@@ -25,7 +25,7 @@ from .. import repository as repo
 from ..config import Settings
 from ..kalshi.client import KalshiClient
 from ..risk.manager import RiskDecision, RiskManager
-from .metrics import MarketMetrics, compute_metrics
+from .metrics import MarketMetrics, compute_metrics, market_open_interest, market_volume
 from .signals import KEYWORDS, SignalResult, score_market
 
 logger = logging.getLogger(__name__)
@@ -105,17 +105,20 @@ class MarketScanner:
                 if not market.get("close_time") and event.get("close_time"):
                     market = {**market, "close_time": event.get("close_time")}
                 summary.markets_scanned += 1
+                vol = market_volume(market)
+                oi = market_open_interest(market)
 
                 if not sample_logged:
                     logger.info(
                         "sample market fields",
                         extra={"extra_fields": {
                             "ticker": market.get("ticker"),
-                            "keys": sorted(market.keys()),
-                            "volume": market.get("volume"),
-                            "open_interest": market.get("open_interest"),
                             "status": market.get("status"),
-                            "yes_bid": market.get("yes_bid"),
+                            "parsed_volume": vol,
+                            "parsed_open_interest": oi,
+                            "volume_fp": market.get("volume_fp"),
+                            "open_interest_fp": market.get("open_interest_fp"),
+                            "yes_bid_dollars": market.get("yes_bid_dollars"),
                         }},
                     )
                     sample_logged = True
@@ -123,21 +126,22 @@ class MarketScanner:
                 if not _is_open(market):
                     summary.filtered_not_open += 1
                     continue
-                if int(market.get("volume") or 0) < s.min_volume:
+                if vol < s.min_volume:
                     summary.filtered_low_volume += 1
                     continue
-                if int(market.get("open_interest") or 0) < s.min_open_interest:
+                if oi < s.min_open_interest:
                     summary.filtered_low_oi += 1
                     continue
                 targets.append(market)
         summary.targets_considered = len(targets)
 
         # 2) Rank pre-candidates by volume, cap.
-        targets.sort(key=lambda mkt: int(mkt.get("volume") or 0), reverse=True)
+        targets.sort(key=market_volume, reverse=True)
         targets = targets[: s.max_markets_per_scan]
 
         # 3) Per-market deep scan.
         ranked: list[tuple[SignalResult, MarketMetrics, dict, RiskDecision | None]] = []
+        ob_sample_logged = False
         for market in targets:
             ticker = market.get("ticker")
             if not ticker:
@@ -151,6 +155,18 @@ class MarketScanner:
                     extra={"extra_fields": {"ticker": ticker, "error": str(exc)}},
                 )
                 continue
+
+            if not ob_sample_logged:
+                inner = orderbook.get("orderbook") or orderbook.get("orderbook_fp") or orderbook
+                logger.info(
+                    "sample orderbook",
+                    extra={"extra_fields": {
+                        "ticker": ticker,
+                        "top_keys": sorted(orderbook.keys()) if isinstance(orderbook, dict) else None,
+                        "inner_keys": sorted(inner.keys()) if isinstance(inner, dict) else None,
+                    }},
+                )
+                ob_sample_logged = True
 
             metrics = compute_metrics(market, orderbook, top_n=s.orderbook_depth, now=now)
             repo.upsert_market(session, market)

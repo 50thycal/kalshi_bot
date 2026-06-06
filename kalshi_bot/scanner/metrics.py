@@ -57,15 +57,61 @@ def parse_dt(value: Any) -> datetime | None:
         return None
 
 
+def _to_count(value: Any) -> int:
+    """Parse a contract count: classic int, or new fixed-point string ('13.00' -> 13)."""
+    if value is None:
+        return 0
+    try:
+        return int(round(float(value)))
+    except (TypeError, ValueError):
+        return 0
+
+
+def price_to_cents(value: Any) -> int | None:
+    """Parse a price into integer cents.
+
+    Accepts classic integer cents (48) and the new dollar-string form ('0.48' -> 48)."""
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(round(value))
+    try:
+        return int(round(float(value) * 100))  # dollar string -> cents
+    except (TypeError, ValueError):
+        return None
+
+
+def market_volume(market: dict) -> int:
+    if market.get("volume") is not None:
+        return _to_count(market.get("volume"))
+    return _to_count(market.get("volume_fp"))
+
+
+def market_open_interest(market: dict) -> int:
+    if market.get("open_interest") is not None:
+        return _to_count(market.get("open_interest"))
+    return _to_count(market.get("open_interest_fp"))
+
+
+def market_last_price(market: dict) -> int | None:
+    if market.get("last_price") is not None:
+        return price_to_cents(market.get("last_price"))
+    return price_to_cents(market.get("last_price_dollars"))
+
+
 def _levels(side: Any) -> list[tuple[int, int]]:
     out: list[tuple[int, int]] = []
     for level in side or []:
         try:
-            price, count = int(level[0]), int(level[1])
+            price, count = level[0], level[1]
         except (TypeError, ValueError, IndexError):
             continue
-        if count > 0:
-            out.append((price, count))
+        cents = price_to_cents(price)
+        cnt = _to_count(count)
+        if cents is not None and cnt > 0:
+            out.append((cents, cnt))
     return out
 
 
@@ -73,9 +119,23 @@ def _best_bid(levels: list[tuple[int, int]]) -> tuple[int, int] | None:
     return max(levels, key=lambda x: x[0]) if levels else None
 
 
+def orderbook_levels(orderbook: dict) -> tuple[Any, Any]:
+    """Return the raw (yes, no) level arrays from either the classic `orderbook`
+    ({"yes": ..., "no": ...}) or the new `orderbook_fp` ({"yes_dollars": ...,
+    "no_dollars": ...}) wrapper."""
+    book = orderbook.get("orderbook") or orderbook.get("orderbook_fp") or orderbook
+    yes_raw = book.get("yes")
+    if yes_raw is None:
+        yes_raw = book.get("yes_dollars")
+    no_raw = book.get("no")
+    if no_raw is None:
+        no_raw = book.get("no_dollars")
+    return yes_raw, no_raw
+
+
 def parse_orderbook(orderbook: dict) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
-    book = orderbook.get("orderbook", orderbook) or {}
-    return _levels(book.get("yes")), _levels(book.get("no"))
+    yes_raw, no_raw = orderbook_levels(orderbook)
+    return _levels(yes_raw), _levels(no_raw)
 
 
 def compute_time_to_close(close_time: Any, now: datetime | None = None) -> float | None:
@@ -116,9 +176,9 @@ def compute_metrics(
         c for _, c in sorted(no_levels, key=lambda x: -x[0])[:top_n]
     )
 
-    volume = int(market.get("volume") or 0)
-    open_interest = int(market.get("open_interest") or 0)
-    last_price = market.get("last_price")
+    volume = market_volume(market)
+    open_interest = market_open_interest(market)
+    last_price = market_last_price(market)
     ttc = compute_time_to_close(market.get("close_time"), now=now)
     liquidity_score = _liquidity_score(spread, top_depth, volume, open_interest, two_sided)
 
@@ -135,7 +195,7 @@ def compute_metrics(
         top_depth=top_depth,
         volume=volume,
         open_interest=open_interest,
-        last_price=int(last_price) if last_price is not None else None,
+        last_price=last_price,
         time_to_close_seconds=ttc,
         liquidity_score=liquidity_score,
         two_sided=two_sided,

@@ -16,7 +16,7 @@ from sqlalchemy import select
 
 from . import models as m
 from .risk.manager import RiskDecision
-from .scanner.metrics import MarketMetrics, parse_dt
+from .scanner.metrics import MarketMetrics, orderbook_levels, parse_dt
 from .scanner.signals import SignalResult
 
 logger = logging.getLogger(__name__)
@@ -111,12 +111,12 @@ def insert_orderbook_snapshot(
     *,
     captured_at: datetime | None = None,
 ) -> m.OrderbookSnapshot:
-    book = orderbook.get("orderbook", orderbook) or {}
+    yes_raw, no_raw = orderbook_levels(orderbook)
     snap = m.OrderbookSnapshot(
         market_ticker=ticker,
         captured_at=captured_at or _now(),
-        yes_levels_json=_safe_json(book.get("yes")),
-        no_levels_json=_safe_json(book.get("no")),
+        yes_levels_json=_safe_json(yes_raw),
+        no_levels_json=_safe_json(no_raw),
         best_yes_bid=metrics.best_yes_bid,
         best_yes_ask=metrics.best_yes_ask,
         best_no_bid=metrics.best_no_bid,
