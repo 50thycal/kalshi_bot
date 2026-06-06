@@ -171,6 +171,8 @@ def _run_cycle(settings: Settings, client: KalshiClient, scanner: MarketScanner)
             )
             _log_ranked(summary)
             if paper_engine is not None:
+                # Count after entries so the summary reflects the post-scan state.
+                paper_engine.summary.open_positions = repo.count_open_paper_positions(session)
                 _log_paper(paper_engine.summary)
         except Exception as exc:
             repo.finish_bot_run(
