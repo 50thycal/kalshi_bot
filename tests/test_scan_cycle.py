@@ -15,46 +15,66 @@ from kalshi_bot.scanner.scanner import MarketScanner
 
 
 class FakeClient:
-    def __init__(self, markets, books):
-        self._markets = markets
+    def __init__(self, events, books):
+        self._events = events
         self._books = books
 
-    def iter_markets(self, **_kw):
-        yield from self._markets
+    def iter_events(self, **_kw):
+        yield from self._events
 
     def get_orderbook(self, ticker, depth=None):
         return self._books[ticker]
 
 
-def _markets():
+def _events():
     return [
-        {  # in-scope, liquid, tight -> candidate
-            "ticker": "FED-1",
-            "title": "Fed rate above 3%",
+        {  # in-scope category; nested market is liquid + tight -> candidate
+            "event_ticker": "FED-1",
             "category": "Economics",
-            "status": "active",
-            "volume": 5000,
-            "open_interest": 2000,
+            "title": "Fed rate decision",
             "close_time": "2030-01-01T00:00:00Z",
-            "rules_primary": "Resolves yes if ...",
+            "markets": [
+                {
+                    "ticker": "FED-1",
+                    "title": "Fed rate above 3%",
+                    "status": "active",
+                    "volume": 5000,
+                    "open_interest": 2000,
+                    "close_time": "2030-01-01T00:00:00Z",
+                    "rules_primary": "Resolves yes if ...",
+                }
+            ],
         },
-        {  # wrong category, no keywords -> filtered before order book
-            "ticker": "WEATHER-1",
-            "title": "Will it be sunny",
+        {  # wrong category, no keywords -> event skipped entirely
+            "event_ticker": "WEATHER-1",
             "category": "Weather",
-            "status": "active",
-            "volume": 5000,
-            "open_interest": 2000,
-            "close_time": "2030-01-01T00:00:00Z",
+            "title": "Sunshine in Miami",
+            "markets": [
+                {
+                    "ticker": "WEATHER-1",
+                    "title": "Will it be sunny",
+                    "status": "active",
+                    "volume": 5000,
+                    "open_interest": 2000,
+                    "close_time": "2030-01-01T00:00:00Z",
+                }
+            ],
         },
-        {  # in-scope but below volume floor -> filtered
-            "ticker": "CPI-2",
-            "title": "CPI inflation above 3%",
+        {  # in-scope category but nested market below volume floor -> filtered
+            "event_ticker": "CPI-1",
             "category": "Economics",
-            "status": "active",
-            "volume": 50,
-            "open_interest": 10,
+            "title": "CPI inflation",
             "close_time": "2030-01-01T00:00:00Z",
+            "markets": [
+                {
+                    "ticker": "CPI-2",
+                    "title": "CPI inflation above 3%",
+                    "status": "active",
+                    "volume": 50,
+                    "open_interest": 10,
+                    "close_time": "2030-01-01T00:00:00Z",
+                }
+            ],
         },
     ]
 
@@ -71,13 +91,16 @@ def test_scan_cycle_persists_and_ranks(settings):
     db.create_all()
 
     scanner = MarketScanner(
-        FakeClient(_markets(), _books()), settings, RiskManager(settings)
+        FakeClient(_events(), _books()), settings, RiskManager(settings)
     )
     with db.session_scope() as session:
         summary = scanner.run_once(session, account_state={"cash_balance": 1000.0})
 
-    assert summary.markets_scanned == 3
-    assert summary.targets_considered == 1  # only FED-1 passes category + volume + OI
+    assert summary.events_scanned == 3
+    # Only the two Economics events' markets are examined (Weather is skipped).
+    assert summary.markets_scanned == 2
+    assert summary.targets_considered == 1  # FED-1 passes; CPI-2 below volume floor
+    assert summary.filtered_low_volume == 1
     assert summary.snapshots_written == 1
     assert summary.candidates_found == 1
 

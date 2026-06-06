@@ -173,6 +173,57 @@ class KalshiClient:
     def get_market(self, ticker: str) -> dict:
         return self._request("GET", f"/markets/{ticker}")
 
+    def get_events(
+        self,
+        *,
+        status: str = "open",
+        limit: int = 200,
+        cursor: str | None = None,
+        with_nested_markets: bool = True,
+        series_ticker: str | None = None,
+    ) -> dict:
+        params: dict[str, Any] = {
+            "status": status,
+            "limit": limit,
+            "with_nested_markets": "true" if with_nested_markets else "false",
+        }
+        if cursor:
+            params["cursor"] = cursor
+        if series_ticker:
+            params["series_ticker"] = series_ticker
+        return self._request("GET", "/events", params=params)
+
+    def iter_events(
+        self,
+        *,
+        status: str = "open",
+        page_size: int = 200,
+        max_events: int | None = None,
+        with_nested_markets: bool = True,
+    ) -> Iterator[dict]:
+        """Yield events across all pages (cursor pagination), capped at max_events.
+
+        Events carry `category` and (with nested markets) a `markets` array, which is
+        how we filter by category — the market object itself has no category field."""
+        fetched = 0
+        cursor: str | None = None
+        while True:
+            page = self.get_events(
+                status=status,
+                limit=page_size,
+                cursor=cursor,
+                with_nested_markets=with_nested_markets,
+            )
+            events = page.get("events") or []
+            for event in events:
+                yield event
+                fetched += 1
+                if max_events is not None and fetched >= max_events:
+                    return
+            cursor = page.get("cursor")
+            if not cursor or not events:
+                return
+
     def get_orderbook(self, ticker: str, depth: int | None = None) -> dict:
         params = {"depth": depth} if depth else None
         return self._request("GET", f"/markets/{ticker}/orderbook", params=params)

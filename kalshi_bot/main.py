@@ -182,14 +182,24 @@ def _run_cycle(settings: Settings, client: KalshiClient, scanner: MarketScanner)
 
 
 def _log_ranked(summary: ScanSummary) -> None:
+    # Top categories seen across events — used to tune TARGET_CATEGORIES against live data.
+    top_categories = dict(
+        sorted(summary.category_counts.items(), key=lambda kv: -kv[1])[:20]
+    )
     log_event(
         logger,
         logging.INFO,
         "scan complete",
+        events_scanned=summary.events_scanned,
         markets_scanned=summary.markets_scanned,
         targets_considered=summary.targets_considered,
         snapshots_written=summary.snapshots_written,
         candidates_found=summary.candidates_found,
+        filtered_low_volume=summary.filtered_low_volume,
+        filtered_low_oi=summary.filtered_low_oi,
+        filtered_not_open=summary.filtered_not_open,
+        filtered_no_orderbook=summary.filtered_no_orderbook,
+        categories=top_categories,
     )
     for rank, c in enumerate(summary.candidates[:25], start=1):
         log_event(
