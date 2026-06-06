@@ -25,6 +25,7 @@ from .db import create_all, init_engine, session_scope
 from .kalshi.client import KalshiClient
 from .kalshi.errors import AuthError
 from .logging_config import configure_logging, log_event
+from .paper.engine import PaperCycleSummary, PaperTradingEngine
 from .risk.manager import RiskManager
 from .scanner.scanner import MarketScanner, ScanSummary
 
@@ -149,7 +150,14 @@ def _run_cycle(settings: Settings, client: KalshiClient, scanner: MarketScanner)
     with session_scope() as session:
         run_row = repo.start_bot_run(session, settings.bot_mode)
         try:
-            summary = scanner.run_once(session, account_state=account_state)
+            paper_engine = None
+            if settings.bot_mode == "paper":
+                paper_engine = PaperTradingEngine(client, settings, scanner.risk)
+                paper_engine.manage_open_positions(session)
+
+            summary = scanner.run_once(
+                session, account_state=account_state, paper_engine=paper_engine
+            )
             if account_state is not None:
                 repo.insert_account_snapshot(
                     session, cash_balance=account_state.get("cash_balance")
@@ -162,6 +170,8 @@ def _run_cycle(settings: Settings, client: KalshiClient, scanner: MarketScanner)
                 candidates_found=summary.candidates_found,
             )
             _log_ranked(summary)
+            if paper_engine is not None:
+                _log_paper(paper_engine.summary)
         except Exception as exc:
             repo.finish_bot_run(
                 session,
@@ -218,6 +228,27 @@ def _log_ranked(summary: ScanSummary) -> None:
             risk_reasons=c.risk_reasons,
             title=c.title[:80],
         )
+
+
+def _log_paper(summary: PaperCycleSummary) -> None:
+    log_event(
+        logger,
+        logging.INFO,
+        "paper cycle",
+        considered=summary.considered,
+        opened=summary.opened,
+        no_fill=summary.no_fill,
+        blocked=summary.blocked,
+        marked=summary.marked,
+        closed_settled=summary.closed_settled,
+        closed_timeout=summary.closed_timeout,
+        closed_tp=summary.closed_tp,
+        closed_sl=summary.closed_sl,
+        closed_void=summary.closed_void,
+        realized_pnl=round(summary.realized_pnl, 4),
+        open_positions=summary.open_positions,
+        fillability_rate=summary.fillability_rate,
+    )
 
 
 def main() -> None:

@@ -12,7 +12,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from . import models as m
 from .risk.manager import RiskDecision
@@ -185,6 +185,153 @@ def insert_account_snapshot(
     session.add(row)
     session.flush()
     return row
+
+
+# --- paper trading -----------------------------------------------------------
+
+
+def create_paper_trade(
+    session,
+    *,
+    signal_id: int | None,
+    ticker: str,
+    side: str,
+    action: str,
+    assumed_price: int,
+    quantity: int,
+    fill_assumption: str,
+    entry_fee: float,
+) -> m.PaperTrade:
+    row = m.PaperTrade(
+        signal_id=signal_id,
+        market_ticker=ticker,
+        created_at=_now(),
+        side=side,
+        action=action,
+        assumed_price=assumed_price,
+        quantity=quantity,
+        fill_assumption=fill_assumption,
+        status="open",
+        fees=entry_fee,
+    )
+    session.add(row)
+    session.flush()
+    return row
+
+
+def record_no_fill(
+    session,
+    *,
+    signal_id: int | None,
+    ticker: str,
+    side: str,
+    action: str,
+    assumed_price: int | None,
+    fill_assumption: str,
+) -> m.PaperTrade:
+    row = m.PaperTrade(
+        signal_id=signal_id,
+        market_ticker=ticker,
+        created_at=_now(),
+        side=side,
+        action=action,
+        assumed_price=assumed_price,
+        quantity=0,
+        fill_assumption=fill_assumption,
+        status="no_fill",
+        closed_at=_now(),
+    )
+    session.add(row)
+    session.flush()
+    return row
+
+
+def get_open_paper_trades(session) -> list[m.PaperTrade]:
+    return list(
+        session.scalars(select(m.PaperTrade).where(m.PaperTrade.status == "open")).all()
+    )
+
+
+def get_open_paper_position(session, ticker: str) -> m.PaperPosition | None:
+    return session.scalar(
+        select(m.PaperPosition).where(
+            m.PaperPosition.market_ticker == ticker, m.PaperPosition.status == "open"
+        )
+    )
+
+
+def count_open_paper_positions(session) -> int:
+    return int(
+        session.scalar(
+            select(func.count())
+            .select_from(m.PaperPosition)
+            .where(m.PaperPosition.status == "open")
+        )
+        or 0
+    )
+
+
+def open_paper_exposure(session, ticker: str | None = None) -> float:
+    """Open paper exposure in dollars (sum of quantity * avg_price_cents / 100)."""
+    stmt = select(m.PaperPosition).where(m.PaperPosition.status == "open")
+    if ticker is not None:
+        stmt = stmt.where(m.PaperPosition.market_ticker == ticker)
+    total = 0.0
+    for pos in session.scalars(stmt).all():
+        total += (pos.quantity or 0) * float(pos.avg_price or 0) / 100.0
+    return total
+
+
+def open_paper_position_for_trade(
+    session, *, ticker: str, side: str, quantity: int, avg_price: int
+) -> m.PaperPosition:
+    pos = m.PaperPosition(
+        market_ticker=ticker,
+        side=side,
+        quantity=quantity,
+        avg_price=avg_price,
+        status="open",
+        opened_at=_now(),
+    )
+    session.add(pos)
+    session.flush()
+    return pos
+
+
+def close_paper_trade(
+    session,
+    trade: m.PaperTrade,
+    *,
+    status: str,
+    pnl: float,
+    exit_price: int | None = None,
+    resolved_value: int | None = None,
+    exit_fee: float = 0.0,
+) -> None:
+    trade.status = status
+    trade.exit_price = exit_price
+    trade.resolved_value = resolved_value
+    trade.pnl = pnl
+    trade.fees = float(trade.fees or 0.0) + exit_fee
+    trade.closed_at = _now()
+    session.add(trade)
+
+    pos = get_open_paper_position(session, trade.market_ticker)
+    if pos is not None:
+        pos.status = status
+        pos.pnl = pnl
+        pos.unrealized_pnl = None
+        pos.closed_at = _now()
+        session.add(pos)
+    session.flush()
+
+
+def mark_paper_position(session, ticker: str, unrealized_pnl: float) -> None:
+    pos = get_open_paper_position(session, ticker)
+    if pos is not None:
+        pos.unrealized_pnl = unrealized_pnl
+        session.add(pos)
+        session.flush()
 
 
 def log_system_event(

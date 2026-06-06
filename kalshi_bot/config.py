@@ -87,6 +87,35 @@ class Settings(BaseSettings):
     staleness_seconds: int = 120
     log_level: str = "INFO"
 
+    # --- Paper trading (BOT_MODE=paper) ---
+    paper_strategy: str = "buy_favorite"
+    paper_order_size: int = 1
+    paper_starting_bankroll: float = 1000.0
+    paper_max_open_positions: int = 50
+    paper_max_hold_hours: float = 72.0
+    paper_take_profit_cents: int | None = None
+    paper_stop_loss_cents: int | None = None
+    paper_fees_enabled: bool = True
+
+    @field_validator("paper_strategy", mode="before")
+    @classmethod
+    def _coerce_paper_strategy(cls, v: object) -> str:
+        valid = ("buy_favorite", "buy_yes", "buy_no")
+        if v is None:
+            return "buy_favorite"
+        v = str(v).strip().lower()
+        return v if v in valid else "buy_favorite"
+
+    @field_validator("paper_take_profit_cents", "paper_stop_loss_cents", mode="before")
+    @classmethod
+    def _optional_cents(cls, v: object) -> int | None:
+        if v is None or (isinstance(v, str) and not v.strip()):
+            return None
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return None
+
     @field_validator("bot_mode", mode="before")
     @classmethod
     def _coerce_bot_mode(cls, v: object) -> str:
@@ -147,6 +176,13 @@ class Settings(BaseSettings):
             "min_open_interest": self.min_open_interest,
             "min_hours_to_close": self.min_hours_to_close,
             "max_markets_per_scan": self.max_markets_per_scan,
+            "paper_strategy": self.paper_strategy,
+            "paper_order_size": self.paper_order_size,
+            "paper_starting_bankroll": self.paper_starting_bankroll,
+            "paper_max_open_positions": self.paper_max_open_positions,
+            "paper_max_hold_hours": self.paper_max_hold_hours,
+            "paper_take_profit_cents": self.paper_take_profit_cents,
+            "paper_stop_loss_cents": self.paper_stop_loss_cents,
             "api_key_id_present": bool(self.kalshi_api_key_id),
             "private_key_present": bool(self.private_key_pem),
         }

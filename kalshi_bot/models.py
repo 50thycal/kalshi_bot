@@ -158,11 +158,13 @@ class PaperTrade(Base):
     action: Mapped[str | None] = mapped_column(String(8))
     assumed_price: Mapped[int | None] = mapped_column(Integer)
     quantity: Mapped[int | None] = mapped_column(Integer)
-    fill_assumption: Mapped[str | None] = mapped_column(String(32))
-    status: Mapped[str | None] = mapped_column(String(20))
+    fill_assumption: Mapped[str | None] = mapped_column(String(64))
+    status: Mapped[str | None] = mapped_column(String(24))
     exit_price: Mapped[int | None] = mapped_column(Integer)
     resolved_value: Mapped[int | None] = mapped_column(Integer)
     pnl: Mapped[float | None] = mapped_column(Numeric(14, 4))
+    fees: Mapped[float | None] = mapped_column(Numeric(14, 4))
+    closed_at: Mapped[datetime | None] = mapped_column(TS)
 
 
 class PaperPosition(Base):
@@ -173,10 +175,11 @@ class PaperPosition(Base):
     side: Mapped[str | None] = mapped_column(String(8))
     quantity: Mapped[int | None] = mapped_column(Integer)
     avg_price: Mapped[float | None] = mapped_column(Numeric(8, 4))
-    status: Mapped[str | None] = mapped_column(String(20))
+    status: Mapped[str | None] = mapped_column(String(24))
     opened_at: Mapped[datetime | None] = mapped_column(TS, default=utcnow)
     closed_at: Mapped[datetime | None] = mapped_column(TS)
     pnl: Mapped[float | None] = mapped_column(Numeric(14, 4))
+    unrealized_pnl: Mapped[float | None] = mapped_column(Numeric(14, 4))
 
 
 class LiveOrder(Base):

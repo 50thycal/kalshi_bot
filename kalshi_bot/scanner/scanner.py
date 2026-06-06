@@ -83,7 +83,9 @@ class MarketScanner:
         self.settings = settings
         self.risk = risk
 
-    def run_once(self, session, *, account_state: dict | None = None) -> ScanSummary:
+    def run_once(
+        self, session, *, account_state: dict | None = None, paper_engine=None
+    ) -> ScanSummary:
         s = self.settings
         summary = ScanSummary()
         now = datetime.now(timezone.utc)
@@ -181,14 +183,26 @@ class MarketScanner:
 
             decision: RiskDecision | None = None
             if signal.label in ("candidate", "paper_trade"):
-                decision = self.risk.evaluate(
-                    signal=signal,
-                    metrics=metrics,
-                    account_state=account_state,
-                    existing_exposure=0.0,
-                )
-                repo.insert_risk_event(session, sig_row.id, ticker, decision)
                 summary.candidates_found += 1
+                if paper_engine is not None:
+                    # Paper mode: the engine evaluates risk (for_paper) and records the
+                    # risk_event, then opens a simulated trade if approved.
+                    decision = paper_engine.consider(
+                        session,
+                        signal=signal,
+                        signal_id=sig_row.id,
+                        metrics=metrics,
+                        market=market,
+                        account_state=account_state,
+                    )
+                else:
+                    decision = self.risk.evaluate(
+                        signal=signal,
+                        metrics=metrics,
+                        account_state=account_state,
+                        existing_exposure=0.0,
+                    )
+                    repo.insert_risk_event(session, sig_row.id, ticker, decision)
             ranked.append((signal, metrics, market, decision))
 
         # 4) Build the ranked candidate list (highest score first).

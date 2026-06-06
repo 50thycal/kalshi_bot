@@ -36,15 +36,22 @@ class RiskManager:
         account_state: dict | None = None,
         existing_exposure: float | None = 0.0,
         existing_open_order: bool = False,
+        for_paper: bool = False,
     ) -> RiskDecision:
+        """Evaluate a would-be trade.
+
+        `for_paper=True` evaluates a *simulated* trade: the live-only execution gates
+        (kill switch, mode-not-live, real-balance availability) are skipped, but every
+        market-quality, liquidity, sizing and exposure gate still applies."""
         s = self.settings
         reasons: list[str] = []
 
-        # --- absolute gates ---
-        if s.kill_switch:
-            reasons.append("KILL_SWITCH_ON")
-        if s.bot_mode != "live":
-            reasons.append("MODE_NOT_LIVE")
+        # --- absolute gates (live execution only) ---
+        if not for_paper:
+            if s.kill_switch:
+                reasons.append("KILL_SWITCH_ON")
+            if s.bot_mode != "live":
+                reasons.append("MODE_NOT_LIVE")
 
         # --- market data quality ---
         if not metrics.two_sided:
@@ -60,9 +67,11 @@ class RiskManager:
             reasons.append("CLOSES_TOO_SOON")
 
         # --- account / exposure ---
-        balance = None if account_state is None else account_state.get("cash_balance")
-        if balance is None:
-            reasons.append("BALANCE_UNAVAILABLE")
+        # Paper trading uses a simulated bankroll, so a missing real balance is fine.
+        if not for_paper:
+            balance = None if account_state is None else account_state.get("cash_balance")
+            if balance is None:
+                reasons.append("BALANCE_UNAVAILABLE")
         if existing_open_order:
             reasons.append("EXISTING_OPEN_ORDER")
         if existing_exposure is None:

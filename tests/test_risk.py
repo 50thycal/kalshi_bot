@@ -59,6 +59,28 @@ def test_market_exposure_exceeded_blocks(settings):
     assert "MARKET_EXPOSURE_EXCEEDED" in decision.reason_codes
 
 
+def test_for_paper_skips_live_gates(settings):
+    # Default settings: kill_switch on, mode scanner, no account balance.
+    decision = RiskManager(settings).evaluate(
+        signal=None, metrics=_good_metrics(), account_state=None, for_paper=True
+    )
+    assert decision.approved is True
+    assert decision.reason_codes == []
+
+
+def test_for_paper_still_blocks_quality_failures(settings):
+    ob = {"orderbook": {"yes": [[20, 300]], "no": [[20, 300]]}}  # spread 60
+    metrics = compute_metrics(
+        {"ticker": "T", "volume": 5000, "open_interest": 2000, "close_time": "2030-01-01T00:00:00Z"},
+        ob,
+    )
+    decision = RiskManager(settings).evaluate(
+        signal=None, metrics=metrics, account_state=None, for_paper=True
+    )
+    assert decision.approved is False
+    assert "SPREAD_TOO_WIDE" in decision.reason_codes
+
+
 def test_approves_when_all_clear(settings):
     settings.kill_switch = False
     settings.bot_mode = "live"

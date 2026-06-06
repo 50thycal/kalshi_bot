@@ -112,6 +112,31 @@ Unit tests cover RSA signing correctness, fail-closed config, order-book math
 full scan against a fake Kalshi client + sqlite. CI additionally applies the Alembic
 migration against a real Postgres 16 service.
 
+## Paper trading (Phase 3)
+
+Set `BOT_MODE=paper` to run everything the scanner does **plus** simulate trades from
+the candidate signals — no real orders are ever placed. Paper trading uses a simulated
+bankroll (`PAPER_STARTING_BANKROLL`), so the real account balance is irrelevant.
+
+Each cycle the worker first **manages open paper positions**, then **scans and opens new
+ones**:
+
+- **Entry** (`PAPER_STRATEGY`, default `buy_favorite`): buy the side implied ≥ 50% at that
+  side's ask, conservatively filled. Quantity is `PAPER_ORDER_SIZE` capped by the order-book
+  depth at the entry price (depth 0 → recorded as a `no_fill`). One open position per market.
+  Every entry passes the Risk Manager in paper mode (`for_paper=True`): the live-only gates
+  (kill switch, mode, real balance) are skipped, but all spread/liquidity/closes-soon and
+  exposure caps still apply.
+- **Exit**: close at payoff (0/100) on settlement; otherwise close at the current bid after
+  `PAPER_MAX_HOLD_HOURS`, or on optional `PAPER_TAKE_PROFIT_CENTS` / `PAPER_STOP_LOSS_CENTS`.
+- **Fees**: Kalshi's `ceil(0.07 × C × P × (1−P))` is modeled on entry and early-exit sells
+  (not on settlement) when `PAPER_FEES_ENABLED=true`.
+
+Results land in `paper_trades` and `paper_positions`, and each cycle logs a `paper cycle`
+summary (opened / no_fill / closed_* / realized P&L / fillability rate). The signal is
+non-directional, so this is a measurement harness; `kalshi_bot/paper/engine.py::choose_entry`
+is the single seam where a future forecasting model plugs in.
+
 ## Safety
 
 The bot must fail closed. It will not do anything trade-like if config is missing, the
