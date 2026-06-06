@@ -1,0 +1,157 @@
+"""Configuration loading and validation.
+
+Fail-closed by design:
+- Required Kalshi/DB values missing -> Settings() raises -> the worker exits without
+  doing anything trade-like.
+- KILL_SWITCH missing -> assume the kill switch is active (True).
+- BOT_MODE missing/invalid -> default to the safest mode, `scanner`.
+"""
+
+from __future__ import annotations
+
+from functools import lru_cache
+from typing import Literal
+
+from pydantic import SecretStr, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BotMode = Literal["scanner", "paper", "approval", "live"]
+KalshiEnv = Literal["demo", "production"]
+
+VALID_MODES = ("scanner", "paper", "approval", "live")
+VALID_ENVS = ("demo", "production")
+
+DEMO_BASE_URL = "https://demo-api.kalshi.co/trade-api/v2"
+PRODUCTION_BASE_URL = "https://api.elections.kalshi.com/trade-api/v2"
+
+
+def normalize_database_url(url: str | None) -> str:
+    """Normalize a Postgres URL to the SQLAlchemy + psycopg3 driver form.
+
+    Railway hands out `postgresql://...`; SQLAlchemy 2.0 with psycopg3 needs
+    `postgresql+psycopg://...`. Non-postgres URLs (e.g. sqlite for tests) pass
+    through unchanged.
+    """
+    if not url:
+        return ""
+    url = str(url).strip()
+    if url.startswith("postgresql+"):
+        return url
+    if url.startswith("postgres://"):
+        return "postgresql+psycopg://" + url[len("postgres://") :]
+    if url.startswith("postgresql://"):
+        return "postgresql+psycopg://" + url[len("postgresql://") :]
+    return url
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        case_sensitive=False,
+        populate_by_name=True,
+    )
+
+    # --- Kalshi connectivity ---
+    kalshi_env: str = "demo"
+    kalshi_api_key_id: str
+    kalshi_private_key: SecretStr
+
+    # --- Database ---
+    database_url: str
+
+    # --- Operating mode / safety ---
+    bot_mode: str = "scanner"
+    kill_switch: bool = True
+
+    # --- Risk limits ---
+    max_order_size: int = 1
+    max_market_exposure: float = 25.0
+    max_total_exposure: float = 100.0
+    max_daily_loss: float = 25.0
+
+    # --- Scan cadence ---
+    scan_interval_seconds: int = 300
+    run_once: bool = False
+
+    # --- Scanner tuning ---
+    target_categories: str = "Economics,Fed,Jobs,Financials"
+    target_series_prefixes: str = ""
+    max_spread_cents: int = 5
+    min_volume: int = 100
+    min_open_interest: int = 50
+    min_hours_to_close: float = 1.0
+    max_markets_per_scan: int = 25
+    orderbook_depth: int = 10
+    staleness_seconds: int = 120
+    log_level: str = "INFO"
+
+    @field_validator("bot_mode", mode="before")
+    @classmethod
+    def _coerce_bot_mode(cls, v: object) -> str:
+        if v is None:
+            return "scanner"
+        v = str(v).strip().lower()
+        return v if v in VALID_MODES else "scanner"
+
+    @field_validator("kalshi_env", mode="before")
+    @classmethod
+    def _coerce_env(cls, v: object) -> str:
+        if v is None:
+            return "demo"
+        v = str(v).strip().lower()
+        return v if v in VALID_ENVS else "demo"
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _normalize_db_url(cls, v: object) -> str:
+        return normalize_database_url(None if v is None else str(v))
+
+    @property
+    def kalshi_base_url(self) -> str:
+        return PRODUCTION_BASE_URL if self.kalshi_env == "production" else DEMO_BASE_URL
+
+    @property
+    def private_key_pem(self) -> str:
+        # Railway stores multi-line secrets single-line with literal \n.
+        raw = self.kalshi_private_key.get_secret_value()
+        if "\\n" in raw and "\n" not in raw:
+            raw = raw.replace("\\n", "\n")
+        return raw
+
+    @property
+    def target_category_list(self) -> list[str]:
+        return [c.strip().lower() for c in self.target_categories.split(",") if c.strip()]
+
+    @property
+    def target_series_prefix_list(self) -> list[str]:
+        return [p.strip().upper() for p in self.target_series_prefixes.split(",") if p.strip()]
+
+    def redacted_summary(self) -> dict:
+        """Config summary safe to log (never includes the private key)."""
+        return {
+            "kalshi_env": self.kalshi_env,
+            "bot_mode": self.bot_mode,
+            "kill_switch": self.kill_switch,
+            "max_order_size": self.max_order_size,
+            "max_market_exposure": self.max_market_exposure,
+            "max_total_exposure": self.max_total_exposure,
+            "max_daily_loss": self.max_daily_loss,
+            "scan_interval_seconds": self.scan_interval_seconds,
+            "run_once": self.run_once,
+            "target_categories": self.target_category_list,
+            "target_series_prefixes": self.target_series_prefix_list,
+            "max_spread_cents": self.max_spread_cents,
+            "min_volume": self.min_volume,
+            "min_open_interest": self.min_open_interest,
+            "min_hours_to_close": self.min_hours_to_close,
+            "max_markets_per_scan": self.max_markets_per_scan,
+            "api_key_id_present": bool(self.kalshi_api_key_id),
+            "private_key_present": bool(self.private_key_pem),
+        }
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

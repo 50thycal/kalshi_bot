@@ -1,0 +1,21 @@
+[project]
+name = "kalshi-bot"
+version = "0.1.0"
+description = "Kalshi market scanner and (future) trading bot — Scanner MVP"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B"]
+# E501: long lines are fine (formatter handles wrapping); UP017: `timezone.utc` is clear
+# and avoids churn vs the `datetime.UTC` alias.
+ignore = ["E501", "UP017"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]

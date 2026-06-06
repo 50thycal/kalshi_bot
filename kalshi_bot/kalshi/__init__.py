@@ -1,0 +1,1 @@
+"""Kalshi REST client package."""
