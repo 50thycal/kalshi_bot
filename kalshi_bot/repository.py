@@ -326,6 +326,43 @@ def close_paper_trade(
     session.flush()
 
 
+_CLOSED_STATUSES = ("settled", "closed_timeout", "closed_tp", "closed_sl", "closed_void")
+
+
+def paper_cycle_stats(session) -> dict:
+    """Lightweight portfolio rollup for the per-cycle log."""
+    open_positions = 0
+    open_unrealized = 0.0
+    for pos in session.scalars(
+        select(m.PaperPosition).where(m.PaperPosition.status == "open")
+    ).all():
+        open_positions += 1
+        open_unrealized += float(pos.unrealized_pnl or 0)
+
+    realized_total = float(
+        session.scalar(
+            select(func.coalesce(func.sum(m.PaperTrade.pnl), 0)).where(
+                m.PaperTrade.status.in_(_CLOSED_STATUSES)
+            )
+        )
+        or 0
+    )
+    closed_count = int(
+        session.scalar(
+            select(func.count())
+            .select_from(m.PaperTrade)
+            .where(m.PaperTrade.status.in_(_CLOSED_STATUSES))
+        )
+        or 0
+    )
+    return {
+        "open_positions": open_positions,
+        "open_unrealized": round(open_unrealized, 4),
+        "realized_total": round(realized_total, 4),
+        "closed_trades": closed_count,
+    }
+
+
 def mark_paper_position(session, ticker: str, unrealized_pnl: float) -> None:
     pos = get_open_paper_position(session, ticker)
     if pos is not None:

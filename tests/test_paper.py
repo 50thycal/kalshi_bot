@@ -120,6 +120,25 @@ def test_paper_open_then_settle_yes(settings):
         ) == 0
 
 
+def test_already_open_skips_reentry_and_stats(settings):
+    from kalshi_bot import repository as repo
+
+    client, risk = _open_one_paper_trade(settings)
+
+    # A second scan over the same (still-open) market should not re-enter.
+    engine2 = PaperTradingEngine(client, settings, risk)
+    scanner2 = MarketScanner(client, settings, risk)
+    with db.session_scope() as session:
+        engine2.manage_open_positions(session)
+        scanner2.run_once(session, paper_engine=engine2)
+        stats = repo.paper_cycle_stats(session)
+
+    assert engine2.summary.opened == 0
+    assert engine2.summary.already_open == 1
+    assert stats["open_positions"] == 1
+    assert stats["closed_trades"] == 0
+
+
 def test_paper_timeout_exit_sells_at_bid(settings):
     settings.paper_max_hold_hours = 0  # force immediate timeout on the next manage pass
     client, risk = _open_one_paper_trade(settings)

@@ -103,9 +103,15 @@ class MarketScanner:
                 continue
 
             for market in event.get("markets") or []:
-                # Nested markets may omit close_time; fall back to the event's.
+                # Nested markets inherit close_time/category from the event when absent
+                # (the market object itself carries no category).
+                fallback = {}
                 if not market.get("close_time") and event.get("close_time"):
-                    market = {**market, "close_time": event.get("close_time")}
+                    fallback["close_time"] = event["close_time"]
+                if not market.get("category") and event.get("category"):
+                    fallback["category"] = event["category"]
+                if fallback:
+                    market = {**market, **fallback}
                 summary.markets_scanned += 1
                 vol = market_volume(market)
                 oi = market_open_interest(market)

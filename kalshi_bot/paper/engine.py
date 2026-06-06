@@ -40,7 +40,8 @@ class PaperCycleSummary:
     considered: int = 0
     opened: int = 0
     no_fill: int = 0
-    blocked: int = 0
+    already_open: int = 0
+    risk_blocked: int = 0
     marked: int = 0
     closed_settled: int = 0
     closed_timeout: int = 0
@@ -121,16 +122,16 @@ class PaperTradingEngine:
 
         entry = choose_entry(metrics, s)
         if entry is None:
-            self.summary.blocked += 1
+            self.summary.risk_blocked += 1
             return None
         side, action, price = entry
 
         # One open position per market in the MVP (no averaging).
         if repo.get_open_paper_position(session, ticker) is not None:
-            self.summary.blocked += 1
+            self.summary.already_open += 1
             return None
         if repo.count_open_paper_positions(session) >= s.paper_max_open_positions:
-            self.summary.blocked += 1
+            self.summary.risk_blocked += 1
             return None
 
         existing_exposure = repo.open_paper_exposure(session, ticker)
@@ -143,7 +144,7 @@ class PaperTradingEngine:
         )
         repo.insert_risk_event(session, signal_id, ticker, decision)
         if not decision.approved:
-            self.summary.blocked += 1
+            self.summary.risk_blocked += 1
             return decision
 
         depth = _entry_depth(metrics, side)

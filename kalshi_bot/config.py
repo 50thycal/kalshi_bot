@@ -92,7 +92,7 @@ class Settings(BaseSettings):
     paper_order_size: int = 1
     paper_starting_bankroll: float = 1000.0
     paper_max_open_positions: int = 50
-    paper_max_hold_hours: float = 72.0
+    paper_max_hold_hours: float = 6.0
     paper_take_profit_cents: int | None = None
     paper_stop_loss_cents: int | None = None
     paper_fees_enabled: bool = True

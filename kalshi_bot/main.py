@@ -174,6 +174,7 @@ def _run_cycle(settings: Settings, client: KalshiClient, scanner: MarketScanner)
                 # Count after entries so the summary reflects the post-scan state.
                 paper_engine.summary.open_positions = repo.count_open_paper_positions(session)
                 _log_paper(paper_engine.summary)
+                log_event(logger, logging.INFO, "paper portfolio", **repo.paper_cycle_stats(session))
         except Exception as exc:
             repo.finish_bot_run(
                 session,
@@ -240,7 +241,8 @@ def _log_paper(summary: PaperCycleSummary) -> None:
         considered=summary.considered,
         opened=summary.opened,
         no_fill=summary.no_fill,
-        blocked=summary.blocked,
+        already_open=summary.already_open,
+        risk_blocked=summary.risk_blocked,
         marked=summary.marked,
         closed_settled=summary.closed_settled,
         closed_timeout=summary.closed_timeout,

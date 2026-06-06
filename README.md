@@ -132,10 +132,19 @@ ones**:
 - **Fees**: Kalshi's `ceil(0.07 × C × P × (1−P))` is modeled on entry and early-exit sells
   (not on settlement) when `PAPER_FEES_ENABLED=true`.
 
-Results land in `paper_trades` and `paper_positions`, and each cycle logs a `paper cycle`
-summary (opened / no_fill / closed_* / realized P&L / fillability rate). The signal is
-non-directional, so this is a measurement harness; `kalshi_bot/paper/engine.py::choose_entry`
-is the single seam where a future forecasting model plugs in.
+Results land in `paper_trades` and `paper_positions`. Each cycle logs a `paper cycle`
+summary (opened / no_fill / already_open / risk_blocked / closed_* / fillability) and a
+`paper portfolio` rollup (open positions, open unrealized P&L, realized P&L to date). The
+signal is non-directional, so this is a measurement harness;
+`kalshi_bot/paper/engine.py::choose_entry` is the single seam where a future forecasting
+model plugs in.
+
+For an on-demand performance report (status breakdown, realized P&L + win rate, open
+unrealized, fillability, and P&L by category):
+
+```bash
+DATABASE_URL=postgresql://... python scripts/paper_stats.py
+```
 
 ## Safety
 
