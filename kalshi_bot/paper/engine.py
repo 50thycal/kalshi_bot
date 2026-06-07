@@ -137,8 +137,13 @@ class PaperTradingEngine:
     ) -> EntryProposal | None:
         if strategy in ("buy_favorite", "buy_yes", "buy_no"):
             return directional_proposal(c.metrics, strategy)
-        if strategy == "momentum":
-            return momentum_proposal(self._history(session, c.signal.ticker), c.metrics, self.settings)
+        if strategy in ("momentum", "reversion"):
+            return momentum_proposal(
+                self._history(session, c.signal.ticker),
+                c.metrics,
+                self.settings,
+                direction=strategy,
+            )
         if strategy == "ladder":
             return ladder_map.get(c.signal.ticker)
         return None

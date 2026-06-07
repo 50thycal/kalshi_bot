@@ -70,8 +70,8 @@ def _events():
                     "ticker": "CPI-2",
                     "title": "CPI inflation above 3%",
                     "status": "active",
-                    "volume": 50,
-                    "open_interest": 10,
+                    "volume": 10,
+                    "open_interest": 5,
                     "close_time": "2030-01-01T00:00:00Z",
                 }
             ],

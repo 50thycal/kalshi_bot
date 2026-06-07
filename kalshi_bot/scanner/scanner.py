@@ -18,6 +18,7 @@ Flow per cycle:
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
@@ -76,6 +77,41 @@ def event_matches(event: dict, settings: Settings) -> bool:
 def _is_open(market: dict) -> bool:
     status = (market.get("status") or "").lower()
     return status in ("active", "open", "")
+
+
+def _select_targets(targets: list[dict], settings: Settings) -> list[dict]:
+    """Pick which markets to deep-scan: up to max_markets_per_category from each
+    category (by volume), then fill the remaining budget with the highest-volume
+    leftovers, capped at max_markets_per_scan."""
+    by_category: dict[str, list[dict]] = defaultdict(list)
+    for market in targets:
+        cat = (market.get("category") or "uncategorized").strip().lower()
+        by_category[cat].append(market)
+
+    selected: list[dict] = []
+    seen: set[str] = set()
+    for markets in by_category.values():
+        markets.sort(key=market_volume, reverse=True)
+        for market in markets[: settings.max_markets_per_category]:
+            ticker = market.get("ticker")
+            if ticker and ticker not in seen:
+                seen.add(ticker)
+                selected.append(market)
+
+    if len(selected) < settings.max_markets_per_scan:
+        leftovers = sorted(
+            (m for m in targets if m.get("ticker") not in seen),
+            key=market_volume,
+            reverse=True,
+        )
+        for market in leftovers:
+            if len(selected) >= settings.max_markets_per_scan:
+                break
+            selected.append(market)
+            seen.add(market.get("ticker"))
+
+    selected.sort(key=market_volume, reverse=True)
+    return selected[: settings.max_markets_per_scan]
 
 
 class MarketScanner:
@@ -144,9 +180,9 @@ class MarketScanner:
                 targets.append(market)
         summary.targets_considered = len(targets)
 
-        # 2) Rank pre-candidates by volume, cap.
-        targets.sort(key=market_volume, reverse=True)
-        targets = targets[: s.max_markets_per_scan]
+        # 2) Select markets to deep-scan: stratify by category so thinner (less
+        #    efficient) categories get represented, not just the highest-volume econ.
+        targets = _select_targets(targets, s)
 
         # 3) Per-market deep scan.
         ranked: list[tuple[SignalResult, MarketMetrics, dict, RiskDecision | None]] = []

@@ -83,15 +83,22 @@ def _ls_slope(points: list[tuple[float, float]]) -> float:
 
 
 def momentum_proposal(
-    history: list[tuple[float, float]], metrics: MarketMetrics, settings
+    history: list[tuple[float, float]],
+    metrics: MarketMetrics,
+    settings,
+    direction: str | None = None,
 ) -> EntryProposal | None:
-    """history: (hours_from_start, midpoint_cents) ascending, including the latest point."""
+    """history: (hours_from_start, midpoint_cents) ascending, including the latest point.
+
+    Projects the recent drift `paper_momentum_project_hours` forward to form the model
+    probability. `direction` ("momentum"|"reversion") overrides the configured default."""
     if not metrics.two_sided or metrics.midpoint is None or len(history) < 2:
         return None
     slope = _ls_slope(history)  # cents/hour
-    if settings.paper_momentum_direction == "reversion":
+    effective = direction or settings.paper_momentum_direction
+    if effective == "reversion":
         slope = -slope
-    projected = metrics.midpoint + slope * 1.0  # project ~1h forward
+    projected = metrics.midpoint + slope * settings.paper_momentum_project_hours
     model_prob = _clamp01(projected / 100.0)
     return best_side_by_edge(model_prob, metrics, settings.paper_min_edge_cents)
 

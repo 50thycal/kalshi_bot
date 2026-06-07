@@ -76,21 +76,25 @@ class Settings(BaseSettings):
     run_once: bool = False
 
     # --- Scanner tuning ---
-    target_categories: str = "Economics,Fed,Jobs,Financials"
+    target_categories: str = (
+        "Economics,Financials,Companies,Climate and Weather,Commodities,Science and Technology"
+    )
     target_series_prefixes: str = ""
     max_spread_cents: int = 5
-    min_volume: int = 100
-    min_open_interest: int = 50
+    min_volume: int = 25
+    min_open_interest: int = 10
     min_hours_to_close: float = 1.0
-    max_markets_per_scan: int = 25
+    max_markets_per_scan: int = 75
+    max_markets_per_category: int = 12
     orderbook_depth: int = 10
     staleness_seconds: int = 120
     log_level: str = "INFO"
 
     # --- Paper trading (BOT_MODE=paper) ---
-    paper_strategies: str = "buy_favorite,momentum,ladder"
+    paper_strategies: str = "buy_favorite,momentum,reversion,ladder"
     paper_min_edge_cents: int = 1
     paper_momentum_lookback_hours: float = 6.0
+    paper_momentum_project_hours: float = 24.0
     paper_momentum_direction: str = "momentum"
     paper_order_size: int = 1
     paper_starting_bankroll: float = 1000.0
@@ -161,7 +165,7 @@ class Settings(BaseSettings):
 
     @property
     def paper_strategy_list(self) -> list[str]:
-        valid = ("buy_favorite", "buy_yes", "buy_no", "momentum", "ladder")
+        valid = ("buy_favorite", "buy_yes", "buy_no", "momentum", "reversion", "ladder")
         out = [s.strip().lower() for s in self.paper_strategies.split(",") if s.strip()]
         return [s for s in out if s in valid] or ["buy_favorite"]
 
@@ -184,8 +188,10 @@ class Settings(BaseSettings):
             "min_open_interest": self.min_open_interest,
             "min_hours_to_close": self.min_hours_to_close,
             "max_markets_per_scan": self.max_markets_per_scan,
+            "max_markets_per_category": self.max_markets_per_category,
             "paper_strategies": self.paper_strategy_list,
             "paper_min_edge_cents": self.paper_min_edge_cents,
+            "paper_momentum_project_hours": self.paper_momentum_project_hours,
             "paper_momentum_direction": self.paper_momentum_direction,
             "paper_order_size": self.paper_order_size,
             "paper_starting_bankroll": self.paper_starting_bankroll,

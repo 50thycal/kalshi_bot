@@ -124,11 +124,17 @@ ones**. Multiple strategies run as **parallel books** (`PAPER_STRATEGIES`, defau
 compared head-to-head:
 
 - **`buy_favorite`** (control): buy the side implied ≥ 50% at its ask; edge = 0.
-- **`momentum`**: fit recent `market_snapshots.midpoint` drift → model probability; trade the
-  side the edge favors when `|edge| ≥ PAPER_MIN_EDGE_CENTS` (`PAPER_MOMENTUM_DIRECTION` =
-  `momentum`|`reversion`).
+- **`momentum`**: fit recent `market_snapshots.midpoint` drift and project it
+  `PAPER_MOMENTUM_PROJECT_HOURS` forward → model probability; trade the side the edge favors
+  when `|edge| ≥ PAPER_MIN_EDGE_CENTS`. Bets recent drift continues.
+- **`reversion`**: same model with the drift sign flipped — bets a recent move overshoots and
+  fades. Run alongside `momentum` to compare the two hypotheses head-to-head.
 - **`ladder`**: isotonic "fair curve" relative value across a series' strike ladder; trade
   cheap/rich rungs beyond the edge threshold (auto-skips non-monotone groups).
+
+Market selection is **stratified by category** (up to `MAX_MARKETS_PER_CATEGORY` per category,
+then filled to `MAX_MARKETS_PER_SCAN` by volume) so thinner, less-efficient categories get
+scanned rather than only the highest-volume economic markets.
 
 Edge is measured against the price actually paid (the ask), so it nets out the spread; entries
 are also `PAPER_ORDER_SIZE` capped by order-book depth (depth 0 → `no_fill`). Every entry

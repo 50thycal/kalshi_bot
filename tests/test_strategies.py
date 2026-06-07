@@ -17,6 +17,7 @@ class _S:
 
     paper_min_edge_cents = 3
     paper_momentum_direction = "momentum"
+    paper_momentum_project_hours = 24.0
 
 
 def _metrics(yes_bid, no_bid, ticker="T", depth=300):
