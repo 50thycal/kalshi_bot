@@ -89,7 +89,7 @@ class Settings(BaseSettings):
 
     # --- Paper trading (BOT_MODE=paper) ---
     paper_strategies: str = "buy_favorite,momentum,ladder"
-    paper_min_edge_cents: int = 3
+    paper_min_edge_cents: int = 1
     paper_momentum_lookback_hours: float = 6.0
     paper_momentum_direction: str = "momentum"
     paper_order_size: int = 1
