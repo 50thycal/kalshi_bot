@@ -252,6 +252,7 @@ def _log_paper(summary: PaperCycleSummary) -> None:
         realized_pnl=round(summary.realized_pnl, 4),
         open_positions=summary.open_positions,
         fillability_rate=summary.fillability_rate,
+        per_strategy=summary.per_strategy,
     )
 
 

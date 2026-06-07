@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import logging
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 from .. import repository as repo
@@ -60,6 +60,14 @@ class PaperCycleSummary:
     closed_void: int = 0
     realized_pnl: float = 0.0
     open_positions: int = 0
+    per_strategy: dict[str, dict[str, int]] = field(default_factory=dict)
+
+    def bucket(self, strategy: str) -> dict[str, int]:
+        return self.per_strategy.setdefault(
+            strategy,
+            {"considered": 0, "proposed": 0, "opened": 0, "already_open": 0,
+             "risk_blocked": 0, "no_fill": 0},
+        )
 
     @property
     def fillability_rate(self) -> float | None:
@@ -115,9 +123,13 @@ class PaperTradingEngine:
         for c in candidates:
             self.summary.considered += 1
             for strategy in strategies:
+                b = self.summary.bucket(strategy)
+                b["considered"] += 1
                 proposal = self._proposal(session, strategy, c, ladder_map)
-                if proposal is not None:
-                    self._open_if_clear(session, strategy, c, proposal, account_state)
+                if proposal is None:
+                    continue
+                b["proposed"] += 1
+                self._open_if_clear(session, strategy, c, proposal, account_state)
         return self.summary
 
     def _proposal(
@@ -148,12 +160,15 @@ class PaperTradingEngine:
     ) -> None:
         s = self.settings
         ticker = c.signal.ticker
+        b = self.summary.bucket(strategy)
 
         if repo.get_open_paper_position(session, ticker, strategy) is not None:
             self.summary.already_open += 1
+            b["already_open"] += 1
             return
         if repo.count_open_paper_positions(session, strategy) >= s.paper_max_open_positions:
             self.summary.risk_blocked += 1
+            b["risk_blocked"] += 1
             return
 
         existing_exposure = repo.open_paper_exposure(session, strategy=strategy, ticker=ticker)
@@ -167,11 +182,14 @@ class PaperTradingEngine:
         repo.insert_risk_event(session, c.signal_id, ticker, decision)
         if not decision.approved:
             self.summary.risk_blocked += 1
+            b["risk_blocked"] += 1
             return
 
         depth = _entry_depth(c.metrics, proposal.side)
         qty = min(s.paper_order_size, depth)
         if qty <= 0:
+            self.summary.no_fill += 1
+            b["no_fill"] += 1
             repo.record_no_fill(
                 session,
                 signal_id=c.signal_id,
@@ -184,7 +202,6 @@ class PaperTradingEngine:
                 model_probability=proposal.model_probability,
                 edge=proposal.edge,
             )
-            self.summary.no_fill += 1
             return
 
         entry_fee = kalshi_fee(proposal.price, qty, s.paper_fees_enabled)
@@ -214,6 +231,7 @@ class PaperTradingEngine:
             avg_price=proposal.price,
         )
         self.summary.opened += 1
+        b["opened"] += 1
 
     # -- open-position management -----------------------------------------
     def manage_open_positions(self, session) -> PaperCycleSummary:
