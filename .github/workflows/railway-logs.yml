@@ -1,0 +1,45 @@
+name: Railway Logs
+
+# Manually-triggered fetch of Railway deployment logs via the public GraphQL API.
+# Triggered via the Actions tab or the GitHub API; logs land in the job log.
+# Requires the `RAILWAY_TOKEN` repo secret (a Workspace or Account token), plus
+# `RAILWAY_PROJECT_ID` and `RAILWAY_ENVIRONMENT_ID` (and optionally
+# `RAILWAY_SERVICE_ID`) so the latest deployment can be located.
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "Number of log lines"
+        required: false
+        default: "200"
+        type: string
+      deployment_id:
+        description: "Deployment ID (optional; defaults to the latest deployment)"
+        required: false
+        type: string
+      filter:
+        description: "Optional Railway log filter string"
+        required: false
+        type: string
+
+jobs:
+  logs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Fetch Railway logs
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          RAILWAY_ENVIRONMENT_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
+          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+          RAILWAY_DEPLOYMENT_ID: ${{ inputs.deployment_id }}
+          LOG_LIMIT: ${{ inputs.limit }}
+          LOG_FILTER: ${{ inputs.filter }}
+        run: python scripts/railway_logs.py
