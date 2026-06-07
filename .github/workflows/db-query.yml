@@ -1,0 +1,39 @@
+name: DB Query (read-only)
+
+# Manually-triggered, read-only SQL against the bot's Postgres database.
+# Triggered via the Actions tab or the GitHub API; results land in the job log.
+# Requires the `DATABASE_URL_RO` repo secret (a SELECT-only role — see
+# scripts/sql/create_readonly_role.sql).
+
+on:
+  workflow_dispatch:
+    inputs:
+      sql:
+        description: "Read-only SQL (single SELECT/WITH/TABLE/EXPLAIN statement)"
+        required: true
+        type: string
+      max_rows:
+        description: "Max rows to print"
+        required: false
+        default: "200"
+        type: string
+
+jobs:
+  query:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install psycopg
+        run: pip install "psycopg[binary]>=3.1,<4.0"
+
+      - name: Run read-only query
+        env:
+          DATABASE_URL_RO: ${{ secrets.DATABASE_URL_RO }}
+          SQL: ${{ inputs.sql }}
+          MAX_ROWS: ${{ inputs.max_rows }}
+        run: python scripts/db_query.py
