@@ -119,14 +119,21 @@ the candidate signals — no real orders are ever placed. Paper trading uses a s
 bankroll (`PAPER_STARTING_BANKROLL`), so the real account balance is irrelevant.
 
 Each cycle the worker first **manages open paper positions**, then **scans and opens new
-ones**:
+ones**. Multiple strategies run as **parallel books** (`PAPER_STRATEGIES`, default
+`buy_favorite,momentum,ladder`) — one position per `(market, strategy)`, so their P&L can be
+compared head-to-head:
 
-- **Entry** (`PAPER_STRATEGY`, default `buy_favorite`): buy the side implied ≥ 50% at that
-  side's ask, conservatively filled. Quantity is `PAPER_ORDER_SIZE` capped by the order-book
-  depth at the entry price (depth 0 → recorded as a `no_fill`). One open position per market.
-  Every entry passes the Risk Manager in paper mode (`for_paper=True`): the live-only gates
-  (kill switch, mode, real balance) are skipped, but all spread/liquidity/closes-soon and
-  exposure caps still apply.
+- **`buy_favorite`** (control): buy the side implied ≥ 50% at its ask; edge = 0.
+- **`momentum`**: fit recent `market_snapshots.midpoint` drift → model probability; trade the
+  side the edge favors when `|edge| ≥ PAPER_MIN_EDGE_CENTS` (`PAPER_MOMENTUM_DIRECTION` =
+  `momentum`|`reversion`).
+- **`ladder`**: isotonic "fair curve" relative value across a series' strike ladder; trade
+  cheap/rich rungs beyond the edge threshold (auto-skips non-monotone groups).
+
+Edge is measured against the price actually paid (the ask), so it nets out the spread; entries
+are also `PAPER_ORDER_SIZE` capped by order-book depth (depth 0 → `no_fill`). Every entry
+passes the Risk Manager in paper mode (`for_paper=True`): the live-only gates (kill switch,
+mode, real balance) are skipped, but all spread/liquidity/closes-soon and exposure caps apply.
 - **Exit**: close at payoff (0/100) on settlement; otherwise close at the current bid after
   `PAPER_MAX_HOLD_HOURS`, or on optional `PAPER_TAKE_PROFIT_CENTS` / `PAPER_STOP_LOSS_CENTS`.
 - **Fees**: Kalshi's `ceil(0.07 × C × P × (1−P))` is modeled on entry and early-exit sells

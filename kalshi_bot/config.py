@@ -88,23 +88,25 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     # --- Paper trading (BOT_MODE=paper) ---
-    paper_strategy: str = "buy_favorite"
+    paper_strategies: str = "buy_favorite,momentum,ladder"
+    paper_min_edge_cents: int = 3
+    paper_momentum_lookback_hours: float = 6.0
+    paper_momentum_direction: str = "momentum"
     paper_order_size: int = 1
     paper_starting_bankroll: float = 1000.0
     paper_max_open_positions: int = 50
-    paper_max_hold_hours: float = 6.0
+    paper_max_hold_hours: float = 2.0
     paper_take_profit_cents: int | None = None
     paper_stop_loss_cents: int | None = None
     paper_fees_enabled: bool = True
 
-    @field_validator("paper_strategy", mode="before")
+    @field_validator("paper_momentum_direction", mode="before")
     @classmethod
-    def _coerce_paper_strategy(cls, v: object) -> str:
-        valid = ("buy_favorite", "buy_yes", "buy_no")
+    def _coerce_momentum_direction(cls, v: object) -> str:
         if v is None:
-            return "buy_favorite"
+            return "momentum"
         v = str(v).strip().lower()
-        return v if v in valid else "buy_favorite"
+        return v if v in ("momentum", "reversion") else "momentum"
 
     @field_validator("paper_take_profit_cents", "paper_stop_loss_cents", mode="before")
     @classmethod
@@ -157,6 +159,12 @@ class Settings(BaseSettings):
     def target_series_prefix_list(self) -> list[str]:
         return [p.strip().upper() for p in self.target_series_prefixes.split(",") if p.strip()]
 
+    @property
+    def paper_strategy_list(self) -> list[str]:
+        valid = ("buy_favorite", "buy_yes", "buy_no", "momentum", "ladder")
+        out = [s.strip().lower() for s in self.paper_strategies.split(",") if s.strip()]
+        return [s for s in out if s in valid] or ["buy_favorite"]
+
     def redacted_summary(self) -> dict:
         """Config summary safe to log (never includes the private key)."""
         return {
@@ -176,7 +184,9 @@ class Settings(BaseSettings):
             "min_open_interest": self.min_open_interest,
             "min_hours_to_close": self.min_hours_to_close,
             "max_markets_per_scan": self.max_markets_per_scan,
-            "paper_strategy": self.paper_strategy,
+            "paper_strategies": self.paper_strategy_list,
+            "paper_min_edge_cents": self.paper_min_edge_cents,
+            "paper_momentum_direction": self.paper_momentum_direction,
             "paper_order_size": self.paper_order_size,
             "paper_starting_bankroll": self.paper_starting_bankroll,
             "paper_max_open_positions": self.paper_max_open_positions,

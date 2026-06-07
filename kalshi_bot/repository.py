@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy import func, select
@@ -195,21 +195,27 @@ def create_paper_trade(
     *,
     signal_id: int | None,
     ticker: str,
+    strategy: str,
     side: str,
     action: str,
     assumed_price: int,
     quantity: int,
     fill_assumption: str,
     entry_fee: float,
+    model_probability: float | None = None,
+    edge: float | None = None,
 ) -> m.PaperTrade:
     row = m.PaperTrade(
         signal_id=signal_id,
         market_ticker=ticker,
+        strategy=strategy,
         created_at=_now(),
         side=side,
         action=action,
         assumed_price=assumed_price,
         quantity=quantity,
+        model_probability=model_probability,
+        edge=edge,
         fill_assumption=fill_assumption,
         status="open",
         fees=entry_fee,
@@ -224,19 +230,25 @@ def record_no_fill(
     *,
     signal_id: int | None,
     ticker: str,
+    strategy: str,
     side: str,
     action: str,
     assumed_price: int | None,
     fill_assumption: str,
+    model_probability: float | None = None,
+    edge: float | None = None,
 ) -> m.PaperTrade:
     row = m.PaperTrade(
         signal_id=signal_id,
         market_ticker=ticker,
+        strategy=strategy,
         created_at=_now(),
         side=side,
         action=action,
         assumed_price=assumed_price,
         quantity=0,
+        model_probability=model_probability,
+        edge=edge,
         fill_assumption=fill_assumption,
         status="no_fill",
         closed_at=_now(),
@@ -246,34 +258,55 @@ def record_no_fill(
     return row
 
 
+def recent_midpoints(
+    session, ticker: str, lookback_hours: float
+) -> list[tuple[datetime, float]]:
+    """Midpoint history for a ticker over the lookback window, ascending by time."""
+    cutoff = _now() - timedelta(hours=lookback_hours)
+    rows = session.execute(
+        select(m.MarketSnapshot.captured_at, m.MarketSnapshot.midpoint)
+        .where(
+            m.MarketSnapshot.market_ticker == ticker,
+            m.MarketSnapshot.midpoint.is_not(None),
+            m.MarketSnapshot.captured_at >= cutoff,
+        )
+        .order_by(m.MarketSnapshot.captured_at.asc())
+    ).all()
+    return [(captured_at, float(mid)) for captured_at, mid in rows]
+
+
 def get_open_paper_trades(session) -> list[m.PaperTrade]:
     return list(
         session.scalars(select(m.PaperTrade).where(m.PaperTrade.status == "open")).all()
     )
 
 
-def get_open_paper_position(session, ticker: str) -> m.PaperPosition | None:
+def get_open_paper_position(session, ticker: str, strategy: str) -> m.PaperPosition | None:
     return session.scalar(
         select(m.PaperPosition).where(
-            m.PaperPosition.market_ticker == ticker, m.PaperPosition.status == "open"
+            m.PaperPosition.market_ticker == ticker,
+            m.PaperPosition.strategy == strategy,
+            m.PaperPosition.status == "open",
         )
     )
 
 
-def count_open_paper_positions(session) -> int:
-    return int(
-        session.scalar(
-            select(func.count())
-            .select_from(m.PaperPosition)
-            .where(m.PaperPosition.status == "open")
-        )
-        or 0
+def count_open_paper_positions(session, strategy: str | None = None) -> int:
+    stmt = select(func.count()).select_from(m.PaperPosition).where(
+        m.PaperPosition.status == "open"
     )
+    if strategy is not None:
+        stmt = stmt.where(m.PaperPosition.strategy == strategy)
+    return int(session.scalar(stmt) or 0)
 
 
-def open_paper_exposure(session, ticker: str | None = None) -> float:
-    """Open paper exposure in dollars (sum of quantity * avg_price_cents / 100)."""
-    stmt = select(m.PaperPosition).where(m.PaperPosition.status == "open")
+def open_paper_exposure(
+    session, *, strategy: str, ticker: str | None = None
+) -> float:
+    """Open paper exposure (dollars) for a strategy, optionally one ticker."""
+    stmt = select(m.PaperPosition).where(
+        m.PaperPosition.status == "open", m.PaperPosition.strategy == strategy
+    )
     if ticker is not None:
         stmt = stmt.where(m.PaperPosition.market_ticker == ticker)
     total = 0.0
@@ -283,10 +316,11 @@ def open_paper_exposure(session, ticker: str | None = None) -> float:
 
 
 def open_paper_position_for_trade(
-    session, *, ticker: str, side: str, quantity: int, avg_price: int
+    session, *, ticker: str, strategy: str, side: str, quantity: int, avg_price: int
 ) -> m.PaperPosition:
     pos = m.PaperPosition(
         market_ticker=ticker,
+        strategy=strategy,
         side=side,
         quantity=quantity,
         avg_price=avg_price,
@@ -316,7 +350,7 @@ def close_paper_trade(
     trade.closed_at = _now()
     session.add(trade)
 
-    pos = get_open_paper_position(session, trade.market_ticker)
+    pos = get_open_paper_position(session, trade.market_ticker, trade.strategy)
     if pos is not None:
         pos.status = status
         pos.pnl = pnl
@@ -360,11 +394,36 @@ def paper_cycle_stats(session) -> dict:
         "open_unrealized": round(open_unrealized, 4),
         "realized_total": round(realized_total, 4),
         "closed_trades": closed_count,
+        "by_strategy": paper_stats_by_strategy(session),
     }
 
 
-def mark_paper_position(session, ticker: str, unrealized_pnl: float) -> None:
-    pos = get_open_paper_position(session, ticker)
+def paper_stats_by_strategy(session) -> dict[str, dict]:
+    """Per-strategy rollup: open positions/unrealized + realized/closed."""
+    stats: dict[str, dict] = {}
+    for pos in session.scalars(
+        select(m.PaperPosition).where(m.PaperPosition.status == "open")
+    ).all():
+        key = pos.strategy or "unknown"
+        s = stats.setdefault(key, {"open": 0, "unrealized": 0.0, "closed": 0, "realized": 0.0})
+        s["open"] += 1
+        s["unrealized"] += float(pos.unrealized_pnl or 0)
+    for strategy, count, pnl in session.execute(
+        select(m.PaperTrade.strategy, func.count(), func.coalesce(func.sum(m.PaperTrade.pnl), 0))
+        .where(m.PaperTrade.status.in_(_CLOSED_STATUSES))
+        .group_by(m.PaperTrade.strategy)
+    ).all():
+        key = strategy or "unknown"
+        s = stats.setdefault(key, {"open": 0, "unrealized": 0.0, "closed": 0, "realized": 0.0})
+        s["closed"] = int(count)
+        s["realized"] = round(float(pnl), 4)
+    for s in stats.values():
+        s["unrealized"] = round(s["unrealized"], 4)
+    return stats
+
+
+def mark_paper_position(session, ticker: str, strategy: str, unrealized_pnl: float) -> None:
+    pos = get_open_paper_position(session, ticker, strategy)
     if pos is not None:
         pos.unrealized_pnl = unrealized_pnl
         session.add(pos)

@@ -14,7 +14,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from sqlalchemy import func, select  # noqa: E402
+from sqlalchemy import case, func, select  # noqa: E402
 
 from kalshi_bot import db  # noqa: E402
 from kalshi_bot import models as m  # noqa: E402
@@ -35,7 +35,25 @@ def main() -> int:
     db.init_engine(url)
 
     with db.session_scope() as s:
-        print("=== Paper trades by status ===")
+        print("=== Performance by strategy ===")
+        strat_rows = s.execute(
+            select(
+                m.PaperTrade.strategy,
+                func.count(),
+                func.coalesce(func.sum(m.PaperTrade.pnl), 0),
+                func.sum(case((m.PaperTrade.pnl > 0, 1), else_=0)),
+            )
+            .where(m.PaperTrade.status.in_(CLOSED))
+            .group_by(m.PaperTrade.strategy)
+            .order_by(func.coalesce(func.sum(m.PaperTrade.pnl), 0).desc())
+        ).all()
+        if not strat_rows:
+            print("  (no closed trades yet)")
+        for strat, closed, pnl, wins in strat_rows:
+            wr = f"{(int(wins or 0) / closed * 100):.0f}%" if closed else "n/a"
+            print(f"  {str(strat or 'unknown'):14s} closed={closed:4d}  pnl={_money(pnl)}  win={wr}")
+
+        print("\n=== Paper trades by status ===")
         for status, count, pnl in s.execute(
             select(m.PaperTrade.status, func.count(), func.coalesce(func.sum(m.PaperTrade.pnl), 0))
             .group_by(m.PaperTrade.status)

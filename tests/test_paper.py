@@ -6,7 +6,8 @@ from sqlalchemy import func, select
 
 from kalshi_bot import db
 from kalshi_bot import models as m
-from kalshi_bot.paper.engine import PaperTradingEngine, choose_entry, kalshi_fee
+from kalshi_bot.paper.engine import CandidateInput, PaperTradingEngine, kalshi_fee
+from kalshi_bot.paper.strategies import directional_proposal
 from kalshi_bot.risk.manager import RiskManager
 from kalshi_bot.scanner.metrics import compute_metrics
 from kalshi_bot.scanner.scanner import MarketScanner
@@ -21,18 +22,18 @@ def test_kalshi_fee_rounds_up_to_cent():
     assert kalshi_fee(61, 1, enabled=False) == 0.0
 
 
-def test_choose_entry_buys_favorite(settings):
-    settings.paper_strategy = "buy_favorite"
+def test_directional_buys_favorite():
     # midpoint 60.5 -> favorite YES, entered at YES ask (61)
     ob = {"orderbook": {"yes": [[60, 300]], "no": [[39, 300]]}}
     metrics = compute_metrics({"ticker": "T", "close_time": "2030-01-01T00:00:00Z"}, ob)
-    assert choose_entry(metrics, settings) == ("yes", "buy", 61)
+    prop = directional_proposal(metrics, "buy_favorite")
+    assert prop.side == "yes" and prop.price == 61 and prop.edge == 0.0
 
     # midpoint 9.5 -> favorite NO, entered at NO ask (100 - best_yes_bid 9 = 91)
     ob2 = {"orderbook": {"yes": [[9, 300]], "no": [[90, 300]]}}
     metrics2 = compute_metrics({"ticker": "T", "close_time": "2030-01-01T00:00:00Z"}, ob2)
-    side, action, price = choose_entry(metrics2, settings)
-    assert side == "no" and action == "buy" and price == 91
+    prop2 = directional_proposal(metrics2, "buy_favorite")
+    assert prop2.side == "no" and prop2.price == 91
 
 
 # -- end-to-end -------------------------------------------------------------
@@ -155,3 +156,54 @@ def test_paper_timeout_exit_sells_at_bid(settings):
         assert trade.exit_price == 60
         # gross = 1*(60-61)/100 = -0.01 ; minus entry fee 0.02 ; minus exit fee 0.02 = -0.05
         assert abs(float(trade.pnl) - (-0.05)) < 1e-9
+
+
+def test_parallel_books_open_per_strategy_and_settle(settings):
+    from datetime import datetime, timedelta, timezone
+
+    settings.bot_mode = "paper"
+    settings.paper_strategies = "buy_favorite,momentum"  # two per-market books
+    db.init_engine(settings.database_url)
+    db.create_all()
+
+    ticker = "KXMOM-1"
+    now = datetime.now(timezone.utc)
+    with db.session_scope() as session:
+        for mins, mid in [(60, 50.0), (30, 52.5), (5, 55.5)]:  # rising -> momentum YES edge
+            session.add(
+                m.MarketSnapshot(
+                    market_ticker=ticker,
+                    captured_at=now - timedelta(minutes=mins),
+                    midpoint=mid,
+                )
+            )
+
+    metrics = compute_metrics(
+        {"ticker": ticker, "close_time": "2030-01-01T00:00:00Z"},
+        {"orderbook": {"yes": [[55, 300]], "no": [[44, 300]]}},  # yes_ask 56, mid 55.5
+    )
+
+    class _Sig:
+        ticker = "KXMOM-1"
+
+    client = FakePaperClient({ticker: {"status": "active"}})
+    risk = RiskManager(settings)
+    engine = PaperTradingEngine(client, settings, risk)
+    cand = CandidateInput(signal=_Sig(), signal_id=None, metrics=metrics, market={"ticker": ticker})
+    with db.session_scope() as session:
+        engine.consider_candidates(session, [cand])
+
+    assert engine.summary.opened == 2  # favorite + momentum, separate books
+    with db.session_scope() as session:
+        strategies = sorted(t.strategy for t in session.scalars(select(m.PaperTrade)).all())
+        assert strategies == ["buy_favorite", "momentum"]
+        assert session.scalar(
+            select(func.count()).select_from(m.PaperPosition).where(m.PaperPosition.status == "open")
+        ) == 2
+
+    # Settle YES -> both strategy books close independently.
+    client._market_state[ticker] = {"status": "settled", "result": "yes"}
+    engine2 = PaperTradingEngine(client, settings, risk)
+    with db.session_scope() as session:
+        engine2.manage_open_positions(session)
+    assert engine2.summary.closed_settled == 2

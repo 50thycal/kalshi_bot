@@ -24,6 +24,7 @@ from datetime import datetime, timezone
 from .. import repository as repo
 from ..config import Settings
 from ..kalshi.client import KalshiClient
+from ..paper.engine import CandidateInput
 from ..risk.manager import RiskDecision, RiskManager
 from .metrics import MarketMetrics, compute_metrics, market_open_interest, market_volume
 from .signals import KEYWORDS, SignalResult, score_market
@@ -149,6 +150,7 @@ class MarketScanner:
 
         # 3) Per-market deep scan.
         ranked: list[tuple[SignalResult, MarketMetrics, dict, RiskDecision | None]] = []
+        paper_candidates: list = []
         ob_sample_logged = False
         for market in targets:
             ticker = market.get("ticker")
@@ -191,15 +193,10 @@ class MarketScanner:
             if signal.label in ("candidate", "paper_trade"):
                 summary.candidates_found += 1
                 if paper_engine is not None:
-                    # Paper mode: the engine evaluates risk (for_paper) and records the
-                    # risk_event, then opens a simulated trade if approved.
-                    decision = paper_engine.consider(
-                        session,
-                        signal=signal,
-                        signal_id=sig_row.id,
-                        metrics=metrics,
-                        market=market,
-                        account_state=account_state,
+                    # Paper mode: defer to the engine's batch pass (needs sibling markets
+                    # together for the ladder strategy).
+                    paper_candidates.append(
+                        CandidateInput(signal=signal, signal_id=sig_row.id, metrics=metrics, market=market)
                     )
                 else:
                     decision = self.risk.evaluate(
@@ -210,6 +207,10 @@ class MarketScanner:
                     )
                     repo.insert_risk_event(session, sig_row.id, ticker, decision)
             ranked.append((signal, metrics, market, decision))
+
+        # Paper mode: run all strategy books over the collected candidates.
+        if paper_engine is not None and paper_candidates:
+            paper_engine.consider_candidates(session, paper_candidates, account_state=account_state)
 
         # 4) Build the ranked candidate list (highest score first).
         ranked.sort(key=lambda t: t[0].score, reverse=True)

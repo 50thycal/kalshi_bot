@@ -3,19 +3,15 @@
 Simulates trades from the scanner's candidate signals so we can measure fill
 quality, spread/fee cost, and resolution outcomes — without placing real orders.
 
-- Entry (baseline, swappable): `buy_favorite` buys the side implied >= 50% at that
-  side's ask; `buy_yes`/`buy_no` force a side. Quantity is the risk-approved size
-  capped by the order-book depth at the entry price (depth 0 -> recorded no_fill).
+- Strategies run as **parallel books** (one position per (market, strategy)): a
+  directional control plus `momentum` and `ladder` edge models (see strategies.py).
 - Risk: every entry passes `RiskManager.evaluate(for_paper=True)` — the live-only
   gates are skipped but all quality/liquidity/exposure gates apply, measured against
-  a simulated bankroll and open paper positions.
+  a simulated bankroll and that strategy's open positions.
 - Exit: settlement (payoff 0/100), or — before settlement — a max-hold timeout or
   optional take-profit/stop-loss, closed conservatively at the current bid.
 - Fees: Kalshi's `ceil(0.07 * C * P * (1-P))` per trade, on entry and early-exit
   sells (never on settlement).
-
-The MVP signal is non-directional, so this is a measurement harness; `choose_entry`
-is the single seam where a future forecasting model plugs in.
 """
 
 from __future__ import annotations
@@ -29,10 +25,24 @@ from .. import repository as repo
 from ..config import Settings
 from ..kalshi.client import KalshiClient
 from ..kalshi.errors import AuthError
-from ..risk.manager import RiskDecision, RiskManager
+from ..risk.manager import RiskManager
 from ..scanner.metrics import MarketMetrics, compute_metrics
+from .strategies import (
+    EntryProposal,
+    directional_proposal,
+    ladder_proposals,
+    momentum_proposal,
+)
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class CandidateInput:
+    signal: object
+    signal_id: int | None
+    metrics: MarketMetrics
+    market: dict
 
 
 @dataclass
@@ -65,23 +75,6 @@ def kalshi_fee(price_cents: int | None, qty: int, enabled: bool = True) -> float
     return math.ceil(0.07 * qty * p * (1 - p) * 100) / 100.0
 
 
-def choose_entry(metrics: MarketMetrics, settings: Settings) -> tuple[str, str, int] | None:
-    """Return (side, action, entry_price_cents) for a new paper entry, or None."""
-    if not metrics.two_sided:
-        return None
-    strategy = settings.paper_strategy
-    if strategy == "buy_yes":
-        side = "yes"
-    elif strategy == "buy_no":
-        side = "no"
-    else:  # buy_favorite
-        side = "yes" if (metrics.midpoint is not None and metrics.midpoint >= 50) else "no"
-    price = metrics.best_yes_ask if side == "yes" else metrics.best_no_ask
-    if price is None:
-        return None
-    return side, "buy", price
-
-
 def _entry_depth(metrics: MarketMetrics, side: str) -> int:
     # Buying YES is filled by resting NO bids (depth_at_best_ask); buying NO by YES bids.
     return metrics.depth_at_best_ask if side == "yes" else metrics.depth_at_best_bid
@@ -105,80 +98,122 @@ class PaperTradingEngine:
         self.risk = risk
         self.summary = PaperCycleSummary()
 
-    # -- entries ----------------------------------------------------------
-    def consider(
+    # -- entries (batch, multi-strategy) ----------------------------------
+    def consider_candidates(
+        self, session, candidates: list[CandidateInput], account_state: dict | None = None
+    ) -> PaperCycleSummary:
+        s = self.settings
+        strategies = s.paper_strategy_list
+
+        # Ladder is relative-value across sibling markets, so precompute it once.
+        ladder_map: dict[str, EntryProposal] = {}
+        if "ladder" in strategies:
+            ladder_map = ladder_proposals(
+                [(c.signal.ticker, c.metrics) for c in candidates], s
+            )
+
+        for c in candidates:
+            self.summary.considered += 1
+            for strategy in strategies:
+                proposal = self._proposal(session, strategy, c, ladder_map)
+                if proposal is not None:
+                    self._open_if_clear(session, strategy, c, proposal, account_state)
+        return self.summary
+
+    def _proposal(
+        self, session, strategy: str, c: CandidateInput, ladder_map: dict[str, EntryProposal]
+    ) -> EntryProposal | None:
+        if strategy in ("buy_favorite", "buy_yes", "buy_no"):
+            return directional_proposal(c.metrics, strategy)
+        if strategy == "momentum":
+            return momentum_proposal(self._history(session, c.signal.ticker), c.metrics, self.settings)
+        if strategy == "ladder":
+            return ladder_map.get(c.signal.ticker)
+        return None
+
+    def _history(self, session, ticker: str) -> list[tuple[float, float]]:
+        rows = repo.recent_midpoints(session, ticker, self.settings.paper_momentum_lookback_hours)
+        if len(rows) < 2:
+            return []
+        first = rows[0][0]
+        return [((dt - first).total_seconds() / 3600.0, mid) for dt, mid in rows]
+
+    def _open_if_clear(
         self,
         session,
-        *,
-        signal,
-        signal_id: int | None,
-        metrics: MarketMetrics,
-        market: dict,
-        account_state: dict | None = None,
-    ) -> RiskDecision | None:
+        strategy: str,
+        c: CandidateInput,
+        proposal: EntryProposal,
+        account_state: dict | None,
+    ) -> None:
         s = self.settings
-        self.summary.considered += 1
-        ticker = signal.ticker
+        ticker = c.signal.ticker
 
-        entry = choose_entry(metrics, s)
-        if entry is None:
-            self.summary.risk_blocked += 1
-            return None
-        side, action, price = entry
-
-        # One open position per market in the MVP (no averaging).
-        if repo.get_open_paper_position(session, ticker) is not None:
+        if repo.get_open_paper_position(session, ticker, strategy) is not None:
             self.summary.already_open += 1
-            return None
-        if repo.count_open_paper_positions(session) >= s.paper_max_open_positions:
+            return
+        if repo.count_open_paper_positions(session, strategy) >= s.paper_max_open_positions:
             self.summary.risk_blocked += 1
-            return None
+            return
 
-        existing_exposure = repo.open_paper_exposure(session, ticker)
+        existing_exposure = repo.open_paper_exposure(session, strategy=strategy, ticker=ticker)
         decision = self.risk.evaluate(
-            signal=signal,
-            metrics=metrics,
+            signal=c.signal,
+            metrics=c.metrics,
             account_state=account_state,
             existing_exposure=existing_exposure,
             for_paper=True,
         )
-        repo.insert_risk_event(session, signal_id, ticker, decision)
+        repo.insert_risk_event(session, c.signal_id, ticker, decision)
         if not decision.approved:
             self.summary.risk_blocked += 1
-            return decision
+            return
 
-        depth = _entry_depth(metrics, side)
-        qty = min(s.paper_order_size, depth)  # paper size, capped by fillable depth
+        depth = _entry_depth(c.metrics, proposal.side)
+        qty = min(s.paper_order_size, depth)
         if qty <= 0:
             repo.record_no_fill(
                 session,
-                signal_id=signal_id,
+                signal_id=c.signal_id,
                 ticker=ticker,
-                side=side,
-                action=action,
-                assumed_price=price,
-                fill_assumption=f"buy {side} @ {price}c but depth {depth} -> no fill",
+                strategy=strategy,
+                side=proposal.side,
+                action="buy",
+                assumed_price=proposal.price,
+                fill_assumption=f"buy {proposal.side} @ {proposal.price}c but depth {depth} -> no fill",
+                model_probability=proposal.model_probability,
+                edge=proposal.edge,
             )
             self.summary.no_fill += 1
-            return decision
+            return
 
-        entry_fee = kalshi_fee(price, qty, s.paper_fees_enabled)
+        entry_fee = kalshi_fee(proposal.price, qty, s.paper_fees_enabled)
         repo.create_paper_trade(
             session,
-            signal_id=signal_id,
+            signal_id=c.signal_id,
             ticker=ticker,
-            side=side,
-            action=action,
-            assumed_price=price,
+            strategy=strategy,
+            side=proposal.side,
+            action="buy",
+            assumed_price=proposal.price,
             quantity=qty,
-            fill_assumption=f"buy {side} @ {side} ask {price}c, depth {depth}, qty {qty}",
+            fill_assumption=(
+                f"[{strategy}] buy {proposal.side} @ {proposal.price}c, depth {depth}, "
+                f"qty {qty}, edge {proposal.edge:+.3f}"
+            ),
             entry_fee=entry_fee,
+            model_probability=proposal.model_probability,
+            edge=proposal.edge,
         )
         repo.open_paper_position_for_trade(
-            session, ticker=ticker, side=side, quantity=qty, avg_price=price
+            session,
+            ticker=ticker,
+            strategy=strategy,
+            side=proposal.side,
+            quantity=qty,
+            avg_price=proposal.price,
         )
         self.summary.opened += 1
-        return decision
 
     # -- open-position management -----------------------------------------
     def manage_open_positions(self, session) -> PaperCycleSummary:
@@ -254,7 +289,7 @@ class PaperTradingEngine:
 
         if exit_status is None:
             unrealized = trade.quantity * gain_cents / 100.0
-            repo.mark_paper_position(session, trade.market_ticker, unrealized)
+            repo.mark_paper_position(session, trade.market_ticker, trade.strategy, unrealized)
             self.summary.marked += 1
             return
 
