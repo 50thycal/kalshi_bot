@@ -137,8 +137,20 @@ class WeatherTracker:
         summary.tracked = len(tracked)
 
         for t in tracked:
+            forecast_high = None
             if s.weather_forecast_enabled and self.forecast is not None:
-                self._store_forecast(session, t, summary)
+                forecast_high = self._store_forecast(session, t, summary)
+            logger.info(
+                "weather market",
+                extra={"extra_fields": {
+                    "city": t.city.code,
+                    "event": t.event.get("event_ticker"),
+                    "hours_to_close": round(t.hours_to_close, 2) if t.hours_to_close is not None else None,
+                    "favorite": t.favorite.get("yes_sub_title") or t.favorite.get("subtitle"),
+                    "favorite_mid": round(t.favorite_mid, 1),
+                    "forecast_high_f": forecast_high,
+                }},
+            )
             if t.hours_to_close is None:
                 continue
             event_ticker = t.event.get("event_ticker")
@@ -202,7 +214,7 @@ class WeatherTracker:
         summary.opened += 1
         summary.per_window[strategy] = summary.per_window.get(strategy, 0) + 1
 
-    def _store_forecast(self, session, t: _Tracked, summary) -> None:
+    def _store_forecast(self, session, t: _Tracked, summary) -> float | None:
         target = _target_date(t.event)
         high = None
         try:
@@ -224,3 +236,4 @@ class WeatherTracker:
             raw={"name": t.city.name, "favorite_mid": t.favorite_mid},
         )
         summary.forecasts_stored += 1
+        return high
