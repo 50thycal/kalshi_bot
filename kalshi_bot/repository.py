@@ -422,6 +422,73 @@ def paper_stats_by_strategy(session) -> dict[str, dict]:
     return stats
 
 
+def weather_entered(session, event_ticker: str, strategy: str) -> bool:
+    """Has a paper trade already been opened for this event under this window-strategy?
+    Bucket tickers start with the event ticker, so we match on that prefix."""
+    return (
+        session.scalar(
+            select(func.count())
+            .select_from(m.PaperTrade)
+            .where(
+                m.PaperTrade.strategy == strategy,
+                m.PaperTrade.market_ticker.like(f"{event_ticker}-%"),
+            )
+        )
+        or 0
+    ) > 0
+
+
+def abandon_open_paper_trades(session, keep_prefixes: tuple[str, ...]) -> int:
+    """Close out open paper trades/positions whose strategy doesn't start with one of
+    keep_prefixes (used to clear a prior experiment when switching modes)."""
+    closed = 0
+    for trade in session.scalars(
+        select(m.PaperTrade).where(m.PaperTrade.status == "open")
+    ).all():
+        if not (trade.strategy or "").startswith(keep_prefixes):
+            trade.status = "abandoned"
+            trade.closed_at = _now()
+            session.add(trade)
+            closed += 1
+    for pos in session.scalars(
+        select(m.PaperPosition).where(m.PaperPosition.status == "open")
+    ).all():
+        if not (pos.strategy or "").startswith(keep_prefixes):
+            pos.status = "abandoned"
+            pos.closed_at = _now()
+            session.add(pos)
+    session.flush()
+    return closed
+
+
+def insert_weather_forecast(
+    session,
+    *,
+    city: str,
+    series_ticker: str | None,
+    event_ticker: str | None,
+    target_date: str | None,
+    station: str | None,
+    forecast_high_f: float | None,
+    source: str,
+    raw: dict | None = None,
+) -> m.WeatherForecast:
+    row = m.WeatherForecast(
+        captured_at=_now(),
+        city=city,
+        series_ticker=series_ticker,
+        event_ticker=event_ticker,
+        target_date=target_date,
+        station=station,
+        forecast_high_f=forecast_high_f,
+        source=source,
+        raw_json=_safe_json(raw or {}),
+    )
+    session.add(row)
+    session.flush()
+    return row
+
+
 def mark_paper_position(session, ticker: str, strategy: str, unrealized_pnl: float) -> None:
     pos = get_open_paper_position(session, ticker, strategy)
     if pos is not None:

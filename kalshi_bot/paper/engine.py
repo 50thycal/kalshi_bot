@@ -302,8 +302,13 @@ class PaperTradingEngine:
             datetime.now(timezone.utc) - _aware(trade.created_at)
         ).total_seconds() / 3600.0
 
+        # Weather books are daily bets — hold to settlement (no timeout / TP / SL).
+        hold_to_settlement = (trade.strategy or "").startswith("weather")
+
         exit_status: str | None = None
-        if s.paper_take_profit_cents is not None and gain_cents >= s.paper_take_profit_cents:
+        if hold_to_settlement:
+            exit_status = None
+        elif s.paper_take_profit_cents is not None and gain_cents >= s.paper_take_profit_cents:
             exit_status, counter = "closed_tp", "closed_tp"
         elif s.paper_stop_loss_cents is not None and gain_cents <= -s.paper_stop_loss_cents:
             exit_status, counter = "closed_sl", "closed_sl"

@@ -159,6 +159,25 @@ unrealized, fillability, and P&L by category):
 DATABASE_URL=postgresql://... python scripts/paper_stats.py
 ```
 
+## Weather mode (Phase 4)
+
+`BOT_MODE=weather` runs a focused pipeline on Kalshi's **daily high-temperature** markets
+instead of the broad scanner. Each city ("Highest temperature in `<CITY>` today?") is a daily
+event with ~6 mutually-exclusive 2° buckets settling on the NWS Daily Climate Report.
+
+- **Baseline**: for the top `WEATHER_TOP_N` cities by volume, buy the **favorite bucket** (highest
+  implied probability) at several hours-to-settlement snapshots (`WEATHER_ENTRY_HOURS`, default
+  `12,8,4`) — separate paper books `weather_fav_h12/h8/h4` — held to settlement. Comparing the
+  windows shows how much entry timing matters.
+- **Forecast collection**: each cycle fetches the NWS daily-high forecast (`api.weather.gov`, free,
+  needs `NWS_USER_AGENT`) per city and stores it in `weather_forecasts` — the dataset for a future
+  forecast-edge strategy (forecast high → bucket probabilities → trade the mispriced bucket).
+- On startup it abandons any open paper positions from prior experiments
+  (`PAPER_ABANDON_FOREIGN_ON_START`).
+
+City→station/lat-lon mapping lives in `kalshi_bot/weather/cities.py`; verify the `KXHIGH*` series
+tickers against the first run's logs.
+
 ## Safety
 
 The bot must fail closed. It will not do anything trade-like if config is missing, the

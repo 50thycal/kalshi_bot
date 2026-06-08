@@ -245,6 +245,22 @@ class AccountSnapshot(Base):
     raw_json: Mapped[dict | None] = mapped_column(JSONType)
 
 
+class WeatherForecast(Base):
+    __tablename__ = "weather_forecasts"
+    __table_args__ = (Index("ix_weather_forecasts_event_time", "event_ticker", "captured_at"),)
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    captured_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    city: Mapped[str] = mapped_column(String(32), nullable=False)
+    series_ticker: Mapped[str | None] = mapped_column(String(64))
+    event_ticker: Mapped[str | None] = mapped_column(String(128))
+    target_date: Mapped[str | None] = mapped_column(String(16))
+    station: Mapped[str | None] = mapped_column(String(16))
+    forecast_high_f: Mapped[float | None] = mapped_column(Float)
+    source: Mapped[str | None] = mapped_column(String(32))
+    raw_json: Mapped[dict | None] = mapped_column(JSONType)
+
+
 class SystemEvent(Base):
     __tablename__ = "system_events"
 

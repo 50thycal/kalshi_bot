@@ -28,6 +28,8 @@ from .logging_config import configure_logging, log_event
 from .paper.engine import PaperCycleSummary, PaperTradingEngine
 from .risk.manager import RiskManager
 from .scanner.scanner import MarketScanner, ScanSummary
+from .weather.forecast import NwsForecastClient
+from .weather.tracker import WeatherCycleSummary, WeatherTracker
 
 logger = logging.getLogger("kalshi_bot.main")
 
@@ -81,6 +83,21 @@ def run() -> int:
 
     scanner = MarketScanner(client, settings, RiskManager(settings))
 
+    # Weather mode runs its own focused pipeline instead of the broad scanner.
+    weather = settings.bot_mode == "weather"
+    forecast_client = NwsForecastClient(settings.nws_user_agent) if weather else None
+    weather_engine = PaperTradingEngine(client, settings, scanner.risk) if weather else None
+    weather_tracker = (
+        WeatherTracker(client, settings, forecast_client) if weather else None
+    )
+    if weather and settings.paper_abandon_foreign_on_start:
+        try:
+            with session_scope() as session:
+                n = repo.abandon_open_paper_trades(session, keep_prefixes=("weather",))
+            log_event(logger, logging.INFO, "abandoned non-weather paper positions", count=n)
+        except Exception:  # noqa: BLE001
+            logger.exception("failed to abandon foreign paper positions")
+
     signal_module.signal(signal_module.SIGTERM, _handle_signal)
     signal_module.signal(signal_module.SIGINT, _handle_signal)
 
@@ -88,7 +105,10 @@ def run() -> int:
     try:
         while True:
             try:
-                _run_cycle(settings, client, scanner)
+                if weather:
+                    _run_weather_cycle(settings, client, weather_engine, weather_tracker)
+                else:
+                    _run_cycle(settings, client, scanner)
             except AuthError:
                 logger.error("kalshi authentication failure; shutting down (fail-closed)")
                 exit_code = 1
@@ -105,6 +125,8 @@ def run() -> int:
                 break
     finally:
         client.close()
+        if forecast_client is not None:
+            forecast_client.close()
     return exit_code
 
 
@@ -231,6 +253,51 @@ def _log_ranked(summary: ScanSummary) -> None:
             risk_reasons=c.risk_reasons,
             title=c.title[:80],
         )
+
+
+def _run_weather_cycle(settings, client, engine, tracker) -> None:
+    status = client.get_exchange_status()  # AuthError propagates -> hard fail
+    log_event(
+        logger,
+        logging.INFO,
+        "exchange status",
+        **{k: status.get(k) for k in ("exchange_active", "trading_active") if k in status},
+    )
+    with session_scope() as session:
+        run_row = repo.start_bot_run(session, settings.bot_mode)
+        try:
+            engine.manage_open_positions(session)  # settle/mark (weather holds to settlement)
+            summary = tracker.run_once(session)
+            repo.finish_bot_run(
+                session,
+                run_row,
+                status="completed",
+                markets_scanned=summary.events_seen,
+                candidates_found=summary.tracked,
+            )
+            _log_weather(summary)
+            log_event(logger, logging.INFO, "paper portfolio", **repo.paper_cycle_stats(session))
+        except Exception as exc:
+            repo.finish_bot_run(
+                session, run_row, status="error", markets_scanned=0, candidates_found=0,
+                error_message=str(exc)[:500],
+            )
+            raise
+
+
+def _log_weather(summary: WeatherCycleSummary) -> None:
+    log_event(
+        logger,
+        logging.INFO,
+        "weather cycle",
+        events_seen=summary.events_seen,
+        tracked=summary.tracked,
+        forecasts_stored=summary.forecasts_stored,
+        opened=summary.opened,
+        skipped_no_book=summary.skipped_no_book,
+        open_positions=summary.open_positions,
+        per_window=summary.per_window,
+    )
 
 
 def _log_paper(summary: PaperCycleSummary) -> None:

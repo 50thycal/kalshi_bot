@@ -15,10 +15,10 @@ from typing import Literal
 from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-BotMode = Literal["scanner", "paper", "approval", "live"]
+BotMode = Literal["scanner", "paper", "approval", "live", "weather"]
 KalshiEnv = Literal["demo", "production"]
 
-VALID_MODES = ("scanner", "paper", "approval", "live")
+VALID_MODES = ("scanner", "paper", "approval", "live", "weather")
 VALID_ENVS = ("demo", "production")
 
 DEMO_BASE_URL = "https://demo-api.kalshi.co/trade-api/v2"
@@ -104,6 +104,13 @@ class Settings(BaseSettings):
     paper_stop_loss_cents: int | None = None
     paper_fees_enabled: bool = True
 
+    # --- Weather mode (BOT_MODE=weather) ---
+    weather_top_n: int = 10
+    weather_entry_hours: str = "12,8,4"
+    weather_forecast_enabled: bool = True
+    nws_user_agent: str = "kalshi-bot (set NWS_USER_AGENT to your app + contact email)"
+    paper_abandon_foreign_on_start: bool = True
+
     @field_validator("paper_momentum_direction", mode="before")
     @classmethod
     def _coerce_momentum_direction(cls, v: object) -> str:
@@ -164,6 +171,20 @@ class Settings(BaseSettings):
         return [p.strip().upper() for p in self.target_series_prefixes.split(",") if p.strip()]
 
     @property
+    def weather_entry_hours_list(self) -> list[float]:
+        out = []
+        for part in self.weather_entry_hours.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            try:
+                out.append(float(part))
+            except ValueError:
+                continue
+        # Widest window first so the earliest snapshot fires before later ones.
+        return sorted(set(out), reverse=True) or [12.0, 8.0, 4.0]
+
+    @property
     def paper_strategy_list(self) -> list[str]:
         valid = ("buy_favorite", "buy_yes", "buy_no", "momentum", "reversion", "ladder")
         out = [s.strip().lower() for s in self.paper_strategies.split(",") if s.strip()]
@@ -199,6 +220,9 @@ class Settings(BaseSettings):
             "paper_max_hold_hours": self.paper_max_hold_hours,
             "paper_take_profit_cents": self.paper_take_profit_cents,
             "paper_stop_loss_cents": self.paper_stop_loss_cents,
+            "weather_top_n": self.weather_top_n,
+            "weather_entry_hours": self.weather_entry_hours_list,
+            "weather_forecast_enabled": self.weather_forecast_enabled,
             "api_key_id_present": bool(self.kalshi_api_key_id),
             "private_key_present": bool(self.private_key_pem),
         }
