@@ -200,13 +200,15 @@ def test_capture_settlements_records_winning_bucket(settings):
 @respx.mock
 def test_nws_daily_high_parse():
     respx.get("https://api.weather.gov/points/40.779,-73.9693").mock(
-        return_value=Response(200, json={"properties": {"forecastGridData": "https://api.weather.gov/gridpoints/OKX/33,35"}})
+        return_value=Response(200, json={"properties": {"forecast": "https://api.weather.gov/gridpoints/OKX/33,35/forecast"}})
     )
-    respx.get("https://api.weather.gov/gridpoints/OKX/33,35").mock(
-        return_value=Response(200, json={"properties": {"maxTemperature": {"uom": "wmoUnit:degC", "values": [
-            {"validTime": "2026-06-08T06:00:00+00:00/PT13H", "value": 25.0},
-        ]}}})
+    respx.get("https://api.weather.gov/gridpoints/OKX/33,35/forecast").mock(
+        return_value=Response(200, json={"properties": {"periods": [
+            {"name": "Tonight", "isDaytime": False, "startTime": "2026-06-07T18:00:00-04:00", "temperature": 60, "temperatureUnit": "F"},
+            {"name": "Today", "isDaytime": True, "startTime": "2026-06-08T06:00:00-04:00", "temperature": 77, "temperatureUnit": "F"},
+            {"name": "Monday", "isDaytime": True, "startTime": "2026-06-09T06:00:00-04:00", "temperature": 81, "temperatureUnit": "F"},
+        ]}})
     )
     with NwsForecastClient("test-agent") as nws:
-        high = nws.daily_high_f(40.779, -73.9693, date(2026, 6, 8))
-    assert high == 77.0  # 25C -> 77F
+        assert nws.daily_high_f(40.779, -73.9693, date(2026, 6, 8)) == 77.0
+        assert nws.daily_high_f(40.779, -73.9693, date(2026, 6, 9)) == 81.0  # picks the right day
