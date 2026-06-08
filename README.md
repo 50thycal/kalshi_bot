@@ -176,7 +176,16 @@ event with ~6 mutually-exclusive 2° buckets settling on the NWS Daily Climate R
   (`PAPER_ABANDON_FOREIGN_ON_START`).
 
 City→station/lat-lon mapping lives in `kalshi_bot/weather/cities.py`; verify the `KXHIGH*` series
-tickers against the first run's logs.
+tickers against the first run's logs. Each cycle also captures the actual winning bucket of recently
+**settled** events into `weather_settlements` (the ground truth). Grade the forecast vs the market:
+
+```bash
+DATABASE_URL=postgresql://... python scripts/weather_score.py
+```
+
+reports the favorite baseline win-rate/P&L by entry window, and a head-to-head — **NWS-implied
+bucket vs market favorite** (who was right on settled events; "NWS-only-right ≫ market-only-right"
+over enough events means a real forecast edge).
 
 ## Safety
 

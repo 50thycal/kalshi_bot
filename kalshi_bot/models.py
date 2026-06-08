@@ -261,6 +261,22 @@ class WeatherForecast(Base):
     raw_json: Mapped[dict | None] = mapped_column(JSONType)
 
 
+class WeatherSettlement(Base):
+    __tablename__ = "weather_settlements"
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    event_ticker: Mapped[str] = mapped_column(String(128), unique=True, index=True, nullable=False)
+    city: Mapped[str | None] = mapped_column(String(32))
+    series_ticker: Mapped[str | None] = mapped_column(String(64))
+    target_date: Mapped[str | None] = mapped_column(String(16))
+    winning_ticker: Mapped[str | None] = mapped_column(String(128))
+    winning_subtitle: Mapped[str | None] = mapped_column(String(64))
+    actual_low_f: Mapped[float | None] = mapped_column(Float)
+    actual_high_f: Mapped[float | None] = mapped_column(Float)
+    captured_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    raw_json: Mapped[dict | None] = mapped_column(JSONType)
+
+
 class SystemEvent(Base):
     __tablename__ = "system_events"
 

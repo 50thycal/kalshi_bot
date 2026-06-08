@@ -23,6 +23,7 @@ from ..scanner.metrics import (
     parse_dt,
     price_to_cents,
 )
+from .buckets import parse_bucket_range
 from .cities import CITIES, City
 from .forecast import NwsForecastClient
 
@@ -42,6 +43,7 @@ class WeatherCycleSummary:
     forecasts_stored: int = 0
     opened: int = 0
     skipped_no_book: int = 0
+    settlements_captured: int = 0
     open_positions: int = 0
     per_window: dict[str, int] = field(default_factory=dict)
 
@@ -140,15 +142,18 @@ class WeatherTracker:
             forecast_high = None
             if s.weather_forecast_enabled and self.forecast is not None:
                 forecast_high = self._store_forecast(session, t, summary)
+            rules = t.favorite.get("rules_primary") or t.event.get("rules_primary") or ""
             logger.info(
                 "weather market",
                 extra={"extra_fields": {
                     "city": t.city.code,
+                    "station": t.city.station,
                     "event": t.event.get("event_ticker"),
                     "hours_to_close": round(t.hours_to_close, 2) if t.hours_to_close is not None else None,
                     "favorite": t.favorite.get("yes_sub_title") or t.favorite.get("subtitle"),
                     "favorite_mid": round(t.favorite_mid, 1),
                     "forecast_high_f": forecast_high,
+                    "settlement": rules[:200],
                 }},
             )
             if t.hours_to_close is None:
@@ -168,8 +173,49 @@ class WeatherTracker:
                         break
                 self._enter(session, strategy, t, fav_metrics, summary)
 
+        self._capture_settlements(session, summary)
         summary.open_positions = repo.count_open_paper_positions(session)
         return summary
+
+    def _capture_settlements(self, session, summary) -> None:
+        """Record the actual winning bucket for recently settled events (the ground
+        truth to grade NWS forecast vs the market favorite)."""
+        for city in CITIES:
+            try:
+                page = self.client.get_events(
+                    series_ticker=city.series_ticker, status="settled", with_nested_markets=True
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "weather: settled events fetch failed",
+                    extra={"extra_fields": {"city": city.code, "error": str(exc)}},
+                )
+                continue
+            for event in page.get("events") or []:
+                event_ticker = event.get("event_ticker")
+                if not event_ticker or repo.weather_settlement_exists(session, event_ticker):
+                    continue
+                winner = next(
+                    (mk for mk in (event.get("markets") or []) if (mk.get("result") or "").lower() == "yes"),
+                    None,
+                )
+                if winner is None:
+                    continue
+                subtitle = winner.get("yes_sub_title") or winner.get("subtitle")
+                low, high = parse_bucket_range(subtitle)
+                target = _target_date(event)
+                repo.insert_weather_settlement(
+                    session,
+                    event_ticker=event_ticker,
+                    city=city.code,
+                    series_ticker=city.series_ticker,
+                    target_date=target.isoformat() if target else None,
+                    winning_ticker=winner.get("ticker"),
+                    winning_subtitle=subtitle,
+                    actual_low_f=low,
+                    actual_high_f=high,
+                )
+                summary.settlements_captured += 1
 
     def _favorite_metrics(self, market: dict):
         ticker = market.get("ticker")

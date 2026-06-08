@@ -13,8 +13,19 @@ from kalshi_bot import models as m
 from kalshi_bot import repository as repo
 from kalshi_bot.paper.engine import PaperTradingEngine
 from kalshi_bot.risk.manager import RiskManager
+from kalshi_bot.weather.buckets import forecast_in_bucket, parse_bucket_range
 from kalshi_bot.weather.forecast import NwsForecastClient
 from kalshi_bot.weather.tracker import WeatherTracker
+
+
+def test_parse_bucket_range_and_forecast_in_bucket():
+    assert parse_bucket_range("74° to 75°") == (74.0, 75.0)
+    assert parse_bucket_range("83° or below") == (None, 83.0)
+    assert parse_bucket_range("95° or above") == (95.0, None)
+    assert forecast_in_bucket(77, 76.0, 77.0) is True
+    assert forecast_in_bucket(77, 74.0, 75.0) is False
+    assert forecast_in_bucket(93, None, 83.0) is False  # NWS 93 not <= 83
+    assert forecast_in_bucket(80, 95.0, None) is False
 
 
 def _bucket(ticker, sub, yb, ya):
@@ -146,6 +157,44 @@ def test_abandon_foreign_keeps_weather(settings):
         assert n == 1
         statuses = {t.strategy: t.status for t in session.scalars(select(m.PaperTrade)).all()}
         assert statuses == {"momentum": "abandoned", "weather_fav_h8": "open"}
+
+
+def test_capture_settlements_records_winning_bucket(settings):
+    settings.bot_mode = "weather"
+    db.init_engine(settings.database_url)
+    db.create_all()
+
+    settled_event = {
+        "event_ticker": "KXHIGHNY-26JUN07",
+        "series_ticker": "KXHIGHNY",
+        "close_time": "2026-06-08T05:00:00Z",
+        "markets": [
+            {"ticker": "KXHIGHNY-26JUN07-B72.5", "yes_sub_title": "72° to 73°", "result": "no"},
+            {"ticker": "KXHIGHNY-26JUN07-B76.5", "yes_sub_title": "76° to 77°", "result": "yes"},
+        ],
+    }
+
+    class SettledClient:
+        def get_events(self, series_ticker, status="open", with_nested_markets=True):
+            if series_ticker == "KXHIGHNY" and status == "settled":
+                return {"events": [settled_event]}
+            return {"events": []}
+
+    tracker = WeatherTracker(SettledClient(), settings, forecast=None)
+    with db.session_scope() as session:
+        summary = tracker.run_once(session)
+    assert summary.settlements_captured == 1
+    with db.session_scope() as session:
+        st = session.scalar(select(m.WeatherSettlement))
+        assert st.event_ticker == "KXHIGHNY-26JUN07"
+        assert st.winning_subtitle == "76° to 77°"
+        assert (st.actual_low_f, st.actual_high_f) == (76.0, 77.0)
+
+    # Idempotent: a second pass doesn't duplicate.
+    with db.session_scope() as session:
+        s2 = tracker.run_once(session)
+        assert s2.settlements_captured == 0
+        assert session.scalar(select(func.count()).select_from(m.WeatherSettlement)) == 1
 
 
 @respx.mock

@@ -295,6 +295,7 @@ def _log_weather(summary: WeatherCycleSummary) -> None:
         forecasts_stored=summary.forecasts_stored,
         opened=summary.opened,
         skipped_no_book=summary.skipped_no_book,
+        settlements_captured=summary.settlements_captured,
         open_positions=summary.open_positions,
         per_window=summary.per_window,
     )

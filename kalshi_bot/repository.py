@@ -489,6 +489,47 @@ def insert_weather_forecast(
     return row
 
 
+def weather_settlement_exists(session, event_ticker: str) -> bool:
+    return (
+        session.scalar(
+            select(func.count())
+            .select_from(m.WeatherSettlement)
+            .where(m.WeatherSettlement.event_ticker == event_ticker)
+        )
+        or 0
+    ) > 0
+
+
+def insert_weather_settlement(
+    session,
+    *,
+    event_ticker: str,
+    city: str | None,
+    series_ticker: str | None,
+    target_date: str | None,
+    winning_ticker: str | None,
+    winning_subtitle: str | None,
+    actual_low_f: float | None,
+    actual_high_f: float | None,
+    raw: dict | None = None,
+) -> m.WeatherSettlement:
+    row = m.WeatherSettlement(
+        event_ticker=event_ticker,
+        city=city,
+        series_ticker=series_ticker,
+        target_date=target_date,
+        winning_ticker=winning_ticker,
+        winning_subtitle=winning_subtitle,
+        actual_low_f=actual_low_f,
+        actual_high_f=actual_high_f,
+        captured_at=_now(),
+        raw_json=_safe_json(raw or {}),
+    )
+    session.add(row)
+    session.flush()
+    return row
+
+
 def mark_paper_position(session, ticker: str, strategy: str, unrealized_pnl: float) -> None:
     pos = get_open_paper_position(session, ticker, strategy)
     if pos is not None:
