@@ -106,7 +106,7 @@ class Settings(BaseSettings):
 
     # --- Weather mode (BOT_MODE=weather) ---
     weather_top_n: int = 10
-    weather_entry_hours: str = "12,8,4"
+    weather_entry_hours: str = "20,14,8"
     weather_strategies: str = "favorite,nws"
     weather_forecast_enabled: bool = True
     nws_user_agent: str = "kalshi-bot (set NWS_USER_AGENT to your app + contact email)"

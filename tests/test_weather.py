@@ -79,6 +79,8 @@ class FakeWeatherClient:
 
 def test_favorite_entered_per_window_and_dedup(settings):
     settings.bot_mode = "weather"
+    settings.weather_entry_hours = "12,8,4"
+    settings.weather_strategies = "favorite"
     db.init_engine(settings.database_url)
     db.create_all()
 
