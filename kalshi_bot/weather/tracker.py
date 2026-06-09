@@ -23,7 +23,7 @@ from ..scanner.metrics import (
     parse_dt,
     price_to_cents,
 )
-from .buckets import parse_bucket_range
+from .buckets import forecast_in_bucket, parse_bucket_range
 from .cities import CITIES, City
 from .forecast import NwsForecastClient
 
@@ -156,22 +156,41 @@ class WeatherTracker:
                     "settlement": rules[:200],
                 }},
             )
-            if t.hours_to_close is None:
-                continue
             event_ticker = t.event.get("event_ticker")
-            fav_metrics = None
+            if t.hours_to_close is None or not event_ticker:
+                continue
+            if t.hours_to_close > max(s.weather_entry_hours_list):
+                continue  # too early — no window open yet
+
+            strategies = s.weather_strategy_list
+            markets = t.event.get("markets") or []
+            fav_metrics = self._bucket_metrics(t.favorite) if "favorite" in strategies else None
+            nws_market = (
+                self._nws_bucket(markets, forecast_high)
+                if "nws" in strategies and forecast_high is not None
+                else None
+            )
+            nws_metrics = None
+            if nws_market is not None:
+                nws_metrics = (
+                    fav_metrics
+                    if fav_metrics is not None and nws_market.get("ticker") == t.favorite.get("ticker")
+                    else self._bucket_metrics(nws_market)
+                )
+
             for hours in s.weather_entry_hours_list:
-                strategy = f"weather_fav_h{int(hours)}"
                 if t.hours_to_close > hours:
                     continue
-                if not event_ticker or repo.weather_entered(session, event_ticker, strategy):
-                    continue
-                if fav_metrics is None:
-                    fav_metrics = self._favorite_metrics(t.favorite)
-                    if fav_metrics is None:
-                        summary.skipped_no_book += 1
-                        break
-                self._enter(session, strategy, t, fav_metrics, summary)
+                if "favorite" in strategies:
+                    self._maybe_enter(
+                        session, f"weather_fav_h{int(hours)}", event_ticker, t, t.favorite,
+                        fav_metrics, t.favorite_mid / 100.0, summary,
+                    )
+                if nws_market is not None:
+                    self._maybe_enter(
+                        session, f"weather_nws_h{int(hours)}", event_ticker, t, nws_market,
+                        nws_metrics, None, summary,
+                    )
 
         self._capture_settlements(session, summary)
         summary.open_positions = repo.count_open_paper_positions(session)
@@ -217,7 +236,17 @@ class WeatherTracker:
                 )
                 summary.settlements_captured += 1
 
-    def _favorite_metrics(self, market: dict):
+    def _nws_bucket(self, markets: list[dict], forecast_high: float | None) -> dict | None:
+        """The bucket whose range contains the NWS forecast high."""
+        if forecast_high is None:
+            return None
+        for mk in markets:
+            low, high = parse_bucket_range(mk.get("yes_sub_title") or mk.get("subtitle"))
+            if forecast_in_bucket(forecast_high, low, high):
+                return mk
+        return None
+
+    def _bucket_metrics(self, market: dict):
         ticker = market.get("ticker")
         try:
             ob = self.client.get_orderbook(ticker, depth=self.settings.orderbook_depth)
@@ -230,7 +259,15 @@ class WeatherTracker:
         metrics = compute_metrics(market, ob, top_n=self.settings.orderbook_depth)
         return metrics if (metrics.two_sided and metrics.best_yes_ask is not None) else None
 
-    def _enter(self, session, strategy: str, t: _Tracked, metrics, summary) -> None:
+    def _maybe_enter(
+        self, session, strategy: str, event_ticker: str, t: _Tracked, market: dict,
+        metrics, model_probability: float | None, summary,
+    ) -> None:
+        if repo.weather_entered(session, event_ticker, strategy):
+            return
+        if metrics is None:
+            summary.skipped_no_book += 1
+            return
         s = self.settings
         qty = min(s.paper_order_size, metrics.depth_at_best_ask)
         if qty <= 0:
@@ -238,24 +275,24 @@ class WeatherTracker:
             return
         price = metrics.best_yes_ask
         fee = kalshi_fee(price, qty, s.paper_fees_enabled)
-        bucket = t.favorite.get("yes_sub_title") or t.favorite.get("subtitle") or ""
+        bucket = market.get("yes_sub_title") or market.get("subtitle") or ""
+        ticker = market.get("ticker")
         repo.create_paper_trade(
             session,
             signal_id=None,
-            ticker=t.favorite.get("ticker"),
+            ticker=ticker,
             strategy=strategy,
             side="yes",
             action="buy",
             assumed_price=price,
             quantity=qty,
-            fill_assumption=f"[{strategy}] {t.city.code} favorite '{bucket}' @ {price}c",
+            fill_assumption=f"[{strategy}] {t.city.code} '{bucket}' @ {price}c",
             entry_fee=fee,
-            model_probability=(metrics.midpoint / 100.0 if metrics.midpoint is not None else None),
+            model_probability=model_probability,
             edge=0.0,
         )
         repo.open_paper_position_for_trade(
-            session, ticker=t.favorite.get("ticker"), strategy=strategy, side="yes",
-            quantity=qty, avg_price=price,
+            session, ticker=ticker, strategy=strategy, side="yes", quantity=qty, avg_price=price,
         )
         summary.opened += 1
         summary.per_window[strategy] = summary.per_window.get(strategy, 0) + 1

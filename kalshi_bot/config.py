@@ -107,6 +107,7 @@ class Settings(BaseSettings):
     # --- Weather mode (BOT_MODE=weather) ---
     weather_top_n: int = 10
     weather_entry_hours: str = "12,8,4"
+    weather_strategies: str = "favorite,nws"
     weather_forecast_enabled: bool = True
     nws_user_agent: str = "kalshi-bot (set NWS_USER_AGENT to your app + contact email)"
     paper_abandon_foreign_on_start: bool = True
@@ -172,7 +173,7 @@ class Settings(BaseSettings):
 
     @property
     def weather_entry_hours_list(self) -> list[float]:
-        out = []
+        out: list[float] = []
         for part in self.weather_entry_hours.split(","):
             part = part.strip()
             if not part:
@@ -183,6 +184,12 @@ class Settings(BaseSettings):
                 continue
         # Widest window first so the earliest snapshot fires before later ones.
         return sorted(set(out), reverse=True) or [12.0, 8.0, 4.0]
+
+    @property
+    def weather_strategy_list(self) -> list[str]:
+        valid = ("favorite", "nws")
+        out = [s.strip().lower() for s in self.weather_strategies.split(",") if s.strip()]
+        return [s for s in out if s in valid] or ["favorite"]
 
     @property
     def paper_strategy_list(self) -> list[str]:
@@ -222,6 +229,7 @@ class Settings(BaseSettings):
             "paper_stop_loss_cents": self.paper_stop_loss_cents,
             "weather_top_n": self.weather_top_n,
             "weather_entry_hours": self.weather_entry_hours_list,
+            "weather_strategies": self.weather_strategy_list,
             "weather_forecast_enabled": self.weather_forecast_enabled,
             "api_key_id_present": bool(self.kalshi_api_key_id),
             "private_key_present": bool(self.private_key_pem),

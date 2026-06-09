@@ -165,10 +165,14 @@ DATABASE_URL=postgresql://... python scripts/paper_stats.py
 instead of the broad scanner. Each city ("Highest temperature in `<CITY>` today?") is a daily
 event with ~6 mutually-exclusive 2° buckets settling on the NWS Daily Climate Report.
 
-- **Baseline**: for the top `WEATHER_TOP_N` cities by volume, buy the **favorite bucket** (highest
-  implied probability) at several hours-to-settlement snapshots (`WEATHER_ENTRY_HOURS`, default
-  `12,8,4`) — separate paper books `weather_fav_h12/h8/h4` — held to settlement. Comparing the
-  windows shows how much entry timing matters.
+- **Parallel books** (`WEATHER_STRATEGIES`, default `favorite,nws`), each entered at several
+  hours-to-settlement snapshots (`WEATHER_ENTRY_HOURS`, default `12,8,4`) and held to settlement:
+  - **`favorite`** (`weather_fav_h*`): buy the market's top bucket — the baseline.
+  - **`nws`** (`weather_nws_h*`): buy the bucket the NWS forecast high points to — the forecast
+    edge. Running it next to `favorite` is a head-to-head: when they disagree, whoever's bucket
+    actually wins reveals whether the forecast beats the crowd.
+
+  Comparing windows also shows how much entry timing matters.
 - **Forecast collection**: each cycle fetches the NWS daily-high forecast (`api.weather.gov`, free,
   needs `NWS_USER_AGENT`) per city and stores it in `weather_forecasts` — the dataset for a future
   forecast-edge strategy (forecast high → bucket probabilities → trade the mispriced bucket).

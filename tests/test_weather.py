@@ -105,6 +105,45 @@ def test_favorite_entered_per_window_and_dedup(settings):
         assert session.scalar(select(func.count()).select_from(m.PaperTrade)) == 3
 
 
+class FakeForecast:
+    def __init__(self, high):
+        self.high = high
+
+    def daily_high_f(self, lat, lon, target):
+        return self.high
+
+
+def test_weather_nws_book_buys_forecast_bucket(settings):
+    settings.bot_mode = "weather"
+    settings.weather_strategies = "favorite,nws"
+    db.init_engine(settings.database_url)
+    db.create_all()
+
+    book = {
+        "KXHIGHNY-26JUN08-B74.5": {"orderbook_fp": {"yes_dollars": [["0.5500", "300"]], "no_dollars": [["0.4300", "300"]]}},
+        "KXHIGHNY-26JUN08-B76.5": {"orderbook_fp": {"yes_dollars": [["0.2000", "300"]], "no_dollars": [["0.7800", "300"]]}},
+    }
+
+    class Client(FakeWeatherClient):
+        def get_orderbook(self, ticker, depth=None):
+            return book[ticker]
+
+    client = Client(_nyc_event(hours_ahead=3))  # favorite = 74-75
+    tracker = WeatherTracker(client, settings, FakeForecast(77.0))  # NWS 77 -> bucket 76-77
+    with db.session_scope() as session:
+        summary = tracker.run_once(session)
+
+    assert summary.opened == 6  # 3 favorite windows + 3 nws windows
+    with db.session_scope() as session:
+        trades = session.scalars(select(m.PaperTrade)).all()
+        fav = [t for t in trades if (t.strategy or "").startswith("weather_fav")]
+        nws = [t for t in trades if (t.strategy or "").startswith("weather_nws")]
+        assert len(fav) == 3 and len(nws) == 3
+        assert all(t.market_ticker == "KXHIGHNY-26JUN08-B74.5" for t in fav)  # market favorite
+        assert all(t.market_ticker == "KXHIGHNY-26JUN08-B76.5" for t in nws)  # NWS bucket
+        assert all(t.assumed_price == 22 for t in nws)  # bought the forecast bucket at its ask
+
+
 def test_weather_holds_to_settlement_then_settles(settings):
     settings.bot_mode = "weather"
     settings.paper_max_hold_hours = 0  # would time out a normal trade immediately
