@@ -62,13 +62,6 @@ def main() -> int:
         per_city: dict[str, list[int]] = {}  # city -> [nws_right, market_right, n]
         details = []
         for st in settlements:
-            # latest forecast for this event
-            fc = s.scalar(
-                select(m.WeatherForecast.forecast_high_f)
-                .where(m.WeatherForecast.event_ticker == st.event_ticker)
-                .order_by(m.WeatherForecast.captured_at.desc())
-                .limit(1)
-            )
             # earliest-window favorite trade for this event
             trades = s.scalars(
                 select(m.PaperTrade)
@@ -80,6 +73,20 @@ def main() -> int:
             ).all()
             trades.sort(key=lambda t: -(int(_HOURS.search(t.strategy or "").group(1)) if _HOURS.search(t.strategy or "") else 0))
             fav = trades[0] if trades else None
+
+            # Forecast made at/before that entry (the morning forecast, not the evening null).
+            fc_stmt = (
+                select(m.WeatherForecast.forecast_high_f)
+                .where(
+                    m.WeatherForecast.event_ticker == st.event_ticker,
+                    m.WeatherForecast.forecast_high_f.is_not(None),
+                )
+                .order_by(m.WeatherForecast.captured_at.desc())
+                .limit(1)
+            )
+            if fav is not None:
+                fc_stmt = fc_stmt.where(m.WeatherForecast.captured_at <= fav.created_at)
+            fc = s.scalar(fc_stmt)
 
             if fc is None or fav is None:
                 agg["no_data"] += 1
