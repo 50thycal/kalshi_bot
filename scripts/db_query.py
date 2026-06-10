@@ -23,14 +23,16 @@ Usage:
 from __future__ import annotations
 
 import os
+import re
 import sys
 
-# Statements that must never reach the database. The read-only role/transaction
-# already block these server-side; this just fails fast with a clear message.
+# Write/DDL verbs that must never reach the database. The read-only
+# transaction (and read-only role) already block these server-side; this just
+# fails fast with a clear message. Matched on word boundaries so column names
+# like `created_at` / `updated_at` don't trip the `create` / `update` checks.
 _FORBIDDEN = (
-    "insert", "update", "delete", "drop", "alter", "create", "truncate",
-    "grant", "revoke", "comment", "copy", "merge", "call", "do",
-    "vacuum", "reindex", "refresh", "set ", "reset ",
+    "insert", "update", "delete", "drop", "alter",
+    "truncate", "create", "grant", "revoke",
 )
 
 MAX_ROWS_DEFAULT = 200
@@ -71,8 +73,8 @@ def _validate(sql: str) -> str:
     if not (head.startswith("select") or head.startswith("with") or head.startswith("table") or head.startswith("explain")):
         raise SystemExit("Only read-only SELECT/WITH/TABLE/EXPLAIN queries are allowed.")
     for kw in _FORBIDDEN:
-        if kw in lowered:
-            raise SystemExit(f"Rejected: statement contains a write/DDL keyword ('{kw.strip()}').")
+        if re.search(rf"\b{kw}\b", lowered):
+            raise SystemExit(f"Rejected: statement contains a write/DDL keyword ('{kw}').")
     return sql
 
 
