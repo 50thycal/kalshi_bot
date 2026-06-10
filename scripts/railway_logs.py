@@ -69,6 +69,13 @@ def _gql(query: str, variables: dict, token: str) -> dict:
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {token}",
+            # Railway sits behind Cloudflare, which 403s (error 1010) the default
+            # `Python-urllib` user-agent. A normal browser UA gets through.
+            "User-Agent": (
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+            ),
+            "Accept": "application/json",
         },
     )
     try:
