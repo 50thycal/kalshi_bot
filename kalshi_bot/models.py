@@ -256,6 +256,9 @@ class WeatherForecast(Base):
     event_ticker: Mapped[str | None] = mapped_column(String(128))
     target_date: Mapped[str | None] = mapped_column(String(16))
     station: Mapped[str | None] = mapped_column(String(16))
+    # 'high' | 'low' (None = legacy rows, all high). For kind='low' rows,
+    # forecast_high_f holds the forecast daily LOW.
+    kind: Mapped[str | None] = mapped_column(String(8))
     forecast_high_f: Mapped[float | None] = mapped_column(Float)
     source: Mapped[str | None] = mapped_column(String(32))
     raw_json: Mapped[dict | None] = mapped_column(JSONType)
@@ -269,12 +272,76 @@ class WeatherSettlement(Base):
     city: Mapped[str | None] = mapped_column(String(32))
     series_ticker: Mapped[str | None] = mapped_column(String(64))
     target_date: Mapped[str | None] = mapped_column(String(16))
+    kind: Mapped[str | None] = mapped_column(String(8))  # 'high' | 'low' (None = legacy high)
     winning_ticker: Mapped[str | None] = mapped_column(String(128))
     winning_subtitle: Mapped[str | None] = mapped_column(String(64))
     actual_low_f: Mapped[float | None] = mapped_column(Float)
     actual_high_f: Mapped[float | None] = mapped_column(Float)
     captured_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
     raw_json: Mapped[dict | None] = mapped_column(JSONType)
+
+
+class WeatherObservation(Base):
+    """Running max/min observed at the settlement station so far in the local day —
+    by mid-afternoon the daily high is often already locked in while the market lags."""
+
+    __tablename__ = "weather_observations"
+    __table_args__ = (Index("ix_weather_observations_city_time", "city", "captured_at"),)
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    captured_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    city: Mapped[str] = mapped_column(String(32), nullable=False)
+    station: Mapped[str | None] = mapped_column(String(16))
+    target_date: Mapped[str | None] = mapped_column(String(16))
+    running_max_f: Mapped[float | None] = mapped_column(Float)
+    running_min_f: Mapped[float | None] = mapped_column(Float)
+    obs_count: Mapped[int] = mapped_column(Integer, default=0)
+    last_obs_at: Mapped[datetime | None] = mapped_column(TS)
+
+
+class WeatherEnsemble(Base):
+    """Per-member ensemble daily extremes (one row per model per kind per capture) —
+    the empirical forecast distribution behind P(temperature lands in bucket)."""
+
+    __tablename__ = "weather_ensembles"
+    __table_args__ = (Index("ix_weather_ensembles_city_time", "city", "captured_at"),)
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    captured_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    city: Mapped[str] = mapped_column(String(32), nullable=False)
+    target_date: Mapped[str | None] = mapped_column(String(16))
+    kind: Mapped[str] = mapped_column(String(8), nullable=False)  # 'high' | 'low'
+    model: Mapped[str | None] = mapped_column(String(32))
+    member_count: Mapped[int] = mapped_column(Integer, default=0)
+    mean_f: Mapped[float | None] = mapped_column(Float)
+    std_f: Mapped[float | None] = mapped_column(Float)
+    members_json: Mapped[list | None] = mapped_column(JSONType)  # per-member degF values
+
+
+class WeatherBucketSnapshot(Base):
+    """The full bucket ladder's prices over time — the market's own implied temperature
+    distribution, captured per cycle (throttled) for later mispricing analysis."""
+
+    __tablename__ = "weather_bucket_snapshots"
+    __table_args__ = (
+        Index("ix_weather_bucket_snapshots_event_time", "event_ticker", "captured_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    captured_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    event_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    market_ticker: Mapped[str | None] = mapped_column(String(128))
+    city: Mapped[str | None] = mapped_column(String(32))
+    kind: Mapped[str | None] = mapped_column(String(8))  # 'high' | 'low'
+    subtitle: Mapped[str | None] = mapped_column(String(64))
+    low_f: Mapped[float | None] = mapped_column(Float)
+    high_f: Mapped[float | None] = mapped_column(Float)
+    yes_bid_cents: Mapped[float | None] = mapped_column(Float)
+    yes_ask_cents: Mapped[float | None] = mapped_column(Float)
+    mid_cents: Mapped[float | None] = mapped_column(Float)
+    volume: Mapped[int | None] = mapped_column(Integer)
+    hours_to_close: Mapped[float | None] = mapped_column(Float)
+    status: Mapped[str | None] = mapped_column(String(32))
 
 
 class SystemEvent(Base):

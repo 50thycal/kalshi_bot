@@ -166,8 +166,8 @@ def test_weather_city_bias_shrinks_toward_zero(settings):
         for ev in ("KXHIGHNY-26JUN05", "KXHIGHNY-26JUN06"):
             _seed_nyc_settlement(session, ev, 81.0, "78° to 79°", 78.0, 79.0)
         bias = repo.weather_city_bias(session, shrinkage=3.0, min_events=1)
-        # mean(actual-fc) = -2.5; shrunk *2/(2+3)=0.4 -> -1.0
-        assert bias["NYC"] == -1.0
+        # mean(actual-fc) = -2.5; shrunk *2/(2+3)=0.4 -> -1.0; keyed by (city, kind)
+        assert bias[("NYC", "high")] == -1.0
         # min_events gate: requiring 3 events drops NYC (only 2).
         assert repo.weather_city_bias(session, shrinkage=3.0, min_events=3) == {}
 

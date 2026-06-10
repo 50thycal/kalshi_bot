@@ -1,8 +1,14 @@
-"""Weather baseline tracker: buy the favorite bucket of each city's daily high-temp
-event at several hours-to-settlement windows, and collect NWS forecasts.
+"""Weather tracker: trade parallel paper books on Kalshi's daily HIGH and LOW
+temperature markets, and collect the datasets a real forecast-edge model needs.
 
-No forecast trading yet — that's the next round. This establishes the buy-the-favorite
-baseline and the forecast dataset to evaluate it against.
+Per cycle, per tracked (city, kind=high|low) event:
+- store the NWS point forecast (the books' signal),
+- store the running station observations for the local day (the high is often
+  already locked in by mid-afternoon while the market lags),
+- store Open-Meteo ensemble member extremes (the forecast *distribution* behind
+  P(temperature lands in bucket)), throttled,
+- snapshot the full bucket ladder (the market's implied distribution), throttled,
+- enter the favorite / nws / cal books at each hours-to-settlement window.
 """
 
 from __future__ import annotations
@@ -25,7 +31,8 @@ from ..scanner.metrics import (
 )
 from .buckets import forecast_in_bucket, parse_bucket_range
 from .cities import CITIES, City
-from .forecast import NwsForecastClient
+from .ensemble import OpenMeteoEnsembleClient
+from .forecast import NwsForecastClient, ObservedExtremes
 
 logger = logging.getLogger(__name__)
 
@@ -35,12 +42,17 @@ _MONTHS = {
 }
 _DATE_RE = re.compile(r"(\d{2})([A-Z]{3})(\d{2})")
 
+KINDS = ("high", "low")
+
 
 @dataclass
 class WeatherCycleSummary:
     events_seen: int = 0
     tracked: int = 0
     forecasts_stored: int = 0
+    obs_stored: int = 0
+    ensembles_stored: int = 0
+    bucket_snaps: int = 0
     opened: int = 0
     skipped_no_book: int = 0
     settlements_captured: int = 0
@@ -50,8 +62,7 @@ class WeatherCycleSummary:
 
 def _implied_mid_cents(market: dict) -> float | None:
     """A bucket's implied probability (cents), from the market object's bid/ask."""
-    yb = price_to_cents(market.get("yes_bid") if market.get("yes_bid") is not None else market.get("yes_bid_dollars"))
-    ya = price_to_cents(market.get("yes_ask") if market.get("yes_ask") is not None else market.get("yes_ask_dollars"))
+    yb, ya = _bid_ask_cents(market)
     if yb is not None and ya is not None:
         return (yb + ya) / 2
     if yb is not None:
@@ -60,6 +71,12 @@ def _implied_mid_cents(market: dict) -> float | None:
         return float(ya)
     last = market_last_price(market)
     return float(last) if last is not None else None
+
+
+def _bid_ask_cents(market: dict) -> tuple[float | None, float | None]:
+    yb = price_to_cents(market.get("yes_bid") if market.get("yes_bid") is not None else market.get("yes_bid_dollars"))
+    ya = price_to_cents(market.get("yes_ask") if market.get("yes_ask") is not None else market.get("yes_ask_dollars"))
+    return (float(yb) if yb is not None else None, float(ya) if ya is not None else None)
 
 
 def _target_date(event: dict) -> date | None:
@@ -75,9 +92,20 @@ def _target_date(event: dict) -> date | None:
     return dt.date() if dt else None
 
 
+def _age_minutes(dt, now: datetime) -> float | None:
+    """Minutes since dt; naive timestamps (sqlite) are treated as UTC."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return (now - dt).total_seconds() / 60.0
+
+
 @dataclass
 class _Tracked:
     city: City
+    kind: str  # "high" | "low"
+    series: str
     event: dict
     favorite: dict
     favorite_mid: float
@@ -86,10 +114,24 @@ class _Tracked:
 
 
 class WeatherTracker:
-    def __init__(self, client, settings: Settings, forecast: NwsForecastClient | None):
+    def __init__(
+        self,
+        client,
+        settings: Settings,
+        forecast: NwsForecastClient | None,
+        ensemble: OpenMeteoEnsembleClient | None = None,
+    ):
         self.client = client
         self.settings = settings
         self.forecast = forecast
+        self.ensemble = ensemble
+
+    def _series_for(self, city: City, kind: str) -> str | None:
+        if kind == "high":
+            return city.series_high
+        if not self.settings.weather_track_lows:
+            return None
+        return self.settings.weather_low_series_map.get(city.code) or city.series_low
 
     def run_once(self, session) -> WeatherCycleSummary:
         s = self.settings
@@ -98,44 +140,56 @@ class WeatherTracker:
 
         tracked: list[_Tracked] = []
         for city in CITIES:
-            try:
-                page = self.client.get_events(
-                    series_ticker=city.series_ticker, status="open", with_nested_markets=True
-                )
-            except Exception as exc:  # noqa: BLE001
-                logger.warning(
-                    "weather: events fetch failed",
-                    extra={"extra_fields": {"city": city.code, "error": str(exc)}},
-                )
-                continue
-            for event in page.get("events") or []:
-                markets = event.get("markets") or []
-                if not markets:
+            for kind in KINDS:
+                series = self._series_for(city, kind)
+                if not series:
                     continue
-                summary.events_seen += 1
-                favorite, fav_mid = None, -1.0
-                for mk in markets:
-                    mid = _implied_mid_cents(mk)
-                    if mid is not None and mid > fav_mid:
-                        favorite, fav_mid = mk, mid
-                if favorite is None:
-                    continue
-                htc = compute_time_to_close(
-                    event.get("close_time") or favorite.get("close_time"), now=now
-                )
-                tracked.append(
-                    _Tracked(
-                        city=city,
-                        event=event,
-                        favorite=favorite,
-                        favorite_mid=fav_mid,
-                        hours_to_close=(htc / 3600.0 if htc is not None else None),
-                        volume=sum(market_volume(mk) for mk in markets),
+                try:
+                    page = self.client.get_events(
+                        series_ticker=series, status="open", with_nested_markets=True
                     )
-                )
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning(
+                        "weather: events fetch failed",
+                        extra={"extra_fields": {"city": city.code, "kind": kind, "error": str(exc)}},
+                    )
+                    continue
+                for event in page.get("events") or []:
+                    markets = event.get("markets") or []
+                    if not markets:
+                        continue
+                    summary.events_seen += 1
+                    favorite, fav_mid = None, -1.0
+                    for mk in markets:
+                        mid = _implied_mid_cents(mk)
+                        if mid is not None and mid > fav_mid:
+                            favorite, fav_mid = mk, mid
+                    if favorite is None:
+                        continue
+                    htc = compute_time_to_close(
+                        event.get("close_time") or favorite.get("close_time"), now=now
+                    )
+                    tracked.append(
+                        _Tracked(
+                            city=city,
+                            kind=kind,
+                            series=series,
+                            event=event,
+                            favorite=favorite,
+                            favorite_mid=fav_mid,
+                            hours_to_close=(htc / 3600.0 if htc is not None else None),
+                            volume=sum(market_volume(mk) for mk in markets),
+                        )
+                    )
 
-        tracked.sort(key=lambda t: t.volume, reverse=True)
-        tracked = tracked[: s.weather_top_n]
+        # Rank by volume within each kind so lows don't crowd out highs (or vice versa).
+        keep: list[_Tracked] = []
+        for kind in KINDS:
+            group = sorted(
+                (t for t in tracked if t.kind == kind), key=lambda t: t.volume, reverse=True
+            )
+            keep.extend(group[: s.weather_top_n])
+        tracked = keep
         summary.tracked = len(tracked)
 
         strategies = s.weather_strategy_list
@@ -148,28 +202,42 @@ class WeatherTracker:
             if "cal" in strategies
             else {}
         )
+        obs_cache: dict[tuple[str, str], ObservedExtremes | None] = {}
+        ensemble_done: set[tuple[str, str]] = set()
 
         for t in tracked:
-            forecast_high = None
+            target = _target_date(t.event)
+            forecast_val = None
             if s.weather_forecast_enabled and self.forecast is not None:
-                forecast_high = self._store_forecast(session, t, summary)
-            bias = city_bias.get(t.city.code, 0.0)
-            cal_high = (
-                round(forecast_high + bias, 1) if forecast_high is not None else None
+                forecast_val = self._store_forecast(session, t, target, summary)
+            obs = self._collect_observations(session, t, target, now, summary, obs_cache)
+            self._collect_ensemble(session, t, target, now, summary, ensemble_done)
+            self._snapshot_ladder(session, t, now, summary)
+
+            bias = city_bias.get((t.city.code, t.kind), 0.0)
+            cal_val = (
+                round(forecast_val + bias, 1)
+                if forecast_val is not None and "cal" in strategies
+                else None
             )
             rules = t.favorite.get("rules_primary") or t.event.get("rules_primary") or ""
             logger.info(
                 "weather market",
                 extra={"extra_fields": {
                     "city": t.city.code,
+                    "kind": t.kind,
                     "station": t.city.station,
                     "event": t.event.get("event_ticker"),
                     "hours_to_close": round(t.hours_to_close, 2) if t.hours_to_close is not None else None,
                     "favorite": t.favorite.get("yes_sub_title") or t.favorite.get("subtitle"),
                     "favorite_mid": round(t.favorite_mid, 1),
-                    "forecast_high_f": forecast_high,
+                    "forecast_f": forecast_val,
                     "bias_offset_f": bias if "cal" in strategies else None,
-                    "forecast_cal_f": cal_high if "cal" in strategies else None,
+                    "forecast_cal_f": cal_val,
+                    "obs_running_f": (
+                        (obs.max_f if t.kind == "high" else obs.min_f) if obs else None
+                    ),
+                    "obs_count": obs.obs_count if obs else 0,
                     "settlement": rules[:200],
                 }},
             )
@@ -185,33 +253,30 @@ class WeatherTracker:
             metrics_cache: dict[str, object] = {}
             fav_market = t.favorite if "favorite" in strategies else None
             nws_market = (
-                self._nws_bucket(markets, forecast_high)
-                if "nws" in strategies and forecast_high is not None
+                self._value_bucket(markets, forecast_val)
+                if "nws" in strategies and forecast_val is not None
                 else None
             )
-            cal_market = (
-                self._nws_bucket(markets, cal_high)
-                if "cal" in strategies and cal_high is not None
-                else None
-            )
+            cal_market = self._value_bucket(markets, cal_val) if cal_val is not None else None
 
+            prefix = "weather_" if t.kind == "high" else "weather_low_"
             for hours in s.weather_entry_hours_list:
                 if t.hours_to_close > hours:
                     continue
                 if fav_market is not None:
                     self._maybe_enter(
-                        session, f"weather_fav_h{int(hours)}", event_ticker, t, fav_market,
+                        session, f"{prefix}fav_h{int(hours)}", event_ticker, t, fav_market,
                         self._cached_metrics(fav_market, metrics_cache),
                         t.favorite_mid / 100.0, summary,
                     )
                 if nws_market is not None:
                     self._maybe_enter(
-                        session, f"weather_nws_h{int(hours)}", event_ticker, t, nws_market,
+                        session, f"{prefix}nws_h{int(hours)}", event_ticker, t, nws_market,
                         self._cached_metrics(nws_market, metrics_cache), None, summary,
                     )
                 if cal_market is not None:
                     self._maybe_enter(
-                        session, f"weather_cal_h{int(hours)}", event_ticker, t, cal_market,
+                        session, f"{prefix}cal_h{int(hours)}", event_ticker, t, cal_market,
                         self._cached_metrics(cal_market, metrics_cache), None, summary,
                     )
 
@@ -219,53 +284,200 @@ class WeatherTracker:
         summary.open_positions = repo.count_open_paper_positions(session)
         return summary
 
+    # --- data collectors -------------------------------------------------------
+
+    def _store_forecast(self, session, t: _Tracked, target: date | None, summary) -> float | None:
+        value = None
+        try:
+            if target is not None:
+                if t.kind == "high":
+                    value = self.forecast.daily_high_f(t.city.lat, t.city.lon, target)
+                else:
+                    value = self.forecast.daily_low_f(t.city.lat, t.city.lon, target)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "weather: forecast fetch failed",
+                extra={"extra_fields": {"city": t.city.code, "kind": t.kind, "error": str(exc)}},
+            )
+        repo.insert_weather_forecast(
+            session,
+            city=t.city.code,
+            series_ticker=t.series,
+            event_ticker=t.event.get("event_ticker"),
+            target_date=target.isoformat() if target else None,
+            station=t.city.station,
+            kind=t.kind,
+            forecast_high_f=value,
+            source="nws",
+            raw={"name": t.city.name, "favorite_mid": t.favorite_mid},
+        )
+        summary.forecasts_stored += 1
+        return value
+
+    def _collect_observations(
+        self, session, t: _Tracked, target: date | None, now, summary, cache
+    ) -> ObservedExtremes | None:
+        s = self.settings
+        if not s.weather_obs_enabled or self.forecast is None or target is None:
+            return None
+        fetch = getattr(self.forecast, "observed_extremes_f", None)
+        if fetch is None:
+            return None
+        key = (t.city.code, target.isoformat())
+        if key in cache:
+            return cache[key]
+        row = repo.latest_weather_observation(session, t.city.code, target.isoformat())
+        age = _age_minutes(row.captured_at, now) if row is not None else None
+        if age is not None and age < s.weather_obs_interval_minutes:
+            obs = (
+                ObservedExtremes(row.running_max_f, row.running_min_f, row.obs_count or 0, row.last_obs_at)
+                if row.running_max_f is not None and row.running_min_f is not None
+                else None
+            )
+            cache[key] = obs
+            return obs
+        obs = None
+        try:
+            obs = fetch(t.city.station, target, t.city.tz)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "weather: observations fetch failed",
+                extra={"extra_fields": {"city": t.city.code, "error": str(exc)}},
+            )
+        if obs is not None:
+            repo.insert_weather_observation(
+                session,
+                city=t.city.code,
+                station=t.city.station,
+                target_date=target.isoformat(),
+                running_max_f=obs.max_f,
+                running_min_f=obs.min_f,
+                obs_count=obs.obs_count,
+                last_obs_at=obs.last_obs_at,
+            )
+            summary.obs_stored += 1
+        cache[key] = obs
+        return obs
+
+    def _collect_ensemble(self, session, t: _Tracked, target: date | None, now, summary, done) -> None:
+        s = self.settings
+        if not s.weather_ensemble_enabled or self.ensemble is None or target is None:
+            return
+        key = (t.city.code, target.isoformat())
+        if key in done:
+            return
+        done.add(key)
+        last = repo.latest_weather_ensemble_at(session, t.city.code, target.isoformat())
+        age = _age_minutes(last, now)
+        if age is not None and age < s.weather_ensemble_interval_minutes:
+            return
+        try:
+            days = self.ensemble.daily_extremes(
+                t.city.lat, t.city.lon, t.city.tz, target, s.weather_ensemble_model_list
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "weather: ensemble fetch failed",
+                extra={"extra_fields": {"city": t.city.code, "error": str(exc)}},
+            )
+            return
+        for day in days:
+            for kind, members in (("high", day.highs), ("low", day.lows)):
+                repo.insert_weather_ensemble(
+                    session,
+                    city=t.city.code,
+                    target_date=target.isoformat(),
+                    kind=kind,
+                    model=day.model,
+                    members=members,
+                )
+                summary.ensembles_stored += 1
+
+    def _snapshot_ladder(self, session, t: _Tracked, now, summary) -> None:
+        event_ticker = t.event.get("event_ticker")
+        if not event_ticker:
+            return
+        last = repo.latest_bucket_snapshot_at(session, event_ticker)
+        age = _age_minutes(last, now)
+        if age is not None and age < self.settings.weather_ladder_interval_minutes:
+            return
+        rows = []
+        for mk in t.event.get("markets") or []:
+            subtitle = mk.get("yes_sub_title") or mk.get("subtitle")
+            low, high = parse_bucket_range(subtitle)
+            yb, ya = _bid_ask_cents(mk)
+            rows.append(dict(
+                event_ticker=event_ticker,
+                market_ticker=mk.get("ticker"),
+                city=t.city.code,
+                kind=t.kind,
+                subtitle=subtitle,
+                low_f=low,
+                high_f=high,
+                yes_bid_cents=yb,
+                yes_ask_cents=ya,
+                mid_cents=_implied_mid_cents(mk),
+                volume=market_volume(mk),
+                hours_to_close=t.hours_to_close,
+                status=mk.get("status"),
+            ))
+        if rows:
+            summary.bucket_snaps += repo.insert_weather_bucket_snapshots(session, rows)
+
+    # --- settlements + entries ---------------------------------------------------
+
     def _capture_settlements(self, session, summary) -> None:
         """Record the actual winning bucket for recently settled events (the ground
         truth to grade NWS forecast vs the market favorite)."""
         for city in CITIES:
-            try:
-                page = self.client.get_events(
-                    series_ticker=city.series_ticker, status="settled", with_nested_markets=True
-                )
-            except Exception as exc:  # noqa: BLE001
-                logger.warning(
-                    "weather: settled events fetch failed",
-                    extra={"extra_fields": {"city": city.code, "error": str(exc)}},
-                )
-                continue
-            for event in page.get("events") or []:
-                event_ticker = event.get("event_ticker")
-                if not event_ticker or repo.weather_settlement_exists(session, event_ticker):
+            for kind in KINDS:
+                series = self._series_for(city, kind)
+                if not series:
                     continue
-                winner = next(
-                    (mk for mk in (event.get("markets") or []) if (mk.get("result") or "").lower() == "yes"),
-                    None,
-                )
-                if winner is None:
+                try:
+                    page = self.client.get_events(
+                        series_ticker=series, status="settled", with_nested_markets=True
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning(
+                        "weather: settled events fetch failed",
+                        extra={"extra_fields": {"city": city.code, "kind": kind, "error": str(exc)}},
+                    )
                     continue
-                subtitle = winner.get("yes_sub_title") or winner.get("subtitle")
-                low, high = parse_bucket_range(subtitle)
-                target = _target_date(event)
-                repo.insert_weather_settlement(
-                    session,
-                    event_ticker=event_ticker,
-                    city=city.code,
-                    series_ticker=city.series_ticker,
-                    target_date=target.isoformat() if target else None,
-                    winning_ticker=winner.get("ticker"),
-                    winning_subtitle=subtitle,
-                    actual_low_f=low,
-                    actual_high_f=high,
-                )
-                summary.settlements_captured += 1
+                for event in page.get("events") or []:
+                    event_ticker = event.get("event_ticker")
+                    if not event_ticker or repo.weather_settlement_exists(session, event_ticker):
+                        continue
+                    winner = next(
+                        (mk for mk in (event.get("markets") or []) if (mk.get("result") or "").lower() == "yes"),
+                        None,
+                    )
+                    if winner is None:
+                        continue
+                    subtitle = winner.get("yes_sub_title") or winner.get("subtitle")
+                    low, high = parse_bucket_range(subtitle)
+                    target = _target_date(event)
+                    repo.insert_weather_settlement(
+                        session,
+                        event_ticker=event_ticker,
+                        city=city.code,
+                        series_ticker=series,
+                        target_date=target.isoformat() if target else None,
+                        kind=kind,
+                        winning_ticker=winner.get("ticker"),
+                        winning_subtitle=subtitle,
+                        actual_low_f=low,
+                        actual_high_f=high,
+                    )
+                    summary.settlements_captured += 1
 
-    def _nws_bucket(self, markets: list[dict], forecast_high: float | None) -> dict | None:
-        """The bucket whose range contains the NWS forecast high."""
-        if forecast_high is None:
+    def _value_bucket(self, markets: list[dict], value: float | None) -> dict | None:
+        """The bucket whose range contains the given (forecast) temperature."""
+        if value is None:
             return None
         for mk in markets:
             low, high = parse_bucket_range(mk.get("yes_sub_title") or mk.get("subtitle"))
-            if forecast_in_bucket(forecast_high, low, high):
+            if forecast_in_bucket(value, low, high):
                 return mk
         return None
 
@@ -329,27 +541,3 @@ class WeatherTracker:
         )
         summary.opened += 1
         summary.per_window[strategy] = summary.per_window.get(strategy, 0) + 1
-
-    def _store_forecast(self, session, t: _Tracked, summary) -> float | None:
-        target = _target_date(t.event)
-        high = None
-        try:
-            high = self.forecast.daily_high_f(t.city.lat, t.city.lon, target) if target else None
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(
-                "weather: forecast fetch failed",
-                extra={"extra_fields": {"city": t.city.code, "error": str(exc)}},
-            )
-        repo.insert_weather_forecast(
-            session,
-            city=t.city.code,
-            series_ticker=t.city.series_ticker,
-            event_ticker=t.event.get("event_ticker"),
-            target_date=target.isoformat() if target else None,
-            station=t.city.station,
-            forecast_high_f=high,
-            source="nws",
-            raw={"name": t.city.name, "favorite_mid": t.favorite_mid},
-        )
-        summary.forecasts_stored += 1
-        return high

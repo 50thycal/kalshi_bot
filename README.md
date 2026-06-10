@@ -161,9 +161,14 @@ DATABASE_URL=postgresql://... python scripts/paper_stats.py
 
 ## Weather mode (Phase 4)
 
-`BOT_MODE=weather` runs a focused pipeline on Kalshi's **daily high-temperature** markets
-instead of the broad scanner. Each city ("Highest temperature in `<CITY>` today?") is a daily
-event with ~6 mutually-exclusive 2° buckets settling on the NWS Daily Climate Report.
+`BOT_MODE=weather` runs a focused pipeline on Kalshi's **daily temperature** markets instead
+of the broad scanner — both the **daily HIGH** ("Highest temperature in `<CITY>` today?",
+`KXHIGH*`) and the **daily LOW** ("Lowest temperature...", `KXLOWT*`; `WEATHER_TRACK_LOWS`).
+Each is a daily event per city with ~6 mutually-exclusive 2° buckets settling on the NWS Daily
+Climate Report. Low books run in parallel under `weather_low_*` strategy names; note lows
+mostly realize in the early morning, so for lows the widest entry window carries most of the
+uncertainty. If a low series ticker guess is wrong (check the first run's logs for
+"events fetch failed"/zero events), override it via `WEATHER_LOW_SERIES`.
 
 - **Parallel books** (`WEATHER_STRATEGIES`, default `favorite,nws,cal`), each entered at several
   hours-to-settlement snapshots (`WEATHER_ENTRY_HOURS`, default `20,14,8`) and held to settlement:
@@ -179,30 +184,45 @@ event with ~6 mutually-exclusive 2° buckets settling on the NWS Daily Climate R
     the bucket. `cal` vs `nws` measures whether the correction actually helps.
 
   Comparing windows also shows how much entry timing matters.
-- **Forecast collection**: each cycle fetches the NWS daily-high forecast (`api.weather.gov`, free,
-  needs `NWS_USER_AGENT`) per city and stores it in `weather_forecasts` — the dataset for a future
-  forecast-edge strategy (forecast high → bucket probabilities → trade the mispriced bucket).
+- **Forecast collection**: each cycle fetches the NWS daily high/low forecast (`api.weather.gov`,
+  free, needs `NWS_USER_AGENT`) per city and stores it in `weather_forecasts` (tagged `kind`).
+- **Data collection for the real edge model** — temperature buckets are priced off a
+  *distribution*, so alongside the point forecast each cycle also collects (all throttled,
+  all fail-soft):
+  - **Intraday station observations** (`weather_observations`): the running max/min observed
+    *so far today* at the settlement station (NWS `/stations/{id}/observations`). By
+    mid-afternoon the daily high is often already locked in while the market lags — the
+    concrete late-day signal the books are currently blind to.
+  - **Ensemble distributions** (`weather_ensembles`): per-member daily highs/lows from
+    Open-Meteo's ensemble API (free, no key; `WEATHER_ENSEMBLE_MODELS`, default GFS + ECMWF).
+    The member spread is an empirical P(temperature lands in bucket) and the uncertainty
+    signal that says when the market favorite is overconfident.
+  - **Bucket-ladder snapshots** (`weather_bucket_snapshots`): every bucket's bid/ask/mid per
+    event over time — the market's own implied distribution, i.e. the training data for a
+    future mispricing/sizing model.
 - On startup it abandons any open paper positions from prior experiments
   (`PAPER_ABANDON_FOREIGN_ON_START`).
 
-City→station/lat-lon mapping lives in `kalshi_bot/weather/cities.py`; verify the `KXHIGH*` series
-tickers against the first run's logs. Each cycle also captures the actual winning bucket of recently
-**settled** events into `weather_settlements` (the ground truth). Grade the forecast vs the market:
+City→station/series/lat-lon/timezone mapping lives in `kalshi_bot/weather/cities.py`; verify the
+series tickers against the first run's logs. Each cycle also captures the actual winning bucket of
+recently **settled** events (highs and lows) into `weather_settlements` (the ground truth). Grade
+the forecast vs the market:
 
 ```bash
 DATABASE_URL=postgresql://... python scripts/weather_score.py
 ```
 
-reports the favorite baseline win-rate/P&L by entry window, the **per-book realized P&L by window**
-(fav | nws | cal side by side), a head-to-head — **NWS-implied bucket vs market favorite** (who was
-right on settled events; "NWS-only-right ≫ market-only-right" over enough events means a real
-forecast edge) — **raw forecast accuracy** (NWS bucket hit-rate, mean absolute error and signed
-bias in °F, % within 2°F, overall and per city; uses the *earliest/morning* forecast so it grades
-the tradeable signal, not a hindsight upper bound), and a **consistency** block: per-book EV/trade,
-stdev, a per-trade Sharpe (EV ÷ stdev), worst trade, worst single day, and max drawdown. Consistency
-is the right lens for the goal of *reliable small gains* — a high win-rate on high-priced favorites
-hides rare large losses (negative skew), which shows up as a poor Sharpe and a deep worst-day even
-when the win-rate looks great.
+reports, **per kind (HIGH and LOW)**: the per-book realized P&L by window (fav | nws | cal side by
+side), a head-to-head — **NWS-implied bucket vs market favorite** (who was right on settled events;
+"NWS-only-right ≫ market-only-right" over enough events means a real forecast edge) — and **raw
+forecast accuracy** (bucket hit-rate, mean absolute error and signed bias in °F, % within 2°F,
+overall and per city; uses the *earliest/morning* forecast so it grades the tradeable signal, not a
+hindsight upper bound). Then a **consistency** block across all six books: EV/trade, stdev, a
+per-trade Sharpe (EV ÷ stdev), worst trade, worst single day, and max drawdown — the right lens for
+the goal of *reliable small gains*, since a high win-rate on high-priced favorites hides rare large
+losses (negative skew). A final **data-collection health** section counts last-24h rows per dataset
+(forecasts / observations / ensembles / bucket snapshots / settlements) so a silent collector
+failure is visible in the daily run.
 
 The **`weather-score` GitHub Action** runs this automatically every morning (14:00 UTC, after the
 overnight settlements) and writes the scorecard to the run summary. It needs a read-only Postgres

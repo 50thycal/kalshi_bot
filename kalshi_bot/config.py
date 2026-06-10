@@ -116,6 +116,22 @@ class Settings(BaseSettings):
     # couple of events don't overcorrect; only cities with >= min_events contribute.
     weather_bias_shrinkage: float = 3.0
     weather_bias_min_events: int = 1
+    # Daily LOW temperature markets (KXLOWT*): track + trade the same books in parallel.
+    # WEATHER_LOW_SERIES overrides per-city series tickers, e.g. "AUS=KXLOWTAUSTIN".
+    weather_track_lows: bool = True
+    weather_low_series: str = ""
+    # Intraday station observations (running max/min so far today at the settlement
+    # station) — stored in weather_observations, refreshed at most every N minutes.
+    weather_obs_enabled: bool = True
+    weather_obs_interval_minutes: float = 15.0
+    # Open-Meteo ensemble members (the forecast *distribution*) — stored in
+    # weather_ensembles. Models update ~6-hourly; refresh at most every N minutes.
+    weather_ensemble_enabled: bool = True
+    weather_ensemble_models: str = "gfs_seamless,ecmwf_ifs025"
+    weather_ensemble_interval_minutes: float = 60.0
+    # Full bucket-ladder price snapshots (the market's implied distribution) — stored
+    # in weather_bucket_snapshots at most every N minutes per event.
+    weather_ladder_interval_minutes: float = 15.0
 
     @field_validator("paper_momentum_direction", mode="before")
     @classmethod
@@ -197,6 +213,23 @@ class Settings(BaseSettings):
         return [s for s in out if s in valid] or ["favorite"]
 
     @property
+    def weather_low_series_map(self) -> dict[str, str]:
+        """Optional per-city low-series overrides: "NYC=KXLOWTNYC,AUS=KXLOWTAUSTIN"."""
+        out: dict[str, str] = {}
+        for part in self.weather_low_series.split(","):
+            part = part.strip()
+            if not part or "=" not in part:
+                continue
+            code, ticker = part.split("=", 1)
+            if code.strip() and ticker.strip():
+                out[code.strip().upper()] = ticker.strip().upper()
+        return out
+
+    @property
+    def weather_ensemble_model_list(self) -> list[str]:
+        return [p.strip() for p in self.weather_ensemble_models.split(",") if p.strip()]
+
+    @property
     def paper_strategy_list(self) -> list[str]:
         valid = ("buy_favorite", "buy_yes", "buy_no", "momentum", "reversion", "ladder")
         out = [s.strip().lower() for s in self.paper_strategies.split(",") if s.strip()]
@@ -237,6 +270,10 @@ class Settings(BaseSettings):
             "weather_strategies": self.weather_strategy_list,
             "weather_forecast_enabled": self.weather_forecast_enabled,
             "weather_bias_shrinkage": self.weather_bias_shrinkage,
+            "weather_track_lows": self.weather_track_lows,
+            "weather_obs_enabled": self.weather_obs_enabled,
+            "weather_ensemble_enabled": self.weather_ensemble_enabled,
+            "weather_ensemble_models": self.weather_ensemble_model_list,
             "api_key_id_present": bool(self.kalshi_api_key_id),
             "private_key_present": bool(self.private_key_pem),
         }

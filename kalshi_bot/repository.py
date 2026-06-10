@@ -471,6 +471,7 @@ def insert_weather_forecast(
     station: str | None,
     forecast_high_f: float | None,
     source: str,
+    kind: str = "high",
     raw: dict | None = None,
 ) -> m.WeatherForecast:
     row = m.WeatherForecast(
@@ -480,6 +481,7 @@ def insert_weather_forecast(
         event_ticker=event_ticker,
         target_date=target_date,
         station=station,
+        kind=kind,
         forecast_high_f=forecast_high_f,
         source=source,
         raw_json=_safe_json(raw or {}),
@@ -511,6 +513,7 @@ def insert_weather_settlement(
     winning_subtitle: str | None,
     actual_low_f: float | None,
     actual_high_f: float | None,
+    kind: str = "high",
     raw: dict | None = None,
 ) -> m.WeatherSettlement:
     row = m.WeatherSettlement(
@@ -518,6 +521,7 @@ def insert_weather_settlement(
         city=city,
         series_ticker=series_ticker,
         target_date=target_date,
+        kind=kind,
         winning_ticker=winning_ticker,
         winning_subtitle=winning_subtitle,
         actual_low_f=actual_low_f,
@@ -532,16 +536,17 @@ def insert_weather_settlement(
 
 def weather_city_bias(
     session, *, shrinkage: float = 3.0, min_events: int = 1
-) -> dict[str, float]:
-    """Per-city forecast bias offset (degF) to ADD to a raw NWS forecast so it better
-    matches the station's settled high.
+) -> dict[tuple[str, str], float]:
+    """Per-(city, kind) forecast bias offset (degF) to ADD to a raw NWS forecast so it
+    better matches the station's settled extreme.
 
-    offset = shrink( mean(actual_high - earliest_forecast) ), where the shrink factor
+    offset = shrink( mean(actual - earliest_forecast) ), where the shrink factor
     n/(n+shrinkage) pulls small samples toward 0 so a couple of events don't overcorrect.
     Uses the earliest (morning) forecast per event — the value the books trade on. Only
-    cities with >= min_events settled+forecast pairs are returned (others -> no offset).
+    (city, kind) pairs with >= min_events settled+forecast pairs are returned. Highs and
+    lows are learned independently (a station can run cool on highs but not on lows).
     """
-    diffs: dict[str, list[float]] = {}
+    diffs: dict[tuple[str, str], list[float]] = {}
     for st in session.scalars(select(m.WeatherSettlement)).all():
         low, high = st.actual_low_f, st.actual_high_f
         if low is not None and high is not None:
@@ -563,15 +568,108 @@ def weather_city_bias(
         )
         if fc is None or not st.city:
             continue
-        diffs.setdefault(st.city, []).append(actual - float(fc))
-    out: dict[str, float] = {}
-    for city, ds in diffs.items():
+        diffs.setdefault((st.city, st.kind or "high"), []).append(actual - float(fc))
+    out: dict[tuple[str, str], float] = {}
+    for key, ds in diffs.items():
         n = len(ds)
         if n < min_events:
             continue
         raw = sum(ds) / n
-        out[city] = round(raw * n / (n + shrinkage), 2)
+        out[key] = round(raw * n / (n + shrinkage), 2)
     return out
+
+
+def insert_weather_observation(
+    session,
+    *,
+    city: str,
+    station: str | None,
+    target_date: str | None,
+    running_max_f: float | None,
+    running_min_f: float | None,
+    obs_count: int,
+    last_obs_at,
+) -> m.WeatherObservation:
+    row = m.WeatherObservation(
+        captured_at=_now(),
+        city=city,
+        station=station,
+        target_date=target_date,
+        running_max_f=running_max_f,
+        running_min_f=running_min_f,
+        obs_count=obs_count,
+        last_obs_at=last_obs_at,
+    )
+    session.add(row)
+    session.flush()
+    return row
+
+
+def latest_weather_observation(
+    session, city: str, target_date: str
+) -> m.WeatherObservation | None:
+    return session.scalar(
+        select(m.WeatherObservation)
+        .where(
+            m.WeatherObservation.city == city,
+            m.WeatherObservation.target_date == target_date,
+        )
+        .order_by(m.WeatherObservation.captured_at.desc())
+        .limit(1)
+    )
+
+
+def insert_weather_ensemble(
+    session,
+    *,
+    city: str,
+    target_date: str | None,
+    kind: str,
+    model: str | None,
+    members: list[float],
+) -> m.WeatherEnsemble:
+    n = len(members)
+    mean = sum(members) / n if n else None
+    std = (sum((x - mean) ** 2 for x in members) / n) ** 0.5 if n else None
+    row = m.WeatherEnsemble(
+        captured_at=_now(),
+        city=city,
+        target_date=target_date,
+        kind=kind,
+        model=model,
+        member_count=n,
+        mean_f=round(mean, 2) if mean is not None else None,
+        std_f=round(std, 2) if std is not None else None,
+        members_json=members,
+    )
+    session.add(row)
+    session.flush()
+    return row
+
+
+def latest_weather_ensemble_at(session, city: str, target_date: str):
+    return session.scalar(
+        select(func.max(m.WeatherEnsemble.captured_at)).where(
+            m.WeatherEnsemble.city == city,
+            m.WeatherEnsemble.target_date == target_date,
+        )
+    )
+
+
+def insert_weather_bucket_snapshots(session, rows: list[dict]) -> int:
+    now = _now()
+    for row in rows:
+        session.add(m.WeatherBucketSnapshot(captured_at=now, **row))
+    session.flush()
+    return len(rows)
+
+
+def latest_bucket_snapshot_at(session, event_ticker: str):
+    return session.scalar(
+        select(func.max(m.WeatherBucketSnapshot.captured_at)).where(
+            m.WeatherBucketSnapshot.event_ticker == event_ticker
+        )
+    )
 
 
 def mark_paper_position(session, ticker: str, strategy: str, unrealized_pnl: float) -> None:

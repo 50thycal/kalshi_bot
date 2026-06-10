@@ -28,6 +28,7 @@ from .logging_config import configure_logging, log_event
 from .paper.engine import PaperCycleSummary, PaperTradingEngine
 from .risk.manager import RiskManager
 from .scanner.scanner import MarketScanner, ScanSummary
+from .weather.ensemble import OpenMeteoEnsembleClient
 from .weather.forecast import NwsForecastClient
 from .weather.tracker import WeatherCycleSummary, WeatherTracker
 
@@ -86,9 +87,12 @@ def run() -> int:
     # Weather mode runs its own focused pipeline instead of the broad scanner.
     weather = settings.bot_mode == "weather"
     forecast_client = NwsForecastClient(settings.nws_user_agent) if weather else None
+    ensemble_client = (
+        OpenMeteoEnsembleClient() if weather and settings.weather_ensemble_enabled else None
+    )
     weather_engine = PaperTradingEngine(client, settings, scanner.risk) if weather else None
     weather_tracker = (
-        WeatherTracker(client, settings, forecast_client) if weather else None
+        WeatherTracker(client, settings, forecast_client, ensemble_client) if weather else None
     )
     if weather and settings.paper_abandon_foreign_on_start:
         try:
@@ -127,6 +131,8 @@ def run() -> int:
         client.close()
         if forecast_client is not None:
             forecast_client.close()
+        if ensemble_client is not None:
+            ensemble_client.close()
     return exit_code
 
 
@@ -293,6 +299,9 @@ def _log_weather(summary: WeatherCycleSummary) -> None:
         events_seen=summary.events_seen,
         tracked=summary.tracked,
         forecasts_stored=summary.forecasts_stored,
+        obs_stored=summary.obs_stored,
+        ensembles_stored=summary.ensembles_stored,
+        bucket_snaps=summary.bucket_snaps,
         opened=summary.opened,
         skipped_no_book=summary.skipped_no_book,
         settlements_captured=summary.settlements_captured,
