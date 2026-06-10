@@ -1,1 +1,1 @@
-{"type": "noop"}
+{"type": "db", "sql": "select 'market_snapshots' as tbl, count(*) as rows, max(captured_at)::text as latest from market_snapshots union all select 'signals', count(*), max(created_at)::text from signals union all select 'paper_trades', count(*), max(created_at)::text from paper_trades order by tbl", "max_rows": 50}
