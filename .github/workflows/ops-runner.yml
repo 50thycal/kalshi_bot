@@ -1,0 +1,36 @@
+name: Ops Runner
+
+# Self-service bridge: runs automatically when `ops/request.json` changes on the
+# `ops` branch (a push Claude makes), so logs / read-only queries can be fetched
+# without a manual "Run workflow" click. Results land in this job's log.
+#
+# This workflow lives ONLY on the `ops` branch by design — `main` and the Railway
+# worker are never touched by ops requests.
+
+on:
+  push:
+    branches: [ops]
+    paths:
+      - "ops/request.json"
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install psycopg
+        run: pip install "psycopg[binary]>=3.1,<4.0"
+
+      - name: Run ops request
+        env:
+          DATABASE_URL_RO: ${{ secrets.DATABASE_URL_RO }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          RAILWAY_ENVIRONMENT_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
+          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+        run: python scripts/ops_runner.py
