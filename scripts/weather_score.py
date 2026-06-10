@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import re
 import sys
+from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -54,6 +55,33 @@ def main() -> int:
         for strat, n, wins, pnl in rows:
             wr = f"{(int(wins or 0) / n * 100):.0f}%" if n else "n/a"
             print(f"  {strat:18s} settled={n:4d}  win={wr:>4}  pnl={_money(pnl)}")
+
+        # 1b) The headline: NWS vs favorite realized P&L, side by side, by window.
+        print("\n=== NWS vs favorite by window (settled realized P&L) ===")
+        by_win: dict[int, dict[str, tuple[int, float]]] = defaultdict(
+            lambda: {"fav": (0, 0.0), "nws": (0, 0.0)}
+        )
+        for strat, n, _wins, pnl in rows:
+            mobj = _HOURS.search(strat or "")
+            if not mobj:
+                continue
+            w = int(mobj.group(1))
+            book = "fav" if (strat or "").startswith("weather_fav") else (
+                "nws" if (strat or "").startswith("weather_nws") else None
+            )
+            if book:
+                by_win[w][book] = (int(n), float(pnl))
+        if not by_win:
+            print("  (no settled weather trades yet)")
+        for w in sorted(by_win, reverse=True):
+            f_n, f_pnl = by_win[w]["fav"]
+            n_n, n_pnl = by_win[w]["nws"]
+            spread = n_pnl - f_pnl
+            flag = "  <-- nws ahead" if spread > 0 else ("  <-- fav ahead" if spread < 0 else "")
+            print(
+                f"  h{w:<3} fav={_money(f_pnl)} (n={f_n})   nws={_money(n_pnl)} (n={n_n})   "
+                f"nws-fav={_money(spread)}{flag}"
+            )
 
         # 2) Head-to-head: NWS forecast vs market favorite on settled events.
         settlements = s.scalars(select(m.WeatherSettlement)).all()

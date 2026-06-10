@@ -187,9 +187,14 @@ tickers against the first run's logs. Each cycle also captures the actual winnin
 DATABASE_URL=postgresql://... python scripts/weather_score.py
 ```
 
-reports the favorite baseline win-rate/P&L by entry window, and a head-to-head — **NWS-implied
-bucket vs market favorite** (who was right on settled events; "NWS-only-right ≫ market-only-right"
-over enough events means a real forecast edge).
+reports the favorite baseline win-rate/P&L by entry window, the **NWS-vs-favorite realized P&L by
+window**, and a head-to-head — **NWS-implied bucket vs market favorite** (who was right on settled
+events; "NWS-only-right ≫ market-only-right" over enough events means a real forecast edge).
+
+The **`weather-score` GitHub Action** runs this automatically every morning (14:00 UTC, after the
+overnight settlements) and writes the scorecard to the run summary. It needs a read-only Postgres
+URL in the `DATABASE_URL_RO` secret (see `docs/REMOTE_ACCESS.md`); trigger it manually anytime via
+the Actions tab.
 
 ## Safety
 

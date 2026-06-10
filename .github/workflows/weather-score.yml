@@ -1,0 +1,39 @@
+name: Weather score (daily)
+
+# Automatic morning check: grade the NWS forecast book vs the favorite baseline on
+# the daily-temperature markets that settled overnight. Runs on a schedule and can be
+# triggered manually. Reads a SELECT-only Postgres URL from the DATABASE_URL_RO secret.
+
+on:
+  schedule:
+    # 14:00 UTC ~= morning ET, after the overnight NWS Daily Climate Reports settle.
+    - cron: "0 14 * * *"
+  workflow_dispatch:
+
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install runtime deps
+        run: pip install -r requirements.txt
+
+      - name: Run weather scorecard
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_RO }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL_RO secret is not set — add a read-only Postgres URL (see docs/REMOTE_ACCESS.md)."
+            exit 1
+          fi
+          {
+            echo '## Weather scorecard'
+            echo '```'
+            python scripts/weather_score.py
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
