@@ -188,8 +188,12 @@ DATABASE_URL=postgresql://... python scripts/weather_score.py
 ```
 
 reports the favorite baseline win-rate/P&L by entry window, the **NWS-vs-favorite realized P&L by
-window**, and a head-to-head — **NWS-implied bucket vs market favorite** (who was right on settled
-events; "NWS-only-right ≫ market-only-right" over enough events means a real forecast edge).
+window**, a head-to-head — **NWS-implied bucket vs market favorite** (who was right on settled
+events; "NWS-only-right ≫ market-only-right" over enough events means a real forecast edge) — and
+**raw forecast accuracy**: NWS bucket hit-rate, mean absolute error and signed bias (warm/cold) in
+°F, and % within 2°F, overall and per city. The accuracy section uses the *earliest* (morning)
+forecast per event — the value you'd actually trade on — so it grades the tradeable signal, not a
+hindsight upper bound. That's the number that decides whether the `nws` book is worth graduating.
 
 The **`weather-score` GitHub Action** runs this automatically every morning (14:00 UTC, after the
 overnight settlements) and writes the scorecard to the run summary. It needs a read-only Postgres

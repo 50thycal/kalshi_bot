@@ -19,7 +19,7 @@ from sqlalchemy import case, func, select  # noqa: E402
 from kalshi_bot import db  # noqa: E402
 from kalshi_bot import models as m  # noqa: E402
 from kalshi_bot.config import normalize_database_url  # noqa: E402
-from kalshi_bot.weather.buckets import forecast_in_bucket  # noqa: E402
+from kalshi_bot.weather.buckets import forecast_in_bucket, parse_bucket_range  # noqa: E402
 
 CLOSED = ("settled", "closed_timeout", "closed_tp", "closed_sl", "closed_void", "abandoned")
 _HOURS = re.compile(r"_h(\d+)$")
@@ -155,6 +155,64 @@ def main() -> int:
             print("\n  recent events (city, date, forecast, winning bucket, nws?, mkt?):")
             for d in details[-20:]:
                 print(f"    {d[0]:5s} {str(d[1]):10s} fc={d[2]}  won='{d[3]}'  nws={d[4]} mkt={d[5]}")
+
+        # 3) Raw forecast accuracy: how many degrees off is NWS from the actual high?
+        # Uses the EARLIEST non-null forecast per event (the morning value you'd trade on),
+        # so this is the tradeable accuracy, not a hindsight upper bound.
+        print("\n=== NWS forecast accuracy vs actual high (earliest/morning forecast) ===")
+        errs: list[float] = []
+        hits = 0
+        graded = 0
+        acc_city: dict[str, list[float]] = {}  # city -> [sum_abs_err, sum_signed_err, n, hits]
+        for st in settlements:
+            low, high = (st.actual_low_f, st.actual_high_f)
+            if low is None and high is None:
+                low, high = parse_bucket_range(st.winning_subtitle)
+            # bucket midpoint as the proxy for the realized station high
+            if low is not None and high is not None:
+                actual = (low + high) / 2.0
+            elif high is not None:
+                actual = high  # "X or below" -> use the edge
+            elif low is not None:
+                actual = low  # "X or above" -> use the edge
+            else:
+                continue
+            fc = s.scalar(
+                select(m.WeatherForecast.forecast_high_f)
+                .where(
+                    m.WeatherForecast.event_ticker == st.event_ticker,
+                    m.WeatherForecast.forecast_high_f.is_not(None),
+                )
+                .order_by(m.WeatherForecast.captured_at.asc())
+                .limit(1)
+            )
+            if fc is None:
+                continue
+            graded += 1
+            signed = float(fc) - actual  # +ve => NWS forecast runs warm
+            errs.append(signed)
+            if forecast_in_bucket(fc, st.actual_low_f, st.actual_high_f):
+                hits += 1
+            c = acc_city.setdefault(st.city or "?", [0.0, 0.0, 0.0, 0.0])
+            c[0] += abs(signed)
+            c[1] += signed
+            c[2] += 1
+            c[3] += 1 if forecast_in_bucket(fc, st.actual_low_f, st.actual_high_f) else 0
+        if not graded:
+            print("  (no settled events with a stored forecast yet)")
+        else:
+            mae = sum(abs(e) for e in errs) / graded
+            bias = sum(errs) / graded
+            within2 = sum(1 for e in errs if abs(e) <= 2.0) / graded * 100
+            print(f"  graded events : {graded}")
+            print(f"  bucket hit-rate: {hits}/{graded} ({hits / graded * 100:.0f}%)")
+            print(f"  MAE           : {mae:.2f}°F   bias: {bias:+.2f}°F "
+                  f"({'runs warm' if bias > 0 else 'runs cold' if bias < 0 else 'unbiased'})")
+            print(f"  within 2°F    : {within2:.0f}%")
+            print("  by city (MAE / bias / hit-rate / n):")
+            for city, (sa, ss, n, h) in sorted(acc_city.items()):
+                print(f"    {city:5s} {sa / n:5.2f} / {ss / n:+5.2f} / "
+                      f"{h / n * 100:3.0f}% / {int(n)}")
 
     return 0
 
