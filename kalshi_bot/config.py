@@ -107,10 +107,15 @@ class Settings(BaseSettings):
     # --- Weather mode (BOT_MODE=weather) ---
     weather_top_n: int = 10
     weather_entry_hours: str = "20,14,8"
-    weather_strategies: str = "favorite,nws"
+    weather_strategies: str = "favorite,nws,cal"
     weather_forecast_enabled: bool = True
     nws_user_agent: str = "kalshi-bot (set NWS_USER_AGENT to your app + contact email)"
     paper_abandon_foreign_on_start: bool = True
+    # `cal` book: per-city forecast bias correction learned from settled history.
+    # offset = mean(actual_high - forecast), shrunk toward 0 by n/(n+shrinkage) so a
+    # couple of events don't overcorrect; only cities with >= min_events contribute.
+    weather_bias_shrinkage: float = 3.0
+    weather_bias_min_events: int = 1
 
     @field_validator("paper_momentum_direction", mode="before")
     @classmethod
@@ -187,7 +192,7 @@ class Settings(BaseSettings):
 
     @property
     def weather_strategy_list(self) -> list[str]:
-        valid = ("favorite", "nws")
+        valid = ("favorite", "nws", "cal")
         out = [s.strip().lower() for s in self.weather_strategies.split(",") if s.strip()]
         return [s for s in out if s in valid] or ["favorite"]
 
@@ -231,6 +236,7 @@ class Settings(BaseSettings):
             "weather_entry_hours": self.weather_entry_hours_list,
             "weather_strategies": self.weather_strategy_list,
             "weather_forecast_enabled": self.weather_forecast_enabled,
+            "weather_bias_shrinkage": self.weather_bias_shrinkage,
             "api_key_id_present": bool(self.kalshi_api_key_id),
             "private_key_present": bool(self.private_key_pem),
         }

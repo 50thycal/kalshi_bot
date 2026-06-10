@@ -29,6 +29,26 @@ def _money(x) -> str:
     return f"${float(x or 0):,.2f}"
 
 
+def _book(strat: str | None) -> str | None:
+    """Map a weather strategy string to its book: fav | nws | cal."""
+    s = strat or ""
+    if s.startswith("weather_fav"):
+        return "fav"
+    if s.startswith("weather_nws"):
+        return "nws"
+    if s.startswith("weather_cal"):
+        return "cal"
+    return None
+
+
+def _day(ts) -> str:
+    if ts is None:
+        return "?"
+    if hasattr(ts, "date"):
+        return ts.date().isoformat()
+    return str(ts)[:10]
+
+
 def main() -> int:
     url = normalize_database_url(os.environ.get("DATABASE_URL"))
     if not url:
@@ -56,32 +76,28 @@ def main() -> int:
             wr = f"{(int(wins or 0) / n * 100):.0f}%" if n else "n/a"
             print(f"  {strat:18s} settled={n:4d}  win={wr:>4}  pnl={_money(pnl)}")
 
-        # 1b) The headline: NWS vs favorite realized P&L, side by side, by window.
-        print("\n=== NWS vs favorite by window (settled realized P&L) ===")
+        # 1b) The headline: each book's realized P&L, side by side, by window.
+        print("\n=== Books by window (settled realized P&L: fav | nws | cal) ===")
         by_win: dict[int, dict[str, tuple[int, float]]] = defaultdict(
-            lambda: {"fav": (0, 0.0), "nws": (0, 0.0)}
+            lambda: {"fav": (0, 0.0), "nws": (0, 0.0), "cal": (0, 0.0)}
         )
         for strat, n, _wins, pnl in rows:
             mobj = _HOURS.search(strat or "")
-            if not mobj:
-                continue
-            w = int(mobj.group(1))
-            book = "fav" if (strat or "").startswith("weather_fav") else (
-                "nws" if (strat or "").startswith("weather_nws") else None
-            )
-            if book:
-                by_win[w][book] = (int(n), float(pnl))
+            book = _book(strat)
+            if mobj and book:
+                by_win[int(mobj.group(1))][book] = (int(n), float(pnl))
         if not by_win:
             print("  (no settled weather trades yet)")
         for w in sorted(by_win, reverse=True):
-            f_n, f_pnl = by_win[w]["fav"]
-            n_n, n_pnl = by_win[w]["nws"]
-            spread = n_pnl - f_pnl
-            flag = "  <-- nws ahead" if spread > 0 else ("  <-- fav ahead" if spread < 0 else "")
-            print(
-                f"  h{w:<3} fav={_money(f_pnl)} (n={f_n})   nws={_money(n_pnl)} (n={n_n})   "
-                f"nws-fav={_money(spread)}{flag}"
-            )
+            cells = []
+            for b in ("fav", "nws", "cal"):
+                bn, bp = by_win[w][b]
+                cells.append(f"{b}={_money(bp)} (n={bn})")
+            f_pnl = by_win[w]["fav"][1]
+            best = max(("nws", "cal"), key=lambda b: by_win[w][b][1])
+            spread = by_win[w][best][1] - f_pnl
+            flag = f"   <-- {best} +{_money(spread)} vs fav" if spread > 0 else ""
+            print(f"  h{w:<3} " + "   ".join(cells) + flag)
 
         # 2) Head-to-head: NWS forecast vs market favorite on settled events.
         settlements = s.scalars(select(m.WeatherSettlement)).all()
@@ -213,6 +229,53 @@ def main() -> int:
             for city, (sa, ss, n, h) in sorted(acc_city.items()):
                 print(f"    {city:5s} {sa / n:5.2f} / {ss / n:+5.2f} / "
                       f"{h / n * 100:3.0f}% / {int(n)}")
+
+        # 4) Consistency — the goal is reliable small gains, so judge books on EV/trade,
+        # variability and drawdown, NOT win-rate (a high win-rate on high-priced
+        # favorites hides rare large losses, i.e. negative skew).
+        print("\n=== Consistency by book (settled trades) ===")
+        ctrades = s.execute(
+            select(m.PaperTrade.strategy, m.PaperTrade.pnl, m.PaperTrade.closed_at)
+            .where(m.PaperTrade.strategy.like("weather%"), m.PaperTrade.status == "settled")
+        ).all()
+        book_pnls: dict[str, list[tuple]] = {"fav": [], "nws": [], "cal": []}
+        for strat, pnl, closed in ctrades:
+            b = _book(strat)
+            if b:
+                book_pnls[b].append((closed, float(pnl or 0.0)))
+        if not any(book_pnls.values()):
+            print("  (no settled weather trades yet)")
+        else:
+            print(f"  {'book':4s} {'n':>3} {'ev/trade':>9} {'stdev':>7} "
+                  f"{'sharpe':>7} {'worst':>7} {'total':>8}")
+            for b in ("fav", "nws", "cal"):
+                data = [p for _, p in book_pnls[b]]
+                n = len(data)
+                if not n:
+                    continue
+                ev = sum(data) / n
+                sd = (sum((x - ev) ** 2 for x in data) / n) ** 0.5
+                sharpe = (ev / sd) if sd > 1e-9 else 0.0
+                print(f"  {b:4s} {n:3d} {ev:>+9.3f} {sd:>7.3f} {sharpe:>+7.2f} "
+                      f"{min(data):>+7.2f} {sum(data):>+8.2f}")
+            print("  (sharpe = ev/trade ÷ stdev, per-trade; higher = more consistent)")
+
+            print("\n  daily P&L per book (worst day / max drawdown / up-days):")
+            for b in ("fav", "nws", "cal"):
+                if not book_pnls[b]:
+                    continue
+                daily: dict[str, float] = defaultdict(float)
+                for closed, pnl in book_pnls[b]:
+                    daily[_day(closed)] += pnl
+                series = [daily[k] for k in sorted(daily)]
+                cum = peak = mdd = 0.0
+                for x in series:
+                    cum += x
+                    peak = max(peak, cum)
+                    mdd = min(mdd, cum - peak)
+                up = sum(1 for x in series if x > 0)
+                print(f"    {b:4s} days={len(series):2d}  worst_day={_money(min(series))}  "
+                      f"max_drawdown={_money(mdd)}  up_days={up}/{len(series)}")
 
     return 0
 

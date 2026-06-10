@@ -146,6 +146,67 @@ def test_weather_nws_book_buys_forecast_bucket(settings):
         assert all(t.assumed_price == 22 for t in nws)  # bought the forecast bucket at its ask
 
 
+def _seed_nyc_settlement(session, event_ticker, fc_high, sub, low, high):
+    repo.insert_weather_settlement(
+        session, event_ticker=event_ticker, city="NYC", series_ticker="KXHIGHNY",
+        target_date=None, winning_ticker=None, winning_subtitle=sub,
+        actual_low_f=low, actual_high_f=high,
+    )
+    repo.insert_weather_forecast(
+        session, city="NYC", series_ticker="KXHIGHNY", event_ticker=event_ticker,
+        target_date=None, station="KNYC", forecast_high_f=fc_high, source="nws",
+    )
+
+
+def test_weather_city_bias_shrinks_toward_zero(settings):
+    db.init_engine(settings.database_url)
+    db.create_all()
+    with db.session_scope() as session:
+        # Two events: forecast 81 but settled 78-79 (mid 78.5) -> raw bias -2.5.
+        for ev in ("KXHIGHNY-26JUN05", "KXHIGHNY-26JUN06"):
+            _seed_nyc_settlement(session, ev, 81.0, "78° to 79°", 78.0, 79.0)
+        bias = repo.weather_city_bias(session, shrinkage=3.0, min_events=1)
+        # mean(actual-fc) = -2.5; shrunk *2/(2+3)=0.4 -> -1.0
+        assert bias["NYC"] == -1.0
+        # min_events gate: requiring 3 events drops NYC (only 2).
+        assert repo.weather_city_bias(session, shrinkage=3.0, min_events=3) == {}
+
+
+def test_weather_cal_book_buys_bias_corrected_bucket(settings):
+    settings.bot_mode = "weather"
+    settings.weather_strategies = "cal"
+    settings.weather_bias_shrinkage = 0.0  # full correction -> deterministic
+    settings.weather_bias_min_events = 1
+    db.init_engine(settings.database_url)
+    db.create_all()
+
+    # Prior settled NYC event: forecast 81 but actually settled 76-77 -> station runs
+    # ~4.5 degF cooler than the raw forecast.
+    with db.session_scope() as session:
+        _seed_nyc_settlement(session, "KXHIGHNY-26JUN07", 81.0, "76° to 77°", 76.0, 77.0)
+
+    book = {
+        "KXHIGHNY-26JUN08-B74.5": {"orderbook_fp": {"yes_dollars": [["0.5500", "300"]], "no_dollars": [["0.4300", "300"]]}},
+        "KXHIGHNY-26JUN08-B76.5": {"orderbook_fp": {"yes_dollars": [["0.2000", "300"]], "no_dollars": [["0.7800", "300"]]}},
+    }
+
+    class Client(FakeWeatherClient):
+        def get_orderbook(self, ticker, depth=None):
+            return book[ticker]
+
+    client = Client(_nyc_event(hours_ahead=3))  # favorite = 74-75
+    # Raw forecast 81 -> corrected 81 + (-4.5) = 76.5 -> bucket 76-77 (not the favorite).
+    tracker = WeatherTracker(client, settings, FakeForecast(81.0))
+    with db.session_scope() as session:
+        tracker.run_once(session)
+
+    with db.session_scope() as session:
+        cal = [t for t in session.scalars(select(m.PaperTrade)).all()
+               if (t.strategy or "").startswith("weather_cal")]
+        assert len(cal) == 3  # one per entry window
+        assert all(t.market_ticker == "KXHIGHNY-26JUN08-B76.5" for t in cal)
+
+
 def test_weather_holds_to_settlement_then_settles(settings):
     settings.bot_mode = "weather"
     settings.paper_max_hold_hours = 0  # would time out a normal trade immediately

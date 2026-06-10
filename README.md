@@ -165,12 +165,18 @@ DATABASE_URL=postgresql://... python scripts/paper_stats.py
 instead of the broad scanner. Each city ("Highest temperature in `<CITY>` today?") is a daily
 event with ~6 mutually-exclusive 2° buckets settling on the NWS Daily Climate Report.
 
-- **Parallel books** (`WEATHER_STRATEGIES`, default `favorite,nws`), each entered at several
-  hours-to-settlement snapshots (`WEATHER_ENTRY_HOURS`, default `12,8,4`) and held to settlement:
+- **Parallel books** (`WEATHER_STRATEGIES`, default `favorite,nws,cal`), each entered at several
+  hours-to-settlement snapshots (`WEATHER_ENTRY_HOURS`, default `20,14,8`) and held to settlement:
   - **`favorite`** (`weather_fav_h*`): buy the market's top bucket — the baseline.
-  - **`nws`** (`weather_nws_h*`): buy the bucket the NWS forecast high points to — the forecast
+  - **`nws`** (`weather_nws_h*`): buy the bucket the raw NWS forecast high points to — the forecast
     edge. Running it next to `favorite` is a head-to-head: when they disagree, whoever's bucket
     actually wins reveals whether the forecast beats the crowd.
+  - **`cal`** (`weather_cal_h*`): same as `nws` but on a **per-city bias-corrected** forecast.
+    Some stations (notably NYC/Central Park, a cool micro-site) run consistently warmer or cooler
+    than the gridded NWS forecast; `repository.weather_city_bias` learns
+    `offset = mean(actual_high − forecast)` per city from settled history (shrunk toward 0 by
+    `n/(n+WEATHER_BIAS_SHRINKAGE)` so small samples don't overcorrect) and adds it before picking
+    the bucket. `cal` vs `nws` measures whether the correction actually helps.
 
   Comparing windows also shows how much entry timing matters.
 - **Forecast collection**: each cycle fetches the NWS daily-high forecast (`api.weather.gov`, free,
@@ -187,13 +193,16 @@ tickers against the first run's logs. Each cycle also captures the actual winnin
 DATABASE_URL=postgresql://... python scripts/weather_score.py
 ```
 
-reports the favorite baseline win-rate/P&L by entry window, the **NWS-vs-favorite realized P&L by
-window**, a head-to-head — **NWS-implied bucket vs market favorite** (who was right on settled
-events; "NWS-only-right ≫ market-only-right" over enough events means a real forecast edge) — and
-**raw forecast accuracy**: NWS bucket hit-rate, mean absolute error and signed bias (warm/cold) in
-°F, and % within 2°F, overall and per city. The accuracy section uses the *earliest* (morning)
-forecast per event — the value you'd actually trade on — so it grades the tradeable signal, not a
-hindsight upper bound. That's the number that decides whether the `nws` book is worth graduating.
+reports the favorite baseline win-rate/P&L by entry window, the **per-book realized P&L by window**
+(fav | nws | cal side by side), a head-to-head — **NWS-implied bucket vs market favorite** (who was
+right on settled events; "NWS-only-right ≫ market-only-right" over enough events means a real
+forecast edge) — **raw forecast accuracy** (NWS bucket hit-rate, mean absolute error and signed
+bias in °F, % within 2°F, overall and per city; uses the *earliest/morning* forecast so it grades
+the tradeable signal, not a hindsight upper bound), and a **consistency** block: per-book EV/trade,
+stdev, a per-trade Sharpe (EV ÷ stdev), worst trade, worst single day, and max drawdown. Consistency
+is the right lens for the goal of *reliable small gains* — a high win-rate on high-priced favorites
+hides rare large losses (negative skew), which shows up as a poor Sharpe and a deep worst-day even
+when the win-rate looks great.
 
 The **`weather-score` GitHub Action** runs this automatically every morning (14:00 UTC, after the
 overnight settlements) and writes the scorecard to the run summary. It needs a read-only Postgres

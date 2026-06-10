@@ -138,10 +138,25 @@ class WeatherTracker:
         tracked = tracked[: s.weather_top_n]
         summary.tracked = len(tracked)
 
+        strategies = s.weather_strategy_list
+        city_bias = (
+            repo.weather_city_bias(
+                session,
+                shrinkage=s.weather_bias_shrinkage,
+                min_events=s.weather_bias_min_events,
+            )
+            if "cal" in strategies
+            else {}
+        )
+
         for t in tracked:
             forecast_high = None
             if s.weather_forecast_enabled and self.forecast is not None:
                 forecast_high = self._store_forecast(session, t, summary)
+            bias = city_bias.get(t.city.code, 0.0)
+            cal_high = (
+                round(forecast_high + bias, 1) if forecast_high is not None else None
+            )
             rules = t.favorite.get("rules_primary") or t.event.get("rules_primary") or ""
             logger.info(
                 "weather market",
@@ -153,6 +168,8 @@ class WeatherTracker:
                     "favorite": t.favorite.get("yes_sub_title") or t.favorite.get("subtitle"),
                     "favorite_mid": round(t.favorite_mid, 1),
                     "forecast_high_f": forecast_high,
+                    "bias_offset_f": bias if "cal" in strategies else None,
+                    "forecast_cal_f": cal_high if "cal" in strategies else None,
                     "settlement": rules[:200],
                 }},
             )
@@ -162,34 +179,40 @@ class WeatherTracker:
             if t.hours_to_close > max(s.weather_entry_hours_list):
                 continue  # too early — no window open yet
 
-            strategies = s.weather_strategy_list
             markets = t.event.get("markets") or []
-            fav_metrics = self._bucket_metrics(t.favorite) if "favorite" in strategies else None
+            # Resolve each book's target bucket once, sharing order-book metrics when two
+            # books land on the same ticker (avoids redundant order-book fetches).
+            metrics_cache: dict[str, object] = {}
+            fav_market = t.favorite if "favorite" in strategies else None
             nws_market = (
                 self._nws_bucket(markets, forecast_high)
                 if "nws" in strategies and forecast_high is not None
                 else None
             )
-            nws_metrics = None
-            if nws_market is not None:
-                nws_metrics = (
-                    fav_metrics
-                    if fav_metrics is not None and nws_market.get("ticker") == t.favorite.get("ticker")
-                    else self._bucket_metrics(nws_market)
-                )
+            cal_market = (
+                self._nws_bucket(markets, cal_high)
+                if "cal" in strategies and cal_high is not None
+                else None
+            )
 
             for hours in s.weather_entry_hours_list:
                 if t.hours_to_close > hours:
                     continue
-                if "favorite" in strategies:
+                if fav_market is not None:
                     self._maybe_enter(
-                        session, f"weather_fav_h{int(hours)}", event_ticker, t, t.favorite,
-                        fav_metrics, t.favorite_mid / 100.0, summary,
+                        session, f"weather_fav_h{int(hours)}", event_ticker, t, fav_market,
+                        self._cached_metrics(fav_market, metrics_cache),
+                        t.favorite_mid / 100.0, summary,
                     )
                 if nws_market is not None:
                     self._maybe_enter(
                         session, f"weather_nws_h{int(hours)}", event_ticker, t, nws_market,
-                        nws_metrics, None, summary,
+                        self._cached_metrics(nws_market, metrics_cache), None, summary,
+                    )
+                if cal_market is not None:
+                    self._maybe_enter(
+                        session, f"weather_cal_h{int(hours)}", event_ticker, t, cal_market,
+                        self._cached_metrics(cal_market, metrics_cache), None, summary,
                     )
 
         self._capture_settlements(session, summary)
@@ -245,6 +268,16 @@ class WeatherTracker:
             if forecast_in_bucket(forecast_high, low, high):
                 return mk
         return None
+
+    def _cached_metrics(self, market: dict | None, cache: dict):
+        """Order-book metrics for a bucket, memoized per ticker within a cycle so two
+        books that pick the same bucket don't double-fetch the order book."""
+        if market is None:
+            return None
+        tk = market.get("ticker")
+        if tk not in cache:
+            cache[tk] = self._bucket_metrics(market)
+        return cache[tk]
 
     def _bucket_metrics(self, market: dict):
         ticker = market.get("ticker")

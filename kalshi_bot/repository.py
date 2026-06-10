@@ -530,6 +530,50 @@ def insert_weather_settlement(
     return row
 
 
+def weather_city_bias(
+    session, *, shrinkage: float = 3.0, min_events: int = 1
+) -> dict[str, float]:
+    """Per-city forecast bias offset (degF) to ADD to a raw NWS forecast so it better
+    matches the station's settled high.
+
+    offset = shrink( mean(actual_high - earliest_forecast) ), where the shrink factor
+    n/(n+shrinkage) pulls small samples toward 0 so a couple of events don't overcorrect.
+    Uses the earliest (morning) forecast per event — the value the books trade on. Only
+    cities with >= min_events settled+forecast pairs are returned (others -> no offset).
+    """
+    diffs: dict[str, list[float]] = {}
+    for st in session.scalars(select(m.WeatherSettlement)).all():
+        low, high = st.actual_low_f, st.actual_high_f
+        if low is not None and high is not None:
+            actual = (low + high) / 2.0
+        elif high is not None:
+            actual = high
+        elif low is not None:
+            actual = low
+        else:
+            continue
+        fc = session.scalar(
+            select(m.WeatherForecast.forecast_high_f)
+            .where(
+                m.WeatherForecast.event_ticker == st.event_ticker,
+                m.WeatherForecast.forecast_high_f.is_not(None),
+            )
+            .order_by(m.WeatherForecast.captured_at.asc())
+            .limit(1)
+        )
+        if fc is None or not st.city:
+            continue
+        diffs.setdefault(st.city, []).append(actual - float(fc))
+    out: dict[str, float] = {}
+    for city, ds in diffs.items():
+        n = len(ds)
+        if n < min_events:
+            continue
+        raw = sum(ds) / n
+        out[city] = round(raw * n / (n + shrinkage), 2)
+    return out
+
+
 def mark_paper_position(session, ticker: str, strategy: str, unrealized_pnl: float) -> None:
     pos = get_open_paper_position(session, ticker, strategy)
     if pos is not None:
