@@ -31,9 +31,11 @@ jobs:
             echo "::error::DATABASE_URL_RO secret is not set — add a read-only Postgres URL (see docs/REMOTE_ACCESS.md)."
             exit 1
           fi
+          # tee so the scorecard lands in BOTH the run summary (human-readable web
+          # page) and the job's console log (which the GitHub API/tools can fetch).
           {
             echo '## Weather scorecard'
             echo '```'
             python scripts/weather_score.py
             echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
