@@ -55,7 +55,14 @@ To run a request:
    ```bash
    cd /tmp/ops && git add ops/request.json && git commit -m "ops: <what>" && git push origin ops
    ```
-4. Read the result with the GitHub MCP tools:
+4. Read the result. The runner commits its full output back to the `ops` branch
+   as `ops/result.txt`, so the simplest path is plain git (works even when the
+   GitHub MCP tools are down):
+   ```bash
+   # poll until the result commit lands (~30-90s), then:
+   git fetch origin ops && git show FETCH_HEAD:ops/result.txt
+   ```
+   Alternatively via the GitHub MCP tools:
    - `actions_list` `method=list_workflow_runs`, `resource_id=ops-runner.yml` → newest run id
    - `actions_list` `method=list_workflow_jobs`, `resource_id=<run id>` → job id
    - `get_job_logs` `job_id=<job id>` `return_content=true` → the output is the query

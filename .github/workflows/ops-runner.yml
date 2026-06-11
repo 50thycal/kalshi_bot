@@ -2,7 +2,12 @@ name: Ops Runner
 
 # Self-service bridge: runs automatically when `ops/request.json` changes on the
 # `ops` branch (a push Claude makes), so logs / read-only queries can be fetched
-# without a manual "Run workflow" click. Results land in this job's log.
+# without a manual "Run workflow" click. Results land in this job's log AND are
+# committed back to the ops branch as `ops/result.txt`, so they can be read over
+# plain git when the GitHub API/MCP tools are unavailable.
+#
+# The push trigger filters on ops/request.json only, so the result commit can
+# never retrigger the workflow.
 #
 # This workflow lives ONLY on the `ops` branch by design — `main` and the Railway
 # worker are never touched by ops requests.
@@ -12,6 +17,9 @@ on:
     branches: [ops]
     paths:
       - "ops/request.json"
+
+permissions:
+  contents: write # to push ops/result.txt back to the ops branch
 
 jobs:
   run:
@@ -33,4 +41,18 @@ jobs:
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
           RAILWAY_ENVIRONMENT_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
           RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
-        run: python scripts/ops_runner.py
+        run: |
+          set -o pipefail
+          python scripts/ops_runner.py 2>&1 | tee ops/result.txt
+
+      - name: Publish result to ops branch
+        if: always()
+        run: |
+          git config user.name "ops-runner"
+          git config user.email "ops-runner@users.noreply.github.com"
+          git add ops/result.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "ops: result"
+            git pull --rebase origin ops || true
+            git push origin HEAD:ops
+          fi
