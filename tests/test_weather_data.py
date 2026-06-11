@@ -169,6 +169,69 @@ def test_low_book_buys_low_forecast_bucket(settings):
         assert kinds == {"low"}
 
 
+class LowNoForecast:
+    """Low event where the NWS overnight period has already passed (daily_low_f -> None),
+    but the station's running minimum is available."""
+
+    def daily_high_f(self, lat, lon, target):
+        raise AssertionError("high forecast should not be fetched for a low event")
+
+    def daily_low_f(self, lat, lon, target):
+        return None  # overnight period ending today is no longer served
+
+    def observed_extremes_f(self, station, target, tz):
+        from kalshi_bot.weather.forecast import ObservedExtremes
+
+        # Running min 60.5 -> bucket 60-61, NOT the favorite (58-59).
+        return ObservedExtremes(max_f=72.0, min_f=60.5, obs_count=12, last_obs_at=None)
+
+
+def test_low_nws_falls_back_to_running_min(settings):
+    settings.bot_mode = "weather"
+    settings.weather_strategies = "favorite,nws"
+    settings.weather_entry_hours = "12,8,4"
+    settings.weather_obs_enabled = True
+    db.init_engine(settings.database_url)
+    db.create_all()
+
+    tracker = WeatherTracker(LowOnlyClient(), settings, LowNoForecast())
+    with db.session_scope() as session:
+        summary = tracker.run_once(session)
+    # 3 favorite windows + 3 nws windows (nws now trades off the running-min fallback).
+    assert summary.opened == 6
+
+    with db.session_scope() as session:
+        trades = session.scalars(select(m.PaperTrade)).all()
+        fav = [t for t in trades if (t.strategy or "").startswith("weather_low_fav")]
+        nws = [t for t in trades if (t.strategy or "").startswith("weather_low_nws")]
+        assert len(fav) == 3 and len(nws) == 3
+        assert all(t.market_ticker == "KXLOWTNYC-26JUN08-B58.5" for t in fav)
+        # nws buys the running-min bucket (60-61), not the favorite.
+        assert all(t.market_ticker == "KXLOWTNYC-26JUN08-B60.5" for t in nws)
+        # The stored NWS forecast is still null (we didn't fabricate a forecast row).
+        fc = session.scalars(select(m.WeatherForecast)).all()
+        assert all(f.forecast_high_f is None and f.kind == "low" for f in fc)
+
+
+def test_low_nws_no_trade_without_forecast_or_obs(settings):
+    """With no forecast and no observations, the nws low book stays silent (fail-closed)."""
+    settings.bot_mode = "weather"
+    settings.weather_strategies = "favorite,nws"
+    settings.weather_entry_hours = "12,8,4"
+    settings.weather_obs_enabled = False  # no observation fallback available
+    db.init_engine(settings.database_url)
+    db.create_all()
+
+    tracker = WeatherTracker(LowOnlyClient(), settings, LowNoForecast())
+    with db.session_scope() as session:
+        summary = tracker.run_once(session)
+    assert summary.opened == 3  # favorite only; nws has no point estimate
+
+    with db.session_scope() as session:
+        trades = session.scalars(select(m.PaperTrade)).all()
+        assert all((t.strategy or "").startswith("weather_low_fav") for t in trades)
+
+
 def test_bucket_ladder_snapshot_and_throttle(settings):
     settings.bot_mode = "weather"
     settings.weather_strategies = "favorite"

@@ -215,9 +215,25 @@ class WeatherTracker:
             self._snapshot_ladder(session, t, now, summary)
 
             bias = city_bias.get((t.city.code, t.kind), 0.0)
+            # For LOW markets the NWS overnight period ENDING on target_date is no longer
+            # served by the time the books run (anchored near next-morning settlement), so
+            # daily_low_f returns None and the nws/cal books would never trade. Fall back to
+            # the day's running-minimum observation: the daily low lands in the early morning,
+            # so once any entry window is open the coldest reading has already occurred and the
+            # running min is a sound point estimate (often better than a stale forecast).
+            effective_forecast = forecast_val
+            forecast_source = "nws"
+            if (
+                t.kind == "low"
+                and forecast_val is None
+                and obs is not None
+                and obs.min_f is not None
+            ):
+                effective_forecast = obs.min_f
+                forecast_source = "obs"
             cal_val = (
-                round(forecast_val + bias, 1)
-                if forecast_val is not None and "cal" in strategies
+                round(effective_forecast + bias, 1)
+                if effective_forecast is not None and "cal" in strategies
                 else None
             )
             rules = t.favorite.get("rules_primary") or t.event.get("rules_primary") or ""
@@ -232,6 +248,8 @@ class WeatherTracker:
                     "favorite": t.favorite.get("yes_sub_title") or t.favorite.get("subtitle"),
                     "favorite_mid": round(t.favorite_mid, 1),
                     "forecast_f": forecast_val,
+                    "forecast_effective_f": effective_forecast,
+                    "forecast_source": forecast_source,
                     "bias_offset_f": bias if "cal" in strategies else None,
                     "forecast_cal_f": cal_val,
                     "obs_running_f": (
@@ -253,8 +271,8 @@ class WeatherTracker:
             metrics_cache: dict[str, object] = {}
             fav_market = t.favorite if "favorite" in strategies else None
             nws_market = (
-                self._value_bucket(markets, forecast_val)
-                if "nws" in strategies and forecast_val is not None
+                self._value_bucket(markets, effective_forecast)
+                if "nws" in strategies and effective_forecast is not None
                 else None
             )
             cal_market = self._value_bucket(markets, cal_val) if cal_val is not None else None
