@@ -28,7 +28,7 @@ REQUEST_PATH = os.environ.get("OPS_REQUEST_PATH", "ops/request.json")
 
 # Read-only analysis scripts (stdlib + psycopg only) runnable via the ops channel.
 # Each connects with DATABASE_URL_RO and a read-only session, like db_query.py.
-ALLOWED_SCRIPTS = ("weather_model_check", "weather_exit_sweep")
+ALLOWED_SCRIPTS = ("weather_model_check", "weather_exit_sweep", "weather_entry_study")
 
 
 def main() -> int:

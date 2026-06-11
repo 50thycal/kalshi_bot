@@ -130,8 +130,10 @@ class Settings(BaseSettings):
     weather_ensemble_models: str = "gfs_seamless,ecmwf_ifs025"
     weather_ensemble_interval_minutes: float = 60.0
     # Full bucket-ladder price snapshots (the market's implied distribution) — stored
-    # in weather_bucket_snapshots at most every N minutes per event.
-    weather_ladder_interval_minutes: float = 15.0
+    # in weather_bucket_snapshots at most every N minutes per event. The ladder reads
+    # the markets the cycle already fetched (no extra API calls), so this can run as
+    # fast as the scan cycle; finer paths make the exit/entry replay studies sharper.
+    weather_ladder_interval_minutes: float = 5.0
 
     @field_validator("paper_momentum_direction", mode="before")
     @classmethod
