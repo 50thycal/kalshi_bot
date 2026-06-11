@@ -229,6 +229,20 @@ overnight settlements) and writes the scorecard to the run summary. It needs a r
 URL in the `DATABASE_URL_RO` secret (see `docs/REMOTE_ACCESS.md`); trigger it manually anytime via
 the Actions tab.
 
+**Model check (the gate before a real edge book).** `scripts/weather_model_check.py` answers the
+question the collected distributions exist for: *does the ensemble forecast beat the market's own
+implied distribution?* Per settled event and entry window it rebuilds the ensemble's
+P(bucket) (Gaussian kernel around each member, models blended equally, strictly using only data
+captured before the snapshot — no lookahead), grades it against the market's normalized bucket
+mids on the actual winner (Brier score / log-loss / hit-rate), and simulates cost-aware trades
+(YES at ask, NO at 100−bid, Kalshi fee) wherever model-vs-price disagreement clears
+`--min-edge-cents`. It also prints the model's **live** disagreements on open events and a
+data-readiness section, and banners loudly until the graded sample is big enough to mean anything.
+Read-only and self-contained (stdlib + psycopg), so it runs locally
+(`DATABASE_URL=... python scripts/weather_model_check.py`) or through the ops channel
+(`{"type": "script", "name": "weather_model_check"}`). Only if this shows the ensemble
+persistently beating the market does a `weather_edge_*` paper book get wired in.
+
 ## Safety
 
 The bot must fail closed. It will not do anything trade-like if config is missing, the

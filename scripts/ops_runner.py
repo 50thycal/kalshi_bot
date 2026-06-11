@@ -8,10 +8,12 @@ result back from the job log.
 ops/request.json shapes:
   {"type": "logs", "limit": 200, "filter": "", "deployment_id": ""}
   {"type": "db",   "sql": "select ...", "max_rows": 200}
+  {"type": "script", "name": "weather_model_check", "args": ["--sigma", "1.5"]}
   {"type": "noop"}   # placeholder; do nothing
 
 Reuses scripts/railway_logs.py and scripts/db_query.py by setting the env vars
-they already read, so all the read-only guards there still apply.
+they already read, so all the read-only guards there still apply. Script requests
+are allowlisted to self-contained read-only analysis scripts in scripts/.
 """
 
 from __future__ import annotations
@@ -23,6 +25,10 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 REQUEST_PATH = os.environ.get("OPS_REQUEST_PATH", "ops/request.json")
+
+# Read-only analysis scripts (stdlib + psycopg only) runnable via the ops channel.
+# Each connects with DATABASE_URL_RO and a read-only session, like db_query.py.
+ALLOWED_SCRIPTS = ("weather_model_check",)
 
 
 def main() -> int:
@@ -64,6 +70,17 @@ def main() -> int:
         import db_query
 
         return db_query.main()
+
+    if rtype == "script":
+        name = (req.get("name") or "").strip()
+        if name not in ALLOWED_SCRIPTS:
+            print(f"script {name!r} is not allowlisted (allowed: {ALLOWED_SCRIPTS})", file=sys.stderr)
+            return 1
+        args = [str(a) for a in (req.get("args") or [])]
+        import importlib
+
+        mod = importlib.import_module(name)
+        return mod.main(args)
 
     print(f"Unknown request type: {rtype!r}", file=sys.stderr)
     return 1

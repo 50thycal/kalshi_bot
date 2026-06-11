@@ -41,8 +41,14 @@ To run a request:
    ```jsonc
    {"type": "db",   "sql": "select ...", "max_rows": 200}
    {"type": "logs", "limit": 200, "filter": "", "deployment_id": ""}
+   {"type": "script", "name": "weather_model_check", "args": ["--sigma", "1.5"]}
    {"type": "noop"}
    ```
+   `script` runs an allowlisted self-contained read-only analysis script from
+   `scripts/` (see `ALLOWED_SCRIPTS` in `scripts/ops_runner.py`).
+   `weather_model_check` grades the ensemble forecast distribution against the
+   market's bucket prices on settled events (Brier/log-loss + hypothetical EV)
+   and prints live model-vs-market disagreements.
 3. Commit and push:
    ```bash
    cd /tmp/ops && git add ops/request.json && git commit -m "ops: <what>" && git push origin ops
@@ -58,9 +64,9 @@ Notes:
 - **Never open a PR merging `ops` into the default branch.** GitHub auto-deletes
   the branch on merge, which removes the trigger. If `ops` is ever missing,
   recreate it: `git checkout -B ops origin/<default-branch> && git push -u origin ops`.
-- If `scripts/db_query.py` or `scripts/railway_logs.py` change on the default
-  branch, refresh `ops` from the default branch (recreate as above) so it picks
-  up the fix.
+- If `scripts/db_query.py`, `scripts/railway_logs.py`, `scripts/ops_runner.py`,
+  or an allowlisted analysis script change on the default branch, refresh `ops`
+  from the default branch (recreate as above) so it picks up the fix.
 - Latency is ~30–60s per run. Request commits live only on `ops`; they never
   touch the default branch and never redeploy the Railway worker.
 
