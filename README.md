@@ -243,6 +243,18 @@ Read-only and self-contained (stdlib + psycopg), so it runs locally
 (`{"type": "script", "name": "weather_model_check"}`). Only if this shows the ensemble
 persistently beating the market does a `weather_edge_*` paper book get wired in.
 
+**Exit sweep (stop-loss / take-profit, evaluated offline).** The weather books hold to
+settlement; `scripts/weather_exit_sweep.py` asks whether they should. Because the bucket
+ladder is snapshotted every ~15 minutes, every settled paper trade has a recorded price
+path — so the sweep replays each trade under a whole grid of (take-profit, stop-loss)
+exits at once, with engine-identical semantics (trigger on bid−entry, exit at the
+snapshot bid, Kalshi fee on early exits, none on settlement). Every combo is graded on
+the identical trades — a paired comparison that live SL/TP books would need months to
+approximate — and reported against the hold-to-settlement baseline, per book and pooled.
+Same plumbing as the model check: read-only, self-contained, runs locally or via the ops
+channel (`{"type": "script", "name": "weather_exit_sweep"}`). If a combo robustly beats
+hold once the sample is real, it gets wired into the live books as the exit rule.
+
 ## Safety
 
 The bot must fail closed. It will not do anything trade-like if config is missing, the

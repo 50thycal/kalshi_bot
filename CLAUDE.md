@@ -48,7 +48,9 @@ To run a request:
    `scripts/` (see `ALLOWED_SCRIPTS` in `scripts/ops_runner.py`).
    `weather_model_check` grades the ensemble forecast distribution against the
    market's bucket prices on settled events (Brier/log-loss + hypothetical EV)
-   and prints live model-vs-market disagreements.
+   and prints live model-vs-market disagreements. `weather_exit_sweep` replays
+   settled weather paper trades through their recorded bucket price paths under
+   a TP/SL grid to find the best exit rule vs holding to settlement.
 3. Commit and push:
    ```bash
    cd /tmp/ops && git add ops/request.json && git commit -m "ops: <what>" && git push origin ops
