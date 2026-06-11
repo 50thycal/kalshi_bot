@@ -96,6 +96,39 @@ def main() -> int:
             wr = f"{(int(wins or 0) / n * 100):.0f}%" if n else "n/a"
             print(f"  {strat:22s} settled={n:4d}  win={wr:>4}  pnl={_money(pnl)}")
 
+        # 1a) Per-book rollup (windows summed): the at-a-glance ledger. P&L per trade
+        # is the number that matters — it must clear the ~4-5c round-trip cost to print
+        # money; a high win-rate alone just means buying expensive favorites (neg skew).
+        print("\n=== Realized P&L by book (all windows summed) ===")
+        roll: dict[tuple[str, str], list[float]] = defaultdict(lambda: [0, 0, 0.0])  # n, wins, pnl
+        for strat, n, wins, pnl in rows:
+            kb = _book(strat)
+            if kb is None:
+                continue
+            agg = roll[kb]
+            agg[0] += int(n)
+            agg[1] += int(wins or 0)
+            agg[2] += float(pnl)
+        if not roll:
+            print("  (no settled trades yet)")
+        else:
+            print(f"  {'book':16s} {'settled':>7}  {'win%':>4}  {'total':>8}  {'per-trade':>9}")
+            grand = [0, 0, 0.0]
+            for kind in ("high", "low"):
+                for book in ("fav", "nws", "cal"):
+                    if (kind, book) not in roll:
+                        continue
+                    n, wins, pnl = roll[(kind, book)]
+                    grand[0] += n
+                    grand[1] += wins
+                    grand[2] += pnl
+                    wr = f"{wins / n * 100:.0f}%" if n else "n/a"
+                    per = f"{pnl / n * 100:+.1f}c" if n else "n/a"
+                    print(f"  {kind+' '+book:16s} {n:7d}  {wr:>4}  {_money(pnl):>8}  {per:>9}")
+            gn, _gw, gp = grand
+            gper = f"{gp / gn * 100:+.1f}c" if gn else "n/a"
+            print(f"  {'TOTAL':16s} {gn:7d}  {'':>4}  {_money(gp):>8}  {gper:>9}")
+
         # 1b) The headline: each book's realized P&L, side by side, by window and kind.
         for kind in ("high", "low"):
             print(f"\n=== {kind.upper()} books by window (settled realized P&L) ===")
