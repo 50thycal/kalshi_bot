@@ -129,29 +129,44 @@ def main() -> int:
             gper = f"{gp / gn * 100:+.1f}c" if gn else "n/a"
             print(f"  {'TOTAL':16s} {gn:7d}  {'':>4}  {_money(gp):>8}  {gper:>9}")
 
-        # 1b) The headline: each book's realized P&L, side by side, by window and kind.
+        # 1b) The decision table: per entry window x strategy (fav/nws/cal), each with
+        # n, win% and — the number that decides it — P&L per trade (must clear ~4-5c of
+        # round-trip cost to make money). Read DOWN a strategy to judge a window ("does
+        # nws at midday work?") and ACROSS a window to compare strategies, since
+        # real-money trading picks ONE window x strategy, not the whole grid.
+        cell: dict[tuple[str, int, str], list[float]] = defaultdict(lambda: [0, 0, 0.0])  # n, wins, pnl
+        for strat, n, wins, pnl in rows:
+            mobj = _HOURS.search(strat or "")
+            kb = _book(strat)
+            if mobj and kb:
+                c = cell[(kb[0], int(mobj.group(1)), kb[1])]
+                c[0] += int(n)
+                c[1] += int(wins or 0)
+                c[2] += float(pnl)
         for kind in ("high", "low"):
-            print(f"\n=== {kind.upper()} books by window (settled realized P&L) ===")
-            by_win: dict[int, dict[str, tuple[int, float]]] = defaultdict(
-                lambda: {"fav": (0, 0.0), "nws": (0, 0.0), "cal": (0, 0.0)}
-            )
-            for strat, n, _wins, pnl in rows:
-                mobj = _HOURS.search(strat or "")
-                kb = _book(strat)
-                if mobj and kb and kb[0] == kind:
-                    by_win[int(mobj.group(1))][kb[1]] = (int(n), float(pnl))
-            if not by_win:
+            print(f"\n=== {kind.upper()} books — by window x strategy (settled) ===")
+            windows = sorted({w for (k, w, _b) in cell if k == kind}, reverse=True)
+            if not windows:
                 print("  (no settled trades yet)")
-            for w in sorted(by_win, reverse=True):
-                cells = []
+                continue
+            print(f"  {'window':6s} {'strat':5s} {'n':>4} {'win%':>5} {'total':>8} {'per-trade':>9}")
+            best_combo = None
+            for w in windows:
                 for b in ("fav", "nws", "cal"):
-                    bn, bp = by_win[w][b]
-                    cells.append(f"{b}={_money(bp)} (n={bn})")
-                f_pnl = by_win[w]["fav"][1]
-                best = max(("nws", "cal"), key=lambda b: by_win[w][b][1])
-                spread = by_win[w][best][1] - f_pnl
-                flag = f"   <-- {best} +{_money(spread)} vs fav" if spread > 0 else ""
-                print(f"  h{w:<3} " + "   ".join(cells) + flag)
+                    if (kind, w, b) not in cell:
+                        continue
+                    n, wins, pnl = cell[(kind, w, b)]
+                    wr = f"{wins / n * 100:.0f}%" if n else "n/a"
+                    per_val = pnl / n * 100 if n else None
+                    per = f"{per_val:+.1f}c" if per_val is not None else "n/a"
+                    print(f"  h{w:<5d} {b:5s} {n:4d} {wr:>5} {_money(pnl):>8} {per:>9}")
+                    if per_val is not None and (best_combo is None or per_val > best_combo[0]):
+                        best_combo = (per_val, w, b, n)
+                print()
+            if best_combo:
+                _v, bw, bb, bn = best_combo
+                print(f"  best {kind} window x strategy by per-trade: "
+                      f"{bb} @ h{bw} ({_v:+.1f}c/trade, n={bn})")
 
         # 2) Head-to-head + forecast accuracy, per kind.
         settlements = s.scalars(select(m.WeatherSettlement)).all()
