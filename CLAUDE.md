@@ -46,11 +46,23 @@ To run a request:
    ```
    `script` runs an allowlisted self-contained read-only analysis script from
    `scripts/` (see `ALLOWED_SCRIPTS` in `scripts/ops_runner.py`).
+
+   Two of these are the standing **commands** the user asks for by name:
+   - **"PnL"** -> `{"type":"script","name":"weather_pnl"}` — the per-book rollup
+     plus the per-window x strategy decision table (n, win%, total, P&L/trade).
+     Present it as the tables discussed: per-trade is the deciding number.
+   - **"experiment results"** -> `{"type":"script","name":"weather_experiments"}`
+     — runs all three research probes in one shot (model check, exit sweep, entry
+     study). Present each as a structured table.
+
+   The individual probes can still be run alone:
    `weather_model_check` grades the ensemble forecast distribution against the
    market's bucket prices on settled events (Brier/log-loss + hypothetical EV)
    and prints live model-vs-market disagreements. `weather_exit_sweep` replays
    settled weather paper trades through their recorded bucket price paths under
    a TP/SL grid to find the best exit rule vs holding to settlement.
+   `weather_entry_study` runs the entry experiments (market calibration,
+   price-band P&L, obs-confirmed entry, limit-entry fills).
 3. Commit and push:
    ```bash
    cd /tmp/ops && git add ops/request.json && git commit -m "ops: <what>" && git push origin ops
