@@ -693,3 +693,61 @@ def log_system_event(
     session.add(row)
     session.flush()
     return row
+
+
+# --- Kalshi history backfill (separate provenance from live-collected tables) ----
+
+
+def upsert_backfill_market(session, *, market_ticker: str, **fields) -> bool:
+    """Insert a backfilled settled market if unseen; returns True when created."""
+    existing = session.scalar(
+        select(m.BackfillWeatherMarket).where(
+            m.BackfillWeatherMarket.market_ticker == market_ticker
+        )
+    )
+    if existing is not None:
+        return False
+    session.add(m.BackfillWeatherMarket(market_ticker=market_ticker, fetched_at=_now(), **fields))
+    session.flush()
+    return True
+
+
+def pending_backfill_markets(session, *, limit: int) -> list:
+    """Backfilled markets still awaiting candlesticks, newest settlements first."""
+    return list(
+        session.scalars(
+            select(m.BackfillWeatherMarket)
+            .where(m.BackfillWeatherMarket.candles_fetched.is_(False))
+            .order_by(m.BackfillWeatherMarket.close_time.desc().nulls_last())
+            .limit(limit)
+        )
+    )
+
+
+def count_backfill_pending(session) -> int:
+    return int(
+        session.scalar(
+            select(func.count())
+            .select_from(m.BackfillWeatherMarket)
+            .where(m.BackfillWeatherMarket.candles_fetched.is_(False))
+        )
+        or 0
+    )
+
+
+def mark_backfill_fetched(session, market, *, candle_count: int) -> None:
+    market.candles_fetched = True
+    market.candle_count = candle_count
+    session.add(market)
+    session.flush()
+
+
+def replace_backfill_candles(session, market_ticker: str, rows: list[dict]) -> int:
+    """Idempotent per-market candle store: drop any prior rows, insert the new set."""
+    session.query(m.BackfillWeatherCandle).filter(
+        m.BackfillWeatherCandle.market_ticker == market_ticker
+    ).delete(synchronize_session=False)
+    for row in rows:
+        session.add(m.BackfillWeatherCandle(**row))
+    session.flush()
+    return len(rows)

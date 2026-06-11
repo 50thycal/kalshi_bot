@@ -105,7 +105,10 @@ unavailable.
   server-side (a SELECT-only role + a read-only transaction). Don't try to write.
 - Schema reference: `kalshi_bot/models.py`. Key tables: `bot_runs`, `markets`,
   `market_snapshots`, `orderbook_snapshots`, `signals`, `paper_trades`,
-  `paper_positions`, `account_snapshots`, `system_events`.
+  `paper_positions`, `account_snapshots`, `system_events`. Weather research:
+  live-collected `weather_*` tables vs `backfill_weather_markets` /
+  `backfill_weather_candles` (Kalshi REST history — separate provenance, never
+  mix them silently in an analysis).
 
 ### Secrets
 

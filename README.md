@@ -255,6 +255,18 @@ Same plumbing as the model check: read-only, self-contained, runs locally or via
 channel (`{"type": "script", "name": "weather_exit_sweep"}`). If a combo robustly beats
 hold once the sample is real, it gets wired into the live books as the exit rule.
 
+**Kalshi history backfill (separate provenance).** The research above is sample-starved until
+settlements accumulate — so the weather worker also backfills Kalshi's own archives: settled
+temperature markets (`WEATHER_BACKFILL_DAYS`, default 120) and their hourly candlesticks
+(price/bid/ask OHLC, volume, OI) via `GET /series/.../candlesticks`, falling back to the
+`/historical` endpoints for markets archived past Kalshi's cutoff. Backfilled rows land in the
+dedicated **`backfill_weather_markets` / `backfill_weather_candles`** tables — deliberately
+separate from the live-collected `weather_*` tables, so an analysis always knows whether a price
+path was observed live or reconstructed from REST archives. The backfill runs as a bounded chunk
+per cycle (`WEATHER_BACKFILL_MARKETS_PER_CYCLE`, default 40, newest settlements first) inside the
+weather worker — the only place with Kalshi credentials and a writable database — and converges on
+~120 days of 7-city high+low history in under a day without competing with trading for API budget.
+
 ## Safety
 
 The bot must fail closed. It will not do anything trade-like if config is missing, the

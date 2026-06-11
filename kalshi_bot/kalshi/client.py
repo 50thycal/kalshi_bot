@@ -130,6 +130,7 @@ class KalshiClient:
         cursor: str | None = None,
         series_ticker: str | None = None,
         event_ticker: str | None = None,
+        min_close_ts: int | None = None,
     ) -> dict:
         params: dict[str, Any] = {"status": status, "limit": limit}
         if cursor:
@@ -138,6 +139,8 @@ class KalshiClient:
             params["series_ticker"] = series_ticker
         if event_ticker:
             params["event_ticker"] = event_ticker
+        if min_close_ts is not None:
+            params["min_close_ts"] = min_close_ts
         return self._request("GET", "/markets", params=params)
 
     def iter_markets(
@@ -148,6 +151,7 @@ class KalshiClient:
         max_markets: int | None = None,
         series_ticker: str | None = None,
         event_ticker: str | None = None,
+        min_close_ts: int | None = None,
     ) -> Iterator[dict]:
         """Yield markets across all pages (cursor pagination), capped at max_markets."""
         fetched = 0
@@ -159,6 +163,7 @@ class KalshiClient:
                 cursor=cursor,
                 series_ticker=series_ticker,
                 event_ticker=event_ticker,
+                min_close_ts=min_close_ts,
             )
             markets = page.get("markets") or []
             for market in markets:
@@ -172,6 +177,39 @@ class KalshiClient:
 
     def get_market(self, ticker: str) -> dict:
         return self._request("GET", f"/markets/{ticker}")
+
+    def get_market_candlesticks(
+        self,
+        series_ticker: str,
+        ticker: str,
+        *,
+        start_ts: int,
+        end_ts: int,
+        period_interval: int = 60,
+    ) -> dict:
+        """OHLC price/bid/ask candlesticks for a market (live/recent data set).
+        period_interval is in minutes: 1, 60 or 1440."""
+        return self._request(
+            "GET",
+            f"/series/{series_ticker}/markets/{ticker}/candlesticks",
+            params={"start_ts": start_ts, "end_ts": end_ts, "period_interval": period_interval},
+        )
+
+    def get_historical_market_candlesticks(
+        self,
+        ticker: str,
+        *,
+        start_ts: int,
+        end_ts: int,
+        period_interval: int = 60,
+    ) -> dict:
+        """Candlesticks for markets archived out of the live data set (older
+        settlements). Same shape as get_market_candlesticks."""
+        return self._request(
+            "GET",
+            f"/historical/markets/{ticker}/candlesticks",
+            params={"start_ts": start_ts, "end_ts": end_ts, "period_interval": period_interval},
+        )
 
     def get_events(
         self,

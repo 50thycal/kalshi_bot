@@ -28,6 +28,7 @@ from .logging_config import configure_logging, log_event
 from .paper.engine import PaperCycleSummary, PaperTradingEngine
 from .risk.manager import RiskManager
 from .scanner.scanner import MarketScanner, ScanSummary
+from .weather.backfill import WeatherBackfill
 from .weather.ensemble import OpenMeteoEnsembleClient
 from .weather.forecast import NwsForecastClient
 from .weather.tracker import WeatherCycleSummary, WeatherTracker
@@ -94,6 +95,11 @@ def run() -> int:
     weather_tracker = (
         WeatherTracker(client, settings, forecast_client, ensemble_client) if weather else None
     )
+    weather_backfill = (
+        WeatherBackfill(client, settings)
+        if weather and settings.weather_backfill_enabled
+        else None
+    )
     if weather and settings.paper_abandon_foreign_on_start:
         try:
             with session_scope() as session:
@@ -110,7 +116,9 @@ def run() -> int:
         while True:
             try:
                 if weather:
-                    _run_weather_cycle(settings, client, weather_engine, weather_tracker)
+                    _run_weather_cycle(
+                        settings, client, weather_engine, weather_tracker, weather_backfill
+                    )
                 else:
                     _run_cycle(settings, client, scanner)
             except AuthError:
@@ -261,7 +269,7 @@ def _log_ranked(summary: ScanSummary) -> None:
         )
 
 
-def _run_weather_cycle(settings, client, engine, tracker) -> None:
+def _run_weather_cycle(settings, client, engine, tracker, backfill=None) -> None:
     status = client.get_exchange_status()  # AuthError propagates -> hard fail
     log_event(
         logger,
@@ -289,6 +297,22 @@ def _run_weather_cycle(settings, client, engine, tracker) -> None:
                 error_message=str(exc)[:500],
             )
             raise
+    if backfill is not None:
+        try:
+            with session_scope() as bf_session:
+                bsum = backfill.run_once(bf_session)
+            log_event(
+                logger,
+                logging.INFO,
+                "weather backfill",
+                markets_enumerated=bsum.markets_enumerated,
+                markets_fetched=bsum.markets_fetched,
+                candles_stored=bsum.candles_stored,
+                errors=bsum.errors,
+                pending=bsum.pending,
+            )
+        except Exception:  # noqa: BLE001 — history backfill must never stop the books
+            logger.exception("weather backfill cycle failed")
 
 
 def _log_weather(summary: WeatherCycleSummary) -> None:

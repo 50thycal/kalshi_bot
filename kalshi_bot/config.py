@@ -134,6 +134,13 @@ class Settings(BaseSettings):
     # the markets the cycle already fetched (no extra API calls), so this can run as
     # fast as the scan cycle; finer paths make the exit/entry replay studies sharper.
     weather_ladder_interval_minutes: float = 5.0
+    # Kalshi history backfill (separate backfill_* tables; provenance never mixes with
+    # the live-collected snapshots). Runs as a bounded chunk per cycle inside the
+    # weather worker — the only place holding Kalshi credentials + a writable DB URL.
+    weather_backfill_enabled: bool = True
+    weather_backfill_days: float = 120.0
+    weather_backfill_markets_per_cycle: int = 40
+    weather_backfill_period_minutes: int = 60  # candle granularity: 1, 60 or 1440
 
     @field_validator("paper_momentum_direction", mode="before")
     @classmethod

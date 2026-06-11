@@ -29,6 +29,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -342,6 +343,64 @@ class WeatherBucketSnapshot(Base):
     volume: Mapped[int | None] = mapped_column(Integer)
     hours_to_close: Mapped[float | None] = mapped_column(Float)
     status: Mapped[str | None] = mapped_column(String(32))
+
+
+class BackfillWeatherMarket(Base):
+    """Settled temperature markets pulled from the Kalshi REST API as HISTORY.
+
+    Deliberately separate from the live-collected tables (weather_settlements /
+    weather_bucket_snapshots): rows here come from a one-time backfill of Kalshi's
+    archives, not from the bot observing markets in real time, so research can
+    always distinguish (and weight) the two provenances.
+    """
+
+    __tablename__ = "backfill_weather_markets"
+    __table_args__ = (
+        Index("ix_backfill_weather_markets_close", "close_time"),
+        Index("ix_backfill_weather_markets_pending", "candles_fetched", "close_time"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    fetched_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    market_ticker: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    event_ticker: Mapped[str | None] = mapped_column(String(128), index=True)
+    series_ticker: Mapped[str | None] = mapped_column(String(64))
+    city: Mapped[str | None] = mapped_column(String(32))
+    kind: Mapped[str | None] = mapped_column(String(8))  # 'high' | 'low'
+    target_date: Mapped[str | None] = mapped_column(String(16))
+    subtitle: Mapped[str | None] = mapped_column(String(64))
+    low_f: Mapped[float | None] = mapped_column(Float)
+    high_f: Mapped[float | None] = mapped_column(Float)
+    result: Mapped[str | None] = mapped_column(String(8))  # 'yes' | 'no'
+    open_time: Mapped[datetime | None] = mapped_column(TS)
+    close_time: Mapped[datetime | None] = mapped_column(TS)
+    candles_fetched: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    candle_count: Mapped[int] = mapped_column(Integer, default=0)
+    source: Mapped[str | None] = mapped_column(String(16), default="kalshi_rest")
+
+
+class BackfillWeatherCandle(Base):
+    """Hourly (configurable) candlesticks for backfilled markets — the historical
+    price paths behind calibration / exit-replay studies at real sample sizes.
+    Same provenance rule as backfill_weather_markets: REST archive, not live capture."""
+
+    __tablename__ = "backfill_weather_candles"
+    __table_args__ = (
+        UniqueConstraint("market_ticker", "end_period_ts", name="uq_backfill_candle"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    market_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    end_period_ts: Mapped[datetime] = mapped_column(TS, nullable=False)
+    period_minutes: Mapped[int | None] = mapped_column(Integer)
+    price_open: Mapped[float | None] = mapped_column(Float)  # cents
+    price_high: Mapped[float | None] = mapped_column(Float)
+    price_low: Mapped[float | None] = mapped_column(Float)
+    price_close: Mapped[float | None] = mapped_column(Float)
+    yes_bid_close: Mapped[float | None] = mapped_column(Float)
+    yes_ask_close: Mapped[float | None] = mapped_column(Float)
+    volume: Mapped[int | None] = mapped_column(Integer)
+    open_interest: Mapped[int | None] = mapped_column(Integer)
 
 
 class SystemEvent(Base):
