@@ -199,40 +199,55 @@ def _get(path: str, params: dict, *, timeout: float = 25.0) -> list | dict:
     raise RuntimeError(f"gamma fetch failed for {url}: {last}")
 
 
-def fetch_temp_events(hours_ahead: float, max_pages: int) -> list[dict]:
-    """Open events closing within the next `hours_ahead` (daily temp markets cluster
-    there), paginated and client-side filtered to our cities."""
+def fetch_temp_events(hours_ahead: float, max_pages: int) -> tuple[list[dict], dict]:
+    """Scan open events (soonest-closing first) and client-side filter to our cities.
+    Also returns diagnostics so a zero-match result is debuggable: how many events the
+    API actually returned, every title containing 'temperature', and sample titles."""
     now = datetime.now(timezone.utc)
+    end_max = (now + timedelta(hours=hours_ahead)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    # Soonest-closing open events first; date bound is best-effort (ignored if unsupported).
     params_base = {
         "closed": "false",
-        "end_date_min": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "end_date_max": (now + timedelta(hours=hours_ahead)).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "limit": 200,
         "order": "endDate",
         "ascending": "true",
+        "end_date_max": end_max,
     }
     out: list[dict] = []
+    diag = {"events_scanned": 0, "pages": 0, "temp_titles": [], "sample_titles": []}
     for page in range(max_pages):
         batch = _get("/events", {**params_base, "offset": page * 200})
         if not isinstance(batch, list) or not batch:
             break
+        diag["pages"] += 1
+        diag["events_scanned"] += len(batch)
         for ev in batch:
+            title = ev.get("title") or ""
+            if len(diag["sample_titles"]) < 12:
+                diag["sample_titles"].append(title)
+            if "temp" in title.lower() and len(diag["temp_titles"]) < 20:
+                diag["temp_titles"].append(title)
             s = summarize_event(ev, now=now)
             if s is not None:
                 out.append(s)
         if len(batch) < 200:
             break
-    return out
+    return out, diag
 
 
-def report(summaries: list[dict], hours_ahead: float) -> None:
+def report(summaries: list[dict], hours_ahead: float, diag: dict) -> None:
     print("=== Polymarket alignment probe (read-only; lead-lag study step 1) ===")
-    print(f"  scanned open events closing within {hours_ahead:.0f}h; "
-          f"matched temperature events for our cities: {len(summaries)}")
+    print(f"  scanned {diag['events_scanned']} open events over {diag['pages']} page(s)"
+          f" (closing within ~{hours_ahead:.0f}h); matched our cities: {len(summaries)}")
     if not summaries:
-        print("  (no Polymarket temperature events matched — either none open in window,")
-        print("   the title format differs, or they're tagged/sliced differently. "
-              "Widen --hours-ahead or inspect raw titles.)")
+        print("  --- diagnostics (why zero matches) ---")
+        print(f"  titles containing 'temp': {len(diag['temp_titles'])}")
+        for t in diag["temp_titles"][:20]:
+            print(f"    temp> {t}")
+        if not diag["temp_titles"]:
+            print("  sample of titles actually returned (is the endpoint/ordering right?):")
+            for t in diag["sample_titles"]:
+                print(f"    any> {t}")
         return
 
     by_city: dict[str, list[dict]] = {}
@@ -269,11 +284,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--max-pages", type=int, default=10)
     args = ap.parse_args(argv)
     try:
-        summaries = fetch_temp_events(args.hours_ahead, args.max_pages)
+        summaries, diag = fetch_temp_events(args.hours_ahead, args.max_pages)
     except Exception as exc:  # noqa: BLE001 — probe: report the failure, don't crash the runner
         print(f"=== Polymarket alignment probe ===\n  fetch failed: {exc}", file=sys.stderr)
         return 1
-    report(summaries, args.hours_ahead)
+    report(summaries, args.hours_ahead, diag)
     return 0
 
 
