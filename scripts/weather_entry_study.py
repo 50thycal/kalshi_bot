@@ -58,8 +58,10 @@ CITY_TZ = {
 }
 
 BOOKS = {
-    "low": {"fav": "weather_low_fav", "nws": "weather_low_nws", "cal": "weather_low_cal"},
-    "high": {"fav": "weather_fav", "nws": "weather_nws", "cal": "weather_cal"},
+    "low": {"fav": "weather_low_fav", "nws": "weather_low_nws", "cal": "weather_low_cal",
+            "pm": "weather_low_pm"},
+    "high": {"fav": "weather_fav", "nws": "weather_nws", "cal": "weather_cal",
+             "pm": "weather_pm"},
 }
 
 _NUM = re.compile(r"-?\d+(?:\.\d+)?")

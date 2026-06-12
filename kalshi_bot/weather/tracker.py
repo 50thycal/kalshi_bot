@@ -33,6 +33,7 @@ from .buckets import forecast_in_bucket, parse_bucket_range
 from .cities import CITIES, City
 from .ensemble import OpenMeteoEnsembleClient
 from .forecast import NwsForecastClient, ObservedExtremes
+from .polymarket import PolymarketClient
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,7 @@ class WeatherCycleSummary:
     skipped_no_book: int = 0
     settlements_captured: int = 0
     open_positions: int = 0
+    pm_snaps: int = 0
     per_window: dict[str, int] = field(default_factory=dict)
 
 
@@ -120,11 +122,13 @@ class WeatherTracker:
         settings: Settings,
         forecast: NwsForecastClient | None,
         ensemble: OpenMeteoEnsembleClient | None = None,
+        polymarket: PolymarketClient | None = None,
     ):
         self.client = client
         self.settings = settings
         self.forecast = forecast
         self.ensemble = ensemble
+        self.polymarket = polymarket
 
     def _series_for(self, city: City, kind: str) -> str | None:
         if kind == "high":
@@ -205,6 +209,19 @@ class WeatherTracker:
         obs_cache: dict[tuple[str, str], ObservedExtremes | None] = {}
         ensemble_done: set[tuple[str, str]] = set()
 
+        # Polymarket cross-market signal (only the station-matched cities). Refresh the
+        # index once per cycle; failures disable it for this cycle without touching books.
+        pm_cities = set(s.weather_pm_city_list)
+        pm_enabled = s.weather_polymarket_enabled and self.polymarket is not None and bool(pm_cities)
+        if pm_enabled:
+            try:
+                n_pm = self.polymarket.refresh(pm_cities, now=now)
+                logger.info("polymarket index", extra={"extra_fields": {"events": n_pm}})
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("weather: polymarket refresh failed",
+                               extra={"extra_fields": {"error": str(exc)}})
+                pm_enabled = False
+
         for t in tracked:
             target = _target_date(t.event)
             forecast_val = None
@@ -277,6 +294,15 @@ class WeatherTracker:
             )
             cal_market = self._value_bucket(markets, cal_val) if cal_val is not None else None
 
+            # Polymarket signal: store its bucket prices and pick the Kalshi bucket whose
+            # ask most underprices Polymarket's implied probability (trade toward it).
+            pm_market, pm_prob = None, None
+            if pm_enabled and target is not None and t.city.code in pm_cities:
+                pm_buckets = self.polymarket.lookup(t.city.code, t.kind, target)
+                if pm_buckets:
+                    self._store_pm_snapshot(session, t, target, pm_buckets, now, summary)
+                    pm_market, pm_prob = self._pm_best_bucket(markets, pm_buckets)
+
             prefix = "weather_" if t.kind == "high" else "weather_low_"
             for hours in s.weather_entry_hours_list:
                 if t.hours_to_close > hours:
@@ -296,6 +322,11 @@ class WeatherTracker:
                     self._maybe_enter(
                         session, f"{prefix}cal_h{int(hours)}", event_ticker, t, cal_market,
                         self._cached_metrics(cal_market, metrics_cache), None, summary,
+                    )
+                if pm_market is not None:
+                    self._maybe_enter(
+                        session, f"{prefix}pm_h{int(hours)}", event_ticker, t, pm_market,
+                        self._cached_metrics(pm_market, metrics_cache), pm_prob, summary,
                     )
 
         self._capture_settlements(session, summary)
@@ -441,6 +472,41 @@ class WeatherTracker:
             ))
         if rows:
             summary.bucket_snaps += repo.insert_weather_bucket_snapshots(session, rows)
+
+    # --- Polymarket cross-market signal ------------------------------------------
+
+    def _store_pm_snapshot(self, session, t: _Tracked, target, pm_buckets, now, summary) -> None:
+        last = repo.latest_polymarket_snapshot_at(session, t.city.code, t.kind, target.isoformat())
+        age = _age_minutes(last, now)
+        if age is not None and age < self.settings.weather_pm_interval_minutes:
+            return
+        rows = [dict(
+            city=t.city.code, kind=t.kind, target_date=target.isoformat(),
+            subtitle=b.subtitle, low_f=b.low_f, high_f=b.high_f, yes_prob=b.yes_prob,
+        ) for b in pm_buckets]
+        if rows:
+            summary.pm_snaps += repo.insert_polymarket_snapshots(session, rows)
+
+    def _pm_best_bucket(self, markets: list[dict], pm_buckets):
+        """The Kalshi bucket whose ask most underprices Polymarket's implied probability,
+        if that edge clears the cost hurdle. Returns (market, pm_prob) or (None, None)."""
+        pm_by_range = {(b.low_f, b.high_f): b.yes_prob for b in pm_buckets}
+        min_edge = self.settings.paper_min_edge_cents
+        best = None  # (edge, market, prob)
+        for mk in markets:
+            rng = parse_bucket_range(mk.get("yes_sub_title") or mk.get("subtitle"))
+            prob = pm_by_range.get(rng)
+            if prob is None:
+                continue
+            _yb, ya = _bid_ask_cents(mk)
+            if ya is None or not (1 <= ya <= 99):
+                continue
+            edge = prob * 100.0 - ya - kalshi_fee(int(round(ya)), 1, self.settings.paper_fees_enabled)
+            if edge >= min_edge and (best is None or edge > best[0]):
+                best = (edge, mk, prob)
+        if best is None:
+            return (None, None)
+        return (best[1], best[2])
 
     # --- settlements + entries ---------------------------------------------------
 

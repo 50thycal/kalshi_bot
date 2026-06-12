@@ -751,3 +751,23 @@ def replace_backfill_candles(session, market_ticker: str, rows: list[dict]) -> i
         session.add(m.BackfillWeatherCandle(**row))
     session.flush()
     return len(rows)
+
+
+# --- Polymarket cross-market signal snapshots (separate provenance) --------------
+
+
+def insert_polymarket_snapshots(session, rows: list[dict]) -> int:
+    for row in rows:
+        session.add(m.PolymarketSnapshot(captured_at=_now(), source="polymarket_gamma", **row))
+    session.flush()
+    return len(rows)
+
+
+def latest_polymarket_snapshot_at(session, city: str, kind: str, target_date: str):
+    return session.scalar(
+        select(func.max(m.PolymarketSnapshot.captured_at)).where(
+            m.PolymarketSnapshot.city == city,
+            m.PolymarketSnapshot.kind == kind,
+            m.PolymarketSnapshot.target_date == target_date,
+        )
+    )

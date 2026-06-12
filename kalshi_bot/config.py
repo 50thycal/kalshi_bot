@@ -134,6 +134,14 @@ class Settings(BaseSettings):
     # the markets the cycle already fetched (no extra API calls), so this can run as
     # fast as the scan cycle; finer paths make the exit/entry replay studies sharper.
     weather_ladder_interval_minutes: float = 5.0
+    # Polymarket cross-market signal. Polymarket runs the same daily temperature
+    # markets; the `weather_pm` book trades Kalshi toward Polymarket's implied price,
+    # but ONLY for cities where the settlement station matches Kalshi (verified
+    # LAX/MIA/AUS). Polymarket prices are read-only signal — we never trade Polymarket
+    # (geofenced). Stored separately in polymarket_snapshots.
+    weather_polymarket_enabled: bool = True
+    weather_pm_cities: str = "LAX,MIA,AUS"
+    weather_pm_interval_minutes: float = 5.0
     # Kalshi history backfill (separate backfill_* tables; provenance never mixes with
     # the live-collected snapshots). Runs as a bounded chunk per cycle inside the
     # weather worker — the only place holding Kalshi credentials + a writable DB URL.
@@ -237,6 +245,10 @@ class Settings(BaseSettings):
     @property
     def weather_ensemble_model_list(self) -> list[str]:
         return [p.strip() for p in self.weather_ensemble_models.split(",") if p.strip()]
+
+    @property
+    def weather_pm_city_list(self) -> list[str]:
+        return [p.strip().upper() for p in self.weather_pm_cities.split(",") if p.strip()]
 
     @property
     def paper_strategy_list(self) -> list[str]:

@@ -31,6 +31,7 @@ from .scanner.scanner import MarketScanner, ScanSummary
 from .weather.backfill import WeatherBackfill
 from .weather.ensemble import OpenMeteoEnsembleClient
 from .weather.forecast import NwsForecastClient
+from .weather.polymarket import PolymarketClient
 from .weather.tracker import WeatherCycleSummary, WeatherTracker
 
 logger = logging.getLogger("kalshi_bot.main")
@@ -91,9 +92,13 @@ def run() -> int:
     ensemble_client = (
         OpenMeteoEnsembleClient() if weather and settings.weather_ensemble_enabled else None
     )
+    polymarket_client = (
+        PolymarketClient() if weather and settings.weather_polymarket_enabled else None
+    )
     weather_engine = PaperTradingEngine(client, settings, scanner.risk) if weather else None
     weather_tracker = (
-        WeatherTracker(client, settings, forecast_client, ensemble_client) if weather else None
+        WeatherTracker(client, settings, forecast_client, ensemble_client, polymarket_client)
+        if weather else None
     )
     weather_backfill = (
         WeatherBackfill(client, settings)
@@ -141,6 +146,8 @@ def run() -> int:
             forecast_client.close()
         if ensemble_client is not None:
             ensemble_client.close()
+        if polymarket_client is not None:
+            polymarket_client.close()
     return exit_code
 
 

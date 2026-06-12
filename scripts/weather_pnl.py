@@ -28,8 +28,10 @@ RO_OPTIONS = (
 # Book prefixes by kind; low prefixes are longer so they match first
 # (mirrors scripts/weather_score.py).
 BOOKS = {
-    "low": {"fav": "weather_low_fav", "nws": "weather_low_nws", "cal": "weather_low_cal"},
-    "high": {"fav": "weather_fav", "nws": "weather_nws", "cal": "weather_cal"},
+    "low": {"fav": "weather_low_fav", "nws": "weather_low_nws", "cal": "weather_low_cal",
+            "pm": "weather_low_pm"},
+    "high": {"fav": "weather_fav", "nws": "weather_nws", "cal": "weather_cal",
+             "pm": "weather_pm"},
 }
 _HOURS = re.compile(r"_h(\d+)$")
 
@@ -85,7 +87,7 @@ def report(rows: list[tuple]) -> None:
         print(f"  {'book':16s} {'settled':>7}  {'win%':>4}  {'total':>9}  {'per-trade':>9}")
         grand = [0, 0, 0.0]
         for kind in ("high", "low"):
-            for book in ("fav", "nws", "cal"):
+            for book in ("fav", "nws", "cal", "pm"):
                 if (kind, book) not in rollup:
                     continue
                 n, wins, cents = rollup[(kind, book)]
@@ -107,7 +109,7 @@ def report(rows: list[tuple]) -> None:
         print(f"  {'window':6s} {'strat':5s} {'n':>4} {'win%':>5} {'total':>8} {'per-trade':>9}")
         best = None
         for w in windows:
-            for b in ("fav", "nws", "cal"):
+            for b in ("fav", "nws", "cal", "pm"):
                 if (kind, w, b) not in grid:
                     continue
                 n, wins, cents = grid[(kind, w, b)]

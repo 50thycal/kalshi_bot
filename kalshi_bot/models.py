@@ -403,6 +403,29 @@ class BackfillWeatherCandle(Base):
     open_interest: Mapped[int | None] = mapped_column(Integer)
 
 
+class PolymarketSnapshot(Base):
+    """Polymarket's per-bucket implied probability over time — a SEPARATE-provenance
+    cross-market signal (public Gamma API, not Kalshi, not live-collected Kalshi data).
+    Drives the `weather_pm` book and feeds the eventual Kalshi-vs-Polymarket lead-lag
+    study. Only the station-matched cities (LAX/MIA/AUS) are collected."""
+
+    __tablename__ = "polymarket_snapshots"
+    __table_args__ = (
+        Index("ix_polymarket_snapshots_city_time", "city", "kind", "target_date", "captured_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    captured_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    city: Mapped[str] = mapped_column(String(32), nullable=False)
+    kind: Mapped[str] = mapped_column(String(8), nullable=False)  # 'high' | 'low'
+    target_date: Mapped[str | None] = mapped_column(String(16))
+    subtitle: Mapped[str | None] = mapped_column(String(64))
+    low_f: Mapped[float | None] = mapped_column(Float)
+    high_f: Mapped[float | None] = mapped_column(Float)
+    yes_prob: Mapped[float | None] = mapped_column(Float)  # 0..1 implied probability
+    source: Mapped[str | None] = mapped_column(String(20), default="polymarket_gamma")
+
+
 class SystemEvent(Base):
     __tablename__ = "system_events"
 

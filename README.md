@@ -267,6 +267,18 @@ per cycle (`WEATHER_BACKFILL_MARKETS_PER_CYCLE`, default 40, newest settlements 
 weather worker — the only place with Kalshi credentials and a writable database — and converges on
 ~120 days of 7-city high+low history in under a day without competing with trading for API budget.
 
+**Polymarket cross-market signal (`weather_pm` book).** Polymarket runs the same daily
+temperature markets; an alignment probe (`scripts/weather_polymarket_align.py`) confirmed the
+bucket scheme and dates match, and — critically — that the settlement **station** matches Kalshi
+for exactly three cities: **LAX, MIA, AUS** (NYC/CHI/DEN use different stations, e.g. Polymarket
+NYC settles on LaGuardia vs Kalshi's Central Park, so they are not the same bet). For those three
+cities the worker reads Polymarket's public Gamma API (no auth; we never trade Polymarket, which is
+geofenced) and the `weather_pm` paper book buys the Kalshi bucket whose ask most underprices
+Polymarket's implied probability beyond the cost hurdle — i.e. it trades Kalshi *toward* the
+Polymarket price, testing whether Polymarket leads. Polymarket's per-bucket probabilities are
+stored separately in `polymarket_snapshots` (provenance kept apart from the Kalshi `weather_*`
+tables), which also feeds the eventual Kalshi-vs-Polymarket lead-lag study.
+
 ## Safety
 
 The bot must fail closed. It will not do anything trade-like if config is missing, the
