@@ -34,6 +34,7 @@ ALLOWED_SCRIPTS = (
     "weather_model_check",
     "weather_exit_sweep",
     "weather_entry_study",
+    "weather_backfill_calib",
 )
 
 
