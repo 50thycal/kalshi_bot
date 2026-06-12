@@ -27,7 +27,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 GAMMA = "https://gamma-api.polymarket.com"
 UA = (  # Gamma sits behind Cloudflare; a browser UA avoids the default-urllib block
@@ -199,53 +199,98 @@ def _get(path: str, params: dict, *, timeout: float = 25.0) -> list | dict:
     raise RuntimeError(f"gamma fetch failed for {url}: {last}")
 
 
-def fetch_temp_events(hours_ahead: float, max_pages: int) -> tuple[list[dict], dict]:
-    """Scan open events (soonest-closing first) and client-side filter to our cities.
-    Also returns diagnostics so a zero-match result is debuggable: how many events the
-    API actually returned, every title containing 'temperature', and sample titles."""
-    now = datetime.now(timezone.utc)
-    end_max = (now + timedelta(hours=hours_ahead)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    # Soonest-closing open events first; date bound is best-effort (ignored if unsupported).
-    params_base = {
-        "closed": "false",
-        "limit": 200,
-        "order": "endDate",
-        "ascending": "true",
-        "end_date_max": end_max,
-    }
+LIMIT = 100  # Gamma caps page size at 100
+TAG_HINTS = ("temperature", "weather", "climate", "highest-temp", "lowest-temp")
+
+
+def find_weather_tags() -> list[dict]:
+    """Tags whose slug/label looks weather/temperature related (id + slug for querying)."""
+    try:
+        tags = _get("/tags", {"limit": 1000})
+    except Exception:  # noqa: BLE001
+        return []
+    items = tags if isinstance(tags, list) else tags.get("data") or []
+    found = []
+    for t in items:
+        slug = (t.get("slug") or "").lower()
+        label = (t.get("label") or t.get("name") or "").lower()
+        if any(h in slug or h in label for h in TAG_HINTS):
+            found.append({"id": t.get("id"), "slug": t.get("slug"), "label": t.get("label")})
+    return found
+
+
+def _events_for(params: dict, max_pages: int, now: datetime, diag: dict) -> list[dict]:
     out: list[dict] = []
-    diag = {"events_scanned": 0, "pages": 0, "temp_titles": [], "sample_titles": []}
     for page in range(max_pages):
-        batch = _get("/events", {**params_base, "offset": page * 200})
+        batch = _get("/events", {**params, "limit": LIMIT, "offset": page * LIMIT})
         if not isinstance(batch, list) or not batch:
             break
-        diag["pages"] += 1
         diag["events_scanned"] += len(batch)
         for ev in batch:
             title = ev.get("title") or ""
-            if len(diag["sample_titles"]) < 12:
-                diag["sample_titles"].append(title)
-            if "temp" in title.lower() and len(diag["temp_titles"]) < 20:
+            if "temp" in title.lower() and len(diag["temp_titles"]) < 25:
                 diag["temp_titles"].append(title)
+            elif len(diag["sample_titles"]) < 12:
+                diag["sample_titles"].append(title)
             s = summarize_event(ev, now=now)
             if s is not None:
                 out.append(s)
-        if len(batch) < 200:
+        if len(batch) < LIMIT:
             break
+    return out
+
+
+def fetch_temp_events(hours_ahead: float, max_pages: int) -> tuple[list[dict], dict]:
+    """Discover open temperature events via Polymarket TAGS (a blind scan drowns in
+    crypto 5-minute markets). Returns matches + diagnostics."""
+    now = datetime.now(timezone.utc)
+    diag: dict = {"events_scanned": 0, "weather_tags": [], "strategy": None,
+                  "temp_titles": [], "sample_titles": []}
+
+    tags = find_weather_tags()
+    diag["weather_tags"] = [f"{t['slug']}(id={t['id']})" for t in tags]
+
+    seen: set[str] = set()
+    out: list[dict] = []
+
+    def _collect(found: list[dict], strategy: str) -> None:
+        for s in found:
+            key = s.get("slug") or s["title"]
+            if key not in seen:
+                seen.add(key)
+                out.append(s)
+        if found and diag["strategy"] is None:
+            diag["strategy"] = strategy
+
+    # 1) query events under each discovered weather tag (by id, then slug)
+    for t in tags:
+        if t.get("id") is not None:
+            _collect(_events_for({"closed": "false", "tag_id": t["id"]}, max_pages, now, diag),
+                     f"tag_id={t['id']}")
+        if not out and t.get("slug"):
+            _collect(_events_for({"closed": "false", "tag_slug": t["slug"]}, max_pages, now, diag),
+                     f"tag_slug={t['slug']}")
+    # 2) fallback: try the hint slugs directly as tag_slug
+    if not out:
+        for slug in TAG_HINTS:
+            _collect(_events_for({"closed": "false", "tag_slug": slug}, 2, now, diag),
+                     f"tag_slug={slug}")
     return out, diag
 
 
 def report(summaries: list[dict], hours_ahead: float, diag: dict) -> None:
     print("=== Polymarket alignment probe (read-only; lead-lag study step 1) ===")
-    print(f"  scanned {diag['events_scanned']} open events over {diag['pages']} page(s)"
-          f" (closing within ~{hours_ahead:.0f}h); matched our cities: {len(summaries)}")
+    print(f"  weather/temp tags found: {', '.join(diag['weather_tags']) or '(none)'}")
+    print(f"  events scanned under those tags: {diag['events_scanned']}"
+          f"  | winning query: {diag['strategy'] or '(none matched)'}")
+    print(f"  matched temperature events for our cities: {len(summaries)}")
     if not summaries:
         print("  --- diagnostics (why zero matches) ---")
-        print(f"  titles containing 'temp': {len(diag['temp_titles'])}")
-        for t in diag["temp_titles"][:20]:
+        print(f"  titles containing 'temp' seen: {len(diag['temp_titles'])}")
+        for t in diag["temp_titles"][:25]:
             print(f"    temp> {t}")
         if not diag["temp_titles"]:
-            print("  sample of titles actually returned (is the endpoint/ordering right?):")
+            print("  sample of titles the tag query returned:")
             for t in diag["sample_titles"]:
                 print(f"    any> {t}")
         return
