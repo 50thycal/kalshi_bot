@@ -1,8 +1,10 @@
-name: Weather score (daily)
+name: Weather check-in (daily)
 
-# Automatic morning check: grade the NWS forecast book vs the favorite baseline on
-# the daily-temperature markets that settled overnight. Runs on a schedule and can be
-# triggered manually. Reads a SELECT-only Postgres URL from the DATABASE_URL_RO secret.
+# Automatic morning check-in on the daily-temperature markets that settled overnight:
+# the scorecard (per-book PnL + decision table, incl. the weather_pm cross-market book)
+# AND the research experiments digest (model check / exit sweep / entry study). Runs on
+# a schedule and can be triggered manually. Reads a SELECT-only Postgres URL from the
+# DATABASE_URL_RO secret.
 
 on:
   schedule:
@@ -23,7 +25,7 @@ jobs:
       - name: Install runtime deps
         run: pip install -r requirements.txt
 
-      - name: Run weather scorecard
+      - name: Run weather check-in
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL_RO }}
         run: |
@@ -31,11 +33,16 @@ jobs:
             echo "::error::DATABASE_URL_RO secret is not set — add a read-only Postgres URL (see docs/REMOTE_ACCESS.md)."
             exit 1
           fi
-          # tee so the scorecard lands in BOTH the run summary (human-readable web
-          # page) and the job's console log (which the GitHub API/tools can fetch).
+          # tee so everything lands in BOTH the run summary (human-readable web page)
+          # and the job's console log (which the GitHub API/tools can fetch).
           {
-            echo '## Weather scorecard'
+            echo '## Weather scorecard (PnL + forecast accuracy + consistency)'
             echo '```'
             python scripts/weather_score.py
             echo '```'
+            echo '## Experiments digest (model check / exit sweep / entry study)'
+            echo '```'
+            python scripts/weather_experiments.py
+            echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
+
