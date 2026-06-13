@@ -227,6 +227,26 @@ def test_leadlag_ignores_unknown_cities():
     assert res["dn_n"][1] == 0 and res["trade"][1.0][0] == 0
 
 
+def test_diurnal_couples_high_and_low_same_city_day():
+    # Same city; high & low share the day's anomaly (warm airmass lifts both) -> coupling ~+1.
+    hi = [_city_evt("AUS", "high", f"2026-06-{i:02d}", v)
+          for i, v in [(1, 70), (2, 80), (3, 70), (4, 80)]]
+    lo = [_city_evt("AUS", "low", f"2026-06-{i:02d}", v)
+          for i, v in [(1, 50), (2, 60), (3, 50), (4, 60)]]
+    res = be.diurnal(hi + lo, fees=True, htc=12.0, tol=4.0)
+    assert res["n_pair"] == 4
+    assert res["coupling"] is not None and res["coupling"] > 0.9
+    # the tradeable shift placed trades on the high side, plus the favorite baseline
+    assert res["trade_real"][1.0][0] > 0 and res["fav"][0] > 0
+
+
+def test_diurnal_needs_both_high_and_low():
+    # Only highs -> no (high,low) pair on any day.
+    hi = [_city_evt("AUS", "high", "2026-06-01", 70), _city_evt("AUS", "high", "2026-06-02", 80)]
+    res = be.diurnal(hi, fees=True)
+    assert res["n_pair"] == 0 and res["fav"][0] == 0
+
+
 def test_ops_runner_allowlists_backfill_edges(tmp_path, monkeypatch):
     import json
 

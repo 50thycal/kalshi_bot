@@ -43,6 +43,11 @@ Pooled corr(anomaly) by lag, downwind (west leads east) vs an upwind placebo; th
 corr(east market_error[d+lag], west anomaly[d]) to test if the lead is unpriced; then a
 tradeable lead-shift (buy east bucket at implied_east + k*west_anom[d-1]) vs the favorite.
 
+DIURNAL — within a city/day the overnight low and afternoon high are coupled, and the low
+settles in the morning before the high. Measures high<->low anomaly coupling, whether the
+implied diurnal range is biased vs realized, whether the low's anomaly (realized or implied)
+predicts the high market's error, and a tradeable shift of the high by the low's anomaly.
+
 Reads ONLY the backfill_* tables. Caveats: hourly candles, spring-only (Apr-Jun), final
 ~48h per market. Usage:
     {"type": "script", "name": "weather_backfill_edges", "args": ["--analysis", "both"]}
@@ -814,11 +819,114 @@ def report_leadlag(res) -> None:
         print(f"  {'fav':>5} {fn:5d} {fw / fn * 100:4.0f}% {fp / fn:+9.1f}c   (open-favorite baseline)")
 
 
+def diurnal(events: list[Event], fees: bool, *, htc: float = 12.0, tol: float = 4.0):
+    """Diurnal-range coupling: within a city/day the overnight low and afternoon high are
+    coupled (a warm airmass lifts both), and the low settles in the morning BEFORE the high.
+    (1) corr(high_anom, low_anom). (2) is the implied diurnal range biased vs realized?
+    (3) does the low's anomaly predict the high market's error — realized (obs-style: enter
+    the high once the morning low is in) and implied (pure cross-market, no lookahead)?
+    (4) tradeable: buy the high bucket at implied_high + k*low_anom, vs the favorite."""
+    series: dict[tuple[str, str], list[Event]] = {}
+    for ev in events:
+        if ev.date and ev.winner_mid_f is not None and ev.city in CITY_LON:
+            series.setdefault((ev.city, ev.kind), []).append(ev)
+    citymean = {ck: sum(e.winner_mid_f for e in evs) / len(evs) for ck, evs in series.items()}
+
+    info: dict[tuple[str, str, str], dict] = {}
+    for (city, kind), evs in series.items():
+        cm = citymean[(city, kind)]
+        for ev in evs:
+            cyc = _nearest_cycle(ev, htc, tol)
+            impl = implied_mean_f(cyc.buckets) if cyc else None
+            info[(city, kind, ev.date)] = {
+                "actual": ev.winner_mid_f, "anom": ev.winner_mid_f - cm, "impl": impl,
+                "impl_anom": (impl - cm) if impl is not None else None,
+                "err": (ev.winner_mid_f - impl) if impl is not None else None,
+                "cyc": cyc, "winner": ev.winner}
+
+    hi_anom, lo_anom = [], []
+    rng_real, rng_impl = [], []
+    lo_real_x, herr_real_y = [], []          # corr(high err, low realized anomaly)
+    lo_impl_x, herr_impl_y = [], []          # corr(high err, low implied anomaly)
+    ks = (0.0, 0.5, 1.0)
+    trade_real = {k: [0, 0, 0.0] for k in ks}
+    trade_impl = {k: [0, 0, 0.0] for k in ks}
+    fav = [0, 0, 0.0]
+
+    for city, d in {(c, dt) for (c, _k, dt) in info}:
+        hi, lo = info.get((city, "high", d)), info.get((city, "low", d))
+        if hi is None or lo is None:
+            continue
+        hi_anom.append(hi["anom"])
+        lo_anom.append(lo["anom"])
+        if hi["impl"] is not None and lo["impl"] is not None:
+            rng_real.append(hi["actual"] - lo["actual"])
+            rng_impl.append(hi["impl"] - lo["impl"])
+        if hi["err"] is not None:
+            lo_real_x.append(lo["anom"])
+            herr_real_y.append(hi["err"])
+            if lo["impl_anom"] is not None:
+                lo_impl_x.append(lo["impl_anom"])
+                herr_impl_y.append(hi["err"])
+        if hi["cyc"] is not None and hi["impl"] is not None:
+            for k in ks:
+                _strat_entry(trade_real[k], hi["cyc"], hi["winner"],
+                             _bucket_containing(hi["cyc"].buckets, hi["impl"] + k * lo["anom"]), fees)
+                if lo["impl_anom"] is not None:
+                    _strat_entry(trade_impl[k], hi["cyc"], hi["winner"],
+                                 _bucket_containing(hi["cyc"].buckets, hi["impl"] + k * lo["impl_anom"]),
+                                 fees)
+            _strat_entry(fav, hi["cyc"], hi["winner"], _favorite(hi["cyc"].buckets), fees)
+
+    return {
+        "coupling": pearson(hi_anom, lo_anom), "n_pair": len(hi_anom),
+        "rng_bias": (sum(a - b for a, b in zip(rng_real, rng_impl, strict=True)) / len(rng_real))
+        if rng_real else None,
+        "rng_corr": pearson(rng_real, rng_impl), "rng_n": len(rng_real),
+        "herr_lo_real": pearson(lo_real_x, herr_real_y), "herr_lo_real_n": len(lo_real_x),
+        "herr_lo_impl": pearson(lo_impl_x, herr_impl_y),
+        "trade_real": trade_real, "trade_impl": trade_impl, "fav": fav,
+    }
+
+
+def _trade_rows(label: str, table: dict, fav) -> None:
+    for k, (n, wins, pnl) in sorted(table.items()):
+        if n:
+            print(f"  {label if k == 0.0 else '':>10} {k:5.2f} {n:5d} "
+                  f"{wins / n * 100:4.0f}% {pnl / n:+9.1f}c")
+
+
+def report_diurnal(res) -> None:
+    print("\n=== G) Diurnal-range coupling — does the low inform the high within a city/day? ===")
+    cp = res["coupling"]
+    if cp is not None:
+        print(f"  high<->low anomaly coupling corr: {cp:+.2f} (n={res['n_pair']})"
+              "   (warm airmass lifts both)")
+    if res["rng_bias"] is not None:
+        rc = res["rng_corr"]
+        print(f"  diurnal range mean(realized - implied): {res['rng_bias']:+.2f}F (n={res['rng_n']})"
+              + (f", corr(realized,implied)={rc:+.2f}" if rc is not None else ""))
+        print("    (range bias != 0 => market mis-estimates the day's high-low spread)")
+    hr, hi = res["herr_lo_real"], res["herr_lo_impl"]
+    if hr is not None:
+        print(f"  corr(high market_error, low anomaly REALIZED): {hr:+.2f} (n={res['herr_lo_real_n']})")
+        print("    (>0 => high market underweights a warm/cold night -> trade the high once the low is in)")
+    if hi is not None:
+        print(f"  corr(high market_error, low anomaly IMPLIED):  {hi:+.2f}   (pure cross-market, no lookahead)")
+    print("\n  --- buy the high bucket at implied_high + k*low_anom, hold to settle, fees ---")
+    print(f"  {'low src':>10} {'k':>5} {'n':>5} {'win%':>5} {'pnl/trade':>10}")
+    _trade_rows("realized", res["trade_real"], res["fav"])
+    _trade_rows("implied", res["trade_impl"], res["fav"])
+    fn, fw, fp = res["fav"]
+    if fn:
+        print(f"  {'favorite':>10} {'':>5} {fn:5d} {fw / fn * 100:4.0f}% {fp / fn:+9.1f}c")
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--analysis",
                     choices=("overround", "persistence", "meanrev", "longshot",
-                             "convergence", "distshape", "leadlag", "both"),
+                             "convergence", "distshape", "leadlag", "diurnal", "both"),
                     default="both")
     ap.add_argument("--no-fees", action="store_true")
     ap.add_argument("--htc", type=float, default=12.0,
@@ -855,6 +963,8 @@ def main(argv: list[str] | None = None) -> int:
         report_distshape(distshape(events, fees, target_htc=args.htc))
     if args.analysis in ("leadlag", "both"):
         report_leadlag(leadlag(events, fees))
+    if args.analysis in ("diurnal", "both"):
+        report_diurnal(diurnal(events, fees))
     return 0
 
 
