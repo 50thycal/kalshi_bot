@@ -353,6 +353,31 @@ def main() -> int:
                 print(f"    {label:9s} days={len(series):2d}  worst_day={_money(min(series))}  "
                       f"max_drawdown={_money(mdd)}  up_days={up}/{len(series)}")
 
+        # 4b) Edge-vs-control headline: the one question the morning check exists to
+        # answer — does each edge book (esp. `dist`, the forecast-distribution model)
+        # beat the fav baseline on EV/trade, on the same markets? Surfaced up here so it
+        # doesn't stay buried in the tables.
+        print("\n=== Edge vs control (fav baseline) — EV/trade ===")
+        printed = False
+        for kind in ("high", "low"):
+            fav_data = [p for _, p in book_pnls.get((kind, "fav"), [])]
+            if not fav_data:
+                continue
+            printed = True
+            fav_ev = sum(fav_data) / len(fav_data)
+            print(f"  {kind} fav baseline: {fav_ev:+.3f}$/trade (n={len(fav_data)})")
+            for book in ("nws", "cal", "pm", "cwin", "obs", "dist"):
+                data = [p for _, p in book_pnls.get((kind, book), [])]
+                if not data:
+                    continue
+                ev = sum(data) / len(data)
+                flag = "  <-- beats control" if ev > fav_ev else ""
+                print(f"    {book:5s} {ev:+.3f}$/trade (n={len(data):3d})  "
+                      f"delta {ev - fav_ev:+.3f}${flag}")
+        if not printed:
+            print("  (no settled fav baseline yet)")
+        print("  (dist = the forecast-distribution model; positive delta vs fav = real edge)")
+
         # 5) Data-collection health: is every dataset still flowing? (last 24h)
         print("\n=== Data collection (last 24h) ===")
         cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
