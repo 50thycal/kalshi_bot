@@ -31,9 +31,47 @@ Live books currently running: `fav` (control), `nws`, `cal`, `pm`
 entry). The legacy h12 window is flagged in the DB and excluded from the PnL
 report.
 
+### Build backlog — the bucket-probability edge model (NOT yet live)
+The probability *engine* exists but only offline. Status:
+- **Live:** ensemble-distribution collection — `OpenMeteoEnsembleClient` stores
+  GFS+ECMWF member daily extremes (the forecast distribution) in `weather_ensembles`.
+- **Offline only:** `scripts/weather_model_check.py` is the actual model —
+  `member_bucket_prob` (Gaussian kernel, sigma = forecast error beyond ensemble
+  spread) → `model_bucket_probs` (blend models → per-bucket P) → Brier/log-loss
+  grading + a cost-aware trade sim (`edge = model_prob − implied`, trade buckets
+  beyond min-edge). It grades the ensemble vs market.
+- **Missing:** a *live paper book* that trades that distribution edge. The live
+  `nws`/`cal` books are crude — they buy only the single bucket containing the
+  point forecast (`forecast_in_bucket`), not the full mispriced-bucket set.
+- **When built, bake in #6:** trust the market's implied mean but shrink its
+  variance (~×0.78²) — equivalently tune the sigma kernel so the model's
+  distribution is tighter than the raw ladder, since the market is overdispersed.
+
 ---
 
 ## Backfill structural-edge hunt (Apr–Jun history, 964 complete events)
+
+### #8 — Diurnal-range coupling — strong coupling, PERFECTLY priced (no trade)
+Within a city/day the overnight low (settles first, ~morning) and the afternoon
+high are physically coupled; does the low inform the high beyond its price? (482
+paired city-days)
+
+- **Coupling is strong:** corr(high_anom, low_anom) = **+0.83** — a warm/cold
+  airmass lifts both, as expected.
+- **The market prices the spread almost perfectly:** implied diurnal range vs
+  realized — mean(realized − implied) = **+0.04 °F**, corr = **+0.97**. The market
+  nails the day's high-minus-low gap.
+- **The low adds nothing to the high.** corr(high market_error, low anomaly) =
+  **−0.07** (both realized *and* implied) — the high market has already priced
+  whatever the low tells you. Even knowing the *realized* morning low (an obs-style
+  entry) gives no predictive power on the high's error.
+- **Tradeable test:** shifting the high by the low's anomaly (implied_high +
+  k·low_anom) collapses win% 64% (k=0) → 29% → 18%, all negative; favorite 65% /
+  −3.1¢. The k>0 "less-negative" pnl is the cheap-bucket artifact, not accuracy.
+
+**Verdict:** strong real coupling, but Kalshi is *jointly* calibrated across a
+city's high and low markets (range corr 0.97) — nothing to arb. Same theme. Probe:
+`--analysis diurnal`.
 
 ### #7 — Cross-city W→E lead-lag — mechanism REAL, but FULLY PRICED (no trade)
 Weather propagates west→east, so a western city's daily anomaly might lead an
