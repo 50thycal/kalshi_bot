@@ -142,6 +142,11 @@ class Settings(BaseSettings):
     weather_polymarket_enabled: bool = True
     weather_pm_cities: str = "LAX,MIA,AUS"
     weather_pm_interval_minutes: float = 5.0
+    # Per-city entry-window book (`weather_cwin`): the backfill-validated optimal
+    # hours-to-close for the HIGH favorite per city (h18 for CHI/LAX/DEN won an
+    # out-of-sample holdout). Buys the favorite once at that city's window.
+    weather_city_window_enabled: bool = True
+    weather_city_windows: str = "CHI:18,LAX:18,DEN:18,NYC:10,MIA:24,AUS:24,PHIL:10"
     # Kalshi history backfill (separate backfill_* tables; provenance never mixes with
     # the live-collected snapshots). Runs as a bounded chunk per cycle inside the
     # weather worker — the only place holding Kalshi credentials + a writable DB URL.
@@ -249,6 +254,18 @@ class Settings(BaseSettings):
     @property
     def weather_pm_city_list(self) -> list[str]:
         return [p.strip().upper() for p in self.weather_pm_cities.split(",") if p.strip()]
+
+    @property
+    def weather_city_window_map(self) -> dict[str, float]:
+        out: dict[str, float] = {}
+        for tok in self.weather_city_windows.split(","):
+            if ":" in tok:
+                city, _, hrs = tok.partition(":")
+                try:
+                    out[city.strip().upper()] = float(hrs)
+                except ValueError:
+                    continue
+        return out
 
     @property
     def paper_strategy_list(self) -> list[str]:

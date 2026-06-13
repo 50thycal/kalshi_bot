@@ -79,6 +79,7 @@ class FakeWeatherClient:
 
 def test_favorite_entered_per_window_and_dedup(settings):
     settings.bot_mode = "weather"
+    settings.weather_city_window_enabled = False  # focus on the fav window books
     settings.weather_entry_hours = "12,8,4"
     settings.weather_strategies = "favorite"
     db.init_engine(settings.database_url)
@@ -117,6 +118,7 @@ class FakeForecast:
 
 def test_weather_nws_book_buys_forecast_bucket(settings):
     settings.bot_mode = "weather"
+    settings.weather_city_window_enabled = False  # focus on the fav/nws window books
     settings.weather_strategies = "favorite,nws"
     db.init_engine(settings.database_url)
     db.create_all()

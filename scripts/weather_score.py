@@ -30,7 +30,7 @@ _HOURS = re.compile(r"_h(\d+)$")
 # Book prefixes by kind. Order matters when matching (low prefixes are longer).
 BOOKS = {
     "high": {"fav": "weather_fav", "nws": "weather_nws", "cal": "weather_cal",
-             "pm": "weather_pm"},
+             "pm": "weather_pm", "cwin": "weather_cwin"},
     "low": {"fav": "weather_low_fav", "nws": "weather_low_nws", "cal": "weather_low_cal",
             "pm": "weather_low_pm"},
 }
@@ -118,7 +118,7 @@ def main() -> int:
             print(f"  {'book':16s} {'settled':>7}  {'win%':>4}  {'total':>8}  {'per-trade':>9}")
             grand = [0, 0, 0.0]
             for kind in ("high", "low"):
-                for book in ("fav", "nws", "cal", "pm"):
+                for book in ("fav", "nws", "cal", "pm", "cwin"):
                     if (kind, book) not in roll:
                         continue
                     n, wins, pnl = roll[(kind, book)]
@@ -155,7 +155,7 @@ def main() -> int:
             print(f"  {'window':6s} {'strat':5s} {'n':>4} {'win%':>5} {'total':>8} {'per-trade':>9}")
             best_combo = None
             for w in windows:
-                for b in ("fav", "nws", "cal", "pm"):
+                for b in ("fav", "nws", "cal", "pm", "cwin"):
                     if (kind, w, b) not in cell:
                         continue
                     n, wins, pnl = cell[(kind, w, b)]
@@ -310,7 +310,7 @@ def main() -> int:
             .where(m.PaperTrade.strategy.like("weather%"), m.PaperTrade.status == "settled",
                    m.PaperTrade.legacy.is_(False))
         ).all()
-        all_books = [(k, b) for k in ("high", "low") for b in ("fav", "nws", "cal", "pm")]
+        all_books = [(k, b) for k in ("high", "low") for b in ("fav", "nws", "cal", "pm", "cwin")]
         book_pnls: dict[tuple[str, str], list[tuple]] = {kb: [] for kb in all_books}
         for strat, pnl, closed in ctrades:
             kb = _book(strat)

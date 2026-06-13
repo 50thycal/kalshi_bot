@@ -61,7 +61,7 @@ BOOKS = {
     "low": {"fav": "weather_low_fav", "nws": "weather_low_nws", "cal": "weather_low_cal",
             "pm": "weather_low_pm"},
     "high": {"fav": "weather_fav", "nws": "weather_nws", "cal": "weather_cal",
-             "pm": "weather_pm"},
+             "pm": "weather_pm", "cwin": "weather_cwin"},
 }
 
 _NUM = re.compile(r"-?\d+(?:\.\d+)?")

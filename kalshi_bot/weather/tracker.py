@@ -329,6 +329,20 @@ class WeatherTracker:
                         self._cached_metrics(pm_market, metrics_cache), pm_prob, summary,
                     )
 
+            # City-window book: the backfill-validated per-city entry window for HIGHs
+            # (e.g. h18 for CHI/LAX/DEN). Buy the favorite once, at that city's window.
+            cwin = (
+                s.weather_city_window_map.get(t.city.code)
+                if s.weather_city_window_enabled and t.kind == "high" and fav_market is not None
+                else None
+            )
+            if cwin is not None and t.hours_to_close <= cwin:
+                self._maybe_enter(
+                    session, f"weather_cwin_h{int(cwin)}", event_ticker, t, fav_market,
+                    self._cached_metrics(fav_market, metrics_cache),
+                    t.favorite_mid / 100.0, summary,
+                )
+
         self._capture_settlements(session, summary)
         summary.open_positions = repo.count_open_paper_positions(session)
         return summary
