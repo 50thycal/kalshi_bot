@@ -76,6 +76,45 @@ def test_persistence_strategy_and_correlation():
     assert res["strat"]["fav"][0] == 1
 
 
+def test_nearest_cycle_within_tolerance():
+    ev = be.Event("NYC", "high", "2026-06-10", "B", 74.5,
+                  [be.Cycle(24.0, []), be.Cycle(11.0, []), be.Cycle(2.0, [])])
+    assert be._nearest_cycle(ev, 12.0, 3.0).htc == 11.0   # closest within tol
+    assert be._nearest_cycle(ev, 12.0, 0.5) is None        # nothing close enough
+    assert be._nearest_cycle(be.Event("X", "high", None, "B", None, []), 12.0, 3.0) is None
+
+
+def test_longshot_sells_cheap_loser_and_buys_winning_favorite():
+    # At htc~12 one cheap longshot (mid 4) that LOSES and one heavy favorite (mid 92)
+    # that WINS. Selling the longshot (buy NO at 100-bid) and buying the favorite YES
+    # should both book a positive harvest.
+    cheap = _b("LONG", 80, 81, 3, 5)        # mid 4  -> longshot band (3,5)
+    favor = _b("FAV", 74, 75, 91, 93)       # mid 92 -> favorite band (90,95)
+    ev = be.Event("NYC", "high", "2026-06-10", "FAV", 74.5, [be.Cycle(12.0, [cheap, favor])])
+    res = be.longshot([ev], fees=True, target_htc=12.0, tol=3.0)
+    assert res["n_ev"] == 1
+
+    # longshot (3,5): n=1, the YES bucket lost, so NO harvest = (100 - no_cost) - fee.
+    n, yes_wins, no_pnl = res["ls"][(3, 5)]
+    no_cost = 100 - 3
+    assert n == 1 and yes_wins == 0
+    assert no_pnl == 100.0 - no_cost - be.fee_cents(no_cost)
+
+    # favorite (90,95): n=1, the YES bucket won, so YES harvest = (100 - ask) - fee.
+    n, yes_wins, yes_pnl = res["fv"][(90, 95)]
+    assert n == 1 and yes_wins == 1
+    assert yes_pnl == 100.0 - 93.0 - be.fee_cents(93.0)
+
+
+def test_longshot_skips_events_without_a_near_cycle():
+    far = _b("X", 74, 75, 3, 5)
+    ev = be.Event("NYC", "high", "2026-06-10", "X", 74.5, [be.Cycle(40.0, [far])])
+    res = be.longshot([ev], fees=True, target_htc=12.0, tol=3.0)
+    assert res["n_ev"] == 0
+    assert all(cell[0] == 0 for cell in res["ls"].values())
+    assert all(cell[0] == 0 for cell in res["fv"].values())
+
+
 def test_ops_runner_allowlists_backfill_edges(tmp_path, monkeypatch):
     import json
 

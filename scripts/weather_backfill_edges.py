@@ -16,9 +16,17 @@ concrete strategy "buy the bucket containing YESTERDAY's settled temperature at 
 open" vs buying the open favorite, and (d) check the seasonal mean(actual - implied) by
 month for a warming-lag.
 
+LONGSHOT — the favorite-longshot bias: do cheap tail buckets settle YES even less often
+than their price implies (so selling them — buying NO at 100-bid — is +EV), and do heavy
+favorites win MORE often than their ask (so buying YES is +EV)? At a fixed hours-to-close
+we bin every bucket by its mid price into longshot bands (1-3, 3-5, 5-10, 10-20c) and
+favorite bands (80-90, 90-95, 95-100c), grade on the actual winner, and report yes-win%
+and the per-trade EV of each harvest (fees on both legs).
+
 Reads ONLY the backfill_* tables. Caveats: hourly candles, spring-only (Apr-Jun), final
 ~48h per market. Usage:
     {"type": "script", "name": "weather_backfill_edges", "args": ["--analysis", "both"]}
+    {"type": "script", "name": "weather_backfill_edges", "args": ["--analysis", "longshot"]}
 """
 
 from __future__ import annotations
@@ -37,6 +45,8 @@ RO_OPTIONS = (
 )
 
 HTC_BINS = ((0, 6), (6, 12), (12, 24), (24, 48))
+LONGSHOT_BANDS = ((1, 3), (3, 5), (5, 10), (10, 20))   # cheap tails (by mid) -> sell (buy NO)
+FAVORITE_BANDS = ((80, 90), (90, 95), (95, 100))        # heavy favorites -> buy YES
 
 
 def fee_cents(price_cents: float, enabled: bool = True) -> float:
@@ -449,11 +459,72 @@ def report_meanrev(res) -> None:
             print(f"  {k:5.2f} {n:5d} {wins / n * 100:4.0f}% {pnl / n:+9.1f}c")
 
 
+def _nearest_cycle(ev: Event, target_htc: float, tol: float):
+    if not ev.cycles:
+        return None
+    best = min(ev.cycles, key=lambda c: abs(c.htc - target_htc))
+    return best if abs(best.htc - target_htc) <= tol else None
+
+
+def longshot(events: list[Event], fees: bool, *, target_htc: float = 12.0, tol: float = 3.0):
+    """Harvest the tails at ~target_htc: SELL cheap longshots (buy NO at 100-bid) and BUY
+    heavy favorites (YES at ask), binned by mid price, graded on the actual winner."""
+    ls = {b: [0, 0, 0.0] for b in LONGSHOT_BANDS}  # n, yes_wins, no_pnl_cents
+    fv = {b: [0, 0, 0.0] for b in FAVORITE_BANDS}  # n, yes_wins, yes_pnl_cents
+    n_ev = 0
+    for ev in events:
+        cyc = _nearest_cycle(ev, target_htc, tol)
+        if cyc is None:
+            continue
+        n_ev += 1
+        for b in cyc.buckets:
+            if b.mid is None:
+                continue
+            won = b.ticker == ev.winner
+            for band in LONGSHOT_BANDS:
+                if band[0] <= b.mid < band[1] and b.bid is not None and 1 <= (100 - b.bid) <= 99:
+                    no_cost = 100 - b.bid  # buy NO = take the other side of the longshot YES
+                    cell = ls[band]
+                    cell[0] += 1
+                    cell[1] += int(won)
+                    cell[2] += (0.0 if won else 100.0) - no_cost - fee_cents(no_cost, fees)
+                    break
+            for band in FAVORITE_BANDS:
+                if band[0] <= b.mid < band[1] and b.ask is not None and 1 <= b.ask <= 99:
+                    cell = fv[band]
+                    cell[0] += 1
+                    cell[1] += int(won)
+                    cell[2] += (100.0 if won else 0.0) - b.ask - fee_cents(b.ask, fees)
+                    break
+    return {"ls": ls, "fv": fv, "n_ev": n_ev, "htc": target_htc}
+
+
+def report_longshot(res) -> None:
+    print(f"\n=== C) Tail harvesting at ~h{int(res['htc'])} — sell longshots / buy favorites "
+          f"(fees on, {res['n_ev']} events) ===")
+    print("  --- SELL cheap longshots (buy NO at 100-bid); needs the bucket to LOSE ---")
+    print(f"  {'yes band':>9} {'n':>5} {'yes_win%':>8} {'no_ev/trade':>12}")
+    for band in LONGSHOT_BANDS:
+        n, wins, pnl = res["ls"][band]
+        if n:
+            print(f"  {band[0]:3d}-{band[1]:<4d} {n:5d} {wins / n * 100:7.1f}% {pnl / n:+11.1f}c")
+    print("  --- BUY heavy favorites (YES at ask); needs the bucket to WIN ---")
+    print(f"  {'yes band':>9} {'n':>5} {'yes_win%':>8} {'yes_ev/trade':>12}")
+    for band in FAVORITE_BANDS:
+        n, wins, pnl = res["fv"][band]
+        if n:
+            print(f"  {band[0]:3d}-{band[1]:<4d} {n:5d} {wins / n * 100:7.1f}% {pnl / n:+11.1f}c")
+    print("  (positive ev/trade beyond ~0 => a tradeable favorite-longshot edge)")
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--analysis", choices=("overround", "persistence", "meanrev", "both"),
+    ap.add_argument("--analysis",
+                    choices=("overround", "persistence", "meanrev", "longshot", "both"),
                     default="both")
     ap.add_argument("--no-fees", action="store_true")
+    ap.add_argument("--htc", type=float, default=12.0,
+                    help="target hours-to-close for the tail-harvest (longshot) probe")
     args = ap.parse_args(argv)
     fees = not args.no_fees
 
@@ -478,6 +549,8 @@ def main(argv: list[str] | None = None) -> int:
         report_persistence(persistence(events, fees))
     if args.analysis in ("meanrev", "both"):
         report_meanrev(meanrev(events, fees))
+    if args.analysis in ("longshot", "both"):
+        report_longshot(longshot(events, fees, target_htc=args.htc))
     return 0
 
 
