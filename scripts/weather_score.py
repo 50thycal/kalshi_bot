@@ -88,7 +88,8 @@ def main() -> int:
                 func.sum(case((m.PaperTrade.resolved_value == 100, 1), else_=0)),
                 func.coalesce(func.sum(m.PaperTrade.pnl), 0),
             )
-            .where(m.PaperTrade.strategy.like("weather%"), m.PaperTrade.status == "settled")
+            .where(m.PaperTrade.strategy.like("weather%"), m.PaperTrade.status == "settled",
+                   m.PaperTrade.legacy.is_(False))
             .group_by(m.PaperTrade.strategy)
             .order_by(m.PaperTrade.strategy)
         ).all()
@@ -190,6 +191,7 @@ def main() -> int:
                         m.PaperTrade.market_ticker.like(f"{st.event_ticker}-%"),
                         m.PaperTrade.strategy.like(fav_pattern),
                         m.PaperTrade.status == "settled",
+                        m.PaperTrade.legacy.is_(False),
                     )
                 ).all()
                 trades.sort(key=lambda t: -(int(_HOURS.search(t.strategy or "").group(1)) if _HOURS.search(t.strategy or "") else 0))
@@ -305,7 +307,8 @@ def main() -> int:
         print("\n=== Consistency by book (settled trades) ===")
         ctrades = s.execute(
             select(m.PaperTrade.strategy, m.PaperTrade.pnl, m.PaperTrade.closed_at)
-            .where(m.PaperTrade.strategy.like("weather%"), m.PaperTrade.status == "settled")
+            .where(m.PaperTrade.strategy.like("weather%"), m.PaperTrade.status == "settled",
+                   m.PaperTrade.legacy.is_(False))
         ).all()
         all_books = [(k, b) for k in ("high", "low") for b in ("fav", "nws", "cal", "pm")]
         book_pnls: dict[tuple[str, str], list[tuple]] = {kb: [] for kb in all_books}

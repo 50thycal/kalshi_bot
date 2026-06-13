@@ -149,7 +149,7 @@ def main(argv: list[str] | None = None) -> int:
                 " count(*) FILTER (WHERE status='settled') AS settled,"
                 " count(*) FILTER (WHERE status='settled' AND resolved_value=100) AS wins,"
                 " sum(pnl) FILTER (WHERE status='settled') AS pnl"
-                " FROM paper_trades WHERE strategy LIKE 'weather%'"
+                " FROM paper_trades WHERE strategy LIKE 'weather%' AND NOT legacy"
                 " GROUP BY strategy ORDER BY strategy"
             )
             rows = cur.fetchall()

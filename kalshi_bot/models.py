@@ -169,6 +169,9 @@ class PaperTrade(Base):
     pnl: Mapped[float | None] = mapped_column(Numeric(14, 4))
     fees: Mapped[float | None] = mapped_column(Numeric(14, 4))
     closed_at: Mapped[datetime | None] = mapped_column(TS)
+    # Trades from retired entry windows/strategies (e.g. the day-1 h12 window): kept for
+    # the record but excluded from the PnL report so it only reflects live strategies.
+    legacy: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
 
 class PaperPosition(Base):
