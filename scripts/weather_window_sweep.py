@@ -283,16 +283,16 @@ def load_events_backfill(conn) -> list[dict]:
     Only events with exactly one backfilled winner are used."""
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT event_ticker, market_ticker, city, kind, result, low_f, high_f, close_time"
-            " FROM backfill_weather_markets"
+            "SELECT event_ticker, market_ticker, city, kind, result, low_f, high_f,"
+            " close_time, target_date FROM backfill_weather_markets"
             " WHERE candles_fetched AND close_time IS NOT NULL AND event_ticker IS NOT NULL"
         )
         markets: dict[str, dict] = {}
         events: dict[str, dict] = {}
-        for ev_tk, mk_tk, city, kind, result, lo, hi, close in cur.fetchall():
+        for ev_tk, mk_tk, city, kind, result, lo, hi, close, tdate in cur.fetchall():
             markets[mk_tk] = {"event": ev_tk, "low": lo, "high": hi}
             e = events.setdefault(
-                ev_tk, {"city": city, "kind": kind or "high", "close": close,
+                ev_tk, {"city": city, "kind": kind or "high", "close": close, "date": tdate,
                         "winner": None, "winners": 0}
             )
             if (result or "").lower() == "yes":
@@ -335,14 +335,152 @@ def load_events_backfill(conn) -> list[dict]:
                 cycles.append(Cycle(htc, buckets))
         if cycles:
             out.append({"kind": e["kind"], "city": e["city"], "winner": e["winner"],
-                        "forecast": None, "cycles": cycles})
+                        "forecast": None, "date": e["date"], "cycles": cycles})
     return out
+
+
+def _stdev(xs: list[float]) -> float:
+    n = len(xs)
+    if n < 2:
+        return 0.0
+    m = sum(xs) / n
+    return math.sqrt(sum((x - m) ** 2 for x in xs) / (n - 1))
+
+
+def _fav_pnl_at(ev: dict, w: float, fees: bool) -> float | None:
+    cyc = pick_cycle_nearest(ev["cycles"], w)
+    if cyc is None:
+        return None
+    fb = favorite_bucket(cyc)
+    if fb is None:
+        return None
+    return _entry_pnl(fb, ev["winner"], fees)
+
+
+def validate_windows(events: list[dict], windows: list[float], fees: bool,
+                     *, min_n: int = 25, train_frac: float = 0.6):
+    """Guard the city x window 'edge' against overfitting: significance (t-stat),
+    month stability, and a train/test holdout of a per-city window MAP vs one global
+    window. Favorite book only (backfill has no forecast)."""
+    # per (city, kind, window) -> list of (date, pnl)
+    cell: dict[tuple[str, str, float], list[tuple[str, float]]] = {}
+    for ev in events:
+        for w in windows:
+            pnl = _fav_pnl_at(ev, w, fees)
+            if pnl is not None and ev.get("date"):
+                cell.setdefault((ev["city"], ev["kind"], w), []).append((ev["date"], pnl))
+
+    # 1) significance per cell (full sample)
+    sig = {}
+    for key, dp in cell.items():
+        pnls = [p for _d, p in dp]
+        n = len(pnls)
+        if n >= min_n:
+            mean = sum(pnls) / n
+            se = _stdev(pnls) / math.sqrt(n)
+            sig[key] = (n, mean, mean / se if se > 0 else 0.0)
+
+    # 2) month stability for the strongest high cells (by |t|)
+    top = sorted((k for k in sig if k[1] == "high"), key=lambda k: -abs(sig[k][2]))[:6]
+    stab = {}
+    for key in top:
+        months: dict[str, list[float]] = {}
+        for d, p in cell[key]:
+            months.setdefault(d[:7], []).append(p)
+        stab[key] = {m: (sum(v) / len(v), len(v)) for m, v in sorted(months.items())}
+
+    # 3) train/test: pick each (city,kind)'s best window on train, evaluate on test;
+    #    compare to ONE global best window (chosen on train) evaluated on test.
+    by_ck: dict[tuple[str, str], list[dict]] = {}
+    for ev in events:
+        if ev.get("date"):
+            by_ck.setdefault((ev["city"], ev["kind"]), []).append(ev)
+    map_test, flat_test = [], []  # per-trade pnls on the test set
+    # global window chosen on the pooled train half
+    all_sorted = sorted((ev for ev in events if ev.get("date")), key=lambda e: e["date"])
+    cut = int(len(all_sorted) * train_frac)
+    global_train: dict[float, list[float]] = {}
+    for ev in all_sorted[:cut]:
+        for w in windows:
+            p = _fav_pnl_at(ev, w, fees)
+            if p is not None:
+                global_train.setdefault(w, []).append(p)
+    global_w = max(
+        (w for w, ps in global_train.items() if len(ps) >= min_n),
+        key=lambda w: sum(global_train[w]) / len(global_train[w]),
+        default=None,
+    )
+    picks = {}
+    for ck, evs in by_ck.items():
+        evs_sorted = sorted(evs, key=lambda e: e["date"])
+        c = int(len(evs_sorted) * train_frac)
+        train, test = evs_sorted[:c], evs_sorted[c:]
+        # best window on train
+        tr: dict[float, list[float]] = {}
+        for ev in train:
+            for w in windows:
+                p = _fav_pnl_at(ev, w, fees)
+                if p is not None:
+                    tr.setdefault(w, []).append(p)
+        best_w = max(
+            (w for w, ps in tr.items() if len(ps) >= min_n // 2),
+            key=lambda w: sum(tr[w]) / len(tr[w]),
+            default=None,
+        )
+        if best_w is None:
+            continue
+        picks[ck] = best_w
+        for ev in test:
+            pm = _fav_pnl_at(ev, best_w, fees)
+            if pm is not None:
+                map_test.append(pm)
+            if global_w is not None:
+                pf = _fav_pnl_at(ev, global_w, fees)
+                if pf is not None:
+                    flat_test.append(pf)
+    return {"sig": sig, "stab": stab, "picks": picks, "global_w": global_w,
+            "map_test": map_test, "flat_test": flat_test}
+
+
+def report_validate(res, windows) -> None:
+    print("=== City x entry-window validation (favorite, backfill) ===")
+    print("  --- per (city, kind, window) favorite EV with t-stat (full sample, n>=25) ---")
+    print("  (|t|>2 ~ unlikely to be pure noise; but we're scanning many cells, so the")
+    print("   train/test holdout below is the real test against overfitting)")
+    sig = res["sig"]
+    # show the high-kind cells sorted by EV, flag significance
+    highs = sorted((k for k in sig if k[1] == "high"), key=lambda k: -sig[k][1])
+    print(f"  {'city':5s} {'kind':4s} {'win':>4} {'n':>4} {'ev/trade':>9} {'t':>6}")
+    for k in highs[:12]:
+        n, mean, t = sig[k]
+        star = " *" if abs(t) > 2 else ""
+        print(f"  {k[0]:5s} {k[1]:4s} h{int(k[2]):<3d} {n:4d} {mean:+8.1f}c {t:+6.2f}{star}")
+
+    if res["stab"]:
+        print("\n  --- month stability of the strongest high cells (is it one heat wave?) ---")
+        for key, months in res["stab"].items():
+            cells = "  ".join(f"{m}:{v:+.0f}c(n{n})" for m, (v, n) in months.items())
+            print(f"  {key[0]} h{int(key[2])}: {cells}")
+
+    print("\n  --- TRAIN/TEST holdout: per-city window map vs one global window ---")
+    print(f"  global window chosen on train: h{int(res['global_w'])}"
+          if res["global_w"] is not None else "  (no global window)")
+    picks = "  ".join(f"{c}/{k[:1]}=h{int(w)}" for (c, k), w in sorted(res["picks"].items()))
+    print(f"  per-(city,kind) windows picked on train: {picks}")
+    mt, ft = res["map_test"], res["flat_test"]
+    if mt and ft:
+        mm, fm = sum(mt) / len(mt), sum(ft) / len(ft)
+        print(f"  TEST per-trade EV — per-city MAP: {mm:+.1f}c (n={len(mt)})   "
+              f"global FLAT: {fm:+.1f}c (n={len(ft)})   edge: {mm - fm:+.1f}c")
+        print("  (if MAP <= FLAT out-of-sample, the per-city window edge was overfit)")
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--windows", default=",".join(str(w) for w in DEFAULT_WINDOWS))
     ap.add_argument("--source", choices=("live", "backfill"), default="live")
+    ap.add_argument("--validate", action="store_true",
+                    help="significance + month-stability + train/test of a per-city window map")
     ap.add_argument("--no-fees", action="store_true")
     args = ap.parse_args(argv)
     windows = [float(w) for w in args.windows.split(",") if w.strip()]
@@ -360,6 +498,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if not events:
         print("=== Entry-window sweep ===\n  (no settled events with ladder coverage yet)")
+        return 0
+    if args.validate:
+        report_validate(validate_windows(events, windows, not args.no_fees), windows)
         return 0
     cell, cell_city = sweep(events, windows, not args.no_fees)
     report(cell, cell_city, windows, len(events),
