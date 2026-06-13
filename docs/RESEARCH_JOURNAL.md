@@ -35,6 +35,34 @@ report.
 
 ## Backfill structural-edge hunt (Apr–Jun history, 964 complete events)
 
+### #6 — Distribution shape / tail mispricing — REAL bias, NOT a standalone trade (→ model feature)
+Normalize each event's h12 ladder into an implied PDF over bucket temperatures,
+standardize the actual outcome (z = (actual − implied_mean) / implied_sd), and
+check the shape. **This is the most actionable result so far.** (940 events)
+
+- **Location is unbiased:** mean z = **−0.02 σ** — no systematic hot/cold lean in
+  the market's implied mean.
+- **The implied distribution is too WIDE (overdispersed):** SD(z) = **0.78** (< 1).
+  Actual outcomes land *closer* to the implied mean than the prices say they
+  should. **PIT tail mass lo=5% / hi=3%** (vs ~10%/10% if calibrated) confirms it
+  — only ~8% of outcomes fall in the tails the market prices at ~20%. Reality is
+  more predictable at h12 than Kalshi prices it; the **shoulders/near-tails are
+  too rich and the center is too cheap.**
+- **But the mispricing is below the cost floor.** Per implied-σ shell: center
+  (0–0.5σ) wins 73% priced 72¢ (1¢ cheap), the 1.0–1.5σ shell wins 16% priced 18¢
+  (2¢ rich), the far 1.5σ+ tail wins 2% priced 2.2¢ (fair — agrees with #4). The
+  gaps are 1–2¢; after bid/ask + fees **every** YES and NO entry is negative
+  (best cells ≈ −1.2¢). No naive buy-center / sell-shoulders book clears the floor.
+
+**Verdict:** a *robust, mechanism-plausible* shape bias (retail spreads bets/lottery
+tickets across tails; the market is slow to tighten its distribution as the day
+constrains the outcome — same family as the `obs` thermometer-lag edge), but too
+small to trade directly. **High value as a calibration feature for the forecast
+model: trust the market's implied mean, then SHRINK its variance (~×0.78²).** The
+resulting bucket probabilities should be better calibrated than the raw ladder,
+especially by de-weighting the over-fat shoulders. This is the first finding that
+feeds the edge model rather than just closing a door. Probe: `--analysis distshape`.
+
 ### #5 — Favorite momentum / convergence — REFUTED
 Does the favorite's price drift predictably, and do bucket price moves trend?
 
