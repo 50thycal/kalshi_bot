@@ -36,6 +36,7 @@ ALLOWED_SCRIPTS = (
     "weather_entry_study",
     "weather_window_sweep",
     "weather_backfill_calib",
+    "weather_backfill_edges",
     "weather_polymarket_align",
 )
 
