@@ -23,6 +23,7 @@ import math
 import os
 import sys
 from dataclasses import dataclass
+from datetime import timezone
 
 RO_OPTIONS = (
     "-c default_transaction_read_only=on "
@@ -166,24 +167,34 @@ def _row(n, wins, cents):
     return n, wr, pt, (cents / n if n else None)
 
 
-def report(cell, cell_city, windows, n_events) -> None:
-    print("=== Entry-window sweep — favorite & nws by hours-to-close "
-          "(fees on, YES at ask, held to settlement) ===")
+def report(cell, cell_city, windows, n_events, *, source: str = "live", show_nws: bool = True) -> None:
+    tag = "BACKFILL (Kalshi REST history, hourly candles, market-only)" if source == "backfill" \
+        else "live-collected 5-min ladders"
+    print("=== Entry-window sweep — favorite"
+          + (" & nws" if show_nws else "")
+          + f" by hours-to-close (fees on, YES at ask, held to settlement) [{tag}] ===")
     print(f"  settled events with ladder coverage: {n_events}")
-    print("  (snapshots start ~Jun 10, so later windows have more coverage than earlier"
-          " ones for now; the curve sharpens as data accrues)")
+    if source == "backfill":
+        print("  (backfill has no NWS forecast history, so this is the favorite book only;"
+              " hourly candle granularity)")
+    else:
+        print("  (snapshots start ~Jun 10, so later windows have more coverage than earlier"
+              " ones for now; the curve sharpens as data accrues)")
 
     for kind in ("high", "low"):
         kwins = [w for w in windows if (kind, w) in cell["fav"] or (kind, w) in cell["nws"]]
         if not kwins:
             continue
         print(f"\n  --- {kind.upper()}: P&L per trade by entry window ---")
-        print(f"  {'window':6s} | {'fav_n':>5} {'fav_win':>7} {'fav/trade':>9}"
-              f" | {'nws_n':>5} {'nws_win':>7} {'nws/trade':>9}")
+        header = f"  {'window':6s} | {'fav_n':>5} {'fav_win':>7} {'fav/trade':>9}"
+        if show_nws:
+            header += f" | {'nws_n':>5} {'nws_win':>7} {'nws/trade':>9}"
+        print(header)
         best = {"fav": None, "nws": None}
+        books = ("fav", "nws") if show_nws else ("fav",)
         for w in sorted(kwins, reverse=True):
             parts = [f"  h{int(w):<4d} |"]
-            for book in ("fav", "nws"):
+            for book in books:
                 n, wr, pt, pv = _row(*cell[book].get((kind, w), [0, 0, 0.0]))
                 flag = "*" if (n and n < MIN_PER_CELL) else " "
                 parts.append(f" {n:5d} {wr:>7} {pt:>8}{flag}")
@@ -192,7 +203,7 @@ def report(cell, cell_city, windows, n_events) -> None:
                 ):
                     best[book] = (pv, w, n)
             print(" |".join(parts))
-        for book in ("fav", "nws"):
+        for book in books:
             if best[book]:
                 pv, w, n = best[book]
                 print(f"  best {kind} {book} entry window: h{int(w)} ({pv:+.1f}c/trade, n={n})"
@@ -266,9 +277,72 @@ def load_events(conn) -> list[dict]:
     return events
 
 
+def load_events_backfill(conn) -> list[dict]:
+    """Same event shape from the SEPARATE backfill_* tables (Kalshi REST history):
+    reconstruct per-event hourly cycles from candles. No forecast -> favorite only.
+    Only events with exactly one backfilled winner are used."""
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT event_ticker, market_ticker, city, kind, result, low_f, high_f, close_time"
+            " FROM backfill_weather_markets"
+            " WHERE candles_fetched AND close_time IS NOT NULL AND event_ticker IS NOT NULL"
+        )
+        markets: dict[str, dict] = {}
+        events: dict[str, dict] = {}
+        for ev_tk, mk_tk, city, kind, result, lo, hi, close in cur.fetchall():
+            markets[mk_tk] = {"event": ev_tk, "low": lo, "high": hi}
+            e = events.setdefault(
+                ev_tk, {"city": city, "kind": kind or "high", "close": close,
+                        "winner": None, "winners": 0}
+            )
+            if (result or "").lower() == "yes":
+                e["winner"] = mk_tk
+                e["winners"] += 1
+        if not markets:
+            return []
+        cur.execute(
+            "SELECT market_ticker, end_period_ts, price_close, yes_bid_close, yes_ask_close"
+            " FROM backfill_weather_candles WHERE market_ticker = ANY(%s)",
+            (list(markets),),
+        )
+        per_event_time: dict[str, dict] = {}
+        for mk_tk, ts, price_close, bid, ask in cur.fetchall():
+            m = markets.get(mk_tk)
+            if m is None:
+                continue
+            if bid is not None and ask is not None:
+                mid = (float(bid) + float(ask)) / 2.0
+            elif price_close is not None:
+                mid = float(price_close)
+            else:
+                mid = None
+            bucket = Bucket(mk_tk, m["low"], m["high"],
+                            float(ask) if ask is not None else None, mid)
+            per_event_time.setdefault(m["event"], {}).setdefault(ts, []).append(bucket)
+
+    out = []
+    for ev_tk, e in events.items():
+        if e["winners"] != 1:  # incomplete/ambiguous backfill coverage
+            continue
+        close = e["close"]
+        if close.tzinfo is None:
+            close = close.replace(tzinfo=timezone.utc)
+        cycles = []
+        for ts, buckets in (per_event_time.get(ev_tk) or {}).items():
+            t = ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
+            htc = (close - t).total_seconds() / 3600.0
+            if htc >= 0:
+                cycles.append(Cycle(htc, buckets))
+        if cycles:
+            out.append({"kind": e["kind"], "city": e["city"], "winner": e["winner"],
+                        "forecast": None, "cycles": cycles})
+    return out
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--windows", default=",".join(str(w) for w in DEFAULT_WINDOWS))
+    ap.add_argument("--source", choices=("live", "backfill"), default="live")
     ap.add_argument("--no-fees", action="store_true")
     args = ap.parse_args(argv)
     windows = [float(w) for w in args.windows.split(",") if w.strip()]
@@ -282,13 +356,14 @@ def main(argv: list[str] | None = None) -> int:
 
     with psycopg.connect(url, options=RO_OPTIONS, connect_timeout=15) as conn:
         conn.read_only = True
-        events = load_events(conn)
+        events = load_events_backfill(conn) if args.source == "backfill" else load_events(conn)
 
     if not events:
         print("=== Entry-window sweep ===\n  (no settled events with ladder coverage yet)")
         return 0
     cell, cell_city = sweep(events, windows, not args.no_fees)
-    report(cell, cell_city, windows, len(events))
+    report(cell, cell_city, windows, len(events),
+           source=args.source, show_nws=(args.source == "live"))
     return 0
 
 
