@@ -20,9 +20,9 @@ def _load(name: str):
 be = _load("weather_backfill_edges")
 
 
-def _b(ticker, low, high, bid, ask):
+def _b(ticker, low, high, bid, ask, vol=None):
     mid = (bid + ask) / 2 if bid is not None and ask is not None else None
-    return be.Bkt(ticker, low, high, bid, ask, mid)
+    return be.Bkt(ticker, low, high, bid, ask, mid, vol)
 
 
 def test_bucket_mid_and_value_in_bucket():
@@ -245,6 +245,32 @@ def test_diurnal_needs_both_high_and_low():
     hi = [_city_evt("AUS", "high", "2026-06-01", 70), _city_evt("AUS", "high", "2026-06-02", 80)]
     res = be.diurnal(hi, fees=True)
     assert res["n_pair"] == 0 and res["fav"][0] == 0
+
+
+def test_liquidity_bins_by_spread_and_volume():
+    # tight winning bucket (spread 2, vol 600) and a wide losing bucket (spread 10, vol 5).
+    tight = _b("W", 74, 75, 54, 56, vol=600)
+    wide = _b("X", 76, 77, 30, 40, vol=5)
+    ev = be.Event("NYC", "high", "2026-06-10", "W", 74.5, [be.Cycle(12.0, [tight, wide])])
+    res = be.liquidity([ev], fees=True, htc=12.0, tol=3.0)
+    assert res["n_ev"] == 1
+    # spread bins: tight -> (0,2) n=1 win=1; wide -> (6,10) n=1 win=0
+    assert res["spread"][(0, 2)][0] == 1 and res["spread"][(0, 2)][1] == 1
+    assert res["spread"][(6, 10)][0] == 1 and res["spread"][(6, 10)][1] == 0
+    # volume bins: 600 -> (501, big), 5 -> (1, 50)
+    assert res["vol"][(501, 10 ** 9)][0] == 1
+    assert res["vol"][(1, 50)][0] == 1
+    # the tight winner's YES harvest = (100 - ask) - fee, recorded in its yes cell
+    n, wins, sump, yn, ypnl, nn, npnl = res["spread"][(0, 2)]
+    assert yn == 1 and ypnl == 100.0 - 56.0 - be.fee_cents(56.0)
+
+
+def test_liquidity_skips_buckets_without_prices():
+    nopx = be.Bkt("Z", 72, 73, None, None, None, None)
+    ev = be.Event("NYC", "high", "2026-06-10", "W", 74.5, [be.Cycle(12.0, [nopx])])
+    res = be.liquidity([ev], fees=True)
+    assert all(cell[0] == 0 for cell in res["spread"].values())
+    assert all(cell[0] == 0 for cell in res["vol"].values())
 
 
 def test_ops_runner_allowlists_backfill_edges(tmp_path, monkeypatch):

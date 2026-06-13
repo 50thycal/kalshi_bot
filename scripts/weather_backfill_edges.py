@@ -48,6 +48,11 @@ settles in the morning before the high. Measures high<->low anomaly coupling, wh
 implied diurnal range is biased vs realized, whether the low's anomaly (realized or implied)
 predicts the high market's error, and a tradeable shift of the high by the low's anomaly.
 
+LIQUIDITY — is mispricing concentrated in illiquid buckets? At ~h12, grade every bucket's
+mid against its realized win-rate, binned by bid/ask spread and by candle volume. mid_err
+(win% - avg_mid) localizes where the mid is least honest; yes/no EV (at ask / 100-bid) say
+whether any such mispricing survives the spread+fee cost it hides behind.
+
 Reads ONLY the backfill_* tables. Caveats: hourly candles, spring-only (Apr-Jun), final
 ~48h per market. Usage:
     {"type": "script", "name": "weather_backfill_edges", "args": ["--analysis", "both"]}
@@ -75,6 +80,8 @@ FAVORITE_BANDS = ((80, 90), (90, 95), (95, 100))        # heavy favorites -> buy
 SIGMA_BANDS = ((0.0, 0.5), (0.5, 1.0), (1.0, 1.5), (1.5, 99.0))  # implied sigma from mean
 CITY_LON = {"LAX": -118.2, "DEN": -105.0, "AUS": -97.7, "CHI": -87.7,  # west -> east
             "MIA": -80.2, "PHIL": -75.2, "NYC": -74.0}
+SPREAD_BINS = ((0, 2), (3, 5), (6, 10), (11, 999))             # bid/ask spread, cents
+VOL_BINS = ((0, 0), (1, 50), (51, 500), (501, 10 ** 9))        # candle volume, contracts
 
 
 def fee_cents(price_cents: float, enabled: bool = True) -> float:
@@ -113,6 +120,7 @@ class Bkt:
     bid: float | None
     ask: float | None
     mid: float | None
+    vol: int | None = None
 
 
 @dataclass
@@ -356,12 +364,12 @@ def load_events(conn) -> list[Event]:
         if not markets:
             return []
         cur.execute(
-            "SELECT market_ticker, end_period_ts, price_close, yes_bid_close, yes_ask_close"
-            " FROM backfill_weather_candles WHERE market_ticker = ANY(%s)",
+            "SELECT market_ticker, end_period_ts, price_close, yes_bid_close, yes_ask_close,"
+            " volume FROM backfill_weather_candles WHERE market_ticker = ANY(%s)",
             (list(markets),),
         )
         per_event_time: dict[str, dict] = {}
-        for mk_tk, ts, price_close, bid, ask in cur.fetchall():
+        for mk_tk, ts, price_close, bid, ask, vol in cur.fetchall():
             m = markets.get(mk_tk)
             if m is None:
                 continue
@@ -373,7 +381,8 @@ def load_events(conn) -> list[Event]:
                 mid = None
             bkt = Bkt(mk_tk, m["low"], m["high"],
                       float(bid) if bid is not None else None,
-                      float(ask) if ask is not None else None, mid)
+                      float(ask) if ask is not None else None, mid,
+                      int(vol) if vol is not None else None)
             per_event_time.setdefault(m["event"], {}).setdefault(ts, []).append(bkt)
 
     out: list[Event] = []
@@ -922,11 +931,84 @@ def report_diurnal(res) -> None:
         print(f"  {'favorite':>10} {'':>5} {fn:5d} {fw / fn * 100:4.0f}% {fp / fn:+9.1f}c")
 
 
+def _bin(v: int, bins):
+    return next((b for b in bins if b[0] <= v <= b[1]), None)
+
+
+def _liq_add(table, band, b: Bkt, won: bool, fees: bool) -> None:
+    if band is None:
+        return
+    cell = table[band]
+    cell[0] += 1
+    cell[1] += int(won)
+    cell[2] += b.mid
+    if b.ask is not None and 1 <= b.ask <= 99:
+        cell[3] += 1
+        cell[4] += (100.0 if won else 0.0) - b.ask - fee_cents(b.ask, fees)
+    if b.bid is not None and 1 <= (100 - b.bid) <= 99:
+        nc = 100 - b.bid
+        cell[5] += 1
+        cell[6] += (0.0 if won else 100.0) - nc - fee_cents(nc, fees)
+
+
+def liquidity(events: list[Event], fees: bool, *, htc: float = 12.0, tol: float = 3.0):
+    """Is mispricing concentrated in illiquid buckets? At ~h12, grade every bucket's mid
+    against its realized win-rate, binned by bid/ask spread and by candle volume. mid_err =
+    win% - avg_mid measures calibration per liquidity bin; yes/no EV (at ask / 100-bid) say
+    whether any mispricing survives the spread+fee cost it lives behind."""
+    spread = {b: [0, 0, 0.0, 0, 0.0, 0, 0.0] for b in SPREAD_BINS}
+    vol = {b: [0, 0, 0.0, 0, 0.0, 0, 0.0] for b in VOL_BINS}
+    n_ev = 0
+    for ev in events:
+        cyc = _nearest_cycle(ev, htc, tol)
+        if cyc is None:
+            continue
+        n_ev += 1
+        for b in cyc.buckets:
+            if b.mid is None:
+                continue
+            won = b.ticker == ev.winner
+            if b.bid is not None and b.ask is not None:
+                sp = int(round(b.ask - b.bid))
+                if sp >= 0:
+                    _liq_add(spread, _bin(sp, SPREAD_BINS), b, won, fees)
+            if b.vol is not None:
+                _liq_add(vol, _bin(int(b.vol), VOL_BINS), b, won, fees)
+    return {"spread": spread, "vol": vol, "n_ev": n_ev, "htc": htc}
+
+
+def _liq_rows(table, bins, labels) -> None:
+    for band, label in zip(bins, labels, strict=True):
+        n, wins, sump, yn, ypnl, nn, npnl = table[band]
+        if not n:
+            continue
+        mid_err = wins / n * 100 - sump / n
+        yev = f"{ypnl / yn:+.1f}c" if yn else "n/a"
+        nev = f"{npnl / nn:+.1f}c" if nn else "n/a"
+        print(f"  {label:>8} {n:6d} {sump / n:8.1f}c {wins / n * 100:4.0f}% "
+              f"{mid_err:+7.1f} {yev:>10} {nev:>9}")
+
+
+def report_liquidity(res) -> None:
+    print(f"\n=== H) Liquidity-conditioned mispricing (h{int(res['htc'])}, fees on, "
+          f"{res['n_ev']} events) ===")
+    hdr = f"  {'bin':>8} {'n':>6} {'avg_mid':>8} {'win%':>5} {'mid_err':>7} {'yes_ev/tr':>10} {'no_ev/tr':>9}"
+    print("  --- by bid/ask spread (wider = thinner) ---")
+    print(hdr)
+    _liq_rows(res["spread"], SPREAD_BINS, ("<=2c", "3-5c", "6-10c", ">10c"))
+    print("  --- by candle volume (fewer = thinner) ---")
+    print(hdr)
+    _liq_rows(res["vol"], VOL_BINS, ("0", "1-50", "51-500", ">500"))
+    print("  (mid_err = win% - avg_mid: big |mid_err| in thin bins => the mid misprices there;")
+    print("   yes/no_ev > 0 => the mispricing survives the spread+fee cost it hides behind)")
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--analysis",
                     choices=("overround", "persistence", "meanrev", "longshot",
-                             "convergence", "distshape", "leadlag", "diurnal", "both"),
+                             "convergence", "distshape", "leadlag", "diurnal",
+                             "liquidity", "both"),
                     default="both")
     ap.add_argument("--no-fees", action="store_true")
     ap.add_argument("--htc", type=float, default=12.0,
@@ -965,6 +1047,8 @@ def main(argv: list[str] | None = None) -> int:
         report_leadlag(leadlag(events, fees))
     if args.analysis in ("diurnal", "both"):
         report_diurnal(diurnal(events, fees))
+    if args.analysis in ("liquidity", "both"):
+        report_liquidity(liquidity(events, fees, htc=args.htc))
     return 0
 
 
