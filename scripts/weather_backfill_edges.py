@@ -23,6 +23,12 @@ we bin every bucket by its mid price into longshot bands (1-3, 3-5, 5-10, 10-20c
 favorite bands (80-90, 90-95, 95-100c), grade on the actual winner, and report yes-win%
 and the per-trade EV of each harvest (fees on both legs).
 
+CONVERGENCE — favorite momentum / price-drift. Do bucket price MOVES trend or reverse
+(autocorrelation of dprice[h24->h12] vs dprice[h12->h6])? Is buying the favorite YES at
+its ask +EV at each horizon (h24/h12/h6 held to settlement), i.e. does the favorite firm
+up underpriced or is it already priced? And does buying the biggest recent RISER at h12
+beat buying the h12 favorite (tradeable momentum)?
+
 Reads ONLY the backfill_* tables. Caveats: hourly candles, spring-only (Apr-Jun), final
 ~48h per market. Usage:
     {"type": "script", "name": "weather_backfill_edges", "args": ["--analysis", "both"]}
@@ -517,10 +523,80 @@ def report_longshot(res) -> None:
     print("  (positive ev/trade beyond ~0 => a tradeable favorite-longshot edge)")
 
 
+def _cycle_by_ticker(cyc: Cycle) -> dict[str, Bkt]:
+    return {b.ticker: b for b in cyc.buckets}
+
+
+def convergence(events: list[Event], fees: bool, *,
+                early: float = 24.0, mid: float = 12.0, late: float = 6.0, tol: float = 4.0):
+    """Favorite momentum / convergence. Two questions: (1) do bucket price MOVES trend or
+    reverse (autocorr of Δprice[h24->h12] vs Δprice[h12->h6])? (2) is buying the favorite
+    YES at its ask +EV at each horizon, and does buying the biggest recent RISER at h12
+    beat buying the h12 favorite (momentum) — all held to settlement, fees on?"""
+    leg1, leg2 = [], []                                   # paired bucket price moves
+    fav_settle = {"early": [0, 0, 0.0], "mid": [0, 0, 0.0], "late": [0, 0, 0.0]}
+    mom = {"riser": [0, 0, 0.0], "faller": [0, 0, 0.0], "fav": [0, 0, 0.0]}
+    n_ev = 0
+    for ev in events:
+        ce, cm, cl = (_nearest_cycle(ev, h, tol) for h in (early, mid, late))
+        for key, cyc in (("early", ce), ("mid", cm), ("late", cl)):
+            if cyc is not None:
+                _strat_entry(fav_settle[key], cyc, ev.winner, _favorite(cyc.buckets), fees)
+        if ce is None or cm is None:
+            continue
+        n_ev += 1
+        me, mm = _cycle_by_ticker(ce), _cycle_by_ticker(cm)
+        ml = _cycle_by_ticker(cl) if cl is not None else {}
+        moves = []                                        # (Δearly->mid, bucket@mid)
+        for tk, b_mid in mm.items():
+            b_early = me.get(tk)
+            if b_early is None or b_early.mid is None or b_mid.mid is None:
+                continue
+            d1 = b_mid.mid - b_early.mid
+            b_late = ml.get(tk)
+            if b_late is not None and b_late.mid is not None:
+                leg1.append(d1)
+                leg2.append(b_late.mid - b_mid.mid)
+            moves.append((d1, b_mid))
+        if moves:
+            _strat_entry(mom["riser"], cm, ev.winner, max(moves, key=lambda x: x[0])[1], fees)
+            _strat_entry(mom["faller"], cm, ev.winner, min(moves, key=lambda x: x[0])[1], fees)
+            _strat_entry(mom["fav"], cm, ev.winner, _favorite(cm.buckets), fees)
+    return {"leg1": leg1, "leg2": leg2, "move_corr": pearson(leg1, leg2),
+            "fav_settle": fav_settle, "mom": mom, "n_ev": n_ev,
+            "horizons": (early, mid, late)}
+
+
+def report_convergence(res) -> None:
+    e, m, ll = (int(h) for h in res["horizons"])
+    print(f"\n=== D) Favorite momentum / convergence (fees on, {res['n_ev']} events) ===")
+    mc = res["move_corr"]
+    if mc is not None:
+        print(f"  price-move autocorr corr(d[h{e}->h{m}], d[h{m}->h{ll}]): "
+              f"{mc:+.2f} (n={len(res['leg1'])})")
+        print("    (>0 => moves trend/continue: momentum; <0 => moves reverse: fade)")
+    print("\n  --- buy the favorite YES at its ask, hold to settlement, by horizon ---")
+    print(f"  {'horizon':>8} {'n':>5} {'win%':>5} {'pnl/trade':>10}")
+    for key, label in (("early", f"~h{e}"), ("mid", f"~h{m}"), ("late", f"~h{ll}")):
+        n, wins, pnl = res["fav_settle"][key]
+        if n:
+            print(f"  {label:>8} {n:5d} {wins / n * 100:4.0f}% {pnl / n:+9.1f}c")
+    print("    (more +EV as horizon shortens => favorite firms up underpriced; flat => priced)")
+    print(f"\n  --- at ~h{m} buy by recent move, hold to settlement ---")
+    print(f"  {'pick':>14} {'n':>5} {'win%':>5} {'pnl/trade':>10}")
+    for key, label in (("riser", "biggest riser"), ("faller", "biggest faller"),
+                       ("fav", "favorite")):
+        n, wins, pnl = res["mom"][key]
+        if n:
+            print(f"  {label:>14} {n:5d} {wins / n * 100:4.0f}% {pnl / n:+9.1f}c")
+    print("    (riser >> favorite => momentum tradeable; faller >> => reversion)")
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--analysis",
-                    choices=("overround", "persistence", "meanrev", "longshot", "both"),
+                    choices=("overround", "persistence", "meanrev", "longshot",
+                             "convergence", "both"),
                     default="both")
     ap.add_argument("--no-fees", action="store_true")
     ap.add_argument("--htc", type=float, default=12.0,
@@ -551,6 +627,8 @@ def main(argv: list[str] | None = None) -> int:
         report_meanrev(meanrev(events, fees))
     if args.analysis in ("longshot", "both"):
         report_longshot(longshot(events, fees, target_htc=args.htc))
+    if args.analysis in ("convergence", "both"):
+        report_convergence(convergence(events, fees))
     return 0
 
 

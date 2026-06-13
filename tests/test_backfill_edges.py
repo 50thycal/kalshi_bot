@@ -115,6 +115,41 @@ def test_longshot_skips_events_without_a_near_cycle():
     assert all(cell[0] == 0 for cell in res["fv"].values())
 
 
+def test_convergence_momentum_and_favorite_horizons():
+    # 3 buckets across h24/h12/h6. A rises early->mid (+20) and keeps rising; A wins.
+    # So at h12 the biggest riser (A) should win and the biggest faller (B) should lose,
+    # and the move autocorrelation should be positive (moves trend).
+    def cyc(htc, a, b, c):
+        return be.Cycle(htc, [_b("A", 74, 75, a - 1, a + 1),
+                              _b("B", 76, 77, b - 1, b + 1),
+                              _b("C", 72, 73, c - 1, c + 1)])
+    ev = be.Event("NYC", "high", "2026-06-10", "A", 74.5,
+                  [cyc(24.0, 30, 50, 20), cyc(12.0, 50, 40, 25), cyc(6.0, 65, 30, 22)])
+    res = be.convergence([ev], fees=True, early=24.0, mid=12.0, late=6.0, tol=4.0)
+    assert res["n_ev"] == 1
+    assert res["move_corr"] is not None and res["move_corr"] > 0   # moves trend (momentum)
+
+    # riser at h12 is A (delta +20), which wins; bought YES at ask 51.
+    n, wins, pnl = res["mom"]["riser"]
+    assert n == 1 and wins == 1
+    assert pnl == 100.0 - 51.0 - be.fee_cents(51.0)
+    # faller at h12 is B (delta -10), which loses.
+    assert res["mom"]["faller"] == [1, 0, -(40 + 1) - be.fee_cents(41.0)]
+    # favorite at h12 is A (mid 50) and wins.
+    assert res["mom"]["fav"][1] == 1
+    # favorite-by-horizon table is populated at all three horizons.
+    assert all(res["fav_settle"][k][0] == 1 for k in ("early", "mid", "late"))
+
+
+def test_convergence_skips_event_missing_early_or_mid():
+    # Only a late cycle -> no early/mid pair, so n_ev stays 0 (favorite table may still fill).
+    ev = be.Event("NYC", "high", "2026-06-10", "A", 74.5,
+                  [be.Cycle(6.0, [_b("A", 74, 75, 49, 51)])])
+    res = be.convergence([ev], fees=True, tol=4.0)
+    assert res["n_ev"] == 0
+    assert res["move_corr"] is None
+
+
 def test_ops_runner_allowlists_backfill_edges(tmp_path, monkeypatch):
     import json
 
