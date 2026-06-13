@@ -51,6 +51,35 @@ The probability *engine* exists but only offline. Status:
 
 ## Backfill structural-edge hunt (Apr–Jun history, 964 complete events)
 
+**Scorecard (all 9 probes complete):** #3 city×window VALIDATED (→ live `cwin`);
+#6 distribution overdispersion REAL (→ model calibration feature, not a book);
+#2b mean-reversion REAL but sub-fee (→ model feature). Everything else priced or
+dead — #1 overround, #2 persistence, #4 longshot, #5 momentum/convergence, #7 W→E
+lead-lag (real physics, priced), #8 diurnal coupling (real physics, priced), #9
+liquidity (mid honest even when thin). **Conclusion: Kalshi temperature markets
+are remarkably efficient on everything derivable from price/public data — the only
+positive EV is timing (`cwin`) and last-mile information lag (`obs`, `pm`), plus
+sharpening the forecast model with #6.** Next build: promote the offline
+distribution model into a live book (see "Build backlog" above).
+
+### #9 — Liquidity-conditioned mispricing — REFUTED (mid is honest even when thin)
+Is mispricing concentrated in illiquid buckets? At h12, grade each bucket's mid
+vs its realized win-rate, binned by bid/ask spread and by candle volume.
+
+- **The mid is well-calibrated in EVERY liquidity bin.** By spread: ≤2¢ → mid_err
+  −0.7, 3–5¢ → +1.6, 6–10¢ → −1.2, >10¢ → −0.8 (even the widest-spread buckets win
+  42% at a 42.9¢ mid). By volume: 0 → −0.4, 1–50 → +0.4, 51–500 → −1.2, >500 → −0.1
+  (even zero-volume deep longshots, avg mid 4.6¢, win 4% — perfectly priced). Thin
+  books do **not** create stale/sloppy mids.
+- **Illiquidity is pure cost, not edge.** yes/no EV degrades monotonically as the
+  spread widens: YES −2.4¢ (≤2¢ spread) → −11.3¢ (>10¢ spread); NO likewise. The
+  spread is wide *because* there's no edge, and crossing it bleeds you. Thin
+  buckets are the most expensive to touch, not the most profitable.
+
+**Verdict:** the "sloppy pricing in thin markets" hypothesis fails outright —
+Kalshi's resting quotes are honest even in the corners (zero-volume tails, >10¢
+spreads) where sloppiness is most expected. Probe: `--analysis liquidity`.
+
 ### #8 — Diurnal-range coupling — strong coupling, PERFECTLY priced (no trade)
 Within a city/day the overnight low (settles first, ~morning) and the afternoon
 high are physically coupled; does the low inform the high beyond its price? (482
