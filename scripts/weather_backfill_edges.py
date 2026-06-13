@@ -29,6 +29,14 @@ its ask +EV at each horizon (h24/h12/h6 held to settlement), i.e. does the favor
 up underpriced or is it already priced? And does buying the biggest recent RISER at h12
 beat buying the h12 favorite (tradeable momentum)?
 
+DISTSHAPE — is the market's implied PDF the wrong SHAPE/width? Normalize the ladder mids
+into a distribution over bucket temperatures, get its implied mean & sd, and standardize
+each event's actual outcome (z = (actual-mean)/sd). SD(z) > 1 => the market is
+underdispersed (outcomes land in the tails more than priced => tails too cheap, buy them);
+< 1 => overdispersed (tails too rich). A PIT tail-mass check cross-confirms, and buckets
+binned by implied sigma-distance from the mean are graded (YES at ask / NO at 100-bid) to
+localize and price any tail edge. The principled version of the longshot probe.
+
 Reads ONLY the backfill_* tables. Caveats: hourly candles, spring-only (Apr-Jun), final
 ~48h per market. Usage:
     {"type": "script", "name": "weather_backfill_edges", "args": ["--analysis", "both"]}
@@ -53,6 +61,7 @@ RO_OPTIONS = (
 HTC_BINS = ((0, 6), (6, 12), (12, 24), (24, 48))
 LONGSHOT_BANDS = ((1, 3), (3, 5), (5, 10), (10, 20))   # cheap tails (by mid) -> sell (buy NO)
 FAVORITE_BANDS = ((80, 90), (90, 95), (95, 100))        # heavy favorites -> buy YES
+SIGMA_BANDS = ((0.0, 0.5), (0.5, 1.0), (1.0, 1.5), (1.5, 99.0))  # implied sigma from mean
 
 
 def fee_cents(price_cents: float, enabled: bool = True) -> float:
@@ -592,11 +601,108 @@ def report_convergence(res) -> None:
     print("    (riser >> favorite => momentum tradeable; faller >> => reversion)")
 
 
+def _implied_dist(buckets: list[Bkt]):
+    """Normalize the ladder mids into a proper probability distribution over bucket
+    temperatures; return (mean, sd, temps, probs) or None if too sparse."""
+    pts, ps = [], []
+    for b in buckets:
+        pt = bucket_mid_f(b.low, b.high)
+        if b.mid is not None and b.mid > 0 and pt is not None:
+            pts.append(pt)
+            ps.append(b.mid / 100.0)
+    tot = sum(ps)
+    if tot <= 0 or len(ps) < 3:
+        return None
+    ps = [p / tot for p in ps]
+    mean = sum(p * t for p, t in zip(ps, pts, strict=True))
+    var = sum(p * (t - mean) ** 2 for p, t in zip(ps, pts, strict=True))
+    return mean, math.sqrt(var), pts, ps
+
+
+def distshape(events: list[Event], fees: bool, *, target_htc: float = 12.0, tol: float = 3.0):
+    """Is the market's implied PDF the wrong shape? Standardize each event's outcome by the
+    ladder's own implied mean/sd (z); SD(z)>1 => underdispersed (tails realize too often =>
+    too cheap), <1 => overdispersed. PIT tail mass cross-checks. Then grade buckets binned by
+    implied sigma-distance from the mean (YES at ask / NO at 100-bid) to localize any edge."""
+    zs, pits = [], []
+    # per band: [n, yes_wins, sum_price, yes_n, yes_pnl, no_n, no_pnl]
+    bands = {b: [0, 0, 0.0, 0, 0.0, 0, 0.0] for b in SIGMA_BANDS}
+    n_ev = 0
+    for ev in events:
+        cyc = _nearest_cycle(ev, target_htc, tol)
+        if cyc is None or ev.winner_mid_f is None:
+            continue
+        dist = _implied_dist(cyc.buckets)
+        if dist is None:
+            continue
+        mean, sd, pts, ps = dist
+        if sd <= 0:
+            continue
+        n_ev += 1
+        actual = ev.winner_mid_f
+        zs.append((actual - mean) / sd)
+        below = sum(p for p, t in zip(ps, pts, strict=True) if t < actual - 1e-9)
+        at = sum(p for p, t in zip(ps, pts, strict=True) if abs(t - actual) <= 1e-9)
+        pits.append(below + 0.5 * at)
+        for b in cyc.buckets:
+            pt = bucket_mid_f(b.low, b.high)
+            if b.mid is None or pt is None:
+                continue
+            zb = abs(pt - mean) / sd
+            band = next((sb for sb in SIGMA_BANDS if sb[0] <= zb < sb[1]), None)
+            if band is None:
+                continue
+            won = b.ticker == ev.winner
+            cell = bands[band]
+            cell[0] += 1
+            cell[1] += int(won)
+            cell[2] += b.mid
+            if b.ask is not None and 1 <= b.ask <= 99:
+                cell[3] += 1
+                cell[4] += (100.0 if won else 0.0) - b.ask - fee_cents(b.ask, fees)
+            if b.bid is not None and 1 <= (100 - b.bid) <= 99:
+                no_cost = 100 - b.bid
+                cell[5] += 1
+                cell[6] += (0.0 if won else 100.0) - no_cost - fee_cents(no_cost, fees)
+    mean_z = sum(zs) / len(zs) if zs else None
+    sd_z = math.sqrt(sum((z - mean_z) ** 2 for z in zs) / len(zs)) if mean_z is not None and len(zs) > 1 else None
+    pit_lo = sum(1 for p in pits if p < 0.1) / len(pits) if pits else None
+    pit_hi = sum(1 for p in pits if p > 0.9) / len(pits) if pits else None
+    return {"mean_z": mean_z, "sd_z": sd_z, "pit_lo": pit_lo, "pit_hi": pit_hi,
+            "bands": bands, "n_ev": n_ev, "htc": target_htc}
+
+
+def report_distshape(res) -> None:
+    print(f"\n=== E) Distribution shape / tail mispricing (fees on, {res['n_ev']} events "
+          f"at ~h{int(res['htc'])}) ===")
+    if res["mean_z"] is not None:
+        print(f"  mean standardized outcome (bias):  {res['mean_z']:+.2f} sigma"
+              "   (>0 => actual runs hot vs implied mean)")
+    if res["sd_z"] is not None:
+        print(f"  SD of standardized outcome:         {res['sd_z']:.2f}"
+              "   (>1 => UNDERdispersed: tails too cheap; <1 => overdispersed: tails too rich)")
+    if res["pit_lo"] is not None:
+        print(f"  PIT tail mass: lo(<0.1)={res['pit_lo'] * 100:.0f}%  hi(>0.9)={res['pit_hi'] * 100:.0f}%"
+              "   (expect ~10%/10% if calibrated; more => outcomes land in the tails too often)")
+    print("\n  --- buckets binned by implied sigma-distance from the mean ---")
+    print(f"  {'sigma':>9} {'n':>5} {'impl_price':>10} {'win%':>5} {'yes_ev/tr':>10} {'no_ev/tr':>9}")
+    for sb in SIGMA_BANDS:
+        n, wins, sump, yn, ypnl, nn, npnl = res["bands"][sb]
+        if not n:
+            continue
+        label = f"{sb[0]:.1f}-{sb[1]:.1f}" if sb[1] < 90 else f"{sb[0]:.1f}+"
+        yev = f"{ypnl / yn:+.1f}c" if yn else "n/a"
+        nev = f"{npnl / nn:+.1f}c" if nn else "n/a"
+        print(f"  {label:>9} {n:5d} {sump / n:9.1f}c {wins / n * 100:4.0f}% {yev:>10} {nev:>9}")
+    print("  (win% > impl_price & yes_ev>0 => that shell underpriced -> buy YES; "
+          "win% < impl_price => buy NO)")
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--analysis",
                     choices=("overround", "persistence", "meanrev", "longshot",
-                             "convergence", "both"),
+                             "convergence", "distshape", "both"),
                     default="both")
     ap.add_argument("--no-fees", action="store_true")
     ap.add_argument("--htc", type=float, default=12.0,
@@ -629,6 +735,8 @@ def main(argv: list[str] | None = None) -> int:
         report_longshot(longshot(events, fees, target_htc=args.htc))
     if args.analysis in ("convergence", "both"):
         report_convergence(convergence(events, fees))
+    if args.analysis in ("distshape", "both"):
+        report_distshape(distshape(events, fees, target_htc=args.htc))
     return 0
 
 

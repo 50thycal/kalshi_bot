@@ -150,6 +150,46 @@ def test_convergence_skips_event_missing_early_or_mid():
     assert res["move_corr"] is None
 
 
+def test_implied_dist_normalizes_and_weights():
+    # mids 10/80/10 over temps 71/72.5/74 -> normalized [.1,.8,.1], mean 72.5, var 0.45.
+    buckets = [_b("L", None, 71, 9, 11), _b("C", 72, 73, 79, 81), _b("H", 74, None, 9, 11)]
+    mean, sd, pts, ps = be._implied_dist(buckets)
+    assert abs(mean - 72.5) < 1e-9
+    assert abs(sd - (0.45 ** 0.5)) < 1e-9
+    assert abs(sum(ps) - 1.0) < 1e-9
+    assert be._implied_dist([_b("A", 1, 2, 5, 7)]) is None  # too sparse
+
+
+def test_distshape_z_pit_and_sigma_bands():
+    # Same ladder; the CENTER bucket (72.5) wins -> outcome sits on the implied mean.
+    buckets = [_b("L", None, 71, 9, 11), _b("C", 72, 73, 79, 81), _b("H", 74, None, 9, 11)]
+    ev = be.Event("NYC", "high", "2026-06-10", "C", 72.5, [be.Cycle(12.0, buckets)])
+    res = be.distshape([ev], fees=True, target_htc=12.0, tol=3.0)
+    assert res["n_ev"] == 1
+    assert abs(res["mean_z"]) < 1e-9          # actual == implied mean -> z 0
+    assert res["sd_z"] is None                # one event -> no dispersion estimate
+
+    # center bucket -> ~0 sigma band, wins; the two edge buckets -> >1.5 sigma, lose.
+    n, wins, sump, yn, ypnl, nn, npnl = res["bands"][(0.0, 0.5)]
+    assert n == 1 and wins == 1 and sump == 80.0
+    assert yn == 1 and ypnl == 100.0 - 81.0 - be.fee_cents(81.0)
+    n2, wins2, sump2, *_ = res["bands"][(1.5, 99.0)]
+    assert n2 == 2 and wins2 == 0 and sump2 == 20.0
+
+
+def test_distshape_underdispersed_when_outcomes_hit_tails():
+    # Confident ladder (center 90c) but every outcome lands in an edge bucket ->
+    # standardized outcomes spread wider than 1 (underdispersed: tails too cheap).
+    def ladder():
+        return [_b("L", None, 71, 4, 6), _b("C", 72, 73, 89, 91), _b("H", 74, None, 4, 6)]
+    evs = [be.Event("NYC", "high", f"2026-06-1{i}", tk, val, [be.Cycle(12.0, ladder())])
+           for i, (tk, val) in enumerate([("L", 71), ("H", 74), ("L", 71), ("H", 74)])]
+    res = be.distshape(evs, fees=True, target_htc=12.0, tol=3.0)
+    assert res["n_ev"] == 4
+    assert res["sd_z"] is not None and res["sd_z"] > 1.0   # underdispersed
+    assert res["pit_lo"] + res["pit_hi"] > 0.2             # outcomes pile in the tails
+
+
 def test_ops_runner_allowlists_backfill_edges(tmp_path, monkeypatch):
     import json
 
