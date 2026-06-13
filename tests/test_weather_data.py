@@ -191,6 +191,7 @@ def test_low_nws_falls_back_to_running_min(settings):
     settings.weather_strategies = "favorite,nws"
     settings.weather_entry_hours = "12,8,4"
     settings.weather_obs_enabled = True
+    settings.weather_obs_entry_enabled = False  # isolate the nws fallback from the obs book
     db.init_engine(settings.database_url)
     db.create_all()
 

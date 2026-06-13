@@ -43,9 +43,9 @@ MIN_TRADES = 30  # below this, combo rankings are noise — banner it
 # (mirrors scripts/weather_score.py).
 BOOKS = {
     "low": {"fav": "weather_low_fav", "nws": "weather_low_nws", "cal": "weather_low_cal",
-            "pm": "weather_low_pm"},
+            "pm": "weather_low_pm", "obs": "weather_low_obs"},
     "high": {"fav": "weather_fav", "nws": "weather_nws", "cal": "weather_cal",
-             "pm": "weather_pm", "cwin": "weather_cwin"},
+             "pm": "weather_pm", "cwin": "weather_cwin", "obs": "weather_obs"},
 }
 
 

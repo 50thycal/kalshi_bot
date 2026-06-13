@@ -147,6 +147,14 @@ class Settings(BaseSettings):
     # out-of-sample holdout). Buys the favorite once at that city's window.
     weather_city_window_enabled: bool = True
     weather_city_windows: str = "CHI:18,LAX:18,DEN:18,NYC:10,MIA:24,AUS:24,PHIL:10"
+    # Obs-confirmed late entry (`weather_obs` / `weather_low_obs`): after the local
+    # cutoff hour the day's high/low has usually formed, so the station's running
+    # max/min is a near-locked bound the market lags. Buy the bucket containing it
+    # once, if its ask is still <= the cap (the entry study showed +EV late & cheap).
+    weather_obs_entry_enabled: bool = True
+    weather_obs_high_after_hour: int = 16  # local hour; the high typically forms by ~3-4pm
+    weather_obs_low_after_hour: int = 7    # the overnight low typically forms by ~dawn
+    weather_obs_ask_cap: float = 90.0      # skip if the running-extreme bucket is already rich
     # Kalshi history backfill (separate backfill_* tables; provenance never mixes with
     # the live-collected snapshots). Runs as a bounded chunk per cycle inside the
     # weather worker — the only place holding Kalshi credentials + a writable DB URL.

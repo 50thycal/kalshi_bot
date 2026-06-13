@@ -17,6 +17,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
 
 from .. import repository as repo
 from ..config import Settings
@@ -343,6 +344,11 @@ class WeatherTracker:
                     t.favorite_mid / 100.0, summary,
                 )
 
+            # Obs-confirmed late entry: after the local cutoff hour the day's extreme has
+            # usually already occurred, so the running max/min is a near-locked bound the
+            # market can lag. Buy the bucket containing it once, if its ask is still cheap.
+            self._obs_entry(session, t, obs, markets, event_ticker, metrics_cache, now, summary)
+
         self._capture_settlements(session, summary)
         summary.open_positions = repo.count_open_paper_positions(session)
         return summary
@@ -568,6 +574,35 @@ class WeatherTracker:
                         actual_high_f=high,
                     )
                     summary.settlements_captured += 1
+
+    def _obs_entry(self, session, t: _Tracked, obs, markets, event_ticker,
+                   metrics_cache, now, summary) -> None:
+        """Buy the bucket containing the station's running extreme once, after the local
+        cutoff hour and only if its ask is still <= the cap (the thermometer-lag edge)."""
+        s = self.settings
+        if not s.weather_obs_entry_enabled or obs is None:
+            return
+        extreme = obs.max_f if t.kind == "high" else obs.min_f
+        if extreme is None:
+            return
+        cutoff = (s.weather_obs_high_after_hour if t.kind == "high"
+                  else s.weather_obs_low_after_hour)
+        try:
+            local_hour = now.astimezone(ZoneInfo(t.city.tz)).hour
+        except Exception:  # noqa: BLE001 — bad tz shouldn't break the cycle
+            return
+        if local_hour < cutoff:
+            return
+        market = self._value_bucket(markets, extreme)
+        if market is None:
+            return
+        metrics = self._cached_metrics(market, metrics_cache)
+        if metrics is None or metrics.best_yes_ask is None:
+            return
+        if metrics.best_yes_ask > s.weather_obs_ask_cap:
+            return  # too expensive — the lag has already been priced in
+        strategy = "weather_obs" if t.kind == "high" else "weather_low_obs"
+        self._maybe_enter(session, strategy, event_ticker, t, market, metrics, None, summary)
 
     def _value_bucket(self, markets: list[dict], value: float | None) -> dict | None:
         """The bucket whose range contains the given (forecast) temperature."""
