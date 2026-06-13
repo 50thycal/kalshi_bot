@@ -35,6 +35,33 @@ report.
 
 ## Backfill structural-edge hunt (Apr–Jun history, 964 complete events)
 
+### #7 — Cross-city W→E lead-lag — mechanism REAL, but FULLY PRICED (no trade)
+Weather propagates west→east, so a western city's daily anomaly might lead an
+eastern city's. Cities ordered by longitude (LAX→DEN→AUS→CHI→MIA→PHIL→NYC).
+
+- **The physics is visible in the data.** Pooled corr(anomaly), downwind (west
+  leads east) vs an upwind placebo (east leads west): lag 0 = +0.39 / +0.39
+  (same-day cities just share regional weather — symmetric, as expected), but
+  **lag 1 = +0.43 downwind vs +0.30 upwind**, **lag 2 = +0.40 vs +0.23**. The
+  downwind-minus-upwind asymmetry (~+0.13–0.17 at lag 1–2) is the genuine
+  fingerprint of airmasses moving W→E. This is a *real* detected signal — most
+  lead-lag fishing finds nothing.
+- **But the eastern market has already priced it.** corr(east market_error[d+lag],
+  west anomaly[d]) = **−0.03 @ lag 1**, **−0.01 @ lag 2** (n≈2,800) — dead zero.
+  By the time the east is at h12 the airmass is essentially overhead and the
+  price reflects it (same public forecasts).
+- **Tradeable test confirms no edge.** Shifting the east prediction by the western
+  anomaly (pred = implied_east + k·west_anom[d−1]) *destroys* accuracy: win% 63%
+  (k=0) → 25% (k=0.5) → 17% (k=1.0), all negative; favorite 65% / −2.8¢. The shift
+  moves you off the (already-correct) implied center.
+
+**Verdict:** we detected the propagation physics, but it's public information the
+eastern market prices efficiently by h12. Same theme — derivable signal, no gap.
+(Caveat: only tested at h12; the airmass is already imminent then. A much earlier
+horizon, h36–48, is the only place this could conceivably be unpriced, but the
+zero error-correlation even at lag 2 argues against it, and our backfill barely
+reaches that far.) Probe: `--analysis leadlag`.
+
 ### #6 — Distribution shape / tail mispricing — REAL bias, NOT a standalone trade (→ model feature)
 Normalize each event's h12 ladder into an implied PDF over bucket temperatures,
 standardize the actual outcome (z = (actual − implied_mean) / implied_sd), and
