@@ -35,6 +35,26 @@ report.
 
 ## Backfill structural-edge hunt (Apr–Jun history, 964 complete events)
 
+### #5 — Favorite momentum / convergence — REFUTED
+Does the favorite's price drift predictably, and do bucket price moves trend?
+
+- **Price moves are a random walk.** Autocorr of Δprice[h24→h12] vs Δprice[h12→h6]
+  = **−0.03** (n=4798) — no momentum, no intraday reversion.
+- **The favorite is fairly-to-richly priced and gets *worse* to buy as the day
+  shortens:** buy-favorite-YES-hold-to-settle EV is **−1.8¢ @ h24**, **−3.5¢ @
+  h12**, **−6.3¢ @ h6**. Win% rises (50→67→63%) but price rises faster — the
+  market firms up *correctly* and the price already reflects it. No "favorite
+  underpriced and converging" edge.
+- **Chasing risers doesn't beat the favorite:** at h12 the biggest recent riser
+  wins 63% (−4.3¢) vs the favorite's 67% (−3.5¢). The biggest faller wins only 6%
+  — priced low, so its −2.8¢ isn't an edge either.
+
+Corroborating note: the h24 favorite (−1.8¢) is the *least*-negative entry,
+reinforcing the `cwin` finding that **earlier entry on highs beats late entry**
+(late favorites pay up). That structural timing edge is already captured by the
+city × window map; there is no separate momentum/convergence book to build.
+Probe: `--analysis convergence`.
+
 ### #4 — Favorite-longshot bias (tail harvesting) — REFUTED
 Bin every bucket at h12 by its mid price; sell cheap longshots (buy NO at
 100−bid) and buy heavy favorites (YES at ask); grade on the actual winner.
