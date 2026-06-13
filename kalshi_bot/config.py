@@ -155,6 +155,14 @@ class Settings(BaseSettings):
     weather_obs_high_after_hour: int = 16  # local hour; the high typically forms by ~3-4pm
     weather_obs_low_after_hour: int = 7    # the overnight low typically forms by ~dawn
     weather_obs_ask_cap: float = 90.0      # skip if the running-extreme bucket is already rich
+    # Distribution edge book (`weather_dist` / `weather_low_dist`): price every bucket off
+    # the stored Open-Meteo ensemble (a Gaussian kernel per member, blended across models),
+    # and buy the single bucket whose model probability most beats its ask. sigma is the
+    # kernel width (deg F) for forecast error beyond the ensemble spread — kept modest so
+    # the model distribution stays tighter than the market's overdispersed ladder (#6).
+    weather_dist_enabled: bool = True
+    weather_dist_sigma: float = 1.5
+    weather_dist_min_edge_cents: float = 5.0
     # Kalshi history backfill (separate backfill_* tables; provenance never mixes with
     # the live-collected snapshots). Runs as a bounded chunk per cycle inside the
     # weather worker — the only place holding Kalshi credentials + a writable DB URL.
@@ -320,6 +328,9 @@ class Settings(BaseSettings):
             "weather_obs_enabled": self.weather_obs_enabled,
             "weather_ensemble_enabled": self.weather_ensemble_enabled,
             "weather_ensemble_models": self.weather_ensemble_model_list,
+            "weather_dist_enabled": self.weather_dist_enabled,
+            "weather_dist_sigma": self.weather_dist_sigma,
+            "weather_dist_min_edge_cents": self.weather_dist_min_edge_cents,
             "api_key_id_present": bool(self.kalshi_api_key_id),
             "private_key_present": bool(self.private_key_pem),
         }

@@ -31,21 +31,24 @@ Live books currently running: `fav` (control), `nws`, `cal`, `pm`
 entry). The legacy h12 window is flagged in the DB and excluded from the PnL
 report.
 
-### Build backlog — the bucket-probability edge model (NOT yet live)
-The probability *engine* exists but only offline. Status:
-- **Live:** ensemble-distribution collection — `OpenMeteoEnsembleClient` stores
-  GFS+ECMWF member daily extremes (the forecast distribution) in `weather_ensembles`.
-- **Offline only:** `scripts/weather_model_check.py` is the actual model —
-  `member_bucket_prob` (Gaussian kernel, sigma = forecast error beyond ensemble
-  spread) → `model_bucket_probs` (blend models → per-bucket P) → Brier/log-loss
-  grading + a cost-aware trade sim (`edge = model_prob − implied`, trade buckets
-  beyond min-edge). It grades the ensemble vs market.
-- **Missing:** a *live paper book* that trades that distribution edge. The live
-  `nws`/`cal` books are crude — they buy only the single bucket containing the
-  point forecast (`forecast_in_bucket`), not the full mispriced-bucket set.
-- **When built, bake in #6:** trust the market's implied mean but shrink its
-  variance (~×0.78²) — equivalently tune the sigma kernel so the model's
-  distribution is tighter than the raw ladder, since the market is overdispersed.
+### The bucket-probability edge model — NOW LIVE as the `dist` book
+Built and shipped (`weather_dist` / `weather_low_dist`). How it works:
+- **Engine:** `kalshi_bot/weather/distribution.py` — `member_bucket_prob` (Gaussian
+  kernel, sigma = forecast error beyond ensemble spread) → `model_bucket_probs`
+  (blend GFS+ECMWF → per-bucket P) → `best_bucket_by_edge` (buy the single bucket
+  whose model prob most beats its ask, net of fee, by ≥ `weather_dist_min_edge_cents`).
+  The live counterpart of the offline grader in `scripts/weather_model_check.py`
+  (math duplicated there so the ops script stays self-contained).
+- **Inputs:** reads the latest stored ensemble for (city, date, kind) from
+  `weather_ensembles` (collected live by `OpenMeteoEnsembleClient`); self-gates —
+  no ensemble → no trade. Enters per entry-window like fav/nws/cal/pm.
+- **#6 baked in:** `weather_dist_sigma` default 1.5 °F keeps the model distribution
+  tighter than the market's overdispersed ladder — the edge is precisely that the
+  ensemble-grounded distribution is sharper than the crowd's.
+- **Config:** `weather_dist_enabled` (true), `weather_dist_sigma` (1.5),
+  `weather_dist_min_edge_cents` (5). Watch its settled P&L vs `fav` in the PnL table.
+- **Still crude (kept as controls):** `nws`/`cal` buy only the single point-forecast
+  bucket; `dist` is the real distribution model.
 
 ---
 

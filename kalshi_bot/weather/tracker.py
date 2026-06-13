@@ -8,7 +8,12 @@ Per cycle, per tracked (city, kind=high|low) event:
 - store Open-Meteo ensemble member extremes (the forecast *distribution* behind
   P(temperature lands in bucket)), throttled,
 - snapshot the full bucket ladder (the market's implied distribution), throttled,
-- enter the favorite / nws / cal books at each hours-to-settlement window.
+- enter the favorite / nws / cal / pm / dist books at each hours-to-settlement window,
+  plus the once-per-event cwin (per-city window) and obs (running-extreme) books.
+
+The `dist` book is the forecast-edge model: it prices every bucket off the stored
+ensemble distribution (weather/distribution.py) and buys the bucket whose model
+probability most beats its ask — the live counterpart of scripts/weather_model_check.py.
 """
 
 from __future__ import annotations
@@ -32,6 +37,7 @@ from ..scanner.metrics import (
 )
 from .buckets import forecast_in_bucket, parse_bucket_range
 from .cities import CITIES, City
+from .distribution import best_bucket_by_edge
 from .ensemble import OpenMeteoEnsembleClient
 from .forecast import NwsForecastClient, ObservedExtremes
 from .polymarket import PolymarketClient
@@ -304,6 +310,10 @@ class WeatherTracker:
                     self._store_pm_snapshot(session, t, target, pm_buckets, now, summary)
                     pm_market, pm_prob = self._pm_best_bucket(markets, pm_buckets)
 
+            # Distribution edge: price every bucket off the stored ensemble and pick the
+            # one whose model probability most beats its ask (the forecast-edge book).
+            dist_market, dist_prob = self._dist_best_bucket(session, t, target, markets)
+
             prefix = "weather_" if t.kind == "high" else "weather_low_"
             for hours in s.weather_entry_hours_list:
                 if t.hours_to_close > hours:
@@ -328,6 +338,11 @@ class WeatherTracker:
                     self._maybe_enter(
                         session, f"{prefix}pm_h{int(hours)}", event_ticker, t, pm_market,
                         self._cached_metrics(pm_market, metrics_cache), pm_prob, summary,
+                    )
+                if dist_market is not None:
+                    self._maybe_enter(
+                        session, f"{prefix}dist_h{int(hours)}", event_ticker, t, dist_market,
+                        self._cached_metrics(dist_market, metrics_cache), dist_prob, summary,
                     )
 
             # City-window book: the backfill-validated per-city entry window for HIGHs
@@ -527,6 +542,34 @@ class WeatherTracker:
         if best is None:
             return (None, None)
         return (best[1], best[2])
+
+    def _dist_best_bucket(self, session, t: _Tracked, target, markets: list[dict]):
+        """The Kalshi bucket whose ensemble-model probability most beats its ask, net of
+        the fee, if that edge clears the threshold. Returns (market, model_prob) or
+        (None, None). Reads the latest stored ensemble for this (city, date, kind)."""
+        s = self.settings
+        if not s.weather_dist_enabled or target is None:
+            return (None, None)
+        members_by_model = repo.latest_weather_ensemble_members(
+            session, t.city.code, target.isoformat(), t.kind
+        )
+        if not members_by_model:
+            return (None, None)
+        ladder = []
+        for mk in markets:
+            rng = parse_bucket_range(mk.get("yes_sub_title") or mk.get("subtitle"))
+            _yb, ya = _bid_ask_cents(mk)
+            ladder.append((rng, ya))
+        pick = best_bucket_by_edge(
+            ladder, members_by_model,
+            sigma=s.weather_dist_sigma,
+            min_edge_cents=s.weather_dist_min_edge_cents,
+            fee_cents=lambda ask: kalshi_fee(int(round(ask)), 1, s.paper_fees_enabled),
+        )
+        if pick is None:
+            return (None, None)
+        idx, prob, _edge = pick
+        return (markets[idx], prob)
 
     # --- settlements + entries ---------------------------------------------------
 

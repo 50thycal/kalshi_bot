@@ -656,6 +656,28 @@ def latest_weather_ensemble_at(session, city: str, target_date: str):
     )
 
 
+def latest_weather_ensemble_members(
+    session, city: str, target_date: str, kind: str
+) -> dict[str, list[float]]:
+    """Most recent ensemble member list per model for (city, date, kind) — the live
+    forecast distribution the `dist` book prices buckets against."""
+    rows = session.scalars(
+        select(m.WeatherEnsemble)
+        .where(
+            m.WeatherEnsemble.city == city,
+            m.WeatherEnsemble.target_date == target_date,
+            m.WeatherEnsemble.kind == kind,
+        )
+        .order_by(m.WeatherEnsemble.captured_at.desc())
+    ).all()
+    out: dict[str, list[float]] = {}
+    for row in rows:
+        model = row.model or "?"
+        if model not in out and row.members_json:
+            out[model] = [float(v) for v in row.members_json if v is not None]
+    return out
+
+
 def insert_weather_bucket_snapshots(session, rows: list[dict]) -> int:
     now = _now()
     for row in rows:
