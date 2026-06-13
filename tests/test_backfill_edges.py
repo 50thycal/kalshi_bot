@@ -190,6 +190,43 @@ def test_distshape_underdispersed_when_outcomes_hit_tails():
     assert res["pit_lo"] + res["pit_hi"] > 0.2             # outcomes pile in the tails
 
 
+def _city_evt(city, kind, d, wmid):
+    """A one-favorite event: dominant center bucket W at wmid, two cheap edge buckets."""
+    return be.Event(city, kind, d, "W", wmid, [be.Cycle(12.0, [
+        _b("W", wmid - 0.5, wmid + 0.5, 55, 57),
+        _b("L", None, wmid - 2, 9, 11),
+        _b("H", wmid + 2, None, 9, 11),
+    ])])
+
+
+def test_shift_date_and_city_lon_ordering():
+    assert be._shift_date("2026-06-10", 1) == "2026-06-11"
+    assert be._shift_date("2026-06-30", 1) == "2026-07-01"   # month rollover
+    assert be._shift_date("not-a-date", 1) is None
+    # west -> east by longitude
+    assert be.CITY_LON["LAX"] < be.CITY_LON["DEN"] < be.CITY_LON["CHI"] < be.CITY_LON["NYC"]
+
+
+def test_leadlag_detects_constructed_west_to_east_signal():
+    # NYC anomaly[d] mirrors LAX anomaly[d-1] exactly -> perfect downwind lag-1 corr.
+    lax = [_city_evt("LAX", "high", f"2026-06-{i:02d}", v)
+           for i, v in [(1, 70), (2, 80), (3, 70), (4, 80)]]
+    nyc = [_city_evt("NYC", "high", f"2026-06-{i:02d}", v)
+           for i, v in [(2, 70), (3, 80), (4, 70), (5, 80)]]
+    res = be.leadlag(lax + nyc, fees=True, htc=12.0, tol=4.0)
+    assert res["dn"][1] is not None and res["dn"][1] > 0.9   # downwind lag-1 ~ +1
+    assert res["dn_n"][1] == 4
+    assert res["dn"][0] is not None and res["dn"][0] < 0     # same-day is anticorrelated here
+    # the tradeable lead-shift actually placed trades at lag 1
+    assert res["trade"][1.0][0] > 0 and res["fav"][0] > 0
+
+
+def test_leadlag_ignores_unknown_cities():
+    evs = [_city_evt("ZZZ", "high", "2026-06-01", 70), _city_evt("YYY", "high", "2026-06-02", 80)]
+    res = be.leadlag(evs, fees=True)
+    assert res["dn_n"][1] == 0 and res["trade"][1.0][0] == 0
+
+
 def test_ops_runner_allowlists_backfill_edges(tmp_path, monkeypatch):
     import json
 

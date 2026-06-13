@@ -37,6 +37,12 @@ underdispersed (outcomes land in the tails more than priced => tails too cheap, 
 binned by implied sigma-distance from the mean are graded (YES at ask / NO at 100-bid) to
 localize and price any tail edge. The principled version of the longshot probe.
 
+LEADLAG — weather propagates west->east over ~1-2 days. Does a western city's daily
+anomaly lead an eastern city's, and has the eastern market priced the incoming airmass?
+Pooled corr(anomaly) by lag, downwind (west leads east) vs an upwind placebo; then
+corr(east market_error[d+lag], west anomaly[d]) to test if the lead is unpriced; then a
+tradeable lead-shift (buy east bucket at implied_east + k*west_anom[d-1]) vs the favorite.
+
 Reads ONLY the backfill_* tables. Caveats: hourly candles, spring-only (Apr-Jun), final
 ~48h per market. Usage:
     {"type": "script", "name": "weather_backfill_edges", "args": ["--analysis", "both"]}
@@ -50,7 +56,7 @@ import math
 import os
 import sys
 from dataclasses import dataclass
-from datetime import date, timezone
+from datetime import date, timedelta, timezone
 
 RO_OPTIONS = (
     "-c default_transaction_read_only=on "
@@ -62,6 +68,8 @@ HTC_BINS = ((0, 6), (6, 12), (12, 24), (24, 48))
 LONGSHOT_BANDS = ((1, 3), (3, 5), (5, 10), (10, 20))   # cheap tails (by mid) -> sell (buy NO)
 FAVORITE_BANDS = ((80, 90), (90, 95), (95, 100))        # heavy favorites -> buy YES
 SIGMA_BANDS = ((0.0, 0.5), (0.5, 1.0), (1.0, 1.5), (1.5, 99.0))  # implied sigma from mean
+CITY_LON = {"LAX": -118.2, "DEN": -105.0, "AUS": -97.7, "CHI": -87.7,  # west -> east
+            "MIA": -80.2, "PHIL": -75.2, "NYC": -74.0}
 
 
 def fee_cents(price_cents: float, enabled: bool = True) -> float:
@@ -698,11 +706,119 @@ def report_distshape(res) -> None:
           "win% < impl_price => buy NO)")
 
 
+def _shift_date(d: str, days: int) -> str | None:
+    try:
+        y, m, dd = (int(x) for x in d.split("-"))
+        return (date(y, m, dd) + timedelta(days=days)).isoformat()
+    except (ValueError, TypeError):
+        return None
+
+
+def leadlag(events: list[Event], fees: bool, *, htc: float = 12.0, tol: float = 4.0):
+    """Cross-city W->E lead-lag. Weather propagates west->east over ~1-2 days, so a western
+    city's daily anomaly may lead an eastern city's. (1) Pooled corr(anomaly) by lag,
+    downwind (west leads east) vs an upwind placebo. (2) corr(east market_error[d+lag],
+    west anomaly[d]) — is any lead UNpriced? (3) tradeable: buy the east bucket at
+    pred = implied_east + k*west_anom[d-1], graded vs the open favorite (fees on)."""
+    series: dict[tuple[str, str], list[Event]] = {}
+    for ev in events:
+        if ev.date and ev.winner_mid_f is not None and ev.city in CITY_LON:
+            series.setdefault((ev.city, ev.kind), []).append(ev)
+
+    rows: dict[tuple[str, str], dict[str, dict]] = {}
+    for (city, kind), evs in series.items():
+        mean_actual = sum(e.winner_mid_f for e in evs) / len(evs)
+        d: dict[str, dict] = {}
+        for ev in evs:
+            cyc = _nearest_cycle(ev, htc, tol)
+            implied = implied_mean_f(cyc.buckets) if cyc else None
+            d[ev.date] = {"anom": ev.winner_mid_f - mean_actual,
+                          "err": (ev.winner_mid_f - implied) if implied is not None else None,
+                          "cyc": cyc, "winner": ev.winner}
+        rows[(city, kind)] = d
+
+    lag_dn = {lag: ([], []) for lag in (0, 1, 2)}
+    lag_up = {lag: ([], []) for lag in (0, 1, 2)}
+    err_dn = {lag: ([], []) for lag in (1, 2)}
+    ks = (0.0, 0.5, 1.0)
+    trade = {k: [0, 0, 0.0] for k in ks}
+    fav = [0, 0, 0.0]
+
+    for kind in sorted({k for _c, k in series}):
+        present = [c for c in CITY_LON if (c, kind) in rows]
+        for w in present:
+            for e in present:
+                if CITY_LON[w] >= CITY_LON[e]:
+                    continue                              # need w strictly west of e
+                wd, ed = rows[(w, kind)], rows[(e, kind)]
+                for lag in (0, 1, 2):
+                    for dt, wr in wd.items():
+                        er = ed.get(_shift_date(dt, lag))
+                        if er is not None:
+                            lag_dn[lag][0].append(wr["anom"])
+                            lag_dn[lag][1].append(er["anom"])
+                            if lag in (1, 2) and er["err"] is not None:
+                                err_dn[lag][0].append(wr["anom"])
+                                err_dn[lag][1].append(er["err"])
+                    for dt, er in ed.items():               # upwind placebo: east leads west
+                        wr = wd.get(_shift_date(dt, lag))
+                        if wr is not None:
+                            lag_up[lag][0].append(er["anom"])
+                            lag_up[lag][1].append(wr["anom"])
+                for dt, wr in wd.items():                    # tradeable lead-shift at lag 1
+                    er = ed.get(_shift_date(dt, 1))
+                    if er is None or er["cyc"] is None:
+                        continue
+                    implied_e = implied_mean_f(er["cyc"].buckets)
+                    if implied_e is None:
+                        continue
+                    for k in ks:
+                        _strat_entry(trade[k], er["cyc"], er["winner"],
+                                     _bucket_containing(er["cyc"].buckets, implied_e + k * wr["anom"]),
+                                     fees)
+                    _strat_entry(fav, er["cyc"], er["winner"], _favorite(er["cyc"].buckets), fees)
+
+    return {
+        "dn": {lag: pearson(*lag_dn[lag]) for lag in (0, 1, 2)},
+        "dn_n": {lag: len(lag_dn[lag][0]) for lag in (0, 1, 2)},
+        "up": {lag: pearson(*lag_up[lag]) for lag in (0, 1, 2)},
+        "err": {lag: pearson(*err_dn[lag]) for lag in (1, 2)},
+        "err_n": {lag: len(err_dn[lag][0]) for lag in (1, 2)},
+        "trade": trade, "fav": fav,
+    }
+
+
+def report_leadlag(res) -> None:
+    print("\n=== F) Cross-city W->E lead-lag — does a western city lead an eastern one? ===")
+    print("  pooled corr(anomaly) by lag: downwind (west leads east) vs upwind placebo")
+    print(f"  {'lag(d)':>7} {'downwind':>9} {'n':>6} {'upwind':>9}")
+    for lag in (0, 1, 2):
+        dn, up = res["dn"][lag], res["up"][lag]
+        dns = f"{dn:+.2f}" if dn is not None else "n/a"
+        ups = f"{up:+.2f}" if up is not None else "n/a"
+        print(f"  {lag:7d} {dns:>9} {res['dn_n'][lag]:6d} {ups:>9}")
+    print("    (a real W->E airmass signal => downwind corr at lag 1-2 > upwind placebo)")
+    print("  corr(east market_error[d+lag], west anomaly[d])  [is the lead UNpriced?]:")
+    for lag in (1, 2):
+        ec = res["err"][lag]
+        print(f"    lag {lag}: {ec:+.2f} (n={res['err_n'][lag]})" if ec is not None
+              else f"    lag {lag}: n/a")
+    print("    (>0 => east market underweights the incoming airmass -> tradeable)")
+    print("\n  --- strategy: buy east bucket at pred = implied_east + k*west_anom[d-1], fees ---")
+    print(f"  {'k':>5} {'n':>5} {'win%':>5} {'pnl/trade':>10}  (k=0 = implied-center baseline)")
+    for k, (n, wins, pnl) in sorted(res["trade"].items()):
+        if n:
+            print(f"  {k:5.2f} {n:5d} {wins / n * 100:4.0f}% {pnl / n:+9.1f}c")
+    fn, fw, fp = res["fav"]
+    if fn:
+        print(f"  {'fav':>5} {fn:5d} {fw / fn * 100:4.0f}% {fp / fn:+9.1f}c   (open-favorite baseline)")
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--analysis",
                     choices=("overround", "persistence", "meanrev", "longshot",
-                             "convergence", "distshape", "both"),
+                             "convergence", "distshape", "leadlag", "both"),
                     default="both")
     ap.add_argument("--no-fees", action="store_true")
     ap.add_argument("--htc", type=float, default=12.0,
@@ -737,6 +853,8 @@ def main(argv: list[str] | None = None) -> int:
         report_convergence(convergence(events, fees))
     if args.analysis in ("distshape", "both"):
         report_distshape(distshape(events, fees, target_htc=args.htc))
+    if args.analysis in ("leadlag", "both"):
+        report_leadlag(leadlag(events, fees))
     return 0
 
 
