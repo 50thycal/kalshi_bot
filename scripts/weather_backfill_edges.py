@@ -378,9 +378,81 @@ def _date_from_ticker(tk: str | None) -> str | None:
         return None
 
 
+def meanrev(events: list[Event], fees: bool):
+    """Push the fade-after-extreme signal: bin today's market error by yesterday's
+    anomaly tercile, check per-city robustness, and sweep a 'shrink the prior anomaly'
+    correction (pred = implied - k*anomaly) as a tradeable bucket entry vs the favorite."""
+    series: dict[tuple[str, str], list[Event]] = {}
+    for ev in events:
+        if ev.date and ev.winner_mid_f is not None:
+            series.setdefault((ev.city, ev.kind), []).append(ev)
+    for evs in series.values():
+        evs.sort(key=lambda e: e.date)
+
+    samples = []  # (city, anomaly, error, implied, cyc, winner)
+    per_city_anom: dict[str, list[float]] = {}
+    per_city_err: dict[str, list[float]] = {}
+    for (city, _kind), evs in series.items():
+        mean_actual = sum(e.winner_mid_f for e in evs) / len(evs)
+        prev = None
+        for ev in evs:
+            cyc = ev.open_cycle()
+            implied = implied_mean_f(cyc.buckets) if cyc else None
+            if prev is not None and implied is not None and cyc is not None:
+                anom = prev.winner_mid_f - mean_actual
+                err = ev.winner_mid_f - implied
+                samples.append((city, anom, err, implied, cyc, ev.winner))
+                per_city_anom.setdefault(city, []).append(anom)
+                per_city_err.setdefault(city, []).append(err)
+            prev = ev
+
+    # anomaly terciles -> mean error (monotone reversion check)
+    anoms = sorted(s[1] for s in samples)
+    terc = {}
+    if len(anoms) >= 9:
+        lo, hi = anoms[len(anoms) // 3], anoms[2 * len(anoms) // 3]
+        for label, lo_b, hi_b in (("cold", -1e9, lo), ("normal", lo, hi), ("hot", hi, 1e9)):
+            errs = [s[2] for s in samples if lo_b <= s[1] < hi_b]
+            if errs:
+                terc[label] = (sum(errs) / len(errs), len(errs))
+
+    # per-city correlation (robustness of the pooled -0.18)
+    city_corr = {c: pearson(per_city_anom[c], per_city_err[c]) for c in per_city_anom}
+
+    # fade strategy: pred = implied - k*anomaly; buy bucket containing pred at open ask
+    ks = (0.0, 0.25, 0.5, 0.75, 1.0)
+    fade = {k: [0, 0, 0.0] for k in ks}
+    for _city, anom, _err, implied, cyc, winner in samples:
+        for k in ks:
+            pred = implied - k * anom
+            _strat_entry(fade[k], cyc, winner, _bucket_containing(cyc.buckets, pred), fees)
+    return {"terc": terc, "city_corr": city_corr, "fade": fade, "n": len(samples)}
+
+
+def report_meanrev(res) -> None:
+    print("\n=== B2) Mean-reversion (fade after extreme) — is the -0.18 tradeable? ===")
+    print(f"  paired days: {res['n']}")
+    if res["terc"]:
+        cells = "   ".join(
+            f"{lab}: {v:+.2f}F(n{n})" for lab, (v, n) in
+            sorted(res["terc"].items(), key=lambda x: {"cold": 0, "normal": 1, "hot": 2}[x[0]])
+        )
+        print(f"  mean(actual - implied) by yesterday's anomaly tercile: {cells}")
+        print("    (if hot << cold, the market over-extrapolates heat -> fade it)")
+    print("  per-city corr(error, anomaly_t-1) [robustness of the pooled signal]:")
+    for c, cc in sorted(res["city_corr"].items()):
+        print(f"    {c:5s} {cc:+.2f}" if cc is not None else f"    {c:5s}  n/a")
+    print("\n  --- fade strategy: buy bucket at pred = implied - k*anomaly, open, fees on ---")
+    print(f"  {'k':>5} {'n':>5} {'win%':>5} {'pnl/trade':>10}  (k=0 is the plain implied-center)")
+    for k, (n, wins, pnl) in sorted(res["fade"].items()):
+        if n:
+            print(f"  {k:5.2f} {n:5d} {wins / n * 100:4.0f}% {pnl / n:+9.1f}c")
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--analysis", choices=("overround", "persistence", "both"), default="both")
+    ap.add_argument("--analysis", choices=("overround", "persistence", "meanrev", "both"),
+                    default="both")
     ap.add_argument("--no-fees", action="store_true")
     args = ap.parse_args(argv)
     fees = not args.no_fees
@@ -404,6 +476,8 @@ def main(argv: list[str] | None = None) -> int:
         report_overround(bins, sellable)
     if args.analysis in ("persistence", "both"):
         report_persistence(persistence(events, fees))
+    if args.analysis in ("meanrev", "both"):
+        report_meanrev(meanrev(events, fees))
     return 0
 
 
