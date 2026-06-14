@@ -84,6 +84,37 @@ def test_sweep_pairs_combos_on_identical_trades():
     assert tight.pnl_cents == expected
 
 
+def test_replay_break_even_arms_then_exits_at_entry():
+    # Entry 60. Runs up to 68 (arms BE at +5), then falls back through entry to 58 -> exit.
+    t = _trade(entry=60, fee=2.0, resolved=0, bids=[63.0, 68.0, 58.0, 5.0])
+    pnl, kind = es.replay(t, tp=None, sl=None, be=5)
+    assert kind == "be"
+    assert pnl == 58.0 - 60.0 - 2.0 - es.fee_cents(58.0)  # caps the loss near break-even
+
+
+def test_replay_break_even_not_armed_holds_to_settle():
+    # Never gains +5, so BE never arms -> the loser rides to settlement (0).
+    t = _trade(entry=60, fee=2.0, resolved=0, bids=[61.0, 63.0, 30.0, 4.0])
+    pnl, kind = es.replay(t, tp=None, sl=None, be=5)
+    assert kind == "settle"
+    assert pnl == 0.0 - 60.0 - 2.0
+
+
+def test_replay_break_even_winner_keeps_running_to_settlement():
+    # Arms at +5 but never falls back to entry -> settles as a full winner.
+    t = _trade(entry=60, fee=2.0, resolved=100, bids=[66.0, 80.0, 95.0])
+    pnl, kind = es.replay(t, tp=None, sl=None, be=5)
+    assert kind == "settle"
+    assert pnl == 100.0 - 60.0 - 2.0
+
+
+def test_fee_per_contract_amortizes_ceil_with_size():
+    # qty=1 rounds 1.75c up to 2c; larger size amortizes the ceil toward the true 1.75c.
+    assert es.fee_per_contract(50, 1) == 2.0
+    assert es.fee_per_contract(50, 100) == 1.75
+    assert es.fee_per_contract(50, 1, enabled=False) == 0.0
+
+
 def test_parse_grid_and_book_mapping():
     assert es.parse_grid("none,5,12.5") == [None, 5.0, 12.5]
     assert es.book_of("weather_low_fav_h14") == ("low", "fav")
