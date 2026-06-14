@@ -41,6 +41,7 @@ ALLOWED_SCRIPTS = (
     "weather_backfill_edges",
     "weather_polymarket_align",
     "weather_strategy_compare",
+    "kalshi_market_probe",
 )
 
 
