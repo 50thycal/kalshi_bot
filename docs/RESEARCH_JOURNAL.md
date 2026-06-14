@@ -52,6 +52,29 @@ Built and shipped (`weather_dist` / `weather_low_dist`). How it works:
 
 ---
 
+## Exit & sizing studies (live settled trades)
+
+### Exit dynamics on the profitable (low) books — HOLD-TO-SETTLEMENT WINS
+Replayed 158 settled low-book trades (`low_fav/nws/cal/pm` + `high_pm`) through their
+recorded 15-min bid paths under a TP/SL grid, a **break-even stop** (arm at +gain,
+then exit at entry if it falls back), and a **size/fee** sweep. `weather_exit_sweep.py`.
+
+- **Hold beats every exit rule:** hold = **+5.3¢/trade**; the best TP-only is +3.6¢
+  (−1.6¢ vs hold), and every stop-loss is brutal (hold/5¢SL = −10.9¢, −16¢ vs hold).
+  Any SL gets whipsawed out of trades that dip intraday but settle YES.
+- **Break-even also loses:** best BE config (arm 12¢ / TP 15¢) = +2.4¢, still −2.9¢
+  vs hold; BE-only −0.9 to +0.5¢. Same reason — it exits near-certain winners on a
+  transient dip back to entry.
+- **Why:** the low-book edge is *outcome certainty* (thermometer lag — the overnight
+  low is already locked, the bucket settles YES ~93%), not price momentum. Exiting
+  early on a price wiggle only forfeits the settlement payout. **Verdict: keep the
+  weather books hold-to-settlement; do not add TP/SL/BE to them.**
+- **Size/fee:** per-contract P&L is +5.29¢ (qty 1) → +5.78¢ (qty 5) → +5.87¢ (qty
+  100). Kalshi fees scale with qty, so size only amortizes the `ceil` rounding —
+  a one-time ~+0.5¢ from qty 1→5, then flat. The real fee lever is *price* (fee =
+  0.07·P·(1−P), tiny near 0/100), which the low favorite already enjoys. Trading ≥5
+  contracts is a free ~0.5¢, but size is NOT the cost fix; holding + high-price entries are.
+
 ## Backfill structural-edge hunt (Apr–Jun history, 964 complete events)
 
 **Scorecard (all 9 probes complete):** #3 city×window VALIDATED (→ live `cwin`);
