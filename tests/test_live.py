@@ -440,10 +440,10 @@ def test_exit_primary_sell_yes_close(settings):
         ex.manage_exits(session)
         assert len(client.placed) == 1
         o = client.placed[0]
-        # close = SELL the yes at the bid, fractional format + required type (the app's "Sell")
+        # close = SELL the yes at the bid, mirroring the proven buy schema + sell_position_floor=0
         assert o["action"] == "sell" and o["side"] == "yes"
-        assert o["yes_price_dollars"] == "0.60" and o["count_fp"] == "1.00"
-        assert o["type"] == "limit" and "no_price" not in o and "yes_price" not in o
+        assert o["yes_price"] == 60 and o["count"] == 1 and o["type"] == "limit"
+        assert o["sell_position_floor"] == 0 and "no_price" not in o
         assert o["client_order_id"] == "exit:weather_low_fav_h20:T1:1"
         assert ex.summary.exits_placed == 1
         # the submitted (in-flight) exit blocks a duplicate this cycle
@@ -468,7 +468,7 @@ def test_exit_rejection_escalates_and_does_not_block(settings):
         assert len(client.placed) == 2
         o2 = client.placed[1]
         # escalated sell crosses deeper: bid 60 - 3 slippage = 57 cents
-        assert o2["client_order_id"].endswith(":2") and o2["yes_price_dollars"] == "0.57"
+        assert o2["client_order_id"].endswith(":2") and o2["yes_price"] == 57
 
 
 def test_exit_409_treated_as_success(settings):
@@ -499,7 +499,7 @@ def test_exit_partial_fill_sizes_remainder(settings):
         _filled_entry(session, qty=5, price=48)
         ex.reconcile(session)       # snapshot shows 2 still open
         ex.manage_exits(session)    # size the close to the remaining 2, not the original 5
-        assert client.placed[0]["count_fp"] == "2.00"
+        assert client.placed[0]["count"] == 2
 
 
 def test_exit_flat_position_skips(settings):
@@ -566,7 +566,7 @@ def test_exit_market_fallback_when_enabled(settings):
         ex.manage_exits(session)
         o = client.placed[0]
         assert o["type"] == "market" and o["action"] == "sell" and o["side"] == "yes"
-        assert o["count_fp"] == "1.00" and "yes_price_dollars" not in o
+        assert o["count"] == 1 and o["sell_position_floor"] == 0 and "yes_price" not in o
 
 
 def test_exit_full_error_logged_on_rejection(settings, caplog):
@@ -584,7 +584,7 @@ def test_exit_full_error_logged_on_rejection(settings, caplog):
         row = session.scalar(select(m.LiveOrder).where(
             m.LiveOrder.client_order_id.like("exit:%"), m.LiveOrder.action == "sell"))
         assert row.status == "rejected" and row.cancel_reason.startswith("400:")
-        assert row.raw_order_json.get("yes_price_dollars") == "0.60"  # exact payload kept for RCA
+        assert row.raw_order_json.get("yes_price") == 60  # exact payload kept for RCA
         assert any("REJECTED" in r.message for r in caplog.records)
 
 

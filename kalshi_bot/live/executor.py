@@ -439,25 +439,24 @@ class LiveExecutor:
                              "remaining": remaining, "attempts": attempts}})
 
     def _place_exit(self, session, ticker, strategy, bid, qty, kind, *, attempt, level) -> None:
-        # Close a YES position by SELLING it — exactly the app's "Slide to Sell". These weather
-        # markets are fractional_trading_enabled (live probe confirmed), so the accepted order
-        # uses the FRACTIONAL fields together: count_fp + yes_price_dollars + type. (Our earlier
-        # sell-yes rejections omitted the spec-required `type`; integer count/yes_price mixes the
-        # legacy + fractional schemas. The market is structurally identical to threshold markets
-        # that DO close, so mutual-exclusivity is not the blocker.) Unique coid per attempt
-        # avoids a self-409 on re-tries/escalation.
+        # Close a YES position by SELLING it. Mirror the PROVEN entry-buy schema exactly
+        # (integer count + yes_price + type=limit, which fills on these markets) and add the one
+        # field the spec ties to selling/closing: `sell_position_floor=0` ("won't let you flip
+        # position if set to 0"). On a mutually-exclusive event a sell with no floor is ambiguous
+        # (reduce vs flip into the excluded side) -> invalid_parameters; the floor disambiguates
+        # it as a pure reduce-to-flat. Unique coid per attempt avoids a self-409 on re-tries.
         coid = f"exit:{strategy}:{ticker}:{attempt}"
-        count_fp = f"{int(qty)}.00"
         use_market = level >= 2
         if use_market:
-            # Best-effort market sell (immediate cash-out); behind a default-off flag.
-            order = {"ticker": ticker, "action": "sell", "side": "yes", "count_fp": count_fp,
-                     "type": "market", "client_order_id": coid}
+            # Best-effort market sell to close (the spec's sell_position_floor is documented for
+            # market orders); behind a default-off flag.
+            order = {"ticker": ticker, "action": "sell", "side": "yes", "count": int(qty),
+                     "type": "market", "sell_position_floor": 0, "client_order_id": coid}
             sell_px = None
         else:
             sell_px = self._exit_sell_price(bid, level)
-            order = {"ticker": ticker, "action": "sell", "side": "yes", "count_fp": count_fp,
-                     "type": "limit", "yes_price_dollars": f"{sell_px / 100:.2f}",
+            order = {"ticker": ticker, "action": "sell", "side": "yes", "count": int(qty),
+                     "type": "limit", "yes_price": sell_px, "sell_position_floor": 0,
                      "client_order_id": coid}
             if level >= 1:
                 self.summary.exits_escalated += 1
@@ -500,10 +499,10 @@ class LiveExecutor:
         koid = (resp or {}).get("order", {}).get("order_id") if isinstance(resp, dict) else None
         repo.update_live_order_status(session, row, status="submitted", kalshi_order_id=koid, raw=resp)
         self.summary.exits_placed += 1
-        logger.info("live exit order placed (sell-yes to close)", extra={"extra_fields": {
+        logger.info("live exit order placed (sell-yes + floor to close)", extra={"extra_fields": {
             "ticker": ticker, "strategy": strategy, "rule": kind,
             "order_type": "market" if level >= 2 else "limit",
-            "yes_price_dollars": order.get("yes_price_dollars"), "count": qty,
+            "yes_price": order.get("yes_price"), "count": qty,
             "attempt": attempt, "level": level}})
 
     def _current_bid(self, ticker: str) -> int | None:
