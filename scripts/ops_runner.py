@@ -38,6 +38,7 @@ ALLOWED_SCRIPTS = (
     "weather_backfill_calib",
     "weather_backfill_edges",
     "weather_polymarket_align",
+    "weather_strategy_compare",
 )
 
 
