@@ -36,6 +36,24 @@ BOOKS = {
 }
 _HOURS = re.compile(r"_h(\d+)$")
 
+# series prefix -> city code (mirrors kalshi_bot/weather/cities.py; this script is
+# self-contained so it can't import the package).
+CITY_BY_SERIES = {
+    "KXHIGHNY": "NYC", "KXLOWTNYC": "NYC", "KXHIGHCHI": "CHI", "KXLOWTCHI": "CHI",
+    "KXHIGHMIA": "MIA", "KXLOWTMIA": "MIA", "KXHIGHAUS": "AUS", "KXLOWTAUS": "AUS",
+    "KXHIGHLAX": "LAX", "KXLOWTLAX": "LAX", "KXHIGHPHIL": "PHIL", "KXLOWTPHIL": "PHIL",
+    "KXHIGHDEN": "DEN", "KXLOWTDEN": "DEN",
+}
+
+
+def city_of(ticker: str | None) -> str | None:
+    t = ticker or ""
+    for series, code in CITY_BY_SERIES.items():
+        if t.startswith(series):
+            return code
+    return None
+
+
 
 def book_of(strategy: str | None) -> tuple[str, str] | None:
     s = strategy or ""
@@ -125,6 +143,73 @@ def report(rows: list[tuple]) -> None:
             print(f"  best {kind} window x strategy by per-trade: {bb} @ h{bw} ({v:+.1f}c, n={bn})")
 
 
+def granular(rows: list[tuple]):
+    """rows = (strategy, market_ticker, resolved_value, pnl). Returns dicts keyed at three
+    granularities: the full (kind, book, window, city) cell, the (kind, book, city) rollup
+    (windows summed), and (kind, book, window) — each [n, wins, pnl_cents]."""
+    full: dict[tuple, list[float]] = {}
+    by_city: dict[tuple, list[float]] = {}
+    by_win: dict[tuple, list[float]] = {}
+    for strat, ticker, resolved, pnl in rows:
+        kb = book_of(strat)
+        if kb is None:
+            continue
+        kind, book = kb
+        w = window_of(strat)
+        city = city_of(ticker) or "?"
+        win = 1 if int(resolved or 0) == 100 else 0
+        cents = float(pnl or 0.0) * 100.0
+        for key, table in (
+            ((kind, book, w, city), full),
+            ((kind, book, city), by_city),
+            ((kind, book, w), by_win),
+        ):
+            c = table.setdefault(key, [0, 0, 0.0])
+            c[0] += 1
+            c[1] += win
+            c[2] += cents
+    return full, by_city, by_win
+
+
+def _rank(table: dict, min_n: int, top: int) -> list[tuple]:
+    out = [(k, v) for k, v in table.items() if v[0] >= min_n]
+    out.sort(key=lambda kv: kv[1][2] / kv[1][0], reverse=True)
+    return out[:top]
+
+
+def report_best(rows: list[tuple], top: int, min_n: int) -> None:
+    full, by_city, by_win = granular(rows)
+    print(f"\n=== Best strategies (settled, n >= {min_n}, ranked by P&L/trade) ===")
+    print("  *** the finer the slice the smaller the sample — treat tiny-n cells as noise,"
+          " not a pick ***")
+
+    print(f"\n  --- Top {top}: book x window x city (the most granular cell) ---")
+    print(f"  {'rank':>4} {'kind':>4} {'book':>5} {'window':>6} {'city':>5} "
+          f"{'n':>4} {'win%':>5} {'total':>8} {'per-trade':>9}")
+    best = _rank(full, min_n, top)
+    if not best:
+        print(f"    (no cells with n >= {min_n})")
+    for i, ((kind, book, w, city), (n, wins, cents)) in enumerate(best, 1):
+        wstr = f"h{w}" if w is not None else "-"
+        print(f"  {i:>4} {kind:>4} {book:>5} {wstr:>6} {city:>5} {n:4d} "
+              f"{wins / n * 100:4.0f}% {cents / 100.0:+7.2f}$ {cents / n:+8.1f}c")
+
+    print(f"\n  --- Top {top}: book x city (windows summed) ---")
+    print(f"  {'rank':>4} {'kind':>4} {'book':>5} {'city':>5} {'n':>4} {'win%':>5}"
+          f" {'total':>8} {'per-trade':>9}")
+    for i, ((kind, book, city), (n, wins, cents)) in enumerate(_rank(by_city, min_n, top), 1):
+        print(f"  {i:>4} {kind:>4} {book:>5} {city:>5} {n:4d} "
+              f"{wins / n * 100:4.0f}% {cents / 100.0:+7.2f}$ {cents / n:+8.1f}c")
+
+    print(f"\n  --- Top {top}: book x window (all cities) ---")
+    print(f"  {'rank':>4} {'kind':>4} {'book':>5} {'window':>6} {'n':>4} {'win%':>5}"
+          f" {'total':>8} {'per-trade':>9}")
+    for i, ((kind, book, w), (n, wins, cents)) in enumerate(_rank(by_win, min_n, top), 1):
+        wstr = f"h{w}" if w is not None else "-"
+        print(f"  {i:>4} {kind:>4} {book:>5} {wstr:>6} {n:4d} "
+              f"{wins / n * 100:4.0f}% {cents / 100.0:+7.2f}$ {cents / n:+8.1f}c")
+
+
 def _to_libpq_url(url: str) -> str:
     url = (url or "").strip()
     if url.startswith("postgresql+"):
@@ -135,6 +220,15 @@ def _to_libpq_url(url: str) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    import argparse
+
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--best", type=int, default=5,
+                    help="show the top-N best strategy cells (book x window x city); 0 = off")
+    ap.add_argument("--min-n", type=int, default=4,
+                    help="minimum settled trades for a cell to be ranked (noise guard)")
+    args = ap.parse_args(argv)
+
     url = _to_libpq_url(os.environ.get("DATABASE_URL_RO") or os.environ.get("DATABASE_URL") or "")
     if not url:
         print("DATABASE_URL_RO (or DATABASE_URL) is not set.", file=sys.stderr)
@@ -154,7 +248,17 @@ def main(argv: list[str] | None = None) -> int:
                 " GROUP BY strategy ORDER BY strategy"
             )
             rows = cur.fetchall()
+            best_rows = []
+            if args.best > 0:
+                cur.execute(
+                    "SELECT strategy, market_ticker, resolved_value, pnl"
+                    " FROM paper_trades WHERE strategy LIKE 'weather%' AND NOT legacy"
+                    " AND status='settled'"
+                )
+                best_rows = cur.fetchall()
     report(rows)
+    if args.best > 0:
+        report_best(best_rows, args.best, args.min_n)
     return 0
 
 

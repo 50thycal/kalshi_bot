@@ -60,6 +60,39 @@ def test_report_runs_without_data(capsys):
     assert "no settled weather trades yet" in out
 
 
+def test_city_of_maps_high_and_low_tickers():
+    assert pnl.city_of("KXHIGHLAX-26JUN12-B74.5") == "LAX"
+    assert pnl.city_of("KXLOWTNYC-26JUN12-B60.5") == "NYC"
+    assert pnl.city_of("KXHIGHPHIL-26JUN12-T80") == "PHIL"
+    assert pnl.city_of("KXNOTAWEATHER-X") is None
+    assert pnl.city_of(None) is None
+
+
+def test_granular_groups_and_ranks_by_city_window_book():
+    # (strategy, market_ticker, resolved_value, pnl_dollars)
+    rows = [
+        ("weather_low_fav_h20", "KXLOWTLAX-26JUN12-B60", 100, 0.50),
+        ("weather_low_fav_h20", "KXLOWTLAX-26JUN13-B60", 100, 0.40),
+        ("weather_low_fav_h20", "KXLOWTNYC-26JUN12-B55", 0, -0.60),
+        ("weather_fav_h8", "KXHIGHCHI-26JUN12-B80", 100, 0.30),
+    ]
+    full, by_city, by_win = pnl.granular(rows)
+    # the LAX low-fav h20 cell has 2 trades, both winners
+    assert full[("low", "fav", 20, "LAX")][0] == 2
+    assert full[("low", "fav", 20, "LAX")][1] == 2
+    # by-city rollup keys collapse the window
+    assert ("low", "fav", "LAX") in by_city and ("low", "fav", "NYC") in by_city
+    # ranking by per-trade with min_n=2 keeps only the LAX cell (n=2), NYC/CHI are n=1
+    ranked = pnl._rank(full, min_n=2, top=5)
+    assert len(ranked) == 1 and ranked[0][0] == ("low", "fav", 20, "LAX")
+
+
+def test_report_best_runs_without_data(capsys):
+    pnl.report_best([], top=5, min_n=4)
+    out = capsys.readouterr().out
+    assert "Best strategies" in out and "no cells with n >= 4" in out
+
+
 def test_experiments_digest_wires_three_probes():
     exp = _load("weather_experiments")
     names = [m.__name__ for _t, m, _a in exp.SECTIONS]
