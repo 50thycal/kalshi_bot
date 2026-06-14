@@ -425,7 +425,7 @@ def _rejected_exit(session, attempt, *, ticker="T1", strategy="weather_low_fav_h
         client_order_id=f"exit:{strategy}:{ticker}:{attempt}", raw_order_json={})
 
 
-def test_exit_primary_buy_no_close(settings):
+def test_exit_primary_sell_yes_close(settings):
     _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_cents=10)
     db.init_engine(settings.database_url)
     db.create_all()
@@ -436,7 +436,10 @@ def test_exit_primary_buy_no_close(settings):
         ex.manage_exits(session)
         assert len(client.placed) == 1
         o = client.placed[0]
-        assert o["action"] == "buy" and o["side"] == "no" and o["no_price"] == 40
+        # close = SELL the yes at the bid, in Kalshi's dollar/fixed-point format (app's "Sell")
+        assert o["action"] == "sell" and o["side"] == "yes"
+        assert o["yes_price_dollars"] == "0.60" and o["count_fp"] == "1.00"
+        assert "type" not in o and "no_price" not in o
         assert o["client_order_id"] == "exit:weather_low_fav_h20:T1:1"
         assert ex.summary.exits_placed == 1
         # the submitted (in-flight) exit blocks a duplicate this cycle
@@ -460,7 +463,8 @@ def test_exit_rejection_escalates_and_does_not_block(settings):
         ex.manage_exits(session)  # rejected didn't block -> attempt 2, escalated price
         assert len(client.placed) == 2
         o2 = client.placed[1]
-        assert o2["client_order_id"].endswith(":2") and o2["no_price"] == 43  # 40 + 3 slippage
+        # escalated sell crosses deeper: bid 60 - 3 slippage = 57 cents
+        assert o2["client_order_id"].endswith(":2") and o2["yes_price_dollars"] == "0.57"
 
 
 def test_exit_409_treated_as_success(settings):
@@ -491,7 +495,7 @@ def test_exit_partial_fill_sizes_remainder(settings):
         _filled_entry(session, qty=5, price=48)
         ex.reconcile(session)       # snapshot shows 2 still open
         ex.manage_exits(session)    # size the close to the remaining 2, not the original 5
-        assert client.placed[0]["count"] == 2
+        assert client.placed[0]["count_fp"] == "2.00"
 
 
 def test_exit_flat_position_skips(settings):
@@ -557,7 +561,8 @@ def test_exit_market_fallback_when_enabled(settings):
         _rejected_exit(session, 1)  # next is the final attempt -> market fallback
         ex.manage_exits(session)
         o = client.placed[0]
-        assert o["type"] == "market" and "buy_max_cost" in o and "no_price" not in o
+        assert o["type"] == "market" and o["action"] == "sell" and o["side"] == "yes"
+        assert o["count_fp"] == "1.00" and "yes_price_dollars" not in o
 
 
 def test_exit_full_error_logged_on_rejection(settings, caplog):
@@ -572,9 +577,10 @@ def test_exit_full_error_logged_on_rejection(settings, caplog):
         _filled_entry(session, price=48)
         with caplog.at_level(logging.ERROR):
             ex.manage_exits(session)
-        row = session.scalar(select(m.LiveOrder).where(m.LiveOrder.client_order_id.like("exit:%")))
+        row = session.scalar(select(m.LiveOrder).where(
+            m.LiveOrder.client_order_id.like("exit:%"), m.LiveOrder.action == "sell"))
         assert row.status == "rejected" and row.cancel_reason.startswith("400:")
-        assert row.raw_order_json.get("no_price") == 40  # exact payload kept for RCA
+        assert row.raw_order_json.get("yes_price_dollars") == "0.60"  # exact payload kept for RCA
         assert any("REJECTED" in r.message for r in caplog.records)
 
 
