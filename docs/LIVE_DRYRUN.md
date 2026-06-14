@@ -76,6 +76,35 @@ The executor parses these Kalshi response keys — confirm each matches a real d
       order, fill recorded once), and an untracked demo position logs CRITICAL without
       auto-trading it.
 
+## Recommended config for a small ($50 wallet) live test
+
+The cross-validation (`docs/RESEARCH_JOURNAL.md`) says the defensible first live edge is the
+**late-window high favorite in stable cities** (DEN/MIA/AUS/CHI/LAX at h8) — NOT the low
+favorite (which fails to confirm out-of-sample). With a $50 wallet, size tiny and cap risk
+well under the balance. Set these as Railway env vars (committed defaults stay inert):
+
+```
+BOT_MODE=live
+KILL_SWITCH=false
+LIVE_ENABLED=true
+LIVE_STRATEGIES=weather_fav            # high favorite only (low fav = weather_low_fav)
+LIVE_CITIES=DEN,MIA,AUS,CHI,LAX        # stable marine/continental cities (cross-validated)
+LIVE_WINDOWS=8                         # late entry only (the high has formed)
+LIVE_ENTRY_STYLE=marketable
+LIVE_MAX_ORDER_DOLLARS=2               # ~1-4 contracts per order
+LIVE_EXIT_MODE=settlement              # hold to settlement (exits don't help these books)
+MAX_ORDER_SIZE=5
+MAX_MARKET_EXPOSURE=10                 # << $50
+MAX_TOTAL_EXPOSURE=40                  # leave headroom under the $50 balance
+MAX_DAILY_LOSS=15                      # circuit breaker trips well before the wallet is gone
+LIVE_KILL_ON_DAILY_LOSS=true
+```
+
+This trades ~one tiny high-favorite order per eligible stable city per day, hold-to-settle.
+Confirm on demo first (sections 1–8); the wallet test then validates real fills + settlement
+with at most a few dollars at risk. Scale `LIVE_MAX_ORDER_DOLLARS` / add cities only after a
+clean run.
+
 ## Go-live gate (production)
 Only after all of the above pass on demo:
 - [ ] `KALSHI_ENV=production`, production demo→real key swapped.

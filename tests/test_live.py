@@ -134,6 +134,42 @@ def test_fires_when_fully_enabled_and_allowlisted(settings):
         assert row.status == "submitted" and row.kalshi_order_id == "K-1"
 
 
+def test_city_filter_blocks_non_listed_city(settings):
+    _live_settings(settings, live_strategies="weather_fav", live_cities="DEN,MIA,LAX")
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        # NYC high favorite -> not in the city allowlist -> blocked
+        ex.mirror_entry(session, strategy="weather_fav_h8", event_ticker="KXHIGHNY-26JUN12",
+                        ticker="KXHIGHNY-26JUN12-B74.5", side="yes", action="buy",
+                        metrics=_metrics(), account_state={"cash_balance": 1000.0})
+        assert client.placed == []
+        # DEN high favorite -> allowed
+        ex.mirror_entry(session, strategy="weather_fav_h8", event_ticker="KXHIGHDEN-26JUN12",
+                        ticker="KXHIGHDEN-26JUN12-B74.5", side="yes", action="buy",
+                        metrics=_metrics(), account_state={"cash_balance": 1000.0})
+        assert len(client.placed) == 1
+
+
+def test_window_filter_blocks_non_listed_window(settings):
+    _live_settings(settings, live_strategies="weather_fav", live_windows="8")
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        ex.mirror_entry(session, strategy="weather_fav_h20", event_ticker="KXHIGHDEN-26JUN12",
+                        ticker="KXHIGHDEN-26JUN12-B74.5", side="yes", action="buy",
+                        metrics=_metrics(), account_state={"cash_balance": 1000.0})
+        assert client.placed == []  # h20 not in {8}
+        ex.mirror_entry(session, strategy="weather_fav_h8", event_ticker="KXHIGHDEN-26JUN13",
+                        ticker="KXHIGHDEN-26JUN13-B74.5", side="yes", action="buy",
+                        metrics=_metrics(), account_state={"cash_balance": 1000.0})
+        assert len(client.placed) == 1  # h8 allowed
+
+
 def test_dedup_blocks_second_entry(settings):
     _live_settings(settings)
     db.init_engine(settings.database_url)

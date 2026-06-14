@@ -16,15 +16,39 @@ from __future__ import annotations
 
 import logging
 import math
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 from .. import repository as repo
 from ..kalshi.errors import AuthError, KalshiAPIError, TransientError
 from ..paper.engine import kalshi_fee
+from ..weather.cities import CITIES
 from . import exit_rules
 
 logger = logging.getLogger(__name__)
+
+# series-ticker prefix -> city code, for the optional live city filter.
+_CITY_BY_SERIES = {}
+for _c in CITIES:
+    _CITY_BY_SERIES[_c.series_high] = _c.code
+    if _c.series_low:
+        _CITY_BY_SERIES[_c.series_low] = _c.code
+
+_WINDOW_RE = re.compile(r"_h(\d+)$")
+
+
+def _city_of(ticker: str | None) -> str | None:
+    t = ticker or ""
+    for series, code in _CITY_BY_SERIES.items():
+        if t.startswith(series):
+            return code
+    return None
+
+
+def _window_of(strategy: str | None) -> int | None:
+    m = _WINDOW_RE.search(strategy or "")
+    return int(m.group(1)) if m else None
 
 
 @dataclass
@@ -69,6 +93,17 @@ class LiveExecutor:
         prefixes = self.settings.live_strategy_list
         return any(strategy.startswith(p) for p in prefixes)
 
+    def _cell_allowed(self, strategy: str, ticker: str) -> bool:
+        """Optional city/window narrowing on top of the strategy allowlist, so live trading
+        can target the cross-validated cells (e.g. late-window highs in stable cities)."""
+        cities = self.settings.live_city_list
+        if cities and _city_of(ticker) not in cities:
+            return False
+        windows = self.settings.live_window_list
+        if windows and _window_of(strategy) not in windows:
+            return False
+        return True
+
     def _daily_loss_hit(self, session) -> bool:
         s = self.settings
         if not s.live_kill_on_daily_loss:
@@ -86,6 +121,9 @@ class LiveExecutor:
         fail-closed: any gate failure simply places nothing."""
         s = self.settings
         if not self._allowed(strategy) or not self._switches_on():
+            self.summary.skipped_gate += 1
+            return
+        if not self._cell_allowed(strategy, ticker):
             self.summary.skipped_gate += 1
             return
         if self._daily_loss_tripped or self._daily_loss_hit(session):

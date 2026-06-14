@@ -32,6 +32,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import weather_entry_study  # noqa: E402
 import weather_exit_sweep  # noqa: E402
 import weather_model_check  # noqa: E402
+import weather_strategy_compare  # noqa: E402
 import weather_window_sweep  # noqa: E402
 
 SECTIONS = (
@@ -39,6 +40,8 @@ SECTIONS = (
     ("EXIT SWEEP — TP/SL vs hold to settlement", weather_exit_sweep, []),
     ("WINDOW SWEEP — best entry hours-to-close", weather_window_sweep, []),
     ("ENTRY STUDY — calibration / bands / obs / limit", weather_entry_study, []),
+    ("STRATEGY COMPARE — backfill vs live vs TP/SL (cross-validation)",
+     weather_strategy_compare, []),
 )
 
 

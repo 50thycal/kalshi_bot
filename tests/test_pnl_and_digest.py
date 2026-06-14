@@ -93,11 +93,12 @@ def test_report_best_runs_without_data(capsys):
     assert "Best strategies" in out and "no cells with n >= 4" in out
 
 
-def test_experiments_digest_wires_three_probes():
+def test_experiments_digest_wires_probes():
     exp = _load("weather_experiments")
     names = [m.__name__ for _t, m, _a in exp.SECTIONS]
     assert names == ["weather_model_check", "weather_exit_sweep",
-                     "weather_window_sweep", "weather_entry_study"]
+                     "weather_window_sweep", "weather_entry_study",
+                     "weather_strategy_compare"]
     # The model-check probe is run with --no-live to keep the digest tight.
     model_args = next(a for _t, m, a in exp.SECTIONS if m.__name__ == "weather_model_check")
     assert model_args == ["--no-live"]

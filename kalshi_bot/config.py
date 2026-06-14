@@ -176,6 +176,8 @@ class Settings(BaseSettings):
     # client also self-guards place_order on mode+kill_switch, so this is defense in depth.
     live_enabled: bool = False
     live_strategies: str = ""               # allowlist of strategy prefixes; empty = inert
+    live_cities: str = ""                   # restrict to these city codes (empty = all)
+    live_windows: str = ""                  # restrict to these entry windows hN (empty = all)
     live_entry_style: str = "marketable"    # "marketable" (limit @ ask) | "passive" (rest below)
     live_passive_offset_cents: int = 2      # passive: rest this many cents below the ask
     live_order_timeout_seconds: int = 600   # cancel an unfilled passive order after this long
@@ -309,6 +311,24 @@ class Settings(BaseSettings):
         return [s.strip() for s in self.live_strategies.split(",") if s.strip()]
 
     @property
+    def live_city_list(self) -> list[str]:
+        """Optional city-code filter for live orders (empty = all cities)."""
+        return [c.strip().upper() for c in self.live_cities.split(",") if c.strip()]
+
+    @property
+    def live_window_list(self) -> list[int]:
+        """Optional entry-window filter for live orders, in hours (empty = all windows)."""
+        out: list[int] = []
+        for part in self.live_windows.split(","):
+            part = part.strip().lower().lstrip("h")
+            if part:
+                try:
+                    out.append(int(part))
+                except ValueError:
+                    continue
+        return out
+
+    @property
     def weather_pm_city_list(self) -> list[str]:
         return [p.strip().upper() for p in self.weather_pm_cities.split(",") if p.strip()]
 
@@ -374,6 +394,8 @@ class Settings(BaseSettings):
             "weather_dist_min_edge_cents": self.weather_dist_min_edge_cents,
             "live_enabled": self.live_enabled,
             "live_strategies": self.live_strategy_list,
+            "live_cities": self.live_city_list,
+            "live_windows": self.live_window_list,
             "live_entry_style": self.live_entry_style,
             "live_exit_mode": self.live_exit_mode,
             "live_max_order_dollars": self.live_max_order_dollars,
