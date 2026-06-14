@@ -54,6 +54,28 @@ Built and shipped (`weather_dist` / `weather_low_dist`). How it works:
 
 ## Exit & sizing studies (live settled trades)
 
+### Inverse view — rank by BACKFILL, check live (the trustworthy direction)
+`weather_strategy_compare.py --top`. Ranking the favorite by the robust backfill sample
+(n≥15/cell) and showing live alongside flips the picture from the live-first ranking:
+
+- **The best backfill favorite cells are almost all HIGHS** (12 of the top 14; only NYC h20
+  and PHIL h14 lows appear). The favorite edge the history supports lives in *highs*, not
+  lows — the opposite of the live-first ranking, confirming the low-book live profit was
+  small-sample luck.
+- **Cross-validated winners (both samples positive, high backfill win%):** late-window (h8)
+  highs in stable cities — DEN h8 (+3.8¢/68 backfill 96% · +3.7¢ live), MIA h8 (+3.6¢/100% ·
+  +1.0¢), AUS h8 (+2.9¢/95% · +10.6¢), CHI h8 (+1.2¢/95% · +10.0¢) — plus LAX highs across
+  windows (LAX h20 +3.3¢·+11¢, LAX h14 +3.3¢·+33.8¢) and NYC h14 (+1.5¢·+20.5¢).
+- **Sign agreement: 11 of the top 14 backfill cells are also positive live.** The 3
+  disagreements are all *early-window* continental highs (DEN h20, CHI h20, DEN h14: backfill
+  + but live − on n=4) — early entry is less reliable (the high hasn't formed), and the *late*
+  (h8) versions of the same cities cross-validate positive. Window matters: late > early for highs.
+
+**Go-live implication (validated from both directions):** the defensible first live book is
+**late-window (h8) high favorites in stable cities (DEN/MIA/AUS/CHI/LAX)** — high historical
+win rates (95-100%) AND positive live — not the low favorite. Live per-cell n is still tiny
+(1-5), so treat magnitudes as noisy; the SIGN agreement is what matters.
+
 ### Backfill vs live cross-validation — the low-book edge does NOT survive (caution!)
 `weather_strategy_compare.py` replays the favorite three ways: backfill (Kalshi REST
 history, n~350-480/cell), live realized paper P&L (n~17-28/cell), and best TP/SL on the
