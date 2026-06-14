@@ -339,13 +339,17 @@ class LiveExecutor:
                 self._place_exit(session, ticker, strategy, live_bid, qty, kind)
 
     def _place_exit(self, session, ticker, strategy, bid, qty, kind) -> None:
-        price = max(1, min(99, int(bid)))
+        # Exit a YES position the Kalshi-native, proven way: BUY the opposite (NO) side at
+        # no_price = 100 - yes_bid. This reuses the working buy path (a raw action="sell"
+        # yes order returns invalid_parameters), and Kalshi nets the opposing position so
+        # the P&L is the same as selling YES at the bid.
+        no_price = max(1, min(99, 100 - int(bid)))
         coid = f"exit:{strategy}:{ticker}"
-        order = {"ticker": ticker, "action": "sell", "side": "yes", "count": qty,
-                 "type": "limit", "yes_price": price, "client_order_id": coid}
+        order = {"ticker": ticker, "action": "buy", "side": "no", "count": qty,
+                 "type": "limit", "no_price": no_price, "client_order_id": coid}
         row = repo.create_live_order(
             session, signal_id=None, ticker=ticker, event_ticker=None, strategy=strategy,
-            side="yes", action="sell", limit_price=price, quantity=qty, status="pending",
+            side="no", action="buy", limit_price=no_price, quantity=qty, status="pending",
             client_order_id=coid, raw_order_json=order)
         try:
             resp = self.client.place_order(**order)
@@ -358,8 +362,9 @@ class LiveExecutor:
         koid = (resp or {}).get("order", {}).get("order_id") if isinstance(resp, dict) else None
         repo.update_live_order_status(session, row, status="submitted", kalshi_order_id=koid, raw=resp)
         self.summary.exits_placed += 1
-        logger.info("live exit order placed", extra={"extra_fields": {
-            "ticker": ticker, "strategy": strategy, "rule": kind, "price": price, "count": qty}})
+        logger.info("live exit order placed (buy-no to close)", extra={"extra_fields": {
+            "ticker": ticker, "strategy": strategy, "rule": kind, "no_price": no_price,
+            "count": qty}})
 
     def _current_bid(self, ticker: str) -> int | None:
         try:

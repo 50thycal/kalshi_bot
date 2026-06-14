@@ -400,12 +400,12 @@ def test_should_exit_rules():
     assert should_exit(50, [60], 55, tp=10, sl=10, be=None) is None        # no trigger now
 
 
-def test_manage_exits_places_sell_on_tp(settings):
+def test_manage_exits_closes_by_buying_no_on_tp(settings):
     _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_cents=10)
     db.init_engine(settings.database_url)
     db.create_all()
     client = FakeLiveClient()
-    # current bid via orderbook -> best_yes_bid 60; entry 48 -> gain 12 >= tp 10 -> sell
+    # current bid via orderbook -> best_yes_bid 60; entry 48 -> gain 12 >= tp 10 -> exit
     ex = _exec(settings, client)
     with db.session_scope() as session:
         repo.create_live_order(
@@ -413,9 +413,13 @@ def test_manage_exits_places_sell_on_tp(settings):
             side="yes", action="buy", limit_price=48, quantity=1, status="filled",
             client_order_id="weather_low_fav_h20:E1", raw_order_json={})
         ex.manage_exits(session)
-        assert len(client.placed) == 1 and client.placed[0]["action"] == "sell"
+        # exit closes a YES long by BUYing NO at 100 - yes_bid(60) = 40
+        assert len(client.placed) == 1
+        o = client.placed[0]
+        assert o["action"] == "buy" and o["side"] == "no" and o["no_price"] == 40
+        assert o["client_order_id"].startswith("exit:")
         assert ex.summary.exits_placed == 1
-        # idempotent: a committed exit order blocks a second sell
+        # idempotent: a committed exit order blocks a second close
         ex.manage_exits(session)
         assert len(client.placed) == 1
 

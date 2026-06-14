@@ -371,7 +371,8 @@ def _probe_api_shapes(client) -> None:
     market_positions. Per-element field names only appear once there is real history."""
     import json
     for name, fn in (("balance", client.get_balance), ("orders", client.get_orders),
-                     ("fills", client.get_fills), ("positions", client.get_positions)):
+                     ("fills", client.get_fills), ("positions", client.get_positions),
+                     ("settlements", client.get_settlements)):
         try:
             shape = json.dumps(_api_shape(fn()))[:600]
             # Embed the shape in the MESSAGE (not extra fields) so it survives Railway's

@@ -868,12 +868,13 @@ def live_order_exists(session, event_ticker: str, strategy: str) -> bool:
 
 
 def live_exit_order_exists(session, ticker: str, strategy: str) -> bool:
-    """A sell/exit order already placed for this position — exit dedup."""
+    """An exit (close) order already placed for this position — exit dedup. Exits are tagged
+    with a client_order_id starting 'exit:' (they close by buying the opposite side)."""
     return session.scalar(
         select(func.count()).select_from(m.LiveOrder).where(
             m.LiveOrder.market_ticker == ticker,
             m.LiveOrder.strategy == strategy,
-            m.LiveOrder.action == "sell",
+            m.LiveOrder.client_order_id.like("exit:%"),
             m.LiveOrder.status.in_(LIVE_COMMITTED_STATUSES),
         )
     ) > 0
@@ -965,11 +966,13 @@ def latest_position_snapshot(session, ticker: str) -> m.Position | None:
 
 
 def open_live_positions(session) -> list[tuple]:
-    """Open live positions to manage exits for: filled/partial BUY orders that don't yet have
-    a committed SELL order. Returns (ticker, strategy, entry_price_cents, entry_at, qty)."""
+    """Open YES positions to manage exits for: filled/partial YES entry buys without a
+    committed exit. Returns (ticker, strategy, entry_price_cents, entry_at, qty). Excludes
+    the exit buy-NO orders (side='no') so a close isn't mistaken for a new position."""
     rows = session.scalars(
         select(m.LiveOrder).where(
             m.LiveOrder.action == "buy",
+            m.LiveOrder.side == "yes",
             m.LiveOrder.status.in_(("filled", "partial")),
         )
     ).all()

@@ -275,6 +275,9 @@ class KalshiClient:
     def get_fills(self, **params: Any) -> dict:
         return self._request("GET", "/portfolio/fills", params=params or None)
 
+    def get_settlements(self, **params: Any) -> dict:
+        return self._request("GET", "/portfolio/settlements", params=params or None)
+
     # -- guarded write endpoints (out of scope for Scanner MVP) ------------
     def place_order(self, **order: Any) -> dict:
         self._ensure_live_enabled()
