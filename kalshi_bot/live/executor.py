@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from .. import repository as repo
 from ..kalshi.errors import AuthError, KalshiAPIError, TransientError
 from ..paper.engine import kalshi_fee
+from ..scanner.metrics import _to_count, price_to_cents
 from ..weather.cities import CITIES
 from . import exit_rules
 
@@ -248,18 +249,27 @@ class LiveExecutor:
                 session, row, status=_map_status(exch.get("status")),
                 kalshi_order_id=exch.get("order_id"), raw=exch)
 
-        # Record fills idempotently.
+        # Record fills idempotently. Kalshi shapes (confirmed via the shape probe):
+        # id=trade_id/fill_id; price=yes_price_dollars/no_price_dollars (dollar strings);
+        # qty=count_fp (fixed-point string); fee=fee_cost (dollars).
         for f in fills:
             fid = f.get("trade_id") or f.get("fill_id")
             if not fid or repo.fill_exists(session, fid):
                 continue
-            price = f.get("yes_price") if f.get("yes_price") is not None else f.get("price")
-            qty = f.get("count") or f.get("quantity")
-            fee = f.get("fee")
-            fee = float(fee) / 100.0 if fee is not None else kalshi_fee(price, qty or 0, True)
+            side = f.get("side")
+            if side == "no":
+                price = price_to_cents(_first(f, "no_price_dollars", "no_price", "price"))
+            else:
+                price = price_to_cents(_first(f, "yes_price_dollars", "yes_price", "price"))
+            qty = _to_count(_first(f, "count_fp", "count", "quantity"))
+            fee_raw = _first(f, "fee_cost", "fee")
+            try:
+                fee = float(fee_raw) if fee_raw is not None else kalshi_fee(price, qty, True)
+            except (TypeError, ValueError):
+                fee = kalshi_fee(price, qty, True)
             repo.insert_fill(
                 session, kalshi_fill_id=str(fid), kalshi_order_id=f.get("order_id"),
-                ticker=f.get("ticker"), filled_at=None, side=f.get("side"),
+                ticker=f.get("market_ticker") or f.get("ticker"), filled_at=None, side=side,
                 action=f.get("action"), price=price, quantity=qty, fee=fee, raw_fill_json=f)
             self.summary.new_fills += 1
 
@@ -371,6 +381,15 @@ class LiveExecutor:
             raise
         except Exception:  # noqa: BLE001
             logger.exception("live recover failed")
+
+
+def _first(d: dict, *keys: str):
+    """First non-None value among keys (tolerates Kalshi field-name variants)."""
+    for k in keys:
+        v = d.get(k)
+        if v is not None:
+            return v
+    return None
 
 
 def _items(resp, key: str) -> list:

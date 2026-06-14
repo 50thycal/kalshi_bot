@@ -299,15 +299,21 @@ def test_reconcile_dedups_fills_and_snapshots_positions(settings):
     db.init_engine(settings.database_url)
     db.create_all()
     client = FakeLiveClient()
-    client.fills = [{"trade_id": "F1", "order_id": "K-1", "ticker": "T1", "side": "yes",
-                     "action": "buy", "yes_price": 60, "count": 2, "fee": 1}]
+    # real Kalshi fill shape: *_dollars price strings, count_fp, fee_cost, market_ticker
+    client.fills = [{"trade_id": "F1", "order_id": "K-1", "market_ticker": "T1", "side": "yes",
+                     "action": "buy", "yes_price_dollars": "0.60", "no_price_dollars": "0.40",
+                     "count_fp": "2.00", "fee_cost": "0.01"}]
     client.positions = [{"ticker": "T1", "position": 2, "market_exposure": 120,
                          "realized_pnl": 0}]
     ex = _exec(settings, client)
     with db.session_scope() as session:
         ex.reconcile(session)
         ex.reconcile(session)  # same fill again -> still one row
-        assert len(session.scalars(select(m.Fill)).all()) == 1
+        fills = session.scalars(select(m.Fill)).all()
+        assert len(fills) == 1
+        # parsed from Kalshi's real field names
+        assert fills[0].price == 60 and fills[0].quantity == 2
+        assert float(fills[0].fee) == 0.01 and fills[0].market_ticker == "T1"
         assert len(session.scalars(select(m.Position)).all()) == 2  # one snapshot per cycle
 
 
