@@ -54,6 +54,35 @@ Built and shipped (`weather_dist` / `weather_low_dist`). How it works:
 
 ## Exit & sizing studies (live settled trades)
 
+### Backfill vs live cross-validation — the low-book edge does NOT survive (caution!)
+`weather_strategy_compare.py` replays the favorite three ways: backfill (Kalshi REST
+history, n~350-480/cell), live realized paper P&L (n~17-28/cell), and best TP/SL on the
+live trades. **The low books contradict between samples:**
+
+| kind/window | backfill (large n) | live (small n) |
+|---|---|---|
+| low h20 | **−6.4¢ (468)** | +12.7¢ (19, 89%) |
+| low h14 | −3.7¢ (346) | +5.7¢ (18) |
+| low h8 | −6.6¢ (354) | +2.2¢ (17) |
+| high h20 | +1.3¢ (481) | −4.2¢ (28) |
+| high h8 | −0.9¢ (230) | +6.1¢ (18, 100%) |
+
+The robust 25×-larger backfill says the **low favorite LOSES ~4-7¢**; the tiny recent live
+sample says it's our best winner (+12.7¢). This is the small-sample/recent-regime trap in
+action — the live "low fav h20 = best strategy" headline does **not** cross-validate. Trust
+the backfill: do NOT seed live trading with the low favorite on the strength of the live
+numbers alone.
+
+**The only sign-consistent (both samples agree) positive signal is highs in stable
+marine/subtropical cities:** high LAX backfill +3.2¢ / live +22.4¢; high MIA backfill +1.0¢
+/ live +18.1¢. Everywhere else the two samples disagree (low cities: backfill all negative,
+live all positive; DEN high +4.6¢ backfill but −2.6¢ live). TP/SL barely moves anything —
+hold is best in 5 of 6 window cells (only high h20 benefits: tp=20 → +2.9¢), echoing the
+exit-sweep finding. **Implication for go-live: the cross-validated candidate is high
+LAX/MIA, not low fav.** Gather more live low-book settlements before trusting that edge.
+
+
+
 ### Best-strategy breakdown (live settled, by city × window × book)
 `weather_pnl.py --best`. Robust picks (n ≥ 15, ranked by P&L/trade):
 **low fav h20 = +12.7¢ (n19, 89%)** — the standout; then low nws/cal h14 +7.7¢ (n15),
