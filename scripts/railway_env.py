@@ -11,7 +11,10 @@ ops/request.json shapes (handled by ops_runner.py):
   {"type": "env", "set": {"KILL_SWITCH": "false", "LIVE_ENABLED": "true"}}
   {"type": "env", "set": {...}, "redeploy": false}         # set without redeploying
 
-Stdlib only; reuses railway_logs._gql (browser UA to clear Cloudflare).
+Stdlib only. Resilient client: Railway's GraphQL API (backboard, behind Cloudflare) has
+transient latency spikes, so every call retries with backoff on timeouts / 429 / 5xx, uses a
+generous read timeout, and a batch set continues past a slow var (variableUpsert is idempotent,
+so a retried — even a read-timed-out — upsert is safe). A browser UA clears Cloudflare's 1010.
 """
 
 from __future__ import annotations
@@ -19,8 +22,15 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
+import urllib.error
+import urllib.request
 
-from railway_logs import _gql
+API_URL = "https://backboard.railway.com/graphql/v2"
+_UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+_TIMEOUT = 45      # generous read timeout — Railway mutations can be slow under load
+_ATTEMPTS = 4      # total tries per call before giving up
 
 # The ONLY vars this tool may set or print. Deliberately excludes every secret/infra var
 # (KALSHI_API_KEY_ID, KALSHI_PRIVATE_KEY, DATABASE_URL, RAILWAY_*, NWS_USER_AGENT).
@@ -44,6 +54,45 @@ _QUERY = "query($p:String!,$e:String!,$s:String){ variables(projectId:$p, enviro
 _REDEPLOY = "mutation($e:String!,$s:String!){ serviceInstanceRedeploy(environmentId:$e, serviceId:$s) }"
 
 
+class RailwayError(Exception):
+    """A Railway GraphQL call failed (after retries) or returned a hard error."""
+
+
+def _graphql(query: str, variables: dict, token: str,
+             *, attempts: int = _ATTEMPTS, timeout: int = _TIMEOUT) -> dict:
+    """POST a GraphQL request, retrying transient failures (timeout / 429 / 5xx / network)
+    with exponential backoff. Raises RailwayError only after exhausting retries, or
+    immediately on a non-retryable error (4xx, GraphQL errors)."""
+    payload = json.dumps({"query": query, "variables": variables}).encode("utf-8")
+    last: Exception | None = None
+    for attempt in range(attempts):
+        req = urllib.request.Request(API_URL, data=payload, method="POST", headers={
+            "Content-Type": "application/json", "Authorization": f"Bearer {token}",
+            "User-Agent": _UA, "Accept": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                body = json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", "replace")[:300]
+            if exc.code == 429 or exc.code >= 500:        # transient -> retry
+                last = RailwayError(f"HTTP {exc.code}: {detail}")
+                _backoff(attempt)
+                continue
+            raise RailwayError(f"HTTP {exc.code}: {detail}") from None  # 4xx -> hard
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:   # incl read timeout
+            last = RailwayError(f"network/timeout: {exc}")
+            _backoff(attempt)
+            continue
+        if body.get("errors"):
+            raise RailwayError("GraphQL errors: " + json.dumps(body["errors"])[:300])
+        return body.get("data") or {}
+    raise last or RailwayError("request failed after retries")
+
+
+def _backoff(attempt: int) -> None:
+    time.sleep(min(2 ** attempt, 8))
+
+
 def _ctx():
     token = os.environ.get("RAILWAY_TOKEN", "").strip()
     project = os.environ.get("RAILWAY_PROJECT_ID", "").strip()
@@ -62,9 +111,9 @@ def run_get() -> int:
         return 1
     token, project, env_id, svc = ctx
     try:
-        data = _gql(_QUERY, {"p": project, "e": env_id, "s": svc}, token)
-    except SystemExit as exc:
-        print(str(exc), file=sys.stderr)
+        data = _graphql(_QUERY, {"p": project, "e": env_id, "s": svc}, token)
+    except RailwayError as exc:
+        print(f"env read failed: {exc}", file=sys.stderr)
         return 1
     allvars = data.get("variables") or {}
     print("# current allowlisted env vars (secrets hidden):")
@@ -89,24 +138,29 @@ def run_set(mapping: dict, redeploy: bool = True) -> int:
     if not ctx:
         return 1
     token, project, env_id, svc = ctx
-    ok = 0
+    # Each upsert retries internally; a persistent failure on one var does NOT abort the
+    # batch (upserts are idempotent, so a re-run safely re-applies any that didn't land).
+    ok, failed = 0, []
     for name, value in mapping.items():
         inp = {"projectId": project, "environmentId": env_id, "serviceId": svc,
                "name": name, "value": str(value)}
         try:
-            _gql(_UPSERT, {"input": inp}, token)
+            _graphql(_UPSERT, {"input": inp}, token)
             print(f"  set {name}={value}")
             ok += 1
-        except SystemExit as exc:
+        except RailwayError as exc:
             print(f"  FAILED {name}: {exc}", file=sys.stderr)
+            failed.append(name)
     print(f"# {ok}/{len(mapping)} variables set")
+    if failed:
+        print(f"# NOT set (re-run to retry; idempotent): {failed}", file=sys.stderr)
     if ok and redeploy:
         try:
-            _gql(_REDEPLOY, {"e": env_id, "s": svc}, token)
+            _graphql(_REDEPLOY, {"e": env_id, "s": svc}, token)
             print("# redeploy triggered — the worker will restart with the new config")
-        except SystemExit as exc:
+        except RailwayError as exc:
             print(f"# redeploy failed (vars apply on the next deploy): {exc}", file=sys.stderr)
-    return 0 if ok == len(mapping) else 1
+    return 0 if not failed else 1
 
 
 def main(argv: list[str] | None = None) -> int:

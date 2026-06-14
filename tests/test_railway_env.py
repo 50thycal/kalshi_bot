@@ -44,7 +44,7 @@ def test_run_set_rejects_non_allowlisted_before_any_network(monkeypatch, capsys)
     def _boom(*a, **k):  # if this is called, the guard failed
         raise AssertionError("network call attempted for a rejected var")
 
-    monkeypatch.setattr(renv, "_gql", _boom)
+    monkeypatch.setattr(renv, "_graphql", _boom)
     rc = renv.run_set({"KILL_SWITCH": "false", "DATABASE_URL": "postgres://x"})
     assert rc == 1
     assert "non-allowlisted" in capsys.readouterr().err
@@ -57,23 +57,72 @@ def test_run_set_requires_credentials(monkeypatch):
     assert renv.run_set({"KILL_SWITCH": "false"}) == 1
 
 
-def test_run_set_upserts_allowlisted_and_redeploys(monkeypatch, capsys):
+def _creds(monkeypatch):
     monkeypatch.setenv("RAILWAY_TOKEN", "t")
     monkeypatch.setenv("RAILWAY_PROJECT_ID", "p")
     monkeypatch.setenv("RAILWAY_ENVIRONMENT_ID", "e")
     monkeypatch.setenv("RAILWAY_SERVICE_ID", "s")
+
+
+def test_run_set_upserts_allowlisted_and_redeploys(monkeypatch, capsys):
+    _creds(monkeypatch)
     calls = []
 
-    def _fake_gql(query, variables, token):
+    def _fake(query, variables, token):
         calls.append((query, variables))
         return {}
 
-    monkeypatch.setattr(renv, "_gql", _fake_gql)
+    monkeypatch.setattr(renv, "_graphql", _fake)
     rc = renv.run_set({"KILL_SWITCH": "false", "LIVE_ENABLED": "true"}, redeploy=True)
     assert rc == 0
-    # two upserts + one redeploy
-    assert len(calls) == 3
+    assert len(calls) == 3  # two upserts + one redeploy
     assert "redeploy triggered" in capsys.readouterr().out
+
+
+def test_graphql_retries_transient_timeout(monkeypatch):
+    # A transient TimeoutError on the first attempt is retried and then succeeds.
+    monkeypatch.setattr(renv.time, "sleep", lambda *_: None)
+    n = {"calls": 0}
+
+    class _Resp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return b'{"data": {"ok": true}}'
+
+    def _urlopen(req, timeout=None):
+        n["calls"] += 1
+        if n["calls"] == 1:
+            raise TimeoutError("The read operation timed out")
+        return _Resp()
+
+    monkeypatch.setattr(renv.urllib.request, "urlopen", _urlopen)
+    data = renv._graphql("q", {}, "tok", attempts=3)
+    assert data == {"ok": True} and n["calls"] == 2  # retried once, then OK
+
+
+def test_run_set_continues_past_a_failing_var(monkeypatch, capsys):
+    # One var fails persistently -> the batch still sets the others and reports rc=1.
+    _creds(monkeypatch)
+    monkeypatch.setattr(renv.time, "sleep", lambda *_: None)
+
+    def _fake(query, variables, token):
+        name = (variables.get("input") or {}).get("name")
+        if name == "LIVE_ENABLED":
+            raise renv.RailwayError("network/timeout: boom")
+        return {}
+
+    monkeypatch.setattr(renv, "_graphql", _fake)
+    rc = renv.run_set({"KILL_SWITCH": "true", "LIVE_ENABLED": "true"}, redeploy=False)
+    out = capsys.readouterr()
+    assert rc == 1
+    assert "set KILL_SWITCH=true" in out.out          # the good one still applied
+    assert "1/2 variables set" in out.out
+    assert "FAILED LIVE_ENABLED" in out.err
 
 
 def test_ops_runner_dispatches_env(tmp_path, monkeypatch):
