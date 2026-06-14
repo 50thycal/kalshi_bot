@@ -9,6 +9,8 @@ ops/request.json shapes:
   {"type": "logs", "limit": 200, "filter": "", "deployment_id": ""}
   {"type": "db",   "sql": "select ...", "max_rows": 200}
   {"type": "script", "name": "weather_model_check", "args": ["--sigma", "1.5"]}
+  {"type": "env"}                                       # read allowlisted Railway env vars
+  {"type": "env", "set": {"KILL_SWITCH": "false"}}      # set allowlisted vars + redeploy
   {"type": "noop"}   # placeholder; do nothing
 
 Reuses scripts/railway_logs.py and scripts/db_query.py by setting the env vars
@@ -81,6 +83,13 @@ def main() -> int:
         import db_query
 
         return db_query.main()
+
+    if rtype == "env":
+        import railway_env
+
+        if req.get("set"):
+            return railway_env.run_set(dict(req["set"]), redeploy=req.get("redeploy", True))
+        return railway_env.run_get()
 
     if rtype == "script":
         name = (req.get("name") or "").strip()
