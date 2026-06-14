@@ -198,6 +198,33 @@ closed-market"). Both were wrong. What the evidence actually shows:
   bucket-close API form. Worker disarmed to the safe baseline (BOT_MODE=weather, KILL_SWITCH=true,
   LIVE_ENABLED=false); the open LAX position (~$0.80) holds to settlement.
 
+### Order-group investigation — DISPROVEN; bucket==threshold structurally (read-only probe)
+Added `scripts/kalshi_market_probe.py` (read-only, public Kalshi market-data, browser UA to
+clear Cloudflare — no auth, no orders) and compared the LAX bucket that REJECTED closes
+(`KXHIGHLAX-26JUN14-B72.5`) against the DEN threshold that ACCEPTED a buy-NO close
+(`KXHIGHDEN-26JUN14-T69`). They are structurally identical for order purposes:
+`market_type=binary`, `can_close_early=true`, `fractional_trading_enabled=true`,
+`price_level_structure=linear_cent`, `price_ranges` step `0.01`, `response_price_units=usd_cent`,
+`notional_value=$1`. The only diffs are economically irrelevant to orders (`strike_type`
+between vs greater; `settlement_timer` 1800 vs 300). There is **no `order_group` field** on
+markets or events, so order-groups are not involved.
+- **Decisive:** the DEN market that closed fine is ALSO in a `mutually_exclusive=true` event —
+  identical to the LAX bucket. So "mutually-exclusive bucket can't be closed" is FALSE; mutual
+  exclusivity does not block closing. Buckets are closeable in principle.
+- **So the LAX close rejections were not structural.** Two concrete culprits from the payload +
+  spec evidence: (1) the sell-YES *dollar* attempts omitted the spec-required `type` field
+  (`count_fp`/`yes_price_dollars` with no `type` → invalid_parameters); (2) every market is
+  `fractional_trading_enabled` (sizes/OI come back as `*_fp`, prices as `*_dollars`), so the modern
+  order path likely wants the fractional fields TOGETHER (`count_fp` + `*_price_dollars` +
+  `type:"limit"`), not a half-integer/half-dollar mix. The one residual puzzle is the LAX buy-NO
+  integer `no_price:30` (type=limit) rejection — same format that FILLED on DEN-T69 — which has no
+  structural cause and is most likely a transient state/liquidity/balance edge at that instant.
+- **Open spec question:** the authoritative `CreateOrderRequest` (official OpenAPI client) confirms
+  `type` is required for limit orders, `Cent` = integer cents, and selling the held side is the
+  documented close; docs.kalshi.com is Cloudflare-403 to WebFetch but GitHub-raw spec/model files
+  are readable. Next definitive step is either capturing the app's real Slide-to-Sell request, or
+  aligning the close to the full fractional format and re-testing once on a bucket.
+
 ## Exit & sizing studies (live settled trades)
 
 ### Inverse view — rank by BACKFILL, check live (the trustworthy direction)
