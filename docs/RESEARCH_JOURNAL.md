@@ -125,6 +125,29 @@ the CHI rejections were validation/market-state, not a wrong method. So the fix 
 - Config: `live_exit_slippage_cents` (0), `live_exit_use_market_fallback` (false),
   `live_exit_max_attempts` (3). 11 new exit tests. Still inert until tp_sl mode + live switches on.
 
+### Exit verification #2 — hardening WORKS; root cause = bucket-market closes rejected
+A live `tp_sl` round trip confirmed the hardened mechanics: re-attempts (`exit:...:2`, `:3`),
+price escalation, **409 order_already_exists treated as success**, full error body captured,
+bounded attempts. But the **close still fails on weather bucket markets**, and now we know why
+the error body is uninformative: Kalshi returns a GENERIC `{"code":"invalid_parameters",
+"message":"invalid parameters"}` with **no field detail** — even fully logged.
+
+**The empirical pattern across all live tests is the real RCA:** *closing* a weather range-bucket
+market (`...-B##.#` tickers) via API limit order is rejected `invalid_parameters` in BOTH
+directions — `action=sell/side=yes` (test #1) AND `action=buy/side=no` (tests #2/#3) — while
+*buying YES to open* the same bucket works fine, and the one THRESHOLD market (`...-T##`,
+DEN-T69) accepted a buy-NO close. So it's specifically *closing the mutually-exclusive bucket
+markets* that Kalshi rejects; the close method/code is not the problem.
+
+**Implication:** live early-exit (TP/SL/break-even) is NOT viable on the weather bucket markets
+with current knowledge (Kalshi's error gives no specifics; docs are 403-blocked). The reliable
+path for the weather books is **hold-to-settlement** (the validated strategy — needs no closes).
+Open question for later: try a market order, or ask Kalshi support, for the bucket-close param.
+
+Ops note: the Railway env API had transient read-timeouts during cleanup; the timed-out writes
+still landed (verified BOT_MODE=weather, KILL_SWITCH=true). Minor follow-up: mirror_entry should
+also treat 409 as success (benign — Kalshi dedups on client_order_id). Baseline fully restored.
+
 ## Exit & sizing studies (live settled trades)
 
 ### Inverse view — rank by BACKFILL, check live (the trustworthy direction)
