@@ -171,6 +171,21 @@ class Settings(BaseSettings):
     weather_backfill_markets_per_cycle: int = 40
     weather_backfill_period_minutes: int = 60  # candle granularity: 1, 60 or 1440
 
+    # --- Live real-money execution (ALL default OFF; the layer is inert until an operator
+    # flips BOT_MODE=live + KILL_SWITCH=false + LIVE_ENABLED=true AND lists a strategy). The
+    # client also self-guards place_order on mode+kill_switch, so this is defense in depth.
+    live_enabled: bool = False
+    live_strategies: str = ""               # allowlist of strategy prefixes; empty = inert
+    live_entry_style: str = "marketable"    # "marketable" (limit @ ask) | "passive" (rest below)
+    live_passive_offset_cents: int = 2      # passive: rest this many cents below the ask
+    live_order_timeout_seconds: int = 600   # cancel an unfilled passive order after this long
+    live_max_order_dollars: float = 5.0     # per-order dollar cap -> qty = floor(cap / price)
+    live_exit_mode: str = "settlement"      # "settlement" (hold) | "tp_sl" (TP/SL/break-even)
+    live_take_profit_cents: int | None = None
+    live_stop_loss_cents: int | None = None
+    live_break_even_arm_cents: int | None = None
+    live_kill_on_daily_loss: bool = True    # self-trip entries when realized_today <= -max_daily_loss
+
     @field_validator("paper_momentum_direction", mode="before")
     @classmethod
     def _coerce_momentum_direction(cls, v: object) -> str:
@@ -179,7 +194,11 @@ class Settings(BaseSettings):
         v = str(v).strip().lower()
         return v if v in ("momentum", "reversion") else "momentum"
 
-    @field_validator("paper_take_profit_cents", "paper_stop_loss_cents", mode="before")
+    @field_validator(
+        "paper_take_profit_cents", "paper_stop_loss_cents",
+        "live_take_profit_cents", "live_stop_loss_cents", "live_break_even_arm_cents",
+        mode="before",
+    )
     @classmethod
     def _optional_cents(cls, v: object) -> int | None:
         if v is None or (isinstance(v, str) and not v.strip()):
@@ -188,6 +207,22 @@ class Settings(BaseSettings):
             return int(v)
         except (TypeError, ValueError):
             return None
+
+    @field_validator("live_entry_style", mode="before")
+    @classmethod
+    def _coerce_live_entry_style(cls, v: object) -> str:
+        if v is None:
+            return "marketable"
+        v = str(v).strip().lower()
+        return v if v in ("marketable", "passive") else "marketable"
+
+    @field_validator("live_exit_mode", mode="before")
+    @classmethod
+    def _coerce_live_exit_mode(cls, v: object) -> str:
+        if v is None:
+            return "settlement"
+        v = str(v).strip().lower()
+        return v if v in ("settlement", "tp_sl") else "settlement"
 
     @field_validator("bot_mode", mode="before")
     @classmethod
@@ -268,6 +303,12 @@ class Settings(BaseSettings):
         return [p.strip() for p in self.weather_ensemble_models.split(",") if p.strip()]
 
     @property
+    def live_strategy_list(self) -> list[str]:
+        """Allowlist of strategy prefixes permitted to place real orders. Book-agnostic:
+        no whitelist filter — empty means nothing trades live."""
+        return [s.strip() for s in self.live_strategies.split(",") if s.strip()]
+
+    @property
     def weather_pm_city_list(self) -> list[str]:
         return [p.strip().upper() for p in self.weather_pm_cities.split(",") if p.strip()]
 
@@ -331,6 +372,11 @@ class Settings(BaseSettings):
             "weather_dist_enabled": self.weather_dist_enabled,
             "weather_dist_sigma": self.weather_dist_sigma,
             "weather_dist_min_edge_cents": self.weather_dist_min_edge_cents,
+            "live_enabled": self.live_enabled,
+            "live_strategies": self.live_strategy_list,
+            "live_entry_style": self.live_entry_style,
+            "live_exit_mode": self.live_exit_mode,
+            "live_max_order_dollars": self.live_max_order_dollars,
             "api_key_id_present": bool(self.kalshi_api_key_id),
             "private_key_present": bool(self.private_key_pem),
         }

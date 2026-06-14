@@ -26,6 +26,7 @@ from zoneinfo import ZoneInfo
 
 from .. import repository as repo
 from ..config import Settings
+from ..kalshi.errors import AuthError
 from ..paper.engine import kalshi_fee
 from ..scanner.metrics import (
     compute_metrics,
@@ -130,12 +131,16 @@ class WeatherTracker:
         forecast: NwsForecastClient | None,
         ensemble: OpenMeteoEnsembleClient | None = None,
         polymarket: PolymarketClient | None = None,
+        live_executor=None,
     ):
         self.client = client
         self.settings = settings
         self.forecast = forecast
         self.ensemble = ensemble
         self.polymarket = polymarket
+        self.live_executor = live_executor
+        # Set by the live cycle before run_once so mirror_entry can pass it to risk.evaluate.
+        self._account_state: dict | None = None
 
     def _series_for(self, city: City, kind: str) -> str | None:
         if kind == "high":
@@ -717,3 +722,17 @@ class WeatherTracker:
         )
         summary.opened += 1
         summary.per_window[strategy] = summary.per_window.get(strategy, 0) + 1
+
+        # Mirror the entry into a real order for allowlisted strategies (inert by default).
+        # Self-guarded; live failures never roll back the paper record above.
+        if self.live_executor is not None:
+            try:
+                self.live_executor.mirror_entry(
+                    session, strategy=strategy, event_ticker=event_ticker, ticker=ticker,
+                    side="yes", action="buy", metrics=metrics,
+                    model_probability=model_probability, account_state=self._account_state,
+                )
+            except AuthError:
+                raise
+            except Exception:  # noqa: BLE001 — paper record stays intact
+                logger.exception("live mirror_entry failed (paper unaffected)")

@@ -793,3 +793,221 @@ def latest_polymarket_snapshot_at(session, city: str, kind: str, target_date: st
             m.PolymarketSnapshot.target_date == target_date,
         )
     )
+
+
+# --- live execution: orders / fills / positions ------------------------------------
+# Order status lifecycle. COMMITTED = a real attempt that blocks a duplicate (event,strategy)
+# entry. NON_TERMINAL = still in flight, reconcile/recover must resolve it. Excluded from the
+# entry-dedup: "not_landed" (never reached the exchange -> may retry) and "canceled".
+LIVE_COMMITTED_STATUSES = (
+    "pending", "unknown", "submitted", "resting", "partial", "filled", "rejected",
+)
+LIVE_NONTERMINAL_STATUSES = ("pending", "unknown", "submitted", "resting", "partial")
+
+
+def create_live_order(
+    session,
+    *,
+    signal_id: int | None,
+    ticker: str,
+    event_ticker: str | None,
+    strategy: str,
+    side: str,
+    action: str,
+    limit_price: int | None,
+    quantity: int,
+    status: str,
+    client_order_id: str,
+    raw_order_json: Any | None = None,
+) -> m.LiveOrder:
+    row = m.LiveOrder(
+        signal_id=signal_id,
+        kalshi_order_id=None,
+        client_order_id=client_order_id,
+        market_ticker=ticker,
+        event_ticker=event_ticker,
+        strategy=strategy,
+        created_at=_now(),
+        side=side,
+        action=action,
+        limit_price=limit_price,
+        quantity=quantity,
+        status=status,
+        raw_order_json=_safe_json(raw_order_json),
+    )
+    session.add(row)
+    session.flush()
+    return row
+
+
+def update_live_order_status(
+    session, order: m.LiveOrder, *, status: str,
+    kalshi_order_id: str | None = None, cancel_reason: str | None = None, raw: Any | None = None,
+) -> None:
+    order.status = status
+    if kalshi_order_id is not None:
+        order.kalshi_order_id = kalshi_order_id
+    if cancel_reason is not None:
+        order.cancel_reason = cancel_reason[:300]
+    if raw is not None:
+        order.raw_order_json = _safe_json(raw)
+    session.add(order)
+    session.flush()
+
+
+def live_order_exists(session, event_ticker: str, strategy: str) -> bool:
+    """A committed live order already exists for this (event, strategy) — entry dedup."""
+    return session.scalar(
+        select(func.count()).select_from(m.LiveOrder).where(
+            m.LiveOrder.event_ticker == event_ticker,
+            m.LiveOrder.strategy == strategy,
+            m.LiveOrder.status.in_(LIVE_COMMITTED_STATUSES),
+            m.LiveOrder.action == "buy",
+        )
+    ) > 0
+
+
+def live_exit_order_exists(session, ticker: str, strategy: str) -> bool:
+    """A sell/exit order already placed for this position — exit dedup."""
+    return session.scalar(
+        select(func.count()).select_from(m.LiveOrder).where(
+            m.LiveOrder.market_ticker == ticker,
+            m.LiveOrder.strategy == strategy,
+            m.LiveOrder.action == "sell",
+            m.LiveOrder.status.in_(LIVE_COMMITTED_STATUSES),
+        )
+    ) > 0
+
+
+def live_open_order_exists(session, ticker: str) -> bool:
+    """Any in-flight live order on this market (for the risk existing_open_order gate)."""
+    return session.scalar(
+        select(func.count()).select_from(m.LiveOrder).where(
+            m.LiveOrder.market_ticker == ticker,
+            m.LiveOrder.status.in_(LIVE_NONTERMINAL_STATUSES),
+        )
+    ) > 0
+
+
+def get_live_order_by_client_id(session, client_order_id: str) -> m.LiveOrder | None:
+    return session.scalar(
+        select(m.LiveOrder).where(m.LiveOrder.client_order_id == client_order_id)
+        .order_by(m.LiveOrder.id.desc())
+    )
+
+
+def get_nonterminal_live_orders(session) -> list[m.LiveOrder]:
+    return list(session.scalars(
+        select(m.LiveOrder).where(m.LiveOrder.status.in_(LIVE_NONTERMINAL_STATUSES))
+    ).all())
+
+
+def fill_exists(session, kalshi_fill_id: str) -> bool:
+    return session.scalar(
+        select(func.count()).select_from(m.Fill).where(m.Fill.kalshi_fill_id == kalshi_fill_id)
+    ) > 0
+
+
+def insert_fill(
+    session, *, kalshi_fill_id: str | None, kalshi_order_id: str | None, ticker: str,
+    filled_at: datetime | None, side: str | None, action: str | None,
+    price: int | None, quantity: int | None, fee: float | None, raw_fill_json: Any | None = None,
+) -> m.Fill:
+    row = m.Fill(
+        kalshi_fill_id=kalshi_fill_id,
+        kalshi_order_id=kalshi_order_id,
+        market_ticker=ticker,
+        filled_at=filled_at or _now(),
+        side=side,
+        action=action,
+        price=price,
+        quantity=quantity,
+        fee=fee,
+        raw_fill_json=_safe_json(raw_fill_json),
+    )
+    session.add(row)
+    session.flush()
+    return row
+
+
+def fills_for_ticker(session, ticker: str) -> list[m.Fill]:
+    return list(session.scalars(
+        select(m.Fill).where(m.Fill.market_ticker == ticker).order_by(m.Fill.filled_at)
+    ).all())
+
+
+def insert_position_snapshot(
+    session, *, ticker: str, side: str | None, quantity: int | None, avg_price: float | None,
+    market_exposure: float | None = None, realized_pnl: float | None = None,
+    unrealized_pnl: float | None = None, raw_json: Any | None = None,
+) -> m.Position:
+    row = m.Position(
+        market_ticker=ticker,
+        captured_at=_now(),
+        side=side,
+        quantity=quantity,
+        avg_price=avg_price,
+        market_exposure=market_exposure,
+        realized_pnl=realized_pnl,
+        unrealized_pnl=unrealized_pnl,
+        raw_json=_safe_json(raw_json),
+    )
+    session.add(row)
+    session.flush()
+    return row
+
+
+def latest_position_snapshot(session, ticker: str) -> m.Position | None:
+    return session.scalar(
+        select(m.Position).where(m.Position.market_ticker == ticker)
+        .order_by(m.Position.captured_at.desc())
+    )
+
+
+def open_live_positions(session) -> list[tuple]:
+    """Open live positions to manage exits for: filled/partial BUY orders that don't yet have
+    a committed SELL order. Returns (ticker, strategy, entry_price_cents, entry_at, qty)."""
+    rows = session.scalars(
+        select(m.LiveOrder).where(
+            m.LiveOrder.action == "buy",
+            m.LiveOrder.status.in_(("filled", "partial")),
+        )
+    ).all()
+    out: list[tuple] = []
+    for row in rows:
+        if live_exit_order_exists(session, row.market_ticker, row.strategy or ""):
+            continue
+        out.append((row.market_ticker, row.strategy or "", int(row.limit_price or 0),
+                    row.created_at, int(row.quantity or 0)))
+    return out
+
+
+def bucket_bid_path(session, ticker: str, *, after: datetime | None = None) -> list[float]:
+    """The recorded yes-bid path for a bucket since `after` (for live exit evaluation),
+    mirroring how the offline exit sweep reconstructs paths from weather_bucket_snapshots."""
+    stmt = select(m.WeatherBucketSnapshot.yes_bid_cents).where(
+        m.WeatherBucketSnapshot.market_ticker == ticker,
+        m.WeatherBucketSnapshot.yes_bid_cents.is_not(None),
+    )
+    if after is not None:
+        stmt = stmt.where(m.WeatherBucketSnapshot.captured_at > after)
+    stmt = stmt.order_by(m.WeatherBucketSnapshot.captured_at)
+    return [float(b) for b in session.scalars(stmt).all() if b is not None]
+
+
+def live_realized_pnl_today(session) -> float:
+    """Realized P&L (dollars) since UTC midnight — input to the max_daily_loss circuit
+    breaker. Kalshi reports realized_pnl cumulatively per market, so we take the LATEST
+    snapshot per ticker today and sum across markets (never sum repeated snapshots)."""
+    midnight = _now().replace(hour=0, minute=0, second=0, microsecond=0)
+    rows = session.scalars(
+        select(m.Position).where(
+            m.Position.captured_at >= midnight,
+            m.Position.realized_pnl.is_not(None),
+        ).order_by(m.Position.captured_at.desc())
+    ).all()
+    latest: dict[str, float] = {}
+    for row in rows:
+        if row.market_ticker not in latest:
+            latest[row.market_ticker] = float(row.realized_pnl or 0.0)
+    return sum(latest.values())

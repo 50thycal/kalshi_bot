@@ -24,6 +24,7 @@ from .config import Settings, get_settings
 from .db import create_all, init_engine, session_scope
 from .kalshi.client import KalshiClient
 from .kalshi.errors import AuthError
+from .live.executor import LiveExecutor
 from .logging_config import configure_logging, log_event
 from .paper.engine import PaperCycleSummary, PaperTradingEngine
 from .risk.manager import RiskManager
@@ -86,26 +87,48 @@ def run() -> int:
 
     scanner = MarketScanner(client, settings, RiskManager(settings))
 
-    # Weather mode runs its own focused pipeline instead of the broad scanner.
+    # Weather AND live modes both run the focused weather pipeline; live adds a real-money
+    # executor that mirrors allowlisted paper entries into orders (inert until configured).
+    live = settings.bot_mode == "live"
     weather = settings.bot_mode == "weather"
-    forecast_client = NwsForecastClient(settings.nws_user_agent) if weather else None
+    weather_like = weather or live
+    forecast_client = NwsForecastClient(settings.nws_user_agent) if weather_like else None
     ensemble_client = (
-        OpenMeteoEnsembleClient() if weather and settings.weather_ensemble_enabled else None
+        OpenMeteoEnsembleClient() if weather_like and settings.weather_ensemble_enabled else None
     )
     polymarket_client = (
-        PolymarketClient() if weather and settings.weather_polymarket_enabled else None
+        PolymarketClient() if weather_like and settings.weather_polymarket_enabled else None
     )
-    weather_engine = PaperTradingEngine(client, settings, scanner.risk) if weather else None
+    weather_engine = PaperTradingEngine(client, settings, scanner.risk) if weather_like else None
+    live_executor = LiveExecutor(client, settings, scanner.risk) if live else None
     weather_tracker = (
-        WeatherTracker(client, settings, forecast_client, ensemble_client, polymarket_client)
-        if weather else None
+        WeatherTracker(client, settings, forecast_client, ensemble_client, polymarket_client,
+                       live_executor=live_executor)
+        if weather_like else None
     )
     weather_backfill = (
         WeatherBackfill(client, settings)
-        if weather and settings.weather_backfill_enabled
+        if weather_like and settings.weather_backfill_enabled
         else None
     )
-    if weather and settings.paper_abandon_foreign_on_start:
+
+    # Live mode is stricter: a real balance MUST be available (fail-closed, refuse to start).
+    if live:
+        try:
+            bal = client.get_balance()
+            if bal is None or bal.get("balance") is None:
+                logger.error("live mode requires an available balance; refusing to start")
+                return 1
+        except AuthError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.error("live balance check failed; refusing to start",
+                         extra={"extra_fields": {"error": str(exc)}})
+            return 1
+        with session_scope() as session:
+            live_executor.recover(session)
+
+    if weather_like and settings.paper_abandon_foreign_on_start:
         try:
             with session_scope() as session:
                 n = repo.abandon_open_paper_trades(session, keep_prefixes=("weather",))
@@ -120,7 +143,12 @@ def run() -> int:
     try:
         while True:
             try:
-                if weather:
+                if live:
+                    _run_live_cycle(
+                        settings, client, weather_engine, weather_tracker, live_executor,
+                        weather_backfill,
+                    )
+                elif weather:
                     _run_weather_cycle(
                         settings, client, weather_engine, weather_tracker, weather_backfill
                     )
@@ -319,6 +347,61 @@ def _run_weather_cycle(settings, client, engine, tracker, backfill=None) -> None
                 pending=bsum.pending,
             )
         except Exception:  # noqa: BLE001 — history backfill must never stop the books
+            logger.exception("weather backfill cycle failed")
+
+
+def _fetch_account_state(client) -> dict:
+    """Build {cash_balance: dollars|None}; AuthError propagates (hard-fail)."""
+    try:
+        bal = client.get_balance()
+        cents = bal.get("balance") if isinstance(bal, dict) else None
+        return {"cash_balance": (cents / 100.0) if cents is not None else None}
+    except AuthError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("live balance fetch failed; risk treats balance as unavailable",
+                       extra={"extra_fields": {"error": str(exc)}})
+        return {"cash_balance": None}
+
+
+def _run_live_cycle(settings, client, engine, tracker, executor, backfill=None) -> None:
+    """Live cycle: reconcile Kalshi truth, manage exits, settle/mark paper, then run the
+    tracker (which mirrors allowlisted entries into real orders)."""
+    status = client.get_exchange_status()  # AuthError propagates -> hard fail
+    log_event(logger, logging.INFO, "exchange status",
+              **{k: status.get(k) for k in ("exchange_active", "trading_active") if k in status})
+    account_state = _fetch_account_state(client)
+    executor.reset_summary()
+    tracker._account_state = account_state
+    with session_scope() as session:
+        run_row = repo.start_bot_run(session, settings.bot_mode)
+        try:
+            executor.reconcile(session, account_state)  # Kalshi truth first
+            executor.manage_exits(session)
+            engine.manage_open_positions(session)       # paper settle/mark (shadow record)
+            summary = tracker.run_once(session)         # mirrors entries for allowlisted books
+            repo.finish_bot_run(
+                session, run_row, status="completed",
+                markets_scanned=summary.events_seen, candidates_found=summary.tracked,
+            )
+            _log_weather(summary)
+            s = executor.summary
+            log_event(logger, logging.INFO, "live cycle",
+                      placed=s.placed, risk_blocked=s.risk_blocked, rejected=s.rejected,
+                      new_fills=s.new_fills, positions=s.positions_snapshot,
+                      timed_out=s.timed_out_canceled, exits_placed=s.exits_placed,
+                      realized_today=s.realized_today)
+        except Exception as exc:
+            repo.finish_bot_run(
+                session, run_row, status="error", markets_scanned=0, candidates_found=0,
+                error_message=str(exc)[:500],
+            )
+            raise
+    if backfill is not None:
+        try:
+            with session_scope() as bf_session:
+                backfill.run_once(bf_session)
+        except Exception:  # noqa: BLE001
             logger.exception("weather backfill cycle failed")
 
 
