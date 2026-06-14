@@ -252,6 +252,40 @@ weather books are hold-to-settlement (no closes needed) and live-tradeable on th
 early-exit (TP/SL) on bucket markets stays blocked. Reusable read-only `kalshi_market_probe.py`
 added for future structural checks. Worker disarmed to baseline; entry-window override reverted.
 
+### EXHAUSTIVE close sweep — EVERY API order shape is rejected on bucket markets (conclusive)
+A close-format discovery ladder (rejected orders are harmless no-ops that leave the position open,
+so one deploy cycles many shapes) tried every order form the Kalshi API supports against a live,
+OPEN LAX range-bucket position. **All rejected `400 invalid_parameters`:**
+
+| # | close order shape | result |
+|---|---|---|
+| 1 | sell-yes limit, integer `yes_price` | ❌ |
+| 2 | sell-yes limit, fractional `count_fp`+`yes_price_dollars` | ❌ |
+| 3 | sell-yes limit + `sell_position_floor:0` | ❌ |
+| 4 | sell-yes limit + `reduce_only:true` | ❌ |
+| 5 | sell-yes **market** + `sell_position_floor:0` | ❌ |
+| 6 | buy-no limit, integer `no_price` | ❌ |
+| 7 | buy-no **market** + `buy_max_cost` | ❌ |
+
+Meanwhile **buys to OPEN the same bucket fill fine**, and a **buy-no close fills on a THRESHOLD
+market** (`-T##`). So this is not our order format, not a missing field, not order-groups, not
+market structure (the bucket and threshold markets are byte-for-byte identical in the public
+objects: `binary`, `mutually_exclusive`, `can_close_early`, `fractional_trading_enabled`,
+`linear_cent`). **Conclusion: the Kalshi public order API does not accept ANY close/reduce order
+on these range-bucket weather markets from this account, by any derivable shape.** The app closes
+them (user's own app close appeared in our fills), so an accepted path exists via the app's
+(privileged/internal) flow that the documented REST order endpoint does not expose to us.
+
+**Decision/operational impact:** live early-exit (TP/SL/break-even) on the weather BUCKET books is
+**not achievable via the API** with current knowledge — this is a Kalshi-side restriction, not a bot
+bug. The validated, edge-bearing books are **hold-to-settlement** (need no closes) and are fully
+live-tradeable. Everything ELSE in the live path is proven on real money: entry, marketable fill,
+409→filled idempotency, reconcile (fills/positions/settlements), settlement P&L, the daily-loss
+breaker, and exit *firing* (retry/escalation/snapshot-as-truth/bounded attempts). To unblock live
+bucket exits, the remaining avenues are: capture the app's actual close request, or ask Kalshi
+support why a spec-correct close on a range market returns `invalid_parameters`. The
+`_exit_candidate` ladder + `kalshi_market_probe.py` remain in the tree for when a format is found.
+
 ## Exit & sizing studies (live settled trades)
 
 ### Inverse view — rank by BACKFILL, check live (the trustworthy direction)
