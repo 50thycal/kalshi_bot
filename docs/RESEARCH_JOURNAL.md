@@ -148,6 +148,21 @@ Ops note: the Railway env API had transient read-timeouts during cleanup; the ti
 still landed (verified BOT_MODE=weather, KILL_SWITCH=true). Minor follow-up: mirror_entry should
 also treat 409 as success (benign — Kalshi dedups on client_order_id). Baseline fully restored.
 
+### The close was FIXABLE — wrong format, not the market (app screenshot proved it)
+A screenshot of the Kalshi app cashing out a *bucket* position via "Slide to Sell" disproved the
+"bucket markets can't be closed" theory. The working **pykalshi** SDK revealed the real issue: it
+sends `action="sell", side="yes"` with **`count_fp` + `yes_price_dollars`** (strings) and **no
+`type`/`no_price`** fields. Our close used integer `no_price`/`yes_price` + `type:"limit"`, which
+Kalshi rejected for sells (generic `invalid_parameters`). Buys tolerated the integer format (entries
+filled); sells did not — hence the asymmetry.
+- **Fix:** `_place_exit` now SELLS the YES position like the app does — `action="sell", side="yes",
+  count_fp="N.00", yes_price_dollars="0.NN"` at the bid (escalated re-attempts sell lower to force a
+  fill; market fallback = `type="market"` sell). All exit tests updated to the new shape; green.
+- **Live verification blocked:** Railway's env API had repeated read-timeouts, so the live tp_sl
+  test couldn't be reliably configured (writes land but the config sequence kept getting cut). The
+  fix is well-grounded (the app + a working SDK use exactly this format) and unit-tested, but a clean
+  live confirmation is still pending. Worker left disarmed (weather, kill switch on).
+
 ## Exit & sizing studies (live settled trades)
 
 ### Inverse view — rank by BACKFILL, check live (the trustworthy direction)
