@@ -225,6 +225,33 @@ markets or events, so order-groups are not involved.
   are readable. Next definitive step is either capturing the app's real Slide-to-Sell request, or
   aligning the close to the full fractional format and re-testing once on a bucket.
 
+### Fractional sell-YES retest — REJECTED too; all spec-derivable close forms exhausted
+A fresh $1 round trip (h11 LAX favorite) cleanly tested the fractional sell-YES close (the app's
+field shape WITH the spec-required `type`): `{action:sell, side:yes, type:limit, count_fp:"1.00",
+yes_price_dollars:"0.XX"}`. The entry filled (and the entry-409→filled handling worked), then the
+close fired as `exit:weather_fav_h11:...:1` and was **REJECTED `400 invalid_parameters`** — same as
+every other form. So the fractional-format hypothesis is also wrong.
+
+**Definitive close matrix on the weather RANGE-BUCKET markets (`-B##.#`, market OPEN):**
+| close form | result |
+|---|---|
+| sell-YES integer (`type:limit, yes_price`) | REJECTED invalid_parameters |
+| sell-YES fractional (`type:limit, count_fp, yes_price_dollars`) | REJECTED invalid_parameters |
+| buy-NO integer (`type:limit, no_price`) | REJECTED invalid_parameters |
+| buy-NO integer on a THRESHOLD market (`-T##`) | FILLED |
+
+Every order matches Kalshi's published `CreateOrderRequest` spec, and the bucket market is
+structurally identical to the threshold market that closes (same `market_type=binary`,
+`mutually_exclusive`, `can_close_early`, `fractional_trading_enabled`, `linear_cent`). So the
+blocker is neither order format nor order-groups nor market structure that we can see. The Kalshi
+APP closes these buckets (user screenshot + the user's own app close of a LAX position, which
+appeared in our fills as trades the bot never makes), so an accepted form EXISTS — we simply cannot
+derive it from the spec/SDKs (generic error, 403-blocked docs). **The only remaining definitive path
+is capturing the app's actual Slide-to-Sell request** (web devtools). Until then: the validated
+weather books are hold-to-settlement (no closes needed) and live-tradeable on that basis; live
+early-exit (TP/SL) on bucket markets stays blocked. Reusable read-only `kalshi_market_probe.py`
+added for future structural checks. Worker disarmed to baseline; entry-window override reverted.
+
 ## Exit & sizing studies (live settled trades)
 
 ### Inverse view — rank by BACKFILL, check live (the trustworthy direction)
