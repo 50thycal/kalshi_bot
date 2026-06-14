@@ -54,6 +54,19 @@ Built and shipped (`weather_dist` / `weather_low_dist`). How it works:
 
 ## Exit & sizing studies (live settled trades)
 
+### Best-strategy breakdown (live settled, by city × window × book)
+`weather_pnl.py --best`. Robust picks (n ≥ 15, ranked by P&L/trade):
+**low fav h20 = +12.7¢ (n19, 89%)** — the standout; then low nws/cal h14 +7.7¢ (n15),
+high fav h8 +6.1¢ (n18, 100%), low fav h14 +5.7¢ (n18). Finer city cells are all n≈4 —
+noise, not picks.
+
+**City pattern worth noting (n 7–9):** the HIGH books are net negative *pooled*
+(fav −2.2¢, nws −1.3¢) but strongly positive in **stable-climate cities** — high nws
+MIA +33¢ (n9, 100%), cal MIA +28.6¢, cal CHI +25.9¢, fav LAX +22.4¢. Miami/LA highs are
+low-variance (subtropical / marine layer) so forecasts nail them; the high-book edge is
+**city-dependent**, echoing the #3 city×window result. Candidate: gate the high books to
+stable cities (MIA/LAX/CHI), drop the volatile ones — needs more n before acting.
+
 ### Exit dynamics on the profitable (low) books — HOLD-TO-SETTLEMENT WINS
 Replayed 158 settled low-book trades (`low_fav/nws/cal/pm` + `high_pm`) through their
 recorded 15-min bid paths under a TP/SL grid, a **break-even stop** (arm at +gain,
