@@ -440,10 +440,10 @@ def test_exit_primary_sell_yes_close(settings):
         ex.manage_exits(session)
         assert len(client.placed) == 1
         o = client.placed[0]
-        # close = SELL the yes at the bid, mirroring the proven buy schema + sell_position_floor=0
+        # close ladder attempt 1 = sell-yes limit + reduce_only (discovery ladder)
         assert o["action"] == "sell" and o["side"] == "yes"
         assert o["yes_price"] == 60 and o["count"] == 1 and o["type"] == "limit"
-        assert o["sell_position_floor"] == 0 and "no_price" not in o
+        assert o["reduce_only"] is True and "no_price" not in o
         assert o["client_order_id"] == "exit:weather_low_fav_h20:T1:1"
         assert ex.summary.exits_placed == 1
         # the submitted (in-flight) exit blocks a duplicate this cycle
@@ -464,11 +464,12 @@ def test_exit_rejection_escalates_and_does_not_block(settings):
         ex.manage_exits(session)  # attempt 1 -> rejected (terminal, not in-flight)
         assert ex.summary.rejected == 1
         assert client.placed[0]["client_order_id"].endswith(":1")
-        ex.manage_exits(session)  # rejected didn't block -> attempt 2, escalated price
+        ex.manage_exits(session)  # rejected didn't block -> attempt 2 cycles to next candidate
         assert len(client.placed) == 2
         o2 = client.placed[1]
-        # escalated sell crosses deeper: bid 60 - 3 slippage = 57 cents
-        assert o2["client_order_id"].endswith(":2") and o2["yes_price"] == 57
+        # attempt 2 = next ladder candidate (market sell + floor); the rejected attempt 1 did not block
+        assert o2["client_order_id"].endswith(":2")
+        assert o2["type"] == "market" and o2["action"] == "sell" and o2["sell_position_floor"] == 0
 
 
 def test_exit_409_treated_as_success(settings):
