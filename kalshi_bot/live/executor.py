@@ -407,12 +407,14 @@ class LiveExecutor:
             return 2
         return 1
 
-    def _exit_sell_price(self, bid: int, level: int) -> int:
-        """Limit price (cents) to SELL the YES position at. Base = the current bid; escalated
-        re-attempts sell LOWER (cross deeper) to force a fill, like the app's cash-out."""
-        px = int(bid)
+    def _exit_no_price(self, bid: int, level: int) -> int:
+        """Limit price (cents) to BUY NO at, to net-close the YES position (Kalshi's canonical
+        close: buying the opposite side credits $1 against the held YES). Base crosses the book
+        at no_ask = 100 - yes_bid so it fills immediately, like the app's cash-out; escalated
+        re-attempts pay UP (cross deeper) to force the fill."""
+        px = 100 - int(bid)
         if level >= 1:
-            px -= self.settings.live_exit_slippage_cents
+            px += self.settings.live_exit_slippage_cents
         return max(1, min(99, px))
 
     def _remaining_open_qty(self, session, ticker: str, entry_qty: int) -> int:
@@ -424,7 +426,7 @@ class LiveExecutor:
         if snap is not None and _aware(snap.captured_at) >= midnight:
             return max(0, abs(int(snap.quantity or 0)))
         closed = sum(int(f.quantity or 0) for f in repo.fills_for_ticker(session, ticker)
-                     if f.side == "yes" and f.action == "sell")
+                     if f.side == "no" and f.action == "buy")
         return max(0, int(entry_qty) - closed)
 
     def _log_exit_abandoned(self, ticker, strategy, remaining, attempts) -> None:
@@ -438,27 +440,27 @@ class LiveExecutor:
                              "remaining": remaining, "attempts": attempts}})
 
     def _place_exit(self, session, ticker, strategy, bid, qty, kind, *, attempt, level) -> None:
-        # Close a YES position by SELLING it — exactly what the app's "Slide to Sell" does.
-        # Uses the proven Kalshi format (per the working pykalshi SDK): action="sell", side="yes",
-        # count_fp + yes_price_dollars (NOT integer no_price/yes_price + type, which Kalshi rejected
-        # for sells). Unique coid per attempt avoids self-409 on re-tries/escalation.
+        # Close a YES position by BUYING NO — Kalshi's canonical netting close (proven to fill
+        # on a live favorite: DEN-T69 buy-no@17 executed). A raw action="sell" yes order is
+        # rejected invalid_parameters even with the correct integer schema, so we never use it.
+        # Integer count/no_price + type=limit is the accepted entry schema, mirrored here.
+        # Unique coid per attempt avoids a self-409 on re-tries/escalation.
         coid = f"exit:{strategy}:{ticker}:{attempt}"
-        count_fp = f"{int(qty)}.00"
         use_market = level >= 2
         if use_market:
-            # Best-effort market sell (immediate cash-out); behind a default-off flag.
-            order = {"ticker": ticker, "action": "sell", "side": "yes",
-                     "count_fp": count_fp, "type": "market", "client_order_id": coid}
-            sell_px = None
+            # Best-effort market buy-NO (immediate cash-out); behind a default-off flag.
+            order = {"ticker": ticker, "action": "buy", "side": "no", "count": int(qty),
+                     "type": "market", "client_order_id": coid}
+            no_px = None
         else:
-            sell_px = self._exit_sell_price(bid, level)
-            order = {"ticker": ticker, "action": "sell", "side": "yes", "count_fp": count_fp,
-                     "yes_price_dollars": f"{sell_px / 100:.2f}", "client_order_id": coid}
+            no_px = self._exit_no_price(bid, level)
+            order = {"ticker": ticker, "action": "buy", "side": "no", "count": int(qty),
+                     "type": "limit", "no_price": no_px, "client_order_id": coid}
             if level >= 1:
                 self.summary.exits_escalated += 1
         row = repo.create_live_order(
             session, signal_id=None, ticker=ticker, event_ticker=None, strategy=strategy,
-            side="yes", action="sell", limit_price=sell_px, quantity=qty, status="pending",
+            side="no", action="buy", limit_price=no_px, quantity=qty, status="pending",
             client_order_id=coid, raw_order_json=order)
         try:
             resp = self.client.place_order(**order)
@@ -495,10 +497,10 @@ class LiveExecutor:
         koid = (resp or {}).get("order", {}).get("order_id") if isinstance(resp, dict) else None
         repo.update_live_order_status(session, row, status="submitted", kalshi_order_id=koid, raw=resp)
         self.summary.exits_placed += 1
-        logger.info("live exit order placed (sell-yes to close)", extra={"extra_fields": {
+        logger.info("live exit order placed (buy-no to close)", extra={"extra_fields": {
             "ticker": ticker, "strategy": strategy, "rule": kind,
             "order_type": "market" if level >= 2 else "limit",
-            "yes_price_dollars": order.get("yes_price_dollars"), "count": qty,
+            "no_price": order.get("no_price"), "count": qty,
             "attempt": attempt, "level": level}})
 
     def _current_bid(self, ticker: str) -> int | None:

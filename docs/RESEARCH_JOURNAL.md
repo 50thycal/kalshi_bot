@@ -163,6 +163,29 @@ filled); sells did not — hence the asymmetry.
   fix is well-grounded (the app + a working SDK use exactly this format) and unit-tested, but a clean
   live confirmation is still pending. Worker left disarmed (weather, kill switch on).
 
+### DEFINITIVE close RCA — buy-NO is the only accepted close; sell-YES is rejected (resolved)
+A clean live `tp_sl` test (LAX-B72.5, a favorite, ~11h to close so the market was OPEN) finally
+settled the question with full payload evidence from `live_orders`:
+- **sell-YES is rejected even with the textbook integer schema.** The 26JUN13 closes sent
+  `{side:yes, type:limit, count:1, action:sell, yes_price:68}` — the *correct* Kalshi limit-sell
+  shape — and Kalshi returned `400 invalid_parameters`. The later "app format"
+  (`count_fp`/`yes_price_dollars`, no `type`) was *also* rejected. So `action="sell"` is simply not
+  the API path here, regardless of format — the earlier "wrong format, sell-YES is the fix"
+  conclusion was WRONG.
+- **buy-NO with the integer schema FILLS on an open market.** DEN-T69
+  `{side:no, type:limit, count:1, action:buy, no_price:17}` executed. The CHI bucket buy-NO
+  rejections were **closed/illiquid market state, not format**: DEN's buy-NO at 13:46 filled; the
+  CHI buy-NOs ~1.5h later (near settlement) hit markets that had stopped trading → generic
+  `invalid_parameters`. The LAX favorite (market open) is the apples-to-apples case to DEN.
+- **Resolution:** reverted `_place_exit` to **buy-NO** (Kalshi's canonical netting close, the
+  original Phase-6 design), marketable at `no_price = 100 − yes_bid` (+slippage on escalation),
+  integer `count`/`type:"limit"`/`no_price` — mirroring the accepted entry-buy schema exactly.
+  This also rides on the two fixes that made the exit *fire* at all this round:
+  (1) entry `409 order_already_exists → submitted` (was mis-recorded `rejected`, corrupting the
+  position) and (2) `open_live_positions` driven by the **Kalshi position snapshot** (so a position
+  is managed even if its entry row is corrupted). All 4 tests green; live confirmation of the
+  buy-NO fill on LAX pending the next deployed cycle.
+
 ## Exit & sizing studies (live settled trades)
 
 ### Inverse view — rank by BACKFILL, check live (the trustworthy direction)
