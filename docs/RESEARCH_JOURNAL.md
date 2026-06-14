@@ -52,6 +52,33 @@ Built and shipped (`weather_dist` / `weather_low_dist`). How it works:
 
 ---
 
+## First real-money live test ($1, Jun 14) — buy path CONFIRMED; 2 parser bugs fixed
+
+Ran a tiny live round-trip via the env channel (relaxed spread + a fresh entry window to
+force entries on near-close low favorites). Outcome:
+
+- **The buy path works end-to-end on real money.** 3 BUY orders placed and FILLED on Kalshi
+  (DEN low @82¢, CHI @99¢, LAX @88¢, 1 contract each), with real `kalshi_order_id`s captured
+  and reconciled to `filled`. The env-channel control, place_order, fill reconciliation, and
+  the risk gate (it correctly blocked `SPREAD_TOO_WIDE` until relaxed) all validated live.
+- **Two reconciliation parser bugs — only real API data could reveal them — found & fixed:**
+  1. **Fills**: Kalshi sends `yes_price_dollars`/`no_price_dollars` (dollar strings),
+     `count_fp` (fixed-point), `fee_cost` (dollars) — not `yes_price`/`count`/`fee`. Fixed
+     (reuse `price_to_cents`/`_to_count`). Confirmed: DEN @82¢/qty1/$0.0104 fee.
+  2. **Positions**: fields are `position_fp` (signed FP), `market_exposure_dollars`,
+     `realized_pnl_dollars` — not `position`/`market_exposure`/`realized_pnl`. The old parser
+     left `realized_pnl` null, **silently disabling the daily-loss circuit breaker**. Fixed.
+- **Known remaining issue — SELL/exit orders rejected** (`invalid_parameters`, 400). The
+  exit-order param format is wrong for Kalshi. NOT needed for the validated books (they're
+  hold-to-settlement), but must be fixed before using live TP/SL/break-even exits. The sl=1
+  in the test was only a contrivance to force a round trip.
+- **Lesson:** the demo/shape probe caught the read shapes (orders/balance) but the fill/
+  position element fields could only be confirmed with a real fill. Always do a tiny live
+  buy-and-reconcile before trusting the parsers.
+
+Aftermath: kill switch back ON, config restored (spread 5, windows 20/14/8, exit settlement);
+3 tiny low-favorite positions (~$2.69) left to settle (also validates the settlement path).
+
 ## Exit & sizing studies (live settled trades)
 
 ### Inverse view — rank by BACKFILL, check live (the trustworthy direction)
