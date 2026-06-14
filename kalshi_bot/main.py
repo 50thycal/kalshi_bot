@@ -87,6 +87,11 @@ def run() -> int:
 
     scanner = MarketScanner(client, settings, RiskManager(settings))
 
+    # Read-only API shape probe (zero orders, zero money): logs the STRUCTURE of the live
+    # portfolio responses so the live reconciler's parsing can be confirmed before any order.
+    if settings.live_shape_probe:
+        _probe_api_shapes(client)
+
     # Weather AND live modes both run the focused weather pipeline; live adds a real-money
     # executor that mirrors allowlisted paper entries into orders (inert until configured).
     live = settings.bot_mode == "live"
@@ -348,6 +353,34 @@ def _run_weather_cycle(settings, client, engine, tracker, backfill=None) -> None
             )
         except Exception:  # noqa: BLE001 — history backfill must never stop the books
             logger.exception("weather backfill cycle failed")
+
+
+def _api_shape(obj, depth: int = 0):
+    """Structure of a response with VALUES redacted to their type — safe to log (no secrets,
+    balances or order ids leak; only the shape the parser keys off is shown)."""
+    if isinstance(obj, dict):
+        return {k: _api_shape(v, depth + 1) for k, v in obj.items()} if depth < 3 else "{...}"
+    if isinstance(obj, list):
+        return [_api_shape(obj[0], depth + 1)] if obj else []
+    return type(obj).__name__
+
+
+def _probe_api_shapes(client) -> None:
+    """Log the shape of each live portfolio read endpoint (read-only; no orders placed).
+    Confirms the container keys the reconciler parses: balance / orders / fills /
+    market_positions. Per-element field names only appear once there is real history."""
+    import json
+    for name, fn in (("balance", client.get_balance), ("orders", client.get_orders),
+                     ("fills", client.get_fills), ("positions", client.get_positions)):
+        try:
+            shape = _api_shape(fn())
+            log_event(logger, logging.INFO, "api shape probe", endpoint=name,
+                      shape=json.dumps(shape)[:600])
+        except AuthError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            log_event(logger, logging.WARNING, "api shape probe failed", endpoint=name,
+                      error=str(exc))
 
 
 def _fetch_account_state(client) -> dict:

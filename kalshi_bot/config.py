@@ -187,6 +187,7 @@ class Settings(BaseSettings):
     live_stop_loss_cents: int | None = None
     live_break_even_arm_cents: int | None = None
     live_kill_on_daily_loss: bool = True    # self-trip entries when realized_today <= -max_daily_loss
+    live_shape_probe: bool = False          # log live API response shapes once at startup (read-only)
 
     @field_validator("paper_momentum_direction", mode="before")
     @classmethod
