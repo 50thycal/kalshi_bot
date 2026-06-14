@@ -35,6 +35,7 @@ class FakeLiveClient:
         self.orders: list[dict] = []
         self.fills: list[dict] = []
         self.positions: list[dict] = []
+        self.settlements: list[dict] = []
         self.balance = {"balance": 100_000}
         self.place_exc: Exception | None = None
 
@@ -56,6 +57,9 @@ class FakeLiveClient:
 
     def get_positions(self, **kw):
         return {"market_positions": self.positions}
+
+    def get_settlements(self, **kw):
+        return {"settlements": self.settlements}
 
     def get_balance(self):
         return self.balance
@@ -422,6 +426,30 @@ def test_manage_exits_closes_by_buying_no_on_tp(settings):
         # idempotent: a committed exit order blocks a second close
         ex.manage_exits(session)
         assert len(client.placed) == 1
+
+
+def test_reconcile_records_settlement_pnl_for_daily_loss(settings):
+    _live_settings(settings)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    from datetime import datetime, timezone
+    now_iso = datetime.now(timezone.utc).isoformat()
+    client = FakeLiveClient()
+    # a losing YES position: bought $0.82, revenue 0 at settlement -> ~-0.83 realized
+    client.settlements = [{"ticker": "KXLOWTDEN-26JUN13-B54.5", "market_result": "no",
+                           "revenue": 0, "yes_total_cost_dollars": "0.82",
+                           "no_total_cost_dollars": "0.00", "fee_cost": "0.0104",
+                           "settled_time": now_iso}]
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        ex.reconcile(session)
+        ex.reconcile(session)  # idempotent: already recorded -> not double counted
+        snaps = session.scalars(
+            select(m.Position).where(m.Position.market_ticker == "KXLOWTDEN-26JUN13-B54.5")
+        ).all()
+        assert len(snaps) == 1 and snaps[0].quantity == 0
+        assert abs(float(snaps[0].realized_pnl) - (-0.8304)) < 1e-6
+        assert abs(repo.live_realized_pnl_today(session) - (-0.8304)) < 1e-6
 
 
 def test_manage_exits_noop_in_settlement_mode(settings):

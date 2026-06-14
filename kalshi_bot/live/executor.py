@@ -23,7 +23,7 @@ from datetime import datetime, timezone
 from .. import repository as repo
 from ..kalshi.errors import AuthError, KalshiAPIError, TransientError
 from ..paper.engine import kalshi_fee
-from ..scanner.metrics import _to_count, price_to_cents
+from ..scanner.metrics import _to_count, parse_dt, price_to_cents
 from ..weather.cities import CITIES
 from . import exit_rules
 
@@ -61,6 +61,7 @@ class LiveCycleSummary:
     rejected: int = 0
     new_fills: int = 0
     positions_snapshot: int = 0
+    settlements: int = 0
     timed_out_canceled: int = 0
     exits_placed: int = 0
     realized_today: float = 0.0
@@ -307,6 +308,34 @@ class LiveExecutor:
             except Exception:  # noqa: BLE001 — likely already filled/gone; next cycle resolves
                 logger.warning("live cancel failed", extra={"extra_fields": {
                     "kalshi_order_id": row.kalshi_order_id}})
+
+        # Settled positions vanish from get_positions, so capture realized P&L from
+        # /portfolio/settlements (feeds the daily-loss breaker). Record today's settlements
+        # once each (qty=0 snapshot with realized_pnl); dedup via the latest snapshot.
+        try:
+            settlements = _items(self.client.get_settlements(), "settlements")
+        except AuthError:
+            raise
+        except Exception:  # noqa: BLE001
+            settlements = []
+        midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        for st in settlements:
+            ts = parse_dt(st.get("settled_time"))
+            if ts is None or ts < midnight:
+                continue
+            tkr = st.get("ticker")
+            last = repo.latest_position_snapshot(session, tkr)
+            if last is not None and last.quantity == 0 and last.realized_pnl is not None:
+                continue  # settlement already recorded
+            revenue = _to_float(st.get("revenue")) or 0.0  # cents received at settlement
+            cost = ((_to_float(st.get("yes_total_cost_dollars")) or 0.0)
+                    + (_to_float(st.get("no_total_cost_dollars")) or 0.0))
+            fee = _to_float(st.get("fee_cost")) or 0.0
+            pnl = revenue / 100.0 - cost - fee
+            repo.insert_position_snapshot(
+                session, ticker=tkr, side=st.get("market_result"), quantity=0,
+                avg_price=None, market_exposure=0.0, realized_pnl=pnl, raw_json=st)
+            self.summary.settlements += 1
 
         self.summary.realized_today = repo.live_realized_pnl_today(session)
         if self.settings.live_kill_on_daily_loss and self._daily_loss_hit(session):
