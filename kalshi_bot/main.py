@@ -373,14 +373,14 @@ def _probe_api_shapes(client) -> None:
     for name, fn in (("balance", client.get_balance), ("orders", client.get_orders),
                      ("fills", client.get_fills), ("positions", client.get_positions)):
         try:
-            shape = _api_shape(fn())
-            log_event(logger, logging.INFO, "api shape probe", endpoint=name,
-                      shape=json.dumps(shape)[:600])
+            shape = json.dumps(_api_shape(fn()))[:600]
+            # Embed the shape in the MESSAGE (not extra fields) so it survives Railway's
+            # log view, which only surfaces the base message string.
+            logger.info("api shape probe [%s]: %s", name, shape)
         except AuthError:
             raise
         except Exception as exc:  # noqa: BLE001
-            log_event(logger, logging.WARNING, "api shape probe failed", endpoint=name,
-                      error=str(exc))
+            logger.warning("api shape probe failed [%s]: %s", name, exc)
 
 
 def _fetch_account_state(client) -> dict:
