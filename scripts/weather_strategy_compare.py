@@ -78,10 +78,24 @@ def backfill_favorite_by_city(events, windows, fees):
     return out
 
 
+def backfill_favorite_by_cell(events, windows, fees):
+    """{(kind, city, window): [n, wins, pnl_cents]} — the finest backfill granularity."""
+    out: dict[tuple[str, str, int], list[float]] = {}
+    for ev in events:
+        for w in windows:
+            cyc = be._nearest_cycle(ev, float(w), 3.0)
+            if cyc is None:
+                continue
+            cell = out.setdefault((ev.kind, ev.city, w), [0, 0, 0.0])
+            be._strat_entry(cell, cyc, ev.winner, be._favorite(cyc.buckets), fees)
+    return out
+
+
 def live_favorite(conn):
-    """Realized favorite P&L from paper_trades, keyed (kind, window) and (kind, city)."""
+    """Realized favorite P&L from paper_trades, keyed (kind,window), (kind,city), (kind,city,window)."""
     by_window: dict[tuple[str, int], list[float]] = {}
     by_city: dict[tuple[str, str], list[float]] = {}
+    by_cell: dict[tuple[str, str, int], list[float]] = {}
     with conn.cursor() as cur:
         cur.execute(
             "SELECT strategy, market_ticker, resolved_value, pnl FROM paper_trades"
@@ -94,17 +108,19 @@ def live_favorite(conn):
             win = 1 if int(resolved or 0) == 100 else 0
             cents = float(pnl_d or 0.0) * 100.0
             w = pnl.window_of(strat)
-            if w is not None:
-                c = by_window.setdefault((kb[0], w), [0, 0, 0.0])
-                c[0] += 1
-                c[1] += win
-                c[2] += cents
             city = pnl.city_of(ticker) or "?"
-            cc = by_city.setdefault((kb[0], city), [0, 0, 0.0])
-            cc[0] += 1
-            cc[1] += win
-            cc[2] += cents
-    return by_window, by_city
+            if w is not None:
+                _acc(by_window, (kb[0], w), win, cents)
+                _acc(by_cell, (kb[0], city, w), win, cents)
+            _acc(by_city, (kb[0], city), win, cents)
+    return by_window, by_city, by_cell
+
+
+def _acc(table, key, win, cents) -> None:
+    c = table.setdefault(key, [0, 0, 0.0])
+    c[0] += 1
+    c[1] += win
+    c[2] += cents
 
 
 def live_tpsl_best(conn):
@@ -163,6 +179,25 @@ def report(bf, live_win, live_city, tpsl, bf_city, windows) -> None:
     print("  no forecast) — see scripts/weather_pnl.py for their realized P&L.")
 
 
+def report_ranked(bf_cell, live_cell, *, top: int, min_n: int) -> None:
+    """Inverse view: rank the BEST backfill cells (kind x city x window) by EV/trade on the
+    large historical sample, then show whether live confirmed them."""
+    ranked = sorted(
+        ((k, v) for k, v in bf_cell.items() if v[0] >= min_n),
+        key=lambda kv: kv[1][2] / kv[1][0], reverse=True,
+    )[:top]
+    print(f"\n=== Best BACKFILL favorite cells (n >= {min_n}) vs live ===")
+    print("  (ranked by the robust historical sample; live is the same cell's realized P&L)")
+    print(f"  {'rank':>4} {'kind':>4} {'city':>5} {'window':>6} | "
+          f"{'backfill ev (n, win%)':>22} | {'live ev (n, win%)':>20}")
+    for i, ((kind, city, w), bcell) in enumerate(ranked, 1):
+        lcell = live_cell.get((kind, city, w), [0, 0, 0.0])
+        bf_s = f"{_ev(bcell)} ({bcell[0]}, {_win(bcell)})"
+        live_s = f"{_ev(lcell)} ({lcell[0]}, {_win(lcell)})" if lcell[0] else "no live trades"
+        print(f"  {i:>4} {kind:>4} {city:>5} h{w:<5} | {bf_s:>22} | {live_s:>20}")
+    print("  (a backfill edge is trustworthy only if live agrees in SIGN — small live n is noise)")
+
+
 def _to_libpq_url(url: str) -> str:
     url = (url or "").strip()
     if url.startswith("postgresql+"):
@@ -176,6 +211,10 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--windows", default="20,14,8", help="entry windows (hours-to-close)")
     ap.add_argument("--no-fees", action="store_true")
+    ap.add_argument("--top", type=int, default=12,
+                    help="show the top-N best backfill cells vs live (0 = off)")
+    ap.add_argument("--min-n", type=int, default=15,
+                    help="min backfill trades for a cell to be ranked")
     args = ap.parse_args(argv)
     windows = [int(w) for w in args.windows.split(",") if w.strip()]
     fees = not args.no_fees
@@ -192,11 +231,14 @@ def main(argv: list[str] | None = None) -> int:
         events = be.load_events(conn)
         bf = backfill_favorite(events, windows, fees)
         bf_city = backfill_favorite_by_city(events, windows, fees)
-        live_win, live_city = live_favorite(conn)
+        bf_cell = backfill_favorite_by_cell(events, windows, fees)
+        live_win, live_city, live_cell = live_favorite(conn)
         tpsl = live_tpsl_best(conn)
 
     print(f"=== Strategy comparison — {len(events)} backfill events ===")
     report(bf, live_win, live_city, tpsl, bf_city, windows)
+    if args.top > 0:
+        report_ranked(bf_cell, live_cell, top=args.top, min_n=args.min_n)
     return 0
 
 

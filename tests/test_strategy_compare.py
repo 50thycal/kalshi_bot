@@ -59,6 +59,19 @@ def test_backfill_favorite_by_city_groups():
     assert by_city[("high", "MIA")][0] == 1
 
 
+def test_backfill_favorite_by_cell_keys_by_city_and_window():
+    evs = [
+        _event("high", "LAX", "2026-06-10", "B", htc=20.0),
+        _event("high", "LAX", "2026-06-11", "B", htc=20.0),
+        _event("low", "MIA", "2026-06-10", "B", htc=14.0),
+    ]
+    by_cell = cmp.backfill_favorite_by_cell(evs, [20, 14], fees=True)
+    assert by_cell[("high", "LAX", 20)][0] == 2
+    assert by_cell[("low", "MIA", 14)][0] == 1
+    # report_ranked runs and respects min_n (no crash, filters tiny cells)
+    cmp.report_ranked(by_cell, {}, top=5, min_n=2)  # only the LAX cell qualifies
+
+
 def test_ev_and_win_formatting():
     assert cmp._ev([0, 0, 0.0]) == "n/a"
     assert cmp._ev([2, 1, 100.0]) == "+50.0c"
