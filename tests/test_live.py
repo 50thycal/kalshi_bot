@@ -38,9 +38,16 @@ class FakeLiveClient:
         self.settlements: list[dict] = []
         self.balance = {"balance": 100_000}
         self.place_exc: Exception | None = None
+        # Optional per-call script: each item is an Exception to raise or a dict to return.
+        self.place_responses: list = []
 
     def place_order(self, **order):
         self.placed.append(order)
+        if self.place_responses:
+            item = self.place_responses.pop(0)
+            if isinstance(item, Exception):
+                raise item
+            return item
         if self.place_exc is not None:
             raise self.place_exc
         return {"order": {"order_id": f"K-{len(self.placed)}", "status": "resting"}}
@@ -404,28 +411,185 @@ def test_should_exit_rules():
     assert should_exit(50, [60], 55, tp=10, sl=10, be=None) is None        # no trigger now
 
 
-def test_manage_exits_closes_by_buying_no_on_tp(settings):
+def _filled_entry(session, *, ticker="T1", strategy="weather_low_fav_h20", qty=1, price=48):
+    repo.create_live_order(
+        session, signal_id=None, ticker=ticker, event_ticker="E1", strategy=strategy,
+        side="yes", action="buy", limit_price=price, quantity=qty, status="filled",
+        client_order_id=f"{strategy}:E1", raw_order_json={})
+
+
+def _rejected_exit(session, attempt, *, ticker="T1", strategy="weather_low_fav_h20"):
+    repo.create_live_order(
+        session, signal_id=None, ticker=ticker, event_ticker=None, strategy=strategy,
+        side="no", action="buy", limit_price=40, quantity=1, status="rejected",
+        client_order_id=f"exit:{strategy}:{ticker}:{attempt}", raw_order_json={})
+
+
+def test_exit_primary_buy_no_close(settings):
     _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_cents=10)
     db.init_engine(settings.database_url)
     db.create_all()
     client = FakeLiveClient()
-    # current bid via orderbook -> best_yes_bid 60; entry 48 -> gain 12 >= tp 10 -> exit
     ex = _exec(settings, client)
     with db.session_scope() as session:
-        repo.create_live_order(
-            session, signal_id=None, ticker="T1", event_ticker="E1", strategy="weather_low_fav_h20",
-            side="yes", action="buy", limit_price=48, quantity=1, status="filled",
-            client_order_id="weather_low_fav_h20:E1", raw_order_json={})
+        _filled_entry(session, price=48)  # bid 60 - entry 48 = +12 >= tp 10 -> close
         ex.manage_exits(session)
-        # exit closes a YES long by BUYing NO at 100 - yes_bid(60) = 40
         assert len(client.placed) == 1
         o = client.placed[0]
         assert o["action"] == "buy" and o["side"] == "no" and o["no_price"] == 40
-        assert o["client_order_id"].startswith("exit:")
+        assert o["client_order_id"] == "exit:weather_low_fav_h20:T1:1"
         assert ex.summary.exits_placed == 1
-        # idempotent: a committed exit order blocks a second close
+        # the submitted (in-flight) exit blocks a duplicate this cycle
         ex.manage_exits(session)
         assert len(client.placed) == 1
+
+
+def test_exit_rejection_escalates_and_does_not_block(settings):
+    _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_cents=10,
+                   live_exit_slippage_cents=3, live_exit_max_attempts=3)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    client.place_responses = [KalshiAPIError(400, "invalid parameters", "/p")]  # 1st rejects
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _filled_entry(session, price=48)
+        ex.manage_exits(session)  # attempt 1 -> rejected (terminal, not in-flight)
+        assert ex.summary.rejected == 1
+        assert client.placed[0]["client_order_id"].endswith(":1")
+        ex.manage_exits(session)  # rejected didn't block -> attempt 2, escalated price
+        assert len(client.placed) == 2
+        o2 = client.placed[1]
+        assert o2["client_order_id"].endswith(":2") and o2["no_price"] == 43  # 40 + 3 slippage
+
+
+def test_exit_409_treated_as_success(settings):
+    _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_cents=10)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    client.place_responses = [KalshiAPIError(409, "order already exists", "/p")]
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _filled_entry(session, price=48)
+        ex.manage_exits(session)
+        row = session.scalar(select(m.LiveOrder).where(m.LiveOrder.client_order_id.like("exit:%")))
+        assert row.status == "submitted" and ex.summary.exits_placed == 1
+        ex.manage_exits(session)  # now in-flight -> no new order
+        assert len(client.placed) == 1
+
+
+def test_exit_partial_fill_sizes_remainder(settings):
+    _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_cents=10)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    client.positions = [{"ticker": "T1", "position_fp": "2.00",
+                         "market_exposure_dollars": "1.00", "realized_pnl_dollars": "0"}]
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _filled_entry(session, qty=5, price=48)
+        ex.reconcile(session)       # snapshot shows 2 still open
+        ex.manage_exits(session)    # size the close to the remaining 2, not the original 5
+        assert client.placed[0]["count"] == 2
+
+
+def test_exit_flat_position_skips(settings):
+    _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_cents=10)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    client.positions = [{"ticker": "T1", "position_fp": "0",
+                         "market_exposure_dollars": "0", "realized_pnl_dollars": "0"}]
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _filled_entry(session, qty=1)
+        ex.reconcile(session)       # snapshot shows flat
+        ex.manage_exits(session)
+        assert client.placed == []  # nothing to close
+
+
+def test_rejected_exit_does_not_permanently_block(settings):
+    # Regression for the dedup bug: a rejected exit must NOT hide the still-open position.
+    _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_cents=10)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _filled_entry(session, price=48)
+        _rejected_exit(session, 1)
+        ex.manage_exits(session)
+        assert len(client.placed) == 1
+        assert client.placed[0]["client_order_id"].endswith(":2")
+
+
+def test_exit_bounded_attempts_holds_and_logs_critical(settings, caplog):
+    import logging
+    _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_cents=10,
+                   live_exit_max_attempts=2)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _filled_entry(session)
+        _rejected_exit(session, 1)
+        _rejected_exit(session, 2)  # 2 attempts == cap
+        with caplog.at_level(logging.CRITICAL):
+            ex.manage_exits(session)
+        assert client.placed == []          # no new attempt; hold to settlement
+        assert ex.summary.exits_abandoned == 1
+        assert any("exhausted attempts" in r.message for r in caplog.records)
+        ex.manage_exits(session)            # one-shot -> not double counted
+        assert ex.summary.exits_abandoned == 1
+
+
+def test_exit_market_fallback_when_enabled(settings):
+    _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_cents=10,
+                   live_exit_max_attempts=2, live_exit_use_market_fallback=True)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _filled_entry(session)
+        _rejected_exit(session, 1)  # next is the final attempt -> market fallback
+        ex.manage_exits(session)
+        o = client.placed[0]
+        assert o["type"] == "market" and "buy_max_cost" in o and "no_price" not in o
+
+
+def test_exit_full_error_logged_on_rejection(settings, caplog):
+    import logging
+    _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_cents=10)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    client.place_responses = [KalshiAPIError(400, '{"error":{"code":"invalid_parameters"}}', "/p")]
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _filled_entry(session, price=48)
+        with caplog.at_level(logging.ERROR):
+            ex.manage_exits(session)
+        row = session.scalar(select(m.LiveOrder).where(m.LiveOrder.client_order_id.like("exit:%")))
+        assert row.status == "rejected" and row.cancel_reason.startswith("400:")
+        assert row.raw_order_json.get("no_price") == 40  # exact payload kept for RCA
+        assert any("REJECTED" in r.message for r in caplog.records)
+
+
+def test_exit_transient_marks_unknown(settings):
+    _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_cents=10)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    client.place_responses = [TransientError("net")]
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _filled_entry(session, price=48)
+        ex.manage_exits(session)
+        row = session.scalar(select(m.LiveOrder).where(m.LiveOrder.client_order_id.like("exit:%")))
+        assert row.status == "unknown"
 
 
 def test_reconcile_records_settlement_pnl_for_daily_loss(settings):

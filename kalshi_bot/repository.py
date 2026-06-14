@@ -868,8 +868,8 @@ def live_order_exists(session, event_ticker: str, strategy: str) -> bool:
 
 
 def live_exit_order_exists(session, ticker: str, strategy: str) -> bool:
-    """An exit (close) order already placed for this position — exit dedup. Exits are tagged
-    with a client_order_id starting 'exit:' (they close by buying the opposite side)."""
+    """DEPRECATED for exit dedup (a rejected exit would permanently block re-attempts). Use
+    live_exit_in_flight (in-flight guard) + count_exit_attempts (ladder/cap) instead."""
     return session.scalar(
         select(func.count()).select_from(m.LiveOrder).where(
             m.LiveOrder.market_ticker == ticker,
@@ -878,6 +878,33 @@ def live_exit_order_exists(session, ticker: str, strategy: str) -> bool:
             m.LiveOrder.status.in_(LIVE_COMMITTED_STATUSES),
         )
     ) > 0
+
+
+def live_exit_in_flight(session, ticker: str, strategy: str) -> bool:
+    """An exit order is still working (non-terminal) — don't place a second one this cycle.
+    A rejected/terminal exit does NOT count, so re-attempts can proceed."""
+    return session.scalar(
+        select(func.count()).select_from(m.LiveOrder).where(
+            m.LiveOrder.market_ticker == ticker,
+            m.LiveOrder.strategy == strategy,
+            m.LiveOrder.client_order_id.like("exit:%"),
+            m.LiveOrder.status.in_(LIVE_NONTERMINAL_STATUSES),
+        )
+    ) > 0
+
+
+def count_exit_attempts(session, ticker: str, strategy: str) -> int:
+    """All exit attempts (any status) for this position today — drives the price-escalation
+    ladder and the bounded per-day attempt cap."""
+    midnight = _now().replace(hour=0, minute=0, second=0, microsecond=0)
+    return int(session.scalar(
+        select(func.count()).select_from(m.LiveOrder).where(
+            m.LiveOrder.market_ticker == ticker,
+            m.LiveOrder.strategy == strategy,
+            m.LiveOrder.client_order_id.like("exit:%"),
+            m.LiveOrder.created_at >= midnight,
+        )
+    ) or 0)
 
 
 def live_open_order_exists(session, ticker: str) -> bool:
@@ -966,9 +993,10 @@ def latest_position_snapshot(session, ticker: str) -> m.Position | None:
 
 
 def open_live_positions(session) -> list[tuple]:
-    """Open YES positions to manage exits for: filled/partial YES entry buys without a
-    committed exit. Returns (ticker, strategy, entry_price_cents, entry_at, qty). Excludes
-    the exit buy-NO orders (side='no') so a close isn't mistaken for a new position."""
+    """Candidate YES positions for exit management: filled/partial YES entry buys. Returns
+    (ticker, strategy, entry_price_cents, entry_at, qty). Excludes exit buy-NO orders
+    (side='no'). Does NOT filter on prior exits — manage_exits decides flat/in-flight/cap
+    from the live position snapshot, so a rejected exit never hides a still-open position."""
     rows = session.scalars(
         select(m.LiveOrder).where(
             m.LiveOrder.action == "buy",
@@ -976,13 +1004,8 @@ def open_live_positions(session) -> list[tuple]:
             m.LiveOrder.status.in_(("filled", "partial")),
         )
     ).all()
-    out: list[tuple] = []
-    for row in rows:
-        if live_exit_order_exists(session, row.market_ticker, row.strategy or ""):
-            continue
-        out.append((row.market_ticker, row.strategy or "", int(row.limit_price or 0),
-                    row.created_at, int(row.quantity or 0)))
-    return out
+    return [(row.market_ticker, row.strategy or "", int(row.limit_price or 0),
+             row.created_at, int(row.quantity or 0)) for row in rows]
 
 
 def bucket_bid_path(session, ticker: str, *, after: datetime | None = None) -> list[float]:

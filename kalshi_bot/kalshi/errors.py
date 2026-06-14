@@ -20,5 +20,6 @@ class KalshiAPIError(KalshiError):
 
     def __init__(self, status_code: int, message: str, path: str | None = None):
         self.status_code = status_code
+        self.message = message  # the response body, for diagnostics (e.g. invalid_parameters RCA)
         self.path = path
         super().__init__(f"Kalshi API error {status_code} on {path}: {message}")

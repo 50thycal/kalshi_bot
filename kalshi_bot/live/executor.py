@@ -64,6 +64,9 @@ class LiveCycleSummary:
     settlements: int = 0
     timed_out_canceled: int = 0
     exits_placed: int = 0
+    exits_reattempted: int = 0
+    exits_escalated: int = 0
+    exits_abandoned: int = 0
     realized_today: float = 0.0
     notes: list[str] = field(default_factory=list)
 
@@ -81,6 +84,7 @@ class LiveExecutor:
         self.risk = risk
         self.summary = LiveCycleSummary()
         self._daily_loss_tripped = False
+        self._exit_abandoned: set[tuple[str, str]] = set()
 
     def reset_summary(self) -> None:
         self.summary = LiveCycleSummary()
@@ -353,47 +357,134 @@ class LiveExecutor:
         s = self.settings
         if s.live_exit_mode != "tp_sl" or not self._switches_on():
             return
-        for ticker, strategy, entry_price, entry_at, qty in repo.open_live_positions(session):
-            if repo.live_exit_order_exists(session, ticker, strategy):
+        for ticker, strategy, entry_price, entry_at, entry_qty in repo.open_live_positions(session):
+            # The position snapshot (refreshed by reconcile, which runs first) is the source of
+            # truth — an exit is "done" only when Kalshi shows the position flat.
+            remaining = self._remaining_open_qty(session, ticker, entry_qty)
+            if remaining <= 0:
                 continue
+            if repo.live_exit_in_flight(session, ticker, strategy):
+                continue  # an attempt is still working this cycle; let it resolve
+            attempts = repo.count_exit_attempts(session, ticker, strategy)
+            if attempts >= s.live_exit_max_attempts:
+                self._log_exit_abandoned(ticker, strategy, remaining, attempts)
+                continue  # give up early-exit; hold to settlement (bounded loss, no catastrophe)
             live_bid = self._current_bid(ticker)
             if live_bid is None:
                 continue
-            history = repo.bucket_bid_path(session, ticker, after=entry_at)
-            kind = exit_rules.should_exit(
-                entry_price, history, live_bid,
-                tp=s.live_take_profit_cents, sl=s.live_stop_loss_cents,
-                be=s.live_break_even_arm_cents)
-            if kind is not None:
-                self._place_exit(session, ticker, strategy, live_bid, qty, kind)
+            if attempts == 0:
+                history = repo.bucket_bid_path(session, ticker, after=entry_at)
+                kind = exit_rules.should_exit(
+                    entry_price, history, live_bid,
+                    tp=s.live_take_profit_cents, sl=s.live_stop_loss_cents,
+                    be=s.live_break_even_arm_cents)
+                if kind is None:
+                    continue
+            else:
+                # Already committed to closing — keep trying to get fully out (escalating price)
+                # rather than leaving a partial/stuck position because the trigger no longer holds.
+                kind = "reattempt"
+                self.summary.exits_reattempted += 1
+            self._place_exit(session, ticker, strategy, live_bid, remaining, kind,
+                             attempt=attempts + 1, level=self._escalation_level(attempts))
 
-    def _place_exit(self, session, ticker, strategy, bid, qty, kind) -> None:
-        # Exit a YES position the Kalshi-native, proven way: BUY the opposite (NO) side at
-        # no_price = 100 - yes_bid. This reuses the working buy path (a raw action="sell"
-        # yes order returns invalid_parameters), and Kalshi nets the opposing position so
-        # the P&L is the same as selling YES at the bid.
-        no_price = max(1, min(99, 100 - int(bid)))
-        coid = f"exit:{strategy}:{ticker}"
-        order = {"ticker": ticker, "action": "buy", "side": "no", "count": qty,
-                 "type": "limit", "no_price": no_price, "client_order_id": coid}
+    def _escalation_level(self, attempts: int) -> int:
+        """0 = base marketable limit; 1 = aggressive (slippage-buffered) limit;
+        2 = optional best-effort market order on the final attempt."""
+        if attempts == 0:
+            return 0
+        if (attempts + 1) >= self.settings.live_exit_max_attempts and \
+                self.settings.live_exit_use_market_fallback:
+            return 2
+        return 1
+
+    def _exit_no_price(self, bid: int, level: int) -> int:
+        base = 100 - int(bid)  # marketable buy-NO at the current YES bid
+        if level >= 1:
+            base += self.settings.live_exit_slippage_cents  # cross deeper to force a fill
+        return max(1, min(99, base))
+
+    def _remaining_open_qty(self, session, ticker: str, entry_qty: int) -> int:
+        """Remaining open YES contracts from Kalshi truth. The latest position snapshot
+        (refreshed by reconcile each cycle) is authoritative; 0 means flat. Falls back to the
+        entry qty minus already-filled exit-NO contracts if no fresh snapshot exists yet."""
+        midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        snap = repo.latest_position_snapshot(session, ticker)
+        if snap is not None and _aware(snap.captured_at) >= midnight:
+            return max(0, abs(int(snap.quantity or 0)))
+        closed = sum(int(f.quantity or 0) for f in repo.fills_for_ticker(session, ticker)
+                     if f.side == "no" and f.action == "buy")
+        return max(0, int(entry_qty) - closed)
+
+    def _log_exit_abandoned(self, ticker, strategy, remaining, attempts) -> None:
+        key = (ticker, strategy)
+        if key in self._exit_abandoned:
+            return
+        self._exit_abandoned.add(key)
+        self.summary.exits_abandoned += 1
+        logger.critical("live exit exhausted attempts; holding to settlement", extra={
+            "extra_fields": {"ticker": ticker, "strategy": strategy,
+                             "remaining": remaining, "attempts": attempts}})
+
+    def _place_exit(self, session, ticker, strategy, bid, qty, kind, *, attempt, level) -> None:
+        # Close a YES position the Kalshi-native way: BUY the opposite (NO) side (Kalshi nets the
+        # pair and credits $1). Unique coid per attempt avoids self-409 on re-tries/escalation.
+        coid = f"exit:{strategy}:{ticker}:{attempt}"
+        use_market = level >= 2
+        if use_market:
+            # Market support is UNCONFIRMED (docs 403); best-effort, behind a default-off flag.
+            cap = self._exit_no_price(bid, level=1)
+            order = {"ticker": ticker, "action": "buy", "side": "no", "count": qty,
+                     "type": "market", "buy_max_cost": cap * qty, "client_order_id": coid}
+            limit_px = None
+        else:
+            limit_px = self._exit_no_price(bid, level)
+            order = {"ticker": ticker, "action": "buy", "side": "no", "count": qty,
+                     "type": "limit", "no_price": limit_px, "client_order_id": coid}
+            if level >= 1:
+                self.summary.exits_escalated += 1
         row = repo.create_live_order(
             session, signal_id=None, ticker=ticker, event_ticker=None, strategy=strategy,
-            side="no", action="buy", limit_price=no_price, quantity=qty, status="pending",
+            side="no", action="buy", limit_price=limit_px, quantity=qty, status="pending",
             client_order_id=coid, raw_order_json=order)
         try:
             resp = self.client.place_order(**order)
         except AuthError:
             repo.update_live_order_status(session, row, status="error", cancel_reason="auth")
             raise
+        except TransientError as exc:
+            repo.update_live_order_status(session, row, status="unknown", cancel_reason=str(exc))
+            logger.warning("live exit transient; status=unknown", extra={"extra_fields": {
+                "ticker": ticker, "coid": coid, "attempt": attempt, "level": level}})
+            return
+        except KalshiAPIError as exc:
+            if exc.status_code == 409:  # order_already_exists -> it landed; treat as success
+                repo.update_live_order_status(session, row, status="submitted",
+                                              cancel_reason="409_already_exists")
+                self.summary.exits_placed += 1
+                logger.info("live exit 409 already_exists -> submitted", extra={
+                    "extra_fields": {"ticker": ticker, "coid": coid}})
+                return
+            repo.update_live_order_status(
+                session, row, status="rejected",
+                cancel_reason=f"{exc.status_code}:{exc.message}", raw=order)
+            self.summary.rejected += 1
+            logger.error("live exit REJECTED", extra={"extra_fields": {
+                "ticker": ticker, "strategy": strategy, "coid": coid, "attempt": attempt,
+                "level": level, "status_code": exc.status_code, "body": exc.message,
+                "payload": order}})  # full body + payload for root-cause analysis
+            return
         except Exception as exc:  # noqa: BLE001
-            repo.update_live_order_status(session, row, status="rejected", cancel_reason=str(exc))
+            repo.update_live_order_status(session, row, status="error",
+                                          cancel_reason=str(exc), raw=order)
+            logger.exception("live exit place_order failed")
             return
         koid = (resp or {}).get("order", {}).get("order_id") if isinstance(resp, dict) else None
         repo.update_live_order_status(session, row, status="submitted", kalshi_order_id=koid, raw=resp)
         self.summary.exits_placed += 1
         logger.info("live exit order placed (buy-no to close)", extra={"extra_fields": {
-            "ticker": ticker, "strategy": strategy, "rule": kind, "no_price": no_price,
-            "count": qty}})
+            "ticker": ticker, "strategy": strategy, "rule": kind, "type": order["type"],
+            "no_price": order.get("no_price"), "count": qty, "attempt": attempt, "level": level}})
 
     def _current_bid(self, ticker: str) -> int | None:
         try:

@@ -188,6 +188,13 @@ class Settings(BaseSettings):
     live_break_even_arm_cents: int | None = None
     live_kill_on_daily_loss: bool = True    # self-trip entries when realized_today <= -max_daily_loss
     live_shape_probe: bool = False          # log live API response shapes once at startup (read-only)
+    # Hardened exit (tp_sl mode): re-attempt the close until the position is flat, escalating
+    # the buy-NO price. slippage_cents crosses deeper on re-attempts; market fallback is a
+    # best-effort last resort (Kalshi market-order fields unconfirmed, default OFF); max_attempts
+    # bounds re-tries per position/day, then it holds to settlement.
+    live_exit_slippage_cents: int = 0
+    live_exit_use_market_fallback: bool = False
+    live_exit_max_attempts: int = 3
 
     @field_validator("paper_momentum_direction", mode="before")
     @classmethod
@@ -226,6 +233,22 @@ class Settings(BaseSettings):
             return "settlement"
         v = str(v).strip().lower()
         return v if v in ("settlement", "tp_sl") else "settlement"
+
+    @field_validator("live_exit_slippage_cents", mode="before")
+    @classmethod
+    def _coerce_exit_slippage(cls, v: object) -> int:
+        try:
+            return max(0, int(v))
+        except (TypeError, ValueError):
+            return 0
+
+    @field_validator("live_exit_max_attempts", mode="before")
+    @classmethod
+    def _coerce_exit_max_attempts(cls, v: object) -> int:
+        try:
+            return max(1, int(v))
+        except (TypeError, ValueError):
+            return 3
 
     @field_validator("bot_mode", mode="before")
     @classmethod
@@ -399,6 +422,9 @@ class Settings(BaseSettings):
             "live_windows": self.live_window_list,
             "live_entry_style": self.live_entry_style,
             "live_exit_mode": self.live_exit_mode,
+            "live_exit_slippage_cents": self.live_exit_slippage_cents,
+            "live_exit_use_market_fallback": self.live_exit_use_market_fallback,
+            "live_exit_max_attempts": self.live_exit_max_attempts,
             "live_max_order_dollars": self.live_max_order_dollars,
             "api_key_id_present": bool(self.kalshi_api_key_id),
             "private_key_present": bool(self.private_key_pem),

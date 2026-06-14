@@ -108,6 +108,23 @@ Sped cycles to 60s, forced fresh h18 entries, sl=1 to close. Result:
   exits.** The validated books are hold-to-settlement (no exits), which is fully proven.
 - Aftermath: 2 open CHI positions (@45, @71) left to settle; baseline restored, fully disarmed.
 
+### Exit hardening (Phase 6) — robust close, not a new method
+Research confirmed buy-NO-to-close is Kalshi's *canonical* close (it nets the pair → credits $1);
+the CHI rejections were validation/market-state, not a wrong method. So the fix is robustness:
+- **Position snapshot is the source of truth** (reconcile runs before manage_exits each cycle):
+  an exit is "done" only when Kalshi shows the position flat; otherwise re-attempt.
+- **Dedup bug fixed:** `live_exit_order_exists` counted `rejected` as committed, permanently
+  blocking re-attempts. Split into `live_exit_in_flight` (non-terminal only) + `count_exit_attempts`
+  (ladder/cap); `open_live_positions` no longer hides a position behind a rejected exit.
+- **Price-escalation ladder:** base marketable buy-NO → slippage-buffered limit on re-attempts →
+  optional best-effort market order (flag-off; market fields unconfirmed) → hold to settlement.
+- **409 order_already_exists → success** (it landed); unique `client_order_id` per attempt
+  (`exit:{strategy}:{ticker}:{n}`) avoids self-409. **Partial fills** sized to remaining qty.
+  **Full Kalshi error body + payload logged** on rejection (the hook to finally RCA the CHI 400).
+  **Bounded attempts** (default 3/day) then CRITICAL + hold to settlement.
+- Config: `live_exit_slippage_cents` (0), `live_exit_use_market_fallback` (false),
+  `live_exit_max_attempts` (3). 11 new exit tests. Still inert until tp_sl mode + live switches on.
+
 ## Exit & sizing studies (live settled trades)
 
 ### Inverse view — rank by BACKFILL, check live (the trustworthy direction)
