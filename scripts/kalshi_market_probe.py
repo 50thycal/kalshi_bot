@@ -92,8 +92,10 @@ def _probe_market(market_ticker: str) -> None:
     if not data:
         return
     mk = data.get("market") or data
-    print("market fields:", json.dumps(_summary(mk, _MARKET_KEYS), indent=2))
-    print("market all keys:", sorted(mk.keys()))
+    # full dump for a directly-probed market — we need the VALUES of the
+    # order-validation fields (fractional_trading_enabled, price_level_structure,
+    # price_ranges, notional_value) to explain why a close is rejected.
+    print("market FULL:", json.dumps(mk, indent=2, default=str)[:5000])
 
 
 def main(argv: list[str] | None = None) -> int:
