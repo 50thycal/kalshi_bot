@@ -163,28 +163,40 @@ filled); sells did not — hence the asymmetry.
   fix is well-grounded (the app + a working SDK use exactly this format) and unit-tested, but a clean
   live confirmation is still pending. Worker left disarmed (weather, kill switch on).
 
-### DEFINITIVE close RCA — buy-NO is the only accepted close; sell-YES is rejected (resolved)
-A clean live `tp_sl` test (LAX-B72.5, a favorite, ~11h to close so the market was OPEN) finally
-settled the question with full payload evidence from `live_orders`:
-- **sell-YES is rejected even with the textbook integer schema.** The 26JUN13 closes sent
-  `{side:yes, type:limit, count:1, action:sell, yes_price:68}` — the *correct* Kalshi limit-sell
-  shape — and Kalshi returned `400 invalid_parameters`. The later "app format"
-  (`count_fp`/`yes_price_dollars`, no `type`) was *also* rejected. So `action="sell"` is simply not
-  the API path here, regardless of format — the earlier "wrong format, sell-YES is the fix"
-  conclusion was WRONG.
-- **buy-NO with the integer schema FILLS on an open market.** DEN-T69
-  `{side:no, type:limit, count:1, action:buy, no_price:17}` executed. The CHI bucket buy-NO
-  rejections were **closed/illiquid market state, not format**: DEN's buy-NO at 13:46 filled; the
-  CHI buy-NOs ~1.5h later (near settlement) hit markets that had stopped trading → generic
-  `invalid_parameters`. The LAX favorite (market open) is the apples-to-apples case to DEN.
-- **Resolution:** reverted `_place_exit` to **buy-NO** (Kalshi's canonical netting close, the
-  original Phase-6 design), marketable at `no_price = 100 − yes_bid` (+slippage on escalation),
-  integer `count`/`type:"limit"`/`no_price` — mirroring the accepted entry-buy schema exactly.
-  This also rides on the two fixes that made the exit *fire* at all this round:
-  (1) entry `409 order_already_exists → submitted` (was mis-recorded `rejected`, corrupting the
-  position) and (2) `open_live_positions` driven by the **Kalshi position snapshot** (so a position
-  is managed even if its entry row is corrupted). All 4 tests green; live confirmation of the
-  buy-NO fill on LAX pending the next deployed cycle.
+### DEFINITIVE close finding — the exit now FIRES, but the API rejects BOTH closes on bucket markets
+A clean live `tp_sl` test (LAX-B72.5, a favorite, ~11h to close so the market was definitively
+OPEN) plus full payload evidence from `live_orders` finally settled the question — and overturned
+the two prior theories ("sell-YES dollar format is the fix" AND "buy-NO works, CHI was just
+closed-market"). Both were wrong. What the evidence actually shows:
+- **The exit machinery is FIXED and now fires reliably.** Two bugs had prevented the close from
+  ever being attempted on LAX: (1) the entry `409 order_already_exists` was mis-recorded as
+  `rejected`, corrupting position tracking; (2) `open_live_positions` keyed off the (corrupted)
+  entry row instead of the Kalshi position. Fixes: 409→`submitted` (success), and
+  `open_live_positions` now driven by the **Kalshi position snapshot** (managed even if the entry
+  row is corrupted). After deploy the worker correctly fired attempts `:1…:4` with retry,
+  price-escalation, bounded attempts, and snapshot-as-truth — all working.
+- **Kalshi rejects every close form we can build on a range-BUCKET market, even when OPEN:**
+  - `sell-YES` integer limit `{side:yes,type:limit,count:1,action:sell,yes_price:68}` → `400
+    invalid_parameters` (26JUN13).
+  - `sell-YES` dollar `{side:yes,action:sell,count_fp:"1.00",yes_price_dollars:"0.74"}` → rejected
+    (LAX 20:29–31, **market open**).
+  - `buy-NO` integer limit `{side:no,type:limit,count:1,action:buy,no_price:30}` → rejected (LAX
+    20:39, **market open**). This is the one that kills the "closed-market" theory: the LAX bucket
+    was open for ~11h and buy-NO STILL failed.
+- **The only close that has ever filled is buy-NO on a THRESHOLD market** (`-T##`): DEN-T69 buy-NO
+  @17 executed. So the split is **threshold (`-T##`) closeable via buy-NO vs range-bucket
+  (`-B##.#`) rejected in both directions** — a market-type distinction, not an order-format bug.
+- **The app CAN close a bucket position** (user screenshot, "Slide to Sell"), so an accepted API
+  form exists, but Kalshi's generic `invalid_parameters` (no field detail) + 403-blocked docs +
+  SDKs that abstract the wire format mean we can't yet derive the exact bucket-close parameters.
+- **Code state:** `_place_exit` reverted to the canonical **buy-NO** netting close (proven on
+  threshold markets; the original Phase-6 design), marketable at `no_price = 100 − yes_bid`
+  (+slippage on escalation), integer `count`/`type:"limit"`/`no_price`. All tests green.
+- **Operational implication (unchanged & important):** the validated, edge-bearing weather books are
+  **hold-to-settlement** and need NO closes — live trading is viable today on that basis. Live
+  early-exit (TP/SL/break-even) on the bucket books is the one piece still blocked on the unknown
+  bucket-close API form. Worker disarmed to the safe baseline (BOT_MODE=weather, KILL_SWITCH=true,
+  LIVE_ENABLED=false); the open LAX position (~$0.80) holds to settlement.
 
 ## Exit & sizing studies (live settled trades)
 
