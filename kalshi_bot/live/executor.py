@@ -274,15 +274,18 @@ class LiveExecutor:
             self.summary.new_fills += 1
 
         # Snapshot positions.
+        # Kalshi market_positions shape (confirmed via real positions): position_fp
+        # (signed fixed-point), market_exposure_dollars, realized_pnl_dollars.
         for p in positions:
+            pos = _to_count(_first(p, "position_fp", "position"))
+            exposure = _to_float(_first(p, "market_exposure_dollars", "market_exposure"))
+            realized = _to_float(_first(p, "realized_pnl_dollars", "realized_pnl"))
+            qty = abs(pos)
+            avg_px = round(exposure / qty * 100, 2) if (exposure is not None and qty) else None
             repo.insert_position_snapshot(
                 session, ticker=p.get("ticker"),
-                side="yes" if (p.get("position") or 0) >= 0 else "no",
-                quantity=p.get("position"),
-                avg_price=_cents(p.get("market_exposure"), p.get("position")),
-                market_exposure=_dollars(p.get("market_exposure")),
-                realized_pnl=_dollars(p.get("realized_pnl")),
-                raw_json=p)
+                side="yes" if pos >= 0 else "no", quantity=pos, avg_price=avg_px,
+                market_exposure=exposure, realized_pnl=realized, raw_json=p)
             self.summary.positions_snapshot += 1
 
         # Cancel timed-out passive (resting) orders.
@@ -409,21 +412,11 @@ def _map_status(kalshi_status: str | None) -> str:
     }.get(s, "submitted")
 
 
-def _dollars(cents) -> float | None:
-    if cents is None:
+def _to_float(value) -> float | None:
+    """Parse a Kalshi *_dollars string (or number) into a float; None if unparseable."""
+    if value is None:
         return None
     try:
-        return float(cents) / 100.0
+        return float(value)
     except (TypeError, ValueError):
-        return None
-
-
-def _cents(exposure_cents, position) -> float | None:
-    """Approximate per-contract avg price (cents) from market_exposure / |position|."""
-    try:
-        n = abs(int(position or 0))
-        if n == 0 or exposure_cents is None:
-            return None
-        return float(exposure_cents) / n
-    except (TypeError, ValueError, ZeroDivisionError):
         return None

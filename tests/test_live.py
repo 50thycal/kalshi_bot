@@ -303,8 +303,9 @@ def test_reconcile_dedups_fills_and_snapshots_positions(settings):
     client.fills = [{"trade_id": "F1", "order_id": "K-1", "market_ticker": "T1", "side": "yes",
                      "action": "buy", "yes_price_dollars": "0.60", "no_price_dollars": "0.40",
                      "count_fp": "2.00", "fee_cost": "0.01"}]
-    client.positions = [{"ticker": "T1", "position": 2, "market_exposure": 120,
-                         "realized_pnl": 0}]
+    # real Kalshi market_positions shape: position_fp, *_dollars strings
+    client.positions = [{"ticker": "T1", "position_fp": "2.00",
+                         "market_exposure_dollars": "1.20", "realized_pnl_dollars": "0.000000"}]
     ex = _exec(settings, client)
     with db.session_scope() as session:
         ex.reconcile(session)
@@ -314,7 +315,10 @@ def test_reconcile_dedups_fills_and_snapshots_positions(settings):
         # parsed from Kalshi's real field names
         assert fills[0].price == 60 and fills[0].quantity == 2
         assert float(fills[0].fee) == 0.01 and fills[0].market_ticker == "T1"
-        assert len(session.scalars(select(m.Position)).all()) == 2  # one snapshot per cycle
+        positions = session.scalars(select(m.Position)).all()
+        assert len(positions) == 2  # one snapshot per cycle
+        assert positions[0].quantity == 2 and positions[0].side == "yes"
+        assert float(positions[0].realized_pnl) == 0.0
 
 
 def test_reconcile_cancels_timed_out_passive_order(settings):
