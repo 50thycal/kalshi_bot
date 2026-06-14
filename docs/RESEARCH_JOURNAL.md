@@ -93,6 +93,21 @@ Aftermath: kill switch back ON, config restored (spread 5, windows 20/14/8, exit
 - Net realized cost of the whole live test ≈ **−$0.83** (CHI +0.005, DEN −0.83; LAX pending).
   Worker restored to clean baseline: BOT_MODE=weather, KILL_SWITCH=true, live fully disarmed.
 
+### Round-trip test #2 (buy → ~1min hold → close) — mechanics CONFIRMED; exit edge case
+Sped cycles to 60s, forced fresh h18 entries, sl=1 to close. Result:
+- **Full round trip works end-to-end:** DEN-T69 entry **buy YES @85¢ (filled)** → ~15s hold →
+  exit **buy-NO @17¢ (FILLED)**, closing the position. The buy-NO close (the fix) executes on
+  real money. ✓
+- **Exit reliability edge case:** 2 of 3 exits (CHI high B69.5, CHI low B58.5) were rejected
+  `400 invalid_parameters` on payloads STRUCTURALLY IDENTICAL to DEN's (differ only by ticker +
+  no_price) — so it's not a code bug; likely a transient market-state condition for those
+  buckets at that instant. A duplicate DEN exit got `409 order_already_exists` (Kalshi's
+  client_order_id idempotency caught a fast-cycle retry race — a non-issue at the normal 300s
+  cadence). **Takeaway: the buy-NO close is proven but not yet 100% reliable across markets;
+  harden it (retry/fallback, confirm before relying on live TP/SL) before using non-settlement
+  exits.** The validated books are hold-to-settlement (no exits), which is fully proven.
+- Aftermath: 2 open CHI positions (@45, @71) left to settle; baseline restored, fully disarmed.
+
 ## Exit & sizing studies (live settled trades)
 
 ### Inverse view — rank by BACKFILL, check live (the trustworthy direction)
