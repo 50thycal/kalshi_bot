@@ -992,20 +992,44 @@ def latest_position_snapshot(session, ticker: str) -> m.Position | None:
     )
 
 
-def open_live_positions(session) -> list[tuple]:
-    """Candidate YES positions for exit management: filled/partial YES entry buys. Returns
-    (ticker, strategy, entry_price_cents, entry_at, qty). Excludes exit buy-NO orders
-    (side='no'). Does NOT filter on prior exits — manage_exits decides flat/in-flight/cap
-    from the live position snapshot, so a rejected exit never hides a still-open position."""
-    rows = session.scalars(
+def _entry_order_for(session, ticker: str):
+    """The most recent YES entry buy for a ticker (any status) — for strategy/entry price."""
+    return session.scalar(
         select(m.LiveOrder).where(
-            m.LiveOrder.action == "buy",
-            m.LiveOrder.side == "yes",
-            m.LiveOrder.status.in_(("filled", "partial")),
-        )
+            m.LiveOrder.market_ticker == ticker,
+            m.LiveOrder.action == "buy", m.LiveOrder.side == "yes",
+        ).order_by(m.LiveOrder.created_at.desc())
+    )
+
+
+def open_live_positions(session) -> list[tuple]:
+    """Open YES positions to manage exits for, driven by KALSHI TRUTH (the latest position
+    snapshot per ticker with a net-long YES position), so a position is managed even if its
+    local entry order row is corrupted (e.g. a 409 recorded as rejected). Strategy/entry come
+    from the most recent YES entry order for the ticker. Returns
+    (ticker, strategy, entry_price_cents, entry_at, qty)."""
+    midnight = _now().replace(hour=0, minute=0, second=0, microsecond=0)
+    snaps = session.scalars(
+        select(m.Position).where(m.Position.captured_at >= midnight)
+        .order_by(m.Position.captured_at.desc())
     ).all()
-    return [(row.market_ticker, row.strategy or "", int(row.limit_price or 0),
-             row.created_at, int(row.quantity or 0)) for row in rows]
+    seen: set[str] = set()
+    out: list[tuple] = []
+    for snap in snaps:
+        tkr = snap.market_ticker
+        if tkr in seen:
+            continue
+        seen.add(tkr)
+        qty = int(snap.quantity or 0)
+        if qty <= 0:  # flat or net-NO -> nothing to close on the YES side
+            continue
+        entry = _entry_order_for(session, tkr)
+        strategy = (entry.strategy if entry else None) or "live"
+        entry_price = int(entry.limit_price) if (entry and entry.limit_price) \
+            else int(round(snap.avg_price or 0))
+        entry_at = entry.created_at if entry else snap.captured_at
+        out.append((tkr, strategy, entry_price, entry_at, qty))
+    return out
 
 
 def bucket_bid_path(session, ticker: str, *, after: datetime | None = None) -> list[float]:

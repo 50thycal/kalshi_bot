@@ -416,6 +416,10 @@ def _filled_entry(session, *, ticker="T1", strategy="weather_low_fav_h20", qty=1
         session, signal_id=None, ticker=ticker, event_ticker="E1", strategy=strategy,
         side="yes", action="buy", limit_price=price, quantity=qty, status="filled",
         client_order_id=f"{strategy}:E1", raw_order_json={})
+    # open_live_positions is driven by Kalshi position snapshots, so seed one (net-long YES).
+    repo.insert_position_snapshot(
+        session, ticker=ticker, side="yes", quantity=qty, avg_price=float(price),
+        market_exposure=qty * price / 100.0, realized_pnl=0.0)
 
 
 def _rejected_exit(session, attempt, *, ticker="T1", strategy="weather_low_fav_h20"):

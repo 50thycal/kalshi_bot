@@ -192,6 +192,15 @@ class LiveExecutor:
                            extra={"extra_fields": {"ticker": ticker, "coid": client_order_id}})
             return
         except KalshiAPIError as exc:
+            if exc.status_code == 409:  # order_already_exists -> a prior identical send landed;
+                # treat as success so reconcile resolves it by client_order_id (NOT rejected,
+                # which would corrupt position tracking and block the exit).
+                repo.update_live_order_status(session, row, status="submitted",
+                                              cancel_reason="409_already_exists")
+                self.summary.placed += 1
+                logger.info("live entry 409 already_exists -> submitted",
+                            extra={"extra_fields": {"ticker": ticker, "coid": client_order_id}})
+                return
             repo.update_live_order_status(session, row, status="rejected", cancel_reason=str(exc))
             self.summary.rejected += 1
             return
