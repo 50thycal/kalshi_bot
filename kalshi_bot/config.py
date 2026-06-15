@@ -200,6 +200,10 @@ class Settings(BaseSettings):
     # /portfolio/orders endpoint rejects closes on range-bucket markets. Needs the account's
     # user_id (an account UUID, not a secret; set via env). Empty -> v1 close disabled.
     live_user_id: str = ""
+    # When true, entries size by a FRACTIONAL contract count (count_fp = dollars / price) so a
+    # position costs the dollar cap precisely, instead of flooring to whole shares. Default OFF
+    # (whole-share sizing) — flipping it on changes live entry sizing, so it's opt-in.
+    live_fractional: bool = False
 
     @field_validator("paper_momentum_direction", mode="before")
     @classmethod

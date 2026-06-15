@@ -164,17 +164,33 @@ class LiveExecutor:
         if price is None:
             self.summary.skipped_gate += 1
             return
-        qty_cap = math.floor(s.live_max_order_dollars / (price / 100.0))
-        qty = min(qty_cap, metrics.depth_at_best_ask, decision.max_allowed_quantity, s.max_order_size)
-        if qty <= 0:
-            self.summary.skipped_gate += 1
-            return
-
         client_order_id = f"{strategy}:{event_ticker}"
-        order = {
-            "ticker": ticker, "action": action, "side": side, "count": qty,
-            "type": "limit", "yes_price": price, "client_order_id": client_order_id,
-        }
+        if s.live_fractional:
+            # Spend the dollar cap precisely via a fractional contract count (fixed-point):
+            # count_fp = dollars / price, rounded to the 0.01-contract increment. Caps still
+            # apply as upper bounds. The Integer `quantity` column stores a rounded value for the
+            # local record only — the position snapshot from reconcile is the source of truth.
+            qty_fp = round(s.live_max_order_dollars / (price / 100.0), 2)
+            qty_fp = min(qty_fp, float(metrics.depth_at_best_ask),
+                         float(decision.max_allowed_quantity), float(s.max_order_size))
+            if qty_fp <= 0:
+                self.summary.skipped_gate += 1
+                return
+            order = {
+                "ticker": ticker, "action": action, "side": side, "count_fp": f"{qty_fp:.2f}",
+                "type": "limit", "yes_price": price, "client_order_id": client_order_id,
+            }
+            qty = max(1, round(qty_fp))
+        else:
+            qty_cap = math.floor(s.live_max_order_dollars / (price / 100.0))
+            qty = min(qty_cap, metrics.depth_at_best_ask, decision.max_allowed_quantity, s.max_order_size)
+            if qty <= 0:
+                self.summary.skipped_gate += 1
+                return
+            order = {
+                "ticker": ticker, "action": action, "side": side, "count": qty,
+                "type": "limit", "yes_price": price, "client_order_id": client_order_id,
+            }
         # Persist intent BEFORE the POST so a crash mid-place is recoverable.
         row = repo.create_live_order(
             session, signal_id=None, ticker=ticker, event_ticker=event_ticker,

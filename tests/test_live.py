@@ -161,6 +161,22 @@ def test_fires_when_fully_enabled_and_allowlisted(settings):
         assert row.status == "submitted" and row.kalshi_order_id == "K-1"
 
 
+def test_fractional_entry_sizes_by_dollars(settings):
+    # live_fractional -> entry uses count_fp = dollars/price (fixed-point), not integer count.
+    _live_settings(settings, live_fractional=True, live_max_order_dollars=1.5)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        # entry ask = 50c (metrics ask) -> 1.5 / 0.50 = 3.00 contracts
+        _enter(ex, session, metrics=_metrics(ask=50, bid=48))
+        assert len(client.placed) == 1
+        o = client.placed[0]
+        assert o["count_fp"] == "3.00" and "count" not in o
+        assert o["action"] == "buy" and o["side"] == "yes" and o["type"] == "limit"
+
+
 def test_city_filter_blocks_non_listed_city(settings):
     _live_settings(settings, live_strategies="weather_fav", live_cities="DEN,MIA,LAX")
     db.init_engine(settings.database_url)
