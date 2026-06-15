@@ -166,6 +166,13 @@ class LiveExecutor:
             return
         client_order_id = f"{strategy}:{event_ticker}"
         if s.live_fractional:
+            # ⚠️ KNOWN-BROKEN on this (v2) order path: live testing proved the v2
+            # /portfolio/orders endpoint REJECTS every fractional count_fp buy with
+            # 'invalid_parameters' (verified across marketable prices). Fractional is a v1-only
+            # capability (see RESEARCH_JOURNAL "Fractional sizing"); the working fractional buy is
+            # the v1 probe path. Keep LIVE_FRACTIONAL=false for the strategy until this entry is
+            # reworked to the v1 endpoint, or live entries will silently fail.
+            #
             # Spend the dollar cap precisely via a fractional contract count (fixed-point):
             # count_fp = dollars / price, rounded to the 0.01-contract increment. Caps still
             # apply as upper bounds. The Integer `quantity` column stores a rounded value for the

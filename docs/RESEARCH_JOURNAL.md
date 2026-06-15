@@ -317,6 +317,37 @@ hold-to-settlement. Full live loop proven on real money: entry → fill → reco
 fill → flat**. Worker disarmed to baseline after the test. (Security: the capture's request headers
 contained a session cookie/CSRF/WAF token — ignored, never stored; operator advised to log out.)
 
+### Fractional sizing — BUY confirmed live, but ONLY via the v1 endpoint (v2 rejects it)
+Goal: spend an exact dollar amount (a "$3 position" = $3 of contracts, not `floor($3/price)`),
+since the integer `count` floor leaves positions short of the target. Markets are
+`fractional_trading_enabled` and `count_fp` accepts 0.01-contract increments.
+
+**Hard live finding:** the **v2** `/portfolio/orders` endpoint rejects EVERY fractional
+(`count_fp`) buy with `400 invalid_parameters` — verified across `yes_price` 91→99 (all fully
+marketable, so it is NOT a pricing/marketability issue). v2 simply has no fractional support.
+Fractional is a **v1-only** capability: the same `POST /v1/users/{user_id}/orders` endpoint the
+close uses accepts `count_fp`. Rebuilt the isolated probe BUY as a **v1 fractional market buy** of
+YES (mirroring the v1 close body: `order_action:"buy", side:"yes", user_side:"yes",
+order_type:"market", count_fp, price_dollars=through-ask, max_cost_cents=cap`). LIVE-VERIFIED on
+real money: MIA B93.5 filled at `count_fp 1.55` (avg 97¢, ~$1.50) — a true fractional position,
+not rounded to a whole contract.
+
+**Close side, fractional:** the v1 close already sizes to the exact fractional remainder
+(`count_fp = quantity_fp`, tracked via the new `positions.quantity_fp`); unit-tested. In the live
+probe it was NOT demonstrated end-to-end because the MIA position was closed through the **v1 app
+endpoint by a client that is NOT our bot** at 18:20:32 (a fractional `no/sell` of exactly 1.55,
+taker; no `live_orders` intent row and every bot cycle committed cleanly → not bot-placed) before
+the probe's `_probe_close` could run. Operator confirmed it wasn't a deliberate close — most likely
+a leftover/standing app session (see the session-token note above). The bot's fractional close is
+the same proven v1 path, sized to the remainder.
+
+**⚠️ Known limitation / footgun for later:** `LiveExecutor.mirror_entry`'s `live_fractional=True`
+branch still builds a **v2** `count_fp` order — which is exactly the form Kalshi rejects. So
+enabling `LIVE_FRACTIONAL=true` for the live STRATEGY today would make every entry fail
+`invalid_parameters` and silently stop trading. **Keep `LIVE_FRACTIONAL=false`** until
+`mirror_entry` is reworked to place fractional entries via the v1 endpoint (like the probe). The
+validated DEN/LAX run stays integer `count` (dollar cap floored) for now.
+
 ## Exit & sizing studies (live settled trades)
 
 ### Inverse view — rank by BACKFILL, check live (the trustworthy direction)
