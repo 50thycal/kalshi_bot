@@ -286,6 +286,37 @@ bucket exits, the remaining avenues are: capture the app's actual close request,
 support why a spec-correct close on a range market returns `invalid_parameters`. The
 `_exit_candidate` ladder + `kalshi_market_probe.py` remain in the tree for when a format is found.
 
+### SOLVED — bucket close works via Kalshi's v1 user-scoped order endpoint (live-verified)
+Captured the web app's Slide-to-Sell request (browser devtools) and it explained everything: the
+app does NOT use the v2 `/trade-api/v2/portfolio/orders` endpoint the bot used — it posts to the
+**v1 user-scoped endpoint** `POST /v1/users/{user_id}/orders` with a different schema:
+```json
+{"market_id":"<uuid>","user_side":"yes","side":"no","order_action":"sell","order_type":"market",
+ "time_in_force":"immediate_or_cancel","count_fp":"1.00","price_dollars":"<100-yes_bid>",
+ "sell_position_capped":true,"post_only":false,"expiration_unix_ts":0,"max_cost_cents":0}
+```
+That's why every v2 close (sell-yes / buy-no, all variants) was rejected `invalid_parameters` — the
+v2 endpoint simply doesn't accept closes on these range-bucket markets; the v1 endpoint does.
+
+Implemented + LIVE-VERIFIED on real money (a $1 LAX bucket round trip): entry filled → the v1
+close FIRED and FILLED (fills table: `no sell, qty 2, @37` closing the position for **+$0.05**;
+not settlement — that market didn't close until the next day). Key details learned the hard way:
+- **Auth:** the bot's RSA API-key auth IS accepted on `/v1` (signs the full v1 path; same keys).
+- **market_id:** the v1 order needs the market UUID, which the v2 objects don't expose and
+  `/v1/markets/{ticker}` 404s — it lives on the **v1 event's nested markets**
+  (`/v1/series/{series}/events/{event}`), matched by `ticker_name`.
+- **price_dollars** must be the live NO-side price (`100 − yes_bid`, +slippage to cross); the
+  app's `0.01` was specific to its ~99¢ position. An IOC that doesn't cross is canceled unfilled.
+- **async fill:** the v1 IOC returns `status:"pending"` + an `order_id` and fills ~a cycle later;
+  the fill carries that order_id, so reconcile resolves the order (`filled`/`canceled`).
+- **`sell_position_capped:true`** closes the whole position safely (it even swept an older stuck
+  position in one shot).
+
+So the live early-exit (TP/SL/break-even) path now works on the weather BUCKET books, not just
+hold-to-settlement. Full live loop proven on real money: entry → fill → reconcile → **API close →
+fill → flat**. Worker disarmed to baseline after the test. (Security: the capture's request headers
+contained a session cookie/CSRF/WAF token — ignored, never stored; operator advised to log out.)
+
 ## Exit & sizing studies (live settled trades)
 
 ### Inverse view — rank by BACKFILL, check live (the trustworthy direction)
