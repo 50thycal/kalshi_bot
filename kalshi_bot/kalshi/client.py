@@ -319,10 +319,13 @@ class KalshiClient:
         self._ensure_live_enabled()
         return self._request_v1("POST", f"/v1/users/{user_id}/orders", json=order)
 
-    def get_v1_market(self, ticker: str) -> dict:
-        """v1 market object — carries the market UUID (`id`/`market_id`) that the v1 order
-        endpoint requires and the v2 market object does not expose."""
-        return self._request_v1("GET", f"/v1/markets/{ticker}")
+    def get_v1_event(self, series_ticker: str, event_ticker: str) -> dict:
+        """v1 event object with nested markets — each nested market carries the UUID
+        (`id`) that the v1 order endpoint requires and the v2 objects don't expose."""
+        return self._request_v1(
+            "GET", f"/v1/series/{series_ticker}/events/{event_ticker}",
+            json=None,
+        )
 
     def _ensure_live_enabled(self) -> None:
         if self._settings.bot_mode != "live" or self._settings.kill_switch:

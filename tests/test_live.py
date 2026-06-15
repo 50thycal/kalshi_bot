@@ -41,6 +41,7 @@ class FakeLiveClient:
         # Optional per-call script: each item is an Exception to raise or a dict to return.
         self.place_responses: list = []
         self.v1_user_ids: list[str] = []
+        self.v1_market_tickers: list[str] = ["WX-D1-B1"]  # tickers the v1 event exposes
 
     def _respond(self, default):
         if self.place_responses:
@@ -61,8 +62,10 @@ class FakeLiveClient:
         self.v1_user_ids.append(user_id)
         return self._respond({"order": {"order_id": f"K-{len(self.placed)}", "status": "executed"}})
 
-    def get_v1_market(self, ticker):
-        return {"market": {"id": f"MID-{ticker}"}}
+    def get_v1_event(self, series, event):
+        # nested markets carry the UUID; key by ticker_name like the real v1 event
+        return {"event": {"markets": [
+            {"ticker_name": t, "id": f"MID-{t}"} for t in self.v1_market_tickers]}}
 
     def cancel_order(self, order_id):
         self.canceled.append(order_id)
@@ -424,7 +427,7 @@ def test_should_exit_rules():
     assert should_exit(50, [60], 55, tp=10, sl=10, be=None) is None        # no trigger now
 
 
-def _filled_entry(session, *, ticker="T1", strategy="weather_low_fav_h20", qty=1, price=48):
+def _filled_entry(session, *, ticker="WX-D1-B1", strategy="weather_low_fav_h20", qty=1, price=48):
     repo.create_live_order(
         session, signal_id=None, ticker=ticker, event_ticker="E1", strategy=strategy,
         side="yes", action="buy", limit_price=price, quantity=qty, status="filled",
@@ -435,7 +438,7 @@ def _filled_entry(session, *, ticker="T1", strategy="weather_low_fav_h20", qty=1
         market_exposure=qty * price / 100.0, realized_pnl=0.0)
 
 
-def _rejected_exit(session, attempt, *, ticker="T1", strategy="weather_low_fav_h20"):
+def _rejected_exit(session, attempt, *, ticker="WX-D1-B1", strategy="weather_low_fav_h20"):
     repo.create_live_order(
         session, signal_id=None, ticker=ticker, event_ticker=None, strategy=strategy,
         side="yes", action="sell", limit_price=60, quantity=1, status="rejected",
@@ -456,7 +459,7 @@ def test_exit_primary_sell_yes_close(settings):
         # close = the v1 position-capped market sell (the app's request shape)
         assert o["order_action"] == "sell" and o["user_side"] == "yes" and o["side"] == "no"
         assert o["order_type"] == "market" and o["count_fp"] == "1.00"
-        assert o["sell_position_capped"] is True and o["market_id"] == "MID-T1"
+        assert o["sell_position_capped"] is True and o["market_id"] == "MID-WX-D1-B1"
         assert client.v1_user_ids[0] == "U-TEST"
         assert ex.summary.exits_placed == 1
         # the submitted (in-flight) exit blocks a duplicate this cycle
@@ -505,7 +508,7 @@ def test_exit_partial_fill_sizes_remainder(settings):
     db.init_engine(settings.database_url)
     db.create_all()
     client = FakeLiveClient()
-    client.positions = [{"ticker": "T1", "position_fp": "2.00",
+    client.positions = [{"ticker": "WX-D1-B1", "position_fp": "2.00",
                          "market_exposure_dollars": "1.00", "realized_pnl_dollars": "0"}]
     ex = _exec(settings, client)
     with db.session_scope() as session:
@@ -520,7 +523,7 @@ def test_exit_flat_position_skips(settings):
     db.init_engine(settings.database_url)
     db.create_all()
     client = FakeLiveClient()
-    client.positions = [{"ticker": "T1", "position_fp": "0",
+    client.positions = [{"ticker": "WX-D1-B1", "position_fp": "0",
                          "market_exposure_dollars": "0", "realized_pnl_dollars": "0"}]
     ex = _exec(settings, client)
     with db.session_scope() as session:
@@ -543,7 +546,7 @@ def test_rejected_exit_does_not_permanently_block(settings):
         ex.manage_exits(session)
         assert len(client.placed) == 1  # the rejected :1 did not hide the open position
         row = session.scalar(select(m.LiveOrder).where(
-            m.LiveOrder.client_order_id == "exit:weather_low_fav_h20:T1:2"))
+            m.LiveOrder.client_order_id == "exit:weather_low_fav_h20:WX-D1-B1:2"))
         assert row is not None and row.status == "submitted"
 
 

@@ -410,22 +410,40 @@ class LiveExecutor:
 
     def _market_id(self, ticker: str) -> str | None:
         """Resolve a ticker to its market UUID (cached). The v1 order endpoint requires the
-        UUID and the v2 market object does not expose it, so we read it from the v1 market."""
+        UUID, which only the v1 event's nested markets expose. ticker = SERIES-DATE-STRIKE."""
         mid = self._market_ids.get(ticker)
         if mid:
             return mid
-        try:
-            data = self.client.get_v1_market(ticker)
-        except Exception:  # noqa: BLE001
-            logger.exception("v1 market lookup failed", extra={"extra_fields": {"ticker": ticker}})
+        parts = ticker.split("-")
+        if len(parts) < 3:
+            logger.error("cannot derive event from ticker", extra={"extra_fields": {"ticker": ticker}})
             return None
-        mk = data.get("market") if isinstance(data.get("market"), dict) else data
-        mid = (mk or {}).get("id") or (mk or {}).get("market_id")
+        series, event = parts[0], f"{parts[0]}-{parts[1]}"
+        try:
+            data = self.client.get_v1_event(series, event)
+        except AuthError as exc:
+            logger.error("v1 event lookup AUTH FAILED — API key not accepted on /v1 endpoint",
+                         extra={"extra_fields": {"ticker": ticker, "error": str(exc)}})
+            return None
+        except KalshiAPIError as exc:
+            logger.error("v1 event lookup API error", extra={"extra_fields": {
+                "ticker": ticker, "status_code": exc.status_code, "path": exc.path,
+                "body": exc.message}})
+            return None
+        except Exception:  # noqa: BLE001
+            logger.exception("v1 event lookup failed", extra={"extra_fields": {"ticker": ticker}})
+            return None
+        ev = data.get("event") if isinstance(data.get("event"), dict) else data
+        markets = (ev or {}).get("markets") or data.get("markets") or []
+        for mk in markets:
+            if (mk.get("ticker_name") or mk.get("ticker")) == ticker:
+                mid = mk.get("id") or mk.get("market_id")
+                break
         if mid:
             self._market_ids[ticker] = mid
         else:
-            logger.error("v1 market has no id field",
-                         extra={"extra_fields": {"ticker": ticker, "keys": sorted((mk or {}).keys())}})
+            logger.error("v1 event has no matching market id", extra={"extra_fields": {
+                "ticker": ticker, "n_markets": len(markets)}})
         return mid
 
     def _remaining_open_qty(self, session, ticker: str, entry_qty: int) -> int:
