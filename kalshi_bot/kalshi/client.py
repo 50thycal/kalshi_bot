@@ -66,7 +66,31 @@ class KalshiClient:
         # `request_path` is relative to the httpx base_url, which already carries the
         # API prefix — so we must NOT repeat it or the URL ends up doubled.
         sign_path = f"{API_PREFIX}{suffix}"
-        request_path = suffix.lstrip("/")
+        return self._send(method, suffix.lstrip("/"), sign_path, params=params, json=json, auth=auth)
+
+    def _request_v1(
+        self, method: str, path: str, *, json: dict | None = None, auth: bool = True
+    ) -> dict[str, Any]:
+        """Call a v1 endpoint (e.g. /v1/users/{id}/orders), which lives OUTSIDE the
+        /trade-api/v2 prefix. We sign the full v1 path and hit it at the host root, reusing
+        the same RSA API-key auth. (The web app uses these v1 endpoints to close range-bucket
+        markets that the v2 /portfolio/orders endpoint rejects.)"""
+        from urllib.parse import urlsplit
+
+        parts = urlsplit(self._base_url)
+        url = f"{parts.scheme}://{parts.netloc}{path}"
+        return self._send(method, url, path, json=json, auth=auth)
+
+    def _send(
+        self,
+        method: str,
+        url: str,
+        sign_path: str,
+        *,
+        params: dict | None = None,
+        json: dict | None = None,
+        auth: bool = True,
+    ) -> dict[str, Any]:
         attempts = len(self._retry_backoffs) + 1
         last_exc: Exception | None = None
 
@@ -76,7 +100,7 @@ class KalshiClient:
                 headers.update(self._signer.auth_headers(method, sign_path))
             try:
                 resp = self._client.request(
-                    method, request_path, params=params, json=json, headers=headers
+                    method, url, params=params, json=json, headers=headers
                 )
             except httpx.HTTPError as exc:
                 last_exc = TransientError(f"network error: {exc}")
@@ -286,6 +310,19 @@ class KalshiClient:
     def cancel_order(self, order_id: str) -> dict:
         self._ensure_live_enabled()
         return self._request("DELETE", f"/portfolio/orders/{order_id}")
+
+    def create_v1_order(self, user_id: str, order: dict[str, Any]) -> dict:
+        """Place an order via the v1 user-scoped endpoint — the path the web app uses to CLOSE
+        range-bucket markets (the v2 endpoint rejects those closes). `order` is the v1 body
+        (market_id, user_side, side, order_action, order_type, count_fp, price_dollars,
+        sell_position_capped, ...)."""
+        self._ensure_live_enabled()
+        return self._request_v1("POST", f"/v1/users/{user_id}/orders", json=order)
+
+    def get_v1_market(self, ticker: str) -> dict:
+        """v1 market object — carries the market UUID (`id`/`market_id`) that the v1 order
+        endpoint requires and the v2 market object does not expose."""
+        return self._request_v1("GET", f"/v1/markets/{ticker}")
 
     def _ensure_live_enabled(self) -> None:
         if self._settings.bot_mode != "live" or self._settings.kill_switch:

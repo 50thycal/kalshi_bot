@@ -85,6 +85,7 @@ class LiveExecutor:
         self.summary = LiveCycleSummary()
         self._daily_loss_tripped = False
         self._exit_abandoned: set[tuple[str, str]] = set()
+        self._market_ids: dict[str, str] = {}  # ticker -> v1 market UUID (cached)
 
     def reset_summary(self) -> None:
         self.summary = LiveCycleSummary()
@@ -407,36 +408,25 @@ class LiveExecutor:
             return 2
         return 1
 
-    def _exit_sell_price(self, bid: int, level: int) -> int:
-        """Limit price (cents) to SELL the held YES at — exactly the app's "Slide to Sell".
-        Base = the current bid so it crosses and fills immediately; escalated re-attempts sell
-        LOWER (cross deeper) to force the fill."""
-        px = int(bid)
-        if level >= 1:
-            px -= self.settings.live_exit_slippage_cents
-        return max(1, min(99, px))
-
-    def _exit_candidate(self, ticker, qty, sell_px, coid, index) -> tuple[dict, str]:
-        """The close-format discovery ladder: returns (order, label) for attempt `index`.
-        Cycles the close-specific variants we have NOT yet had accepted on bucket markets
-        (reduce_only and market orders), in addition to the plain forms, until one fills."""
-        n = int(qty)
-        no_px = max(1, min(99, 100 - sell_px))
-        candidates = [
-            ({"ticker": ticker, "action": "sell", "side": "yes", "count": n, "type": "limit",
-              "yes_price": sell_px, "reduce_only": True, "client_order_id": coid},
-             "sell_yes_limit_reduce_only"),
-            ({"ticker": ticker, "action": "sell", "side": "yes", "count": n, "type": "market",
-              "sell_position_floor": 0, "client_order_id": coid},
-             "sell_yes_market_floor"),
-            ({"ticker": ticker, "action": "buy", "side": "no", "count": n, "type": "limit",
-              "no_price": no_px, "reduce_only": True, "client_order_id": coid},
-             "buy_no_limit_reduce_only"),
-            ({"ticker": ticker, "action": "buy", "side": "no", "count": n, "type": "market",
-              "buy_max_cost": 100, "client_order_id": coid},
-             "buy_no_market"),
-        ]
-        return candidates[index % len(candidates)]
+    def _market_id(self, ticker: str) -> str | None:
+        """Resolve a ticker to its market UUID (cached). The v1 order endpoint requires the
+        UUID and the v2 market object does not expose it, so we read it from the v1 market."""
+        mid = self._market_ids.get(ticker)
+        if mid:
+            return mid
+        try:
+            data = self.client.get_v1_market(ticker)
+        except Exception:  # noqa: BLE001
+            logger.exception("v1 market lookup failed", extra={"extra_fields": {"ticker": ticker}})
+            return None
+        mk = data.get("market") if isinstance(data.get("market"), dict) else data
+        mid = (mk or {}).get("id") or (mk or {}).get("market_id")
+        if mid:
+            self._market_ids[ticker] = mid
+        else:
+            logger.error("v1 market has no id field",
+                         extra={"extra_fields": {"ticker": ticker, "keys": sorted((mk or {}).keys())}})
+        return mid
 
     def _remaining_open_qty(self, session, ticker: str, entry_qty: int) -> int:
         """Remaining open YES contracts from Kalshi truth. The latest position snapshot
@@ -461,25 +451,44 @@ class LiveExecutor:
                              "remaining": remaining, "attempts": attempts}})
 
     def _place_exit(self, session, ticker, strategy, bid, qty, kind, *, attempt, level) -> None:
-        # Close-format DISCOVERY ladder. Every documented single close form (sell-yes limit,
-        # sell-yes fractional, buy-no limit, sell-yes+floor) is rejected invalid_parameters on
-        # these range-bucket markets while accepted on threshold markets. Since a rejected order
-        # is a harmless no-op that leaves the position open, we cycle the remaining close-specific
-        # variants across re-attempts until one FILLS, logging each full payload for RCA.
+        # Close via Kalshi's v1 user-scoped order endpoint (POST /v1/users/{user_id}/orders) —
+        # the path the web app uses, which ACCEPTS closes on range-bucket markets that the v2
+        # /portfolio/orders endpoint rejects (captured from the app's Slide-to-Sell request).
+        # Body = a position-capped market sell of the held (YES) side. coid is local-only for
+        # attempt tracking (v1 has no client_order_id; sell_position_capped guards a double-send).
         coid = f"exit:{strategy}:{ticker}:{attempt}"
-        sell_px = self._exit_sell_price(bid, level)
-        order, label = self._exit_candidate(ticker, qty, sell_px, coid, attempt - 1)
+        user_id = (self.settings.live_user_id or "").strip()
+        market_id = self._market_id(ticker)
+        if not user_id or not market_id:
+            logger.error("live exit cannot build v1 close (missing user_id/market_id)", extra={
+                "extra_fields": {"ticker": ticker, "have_user_id": bool(user_id),
+                                 "market_id": market_id}})
+            self._log_exit_abandoned(ticker, strategy, qty, attempt)
+            return
+        order = {
+            "market_id": market_id,
+            "user_side": "yes",          # the bot only holds YES (buy-favorite entries)
+            "side": "no",
+            "order_action": "sell",
+            "order_type": "market",
+            "time_in_force": "immediate_or_cancel",
+            "count_fp": f"{int(qty)}.00",
+            "price_dollars": "0.0100",
+            "sell_position_capped": True,
+            "post_only": False,
+            "expiration_unix_ts": 0,
+            "max_cost_cents": 0,
+        }
         if level >= 1:
             self.summary.exits_escalated += 1
-        px = order.get("yes_price") or order.get("no_price")
         row = repo.create_live_order(
             session, signal_id=None, ticker=ticker, event_ticker=None, strategy=strategy,
-            side=order["side"], action=order["action"], limit_price=px, quantity=qty,
+            side="yes", action="sell", limit_price=int(bid), quantity=qty,
             status="pending", client_order_id=coid, raw_order_json=order)
-        logger.info("live exit attempt", extra={"extra_fields": {
-            "ticker": ticker, "coid": coid, "candidate": label, "payload": order}})
+        logger.info("live exit attempt (v1 close)", extra={"extra_fields": {
+            "ticker": ticker, "coid": coid, "market_id": market_id, "payload": order}})
         try:
-            resp = self.client.place_order(**order)
+            resp = self.client.create_v1_order(user_id, order)
         except AuthError:
             repo.update_live_order_status(session, row, status="error", cancel_reason="auth")
             raise
@@ -510,14 +519,15 @@ class LiveExecutor:
                                           cancel_reason=str(exc), raw=order)
             logger.exception("live exit place_order failed")
             return
-        koid = (resp or {}).get("order", {}).get("order_id") if isinstance(resp, dict) else None
+        koid = None
+        if isinstance(resp, dict):
+            o = resp.get("order") if isinstance(resp.get("order"), dict) else resp
+            koid = o.get("order_id") or o.get("id")
         repo.update_live_order_status(session, row, status="submitted", kalshi_order_id=koid, raw=resp)
         self.summary.exits_placed += 1
-        logger.info("live exit order placed", extra={"extra_fields": {
+        logger.info("live exit order placed (v1 close)", extra={"extra_fields": {
             "ticker": ticker, "strategy": strategy, "rule": kind,
-            "order_type": "market" if level >= 2 else "limit",
-            "yes_price": order.get("yes_price"), "count": qty,
-            "attempt": attempt, "level": level}})
+            "market_id": market_id, "count": qty, "attempt": attempt}})
 
     def _current_bid(self, ticker: str) -> int | None:
         try:

@@ -195,6 +195,11 @@ class Settings(BaseSettings):
     live_exit_slippage_cents: int = 0
     live_exit_use_market_fallback: bool = False
     live_exit_max_attempts: int = 3
+    # The bucket close uses Kalshi's v1 user-scoped order endpoint
+    # (POST /v1/users/{user_id}/orders) — the one the web app uses — because the v2
+    # /portfolio/orders endpoint rejects closes on range-bucket markets. Needs the account's
+    # user_id (an account UUID, not a secret; set via env). Empty -> v1 close disabled.
+    live_user_id: str = ""
 
     @field_validator("paper_momentum_direction", mode="before")
     @classmethod
@@ -426,6 +431,7 @@ class Settings(BaseSettings):
             "live_exit_use_market_fallback": self.live_exit_use_market_fallback,
             "live_exit_max_attempts": self.live_exit_max_attempts,
             "live_max_order_dollars": self.live_max_order_dollars,
+            "live_user_id_present": bool(self.live_user_id),
             "api_key_id_present": bool(self.kalshi_api_key_id),
             "private_key_present": bool(self.private_key_pem),
         }

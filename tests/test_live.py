@@ -40,9 +40,9 @@ class FakeLiveClient:
         self.place_exc: Exception | None = None
         # Optional per-call script: each item is an Exception to raise or a dict to return.
         self.place_responses: list = []
+        self.v1_user_ids: list[str] = []
 
-    def place_order(self, **order):
-        self.placed.append(order)
+    def _respond(self, default):
         if self.place_responses:
             item = self.place_responses.pop(0)
             if isinstance(item, Exception):
@@ -50,7 +50,19 @@ class FakeLiveClient:
             return item
         if self.place_exc is not None:
             raise self.place_exc
-        return {"order": {"order_id": f"K-{len(self.placed)}", "status": "resting"}}
+        return default
+
+    def place_order(self, **order):
+        self.placed.append(order)
+        return self._respond({"order": {"order_id": f"K-{len(self.placed)}", "status": "resting"}})
+
+    def create_v1_order(self, user_id, order):
+        self.placed.append(order)
+        self.v1_user_ids.append(user_id)
+        return self._respond({"order": {"order_id": f"K-{len(self.placed)}", "status": "executed"}})
+
+    def get_v1_market(self, ticker):
+        return {"market": {"id": f"MID-{ticker}"}}
 
     def cancel_order(self, order_id):
         self.canceled.append(order_id)
@@ -83,6 +95,7 @@ def _live_settings(settings, **over):
     settings.live_max_order_dollars = 5.0
     settings.max_order_size = 100
     settings.live_entry_style = "marketable"
+    settings.live_user_id = "U-TEST"
     for k, v in over.items():
         setattr(settings, k, v)
     return settings
@@ -440,11 +453,11 @@ def test_exit_primary_sell_yes_close(settings):
         ex.manage_exits(session)
         assert len(client.placed) == 1
         o = client.placed[0]
-        # close ladder attempt 1 = sell-yes limit + reduce_only (discovery ladder)
-        assert o["action"] == "sell" and o["side"] == "yes"
-        assert o["yes_price"] == 60 and o["count"] == 1 and o["type"] == "limit"
-        assert o["reduce_only"] is True and "no_price" not in o
-        assert o["client_order_id"] == "exit:weather_low_fav_h20:T1:1"
+        # close = the v1 position-capped market sell (the app's request shape)
+        assert o["order_action"] == "sell" and o["user_side"] == "yes" and o["side"] == "no"
+        assert o["order_type"] == "market" and o["count_fp"] == "1.00"
+        assert o["sell_position_capped"] is True and o["market_id"] == "MID-T1"
+        assert client.v1_user_ids[0] == "U-TEST"
         assert ex.summary.exits_placed == 1
         # the submitted (in-flight) exit blocks a duplicate this cycle
         ex.manage_exits(session)
@@ -462,14 +475,13 @@ def test_exit_rejection_escalates_and_does_not_block(settings):
     with db.session_scope() as session:
         _filled_entry(session, price=48)
         ex.manage_exits(session)  # attempt 1 -> rejected (terminal, not in-flight)
-        assert ex.summary.rejected == 1
-        assert client.placed[0]["client_order_id"].endswith(":1")
-        ex.manage_exits(session)  # rejected didn't block -> attempt 2 cycles to next candidate
+        assert ex.summary.rejected == 1 and len(client.placed) == 1
+        ex.manage_exits(session)  # rejected didn't block -> attempt 2 fires (regression)
         assert len(client.placed) == 2
-        o2 = client.placed[1]
-        # attempt 2 = next ladder candidate (market sell + floor); the rejected attempt 1 did not block
-        assert o2["client_order_id"].endswith(":2")
-        assert o2["type"] == "market" and o2["action"] == "sell" and o2["sell_position_floor"] == 0
+        assert client.placed[1]["order_action"] == "sell"  # still the v1 close
+        rows = session.scalars(select(m.LiveOrder).where(
+            m.LiveOrder.client_order_id.like("exit:%"))).all()
+        assert any(r.client_order_id.endswith(":2") for r in rows)
 
 
 def test_exit_409_treated_as_success(settings):
@@ -500,7 +512,7 @@ def test_exit_partial_fill_sizes_remainder(settings):
         _filled_entry(session, qty=5, price=48)
         ex.reconcile(session)       # snapshot shows 2 still open
         ex.manage_exits(session)    # size the close to the remaining 2, not the original 5
-        assert client.placed[0]["count"] == 2
+        assert client.placed[0]["count_fp"] == "2.00"
 
 
 def test_exit_flat_position_skips(settings):
@@ -529,8 +541,10 @@ def test_rejected_exit_does_not_permanently_block(settings):
         _filled_entry(session, price=48)
         _rejected_exit(session, 1)
         ex.manage_exits(session)
-        assert len(client.placed) == 1
-        assert client.placed[0]["client_order_id"].endswith(":2")
+        assert len(client.placed) == 1  # the rejected :1 did not hide the open position
+        row = session.scalar(select(m.LiveOrder).where(
+            m.LiveOrder.client_order_id == "exit:weather_low_fav_h20:T1:2"))
+        assert row is not None and row.status == "submitted"
 
 
 def test_exit_bounded_attempts_holds_and_logs_critical(settings, caplog):
@@ -554,20 +568,21 @@ def test_exit_bounded_attempts_holds_and_logs_critical(settings, caplog):
         assert ex.summary.exits_abandoned == 1
 
 
-def test_exit_market_fallback_when_enabled(settings):
+def test_exit_v1_close_is_position_capped_market_sell(settings):
     _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_cents=10,
-                   live_exit_max_attempts=2, live_exit_use_market_fallback=True)
+                   live_exit_max_attempts=3)
     db.init_engine(settings.database_url)
     db.create_all()
     client = FakeLiveClient()
     ex = _exec(settings, client)
     with db.session_scope() as session:
         _filled_entry(session)
-        _rejected_exit(session, 1)  # next is the final attempt -> market fallback
+        _rejected_exit(session, 1)  # a prior reject must not change the v1 close shape
         ex.manage_exits(session)
         o = client.placed[0]
-        assert o["type"] == "market" and o["action"] == "sell" and o["side"] == "yes"
-        assert o["count"] == 1 and o["sell_position_floor"] == 0 and "yes_price" not in o
+        assert o["order_type"] == "market" and o["order_action"] == "sell"
+        assert o["count_fp"] == "1.00" and o["sell_position_capped"] is True
+        assert "yes_price" not in o and "no_price" not in o
 
 
 def test_exit_full_error_logged_on_rejection(settings, caplog):
@@ -585,7 +600,7 @@ def test_exit_full_error_logged_on_rejection(settings, caplog):
         row = session.scalar(select(m.LiveOrder).where(
             m.LiveOrder.client_order_id.like("exit:%"), m.LiveOrder.action == "sell"))
         assert row.status == "rejected" and row.cancel_reason.startswith("400:")
-        assert row.raw_order_json.get("yes_price") == 60  # exact payload kept for RCA
+        assert row.raw_order_json.get("order_action") == "sell"  # exact v1 payload kept for RCA
         assert any("REJECTED" in r.message for r in caplog.records)
 
 
