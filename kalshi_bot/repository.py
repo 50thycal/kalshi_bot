@@ -964,6 +964,16 @@ def fills_for_ticker(session, ticker: str) -> list[m.Fill]:
     ).all())
 
 
+def fills_for_order(session, kalshi_order_id: str) -> list[m.Fill]:
+    """Fills belonging to a given exchange order id (how a v1 IOC close is matched to its
+    fill — the v1 order isn't visible via the v2 orders endpoint, but the fill carries it)."""
+    if not kalshi_order_id:
+        return []
+    return list(session.scalars(
+        select(m.Fill).where(m.Fill.kalshi_order_id == kalshi_order_id)
+    ).all())
+
+
 def insert_position_snapshot(
     session, *, ticker: str, side: str | None, quantity: int | None, avg_price: float | None,
     market_exposure: float | None = None, realized_pnl: float | None = None,

@@ -537,6 +537,28 @@ def test_exit_flat_position_skips(settings):
         assert client.placed == []  # nothing to close
 
 
+def test_v1_exit_resolved_by_fill_on_reconcile(settings):
+    # A submitted v1 close (IOC, not in the v2 orders feed) is marked 'filled' once its fill
+    # lands (matched by kalshi_order_id), since v1 fills async.
+    _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_cents=10)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _filled_entry(session, price=48)
+        ex.manage_exits(session)            # places the v1 close -> submitted, koid 'K-1'
+        row = session.scalar(select(m.LiveOrder).where(m.LiveOrder.client_order_id.like("exit:%")))
+        assert row.status == "submitted" and row.kalshi_order_id == "K-1"
+        # the async fill lands carrying that order_id -> reconcile resolves the order to filled
+        client.fills = [{"trade_id": "XF1", "order_id": "K-1", "market_ticker": "WX-D1-B1",
+                         "side": "no", "action": "sell", "no_price_dollars": "0.37",
+                         "count_fp": "1.00", "fee_cost": "0.01"}]
+        ex.reconcile(session)
+        session.refresh(row)
+        assert row.status == "filled"
+
+
 def test_rejected_exit_does_not_permanently_block(settings):
     # Regression for the dedup bug: a rejected exit must NOT hide the still-open position.
     _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_cents=10)
@@ -551,7 +573,7 @@ def test_rejected_exit_does_not_permanently_block(settings):
         assert len(client.placed) == 1  # the rejected :1 did not hide the open position
         row = session.scalar(select(m.LiveOrder).where(
             m.LiveOrder.client_order_id == "exit:weather_low_fav_h20:WX-D1-B1:2"))
-        assert row is not None and row.status == "filled"
+        assert row is not None and row.status == "submitted"
 
 
 def test_exit_bounded_attempts_holds_and_logs_critical(settings, caplog):

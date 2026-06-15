@@ -18,7 +18,7 @@ import logging
 import math
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from .. import repository as repo
 from ..kalshi.errors import AuthError, KalshiAPIError, TransientError
@@ -288,6 +288,9 @@ class LiveExecutor:
                 action=f.get("action"), price=price, quantity=qty, fee=fee, raw_fill_json=f)
             self.summary.new_fills += 1
 
+        # v1 IOC closes aren't in the v2 orders feed; resolve them by their fill (or age-out).
+        self._resolve_v1_exits(session)
+
         # Snapshot positions.
         # Kalshi market_positions shape (confirmed via real positions): position_fp
         # (signed fixed-point), market_exposure_dollars, realized_pnl_dollars.
@@ -397,6 +400,22 @@ class LiveExecutor:
                 self.summary.exits_reattempted += 1
             self._place_exit(session, ticker, strategy, live_bid, remaining, kind,
                              attempt=attempts + 1, level=self._escalation_level(attempts))
+
+    def _resolve_v1_exits(self, session) -> None:
+        """Resolve submitted v1 exit (close) orders, which the v2 orders feed can't see. The v1
+        IOC returns 'pending' + an order_id and fills async; match the fill by that order_id ->
+        'filled'. If no fill lands within a bounded window, the IOC expired -> 'canceled' (which
+        also unblocks a re-attempt). Keeps order status honest without affecting the
+        position-as-truth re-attempt logic."""
+        cutoff = datetime.now(timezone.utc) - timedelta(seconds=180)
+        for row in repo.get_nonterminal_live_orders(session):
+            if not (row.client_order_id or "").startswith("exit:"):
+                continue
+            if row.kalshi_order_id and repo.fills_for_order(session, row.kalshi_order_id):
+                repo.update_live_order_status(session, row, status="filled")
+            elif _aware(row.created_at) < cutoff:
+                repo.update_live_order_status(session, row, status="canceled",
+                                              cancel_reason="ioc_no_fill")
 
     def _escalation_level(self, attempts: int) -> int:
         """0 = base marketable limit; 1 = aggressive (slippage-buffered) limit;
@@ -547,19 +566,17 @@ class LiveExecutor:
                                           cancel_reason=str(exc), raw=order)
             logger.exception("live exit place_order failed")
             return
-        # The v1 close is immediate-or-cancel: it resolves at placement (fills or cancels) and
-        # cannot be reconciled via the v2 orders endpoint, so mark it TERMINAL now and let the
-        # position snapshot (refreshed by reconcile each cycle) be the source of truth for whether
-        # to re-attempt. A non-terminal status here would block re-attempts forever.
+        # The v1 close returns status='pending' + an order_id and FILLS asynchronously (the fill
+        # carries that order_id). Mark it 'submitted' with the order_id; reconcile resolves it to
+        # 'filled' when the matching fill lands, or 'canceled' if the IOC ages out unfilled
+        # (_resolve_v1_exits). The position snapshot stays the source of truth for re-attempts.
         koid = None
         ostatus = ""
         if isinstance(resp, dict):
             o = resp.get("order") if isinstance(resp.get("order"), dict) else resp
             koid = o.get("order_id") or o.get("id")
             ostatus = str(o.get("status") or "").lower()
-        filled = ostatus in ("executed", "filled", "matched", "") or not ostatus
-        repo.update_live_order_status(session, row, status="filled" if filled else "canceled",
-                                      kalshi_order_id=koid, raw=resp)
+        repo.update_live_order_status(session, row, status="submitted", kalshi_order_id=koid, raw=resp)
         self.summary.exits_placed += 1
         logger.info("live exit order placed (v1 close)", extra={"extra_fields": {
             "ticker": ticker, "strategy": strategy, "rule": kind, "resp_status": ostatus,
