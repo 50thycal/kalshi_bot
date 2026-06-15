@@ -455,6 +455,43 @@ def _filled_entry(session, *, ticker="WX-D1-B1", strategy="weather_low_fav_h20",
         avg_price=float(price), market_exposure=qty * price / 100.0, realized_pnl=0.0)
 
 
+def test_probe_buy_is_fractional(settings):
+    # live_probe buy -> a fractional v2 order (count_fp = dollars/ask), isolated from the strategy.
+    _live_settings(settings, live_probe="buy:WX-D1-B1:1.5")
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()  # orderbook -> best_yes_ask = 100 - no_bid(38) = 62
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        ex.run_probe(session)
+        assert len(client.placed) == 1
+        o = client.placed[0]
+        assert o["action"] == "buy" and o["side"] == "yes" and o["type"] == "limit"
+        assert o["count_fp"] == "2.42"  # round(1.5 / 0.62, 2)
+        assert o["client_order_id"] == "probe:buy:WX-D1-B1"
+        # one-shot: a second run does not duplicate
+        ex.run_probe(session)
+        assert len(client.placed) == 1
+
+
+def test_probe_close_only_matches_prefix(settings):
+    # live_probe close -> targeted fractional close of ONLY the prefix; strategy positions untouched.
+    _live_settings(settings, live_probe="close:KXHIGHMIA", live_exit_mode="settlement")
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    client.v1_market_tickers = ["KXHIGHMIA-26JUN15-B93.5"]  # the v1 event exposes this market's id
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _filled_entry(session, ticker="KXHIGHMIA-26JUN15-B93.5", strategy="probe", qty=3, qty_fp=3.12)
+        _filled_entry(session, ticker="KXHIGHDEN-26JUN15-B79.5", strategy="weather_fav_h14", qty=3)
+        ex.run_probe(session)
+        # only the MIA position is closed (exact fractional remainder); DEN is never touched
+        assert len(client.placed) == 1
+        assert client.placed[0]["count_fp"] == "3.12"
+        assert client.placed[0]["market_id"] == "MID-KXHIGHMIA-26JUN15-B93.5"
+
+
 def test_fractional_close_sizes_exact_remainder(settings):
     # A fractional position (3.12 shares) must close the EXACT remainder, not round to 3.00.
     _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_cents=10)

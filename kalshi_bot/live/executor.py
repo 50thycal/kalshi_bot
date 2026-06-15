@@ -381,6 +381,85 @@ class LiveExecutor:
 
     # --- dynamic exits ----------------------------------------------------------
 
+    def run_probe(self, session) -> None:
+        """One-shot isolated PROBE for fractional buy/sell verification (gated on `live_probe`,
+        empty = off). NEVER touches the strategy pipeline — a `close` only matches the given
+        ticker prefix, so the strategy's positions are untouched. Directives:
+          buy:<ticker>:<dollars>  -> fractional v2 buy (count_fp = dollars/ask)
+          close:<ticker_prefix>   -> targeted v1 close of matching open positions only."""
+        directive = (self.settings.live_probe or "").strip()
+        if not directive or not self._switches_on():
+            return
+        parts = directive.split(":")
+        kind = parts[0].lower()
+        try:
+            if kind == "buy" and len(parts) >= 3:
+                self._probe_buy(session, parts[1], float(parts[2]))
+            elif kind == "close" and len(parts) >= 2:
+                self._probe_close(session, parts[1])
+            else:
+                logger.error("live_probe not understood",
+                             extra={"extra_fields": {"directive": directive}})
+        except AuthError:
+            raise
+        except Exception:  # noqa: BLE001
+            logger.exception("live probe failed", extra={"extra_fields": {"directive": directive}})
+
+    def _probe_buy(self, session, ticker: str, dollars: float) -> None:
+        coid = f"probe:buy:{ticker}"
+        if repo.get_live_order_by_client_id(session, coid):
+            return  # one-shot per ticker
+        from ..scanner.metrics import compute_metrics
+        ob = self.client.get_orderbook(ticker, depth=self.settings.orderbook_depth)
+        mx = compute_metrics({"ticker": ticker}, ob, top_n=self.settings.orderbook_depth)
+        ask = mx.best_yes_ask
+        if not ask or not (1 <= ask <= 99):
+            logger.error("probe buy: no ask", extra={"extra_fields": {"ticker": ticker}})
+            return
+        count_fp = round(dollars / (ask / 100.0), 2)
+        if count_fp < 0.01:
+            return
+        order = {"ticker": ticker, "action": "buy", "side": "yes", "count_fp": f"{count_fp:.2f}",
+                 "type": "limit", "yes_price": int(ask), "client_order_id": coid}
+        row = repo.create_live_order(
+            session, signal_id=None, ticker=ticker, event_ticker=None, strategy="probe",
+            side="yes", action="buy", limit_price=int(ask), quantity=max(1, round(count_fp)),
+            status="pending", client_order_id=coid, raw_order_json=order)
+        logger.info("live PROBE buy (fractional)", extra={"extra_fields": {
+            "ticker": ticker, "dollars": dollars, "ask": ask, "count_fp": f"{count_fp:.2f}"}})
+        try:
+            resp = self.client.place_order(**order)
+        except KalshiAPIError as exc:
+            if exc.status_code == 409:
+                repo.update_live_order_status(session, row, status="submitted", cancel_reason="409")
+                return
+            repo.update_live_order_status(session, row, status="rejected",
+                                          cancel_reason=f"{exc.status_code}:{exc.message}", raw=order)
+            logger.error("probe buy REJECTED", extra={"extra_fields": {
+                "ticker": ticker, "status_code": exc.status_code, "body": exc.message, "payload": order}})
+            return
+        koid = (resp.get("order") or {}).get("order_id") if isinstance(resp, dict) else None
+        repo.update_live_order_status(session, row, status="submitted", kalshi_order_id=koid, raw=resp)
+
+    def _probe_close(self, session, prefix: str) -> None:
+        for ticker, strategy, _entry_price, _entry_at, entry_qty in repo.open_live_positions(session):
+            if not ticker.startswith(prefix):
+                continue  # ONLY the probe's ticker(s) — never the strategy's positions
+            remaining = self._remaining_open_qty(session, ticker, entry_qty)
+            if remaining < 0.01:
+                continue
+            if repo.live_exit_in_flight(session, ticker, strategy):
+                continue
+            attempts = repo.count_exit_attempts(session, ticker, strategy)
+            if attempts >= self.settings.live_exit_max_attempts:
+                self._log_exit_abandoned(ticker, strategy, remaining, attempts)
+                continue
+            bid = self._current_bid(ticker)
+            if bid is None:
+                continue
+            self._place_exit(session, ticker, strategy, bid, remaining, "probe_close",
+                             attempt=attempts + 1, level=0)
+
     def manage_exits(self, session) -> None:
         """Place closing orders for configured TP/SL/break-even rules. No-op in the default
         'settlement' mode (Kalshi cash-settles automatically). Reuses the replay semantics."""

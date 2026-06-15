@@ -204,6 +204,11 @@ class Settings(BaseSettings):
     # position costs the dollar cap precisely, instead of flooring to whole shares. Default OFF
     # (whole-share sizing) — flipping it on changes live entry sizing, so it's opt-in.
     live_fractional: bool = False
+    # One-shot isolated PROBE for fractional buy/sell verification, gated here (empty = off).
+    # NEVER touches the strategy pipeline. Directives:
+    #   "buy:<ticker>:<dollars>" -> a fractional v2 buy (count_fp = dollars/ask)
+    #   "close:<ticker_prefix>"  -> targeted v1 close of ONLY positions matching that prefix
+    live_probe: str = ""
 
     @field_validator("paper_momentum_direction", mode="before")
     @classmethod

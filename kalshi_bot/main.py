@@ -412,6 +412,7 @@ def _run_live_cycle(settings, client, engine, tracker, executor, backfill=None) 
         try:
             executor.reconcile(session, account_state)  # Kalshi truth first
             executor.manage_exits(session)
+            executor.run_probe(session)                  # isolated fractional buy/sell probe (off by default)
             engine.manage_open_positions(session)       # paper settle/mark (shadow record)
             summary = tracker.run_once(session)         # mirrors entries for allowlisted books
             repo.finish_bot_run(
