@@ -407,8 +407,9 @@ class LiveExecutor:
 
     def _probe_buy(self, session, ticker: str, dollars: float) -> None:
         coid = f"probe:buy:{ticker}"
-        if repo.get_live_order_by_client_id(session, coid):
-            return  # one-shot per ticker
+        prior = repo.get_live_order_by_client_id(session, coid)
+        if prior and prior.status not in ("rejected", "not_landed", "canceled", "error"):
+            return  # one-shot per ticker (already submitted/filled); retry only after a failure
         from ..scanner.metrics import compute_metrics
         ob = self.client.get_orderbook(ticker, depth=self.settings.orderbook_depth)
         mx = compute_metrics({"ticker": ticker}, ob, top_n=self.settings.orderbook_depth)
@@ -416,17 +417,23 @@ class LiveExecutor:
         if not ask or not (1 <= ask <= 99):
             logger.error("probe buy: no ask", extra={"extra_fields": {"ticker": ticker}})
             return
+        # Fractional orders are taker-only — they cannot rest on the book, so a limit that does
+        # not strictly cross the ask is rejected 'invalid_parameters'. Price a couple cents
+        # THROUGH the ask (clamped 1..99) so the fractional buy is marketable; count_fp is still
+        # sized off the ask so the dollar cost stays ~= the target.
+        buy_price = min(99, int(ask) + 2)
         count_fp = round(dollars / (ask / 100.0), 2)
         if count_fp < 0.01:
             return
         order = {"ticker": ticker, "action": "buy", "side": "yes", "count_fp": f"{count_fp:.2f}",
-                 "type": "limit", "yes_price": int(ask), "client_order_id": coid}
+                 "type": "limit", "yes_price": buy_price, "client_order_id": coid}
         row = repo.create_live_order(
             session, signal_id=None, ticker=ticker, event_ticker=None, strategy="probe",
-            side="yes", action="buy", limit_price=int(ask), quantity=max(1, round(count_fp)),
+            side="yes", action="buy", limit_price=buy_price, quantity=max(1, round(count_fp)),
             status="pending", client_order_id=coid, raw_order_json=order)
         logger.info("live PROBE buy (fractional)", extra={"extra_fields": {
-            "ticker": ticker, "dollars": dollars, "ask": ask, "count_fp": f"{count_fp:.2f}"}})
+            "ticker": ticker, "dollars": dollars, "ask": ask, "buy_price": buy_price,
+            "count_fp": f"{count_fp:.2f}"}})
         try:
             resp = self.client.place_order(**order)
         except KalshiAPIError as exc:
