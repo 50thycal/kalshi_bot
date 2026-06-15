@@ -483,6 +483,10 @@ class LiveExecutor:
                                  "market_id": market_id}})
             self._log_exit_abandoned(ticker, strategy, qty, attempt)
             return
+        # price_dollars is the NO-side marketable price = 100 - yes_bid (the app sent 0.01 only
+        # because its position was at yes~99c). An IOC that doesn't cross is canceled unfilled,
+        # so derive it from the live bid (+ optional slippage to cross deeper and guarantee fill).
+        no_price = max(1, min(99, 100 - int(bid) + self.settings.live_exit_slippage_cents))
         order = {
             "market_id": market_id,
             "user_side": "yes",          # the bot only holds YES (buy-favorite entries)
@@ -491,7 +495,7 @@ class LiveExecutor:
             "order_type": "market",
             "time_in_force": "immediate_or_cancel",
             "count_fp": f"{int(qty)}.00",
-            "price_dollars": "0.0100",
+            "price_dollars": f"{no_price / 100:.4f}",
             "sell_position_capped": True,
             "post_only": False,
             "expiration_unix_ts": 0,
@@ -543,15 +547,23 @@ class LiveExecutor:
                                           cancel_reason=str(exc), raw=order)
             logger.exception("live exit place_order failed")
             return
+        # The v1 close is immediate-or-cancel: it resolves at placement (fills or cancels) and
+        # cannot be reconciled via the v2 orders endpoint, so mark it TERMINAL now and let the
+        # position snapshot (refreshed by reconcile each cycle) be the source of truth for whether
+        # to re-attempt. A non-terminal status here would block re-attempts forever.
         koid = None
+        ostatus = ""
         if isinstance(resp, dict):
             o = resp.get("order") if isinstance(resp.get("order"), dict) else resp
             koid = o.get("order_id") or o.get("id")
-        repo.update_live_order_status(session, row, status="submitted", kalshi_order_id=koid, raw=resp)
+            ostatus = str(o.get("status") or "").lower()
+        filled = ostatus in ("executed", "filled", "matched", "") or not ostatus
+        repo.update_live_order_status(session, row, status="filled" if filled else "canceled",
+                                      kalshi_order_id=koid, raw=resp)
         self.summary.exits_placed += 1
         logger.info("live exit order placed (v1 close)", extra={"extra_fields": {
-            "ticker": ticker, "strategy": strategy, "rule": kind,
-            "market_id": market_id, "count": qty, "attempt": attempt}})
+            "ticker": ticker, "strategy": strategy, "rule": kind, "resp_status": ostatus,
+            "no_price": no_price, "market_id": market_id, "count": qty, "attempt": attempt}})
 
     def _current_bid(self, ticker: str) -> int | None:
         try:

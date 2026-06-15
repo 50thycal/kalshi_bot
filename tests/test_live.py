@@ -460,9 +460,13 @@ def test_exit_primary_sell_yes_close(settings):
         assert o["order_action"] == "sell" and o["user_side"] == "yes" and o["side"] == "no"
         assert o["order_type"] == "market" and o["count_fp"] == "1.00"
         assert o["sell_position_capped"] is True and o["market_id"] == "MID-WX-D1-B1"
+        assert o["price_dollars"] == "0.4000"  # no-price = 100 - yes_bid(60)
         assert client.v1_user_ids[0] == "U-TEST"
         assert ex.summary.exits_placed == 1
-        # the submitted (in-flight) exit blocks a duplicate this cycle
+        # after the IOC close fills, Kalshi shows the position flat -> no re-attempt
+        client.positions = [{"ticker": "WX-D1-B1", "position_fp": "0",
+                             "market_exposure_dollars": "0", "realized_pnl_dollars": "0"}]
+        ex.reconcile(session)
         ex.manage_exits(session)
         assert len(client.placed) == 1
 
@@ -547,7 +551,7 @@ def test_rejected_exit_does_not_permanently_block(settings):
         assert len(client.placed) == 1  # the rejected :1 did not hide the open position
         row = session.scalar(select(m.LiveOrder).where(
             m.LiveOrder.client_order_id == "exit:weather_low_fav_h20:WX-D1-B1:2"))
-        assert row is not None and row.status == "submitted"
+        assert row is not None and row.status == "filled"
 
 
 def test_exit_bounded_attempts_holds_and_logs_critical(settings, caplog):
