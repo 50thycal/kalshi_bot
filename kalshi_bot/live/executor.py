@@ -489,9 +489,15 @@ class LiveExecutor:
             "ticker": ticker, "coid": coid, "market_id": market_id, "payload": order}})
         try:
             resp = self.client.create_v1_order(user_id, order)
-        except AuthError:
-            repo.update_live_order_status(session, row, status="error", cancel_reason="auth")
-            raise
+        except AuthError as exc:
+            # v1 endpoint auth is experimental (the app used a browser session; we use the API
+            # key). If the key isn't accepted on /v1, do NOT crash the worker — log clearly,
+            # abandon the close (hold to settlement). The v2 entry path keeps strict auth.
+            repo.update_live_order_status(session, row, status="error", cancel_reason=f"v1_auth:{exc}")
+            logger.error("live v1 close AUTH FAILED — API key not accepted on /v1 endpoint",
+                         extra={"extra_fields": {"ticker": ticker, "coid": coid, "error": str(exc)}})
+            self._log_exit_abandoned(ticker, strategy, qty, attempt)
+            return
         except TransientError as exc:
             repo.update_live_order_status(session, row, status="unknown", cancel_reason=str(exc))
             logger.warning("live exit transient; status=unknown", extra={"extra_fields": {
