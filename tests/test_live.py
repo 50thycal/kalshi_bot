@@ -456,7 +456,8 @@ def _filled_entry(session, *, ticker="WX-D1-B1", strategy="weather_low_fav_h20",
 
 
 def test_probe_buy_is_fractional(settings):
-    # live_probe buy -> a fractional v2 order (count_fp = dollars/ask), isolated from the strategy.
+    # live_probe buy -> a fractional v1 MARKET order (count_fp = dollars/ask). Fractional is a
+    # v1-only capability (v2 rejects count_fp), so the probe mirrors the v1 close shape as a buy.
     _live_settings(settings, live_probe="buy:WX-D1-B1:1.5")
     db.init_engine(settings.database_url)
     db.create_all()
@@ -466,9 +467,13 @@ def test_probe_buy_is_fractional(settings):
         ex.run_probe(session)
         assert len(client.placed) == 1
         o = client.placed[0]
-        assert o["action"] == "buy" and o["side"] == "yes" and o["type"] == "limit"
+        assert o["order_action"] == "buy" and o["side"] == "yes" and o["order_type"] == "market"
         assert o["count_fp"] == "2.42"  # round(1.5 / 0.62, 2)
-        assert o["client_order_id"] == "probe:buy:WX-D1-B1"
+        assert o["market_id"] == "MID-WX-D1-B1"
+        assert client.v1_user_ids[0] == "U-TEST"
+        # buy price = ask(62) + 2 = 64c through the ask; cost cap > notional
+        assert o["price_dollars"] == "0.6400"
+        assert o["max_cost_cents"] == int(__import__("math").ceil(2.42 * 64)) + 5
         # one-shot: a second run does not duplicate
         ex.run_probe(session)
         assert len(client.placed) == 1

@@ -417,25 +417,52 @@ class LiveExecutor:
         if not ask or not (1 <= ask <= 99):
             logger.error("probe buy: no ask", extra={"extra_fields": {"ticker": ticker}})
             return
-        # Fractional orders are taker-only — they cannot rest on the book, so a limit that does
-        # not strictly cross the ask is rejected 'invalid_parameters'. Price a couple cents
-        # THROUGH the ask (clamped 1..99) so the fractional buy is marketable; count_fp is still
-        # sized off the ask so the dollar cost stays ~= the target.
+        # FRACTIONAL is a v1-only capability: the v2 /portfolio/orders endpoint rejects ANY
+        # count_fp buy with 'invalid_parameters' (verified live across yes_price 91..99 — all
+        # marketable). The web app does every fractional trade through the v1 user-scoped
+        # endpoint, which accepts count_fp (our v1 close proves it). So place a v1 fractional
+        # MARKET buy of YES, mirroring the EXACT field vocabulary Kalshi accepted for the v1
+        # close (flipped buy/yes), priced a couple cents through the ask with a cost cap.
+        user_id = (self.settings.live_user_id or "").strip()
+        market_id = self._market_id(ticker)
+        if not user_id or not market_id:
+            logger.error("probe buy cannot build v1 order (missing user_id/market_id)", extra={
+                "extra_fields": {"ticker": ticker, "have_user_id": bool(user_id),
+                                 "market_id": market_id}})
+            return
         buy_price = min(99, int(ask) + 2)
         count_fp = round(dollars / (ask / 100.0), 2)
         if count_fp < 0.01:
             return
-        order = {"ticker": ticker, "action": "buy", "side": "yes", "count_fp": f"{count_fp:.2f}",
-                 "type": "limit", "yes_price": buy_price, "client_order_id": coid}
+        max_cost_cents = int(math.ceil(count_fp * buy_price)) + 5  # generous spend cap
+        order = {
+            "market_id": market_id,
+            "user_side": "yes",
+            "side": "yes",
+            "order_action": "buy",
+            "order_type": "market",
+            "time_in_force": "immediate_or_cancel",
+            "count_fp": f"{count_fp:.2f}",
+            "price_dollars": f"{buy_price / 100:.4f}",
+            "sell_position_capped": False,
+            "post_only": False,
+            "expiration_unix_ts": 0,
+            "max_cost_cents": max_cost_cents,
+        }
         row = repo.create_live_order(
             session, signal_id=None, ticker=ticker, event_ticker=None, strategy="probe",
             side="yes", action="buy", limit_price=buy_price, quantity=max(1, round(count_fp)),
             status="pending", client_order_id=coid, raw_order_json=order)
-        logger.info("live PROBE buy (fractional)", extra={"extra_fields": {
+        logger.info("live PROBE buy (v1 fractional)", extra={"extra_fields": {
             "ticker": ticker, "dollars": dollars, "ask": ask, "buy_price": buy_price,
-            "count_fp": f"{count_fp:.2f}"}})
+            "count_fp": f"{count_fp:.2f}", "market_id": market_id, "payload": order}})
         try:
-            resp = self.client.place_order(**order)
+            resp = self.client.create_v1_order(user_id, order)
+        except AuthError as exc:
+            repo.update_live_order_status(session, row, status="error", cancel_reason=f"v1_auth:{exc}")
+            logger.error("probe buy v1 AUTH FAILED", extra={"extra_fields": {
+                "ticker": ticker, "error": str(exc)}})
+            return
         except KalshiAPIError as exc:
             if exc.status_code == 409:
                 repo.update_live_order_status(session, row, status="submitted", cancel_reason="409")
@@ -445,8 +472,13 @@ class LiveExecutor:
             logger.error("probe buy REJECTED", extra={"extra_fields": {
                 "ticker": ticker, "status_code": exc.status_code, "body": exc.message, "payload": order}})
             return
-        koid = (resp.get("order") or {}).get("order_id") if isinstance(resp, dict) else None
+        koid = None
+        if isinstance(resp, dict):
+            o = resp.get("order") if isinstance(resp.get("order"), dict) else resp
+            koid = o.get("order_id") or o.get("id")
         repo.update_live_order_status(session, row, status="submitted", kalshi_order_id=koid, raw=resp)
+        logger.info("live PROBE buy submitted (v1)", extra={"extra_fields": {
+            "ticker": ticker, "order_id": koid}})
 
     def _probe_close(self, session, prefix: str) -> None:
         for ticker, strategy, _entry_price, _entry_at, entry_qty in repo.open_live_positions(session):
