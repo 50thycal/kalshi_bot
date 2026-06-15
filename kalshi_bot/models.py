@@ -234,6 +234,7 @@ class Position(Base):
     captured_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
     side: Mapped[str | None] = mapped_column(String(8))
     quantity: Mapped[int | None] = mapped_column(Integer)
+    quantity_fp: Mapped[float | None] = mapped_column(Numeric(18, 4))  # fractional position size
     avg_price: Mapped[float | None] = mapped_column(Numeric(8, 4))
     market_exposure: Mapped[float | None] = mapped_column(Numeric(14, 4))
     realized_pnl: Mapped[float | None] = mapped_column(Numeric(14, 4))

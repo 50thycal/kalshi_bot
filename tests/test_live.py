@@ -443,15 +443,44 @@ def test_should_exit_rules():
     assert should_exit(50, [60], 55, tp=10, sl=10, be=None) is None        # no trigger now
 
 
-def _filled_entry(session, *, ticker="WX-D1-B1", strategy="weather_low_fav_h20", qty=1, price=48):
+def _filled_entry(session, *, ticker="WX-D1-B1", strategy="weather_low_fav_h20", qty=1, price=48,
+                  qty_fp=None):
     repo.create_live_order(
         session, signal_id=None, ticker=ticker, event_ticker="E1", strategy=strategy,
         side="yes", action="buy", limit_price=price, quantity=qty, status="filled",
         client_order_id=f"{strategy}:E1", raw_order_json={})
     # open_live_positions is driven by Kalshi position snapshots, so seed one (net-long YES).
     repo.insert_position_snapshot(
-        session, ticker=ticker, side="yes", quantity=qty, avg_price=float(price),
-        market_exposure=qty * price / 100.0, realized_pnl=0.0)
+        session, ticker=ticker, side="yes", quantity=qty, quantity_fp=qty_fp,
+        avg_price=float(price), market_exposure=qty * price / 100.0, realized_pnl=0.0)
+
+
+def test_fractional_close_sizes_exact_remainder(settings):
+    # A fractional position (3.12 shares) must close the EXACT remainder, not round to 3.00.
+    _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_cents=10)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _filled_entry(session, qty=3, qty_fp=3.12, price=48)
+        ex.manage_exits(session)
+        assert len(client.placed) == 1
+        assert client.placed[0]["count_fp"] == "3.12"
+
+
+def test_fractional_residual_is_managed(settings):
+    # A sub-1-share residual (0.12) must still be surfaced for closing (not rounded to flat).
+    _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_cents=10)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _filled_entry(session, qty=0, qty_fp=0.12, price=48)
+        ex.manage_exits(session)
+        assert len(client.placed) == 1
+        assert client.placed[0]["count_fp"] == "0.12"
 
 
 def _rejected_exit(session, attempt, *, ticker="WX-D1-B1", strategy="weather_low_fav_h20"):

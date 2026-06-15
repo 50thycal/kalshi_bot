@@ -976,14 +976,16 @@ def fills_for_order(session, kalshi_order_id: str) -> list[m.Fill]:
 
 def insert_position_snapshot(
     session, *, ticker: str, side: str | None, quantity: int | None, avg_price: float | None,
-    market_exposure: float | None = None, realized_pnl: float | None = None,
-    unrealized_pnl: float | None = None, raw_json: Any | None = None,
+    quantity_fp: float | None = None, market_exposure: float | None = None,
+    realized_pnl: float | None = None, unrealized_pnl: float | None = None,
+    raw_json: Any | None = None,
 ) -> m.Position:
     row = m.Position(
         market_ticker=ticker,
         captured_at=_now(),
         side=side,
         quantity=quantity,
+        quantity_fp=quantity_fp,
         avg_price=avg_price,
         market_exposure=market_exposure,
         realized_pnl=realized_pnl,
@@ -1030,9 +1032,11 @@ def open_live_positions(session) -> list[tuple]:
         if tkr in seen:
             continue
         seen.add(tkr)
-        qty = int(snap.quantity or 0)
-        if qty <= 0:  # flat or net-NO -> nothing to close on the YES side
+        # Use the fractional size so a sub-1-share long (e.g. a 0.12 residual) is still managed.
+        qty_fp = float(snap.quantity_fp) if snap.quantity_fp is not None else float(snap.quantity or 0)
+        if qty_fp < 0.01:  # flat / net-NO / sub-0.01 dust -> nothing to close on the YES side
             continue
+        qty = int(snap.quantity or 0)
         entry = _entry_order_for(session, tkr)
         strategy = (entry.strategy if entry else None) or "live"
         entry_price = int(entry.limit_price) if (entry and entry.limit_price) \

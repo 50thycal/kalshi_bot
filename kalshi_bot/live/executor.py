@@ -311,15 +311,16 @@ class LiveExecutor:
         # Kalshi market_positions shape (confirmed via real positions): position_fp
         # (signed fixed-point), market_exposure_dollars, realized_pnl_dollars.
         for p in positions:
-            pos = _to_count(_first(p, "position_fp", "position"))
+            pos_fp = _to_float(_first(p, "position_fp", "position")) or 0.0  # fractional, signed
+            pos = _to_count(_first(p, "position_fp", "position"))            # rounded (legacy col)
             exposure = _to_float(_first(p, "market_exposure_dollars", "market_exposure"))
             realized = _to_float(_first(p, "realized_pnl_dollars", "realized_pnl"))
-            qty = abs(pos)
+            qty = abs(pos_fp)
             avg_px = round(exposure / qty * 100, 2) if (exposure is not None and qty) else None
             repo.insert_position_snapshot(
                 session, ticker=p.get("ticker"),
-                side="yes" if pos >= 0 else "no", quantity=pos, avg_price=avg_px,
-                market_exposure=exposure, realized_pnl=realized, raw_json=p)
+                side="yes" if pos_fp >= 0 else "no", quantity=pos, quantity_fp=pos_fp,
+                avg_price=avg_px, market_exposure=exposure, realized_pnl=realized, raw_json=p)
             self.summary.positions_snapshot += 1
 
         # Cancel timed-out passive (resting) orders.
@@ -390,7 +391,7 @@ class LiveExecutor:
             # The position snapshot (refreshed by reconcile, which runs first) is the source of
             # truth — an exit is "done" only when Kalshi shows the position flat.
             remaining = self._remaining_open_qty(session, ticker, entry_qty)
-            if remaining <= 0:
+            if remaining < 0.01:  # flat (or sub-0.01 dust that can't be traded)
                 continue
             if repo.live_exit_in_flight(session, ticker, strategy):
                 continue  # an attempt is still working this cycle; let it resolve
@@ -481,17 +482,21 @@ class LiveExecutor:
                 "ticker": ticker, "n_markets": len(markets)}})
         return mid
 
-    def _remaining_open_qty(self, session, ticker: str, entry_qty: int) -> int:
-        """Remaining open YES contracts from Kalshi truth. The latest position snapshot
-        (refreshed by reconcile each cycle) is authoritative; 0 means flat. Falls back to the
-        entry qty minus already-filled exit-NO contracts if no fresh snapshot exists yet."""
+    def _remaining_open_qty(self, session, ticker: str, entry_qty: int) -> float:
+        """Remaining open YES contracts from Kalshi truth, FRACTIONAL. The latest position
+        snapshot (refreshed by reconcile each cycle) is authoritative — prefer its fractional
+        quantity_fp so the close sizes to the exact remainder (a fractional position rounded to a
+        whole count under-closes, leaving a residual). 0 means flat. Falls back to the entry qty
+        minus already-filled exit contracts if no fresh snapshot exists yet."""
         midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
         snap = repo.latest_position_snapshot(session, ticker)
         if snap is not None and _aware(snap.captured_at) >= midnight:
-            return max(0, abs(int(snap.quantity or 0)))
+            if snap.quantity_fp is not None:
+                return max(0.0, abs(float(snap.quantity_fp)))
+            return float(max(0, abs(int(snap.quantity or 0))))
         closed = sum(int(f.quantity or 0) for f in repo.fills_for_ticker(session, ticker)
                      if f.side == "yes" and f.action == "sell")
-        return max(0, int(entry_qty) - closed)
+        return float(max(0, int(entry_qty) - closed))
 
     def _log_exit_abandoned(self, ticker, strategy, remaining, attempts) -> None:
         key = (ticker, strategy)
@@ -529,7 +534,7 @@ class LiveExecutor:
             "order_action": "sell",
             "order_type": "market",
             "time_in_force": "immediate_or_cancel",
-            "count_fp": f"{int(qty)}.00",
+            "count_fp": f"{float(qty):.2f}",  # close the EXACT (fractional) remainder
             "price_dollars": f"{no_price / 100:.4f}",
             "sell_position_capped": True,
             "post_only": False,
@@ -540,7 +545,7 @@ class LiveExecutor:
             self.summary.exits_escalated += 1
         row = repo.create_live_order(
             session, signal_id=None, ticker=ticker, event_ticker=None, strategy=strategy,
-            side="yes", action="sell", limit_price=int(bid), quantity=qty,
+            side="yes", action="sell", limit_price=int(bid), quantity=max(1, round(float(qty))),
             status="pending", client_order_id=coid, raw_order_json=order)
         logger.info("live exit attempt (v1 close)", extra={"extra_fields": {
             "ticker": ticker, "coid": coid, "market_id": market_id, "payload": order}})
