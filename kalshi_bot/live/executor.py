@@ -293,8 +293,18 @@ class LiveExecutor:
                 by_koid.get(row.kalshi_order_id) if row.kalshi_order_id else None)
             if exch is None:
                 if row.status in ("pending", "unknown"):
-                    repo.update_live_order_status(session, row, status="not_landed",
-                                                  cancel_reason="not_found_on_exchange")
+                    # A v1 order (fractional entry / bucket close) is NEVER visible in the v2
+                    # orders feed, so 'not found here' is not proof it didn't land. If Kalshi's
+                    # fresh fills/positions show this ticker executed, treat the indeterminate
+                    # order as landed ('submitted', a committed status) so the entry-dedup guard
+                    # can't re-fire a DUPLICATE on the next cycle. Only with NO execution evidence
+                    # do we mark 'not_landed' (which correctly allows a re-entry).
+                    if self._executed_on_exchange(row, fills, positions):
+                        repo.update_live_order_status(session, row, status="submitted",
+                                                      cancel_reason="resolved_by_exchange_state")
+                    else:
+                        repo.update_live_order_status(session, row, status="not_landed",
+                                                      cancel_reason="not_found_on_exchange")
                 continue
             repo.update_live_order_status(
                 session, row, status=_map_status(exch.get("status")),
@@ -424,6 +434,28 @@ class LiveExecutor:
             raise
         except Exception:  # noqa: BLE001
             logger.exception("live probe failed", extra={"extra_fields": {"directive": directive}})
+
+    @staticmethod
+    def _executed_on_exchange(row, fills, positions) -> bool:
+        """Evidence (from Kalshi's freshly-fetched fills/positions) that an indeterminate order
+        actually executed — an open position on its ticker, or a same-action fill for it. Used so
+        a v1 order whose POST was transient/indeterminate isn't wrongly declared 'not_landed'
+        (which would let entry-dedup re-fire a duplicate). Conservative: any evidence -> executed."""
+        tkr = row.market_ticker
+        for p in positions:
+            if p.get("ticker") == tkr:
+                pf = p.get("position_fp")
+                if pf is None:
+                    pf = p.get("position")
+                try:
+                    if pf is not None and abs(float(pf)) >= 0.01:
+                        return True
+                except (TypeError, ValueError):
+                    pass
+        for f in fills:
+            if (f.get("market_ticker") or f.get("ticker")) == tkr and f.get("action") == row.action:
+                return True
+        return False
 
     @staticmethod
     def _v1_buy_body(market_id: str, count_fp: float, buy_price: int) -> dict:

@@ -483,6 +483,49 @@ def test_intent_committed_before_post_survives_rollback_no_dup_order(settings):
     assert len(client.placed) == 1  # still exactly one real order ever placed
 
 
+def test_transient_v1_entry_that_filled_is_not_re_entered(settings):
+    # A v1 fractional entry whose POST was indeterminate (TransientError) but actually FILLED must
+    # NOT be mislabeled 'not_landed' (which would let dedup re-fire a duplicate). reconcile sees
+    # Kalshi's position for the ticker and resolves it to 'submitted', so the next attempt dedups.
+    _live_settings(settings, live_fractional=True)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    client.v1_market_tickers = ["KXHIGHLAX-26JUN12-B74.5"]
+    client.place_responses = [TransientError("network")]  # the entry POST is indeterminate
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _enter(ex, session)  # v1 POST raises Transient -> row status 'unknown'
+    assert len(client.placed) == 1
+    # Kalshi now shows the position DID fill (the transient POST actually landed on the exchange).
+    client.positions = [{"ticker": "KXHIGHLAX-26JUN12-B74.5", "position_fp": "3.00"}]
+    with db.session_scope() as session:
+        ex.reconcile(session, {"cash_balance": 1000.0})
+        row = session.scalars(select(m.LiveOrder)).all()[0]
+        assert row.status == "submitted"  # resolved by exchange state, NOT not_landed
+    # next cycle: same (event, strategy) -> dedup holds -> NO duplicate entry
+    with db.session_scope() as session:
+        _enter(ex, session)
+    assert len(client.placed) == 1  # still exactly one real order ever placed
+
+
+def test_indeterminate_entry_with_no_execution_evidence_is_not_landed(settings):
+    # The other side: an indeterminate entry with NO position/fill evidence is correctly marked
+    # 'not_landed' so a genuine non-landing can be retried (we don't over-suppress entries).
+    _live_settings(settings, live_fractional=True)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    client.v1_market_tickers = ["KXHIGHLAX-26JUN12-B74.5"]
+    client.place_responses = [TransientError("network")]
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _enter(ex, session)
+    with db.session_scope() as session:
+        ex.reconcile(session, {"cash_balance": 1000.0})  # no positions/fills -> no evidence
+        assert session.scalars(select(m.LiveOrder)).all()[0].status == "not_landed"
+
+
 def test_probe_buy_is_fractional(settings):
     # live_probe buy -> a fractional v1 MARKET order (count_fp = dollars/ask). Fractional is a
     # v1-only capability (v2 rejects count_fp), so the probe mirrors the v1 close shape as a buy.

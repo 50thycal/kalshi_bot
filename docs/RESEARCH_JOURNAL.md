@@ -367,6 +367,16 @@ skipped (logged), never silently mis-placed. So `LIVE_FRACTIONAL=true` now spend
 cap (a "$3 position" = $3 of contracts) on the live books. Integer path (`live_fractional=false`)
 unchanged.
 
+**Reconcile hardening — no duplicate on an indeterminate-but-filled v1 entry.** A v1 order is
+never visible in the v2 orders feed, so reconcile used to mark any `pending`/`unknown` order it
+couldn't find there as `not_landed` — which would drop it out of the dedup set and let the next
+cycle re-fire a DUPLICATE entry if the transient POST had actually landed. Now reconcile checks
+Kalshi's freshly-fetched fills/positions first (`_executed_on_exchange`): any position or
+same-action fill for the ticker → the order is resolved to `submitted` (committed → dedup holds);
+only with NO execution evidence is it `not_landed` (a genuine non-landing, retry allowed).
+Conservative by design — it favours "don't double-enter" over "never miss a retry". Regression
+tests cover both directions (filled→submitted→no-dup; no-evidence→not_landed).
+
 ### Live trade log — DEN/LAX h-window favorites closed at ~99¢ (Jun 15, real money)
 The two cross-validated favorite books filled at their windows and ran to ~99¢ (both winners),
 then were closed early (operator call) via the bot's v1 buy-NO close rather than held to
