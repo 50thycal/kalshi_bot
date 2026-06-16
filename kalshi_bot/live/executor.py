@@ -392,7 +392,7 @@ class LiveExecutor:
         """One-shot isolated PROBE for fractional buy/sell verification (gated on `live_probe`,
         empty = off). NEVER touches the strategy pipeline — a `close` only matches the given
         ticker prefix, so the strategy's positions are untouched. Directives:
-          buy:<ticker>:<dollars>  -> fractional v2 buy (count_fp = dollars/ask)
+          buy:<ticker>:<dollars>  -> v1 fractional market buy (count_fp = dollars/ask)
           close:<ticker_prefix>   -> targeted v1 close of matching open positions only."""
         directive = (self.settings.live_probe or "").strip()
         if not directive or not self._switches_on():
