@@ -165,29 +165,31 @@ class LiveExecutor:
             self.summary.skipped_gate += 1
             return
         client_order_id = f"{strategy}:{event_ticker}"
-        if s.live_fractional:
-            # ⚠️ KNOWN-BROKEN on this (v2) order path: live testing proved the v2
-            # /portfolio/orders endpoint REJECTS every fractional count_fp buy with
-            # 'invalid_parameters' (verified across marketable prices). Fractional is a v1-only
-            # capability (see RESEARCH_JOURNAL "Fractional sizing"); the working fractional buy is
-            # the v1 probe path. Keep LIVE_FRACTIONAL=false for the strategy until this entry is
-            # reworked to the v1 endpoint, or live entries will silently fail.
-            #
-            # Spend the dollar cap precisely via a fractional contract count (fixed-point):
-            # count_fp = dollars / price, rounded to the 0.01-contract increment. Caps still
-            # apply as upper bounds. The Integer `quantity` column stores a rounded value for the
-            # local record only — the position snapshot from reconcile is the source of truth.
+        is_v1 = bool(s.live_fractional)
+        user_id = (s.live_user_id or "").strip()
+        if is_v1:
+            # Fractional entries MUST use Kalshi's v1 user-scoped endpoint — the v2
+            # /portfolio/orders API rejects every count_fp buy with 'invalid_parameters'
+            # (verified live across marketable prices). Spend the dollar cap precisely via a
+            # fractional contract count and place a v1 fractional MARKET buy of YES (same shape as
+            # the proven v1 close), priced a couple cents through the ask with a cost cap. Caps
+            # still apply as upper bounds; the position snapshot from reconcile is the source of
+            # truth (the Integer `quantity` column stores a rounded value for the local record).
             qty_fp = round(s.live_max_order_dollars / (price / 100.0), 2)
             qty_fp = min(qty_fp, float(metrics.depth_at_best_ask),
                          float(decision.max_allowed_quantity), float(s.max_order_size))
-            if qty_fp <= 0:
+            market_id = self._market_id(ticker)
+            if qty_fp <= 0 or not user_id or not market_id:
                 self.summary.skipped_gate += 1
+                if qty_fp > 0 and (not user_id or not market_id):
+                    logger.error("live fractional entry missing user_id/market_id; skipped", extra={
+                        "extra_fields": {"ticker": ticker, "have_user_id": bool(user_id),
+                                         "market_id": market_id}})
                 return
-            order = {
-                "ticker": ticker, "action": action, "side": side, "count_fp": f"{qty_fp:.2f}",
-                "type": "limit", "yes_price": price, "client_order_id": client_order_id,
-            }
+            buy_price = min(99, int(metrics.best_yes_ask) + 2)
+            order = self._v1_buy_body(market_id, qty_fp, buy_price)
             qty = max(1, round(qty_fp))
+            record_price = buy_price
         else:
             qty_cap = math.floor(s.live_max_order_dollars / (price / 100.0))
             qty = min(qty_cap, metrics.depth_at_best_ask, decision.max_allowed_quantity, s.max_order_size)
@@ -198,18 +200,20 @@ class LiveExecutor:
                 "ticker": ticker, "action": action, "side": side, "count": qty,
                 "type": "limit", "yes_price": price, "client_order_id": client_order_id,
             }
+            record_price = price
         # Persist intent BEFORE the POST, and COMMIT it durably so it survives any later
         # rollback of the cycle-wide transaction. Otherwise a downstream cycle error would
         # erase the intent AFTER the order already hit Kalshi, and the dedup guard (which reads
         # this row) would re-fire a DUPLICATE real order on the next cycle.
         row = repo.create_live_order(
             session, signal_id=None, ticker=ticker, event_ticker=event_ticker,
-            strategy=strategy, side=side, action=action, limit_price=price, quantity=qty,
+            strategy=strategy, side=side, action=action, limit_price=record_price, quantity=qty,
             status="pending", client_order_id=client_order_id, raw_order_json=order,
         )
         session.commit()
         try:
-            resp = self.client.place_order(**order)
+            resp = (self.client.create_v1_order(user_id, order) if is_v1
+                    else self.client.place_order(**order))
         except AuthError:
             repo.update_live_order_status(session, row, status="error", cancel_reason="auth")
             raise
@@ -237,13 +241,18 @@ class LiveExecutor:
             logger.exception("live place_order failed")
             return
 
-        koid = (resp or {}).get("order", {}).get("order_id") if isinstance(resp, dict) else None
-        status = "resting" if s.live_entry_style == "passive" else "submitted"
+        koid = None
+        if isinstance(resp, dict):
+            o = resp.get("order") if isinstance(resp.get("order"), dict) else resp
+            koid = o.get("order_id") or o.get("id")
+        # v1 fractional is a market IOC that fills async -> 'submitted'; a v2 passive limit rests.
+        status = "resting" if (s.live_entry_style == "passive" and not is_v1) else "submitted"
         repo.update_live_order_status(session, row, status=status, kalshi_order_id=koid, raw=resp)
         self.summary.placed += 1
         logger.info("live order placed", extra={"extra_fields": {
-            "ticker": ticker, "strategy": strategy, "price": price, "count": qty,
-            "style": s.live_entry_style, "coid": client_order_id, "kalshi_order_id": koid}})
+            "ticker": ticker, "strategy": strategy, "price": record_price, "count": qty,
+            "fractional": is_v1, "style": s.live_entry_style, "coid": client_order_id,
+            "kalshi_order_id": koid}})
 
     def _entry_price(self, metrics) -> int | None:
         ask = metrics.best_yes_ask
@@ -416,6 +425,27 @@ class LiveExecutor:
         except Exception:  # noqa: BLE001
             logger.exception("live probe failed", extra={"extra_fields": {"directive": directive}})
 
+    @staticmethod
+    def _v1_buy_body(market_id: str, count_fp: float, buy_price: int) -> dict:
+        """A v1 fractional MARKET buy of YES (the only order shape Kalshi accepts for fractional;
+        the v2 endpoint rejects count_fp). Mirrors the proven v1 close vocabulary, flipped to buy:
+        priced through the ask (buy_price) with a generous cost cap. Shared by the strategy's
+        fractional entry and the isolated probe so they stay byte-for-byte identical."""
+        return {
+            "market_id": market_id,
+            "user_side": "yes",
+            "side": "yes",
+            "order_action": "buy",
+            "order_type": "market",
+            "time_in_force": "immediate_or_cancel",
+            "count_fp": f"{count_fp:.2f}",
+            "price_dollars": f"{buy_price / 100:.4f}",
+            "sell_position_capped": False,
+            "post_only": False,
+            "expiration_unix_ts": 0,
+            "max_cost_cents": int(math.ceil(count_fp * buy_price)) + 5,
+        }
+
     def _probe_buy(self, session, ticker: str, dollars: float) -> None:
         coid = f"probe:buy:{ticker}"
         prior = repo.get_live_order_by_client_id(session, coid)
@@ -445,21 +475,7 @@ class LiveExecutor:
         count_fp = round(dollars / (ask / 100.0), 2)
         if count_fp < 0.01:
             return
-        max_cost_cents = int(math.ceil(count_fp * buy_price)) + 5  # generous spend cap
-        order = {
-            "market_id": market_id,
-            "user_side": "yes",
-            "side": "yes",
-            "order_action": "buy",
-            "order_type": "market",
-            "time_in_force": "immediate_or_cancel",
-            "count_fp": f"{count_fp:.2f}",
-            "price_dollars": f"{buy_price / 100:.4f}",
-            "sell_position_capped": False,
-            "post_only": False,
-            "expiration_unix_ts": 0,
-            "max_cost_cents": max_cost_cents,
-        }
+        order = self._v1_buy_body(market_id, count_fp, buy_price)
         row = repo.create_live_order(
             session, signal_id=None, ticker=ticker, event_ticker=None, strategy="probe",
             side="yes", action="buy", limit_price=buy_price, quantity=max(1, round(count_fp)),

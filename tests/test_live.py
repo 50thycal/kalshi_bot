@@ -162,11 +162,13 @@ def test_fires_when_fully_enabled_and_allowlisted(settings):
 
 
 def test_fractional_entry_sizes_by_dollars(settings):
-    # live_fractional -> entry uses count_fp = dollars/price (fixed-point), not integer count.
+    # live_fractional -> entry is a v1 fractional MARKET buy (count_fp = dollars/price), since the
+    # v2 endpoint rejects count_fp. Routed through create_v1_order with the v1 close vocabulary.
     _live_settings(settings, live_fractional=True, live_max_order_dollars=1.5)
     db.init_engine(settings.database_url)
     db.create_all()
     client = FakeLiveClient()
+    client.v1_market_tickers = ["KXHIGHLAX-26JUN12-B74.5"]  # v1 event exposes the entry market id
     ex = _exec(settings, client)
     with db.session_scope() as session:
         # entry ask = 50c (metrics ask) -> 1.5 / 0.50 = 3.00 contracts
@@ -174,7 +176,10 @@ def test_fractional_entry_sizes_by_dollars(settings):
         assert len(client.placed) == 1
         o = client.placed[0]
         assert o["count_fp"] == "3.00" and "count" not in o
-        assert o["action"] == "buy" and o["side"] == "yes" and o["type"] == "limit"
+        assert o["order_action"] == "buy" and o["side"] == "yes" and o["order_type"] == "market"
+        assert o["market_id"] == "MID-KXHIGHLAX-26JUN12-B74.5"
+        assert client.v1_user_ids[0] == "U-TEST"
+        assert o["price_dollars"] == "0.5200"  # buy_price = ask(50) + 2 through the ask
 
 
 def test_city_filter_blocks_non_listed_city(settings):

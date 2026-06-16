@@ -356,12 +356,16 @@ window entries did NOT duplicate (only the probe's every-cycle retry hammered th
 live DEN/LAX books were unaffected. The bot's fractional close is the same proven v1 path, sized
 to the remainder.
 
-**⚠️ Known limitation / footgun for later:** `LiveExecutor.mirror_entry`'s `live_fractional=True`
-branch still builds a **v2** `count_fp` order — which is exactly the form Kalshi rejects. So
-enabling `LIVE_FRACTIONAL=true` for the live STRATEGY today would make every entry fail
-`invalid_parameters` and silently stop trading. **Keep `LIVE_FRACTIONAL=false`** until
-`mirror_entry` is reworked to place fractional entries via the v1 endpoint (like the probe). The
-validated DEN/LAX run stays integer `count` (dollar cap floored) for now.
+**Fractional live ENTRY — now wired to v1 (`LIVE_FRACTIONAL=true` is safe).** `mirror_entry` was
+reworked: when `live_fractional` is on it builds the shared `_v1_buy_body` (the same v1 fractional
+MARKET-buy vocabulary the probe/close use) and POSTs via `create_v1_order`, instead of the v2
+`count_fp` order Kalshi rejects. Sizing is `count_fp = dollars / price` capped by depth / risk /
+`max_order_size`; the order is priced a couple cents through the ask with a cost cap; reconcile
+leaves the async-filled v1 buy `submitted` (committed → dedup holds) and tracks the real size from
+the position snapshot. Fail-closed: if `live_user_id`/`market_id` can't be resolved the entry is
+skipped (logged), never silently mis-placed. So `LIVE_FRACTIONAL=true` now spends an exact dollar
+cap (a "$3 position" = $3 of contracts) on the live books. Integer path (`live_fractional=false`)
+unchanged.
 
 ## Exit & sizing studies (live settled trades)
 
