@@ -367,6 +367,25 @@ skipped (logged), never silently mis-placed. So `LIVE_FRACTIONAL=true` now spend
 cap (a "$3 position" = $3 of contracts) on the live books. Integer path (`live_fractional=false`)
 unchanged.
 
+### Live trade log — DEN/LAX h-window favorites closed at ~99¢ (Jun 15, real money)
+The two cross-validated favorite books filled at their windows and ran to ~99¢ (both winners),
+then were closed early (operator call) via the bot's v1 buy-NO close rather than held to
+settlement. Both positions went flat with matching no-sell fills, and the close intent rows now
+PERSIST (post atomicity fix) — DEN's row resolved to `filled`; LAX's filled too (position flat +
+6@1 fill) but its order row was cosmetically mislabeled `not_landed` (a known v1-close reconcile
+gap: v1 orders aren't matched by `client_order_id` in the v2 orders feed, so a transient/async
+close can be mis-resolved — harmless, the position snapshot is the authority for management):
+| book | bucket | entry | exit (≈) | qty | gross P&L |
+|------|--------|-------|----------|-----|-----------|
+| `weather_fav` DEN h-win | `KXHIGHDEN-26JUN15-B81.5` | 48¢ | ~99¢ (no-sell @1¢) | 6 | ≈ +$3.0 |
+| `weather_fav` LAX h-win | `KXHIGHLAX-26JUN15-B70.5` | 49¢ | ~99¢ (no-sell @1¢) | 6 | ≈ +$3.0 |
+
+Net ≈ **+$6 gross** (minus entry+exit fees) on the two $3 favorite entries — the cross-validated
+HIGH-favorite edge paying off live. (A separate 0.38-contract `LAX-B72.5` residual from an earlier
+exit-sweep test had already hit the 3-attempt exit cap, so the bot holds it to settlement — ~$0.24,
+immaterial.) This is also the first clean live demonstration that the bot's own close fires AND
+leaves an audit record now that intent rows commit before the POST.
+
 ## Exit & sizing studies (live settled trades)
 
 ### Inverse view — rank by BACKFILL, check live (the trustworthy direction)
