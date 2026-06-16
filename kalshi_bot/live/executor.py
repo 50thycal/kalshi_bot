@@ -314,19 +314,26 @@ class LiveExecutor:
             exch = by_coid.get(row.client_order_id) or (
                 by_koid.get(row.kalshi_order_id) if row.kalshi_order_id else None)
             if exch is None:
-                if row.status in ("pending", "unknown"):
-                    # A v1 order (fractional entry / bucket close) is NEVER visible in the v2
-                    # orders feed, so 'not found here' is not proof it didn't land. If Kalshi's
-                    # fresh fills/positions show this ticker executed, treat the indeterminate
-                    # order as landed ('submitted', a committed status) so the entry-dedup guard
-                    # can't re-fire a DUPLICATE on the next cycle. Only with NO execution evidence
-                    # do we mark 'not_landed' (which correctly allows a re-entry).
+                # A v1 order (fractional entry / bucket close) is NEVER visible in the v2 orders
+                # feed, so 'not found here' is not proof of anything. Resolve it from Kalshi's
+                # fresh FILLS first — the accurate terminal status. The fill carries the exchange
+                # order_id, so we also backfill it onto the row for a clean audit trail.
+                fill = self._fill_for_order(row, fills)
+                if fill is not None:
+                    repo.update_live_order_status(
+                        session, row, status="filled",
+                        kalshi_order_id=row.kalshi_order_id or fill.get("order_id"))
+                elif row.status in ("pending", "unknown"):
+                    # No fill yet. If a position exists the order likely executed (fill not in
+                    # this batch) -> 'submitted' (committed) so dedup can't re-fire a DUPLICATE;
+                    # otherwise it genuinely never landed -> 'not_landed' (re-entry allowed).
                     if self._executed_on_exchange(row, fills, positions):
                         repo.update_live_order_status(session, row, status="submitted",
                                                       cancel_reason="resolved_by_exchange_state")
                     else:
                         repo.update_live_order_status(session, row, status="not_landed",
                                                       cancel_reason="not_found_on_exchange")
+                # else: submitted/resting with no fill yet -> leave; a later cycle resolves it.
                 continue
             repo.update_live_order_status(
                 session, row, status=_map_status(exch.get("status")),
@@ -456,6 +463,24 @@ class LiveExecutor:
             raise
         except Exception:  # noqa: BLE001
             logger.exception("live probe failed", extra={"extra_fields": {"directive": directive}})
+
+    @staticmethod
+    def _fill_for_order(row, fills):
+        """The Kalshi fill (from the fresh fills batch) belonging to a live_order, used to resolve
+        v1 orders the v2 feed never shows. Match by exchange order_id when we have one; otherwise
+        (an indeterminate/transient POST left no order_id) fall back to a same-ticker, same-ACTION
+        fill (buy<->entry, sell<->close). Returns the fill dict or None."""
+        koid = row.kalshi_order_id
+        if koid:
+            for f in fills:
+                if f.get("order_id") == koid:
+                    return f
+            return None  # we have an id but no matching fill -> not filled (yet)
+        tkr = row.market_ticker
+        for f in fills:
+            if (f.get("market_ticker") or f.get("ticker")) == tkr and f.get("action") == row.action:
+                return f
+        return None
 
     @staticmethod
     def _executed_on_exchange(row, fills, positions) -> bool:

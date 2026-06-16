@@ -763,6 +763,29 @@ def test_v1_exit_resolved_by_fill_on_reconcile(settings):
         assert row.status == "filled"
 
 
+def test_v1_order_resolved_to_filled_without_koid(settings):
+    # The LAX-close fix: a v1 order whose POST was indeterminate (no exchange order_id) is
+    # resolved to 'filled' (not mislabeled 'not_landed') when a same-ticker, same-action fill
+    # lands — matched by ticker+action and the order_id backfilled for an accurate audit trail.
+    _live_settings(settings)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        row = repo.create_live_order(
+            session, signal_id=None, ticker="WX-D1-B1", event_ticker="WX-D1",
+            strategy="weather_fav_h20", side="yes", action="sell", limit_price=99, quantity=1,
+            status="unknown", client_order_id="exit:weather_fav_h20:WX-D1-B1:1", raw_order_json={})
+        client.fills = [{"trade_id": "F9", "order_id": "K-EXT", "market_ticker": "WX-D1-B1",
+                         "side": "no", "action": "sell", "no_price_dollars": "0.40",
+                         "count_fp": "1.00", "fee_cost": "0.01"}]
+        ex.reconcile(session)
+        session.refresh(row)
+        assert row.status == "filled"
+        assert row.kalshi_order_id == "K-EXT"  # backfilled from the fill
+
+
 def test_rejected_exit_does_not_permanently_block(settings):
     # Regression for the dedup bug: a rejected exit must NOT hide the still-open position.
     _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_cents=10)

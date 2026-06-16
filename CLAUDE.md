@@ -54,6 +54,13 @@ To run a request:
    - **"experiment results"** -> `{"type":"script","name":"weather_experiments"}`
      — runs all three research probes in one shot (model check, exit sweep, entry
      study). Present each as a structured table.
+   - **"digest"** (daily) -> `{"type":"script","name":"weather_digest"}` — the live
+     operational digest: worker health, today's entries/exits + fill status, open
+     positions (with best-effort current price + unrealized), realized P&L today,
+     a per-book paper rollup, and an **ANOMALIES** section (bad-status orders, fills
+     with no order row, untracked positions, stale worker, stuck orders). Lead with
+     ANOMALIES — flag anything there; otherwise confirm "all clear". Meant to be run
+     once a day on a schedule (`--hours N`, `--no-prices` to skip the Kalshi lookup).
 
    The individual probes can still be run alone:
    `weather_model_check` grades the ensemble forecast distribution against the
