@@ -334,12 +334,27 @@ not rounded to a whole contract.
 
 **Close side, fractional:** the v1 close already sizes to the exact fractional remainder
 (`count_fp = quantity_fp`, tracked via the new `positions.quantity_fp`); unit-tested. In the live
-probe it was NOT demonstrated end-to-end because the MIA position was closed through the **v1 app
-endpoint by a client that is NOT our bot** at 18:20:32 (a fractional `no/sell` of exactly 1.55,
-taker; no `live_orders` intent row and every bot cycle committed cleanly → not bot-placed) before
-the probe's `_probe_close` could run. Operator confirmed it wasn't a deliberate close — most likely
-a leftover/standing app session (see the session-token note above). The bot's fractional close is
-the same proven v1 path, sized to the remainder.
+probe it was NOT demonstrated end-to-end because the MIA position kept getting closed before
+`_probe_close` ran. Diagnosing that uncovered a real bug (below).
+
+### CRITICAL bug found + fixed — cycle-wide transaction rollback duplicated REAL orders
+A controlled retry of the fractional round trip exposed it: a single `$1.50` probe buy on
+`KXHIGHMIA-26JUN16-B92.5` became **3 real orders / ~12 contracts / $4.68** ("3 trades" on the
+app) while only **ONE** `live_orders` row persisted (`quantity 4`). A 4-contract order cannot
+fill 12 → multiple real orders were placed but their rows vanished. Root cause: `_run_live_cycle`
+wraps the WHOLE cycle (`reconcile → manage_exits → run_probe → manage_open_positions →
+tracker.run_once`) in ONE `session_scope` transaction. An order's intent row was only durable at
+cycle-end commit, so a downstream error rolled it back **after** the order already hit Kalshi —
+and the dedup / one-shot guards (which read that row) then re-fired a DUPLICATE real order next
+cycle. This also explains the earlier "phantom" closes (a bot order whose row was rolled back).
+**Fix:** in every order-placement path (`mirror_entry`, `_place_exit`, `_probe_buy`)
+`session.commit()` the `pending` intent row **immediately, before the POST**, so it survives any
+later cycle rollback and the dedup guard can never be fooled. Regression test
+`test_intent_committed_before_post_survives_rollback_no_dup_order` simulates a post-POST rollback
+and asserts no duplicate order fires (fails without the commit). The strategy's own once-per-
+window entries did NOT duplicate (only the probe's every-cycle retry hammered the guard), so the
+live DEN/LAX books were unaffected. The bot's fractional close is the same proven v1 path, sized
+to the remainder.
 
 **⚠️ Known limitation / footgun for later:** `LiveExecutor.mirror_entry`'s `live_fractional=True`
 branch still builds a **v2** `count_fp` order — which is exactly the form Kalshi rejects. So

@@ -455,6 +455,29 @@ def _filled_entry(session, *, ticker="WX-D1-B1", strategy="weather_low_fav_h20",
         avg_price=float(price), market_exposure=qty * price / 100.0, realized_pnl=0.0)
 
 
+def test_intent_committed_before_post_survives_rollback_no_dup_order(settings):
+    # Regression: the live_orders intent row is COMMITTED before the POST, so a later rollback
+    # of the cycle-wide transaction cannot erase a placed order and let the dedup guard re-fire
+    # a DUPLICATE real order on the next cycle (the bug that turned one $1.50 buy into three).
+    _live_settings(settings)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    # cycle 1: place an entry, then the cycle rolls back (simulating a downstream cycle error).
+    with db.session_scope() as session:
+        _enter(ex, session)
+        assert len(client.placed) == 1
+        session.rollback()  # downstream error rolls the whole cycle back
+    # the committed intent survived the rollback (without the pre-POST commit it would be gone).
+    with db.session_scope() as session:
+        assert len(session.scalars(select(m.LiveOrder)).all()) == 1
+    # cycle 2: same (event, strategy) -> dedup sees the committed intent -> NO duplicate order.
+    with db.session_scope() as session:
+        _enter(ex, session)
+    assert len(client.placed) == 1  # still exactly one real order ever placed
+
+
 def test_probe_buy_is_fractional(settings):
     # live_probe buy -> a fractional v1 MARKET order (count_fp = dollars/ask). Fractional is a
     # v1-only capability (v2 rejects count_fp), so the probe mirrors the v1 close shape as a buy.

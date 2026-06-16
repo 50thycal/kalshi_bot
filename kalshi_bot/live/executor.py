@@ -198,12 +198,16 @@ class LiveExecutor:
                 "ticker": ticker, "action": action, "side": side, "count": qty,
                 "type": "limit", "yes_price": price, "client_order_id": client_order_id,
             }
-        # Persist intent BEFORE the POST so a crash mid-place is recoverable.
+        # Persist intent BEFORE the POST, and COMMIT it durably so it survives any later
+        # rollback of the cycle-wide transaction. Otherwise a downstream cycle error would
+        # erase the intent AFTER the order already hit Kalshi, and the dedup guard (which reads
+        # this row) would re-fire a DUPLICATE real order on the next cycle.
         row = repo.create_live_order(
             session, signal_id=None, ticker=ticker, event_ticker=event_ticker,
             strategy=strategy, side=side, action=action, limit_price=price, quantity=qty,
             status="pending", client_order_id=client_order_id, raw_order_json=order,
         )
+        session.commit()
         try:
             resp = self.client.place_order(**order)
         except AuthError:
@@ -460,6 +464,7 @@ class LiveExecutor:
             session, signal_id=None, ticker=ticker, event_ticker=None, strategy="probe",
             side="yes", action="buy", limit_price=buy_price, quantity=max(1, round(count_fp)),
             status="pending", client_order_id=coid, raw_order_json=order)
+        session.commit()  # durable intent before POST — survives later cycle rollback (no dup order)
         logger.info("live PROBE buy (v1 fractional)", extra={"extra_fields": {
             "ticker": ticker, "dollars": dollars, "ask": ask, "buy_price": buy_price,
             "count_fp": f"{count_fp:.2f}", "market_id": market_id, "payload": order}})
@@ -672,6 +677,7 @@ class LiveExecutor:
             session, signal_id=None, ticker=ticker, event_ticker=None, strategy=strategy,
             side="yes", action="sell", limit_price=int(bid), quantity=max(1, round(float(qty))),
             status="pending", client_order_id=coid, raw_order_json=order)
+        session.commit()  # durable intent before POST — survives later cycle rollback (no dup order)
         logger.info("live exit attempt (v1 close)", extra={"extra_fields": {
             "ticker": ticker, "coid": coid, "market_id": market_id, "payload": order}})
         try:
