@@ -201,6 +201,52 @@ def test_city_filter_blocks_non_listed_city(settings):
         assert len(client.placed) == 1
 
 
+def test_cell_allowlist_targets_exact_cells(settings):
+    # live_cells = precise (book:CITY:window) allowlist; it SUPERSEDES city/window filters so a
+    # mix (high-fav DEN + low-fav NYC at h20) trades EXACTLY those cells and nothing adjacent.
+    _live_settings(settings, live_strategies="weather_fav,weather_low_fav",
+                   live_cells="weather_fav:DEN:20,weather_low_fav:NYC:20")
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    acct = {"cash_balance": 1000.0}
+    with db.session_scope() as session:
+        ent = lambda strat, ev, tkr: ex.mirror_entry(  # noqa: E731
+            session, strategy=strat, event_ticker=ev, ticker=tkr, side="yes", action="buy",
+            metrics=_metrics(), account_state=acct)
+        ent("weather_fav_h20", "KXHIGHDEN-26JUN12", "KXHIGHDEN-26JUN12-B74.5")  # cell -> allowed
+        assert len(client.placed) == 1
+        ent("weather_fav_h20", "KXHIGHLAX-26JUN12", "KXHIGHLAX-26JUN12-B74.5")  # LAX high: not a cell
+        ent("weather_low_fav_h20", "KXLOWTDEN-26JUN12", "KXLOWTDEN-26JUN12-T40")  # low DEN: not a cell
+        ent("weather_fav_h14", "KXHIGHDEN-26JUN12", "KXHIGHDEN-26JUN12-B74.5")  # DEN h14: not a cell
+        assert len(client.placed) == 1  # all three blocked
+        ent("weather_low_fav_h20", "KXLOWTNYC-26JUN12", "KXLOWTNYC-26JUN12-T40")  # cell -> allowed
+        assert len(client.placed) == 2
+
+
+def test_entry_grace_skips_passed_window(settings):
+    # On-time only: an entry whose hours_to_close is more than the grace past the window is
+    # skipped (no late catch-up); within the grace it enters normally.
+    _live_settings(settings, live_strategies="weather_fav", live_entry_grace_hours=2.0)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    acct = {"cash_balance": 1000.0}
+    with db.session_scope() as session:
+        # h20 window but only 16h to close -> 16 < 20-2 -> window missed -> skip
+        ex.mirror_entry(session, strategy="weather_fav_h20", event_ticker="KXHIGHDEN-26JUN12",
+                        ticker="KXHIGHDEN-26JUN12-B74.5", side="yes", action="buy",
+                        metrics=_metrics(), account_state=acct, hours_to_close=16.0)
+        assert client.placed == []
+        # 19h to close -> within [18,20] -> on time -> enter
+        ex.mirror_entry(session, strategy="weather_fav_h20", event_ticker="KXHIGHDEN-26JUN13",
+                        ticker="KXHIGHDEN-26JUN13-B74.5", side="yes", action="buy",
+                        metrics=_metrics(), account_state=acct, hours_to_close=19.0)
+        assert len(client.placed) == 1
+
+
 def test_window_filter_blocks_non_listed_window(settings):
     _live_settings(settings, live_strategies="weather_fav", live_windows="8")
     db.init_engine(settings.database_url)

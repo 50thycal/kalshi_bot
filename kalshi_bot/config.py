@@ -178,6 +178,8 @@ class Settings(BaseSettings):
     live_strategies: str = ""               # allowlist of strategy prefixes; empty = inert
     live_cities: str = ""                   # restrict to these city codes (empty = all)
     live_windows: str = ""                  # restrict to these entry windows hN (empty = all)
+    live_cells: str = ""                    # precise (book:CITY:window) allowlist; supersedes cities/windows
+    live_entry_grace_hours: float = 2.0     # skip a window entry if hours-to-close is >this past it
     live_entry_style: str = "marketable"    # "marketable" (limit @ ask) | "passive" (rest below)
     live_passive_offset_cents: int = 2      # passive: rest this many cents below the ask
     live_order_timeout_seconds: int = 600   # cancel an unfilled passive order after this long
@@ -367,6 +369,30 @@ class Settings(BaseSettings):
         return out
 
     @property
+    def live_cell_list(self) -> list[tuple[str, str, int]]:
+        """Precise per-cell live allowlist: a list of (book_prefix, CITY, window) tuples parsed
+        from `live_cells` ("weather_fav:DEN:20,weather_low_fav:NYC:20,..."). When non-empty it is
+        the exact set of cells permitted to trade live and SUPERSEDES live_cities/live_windows —
+        so a mix like high-fav on DEN/LAX plus low-fav on NYC/PHIL can be expressed exactly,
+        without the coarse cross-product enabling unwanted cells."""
+        out: list[tuple[str, str, int]] = []
+        for part in self.live_cells.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            bits = part.split(":")
+            if len(bits) != 3:
+                continue
+            book, city, win = bits[0].strip(), bits[1].strip().upper(), bits[2].strip().lower().lstrip("h")
+            if not book or not city or not win:
+                continue
+            try:
+                out.append((book, city, int(win)))
+            except ValueError:
+                continue
+        return out
+
+    @property
     def weather_pm_city_list(self) -> list[str]:
         return [p.strip().upper() for p in self.weather_pm_cities.split(",") if p.strip()]
 
@@ -434,6 +460,8 @@ class Settings(BaseSettings):
             "live_strategies": self.live_strategy_list,
             "live_cities": self.live_city_list,
             "live_windows": self.live_window_list,
+            "live_cells": [f"{b}:{c}:{w}" for b, c, w in self.live_cell_list],
+            "live_entry_grace_hours": self.live_entry_grace_hours,
             "live_entry_style": self.live_entry_style,
             "live_exit_mode": self.live_exit_mode,
             "live_exit_slippage_cents": self.live_exit_slippage_cents,

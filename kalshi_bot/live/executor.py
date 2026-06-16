@@ -52,6 +52,12 @@ def _window_of(strategy: str | None) -> int | None:
     return int(m.group(1)) if m else None
 
 
+def _strategy_book(strategy: str | None) -> str:
+    """The book prefix of a strategy (the `_h<window>` suffix removed): 'weather_low_fav_h20'
+    -> 'weather_low_fav'. Used to match the precise per-cell live allowlist."""
+    return _WINDOW_RE.sub("", strategy or "")
+
+
 @dataclass
 class LiveCycleSummary:
     placed: int = 0
@@ -101,8 +107,13 @@ class LiveExecutor:
         return any(strategy.startswith(p) for p in prefixes)
 
     def _cell_allowed(self, strategy: str, ticker: str) -> bool:
-        """Optional city/window narrowing on top of the strategy allowlist, so live trading
-        can target the cross-validated cells (e.g. late-window highs in stable cities)."""
+        """Narrow the strategy allowlist to specific cells. If a precise `live_cells` allowlist is
+        set, ONLY exact (book, city, window) cells trade — this supersedes the coarse city/window
+        cross-product so a mix like high-fav DEN/LAX + low-fav NYC/PHIL can't leak unwanted cells.
+        Otherwise fall back to the optional city/window filters."""
+        cells = self.settings.live_cell_list
+        if cells:
+            return (_strategy_book(strategy), _city_of(ticker), _window_of(strategy)) in cells
         cities = self.settings.live_city_list
         if cities and _city_of(ticker) not in cities:
             return False
@@ -122,7 +133,7 @@ class LiveExecutor:
 
     def mirror_entry(
         self, session, *, strategy: str, event_ticker: str, ticker: str, side: str,
-        action: str, metrics, model_probability=None, account_state=None,
+        action: str, metrics, model_probability=None, account_state=None, hours_to_close=None,
     ) -> None:
         """Mirror one allowlisted paper entry into a real order. Self-guarded and
         fail-closed: any gate failure simply places nothing."""
@@ -132,6 +143,17 @@ class LiveExecutor:
             return
         if not self._cell_allowed(strategy, ticker):
             self.summary.skipped_gate += 1
+            return
+        # On-time only: skip a window whose moment already passed (hours-to-close more than the
+        # grace below the window). Prevents a LATE catch-up entry when a cell is freshly enabled
+        # mid-day or the worker was down across the window — "if we missed it, we missed it".
+        win = _window_of(strategy)
+        if (win is not None and hours_to_close is not None
+                and float(hours_to_close) < win - s.live_entry_grace_hours):
+            self.summary.skipped_gate += 1
+            logger.info("live entry skipped — window already passed", extra={"extra_fields": {
+                "ticker": ticker, "strategy": strategy, "window": win,
+                "hours_to_close": round(float(hours_to_close), 2)}})
             return
         if self._daily_loss_tripped or self._daily_loss_hit(session):
             self._daily_loss_tripped = True

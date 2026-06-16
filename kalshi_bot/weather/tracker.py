@@ -731,6 +731,7 @@ class WeatherTracker:
                     session, strategy=strategy, event_ticker=event_ticker, ticker=ticker,
                     side="yes", action="buy", metrics=metrics,
                     model_probability=model_probability, account_state=self._account_state,
+                    hours_to_close=t.hours_to_close,
                 )
             except AuthError:
                 raise
