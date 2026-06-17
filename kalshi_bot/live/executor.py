@@ -235,11 +235,16 @@ class LiveExecutor:
             # /portfolio/orders API rejects every count_fp buy with 'invalid_parameters'
             # (verified live across marketable prices). Spend the dollar cap precisely via a
             # fractional contract count and place a v1 fractional MARKET buy of YES (same shape as
-            # the proven v1 close), priced a couple cents through the ask with a cost cap. Caps
-            # still apply as upper bounds; the position snapshot from reconcile is the source of
-            # truth (the Integer `quantity` column stores a rounded value for the local record).
+            # the proven v1 close), priced through the ask with a cost cap. Caps still apply as
+            # upper bounds; the position snapshot from reconcile is the source of truth (the
+            # Integer `quantity` column stores a rounded value for the local record).
+            # Bounded slippage: cross up to best_ask + live_entry_slippage_cents and cap the
+            # count at the depth available WITHIN that band (not just the single best-ask level),
+            # so a thin top-of-book can't shrink the dollar-cap size to a token fill.
+            buy_price = max(1, min(99, int(metrics.best_yes_ask) + s.live_entry_slippage_cents))
+            fill_depth = ask_depth_within(metrics.raw_orderbook, buy_price)
             qty_fp = round(s.live_max_order_dollars / (price / 100.0), 2)
-            qty_fp = min(qty_fp, float(metrics.depth_at_best_ask),
+            qty_fp = min(qty_fp, float(fill_depth),
                          float(decision.max_allowed_quantity), float(s.max_order_size))
             market_id = self._market_id(ticker)
             if qty_fp <= 0 or not user_id or not market_id:
@@ -249,7 +254,6 @@ class LiveExecutor:
                         "extra_fields": {"ticker": ticker, "have_user_id": bool(user_id),
                                          "market_id": market_id}})
                 return
-            buy_price = min(99, int(metrics.best_yes_ask) + 2)
             order = self._v1_buy_body(market_id, qty_fp, buy_price)
             qty = max(1, round(qty_fp))
             record_price = buy_price
