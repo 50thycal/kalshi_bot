@@ -199,6 +199,9 @@ class Settings(BaseSettings):
     live_entry_grace_hours: float = 2.0     # skip a window entry if hours-to-close is >this past it
     live_entry_style: str = "marketable"    # "marketable" (limit @ ask) | "passive" (rest below)
     live_passive_offset_cents: int = 2      # passive: rest this many cents below the ask
+    live_entry_slippage_cents: int = 2      # marketable: cross up to this many cents above the ask
+    #                                         so a thin best-ask level can't shrink the dollar-cap
+    #                                         size; count is capped to depth within ask+this band.
     live_order_timeout_seconds: int = 600   # cancel an unfilled passive order after this long
     live_max_order_dollars: float = 5.0     # per-order dollar cap -> qty = floor(cap / price)
     live_exit_mode: str = "settlement"      # "settlement" (hold) | "tp_sl" (TP/SL/break-even)
@@ -485,6 +488,7 @@ class Settings(BaseSettings):
             "live_cells": [f"{b}:{c}:{w}" for b, c, w in self.live_cell_list],
             "live_entry_grace_hours": self.live_entry_grace_hours,
             "live_entry_style": self.live_entry_style,
+            "live_entry_slippage_cents": self.live_entry_slippage_cents,
             "live_exit_mode": self.live_exit_mode,
             "live_exit_slippage_cents": self.live_exit_slippage_cents,
             "live_exit_use_market_fallback": self.live_exit_use_market_fallback,

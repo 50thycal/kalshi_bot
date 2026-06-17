@@ -138,6 +138,20 @@ def parse_orderbook(orderbook: dict) -> tuple[list[tuple[int, int]], list[tuple[
     return _levels(yes_raw), _levels(no_raw)
 
 
+def ask_depth_within(orderbook: dict, max_yes_ask_cents: int) -> int:
+    """Cumulative YES contracts buyable at a YES ask <= max_yes_ask_cents.
+
+    Kalshi books hold resting bids only; a YES ask at price p is a resting NO bid at
+    100 - p, so YES-ask depth up to a price ceiling is the sum of NO-bid counts at prices
+    >= 100 - ceiling. Used to size a bounded-slippage marketable entry to the liquidity
+    available within the price band (so the marketable limit fully fills, leaving no
+    resting remainder), instead of just the single best-ask level."""
+    _yes_levels, no_levels = parse_orderbook(orderbook or {})
+    floor_no = 100 - int(max_yes_ask_cents)
+    return sum(count for price, count in no_levels if price >= floor_no)
+
+
+
 def compute_time_to_close(close_time: Any, now: datetime | None = None) -> float | None:
     dt = parse_dt(close_time)
     if dt is None:

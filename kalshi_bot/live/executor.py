@@ -23,7 +23,7 @@ from datetime import datetime, timedelta, timezone
 from .. import repository as repo
 from ..kalshi.errors import AuthError, KalshiAPIError, TransientError
 from ..paper.engine import kalshi_fee
-from ..scanner.metrics import _to_count, parse_dt, price_to_cents
+from ..scanner.metrics import _to_count, ask_depth_within, parse_dt, price_to_cents
 from ..weather.cities import CITIES
 from . import exit_rules
 
@@ -254,16 +254,28 @@ class LiveExecutor:
             qty = max(1, round(qty_fp))
             record_price = buy_price
         else:
-            qty_cap = math.floor(s.live_max_order_dollars / (price / 100.0))
-            qty = min(qty_cap, metrics.depth_at_best_ask, decision.max_allowed_quantity, s.max_order_size)
+            # Bounded-slippage marketable entry: cross the spread up to a price CEILING
+            # (best_ask + live_entry_slippage_cents) and size to the dollar cap, but cap the
+            # count at the liquidity available WITHIN that band so a thin best-ask level can't
+            # shrink the position to a token fill (the bug that bought 1 Denver contract) AND
+            # the marketable limit still fully fills with no resting remainder. A passive entry
+            # rests one bid below the ask at the best level (unchanged).
+            if s.live_entry_style == "passive":
+                order_price = price
+                fill_depth = metrics.depth_at_best_ask
+            else:
+                order_price = max(1, min(99, int(metrics.best_yes_ask) + s.live_entry_slippage_cents))
+                fill_depth = ask_depth_within(metrics.raw_orderbook, order_price)
+            qty_cap = math.floor(s.live_max_order_dollars / (order_price / 100.0))
+            qty = min(qty_cap, fill_depth, decision.max_allowed_quantity, s.max_order_size)
             if qty <= 0:
                 self.summary.skipped_gate += 1
                 return
             order = {
                 "ticker": ticker, "action": action, "side": side, "count": qty,
-                "type": "limit", "yes_price": price, "client_order_id": client_order_id,
+                "type": "limit", "yes_price": order_price, "client_order_id": client_order_id,
             }
-            record_price = price
+            record_price = order_price
         # Persist intent BEFORE the POST, and COMMIT it durably so it survives any later
         # rollback of the cycle-wide transaction. Otherwise a downstream cycle error would
         # erase the intent AFTER the order already hit Kalshi, and the dedup guard (which reads

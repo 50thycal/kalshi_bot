@@ -17,14 +17,20 @@ from kalshi_bot.risk.manager import RiskManager
 from kalshi_bot.scanner.metrics import MarketMetrics
 
 
-def _metrics(*, ask=50, bid=48, depth=100, two_sided=True, spread=2, liq=10.0):
+def _metrics(*, ask=50, bid=48, depth=100, two_sided=True, spread=2, liq=10.0, raw=None):
+    no_bid = 100 - ask if ask else None
+    if raw is None:  # single-level book: `depth` contracts at the best bid/ask
+        raw = {"orderbook_fp": {
+            "yes": [[f"{bid / 100:.2f}", str(depth)]] if bid else [],
+            "no": [[f"{no_bid / 100:.2f}", str(depth)]] if no_bid else [],
+        }}
     return MarketMetrics(
         ticker="KXHIGHLAX-26JUN12-B74.5", best_yes_bid=bid, best_yes_ask=ask,
-        best_no_bid=100 - ask if ask else None, best_no_ask=100 - bid if bid else None,
+        best_no_bid=no_bid, best_no_ask=100 - bid if bid else None,
         midpoint=(bid + ask) / 2 if (bid and ask) else None, spread=spread,
         depth_at_best_bid=depth, depth_at_best_ask=depth, top_depth=depth, volume=1000,
         open_interest=500, last_price=ask, time_to_close_seconds=6 * 3600,
-        liquidity_score=liq, two_sided=two_sided,
+        liquidity_score=liq, two_sided=two_sided, raw_orderbook=raw,
     )
 
 
@@ -305,7 +311,9 @@ def test_dollar_cap_sizing(settings):
     ]
     for cap, ask, depth, mos, expected in cases:
         client = FakeLiveClient()
-        s = _live_settings(settings, live_max_order_dollars=cap, max_order_size=mos)
+        # slippage=0 isolates the dollar-cap/depth/max_order_size logic (price == ask).
+        s = _live_settings(settings, live_max_order_dollars=cap, max_order_size=mos,
+                           live_entry_slippage_cents=0)
         ex = _exec(s, client)
         with db.session_scope() as session:
             ex.mirror_entry(
@@ -315,6 +323,29 @@ def test_dollar_cap_sizing(settings):
                 account_state={"cash_balance": 1000.0},
             )
         assert client.placed[0]["count"] == expected, (cap, ask, depth, mos)
+
+
+def test_marketable_walks_thin_book_within_slippage(settings):
+    """Denver regression: only 1 contract at the best ask, more just above. Bounded-slippage
+    sizing should fill the dollar-cap size within ask+slippage instead of a token 1 contract."""
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    s = _live_settings(settings, live_max_order_dollars=3.0, live_entry_slippage_cents=2,
+                       max_order_size=100)
+    ex = _exec(s, client)
+    # YES asks: 1@45c, 4@46c, 10@47c  ->  resting NO bids at 55(1), 54(4), 53(10).
+    book = {"orderbook_fp": {"yes": [["0.40", "50"]],
+                             "no": [["0.55", "1"], ["0.54", "4"], ["0.53", "10"]]}}
+    mx = _metrics(ask=45, bid=40, depth=1, raw=book)  # depth_at_best_ask == 1 (the old cap)
+    with db.session_scope() as session:
+        ex.mirror_entry(session, strategy="weather_low_fav_h20", event_ticker="E-DEN",
+                        ticker="T-DEN", side="yes", action="buy", metrics=mx,
+                        account_state={"cash_balance": 1000.0})
+    o = client.placed[0]
+    # ceiling = 47c; in-band YES-ask depth = 1+4+10 = 15; dollar cap floor(3.0/0.47) = 6 -> 6.
+    assert o["yes_price"] == 47
+    assert o["count"] == 6  # not 1 (the old depth_at_best_ask cap)
 
 
 def test_passive_vs_marketable_price(settings):
@@ -328,11 +359,16 @@ def test_passive_vs_marketable_price(settings):
                             ticker="T-" + event, side="yes", action="buy",
                             metrics=_metrics(ask=50), account_state={"cash_balance": 1000.0})
 
-    # marketable: yes_price == ask
+    # marketable: yes_price == ask + slippage (crosses up to the bounded ceiling)
     c1 = FakeLiveClient()
-    _live_settings(settings, live_entry_style="marketable")
+    _live_settings(settings, live_entry_style="marketable", live_entry_slippage_cents=2)
     _place(c1, "EVT-MKT")
-    assert c1.placed[0]["yes_price"] == 50
+    assert c1.placed[0]["yes_price"] == 52
+    # marketable, zero slippage: yes_price == ask
+    c1b = FakeLiveClient()
+    _live_settings(settings, live_entry_style="marketable", live_entry_slippage_cents=0)
+    _place(c1b, "EVT-MKT0")
+    assert c1b.placed[0]["yes_price"] == 50
     # passive: yes_price == ask - offset (distinct event so dedup doesn't block)
     c2 = FakeLiveClient()
     _live_settings(settings, live_entry_style="passive", live_passive_offset_cents=3)
