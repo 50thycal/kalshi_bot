@@ -170,6 +170,13 @@ class Settings(BaseSettings):
     weather_backfill_days: float = 120.0
     weather_backfill_markets_per_cycle: int = 40
     weather_backfill_period_minutes: int = 60  # candle granularity: 1, 60 or 1440
+    # Persisted forecast->settlement validation dataset (weather_forecast_outcomes).
+    # Materialized at settlement by replaying the raw live-collected tables; a bounded
+    # backfill (settled events with no rows yet) drains historical settlements gradually,
+    # off the trading path. max_htc caps how far before close a cycle is kept (bounds rows).
+    weather_validation_enabled: bool = True
+    weather_validation_events_per_cycle: int = 25
+    weather_validation_max_htc: float = 24.0
 
     # --- Live real-money execution (ALL default OFF; the layer is inert until an operator
     # flips BOT_MODE=live + KILL_SWITCH=false + LIVE_ENABLED=true AND lists a strategy). The
@@ -456,6 +463,9 @@ class Settings(BaseSettings):
             "weather_dist_enabled": self.weather_dist_enabled,
             "weather_dist_sigma": self.weather_dist_sigma,
             "weather_dist_min_edge_cents": self.weather_dist_min_edge_cents,
+            "weather_validation_enabled": self.weather_validation_enabled,
+            "weather_validation_events_per_cycle": self.weather_validation_events_per_cycle,
+            "weather_validation_max_htc": self.weather_validation_max_htc,
             "live_enabled": self.live_enabled,
             "live_strategies": self.live_strategy_list,
             "live_cities": self.live_city_list,

@@ -34,6 +34,7 @@ from .weather.ensemble import OpenMeteoEnsembleClient
 from .weather.forecast import NwsForecastClient
 from .weather.polymarket import PolymarketClient
 from .weather.tracker import WeatherCycleSummary, WeatherTracker
+from .weather.validation import WeatherValidationBackfill
 
 logger = logging.getLogger("kalshi_bot.main")
 
@@ -116,6 +117,11 @@ def run() -> int:
         if weather_like and settings.weather_backfill_enabled
         else None
     )
+    validation_backfill = (
+        WeatherValidationBackfill(settings)
+        if weather_like and settings.weather_validation_enabled
+        else None
+    )
 
     # Live mode is stricter: a real balance MUST be available (fail-closed, refuse to start).
     if live:
@@ -151,11 +157,12 @@ def run() -> int:
                 if live:
                     _run_live_cycle(
                         settings, client, weather_engine, weather_tracker, live_executor,
-                        weather_backfill,
+                        weather_backfill, validation_backfill,
                     )
                 elif weather:
                     _run_weather_cycle(
-                        settings, client, weather_engine, weather_tracker, weather_backfill
+                        settings, client, weather_engine, weather_tracker, weather_backfill,
+                        validation_backfill,
                     )
                 else:
                     _run_cycle(settings, client, scanner)
@@ -309,7 +316,30 @@ def _log_ranked(summary: ScanSummary) -> None:
         )
 
 
-def _run_weather_cycle(settings, client, engine, tracker, backfill=None) -> None:
+def _run_validation_backfill(validation_backfill) -> None:
+    """Materialize the forecast->settlement dataset for newly/late-settled events, off the
+    trading path and in its own session — a failure here must never stop the books."""
+    if validation_backfill is None:
+        return
+    try:
+        with session_scope() as v_session:
+            vsum = validation_backfill.run_once(v_session)
+        log_event(
+            logger,
+            logging.INFO,
+            "weather validation",
+            events_materialized=vsum.events_materialized,
+            rows_written=vsum.rows_written,
+            pending=vsum.pending,
+            errors=vsum.errors,
+        )
+    except Exception:  # noqa: BLE001 — validation must never stop the books
+        logger.exception("weather validation cycle failed")
+
+
+def _run_weather_cycle(
+    settings, client, engine, tracker, backfill=None, validation_backfill=None
+) -> None:
     status = client.get_exchange_status()  # AuthError propagates -> hard fail
     log_event(
         logger,
@@ -353,6 +383,7 @@ def _run_weather_cycle(settings, client, engine, tracker, backfill=None) -> None
             )
         except Exception:  # noqa: BLE001 — history backfill must never stop the books
             logger.exception("weather backfill cycle failed")
+    _run_validation_backfill(validation_backfill)
 
 
 def _api_shape(obj, depth: int = 0):
@@ -398,7 +429,9 @@ def _fetch_account_state(client) -> dict:
         return {"cash_balance": None}
 
 
-def _run_live_cycle(settings, client, engine, tracker, executor, backfill=None) -> None:
+def _run_live_cycle(
+    settings, client, engine, tracker, executor, backfill=None, validation_backfill=None
+) -> None:
     """Live cycle: reconcile Kalshi truth, manage exits, settle/mark paper, then run the
     tracker (which mirrors allowlisted entries into real orders)."""
     status = client.get_exchange_status()  # AuthError propagates -> hard fail
@@ -438,6 +471,7 @@ def _run_live_cycle(settings, client, engine, tracker, executor, backfill=None) 
                 backfill.run_once(bf_session)
         except Exception:  # noqa: BLE001
             logger.exception("weather backfill cycle failed")
+    _run_validation_backfill(validation_backfill)
 
 
 def _log_weather(summary: WeatherCycleSummary) -> None:

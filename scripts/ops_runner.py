@@ -43,6 +43,7 @@ ALLOWED_SCRIPTS = (
     "weather_strategy_compare",
     "kalshi_market_probe",
     "weather_digest",
+    "weather_validation",
 )
 
 

@@ -70,6 +70,11 @@ To run a request:
    a TP/SL grid to find the best exit rule vs holding to settlement.
    `weather_entry_study` runs the entry experiments (market calibration,
    price-band P&L, obs-confirmed entry, limit-entry fills).
+   `weather_validation` reports over the persisted forecast→settlement dataset
+   (`weather_forecast_outcomes`, materialized at settlement from the raw live tables):
+   coverage/growth, forecast-vs-market skill, the ensemble-vs-market probabilistic edge
+   on the winning bucket, and market-vs-forecast divergence vs who was right — the
+   accumulating data that makes cal/dist/pm validatable.
 3. Commit and push:
    ```bash
    cd /tmp/ops && git add ops/request.json && git commit -m "ops: <what>" && git push origin ops
@@ -115,7 +120,9 @@ unavailable.
   `paper_positions`, `account_snapshots`, `system_events`. Weather research:
   live-collected `weather_*` tables vs `backfill_weather_markets` /
   `backfill_weather_candles` (Kalshi REST history — separate provenance, never
-  mix them silently in an analysis).
+  mix them silently in an analysis). `weather_forecast_outcomes` is the persisted
+  forecast→settlement join (one labeled row per intraday cycle, materialized at
+  settlement from the live `weather_*` tables) — the validation dataset.
 
 ### Secrets
 

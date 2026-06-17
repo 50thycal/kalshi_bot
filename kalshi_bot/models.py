@@ -433,6 +433,72 @@ class PolymarketSnapshot(Base):
     source: Mapped[str | None] = mapped_column(String(20), default="polymarket_gamma")
 
 
+class WeatherForecastOutcome(Base):
+    """Persisted forecast->settlement validation dataset: one row per (settled event,
+    intraday market-state cycle).
+
+    Materialized AT SETTLEMENT by replaying the live-collected raw tables
+    (weather_forecasts / weather_ensembles / weather_bucket_snapshots /
+    weather_observations / polymarket_snapshots) with NO lookahead and labeling each
+    cycle with the actual outcome from weather_settlements. This is the clean join that
+    scripts/weather_model_check.py reconstructs ad-hoc on every run; storing it lets
+    cal/dist/pm calibration and forecast-vs-market skill accumulate over time (a forecast
+    backfill). A sentinel row (all features NULL, hours_to_close NULL) is written for a
+    settled event that has no usable bucket snapshots, so the backfill work-queue
+    (settled events with no rows here) does not reprocess it forever."""
+
+    __tablename__ = "weather_forecast_outcomes"
+    __table_args__ = (
+        UniqueConstraint("event_ticker", "captured_at", name="uq_wfo_event_capture"),
+        Index("ix_wfo_event", "event_ticker"),
+        Index("ix_wfo_city_kind_date", "city", "kind", "target_date"),
+        Index("ix_wfo_htc", "hours_to_close"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+
+    # --- identity / grain ---
+    event_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    city: Mapped[str | None] = mapped_column(String(32))
+    kind: Mapped[str | None] = mapped_column(String(8))  # 'high' | 'low'
+    target_date: Mapped[str | None] = mapped_column(String(16))
+    captured_at: Mapped[datetime] = mapped_column(TS, nullable=False)  # cycle snapshot time
+    hours_to_close: Mapped[float | None] = mapped_column(Float)  # NULL => sentinel row
+
+    # --- features at this cycle (no lookahead) ---
+    forecast_f: Mapped[float | None] = mapped_column(Float)  # nearest NWS point fc <= captured_at
+    forecast_source: Mapped[str | None] = mapped_column(String(16))
+    ens_mean_f: Mapped[float | None] = mapped_column(Float)
+    ens_std_f: Mapped[float | None] = mapped_column(Float)
+    ens_models: Mapped[int | None] = mapped_column(Integer)
+    market_implied_mean_f: Mapped[float | None] = mapped_column(Float)  # prob-wt bucket midpoint
+    market_fav_low_f: Mapped[float | None] = mapped_column(Float)
+    market_fav_high_f: Mapped[float | None] = mapped_column(Float)
+    market_fav_mid_cents: Mapped[float | None] = mapped_column(Float)
+    divergence_f: Mapped[float | None] = mapped_column(Float)  # forecast_f - market_implied_mean_f
+    obs_running_max_f: Mapped[float | None] = mapped_column(Float)
+    obs_running_min_f: Mapped[float | None] = mapped_column(Float)
+    pm_implied_mean_f: Mapped[float | None] = mapped_column(Float)  # polymarket, nullable
+
+    # --- outcome label (constant across an event's rows; from weather_settlements) ---
+    actual_high_f: Mapped[float | None] = mapped_column(Float)
+    actual_low_f: Mapped[float | None] = mapped_column(Float)
+    winning_low_f: Mapped[float | None] = mapped_column(Float)
+    winning_high_f: Mapped[float | None] = mapped_column(Float)
+    winning_subtitle: Mapped[str | None] = mapped_column(String(64))
+
+    # --- calibration / skill labels (per-cycle, vs this cycle's distribution) ---
+    market_prob_winner: Mapped[float | None] = mapped_column(Float)  # market P on the winning bucket
+    ens_prob_winner: Mapped[float | None] = mapped_column(Float)  # ensemble P on the winner (sigma)
+    forecast_abs_err_f: Mapped[float | None] = mapped_column(Float)  # |forecast_f - actual_extreme|
+    market_abs_err_f: Mapped[float | None] = mapped_column(Float)  # |market_implied_mean_f - actual|
+
+    # --- provenance / debug ---
+    n_buckets: Mapped[int | None] = mapped_column(Integer)
+    materialized_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    raw_json: Mapped[dict | None] = mapped_column(JSONType)  # compact per-bucket distribution
+
+
 class SystemEvent(Base):
     __tablename__ = "system_events"
 

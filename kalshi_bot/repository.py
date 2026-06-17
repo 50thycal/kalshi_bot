@@ -775,6 +775,65 @@ def replace_backfill_candles(session, market_ticker: str, rows: list[dict]) -> i
     return len(rows)
 
 
+# --- forecast->settlement validation dataset (weather_forecast_outcomes) ----------
+
+
+def event_outcomes_exist(session, event_ticker: str) -> bool:
+    return (
+        session.scalar(
+            select(func.count())
+            .select_from(m.WeatherForecastOutcome)
+            .where(m.WeatherForecastOutcome.event_ticker == event_ticker)
+        )
+        or 0
+    ) > 0
+
+
+def pending_outcome_settlements(session, *, limit: int) -> list:
+    """Settled events with no materialized outcome rows yet (anti-join), newest first —
+    the validation backfill work queue. Newest target_date drains first so fresh
+    settlements are graded promptly."""
+    has_rows = (
+        select(m.WeatherForecastOutcome.id)
+        .where(m.WeatherForecastOutcome.event_ticker == m.WeatherSettlement.event_ticker)
+        .exists()
+    )
+    return list(
+        session.scalars(
+            select(m.WeatherSettlement)
+            .where(~has_rows)
+            .order_by(m.WeatherSettlement.target_date.desc().nulls_last())
+            .limit(limit)
+        )
+    )
+
+
+def count_pending_outcome_settlements(session) -> int:
+    has_rows = (
+        select(m.WeatherForecastOutcome.id)
+        .where(m.WeatherForecastOutcome.event_ticker == m.WeatherSettlement.event_ticker)
+        .exists()
+    )
+    return (
+        session.scalar(
+            select(func.count()).select_from(m.WeatherSettlement).where(~has_rows)
+        )
+        or 0
+    )
+
+
+def replace_event_outcomes(session, event_ticker: str, rows: list[dict]) -> int:
+    """Idempotent per-event store: drop any prior rows, insert the rebuilt set (mirrors
+    replace_backfill_candles). Each dict is a full set of WeatherForecastOutcome kwargs."""
+    session.query(m.WeatherForecastOutcome).filter(
+        m.WeatherForecastOutcome.event_ticker == event_ticker
+    ).delete(synchronize_session=False)
+    for row in rows:
+        session.add(m.WeatherForecastOutcome(materialized_at=_now(), **row))
+    session.flush()
+    return len(rows)
+
+
 # --- Polymarket cross-market signal snapshots (separate provenance) --------------
 
 
