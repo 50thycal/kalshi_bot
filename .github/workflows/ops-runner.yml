@@ -56,3 +56,69 @@ jobs:
             git pull --rebase origin ops || true
             git push origin HEAD:ops
           fi
+
+      # Durable running history of daily digests. When the request was a
+      # `weather_digest` run, snapshot its full output to a dated file on the
+      # long-lived `digest-archive` branch. That branch is deliberately separate
+      # from `ops` (which is disposable/recreated) and from the default branch
+      # (so this never redeploys the Railway worker). It only ever accumulates
+      # `digests/*.md` snapshots, so it is safe to browse and never merged back.
+      - name: Archive digest to durable branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          is_digest=$(python - <<'PY'
+          import json
+          try:
+              d = json.load(open("ops/request.json"))
+          except Exception:
+              d = {}
+          ok = (d.get("type", "").strip().lower() == "script"
+                and (d.get("name") or "").strip().lower() == "weather_digest")
+          print("yes" if ok else "no")
+          PY
+          )
+          if [ "$is_digest" != "yes" ]; then
+            echo "Not a digest request; nothing to archive."
+            exit 0
+          fi
+          if [ ! -s ops/result.txt ]; then
+            echo "No result.txt to archive."
+            exit 0
+          fi
+
+          ts=$(date -u +"%Y-%m-%d_%H%M%SZ")
+          repo_url="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          work=$(mktemp -d)
+
+          if git ls-remote --exit-code --heads "$repo_url" digest-archive >/dev/null 2>&1; then
+            git clone --depth 1 --branch digest-archive "$repo_url" "$work"
+          else
+            # First run: create the branch as an orphan so it carries no app history.
+            git clone --depth 1 "$repo_url" "$work"
+            git -C "$work" checkout --orphan digest-archive
+            git -C "$work" rm -rf . >/dev/null 2>&1 || true
+            printf '%s\n' \
+              "# Digest archive" \
+              "" \
+              "Running history of the daily weather-bot digest." \
+              "Each \`digests/<UTC-timestamp>.md\` file is the full output of one" \
+              "\`weather_digest\` run, committed automatically by the Ops Runner workflow." \
+              "This branch is append-only and is never merged into the default branch." \
+              > "$work/README.md"
+          fi
+
+          mkdir -p "$work/digests"
+          cp ops/result.txt "$work/digests/${ts}.md"
+
+          git -C "$work" config user.name "ops-runner"
+          git -C "$work" config user.email "ops-runner@users.noreply.github.com"
+          git -C "$work" add -A
+          if git -C "$work" diff --cached --quiet; then
+            echo "Nothing new to archive."
+            exit 0
+          fi
+          git -C "$work" commit -m "digest archive ${ts}"
+          git -C "$work" push origin digest-archive

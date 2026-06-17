@@ -62,6 +62,14 @@ To run a request:
      ANOMALIES — flag anything there; otherwise confirm "all clear". Meant to be run
      once a day on a schedule (`--hours N`, `--no-prices` to skip the Kalshi lookup).
 
+     Every `weather_digest` run is **archived automatically**: the Ops Runner
+     workflow snapshots the full result to `digests/<UTC-timestamp>.md` on the
+     long-lived **`digest-archive`** branch (created on first run). That branch is
+     the durable running history — append-only, browsable on GitHub, never merged
+     into the default branch and separate from the disposable `ops` branch. You do
+     **not** need to hand-commit digests anywhere; to review past digests, read from
+     `digest-archive` (e.g. `git fetch origin digest-archive && git ls-tree -r --name-only FETCH_HEAD digests/`).
+
    The individual probes can still be run alone:
    `weather_model_check` grades the ensemble forecast distribution against the
    market's bucket prices on settled events (Brier/log-loss + hypothetical EV)
@@ -98,8 +106,9 @@ Notes:
   the branch on merge, which removes the trigger. If `ops` is ever missing,
   recreate it: `git checkout -B ops origin/<default-branch> && git push -u origin ops`.
 - If `scripts/db_query.py`, `scripts/railway_logs.py`, `scripts/ops_runner.py`,
-  or an allowlisted analysis script change on the default branch, refresh `ops`
-  from the default branch (recreate as above) so it picks up the fix.
+  `.github/workflows/ops-runner.yml`, or an allowlisted analysis script change on
+  the default branch, refresh `ops` from the default branch (recreate as above) so
+  it picks up the fix (e.g. the digest auto-archive step).
 - Latency is ~30–60s per run. Request commits live only on `ops`; they never
   touch the default branch and never redeploy the Railway worker.
 
