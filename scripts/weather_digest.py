@@ -209,6 +209,17 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"  {kind:>4} {book:<5} n={n:<4} total={float(total or 0):+7.2f}$"
                           f"  {pt:+5.1f}c/trade")
 
+            # --- LIVE CELL COVERAGE (cells that couldn't trade) ----------------
+            cell_issues = _q(cur,
+                "SELECT message, to_char(created_at,'HH24:MI') FROM system_events"
+                " WHERE component='live_cell' AND created_at >= %s ORDER BY id DESC LIMIT 20",
+                (since,))
+            if cell_issues:
+                print("\n[LIVE CELL ISSUES — a configured cell could not trade at its window]")
+                for msg, ts in cell_issues:
+                    print(f"  {ts}  {msg}")
+                    anomalies.append(f"cell could not trade: {msg}")
+
             # --- ANOMALIES (alerts) --------------------------------------------
             # bad-status live orders in the window
             bad = _q(cur,

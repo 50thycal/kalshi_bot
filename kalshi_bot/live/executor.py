@@ -58,6 +58,15 @@ def _strategy_book(strategy: str | None) -> str:
     return _WINDOW_RE.sub("", strategy or "")
 
 
+_STRIKE_RE = re.compile(r"-[BT][0-9.]+$")
+
+
+def _event_of(ticker: str | None) -> str:
+    """A market ticker's parent event (strike token stripped): 'KXLOWTPHIL-26JUN16-B59.5'
+    -> 'KXLOWTPHIL-26JUN16'. Used to dedup per-cell coverage notes per event-day."""
+    return _STRIKE_RE.sub("", ticker or "")
+
+
 @dataclass
 class LiveCycleSummary:
     placed: int = 0
@@ -92,6 +101,7 @@ class LiveExecutor:
         self._daily_loss_tripped = False
         self._exit_abandoned: set[tuple[str, str]] = set()
         self._market_ids: dict[str, str] = {}  # ticker -> v1 market UUID (cached)
+        self._cell_skips_noted: set = set()  # (book, event, reason, day) already logged this run
 
     def reset_summary(self) -> None:
         self.summary = LiveCycleSummary()
@@ -121,6 +131,37 @@ class LiveExecutor:
         if windows and _window_of(strategy) not in windows:
             return False
         return True
+
+    def live_cell_enabled(self, book: str, city: str | None, window: int | None) -> bool:
+        """True if (book, city, window) is an enabled live cell (switches on + precise allowlist).
+        Used to scope availability/coverage logging to cells we actually trade live."""
+        if not self._switches_on():
+            return False
+        cells = self.settings.live_cell_list
+        return bool(cells) and (book, city, window) in cells
+
+    def is_live_cell(self, strategy: str, ticker: str) -> bool:
+        return self.live_cell_enabled(_strategy_book(strategy), _city_of(ticker), _window_of(strategy))
+
+    def note_cell_skip(self, session, strategy: str, ticker: str, reason: str) -> None:
+        """Record (once per process per cell+event-day) that a LIVE cell was due at its window but
+        could NOT trade — no tradeable market / illiquid book. Surfaced by the daily digest so a
+        structurally-thin cell is visible vs a one-off miss. Best-effort: never breaks the cycle."""
+        day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        key = (_strategy_book(strategy), _event_of(ticker), reason, day)
+        if key in self._cell_skips_noted:
+            return
+        self._cell_skips_noted.add(key)
+        self.summary.notes.append(f"cell could not trade: {strategy} {ticker} ({reason})")
+        logger.warning("live cell could not trade at its window", extra={"extra_fields": {
+            "strategy": strategy, "ticker": ticker, "reason": reason}})
+        try:
+            repo.log_system_event(
+                session, level="WARNING", component="live_cell",
+                message=f"{strategy} {_event_of(ticker)}: {reason}",
+                raw={"strategy": strategy, "ticker": ticker, "reason": reason})
+        except Exception:  # noqa: BLE001 — observability must never disturb trading
+            logger.exception("note_cell_skip failed")
 
     def _daily_loss_hit(self, session) -> bool:
         s = self.settings

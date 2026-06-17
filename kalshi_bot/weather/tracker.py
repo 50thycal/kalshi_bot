@@ -349,6 +349,16 @@ class WeatherTracker:
                         session, f"{prefix}dist_h{int(hours)}", event_ticker, t, dist_market,
                         self._cached_metrics(dist_market, metrics_cache), dist_prob, summary,
                     )
+                # Live-cell coverage: a LIVE cell whose book has NO market this window (no
+                # favorite / value bucket found) -> note it so the digest shows the no-show.
+                if self.live_executor is not None:
+                    for _name, _mkt in (("fav", fav_market), ("nws", nws_market),
+                                        ("cal", cal_market), ("pm", pm_market), ("dist", dist_market)):
+                        if _mkt is None and self.live_executor.live_cell_enabled(
+                                f"{prefix}{_name}", t.city.code, int(hours)):
+                            self.live_executor.note_cell_skip(
+                                session, f"{prefix}{_name}_h{int(hours)}", event_ticker,
+                                "no favorite/value market today")
 
             # City-window book: the backfill-validated per-city entry window for HIGHs
             # (e.g. h18 for CHI/LAX/DEN). Buy the favorite once, at that city's window.
@@ -685,19 +695,30 @@ class WeatherTracker:
         metrics = compute_metrics(market, ob, top_n=self.settings.orderbook_depth)
         return metrics if (metrics.two_sided and metrics.best_yes_ask is not None) else None
 
+    def _note_live_skip(self, session, strategy: str, ticker: str | None, reason: str) -> None:
+        """If this skipped entry is an enabled LIVE cell, record that it couldn't trade (for the
+        digest's cell-coverage view). No-op for paper-only books."""
+        if self.live_executor is None or not ticker:
+            return
+        if self.live_executor.is_live_cell(strategy, ticker):
+            self.live_executor.note_cell_skip(session, strategy, ticker, reason)
+
     def _maybe_enter(
         self, session, strategy: str, event_ticker: str, t: _Tracked, market: dict,
         metrics, model_probability: float | None, summary,
     ) -> None:
         if repo.weather_entered(session, event_ticker, strategy):
             return
+        tkr = (market or {}).get("ticker")
         if metrics is None:
             summary.skipped_no_book += 1
+            self._note_live_skip(session, strategy, tkr, "no order book")
             return
         s = self.settings
         qty = min(s.paper_order_size, metrics.depth_at_best_ask)
         if qty <= 0:
             summary.skipped_no_book += 1
+            self._note_live_skip(session, strategy, tkr, "illiquid — no depth at ask")
             return
         price = metrics.best_yes_ask
         fee = kalshi_fee(price, qty, s.paper_fees_enabled)

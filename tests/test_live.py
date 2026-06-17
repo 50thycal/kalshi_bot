@@ -572,6 +572,26 @@ def test_indeterminate_entry_with_no_execution_evidence_is_not_landed(settings):
         assert session.scalars(select(m.LiveOrder)).all()[0].status == "not_landed"
 
 
+def test_live_cell_coverage_note_deduped(settings):
+    # A LIVE cell that can't trade at its window is recorded once (deduped per event+day) as a
+    # system_event, so the daily digest can show the no-show (e.g. PHIL-h14 illiquid).
+    _live_settings(settings, live_strategies="weather_low_fav",
+                   live_cells="weather_low_fav:PHIL:14")
+    db.init_engine(settings.database_url)
+    db.create_all()
+    ex = _exec(settings, FakeLiveClient())
+    with db.session_scope() as session:
+        assert ex.is_live_cell("weather_low_fav_h14", "KXLOWTPHIL-26JUN16-B59.5")
+        assert not ex.is_live_cell("weather_low_fav_h14", "KXLOWTLAX-26JUN16-B59.5")  # wrong city
+        assert not ex.is_live_cell("weather_low_fav_h20", "KXLOWTPHIL-26JUN16-B59.5")  # wrong window
+        ex.note_cell_skip(session, "weather_low_fav_h14", "KXLOWTPHIL-26JUN16-B59.5", "illiquid")
+        ex.note_cell_skip(session, "weather_low_fav_h14", "KXLOWTPHIL-26JUN16-B62.5", "illiquid")
+        rows = session.scalars(
+            select(m.SystemEvent).where(m.SystemEvent.component == "live_cell")).all()
+        assert len(rows) == 1  # same event-day -> deduped to one
+        assert "weather_low_fav_h14" in rows[0].message and "PHIL" in rows[0].message
+
+
 def test_probe_buy_is_fractional(settings):
     # live_probe buy -> a fractional v1 MARKET order (count_fp = dollars/ask). Fractional is a
     # v1-only capability (v2 rejects count_fp), so the probe mirrors the v1 close shape as a buy.
