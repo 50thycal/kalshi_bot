@@ -562,6 +562,9 @@ def weather_city_bias(
             .where(
                 m.WeatherForecast.event_ticker == st.event_ticker,
                 m.WeatherForecast.forecast_high_f.is_not(None),
+                # NWS only — HRRR (source='openmeteo_hrrr') is collected/graded separately
+                # and must not pollute the NWS-anchored `cal` bias. NULL/'nws' => NWS.
+                func.coalesce(m.WeatherForecast.source, "nws") != "openmeteo_hrrr",
             )
             .order_by(m.WeatherForecast.captured_at.asc())
             .limit(1)
@@ -645,6 +648,20 @@ def insert_weather_ensemble(
     session.add(row)
     session.flush()
     return row
+
+
+def latest_weather_forecast_at(
+    session, event_ticker: str, source: str, kind: str = "high"
+):
+    """Most recent captured_at for a stored forecast of this (event, source, kind), for
+    throttling repeat fetches (e.g. HRRR). None when none stored yet."""
+    return session.scalar(
+        select(func.max(m.WeatherForecast.captured_at)).where(
+            m.WeatherForecast.event_ticker == event_ticker,
+            m.WeatherForecast.source == source,
+            m.WeatherForecast.kind == kind,
+        )
+    )
 
 
 def latest_weather_ensemble_at(session, city: str, target_date: str):

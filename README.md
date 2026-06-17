@@ -186,6 +186,11 @@ uncertainty. If a low series ticker guess is wrong (check the first run's logs f
   Comparing windows also shows how much entry timing matters.
 - **Forecast collection**: each cycle fetches the NWS daily high/low forecast (`api.weather.gov`,
   free, needs `NWS_USER_AGENT`) per city and stores it in `weather_forecasts` (tagged `kind`).
+  Alongside it (throttled, fail-soft) it also stores the **HRRR** point forecast — NOAA's hourly,
+  high-res, ≤48h CONUS model, via Open-Meteo (`ncep_hrrr_conus`) — in the same table tagged
+  `source='openmeteo_hrrr'` (`WEATHER_HRRR_ENABLED`). HRRR is **collect + grade only**: it is graded
+  head-to-head against NWS and the market in the validation dataset (see below) but no book trades on
+  it yet — we add the better data, read whether it wins, and only then route it into a strategy.
 - **Data collection for the real edge model** — temperature buckets are priced off a
   *distribution*, so alongside the point forecast each cycle also collects (all throttled,
   all fail-soft):
@@ -194,9 +199,11 @@ uncertainty. If a low series ticker guess is wrong (check the first run's logs f
     mid-afternoon the daily high is often already locked in while the market lags — the
     concrete late-day signal the books are currently blind to.
   - **Ensemble distributions** (`weather_ensembles`): per-member daily highs/lows from
-    Open-Meteo's ensemble API (free, no key; `WEATHER_ENSEMBLE_MODELS`, default GFS + ECMWF).
-    The member spread is an empirical P(temperature lands in bucket) and the uncertainty
-    signal that says when the market favorite is overconfident.
+    Open-Meteo's ensemble API (free, no key; `WEATHER_ENSEMBLE_MODELS`, default
+    GFS + ECMWF + ICON-EPS + GEM-EPS). The member spread is an empirical P(temperature lands in
+    bucket) and the uncertainty signal that says when the market favorite is overconfident; the
+    wider the multi-model disagreement, the better-calibrated the `dist` sigma. Unrecognized model
+    ids fail soft (logged + skipped), so widening the list is low-risk.
   - **Bucket-ladder snapshots** (`weather_bucket_snapshots`): every bucket's bid/ask/mid per
     event over time — the market's own implied distribution, i.e. the training data for a
     future mispricing/sizing model.
@@ -242,6 +249,15 @@ Read-only and self-contained (stdlib + psycopg), so it runs locally
 (`DATABASE_URL=... python scripts/weather_model_check.py`) or through the ops channel
 (`{"type": "script", "name": "weather_model_check"}`). Only if this shows the ensemble
 persistently beating the market does a `weather_edge_*` paper book get wired in.
+
+**Persisted validation dataset (`weather_forecast_outcomes`).** The model check rebuilds its join
+ad-hoc on every run; the worker also *stores* it so skill accumulates. At settlement each event is
+replayed into one labeled row per intraday cycle (no lookahead) with the actual outcome attached.
+`scripts/weather_validation.py` (`{"type": "script", "name": "weather_validation"}`) reports over it:
+coverage/growth, forecast-vs-market skill, the ensemble-vs-market probabilistic edge on the winning
+bucket, and — now that HRRR is collected — an **HRRR-vs-NWS-vs-market** abs-error table by window ×
+kind (the read that decides whether HRRR earns its way into the books). HRRR rows accumulate forward
+from deploy, so that section fills in as new events settle.
 
 **Exit sweep (stop-loss / take-profit, evaluated offline).** The weather books hold to
 settlement; `scripts/weather_exit_sweep.py` asks whether they should. Because the bucket

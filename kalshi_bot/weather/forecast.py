@@ -163,3 +163,90 @@ class NwsForecastClient:
         return ObservedExtremes(
             max_f=max(temps), min_f=min(temps), obs_count=len(temps), last_obs_at=last_at
         )
+
+
+OPEN_METEO_FORECAST_BASE = "https://api.open-meteo.com"
+
+# HRRR (NCEP HRRR CONUS) on the Open-Meteo deterministic forecast API: hourly, high-res,
+# US-only, <=48h horizon. Updates hourly. We reduce the target local-date hourly series to
+# a daily max/min — same hourly-reduction pattern as the ensemble client.
+HRRR_MODEL = "ncep_hrrr_conus"
+
+# Require most of the local day's hours before trusting a daily max/min from the series.
+# The low is horizon-limited late in the day (HRRR's future hours can't include a minimum
+# that already passed) exactly like the NWS overnight period — we capture what it says.
+_HRRR_MIN_HOURS = 12
+
+
+class OpenMeteoForecastClient:
+    """Open-Meteo deterministic point-forecast client, used here for HRRR (free, no key).
+
+    One request per (location, date): `GET /v1/forecast` with hourly `temperature_2m`,
+    `models=ncep_hrrr_conus`, `timezone` set to the station's zone (local timestamps),
+    `temperature_unit=fahrenheit`. The daily high/low for the target local date is the
+    max/min over that date's hourly values. Fails soft -> None (CONUS-only / >48h / down)."""
+
+    def __init__(
+        self,
+        *,
+        model: str = HRRR_MODEL,
+        timeout: float = 20.0,
+        transport: httpx.BaseTransport | None = None,
+    ):
+        self._model = model
+        self._client = httpx.Client(
+            base_url=OPEN_METEO_FORECAST_BASE, timeout=timeout, transport=transport
+        )
+
+    def close(self) -> None:
+        self._client.close()
+
+    def __enter__(self) -> OpenMeteoForecastClient:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self.close()
+
+    def _daily_values(self, lat: float, lon: float, tz_name: str, target_date: date) -> list[float]:
+        """Target-local-date hourly temperatures (degF), or [] on any failure."""
+        try:
+            resp = self._client.get(
+                "/v1/forecast",
+                params={
+                    "latitude": lat,
+                    "longitude": lon,
+                    "hourly": "temperature_2m",
+                    "models": self._model,
+                    "forecast_days": 2,
+                    "timezone": tz_name,
+                    "temperature_unit": "fahrenheit",
+                },
+            )
+            resp.raise_for_status()
+            hourly = (resp.json() or {}).get("hourly") or {}
+        except Exception as exc:  # noqa: BLE001 — a down/out-of-range model must not break the cycle
+            logger.warning(
+                "hrrr fetch failed",
+                extra={"extra_fields": {"model": self._model, "error": str(exc)}},
+            )
+            return []
+        times = hourly.get("time") or []
+        series = hourly.get("temperature_2m") or []
+        target = target_date.isoformat()
+        return [
+            float(series[i])
+            for i, ts in enumerate(times)
+            if str(ts)[:10] == target and i < len(series) and series[i] is not None
+        ]
+
+    def daily_high_f(
+        self, lat: float, lon: float, tz_name: str, target_date: date
+    ) -> float | None:
+        values = self._daily_values(lat, lon, tz_name, target_date)
+        return round(max(values), 1) if len(values) >= _HRRR_MIN_HOURS else None
+
+    def daily_low_f(
+        self, lat: float, lon: float, tz_name: str, target_date: date
+    ) -> float | None:
+        values = self._daily_values(lat, lon, tz_name, target_date)
+        return round(min(values), 1) if len(values) >= _HRRR_MIN_HOURS else None

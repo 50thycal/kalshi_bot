@@ -176,6 +176,49 @@ def test_bounded_backfill_drains_queue(settings):
         assert repo.count_pending_outcome_settlements(s) == 0
 
 
+def test_materialize_grades_hrrr_separately(settings):
+    """HRRR rows (source='openmeteo_hrrr') share weather_forecasts with NWS but are graded
+    into their own columns — forecast_f must stay NWS even when an HRRR row is later."""
+    _init_db(settings)
+    with db.session_scope() as s:
+        c1 = T0 + timedelta(hours=8)  # htc 12
+        _add_buckets(s, c1, htc=12.0)
+        # NWS (71.0) earlier; HRRR (72.0) LATER. Without the source-split, _pick_latest_at
+        # would wrongly take the HRRR row as forecast_f.
+        s.add(m.WeatherForecast(captured_at=c1 - timedelta(minutes=2), city=CITY,
+                                event_ticker=EV, target_date=TARGET, kind=KIND,
+                                forecast_high_f=71.0, source="nws"))
+        s.add(m.WeatherForecast(captured_at=c1 - timedelta(minutes=1), city=CITY,
+                                event_ticker=EV, target_date=TARGET, kind=KIND,
+                                forecast_high_f=72.0, source="openmeteo_hrrr"))
+        _add_settlement(s)  # actual_high 72.0; market implied mean 72.5
+        st = s.scalars(select(m.WeatherSettlement)).one()
+        materialize_event(s, st, settings=settings)
+    with db.session_scope() as s:
+        row = s.scalars(select(m.WeatherForecastOutcome)).one()
+        assert row.forecast_f == 71.0 and row.forecast_source == "nws"
+        assert row.hrrr_f == 72.0
+        assert row.hrrr_abs_err_f == 0.0  # |72 - 72|
+        assert abs(row.hrrr_divergence_f - (72.0 - 72.5)) < 1e-6
+
+
+def test_city_bias_ignores_hrrr_forecasts(settings):
+    """The cal bias is NWS-anchored: an earlier HRRR row must not be picked as the
+    'earliest forecast' and skew the offset."""
+    _init_db(settings)
+    with db.session_scope() as s:
+        # HRRR row is EARLIER (would be the 'earliest' without the source filter).
+        s.add(m.WeatherForecast(captured_at=T0, city=CITY, event_ticker=EV,
+                                target_date=TARGET, kind=KIND, forecast_high_f=50.0,
+                                source="openmeteo_hrrr"))
+        s.add(m.WeatherForecast(captured_at=T0 + timedelta(hours=1), city=CITY, event_ticker=EV,
+                                target_date=TARGET, kind=KIND, forecast_high_f=70.0, source="nws"))
+        _add_settlement(s)  # actual_high 72, actual_low 60 -> mid 66
+        bias = repo.weather_city_bias(s, shrinkage=3.0, min_events=1)
+    # Uses NWS (70), not HRRR (50): (66 - 70) * 1/(1+3) = -1.0.
+    assert bias[(CITY, KIND)] == -1.0
+
+
 def test_low_kind_uses_low_extreme(settings):
     _init_db(settings)
     with db.session_scope() as s:

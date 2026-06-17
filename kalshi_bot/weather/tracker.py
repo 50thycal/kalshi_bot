@@ -40,7 +40,7 @@ from .buckets import forecast_in_bucket, parse_bucket_range
 from .cities import CITIES, City
 from .distribution import best_bucket_by_edge
 from .ensemble import OpenMeteoEnsembleClient
-from .forecast import NwsForecastClient, ObservedExtremes
+from .forecast import NwsForecastClient, ObservedExtremes, OpenMeteoForecastClient
 from .polymarket import PolymarketClient
 
 logger = logging.getLogger(__name__)
@@ -59,6 +59,7 @@ class WeatherCycleSummary:
     events_seen: int = 0
     tracked: int = 0
     forecasts_stored: int = 0
+    hrrr_stored: int = 0
     obs_stored: int = 0
     ensembles_stored: int = 0
     bucket_snaps: int = 0
@@ -131,12 +132,14 @@ class WeatherTracker:
         forecast: NwsForecastClient | None,
         ensemble: OpenMeteoEnsembleClient | None = None,
         polymarket: PolymarketClient | None = None,
+        hrrr: OpenMeteoForecastClient | None = None,
         live_executor=None,
     ):
         self.client = client
         self.settings = settings
         self.forecast = forecast
         self.ensemble = ensemble
+        self.hrrr = hrrr
         self.polymarket = polymarket
         self.live_executor = live_executor
         # Set by the live cycle before run_once so mirror_entry can pass it to risk.evaluate.
@@ -239,6 +242,7 @@ class WeatherTracker:
             forecast_val = None
             if s.weather_forecast_enabled and self.forecast is not None:
                 forecast_val = self._store_forecast(session, t, target, summary)
+            self._store_hrrr_forecast(session, t, target, now, summary)
             obs = self._collect_observations(session, t, target, now, summary, obs_cache)
             self._collect_ensemble(session, t, target, now, summary, ensemble_done)
             self._snapshot_ladder(session, t, now, summary)
@@ -412,6 +416,44 @@ class WeatherTracker:
         )
         summary.forecasts_stored += 1
         return value
+
+    def _store_hrrr_forecast(self, session, t: _Tracked, target: date | None, now, summary) -> None:
+        """Store the HRRR point forecast (source='openmeteo_hrrr') alongside NWS, throttled
+        per (event, kind). Collect + grade only — no book reads this yet."""
+        s = self.settings
+        if not s.weather_hrrr_enabled or self.hrrr is None or target is None:
+            return
+        event_ticker = t.event.get("event_ticker")
+        if not event_ticker:
+            return
+        last = repo.latest_weather_forecast_at(session, event_ticker, "openmeteo_hrrr", t.kind)
+        age = _age_minutes(last, now)
+        if age is not None and age < s.weather_hrrr_interval_minutes:
+            return
+        value = None
+        try:
+            if t.kind == "high":
+                value = self.hrrr.daily_high_f(t.city.lat, t.city.lon, t.city.tz, target)
+            else:
+                value = self.hrrr.daily_low_f(t.city.lat, t.city.lon, t.city.tz, target)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "weather: hrrr fetch failed",
+                extra={"extra_fields": {"city": t.city.code, "kind": t.kind, "error": str(exc)}},
+            )
+        repo.insert_weather_forecast(
+            session,
+            city=t.city.code,
+            series_ticker=t.series,
+            event_ticker=event_ticker,
+            target_date=target.isoformat(),
+            station=t.city.station,
+            kind=t.kind,
+            forecast_high_f=value,
+            source="openmeteo_hrrr",
+            raw={"name": t.city.name, "model": "ncep_hrrr_conus"},
+        )
+        summary.hrrr_stored += 1
 
     def _collect_observations(
         self, session, t: _Tracked, target: date | None, now, summary, cache

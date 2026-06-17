@@ -31,7 +31,7 @@ from .risk.manager import RiskManager
 from .scanner.scanner import MarketScanner, ScanSummary
 from .weather.backfill import WeatherBackfill
 from .weather.ensemble import OpenMeteoEnsembleClient
-from .weather.forecast import NwsForecastClient
+from .weather.forecast import NwsForecastClient, OpenMeteoForecastClient
 from .weather.polymarket import PolymarketClient
 from .weather.tracker import WeatherCycleSummary, WeatherTracker
 from .weather.validation import WeatherValidationBackfill
@@ -105,11 +105,14 @@ def run() -> int:
     polymarket_client = (
         PolymarketClient() if weather_like and settings.weather_polymarket_enabled else None
     )
+    hrrr_client = (
+        OpenMeteoForecastClient() if weather_like and settings.weather_hrrr_enabled else None
+    )
     weather_engine = PaperTradingEngine(client, settings, scanner.risk) if weather_like else None
     live_executor = LiveExecutor(client, settings, scanner.risk) if live else None
     weather_tracker = (
         WeatherTracker(client, settings, forecast_client, ensemble_client, polymarket_client,
-                       live_executor=live_executor)
+                       hrrr=hrrr_client, live_executor=live_executor)
         if weather_like else None
     )
     weather_backfill = (

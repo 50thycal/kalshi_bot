@@ -191,9 +191,17 @@ def _build_cycle_row(
     actual_extreme = st.actual_high_f if kind == "high" else st.actual_low_f
 
     # --- forecast (point NWS; holds the low for kind='low') ---
-    fc = _pick_latest_at(forecast_rows, cap, lambda r: r.captured_at)
+    # HRRR rows (source='openmeteo_hrrr') live in the same table but are graded separately
+    # below; NULL/'nws' source => the NWS forecast the books trade on.
+    nws_rows = [r for r in forecast_rows if (r.source or "nws") != "openmeteo_hrrr"]
+    hrrr_rows = [r for r in forecast_rows if r.source == "openmeteo_hrrr"]
+    fc = _pick_latest_at(nws_rows, cap, lambda r: r.captured_at)
     forecast_f = fc.forecast_high_f if fc is not None else None
     forecast_source = fc.source if fc is not None else None
+
+    # --- HRRR point forecast (collect + grade only) ---
+    hrrr_fc = _pick_latest_at(hrrr_rows, cap, lambda r: r.captured_at)
+    hrrr_f = hrrr_fc.forecast_high_f if hrrr_fc is not None else None
 
     # --- ensemble distribution ---
     members = _ensembles_at(ens_rows, cap)
@@ -256,6 +264,16 @@ def _build_cycle_row(
         if (market_implied_mean_f is not None and actual_extreme is not None)
         else None
     )
+    hrrr_abs_err_f = (
+        abs(hrrr_f - actual_extreme)
+        if (hrrr_f is not None and actual_extreme is not None)
+        else None
+    )
+    hrrr_divergence_f = (
+        hrrr_f - market_implied_mean_f
+        if (hrrr_f is not None and market_implied_mean_f is not None)
+        else None
+    )
 
     win_low, win_high = parse_bucket_range(st.winning_subtitle)
 
@@ -268,6 +286,9 @@ def _build_cycle_row(
         "hours_to_close": cycle.hours_to_close,
         "forecast_f": forecast_f,
         "forecast_source": forecast_source,
+        "hrrr_f": hrrr_f,
+        "hrrr_abs_err_f": hrrr_abs_err_f,
+        "hrrr_divergence_f": hrrr_divergence_f,
         "ens_mean_f": ens_mean_f,
         "ens_std_f": ens_std_f,
         "ens_models": ens_models,

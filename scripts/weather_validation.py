@@ -163,6 +163,54 @@ def report_divergence(rows: list[dict], min_rows: int) -> None:
     print("  (mkt-fc_err > 0 => forecast wins in that divergence band — the tradable signal)")
 
 
+def report_hrrr(rows: list[dict], windows: list[float], min_rows: int) -> None:
+    """HRRR vs NWS vs market abs error on the daily extreme (HRRR is collect+grade only —
+    this section is what decides whether it earns its way into the books later)."""
+    print("\n=== HRRR vs NWS vs market skill (abs error on the daily extreme, by window x kind) ===")
+    graded = [r for r in rows if r["hrrr_abs_err_f"] is not None]
+    cov = len(graded)
+    print(f"  HRRR-graded cycles: {cov} / {len(rows)}"
+          f"   distinct events with HRRR: {len({r['event_ticker'] for r in graded})}")
+    if not graded:
+        print("  (no HRRR-graded rows yet — HRRR accumulates forward from deploy; "
+              "give it a few settlements)")
+        return
+    def _num(x: float | None) -> str:
+        return f"{x:.2f}" if x is not None else "n/a"
+
+    def _pct(hits: int, tot: int) -> str:
+        return f"{hits / tot * 100.0:.0f}%" if tot else "n/a"
+
+    print(f"  {'kind':>4} {'window':>6} {'n':>5} {'hrrr_err':>8} {'nws_err':>8} {'mkt_err':>8}"
+          f" {'nws-hrrr':>8} {'hrrr<nws':>8} {'hrrr<mkt':>8}")
+    # (hrrr_err, nws_err, mkt_err) per cell; nws/mkt may be None for a given row.
+    cells: dict[tuple, list[tuple]] = {}
+    for r in graded:
+        key = ((r["kind"] or "high"), _nearest_window(r["hours_to_close"], windows))
+        cells.setdefault(key, []).append(
+            (r["hrrr_abs_err_f"], r["forecast_abs_err_f"], r["market_abs_err_f"])
+        )
+    for kind in ("high", "low"):
+        for w in windows:
+            trips = cells.get((kind, w))
+            if not trips:
+                continue
+            n = len(trips)
+            he = mean(t[0] for t in trips)
+            nws_pairs = [(t[0], t[1]) for t in trips if t[1] is not None]
+            mkt_pairs = [(t[0], t[2]) for t in trips if t[2] is not None]
+            ne = _avg([p[1] for p in nws_pairs])
+            me = _avg([p[1] for p in mkt_pairs])
+            nws_minus_hrrr = _avg([nw - hr for hr, nw in nws_pairs])
+            flag = "  (small n)" if n < min_rows else ""
+            print(f"  {kind:>4} h{int(w):<5d} {n:5d} {he:8.2f} {_num(ne):>8} {_num(me):>8}"
+                  f" {_num(nws_minus_hrrr):>8}"
+                  f" {_pct(sum(1 for hr, nw in nws_pairs if hr < nw), len(nws_pairs)):>8}"
+                  f" {_pct(sum(1 for hr, mk in mkt_pairs if hr < mk), len(mkt_pairs)):>8}{flag}")
+    print("  (nws-hrrr > 0 => HRRR closer to the actual extreme than NWS; hrrr<nws / hrrr<mkt"
+          " = share of cycles HRRR beat NWS / market)")
+
+
 def report_pm_and_cal(rows: list[dict], min_rows: int) -> None:
     pm = []
     for r in rows:
@@ -237,7 +285,8 @@ def main(argv: list[str] | None = None) -> int:
                 "SELECT event_ticker, city, kind, target_date, hours_to_close,"
                 " forecast_f, forecast_source, market_implied_mean_f, divergence_f,"
                 " market_prob_winner, ens_prob_winner, pm_implied_mean_f,"
-                " forecast_abs_err_f, market_abs_err_f, actual_high_f, actual_low_f"
+                " forecast_abs_err_f, market_abs_err_f, actual_high_f, actual_low_f,"
+                " hrrr_f, hrrr_abs_err_f, hrrr_divergence_f"
                 f" FROM weather_forecast_outcomes WHERE {clause}",
                 params,
             )
@@ -256,6 +305,7 @@ def main(argv: list[str] | None = None) -> int:
     report_coverage(rows, sentinels)
     report_skill(rows, windows, args.min_rows)
     report_prob_edge(rows, windows, args.min_rows)
+    report_hrrr(rows, windows, args.min_rows)
     report_divergence(rows, args.min_rows)
     report_pm_and_cal(rows, args.min_rows)
     return 0

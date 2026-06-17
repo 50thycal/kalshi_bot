@@ -468,6 +468,10 @@ class WeatherForecastOutcome(Base):
     # --- features at this cycle (no lookahead) ---
     forecast_f: Mapped[float | None] = mapped_column(Float)  # nearest NWS point fc <= captured_at
     forecast_source: Mapped[str | None] = mapped_column(String(16))
+    # HRRR (Open-Meteo ncep_hrrr_conus) point forecast, graded alongside NWS (collect-only)
+    hrrr_f: Mapped[float | None] = mapped_column(Float)  # nearest HRRR point fc <= captured_at
+    hrrr_abs_err_f: Mapped[float | None] = mapped_column(Float)  # |hrrr_f - actual_extreme|
+    hrrr_divergence_f: Mapped[float | None] = mapped_column(Float)  # hrrr_f - market_implied_mean_f
     ens_mean_f: Mapped[float | None] = mapped_column(Float)
     ens_std_f: Mapped[float | None] = mapped_column(Float)
     ens_models: Mapped[int | None] = mapped_column(Integer)

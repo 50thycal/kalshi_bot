@@ -12,7 +12,7 @@ from sqlalchemy import func, select
 from kalshi_bot import db
 from kalshi_bot import models as m
 from kalshi_bot.weather.ensemble import OpenMeteoEnsembleClient
-from kalshi_bot.weather.forecast import NwsForecastClient
+from kalshi_bot.weather.forecast import NwsForecastClient, OpenMeteoForecastClient
 from kalshi_bot.weather.tracker import WeatherTracker
 
 # --- NWS client: daily low + station observations -----------------------------
@@ -90,6 +90,130 @@ def test_ensemble_daily_extremes():
     assert day.model == "gfs_seamless"
     assert sorted(day.highs) == [80.0, 84.0]  # per-member Jun 8 maxima (Jun 9 excluded)
     assert sorted(day.lows) == [60.0, 62.0]
+
+
+# --- Open-Meteo HRRR point-forecast client -------------------------------------
+
+
+@respx.mock
+def test_hrrr_daily_extremes_parse():
+    hours = [f"2026-06-08T{h:02d}:00" for h in range(24)] + [f"2026-06-09T{h:02d}:00" for h in range(24)]
+    temps = [70.0] * 24 + [90.0] * 24  # Jun 9 hotter — must NOT leak into Jun 8.
+    temps[5], temps[14] = 55.0, 88.0   # Jun 8 dip / peak
+    respx.get("https://api.open-meteo.com/v1/forecast").mock(
+        return_value=Response(200, json={"hourly": {"time": hours, "temperature_2m": temps}})
+    )
+    with OpenMeteoForecastClient() as hrrr:
+        assert hrrr.daily_high_f(40.78, -73.97, "America/New_York", date(2026, 6, 8)) == 88.0
+        assert hrrr.daily_low_f(40.78, -73.97, "America/New_York", date(2026, 6, 8)) == 55.0
+
+
+@respx.mock
+def test_hrrr_short_series_returns_none():
+    # Out-of-CONUS / >48h: too few target-date hours to trust an extreme -> None (fail soft).
+    hours = [f"2026-06-08T{h:02d}:00" for h in range(5)]
+    respx.get("https://api.open-meteo.com/v1/forecast").mock(
+        return_value=Response(200, json={"hourly": {"time": hours, "temperature_2m": [70.0] * 5}})
+    )
+    with OpenMeteoForecastClient() as hrrr:
+        assert hrrr.daily_high_f(40.78, -73.97, "America/New_York", date(2026, 6, 8)) is None
+
+
+@respx.mock
+def test_hrrr_http_error_returns_none():
+    respx.get("https://api.open-meteo.com/v1/forecast").mock(return_value=Response(400))
+    with OpenMeteoForecastClient() as hrrr:
+        assert hrrr.daily_high_f(0.0, 0.0, "UTC", date(2026, 6, 8)) is None
+
+
+# --- Tracker: HRRR collection ---------------------------------------------------
+
+
+class FakeHrrr:
+    def __init__(self, high=78.3, low=59.1):
+        self.calls = 0
+        self.high = high
+        self.low = low
+
+    def daily_high_f(self, lat, lon, tz, target):
+        self.calls += 1
+        return self.high
+
+    def daily_low_f(self, lat, lon, tz, target):
+        self.calls += 1
+        return self.low
+
+
+def _high_event_client():
+    close = (datetime.now(timezone.utc) + timedelta(hours=3)).isoformat()
+    event = {
+        "event_ticker": "KXHIGHNY-26JUN08",
+        "series_ticker": "KXHIGHNY",
+        "close_time": close,
+        "markets": [_bucket("KXHIGHNY-26JUN08-B74.5", "74° to 75°", 55, 57)],
+    }
+
+    class Client:
+        def get_events(self, series_ticker, status="open", with_nested_markets=True):
+            if series_ticker == "KXHIGHNY" and status == "open":
+                return {"events": [event]}
+            return {"events": []}
+
+        def get_orderbook(self, ticker, depth=None):
+            return {"orderbook_fp": {"yes_dollars": [["0.5500", "300"]], "no_dollars": [["0.4300", "300"]]}}
+
+    return Client()
+
+
+def test_hrrr_forecast_stored_and_throttled(settings):
+    settings.bot_mode = "weather"
+    settings.weather_strategies = "favorite"
+    settings.weather_track_lows = False
+    db.init_engine(settings.database_url)
+    db.create_all()
+
+    hrrr = FakeHrrr()
+    tracker = WeatherTracker(_high_event_client(), settings, forecast=None, hrrr=hrrr)
+    with db.session_scope() as session:
+        s1 = tracker.run_once(session)
+    assert s1.hrrr_stored == 1
+    with db.session_scope() as session:
+        rows = session.scalars(select(m.WeatherForecast)).all()
+        assert len(rows) == 1  # only HRRR (forecast=None -> no NWS row written)
+        assert rows[0].source == "openmeteo_hrrr"
+        assert rows[0].forecast_high_f == 78.3 and rows[0].kind == "high"
+
+    # Immediately after: within the HRRR interval -> no fetch, no new row.
+    with db.session_scope() as session:
+        s2 = tracker.run_once(session)
+        assert s2.hrrr_stored == 0
+        assert session.scalar(select(func.count()).select_from(m.WeatherForecast)) == 1
+    assert hrrr.calls == 1
+
+
+def test_hrrr_disabled_no_store(settings):
+    settings.bot_mode = "weather"
+    settings.weather_strategies = "favorite"
+    settings.weather_track_lows = False
+    settings.weather_hrrr_enabled = False
+    db.init_engine(settings.database_url)
+    db.create_all()
+
+    hrrr = FakeHrrr()
+    tracker = WeatherTracker(_high_event_client(), settings, forecast=None, hrrr=hrrr)
+    with db.session_scope() as session:
+        s1 = tracker.run_once(session)
+    assert s1.hrrr_stored == 0
+    assert hrrr.calls == 0
+    with db.session_scope() as session:
+        assert session.scalar(select(func.count()).select_from(m.WeatherForecast)) == 0
+
+
+def test_ensemble_default_model_list_widened(settings):
+    # Default now spans GFS + ECMWF + ICON-EPS + GEM-EPS (wider disagreement -> better sigma).
+    assert settings.weather_ensemble_model_list == [
+        "gfs_seamless", "ecmwf_ifs025", "icon_seamless", "gem_global",
+    ]
 
 
 # --- Tracker: low books, ladder snapshots, settlement kinds ---------------------

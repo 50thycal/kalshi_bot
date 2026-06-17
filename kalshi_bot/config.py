@@ -110,6 +110,13 @@ class Settings(BaseSettings):
     weather_strategies: str = "favorite,nws,cal"
     weather_forecast_enabled: bool = True
     nws_user_agent: str = "kalshi-bot (set NWS_USER_AGENT to your app + contact email)"
+    # HRRR (NOAA's hourly, high-res, <=48h CONUS model) point forecast via Open-Meteo
+    # (model id ncep_hrrr_conus) — stored in weather_forecasts with source='openmeteo_hrrr'
+    # ALONGSIDE the NWS forecast, and graded head-to-head vs NWS/market in the validation
+    # dataset. COLLECT + GRADE ONLY this round: no book trades on it yet. HRRR updates
+    # hourly; refresh at most every N minutes.
+    weather_hrrr_enabled: bool = True
+    weather_hrrr_interval_minutes: float = 15.0
     paper_abandon_foreign_on_start: bool = True
     # `cal` book: per-city forecast bias correction learned from settled history.
     # offset = mean(actual_high - forecast), shrunk toward 0 by n/(n+shrinkage) so a
@@ -127,7 +134,10 @@ class Settings(BaseSettings):
     # Open-Meteo ensemble members (the forecast *distribution*) — stored in
     # weather_ensembles. Models update ~6-hourly; refresh at most every N minutes.
     weather_ensemble_enabled: bool = True
-    weather_ensemble_models: str = "gfs_seamless,ecmwf_ifs025"
+    # GFS + ECMWF + ICON-EPS + GEM-EPS: wider model disagreement = better sigma for the
+    # `dist` bucket model. The client fails soft per model, so an unrecognized id just logs
+    # and is skipped (a safe way to verify ids on first run).
+    weather_ensemble_models: str = "gfs_seamless,ecmwf_ifs025,icon_seamless,gem_global"
     weather_ensemble_interval_minutes: float = 60.0
     # Full bucket-ladder price snapshots (the market's implied distribution) — stored
     # in weather_bucket_snapshots at most every N minutes per event. The ladder reads
@@ -455,6 +465,8 @@ class Settings(BaseSettings):
             "weather_entry_hours": self.weather_entry_hours_list,
             "weather_strategies": self.weather_strategy_list,
             "weather_forecast_enabled": self.weather_forecast_enabled,
+            "weather_hrrr_enabled": self.weather_hrrr_enabled,
+            "weather_hrrr_interval_minutes": self.weather_hrrr_interval_minutes,
             "weather_bias_shrinkage": self.weather_bias_shrinkage,
             "weather_track_lows": self.weather_track_lows,
             "weather_obs_enabled": self.weather_obs_enabled,
