@@ -1,28 +1,22 @@
 """Offline consensus study — does requiring independent signals to CONVERGE on a bucket
-beat following any single signal?
+beat following any single signal? (sharpened edition)
 
 Replays the persisted forecast->settlement dataset (`weather_forecast_outcomes`, one
-labeled row per intraday market-state cycle) and, for each cycle, maps every independent
-signal to the bucket it points at, then measures accuracy/EV as a function of how many
-signals agree (K), the bucket tolerance (T), and which signal families agree. This is the
-gate-before-live check for a layered "consensus" book: only build/trade it if convergence
-demonstrably beats the single-signal books.
+labeled row per intraday market-state cycle) and, per cycle, maps every independent signal
+to the bucket it points at, then measures accuracy/EV as a function of:
+  - K, how many signal families agree (within +/-tol buckets),
+  - whether an INDEPENDENT confirmer (obs or pm) is in the agreement (forecast-only
+    agreement is correlated error),
+  - a skill-WEIGHTED blend (obs/pm weighted above the forecasts),
+and breaks the consensus-vs-favorite edge down BY WINDOW.
 
-Independent signal FAMILIES (deliberately de-duplicated — cal is nws+bias, so it is not a
-second vote; HRRR and NWS are one forecast family, HRRR preferred when present):
-  fc   forecast   = hrrr_f if present else forecast_f
-  ens  ensemble   = ens_mean_f          (GFS/ECMWF/ICON/GEM blend mean)
-  obs  observed   = running max (high) / min (low)   [a one-sided bound; sharpest late]
-  pm   polymarket = pm_implied_mean_f    (only the PM-tracked cities)
-The market (market_implied_mean_f / the favorite bucket) is the PRIOR/baseline we try to
-beat, not a vote.
+Entry price uses the REAL resting ask joined from `weather_bucket_snapshots` at the cycle
+time (falling back to bucket mid + a haircut when no snapshot matches), so EV is realistic.
 
-Entry price is approximated as the bucket's implied mid + a spread haircut (the ladder
-stores mids, not asks); win% is exact. Relative comparisons across K are robust to the
-haircut. Self-contained (stdlib + psycopg) so it runs on the ops runner.
+Independent signal FAMILIES (cal is nws+bias, so not a second vote; HRRR+NWS are one
+forecast family, HRRR preferred): fc, ens, obs, pm. The market favorite is the baseline.
 
-Usage:
-    DATABASE_URL_RO=postgresql://... python scripts/weather_consensus_study.py
+Self-contained (stdlib + psycopg). Usage:
     {"type": "script", "name": "weather_consensus_study", "args": ["--tol", "1"]}
 """
 
@@ -37,24 +31,25 @@ from statistics import mean
 
 RO_OPTIONS = (
     "-c default_transaction_read_only=on "
-    "-c statement_timeout=60000 "
-    "-c idle_in_transaction_session_timeout=60000"
+    "-c statement_timeout=90000 "
+    "-c idle_in_transaction_session_timeout=90000"
 )
 
 FAMILIES = ("fc", "ens", "obs", "pm")
+CONFIRMERS = ("obs", "pm")  # independent of the forecast models
+DEFAULT_WEIGHTS = {"fc": 1.0, "ens": 1.0, "obs": 2.0, "pm": 2.0}
+ASK_MATCH_SECONDS = 120
 
 
 # --- pricing -----------------------------------------------------------------------
 
 
 def fee_cents(entry: float) -> int:
-    """Kalshi trading fee per contract (cents): ceil(7% * P * (1-P)), P in dollars."""
     p = max(0.0, min(1.0, entry / 100.0))
     return math.ceil(7.0 * p * (1.0 - p))
 
 
 def trade_pnl(win: bool, entry: float) -> float:
-    """Net cents on a 1-contract YES buy held to settlement (fee on entry)."""
     return (100.0 if win else 0.0) - entry - fee_cents(entry)
 
 
@@ -62,8 +57,6 @@ def trade_pnl(win: bool, entry: float) -> float:
 
 
 def bucket_for_temp(temp, buckets: list[dict]) -> int | None:
-    """Index of the ladder bucket containing temp; nearest-by-edge if none strictly
-    contains it (open-ended below/above buckets carry a None edge)."""
     if temp is None:
         return None
     for i, b in enumerate(buckets):
@@ -106,7 +99,6 @@ def fav_index(buckets: list[dict]) -> int | None:
 
 
 def build_cycle(row: dict) -> dict | None:
-    """Parse one wfo row into votes/outcome, or None if it has no usable ladder/winner."""
     raw = row.get("raw_json")
     if isinstance(raw, str):
         try:
@@ -119,64 +111,84 @@ def build_cycle(row: dict) -> dict | None:
     win_idx = winner_index(buckets, row)
     if win_idx is None:
         return None
-
     kind = row.get("kind") or "high"
     fc = row.get("hrrr_f") if row.get("hrrr_f") is not None else row.get("forecast_f")
     obs = row.get("obs_running_max_f") if kind == "high" else row.get("obs_running_min_f")
     temps = {"fc": fc, "ens": row.get("ens_mean_f"), "obs": obs, "pm": row.get("pm_implied_mean_f")}
-    votes = {f: bucket_for_temp(t, buckets) for f, t in temps.items()}
-
     return {
+        "id": row.get("id"),
         "kind": kind,
         "htc": row.get("hours_to_close"),
         "event": row.get("event_ticker"),
         "buckets": buckets,
-        "votes": votes,
+        "votes": {f: bucket_for_temp(t, buckets) for f, t in temps.items()},
         "winner": win_idx,
         "fav": fav_index(buckets),
     }
 
 
-def consensus_pick(votes: dict, *, k: int, tol: int) -> tuple[int, int] | None:
-    """The bucket with the most family votes within +/-tol; (bucket_idx, agree_count) if
-    that count reaches k, else None. Tie -> the candidate closest to the vote centroid."""
-    present = [idx for idx in votes.values() if idx is not None]
+def consensus_pick(votes: dict, *, k: int, tol: int, require_confirmer: bool = False):
+    """Bucket with the most family votes within +/-tol; (bucket, count) if it reaches k
+    (and includes an obs/pm voter when require_confirmer), else None."""
+    present = {f: idx for f, idx in votes.items() if idx is not None}
     if len(present) < k:
         return None
-    centroid = mean(present)
-    best = None  # (count, -dist_to_centroid, bucket_idx)
-    for cand in set(present):
-        count = sum(1 for idx in present if abs(idx - cand) <= tol)
-        key = (count, -abs(cand - centroid))
+    centroid = mean(present.values())
+    best = None  # (count, -dist, cand)
+    for cand in set(present.values()):
+        voters = [f for f, idx in present.items() if abs(idx - cand) <= tol]
+        if len(voters) < k:
+            continue
+        if require_confirmer and not any(f in CONFIRMERS for f in voters):
+            continue
+        key = (len(voters), -abs(cand - centroid))
         if best is None or key > best[:2]:
-            best = (count, -abs(cand - centroid), cand)
-    if best is None or best[0] < k:
+            best = (len(voters), -abs(cand - centroid), cand)
+    return (best[2], best[0]) if best else None
+
+
+def weighted_pick(votes: dict, *, weights: dict, tol: int, min_mass: float):
+    """Bucket with the most skill-WEIGHTED vote mass within +/-tol; (bucket, mass) if mass
+    reaches min_mass, else None."""
+    present = {f: idx for f, idx in votes.items() if idx is not None}
+    if not present:
+        return None
+    centroid = mean(present.values())
+    best = None
+    for cand in set(present.values()):
+        mass = sum(weights.get(f, 1.0) for f, idx in present.items() if abs(idx - cand) <= tol)
+        key = (mass, -abs(cand - centroid))
+        if best is None or key > best[:2]:
+            best = (mass, -abs(cand - centroid), cand)
+    if best is None or best[0] < min_mass:
         return None
     return (best[2], best[0])
 
 
-def entry_cost(cycle: dict, idx: int, haircut: float) -> float:
-    mid = cycle["buckets"][idx].get("mid_cents")
-    if mid is None:
-        return 50.0 + haircut
-    return max(1.0, min(99.0, mid + haircut))
+def entry_cost(cycle: dict, idx: int, haircut: float, asks: dict) -> float:
+    b = cycle["buckets"][idx]
+    real = asks.get(cycle["id"], {}).get(b.get("subtitle")) if asks else None
+    if real is not None:
+        return max(1.0, min(99.0, float(real)))
+    mid = b.get("mid_cents")
+    return max(1.0, min(99.0, (mid if mid is not None else 50.0) + haircut))
 
 
-# --- aggregation helpers -----------------------------------------------------------
+# --- aggregation -------------------------------------------------------------------
 
 
-def _nearest_window(htc, windows: list[float]) -> float | None:
+def _nearest_window(htc, windows: list[float]):
     return min(windows, key=lambda w: abs(htc - w)) if htc is not None else None
 
 
 class Cell:
     __slots__ = ("n", "wins", "pnl", "entry")
 
-    def __init__(self) -> None:
+    def __init__(self):
         self.n = self.wins = 0
         self.pnl = self.entry = 0.0
 
-    def add(self, win: bool, entry: float) -> None:
+    def add(self, win: bool, entry: float):
         self.n += 1
         self.wins += 1 if win else 0
         self.pnl += trade_pnl(win, entry)
@@ -184,146 +196,156 @@ class Cell:
 
     def row(self) -> str:
         if not self.n:
-            return f"{0:5d} {'n/a':>5} {'n/a':>7} {'n/a':>9}"
-        return (f"{self.n:5d} {self.wins / self.n * 100:4.0f}% {self.entry / self.n:6.1f}c"
-                f" {self.pnl / self.n:+7.1f}c")
+            return f"{0:5d} {'n/a':>4} {'n/a':>6} {'n/a':>8}"
+        return (f"{self.n:5d} {self.wins / self.n * 100:3.0f}% {self.entry / self.n:5.1f}c"
+                f" {self.pnl / self.n:+6.1f}c")
+
+
+def _cells_by(cycles, windows, kind, w):
+    return [c for c in cycles if c["kind"] == kind and _nearest_window(c["htc"], windows) == w]
 
 
 # --- sections ----------------------------------------------------------------------
 
 
-def report_coverage(cycles: list[dict], windows: list[float]) -> None:
+def report_coverage(cycles, windows, asks):
     print("=== Signal coverage (graded cycles with a usable ladder + winner) ===")
     events = {c["event"] for c in cycles}
-    print(f"  cycles: {len(cycles)}   distinct settled events: {len(events)}")
+    matched = sum(1 for c in cycles if c["fav"] is not None
+                  and asks.get(c["id"], {}).get(c["buckets"][c["fav"]].get("subtitle")) is not None)
+    src = (f"real ask matched on {matched / len(cycles) * 100:.0f}% of favorite buckets"
+           if asks else "real asks OFF — using mid+haircut")
+    print(f"  cycles: {len(cycles)}   distinct settled events: {len(events)}   ({src})")
     print(f"  {'window':>6} {'n':>5}   " + "  ".join(f"{f}%" for f in FAMILIES) + "   avg_fams")
     for w in windows + [None]:
         sel = [c for c in cycles if (_nearest_window(c["htc"], windows) == w if w else True)]
         if not sel:
             continue
         cov = [sum(1 for c in sel if c["votes"][f] is not None) / len(sel) * 100 for f in FAMILIES]
-        avg_fams = mean(sum(1 for f in FAMILIES if c["votes"][f] is not None) for c in sel)
+        avg = mean(sum(1 for f in FAMILIES if c["votes"][f] is not None) for c in sel)
         label = f"h{int(w)}" if w else "ALL"
-        print(f"  {label:>6} {len(sel):5d}   "
-              + "  ".join(f"{c:3.0f}" for c in cov) + f"   {avg_fams:.2f}")
-    print("  (fc=forecast hrrr|nws, ens=ensemble, obs=running extreme, pm=polymarket;"
-          " avg_fams = independent signals present per cycle)")
+        print(f"  {label:>6} {len(sel):5d}   " + "  ".join(f"{c:3.0f}" for c in cov) + f"   {avg:.2f}")
+    print("  (fc=forecast hrrr|nws, ens=ensemble, obs=running extreme, pm=polymarket)")
 
 
-def report_baselines(cycles: list[dict], windows: list[float], haircut: float, min_rows: int) -> None:
-    print("\n=== Single-signal baselines — bucket hit% and net c/trade (what to beat) ===")
-    print("  the favorite is the market's own pick; each family is one of the parallel books")
-    print(f"  {'kind':>4} {'window':>6} | " + " | ".join(f"{s:>16}" for s in ("fav", *FAMILIES)))
-    for kind in ("high", "low"):
-        for w in windows:
-            sel = [c for c in cycles
-                   if c["kind"] == kind and _nearest_window(c["htc"], windows) == w]
-            if not sel:
-                continue
-            cells = {s: Cell() for s in ("fav", *FAMILIES)}
-            for c in sel:
-                if c["fav"] is not None:
-                    cells["fav"].add(c["fav"] == c["winner"], entry_cost(c, c["fav"], haircut))
-                for f in FAMILIES:
-                    idx = c["votes"][f]
-                    if idx is not None:
-                        cells[f].add(idx == c["winner"], entry_cost(c, idx, haircut))
-            flag = "  (small n)" if len(sel) < min_rows else ""
-            print(f"  {kind:>4} h{int(w):<5d} | "
-                  + " | ".join(cells[s].row() for s in ("fav", *FAMILIES)) + flag)
-    print("  cell = n  hit%  avg_entry  net/trade   (net includes the spread haircut + fee)")
-
-
-def report_consensus(cycles: list[dict], windows: list[float], haircut: float,
-                     tol: int, min_rows: int) -> None:
-    print(f"\n=== Consensus by agreement K (tolerance +/-{tol} buckets) — does converging help? ===")
-    print(f"  {'kind':>4} {'window':>6} {'K':>2}  {'n':>5} {'win%':>5} {'avg_buy':>7}"
+def report_consensus(cycles, windows, haircut, asks, tol, min_rows):
+    print(f"\n=== Consensus by agreement K (tol +/-{tol}, REAL asks) — does converging help? ===")
+    print(f"  {'kind':>4} {'window':>6} {'K':>2}  {'n':>5} {'win%':>4} {'avg_buy':>7}"
           f" {'net/trade':>9} {'vs_fav':>7}")
     for kind in ("high", "low"):
         for w in windows:
-            sel = [c for c in cycles
-                   if c["kind"] == kind and _nearest_window(c["htc"], windows) == w]
+            sel = _cells_by(cycles, windows, kind, w)
             if not sel:
                 continue
             fav = Cell()
             for c in sel:
                 if c["fav"] is not None:
-                    fav.add(c["fav"] == c["winner"], entry_cost(c, c["fav"], haircut))
+                    fav.add(c["fav"] == c["winner"], entry_cost(c, c["fav"], haircut, asks))
             fav_net = fav.pnl / fav.n if fav.n else None
             for k in (1, 2, 3, 4):
                 cell = Cell()
                 for c in sel:
-                    pick = consensus_pick(c["votes"], k=k, tol=tol)
-                    if pick is None:
-                        continue
-                    idx, _cnt = pick
-                    cell.add(idx == c["winner"], entry_cost(c, idx, haircut))
+                    p = consensus_pick(c["votes"], k=k, tol=tol)
+                    if p:
+                        cell.add(p[0] == c["winner"], entry_cost(c, p[0], haircut, asks))
                 if not cell.n:
                     continue
                 net = cell.pnl / cell.n
                 vs = f"{net - fav_net:+5.1f}c" if fav_net is not None else "  n/a"
-                flag = "  (small n)" if cell.n < min_rows else ""
-                print(f"  {kind:>4} h{int(w):<5d} {k:>2}  {cell.n:5d} {cell.wins / cell.n * 100:4.0f}%"
-                      f" {cell.entry / cell.n:6.1f}c {net:+8.1f}c {vs:>7}{flag}")
-    print("  (win% & net should RISE with K if convergence has edge; vs_fav = net minus"
-          " just buying the favorite that cell)")
+                flag = " *" if cell.n < min_rows else ""
+                print(f"  {kind:>4} h{int(w):<5d} {k:>2}  {cell.n:5d} {cell.wins / cell.n * 100:3.0f}%"
+                      f" {cell.entry / cell.n:5.1f}c {net:+8.1f}c {vs:>7}{flag}")
+    print("  (* = n<min_rows; win% & net should rise with K; vs_fav = net minus buying the favorite)")
 
 
-def report_pairs(cycles: list[dict], tol: int, min_rows: int) -> None:
+def report_confirmer(cycles, windows, haircut, asks, tol, k, min_rows):
+    print(f"\n=== Confirmer test: K>={k} plain vs K>={k} requiring an obs/pm voter (tol +/-{tol}) ===")
+    print(f"  {'kind':>4} {'window':>6} |        plain  n  win  buy     net |    +confirmer  n  win  buy     net")
+    for kind in ("high", "low"):
+        for w in windows:
+            sel = _cells_by(cycles, windows, kind, w)
+            if not sel:
+                continue
+            plain, conf = Cell(), Cell()
+            for c in sel:
+                p = consensus_pick(c["votes"], k=k, tol=tol)
+                if p:
+                    plain.add(p[0] == c["winner"], entry_cost(c, p[0], haircut, asks))
+                pc = consensus_pick(c["votes"], k=k, tol=tol, require_confirmer=True)
+                if pc:
+                    conf.add(pc[0] == c["winner"], entry_cost(c, pc[0], haircut, asks))
+            print(f"  {kind:>4} h{int(w):<5d} |  {plain.row()} |  {conf.row()}")
+    print("  (does forcing an independent obs/pm signal into the agreement lift win%/net?)")
+
+
+def report_weighted(cycles, windows, haircut, asks, weights, tol, min_masses, min_rows):
+    wtxt = ",".join(f"{f}={weights[f]:g}" for f in FAMILIES)
+    print(f"\n=== Skill-weighted blend ({wtxt}, tol +/-{tol}) — mass threshold vs equal votes ===")
+    print(f"  {'kind':>4} {'window':>6} {'mass>=':>6}  {'n':>5} {'win%':>4} {'avg_buy':>7} {'net/trade':>9}")
+    for kind in ("high", "low"):
+        for w in windows:
+            sel = _cells_by(cycles, windows, kind, w)
+            if not sel:
+                continue
+            for mm in min_masses:
+                cell = Cell()
+                for c in sel:
+                    p = weighted_pick(c["votes"], weights=weights, tol=tol, min_mass=mm)
+                    if p:
+                        cell.add(p[0] == c["winner"], entry_cost(c, p[0], haircut, asks))
+                if not cell.n:
+                    continue
+                flag = " *" if cell.n < min_rows else ""
+                print(f"  {kind:>4} h{int(w):<5d} {mm:6.0f}  {cell.n:5d} {cell.wins / cell.n * 100:3.0f}%"
+                      f" {cell.entry / cell.n:5.1f}c {cell.pnl / cell.n:+8.1f}c{flag}")
+    print("  (obs/pm weighted 2x; mass>=4 ~ 'two independent confirmers or one + both forecasts')")
+
+
+def report_pairs(cycles, tol, min_rows):
     print(f"\n=== Which families agreeing matters — pairwise co-agreement (tol +/-{tol}) ===")
-    print(f"  {'pair':>9} {'kind':>4}  {'n':>5} {'both_hit%':>9} {'agree_hit%':>10}")
+    print(f"  {'pair':>9} {'kind':>4}  {'n':>5} {'agree_hit%':>10}")
     pairs = [("fc", "ens"), ("fc", "obs"), ("fc", "pm"), ("ens", "obs"), ("ens", "pm"), ("obs", "pm")]
     for a, b in pairs:
         for kind in ("high", "low"):
-            n = agree = agree_hit = 0
+            agree = hit = 0
             for c in cycles:
                 if c["kind"] != kind:
                     continue
                 ia, ib = c["votes"][a], c["votes"][b]
-                if ia is None or ib is None:
+                if ia is None or ib is None or abs(ia - ib) > tol:
                     continue
-                n += 1
-                if abs(ia - ib) <= tol:
-                    agree += 1
-                    # the agreed bucket = the one closer to the favorite-free centroid (here just a)
-                    if ia == c["winner"]:
-                        agree_hit += 1
+                agree += 1
+                if ia == c["winner"]:
+                    hit += 1
             if agree:
-                flag = "  (small n)" if agree < min_rows else ""
-                print(f"  {a + '+' + b:>9} {kind:>4}  {agree:5d} {agree / n * 100:8.0f}%"
-                      f" {agree_hit / agree * 100:9.0f}%{flag}")
-    print("  (n = cycles where BOTH present & agree; agree_hit% = the agreed bucket won)")
+                flag = " *" if agree < min_rows else ""
+                print(f"  {a + '+' + b:>9} {kind:>4}  {agree:5d} {hit / agree * 100:9.0f}%{flag}")
+    print("  (agree_hit% = the agreed bucket actually won; forecast-only fc+ens is correlated error)")
 
 
-def report_edge(cycles: list[dict], windows: list[float], haircut: float,
-                tol: int, k: int, min_rows: int) -> None:
-    print(f"\n=== Consensus vs market favorite — where is the EDGE? (K>={k}, tol +/-{tol}) ===")
-    same = Cell()
-    diff = Cell()
-    diff_cheap = Cell()
-    fav_when_diff = Cell()
-    for c in cycles:
-        pick = consensus_pick(c["votes"], k=k, tol=tol)
-        if pick is None or c["fav"] is None:
-            continue
-        idx, _ = pick
-        entry = entry_cost(c, idx, haircut)
-        win = idx == c["winner"]
-        if idx == c["fav"]:
-            same.add(win, entry)
-        else:
-            diff.add(win, entry)
-            fav_when_diff.add(c["fav"] == c["winner"], entry_cost(c, c["fav"], haircut))
-            if entry < entry_cost(c, c["fav"], haircut):  # consensus bucket cheaper than fav
-                diff_cheap.add(win, entry)
-    print(f"  consensus == favorite : {same.row()}")
-    print(f"  consensus != favorite : {diff.row()}")
-    print(f"    (favorite on those) : {fav_when_diff.row()}")
-    print(f"  != favorite & cheaper : {diff_cheap.row()}")
-    print("  the tradable edge lives in '!= favorite': consensus must WIN more than the"
-          " favorite did on those same cycles")
-    if diff.n and diff.n < min_rows:
-        print("  (small n — treat as directional only)")
+def report_edge(cycles, windows, haircut, asks, tol, k, min_rows):
+    print(f"\n=== Consensus vs favorite, BY WINDOW (K>={k}, tol +/-{tol}) — where to deviate ===")
+    print(f"  {'kind':>4} {'window':>6} | conc==fav  n win net | conc!=fav  n win net | fav_on_diff win%")
+    for kind in ("high", "low"):
+        for w in windows:
+            sel = _cells_by(cycles, windows, kind, w)
+            same, diff, fav_diff = Cell(), Cell(), Cell()
+            for c in sel:
+                p = consensus_pick(c["votes"], k=k, tol=tol)
+                if p is None or c["fav"] is None:
+                    continue
+                idx = p[0]
+                entry = entry_cost(c, idx, haircut, asks)
+                if idx == c["fav"]:
+                    same.add(idx == c["winner"], entry)
+                else:
+                    diff.add(idx == c["winner"], entry)
+                    fav_diff.add(c["fav"] == c["winner"], entry_cost(c, c["fav"], haircut, asks))
+            if not (same.n or diff.n):
+                continue
+            favw = f"{fav_diff.wins / fav_diff.n * 100:3.0f}%" if fav_diff.n else " n/a"
+            print(f"  {kind:>4} h{int(w):<5d} |  {same.row()} |  {diff.row()} |  {favw}")
+    print("  (deviating from the favorite only pays where conc!=fav win% > fav_on_diff win%)")
 
 
 # --- main --------------------------------------------------------------------------
@@ -338,17 +360,57 @@ def _to_libpq_url(url: str) -> str:
     return url
 
 
+def _parse_weights(text: str) -> dict:
+    weights = dict(DEFAULT_WEIGHTS)
+    for part in (text or "").split(","):
+        if "=" in part:
+            f, v = part.split("=", 1)
+            if f.strip() in FAMILIES:
+                weights[f.strip()] = float(v)
+    return weights
+
+
+def load_asks(conn, clause: str, params: list) -> dict:
+    """Real resting ask per (cycle, bucket): the nearest snapshot ask within +/-120s of the
+    cycle, keyed by wfo row id -> {subtitle: ask}. Empty dict if the table/columns are absent."""
+    sql = (
+        "SELECT w.id AS cyc_id, b.subtitle, b.yes_ask_cents FROM "
+        f"(SELECT id, event_ticker, captured_at FROM weather_forecast_outcomes WHERE {clause}) w "
+        "JOIN LATERAL (SELECT DISTINCT ON (subtitle) subtitle, yes_ask_cents "
+        "FROM weather_bucket_snapshots s WHERE s.event_ticker = w.event_ticker "
+        f"AND s.captured_at BETWEEN w.captured_at - interval '{ASK_MATCH_SECONDS} seconds' "
+        f"AND w.captured_at + interval '{ASK_MATCH_SECONDS} seconds' AND s.yes_ask_cents IS NOT NULL "
+        "ORDER BY subtitle, abs(extract(epoch FROM s.captured_at - w.captured_at))) b ON true"
+    )
+    asks: dict = {}
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            for cyc_id, subtitle, ask in cur:
+                if ask is not None:
+                    asks.setdefault(cyc_id, {})[subtitle] = float(ask)
+    except Exception as exc:  # noqa: BLE001 — fall back to the mid+haircut proxy
+        print(f"  (real-ask join unavailable: {exc}; using mid+haircut)", file=sys.stderr)
+        return {}
+    return asks
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--windows", default="20,14,8")
     ap.add_argument("--kind", choices=("high", "low", "both"), default="both")
-    ap.add_argument("--tol", type=int, default=1, help="bucket tolerance for 'agree' (+/- buckets)")
-    ap.add_argument("--haircut", type=float, default=2.0, help="cents above mid for entry (ask proxy)")
-    ap.add_argument("--edge-k", type=int, default=3, help="K for the consensus-vs-favorite edge cut")
-    ap.add_argument("--since", default=None, help="only target_date >= this ISO date")
+    ap.add_argument("--tol", type=int, default=1)
+    ap.add_argument("--haircut", type=float, default=2.0, help="ask proxy when no snapshot matches")
+    ap.add_argument("--edge-k", type=int, default=3)
+    ap.add_argument("--weights", default="", help="e.g. fc=1,ens=1,obs=2,pm=2")
+    ap.add_argument("--min-mass", default="3,4", help="weighted-mass thresholds to report")
+    ap.add_argument("--no-real-asks", action="store_true")
+    ap.add_argument("--since", default=None)
     ap.add_argument("--min-rows", type=int, default=20)
     args = ap.parse_args(argv)
     windows = [float(x) for x in args.windows.split(",") if x.strip()]
+    weights = _parse_weights(args.weights)
+    min_masses = [float(x) for x in args.min_mass.split(",") if x.strip()]
 
     url = _to_libpq_url(os.environ.get("DATABASE_URL_RO") or os.environ.get("DATABASE_URL") or "")
     if not url:
@@ -371,29 +433,28 @@ def main(argv: list[str] | None = None) -> int:
         conn.read_only = True
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT event_ticker, city, kind, hours_to_close, target_date,"
+                "SELECT id, event_ticker, city, kind, hours_to_close, target_date,"
                 " forecast_f, hrrr_f, ens_mean_f, obs_running_max_f, obs_running_min_f,"
-                " pm_implied_mean_f, market_implied_mean_f, market_fav_low_f, market_fav_high_f,"
-                " winning_low_f, winning_high_f, winning_subtitle,"
-                " actual_high_f, actual_low_f, raw_json"
+                " pm_implied_mean_f, market_implied_mean_f, winning_low_f, winning_high_f,"
+                " winning_subtitle, raw_json"
                 f" FROM weather_forecast_outcomes WHERE {clause}",
                 params,
             )
             cols = [d.name for d in cur.description]
             rows = [dict(zip(cols, r, strict=True)) for r in cur.fetchall()]
+        asks = {} if args.no_real_asks else load_asks(conn, clause, params)
 
     cycles = [c for c in (build_cycle(r) for r in rows) if c is not None]
     if not cycles:
-        print("No usable graded cycles in weather_forecast_outcomes yet"
-              f" ({len(rows)} rows scanned).")
-        print("Consensus needs cycles with a stored bucket ladder + a settled winner.")
+        print(f"No usable graded cycles yet ({len(rows)} rows scanned).")
         return 0
 
-    report_coverage(cycles, windows)
-    report_baselines(cycles, windows, args.haircut, args.min_rows)
-    report_consensus(cycles, windows, args.haircut, args.tol, args.min_rows)
+    report_coverage(cycles, windows, asks)
+    report_consensus(cycles, windows, args.haircut, asks, args.tol, args.min_rows)
+    report_confirmer(cycles, windows, args.haircut, asks, args.tol, args.edge_k, args.min_rows)
+    report_weighted(cycles, windows, args.haircut, asks, weights, args.tol, min_masses, args.min_rows)
     report_pairs(cycles, args.tol, args.min_rows)
-    report_edge(cycles, windows, args.haircut, args.tol, args.edge_k, args.min_rows)
+    report_edge(cycles, windows, args.haircut, asks, args.tol, args.edge_k, args.min_rows)
     return 0
 
 
