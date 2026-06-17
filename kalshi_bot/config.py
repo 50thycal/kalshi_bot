@@ -173,6 +173,19 @@ class Settings(BaseSettings):
     weather_dist_enabled: bool = True
     weather_dist_sigma: float = 1.5
     weather_dist_min_edge_cents: float = 5.0
+    # Consensus / layered book (`weather_con` / `weather_low_con`): make the independent
+    # signal families (fc=hrrr|nws, ens, obs, pm) CONVERGE before trading instead of
+    # following one. Offline-validated two-mode rule (scripts/weather_consensus_study.py):
+    #  - HIGH at early windows -> skill-weighted blend (obs/pm weighted above forecasts),
+    #    trade only when it DEVIATES from the favorite (cheaper, model-preferred, +EV);
+    #  - LOW / HIGH-late -> trade only a near-unanimous K agreement that lands ON the
+    #    favorite (a high-confidence near-lock filter), else skip.
+    weather_consensus_enabled: bool = True
+    weather_consensus_tol: int = 1                      # bucket tolerance for "agree" (+/-)
+    weather_consensus_weights: str = "fc=1,ens=1,obs=2,pm=2"
+    weather_consensus_early_windows: str = "20,14"      # high windows that use the deviate mode
+    weather_consensus_early_min_mass: float = 3.0       # high-early weighted-mass threshold
+    weather_consensus_confirm_k: int = 4                # low/late: families agreeing on the favorite
     # Kalshi history backfill (separate backfill_* tables; provenance never mixes with
     # the live-collected snapshots). Runs as a bounded chunk per cycle inside the
     # weather worker — the only place holding Kalshi credentials + a writable DB URL.
@@ -477,6 +490,8 @@ class Settings(BaseSettings):
             "weather_ensemble_models": self.weather_ensemble_model_list,
             "weather_dist_enabled": self.weather_dist_enabled,
             "weather_dist_sigma": self.weather_dist_sigma,
+            "weather_consensus_enabled": self.weather_consensus_enabled,
+            "weather_consensus_confirm_k": self.weather_consensus_confirm_k,
             "weather_dist_min_edge_cents": self.weather_dist_min_edge_cents,
             "weather_validation_enabled": self.weather_validation_enabled,
             "weather_validation_events_per_cycle": self.weather_validation_events_per_cycle,

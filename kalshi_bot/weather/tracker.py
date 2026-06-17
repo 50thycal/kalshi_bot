@@ -22,6 +22,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
+from statistics import mean
 from zoneinfo import ZoneInfo
 
 from .. import repository as repo
@@ -36,6 +37,7 @@ from ..scanner.metrics import (
     parse_dt,
     price_to_cents,
 )
+from . import consensus
 from .buckets import forecast_in_bucket, parse_bucket_range
 from .cities import CITIES, City
 from .distribution import best_bucket_by_edge
@@ -113,6 +115,16 @@ def _age_minutes(dt, now: datetime) -> float | None:
 
 
 @dataclass
+class _ConContext:
+    """Per-event consensus inputs: the ladder (sorted asc by bucket low), each signal
+    family's voted bucket index, and the favorite's index."""
+
+    markets: list
+    votes: dict
+    fav_idx: int | None
+
+
+@dataclass
 class _Tracked:
     city: City
     kind: str  # "high" | "low"
@@ -142,6 +154,7 @@ class WeatherTracker:
         self.hrrr = hrrr
         self.polymarket = polymarket
         self.live_executor = live_executor
+        self._con_params = consensus.params_from_settings(settings)
         # Set by the live cycle before run_once so mirror_entry can pass it to risk.evaluate.
         self._account_state: dict | None = None
 
@@ -312,7 +325,7 @@ class WeatherTracker:
 
             # Polymarket signal: store its bucket prices and pick the Kalshi bucket whose
             # ask most underprices Polymarket's implied probability (trade toward it).
-            pm_market, pm_prob = None, None
+            pm_market, pm_prob, pm_buckets = None, None, None
             if pm_enabled and target is not None and t.city.code in pm_cities:
                 pm_buckets = self.polymarket.lookup(t.city.code, t.kind, target)
                 if pm_buckets:
@@ -322,6 +335,12 @@ class WeatherTracker:
             # Distribution edge: price every bucket off the stored ensemble and pick the
             # one whose model probability most beats its ask (the forecast-edge book).
             dist_market, dist_prob = self._dist_best_bucket(session, t, target, markets)
+
+            # Consensus (layered) book: make the independent signal families converge.
+            con_ctx = (
+                self._consensus_context(session, t, target, markets, forecast_val, obs, pm_buckets)
+                if s.weather_consensus_enabled else None
+            )
 
             prefix = "weather_" if t.kind == "high" else "weather_low_"
             for hours in s.weather_entry_hours_list:
@@ -353,6 +372,15 @@ class WeatherTracker:
                         session, f"{prefix}dist_h{int(hours)}", event_ticker, t, dist_market,
                         self._cached_metrics(dist_market, metrics_cache), dist_prob, summary,
                     )
+                if con_ctx is not None:
+                    con_pick = consensus.choose_bucket(
+                        t.kind, float(hours), con_ctx.votes, con_ctx.fav_idx, self._con_params)
+                    if con_pick is not None:
+                        con_market = con_ctx.markets[con_pick[0]]
+                        self._maybe_enter(
+                            session, f"{prefix}con_h{int(hours)}", event_ticker, t, con_market,
+                            self._cached_metrics(con_market, metrics_cache), None, summary,
+                        )
                 # Live-cell coverage: a LIVE cell whose book has NO market this window (no
                 # favorite / value bucket found) -> note it so the digest shows the no-show.
                 if self.live_executor is not None:
@@ -627,6 +655,37 @@ class WeatherTracker:
             return (None, None)
         idx, prob, _edge = pick
         return (markets[idx], prob)
+
+    def _consensus_context(self, session, t: _Tracked, target, markets, forecast_val, obs,
+                           pm_buckets) -> _ConContext | None:
+        """Gather each independent family's voted bucket on the sorted ladder for the
+        consensus book: fc=NWS point (HRRR once graded), ens=ensemble mean, obs=running
+        extreme, pm=Polymarket implied mean. Returns None if the ladder is unusable."""
+        ladder = []
+        for mk in markets:
+            low, high = parse_bucket_range(mk.get("yes_sub_title") or mk.get("subtitle"))
+            ladder.append((low, high, mk))
+        if not ladder:
+            return None
+        ladder.sort(key=lambda x: (x[0] if x[0] is not None else -1e9))
+        ranges = [(lo, hi) for lo, hi, _ in ladder]
+        bucket_markets = [mk for _, _, mk in ladder]
+
+        ens_mean = None
+        if target is not None:
+            members = repo.latest_weather_ensemble_members(
+                session, t.city.code, target.isoformat(), t.kind)
+            pooled = [float(v) for vals in members.values() for v in vals if v is not None]
+            ens_mean = mean(pooled) if pooled else None
+        obs_temp = (obs.max_f if t.kind == "high" else obs.min_f) if obs is not None else None
+        pm_mean = consensus.pm_implied_mean(pm_buckets) if pm_buckets else None
+
+        temps = {"fc": forecast_val, "ens": ens_mean, "obs": obs_temp, "pm": pm_mean}
+        votes = {f: consensus.bucket_index_for_temp(v, ranges) for f, v in temps.items()}
+        fav_ticker = (t.favorite or {}).get("ticker")
+        fav_idx = next(
+            (i for i, mk in enumerate(bucket_markets) if mk.get("ticker") == fav_ticker), None)
+        return _ConContext(markets=bucket_markets, votes=votes, fav_idx=fav_idx)
 
     # --- settlements + entries ---------------------------------------------------
 

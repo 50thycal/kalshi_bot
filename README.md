@@ -184,6 +184,16 @@ uncertainty. If a low series ticker guess is wrong (check the first run's logs f
     the bucket. `cal` vs `nws` measures whether the correction actually helps.
 
   Comparing windows also shows how much entry timing matters.
+- **`con`** (`weather_con_h*` / `weather_low_con_h*`), the **layered/consensus book**: instead of
+  following one signal, it makes the *independent* families converge (fc=hrrr|nws, ens=ensemble
+  mean, obs=running extreme, pm=Polymarket; cal is dropped as a duplicate of nws). Offline
+  validation (`scripts/weather_consensus_study.py` over `weather_forecast_outcomes`) found two
+  opposite-by-kind edges, which the book encodes: at **early HIGH windows** a skill-weighted blend
+  (obs/pm weighted above the correlated forecasts) trades a bucket **only when it deviates from the
+  favorite** — those cheaper, model-preferred buckets were +EV while confirming an expensive early
+  favorite was −EV; for **LOWs and late HIGHs** it trades **only a near-unanimous agreement that
+  lands on the favorite** (a high-confidence near-lock filter), else it skips. Paper-only for now
+  (`WEATHER_CONSENSUS_*`); conviction-sizing is deferred to the live path.
 - **Forecast collection**: each cycle fetches the NWS daily high/low forecast (`api.weather.gov`,
   free, needs `NWS_USER_AGENT`) per city and stores it in `weather_forecasts` (tagged `kind`).
   Alongside it (throttled, fail-soft) it also stores the **HRRR** point forecast — NOAA's hourly,
