@@ -316,3 +316,84 @@ def test_nws_daily_high_parse():
     with NwsForecastClient("test-agent") as nws:
         assert nws.daily_high_f(40.779, -73.9693, date(2026, 6, 8)) == 77.0
         assert nws.daily_high_f(40.779, -73.9693, date(2026, 6, 9)) == 81.0  # picks the right day
+
+
+class FakeFullClient(FakeWeatherClient):
+    """Weather market-data client + the trading/reconcile methods, so one fake drives the full
+    live loop (tracker discovery -> executor mirror -> reconcile)."""
+
+    def __init__(self, event, market_state=None):
+        super().__init__(event, market_state)
+        self.placed: list = []
+        self.orders: list = []
+        self.fills: list = []
+        self.positions: list = []
+
+    def place_order(self, **order):
+        self.placed.append(order)
+        return {"order": {"order_id": f"K-{len(self.placed)}", "status": "resting"}}
+
+    def get_orders(self, **kw):
+        return {"orders": self.orders}
+
+    def get_fills(self, **kw):
+        return {"fills": self.fills}
+
+    def get_positions(self, **kw):
+        return {"market_positions": self.positions}
+
+    def get_settlements(self, **kw):
+        return {"settlements": []}
+
+    def get_balance(self):
+        return {"balance": 100_000}
+
+
+def test_live_e2e_tracker_mirrors_entry_then_reconciles(settings):
+    # End-to-end live loop: the weather tracker discovers the NYC favorite, mirrors the
+    # allowlisted live cell (weather_fav:NYC:8) into a REAL order via the executor, and a
+    # subsequent reconcile records the resulting fill + position. Proves the tracker<->executor
+    # <->reconcile seam that the per-piece unit tests don't cover.
+    from kalshi_bot.live.executor import LiveExecutor
+
+    settings.bot_mode = "live"
+    settings.kill_switch = False
+    settings.live_enabled = True
+    settings.weather_city_window_enabled = False
+    settings.weather_entry_hours = "8"
+    settings.weather_strategies = "favorite"
+    settings.live_strategies = "weather_fav"
+    settings.live_cells = "weather_fav:NYC:8"
+    settings.live_max_order_dollars = 3.0
+    settings.live_user_id = "U-TEST"
+    settings.live_entry_grace_hours = 2.0
+    settings.min_hours_to_close = 1
+    settings.max_order_size = 100
+    db.init_engine(settings.database_url)
+    db.create_all()
+
+    event = _nyc_event(hours_ahead=7)  # htc=7 -> within grace of the h8 window
+    for _mkt in event["markets"]:      # markets carry close_time live (risk needs time-to-close)
+        _mkt["close_time"] = event["close_time"]
+    client = FakeFullClient(event)
+    ex = LiveExecutor(client, settings, RiskManager(settings))
+    tracker = WeatherTracker(client, settings, forecast=None, live_executor=ex)
+
+    with db.session_scope() as session:
+        tracker._account_state = {"cash_balance": 1000.0}
+        tracker.run_once(session)
+        assert len(client.placed) == 1                 # the live cell was mirrored to a real order
+        assert client.placed[0]["ticker"] == _FAV       # the NYC favorite bucket
+        assert client.placed[0]["count"] == 5           # floor($3 / $0.57)
+
+    # the order fills async; reconcile records the fill + a position snapshot
+    client.fills = [{"trade_id": "F1", "order_id": "K-1", "market_ticker": _FAV, "side": "yes",
+                     "action": "buy", "yes_price_dollars": "0.57", "count_fp": "5.00",
+                     "fee_cost": "0.02"}]
+    client.positions = [{"ticker": _FAV, "position_fp": "5.00",
+                         "market_exposure_dollars": "2.85", "realized_pnl_dollars": "0"}]
+    with db.session_scope() as session:
+        ex.reconcile(session, {"cash_balance": 1000.0})
+        snap = repo.latest_position_snapshot(session, _FAV)
+        assert snap is not None and float(snap.quantity_fp) == 5.0
+        assert repo.fill_exists(session, "F1")
