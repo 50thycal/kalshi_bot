@@ -943,6 +943,32 @@ def live_order_exists(session, event_ticker: str, strategy: str) -> bool:
     ) > 0
 
 
+def event_has_open_live_position(session, event_ticker: str, *, exclude_strategy: str | None = None) -> bool:
+    """True if any committed live BUY on this event still holds an open position (Kalshi-truth:
+    its latest position snapshot is net non-zero). Used to cap exposure to one position per
+    event-day — a later-window entry is skipped while an earlier-window one is still open.
+    `exclude_strategy` ignores the entry's own strategy (so it never blocks itself)."""
+    rows = session.execute(
+        select(m.LiveOrder.market_ticker, m.LiveOrder.strategy).where(
+            m.LiveOrder.event_ticker == event_ticker,
+            m.LiveOrder.action == "buy",
+            m.LiveOrder.status.in_(LIVE_COMMITTED_STATUSES),
+        )
+    ).all()
+    seen: set[str] = set()
+    for ticker, strategy in rows:
+        if (exclude_strategy and strategy == exclude_strategy) or ticker in seen:
+            continue
+        seen.add(ticker)
+        snap = latest_position_snapshot(session, ticker)
+        if snap is None:
+            continue
+        qty = snap.quantity_fp if snap.quantity_fp is not None else snap.quantity
+        if qty is not None and abs(float(qty)) > 0.01:
+            return True
+    return False
+
+
 def live_exit_order_exists(session, ticker: str, strategy: str) -> bool:
     """DEPRECATED for exit dedup (a rejected exit would permanently block re-attempts). Use
     live_exit_in_flight (in-flight guard) + count_exit_attempts (ladder/cap) instead."""

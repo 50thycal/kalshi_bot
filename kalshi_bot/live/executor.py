@@ -203,6 +203,14 @@ class LiveExecutor:
         if repo.live_order_exists(session, event_ticker, strategy):
             self.summary.skipped_dedup += 1
             return
+        # One position per event-day: skip a later-window entry while an earlier-window position
+        # on the same event is still open (caps real exposure to one bet per city/day).
+        if s.live_one_position_per_event and repo.event_has_open_live_position(
+                session, event_ticker, exclude_strategy=strategy):
+            self.summary.skipped_dedup += 1
+            logger.info("live entry skipped — event already holds an open position", extra={
+                "extra_fields": {"event_ticker": event_ticker, "strategy": strategy}})
+            return
         if metrics is None or metrics.best_yes_ask is None:
             self.summary.skipped_gate += 1
             return
@@ -663,6 +671,18 @@ class LiveExecutor:
             self._place_exit(session, ticker, strategy, bid, remaining, "probe_close",
                              attempt=attempts + 1, level=0)
 
+    def _window_exit_params(self, strategy: str | None) -> tuple:
+        """(take_profit, stop_loss, break_even) for a position's entry window. A window listed in
+        `live_take_profit_by_window` (e.g. h20 scalps +5, h14 runs to +20) is TP-ONLY — no stop,
+        since stops whipsaw these high-win favorites out of trades that settle YES. Windows not
+        listed fall back to the global TP/SL/BE settings."""
+        s = self.settings
+        wmap = s.live_tp_by_window_map
+        win = _window_of(strategy)
+        if wmap and win in wmap:
+            return (wmap[win], None, None)
+        return (s.live_take_profit_cents, s.live_stop_loss_cents, s.live_break_even_arm_cents)
+
     def manage_exits(self, session) -> None:
         """Place closing orders for configured TP/SL/break-even rules. No-op in the default
         'settlement' mode (Kalshi cash-settles automatically). Reuses the replay semantics."""
@@ -686,10 +706,8 @@ class LiveExecutor:
                 continue
             if attempts == 0:
                 history = repo.bucket_bid_path(session, ticker, after=entry_at)
-                kind = exit_rules.should_exit(
-                    entry_price, history, live_bid,
-                    tp=s.live_take_profit_cents, sl=s.live_stop_loss_cents,
-                    be=s.live_break_even_arm_cents)
+                tp, sl, be = self._window_exit_params(strategy)
+                kind = exit_rules.should_exit(entry_price, history, live_bid, tp=tp, sl=sl, be=be)
                 if kind is None:
                     continue
             else:

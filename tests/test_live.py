@@ -348,6 +348,81 @@ def test_marketable_walks_thin_book_within_slippage(settings):
     assert o["count"] == 6  # not 1 (the old depth_at_best_ask cap)
 
 
+def test_window_exit_params_and_map(settings):
+    _live_settings(settings, live_take_profit_by_window="20:5,14:20",
+                   live_take_profit_cents=12, live_stop_loss_cents=8)
+    assert settings.live_tp_by_window_map == {20: 5, 14: 20}
+    ex = _exec(settings)
+    # mapped windows are TP-ONLY (no stop), with their own TP.
+    assert ex._window_exit_params("weather_fav_h20") == (5, None, None)
+    assert ex._window_exit_params("weather_fav_h14") == (20, None, None)
+    # an unmapped window falls back to the global TP/SL/BE.
+    assert ex._window_exit_params("weather_fav_h8") == (12, 8, None)
+
+
+def test_per_window_take_profit_triggers(settings):
+    # h20 scalps a tight +5; h14 runs to +20. Bid is fixed at 60 by the fake order book.
+    _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_by_window="20:5,14:20")
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    client.v1_market_tickers = ["WX-D1-B1", "WX-D2-B1", "WX-D3-B1"]
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _filled_entry(session, ticker="WX-D1-B1", strategy="weather_fav_h20", price=53)   # +7 >= 5  -> exit
+        _filled_entry(session, ticker="WX-D2-B1", strategy="weather_fav_h14", price=53)   # +7 < 20  -> hold
+        _filled_entry(session, ticker="WX-D3-B1", strategy="weather_fav_h14", price=38)   # +22 >= 20 -> exit
+        ex.manage_exits(session)
+    assert {o["market_id"] for o in client.placed} == {"MID-WX-D1-B1", "MID-WX-D3-B1"}
+
+
+def _open_h20(session, *, event, ticker, qty_fp):
+    repo.create_live_order(
+        session, signal_id=None, ticker=ticker, event_ticker=event, strategy="weather_fav_h20",
+        side="yes", action="buy", limit_price=60, quantity=1, status="filled",
+        client_order_id=f"weather_fav_h20:{event}", raw_order_json={})
+    repo.insert_position_snapshot(
+        session, ticker=ticker, side="yes", quantity=int(qty_fp), quantity_fp=qty_fp,
+        avg_price=60.0, market_exposure=qty_fp * 0.60, realized_pnl=0.0)
+
+
+def _h14_entry(ex, session, client):
+    _live_settings(ex.settings, live_one_position_per_event=True, live_strategies="weather_fav",
+                   live_cells="weather_fav:LAX:20,weather_fav:LAX:14")
+    ex.mirror_entry(
+        session, strategy="weather_fav_h14", event_ticker="KXHIGHLAX-26JUN12",
+        ticker="KXHIGHLAX-26JUN12-B74.5", side="yes", action="buy",
+        metrics=_metrics(), account_state={"cash_balance": 1000.0})
+
+
+def test_one_position_per_event_blocks_later_window(settings):
+    _live_settings(settings, live_one_position_per_event=True, live_strategies="weather_fav",
+                   live_cells="weather_fav:LAX:20,weather_fav:LAX:14")
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _open_h20(session, event="KXHIGHLAX-26JUN12", ticker="KXHIGHLAX-26JUN12-B74.5", qty_fp=1.0)
+        _h14_entry(ex, session, client)
+    assert client.placed == []            # h14 blocked while the h20 position is open
+    assert ex.summary.skipped_dedup >= 1
+
+
+def test_one_position_per_event_allows_when_prior_flat(settings):
+    _live_settings(settings, live_one_position_per_event=True, live_strategies="weather_fav",
+                   live_cells="weather_fav:LAX:20,weather_fav:LAX:14")
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    client.v1_market_tickers = ["KXHIGHLAX-26JUN12-B74.5"]
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _open_h20(session, event="KXHIGHLAX-26JUN12", ticker="KXHIGHLAX-26JUN12-B74.5", qty_fp=0.0)
+        _h14_entry(ex, session, client)
+    assert len(client.placed) == 1        # h20 flat (settled) -> h14 free to enter
+
+
 def test_passive_vs_marketable_price(settings):
     db.init_engine(settings.database_url)
     db.create_all()

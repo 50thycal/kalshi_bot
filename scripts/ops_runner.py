@@ -45,6 +45,7 @@ ALLOWED_SCRIPTS = (
     "weather_digest",
     "weather_validation",
     "weather_consensus_study",
+    "weather_ratchet_study",
 )
 
 

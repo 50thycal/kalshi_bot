@@ -221,6 +221,15 @@ class Settings(BaseSettings):
     live_take_profit_cents: int | None = None
     live_stop_loss_cents: int | None = None
     live_break_even_arm_cents: int | None = None
+    # Per-entry-window take-profit (tp_sl mode), e.g. "20:5,14:20": the h20 entry scalps a tight
+    # +5c, the h14 (higher-conviction) entry runs to +20c. A window listed here is TP-ONLY (no
+    # stop — stops whipsaw these high-win favorites); windows not listed fall back to the global
+    # take_profit/stop/break-even above. Validated per-window on the LAX favorite.
+    live_take_profit_by_window: str = ""
+    # Cap real exposure to ONE open position per event (city-day): skip a later-window entry while
+    # an earlier-window position on the same event is still open. With the tight h20 TP it usually
+    # closes before h14, freeing h14 to run; if h20 is stuck, h14 is skipped (no doubling down).
+    live_one_position_per_event: bool = False
     live_kill_on_daily_loss: bool = True    # self-trip entries when realized_today <= -max_daily_loss
     live_shape_probe: bool = False          # log live API response shapes once at startup (read-only)
     # Hardened exit (tp_sl mode): re-attempt the close until the position is flat, escalating
@@ -426,6 +435,21 @@ class Settings(BaseSettings):
         return out
 
     @property
+    def live_tp_by_window_map(self) -> dict[int, int]:
+        """Per-window take-profit cents parsed from `live_take_profit_by_window` ("20:5,14:20")."""
+        out: dict[int, int] = {}
+        for part in self.live_take_profit_by_window.split(","):
+            part = part.strip()
+            if ":" not in part:
+                continue
+            win, tp = part.split(":", 1)
+            try:
+                out[int(win.strip().lower().lstrip("h"))] = int(tp.strip())
+            except ValueError:
+                continue
+        return out
+
+    @property
     def weather_pm_city_list(self) -> list[str]:
         return [p.strip().upper() for p in self.weather_pm_cities.split(",") if p.strip()]
 
@@ -505,6 +529,8 @@ class Settings(BaseSettings):
             "live_entry_style": self.live_entry_style,
             "live_entry_slippage_cents": self.live_entry_slippage_cents,
             "live_exit_mode": self.live_exit_mode,
+            "live_take_profit_by_window": self.live_tp_by_window_map,
+            "live_one_position_per_event": self.live_one_position_per_event,
             "live_exit_slippage_cents": self.live_exit_slippage_cents,
             "live_exit_use_market_fallback": self.live_exit_use_market_fallback,
             "live_exit_max_attempts": self.live_exit_max_attempts,
