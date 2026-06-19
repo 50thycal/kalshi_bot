@@ -29,11 +29,14 @@ RO_OPTIONS = (
 # (mirrors scripts/weather_score.py).
 BOOKS = {
     "low": {"fav": "weather_low_fav", "nws": "weather_low_nws", "cal": "weather_low_cal",
-            "pm": "weather_low_pm", "obs": "weather_low_obs", "dist": "weather_low_dist"},
-    "high": {"fav": "weather_fav", "nws": "weather_nws", "cal": "weather_cal",
-             "pm": "weather_pm", "cwin": "weather_cwin", "obs": "weather_obs",
-             "dist": "weather_dist"},
+            "pm": "weather_low_pm", "con": "weather_low_con", "obs": "weather_low_obs",
+            "dist": "weather_low_dist"},
+    "high": {"fav": "weather_fav", "favband": "weather_favband", "nws": "weather_nws",
+             "cal": "weather_cal", "pm": "weather_pm", "con": "weather_con",
+             "cwin": "weather_cwin", "obs": "weather_obs", "dist": "weather_dist"},
 }
+# Display/iteration order for the rollup + grid (books absent from the data are skipped).
+BOOK_ORDER = ("fav", "favband", "nws", "cal", "pm", "con", "cwin", "obs", "dist")
 _HOURS = re.compile(r"_h(\d+)$")
 
 # series prefix -> city code (mirrors kalshi_bot/weather/cities.py; this script is
@@ -58,7 +61,8 @@ def city_of(ticker: str | None) -> str | None:
 def book_of(strategy: str | None) -> tuple[str, str] | None:
     s = strategy or ""
     for kind in ("low", "high"):
-        for book, prefix in BOOKS[kind].items():
+        # longest prefix first so "weather_favband" isn't captured by "weather_fav"
+        for book, prefix in sorted(BOOKS[kind].items(), key=lambda kv: -len(kv[1])):
             if s.startswith(prefix):
                 return (kind, book)
     return None
@@ -106,7 +110,7 @@ def report(rows: list[tuple]) -> None:
         print(f"  {'book':16s} {'settled':>7}  {'win%':>4}  {'total':>9}  {'per-trade':>9}")
         grand = [0, 0, 0.0]
         for kind in ("high", "low"):
-            for book in ("fav", "nws", "cal", "pm", "cwin", "obs", "dist"):
+            for book in BOOK_ORDER:
                 if (kind, book) not in rollup:
                     continue
                 n, wins, cents = rollup[(kind, book)]
@@ -128,7 +132,7 @@ def report(rows: list[tuple]) -> None:
         print(f"  {'window':6s} {'strat':5s} {'n':>4} {'win%':>5} {'total':>8} {'per-trade':>9}")
         best = None
         for w in windows:
-            for b in ("fav", "nws", "cal", "pm", "cwin", "obs", "dist"):
+            for b in BOOK_ORDER:
                 if (kind, w, b) not in grid:
                     continue
                 n, wins, cents = grid[(kind, w, b)]

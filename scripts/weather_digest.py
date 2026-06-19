@@ -238,13 +238,18 @@ def main(argv: list[str] | None = None) -> int:
             for mt, act, status, ts in stuck:
                 anomalies.append(f"order STUCK {status} since {ts}: {act} {mt}")
 
-            # fills with NO matching live_orders row (the duplicate-order / lost-intent bug class)
+            # fills with NO matching live_orders row (the duplicate-order / lost-intent bug
+            # class). Scope to the bug's actual surface: weather-series BUYS the bot places
+            # itself. Manual position closes (sells) and trades in non-weather markets
+            # (e.g. KXBTC*) are expected out-of-band activity, not a bot integrity issue.
             codes = _recent_date_codes(3)
             like = " OR ".join(["f.market_ticker LIKE %s"] * len(codes))
             orphan = _q(cur,
                 f"SELECT f.market_ticker, f.action, f.side, count(*)"
                 f" FROM fills f LEFT JOIN live_orders o ON o.kalshi_order_id = f.kalshi_order_id"
-                f" WHERE o.id IS NULL AND ({like})"
+                f" WHERE o.id IS NULL AND f.action = 'buy'"
+                f" AND (f.market_ticker LIKE 'KXHIGH%%' OR f.market_ticker LIKE 'KXLOWT%%')"
+                f" AND ({like})"
                 f" GROUP BY 1,2,3 ORDER BY 1", tuple(f"%{c}%" for c in codes))
             for mt, act, side, n in orphan:
                 anomalies.append(f"{n} fill(s) with NO order row: {side} {act} {mt} "
