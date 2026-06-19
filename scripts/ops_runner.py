@@ -47,6 +47,7 @@ ALLOWED_SCRIPTS = (
     "weather_consensus_study",
     "weather_ratchet_study",
     "weather_entry_timing_study",
+    "weather_entry_timing_backfill",
 )
 
 
