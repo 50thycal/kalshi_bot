@@ -220,13 +220,22 @@ def main(argv: list[str] | None = None) -> int:
           f"   ->  TEST {te_all.per:+6.1f}c (n={te_all.n})")
     print("  (OOS verdict: selected TEST net should stay clearly positive & beat buy-ALL)")
 
-    # named hypotheses train vs test
-    named = [
-        ("AUS fade 40-70 (NO)", {"AUS"}, 40, 70, "NO"),
-        ("AUS buy 30-40 (YES)", {"AUS"}, 30, 40, "YES"),
-        ("LAX buy 50-70 (YES)", {"LAX"}, 50, 70, "YES"),
-        ("LAX fade 70-90 (NO)", {"LAX"}, 70, 90, "NO"),
-    ]
+    # named hypotheses train vs test (kind-appropriate)
+    all_cities = {"AUS", "CHI", "DEN", "LAX", "MIA", "NYC", "PHIL"}
+    if args.kind == "high":
+        named = [
+            ("AUS fade 40-70 (NO)", {"AUS"}, 40, 70, "NO"),
+            ("AUS buy 30-40 (YES)", {"AUS"}, 30, 40, "YES"),
+            ("LAX buy 50-70 (YES)", {"LAX"}, 50, 70, "YES"),
+            ("LAX fade 70-90 (NO)", {"LAX"}, 70, 90, "NO"),
+        ]
+    else:
+        named = [
+            ("low cheap-fade 10-40 (NO)", all_cities, 10, 40, "NO"),
+            ("PHIL buy 20-40 (YES)", {"PHIL"}, 20, 40, "YES"),
+            ("NYC buy 10-20 (YES)", {"NYC"}, 10, 20, "YES"),
+            ("low fav 90-100 (YES)", all_cities, 90, 100, "YES"),
+        ]
     print("\n  named hypotheses (fixed, not learned):")
     print(f"  {'hypothesis':>22} | {'train n':>7} {'net/trd':>8} | {'TEST n':>6} {'net/trd':>8}")
     for label, cities, lo, hi, side in named:
