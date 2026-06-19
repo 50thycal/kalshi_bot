@@ -51,6 +51,7 @@ ALLOWED_SCRIPTS = (
     "weather_obs_backfill_test",
     "weather_calibration_map",
     "weather_calibration_validate",
+    "weather_exit_backfill",
 )
 
 
