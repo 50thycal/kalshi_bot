@@ -157,6 +157,13 @@ class Settings(BaseSettings):
     # out-of-sample holdout). Buys the favorite once at that city's window.
     weather_city_window_enabled: bool = True
     weather_city_windows: str = "CHI:18,LAX:18,DEN:18,NYC:10,MIA:24,AUS:24,PHIL:10"
+    # Per-city favorite PRICE-BAND book (`weather_favband`): buy the HIGH favorite at the
+    # normal entry windows only when its implied price sits in a per-city band. The LAX
+    # favorite is underpriced at 50-70c but OVERpriced >70c (over-paying for overshoot
+    # risk) — buying only in-band survived an out-of-sample date split AND the h20/h14
+    # windows in the backfill calibration study. Format: CITY:lo-hi cents.
+    weather_favband_enabled: bool = True
+    weather_favband_bands: str = "LAX:50-70"
     # Obs-confirmed late entry (`weather_obs` / `weather_low_obs`): after the local
     # cutoff hour the day's high/low has usually formed, so the station's running
     # max/min is a near-locked bound the market lags. Buy the bucket containing it
@@ -463,6 +470,22 @@ class Settings(BaseSettings):
                     out[city.strip().upper()] = float(hrs)
                 except ValueError:
                     continue
+        return out
+
+    @property
+    def weather_favband_map(self) -> dict[str, tuple[float, float]]:
+        """CITY -> (low_cents, high_cents) inclusive-low/exclusive-high price band for the
+        favband book. Parses "LAX:50-70,AUS:..."; skips malformed or inverted tokens."""
+        out: dict[str, tuple[float, float]] = {}
+        for tok in self.weather_favband_bands.split(","):
+            city, _, rng = tok.partition(":")
+            lo_s, _, hi_s = rng.partition("-")
+            try:
+                lo, hi = float(lo_s), float(hi_s)
+            except ValueError:
+                continue
+            if city.strip() and lo < hi:
+                out[city.strip().upper()] = (lo, hi)
         return out
 
     @property

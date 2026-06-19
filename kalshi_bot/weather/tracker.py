@@ -316,6 +316,10 @@ class WeatherTracker:
             # books land on the same ticker (avoids redundant order-book fetches).
             metrics_cache: dict[str, object] = {}
             fav_market = t.favorite if "favorite" in strategies else None
+            favband = (
+                s.weather_favband_map.get(t.city.code)
+                if s.weather_favband_enabled and t.kind == "high" else None
+            )
             nws_market = (
                 self._value_bucket(markets, effective_forecast)
                 if "nws" in strategies and effective_forecast is not None
@@ -350,6 +354,15 @@ class WeatherTracker:
                     self._maybe_enter(
                         session, f"{prefix}fav_h{int(hours)}", event_ticker, t, fav_market,
                         self._cached_metrics(fav_market, metrics_cache),
+                        t.favorite_mid / 100.0, summary,
+                    )
+                # Price-band favorite book (highs): buy the favorite only when its implied
+                # price is in this city's validated band (e.g. LAX 50-70c). OOS-validated;
+                # independent of the generic favorite book (targets t.favorite directly).
+                if favband is not None and favband[0] <= t.favorite_mid < favband[1]:
+                    self._maybe_enter(
+                        session, f"{prefix}favband_h{int(hours)}", event_ticker, t, t.favorite,
+                        self._cached_metrics(t.favorite, metrics_cache),
                         t.favorite_mid / 100.0, summary,
                     )
                 if nws_market is not None:

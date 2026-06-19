@@ -173,6 +173,12 @@ uncertainty. If a low series ticker guess is wrong (check the first run's logs f
 - **Parallel books** (`WEATHER_STRATEGIES`, default `favorite,nws,cal`), each entered at several
   hours-to-settlement snapshots (`WEATHER_ENTRY_HOURS`, default `20,14,8`) and held to settlement:
   - **`favorite`** (`weather_fav_h*`): buy the market's top bucket — the baseline.
+  - **`favband`** (`weather_favband_h*`, highs, `WEATHER_FAVBAND_BANDS`, default `LAX:50-70`): buy
+    the favorite **only when its implied price is in a per-city band**. The backfill calibration map
+    (`scripts/weather_calibration_map.py`) found the LAX high favorite is *underpriced* at 50–70¢ but
+    *overpriced* above 70¢ (paying up for overshoot risk); the band survived an out-of-sample date
+    split and both the h20/h14 windows (`scripts/weather_calibration_validate.py`). Runs next to
+    `favorite` to forward-test the price-band filter live.
   - **`nws`** (`weather_nws_h*`): buy the bucket the raw NWS forecast high points to — the forecast
     edge. Running it next to `favorite` is a head-to-head: when they disagree, whoever's bucket
     actually wins reveals whether the forecast beats the crowd.
