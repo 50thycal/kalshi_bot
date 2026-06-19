@@ -49,6 +49,7 @@ ALLOWED_SCRIPTS = (
     "weather_entry_timing_study",
     "weather_entry_timing_backfill",
     "weather_obs_backfill_test",
+    "weather_calibration_map",
 )
 
 
