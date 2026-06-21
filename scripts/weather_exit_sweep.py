@@ -89,16 +89,18 @@ class Trade:
 
 def replay(
     trade: Trade, tp: float | None, sl: float | None,
-    be: float | None = None, qty: int = 1,
+    be: float | None = None, qty: int = 1, sl_abs: float | None = None,
 ) -> tuple[float, str]:
-    """P&L in cents (per contract) and exit kind ('tp'|'sl'|'be'|'settle') for an exit rule.
+    """P&L in cents (per contract) and exit kind ('tp'|'sl'|'slabs'|'be'|'settle') for an exit rule.
 
     Mirrors engine semantics: trigger on (bid - entry), exit at that snapshot's bid minus
     the exit fee; settlement pays 0/100 with no exit fee. Rules, checked per snapshot:
-      tp  - take profit: gain >= tp.
-      sl  - stop loss:   gain <= -sl.
-      be  - break-even stop: once gain >= be the stop ARMS at entry; thereafter if the bid
-            falls back to <= entry, exit (so a trade that ran up can't settle below entry).
+      tp     - take profit: gain >= tp.
+      sl     - stop loss (RELATIVE): gain <= -sl.
+      sl_abs - stop loss (ABSOLUTE PRICE FLOOR): the yes-bid falls to <= sl_abs cents, i.e.
+               "exit when the market's implied probability drops below this level" (e.g. 25c).
+      be     - break-even stop: once gain >= be the stop ARMS at entry; thereafter if the bid
+               falls back to <= entry, exit (so a trade that ran up can't settle below entry).
     """
     entry_fee = trade.entry_fee_cents if qty == 1 else fee_per_contract(trade.entry_cents, qty)
 
@@ -113,6 +115,8 @@ def replay(
             return (_exit(bid), "tp")
         if sl is not None and gain <= -sl:
             return (_exit(bid), "sl")
+        if sl_abs is not None and bid <= sl_abs:
+            return (_exit(bid), "slabs")
         if be is not None:
             if not armed:
                 if gain >= be:
@@ -246,6 +250,60 @@ def report(trades, grid, be_grid, qtys, args, skipped_no_path: int) -> None:
         print(f"  {kind} {book} (n={len(ts)}): hold={bhold.per_trade:+.1f}c | best: {cells}")
 
 
+def _avg(ts: list[Trade], tp, sl_abs) -> float:
+    """Mean per-trade P&L (cents) under take-profit `tp` + absolute price-floor stop `sl_abs`."""
+    return sum(replay(t, tp, None, None, 1, sl_abs)[0] for t in ts) / len(ts) if ts else math.nan
+
+
+def report_optimize(trades, tp_levels, slabs_levels, min_n: int, ref_sl_abs: float) -> None:
+    """Per book: best TP alone, best absolute-SL alone, best TP+SL combo, and whether the
+    reference absolute stop (e.g. 25c) helps the optimum TP — answering 'which exit, per book,
+    and is any of it profitable?'."""
+    by_book: dict[tuple[str, str], list[Trade]] = {}
+    for t in trades:
+        kb = book_of(t.strategy)
+        if kb:
+            by_book.setdefault(kb, []).append(t)
+    groups = [("ALL", "", trades)] + [(k, b, ts) for (k, b), ts in sorted(by_book.items())]
+
+    print("\n=== Exit OPTIMIZATION per book (TP = take-profit gain; SL = ABSOLUTE price floor)"
+          " ===")
+    print(f"  absolute stop = exit when the yes-bid drops to <= the level (ref = {ref_sl_abs:g}c)")
+    print(f"  {'book':>12} {'n':>4} {'hold':>7} | {'bestTP':>9} {'net':>7} | {'bestSL':>7}"
+          f" {'net':>7} | {'best TP+SL':>13} {'net':>7} | {'profit?':>7}")
+    for kind, book, ts in groups:
+        label = "ALL" if kind == "ALL" else f"{kind} {book}"
+        if len(ts) < min_n:
+            print(f"  {label:>12} {len(ts):4d}  (n<{min_n}, skip)")
+            continue
+        hold = _avg(ts, None, None)
+        tp_only = max(((tp, _avg(ts, tp, None)) for tp in tp_levels), key=lambda x: x[1])
+        sl_only = max(((sa, _avg(ts, None, sa)) for sa in slabs_levels if sa is not None),
+                      key=lambda x: x[1], default=(None, hold))
+        combo = max((((tp, sa), _avg(ts, tp, sa)) for tp in tp_levels for sa in slabs_levels),
+                    key=lambda x: x[1])
+        (ctp, csa), cpnl = combo
+        prof = "YES" if cpnl > 0 else "no"
+        print(f"  {label:>12} {len(ts):4d} {hold:+6.1f}c | tp={_lvl(tp_only[0]):>5} {tp_only[1]:+6.1f}c"
+              f" | {_lvl(sl_only[0]):>6} {sl_only[1]:+6.1f}c |"
+              f" tp={_lvl(ctp)}/sl={_lvl(csa):>5} {cpnl:+6.1f}c | {prof:>7}")
+    print("  (hold = no exit; bestTP = best take-profit alone; bestSL = best absolute floor"
+          " alone; best TP+SL = joint optimum)")
+
+    print(f"\n  --- TP with vs without the {ref_sl_abs:g}c absolute stop (does the stop help the"
+          " best take-profit?) ---")
+    print(f"  {'book':>12} {'TP*':>5} {'TP only':>8} {f'TP+{ref_sl_abs:g}c':>9} {'delta':>7}")
+    for kind, book, ts in groups:
+        label = "ALL" if kind == "ALL" else f"{kind} {book}"
+        if len(ts) < min_n:
+            continue
+        best_tp = max(tp_levels, key=lambda tp: _avg(ts, tp, None))
+        no_sl = _avg(ts, best_tp, None)
+        with_sl = _avg(ts, best_tp, ref_sl_abs)
+        print(f"  {label:>12} {_lvl(best_tp):>5} {no_sl:+7.1f}c {with_sl:+8.1f}c"
+              f" {with_sl - no_sl:+6.1f}c")
+
+
 def _to_libpq_url(url: str) -> str:
     url = (url or "").strip()
     if url.startswith("postgresql+"):
@@ -316,6 +374,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--books", default="",
                     help="restrict to these books, e.g. 'low_fav,low_nws,low_cal,low_pm'"
                          " (kind_book; empty = all)")
+    ap.add_argument("--opt-tp-grid", default="none,5,10,15,20,25,30,40",
+                    help="take-profit levels for the per-book optimization")
+    ap.add_argument("--sl-abs-grid", default="none,15,20,25,30,35",
+                    help="ABSOLUTE price-floor stop levels (exit when yes-bid <= level)")
+    ap.add_argument("--ref-sl-abs", type=float, default=25.0,
+                    help="the absolute stop to spotlight in the with/without comparison")
+    ap.add_argument("--opt-min-n", type=int, default=20,
+                    help="min trades to rank a book in the optimization table")
     args = ap.parse_args(argv)
     tps, sls = parse_grid(args.tp_grid), parse_grid(args.sl_grid)
     grid = [(tp, sl) for tp in tps for sl in sls]
@@ -340,6 +406,10 @@ def main(argv: list[str] | None = None) -> int:
         trades, skipped = fetch_trades(conn, allowed)
 
     report(trades, grid, be_grid, qtys, args, skipped)
+    if trades:
+        opt_tps = parse_grid(args.opt_tp_grid)
+        slabs = parse_grid(args.sl_abs_grid)
+        report_optimize(trades, opt_tps, slabs, args.opt_min_n, args.ref_sl_abs)
     return 0
 
 
