@@ -6,6 +6,16 @@ Kalshi trading bot (market scanner + paper trading) deployed on **Railway** with
 a **Postgres** database. Architecture is in `README.md`; the source is in
 `kalshi_bot/`, and the full DB schema is in `kalshi_bot/models.py`.
 
+## Goal (north star)
+
+**Make $100/month in realized profit from any combination of the bot's trading
+strategies.** This is the single metric that matters — not win rate, not number of
+books, not research volume. Every strategy, experiment, and config change is judged by
+whether it moves net realized P&L toward +$100/month. Research that proves a book is
+−EV is still a *win* (it tells us what to stop trading); the bottom line is dollars,
+across the whole portfolio. Track progress with the **"PnL"** and **"digest"** commands
+and the **"full update"** review (the `full-update` skill).
+
 ---
 
 ## Operating the logs + database access system
