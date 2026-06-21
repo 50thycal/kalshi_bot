@@ -59,6 +59,23 @@ def book_of(strategy: str | None) -> tuple[str, str] | None:
     return None
 
 
+# series prefix -> city code (mirrors kalshi_bot/weather/cities.py)
+CITY_BY_SERIES = {
+    "KXHIGHNY": "NYC", "KXLOWTNYC": "NYC", "KXHIGHCHI": "CHI", "KXLOWTCHI": "CHI",
+    "KXHIGHMIA": "MIA", "KXLOWTMIA": "MIA", "KXHIGHAUS": "AUS", "KXLOWTAUS": "AUS",
+    "KXHIGHLAX": "LAX", "KXLOWTLAX": "LAX", "KXHIGHPHIL": "PHIL", "KXLOWTPHIL": "PHIL",
+    "KXHIGHDEN": "DEN", "KXLOWTDEN": "DEN",
+}
+
+
+def city_of(ticker: str | None) -> str | None:
+    t = ticker or ""
+    for series, code in CITY_BY_SERIES.items():
+        if t.startswith(series):
+            return code
+    return None
+
+
 def fee_cents(price_cents: float, enabled: bool = True) -> float:
     """Kalshi fee in cents at qty=1 (mirrors paper/engine.py::kalshi_fee)."""
     if not enabled:
@@ -255,24 +272,17 @@ def _avg(ts: list[Trade], tp, sl_abs) -> float:
     return sum(replay(t, tp, None, None, 1, sl_abs)[0] for t in ts) / len(ts) if ts else math.nan
 
 
-def report_optimize(trades, tp_levels, slabs_levels, min_n: int, ref_sl_abs: float) -> None:
-    """Per book: best TP alone, best absolute-SL alone, best TP+SL combo, and whether the
-    reference absolute stop (e.g. 25c) helps the optimum TP — answering 'which exit, per book,
-    and is any of it profitable?'."""
-    by_book: dict[tuple[str, str], list[Trade]] = {}
-    for t in trades:
-        kb = book_of(t.strategy)
-        if kb:
-            by_book.setdefault(kb, []).append(t)
-    groups = [("ALL", "", trades)] + [(k, b, ts) for (k, b), ts in sorted(by_book.items())]
-
-    print("\n=== Exit OPTIMIZATION per book (TP = take-profit gain; SL = ABSOLUTE price floor)"
+def report_optimize(groups, tp_levels, slabs_levels, min_n: int, ref_sl_abs: float,
+                    dim: str) -> None:
+    """For each (label, trades) group: best TP alone, best absolute-SL alone, best TP+SL
+    combo, whether it turns profitable, and whether the reference absolute stop (e.g. 25c)
+    helps the optimum TP. `dim` is just the heading ('book' or 'city')."""
+    print(f"\n=== Exit OPTIMIZATION per {dim} (TP = take-profit gain; SL = ABSOLUTE price floor)"
           " ===")
     print(f"  absolute stop = exit when the yes-bid drops to <= the level (ref = {ref_sl_abs:g}c)")
-    print(f"  {'book':>12} {'n':>4} {'hold':>7} | {'bestTP':>9} {'net':>7} | {'bestSL':>7}"
+    print(f"  {dim:>12} {'n':>4} {'hold':>7} | {'bestTP':>9} {'net':>7} | {'bestSL':>7}"
           f" {'net':>7} | {'best TP+SL':>13} {'net':>7} | {'profit?':>7}")
-    for kind, book, ts in groups:
-        label = "ALL" if kind == "ALL" else f"{kind} {book}"
+    for label, ts in groups:
         if len(ts) < min_n:
             print(f"  {label:>12} {len(ts):4d}  (n<{min_n}, skip)")
             continue
@@ -280,9 +290,9 @@ def report_optimize(trades, tp_levels, slabs_levels, min_n: int, ref_sl_abs: flo
         tp_only = max(((tp, _avg(ts, tp, None)) for tp in tp_levels), key=lambda x: x[1])
         sl_only = max(((sa, _avg(ts, None, sa)) for sa in slabs_levels if sa is not None),
                       key=lambda x: x[1], default=(None, hold))
-        combo = max((((tp, sa), _avg(ts, tp, sa)) for tp in tp_levels for sa in slabs_levels),
-                    key=lambda x: x[1])
-        (ctp, csa), cpnl = combo
+        (ctp, csa), cpnl = max(
+            (((tp, sa), _avg(ts, tp, sa)) for tp in tp_levels for sa in slabs_levels),
+            key=lambda x: x[1])
         prof = "YES" if cpnl > 0 else "no"
         print(f"  {label:>12} {len(ts):4d} {hold:+6.1f}c | tp={_lvl(tp_only[0]):>5} {tp_only[1]:+6.1f}c"
               f" | {_lvl(sl_only[0]):>6} {sl_only[1]:+6.1f}c |"
@@ -290,11 +300,9 @@ def report_optimize(trades, tp_levels, slabs_levels, min_n: int, ref_sl_abs: flo
     print("  (hold = no exit; bestTP = best take-profit alone; bestSL = best absolute floor"
           " alone; best TP+SL = joint optimum)")
 
-    print(f"\n  --- TP with vs without the {ref_sl_abs:g}c absolute stop (does the stop help the"
-          " best take-profit?) ---")
-    print(f"  {'book':>12} {'TP*':>5} {'TP only':>8} {f'TP+{ref_sl_abs:g}c':>9} {'delta':>7}")
-    for kind, book, ts in groups:
-        label = "ALL" if kind == "ALL" else f"{kind} {book}"
+    print(f"\n  --- TP with vs without the {ref_sl_abs:g}c absolute stop, per {dim} ---")
+    print(f"  {dim:>12} {'TP*':>5} {'TP only':>8} {f'TP+{ref_sl_abs:g}c':>9} {'delta':>7}")
+    for label, ts in groups:
         if len(ts) < min_n:
             continue
         best_tp = max(tp_levels, key=lambda tp: _avg(ts, tp, None))
@@ -302,6 +310,25 @@ def report_optimize(trades, tp_levels, slabs_levels, min_n: int, ref_sl_abs: flo
         with_sl = _avg(ts, best_tp, ref_sl_abs)
         print(f"  {label:>12} {_lvl(best_tp):>5} {no_sl:+7.1f}c {with_sl:+8.1f}c"
               f" {with_sl - no_sl:+6.1f}c")
+
+
+def _book_groups(trades):
+    by_book: dict[tuple[str, str], list[Trade]] = {}
+    for t in trades:
+        kb = book_of(t.strategy)
+        if kb:
+            by_book.setdefault(kb, []).append(t)
+    return [("ALL", trades)] + [(f"{k} {b}", ts) for (k, b), ts in sorted(by_book.items())]
+
+
+def _city_groups(trades, fav_only: bool = False):
+    by_city: dict[str, list[Trade]] = {}
+    for t in trades:
+        if fav_only and (book_of(t.strategy) or ("", ""))[1] != "fav":
+            continue
+        c = city_of(t.market_ticker) or "?"
+        by_city.setdefault(c, []).append(t)
+    return [(c, ts) for c, ts in sorted(by_city.items())]
 
 
 def _to_libpq_url(url: str) -> str:
@@ -409,7 +436,12 @@ def main(argv: list[str] | None = None) -> int:
     if trades:
         opt_tps = parse_grid(args.opt_tp_grid)
         slabs = parse_grid(args.sl_abs_grid)
-        report_optimize(trades, opt_tps, slabs, args.opt_min_n, args.ref_sl_abs)
+        report_optimize(_book_groups(trades), opt_tps, slabs, args.opt_min_n, args.ref_sl_abs,
+                        "book")
+        report_optimize(_city_groups(trades), opt_tps, slabs, args.opt_min_n, args.ref_sl_abs,
+                        "city")
+        report_optimize(_city_groups(trades, fav_only=True), opt_tps, slabs, args.opt_min_n,
+                        args.ref_sl_abs, "city(fav)")
     return 0
 
 
