@@ -95,15 +95,20 @@ class Agg:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--max-pages", type=int, default=40, help="pagination cap per endpoint")
+    ap.add_argument("--max-pages", type=int, default=60, help="pagination cap per endpoint")
     ap.add_argument("--top-series", type=int, default=35)
+    ap.add_argument("--days", type=float, default=14.0,
+                    help="only markets closing within N days (skips dead far-future parlays)")
+    ap.add_argument("--min-volume", type=int, default=1, help="skip markets below this volume")
     args = ap.parse_args(argv)
+    max_close = int(time.time() + args.days * 86400)
 
-    # 1) events -> category/series/title per event_ticker
+    # 1) events (near-term) -> category/series/title per event_ticker
     ev_cat: dict[str, str] = {}
     ev_title: dict[str, str] = {}
     n_events = 0
-    for e in _paginate("/events", "events", {"status": "open", "limit": 200}, args.max_pages):
+    for e in _paginate("/events", "events",
+                       {"status": "open", "limit": 200}, args.max_pages):
         et = e.get("event_ticker")
         if not et:
             continue
@@ -111,25 +116,37 @@ def main(argv: list[str] | None = None) -> int:
         ev_cat[et] = (e.get("category") or "?").strip() or "?"
         ev_title[et] = e.get("title") or e.get("sub_title") or ""
 
-    # 2) markets -> liquidity, joined to category/series
+    # 2) markets (near-term, traded) -> liquidity, joined to category/series
     by_cat: dict[str, Agg] = defaultdict(Agg)
     by_series: dict[str, Agg] = defaultdict(Agg)
     series_cat: dict[str, str] = {}
     series_title: dict[str, str] = {}
-    n_mkts = 0
-    for m in _paginate("/markets", "markets", {"status": "open", "limit": 1000}, args.max_pages):
+    n_mkts = n_kept = 0
+    sample_keys = None
+    for m in _paginate("/markets", "markets",
+                       {"status": "open", "limit": 1000, "max_close_ts": max_close}, args.max_pages):
+        n_mkts += 1
         et = m.get("event_ticker") or ""
         series = _series_of(et)
-        cat = ev_cat.get(et, "?")
-        n_mkts += 1
-        vol, oi = m.get("volume"), m.get("open_interest")
+        if series.startswith("KXMVE"):           # auto-generated multivariate parlays — noise
+            continue
+        vol = m.get("volume") or m.get("volume_24h") or 0
+        oi = m.get("open_interest") or 0
+        if vol < args.min_volume and oi < args.min_volume:
+            continue
+        if sample_keys is None:
+            sample_keys = sorted(m.keys())
+        n_kept += 1
         bid, ask = m.get("yes_bid"), m.get("yes_ask")
+        cat = ev_cat.get(et, m.get("category") or "?")
         by_cat[cat].add(series, vol, oi, bid, ask)
         by_series[series].add(series, vol, oi, bid, ask)
         series_cat.setdefault(series, cat)
         series_title.setdefault(series, ev_title.get(et, ""))
 
-    print(f"=== Kalshi open-market survey — {n_events} events, {n_mkts} markets ===")
+    print(f"=== Kalshi open-market survey — {n_events} near-term events, {n_mkts} markets scanned,"
+          f" {n_kept} traded (vol/oi>={args.min_volume}, <= {args.days:g}d to close) ===")
+    print(f"  (market fields seen: {sample_keys})")
     print("\n=== Categories by total volume (spread = efficiency proxy: tighter = more efficient) ===")
     print(f"  {'category':>22} {'series':>6} {'mkts':>6} {'volume':>12} {'open_int':>11}"
           f" {'avg_spr':>7} {'avg_px':>6}")
