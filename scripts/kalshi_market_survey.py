@@ -65,6 +65,14 @@ def _series_of(event_ticker: str) -> str:
     return (event_ticker or "").split("-", 1)[0] or "?"
 
 
+def _num(v) -> float:
+    """Parse Kalshi's fixed-point / dollar string fields ('1234.0000') to float; None -> 0."""
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 class Agg:
     __slots__ = ("series", "n", "vol", "oi", "spread_sum", "spread_n", "price_sum", "price_n")
 
@@ -108,7 +116,6 @@ def main(argv: list[str] | None = None) -> int:
     series_cat: dict[str, str] = {}
     series_title: dict[str, str] = {}
     n_events = n_mkts = n_kept = 0
-    sample_keys = None
     raw_samples: list = []
     for e in _paginate("/events", "events",
                        {"status": "open", "with_nested_markets": "true", "limit": 200},
@@ -124,18 +131,16 @@ def main(argv: list[str] | None = None) -> int:
         title = e.get("title") or e.get("sub_title") or ""
         for m in (e.get("markets") or []):
             n_mkts += 1
-            if sample_keys is None:
-                sample_keys = sorted(m.keys())
-            if len(raw_samples) < 3 and (m.get("volume") or m.get("open_interest")):
-                raw_samples.append({k: m.get(k) for k in
-                                    ("ticker", "volume", "volume_24h", "open_interest",
-                                     "yes_bid", "yes_ask", "liquidity", "last_price")})
-            vol = m.get("volume") or 0
-            oi = m.get("open_interest") or 0
+            vol = int(_num(m.get("volume_fp")))
+            oi = int(_num(m.get("open_interest_fp")))
+            if len(raw_samples) < 3 and (vol or oi):
+                raw_samples.append({"ticker": m.get("ticker"), "vol": vol, "oi": oi,
+                                    "bid$": m.get("yes_bid_dollars"), "ask$": m.get("yes_ask_dollars")})
             if vol < args.min_volume and oi < args.min_volume:
                 continue
             n_kept += 1
-            bid, ask = m.get("yes_bid"), m.get("yes_ask")
+            bid = _num(m.get("yes_bid_dollars")) * 100.0      # dollars -> cents
+            ask = _num(m.get("yes_ask_dollars")) * 100.0
             by_cat[cat].add(series, vol, oi, bid, ask)
             by_series[series].add(series, vol, oi, bid, ask)
             series_cat.setdefault(series, cat)
@@ -143,7 +148,6 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"=== Kalshi open-market survey — {n_events} events, {n_mkts} markets scanned,"
           f" {n_kept} traded (vol/oi>={args.min_volume}) ===")
-    print(f"  (market fields: {sample_keys})")
     for s in raw_samples:
         print(f"  sample: {s}")
     print("\n=== Categories by total volume (spread = efficiency proxy: tighter = more efficient) ===")
