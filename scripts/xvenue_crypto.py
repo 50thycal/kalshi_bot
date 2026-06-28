@@ -93,6 +93,23 @@ def _parse_iso_day(s: str) -> str:
     return s if re.match(r"\d{4}-\d{2}-\d{2}", s) else ""
 
 
+def kalshi_strike(ticker: str) -> float | None:
+    """The real strike is the trailing token of the ticker (B102500 / T149999.99 / 200000)."""
+    tail = (ticker or "").rsplit("-", 1)[-1].lstrip("BT")
+    try:
+        return float(tail)
+    except (TypeError, ValueError):
+        return None
+
+
+def kalshi_dir(series: str, ticker: str) -> str:
+    """Direction from the series taxonomy: MIN = below (down), MAX/above = up."""
+    s = (series or "").upper()
+    if "MIN" in s:
+        return "down"
+    return "up"
+
+
 # --- venue fetchers ----------------------------------------------------------------
 
 
@@ -107,6 +124,11 @@ def fetch_kalshi_crypto(max_days: float) -> list[dict]:
         for e in evs:
             if (e.get("category") or "") != "Crypto":
                 continue
+            series = (e.get("series_ticker") or "").upper()
+            # Only THRESHOLD series (MAX = reach >= X, MIN = drop <= X) are semantically the
+            # same contract as Polymarket "will [asset] reach $X"; skip range-bucket series.
+            if "MAX" not in series and "MIN" not in series:
+                continue
             asset = detect_asset(f"{e.get('title', '')} {e.get('series_ticker', '')}")
             for m in e.get("markets") or []:
                 close = m.get("close_time")
@@ -118,15 +140,17 @@ def fetch_kalshi_crypto(max_days: float) -> list[dict]:
                         cts = None
                 if cts and cts > max_close:
                     continue
+                tk = m.get("ticker") or ""
                 title = f"{m.get('title', '')} {m.get('yes_sub_title', '')}"
-                a = asset or detect_asset(title)
-                strike = parse_strike(m.get("yes_sub_title") or "") or parse_strike(m.get("title") or "")
+                a = asset or detect_asset(title) or detect_asset(tk)
+                strike = kalshi_strike(tk)            # from the ticker, not the title (reliable)
                 if not a or strike is None:
                     continue
                 mid = (_num(m.get("yes_bid_dollars")) + _num(m.get("yes_ask_dollars"))) / 2.0
                 out.append({
-                    "venue": "kalshi", "asset": a, "strike": strike, "dir": parse_dir(title),
-                    "day": _day(cts) if cts else "", "ticker": m.get("ticker"),
+                    "venue": "kalshi", "asset": a, "strike": strike,
+                    "dir": kalshi_dir(e.get("series_ticker") or "", tk),
+                    "day": _day(cts) if cts else "", "ticker": tk,
                     "series": e.get("series_ticker"), "yes": mid,
                     "vol": _num(m.get("volume_fp")),
                 })
@@ -215,6 +239,14 @@ def main(argv: list[str] | None = None) -> int:
     if not pairs:
         print("  (no structural matches — assets present:"
               f" kalshi={sorted({k['asset'] for k in kal})} pm={sorted({p['asset'] for p in pm})})")
+        print("  --- sample Kalshi crypto (asset/strike/dir/day | ticker) ---")
+        for k in sorted(kal, key=lambda k: -k["vol"])[:12]:
+            print(f"    {k['asset']:>4} {k['strike']:>11,.0f} {k['dir']:>4} {k['day']:>10}"
+                  f" | {k['ticker']}")
+        print("  --- sample Polymarket crypto (asset/strike/dir/day | question) ---")
+        for p in sorted(pm, key=lambda p: -p["vol"])[:12]:
+            print(f"    {p['asset']:>4} {p['strike']:>11,.0f} {p['dir']:>4} {p['day']:>10}"
+                  f" | {p['question']}")
         return 0
 
     print(f"\n  {'asset':>5} {'strike':>10} {'day':>10} {'dir':>4} {'kYes':>5} {'pmYes':>5}"
