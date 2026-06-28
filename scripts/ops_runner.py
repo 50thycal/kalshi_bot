@@ -48,6 +48,7 @@ ALLOWED_SCRIPTS = (
     "xvenue_crypto",
     "xvenue_shock",
     "xvenue_game_probe",
+    "kalshi_deribit",
     "xvenue_game",
     "weather_digest",
     "weather_validation",
