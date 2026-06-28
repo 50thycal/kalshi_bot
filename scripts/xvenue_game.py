@@ -19,6 +19,7 @@ import argparse
 import re
 import time
 
+import xvenue_crypto as xc  # kalshi_candles (reliable 1-min)
 import xvenue_leadlag as xl  # _get, _num, align
 import xvenue_shock as xs  # shock_study, Shock
 
@@ -97,28 +98,11 @@ def pm_wc_games() -> dict:
 
 
 def kalshi_bars(ticker: str, start: int, end: int, bar: int) -> dict[int, float]:
-    """bar-bucket -> last yes price (0..1) from the Kalshi trade tape."""
-    last: dict[int, float] = {}
-    cursor = ""
-    for _ in range(40):
-        data = xl._get(f"{KALSHI}/markets/{ticker}/trades?limit=1000&min_ts={start}"
-                       f"&max_ts={end}&cursor={cursor}")
-        trades = (data or {}).get("trades") or []
-        for tr in trades:
-            ts = tr.get("created_time") or tr.get("ts")
-            if isinstance(ts, str):
-                try:
-                    ts = int(time.mktime(time.strptime(ts[:19], "%Y-%m-%dT%H:%M:%S")))
-                except (ValueError, TypeError):
-                    continue
-            price = tr.get("yes_price")
-            if ts is None or price is None:
-                continue
-            last[int(ts) // bar] = float(price) / 100.0
-        cursor = (data or {}).get("cursor") or ""
-        if not cursor or not trades:
-            break
-    return last
+    """bar-bucket -> Kalshi yes-mid (0..1), from the reliable 1-min candlestick endpoint
+    (the /trades endpoint returned nothing for these markets). 1-min candles forward-fill
+    onto the finer bar grid in align(); a 1-2 min lag is still visible."""
+    mins = xc.kalshi_candles("KXWCGAME", ticker, start, end)   # {minute -> mid 0..1}
+    return {(m * 60) // bar: p for m, p in mins.items()}
 
 
 def pm_bars(cond: str, start: int, end: int, bar: int) -> dict[int, float]:
