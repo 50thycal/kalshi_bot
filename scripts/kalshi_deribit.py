@@ -23,10 +23,10 @@ import re
 import time
 from collections import defaultdict
 
-import xvenue_crypto as xc  # fetch_kalshi_crypto
 import xvenue_leadlag as xl  # _get (browser-UA fetch), _num
 
 DERIBIT = "https://www.deribit.com/api/v2"
+KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
 _MON = {m: i + 1 for i, m in enumerate(
     ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"])}
 _INSTR = re.compile(r"^BTC-(\d{1,2})([A-Z]{3})(\d{2})-(\d+)-([CP])$")
@@ -118,11 +118,31 @@ def fee_cents(p: float) -> float:
     return math.ceil(7.0 * p * (1 - p))   # taker fee per contract (cents)
 
 
-def _kalshi_day_unix(day: str) -> int | None:
-    try:
-        return calendar.timegm(time.strptime(day, "%Y-%m-%d")) + 8 * 3600
-    except (ValueError, TypeError):
-        return None
+def fetch_kalshi_btcd() -> list[dict]:
+    """KXBTCD = European daily 'BTC >= $X at [close time]' thresholds (terminal index
+    settlement, strike in dollars). The like-for-like contract for a Deribit digital."""
+    out: list[dict] = []
+    cursor = ""
+    for _ in range(10):
+        page = xl._get(f"{KALSHI}/markets?series_ticker=KXBTCD&status=open&limit=200&cursor={cursor}")
+        mkts = (page or {}).get("markets") or []
+        for m in mkts:
+            tail = (m.get("ticker") or "").rsplit("-", 1)[-1].lstrip("T")
+            ct = m.get("close_time") or ""
+            try:
+                strike = float(tail)
+                close = calendar.timegm(time.strptime(ct[:19], "%Y-%m-%dT%H:%M:%S"))
+            except (ValueError, TypeError):
+                continue
+            yb, ya = xl._num(m.get("yes_bid_dollars")), xl._num(m.get("yes_ask_dollars"))
+            if yb <= 0 and ya <= 0:
+                continue
+            out.append({"strike": strike, "close": close, "yes": (yb + ya) / 2.0,
+                        "ticker": m.get("ticker"), "vol": xl._num(m.get("volume_fp"))})
+        cursor = (page or {}).get("cursor") or ""
+        if not cursor or not mkts:
+            break
+    return out
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -142,45 +162,41 @@ def main(argv: list[str] | None = None) -> int:
         print("  (no Deribit option data)")
         return 0
 
-    kc = [k for k in xc.fetch_kalshi_crypto(400) if k["asset"] == "BTC" and k["vol"] >= args.min_vol]
-    print(f"  Kalshi BTC threshold markets: {len(kc)}\n")
+    btcd = [k for k in fetch_kalshi_btcd() if k["vol"] >= args.min_vol and k["close"] > now]
+    print(f"  Kalshi KXBTCD (European daily, terminal-settled) markets: {len(btcd)}\n")
 
     rows = []
-    for k in kc:
-        kclose = _kalshi_day_unix(k["day"])
-        if not kclose:
+    for k in btcd:
+        exp = min(exps, key=lambda e: abs(e - k["close"]))   # nearest Deribit expiry (smile)
+        gap_h = abs(exp - k["close"]) / 3600.0
+        if gap_h > args.max_gap_days * 24:
             continue
-        exp = min(exps, key=lambda e: abs(e - kclose))
-        gap = abs(exp - kclose) / 86400.0
-        if gap > args.max_gap_days:
+        t = (k["close"] - now) / _YEAR                       # Kalshi's EXACT time-to-expiry
+        deribit = digital_ge(smiles[exp], forwards[exp], t, k["strike"])  # P(S_T >= strike)
+        if deribit is None:
             continue
-        t = (exp - now) / _YEAR
-        f = forwards[exp]
-        p_ge = digital_ge(smiles[exp], f, t, k["strike"])
-        if p_ge is None:
-            continue
-        deribit = p_ge if k["dir"] == "up" else (1.0 - p_ge)
-        div = (k["yes"] - deribit) * 100.0       # +: Kalshi richer than Deribit -> sell Kalshi
-        rows.append((abs(div), div, k, deribit, gap, f))
+        div = (k["yes"] - deribit) * 100.0       # +: Kalshi richer -> buy NO; - : cheaper -> buy YES
+        rows.append((abs(div), div, k, deribit, gap_h))
 
     rows.sort(key=lambda r: r[0], reverse=True)
-    print(f"  {'asset':>4} {'dir':>4} {'strike':>9} {'kClose':>10} {'kYes':>5} {'derib':>6}"
-          f" {'div':>6} {'fee':>4} {'gap_d':>5} {'edge':>6}  ticker")
-    for _ad, div, k, deribit, gap, _f in rows[:40]:
-        fee = fee_cents(k["yes"]) + fee_cents(deribit)   # rough round-trip-ish
-        edge = abs(div) - fee
-        print(f"  {k['asset']:>4} {k['dir']:>4} {k['strike']:>9,.0f} {k['day']:>10}"
-              f" {k['yes'] * 100:4.0f}c {deribit * 100:5.1f}c {div:+5.1f}c {fee:4.0f}c"
-              f" {gap:5.1f} {edge:+5.1f}c  {k['ticker']}")
+    print(f"  {'strike':>9} {'kClose(UTC)':>16} {'thr_h':>5} {'kYes':>5} {'derib':>6}"
+          f" {'div':>6} {'fee':>4} {'gap_h':>5} {'edge':>6}  ticker")
+    for _ad, div, k, deribit, gap_h in rows[:45]:
+        fee = fee_cents(k["yes"]) + fee_cents(deribit)
+        thr_h = (k["close"] - now) / 3600.0
+        print(f"  {k['strike']:>9,.0f} {time.strftime('%m-%d %H:%M', time.gmtime(k['close'])):>16}"
+              f" {thr_h:5.1f} {k['yes'] * 100:4.0f}c {deribit * 100:5.1f}c {div:+5.1f}c {fee:4.0f}c"
+              f" {gap_h:5.1f} {abs(div) - fee:+5.1f}c  {k['ticker']}")
     if rows:
         divs = [abs(d[1]) for d in rows]
-        print(f"\n  {len(rows)} comparable markets | avg|div|={sum(divs) / len(divs):.1f}c"
+        print(f"\n  {len(rows)} comparable European markets | avg|div|={sum(divs) / len(divs):.1f}c"
               f"  median={sorted(divs)[len(divs) // 2]:.1f}c"
               f"  %>4c={100.0 * sum(1 for d in divs if d >= 4) / len(divs):.0f}%")
-        print("  div = Kalshi yes - Deribit digital (+ = Kalshi too rich, buy NO / - = too cheap,"
-              " buy YES). edge = |div| - fees. CAVEAT: expiry gap + index basis (BRTI vs Deribit).")
+        print("  div = Kalshi yes - Deribit digital (+ = Kalshi rich/buy NO, - = cheap/buy YES);"
+              " edge = |div| - fees. CAVEAT: ~half-day expiry-time gap (Kalshi 21:00 vs Deribit"
+              " 08:00 UTC) + BRTI-vs-Deribit index basis. Watch for a SYSTEMATIC sign (skew).")
     else:
-        print("  (no comparable Kalshi/Deribit expiry pairs within gap)")
+        print("  (no comparable markets)")
     return 0
 
 
