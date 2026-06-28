@@ -47,6 +47,7 @@ ALLOWED_SCRIPTS = (
     "xvenue_leadlag",
     "xvenue_crypto",
     "xvenue_shock",
+    "xvenue_game_probe",
     "weather_digest",
     "weather_validation",
     "weather_consensus_study",
