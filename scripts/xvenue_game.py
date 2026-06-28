@@ -16,6 +16,7 @@ Usage: {"type":"script","name":"xvenue_game","args":["--days","3","--bar","30","
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import time
 
@@ -25,7 +26,6 @@ import xvenue_shock as xs  # shock_study, Shock
 
 KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
 GAMMA = "https://gamma-api.polymarket.com"
-DATA = "https://data-api.polymarket.com"
 
 _PM_WIN = re.compile(r"will\s+(.+?)\s+win on\s+(\d{4}-\d{2}-\d{2})", re.I)
 _TICKER_DATE = re.compile(r"-(\d{2})([A-Z]{3})(\d{2})")
@@ -73,14 +73,12 @@ def kalshi_wc_games() -> dict:
 
 
 def pm_wc_games() -> dict:
-    """(day, team) -> polymarket conditionId, for 'Will <team> win on <date>' markets."""
+    """(day, team) -> polymarket YES clobToken, for 'Will <team> win on <date>' markets."""
     out: dict[tuple[str, str], str] = {}
-    for tag in ("soccer",):
+    for closed in ("false", "true"):     # open + recently-closed (played) games
         for page in range(8):
-            evs = xl._get(f"{GAMMA}/events?closed=false&tag_slug={tag}&limit=100&offset={page * 100}")
-            if not isinstance(evs, list) or not evs:
-                # also try recently-closed games (played in last days)
-                evs = xl._get(f"{GAMMA}/events?closed=true&tag_slug={tag}&limit=100&offset={page * 100}")
+            evs = xl._get(f"{GAMMA}/events?closed={closed}&tag_slug=soccer"
+                          f"&limit=100&offset={page * 100}")
             if not isinstance(evs, list) or not evs:
                 break
             for e in evs:
@@ -88,62 +86,22 @@ def pm_wc_games() -> dict:
                     mq = _PM_WIN.search(m.get("question") or "")
                     if not mq:
                         continue
-                    cond = m.get("conditionId")
-                    if cond:
-                        out[(mq.group(2), _norm(mq.group(1)))] = cond
-    return out
-
-
-# --- trade tapes -> bars ------------------------------------------------------------
-
-
-def kalshi_bars(ticker: str, start: int, end: int, bar: int) -> dict[int, float]:
-    """bar-bucket -> Kalshi yes-mid (0..1), from the reliable 1-min candlestick endpoint
-    (the /trades endpoint returned nothing for these markets). 1-min candles forward-fill
-    onto the finer bar grid in align(); a 1-2 min lag is still visible."""
-    mins = xc.kalshi_candles("KXWCGAME", ticker, start, end)   # {minute -> mid 0..1}
-    return {(m * 60) // bar: p for m, p in mins.items()}
-
-
-def pm_bars(cond: str, start: int, end: int, bar: int) -> dict[int, float]:
-    """bar-bucket -> last price (0..1) from the Polymarket trade tape."""
-    last: dict[int, float] = {}
-    offset = 0
-    for _ in range(40):
-        data = xl._get(f"{DATA}/trades?market={cond}&limit=500&offset={offset}")
-        if not isinstance(data, list) or not data:
-            break
-        for tr in data:
-            ts = tr.get("timestamp")
-            price = tr.get("price")
-            try:
-                ts = int(ts)
-            except (TypeError, ValueError):
-                continue
-            if price is None or ts < start or ts > end:
-                continue
-            last[ts // bar] = float(price)
-        if len(data) < 500:
-            break
-        offset += len(data)
-    return last
-
-
-def _ffill(d: dict[int, float], lo: int, hi: int) -> dict[int, float]:
-    out, cur = {}, None
-    for t in range(lo, hi + 1):
-        cur = d.get(t, cur)
-        if cur is not None:
-            out[t] = cur
+                    toks = m.get("clobTokenIds")
+                    if isinstance(toks, str):
+                        try:
+                            toks = json.loads(toks)
+                        except json.JSONDecodeError:
+                            toks = None
+                    if isinstance(toks, list) and toks:
+                        out[(mq.group(2), _norm(mq.group(1)))] = str(toks[0])  # YES token
     return out
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--days", type=float, default=3.0, help="look back N days for games")
-    ap.add_argument("--bar", type=int, default=30, help="bar size (seconds)")
-    ap.add_argument("--shock", type=float, default=2.0, help="per-bar jump threshold (cents)")
-    ap.add_argument("--horizon", type=int, default=4, help="follow window (bars)")
+    ap.add_argument("--shock", type=float, default=2.0, help="per-minute jump threshold (cents)")
+    ap.add_argument("--horizon", type=int, default=2, help="follow window (minutes)")
     args = ap.parse_args(argv)
     end = int(time.time())
     start = end - int(args.days * 86400)
@@ -152,8 +110,8 @@ def main(argv: list[str] | None = None) -> int:
     kg = kalshi_wc_games()
     pg = pm_wc_games()
     matched = sorted(set(kg) & set(pg))
-    print(f"=== In-play game lead-lag (WC, {args.bar}s bars, shock>={args.shock:g}c,"
-          f" follow={args.horizon} bars) ===")
+    print(f"=== In-play game lead-lag (WC, 1-min, shock>={args.shock:g}c,"
+          f" follow={args.horizon}min) ===")
     print(f"  Kalshi games: {len(kg)}  Polymarket games: {len(pg)}  matched: {len(matched)}")
     if not matched:
         print(f"  Kalshi sample keys: {sorted(kg)[:8]}")
@@ -163,25 +121,17 @@ def main(argv: list[str] | None = None) -> int:
     pm_kal, kal_pm = xs.Shock(), xs.Shock()
     per_game = []
     for day, team in matched:
-        kb = kalshi_bars(kg[(day, team)], start, end, args.bar)
-        pb = pm_bars(pg[(day, team)], start, end, args.bar)
-        if not kb or not pb:
-            per_game.append((day, team, len(kb), len(pb), 0))
+        ks_min = xc.kalshi_candles("KXWCGAME", kg[(day, team)], start, end)   # {min -> yes mid}
+        ps_min = xl.pm_series(pg[(day, team)], start, end)                    # {min -> yes prob}
+        kal, pm = xl.align(ks_min, ps_min)                                   # minute-aligned lists
+        if len(kal) < 20:
+            per_game.append((day, team, len(ks_min), len(ps_min), 0))
             continue
-        lo, hi = max(min(kb), min(pb)), min(max(kb), max(pb))
-        if hi - lo < 10:
-            per_game.append((day, team, len(kb), len(pb), 0))
-            continue
-        kf, pf = _ffill(kb, lo, hi), _ffill(pb, lo, hi)
-        ks = [kf[t] for t in range(lo, hi + 1) if t in kf and t in pf]
-        ps = [pf[t] for t in range(lo, hi + 1) if t in kf and t in pf]
-        n = min(len(ks), len(ps))
-        ks, ps = ks[:n], ps[:n]
-        a = xs.shock_study(ps, ks, shock, args.horizon)   # PM shocks -> Kalshi follows
-        b = xs.shock_study(ks, ps, shock, args.horizon)   # Kalshi shocks -> PM follows
+        a = xs.shock_study(pm, kal, shock, args.horizon)   # PM shocks -> does Kalshi follow
+        b = xs.shock_study(kal, pm, shock, args.horizon)   # Kalshi shocks -> does PM follow
         pm_kal.merge(a)
         kal_pm.merge(b)
-        per_game.append((day, team, len(kb), len(pb), a.n + b.n))
+        per_game.append((day, team, len(ks_min), len(ps_min), a.n + b.n))
 
     print(f"\n  {'day':>11} {'team':>14} {'kBars':>6} {'pBars':>6} {'shocks':>7}")
     for day, team, nk, np_, sh in per_game:
