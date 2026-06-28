@@ -130,23 +130,29 @@ def kalshi_worldcup() -> dict:
 
 
 def kalshi_series(ticker: str, start: int, end: int) -> dict[int, float]:
-    """minute -> Kalshi yes-mid (dollars 0..1), from 1-min candlesticks."""
-    url = (f"{KALSHI}/series/{SERIES}/markets/{ticker}/candlesticks"
-           f"?start_ts={start}&end_ts={end}&period_interval=1")
-    data = _get(url)
+    """minute -> Kalshi yes-mid (dollars 0..1), from 1-min candlesticks. Chunked: the endpoint
+    caps a request at ~5000 periods, so a multi-day 1-min pull must be fetched in windows."""
     out: dict[int, float] = {}
-    for c in (data or {}).get("candlesticks") or []:
-        ts = c.get("end_period_ts")
-        yb = (c.get("yes_bid") or {}).get("close_dollars")
-        ya = (c.get("yes_ask") or {}).get("close_dollars")
-        if ts is None:
-            continue
-        if yb is not None and ya is not None:
-            mid = (_num(yb) + _num(ya)) / 2.0
-        else:
-            mid = _num((c.get("price") or {}).get("close_dollars"))
-        if mid > 0:
-            out[int(ts) // 60] = mid
+    step = 4800 * 60  # 4800 one-minute periods per request, safely under the ~5000 cap
+    s = start
+    while s < end:
+        e = min(s + step, end)
+        url = (f"{KALSHI}/series/{SERIES}/markets/{ticker}/candlesticks"
+               f"?start_ts={s}&end_ts={e}&period_interval=1")
+        data = _get(url)
+        for c in (data or {}).get("candlesticks") or []:
+            ts = c.get("end_period_ts")
+            yb = (c.get("yes_bid") or {}).get("close_dollars")
+            ya = (c.get("yes_ask") or {}).get("close_dollars")
+            if ts is None:
+                continue
+            if yb is not None and ya is not None:
+                mid = (_num(yb) + _num(ya)) / 2.0
+            else:
+                mid = _num((c.get("price") or {}).get("close_dollars"))
+            if mid > 0:
+                out[int(ts) // 60] = mid
+        s = e
     return out
 
 
