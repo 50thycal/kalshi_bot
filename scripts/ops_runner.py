@@ -43,6 +43,7 @@ ALLOWED_SCRIPTS = (
     "weather_strategy_compare",
     "kalshi_market_probe",
     "kalshi_market_survey",
+    "xvenue_probe",
     "weather_digest",
     "weather_validation",
     "weather_consensus_study",
