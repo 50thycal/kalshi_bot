@@ -163,7 +163,7 @@ def main(argv: list[str] | None = None) -> int:
         div = (k["yes"] - deribit) * 100.0       # +: Kalshi richer than Deribit -> sell Kalshi
         rows.append((abs(div), div, k, deribit, gap, f))
 
-    rows.sort(reverse=True)
+    rows.sort(key=lambda r: r[0], reverse=True)
     print(f"  {'asset':>4} {'dir':>4} {'strike':>9} {'kClose':>10} {'kYes':>5} {'derib':>6}"
           f" {'div':>6} {'fee':>4} {'gap_d':>5} {'edge':>6}  ticker")
     for _ad, div, k, deribit, gap, _f in rows[:40]:
