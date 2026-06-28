@@ -45,6 +45,7 @@ ALLOWED_SCRIPTS = (
     "kalshi_market_survey",
     "xvenue_probe",
     "xvenue_leadlag",
+    "xvenue_crypto",
     "weather_digest",
     "weather_validation",
     "weather_consensus_study",
