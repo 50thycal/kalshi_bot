@@ -118,24 +118,34 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  PM sample keys: {sorted(pg)[:8]}")
         return 0
 
+    def _rng_jumps(series: dict) -> tuple[float, float, int]:
+        vals = [series[k] for k in sorted(series)]
+        if len(vals) < 2:
+            return (0.0, 0.0, 0)
+        jumps = sum(1 for i in range(1, len(vals)) if abs(vals[i] - vals[i - 1]) >= shock)
+        return (min(vals) * 100, max(vals) * 100, jumps)
+
     pm_kal, kal_pm = xs.Shock(), xs.Shock()
     per_game = []
     for day, team in matched:
         ks_min = xc.kalshi_candles("KXWCGAME", kg[(day, team)], start, end)   # {min -> yes mid}
         ps_min = xl.pm_series(pg[(day, team)], start, end)                    # {min -> yes prob}
+        klo, khi, kj = _rng_jumps(ks_min)
+        plo, phi, pj = _rng_jumps(ps_min)
         kal, pm = xl.align(ks_min, ps_min)                                   # minute-aligned lists
         if len(kal) < 20:
-            per_game.append((day, team, len(ks_min), len(ps_min), 0))
+            per_game.append((day, team, f"k[{klo:.0f}-{khi:.0f}]j{kj}", f"p[{plo:.0f}-{phi:.0f}]j{pj}", 0))
             continue
         a = xs.shock_study(pm, kal, shock, args.horizon)   # PM shocks -> does Kalshi follow
         b = xs.shock_study(kal, pm, shock, args.horizon)   # Kalshi shocks -> does PM follow
         pm_kal.merge(a)
         kal_pm.merge(b)
-        per_game.append((day, team, len(ks_min), len(ps_min), a.n + b.n))
+        per_game.append((day, team, f"k[{klo:.0f}-{khi:.0f}]j{kj}",
+                         f"p[{plo:.0f}-{phi:.0f}]j{pj}", a.n + b.n))
 
-    print(f"\n  {'day':>11} {'team':>14} {'kBars':>6} {'pBars':>6} {'shocks':>7}")
-    for day, team, nk, np_, sh in per_game:
-        print(f"  {day:>11} {team:>14} {nk:6d} {np_:6d} {sh:7d}")
+    print(f"\n  {'day':>11} {'team':>13} {'kalshi rng/jumps':>20} {'pm rng/jumps':>20} {'shk':>4}")
+    for day, team, kd, pd, sh in per_game:
+        print(f"  {day:>11} {team:>13} {kd:>20} {pd:>20} {sh:4d}")
 
     print(f"\n  {'direction':>14} {'n':>5} {'jump':>6} {'same':>5} {'foll%':>6} {'follow_move':>11}")
     print(pm_kal.row("PM->Kalshi"))
