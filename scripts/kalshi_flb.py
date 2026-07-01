@@ -65,26 +65,29 @@ def _close_unix(iso: str) -> int:
         return 0
 
 
-def fetch_settled(max_markets: int, min_vol: float) -> list[dict]:
-    """Settled binary markets newest-first with a yes/no result + parseable close + series."""
+def fetch_settled(max_markets: int, min_vol: float, status: str, max_pages: int) -> list[dict]:
+    """Settled binary markets newest-first with a yes/no result + parseable close + series.
+    Skips KXMVE parlays (which dominate the recent feed and aren't clean single binaries)."""
     out: list[dict] = []
     cursor = ""
-    for _ in range(max_markets // 1000 + 2):
-        page = xl._get(f"{KALSHI}/markets?status=settled&limit=1000&cursor={cursor}")
+    for _ in range(max_pages):
+        page = xl._get(f"{KALSHI}/markets?status={status}&limit=1000&cursor={cursor}")
         mkts = (page or {}).get("markets") or []
         for m in mkts:
             res = (m.get("result") or "").lower()
             if res not in ("yes", "no"):
                 continue
-            if xl._num(m.get("volume")) < min_vol:
+            tk = m.get("ticker") or ""
+            if tk.startswith("KXMVE"):                 # multi-leg parlay noise
+                continue
+            vol = xl._num(m.get("volume_fp"))
+            if vol < min_vol:
                 continue
             close = _close_unix(m.get("close_time"))
             if not close:
                 continue
-            tk = m.get("ticker") or ""
             series = m.get("series_ticker") or tk.split("-")[0]
-            out.append({"ticker": tk, "series": series, "close": close, "result": res,
-                        "vol": xl._num(m.get("volume"))})
+            out.append({"ticker": tk, "series": series, "close": close, "result": res, "vol": vol})
             if len(out) >= max_markets:
                 return out
         cursor = (page or {}).get("cursor") or ""
@@ -153,11 +156,27 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--max", type=int, default=2000, help="settled markets to collect")
     ap.add_argument("--sample", type=int, default=800, help="markets to pull candles for")
     ap.add_argument("--horizon", type=int, default=60, help="minutes before close to price")
-    ap.add_argument("--min-vol", type=float, default=50.0, help="skip thin markets")
+    ap.add_argument("--min-vol", type=float, default=50.0, help="skip thin markets (volume_fp)")
+    ap.add_argument("--max-pages", type=int, default=25, help="settled-feed pages to scan")
     ap.add_argument("--no-sports", action="store_true", help="drop Sports category")
+    ap.add_argument("--status", default="settled", help="market status filter")
+    ap.add_argument("--probe", action="store_true", help="dump raw fields of a few markets")
     args = ap.parse_args(argv)
 
-    settled = fetch_settled(args.max, args.min_vol)
+    if args.probe:
+        for st in ("settled", "finalized", "closed"):
+            page = xl._get(f"{KALSHI}/markets?status={st}&limit=5")
+            mkts = (page or {}).get("markets") or []
+            print(f"status={st!r}: {len(mkts)} markets; cursor={bool((page or {}).get('cursor'))}")
+            for m in mkts[:3]:
+                print(f"  ticker={m.get('ticker')} series={m.get('series_ticker')} "
+                      f"result={m.get('result')!r} status={m.get('status')!r} "
+                      f"close={m.get('close_time')} vol={m.get('volume')} vol_fp={m.get('volume_fp')}")
+            if mkts:
+                print(f"  KEYS: {sorted(mkts[0].keys())}")
+        return 0
+
+    settled = fetch_settled(args.max, args.min_vol, args.status, args.max_pages)
     if args.no_sports:
         settled = [m for m in settled if category(m["series"]) != "Sports"]
     # sample evenly across the collected set so we aren't biased to the newest slice
