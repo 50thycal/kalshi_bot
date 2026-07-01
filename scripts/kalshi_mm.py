@@ -40,6 +40,12 @@ def maker_fee(p: float) -> float:
     return 1.75 * p * (1 - p) / 100.0
 
 
+def maker_fee_ceil(p: float) -> float:
+    """Worst-case realistic maker fee: rounded UP to the whole cent per contract (as Kalshi
+    bills). Kills thin longshot edges; the honest lower bound on MM profitability."""
+    return math.ceil(1.75 * p * (1 - p)) / 100.0
+
+
 def fetch_trades(ticker: str, cap: int) -> list[dict]:
     """Trade tape for a market (paginated), newest first, capped. Kalshi's endpoint is the
     top-level /markets/trades with ticker as a QUERY param (not /markets/{ticker}/trades)."""
@@ -123,7 +129,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"=== Kalshi market-making backtest — {len(series_list)} liquid series, "
           f"{len(settled)} settled markets, tapes for {len(sample)} ===")
 
-    # accumulators: list of (net_pnl, gross_pnl, count, yes_price_c, maker_side, category)
+    # accumulators: rec = (gross, net_rate, net_ceil, count, yes_price_c, maker_side, cat, ticker)
     recs = []
     tapes = trades_used = 0
     for m in sample:
@@ -143,61 +149,69 @@ def main(argv: list[str] | None = None) -> int:
                 gross, mside = p - settle, "sell"
             else:                             # maker BOUGHT yes at p (long yes)
                 gross, mside = settle - p, "buy"
-            net = gross - maker_fee(p)
-            recs.append((net, gross, cnt, p * 100.0, mside, cat))
+            recs.append((gross, gross - maker_fee(p), gross - maker_fee_ceil(p),
+                         cnt, p * 100.0, mside, cat, m["ticker"]))
             trades_used += 1
 
     if not recs:
         print("  (no usable trades — check field names with --probe)")
         return 0
-    print(f"  tapes fetched {tapes}, trades used {trades_used}\n")
+    print(f"  tapes fetched {tapes}, trades used {trades_used}")
+    print("  net_rate = 0.25x-taker maker fee (unrounded); net_ceil = fee rounded up to 1c/"
+          "contract (realistic worst case). A band is only believable if BOTH are +.\n")
 
-    def block(title, keyfn, keys):
+    from collections import defaultdict
+
+    def _summ(v):
+        contracts = sum(r[3] for r in v)
+        mkts = len({r[7] for r in v})
+        return (len(v), mkts, contracts,
+                _wavg([(r[0], r[3]) for r in v]),    # gross
+                _wavg([(r[1], r[3]) for r in v]),    # net_rate
+                _wavg([(r[2], r[3]) for r in v]))    # net_ceil
+
+    def block(title, keyfn, keys, rows=None):
+        rows = recs if rows is None else rows
         print(f"  --- {title} (volume-weighted, per contract) ---")
-        print(f"    {'bucket':>12} {'trades':>7} {'contracts':>9} {'gross':>8} {'net':>8}")
-        from collections import defaultdict
+        print(f"    {'bucket':>12} {'trades':>7} {'mkts':>5} {'contracts':>10} "
+              f"{'gross':>8} {'net_rate':>9} {'net_ceil':>9}")
         g = defaultdict(list)
-        for net, gross, cnt, pc, mside, cat in recs:
-            g[keyfn(net, gross, cnt, pc, mside, cat)].append((net, gross, cnt))
+        for r in rows:
+            g[keyfn(r)].append(r)
         for k in keys:
             v = g.get(k)
             if not v:
                 continue
-            contracts = sum(c for _n, _gr, c in v)
-            gross = _wavg([(gr, c) for _n, gr, c in v])
-            net = _wavg([(n, c) for n, _gr, c in v])
-            print(f"    {str(k):>12} {len(v):7d} {contracts:9.0f} {gross:+8.4f} {net:+8.4f}")
-        # total row
-        contracts = sum(c for _n, _gr, c, _pc, _ms, _ct in recs)
-        gross = _wavg([(gr, c) for _n, gr, c, _pc, _ms, _ct in recs])
-        net = _wavg([(n, c) for n, _gr, c, _pc, _ms, _ct in recs])
-        print(f"    {'ALL':>12} {len(recs):7d} {contracts:9.0f} {gross:+8.4f} {net:+8.4f}\n")
+            n, mkts, c, gr, nr, nc = _summ(v)
+            print(f"    {str(k):>12} {n:7d} {mkts:5d} {c:10.0f} {gr:+8.4f} {nr:+9.4f} {nc:+9.4f}")
+        n, mkts, c, gr, nr, nc = _summ(rows)
+        print(f"    {'ALL':>12} {n:7d} {mkts:5d} {c:10.0f} {gr:+8.4f} {nr:+9.4f} {nc:+9.4f}\n")
 
-    block("MAKER P&L by yes-price band", lambda n, g, c, pc, ms, ct: _band(pc), _BANDS)
-    block("MAKER P&L by side", lambda n, g, c, pc, ms, ct: ms, ["sell", "buy"])
-    block("MAKER P&L by category", lambda n, g, c, pc, ms, ct: ct,
+    block("MAKER P&L by yes-price band", lambda r: _band(r[4]), _BANDS)
+    block("MAKER P&L by side", lambda r: r[5], ["sell", "buy"])
+    block("MAKER P&L by category", lambda r: r[6],
           ["Sports", "Crypto", "Weather", "Econ", "Politics", "Entertainment", "Other"])
 
-    # the FLB-implied sweet spot: SELLING cheap longshots (maker sell, low yes-price)
-    print("  --- MAKER-SELL of cheap longshots (sell yes at low price = the FLB-implied edge) ---")
-    print(f"    {'yes_px':>10} {'trades':>7} {'contracts':>9} {'gross':>8} {'net':>8}")
-    from collections import defaultdict
-    ls = defaultdict(list)
-    for net, gross, cnt, pc, mside, _cat in recs:
-        if mside == "sell":
-            ls[_band(pc)].append((net, gross, cnt))
-    for band in _BANDS:
-        v = ls.get(band)
-        if not v:
-            continue
-        contracts = sum(c for _n, _g, c in v)
-        gross = _wavg([(g, c) for _n, g, c in v])
-        net = _wavg([(n, c) for n, _g, c in v])
-        print(f"    {band[0]:2d}-{band[1]:<3d}     {len(v):7d} {contracts:9.0f} {gross:+8.4f} {net:+8.4f}")
+    sell = [r for r in recs if r[5] == "sell"]
+    block("MAKER-SELL by yes-price (rest an ASK; the FLB-implied edge)", lambda r: _band(r[4]),
+          _BANDS, rows=sell)
+    nonsport_sell = [r for r in sell if r[6] != "Sports"]
+    if nonsport_sell:
+        block("MAKER-SELL by yes-price, NON-SPORTS ONLY (does the edge survive off sports?)",
+              lambda r: _band(r[4]), _BANDS, rows=nonsport_sell)
 
-    print("\n  maker pnl to SETTLEMENT; net = gross - 0.25x-taker maker fee (rate; real fills")
-    print("  round up). +net in a band => resting liquidity there is +EV. If ALL ~0/negative,")
-    print("  taker flow is informed enough that MM doesn't beat the fee either.")
+    # split-half OOS on the headline maker-sell 10-65c pocket (both halves must be +)
+    pocket = [r for r in sell if 10 <= r[4] < 65]
+    if pocket:
+        h1, h2 = pocket[::2], pocket[1::2]
+        print("  --- SPLIT-HALF OOS: maker-SELL yes 10-65c pocket (net_ceil) ---")
+        for name, hh in (("half-A", h1), ("half-B", h2)):
+            n, mkts, c, _gr, _nr, nc = _summ(hh)
+            print(f"    {name}: trades={n} mkts={mkts} contracts={c:.0f} net_ceil={nc:+.4f}")
+        print()
+
+    print("  maker pnl to SETTLEMENT. +net_ceil in a band => resting liquidity there beats even")
+    print("  the worst-case fee. Watch for sports-concentration + few-market drivers (mkts col).")
     return 0
 
 
