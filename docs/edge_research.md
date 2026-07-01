@@ -57,6 +57,49 @@ Plan:
 Reuse: `xvenue_shock.shock_study`, `xvenue_leadlag.align/pm_series`, `xvenue_crypto.kalshi_candles`.
 All `xvenue_*` + `kalshi_market_survey` scripts are allowlisted in `scripts/ops_runner.py`.
 
+## RULED OUT — No-arbitrage / Dutch-book scanner (`scripts/kalshi_arb.py`)
+
+Scanned 882 open multi-outcome events for locked arbitrage (Dutch book on MECE sets:
+Σ(yes_ask)<$1 or Σ(yes_bid)>$1; monotonicity on 'ge' threshold ladders), net of the
+ceil(7p(1-p)) per-leg fee. **No real arb.** The 15 initial "hits" were all artifacts:
+- 12 MONO-VERTICAL "arbs" were a parser bug — dropped minus signs ('Above -0.3%'→0.3) and
+  ignored K/M/B units ('Above 1M'→1.0), scrambling monotone CPI/GDP/album ladders. Fixed the
+  parser (signed + unit-scaled strikes) → all 12 vanished (ladders are correctly priced).
+- 3 BUY-ALL-YES hits were non-fillable/non-exhaustive: Peru president (19-way, every leg quoted
+  0–1¢ pre-liquidity, Σask=$0.044), Netflix top-movie (15¢ stale spreads, set not provably
+  exhaustive), Fed combo (4 legs, space not provably complete). None is fillable free money.
+- Decisive evidence: every *liquid* MECE set sits right at the no-arb boundary (Fear&Greed
+  Σask=0.99, Trump pardons 0.98, FDA 0.98, World Cup 1.00). Kalshi's liquid markets are
+  arbitraged clean. Scanner kept as a correct standing monitor (flags a real dislocation if one
+  ever appears), but nothing to harvest.
+
+## RULED OUT — Favorite-longshot bias, taker side (`scripts/kalshi_flb.py`)
+
+Backtested settled markets (discover liquid series → pull settled history → price each at
+multiple horizons before close from real candlestick yes_bid/ask → bin by price). ~900
+markets collected, priced at T-30 / T-120 / T-360 min.
+- **FLB is REAL on Kalshi (calibration level):** cheap longshots (0–10¢) settle YES ~0% vs
+  priced 1–8¢ (overpriced) at ALL horizons; favorites mildly underpriced. Matches the
+  literature.
+- **NOT harvestable as a taker.** Back-the-favorite P&L/trade (net fee): **T-30 +0.036**, but
+  **T-120 −0.008**, **T-360 −0.010**. The positive appears ONLY near close — the
+  "already-decided favorites win" artifact (a 90¢ sports favorite at T-30 is nearly settled).
+  At genuine lead times (2–6h) backing favorites LOSES ~1¢/trade. Fading longshots (buy NO) is
+  tiny-edge / huge-variance / capital-heavy — the bias accrues to MAKERS, not takers.
+- Meta: same verdict as every taker avenue — the edge exists but fees + variance eat it.
+
+## Meta-conclusion after this round (arb + FLB)
+
+We have now exhaustively tested TAKER strategies: weather directional, crypto directional,
+crypto options-replication (vs Deribit), cross-venue divergence + lead-lag (vs Polymarket),
+structural no-arb, and favorite-longshot fade. **All efficient / untradeable for a taker.**
+The recurring theme across ALL of them: any real edge accrues to the **maker** (who earns the
+spread + the longshot premium), not the taker (who pays spread + fee). The unexplored frontier
+consistent with this is disciplined **market-making that manages adverse selection** — but our
+one MM test (weather) lost to adverse selection, and Kalshi maker fees are charged not rebated.
+Open question for the user: pursue maker/liquidity provision (harder, inventory + adverse
+selection risk) or accept that a reliable automated taker edge on Kalshi isn't there.
+
 ## Methodology lessons (don't repeat)
 - Use REAL identifiers (Kalshi ticker strike), never title-parsed numbers — false pairs fake
   divergence.
