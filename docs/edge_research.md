@@ -87,6 +87,12 @@ markets collected, priced at T-30 / T-120 / T-360 min.
   At genuine lead times (2–6h) backing favorites LOSES ~1¢/trade. Fading longshots (buy NO) is
   tiny-edge / huge-variance / capital-heavy — the bias accrues to MAKERS, not takers.
 - Meta: same verdict as every taker avenue — the edge exists but fees + variance eat it.
+- **Follow-up (the 65-80c "pocket") — CONFIRMED A MIRAGE.** The one sub-signal that looked
+  horizon-robust (+0.02..+0.05/trade) collapsed under a bigger sample + focus deep-dive
+  (`--focus-band`): at n=280 it fell to +0.004/trade; 5c sub-bands alternate sign (65-70c
+  = -0.259, 60-65c = +0.131 — noise, not a monotone edge); it is 100% Sports; split-half OOS
+  = +0.008 / +0.001 (both ~0). Textbook small-n mirage (the 5th time — see methodology notes).
+  Taker chapter is CLOSED: back-the-favorite ≈ -0.002..-0.010/trade at every horizon.
 
 ## Meta-conclusion after this round (arb + FLB)
 
