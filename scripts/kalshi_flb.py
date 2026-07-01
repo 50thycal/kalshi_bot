@@ -114,12 +114,10 @@ def fetch_settled_for_series(series: str, per_series: int, min_vol: float) -> li
     return out
 
 
-def price_at_horizon(series: str, ticker: str, close: int, horizon_min: int):
-    """Return (yes_bid, yes_ask) in dollars nearest to `horizon_min` before close, or None."""
-    target = close // 60 - horizon_min
-    start, end = close - 3 * 3600, close + 60
+def fetch_candles(series: str, ticker: str, start: int, end: int) -> dict[int, tuple]:
+    """{minute: (yes_bid, yes_ask)} over [start,end] (chunked 1-min candles)."""
+    out: dict[int, tuple] = {}
     s = start
-    best = None
     while s < end:
         e = min(s + 4800 * 60, end)
         data = xl._get(f"{KALSHI}/series/{series}/markets/{ticker}/candlesticks"
@@ -130,16 +128,22 @@ def price_at_horizon(series: str, ticker: str, close: int, horizon_min: int):
             ya = (c.get("yes_ask") or {}).get("close_dollars")
             if ts is None or yb is None or ya is None:
                 continue
-            m = int(ts) // 60
-            if m > target + 1:          # only look at/ before the horizon (no lookahead)
-                continue
-            d = abs(m - target)
-            if best is None or d < best[0]:
-                best = (d, xl._num(yb), xl._num(ya))
+            out[int(ts) // 60] = (xl._num(yb), xl._num(ya))
         s = e
-    if best is None:
-        return None
-    return best[1], best[2]
+    return out
+
+
+def pick_at(candles: dict[int, tuple], close: int, horizon_min: int, tol_min: int = 30):
+    """Nearest (yb,ya) at-or-before `horizon_min` mins pre-close, within tol. No lookahead."""
+    target = close // 60 - horizon_min
+    best = None
+    for m, (yb, ya) in candles.items():
+        if m > target:                  # strictly no lookahead past the horizon
+            continue
+        d = target - m
+        if d <= tol_min and (best is None or d < best[0]):
+            best = (d, yb, ya)
+    return (best[1], best[2]) if best else None
 
 
 # entry-price bands (cents) for the calibration / P&L table
@@ -173,7 +177,8 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--max", type=int, default=2000, help="settled markets to collect")
     ap.add_argument("--sample", type=int, default=800, help="markets to pull candles for")
-    ap.add_argument("--horizon", type=int, default=60, help="minutes before close to price")
+    ap.add_argument("--horizons", default="30,120,360",
+                    help="comma minutes-before-close to price (tests if fav edge survives lead time)")
     ap.add_argument("--min-vol", type=float, default=50.0, help="skip thin markets (volume_fp)")
     ap.add_argument("--top-series", type=int, default=40, help="liquid series to sample from")
     ap.add_argument("--per-series", type=int, default=120, help="settled markets per series")
@@ -204,83 +209,88 @@ def main(argv: list[str] | None = None) -> int:
         settled.extend(fetch_settled_for_series(s, args.per_series, args.min_vol))
         if len(settled) >= args.max:
             break
+    horizons = [int(x) for x in args.horizons.split(",") if x.strip()]
+    max_h = max(horizons)
     print(f"=== Kalshi favorite-longshot backtest — {len(series_list)} liquid series, "
           f"{len(settled)} settled markets collected ===")
-    # sample evenly across the collected set so we aren't biased to any one series
     step = max(1, len(settled) // args.sample)
     sample = settled[::step][:args.sample]
-    print(f"  pricing {len(sample)} at T-{args.horizon}min\n")
+    print(f"  pricing {len(sample)} markets at horizons {horizons} min-before-close "
+          f"(one candle fetch each)\n")
 
-    rows = []       # (mid_c, pnl, result_yes, category)
-    priced = 0
-    for m in sample:
-        px = price_at_horizon(m["series"], m["ticker"], m["close"], args.horizon)
-        if px is None:
-            continue
-        yb, ya = px
-        r = fav_trade_pnl(yb, ya, m["result"])
-        if r is None:
-            continue
-        mid, pnl = r
-        priced += 1
-        rows.append((mid * 100.0, pnl, m["result"] == "yes", category(m["series"])))
-
-    if not rows:
-        print("  (no priceable markets — candlestick coverage empty)")
-        return 0
-
-    # ---- calibration curve: realized YES rate vs entry price ----
-    print(f"  priced {priced} markets\n")
-    print("  --- CALIBRATION: does entry price predict settle rate? (gap<0 longshot overpriced) ---")
-    print(f"  {'band(c)':>9} {'n':>5} {'avg_px':>7} {'yes_rate':>8} {'gap':>7}")
     from collections import defaultdict
-    by_band = defaultdict(list)
-    for mid_c, _pnl, yes, _cat in rows:
-        by_band[_band(mid_c)].append((mid_c, yes))
-    for band in _BANDS:
-        v = by_band.get(band)
-        if not v:
+    # rows_by_h[h] = list of (mid_c, pnl, result_yes, category)
+    rows_by_h: dict[int, list] = {h: [] for h in horizons}
+    fetched = 0
+    for m in sample:
+        candles = fetch_candles(m["series"], m["ticker"],
+                                m["close"] - (max_h + 45) * 60, m["close"] + 60)
+        if not candles:
             continue
-        n = len(v)
-        avg_px = sum(x[0] for x in v) / n
-        yr = 100.0 * sum(1 for x in v if x[1]) / n
-        print(f"  {band[0]:2d}-{band[1]:<3d}   {n:5d} {avg_px:6.1f}c {yr:7.1f}% {yr - avg_px:+6.1f}")
+        fetched += 1
+        cat = category(m["series"])
+        for h in horizons:
+            px = pick_at(candles, m["close"], h)
+            if px is None:
+                continue
+            r = fav_trade_pnl(px[0], px[1], m["result"])
+            if r is None:
+                continue
+            mid, pnl = r
+            rows_by_h[h].append((mid * 100.0, pnl, m["result"] == "yes", cat))
 
-    # ---- taker P&L of backing the favorite, by entry band ----
-    print("\n  --- BACK-THE-FAVORITE taker P&L per contract (net of entry fee), by fav price ---")
-    print(f"  {'fav_px(c)':>9} {'n':>5} {'win%':>6} {'pnl/trade':>10} {'total$':>8}")
-    fav_bands = [(50, 65), (65, 80), (80, 90), (90, 95), (95, 97), (97, 100)]
-    fb = defaultdict(list)
-    for mid_c, pnl, _yes, _cat in rows:
-        favpx = mid_c if mid_c >= 50 else 100 - mid_c
-        for lo, hi in fav_bands:
-            if lo <= favpx < hi:
-                fb[(lo, hi)].append(pnl)
-                break
-    allpnl = [pnl for _mc, pnl, _y, _c in rows]
-    for band in fav_bands:
-        v = fb.get(band)
-        if not v:
+    print(f"  fetched candles for {fetched} markets\n")
+    fav_bands = [(50, 65), (65, 80), (80, 90), (90, 95), (95, 100)]
+
+    for h in horizons:
+        rows = rows_by_h[h]
+        if not rows:
+            print(f"  [T-{h}min] no priceable markets\n")
             continue
-        n = len(v)
-        win = 100.0 * sum(1 for p in v if p > 0) / n
-        print(f"  {band[0]:2d}-{band[1]:<3d}   {n:5d} {win:5.1f}% {sum(v) / n:+9.3f} {sum(v):+8.2f}")
-    print(f"  {'ALL':>9} {len(allpnl):5d} {'':6} {sum(allpnl) / len(allpnl):+9.3f} "
-          f"{sum(allpnl):+8.2f}")
+        print(f"  ===================== HORIZON T-{h} min  (n={len(rows)}) =====================")
+        # calibration
+        print("  CALIBRATION (gap = yes_rate - price; <0 longshot overpriced, >0 fav underpriced)")
+        by_band = defaultdict(list)
+        for mid_c, _pnl, yes, _cat in rows:
+            by_band[_band(mid_c)].append((mid_c, yes))
+        print(f"    {'band(c)':>8} {'n':>5} {'avg_px':>7} {'yes_rate':>8} {'gap':>7}")
+        for band in _BANDS:
+            v = by_band.get(band)
+            if not v:
+                continue
+            n = len(v)
+            avg_px = sum(x[0] for x in v) / n
+            yr = 100.0 * sum(1 for x in v if x[1]) / n
+            print(f"    {band[0]:2d}-{band[1]:<3d}  {n:5d} {avg_px:6.1f}c {yr:7.1f}% {yr - avg_px:+6.1f}")
+        # back-the-favorite P&L by fav price band
+        print("  BACK-THE-FAVORITE P&L/contract (net entry fee), by fav price:")
+        fb = defaultdict(list)
+        for mid_c, pnl, _yes, _cat in rows:
+            favpx = mid_c if mid_c >= 50 else 100 - mid_c
+            for lo, hi in fav_bands:
+                if lo <= favpx < hi:
+                    fb[(lo, hi)].append(pnl)
+                    break
+        print(f"    {'fav_px':>8} {'n':>5} {'win%':>6} {'pnl/trade':>10} {'total$':>8}")
+        for band in fav_bands:
+            v = fb.get(band)
+            if not v:
+                continue
+            win = 100.0 * sum(1 for p in v if p > 0) / len(v)
+            print(f"    {band[0]:2d}-{band[1]:<3d}  {len(v):5d} {win:5.1f}% "
+                  f"{sum(v) / len(v):+9.3f} {sum(v):+8.2f}")
+        allpnl = [p for _mc, p, _y, _c in rows]
+        heavy = [p for mc, p, _y, _c in rows if (mc if mc >= 50 else 100 - mc) >= 80]
+        print(f"    {'ALL':>8} {len(allpnl):5d} {'':6} {sum(allpnl) / len(allpnl):+9.3f} "
+              f"{sum(allpnl):+8.2f}")
+        if heavy:
+            print(f"    heavy-fav(>=80c) n={len(heavy)} pnl/trade={sum(heavy) / len(heavy):+.3f} "
+                  f"total={sum(heavy):+.2f}")
+        print()
 
-    # ---- by category ----
-    print("\n  --- BACK-THE-FAVORITE P&L by category (per-trade is the verdict) ---")
-    print(f"  {'category':>14} {'n':>5} {'win%':>6} {'pnl/trade':>10} {'total$':>8}")
-    bc = defaultdict(list)
-    for _mc, pnl, _yes, cat in rows:
-        bc[cat].append(pnl)
-    for cat in sorted(bc, key=lambda c: -sum(bc[c]) / len(bc[c])):
-        v = bc[cat]
-        win = 100.0 * sum(1 for p in v if p > 0) / len(v)
-        print(f"  {cat:>14} {len(v):5d} {win:5.1f}% {sum(v) / len(v):+9.3f} {sum(v):+8.2f}")
-
-    print("\n  pnl = payoff(0/1) - entry_ask - ceil(7p(1-p))c fee; settlement has no fee.")
-    print("  +per-trade in a band => a real taker edge there; ~ -fee everywhere => efficient.")
+    print("  pnl = payoff(0/1) - entry_ask - ceil(7p(1-p))c fee; settlement has no fee.")
+    print("  KEY: a fav edge that HOLDS at long horizons is tradeable; one that appears only")
+    print("  near close (T-30) but not at T-360 is just 'already-decided favorites win' — not an edge.")
     return 0
 
 
