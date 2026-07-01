@@ -26,7 +26,11 @@ import time
 import xvenue_leadlag as xl  # _get, _num
 
 KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
-_NUM = re.compile(r"\$?\s*([0-9][0-9,]*\.?[0-9]*)")
+# capture an optional leading sign/$ blob, the number, and an optional K/M/B unit — so
+# 'Above -0.3%' -> -0.3 and 'Above $1.1M' -> 1_100_000 (both were mis-parsed before, which
+# scrambled otherwise-monotone ladders into FALSE arbs).
+_NUM = re.compile(r"([-$]*)\s*([0-9][0-9,]*\.?[0-9]*)\s*([kmb]?)", re.I)
+_UNIT = {"": 1.0, "k": 1e3, "m": 1e6, "b": 1e9}
 
 
 def fee(p: float) -> float:
@@ -34,10 +38,19 @@ def fee(p: float) -> float:
     return math.ceil(7.0 * p * (1 - p)) / 100.0
 
 
+def _nums(s: str) -> list[float]:
+    """Signed, unit-scaled numbers from a subtitle (handles leading '-' and K/M/B suffixes)."""
+    out = []
+    for pre, num, unit in _NUM.findall(s or ""):
+        v = float(num.replace(",", "")) * _UNIT[unit.lower()]
+        out.append(-v if "-" in pre else v)
+    return out
+
+
 def _parse_bucket(sub: str):
     """Return ('range', lo, hi) | ('ge', x) | ('le', x) | None from a Kalshi subtitle."""
     s = (sub or "").lower()
-    nums = [float(x.replace(",", "")) for x in _NUM.findall(sub or "")]
+    nums = _nums(sub or "")
     if not nums:
         return None
     if any(w in s for w in ("or above", "or higher", "above", "or more", ">=")):
