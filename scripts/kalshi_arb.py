@@ -92,7 +92,8 @@ def scan_event(e: dict, fee_buf: float, max_close: int):
         return out
 
     # (2) Monotonicity on a 'ge' threshold ladder
-    ge = sorted((m["parse"][1], m) for m in mkts if m["parse"] and m["parse"][0] == "ge")
+    ge = sorted(((m["parse"][1], m) for m in mkts if m["parse"] and m["parse"][0] == "ge"),
+                key=lambda x: x[0])
     best = None
     for i in range(len(ge)):
         for j in range(i + 1, len(ge)):
