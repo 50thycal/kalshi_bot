@@ -72,7 +72,8 @@ def scan_event(e: dict, fee_buf: float, max_close: int):
                      "tk": m.get("ticker"), "parse": _parse_bucket(m.get("yes_sub_title") or "")})
     if len(mkts) < 3:
         return None
-    out = {"event": e.get("event_ticker"), "n": len(mkts), "title": (e.get("title") or "")[:40]}
+    out = {"event": e.get("event_ticker"), "n": len(mkts), "title": (e.get("title") or "")[:40],
+           "excl": bool(e.get("mutually_exclusive")), "legs": mkts}
 
     # (1) Dutch book — only for a true mutually-exclusive set
     mece = bool(e.get("mutually_exclusive")) or all(m["parse"] and m["parse"][0] == "range"
@@ -116,6 +117,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--days", type=float, default=30.0, help="events closing within N days")
     ap.add_argument("--max-pages", type=int, default=60)
     ap.add_argument("--fee-buf", type=float, default=0.0, help="min net profit ($) to flag")
+    ap.add_argument("--explain", type=int, default=6, help="dump legs for top N flagged arbs")
     args = ap.parse_args(argv)
     max_close = int(time.time() + args.days * 86400)
 
@@ -148,6 +150,13 @@ def main(argv: list[str] | None = None) -> int:
                   f"  [{r['title']}]")
     else:
         print("  (no locked arbs found)")
+
+    if live and args.explain:
+        print("\n  --- LEG DETAIL for top flagged arbs (reality check: is it fillable & truly MECE?) ---")
+        for r in sorted(live, key=lambda r: -r["ARB"][1])[:args.explain]:
+            print(f"\n  {r['event']}  {r['ARB'][0]} +${r['ARB'][1]:.3f}  excl_flag={r['excl']}  [{r['title']}]")
+            for m in sorted(r["legs"], key=lambda m: -m["ya"]):
+                print(f"      yb={m['yb']:.2f} ya={m['ya']:.2f} parse={m['parse']}  {m['sub'][:48]!r}")
 
     mece = [r for r in results if r.get("mece") and "sum_ask" in r]
     if mece:
