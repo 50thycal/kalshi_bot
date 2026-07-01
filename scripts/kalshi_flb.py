@@ -65,20 +65,39 @@ def _close_unix(iso: str) -> int:
         return 0
 
 
-def fetch_settled(max_markets: int, min_vol: float, status: str, max_pages: int) -> list[dict]:
-    """Settled binary markets newest-first with a yes/no result + parseable close + series.
-    Skips KXMVE parlays (which dominate the recent feed and aren't clean single binaries)."""
-    out: list[dict] = []
+def discover_series(top_n: int, max_pages: int) -> list[str]:
+    """Liquid series tickers, ranked by open-event volume (skips KXMVE parlays). We query each
+    series' SETTLED history — this guarantees clean, liquid single binaries across categories,
+    unlike the global settled feed which is ~all parlays + thin markets near 'now'."""
+    vol_by_series: dict[str, float] = {}
     cursor = ""
     for _ in range(max_pages):
-        page = xl._get(f"{KALSHI}/markets?status={status}&limit=1000&cursor={cursor}")
+        page = xl._get(f"{KALSHI}/events?status=open&with_nested_markets=true&limit=200&cursor={cursor}")
+        evs = (page or {}).get("events") or []
+        for e in evs:
+            s = (e.get("series_ticker") or "").upper()
+            if not s or s.startswith("KXMVE"):
+                continue
+            v = sum(xl._num(m.get("volume_fp")) for m in e.get("markets") or [])
+            vol_by_series[s] = vol_by_series.get(s, 0.0) + v
+        cursor = (page or {}).get("cursor") or ""
+        if not cursor or not evs:
+            break
+    return sorted(vol_by_series, key=lambda s: -vol_by_series[s])[:top_n]
+
+
+def fetch_settled_for_series(series: str, per_series: int, min_vol: float) -> list[dict]:
+    """Settled single binaries for one series (newest first), with yes/no result + close."""
+    out: list[dict] = []
+    cursor = ""
+    for _ in range(3):
+        page = xl._get(f"{KALSHI}/markets?series_ticker={series}&status=settled"
+                       f"&limit=1000&cursor={cursor}")
         mkts = (page or {}).get("markets") or []
         for m in mkts:
             res = (m.get("result") or "").lower()
-            if res not in ("yes", "no"):
-                continue
             tk = m.get("ticker") or ""
-            if tk.startswith("KXMVE"):                 # multi-leg parlay noise
+            if res not in ("yes", "no") or tk.startswith("KXMVE"):
                 continue
             vol = xl._num(m.get("volume_fp"))
             if vol < min_vol:
@@ -86,9 +105,8 @@ def fetch_settled(max_markets: int, min_vol: float, status: str, max_pages: int)
             close = _close_unix(m.get("close_time"))
             if not close:
                 continue
-            series = m.get("series_ticker") or tk.split("-")[0]
             out.append({"ticker": tk, "series": series, "close": close, "result": res, "vol": vol})
-            if len(out) >= max_markets:
+            if len(out) >= per_series:
                 return out
         cursor = (page or {}).get("cursor") or ""
         if not cursor or not mkts:
@@ -157,7 +175,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--sample", type=int, default=800, help="markets to pull candles for")
     ap.add_argument("--horizon", type=int, default=60, help="minutes before close to price")
     ap.add_argument("--min-vol", type=float, default=50.0, help="skip thin markets (volume_fp)")
-    ap.add_argument("--max-pages", type=int, default=25, help="settled-feed pages to scan")
+    ap.add_argument("--top-series", type=int, default=40, help="liquid series to sample from")
+    ap.add_argument("--per-series", type=int, default=120, help="settled markets per series")
+    ap.add_argument("--max-pages", type=int, default=25, help="event pages for series discovery")
     ap.add_argument("--no-sports", action="store_true", help="drop Sports category")
     ap.add_argument("--status", default="settled", help="market status filter")
     ap.add_argument("--probe", action="store_true", help="dump raw fields of a few markets")
@@ -176,14 +196,20 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"  KEYS: {sorted(mkts[0].keys())}")
         return 0
 
-    settled = fetch_settled(args.max, args.min_vol, args.status, args.max_pages)
-    if args.no_sports:
-        settled = [m for m in settled if category(m["series"]) != "Sports"]
-    # sample evenly across the collected set so we aren't biased to the newest slice
+    series_list = discover_series(args.top_series, args.max_pages)
+    settled: list[dict] = []
+    for s in series_list:
+        if args.no_sports and category(s) == "Sports":
+            continue
+        settled.extend(fetch_settled_for_series(s, args.per_series, args.min_vol))
+        if len(settled) >= args.max:
+            break
+    print(f"=== Kalshi favorite-longshot backtest — {len(series_list)} liquid series, "
+          f"{len(settled)} settled markets collected ===")
+    # sample evenly across the collected set so we aren't biased to any one series
     step = max(1, len(settled) // args.sample)
     sample = settled[::step][:args.sample]
-    print(f"=== Kalshi favorite-longshot backtest — {len(settled)} settled markets, "
-          f"pricing {len(sample)} at T-{args.horizon}min ===\n")
+    print(f"  pricing {len(sample)} at T-{args.horizon}min\n")
 
     rows = []       # (mid_c, pnl, result_yes, category)
     priced = 0
