@@ -106,6 +106,35 @@ one MM test (weather) lost to adverse selection, and Kalshi maker fees are charg
 Open question for the user: pursue maker/liquidity provision (harder, inventory + adverse
 selection risk) or accept that a reliable automated taker edge on Kalshi isn't there.
 
+## *** FIRST +EV EDGE FOUND *** — Market-making / maker-SELL (`scripts/kalshi_mm.py`)
+
+The mirror of every taker result: takers lose the spread+fee, so the resting (MAKER) side
+collects it — IF adverse selection doesn't eat it. Measured assumption-light from the real
+trade tape (`/markets/trades?ticker=`): for settled markets, each trade's passive counterparty
+P&L held to settlement (`taker_side=yes` ⇒ maker sold yes at p ⇒ pnl=p−settle; `no` ⇒ maker
+bought yes ⇒ settle−p), minus maker fee. 70,861 trades / 349 markets / 68M contracts.
+
+**Providing liquidity is net +EV, and the structure exactly matches FLB:**
+- Maker-SELL wins (+0.0067 gross), maker-BUY loses (−0.008). Selling the OVERPRICED side is
+  the edge.
+- **Maker-SELL yes by price (net of WORST-CASE 1c/contract fee = `net_ceil`):** 5-10c +0.050,
+  10-20c **+0.125**, 20-35c **+0.222**, 35-50c +0.292, 50-65c +0.324 — then flips hard negative
+  ≥65c (selling underpriced favorites = adverse selection). Robust core = **selling yes priced
+  ~5-35c** (moderate overpriced longshots), +5..+22c/contract.
+- **Passed every stress test:** survives worst-case per-contract fee; spread over 70-100 distinct
+  markets per band (not a whale); **split-half OOS +0.187 / +0.185** (near-identical — the
+  opposite of the FLB mirage); and **survives OFF sports** (non-sports 10-35c maker-sell still
+  +0.14..+0.18 net_ceil, though thinner n).
+- **What dies:** 0-3c penny longshots (net_ceil −0.005 — the 1c fee eats them; they dominate
+  volume so the raw ALL net_ceil is −0.006, misleading); selling favorites ≥65c; maker-BUY.
+
+**The ONE untested assumption = FILL REALISM.** The backtest assumes we're the maker on every
+realized trade; live we rest ONE ask with queue competition and only capture a subset of fills
+(possibly an adverse subset). Everything else checks out. Next step to validate: a PAPER
+maker-sell book (rest asks on 5-35c contracts, hold to settlement) forward-tested against this
+backtest's prediction — reuses the existing paper infra + strategy seam. If paper fills capture
+even a fraction of +0.15c/contract, that's the first real path to the $100/mo goal.
+
 ## Methodology lessons (don't repeat)
 - Use REAL identifiers (Kalshi ticker strike), never title-parsed numbers — false pairs fake
   divergence.
