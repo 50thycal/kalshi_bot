@@ -52,6 +52,7 @@ ALLOWED_SCRIPTS = (
     "kalshi_crypto_probe",
     "kalshi_arb",
     "kalshi_flb",
+    "kalshi_mm",
     "xvenue_game",
     "weather_digest",
     "weather_validation",
