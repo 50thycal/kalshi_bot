@@ -41,11 +41,12 @@ def maker_fee(p: float) -> float:
 
 
 def fetch_trades(ticker: str, cap: int) -> list[dict]:
-    """Trade tape for a market (paginated), newest first, capped."""
+    """Trade tape for a market (paginated), newest first, capped. Kalshi's endpoint is the
+    top-level /markets/trades with ticker as a QUERY param (not /markets/{ticker}/trades)."""
     out: list[dict] = []
     cursor = ""
     for _ in range(cap // 1000 + 2):
-        page = xl._get(f"{KALSHI}/markets/{ticker}/trades?limit=1000&cursor={cursor}")
+        page = xl._get(f"{KALSHI}/markets/trades?ticker={ticker}&limit=1000&cursor={cursor}")
         trs = (page or {}).get("trades") or []
         out.extend(trs)
         cursor = (page or {}).get("cursor") or ""
@@ -104,13 +105,17 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.probe:
-        for m in settled[:3]:
-            trs = fetch_trades(m["ticker"], 5)
-            print(f"{m['ticker']} result={m['result']} vol={m['vol']:.0f}: {len(trs)} trades")
-            if trs:
-                print(f"  KEYS: {sorted(trs[0].keys())}")
-                for t in trs[:3]:
+        for m in settled[:4]:
+            tk = m["ticker"]
+            a = (xl._get(f"{KALSHI}/markets/trades?ticker={tk}&limit=5") or {}).get("trades") or []
+            b = (xl._get(f"{KALSHI}/markets/{tk}/trades?limit=5") or {}).get("trades") or []
+            print(f"{tk} result={m['result']} vol={m['vol']:.0f}: "
+                  f"/markets/trades?ticker={len(a)}  /markets/{{tk}}/trades={len(b)}")
+            if a:
+                print(f"  KEYS: {sorted(a[0].keys())}")
+                for t in a[:3]:
                     print(f"    {t}")
+                break
         return 0
 
     step = max(1, len(settled) // args.sample)
