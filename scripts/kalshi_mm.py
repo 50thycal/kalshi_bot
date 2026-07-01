@@ -136,7 +136,7 @@ def main(argv: list[str] | None = None) -> int:
         for t in trs:
             p = trade_yes_price(t)
             side = (t.get("taker_side") or "").lower()
-            cnt = xl._num(t.get("count")) or 1.0
+            cnt = xl._num(t.get("count_fp")) or 1.0
             if p is None or not (0 < p < 1) or side not in ("yes", "no"):
                 continue
             if side == "yes":                 # maker SOLD yes at p (short yes)
