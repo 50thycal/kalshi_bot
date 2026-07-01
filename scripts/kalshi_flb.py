@@ -184,6 +184,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--per-series", type=int, default=120, help="settled markets per series")
     ap.add_argument("--max-pages", type=int, default=25, help="event pages for series discovery")
     ap.add_argument("--no-sports", action="store_true", help="drop Sports category")
+    ap.add_argument("--focus-horizon", type=int, default=120, help="horizon for the focus deep-dive")
+    ap.add_argument("--focus-band", default="65,80", help="fav price band to interrogate (lo,hi)")
     ap.add_argument("--status", default="settled", help="market status filter")
     ap.add_argument("--probe", action="store_true", help="dump raw fields of a few markets")
     args = ap.parse_args(argv)
@@ -286,6 +288,52 @@ def main(argv: list[str] | None = None) -> int:
         if heavy:
             print(f"    heavy-fav(>=80c) n={len(heavy)} pnl/trade={sum(heavy) / len(heavy):+.3f} "
                   f"total={sum(heavy):+.2f}")
+        print()
+
+    # ---- FOCUS: interrogate the one horizon-robust pocket (fav 65-80c) ----
+    fh = args.focus_horizon
+    frows = rows_by_h.get(fh) or next((r for r in rows_by_h.values() if r), [])
+    flo, fhi = (int(x) for x in args.focus_band.split(","))
+    if frows:
+        print(f"  ===================== FOCUS @ T-{fh}min: is fav {flo}-{fhi}c a REAL pocket? "
+              f"=====================")
+        # fine 5c sub-bands across the favorite side (monotone? or one lucky bin?)
+        print("  fav P&L in 5c sub-bands (favpx = the >=50c side; net fee):")
+        print(f"    {'sub':>8} {'n':>5} {'win%':>6} {'gap_pp':>7} {'pnl/trade':>10}")
+        for lo in range(50, 100, 5):
+            hi = lo + 5
+            v = [(p, mc, yes) for mc, p, yes, _c in frows
+                 if lo <= (mc if mc >= 50 else 100 - mc) < hi]
+            if not v:
+                continue
+            pnls = [x[0] for x in v]
+            # calibration gap on the FAVORITE side: fav-win-rate - avg fav price
+            favwin = 100.0 * sum(1 for p, mc, yes in v
+                                 if (yes if mc >= 50 else not yes)) / len(v)
+            favpx = sum((mc if mc >= 50 else 100 - mc) for _p, mc, _y in v) / len(v)
+            win = 100.0 * sum(1 for p in pnls if p > 0) / len(pnls)
+            print(f"    {lo:2d}-{hi:<3d}  {len(pnls):5d} {win:5.1f}% {favwin - favpx:+6.1f} "
+                  f"{sum(pnls) / len(pnls):+9.3f}")
+        # the focus band: by category (sports-only or broad?) + split-half OOS
+        band = [(mc, p, yes, c) for mc, p, yes, c in frows
+                if flo <= (mc if mc >= 50 else 100 - mc) < fhi]
+        print(f"\n  fav {flo}-{fhi}c by CATEGORY (is the pocket sports-only?):")
+        print(f"    {'category':>14} {'n':>5} {'win%':>6} {'pnl/trade':>10} {'total$':>8}")
+        bc = defaultdict(list)
+        for _mc, p, _y, c in band:
+            bc[c].append(p)
+        for c in sorted(bc, key=lambda c: -sum(bc[c]) / len(bc[c])):
+            v = bc[c]
+            win = 100.0 * sum(1 for p in v if p > 0) / len(v)
+            print(f"    {c:>14} {len(v):5d} {win:5.1f}% {sum(v) / len(v):+9.3f} {sum(v):+8.2f}")
+        # split-half out-of-sample (guard vs small-n mirage — we've been fooled before)
+        halfp = [p for _mc, p, _y, _c in band]
+        h1, h2 = halfp[::2], halfp[1::2]
+        print("\n  SPLIT-HALF OOS (both halves must be +EV for a believable edge):")
+        for name, hh in (("half-A", h1), ("half-B", h2)):
+            if hh:
+                print(f"    {name}: n={len(hh)} pnl/trade={sum(hh) / len(hh):+.3f} "
+                      f"total={sum(hh):+.2f}")
         print()
 
     print("  pnl = payoff(0/1) - entry_ask - ceil(7p(1-p))c fee; settlement has no fee.")
