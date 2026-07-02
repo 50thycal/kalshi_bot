@@ -44,13 +44,19 @@ def taker_fee_c(p_c: float) -> float:
 
 
 def replay_short(entry_c: float, path: list[tuple], settle_c: float,
-                 tp: float | None, sl: float | None) -> tuple[float, str, int]:
+                 tp: float | None, sl: float | None,
+                 abs_stop: float | None = None) -> tuple[float, str, int]:
     """(net_pnl_cents, exit_kind, hold_minutes) for a short-yes sold at entry_c.
-    path = [(minute, yes_bid_c, yes_ask_c), ...] strictly AFTER entry, time-ordered."""
+    path = [(minute, yes_bid_c, yes_ask_c), ...] strictly AFTER entry, time-ordered.
+    tp/sl trigger on RELATIVE move of the mid; abs_stop triggers when the yes ASK rises to an
+    ABSOLUTE level (the sold longshot became genuinely likely) -> caps the tail without
+    whipsawing on small noise."""
     ent_fee = maker_fee_c(entry_c)
     for i, (_mn, yb, ya) in enumerate(path):
         mid = (yb + ya) / 2.0
         gain = entry_c - mid                       # short profits as yes falls
+        if abs_stop is not None and ya >= abs_stop:
+            return (entry_c - ya - ent_fee - taker_fee_c(ya), "abs", i)
         if tp is not None and gain >= tp:
             return (entry_c - ya - ent_fee - taker_fee_c(ya), "tp", i)
         if sl is not None and gain <= -sl:
@@ -135,20 +141,23 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     print(f"  {len(fills)} maker-sell fills across {used_mkts} markets\n")
 
-    # rule grid: (tp, sl); None = disabled. include hold-to-settlement.
-    tps = [None, 5, 8, 12, 20]
-    sls = [None, 8, 12, 20, 30]
-    grid = [(tp, sl) for tp in tps for sl in sls]
+    # rule grid: (tp, sl, abs_stop); None = disabled. include hold-to-settlement.
+    rules = [(None, None, None)]                                  # hold
+    rules += [(tp, None, None) for tp in (5, 8, 12, 20)]          # TP only
+    rules += [(None, sl, None) for sl in (8, 12, 20, 30)]         # relative SL only
+    rules += [(None, None, a) for a in (50, 60, 70, 80)]          # ABSOLUTE stop only
+    rules += [(12, None, a) for a in (50, 60)]                    # TP + abs stop (best of both?)
 
-    print("  rule = TP/SL in cents of yes-price move on the SHORT (TP=yes fell, SL=yes rose).")
-    print("  pnl in cents/contract, vol-weighted; p5 = 5th-pctile (the tail you want to cut).\n")
-    print(f"  {'TP':>4} {'SL':>4} {'mean':>7} {'std':>6} {'p5':>7} {'win%':>6} "
-          f"{'%tp':>5} {'%sl':>5} {'%hold':>6} {'sharpe':>7}")
+    print("  rule cols: TP/SL = RELATIVE cents of mid move; ABS = absolute yes-ask level that")
+    print("  abandons a sold longshot gone likely. pnl cents/contract vol-weighted;")
+    print("  p5 = 5th-pctile tail (what you want to cut).\n")
+    print(f"  {'TP':>4} {'SL':>4} {'ABS':>4} {'mean':>7} {'std':>6} {'p5':>7} {'win%':>6} "
+          f"{'%exit':>6} {'%hold':>6} {'sharpe':>7}")
     best = None
-    for tp, sl in grid:
+    for tp, sl, ab in rules:
         pnls, wts, kinds = [], [], []
         for entry_c, settle_c, cnt, path in fills:
-            pnl, kind, _h = replay_short(entry_c, path, settle_c, tp, sl)
+            pnl, kind, _h = replay_short(entry_c, path, settle_c, tp, sl, ab)
             pnls.append(pnl)
             wts.append(cnt)
             kinds.append(kind)
@@ -157,19 +166,21 @@ def main(argv: list[str] | None = None) -> int:
         std = statistics.pstdev(pnls) if len(pnls) > 1 else 0.0
         p5 = _pctile(pnls, 0.05)
         win = 100.0 * sum(1 for p in pnls if p > 0) / len(pnls)
-        ntp = 100.0 * sum(1 for k in kinds if k == "tp") / len(kinds)
-        nsl = 100.0 * sum(1 for k in kinds if k == "sl") / len(kinds)
         nhold = 100.0 * sum(1 for k in kinds if k == "settle") / len(kinds)
+        nexit = 100.0 - nhold
         sharpe = mean / std if std else 0.0
-        tag = f"{tp if tp else '-':>4} {sl if sl else '-':>4}"
+        tag = f"{tp if tp else '-':>4} {sl if sl else '-':>4} {ab if ab else '-':>4}"
         print(f"  {tag} {mean:+7.2f} {std:6.1f} {p5:+7.1f} {win:5.1f}% "
-              f"{ntp:4.0f}% {nsl:4.0f}% {nhold:5.0f}% {sharpe:+7.3f}")
-        if best is None or mean > best[1]:
-            best = ((tp, sl), mean, p5, sharpe)
-    print(f"\n  best mean: TP={best[0][0]} SL={best[0][1]} -> {best[1]:+.2f}c/contract "
-          f"(p5={best[2]:+.1f}, sharpe={best[3]:+.3f})")
-    print("  Compare the hold row (TP=- SL=-): higher mean but worse p5/std = the all-or-nothing")
-    print("  tail. A TP/SL row with similar mean + far better p5 is the risk-adjusted winner.")
+              f"{nexit:5.0f}% {nhold:5.0f}% {sharpe:+7.3f}")
+        # rank by Sharpe (risk-adjusted), which is what the user cares about
+        if best is None or sharpe > best[1]:
+            best = ((tp, sl, ab), sharpe, mean, p5)
+    b = best[0]
+    print(f"\n  best risk-adjusted (Sharpe): TP={b[0]} SL={b[1]} ABS={b[2]} -> "
+          f"sharpe={best[1]:+.3f} mean={best[2]:+.2f}c p5={best[3]:+.1f}")
+    print("  Read: relative SL whipsaws (kills mean+tail); an ABS stop can cap the tail if it")
+    print("  beats hold on p5 WITHOUT gutting the mean. If hold still wins Sharpe, the real risk")
+    print("  control is small size + diversification, not exits.")
     return 0
 
 
