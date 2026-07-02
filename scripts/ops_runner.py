@@ -53,6 +53,7 @@ ALLOWED_SCRIPTS = (
     "kalshi_arb",
     "kalshi_flb",
     "kalshi_mm",
+    "kalshi_mm_exits",
     "xvenue_game",
     "weather_digest",
     "weather_validation",
