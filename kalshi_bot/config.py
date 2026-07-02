@@ -125,7 +125,10 @@ class Settings(BaseSettings):
     # --- Weather mode (BOT_MODE=weather) ---
     weather_top_n: int = 10
     weather_entry_hours: str = "20,14,8"
-    weather_strategies: str = "favorite,nws,cal"
+    # Base books to run. `favorite` and `nws` were pruned after paper P&L confirmed both bleed
+    # the cost floor (weather_fav ~-$39, weather_nws ~-$34); `cal` stays, and the con/dist/
+    # favband/cwin books run via their own flags (con is the one book showing +EV).
+    weather_strategies: str = "cal"
     weather_forecast_enabled: bool = True
     nws_user_agent: str = "kalshi-bot (set NWS_USER_AGENT to your app + contact email)"
     # HRRR (NOAA's hourly, high-res, <=48h CONUS model) point forecast via Open-Meteo
@@ -143,7 +146,9 @@ class Settings(BaseSettings):
     weather_bias_min_events: int = 1
     # Daily LOW temperature markets (KXLOWT*): track + trade the same books in parallel.
     # WEATHER_LOW_SERIES overrides per-city series tickers, e.g. "AUS=KXLOWTAUSTIN".
-    weather_track_lows: bool = True
+    # Pruned: the entire low-temperature program bled ~-$88 in paper with no +EV sub-book
+    # (low_con was 11 trades / -$0.99), so lows are off by default. Set true to resume.
+    weather_track_lows: bool = False
     weather_low_series: str = ""
     # Intraday station observations (running max/min so far today at the settlement
     # station) — stored in weather_observations, refreshed at most every N minutes.

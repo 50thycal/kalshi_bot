@@ -272,6 +272,7 @@ class LowForecast:
 def test_low_book_buys_low_forecast_bucket(settings):
     settings.bot_mode = "weather"
     settings.weather_strategies = "favorite,nws"
+    settings.weather_track_lows = True
     settings.weather_entry_hours = "12,8,4"
     db.init_engine(settings.database_url)
     db.create_all()
@@ -313,6 +314,7 @@ class LowNoForecast:
 def test_low_nws_falls_back_to_running_min(settings):
     settings.bot_mode = "weather"
     settings.weather_strategies = "favorite,nws"
+    settings.weather_track_lows = True
     settings.weather_entry_hours = "12,8,4"
     settings.weather_obs_enabled = True
     settings.weather_obs_entry_enabled = False  # isolate the nws fallback from the obs book
@@ -342,6 +344,7 @@ def test_low_nws_no_trade_without_forecast_or_obs(settings):
     """With no forecast and no observations, the nws low book stays silent (fail-closed)."""
     settings.bot_mode = "weather"
     settings.weather_strategies = "favorite,nws"
+    settings.weather_track_lows = True
     settings.weather_entry_hours = "12,8,4"
     settings.weather_obs_enabled = False  # no observation fallback available
     db.init_engine(settings.database_url)
@@ -405,6 +408,7 @@ def test_bucket_ladder_snapshot_and_throttle(settings):
 
 def test_low_settlement_captured_with_kind(settings):
     settings.bot_mode = "weather"
+    settings.weather_track_lows = True
     db.init_engine(settings.database_url)
     db.create_all()
 
