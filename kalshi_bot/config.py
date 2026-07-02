@@ -18,7 +18,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 BotMode = Literal["scanner", "paper", "approval", "live", "weather"]
 KalshiEnv = Literal["demo", "production"]
 
-VALID_MODES = ("scanner", "paper", "approval", "live", "weather")
+VALID_MODES = ("scanner", "paper", "approval", "live", "weather", "mmsell")
 VALID_ENVS = ("demo", "production")
 
 DEMO_BASE_URL = "https://demo-api.kalshi.co/trade-api/v2"
@@ -103,6 +103,20 @@ class Settings(BaseSettings):
     paper_take_profit_cents: int | None = None
     paper_stop_loss_cents: int | None = None
     paper_fees_enabled: bool = True
+
+    # --- Market-making SELL book (BOT_MODE=mmsell) ---
+    # Forward-tests the backtested maker edge: rest an ASK to sell yes on overpriced cheap/
+    # underdog contracts (= buy NO at the no-bid, the maker price) and HOLD to settlement.
+    # Entry band is on the yes midpoint; the backtest edge lives ~5-40c (0-3c pennies die to
+    # fees). Hold-to-settlement is optimal (exit sweep: TP/SL only hurt) so tp/sl default off.
+    mmsell_entry_lo_cents: int = 5
+    mmsell_entry_hi_cents: int = 40
+    mmsell_min_volume: float = 100.0
+    mmsell_min_hours_to_close: float = 1.0
+    mmsell_max_hours_to_close: float = 336.0     # 14 days — bound how long capital is tied up
+    mmsell_top_events: int = 150                 # scan cap per cycle (liquid events, by volume)
+    mmsell_max_open_positions: int = 500         # diversification is the real risk control
+    mmsell_skip_series: str = "KXMVE,KXHIGH,KXLOW"  # skip parlays + weather (its own book)
 
     # --- Weather mode (BOT_MODE=weather) ---
     weather_top_n: int = 10
@@ -494,6 +508,10 @@ class Settings(BaseSettings):
         out = [s.strip().lower() for s in self.paper_strategies.split(",") if s.strip()]
         return [s for s in out if s in valid] or ["buy_favorite"]
 
+    @property
+    def mmsell_skip_series_list(self) -> list[str]:
+        return [s.strip().upper() for s in self.mmsell_skip_series.split(",") if s.strip()]
+
     def redacted_summary(self) -> dict:
         """Config summary safe to log (never includes the private key)."""
         return {
@@ -515,6 +533,11 @@ class Settings(BaseSettings):
             "max_markets_per_scan": self.max_markets_per_scan,
             "max_markets_per_category": self.max_markets_per_category,
             "paper_strategies": self.paper_strategy_list,
+            "mmsell_band_cents": [self.mmsell_entry_lo_cents, self.mmsell_entry_hi_cents],
+            "mmsell_min_volume": self.mmsell_min_volume,
+            "mmsell_htc_hours": [self.mmsell_min_hours_to_close, self.mmsell_max_hours_to_close],
+            "mmsell_top_events": self.mmsell_top_events,
+            "mmsell_max_open_positions": self.mmsell_max_open_positions,
             "paper_min_edge_cents": self.paper_min_edge_cents,
             "paper_momentum_project_hours": self.paper_momentum_project_hours,
             "paper_momentum_direction": self.paper_momentum_direction,

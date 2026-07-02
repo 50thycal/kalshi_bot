@@ -159,6 +159,26 @@ unrealized, fillability, and P&L by category):
 DATABASE_URL=postgresql://... python scripts/paper_stats.py
 ```
 
+## Market-making SELL book (`BOT_MODE=mmsell`)
+
+Forward-tests the one edge that survived the whole research program: the **maker** side.
+Takers on Kalshi lose the spread+fee, so the resting (maker) side collects it — and a
+trade-tape backtest (`scripts/kalshi_mm.py`) confirmed that **selling yes on overpriced
+cheap/underdog contracts (~5–40¢) and holding to settlement is net +EV**, robust to worst-case
+fees, split-half OOS, and off-sports. Selling yes == buying **NO at the no-bid** (the maker
+price), so this book reuses the paper engine's buy/settle machinery: each cycle it scans the
+most-liquid open markets and opens a paper buy-NO position on every market whose yes midpoint
+sits in the entry band, held to settlement (`mmsell_*` config; `strategy="mmsell"`).
+
+An exit-rule backtest (`scripts/kalshi_mm_exits.py`) showed **hold-to-settlement is optimal** —
+TP/SL only hurt (relative stops whipsaw on the noisy mean-reverting path; the real tail events
+are gaps a stop can't catch). The right risk control is **small size + diversification** (hence
+the high `MMSELL_MAX_OPEN_POSITIONS`), not exits — so TP/SL default off (but honored if set).
+
+Honest limitation: paper **assumes the resting ask fills** (enters at the maker no-bid price),
+so it validates whether the +EV persists out-of-sample on new markets — **not** queue/fill
+realism, which only a small live test (a one-book `LIVE_STRATEGIES=mmsell` allowlist) can prove.
+
 ## Weather mode (Phase 4)
 
 `BOT_MODE=weather` runs a focused pipeline on Kalshi's **daily temperature** markets instead

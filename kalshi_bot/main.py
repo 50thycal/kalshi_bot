@@ -26,6 +26,7 @@ from .kalshi.client import KalshiClient
 from .kalshi.errors import AuthError
 from .live.executor import LiveExecutor
 from .logging_config import configure_logging, log_event
+from .mmsell.tracker import MmSellTracker
 from .paper.engine import PaperCycleSummary, PaperTradingEngine
 from .risk.manager import RiskManager
 from .scanner.scanner import MarketScanner, ScanSummary
@@ -97,7 +98,10 @@ def run() -> int:
     # executor that mirrors allowlisted paper entries into orders (inert until configured).
     live = settings.bot_mode == "live"
     weather = settings.bot_mode == "weather"
+    mmsell = settings.bot_mode == "mmsell"
     weather_like = weather or live
+    mmsell_engine = PaperTradingEngine(client, settings, scanner.risk) if mmsell else None
+    mmsell_tracker = MmSellTracker(client, settings) if mmsell else None
     forecast_client = NwsForecastClient(settings.nws_user_agent) if weather_like else None
     ensemble_client = (
         OpenMeteoEnsembleClient() if weather_like and settings.weather_ensemble_enabled else None
@@ -150,6 +154,14 @@ def run() -> int:
         except Exception:  # noqa: BLE001
             logger.exception("failed to abandon foreign paper positions")
 
+    if mmsell and settings.paper_abandon_foreign_on_start:
+        try:
+            with session_scope() as session:
+                n = repo.abandon_open_paper_trades(session, keep_prefixes=("mmsell",))
+            log_event(logger, logging.INFO, "abandoned non-mmsell paper positions", count=n)
+        except Exception:  # noqa: BLE001
+            logger.exception("failed to abandon foreign paper positions")
+
     signal_module.signal(signal_module.SIGTERM, _handle_signal)
     signal_module.signal(signal_module.SIGINT, _handle_signal)
 
@@ -167,6 +179,8 @@ def run() -> int:
                         settings, client, weather_engine, weather_tracker, weather_backfill,
                         validation_backfill,
                     )
+                elif mmsell:
+                    _run_mmsell_cycle(settings, client, mmsell_engine, mmsell_tracker)
                 else:
                     _run_cycle(settings, client, scanner)
             except AuthError:
@@ -387,6 +401,41 @@ def _run_weather_cycle(
         except Exception:  # noqa: BLE001 — history backfill must never stop the books
             logger.exception("weather backfill cycle failed")
     _run_validation_backfill(validation_backfill)
+
+
+def _run_mmsell_cycle(settings, client, engine, tracker) -> None:
+    """Market-making SELL book: settle/mark open positions, then scan for new maker-sell
+    entries (buy NO at the no-bid on overpriced cheap contracts), held to settlement."""
+    status = client.get_exchange_status()  # AuthError propagates -> hard fail
+    log_event(
+        logger, logging.INFO, "exchange status",
+        **{k: status.get(k) for k in ("exchange_active", "trading_active") if k in status},
+    )
+    with session_scope() as session:
+        run_row = repo.start_bot_run(session, settings.bot_mode)
+        try:
+            engine.manage_open_positions(session)   # settle/mark (mmsell holds to settlement)
+            summary = tracker.run_once(session)
+            repo.finish_bot_run(
+                session, run_row, status="completed",
+                markets_scanned=summary.markets_considered, candidates_found=summary.opened,
+            )
+            log_event(
+                logger, logging.INFO, "mmsell cycle",
+                events=summary.events_seen, considered=summary.markets_considered,
+                in_band=summary.in_band, opened=summary.opened,
+                already_open=summary.already_open, capped=summary.capped,
+                illiquid=summary.skipped_illiquid, out_of_window=summary.skipped_htc,
+                top_series=dict(sorted(summary.per_series.items(),
+                                       key=lambda kv: -kv[1])[:8]),
+            )
+            log_event(logger, logging.INFO, "paper portfolio", **repo.paper_cycle_stats(session))
+        except Exception as exc:
+            repo.finish_bot_run(
+                session, run_row, status="error", markets_scanned=0, candidates_found=0,
+                error_message=str(exc)[:500],
+            )
+            raise
 
 
 def _api_shape(obj, depth: int = 0):

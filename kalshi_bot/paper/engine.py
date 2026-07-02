@@ -302,17 +302,22 @@ class PaperTradingEngine:
             datetime.now(timezone.utc) - _aware(trade.created_at)
         ).total_seconds() / 3600.0
 
-        # Weather books are daily bets — hold to settlement (no timeout / TP / SL).
-        hold_to_settlement = (trade.strategy or "").startswith("weather")
+        # Weather books hold to settlement (no timeout / TP / SL). The mmsell maker book also
+        # holds to settlement by default (its exit sweep showed TP/SL only hurt) — but keeps
+        # TP/SL OPTIONAL so they can be forward-tested; either way it skips the max-hold TIMEOUT
+        # (positions settle on their own schedule, days out — a 2h timeout would force-close).
+        strat = trade.strategy or ""
+        weather_hold = strat.startswith("weather")
+        no_timeout = weather_hold or strat.startswith("mmsell")
 
         exit_status: str | None = None
-        if hold_to_settlement:
+        if weather_hold:
             exit_status = None
         elif s.paper_take_profit_cents is not None and gain_cents >= s.paper_take_profit_cents:
             exit_status, counter = "closed_tp", "closed_tp"
         elif s.paper_stop_loss_cents is not None and gain_cents <= -s.paper_stop_loss_cents:
             exit_status, counter = "closed_sl", "closed_sl"
-        elif held_hours >= s.paper_max_hold_hours:
+        elif not no_timeout and held_hours >= s.paper_max_hold_hours:
             exit_status, counter = "closed_timeout", "closed_timeout"
 
         if exit_status is None:
