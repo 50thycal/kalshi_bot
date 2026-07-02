@@ -135,6 +135,26 @@ maker-sell book (rest asks on 5-35c contracts, hold to settlement) forward-teste
 backtest's prediction — reuses the existing paper infra + strategy seam. If paper fills capture
 even a fraction of +0.15c/contract, that's the first real path to the $100/mo goal.
 
+## Maker-SELL exit study (`scripts/kalshi_mm_exits.py`) — HOLD-TO-SETTLEMENT WINS
+
+Replayed each maker-sell fill's real post-entry yes-price path (candles) through a TP / relative-SL
+/ absolute-stop grid, over a 21-day window (unbiased: entries span the uncertain regime), 3230
+fills / 63 markets, entries yes 5-45c. Metric = cents/contract net of worst-case fees, with std
++ 5th-pctile tail + Sharpe.
+- **Hold-to-settlement is best on BOTH mean (+8.96c) and Sharpe (+0.359).** The tail is real
+  (p5 = -65c, ~8% of sold longshots hit) — the user's all-or-nothing worry is valid at the
+  single-trade level.
+- **But NO exit rule improves it — all make it worse:** relative SL is catastrophic (-45..-52c,
+  whipsawed out by mean-reverting noise then it settles NO anyway; p5 -96 = WORSE tail);
+  absolute stops (abandon at yes-ask 50-80c) equally bad (-46..-53c) — tight levels whipsaw,
+  and the true tail events are GAPS with no intermediate fill a stop could catch; take-profit
+  just costs mean ~1:1 (TP20 ties hold on Sharpe but lower mean).
+- **Conclusion:** the edge is a carry/mean-reversion play that only pays if held through the
+  noise to settlement. Exit rules can't cut the inherent tail. **Correct risk control = small
+  per-position size + diversification across uncorrelated markets** (so the ~8% hits are
+  swamped by the 92% wins), NOT stops. Build the paper book hold-to-settlement; keep TP/SL/abs
+  as config, default OFF.
+
 ## Methodology lessons (don't repeat)
 - Use REAL identifiers (Kalshi ticker strike), never title-parsed numbers — false pairs fake
   divergence.
