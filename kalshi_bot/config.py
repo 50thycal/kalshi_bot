@@ -115,8 +115,12 @@ class Settings(BaseSettings):
     mmsell_min_hours_to_close: float = 1.0
     mmsell_max_hours_to_close: float = 336.0     # 14 days — bound how long capital is tied up
     mmsell_top_events: int = 150                 # scan cap per cycle (liquid events, by volume)
-    mmsell_max_open_positions: int = 500         # diversification is the real risk control
+    mmsell_max_open_positions: int = 200         # diversification is the real risk control
     mmsell_skip_series: str = "KXMVE,KXHIGH,KXLOW"  # skip parlays + weather (its own book)
+    # Ride-along: run the mmsell PAPER book inside the weather/live cycle (throttled), so it
+    # collects alongside the weather books without a disruptive mode switch or any real money.
+    mmsell_paper_enabled: bool = False
+    mmsell_interval_minutes: float = 30.0        # how often the ride-along entry scan runs
 
     # --- Weather mode (BOT_MODE=weather) ---
     weather_top_n: int = 10
@@ -538,6 +542,8 @@ class Settings(BaseSettings):
             "mmsell_htc_hours": [self.mmsell_min_hours_to_close, self.mmsell_max_hours_to_close],
             "mmsell_top_events": self.mmsell_top_events,
             "mmsell_max_open_positions": self.mmsell_max_open_positions,
+            "mmsell_paper_enabled": self.mmsell_paper_enabled,
+            "mmsell_interval_minutes": self.mmsell_interval_minutes,
             "paper_min_edge_cents": self.paper_min_edge_cents,
             "paper_momentum_project_hours": self.paper_momentum_project_hours,
             "paper_momentum_direction": self.paper_momentum_direction,

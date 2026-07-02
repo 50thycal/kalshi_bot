@@ -151,3 +151,28 @@ def test_skips_configured_series(settings):
     with db.session_scope() as session:
         summ = MmSellTracker(client, settings).run_once(session)
     assert summ.opened == 0 and summ.events_seen == 0
+
+
+def test_abandon_foreign_keeps_mmsell_and_weather(settings):
+    """The ride-along startup abandon must keep BOTH weather and mmsell paper positions."""
+    from kalshi_bot import repository as repo
+    _setup(settings)
+    with db.session_scope() as session:
+        for strat in ("weather_fav_h8", "mmsell", "momentum", "buy_favorite"):
+            repo.create_paper_trade(
+                session, signal_id=None, ticker=f"T-{strat}", strategy=strat, side="no",
+                action="buy", assumed_price=80, quantity=1,
+                fill_assumption="x", entry_fee=0.0,
+            )
+            repo.open_paper_position_for_trade(
+                session, ticker=f"T-{strat}", strategy=strat, side="no", quantity=1, avg_price=80,
+            )
+        n = repo.abandon_open_paper_trades(session, keep_prefixes=("weather", "mmsell"))
+    assert n == 2                                  # momentum + buy_favorite abandoned
+    with db.session_scope() as session:
+        kept = sorted(
+            t.strategy for t in session.scalars(
+                select(m.PaperTrade).where(m.PaperTrade.status == "open")
+            ).all()
+        )
+    assert kept == ["mmsell", "weather_fav_h8"]

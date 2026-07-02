@@ -102,6 +102,10 @@ def run() -> int:
     weather_like = weather or live
     mmsell_engine = PaperTradingEngine(client, settings, scanner.risk) if mmsell else None
     mmsell_tracker = MmSellTracker(client, settings) if mmsell else None
+    # mmsell can ALSO ride along as a paper book inside the weather/live cycle (its positions
+    # are settled/marked by the shared weather_engine, which manages ALL open paper trades).
+    mmsell_paper = weather_like and settings.mmsell_paper_enabled
+    mmsell_paper_tracker = MmSellTracker(client, settings) if mmsell_paper else None
     forecast_client = NwsForecastClient(settings.nws_user_agent) if weather_like else None
     ensemble_client = (
         OpenMeteoEnsembleClient() if weather_like and settings.weather_ensemble_enabled else None
@@ -148,9 +152,11 @@ def run() -> int:
 
     if weather_like and settings.paper_abandon_foreign_on_start:
         try:
+            keep = ("weather", "mmsell") if mmsell_paper else ("weather",)
             with session_scope() as session:
-                n = repo.abandon_open_paper_trades(session, keep_prefixes=("weather",))
-            log_event(logger, logging.INFO, "abandoned non-weather paper positions", count=n)
+                n = repo.abandon_open_paper_trades(session, keep_prefixes=keep)
+            log_event(logger, logging.INFO, "abandoned foreign paper positions",
+                      count=n, kept=keep)
         except Exception:  # noqa: BLE001
             logger.exception("failed to abandon foreign paper positions")
 
@@ -172,12 +178,12 @@ def run() -> int:
                 if live:
                     _run_live_cycle(
                         settings, client, weather_engine, weather_tracker, live_executor,
-                        weather_backfill, validation_backfill,
+                        weather_backfill, validation_backfill, mmsell_paper_tracker,
                     )
                 elif weather:
                     _run_weather_cycle(
                         settings, client, weather_engine, weather_tracker, weather_backfill,
-                        validation_backfill,
+                        validation_backfill, mmsell_paper_tracker,
                     )
                 elif mmsell:
                     _run_mmsell_cycle(settings, client, mmsell_engine, mmsell_tracker)
@@ -355,7 +361,8 @@ def _run_validation_backfill(validation_backfill) -> None:
 
 
 def _run_weather_cycle(
-    settings, client, engine, tracker, backfill=None, validation_backfill=None
+    settings, client, engine, tracker, backfill=None, validation_backfill=None,
+    mmsell_tracker=None,
 ) -> None:
     status = client.get_exchange_status()  # AuthError propagates -> hard fail
     log_event(
@@ -401,6 +408,34 @@ def _run_weather_cycle(
         except Exception:  # noqa: BLE001 — history backfill must never stop the books
             logger.exception("weather backfill cycle failed")
     _run_validation_backfill(validation_backfill)
+    _run_mmsell_book(settings, mmsell_tracker)
+
+
+_mmsell_last_run = {"ts": 0.0}
+
+
+def _run_mmsell_book(settings, tracker) -> None:
+    """Ride-along mmsell paper book inside the weather/live cycle: throttled entry scan only
+    (the shared weather_engine already settles/marks mmsell positions). Never raises into the
+    cycle — its failures must not disturb the weather books or the live executor."""
+    if tracker is None:
+        return
+    now = time.monotonic()
+    if now - _mmsell_last_run["ts"] < settings.mmsell_interval_minutes * 60.0:
+        return
+    _mmsell_last_run["ts"] = now
+    try:
+        with session_scope() as session:
+            summ = tracker.run_once(session)
+        log_event(
+            logger, logging.INFO, "mmsell book",
+            events=summ.events_seen, considered=summ.markets_considered, in_band=summ.in_band,
+            opened=summ.opened, already_open=summ.already_open, capped=summ.capped,
+        )
+    except AuthError:
+        raise
+    except Exception:  # noqa: BLE001 — ride-along book must never stop the cycle
+        logger.exception("mmsell ride-along book failed (weather/live unaffected)")
 
 
 def _run_mmsell_cycle(settings, client, engine, tracker) -> None:
@@ -482,7 +517,8 @@ def _fetch_account_state(client) -> dict:
 
 
 def _run_live_cycle(
-    settings, client, engine, tracker, executor, backfill=None, validation_backfill=None
+    settings, client, engine, tracker, executor, backfill=None, validation_backfill=None,
+    mmsell_tracker=None,
 ) -> None:
     """Live cycle: reconcile Kalshi truth, manage exits, settle/mark paper, then run the
     tracker (which mirrors allowlisted entries into real orders)."""
@@ -524,6 +560,7 @@ def _run_live_cycle(
         except Exception:  # noqa: BLE001
             logger.exception("weather backfill cycle failed")
     _run_validation_backfill(validation_backfill)
+    _run_mmsell_book(settings, mmsell_tracker)
 
 
 def _log_weather(summary: WeatherCycleSummary) -> None:
