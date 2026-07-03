@@ -135,9 +135,12 @@ class MmSellTracker:
                     action="buy",
                     assumed_price=price,
                     quantity=qty,
+                    # Prices first, subtitle last: the repo clamps to 64 chars, so a long
+                    # subtitle loses its tail instead of the prices (or the whole entry —
+                    # the unclamped 82-char version aborted the first ride-along cycles).
                     fill_assumption=(
-                        f"[mmsell] sell yes '{sub[:32]}' @ {100 - price}c "
-                        f"(buy no @ {price}c, mid {metrics.midpoint:.0f}c)"
+                        f"[mmsell] sell yes @ {100 - price}c (no {price}c, "
+                        f"mid {metrics.midpoint:.0f}c) '{sub}'"
                     ),
                     entry_fee=fee,
                     model_probability=None,

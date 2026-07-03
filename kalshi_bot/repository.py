@@ -216,7 +216,10 @@ def create_paper_trade(
         quantity=quantity,
         model_probability=model_probability,
         edge=edge,
-        fill_assumption=fill_assumption,
+        # Clamp to the column width (String(64)): a long market subtitle in a book's
+        # annotation must degrade to a truncated note, never abort the entry (Postgres
+        # raises StringDataRightTruncation on overflow, killing the whole cycle).
+        fill_assumption=(fill_assumption or "")[:64],
         status="open",
         fees=entry_fee,
     )
@@ -249,7 +252,7 @@ def record_no_fill(
         quantity=0,
         model_probability=model_probability,
         edge=edge,
-        fill_assumption=fill_assumption,
+        fill_assumption=(fill_assumption or "")[:64],  # clamp: see create_paper_trade
         status="no_fill",
         closed_at=_now(),
     )

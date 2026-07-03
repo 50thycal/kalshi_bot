@@ -176,3 +176,23 @@ def test_abandon_foreign_keeps_mmsell_and_weather(settings):
             ).all()
         )
     assert kept == ["mmsell", "weather_fav_h8"]
+
+
+def test_long_subtitle_fill_assumption_clamped_to_column_width(settings):
+    """Postgres rejects fill_assumption > String(64) (StringDataRightTruncation), which
+    aborted the whole first ride-along cycle on a long sports subtitle. The repo layer
+    now clamps, and the mmsell note puts prices before the subtitle so truncation only
+    costs subtitle characters. (sqlite doesn't enforce VARCHAR width, so assert length.)"""
+    _setup(settings)
+    long_sub = "Kansas City at Buffalo: Chiefs win by 3+ points in regulation"
+    ev = _event([_mkt("KXTEAM-26-A", long_sub, 18, 20)])
+    client = FakeClient([ev], {"KXTEAM-26-A": _ob(18, 20)})
+
+    with db.session_scope() as session:
+        summ = MmSellTracker(client, settings).run_once(session)
+    assert summ.opened == 1
+
+    with db.session_scope() as session:
+        t = session.scalars(select(m.PaperTrade)).one()
+        assert len(t.fill_assumption) <= 64
+        assert "no 80c" in t.fill_assumption     # prices survive the truncation
