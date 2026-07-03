@@ -143,6 +143,25 @@ def test_settles_no_loss_when_longshot_hits(settings):
         assert t.pnl < -0.75                       # buy-no at 80 loses the 80c
 
 
+def test_fill_assumption_fits_column_width(settings):
+    """Regression: a real prod row ('$62,500 or above' @ 16c, mid 14c, no@84c) built a 66-char
+    fill_assumption against a String(64) column -> psycopg StringDataRightTruncation, which
+    silently dropped the row (and every mmsell entry) on Postgres. sqlite doesn't enforce the
+    column width, so this asserts the STRING ITSELF stays within bounds, not just that the
+    insert succeeds locally."""
+    _setup(settings)
+    # the exact subtitle from the production traceback
+    ev = _event([_mkt("KXBTCD-26JUL0317-T62499.99", "$62,500 or above", 14, 16, vol=5000)])
+    client = FakeClient([ev], {"KXBTCD-26JUL0317-T62499.99": _ob(14, 16)})
+    with db.session_scope() as session:
+        summ = MmSellTracker(client, settings).run_once(session)
+    assert summ.opened == 1
+    with db.session_scope() as session:
+        t = session.scalars(select(m.PaperTrade)).one()
+        assert t.fill_assumption is not None
+        assert len(t.fill_assumption) <= 64
+
+
 def test_skips_configured_series(settings):
     _setup(settings)
     settings.mmsell_skip_series = "KXTEAM"         # skip our own series
