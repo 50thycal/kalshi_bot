@@ -69,6 +69,16 @@ def _price_c(market: dict, key: str) -> float | None:
         return None
 
 
+def _strike(v) -> float | None:
+    """Numeric strike or None — a weird API value must degrade, not kill the cycle."""
+    if v in (None, ""):
+        return None
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
 def _volume(market: dict) -> float:
     for k in ("volume_fp", "volume"):
         v = market.get(k)
@@ -174,7 +184,8 @@ class ThetaTracker:
                     continue
                 mid = (yb + ya) / 2.0
                 strike_type = (mkt.get("strike_type") or "").lower()
-                floor_k, cap_k = mkt.get("floor_strike"), mkt.get("cap_strike")
+                floor_k = _strike(mkt.get("floor_strike"))
+                cap_k = _strike(mkt.get("cap_strike"))
 
                 p = None
                 if model is not None:
@@ -188,8 +199,8 @@ class ThetaTracker:
                     "event_ticker": ticker.rsplit("-", 1)[0],
                     "market_ticker": ticker,
                     "strike_type": strike_type or None,
-                    "floor_strike": float(floor_k) if floor_k not in (None, "") else None,
-                    "cap_strike": float(cap_k) if cap_k not in (None, "") else None,
+                    "floor_strike": floor_k,
+                    "cap_strike": cap_k,
                     "yes_bid_cents": yb,
                     "yes_ask_cents": ya,
                     "mid_cents": mid,
