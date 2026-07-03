@@ -119,7 +119,8 @@ class Settings(BaseSettings):
     mmsell_skip_series: str = "KXMVE,KXHIGH,KXLOW"  # skip parlays + weather (its own book)
     # Ride-along: run the mmsell PAPER book inside the weather/live cycle (throttled), so it
     # collects alongside the weather books without a disruptive mode switch or any real money.
-    mmsell_paper_enabled: bool = False
+    # On by default now that we're forward-testing the maker edge; set false to disable.
+    mmsell_paper_enabled: bool = True
     mmsell_interval_minutes: float = 30.0        # how often the ride-along entry scan runs
 
     # --- Weather mode (BOT_MODE=weather) ---
