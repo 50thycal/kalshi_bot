@@ -18,6 +18,7 @@ import logging
 import signal as signal_module
 import sys
 import time
+import traceback
 
 from . import repository as repo
 from .config import Settings, get_settings
@@ -434,8 +435,15 @@ def _run_mmsell_book(settings, tracker) -> None:
         )
     except AuthError:
         raise
-    except Exception:  # noqa: BLE001 — ride-along book must never stop the cycle
-        logger.exception("mmsell ride-along book failed (weather/live unaffected)")
+    except Exception as exc:  # noqa: BLE001 — ride-along book must never stop the cycle
+        # Embed the error in the MESSAGE (not just exc_info) so it survives Railway's log
+        # view, which only surfaces the base message string (see _probe_api_shapes).
+        tb = traceback.extract_tb(exc.__traceback__)
+        where = f"{tb[-1].filename.rsplit('/', 1)[-1]}:{tb[-1].lineno}" if tb else "?"
+        logger.error(
+            "mmsell ride-along book failed (weather/live unaffected): %s: %s at %s",
+            type(exc).__name__, exc, where, exc_info=True,
+        )
 
 
 def _run_mmsell_cycle(settings, client, engine, tracker) -> None:
