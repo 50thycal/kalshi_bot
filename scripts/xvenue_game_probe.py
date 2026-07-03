@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import time
 
 import xvenue_leadlag as xl  # _get, _num
 
@@ -79,7 +78,6 @@ def probe_trades(kalshi_pair, pm_pair) -> None:
     print("\n=== Trade-tape endpoints (sub-minute) ===")
     if kalshi_pair:
         s, t = kalshi_pair
-        end = int(time.time())
         data = xl._get(f"{KALSHI}/markets/{t}/trades?limit=5")
         trades = (data or {}).get("trades") or []
         print(f"  Kalshi /markets/{t}/trades -> {len(trades)} trades")

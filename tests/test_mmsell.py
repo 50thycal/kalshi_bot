@@ -195,3 +195,27 @@ def test_abandon_foreign_keeps_mmsell_and_weather(settings):
             ).all()
         )
     assert kept == ["mmsell", "weather_fav_h8"]
+
+
+def test_repo_layer_clamps_overlong_fill_assumption(settings):
+    """Defense-in-depth for the String(64) overflow that dropped every mmsell row: even if a
+    call site passes an over-length note (any book, any subtitle/price width), the repo layer
+    clamps it so the insert can never be rejected. Complements the tracker-level truncation
+    above by testing the guard at the single insertion point every book shares. (sqlite doesn't
+    enforce VARCHAR width, so assert the stored length.)"""
+    from kalshi_bot import repository as repo
+
+    _setup(settings)
+    overlong = "[somebook] " + "x" * 200
+    with db.session_scope() as session:
+        repo.create_paper_trade(
+            session, signal_id=None, ticker="KXTEAM-26-A", strategy="mmsell", side="no",
+            action="buy", assumed_price=80, quantity=1, fill_assumption=overlong, entry_fee=0.0,
+        )
+        repo.record_no_fill(
+            session, signal_id=None, ticker="KXTEAM-26-B", strategy="mmsell", side="no",
+            action="buy", assumed_price=80, fill_assumption=overlong,
+        )
+    with db.session_scope() as session:
+        for t in session.scalars(select(m.PaperTrade)).all():
+            assert len(t.fill_assumption) <= 64

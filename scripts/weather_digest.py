@@ -209,6 +209,23 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"  {kind:>4} {book:<5} n={n:<4} total={float(total or 0):+7.2f}$"
                           f"  {pt:+5.1f}c/trade")
 
+            # --- NON-WEATHER PAPER BOOKS (mmsell, theta, ...) -------------------
+            other = _q(cur,
+                "SELECT strategy,"
+                " count(*) FILTER (WHERE status='settled') n,"
+                " round(sum(pnl) FILTER (WHERE status='settled')::numeric,2) total,"
+                " count(*) FILTER (WHERE status='open') open_n"
+                " FROM paper_trades"
+                " WHERE strategy NOT LIKE 'weather%' AND NOT legacy"
+                "   AND strategy IN ('mmsell','theta')"
+                " GROUP BY 1 ORDER BY 1")
+            if other:
+                print("\n[RESEARCH BOOKS — mmsell / theta]")
+                for strat, n, total, open_n in other:
+                    pt = (float(total) / n * 100) if (total is not None and n) else 0.0
+                    print(f"  {strat:<7} settled={n or 0:<5} total={float(total or 0):+7.2f}$"
+                          f"  {pt:+5.1f}c/trade  open={open_n}")
+
             # --- LIVE CELL COVERAGE (cells that couldn't trade) ----------------
             cell_issues = _q(cur,
                 "SELECT message, to_char(created_at,'HH24:MI') FROM system_events"

@@ -31,6 +31,7 @@ from .mmsell.tracker import MmSellTracker
 from .paper.engine import PaperCycleSummary, PaperTradingEngine
 from .risk.manager import RiskManager
 from .scanner.scanner import MarketScanner, ScanSummary
+from .theta.tracker import ThetaTracker
 from .weather.backfill import WeatherBackfill
 from .weather.ensemble import OpenMeteoEnsembleClient
 from .weather.forecast import NwsForecastClient, OpenMeteoForecastClient
@@ -107,6 +108,10 @@ def run() -> int:
     # are settled/marked by the shared weather_engine, which manages ALL open paper trades).
     mmsell_paper = weather_like and settings.mmsell_paper_enabled
     mmsell_paper_tracker = MmSellTracker(client, settings) if mmsell_paper else None
+    # theta rides along the same way (paper): model-anchored tail-selling on the hourly
+    # crypto ladders; the shared weather_engine settles/marks its <1h positions.
+    theta_paper = weather_like and settings.theta_enabled
+    theta_tracker = ThetaTracker(client, settings) if theta_paper else None
     forecast_client = NwsForecastClient(settings.nws_user_agent) if weather_like else None
     ensemble_client = (
         OpenMeteoEnsembleClient() if weather_like and settings.weather_ensemble_enabled else None
@@ -153,7 +158,11 @@ def run() -> int:
 
     if weather_like and settings.paper_abandon_foreign_on_start:
         try:
-            keep = ("weather", "mmsell") if mmsell_paper else ("weather",)
+            keep = ("weather",)
+            if mmsell_paper:
+                keep += ("mmsell",)
+            if theta_paper:
+                keep += ("theta",)
             with session_scope() as session:
                 n = repo.abandon_open_paper_trades(session, keep_prefixes=keep)
             log_event(logger, logging.INFO, "abandoned foreign paper positions",
@@ -180,11 +189,12 @@ def run() -> int:
                     _run_live_cycle(
                         settings, client, weather_engine, weather_tracker, live_executor,
                         weather_backfill, validation_backfill, mmsell_paper_tracker,
+                        theta_tracker,
                     )
                 elif weather:
                     _run_weather_cycle(
                         settings, client, weather_engine, weather_tracker, weather_backfill,
-                        validation_backfill, mmsell_paper_tracker,
+                        validation_backfill, mmsell_paper_tracker, theta_tracker,
                     )
                 elif mmsell:
                     _run_mmsell_cycle(settings, client, mmsell_engine, mmsell_tracker)
@@ -363,7 +373,7 @@ def _run_validation_backfill(validation_backfill) -> None:
 
 def _run_weather_cycle(
     settings, client, engine, tracker, backfill=None, validation_backfill=None,
-    mmsell_tracker=None,
+    mmsell_tracker=None, theta_tracker=None,
 ) -> None:
     status = client.get_exchange_status()  # AuthError propagates -> hard fail
     log_event(
@@ -410,6 +420,7 @@ def _run_weather_cycle(
             logger.exception("weather backfill cycle failed")
     _run_validation_backfill(validation_backfill)
     _run_mmsell_book(settings, mmsell_tracker)
+    _run_theta_book(settings, theta_tracker)
 
 
 _mmsell_last_run = {"ts": 0.0}
@@ -444,6 +455,37 @@ def _run_mmsell_book(settings, tracker) -> None:
             "mmsell ride-along book failed (weather/live unaffected): %s: %s at %s",
             type(exc).__name__, exc, where, exc_info=True,
         )
+
+
+_theta_last_run = {"ts": 0.0}
+
+
+def _run_theta_book(settings, tracker) -> None:
+    """Ride-along theta paper book (model-anchored crypto tail-selling): throttled scan +
+    spot refresh + ladder snapshots + entries. The shared weather_engine settles/marks its
+    positions. Never raises into the cycle."""
+    if tracker is None:
+        return
+    now = time.monotonic()
+    if now - _theta_last_run["ts"] < settings.theta_interval_minutes * 60.0:
+        return
+    _theta_last_run["ts"] = now
+    try:
+        with session_scope() as session:
+            summ = tracker.run_once(session)
+        log_event(
+            logger, logging.INFO, "theta book",
+            products_ok=summ.products_ok, markets=summ.markets_seen,
+            snapshots=summ.snapshot_rows, in_window=summ.in_window, in_band=summ.in_band,
+            model_priced=summ.model_priced, edged=summ.edged, opened=summ.opened,
+            already_open=summ.already_open, capped=summ.capped,
+            no_model=summ.skipped_no_model, illiquid=summ.skipped_illiquid,
+            per_series=summ.per_series,
+        )
+    except AuthError:
+        raise
+    except Exception:  # noqa: BLE001 — ride-along book must never stop the cycle
+        logger.exception("theta ride-along book failed (weather/live unaffected)")
 
 
 def _run_mmsell_cycle(settings, client, engine, tracker) -> None:
@@ -526,7 +568,7 @@ def _fetch_account_state(client) -> dict:
 
 def _run_live_cycle(
     settings, client, engine, tracker, executor, backfill=None, validation_backfill=None,
-    mmsell_tracker=None,
+    mmsell_tracker=None, theta_tracker=None,
 ) -> None:
     """Live cycle: reconcile Kalshi truth, manage exits, settle/mark paper, then run the
     tracker (which mirrors allowlisted entries into real orders)."""
@@ -569,6 +611,7 @@ def _run_live_cycle(
             logger.exception("weather backfill cycle failed")
     _run_validation_backfill(validation_backfill)
     _run_mmsell_book(settings, mmsell_tracker)
+    _run_theta_book(settings, theta_tracker)
 
 
 def _log_weather(summary: WeatherCycleSummary) -> None:

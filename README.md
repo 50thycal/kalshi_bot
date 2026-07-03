@@ -179,6 +179,24 @@ Honest limitation: paper **assumes the resting ask fills** (enters at the maker 
 so it validates whether the +EV persists out-of-sample on new markets — **not** queue/fill
 realism, which only a small live test (a one-book `LIVE_STRATEGIES=mmsell` allowlist) can prove.
 
+## Theta book (ride-along paper — hourly crypto ladders)
+
+Model-anchored tail-selling on Kalshi's recurring hourly crypto ladders (`KXBTCD`/`KXBTC`
+hourly BTC threshold + range ladders, ETH twins) — thesis, pre-registered predictions and
+validation results in **`docs/THETA_THESIS.md`**; probe in `scripts/kalshi_theta_study.py`
+(ops-runnable). The 2026-07-03 validation found: selling every tail at the quotes is ~0 EV,
+but the realized maker-sell flow nets +5.2¢/contract inside the final hour, and a trailing
+spot-vol model (Coinbase 1-min candles → empirical remaining-window return distribution)
+separates dead tails from live ones (+4.4¢ selling model-overpriced tails vs −1.5¢ fair).
+
+So the `theta` book (`kalshi_bot/theta/`, `THETA_*` config) rides along the weather/live
+cycle like `mmsell` and each throttled cycle: maintains the rolling 1-min spot window
+(`crypto_spot_candles`), snapshots near-settlement ladders **with the model probability**
+(`crypto_ladder_snapshots` — the accumulating research dataset), and opens a paper
+maker-sell (buy NO at the no-bid) on strikes with 10–55 min to settlement, yes-mid 3–40¢,
+and model excess ≥ `THETA_MIN_EDGE_CENTS` — hold to settlement (positions expire within the
+hour, so capital recycles ~24×/day and the sample accumulates at ~100s of trades/week).
+
 ## Weather mode (Phase 4)
 
 `BOT_MODE=weather` runs a focused pipeline on Kalshi's **daily temperature** markets instead

@@ -302,13 +302,14 @@ class PaperTradingEngine:
             datetime.now(timezone.utc) - _aware(trade.created_at)
         ).total_seconds() / 3600.0
 
-        # Weather books hold to settlement (no timeout / TP / SL). The mmsell maker book also
-        # holds to settlement by default (its exit sweep showed TP/SL only hurt) — but keeps
-        # TP/SL OPTIONAL so they can be forward-tested; either way it skips the max-hold TIMEOUT
-        # (positions settle on their own schedule, days out — a 2h timeout would force-close).
+        # Weather books hold to settlement (no timeout / TP / SL). The mmsell and theta maker
+        # books also hold to settlement by default (both exit sweeps showed TP/SL only hurt) —
+        # but keep TP/SL OPTIONAL so they can be forward-tested; either way they skip the
+        # max-hold TIMEOUT (positions settle on their own schedule — a 2h timeout would
+        # force-close mmsell days early, and theta settles within the hour anyway).
         strat = trade.strategy or ""
         weather_hold = strat.startswith("weather")
-        no_timeout = weather_hold or strat.startswith("mmsell")
+        no_timeout = weather_hold or strat.startswith(("mmsell", "theta"))
 
         exit_status: str | None = None
         if weather_hold:

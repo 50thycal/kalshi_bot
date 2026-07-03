@@ -67,6 +67,7 @@ ALLOWED_SCRIPTS = (
     "weather_exit_backfill",
     "weather_maker_study",
     "weather_maker_fills",
+    "kalshi_theta_study",
 )
 
 

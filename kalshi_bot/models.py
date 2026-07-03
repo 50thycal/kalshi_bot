@@ -503,6 +503,52 @@ class WeatherForecastOutcome(Base):
     raw_json: Mapped[dict | None] = mapped_column(JSONType)  # compact per-bucket distribution
 
 
+class CryptoSpotCandle(Base):
+    """1-minute spot closes (Coinbase Exchange public candles) — the underlying feed for
+    the theta book's remaining-window return distribution. Rolling window only (pruned to
+    the model's trailing days); provenance is the exchange feed, not Kalshi."""
+
+    __tablename__ = "crypto_spot_candles"
+    __table_args__ = (
+        UniqueConstraint("product", "minute_ts", name="uq_spot_candle"),
+        Index("ix_crypto_spot_candles_product_time", "product", "minute_ts"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    product: Mapped[str] = mapped_column(String(16), nullable=False)  # e.g. BTC-USD
+    minute_ts: Mapped[datetime] = mapped_column(TS, nullable=False)
+    close: Mapped[float] = mapped_column(Float, nullable=False)
+    source: Mapped[str | None] = mapped_column(String(16), default="coinbase")
+
+
+class CryptoLadderSnapshot(Base):
+    """Hourly crypto ladder quotes + the theta model's probability at capture — the
+    research dataset behind the theta book (mirrors weather_bucket_snapshots). Only
+    events near settlement are snapshotted (the strategy's active window)."""
+
+    __tablename__ = "crypto_ladder_snapshots"
+    __table_args__ = (
+        Index("ix_crypto_ladder_snapshots_event_time", "event_ticker", "captured_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    captured_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    series: Mapped[str | None] = mapped_column(String(32))
+    event_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    market_ticker: Mapped[str | None] = mapped_column(String(128))
+    strike_type: Mapped[str | None] = mapped_column(String(16))  # greater | less | between
+    floor_strike: Mapped[float | None] = mapped_column(Float)
+    cap_strike: Mapped[float | None] = mapped_column(Float)
+    yes_bid_cents: Mapped[float | None] = mapped_column(Float)
+    yes_ask_cents: Mapped[float | None] = mapped_column(Float)
+    mid_cents: Mapped[float | None] = mapped_column(Float)
+    volume: Mapped[float | None] = mapped_column(Float)
+    minutes_to_close: Mapped[float | None] = mapped_column(Float)
+    spot: Mapped[float | None] = mapped_column(Float)  # underlying at capture
+    model_p: Mapped[float | None] = mapped_column(Float)  # theta model P(YES), 0..1
+    model_excess_cents: Mapped[float | None] = mapped_column(Float)  # mid - 100*model_p
+
+
 class SystemEvent(Base):
     __tablename__ = "system_events"
 
