@@ -216,7 +216,7 @@ def main(argv: list[str] | None = None) -> int:
                 " round(sum(pnl) FILTER (WHERE status='settled')::numeric,2) total,"
                 " count(*) FILTER (WHERE status='open') open_n"
                 " FROM paper_trades"
-                " WHERE strategy NOT LIKE 'weather%%' AND NOT legacy"
+                " WHERE strategy NOT LIKE 'weather%' AND NOT legacy"
                 "   AND strategy IN ('mmsell','theta')"
                 " GROUP BY 1 ORDER BY 1")
             if other:
