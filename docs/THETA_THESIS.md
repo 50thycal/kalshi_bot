@@ -2,8 +2,37 @@
 
 *Claude's own book. Thesis written 2026-07-03, before any validation ran; the falsifiable
 predictions below are pre-registered so the validation can't be quietly re-scoped after the
-fact. Status: THESIS → validation probe → (only if it survives) data collection → paper →
-live gate.*
+fact. Status: **validated 2026-07-03** (P1 FAIL / P2 PASS / P3 PASS — see Results) →
+data collection + paper book built the same day → forward-testing → live gate.*
+
+## RESULTS (2026-07-03 probe run — `kalshi_theta_study`, defaults)
+
+Sample: KXBTCD 1,663 / KXBTC 682 / KXETHD 762 / KXETH 267 settled markets (vol ≥ 200),
+2.9–7.0 days of history; 87,539 tape trades across 720 markets; 12 days of 1-min spot.
+
+- **P1 — FAIL.** Selling *every* 3–40¢ tail at the posted quote is ~0 EV (T-30 gap +0.7¢,
+  sellEV −0.15¢, n=494; per-series mixed/noisy). The quotes are calibrated on average —
+  there is no naive band edge at rest. (Side-finding parked for later: hourly favorites at
+  65–90¢ ran *under*priced, win% ≈ +9–11¢ over mid, small n.)
+- **P2 — PASS.** Realized maker-SELL flow on these series: **+5.21¢/contract net of
+  worst-case fees** (21,552 trades / 2.09M contracts), split-half **+5.11 / +5.32**.
+  Sliced by time-to-expiry the edge lives **inside the final hour** (10–20¢: +9 to +11¢;
+  20–35¢: +1 to +18¢ under 60m) and is *negative* beyond 60m (−7 to −22¢). Mirror
+  maker-BUY: −9.26¢, as the FLB structure predicts.
+- **P3 — PASS.** At the same quotes, the spot-model split separates cleanly in 3–40¢:
+  model-OVERpriced (mid − 100·P ≥ 5¢): **sellEV +4.44¢** (n=114, win 18.4% vs ~22 implied);
+  model-fair: **−1.52¢** (n=380). Strongest cell: 10–20¢ overpriced → +13.2¢ (n=39, win
+  2.6% vs 15.4 implied) — consistent with quote-staleness after spot moves, the same
+  information-lag family as the weather `obs` edge.
+- **P4 — mixed but acceptable.** P2 halves agree near-perfectly; P1 per-series/halves are
+  noise around zero (expected once P1 is understood as "no unconditional edge").
+
+**Decision (per the pre-registered criteria):** build the paper book **with the model
+filter as a required gate** (P1's failure means the filter is load-bearing, not optional)
+plus a **final-hour entry window** (P2's tte structure). Honest caveats: P3's n=114 spans
+only ~3–7 days in one vol regime — the paper book *is* the out-of-sample test, at ~100s of
+trades/week; and paper assumes our resting ask is the one that fills (same limitation as
+mmsell, partially derisked by P2 measuring realized passive fills).
 
 ## One-liner
 

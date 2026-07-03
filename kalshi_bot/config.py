@@ -123,7 +123,30 @@ class Settings(BaseSettings):
     mmsell_paper_enabled: bool = True
     mmsell_interval_minutes: float = 30.0        # how often the ride-along entry scan runs
 
-    # --- Weather mode (BOT_MODE=weather) ---
+    # --- Theta book (ride-along paper, weather/live cycle) ---
+    # Model-anchored tail-selling on the recurring hourly crypto ladders (docs/
+    # THETA_THESIS.md). Validated 2026-07-03 (scripts/kalshi_theta_study.py): selling
+    # every tail at the quote is ~0 EV, but selling only MODEL-overpriced 3-40c tails at
+    # the ask inside the final hour netted +4.4c/contract net of worst-case fees, and the
+    # realized maker-sell tape on these series is +5.2c with the edge <60min to expiry.
+    # Entry = the mmsell maker convention (sell yes at ask == buy NO at no-bid), hold the
+    # <1h to settlement. Paper-only; positions are settled by the shared paper engine.
+    theta_enabled: bool = True
+    theta_interval_minutes: float = 5.0       # ride-along cadence (also snapshot cadence)
+    # SERIES:COINBASE_PRODUCT pairs; wrong series fail soft (logged, skipped).
+    theta_series: str = "KXBTCD:BTC-USD,KXBTC:BTC-USD,KXETHD:ETH-USD,KXETH:ETH-USD"
+    theta_trail_days: float = 5.0             # spot window behind the return distribution
+    theta_entry_min_minutes: float = 10.0     # don't sell inside the last 10min (stale loop)
+    theta_entry_max_minutes: float = 55.0     # the tape edge lives <60min to expiry
+    theta_snapshot_max_minutes: float = 90.0  # snapshot ladders this close to settlement
+    theta_snapshot_rows_cap: int = 240        # bound rows written per cycle
+    theta_price_lo_cents: float = 3.0         # tail band (yes mid), validated 3-40c
+    theta_price_hi_cents: float = 40.0
+    theta_min_edge_cents: float = 5.0         # mid - 100*P_model must clear this
+    theta_min_volume: float = 100.0           # skip untraded strikes
+    theta_order_size: int = 5                 # >=5 amortizes the fee ceil (exit study)
+    theta_max_open_positions: int = 60
+    theta_max_per_event: int = 3              # cap correlated strikes per hourly event
     weather_top_n: int = 10
     weather_entry_hours: str = "20,14,8"
     # Base books to run. `favorite` and `nws` were pruned after paper P&L confirmed both bleed
@@ -522,6 +545,16 @@ class Settings(BaseSettings):
     def mmsell_skip_series_list(self) -> list[str]:
         return [s.strip().upper() for s in self.mmsell_skip_series.split(",") if s.strip()]
 
+    @property
+    def theta_series_map(self) -> dict[str, str]:
+        """SERIES -> Coinbase product, parsed from "KXBTCD:BTC-USD,..."; skips malformed."""
+        out: dict[str, str] = {}
+        for tok in self.theta_series.split(","):
+            series, _, product = tok.partition(":")
+            if series.strip() and product.strip():
+                out[series.strip().upper()] = product.strip().upper()
+        return out
+
     def redacted_summary(self) -> dict:
         """Config summary safe to log (never includes the private key)."""
         return {
@@ -550,6 +583,13 @@ class Settings(BaseSettings):
             "mmsell_max_open_positions": self.mmsell_max_open_positions,
             "mmsell_paper_enabled": self.mmsell_paper_enabled,
             "mmsell_interval_minutes": self.mmsell_interval_minutes,
+            "theta_enabled": self.theta_enabled,
+            "theta_series": self.theta_series_map,
+            "theta_entry_minutes": [self.theta_entry_min_minutes, self.theta_entry_max_minutes],
+            "theta_band_cents": [self.theta_price_lo_cents, self.theta_price_hi_cents],
+            "theta_min_edge_cents": self.theta_min_edge_cents,
+            "theta_order_size": self.theta_order_size,
+            "theta_max_open_positions": self.theta_max_open_positions,
             "paper_min_edge_cents": self.paper_min_edge_cents,
             "paper_momentum_project_hours": self.paper_momentum_project_hours,
             "paper_momentum_direction": self.paper_momentum_direction,

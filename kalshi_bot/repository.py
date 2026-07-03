@@ -303,6 +303,17 @@ def count_open_paper_positions(session, strategy: str | None = None) -> int:
     return int(session.scalar(stmt) or 0)
 
 
+def open_paper_position_tickers(session, strategy: str) -> set[str]:
+    return set(
+        session.scalars(
+            select(m.PaperPosition.market_ticker).where(
+                m.PaperPosition.status == "open",
+                m.PaperPosition.strategy == strategy,
+            )
+        )
+    )
+
+
 def open_paper_exposure(
     session, *, strategy: str, ticker: str | None = None
 ) -> float:
@@ -1180,3 +1191,76 @@ def live_realized_pnl_today(session) -> float:
         if row.market_ticker not in latest:
             latest[row.market_ticker] = float(row.realized_pnl or 0.0)
     return sum(latest.values())
+
+
+# --- theta book (crypto spot + ladder snapshots) ---------------------------------
+
+
+def insert_spot_candles(session, product: str, closes: dict[int, float]) -> int:
+    """Insert new 1-min spot closes ({unix_minute: close}); skips minutes already stored.
+    Bounded input (the tracker fetches only the gap since the latest stored minute)."""
+    if not closes:
+        return 0
+    existing = {
+        ts.replace(tzinfo=ts.tzinfo or timezone.utc)
+        for ts in session.scalars(
+            select(m.CryptoSpotCandle.minute_ts).where(
+                m.CryptoSpotCandle.product == product,
+                m.CryptoSpotCandle.minute_ts
+                >= datetime.fromtimestamp(min(closes), tz=timezone.utc),
+            )
+        )
+    }
+    n = 0
+    for ts_unix, close in closes.items():
+        dt = datetime.fromtimestamp(ts_unix // 60 * 60, tz=timezone.utc)
+        if dt in existing:
+            continue
+        session.add(m.CryptoSpotCandle(product=product, minute_ts=dt, close=float(close)))
+        n += 1
+    session.flush()
+    return n
+
+
+def latest_spot_minute(session, product: str) -> datetime | None:
+    return session.scalar(
+        select(func.max(m.CryptoSpotCandle.minute_ts)).where(
+            m.CryptoSpotCandle.product == product
+        )
+    )
+
+
+def load_spot_closes(session, product: str, since: datetime) -> dict[int, float]:
+    """{unix_minute: close} for the model's trailing window."""
+    rows = session.execute(
+        select(m.CryptoSpotCandle.minute_ts, m.CryptoSpotCandle.close).where(
+            m.CryptoSpotCandle.product == product,
+            m.CryptoSpotCandle.minute_ts >= since,
+        )
+    ).all()
+    out: dict[int, float] = {}
+    for ts, close in rows:
+        ts = ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
+        out[int(ts.timestamp()) // 60 * 60] = float(close)
+    return out
+
+
+def prune_spot_candles(session, product: str, older_than: datetime) -> int:
+    rows = session.scalars(
+        select(m.CryptoSpotCandle).where(
+            m.CryptoSpotCandle.product == product,
+            m.CryptoSpotCandle.minute_ts < older_than,
+        )
+    ).all()
+    for r in rows:
+        session.delete(r)
+    session.flush()
+    return len(rows)
+
+
+def insert_crypto_ladder_snapshots(session, rows: list[dict]) -> int:
+    now = _now()
+    for row in rows:
+        session.add(m.CryptoLadderSnapshot(captured_at=now, **row))
+    session.flush()
+    return len(rows)

@@ -16,6 +16,38 @@ Conventions:
 
 ---
 
+## THETA book — hourly crypto ladders: naive tail-selling ~0, MODEL-FILTERED tail-selling +EV (built)
+
+*(2026-07-03, Claude's own book — full thesis + pre-registered predictions in
+`docs/THETA_THESIS.md`; probe `scripts/kalshi_theta_study.py`, ops-runnable.)*
+
+Tested Kalshi's recurring hourly crypto ladders (KXBTCD/KXBTC/KXETHD/KXETH — 24
+settles/day/series, deep 3-40c tails, retail lottery flow) on ~3-7 days of settled
+history, 87.5k tape trades, and a Coinbase 1-min spot model (empirical remaining-window
+return distribution, no lookahead):
+
+- **Naive tail-selling at the quotes: ~0 EV** (T-30 gap +0.7c, n=494) — the posted
+  quotes are calibrated on average. No unconditional band edge. (Same lesson as every
+  price-only weather probe.)
+- **The realized maker-SELL flow is +5.2c/contract net of worst-case fees** (2.09M
+  contracts, split-half +5.11/+5.32), and by minutes-to-expiry the edge is entirely
+  **inside the final hour**; >60min out it inverts negative. Maker-BUY mirror: -9.3c.
+- **A spot-vol model separates dead tails from live ones at the same price**: selling
+  only model-overpriced tails (mid - 100·P_model >= 5c) at the ask = **+4.44c/contract**
+  (n=114); model-fair tails = -1.52c. Strongest: 10-20c overpriced -> +13.2c (win 2.6%
+  vs 15.4 implied) — quote staleness after spot moves, the obs-lag family.
+- Side-finding parked: hourly 65-90c favorites ran ~9-11c UNDERpriced (small n) — a
+  possible future buy-the-favorite probe.
+
+**Built the same day**: `theta` paper book (`kalshi_bot/theta/`) riding the weather/live
+cycle like mmsell — collects 1-min spot (`crypto_spot_candles`) + near-settlement ladder
+snapshots with the model probability attached (`crypto_ladder_snapshots`), and sells
+model-overpriced 3-40c tails at the ask (buy NO at no-bid) ONLY at 10-55min to
+settlement, qty 5, capped 3/event, hold-to-settlement. Caveats: the model split's n=114
+covers one vol regime — the paper book is the real out-of-sample test (~100s of
+trades/week); fills assume our ask is hit (mmsell's known limitation, partially derisked
+because the tape measures realized passive fills).
+
 ## Standing verdict / themes
 
 **Kalshi's temperature ladder is efficient on everything derivable from price
