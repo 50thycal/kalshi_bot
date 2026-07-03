@@ -126,6 +126,13 @@ class MmSellTracker:
                 qty = s.paper_order_size
                 fee = kalshi_fee(price, qty, s.paper_fees_enabled)
                 sub = market.get("yes_sub_title") or market.get("subtitle") or ""
+                # fill_assumption is String(64) in the DB — truncate the FINAL string, not just
+                # the subtitle slice, or a longer subtitle/wider price still overflows the column
+                # (a real prod failure: a 66-char string blew past the limit and dropped the row).
+                assumption = (
+                    f"[mmsell] sell yes '{sub[:24]}' @ {100 - price}c "
+                    f"(no@{price}c mid{metrics.midpoint:.0f}c)"
+                )[:64]
                 repo.create_paper_trade(
                     session,
                     signal_id=None,
@@ -135,10 +142,7 @@ class MmSellTracker:
                     action="buy",
                     assumed_price=price,
                     quantity=qty,
-                    fill_assumption=(
-                        f"[mmsell] sell yes '{sub[:32]}' @ {100 - price}c "
-                        f"(buy no @ {price}c, mid {metrics.midpoint:.0f}c)"
-                    ),
+                    fill_assumption=assumption,
                     entry_fee=fee,
                     model_probability=None,
                     edge=0.0,
