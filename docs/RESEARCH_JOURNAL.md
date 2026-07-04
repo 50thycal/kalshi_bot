@@ -60,6 +60,29 @@ XGAME collector starts filling tables on the next Railway deploy — watch the
 `xgame collector` log line (kalshi_games/pm_games/matched tell you immediately if the
 PM question-format match is off).
 
+**First live runs (same day, via ops — all PROVISIONAL, tiny n):**
+- `xmarket_wc` (21d, all 48 teams mapped, 80 decisive events): only **2 measurable
+  rows** — most candidate rows died to `below_min_move` (140: group-stage results
+  genuinely don't move title odds ≥3¢; the tradeable version of this thesis is
+  knockout-round) and `missing_quotes` (86: winner-ladder candle minutes often lack a
+  two-sided close → added a trade-price-mid fallback for pin/completion; quotes still
+  required for entry/spread). Provisional read on n=2: P1 lag exists (5% completion@5m)
+  but P2 residual **−2.45¢ → KILL-shaped** — the two group-stage repricings were too
+  small to clear fees. Re-run in the knockout rounds before any verdict.
+- `kalshi_favbuy_study` (62k snapshots, 52 events, ~1.5 days of collection): pipeline
+  + settlement-labeling work. Unconditional favorite-buy shows **+6.9¢ — flagged
+  SUSPICIOUS by the probe itself** (the pre-warned already-decided-favorite artifact +
+  one calm regime + small n, the classic mirage). Model filter fired only n=2 (+21¢,
+  meaningless). P4 not computable yet. Let snapshots accumulate ≥2 weeks before
+  reading anything into it.
+- `xvenue_game_probe` (format check): PM per-game markets confirmed as
+  `'Will Paraguay win on 2026-07-04?'` (~$4M/game volume) — the xgame matcher regex
+  fires as designed; PM trade-tape keys match the collector's parsing. **Live format
+  discovery: KXWCGAME `close_time` is a far-future settlement DEADLINE (game Jul 6 →
+  close Jul 21), not the game end** — the collector's poll window was re-keyed to the
+  ticker-derived game day, and settled close_times ≈ finalization (hours late), which
+  is why `xmarket_wc` anchors on price-pin detection rather than close_time.
+
 *(2026-07-04.)* First ~21h live: theta −$13/40 settled vs +4.4¢ backtest. Read-only
 decomposition found the miss is CONCENTRATED, not uniform: **38/40 entries were KXBTC range
 buckets at 20-40¢** (model 19% vs realized 37% — the trailing distribution under-weights

@@ -20,6 +20,17 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 NOW = datetime.now(timezone.utc).replace(microsecond=0)
+# tickers/days are built relative to NOW: the collector's poll window keys on the
+# ticker-derived GAME DAY, so fixed dates would rot as the calendar moves.
+TODAY_TK = NOW.strftime("%y%b%d").upper()      # e.g. 26JUL04
+TODAY_ISO = NOW.date().isoformat()             # e.g. 2026-07-04
+
+
+def _tk_day(offset_days: int) -> tuple[str, str]:
+    d = NOW + timedelta(days=offset_days)
+    return d.strftime("%y%b%d").upper(), d.date().isoformat()
+
+
 YES_TOKEN = "1234567890" * 7  # full-length clobTokenId (70 chars), never truncated
 NO_TOKEN = "9876543210" * 7
 
@@ -136,15 +147,15 @@ def _tracker(settings, kal_markets, kal_trades, pm_games, pm_trades):
     return XGameTracker(client, settings, pm_client=pm)
 
 
-PM_GAME = {"day": "2026-07-04", "team": "portugal", "condition_id": "0xc0ffee",
-           "token_id": YES_TOKEN, "question": "Will Portugal win on 2026-07-04?"}
+PM_GAME = {"day": TODAY_ISO, "team": "portugal", "condition_id": "0xc0ffee",
+           "token_id": YES_TOKEN, "question": f"Will Portugal win on {TODAY_ISO}?"}
 
 
 # ---------------------------------------------------------------- discovery
 def test_discovery_creates_match_and_polls_both_tapes(settings):
     _setup(settings)
-    tk = "KXWCGAME-26JUL04PORCRO-POR"
-    close = NOW + timedelta(minutes=45)  # in the game window
+    tk = f"KXWCGAME-{TODAY_TK}PORCRO-POR"
+    close = NOW + timedelta(minutes=45)  # in the game-day window
     kal_trades = [
         _k_trade("kt-1", 62.0, NOW - timedelta(seconds=90)),
         _k_trade("kt-2", 66.0, NOW - timedelta(seconds=30), side="no"),
@@ -164,7 +175,7 @@ def test_discovery_creates_match_and_polls_both_tapes(settings):
     with db.session_scope() as session:
         match = session.scalars(select(m.GameMarketMatch)).one()
         assert match.pm_token_id == YES_TOKEN          # full id stored
-        assert match.team == "portugal" and match.day == "2026-07-04"
+        assert match.team == "portugal" and match.day == TODAY_ISO
         assert match.kalshi_trades == 2 and match.pm_trades == 2
         assert match.kalshi_since_ts is not None and match.pm_since_ts is not None
         rows = session.scalars(select(m.GameTapeSnapshot)).all()
@@ -183,15 +194,15 @@ def test_discovery_drops_ambiguous_and_respects_cap(settings):
     settings.xgame_max_matches = 1
     close = NOW + timedelta(minutes=30)
     kal = [
-        _k_market("KXWCGAME-26JUL04PORCRO-POR", "Portugal", close),
-        _k_market("KXWCGAME-26JUL04FRAESP-FRA", "France", close),
+        _k_market(f"KXWCGAME-{TODAY_TK}PORCRO-POR", "Portugal", close),
+        _k_market(f"KXWCGAME-{TODAY_TK}FRAESP-FRA", "France", close),
         # duplicate (day, team) on kalshi -> ambiguous, dropped entirely
-        _k_market("KXWCGAME-26JUL04PORBRA-POR", "Portugal", close),
+        _k_market(f"KXWCGAME-{TODAY_TK}PORBRA-POR", "Portugal", close),
     ]
     pm_games = [
         PM_GAME,
-        {"day": "2026-07-04", "team": "france", "condition_id": "0xf1",
-         "token_id": NO_TOKEN, "question": "Will France win on 2026-07-04?"},
+        {"day": TODAY_ISO, "team": "france", "condition_id": "0xf1",
+         "token_id": NO_TOKEN, "question": f"Will France win on {TODAY_ISO}?"},
     ]
     tracker = _tracker(settings, {"KXWCGAME": kal}, {}, pm_games, {})
     with db.session_scope() as session:
@@ -205,7 +216,7 @@ def test_discovery_drops_ambiguous_and_respects_cap(settings):
 
 def test_repoll_dedups_and_advances_high_water(settings):
     _setup(settings)
-    tk = "KXWCGAME-26JUL04PORCRO-POR"
+    tk = f"KXWCGAME-{TODAY_TK}PORCRO-POR"
     close = NOW + timedelta(minutes=45)
     kal_trades = [_k_trade("kt-1", 62.0, NOW - timedelta(seconds=60))]
     pm_trades = [_pm_trade("0xaa", YES_TOKEN, 0.61, NOW - timedelta(seconds=60))]
@@ -226,19 +237,27 @@ def test_repoll_dedups_and_advances_high_water(settings):
 
 
 def test_window_skip_and_ended_transition(settings):
+    """The poll window keys on the ticker-derived game DAY, not close_time — the live
+    format probe showed KXWCGAME close_time is a settlement deadline weeks past the
+    game. A future game day is skipped; a long-finished one is marked ended."""
     _setup(settings)
-    far = _k_market("KXWCGAME-26JUL09AAABBB-AAA", "Argentina", NOW + timedelta(hours=20))
-    over = _k_market("KXWCGAME-26JUL01CCCDDD-CCC", "Croatia", NOW - timedelta(hours=5))
+    far_tk, far_iso = _tk_day(+5)
+    over_tk, over_iso = _tk_day(-3)
+    # close_times deliberately mislead (far future), mirroring the real API
+    far = _k_market(f"KXWCGAME-{far_tk}AAABBB-AAA", "Argentina",
+                    NOW + timedelta(days=17))
+    over = _k_market(f"KXWCGAME-{over_tk}CCCDDD-CCC", "Croatia",
+                     NOW + timedelta(days=14))
     pm_games = [
-        {"day": "2026-07-09", "team": "argentina", "condition_id": "0xa1",
-         "token_id": "111", "question": "Will Argentina win on 2026-07-09?"},
-        {"day": "2026-07-01", "team": "croatia", "condition_id": "0xc2",
-         "token_id": "222", "question": "Will Croatia win on 2026-07-01?"},
+        {"day": far_iso, "team": "argentina", "condition_id": "0xa1",
+         "token_id": "111", "question": f"Will Argentina win on {far_iso}?"},
+        {"day": over_iso, "team": "croatia", "condition_id": "0xc2",
+         "token_id": "222", "question": f"Will Croatia win on {over_iso}?"},
     ]
     tracker = _tracker(settings, {"KXWCGAME": [far, over]}, {}, pm_games, {})
     with db.session_scope() as session:
         summ = tracker.run_once(session)
-    # 20h out: > 6h pre-game -> skipped; 5h past close: > 2h grace -> ended, not polled
+    # game in 5 days -> skipped; game 3 days ago (past day-window + grace) -> ended
     assert summ.matched_new == 2
     assert summ.skipped_window == 1 and summ.ended == 1 and summ.polled == 0
     with db.session_scope() as session:

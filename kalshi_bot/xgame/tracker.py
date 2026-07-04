@@ -220,11 +220,25 @@ class XGameTracker:
             close = close.replace(tzinfo=timezone.utc)
         return close
 
-    def _in_window(self, match, now: datetime) -> bool:
-        """Poll from a few hours before the (approximate) game end; matches with no
-        close_time are always polled. (Past-grace matches are ended before this check.)"""
+    def _poll_window(self, match) -> tuple[datetime, datetime] | None:
+        """(lo, hi) of the polling window. Keyed on the ticker-derived GAME DAY —
+        the 2026-07-04 format probe showed KXWCGAME close_time is a far-future
+        settlement deadline (game Jul 6, close Jul 21), so close_time would start
+        polling weeks late. Day windows cover any kickoff that UTC day plus the
+        post-game tail; close_time (plus grace) is only the day-less fallback."""
+        s = self.settings
+        grace = timedelta(minutes=s.xgame_ended_grace_minutes)
+        if match.day:
+            try:
+                start = datetime.fromisoformat(match.day).replace(tzinfo=timezone.utc)
+            except ValueError:
+                start = None
+            if start is not None:
+                return start - timedelta(hours=2), start + timedelta(hours=30) + grace
         close = self._aware_close(match)
-        return close is None or now >= close - timedelta(hours=6)
+        if close is None:
+            return None  # no window information: always poll, never auto-end
+        return close - timedelta(hours=6), close + grace
 
     def _poll_kalshi(self, session, match) -> int:
         s = self.settings
@@ -349,15 +363,13 @@ class XGameTracker:
         matches = repo.active_game_matches(session, limit=s.xgame_max_matches)
         summ.matches_active = len(matches)
         for match in matches:
-            close = self._aware_close(match)
-            if close is not None and now > close + timedelta(
-                minutes=s.xgame_ended_grace_minutes
-            ):
-                # the tail was already polled during the grace window each cycle
+            window = self._poll_window(match)
+            if window is not None and now > window[1]:
+                # the tail was already polled while inside the window each cycle
                 match.status = "ended"
                 summ.ended += 1
                 continue
-            if not self._in_window(match, now):
+            if window is not None and now < window[0]:
                 summ.skipped_window += 1
                 continue
             summ.polled += 1
