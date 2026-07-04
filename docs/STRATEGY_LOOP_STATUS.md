@@ -7,68 +7,56 @@ suggestion list carries over run-to-run, updated as data accumulates.*
 
 ---
 
-## Snapshot — 2026-07-04 10:13 UTC (run #8) — **theta diagnosed**
+## Snapshot — 2026-07-04 12:13 UTC (run #9)
 
-**Books actively trading (settled n / settled P&L / open) — Δ vs run #7:**
-- **theta** — **37 settled**, **−$13.14** (−36¢/trade), 2 open. **Root cause found this run
-  (read-only decomposition):**
-
-  | band | n | model P(YES) | realized tail-hit | win% | avg win / avg loss |
-  |---|---|---|---|---|---|
-  | ALL | 37 | **18.7%** | **35.1%** | 65% | +$1.39 / −$3.57 |
-  | yes 20–40c | 35 | 19.1% | 37.1% | — | — |
-
-  **The spot-vol model underestimates settlement tail probability ~2×** (says 18.7%, reality
-  35.1%). Negative-skew math: with a 2.6:1 loss:win ratio, break-even needs **72% win-rate**;
-  theta gets 65%. The extra tail hits the model didn't price = the entire −EV. Not a code bug
-  (the backtest's P3 separation was real) — a **live calibration miss**: the trailing
-  return distribution is too thin-tailed for the current regime / settlement window.
-- **mmsell** — **243 settled**, **+$3.30** (+1.4¢/trade), 17 open. Flat; still mildly +, still
-  short of n≈300.
-- **weather `con`** — 211 settled, **+$9.67**, 20 open (new morning entries; next settlement
-  batch ~14:00 UTC). **weather (rest)** — 4,596 settled, −$226.07, 73 open. Unchanged.
+**Books actively trading (settled n / settled P&L / open) — Δ vs run #8:**
+- **theta** — **40 settled**, **−$12.99** (−32¢/trade), 2 open. Diagnosis from run #8 stands
+  (model prices tails at ~18.7% vs ~35% realized). Cumulative ticked up +$0.15 over 3 new
+  trades = noise; nothing changes the read. Awaiting a fable recalibration.
+- **mmsell** — **245 settled**, **+$3.86** (+1.6¢/trade), 17 open. Creeping positive; ~n=300
+  (judgable) about a day out.
+- **weather `con`** — **228 settled** (+17), **+$10.82** (+$1.15 on the new batch = **+6.8¢/
+  trade**), 3 open. **Fresh settlement batch confirms con is +EV on new data.**
+- **weather (rest pooled)** — **4,659 settled** (+63), **−$235.77** (−$9.70 on the new batch =
+  **−15.4¢/trade**), 22 open. The same batch shows the rest still bleeding hard.
 
 **Data collection — ALL FRESH ✓ (last-24h rows / latest UTC):**
 | collector | 24h rows | latest | status |
 |---|---|---|---|
-| crypto_spot_candles | 2,876 | 10:12 | ✓ fresh, 2 products |
-| crypto_ladder_snapshots | 31,680 | 10:12 | ✓ fresh, 100% model-priced |
-| weather_forecasts | 11,023 | 10:14 | ✓ fresh |
-| weather_observations | 644 | 10:10 | ✓ fresh |
-| weather_ensembles | 1,696 | 10:03 | ✓ fresh (hourly) |
-| weather_bucket_snapshots | 13,194 | 10:14 | ✓ fresh |
+| crypto_spot_candles | 2,876 | 12:11 | ✓ fresh, 2 products |
+| crypto_ladder_snapshots | 36,240 | 12:12 | ✓ fresh, 100% model-priced |
+| weather_forecasts | 10,996 | 12:13 | ✓ fresh |
+| weather_observations | 646 | 12:09 | ✓ fresh |
+| weather_ensembles | 1,696 | 12:04 | ✓ fresh (hourly) |
+| weather_bucket_snapshots | 13,134 | 12:13 | ✓ fresh |
 
-**Headline:** theta's problem is now **diagnosed, not just observed** — the model prices tails
-at ~½ their true rate, so its "overpriced tails" were actually fair/underpriced. This is a
-fixable calibration miss and the data to recalibrate is accumulating. It's **paper**, so no real
-money at risk — no urgency, but a clear fable task. Everything else steady; collectors all fresh.
+**Headline:** picture stable. This run's fresh weather settlements gave a clean side-by-side on
+new data — **con +6.8¢/trade vs the rest −15.4¢/trade** — reinforcing both the "con is the only
++EV weather book" finding and the prune suggestion. theta unchanged (diagnosed, awaiting fix);
+mmsell inching positive. All 9/9 runs: collectors fully fresh.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[theta · DIAGNOSED — was "build the slice", now DONE] The vol model under-prices tails ~2×
-   (18.7% modeled vs 35.1% realized).** That single miss explains the −EV (needs 72% win-rate,
-   gets 65%). No further diagnosis needed at this n; the question is now the fix, not the cause.
+1. **[theta · DIAGNOSED, holds at n=40] Vol model under-prices tails ~2× (18.7% vs 35.1%)** —
+   the entire −EV. No new diagnosis needed; the +$0.15 uptick this run is noise.
 
-2. **[theta · fable fix — well-grounded now] Widen the model's tail, then re-validate before
-   trusting it.** Concrete levers (fable's call; confirm on held-out settled data that modeled
-   P ≈ realized before redeploying): (a) fatten/scale the empirical return distribution (e.g.
-   Student-t fit or a ×k vol multiplier) so sub-hour tails aren't understated; (b) a sigma
-   floor; (c) meanwhile raise `theta_min_edge_cents` a lot (only trade huge apparent
-   mispricings, which survive a 2× tail correction) or pause entries. **Recalibrate against the
-   now-accumulating settled theta trades — don't hand-tune blind.**
+2. **[theta · fable fix — the actionable one] Widen the model tail + re-validate before trusting.**
+   Fatten/scale the empirical return distribution (Student-t or ×k vol), and/or a sigma floor;
+   or raise `theta_min_edge_cents` hard / pause entries. **Recalibrate against the accumulating
+   settled trades so modeled-P ≈ ~35% realized on held-out data — don't hand-tune blind.**
 
-3. **[theta · keep collecting] Do NOT stop the theta data collectors.** It's paper (no money
-   lost), and every settled trade with `model_probability` vs `resolved_value` is exactly the
-   labeled data needed to refit the vol model offline. Pausing *entries* is optional; keep the
-   spot + ladder feeds.
+3. **[theta · keep collecting] Don't stop the theta feeds** — it's paper (no loss), and each
+   settled trade is labeled data to refit the model offline.
 
-4. **[mmsell · STILL VALID — inconclusive, mildly +] Watch, don't judge.** +1.4¢/243. Needs
-   n≈300+ (a day or two more) before the +5.2¢ backtest is confirmed/refuted.
+4. **[mmsell · STILL VALID — inconclusive, mildly +] Watch, don't judge.** +1.6¢/245, trending
+   up. About a day from n≈300 where the +5.2¢ backtest gets a real verdict.
 
-5. **[weather · STILL VALID, 07-03] Consider pruning confirmed-bleeder weather books**
-   (−$226/4,596 vs `con` +$9.67). Judgment call, not urgent.
+5. **[weather · STILL VALID — reinforced] Consider pruning confirmed-bleeder weather books.**
+   This run's fresh batch: con +6.8¢/trade vs rest −15.4¢/trade — the cleanest live restatement
+   yet of "keep `con`, drop fav/nws/cal/dist/lows." Cuts ~−$10/settlement-batch of paper bleed
+   + API load; the only cost is losing cross-validation on already-dead books. Judgment call.
 
-*(Resolved this run: the "build a theta PnL slice to diagnose" suggestion — done, read-only,
-in-loop; result above. Replaced by the concrete fix path #2 + keep-collecting #3.)*
+*(Resolved/dropped: none. #5 reinforced by a fresh settlement batch; theta items unchanged —
+diagnosis is stable, ball is in fable's court for the fix.)*
