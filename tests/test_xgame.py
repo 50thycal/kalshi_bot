@@ -309,26 +309,28 @@ def test_tape_study_window_censoring():
 def test_xmarket_wc_pin_and_windows():
     wc = _load("xmarket_wc")
     t0 = 1_000_000 // 60 * 60
-    candles = {t0 + i * 60: (40.0, 42.0) for i in range(5)}
-    candles[t0 + 5 * 60] = (96.0, 98.0)      # premature spike...
-    candles[t0 + 6 * 60] = (80.0, 82.0)      # ...un-pins (mid < 90)
+    mids = {t0 + i * 60: 41.0 for i in range(5)}
+    mids[t0 + 5 * 60] = 97.0      # premature spike...
+    mids[t0 + 6 * 60] = 81.0      # ...un-pins (< pin - 5)
     for i in range(7, 12):
-        candles[t0 + i * 60] = (97.0, 99.0)  # the real pin
-    assert wc.pin_time(candles, 95.0) == t0 + 7 * 60
+        mids[t0 + i * 60] = 98.0  # the real pin
+    assert wc.pin_time(mids, 95.0) == t0 + 7 * 60
+    # the loser-side mirror pins low at the same minute
+    assert wc.pin_time_low({k: 100.0 - v for k, v in mids.items()}, 5.0) == t0 + 7 * 60
     # last_in_window never returns the T candle itself
-    assert wc.last_in_window(candles, t0 + 7 * 60, t0 + 7 * 60) is None
-    assert wc.last_in_window(candles, t0 + 7 * 60, t0 + 9 * 60) == (97.0, 99.0)
-    q, ts = wc.at_or_before(candles, t0 + 6 * 60, 60)
-    assert q == (80.0, 82.0) and ts == t0 + 6 * 60
-    q, ts = wc.first_after(candles, t0 + 6 * 60, 120)
+    assert wc.last_in_window(mids, t0 + 7 * 60, t0 + 7 * 60) is None
+    assert wc.last_in_window(mids, t0 + 7 * 60, t0 + 9 * 60) == 98.0
+    q, ts = wc.at_or_before(mids, t0 + 6 * 60, 60)
+    assert q == 81.0 and ts == t0 + 6 * 60
+    q, ts = wc.first_after(mids, t0 + 6 * 60, 120)
     assert ts == t0 + 7 * 60
 
 
 def test_xmarket_wc_no_pin_returns_none():
     wc = _load("xmarket_wc")
     t0 = 1_000_000 // 60 * 60
-    candles = {t0 + i * 60: (40.0, 42.0) for i in range(10)}
-    assert wc.pin_time(candles, 95.0) is None
+    mids = {t0 + i * 60: 41.0 for i in range(10)}
+    assert wc.pin_time(mids, 95.0) is None
 
 
 # ---------------------------------------------------------------- kalshi_favbuy_study

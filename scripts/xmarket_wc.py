@@ -111,10 +111,14 @@ def fetch_winner_map() -> dict[str, str]:
     return out
 
 
-def fetch_candles(series: str, ticker: str, start: int, end: int) -> dict[int, tuple]:
-    """{minute_ts: (yes_bid_c, yes_ask_c)} from 1-min candlesticks (chunked under the
-    ~5000-period request cap)."""
-    out: dict[int, tuple] = {}
+def fetch_candles(series: str, ticker: str, start: int, end: int) -> tuple[dict, dict]:
+    """(quotes, mids) from 1-min candlesticks (chunked under the ~5000-period cap).
+    quotes: {minute_ts: (yes_bid_c, yes_ask_c)} — only minutes with a two-sided close
+    (entry pricing / residual / spread filter need real quotes). mids: {minute_ts: mid_c}
+    — quote-mid when available, else the trade-price close (the xvenue_leadlag fallback);
+    pin detection and completion% use these for coverage on thin longshot books."""
+    quotes: dict[int, tuple] = {}
+    mids: dict[int, float] = {}
     step = 4800 * 60
     s = start
     while s < end:
@@ -123,27 +127,33 @@ def fetch_candles(series: str, ticker: str, start: int, end: int) -> dict[int, t
                        f"?start_ts={s}&end_ts={e}&period_interval=1")
         for c in (data or {}).get("candlesticks") or []:
             ts = c.get("end_period_ts")
+            if ts is None:
+                continue
+            minute = int(ts) // 60 * 60
             yb = (c.get("yes_bid") or {}).get("close_dollars")
             ya = (c.get("yes_ask") or {}).get("close_dollars")
-            if ts is None or yb is None or ya is None:
-                continue
-            yb_c, ya_c = xl._num(yb) * 100.0, xl._num(ya) * 100.0
-            if 0 <= yb_c <= 100 and 0 <= ya_c <= 100 and ya_c >= yb_c:
-                out[int(ts) // 60 * 60] = (yb_c, ya_c)
+            if yb is not None and ya is not None:
+                yb_c, ya_c = xl._num(yb) * 100.0, xl._num(ya) * 100.0
+                if 0 <= yb_c <= 100 and 0 <= ya_c <= 100 and ya_c >= yb_c:
+                    quotes[minute] = (yb_c, ya_c)
+                    mids[minute] = (yb_c + ya_c) / 2.0
+                    continue
+            px = (c.get("price") or {}).get("close_dollars")
+            px_c = xl._num(px) * 100.0 if px is not None else 0.0
+            if 0 < px_c < 100:
+                mids[minute] = px_c
         s = e
-    return out
+    return quotes, mids
 
 
 # --- result-known time ------------------------------------------------------------------
 
 
-def pin_time(candles: dict[int, tuple], pin_c: float) -> int | None:
+def pin_time(mids: dict[int, float], pin_c: float) -> int | None:
     """First minute the mid reaches >= pin_c and never drops below pin_c - 5 afterwards
     (the market 'knowing' the result), or None if no such pin exists."""
-    ts_sorted = sorted(candles)
-    mids = {ts: (candles[ts][0] + candles[ts][1]) / 2.0 for ts in ts_sorted}
     candidate = None
-    for ts in ts_sorted:
+    for ts in sorted(mids):
         if mids[ts] >= pin_c:
             if candidate is None:
                 candidate = ts
@@ -152,13 +162,11 @@ def pin_time(candles: dict[int, tuple], pin_c: float) -> int | None:
     return candidate
 
 
-def pin_time_low(candles: dict[int, tuple], pin_lo_c: float) -> int | None:
+def pin_time_low(mids: dict[int, float], pin_lo_c: float) -> int | None:
     """Mirror of pin_time for a LOSING side: first minute the mid reaches <= pin_lo_c
     and never rises above pin_lo_c + 5 again."""
-    ts_sorted = sorted(candles)
-    mids = {ts: (candles[ts][0] + candles[ts][1]) / 2.0 for ts in ts_sorted}
     candidate = None
-    for ts in ts_sorted:
+    for ts in sorted(mids):
         if mids[ts] <= pin_lo_c:
             if candidate is None:
                 candidate = ts
@@ -167,7 +175,7 @@ def pin_time_low(candles: dict[int, tuple], pin_lo_c: float) -> int | None:
     return candidate
 
 
-def at_or_before(candles: dict[int, tuple], ts: int, tol_s: int):
+def at_or_before(candles: dict, ts: int, tol_s: int):
     best = None
     for t in candles:
         if t <= ts and ts - t <= tol_s and (best is None or t > best):
@@ -175,7 +183,7 @@ def at_or_before(candles: dict[int, tuple], ts: int, tol_s: int):
     return (candles[best], best) if best is not None else (None, None)
 
 
-def first_after(candles: dict[int, tuple], ts: int, tol_s: int):
+def first_after(candles: dict, ts: int, tol_s: int):
     best = None
     for t in candles:
         if t > ts and t - ts <= tol_s and (best is None or t < best):
@@ -183,7 +191,7 @@ def first_after(candles: dict[int, tuple], ts: int, tol_s: int):
     return (candles[best], best) if best is not None else (None, None)
 
 
-def last_in_window(candles: dict[int, tuple], lo_exclusive: int, hi_inclusive: int):
+def last_in_window(candles: dict, lo_exclusive: int, hi_inclusive: int):
     """Latest candle with lo < t <= hi — used for completion@k so the measurement never
     reuses the T candle itself (which straddles the result)."""
     best = None
@@ -191,10 +199,6 @@ def last_in_window(candles: dict[int, tuple], lo_exclusive: int, hi_inclusive: i
         if lo_exclusive < t <= hi_inclusive and (best is None or t > best):
             best = t
     return candles[best] if best is not None else None
-
-
-def _mid(q: tuple) -> float:
-    return (q[0] + q[1]) / 2.0
 
 
 # --- main ---------------------------------------------------------------------------
@@ -250,15 +254,15 @@ def main(argv: list[str] | None = None) -> int:
     rows = []  # dicts: event, team, series, t_src, comp1/5/15, resid, spread, direction
     for ev in events:
         m = ev["yes_mkt"]
-        mc = fetch_candles(m["series"], m["ticker"], ev["close"] - 12 * 3600,
-                           ev["close"] + 2 * 3600)
-        t_known = pin_time(mc, args.pin_cents)
+        _mq, m_mids = fetch_candles(m["series"], m["ticker"], ev["close"] - 12 * 3600,
+                                    ev["close"] + 2 * 3600)
+        t_known = pin_time(m_mids, args.pin_cents)
         t_src = "pin"
         if t_known is None and ev["no_mkts"]:
             # winner never pinned high (thin quotes) — try a loser pinning low instead
-            lc = fetch_candles(m["series"], ev["no_mkts"][0]["ticker"],
-                               ev["close"] - 12 * 3600, ev["close"] + 2 * 3600)
-            t_known, t_src = pin_time_low(lc, 100.0 - args.pin_cents), "pin_lo"
+            _lq, l_mids = fetch_candles(m["series"], ev["no_mkts"][0]["ticker"],
+                                        ev["close"] - 12 * 3600, ev["close"] + 2 * 3600)
+            t_known, t_src = pin_time_low(l_mids, 100.0 - args.pin_cents), "pin_lo"
         if t_known is None:
             t_known, t_src = ev["close"], "close_time"
         for team in ev["teams"]:
@@ -266,24 +270,26 @@ def main(argv: list[str] | None = None) -> int:
             if not wtk:
                 skips["unmapped_team"] += 1
                 continue
-            wc = fetch_candles(WINNER_SERIES, wtk, t_known - 40 * 60, t_known + H + 40 * 60)
-            pre_q, _ = at_or_before(wc, t_known, 30 * 60)
-            end_q, _ = at_or_before(wc, t_known + H, 45 * 60)
-            if pre_q is None or end_q is None:
-                skips["missing_quotes"] += 1
+            wq, wm = fetch_candles(WINNER_SERIES, wtk, t_known - 40 * 60,
+                                   t_known + H + 40 * 60)
+            p_pre, _ = at_or_before(wm, t_known, 30 * 60)
+            p_end, _ = at_or_before(wm, t_known + H, 45 * 60)
+            if p_pre is None or p_end is None:
+                skips["missing_mids"] += 1
                 continue
-            p_pre, p_end = _mid(pre_q), _mid(end_q)
             total = p_end - p_pre
             if abs(total) < args.min_move_c:
                 skips["below_min_move"] += 1
                 continue
             comp = {}
             for k in (1, 5, 15):
-                q = last_in_window(wc, t_known, t_known + k * 60)
-                comp[k] = ((_mid(q) - p_pre) / total) if q is not None else None
-            entry_q, entry_ts = first_after(wc, t_known + 5 * 60, 10 * 60)
+                q = last_in_window(wm, t_known, t_known + k * 60)
+                comp[k] = ((q - p_pre) / total) if q is not None else None
+            # entry/exit + spread need REAL two-sided quotes, not the price fallback
+            entry_q, _ = first_after(wq, t_known + 5 * 60, 10 * 60)
+            end_q, _ = at_or_before(wq, t_known + H, 45 * 60)
             resid = spread = None
-            if entry_q is not None:
+            if entry_q is not None and end_q is not None:
                 spread = entry_q[1] - entry_q[0]
                 if total > 0:  # buy YES at ask, exit at bid at T+H
                     entry, exitp = entry_q[1], end_q[0]
