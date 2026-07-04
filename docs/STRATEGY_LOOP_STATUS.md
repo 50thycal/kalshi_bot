@@ -7,65 +7,62 @@ suggestion list carries over run-to-run, updated as data accumulates.*
 
 ---
 
-## Snapshot — 2026-07-03 22:13 UTC (run #2)
+## Snapshot — 2026-07-04 00:13 UTC (run #3)
 
-**Books actively trading (settled n / settled P&L / open) — Δ vs run #1 noted:**
-- **theta** — **3 settled** (was 0), **−$0.79** (−26¢/trade), 1 open. **First settlements
-  landed.** n=3 is pure noise (one tail that hits swamps three wins); no signal yet. It's
-  opening + settling on the expected hourly cadence, which is what matters this early.
-- **mmsell** — 65 settled (was 64), **−$1.18** (−1.8¢/trade), **47 open** (was 9). Entries
-  **ramping hard** (diversifying across many small positions, as the exit study prescribed);
-  settlements lag because these markets settle over days. Still a tiny settled sample.
-- **weather `con` (consensus)** — **211 settled, +$9.67**, 17 open. Steady, still the only
-  consistently +EV weather book.
-- **weather (everything else pooled)** — **4,596 settled, −$226.07**, 62 open. The documented
-  bleeders (fav/nws/cal/dist/all lows), unchanged in character.
+**Books actively trading (settled n / settled P&L / open) — Δ vs run #2:**
+- **mmsell** — **104 settled** (was 65), **+$2.03** (was −$1.18) = **+2.0¢/trade**, 53 open.
+  **Flipped positive.** Early but encouraging — the maker-sell edge starting to show as
+  settlements accrue (still below the +5.2¢ backtest, but positive and n growing fast).
+- **theta** — **8 settled** (was 3), **−$3.68** (−46¢/trade), 0 open. Still noise-level n.
+  The negative is consistent with **1 tail hitting** (negative skew — many small wins, rare
+  big loss, exactly the thesis's risk profile); it is **not** yet evidence the edge is
+  absent. 0 open right now = no model-overpriced tail in the last entry window (lumpy).
+- **weather `con`** — 211 settled, **+$9.67**, 17 open. Unchanged (settles on weather-event
+  clock; no new settlements this window).
+- **weather (rest pooled)** — 4,596 settled, **−$226.07**, 63 open. Unchanged bleeders.
 
 **Data collection — ALL FRESH ✓ (last-24h rows / latest UTC):**
 | collector | 24h rows | latest | status |
 |---|---|---|---|
-| crypto_spot_candles | 2,870 | 22:09 | ✓ fresh, 2 products (BTC+ETH) |
-| crypto_ladder_snapshots | 1,680 | 22:09 | ✓ fresh, **100% model-priced** (1680/1680) |
-| weather_forecasts | 11,356 | 22:13 | ✓ fresh |
-| weather_observations | 644 | 22:13 | ✓ fresh |
-| weather_ensembles | 1,776 | 22:13 | ✓ fresh (hourly cadence) |
-| weather_bucket_snapshots | 13,194 | 22:13 | ✓ fresh |
+| crypto_spot_candles | 2,874 | 00:11 | ✓ fresh, 2 products (BTC+ETH) |
+| crypto_ladder_snapshots | 6,960 | 00:11 | ✓ fresh, **100% model-priced** (6960/6960) |
+| weather_forecasts | 11,292 | 00:12 | ✓ fresh |
+| weather_observations | 656 | 00:12 | ✓ fresh |
+| weather_ensembles | 1,744 | 00:12 | ✓ fresh (hourly cadence) |
+| weather_bucket_snapshots | 13,248 | 00:12 | ✓ fresh |
 
-**Headline:** everything healthy. theta crossed from 0→3 settled (noise-level, negative, ignore
-the sign at n=3); mmsell is fanning out to 47 open positions. No stale or zero collectors.
+**Headline:** mmsell turned positive (+$2.03/104); theta at 8 settled −$3.68 (negative-skew
+noise, watch); all collectors fresh. Ladder-snapshot 24h count jumped (1.7k→7.0k) as theta's
+full day of collection now fits the window — expected, not an anomaly.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-Each tagged with status and the date first raised. Kept while valid, dropped when
-resolved/invalidated, updated as data grows.
+1. **[theta · STILL VALID, 07-03] Let theta accumulate before judging.** 8 settled, −$3.68 —
+   still noise, and the sign is dominated by negative skew (a single tail hit ≈ −$4 on 5
+   contracts). Target ~30–100 settled before reading anything into P&L. Do **not** touch
+   `THETA_*` config yet.
 
-1. **[theta · STILL VALID, 07-03] Let theta accumulate before judging.** Now 3 settled at
-   −$0.79 — n=3 is noise, do not read the sign. Still target ~30–100 settled before comparing
-   live P&L to the +4.4¢/contract backtest. Do **not** touch `THETA_*` config yet.
+2. **[theta · STILL VALID, 07-03] Build a theta PnL slice once ~30+ settle** — and make it
+   **decompose win-rate vs average tail-loss** (band × time-to-expiry, model-overpriced cohort
+   win% vs priced-in prob). That's the read that tells whether −P&L is a broken edge or just
+   variance from the occasional tail. Not there yet (8 settled).
 
-2. **[theta · STILL VALID, 07-03] Build a theta PnL slice once ~30+ settle** (a read-only
-   analysis like `weather_pnl`, sliced by price band × time-to-expiry, comparing the
-   model-overpriced cohort's live win% to its priced-in probability). Not there yet (3 settled).
+3. **[theta · STILL VALID, 07-03 run#2] Watch theta's sample-build velocity.** 3→8 settled in
+   2h (~2–3/hr), 0 open right now. On track for ~30–50/day → judgable in ~2–3 days. If it
+   stalls (few opens over a full day), the entry gates (`theta_min_edge_cents` / entry window /
+   `theta_max_per_event`) are the tuning lever — fable candidate, **not now**.
 
-3. **[theta · NEW 07-03 run#2] Watch theta's sample-build velocity.** In ~26 min it went 3
-   open → 3 settled + 1 open, i.e. it opens a few per hour (lumpy — depends on hourly windows
-   hitting the 10–55 min entry zone AND a model-overpriced tail). If after ~a day it's opening
-   too few to reach a judgable sample in reasonable time, the entry gates (`theta_min_edge_cents`,
-   the entry window, `theta_max_per_event`) would be the tuning lever — a fable candidate, **not
-   now**. Just monitoring the rate for now.
-
-4. **[mmsell · STILL VALID, 07-03] Watch whether the +5.2¢ tape edge shows in paper.** 65
-   settled at −1.8¢/trade, 47 open ramping. Settlements lag entries (multi-day markets), so the
-   settled sample builds slower than theta's — give it more n before any verdict.
+4. **[mmsell · STILL VALID, 07-03 — improving] Watch the +5.2¢ tape edge in paper.** Now
+   **+2.0¢/trade on 104 settled** (was −1.8¢ on 65). Trending toward the backtest; keep
+   watching as n grows — if it holds ≥ ~+2–3¢ at n≈300+, that's a real forward-validation.
 
 5. **[weather · STILL VALID, 07-03] Consider pruning more confirmed-bleeder weather books.**
-   Now quantified: weather-other = **−$226 over 4,596 settled** vs `con` +$9.67. Pruning cuts
-   noise + API load but stops cross-validation accrual — judgment call for the user, not urgent.
+   weather-other = −$226 over 4,596 vs `con` +$9.67. Judgment call (cuts noise + API load but
+   stops cross-validation accrual), not urgent.
 
-6. **[infra · STILL VALID, 07-03] Highest-value next build is theta analysis tooling** (see #2),
-   not more strategies — pipeline is healthy; the missing piece is the lens to read theta's live
-   edge once its sample is real.
+6. **[infra · STILL VALID, 07-03] Highest-value next build is theta analysis tooling** (see #2)
+   — pipeline is healthy; the missing piece is the lens to read theta's live edge at real n.
 
-*(Resolved/dropped this run: none. Added: #3 theta entry-rate watch.)*
+*(Resolved/dropped this run: none. #4 upgraded to "improving" as mmsell flipped positive.)*
