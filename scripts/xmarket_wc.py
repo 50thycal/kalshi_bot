@@ -88,7 +88,9 @@ def fetch_settled_match_markets(series: str, pages: int) -> list[dict]:
 
 def fetch_winner_map() -> dict[str, str]:
     """normalized team -> KXMENWORLDCUP market ticker (open AND settled — eliminated
-    teams' contracts settle NO but their candles are exactly the repricing we measure)."""
+    teams' contracts settle NO but their candles are exactly the repricing we measure).
+    Mapping is DYNAMIC from each winner market's own yes_sub_title (the 2026 field has
+    48 teams — far beyond the static contender dict, kept only as a fallback)."""
     out: dict[str, str] = {}
     for status in ("open", "settled", "closed"):
         cursor = ""
@@ -98,12 +100,9 @@ def fetch_winner_map() -> dict[str, str]:
             mkts = (page or {}).get("markets") or []
             for m in mkts:
                 tk = m.get("ticker") or ""
-                code = tk.rsplit("-", 1)[-1]
-                name = xl.CODE2NAME.get(code)
+                name = xg._norm(xl._norm_country(m.get("yes_sub_title") or ""))
                 if not name:
-                    sub = xl._norm_country(m.get("yes_sub_title") or "")
-                    if sub in xl.CODE2NAME.values():
-                        name = sub
+                    name = xl.CODE2NAME.get(tk.rsplit("-", 1)[-1]) or ""
                 if name and name not in out:
                     out[name] = tk
             cursor = (page or {}).get("cursor") or ""
@@ -150,6 +149,21 @@ def pin_time(candles: dict[int, tuple], pin_c: float) -> int | None:
                 candidate = ts
         elif mids[ts] < pin_c - 5.0:
             candidate = None  # un-pinned again; the earlier pin was premature
+    return candidate
+
+
+def pin_time_low(candles: dict[int, tuple], pin_lo_c: float) -> int | None:
+    """Mirror of pin_time for a LOSING side: first minute the mid reaches <= pin_lo_c
+    and never rises above pin_lo_c + 5 again."""
+    ts_sorted = sorted(candles)
+    mids = {ts: (candles[ts][0] + candles[ts][1]) / 2.0 for ts in ts_sorted}
+    candidate = None
+    for ts in ts_sorted:
+        if mids[ts] <= pin_lo_c:
+            if candidate is None:
+                candidate = ts
+        elif mids[ts] > pin_lo_c + 5.0:
+            candidate = None
     return candidate
 
 
@@ -214,11 +228,13 @@ def main(argv: list[str] | None = None) -> int:
     events = []
     for ev, mkts in sorted(by_event.items()):
         yes_side = [m for m in mkts if m["result"] == "yes"]
+        no_side = [m for m in mkts if m["result"] == "no" and m["team"] != "tie"]
         teams = sorted({m["team"] for m in mkts if m["team"] and m["team"] != "tie"})
         if not yes_side or not teams:
             continue  # not decisively settled yet, or no team names parsed
         events.append({"event": ev, "series": mkts[0]["series"], "teams": teams,
-                       "yes_mkt": yes_side[0], "close": max(m["close"] for m in mkts)})
+                       "yes_mkt": yes_side[0], "no_mkts": no_side,
+                       "close": max(m["close"] for m in mkts)})
     events = events[-args.max_events:]
     winner_map = fetch_winner_map()
     print("=== WCPROP — match-result -> winner-ladder propagation "
@@ -230,27 +246,36 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     # 2) per (event, involved team): completion + residual capture ----------------------
+    skips = defaultdict(int)
     rows = []  # dicts: event, team, series, t_src, comp1/5/15, resid, spread, direction
     for ev in events:
         m = ev["yes_mkt"]
-        mc = fetch_candles(m["series"], m["ticker"], ev["close"] - 8 * 3600,
-                           ev["close"] + 3600)
+        mc = fetch_candles(m["series"], m["ticker"], ev["close"] - 12 * 3600,
+                           ev["close"] + 2 * 3600)
         t_known = pin_time(mc, args.pin_cents)
         t_src = "pin"
+        if t_known is None and ev["no_mkts"]:
+            # winner never pinned high (thin quotes) — try a loser pinning low instead
+            lc = fetch_candles(m["series"], ev["no_mkts"][0]["ticker"],
+                               ev["close"] - 12 * 3600, ev["close"] + 2 * 3600)
+            t_known, t_src = pin_time_low(lc, 100.0 - args.pin_cents), "pin_lo"
         if t_known is None:
             t_known, t_src = ev["close"], "close_time"
         for team in ev["teams"]:
             wtk = winner_map.get(team) or winner_map.get(xl._norm_country(team))
             if not wtk:
+                skips["unmapped_team"] += 1
                 continue
             wc = fetch_candles(WINNER_SERIES, wtk, t_known - 40 * 60, t_known + H + 40 * 60)
             pre_q, _ = at_or_before(wc, t_known, 30 * 60)
             end_q, _ = at_or_before(wc, t_known + H, 45 * 60)
             if pre_q is None or end_q is None:
+                skips["missing_quotes"] += 1
                 continue
             p_pre, p_end = _mid(pre_q), _mid(end_q)
             total = p_end - p_pre
             if abs(total) < args.min_move_c:
+                skips["below_min_move"] += 1
                 continue
             comp = {}
             for k in (1, 5, 15):
@@ -270,8 +295,10 @@ def main(argv: list[str] | None = None) -> int:
                 "event": ev["event"], "series": ev["series"], "team": team,
                 "t_src": t_src, "total": total, "comp": comp, "resid": resid,
                 "spread": spread, "direction": "up" if total > 0 else "down",
+                "p_pre": p_pre, "p_end": p_end,
             })
 
+    print(f"\n  skips: {dict(skips) or '(none)'}   measurable rows: {len(rows)}")
     if not rows:
         print("  No measurable (event, team) repricings — check winner-map coverage above.")
         return 0
@@ -279,12 +306,13 @@ def main(argv: list[str] | None = None) -> int:
     def _pct(v: float | None) -> str:
         return f"{v * 100:4.0f}%" if v is not None else "  n/a"
 
-    print(f"\n  {'event':>26} {'team':>13} {'src':>5} {'move':>6} "
+    print(f"\n  {'event':>26} {'team':>13} {'src':>6} {'pre>end':>11} {'move':>6} "
           f"{'c@1':>5} {'c@5':>5} {'c@15':>5} {'resid':>7} {'sprd':>5}")
     for r in rows:
         resid = f"{r['resid']:+6.1f}c" if r["resid"] is not None else "    n/a"
         sprd = f"{r['spread']:4.1f}" if r["spread"] is not None else " n/a"
-        print(f"  {r['event']:>26} {r['team']:>13} {r['t_src']:>5} {r['total']:+5.1f}c "
+        print(f"  {r['event']:>26} {r['team']:>13} {r['t_src']:>6} "
+              f"{r['p_pre']:5.1f}>{r['p_end']:5.1f} {r['total']:+5.1f}c "
               f"{_pct(r['comp'].get(1)):>5} {_pct(r['comp'].get(5)):>5} "
               f"{_pct(r['comp'].get(15)):>5} {resid:>7} {sprd:>5}")
 
