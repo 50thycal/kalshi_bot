@@ -7,56 +7,58 @@ suggestion list carries over run-to-run, updated as data accumulates.*
 
 ---
 
-## Snapshot — 2026-07-04 12:13 UTC (run #9)
+## Snapshot — 2026-07-04 14:13 UTC (run #10) — **revision round DEPLOYED**
 
-**Books actively trading (settled n / settled P&L / open) — Δ vs run #8:**
-- **theta** — **40 settled**, **−$12.99** (−32¢/trade), 2 open. Diagnosis from run #8 stands
-  (model prices tails at ~18.7% vs ~35% realized). Cumulative ticked up +$0.15 over 3 new
-  trades = noise; nothing changes the read. Awaiting a fable recalibration.
-- **mmsell** — **245 settled**, **+$3.86** (+1.6¢/trade), 17 open. Creeping positive; ~n=300
-  (judgable) about a day out.
-- **weather `con`** — **228 settled** (+17), **+$10.82** (+$1.15 on the new batch = **+6.8¢/
-  trade**), 3 open. **Fresh settlement batch confirms con is +EV on new data.**
-- **weather (rest pooled)** — **4,659 settled** (+63), **−$235.77** (−$9.70 on the new batch =
-  **−15.4¢/trade**), 22 open. The same batch shows the rest still bleeding hard.
+PR #8 merged; the theta1/2/3 revision books are live as of ~14:05 UTC (theta3 already
+trading). The pre-registered A/B/C/D experiment vs the untouched control is now running.
+
+**Books actively trading (settled n / settled P&L / open) — Δ vs run #9:**
+- **theta (control)** — 48 settled, **−$12.08** (−25¢/trade), 2 open. Slightly recovered
+  (+$0.91 over the last 8). Unchanged config, as designed.
+- **theta3** (wide band, edge≥12¢, mult 1.25) — **first 2 settled (−$1.27), 2 open.** Fires
+  most often of the revisions (it shares the control's wide gates).
+- **theta1 / theta2** (band 3-20¢ + tte 10-35m; theta2 thresholds-only) — no rows yet.
+  **Expected**: their gates are much tighter, so they trade less often; give them a day
+  before reading anything into "no entries." The loop will flag if they NEVER fire.
+- **mmsell** — 247 settled, **+$4.16** (+1.7¢/trade), 17 open. Continuing its slow positive
+  drift; n≈300 verdict approaching.
+- **weather `con`** — 228 settled, **+$10.82**, 4 open. Steady. **weather (rest)** — 4,659
+  settled, −$235.77, 28 open. Unchanged bleeders.
 
 **Data collection — ALL FRESH ✓ (last-24h rows / latest UTC):**
 | collector | 24h rows | latest | status |
 |---|---|---|---|
-| crypto_spot_candles | 2,876 | 12:11 | ✓ fresh, 2 products |
-| crypto_ladder_snapshots | 36,240 | 12:12 | ✓ fresh, 100% model-priced |
-| weather_forecasts | 10,996 | 12:13 | ✓ fresh |
-| weather_observations | 646 | 12:09 | ✓ fresh |
-| weather_ensembles | 1,696 | 12:04 | ✓ fresh (hourly) |
-| weather_bucket_snapshots | 13,134 | 12:13 | ✓ fresh |
+| crypto_spot_candles | 2,876 | 14:12 | ✓ fresh, 2 products |
+| crypto_ladder_snapshots | 41,280 | 14:12 | ✓ fresh, 100% model-priced |
+| weather_forecasts | 10,976 | 14:12 | ✓ fresh |
+| weather_observations | 645 | 14:12 | ✓ fresh |
+| weather_ensembles | 1,712 | 14:06 | ✓ fresh (hourly) |
+| weather_bucket_snapshots | 13,110 | 14:12 | ✓ fresh |
 
-**Headline:** picture stable. This run's fresh weather settlements gave a clean side-by-side on
-new data — **con +6.8¢/trade vs the rest −15.4¢/trade** — reinforcing both the "con is the only
-+EV weather book" finding and the prune suggestion. theta unchanged (diagnosed, awaiting fix);
-mmsell inching positive. All 9/9 runs: collectors fully fresh.
+**Headline:** revision round is live and trading (theta3 first). Everything healthy. The
+experiment clock starts now — evaluation at ≥~60 settled per revision book per the
+pre-registered rule in `docs/THETA_THESIS.md`.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[theta · DIAGNOSED, holds at n=40] Vol model under-prices tails ~2× (18.7% vs 35.1%)** —
-   the entire −EV. No new diagnosis needed; the +$0.15 uptick this run is noise.
+1. **[theta · IN FLIGHT] Let the revision experiment run untouched.** Pre-registered rule:
+   evaluate at ≥~60 settled per book; keep only books with positive P&L AND realized
+   tail-hit ≤ modeled; all negative (incl. control) → shelve the family. **No parameter
+   tweaks mid-window** — the books ARE the experiment. The loop reports per-book each run.
 
-2. **[theta · fable fix — the actionable one] Widen the model tail + re-validate before trusting.**
-   Fatten/scale the empirical return distribution (Student-t or ×k vol), and/or a sigma floor;
-   or raise `theta_min_edge_cents` hard / pause entries. **Recalibrate against the accumulating
-   settled trades so modeled-P ≈ ~35% realized on held-out data — don't hand-tune blind.**
+2. **[theta · WATCH] theta1/theta2 entry rate.** Their tight gates (3-20¢ band, 10-35m
+   window; theta2 thresholds-only) mean fewer trades — that's the design. But if they have
+   ~zero entries after ~24h, the 3-20¢ band may simply be too sparse at T-30 in this calm
+   regime (the snapshot data showed the mid-band is thin); that would itself be a finding:
+   the surgical config can't reach sample size, and the evaluation window stretches.
 
-3. **[theta · keep collecting] Don't stop the theta feeds** — it's paper (no loss), and each
-   settled trade is labeled data to refit the model offline.
+3. **[mmsell · STILL VALID — inconclusive, mildly +] Watch, don't judge.** +1.7¢/247 and
+   drifting up; n≈300 verdict likely within ~a day.
 
-4. **[mmsell · STILL VALID — inconclusive, mildly +] Watch, don't judge.** +1.6¢/245, trending
-   up. About a day from n≈300 where the +5.2¢ backtest gets a real verdict.
+4. **[weather · STILL VALID, 07-03] Consider pruning confirmed-bleeder weather books**
+   (−$235.77/4,659 vs `con` +$10.82). Judgment call, not urgent.
 
-5. **[weather · STILL VALID — reinforced] Consider pruning confirmed-bleeder weather books.**
-   This run's fresh batch: con +6.8¢/trade vs rest −15.4¢/trade — the cleanest live restatement
-   yet of "keep `con`, drop fav/nws/cal/dist/lows." Cuts ~−$10/settlement-batch of paper bleed
-   + API load; the only cost is losing cross-validation on already-dead books. Judgment call.
-
-*(Resolved/dropped: none. #5 reinforced by a fresh settlement batch; theta items unchanged —
-diagnosis is stable, ball is in fable's court for the fix.)*
+*(Resolved this run: "diagnose theta" and "build the fix" — both done and DEPLOYED as the
+theta1/2/3 experiment (PR #8). Replaced by #1 run-the-experiment and #2 entry-rate watch.)*
