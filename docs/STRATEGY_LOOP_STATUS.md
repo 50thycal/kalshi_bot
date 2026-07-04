@@ -7,58 +7,60 @@ suggestion list carries over run-to-run, updated as data accumulates.*
 
 ---
 
-## Snapshot — 2026-07-04 14:13 UTC (run #10) — **revision round DEPLOYED**
+## Snapshot — 2026-07-04 16:13 UTC (run #11)
 
-PR #8 merged; the theta1/2/3 revision books are live as of ~14:05 UTC (theta3 already
-trading). The pre-registered A/B/C/D experiment vs the untouched control is now running.
+**Theta experiment (control + revisions, deployed ~14:05 UTC):**
+| book | settled | P&L | open | Δ this run |
+|---|---|---|---|---|
+| theta (control) | 56 | **−$4.99** | 1 | **+$7.09 over last 8** — sharp recovery |
+| theta1 (3-20¢, 10-35m) | 2 | **+$1.25** | 0 | first trades, both won |
+| theta2 (theta1 + thr-only) | 0 | — | 0 | not fired yet (rarest gates) |
+| theta3 (wide, edge≥12, ×1.25) | 7 | **+$2.01** | 0 | positive start |
 
-**Books actively trading (settled n / settled P&L / open) — Δ vs run #9:**
-- **theta (control)** — 48 settled, **−$12.08** (−25¢/trade), 2 open. Slightly recovered
-  (+$0.91 over the last 8). Unchanged config, as designed.
-- **theta3** (wide band, edge≥12¢, mult 1.25) — **first 2 settled (−$1.27), 2 open.** Fires
-  most often of the revisions (it shares the control's wide gates).
-- **theta1 / theta2** (band 3-20¢ + tte 10-35m; theta2 thresholds-only) — no rows yet.
-  **Expected**: their gates are much tighter, so they trade less often; give them a day
-  before reading anything into "no entries." The loop will flag if they NEVER fire.
-- **mmsell** — 247 settled, **+$4.16** (+1.7¢/trade), 17 open. Continuing its slow positive
-  drift; n≈300 verdict approaching.
-- **weather `con`** — 228 settled, **+$10.82**, 4 open. Steady. **weather (rest)** — 4,659
-  settled, −$235.77, 28 open. Unchanged bleeders.
+All theta books positive THIS window — including the control, whose recent recovery
+(−$12.08 → −$4.99) says the early bleed had a heavy bad-luck/regime component on top of the
+diagnosed model miss. All revision n's are tiny; the ≥~60-settled evaluation gate stands.
+
+**Other books:**
+- **mmsell** — 256 settled, **+$5.21** (+2.0¢/trade), 19 open. Steady climb; ~n=300 verdict
+  imminent. Trending toward (though below) the +5.2¢ backtest.
+- **weather `con`** — 228 settled, **+$10.82**, 7 open. Steady.
+- **weather (rest)** — 4,659 settled, −$235.77, 43 open. Unchanged bleeders.
 
 **Data collection — ALL FRESH ✓ (last-24h rows / latest UTC):**
 | collector | 24h rows | latest | status |
 |---|---|---|---|
-| crypto_spot_candles | 2,876 | 14:12 | ✓ fresh, 2 products |
-| crypto_ladder_snapshots | 41,280 | 14:12 | ✓ fresh, 100% model-priced |
-| weather_forecasts | 10,976 | 14:12 | ✓ fresh |
-| weather_observations | 645 | 14:12 | ✓ fresh |
-| weather_ensembles | 1,712 | 14:06 | ✓ fresh (hourly) |
-| weather_bucket_snapshots | 13,110 | 14:12 | ✓ fresh |
+| crypto_spot_candles | 2,870 | 16:08 | ✓ fresh, 2 products |
+| crypto_ladder_snapshots | 45,840 | 16:08 | ✓ fresh, 100% model-priced |
+| weather_forecasts | 10,974 | 16:13 | ✓ fresh |
+| weather_observations | 644 | 16:11 | ✓ fresh |
+| weather_ensembles | 1,712 | 16:07 | ✓ fresh (hourly) |
+| weather_bucket_snapshots | 13,086 | 16:13 | ✓ fresh |
 
-**Headline:** revision round is live and trading (theta3 first). Everything healthy. The
-experiment clock starts now — evaluation at ≥~60 settled per revision book per the
-pre-registered rule in `docs/THETA_THESIS.md`.
+**Headline:** revision experiment fully alive (theta1 + theta3 both trading and green so
+far; theta2 awaiting its rarer setup). Control bounced hard. Everything fresh, 11/11 runs.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[theta · IN FLIGHT] Let the revision experiment run untouched.** Pre-registered rule:
-   evaluate at ≥~60 settled per book; keep only books with positive P&L AND realized
-   tail-hit ≤ modeled; all negative (incl. control) → shelve the family. **No parameter
-   tweaks mid-window** — the books ARE the experiment. The loop reports per-book each run.
+1. **[theta · IN FLIGHT] Let the experiment run untouched to ≥~60 settled per revision
+   book** (theta3 pace ≈ 1-2 days; theta1 slower; theta2 slowest). Keep-if-positive-AND-
+   calibrated rule as pre-registered. The control's bounce is a reminder that 2-hour windows
+   swing hard — only the gate decides.
 
-2. **[theta · WATCH] theta1/theta2 entry rate.** Their tight gates (3-20¢ band, 10-35m
-   window; theta2 thresholds-only) mean fewer trades — that's the design. But if they have
-   ~zero entries after ~24h, the 3-20¢ band may simply be too sparse at T-30 in this calm
-   regime (the snapshot data showed the mid-band is thin); that would itself be a finding:
-   the surgical config can't reach sample size, and the evaluation window stretches.
+2. **[theta · WATCH, softened] theta2 entry rate.** theta1 firing confirms the tight band
+   isn't empty; theta2's extra thresholds-only filter makes it the rarest. If still zero
+   after another ~24h, that's the finding: threshold tails ≤20¢ with ≥5¢ model edge are
+   near-nonexistent in this regime, and theta2's cell is effectively untradeable (evaluation
+   would then close it for sparsity, not P&L).
 
-3. **[mmsell · STILL VALID — inconclusive, mildly +] Watch, don't judge.** +1.7¢/247 and
-   drifting up; n≈300 verdict likely within ~a day.
+3. **[mmsell · verdict imminent] n≈300 within ~a day.** +2.0¢/256 and climbing. At the
+   verdict: if ≥ +2¢ holds, mmsell forward-validates as the first durable +EV book beyond
+   weather-con — sizing/live questions become relevant (fable discussion, not loop action).
 
-4. **[weather · STILL VALID, 07-03] Consider pruning confirmed-bleeder weather books**
+4. **[weather · STILL VALID] Consider pruning confirmed-bleeder weather books**
    (−$235.77/4,659 vs `con` +$10.82). Judgment call, not urgent.
 
-*(Resolved this run: "diagnose theta" and "build the fix" — both done and DEPLOYED as the
-theta1/2/3 experiment (PR #8). Replaced by #1 run-the-experiment and #2 entry-rate watch.)*
+*(No items resolved/dropped this run; #2 softened after theta1 fired, #3 upgraded to
+"verdict imminent.")*
