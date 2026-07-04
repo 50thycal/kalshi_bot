@@ -1,15 +1,14 @@
 # ops request: type='db'
-metric                      value                                  
---------------------------  ---------------------------------------
-alembic_head                f3a4b5c6d7e8                           
-xgame_tables_present        game_market_matches,game_tape_snapshots
-bot_runs_last_1h            47                                     
-ladder_total                63600                                  
-ladder_last_24h             60000                                  
-ladder_latest_capture       2026-07-04 22:50:25.378559+00          
-favband_65_90_total         236                                    
-favband_65_90_last24h       222                                    
-favband_last24h_with_model  222                                    
-favband_final_hour_24h      221                                    
+metric               value 
+-------------------  ------
+bot_mode_1h          live  
+game_matches_total   0     
+game_matches_active  0     
+game_matches_ended   0     
+game_tape_total      0     
+game_tape_kalshi     0     
+game_tape_pm         0     
+game_tape_latest     (none)
+match_sample         (none)
 
-(10 rows)
+(9 rows)
