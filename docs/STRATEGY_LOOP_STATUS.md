@@ -7,59 +7,62 @@ suggestion list carries over run-to-run, updated as data accumulates.*
 
 ---
 
-## Snapshot — 2026-07-04 06:13 UTC (run #6)
+## Snapshot — 2026-07-04 08:13 UTC (run #7)
 
-**Books actively trading (settled n / settled P&L / open) — Δ vs run #5:**
-- **mmsell** — **241 settled** (was 218), **+$2.99** (was +$0.97) = **+1.2¢/trade**, 13 open.
-  Drifting slightly positive across the swings (−1.8 → +2.0 → −2.8 → +0.4 → +1.2 ¢/trade).
-  Still short of the n≈300 needed to call it; leaning mildly encouraging.
-- **theta** — **26 settled** (was 19), **−$9.75** (−37¢/trade), 2 open. **The important nuance:
-  the last 7 trades added only −$0.58 (≈ −8¢/trade)** vs −37…−46¢/trade in earlier runs — so
-  the deep cumulative loss is **front-loaded from a few early tail hits**, and recent trades are
-  near breakeven. Tail-hit ≈ 27% vs ~20% priced. n=26 ≈ the decision zone.
-- **weather `con`** — 211 settled, **+$9.67**, 17 open. Flat (pre next ~14:00 UTC settlement).
+**Books actively trading (settled n / settled P&L / open) — Δ vs run #6:**
+- **theta** — **32 settled** (was 26), **−$10.83** (−34¢/trade), 2 open. **Crossed the n≈30
+  decision zone.** Verdict emerging: **leaning negative, opposite the +4.4¢ backtest.** Tails
+  have hit ~26–27% vs ~20% priced in *every* run — a small but consistent adverse gap (still
+  <1 SD at n=32, so "lean," not "proven"). Recent 6 trades −$1.08 (−18¢/trade) — moderated
+  from the early deep hits but still red.
+- **mmsell** — **242 settled** (was 241), **+$3.19** = **+1.3¢/trade**, 15 open. Barely moved
+  overnight (few markets settle at night). Still mildly positive, still short of n≈300.
+- **weather `con`** — 211 settled, **+$9.67**, 17 open. Flat (next settlement batch ~14:00 UTC,
+  ~6h out). Collectors underneath live.
 - **weather (rest pooled)** — 4,596 settled, **−$226.07**, 63 open. Unchanged bleeders.
 
 **Data collection — ALL FRESH ✓ (last-24h rows / latest UTC):**
 | collector | 24h rows | latest | status |
 |---|---|---|---|
-| crypto_spot_candles | 2,876 | 06:12 | ✓ fresh, 2 products (BTC+ETH) |
-| crypto_ladder_snapshots | 22,320 | 06:12 | ✓ fresh, **100% model-priced** |
-| weather_forecasts | 11,081 | 06:13 | ✓ fresh |
-| weather_observations | 652 | 06:13 | ✓ fresh |
-| weather_ensembles | 1,720 | 06:13 | ✓ fresh (hourly cadence) |
-| weather_bucket_snapshots | 13,254 | 06:13 | ✓ fresh |
+| crypto_spot_candles | 2,870 | 08:09 | ✓ fresh, 2 products (BTC+ETH) |
+| crypto_ladder_snapshots | 26,880 | 08:09 | ✓ fresh, **100% model-priced** |
+| weather_forecasts | 11,049 | 08:13 | ✓ fresh |
+| weather_observations | 650 | 08:11 | ✓ fresh |
+| weather_ensembles | 1,696 | 08:02 | ✓ fresh (hourly cadence) |
+| weather_bucket_snapshots | 13,206 | 08:11 | ✓ fresh |
 
-**Headline:** collectors all fresh. **theta's read softened** — cumulative −$9.75 is dominated
-by early tail hits; the last 7 trades were ~breakeven, which is exactly why cumulative P&L
-misleads on a negative-skew book and the **win-rate-vs-tail-loss decomposition is now the
-deciding read** (theta is at n=26). mmsell mildly positive at n=241. Still no action warranted.
+**Headline:** collectors all fresh. **theta reached judgable n (32) and is leaning negative —
+the opposite of its backtest** — with a consistent tail-hit gap (~26% realized vs ~20% priced)
+that points at the vol model **underestimating settlement tail probability**. This is the run
+where the diagnostic PnL slice (suggestion #1/#2) becomes the concrete, worth-doing next action
+for fable. Still not touching config — diagnose before changing anything.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[theta · STILL VALID — at the decision zone] Judge by decomposition, not cumulative P&L.**
-   n=26, cumulative −$9.75 but **recent 7 ≈ breakeven** → the loss is front-loaded early
-   variance, not (yet) a persistent bleed. Don't read the −$ headline literally on a
-   negative-skew book. Hold `THETA_*` config.
+1. **[theta · ELEVATED — diagnose now] Build the theta PnL slice; the edge is inverted at n=32.**
+   Live −34¢/trade vs +4.4¢ backtest, tails ~26% vs ~20% priced every run. The single concrete
+   next action: slice settled theta trades by price band × time-to-expiry and compare **model
+   P(YES) to realized hit-rate**. Expectation from the pattern: model P sits *below* realized —
+   i.e. the spot-vol model under-prices tail probability. Read-only; no config change.
 
-2. **[theta · NOW ACTIONABLE] Build the theta PnL slice (this is the pivotal read).** At n≈26–30:
-   win-rate vs average tail-loss, model-P(YES) vs realized hit-rate by price band × time-to-
-   expiry. That decomposition — not the cumulative total — tells whether the +4.4¢ backtest
-   edge is showing up. If model-P is systematically *below* realized hit-rate, the fix (for
-   fable) is the vol model underestimating settlement tail risk (Coinbase 1-min vol vs BRRNY).
+2. **[theta · fable fix candidate, AFTER #1 confirms] If model underestimates tails, widen the
+   distribution.** Likely levers (do not apply blind — confirm with #1 first): the 5-day
+   overlapping-return window under-captures sub-hour fat tails; Coinbase 1-min vol may run below
+   BRRNY settlement vol. Candidate fixes: a fatter-tailed / longer-window return model, a sigma
+   floor, or a higher `theta_min_edge_cents` so only larger mispricings trade. Fable's call.
 
-3. **[theta · STILL VALID] Velocity fine** — ~3.5 settling/hr, 2 open. No action.
+3. **[theta · STILL VALID] Velocity fine** — ~3 settling/hr, 2 open. No action.
 
-4. **[mmsell · STILL VALID — inconclusive, mildly +] Watch, don't judge.** +1.2¢/241, drifting
-   slightly positive through the swings. Needs n≈300+ to confirm/refute +5.2¢ backtest.
+4. **[mmsell · STILL VALID — inconclusive, mildly +] Watch, don't judge.** +1.3¢/242, flat
+   overnight. Needs n≈300+ to confirm/refute the +5.2¢ backtest.
 
 5. **[weather · STILL VALID, 07-03] Consider pruning confirmed-bleeder weather books**
    (−$226/4,596 vs `con` +$9.67). Judgment call, not urgent.
 
-6. **[infra · STILL VALID, 07-03] Highest-value next build is the theta PnL slice** (#2) — now
-   the single most useful thing to build; theta has crossed into judgable-n territory.
+6. **[infra · SUPERSEDED by #1] theta PnL slice is the build** — no longer "future," it's the
+   now-action given theta crossed n=30 leaning wrong.
 
-*(Resolved/dropped: none. #1/#2 updated — recent theta trades near breakeven reframe the loss
-as front-loaded; the decomposition is now the decisive, buildable read.)*
+*(Resolved/dropped: old #6 folded into #1. #1 elevated from "watch" to "diagnose now" —
+theta reached judgable n leaning opposite its backtest; added #2 as the conditional fix path.)*
