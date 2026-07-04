@@ -549,6 +549,77 @@ class CryptoLadderSnapshot(Base):
     model_excess_cents: Mapped[float | None] = mapped_column(Float)  # mid - 100*model_p
 
 
+class GameMarketMatch(Base):
+    """A matched in-play game-market pair across venues — Kalshi per-team moneyline
+    (e.g. KXWCGAME 'Reg Time: Portugal') vs the Polymarket same-team, same-day market
+    ('Will Portugal win on 2026-07-04?') — the unit the XGAME tape collector polls.
+
+    Matching is by (day, normalized team), precision over recall: a (day, team) key that
+    appears more than once on either venue is ambiguous and skipped. pm_token_id is the
+    FULL clobTokenId of the team-YES outcome (never truncated)."""
+
+    __tablename__ = "game_market_matches"
+    __table_args__ = (
+        UniqueConstraint("kalshi_ticker", "pm_token_id", name="uq_game_match_pair"),
+        Index("ix_game_market_matches_status", "status"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    created_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(TS, default=utcnow, onupdate=utcnow, nullable=False)
+    sport: Mapped[str | None] = mapped_column(String(24))  # config tag, e.g. 'soccer'
+    day: Mapped[str | None] = mapped_column(String(16))    # game date YYYY-MM-DD
+    team: Mapped[str] = mapped_column(String(48), nullable=False)  # normalized YES team
+    kalshi_series: Mapped[str | None] = mapped_column(String(32))
+    kalshi_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    kalshi_event_ticker: Mapped[str | None] = mapped_column(String(128))
+    kalshi_title: Mapped[str | None] = mapped_column(Text)
+    pm_condition_id: Mapped[str | None] = mapped_column(String(80))
+    pm_token_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    pm_question: Mapped[str | None] = mapped_column(Text)
+    close_time: Mapped[datetime | None] = mapped_column(TS)  # Kalshi close ~ game end
+    status: Mapped[str] = mapped_column(String(16), default="active", nullable=False)
+    # tape polling high-water marks (newest stored trade per venue)
+    kalshi_since_ts: Mapped[datetime | None] = mapped_column(TS)
+    pm_since_ts: Mapped[datetime | None] = mapped_column(TS)
+    kalshi_trades: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    pm_trades: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_polled_at: Mapped[datetime | None] = mapped_column(TS)
+
+
+class GameTapeSnapshot(Base):
+    """Raw in-play trade-tape rows from BOTH venues for matched game markets — the
+    XGAME research dataset (docs/IDEA_MODEL_20260704.md). SEPARATE provenance: rows come
+    from the Kalshi public trades API and the Polymarket data-api, not from any
+    live-collected weather/crypto table. Each row is one venue trade with the venue's
+    own timestamp; the analysis (scripts/xgame_tape_study.py) builds ~10s bars from
+    them, so poll cadence does not limit bar resolution.
+
+    team_prob_cents normalizes both venues onto P(matched team wins) in cents: Kalshi
+    trades are already the team's YES price; Polymarket trades on the complementary
+    token are flipped (100 - price)."""
+
+    __tablename__ = "game_tape_snapshots"
+    __table_args__ = (
+        UniqueConstraint("venue", "trade_id", name="uq_game_tape_trade"),
+        Index("ix_game_tape_match_venue_time", "match_id", "venue", "traded_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    captured_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    match_id: Mapped[int] = mapped_column(
+        BigIntId, ForeignKey("game_market_matches.id"), nullable=False
+    )
+    venue: Mapped[str] = mapped_column(String(12), nullable=False)  # kalshi | polymarket
+    market_id: Mapped[str | None] = mapped_column(String(128))  # ticker / pm asset id
+    trade_id: Mapped[str] = mapped_column(String(160), nullable=False)
+    traded_at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    price_cents: Mapped[float | None] = mapped_column(Float)  # raw instrument price
+    team_prob_cents: Mapped[float | None] = mapped_column(Float)  # normalized P(team)
+    size: Mapped[float | None] = mapped_column(Float)
+    taker_side: Mapped[str | None] = mapped_column(String(8))  # kalshi yes/no; pm buy/sell
+
+
 class SystemEvent(Base):
     __tablename__ = "system_events"
 

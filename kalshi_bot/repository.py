@@ -1264,3 +1264,80 @@ def insert_crypto_ladder_snapshots(session, rows: list[dict]) -> int:
         session.add(m.CryptoLadderSnapshot(captured_at=now, **row))
     session.flush()
     return len(rows)
+
+
+# --- XGAME in-play tape collection (game_market_matches / game_tape_snapshots) --------
+
+
+def upsert_game_match(session, **fields) -> tuple[m.GameMarketMatch, bool]:
+    """Get-or-create a matched game-market pair keyed by (kalshi_ticker, pm_token_id).
+    Refreshes close_time on an existing row (Kalshi moves it as the game ends).
+    Returns (row, created)."""
+    row = session.scalar(
+        select(m.GameMarketMatch).where(
+            m.GameMarketMatch.kalshi_ticker == fields["kalshi_ticker"],
+            m.GameMarketMatch.pm_token_id == fields["pm_token_id"],
+        )
+    )
+    if row is not None:
+        if fields.get("close_time") is not None:
+            row.close_time = fields["close_time"]
+        session.flush()
+        return row, False
+    row = m.GameMarketMatch(**fields)
+    session.add(row)
+    session.flush()
+    return row, True
+
+
+def active_game_matches(session, limit: int | None = None) -> list[m.GameMarketMatch]:
+    stmt = (
+        select(m.GameMarketMatch)
+        .where(m.GameMarketMatch.status == "active")
+        .order_by(m.GameMarketMatch.created_at.asc())
+    )
+    if limit is not None:
+        stmt = stmt.limit(limit)
+    return list(session.scalars(stmt))
+
+
+def count_active_game_matches(session) -> int:
+    return int(
+        session.scalar(
+            select(func.count())
+            .select_from(m.GameMarketMatch)
+            .where(m.GameMarketMatch.status == "active")
+        )
+        or 0
+    )
+
+
+def insert_game_tape_trades(session, match_id: int, venue: str, rows: list[dict]) -> int:
+    """Insert tape rows, skipping (venue, trade_id) duplicates — polls overlap on
+    purpose so no trade is lost between cycles. Portable dedup (sqlite tests +
+    Postgres prod): pre-query existing ids in chunks, then guard in-batch dups."""
+    if not rows:
+        return 0
+    ids = [r["trade_id"] for r in rows]
+    existing: set[str] = set()
+    for i in range(0, len(ids), 400):
+        existing.update(
+            session.scalars(
+                select(m.GameTapeSnapshot.trade_id).where(
+                    m.GameTapeSnapshot.venue == venue,
+                    m.GameTapeSnapshot.trade_id.in_(ids[i : i + 400]),
+                )
+            )
+        )
+    now = _now()
+    inserted = 0
+    for r in rows:
+        if r["trade_id"] in existing:
+            continue
+        existing.add(r["trade_id"])
+        session.add(
+            m.GameTapeSnapshot(captured_at=now, match_id=match_id, venue=venue, **r)
+        )
+        inserted += 1
+    session.flush()
+    return inserted

@@ -38,6 +38,7 @@ from .weather.forecast import NwsForecastClient, OpenMeteoForecastClient
 from .weather.polymarket import PolymarketClient
 from .weather.tracker import WeatherCycleSummary, WeatherTracker
 from .weather.validation import WeatherValidationBackfill
+from .xgame.tracker import XGameTracker
 
 logger = logging.getLogger("kalshi_bot.main")
 
@@ -112,6 +113,11 @@ def run() -> int:
     # crypto ladders; the shared weather_engine settles/marks its <1h positions.
     theta_paper = weather_like and settings.theta_enabled
     theta_tracker = ThetaTracker(client, settings) if theta_paper else None
+    # xgame rides along as a pure DATA COLLECTOR (no trades): cross-venue in-play game
+    # tapes for the XGAME lead-lag thesis (docs/IDEA_MODEL_20260704.md).
+    xgame_tracker = (
+        XGameTracker(client, settings) if weather_like and settings.xgame_enabled else None
+    )
     forecast_client = NwsForecastClient(settings.nws_user_agent) if weather_like else None
     ensemble_client = (
         OpenMeteoEnsembleClient() if weather_like and settings.weather_ensemble_enabled else None
@@ -189,12 +195,13 @@ def run() -> int:
                     _run_live_cycle(
                         settings, client, weather_engine, weather_tracker, live_executor,
                         weather_backfill, validation_backfill, mmsell_paper_tracker,
-                        theta_tracker,
+                        theta_tracker, xgame_tracker,
                     )
                 elif weather:
                     _run_weather_cycle(
                         settings, client, weather_engine, weather_tracker, weather_backfill,
                         validation_backfill, mmsell_paper_tracker, theta_tracker,
+                        xgame_tracker,
                     )
                 elif mmsell:
                     _run_mmsell_cycle(settings, client, mmsell_engine, mmsell_tracker)
@@ -222,6 +229,8 @@ def run() -> int:
             ensemble_client.close()
         if polymarket_client is not None:
             polymarket_client.close()
+        if xgame_tracker is not None:
+            xgame_tracker.pm.close()
     return exit_code
 
 
@@ -373,7 +382,7 @@ def _run_validation_backfill(validation_backfill) -> None:
 
 def _run_weather_cycle(
     settings, client, engine, tracker, backfill=None, validation_backfill=None,
-    mmsell_tracker=None, theta_tracker=None,
+    mmsell_tracker=None, theta_tracker=None, xgame_tracker=None,
 ) -> None:
     status = client.get_exchange_status()  # AuthError propagates -> hard fail
     log_event(
@@ -421,6 +430,7 @@ def _run_weather_cycle(
     _run_validation_backfill(validation_backfill)
     _run_mmsell_book(settings, mmsell_tracker)
     _run_theta_book(settings, theta_tracker)
+    _run_xgame_collector(settings, xgame_tracker)
 
 
 _mmsell_last_run = {"ts": 0.0}
@@ -486,6 +496,37 @@ def _run_theta_book(settings, tracker) -> None:
         raise
     except Exception:  # noqa: BLE001 — ride-along book must never stop the cycle
         logger.exception("theta ride-along book failed (weather/live unaffected)")
+
+
+_xgame_last_run = {"ts": 0.0}
+
+
+def _run_xgame_collector(settings, tracker) -> None:
+    """Ride-along XGAME tape collector (throttled, COLLECT ONLY — no positions): match
+    in-play game markets across venues and store both trade tapes. Never raises into
+    the cycle; a dead collector must not disturb the books."""
+    if tracker is None:
+        return
+    now = time.monotonic()
+    if now - _xgame_last_run["ts"] < settings.xgame_interval_minutes * 60.0:
+        return
+    _xgame_last_run["ts"] = now
+    try:
+        with session_scope() as session:
+            summ = tracker.run_once(session)
+        log_event(
+            logger, logging.INFO, "xgame collector",
+            kalshi_games=summ.kalshi_games, pm_games=summ.pm_games,
+            matched_new=summ.matched_new, active=summ.matches_active,
+            polled=summ.polled, skipped_window=summ.skipped_window,
+            kalshi_rows=summ.kalshi_rows, pm_rows=summ.pm_rows,
+            ended=summ.ended, errors=summ.errors,
+            per_match=dict(sorted(summ.per_match.items(), key=lambda kv: -kv[1])[:8]),
+        )
+    except AuthError:
+        raise
+    except Exception:  # noqa: BLE001 — ride-along collector must never stop the cycle
+        logger.exception("xgame collector failed (weather/live unaffected)")
 
 
 def _run_mmsell_cycle(settings, client, engine, tracker) -> None:
@@ -568,7 +609,7 @@ def _fetch_account_state(client) -> dict:
 
 def _run_live_cycle(
     settings, client, engine, tracker, executor, backfill=None, validation_backfill=None,
-    mmsell_tracker=None, theta_tracker=None,
+    mmsell_tracker=None, theta_tracker=None, xgame_tracker=None,
 ) -> None:
     """Live cycle: reconcile Kalshi truth, manage exits, settle/mark paper, then run the
     tracker (which mirrors allowlisted entries into real orders)."""
@@ -612,6 +653,7 @@ def _run_live_cycle(
     _run_validation_backfill(validation_backfill)
     _run_mmsell_book(settings, mmsell_tracker)
     _run_theta_book(settings, theta_tracker)
+    _run_xgame_collector(settings, xgame_tracker)
 
 
 def _log_weather(summary: WeatherCycleSummary) -> None:

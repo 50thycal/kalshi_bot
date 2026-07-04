@@ -162,6 +162,26 @@ class Settings(BaseSettings):
         "theta2:hi=20,ttemax=35,thronly=1;"
         "theta3:edge=12,mult=1.25"
     )
+
+    # --- XGAME in-play tape collector (ride-along, weather/live cycle) ---
+    # COLLECT ONLY, no trading: stores both venues' trade tapes for matched in-play game
+    # markets (Kalshi per-team moneyline vs Polymarket same-team/day market) into
+    # game_market_matches / game_tape_snapshots — the dataset behind the XGAME lead-lag
+    # thesis (docs/IDEA_MODEL_20260704.md). Trades carry the venues' own timestamps, so
+    # the ride-along poll cadence bounds LOSS RISK (very deep tapes truncating between
+    # polls), not bar resolution — the analysis builds ~10s bars from the timestamps.
+    xgame_enabled: bool = True
+    xgame_interval_minutes: float = 3.0       # ride-along poll cadence
+    xgame_discovery_minutes: float = 30.0     # how often to re-match markets across venues
+    xgame_series: str = "KXWCGAME"            # comma list of Kalshi game series to match
+    xgame_pm_tags: str = "soccer"             # comma list of Polymarket tag slugs
+    xgame_pm_pages: int = 6                   # Gamma discovery pages (100 events/page) per tag
+    xgame_max_matches: int = 60               # cap on concurrently-active matched pairs
+    xgame_kalshi_trade_pages: int = 6         # Kalshi tape pages (1000 trades) per poll
+    xgame_pm_trade_pages: int = 8             # PM data-api pages (500 trades) per poll
+    xgame_overlap_seconds: int = 180          # re-fetch overlap behind the high-water mark
+    xgame_ended_grace_minutes: float = 120.0  # keep polling this long past market close
+
     weather_top_n: int = 10
     weather_entry_hours: str = "20,14,8"
     # Base books to run. `favorite` and `nws` were pruned after paper P&L confirmed both bleed
@@ -615,6 +635,14 @@ class Settings(BaseSettings):
                 out.append(v)
         return out
 
+    @property
+    def xgame_series_list(self) -> list[str]:
+        return [s.strip().upper() for s in self.xgame_series.split(",") if s.strip()]
+
+    @property
+    def xgame_pm_tag_list(self) -> list[str]:
+        return [t.strip().lower() for t in self.xgame_pm_tags.split(",") if t.strip()]
+
     def redacted_summary(self) -> dict:
         """Config summary safe to log (never includes the private key)."""
         return {
@@ -651,6 +679,11 @@ class Settings(BaseSettings):
             "theta_order_size": self.theta_order_size,
             "theta_max_open_positions": self.theta_max_open_positions,
             "theta_variants": [v["tag"] for v in self.theta_variant_list],
+            "xgame_enabled": self.xgame_enabled,
+            "xgame_series": self.xgame_series_list,
+            "xgame_pm_tags": self.xgame_pm_tag_list,
+            "xgame_interval_minutes": self.xgame_interval_minutes,
+            "xgame_max_matches": self.xgame_max_matches,
             "paper_min_edge_cents": self.paper_min_edge_cents,
             "paper_momentum_project_hours": self.paper_momentum_project_hours,
             "paper_momentum_direction": self.paper_momentum_direction,

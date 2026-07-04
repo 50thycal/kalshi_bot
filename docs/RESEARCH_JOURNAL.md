@@ -16,7 +16,72 @@ Conventions:
 
 ---
 
-## THETA revision round 1 — live n=40 diagnosis: bleed = near-money RANGE buckets + earliest entries (theta1/2/3 shipped)
+## IDEA-MODEL 2026-07-04 → Phase 2 built: TFAV / WCPROP / XGAME pipelines + pre-registered probes (verdicts pending)
+
+*(2026-07-04. Pre-registered theses, predictions and decision rules in
+`docs/IDEA_MODEL_20260704.md` — written BEFORE any validation ran; thresholds must not
+be re-scoped post-hoc. This entry logs the Phase-2 data-pipeline/probe build only;
+verdicts land here once the probes run on real samples.)*
+
+The idea-model run screened 18 candidates → 3 promoted, and all three now have their
+data pipelines + ops-runnable probes in place (run order = cost-to-verdict):
+
+- **TFAV** (crypto hourly favorite-buy, the mirror of theta's parked side-finding):
+  NO new collection needed — the theta collector already snapshots the FULL ladder
+  (every price band ≤90min to settlement, model P attached), so 65-90¢ favorites are
+  accumulating in `crypto_ladder_snapshots` since 2026-07-03. Probe
+  `scripts/kalshi_favbuy_study.py` (ops: `kalshi_favbuy_study`) grades P1-P4:
+  unconditional ~0 / model-filtered ≥+3¢ with split-half agreement / final-hour
+  concentration / |corr| < 0.4 vs a theta-rule sim on the same events. Labels come
+  from the Kalshi settlement archive (public REST), quotes+model from live snapshots.
+- **WCPROP** (WC match-result → tournament-winner-ladder propagation lag): no
+  collector needed — public 1-min candlesticks. Probe `scripts/xmarket_wc.py` (ops:
+  `xmarket_wc`) detects result-known time from the match market's own pin (fallback
+  close_time), measures winner-contract repricing completion at +1/+5/+15min and the
+  net residual entering at the +5min quote (P1 <70% / P2 ≥+3¢ / P3 survives spread≤5¢).
+  Runnable NOW against the live tournament.
+- **XGAME** (in-play PM→Kalshi lead-lag on scoring shocks — the repo's standing #1
+  frontier): the blocker was in-play tape collection, now built. New ride-along
+  collector `kalshi_bot/xgame/` (COLLECT ONLY, no trading; `XGAME_*` config, default
+  on) matches Kalshi per-team game markets (KXWCGAME) to Polymarket same-team/day
+  markets by (day, normalized team) — precision over recall, ambiguous keys dropped,
+  FULL clobTokenId stored — and polls BOTH venues' trade tapes (Kalshi
+  `/markets/trades` with min_ts high-water marks; PM data-api, overlap+dedup) into
+  `game_market_matches` / `game_tape_snapshots` (new tables, migration
+  `f3a4b5c6d7e8`; separate provenance from all weather/crypto tables). Trades carry
+  venue timestamps, so the probe builds ~10s bars regardless of poll cadence. Probe
+  `scripts/xgame_tape_study.py` (ops: `xgame_tape_study`) grades P1-P4: follow%>55 &
+  same-bar<40 / median net follow-through ≥4¢ / PM→K exceeds K→PM by ≥10pts / median
+  exploitable window ≥20s.
+
+Ops note: the three probes are allowlisted in `scripts/ops_runner.py`; refresh the
+`ops` branch from the default branch after merge so the channel picks them up. The
+XGAME collector starts filling tables on the next Railway deploy — watch the
+`xgame collector` log line (kalshi_games/pm_games/matched tell you immediately if the
+PM question-format match is off).
+
+**First live runs (same day, via ops — all PROVISIONAL, tiny n):**
+- `xmarket_wc` (21d, all 48 teams mapped, 80 decisive events): only **2 measurable
+  rows** — most candidate rows died to `below_min_move` (140: group-stage results
+  genuinely don't move title odds ≥3¢; the tradeable version of this thesis is
+  knockout-round) and `missing_quotes` (86: winner-ladder candle minutes often lack a
+  two-sided close → added a trade-price-mid fallback for pin/completion; quotes still
+  required for entry/spread). Provisional read on n=2: P1 lag exists (5% completion@5m)
+  but P2 residual **−2.45¢ → KILL-shaped** — the two group-stage repricings were too
+  small to clear fees. Re-run in the knockout rounds before any verdict.
+- `kalshi_favbuy_study` (62k snapshots, 52 events, ~1.5 days of collection): pipeline
+  + settlement-labeling work. Unconditional favorite-buy shows **+6.9¢ — flagged
+  SUSPICIOUS by the probe itself** (the pre-warned already-decided-favorite artifact +
+  one calm regime + small n, the classic mirage). Model filter fired only n=2 (+21¢,
+  meaningless). P4 not computable yet. Let snapshots accumulate ≥2 weeks before
+  reading anything into it.
+- `xvenue_game_probe` (format check): PM per-game markets confirmed as
+  `'Will Paraguay win on 2026-07-04?'` (~$4M/game volume) — the xgame matcher regex
+  fires as designed; PM trade-tape keys match the collector's parsing. **Live format
+  discovery: KXWCGAME `close_time` is a far-future settlement DEADLINE (game Jul 6 →
+  close Jul 21), not the game end** — the collector's poll window was re-keyed to the
+  ticker-derived game day, and settled close_times ≈ finalization (hours late), which
+  is why `xmarket_wc` anchors on price-pin detection rather than close_time.
 
 *(2026-07-04.)* First ~21h live: theta −$13/40 settled vs +4.4¢ backtest. Read-only
 decomposition found the miss is CONCENTRATED, not uniform: **38/40 entries were KXBTC range
