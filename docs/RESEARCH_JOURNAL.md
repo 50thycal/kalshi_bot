@@ -16,6 +16,22 @@ Conventions:
 
 ---
 
+## THETA revision round 1 — live n=40 diagnosis: bleed = near-money RANGE buckets + earliest entries (theta1/2/3 shipped)
+
+*(2026-07-04.)* First ~21h live: theta −$13/40 settled vs +4.4¢ backtest. Read-only
+decomposition found the miss is CONCENTRATED, not uniform: **38/40 entries were KXBTC range
+buckets at 20-40¢** (model 19% vs realized 37% — the trailing distribution under-weights
+center mass, so "overpriced" flags on near-money buckets were model error) and **40-55min
+entries carried the losses** (−11.6¢/ct vs positive at 10-40min — matching the tape's
+edge-lives-late structure). 10-20¢ trades were +17.8¢/ct (tiny n). The unselected
+snapshot-calibration set (spot-at-close labels) shows far tails perfectly calibrated and
+3-40¢ *threshold* tails if anything over-priced by the model in this calm regime — so a
+global tail-fattening fix is wrong. Shipped three pre-registered revision books next to the
+untouched control (same scan/model, gates only): **theta1** (band 3-20¢ + tte 10-35m),
+**theta2** (theta1 + thresholds-only), **theta3** (wide config + edge≥12¢ + mult 1.25).
+Decision rule: ≥~60 settled/book, keep only positive-P&L books whose realized tail-hit ≤
+modeled; all negative → shelve the family. Full detail in `docs/THETA_THESIS.md`.
+
 ## THETA book — hourly crypto ladders: naive tail-selling ~0, MODEL-FILTERED tail-selling +EV (built)
 
 *(2026-07-03, Claude's own book — full thesis + pre-registered predictions in

@@ -95,6 +95,42 @@ class SpotModel:
                 out.append(math.log(b / a))
         return out
 
+    def returns(self, ts_unix: int, h_min: int) -> list[float]:
+        """Public accessor so a caller can compute several variant probabilities from one
+        pass over the trailing window (the per-cycle hot path)."""
+        return self._returns(ts_unix, h_min)
+
+    @staticmethod
+    def prob_from_returns(
+        rets: list[float],
+        spot: float,
+        strike_type: str,
+        floor: float | None,
+        cap: float | None,
+        vol_mult: float = 1.0,
+    ) -> float | None:
+        """P(YES) from a precomputed return sample. `vol_mult` scales the distribution's
+        width: evaluating r*k against threshold x is identical to evaluating r against
+        x/k, so widening (k>1) is a cheap threshold rescale, not a re-simulation."""
+        if not rets or len(rets) < SpotModel.MIN_SAMPLES or spot is None or spot <= 0:
+            return None
+        k = vol_mult if vol_mult and vol_mult > 0 else 1.0
+        n = len(rets)
+        try:
+            if strike_type == "greater" and floor:
+                x = math.log(float(floor) / spot) / k
+                return sum(1 for r in rets if r > x) / n
+            if strike_type == "less" and cap:
+                x = math.log(float(cap) / spot) / k
+                return sum(1 for r in rets if r < x) / n
+            if strike_type == "between" and floor and cap:
+                lo_x = math.log(float(floor) / spot) / k
+                hi_x = math.log(float(cap) / spot) / k
+                return sum(1 for r in rets if lo_x <= r <= hi_x) / n
+        except (TypeError, ValueError):
+            return None
+        return None
+
     def p_yes(
         self,
         ts_unix: int,
@@ -102,6 +138,7 @@ class SpotModel:
         strike_type: str,
         floor: float | None,
         cap: float | None,
+        vol_mult: float = 1.0,
     ) -> float | None:
         """P(YES) for the strike over the next h_min minutes; None if unpriceable."""
         if h_min <= 0:
@@ -110,19 +147,4 @@ class SpotModel:
         if s is None or s <= 0:
             return None
         rets = self._returns(ts_unix, h_min)
-        if len(rets) < self.MIN_SAMPLES:
-            return None
-        n = len(rets)
-        try:
-            if strike_type == "greater" and floor:
-                x = math.log(float(floor) / s)
-                return sum(1 for r in rets if r > x) / n
-            if strike_type == "less" and cap:
-                x = math.log(float(cap) / s)
-                return sum(1 for r in rets if r < x) / n
-            if strike_type == "between" and floor and cap:
-                lo_x, hi_x = math.log(float(floor) / s), math.log(float(cap) / s)
-                return sum(1 for r in rets if lo_x <= r <= hi_x) / n
-        except (TypeError, ValueError):
-            return None
-        return None
+        return self.prob_from_returns(rets, s, strike_type, floor, cap, vol_mult)

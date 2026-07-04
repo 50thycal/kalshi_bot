@@ -121,8 +121,9 @@ def _setup(settings):
     db.create_all()
 
 
-def _tracker(settings, markets_by_series, books, closes=None):
+def _tracker(settings, markets_by_series, books, closes=None, variants=""):
     settings.theta_series = "KXBTCD:BTC-USD"
+    settings.theta_variants = variants  # control-only unless a test opts in
     client = FakeKalshi(markets_by_series, books)
     spot = FakeSpotClient(closes if closes is not None else _flat_closes(900))
     return ThetaTracker(client, settings, spot_client=spot)
@@ -266,3 +267,88 @@ def test_theta_spot_persistence_roundtrip(settings):
             session, "BTC-USD", datetime.now(timezone.utc) - timedelta(minutes=300)
         )
         assert pruned > 0
+
+
+# ---------------------------------------------------------------- revision books
+def test_variant_spec_parsing(settings):
+    settings.theta_variants = (
+        "theta1:hi=20,ttemax=35;theta2:hi=20,ttemax=35,thronly=1;"
+        "theta3:edge=12,mult=1.25;theta:hi=10;badtag:hi=10;theta4:hi=5,lo=20"
+    )
+    vs = settings.theta_variant_list
+    tags = [v["tag"] for v in vs]
+    # 'theta' (control collision), 'badtag', and inverted-band theta4 are all rejected
+    assert tags == ["theta1", "theta2", "theta3"]
+    t1, t2, t3 = vs
+    assert t1["hi"] == 20 and t1["ttemax"] == 35 and t1["mult"] == 1.0 and not t1["thronly"]
+    assert t2["thronly"] is True
+    assert t3["edge"] == 12 and t3["mult"] == 1.25
+    # unset keys inherit the base knobs
+    assert t3["hi"] == settings.theta_price_hi_cents
+    assert t1["lo"] == settings.theta_price_lo_cents
+
+
+def test_vol_mult_widens_distribution():
+    """prob_from_returns with k scales thresholds by 1/k: returns of +-0.1%, threshold
+    0.15% -> p=0 at k=1 but p=0.5 at k=2 (0.15/2 = 0.075% < 0.1%)."""
+    rets = [0.001] * 300 + [-0.001] * 300
+    spot = 60000.0
+    strike = spot * math.exp(0.0015)
+    p1 = SpotModel.prob_from_returns(rets, spot, "greater", strike, None, vol_mult=1.0)
+    p2 = SpotModel.prob_from_returns(rets, spot, "greater", strike, None, vol_mult=2.0)
+    assert p1 == 0.0
+    assert p2 == 0.5
+
+
+def test_variants_gate_independently(settings):
+    """One 25c tail 45min out: control (band<=40, tte<=55) trades it; theta1 (band<=20,
+    tte<=35) skips on BOTH gates; theta2 additionally skips 'between'; theta3 (edge 12)
+    trades it (excess 25 >= 12). A second 15c between-bucket 30min out: control+theta1
+    trade, theta2 skips (thronly), theta3 skips (edge 15 >= 12 -> trades it too)."""
+    _setup(settings)
+    mkts = [
+        _mkt("KXBTCD-26JUL0417-T60500", "greater", 60500.0, None, 24, 26, minutes=45),
+        _mkt("KXBTCD-26JUL0417-B60750", "between", 60600.0, 60900.0, 14, 16, minutes=30),
+    ]
+    books = {
+        "KXBTCD-26JUL0417-T60500": _ob(24, 26),
+        "KXBTCD-26JUL0417-B60750": _ob(14, 16),
+    }
+    tracker = _tracker(
+        settings, {"KXBTCD": mkts}, books,
+        variants="theta1:hi=20,ttemax=35;theta2:hi=20,ttemax=35,thronly=1;theta3:edge=12",
+    )
+    with db.session_scope() as session:
+        summ = tracker.run_once(session)
+    # T60500 (25c, 45m, greater): theta yes, theta1 no (band+tte), theta2 no, theta3 yes
+    # B60750 (15c, 30m, between): theta yes, theta1 yes, theta2 no (thronly), theta3 yes
+    assert summ.per_book == {"theta": 2, "theta1": 1, "theta3": 2}
+    with db.session_scope() as session:
+        trades = session.scalars(select(m.PaperTrade)).all()
+        by_strat = {}
+        for t in trades:
+            by_strat.setdefault(t.strategy, set()).add(t.market_ticker)
+        assert by_strat["theta1"] == {"KXBTCD-26JUL0417-B60750"}
+        assert "theta2" not in by_strat
+        assert by_strat["theta3"] == {"KXBTCD-26JUL0417-T60500", "KXBTCD-26JUL0417-B60750"}
+        for t in trades:
+            assert len(t.fill_assumption) <= 64
+            assert t.fill_assumption.startswith(f"[{t.strategy}]")
+
+
+def test_variant_dedup_and_caps_are_per_book(settings):
+    _setup(settings)
+    settings.theta_max_per_event = 1
+    mkts = [
+        _mkt("KXBTCD-26JUL0417-T60500", "greater", 60500.0, None, 9, 11, minutes=30),
+        _mkt("KXBTCD-26JUL0417-T60750", "greater", 60750.0, None, 9, 11, minutes=30),
+    ]
+    books = {mk["ticker"]: _ob(9, 11) for mk in mkts}
+    tracker = _tracker(settings, {"KXBTCD": mkts}, books, variants="theta1:hi=20")
+    with db.session_scope() as session:
+        summ = tracker.run_once(session)
+    # per-event cap of 1 applies PER BOOK: control 1 + theta1 1
+    assert summ.per_book == {"theta": 1, "theta1": 1}
+    with db.session_scope() as session:
+        summ2 = tracker.run_once(session)
+    assert summ2.opened == 0 and summ2.already_open + summ2.capped >= 2
