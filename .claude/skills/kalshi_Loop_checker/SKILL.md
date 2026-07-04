@@ -19,12 +19,16 @@ code block (so the `#` wall renders literally, visually separating updates):
 ````
 ```
 ########################################################
-##  KALSHI LOOP — RUN #<n> — <YYYY-MM-DD HH:MM UTC>  ##
+##  KALSHI LOOP — RUN #<n> — <YYYY-MM-DD HH:MM CDT>  ##
 ########################################################
 ```
 ````
 
-`<n>` = previous run number from `docs/STRATEGY_LOOP_STATUS.md` + 1. After the banner:
+**All times in reports are CENTRAL TIME (CDT/CST — `TZ=America/Chicago`), always.** The
+database stores UTC; convert before reporting (`TZ=America/Chicago date`, or in SQL
+`... AT TIME ZONE 'America/Chicago'`). Label internal branch-file snapshots the same way.
+
+`<n>` = previous run number from `docs/STRATEGY_LOOP_STATUS.md` + 1 (times there are CDT too). After the banner:
 a books table (settled n / P&L / open / one-word trend), a data-health line or table
 (fresh / STALE / zero per collector), a 1-3 sentence headline read, then the current
 suggestion list. Keep it tight — the durable detail goes in the status file, not chat.
