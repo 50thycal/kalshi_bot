@@ -1,14 +1,6 @@
-# ops request: type='db'
-metric               value 
--------------------  ------
-bot_mode_1h          live  
-game_matches_total   0     
-game_matches_active  0     
-game_matches_ended   0     
-game_tape_total      0     
-game_tape_kalshi     0     
-game_tape_pm         0     
-game_tape_latest     (none)
-match_sample         (none)
-
-(9 rows)
+# latest deployment abfc576b-8317-4c73-b43d-90443a5b60ce (status=SUCCESS, created=2026-07-04T22:43:07.756Z)
+# ops request: type='logs'
+2026-07-04T22:44:21.957806379Z ERROR  INFO  [alembic.runtime.migration] Running upgrade e8a1b2c3d4f5 -> f3a4b5c6d7e8, XGAME in-play tape collection: matched game-market pairs + raw cross-venue trades.
+2026-07-04T22:45:10.089669323Z INFO  xgame collector
+2026-07-04T22:49:08.581864104Z INFO  xgame collector
+2026-07-04T22:53:04.080952774Z INFO  xgame collector
