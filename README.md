@@ -197,6 +197,23 @@ maker-sell (buy NO at the no-bid) on strikes with 10–55 min to settlement, yes
 and model excess ≥ `THETA_MIN_EDGE_CENTS` — hold to settlement (positions expire within the
 hour, so capital recycles ~24×/day and the sample accumulates at ~100s of trades/week).
 
+## XGAME tape collector (ride-along data collection — no trading)
+
+The pending in-play cross-venue test ("a goal happens, Polymarket pops, Kalshi catches
+up seconds later") needs sub-minute tapes no public history endpoint provides — so
+`kalshi_bot/xgame/` rides the weather/live cycle (throttled, `XGAME_*` config) and
+**collects only**: it matches Kalshi per-team game markets (`XGAME_SERIES`, default
+`KXWCGAME`) against Polymarket's same-team, same-day markets by `(day, normalized
+team)` — precision over recall, ambiguous keys dropped, the full clobTokenId stored —
+and polls both venues' **trade tapes** (Kalshi `/markets/trades` with `min_ts`
+high-water marks; Polymarket data-api with overlap + dedup) into
+`game_market_matches` / `game_tape_snapshots`. Both venues are normalized onto
+P(matched team) in cents; trades keep the venues' own timestamps, so
+`scripts/xgame_tape_study.py` (ops-runnable) builds ~10-second bars regardless of the
+poll cadence and grades the pre-registered XGAME lead-lag predictions
+(`docs/IDEA_MODEL_20260704.md`). Matches auto-end after a grace window past market
+close; everything is fail-soft so a venue outage never disturbs the trading books.
+
 ## Weather mode (Phase 4)
 
 `BOT_MODE=weather` runs a focused pipeline on Kalshi's **daily temperature** markets instead

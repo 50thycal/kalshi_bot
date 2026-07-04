@@ -290,6 +290,27 @@ class KalshiClient:
         params = {"depth": depth} if depth else None
         return self._request("GET", f"/markets/{ticker}/orderbook", params=params)
 
+    def get_market_trades(
+        self,
+        *,
+        ticker: str,
+        limit: int = 1000,
+        cursor: str | None = None,
+        min_ts: int | None = None,
+        max_ts: int | None = None,
+    ) -> dict:
+        """Public trade tape for a market, newest first ({trades: [...], cursor}).
+        min_ts/max_ts are unix seconds; the XGAME collector uses min_ts to fetch
+        only the gap since its stored high-water mark."""
+        params: dict[str, Any] = {"ticker": ticker, "limit": limit}
+        if cursor:
+            params["cursor"] = cursor
+        if min_ts is not None:
+            params["min_ts"] = min_ts
+        if max_ts is not None:
+            params["max_ts"] = max_ts
+        return self._request("GET", "/markets/trades", params=params)
+
     def get_positions(self, **params: Any) -> dict:
         return self._request("GET", "/portfolio/positions", params=params or None)
 
