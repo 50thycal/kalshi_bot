@@ -40,6 +40,8 @@ class ThetaCycleSummary:
     products_ok: int = 0
     markets_seen: int = 0
     snapshot_rows: int = 0
+    # gate counters are CONTROL-book scoped (stable semantics across releases); entry
+    # outcome counters accumulate across control + revision books, with per_book detail.
     in_window: int = 0
     in_band: int = 0
     model_priced: int = 0
@@ -50,6 +52,7 @@ class ThetaCycleSummary:
     skipped_no_model: int = 0
     skipped_illiquid: int = 0
     per_series: dict[str, int] = field(default_factory=dict)
+    per_book: dict[str, int] = field(default_factory=dict)
 
 
 def _price_c(market: dict, key: str) -> float | None:
@@ -125,6 +128,22 @@ class ThetaTracker:
             return None
         return SpotModel(stored, trail_days=s.theta_trail_days)
 
+    def _books(self) -> list[dict]:
+        """The control book (base knobs, tag 'theta' — NEVER reparameterized) followed by
+        the configured revision books. All share the scan/model; only gates differ."""
+        s = self.settings
+        control = {
+            "tag": self.STRATEGY,
+            "lo": s.theta_price_lo_cents,
+            "hi": s.theta_price_hi_cents,
+            "edge": s.theta_min_edge_cents,
+            "mult": 1.0,
+            "ttemin": s.theta_entry_min_minutes,
+            "ttemax": s.theta_entry_max_minutes,
+            "thronly": False,
+        }
+        return [control, *s.theta_variant_list]
+
     # -- one cycle ------------------------------------------------------------
     def run_once(self, session) -> ThetaCycleSummary:
         s = self.settings
@@ -137,12 +156,19 @@ class ThetaTracker:
             if models[product] is not None:
                 summ.products_ok += 1
 
-        open_count = repo.count_open_paper_positions(session, self.STRATEGY)
-        open_tickers = repo.open_paper_position_tickers(session, self.STRATEGY)
-        per_event_open: dict[str, int] = {}
-        for tk in open_tickers:
-            ev = tk.rsplit("-", 1)[0]
-            per_event_open[ev] = per_event_open.get(ev, 0) + 1
+        books = self._books()
+        open_count: dict[str, int] = {}
+        open_tickers: dict[str, set[str]] = {}
+        per_event_open: dict[str, dict[str, int]] = {}
+        for b in books:
+            tag = b["tag"]
+            open_count[tag] = repo.count_open_paper_positions(session, tag)
+            open_tickers[tag] = repo.open_paper_position_tickers(session, tag)
+            per_event_open[tag] = {}
+            for tk in open_tickers[tag]:
+                ev = tk.rsplit("-", 1)[0]
+                per_event_open[tag][ev] = per_event_open[tag].get(ev, 0) + 1
+        returns_cache: dict[tuple[str, int], list[float]] = {}
 
         snapshot_rows: list[dict] = []
         for series, product in s.theta_series_map.items():
@@ -211,84 +237,116 @@ class ThetaTracker:
                     "model_excess_cents": excess,
                 })
 
-                # ---- entry rule (all gates validated in the probe) ----
-                if not (s.theta_entry_min_minutes <= tte_min <= s.theta_entry_max_minutes):
-                    continue
-                summ.in_window += 1
-                if not (s.theta_price_lo_cents <= mid <= s.theta_price_hi_cents):
-                    continue
-                summ.in_band += 1
+                # ---- entries: control first, then revision books (shared scan/model/
+                # orderbook; only the gates differ per book) ----
+                if s.theta_entry_min_minutes <= tte_min <= s.theta_entry_max_minutes:
+                    summ.in_window += 1
+                    if s.theta_price_lo_cents <= mid <= s.theta_price_hi_cents:
+                        summ.in_band += 1
+
                 if _volume(mkt) < s.theta_min_volume:
                     summ.skipped_illiquid += 1
                     continue
-                if p is None:
-                    summ.skipped_no_model += 1
-                    continue
-                if excess is None or excess < s.theta_min_edge_cents:
-                    continue
-                summ.edged += 1
 
-                if ticker in open_tickers:
-                    summ.already_open += 1
-                    continue
+                spot = model.spot_at(now_unix) if model is not None else None
+                metrics = None  # lazy: fetched once for the first book that wants in
                 event = ticker.rsplit("-", 1)[0]
-                if open_count >= s.theta_max_open_positions or \
-                        per_event_open.get(event, 0) >= s.theta_max_per_event:
-                    summ.capped += 1
-                    continue
+                for book in books:
+                    tag = book["tag"]
+                    if not (book["ttemin"] <= tte_min <= book["ttemax"]):
+                        continue
+                    if not (book["lo"] <= mid <= book["hi"]):
+                        continue
+                    if book["thronly"] and strike_type == "between":
+                        continue
+                    if model is None or spot is None:
+                        if tag == self.STRATEGY:
+                            summ.skipped_no_model += 1
+                        continue
+                    if book["mult"] == 1.0:
+                        p_book = p
+                    else:
+                        h = max(1, int(tte_min))
+                        key = (product, h)
+                        if key not in returns_cache:
+                            returns_cache[key] = model.returns(now_unix, h)
+                        p_book = SpotModel.prob_from_returns(
+                            returns_cache[key], spot, strike_type, floor_k, cap_k,
+                            vol_mult=book["mult"],
+                        )
+                    if p_book is None:
+                        if tag == self.STRATEGY:
+                            summ.skipped_no_model += 1
+                        continue
+                    excess_book = mid - p_book * 100.0
+                    if excess_book < book["edge"]:
+                        continue
+                    if tag == self.STRATEGY:
+                        summ.edged += 1
 
-                # confirm the book two-sided + get the maker entry price (buy NO at no-bid
-                # == sell YES at the ask), qty capped by resting depth like every paper book
-                try:
-                    ob = self.client.get_orderbook(ticker, depth=s.orderbook_depth)
-                except AuthError:
-                    raise
-                except Exception as exc:  # noqa: BLE001
-                    logger.warning(
-                        "theta: orderbook fetch failed",
-                        extra={"extra_fields": {"ticker": ticker, "error": str(exc)[:200]}},
+                    if ticker in open_tickers[tag]:
+                        summ.already_open += 1
+                        continue
+                    if open_count[tag] >= s.theta_max_open_positions or \
+                            per_event_open[tag].get(event, 0) >= s.theta_max_per_event:
+                        summ.capped += 1
+                        continue
+
+                    # confirm two-sided + maker entry price (buy NO at no-bid == sell YES
+                    # at the ask), qty capped by resting depth like every paper book
+                    if metrics is None:
+                        try:
+                            ob = self.client.get_orderbook(ticker, depth=s.orderbook_depth)
+                        except AuthError:
+                            raise
+                        except Exception as exc:  # noqa: BLE001
+                            logger.warning(
+                                "theta: orderbook fetch failed",
+                                extra={"extra_fields": {"ticker": ticker,
+                                                        "error": str(exc)[:200]}},
+                            )
+                            break  # no book can enter this market this cycle
+                        metrics = compute_metrics(mkt, ob, top_n=s.orderbook_depth)
+                    if not metrics.two_sided or metrics.best_no_bid is None:
+                        summ.skipped_illiquid += 1
+                        break
+                    price = metrics.best_no_bid
+                    if not (0 < price < 100):
+                        summ.skipped_illiquid += 1
+                        break
+                    qty = min(s.theta_order_size, metrics.depth_at_best_bid or 0)
+                    if qty <= 0:
+                        summ.skipped_illiquid += 1
+                        break
+
+                    fee = kalshi_fee(price, qty, s.paper_fees_enabled)
+                    repo.create_paper_trade(
+                        session,
+                        signal_id=None,
+                        ticker=ticker,
+                        strategy=tag,
+                        side="no",
+                        action="buy",
+                        assumed_price=price,
+                        quantity=qty,
+                        fill_assumption=(
+                            f"[{tag}] sell yes @ {100 - price:.0f}c mid {mid:.0f} "
+                            f"p {p_book * 100.0:.0f} tte {tte_min:.0f}m"
+                        ),
+                        entry_fee=fee,
+                        model_probability=p_book,
+                        edge=excess_book,
                     )
-                    continue
-                metrics = compute_metrics(mkt, ob, top_n=s.orderbook_depth)
-                if not metrics.two_sided or metrics.best_no_bid is None:
-                    summ.skipped_illiquid += 1
-                    continue
-                price = metrics.best_no_bid
-                if not (0 < price < 100):
-                    summ.skipped_illiquid += 1
-                    continue
-                qty = min(s.theta_order_size, metrics.depth_at_best_bid or 0)
-                if qty <= 0:
-                    summ.skipped_illiquid += 1
-                    continue
-
-                fee = kalshi_fee(price, qty, s.paper_fees_enabled)
-                repo.create_paper_trade(
-                    session,
-                    signal_id=None,
-                    ticker=ticker,
-                    strategy=self.STRATEGY,
-                    side="no",
-                    action="buy",
-                    assumed_price=price,
-                    quantity=qty,
-                    fill_assumption=(
-                        f"[theta] sell yes @ {100 - price:.0f}c mid {mid:.0f} "
-                        f"p {p * 100.0:.0f} tte {tte_min:.0f}m"
-                    ),
-                    entry_fee=fee,
-                    model_probability=p,
-                    edge=excess,
-                )
-                repo.open_paper_position_for_trade(
-                    session, ticker=ticker, strategy=self.STRATEGY, side="no",
-                    quantity=qty, avg_price=price,
-                )
-                open_count += 1
-                per_event_open[event] = per_event_open.get(event, 0) + 1
-                open_tickers.add(ticker)
-                summ.opened += 1
-                summ.per_series[series] = summ.per_series.get(series, 0) + 1
+                    repo.open_paper_position_for_trade(
+                        session, ticker=ticker, strategy=tag, side="no",
+                        quantity=qty, avg_price=price,
+                    )
+                    open_count[tag] += 1
+                    per_event_open[tag][event] = per_event_open[tag].get(event, 0) + 1
+                    open_tickers[tag].add(ticker)
+                    summ.opened += 1
+                    summ.per_book[tag] = summ.per_book.get(tag, 0) + 1
+                    summ.per_series[series] = summ.per_series.get(series, 0) + 1
 
         if snapshot_rows:
             summ.snapshot_rows = repo.insert_crypto_ladder_snapshots(

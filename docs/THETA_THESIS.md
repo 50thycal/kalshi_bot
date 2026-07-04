@@ -41,6 +41,41 @@ Sell overpriced lottery tickets to retail gamblers on Kalshi's hourly BTC/ETH pr
 realized-volatility model says they're worth — small size, both tails, dozens of independent
 expiries a day, always held the <1h to settlement.
 
+## REVISION ROUND 1 (2026-07-04) — live diagnosis at n=40 + the theta1/2/3 books
+
+**What the first ~21h live showed** (read-only decompositions over settled trades and the
+unselected ladder-snapshot dataset labeled by spot-at-close):
+
+- Live P&L −$13 over 40 settled (−34¢/trade) vs the +4.4¢ backtest. The miss decomposes
+  cleanly, and it is NOT uniform:
+  - **38/40 entries were KXBTC RANGE buckets at 20–40¢** — where the model said 19% and
+    reality landed **37%**. For near-money range buckets the model puts too little mass at
+    the center (mis-centered/too-wide trailing distribution), so its "overpriced" flags
+    there were model error; the market was right.
+  - **10–20¢ trades were positive** (+17.8¢/ct, tiny n), matching the probe's strongest cell.
+  - **40–55min entries carried the losses** (−11.6¢/ct, 40% tail-hit, n=30); 10–40min
+    entries were positive — matching P2's edge-lives-late tte structure.
+  - On the unselected snapshot set, far tails (0–3¢) are perfectly calibrated and the model
+    if anything OVER-prices 3–40¢ threshold tails in this calm regime — so a global
+    "fatten the tails" fix is wrong; the failure is concentrated in near-money range
+    buckets + early entries.
+
+**Revision books (pre-registered, run in parallel against the UNTOUCHED `theta` control;
+same scan/model/costs, only gates differ — `THETA_VARIANTS`):**
+
+| book | band | entry tte | strike types | min edge | vol mult | isolates |
+|---|---|---|---|---|---|---|
+| `theta` (control) | 3–40¢ | 10–55m | all | 5¢ | 1.00 | baseline |
+| `theta1` | 3–20¢ | 10–35m | all | 5¢ | 1.00 | removing both measured bleed sources |
+| `theta2` | 3–20¢ | 10–35m | thresholds only | 5¢ | 1.00 | are range buckets structurally bad? |
+| `theta3` | 3–40¢ | 10–55m | all | 12¢ | 1.25 | can a high bar rescue the wide config? |
+
+**Decision rule (pre-committed):** evaluate after ≥ ~60 settled per revision book (≈ 3–7
+days). Keep a book only if its P&L/trade is positive AND its realized tail-hit rate is at or
+below its modeled probability; kill the others. If every book including the control is
+negative at that point, shelve the theta family and write the post-mortem in the journal.
+No parameter tweaks mid-window — the books are the experiment.
+
 ## Why this, specifically
 
 Everything this repo has learned in ~1,500 paper trades and nine structural probes points the

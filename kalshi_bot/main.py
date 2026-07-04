@@ -480,7 +480,7 @@ def _run_theta_book(settings, tracker) -> None:
             model_priced=summ.model_priced, edged=summ.edged, opened=summ.opened,
             already_open=summ.already_open, capped=summ.capped,
             no_model=summ.skipped_no_model, illiquid=summ.skipped_illiquid,
-            per_series=summ.per_series,
+            per_series=summ.per_series, per_book=summ.per_book,
         )
     except AuthError:
         raise

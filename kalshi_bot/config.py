@@ -147,6 +147,21 @@ class Settings(BaseSettings):
     theta_order_size: int = 5                 # >=5 amortizes the fee ceil (exit study)
     theta_max_open_positions: int = 60
     theta_max_per_event: int = 3              # cap correlated strikes per hourly event
+    # Revision books (parallel paper variants next to the untouched `theta` control), from
+    # the 2026-07-04 live diagnosis at n=40: the bleed concentrated in 20-40c RANGE buckets
+    # (model under-prices center mass: 19% modeled vs 37% realized) and in the earliest
+    # 40-55min entries (-11.6c/ct); 10-20c and later entries were positive. Spec format:
+    #   "tag:key=val,key=val;tag:..."  keys: lo, hi (band cents), edge (min edge cents),
+    #   mult (vol multiplier), ttemin, ttemax (entry window min), thronly (1 = skip
+    #   'between' range buckets). Unset keys inherit the base theta_* knobs above.
+    #   theta1 = band+window surgery; theta2 = theta1 + thresholds-only (isolates whether
+    #   range buckets are structurally bad); theta3 = wide config rescued only by a much
+    #   higher bar + mildly widened tails. Empty string disables all variants.
+    theta_variants: str = (
+        "theta1:hi=20,ttemax=35;"
+        "theta2:hi=20,ttemax=35,thronly=1;"
+        "theta3:edge=12,mult=1.25"
+    )
     weather_top_n: int = 10
     weather_entry_hours: str = "20,14,8"
     # Base books to run. `favorite` and `nws` were pruned after paper P&L confirmed both bleed
@@ -555,6 +570,51 @@ class Settings(BaseSettings):
                 out[series.strip().upper()] = product.strip().upper()
         return out
 
+    @property
+    def theta_variant_list(self) -> list[dict]:
+        """Parsed revision-book specs. Each dict carries the FULL resolved parameter set
+        (unset keys inherit the base theta knobs); malformed tokens are skipped. The tag
+        must start with 'theta', differ from the control's own 'theta', and fit the
+        strategy column (String(24))."""
+        out: list[dict] = []
+        for spec in self.theta_variants.split(";"):
+            spec = spec.strip()
+            if not spec or ":" not in spec:
+                continue
+            tag, _, body = spec.partition(":")
+            tag = tag.strip()
+            if not tag.startswith("theta") or tag == "theta" or len(tag) > 24:
+                continue
+            v = {
+                "tag": tag,
+                "lo": self.theta_price_lo_cents,
+                "hi": self.theta_price_hi_cents,
+                "edge": self.theta_min_edge_cents,
+                "mult": 1.0,
+                "ttemin": self.theta_entry_min_minutes,
+                "ttemax": self.theta_entry_max_minutes,
+                "thronly": False,
+            }
+            ok = True
+            for kv in body.split(","):
+                kv = kv.strip()
+                if not kv:
+                    continue
+                key, _, val = kv.partition("=")
+                key = key.strip().lower()
+                try:
+                    if key in ("lo", "hi", "edge", "mult", "ttemin", "ttemax"):
+                        v[key] = float(val)
+                    elif key == "thronly":
+                        v[key] = val.strip() in ("1", "true", "yes")
+                    else:
+                        ok = False
+                except (TypeError, ValueError):
+                    ok = False
+            if ok and v["lo"] < v["hi"] and v["ttemin"] < v["ttemax"]:
+                out.append(v)
+        return out
+
     def redacted_summary(self) -> dict:
         """Config summary safe to log (never includes the private key)."""
         return {
@@ -590,6 +650,7 @@ class Settings(BaseSettings):
             "theta_min_edge_cents": self.theta_min_edge_cents,
             "theta_order_size": self.theta_order_size,
             "theta_max_open_positions": self.theta_max_open_positions,
+            "theta_variants": [v["tag"] for v in self.theta_variant_list],
             "paper_min_edge_cents": self.paper_min_edge_cents,
             "paper_momentum_project_hours": self.paper_momentum_project_hours,
             "paper_momentum_direction": self.paper_momentum_direction,
