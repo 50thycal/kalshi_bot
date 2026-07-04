@@ -514,8 +514,17 @@ def _run_xgame_collector(settings, tracker) -> None:
     try:
         with session_scope() as session:
             summ = tracker.run_once(session)
+        # Embed the health counts in the MESSAGE (not just extra_fields) so they survive
+        # Railway's log view, which only surfaces the base message string (same reason
+        # the mmsell error path does). For a collect-only book whose whole job is these
+        # counts, they must be visible to confirm discovery is seeing both venues.
         log_event(
-            logger, logging.INFO, "xgame collector",
+            logger, logging.INFO,
+            f"xgame collector: kal_games={summ.kalshi_games} pm_games={summ.pm_games} "
+            f"matched_new={summ.matched_new} active={summ.matches_active} "
+            f"polled={summ.polled} skipped_window={summ.skipped_window} "
+            f"kal_rows={summ.kalshi_rows} pm_rows={summ.pm_rows} "
+            f"ended={summ.ended} errors={summ.errors}",
             kalshi_games=summ.kalshi_games, pm_games=summ.pm_games,
             matched_new=summ.matched_new, active=summ.matches_active,
             polled=summ.polled, skipped_window=summ.skipped_window,
@@ -525,8 +534,13 @@ def _run_xgame_collector(settings, tracker) -> None:
         )
     except AuthError:
         raise
-    except Exception:  # noqa: BLE001 — ride-along collector must never stop the cycle
-        logger.exception("xgame collector failed (weather/live unaffected)")
+    except Exception as exc:  # noqa: BLE001 — ride-along collector must never stop the cycle
+        tb = traceback.extract_tb(exc.__traceback__)
+        where = f"{tb[-1].filename.rsplit('/', 1)[-1]}:{tb[-1].lineno}" if tb else "?"
+        logger.error(
+            "xgame collector failed (weather/live unaffected): %s: %s at %s",
+            type(exc).__name__, exc, where, exc_info=True,
+        )
 
 
 def _run_mmsell_cycle(settings, client, engine, tracker) -> None:
