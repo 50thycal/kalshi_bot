@@ -7,55 +7,67 @@ carries over run-to-run. All times CENTRAL (CDT/CST).*
 
 ---
 
-## Snapshot — 2026-07-04 05:14 PM CDT (run #14)
+## Snapshot — 2026-07-04 10:11 PM CDT (run #15)
 
-*(Short window — only ~40 min after the delayed run #13; deltas small by construction.)*
+*(Covers ~5h — two scheduled fires collapsed into one iteration after a session pause.)*
 
-**Theta experiment:**
-| book | settled | P&L | open | trend |
+**Theta experiment — an evening cluster of tail hits swung the family:**
+| book | settled | P&L | open | Δ this window |
 |---|---|---|---|---|
-| theta (control) | 74 | −$6.36 | 2 | mild bleed |
-| theta1 (3-20¢, 10-35m) | 4 | −$2.07 | 0 | 4th trade won (+$1.03) |
-| theta2 (thr-only) | 1 | −$4.35 | 0 | idle |
-| theta3 (wide, edge≥12, ×1.25) | 19 | **+$3.25** | 2 | leader; small dip, still green |
+| theta (control) | 91 | −$9.74 | 2 | −$3.38 over 17 trades |
+| theta1 (3-20¢, 10-35m) | 6 | **−$0.09** | 0 | +$1.98 over 2 — best calibrated so far |
+| theta2 (thr-only) | 2 | −$3.79 | 0 | 2nd trade won |
+| theta3 (wide, edge≥12, ×1.25) | 30 | **−$5.04** | 0 | **flipped red**: −$8.29 over trades 20-30 |
 
-**mmsell** — 366 settled, **−$0.14** (≈0.0¢/trade), 58 open. Breakeven verdict from run
-#13 unchanged.
+theta3 is exactly at the halfway mark (30/60) and just gave back its lead in one bad
+stretch — the same evening window hit several books at once (correlated tail exposure to
+one underlying move). This is why the gate is 60, not 20: no conclusions yet, in either
+direction.
 
-**weather `con`** — 228 settled, +$10.82, 14 open (evening entries opening). **weather
-(rest)** — 4,659 settled, −$235.77, 50 open. Unchanged.
+**mmsell** — **445 settled (+79), +$5.85 (+1.3¢/trade)**, 27 open. Bounced back positive
+from the n≈356 breakeven read. Running estimate keeps oscillating in 0..+2.5¢ — weakly
+positive, CI still wide; the n≈600 checkpoint (option b) is effectively in progress.
+
+**weather `con`** — 228 settled, +$10.82, 14 open. **weather (rest)** — 4,659, −$235.77,
+50 open. No new weather settlements this window (normal for the hour).
 
 **Data collection — ALL FRESH ✓ (last-24h rows / latest CDT):**
 | collector | 24h rows | latest | status |
 |---|---|---|---|
-| crypto_spot_candles | 2,868 | 05:08 PM | ✓ fresh, 2 products |
-| crypto_ladder_snapshots | 60,000 | 05:09 PM | ✓ fresh, 100% model-priced |
-| weather_forecasts | 10,966 | 05:12 PM | ✓ fresh |
-| weather_observations | 646 | 05:11 PM | ✓ fresh |
-| weather_ensembles | 1,712 | 05:12 PM | ✓ fresh (hourly) |
-| weather_bucket_snapshots | 13,194 | 05:11 PM | ✓ fresh |
+| crypto_spot_candles | 2,870 | 10:06 PM | ✓ fresh, 2 products |
+| crypto_ladder_snapshots | 61,200 | 10:06 PM | ✓ fresh, 100% model-priced |
+| weather_forecasts | 11,353 | 10:10 PM | ✓ fresh |
+| weather_observations | 651 | 10:10 PM | ✓ fresh |
+| weather_ensembles | 1,696 | 10:10 PM | ✓ fresh (hourly) |
+| weather_bucket_snapshots | 13,500 | 10:09 PM | ✓ fresh |
 
-**Headline:** quiet, healthy window. theta3 at 19/60 toward its gate (still the only green
-theta book); theta1 nudged up on a win; mmsell stays breakeven. 14/14 runs all-fresh.
+**Headline:** an evening tail-hit cluster pushed every theta book except theta1 into the
+red — theta3 gave back its lead at 30/60; theta1 sits near breakeven (n=6) as the only
+book whose realized tails have roughly matched its model. mmsell re-bounced to +1.3¢/445.
+All collectors fresh, 15/15 runs.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[theta · IN FLIGHT] Run the revision experiment untouched to ≥~60 settled/book.**
-   theta3 19/60 (pacer, ETA ~2 days); theta1 4/60 (slow by design); theta2 1/60 —
-   near-idle; if theta2 stays this sparse through the window, close its cell for
-   sparsity (a finding, not a failure).
+1. **[theta · IN FLIGHT — hold the line] No conclusions at the halfway mark.** theta3's
+   flip from +$3.98 to −$5.04 inside ~5h is exactly the run-to-run variance the ≥60 gate
+   exists for. Let all four books reach the gate (theta3 ETA ~1-2 days; theta at 91 is
+   past it and still negative — its verdict is effectively forming: negative and
+   miscalibrated unless the next ~days reverse it).
 
-2. **[theta · correlation note] Judge each book vs its own modeled-vs-realized tail
-   rate**; the four books overlap on markets — never sum them or read as replications.
+2. **[theta · correlation note — reinforced] One spot move hits all books at once** (this
+   evening's cluster). At evaluation, judge per-book calibration; also consider that
+   max-per-event caps don't cap FAMILY-wide exposure to a single hour's move — a fable
+   topic if multiple books graduate.
 
-3. **[mmsell · VERDICT stands] Breakeven at n=366; naive proxy doesn't carry the tape
-   edge.** Fable options (unchanged): (a) restructure entries to the tape's strong cells
-   (<60min-to-close and/or 10-35¢ band); (b) collect to n≈600 for a tighter CI; (c)
-   deprioritize. Not supported: going live on mmsell as-is.
+3. **[mmsell · extend to n≈600] Weakly positive, oscillating.** +1.3¢/445 after the
+   breakeven read at 356. Keep collecting to ~600 before structural changes; the
+   restructure option (tape's strong cells: <60min, 10-35¢) stays on the table.
 
 4. **[weather · STILL VALID] Consider pruning confirmed-bleeder weather books**
    (−$235.77/4,659 vs `con` +$10.82). Judgment call, not urgent.
 
-*(No changes to the suggestion set this run; cadence back on schedule.)*
+*(Updated: #1 reframed around theta3's red flip + theta control nearing a negative
+verdict at n=91; #3 softened from "breakeven verdict" to "weakly positive, extend to
+600" after the bounce.)*
