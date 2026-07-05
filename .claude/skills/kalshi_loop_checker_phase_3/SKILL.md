@@ -46,14 +46,17 @@ Work on the `ops` branch (worktree at `/tmp/ops`; `git fetch origin ops && git r
 read-only query to `ops/request.json`, push, then poll `ops/result.txt` (~30-90s):
 
 ```json
-{"type":"db","sql":"WITH books AS (SELECT CASE WHEN strategy LIKE 'weather_con%' THEN 'book:weather_con(all)' WHEN strategy LIKE 'weather%' THEN 'book:weather_other(all)' ELSE 'book:'||strategy END AS item, count(*) FILTER (WHERE status='settled') AS a, round(coalesce(sum(pnl) FILTER (WHERE status='settled'),0)::numeric,2) AS b, count(*) FILTER (WHERE status='open') AS c, max(created_at) AS latest FROM paper_trades WHERE NOT legacy GROUP BY 1), data AS (SELECT 'data:crypto_spot_candles' AS item, count(*) FILTER (WHERE minute_ts>now()-interval '24 hours') AS a, count(distinct product) AS b, 0 AS c, max(minute_ts) AS latest FROM crypto_spot_candles UNION ALL SELECT 'data:crypto_ladder_snapshots', count(*) FILTER (WHERE captured_at>now()-interval '24 hours'), count(*) FILTER (WHERE model_p is not null AND captured_at>now()-interval '24 hours'), 0, max(captured_at) FROM crypto_ladder_snapshots UNION ALL SELECT 'data:weather_forecasts', count(*) FILTER (WHERE captured_at>now()-interval '24 hours'),0,0,max(captured_at) FROM weather_forecasts UNION ALL SELECT 'data:weather_observations', count(*) FILTER (WHERE captured_at>now()-interval '24 hours'),0,0,max(captured_at) FROM weather_observations UNION ALL SELECT 'data:weather_ensembles', count(*) FILTER (WHERE captured_at>now()-interval '24 hours'),0,0,max(captured_at) FROM weather_ensembles UNION ALL SELECT 'data:weather_bucket_snapshots', count(*) FILTER (WHERE captured_at>now()-interval '24 hours'),0,0,max(captured_at) FROM weather_bucket_snapshots) SELECT item,a,b,c,latest FROM books UNION ALL SELECT item,a,b,c,latest FROM data ORDER BY item","max_rows":50}
+{"type":"db","sql":"WITH books AS (SELECT CASE WHEN strategy LIKE 'weather_con%' THEN 'book:weather_con(all)' WHEN strategy LIKE 'weather%' THEN 'book:weather_other(all)' ELSE 'book:'||strategy END AS item, count(*) FILTER (WHERE status='settled') AS a, round(coalesce(sum(pnl) FILTER (WHERE status='settled'),0)::numeric,2) AS b, count(*) FILTER (WHERE status='open') AS c, max(created_at) AS latest FROM paper_trades WHERE NOT legacy GROUP BY 1), data AS (SELECT 'data:crypto_spot_candles' AS item, count(*) FILTER (WHERE minute_ts>now()-interval '24 hours') AS a, count(distinct product) AS b, 0 AS c, max(minute_ts) AS latest FROM crypto_spot_candles UNION ALL SELECT 'data:crypto_ladder_snapshots', count(*) FILTER (WHERE captured_at>now()-interval '24 hours'), count(*) FILTER (WHERE model_p is not null AND captured_at>now()-interval '24 hours'), 0, max(captured_at) FROM crypto_ladder_snapshots UNION ALL SELECT 'data:weather_forecasts', count(*) FILTER (WHERE captured_at>now()-interval '24 hours'),0,0,max(captured_at) FROM weather_forecasts UNION ALL SELECT 'data:weather_observations', count(*) FILTER (WHERE captured_at>now()-interval '24 hours'),0,0,max(captured_at) FROM weather_observations UNION ALL SELECT 'data:weather_ensembles', count(*) FILTER (WHERE captured_at>now()-interval '24 hours'),0,0,max(captured_at) FROM weather_ensembles UNION ALL SELECT 'data:weather_bucket_snapshots', count(*) FILTER (WHERE captured_at>now()-interval '24 hours'),0,0,max(captured_at) FROM weather_bucket_snapshots UNION ALL SELECT 'data:xgame_matches', count(*) FILTER (WHERE created_at>now()-interval '24 hours'), count(*), 0, max(created_at) FROM game_market_matches UNION ALL SELECT 'data:xgame_tapes', count(*) FILTER (WHERE captured_at>now()-interval '24 hours'), 0, 0, max(captured_at) FROM game_tape_snapshots) SELECT item,a,b,c,latest FROM books UNION ALL SELECT item,a,b,c,latest FROM data ORDER BY item","max_rows":50}
 ```
 
 Columns: `a` = settled count (or last-24h rows for data:), `b` = settled P&L $ (or a
 secondary count for data:), `c` = open positions. Follow-up drill-down queries (e.g. a
 theta calibration slice) are allowed when a finding needs them — read-only only.
-If a crypto table errors as nonexistent, the theta migration isn't deployed — lead with
-that. If the ops channel is busy (another session's request in flight), wait for its
+If a crypto/game table errors as nonexistent, that migration isn't deployed — lead with
+that. For `data:xgame_matches` the `b` column is the TOTAL match count (not last-24h): b=0
+means the XGAME collector is matching no games — cross-check the `xgame collector` log line
+(`kal_games`/`pm_games`/`matched_new`) to see whether it's a no-games-in-window lull or a
+broken matcher. If the ops channel is busy (another session's request in flight), wait for its
 result commit before pushing yours.
 
 ### 2. Read prior state
@@ -91,3 +94,20 @@ git reset --hard origin/strategy-loop-status` first), commit, push to
 
 Post the banner-first chat report (format above). Then reset the ops channel to idle:
 write `{"type": "noop"}` to `ops/request.json`, commit, push.
+
+## Research probes vs trading books (what shows up where)
+
+The table has two row kinds: **trading books** (things that write `paper_trades` — theta*,
+mmsell*, weather con/other) and **data collectors** (freshness of tables the worker writes).
+Some strategies are NEITHER — they are **on-demand research probes** that read existing data
+or public APIs only when run via the ops channel, so they never appear as book/data rows:
+
+- **TFAV** (`kalshi_favbuy_study`) — reads existing `crypto_ladder_snapshots`; its data already
+  shows as that collector row. Verdict lives in `docs/RESEARCH_JOURNAL.md`.
+- **WCPROP** (`xmarket_wc`) — reads public candlesticks on demand; no table, no book.
+- **XGAME** (`xgame_tape_study`) — the collector IS tracked (the `data:xgame_*` rows above);
+  the probe that grades it is on-demand.
+
+In the report, keep a one-line **"Research probes (on-demand):"** note listing these three with
+their latest journal verdict state, so they are visibly accounted for even though they are not
+continuous books. Do NOT run the probes from the loop (they are the operator's fable call).
