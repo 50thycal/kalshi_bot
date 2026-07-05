@@ -1,1 +1,1 @@
-{"type":"db","sql":"SELECT 'matches' AS tbl, count(*) AS rows, coalesce(sum(kalshi_trades),0) AS k_tr, coalesce(sum(pm_trades),0) AS pm_tr, max(created_at)::text AS latest_created, max(last_polled_at)::text AS latest_poll FROM game_market_matches UNION ALL SELECT 'tapes', count(*), count(*) FILTER (WHERE venue='kalshi'), count(*) FILTER (WHERE venue='polymarket'), max(traded_at)::text, max(captured_at)::text FROM game_tape_snapshots","max_rows":10}
+{"type": "logs", "limit": 400, "filter": "xgame"}
