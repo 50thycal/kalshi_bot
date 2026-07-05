@@ -1,0 +1,7 @@
+# ops request: type='db'
+tbl      rows  k_tr  pm_tr  latest_created  latest_poll
+-------  ----  ----  -----  --------------  -----------
+matches  0     0     0                                 
+tapes    0     0     0                                 
+
+(2 rows)

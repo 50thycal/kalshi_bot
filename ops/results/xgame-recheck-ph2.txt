@@ -1,0 +1,10 @@
+# ops request: type='db'
+metric                 value
+---------------------  -----
+game_matches_total     0    
+game_matches_active    0    
+game_tape_total        0    
+ladder_favband_last1h  10   
+bot_runs_last_15m      12   
+
+(5 rows)
