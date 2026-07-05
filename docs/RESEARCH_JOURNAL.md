@@ -16,6 +16,58 @@ Conventions:
 
 ---
 
+## WEATHER PRUNE 2026-07-04 — keep only `con`; all other weather books are confirmed bleeders
+
+Fable-session decision from the per-book forward P&L (settled paper, NOT legacy):
+
+| book | n | total | c/trade | verdict |
+|---|---|---|---|---|
+| **con** | 239 | **+$9.83** | **+4.1** | KEEP — the only +EV weather book |
+| favband | 41 | −$3.65 | −8.9 | prune |
+| pm | 158 | −$6.15 | −3.9 | prune (book only; DATA stays for con) |
+| obs | 171 | −$6.35 | −3.7 | prune (book only; DATA stays for con) |
+| cwin | 130 | −$6.81 | −5.2 | prune (already dormant) |
+| dist | 669 | −$26.55 | −4.0 | prune |
+| fav | 1196 | −$49.41 | −4.1 | (already off) |
+| nws | 1146 | −$63.83 | −5.6 | (already off) |
+| cal | 1137 | −$72.03 | −6.3 | prune |
+
+Pruned via config defaults (`weather_strategies="none"` + a new `weather_strategy_list`
+"none"/"off" sentinel that returns `[]`; `weather_dist_enabled`/`weather_city_window_enabled`/
+`weather_favband_enabled`/`weather_obs_entry_enabled` → False; new `weather_pm_book_enabled`
+→ False separating the pm BOOK from the pm DATA). **Critical: the data collectors that feed
+`con` stay ON** — forecasts, ensembles (`weather_ensemble_enabled`), observations
+(`weather_obs_enabled`), and Polymarket (`weather_polymarket_enabled`); only the losing
+*entry books* stop. Existing open positions on pruned books hold to settlement (startup
+abandon keeps `weather*`), then no new entries. Net effect going forward: the weather program
+trades ONLY `con` (+4.1c/trade), ending ~−$4-5/settlement-batch of paper bleed + the API load
+of six dead books.
+
+## MMSELL REVISION 2026-07-04 — forward data OVERTURNS the tape: the edge is in CHEAP longshots, not the mid-band
+
+Fable-session decomposition of 445 settled mmsell paper trades by yes-price-sold band —
+the naive proxy is breakeven (+1.3c/trade pooled) because it AVERAGES a real edge and a
+real drag:
+
+| yes-sold | n | c/contract | win% |
+|---|---|---|---|
+| 5-10c | 113 | **+2.69** | 96% |
+| 10-20c | 151 | **+3.60** | 91% |
+| 20-35c | 121 | **−1.50** | 74% |
+| 35-50c | 57 | **−4.35** | 60% |
+
+This is the **opposite** of the raw kalshi_mm tape backtest (which rose with price, 20-35c
+best). The resolution: hold-to-settlement harvests the **favorite-longshot bias** — cheap
+longshots are the most overpriced relative to their tiny true probability, so selling them
+and holding nets the premium at 91-96% win; mid-price contracts aren't overpriced enough to
+cover their bigger loss-when-hit (the tape measured ALL maker fills incl. two-way flow, a
+different object than sell-and-hold). The control's 5-40c band drags in the losing 20-40c
+cells. Shipped two pre-registered revision books next to the untouched `mmsell` control
+(same scan/orderbook, band only): **mmsell1** (5-20c, the broad cheap sweet-spot) and
+**mmsell2** (10-20c, the single best band). Decision rule (in-sample decomposition ⇒ needs
+OOS): keep a variant only if it beats the control forward at ≥~150 settled with per-trade
+P&L clearly > 0; the parallel books ARE the out-of-sample test. `MMSELL_VARIANTS` config.
+
 ## IDEA-MODEL 2026-07-04 → Phase 2 built: TFAV / WCPROP / XGAME pipelines + pre-registered probes (verdicts pending)
 
 *(2026-07-04. Pre-registered theses, predictions and decision rules in

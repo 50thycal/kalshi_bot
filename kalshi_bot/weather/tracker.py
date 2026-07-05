@@ -375,7 +375,7 @@ class WeatherTracker:
                         session, f"{prefix}cal_h{int(hours)}", event_ticker, t, cal_market,
                         self._cached_metrics(cal_market, metrics_cache), None, summary,
                     )
-                if pm_market is not None:
+                if pm_market is not None and s.weather_pm_book_enabled:
                     self._maybe_enter(
                         session, f"{prefix}pm_h{int(hours)}", event_ticker, t, pm_market,
                         self._cached_metrics(pm_market, metrics_cache), pm_prob, summary,

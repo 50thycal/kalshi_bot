@@ -121,6 +121,7 @@ def _tracker_settings(settings):
     settings.weather_track_lows = False
     settings.weather_entry_hours = "4"          # single window -> one entry per book
     settings.weather_polymarket_enabled = True
+    settings.weather_pm_book_enabled = True   # the pm BOOK is off by default (pruned); opt in
     settings.weather_pm_cities = "LAX,MIA,AUS"
     return settings
 

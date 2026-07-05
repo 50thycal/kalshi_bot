@@ -122,6 +122,18 @@ class Settings(BaseSettings):
     # On by default now that we're forward-testing the maker edge; set false to disable.
     mmsell_paper_enabled: bool = True
     mmsell_interval_minutes: float = 30.0        # how often the ride-along entry scan runs
+    # Revision books (parallel paper variants next to the untouched `mmsell` control), from
+    # the 2026-07-04 forward decomposition of 445 settled trades: the maker-sell-and-hold
+    # edge lives in the CHEAP longshots (yes 5-10c +2.7c/ct 96%win, 10-20c +3.6c 91%) and is
+    # NEGATIVE in the mid band (20-35c -1.5c 74%, 35-50c -4.4c 60%) — the OPPOSITE of the raw
+    # tape backtest, because hold-to-settlement harvests the favorite-longshot bias (cheap
+    # longshots are the most overpriced), while mid-price contracts don't overprice enough to
+    # cover their bigger loss-when-hit. The control's 5-40c band drags in the losing 20-40c
+    # cells. Variants narrow to where the forward edge actually is. Spec format:
+    #   "tag:key=val,...;tag:..."  keys: lo, hi (midpoint band cents), htcmin, htcmax (hours).
+    #   Unset keys inherit the base mmsell_* knobs. theta1=broad cheap sweet-spot (5-20c),
+    #   theta2=the single best band (10-20c). Empty string disables all variants.
+    mmsell_variants: str = "mmsell1:lo=5,hi=20;mmsell2:lo=10,hi=20"
 
     # --- Theta book (ride-along paper, weather/live cycle) ---
     # Model-anchored tail-selling on the recurring hourly crypto ladders (docs/
@@ -184,10 +196,14 @@ class Settings(BaseSettings):
 
     weather_top_n: int = 10
     weather_entry_hours: str = "20,14,8"
-    # Base books to run. `favorite` and `nws` were pruned after paper P&L confirmed both bleed
-    # the cost floor (weather_fav ~-$39, weather_nws ~-$34); `cal` stays, and the con/dist/
-    # favband/cwin books run via their own flags (con is the one book showing +EV).
-    weather_strategies: str = "cal"
+    # Base books to run (favorite | nws | cal | "none"). PRUNED to "none" on 2026-07-04:
+    # the per-book forward P&L showed `con` is the ONLY +EV weather book (+$9.83, +4.1c/trade
+    # over 239) and every other book bleeds — fav -$49, nws -$64, cal -$72, dist -$27, cwin
+    # -$7, obs -$6, pm -$6, favband -$4. So all base books are off and the flag-gated bleeders
+    # (dist/cwin/favband/obs-book/pm-book) are disabled below; only `con` trades. Data
+    # collectors that feed `con` (forecasts, ensembles, obs, Polymarket) stay ON. Set to a
+    # comma list of the valid names to resume base books.
+    weather_strategies: str = "none"
     weather_forecast_enabled: bool = True
     nws_user_agent: str = "kalshi-bot (set NWS_USER_AGENT to your app + contact email)"
     # HRRR (NOAA's hourly, high-res, <=48h CONUS model) point forecast via Open-Meteo
@@ -231,26 +247,33 @@ class Settings(BaseSettings):
     # but ONLY for cities where the settlement station matches Kalshi (verified
     # LAX/MIA/AUS). Polymarket prices are read-only signal — we never trade Polymarket
     # (geofenced). Stored separately in polymarket_snapshots.
+    # `weather_polymarket_enabled` gates the Polymarket DATA (bucket prices → stored +
+    # fed to the `con` consensus as the `pm` family). `weather_pm_book_enabled` separately
+    # gates the `weather_pm` BOOK that trades Kalshi toward Polymarket — PRUNED 2026-07-04
+    # (-$6.15/158, -3.9c/trade) while data collection stays ON for con (mirrors the
+    # obs data-vs-book split).
     weather_polymarket_enabled: bool = True
+    weather_pm_book_enabled: bool = False
     weather_pm_cities: str = "LAX,MIA,AUS"
     weather_pm_interval_minutes: float = 5.0
     # Per-city entry-window book (`weather_cwin`): the backfill-validated optimal
     # hours-to-close for the HIGH favorite per city (h18 for CHI/LAX/DEN won an
     # out-of-sample holdout). Buys the favorite once at that city's window.
-    weather_city_window_enabled: bool = True
+    weather_city_window_enabled: bool = False  # PRUNED 2026-07-04 (cwin -$6.81/130, -5.2c)
     weather_city_windows: str = "CHI:18,LAX:18,DEN:18,NYC:10,MIA:24,AUS:24,PHIL:10"
     # Per-city favorite PRICE-BAND book (`weather_favband`): buy the HIGH favorite at the
     # normal entry windows only when its implied price sits in a per-city band. The LAX
     # favorite is underpriced at 50-70c but OVERpriced >70c (over-paying for overshoot
     # risk) — buying only in-band survived an out-of-sample date split AND the h20/h14
     # windows in the backfill calibration study. Format: CITY:lo-hi cents.
-    weather_favband_enabled: bool = True
+    weather_favband_enabled: bool = False  # PRUNED 2026-07-04 (favband -$3.65/41, -8.9c)
     weather_favband_bands: str = "LAX:50-70"
     # Obs-confirmed late entry (`weather_obs` / `weather_low_obs`): after the local
     # cutoff hour the day's high/low has usually formed, so the station's running
     # max/min is a near-locked bound the market lags. Buy the bucket containing it
     # once, if its ask is still <= the cap (the entry study showed +EV late & cheap).
-    weather_obs_entry_enabled: bool = True
+    weather_obs_entry_enabled: bool = False  # PRUNED 2026-07-04 (obs book -$6.35/171, -3.7c);
+    #                                          weather_obs_enabled (data) stays ON for con
     weather_obs_high_after_hour: int = 16  # local hour; the high typically forms by ~3-4pm
     weather_obs_low_after_hour: int = 7    # the overnight low typically forms by ~dawn
     weather_obs_ask_cap: float = 90.0      # skip if the running-extreme bucket is already rich
@@ -259,7 +282,8 @@ class Settings(BaseSettings):
     # and buy the single bucket whose model probability most beats its ask. sigma is the
     # kernel width (deg F) for forecast error beyond the ensemble spread — kept modest so
     # the model distribution stays tighter than the market's overdispersed ladder (#6).
-    weather_dist_enabled: bool = True
+    weather_dist_enabled: bool = False  # PRUNED 2026-07-04 (dist -$26.55/669, -4.0c); the
+    #                                     ensemble DATA (weather_ensemble_enabled) stays ON for con
     weather_dist_sigma: float = 1.5
     weather_dist_min_edge_cents: float = 5.0
     # Consensus / layered book (`weather_con` / `weather_low_con`): make the independent
@@ -455,6 +479,9 @@ class Settings(BaseSettings):
     @property
     def weather_strategy_list(self) -> list[str]:
         valid = ("favorite", "nws", "cal")
+        raw = self.weather_strategies.strip().lower()
+        if raw in ("none", "off"):  # explicit: run NO base fav/nws/cal book (con still runs)
+            return []
         out = [s.strip().lower() for s in self.weather_strategies.split(",") if s.strip()]
         return [s for s in out if s in valid] or ["favorite"]
 
@@ -581,6 +608,45 @@ class Settings(BaseSettings):
         return [s.strip().upper() for s in self.mmsell_skip_series.split(",") if s.strip()]
 
     @property
+    def mmsell_variant_list(self) -> list[dict]:
+        """Parsed revision-book specs (unset keys inherit the base mmsell knobs). The tag
+        must start with 'mmsell', differ from the control's own 'mmsell', and fit the
+        strategy column (String(24)). Malformed tokens / inverted bands are skipped."""
+        out: list[dict] = []
+        for spec in self.mmsell_variants.split(";"):
+            spec = spec.strip()
+            if not spec or ":" not in spec:
+                continue
+            tag, _, body = spec.partition(":")
+            tag = tag.strip()
+            if not tag.startswith("mmsell") or tag == "mmsell" or len(tag) > 24:
+                continue
+            v = {
+                "tag": tag,
+                "lo": float(self.mmsell_entry_lo_cents),
+                "hi": float(self.mmsell_entry_hi_cents),
+                "htcmin": self.mmsell_min_hours_to_close,
+                "htcmax": self.mmsell_max_hours_to_close,
+            }
+            ok = True
+            for kv in body.split(","):
+                kv = kv.strip()
+                if not kv:
+                    continue
+                key, _, val = kv.partition("=")
+                key = key.strip().lower()
+                try:
+                    if key in ("lo", "hi", "htcmin", "htcmax"):
+                        v[key] = float(val)
+                    else:
+                        ok = False
+                except (TypeError, ValueError):
+                    ok = False
+            if ok and v["lo"] < v["hi"] and v["htcmin"] < v["htcmax"]:
+                out.append(v)
+        return out
+
+    @property
     def theta_series_map(self) -> dict[str, str]:
         """SERIES -> Coinbase product, parsed from "KXBTCD:BTC-USD,..."; skips malformed."""
         out: dict[str, str] = {}
@@ -671,6 +737,8 @@ class Settings(BaseSettings):
             "mmsell_max_open_positions": self.mmsell_max_open_positions,
             "mmsell_paper_enabled": self.mmsell_paper_enabled,
             "mmsell_interval_minutes": self.mmsell_interval_minutes,
+            "mmsell_variants": [f"{v['tag']}:{v['lo']:.0f}-{v['hi']:.0f}"
+                                for v in self.mmsell_variant_list],
             "theta_enabled": self.theta_enabled,
             "theta_series": self.theta_series_map,
             "theta_entry_minutes": [self.theta_entry_min_minutes, self.theta_entry_max_minutes],
@@ -702,6 +770,10 @@ class Settings(BaseSettings):
             "weather_bias_shrinkage": self.weather_bias_shrinkage,
             "weather_track_lows": self.weather_track_lows,
             "weather_obs_enabled": self.weather_obs_enabled,
+            "weather_obs_entry_enabled": self.weather_obs_entry_enabled,
+            "weather_favband_enabled": self.weather_favband_enabled,
+            "weather_city_window_enabled": self.weather_city_window_enabled,
+            "weather_pm_book_enabled": self.weather_pm_book_enabled,
             "weather_ensemble_enabled": self.weather_ensemble_enabled,
             "weather_ensemble_models": self.weather_ensemble_model_list,
             "weather_dist_enabled": self.weather_dist_enabled,
