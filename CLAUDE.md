@@ -49,13 +49,23 @@ To run a request:
    ```
 2. Overwrite `/tmp/ops/ops/request.json` with **one** of:
    ```jsonc
-   {"type": "db",   "sql": "select ...", "max_rows": 200}
-   {"type": "logs", "limit": 200, "filter": "", "deployment_id": ""}
+   {"type": "db",   "sql": "select ...", "max_rows": 200, "id": "pnl-check-1"}
+   {"type": "logs", "limit": 200, "filter": "", "deployment_id": "", "id": "logs-1"}
    {"type": "script", "name": "weather_model_check", "args": ["--sigma", "1.5"]}
    {"type": "noop"}
    ```
    `script` runs an allowlisted self-contained read-only analysis script from
    `scripts/` (see `ALLOWED_SCRIPTS` in `scripts/ops_runner.py`).
+
+   **Always set a unique `"id"`** (any short slug — sanitized to `[A-Za-z0-9._-]`).
+   The runner writes your output to a durable per-run file `ops/results/<id>.txt`
+   in addition to the shared `ops/result.txt`. This is what lets you read back
+   **exactly your own result** even when another producer (e.g. a parallel `/loop`
+   session) drives the channel at the same time — the shared `result.txt` is only the
+   latest-run pointer and can be overwritten by a concurrent run, but `ops/results/<id>.txt`
+   is uniquely named, never conflicts, and is always published (the workflow retries
+   against concurrent pushes). Omit `id` only for throwaway requests (it then falls back
+   to a timestamp+run-number filename you'd have to hunt for).
 
    Two of these are the standing **commands** the user asks for by name:
    - **"PnL"** -> `{"type":"script","name":"weather_pnl"}` — the per-book rollup
@@ -97,12 +107,15 @@ To run a request:
    ```bash
    cd /tmp/ops && git add ops/request.json && git commit -m "ops: <what>" && git push origin ops
    ```
-4. Read the result. The runner commits its full output back to the `ops` branch
-   as `ops/result.txt`, so the simplest path is plain git (works even when the
-   GitHub MCP tools are down):
+4. Read the result. The runner commits your output back to the `ops` branch as the
+   durable per-run file `ops/results/<id>.txt` (and updates the shared `ops/result.txt`
+   pointer). Plain git is the simplest path (works even when the GitHub MCP tools are
+   down) — read **your own `id`** so a concurrent producer's run can't shadow yours:
    ```bash
-   # poll until the result commit lands (~30-90s), then:
-   git fetch origin ops && git show FETCH_HEAD:ops/result.txt
+   # poll until YOUR result lands (~30-90s), then:
+   git fetch origin ops && git show FETCH_HEAD:ops/results/<id>.txt
+   # (git show FETCH_HEAD:ops/result.txt is the latest-run pointer — fine when you're
+   #  the only producer, but it can be overwritten by a concurrent /loop run.)
    ```
    Alternatively via the GitHub MCP tools:
    - `actions_list` `method=list_workflow_runs`, `resource_id=ops-runner.yml` → newest run id

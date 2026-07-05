@@ -3,8 +3,20 @@ name: Ops Runner
 # Self-service bridge: runs automatically when `ops/request.json` changes on the
 # `ops` branch (a push Claude makes), so logs / read-only queries can be fetched
 # without a manual "Run workflow" click. Results land in this job's log AND are
-# committed back to the ops branch as `ops/result.txt`, so they can be read over
-# plain git when the GitHub API/MCP tools are unavailable.
+# committed back to the ops branch, so they can be read over plain git when the
+# GitHub API/MCP tools are unavailable.
+#
+# Two result copies are written per run:
+#   - ops/result.txt              — the latest-run pointer (backward compatible)
+#   - ops/results/<id>.txt        — a DURABLE per-run copy, keyed by the request's
+#                                   optional "id" field (else a timestamp+run number)
+# The per-run copy exists because more than one producer can drive this channel at
+# once (e.g. a parallel /loop session). The old publish step did
+# `git pull --rebase origin ops || true`, which swallowed the add/add conflict on the
+# shared result.txt and left the push a SILENT no-op — dropping the result. The publish
+# step below instead retries against concurrent pushes and never conflicts (unique
+# per-run filenames), so a requester can ALWAYS read exactly its own output at
+# ops/results/<id>.txt without a human untangling the branch.
 #
 # The push trigger filters on ops/request.json only, so the result commit can
 # never retrigger the workflow.
@@ -43,18 +55,57 @@ jobs:
           RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
         run: |
           set -o pipefail
-          python scripts/ops_runner.py 2>&1 | tee ops/result.txt
+          # Snapshot the triggering request BEFORE running: the robust publish step
+          # below checks out the latest ops tree, under which ops/request.json can change
+          # if a concurrent producer (e.g. a parallel /loop session) pushed meanwhile.
+          cp ops/request.json "$RUNNER_TEMP/ops_request.json"
+          python scripts/ops_runner.py 2>&1 | tee ops/result.txt || true
+          cp ops/result.txt "$RUNNER_TEMP/ops_result.txt"
+          # Per-run result key: the request's optional "id" lets the requester read
+          # exactly its own output at ops/results/<id>.txt even when another producer
+          # writes concurrently; else fall back to a timestamp + run number.
+          rid="$(jq -r '.id // empty' ops/request.json 2>/dev/null || true)"
+          rid="$(printf '%s' "$rid" | tr -c 'A-Za-z0-9._-' '_' | cut -c1-64)"
+          [ -z "$rid" ] && rid="$(date -u +%Y%m%dT%H%M%SZ)-run${{ github.run_number }}"
+          printf '%s' "$rid" > "$RUNNER_TEMP/ops_rid"
 
       - name: Publish result to ops branch
         if: always()
         run: |
           git config user.name "ops-runner"
           git config user.email "ops-runner@users.noreply.github.com"
-          git add ops/result.txt
-          if ! git diff --cached --quiet; then
-            git commit -m "ops: result"
-            git pull --rebase origin ops || true
-            git push origin HEAD:ops
+          rid="$(cat "$RUNNER_TEMP/ops_rid" 2>/dev/null || true)"
+          [ -z "$rid" ] && rid="run${{ github.run_number }}"
+          # Race-proof publish (see header comment). Each attempt starts from the LATEST
+          # ops tree — preserving any concurrent commit and its per-run file — then
+          # re-applies THIS run's files and retries the push. Unique per-run filenames
+          # never conflict, so the result always lands; result.txt is last-writer-wins,
+          # but ops/results/<id>.txt durably preserves this run's output.
+          published=""
+          for attempt in 1 2 3 4 5 6; do
+            git fetch -q origin ops || true
+            # -f: discard the dirty working tree from the run step (result.txt was tee'd);
+            # this run's output is re-applied from the RUNNER_TEMP snapshot just below.
+            git checkout -q -f -B __ops_publish origin/ops
+            mkdir -p ops/results
+            cp "$RUNNER_TEMP/ops_result.txt" ops/result.txt
+            cp "$RUNNER_TEMP/ops_result.txt" "ops/results/${rid}.txt"
+            # Bound growth: keep only the newest 80 per-run results.
+            ls -1t ops/results/*.txt 2>/dev/null | tail -n +81 | xargs -r rm -f
+            git add -A ops
+            if git diff --cached --quiet; then
+              echo "nothing to publish"; published="yes"; break
+            fi
+            git commit -q -m "ops: result ${rid}"
+            if git push -q origin __ops_publish:ops; then
+              published="yes"; echo "published ${rid} on attempt ${attempt}"; break
+            fi
+            echo "push rejected by concurrent write; retrying (attempt ${attempt})"
+            sleep $((attempt * 2))
+          done
+          if [ -z "$published" ]; then
+            echo "::error::failed to publish ops result ${rid} after 6 attempts"
+            exit 1
           fi
 
       # Durable running history of daily digests. When the request was a
@@ -69,10 +120,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -e
+          # Read the request + result from the pre-publish SNAPSHOTS: the publish step
+          # left the working tree on the latest ops tip, whose request.json/result.txt
+          # may belong to a concurrent producer, not this run.
           is_digest=$(python - <<'PY'
-          import json
+          import json, os
           try:
-              d = json.load(open("ops/request.json"))
+              d = json.load(open(os.path.join(os.environ["RUNNER_TEMP"], "ops_request.json")))
           except Exception:
               d = {}
           ok = (d.get("type", "").strip().lower() == "script"
@@ -84,8 +138,8 @@ jobs:
             echo "Not a digest request; nothing to archive."
             exit 0
           fi
-          if [ ! -s ops/result.txt ]; then
-            echo "No result.txt to archive."
+          if [ ! -s "$RUNNER_TEMP/ops_result.txt" ]; then
+            echo "No result to archive."
             exit 0
           fi
 
@@ -111,7 +165,7 @@ jobs:
           fi
 
           mkdir -p "$work/digests"
-          cp ops/result.txt "$work/digests/${ts}.md"
+          cp "$RUNNER_TEMP/ops_result.txt" "$work/digests/${ts}.md"
 
           git -C "$work" config user.name "ops-runner"
           git -C "$work" config user.email "ops-runner@users.noreply.github.com"
