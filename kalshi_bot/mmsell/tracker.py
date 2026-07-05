@@ -31,13 +31,14 @@ logger = logging.getLogger(__name__)
 class MmSellCycleSummary:
     events_seen: int = 0
     markets_considered: int = 0
-    in_band: int = 0
-    opened: int = 0
+    in_band: int = 0        # control-book scoped (stable across releases)
+    opened: int = 0         # across control + revision books
     already_open: int = 0
     capped: int = 0
     skipped_illiquid: int = 0
     skipped_htc: int = 0
     per_series: dict[str, int] = field(default_factory=dict)
+    per_book: dict[str, int] = field(default_factory=dict)
 
 
 class MmSellTracker:
@@ -50,6 +51,19 @@ class MmSellTracker:
     def _skip_series(self, series: str) -> bool:
         s = (series or "").upper()
         return any(s.startswith(p) for p in self.settings.mmsell_skip_series_list)
+
+    def _books(self) -> list[dict]:
+        """Control book (base knobs, tag 'mmsell' — NEVER reparameterized) then the
+        configured revision books. All share the scan/orderbook; only the band + htc differ."""
+        s = self.settings
+        control = {
+            "tag": self.STRATEGY,
+            "lo": float(s.mmsell_entry_lo_cents),
+            "hi": float(s.mmsell_entry_hi_cents),
+            "htcmin": s.mmsell_min_hours_to_close,
+            "htcmax": s.mmsell_max_hours_to_close,
+        }
+        return [control, *s.mmsell_variant_list]
 
     def run_once(self, session) -> MmSellCycleSummary:
         s = self.settings
@@ -76,10 +90,12 @@ class MmSellTracker:
         events = events[: s.mmsell_top_events]
         summ.events_seen = len(events)
 
-        open_count = repo.count_open_paper_positions(session, self.STRATEGY)
+        books = self._books()
+        open_count = {b["tag"]: repo.count_open_paper_positions(session, b["tag"]) for b in books}
 
-        # 2) per market: if yes-midpoint in the entry band + two-sided + liquid + htc window,
-        #    open a maker BUY-NO at the no-bid, held to settlement.
+        # 2) per market: for each book whose band+htc admit it, open a maker BUY-NO at the
+        #    no-bid (== sell yes at the ask), held to settlement. Books share one orderbook
+        #    fetch; only the band (and htc) differ.
         for _vol, event in events:
             for market in event.get("markets") or []:
                 summ.markets_considered += 1
@@ -90,70 +106,81 @@ class MmSellTracker:
                     continue
                 htc_s = compute_time_to_close(market.get("close_time"))
                 htc = htc_s / 3600.0 if htc_s is not None else None   # seconds -> hours
+                # control htc gate scopes the shared work + the skipped_htc counter; a variant
+                # with a wider htc than the control is not supported (control is the widest).
                 if htc is None or not (s.mmsell_min_hours_to_close <= htc
                                        <= s.mmsell_max_hours_to_close):
                     summ.skipped_htc += 1
                     continue
-                try:
-                    ob = self.client.get_orderbook(ticker, depth=s.orderbook_depth)
-                except AuthError:
-                    raise
-                except Exception as exc:  # noqa: BLE001
-                    logger.warning("mmsell: orderbook fetch failed",
-                                   extra={"extra_fields": {"ticker": ticker, "error": str(exc)}})
-                    continue
-                metrics = compute_metrics(market, ob, top_n=s.orderbook_depth)
-                if not metrics.two_sided or metrics.midpoint is None \
-                        or metrics.best_no_bid is None:
-                    summ.skipped_illiquid += 1
-                    continue
-                if not (s.mmsell_entry_lo_cents <= metrics.midpoint <= s.mmsell_entry_hi_cents):
-                    continue
-                summ.in_band += 1
 
-                if repo.get_open_paper_position(session, ticker, self.STRATEGY) is not None:
-                    summ.already_open += 1
-                    continue
-                if open_count >= s.mmsell_max_open_positions:
-                    summ.capped += 1
-                    continue
-
-                # maker sells yes at the yes-ask == buys NO at the no-bid (100 - yes_ask)
-                price = metrics.best_no_bid
-                if not (0 < price < 100):
-                    summ.skipped_illiquid += 1
-                    continue
-                qty = s.paper_order_size
-                fee = kalshi_fee(price, qty, s.paper_fees_enabled)
-                sub = market.get("yes_sub_title") or market.get("subtitle") or ""
-                # fill_assumption is String(64) in the DB — truncate the FINAL string, not just
-                # the subtitle slice, or a longer subtitle/wider price still overflows the column
-                # (a real prod failure: a 66-char string blew past the limit and dropped the row).
-                assumption = (
-                    f"[mmsell] sell yes '{sub[:24]}' @ {100 - price}c "
-                    f"(no@{price}c mid{metrics.midpoint:.0f}c)"
-                )[:64]
-                repo.create_paper_trade(
-                    session,
-                    signal_id=None,
-                    ticker=ticker,
-                    strategy=self.STRATEGY,
-                    side="no",
-                    action="buy",
-                    assumed_price=price,
-                    quantity=qty,
-                    fill_assumption=assumption,
-                    entry_fee=fee,
-                    model_probability=None,
-                    edge=0.0,
-                )
-                repo.open_paper_position_for_trade(
-                    session, ticker=ticker, strategy=self.STRATEGY, side="no",
-                    quantity=qty, avg_price=price,
-                )
-                open_count += 1
-                summ.opened += 1
+                metrics = None  # lazy: fetched once for the first book that clears the band
                 series = (event.get("series_ticker") or ticker.split("-")[0]).upper()
-                summ.per_series[series] = summ.per_series.get(series, 0) + 1
+                for book in books:
+                    tag = book["tag"]
+                    if not (book["htcmin"] <= htc <= book["htcmax"]):
+                        continue
+                    if metrics is None:
+                        try:
+                            ob = self.client.get_orderbook(ticker, depth=s.orderbook_depth)
+                        except AuthError:
+                            raise
+                        except Exception as exc:  # noqa: BLE001
+                            logger.warning(
+                                "mmsell: orderbook fetch failed",
+                                extra={"extra_fields": {"ticker": ticker, "error": str(exc)}})
+                            break  # no book can enter this market this cycle
+                        metrics = compute_metrics(market, ob, top_n=s.orderbook_depth)
+                    if not metrics.two_sided or metrics.midpoint is None \
+                            or metrics.best_no_bid is None:
+                        summ.skipped_illiquid += 1
+                        break
+                    if not (book["lo"] <= metrics.midpoint <= book["hi"]):
+                        continue
+                    if tag == self.STRATEGY:
+                        summ.in_band += 1
+
+                    if repo.get_open_paper_position(session, ticker, tag) is not None:
+                        summ.already_open += 1
+                        continue
+                    if open_count[tag] >= s.mmsell_max_open_positions:
+                        summ.capped += 1
+                        continue
+
+                    # maker sells yes at the yes-ask == buys NO at the no-bid (100 - yes_ask)
+                    price = metrics.best_no_bid
+                    if not (0 < price < 100):
+                        summ.skipped_illiquid += 1
+                        break
+                    qty = s.paper_order_size
+                    fee = kalshi_fee(price, qty, s.paper_fees_enabled)
+                    sub = market.get("yes_sub_title") or market.get("subtitle") or ""
+                    # fill_assumption is String(64); the repo layer also clamps, but keep the
+                    # subtitle short and the prices first so truncation only costs subtitle chars.
+                    assumption = (
+                        f"[{tag}] sell yes '{sub[:24]}' @ {100 - price}c "
+                        f"(no@{price}c mid{metrics.midpoint:.0f}c)"
+                    )[:64]
+                    repo.create_paper_trade(
+                        session,
+                        signal_id=None,
+                        ticker=ticker,
+                        strategy=tag,
+                        side="no",
+                        action="buy",
+                        assumed_price=price,
+                        quantity=qty,
+                        fill_assumption=assumption,
+                        entry_fee=fee,
+                        model_probability=None,
+                        edge=0.0,
+                    )
+                    repo.open_paper_position_for_trade(
+                        session, ticker=ticker, strategy=tag, side="no",
+                        quantity=qty, avg_price=price,
+                    )
+                    open_count[tag] += 1
+                    summ.opened += 1
+                    summ.per_book[tag] = summ.per_book.get(tag, 0) + 1
+                    summ.per_series[series] = summ.per_series.get(series, 0) + 1
 
         return summ

@@ -453,6 +453,7 @@ def _run_mmsell_book(settings, tracker) -> None:
             logger, logging.INFO, "mmsell book",
             events=summ.events_seen, considered=summ.markets_considered, in_band=summ.in_band,
             opened=summ.opened, already_open=summ.already_open, capped=summ.capped,
+            per_book=summ.per_book,
         )
     except AuthError:
         raise

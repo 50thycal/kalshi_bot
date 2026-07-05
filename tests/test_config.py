@@ -63,3 +63,31 @@ def test_escaped_newline_private_key(base_env, monkeypatch, rsa_keypair):
     s = Settings(_env_file=None)
     assert "\n" in s.private_key_pem
     assert "\\n" not in s.private_key_pem
+
+
+def test_weather_strategies_none_disables_base_books(base_env):
+    from kalshi_bot.config import Settings
+    s = Settings(_env_file=None, weather_strategies="none")
+    assert s.weather_strategy_list == []           # con still runs via its own flag
+    s = Settings(_env_file=None, weather_strategies="off")
+    assert s.weather_strategy_list == []
+    # explicit names still parse; empty/garbage keeps the favorite fallback (backcompat)
+    assert Settings(_env_file=None, weather_strategies="cal,nws").weather_strategy_list == ["cal", "nws"]
+    assert Settings(_env_file=None, weather_strategies="").weather_strategy_list == ["favorite"]
+
+
+def test_weather_prune_defaults_keep_only_con(base_env):
+    from kalshi_bot.config import Settings
+    s = Settings(_env_file=None)
+    # bleeders pruned to off by default...
+    assert s.weather_strategy_list == []
+    assert s.weather_dist_enabled is False
+    assert s.weather_city_window_enabled is False
+    assert s.weather_favband_enabled is False
+    assert s.weather_obs_entry_enabled is False
+    assert s.weather_pm_book_enabled is False
+    # ...while con + the data collectors that feed it stay on
+    assert s.weather_consensus_enabled is True
+    assert s.weather_polymarket_enabled is True     # pm DATA for con
+    assert s.weather_obs_enabled is True            # obs DATA for con
+    assert s.weather_ensemble_enabled is True        # ensemble DATA for con
