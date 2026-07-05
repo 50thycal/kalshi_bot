@@ -7,56 +7,56 @@ suggestion list carries over run-to-run. All times CENTRAL (CDT/CST).*
 
 ---
 
-## Snapshot — 2026-07-04 11:14 PM CDT (run #17) — **fable branch DEPLOYED**
+## Snapshot — 2026-07-05 03:14 AM CDT (run #18) — both fable changes confirmed working
 
-Merged + deployed ~10:54 PM CDT: **mmsell1/mmsell2 revision books are now trading**, and
-the weather prune is live (con-only going forward).
+**Trading books (settled n / P&L / per-trade / open):**
+| book | n | P&L | ¢/trade | open | note |
+|---|---|---|---|---|---|
+| mmsell (control) | 490 | +$7.19 | +1.5 | 19 | baseline |
+| **mmsell1** (5-20¢) | 17 | **+$0.87** | **+5.1** | 14 | first settles — ahead of control |
+| **mmsell2** (10-20¢) | 11 | **+$1.56** | **+14.2** | 7 | first settles — well ahead (tiny n) |
+| theta (control) | 102 | −$9.73 | — | 2 | recovered +$2.2 |
+| theta1 / theta2 | 7 / 2 | −$4.29 / −$3.79 | — | 0/0 | idle |
+| **theta3** (wide, ×1.25) | 40 | **−$0.18** | — | 2 | **bounced +$6.7 → ~breakeven at 40/60** |
+| weather con | 228 | +$10.82 | +4.1 | 14 | healthy (see below) |
+| weather (rest) | 4,659 | −$235.77 | — | 50 | pruned; 50 legacy opens settling out |
 
-**Trading books (settled n / P&L / open):**
-| book | n | P&L | open | note |
-|---|---|---|---|---|
-| mmsell (control) | 459 | +$5.78 | 33 | +1.3¢/trade |
-| **mmsell1** (5-20¢) | 0 | — | **19** | **NEW — cheap-longshot variant live, no settles yet** |
-| **mmsell2** (10-20¢) | 0 | — | **12** | **NEW — peak-band variant live** |
-| theta (control) | 93 | −$11.90 | 2 | drifted down overnight |
-| theta1 / theta2 / theta3 | 7 / 2 / 32 | −$4.29 / −$3.79 / −$6.90 | 0/0/2 | all down this window (crypto session) |
-| weather con | 228 | +$10.82 | 14 | the keeper |
-| weather (rest) | 4,659 | −$235.77 | 50 | legacy opens holding to settlement; **no new entries since deploy** |
+**Weather prune — CONFIRMED, con healthy.** Zero weather entries (con OR pruned) since the
+10:54 PM deploy → no pruned book is trading. con's 10.3h quiet is normal: its max historical
+gap is **24.7h** (avg 1.69h, 33 entries in the last 3 days), so it's just off-window overnight
+and will fire at its next qualifying setup. The weather program is now genuinely con-only.
 
-**Data collection (last-24h / latest CDT):** crypto_spot 2,878 (11:13 PM ✓), ladder 61,440
-(11:14 PM ✓, 100% model-priced), forecasts/obs/ensembles/buckets all ✓ within minutes.
-**xgame_matches 0 / xgame_tapes 0** — matcher still makes no pairs (known bug, kal=14/pm=169).
+**mmsell A/B — first settlements favor the variants.** mmsell1 +5.1¢/trade and mmsell2
++14.2¢/trade both clear the control's +1.5¢, directionally exactly as the cheap-longshot
+decomposition predicted. n is tiny (17 / 11) — not a verdict, but the right sign + magnitude.
 
-**Research probes (on-demand, verdicts in RESEARCH_JOURNAL):** TFAV (`kalshi_favbuy_study`) ·
-WCPROP (`xmarket_wc`) · XGAME (`xgame_tape_study`) — not continuous books by design.
+**Data collection (last-24h / latest CDT):** crypto_spot 2,876 (03:12 AM ✓), ladder 61,680
+(03:13 AM ✓, 100% model-priced), forecasts/obs/ensembles/buckets ✓ within minutes.
+**xgame_matches 0 / tapes 0** — matcher still 0 pairs (known bug, kal=14/pm=169).
 
-**Headline:** the deploy landed — mmsell1 (19 open) + mmsell2 (12 open) are live and the
-weather program is pruning to con-only. The mmsell-variant A/B and the weather-prune
-confirmation are both now *running*; first reads in the next 1-2 runs. theta family slid
-overnight but all revisions are still pre-gate (theta3 32/60). All collectors fresh; XGAME
-matcher still the one broken thing.
+**Research probes (on-demand, verdicts in RESEARCH_JOURNAL):** TFAV · WCPROP · XGAME.
+
+**Headline:** the fable changes are validated live — mmsell variants trading and early-beating
+the control, weather cleanly pruned to a healthy con. theta3 bounced from −$6.90 to −$0.18 at
+40/60 (the variance the ≥60 gate exists for). Only broken thing: the XGAME matcher.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[mmsell · NEW A/B live] Watch mmsell1/mmsell2 vs the control as they settle.** Both
-   opened immediately (19 + 12) — the cheap-longshot thesis predicts they beat the control's
-   +1.3¢/trade. Judge at ~150 settled each; the in-sample decomposition said 5-20¢ = +2.7 to
-   +3.6¢/ct, so anything clearly above the control forward validates it.
+1. **[mmsell A/B · early-positive] Variants leading the control on first settles.** mmsell1
+   +5.1¢, mmsell2 +14.2¢ vs control +1.5¢/trade — the cheap-longshot thesis showing forward.
+   Hold to ~150 settled each before promoting; the sign is right, the n isn't there yet.
 
-2. **[weather · prune confirmation pending] Verify con-only at the next weather window.** No
-   new weather entries since the 10:54 PM deploy (expected — off-window). Next run should show
-   `con` getting fresh entries while weather-other stays flat (its 50 open just settle out).
-   If any non-con weather book takes a NEW position after the deploy, a flag/env override
-   slipped through — but the env check was clean, so this is a confirm-not-worry.
+2. **[theta · IN FLIGHT — theta3 the one to watch] theta3 at 40/60, ~breakeven after its
+   bounce.** The −$5..−$7 reads were variance; it recovered +$6.7 in 8 trades. Let it (and the
+   control, 102 and still negative) reach the gate before judging. theta1/theta2 near-idle.
 
-3. **[XGAME · real bug] Matcher makes 0 pairs from kal=14 / pm=169 games.** The one broken
-   collector. Fable session: check team-name normalization across venues + the Kalshi
-   ticker-derived game-day vs PM's "on YYYY-MM-DD". Until it pairs, no tape accrues.
+3. **[XGAME · real bug] Matcher makes 0 pairs from kal=14 / pm=169 games.** Fable fix: team-
+   name normalization across venues + Kalshi ticker-derived game-day vs PM "on YYYY-MM-DD".
 
-4. **[theta · IN FLIGHT] Revisions still pre-gate (theta3 32/60); all slid overnight.**
-   Variance, not verdict. Control (93) continues negative/miscalibrated. Hold; judge at the gate.
+4. **[weather · resolved] Prune confirmed + con healthy** — no action; con trades at its next
+   window (verified normal cadence, max gap 24.7h).
 
-*(Resolved: "deploy-pending" from run #16 — the branch is merged and mmsell1/2 + the prune are
-live. Added #1 mmsell A/B watch + #2 prune-confirmation.)*
+*(Resolved: run #17's "prune confirmation pending" — now confirmed, con verified healthy.
+Updated #1 with the first-settle A/B reads; #2 reframed around theta3's bounce.)*
