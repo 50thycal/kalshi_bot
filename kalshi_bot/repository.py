@@ -1341,3 +1341,36 @@ def insert_game_tape_trades(session, match_id: int, venue: str, rows: list[dict]
         inserted += 1
     session.flush()
     return inserted
+
+
+def recent_game_tape(
+    session, match_id: int, venue: str, since: datetime
+) -> list[tuple[datetime, float]]:
+    """(traded_at, team_prob_cents) rows for a match+venue traded at or after `since`,
+    ascending by trade time — the live signal window the XGAME book reads each cycle."""
+    if since.tzinfo is None:
+        since = since.replace(tzinfo=timezone.utc)
+    rows = session.execute(
+        select(m.GameTapeSnapshot.traded_at, m.GameTapeSnapshot.team_prob_cents)
+        .where(
+            m.GameTapeSnapshot.match_id == match_id,
+            m.GameTapeSnapshot.venue == venue,
+            m.GameTapeSnapshot.team_prob_cents.is_not(None),
+            m.GameTapeSnapshot.traded_at >= since,
+        )
+        .order_by(m.GameTapeSnapshot.traded_at.asc())
+    ).all()
+    return [(ta, float(tp)) for ta, tp in rows]
+
+
+def open_paper_trades_with_prefix(session, prefix: str) -> list[m.PaperTrade]:
+    """Open paper trades whose strategy starts with `prefix` — used by self-managing books
+    (XGAME) that own their exit rather than deferring to the shared paper engine."""
+    return list(
+        session.scalars(
+            select(m.PaperTrade).where(
+                m.PaperTrade.status == "open",
+                m.PaperTrade.strategy.like(f"{prefix}%"),
+            )
+        )
+    )

@@ -175,6 +175,33 @@ class Settings(BaseSettings):
         "theta3:edge=12,mult=1.25"
     )
 
+    # --- TFAV book (ride-along paper, weather/live cycle) ---
+    # The MIRROR of theta on the same recurring hourly crypto ladders: theta SELLS the
+    # model-OVERpriced tails, tfav BUYS the model-UNDERpriced FAVORITES. Entry is a TAKER
+    # buy of YES at the ask (not the maker no-bid the sell books use) on 65-90c favorites
+    # inside the final hour whose model probability beats the ask by >= min_edge; held to
+    # settlement (the shared paper engine settles it, like theta). Forward-test of
+    # scripts/kalshi_favbuy_study.py — still EXPLORATORY (its P2/P4 gates aren't validated
+    # yet); running it as a paper book is exactly how we accumulate the settled-trade data
+    # that proves or kills it. tfav rides its own scan (shares theta's persisted spot window
+    # in crypto_spot_candles, so the spot fetch is near-free once theta has run this cycle).
+    tfav_enabled: bool = True
+    tfav_interval_minutes: float = 5.0        # ride-along cadence (matches theta)
+    tfav_entry_min_minutes: float = 0.0       # final-hour edge window (minutes to close)
+    tfav_entry_max_minutes: float = 60.0
+    tfav_price_lo_cents: float = 65.0         # favorite band on the yes ASK (taker price)
+    tfav_price_hi_cents: float = 90.0
+    tfav_min_edge_cents: float = 5.0          # 100*p_model - yes_ask must clear this
+    tfav_min_volume: float = 100.0            # skip untraded strikes
+    tfav_order_size: int = 5                  # >=5 amortizes the fee ceil (like theta)
+    tfav_max_open_positions: int = 60
+    tfav_max_per_event: int = 3               # cap correlated strikes per hourly event
+    # Revision books (parallel paper variants next to the untouched `tfav` control). Spec
+    # format: "tag:key=val,key=val;tag:..."  keys: lo, hi (yes-ask band cents), edge (min
+    # edge cents), ttemin, ttemax (entry-window minutes). Unset keys inherit the base
+    # tfav_* knobs. Tag must start with 'tfav', differ from the control, fit String(24).
+    tfav_variants: str = ""
+
     # --- XGAME in-play tape collector (ride-along, weather/live cycle) ---
     # COLLECT ONLY, no trading: stores both venues' trade tapes for matched in-play game
     # markets (Kalshi per-team moneyline vs Polymarket same-team/day market) into
@@ -193,6 +220,46 @@ class Settings(BaseSettings):
     xgame_pm_trade_pages: int = 8             # PM data-api pages (500 trades) per poll
     xgame_overlap_seconds: int = 180          # re-fetch overlap behind the high-water mark
     xgame_ended_grace_minutes: float = 120.0  # keep polling this long past market close
+    # XGAME paper BOOK (rides ON TOP of the tape collector above). Forward-test of the
+    # cross-venue lead-lag thesis (scripts/xgame_tape_study.py): Polymarket leads, Kalshi
+    # lags. When PM's P(team) has jumped >= shock_cents and Kalshi has NOT yet followed
+    # (the live gap |pm_now - kal_now| >= min_gap_cents in the same direction), the book
+    # buys the lagging Kalshi side TAKER at the ask and rides the catch-up. UNLIKE every
+    # other book it does NOT hold to settlement — its edge is a 20-90s convergence — so the
+    # tracker manages its OWN exit: close at the current Kalshi bid once Kalshi has repriced
+    # >= converge_frac of the gap, or after hold_seconds, whichever first. Still exploratory
+    # (P1/P2/P3 unproven); paper accumulates the data. Off-by-default sub-knob aside, the
+    # book is ON by default so it starts forward-testing immediately.
+    xgame_book_enabled: bool = True
+    xgame_shock_cents: float = 3.0            # min recent PM jump to call it a shock
+    xgame_shock_window_seconds: float = 60.0  # lookback for the PM jump + the Kalshi level
+    xgame_min_gap_cents: float = 3.0          # min live pm_now - kal_now gap to enter
+    xgame_converge_frac: float = 0.8          # exit once Kalshi closes this frac of the gap
+    xgame_hold_seconds: float = 120.0         # hard exit cap (the follow-through horizon)
+    xgame_order_size: int = 5
+    xgame_book_max_open_positions: int = 30   # one live position per matched game (deduped)
+
+    # --- WCPROP book (ride-along paper, weather/live cycle) ---
+    # World Cup cross-market coherence forward-test (scripts/xmarket_wc.py): does the
+    # tournament-WINNER ladder (KXMENWORLDCUP) lag a decisive MATCH result? When a
+    # KXWCGAME/KXWCROUND match settles, the involved teams' winner contracts should still
+    # be catching up. The book finds winner contracts that MOVED over the recent window
+    # (the causal, no-lookahead direction signal — the offline probe used the realized
+    # [T,T+H] move, which a live book can't see) and enters TAKER in the move direction on
+    # liquid, tight-spread rungs. NOT held to settlement (that would swap the lag residual
+    # for a weeks-long tournament bet): the shared engine times it out at wcprop_hold_minutes,
+    # closing at the current bid. Still exploratory (P1/P2/P3 unproven); paper accrues data.
+    wcprop_enabled: bool = True
+    wcprop_interval_minutes: float = 10.0     # ride-along cadence (matches games are slow)
+    wcprop_match_series: str = "KXWCGAME,KXWCROUND"   # settled match markets that trigger
+    wcprop_winner_series: str = "KXMENWORLDCUP"       # the lagging winner ladder we trade
+    wcprop_lookback_minutes: float = 45.0     # consider matches that closed within this
+    wcprop_min_age_minutes: float = 5.0       # ...but not younger than this (the +5m entry)
+    wcprop_min_move_cents: float = 3.0        # winner rung must have moved >= this recently
+    wcprop_spread_cap_cents: float = 5.0      # skip wide/illiquid winner quotes
+    wcprop_hold_minutes: float = 120.0        # timed exit horizon (the repricing window H)
+    wcprop_order_size: int = 5
+    wcprop_max_open_positions: int = 40
 
     weather_top_n: int = 10
     weather_entry_hours: str = "20,14,8"
@@ -709,6 +776,50 @@ class Settings(BaseSettings):
     def xgame_pm_tag_list(self) -> list[str]:
         return [t.strip().lower() for t in self.xgame_pm_tags.split(",") if t.strip()]
 
+    @property
+    def tfav_variant_list(self) -> list[dict]:
+        """Parsed tfav revision-book specs (unset keys inherit the base tfav knobs). The tag
+        must start with 'tfav', differ from the control's own 'tfav', and fit String(24).
+        Malformed tokens / inverted bands or windows are skipped."""
+        out: list[dict] = []
+        for spec in self.tfav_variants.split(";"):
+            spec = spec.strip()
+            if not spec or ":" not in spec:
+                continue
+            tag, _, body = spec.partition(":")
+            tag = tag.strip()
+            if not tag.startswith("tfav") or tag == "tfav" or len(tag) > 24:
+                continue
+            v = {
+                "tag": tag,
+                "lo": float(self.tfav_price_lo_cents),
+                "hi": float(self.tfav_price_hi_cents),
+                "edge": float(self.tfav_min_edge_cents),
+                "ttemin": float(self.tfav_entry_min_minutes),
+                "ttemax": float(self.tfav_entry_max_minutes),
+            }
+            ok = True
+            for kv in body.split(","):
+                kv = kv.strip()
+                if not kv:
+                    continue
+                key, _, val = kv.partition("=")
+                key = key.strip().lower()
+                try:
+                    if key in ("lo", "hi", "edge", "ttemin", "ttemax"):
+                        v[key] = float(val)
+                    else:
+                        ok = False
+                except (TypeError, ValueError):
+                    ok = False
+            if ok and v["lo"] < v["hi"] and v["ttemin"] < v["ttemax"]:
+                out.append(v)
+        return out
+
+    @property
+    def wcprop_match_series_list(self) -> list[str]:
+        return [s.strip().upper() for s in self.wcprop_match_series.split(",") if s.strip()]
+
     def redacted_summary(self) -> dict:
         """Config summary safe to log (never includes the private key)."""
         return {
@@ -752,6 +863,21 @@ class Settings(BaseSettings):
             "xgame_pm_tags": self.xgame_pm_tag_list,
             "xgame_interval_minutes": self.xgame_interval_minutes,
             "xgame_max_matches": self.xgame_max_matches,
+            "xgame_book_enabled": self.xgame_book_enabled,
+            "xgame_shock_cents": self.xgame_shock_cents,
+            "xgame_min_gap_cents": self.xgame_min_gap_cents,
+            "xgame_hold_seconds": self.xgame_hold_seconds,
+            "tfav_enabled": self.tfav_enabled,
+            "tfav_entry_minutes": [self.tfav_entry_min_minutes, self.tfav_entry_max_minutes],
+            "tfav_band_cents": [self.tfav_price_lo_cents, self.tfav_price_hi_cents],
+            "tfav_min_edge_cents": self.tfav_min_edge_cents,
+            "tfav_order_size": self.tfav_order_size,
+            "tfav_variants": [v["tag"] for v in self.tfav_variant_list],
+            "wcprop_enabled": self.wcprop_enabled,
+            "wcprop_match_series": self.wcprop_match_series_list,
+            "wcprop_winner_series": self.wcprop_winner_series,
+            "wcprop_hold_minutes": self.wcprop_hold_minutes,
+            "wcprop_order_size": self.wcprop_order_size,
             "paper_min_edge_cents": self.paper_min_edge_cents,
             "paper_momentum_project_hours": self.paper_momentum_project_hours,
             "paper_momentum_direction": self.paper_momentum_direction,
