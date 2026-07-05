@@ -36,7 +36,11 @@ show yet.
 | weather_observations | 651 | 10:42 PM | ✓ fresh |
 | weather_ensembles | 1,712 | 10:29 PM | ✓ fresh (hourly) |
 | weather_bucket_snapshots | 13,506 | 10:41 PM | ✓ fresh |
-| **game_tape_snapshots (XGAME)** | **0** | **—** | ⚠️ **ZERO — new collector producing nothing** |
+| **xgame_matches / tapes (XGAME)** | **0 / 0** | **—** | ⚠️ **matcher makes 0 pairs from kal=14 / pm=169 games** |
+
+**Research probes (on-demand, NOT continuous books — verdicts in RESEARCH_JOURNAL):** TFAV
+(`kalshi_favbuy_study`, reads crypto_ladder_snapshots) · WCPROP (`xmarket_wc`, public candles) ·
+XGAME (`xgame_tape_study`, grades the collector below). These never appear as book rows by design.
 
 **Headline:** the phase-3 query surfaces all books individually (mechanism works). Nothing
 new is *trading* yet — my mmsell1/2 + weather prune await a merge, and the Phase-2 additions
@@ -52,11 +56,15 @@ data-health flag this run). Everything else fresh.
    but unmerged — that's why weather (rest) still has 50 open and no mmsell variants appear.
    A merge + deploy applies both (env verified clean, no overrides block them).
 
-2. **[XGAME · NEW — data-health] game_tape_snapshots = 0.** The new cross-venue in-play
-   collector (PR #9) has stored nothing. Likely no matched Kalshi↔Polymarket games in-window
-   (the journal noted KXWCGAME close_time is a far-future settlement deadline, re-keyed to the
-   game day) — but a collector at zero is worth a look: check the `xgame collector` log line
-   (kalshi_games / pm_games / matched) to see whether matching is firing. Fable topic.
+2. **[XGAME · NEW — real bug] The matcher makes ZERO pairs despite games on both venues.**
+   Log line: `kal_games=14 pm_games=169 matched_new=0`. So the collector is deployed and sees
+   14 Kalshi + 169 Polymarket game markets, but the (day, normalized-team) join matches none →
+   `game_market_matches`=0 → `game_tape_snapshots`=0. Prime suspects for a fable session: team-
+   name normalization differing across venues, or the Kalshi ticker-derived game day not lining
+   up with PM's "on YYYY-MM-DD" date. Until the matcher pairs games, the XGAME thesis can't
+   collect any tape. (This is the answer to "why aren't the new ones in the loop" — see the
+   probes note above: TFAV/WCPROP are on-demand probes with nothing continuous to show; XGAME
+   is the one continuous collector and it's stuck at 0 matches.)
 
 3. **[theta · IN FLIGHT] Run the revision experiment untouched to ≥~60 settled/book.** theta3
    30/60 (red after an evening tail cluster — variance, not verdict); theta1 best-calibrated at
