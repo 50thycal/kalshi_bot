@@ -55,6 +55,16 @@ def test_ticker_day_and_norm_team():
     assert norm_team(" Portugal! ") == "portugal"
 
 
+def test_pm_tag_default_targets_world_cup_not_club_soccer(base_env):
+    """Regression guard for the 2026-07-05 matcher bug: the PM discovery tag must target the
+    World Cup (whose per-game markets pair with KXWCGAME), NOT 'soccer' (club games, which
+    matched 0 of KXWCGAME's national-team keys). See config comment + scripts/xgame_match_debug."""
+    from kalshi_bot.config import Settings
+    tags = Settings(_env_file=None).xgame_pm_tag_list
+    assert "soccer" not in tags
+    assert any("world-cup" in t for t in tags)
+
+
 def test_pm_parse_market_extracts_full_token():
     mk = {
         "question": "Will Portugal win on 2026-07-04?",

@@ -16,6 +16,24 @@ Conventions:
 
 ---
 
+## XGAME MATCHER FIX 2026-07-05 — wrong PM tag ("soccer" = club games) matched 0; WC tags → 13
+
+The XGAME collector logged `kal_games=14 pm_games=169 matched_new=0` for two days — deployed
+and seeing both venues, but pairing nothing. Diagnosed with a live read-only probe
+(`scripts/xgame_match_debug.py`, which reproduces the collector's exact `(day, team)` key
+extraction): the code was fine; the **config tag was wrong**. `xgame_pm_tags="soccer"` pulls
+Polymarket's CLUB soccer markets (145 club teams, dates spanning Mar–Jul) — **zero team
+overlap** with the World Cup national teams KXWCGAME lists (france, morocco, argentina, …).
+The WC per-game "Will `<team>` win on `<date>`?" markets live under the **`fifa-world-cup` /
+`2026-fifa-world-cup`** tags. Switching the tag took the live intersection **0 → 13** matched
+(day, team) pairs (14 Kalshi keys, minus the `tie` line PM doesn't run). Fix: one-line default
+`xgame_pm_tags = "fifa-world-cup,2026-fifa-world-cup"` + a regression test asserting the tag
+targets the World Cup, not club soccer. The matcher/normalization code was already correct
+(the existing tests use a fake PM client, so they never exercised the real tag) — the tag must
+match the sport/tournament of `xgame_series`. On the next deploy the collector should match ~13
+WC games and begin filling `game_market_matches` / `game_tape_snapshots`; watch the
+`xgame collector` log line (`matched_new` > 0) and the loop's `data:xgame_*` rows.
+
 ## WEATHER PRUNE 2026-07-04 — keep only `con`; all other weather books are confirmed bleeders
 
 Fable-session decision from the per-book forward P&L (settled paper, NOT legacy):

@@ -71,6 +71,7 @@ ALLOWED_SCRIPTS = (
     "kalshi_favbuy_study",
     "xmarket_wc",
     "xgame_tape_study",
+    "xgame_match_debug",
 )
 
 

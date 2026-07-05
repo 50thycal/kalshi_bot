@@ -213,7 +213,13 @@ class Settings(BaseSettings):
     xgame_interval_minutes: float = 3.0       # ride-along poll cadence
     xgame_discovery_minutes: float = 30.0     # how often to re-match markets across venues
     xgame_series: str = "KXWCGAME"            # comma list of Kalshi game series to match
-    xgame_pm_tags: str = "soccer"             # comma list of Polymarket tag slugs
+    # PM tag slugs holding the per-game "Will <team> win on <date>?" markets that pair with
+    # KXWCGAME. FIXED 2026-07-05: the old "soccer" default pulled CLUB soccer (145 club teams,
+    # zero overlap with the World Cup national teams KXWCGAME lists) so the (day,team) join
+    # matched 0 pairs; the WC per-game markets live under the fifa-world-cup tags. Verified live
+    # (scripts/xgame_match_debug): these tags take the match count 0 -> 13. The tag MUST match
+    # the sport/tournament of xgame_series (add e.g. "mlb" if KXMLBGAME is ever added).
+    xgame_pm_tags: str = "fifa-world-cup,2026-fifa-world-cup"
     xgame_pm_pages: int = 6                   # Gamma discovery pages (100 events/page) per tag
     xgame_max_matches: int = 60               # cap on concurrently-active matched pairs
     xgame_kalshi_trade_pages: int = 6         # Kalshi tape pages (1000 trades) per poll
