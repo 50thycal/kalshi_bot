@@ -7,56 +7,56 @@ suggestion list carries over run-to-run. All times CENTRAL (CDT/CST).*
 
 ---
 
-## Snapshot — 2026-07-05 03:14 AM CDT (run #18) — both fable changes confirmed working
+## Snapshot — 2026-07-05 07:14 AM CDT (run #19)
 
 **Trading books (settled n / P&L / per-trade / open):**
 | book | n | P&L | ¢/trade | open | note |
 |---|---|---|---|---|---|
-| mmsell (control) | 490 | +$7.19 | +1.5 | 19 | baseline |
-| **mmsell1** (5-20¢) | 17 | **+$0.87** | **+5.1** | 14 | first settles — ahead of control |
-| **mmsell2** (10-20¢) | 11 | **+$1.56** | **+14.2** | 7 | first settles — well ahead (tiny n) |
-| theta (control) | 102 | −$9.73 | — | 2 | recovered +$2.2 |
+| mmsell (control) | 493 | +$6.89 | +1.4 | 24 | baseline |
+| **mmsell1** (5-20¢) | 18 | +$1.08 | **+6.0** | 18 | still ahead of control |
+| **mmsell2** (10-20¢) | 12 | +$1.77 | **+14.8** | 11 | still well ahead (tiny n) |
+| theta (control) | 112 | −$11.69 | — | 1 | persistently negative |
+| theta3 (wide, ×1.25) | 47 | −$3.17 | — | 1 | gave back the bounce; **47/60**, near gate |
 | theta1 / theta2 | 7 / 2 | −$4.29 / −$3.79 | — | 0/0 | idle |
-| **theta3** (wide, ×1.25) | 40 | **−$0.18** | — | 2 | **bounced +$6.7 → ~breakeven at 40/60** |
-| weather con | 228 | +$10.82 | +4.1 | 14 | healthy (see below) |
-| weather (rest) | 4,659 | −$235.77 | — | 50 | pruned; 50 legacy opens settling out |
+| weather con | 242 | +$7.25 | +3.0 | 3 | **entered post-deploy — alive**; dipped this batch |
+| weather (rest) | 4,709 | −$238.63 | — | **0** | **pruned books fully wound down (50→0 open)** |
 
-**Weather prune — CONFIRMED, con healthy.** Zero weather entries (con OR pruned) since the
-10:54 PM deploy → no pruned book is trading. con's 10.3h quiet is normal: its max historical
-gap is **24.7h** (avg 1.69h, 33 entries in the last 3 days), so it's just off-window overnight
-and will fire at its next qualifying setup. The weather program is now genuinely con-only.
+**Weather prune — DONE.** con entered new positions after the deploy (latest 06:59 AM CDT;
+242 settled, up from 228) → definitively alive and trading. The pruned books' 50 open
+positions all settled out to **0 open** with no new entries → they can never grow again. The
+weather program is now cleanly con-only. Caveat: con's last ~14 settles netted −$3.57 (pooled
++$10.82 → +$7.25, still +3.0¢/trade) — a normal down-batch, not a concern at this n.
 
-**mmsell A/B — first settlements favor the variants.** mmsell1 +5.1¢/trade and mmsell2
-+14.2¢/trade both clear the control's +1.5¢, directionally exactly as the cheap-longshot
-decomposition predicted. n is tiny (17 / 11) — not a verdict, but the right sign + magnitude.
+**mmsell A/B — variants still leading.** mmsell1 +6.0¢/trade, mmsell2 +14.8¢/trade vs control
++1.4¢. n creeping up (18 / 12). Consistent with the cheap-longshot thesis; hold to ~150.
 
-**Data collection (last-24h / latest CDT):** crypto_spot 2,876 (03:12 AM ✓), ladder 61,680
-(03:13 AM ✓, 100% model-priced), forecasts/obs/ensembles/buckets ✓ within minutes.
-**xgame_matches 0 / tapes 0** — matcher still 0 pairs (known bug, kal=14/pm=169).
+**theta — revisions nearing the gate.** theta3 at 47/60 gave back its bounce (−$0.18 → −$3.17,
+variance); control (112) stays negative. ~13 trades to theta3's evaluation gate.
 
-**Research probes (on-demand, verdicts in RESEARCH_JOURNAL):** TFAV · WCPROP · XGAME.
+**Data (last-24h / latest CDT):** crypto_spot 2,874 (07:11 AM ✓), ladder 61,920 (07:11 AM ✓,
+100% model-priced), forecasts/obs/ensembles/buckets ✓. **xgame 0/0** — matcher still broken.
 
-**Headline:** the fable changes are validated live — mmsell variants trading and early-beating
-the control, weather cleanly pruned to a healthy con. theta3 bounced from −$6.90 to −$0.18 at
-40/60 (the variance the ≥60 gate exists for). Only broken thing: the XGAME matcher.
+**Research probes (on-demand):** TFAV · WCPROP · XGAME (verdicts in RESEARCH_JOURNAL).
+
+**Headline:** weather prune fully complete + con confirmed live; mmsell variants keep beating
+the control; theta3 near its gate (variance-bound). Only broken thing: the XGAME matcher.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[mmsell A/B · early-positive] Variants leading the control on first settles.** mmsell1
-   +5.1¢, mmsell2 +14.2¢ vs control +1.5¢/trade — the cheap-longshot thesis showing forward.
-   Hold to ~150 settled each before promoting; the sign is right, the n isn't there yet.
+1. **[mmsell A/B · early-positive] Variants still ahead** (+6.0 / +14.8¢ vs +1.4¢). Hold to
+   ~150 settled each before promoting; sign is consistent across two runs now.
 
-2. **[theta · IN FLIGHT — theta3 the one to watch] theta3 at 40/60, ~breakeven after its
-   bounce.** The −$5..−$7 reads were variance; it recovered +$6.7 in 8 trades. Let it (and the
-   control, 102 and still negative) reach the gate before judging. theta1/theta2 near-idle.
+2. **[theta · gate approaching] theta3 47/60.** Let it (and control, 112, still negative)
+   reach ≥60 before judging per the pre-registered rule (positive AND realized-tail ≤ modeled).
+   theta1/theta2 near-idle — likely closed for sparsity at the gate.
 
-3. **[XGAME · real bug] Matcher makes 0 pairs from kal=14 / pm=169 games.** Fable fix: team-
-   name normalization across venues + Kalshi ticker-derived game-day vs PM "on YYYY-MM-DD".
+3. **[XGAME · real bug] Matcher makes 0 pairs from kal=14 / pm=169 games.** Only broken piece.
+   Fable fix: team-name normalization + Kalshi ticker game-day vs PM "on YYYY-MM-DD".
 
-4. **[weather · resolved] Prune confirmed + con healthy** — no action; con trades at its next
-   window (verified normal cadence, max gap 24.7h).
+4. **[weather · resolved/monitor] Prune complete, con live.** No action; just note con's small
+   down-batch this run (−$3.57 / 14) — watch it stays net-positive as its own n grows.
 
-*(Resolved: run #17's "prune confirmation pending" — now confirmed, con verified healthy.
-Updated #1 with the first-settle A/B reads; #2 reframed around theta3's bounce.)*
+*(Resolved: run #18's prune-confirmation — con has now entered post-deploy and the pruned
+books are fully wound down to 0 open. Nothing new added.)*
