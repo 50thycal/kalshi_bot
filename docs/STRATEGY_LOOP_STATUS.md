@@ -7,56 +7,66 @@ suggestion list carries over run-to-run. All times CENTRAL (CDT/CST).*
 
 ---
 
-## Snapshot — 2026-07-04 11:14 PM CDT (run #17) — **fable branch DEPLOYED**
+## Snapshot — 2026-07-05 11:14 AM CDT (run #20)
 
-Merged + deployed ~10:54 PM CDT: **mmsell1/mmsell2 revision books are now trading**, and
-the weather prune is live (con-only going forward).
+**Trading books (settled n / P&L / per-trade / open):**
+| book | n | P&L | ¢/trade | open | note |
+|---|---|---|---|---|---|
+| mmsell (control) | 503 | +$7.74 | +1.5 | 27 | baseline |
+| **mmsell1** (5-20¢) | 28 | +$1.25 | **+4.5** | 21 | still ahead of control (3 runs) |
+| **mmsell2** (10-20¢) | 18 | +$1.81 | **+10.1** | 11 | still well ahead (n growing) |
+| **tfav** (NEW) | 0 | — | — | 1 | **NEW book just started — crypto favorite-buy** |
+| theta (control) | 124 | −$14.19 | — | 1 | persistently negative |
+| **theta3** (wide, ×1.25) | 55 | **−$10.14** | — | 1 | bounce reversed; **55/60 — verdict imminent** |
+| theta1 / theta2 | 7 / 2 | −$4.29 / −$3.79 | — | 0/0 | near-idle |
+| weather con | 242 | +$7.25 | +3.0 | 5 | trading normally (5 open) |
+| weather (rest) | 4,709 | −$238.63 | — | 0 | pruned; fully wound down |
 
-**Trading books (settled n / P&L / open):**
-| book | n | P&L | open | note |
-|---|---|---|---|---|
-| mmsell (control) | 459 | +$5.78 | 33 | +1.3¢/trade |
-| **mmsell1** (5-20¢) | 0 | — | **19** | **NEW — cheap-longshot variant live, no settles yet** |
-| **mmsell2** (10-20¢) | 0 | — | **12** | **NEW — peak-band variant live** |
-| theta (control) | 93 | −$11.90 | 2 | drifted down overnight |
-| theta1 / theta2 / theta3 | 7 / 2 / 32 | −$4.29 / −$3.79 / −$6.90 | 0/0/2 | all down this window (crypto session) |
-| weather con | 228 | +$10.82 | 14 | the keeper |
-| weather (rest) | 4,659 | −$235.77 | 50 | legacy opens holding to settlement; **no new entries since deploy** |
+**NEW book — `tfav`.** The TFAV crypto favorite-buy thesis has been promoted from a probe to a
+paper book (fable session) and is now trading (1 open, first entry 11:05 AM CDT). Surfaced
+automatically by the phase-3 all-books-individual query — exactly what that change was for. No
+settles yet; nothing to judge.
 
-**Data collection (last-24h / latest CDT):** crypto_spot 2,878 (11:13 PM ✓), ladder 61,440
-(11:14 PM ✓, 100% model-priced), forecasts/obs/ensembles/buckets all ✓ within minutes.
-**xgame_matches 0 / xgame_tapes 0** — matcher still makes no pairs (known bug, kal=14/pm=169).
+**theta — heading to a NEGATIVE gate verdict.** theta3 at **55/60** is −$10.14 (its run-#18
+bounce to −$0.18 fully reversed); the control (124) is −$14.19 and worsening; theta1/theta2 are
+near-idle at n=7/2. Barring a sharp reversal in the last ~5 theta3 trades, the pre-registered
+rule (keep only positive AND calibrated) points to **shelving the whole theta family** at the
+gate. Decision point is ~1 run away.
 
-**Research probes (on-demand, verdicts in RESEARCH_JOURNAL):** TFAV (`kalshi_favbuy_study`) ·
-WCPROP (`xmarket_wc`) · XGAME (`xgame_tape_study`) — not continuous books by design.
+**mmsell A/B — variants still ahead, 3 runs running.** mmsell1 +4.5¢, mmsell2 +10.1¢ vs
+control +1.5¢/trade (n 28 / 18). mmsell2's edge is regressing toward realism (14.8→10.1) but
+stays well above the control. Consistent enough to keep leaning positive; hold to ~150.
 
-**Headline:** the deploy landed — mmsell1 (19 open) + mmsell2 (12 open) are live and the
-weather program is pruning to con-only. The mmsell-variant A/B and the weather-prune
-confirmation are both now *running*; first reads in the next 1-2 runs. theta family slid
-overnight but all revisions are still pre-gate (theta3 32/60). All collectors fresh; XGAME
-matcher still the one broken thing.
+**Data (last-24h / latest CDT):** crypto_spot 2,874 (11:11 AM ✓), ladder 62,400 (11:11 AM ✓,
+100% model-priced), forecasts/obs/ensembles/buckets ✓. **xgame 0/0** — matcher still broken.
+
+**Research probes (on-demand):** WCPROP · XGAME (TFAV is now a live book, above).
+
+**Headline:** the query caught a genuinely new book (`tfav`) the moment it started. mmsell
+variants keep beating the control; weather con-only is stable; theta is one run from a likely
+negative gate verdict. XGAME matcher remains the one broken piece.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[mmsell · NEW A/B live] Watch mmsell1/mmsell2 vs the control as they settle.** Both
-   opened immediately (19 + 12) — the cheap-longshot thesis predicts they beat the control's
-   +1.3¢/trade. Judge at ~150 settled each; the in-sample decomposition said 5-20¢ = +2.7 to
-   +3.6¢/ct, so anything clearly above the control forward validates it.
+1. **[theta · DECISION IMMINENT] theta3 55/60, −$10.14 — prep to shelve the family at the gate.**
+   All four theta books are negative approaching n=60 (control −$14.19). Unless the last ~5
+   theta3 trades sharply reverse, the pre-registered rule kills them. A fable session should be
+   ready to disable the theta books (keep the collectors — the ladder/spot data is reusable) and
+   write the post-mortem. Do NOT pre-empt the gate; just be ready.
 
-2. **[weather · prune confirmation pending] Verify con-only at the next weather window.** No
-   new weather entries since the 10:54 PM deploy (expected — off-window). Next run should show
-   `con` getting fresh entries while weather-other stays flat (its 50 open just settle out).
-   If any non-con weather book takes a NEW position after the deploy, a flag/env override
-   slipped through — but the env check was clean, so this is a confirm-not-worry.
+2. **[mmsell A/B · early-positive, 3 runs] Variants ahead of control.** +4.5 / +10.1¢ vs +1.5¢.
+   Hold to ~150 settled each; if it holds, promote the narrowed band and retire the control's
+   wide 5-40¢.
 
-3. **[XGAME · real bug] Matcher makes 0 pairs from kal=14 / pm=169 games.** The one broken
-   collector. Fable session: check team-name normalization across venues + the Kalshi
-   ticker-derived game-day vs PM's "on YYYY-MM-DD". Until it pairs, no tape accrues.
+3. **[tfav · NEW — just watch] First crypto favorite-buy book live.** No settles yet. Let it
+   accumulate; its thesis (65-90¢ favorites) is the parked side of the theta work.
 
-4. **[theta · IN FLIGHT] Revisions still pre-gate (theta3 32/60); all slid overnight.**
-   Variance, not verdict. Control (93) continues negative/miscalibrated. Hold; judge at the gate.
+4. **[XGAME · real bug] Matcher makes 0 pairs (kal=14 / pm=169).** Unchanged. Fable fix.
 
-*(Resolved: "deploy-pending" from run #16 — the branch is merged and mmsell1/2 + the prune are
-live. Added #1 mmsell A/B watch + #2 prune-confirmation.)*
+5. **[weather · resolved] con-only stable** (+$7.25, 5 open); pruned books 0 open. Watch con
+   stays net-positive as its own n grows.
+
+*(Added: #1 theta decision-imminent (gate ~1 run out), #3 tfav new book. mmsell/xgame/weather
+carried.)*
