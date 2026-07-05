@@ -64,18 +64,26 @@ def kalshi_keys(series_list, max_pages=8):
     return out, samples
 
 
-def pm_keys(tags, pages=6):
-    """{(day, team): question} from PM 'Will <team> win on <date>?' markets."""
+def pm_keys(tags, pages=6, dump=0):
+    """{(day, team): question} from PM 'Will <team> win on <date>?' markets. When dump>0,
+    also collects up to `dump` raw questions per tag (any format) so the actual WC
+    per-game phrasing is visible, plus a per-tag event count."""
     out = {}
     samples = []
+    dumped: dict[str, list[str]] = {}
+    tag_counts: dict[str, int] = {}
     for tag in tags:
+        dumped[tag] = []
         for page in range(pages):
             evs = xl._get(f"{GAMMA}/events?closed=false&tag_slug={tag}&limit=100&offset={page * 100}")
             if not isinstance(evs, list) or not evs:
                 break
+            tag_counts[tag] = tag_counts.get(tag, 0) + len(evs)
             for ev in evs:
                 for mk in ev.get("markets") or []:
                     q = mk.get("question") or ""
+                    if dump and q and len(dumped[tag]) < dump:
+                        dumped[tag].append(q)
                     mq = PM_WIN.search(q)
                     if len(samples) < 8 and q:
                         samples.append((q, "MATCH" if mq else "no-regex"))
@@ -87,19 +95,22 @@ def pm_keys(tags, pages=6):
                     out[(mq.group(2), team)] = q[:60]
             if len(evs) < 100:
                 break
-    return out, samples
+    return out, samples, dumped, tag_counts
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--series", default="KXWCGAME")
     ap.add_argument("--tags", default="soccer")
+    ap.add_argument("--dump", type=int, default=0, help="print N raw PM questions per tag")
     args = ap.parse_args(argv)
 
     kal, kal_samples = kalshi_keys([s.strip().upper() for s in args.series.split(",") if s.strip()])
-    pm, pm_samples = pm_keys([t.strip().lower() for t in args.tags.split(",") if t.strip()])
+    pm, pm_samples, dumped, tag_counts = pm_keys(
+        [t.strip().lower() for t in args.tags.split(",") if t.strip()], dump=args.dump)
 
-    print(f"=== Kalshi keys: {len(kal)} | Polymarket keys: {len(pm)} ===\n")
+    print(f"=== Kalshi keys: {len(kal)} | Polymarket keys: {len(pm)} ===")
+    print(f"    PM events per tag: {tag_counts}\n")
 
     print("--- Kalshi sample (ticker | raw sub | derived day | norm team) ---")
     for tk, sub, day, team in kal_samples:
@@ -107,6 +118,11 @@ def main(argv=None) -> int:
     print("\n--- Polymarket sample (question | regex) ---")
     for q, status in pm_samples:
         print(f"  [{status}] {q[:70]!r}")
+    if args.dump:
+        for tag, qs in dumped.items():
+            print(f"\n--- raw PM questions under tag '{tag}' ({len(qs)} shown) ---")
+            for q in qs:
+                print(f"    {q[:80]!r}")
 
     inter = set(kal) & set(pm)
     print(f"\n=== INTERSECTION (day,team): {len(inter)} ===")
