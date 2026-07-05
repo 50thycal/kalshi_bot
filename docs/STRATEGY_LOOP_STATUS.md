@@ -7,76 +7,56 @@ suggestion list carries over run-to-run. All times CENTRAL (CDT/CST).*
 
 ---
 
-## Snapshot — 2026-07-04 10:43 PM CDT (run #16) — first phase-3 run (all books individual)
+## Snapshot — 2026-07-04 11:14 PM CDT (run #17) — **fable branch DEPLOYED**
 
-Query widened to show **every non-weather strategy individually** so new books surface.
-Result: no *new trading books* beyond the known set — the recent Phase-2 work (TFAV /
-WCPROP / XGAME, from another session's PR #9) is **probes + a data collector, not paper
-books**. My mmsell1/mmsell2 + weather prune are **built but NOT merged**, so they don't
-show yet.
+Merged + deployed ~10:54 PM CDT: **mmsell1/mmsell2 revision books are now trading**, and
+the weather prune is live (con-only going forward).
 
 **Trading books (settled n / P&L / open):**
 | book | n | P&L | open | note |
 |---|---|---|---|---|
-| theta (control) | 91 | −$9.74 | 2 | unchanged (left running per operator) |
-| theta1 (5-20¢, 10-35m) | 6 | −$0.09 | 1 | ~breakeven, best-calibrated |
-| theta2 (thr-only) | 2 | −$3.79 | 0 | idle |
-| theta3 (wide, edge≥12, ×1.25) | 30 | −$5.04 | 2 | halfway to gate, red after evening cluster |
-| mmsell (control) | 449 | +$4.87 | 43 | +1.1¢/trade; **mmsell1/2 not deployed yet** |
+| mmsell (control) | 459 | +$5.78 | 33 | +1.3¢/trade |
+| **mmsell1** (5-20¢) | 0 | — | **19** | **NEW — cheap-longshot variant live, no settles yet** |
+| **mmsell2** (10-20¢) | 0 | — | **12** | **NEW — peak-band variant live** |
+| theta (control) | 93 | −$11.90 | 2 | drifted down overnight |
+| theta1 / theta2 / theta3 | 7 / 2 / 32 | −$4.29 / −$3.79 / −$6.90 | 0/0/2 | all down this window (crypto session) |
 | weather con | 228 | +$10.82 | 14 | the keeper |
-| weather (rest) | 4,659 | −$235.77 | **50** | **still trading — prune not deployed yet** |
-| legacy TA (buy_fav/mom/rev) | 0 | — | 0 | long dead |
+| weather (rest) | 4,659 | −$235.77 | 50 | legacy opens holding to settlement; **no new entries since deploy** |
 
-**Data collection (last-24h rows / latest CDT):**
-| collector | 24h | latest | status |
-|---|---|---|---|
-| crypto_spot_candles | 2,872 | 10:39 PM | ✓ fresh, 2 products |
-| crypto_ladder_snapshots | 61,440 | 10:39 PM | ✓ fresh, 100% model-priced |
-| weather_forecasts | 11,373 | 10:42 PM | ✓ fresh |
-| weather_observations | 651 | 10:42 PM | ✓ fresh |
-| weather_ensembles | 1,712 | 10:29 PM | ✓ fresh (hourly) |
-| weather_bucket_snapshots | 13,506 | 10:41 PM | ✓ fresh |
-| **xgame_matches / tapes (XGAME)** | **0 / 0** | **—** | ⚠️ **matcher makes 0 pairs from kal=14 / pm=169 games** |
+**Data collection (last-24h / latest CDT):** crypto_spot 2,878 (11:13 PM ✓), ladder 61,440
+(11:14 PM ✓, 100% model-priced), forecasts/obs/ensembles/buckets all ✓ within minutes.
+**xgame_matches 0 / xgame_tapes 0** — matcher still makes no pairs (known bug, kal=14/pm=169).
 
-**Research probes (on-demand, NOT continuous books — verdicts in RESEARCH_JOURNAL):** TFAV
-(`kalshi_favbuy_study`, reads crypto_ladder_snapshots) · WCPROP (`xmarket_wc`, public candles) ·
-XGAME (`xgame_tape_study`, grades the collector below). These never appear as book rows by design.
+**Research probes (on-demand, verdicts in RESEARCH_JOURNAL):** TFAV (`kalshi_favbuy_study`) ·
+WCPROP (`xmarket_wc`) · XGAME (`xgame_tape_study`) — not continuous books by design.
 
-**Headline:** the phase-3 query surfaces all books individually (mechanism works). Nothing
-new is *trading* yet — my mmsell1/2 + weather prune await a merge, and the Phase-2 additions
-are research probes + the XGAME collector (which has collected **0** game tapes — the one real
-data-health flag this run). Everything else fresh.
+**Headline:** the deploy landed — mmsell1 (19 open) + mmsell2 (12 open) are live and the
+weather program is pruning to con-only. The mmsell-variant A/B and the weather-prune
+confirmation are both now *running*; first reads in the next 1-2 runs. theta family slid
+overnight but all revisions are still pre-gate (theta3 32/60). All collectors fresh; XGAME
+matcher still the one broken thing.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[deploy · NEW] Merge the fable branch to activate the pending changes.** mmsell1 (5-20¢)
-   / mmsell2 (10-20¢) revision books and the weather prune-to-con-only are committed + tested
-   but unmerged — that's why weather (rest) still has 50 open and no mmsell variants appear.
-   A merge + deploy applies both (env verified clean, no overrides block them).
+1. **[mmsell · NEW A/B live] Watch mmsell1/mmsell2 vs the control as they settle.** Both
+   opened immediately (19 + 12) — the cheap-longshot thesis predicts they beat the control's
+   +1.3¢/trade. Judge at ~150 settled each; the in-sample decomposition said 5-20¢ = +2.7 to
+   +3.6¢/ct, so anything clearly above the control forward validates it.
 
-2. **[XGAME · NEW — real bug] The matcher makes ZERO pairs despite games on both venues.**
-   Log line: `kal_games=14 pm_games=169 matched_new=0`. So the collector is deployed and sees
-   14 Kalshi + 169 Polymarket game markets, but the (day, normalized-team) join matches none →
-   `game_market_matches`=0 → `game_tape_snapshots`=0. Prime suspects for a fable session: team-
-   name normalization differing across venues, or the Kalshi ticker-derived game day not lining
-   up with PM's "on YYYY-MM-DD" date. Until the matcher pairs games, the XGAME thesis can't
-   collect any tape. (This is the answer to "why aren't the new ones in the loop" — see the
-   probes note above: TFAV/WCPROP are on-demand probes with nothing continuous to show; XGAME
-   is the one continuous collector and it's stuck at 0 matches.)
+2. **[weather · prune confirmation pending] Verify con-only at the next weather window.** No
+   new weather entries since the 10:54 PM deploy (expected — off-window). Next run should show
+   `con` getting fresh entries while weather-other stays flat (its 50 open just settle out).
+   If any non-con weather book takes a NEW position after the deploy, a flag/env override
+   slipped through — but the env check was clean, so this is a confirm-not-worry.
 
-3. **[theta · IN FLIGHT] Run the revision experiment untouched to ≥~60 settled/book.** theta3
-   30/60 (red after an evening tail cluster — variance, not verdict); theta1 best-calibrated at
-   n=6; theta2 near-idle. The control (91) is shaping toward a negative, miscalibrated verdict.
+3. **[XGAME · real bug] Matcher makes 0 pairs from kal=14 / pm=169 games.** The one broken
+   collector. Fable session: check team-name normalization across venues + the Kalshi
+   ticker-derived game-day vs PM's "on YYYY-MM-DD". Until it pairs, no tape accrues.
 
-4. **[mmsell · verdict pending on variants] Control +1.1¢/449.** The forward decomposition
-   (cheap-longshot edge) is the basis for mmsell1/2 — once deployed, watch whether the narrowed
-   bands beat the control forward (~150 settled), not just in the in-sample slice.
+4. **[theta · IN FLIGHT] Revisions still pre-gate (theta3 32/60); all slid overnight.**
+   Variance, not verdict. Control (93) continues negative/miscalibrated. Hold; judge at the gate.
 
-5. **[weather · resolved on merge] Prune to con-only** is built; will take effect on deploy.
-   con remains the sole +EV weather book (+$10.82 / +4.1¢).
-
-*(Phase-3 changes this run: renamed skill, 4-hourly cadence, all-books-individual query.
-Added #1 deploy-pending + #2 XGAME-zero. Dropped the old mmsell "extend to n≈600" — superseded
-by the variant experiment awaiting deploy.)*
+*(Resolved: "deploy-pending" from run #16 — the branch is merged and mmsell1/2 + the prune are
+live. Added #1 mmsell A/B watch + #2 prune-confirmation.)*
