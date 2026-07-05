@@ -1,1 +1,1 @@
-{"type": "noop"}
+{"type":"db","sql":"SELECT 'game_market_matches' AS tbl, count(*) AS rows, count(*) FILTER (WHERE captured_at>now()-interval '24 hours') AS last24h, max(captured_at)::text AS latest FROM game_market_matches UNION ALL SELECT 'game_tape_snapshots', count(*), count(*) FILTER (WHERE captured_at>now()-interval '24 hours'), max(captured_at)::text FROM game_tape_snapshots","max_rows":10}
