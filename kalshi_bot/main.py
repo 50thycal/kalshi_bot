@@ -31,7 +31,9 @@ from .mmsell.tracker import MmSellTracker
 from .paper.engine import PaperCycleSummary, PaperTradingEngine
 from .risk.manager import RiskManager
 from .scanner.scanner import MarketScanner, ScanSummary
+from .tfav.tracker import TfavTracker
 from .theta.tracker import ThetaTracker
+from .wcprop.tracker import WcPropTracker
 from .weather.backfill import WeatherBackfill
 from .weather.ensemble import OpenMeteoEnsembleClient
 from .weather.forecast import NwsForecastClient, OpenMeteoForecastClient
@@ -113,8 +115,17 @@ def run() -> int:
     # crypto ladders; the shared weather_engine settles/marks its <1h positions.
     theta_paper = weather_like and settings.theta_enabled
     theta_tracker = ThetaTracker(client, settings) if theta_paper else None
-    # xgame rides along as a pure DATA COLLECTOR (no trades): cross-venue in-play game
-    # tapes for the XGAME lead-lag thesis (docs/IDEA_MODEL_20260704.md).
+    # tfav rides along the same way (paper): the MIRROR of theta — buy model-underpriced
+    # favorites (taker buy YES) on the same crypto ladders, held to settlement.
+    tfav_paper = weather_like and settings.tfav_enabled
+    tfav_tracker = TfavTracker(client, settings) if tfav_paper else None
+    # wcprop rides along (paper): ride the World Cup winner-ladder's lag after a decisive
+    # match result (cross-market coherence forward-test). Timed exit via the shared engine.
+    wcprop_paper = weather_like and settings.wcprop_enabled
+    wcprop_tracker = WcPropTracker(client, settings) if wcprop_paper else None
+    # xgame rides along as a cross-venue in-play tape COLLECTOR and (when xgame_book_enabled)
+    # a paper BOOK that trades the PM-lead/Kalshi-lag gap (docs/IDEA_MODEL_20260704.md); the
+    # book manages its own fast converge/timeout exit.
     xgame_tracker = (
         XGameTracker(client, settings) if weather_like and settings.xgame_enabled else None
     )
@@ -169,6 +180,12 @@ def run() -> int:
                 keep += ("mmsell",)
             if theta_paper:
                 keep += ("theta",)
+            if tfav_paper:
+                keep += ("tfav",)
+            if wcprop_paper:
+                keep += ("wcprop",)
+            if xgame_tracker is not None and settings.xgame_book_enabled:
+                keep += ("xgame",)
             with session_scope() as session:
                 n = repo.abandon_open_paper_trades(session, keep_prefixes=keep)
             log_event(logger, logging.INFO, "abandoned foreign paper positions",
@@ -195,13 +212,13 @@ def run() -> int:
                     _run_live_cycle(
                         settings, client, weather_engine, weather_tracker, live_executor,
                         weather_backfill, validation_backfill, mmsell_paper_tracker,
-                        theta_tracker, xgame_tracker,
+                        theta_tracker, xgame_tracker, tfav_tracker, wcprop_tracker,
                     )
                 elif weather:
                     _run_weather_cycle(
                         settings, client, weather_engine, weather_tracker, weather_backfill,
                         validation_backfill, mmsell_paper_tracker, theta_tracker,
-                        xgame_tracker,
+                        xgame_tracker, tfav_tracker, wcprop_tracker,
                     )
                 elif mmsell:
                     _run_mmsell_cycle(settings, client, mmsell_engine, mmsell_tracker)
@@ -231,6 +248,8 @@ def run() -> int:
             polymarket_client.close()
         if xgame_tracker is not None:
             xgame_tracker.pm.close()
+        if tfav_tracker is not None:
+            tfav_tracker.spot.close()
     return exit_code
 
 
@@ -382,7 +401,8 @@ def _run_validation_backfill(validation_backfill) -> None:
 
 def _run_weather_cycle(
     settings, client, engine, tracker, backfill=None, validation_backfill=None,
-    mmsell_tracker=None, theta_tracker=None, xgame_tracker=None,
+    mmsell_tracker=None, theta_tracker=None, xgame_tracker=None, tfav_tracker=None,
+    wcprop_tracker=None,
 ) -> None:
     status = client.get_exchange_status()  # AuthError propagates -> hard fail
     log_event(
@@ -430,6 +450,8 @@ def _run_weather_cycle(
     _run_validation_backfill(validation_backfill)
     _run_mmsell_book(settings, mmsell_tracker)
     _run_theta_book(settings, theta_tracker)
+    _run_tfav_book(settings, tfav_tracker)
+    _run_wcprop_book(settings, wcprop_tracker)
     _run_xgame_collector(settings, xgame_tracker)
 
 
@@ -499,15 +521,90 @@ def _run_theta_book(settings, tracker) -> None:
         logger.exception("theta ride-along book failed (weather/live unaffected)")
 
 
+_tfav_last_run = {"ts": 0.0}
+
+
+def _run_tfav_book(settings, tracker) -> None:
+    """Ride-along tfav paper book (the theta mirror — buy model-underpriced crypto favorites):
+    throttled spot refresh + scan + taker YES entries. The shared weather_engine settles/marks
+    its positions (held to settlement). Never raises into the cycle."""
+    if tracker is None:
+        return
+    now = time.monotonic()
+    if now - _tfav_last_run["ts"] < settings.tfav_interval_minutes * 60.0:
+        return
+    _tfav_last_run["ts"] = now
+    try:
+        with session_scope() as session:
+            summ = tracker.run_once(session)
+        log_event(
+            logger, logging.INFO, "tfav book",
+            products_ok=summ.products_ok, markets=summ.markets_seen,
+            in_window=summ.in_window, in_band=summ.in_band, model_priced=summ.model_priced,
+            edged=summ.edged, opened=summ.opened, already_open=summ.already_open,
+            capped=summ.capped, no_model=summ.skipped_no_model, illiquid=summ.skipped_illiquid,
+            per_series=summ.per_series, per_book=summ.per_book,
+        )
+    except AuthError:
+        raise
+    except Exception:  # noqa: BLE001 — ride-along book must never stop the cycle
+        logger.exception("tfav ride-along book failed (weather/live unaffected)")
+
+
+_wcprop_last_run = {"ts": 0.0}
+
+
+def _run_wcprop_book(settings, tracker) -> None:
+    """Ride-along wcprop paper book (World Cup winner-ladder lag): throttled settled-match
+    trigger + winner-ladder move scan + taker entries. Positions are timed out at
+    wcprop_hold_minutes by the shared weather_engine. Never raises into the cycle."""
+    if tracker is None:
+        return
+    now = time.monotonic()
+    if now - _wcprop_last_run["ts"] < settings.wcprop_interval_minutes * 60.0:
+        return
+    _wcprop_last_run["ts"] = now
+    try:
+        with session_scope() as session:
+            summ = tracker.run_once(session)
+        log_event(
+            logger, logging.INFO, "wcprop book",
+            recent_settled=summ.recent_settled, triggered=summ.triggered,
+            winner_rungs=summ.winner_rungs, moved=summ.moved, opened=summ.opened,
+            already_open=summ.already_open, capped=summ.capped,
+            illiquid=summ.skipped_illiquid, wide=summ.skipped_spread, per_side=summ.per_side,
+        )
+    except AuthError:
+        raise
+    except Exception:  # noqa: BLE001 — ride-along book must never stop the cycle
+        logger.exception("wcprop ride-along book failed (weather/live unaffected)")
+
+
 _xgame_last_run = {"ts": 0.0}
 
 
 def _run_xgame_collector(settings, tracker) -> None:
-    """Ride-along XGAME tape collector (throttled, COLLECT ONLY — no positions): match
-    in-play game markets across venues and store both trade tapes. Never raises into
-    the cycle; a dead collector must not disturb the books."""
+    """Ride-along XGAME tape collector + paper book. The paper book's fast converge/timeout
+    EXIT runs every cycle (cheap — only open positions — and the seconds-scale edge can't wait
+    on the poll throttle); tape polling, discovery and ENTRIES run on the throttled cadence.
+    Never raises into the cycle; a dead collector/book must not disturb the weather books."""
     if tracker is None:
         return
+    # exit management first, every cycle (the shared paper engine skips 'xgame' on purpose)
+    if settings.xgame_book_enabled:
+        try:
+            with session_scope() as session:
+                ex = tracker.manage_open_positions(session)
+            if ex.exits_converged or ex.exits_timeout:
+                log_event(
+                    logger, logging.INFO, "xgame book exits",
+                    converged=ex.exits_converged, timeout=ex.exits_timeout,
+                    pnl=round(ex.book_pnl, 4),
+                )
+        except AuthError:
+            raise
+        except Exception:  # noqa: BLE001 — exit management must never stop the cycle
+            logger.exception("xgame book exit management failed (weather/live unaffected)")
     now = time.monotonic()
     if now - _xgame_last_run["ts"] < settings.xgame_interval_minutes * 60.0:
         return
@@ -525,12 +622,14 @@ def _run_xgame_collector(settings, tracker) -> None:
             f"matched_new={summ.matched_new} active={summ.matches_active} "
             f"polled={summ.polled} skipped_window={summ.skipped_window} "
             f"kal_rows={summ.kalshi_rows} pm_rows={summ.pm_rows} "
+            f"signals={summ.signals} opened={summ.opened} "
             f"ended={summ.ended} errors={summ.errors}",
             kalshi_games=summ.kalshi_games, pm_games=summ.pm_games,
             matched_new=summ.matched_new, active=summ.matches_active,
             polled=summ.polled, skipped_window=summ.skipped_window,
             kalshi_rows=summ.kalshi_rows, pm_rows=summ.pm_rows,
-            ended=summ.ended, errors=summ.errors,
+            signals=summ.signals, opened=summ.opened, already_open=summ.already_open,
+            capped=summ.capped, ended=summ.ended, errors=summ.errors,
             per_match=dict(sorted(summ.per_match.items(), key=lambda kv: -kv[1])[:8]),
         )
     except AuthError:
@@ -624,7 +723,8 @@ def _fetch_account_state(client) -> dict:
 
 def _run_live_cycle(
     settings, client, engine, tracker, executor, backfill=None, validation_backfill=None,
-    mmsell_tracker=None, theta_tracker=None, xgame_tracker=None,
+    mmsell_tracker=None, theta_tracker=None, xgame_tracker=None, tfav_tracker=None,
+    wcprop_tracker=None,
 ) -> None:
     """Live cycle: reconcile Kalshi truth, manage exits, settle/mark paper, then run the
     tracker (which mirrors allowlisted entries into real orders)."""
@@ -668,6 +768,8 @@ def _run_live_cycle(
     _run_validation_backfill(validation_backfill)
     _run_mmsell_book(settings, mmsell_tracker)
     _run_theta_book(settings, theta_tracker)
+    _run_tfav_book(settings, tfav_tracker)
+    _run_wcprop_book(settings, wcprop_tracker)
     _run_xgame_collector(settings, xgame_tracker)
 
 

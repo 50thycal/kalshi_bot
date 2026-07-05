@@ -37,7 +37,8 @@ from datetime import datetime, timedelta, timezone
 from .. import repository as repo
 from ..config import Settings
 from ..kalshi.errors import AuthError
-from ..scanner.metrics import parse_dt
+from ..paper.engine import kalshi_fee
+from ..scanner.metrics import compute_metrics, parse_dt
 from .pm import PmGamesClient, norm_team
 
 logger = logging.getLogger(__name__)
@@ -97,6 +98,14 @@ class XGameCycleSummary:
     pm_rows: int = 0
     ended: int = 0
     errors: int = 0
+    # paper BOOK counters (rides on top of the collector; see _maybe_enter / manage_open_positions)
+    signals: int = 0             # matches with a live PM-shock + Kalshi-lag gap this cycle
+    opened: int = 0
+    already_open: int = 0
+    capped: int = 0
+    exits_converged: int = 0
+    exits_timeout: int = 0
+    book_pnl: float = 0.0
     per_match: dict[str, int] = field(default_factory=dict)  # ticker -> rows this cycle
 
 
@@ -362,6 +371,13 @@ class XGameTracker:
         now = datetime.now(timezone.utc)
         matches = repo.active_game_matches(session, limit=s.xgame_max_matches)
         summ.matches_active = len(matches)
+
+        # paper-book open state (recomputed once per cycle; updated as we open)
+        book_open_count = repo.count_open_paper_positions(session, "xgame") if s.xgame_book_enabled else 0
+        book_open_tickers = (
+            repo.open_paper_position_tickers(session, "xgame") if s.xgame_book_enabled else set()
+        )
+
         for match in matches:
             window = self._poll_window(match)
             if window is not None and now > window[1]:
@@ -400,6 +416,166 @@ class XGameTracker:
                 )
             if got:
                 summ.per_match[match.kalshi_ticker] = got
+
+            # paper book: act on the freshly-polled tape (PM lead / Kalshi lag)
+            if s.xgame_book_enabled and match.kalshi_ticker not in book_open_tickers:
+                try:
+                    opened = self._maybe_enter(session, match, now, book_open_count, summ)
+                except AuthError:
+                    raise
+                except Exception as exc:  # noqa: BLE001 — the book must never stop the collector
+                    summ.errors += 1
+                    logger.warning(
+                        "xgame: entry check failed",
+                        extra={"extra_fields": {"ticker": match.kalshi_ticker,
+                                                "error": str(exc)[:200]}},
+                    )
+                    opened = False
+                if opened:
+                    book_open_count += 1
+                    book_open_tickers.add(match.kalshi_ticker)
+
             match.last_polled_at = now
         session.flush()
+        return summ
+
+    # -- paper book: entry ----------------------------------------------------
+    def _tape_levels(self, session, match, now: datetime) -> tuple[float, float, float] | None:
+        """(pm_now, pm_prev, kal_now) team-prob levels over the recent shock window, or None
+        if either venue is too thin to read a level. pm_prev is the oldest PM print in the
+        window (the pre-shock level); *_now are the latest prints."""
+        s = self.settings
+        since = now - timedelta(seconds=s.xgame_shock_window_seconds)
+        pm = repo.recent_game_tape(session, match.id, "polymarket", since)
+        kal = repo.recent_game_tape(session, match.id, "kalshi", since)
+        if not pm or not kal:
+            return None
+        return pm[-1][1], pm[0][1], kal[-1][1]
+
+    def _maybe_enter(self, session, match, now: datetime, open_count: int,
+                     summ: XGameCycleSummary) -> bool:
+        """Open one taker paper position on the lagging Kalshi market when PM has shocked and
+        Kalshi has not yet followed. Returns True if a position was opened."""
+        s = self.settings
+        levels = self._tape_levels(session, match, now)
+        if levels is None:
+            return False
+        pm_now, pm_prev, kal_now = levels
+        pm_shock = pm_now - pm_prev          # PM's recent jump (signed)
+        gap = pm_now - kal_now               # live lead the Kalshi tape hasn't closed (signed)
+        if abs(pm_shock) < s.xgame_shock_cents or abs(gap) < s.xgame_min_gap_cents:
+            return False
+        # the lag must be in the SAME direction as the PM shock (Kalshi behind the move)
+        if (pm_shock > 0) != (gap > 0):
+            return False
+        summ.signals += 1
+        if open_count >= s.xgame_book_max_open_positions:
+            summ.capped += 1
+            return False
+
+        try:
+            ob = self.client.get_orderbook(match.kalshi_ticker, depth=s.orderbook_depth)
+        except AuthError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "xgame: book orderbook fetch failed",
+                extra={"extra_fields": {"ticker": match.kalshi_ticker, "error": str(exc)[:200]}},
+            )
+            return False
+        metrics = compute_metrics({"ticker": match.kalshi_ticker}, ob, top_n=s.orderbook_depth)
+        if not metrics.two_sided:
+            return False
+
+        # buy the side the gap points to, TAKER at that side's ask; qty capped by ask depth.
+        if gap > 0:  # expect Kalshi P(team) to RISE toward PM -> buy YES
+            side, price, depth = "yes", metrics.best_yes_ask, metrics.depth_at_best_ask
+        else:        # expect Kalshi P(team) to FALL -> buy NO
+            side, price, depth = "no", metrics.best_no_ask, metrics.depth_at_best_bid
+        if price is None or not (0 < price < 100):
+            return False
+        qty = min(s.xgame_order_size, depth or 0)
+        if qty <= 0:
+            return False
+
+        fee = kalshi_fee(price, qty, s.paper_fees_enabled)
+        repo.create_paper_trade(
+            session,
+            signal_id=None,
+            ticker=match.kalshi_ticker,
+            strategy="xgame",
+            side=side,
+            action="buy",
+            assumed_price=price,
+            fill_assumption=(
+                f"[xgame] buy {side} @ {price:.0f}c pm {pm_now:.0f} kal {kal_now:.0f} gap {gap:+.0f}"
+            ),
+            quantity=qty,
+            entry_fee=fee,
+            model_probability=(pm_now / 100.0),   # convergence target (PM's P(team))
+            edge=gap / 100.0,                     # signed entry gap
+        )
+        repo.open_paper_position_for_trade(
+            session, ticker=match.kalshi_ticker, strategy="xgame", side=side,
+            quantity=qty, avg_price=price,
+        )
+        summ.opened += 1
+        return True
+
+    # -- paper book: exit (converge or timeout; the shared engine skips xgame) -------
+    def manage_open_positions(self, session) -> XGameCycleSummary:
+        """Close open xgame paper positions on the fast converge/timeout rule — the shared
+        paper engine deliberately skips 'xgame' so this seconds-scale exit owns them. Never
+        raises into the cycle; a mark failure just leaves the position for the next cycle."""
+        s = self.settings
+        summ = XGameCycleSummary()
+        now = datetime.now(timezone.utc)
+        for trade in repo.open_paper_trades_with_prefix(session, "xgame"):
+            created = trade.created_at
+            if created is not None and created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
+            age_s = (now - created).total_seconds() if created is not None else 0.0
+
+            try:
+                ob = self.client.get_orderbook(trade.market_ticker, depth=s.orderbook_depth)
+            except AuthError:
+                raise
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "xgame: exit orderbook fetch failed",
+                    extra={"extra_fields": {"ticker": trade.market_ticker,
+                                            "error": str(exc)[:200]}},
+                )
+                continue
+            metrics = compute_metrics({"ticker": trade.market_ticker}, ob, top_n=s.orderbook_depth)
+
+            target = float(trade.model_probability or 0.0) * 100.0   # PM target P(team)
+            gap0 = float(trade.edge or 0.0) * 100.0                  # signed entry gap
+            cur_mid = metrics.midpoint
+            converged = False
+            if cur_mid is not None and gap0 != 0.0:
+                # fraction of the entry gap Kalshi has now closed toward the PM target
+                closed_frac = 1.0 - (target - cur_mid) / gap0
+                converged = closed_frac >= s.xgame_converge_frac
+            timed_out = age_s >= s.xgame_hold_seconds
+            if not converged and not timed_out:
+                continue
+
+            # exit taker at the held side's bid (sell what we bought); fall back to the mid
+            # (then the entry price) so an aged, one-sided book still closes rather than hangs.
+            exit_bid = metrics.best_yes_bid if trade.side == "yes" else metrics.best_no_bid
+            if exit_bid is None:
+                exit_bid = int(round(cur_mid)) if cur_mid is not None else trade.assumed_price
+            exit_fee = kalshi_fee(exit_bid, trade.quantity, s.paper_fees_enabled)
+            pnl = trade.quantity * (exit_bid - trade.assumed_price) / 100.0 \
+                - float(trade.fees or 0.0) - exit_fee
+            status = "closed_tp" if converged else "closed_timeout"
+            repo.close_paper_trade(
+                session, trade, status=status, pnl=pnl, exit_price=exit_bid, exit_fee=exit_fee
+            )
+            if converged:
+                summ.exits_converged += 1
+            else:
+                summ.exits_timeout += 1
+            summ.book_pnl += pnl
         return summ

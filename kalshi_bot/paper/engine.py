@@ -242,6 +242,11 @@ class PaperTradingEngine:
     def manage_open_positions(self, session) -> PaperCycleSummary:
         s = self.settings
         for trade in repo.get_open_paper_trades(session):
+            # XGAME positions are settled/exited by their own tracker on a seconds-scale
+            # converge/timeout rule (the edge is a 20-90s window); the shared hold-to-
+            # settlement / hours-scale management would fight it, so skip them here.
+            if (trade.strategy or "").startswith("xgame"):
+                continue
             try:
                 resp = self.client.get_market(trade.market_ticker)
             except AuthError:
@@ -302,14 +307,20 @@ class PaperTradingEngine:
             datetime.now(timezone.utc) - _aware(trade.created_at)
         ).total_seconds() / 3600.0
 
-        # Weather books hold to settlement (no timeout / TP / SL). The mmsell and theta maker
-        # books also hold to settlement by default (both exit sweeps showed TP/SL only hurt) —
+        # Weather books hold to settlement (no timeout / TP / SL). The mmsell, theta and tfav
+        # books also hold to settlement by default (their exit sweeps showed TP/SL only hurt) —
         # but keep TP/SL OPTIONAL so they can be forward-tested; either way they skip the
         # max-hold TIMEOUT (positions settle on their own schedule — a 2h timeout would
-        # force-close mmsell days early, and theta settles within the hour anyway).
+        # force-close mmsell days early, and theta/tfav settle within the hour anyway).
+        # WCPROP is the exception: it is a DELIBERATELY timed book (capture the winner-ladder
+        # lag over a fixed horizon, then get out), so it uses its own hold window instead of
+        # the global one and closes at the current bid when it elapses.
         strat = trade.strategy or ""
         weather_hold = strat.startswith("weather")
-        no_timeout = weather_hold or strat.startswith(("mmsell", "theta"))
+        no_timeout = weather_hold or strat.startswith(("mmsell", "theta", "tfav"))
+        max_hold_hours = s.paper_max_hold_hours
+        if strat.startswith("wcprop"):
+            max_hold_hours = s.wcprop_hold_minutes / 60.0
 
         exit_status: str | None = None
         if weather_hold:
@@ -318,7 +329,7 @@ class PaperTradingEngine:
             exit_status, counter = "closed_tp", "closed_tp"
         elif s.paper_stop_loss_cents is not None and gain_cents <= -s.paper_stop_loss_cents:
             exit_status, counter = "closed_sl", "closed_sl"
-        elif not no_timeout and held_hours >= s.paper_max_hold_hours:
+        elif not no_timeout and held_hours >= max_hold_hours:
             exit_status, counter = "closed_timeout", "closed_timeout"
 
         if exit_status is None:

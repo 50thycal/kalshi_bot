@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import logging
 import math
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import httpx
 
@@ -64,6 +64,32 @@ class CoinbaseSpotClient:
                 break
             s = e
         return out
+
+
+def refresh_spot_model(session, spot_client, product: str, *, trail_days: float) -> SpotModel | None:
+    """Gap-fetch + persist 1-min closes for `product` and build a SpotModel over the trailing
+    window, or None if the persisted window is too thin. Shared by the theta and tfav books so
+    both price off ONE persisted spot window (crypto_spot_candles) — whichever book runs first
+    this cycle pays the fetch; the other reads the just-stored closes for free."""
+    from .. import repository as repo
+
+    now = datetime.now(timezone.utc)
+    trail_start = now - timedelta(days=trail_days)
+    latest = repo.latest_spot_minute(session, product)
+    fetch_from = trail_start if latest is None else latest
+    if fetch_from.tzinfo is None:
+        fetch_from = fetch_from.replace(tzinfo=timezone.utc)
+    start_unix = int(fetch_from.timestamp())
+    end_unix = int(now.timestamp())
+    if end_unix - start_unix >= 60:
+        closes = spot_client.candles(product, start_unix, end_unix)
+        if closes:
+            repo.insert_spot_candles(session, product, closes)
+    repo.prune_spot_candles(session, product, trail_start - timedelta(days=1))
+    stored = repo.load_spot_closes(session, product, trail_start)
+    if len(stored) < SpotModel.MIN_SAMPLES:
+        return None
+    return SpotModel(stored, trail_days=trail_days)
 
 
 class SpotModel:

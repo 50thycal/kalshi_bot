@@ -104,10 +104,19 @@ def _pm_trade(tx: str, asset: str, price: float, at: datetime, side="BUY", size=
     }
 
 
+def _ob(yes_bid_c, yes_ask_c, depth=300):
+    no_bid_c = 100 - yes_ask_c
+    return {"orderbook_fp": {
+        "yes_dollars": [[f"{yes_bid_c / 100:.4f}", str(depth)]],
+        "no_dollars": [[f"{no_bid_c / 100:.4f}", str(depth)]],
+    }}
+
+
 class FakeKalshi:
-    def __init__(self, markets, trades):
+    def __init__(self, markets, trades, books=None):
         self._markets = markets  # series -> [market]
         self._trades = trades    # ticker -> [trade]
+        self.books = books or {}  # ticker -> orderbook
         self.trade_calls: list[dict] = []
 
     def get_markets(self, *, status="open", series_ticker=None, limit=200, cursor=None,
@@ -122,6 +131,9 @@ class FakeKalshi:
             trades = [t for t in trades
                       if datetime.fromisoformat(t["created_time"]).timestamp() >= min_ts]
         return {"trades": trades, "cursor": ""}
+
+    def get_orderbook(self, ticker, depth=None):
+        return self.books[ticker]
 
 
 class FakePM:
@@ -368,3 +380,114 @@ def test_favbuy_first_qualifying_and_pnl():
     assert fb.sell_pnl_c(20.0, 0) == 20.0 - fb.maker_fee_ceil_c(20.0)
     assert abs(fb._corr([1, 2, 3, 4], [2, 4, 6, 8]) - 1.0) < 1e-9
     assert fb._corr([1.0, 1.0], [2.0, 2.0]) != fb._corr([1.0, 1.0], [2.0, 2.0])  # nan
+
+
+# ---------------------------------------------------------------- XGAME paper book
+def test_xgame_book_enters_on_pm_lead_gap(settings):
+    """PM jumps 50 -> 58 (shock +8) while Kalshi still sits at 51 (gap +7, same direction):
+    the book buys the lagging Kalshi YES side TAKER at the ask."""
+    _setup(settings)
+    nowt = datetime.now(timezone.utc)   # tape freshness is read against real wall-clock
+    tk = f"KXWCGAME-{TODAY_TK}PORCRO-POR"
+    close = NOW + timedelta(minutes=45)
+    kal_trades = [_k_trade("kt-1", 51.0, nowt - timedelta(seconds=25))]
+    pm_trades = [  # newest-first (data-api order); both inside the 60s shock window
+        _pm_trade("0xaa", YES_TOKEN, 0.58, nowt - timedelta(seconds=10)),
+        _pm_trade("0xbb", YES_TOKEN, 0.50, nowt - timedelta(seconds=45)),
+    ]
+    client = FakeKalshi({"KXWCGAME": [_k_market(tk, "Portugal", close)]},
+                        {tk: kal_trades}, books={tk: _ob(50, 52)})
+    tracker = XGameTracker(client, settings, pm_client=FakePM([PM_GAME], {"0xc0ffee": pm_trades}))
+    with db.session_scope() as session:
+        summ = tracker.run_once(session)
+    assert summ.signals == 1 and summ.opened == 1 and summ.errors == 0
+    with db.session_scope() as session:
+        t = session.scalars(select(m.PaperTrade)).one()
+        assert t.strategy == "xgame" and t.side == "yes" and t.action == "buy"
+        assert t.assumed_price == 52                 # taker buy YES at the ask
+        assert abs(float(t.model_probability) - 0.58) < 1e-9   # PM target
+        assert abs(float(t.edge) - 0.07) < 1e-9                # +7c entry gap
+
+
+def test_xgame_book_no_entry_when_kalshi_already_followed(settings):
+    """PM jumped but Kalshi has ALREADY caught up (gap ~0) -> no lag to trade."""
+    _setup(settings)
+    nowt = datetime.now(timezone.utc)
+    tk = f"KXWCGAME-{TODAY_TK}PORCRO-POR"
+    close = NOW + timedelta(minutes=45)
+    kal_trades = [_k_trade("kt-1", 57.0, nowt - timedelta(seconds=15))]   # already ~58
+    pm_trades = [
+        _pm_trade("0xaa", YES_TOKEN, 0.58, nowt - timedelta(seconds=10)),
+        _pm_trade("0xbb", YES_TOKEN, 0.50, nowt - timedelta(seconds=45)),
+    ]
+    client = FakeKalshi({"KXWCGAME": [_k_market(tk, "Portugal", close)]},
+                        {tk: kal_trades}, books={tk: _ob(56, 58)})
+    tracker = XGameTracker(client, settings, pm_client=FakePM([PM_GAME], {"0xc0ffee": pm_trades}))
+    with db.session_scope() as session:
+        summ = tracker.run_once(session)
+    assert summ.opened == 0                          # gap 58-57=1 < min_gap 3
+    with db.session_scope() as session:
+        assert session.scalar(select(m.PaperTrade)) is None
+
+
+def _open_xgame_trade(session, *, target_prob, gap, age_s, entry=52, side="yes"):
+    from kalshi_bot import repository as repo
+    t = repo.create_paper_trade(
+        session, signal_id=None, ticker="KXWCGAME-T-POR", strategy="xgame", side=side,
+        action="buy", assumed_price=entry, quantity=5, fill_assumption="x", entry_fee=0.05,
+        model_probability=target_prob, edge=gap,
+    )
+    t.created_at = datetime.now(timezone.utc) - timedelta(seconds=age_s)
+    repo.open_paper_position_for_trade(
+        session, ticker=t.market_ticker, strategy="xgame", side=side, quantity=5, avg_price=entry,
+    )
+
+
+def test_xgame_book_exit_on_converge(settings):
+    """Kalshi has closed >= converge_frac of the entry gap toward the PM target -> close (tp)
+    at the current bid, even before the hold cap."""
+    _setup(settings)
+    client = FakeKalshi({}, {}, books={"KXWCGAME-T-POR": _ob(56, 58)})  # mid 57
+    tracker = XGameTracker(client, settings, pm_client=FakePM([], {}))
+    with db.session_scope() as session:
+        _open_xgame_trade(session, target_prob=0.58, gap=0.07, age_s=30)  # entry kal ~51
+    with db.session_scope() as session:
+        summ = tracker.manage_open_positions(session)
+    # distance now = 58 - 57 = 1c of a 7c gap -> 86% closed >= 80% -> converged
+    assert summ.exits_converged == 1 and summ.exits_timeout == 0
+    with db.session_scope() as session:
+        t = session.scalars(select(m.PaperTrade)).one()
+        assert t.status == "closed_tp" and t.exit_price == 56   # sold YES at the bid
+
+
+def test_xgame_book_exit_on_timeout(settings):
+    """Not converged, but past hold_seconds -> timed exit at the current bid."""
+    _setup(settings)
+    settings.xgame_hold_seconds = 120.0
+    client = FakeKalshi({}, {}, books={"KXWCGAME-T-POR": _ob(51, 53)})  # mid 52, barely moved
+    tracker = XGameTracker(client, settings, pm_client=FakePM([], {}))
+    with db.session_scope() as session:
+        _open_xgame_trade(session, target_prob=0.58, gap=0.07, age_s=200)
+    with db.session_scope() as session:
+        summ = tracker.manage_open_positions(session)
+    assert summ.exits_timeout == 1 and summ.exits_converged == 0
+    with db.session_scope() as session:
+        t = session.scalars(select(m.PaperTrade)).one()
+        assert t.status == "closed_timeout"
+
+
+def test_xgame_engine_skips_xgame_positions(settings):
+    """The shared paper engine must LEAVE xgame positions alone (the tracker owns their exit)."""
+    from kalshi_bot.paper.engine import PaperTradingEngine
+    from kalshi_bot.risk.manager import RiskManager
+
+    _setup(settings)
+    settings.paper_max_hold_hours = 0.0            # would instantly time out any managed book
+    with db.session_scope() as session:
+        _open_xgame_trade(session, target_prob=0.58, gap=0.07, age_s=9999)
+    engine = PaperTradingEngine(None, settings, RiskManager(settings))  # None client: must not be used
+    with db.session_scope() as session:
+        engine.manage_open_positions(session)      # iterates open trades; must skip xgame
+    with db.session_scope() as session:
+        t = session.scalars(select(m.PaperTrade)).one()
+        assert t.status == "open"                  # untouched by the shared engine
