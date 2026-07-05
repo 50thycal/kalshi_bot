@@ -7,66 +7,67 @@ suggestion list carries over run-to-run. All times CENTRAL (CDT/CST).*
 
 ---
 
-## Snapshot — 2026-07-05 11:14 AM CDT (run #20)
+## Snapshot — 2026-07-05 03:14 PM CDT (run #21)
 
 **Trading books (settled n / P&L / per-trade / open):**
 | book | n | P&L | ¢/trade | open | note |
 |---|---|---|---|---|---|
-| mmsell (control) | 503 | +$7.74 | +1.5 | 27 | baseline |
-| **mmsell1** (5-20¢) | 28 | +$1.25 | **+4.5** | 21 | still ahead of control (3 runs) |
-| **mmsell2** (10-20¢) | 18 | +$1.81 | **+10.1** | 11 | still well ahead (n growing) |
-| **tfav** (NEW) | 0 | — | — | 1 | **NEW book just started — crypto favorite-buy** |
-| theta (control) | 124 | −$14.19 | — | 1 | persistently negative |
-| **theta3** (wide, ×1.25) | 55 | **−$10.14** | — | 1 | bounce reversed; **55/60 — verdict imminent** |
-| theta1 / theta2 | 7 / 2 | −$4.29 / −$3.79 | — | 0/0 | near-idle |
-| weather con | 242 | +$7.25 | +3.0 | 5 | trading normally (5 open) |
-| weather (rest) | 4,709 | −$238.63 | — | 0 | pruned; fully wound down |
+| mmsell (control) | 510 | +$6.52 | +1.3 | 82 | baseline |
+| **mmsell1** (5-20¢) | 31 | +$0.77 | **+2.5** | 62 | still ahead (4 runs); edge regressing to realism |
+| **mmsell2** (10-20¢) | 21 | +$1.33 | **+6.3** | 32 | still well ahead |
+| tfav (NEW) | 1 | +$0.99 | — | 0 | first settle + (n=1 noise) |
+| theta (control) | 135 | −$16.49 | −12.2 | 0 | negative |
+| **theta3** | **60** | **−$7.98** | −13.3 | 0 | **HIT THE GATE — negative → fails pre-registered rule** |
+| theta1 / theta2 | 8 / 2 | −$3.64 / −$3.79 | — | 0/0 | never reached gate (sparse) |
+| weather con | 242 | +$7.25 | +3.0 | 8 | healthy, trading |
+| weather (rest) | 4,709 | −$238.63 | — | 0 | pruned, done |
 
-**NEW book — `tfav`.** The TFAV crypto favorite-buy thesis has been promoted from a probe to a
-paper book (fable session) and is now trading (1 open, first entry 11:05 AM CDT). Surfaced
-automatically by the phase-3 all-books-individual query — exactly what that change was for. No
-settles yet; nothing to judge.
+**XGAME FIX IS LIVE AND WORKING.** The tag fix deployed: `data:xgame_matches` **0 → 13**
+(the 13 World Cup games pair now) and `data:xgame_tapes` **0 → 30,160** rows in 24h — both
+venues' in-play trade tapes are collecting. The XGAME research dataset is finally filling.
 
-**theta — heading to a NEGATIVE gate verdict.** theta3 at **55/60** is −$10.14 (its run-#18
-bounce to −$0.18 fully reversed); the control (124) is −$14.19 and worsening; theta1/theta2 are
-near-idle at n=7/2. Barring a sharp reversal in the last ~5 theta3 trades, the pre-registered
-rule (keep only positive AND calibrated) points to **shelving the whole theta family** at the
-gate. Decision point is ~1 run away.
+**theta — VERDICT REACHED (negative).** theta3, the best revision, hit its ≥60 gate at
+**−$7.98 / −13.3¢per trade** — negative, so it fails the pre-registered "keep only positive
+AND calibrated" rule; the control (135) is −$16.49 and theta1/theta2 never reached n=60. Per
+the rule, **the theta family should be shelved.** (Report-only — the operator acts via fable.)
 
-**mmsell A/B — variants still ahead, 3 runs running.** mmsell1 +4.5¢, mmsell2 +10.1¢ vs
-control +1.5¢/trade (n 28 / 18). mmsell2's edge is regressing toward realism (14.8→10.1) but
-stays well above the control. Consistent enough to keep leaning positive; hold to ~150.
+**mmsell A/B — variants still ahead, 4 runs.** mmsell1 +2.5¢, mmsell2 +6.3¢ vs control +1.3¢.
+Edges are regressing toward realism as n grows (mmsell2 10.1→6.3) but stay clearly above the
+control. n at 31 / 21 — hold to ~150.
 
-**Data (last-24h / latest CDT):** crypto_spot 2,874 (11:11 AM ✓), ladder 62,400 (11:11 AM ✓,
-100% model-priced), forecasts/obs/ensembles/buckets ✓. **xgame 0/0** — matcher still broken.
+**Data (last-24h / latest CDT):** crypto_spot 2,876 (03:12 PM ✓), ladder 61,842 (✓, 100%
+model-priced), forecasts/obs/ensembles/buckets ✓. **xgame_matches 13 / tapes 30,160 ✓ (FIXED).**
 
-**Research probes (on-demand):** WCPROP · XGAME (TFAV is now a live book, above).
+**Research probes (on-demand):** WCPROP · TFAV now a live book. XGAME's `xgame_tape_study`
+probe is now runnable (tape data exists) once a WC match plays live.
 
-**Headline:** the query caught a genuinely new book (`tfav`) the moment it started. mmsell
-variants keep beating the control; weather con-only is stable; theta is one run from a likely
-negative gate verdict. XGAME matcher remains the one broken piece.
+**Headline:** the XGAME matcher fix is validated in production (13 matches, 30k tapes). theta
+reached its pre-registered gate negative → shelve-the-family decision is ready for fable.
+mmsell variants keep beating the control; weather con-only healthy.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[theta · DECISION IMMINENT] theta3 55/60, −$10.14 — prep to shelve the family at the gate.**
-   All four theta books are negative approaching n=60 (control −$14.19). Unless the last ~5
-   theta3 trades sharply reverse, the pre-registered rule kills them. A fable session should be
-   ready to disable the theta books (keep the collectors — the ladder/spot data is reusable) and
-   write the post-mortem. Do NOT pre-empt the gate; just be ready.
+1. **[theta · VERDICT — shelve the family (fable)] theta3 hit n=60 at −$7.98; all books
+   negative.** The pre-registered rule (positive AND calibrated at the gate) is not met by any
+   theta book. Recommended fable action: disable the theta books (`THETA_ENABLED=false` /
+   drop the variants) but **keep the crypto_spot + ladder collectors** — that labeled dataset
+   is exactly what a future recalibrated (fatter-tail) model would be rebuilt from. Write the
+   post-mortem in RESEARCH_JOURNAL. Not urgent (paper, no money lost), but the experiment is
+   decided.
 
-2. **[mmsell A/B · early-positive, 3 runs] Variants ahead of control.** +4.5 / +10.1¢ vs +1.5¢.
-   Hold to ~150 settled each; if it holds, promote the narrowed band and retire the control's
-   wide 5-40¢.
+2. **[mmsell A/B · early-positive, 4 runs] Variants ahead of control** (+2.5 / +6.3¢ vs +1.3¢).
+   Hold to ~150 settled each; if the edge holds above the control, promote the narrowed band
+   and retire the wide 5-40¢ control.
 
-3. **[tfav · NEW — just watch] First crypto favorite-buy book live.** No settles yet. Let it
-   accumulate; its thesis (65-90¢ favorites) is the parked side of the theta work.
+3. **[XGAME · FIXED — next step is the study] Collector now matching (13) + taping (30k).**
+   Once a matched WC game plays live, run `xgame_tape_study` to grade the lead-lag thesis
+   (P1-P4 in docs/IDEA_MODEL_20260704.md). No collector action needed.
 
-4. **[XGAME · real bug] Matcher makes 0 pairs (kal=14 / pm=169).** Unchanged. Fable fix.
+4. **[tfav · watch] First settle +$0.99 (n=1).** Let it accumulate.
 
-5. **[weather · resolved] con-only stable** (+$7.25, 5 open); pruned books 0 open. Watch con
-   stays net-positive as its own n grows.
+5. **[weather · resolved] con-only stable** (+$7.25, 8 open); pruned books 0 open.
 
-*(Added: #1 theta decision-imminent (gate ~1 run out), #3 tfav new book. mmsell/xgame/weather
-carried.)*
+*(Resolved: XGAME matcher bug — fixed + deployed, now collecting. theta "decision imminent"
+→ decision REACHED (negative). Added #1 shelve-theta + #3 run-the-study.)*
