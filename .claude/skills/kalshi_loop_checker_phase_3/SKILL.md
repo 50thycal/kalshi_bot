@@ -1,9 +1,9 @@
 ---
 name: kalshi_loop_checker_phase_3
-description: Run one iteration of the recurring Kalshi strategy status loop — pull per-book paper P&L and data-collection freshness via the ops channel, update the carried-over suggestion list on the strategy-loop-status branch, and post a banner-delimited report in chat. Use when the 4-hourly strategy-status trigger fires or the user asks for a loop check / strategy status pass.
+description: Run one iteration of the recurring Kalshi strategy status loop — pull per-book paper P&L and data-collection freshness via the ops channel, update the carried-over suggestion list on the strategy-loop-status branch, and post a banner-delimited report in chat. Use when the 8-hourly strategy-status trigger fires or the user asks for a loop check / strategy status pass.
 ---
 
-# Kalshi loop checker (phase 3) — one iteration of the 4-hourly strategy status loop
+# Kalshi loop checker (phase 3) — one iteration of the 8-hourly strategy status loop
 
 **Guardrails (absolute):** this loop REPORTS and SUGGESTS only. Never act on the
 suggestions, never edit strategy code or config, never flip live switches, and never
