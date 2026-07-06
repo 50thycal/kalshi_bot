@@ -1,6 +1,7 @@
 # Strategy status loop — live report + carried-over suggestions
 
-*Auto-maintained by the 4-hourly status loop (`kalshi_loop_checker_phase_3` skill).
+*Auto-maintained by the 8-hourly status loop (`kalshi_loop_checker_phase_3` skill; cadence
+changed from 4h to 8h on 2026-07-06).
 Suggestions are **recommendations only** — the loop never acts on them; the user reviews
 and runs fable to change anything. Newest snapshot replaces the one above it; the
 suggestion list carries over run-to-run. All times CENTRAL (CDT/CST).*
