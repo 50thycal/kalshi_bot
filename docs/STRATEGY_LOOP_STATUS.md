@@ -16,10 +16,13 @@ Meanwhile crypto_spot (3:14 AM), all weather collectors (3:00–3:14 AM), and mm
 (last entry 1:57 AM) are all fresh — so the worker is alive; this is specific to the
 ladder-snapshot / theta subsystem. theta stopped entering at **11:28 PM CDT** (0 open now),
 right as the ladder snapshots stopped. Cause needs an operator/logs check (worker thread
-died / Kalshi ladder endpoint / a silent restart that didn't revive that collector). A logs
-probe was queued this run but the Railway logs workflow hadn't returned by report time.
-**This matters because the ladder dataset is exactly what the theta-shelve rec says to
-preserve** — if the collector is down, "keep collecting" is moot until it's restarted.
+died / Kalshi ladder endpoint / a silent restart that didn't revive that collector). The
+queued logs probe returned late with **zero lines matching "ladder"**, on the **same Jul-6
+deployment (no restart since 07-06 12:27 UTC)** — weakly corroborating a silent/stalled
+collector on a still-running process (inconclusive: the collector may log under a different
+string, or the lines scrolled past the 250-line window). **This matters because the ladder
+dataset is exactly what the theta-shelve rec says to preserve** — if the collector is down,
+"keep collecting" is moot until it's restarted. Watch run #29 for auto-recovery.
 
 **Trading books (settled n / P&L / per-trade / open):**
 | book | n | P&L | ¢/trade | open | note |
