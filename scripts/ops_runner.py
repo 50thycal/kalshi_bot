@@ -73,6 +73,7 @@ ALLOWED_SCRIPTS = (
     "xgame_tape_study",
     "xgame_match_debug",
     "kalshi_mlbwx",
+    "kalshi_perps_survey",
 )
 
 
