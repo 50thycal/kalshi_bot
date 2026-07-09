@@ -8,111 +8,102 @@ suggestion list carries over run-to-run. All times CENTRAL (CDT/CST).*
 
 ---
 
-## Snapshot — 2026-07-09 03:14 AM CDT (run #28)
+## Snapshot — 2026-07-09 11:13 AM CDT (run #29)
 
-**⚠ ANOMALY — the crypto_ladder collector looks STALLED (~3h).** Its latest snapshot is
-**11:59 PM CDT (Jul 8)**, ~3h15m ago, vs a ~5-min cadence — STALE by the skill's own rule.
-Meanwhile crypto_spot (3:14 AM), all weather collectors (3:00–3:14 AM), and mmsell trading
-(last entry 1:57 AM) are all fresh — so the worker is alive; this is specific to the
-ladder-snapshot / theta subsystem. theta stopped entering at **11:28 PM CDT** (0 open now),
-right as the ladder snapshots stopped. Cause needs an operator/logs check (worker thread
-died / Kalshi ladder endpoint / a silent restart that didn't revive that collector). The
-queued logs probe returned late with **zero lines matching "ladder"**, on the **same Jul-6
-deployment (no restart since 07-06 12:27 UTC)** — weakly corroborating a silent/stalled
-collector on a still-running process (inconclusive: the collector may log under a different
-string, or the lines scrolled past the 250-line window). **This matters because the ladder
-dataset is exactly what the theta-shelve rec says to preserve** — if the collector is down,
-"keep collecting" is moot until it's restarted. Watch run #29 for auto-recovery.
+**✅ RESOLVED — crypto_ladder collector recovered after the operator's worker restart.**
+Confirmed at 7:54 AM CDT (52,426 snapshots/24h, latest within ~1 min of "now" at report time)
+and still healthy now. theta resumed trading normally. Anomaly #0 from run #28 is closed.
 
 **Trading books (settled n / P&L / per-trade / open):**
 | book | n | P&L | ¢/trade | open | note |
 |---|---|---|---|---|---|
-| mmsell (control) | 1,454 | +$4.85 | +0.3 | 27 | +$2.56 overnight; breakeven noise |
-| mmsell1 (5-20¢) | 748 | +$4.83 | +0.6 | 23 | breakeven+ |
-| mmsell2 (10-20¢) | 490 | +$3.33 | +0.7 | 14 | breakeven+ |
-| tfav | 191 | −$7.08 | −3.7 | 0 | **dormant** (no new trades); gate crossed neg → kill rec |
-| theta (control) | 502 | +$9.28 | +1.8 | 0 | **gave back −$6.25** this window (calm streak reversing, as predicted) |
-| theta1 | 180 | +$12.59 | +7.0 | 0 | ~flat (+1 trade); the only theta with a + per-trade |
-| theta2 / theta3 | 86 / 127 | −$8.72 / −$11.58 | −10.1 / −9.1 | 0/0 | dormant, unchanged; both negative |
+| mmsell (control) | 1,460 | +$3.36 | +0.2 | 32 | −$1.49 window (small n=6); still breakeven |
+| mmsell1 (5-20¢) | 752 | +$3.40 | +0.5 | 26 | −$1.43 window (n=4); breakeven |
+| mmsell2 (10-20¢) | 494 | +$1.90 | +0.4 | 16 | −$1.43 window (n=4); breakeven |
+| tfav | 210 | −$7.54 | −3.6 | 0 | resumed (+19), still negative; further past kill gate |
+| theta (control) | 542 | **−$0.07** | −0.01 | 2 | **gave back its ENTIRE calm-streak gain** (see below) |
+| theta1 | 196 | +$11.67 | +6.0 | 0 | flat-ish (−$0.92/16); still the one + theta book |
+| theta2 | 96 | −$12.57 | −13.1 | 0 | **−$3.85 window (−38.5¢/trade)**, worst theta book now |
+| theta3 | 134 | −$11.62 | −8.7 | 0 | flat window |
 | wcprop | 0 | — | — | 0 | still zero trades ever |
-| weather con | 277 | +$1.46 | +0.5 | 17 | dormant since 5:01 PM (overnight); 17 open await ~9 AM batch |
+| weather con | 294 | **−$1.24** | **−0.4** | 6 | **FIRST-EVER NET-NEGATIVE cumulative** (−$2.70 this batch) |
 | weather (rest) | 4,709 | −$238.63 | — | 0 | pruned, done |
 | buy_favorite / momentum / reversion / (blank) | 0 | 0 | — | 0 | dormant legacy (last active Jun 6–8) |
 
-**HEADLINE — quiet overnight + one real anomaly (ladder collector stale).** Books barely
-moved: mmsell nudged up (still breakeven), theta control **gave back −$6.25** of its calm-streak
-gains — the exact "miscalibrated tail-seller reverts" behavior run #27's calibration read
-predicted, now visible within 5 hours. tfav, theta2/3, and weather_con are all dormant (no new
-settles). Every run-#27 verdict is unchanged. The one thing that needs eyes is the **stale
-crypto_ladder collector** (above).
+**HEADLINE — two confirmations of standing verdicts, one new escalation.** theta's control has
+now given back **its entire calm-streak gain across two windows**: peak was +$15.53 at run #27
+(n=495); it's now **−$0.07 at n=542** — a **$15.60 giveback** in ~47 trades. This is exactly
+what the run #27 calibration read (realized tails 1.4–2.6× modeled) predicted, playing out in
+real time — about as clean a confirmation as this loop will ever see. Separately,
+**weather_con posted its first-ever net-negative cumulative** (+$1.46 → **−$1.24** on the
+~9 AM CDT settlement batch) — the "diagnose the drawdown" flag from run #27 was not
+precautionary, the pattern continued and just crossed zero.
 
-**theta — no change; the −$6.25 giveback reinforces the shelve read.** control still +$9.28
-cumulative but shedding it as soon as a tail bites; calibration verdict (run #27: realized
-tails 1.4–2.6× modeled) governs. theta1 (+7.0¢, n=180) remains the sole keep-candidate under a
-NEW pre-registration, not a silent extension.
+**theta — shelve verdict now has a live confirmation, not just a calibration argument.**
+control round-tripped its entire positive P&L back to roughly breakeven; theta2 also worsened
+sharply (−38.5¢/trade this window, now the worst theta book at −13.1¢ lifetime). theta1
+remains the only book with a durable positive per-trade (+6.0¢, n=196) — still the sole
+keep-candidate, still only under a fresh pre-registration.
 
-**tfav / mmsell / wcprop / weather_con — unchanged from run #27.** tfav kill rec active
-(gate crossed negative, now dormant); mmsell breakeven noise; wcprop 0-trades kill rec stands;
-weather_con scale-up still PAUSED pending the bad-days diagnosis (no new data overnight — its
-17 open settle at the ~9 AM CDT batch, next run will show whether the drawdown continued).
+**weather_con — escalating from "diagnose before scaling" to "diagnose now, the trend is
+real."** Three bad days out of the last six (run #27) have now dragged cumulative P&L
+negative for the first time in this book's history. This is no longer a caution flag on an
+otherwise-green book — it needs the city/window/regime breakdown before any further capital or
+attention, and arguably before letting it keep running unexamined.
 
-**XGAME — collector fresh, semifinal lull.** 19 matched games (unchanged), tapes 7,056/24h
-(last tape 2:01 AM — tapes only write during live matches, so the lull is expected, not a
-stall). `xgame_tape_study` still runnable and still the top pending info action.
+**mmsell / tfav / wcprop / XGAME — unchanged in substance.** mmsell still breakeven noise;
+tfav resumed trading and stayed negative, now further past its kill gate (n=210); wcprop still
+0 trades ever; XGAME collector fresh, 0 new matches in 24h (tournament thinning to
+semifinal/final) but tapes +10,254/24h — still runnable and still the top pending info action.
 
-**Data (last-24h / latest CDT):** crypto_spot 2,878 (3:14 AM ✓, 2 products), **crypto_ladder
-53,386 — STALE, last 11:59 PM CDT (see anomaly)**, weather forecasts/obs/ensembles/buckets all
-fresh (3:00–3:14 AM ✓). xgame_matches 19 (last new Jul 8 5:32 AM), xgame_tapes 7,056 (2:01 AM,
-lull). Ladder is the one red flag; everything else green.
+**Data (last-24h / latest CDT):** crypto_spot 2,876 (11:12 AM ✓), **ladder 52,426 (11:12 AM ✓,
+RECOVERED)**, weather forecasts/obs/ensembles/buckets all fresh (11:06–11:13 AM ✓).
+xgame_matches 19 total (0 new in 24h), xgame_tapes 10,254 (11:12 AM ✓). All green.
 
-**Research probes (on-demand):** WCPROP = `xmarket_wc` (offline) + live `wcprop` book (0 trades).
-XGAME `xgame_tape_study` (runnable). Not run from the loop.
+**Research probes (on-demand):** WCPROP = `xmarket_wc` (offline) + live `wcprop` book (0
+trades). XGAME `xgame_tape_study` (runnable). Not run from the loop.
 
-**Headline:** quiet overnight; theta control shed −$6.25 of its calm-streak gain (calibration
-read confirmed); all run-#27 verdicts stand. **One anomaly: the crypto_ladder collector is ~3h
-stale (theta stopped entering at 11:28 PM) while spot/weather/mmsell stayed fresh — needs an
-operator check, and it's the dataset the theta-shelve rec relies on preserving.**
+**Headline:** the ladder-collector restart held (resolved); theta's control fully round-tripped
+its calm-streak gain back to breakeven, live-confirming the shelve calibration read; weather_con
+crossed into net-negative territory for the first time, escalating the diagnose-the-drawdown
+flag. mmsell/tfav/wcprop unchanged. Collectors all green.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-0. **[NEW · ops health — verify the crypto_ladder collector] It is ~3h stale as of 3:14 AM CDT
-   (last snapshot 11:59 PM), while spot + weather + mmsell stayed fresh, and theta stopped
-   entering at 11:28 PM.** Likely a stalled ladder/theta worker thread or a Kalshi
-   ladder-endpoint issue (no deploy landed in the gap, so not a code change). Recommended
-   check: pull worker logs filtered for the ladder/crypto scan and confirm whether it's
-   erroring or silently dead; a worker restart may be needed. **Priority because the ladder
-   dataset is the asset the theta-shelve plan preserves** — a dead collector makes "keep
-   collecting" moot. If it self-recovers by run #29, downgrade to noise.
+1. **[theta · shelve — now LIVE-CONFIRMED, not just calibration] control gave back its entire
+   +$15.53 peak (run #27) and sits at −$0.07 (n=542); theta2 worsened to −13.1¢/trade
+   (n=96).** Two windows of giveback after one calm streak is exactly the miscalibrated-tail
+   pattern (1.4–2.6× underpriced, per run #27's drill-down) predicted. Shelve the family; keep
+   crypto_spot + ladder collectors in collect-only mode (now confirmed healthy post-restart).
+   theta1 (+6.0¢, n=196) remains the only keep-candidate, only under a NEW pre-registered
+   tail-calibration test at n≥350. Post-mortem in RESEARCH_JOURNAL.
 
-1. **[theta · shelve per the rule] Calibration fails on every book (realized tails 1.4–2.6×
-   modeled); the cumulative positive is one calm streak that is already reverting (control
-   −$6.25 this run).** Shelve the family; keep the spot + ladder collectors in collect-only mode
-   (and see #0 — verify the ladder collector is actually alive). If keeping anything, theta1
-   only (+7.0¢, n=180) under a NEW pre-registered tail-calibration test at n≥350. Post-mortem
-   in RESEARCH_JOURNAL.
+2. **[weather_con · ESCALATED — cumulative now net-negative, first time ever] +$1.46 → −$1.24
+   this run (−$2.70 on the ~9 AM CDT batch).** The 3-bad-days-of-6 pattern flagged in run #27
+   was not a fluke; it has now erased the book's entire historical edge. Recommend a fable pass
+   this week (not just "before scaling") on whether losing days share a cause (city / window /
+   forecast-regime shift). This was the portfolio's only steady earner — its reversal is the
+   most consequential open question right now.
 
-2. **[tfav · kill rec active] n=191 ≥ 150 gate, −3.7¢/trade, now dormant.** Fails the
-   pre-registered gate (2026-07-06 fable memo). `TFAV_ENABLED=false`.
+3. **[tfav · kill rec active, more data] n=210 (further past the n≥150 gate), −3.6¢/trade,
+   resumed trading and stayed negative.** Fails the pre-registered gate (2026-07-06 fable
+   memo). `TFAV_ENABLED=false`.
 
-3. **[mmsell · breakeven noise] All three books slightly positive (pooled ~+0.4¢/trade,
-   n≈2,692), oscillating around zero.** Do NOT promote; keep as a zero-attention data book or
-   prune for simplicity. No demonstrated edge net of realism.
-
-4. **[weather_con · scale-up PAUSED — diagnose the drawdown] 3 of the last 6 entry-days sharply
-   negative (8–14% win); cumulative +$1.46.** No new data overnight. Before any sizing, a fable
-   pass on whether the losing days share a cause (city / window / forecast regime). Book stays
-   on; diagnose-first, not a kill.
+4. **[mmsell · breakeven noise, unchanged] All three books ~flat cumulative (pooled
+   ~+0.3¢/trade, n≈2,706), small negative windows this run (n too small to read).** Do NOT
+   promote; keep as a zero-attention data book or prune for simplicity.
 
 5. **[wcprop · kill rec stands] Zero trades ever.** `WCPROP_ENABLED=false` + optional one-shot
-   `xmarket_wc` epitaph. Tournament ends in days.
+   `xmarket_wc` epitaph. Tournament ending soon (0 new matches in 24h — semifinal/final stage).
 
-6. **[XGAME · run the tape study — top info action] 19 matched games, multiple completed and on
-   tape.** Run `xgame_tape_study` (fable/operator) to grade P1–P4; gate `xgame_book_enabled` on
-   the result.
+6. **[XGAME · run the tape study — top info action] 19 matched games, multiple completed and
+   on tape, tournament thinning.** Run `xgame_tape_study` (fable/operator) before the dataset
+   goes fully cold at tournament end; gate `xgame_book_enabled` on the result.
 
-*(Changed this run: NEW #0 — stale crypto_ladder collector anomaly (verify/restart). theta (#1)
-reinforced by the −$6.25 giveback (calm-streak reversion the calibration read predicted).
-tfav (#2), mmsell (#3), weather_con (#4), wcprop (#5), XGAME (#6) unchanged — quiet overnight,
-most books dormant. Data otherwise fresh; ladder is the lone red flag.)*
+*(Changed this run: ladder-collector anomaly (#0 from run #28) marked RESOLVED — restart
+confirmed effective. theta (#1) upgraded from "calibration argument" to "live-confirmed" via
+the full giveback. weather_con (#2, was #4) ESCALATED — crossed into net-negative for the
+first time; moved up the list given it's now the most consequential open question. tfav (#3),
+mmsell (#4), wcprop (#5), XGAME (#6) unchanged in substance, renumbered.)*
