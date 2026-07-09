@@ -8,113 +8,132 @@ suggestion list carries over run-to-run. All times CENTRAL (CDT/CST).*
 
 ---
 
-## Snapshot — 2026-07-06 11:13 AM CDT (run #26)
+## Snapshot — 2026-07-08 10:33 PM CDT (run #27 — catch-up)
+
+*Gap note: the loop stalled after run #26 (Jul 6, 11:13 AM) on the account's weekly usage
+limit; ~7 scheduled fires were missed. This single run covers the full ~2.6-day window.
+No commits landed on the default branch during the gap — no strategy changes deployed;
+all books kept trading as configured.*
 
 **Trading books (settled n / P&L / per-trade / open):**
 | book | n | P&L | ¢/trade | open | note |
 |---|---|---|---|---|---|
-| mmsell (control) | 798 | −$7.81 | −1.0 | 35 | flat window (+$0.5/16); net-red |
-| mmsell1 (5-20¢) | 254 | −$5.20 | −2.0 | 26 | slight down window (−$0.8/13); net-red |
-| mmsell2 (10-20¢) | 169 | −$5.17 | −3.1 | 14 | slight down window (−$0.9/8); net-red |
-| **tfav** | 50 | **+$3.99** | **+8.0** | 5 | **REVERSED — swung +$15.3 on 22 trades**, now net-positive |
-| theta (control) | 228 | **−$46.24** | −20.3 | 7 | **−$14.3 this window** (39 trades); worst cumulative in system |
-| theta3 | 79 | −$20.24 | −25.6 | 3 | **now well past gate (n=79)**, −$8.8 this window |
-| theta1 | 52 | **−$29.45** | **−56.6** | 0 | resumed trading, **cratered** (was −$5.92 @ n=20) |
-| theta2 | 21 | **−$23.46** | **−111.7** | 0 | resumed trading, **cratered** (was −$6.46 @ n=6); worst ¢/trade of any book |
-| wcprop | 0 | — | — | 0 | enabled LIVE book, armed, 0 trades (unchanged) |
-| weather con | 251 | +$7.82 | +3.0 | 8 | settled flat (batch already ran), 5 new opens; only green |
+| mmsell (control) | 1,421 | +$2.29 | +0.2 | 41 | **flipped positive** (+$10.10 on +623 settles) |
+| mmsell1 (5-20¢) | 724 | +$3.25 | +0.4 | 31 | flipped positive (+$8.45) |
+| mmsell2 (10-20¢) | 470 | +$2.02 | +0.4 | 22 | flipped positive (+$7.19) |
+| tfav | 191 | −$7.08 | −3.7 | 0 | **crossed n≥150 gate NEGATIVE** (3rd straight whipsaw) |
+| theta (control) | 495 | **+$15.53** | +3.1 | 2 | **+$61.77 window** — but see calibration below |
+| theta1 | 179 | **+$12.22** | +6.8 | 0 | +$41.67 window; past gate, positive P&L |
+| theta2 | 86 | −$8.72 | −10.1 | 0 | improved but negative |
+| theta3 | 127 | −$11.58 | −9.1 | 0 | past gate, still negative |
+| wcprop | 0 | — | — | 0 | still zero trades ever (armed since Jul 4) |
+| weather con | 277 | **+$1.46** | +0.5 | 17 | **first real drawdown** (−$6.36 on 26 settles) |
 | weather (rest) | 4,709 | −$238.63 | — | 0 | pruned, done |
 | buy_favorite / momentum / reversion / (blank) | 0 | 0 | — | 0 | dormant legacy (last active Jun 6–8) |
 
-**HEADLINE — a correlated tail event hit the entire theta family at once; tfav whipsawed hard
-positive.** This is the first run under the new 8-hour cadence, and the wider window caught a
-real event: **all four theta books took simultaneous marginal losses** this window (control
-−36.7¢/trade, theta3 −62.6¢/trade, theta1 −73.5¢/trade, theta2 **−113.3¢/trade** — its worst
-window yet). theta1/theta2 had gone quiet for ~1.5 days and **resumed trading hard this
-window**, immediately eating the tail. Because all theta books share the same underlying
-crypto markets (just different bands/multipliers), a single sharp move hits all of them
-together — this is exactly the "model underprices tails" failure mode from the original
-diagnosis, now showing up at scale. **This materially reinforces the shelve verdict**, it does
-not change it. Meanwhile **tfav reversed hard**: −$11.31 (n=28) → **+$3.99 (n=50)**, a +$15.30
-swing on 22 trades (+69.5¢/trade this window) — the same small-n whipsaw discipline applies:
-neither the prior negative nor this positive read is decisive.
+**HEADLINE — everything whipsawed across the 2.6-day gap, and the calibration drill-down
+separates luck from edge.** The theta family swung **+$127 pooled** (control −$46→+$16, theta1
+−$29→+$12 — both cumulatively positive for the first time); all three mmsell books flipped
+slightly positive; tfav crashed −$11 through its gate; weather_con gave back most of its
+cumulative in its worst week. Three consecutive runs have now flipped signs on three different
+families — cumulative P&L endpoints on these negative-skew books are noise; per-trade rates +
+calibration at large n are the only trustworthy reads. That is what the drill-down checked:
 
-**theta — verdict now stronger, not just standing.** theta3 is decisively past its n≥60 gate
-(now n=79) and got *more* negative as n grew (−$11.47→−$20.24). theta1 (n=52, −$29.45) and
-theta2 (n=21, −$23.46) both cratered on resumed trading. No book is within reach of the
-positive-AND-calibrated gate; the control's cumulative loss is now −$46.24, the largest in the
-whole portfolio.
+**theta — P&L flipped, calibration still fails → shelve verdict SURVIVES (per the
+pre-registered rule).** The calibration slice (all settled trades, lifetime): realized
+tail-hit rates exceed modeled on **every** book — control modeled 15.6% vs realized 21.8%
+(1.4×), theta1 5.7% vs 10.6% (1.9×), theta2 5.3% vs 14.0% (2.6×), theta3 17.0% vs 31.5%
+(1.9×). The model still underprices tails, exactly the original ~2× diagnosis. And the
+positive cumulative is entirely one calm 3-day run: control made **+$58.54 in 3 days vs
++$15.53 lifetime** (it was −$43 before the streak); theta1 +$18.14 in 3 days vs +$12.22
+lifetime. A tail-seller that is miscalibrated 1.4–2.6× will look great in calm stretches and
+give it back in the next correlated tail (run #26 was that tail). The pre-registered rule is
+"positive AND calibrated" — calibration fails everywhere, so the rule still says shelve.
+Nuance for fable: theta1's +6.8¢/trade at n=179 is the only number that argues for anything;
+if the operator wants to keep one book alive, that's the candidate — but it requires a NEW
+pre-registration (e.g. sold-price-vs-realized-tail-rate test at n≥350), not a quiet extension.
 
-**tfav — do not overreact either direction.** Two consecutive windows have each swung this book
-by more than its entire cumulative P&L (−$5.6 last run, +$15.3 this run). At n=50 it's still
-too small and too high-variance to call. Recommend treating it like theta/mmsell — needs a much
-larger n (proposing ~100+) before any promote or prune read.
+**weather_con — the drawdown is a pattern, not a fluke day.** By entry-day (CDT): 07-03
++$1.15 (41% win), 07-04 **−$3.57 (14% win)**, 07-05 +$0.57 (44%), 07-06 **−$3.05 (8% win)**,
+07-07 **−$3.31 (14% win)**. Three of the last six entry-days were sharply negative with
+8–14% win rates. Cumulative is down to +$1.46 (+0.5¢/trade). The "scale the con book" plan
+should be PAUSED until a fable pass checks whether the losing days share a cause (same city /
+same window type / a forecast-regime shift the ensembles kept missing). 17 open positions.
 
-**mmsell — unchanged, still flat-to-red.** All three bands moved <$1 this window and remain
-cumulatively negative; the prune-candidate read stands.
+**tfav — pre-registered gate crossed, negative → kill rec now active.** n=191 (past the
+n≥150 gate), −$7.08, −3.7¢/trade, after a third consecutive window whipsaw (−11 → +15 → −11).
+Under the gate registered in the 2026-07-06 fable memo ("keep only if >+2¢/trade at n≥150"),
+tfav fails → recommend kill (fable action).
 
-**wcprop — still 0 trades (unverified this run, last confirmed armed via logs at run #21).**
-No new evidence either way this window; carrying forward unchanged.
+**mmsell — all three books flipped slightly positive; the honest read is breakeven noise.**
+Pooled +$7.56 over 2,615 settles ≈ **+0.3¢/trade**, after being −1.5¢ pooled two runs ago.
+This book oscillates around zero: no evidence of an edge that would survive live fill
+realism, and no longer decisively negative either. Softened recommendation: do NOT promote;
+keep as a zero-attention data book or prune for simplicity — either is defensible.
 
-**XGAME — steady.** Matcher unchanged at 15 games (no new matches since 7:10 AM); tapes
-+11,692 in ~4h (173,121→184,813) — collection pace holding.
+**wcprop — still zero trades ever** (absent from the books table = no rows). Armed through
+the entire knockout stage without a single qualifying entry. Kill rec stands (winner ladder
+efficiently priced / no lag at ride-along cadence).
 
-**Data (last-24h / latest CDT):** crypto_spot 2,875 (11:13 AM ✓, 2 products), ladder 61,122
-(11:13 AM ✓, 100% model-priced), weather forecasts/obs/ensembles/buckets all fresh (11:04–
-11:13 AM ✓). xgame_matches 15 (last new 07:10 AM), xgame_tapes 184,813 (11:12 AM ✓). All green.
+**XGAME — collector healthy, schedule thinned.** Matches 19 total (+4 since #26, last new
+Jul 8 5:32 AM); tapes 5,966/24h (group-stage flood is over — semifinal lull). Fresh as of
+10:27 PM. The `xgame_tape_study` is now runnable on multiple completed matched games — still
+the highest-information pending action.
 
-**Research probes (on-demand):** WCPROP = `xmarket_wc` (offline P1/P2/P3 backtest) + the live
-`wcprop` book above (armed, 0 trades). XGAME `xgame_tape_study` (runnable once a matched game
-plays). Not run from the loop.
+**Data (last-24h / latest CDT):** crypto_spot 2,870 (10:25 PM ✓, 2 products), ladder 61,066
+(10:25 PM ✓, 100% model-priced), weather forecasts/obs/ensembles/buckets all fresh (10:18–
+10:29 PM ✓). xgame_matches 19 total (2 new in 24h), xgame_tapes 5,966/24h (10:27 PM ✓). All green.
 
-**Headline:** a shared tail event hit all four theta books this window (control now −$46.24,
-worst in the portfolio; theta1/theta2 cratered on resumed trading) — reinforces shelve. tfav
-whipsawed −$11.31→+$3.99 on n=50 — too volatile/small to read either way. mmsell flat-red.
-weather_con (+$7.82) the only steady green book. Collectors fresh; XGAME steady at 15/185k.
+**Research probes (on-demand):** WCPROP = `xmarket_wc` (offline backtest; epitaph run still
+suggested) + the live `wcprop` book (armed, 0 trades). XGAME `xgame_tape_study` (now runnable).
+Not run from the loop.
+
+**Headline:** the 2.6-day catch-up window flipped P&L signs on theta (now +, but calibration
+still fails 1.4–2.6× → shelve survives), mmsell (now marginally +, breakeven noise), and
+weather_con (first drawdown — 3 bad days of 6, scale-up paused); tfav crossed its gate
+negative → kill rec active. wcprop still 0 forever. Collectors all green.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[theta · VERDICT — shelve the family (fable), now stronger] Every theta book negative and
-   the gate-passing book got worse with more data.** control −$46.24 (n=228, −20.3¢, largest
-   loss in the portfolio), theta3 −$20.24 (n=79, **now well past the n≥60 gate** and more
-   negative than at the gate), theta1 −$29.45 (n=52, cratered on resumed trading), theta2
-   −$23.46 (n=21, **−111.7¢/trade, worst in the system**). This window's correlated hit across
-   all four books is itself evidence for the original diagnosis (model underprices tails).
-   Recommended fable action: disable the theta books, **keep the crypto_spot + ladder
-   collectors** (a future fatter-tail model rebuilds from that dataset), write the post-mortem
-   in RESEARCH_JOURNAL. Paper only, but decisively confirmed — good candidate for the next
-   fable pass.
+1. **[theta · shelve per the rule — verdict SURVIVES the P&L flip] Calibration still fails on
+   every book (realized tails 1.4–2.6× modeled); the cumulative positive is one calm 3-day
+   streak.** control +$15.53 (n=495) but +$58.54 of it came in 3 days; theta1 +$12.22 (n=179,
+   +6.8¢) same pattern. The pre-registered "positive AND calibrated" rule fails on the
+   calibration half everywhere → shelve the family; keep the crypto_spot + ladder collectors
+   (verify collect-only mode so the dataset survives). If keeping anything: theta1 only, under
+   a NEW pre-registered test (sold-price vs realized-tail-rate at n≥350) — not a silent
+   extension. Post-mortem in RESEARCH_JOURNAL either way.
 
-2. **[mmsell · whole family net-negative — prune candidate] No mmsell book is positive.**
-   control −1.0¢ (n=798), mmsell1 −2.0¢ (n=254), mmsell2 −3.1¢ (n=169); flat this window.
-   Recommended fable action: treat mmsell (all bands) as a prune candidate alongside theta; if
-   kept, data-only. Non-urgent.
+2. **[tfav · gate crossed NEGATIVE → kill rec active] n=191 ≥ 150, −3.7¢/trade.** Fails the
+   pre-registered gate from the 2026-07-06 fable memo. Recommend disabling tfav
+   (`TFAV_ENABLED=false`). Third consecutive window whipsaw confirms it's variance around a
+   negative mean, not an edge.
 
-3. **[wcprop · live book, armed, 0 trades] Enabled and running (last verified via worker logs
-   at run #21), not a dormant probe.** No collector/switch action. Report-only: (a) the loop's
-   skill-doc mislabel fix is still offered/awaiting your go-ahead. (b) Still 0 trades — continuing
-   (if weaker, since not re-verified this run) evidence the winner ladder may be efficiently
-   priced (probe P1 kill).
+3. **[mmsell · breakeven noise — softened from "prune candidate"] All three books now slightly
+   positive (pooled +0.3¢/trade, n=2,615).** Oscillating around zero across runs. Do NOT
+   promote anything; either keep as a zero-attention data book or prune for simplicity. If
+   pruning strategy families this pass, mmsell remains a reasonable cut (no demonstrated edge
+   net of realism), but it is no longer "decisively negative."
 
-4. **[XGAME · FIXED — study nearly runnable] Matcher steady at 15, taping steady (185k/24h,
-   +11.7k this window).** Once a matched WC game finishes with tape coverage, run
-   `xgame_tape_study` to grade the lead-lag thesis (P1–P4 in docs/IDEA_MODEL_20260704.md). No
-   collector action needed.
+4. **[weather_con · PAUSE the scale-up — drawdown needs diagnosis] 3 of the last 6 entry-days
+   sharply negative (8–14% win) → cumulative down to +$1.46.** Before any sizing/expansion per
+   the fable plan, run a fable pass on whether the losing days share a cause (city, window
+   type, forecast-regime shift). The book stays on (17 open) — this is a diagnose-first flag,
+   not a kill flag.
 
-5. **[tfav · HIGH VARIANCE — do not read either direction] Reversed hard: −$11.31 (n=28) →
-   +$3.99 (n=50), a +$15.30 swing in one window.** Two straight windows have each moved P&L by
-   more than the book's entire cumulative total — this is a small-n, high-variance book, not a
-   trend in either direction. Recommend waiting for a much larger n (~100+) before any
-   promote/prune read; the loop will keep tracking but will not call a verdict prematurely.
+5. **[wcprop · kill rec stands] Zero trades ever, through the whole knockout stage.** Winner
+   ladder shows no harvestable post-match lag at 10-min cadence. `WCPROP_ENABLED=false`;
+   optional one-shot `xmarket_wc` run for the post-mortem numbers. Tournament ends in days —
+   low stakes either way.
 
-6. **[weather · resolved] con-only book +$7.82 (n=251, unchanged — no new settlement since the
-   last batch), 8 open (5 new entries this window) — the only steady positive book.** Healthy,
-   actively trading; no action.
+6. **[XGAME · run the tape study — top info action] 19 matched games, tape collection through
+   the semifinal lull, multiple completed matched games now in the dataset.** Run
+   `xgame_tape_study` (fable/operator) to grade P1–P4; gate `xgame_book_enabled` on the result.
 
-*(Changed this run: theta (#1) escalated from "shelve" to "shelve — now stronger," with the
-correlated-tail-event framing and theta3 confirmed well past gate. #5 tfav reworded from
-"clearly negative" to "HIGH VARIANCE — do not read either direction" after a hard reversal to
-positive; raised the bar to n~100+ before any verdict. mmsell (#2), wcprop (#3), XGAME (#4),
-weather (#6) unchanged in substance. This is the first run under the new 8-hourly cadence.)*
+*(Changed this run: #1 theta reframed — P&L flipped positive but calibration drill-down keeps
+the shelve verdict; #2 tfav escalated to ACTIVE kill rec (gate crossed negative); #3 mmsell
+softened from prune-candidate to breakeven-noise; #4 weather_con NEW pause-the-scale-up flag
+after its first real drawdown (3 bad days of 6); #5 wcprop unchanged; #6 XGAME unchanged.
+Loop gap Jul 6 PM → Jul 8 PM (usage limit) — this run is a single 2.6-day catch-up.)*
