@@ -397,6 +397,7 @@ def test_xgame_book_enters_on_pm_lead_gap(settings):
     """PM jumps 50 -> 58 (shock +8) while Kalshi still sits at 51 (gap +7, same direction):
     the book buys the lagging Kalshi YES side TAKER at the ask."""
     _setup(settings)
+    settings.xgame_book_enabled = True   # book shelved by default (study KILL); test exercises it
     nowt = datetime.now(timezone.utc)   # tape freshness is read against real wall-clock
     tk = f"KXWCGAME-{TODAY_TK}PORCRO-POR"
     close = NOW + timedelta(minutes=45)
@@ -422,6 +423,7 @@ def test_xgame_book_enters_on_pm_lead_gap(settings):
 def test_xgame_book_no_entry_when_kalshi_already_followed(settings):
     """PM jumped but Kalshi has ALREADY caught up (gap ~0) -> no lag to trade."""
     _setup(settings)
+    settings.xgame_book_enabled = True   # book shelved by default (study KILL); test exercises it
     nowt = datetime.now(timezone.utc)
     tk = f"KXWCGAME-{TODAY_TK}PORCRO-POR"
     close = NOW + timedelta(minutes=45)

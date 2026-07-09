@@ -16,6 +16,13 @@ at the no-bid, held the <1h to settlement (the shared paper engine settles it).
 Every cycle also snapshots the near-settlement ladders WITH the model probability into
 crypto_ladder_snapshots — the accumulating research dataset — and maintains the rolling
 1-min spot window in crypto_spot_candles.
+
+SHELVED 2026-07-09 (settings.theta_collect_only, default True): the family failed its
+pre-registered "positive AND calibrated" gate on every book and gave back a full calm-streak
+gain live (control +$15.53 -> -$0.07 in two windows; realized tails 1.4-2.6x the model). In
+collect-only mode run_once still refreshes spot + writes the model-priced ladder snapshots
+but opens NO entries (control or variants). Flip theta_collect_only=False to resume trading,
+which requires a fresh pre-registration (docs/THETA_THESIS.md).
 """
 
 from __future__ import annotations
@@ -236,6 +243,13 @@ class ThetaTracker:
                     "model_p": p,
                     "model_excess_cents": excess,
                 })
+
+                # SHELVED (theta_collect_only): keep snapshotting the model-priced ladder
+                # (the research dataset) but skip ALL entries — control and every revision
+                # book. The snapshot row above is already captured, so the labeled dataset a
+                # future recalibrated model rebuilds from keeps accumulating untouched.
+                if s.theta_collect_only:
+                    continue
 
                 # ---- entries: control first, then revision books (shared scan/model/
                 # orderbook; only the gates differ per book) ----
