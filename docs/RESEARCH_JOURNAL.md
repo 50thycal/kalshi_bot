@@ -16,6 +16,97 @@ Conventions:
 
 ---
 
+## PERPS SURVEY 2026-07-09 — zero-fee crypto perps NOT on the market API; discovery gap, no probe
+
+Phase-2 Task 3 (optional, no clock): does Kalshi's mid-2026 zero-fee crypto **perpetual
+futures** product expose a pullable price history, and is there perp↔spot / perp↔ladder basis
+structure that could survive *normal* fees? Surveyed with `scripts/kalshi_perps_survey.py`
+(read-only). **Result: no perp series is reachable via the public `/trade-api/v2` event/market
+endpoints** — 76 open Crypto events scanned, none perp-marked; candidate series tickers
+(KXBTCPERP, BTCPERP, …) all resolve to 0 markets. The perps evidently live on a separate
+product/API surface, so there is **no price history to pull through the event-contract channel**
+and the basis/coherence read can't run. Per the thesis, **do not promote** (the zero-fee promo
+would make any cost gate misleadingly easy anyway). Next step *if* revisited: find Kalshi's
+perp-specific endpoint/feed, then a funding/basis staleness probe gated on normal fees — not a
+series-name guess against the event API. Folds slate N4/N5/N15 into this one open discovery item.
+
+## MLBWX VERDICT 2026-07-09 — weather-total staleness KILLED (P2 −1.5¢); do not promote
+
+Pre-registered MLBWX thesis (docs/IDEA_MODEL_20260709.md): on Kalshi's MLB run-total market,
+an imminent-rain nowcast should reprice the total *down* (rain suppresses scoring / risks
+postponement) faster than the casual sports flow, leaving a stale lagging quote to take.
+Probed with `scripts/kalshi_mlbwx.py` (read-only backtest, 45 days).
+
+**A v1 of the probe tested the WINNER market and defined the trade direction from the SETTLED
+price — a look-ahead bug that manufactured a fake +5.5¢ "edge" (you always profit if you pick
+the direction the price ended up going).** Caught it in the per-row table (net was positive for
+BOTH the home and away contract of every game — the tell). Rebuilt to the correct instrument
+and a no-lookahead design:
+- **Instrument = KXMLBTOTAL** (Over-K run total), where rain carries a *signed* prior; the
+  winner market carries none (rain doesn't say which team wins).
+- **Direction fixed by the weather signal** (short the Over on rain), never by the outcome;
+  P&L is the price-path capture. Robust away/home matchup split (handles 2-letter codes).
+
+**Data (all confirmed liquid, so P4 is not the blocker):** KXMLBTOTAL ≈6000 markets, contract
+spread median **1.0¢**, 91% ≤5¢; 468 games mapped to parks, 374 open-air; 63 open-park games
+with a rain event (≥1mm near game time), 6 postponed/suspended.
+
+**Verdict (n=44 rain-affected games with a tradeable ATM Over contract):**
+- **P1** median 5-min completion = 0.00 → PASS (the quote barely moves in 5 min) — but this is
+  *not* exploitable because there's no profitable direction:
+- **P2** short-Over capture to settlement = **−1.5¢/ct** → **KILL** (bar +4¢; kill <2¢). The
+  rain→under prior *does* pay on the big rainouts (BAL 07-09 +42¢, CHC rainouts) but is offset
+  by games where rain didn't suppress scoring (CLE −46¢), and the postponement cases settle on
+  rule-dependent void/reschedule terms. Net: no capturable edge.
+- **P3** pre-game-only capture = −0.5¢ → no directional level edge either.
+- **P4** 44/48 rows clear the 5¢ spread filter → PASS (liquidity is fine).
+
+**Decision rule was P1 ∧ P2 ∧ P4 → not met (P2 KILL) → do not promote; close the family.**
+Kalshi's MLB total market prices weather efficiently at the tradeable horizon (or the
+rain→runs link is too noisy to trade). This is the cheap clean ruling-out the thesis
+anticipated — ~44 games, zero production code shipped. The weather infra was reused read-only
+(Open-Meteo park precip); nothing about the temperature books changes.
+
+## XGAME VERDICT 2026-07-09 — WC lead-lag SHELVED (P2 KILL); paper book not built
+
+The `xgame_tape_study` ran to verdict on the World Cup knockout tape (matched pairs through
+the 07-06/07-07 quarterfinals — the games where both venues actually collected: belgium,
+portugal, spain, colombia, egypt, switzerland; ~104 shock events pooled). Graded against the
+pre-registered predictions in `docs/IDEA_MODEL_20260704.md` (XGAME), two independent runs
+(`xgame-study-1`, `xgame-verdict-0709`) agree:
+
+- **P1** (follow%>55 AND same-bar<40): follow≈60% but **same-bar≈57%** → **GREY** — moves are
+  contemporaneous, not cleanly led.
+- **P2** (median net follow-through ≥4¢): **−2.0¢** (gross +1.0¢, fees eat it) → **KILL**.
+- **P3** (PM→K exceeds K→PM by ≥10 pts): 60% vs 59%, gap +1 → **FAIL** — symmetric, i.e. both
+  venues follow a shared third feed rather than one leading the other.
+- **P4** (median exploitable window ≥20s): 600s → PASS (windows are wide, but there's nothing
+  profitable to exploit in them once P2 fails).
+
+**Decision rule** was: paper book `xgame` only if **P1 ∧ P2 ∧ P3**. Not met → **do not build the
+`xgame` paper book; shelve.** P1 is GREY (not a clean fail), so per the rule the lead-lag
+*family* is not fully ruled out — only this WC instance + entry. MLB (year-round, liquid) is the
+family's only remaining testable home; see the collector-retarget note below.
+
+**Operational note:** the newest knockout games (07-09 france/morocco, and the 07-10/07-11
+upcoming games) show Kalshi rows but **0 PM rows** — the Polymarket leg is no longer matching
+current games, and `game_matches_active=0` on the live recheck. So the "most liquid knockout
+sample" the Phase-2 order hoped to add before the Jul-19 WC close is effectively already not
+flowing; the verdict rests on the 07-06/07-07 sample, which is sufficient for the P2 KILL.
+
+**Collector retarget to MLB (Phase-2 Task 1b) — NOT DONE, deliberately.** The Phase-2 order
+framed this as a one-line config change (add KXMLBGAME to `xgame_series` + an MLB PM tag). The
+board survey showed it is not: Kalshi MLB markets are liquid (KXMLBGAME ~1878, KXMLBTOTAL
+~6000, 1¢ median spreads), but **Polymarket's MLB per-game markets are titled "TeamA vs.
+TeamB"**, not the WC "Will `<team>` win on `<date>`?" that the collector's `PM_WIN` regex
+(`kalshi_bot/xgame/pm.py`) requires — so the matcher would produce **zero** MLB pairs, and
+Kalshi's abbreviated subtitle ("Chicago C") wouldn't norm-reconcile with PM's "Chicago Cubs"
+either. A real retarget = a new PM "TeamA vs. TeamB" parser + a team-name/code reconciliation
+layer across `pm.py` and `tracker.py` — a multi-file collector change, not config. Given the WC
+lead-lag was just **KILLED** and P3's "symmetric / shared third feed" is a *structural* reason
+that transfers to MLB (both venues watch the same game feed), we chose (2026-07-09, with the
+operator) **not to invest in the rewrite** — it would feed a dead edge. Revisit only if a new
+mechanism (not naive lead-lag) motivates in-play MLB tape.
 ## PORTFOLIO CLEANUP 2026-07-09 — shelve theta, kill tfav + wcprop + xgame book; con diagnosed by-city
 
 Fable/opus session acting on the run #21–#29 loop findings (`docs/STRATEGY_LOOP_STATUS.md`).
