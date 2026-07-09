@@ -16,6 +16,33 @@ Conventions:
 
 ---
 
+## XGAME VERDICT 2026-07-09 — WC lead-lag SHELVED (P2 KILL); paper book not built
+
+The `xgame_tape_study` ran to verdict on the World Cup knockout tape (matched pairs through
+the 07-06/07-07 quarterfinals — the games where both venues actually collected: belgium,
+portugal, spain, colombia, egypt, switzerland; ~104 shock events pooled). Graded against the
+pre-registered predictions in `docs/IDEA_MODEL_20260704.md` (XGAME), two independent runs
+(`xgame-study-1`, `xgame-verdict-0709`) agree:
+
+- **P1** (follow%>55 AND same-bar<40): follow≈60% but **same-bar≈57%** → **GREY** — moves are
+  contemporaneous, not cleanly led.
+- **P2** (median net follow-through ≥4¢): **−2.0¢** (gross +1.0¢, fees eat it) → **KILL**.
+- **P3** (PM→K exceeds K→PM by ≥10 pts): 60% vs 59%, gap +1 → **FAIL** — symmetric, i.e. both
+  venues follow a shared third feed rather than one leading the other.
+- **P4** (median exploitable window ≥20s): 600s → PASS (windows are wide, but there's nothing
+  profitable to exploit in them once P2 fails).
+
+**Decision rule** was: paper book `xgame` only if **P1 ∧ P2 ∧ P3**. Not met → **do not build the
+`xgame` paper book; shelve.** P1 is GREY (not a clean fail), so per the rule the lead-lag
+*family* is not fully ruled out — only this WC instance + entry. MLB (year-round, liquid) is the
+family's only remaining testable home; see the collector-retarget note below.
+
+**Operational note:** the newest knockout games (07-09 france/morocco, and the 07-10/07-11
+upcoming games) show Kalshi rows but **0 PM rows** — the Polymarket leg is no longer matching
+current games, and `game_matches_active=0` on the live recheck. So the "most liquid knockout
+sample" the Phase-2 order hoped to add before the Jul-19 WC close is effectively already not
+flowing; the verdict rests on the 07-06/07-07 sample, which is sufficient for the P2 KILL.
+
 ## XGAME MATCHER FIX 2026-07-05 — wrong PM tag ("soccer" = club games) matched 0; WC tags → 13
 
 The XGAME collector logged `kal_games=14 pm_games=169 matched_new=0` for two days — deployed
