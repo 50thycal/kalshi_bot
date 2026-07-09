@@ -16,6 +16,74 @@ Conventions:
 
 ---
 
+## PORTFOLIO CLEANUP 2026-07-09 — shelve theta, kill tfav + wcprop + xgame book; con diagnosed by-city
+
+Fable/opus session acting on the run #21–#29 loop findings (`docs/STRATEGY_LOOP_STATUS.md`).
+Four books turned off, one book diagnosed. All paper — the value is stopping the attention/paper
+bleed and encoding the verdicts in the repo so they aren't re-litigated. Collectors stay on.
+
+**theta — SHELVED (collect-only), not deleted.** The model-anchored crypto tail-seller failed
+its pre-registered "positive AND calibrated at n≥60" gate on every book (control + theta1/2/3).
+The decisive evidence was a *live round-trip*: the control peaked at **+$15.53 (n=495, run #27)**
+during a calm 3-day stretch, then gave the entire gain back to **−$0.07 (n=542, run #29)** in two
+windows. The calibration drill-down (run #27) showed realized tail-hit rates **1.4–2.6× the
+model** on every book (control 21.8% vs 15.6% modeled; theta2 14.0% vs 5.3%) — the SpotModel's
+empirical remaining-window return distribution undersamples regime shifts, so it systematically
+under-prices the tails it sells. A parametric fix can't rescue a distribution-shape error, which
+is why theta1 (band/window surgery), theta2 (thresholds-only), and theta3 (widened tails + higher
+bar) all also failed. Implementation: **`theta_collect_only=True`** (new flag) keeps
+`ThetaTracker.run_once` refreshing spot + writing the model-priced `crypto_ladder_snapshots`
+(the labeled dataset a future fatter-tail model rebuilds from) while skipping ALL entries.
+`theta_enabled` stays True so the collector runs. Reviving the book requires a genuinely new
+model (Student-t/EVT tail fit, or a market-implied prior with divergence gating) under a fresh
+pre-registration — not another live variant. theta1's +6.0¢/trade (n=196) is the only datum
+arguing for a revival and is explicitly NOT a reason to keep it trading now.
+
+**tfav — KILLED.** The taker-buy-favorites mirror of theta crossed its pre-registered n≥150 gate
+**negative** (−3.6¢/trade at n=210) after three straight window whipsaws (−$11.31 → +$3.99 →
+−$7.54). The favorite side of the favorite–longshot bias doesn't net positive here either;
+combined with mmsell's ~breakeven maker-sell result, the bias is not harvestable on these hourly
+crypto ladders from either direction net of realism. `tfav_enabled=False`. (Spot/ladder
+collectors are theta's, unaffected.)
+
+**wcprop — KILLED.** The World-Cup winner-ladder lag book was armed and cycling every ~10 min
+through the ENTIRE knockout stage (15+ matched games settling) and opened **zero** trades: no
+`KXMENWORLDCUP` rung ever moved ≥3¢ within 45 min of a match settling on a liquid, non-rail
+rung. The post-match repricing either completes inside one cycle or doesn't happen — no lag is
+harvestable at ride-along cadence. This confirms the offline probe's P1-kill (winner ladder
+efficiently priced) forward. `wcprop_enabled=False`.
+
+**xgame book — SHELVED (collector left on).** `xgame_tape_study` on 19 matched WC games returned
+a decisive verdict: **P2 KILL** (median net follow-through −2¢ after costs; gross only +1¢) and
+**P3 FAIL** (PM→Kalshi 58% vs Kalshi→PM 59% — *symmetric*). The symmetry is the real finding:
+neither venue leads because both simply track the match itself (a shared "third feed" = the live
+game), so there is no cross-venue lead-lag to trade. The pre-registered rule shelves the book on
+P2 fail and rules out the lead-lag family on the symmetry. `xgame_book_enabled=False`; the
+`xgame_enabled` tape collector is left running to finish out the tournament. The book had 0 trades.
+
+**weather con — DIAGNOSED (kept on, do not scale yet).** con went net-negative cumulatively for
+the first time (+$1.46 → −$1.24, runs #27→#29). The by-city breakdown (last 10 days, settled)
+shows the drawdown is **concentrated in hard-to-forecast cities, not uniform**:
+| city | n | win% | P&L | ¢/trade |
+|---|---|---|---|---|
+| MIA | 24 | 46% | **+$1.06** | +4.4 |
+| PHIL | 12 | 42% | **+$1.50** | +12.5 |
+| CHI | 10 | 20% | −$0.59 | −5.9 |
+| NY | 6 | **0%** | −$0.94 | −15.7 |
+| DEN | 16 | **0%** | −$3.13 | −19.6 |
+| AUS | 29 | 52% | −$3.17 | −10.9 |
+| LAX | 19 | 21% | −$3.23 | −17.0 |
+The winners (MIA, PHIL) are stable coastal/eastern climates; the bleeders are Denver (0% win —
+altitude/mountain regime), LAX (marine-layer microclimates), Austin, NY. **Recommended next
+fable step (not done here — small per-city n):** cross-check per-city forecast skill in
+`weather_forecast_outcomes`, then restrict con to the cities where it has real edge (MIA/PHIL/…)
+and drop or shrink DEN/LAX/AUS/NY — a "concentrate where the edge is" move, the same lesson theta
+and mmsell taught. Do NOT scale con until this is done. Left running as-is for now.
+
+**mmsell — LEFT ON as a zero-attention data book.** All three bands sit at ~breakeven (pooled
+~+0.3¢/trade, n≈2,700), oscillating around zero — no edge net of realism, but not a bleeder.
+Kept running for data; not promoted, not a live candidate.
+
 ## XGAME MATCHER FIX 2026-07-05 — wrong PM tag ("soccer" = club games) matched 0; WC tags → 13
 
 The XGAME collector logged `kal_games=14 pm_games=169 matched_new=0` for two days — deployed

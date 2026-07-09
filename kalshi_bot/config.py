@@ -144,6 +144,16 @@ class Settings(BaseSettings):
     # Entry = the mmsell maker convention (sell yes at ask == buy NO at no-bid), hold the
     # <1h to settlement. Paper-only; positions are settled by the shared paper engine.
     theta_enabled: bool = True
+    # SHELVED 2026-07-09 (runs #21-#29): the family failed its pre-registered "positive AND
+    # calibrated at n>=60" gate on every book. Live-confirmed by a full round-trip — the
+    # control peaked at +$15.53 (n=495) then gave it all back to -$0.07 (n=542) within two
+    # windows, exactly the miscalibrated-tail pattern (realized tails 1.4-2.6x the model).
+    # collect_only keeps the tracker's crypto_ladder_snapshots + crypto_spot_candles
+    # collectors alive (the labeled dataset a future fatter-tail model rebuilds from) while
+    # skipping ALL entries (control + variants). theta_enabled stays True so the collector
+    # still runs; set theta_collect_only=False to resume trading (requires a fresh
+    # pre-registration per docs/THETA_THESIS.md).
+    theta_collect_only: bool = True
     theta_interval_minutes: float = 5.0       # ride-along cadence (also snapshot cadence)
     # SERIES:COINBASE_PRODUCT pairs; wrong series fail soft (logged, skipped).
     theta_series: str = "KXBTCD:BTC-USD,KXBTC:BTC-USD,KXETHD:ETH-USD,KXETH:ETH-USD"
@@ -185,7 +195,12 @@ class Settings(BaseSettings):
     # yet); running it as a paper book is exactly how we accumulate the settled-trade data
     # that proves or kills it. tfav rides its own scan (shares theta's persisted spot window
     # in crypto_spot_candles, so the spot fetch is near-free once theta has run this cycle).
-    tfav_enabled: bool = True
+    # KILLED 2026-07-09 (runs #26-#29): crossed its pre-registered n>=150 gate NEGATIVE
+    # (-3.6c/trade at n=210) after three straight window whipsaws — variance around a
+    # negative mean, not an edge. The favorite-buy side of the favorite-longshot bias does
+    # not net positive here. Disabled; crypto_spot/ladder collectors are unaffected (theta
+    # owns those). Set back to True only under a fresh pre-registration.
+    tfav_enabled: bool = False
     tfav_interval_minutes: float = 5.0        # ride-along cadence (matches theta)
     tfav_entry_min_minutes: float = 0.0       # final-hour edge window (minutes to close)
     tfav_entry_max_minutes: float = 60.0
@@ -236,7 +251,13 @@ class Settings(BaseSettings):
     # >= converge_frac of the gap, or after hold_seconds, whichever first. Still exploratory
     # (P1/P2/P3 unproven); paper accumulates the data. Off-by-default sub-knob aside, the
     # book is ON by default so it starts forward-testing immediately.
-    xgame_book_enabled: bool = True
+    # SHELVED 2026-07-09 (xgame_tape_study on 19 matched WC games): the lead-lag thesis
+    # failed its pre-registered gate. P2 KILL (median net follow-through -2c after costs)
+    # and P3 FAIL (PM->K 58% vs K->P 59% — SYMMETRIC, because both venues just track the
+    # match itself; there is no venue that leads). The book had 0 trades. Disabled; the
+    # xgame_enabled tape COLLECTOR is left running to finish out the tournament. The
+    # lead-lag family is ruled out — re-enabling needs a genuinely new mechanism, not a knob.
+    xgame_book_enabled: bool = False
     xgame_shock_cents: float = 3.0            # min recent PM jump to call it a shock
     xgame_shock_window_seconds: float = 60.0  # lookback for the PM jump + the Kalshi level
     xgame_min_gap_cents: float = 3.0          # min live pm_now - kal_now gap to enter
@@ -255,7 +276,13 @@ class Settings(BaseSettings):
     # liquid, tight-spread rungs. NOT held to settlement (that would swap the lag residual
     # for a weeks-long tournament bet): the shared engine times it out at wcprop_hold_minutes,
     # closing at the current bid. Still exploratory (P1/P2/P3 unproven); paper accrues data.
-    wcprop_enabled: bool = True
+    # KILLED 2026-07-09 (runs #21-#29): the book was armed and cycling every ~10min through
+    # the ENTIRE knockout stage (15+ matched games settling) and opened ZERO trades — no
+    # winner rung ever moved >= wcprop_min_move_cents within 45min of a match settling on a
+    # liquid, non-rail-pinned rung. The post-match repricing either completes inside one
+    # cycle or does not happen: no lag is harvestable at ride-along cadence. Winner ladder is
+    # efficiently priced (the probe's P1 kill), confirmed forward. Disabled.
+    wcprop_enabled: bool = False
     wcprop_interval_minutes: float = 10.0     # ride-along cadence (matches games are slow)
     wcprop_match_series: str = "KXWCGAME,KXWCROUND"   # settled match markets that trigger
     wcprop_winner_series: str = "KXMENWORLDCUP"       # the lagging winner ladder we trade

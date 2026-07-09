@@ -124,6 +124,7 @@ def _setup(settings):
 def _tracker(settings, markets_by_series, books, closes=None, variants=""):
     settings.theta_series = "KXBTCD:BTC-USD"
     settings.theta_variants = variants  # control-only unless a test opts in
+    settings.theta_collect_only = False  # exercise entries (prod default is collect-only/shelved)
     client = FakeKalshi(markets_by_series, books)
     spot = FakeSpotClient(closes if closes is not None else _flat_closes(900))
     return ThetaTracker(client, settings, spot_client=spot)
@@ -177,6 +178,24 @@ def test_theta_snapshots_ladder_with_model(settings):
         assert tail.model_p == 0.0 and tail.spot == 60000.0
         assert tail.model_excess_cents == 20.0  # mid 20 - 0
         assert by_tk["KXBTCD-26JUL0317-T59000"].mid_cents == 50.0
+
+
+def test_theta_collect_only_snapshots_but_no_entries(settings):
+    """Shelved mode (prod default): the model-priced ladder snapshot is still written for
+    the research dataset, but NO entries are opened even on a clean sell signal."""
+    _setup(settings)
+    mkts = [_mkt("KXBTCD-26JUL0317-T60500", "greater", 60500.0, None, 19, 21)]  # would sell
+    books = {mk["ticker"]: _ob(19, 21) for mk in mkts}
+    tracker = _tracker(settings, {"KXBTCD": mkts}, books)
+    settings.theta_collect_only = True  # override the _tracker default back to shelved
+    with db.session_scope() as session:
+        summ = tracker.run_once(session)
+    assert summ.snapshot_rows == 1          # dataset still collected
+    assert summ.opened == 0                 # ...but nothing traded
+    with db.session_scope() as session:
+        assert session.scalars(select(m.PaperTrade)).all() == []
+        snap = session.scalars(select(m.CryptoLadderSnapshot)).one()
+        assert snap.model_p == 0.0 and snap.model_excess_cents == 20.0  # model still priced
 
 
 def test_theta_dedup_and_event_cap(settings):
