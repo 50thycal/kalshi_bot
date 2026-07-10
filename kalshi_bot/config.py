@@ -133,7 +133,12 @@ class Settings(BaseSettings):
     #   "tag:key=val,...;tag:..."  keys: lo, hi (midpoint band cents), htcmin, htcmax (hours).
     #   Unset keys inherit the base mmsell_* knobs. theta1=broad cheap sweet-spot (5-20c),
     #   theta2=the single best band (10-20c). Empty string disables all variants.
-    mmsell_variants: str = "mmsell1:lo=5,hi=20;mmsell2:lo=10,hi=20"
+    # mmsell3 added 2026-07-10 from the per-yes-price-band history (n>1,700 settled): the
+    # maker-sell edge is sharply concentrated in the CHEAPEST longshots — yes 5-10c nets
+    # +2.2c/trade at 96% win over n=378 (highest volume band too), 10-15c is only +0.7c, and
+    # 15-20c is NEGATIVE (-2.2c). mmsell1 (5-20) / mmsell2 (10-20) both dilute the 5-10c
+    # winner with the flat/negative 10-20c cells. mmsell3 isolates the pure sweet spot.
+    mmsell_variants: str = "mmsell1:lo=5,hi=20;mmsell2:lo=10,hi=20;mmsell3:lo=5,hi=10"
 
     # --- Theta book (ride-along paper, weather/live cycle) ---
     # Model-anchored tail-selling on the recurring hourly crypto ladders (docs/
@@ -179,11 +184,23 @@ class Settings(BaseSettings):
     #   theta1 = band+window surgery; theta2 = theta1 + thresholds-only (isolates whether
     #   range buckets are structurally bad); theta3 = wide config rescued only by a much
     #   higher bar + mildly widened tails. Empty string disables all variants.
+    #   theta4 (added 2026-07-10, PRE-REGISTERED revival test): the shelve post-mortem found
+    #   the model underprices realized tails by ~1.4-2.6x (median ~1.85x). theta4 attacks that
+    #   directly with mult=2.0 (fattens the model tails ~2x to match realized) and only sells
+    #   tails STILL >=10c overpriced AFTER fattening, in the cheap 3-20c band / final 35min.
+    #   Hypothesis: if theta's failure is a simple ~2x tail-scale error, theta4 is + AND
+    #   calibrated. It trades despite theta_collect_only via theta_live_variants below.
     theta_variants: str = (
         "theta1:hi=20,ttemax=35;"
         "theta2:hi=20,ttemax=35,thronly=1;"
-        "theta3:edge=12,mult=1.25"
+        "theta3:edge=12,mult=1.25;"
+        "theta4:hi=20,ttemax=35,mult=2.0,edge=10"
     )
+    # Variants that keep trading even while theta_collect_only shelves the rest of the family
+    # (control + theta1/2/3). Comma list of variant tags; empty = fully shelved (collect-only).
+    # Set to a single pre-registered revival test at a time — NOT a way to quietly re-enable
+    # the family. Currently: theta4 (the fat-tail calibration test).
+    theta_live_variants: str = "theta4"
 
     # --- TFAV book (ride-along paper, weather/live cycle) ---
     # The MIRROR of theta on the same recurring hourly crypto ladders: theta SELLS the
@@ -399,6 +416,16 @@ class Settings(BaseSettings):
     weather_consensus_early_windows: str = "20,14"      # high windows that use the deviate mode
     weather_consensus_early_min_mass: float = 3.0       # high-early weighted-mass threshold
     weather_consensus_confirm_k: int = 4                # low/late: families agreeing on the favorite
+    # City-restricted consensus book (`weather_concity_h*`), added 2026-07-10 from the
+    # all-time by-city con history (n=23-63/city): the con edge is concentrated by CITY, not
+    # window. Winners AUS +11.7c/trade (n=63), CHI +5.8c (n=31), NY +5.7c (n=23); losers LAX
+    # -11.6c, DEN -9.5c, PHIL -6.1c; MIA ~flat. weather_concity rides the SAME consensus pick
+    # as `weather_con` but only enters for the allowlisted edge cities — a parallel A/B to
+    # test whether restricting to the winners turns the (barely-negative) con book positive.
+    weather_con_city_enabled: bool = True
+    # con-city allowlist = City.code values (NB: New York's code is 'NYC', not the 'NY' series
+    # suffix). Winners AUS/CHI/NYC; excluded losers LAX/DEN/PHIL and flat MIA.
+    weather_con_allow_cities: str = "AUS,CHI,NYC"
     # Kalshi history backfill (separate backfill_* tables; provenance never mixes with
     # the live-collected snapshots). Runs as a bounded chunk per cycle inside the
     # weather worker — the only place holding Kalshi credentials + a writable DB URL.
@@ -800,6 +827,17 @@ class Settings(BaseSettings):
             if ok and v["lo"] < v["hi"] and v["ttemin"] < v["ttemax"]:
                 out.append(v)
         return out
+
+    @property
+    def theta_live_variant_set(self) -> set[str]:
+        """Variant tags that trade even while theta_collect_only shelves the rest of the
+        family. Empty set => fully shelved (collect-only)."""
+        return {t.strip() for t in self.theta_live_variants.split(",") if t.strip()}
+
+    @property
+    def weather_con_allow_city_set(self) -> set[str]:
+        """City.code allowlist for the weather_concity book (upper-cased)."""
+        return {c.strip().upper() for c in self.weather_con_allow_cities.split(",") if c.strip()}
 
     @property
     def xgame_series_list(self) -> list[str]:

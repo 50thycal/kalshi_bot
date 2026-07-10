@@ -163,6 +163,42 @@ def test_con_book_deviates_to_converged_bucket_on_early_high(settings):
         assert by_strat["weather_fav_h20"].market_ticker == "KXHIGHNY-26JUN08-B70.5"
 
 
+def _run_concity(settings, allow_cities):
+    settings.bot_mode = "weather"
+    settings.weather_strategies = "favorite"
+    settings.weather_entry_hours = "20"
+    settings.weather_track_lows = False
+    settings.weather_dist_enabled = False
+    settings.weather_obs_entry_enabled = False
+    settings.weather_city_window_enabled = False
+    settings.weather_consensus_enabled = True
+    settings.weather_con_city_enabled = True
+    settings.weather_con_allow_cities = allow_cities
+    db.init_engine(settings.database_url)
+    db.create_all()
+    tracker = WeatherTracker(_Client(), settings, _ConvergeForecast(), ensemble=_Ensemble())
+    with db.session_scope() as session:
+        tracker.run_once(session)
+    with db.session_scope() as session:
+        return {t.strategy: t for t in session.scalars(select(m.PaperTrade)).all()}
+
+
+def test_concity_enters_for_allowlisted_city(settings):
+    """NYC is in the allowlist -> the city-restricted con book rides the same pick as con."""
+    by_strat = _run_concity(settings, "AUS,CHI,NYC")   # KXHIGHNY -> City.code 'NYC'
+    assert "weather_con_h20" in by_strat                # the full con book always enters
+    assert "weather_concity_h20" in by_strat            # ...and the city book too (NYC allowed)
+    # both rode the same consensus pick (the deviated 72-73 bucket).
+    assert by_strat["weather_concity_h20"].market_ticker == "KXHIGHNY-26JUN08-B72.5"
+
+
+def test_concity_skips_non_allowlisted_city(settings):
+    """NYC not in the allowlist -> con still enters, but the city book does NOT."""
+    by_strat = _run_concity(settings, "AUS,CHI")        # NYC excluded
+    assert "weather_con_h20" in by_strat                # full con unaffected
+    assert "weather_concity_h20" not in by_strat        # city book gated out
+
+
 def test_con_book_skips_when_signals_disagree(settings):
     settings.bot_mode = "weather"
     settings.weather_strategies = "favorite"
