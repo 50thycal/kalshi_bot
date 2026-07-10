@@ -156,6 +156,9 @@ class ThetaTracker:
         s = self.settings
         summ = ThetaCycleSummary()
         now_unix = int(time.time())
+        # In collect-only (shelved) mode, only these variant tags may still trade; the rest of
+        # the family snapshots only. Empty set => fully shelved.
+        live_tags = s.theta_live_variant_set if s.theta_collect_only else None
 
         models: dict[str, SpotModel | None] = {}
         for product in sorted(set(s.theta_series_map.values())):
@@ -245,10 +248,11 @@ class ThetaTracker:
                 })
 
                 # SHELVED (theta_collect_only): keep snapshotting the model-priced ladder
-                # (the research dataset) but skip ALL entries — control and every revision
-                # book. The snapshot row above is already captured, so the labeled dataset a
-                # future recalibrated model rebuilds from keeps accumulating untouched.
-                if s.theta_collect_only:
+                # (the research dataset) but skip entries. Fast path: when the family is FULLY
+                # shelved (no live variants) skip all entry work per market. When a live
+                # variant is designated (theta_live_variants), fall through and let the
+                # per-book gate below admit only that variant.
+                if live_tags is not None and not live_tags:
                     continue
 
                 # ---- entries: control first, then revision books (shared scan/model/
@@ -267,6 +271,9 @@ class ThetaTracker:
                 event = ticker.rsplit("-", 1)[0]
                 for book in books:
                     tag = book["tag"]
+                    # collect-only: shelve every book except the designated live variant(s)
+                    if live_tags is not None and tag not in live_tags:
+                        continue
                     if not (book["ttemin"] <= tte_min <= book["ttemax"]):
                         continue
                     if not (book["lo"] <= mid <= book["hi"]):

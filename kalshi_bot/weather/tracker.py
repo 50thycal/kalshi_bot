@@ -394,6 +394,14 @@ class WeatherTracker:
                             session, f"{prefix}con_h{int(hours)}", event_ticker, t, con_market,
                             self._cached_metrics(con_market, metrics_cache), None, summary,
                         )
+                        # City-restricted con (A/B): same pick, but only enter for the
+                        # allowlisted edge cities (AUS/CHI/NY per the all-time by-city history).
+                        if s.weather_con_city_enabled and t.city.code in s.weather_con_allow_city_set:
+                            self._maybe_enter(
+                                session, f"{prefix}concity_h{int(hours)}", event_ticker, t,
+                                con_market, self._cached_metrics(con_market, metrics_cache),
+                                None, summary,
+                            )
                 # Live-cell coverage: a LIVE cell whose book has NO market this window (no
                 # favorite / value bucket found) -> note it so the digest shows the no-show.
                 if self.live_executor is not None:

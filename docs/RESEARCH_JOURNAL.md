@@ -16,6 +16,51 @@ Conventions:
 
 ---
 
+## THREE NEW PAPER BOOKS 2026-07-10 — data-cut variants of the survivors (pre-registered)
+
+Opus build session. After the PR #22 cleanup left the portfolio with no positive earner, built
+one new, data-justified paper book per surviving family — each an A/B against its parent, each
+with a pre-registered falsifiable gate. Grounded in the full paper history (per-cell queries,
+n far larger than the original decompositions), not vibes.
+
+**mmsell3 (yes 5-10c band) — pure config (`mmsell_variants += mmsell3:lo=5,hi=10`).** The
+per-yes-price-band history (n>1,700 settled `mmsell`): 5-10c nets **+2.2c/trade at 96% win over
+n=378** (also the highest-volume band), 10-15c only +0.7c, and 15-20c is NEGATIVE (-2.2c).
+mmsell1 (5-20) and mmsell2 (10-20) both dilute the 5-10c winner with the flat/negative 10-20c
+cells — which is why they compressed to ~+0.7c as n grew. mmsell3 isolates the sweet spot.
+  PRE-REG GATE: at n>=150 settled, KEEP only if per-trade > +1.5c AND >= mmsell1/mmsell2;
+  otherwise the "cheapest is best" read was small-n and mmsell3 is dropped.
+
+**theta4 (fat-tail revival test) — `theta_variants += theta4:hi=20,ttemax=35,mult=2.0,edge=10`,
+activated past collect-only via the new `theta_live_variants="theta4"`.** The theta shelve
+post-mortem found the SpotModel underprices realized tails by ~1.4-2.6x (median ~1.85x). theta4
+attacks that root cause directly: `mult=2.0` fattens the model tails ~2x (to match realized),
+and it sells ONLY tails still >=10c overpriced AFTER fattening, in the cheap 3-20c band / final
+35min (theta1's better window). New mechanism: `theta_live_variants` lets ONE named variant
+trade while `theta_collect_only` keeps the control + theta1/2/3 snapshot-only — this is the
+"fresh pre-registration, not a quiet re-enable" the shelve doc required; the ladder/spot
+collectors keep running underneath.
+  PRE-REG GATE: at n>=80 settled, KEEP only if per-trade > 0 AND realized-tail-hit rate
+  <= 1.25x modeled (i.e. the 2x fatten fixed the calibration). If it fails BOTH, theta's failure
+  is NOT a simple tail-scale error and the family is fully dead (stop reviving). Expected to be
+  SPARSE (double gate: 2x-fatter model + 10c bar) — n will accrue slowly; that's fine for paper.
+
+**weather_concity (con restricted to AUS/CHI/NYC) — new parallel book + `weather_con_allow_cities`
+knob.** The all-time by-city con history (n=23-63/city) shows the con edge is concentrated by
+CITY, not window (all windows ~flat): winners AUS **+11.7c/trade** (n=63), CHI +5.8c (n=31), NYC
++5.7c (n=23); losers LAX -11.6c, DEN -9.5c, PHIL -6.1c; MIA ~flat. NB the 10-day window (run #29)
+disagreed for some cities (MIA/PHIL looked positive there) — small-window noise; the all-time cut
+is the trustworthy one. weather_concity rides the SAME consensus pick as `weather_con` but only
+enters for the allowlisted edge cities (City.code AUS/CHI/**NYC** — New York's code is NYC, not
+the 'NY' series suffix). Runs alongside the unrestricted con as a live A/B.
+  PRE-REG GATE: at n>=120 settled, KEEP (and consider retiring the all-city con) only if
+  weather_concity per-trade > +3c AND clearly beats the full con book; if it doesn't beat
+  all-city con, the by-city split was noise and concity is dropped.
+
+All three: paper-only, deployed via config (one Railway redeploy enacts them), tests added
+(theta live-variant-under-collect-only, concity allowlist in/out, mmsell3 parse). The loop query
+now surfaces `weather_concity` separately; mmsell3/theta4 auto-surface as non-weather books.
+
 ## PERPS SURVEY 2026-07-09 — zero-fee crypto perps NOT on the market API; discovery gap, no probe
 
 Phase-2 Task 3 (optional, no clock): does Kalshi's mid-2026 zero-fee crypto **perpetual

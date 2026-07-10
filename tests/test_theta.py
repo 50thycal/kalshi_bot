@@ -181,13 +181,14 @@ def test_theta_snapshots_ladder_with_model(settings):
 
 
 def test_theta_collect_only_snapshots_but_no_entries(settings):
-    """Shelved mode (prod default): the model-priced ladder snapshot is still written for
-    the research dataset, but NO entries are opened even on a clean sell signal."""
+    """Fully shelved (no live variants): the model-priced ladder snapshot is still written
+    for the research dataset, but NO entries are opened even on a clean sell signal."""
     _setup(settings)
     mkts = [_mkt("KXBTCD-26JUL0317-T60500", "greater", 60500.0, None, 19, 21)]  # would sell
     books = {mk["ticker"]: _ob(19, 21) for mk in mkts}
     tracker = _tracker(settings, {"KXBTCD": mkts}, books)
-    settings.theta_collect_only = True  # override the _tracker default back to shelved
+    settings.theta_collect_only = True   # override the _tracker default back to shelved
+    settings.theta_live_variants = ""    # fully shelved — nothing trades
     with db.session_scope() as session:
         summ = tracker.run_once(session)
     assert summ.snapshot_rows == 1          # dataset still collected
@@ -196,6 +197,27 @@ def test_theta_collect_only_snapshots_but_no_entries(settings):
         assert session.scalars(select(m.PaperTrade)).all() == []
         snap = session.scalars(select(m.CryptoLadderSnapshot)).one()
         assert snap.model_p == 0.0 and snap.model_excess_cents == 20.0  # model still priced
+
+
+def test_theta_collect_only_live_variant_still_trades(settings):
+    """collect-only shelves the control but a designated live variant (theta_live_variants)
+    keeps trading — the mechanism that runs the pre-registered theta4 revival test while the
+    rest of the family stays snapshot-only."""
+    _setup(settings)
+    mkts = [_mkt("KXBTCD-26JUL0317-T60500", "greater", 60500.0, None, 19, 21)]
+    books = {mk["ticker"]: _ob(19, 21) for mk in mkts}
+    # theta9 inherits the base band/window; it is the ONLY book allowed to trade while shelved.
+    tracker = _tracker(settings, {"KXBTCD": mkts}, books, variants="theta9:hi=40")
+    settings.theta_collect_only = True
+    settings.theta_live_variants = "theta9"
+    with db.session_scope() as session:
+        summ = tracker.run_once(session)
+    assert summ.snapshot_rows == 1
+    assert summ.opened == 1                  # only the live variant traded
+    with db.session_scope() as session:
+        t = session.scalars(select(m.PaperTrade)).one()
+        assert t.strategy == "theta9"        # control 'theta' stayed shelved
+        assert t.side == "no" and t.assumed_price == 79
 
 
 def test_theta_dedup_and_event_cap(settings):
