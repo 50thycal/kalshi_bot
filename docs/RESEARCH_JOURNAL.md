@@ -16,6 +16,47 @@ Conventions:
 
 ---
 
+## PINNED + DECAY VERDICTS 2026-07-10 — both idea-model theses KILLED at the probe; no books built
+
+The two theses pre-registered in `docs/IDEA_MODEL_20260710.md` ran to verdict the same day via
+ops (`scripts/kalshi_pinned_study.py`, `scripts/kalshi_decay_study.py` — read-only public REST,
+no DB/collector). Both graded verbatim against their pre-registered thresholds. Neither
+promotes; per the north star, two clean cheap ruling-outs, zero paper bleed.
+
+**DECAY (deadline-hazard premium on "by-date" markets) — KILLED, decisively.** Full universe:
+16k settled events → 2,050 by-date markets → 1,818 with candle history. Shorting YES∈[5,20]¢ at
+T-14d: **−19.97¢/ct at n=152, win 70%** (P1 KILL bar was <+1¢; this isn't close). The hazard
+signature also failed (T-7 −0.69 / T-14 −19.97 / T-28 −6.23 — not monotone), split-half
+disagreed, and the tail test failed spectacularly (worst day −$32 vs +18¢ median winning day).
+The category cut explains it: **Science/Tech "will X ship/happen by date" markets resolved YES
+94% of the time in the short cohort (EV −86.6¢)** — in this era the by-date "hope" is
+under-priced, not over-priced; Politics also negative (−4.95). Only Elections (+2.6) and
+Entertainment (+4.3) were mildly positive, far below a book. The by-date premium is fair-or-
+inverted insurance; **close the family** (and note it as a caution against any future
+"sell hope" extension of mmsell into by-date one-offs).
+
+**PINNED (post-pin discount on slow-settlement-source markets) — do not promote (P2 fail, P1
+grey).** Final clean run (v4): pooled post-pin EV **+1.80¢/ct on 119 real trades** (P1 needs
+≥+3¢, kill <1.5 → GREY), and it does NOT beat the pre-pin favorite-buy control (+2.23¢, P2
+FAIL) — the "post-pin discount" is mostly just generic favorite pricing, the dead tfav shape.
+The core cells: **weekly AAA gas markets post-pin = +0.02¢ (perfectly efficient)**; CPI
+single-print markets −0.21¢ (efficient, institutional). The one cell that cleared the bar —
+**post-jobs-print trades at +43.4¢/ct — is only 36 trades** and is logged as a residual
+observation, NOT promotable under the registered rule; if ever revisited it needs its own
+pre-registration and a release-time audit (JOLTS/ADP vs 8:30 BLS contamination risk).
+Probe-construction history, for honesty: v2 scored 0 trades (trade tape sends
+`yes_price_dollars`, not the cents field); v3 produced 8,193 pinned-side-loss red flags —
+bucket-midpoint path reconstruction at weekly granularity understates volatility (false pins
+on KXAAAGASW) and natural-gas futures settles are not a glacial index. v4 pins only
+KXAAAGAS{D,W,MAX,MIN} against the KXAAAGASD daily path (running-max-rate reach guard ×1.5 +
+2 bucket-halfwidths) and restricts the release family to single-print markets closing ≤8h
+after the release; it ran with **zero red flags**, so the verdict stands on a sound probe.
+
+Meta-lesson reinforced: the staleness family's surviving shape is *observation-pinning on
+markets where nobody watches the source* — and this run shows even backwater gas/econ quotes
+converge once the answer is public. The inattention window that powers weather `con` does not
+generalize off-weather at tradeable size. Both probes stay allowlisted for future re-runs.
+
 ## THREE NEW PAPER BOOKS 2026-07-10 — data-cut variants of the survivors (pre-registered)
 
 Opus build session. After the PR #22 cleanup left the portfolio with no positive earner, built
