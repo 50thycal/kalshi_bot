@@ -44,7 +44,7 @@ import math
 import re
 import time
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import xvenue_leadlag as xl  # _get (browser UA + retries), _num
@@ -54,16 +54,16 @@ ET = ZoneInfo("America/New_York")
 
 # Release-family keywords -> release local time (ET). Matched against event/market titles.
 RELEASE_RULES: list[tuple[re.Pattern, tuple[int, int], str]] = [
-    (re.compile(r"\b(cpi|inflation rate|consumer price)\b", re.I), (8, 30), "cpi"),
-    (re.compile(r"\b(payroll|jobs report|nonfarm)\b", re.I), (8, 30), "jobs"),
+    (re.compile(r"\b(cpi|inflation|consumer price|pce)\b", re.I), (8, 30), "cpi"),
+    (re.compile(r"\b(payrolls?|jobs report|nonfarm)\b", re.I), (8, 30), "jobs"),
     (re.compile(r"\b(jobless|initial claims|unemployment claims)\b", re.I), (8, 30), "claims"),
     (re.compile(r"\bunemployment rate\b", re.I), (8, 30), "jobs"),
     (re.compile(r"\bgdp\b", re.I), (8, 30), "gdp"),
     (re.compile(r"\bretail sales\b", re.I), (8, 30), "retail"),
-    (re.compile(r"\b(fed(eral)? (funds|reserve)|fomc|rate (hike|cut|decision))\b", re.I),
-     (14, 0), "fed"),
+    (re.compile(r"\b(fed(eral)? (funds|reserve|decision|rate)|fomc|rate (hike|cut|decision))\b",
+                re.I), (14, 0), "fed"),
 ]
-GLACIAL_RE = re.compile(r"\b(gas price|gasoline|aaa)\b", re.I)
+GLACIAL_RE = re.compile(r"\b(gas prices?|gasoline|aaa)\b", re.I)
 
 SKIP_CATEGORIES = re.compile(r"sport|crypto", re.I)
 
@@ -163,16 +163,18 @@ def glacial_pins(events: list[dict]) -> dict[str, tuple[float, str]]:
             daily.append((ts, v, ev))
     daily.sort()
     pins: dict[str, tuple[float, str]] = {}
-    for i, (ts_i, _v, ev) in enumerate(daily):
+    for i, (_ts_i, _v, ev) in enumerate(daily):
         hist = daily[:i]  # strictly earlier events only
         if len(hist) < 4:
             continue
         vals = [(t, v) for t, v, _ in hist]
         max_rate = max((abs(v2 - v1) / max((t2 - t1) / 86400.0, 0.5)
-                        for (t1, v1), (t2, v2) in zip(vals, vals[1:])), default=0.0)
+                        for (t1, v1), (t2, v2) in zip(vals, vals[1:], strict=False)), default=0.0)
         max_rate = max(max_rate, 1e-9)
-        halfw = _median([abs(h - l) / 2.0 for _, _, e in hist for m in e.get("markets") or []
-                         for l, h in [bucket_bounds(m)] if l is not None and h is not None]) or 0.0
+        halfw = _median([abs(b_hi - b_lo) / 2.0 for _, _, e in hist
+                         for m in e.get("markets") or []
+                         for b_lo, b_hi in [bucket_bounds(m)]
+                         if b_lo is not None and b_hi is not None]) or 0.0
         t_now, v_now = vals[-1]  # latest knowledge strictly before this event
         for m in ev.get("markets") or []:
             close = _ts(m.get("close_time"))
@@ -209,8 +211,12 @@ def score_trades(rows: list[dict], result: str, pin_ts: float, pinned_side: str,
                  acc: dict, fam: str, week_notional: dict) -> None:
     for t in rows:
         ts = _ts(t.get("created_time"))
-        p = xl._num(t.get("yes_price"))  # cents
-        cnt = int(xl._num(t.get("count") or t.get("count_fp")) or 0) or 1
+        p = 0.0  # trade yes price in CENTS; API sends yes_price_dollars (string) or yes_price
+        if t.get("yes_price_dollars") is not None:
+            p = xl._num(t.get("yes_price_dollars")) * 100.0
+        elif t.get("yes_price") is not None:
+            p = xl._num(t.get("yes_price"))
+        cnt = int(xl._num(t.get("count_fp")) or xl._num(t.get("count")) or 0) or 1
         if not ts or p <= 0 or p >= 100:
             continue
         if ts >= pin_ts:
@@ -264,7 +270,10 @@ def main(argv: list[str] | None = None) -> int:
     g_pins: dict[str, tuple[float, str]] = {}
     g_lookup: dict[str, tuple[dict, str]] = {}
     for series, evs in fam_events.items():
+        vals = sum(1 for e in evs if event_day_value(e.get("markets") or []) is not None)
         pins = glacial_pins(evs)
+        print(f"  G-series {series}: {len(evs)} settled events, {vals} with a winning-bucket "
+              f"value, {len(pins)} pinned markets")
         g_pins.update(pins)
         for ev in evs:
             for m in ev.get("markets") or []:
@@ -276,7 +285,7 @@ def main(argv: list[str] | None = None) -> int:
     acc = {"post": [], "pre": [], "red_flags": []}
     week_notional: dict[int, float] = {}
     scanned = 0
-    for ev, m, hhmm, key in r_targets:
+    for _ev, m, hhmm, key in r_targets:
         if scanned >= args.max_markets:
             break
         pin = release_pin_ts(m, hhmm)

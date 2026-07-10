@@ -38,7 +38,7 @@ import math
 import re
 import time
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime
 
 import xvenue_leadlag as xl  # _get (browser UA + retries), _num
 
@@ -133,7 +133,7 @@ def main(argv: list[str] | None = None) -> int:
         text = " ".join(filter(None, [ev.get("title"), ev.get("sub_title")]))
         for m in ev.get("markets") or []:
             mtext = " ".join(filter(None, [text, m.get("title"), m.get("subtitle"),
-                                           m.get("rules_primary", "")[:200]]))
+                                           (m.get("rules_primary") or "")[:200]]))
             if not BY_DATE.search(mtext):
                 continue
             if (m.get("result") or "").lower() not in ("yes", "no"):
@@ -173,7 +173,7 @@ def main(argv: list[str] | None = None) -> int:
         evs = [r[0] for r in rs]
         return sum(evs) / len(evs), len(rs), 100.0 * sum(1 for r in rs if r[4]) / len(rs)
 
-    print("\n== cohorts (YES in [{:.0f},{:.0f}]c at entry; EV c/ct net of entry fee) ==".format(lo, hi))
+    print(f"\n== cohorts (YES in [{lo:.0f},{hi:.0f}]c at entry; EV c/ct net of entry fee) ==")
     ev_by_cohort = {}
     for n in COHORTS:
         ev_n, cnt, win = stats(rows[n])
