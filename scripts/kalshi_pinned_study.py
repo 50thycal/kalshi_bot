@@ -63,7 +63,14 @@ RELEASE_RULES: list[tuple[re.Pattern, tuple[int, int], str]] = [
     (re.compile(r"\b(fed(eral)? (funds|reserve|decision|rate)|fomc|rate (hike|cut|decision))\b",
                 re.I), (14, 0), "fed"),
 ]
-GLACIAL_RE = re.compile(r"\b(gas prices?|gasoline|aaa)\b", re.I)
+NOT_SINGLE_PRINT = re.compile(r"\b(this year|in 202\d|by |before |any point|ever)\b", re.I)
+# G family is AAA retail gas ONLY: national daily path (KXAAAGASD) is the reconstructable
+# underlying; weekly/monthly national markets settle on the same index. State variants and
+# natural-gas futures settles are different/fast underlyings -> excluded (the v3 run's 8k
+# pinned-side losses came exactly from pinning against the wrong/too-coarse underlying).
+G_PATH_SERIES = "KXAAAGASD"
+G_TARGET_SERIES = ("KXAAAGASD", "KXAAAGASW", "KXAAAGASMAX", "KXAAAGASMIN")
+MAX_RELEASE_CLOSE_LAG_H = 8  # single-print markets close within hours of the release
 
 SKIP_CATEGORIES = re.compile(r"sport|crypto", re.I)
 
@@ -135,11 +142,11 @@ def markets_to_events(markets: list[dict]) -> list[dict]:
 def classify(ev: dict) -> tuple[str, tuple[int, int] | None, str]:
     """-> (family 'R'|'G'|'', release ET time, family key)."""
     text = " ".join(filter(None, [ev.get("title"), ev.get("sub_title")]))
+    if NOT_SINGLE_PRINT.search(text):
+        return "", None, ""  # multi-print/by-date phrasing: the release doesn't pin it
     for rx, hhmm, key in RELEASE_RULES:
         if rx.search(text):
             return "R", hhmm, key
-    if GLACIAL_RE.search(text):
-        return "G", None, "gas"
     return "", None, ""
 
 
@@ -176,48 +183,49 @@ def event_day_value(markets: list[dict]) -> float | None:
     return None
 
 
-def glacial_pins(events: list[dict]) -> dict[str, tuple[float, str]]:
-    """ticker -> (pin_ts, pinned_side). No-lookahead: day t uses only values from days < t."""
-    daily: list[tuple[float, float, dict]] = []  # (close_ts_of_event, value, event)
-    for ev in events:
-        v = event_day_value(ev.get("markets") or [])
-        ts = max((_ts(m.get("close_time")) for m in ev.get("markets") or []), default=0.0)
+def daily_path(markets: list[dict]) -> list[tuple[float, float]]:
+    """(close_ts, value) per settled DAILY event, from winning-bucket midpoints, ascending."""
+    by_ev: dict[str, list[dict]] = defaultdict(list)
+    for m in markets:
+        by_ev[m.get("event_ticker") or "?"].append(m)
+    path = []
+    for ms in by_ev.values():
+        v = event_day_value(ms)
+        ts = max((_ts(m.get("close_time")) for m in ms), default=0.0)
         if v is not None and ts:
-            daily.append((ts, v, ev))
-    daily.sort()
-    pins: dict[str, tuple[float, str]] = {}
-    for i, (_ts_i, _v, ev) in enumerate(daily):
-        hist = daily[:i]  # strictly earlier events only
-        if len(hist) < 4:
+            path.append((ts, v))
+    return sorted(path)
+
+
+def pin_against_path(m: dict, path: list[tuple[float, float]],
+                     halfw: float, reach_mult: float = 1.5) -> tuple[float, str] | None:
+    """Earliest (pin_ts, side) at which the daily path pins this market, or None.
+    No-lookahead: the decision at path day t uses only path points <= t; the reach guard is
+    days_left x (running max daily move) x reach_mult + 2 x bucket halfwidth (midpoint error)."""
+    close = _ts(m.get("close_time"))
+    if not close:
+        return None
+    lo, hi = bucket_bounds(m)
+    max_rate = 0.0
+    for i, (t, v) in enumerate(path):
+        if i:
+            dt = max((t - path[i - 1][0]) / 86400.0, 0.5)
+            max_rate = max(max_rate, abs(v - path[i - 1][1]) / dt)
+        if t >= close or i < 5:
             continue
-        vals = [(t, v) for t, v, _ in hist]
-        max_rate = max((abs(v2 - v1) / max((t2 - t1) / 86400.0, 0.5)
-                        for (t1, v1), (t2, v2) in zip(vals, vals[1:], strict=False)), default=0.0)
-        max_rate = max(max_rate, 1e-9)
-        halfw = _median([abs(b_hi - b_lo) / 2.0 for _, _, e in hist
-                         for m in e.get("markets") or []
-                         for b_lo, b_hi in [bucket_bounds(m)]
-                         if b_lo is not None and b_hi is not None]) or 0.0
-        t_now, v_now = vals[-1]  # latest knowledge strictly before this event
-        for m in ev.get("markets") or []:
-            close = _ts(m.get("close_time"))
-            if not close or close <= t_now:
-                continue
-            lo, hi = bucket_bounds(m)
-            days_left = (close - t_now) / 86400.0
-            reach = days_left * max_rate + halfw
-            side = None
-            if lo is not None and hi is not None:          # range bucket
-                if v_now < lo - reach or v_now > hi + reach:
-                    side = "no"
-                # a range bucket can pin YES only if both bounds are unreachable outward — rare
-            elif lo is not None:                            # ">= lo" threshold
-                side = "yes" if v_now > lo + reach else ("no" if v_now < lo - reach else None)
-            elif hi is not None:                            # "<= hi" threshold
-                side = "yes" if v_now < hi - reach else ("no" if v_now > hi + reach else None)
-            if side:
-                pins[m.get("ticker")] = (t_now, side)  # pinned from the moment of last knowledge
-    return pins
+        days_left = (close - t) / 86400.0
+        reach = days_left * max(max_rate, 1e-9) * reach_mult + 2 * halfw
+        side = None
+        if lo is not None and hi is not None:
+            if v < lo - reach or v > hi + reach:
+                side = "no"
+        elif lo is not None:
+            side = "yes" if v > lo + reach else ("no" if v < lo - reach else None)
+        elif hi is not None:
+            side = "yes" if v < hi - reach else ("no" if v > hi + reach else None)
+        if side:
+            return (t, side)
+    return None
 
 
 def _median(xs: list[float]) -> float | None:
@@ -276,7 +284,6 @@ def main(argv: list[str] | None = None) -> int:
     events = settled_events(args.max_event_pages)
     print(f"settled events scanned: {len(events)}")
 
-    fam_events: dict[str, list[dict]] = defaultdict(list)
     r_targets: list[tuple[dict, dict, tuple[int, int], str]] = []  # (event, market, hhmm, key)
     for ev in events:
         if SKIP_CATEGORIES.search(ev.get("category") or ""):
@@ -284,28 +291,35 @@ def main(argv: list[str] | None = None) -> int:
         fam, hhmm, key = classify(ev)
         if fam == "R":
             for m in ev.get("markets") or []:
+                text = " ".join(filter(None, [m.get("title"), m.get("subtitle")]))
+                if NOT_SINGLE_PRINT.search(text):
+                    continue
                 if (m.get("result") or "").lower() in ("yes", "no"):
                     r_targets.append((ev, m, hhmm, key))
-        elif fam == "G":
-            series = (ev.get("event_ticker") or "").split("-", 1)[0]
-            fam_events[series].append(ev)
 
+    path_mkts = series_settled_markets(G_PATH_SERIES)
+    path = daily_path(path_mkts)
+    halfw = _median([abs(b_hi - b_lo) / 2.0 for m in path_mkts
+                     for b_lo, b_hi in [bucket_bounds(m)]
+                     if b_lo is not None and b_hi is not None]) or 0.05
+    print(f"  AAA daily path ({G_PATH_SERIES}): {len(path)} days, "
+          f"bucket halfwidth {halfw:.3f}")
     g_pins: dict[str, tuple[float, str]] = {}
     g_lookup: dict[str, tuple[dict, str]] = {}
-    for series in sorted(fam_events):
-        deep = series_settled_markets(series)  # the event scan only reaches weeks back
-        evs = markets_to_events(deep)
-        vals = sum(1 for e in evs if event_day_value(e.get("markets") or []) is not None)
-        pins = glacial_pins(evs)
-        print(f"  G-series {series}: {len(evs)} settled events (deep), {vals} with a "
-              f"winning-bucket value, {len(pins)} pinned markets")
-        g_pins.update(pins)
-        for ev in evs:
-            for m in ev.get("markets") or []:
-                if m.get("ticker") in pins:
-                    g_lookup[m["ticker"]] = (m, series)
+    for series in G_TARGET_SERIES:
+        mkts = path_mkts if series == G_PATH_SERIES else series_settled_markets(series)
+        n_pin = 0
+        for m in mkts:
+            if (m.get("result") or "").lower() not in ("yes", "no"):
+                continue
+            hit = pin_against_path(m, path, halfw)
+            if hit:
+                g_pins[m["ticker"]] = hit
+                g_lookup[m["ticker"]] = (m, series)
+                n_pin += 1
+        print(f"  G-series {series}: {len(mkts)} settled markets, {n_pin} pinned")
     print(f"R-family (release) settled markets: {len(r_targets)}; "
-          f"G-family pinned markets: {len(g_pins)} across {len(fam_events)} series")
+          f"G-family pinned markets: {len(g_pins)} across {len(G_TARGET_SERIES)} series")
 
     acc = {"post": [], "pre": [], "red_flags": []}
     week_notional: dict[int, float] = {}
@@ -317,6 +331,8 @@ def main(argv: list[str] | None = None) -> int:
         close = _ts(m.get("close_time"))
         if not pin or not close or close <= pin:
             continue  # market closed before the release -> no post-pin window
+        if close - pin > MAX_RELEASE_CLOSE_LAG_H * 3600:
+            continue  # closes long after the release -> not a single-print market
         rows = trades(m["ticker"], args.trade_pages)
         if rows:
             scanned += 1
