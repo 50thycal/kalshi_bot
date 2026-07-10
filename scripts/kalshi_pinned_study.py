@@ -109,6 +109,29 @@ def trades(ticker: str, max_pages: int = 5) -> list[dict]:
     return out
 
 
+def series_settled_markets(series: str, max_pages: int = 10) -> list[dict]:
+    """Full settled-market history for one series via /markets (deeper than the event scan)."""
+    out, cursor = [], ""
+    for _ in range(max_pages):
+        page = xl._get(f"{KALSHI}/markets?series_ticker={series}&status=settled"
+                       f"&limit=200&cursor={cursor}")
+        rows = (page or {}).get("markets") or []
+        out.extend(rows)
+        cursor = (page or {}).get("cursor") or ""
+        if not cursor or not rows:
+            break
+        time.sleep(0.05)
+    return out
+
+
+def markets_to_events(markets: list[dict]) -> list[dict]:
+    """Group a flat settled-market list into pseudo-events for glacial_pins."""
+    by_ev: dict[str, list[dict]] = defaultdict(list)
+    for m in markets:
+        by_ev[m.get("event_ticker") or m.get("ticker") or "?"].append(m)
+    return [{"markets": ms} for ms in by_ev.values()]
+
+
 def classify(ev: dict) -> tuple[str, tuple[int, int] | None, str]:
     """-> (family 'R'|'G'|'', release ET time, family key)."""
     text = " ".join(filter(None, [ev.get("title"), ev.get("sub_title")]))
@@ -269,11 +292,13 @@ def main(argv: list[str] | None = None) -> int:
 
     g_pins: dict[str, tuple[float, str]] = {}
     g_lookup: dict[str, tuple[dict, str]] = {}
-    for series, evs in fam_events.items():
+    for series in sorted(fam_events):
+        deep = series_settled_markets(series)  # the event scan only reaches weeks back
+        evs = markets_to_events(deep)
         vals = sum(1 for e in evs if event_day_value(e.get("markets") or []) is not None)
         pins = glacial_pins(evs)
-        print(f"  G-series {series}: {len(evs)} settled events, {vals} with a winning-bucket "
-              f"value, {len(pins)} pinned markets")
+        print(f"  G-series {series}: {len(evs)} settled events (deep), {vals} with a "
+              f"winning-bucket value, {len(pins)} pinned markets")
         g_pins.update(pins)
         for ev in evs:
             for m in ev.get("markets") or []:
@@ -311,8 +336,9 @@ def main(argv: list[str] | None = None) -> int:
     post_ev, post_n = wavg(acc["post"])
     pre_ev, pre_n = wavg(acc["pre"])
     print("\n== pooled ==")
+    post_trades = len(acc["post"])
     print(f"post-pin: EV {post_ev:+.2f} c/ct on n={post_n} contracts "
-          f"({len(acc['post'])} trades)")
+          f"({post_trades} trades)")
     print(f"pre-pin favorite-buy control (>=85c): EV {pre_ev:+.2f} c/ct on n={pre_n}")
 
     print("\n== per family (post-pin) ==")
@@ -324,7 +350,8 @@ def main(argv: list[str] | None = None) -> int:
         ev_f, n_f = wavg(rows)
         ok = ev_f >= 3.0 and n_f >= 30
         fam_pass += ok
-        print(f"  {f:12s} EV {ev_f:+.2f} c/ct  n={n_f}  {'CLEARS P1 bar' if ok else ''}")
+        print(f"  {f:12s} EV {ev_f:+.2f} c/ct  n={n_f} ({len(rows)} trades)"
+              f"  {'CLEARS P1 bar' if ok else ''}")
 
     weeks = max(len(week_notional), 1)
     wk_avg = sum(week_notional.values()) / weeks
@@ -341,11 +368,13 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"   {tk} fam={f} pinned={side} result={res} cost={cost:.0f}c")
 
     print("\n== pre-registered verdicts (thresholds fixed 2026-07-10; do not re-scope) ==")
-    p1 = "PASS" if (post_ev >= 3.0 and post_n >= 100) else ("KILL" if post_ev < 1.5 else "GREY")
+    p1 = ("PASS" if (post_ev >= 3.0 and post_trades >= 100)
+          else ("KILL" if post_ev < 1.5 else "GREY"))
     p2 = "PASS" if post_ev - pre_ev >= 2.0 else "FAIL"
     p3 = "PASS" if fam_pass >= 2 else "FAIL"
     p4 = "PASS" if wk_avg >= 200 else "FAIL"
-    print(f"P1 post-pin EV >= +3c (n>=100, kill<1.5c): {p1}  ({post_ev:+.2f}c, n={post_n})")
+    print(f"P1 post-pin EV >= +3c (>=100 trades, kill<1.5c): {p1}  "
+          f"({post_ev:+.2f}c, {post_trades} trades, {post_n} contracts)")
     print(f"P2 post-pin beats pre-pin favorite control by >=2c: {p2} "
           f"({post_ev - pre_ev:+.2f}c)")
     print(f"P3 >=2 families clear the bar: {p3}  ({fam_pass} families)")
