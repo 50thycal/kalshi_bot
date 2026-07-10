@@ -8,81 +8,84 @@ suggestion list carries over run-to-run. All times CENTRAL (CDT/CST).*
 
 ---
 
-## Snapshot — 2026-07-09 07:18 PM CDT (run #30)
+## Snapshot — 2026-07-10 03:14 AM CDT (run #31)
 
-**✅ PORTFOLIO CLEANUP IS LIVE (PR #22 merged + deployed + verified).** All four
-decided-against books are shelved/killed and have wound DOWN TO 0 OPEN. collect-only is
-confirmed working in the loop's own data: theta made its last entry at 3:11 PM CDT (pre-deploy)
-and has opened nothing since, while `crypto_ladder` + `crypto_spot` keep advancing (fresh 7:15
-PM) — the collector survived the shelve. Only mmsell + weather_con remain active.
+**✅ THREE NEW BOOKS DEPLOYED (PR #26) — all three run #30 suggestions are now BUILT.** mmsell3
+(5-10c), theta4 (fat-tail revival), weather_concity (AUS/CHI/NYC) are live with pre-registered
+gates. mmsell3 is accruing; theta4 + concity are correctly at 0 (both slow/sparse by design).
 
 **Trading books (settled n / P&L / per-trade / open):**
 | book | n | P&L | ¢/trade | open | note |
 |---|---|---|---|---|---|
-| mmsell (control) | 1,582 | +$2.99 | +0.2 | 32 | ACTIVE — breakeven data book |
-| mmsell1 (5-20¢) | 835 | +$7.39 | +0.9 | 23 | ACTIVE — best mmsell band |
-| mmsell2 (10-20¢) | 546 | +$3.96 | +0.7 | 13 | ACTIVE |
-| weather con | 294 | −$1.24 | −0.4 | 13 | ACTIVE — diagnosed (city bleed), unchanged P&L |
-| theta (control) | 560 | +$0.97 | +0.2 | **0** | SHELVED — wound down; last entry 3:11 PM |
-| theta1 | 201 | +$9.69 | +4.8 | **0** | SHELVED — revival candidate (fresh pre-reg only) |
-| theta2 / theta3 | 98 / 134 | −$11.55 / −$11.62 | — | 0/0 | SHELVED |
-| tfav | 215 | −$7.54 | −3.5 | **0** | KILLED — wound down; last entry 1:11 PM |
-| wcprop / xgame | 0 / 0 | — | — | 0/0 | KILLED/SHELVED — never traded |
+| **mmsell3** (NEW, 5-10c) | 9 | −$0.39 | — | 6 | **live & accruing** (n=9 = noise); the fast experiment |
+| **theta4** (NEW, fat-tail) | 0 | — | — | 0 | 0 trades — expected (2x model + 10c bar = sparse) |
+| **weather_concity** (NEW) | 0 | — | — | 0 | 0 trades — con itself idle ~13h (see below) |
+| mmsell (control) | 1,640 | +$3.80 | +0.2 | 26 | breakeven data book |
+| mmsell1 / mmsell2 | 876 / 576 | +$7.78 / +$4.58 | +0.9 / +0.8 | 22 / 13 | breakeven+ |
+| weather con (all) | 294 | −$1.24 | −0.4 | 13 | **idle ~13h** (last entry 2:13 PM CDT); overnight quiet |
+| theta (ctrl) | 560 | +$0.97 | +0.2 | 0 | SHELVED, quiet |
+| theta1 / theta2 / theta3 | 201 / 98 / 134 | +$9.69 / −$11.55 / −$11.62 | — | 0 | SHELVED, quiet |
+| tfav | 215 | −$7.54 | −3.5 | 0 | KILLED, quiet |
+| wcprop / xgame | 0 | — | — | 0 | KILLED / SHELVED |
 | weather (rest) | 4,709 | −$238.63 | — | 0 | pruned, done |
-| buy_favorite / momentum / reversion | 0 | 0 | — | 0 | dormant legacy |
 
-**HEADLINE — the cleanup landed cleanly; now the honest part: no live positive earner.** The
-shelve/kills stopped the paper bleed and the shelved books are all at 0 open with fresh
-collectors behind them. But the surviving portfolio has **no book currently netting positive**:
-mmsell is ~breakeven (+0.2 to +0.9¢/trade across bands) and weather_con is −$1.24 cumulative.
-Against the +$100/month north star, the next work is offense, not pruning: the clearest path
-back to a positive earner is **restricting weather_con to the cities where it actually has edge**
-(MIA/PHIL were positive; DEN/NY were 0% win — see run #29 diagnosis). That is now suggestion #1.
+**HEADLINE — the experiments are live; only mmsell3 gives near-term data.** mmsell3 is trading
+(9 settled, 6 open) — P&L is pure noise at n=9, ignore it; what matters is it's accruing toward
+its n≥150 gate and should get there in days. **theta4 (0) and weather_concity (0) are correctly
+dormant** — theta4 by its deliberate high bar, concity because the con book it rides has not
+entered a single trade in ~13h (overnight quiet, a known con pattern — weather data collectors
+are all fresh, so the worker is alive). The shelved books stay quiet and collectors keep
+advancing — the PR #26 deploy is confirmed healthy in the loop's own data.
 
-**Shelve verification (loop-confirmed).** theta 0 open (last entry 20:11 UTC / 3:11 PM), tfav 0
-open (18:11 UTC / 1:11 PM), theta1/2/3 all 0 open; wcprop + xgame have no book rows at all. The
-18 theta / 5 tfav settled since run #29 are just the pre-deploy open positions closing out, not
-new trades. `theta1` finished at **+$9.69 (+4.8¢/trade, n=201)** — the one revision that ended
-net-positive, and the only theta the post-mortem flags as a possible future revival (new
-pre-registration required, NOT a quiet re-enable).
+**PACING REALITY CHECK (honest).** concity can only trade when con fires AND it's an AUS/CHI/NYC
+market. con is very low-frequency (idle 13h here; historically ~a handful/day across all 7
+cities), and concity sees only 3 — so at ~1-2 concity trades/day, the n≥120 gate is likely
+**1-2 MONTHS** out, not weeks. theta4 similarly slow. This isn't a bug; it's the nature of these
+edges — but it means the portfolio's near-term data all comes from mmsell3, and the con-family
+edge (even if real) has tiny capacity at this trade frequency.
 
-**Data (last-24h / latest CDT):** crypto_spot 2,872 (07:15 PM ✓, 2 products), **crypto_ladder
-52,450 (07:15 PM ✓, 100% model-priced — collect-only alive)**, weather forecasts/obs/ensembles/
-buckets all fresh (07:09–07:19 PM ✓). xgame_matches 19 (0 new; tournament final stage),
-xgame_tapes 41,942 (07:18 PM ✓ — collector left on for the final). All green.
+**Data (last-24h / latest CDT):** crypto_spot 2,878 (03:13 AM ✓, 2 products), crypto_ladder
+59,760 (03:14 AM ✓, 100% model-priced — collect-only feeding it), weather forecasts/obs/
+ensembles/buckets all fresh (03:03–03:14 AM ✓). xgame_matches 19 (0 new — WC final imminent),
+xgame_tapes 43,741 (03:12 AM ✓). All green.
 
-**Research probes (on-demand):** WCPROP + XGAME lead-lag families are now CLOSED (both
-falsified and disabled). No standing probes to run. TFAV concluded (killed).
+**Research probes (on-demand):** WCPROP + XGAME families CLOSED (disabled). No standing probes.
 
-**Headline:** PR #22 cleanup is live & verified — theta shelved to collect-only (ladder/spot
-collectors confirmed still advancing), tfav/wcprop/xgame off, all at 0 open. Surviving portfolio
-= mmsell (breakeven) + weather_con (−$1.24); no positive earner. The path back is the
-weather_con city-restriction. Collectors all fresh.
+**Headline:** PR #26's three new books are live and healthy — mmsell3 accruing (n=9, noise),
+theta4 + concity correctly at 0 (sparse / con idle overnight). Shelved books quiet, collectors
+fresh. Near-term data is mmsell3-only; concity's gate is realistically 1-2 months out.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[weather_con · TOP PRIORITY — restrict to its edge cities] The clearest path back to a
-   positive earner.** Run #29's by-city diagnosis: MIA +$1.06 / PHIL +$1.50 (positive) vs DEN
-   −$3.13 (0% win) / NY −$0.94 (0% win) / LAX −$3.23 / AUS −$3.17 (bleeders). Recommended fable
-   pass: cross-check per-city forecast skill in `weather_forecast_outcomes`, then add a con city
-   allowlist (keep MIA/PHIL/CHI-tier, drop or shrink DEN/LAX/AUS/NY). This is the one live move
-   that could turn the surviving portfolio net-positive. Do NOT scale con until it's done.
+*(All three run #30 suggestions are now BUILT + deployed via PR #26. The list is now "watch the
+experiments toward their pre-registered gates" — no fable action needed unless a gate resolves
+or a book misbehaves.)*
 
-2. **[mmsell · keep-or-prune, low priority] All three bands ~breakeven** (control +0.2¢,
-   mmsell1 +0.9¢, mmsell2 +0.7¢; pooled ~+0.4¢/trade, n≈2,960). No edge net of realism, not a
-   bleeder. Leave running as a zero-attention data book, or prune for simplicity — either is
-   fine; not urgent, not a promote candidate.
+1. **[mmsell3 · WATCH toward gate — the fast one] n=9 (noise), 6 open, accruing.** Pre-reg gate:
+   at n≥150, keep only if per-trade > +1.5c AND beats mmsell1/mmsell2 — else the "5-10c is the
+   pure sweet spot" read was small-n and mmsell3 is dropped. Should reach n≥150 in days. No
+   action until the gate; ignore the P&L until n is real.
 
-3. **[theta1 · revival candidate — NOT now] theta1 ended +$9.69 (+4.8¢/trade, n=201).** The only
-   theta book that finished net-positive. Per the post-mortem it is the sole candidate for a
-   future revival, but ONLY under a fresh pre-registered tail-calibration test (n≥350,
-   sold-price vs realized-tail-rate) — the family stays shelved until then. Collectors keep
-   feeding the dataset that would power it.
+2. **[theta4 · WATCH — sparse by design] 0 trades yet (expected).** Pre-reg gate: at n≥80,
+   keep only if per-trade > 0 AND realized-tail-hit ≤ 1.25x modeled. IF it is STILL 0 after
+   ~1-2 days of trading, that itself is a finding: the mult=2.0 + 10c bar is effectively
+   unreachable → fable should loosen the edge (e.g. edge=6) or conclude the tail-scale
+   hypothesis is dead and stop reviving theta. Watch for the first trade.
 
-*(RESOLVED this run — all enacted by PR #22 (merged/deployed/verified): theta shelved to
-collect-only (#1 prior); tfav killed (#3 prior); wcprop killed (#5 prior); xgame study run →
-P2 KILL/P3 FAIL → book shelved (#6 prior). Remaining: weather_con city-restriction (now #1,
-the only offense move), mmsell keep/prune (#2), theta1 revival-someday (#3). Portfolio has no
-positive earner — the cleanup was defense; weather_con is the offense.)*
+3. **[weather_concity · WATCH — very slow; capacity question] 0 trades (con idle ~13h).** Pre-reg
+   gate: at n≥120, keep only if per-trade > +3c AND clearly beats full con. Realistically 1-2
+   MONTHS to that n given con's low frequency. Meta-note for a future fable pass: if the con
+   edge only yields ~1-2 trades/day on 3 cities, its dollar capacity is tiny even if the
+   per-trade edge is real — worth deciding whether that's worth pursuing vs. finding a
+   higher-frequency edge. Not urgent; let it accrue.
+
+4. **[mmsell existing · unchanged] control/mmsell1/mmsell2 ~breakeven** (pooled ~+0.4c, n≈3,090);
+   data books, not promote candidates. mmsell3 is the live improvement test.
+
+*(Changed this run: run #30's three suggestions (con city-restriction, mmsell band, theta1
+revival) are all BUILT via PR #26 and become "watch toward gate" items #1-3. Added the pacing
+reality check — only mmsell3 gives near-term data; concity's gate is ~months out. theta1-revival
+folded into theta4 (#2). Deploy confirmed healthy: new books writing/dormant-as-designed,
+shelved quiet, collectors fresh.)*
