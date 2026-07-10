@@ -74,6 +74,8 @@ ALLOWED_SCRIPTS = (
     "xgame_match_debug",
     "kalshi_mlbwx",
     "kalshi_perps_survey",
+    "kalshi_pinned_study",
+    "kalshi_decay_study",
 )
 
 
