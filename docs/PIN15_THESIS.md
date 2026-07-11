@@ -2,8 +2,24 @@
 
 *Thesis written 2026-07-11, before any validation ran; the falsifiable predictions below are
 pre-registered so the test can't be quietly re-scoped after the fact. Promoted from the 2026-07-11
-idea-model run (`docs/IDEA_MODEL_15MIN_CRYPTO_20260711.md`). Status: **Phase-A probe run 2026-07-11 —
-P1 PASS / P2 pass-in-sample-but-fragile / P3 (SPIKEFADE) FAIL. See RESULTS.***
+idea-model run (`docs/IDEA_MODEL_15MIN_CRYPTO_20260711.md`). Status: **Phase-A + P4 run 2026-07-11 —
+P1 PASS / P2 PASS (in-sample) / P4 (vol-regime) PASS / P3 (SPIKEFADE) FAIL → advance to `pin15`
+paper book. See RESULTS.***
+
+## P4 UPDATE (2026-07-11 vol-regime re-run — `pin15-volregime`, n=2,800)
+
+The Phase-A fragility flag (edge measured in one calm regime) was the top open kill-risk. The
+dedicated P4 test — windows split into quartiles by per-window realized vol (stdev of 1-min
+log-returns, bps/min) — **PASSES**: the drift-favorite ask-EV is **flat-to-stronger in higher vol**
+(T-180s: Q1 +3.86¢ / Q4-wildest +3.40¢; T-120s: Q1 +1.39¢ → Q4 +4.64¢), and the pin still holds
+**96–100%** in the wildest quartile (vol up to ~36.9 bp/min ≈ ~270% annualized — genuine high-vol
+windows, not just calm ones). The determinism is NOT a calm-regime artifact; the market underprices
+the near-certain favorite in high vol too. Residual risk is now a sustained macro regime absent from
+the ~29-day sample (paper P&L is the tripwire) plus **execution only** — depth at the observed ask
+and hitting the T≈120–180s entry with the loop. Both are what the paper book tests. **Decision:
+advance to the `pin15` paper book.**
+
+
 
 ## RESULTS (2026-07-11 Phase-A — `scripts/kalshi_pin15_study.py`, two runs)
 
