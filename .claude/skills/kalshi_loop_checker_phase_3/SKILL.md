@@ -35,7 +35,10 @@ database stores UTC; convert before reporting (`TZ=America/Chicago date`, or in 
 `<n>` = previous run number from `docs/STRATEGY_LOOP_STATUS.md` + 1 (times there are CDT too). After the banner:
 a books table (settled n / P&L / open / one-word trend), a data-health line or table
 (fresh / STALE / zero per collector), a 1-3 sentence headline read, then the current
-suggestion list. Keep it tight — the durable detail goes in the status file, not chat.
+suggestion list — INCLUDING the idea-model queue item (step 3b) so gate-blocked ideas stay
+visible every run, not just when something changes. If a gate cleared this run, lead the
+headline with it (see step 3b) — don't bury it at the bottom of the suggestion list. Keep it
+tight — the durable detail goes in the status file, not chat.
 
 ## Procedure
 
@@ -76,12 +79,40 @@ result commit before pushing yours.
 - Honor pre-registered gates (e.g. theta revision rule in `docs/THETA_THESIS.md`:
   evaluate at ≥~60 settled per book, keep only positive AND calibrated).
 
+### 3b. Check every ACTIVE EXPERIMENT — books, decision points, AND gate-blocked ideas
+
+"Active experiment" is broader than the books table: it is anything with a pre-registered
+gate or decision point that hasn't resolved yet, wherever it's tracked. Sweep all of these
+every run, not just the paper-trades rows:
+
+- **Trading-book gates** (from step 1's query + `docs/THETA_THESIS.md` / `IDEA_MODEL_*.md`
+  pre-registrations) — mmsell3 n≥150, theta4's decision point, weather_concity n≥120, and any
+  future A/B variant's own gate. Report `n / gate / distance-to-gate` for each, not just P&L.
+- **The idea-model queue** — the carried-over suggestion item that lists ideas held behind one
+  of the gates above (e.g. "MMX behind mmsell3", "NEST behind theta4" — see the current queue
+  item in `docs/STRATEGY_LOOP_STATUS.md`'s suggestion list, and the source docs
+  `docs/IDEA_MODEL_*.md` for the full candidate/thesis detail). **Cross-check: has the gate
+  a held idea depends on now cleared?** If mmsell3 just crossed n≥150 (or any other named
+  trigger fired), that is NOT a quiet carryover — escalate it in the chat headline as
+  **"gate cleared → ready to build"** and name the exact next action (e.g. "re-invoke
+  `kalshi-strategy` on MMX"). This is the one thing the loop must never silently miss: an
+  idea sitting fully-specified and ready, with nobody told its gate opened.
+- **Any other named decision point** referenced in prior suggestions (e.g. "loosen theta4's
+  edge or conclude") — carry it until the user's fable session acts, but re-flag it as DUE
+  again each run it remains unresolved so it doesn't fade into background noise.
+
+This step exists because gate-blocked ideas are easy to forget between runs — they don't show
+up in the books/data query at all until someone remembers to look. Treat the suggestion list
+as the durable memory for them, not chat history.
+
 ### 4. Update the carried-over suggestions
 
 Keep still-valid ones (note how the picture shifted as n grew), drop resolved or
-invalidated ones (say why in the file's footer line), add new ones sparingly.
-Suggestions are recommendations for the user's fable sessions — concrete, evidenced,
-and non-urgent unless something is actually broken.
+invalidated ones (say why in the file's footer line), add new ones sparingly. This includes
+the idea-model queue item from step 3b — update its per-idea status (still blocked / gate
+cleared / built) every run, don't let it go stale while trading-book items get all the
+attention. Suggestions are recommendations for the user's fable sessions — concrete,
+evidenced, and non-urgent unless something is actually broken or a gate just cleared.
 
 ### 5. Persist
 
@@ -95,19 +126,29 @@ git reset --hard origin/strategy-loop-status` first), commit, push to
 Post the banner-first chat report (format above). Then reset the ops channel to idle:
 write `{"type": "noop"}` to `ops/request.json`, commit, push.
 
-## Research probes vs trading books (what shows up where)
+## Research probes vs trading books vs gate-blocked ideas (what shows up where)
 
-The table has two row kinds: **trading books** (things that write `paper_trades` — theta*,
-mmsell*, weather con/other) and **data collectors** (freshness of tables the worker writes).
-Some strategies are NEITHER — they are **on-demand research probes** that read existing data
-or public APIs only when run via the ops channel, so they never appear as book/data rows:
+Three kinds of thing exist outside the plain books table, and the loop must account for all
+three every run — not just re-list whichever ones happen to be currently active:
 
-- **TFAV** (`kalshi_favbuy_study`) — reads existing `crypto_ladder_snapshots`; its data already
-  shows as that collector row. Verdict lives in `docs/RESEARCH_JOURNAL.md`.
-- **WCPROP** (`xmarket_wc`) — reads public candlesticks on demand; no table, no book.
-- **XGAME** (`xgame_tape_study`) — the collector IS tracked (the `data:xgame_*` rows above);
-  the probe that grades it is on-demand.
+- **Trading books** (things that write `paper_trades` — theta*, mmsell*, weather con/other) —
+  tracked by step 1's query.
+- **Data collectors** (freshness of tables the worker writes) — also step 1's query.
+- **On-demand research probes** — read-only `scripts/` studies (allowlisted in
+  `ops_runner.py`) run via the ops channel, not the loop. They read existing collected data or
+  public APIs and never appear as book/data rows on their own. Find the CURRENT set by reading
+  the most recent verdicts in `docs/RESEARCH_JOURNAL.md` (do not hardcode a probe list here —
+  it goes stale the moment a family is closed; as of 2026-07-10 the standing families TFAV,
+  WCPROP, XGAME are all CLOSED/KILLED with zero standing probes, and PINNED/DECAY were probed
+  and killed the same day). Report a one-line **"Research probes (on-demand):"** note reflecting
+  whatever is ACTUALLY open right now, or "none" if nothing is standing.
+- **Gate-blocked ideas** (step 3b) — pre-registered theses/candidates from `IDEA_MODEL_*.md`
+  that are fully specified but waiting on a trading-book gate (e.g. MMX waiting on mmsell3,
+  NEST waiting on theta4). These are NOT probes (nothing runs for them yet) and NOT books
+  (nothing trades yet) — they live only in the carried-over suggestion list. This is the
+  category most likely to be silently forgotten, because it produces zero rows in any query;
+  the suggestion list is its only home, so step 3b + step 4 must actively maintain it every run.
 
-In the report, keep a one-line **"Research probes (on-demand):"** note listing these three with
-their latest journal verdict state, so they are visibly accounted for even though they are not
-continuous books. Do NOT run the probes from the loop (they are the operator's fable call).
+Do NOT run probes or build gate-blocked ideas from the loop — reporting and flagging only, the
+build/probe decision is the operator's fable call (or a `kalshi-strategy` invocation once a
+gate clears).
