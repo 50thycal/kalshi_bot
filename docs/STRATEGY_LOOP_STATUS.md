@@ -82,7 +82,30 @@ concity 7 open awaiting settlement; con idle. Shelved books quiet; collectors fr
 5. **[mmsell existing · unchanged] control/mmsell1/mmsell2 ~breakeven-positive** (+0.6 to +1.0c,
    n≈3,380); data books. mmsell3 is the live improvement candidate.
 
+6. **[idea-model queue · WAITING ON GATES ABOVE — nothing to build yet] Two idea-model runs on
+   2026-07-10 (`docs/IDEA_MODEL_20260710.md`, `docs/IDEA_MODEL_20260710_run2.md`) — 42 candidates
+   total, 2 pre-registered theses probed and KILLED (PINNED, DECAY — both do-not-promote at the
+   probe), 9 held, 19 killed. Nothing is currently promotable to `kalshi-strategy`; every hold is
+   blocked on a gate already tracked in this file, not a missing probe:**
+   - **MMX (highest-value hold)** — extend mmsell's 5-10c FLB maker-sell into uncorrelated
+     non-sports categories (politics fields / awards / box-office / catastrophe / mention-word
+     longshots). Blocked on **item #2 (mmsell3 reaching n≥150)** — do not stack a second maker
+     book mid-A/B. **Trigger: the moment mmsell3 clears its gate, re-run `kalshi-strategy` on
+     MMX** (thesis material + candidate scoring already in `IDEA_MODEL_20260710_run2.md`, no new
+     idea-model pass needed). Optional cheap prep in the meantime: `kalshi_flb.py` calibration
+     cut on the target categories (not yet run).
+   - **NEST** (crypto RV, non-theta) — blocked on **item #1 (theta4's decision)**. Only revisit
+     if theta4 resolves to a real, calibrated edge (unlikely per the DECISION note above).
+   - **RTPIN / BOXPIN** (entertainment obs-pinning) — blocked on building a new scraper/collector
+     (no gate, just unbuilt infra); not urgent, revisit only if a cheap public-data angle appears.
+   - **RATELAG** (KXFED coherence) — blocked on an actual live Fed-shock event; nothing to do
+     until one occurs.
+   Do NOT re-run the idea-model skill again until one of the two gates above (#1 or #2) clears —
+   the board was mined hard across 4 total idea-model runs; re-running against unchanged state
+   will just re-score the same graveyard.
+
 *(Changed this run: theta4 escalated to DECISION DUE (still 0 at ~23.5h → loosen edge 10→6c or
 conclude) — #1. mmsell3 upgraded to PROMISING (+2.9c/trade at n=64, beats its gate & the other
 bands) — #2, watch to n≥150. concity still 0 settled (7 open). Shelved books quiet; deploy
-healthy.)*
+healthy. NEW #6: idea-model queue logged — MMX ready to build the moment mmsell3 (#2) gates;
+NEST behind theta4 (#1); do not re-run idea-model until a gate clears.)*
