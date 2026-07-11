@@ -2,7 +2,43 @@
 
 *Thesis written 2026-07-11, before any validation ran; the falsifiable predictions below are
 pre-registered so the test can't be quietly re-scoped after the fact. Promoted from the 2026-07-11
-idea-model run (`docs/IDEA_MODEL_15MIN_CRYPTO_20260711.md`). Status: **pending probe.***
+idea-model run (`docs/IDEA_MODEL_15MIN_CRYPTO_20260711.md`). Status: **Phase-A probe run 2026-07-11 —
+P1 PASS / P2 pass-in-sample-but-fragile / P3 (SPIKEFADE) FAIL. See RESULTS.***
+
+## RESULTS (2026-07-11 Phase-A — `scripts/kalshi_pin15_study.py`, two runs)
+
+Sample: 1,600–2,400 settled KXBTC15M/KXETH15M windows, ~8–17 days, **one calm vol regime**. Second
+run (`pin15-phaseA-ask`) charges the **real taker ask** at a contemporaneous (≤1-min) quote.
+
+- **STRUCTURE — confirmed.** KXBTC15M = `greater_or_equal` threshold, `floor` strike = "Target Price"
+  ≈ prior window's settle ≈ spot at open. It's a "spot ends ≥ where it started" direction bet on the
+  60s-average settle. (Target came from the explicit strike, not my open-price fallback — 100% of rows.)
+- **P1 — PASS, decisively.** At T-120s, displacement ≥+5bp → settles Up **98–100%** (≤−5bp → 0–2%);
+  only the ±2bp cell is a coin flip. **~76% of windows already decided (≥5bp) by T-60s AND T-180s.**
+  The outcome de-randomizes minutes out — actionable latency, not the un-catchable final seconds.
+- **P2 — PASS IN-SAMPLE but FRAGILE; edge lives 2–3 min out, not at the close.** Buying the drift side
+  at the **real ask**, held to settlement, net of fee: **T-180s +3.9¢/ct** (ask 93.3¢, win 98.3%),
+  **T-120s +3.6¢** (ask 95.1¢, win 99.8%), decaying to **T-60s +1.1¢**. Split-half OOS consistent;
+  BTC+ETH both positive; spreads tight (ask ~0.7–1¢ over mid). **Fragility:** buying a ~93–95¢
+  favorite with only **~3–4pp win-rate cushion** over breakeven, in ONE calm regime — a higher-vol
+  regime flips the 5bp-displaced windows more often and could compress/invert it. **P4 (vol-regime
+  robustness) is UNTESTED.**
+- **P3 — FAIL as written.** SPIKEFADE (fade a last-10s spike; edge rises as T→0) is wrong: divergent
+  windows are **rare (2.8%)** and **weak (~75%)**, and EV **falls** toward the close. The real edge is
+  plainer/obs-family: the **drift-favorite is mildly underpriced ~2–3 min out**. Reshapes the book
+  (enter at T≈120–180s), doesn't kill it. UPBIAS: Up-rate 50.5–50.7% (no directional bias).
+
+**Decision (per the pre-registered P1∧P2 rule):** both pass in-sample, so the family is NOT shelved —
+but the honest remaining risk is entirely **execution + regime**: depth at the ask, hitting the
+T≈120–180s window with the loop, and whether the edge holds outside a calm regime (P4). **Next step is
+a fork:** (A) a cheap **vol-regime robustness re-run** (split the existing/longer sample by realized
+2-min vol; grades P4 on history before any build) and/or (B) a **`pin15` paper book** forward-testing
+real fills/depth at a tightened T≈120–180s poll, which naturally samples the next regime. Correlation
+caution: this is a favorite-BUY, the family `tfav` died in (−3.6¢ on hourly ladders); the material
+difference is the live spot-pin selection, but the skepticism is live.
+
+---
+
 
 ## One-liner
 
