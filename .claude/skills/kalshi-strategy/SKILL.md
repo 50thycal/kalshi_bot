@@ -116,7 +116,15 @@ Run the real strategy end-to-end on live markets with simulated capital. Log eve
 
 Watch specifically for: divergence between paper P&L and backtest expectation, fills materially worse than modeled, signal data arriving later than assumed, and any market-microstructure surprise (thin books, wide spreads, settlement timing).
 
-**Gate:** Live paper behavior matches backtest expectations within reason. If it diverges, **diagnose the cause before proceeding** — divergence is information, usually about fills, latency, or a data assumption that was wrong offline.
+**REGISTER THE BOOK — mandatory, do this the moment it first writes `paper_trades` (not later).** The strategy status loop enumerates books purely from the `paper_trades.strategy` rows in the database; it has no other way to know a book exists or why. A book that starts trading without its rationale + pre-registered gate written down where the loop reads them is an **untracked live book** — the loop discovers an unexplained `book:<tag>` and has to reverse-engineer it (this has happened, and is the failure this step prevents). So, in the SAME change that ships the book, add a row to **`docs/BOOK_REGISTRY.md`** (the canonical index the loop reconciles against every run):
+- **`tag`** — exactly the `strategy` string the book writes to `paper_trades` (or the shared prefix for a variant family), so the loop can join on it.
+- **`status`** — `paper (built <date>)`.
+- **`thesis / rationale`** — the doc holding the full thesis (write a `docs/<NAME>_THESIS.md` in the `THETA_THESIS.md` style if one doesn't exist yet; the loop's experiment sweep reads these).
+- **`one-line edge`** and the **pre-registered gate / kill criteria** — the concrete n-threshold and keep-if/kill-if condition, decided in advance (Phase 6 promotion criteria in miniature). This is what lets the loop honor the gate instead of guessing.
+
+A book is not "built" until this row exists. If you change or kill a book, update its row in the same change.
+
+**Gate:** Live paper behavior matches backtest expectations within reason, AND the book has a `docs/BOOK_REGISTRY.md` row (tag, thesis pointer, pre-registered gate). If paper diverges from backtest, **diagnose the cause before proceeding** — divergence is information, usually about fills, latency, or a data assumption that was wrong offline.
 
 ---
 
@@ -125,6 +133,7 @@ Watch specifically for: divergence between paper P&L and backtest expectation, f
 Use paper-trading evidence to adjust the strategy — recalibrate the model, retune thresholds, fix fill assumptions — then re-paper-trade. Iterate until stable.
 
 Only then consider live, and treat the transition conservatively:
+- **Update the book's `docs/BOOK_REGISTRY.md` row** — flip `status` to `live (<date>)`. The registry stays the single source of truth for what's trading and under which gate; the loop reads `status` to know a real-money book is running.
 - **Promotion criteria, decided in advance** — e.g. minimum paper-trading duration covering multiple market regimes, calibration holding live, paper edge surviving realistic costs, no unresolved divergence from backtest.
 - **Start tiny.** First live size should be small enough that being wrong about live-vs-paper differences is cheap tuition. Scale only as live results confirm paper results.
 - **Keep the kill switch and monitoring** from existing infra wired in from the first live order (use `bot-investigation` / `deploy-check` for health checks and deploy verification).

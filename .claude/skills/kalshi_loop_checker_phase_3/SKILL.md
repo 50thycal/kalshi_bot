@@ -79,6 +79,20 @@ result commit before pushing yours.
 - Honor pre-registered gates (e.g. theta revision rule in `docs/THETA_THESIS.md`:
   evaluate at ≥~60 settled per book, keep only positive AND calibrated).
 
+### 3a. Reconcile every book against the registry — flag UNTRACKED books
+
+Read `docs/BOOK_REGISTRY.md` (`git show FETCH_HEAD:docs/BOOK_REGISTRY.md` off the default
+branch, or the local checkout). It is the canonical index of every book that should be trading,
+with each one's thesis pointer + pre-registered gate. For **every `book:<tag>` row** step 1's
+query returned, confirm there is a matching registry row (join on the `tag` column). **Any book
+with settled or open trades but NO registry row is UNTRACKED** — a book started trading without
+its rationale/gate written down. Do not silently reverse-engineer it: **lead the chat headline
+with it** ("UNTRACKED book `<tag>` — N open, no registry row; needs a thesis + gate registered")
+and add a suggestion that a fable/`kalshi-strategy` session backfill its `BOOK_REGISTRY.md` row.
+This reconciliation is the loop's guard against exactly the case that created this step: a book
+appearing from a parallel build session with no visible rationale. (Registry rows also tell you
+each book's gate for step 3b, so read it before sweeping the gates.)
+
 ### 3b. Check every ACTIVE EXPERIMENT — books, decision points, AND gate-blocked ideas
 
 "Active experiment" is broader than the books table: it is anything with a pre-registered
