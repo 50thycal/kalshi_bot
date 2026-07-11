@@ -8,79 +8,66 @@ suggestion list carries over run-to-run. All times CENTRAL (CDT/CST).*
 
 ---
 
-## Snapshot — 2026-07-10 08:11 PM CDT (run #33)
+## Snapshot — 2026-07-11 03:13 AM CDT (run #34)
 
 **Trading books (settled n / P&L / per-trade / open):**
 | book | n | P&L | ¢/trade | open | note |
 |---|---|---|---|---|---|
-| **mmsell3** (5-10c) | 64 | +$1.87 | **+2.9** | 12 | **early-strong** — beats gate (+1.5c) & mmsell1/2; n→150 |
-| **theta4** (fat-tail) | 0 | — | — | 0 | **STILL 0 at ~23.5h → DECISION triggered (below)** |
-| **weather_concity** | 0 | — | — | 7 | 7 open (AUS/CHI/NYC), none settled yet (weather ~daily) |
-| mmsell (control) | 1,769 | +$11.39 | +0.6 | 30 | good window (+$8.6); breakeven+ |
-| mmsell1 / mmsell2 | 975 / 640 | +$9.58 / +$6.19 | +1.0 / +1.0 | 21 / 11 | breakeven+ |
-| weather con (all) | 307 | −$5.13 | −1.7 | 15 | static since run #32 (con idle) |
+| **mmsell3** (5-10c) | 76 | +$2.71 | **+3.6** | 9 | **strengthening** (+2.9→+3.6c); ~half to n≥150 gate |
+| **theta4** (fat-tail) | 0 | — | — | 0 | still 0 at ~30h — decision stands (loosen or conclude) |
+| **weather_concity** | 0 | — | — | 7 | 7 open; first settlements due ~9 AM CDT batch today |
+| mmsell (control) | 1,822 | +$11.99 | +0.7 | 17 | breakeven+ |
+| mmsell1 / mmsell2 | 1,008 / 667 | +$10.97 / +$7.20 | +1.1 / +1.1 | 16 / 8 | breakeven+ |
+| weather con (all) | 307 | −$5.13 | −1.7 | 15 | idle ~13h (overnight); 15 open await settle |
 | theta ctrl/1/2/3 | 560/201/98/134 | +$0.97/+$9.69/−$11.55/−$11.62 | — | 0 | SHELVED, quiet |
 | tfav | 215 | −$7.54 | −3.5 | 0 | KILLED, quiet |
 | weather (rest) | 4,709 | −$238.63 | — | 0 | pruned, done |
 
-**HEADLINE — mmsell3 is the first new book with a real (early) positive signal; theta4 hit its
-decision point at 0.** mmsell3 jumped n=10 → **64** as its open positions settled, landing at
-**+2.9c/trade** — above its +1.5c gate and well above mmsell1 (+1.0c) / mmsell2 (+1.0c). Not yet
-the n≥150 gate, but the "5-10c is the pure sweet spot" thesis is looking right so far. Meanwhile
-**theta4 is still at 0 trades ~23.5h after deploy** — the pre-registered decision point. con +
-concity are static (con idle since yesterday afternoon; concity's 7 opens await daily settlement).
+**HEADLINE — quiet run; mmsell3 keeps strengthening.** mmsell3 rose to **+3.6c/trade at n=76**
+(from +2.9c at n=64) — still clearly above its +1.5c gate and the other bands (+1.1c), ~half way
+to the n≥150 gate. theta4 remains at 0 (~30h; the loosen-or-conclude decision from run #33 is
+unchanged and awaits a fable pass). Weather is in its overnight lull — con idle ~13h, concity's 7
+edge-city opens still pending; both con and concity settle at today's ~9 AM CDT batch, which is
+when the first concity A/B data lands. Everything else steady; collectors all fresh.
 
-**theta4 — DECISION (pre-registered, now due): the mult=2.0 + 10c bar is effectively
-unreachable.** 0 entries in ~23.5h of live evaluation (mechanism unit-tested; ladder collector
-fresh, so the tracker IS running). Per the run #32 pre-registration, the recommended fable
-action is: **loosen theta4's edge from 10c → ~6c** so it actually trades and we can measure
-whether the 2x-fattened model's tails are calibrated (`theta_variants` → `theta4:...,edge=6`);
-if it STILL barely trades or trades negative/miscalibrated, the fat-tail revival is impractical
-and theta stays fully shelved. Report-only — this is the operator's fable call. (Interpretation
-note: that nothing is 10c+ overpriced after a 2x fatten is itself weak evidence the base model's
-tail miss really was ~2x — but it gives no tradeable signal, hence loosen-or-conclude.)
-
-**mmsell3 — promising, hold to the gate.** +2.9c/trade at n=64 vs the +1.5c bar. If it holds
-through n≥150, it's the portfolio's first genuinely positive book since the cleanup — promote
-candidate (narrow mmsell to 5-10c, retire the diluted wider bands). Do NOT call it yet (n=64).
-
-**Data (last-24h / latest CDT):** crypto_spot 2,874 (08:09 PM ✓, 2 products), crypto_ladder
-57,920 (08:09 PM ✓, 100% model-priced), weather forecasts/obs/ensembles/buckets all fresh
-(08:10–08:11 PM ✓). xgame_matches 19 (0 new — WC final done), xgame_tapes 77,098 (08:11 PM ✓,
-tapering). All green.
+**Data (last-24h / latest CDT):** crypto_spot 2,870 (03:09 AM ✓, 2 products), crypto_ladder
+57,200 (03:09 AM ✓, 100% model-priced), weather forecasts/obs/ensembles/buckets all fresh
+(03:01–03:13 AM ✓). xgame_matches 19 (0 new — WC over), xgame_tapes 77,862 (03:11 AM ✓, flat).
+All green.
 
 **Research probes (on-demand):** WCPROP + XGAME families CLOSED. No standing probes.
 
-**Headline:** mmsell3 early-strong (+2.9c/trade, n=64 — beats its gate & the other bands); theta4
-hit its pre-registered decision point at 0 → recommend loosening edge 10→6c or concluding.
-concity 7 open awaiting settlement; con idle. Shelved books quiet; collectors fresh.
+**Headline:** mmsell3 strengthening (+3.6c/trade, n=76, ~half to gate — the near-term win);
+theta4 still 0 at ~30h (decision stands); concity's first A/B settlements land at the ~9 AM batch
+today. Shelved books quiet; collectors fresh.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[theta4 · DECISION DUE — loosen or conclude (fable)] Still 0 at ~23.5h — bar unreachable.**
+1. **[theta4 · DECISION DUE — loosen or conclude (fable)] Still 0 at ~30h — bar unreachable.**
    The mult=2.0 + edge=10c gate is almost never cleared. Recommended fable action: set
    `theta4:hi=20,ttemax=35,mult=2.0,edge=6` (loosen the edge) to get a testable n and measure
    the 2x-fattened model's calibration; if it then trades negative/miscalibrated or still
    barely trades, conclude the fat-tail revival is impractical and leave theta fully shelved.
    Not urgent (paper), but this experiment is stuck at n=0 until the edge is loosened.
 
-2. **[mmsell3 · PROMISING — hold to gate] +2.9c/trade at n=64** (beats the +1.5c gate and
-   mmsell1/mmsell2 at +1.0c). First new book with a real positive signal. Gate: n≥150, keep
-   only if per-trade > +1.5c AND beats mmsell1/2 — it's on track. If it holds, promote (narrow
-   mmsell to 5-10c, retire the diluted wider bands). Do NOT act at n=64; let it reach the gate.
+2. **[mmsell3 · PROMISING, strengthening — hold to gate] +3.6c/trade at n=76** (up from +2.9c @
+   n=64; beats the +1.5c gate and mmsell1/mmsell2 at +1.1c). First new book with a real positive
+   signal, and it's improving as n grows. Gate: n≥150, keep only if per-trade > +1.5c AND beats
+   mmsell1/2 — on track. If it holds, promote (narrow mmsell to 5-10c, retire the diluted wider
+   bands) AND it unblocks MMX (#6). Do NOT act at n=76; let it reach the gate.
 
-3. **[weather_concity · WATCH — 7 open, awaiting first settlements] Wiring confirmed (run #32).**
-   Gate: n≥120, keep only if >+3c AND clearly beats full con. First A/B data lands when the 7
-   AUS/CHI/NYC opens settle. Still ~1-2 months to the full gate (con is low-frequency; idle since
-   yesterday afternoon).
+3. **[weather_concity · WATCH — first settlements due ~9 AM CDT today] 7 open (AUS/CHI/NYC).**
+   Gate: n≥120, keep only if >+3c AND clearly beats full con. The first direct A/B vs the
+   bleeding all-city con (−$5.13) lands at today's settlement batch. Still ~1-2 months to the
+   full gate (con is low-frequency).
 
-4. **[weather con (all) · context] −$5.13, static.** No action; concity is the test of whether
-   restricting to edge cities beats it.
+4. **[weather con (all) · context] −$5.13, idle ~13h.** No action; concity is the test of
+   whether restricting to edge cities beats it.
 
-5. **[mmsell existing · unchanged] control/mmsell1/mmsell2 ~breakeven-positive** (+0.6 to +1.0c,
-   n≈3,380); data books. mmsell3 is the live improvement candidate.
+5. **[mmsell existing · unchanged] control/mmsell1/mmsell2 ~breakeven-positive** (+0.7 to +1.1c,
+   n≈3,500); data books. mmsell3 is the live improvement candidate.
 
 6. **[idea-model queue · WAITING ON GATES ABOVE — nothing to build yet] Two idea-model runs on
    2026-07-10 (`docs/IDEA_MODEL_20260710.md`, `docs/IDEA_MODEL_20260710_run2.md`) — 42 candidates
@@ -92,8 +79,8 @@ concity 7 open awaiting settlement; con idle. Shelved books quiet; collectors fr
      longshots). Blocked on **item #2 (mmsell3 reaching n≥150)** — do not stack a second maker
      book mid-A/B. **Trigger: the moment mmsell3 clears its gate, re-run `kalshi-strategy` on
      MMX** (thesis material + candidate scoring already in `IDEA_MODEL_20260710_run2.md`, no new
-     idea-model pass needed). Optional cheap prep in the meantime: `kalshi_flb.py` calibration
-     cut on the target categories (not yet run).
+     idea-model pass needed). mmsell3 is now +3.6c @ n=76 — trending toward that trigger. Optional
+     cheap prep: `kalshi_flb.py` calibration cut on the target categories (not yet run).
    - **NEST** (crypto RV, non-theta) — blocked on **item #1 (theta4's decision)**. Only revisit
      if theta4 resolves to a real, calibrated edge (unlikely per the DECISION note above).
    - **RTPIN / BOXPIN** (entertainment obs-pinning) — blocked on building a new scraper/collector
@@ -104,8 +91,7 @@ concity 7 open awaiting settlement; con idle. Shelved books quiet; collectors fr
    the board was mined hard across 4 total idea-model runs; re-running against unchanged state
    will just re-score the same graveyard.
 
-*(Changed this run: theta4 escalated to DECISION DUE (still 0 at ~23.5h → loosen edge 10→6c or
-conclude) — #1. mmsell3 upgraded to PROMISING (+2.9c/trade at n=64, beats its gate & the other
-bands) — #2, watch to n≥150. concity still 0 settled (7 open). Shelved books quiet; deploy
-healthy. NEW #6: idea-model queue logged — MMX ready to build the moment mmsell3 (#2) gates;
-NEST behind theta4 (#1); do not re-run idea-model until a gate clears.)*
+*(Changed this run: mmsell3 strengthened to +3.6c @ n=76 (from +2.9c @ n=64) — #2 trending toward
+its gate + the MMX trigger (#6). theta4 still 0 at ~30h — decision unchanged (#1). concity's first
+A/B settlements now due at today's ~9 AM CDT batch (#3). #6 idea-model queue carried forward from
+the parallel session. Shelved books quiet; deploy healthy.)*
