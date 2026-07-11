@@ -8,90 +8,93 @@ suggestion list carries over run-to-run. All times CENTRAL (CDT/CST).*
 
 ---
 
-## Snapshot — 2026-07-11 03:13 AM CDT (run #34)
+## Snapshot — 2026-07-11 11:13 AM CDT (run #35)
 
 **Trading books (settled n / P&L / per-trade / open):**
 | book | n | P&L | ¢/trade | open | note |
 |---|---|---|---|---|---|
-| **mmsell3** (5-10c) | 76 | +$2.71 | **+3.6** | 9 | **strengthening** (+2.9→+3.6c); ~half to n≥150 gate |
-| **theta4** (fat-tail) | 0 | — | — | 0 | still 0 at ~30h — decision stands (loosen or conclude) |
-| **weather_concity** | 0 | — | — | 7 | 7 open; first settlements due ~9 AM CDT batch today |
-| mmsell (control) | 1,822 | +$11.99 | +0.7 | 17 | breakeven+ |
-| mmsell1 / mmsell2 | 1,008 / 667 | +$10.97 / +$7.20 | +1.1 / +1.1 | 16 / 8 | breakeven+ |
-| weather con (all) | 307 | −$5.13 | −1.7 | 15 | idle ~13h (overnight); 15 open await settle |
+| **mmsell3** (5-10c) | 85 | +$3.41 | **+4.0** | 6 | **strengthening again** (+3.6→+4.0c); ~57% to n≥150 gate |
+| **theta4** (fat-tail) | 2 | +$1.54 | — | 0 | **UNSTUCK** — first 2 trades (n=2 = noise); no longer 0 |
+| **weather_concity** | 7 | −$1.25 | −17.9 | 7 | **first A/B batch NEGATIVE** (n=7 noise); con beat it this batch |
+| **pin15** (NEW) | 0 | 0 | — | 2 | **NEW book from a parallel session** — see #7 (tension w/ idea-model kill) |
+| mmsell (control) | 1,837 | +$14.28 | +0.8 | 15 | breakeven+ |
+| mmsell1 / mmsell2 | 1,021 / 674 | +$12.38 / +$8.16 | +1.2 / +1.2 | 11 / 6 | breakeven+ |
+| weather con (all) | 322 | −$3.83 | −1.2 | 12 | +$1.30 this batch (15 settled); recovered a bit |
 | theta ctrl/1/2/3 | 560/201/98/134 | +$0.97/+$9.69/−$11.55/−$11.62 | — | 0 | SHELVED, quiet |
 | tfav | 215 | −$7.54 | −3.5 | 0 | KILLED, quiet |
 | weather (rest) | 4,709 | −$238.63 | — | 0 | pruned, done |
 
-**HEADLINE — quiet run; mmsell3 keeps strengthening.** mmsell3 rose to **+3.6c/trade at n=76**
-(from +2.9c at n=64) — still clearly above its +1.5c gate and the other bands (+1.1c), ~half way
-to the n≥150 gate. theta4 remains at 0 (~30h; the loosen-or-conclude decision from run #33 is
-unchanged and awaits a fable pass). Weather is in its overnight lull — con idle ~13h, concity's 7
-edge-city opens still pending; both con and concity settle at today's ~9 AM CDT batch, which is
-when the first concity A/B data lands. Everything else steady; collectors all fresh.
+**HEADLINE — mmsell3 still climbing; theta4 unstuck; concity's first A/B went the wrong way (n=7);
+a new `pin15` book appeared.** mmsell3 rose to **+4.0c/trade at n=85** — its edge is *growing* with
+n, ~57% to the gate; still the clear near-term win. **theta4 traded for the first time** (2 trades,
++$1.54) — n=2 is noise but it's no longer stuck at 0, which softens the "bar unreachable" read.
+The **first weather_concity settlements came in NEGATIVE** (7 settled, −$1.25 / −17.9c) while the
+all-city con book it's meant to beat went **+$1.30** on the same batch — the opposite of the
+thesis, but at n=7 it is pure noise (the by-city split always had stability concerns). And a **new
+book `pin15`** (2 open, 0 settled) showed up from a parallel fable session — flagged below.
 
-**Data (last-24h / latest CDT):** crypto_spot 2,870 (03:09 AM ✓, 2 products), crypto_ladder
-57,200 (03:09 AM ✓, 100% model-priced), weather forecasts/obs/ensembles/buckets all fresh
-(03:01–03:13 AM ✓). xgame_matches 19 (0 new — WC over), xgame_tapes 77,862 (03:11 AM ✓, flat).
-All green.
+**pin15 — NEW, needs accounting.** Appeared this run (2 open, latest 11:13 AM CDT). Not one of the
+loop-tracked builds (mmsell3/theta4/concity). Almost certainly a parallel fable session acting on
+the idea-model queue — but note the tension: the idea-model runs KILLED the "PINNED" thesis at the
+probe (#7). Either pin15 is a refined/paper-only test of that idea or a different pinning book.
+Its thesis + pre-registered gate are NOT in this loop's context — they should be captured (likely
+in an IDEA_MODEL / journal doc) so pin15 is graded against a fixed rule like the others.
+
+**Data (last-24h / latest CDT):** crypto_spot 2,874 (11:11 AM ✓, 2 products), crypto_ladder
+58,400 (11:12 AM ✓, 100% model-priced), weather forecasts/obs/ensembles/buckets all fresh
+(11:04–11:14 AM ✓). xgame_matches 21 (+2 new; collector still matching though the book is
+shelved), xgame_tapes 74,760 (11:12 AM ✓, tapering post-WC). All green.
 
 **Research probes (on-demand):** WCPROP + XGAME families CLOSED. No standing probes.
 
-**Headline:** mmsell3 strengthening (+3.6c/trade, n=76, ~half to gate — the near-term win);
-theta4 still 0 at ~30h (decision stands); concity's first A/B settlements land at the ~9 AM batch
-today. Shelved books quiet; collectors fresh.
+**Headline:** mmsell3 +4.0c @ n=85 (edge growing, ~57% to gate — the win); theta4 unstuck (n=2
+noise); concity's first batch negative (n=7 noise, con beat it); NEW pin15 book (2 open) from a
+parallel session needs its thesis/gate documented. Shelved books quiet; collectors fresh.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[theta4 · DECISION DUE — loosen or conclude (fable)] Still 0 at ~30h — bar unreachable.**
-   The mult=2.0 + edge=10c gate is almost never cleared. Recommended fable action: set
-   `theta4:hi=20,ttemax=35,mult=2.0,edge=6` (loosen the edge) to get a testable n and measure
-   the 2x-fattened model's calibration; if it then trades negative/miscalibrated or still
-   barely trades, conclude the fat-tail revival is impractical and leave theta fully shelved.
-   Not urgent (paper), but this experiment is stuck at n=0 until the edge is loosened.
+1. **[theta4 · UNSTUCK — watch toward gate (was: decision due)] First 2 trades, +$1.54 (n=2 =
+   noise).** No longer stuck at 0, so the "loosen the edge" action is no longer forced — it CAN
+   clear the bar, just rarely. Gate unchanged: n≥80, keep only if per-trade > 0 AND realized-tail
+   -hit ≤ 1.25x modeled. It will accrue VERY slowly at this rate; if it's still <~10 by run #38,
+   revisit the loosen-edge idea to get a testable n. Do not read n=2.
 
-2. **[mmsell3 · PROMISING, strengthening — hold to gate] +3.6c/trade at n=76** (up from +2.9c @
-   n=64; beats the +1.5c gate and mmsell1/mmsell2 at +1.1c). First new book with a real positive
-   signal, and it's improving as n grows. Gate: n≥150, keep only if per-trade > +1.5c AND beats
-   mmsell1/2 — on track. If it holds, promote (narrow mmsell to 5-10c, retire the diluted wider
-   bands) AND it unblocks MMX (#6). Do NOT act at n=76; let it reach the gate.
+2. **[mmsell3 · PROMISING, edge growing — hold to gate] +4.0c/trade at n=85** (+2.9→+3.6→+4.0 as
+   n grew; beats the +1.5c gate and mmsell1/2 at +1.2c). Gate: n≥150, keep only if > +1.5c AND
+   beats mmsell1/2 — on track and improving. If it holds, promote (narrow mmsell to 5-10c, retire
+   the diluted wider bands) AND it unblocks MMX (#6). ~57% to the gate. Do NOT act yet.
 
-3. **[weather_concity · WATCH — first settlements due ~9 AM CDT today] 7 open (AUS/CHI/NYC).**
-   Gate: n≥120, keep only if >+3c AND clearly beats full con. The first direct A/B vs the
-   bleeding all-city con (−$5.13) lands at today's settlement batch. Still ~1-2 months to the
-   full gate (con is low-frequency).
+3. **[weather_concity · WATCH — first batch negative, but n=7] 7 settled −$1.25 (−17.9c); con
+   went +$1.30 on the same batch.** The edge-city restriction did NOT beat con in its first tiny
+   batch — the opposite of the thesis, but n=7 is noise and the by-city split always had stability
+   concerns (the 10-day window disagreed with all-time). Gate: n≥120, keep only if >+3c AND beats
+   full con. Let it accrue; if it's still losing / not beating con by n~40-60, the by-city edge was
+   likely historical noise and concity should be dropped. Do not read n=7.
 
-4. **[weather con (all) · context] −$5.13, idle ~13h.** No action; concity is the test of
-   whether restricting to edge cities beats it.
+4. **[weather con (all) · context] −$3.83 (recovered +$1.30 this batch).** No action; concity is
+   the test.
 
-5. **[mmsell existing · unchanged] control/mmsell1/mmsell2 ~breakeven-positive** (+0.7 to +1.1c,
-   n≈3,500); data books. mmsell3 is the live improvement candidate.
+5. **[mmsell existing · unchanged] control/mmsell1/mmsell2 ~breakeven-positive** (+0.8 to +1.2c,
+   n≈3,530); data books. mmsell3 is the live improvement candidate.
 
-6. **[idea-model queue · WAITING ON GATES ABOVE — nothing to build yet] Two idea-model runs on
-   2026-07-10 (`docs/IDEA_MODEL_20260710.md`, `docs/IDEA_MODEL_20260710_run2.md`) — 42 candidates
-   total, 2 pre-registered theses probed and KILLED (PINNED, DECAY — both do-not-promote at the
-   probe), 9 held, 19 killed. Nothing is currently promotable to `kalshi-strategy`; every hold is
-   blocked on a gate already tracked in this file, not a missing probe:**
-   - **MMX (highest-value hold)** — extend mmsell's 5-10c FLB maker-sell into uncorrelated
-     non-sports categories (politics fields / awards / box-office / catastrophe / mention-word
-     longshots). Blocked on **item #2 (mmsell3 reaching n≥150)** — do not stack a second maker
-     book mid-A/B. **Trigger: the moment mmsell3 clears its gate, re-run `kalshi-strategy` on
-     MMX** (thesis material + candidate scoring already in `IDEA_MODEL_20260710_run2.md`, no new
-     idea-model pass needed). mmsell3 is now +3.6c @ n=76 — trending toward that trigger. Optional
-     cheap prep: `kalshi_flb.py` calibration cut on the target categories (not yet run).
-   - **NEST** (crypto RV, non-theta) — blocked on **item #1 (theta4's decision)**. Only revisit
-     if theta4 resolves to a real, calibrated edge (unlikely per the DECISION note above).
-   - **RTPIN / BOXPIN** (entertainment obs-pinning) — blocked on building a new scraper/collector
-     (no gate, just unbuilt infra); not urgent, revisit only if a cheap public-data angle appears.
-   - **RATELAG** (KXFED coherence) — blocked on an actual live Fed-shock event; nothing to do
-     until one occurs.
-   Do NOT re-run the idea-model skill again until one of the two gates above (#1 or #2) clears —
-   the board was mined hard across 4 total idea-model runs; re-running against unchanged state
-   will just re-score the same graveyard.
+6. **[idea-model queue · MMX still waiting on mmsell3's gate] Two idea-model runs 2026-07-10
+   (`IDEA_MODEL_20260710.md`, `..._run2.md`): 42 candidates, PINNED + DECAY probed & KILLED, 9
+   held, 19 killed.** MMX (extend mmsell 5-10c maker-sell into uncorrelated non-sports categories)
+   is the highest-value hold, **blocked on #2 (mmsell3 n≥150)** — trigger: re-run `kalshi-strategy`
+   on MMX the moment mmsell3 gates (material in `..._run2.md`). NEST behind theta4 (#1). RTPIN/
+   BOXPIN behind unbuilt scraper infra. RATELAG behind a live Fed event. Do NOT re-run idea-model
+   until #1 or #2 clears (board already mined across 4 runs).
 
-*(Changed this run: mmsell3 strengthened to +3.6c @ n=76 (from +2.9c @ n=64) — #2 trending toward
-its gate + the MMX trigger (#6). theta4 still 0 at ~30h — decision unchanged (#1). concity's first
-A/B settlements now due at today's ~9 AM CDT batch (#3). #6 idea-model queue carried forward from
-the parallel session. Shelved books quiet; deploy healthy.)*
+7. **[pin15 · NEW book — document its thesis/gate] Appeared run #35 (2 open, 0 settled) from a
+   parallel session.** The idea-model runs KILLED the PINNED thesis at the probe, so pin15's
+   rationale (refined variant? paper-only test-anyway? different pinning book?) needs to be written
+   down with a pre-registered gate so the loop can grade it like the others — otherwise it's an
+   untracked live book. Recommended: point me at its IDEA_MODEL/journal doc, or have the next fable
+   session record it. The loop query now surfaces it as `book:pin15`.
+
+*(Changed this run: theta4 UNSTUCK — 2 trades, +$1.54 (#1, was "decision due"). mmsell3 → +4.0c @
+n=85, edge growing (#2). concity's first A/B batch NEGATIVE at n=7 (#3, noise but flagged with a
+drop-if-still-losing-by-n~50 tripwire). NEW #7: pin15 book appeared from a parallel session — needs
+its thesis/gate documented. #6 idea-model queue carried forward.)*
