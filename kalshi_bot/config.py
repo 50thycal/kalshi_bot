@@ -241,6 +241,33 @@ class Settings(BaseSettings):
     # tfav_* knobs. Tag must start with 'tfav', differ from the control, fit String(24).
     tfav_variants: str = ""
 
+    # --- PIN15 book (ride-along paper, weather/live cycle) ---
+    # Endgame settlement-average observation-pin on Kalshi's 15-minute crypto up/down markets
+    # (KXBTC15M/KXETH15M). Validated 2026-07-11 (scripts/kalshi_pin15_study.py, docs/PIN15_THESIS.md):
+    # these settle on the 60-SECOND AVERAGE of the CF index over the final minute, so 2-3 min before
+    # close a >= ~5bp spot displacement from the target already pins the outcome (settles the drift
+    # way 96-100%, HOLDING ACROSS VOL QUARTILES — P4 pass), while the retail quote — anchored to the
+    # flashing last-tick price — still prices the near-certain favorite at ~93-95c. PIN15 is a TAKER
+    # buy of the drift-favored side (YES if spot>target, NO if spot<target) inside the final few
+    # minutes, held to settlement (the shared paper engine settles it, like theta/tfav). Nets
+    # +3.6-3.9c/ct net of the real ask + fee at T-120/180s in-sample; P3's SPIKEFADE mechanism FAILED
+    # (the edge is plain drift-favorite underpricing, not a last-second-spike fade). The paper book
+    # forward-tests the two remaining risks: real fill depth at the ask, and whether the ~300s loop
+    # lands in the T~120-180s window (T-at-entry is recorded in fill_assumption for the slice).
+    # Correlation caution: it's a favorite-BUY (the family tfav died in), the difference being the
+    # now-vol-validated live spot-pin selection. Set pin15_enabled=False to disable.
+    pin15_enabled: bool = True
+    pin15_interval_minutes: float = 0.0        # EVERY cycle — must be frequent to catch the window
+    # SERIES:COINBASE_PRODUCT pairs; wrong series fail soft (logged, skipped).
+    pin15_series: str = "KXBTC15M:BTC-USD,KXETH15M:ETH-USD"
+    pin15_entry_min_seconds: float = 45.0      # skip the thinnest/most-expensive final seconds
+    pin15_entry_max_seconds: float = 210.0     # stay in the validated T-180..T-0 zone (best 120-180)
+    pin15_min_disp_bps: float = 5.0            # |spot-target|/target in bps; the pin threshold
+    pin15_min_volume: float = 50.0             # skip untraded windows
+    pin15_order_size: int = 5
+    pin15_max_open_positions: int = 20         # <=20 concurrent 15-min windows
+    pin15_max_per_event: int = 1               # one entry per window
+
     # --- XGAME in-play tape collector (ride-along, weather/live cycle) ---
     # COLLECT ONLY, no trading: stores both venues' trade tapes for matched in-play game
     # markets (Kalshi per-team moneyline vs Polymarket same-team/day market) into
@@ -785,6 +812,16 @@ class Settings(BaseSettings):
         """SERIES -> Coinbase product, parsed from "KXBTCD:BTC-USD,..."; skips malformed."""
         out: dict[str, str] = {}
         for tok in self.theta_series.split(","):
+            series, _, product = tok.partition(":")
+            if series.strip() and product.strip():
+                out[series.strip().upper()] = product.strip().upper()
+        return out
+
+    @property
+    def pin15_series_map(self) -> dict[str, str]:
+        """SERIES -> Coinbase product, parsed from "KXBTC15M:BTC-USD,..."; skips malformed."""
+        out: dict[str, str] = {}
+        for tok in self.pin15_series.split(","):
             series, _, product = tok.partition(":")
             if series.strip() and product.strip():
                 out[series.strip().upper()] = product.strip().upper()

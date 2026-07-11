@@ -29,6 +29,7 @@ from .live.executor import LiveExecutor
 from .logging_config import configure_logging, log_event
 from .mmsell.tracker import MmSellTracker
 from .paper.engine import PaperCycleSummary, PaperTradingEngine
+from .pin15.tracker import Pin15Tracker
 from .risk.manager import RiskManager
 from .scanner.scanner import MarketScanner, ScanSummary
 from .tfav.tracker import TfavTracker
@@ -119,6 +120,11 @@ def run() -> int:
     # favorites (taker buy YES) on the same crypto ladders, held to settlement.
     tfav_paper = weather_like and settings.tfav_enabled
     tfav_tracker = TfavTracker(client, settings) if tfav_paper else None
+    # pin15 rides along the same way (paper): endgame settlement-average observation-pin on the
+    # 15-minute crypto up/down markets — a TAKER buy of the drift-favored side 2-3min before close,
+    # held to settlement by the shared weather_engine. Forward-test of docs/PIN15_THESIS.md.
+    pin15_paper = weather_like and settings.pin15_enabled
+    pin15_tracker = Pin15Tracker(client, settings) if pin15_paper else None
     # wcprop rides along (paper): ride the World Cup winner-ladder's lag after a decisive
     # match result (cross-market coherence forward-test). Timed exit via the shared engine.
     wcprop_paper = weather_like and settings.wcprop_enabled
@@ -182,6 +188,8 @@ def run() -> int:
                 keep += ("theta",)
             if tfav_paper:
                 keep += ("tfav",)
+            if pin15_paper:
+                keep += ("pin15",)
             if wcprop_paper:
                 keep += ("wcprop",)
             if xgame_tracker is not None and settings.xgame_book_enabled:
@@ -213,12 +221,13 @@ def run() -> int:
                         settings, client, weather_engine, weather_tracker, live_executor,
                         weather_backfill, validation_backfill, mmsell_paper_tracker,
                         theta_tracker, xgame_tracker, tfav_tracker, wcprop_tracker,
+                        pin15_tracker,
                     )
                 elif weather:
                     _run_weather_cycle(
                         settings, client, weather_engine, weather_tracker, weather_backfill,
                         validation_backfill, mmsell_paper_tracker, theta_tracker,
-                        xgame_tracker, tfav_tracker, wcprop_tracker,
+                        xgame_tracker, tfav_tracker, wcprop_tracker, pin15_tracker,
                     )
                 elif mmsell:
                     _run_mmsell_cycle(settings, client, mmsell_engine, mmsell_tracker)
@@ -250,6 +259,8 @@ def run() -> int:
             xgame_tracker.pm.close()
         if tfav_tracker is not None:
             tfav_tracker.spot.close()
+        if pin15_tracker is not None:
+            pin15_tracker.spot.close()
     return exit_code
 
 
@@ -402,7 +413,7 @@ def _run_validation_backfill(validation_backfill) -> None:
 def _run_weather_cycle(
     settings, client, engine, tracker, backfill=None, validation_backfill=None,
     mmsell_tracker=None, theta_tracker=None, xgame_tracker=None, tfav_tracker=None,
-    wcprop_tracker=None,
+    wcprop_tracker=None, pin15_tracker=None,
 ) -> None:
     status = client.get_exchange_status()  # AuthError propagates -> hard fail
     log_event(
@@ -451,6 +462,7 @@ def _run_weather_cycle(
     _run_mmsell_book(settings, mmsell_tracker)
     _run_theta_book(settings, theta_tracker)
     _run_tfav_book(settings, tfav_tracker)
+    _run_pin15_book(settings, pin15_tracker)
     _run_wcprop_book(settings, wcprop_tracker)
     _run_xgame_collector(settings, xgame_tracker)
 
@@ -549,6 +561,37 @@ def _run_tfav_book(settings, tracker) -> None:
         raise
     except Exception:  # noqa: BLE001 — ride-along book must never stop the cycle
         logger.exception("tfav ride-along book failed (weather/live unaffected)")
+
+
+_pin15_last_run = {"ts": 0.0}
+
+
+def _run_pin15_book(settings, tracker) -> None:
+    """Ride-along pin15 paper book (15-min crypto endgame observation-pin): a TAKER buy of the
+    drift-favored side 2-3min before close, held to settlement (the shared weather_engine settles/
+    marks it). Runs EVERY cycle by default (interval 0) — it must be frequent to land in the short
+    entry window. Never raises into the cycle."""
+    if tracker is None:
+        return
+    now = time.monotonic()
+    if now - _pin15_last_run["ts"] < settings.pin15_interval_minutes * 60.0:
+        return
+    _pin15_last_run["ts"] = now
+    try:
+        with session_scope() as session:
+            summ = tracker.run_once(session)
+        log_event(
+            logger, logging.INFO, "pin15 book",
+            products_ok=summ.products_ok, markets=summ.markets_seen, in_window=summ.in_window,
+            priced=summ.priced, pinned=summ.pinned, opened=summ.opened,
+            already_open=summ.already_open, capped=summ.capped,
+            no_spot=summ.skipped_no_spot, illiquid=summ.skipped_illiquid,
+            per_series=summ.per_series,
+        )
+    except AuthError:
+        raise
+    except Exception:  # noqa: BLE001 — ride-along book must never stop the cycle
+        logger.exception("pin15 ride-along book failed (weather/live unaffected)")
 
 
 _wcprop_last_run = {"ts": 0.0}
@@ -724,7 +767,7 @@ def _fetch_account_state(client) -> dict:
 def _run_live_cycle(
     settings, client, engine, tracker, executor, backfill=None, validation_backfill=None,
     mmsell_tracker=None, theta_tracker=None, xgame_tracker=None, tfav_tracker=None,
-    wcprop_tracker=None,
+    wcprop_tracker=None, pin15_tracker=None,
 ) -> None:
     """Live cycle: reconcile Kalshi truth, manage exits, settle/mark paper, then run the
     tracker (which mirrors allowlisted entries into real orders)."""
@@ -769,6 +812,7 @@ def _run_live_cycle(
     _run_mmsell_book(settings, mmsell_tracker)
     _run_theta_book(settings, theta_tracker)
     _run_tfav_book(settings, tfav_tracker)
+    _run_pin15_book(settings, pin15_tracker)
     _run_wcprop_book(settings, wcprop_tracker)
     _run_xgame_collector(settings, xgame_tracker)
 
