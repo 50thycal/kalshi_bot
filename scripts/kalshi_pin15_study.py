@@ -147,9 +147,9 @@ def spot_at(ohlc: dict[int, tuple], ts: int) -> float | None:
     return None
 
 
-def fetch_kalshi_candles(series: str, ticker: str, start: int, end: int) -> dict[int, float]:
-    """{minute_ts: yes_mid_c} from Kalshi 1-min candlesticks (yes bid/ask midpoint)."""
-    out: dict[int, float] = {}
+def fetch_kalshi_candles(series: str, ticker: str, start: int, end: int) -> dict[int, tuple]:
+    """{minute_ts: (yes_bid_c, yes_ask_c)} from Kalshi 1-min candlesticks."""
+    out: dict[int, tuple] = {}
     data = xl._get(f"{KALSHI}/series/{series}/markets/{ticker}/candlesticks"
                    f"?start_ts={start}&end_ts={end}&period_interval=1")
     for c in (data or {}).get("candlesticks") or []:
@@ -160,21 +160,23 @@ def fetch_kalshi_candles(series: str, ticker: str, start: int, end: int) -> dict
             continue
         yb_c, ya_c = xl._num(yb) * 100.0, xl._num(ya) * 100.0
         if 0 <= yb_c <= 100 and 0 <= ya_c <= 100 and ya_c >= yb_c:
-            out[int(ts) // 60 * 60] = (yb_c + ya_c) / 2.0
+            out[int(ts) // 60 * 60] = (yb_c, ya_c)
     return out
 
 
-def kalshi_mid_at(candles: dict[int, float], ts: int, tol_min: int = 4):
-    """(yes_mid_c, minute_ts) at-or-before ts, within tol; else None."""
+def kalshi_quote_at(candles: dict[int, tuple], ts: int, tol_min: int = 1):
+    """(yes_bid_c, yes_ask_c, minute_ts) at-or-before ts, within tol (default 1 min so the
+    quote is contemporaneous with the displacement — a looser tol grabs a staler, cheaper
+    quote and inflates the edge). Else None."""
     target = ts // 60 * 60
     best = None
-    for t, mid in candles.items():
+    for t, (yb, ya) in candles.items():
         if t > target:
             continue
         d = target - t
         if d <= tol_min * 60 and (best is None or d < best[0]):
-            best = (d, mid, t)
-    return (best[1], best[2]) if best else None
+            best = (d, yb, ya, t)
+    return (best[1], best[2], best[3]) if best else None
 
 
 def disp_bin(bps: float):
@@ -250,12 +252,12 @@ def main(argv: list[str] | None = None) -> int:
             last_tick = fin[3] if fin else None                 # candle close
             avg_proxy = ((fin[0] + fin[3]) / 2.0) if fin else None  # (open+close)/2 ≈ 60s mean
 
-            # coarse quote at each decision T (Kalshi 1-min candles)
+            # quote (yes bid, ask) at each decision T (Kalshi 1-min candles, tol 1 min)
             kc = fetch_kalshi_candles(m["series"], m["ticker"], opent - 60, close + 60)
             quote = {}
             for t in DECISION_TS:
-                q = kalshi_mid_at(kc, close - t)
-                quote[t] = q[0] if q else None
+                q = kalshi_quote_at(kc, close - t)
+                quote[t] = (q[0], q[1]) if q else None    # (yes_bid_c, yes_ask_c)
 
             rows.append({
                 "asset": asset, "close": close, "up": up, "target": target,
@@ -331,10 +333,12 @@ def main(argv: list[str] | None = None) -> int:
         print("    NB (o+c)/2 is a coarse 60s-mean proxy; the tradeable sub-minute test is Phase B.")
     print()
 
-    # ---- P2-COARSE: lower-bound EV taking the drift side at the 1-min quote ---
-    print(f"--- P2-COARSE: EV of taking the drift-favored side at the last 1-min quote "
-          f"(|disp|>={args.disp_bps:.0f}bp), net of worst-case taker fee ---")
-    print("    LOWER BOUND ONLY — real P2 needs the sub-minute quote path (Phase B).")
+    # ---- P2-COARSE: EV taking the drift side at the CONTEMPORANEOUS 1-min ASK ---
+    print(f"--- P2-COARSE: EV of taking the drift-favored side at the 1-min quote, paying the "
+          f"REAL taker cost (yes-ask up / no-ask down), |disp|>={args.disp_bps:.0f}bp, "
+          f"net of worst-case taker fee ---")
+    print("    Quote tol = 1 min (contemporaneous with displacement). Still a LOWER-RESOLUTION")
+    print("    bound — the true sub-minute ask path is Phase B; here it's the 1-min-candle ask.")
     for t in DECISION_TS:
         print(f"  entry at T-{t}s:")
         _p2_slice(rows, t, args.disp_bps, "pooled", lambda r: True)
@@ -363,21 +367,29 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
+def _p2_cost(quote, side_up):
+    """Real taker cost (cents) to buy the drift side: yes-ask if Up, no-ask (=100-yes-bid) if Down."""
+    yb, ya = quote
+    cost = ya if side_up else (100.0 - yb)
+    return min(max(cost, 1.0), 99.0)
+
+
 def _p2_slice(rows, t, thr, label, pred):
     sub = [r for r in rows if pred(r) and r["disp"].get(t) is not None
            and r["quote"].get(t) is not None and abs(r["disp"][t]) >= thr]
     if not sub:
         return
-    evs = []
+    evs, costs, wins = [], [], 0
     for r in sub:
         side_up = r["disp"][t] > 0
-        cost = r["quote"][t] if side_up else (100.0 - r["quote"][t])
-        cost = min(max(cost, 1.0), 99.0)
+        cost = _p2_cost(r["quote"][t], side_up)
         won = (r["up"] == 1) == side_up
+        wins += 1 if won else 0
+        costs.append(cost)
         evs.append((100.0 if won else 0.0) - cost - taker_fee_c(cost))
     n = len(evs)
-    print(f"    {label:>12}: n={n:4d} EV={sum(evs)/n:+6.2f}c/ct  win%={sum(1 for r in sub if (r['up']==1)==(r['disp'][t]>0))/n*100:5.1f}"
-          f"  avg_cost={sum(min(max((r['quote'][t] if r['disp'][t]>0 else 100-r['quote'][t]),1),99) for r in sub)/n:5.1f}c")
+    print(f"    {label:>12}: n={n:4d} EV={sum(evs)/n:+6.2f}c/ct  win%={wins/n*100:5.1f}"
+          f"  avg_ask_cost={sum(costs)/n:5.1f}c")
 
 
 if __name__ == "__main__":
