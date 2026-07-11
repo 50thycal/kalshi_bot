@@ -16,6 +16,41 @@ Conventions:
 
 ---
 
+## PIN15 P4 (VOL-REGIME) VERDICT 2026-07-11 — PASS; the edge holds in high vol, biggest kill-risk cleared
+
+The Phase-A verdict flagged **vol-regime fragility as the top open risk** (the +EV sample was one
+calm regime; a favorite-buy could just be harvesting a premium a high-vol regime pays back). Ran the
+dedicated P4 test via ops (`kalshi_pin15_study` + a new VOLREGIME split; `pin15-volregime`, n=2,800
+settled windows, min-vol lowered to 50 to widen the sample). Windows binned into quartiles by
+per-window realized vol (stdev of 1-min log-returns, bps/min); P1 pin hit-rate + P2 real-ask EV
+reported per quartile.
+
+**PASS — the edge is robust across vol, and does NOT die in the wildest quartile:**
+- **T-180s ask-EV by quartile:** Q1 calm +3.86¢ / Q2 +4.65¢ / Q3 +3.57¢ / **Q4 wildest +3.40¢** —
+  remarkably flat, no collapse. **T-120s:** the edge *rises* with vol (Q1 +1.39¢ → **Q4 +4.64¢**),
+  because calm windows are already priced to ~97¢ by T-120s while higher-vol windows keep a wider
+  favorite discount (~93¢ ask) even though the pin still holds.
+- **The pin holds in high vol:** a ≥5bp displacement at T-120/180s still settles the pinned way
+  **96–100%** even in Q4, whose upper range (6.4–**36.9 bp/min** ≈ up to ~270% annualized) contains
+  genuinely high-vol windows — not just calm ones. So the determinism (P1) is not a calm-regime
+  artifact; the market underprices the near-certain favorite in high vol too.
+- Thinnest cell is Q4 at T-180s (win 95.8% buying a 91.2¢ ask → ~4pp cushion) — still clears; the
+  loss tail is fatter there but the EV stays +3.4¢.
+
+**What this does and doesn't settle.** It clears the *regime* kill-risk within the observable sample
+(~29 days of mid-2026, which does include real intra-sample vol spikes). It does NOT cover a
+sustained crash/melt-up macro regime absent from the window — residual tail risk remains, now much
+smaller, and the paper book's rolling P&L is the tripwire for it (same as every book here). The
+remaining open risks are now **execution-only**: depth at the observed ask (the 1-min-candle ask is
+one number, not a fillable size) and hitting the T≈120–180s entry with the worker loop. Those are
+exactly what a paper book with realistic fill/depth assumptions is built to test.
+
+**Decision:** P1 ✅, P2 ✅ (in-sample), P4 ✅ — the pre-registered gates are met and the biggest
+fragility is cleared. **Advance to a `pin15` paper book** (forward-test real fills at a tightened
+T≈120–180s poll, held to settlement) rather than more probing. Correlation caution stands: it's a
+favorite-buy (the family `tfav` died in on the hourly ladders); the material difference — live
+spot-pin selection, now validated to hold across vol — is why this one is worth forward-testing.
+
 ## PIN15 PHASE-A VERDICT 2026-07-11 — P1 PASS, P2 pass-in-sample-but-fragile, P3 (SPIKEFADE) FAIL
 
 The PIN15 thesis (`docs/PIN15_THESIS.md`, promoted from the 15-min-crypto idea-model run) ran its

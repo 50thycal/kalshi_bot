@@ -2,8 +2,40 @@
 
 *Thesis written 2026-07-11, before any validation ran; the falsifiable predictions below are
 pre-registered so the test can't be quietly re-scoped after the fact. Promoted from the 2026-07-11
-idea-model run (`docs/IDEA_MODEL_15MIN_CRYPTO_20260711.md`). Status: **Phase-A probe run 2026-07-11 —
-P1 PASS / P2 pass-in-sample-but-fragile / P3 (SPIKEFADE) FAIL. See RESULTS.***
+idea-model run (`docs/IDEA_MODEL_15MIN_CRYPTO_20260711.md`). Status: **Phase-A + P4 run 2026-07-11 —
+P1 PASS / P2 PASS (in-sample) / P4 (vol-regime) PASS / P3 (SPIKEFADE) FAIL → `pin15` paper book BUILT
+2026-07-11 (`kalshi_bot/pin15/`, ride-along paper, forward-testing). See RESULTS.***
+
+## PAPER BOOK (built 2026-07-11 — `kalshi_bot/pin15/tracker.py`)
+
+Ride-along paper book on the weather/live cycle, same pattern as theta/tfav. Each cycle it fetches
+the current spot (a small direct Coinbase read — no vol model, no DB coupling), and for every open
+KXBTC15M/KXETH15M window in the final `[45, 210]s` before close whose spot is `>= pin15_min_disp_bps`
+(default 5bp) from the target, it TAKER-buys the drift-favored side (YES at the yes-ask if spot >
+target, else NO at the no-ask), qty capped by resting depth, **held to settlement** (in the engine's
+no-timeout set). `T-at-entry` and the displacement are recorded in `fill_assumption` so realized P&L
+can be sliced by entry latency — the direct forward test of the two remaining risks (fill depth at the
+ask; whether the ~300s loop lands in the T≈120–180s window). One entry per window
+(`pin15_max_per_event=1`), ≤20 concurrent. Config knobs: `pin15_*` in `config.py`; enabled by
+default. Takes effect on the next Railway redeploy (merge to default). Its realized P&L now accrues in
+the standard `paper_trades` rollups next to every other book — the PnL/digest/loop reviews read it
+automatically. Pre-registered live-gate criteria remain: promote toward live only after the paper P&L
+confirms the in-sample edge at real sample size, through the existing `LIVE_STRATEGIES` allowlist.
+
+## P4 UPDATE (2026-07-11 vol-regime re-run — `pin15-volregime`, n=2,800)
+
+The Phase-A fragility flag (edge measured in one calm regime) was the top open kill-risk. The
+dedicated P4 test — windows split into quartiles by per-window realized vol (stdev of 1-min
+log-returns, bps/min) — **PASSES**: the drift-favorite ask-EV is **flat-to-stronger in higher vol**
+(T-180s: Q1 +3.86¢ / Q4-wildest +3.40¢; T-120s: Q1 +1.39¢ → Q4 +4.64¢), and the pin still holds
+**96–100%** in the wildest quartile (vol up to ~36.9 bp/min ≈ ~270% annualized — genuine high-vol
+windows, not just calm ones). The determinism is NOT a calm-regime artifact; the market underprices
+the near-certain favorite in high vol too. Residual risk is now a sustained macro regime absent from
+the ~29-day sample (paper P&L is the tripwire) plus **execution only** — depth at the observed ask
+and hitting the T≈120–180s entry with the loop. Both are what the paper book tests. **Decision:
+advance to the `pin15` paper book.**
+
+
 
 ## RESULTS (2026-07-11 Phase-A — `scripts/kalshi_pin15_study.py`, two runs)
 

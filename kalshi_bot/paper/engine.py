@@ -317,7 +317,7 @@ class PaperTradingEngine:
         # the global one and closes at the current bid when it elapses.
         strat = trade.strategy or ""
         weather_hold = strat.startswith("weather")
-        no_timeout = weather_hold or strat.startswith(("mmsell", "theta", "tfav"))
+        no_timeout = weather_hold or strat.startswith(("mmsell", "theta", "tfav", "pin15"))
         max_hold_hours = s.paper_max_hold_hours
         if strat.startswith("wcprop"):
             max_hold_hours = s.wcprop_hold_minutes / 60.0
