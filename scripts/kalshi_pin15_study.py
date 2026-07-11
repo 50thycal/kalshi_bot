@@ -147,6 +147,20 @@ def spot_at(ohlc: dict[int, tuple], ts: int) -> float | None:
     return None
 
 
+def realized_vol_bps(ohlc: dict[int, tuple], start: int, end: int) -> float | None:
+    """Per-minute realized vol over [start,end] as the stdev of 1-min log-returns, in bps.
+    This is the regime knob: a high value means spot moved a lot minute-to-minute in the
+    window, so a given spot displacement from target is less 'pinned' into settlement."""
+    closes = [ohlc[t][3] for t in sorted(ohlc) if start <= t <= end and ohlc[t][3] > 0]
+    if len(closes) < 5:
+        return None
+    rets = [math.log(closes[i] / closes[i - 1]) for i in range(1, len(closes))]
+    n = len(rets)
+    mean = sum(rets) / n
+    var = sum((r - mean) ** 2 for r in rets) / n
+    return math.sqrt(var) * 1e4    # bps/min
+
+
 def fetch_kalshi_candles(series: str, ticker: str, start: int, end: int) -> dict[int, tuple]:
     """{minute_ts: (yes_bid_c, yes_ask_c)} from Kalshi 1-min candlesticks."""
     out: dict[int, tuple] = {}
@@ -263,6 +277,7 @@ def main(argv: list[str] | None = None) -> int:
                 "asset": asset, "close": close, "up": up, "target": target,
                 "target_src": target_src, "disp": disp, "last_tick": last_tick,
                 "avg_proxy": avg_proxy, "quote": quote,
+                "vol": realized_vol_bps(ohlc, opent, close),
             })
         print(f"  enriched {sum(1 for r in rows if r['asset']==asset)} windows "
               f"({sum(1 for r in rows if r['asset']==asset and r['target_src']=='strike')} explicit-strike)\n")
@@ -351,6 +366,32 @@ def main(argv: list[str] | None = None) -> int:
             half = len(ordered) // 2
             _p2_slice(ordered[:half], t, args.disp_bps, "half-1(old)", lambda r: True)
             _p2_slice(ordered[half:], t, args.disp_bps, "half-2(new)", lambda r: True)
+    print()
+
+    # ---- VOLREGIME (P4): does the edge survive in higher-vol windows? ---------
+    print("--- VOLREGIME (P4 robustness): P1 pin + P2 ask-EV split by per-window realized vol ---")
+    print("    Quartiles by realized 2-min-scale vol (stdev of 1-min log-returns over the window,")
+    print("    bps/min). The KILL risk: the whole Phase-A sample is one regime; if the +EV lives")
+    print("    ONLY in the calm quartiles and dies (or inverts) in the top vol quartile, the")
+    print("    favorite-buy is just harvesting a premium a real high-vol regime pays back.")
+    volrows = sorted((r for r in rows if r.get("vol") is not None), key=lambda r: r["vol"])
+    if len(volrows) >= 40:
+        q = len(volrows) // 4
+        quartiles = [("Q1 calmest", volrows[:q]), ("Q2", volrows[q:2 * q]),
+                     ("Q3", volrows[2 * q:3 * q]), ("Q4 wildest", volrows[3 * q:])]
+        for t in (180, 120):
+            print(f"  entry at T-{t}s (|disp|>={args.disp_bps:.0f}bp):")
+            for name, grp in quartiles:
+                vlo = min(r["vol"] for r in grp)
+                vhi = max(r["vol"] for r in grp)
+                conf = [r for r in grp if r["disp"].get(t) is not None
+                        and abs(r["disp"][t]) >= args.disp_bps]
+                hit = (sum(1 for r in conf if (r["up"] == 1) == (r["disp"][t] > 0)) / len(conf) * 100.0
+                       if conf else 0.0)
+                label = f"{name} vol[{vlo:.1f},{vhi:.1f}] pin{hit:.0f}%"
+                _p2_slice(grp, t, args.disp_bps, label, lambda r: True)
+    else:
+        print("    (insufficient sample for a quartile split)")
     print()
 
     # ---- UPBIAS --------------------------------------------------------------
