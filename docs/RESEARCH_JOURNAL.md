@@ -16,6 +16,29 @@ Conventions:
 
 ---
 
+## THETA4 EDGE LOOSENED 10c→6c 2026-07-11 — pre-registered decision enacted (0 trades at edge=10)
+
+theta4 (the mult=2.0 fat-tail revival test, the one live variant trading while the rest of theta
+is collect-only) made **zero trades in ~24h+** at its `edge=10c` bar — confirmed live via ops
+(`gate-check-0711`: theta4 has no `paper_trades` rows at all). Nothing was ≥10c overpriced *after*
+a 2× tail-fatten. That 0-trade outcome was the exact pre-registered decision point in the strategy
+loop (run #32/#33): **"loosen theta4's edge from 10c → ~6c so it actually trades and we can measure
+whether the 2x-fattened model's tails are calibrated; if it STILL barely trades or trades
+negative/miscalibrated, conclude the fat-tail revival is impractical and leave theta fully shelved."**
+
+Enacted that here (operator-directed): `config.py` `theta_variants` → `theta4:...,edge=6` (from
+edge=10). This is a **paper-only** change to one collect-only-exempt variant; the rest of the theta
+family stays shelved (`theta_collect_only=True`, `theta_live_variants="theta4"` unchanged), and the
+ladder/spot collectors are unaffected. **The pre-registered n≥80 gate is unchanged and now applies
+to the edge=6 sample:** KEEP only if per-trade > 0 AND realized-tail-hit rate ≤ 1.25× modeled; if it
+fails both (or still barely trades), the fat-tail revival is impractical and theta is fully dead —
+stop reviving. Interpretation caveat carried forward: that nothing cleared a 10c bar after a 2×
+fatten is itself weak evidence the base model's tail miss really was ~2×, but it yields no tradeable
+signal, hence loosen-or-conclude rather than declare victory. No test asserts the production edge
+value (the theta tests use synthetic variant strings), so this is a pure config-default change;
+it takes effect on the next Railway redeploy (merge to the default branch). The loop will read the
+new theta4 n at its next pass.
+
 ## PINNED + DECAY VERDICTS 2026-07-10 — both idea-model theses KILLED at the probe; no books built
 
 The two theses pre-registered in `docs/IDEA_MODEL_20260710.md` ran to verdict the same day via

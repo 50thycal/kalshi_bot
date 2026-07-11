@@ -187,14 +187,21 @@ class Settings(BaseSettings):
     #   theta4 (added 2026-07-10, PRE-REGISTERED revival test): the shelve post-mortem found
     #   the model underprices realized tails by ~1.4-2.6x (median ~1.85x). theta4 attacks that
     #   directly with mult=2.0 (fattens the model tails ~2x to match realized) and only sells
-    #   tails STILL >=10c overpriced AFTER fattening, in the cheap 3-20c band / final 35min.
+    #   tails STILL overpriced AFTER fattening, in the cheap 3-20c band / final 35min.
     #   Hypothesis: if theta's failure is a simple ~2x tail-scale error, theta4 is + AND
     #   calibrated. It trades despite theta_collect_only via theta_live_variants below.
+    #   EDGE LOOSENED 10c -> 6c (2026-07-11, pre-registered decision): at edge=10 theta4 made
+    #   ZERO trades in ~24h+ (nothing is 10c+ overpriced after a 2x fatten — itself weak
+    #   evidence the base tail miss really was ~2x, but it gives no tradeable signal). Per the
+    #   run #32/#33 loop pre-registration ("loosen edge 10->6c or conclude"), edge=6 gets a
+    #   testable n; the n>=80 gate (KEEP only if per-trade > 0 AND realized-tail-hit <= 1.25x
+    #   modeled) now applies to this edge=6 sample. If it STILL barely trades or trades
+    #   negative/miscalibrated, the fat-tail revival is impractical and theta stays fully shelved.
     theta_variants: str = (
         "theta1:hi=20,ttemax=35;"
         "theta2:hi=20,ttemax=35,thronly=1;"
         "theta3:edge=12,mult=1.25;"
-        "theta4:hi=20,ttemax=35,mult=2.0,edge=10"
+        "theta4:hi=20,ttemax=35,mult=2.0,edge=6"
     )
     # Variants that keep trading even while theta_collect_only shelves the rest of the family
     # (control + theta1/2/3). Comma list of variant tags; empty = fully shelved (collect-only).
