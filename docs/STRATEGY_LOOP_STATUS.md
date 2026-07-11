@@ -8,93 +8,85 @@ suggestion list carries over run-to-run. All times CENTRAL (CDT/CST).*
 
 ---
 
-## Snapshot — 2026-07-11 11:13 AM CDT (run #35)
+## Snapshot — 2026-07-11 04:41 PM CDT (run #36)
 
 **Trading books (settled n / P&L / per-trade / open):**
 | book | n | P&L | ¢/trade | open | note |
 |---|---|---|---|---|---|
-| **mmsell3** (5-10c) | 85 | +$3.41 | **+4.0** | 6 | **strengthening again** (+3.6→+4.0c); ~57% to n≥150 gate |
-| **theta4** (fat-tail) | 2 | +$1.54 | — | 0 | **UNSTUCK** — first 2 trades (n=2 = noise); no longer 0 |
-| **weather_concity** | 7 | −$1.25 | −17.9 | 7 | **first A/B batch NEGATIVE** (n=7 noise); con beat it this batch |
-| **pin15** (NEW) | 0 | 0 | — | 2 | **NEW book from a parallel session** — see #7 (tension w/ idea-model kill) |
-| mmsell (control) | 1,837 | +$14.28 | +0.8 | 15 | breakeven+ |
-| mmsell1 / mmsell2 | 1,021 / 674 | +$12.38 / +$8.16 | +1.2 / +1.2 | 11 / 6 | breakeven+ |
-| weather con (all) | 322 | −$3.83 | −1.2 | 12 | +$1.30 this batch (15 settled); recovered a bit |
+| **mmsell3** (5-10c) | 97 | +$3.37 | **+3.5** | 41 | still climbing to gate; +3.5c beats mmsell1/2 (+1.0c); **65% to n≥150** |
+| **pin15** (NEW→TRACKED) | 21 | −$3.53 | **−16.8** | 0 | registry row NOW EXISTS (`PIN15_THESIS.md`, gate n≥150) — resolves last run's UNTRACKED flag; but first settlements NEGATIVE (n=21) |
+| **theta4** (fat-tail) | 2 | +$1.54 | — | 0 | unchanged (n=2 = noise); gate n≥80 |
+| **weather_concity** | 7 | −$1.25 | −17.9 | 7 | unchanged this batch (n=7 noise); gate n≥120 |
+| mmsell (control) | 1,869 | +$9.66 | +0.5 | 95 | breakeven+ (drifted down from +$14.3 as recent settles net-neg) |
+| mmsell1 / mmsell2 | 1,042 / 687 | +$10.89 / +$7.09 | +1.0 / +1.0 | 64 / 33 | breakeven+ |
+| weather con (all) | 322 | −$3.83 | −1.2 | 15 | flat this batch (no new settles) |
 | theta ctrl/1/2/3 | 560/201/98/134 | +$0.97/+$9.69/−$11.55/−$11.62 | — | 0 | SHELVED, quiet |
 | tfav | 215 | −$7.54 | −3.5 | 0 | KILLED, quiet |
 | weather (rest) | 4,709 | −$238.63 | — | 0 | pruned, done |
 
-**HEADLINE — mmsell3 still climbing; theta4 unstuck; concity's first A/B went the wrong way (n=7);
-a new `pin15` book appeared.** mmsell3 rose to **+4.0c/trade at n=85** — its edge is *growing* with
-n, ~57% to the gate; still the clear near-term win. **theta4 traded for the first time** (2 trades,
-+$1.54) — n=2 is noise but it's no longer stuck at 0, which softens the "bar unreachable" read.
-The **first weather_concity settlements came in NEGATIVE** (7 settled, −$1.25 / −17.9c) while the
-all-city con book it's meant to beat went **+$1.30** on the same batch — the opposite of the
-thesis, but at n=7 it is pure noise (the by-city split always had stability concerns). And a **new
-book `pin15`** (2 open, 0 settled) showed up from a parallel fable session — flagged below.
+**HEADLINE — pin15 now TRACKED (registry row added) but losing early; mmsell3 holding ~+3.5c,
+still the near-term win; no gate cleared.** The big change since run #35: **`pin15` got its
+thesis + pre-registered gate documented** (`docs/PIN15_THESIS.md`, gate n≥150, keep only if
+per-trade >+1.5c AND profit concentrates in the T≈120–180s entries). That resolves last run's
+UNTRACKED-book flag — it's now graded like the others. BUT its first 21 settlements came in at
+**−$3.53 / −16.8c per trade** (0 open now) — clearly negative, though n=21 of 150 is early and
+the gate specifically tests *where* in the T-window the P&L sits. **mmsell3** settled 12 more
+(85→97), easing to **+3.5c/trade** (from +4.0c) — still well above its +1.5c gate and still
+beating mmsell1/2 (+1.0c), **65% to the n≥150 gate** and the clearest near-term win. theta4 (n=2)
+and concity (n=7) unchanged — pure noise. **No gate cleared this run**, so nothing to build yet.
 
-**pin15 — NEW, needs accounting.** Appeared this run (2 open, latest 11:13 AM CDT). Not one of the
-loop-tracked builds (mmsell3/theta4/concity). Almost certainly a parallel fable session acting on
-the idea-model queue — but note the tension: the idea-model runs KILLED the "PINNED" thesis at the
-probe (#7). Either pin15 is a refined/paper-only test of that idea or a different pinning book.
-Its thesis + pre-registered gate are NOT in this loop's context — they should be captured (likely
-in an IDEA_MODEL / journal doc) so pin15 is graded against a fixed rule like the others.
+**Gate sweep (step 3b):** mmsell3 **97/150** (53 to go, MMX blocked on it) · pin15 **21/150**
+(129 to go, currently −EV) · theta4 **2/80** (NEST behind it) · weather_concity **7/120**.
 
-**Data (last-24h / latest CDT):** crypto_spot 2,874 (11:11 AM ✓, 2 products), crypto_ladder
-58,400 (11:12 AM ✓, 100% model-priced), weather forecasts/obs/ensembles/buckets all fresh
-(11:04–11:14 AM ✓). xgame_matches 21 (+2 new; collector still matching though the book is
-shelved), xgame_tapes 74,760 (11:12 AM ✓, tapering post-WC). All green.
+**Data (last-24h / latest CDT):** crypto_spot 2,872 (04:37 PM ✓, 2 products), crypto_ladder
+59,280 (04:38 PM ✓, 100% model-priced), weather forecasts/obs/ensembles/buckets all fresh
+(04:24–04:40 PM ✓), xgame_tapes 41,765 (04:39 PM ✓, tapering post-WC), xgame_matches +2 in 24h
+(latest 05:37 AM CDT; collector matching, book shelved). All green.
 
 **Research probes (on-demand):** WCPROP + XGAME families CLOSED. No standing probes.
 
-**Headline:** mmsell3 +4.0c @ n=85 (edge growing, ~57% to gate — the win); theta4 unstuck (n=2
-noise); concity's first batch negative (n=7 noise, con beat it); NEW pin15 book (2 open) from a
-parallel session needs its thesis/gate documented. Shelved books quiet; collectors fresh.
+**Headline:** pin15 now tracked w/ gate but −16.8c @ n=21 (watch, early); mmsell3 +3.5c @ n=97
+(65% to gate, still the win); theta4/concity noise-level n; no gate cleared; collectors all fresh.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[theta4 · UNSTUCK — watch toward gate (was: decision due)] First 2 trades, +$1.54 (n=2 =
-   noise).** No longer stuck at 0, so the "loosen the edge" action is no longer forced — it CAN
-   clear the bar, just rarely. Gate unchanged: n≥80, keep only if per-trade > 0 AND realized-tail
-   -hit ≤ 1.25x modeled. It will accrue VERY slowly at this rate; if it's still <~10 by run #38,
-   revisit the loosen-edge idea to get a testable n. Do not read n=2.
+1. **[theta4 · UNSTUCK — watch toward gate] Still 2 trades, +$1.54 (n=2 = noise).** No change
+   this run. Gate: n≥80, keep only if per-trade > 0 AND realized-tail-hit ≤ 1.25x modeled. It
+   accrues VERY slowly; if it's still <~10 by run #38, revisit the loosen-edge idea to get a
+   testable n. Do not read n=2.
 
-2. **[mmsell3 · PROMISING, edge growing — hold to gate] +4.0c/trade at n=85** (+2.9→+3.6→+4.0 as
-   n grew; beats the +1.5c gate and mmsell1/2 at +1.2c). Gate: n≥150, keep only if > +1.5c AND
-   beats mmsell1/2 — on track and improving. If it holds, promote (narrow mmsell to 5-10c, retire
-   the diluted wider bands) AND it unblocks MMX (#6). ~57% to the gate. Do NOT act yet.
+2. **[mmsell3 · PROMISING — hold to gate] +3.5c/trade at n=97** (eased from +4.0c @ n=85 as 12
+   more settled; still beats the +1.5c gate and mmsell1/2 at +1.0c). Gate: n≥150, keep only if
+   > +1.5c AND beats mmsell1/2 — on track. **65% to the gate.** If it holds, promote (narrow
+   mmsell to 5-10c, retire the diluted wider bands) AND it unblocks MMX (#6). Do NOT act yet.
 
-3. **[weather_concity · WATCH — first batch negative, but n=7] 7 settled −$1.25 (−17.9c); con
-   went +$1.30 on the same batch.** The edge-city restriction did NOT beat con in its first tiny
-   batch — the opposite of the thesis, but n=7 is noise and the by-city split always had stability
-   concerns (the 10-day window disagreed with all-time). Gate: n≥120, keep only if >+3c AND beats
-   full con. Let it accrue; if it's still losing / not beating con by n~40-60, the by-city edge was
-   likely historical noise and concity should be dropped. Do not read n=7.
+3. **[pin15 · NOW TRACKED — watch, first batch NEGATIVE] 21 settled −$3.53 (−16.8c), 0 open.**
+   RESOLVED last run's untracked flag: `docs/PIN15_THESIS.md` + `BOOK_REGISTRY.md` row now exist
+   (15-min crypto endgame observation-pin; gate **n≥150**, keep only if per-trade > +1.5c AND
+   profit concentrates in the T≈120–180s entries). First settlements are clearly −EV, but n=21 is
+   early and the gate is really about *which T-window* earns. Watch: if it's still deeply negative
+   with no T≈120–180s concentration by n~60–80, the ~300s loop likely can't capture it → shelve.
+   Do not over-read n=21.
 
-4. **[weather con (all) · context] −$3.83 (recovered +$1.30 this batch).** No action; concity is
-   the test.
+4. **[weather_concity · WATCH — n=7, unchanged] 7 settled −$1.25 (−17.9c); con flat this batch.**
+   No new settlements. Gate: n≥120, keep only if it beats all-city con. Let it accrue; if still
+   losing / not beating con by n~40–60, the by-city edge was historical noise → drop. Do not read n=7.
 
-5. **[mmsell existing · unchanged] control/mmsell1/mmsell2 ~breakeven-positive** (+0.8 to +1.2c,
-   n≈3,530); data books. mmsell3 is the live improvement candidate.
+5. **[mmsell existing · unchanged] control/mmsell1/mmsell2 ~breakeven-positive** (+0.5 to +1.0c,
+   n≈3,600). Control drifted +$14.3→+$9.7 as recent settles ran net-negative — still positive,
+   still a data book. mmsell3 is the live improvement candidate.
 
 6. **[idea-model queue · MMX still waiting on mmsell3's gate] Two idea-model runs 2026-07-10
    (`IDEA_MODEL_20260710.md`, `..._run2.md`): 42 candidates, PINNED + DECAY probed & KILLED, 9
    held, 19 killed.** MMX (extend mmsell 5-10c maker-sell into uncorrelated non-sports categories)
-   is the highest-value hold, **blocked on #2 (mmsell3 n≥150)** — trigger: re-run `kalshi-strategy`
-   on MMX the moment mmsell3 gates (material in `..._run2.md`). NEST behind theta4 (#1). RTPIN/
-   BOXPIN behind unbuilt scraper infra. RATELAG behind a live Fed event. Do NOT re-run idea-model
-   until #1 or #2 clears (board already mined across 4 runs).
+   is the highest-value hold, **blocked on #2 (mmsell3 n≥150 — now 65% there)** — trigger: re-run
+   `kalshi-strategy` on MMX the moment mmsell3 gates (material in `..._run2.md`). NEST behind theta4
+   (#1). RTPIN/BOXPIN behind unbuilt scraper infra. RATELAG behind a live Fed event. Do NOT re-run
+   idea-model until #1 or #2 clears (board already mined across 4 runs).
 
-7. **[pin15 · NEW book — document its thesis/gate] Appeared run #35 (2 open, 0 settled) from a
-   parallel session.** The idea-model runs KILLED the PINNED thesis at the probe, so pin15's
-   rationale (refined variant? paper-only test-anyway? different pinning book?) needs to be written
-   down with a pre-registered gate so the loop can grade it like the others — otherwise it's an
-   untracked live book. Recommended: point me at its IDEA_MODEL/journal doc, or have the next fable
-   session record it. The loop query now surfaces it as `book:pin15`.
-
-*(Changed this run: theta4 UNSTUCK — 2 trades, +$1.54 (#1, was "decision due"). mmsell3 → +4.0c @
-n=85, edge growing (#2). concity's first A/B batch NEGATIVE at n=7 (#3, noise but flagged with a
-drop-if-still-losing-by-n~50 tripwire). NEW #7: pin15 book appeared from a parallel session — needs
-its thesis/gate documented. #6 idea-model queue carried forward.)*
+*(Changed this run: #3 pin15 RESOLVED from untracked → now has `PIN15_THESIS.md` + registry row and
+a real gate (n≥150), but its first 21 settlements are −16.8c/trade (early, watch the T-window). #2
+mmsell3 eased +4.0c→+3.5c @ n=97 (65% to gate, still the win). Prior run #35's #7 (document pin15)
+is now folded into #3 as resolved. theta4/concity unchanged, noise-level n. No gate cleared.)*
