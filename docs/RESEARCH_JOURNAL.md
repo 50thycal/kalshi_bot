@@ -16,6 +16,51 @@ Conventions:
 
 ---
 
+## PIN15 PHASE-A VERDICT 2026-07-11 — P1 PASS, P2 pass-in-sample-but-fragile, P3 (SPIKEFADE) FAIL
+
+The PIN15 thesis (`docs/PIN15_THESIS.md`, promoted from the 15-min-crypto idea-model run) ran its
+Phase-A probe twice via ops (`scripts/kalshi_pin15_study.py`, read-only public REST). Venue: Kalshi
+15-minute crypto up/down (`KXBTC15M`/`KXETH15M`). Sample: 1,600–2,400 settled windows, ~8–17 days,
+one calm vol regime. Two runs: first with candle-mid quotes (`pin15-phaseA-1`), second charging the
+**real taker ask** at a contemporaneous (≤1-min) quote (`pin15-phaseA-ask`) — the honest execution cost.
+
+**STRUCTURE (confirmed):** `KXBTC15M` is a `greater_or_equal` threshold whose `floor` strike =
+"Target Price", and that target ≈ the prior window's settle ≈ spot at window open. So it IS a
+"does spot end ≥ where it started" direction bet, settled on the 60-second average of the CF index.
+
+**P1 — PASS, decisively.** The outcome de-randomizes early and calibrates sharply. At **T-120s**, a
+spot displacement of **≥ +5bp → settles Up 98–100%**; **≤ −5bp → 0–2%**; only the ±2bp cell is a
+coin flip. **~76% of windows are already ≥5bp displaced (i.e. decided) by T-60s** and by T-180s.
+Actionable latency: the signal exists minutes out, not in the un-catchable final seconds.
+
+**P2 — PASS IN-SAMPLE but FRAGILE, and the tradeable window is 2–3 min out, NOT the close.** Buying
+the drift-favored side at the **real ask**, held to settlement, net of worst-case fee:
+**T-180s +3.9¢/ct** (ask 93.3¢, win 98.3%), **T-120s +3.6¢** (ask 95.1¢, win 99.8%), decaying to
+**T-60s +1.1¢** (ask 97.3¢, win 99.4%). Split-half OOS consistent (+3.5/+4.3 at T-180s); BTC and ETH
+both positive; spreads tight (ask only ~0.7–1¢ over mid, so the mid→ask haircut was small). **The
+fragility:** this is buying a ~93–95¢ favorite with only ~**3–4pp of win-rate cushion** over
+breakeven, in a **single calm vol regime**. In a high-vol regime the same 5bp displacement would flip
+far more often (2-min BTC σ is ~2–3bp calm but ~10bp+ in a normal regime), which could compress or
+invert the edge — the ~2% loss tail costs ~93¢ each. **P4 (robustness across vol regimes) is
+therefore UNTESTED** — the whole sample is one regime; this is the theta-in-one-vol-regime caution again.
+
+**P3 — FAIL as pre-registered.** The predicted mechanism (SPIKEFADE: fade a last-10s spike the 60s
+average mutes; edge RISES as T→0) is **wrong**: SPIKEFADE windows are **rare (2.8%)** and **weak
+(settle followed the average only ~75%)**, and the edge **FALLS** as T→0 (the favorite prices toward
+100¢). The real edge is plainer and obs-family: **the drift-favorite is mildly underpriced ~2–3 min
+before close** and the market closes the gap into settlement. This reshapes any book (enter at
+T≈120–180s, not the final seconds) but does not kill it — the decision rule gated on P1∧P2, both of
+which pass in-sample. **UPBIAS:** realized Up-rate 50.5–50.7% (no structural directional bias).
+
+**Verdict + correlation caution.** Promising and rare-for-this-repo (a clean in-sample +EV), but NOT
+a green light to live. Two hard caveats before any build commits real effort: (1) **vol-regime
+fragility** (P4 untested — the biggest kill risk); (2) it is a **favorite-BUY**, the same family
+`tfav` died in (−3.6¢ on the hourly ladders) — the material difference is that here the favorite is
+picked by a live spot-pin, not a static price band, but the correlation/skepticism is live. Probe stays
+allowlisted. Next step is a fork (see thesis RESULTS): a cheap **vol-regime robustness re-run** to
+attack P4 on history, and/or a **`pin15` paper book** that forward-tests real fills/depth at a
+tightened T≈120–180s poll and naturally samples the next regime.
+
 ## THETA4 EDGE LOOSENED 10c→6c 2026-07-11 — pre-registered decision enacted (0 trades at edge=10)
 
 theta4 (the mult=2.0 fat-tail revival test, the one live variant trading while the rest of theta
