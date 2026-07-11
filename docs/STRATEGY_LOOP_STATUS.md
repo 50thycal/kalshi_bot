@@ -8,76 +8,81 @@ suggestion list carries over run-to-run. All times CENTRAL (CDT/CST).*
 
 ---
 
-## Snapshot — 2026-07-10 02:57 PM CDT (run #32)
+## Snapshot — 2026-07-10 08:11 PM CDT (run #33)
 
 **Trading books (settled n / P&L / per-trade / open):**
 | book | n | P&L | ¢/trade | open | note |
 |---|---|---|---|---|---|
-| **mmsell3** (5-10c) | 10 | −$0.32 | — | **48** | accruing fast (48 open → n jumps soon); P&L noise |
-| **weather_concity** | 0 | — | — | **7** | **NOW LIVE** — first entries (AUS/CHI/NYC); wiring confirmed |
-| **theta4** (fat-tail) | 0 | — | — | 0 | still 0 at ~18h — bar very restrictive (decision pt next run) |
-| mmsell (control) | 1,655 | +$2.80 | +0.2 | 118 | breakeven |
-| mmsell1 / mmsell2 | 883 / 582 | +$7.62 / +$4.35 | +0.9 / +0.7 | 88 / 50 | breakeven+ |
-| weather con (all) | 307 | **−$5.13** | −1.7 | 15 | **bad batch** (−$3.89 on 13 today); bleed continues |
+| **mmsell3** (5-10c) | 64 | +$1.87 | **+2.9** | 12 | **early-strong** — beats gate (+1.5c) & mmsell1/2; n→150 |
+| **theta4** (fat-tail) | 0 | — | — | 0 | **STILL 0 at ~23.5h → DECISION triggered (below)** |
+| **weather_concity** | 0 | — | — | 7 | 7 open (AUS/CHI/NYC), none settled yet (weather ~daily) |
+| mmsell (control) | 1,769 | +$11.39 | +0.6 | 30 | good window (+$8.6); breakeven+ |
+| mmsell1 / mmsell2 | 975 / 640 | +$9.58 / +$6.19 | +1.0 / +1.0 | 21 / 11 | breakeven+ |
+| weather con (all) | 307 | −$5.13 | −1.7 | 15 | static since run #32 (con idle) |
 | theta ctrl/1/2/3 | 560/201/98/134 | +$0.97/+$9.69/−$11.55/−$11.62 | — | 0 | SHELVED, quiet |
 | tfav | 215 | −$7.54 | −3.5 | 0 | KILLED, quiet |
 | weather (rest) | 4,709 | −$238.63 | — | 0 | pruned, done |
 
-**HEADLINE — weather_concity is live (7 open); theta4 still 0; con had a bad day.** The concity
-book started trading (con resumed daytime and concity rode its AUS/CHI/NYC picks) — 7 open, 0
-settled yet (weather settles ~daily), but this **confirms the end-to-end wiring in production**.
-mmsell3 is piling up open positions (48) that will settle into real n over the next hours.
-theta4 is **still at 0 after ~18h** — the mult=2.0 + 10c bar is proving very restrictive.
-Separately, the all-city con book had a **bad batch today** (−$1.24 → −$5.13, ~−30c/trade over
-13 settles) — which is exactly the bleed the concity restriction is meant to dodge; the test now
-has live open positions on both sides to compare when they settle.
+**HEADLINE — mmsell3 is the first new book with a real (early) positive signal; theta4 hit its
+decision point at 0.** mmsell3 jumped n=10 → **64** as its open positions settled, landing at
+**+2.9c/trade** — above its +1.5c gate and well above mmsell1 (+1.0c) / mmsell2 (+1.0c). Not yet
+the n≥150 gate, but the "5-10c is the pure sweet spot" thesis is looking right so far. Meanwhile
+**theta4 is still at 0 trades ~23.5h after deploy** — the pre-registered decision point. con +
+concity are static (con idle since yesterday afternoon; concity's 7 opens await daily settlement).
 
-**theta4 — DECISION POINT next run (#33, ~26h post-deploy).** 0 trades at ~18h. The unit test
-proves the live-variant mechanism works and the theta tracker is running (ladder collector
-fresh), so 0 = the double gate (2x fatter model AND 10c edge) is simply almost never cleared.
-Pre-registered call: **if theta4 is STILL 0 at run #33, treat the bar as effectively unreachable
-→ fable should either loosen the edge (10→~6c) to get a testable n, or conclude the fat-tail
-revival is impractical and stop.** One more run decides it.
+**theta4 — DECISION (pre-registered, now due): the mult=2.0 + 10c bar is effectively
+unreachable.** 0 entries in ~23.5h of live evaluation (mechanism unit-tested; ladder collector
+fresh, so the tracker IS running). Per the run #32 pre-registration, the recommended fable
+action is: **loosen theta4's edge from 10c → ~6c** so it actually trades and we can measure
+whether the 2x-fattened model's tails are calibrated (`theta_variants` → `theta4:...,edge=6`);
+if it STILL barely trades or trades negative/miscalibrated, the fat-tail revival is impractical
+and theta stays fully shelved. Report-only — this is the operator's fable call. (Interpretation
+note: that nothing is 10c+ overpriced after a 2x fatten is itself weak evidence the base model's
+tail miss really was ~2x — but it gives no tradeable signal, hence loosen-or-conclude.)
 
-**Data (last-24h / latest CDT):** crypto_spot 2,876 (02:56 PM ✓, 2 products), crypto_ladder
-59,280 (02:56 PM ✓, 100% model-priced), weather forecasts/obs/ensembles/buckets all fresh
-(02:28–02:57 PM ✓). xgame_matches 19 (0 new), xgame_tapes 68,372 (02:56 PM ✓ — heavy volume, WC
-final being played). All green.
+**mmsell3 — promising, hold to the gate.** +2.9c/trade at n=64 vs the +1.5c bar. If it holds
+through n≥150, it's the portfolio's first genuinely positive book since the cleanup — promote
+candidate (narrow mmsell to 5-10c, retire the diluted wider bands). Do NOT call it yet (n=64).
 
-**Research probes (on-demand):** WCPROP + XGAME families CLOSED (disabled). No standing probes.
+**Data (last-24h / latest CDT):** crypto_spot 2,874 (08:09 PM ✓, 2 products), crypto_ladder
+57,920 (08:09 PM ✓, 100% model-priced), weather forecasts/obs/ensembles/buckets all fresh
+(08:10–08:11 PM ✓). xgame_matches 19 (0 new — WC final done), xgame_tapes 77,098 (08:11 PM ✓,
+tapering). All green.
 
-**Headline:** weather_concity live (7 open — wiring confirmed); mmsell3 accruing (48 open, n
-jumps soon); theta4 still 0 at ~18h (decision next run). All-city con bled today (−$5.13),
-reinforcing the concity rationale. Shelved books quiet; collectors fresh.
+**Research probes (on-demand):** WCPROP + XGAME families CLOSED. No standing probes.
+
+**Headline:** mmsell3 early-strong (+2.9c/trade, n=64 — beats its gate & the other bands); theta4
+hit its pre-registered decision point at 0 → recommend loosening edge 10→6c or concluding.
+concity 7 open awaiting settlement; con idle. Shelved books quiet; collectors fresh.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-*(All three run #30 build-suggestions shipped via PR #26; the list is "watch toward the
-pre-registered gates.")*
+1. **[theta4 · DECISION DUE — loosen or conclude (fable)] Still 0 at ~23.5h — bar unreachable.**
+   The mult=2.0 + edge=10c gate is almost never cleared. Recommended fable action: set
+   `theta4:hi=20,ttemax=35,mult=2.0,edge=6` (loosen the edge) to get a testable n and measure
+   the 2x-fattened model's calibration; if it then trades negative/miscalibrated or still
+   barely trades, conclude the fat-tail revival is impractical and leave theta fully shelved.
+   Not urgent (paper), but this experiment is stuck at n=0 until the edge is loosened.
 
-1. **[mmsell3 · WATCH toward gate — fast] n=10 settled but 48 OPEN** → n will jump over the next
-   hours. Gate: n≥150, keep only if >+1.5c AND beats mmsell1/mmsell2. P&L is noise until n≥~100.
+2. **[mmsell3 · PROMISING — hold to gate] +2.9c/trade at n=64** (beats the +1.5c gate and
+   mmsell1/mmsell2 at +1.0c). First new book with a real positive signal. Gate: n≥150, keep
+   only if per-trade > +1.5c AND beats mmsell1/2 — it's on track. If it holds, promote (narrow
+   mmsell to 5-10c, retire the diluted wider bands). Do NOT act at n=64; let it reach the gate.
 
-2. **[theta4 · DECISION POINT next run] Still 0 at ~18h.** If STILL 0 at run #33 (~26h), the
-   2.0x/10c bar is effectively unreachable → fable should loosen edge (10→~6c) for a testable n,
-   OR conclude the fat-tail revival is impractical and leave theta fully shelved. Concrete call
-   next run.
+3. **[weather_concity · WATCH — 7 open, awaiting first settlements] Wiring confirmed (run #32).**
+   Gate: n≥120, keep only if >+3c AND clearly beats full con. First A/B data lands when the 7
+   AUS/CHI/NYC opens settle. Still ~1-2 months to the full gate (con is low-frequency; idle since
+   yesterday afternoon).
 
-3. **[weather_concity · WATCH — now live, 7 open] Wiring confirmed in production.** Gate: n≥120,
-   keep only if >+3c AND clearly beats full con. Today the all-city con bled (−$3.89/13); when
-   concity's 7 AUS/CHI/NYC opens settle we get the first direct A/B on whether the edge-city
-   restriction dodges that bleed. Still ~1-2 months to the full gate (con is low-frequency).
+4. **[weather con (all) · context] −$5.13, static.** No action; concity is the test of whether
+   restricting to edge cities beats it.
 
-4. **[weather con (all) · context — bleed continues] −$5.13 (−1.7c), −$3.89 today.** No action
-   (concity is the test); but if con keeps bleeding, the case to retire all-city con in favor of
-   the restricted book strengthens — pending concity's n.
+5. **[mmsell existing · unchanged] control/mmsell1/mmsell2 ~breakeven-positive** (+0.6 to +1.0c,
+   n≈3,380); data books. mmsell3 is the live improvement candidate.
 
-5. **[mmsell existing · unchanged] control/mmsell1/mmsell2 ~breakeven** (pooled ~+0.4c, n≈3,120);
-   data books, not promote candidates.
-
-*(Changed this run: weather_concity 0 → LIVE (7 open, wiring confirmed) — #3 upgraded. theta4
-given a concrete DECISION POINT for run #33 (#2). Added #4 noting the all-city con bled today
-(−$5.13), which reinforces why concity exists. mmsell3 accruing (48 open). Shelved books quiet;
-deploy remains healthy.)*
+*(Changed this run: theta4 escalated to DECISION DUE (still 0 at ~23.5h → loosen edge 10→6c or
+conclude) — #1. mmsell3 upgraded to PROMISING (+2.9c/trade at n=64, beats its gate & the other
+bands) — #2, watch to n≥150. concity still 0 settled (7 open). Shelved books quiet; deploy
+healthy.)*
