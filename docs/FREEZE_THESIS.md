@@ -1,9 +1,19 @@
 # FREEZE — exchange-closure pin on Kalshi commodity-hub markets
 
 *Thesis written 2026-07-11, before any validation ran; the falsifiable predictions below are
-pre-registered and must not be re-scoped post-hoc. Status: pending probe. Promoted from
-`docs/IDEA_MODEL_20260711_run2.md` (candidate F1, absorbing F2 SETTLEPIN and F3 TOUCHPIN as
-co-measured cells).*
+pre-registered and must not be re-scoped post-hoc. Promoted from `docs/IDEA_MODEL_20260711_run2.md`
+(candidate F1, absorbing F2 SETTLEPIN and F3 TOUCHPIN as co-measured cells).*
+
+**STATUS: UNTESTABLE — provisionally shelved 2026-07-11 (NOT killed).** Probe
+`scripts/kalshi_freeze_study.py` ran to verdict same-day (ops `freeze-0711-1`→`freeze-0711-2`; full
+write-up in `RESEARCH_JOURNAL.md`). The load-bearing analytical refinement: the hub settles on
+**Pyth (continuous 24/7 pricing)**, so metals/energy never truly freeze — only grains/softs can, and
+the hub has **essentially not listed/settled them yet** (settled grain 0 / soft 8; open coffee 22 /
+cotton 3 / soybeans 2; no corn/wheat/sugar). The FREEZE cell got **0 post-pin trades** → the
+mechanism was never exercised, so the pre-registered "P3 fail → close the family" does NOT fire (it
+requires real data). A v1 probe bug (a SETTLEPIN cell scoring Pyth-continuous markets with the
+realized result = lookahead) manufactured a fake +15.82¢ and was caught + removed in v2. **Revisit
+trigger:** settled grain/soft hub markets grow into the hundreds → re-run the probe.
 
 ## One-liner
 

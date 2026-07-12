@@ -16,6 +16,64 @@ Conventions:
 
 ---
 
+## FREEZE VERDICT 2026-07-11 — UNTESTABLE (provisional, NOT a kill); the hub's ag/soft markets don't exist yet
+
+The FREEZE thesis (`docs/FREEZE_THESIS.md`, promoted from `docs/IDEA_MODEL_20260711_run2.md` F1)
+ran its probe to a verdict the same day via ops (`scripts/kalshi_freeze_study.py`, read-only public
+REST + fixed exchange calendars; runs `freeze-0711-1` then `freeze-0711-2`). Thesis: Kalshi's new
+commodities hub trades 24/7 while the underlying exchanges stop printing, so a contract whose
+settlement window sits inside a source freeze is mechanically decided — buy the decided side while
+launch-era retail still quotes it away from certainty.
+
+**The load-bearing analytical call, made before writing the probe:** the hub settles on **Pyth**,
+whose whole selling point is *continuous 24/7 pricing*. For metals/energy the underlying spot trades
+~24/5 OTC, so Pyth keeps printing and the exchange-closure "freeze" is NOT real. Per the thesis's
+own "when in doubt classify NOT frozen" rule, **only agricultural grains + softs get a freeze window**
+(they have no meaningful weekend/overnight OTC market, so Pyth must carry a stale last print);
+metals/energy are excluded from the pin measurement entirely.
+
+**A v1 probe bug, caught on the first ops run and fixed (the same honesty discipline as PINNED
+v2→v4).** v1 also scored a "SETTLEPIN" cell over metals/energy using the realized `result` as the
+locked side — which is **lookahead** on a continuous source (the price is still moving), and it
+manufactured a fake **+15.82¢/ct on 32k trades** — the exact "already-decided-favorite mirage" the
+repo has been fooled by before (favbuy, MLBWX v1). v2 drops that cell and scores ONLY genuinely
+source-frozen (grain/soft) markets; the fake edge vanished to **0 valid trades**, confirming it was
+pure artifact.
+
+**Verdict (v2, graded verbatim): UNTESTABLE — do not promote, do not close the family.** Of 3,808
+settled commodity markets, **the source-frozen universe is grain 0 / soft 8** (the rest are 2,477
+metal + 1,323 energy, all Pyth-continuous). Exactly **1** grain/soft market closed inside a dark
+window, with **0 post-pin trades** — the mechanism was never exercised. P1 KILL / P2–P4 FAIL are all
+**data-absence, not a measured flat**, so the probe reports UNTESTABLE and explicitly does NOT fire
+the pre-registered "P3 fail → close the mechanical-pin family" (that rule requires ≥25 trades of real
+data; there were none). P5 clean (0 red flags — nothing to flag with no tape).
+
+**The structure enumeration (the co-deliverable that unblocks COMPIN/OPTRV) is the real finding —
+the hub is metals/energy-first and the FREEZE-eligible markets barely exist even OPEN:**
+| commodity | open mkts | freeze-eligible? | dominant price type |
+|---|---|---|---|
+| silver | 369 | no (Pyth-cont.) | threshold/close |
+| gold | 359 | no | threshold/close |
+| oil | 342 | no | settle/threshold/close/avg |
+| natgas | 156 | no | close |
+| copper | 126 | no | close |
+| refined (diesel) | 43 | no | **average (41/43 — TWAP)** |
+| **coffee** | **22** | **yes** | threshold |
+| **cotton** | **3** | **yes** | threshold |
+| **soybeans** | **2** | **yes** | threshold |
+
+No corn, no wheat, no sugar listed at all. The thesis's whole premise — daily/short-dated ag markets
+settling inside a weekend/overnight freeze — has **almost no market to trade yet**. This is a genuine
+"the venue isn't ready" outcome, not evidence about the edge.
+
+**Decision + trigger.** FREEZE is **provisionally shelved (UNTESTABLE)**, not killed. Revisit trigger:
+`freeze_eligible` (settled grain/soft markets) grows into the **hundreds** — re-run the probe then. No
+book built, no `BOOK_REGISTRY.md` row (nothing traded). Secondary reads for the holds queue: **COMPIN
+is structurally alive** (average/TWAP-settled contracts do exist — diesel is ~all average, oil has
+some) but only on Pyth-*continuous* energy, so it inherits pin15's "is the partial average known"
+question on a continuous source; **OPTRV** depth couldn't be read (the v2 orderbook snapshot returned
+n/a — a minor probe gap to fix before OPTRV is assessed). Probe stays allowlisted for the re-run.
+
 ## PIN15 P4 (VOL-REGIME) VERDICT 2026-07-11 — PASS; the edge holds in high vol, biggest kill-risk cleared
 
 The Phase-A verdict flagged **vol-regime fragility as the top open risk** (the +EV sample was one
