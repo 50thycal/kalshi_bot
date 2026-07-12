@@ -16,6 +16,69 @@ Conventions:
 
 ---
 
+## COMPIN VERDICT 2026-07-12 — UNTESTABLE (provisional, NOT a kill); TWAP contracts exist OPEN but none have SETTLED yet
+
+The COMPIN thesis (`docs/COMPIN_THESIS.md`, promoted from `docs/IDEA_MODEL_20260712.md` M1) ran
+its probe to a verdict the same day via ops (`scripts/kalshi_compin_study.py`, read-only public
+Kalshi REST + Pyth Benchmarks history; run `compin-0712-1`, before the 2026-07-31 Pyth keyless
+deadline). Thesis: on commodity-hub contracts that settle on a **time-window average** (TWAP/VWAP)
+of the Pyth feed, the elapsed portion of the averaging window progressively **locks** the outcome
+while the quote tracks flashing spot — buy the average-locked side once the remaining window can no
+longer flip it (the pin15 mechanics-blindness shape, with an hours-scale latency budget).
+
+**Verdict (graded verbatim): UNTESTABLE — do not promote, do not close the family.** Of 16,000
+settled events scanned (the `--max-event-pages 80` cap was hit), **3,810 settled commodity markets
+classified — and ZERO are average/TWAP-settled**: the settled universe is `close:3490` (the many
+already-resolved hourly/daily threshold-style rungs) + `settle:128` + `threshold:192`. With no
+settled average-type market there is no tape to grade the pin against, so the mechanism was never
+exercised → the pre-registered UNTESTABLE branch (pooled post-decided trades < 25 → data-absence,
+not a measured flat) fired. Stage 2/3 (rules-window parse → Pyth reconstruction → decided-time)
+never ran because Stage 1 found nothing to feed it.
+
+**The structure enumeration is the real finding, and it corrects the thesis's own framing.** The
+TWAP contracts the FREEZE run flagged ("diesel 41/43 average") were counted in the **OPEN**
+enumeration, and this run confirms they are **still open, not settled**:
+| commodity | open mkts | dominant open price types | FREEZE-eligible? |
+|---|---|---|---|
+| silver | 369 | threshold:249, close:120 | no (Pyth-cont.) |
+| gold | 358 | threshold:238, close:120 | no |
+| **oil** | 342 | settle:190, threshold:79, close:60, **average:13** | no |
+| natgas | 156 | close:140, threshold:16 | no |
+| copper | 126 | close:120, threshold:6 | no |
+| **refined (diesel)** | 43 | **average:41**, threshold:2 | no |
+| coffee | 22 | threshold:22 | yes |
+| cotton | 3 | threshold:2, range:1 | yes |
+| nickel | 2 | threshold:2 | no |
+| soybeans | 2 | threshold:2 | yes |
+
+So **~54 average-settled contracts exist and are live (41 diesel + 13 oil), but none has reached
+expiry yet** — the hub launched ~2026-07-07 and its average/TWAP contracts are evidently longer-
+dated (weekly+), so the settled tape that would grade COMPIN doesn't exist. This is a genuine "the
+venue isn't ready" outcome — the identical shape as the FREEZE verdict 24h earlier — not evidence
+about the edge. **The thesis's "diesel 41/43 average-settled" phrasing was imprecise** (it meant
+41 of 43 open diesel markets are average-*type*, not 41 *settled* markets); corrected here.
+
+**Decision + trigger.** COMPIN is **provisionally shelved (UNTESTABLE)**, not killed. Revisit
+trigger: the average-type universe (diesel/oil especially) **accrues a settled tape** — re-run
+`kalshi_compin_study` (it's cheap and stays allowlisted) once diesel/oil average contracts start
+resolving, ideally still before the 2026-07-31 Pyth keyless deadline (after which Stage 2 needs a
+Pyth API key). No book built, no `BOOK_REGISTRY.md` row (nothing traded).
+
+**Two secondary reads for the holds queue:**
+1. **OPTRV stays blocked on the same probe gap FREEZE v2 hit** — the orderbook depth read came back
+   **`spread n/a` / `depth@2c n/a` for every commodity** (the sampler isn't extracting usable books
+   from the open-market orderbook endpoint). OPTRV's "are hub spreads/depth fillable" question is
+   still unanswered; fixing the orderbook parse in `kalshi_freeze_study.enumerate_structure` /
+   `orderbook()` is the prerequisite before OPTRV can be assessed.
+2. **FREEZE trigger recheck (ride-along): grain/soft settled = 8**, unchanged from 07-11 — still far
+   from the "hundreds" revisit bar; FREEZE stays shelved.
+
+Honest caveat on the null: the settled scan hit its 16,000-event cap, so in principle an average-
+settled market could sit beyond page 80 — but commodity markets were well-represented in the scanned
+set (3,810 found, incl. 3,490 `close`), so an entire settled-average cohort hiding past the cap is
+unlikely; the "not settled yet" read is the dominant explanation. Probe stays allowlisted for the
+re-run.
+
 ## FREEZE VERDICT 2026-07-11 — UNTESTABLE (provisional, NOT a kill); the hub's ag/soft markets don't exist yet
 
 The FREEZE thesis (`docs/FREEZE_THESIS.md`, promoted from `docs/IDEA_MODEL_20260711_run2.md` F1)
