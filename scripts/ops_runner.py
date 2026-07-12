@@ -77,6 +77,7 @@ ALLOWED_SCRIPTS = (
     "kalshi_pinned_study",
     "kalshi_decay_study",
     "kalshi_pin15_study",
+    "kalshi_freeze_study",
 )
 
 
