@@ -53,9 +53,10 @@ Estimate EV against *real* cost, not gross:
 
 An edge that only survives gross is dead. This axis alone kills many candidates.
 
-### 4. Testability — promotable or not
+### 4. Testability — promotable or not, AND testable *now* (a hard pre-promotion gate)
 
-Can it be validated with data you can actually get, via a probe you can write? Name:
+Two parts. **(a) Testable in principle:** can it be validated with data you can actually get, via
+a probe you can write? Name:
 
 - **The dataset + provenance** — a self-contained read-only `scripts/` study (stdlib + psycopg)
   runnable via the ops channel, or web-fetchable public price history (Kalshi candlesticks
@@ -63,16 +64,30 @@ Can it be validated with data you can actually get, via a probe you can write? N
   use the full clobTokenId), or an existing collected table.
 - **The measurement** — the specific number that decides it, no-lookahead.
 
-Untestable, however clever → not promotable. If it needs live in-play data the repo doesn't yet
-collect (e.g. sub-minute game tapes), say so — that's a data-collection task the thesis must
-specify.
+Untestable-in-principle, however clever → not promotable. If it needs live in-play data the repo
+doesn't yet collect (e.g. sub-minute game tapes), say so — that's a data-collection task.
 
-### 5. Capacity / liquidity — from the Phase 1 survey
+**(b) Testable NOW — the gate the record most needs.** Does enough *settled* data exist *today* to
+grade it against the probe's own n-floor (the P1/P2 trade minimums)? **FREEZE and COMPIN both
+promoted, got full probes written, and returned UNTESTABLE because the settled tape didn't exist
+yet** — two wasted probe cycles a cheap upfront count would have caught. Before promoting,
+estimate the settled sample available now (a ~20-line census, or reasoning from the board survey).
+**If it's below the n-floor → HOLD (pending data accrual) with a concrete data-growth trigger, NOT
+PROMOTE.** "Untestable-yet" is a HOLD, not a probe; only "testable-now" earns a promote.
+
+### 5. Capacity / liquidity — from the Phase 1 survey, AND venue age
 
 Can it absorb meaningful size, and does it settle often enough to build a Kelly-sizable,
 statistically-readable track record? Recurring high-frequency settles (hourly crypto, daily
 weather, in-play games) ≫ one-off lumpy events (a single election). A great edge on a $50 market
 is a hobby, not $100/mo.
+
+**Venue age is part of this axis.** A newly-launched venue is seductive — uncorrelated,
+launch-retail counterparty — but **structurally data-poor**: both of the record's UNTESTABLE
+verdicts (FREEZE, COMPIN) chased a venue launched that same month, where the markets existed
+*open* but nothing had *settled*. **For any candidate on a venue younger than ~2 months, HOLD by
+default until a settled-liquidity census shows a gradeable tape.** This is testability-NOW applied
+to the venue rather than the specific idea, and it's cheap to check.
 
 ### 6. Infra reuse — speed-to-verdict multiplier
 
@@ -116,9 +131,16 @@ pre-registered. Status: pending probe.*
 - **Decision rule:** build the paper book only if <which predictions must pass>; if <…>,
   shelve the family. (State it now so results can't be re-scoped.)
 
-## Probe plan
-- **Script / pull:** <the read-only `scripts/` study to write, or the web pull to run>;
-  reuses <existing probe/dataset>; needs allowlisting in `ops_runner.py`? <yes/no>.
+## Probe plan (staged — recon census FIRST)
+- **Recon census (step 1, cheap):** <the ~20-line read-only enumeration that answers ONLY "does
+  the settled data exist, and how much?" — settled-market count, volume, price-type/field
+  presence — against the P1/P2 n-floor>. If it comes back below the floor, the verdict is
+  UNTESTABLE-yet → HOLD with a data-growth trigger; do NOT write the full probe. (FREEZE's
+  enumeration co-deliverable is the model; COMPIN should have been this one census, not a full
+  probe.)
+- **Full probe (step 2, only if the census clears):** <the read-only `scripts/` study to write,
+  or web pull to run>; reuses <existing probe/dataset>; needs allowlisting in `ops_runner.py`?
+  <yes/no>.
 - **Dataset + provenance:** <exact source, and how it's kept separate from other tables —
   never mix provenance silently>.
 - **No-lookahead construction:** <how point-in-time correctness is guaranteed — which
@@ -148,5 +170,18 @@ This thesis is the bridge into the validation machinery:
 - **Generically:** it enters the `kalshi-strategy` skill at Phase 2 (data pipeline) / Phase 4
   (backtest) with the thesis and predictions already articulated — no further generative work.
 
-The idea model's job ends here: a **pre-registered, falsifiable, cost-aware, testable thesis,
-ranked by its expected contribution to $100/month realized.** Validation takes it from there.
+## Close the loop each run (holds queue + scorecard)
+
+Two bookkeeping steps that keep the pipeline honest across runs — do both before you finish:
+
+- **Reconcile the holds queue** in the run doc: collapse duplicate holds, retire dead ones, and
+  **flag which triggers have FIRED** (a fired trigger is an actionable dive for the *next* Phase
+  0.5 menu, not a parked idea). Carry the reconciled queue forward with explicit trigger-state.
+- **Update `docs/IDEA_MODEL_SCORECARD.md`:** append a row for each promotion (date, family, thesis
+  doc, status = pending probe); when a verdict lands later, set its status (paper-book / killed /
+  untestable). This ledger is what Phase 0 reads next time to calibrate skepticism and spot
+  0-for-everything families.
+
+The idea model's job ends here: a **pre-registered, falsifiable, cost-aware, testable-NOW thesis,
+ranked by its expected contribution to $100/month realized** — with the holds queue reconciled and
+the scorecard current. Validation takes it from there.

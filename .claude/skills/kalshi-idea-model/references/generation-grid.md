@@ -4,6 +4,16 @@ Read in Phase 2. The goal is **coverage**: walk this grid deliberately so genera
 tunnel on one corner (the corner it wants to tunnel on is "another weather/crypto variant").
 Generate breadth first; the screen cuts later.
 
+**Two modes (set in Phase 0.5):**
+- **Scoped dive (default)** — the user picked one venue/mechanic focus. Do NOT walk the whole
+  grid. Instead, *go deep in the chosen cell*: generate ≥ ~8 candidates that are variants,
+  sub-cells, adjacent mechanics on the same underlying, and the honest failure modes *within* the
+  focus. Use the grid axes below only to make sure you've covered the focus thoroughly (e.g. for a
+  scoped "commodity TWAP" dive, walk each mechanic against commodities, not against every
+  category). Depth over breadth — this is the mode that produced the pipeline's one paper book.
+- **Broad sweep** — the user asked for a full-board search. Walk the entire grid below as written,
+  ≥ ~12 candidates across mechanics × categories with forced anti-anchor slots.
+
 The grid has three axes. A candidate is a **mechanic × category anchored by a data-edge** (the
 fresh signal you'd compute). Walk **mechanics as the outer loop** — they're the part the
 portfolio is most likely blind to.
