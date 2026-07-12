@@ -114,6 +114,18 @@ every run, not just the paper-trades rows:
 - **Any other named decision point** referenced in prior suggestions (e.g. "loosen theta4's
   edge or conclude") — carry it until the user's fable session acts, but re-flag it as DUE
   again each run it remains unresolved so it doesn't fade into background noise.
+- **FREEZE gate re-check (market-listing trigger, not a book gate).** The FREEZE thesis
+  (`docs/FREEZE_THESIS.md`) came back **UNTESTABLE** 2026-07-11, not killed: Kalshi's
+  commodity-hub grain/soft listings (the only commodities that can genuinely freeze — see the
+  thesis) were too thin to exercise the mechanism (0 settled grain, 8 soft). The revisit trigger
+  is Kalshi's own listings growing, not anything this repo builds. Run the lightweight check
+  every loop pass via ops: `{"type":"script","name":"kalshi_freeze_listing_check","args":[],
+  "id":"freeze-gate-<n>"}` (cheap — enumeration only, no trade-tape scan). It prints settled/open
+  grain+soft counts and whether the pre-registered threshold (settled grain+soft ≥ 100) has
+  fired. If it fires, escalate exactly like a cleared trading-book gate: lead the chat headline
+  with **"FREEZE gate cleared → re-run `scripts/kalshi_freeze_study.py` for a real verdict"** and
+  add that as the next suggestion. If not fired, note the current count in one line and move on
+  — this is a low-urgency background check, not a market event.
 
 This step exists because gate-blocked ideas are easy to forget between runs — they don't show
 up in the books/data query at all until someone remembers to look. Treat the suggestion list
