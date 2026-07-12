@@ -271,12 +271,73 @@ def price_type_of(text: str) -> str:
     return "threshold"
 
 
+# --- orderbook parsing (shape-robust; mirrors kalshi_bot.scanner.metrics, kept stdlib-only) ---
+# Kalshi returns EITHER the classic `orderbook` ({"yes":[[cents,count],...]}) OR the newer
+# `orderbook_fp` ({"yes_dollars":[["0.53","13.00"],...]}) wrapper. The commodity-hub markets
+# return the _fp form, so the old parser (which read only `orderbook.yes` and int()-truncated the
+# dollar-string price 0.53 -> 0) saw every book as empty -> "n/a" for every commodity. This is the
+# FREEZE-v2 / OPTRV "orderbook returned n/a" gap.
+
+def _price_to_cents(value) -> int | None:
+    """Classic int cents (48) or dollar string/float ('0.48' -> 48)."""
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(round(value))
+    try:
+        return int(round(float(value) * 100))  # dollar string -> cents
+    except (TypeError, ValueError):
+        return None
+
+
+def _to_count(value) -> int:
+    try:
+        return int(round(float(value)))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _ob_sides(ob: dict) -> tuple[list, list]:
+    """(yes, no) raw level arrays from either the `orderbook` or `orderbook_fp` wrapper,
+    accepting both `yes`/`no` and `yes_dollars`/`no_dollars` keys."""
+    book = (ob or {}).get("orderbook") or (ob or {}).get("orderbook_fp") or (ob or {})
+    yes_raw = book.get("yes")
+    if yes_raw is None:
+        yes_raw = book.get("yes_dollars")
+    no_raw = book.get("no")
+    if no_raw is None:
+        no_raw = book.get("no_dollars")
+    return yes_raw or [], no_raw or []
+
+
+def _book_levels(side) -> list[tuple[int, int]]:
+    out: list[tuple[int, int]] = []
+    for lvl in side or []:
+        try:
+            cents = _price_to_cents(lvl[0])
+            cnt = _to_count(lvl[1])
+        except (TypeError, IndexError):
+            continue
+        if cents is not None and cnt > 0:
+            out.append((cents, cnt))
+    return out
+
+
+def _mkt_vol(m: dict) -> float:
+    return (xl._num(m.get("volume_fp")) or xl._num(m.get("volume"))
+            or xl._num(m.get("open_interest")) or 0.0)
+
+
 def enumerate_structure(opens: list[dict], sample_depth: int) -> None:
     by_com: dict[str, dict] = defaultdict(
-        lambda: {"n": 0, "series": set(), "ptypes": defaultdict(int), "depth": [], "group": ""})
+        lambda: {"n": 0, "series": set(), "ptypes": defaultdict(int), "depth": [],
+                 "group": "", "probed": 0, "nonempty": 0})
     def mtext(m: dict) -> str:
         return " ".join(filter(None, [m.get("_etext"), m.get("title"), m.get("subtitle"),
                                       m.get("ticker"), m.get("series_ticker")]))
+    cand_by_com: dict[str, list] = defaultdict(list)
     for m in opens:
         cm = commodity_of(mtext(m))
         if not cm:
@@ -288,28 +349,32 @@ def enumerate_structure(opens: list[dict], sample_depth: int) -> None:
         if m.get("series_ticker"):
             rec["series"].add(m["series_ticker"])
         rec["ptypes"][price_type_of(mtext(m))] += 1
-    # depth snapshot: a few open markets per commodity
-    sampled = 0
-    for m in opens:
-        if sampled >= sample_depth:
-            break
-        cm = commodity_of(mtext(m))
-        if not cm:
-            continue
-        ob = orderbook(m.get("ticker") or "")
-        if not ob:
-            continue
-        book = (ob or {}).get("orderbook") or {}
-        yes = book.get("yes") or []
-        no = book.get("no") or []
-        best_yes = max((int(xl._num(lvl[0])) for lvl in yes), default=0)
-        best_no = max((int(xl._num(lvl[0])) for lvl in no), default=0)
-        spread = (100 - best_no) - best_yes if best_yes and best_no else None
-        depth2 = sum(int(xl._num(lvl[1])) for lvl in yes
-                     if best_yes and int(xl._num(lvl[0])) >= best_yes - 2)
-        by_com[cm[0]]["depth"].append((spread, depth2))
-        sampled += 1
-        time.sleep(0.05)
+        if m.get("ticker"):
+            cand_by_com[name].append(m)
+    # depth snapshot: probe the MOST LIQUID markets per commodity (books that actually hold resting
+    # orders), not the first arbitrary deep-OTM rungs — OPTRV's question is whether *fillable* depth
+    # exists. Rank each commodity's markets by volume, probe the top few, and count empty vs
+    # non-empty books so a genuine n/a (no liquidity) is distinguishable from a parse failure.
+    per_com = max(1, min(sample_depth, 5))
+    for name, mkts in cand_by_com.items():
+        mkts.sort(key=_mkt_vol, reverse=True)
+        for m in mkts[:per_com]:
+            ob = orderbook(m["ticker"])
+            time.sleep(0.05)
+            by_com[name]["probed"] += 1
+            if not ob:
+                continue
+            yes_lv = _book_levels(_ob_sides(ob)[0])
+            no_lv = _book_levels(_ob_sides(ob)[1])
+            if not yes_lv and not no_lv:
+                continue
+            by_com[name]["nonempty"] += 1
+            best_yes = max((p for p, _ in yes_lv), default=0)   # best YES bid
+            best_no = max((p for p, _ in no_lv), default=0)     # best NO bid
+            # Kalshi books hold resting bids only; best YES ask == 100 - best NO bid.
+            spread = (100 - best_no) - best_yes if best_yes and best_no else None
+            depth2 = sum(c for p, c in yes_lv if best_yes and p >= best_yes - 2)
+            by_com[name]["depth"].append((spread, depth2))
 
     print("\n== STRUCTURE ENUMERATION (open commodity-hub markets) ==")
     if not by_com:
@@ -322,7 +387,8 @@ def enumerate_structure(opens: list[dict], sample_depth: int) -> None:
         dp = f"~{sum(depths)//len(depths)}" if depths else "n/a"
         frz = "FREEZE-eligible" if rec.get("group") in FREEZE_GROUPS else "Pyth-continuous"
         print(f"  {name:10s} [{frz}] n={rec['n']:4d}  series={sorted(rec['series'])[:3]}  "
-              f"ptypes[{pt}]  spread {sp}  depth@2c {dp}")
+              f"ptypes[{pt}]  spread {sp}  depth@2c {dp}  "
+              f"books {rec['nonempty']}/{rec['probed']}")
 
 
 # --- main --------------------------------------------------------------------------
