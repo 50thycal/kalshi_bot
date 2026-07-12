@@ -302,11 +302,11 @@ def enumerate_structure(opens: list[dict], sample_depth: int) -> None:
         book = (ob or {}).get("orderbook") or {}
         yes = book.get("yes") or []
         no = book.get("no") or []
-        best_yes = max((int(xl._num(l[0])) for l in yes), default=0)
-        best_no = max((int(xl._num(l[0])) for l in no), default=0)
+        best_yes = max((int(xl._num(lvl[0])) for lvl in yes), default=0)
+        best_no = max((int(xl._num(lvl[0])) for lvl in no), default=0)
         spread = (100 - best_no) - best_yes if best_yes and best_no else None
-        depth2 = sum(int(xl._num(l[1])) for l in yes
-                     if best_yes and int(xl._num(l[0])) >= best_yes - 2)
+        depth2 = sum(int(xl._num(lvl[1])) for lvl in yes
+                     if best_yes and int(xl._num(lvl[0])) >= best_yes - 2)
         by_com[cm[0]]["depth"].append((spread, depth2))
         sampled += 1
         time.sleep(0.05)
