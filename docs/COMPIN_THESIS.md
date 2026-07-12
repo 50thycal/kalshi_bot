@@ -1,7 +1,14 @@
 # COMPIN — settlement-window partial-average pin on TWAP-settled commodity-hub contracts
 
 *Thesis written 2026-07-12 (promoted from `docs/IDEA_MODEL_20260712.md` M1), before any
-validation ran; the falsifiable predictions below are pre-registered. Status: pending probe.*
+validation ran; the falsifiable predictions below are pre-registered.*
+
+**Status: UNTESTABLE (provisional, NOT a kill) — probe ran 2026-07-12 (`compin-0712-1`).** The
+average/TWAP-settled contracts exist OPEN (~41 diesel + 13 oil) but **none has settled yet**, so
+there is no tape to grade the pin against — the pre-registered UNTESTABLE branch fired (data
+absence, not a measured flat). Provisionally shelved. **Revisit trigger:** diesel/oil average
+contracts accrue a settled tape — re-run `kalshi_compin_study` (still allowlisted), ideally before
+the 2026-07-31 Pyth keyless deadline. Full verdict in `docs/RESEARCH_JOURNAL.md`.*
 
 ## One-liner
 
