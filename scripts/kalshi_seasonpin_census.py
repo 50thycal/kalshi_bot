@@ -103,7 +103,7 @@ def discover_series(events: list[dict]) -> dict[str, dict]:
 
 
 def rung_stats(markets: list[dict]) -> dict:
-    vols = [_num(m.get("volume")) for m in markets]
+    vols = [_num(m.get("volume") or m.get("volume_24h") or m.get("volume_dollars")) for m in markets]
     spreads = []
     for m in markets:
         bid, ask = _cents(m.get("yes_bid_dollars")) or _num(m.get("yes_bid")), \
@@ -164,12 +164,24 @@ def main(argv: list[str] | None = None) -> int:
     for series in all_series:
         open_ev = open_series.get(series, {"title": "", "event_tickers": []})
         settled_ev = settled_series.get(series, {"title": "", "event_tickers": []})
-        open_mkts = [m for ev in open_events if ev.get("series_ticker") == series or
-                     (ev.get("event_ticker") or "").split("-", 1)[0] == series
-                     for m in (ev.get("markets") or [])]
-        settled_mkts = [m for ev in settled_events if ev.get("series_ticker") == series or
-                         (ev.get("event_ticker") or "").split("-", 1)[0] == series
-                         for m in (ev.get("markets") or [])]
+        # The events "status=settled" filter is EVENT-level; a season-long win-total event
+        # stays "open" until ALL its rungs resolve, so nested markets under an OPEN event can
+        # already be individually decided (result set), and — the classification bug this fixes
+        # — markets nested under a "settled"-status event are not guaranteed to each have a
+        # result themselves. Ground truth is the per-market `result` field, not either event
+        # bucket's status label. Pool both buckets and filter on result truthiness directly.
+        candidate_mkts = [m for ev in (open_events + settled_events)
+                           if ev.get("series_ticker") == series or
+                           (ev.get("event_ticker") or "").split("-", 1)[0] == series
+                           for m in (ev.get("markets") or [])]
+        seen_tickers = set()
+        settled_mkts, open_mkts = [], []
+        for m in candidate_mkts:
+            t = m.get("ticker")
+            if t in seen_tickers:
+                continue
+            seen_tickers.add(t)
+            (settled_mkts if (m.get("result") or "").strip() else open_mkts).append(m)
         total_settled_rungs += len(settled_mkts)
         o_stats = rung_stats(open_mkts)
         s_stats = rung_stats(settled_mkts)
