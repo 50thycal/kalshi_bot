@@ -31,7 +31,6 @@ import re
 import time
 import urllib.error
 import urllib.request
-from collections import defaultdict
 
 BASE = "https://api.elections.kalshi.com/trade-api/v2"
 _UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
@@ -187,7 +186,7 @@ def main(argv: list[str] | None = None) -> int:
             for row in early_expiration_sample(settled_mkts, args.rules_sample):
                 print(f"    {row}")
 
-    print(f"\n=== SUMMARY ===")
+    print("\n=== SUMMARY ===")
     print(f"series found: {len(all_series)} — {all_series}")
     print(f"total settled rungs across series: {total_settled_rungs} "
           f"(thesis P1 n-floor: 40 candle-covered decided rungs)")
