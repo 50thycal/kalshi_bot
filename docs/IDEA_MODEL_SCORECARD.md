@@ -23,7 +23,7 @@ and **outcome**. Keep the base-rate and per-family tallies below in sync.
 | became a book, later shelved | 1 | THETA (distribution-shape model error) |
 | **killed at probe** (clean ruling-out) | 6 | XGAME, TFAV, WCPROP, MLBWX, PINNED, DECAY |
 | **UNTESTABLE — venue not ready** (data absence, not a kill) | 2 | FREEZE, COMPIN |
-| **pending probe** | 1 | SEASONPIN (census-staged) |
+| **census-stage HOLD/borderline** (not yet a full-probe go/no-go) | 1 | SEASONPIN (MLB HOLD, WNBA borderline) |
 
 Plus one run (2026-07-10 run2) that promoted **0 of 28** candidates — a legitimate, good outcome.
 
@@ -47,7 +47,7 @@ highest-leverage screen is **testability-NOW**, not edge cleverness.
 
 | date | idea | family | scope source | verdict date | verdict | outcome |
 |---|---|---|---|---|---|---|
-| 2026-07-12 | **SEASONPIN** | obs-pin (cumulative-bound arithmetic) | **scoped (mechanics hunt)** | — | **pending probe** | Census-staged (`docs/SEASONPIN_THESIS.md`): win-total rungs decided by standings math; census must clear early-expiration + n-floor before any probe code. |
+| 2026-07-12 | **SEASONPIN** | obs-pin (cumulative-bound arithmetic) | **scoped (mechanics hunt)** | 2026-07-12 | **CENSUS: HOLD (MLB) / BORDERLINE (WNBA)** | Census (`docs/kalshi_seasonpin_census.py`, 2 runs — 1st had a classification bug, fixed in PR #43): MLB (named target) 0 settled rungs → HOLD, too early. WNBA (extension, surfaced by discovery) 40 settled — exactly at the n-floor, candle-coverage + volume unconfirmed → not yet a clean promote to full probe. Full detail: `RESEARCH_JOURNAL.md` "SEASONPIN CENSUS 2026-07-12". |
 | 2026-07-12 | **COMPIN** | obs-pin (TWAP mechanics) | scoped (commodities hub) | 2026-07-12 | **UNTESTABLE** | 0 settled TWAP markets yet; 35 settle before Jul 31 → re-run ~Jul 14-16. Not a kill. |
 | 2026-07-11 | **FREEZE** | obs-pin (exchange-closure) | broad + new-venue | 2026-07-11 | **UNTESTABLE** | Source-frozen ag/soft markets barely exist yet. Not a kill; trigger = universe grows to hundreds. |
 | 2026-07-11 | **PIN15** | obs-pin (60s-average pin) | **scoped (15-min crypto)** | 2026-07-11 | **PASS** (P1/P2/P4) | **Live paper book.** The one success — and it came from a scoped dive. |

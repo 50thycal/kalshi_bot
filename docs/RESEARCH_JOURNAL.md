@@ -16,6 +16,62 @@ Conventions:
 
 ---
 
+## SEASONPIN CENSUS 2026-07-12 — MLB (primary target) UNTESTABLE-yet (0 settled); WNBA (extension) BORDERLINE at exactly the n-floor
+
+Stage 1 of `docs/SEASONPIN_THESIS.md`'s staged probe plan (promoted from
+`docs/IDEA_MODEL_20260712_run2.md` S1). `scripts/kalshi_seasonpin_census.py` ran twice via ops
+(`seasonpin-census-0712`, `seasonpin-census-0712b`) — the first run had a real classification bug
+(fixed in the second, see below), so **only the second run's numbers are trustworthy.**
+
+**Classification bug found and fixed before trusting the read (PR #43).** `/events?status=settled`
+filters at the *event* level; a season-long win-total event (all 7 rungs for one team) stays
+"open" until every rung resolves, so a market nested under an "open" event can already be
+individually decided, and a market nested under a "settled" event is not guaranteed to have a
+`result` itself. Run 1 showed this concretely (`KXWNBAWINS` "settled" rungs with `result: ''`
+and `close_time` months out). Fixed to classify on the per-market `result` field directly,
+pooling and deduping both event buckets.
+
+**Verdict (run 2, post-fix): 47 series discovered** (33 per-team `KXMLBWINS-*` + NBA/NFL/NCAA/
+WNBA variants + a few regex false-positives — leader boards, head-to-head, tournament markets —
+that the full probe must exclude).
+
+- **MLB (`KXMLBWINS-*`, the thesis's named primary target): 0 settled/decided rungs across all
+  33 teams.** Genuinely 0, confirmed by both the buggy and fixed runs (a true 0 is invariant to
+  the classification bug). Mid-July is too early — the open rungs are mostly higher thresholds
+  (≥75-95 wins on a 162-game season) that won't start clinching/eliminating until Aug–Sept.
+  **Below the pre-registered n-floor (40) → HOLD, not promote. Do not write the full probe for
+  MLB yet.** Trigger: re-run once MLB win-total rungs start showing non-empty `result` (expect
+  Aug onward as thresholds come into range).
+- **WNBA (`KXWNBAWINS`) — NOT in the original thesis scope, surfaced by the census's dynamic
+  series discovery (same mechanism: cumulative per-team win-count rungs). 40 settled/decided
+  rungs — exactly at the pre-registered floor, with zero margin and two open gaps**: (1) the
+  census's n counts raw decided `result`, not "candle-covered" as P1 requires (candle-history
+  coverage per rung is unconfirmed); (2) **volume reads 0 for every single series in both runs**
+  — nested markets under `/events` evidently don't carry the volume field the top-level
+  `/markets` endpoint does, so real liquidity is still unmeasured (a probe-stage gap, not a
+  census blocker, but it means WNBA's capacity is completely unknown right now). The `close_time`
+  values for different teams/rungs cluster in ~1-second batches (e.g. four different teams'
+  rungs all closing within a 5-second window on 07-06), suggesting Kalshi closes decided
+  win-total markets on a periodic sweep rather than instantly per-game — informative for the
+  latency-budget question (a sweep implies *some* lag exists) but not quantifiable from the
+  census alone.
+
+**Decision: do not write the full probe (`kalshi_seasonpin_study.py`) yet, for either family.**
+MLB clearly fails the floor (clean HOLD). WNBA sits exactly on the floor with unconfirmed candle
+coverage and unmeasured volume — writing a full probe now risks the same "wasted cycle" the
+testability-NOW gate exists to prevent (FREEZE/COMPIN's lesson), just shifted from "0 settled"
+to "borderline settled, capacity unknown." **Recommended next step (cheap, not a full probe):**
+either (a) re-run the census in ~3-5 days once WNBA's rapidly-accruing n comfortably clears the
+floor with margin, or (b) a small follow-up pull of `/markets?series_ticker=KXWNBAWINS-*` for
+real volume/spread before deciding. Not logged as a KILL or a PASS — logged as the honest
+interim state.
+
+**Scorecard/thesis updated:** `docs/SEASONPIN_THESIS.md` status line and
+`docs/IDEA_MODEL_SCORECARD.md`'s SEASONPIN row both changed from "pending probe" to this
+census-stage verdict. WNBA is a same-family extension of the thesis, not a new promotion — no
+new thesis doc written; if WNBA clears on a follow-up check, its P1-P4 predictions are graded
+under the existing SEASONPIN thesis with WNBA named explicitly as a second target family.
+
 ## FORWARD-ITEMS PROBES 2026-07-12 — OPTRV UNBLOCKED (depth read fixed); COMPIN re-run schedulable; ART structurally blocked for ARTSUM; FLB non-sports calibration holds
 
 Four forward items from the idea-model handoff, worked in one pass. Code in

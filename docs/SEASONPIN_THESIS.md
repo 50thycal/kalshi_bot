@@ -1,8 +1,16 @@
 # SEASONPIN — post-decided discount on season win-total ladder rungs
 
 *Thesis written 2026-07-12, before any validation ran; the falsifiable predictions below are
-pre-registered. Status: pending probe (recon census first). Promoted from
-`docs/IDEA_MODEL_20260712_run2.md` (S1), the settlement-mechanics-hunt scoped run.*
+pre-registered. Promoted from `docs/IDEA_MODEL_20260712_run2.md` (S1), the
+settlement-mechanics-hunt scoped run.*
+
+**Status (2026-07-12, recon census run):** MLB (the named primary target) is **HOLD —
+UNTESTABLE-yet**, 0 settled rungs (too early in the season; expect Aug onward). WNBA (a
+same-family extension the census's dynamic discovery surfaced, not originally scoped here) is
+**BORDERLINE** — 40 settled/decided rungs, exactly at the P1 n-floor, with candle-coverage and
+real volume both still unconfirmed. Full probe (`kalshi_seasonpin_study.py`) intentionally not
+yet written for either family — see "SEASONPIN CENSUS 2026-07-12" in `RESEARCH_JOURNAL.md` for
+the full readout and the recommended follow-up before a probe/no-probe call.
 
 ## One-liner
 
