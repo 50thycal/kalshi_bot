@@ -86,10 +86,6 @@ COMMODITY_CATEGORY = re.compile(r"commodit|metal|energy|agricultur|grain", re.I)
 # Only these groups get a genuine source-dark freeze window (see module docstring).
 FREEZE_GROUPS = {"grain", "soft"}
 
-# Official daily settlement print clock (ET) per group -> SETTLEPIN control anchor.
-SETTLE_ET = {"grain": (14, 20), "soft": (14, 0), "metal": (13, 30),
-             "energy": (14, 30)}
-
 
 def fee_cents(price_cents: float) -> float:
     p = max(0.0, min(1.0, price_cents / 100.0))
@@ -157,16 +153,6 @@ def dark_window_start(group: str, ts: float, max_back_h: int = 80) -> float | No
     return None  # dark for longer than max_back -> treat as unknown (skip)
 
 
-def settle_pin_ts(group: str, close_ts: float) -> float:
-    """SETTLEPIN control: the official daily settle print time (ET) on the close date."""
-    hhmm = SETTLE_ET.get(group)
-    if not hhmm or not close_ts:
-        return 0.0
-    d = datetime.fromtimestamp(close_ts, tz=ET)
-    pin = d.replace(hour=hhmm[0], minute=hhmm[1], second=0, microsecond=0)
-    return pin.timestamp()
-
-
 # --- data fetch (reused shape from kalshi_pinned_study) -----------------------------
 
 
@@ -197,14 +183,23 @@ def trades(ticker: str, max_pages: int = 5) -> list[dict]:
     return out
 
 
-def open_markets(max_pages: int = 30) -> list[dict]:
+def open_commodity_markets(max_pages: int = 80) -> list[dict]:
+    """Open commodity markets WITH event context (title/subtitle), via open events — the flat
+    /markets?status=open endpoint omits titles, so ticker-only classification whiffs."""
     out, cursor = [], ""
     for _ in range(max_pages):
-        page = xl._get(f"{KALSHI}/markets?status=open&limit=200&cursor={cursor}")
-        rows = (page or {}).get("markets") or []
-        out.extend(rows)
+        page = xl._get(f"{KALSHI}/events?status=open&with_nested_markets=true"
+                       f"&limit=200&cursor={cursor}")
+        evs = (page or {}).get("events") or []
+        for ev in evs:
+            etext = " ".join(filter(None, [ev.get("title"), ev.get("sub_title"),
+                                           ev.get("series_ticker")]))
+            for m in ev.get("markets") or []:
+                m = dict(m)
+                m["_etext"] = etext
+                out.append(m)
         cursor = (page or {}).get("cursor") or ""
-        if not cursor or not rows:
+        if not cursor or not evs:
             break
         time.sleep(0.05)
     return out
@@ -278,26 +273,27 @@ def price_type_of(text: str) -> str:
 
 def enumerate_structure(opens: list[dict], sample_depth: int) -> None:
     by_com: dict[str, dict] = defaultdict(
-        lambda: {"n": 0, "series": set(), "ptypes": defaultdict(int), "depth": []})
+        lambda: {"n": 0, "series": set(), "ptypes": defaultdict(int), "depth": [], "group": ""})
+    def mtext(m: dict) -> str:
+        return " ".join(filter(None, [m.get("_etext"), m.get("title"), m.get("subtitle"),
+                                      m.get("ticker"), m.get("series_ticker")]))
     for m in opens:
-        text = " ".join(filter(None, [m.get("title"), m.get("subtitle"),
-                                       m.get("ticker"), m.get("series_ticker")]))
-        cm = commodity_of(text)
+        cm = commodity_of(mtext(m))
         if not cm:
             continue
-        name, _group = cm
+        name, group = cm
         rec = by_com[name]
         rec["n"] += 1
+        rec["group"] = group
         if m.get("series_ticker"):
             rec["series"].add(m["series_ticker"])
-        rec["ptypes"][price_type_of(text)] += 1
+        rec["ptypes"][price_type_of(mtext(m))] += 1
     # depth snapshot: a few open markets per commodity
     sampled = 0
     for m in opens:
         if sampled >= sample_depth:
             break
-        cm = commodity_of(" ".join(filter(None, [m.get("title"), m.get("subtitle"),
-                                                  m.get("ticker"), m.get("series_ticker")])))
+        cm = commodity_of(mtext(m))
         if not cm:
             continue
         ob = orderbook(m.get("ticker") or "")
@@ -324,7 +320,8 @@ def enumerate_structure(opens: list[dict], sample_depth: int) -> None:
         depths = [d for _, d in rec["depth"] if d]
         sp = f"{min(spreads)}-{max(spreads)}c" if spreads else "n/a"
         dp = f"~{sum(depths)//len(depths)}" if depths else "n/a"
-        print(f"  {name:10s} n={rec['n']:4d}  series={sorted(rec['series'])[:3]}  "
+        frz = "FREEZE-eligible" if rec.get("group") in FREEZE_GROUPS else "Pyth-continuous"
+        print(f"  {name:10s} [{frz}] n={rec['n']:4d}  series={sorted(rec['series'])[:3]}  "
               f"ptypes[{pt}]  spread {sp}  depth@2c {dp}")
 
 
@@ -336,13 +333,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--max-event-pages", type=int, default=80)
     ap.add_argument("--max-markets", type=int, default=500)
     ap.add_argument("--trade-pages", type=int, default=5)
-    ap.add_argument("--open-pages", type=int, default=30)
+    ap.add_argument("--open-pages", type=int, default=80)
     ap.add_argument("--depth-samples", type=int, default=12)
     args = ap.parse_args(argv)
 
     print("FREEZE probe — commodity-hub exchange-closure pin (pre-registered docs/FREEZE_THESIS.md)")
-    print("NOTE: only grains+softs get a real source-dark freeze (metals/energy = Pyth-continuous);")
-    print("      SETTLEPIN control spans all commodities; TOUCHPIN is N/A in v1 (see docstring).")
+    print("NOTE: ONLY grains+softs can freeze (metals/energy = Pyth-continuous, excluded — scoring")
+    print("      them with the realized result would be lookahead). TOUCHPIN N/A in v1 (see docstring).")
 
     events = settled_events(args.max_event_pages)
     print(f"\nsettled events scanned: {len(events)}")
@@ -371,35 +368,36 @@ def main(argv: list[str] | None = None) -> int:
         grp_counts[g] += 1
     print(f"  by group: {dict(grp_counts)}")
 
+    # Only the FREEZE cell is a VALID pinned measurement: it requires the settlement source to
+    # be genuinely dark (grains/softs), so `result` is point-in-time-known. A "SETTLEPIN" cell
+    # over Pyth-CONTINUOUS metals/energy is invalid — the source is still live, so scoring
+    # post-settle trades with the realized result is lookahead (v1 manufactured a fake +15.82c
+    # exactly this way — the already-decided-favorite mirage). So SETTLEPIN is dropped; we score
+    # ONLY genuinely-frozen markets, and report the settled universe so "untestable" is explicit.
     acc = {"post": [], "pre": [], "red_flags": []}
     week_notional: dict[int, float] = {}
     scanned = 0
-    cell_counts = defaultdict(int)
+    freeze_eligible = 0  # settled grain/soft markets (the only ones that CAN freeze)
+    freeze_with_tape = 0
     for m, commodity, group in targets:
         if scanned >= args.max_markets:
             break
         close = _ts(m.get("close_time"))
         result = (m.get("result") or "").lower()
-        if not close:
+        if not close or group not in FREEZE_GROUPS:
             continue
-        # FREEZE cell (grains/softs): close_time inside a source-dark window.
-        freeze_pin = dark_window_start(group, close)
-        # SETTLEPIN control (all): close after the official daily settle print.
-        settle_pin = settle_pin_ts(group, close)
-        pin_ts, cell = 0.0, ""
-        if freeze_pin:
-            pin_ts, cell = freeze_pin, "FREEZE"
-        elif settle_pin and close > settle_pin:
-            pin_ts, cell = settle_pin, "SETTLEPIN"
-        else:
+        freeze_eligible += 1
+        freeze_pin = dark_window_start(group, close)  # close_time inside a source-dark window
+        if not freeze_pin:
             continue
         rows = trades(m["ticker"], args.trade_pages)
         if not rows:
             continue
         scanned += 1
-        cell_counts[cell] += 1
-        score_trades(rows, result, pin_ts, cell, commodity, acc, week_notional)
-    print(f"markets with tape scanned: {scanned}  by cell: {dict(cell_counts)}")
+        freeze_with_tape += 1
+        score_trades(rows, result, freeze_pin, "FREEZE", commodity, acc, week_notional)
+    print(f"FREEZE-eligible settled markets (grain/soft): {freeze_eligible}; "
+          f"closed-in-dark-window with tape: {freeze_with_tape}")
 
     # --- pooled + per-cell ---------------------------------------------------------
     post_ev, post_n = wavg(acc["post"])
@@ -444,8 +442,8 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"   {tk} cell={c} pinned={side} result={res} cost={cost:.0f}c")
 
     # --- structure enumeration -----------------------------------------------------
-    opens = open_markets(args.open_pages)
-    print(f"\nopen markets scanned for structure: {len(opens)}")
+    opens = open_commodity_markets(args.open_pages)
+    print(f"\nopen commodity markets found (via open events): {len(opens)}")
     enumerate_structure(opens, args.depth_samples)
 
     # --- pre-registered verdicts (thresholds fixed 2026-07-11; do not re-scope) -----
@@ -465,9 +463,19 @@ def main(argv: list[str] | None = None) -> int:
     promote = all(v == "PASS" for v in (p1, p2, p3, p4, p5))
     print(f"DECISION (P1&P2&P3&P4&P5): "
           f"{'PROMOTE to paper book `freeze`' if promote else 'do not promote'}")
-    if p3 == "FAIL" and post_trades:
-        print("NOTE: P3 FAIL => the exchange-closure pin does not clear off-weather; per the "
-              "decision rule this closes the mechanical-pin family (FREEZE + COMPIN).")
+    # Distinguish a MEASURED flat (clean kill) from DATA ABSENCE (untestable — not a kill).
+    TESTABLE_MIN = 25  # the P3 trade floor; below it the cell was never actually exercised
+    if not promote:
+        if freeze_trades < TESTABLE_MIN:
+            print(f"VERDICT: UNTESTABLE (provisional, NOT a clean kill) — the FREEZE cell got only "
+                  f"{freeze_trades} post-pin trades from {freeze_eligible} eligible settled "
+                  f"grain/soft markets. The genuinely source-frozen commodities have essentially "
+                  f"no settled tape on the new hub yet; the mechanism was never exercised. "
+                  f"Do NOT close the family on this — revisit when ag/soft hub markets accrue a "
+                  f"settled tape (trigger: freeze_eligible grows into the hundreds).")
+        else:
+            print("VERDICT: MEASURED FAIL — the FREEZE cell had adequate data and did not clear; "
+                  "per the decision rule this closes the mechanical-pin family (FREEZE + COMPIN).")
     return 0
 
 
