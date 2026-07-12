@@ -62,6 +62,7 @@ import time
 import urllib.error
 import urllib.request
 from collections import defaultdict
+from datetime import datetime, timezone
 
 import kalshi_freeze_study as kfs
 import xvenue_leadlag as xl  # _get (browser UA + retries), _num
@@ -307,6 +308,43 @@ def window_bucket(minutes: int) -> str:
     return ">=1d"
 
 
+def report_open_average_timing(opens: list[dict],
+                               cutoff_iso: str = "2026-07-31T00:00:00+00:00") -> None:
+    """When will the OPEN average/TWAP contracts settle? COMPIN is UNTESTABLE until they resolve
+    (no settled tape to grade the pin), so this reports their close_time distribution + how many
+    settle before the Pyth keyless-history cutoff — enough to SCHEDULE a re-run instead of blindly
+    repeating it to the same UNTESTABLE verdict."""
+    cutoff = _ts(cutoff_iso)
+    closes: list[tuple[float, str, str]] = []
+    for m in opens:
+        mtext = " ".join(filter(None, [m.get("_etext"), m.get("title"), m.get("subtitle"),
+                                       m.get("ticker"), m.get("series_ticker")]))
+        cm = commodity_of(mtext)
+        if not cm or price_type_of(mtext) != "average":
+            continue
+        c = _ts(m.get("close_time"))
+        if c:
+            key = oil_subtype(mtext) if cm[0] == "oil" else cm[0]
+            closes.append((c, key, m.get("ticker") or ""))
+    print("\n== open average/TWAP contracts — settlement timing (COMPIN testability) ==")
+    if not closes:
+        print("  (no open average-type contracts found — nothing pending to become testable)")
+        return
+    closes.sort()
+
+    def d(ts: float) -> str:
+        return datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
+
+    before = sum(1 for c, _, _ in closes if c <= cutoff)
+    print(f"  {len(closes)} open average contracts; close dates {d(closes[0][0])} .. "
+          f"{d(closes[-1][0])}; median {d(closes[len(closes) // 2][0])}")
+    print(f"  settling on/before {d(cutoff)} (Pyth keyless deadline) -> would be testable then: "
+          f"{before}")
+    print("  nearest settles:")
+    for c, key, tk in closes[:8]:
+        print(f"    {d(c)}  {key:10s} {tk}")
+
+
 # --- main ----------------------------------------------------------------------------
 
 def main(argv: list[str] | None = None) -> int:
@@ -374,6 +412,7 @@ def main(argv: list[str] | None = None) -> int:
         opens = kfs.open_commodity_markets(args.open_pages)
         print(f"\nopen commodity markets found (via open events): {len(opens)}")
         kfs.enumerate_structure(opens, args.depth_samples)
+        report_open_average_timing(opens)
         return 0
 
     # --- feed resolution (cache per commodity key) ---------------------------------
@@ -494,6 +533,7 @@ def main(argv: list[str] | None = None) -> int:
     opens = kfs.open_commodity_markets(args.open_pages)
     print(f"\nopen commodity markets found (via open events): {len(opens)}")
     kfs.enumerate_structure(opens, args.depth_samples)
+    report_open_average_timing(opens)
 
     # --- pre-registered verdicts (thresholds fixed 2026-07-12; do not re-scope) -----
     print("\n== pre-registered verdicts (docs/COMPIN_THESIS.md; do not re-scope) ==")

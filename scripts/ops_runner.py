@@ -80,6 +80,7 @@ ALLOWED_SCRIPTS = (
     "kalshi_freeze_study",
     "kalshi_freeze_listing_check",
     "kalshi_compin_study",
+    "kalshi_art_survey",
 )
 
 

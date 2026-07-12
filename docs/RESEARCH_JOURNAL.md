@@ -16,6 +16,82 @@ Conventions:
 
 ---
 
+## FORWARD-ITEMS PROBES 2026-07-12 — OPTRV UNBLOCKED (depth read fixed); COMPIN re-run schedulable; ART structurally blocked for ARTSUM; FLB non-sports calibration holds
+
+Four forward items from the idea-model handoff, worked in one pass. Code in
+`scripts/kalshi_freeze_study.py` (orderbook fix), `scripts/kalshi_compin_study.py` (settle-timing
+readout), and NEW `scripts/kalshi_art_survey.py`; all run read-only via ops (`compin-optrv-0712`,
+`art-survey-v2-0712`, `flb-nosports-v2-0712`). Net: one hold cleanly **unblocked** (OPTRV), one
+**scheduled** (COMPIN re-run), one **sharpened to a structural blocker** (ARTSUM), zero paper bled.
+
+**OPTRV — UNBLOCKED. The hub HAS fillable depth; the FREEZE-v2 "orderbook n/a" was a parse bug, now
+fixed.** Root cause: `enumerate_structure` read only the classic `orderbook.yes` shape and
+`int()`-truncated dollar-string prices, so the hub's `orderbook_fp`/`yes_dollars` books all parsed
+empty → `n/a` for every commodity. Fixed with stdlib-faithful `price_to_cents`/`orderbook_fp`
+handling (mirroring `kalshi_bot.scanner.metrics`) + probing the *most liquid* markets per commodity
+(not the first arbitrary rungs) + a nonempty/probed book counter. The re-run (`compin-optrv-0712`)
+now reports real, tight, fillable books:
+| commodity | spread | depth @2¢ (contracts) | books nonempty/probed |
+|---|---|---|---|
+| gold | 1–8¢ | ~2025 | 5/5 |
+| oil | 0–7¢ | ~1169 | 5/5 |
+| nickel | 4–8¢ | ~1474 | 2/2 |
+| coffee | 2–10¢ | ~1280 | 3/5 |
+| natgas | 1–30¢ | ~441 | 4/5 |
+| refined (diesel) | 1–4¢ | ~170 | 4/5 |
+| copper | 1–36¢ | ~103 | 5/5 |
+| silver | 2–21¢ | ~17 | 5/5 |
+
+**OPTRV's precondition (are hub spreads/depth fillable for a relative-value play vs CME
+options-implied?) is MET on the liquid names** (gold/oil/coffee/nickel: hundreds–thousands of
+contracts within 2¢ at ≤8¢ spreads). OPTRV can now be assessed on its own merits (the remaining
+question is the RV edge itself + CME options-data plumbing, not fillability). Silver/copper/natgas
+are thinner/wider — venue-liquidity-gated. Leaves the holds queue as ASSESSABLE, not blocked.
+
+**COMPIN — still UNTESTABLE today, but now SCHEDULABLE (the point of the settle-timing readout).**
+The re-run confirms 0 settled average markets today (verdict unchanged). The new readout answers
+*when* it becomes testable: **54 open average contracts, close dates 2026-07-13 … 2026-10-22,
+median 2026-07-14 — and 35 settle on/before the 2026-07-31 Pyth keyless deadline, the nearest
+TOMORROW.** So COMPIN converts from "shelved indefinitely" to **"re-run ~2026-07-14/16, after the
+first batch settles and before the Pyth deadline."** Caveat surfaced by the nearest-settles list:
+several are `KXIRANCRUDE-26JUL13-T*` (Iran-crude-export markets classified "average" on the word,
+but a reported *statistical* average, not a price-feed TWAP) — the genuine price-TWAP universe is
+the **diesel `average:41` + some oil** cells, so the true testable-n is smaller than 54; the probe's
+feed-resolution/window-parse gates will exclude the statistical-average markets automatically.
+
+**ART — HOLD confirmed, and sharpened to a structural finding: ARTSUM has no instrument.** New
+`kalshi_art_survey.py` (strict series-first classifier + a diagnostic dump that earned its keep). The
+genuine fine-art universe is small and **entirely un-settled**: `KXART` 33 markets (all open, 0
+settled), `KXAUCTIONRECORD` 6, `KXHERMES{KELLY,BIRKIN}` ~24 luxury-auction. The bulk of raw matches
+(`KXARTISTSTREAMS*` ~2,550) are **music-streaming markets** false-matching the "ART" prefix — exposed
+by the diagnostic, not silently counted (a future run should tighten the prefix to exclude
+ARTISTSTREAMS). Decisive structural reads: **(1) NO sale-total instrument exists at all** — only
+per-lot-price (24 open) and record-binary (39 open) markets — so **ARTSUM (the evening-sale
+running-total pin) has literally nothing to trade** until Kalshi lists sale-total ladders; **(2) zero
+settled art history** → no track record possible regardless. GUARPIN (per-lot guarantee-floor) at
+least has its instrument (the per-lot markets), so it is the more viable ART sub-thesis — but still
+0 settled. Verdict: **HOLD**, re-run near the Oct/Nov evening sales AND watch for a sale-total
+listing before ARTSUM is even writable. Not a kill (the venue is pre-season, exactly as the thesis
+anticipated).
+
+**MMX / FLB non-sports calibration cut — the precondition HOLDS off-sports (a modest green light),
+but n is thin and it only tests calibration, not maker-fill realism.** First run (`flb-nosports-0712`,
+top-40 series) was starved — the WC-dominated board makes the volume-ranked series discovery almost
+all sports, so `--no-sports` left only n=3–4. Widening to top-200 series (`flb-nosports-v2-0712`,
+2,153 settled collected → 866 priced) gives a real read. The favorite-longshot **calibration
+precondition MMX rides — cheap longshots settle YES *less* than their price (overpriced), gap < 0 —
+is present in non-sports**, cleanest at T-30 where it's monotone in the longshot range: 0–3¢ gap
+**−1.5**, 3–5¢ **−4.1**, 5–10¢ **−6.9**, 10–20¢ **−13.2** (all overpriced). This is the same bias
+mmsell harvests on sports, now shown to exist off-sports too. Two honest caveats keep it a HOLD, not
+a promote: **(1)** per-band n is small (7–17/cell) and the **5–10¢ target band specifically is noisy**
+— overpriced at T-30 (−6.9) but flips positive at T-120/T-360 on n=7–11, so the exact mmsell3 band
+isn't cleanly confirmed; **(2)** this measures **taker calibration only — NOT the maker-sell
+adverse-selection/fill realism** that is MMX's actual load-bearing risk (as the idea-model doc flagged;
+only a live book settles that). The back-the-favorite sim was marginal/noisy across horizons (ALL
++0.027 / +0.005 / −0.020¢), consistent with tfav's death — but MMX is the longshot-SELL side, which
+the calibration supports. **Net: MMX stays HOLD behind mmsell3's n≥150 fill-realism gate, now with a
+modest positive calibration signal from non-sports rather than the earlier no-read.**
+
 ## COMPIN VERDICT 2026-07-12 — UNTESTABLE (provisional, NOT a kill); TWAP contracts exist OPEN but none have SETTLED yet
 
 The COMPIN thesis (`docs/COMPIN_THESIS.md`, promoted from `docs/IDEA_MODEL_20260712.md` M1) ran
