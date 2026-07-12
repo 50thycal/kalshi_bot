@@ -11,9 +11,9 @@ and **outcome**. Keep the base-rate and per-family tallies below in sync.
 
 ---
 
-## Base rate (as of 2026-07-12)
+## Base rate (as of 2026-07-12, run 2)
 
-**10 idea-model promotions → 1 currently-live paper book.** The pipeline is working *as a filter*
+**11 idea-model promotions → 1 currently-live paper book.** The pipeline is working *as a filter*
 (most promotions are cheap ruling-outs, no paper bled), but the promote→book conversion is low, so
 **promote conservatively and lean on the testability-NOW + venue-age gates.**
 
@@ -23,6 +23,7 @@ and **outcome**. Keep the base-rate and per-family tallies below in sync.
 | became a book, later shelved | 1 | THETA (distribution-shape model error) |
 | **killed at probe** (clean ruling-out) | 6 | XGAME, TFAV, WCPROP, MLBWX, PINNED, DECAY |
 | **UNTESTABLE — venue not ready** (data absence, not a kill) | 2 | FREEZE, COMPIN |
+| **pending probe** | 1 | SEASONPIN (census-staged) |
 
 Plus one run (2026-07-10 run2) that promoted **0 of 28** candidates — a legitimate, good outcome.
 
@@ -30,7 +31,7 @@ Plus one run (2026-07-10 run2) that promoted **0 of 28** candidates — a legiti
 
 | edge family | promotions | passed | read |
 |---|---|---|---|
-| **observation-pin / mechanics-blindness** (compute fair value the quote lags; deterministic) | PIN15, PINNED, FREEZE, COMPIN | **1** (PIN15) | The **only family that has ever passed.** But 2 of 4 came back UNTESTABLE (new-venue data absence) and 1 killed — so "obs-pin" is necessary, not sufficient; the testability-NOW gate is what separates PIN15 from FREEZE/COMPIN. |
+| **observation-pin / mechanics-blindness** (compute fair value the quote lags; deterministic) | PIN15, PINNED, FREEZE, COMPIN, SEASONPIN | **1** (PIN15) | The **only family that has ever passed.** But 2 of 5 came back UNTESTABLE (new-venue data absence) and 1 killed — so "obs-pin" is necessary, not sufficient; the testability-NOW gate is what separates PIN15 from FREEZE/COMPIN. SEASONPIN (pending) is the family's testability-NOW-first promotion: census on an existing settled tape before any probe code. |
 | **model-vs-quote** (homegrown forecast/vol model beats the market) | THETA, MLBWX | **0** | 0-for-2. Distribution-shape/model error each time. **Do not re-promote without a genuinely new model** under fresh pre-registration. |
 | **lead-lag / cross-venue** (one venue leads, trade the follower) | XGAME, WCPROP | **0** | 0-for-2. XGAME's symmetry finding (both venues track the shared feed) is structural and transfers across sports. |
 | **favorite-buy** (back the underpriced favorite) | TFAV | **0** | 0-for-1 (−3.6¢). The FLB favorite side accrues to makers, not takers. |
@@ -46,6 +47,7 @@ highest-leverage screen is **testability-NOW**, not edge cleverness.
 
 | date | idea | family | scope source | verdict date | verdict | outcome |
 |---|---|---|---|---|---|---|
+| 2026-07-12 | **SEASONPIN** | obs-pin (cumulative-bound arithmetic) | **scoped (mechanics hunt)** | — | **pending probe** | Census-staged (`docs/SEASONPIN_THESIS.md`): win-total rungs decided by standings math; census must clear early-expiration + n-floor before any probe code. |
 | 2026-07-12 | **COMPIN** | obs-pin (TWAP mechanics) | scoped (commodities hub) | 2026-07-12 | **UNTESTABLE** | 0 settled TWAP markets yet; 35 settle before Jul 31 → re-run ~Jul 14-16. Not a kill. |
 | 2026-07-11 | **FREEZE** | obs-pin (exchange-closure) | broad + new-venue | 2026-07-11 | **UNTESTABLE** | Source-frozen ag/soft markets barely exist yet. Not a kill; trigger = universe grows to hundreds. |
 | 2026-07-11 | **PIN15** | obs-pin (60s-average pin) | **scoped (15-min crypto)** | 2026-07-11 | **PASS** (P1/P2/P4) | **Live paper book.** The one success — and it came from a scoped dive. |
