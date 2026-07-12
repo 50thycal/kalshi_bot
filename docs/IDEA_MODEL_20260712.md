@@ -134,11 +134,11 @@ any book). Full pre-registered thesis: `docs/COMPIN_THESIS.md`.
 
 | hold | unblock trigger |
 |---|---|
-| MMX family (FIELD/CULTURE/DOOM/MENTION/MMCOM + **new MMART**) | mmsell3 n≥150 fill-realism gate; cheap pre-stage available now via `kalshi_flb` on non-sports categories |
-| **ART family (ARTSUM partial-sum pin + GUARPIN guarantee floor) — NEW** | fall auction season (Oct–Nov evening sales) AND ≥~30 settled art markets with candle history; **pre-stage available now**: a ~30-line read-only KXART\* enumeration (market types, settled counts, volumes, intra-sale candle activity) to confirm testability before any thesis |
+| MMX family (FIELD/CULTURE/DOOM/MENTION/MMCOM + **new MMART**) | mmsell3 n≥150 fill-realism gate. **Calibration pre-stage ran 2026-07-12** (`flb-nosports-v2-0712`, top-200 series): non-sports cheap longshots ARE overpriced (gap −1.5/−4.1/−6.9/−13.2¢ at 0-3/3-5/5-10/10-20¢ bands, T-30) → the FLB precondition holds off-sports. Caveats: per-band n small, the 5-10¢ band flips sign across horizons, and this tests calibration only (not maker-fill realism). Modest green light; still gated on mmsell3 |
+| **ART family — GUARPIN only now; ARTSUM has NO instrument (pre-stage ran 2026-07-12)** | `kalshi_art_survey` found the genuine fine-art universe is `KXART` 33 (all open, **0 settled**) + `KXAUCTIONRECORD`/`KXHERMES*`; **NO sale-total market exists** → ARTSUM is un-writable until Kalshi lists a sale-total ladder (watch for it). GUARPIN's per-lot instrument exists (24 open) but 0 settled. Unblock: Oct/Nov evening sales give a settled tape **and** (for ARTSUM) a sale-total listing appears |
 | PIN60 + ALT15 (pin15 variant ladder) | pin15 n≥150 gate |
-| COMPIN | **PROMOTED this run** (leaves the queue) |
-| OPTRV (vs CME options-implied) | now concrete: the COMPIN probe's **orderbook-depth co-deliverable** (fixes the FREEZE v2 n/a gap) shows hub spreads/depth are fillable |
+| COMPIN — **UNTESTABLE-now, re-run ~2026-07-14/16** | probe ran (`compin-0712-1`/`compin-optrv-0712`): 0 settled TWAP markets today, but **35 average contracts settle before the 2026-07-31 Pyth deadline, nearest 07-13** → re-run `kalshi_compin_study` after the first batch settles, before Jul 31 (genuine price-TWAP target = diesel `average:41` + some oil; the `KXIRANCRUDE` "average" cells are statistical-average, not price-TWAP) |
+| ~~OPTRV~~ **UNBLOCKED 2026-07-12 — assessable** | the orderbook-parse bug (FREEZE v2 n/a) is **fixed**; the depth read now shows real fillable books (gold ~2025 / oil ~1169 / coffee ~1280 / nickel ~1474 contracts within 2¢ at ≤8¢ spreads). Fillability precondition MET on the liquid names; remaining work is the RV edge itself + CME options-implied-density plumbing |
 | CRYPSUB / NEST | theta4 n≥80 gate |
 | RTPIN/BOXPIN (entertainment obs-pin) | a cheap collector or public-history probe angle |
 | RATELAG (KXFED back-rung lag) | a live macro shock to the front Fed contract |
@@ -161,3 +161,11 @@ book `compin` rides the live cycle hold-to-settlement (the proven path) with a m
 Cheap parallel actions (no thesis needed): the **ART pre-stage enumeration** (testability read
 for the new hold family), and the standing **`kalshi_flb` non-sports calibration cut**
 pre-staging MMX.
+
+**Update 2026-07-12 — all four forward items worked to a verdict** (full detail in
+`RESEARCH_JOURNAL.md`, "FORWARD-ITEMS PROBES 2026-07-12"): OPTRV **unblocked** (orderbook-parse bug
+fixed; hub has real fillable depth), COMPIN **re-run scheduled** for ~Jul 14–16 (35 TWAP contracts
+settle before the Jul 31 Pyth deadline), ART **HOLD sharpened** (no sale-total instrument → ARTSUM
+un-writable; GUARPIN the viable sub-thesis; 0 settled art history), MMX/FLB calibration precondition
+**confirmed off-sports** (still gated on mmsell3). New/changed probes: `kalshi_freeze_study` (depth
+parse fix), `kalshi_compin_study` (settle-timing), new `kalshi_art_survey`.
