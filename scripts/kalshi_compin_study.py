@@ -62,7 +62,6 @@ import time
 import urllib.error
 import urllib.request
 from collections import defaultdict
-from datetime import datetime, timezone
 
 import kalshi_freeze_study as kfs
 import xvenue_leadlag as xl  # _get (browser UA + retries), _num
@@ -167,7 +166,7 @@ def pyth_history(symbol: str, start_ts: float, end_ts: float) -> list[tuple[floa
     closes = body.get("c") or []
     if not ts_list or len(ts_list) != len(closes):
         return []
-    return list(zip((float(t) for t in ts_list), (float(c) for c in closes)))
+    return list(zip((float(t) for t in ts_list), (float(c) for c in closes), strict=True))
 
 
 # --- rules-text window parsing (no-lookahead: derived from the contract's own text, never
@@ -400,7 +399,7 @@ def main(argv: list[str] | None = None) -> int:
     scored = 0
     per_window_bucket: dict[str, list] = defaultdict(list)
 
-    for m, key, group in avg_targets:
+    for m, key, _group in avg_targets:
         if scanned >= args.max_markets:
             break
         scanned += 1
