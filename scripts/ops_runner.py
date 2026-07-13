@@ -82,6 +82,7 @@ ALLOWED_SCRIPTS = (
     "kalshi_compin_study",
     "kalshi_art_survey",
     "kalshi_seasonpin_census",
+    "mmsell_live",
 )
 
 

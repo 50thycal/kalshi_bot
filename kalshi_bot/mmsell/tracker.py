@@ -44,9 +44,14 @@ class MmSellCycleSummary:
 class MmSellTracker:
     STRATEGY = "mmsell"
 
-    def __init__(self, client, settings: Settings):
+    def __init__(self, client, settings: Settings, live_executor=None):
         self.client = client
         self.settings = settings
+        # Set only in live mode (BOT_MODE=live); mirrors allowlisted paper entries into real
+        # resting maker NO-buys. None in paper/weather mode -> the book stays paper-only.
+        self.live_executor = live_executor
+        # Set by the live cycle before run_once so the live mirror can pass it to the balance gate.
+        self._account_state: dict | None = None
 
     def _skip_series(self, series: str) -> bool:
         s = (series or "").upper()
@@ -178,6 +183,20 @@ class MmSellTracker:
                         session, ticker=ticker, strategy=tag, side="no",
                         quantity=qty, avg_price=price,
                     )
+                    # Mirror the entry into a real resting maker NO-buy for allowlisted books
+                    # (inert unless LIVE_STRATEGIES lists this tag). Self-guarded; a live failure
+                    # never rolls back the paper record above (the paper book is the shadow).
+                    if self.live_executor is not None:
+                        try:
+                            self.live_executor.mirror_mmsell_entry(
+                                session, strategy=tag, event_ticker=event.get("event_ticker"),
+                                ticker=ticker, metrics=metrics, no_price=price,
+                                account_state=self._account_state,
+                            )
+                        except AuthError:
+                            raise
+                        except Exception:  # noqa: BLE001 — paper record stays intact
+                            logger.exception("mmsell live mirror_entry failed (paper unaffected)")
                     open_count[tag] += 1
                     summ.opened += 1
                     summ.per_book[tag] = summ.per_book.get(tag, 0) + 1

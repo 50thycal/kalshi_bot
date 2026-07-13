@@ -2,7 +2,8 @@
 
 *Plan written 2026-07-12, before any live order is placed. The sizing, gates and kill criteria
 below are **pre-registered** so the test can't be quietly re-scoped after the fact. Status:
-**PLAN — awaiting build + demo dry-run. No live path exists for mmsell yet.***
+**BUILT 2026-07-13 (inert) — awaiting demo dry-run, then Stage 1 funding. The live path now
+exists (`LiveExecutor.mirror_mmsell_entry`, wired from `MmSellTracker`), all default-OFF.***
 
 The one number that matters is still the north star: **+$100/month realized across the portfolio.**
 This test does not chase that — it answers the single question that stands between the mmsell3 paper
@@ -69,12 +70,19 @@ no-bid, a maker order** — and the mmsell tracker never calls the executor at a
    hanging.
 4. **Scorecard script** `scripts/mmsell_live.py` (ops-allowlisted, read-only), mirroring
    `weather_pnl` / `weather_digest`. Metrics in §5.
-5. **Risk-gate check.** `risk.evaluate(for_paper=False)` runs spread/liquidity/exposure gates tuned for
-   weather; confirm they don't reject every cheap wide-spread longshot (or add a mmsell-scoped path).
-   A gate that silently blocks all entries would look like "zero fills" and mislead the test.
+5. **Risk-gate check.** The weather `risk.evaluate` gate rejects `spread > max_spread_cents` (5¢) —
+   antithetical to the cheap-longshot maker edge (a wide spread is what the maker collects). So
+   `mirror_mmsell_entry` uses its **own** mmsell-scoped gates (switches, per-ticker dedup,
+   daily-loss, real balance, per-market exposure, a generous `MMSELL_LIVE_MAX_SPREAD_CENTS` sanity
+   cap, and a `MMSELL_LIVE_MAX_OPEN_POSITIONS` cap) instead of the weather spread gate, and records
+   an approved `risk_event` for the audit trail. The weather YES-taker path is untouched.
 
-All of it ships **inert**: `live_enabled=false`, `live_strategies=""`, `KILL_SWITCH=true`. Nothing
-places an order until an operator flips the switches **and** lists `mmsell3`.
+**Built (2026-07-13, all inert):** `LiveExecutor.mirror_mmsell_entry` (resting BUY-NO maker order,
+`side=no`, `no_price=no-bid`), called from `MmSellTracker` right after each allowlisted paper
+open; `repository.live_buy_exists_for_ticker` / `count_live_book_open`; `scripts/mmsell_live.py`
+scorecard (ops-allowlisted). Ships **inert**: `LIVE_ENABLED=false`, `LIVE_STRATEGIES=""`,
+`KILL_SWITCH=true`. Nothing places an order until an operator flips the switches **and** lists
+`mmsell3`. The mmsell tracker only receives the executor under `BOT_MODE=live`.
 
 ## 4. Config — Stage 1 (the ~$150 fill-realism test)
 
@@ -83,19 +91,23 @@ faithful to the paper book and the maker edge, so the measured fill rate is the 
 
 | knob | value | rationale |
 |---|---|---|
-| `BOT_MODE` | `weather` | mmsell rides the weather/live cycle; keeps the existing reconcile loop |
+| `BOT_MODE` | `live` | **required** — the executor (and the mmsell live mirror) only exist in live mode; the live cycle runs the same weather pipeline + reconcile loop |
 | `LIVE_ENABLED` / `KILL_SWITCH` | `true` / `false` | the two master switches, flipped only to start |
 | `LIVE_STRATEGIES` | `mmsell3` | **one-book allowlist** — nothing else can trade live |
-| `LIVE_ENTRY_STYLE` | `passive` | rest at the no-bid, do not cross the spread (maker) |
-| `LIVE_PASSIVE_OFFSET_CENTS` | `0` | join the queue AT the no-bid (no price improvement in Stage 1) |
-| `LIVE_MAX_ORDER_DOLLARS` | `~1.0` | ⇒ **1 contract** at ~92¢; the base risk unit |
+| `MMSELL_LIVE_PRICE_OFFSET_CENTS` | `0` | join the queue AT the no-bid (Stage 1); `1` improves price to fill faster. Capped at the no-ask, never pays through |
+| `LIVE_MAX_ORDER_DOLLARS` | `1.0` | ⇒ **1 contract** at ~92¢; the base risk unit |
+| `MMSELL_LIVE_MAX_OPEN_POSITIONS` | `60` | bound concurrency near the observed paper peak (68) |
+| `MMSELL_LIVE_MAX_SPREAD_CENTS` | `40` | generous sanity guard (NOT the weather 5¢ gate, which would reject the book) |
 | `LIVE_ORDER_TIMEOUT_SECONDS` | `600` | cancel + record an unfilled resting order after 10 min |
-| `LIVE_EXIT_MODE` | `settlement` | hold to settlement (exit sweep says TP/SL only hurt) |
+| `LIVE_EXIT_MODE` | `settlement` | hold to settlement (exit sweep says TP/SL only hurt); NO positions auto-settle on Kalshi |
 | `MAX_ORDER_SIZE` | `1` | hard per-order contract cap |
-| `MAX_MARKET_EXPOSURE` | `~2` | one small position per market |
-| `MAX_TOTAL_EXPOSURE` | `~120` | working-capital ceiling below the $150 bankroll |
-| `MAX_DAILY_LOSS` + `LIVE_KILL_ON_DAILY_LOSS` | `~15` / `true` | self-trip entries on a bad day |
-| a mmsell live max-open cap | `~60` | bound concurrency near the observed paper peak (68) |
+| `MAX_MARKET_EXPOSURE` | `2` | one small position per market |
+| `MAX_TOTAL_EXPOSURE` | `120` | working-capital ceiling below the $150 bankroll |
+| `MAX_DAILY_LOSS` + `LIVE_KILL_ON_DAILY_LOSS` | `15` / `true` | self-trip entries on a bad day |
+
+Note: `LIVE_ENTRY_STYLE` / `LIVE_PASSIVE_OFFSET_CENTS` are the **weather** YES-taker knobs and do
+not affect the mmsell maker path — the mmsell entry is always a resting BUY-NO at the no-bid, tuned
+by `MMSELL_LIVE_PRICE_OFFSET_CENTS`.
 
 **Bankroll: ~$150.** Working capital ≈ $63 (paper peak concurrency) + drawdown buffer ≈ $85. At ~92¢/
 contract that's ~160 contracts of buying power — comfortably above the ~68 peak, so the book is

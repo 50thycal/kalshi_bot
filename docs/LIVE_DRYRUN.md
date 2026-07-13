@@ -112,3 +112,41 @@ Only after all of the above pass on demo:
       (e.g. `weather_low_fav`).
 - [ ] Watch the first `live cycle` logs and the `live_orders`/`fills`/`positions` tables for a
       full day before scaling the dollar cap or adding books.
+
+## mmsell maker NO-buy dry-run (a DIFFERENT order shape)
+
+The weather books above are YES-taker entries; the mmsell books (`mmsell3`) place a **resting
+BUY-NO limit at the no-bid** — a maker order via `LiveExecutor.mirror_mmsell_entry`. The order
+body differs (`side="no"`, `no_price=<no-bid>`, no `yes_price`), so verify it separately on demo
+before real money (full plan + gates: `docs/MMSELL_LIVE_PLAN.md`):
+
+- [ ] `BOT_MODE=live`, `LIVE_STRATEGIES=mmsell3`, Stage-1 config from the plan §4.
+- [ ] Confirm a placed order logs `mmsell live order placed (resting maker no-buy)` and a
+      `live_orders` row with `side="no"`, `status="resting"`, `no_price` ≈ the no-bid.
+- [ ] Confirm it **rests** (a maker limit may not fill immediately) and either fills → a `fills`
+      row with `side="no"` and a real `fee`, or ages out → `canceled` after
+      `LIVE_ORDER_TIMEOUT_SECONDS`.
+- [ ] Confirm a held-to-settlement NO position settles via `/portfolio/settlements` on reconcile
+      (realized P&L flows into `positions`, feeding the daily-loss breaker + `scripts/mmsell_live.py`).
+- [ ] Run `{"type":"script","name":"mmsell_live"}` — the scorecard should render (empty is fine
+      pre-fills) with fill-rate, fee/contract, and the live-vs-paper win-rate read.
+
+Stage 1 go-live env (per the plan; ~$150 funded):
+
+```
+BOT_MODE=live
+KILL_SWITCH=false
+LIVE_ENABLED=true
+LIVE_STRATEGIES=mmsell3
+MMSELL_LIVE_PRICE_OFFSET_CENTS=0       # join the queue at the no-bid
+LIVE_MAX_ORDER_DOLLARS=1               # 1 contract at ~92c
+MMSELL_LIVE_MAX_OPEN_POSITIONS=60      # near the observed paper peak (68)
+MMSELL_LIVE_MAX_SPREAD_CENTS=40        # generous (NOT the weather 5c gate)
+LIVE_ORDER_TIMEOUT_SECONDS=600
+LIVE_EXIT_MODE=settlement
+MAX_ORDER_SIZE=1
+MAX_MARKET_EXPOSURE=2
+MAX_TOTAL_EXPOSURE=120
+MAX_DAILY_LOSS=15
+LIVE_KILL_ON_DAILY_LOSS=true
+```
