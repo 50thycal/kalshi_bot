@@ -77,12 +77,24 @@ no-bid, a maker order** — and the mmsell tracker never calls the executor at a
    cap, and a `MMSELL_LIVE_MAX_OPEN_POSITIONS` cap) instead of the weather spread gate, and records
    an approved `risk_event` for the audit trail. The weather YES-taker path is untouched.
 
-**Built (2026-07-13, all inert):** `LiveExecutor.mirror_mmsell_entry` (resting BUY-NO maker order,
-`side=no`, `no_price=no-bid`), called from `MmSellTracker` right after each allowlisted paper
-open; `repository.live_buy_exists_for_ticker` / `count_live_book_open`; `scripts/mmsell_live.py`
+**Built (2026-07-13, all inert):** `LiveExecutor.mirror_mmsell_entry` (a resting maker buy-NO,
+held to settlement), called from `MmSellTracker` right after each allowlisted paper open;
+`repository.live_buy_exists_for_ticker` / `count_live_book_open`; `scripts/mmsell_live.py`
 scorecard (ops-allowlisted). Ships **inert**: `LIVE_ENABLED=false`, `LIVE_STRATEGIES=""`,
 `KILL_SWITCH=true`. Nothing places an order until an operator flips the switches **and** lists
 `mmsell3`. The mmsell tracker only receives the executor under `BOT_MODE=live`.
+
+**Kalshi V2 order endpoint (migrated 2026-07-13).** Kalshi deprecated `POST /portfolio/orders`
+(it now returns `410 deprecated_v1_order_endpoint`), so the live path uses the current endpoint
+`POST /trade-api/v2/portfolio/events/orders` (`client.create_events_order`). That endpoint quotes
+everything from the **YES side**, so buying NO is expressed as **`side:"ask"`** (sell YES) at
+`price = (100 − no_price)/100` **dollars**; `count` and `price` are **decimal strings** (numeric
+types are rejected `400`); `client_order_id` is a fresh **UUID**; `time_in_force:"good_till_canceled"`
+with **`post_only:true`** (a pure maker — a PostOnlyCrossCancel just means no fill that cycle, which
+is safer than accidentally taking). Cancels use `DELETE /portfolio/events/orders/{id}`. The read/
+reconcile endpoints (`get_orders`/`fills`/`positions`) were unaffected. Body shape verified against
+recorded live requests. *(The weather YES-taker live path still targets the old endpoint and is
+**not** migrated — it is inert/out of scope here and needs its own migration before weather goes live.)*
 
 ## 4. Config — Stage 1 (the ~$150 fill-realism test)
 

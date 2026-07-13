@@ -17,6 +17,7 @@ from __future__ import annotations
 import logging
 import math
 import re
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
@@ -404,13 +405,29 @@ class LiveExecutor:
         repo.insert_risk_event(session, None, ticker, RiskDecision(
             approved=True, reason_codes=[], max_allowed_quantity=qty, max_allowed_price=price))
 
-        client_order_id = f"{strategy}:{ticker}"
+        # Kalshi V2 order (POST /portfolio/events/orders): mmsell SELLS yes (== buys NO), so
+        # side="ask" and price is the YES-side price in DOLLARS = (100 - no_price)/100. count and
+        # price MUST be decimal strings (Kalshi rejects numeric types with 400). post_only keeps it
+        # a pure maker — a PostOnlyCrossCancel just means no fill this cycle, which is safer than
+        # accidentally taking and paying the spread. A fresh UUID client_order_id lets the book
+        # re-enter a ticker after a timeout-cancel (a stable id would 409); the DB-side dedup +
+        # commit-before-POST below prevent double-orders without relying on Kalshi idempotency.
+        yes_price = max(1, min(99, 100 - price))
+        client_order_id = str(uuid.uuid4())
         order = {
-            "ticker": ticker, "action": "buy", "side": "no", "count": qty,
-            "type": "limit", "no_price": price, "client_order_id": client_order_id,
+            "ticker": ticker,
+            "client_order_id": client_order_id,
+            "side": "ask",
+            "count": f"{qty:.2f}",
+            "price": f"{yes_price / 100.0:.4f}",
+            "time_in_force": "good_till_canceled",
+            "post_only": True,
+            "self_trade_prevention_type": "taker_at_cross",
         }
         # Persist intent BEFORE the POST and COMMIT it durably (survives a later cycle rollback),
         # so the dedup guard can't re-fire a DUPLICATE real order after one already hit Kalshi.
+        # limit_price keeps the NO price (our maker cost basis) for the internal record; the actual
+        # sent YES-side body is preserved in raw_order_json.
         row = repo.create_live_order(
             session, signal_id=None, ticker=ticker, event_ticker=event_ticker,
             strategy=strategy, side="no", action="buy", limit_price=price, quantity=qty,
@@ -418,7 +435,7 @@ class LiveExecutor:
         )
         session.commit()
         try:
-            resp = self.client.place_order(**order)
+            resp = self.client.create_events_order(order)
         except AuthError:
             repo.update_live_order_status(session, row, status="error", cancel_reason="auth")
             raise
@@ -450,8 +467,8 @@ class LiveExecutor:
         repo.update_live_order_status(session, row, status="resting", kalshi_order_id=koid, raw=resp)
         self.summary.placed += 1
         logger.info("mmsell live order placed (resting maker no-buy)", extra={"extra_fields": {
-            "ticker": ticker, "strategy": strategy, "no_price": price, "count": qty,
-            "coid": client_order_id, "kalshi_order_id": koid}})
+            "ticker": ticker, "strategy": strategy, "no_price": price, "sell_yes_price": yes_price,
+            "count": qty, "coid": client_order_id, "kalshi_order_id": koid}})
 
     def _entry_price(self, metrics) -> int | None:
         ask = metrics.best_yes_ask
@@ -569,7 +586,8 @@ class LiveExecutor:
                 continue
             try:
                 if row.kalshi_order_id:
-                    self.client.cancel_order(row.kalshi_order_id)
+                    # V2 events endpoint (mmsell is the only book that rests live orders).
+                    self.client.cancel_events_order(row.kalshi_order_id)
                 repo.update_live_order_status(session, row, status="canceled",
                                               cancel_reason="timeout")
                 self.summary.timed_out_canceled += 1

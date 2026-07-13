@@ -324,6 +324,9 @@ class KalshiClient:
         return self._request("GET", "/portfolio/settlements", params=params or None)
 
     # -- guarded write endpoints (out of scope for Scanner MVP) ------------
+    # LEGACY: Kalshi deprecated /portfolio/orders (2026-07) — a POST now returns
+    # 410 deprecated_v1_order_endpoint. These remain only for the not-yet-migrated
+    # weather live path (inert). New order flow uses create_events_order below.
     def place_order(self, **order: Any) -> dict:
         self._ensure_live_enabled()
         return self._request("POST", "/portfolio/orders", json=order)
@@ -331,6 +334,21 @@ class KalshiClient:
     def cancel_order(self, order_id: str) -> dict:
         self._ensure_live_enabled()
         return self._request("DELETE", f"/portfolio/orders/{order_id}")
+
+    def create_events_order(self, order: dict[str, Any]) -> dict:
+        """Place an order via Kalshi's current V2 endpoint (POST /portfolio/events/orders),
+        which replaced the deprecated /portfolio/orders. Body shape (verified against recorded
+        live requests): ticker, client_order_id (UUID), side ("bid"=buy YES / "ask"=sell YES),
+        count and price as DECIMAL STRINGS (numeric types are rejected 400), price in YES-side
+        dollars, time_in_force, optional post_only / self_trade_prevention_type."""
+        self._ensure_live_enabled()
+        return self._request("POST", "/portfolio/events/orders", json=order)
+
+    def cancel_events_order(self, order_id: str) -> dict:
+        """Cancel a V2 order (DELETE /portfolio/events/orders/{order_id}) — the partner of
+        create_events_order."""
+        self._ensure_live_enabled()
+        return self._request("DELETE", f"/portfolio/events/orders/{order_id}")
 
     def create_v1_order(self, user_id: str, order: dict[str, Any]) -> dict:
         """Place an order via the v1 user-scoped endpoint — the path the web app uses to CLOSE

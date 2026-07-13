@@ -116,16 +116,19 @@ Only after all of the above pass on demo:
 ## mmsell maker NO-buy dry-run (a DIFFERENT order shape)
 
 The weather books above are YES-taker entries; the mmsell books (`mmsell3`) place a **resting
-BUY-NO limit at the no-bid** — a maker order via `LiveExecutor.mirror_mmsell_entry`. The order
-body differs (`side="no"`, `no_price=<no-bid>`, no `yes_price`), so verify it separately on demo
+maker buy-NO**, held to settlement, via `LiveExecutor.mirror_mmsell_entry`. On Kalshi's current V2
+endpoint (`POST /portfolio/events/orders`, which quotes from the YES side) that is expressed as a
+**`side:"ask"` maker order** (sell YES == buy NO) at `price = (100 − no_price)/100` dollars,
+`post_only:true`, with `count`/`price` as decimal strings and a UUID `client_order_id` — see the
+"Kalshi V2 order endpoint" note in `docs/MMSELL_LIVE_PLAN.md` §3. Verify it separately on demo
 before real money (full plan + gates: `docs/MMSELL_LIVE_PLAN.md`):
 
 - [ ] `BOT_MODE=live`, `LIVE_STRATEGIES=mmsell3`, Stage-1 config from the plan §4.
-- [ ] Confirm a placed order logs `mmsell live order placed (resting maker no-buy)` and a
-      `live_orders` row with `side="no"`, `status="resting"`, `no_price` ≈ the no-bid.
+- [ ] Confirm a placed order logs `mmsell live order placed (resting maker no-buy)` (with
+      `sell_yes_price`) and a `live_orders` row with `side="no"`, `status="resting"`, `limit_price`
+      ≈ the no-bid (the NO cost basis; the wire order is a YES-side ask).
 - [ ] Confirm it **rests** (a maker limit may not fill immediately) and either fills → a `fills`
-      row with `side="no"` and a real `fee`, or ages out → `canceled` after
-      `LIVE_ORDER_TIMEOUT_SECONDS`.
+      row with a real `fee`, or ages out → `canceled` after `LIVE_ORDER_TIMEOUT_SECONDS`.
 - [ ] Confirm a held-to-settlement NO position settles via `/portfolio/settlements` on reconcile
       (realized P&L flows into `positions`, feeding the daily-loss breaker + `scripts/mmsell_live.py`).
 - [ ] Run `{"type":"script","name":"mmsell_live"}` — the scorecard should render (empty is fine

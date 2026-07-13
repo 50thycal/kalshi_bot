@@ -7,6 +7,7 @@ enforces its mmsell-scoped gates. Mirrors the fixture style of test_live.py / te
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, select
@@ -42,7 +43,7 @@ class FakeLiveClient:
         self.placed: list[dict] = []
         self.balance = {"balance": 100_000}
 
-    def place_order(self, **order):
+    def create_events_order(self, order):
         self.placed.append(order)
         return {"order": {"order_id": f"K-{len(self.placed)}", "status": "resting"}}
 
@@ -117,14 +118,17 @@ def test_mmsell_live_places_resting_no_buy_at_no_bid(settings):
         _enter(ex, session)
     assert len(client.placed) == 1
     o = client.placed[0]
-    assert o["side"] == "no" and o["action"] == "buy" and o["type"] == "limit"
-    assert o["no_price"] == 92 and "yes_price" not in o   # buys NO at the no-bid (100 - yes_ask)
-    assert o["count"] == 1                                # $1 cap / 0.92 -> 1 contract
-    assert o["client_order_id"] == "mmsell3:KXTEAM-26-A"  # per-TICKER coid (markets share events)
+    # V2 events shape: SELL yes (== buy NO) as a maker ask; price is the YES-side price in DOLLARS
+    # as a STRING; count is a decimal STRING; client_order_id is a UUID.
+    assert o["side"] == "ask" and o["post_only"] is True
+    assert o["price"] == "0.0800" and "no_price" not in o   # sell yes @ 8c == buy no @ no-bid 92c
+    assert o["count"] == "1.00"                             # $1 cap / 0.92 -> 1 contract
+    assert o["time_in_force"] == "good_till_canceled"
+    uuid.UUID(o["client_order_id"])                         # valid UUID (raises if not)
     with db.session_scope() as session:
         row = session.scalar(select(m.LiveOrder))
         assert row.status == "resting" and row.side == "no" and row.strategy == "mmsell3"
-        assert row.kalshi_order_id == "K-1"
+        assert row.limit_price == 92 and row.kalshi_order_id == "K-1"  # NO cost basis recorded
         assert session.scalar(select(func.count()).select_from(m.RiskEvent)) == 1  # audit trail
 
 
@@ -137,7 +141,8 @@ def test_mmsell_live_price_offset_capped_at_no_ask(settings):
     ex = _exec(settings, client)
     with db.session_scope() as session:
         _enter(ex, session)
-    assert client.placed[0]["no_price"] == 94   # 92 + 5 = 97, capped at no_ask 94
+    # 92 + 5 = 97, capped at no_ask 94 -> buy NO @ 94c == sell YES @ 6c == price "0.0600"
+    assert client.placed[0]["price"] == "0.0600"
 
 
 def test_mmsell_live_wide_spread_guard(settings):
@@ -257,7 +262,9 @@ def test_tracker_mirrors_paper_entry_to_live(settings):
     assert summ.per_book.get("mmsell3", 0) == 1
     assert len(live_client.placed) == 1
     o = live_client.placed[0]
-    assert o["side"] == "no" and o["no_price"] == 90 and o["client_order_id"] == "mmsell3:KXTEAM-26-A"
+    # buy NO @ 90c == sell YES @ 10c: maker ask, price "0.1000", UUID coid
+    assert o["side"] == "ask" and o["price"] == "0.1000"
+    uuid.UUID(o["client_order_id"])
     with db.session_scope() as session:
         assert session.scalar(select(func.count()).select_from(m.LiveOrder)) == 1
         assert session.scalar(
