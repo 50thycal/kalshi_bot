@@ -23,6 +23,7 @@ from datetime import datetime, timedelta, timezone
 from .. import repository as repo
 from ..kalshi.errors import AuthError, KalshiAPIError, TransientError
 from ..paper.engine import kalshi_fee
+from ..risk.manager import RiskDecision
 from ..scanner.metrics import _to_count, ask_depth_within, parse_dt, price_to_cents
 from ..weather.cities import CITIES
 from . import exit_rules
@@ -340,6 +341,117 @@ class LiveExecutor:
             "ticker": ticker, "strategy": strategy, "price": record_price, "count": qty,
             "fractional": is_v1, "style": s.live_entry_style, "coid": client_order_id,
             "kalshi_order_id": koid}})
+
+    def mirror_mmsell_entry(
+        self, session, *, strategy: str, event_ticker: str | None, ticker: str, metrics,
+        no_price: int | None = None, account_state=None,
+    ) -> None:
+        """Mirror one allowlisted mmsell paper entry into a real resting MAKER order: BUY NO at
+        the no-bid (== sell yes at the ask), held to settlement. Self-guarded + fail-closed — any
+        gate failure places nothing, and any exception is swallowed so the paper record stands.
+
+        Distinct from mirror_entry (the weather YES-taker path): mmsell is a maker NO-buy with no
+        window/city/one-per-event semantics, per-TICKER dedup (markets share an event), and its own
+        gates — the shared risk.evaluate's spread<=max_spread_cents gate is antithetical to the
+        cheap-longshot maker edge (a wide spread is what the maker collects), so it's not used here.
+        """
+        s = self.settings
+        if not self._allowed(strategy) or not self._switches_on():
+            self.summary.skipped_gate += 1
+            return
+        if self._daily_loss_tripped or self._daily_loss_hit(session):
+            self._daily_loss_tripped = True
+            self.summary.skipped_gate += 1
+            return
+        # Per-ticker dedup + any in-flight order on this market.
+        if repo.live_buy_exists_for_ticker(session, ticker, strategy) \
+                or repo.live_open_order_exists(session, ticker):
+            self.summary.skipped_dedup += 1
+            return
+        # Cap the book's concurrent live footprint.
+        if repo.count_live_book_open(session, strategy) >= s.mmsell_live_max_open_positions:
+            self.summary.skipped_gate += 1
+            return
+        # Data-quality + balance + exposure gates (mmsell-scoped; NOT the weather spread gate).
+        if metrics is None or metrics.best_no_bid is None or not metrics.two_sided:
+            self.summary.skipped_gate += 1
+            return
+        if metrics.spread is not None and metrics.spread > s.mmsell_live_max_spread_cents:
+            self.summary.skipped_gate += 1
+            return
+        balance = None if account_state is None else account_state.get("cash_balance")
+        if balance is None:  # fail-closed: refuse to place without a real balance
+            self.summary.skipped_gate += 1
+            return
+        if self._market_exposure(session, ticker) >= s.max_market_exposure:
+            self.summary.risk_blocked += 1
+            return
+
+        # Rest a BUY-NO limit at the no-bid (+offset to improve fill), never paying through the ask.
+        base = int(no_price) if no_price is not None else int(metrics.best_no_bid)
+        price = base + max(0, s.mmsell_live_price_offset_cents)
+        if metrics.best_no_ask is not None:
+            price = min(price, int(metrics.best_no_ask))
+        price = max(1, min(99, price))
+        # Dollar-cap sizing on the no-price, capped by the hard max order size.
+        qty = math.floor(s.live_max_order_dollars / (price / 100.0))
+        qty = min(qty, s.max_order_size)
+        if qty <= 0:
+            self.summary.skipped_gate += 1
+            return
+
+        # Audit trail: record an (approved) risk event so the live decision is inspectable.
+        repo.insert_risk_event(session, None, ticker, RiskDecision(
+            approved=True, reason_codes=[], max_allowed_quantity=qty, max_allowed_price=price))
+
+        client_order_id = f"{strategy}:{ticker}"
+        order = {
+            "ticker": ticker, "action": "buy", "side": "no", "count": qty,
+            "type": "limit", "no_price": price, "client_order_id": client_order_id,
+        }
+        # Persist intent BEFORE the POST and COMMIT it durably (survives a later cycle rollback),
+        # so the dedup guard can't re-fire a DUPLICATE real order after one already hit Kalshi.
+        row = repo.create_live_order(
+            session, signal_id=None, ticker=ticker, event_ticker=event_ticker,
+            strategy=strategy, side="no", action="buy", limit_price=price, quantity=qty,
+            status="pending", client_order_id=client_order_id, raw_order_json=order,
+        )
+        session.commit()
+        try:
+            resp = self.client.place_order(**order)
+        except AuthError:
+            repo.update_live_order_status(session, row, status="error", cancel_reason="auth")
+            raise
+        except TransientError as exc:
+            # Indeterminate: never assume placed/failed; reconcile resolves via client_order_id.
+            repo.update_live_order_status(session, row, status="unknown", cancel_reason=str(exc))
+            logger.warning("mmsell live place_order transient; status=unknown",
+                           extra={"extra_fields": {"ticker": ticker, "coid": client_order_id}})
+            return
+        except KalshiAPIError as exc:
+            if getattr(exc, "status_code", None) == 409:  # a prior identical send landed
+                repo.update_live_order_status(session, row, status="submitted",
+                                              cancel_reason="409_already_exists")
+                self.summary.placed += 1
+                return
+            repo.update_live_order_status(session, row, status="rejected", cancel_reason=str(exc))
+            self.summary.rejected += 1
+            return
+        except Exception as exc:  # noqa: BLE001 — never let live break the paper record
+            repo.update_live_order_status(session, row, status="error", cancel_reason=str(exc))
+            logger.exception("mmsell live place_order failed")
+            return
+
+        koid = None
+        if isinstance(resp, dict):
+            o = resp.get("order") if isinstance(resp.get("order"), dict) else resp
+            koid = o.get("order_id") or o.get("id")
+        # A v2 limit maker order rests until filled/canceled (or auto-settles if it fills).
+        repo.update_live_order_status(session, row, status="resting", kalshi_order_id=koid, raw=resp)
+        self.summary.placed += 1
+        logger.info("mmsell live order placed (resting maker no-buy)", extra={"extra_fields": {
+            "ticker": ticker, "strategy": strategy, "no_price": price, "count": qty,
+            "coid": client_order_id, "kalshi_order_id": koid}})
 
     def _entry_price(self, metrics) -> int | None:
         ask = metrics.best_yes_ask

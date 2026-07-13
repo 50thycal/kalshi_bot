@@ -139,6 +139,21 @@ class Settings(BaseSettings):
     # 15-20c is NEGATIVE (-2.2c). mmsell1 (5-20) / mmsell2 (10-20) both dilute the 5-10c
     # winner with the flat/negative 10-20c cells. mmsell3 isolates the pure sweet spot.
     mmsell_variants: str = "mmsell1:lo=5,hi=20;mmsell2:lo=10,hi=20;mmsell3:lo=5,hi=10"
+    # --- mmsell LIVE entry (maker NO-buy; inert until LIVE_STRATEGIES lists a mmsell tag) ---
+    # The mmsell books rest a BUY-NO limit at the no-bid (== sell yes at the ask) and HOLD to
+    # settlement — a MAKER order, unlike the weather books' YES-taker entries. The whole point of
+    # the live test is to measure real fill rate + adverse selection (paper ASSUMES the resting
+    # no-bid fills). Gated by the same three switches (BOT_MODE=live + KILL_SWITCH=false +
+    # LIVE_ENABLED=true) AND a mmsell tag in LIVE_STRATEGIES; these knobs tune the maker entry.
+    # See docs/MMSELL_LIVE_PLAN.md. All default to the safe Stage-1 (~$150, 1-contract) config.
+    mmsell_live_max_open_positions: int = 60     # cap concurrent live mmsell positions (paper peak ~68)
+    mmsell_live_price_offset_cents: int = 0      # bid this many cents ABOVE the no-bid: 0 = join the
+    #                                              queue at the no-bid (Stage 1); 1 = improve to fill
+    #                                              faster. Capped at the no-ask so it never pays through.
+    mmsell_live_max_spread_cents: int = 40       # sanity guard only: skip if the yes spread exceeds
+    #                                              this. Cheap longshots are wide by nature — the maker
+    #                                              edge IS the spread — so this is generous, NOT the
+    #                                              weather risk gate's 5c (which would reject the book).
 
     # --- Theta book (ride-along paper, weather/live cycle) ---
     # Model-anchored tail-selling on the recurring hourly crypto ladders (docs/
@@ -963,6 +978,9 @@ class Settings(BaseSettings):
             "mmsell_max_open_positions": self.mmsell_max_open_positions,
             "mmsell_paper_enabled": self.mmsell_paper_enabled,
             "mmsell_interval_minutes": self.mmsell_interval_minutes,
+            "mmsell_live_max_open_positions": self.mmsell_live_max_open_positions,
+            "mmsell_live_price_offset_cents": self.mmsell_live_price_offset_cents,
+            "mmsell_live_max_spread_cents": self.mmsell_live_max_spread_cents,
             "mmsell_variants": [f"{v['tag']}:{v['lo']:.0f}-{v['hi']:.0f}"
                                 for v in self.mmsell_variant_list],
             "theta_enabled": self.theta_enabled,

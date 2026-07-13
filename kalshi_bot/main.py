@@ -106,12 +106,19 @@ def run() -> int:
     weather = settings.bot_mode == "weather"
     mmsell = settings.bot_mode == "mmsell"
     weather_like = weather or live
+    # The live executor (real-money order placement) exists only in live mode; it mirrors
+    # allowlisted paper entries into orders. Built here so the ride-along mmsell tracker can
+    # receive it (its NO-maker live path). INERT until the switches + LIVE_STRATEGIES are set.
+    live_executor = LiveExecutor(client, settings, scanner.risk) if live else None
     mmsell_engine = PaperTradingEngine(client, settings, scanner.risk) if mmsell else None
     mmsell_tracker = MmSellTracker(client, settings) if mmsell else None
     # mmsell can ALSO ride along as a paper book inside the weather/live cycle (its positions
-    # are settled/marked by the shared weather_engine, which manages ALL open paper trades).
+    # are settled/marked by the shared weather_engine, which manages ALL open paper trades). In
+    # live mode it also mirrors allowlisted entries into real resting maker NO-buys via the executor.
     mmsell_paper = weather_like and settings.mmsell_paper_enabled
-    mmsell_paper_tracker = MmSellTracker(client, settings) if mmsell_paper else None
+    mmsell_paper_tracker = (
+        MmSellTracker(client, settings, live_executor=live_executor) if mmsell_paper else None
+    )
     # theta rides along the same way (paper): model-anchored tail-selling on the hourly
     # crypto ladders; the shared weather_engine settles/marks its <1h positions.
     theta_paper = weather_like and settings.theta_enabled
@@ -146,7 +153,6 @@ def run() -> int:
         OpenMeteoForecastClient() if weather_like and settings.weather_hrrr_enabled else None
     )
     weather_engine = PaperTradingEngine(client, settings, scanner.risk) if weather_like else None
-    live_executor = LiveExecutor(client, settings, scanner.risk) if live else None
     weather_tracker = (
         WeatherTracker(client, settings, forecast_client, ensemble_client, polymarket_client,
                        hrrr=hrrr_client, live_executor=live_executor)
@@ -468,6 +474,13 @@ def _run_weather_cycle(
 
 
 _mmsell_last_run = {"ts": 0.0}
+
+
+def _wire_mmsell_live(tracker, account_state) -> None:
+    """Give the ride-along mmsell tracker the account state so its live mirror can pass the real
+    balance to the entry gate (live cycle only; no-op if the tracker isn't set)."""
+    if tracker is not None:
+        tracker._account_state = account_state
 
 
 def _run_mmsell_book(settings, tracker) -> None:
@@ -809,6 +822,7 @@ def _run_live_cycle(
         except Exception:  # noqa: BLE001
             logger.exception("weather backfill cycle failed")
     _run_validation_backfill(validation_backfill)
+    _wire_mmsell_live(mmsell_tracker, account_state)  # live-only: pass real balance to the mirror
     _run_mmsell_book(settings, mmsell_tracker)
     _run_theta_book(settings, theta_tracker)
     _run_tfav_book(settings, tfav_tracker)

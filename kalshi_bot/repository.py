@@ -957,6 +957,43 @@ def live_order_exists(session, event_ticker: str, strategy: str) -> bool:
     ) > 0
 
 
+def live_buy_exists_for_ticker(session, ticker: str, strategy: str) -> bool:
+    """A committed live BUY already exists for this (market, strategy) — per-TICKER entry dedup
+    for the mmsell books, which open one position per market (markets share an event, so the
+    per-EVENT live_order_exists would wrongly block a second market in the same event)."""
+    return session.scalar(
+        select(func.count()).select_from(m.LiveOrder).where(
+            m.LiveOrder.market_ticker == ticker,
+            m.LiveOrder.strategy == strategy,
+            m.LiveOrder.status.in_(LIVE_COMMITTED_STATUSES),
+            m.LiveOrder.action == "buy",
+        )
+    ) > 0
+
+
+def count_live_book_open(session, strategy: str) -> int:
+    """Count a book's still-open live footprint: distinct tickers with a committed live BUY for
+    `strategy` that have NOT settled flat. A resting/unfilled order (no snapshot yet) counts as
+    open; a filled position counts; a settled (net-flat) position does not. Rejected/canceled
+    orders are excluded. Used to cap concurrent live mmsell positions."""
+    rows = session.execute(
+        select(m.LiveOrder.market_ticker).where(
+            m.LiveOrder.strategy == strategy,
+            m.LiveOrder.action == "buy",
+            m.LiveOrder.status.in_(LIVE_NONTERMINAL_STATUSES + ("filled",)),
+        ).distinct()
+    ).all()
+    n = 0
+    for (ticker,) in rows:
+        snap = latest_position_snapshot(session, ticker)
+        if snap is not None:
+            qty = snap.quantity_fp if snap.quantity_fp is not None else snap.quantity
+            if qty is not None and abs(float(qty)) <= 0.01:
+                continue  # settled / flat
+        n += 1
+    return n
+
+
 def event_has_open_live_position(session, event_ticker: str, *, exclude_strategy: str | None = None) -> bool:
     """True if any committed live BUY on this event still holds an open position (Kalshi-truth:
     its latest position snapshot is net non-zero). Used to cap exposure to one position per
