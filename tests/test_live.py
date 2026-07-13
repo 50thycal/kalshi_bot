@@ -77,6 +77,11 @@ class FakeLiveClient:
         self.canceled.append(order_id)
         return {}
 
+    def cancel_events_order(self, order_id):
+        # V2 events cancel (reconcile uses this for timed-out resting orders).
+        self.canceled.append(order_id)
+        return {}
+
     def get_orders(self, **kw):
         return {"orders": self.orders}
 

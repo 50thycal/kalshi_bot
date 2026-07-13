@@ -75,3 +75,42 @@ def test_place_order_is_guarded_in_scanner_mode(settings):
             client.place_order(
                 ticker="X", action="buy", side="yes", type="limit", count=1, yes_price=50
             )
+
+
+def test_create_events_order_is_guarded_in_scanner_mode(settings):
+    with KalshiClient(settings) as client:
+        with pytest.raises(RuntimeError):
+            client.create_events_order({"ticker": "X", "side": "ask", "price": "0.08"})
+
+
+@respx.mock
+def test_create_events_order_posts_to_v2_events_endpoint(settings):
+    # The current Kalshi order endpoint (replaced the deprecated /portfolio/orders).
+    settings.bot_mode = "live"
+    settings.kill_switch = False
+    base = settings.kalshi_base_url
+    route = respx.post(f"{base}/portfolio/events/orders").mock(
+        return_value=Response(201, json={"order": {"order_id": "K-1", "status": "resting"}})
+    )
+    body = {
+        "ticker": "KXTEAM-26-A", "client_order_id": "cid", "side": "ask",
+        "count": "1.00", "price": "0.0800", "time_in_force": "good_till_canceled",
+        "post_only": True,
+    }
+    with KalshiClient(settings) as client:
+        resp = client.create_events_order(body)
+    assert resp["order"]["order_id"] == "K-1"
+    assert route.call_count == 1
+    import json as _json
+    assert _json.loads(route.calls.last.request.content)["side"] == "ask"
+
+
+@respx.mock
+def test_cancel_events_order_deletes_v2_events_path(settings):
+    settings.bot_mode = "live"
+    settings.kill_switch = False
+    base = settings.kalshi_base_url
+    route = respx.delete(f"{base}/portfolio/events/orders/K-1").mock(return_value=Response(200))
+    with KalshiClient(settings) as client:
+        client.cancel_events_order("K-1")
+    assert route.call_count == 1
