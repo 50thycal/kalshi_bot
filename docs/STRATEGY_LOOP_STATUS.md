@@ -8,116 +8,105 @@ suggestion list carries over run-to-run. All times CENTRAL (CDT/CST).*
 
 ---
 
-## Snapshot — 2026-07-12 08:07 PM CDT (run #38)
+## Snapshot — 2026-07-13 05:31 AM CDT (run #39)
 
-**Trading books (settled n / P&L / per-trade / open):**
+**🔴 ANOMALY — THE BOT IS DOWN. Railway deployment status is CRASHED, crash-looping on a Kalshi
+auth failure since ~9:31 PM CDT last night (~8 hours as of this run).** This supersedes every
+book/gate item below — nothing has traded or collected data since ~9:16 PM CDT because the
+process cannot get past startup.
+
+**What's confirmed (read-only checks, ops channel):**
+- Railway's own deployment record: `e0db4e4d-...` **status=CRASHED**, created **2026-07-13
+  02:31:45 UTC** (9:31 PM CDT 7/12).
+- Crash-loop error, repeating every ~3 seconds since then:
+  `kalshi_bot.kalshi.errors.AuthError: Kalshi auth failed (401) on /trade-api/v2/portfolio/balance`
+  — thrown from `main.py:175` (`client.get_balance()`), called unconditionally at startup before
+  any trading or collection logic runs. Every restart attempt dies at the same line.
+- `bot_runs`: last row started **02:16:40 UTC**, finished **02:16:52 UTC** — **zero runs since**
+  (would be ~50+ runs by now at normal cadence). Confirms total halt, not a partial degradation.
+- Every collector (`crypto_spot_candles`, `crypto_ladder_snapshots`, `weather_forecasts`,
+  `weather_observations`, `weather_ensembles`, `weather_bucket_snapshots`) has its latest row
+  clustered at **02:12–02:17 UTC** — all stopped in the same ~5-minute window, consistent with
+  the crash. `xgame_matches` and `xgame_tapes` show **zero rows in the last 24h** (previously
+  still ticking even though the book is shelved) — further confirming total collector halt, not
+  an xgame-specific issue.
+
+**Likely cause:** a 401 on the Kalshi balance endpoint at process start almost always means the
+API key/private-key credential Railway is using stopped authenticating — expired, rotated, or
+revoked on the Kalshi side, or a bad value got deployed. **This is outside what the loop can
+diagnose further read-only** — it needs the actual credential checked (Kalshi account API-key
+settings) and likely a Railway env var fix + redeploy. **This is a "flag now, don't wait for the
+next scheduled run" situation** — surfacing at 5:30 AM instead of sitting until noon.
+
+---
+
+**Trading books (settled n / P&L / per-trade / open) — snapshot as of the crash (~02:16 UTC),
+nothing has moved since:**
 | book | n | P&L | ¢/trade | open | note |
 |---|---|---|---|---|---|
-| **mmsell3** (5-10c) | 282 | +$4.00 | **+1.4** | 25 | **dipped BELOW +1.5c gate threshold** — this batch (n=29) ran −2.8c/trade |
-| **pin15** | 128 | −$6.47 | −5.1 | 0 | this batch (n=17) reversed to −9.1c/trade (prior batch was −1.6c) — 85% to gate |
-| mmsell1 / mmsell2 | 1,329 / 870 | +$16.28 / +$11.95 | +1.2 / +1.4 | 35 / 22 | mmsell3 still narrowly ahead of both |
-| mmsell (control) | 2,246 | +$19.97 | +0.9 | 46 | breakeven+ |
-| **weather_concity** | 14 | −$0.78 | −5.6 | 7 | unchanged this run (no new settles) |
-| **theta4** (fat-tail) | 3 | +$2.34 | — | 0 | unchanged this run (no new settles) |
-| weather con (all) | 339 | −$2.35 | −0.7 | 16 | unchanged this run (no new settles) |
-| theta ctrl/1/2/3 | 560/201/98/134 | +$0.97/+$9.69/−$11.55/−$11.62 | — | 0 | SHELVED, quiet, unchanged |
-| tfav | 215 | −$7.54 | −3.5 | 0 | KILLED, quiet, unchanged |
-| weather (rest) | 4,709 | −$238.63 | — | 0 | pruned, done |
+| mmsell3 (5-10c) | 285 | +$4.24 | +1.5 | 24 | flat since crash (+3 trades, +8c/trade, right at the gate line) |
+| pin15 | 133 | −$5.39 | −4.1 | 0 | flat since crash (+5 trades, this tiny batch +21.6c/trade — positive, but n too small to read) |
+| mmsell1 / mmsell2 | 1,338 / 877 | +$17.34 / +$12.88 | +1.3 / +1.5 | 31 / 18 | mmsell3's lead over mmsell2 has nearly vanished (1.5 vs 1.5) |
+| mmsell (control) | 2,262 | +$18.23 | +0.8 | 42 | flat since crash |
+| weather_concity / theta4 / weather con(all) | 14 / 3 / 339 | unchanged | unchanged | unchanged | no new settles since run #38, now also frozen by the outage |
+| theta ctrl/1/2/3, tfav, weather(rest) | — | — | — | — | SHELVED/KILLED, unaffected either way |
 
-**HEADLINE — correction to run #37: mmsell3's edge dipped back BELOW its own +1.5c keep-threshold.**
-Last run I called mmsell3's gate cleanly cleared and recommended promoting it. This run's 29 new
-trades settled at **−2.8c/trade**, pulling the cumulative average from **+1.9c (n=253) down to
-+1.4c (n=282)** — now *below* the pre-registered +1.5c bar, even though it still narrowly leads
-both mmsell1 (+1.2c) and mmsell2 (+1.4c). **This is exactly the kind of single-batch swing the
-gate's n≥150 threshold was supposed to guard against, and it still happened at n=282** — the
-per-trade edge here is thin enough that batch-to-batch variance is comparable in size to the edge
-itself. **Revised recommendation: do NOT promote yet.** Treat mmsell3 as "recently gate-adjacent,
-unstable at the threshold" rather than "cleanly resolved" — hold for another run or two to see
-whether it stabilizes above or below +1.5c before a fable session acts on last run's promote
-suggestion. The MMX unblock (mmsell3 crossing n≥150) still formally stands since n≥150 is a
-one-way trigger, but the *performance* leg of the gate is now borderline, so treat MMX as
-"technically unblocked, worth a quick recheck before investing build time" rather than a clean
-green light.
-
-pin15 also reversed direction: last run's improving batch (−1.6c/trade) was followed by a worse
-one this run (n=17, −9.1c/trade), pulling cumulative to −5.1c/trade (was −4.4c). Still 85% to its
-own n≥150 gate (128/150) and still clearly −EV cumulative — the improving trend from run #37 did
-not hold, treat as noise either direction until the gate resolves. theta4, weather_concity, and
-weather con(all) had **no new settlements this run** — all unchanged from #37.
-
-**Gate sweep (step 3b):** mmsell3 **282/150** (n-gate cleared, performance leg now borderline —
-see above) · pin15 **128/150** (85%, still −EV) · theta4 **3/80** · weather_concity **14/120**.
-
-**Data (last-24h / latest CDT):** crypto_spot 2,870 (08:02 PM ✓), crypto_ladder 65,040 (08:03 PM
-✓, 100% model-priced), weather forecasts/obs/buckets fresh (08:05–08:06 PM ✓), ensembles fresh
-(07:23 PM ✓, 43min old vs ~60min cadence). xgame_matches +0 new since run #37 (latest still
-~05:18 AM CDT; collector quiet, book shelved, not itself alarming at this cadence).
-**xgame_tapes anomaly persists and is now confirmed real, not a one-off:** `max(captured_at)` is
-byte-identical to run #37's reading (2026-07-11 10:58 PM CDT, now ~21h stale) despite the 24h-row
-count changing (114,982 → 43,829 rows). Two consecutive runs with an unmoving max timestamp while
-the count keeps churning is a genuine data/query inconsistency, not noise — worth an ops look
-(likely a captured_at vs. insert-order mismatch or a stale materialized value), though still
-low-priority since the book is shelved and quiet.
+**Gate sweep:** mmsell3 **285/150** (~+1.5c, right on the line — see #38's note that this edge is
+noise-comparable at this size) · pin15 **133/150** (89%, still −EV cum) · theta4 **3/80** ·
+weather_concity **14/120**. All frozen mid-outage, nothing new to resolve this run.
 
 **Research probes (on-demand):** WCPROP + XGAME families CLOSED. No standing probes.
 
-**Headline:** mmsell3's gate-clear from run #37 did NOT hold — dipped to +1.4c/trade (below the
-+1.5c bar) on a −2.8c/trade batch; hold off promoting, recheck next run. pin15 reversed to
-−9.1c/trade this batch (85% to its gate). theta4/concity/con(all) quiet, no new settles.
-xgame_tapes timestamp anomaly confirmed repeating — low-priority ops flag.
+**Headline:** 🔴 Bot has been CRASHED/down since ~9:31 PM CDT last night (~8h), crash-looping on a
+Kalshi 401 auth error at startup — likely an expired/rotated API key. All trading and data
+collection halted since ~9:16 PM CDT. This needs a human to check the Kalshi API credential and
+redeploy — the loop can't fix this. Below-the-fold: book P&L unchanged from #38 since everything
+froze at the same moment; nothing to report there this run beyond "still frozen."
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[mmsell3 · REVISED — do NOT promote yet, edge unstable at the threshold] +1.4c/trade at
-   n=282**, down from +1.9c @ n=253 last run after a −2.8c/trade batch (n=29). Still narrowly
-   beats mmsell1 (+1.2c) and mmsell2 (+1.4c) but is now BELOW its own +1.5c keep-bar. The
-   n≥150 gate stays formally crossed (one-way), but the performance leg is borderline — this
-   reverses run #37's "ready to promote" call. **Recommended: wait 1-2 more runs to see if it
-   settles clearly above or below +1.5c before a fable session promotes it.** If it keeps
-   dipping below +1.5c, the honest read may be "the edge is real but too thin to act on with
-   this variance," not a clean win.
+1. **[🔴 URGENT — bot down, needs human action NOW] Railway deployment CRASHED since ~9:31 PM CDT
+   7/12, crash-looping on `AuthError: Kalshi auth failed (401) on /trade-api/v2/portfolio/balance`
+   at startup.** `bot_runs` confirms zero runs since 02:16:52 UTC; every collector confirms the
+   same halt window. **Action needed: check the Kalshi API key/credential Railway is using (most
+   likely expired/rotated/revoked) and redeploy once fixed.** This is not something the loop or a
+   future loop run can resolve — it needs direct operator or Railway-console intervention. Will
+   re-check at the next scheduled run (12:00 PM CT) and escalate again if still down.
 
-2. **[idea-model queue · MMX — technically unblocked, but recheck before building] mmsell3
-   crossed n≥150 in run #37 (MMX's formal trigger), but #1 above shows the performance leg is
-   now borderline.** MMX (extend mmsell 5-10c maker-sell into uncorrelated non-sports
-   categories, material in `IDEA_MODEL_20260710_run2.md`) is worth a quick recheck against
-   mmsell3's *stabilized* number (once #1 resolves) before committing `kalshi-strategy` build
-   time to it — building on a threshold-noise reading would waste the effort. NEST still behind
-   theta4 (n=3/80, far off). RTPIN/BOXPIN behind unbuilt scraper infra. RATELAG behind a live
+2. **[mmsell3 · still right at the +1.5c line, frozen mid-outage] +1.5c/trade at n=285** — last
+   run's dip-below concern and this run's recovery-to-the-line are both within noise; nothing
+   resolved either way, and no new data since the crash. Still: do NOT promote yet, wait for a
+   clean multi-run read once the bot is back up and the edge has had a chance to stabilize.
+
+3. **[idea-model queue · MMX — still "recheck before building," unaffected by the outage]**
+   mmsell3's n≥150 trigger technically stands, but the performance leg is still unresolved (#2).
+   MMX (`IDEA_MODEL_20260710_run2.md`) stays "recheck before building," not a green light. NEST
+   still behind theta4 (n=3/80). RTPIN/BOXPIN behind unbuilt scraper infra. RATELAG behind a live
    Fed event.
 
-3. **[pin15 · WATCH — reversed this batch, still 85% to gate] 128 settled −$6.47 (−5.1c cum), 0
-   open.** This batch's 17 new trades ran **−9.1c/trade**, reversing run #37's improving batch
-   (−1.6c/trade) — batch-to-batch swings here are large, consistent with the T-window-dependent
-   thesis (some batches catch the right window, some don't). Gate: n≥150 (85% there, close),
-   keep only if per-trade > +1.5c AND profit concentrates in T≈120–180s entries. Should resolve
-   within the next couple of runs — do not act on either direction yet.
+4. **[pin15 · WATCH, frozen mid-outage] 133 settled −$5.39 (−4.1c cum), 89% to its n≥150 gate.**
+   No new data since the crash; last partial batch (n=5) was positive but too small to read.
+   Should resolve within a run or two of the bot coming back online.
 
-4. **[weather_concity · WATCH — no new settles this run, still n=14] 14 settled −$0.78 (−5.6c
-   cum), 7 open, unchanged since run #37.** Gate: n≥120 (12% there), keep only if it beats
-   all-city con. Far too early and too quiet to read; carry forward.
+5. **[weather_concity · WATCH, frozen mid-outage] 14 settled −$0.78, unchanged since #37/#38.**
+   Gate n≥120 (12% there). No new data possible until the outage resolves.
 
-5. **[theta4 · unchanged, still noise] 3 trades, +$2.34 (n=3), no new settles this run.** Gate:
-   n≥80, keep only if per-trade > 0 AND realized-tail-hit ≤ 1.25x modeled. Accruing very
-   slowly; if still <~10 by run #41, revisit the loosen-edge idea to get a testable n. Do not
-   read n=3.
+6. **[theta4 · unchanged, frozen mid-outage] 3 trades, +$2.34.** Gate n≥80. No new data possible
+   until the outage resolves.
 
-6. **[mmsell existing · context] control/mmsell1/mmsell2 ~breakeven-positive** (+0.9c / +1.2c /
-   +1.4c, n≈4,400 combined). mmsell3 is still narrowly ahead of both variants despite its dip —
-   the promote case isn't dead, just not yet clean (see #1).
+7. **[mmsell existing · context] control/mmsell1/mmsell2 ~breakeven-positive** (+0.8c/+1.3c/+1.5c).
+   mmsell3's lead over mmsell2 has essentially disappeared (1.5c vs 1.5c) — worth remembering once
+   fresh data resumes, this comparison may flip either way.
 
-7. **[data anomaly · xgame_tapes latest-timestamp, low priority but now CONFIRMED repeating]
-   `max(captured_at)` identical across run #37 and #38 (2026-07-11 10:58 PM CDT, now ~21h
-   stale) despite the last-24h row count changing (114,982 → 43,829).** Two consecutive
-   identical-timestamp readings rules out a one-off fluke — likely a real query/data issue
-   (captured_at not reflecting true insert order, or a stale cached value), on a shelved/quiet
-   book. Still not urgent, but worth an ops look if it persists into run #39.
+8. **[data anomaly · xgame_tapes latest-timestamp — RESOLVED, explained by the outage] The
+   repeating-stale-timestamp anomaly flagged in runs #37/#38 is now explained: the entire worker
+   stopped at ~02:16 UTC (this run's #1 finding), so xgame_tapes freezing at the same moment is
+   just the outage, not a separate query bug.** Drop as a standalone item; folded into #1.
 
-*(Changed this run: #1 mmsell3 REVISED from "GATE CLEARED — promote" to "hold, edge dipped below
-+1.5c threshold on a −2.8c/trade batch" — direct correction of run #37's framing. #2 MMX
-downgraded from "unblocked, go build" to "technically unblocked, recheck before building." #3
-pin15 reversed to −9.1c/trade this batch (was improving last run), still 85% to gate. #7 xgame_tapes
-anomaly upgraded from "flagging for awareness" to "confirmed repeating, low-priority ops item."
-theta4/concity/con(all) (#4, #5) unchanged, no new settlements this run.)*
+*(Changed this run: NEW #1 — critical: bot CRASHED since ~9:31 PM CDT 7/12 on a Kalshi auth 401,
+zero activity in ~8h, needs operator action. #2 mmsell3 — dip/recovery both within noise, frozen
+mid-outage, still hold. #8 — the xgame_tapes anomaly from #37/#38 is now explained by the outage
+and folded in, no longer a standalone mystery. #3-7 otherwise unchanged, all frozen since the
+crash — nothing new to read until the bot is back up.)*
