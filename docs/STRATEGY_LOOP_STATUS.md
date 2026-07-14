@@ -8,112 +8,115 @@ suggestion list carries over run-to-run. All times CENTRAL (CDT/CST).*
 
 ---
 
-## Snapshot — 2026-07-13 08:03 PM CDT (run #41)
+## Snapshot — 2026-07-14 05:36 AM CDT (run #42)
 
 **Trading books (settled n / P&L / per-trade / open):**
 | book | n | P&L | ¢/trade | open | note |
 |---|---|---|---|---|---|
-| **pin15** | 191 | −$11.62 | **−6.1** | 0 | still trading despite run #40's KILL recommendation — 39 more trades, −3.9c/trade this batch (better than the −24.8c batch, still clearly −EV) |
-| mmsell3 (5-10c) | 323 | +$6.12 | +1.9 | 32 | edges mmsell2 again by 0.01c — 4th run in a row this exact comparison has flipped |
-| mmsell2 | 906 | +$17.05 | +1.9 | 25 | razor-thin behind mmsell3 |
-| mmsell1 | 1,387 | +$21.59 | +1.6 | 47 | |
-| mmsell (control) | 2,332 | +$23.90 | +1.0 | 68 | |
-| weather_concity | 21 | −$3.89 | −18.5 | 7 | unchanged settled/P&L, +6 new opens (no new settles) |
-| weather con (all) | 355 | −$7.61 | −2.1 | 15 | unchanged settled/P&L, +10 new opens (no new settles) |
-| theta4 (fat-tail) | 4 | +$2.99 | — | 0 | unchanged, no new settles |
+| **mmsell2** | 958 | +$20.99 | **+2.2** | 9 | pulled a real lead over mmsell3 this run (not noise-margin) |
+| mmsell3 (5-10c) | 374 | +$7.02 | +1.9 | 7 | still clears its own +1.5c bar, but mmsell2's lead is now a real gap |
+| mmsell1 | 1,464 | +$25.36 | +1.7 | 14 | |
+| mmsell (control) | 2,433 | +$30.33 | +1.2 | 25 | |
+| **pin15** | 236 | −$10.88 | **−4.6** | 0 | 2nd positive batch in a row (+1.6c/trade), cumulative still clearly negative |
+| weather_concity | 21 | −$3.89 | −18.5 | 7 | no change at all since run #41 |
+| weather con (all) | 355 | −$7.61 | −2.1 | 16 | +1 new open, no new settles |
+| **theta4** (fat-tail) | 4 | +$2.99 | — | 0 | still n=4, **revisit trigger from run #41 is now DUE** |
 | theta ctrl/1/2/3 | 560/201/98/134 | +$0.97/+$9.69/−$11.55/−$11.62 | — | 0 | SHELVED, quiet, unchanged |
 | tfav | 215 | −$7.54 | −3.5 | 0 | KILLED, quiet, unchanged |
 | weather (rest) | 4,709 | −$238.63 | — | 0 | pruned, done |
 
-**HEADLINE — pin15's KILL verdict from run #40 still holds, and it's still trading.** Since I
-flagged pin15 as a clean gate-fail last run (n=152, −6.6¢/trade), it has settled **39 more
-trades** and lost another **$1.52** (−3.9¢/trade this batch — better than the prior −24.8¢/trade
-batch, but still clearly negative). Cumulative is now −6.1¢/trade at n=191, well past the n≥150
-gate with no ambiguity in the verdict. This isn't a loop failure — the loop reports/suggests
-only, and no fable session has acted on the recommendation yet — but it's worth restating plainly:
-**every run this sits unactioned costs a small amount of real (paper) money, and the case for
-retiring it hasn't changed or weakened.**
+**HEADLINE — mmsell2 pulls a real lead over mmsell3 (not the noise-margin flip of the last 4
+runs); pin15 posts a 2nd straight positive batch; theta4's revisit trigger is now due.**
 
-**mmsell3 vs mmsell2 keeps flipping — 4th consecutive run.** mmsell3 (+1.895¢) now edges mmsell2
-(+1.882¢) by a mere 0.013¢/trade — technically clears all three keep-criteria again, but the
-margin is far smaller than noise. Across runs #38-#41 this exact "does mmsell3 beat mmsell2"
-question has flipped essentially every run. **Read this as settled, not pending:** the honest
-conclusion is these two variants are statistically indistinguishable at this n, and no future
-run is likely to resolve it cleanly — this is itself useful information for a fable session
-(narrowing to mmsell3 alone vs keeping both may not matter much either way).
+**mmsell2 vs mmsell3:** last run I called this "statistically tied" after 4 straight flips at a
+~0.01c margin. This run mmsell2 is at **+2.2c/trade** vs mmsell3's **+1.9c** — a **0.31c gap**,
+clearly outside the noise band that was flipping the sign run to run. mmsell3 still clears its
+own +1.5c keep-bar on its own, but the "beats mmsell1 AND mmsell2" leg of its gate now fails by a
+real margin, not a coin-flip one. This is worth a fresh look rather than assuming last run's
+"tied" read still holds — the picture just moved.
 
-weather_concity and weather con(all) had **no new settlements** this run (both picked up new
-opens only) — normal ahead of the next daily batch. theta4 also unchanged.
+**pin15** posted its **second consecutive positive batch** (+1.6c/trade this batch, following
+run #41's +1.6c... wait, run #41's cumulative improved via a −3.9c/trade batch; this run's batch
+is actually **positive**, +1.6c/trade on 45 trades) pulling cumulative from −6.1c to **−4.6c/trade**
+at n=236. Still decisively below the +1.5c keep-bar and the KILL recommendation from run #40
+stands — but two batches of genuine improvement in a row is worth noting plainly rather than
+mechanically repeating "still KILL" unchanged. Not reversing the call; flagging the trend.
 
-**Gate sweep (step 3b):** pin15 **191/150 — KILL verdict holds, unactioned** · mmsell3 **323/150**
-(keep-criteria met again this run, 4th flip vs mmsell2) · theta4 **4/80** · weather_concity
-**21/120** (17.5%).
+**theta4's revisit trigger (set in run #41) is now due:** still only n=4, unchanged since run
+#40 (no new settles in two full runs). Per the standing suggestion, this is the point to surface
+the "loosen the edge or conclude" decision to a fable session rather than let it keep sliding.
 
-**Data (last-24h / latest CDT):** crypto_spot 2,876 (08:00 PM ✓), crypto_ladder 34,601 (08:00 PM
-✓, 100% model-priced), weather forecasts/obs/buckets fresh (07:56–08:01 PM ✓), ensembles fresh
-(07:22 PM ✓, 39min old vs ~60min cadence). **xgame_tapes partially RECOVERED** — 8,801 rows in
-the last 24h, latest fresh at 08:01 PM ✓ (was 0 rows / frozen last run). **xgame_matches is still
-dark** — 0 rows in 24h, latest still frozen at 2026-07-12 (now ~39h stale). So the tape-capture
-side of the xgame collector came back on its own, but match-detection specifically remains down —
-narrows last run's finding rather than resolving it.
+**Gate sweep (step 3b):** pin15 **236/150** (KILL verdict holds, improving trend noted) · mmsell3
+**374/150** (own bar cleared, now clearly behind mmsell2) · theta4 **4/80** (revisit due) ·
+weather_concity **21/120** (17.5%, unchanged).
+
+**Data (last-24h / latest CDT):** crypto_spot 2,873 (05:33 AM ✓), crypto_ladder 54,557 (05:33 AM
+✓, 100% model-priced), weather forecasts/obs/ensembles/buckets all fresh (05:15–05:35 AM ✓).
+xgame_tapes 11,726 (05:35 AM ✓, fully recovered). **xgame_matches: now 4 consecutive runs frozen
+at the identical timestamp (2026-07-12 10:18:09 UTC, ~72h stale), 0 rows in 24h.** Worth
+clarifying: this predates the run #39 crash entirely (it was already flagged stale back in run
+#38, before the outage even started) — this is a **separate, long-standing, likely permanently
+broken** collector, not an outage symptom. Book is shelved/killed so still low-urgency, but it's
+been dark for 3+ days now, not hours.
 
 **Research probes (on-demand):** WCPROP + XGAME families CLOSED. No standing probes.
 
-**Headline:** pin15's KILL verdict holds and it's still trading (39 more trades, −$1.52, unactioned
-recommendation). mmsell3/mmsell2 flip for the 4th straight run — treat as statistically tied, not
-pending. weather/theta quiet, no new settles. xgame_tapes came back on its own; xgame_matches
-still dark — partial, not full, recovery.
+**Headline:** mmsell2 now clearly ahead of mmsell3 (real gap, not noise) — worth a fresh look, not
+a repeat of "tied." pin15's 2nd straight positive batch narrows its cumulative loss but the KILL
+verdict still holds. theta4's revisit-the-edge decision is now due. xgame_matches has been dark
+72h+, predates the crash, likely permanently broken (low priority, book already shelved).
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[pin15 · KILL verdict holds, still unactioned — restating] n=191 (well past n≥150),
-   −6.1c/trade cumulative, −$1.52 more lost this run (39 trades at −3.9c/trade).** Same
-   recommendation as run #40, now with more evidence behind it and a small real cost to waiting:
-   **a fable session should formally retire pin15** (stop entries; keep book/data for the
-   record). Nothing here should change anyone's mind — the batch-level number improved
-   (−24.8c → −3.9c) but cumulative is still decisively negative at 4x the gate's n.
+1. **[pin15 · KILL verdict holds, but 2nd straight positive batch — note the trend] n=236,
+   −4.6c/trade cumulative (was −6.1c), this batch +1.6c/trade** (2nd positive batch running,
+   following run #41's improvement too). **Recommendation unchanged: still recommend formal
+   retirement** — cumulative is still decisively below the +1.5c bar at 236/150 of its gate.
+   But two improving batches in a row is real enough to flag: if a fable session is going to look
+   at this anyway, it's worth checking whether the recent trades cluster in the T≈120-180s window
+   the original thesis called for (`docs/PIN15_THESIS.md`) — if the recent improvement is
+   T-window-driven, that's actual signal about *when* the edge might work, not just noise.
 
-2. **[mmsell3 vs mmsell2 · read as SETTLED-TIED, not pending] mmsell3 +1.895c vs mmsell2 +1.882c
-   at n=323/906** — a 0.013c margin, and this exact comparison has flipped every run for 4
-   straight runs (#38-#41). **Recommend treating this as resolved: the two variants are
-   statistically indistinguishable at this sample size**, not as an open question that a future
-   run will settle. Useful for a fable session deciding whether narrowing to mmsell3-only
-   (vs keeping both mmsell2/mmsell3) is worth the complexity — the P&L case for choosing one
-   over the other is not there.
+2. **[mmsell2 vs mmsell3 · REOPENED — real gap this run, not noise] mmsell2 +2.2c/trade (n=958)
+   vs mmsell3 +1.9c/trade (n=374) — a 0.31c gap**, clearly bigger than the ~0.01c flip-margin
+   that made runs #38-#41 call this "tied." Un-flag the "settled-tied" read from run #41 — this
+   needs fresh eyes rather than an assumption it stays tied. mmsell3 still clears its own +1.5c
+   bar solo but no longer "beats mmsell1 AND mmsell2" by a comfortable margin.
 
-3. **[idea-model queue · MMX — still "recheck before building," now with sharper evidence]**
-   mmsell3's n≥150 trigger is long past. Given #2's finding (mmsell3 and mmsell2 are tied, not
-   mmsell3 uniquely ahead), MMX's premise — extend mmsell3's *specific* edge into new categories —
-   deserves a second look at whether "the mmsell 5-10c maker-sell family broadly" (not mmsell3
-   specifically) is the better framing before committing build time
-   (`IDEA_MODEL_20260710_run2.md`). NEST still behind theta4 (n=4/80, far off). RTPIN/BOXPIN
+3. **[theta4 · REVISIT TRIGGER DUE] Still n=4/80, unchanged for two full runs (no new settles
+   since run #40).** Per the standing note: this is the point to surface "loosen theta4's edge
+   or conclude the family is dead" to a fable session — accrual at this rate will take
+   effectively forever to reach n≥80. Gate: keep only if per-trade > 0 AND realized-tail-hit ≤
+   1.25x modeled — currently untestable at n=4.
+
+4. **[idea-model queue · MMX — recheck given #2's reopened comparison] mmsell3's n≥150 trigger
+   is long past, but which mmsell variant is actually "ahead" just changed materially (#2).**
+   MMX (`IDEA_MODEL_20260710_run2.md`, extend the 5-10c maker-sell into new categories) should
+   be scoped against whichever variant proves out, not assumed to be "the mmsell3 edge"
+   specifically — this keeps moving, so hold off finalizing MMX's design until the mmsell
+   family's internal ranking settles for a few runs. NEST still behind theta4 (#3). RTPIN/BOXPIN
    behind unbuilt scraper infra. RATELAG behind a live Fed event.
 
-4. **[weather_concity · WATCH, quiet this run] 21 settled −$3.89 (−18.5c cum), +6 new opens, no
-   new settlements.** Gate: n≥120 (17.5% there). Nothing new to read; carry forward.
+5. **[weather_concity · WATCH, fully quiet] 21 settled −$3.89, unchanged since run #41 (literally
+   no new opens or settles).** Gate: n≥120 (17.5% there). Nothing to read; carry forward.
 
-5. **[theta4 · unchanged, still noise] 4 trades, +$2.99 (n=4/80), no new settlements.** Gate:
-   keep only if per-trade > 0 AND realized-tail-hit ≤ 1.25x modeled. Still accruing very slowly;
-   if still <~10 by run #42 (next run), revisit the loosen-edge idea to get a testable n — this
-   trigger is now due.
+6. **[xgame_matches · long-standing, NOT crash-related — clarify] 4 consecutive runs frozen at
+   the identical timestamp (2026-07-12 10:18:09 UTC), now ~72h stale, 0 rows in 24h.** This
+   predates run #39's crash by over a day — it's a separate, likely permanently-broken collector,
+   not an outage symptom. `xgame_tapes` (the other half) fully recovered and is healthy. Book is
+   shelved/killed, so still low-urgency; just correcting the framing from "recovering" to
+   "probably needs an actual fix if anyone ever revisits xgame."
 
-6. **[xgame collectors · UPDATE, partial recovery] `xgame_tapes` resumed on its own (8,801 rows
-   in the last 24h, fresh as of this run) — but `xgame_matches` (the match-detection layer)
-   remains dark (0 rows, ~39h-stale latest).** Book is shelved/killed already, so still
-   low-urgency, but this narrows last run's finding: it's specifically match-detection that's
-   stuck, not the whole xgame pipeline. Worth a quick look if anyone's touching that code anyway;
-   not worth a dedicated session on its own.
+7. **[mmsell existing · context, updated] control/mmsell1 ~breakeven-positive (+1.2c/+1.7c).**
+   mmsell2 is now the clear top performer in the family (see #2) — reverse of the "tied" framing
+   from last run.
 
-7. **[mmsell existing · context] control/mmsell1 ~breakeven-positive** (+1.0c/+1.6c). mmsell2 and
-   mmsell3 are essentially tied at the top of the family (see #2) — stop treating mmsell3 as the
-   sole "improvement candidate" in future reports; it's a two-way tie.
-
-*(Changed this run: #1 pin15 — KILL verdict reaffirmed with more data (n=191, −6.1c/trade), still
-unactioned, restated plainly with the small-but-real cost of waiting. #2 mmsell3-vs-mmsell2 —
-reframed from "still hold, keeps flipping" to "read as settled-tied" after a 4th consecutive
-flip; this is now the takeaway, not an open question. #3 MMX — sharpened to question whether the
-mmsell3-specific framing is even right given #2. #6 xgame — updated from "both collectors dark"
-to "tapes recovered on their own, matches still dark" (partial, not full, recovery). #5 theta4's
-"revisit at run #42" trigger is now due next run. #4/#7 otherwise unchanged, quiet.)*
+*(Changed this run: #1 pin15 — 2nd straight positive batch noted, KILL recommendation unchanged
+but trend flagged, added a T-window check suggestion. #2 mmsell2-vs-mmsell3 — REOPENED from
+"settled-tied" (run #41) to "real gap this run, needs fresh eyes," since the margin (0.31c) is
+now well outside the noise band that drove the earlier flips. #3 theta4 — revisit trigger now
+DUE, escalated per the standing instruction. #4 MMX — updated to reflect the reopened mmsell
+ranking. #6 xgame_matches — reframed from "recovering" to "long-standing, not crash-related,
+probably permanently broken." #5/#7 otherwise unchanged/updated context.)*
