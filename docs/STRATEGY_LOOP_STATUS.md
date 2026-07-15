@@ -8,116 +8,110 @@ suggestion list carries over run-to-run. All times CENTRAL (CDT/CST).*
 
 ---
 
-## Snapshot — 2026-07-14 12:05 PM CDT (run #43)
+## Snapshot — 2026-07-14 08:02 PM CDT (run #44)
 
 **Trading books (settled n / P&L / per-trade / open):**
 | book | n | P&L | ¢/trade | open | note |
 |---|---|---|---|---|---|
-| **theta4** (fat-tail) | 16 | +$11.21 | **+70.1** | 0 | **broke out of its stall** — n went 4→16 in one run, this batch alone +68.5c/trade |
-| **pin15** | 273 | −$3.02 | **−1.1** | 0 | **3rd straight positive batch** (+21.2c/trade) — cumulative loss nearly gone |
-| mmsell2 | 965 | +$22.05 | +2.3 | 19 | still the clear family leader |
-| mmsell3 (5-10c) | 376 | +$7.14 | +1.9 | 16 | flat this run, gap to mmsell2 held/widened slightly |
-| mmsell1 | 1,474 | +$26.74 | +1.8 | 24 | |
-| mmsell (control) | 2,452 | +$32.97 | +1.3 | 38 | |
-| weather con (all) | 370 | −$6.06 | −1.6 | 4 | positive batch (+10.3c/trade), recovering |
-| weather_concity | 28 | −$5.04 | −18.0 | 1 | another negative batch (−16.4c/trade), still n=28/120 |
+| **pin15** | 306 | −$12.75 | **−4.2** | 0 | **reversed hard** — this batch −29.5c/trade, wiping out last run's near-breakeven read |
+| mmsell2 | 1,030 | +$27.42 | +2.7 | 32 | still the clear family leader, gap to mmsell3 widened |
+| mmsell3 (5-10c) | 429 | +$9.12 | +2.1 | 46 | good batch (+3.7c/trade), now also edges mmsell1, but mmsell2 well ahead |
+| mmsell1 | 1,568 | +$32.91 | +2.1 | 63 | |
+| mmsell (control) | 2,579 | +$41.66 | +1.6 | 81 | |
+| theta4 (fat-tail) | 16 | +$11.21 | +70.1 | 0 | unchanged — no new settles since run #43, calibration check still pending |
+| weather con (all) | 370 | −$6.06 | −1.6 | 12 | unchanged settled/P&L, +8 new opens |
+| weather_concity | 28 | −$5.04 | −18.0 | 3 | unchanged settled/P&L, +2 new opens |
 | theta ctrl/1/2/3 | 560/201/98/134 | +$0.97/+$9.69/−$11.55/−$11.62 | — | 0 | SHELVED, quiet, unchanged |
 | tfav | 215 | −$7.54 | −3.5 | 0 | KILLED, quiet, unchanged |
 | weather (rest) | 4,709 | −$238.63 | — | 0 | pruned, done |
 
-**HEADLINE — two reversals worth leading with: theta4 finally started accruing with a big edge,
-and pin15's KILL case has weakened sharply.**
+**HEADLINE — pin15 reversed hard, wiping out last run's optimism; this is itself the real
+finding, not the direction of the swing.** Last run's 3rd-straight-positive-batch pulled
+cumulative to −1.1¢/trade and I withdrew the standing KILL recommendation. This run's batch came
+in at **−29.5¢/trade** (33 trades), pulling cumulative back to **−4.2¢/trade** at n=306 — more
+than double the n≥150 gate. Look at the last six batch readings in sequence: **−24.8, −3.9, +1.6,
++1.6, +21.2, −29.5¢/trade.** That is not a book converging on an answer — that's a book whose
+batch-to-batch variance is enormous relative to whatever edge (or lack of one) actually exists.
+**Revised framing: stop reading any 1-2 run trend as signal here.** Neither "recommend kill" (run
+#40-42) nor "withdraw kill, reassess" (run #43) should have been stated with the confidence they
+were — the honest state is "this book's cumulative P&L swings by more per batch than its
+cumulative average, and no amount of run-to-run narration will resolve that; it needs either a
+much larger n or the T-window-concentration slice the thesis actually specifies" (win-rate/tail
+decomposition, not more headline-chasing).
 
-**theta4** went from stuck at n=4 (flagged as revisit-due last run) to **n=16** in a single run —
-12 new trades, all strongly positive (+68.5c/trade this batch, +70.1c/trade cumulative). This
-resolves last run's "loosen the edge or conclude" trigger by data rather than by decision: it
-just started trading again at a healthy pace. **Caveat: the pre-registered gate is per-trade > 0
-AND realized-tail-hit ≤ 1.25x modeled** — the magnitude here is well past the ">0" bar, but
-nobody has checked the tail-hit-ratio half of the criterion yet, and this book exists specifically
-*because* raw P&L can look great right up until a tail event hits (that's the whole class of risk
-theta was built to study). Worth a drill-down before getting excited, not just watching n climb to
-80.
+**theta4** had no new settlements this run — still n=16, still needs the tail-hit-ratio
+calibration check flagged last run before trusting its +70¢/trade magnitude.
 
-**pin15's cumulative loss has nearly disappeared:** −1.1¢/trade at n=273, after a **third straight
-positive batch** (+21.2¢/trade this run, following +1.6¢ and +1.6¢ the last two runs). Three runs
-ago this loop was recommending formal retirement at −6.6¢/trade; the trend has now pulled
-cumulative to within a hair of breakeven. **Revising the standing recommendation:** holding off on
-retiring pin15 is now clearly the right call — if this trend continues one more run, cumulative
-could cross positive, which would be a genuinely different story than the one that drove the
-original KILL call. Not a promote signal yet (still negative, still below the +1.5¢ keep-bar), but
-the KILL urgency from runs #40-#42 no longer reflects the data.
+**mmsell3** had a good batch (+3.7¢/trade) and now numerically edges mmsell1 too, but **mmsell2's
+lead over mmsell3 widened** (2.7¢ vs 2.1¢, a 0.6¢ gap) — consistent with runs #42-43, mmsell2
+remains the real family leader.
 
-**mmsell family:** essentially unchanged from run #42 — mmsell2 (+2.3¢) still clearly ahead of
-mmsell3 (+1.9¢), gap holding. weather_con(all) had a positive batch (+10.3¢/trade); weather_concity
-had another negative one (−16.4¢/trade) — the two continue to move somewhat independently despite
-sharing underlying markets.
+weather books both quiet (settled/P&L unchanged, new opens only) — normal ahead of the next daily
+batch.
 
-**Gate sweep (step 3b):** theta4 **16/80** (20%, huge early edge — verify calibration) · pin15
-**273/150** (past gate, verdict now genuinely uncertain, was KILL) · mmsell3 **376/150** (own bar
-cleared, behind mmsell2) · weather_concity **28/120** (23%).
+**Gate sweep (step 3b):** pin15 **306/150** (past gate 2x over, verdict unstable — see above,
+recommend a T-window slice instead of more batch-watching) · theta4 **16/80** (20%, unchanged,
+calibration check pending) · mmsell3 **429/150** (clears own bar, behind mmsell2) ·
+weather_concity **28/120** (23%).
 
-**Data (last-24h / latest CDT):** crypto_spot 2,880 (12:04 PM ✓), crypto_ladder 58,157 (12:04 PM
-✓, 100% model-priced), weather forecasts/obs/ensembles/buckets all fresh (12:03–12:04 PM ✓).
-xgame_tapes 18,401 (12:03 PM ✓, healthy). **xgame_matches: 5th consecutive run frozen at the
-identical timestamp** (2026-07-12 10:18:09 UTC, now ~103h / 4+ days stale) — unchanged, long-
-standing, not crash-related (already established run #42), no new action needed, just noting
-continuation.
+**Data (last-24h / latest CDT):** crypto_spot 2,876 (08:00 PM ✓), crypto_ladder 58,596 (08:01 PM
+✓, 100% model-priced), weather forecasts/obs/ensembles/buckets all fresh (08:00–08:01 PM ✓).
+xgame_tapes 62,280 (07:58 PM ✓, healthy). xgame_matches: 6th consecutive run frozen at the
+identical timestamp (2026-07-12 10:18:09 UTC, ~63h stale) — unchanged, long-standing, already
+established as not crash-related.
 
 **Research probes (on-demand):** WCPROP + XGAME families CLOSED. No standing probes.
 
-**Headline:** theta4 broke its stall hard (n=4→16, +70c/trade) — verify tail-calibration before
-trusting the magnitude. pin15's KILL case has weakened sharply (3rd positive batch, −1.1c/trade
-cumulative) — recommend holding off on retirement, reassess next run. mmsell2 still leads mmsell3.
-weather books moved in opposite directions this batch. xgame_matches still dark, unchanged.
+**Headline:** pin15 whipsawed hard (−29.5c/trade this batch after 3 positive ones) — the real
+lesson is the batch variance itself, not which direction it's pointing this run; recommend a
+T-window slice rather than more run-to-run narration. theta4 flat, calibration check still open.
+mmsell2 extends its lead over mmsell3. weather/xgame_matches unchanged.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[theta4 · REVISIT TRIGGER RESOLVED BY DATA — now verify calibration, not just wait] n=16
-   (was 4), +70.1c/trade cumulative, this batch +68.5c/trade — a real breakout, not noise at this
-   magnitude.** The "loosen the edge or conclude" question from run #42 is moot; it's trading
-   again. **New recommendation: before treating this as good news, check the realized-tail-hit
-   ratio against the model** (`docs/THETA_THESIS.md`'s gate: keep only if per-trade > 0 AND
-   tail-hit ≤ 1.25x modeled) — raw per-trade P&L alone doesn't verify the half of the gate that
-   actually matters for a fat-tail-sell book. A quick ops drill-down (settled theta4 trades vs
-   their modeled tail probability) would resolve this cheaply.
+1. **[pin15 · STOP READING SHORT TRENDS — recommend a structural slice instead] n=306,
+   −4.2c/trade cumulative, this batch −29.5c/trade** — the 4th direction-reversal in six runs
+   (−6.6 → −6.1 → −4.6 → −1.1 → back to −4.2¢/trade). Batch-to-batch swings (see the six-batch
+   sequence in the headline) are far larger than the cumulative average itself. **New
+   recommendation: instead of watching more batches, have a fable session run the T-window slice
+   `docs/PIN15_THESIS.md` actually specifies** (P&L by T-at-entry bucket, using the
+   `fill_assumption` field) — that's the pre-registered test for *whether the mechanism works at
+   all*, and it doesn't require waiting for n to grow further. This resolves the question
+   run-to-run narration can't.
 
-2. **[pin15 · KILL RECOMMENDATION WITHDRAWN — reassess, don't retire yet] n=273, −1.1c/trade
-   cumulative (was −4.6c, −6.1c, −6.6c the three runs before) — 3rd straight positive batch
-   (+21.2c/trade this run).** This reverses three runs of "recommend formal retirement." **Do
-   NOT retire pin15 based on the run #40 recommendation** — the data has moved too far since then.
-   Still below the +1.5c keep-bar, so not a promote signal either; watch 1-2 more runs. If it
-   crosses positive, check whether the recent trades concentrate in the T≈120-180s window the
-   original thesis specified (`docs/PIN15_THESIS.md`) — that would confirm the mechanism, not
-   just a lucky run.
+2. **[theta4 · calibration check still pending, unchanged] n=16 (was 16 last run — no new
+   settles), +70.1c/trade cumulative.** Still need the realized-tail-hit-ratio check against
+   `docs/THETA_THESIS.md`'s gate (per-trade > 0 AND tail-hit ≤ 1.25x modeled) before trusting the
+   magnitude — nothing new this run, just restating since it hasn't been done yet.
 
-3. **[mmsell2 vs mmsell3 · unchanged from run #42, gap holding] mmsell2 +2.3c/trade (n=965) vs
-   mmsell3 +1.9c/trade (n=376)** — same real gap as last run, nothing new to resolve. mmsell3
-   still clears its own +1.5c bar solo but doesn't beat mmsell1 AND mmsell2 together.
+3. **[mmsell2 vs mmsell3 · gap widened, mmsell2 still leader] mmsell2 +2.7c/trade (n=1,030) vs
+   mmsell3 +2.1c/trade (n=429) — gap grew from 0.31c (run #42) to 0.39c (run #43) to 0.6c (this
+   run).** Third straight run confirming mmsell2 as the real leader, and the gap is trending
+   wider, not narrower. mmsell3 clears its own +1.5c bar and now edges mmsell1 too, but the
+   "beats mmsell1 AND mmsell2" gate criterion keeps failing more clearly each run.
 
-4. **[idea-model queue · MMX — still holding for the mmsell ranking to settle] No change from
-   run #42** — mmsell2 remains the family's real leader for a second straight run, which is
-   itself a small step toward "settled" rather than still-moving. `IDEA_MODEL_20260710_run2.md`.
-   NEST behind theta4 — **note theta4 just started moving (#1)**, so NEST's blocker may resolve
-   faster than expected if theta4's calibration checks out. RTPIN/BOXPIN behind unbuilt scraper
-   infra. RATELAG behind a live Fed event.
+4. **[idea-model queue · MMX — recommend scoping around mmsell2, not mmsell3] Given #3's
+   3-run-consistent finding, MMX (`IDEA_MODEL_20260710_run2.md`) should extend whichever variant
+   is actually winning** — that's now clearly mmsell2, not mmsell3 (the one the gate was written
+   around). Worth a fable session explicitly re-checking MMX's design assumptions before
+   building. NEST still behind theta4's calibration check (#2). RTPIN/BOXPIN behind unbuilt
+   scraper infra. RATELAG behind a live Fed event.
 
-5. **[weather_concity · WATCH, another negative batch] n=28 (23% to gate), −$5.04 cumulative
-   (−18.0c/trade), this batch −16.4c/trade — the third batch running that's been negative or
-   flat while con(all) itself had a positive batch this time.** The two books are diverging batch
-   to batch rather than moving together, worth remembering when concity's gate resolves at n≥120
-   — its independent-of-con performance is exactly the question the gate asks.
+5. **[weather_concity · WATCH, fully quiet] 28 settled −$5.04, unchanged settled/P&L this run
+   (+2 new opens only).** Gate: n≥120 (23% there). Nothing to read; carry forward.
 
-6. **[xgame_matches · unchanged, still long-standing] 5th consecutive run frozen at the same
-   timestamp, now 4+ days stale.** No new information; established as a pre-existing, likely
-   permanently broken collector in run #42. Book shelved/killed, still low-urgency.
+6. **[xgame_matches · unchanged, still long-standing] 6th consecutive run frozen at the same
+   timestamp, ~63h stale.** No new information; established as pre-existing/likely permanently
+   broken in run #42. Book shelved/killed, still low-urgency.
 
-7. **[mmsell existing · context, unchanged] control/mmsell1 ~breakeven-positive (+1.3c/+1.8c).**
-   No change from run #42's framing.
+7. **[mmsell existing · context, unchanged] control/mmsell1 ~breakeven-to-positive (+1.6c/+2.1c)
+   — mmsell1 has actually caught up to mmsell3 this run.** mmsell2 remains the standout.
 
-*(Changed this run: #1 theta4 — MAJOR reversal, broke its stall (n=4→16, +70c/trade); revisit
-trigger resolved by data, new suggestion to verify tail-calibration rather than just watch n
-climb. #2 pin15 — MAJOR reversal, 3-run KILL recommendation formally WITHDRAWN as cumulative
-nearly reached breakeven (−1.1c/trade); reassess in 1-2 runs rather than retire. #4 MMX — noted
-theta4's blocker may resolve sooner than expected. #3/#5/#6/#7 otherwise unchanged from run #42.)*
+*(Changed this run: #1 pin15 — MAJOR reversal (−29.5c/trade batch), and more importantly a
+reframe: stop treating any short run of batches as a trend, recommend the pre-registered
+T-window slice instead of more waiting. #2 theta4 — unchanged, restating the still-pending
+calibration check. #3 mmsell2-vs-mmsell3 — gap widened for a 3rd straight run, strengthening
+(not just repeating) the mmsell2-leads finding. #4 MMX — sharpened recommendation to scope
+around mmsell2 specifically. #5/#6/#7 otherwise unchanged/updated context.)*
