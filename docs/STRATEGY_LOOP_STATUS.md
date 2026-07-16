@@ -8,96 +8,104 @@ suggestion list carries over run-to-run. All times CENTRAL (CDT/CST).*
 
 ---
 
-## Snapshot — 2026-07-15 12:05 PM CDT (run #46)
+## Snapshot — 2026-07-15 08:03 PM CDT (run #47)
 
 **Trading books (settled n / P&L / per-trade / open):**
 | book | n | P&L | ¢/trade | open | note |
 |---|---|---|---|---|---|
-| **theta4** (fat-tail) | 25 | +$16.85 | **+67.4** | 0 | +8 trades, magnitude holding — 31% to gate, calibration check still pending |
-| mmsell3 (5-10c) | 494 | +$14.51 | +2.9 | 13 | essentially tied with mmsell2 again (0.015c) — not tracking this per-run per #45 |
-| mmsell2 | 1,076 | +$31.44 | +2.9 | 15 | |
-| mmsell1 | 1,657 | +$40.13 | +2.4 | 19 | |
-| mmsell (control) | 2,689 | +$46.58 | +1.7 | 26 | |
-| pin15 | 359 | −$10.19 | −2.8 | 0 | flat batch (−0.5c/trade) — oscillation paused, not resolved |
-| weather_concity | 31 | −$3.84 | −12.4 | 5 | small positive batch (n=3), still 26% to gate |
-| weather con (all) | 382 | −$9.38 | −2.5 | 9 | negative batch (−27.7c/trade) — diverged from concity again |
+| mmsell2 | 1,144 | +$29.04 | +2.5 | 17 | rough batch too (−3.5c/trade) but held up best of the family |
+| mmsell1 | 1,760 | +$33.88 | +1.9 | 19 | rough batch (−6.1c/trade) |
+| mmsell (control) | 2,826 | +$43.79 | +1.5 | 34 | mildest hit of the family (−2.0c/trade) |
+| **mmsell3** (5-10c) | 556 | +$9.19 | **+1.7** | 9 | **worst batch of the whole family** (−8.6c/trade) — widest gap yet vs mmsell2 |
+| **pin15** | 396 | −$15.59 | **−3.9** | 0 | negative batch again (−14.6c/trade) — oscillation continues, no new extreme |
+| theta4 (fat-tail) | 25 | +$16.85 | +67.4 | 0 | unchanged, no new settles — calibration check still the priority |
+| weather con (all) | 382 | −$9.38 | −2.5 | 14 | unchanged settled/P&L, +5 new opens |
+| weather_concity | 31 | −$3.84 | −12.4 | 6 | unchanged settled/P&L, +1 new open |
 | theta ctrl/1/2/3 | 560/201/98/134 | +$0.97/+$9.69/−$11.55/−$11.62 | — | 0 | SHELVED, quiet, unchanged |
 | tfav | 215 | −$7.54 | −3.5 | 0 | KILLED, quiet, unchanged |
 | weather (rest) | 4,709 | −$238.63 | — | 0 | pruned, done |
 
-**HEADLINE — theta4 keeps growing with its edge intact (31% to gate now); everything else is
-quiet/unchanged from the patterns already established.**
+**HEADLINE — the whole mmsell family had a rough batch simultaneously, with mmsell3 hit
+hardest; this reads as a shared adverse market move, not a mmsell3-specific problem.**
 
-**theta4** added 8 more trades, all consistent with its ~65-70¢/trade magnitude (cumulative now
-+67.4¢ at n=25, 31% to the n≥80 gate). This is no longer a 1-2 trade blip — three consecutive
-runs at a stable, very large per-trade edge. **The calibration check (realized-tail-hit ratio vs
-modeled) is now the single most valuable open question in this whole report** — if theta4 is
-actually calibrated, it may be the strongest book in the portfolio by the time it gates; if it's
-just riding a favorable stretch before a tail hit, that won't show up until it's too late to
-un-ring the bell. Worth prioritizing over the mmsell/pin15 noise below.
+All four mmsell variants posted negative batches this run — mmsell3 **−8.6¢/trade**, mmsell1
+−6.1¢/trade, mmsell2 −3.5¢/trade, control −2.0¢/trade (137 combined settlements across the
+family in this window). Because every variant moved the same direction at roughly the same
+time, the more likely read is a batch of sports results that broke against favorites broadly
+(the FLB mechanism this family sells), not something specific to mmsell3's narrower band. The
+side effect: mmsell3 vs mmsell2's gap, which had collapsed to ~0.01-0.06¢ the last two runs, is
+now **0.885¢/trade — the widest recorded yet**. Consistent with the standing "don't re-narrate
+this weekly" call from run #45: this is one more data point in an oscillating series, not a
+new trend to chase. If it matters for a design decision, look at the shared-batch pattern (all
+variants down together) rather than the mmsell3-vs-mmsell2 ranking in isolation.
 
-mmsell3/mmsell2 essentially tied again (per run #45's note, not re-narrating this weekly coin
-flip). pin15 had a flat batch (−0.5¢/trade) — the oscillation didn't produce a new extreme this
-run, nothing new to add to the standing T-window-slice recommendation. weather_concity and
-weather con(all) diverged again in opposite directions, consistent with prior runs.
+**pin15** posted another negative batch (−14.6¢/trade), continuing the established oscillation
+— nothing new, same standing recommendation (T-window slice, not more batch-watching).
 
-**Gate sweep (step 3b):** theta4 **25/80** (31%, calibration check now the priority) · pin15
-**359/150** (T-window slice still recommended) · mmsell3 **494/150** (own bar cleared, family
-ranking still noise) · weather_concity **31/120** (26%).
+**theta4** had zero new settlements this run — still n=25/80 (31%), same +67.4¢/trade. No new
+information; the calibration-check recommendation from run #46 stands untouched and unactioned.
 
-**Data (last-24h / latest CDT):** all collectors fresh (crypto/weather 12:00–12:04 PM ✓,
-xgame_tapes 12:04 PM ✓, 60,680 rows). xgame_matches: unchanged, still frozen (8th consecutive
-run) — no new detail per run #45's note.
+weather books both quiet (new opens only, no new settlements).
+
+**Gate sweep (step 3b):** theta4 **25/80** (31%, calibration check still the priority, unactioned)
+· pin15 **396/150** (T-window slice still recommended) · mmsell3 **556/150** (own bar cleared,
+family-internal ranking still oscillating) · weather_concity **31/120** (26%).
+
+**Data (last-24h / latest CDT):** crypto_spot 2,870 (07:57 PM ✓), crypto_ladder 58,333 (07:57 PM
+✓, 100% model-priced), weather forecasts/obs/ensembles/buckets all fresh (07:36–08:01 PM ✓).
+xgame_tapes latest is **~4h old** (09:06 PM CDT) despite 58,875 rows in the last 24h — likely a
+live-game scheduling lull (fewer games at this hour) rather than a collector issue, worth a
+glance next run but not escalating; distinct from xgame_matches' multi-day staleness.
+xgame_matches: unchanged, 9th consecutive run frozen (per run #46's note, not repeating detail).
 
 **Research probes (on-demand):** WCPROP + XGAME families CLOSED. No standing probes.
 
-**Headline:** theta4's edge is holding steady across 3 runs now (31% to gate) — the calibration
-check is the priority open item in this report. Everything else (mmsell ranking, pin15,
-weather divergence, xgame_matches) continues the patterns already established, nothing new.
+**Headline:** whole mmsell family had a rough batch together, mmsell3 hit hardest — reads as a
+shared market move, not mmsell3-specific; gap to mmsell2 widened to its largest recorded (0.885c)
+but still just one more oscillation point. pin15 continues its established swing pattern. theta4
+flat, calibration check still unactioned. xgame_tapes ~4h stale, likely just a lull.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[theta4 · calibration check — now the top-priority open item] n=25/80 (31%), +67.4c/trade,
-   stable across 3 consecutive runs (was +70.1c, +70.1c, now +67.4c — essentially flat, not
-   decaying).** This has moved from "worth checking eventually" to "the most consequential open
-   question in the report" — a fat-tail-sell book with a persistently huge per-trade edge is
-   exactly the profile that looks great until a tail event proves the model was miscalibrated.
-   Recommend a fable session run the realized-tail-hit-ratio check (`docs/THETA_THESIS.md`'s
-   gate: keep only if per-trade > 0 AND tail-hit ≤ 1.25x modeled) before n climbs much further —
-   catching a calibration problem at n=25-30 is far cheaper than at n=80 with live capital ideas
-   (NEST, #4) already queued behind it.
+1. **[theta4 · calibration check STILL UNACTIONED — restating from run #46] n=25/80 (31%),
+   +67.4c/trade, zero new settlements this run (flat, not decaying, not growing).** This is the
+   3rd run in a row this recommendation has been outstanding. Restating plainly: a fable session
+   should run the realized-tail-hit-ratio check (`docs/THETA_THESIS.md`'s gate) before this
+   reaches n≥80 — the earlier this is checked, the cheaper it is to be wrong.
 
-2. **[pin15 · T-window slice still recommended, oscillation paused not resolved] n=359,
-   −2.8c/trade (flat vs −3.0c last run, batch was −0.5c/trade — no new extreme).** Same standing
-   recommendation from runs #44-45: run the P&L-by-T-at-entry slice rather than keep watching
-   batches. Nothing new this run to change that.
+2. **[pin15 · T-window slice still recommended] n=396, −3.9c/trade cumulative, this batch
+   −14.6c/trade** — one more point in the established oscillation (recent batches: +1.6, +21.2,
+   −29.5, +10.8, −0.5, −14.6c/trade). Same standing recommendation from runs #44-46: the
+   pre-registered T-window slice answers the real question; more batch-watching won't.
 
-3. **[mmsell2 vs mmsell3 · still not tracking per-run, per #45] Essentially tied again this run
-   (2.94c vs 2.92c).** Consistent with the "don't re-narrate weekly" call from run #45 — no
-   change to that recommendation.
+3. **[mmsell3 vs mmsell2 · widest gap yet (0.885c), but likely a shared-batch effect, not a
+   ranking signal] All four mmsell variants had a simultaneously negative batch this run** —
+   mmsell3 hit hardest (−8.6c/trade), which is why the gap widened so much, but every variant
+   moved together. Per run #45's standing call, still not tracking this comparison per-run; if
+   anything, this run's data argues for looking at *shared* batch variance (does something —
+   e.g. a bad week for favorites broadly — hit the whole family at once?) rather than relative
+   ranking between variants.
 
-4. **[idea-model queue · MMX/NEST] MMX (`IDEA_MODEL_20260710_run2.md`) still shouldn't assume
-   either mmsell variant as template (#3).** NEST behind theta4's calibration check (#1) — given
-   theta4's edge is holding steady, NEST's blocker may resolve sooner than expected IF the
-   calibration check comes back clean; if it doesn't, NEST should probably be shelved along with
-   theta4. RTPIN/BOXPIN behind unbuilt scraper infra. RATELAG behind a live Fed event.
+4. **[idea-model queue · MMX/NEST unchanged] MMX still shouldn't assume either mmsell variant
+   as template (#3).** NEST behind theta4's calibration check (#1, still unactioned).
+   RTPIN/BOXPIN behind unbuilt scraper infra. RATELAG behind a live Fed event.
 
-5. **[weather_concity / con(all) · continuing to diverge batch-to-batch] concity −12.4c/trade
-   (26% to gate, improving), con(all) −2.5c/trade (worsening this batch).** Same pattern as
-   recent runs — the two books are not moving together despite shared underlying markets. Carry
-   forward, nothing new to decide yet.
+5. **[weather_concity / con(all) · quiet, no new settles] concity −12.4c/trade (26% to gate),
+   con(all) −2.5c/trade — both flat this run** (new opens only). Carry forward.
 
-6. **[xgame_matches · unchanged, 8th consecutive run] No new detail — still frozen at the same
-   pre-crash timestamp, long-standing per run #42/45's notes.**
+6. **[xgame_matches · unchanged, 9th consecutive run] No new detail — still frozen, long-standing
+   per run #42/45/46's notes.**
 
-7. **[mmsell existing · context, unchanged] control +1.7c/trade, mmsell1 +2.4c/trade** — all four
-   variants remain in a fairly tight band, consistent with run #45's read that this may be one
-   edge with sampling noise rather than genuinely different sub-strategies.
+7. **[NEW · xgame_tapes ~4h stale, likely benign] Latest row is ~4 hours old despite 58,875 rows
+   in the last 24h — probably a live-game scheduling lull, not a collector fault (distinct from
+   xgame_matches' multi-day, clearly-broken staleness). Worth a glance next run; not escalating
+   yet.**
 
-*(Changed this run: #1 theta4 — ELEVATED to top priority; 3 consecutive runs of a stable, large
-edge makes the calibration check materially more important than "eventually get to it." #2/#3
-unchanged, oscillations paused but not resolved, no new narration needed. #4 MMX/NEST — updated
-to note NEST's fate is now tied to theta4's calibration outcome specifically. #5/#6/#7
-unchanged/compressed per the "stop re-narrating settled noise" commitments from run #45.)*
+*(Changed this run: #1 theta4 — still unactioned, 3rd run restating the same ask, flat with no
+new settlements. #2 pin15 — one more oscillation point, no new information. #3 mmsell3-vs-mmsell2
+— widest gap yet (0.885c) but reframed as likely a shared-batch effect across the whole family,
+not a ranking signal; suggests looking at correlated batch variance instead. #7 NEW — xgame_tapes
+modest staleness (~4h), flagged as probably benign and distinct from xgame_matches' real problem.
+#4/#5/#6 unchanged/compressed.)*
