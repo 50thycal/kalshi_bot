@@ -69,16 +69,28 @@ flat, calibration check still unactioned. xgame_tapes ~4h stale, likely just a l
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[theta4 · calibration check STILL UNACTIONED — restating from run #46] n=25/80 (31%),
-   +67.4c/trade, zero new settlements this run (flat, not decaying, not growing).** This is the
-   3rd run in a row this recommendation has been outstanding. Restating plainly: a fable session
-   should run the realized-tail-hit-ratio check (`docs/THETA_THESIS.md`'s gate) before this
-   reaches n≥80 — the earlier this is checked, the cheaper it is to be wrong.
+1. **[theta4 · calibration check DONE 2026-07-15 (user-requested) — PASSES, safe direction, but
+   untested] n=25/80.** Realized tail-hit rate **0/25 = 0%** vs mean modeled hit prob **6.9%**
+   (model expected ~1.7 hits). Gate (realized ≤ 1.25× modeled) PASSES, and critically it is NOT
+   the original-theta failure mode (there realized 37% >> modeled 19%; here realized < modeled,
+   the safe direction). BUT 0 hits in 25 is ~16% likely even if the model is perfectly calibrated
+   — the sample hasn't met a tail yet, so this rules out gross under-pricing, it does not confirm
+   calibration. Netting the not-yet-seen losses at the modeled rate, honest edge ≈ +39c/trade (vs
+   observed +67c) — still strongly +EV if the model holds. **Recommendation: keep running, no
+   action; re-check the realized hit rate as n approaches the n≥80 gate — the first few tail hits
+   are the real test.**
 
-2. **[pin15 · T-window slice still recommended] n=396, −3.9c/trade cumulative, this batch
-   −14.6c/trade** — one more point in the established oscillation (recent batches: +1.6, +21.2,
-   −29.5, +10.8, −0.5, −14.6c/trade). Same standing recommendation from runs #44-46: the
-   pre-registered T-window slice answers the real question; more batch-watching won't.
+2. **[pin15 · T-window slice DONE 2026-07-15 (user-requested) — THESIS FALSIFIED, recommend
+   RETIRE] n=405 settled, sliced by entry T (seconds-to-close):** <60s n=2 +4.0c · **60-120s n=37
+   −53.3c/trade (−$19.73, the entire book's loss)** · **120-180s (the thesis target) n=218
+   +0.27c/trade** · 180-240s n=148 +0.76c/trade. The pre-registered claim (profit concentrates in
+   T≈120-180s at >+1.5c/trade) FAILS: the target window earns only +0.27c, no window clears the
+   +1.5c bar, and the whole cumulative loss is one sub-window (final 1-2 min entries blow up at
+   −53c/trade). The batch oscillation the loop chased for runs #40-47 was just the ~5% negative-skew
+   blowouts landing in different batches — not signal. Even the charitable salvage (hard-exclude
+   <120s entries) lands ~+0.5c/trade, still sub-bar. **Recommendation: a fable session formally
+   retires pin15** (disable entries, keep the book/data for the record). This resolves the item
+   cleanly — no more batch-watching needed.
 
 3. **[mmsell3 vs mmsell2 · widest gap yet (0.885c), but likely a shared-batch effect, not a
    ranking signal] All four mmsell variants had a simultaneously negative batch this run** —
