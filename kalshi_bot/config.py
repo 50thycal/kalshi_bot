@@ -270,8 +270,12 @@ class Settings(BaseSettings):
     # forward-tests the two remaining risks: real fill depth at the ask, and whether the ~300s loop
     # lands in the T~120-180s window (T-at-entry is recorded in fill_assumption for the slice).
     # Correlation caution: it's a favorite-BUY (the family tfav died in), the difference being the
-    # now-vol-validated live spot-pin selection. Set pin15_enabled=False to disable.
-    pin15_enabled: bool = True
+    # now-vol-validated live spot-pin selection.
+    # RETIRED 2026-07-16: the pre-registered T-at-entry slice (n=405 settled) falsified the
+    # thesis — the target T~120-180s window earns only +0.27c/trade (well under the +1.5c
+    # keep-bar), and the book's entire cumulative loss traces to one sub-window (T 60-120s
+    # entries at -53c/trade). See docs/RESEARCH_JOURNAL.md and docs/BOOK_REGISTRY.md.
+    pin15_enabled: bool = False
     pin15_interval_minutes: float = 0.0        # EVERY cycle — must be frequent to catch the window
     # SERIES:COINBASE_PRODUCT pairs; wrong series fail soft (logged, skipped).
     pin15_series: str = "KXBTC15M:BTC-USD,KXETH15M:ETH-USD"
