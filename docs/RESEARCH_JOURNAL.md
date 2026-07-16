@@ -16,6 +16,35 @@ Conventions:
 
 ---
 
+## PIN15 VERDICT 2026-07-16 — T-window slice FALSIFIES the thesis; RETIRED
+
+Requested check on the strategy-status loop's standing suggestion (runs #40-47 kept watching
+batch-to-batch swings without resolving them). Sliced all n=405 settled `pin15` trades by
+T-at-entry (seconds-to-close, parsed from `fill_assumption`):
+
+| T-at-entry | n | win% | total P&L | ¢/trade |
+|---|---|---|---|---|
+| <60s | 2 | 100% | +$0.08 | +4.0 |
+| **60–120s** | 37 | 81% | **−$19.73** | **−53.3** |
+| **120–180s (thesis target)** | 218 | 96% | +$0.59 | **+0.27** |
+| 180–240s | 148 | 96% | +$1.13 | +0.76 |
+
+The pre-registered gate (`docs/BOOK_REGISTRY.md`: keep only if per-trade **> +1.5¢** AND profit
+concentrates in T≈120–180s) fails outright: the target window nets only +0.27¢/trade, no window
+clears the +1.5¢ bar, and the entire book's cumulative loss (−$17) is explained by one
+sub-window — entries in the final 60–120s lose −53¢/trade on 81% win rate (the 19% that lose,
+lose big, a fat-tailed negative-skew shape). The batch-to-batch whipsaw the loop chased for
+weeks (−29.5¢ one run, +21.2¢ the next) was just this negative-skew sub-window landing in
+different batches at different rates — never a real trend either direction.
+
+A charitable salvage (hard-exclude <120s entries) still lands at +0.5¢/trade pooled, well under
+the keep-bar, so restricting rather than retiring isn't worth the added complexity.
+
+**Verdict: RETIRED.** `pin15_enabled=False` (`kalshi_bot/config.py`). Book and its data are kept
+for the record per the registry's own provenance principle — not deleted, entries just stopped.
+
+---
+
 ## SEASONPIN CENSUS 2026-07-12 — MLB (primary target) UNTESTABLE-yet (0 settled); WNBA (extension) BORDERLINE at exactly the n-floor
 
 Stage 1 of `docs/SEASONPIN_THESIS.md`'s staged probe plan (promoted from
