@@ -67,8 +67,24 @@ class MmSellTracker:
             "hi": float(s.mmsell_entry_hi_cents),
             "htcmin": s.mmsell_min_hours_to_close,
             "htcmax": s.mmsell_max_hours_to_close,
+            "skip": [],  # the control never filters by series (global mmsell_skip_series applies)
+            "only": [],
         }
         return [control, *s.mmsell_variant_list]
+
+    @staticmethod
+    def _book_admits_series(book: dict, series: str) -> bool:
+        """Per-variant series filter: a book with a `skip` list drops any series containing one of
+        its substrings; a book with an `only` list trades ONLY series containing one of its
+        substrings. Matched case-insensitively against the (already-uppercased) series prefix.
+        Empty lists (the control + band-only variants) admit everything."""
+        skip = book.get("skip") or []
+        if any(tok in series for tok in skip):
+            return False
+        only = book.get("only") or []
+        if only and not any(tok in series for tok in only):
+            return False
+        return True
 
     def run_once(self, session) -> MmSellCycleSummary:
         s = self.settings
@@ -124,6 +140,8 @@ class MmSellTracker:
                     tag = book["tag"]
                     if not (book["htcmin"] <= htc <= book["htcmax"]):
                         continue
+                    if not self._book_admits_series(book, series):
+                        continue  # per-variant series skip/allow filter
                     if metrics is None:
                         try:
                             ob = self.client.get_orderbook(ticker, depth=s.orderbook_depth)
