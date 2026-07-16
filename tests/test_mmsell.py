@@ -173,6 +173,55 @@ def test_skips_configured_series(settings):
     assert summ.opened == 0 and summ.events_seen == 0
 
 
+def test_variant_spec_parses_skip_and_only(settings):
+    settings.mmsell_variants = "mmsell4:lo=5,hi=10,skip=WC+ATP;mmsell5:lo=5,hi=12,only=TOTAL+SPREAD"
+    vl = {v["tag"]: v for v in settings.mmsell_variant_list}
+    assert vl["mmsell4"]["skip"] == ["WC", "ATP"] and vl["mmsell4"]["only"] == []
+    assert vl["mmsell5"]["only"] == ["TOTAL", "SPREAD"] and vl["mmsell5"]["skip"] == []
+
+
+def test_book_admits_series_helper():
+    adm = MmSellTracker._book_admits_series
+    assert adm({"skip": ["WC"], "only": []}, "KXWCGOAL") is False        # skip substring hit
+    assert adm({"skip": ["WC"], "only": []}, "KXMLBASGHR") is True       # skip miss
+    assert adm({"skip": [], "only": ["TOTAL", "SPREAD"]}, "KXWNBATOTAL") is True   # allow hit
+    assert adm({"skip": [], "only": ["TOTAL"]}, "KXATPMATCH") is False   # allow miss -> dropped
+    assert adm({"skip": [], "only": []}, "KXANYTHING") is True           # no filter -> admit
+
+
+def test_variant_skip_series_filter(settings):
+    _setup(settings)
+    settings.mmsell_variants = "mmsell9:lo=5,hi=40,skip=TEAM"   # variant drops our KXTEAM series
+    ev = _event([_mkt("KXTEAM-26-A", "A", 18, 20)])
+    client = FakeClient([ev], {"KXTEAM-26-A": _ob(18, 20)})
+    with db.session_scope() as session:
+        summ = MmSellTracker(client, settings).run_once(session)
+    assert summ.per_book.get("mmsell") == 1        # control trades it
+    assert "mmsell9" not in summ.per_book          # the skip variant does not
+
+
+def test_variant_only_series_filter(settings):
+    _setup(settings)
+    settings.mmsell_variants = "mmsell9:lo=5,hi=40,only=TEAM"   # variant trades ONLY KXTEAM-like series
+    ev = _event([_mkt("KXTEAM-26-A", "A", 18, 20)])
+    client = FakeClient([ev], {"KXTEAM-26-A": _ob(18, 20)})
+    with db.session_scope() as session:
+        summ = MmSellTracker(client, settings).run_once(session)
+    assert summ.per_book.get("mmsell") == 1        # control trades it
+    assert summ.per_book.get("mmsell9") == 1       # allow-listed variant trades the matching series
+
+
+def test_variant_only_filter_excludes_nonmatching(settings):
+    _setup(settings)
+    settings.mmsell_variants = "mmsell9:lo=5,hi=40,only=NOTPRESENT"  # nothing matches -> variant idle
+    ev = _event([_mkt("KXTEAM-26-A", "A", 18, 20)])
+    client = FakeClient([ev], {"KXTEAM-26-A": _ob(18, 20)})
+    with db.session_scope() as session:
+        summ = MmSellTracker(client, settings).run_once(session)
+    assert summ.per_book.get("mmsell") == 1        # control still trades
+    assert "mmsell9" not in summ.per_book          # allow-list misses -> no trade
+
+
 def test_abandon_foreign_keeps_mmsell_and_weather(settings):
     """The ride-along startup abandon must keep BOTH weather and mmsell paper positions."""
     from kalshi_bot import repository as repo

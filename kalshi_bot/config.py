@@ -130,15 +130,35 @@ class Settings(BaseSettings):
     # longshots are the most overpriced), while mid-price contracts don't overprice enough to
     # cover their bigger loss-when-hit. The control's 5-40c band drags in the losing 20-40c
     # cells. Variants narrow to where the forward edge actually is. Spec format:
-    #   "tag:key=val,...;tag:..."  keys: lo, hi (midpoint band cents), htcmin, htcmax (hours).
-    #   Unset keys inherit the base mmsell_* knobs. theta1=broad cheap sweet-spot (5-20c),
-    #   theta2=the single best band (10-20c). Empty string disables all variants.
+    #   "tag:key=val,...;tag:..."  keys: lo, hi (midpoint band cents), htcmin, htcmax (hours),
+    #   skip (series-substring blocklist), only (series-substring allowlist). skip/only take
+    #   '+'-joined substrings matched (case-insensitive) against the series prefix — e.g.
+    #   skip=WC+ATP means "drop any series containing WC or ATP"; only=TOTAL+SPREAD means "trade
+    #   ONLY series containing TOTAL or SPREAD". Unset keys inherit the base mmsell_* knobs.
+    #   Empty string disables all variants.
     # mmsell3 added 2026-07-10 from the per-yes-price-band history (n>1,700 settled): the
     # maker-sell edge is sharply concentrated in the CHEAPEST longshots — yes 5-10c nets
     # +2.2c/trade at 96% win over n=378 (highest volume band too), 10-15c is only +0.7c, and
     # 15-20c is NEGATIVE (-2.2c). mmsell1 (5-20) / mmsell2 (10-20) both dilute the 5-10c
     # winner with the flat/negative 10-20c cells. mmsell3 isolates the pure sweet spot.
-    mmsell_variants: str = "mmsell1:lo=5,hi=20;mmsell2:lo=10,hi=20;mmsell3:lo=5,hi=10"
+    # mmsell4-8 added 2026-07-15 from the live+paper by-sport/by-market-type decomposition
+    # (docs/MMSELL_VARIANTS_THESIS.md): mmsell3's pooled ~breakeven live P&L is a strongly +EV
+    # non-WC book (+5.6c/ct, 96% win) canceled by a strongly -EV World Cup soccer book (81.7% win,
+    # -9.9c/ct — structural in paper AND worse live from in-play adverse selection). Cricket and
+    # tennis/cricket MATCH-winners are the other -EV cohorts; totals/spreads/props are the strongest.
+    #   mmsell4 = clean book (5-10c minus WC + cricket + tennis);
+    #   mmsell5 = totals/spreads/props only (market-type concentration);
+    #   mmsell6 = ultra-cheap 5-8c (FLB-monotonicity-at-the-floor test);
+    #   mmsell7 = short-dated (<=24h to close) variance test;
+    #   mmsell8 = scheduled-settle only (crypto daily + event props) — the adverse-selection isolator.
+    mmsell_variants: str = (
+        "mmsell1:lo=5,hi=20;mmsell2:lo=10,hi=20;mmsell3:lo=5,hi=10;"
+        "mmsell4:lo=5,hi=10,skip=WC+ATP+ITF+WTA+T20+ODI;"
+        "mmsell5:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY;"
+        "mmsell6:lo=5,hi=8;"
+        "mmsell7:lo=5,hi=10,htcmax=24;"
+        "mmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY"
+    )
     # --- mmsell LIVE entry (maker NO-buy; inert until LIVE_STRATEGIES lists a mmsell tag) ---
     # The mmsell books rest a BUY-NO limit at the no-bid (== sell yes at the ask) and HOLD to
     # settlement — a MAKER order, unlike the weather books' YES-taker entries. The whole point of
@@ -807,6 +827,8 @@ class Settings(BaseSettings):
                 "hi": float(self.mmsell_entry_hi_cents),
                 "htcmin": self.mmsell_min_hours_to_close,
                 "htcmax": self.mmsell_max_hours_to_close,
+                "skip": [],   # series-substring blocklist (case-insensitive; '+'-joined)
+                "only": [],   # series-substring allowlist (empty = admit all)
             }
             ok = True
             for kv in body.split(","):
@@ -818,6 +840,10 @@ class Settings(BaseSettings):
                 try:
                     if key in ("lo", "hi", "htcmin", "htcmax"):
                         v[key] = float(val)
+                    elif key in ("skip", "only"):
+                        # Series filter: '+'-joined substrings (can't use , ; : which the
+                        # variant/spec grammar already claims). Matched against the series prefix.
+                        v[key] = [t.strip().upper() for t in val.split("+") if t.strip()]
                     else:
                         ok = False
                 except (TypeError, ValueError):
