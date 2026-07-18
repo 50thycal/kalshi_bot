@@ -18,7 +18,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 BotMode = Literal["scanner", "paper", "approval", "live", "weather"]
 KalshiEnv = Literal["demo", "production"]
 
-VALID_MODES = ("scanner", "paper", "approval", "live", "weather", "mmsell")
+VALID_MODES = ("scanner", "paper", "approval", "live", "weather", "mmsell", "evo")
 VALID_ENVS = ("demo", "production")
 
 DEMO_BASE_URL = "https://demo-api.kalshi.co/trade-api/v2"
