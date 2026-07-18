@@ -105,6 +105,15 @@ def run() -> int:
     live = settings.bot_mode == "live"
     weather = settings.bot_mode == "weather"
     mmsell = settings.bot_mode == "mmsell"
+    evo = settings.bot_mode == "evo"
+    # Evolutionary agent population (paper/shadow only; docs/EVOLUTIONARY_AGENT_SYSTEM.md).
+    # Runs as its OWN Railway service so LLM-heartbeat latency never touches the trading
+    # loop. The Kalshi client is read-only here (place_order self-guards on bot_mode).
+    evo_runtime = None
+    if evo:
+        from .evo.orchestrator import EvoRuntime
+
+        evo_runtime = EvoRuntime(client)
     weather_like = weather or live
     # The live executor (real-money order placement) exists only in live mode; it mirrors
     # allowlisted paper entries into orders. Built here so the ride-along mmsell tracker can
@@ -237,6 +246,10 @@ def run() -> int:
                     )
                 elif mmsell:
                     _run_mmsell_cycle(settings, client, mmsell_engine, mmsell_tracker)
+                elif evo:
+                    from .evo.orchestrator import run_evo_cycle
+
+                    run_evo_cycle(evo_runtime)
                 else:
                     _run_cycle(settings, client, scanner)
             except AuthError:
@@ -255,6 +268,8 @@ def run() -> int:
                 break
     finally:
         client.close()
+        if evo_runtime is not None:
+            evo_runtime.close()
         if forecast_client is not None:
             forecast_client.close()
         if ensemble_client is not None:
