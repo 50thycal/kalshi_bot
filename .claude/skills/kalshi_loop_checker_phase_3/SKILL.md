@@ -62,6 +62,25 @@ means the XGAME collector is matching no games — cross-check the `xgame collec
 broken matcher. If the ops channel is busy (another session's request in flight), wait for its
 result commit before pushing yours.
 
+### 1b. Pull live P&L (real money — do not skip)
+
+Any book with a **LIVE** row in `docs/BOOK_REGISTRY.md` (currently `mmsell3`) is trading real
+capital, not just paper. Run the live scorecard every pass via ops, right after step 1:
+`{"type":"script","name":"mmsell_live","args":[],"id":"mmsell-live-<n>"}`. It reports, read-only:
+fill rate & order outcomes, fill economics (real fee/contract), **realized P&L + win-rate on
+SETTLED live positions vs the paper shadow** (the adverse-selection detector — live_win%
+materially below paper_win% means real fills are getting picked off in a way paper's free-fill
+assumption can't see), and the current open live footprint (position count + capital deployed).
+Degrades to "(none yet)" harmlessly if a live book has no activity yet — still run it every pass
+so the gap doesn't silently reopen the moment a second book goes live.
+
+Report a **"Live P&L (real money):"** line or small table in chat, separate from and clearly
+labeled apart from the paper books table (the two numbers WILL diverge — that gap is the finding,
+not a bug). Persist the live numbers in `docs/STRATEGY_LOOP_STATUS.md` too, so the live picture
+carries over run-to-run exactly like paper P&L does. If live_win% sits meaningfully below
+paper_win% (the script's own heuristic), lead the headline with it — this is real money
+underperforming its own paper shadow, not a background note.
+
 ### 2. Read prior state
 
 `git fetch origin strategy-loop-status && git show FETCH_HEAD:docs/STRATEGY_LOOP_STATUS.md`
