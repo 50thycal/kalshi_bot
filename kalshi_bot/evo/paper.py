@@ -34,6 +34,7 @@ from sqlalchemy import select
 from ..paper.engine import kalshi_fee
 from .audit import audit
 from .config import EvoSettings
+from .marketdata import MarketData, Quote
 from .models import (
     EvoDataHealthEvent,
     EvoFill,
@@ -43,7 +44,6 @@ from .models import (
     EvoPosition,
     EvoPositionTransfer,
 )
-from .marketdata import MarketData, Quote
 
 logger = logging.getLogger(__name__)
 
@@ -198,6 +198,8 @@ def place_order(
     held quantity, per-market cost cap."""
     existing = session.scalar(select(EvoOrder).where(EvoOrder.idem_key == idem_key))
     if existing is not None:
+        if existing.status == "rejected":
+            return None, existing.reject_reason or "rejected"
         return existing, None
 
     def _reject(reason: str) -> tuple[EvoOrder | None, str | None]:

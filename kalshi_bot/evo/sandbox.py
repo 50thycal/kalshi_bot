@@ -27,7 +27,7 @@ from .audit import audit
 from .config import EvoSettings
 from .marketdata import Quote
 from .models import EvoSandboxRun, EvoStrategy
-from .strategy_spec import StrategySpec, entry_signal, exit_signal, validate_spec
+from .strategy_spec import entry_signal, exit_signal, validate_spec
 
 logger = logging.getLogger(__name__)
 
@@ -39,10 +39,21 @@ def _quote_from_candle(
 ) -> Quote:
     """Candle -> conservative Quote. Depth is unknown in candle history, so a
     deep synthetic ladder is used and fills are capped by the spec's size — the
-    conservative element is the recorded bid/ask spread itself."""
+    conservative element is the recorded bid/ask spread itself.
+
+    close_time is translated to wall-relative (now + remaining-at-candle-time) so
+    the interpreter's hours_to_close gates — which compare against wall clock —
+    see the horizon the strategy would have seen live (no lookahead: `remaining`
+    uses only the candle's own timestamp)."""
     ts = candle.end_period_ts if candle.end_period_ts.tzinfo else candle.end_period_ts.replace(
         tzinfo=timezone.utc
     )
+    wall_close = None
+    if market.close_time is not None:
+        mc = market.close_time if market.close_time.tzinfo else market.close_time.replace(
+            tzinfo=timezone.utc
+        )
+        wall_close = datetime.now(timezone.utc) + (mc - ts)
     yes_bid = candle.yes_bid_close
     yes_ask = candle.yes_ask_close
     if yes_bid is None and candle.price_close is not None:
@@ -67,7 +78,7 @@ def _quote_from_candle(
         last_price=int(candle.price_close) if candle.price_close is not None else None,
         volume=candle.volume,
         open_interest=candle.open_interest,
-        close_time=market.close_time,
+        close_time=wall_close,
     )
     return q
 

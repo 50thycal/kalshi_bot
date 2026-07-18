@@ -12,18 +12,19 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Callable
+from typing import Any
 
 from pydantic import BaseModel, Field, ValidationError
 
 from . import budgets, graveyard, lineage, listeners, memory, peers, sandbox, tickets
 from . import datasources as ds
 from . import paper as papermod
-from .constitution import CONSTITUTION_TEXT, MATERIAL_ACTIONS, PERMITTED_ACTIONS
 from .audit import audit, integrity_violation
 from .config import EvoSettings
+from .constitution import CONSTITUTION_TEXT, MATERIAL_ACTIONS, PERMITTED_ACTIONS
 from .genomes import current_genome, rollback_genome, write_genome_revision
 from .llm import LlmClient
 from .marketdata import MarketData
@@ -109,7 +110,7 @@ memory_retrieved[], peers_reviewed[], graveyard_reviewed[], data_sources_reviewe
 observations[], alternatives_considered[], decision, confidence (0-1),
 expected_outcome, risk, rollback_condition, next_heartbeat_review.
 
-actions: at most %d, each {"type": <one of the permitted types>, ...fields}:
+actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
 - no_action {}
 - revise_belief {title, new_belief, evidence_for, evidence_against, confidence (0-1),
   supersedes_id?, tag?}
@@ -139,7 +140,7 @@ actions: at most %d, each {"type": <one of the permitted types>, ...fields}:
 - set_working_state {state}  (your scratch state for next heartbeat, <= 4000 chars JSON)
 
 Invalid actions are rejected (with the reason recorded); the rest still execute.
-""" % MAX_ACTIONS_PER_HEARTBEAT
+""".replace("MAXN", str(MAX_ACTIONS_PER_HEARTBEAT))
 
 
 def system_blocks(settings: EvoSettings) -> list[dict]:

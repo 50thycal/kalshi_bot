@@ -83,6 +83,8 @@ ALLOWED_SCRIPTS = (
     "kalshi_art_survey",
     "kalshi_seasonpin_census",
     "mmsell_live",
+    "evo_digest",
+    "evo_tree",
 )
 
 

@@ -28,7 +28,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from ..models import Base, BigIntId, JSONType, TS, utcnow
+from ..models import TS, Base, BigIntId, JSONType, utcnow
 
 UUID_LEN = 36
 

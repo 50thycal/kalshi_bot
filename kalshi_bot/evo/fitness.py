@@ -18,7 +18,6 @@ from sqlalchemy import select
 from . import paper as papermod
 from .config import EvoSettings
 from .models import (
-    EvoAgent,
     EvoAuditEvent,
     EvoFitness,
     EvoGenome,
@@ -104,7 +103,6 @@ def collect_metrics(session, settings: EvoSettings, agent_uuid: str, cohort_id: 
     n_eff = len(clusters)
 
     # drawdown / ruin
-    peak = float(pf.peak_nav_usd) if pf and pf.peak_nav_usd else start
     equity, eq_peak, max_dd = start, start, 0.0
     for p in sorted(closed, key=lambda p: (p.closed_at or p.opened_at)):
         equity += float(p.realized_pnl_usd)
@@ -171,7 +169,7 @@ def collect_metrics(session, settings: EvoSettings, agent_uuid: str, cohort_id: 
     for g in revisions:
         by_kind.setdefault(g.kind, []).append(g)
     for revs in by_kind.values():
-        for prev, cur in zip(revs, revs[1:]):
+        for prev, cur in zip(revs, revs[1:], strict=False):
             overlap = set(prev.changed_fields_json or []) & set(cur.changed_fields_json or [])
             reversals += len(overlap)
 

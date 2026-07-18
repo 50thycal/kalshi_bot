@@ -35,3 +35,49 @@ def settings(base_env):
     from kalshi_bot.config import Settings
 
     return Settings(_env_file=None)
+
+
+# --- evolutionary agent system (kalshi_bot/evo) fixtures ---
+
+
+@pytest.fixture
+def evo_session():
+    """In-memory sqlite session over the full schema (legacy + evo tables)."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from kalshi_bot.models import Base
+
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    session = sessionmaker(bind=engine, expire_on_commit=False)()
+    yield session
+    session.close()
+
+
+@pytest.fixture
+def evo_settings():
+    from kalshi_bot.evo.config import EvoSettings
+
+    return EvoSettings(_env_file=None, fill_latency_ms=0)
+
+
+@pytest.fixture
+def evo_agent(evo_session, evo_settings):
+    """One founder agent joined to the current cohort, with default genomes,
+    budgets and both ledgers. Returns (agent, cohort)."""
+    import random
+
+    from kalshi_bot.evo import paper
+    from kalshi_bot.evo.cohorts import ensure_current_cohort
+    from kalshi_bot.evo.evolution import create_agent
+
+    cohort = ensure_current_cohort(evo_session, evo_settings)
+    agent = create_agent(
+        evo_session, evo_settings, cohort, random.Random(7),
+        origin="founder", slot_key="founder:test",
+    )
+    paper.ensure_portfolio(
+        evo_session, agent.agent_uuid, paper.LIFETIME, evo_settings.starting_capital_usd
+    )
+    return agent, cohort

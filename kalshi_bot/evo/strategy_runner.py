@@ -18,7 +18,7 @@ from . import paper as papermod
 from .config import EvoSettings
 from .marketdata import MarketData
 from .models import EvoAgent, EvoOpportunity, EvoOrder, EvoStrategy
-from .strategy_spec import StrategySpec, entry_signal, exit_signal, validate_spec
+from .strategy_spec import entry_signal, exit_signal, validate_spec
 
 logger = logging.getLogger(__name__)
 

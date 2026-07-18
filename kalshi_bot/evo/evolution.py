@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from . import graveyard, memory
+from . import graveyard
 from . import paper as papermod
 from .audit import audit
 from .cognition import Cognition
