@@ -10,58 +10,56 @@ nothing new to report on those unless flagged again.*
 
 ---
 
-## Snapshot — 2026-07-18 05:36 AM CDT (run #54)
+## Snapshot — 2026-07-18 12:05 PM CDT (run #55)
 
 **Trading books (settled n / P&L / per-trade / open) — paper only; live P&L still not tracked
 here, see #1 below:**
 | book | n | P&L | ¢/trade | open | note |
 |---|---|---|---|---|---|
-| mmsell5 | 23 | +$1.99 | +8.7 | 0 | strongest variant holds, good batch (+8.8c/trade) |
-| mmsell control (paper) | 3,061 | +$47.72 | +1.6 | 22 | strong recovery batch (+8.3c/trade) |
-| mmsell3 (paper shadow) | 627 | +$10.42 | +1.7 | 9 | recovery batch (+7.9c/trade) — still see #1 for the real (live) number |
-| mmsell4 | 38 | +$0.84 | +2.2 | 5 | recovery batch (+7.9c/trade) |
-| mmsell2 (paper) | 1,245 | +$33.50 | +2.7 | 10 | recovery batch (+4.3c/trade) |
-| mmsell1 (paper) | 1,900 | +$38.72 | +2.0 | 16 | recovery batch (+4.9c/trade) |
-| mmsell6 | 42 | +$0.71 | +1.7 | 8 | recovery batch (+6.3c/trade) |
-| mmsell7 | 9 | −$0.39 | −4.3 | 1 | unchanged, no new settles |
-| mmsell8 | 13 | +$0.07 | +0.5 | 1 | unchanged, no new settles |
-| theta4 (fat-tail) | 30 | +$15.87 | +52.9 | 0 | unchanged, no new settles since the tail hit (run #53) |
-| weather con (all) | 410 | −$11.82 | −2.9 | 17 | unchanged settled/P&L, +2 new opens |
-| weather_concity | 42 | −$5.36 | −12.8 | 7 | unchanged settled/P&L, +1 new open |
+| mmsell2 (paper) | 1,252 | +$33.57 | +2.7 | 10 | flat batch (+1c/trade), unaffected by the dip below |
+| mmsell1 (paper) | 1,912 | +$38.04 | +2.0 | 16 | negative batch (−5.7¢/trade) |
+| mmsell (control, paper) | 3,079 | +$46.88 | +1.5 | 20 | negative batch (−4.7¢/trade) |
+| mmsell3 (paper shadow) | 634 | +$9.89 | +1.6 | 10 | negative batch (−7.6¢/trade) — still see #1 for the real (live) number |
+| mmsell6 | 48 | +$0.09 | +0.2 | 7 | negative batch (−10.3¢/trade), cumulative dropped sharply |
+| mmsell4/5/7/8 | 38/23/9/13 | — | +2.2/+8.7/−4.3/+0.5 | no new settlements this run |
+| theta4 (fat-tail) | 30 | +$15.87 | +52.9 | 0 | unchanged, 2nd run with no new settles since the tail hit |
+| weather con (all) | 425 | −$15.04 | −3.5 | 12 | rough batch (−21.5¢/trade) |
+| weather_concity | 48 | −$7.43 | −15.5 | 4 | rough batch too (−34.5¢/trade) — moved with con(all) again |
 | theta ctrl/1/2/3 | 560/201/98/134 | +$0.97/+$9.69/−$11.55/−$11.62 | — | 0 | SHELVED, quiet, unchanged |
 | tfav | 215 | −$7.54 | −3.5 | 0 | KILLED, quiet, unchanged |
 | weather (rest) | 4,709 | −$238.63 | — | 0 | pruned, done |
 
-**HEADLINE — the mmsell family broadly recovered this run, confirming run #53's shared-batch
-read rather than a persistent trend.** Every variant with new settlements posted a solidly
-positive batch this run (4.3¢ to 8.8¢/trade across mmsell1/2/3/4/6/control) — the dip flagged
-last run really was a one-batch adverse event, not a degradation. mmsell5 continues to hold as
-the strongest performer (+8.7¢/trade cumulative, n=23) with another good batch of its own.
-mmsell7/8 had no new settlements — still just slow accrual.
+**HEADLINE — the mmsell family dipped again this run, and the pattern across runs #53-55 (dip →
+recover → dip) is itself the finding: this is batch-to-batch variance at small n, not a trend in
+either direction.** mmsell6/mmsell3/mmsell1/control all had negative batches (−4.7¢ to −10.3¢/
+trade); mmsell2 was flat; mmsell4/5/7/8 had no new settlements at all. This mirrors run #53's dip
+→ run #54's recovery almost exactly — **recommend not reading any single run's direction here as
+signal until n is much larger.** mmsell5 remains the standout on a cumulative basis (+8.7¢,
+unchanged this run) but hasn't been tested by a bad batch yet since it had no new settlements.
 
-theta4 had no new settlements — still sitting at +52.9¢/trade post-tail-hit (run #53), nothing
-new to report on the calibration watch this run.
+weather con(all) and weather_concity both had a rough batch together again (−21.5¢ and −34.5¢/
+trade respectively) — consistent with prior runs' observation that they move together when a
+shared adverse settlement window hits (they share underlying markets).
 
-weather books both quiet (new opens only). Live P&L visibility remains the top unresolved item —
-unchanged, restating without re-investigating.
+theta4 remains quiet — no new settlements for the second straight run since the tail hit in run
+#53. Live P&L visibility remains the top unresolved item — unchanged, restating.
 
-**FREEZE gate check:** settled grain=0, soft=5 (5 of the n≥100 trigger) — unchanged across 6 runs
+**FREEZE gate check:** settled grain=0, soft=5 (5 of the n≥100 trigger) — unchanged across 7 runs
 now, not fired.
 
-**Gate sweep (step 3b):** theta4 **30/80** (38%, unchanged) · mmsell4-8 gates (n≥150, or n≥100
-for 5/8) — mmsell6 most-advanced at n=42, mmsell5 strongest per-trade at n=23 · weather_concity
-**42/120** (35%) · FREEZE **5/100** (not fired).
+**Gate sweep (step 3b):** theta4 **30/80** (38%, quiet) · mmsell4-8 gates (n≥150, or n≥100 for
+5/8) — mmsell6 most-advanced at n=48 despite this batch's dip · weather_concity **48/120** (40%)
+· FREEZE **5/100** (not fired).
 
 **Data (last-24h / latest CDT):** crypto_spot, crypto_ladder, weather forecasts/obs/ensembles/
-buckets all fresh (05:22–05:35 AM ✓). xgame_tapes continuing to collect normally since its
-resumption (12,793 rows/24h, fresh) — confirmed stable, not a one-off blip. xgame_matches still
-dark, unchanged.
+buckets all fresh (11:59 AM–12:04 PM ✓). xgame_tapes continuing to collect normally (18,314
+rows/24h); xgame_matches still dark, unchanged.
 
 **Research probes (on-demand):** WCPROP + XGAME families CLOSED. No standing probes.
 
-**Headline:** mmsell family broadly recovered this run, confirming last run's dip was a shared
-one-batch event, not a trend — mmsell5 remains the standout. theta4 quiet post-tail-hit, nothing
-new. Live P&L gap still the top unresolved item. FREEZE gate unchanged.
+**Headline:** mmsell family dipped again (3rd swing in 3 runs: dip/recover/dip) — read as
+ongoing batch variance, not a trend, until n is larger. weather books had another shared rough
+batch. theta4 quiet, no new settles. Live P&L gap and FREEZE gate both unchanged.
 
 ---
 
@@ -71,32 +69,35 @@ new. Live P&L gap still the top unresolved item. FREEZE gate unchanged.
    money; this loop still has no live-P&L visibility.** No new investigation this run — restating.
    Recommend a fable/build session add a live-P&L slice to step 1's query.
 
-2. **[mmsell4-8 · family recovered broadly this run, mmsell5 remains standout] Every variant with
-   new settlements posted a positive batch (4.3-8.8¢/trade), confirming run #53's dip was a
-   shared one-batch event.** mmsell5 (+8.7¢, n=23) continues as the strongest per-trade performer
-   across two consecutive good batches; mmsell6 is the most-advanced by n (42). mmsell7/8 still
-   slow to accrue (n=9/13, no new settles this run) — not a concern yet, just early.
+2. **[mmsell4-8 (+control/mmsell3) · dip-recover-dip pattern across runs #53-55 — treat as
+   variance, not signal] mmsell6 −10.3¢, mmsell3 −7.6¢, mmsell1 −5.7¢, control −4.7¢/trade this
+   batch; mmsell2 flat; mmsell4/5/7/8 no new settlements.** This is the third distinct swing in
+   three runs (down/up/down) — **recommend the loop stop reading single-run direction as signal
+   for this cohort** until n is meaningfully larger (same lesson as pin15's and mmsell2-vs-3's
+   earlier whipsaws). mmsell5 remains the standout on cumulative P&L (+8.7¢) but hasn't yet had a
+   bad batch to test that against — worth watching specifically when it does.
 
-3. **[theta4 · quiet post-tail-hit, nothing new] n=30/80 (38%), +52.9¢/trade, no new settlements
-   since the tail hit in run #53.** No new action — continue watching the realized hit rate as
-   more trades settle; one hit at a modeled-consistent rate doesn't change the standing gate
-   status.
+3. **[theta4 · quiet, 2nd run with no new settles] n=30/80 (38%), +52.9¢/trade, unchanged since
+   the tail hit in run #53.** No new action. Continue watching the realized hit rate as more
+   trades settle.
 
 4. **[idea-model queue · MMX/NEST unchanged] MMX's premise still worth checking against
    mmsell4-8 for redundancy (unresolved since run #49).** NEST still behind theta4's n≥80 gate
    (38% there). RTPIN/BOXPIN behind unbuilt scraper infra. RATELAG behind a live Fed event.
 
-5. **[weather_concity / con(all) · quiet, no new settles] concity −12.8¢/trade (35% to gate),
-   con(all) −2.9¢/trade — both flat this run (new opens only).** Carry forward.
+5. **[weather_concity / con(all) · shared rough batch again] concity −15.5¢/trade (40% to gate),
+   con(all) −3.5¢/trade — both took a hit together this batch (−34.5¢ and −21.5¢/trade
+   respectively), consistent with the pattern of moving together on shared adverse settlement
+   windows.** Carry forward, nothing to decide yet.
 
-6. **[xgame_tapes · confirmed stable after resumption] Continuing to collect normally since run
-   #53's resumption (12,793 rows/24h).** xgame_matches remains dark, unchanged. Both low-urgency;
-   no longer flagging each run unless something changes.
+6. **[xgame_tapes / xgame_matches · stable, unchanged] xgame_tapes continuing to collect normally;
+   xgame_matches still dark.** Both low-urgency, no new information.
 
 7. **[FREEZE gate · unchanged, not fired] Settled grain+soft = 5 of the n≥100 trigger, unchanged
-   across 6 runs now.** Standing background check, nothing to act on.
+   across 7 runs now.** Standing background check, nothing to act on.
 
-*(Changed this run: #2 mmsell4-8 — broad recovery batch confirms run #53's dip was one-off, not
-a trend; mmsell5 continues as standout. #3 theta4 — quiet, nothing new post-tail-hit. #6
-xgame_tapes — confirmed stable, dropping to a one-line note going forward. #1/#4/#5/#7
+*(Changed this run: #2 mmsell4-8 — reframed from run-by-run narration to explicitly calling out
+the dip-recover-dip pattern as variance, recommending the loop stop over-reading single-run
+swings for this cohort (same lesson learned earlier from pin15 and mmsell2-vs-mmsell3). #3 theta4
+— unchanged, still quiet. #5 weather — another shared rough batch, consistent pattern. #1/#4/#6/#7
 restated/unchanged.)*
