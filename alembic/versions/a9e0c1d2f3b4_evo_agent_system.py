@@ -18,7 +18,6 @@ Revises: f3a4b5c6d7e8
 from __future__ import annotations
 
 from alembic import op
-
 from kalshi_bot.evo import models as evo_models  # noqa: F401 — registers evo_* tables
 from kalshi_bot.models import Base
 
