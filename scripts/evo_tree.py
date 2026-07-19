@@ -29,7 +29,7 @@ def _to_libpq_url(url: str) -> str:
     return url
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     url = _to_libpq_url(os.environ.get("DATABASE_URL_RO", ""))
     if not url:
         print("DATABASE_URL_RO not set", file=sys.stderr)

@@ -51,10 +51,10 @@ def _one(cur, sql: str, params: tuple = ()):
     return row[0] if row else None
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--hours", type=float, default=24.0, help="activity window")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     url = _to_libpq_url(os.environ.get("DATABASE_URL_RO", ""))
     if not url:
