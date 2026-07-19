@@ -322,6 +322,11 @@ class EvoHeartbeat(Base):
     cost_usd: Mapped[float] = mapped_column(Numeric(10, 6), nullable=False, default=0)
     actions_json: Mapped[list | None] = mapped_column(JSONType)  # validated action summaries
     journal_memory_id: Mapped[int | None] = mapped_column(BigIntId)
+    # Bounded raw model output, captured ONLY when parsing/validation failed
+    # (never on a successful heartbeat) — private operator diagnostic data, queried
+    # via the read-only ops SQL channel. Never surfaced by the dashboard (see
+    # kalshi_bot/dashboard/data.py's security note) or shown to any agent.
+    raw_output_text: Mapped[str | None] = mapped_column(Text)
 
 
 class EvoListener(Base):
