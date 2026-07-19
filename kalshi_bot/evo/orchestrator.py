@@ -113,13 +113,22 @@ def run_evo_cycle(runtime: EvoRuntime) -> None:
     runtime.md.begin_cycle()
     now = datetime.now(timezone.utc)
 
-    with session_scope() as session:
-        ensure_config_version(session, settings)
-        if not runtime._bootstrapped:
+    # One-time seeding in its OWN transaction, isolated from cohort/founder
+    # bootstrap below: the in-memory _bootstrapped flag is only set to True
+    # AFTER this block commits successfully, so a failure in a LATER phase this
+    # cycle can never strand it "done" with nothing actually persisted (which
+    # would silently starve every heartbeat of pricing forever, since founder
+    # bootstrap retries every cycle but this block would not).
+    if not runtime._bootstrapped:
+        with session_scope() as session:
+            ensure_config_version(session, settings)
             seed_model_prices(session, settings)
             seed_graveyard(session)
             seed_builtin_sources(session)
-            runtime._bootstrapped = True
+        runtime._bootstrapped = True
+
+    with session_scope() as session:
+        ensure_config_version(session, settings)
         cohort = ensure_current_cohort(session, settings, now=now)
         bootstrap_founders(session, settings, cognition=runtime.cognition, md=runtime.md,
                            now=now)
