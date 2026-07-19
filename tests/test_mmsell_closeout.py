@@ -113,6 +113,7 @@ def test_closeout_buys_yes_at_ask_to_flatten(settings):
     assert o["price"] == "0.1300"  # ask 10c + 3c slippage = 13c
     assert o["time_in_force"] == "immediate_or_cancel"
     assert "post_only" not in o  # confirmed live: 400 invalid_parameters if paired with IOC
+    assert o["reduce_only"] is True  # a close may only reduce/close, never open a reversed position
     assert o["client_order_id"].startswith("closeout:mmsell3:KXTEAM-26-A:")
     # required by the V2 API -- omitting it 400s live (missing_parameters); regression guard.
     assert o["self_trade_prevention_type"] == "taker_at_cross"
