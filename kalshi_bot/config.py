@@ -131,6 +131,7 @@ class Settings(BaseSettings):
     # cover their bigger loss-when-hit. The control's 5-40c band drags in the losing 20-40c
     # cells. Variants narrow to where the forward edge actually is. Spec format:
     #   "tag:key=val,...;tag:..."  keys: lo, hi (midpoint band cents), htcmin, htcmax (hours),
+    #   maxyes (entry-price ceiling: cap the ACTUAL yes sell price = 100 - no-bid, cents),
     #   skip (series-substring blocklist), only (series-substring allowlist). skip/only take
     #   '+'-joined substrings matched (case-insensitive) against the series prefix — e.g.
     #   skip=WC+ATP means "drop any series containing WC or ATP"; only=TOTAL+SPREAD means "trade
@@ -151,13 +152,25 @@ class Settings(BaseSettings):
     #   mmsell6 = ultra-cheap 5-8c (FLB-monotonicity-at-the-floor test);
     #   mmsell7 = short-dated (<=24h to close) variance test;
     #   mmsell8 = scheduled-settle only (crypto daily + event props) — the adverse-selection isolator.
+    # mmsell9-11 added 2026-07-18 from the live 2x2 (price x type) decomposition at n=232: the +EV
+    # concentrates in CHEAP (yes <=7c) x NON-winner markets (+2.3c, 96% win), while head-to-head
+    # game/match winners (MLB game, tennis, cricket, esports — WC's structural successors) at 8-11c
+    # net -6.2c. Both levers stack (each ~-3 to -4c). mmsell5 (totals/spreads/props) is the standout
+    # of the first cohort, so these push further:
+    #   mmsell9  = the sweet-spot cell: totals/spreads/props/crypto AND yes<=7c (both levers combined);
+    #   mmsell10 = entry-price ceiling ONLY (yes<=7c, all types) — isolates the price lever, and is the
+    #              candidate mechanism to promote into the LIVE mmsell3 entry if it beats the control;
+    #   mmsell11 = no-late-entry (htcmin=6) — skip the in-play window (adverse-selection lever).
     mmsell_variants: str = (
         "mmsell1:lo=5,hi=20;mmsell2:lo=10,hi=20;mmsell3:lo=5,hi=10;"
         "mmsell4:lo=5,hi=10,skip=WC+ATP+ITF+WTA+T20+ODI;"
         "mmsell5:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY;"
         "mmsell6:lo=5,hi=8;"
         "mmsell7:lo=5,hi=10,htcmax=24;"
-        "mmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY"
+        "mmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;"
+        "mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;"
+        "mmsell10:lo=5,hi=10,maxyes=7;"
+        "mmsell11:lo=5,hi=10,htcmin=6"
     )
     # --- mmsell LIVE entry (maker NO-buy; inert until LIVE_STRATEGIES lists a mmsell tag) ---
     # The mmsell books rest a BUY-NO limit at the no-bid (== sell yes at the ask) and HOLD to
@@ -829,6 +842,7 @@ class Settings(BaseSettings):
                 "htcmax": self.mmsell_max_hours_to_close,
                 "skip": [],   # series-substring blocklist (case-insensitive; '+'-joined)
                 "only": [],   # series-substring allowlist (empty = admit all)
+                "maxyes": None,  # entry-price ceiling: cap the actual yes sell price (cents)
             }
             ok = True
             for kv in body.split(","):
@@ -838,7 +852,7 @@ class Settings(BaseSettings):
                 key, _, val = kv.partition("=")
                 key = key.strip().lower()
                 try:
-                    if key in ("lo", "hi", "htcmin", "htcmax"):
+                    if key in ("lo", "hi", "htcmin", "htcmax", "maxyes"):
                         v[key] = float(val)
                     elif key in ("skip", "only"):
                         # Series filter: '+'-joined substrings (can't use , ; : which the

@@ -76,3 +76,44 @@ Kalshi fee. Baseline comparators: `mmsell3` (the incumbent live book) and non-WC
 next live-book config (via the `LIVE_STRATEGIES` allowlist), following the same staged-sizing +
 demo-dry-run path as mmsell3 (`docs/MMSELL_LIVE_PLAN.md`). Losers are parked (config stays, book goes
 dormant) with the −EV verdict recorded — a research win either way.
+
+---
+
+# Second cohort — mmsell9–11 (added 2026-07-15, from the live 2×2 at n=232)
+
+By n≈232 the live book had enough data to cut **price × type** simultaneously. World Cup had faded;
+the loss engine shifted sport (MLB game-winners, tennis, cricket, esports) but not **type** — it's
+still head-to-head "who wins" markets. And a clean price gradient appeared.
+
+**Live mmsell3, 2×2 (settled, n=232):**
+
+| type | entry price | n | win% | ¢/trade |
+|---|---|---|---|---|
+| totals / spreads / props / crypto | **cheap (yes ≤7¢)** | 73 | 95.9% | **+2.34¢** |
+| totals / spreads / props / crypto | rich (yes ≥8¢) | 143 | 88.8% | −1.33¢ |
+| head-to-head winner | cheap (yes ≤7¢) | 27 | 92.6% | −0.81¢ |
+| head-to-head winner | rich (yes ≥8¢) | 52 | 84.6% | **−6.22¢** |
+
+**Two independent, additive levers.** Being a head-to-head winner costs ~3–4¢; being rich (≥8¢)
+costs ~3–4¢. The clean +EV survives only in the intersection (cheap × non-winner). By entry price
+alone: yes 6–7¢ win (+1–2¢), yes 8–11¢ all negative (worst at 9¢, −7.8¢). The **short-dated variant
+(mmsell7, ≤24h) was the worst of cohort 1** — corroborating that entering *close to settlement*
+(in-play, sharper pricing) is where adverse selection bites.
+
+This motivates a new knob — **`maxyes`**, an entry-price ceiling on the *actual* sell price
+(yes-ask = 100 − no-bid), since the band only gates the midpoint but P&L is driven by the fill.
+
+| tag | spec | thesis |
+|---|---|---|
+| **mmsell9** | `lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7` | **The sweet-spot cell.** Both winning levers combined: non-winner market types AND yes ≤7¢. Should be the strongest book yet (the live cell was +2.34¢, 96% win). |
+| **mmsell10** | `lo=5,hi=10,maxyes=7` | **Entry-price ceiling only** (all types, yes ≤7¢). Isolates the *price* lever independent of type. If it beats the control, `maxyes` is the single mechanism worth promoting into the **live mmsell3 entry** — it removes the −EV rich-end tail we currently pay in real money. |
+| **mmsell11** | `lo=5,hi=10,htcmin=6` | **No-late-entry.** Skip the final in-play window (require ≥6h to close). Isolates the *time / adverse-selection* lever mmsell7 exposed — only rest orders while the market is priced on priors. |
+
+**Gates (same convention; n ≥ 150, or n ≥ 100 for the narrow mmsell9):**
+- **mmsell9 (sweet-spot):** PROMOTE if per-trade **> +2¢ AND ≥ mmsell5** (the two-lever cell beats
+  the type-only book); it is the leading candidate for the next live config. KILL if **≤ mmsell3**.
+- **mmsell10 (price ceiling):** PROMOTE if per-trade **> mmsell3** — and this is the **highest-value
+  result**, because a price ceiling is a one-line change promotable straight into the live mmsell3
+  entry. KILL if **≤ mmsell3** (the rich-end tail wasn't the driver).
+- **mmsell11 (no-late-entry):** PROMOTE if per-trade **> mmsell3** (confirms the in-play window is
+  the adverse-selection source); KILL if **≤ mmsell3** with no win-rate lift.

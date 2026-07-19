@@ -69,6 +69,7 @@ class MmSellTracker:
             "htcmax": s.mmsell_max_hours_to_close,
             "skip": [],  # the control never filters by series (global mmsell_skip_series applies)
             "only": [],
+            "maxyes": None,  # the control has no entry-price ceiling
         }
         return [control, *s.mmsell_variant_list]
 
@@ -158,6 +159,13 @@ class MmSellTracker:
                         summ.skipped_illiquid += 1
                         break
                     if not (book["lo"] <= metrics.midpoint <= book["hi"]):
+                        continue
+                    # Entry-price ceiling: the band gates the MIDPOINT, but P&L is driven by the
+                    # actual sell price (yes-ask = 100 - no-bid), which is always >= the midpoint.
+                    # maxyes caps that directly — the live decomposition found the edge lives only
+                    # in the cheapest longshots (yes <=7c +2.3c; 8-11c net negative).
+                    maxyes = book.get("maxyes")
+                    if maxyes is not None and (100 - metrics.best_no_bid) > maxyes:
                         continue
                     if tag == self.STRATEGY:
                         summ.in_band += 1
