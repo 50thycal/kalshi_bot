@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="dark" />
+<title>Kalshi Evolution Dashboard</title>
+<style>
+  :root{
+    --bg:#0f1117; --panel:#181b24; --panel2:#1f2330; --line:#2a2f3d;
+    --text:#e6e8ee; --muted:#9aa3b2; --accent:#6d8cff;
+    --pos:#3ecf8e; --neg:#f2555a; --warn:#e8b64c;
+    --top:#14351f; --mid:#1c2130; --bot:#331a1c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-text-size-adjust:100%;padding-bottom:40px}
+  a{color:var(--accent)}
+  .wrap{max-width:1100px;margin:0 auto;padding:16px}
+  header{position:sticky;top:0;z-index:5;background:linear-gradient(var(--bg),var(--bg) 82%,transparent);
+    padding-top:14px}
+  h1{font-size:20px;margin:0 0 6px}
+  h2{font-size:15px;letter-spacing:.02em;text-transform:uppercase;color:var(--muted);
+    margin:26px 0 10px;font-weight:600}
+  .sub{color:var(--muted);font-size:13px;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;
+    font-weight:600;font-size:12px}
+  .dot{width:8px;height:8px;border-radius:50%}
+  .pill.running{background:#123024;color:var(--pos)} .pill.running .dot{background:var(--pos)}
+  .pill.paused{background:#332314;color:var(--warn)} .pill.paused .dot{background:var(--warn)}
+  .pill.between_cohorts,.pill.starting{background:#1a2436;color:var(--accent)} .pill.between_cohorts .dot,.pill.starting .dot{background:var(--accent)}
+  .pill.error{background:#331519;color:var(--neg)} .pill.error .dot{background:var(--neg)}
+  .toolbar{display:flex;gap:10px;align-items:center;margin-top:8px}
+  button{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);
+    border-radius:8px;padding:6px 12px;cursor:pointer}
+  button:active{transform:translateY(1px)}
+  button.chip{padding:5px 10px;font-size:12px;color:var(--muted)}
+  button.chip.on{color:var(--text);border-color:var(--accent);background:#1a2135}
+  .cards{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+  .card .k{color:var(--muted);font-size:12px;margin-bottom:6px}
+  .card .v{font-size:20px;font-weight:700}
+  .card .v2{font-size:12px;color:var(--muted);margin-top:2px}
+  .pos{color:var(--pos)} .neg{color:var(--neg)} .muted{color:var(--muted)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .tblwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
+  th,td{padding:9px 10px;text-align:left;white-space:nowrap}
+  thead th{color:var(--muted);font-weight:600;border-bottom:1px solid var(--line);
+    cursor:pointer;user-select:none;position:sticky;top:0;background:var(--panel)}
+  th.num,td.num{text-align:right}
+  tbody tr.agent{border-bottom:1px solid var(--line);cursor:pointer}
+  tbody tr.agent:hover{background:var(--panel2)}
+  tr.grp-top td{background:var(--top)} tr.grp-bottom td{background:var(--bot)}
+  .grouphdr td{background:transparent;color:var(--muted);font-size:11px;text-transform:uppercase;
+    letter-spacing:.04em;padding:10px;border-bottom:1px solid var(--line)}
+  .st{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;
+    background:var(--panel2);color:var(--muted)}
+  .st.trading{color:var(--pos);background:#12281f}
+  .st.researching{color:var(--accent);background:#182034}
+  .st.paused{color:var(--neg);background:#2a1618}
+  .detail td{background:var(--panel2);white-space:normal}
+  .detail .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 18px}
+  .detail .lbl{color:var(--muted);font-size:12px;margin-bottom:2px}
+  .detail .box{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px}
+  .comp{display:flex;flex-wrap:wrap;gap:6px}
+  .comp span{font-size:11px;background:var(--panel);border:1px solid var(--line);
+    border-radius:6px;padding:2px 7px;color:var(--muted)}
+  .feed{list-style:none;margin:0;padding:0}
+  .feed li{display:flex;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line);align-items:baseline}
+  .feed li:last-child{border-bottom:none}
+  .feed .t{color:var(--muted);font-size:11px;min-width:64px;flex-shrink:0}
+  .feed .who{font-weight:600}
+  .rows td:first-child{font-weight:600}
+  .empty{color:var(--muted);padding:16px;text-align:center}
+  @media(max-width:820px){
+    .cards{grid-template-columns:repeat(2,1fr)}
+    .detail .grid{grid-template-columns:1fr}
+    .feed .t{min-width:52px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Kalshi Evolution Dashboard</h1>
+    <div class="sub" id="cohortline">
+      <span id="statuspill" class="pill starting"><span class="dot"></span><span id="statustext">Loading…</span></span>
+      <span id="cohortmeta"></span>
+    </div>
+    <div class="toolbar">
+      <button id="refreshbtn">↻ Refresh</button>
+      <span class="muted" id="updated"></span>
+    </div>
+  </header>
+
+  <!-- 1. Cohort summary cards -->
+  <h2>Current cohort</h2>
+  <div class="cards" id="cards"></div>
+
+  <!-- 2. Agents -->
+  <h2>Agents</h2>
+  <div class="panel"><div class="tblwrap"><table id="agents">
+    <thead><tr>
+      <th data-k="rank" class="num">#</th>
+      <th data-k="name">Agent</th>
+      <th data-k="family">Family</th>
+      <th data-k="generation" class="num">Gen</th>
+      <th data-k="strategy">Strategy</th>
+      <th data-k="equity" class="num">Equity</th>
+      <th data-k="pnl" class="num">P&amp;L</th>
+      <th data-k="return_pct" class="num">Return</th>
+      <th data-k="fitness" class="num">Fitness</th>
+      <th data-k="status">Status</th>
+      <th data-k="last_heartbeat_at">Last HB</th>
+    </tr></thead>
+    <tbody id="agentbody"></tbody>
+  </table></div></div>
+
+  <!-- 3. Recent activity -->
+  <h2>Recent activity</h2>
+  <div class="toolbar" id="feedfilter"></div>
+  <div class="panel"><ul class="feed" id="feed"></ul></div>
+
+  <!-- 4. System components -->
+  <h2>System components</h2>
+  <div class="panel"><div class="tblwrap"><table class="rows">
+    <thead><tr><th>System</th><th>Status</th><th>Information</th></tr></thead>
+    <tbody id="components"></tbody>
+  </table></div></div>
+
+  <!-- 5. Capability requests -->
+  <h2>Capability requests</h2>
+  <div class="panel"><div class="tblwrap"><table class="rows">
+    <thead><tr><th>Request</th><th>Category</th><th class="num">Agents</th>
+      <th class="num">Families</th><th>Reason</th><th>Status</th></tr></thead>
+    <tbody id="requests"></tbody>
+  </table></div></div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+let STATE = null, SORT = {k:"rank", dir:1}, EXPANDED = new Set(), FILTER = "all", lastFetch = null;
+
+const usd = n => (n<0?"-$":"$") + Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const pct = n => (n>=0?"+":"") + n.toFixed(2) + "%";
+const cls = n => n>0?"pos":(n<0?"neg":"muted");
+function ago(iso){
+  if(!iso) return "—";
+  const s = (Date.now() - new Date(iso).getTime())/1000;
+  if(s<60) return Math.max(0,Math.round(s))+"s ago";
+  if(s<3600) return Math.round(s/60)+"m ago";
+  if(s<86400) return Math.round(s/3600)+"h ago";
+  return Math.round(s/86400)+"d ago";
+}
+function dur(sec){
+  const d=Math.floor(sec/86400), h=Math.floor(sec%86400/3600), m=Math.floor(sec%3600/60);
+  if(d>0) return `${d}d ${h}h remaining`;
+  if(h>0) return `${h}h ${m}m remaining`;
+  return `${m}m remaining`;
+}
+const STATUS_LABEL={running:"Running",paused:"Paused",between_cohorts:"Between cohorts",starting:"Starting",error:"Error"};
+
+async function load(){
+  try{
+    const r = await fetch("/api/dashboard",{cache:"no-store"});
+    const d = await r.json();
+    if(d.error){ $("#statustext").textContent = "Unavailable"; return; }
+    STATE = d; lastFetch = Date.now(); render();
+  }catch(e){ $("#statustext").textContent="Offline"; }
+}
+
+function render(){
+  const d = STATE; if(!d) return;
+  // header
+  const st = d.status||"starting";
+  $("#statuspill").className = "pill "+st;
+  $("#statustext").textContent = STATUS_LABEL[st]||st;
+  if(d.cohort){
+    $("#cohortmeta").innerHTML =
+      `<b>Cohort ${d.cohort.number}</b>` +
+      ` · ${dur(d.cohort.seconds_remaining)}` +
+      (d.cohort.wildcard_next?` · <span class="muted">wildcard next</span>`:"");
+  } else { $("#cohortmeta").textContent = "No open cohort"; }
+  renderCards(d.cards);
+  renderAgents(d.agents||[]);
+  renderFeed(d.activity||[]);
+  renderRows("#components", (d.components||[]).map(c=>[
+    c.system, `<span class="st ${c.status}">${c.status}</span>`, c.info]));
+  renderRequests(d.requests||[]);
+  tickUpdated();
+}
+
+function renderCards(c){
+  if(!c){ $("#cards").innerHTML=""; return; }
+  const card=(k,v,v2,klass)=>`<div class="card"><div class="k">${k}</div>
+    <div class="v ${klass||''}">${v}</div>${v2?`<div class="v2">${v2}</div>`:""}</div>`;
+  $("#cards").innerHTML =
+    card("Active agents", c.active_agents) +
+    card("Starting capital", usd(c.starting_capital_usd), usd(c.per_agent_capital_usd)+" / agent") +
+    card("Cohort equity", usd(c.cohort_equity_usd)) +
+    card("Cohort profit", (c.cohort_profit_usd>=0?"+":"")+usd(c.cohort_profit_usd), null, cls(c.cohort_profit_usd)) +
+    card("Completed trades", c.completed_trades) +
+    card("LLM cost", usd(c.llm_cost_usd), "of "+usd(c.llm_budget_usd));
+}
+
+function sortAgents(a){
+  const {k,dir}=SORT;
+  return [...a].sort((x,y)=>{
+    let vx=x[k], vy=y[k];
+    if(k==="last_heartbeat_at"){ vx=vx?new Date(vx):0; vy=vy?new Date(vy):0; }
+    if(vx==null) return 1; if(vy==null) return -1;
+    if(typeof vx==="string") return dir*vx.localeCompare(vy);
+    return dir*(vx-vy);
+  });
+}
+
+function renderAgents(agents){
+  const body = $("#agentbody"); body.innerHTML="";
+  if(!agents.length){ body.innerHTML=`<tr><td colspan="11" class="empty">No active agents yet.</td></tr>`; return; }
+  const rows = sortAgents(agents);
+  const grpLabel={top:"Projected top 30%",middle:"Projected middle 40%",bottom:"Projected bottom 30%",unranked:"Not yet ranked"};
+  let lastGrp=null;
+  // group headers only meaningful when sorted by rank
+  const showGroups = SORT.k==="rank";
+  for(const a of rows){
+    if(showGroups && a.group!==lastGrp){
+      lastGrp=a.group;
+      const tr=document.createElement("tr"); tr.className="grouphdr";
+      tr.innerHTML=`<td colspan="11">${grpLabel[a.group]||a.group}</td>`;
+      body.appendChild(tr);
+    }
+    const tr=document.createElement("tr");
+    tr.className="agent"+(showGroups?" grp-"+a.group:"");
+    tr.innerHTML=
+      `<td class="num">${a.rank??"—"}</td>`+
+      `<td>${a.name}</td>`+
+      `<td class="muted">${a.family}</td>`+
+      `<td class="num">${a.generation}</td>`+
+      `<td>${a.strategy||"—"}</td>`+
+      `<td class="num">${usd(a.equity)}</td>`+
+      `<td class="num ${cls(a.pnl)}">${a.pnl>=0?"+":""}${usd(a.pnl)}</td>`+
+      `<td class="num ${cls(a.return_pct)}">${pct(a.return_pct)}</td>`+
+      `<td class="num">${a.fitness==null?"—":a.fitness.toFixed(1)}</td>`+
+      `<td><span class="st ${a.status}">${a.status}</span></td>`+
+      `<td class="muted">${ago(a.last_heartbeat_at)}</td>`;
+    tr.onclick=()=>toggle(a.uuid);
+    body.appendChild(tr);
+    if(EXPANDED.has(a.uuid)) body.appendChild(detailRow(a));
+  }
+}
+
+function detailRow(a){
+  const d=a.detail||{}; const tr=document.createElement("tr"); tr.className="detail";
+  const pos = (d.positions&&d.positions.length)
+    ? d.positions.map(p=>`${p.ticker} ${p.side} ×${p.qty} @${p.avg_price_cents}¢`).join("<br>")
+    : '<span class="muted">no open positions</span>';
+  const comp = Object.keys(d.fitness_components||{}).length
+    ? `<div class="comp">`+Object.entries(d.fitness_components).map(([k,v])=>`<span>${k} ${v}</span>`).join("")+`</div>`
+    : '<span class="muted">not scored yet</span>';
+  const chg = d.last_strategy_change
+    ? `rev ${d.last_strategy_change.revision} · ${ago(d.last_strategy_change.at)}` : '<span class="muted">none</span>';
+  tr.innerHTML=`<td colspan="11"><div class="grid">
+    <div class="box"><div class="lbl">Current thesis</div>${d.thesis||'<span class="muted">no thesis yet</span>'}</div>
+    <div class="box"><div class="lbl">Open positions</div>${pos}</div>
+    <div class="box"><div class="lbl">Fitness components (pts)</div>${comp}</div>
+    <div class="box"><div class="lbl">Last heartbeat summary</div>${d.last_heartbeat_summary||'<span class="muted">—</span>'}</div>
+    <div class="box"><div class="lbl">Strategy revision</div>rev ${d.trading_revision??"—"} · last change ${chg}</div>
+    <div class="box"><div class="lbl">Lineage &amp; budget</div>
+      Parent: ${d.parent||'<span class="muted">founder</span>'} · Children: ${d.children??0}<br>
+      LLM budget left: ${usd(d.llm_budget_remaining_usd||0)} of ${usd(d.llm_budget_total_usd||0)}</div>
+  </div></td>`;
+  return tr;
+}
+
+function toggle(uuid){ EXPANDED.has(uuid)?EXPANDED.delete(uuid):EXPANDED.add(uuid); renderAgents(STATE.agents||[]); }
+
+const FILTERS=[["all","All"],["heartbeats","Heartbeats"],["trades","Trades"],["strategy","Strategy"],
+  ["experiments","Experiments"],["requests","Requests"],["evolution","Evolution"]];
+function renderFilterChips(){
+  $("#feedfilter").innerHTML = FILTERS.map(([k,l])=>
+    `<button class="chip ${FILTER===k?'on':''}" data-f="${k}">${l}</button>`).join("");
+  $("#feedfilter").querySelectorAll("button").forEach(b=>b.onclick=()=>{FILTER=b.dataset.f;renderFilterChips();renderFeed(STATE.activity||[]);});
+}
+function renderFeed(items){
+  const list = FILTER==="all"?items:items.filter(e=>e.category===FILTER);
+  const ul=$("#feed");
+  if(!list.length){ ul.innerHTML=`<li class="empty">No activity yet.</li>`; return; }
+  ul.innerHTML = list.map(e=>
+    `<li><span class="t">${ago(e.at)}</span><span>${e.agent?`<span class="who">${e.agent}</span> `:""}${e.description}.</span></li>`).join("");
+}
+
+function renderRows(sel, rows){
+  const b=$(sel);
+  b.innerHTML = rows.length?rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")
+    :`<tr><td colspan="6" class="empty">Nothing yet.</td></tr>`;
+}
+function renderRequests(reqs){
+  const b=$("#requests");
+  b.innerHTML = reqs.length?reqs.map(r=>
+    `<tr><td>${r.request}</td><td class="muted">${r.category}</td><td class="num">${r.requested_by}</td>
+     <td class="num">${r.families}</td><td class="muted">${r.reason}</td>
+     <td><span class="st">${r.status}</span></td></tr>`).join("")
+    :`<tr><td colspan="6" class="empty">No open requests.</td></tr>`;
+}
+
+function tickUpdated(){ if(lastFetch) $("#updated").textContent = "Updated "+ago(new Date(lastFetch).toISOString()); }
+
+// sorting
+document.querySelectorAll("#agents thead th").forEach(th=>{
+  th.onclick=()=>{ const k=th.dataset.k;
+    SORT = (SORT.k===k)?{k,dir:-SORT.dir}:{k,dir:(k==="name"||k==="family"||k==="strategy"||k==="status")?1:-1};
+    if(k==="rank") SORT.dir=1;
+    renderAgents(STATE.agents||[]); };
+});
+$("#refreshbtn").onclick=load;
+renderFilterChips();
+load();
+setInterval(load, 30000);
+setInterval(tickUpdated, 1000);
+</script>
+</body>
+</html>
