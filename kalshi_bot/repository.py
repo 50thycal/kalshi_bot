@@ -1237,7 +1237,11 @@ def open_live_no_positions(session, strategy_prefix: str) -> list[tuple]:
         entry_price = int(entry.limit_price) if (entry and entry.limit_price) \
             else int(round(abs(snap.avg_price or 0)))
         entry_at = entry.created_at if entry else snap.captured_at
-        qty = int(snap.quantity or round(abs(qty_fp)))
+        # snap.quantity is SIGNED (negative for a NO position, via _to_count on the raw signed
+        # position_fp) -- unlike open_live_positions' YES-only qty_fp>=0.01 gate, this branch's
+        # qty_fp is always negative here, so snap.quantity is too; abs() both or `qty <= 0` in
+        # the caller silently skips every real position (found live: 0 closeouts on 50 open).
+        qty = abs(int(snap.quantity or round(qty_fp)))
         out.append((tkr, strategy, entry_price, entry_at, qty))
     return out
 
