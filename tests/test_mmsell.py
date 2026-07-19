@@ -222,6 +222,33 @@ def test_variant_only_filter_excludes_nonmatching(settings):
     assert "mmsell9" not in summ.per_book          # allow-list misses -> no trade
 
 
+def test_variant_spec_parses_maxyes(settings):
+    settings.mmsell_variants = "mmsell10:lo=5,hi=10,maxyes=7"
+    v = {x["tag"]: x for x in settings.mmsell_variant_list}["mmsell10"]
+    assert v["maxyes"] == 7.0
+
+
+def test_maxyes_ceiling_blocks_rich_entry_admits_cheap(settings):
+    _setup(settings)
+    # market: yes 8/10 -> we sell yes at the ask 10c (== buy NO at 90c). maxyes=7 must block it.
+    settings.mmsell_variants = "mmsell10:lo=5,hi=40,maxyes=7"
+    rich = _event([_mkt("KXTEAM-26-A", "A", 8, 10)])
+    client = FakeClient([rich], {"KXTEAM-26-A": _ob(8, 10)})
+    with db.session_scope() as session:
+        summ = MmSellTracker(client, settings).run_once(session)
+    assert summ.per_book.get("mmsell") == 1        # control (no ceiling) trades the 10c sell
+    assert "mmsell10" not in summ.per_book         # 10c > maxyes 7 -> ceiling blocks it
+
+    # a cheaper market: yes 5/6 -> sell yes at 6c <= 7c -> the ceiling admits it
+    _setup(settings)
+    settings.mmsell_variants = "mmsell10:lo=5,hi=40,maxyes=7"
+    cheap = _event([_mkt("KXTEAM-26-B", "B", 5, 6)])
+    client = FakeClient([cheap], {"KXTEAM-26-B": _ob(5, 6)})
+    with db.session_scope() as session:
+        summ = MmSellTracker(client, settings).run_once(session)
+    assert summ.per_book.get("mmsell10") == 1      # 6c <= maxyes 7 -> admitted
+
+
 def test_abandon_foreign_keeps_mmsell_and_weather(settings):
     """The ride-along startup abandon must keep BOTH weather and mmsell paper positions."""
     from kalshi_bot import repository as repo
