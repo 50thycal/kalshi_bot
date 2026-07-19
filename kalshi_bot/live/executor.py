@@ -1092,6 +1092,9 @@ class LiveExecutor:
                     "price": f"{price / 100.0:.4f}",
                     "time_in_force": "immediate_or_cancel",  # guarantee execution, don't rest
                     "post_only": False,
+                    "self_trade_prevention_type": "taker_at_cross",  # required by the V2 API
+                    #    (confirmed live: omitting it -> 400 missing_parameters); "taker_at_cross"
+                    #    matches the entry order's convention and is correct for a deliberate cross.
                 }
                 row = repo.create_live_order(
                     session, signal_id=None, ticker=ticker, event_ticker=None,
