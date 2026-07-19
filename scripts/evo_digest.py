@@ -90,12 +90,12 @@ def main(argv: list[str] | None = None) -> int:
         # --- HEALTH ---
         hb = _rows(cur, """
             select status, count(*) from evo_heartbeats
-            where created_at > now() - make_interval(hours => %s)
+            where created_at > now() - (%s * interval '1 hour')
             group by status order by 2 desc""", (args.hours,))
         spend = _rows(cur, """
             select coalesce(sum(cost_usd),0), coalesce(sum(input_tokens+output_tokens),0)
             from evo_llm_usage
-            where created_at > now() - make_interval(hours => %s)""", (args.hours,))
+            where created_at > now() - (%s * interval '1 hour')""", (args.hours,))
         cohort_spend = _one(cur, """
             select coalesce(sum(cost_usd),0) from evo_llm_usage where cohort_id=%s""",
             (cid,))
@@ -159,21 +159,21 @@ def main(argv: list[str] | None = None) -> int:
         # --- ACTIVITY ---
         orders = _rows(cur, """
             select status, count(*) from evo_orders
-            where created_at > now() - make_interval(hours => %s)
+            where created_at > now() - (%s * interval '1 hour')
             group by status order by 2 desc""", (args.hours,))
         fills = _one(cur, """
             select count(*) from evo_fills
-            where created_at > now() - make_interval(hours => %s)""", (args.hours,))
+            where created_at > now() - (%s * interval '1 hour')""", (args.hours,))
         fired = _one(cur, """
             select count(*) from evo_listener_events
-            where created_at > now() - make_interval(hours => %s)""", (args.hours,))
+            where created_at > now() - (%s * interval '1 hour')""", (args.hours,))
         revs = _one(cur, """
             select count(*) from evo_genomes
-            where created_at > now() - make_interval(hours => %s) and material""",
+            where created_at > now() - (%s * interval '1 hour') and material""",
             (args.hours,))
         infl = _one(cur, """
             select count(*) from evo_influences
-            where created_at > now() - make_interval(hours => %s)""", (args.hours,))
+            where created_at > now() - (%s * interval '1 hour')""", (args.hours,))
         print("\nACTIVITY (window)")
         print("  orders: " + (", ".join(f"{s}={n}" for s, n in orders) or "none")
               + f" | fills={fills} listener_fires={fired}"
@@ -212,14 +212,14 @@ def main(argv: list[str] | None = None) -> int:
         abandoned = _one(cur, """
             select count(*) from evo_heartbeats
             where status='abandoned'
-              and created_at > now() - make_interval(hours => %s)""", (args.hours,))
+              and created_at > now() - (%s * interval '1 hour')""", (args.hours,))
         if abandoned:
             anomalies += 1
             print(f"  !! {abandoned} abandoned heartbeats in window (worker restarts?)")
         integ = _rows(cur, """
             select agent_uuid, kind, count(*) from evo_audit_events
             where severity='integrity'
-              and created_at > now() - make_interval(hours => %s)
+              and created_at > now() - (%s * interval '1 hour')
             group by 1,2""", (args.hours,))
         for au, kind, cnt in integ:
             anomalies += 1
@@ -233,7 +233,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  !! {old_open} orders open > 24h (fills stalled or maker never through)")
         degraded = _one(cur, """
             select count(*) from evo_heartbeats where status='degraded'
-              and created_at > now() - make_interval(hours => %s)""", (args.hours,))
+              and created_at > now() - (%s * interval '1 hour')""", (args.hours,))
         if degraded:
             anomalies += 1
             print(f"  !  {degraded} degraded heartbeats in window (LLM key/budget?)")
