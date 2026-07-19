@@ -46,20 +46,33 @@ def _setup():
     return session, settings, cohort, agent
 
 
-def test_malformed_json_output_is_captured_for_diagnosis():
+def test_genuinely_unparseable_output_is_captured_for_diagnosis():
     session, settings, cohort, agent = _setup()
-    marker = "TOTALLY-MALFORMED-MARKER"
-    # missing comma between two journal-like entries — the real-world failure
-    # signature seen live ("Expecting ',' delimiter")
-    raw = f'{{"journal": {{"decision": "{marker}"}} "actions": []}}'
+    marker = "TOTALLY-UNPARSEABLE-MARKER"
+    # prose with no JSON object at all — genuinely unrecoverable (the truncation
+    # recovery only ever CLOSES real structure, it never fabricates one), so this
+    # must degrade and capture the raw output for diagnosis
+    raw = f"I think we should hold this cycle. {marker}. No action."
     hb = run_heartbeat(session, settings, agent=agent, cohort=cohort, kind="routine",
                        slot_id="s1", cognition=_RawTextCognition(raw), md=StaticMarketData())
 
     assert hb.status == "degraded"
-    assert "invalid JSON" in hb.status_detail
     assert hb.raw_output_text is not None
     assert marker in hb.raw_output_text
     assert len(hb.raw_output_text) <= RAW_OUTPUT_CAP
+
+
+def test_truncated_json_is_recovered_not_degraded():
+    session, settings, cohort, agent = _setup()
+    # a reflection-style output cut off mid-string with no closing brace: the
+    # recovery salvages the journal, so the heartbeat COMPLETES instead of wasting
+    # the already-paid-for call
+    raw = '{"journal": {"decision": "hold and research", "observations": ["market is thin'
+    hb = run_heartbeat(session, settings, agent=agent, cohort=cohort, kind="routine",
+                       slot_id="s1", cognition=_RawTextCognition(raw), md=StaticMarketData())
+
+    assert hb.status == "completed"
+    assert hb.raw_output_text is None  # not a failure -> nothing captured
 
 
 def test_raw_output_capped_at_bound():
@@ -103,7 +116,7 @@ def test_raw_output_never_reaches_dashboard_payload():
 
     session, settings, cohort, agent = _setup()
     marker = "sk-DEFINITELY-SHOULD-NOT-LEAK-TO-DASHBOARD"
-    raw = f'{{"journal": {{"decision": "{marker}"}} "actions": []}}'
+    raw = f"prose that is not json at all {marker} still not json"
     hb = run_heartbeat(session, settings, agent=agent, cohort=cohort, kind="routine",
                        slot_id="s1", cognition=_RawTextCognition(raw), md=StaticMarketData())
     assert hb.status == "degraded" and marker in hb.raw_output_text  # sanity: it was captured

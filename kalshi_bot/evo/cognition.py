@@ -217,7 +217,10 @@ def build_user_prompt(ctx: HeartbeatContext) -> str:
         parts.append(f"{key.upper()}:\n{str(value)[:2500]}")
     parts.append(
         "Decide what to do this heartbeat per your cognitive genome. Be economical: "
-        "your token/cost budgets are real. Return ONLY the JSON object."
+        "your token/cost budgets are real. Keep every journal field terse — a short "
+        "phrase per list item, not sentences; the journal is a log, not an essay. An "
+        "over-long journal can truncate the response before your actions are emitted. "
+        "Return ONLY the JSON object."
     )
     return "\n\n".join(parts)
 
@@ -227,21 +230,96 @@ def build_user_prompt(ctx: HeartbeatContext) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _recover_truncated_json(fragment: str) -> str | None:
+    """Best-effort repair of a JSON object cut off mid-generation — the dominant
+    real-world failure mode (a verbose reflection runs out of output-token budget
+    before it can close its braces, so the response ends mid-string with no closing
+    `}` at all). Conservatively CLOSES open structure (an unterminated string, then
+    open arrays/objects in LIFO order) and, if that still won't parse, shaves the
+    dangling tail (a trailing comma/colon or a partial key) one step at a time until
+    the largest parseable prefix is found. Never invents values. Returns a parseable
+    JSON string or None.
+
+    This lets a truncated heartbeat still salvage its (mostly-complete) journal and
+    any actions that finished, instead of losing the whole already-paid-for call."""
+
+    def _close(s: str) -> str:
+        stack: list[str] = []
+        in_str = False
+        esc = False
+        for ch in s:
+            if in_str:
+                if esc:
+                    esc = False
+                elif ch == "\\":
+                    esc = True
+                elif ch == '"':
+                    in_str = False
+            elif ch == '"':
+                in_str = True
+            elif ch in "{[":
+                stack.append("}" if ch == "{" else "]")
+            elif ch in "}]":
+                if stack:
+                    stack.pop()
+        return s + ('"' if in_str else "") + "".join(reversed(stack))
+
+    core = fragment
+    # Bounded trim-and-retry. A real truncation cuts cleanly mid-token, so the
+    # dangling tail to shave is short; cap the work so a pathological input can't
+    # make this O(n^2) on a large fragment (it degrades safely instead).
+    for _ in range(min(len(core), 500)):
+        candidate = _close(core)
+        try:
+            # require a NON-EMPTY object: trimming garbage down to a bare "{}" is
+            # not a real recovery — better to degrade and keep the raw output for
+            # diagnosis than to silently "complete" a no-op from unparseable text.
+            if json.loads(candidate):
+                return candidate
+        except json.JSONDecodeError:
+            pass
+        core = core.rstrip()
+        if core and core[-1] in ",:":
+            core = core[:-1]
+        elif core:
+            core = core[:-1]
+        else:
+            return None
+    return None
+
+
 def parse_output(text: str) -> tuple[dict, list[dict], str | None]:
-    """Extract {journal, actions} from model text. Tolerates markdown fences.
+    """Extract {journal, actions} from model text. Tolerates markdown fences and
+    output that was truncated by the token cap (recovers the parseable prefix).
     Returns (journal, actions, error)."""
     raw = text.strip()
     if raw.startswith("```"):
         raw = raw.strip("`")
         if raw.startswith("json"):
             raw = raw[4:]
-    start, end = raw.find("{"), raw.rfind("}")
-    if start < 0 or end <= start:
+    start = raw.find("{")
+    if start < 0:
         return {}, [], "no JSON object in output"
-    try:
-        doc = json.loads(raw[start:end + 1])
-    except json.JSONDecodeError as exc:
-        return {}, [], f"invalid JSON: {exc}"
+    end = raw.rfind("}")
+    doc = None
+    err: str | None = None
+    if end > start:
+        try:
+            doc = json.loads(raw[start:end + 1])
+        except json.JSONDecodeError as exc:
+            err = f"invalid JSON: {exc}"
+    else:
+        err = "no JSON object in output"  # opened but never closed — truncated
+    if doc is None:
+        recovered = _recover_truncated_json(raw[start:])
+        if recovered is not None:
+            try:
+                doc = json.loads(recovered)
+                err = None
+            except json.JSONDecodeError:
+                pass
+    if doc is None:
+        return {}, [], err or "invalid JSON"
     if not isinstance(doc, dict):
         return {}, [], "output is not an object"
     journal_doc = doc.get("journal") or {}
