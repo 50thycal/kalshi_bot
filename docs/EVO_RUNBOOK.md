@@ -75,9 +75,18 @@ reads the database (no write path exists, so it cannot change any agent behavior
    - `DATABASE_URL` — the same Postgres URL as the evo worker. (That's the only
      required one. It needs **no** Kalshi keys and **no** `ANTHROPIC_API_KEY` — the
      dashboard never calls Kalshi or the LLM.)
-3. Set the **start command** to: `python -m kalshi_bot.dashboard`
-   - Do **not** run `alembic upgrade head` here — the evo worker owns migrations;
-     the dashboard is read-only.
+3. Point this service at its own config-as-code file instead of the repo-root
+   one. The repo root `railway.json` (start command `alembic upgrade head &&
+   python -m kalshi_bot.main`) is what the trading worker and evo worker use —
+   it applies to **every** service on this repo by default and overrides
+   anything typed into the UI's Custom Start Command box (the box will show
+   "The value is set in /railway.json" and ignore edits). `railway.dashboard.json`
+   is a second config file at the repo root with the dashboard's own start
+   command (`python -m kalshi_bot.dashboard`, no alembic). In the dashboard
+   service's Settings, find the config-as-code file path setting (near the top
+   of Settings, above Build/Deploy) and change it from `railway.json` to
+   `railway.dashboard.json`, then redeploy. This way the worker's config file
+   is never touched.
 4. Enable a public domain on the service (Railway → Settings → Networking →
    Generate Domain). Railway injects `PORT` automatically; the server binds it.
 5. Open the generated URL on your phone and bookmark / add-to-home-screen it.
