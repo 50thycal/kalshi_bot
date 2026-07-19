@@ -24,6 +24,7 @@ from sqlalchemy.exc import IntegrityError
 from . import budgets, listeners, memory
 from .audit import audit
 from .cognition import Cognition, CognitionResult, assemble_context, execute_actions
+from .cohorts import active_agents
 from .config import EvoSettings
 from .marketdata import MarketData
 from .models import EvoAgent, EvoCohort, EvoHeartbeat, EvoListener, EvoListenerEvent
@@ -312,9 +313,8 @@ def run_due_heartbeats(
     """One orchestrator pass: sweep stale, run due routine/reflection slots and
     triggered events, bounded per cycle so one pass never monopolizes the loop."""
     counts = {"stale_abandoned": sweep_stale(session, settings), "run": 0, "skipped": 0}
-    agents = list(
-        session.scalars(select(EvoAgent).where(EvoAgent.status == "active"))
-    )
+    # Honors the max_active_agents ops throttle (only the live subset runs).
+    agents = active_agents(session, settings)
     agents_by_uuid = {a.agent_uuid: a for a in agents}
     due = due_routine_heartbeats(session, settings, agents, now=now)
     for agent, kind, slot_id, at in due[:max_per_cycle]:

@@ -162,6 +162,21 @@ a repo session, since the ops channel is read-only):
   reasoning in `human_decision`; after building the thing, set `implemented` and
   fill `implementation_result`.
 
+## Running a small population for testing
+
+To confirm the pipeline end-to-end without paying for or exposing all 30 agents,
+throttle how many run live: set **`EVO_MAX_ACTIVE_AGENTS=3`** on the evo service and
+redeploy. Only the 3 lowest-id (earliest-created) agents then run heartbeats, place
+paper trades, and get snapshotted/scored; the other 27 stay in the cohort, dormant,
+untouched — nobody is retired and no history is lost. Watch those 3 via the digest
+(heartbeats completing, trades filling, fitness computing). When satisfied, set
+`EVO_MAX_ACTIVE_AGENTS=0` (or delete it) and redeploy — all 30 resume immediately.
+
+Caveat: the cap throttles the per-cycle live work, not cohort **finalization** — at
+the Monday-week boundary all active members (including the dormant ones) are still
+scored/retired. Conclude testing, or lift the cap, before a cohort boundary if you
+want the dormant agents judged on real activity.
+
 ## Pausing and emergencies
 
 - **There is deliberately no performance kill switch.** Agents are allowed to lose
@@ -170,6 +185,8 @@ a repo session, since the ops channel is read-only):
   set `EVO_ENABLED=false` on the evo service (or scale it to zero). Nothing is
   lost; the loop resumes idempotently — missed heartbeat slots are swept as
   abandoned, never double-run.
+- **Shrink instead of pause** (keep testing at low scale): `EVO_MAX_ACTIVE_AGENTS=3`
+  (see "Running a small population for testing" above).
 - Rollback of the whole feature: scale the service down; optionally
   `alembic downgrade -1` removes the `evo_*` tables (destroys agent history).
 
