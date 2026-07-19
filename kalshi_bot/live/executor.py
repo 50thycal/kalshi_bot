@@ -1091,10 +1091,12 @@ class LiveExecutor:
                     "count": f"{qty:.2f}",
                     "price": f"{price / 100.0:.4f}",
                     "time_in_force": "immediate_or_cancel",  # guarantee execution, don't rest
-                    "post_only": False,
                     "self_trade_prevention_type": "taker_at_cross",  # required by the V2 API
-                    #    (confirmed live: omitting it -> 400 missing_parameters); "taker_at_cross"
-                    #    matches the entry order's convention and is correct for a deliberate cross.
+                    #    (confirmed live: omitting it -> 400 missing_parameters).
+                    # NO post_only key: confirmed live -> 400 invalid_parameters when paired with
+                    # immediate_or_cancel (the recorded taker-IOC fixture omits it entirely --
+                    # post_only ("never cross") and IOC ("cross now or cancel") are contradictory,
+                    # so the API rejects the combination outright rather than just ignoring it).
                 }
                 row = repo.create_live_order(
                     session, signal_id=None, ticker=ticker, event_ticker=None,
