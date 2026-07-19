@@ -188,6 +188,22 @@ class Settings(BaseSettings):
     #                                              edge IS the spread — so this is generous, NOT the
     #                                              weather risk gate's 5c (which would reject the book).
 
+    # --- mmsell LIVE closeout (one-shot, END-OF-STRATEGY only; inert by default) ---
+    # mmsell was built hold-to-settlement only (the exit study proved TP/SL hurts) — there was
+    # NEVER a path to exit a position early. This is that path, added 2026-07-19 to wind down
+    # the mmsell3 live test: closes every open NO position for the listed strategies by BUYING
+    # YES at the current ask (marketable IOC via the same V2 events endpoint as entries — crosses
+    # the spread deliberately, since a close must guarantee execution, not rest as a maker).
+    # Runs from LiveExecutor.close_mmsell_positions regardless of LIVE_STRATEGIES (so clearing
+    # the entry allowlist stops new entries while this still closes what's open), but the
+    # underlying order placement is STILL gated by the client's own bot_mode+KILL_SWITCH guard —
+    # so KILL_SWITCH must be FALSE for the close orders to actually reach Kalshi. See the
+    # shutdown sequence in docs/MMSELL_LIVE_PLAN.md. Self-limiting: once a strategy's positions
+    # are flat, later cycles find nothing to close — no need to flip this back off.
+    mmsell_closeout_enabled: bool = False
+    mmsell_closeout_strategies: str = ""   # comma list of strategy prefixes, e.g. "mmsell3"
+    mmsell_closeout_slippage_cents: int = 3  # cross up to yes-ask + this many cents to guarantee the fill
+
     # --- Theta book (ride-along paper, weather/live cycle) ---
     # Model-anchored tail-selling on the recurring hourly crypto ladders (docs/
     # THETA_THESIS.md). Validated 2026-07-03 (scripts/kalshi_theta_study.py): selling
@@ -867,6 +883,10 @@ class Settings(BaseSettings):
         return out
 
     @property
+    def mmsell_closeout_strategy_list(self) -> list[str]:
+        return [s.strip() for s in self.mmsell_closeout_strategies.split(",") if s.strip()]
+
+    @property
     def theta_series_map(self) -> dict[str, str]:
         """SERIES -> Coinbase product, parsed from "KXBTCD:BTC-USD,..."; skips malformed."""
         out: dict[str, str] = {}
@@ -1025,6 +1045,8 @@ class Settings(BaseSettings):
             "mmsell_live_max_open_positions": self.mmsell_live_max_open_positions,
             "mmsell_live_price_offset_cents": self.mmsell_live_price_offset_cents,
             "mmsell_live_max_spread_cents": self.mmsell_live_max_spread_cents,
+            "mmsell_closeout_enabled": self.mmsell_closeout_enabled,
+            "mmsell_closeout_strategies": self.mmsell_closeout_strategy_list,
             "mmsell_variants": [f"{v['tag']}:{v['lo']:.0f}-{v['hi']:.0f}"
                                 for v in self.mmsell_variant_list],
             "theta_enabled": self.theta_enabled,
