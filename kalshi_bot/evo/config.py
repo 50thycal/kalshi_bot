@@ -47,7 +47,7 @@ class EvoSettings(BaseSettings):
     model_routine: str = "claude-haiku-4-5-20251001"
     model_deep: str = "claude-sonnet-5"
     weekly_llm_ceiling_usd: float = 2.0  # per active agent
-    heartbeat_max_output_tokens: int = 2000
+    heartbeat_max_output_tokens: int = 3200
     reflection_max_output_tokens: int = 4000
     heartbeat_max_input_tokens: int = 12000
     weekly_token_budget: int = 1_500_000  # per agent, input+output
