@@ -56,15 +56,18 @@ def _exec(settings, client):
 
 
 def _seed_open_no_position(session, *, ticker="KXTEAM-26-A", strategy="mmsell3", no_price=90, qty=1):
-    """A filled mmsell entry (side='no') + a Kalshi position snapshot showing it still open
-    (negative quantity_fp, the NO-side convention)."""
+    """A filled mmsell entry (side='no') + a Kalshi position snapshot showing it still open.
+    quantity is SIGNED to match real reconcile() behavior (_to_count on the raw signed
+    position_fp -> negative for a NO position) -- a positive fixture value here would mask the
+    exact sign bug this test file exists to catch (real: 0 closeouts fired on 50 open positions
+    because `int(snap.quantity or ...)` picked the negative signed int)."""
     repo.create_live_order(
         session, signal_id=None, ticker=ticker, event_ticker="KXTEAM-26", strategy=strategy,
         side="no", action="buy", limit_price=no_price, quantity=qty, status="filled",
         client_order_id=f"{strategy}:{uuid.uuid4()}", raw_order_json={},
     )
     repo.insert_position_snapshot(
-        session, ticker=ticker, side="no", quantity=qty, quantity_fp=-float(qty),
+        session, ticker=ticker, side="no", quantity=-qty, quantity_fp=-float(qty),
         avg_price=float(no_price), market_exposure=qty * no_price / 100.0,
         realized_pnl=None,
     )
