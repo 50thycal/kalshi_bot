@@ -179,27 +179,38 @@ class LlmClient:
             b.get("text", "") for b in data.get("content", []) if b.get("type") == "text"
         )
         cost = compute_cost_usd(price, input_tokens, cached, output_tokens)
-        # Book ACTUAL spend (force: it already happened; never under-count).
-        budgets.spend(session, agent_uuid, cohort_id, "llm_cost_usd", cost, force=True)
-        budgets.spend(
-            session, agent_uuid, cohort_id, "tokens",
-            float(input_tokens + output_tokens), force=True,
-        )
-        session.add(
-            EvoLlmUsage(
-                created_at=datetime.now(timezone.utc),
-                agent_uuid=agent_uuid,
-                cohort_id=cohort_id,
-                heartbeat_id=heartbeat_id,
-                model_alias=alias,
-                model_id=price.model_id,
-                input_tokens=input_tokens,
-                cached_input_tokens=cached,
-                output_tokens=output_tokens,
-                cost_usd=cost,
+        # The API call above already happened and was billed by Anthropic — it is
+        # irreversible. Record it in its OWN committed transaction, independent of
+        # the caller's still-open one, so a later failure elsewhere in the calling
+        # heartbeat (e.g. during action execution, before the caller's
+        # session_scope() commits) can never erase this cost from the audit trail
+        # or the agent's weekly budget. Writing it into the caller's `session`
+        # (flush-only) was exactly how a real, already-spent Sonnet-5 birth-
+        # heartbeat cost went untracked during founder bootstrap: the outer
+        # transaction later rolled back, taking the EvoLlmUsage row and the
+        # budget deduction with it, while the Anthropic bill did not roll back.
+        from ..db import session_scope  # local import: avoids a cycle at module load
+
+        with session_scope() as cost_session:
+            budgets.spend(cost_session, agent_uuid, cohort_id, "llm_cost_usd", cost, force=True)
+            budgets.spend(
+                cost_session, agent_uuid, cohort_id, "tokens",
+                float(input_tokens + output_tokens), force=True,
             )
-        )
-        session.flush()
+            cost_session.add(
+                EvoLlmUsage(
+                    created_at=datetime.now(timezone.utc),
+                    agent_uuid=agent_uuid,
+                    cohort_id=cohort_id,
+                    heartbeat_id=heartbeat_id,
+                    model_alias=alias,
+                    model_id=price.model_id,
+                    input_tokens=input_tokens,
+                    cached_input_tokens=cached,
+                    output_tokens=output_tokens,
+                    cost_usd=cost,
+                )
+            )
         return LlmResult(
             text=text,
             model_id=price.model_id,
