@@ -190,7 +190,11 @@ Same seed ⇒ identical results. This is also part of the test suite
 
 | Symptom (digest) | Meaning | Action |
 |---|---|---|
-| heartbeats all `degraded` | no/invalid `ANTHROPIC_API_KEY`, or ceilings hit | check the key; check per-agent spend vs `EVO_WEEKLY_LLM_CEILING_USD` |
+| heartbeats all `degraded` | check the digest's **`degraded by reason`** line (HEALTH section) — it names the actual cause | act on the named reason (below) |
+| ↳ `API credit balance exhausted` | the Anthropic account is out of prepaid credit — every call returns HTTP 400 | add credits at console.anthropic.com → Plans & Billing (enable auto-reload to prevent recurrence); bots resume automatically, no redeploy needed |
+| ↳ `no/invalid ANTHROPIC_API_KEY` | key missing or wrong on the evo service | set/fix `ANTHROPIC_API_KEY` on the evo service |
+| ↳ `per-agent budget/ceiling reached` | agents hit the `$2/agent/week` hard stop | expected late-cohort; raise `EVO_WEEKLY_LLM_CEILING_USD` only deliberately |
+| ↳ `malformed model JSON output` | the model emitted invalid JSON (captured in `evo_heartbeats.raw_output_text`) | inspect the captured raw output via the ops DB channel |
 | `abandoned` heartbeats | worker restarted mid-heartbeat | none needed (self-heals); investigate frequent restarts |
 | orders open > 24h | maker limits never traded through (conservative fills working as intended) or market data stalled | check data-health section |
 | integrity events | an agent tried to break the rules | none needed — automatic fitness penalties / suspension already applied; the audit row is permanent |

@@ -114,8 +114,45 @@ def main(argv: list[str] | None = None) -> int:
         cohort_spend = _one(cur, """
             select coalesce(sum(cost_usd),0) from evo_llm_usage where cohort_id=%s""",
             (cid,))
+        # Break degraded heartbeats down by *actual* reason (normalized bucket), so
+        # "why are heartbeats degrading" is answerable at a glance instead of guessed
+        # at — an API credit exhaustion, a dropped key, and malformed model JSON are
+        # very different problems with very different fixes.
+        deg = _rows(cur, """
+            select case
+                when status_detail ilike '%%credit balance is too low%%'
+                    then 'API credit balance exhausted (add credits in Anthropic billing)'
+                when status_detail ilike '%%no anthropic_api_key%%'
+                    then 'no/invalid ANTHROPIC_API_KEY on the evo service'
+                when status_detail ilike '%%rate limit%%' or status_detail ilike '%%http 429%%'
+                    then 'API rate limited'
+                when status_detail ilike '%%overloaded%%' or status_detail ilike '%%http 529%%'
+                    then 'API overloaded'
+                when status_detail ilike 'no price%%'
+                    then 'no model price configured'
+                when status_detail ilike 'invalid json%%'
+                     or status_detail ilike '%%no json object%%'
+                     or status_detail ilike 'output is not an object%%'
+                    then 'malformed model JSON output'
+                when status_detail ilike 'connecterror%%'
+                     or status_detail ilike '%%network is unreachable%%'
+                    then 'network error reaching API'
+                when status_detail ilike '%%ceiling%%' or status_detail ilike '%%budget%%'
+                    then 'per-agent budget/ceiling reached'
+                when status_detail ilike 'input too large%%'
+                    then 'prompt too large'
+                when status_detail ilike 'http %%'
+                    then 'other API error: ' || left(status_detail, 48)
+                else coalesce(left(status_detail, 48), '(no detail)')
+            end as reason, count(*) as n
+            from evo_heartbeats
+            where status='degraded' and created_at > now() - (%s * interval '1 hour')
+            group by 1 order by 2 desc""", (args.hours,))
         print("\nHEALTH")
         print("  heartbeats: " + (", ".join(f"{s}={n}" for s, n in hb) or "none in window"))
+        if deg:
+            print("  degraded by reason: "
+                  + "; ".join(f"{reason} x{n}" for reason, n in deg))
         print(f"  llm spend: ${float(spend[0][0]):.4f} / {int(spend[0][1])} tokens in window;"
               f" ${float(cohort_spend or 0):.2f} this cohort")
         dh = _rows(cur, """
@@ -251,7 +288,9 @@ def main(argv: list[str] | None = None) -> int:
               and created_at > now() - (%s * interval '1 hour')""", (args.hours,))
         if degraded:
             anomalies += 1
-            print(f"  !  {degraded} degraded heartbeats in window (LLM key/budget?)")
+            # lead with the dominant reason (computed in HEALTH) instead of guessing
+            top = f" — top: {deg[0][0]}" if deg else ""
+            print(f"  !  {degraded} degraded heartbeats in window{top}")
         if not anomalies:
             print("  all clear")
     return 0
