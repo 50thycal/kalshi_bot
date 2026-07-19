@@ -30,6 +30,8 @@ from .models import EvoAgent, EvoCohort, EvoHeartbeat, EvoListener, EvoListenerE
 
 logger = logging.getLogger(__name__)
 
+RAW_OUTPUT_CAP = 8000  # chars kept from a failed heartbeat's raw model output
+
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
@@ -240,6 +242,11 @@ def run_heartbeat(
         # orchestrator); journal the miss.
         hb.status = "degraded"
         hb.status_detail = result.error[:500]
+        if result.raw_text:
+            # only ever set on a FAILED heartbeat (parse/validation error) — the
+            # bounded evidence an operator needs to diagnose it via the read-only
+            # ops SQL channel; never set on success, never dashboard-exposed.
+            hb.raw_output_text = result.raw_text[:RAW_OUTPUT_CAP]
         journal_row = memory.write_journal(
             session, agent.agent_uuid, hb.id,
             {"decision": f"degraded heartbeat: {result.error[:200]}",
