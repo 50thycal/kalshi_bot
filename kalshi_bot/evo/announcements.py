@@ -1,0 +1,105 @@
+"""Operator announcements: the broadcast channel to the whole agent population.
+
+When the operator makes a system change (a config change, a new rule, a fixed
+bug), an announcement here is injected into EVERY agent's heartbeat context while
+it is active — so all agents learn the same thing at the same time instead of
+each having to rediscover it.
+
+There is no live write path (agents and the read-only ops channel cannot write),
+so announcing something matches the model-price / graveyard seed pattern: declare
+the announcement here with a stable `key` and deploy; `seed_announcements()`
+inserts it once, idempotently. To retire an announcement, let it expire
+(`expires_in_days`) — seeding is insert-only, so editing an already-seeded row's
+fields on a later deploy has no effect.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+
+from sqlalchemy import select
+
+from .models import EvoAnnouncement
+
+# Each entry: key (stable, unique), title, body, category, expires_in_days
+# (0 / omitted = never expires). Add an entry + deploy to broadcast; the whole
+# population sees it on their next heartbeat.
+ANNOUNCEMENTS: list[dict] = [
+    dict(
+        key="2026-07-cohort-full-week",
+        title="Your cohort week now runs a full 7 days from when it was born",
+        category="system_change",
+        body=(
+            "System change from your operator: each cohort now lasts exactly 7 days "
+            "from the moment it is created, instead of ending on a fixed Monday-midnight "
+            "boundary. Your current cohort has been extended so you get a full week — the "
+            "earlier, sooner end time was only an artifact of when this system was first "
+            "switched on, not a real deadline. Plan your research and trades against the "
+            "cohort 'ends' timestamp shown in your heartbeat; it is now accurate. Nothing "
+            "else about scoring, retirement, or reproduction has changed."
+        ),
+        expires_in_days=21,
+    ),
+]
+
+
+def _aware(dt: datetime) -> datetime:
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def seed_announcements(session, *, now: datetime | None = None) -> int:
+    """Insert any not-yet-seeded announcements. Idempotent on `key`. Returns rows added."""
+    now = now or datetime.now(timezone.utc)
+    existing = set(session.scalars(select(EvoAnnouncement.key)).all())
+    added = 0
+    for entry in ANNOUNCEMENTS:
+        if entry["key"] in existing:
+            continue
+        days = entry.get("expires_in_days") or 0
+        session.add(
+            EvoAnnouncement(
+                key=entry["key"],
+                title=entry["title"],
+                body=entry["body"],
+                category=entry.get("category", "system_change"),
+                effective_at=now,
+                expires_at=(now + timedelta(days=days)) if days else None,
+                active=True,
+            )
+        )
+        added += 1
+    session.flush()
+    return added
+
+
+def active_announcements(
+    session, *, now: datetime | None = None, limit: int = 5
+) -> list[EvoAnnouncement]:
+    """Currently-broadcasting announcements, newest first: active, already effective,
+    and not yet expired. Filtered in Python (the table is tiny) so it behaves the
+    same on sqlite and Postgres regardless of stored-tz quirks."""
+    now = now or datetime.now(timezone.utc)
+    rows = session.scalars(
+        select(EvoAnnouncement)
+        .where(EvoAnnouncement.active.is_(True))
+        .order_by(EvoAnnouncement.effective_at.desc())
+    )
+    out: list[EvoAnnouncement] = []
+    for r in rows:
+        if _aware(r.effective_at) > now:
+            continue
+        if r.expires_at is not None and _aware(r.expires_at) <= now:
+            continue
+        out.append(r)
+        if len(out) >= limit:
+            break
+    return out
+
+
+def summarize_for_prompt(rows: list[EvoAnnouncement], *, body_cap: int = 700) -> str:
+    """Compact text block for the heartbeat prompt."""
+    parts: list[str] = []
+    for r in rows:
+        body = r.body if len(r.body) <= body_cap else r.body[: body_cap - 1] + "…"
+        parts.append(f"- [{r.category}] {r.title}\n  {body}")
+    return "\n".join(parts)

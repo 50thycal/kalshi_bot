@@ -117,8 +117,8 @@ class EvoCohort(Base):
 
     id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
     number: Mapped[int] = mapped_column(Integer, nullable=False)
-    starts_at: Mapped[datetime] = mapped_column(TS, nullable=False)  # Monday 00:00 America/Chicago
-    ends_at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    starts_at: Mapped[datetime] = mapped_column(TS, nullable=False)  # birth (cohort creation)
+    ends_at: Mapped[datetime] = mapped_column(TS, nullable=False)  # starts_at + cohort_days
     status: Mapped[str] = mapped_column(
         String(16), nullable=False, default="open"
     )  # open | finalizing | finalized
@@ -865,3 +865,35 @@ class EvoAuditEvent(Base):
     severity: Mapped[str] = mapped_column(String(12), nullable=False, default="info")
     # info | warn | integrity
     detail_json: Mapped[dict | None] = mapped_column(JSONType)
+
+
+# ---------------------------------------------------------------------------
+# Operator announcements (broadcast to every agent)
+# ---------------------------------------------------------------------------
+
+
+class EvoAnnouncement(Base):
+    """An operator broadcast shown to every agent while active: how the operator
+    tells the whole population about a system change (a config change, a new rule,
+    a fixed bug). Active announcements are injected into every heartbeat's context,
+    so all agents 'know' the same thing at once.
+
+    Declared in code (kalshi_bot/evo/announcements.py) and seeded idempotently on
+    the stable `key`, matching the model-price/graveyard seed pattern — there is no
+    live write path, so announcing something is: add an entry and deploy."""
+
+    __tablename__ = "evo_announcements"
+    __table_args__ = (
+        UniqueConstraint("key", name="uq_evo_announcement_key"),
+        Index("ix_evo_announcements_active", "active", "effective_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    created_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    key: Mapped[str] = mapped_column(String(64), nullable=False)  # stable idempotency key
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    category: Mapped[str] = mapped_column(String(32), nullable=False, default="system_change")
+    effective_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    expires_at: Mapped[datetime | None] = mapped_column(TS)  # null = never expires
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

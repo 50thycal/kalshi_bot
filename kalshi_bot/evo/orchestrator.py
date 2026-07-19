@@ -30,8 +30,14 @@ from ..logging_config import log_event
 from . import listeners as listeners_mod
 from . import paper as papermod
 from . import strategy_runner
+from .announcements import seed_announcements
 from .cognition import LlmCognition
-from .cohorts import active_agents, cohort_is_over, ensure_current_cohort
+from .cohorts import (
+    active_agents,
+    cohort_is_over,
+    ensure_current_cohort,
+    reanchor_open_cohort,
+)
 from .config import EvoSettings, get_evo_settings
 from .constitution import ensure_config_version
 from .datasources import seed_builtin_sources
@@ -125,6 +131,7 @@ def run_evo_cycle(runtime: EvoRuntime) -> None:
             seed_model_prices(session, settings)
             seed_graveyard(session)
             seed_builtin_sources(session)
+            seed_announcements(session)
         runtime._bootstrapped = True
 
     with session_scope() as session:
@@ -132,6 +139,13 @@ def run_evo_cycle(runtime: EvoRuntime) -> None:
         cohort = ensure_current_cohort(session, settings, now=now)
         bootstrap_founders(session, settings, cognition=runtime.cognition, md=runtime.md,
                            now=now)
+
+    # Heal the legacy calendar-snapped cohort window so the population gets a full
+    # week. Its OWN transaction (idempotent + cheap): a failure in founder
+    # bootstrap above must never roll back this fix, and this must land before the
+    # boundary check below reads ends_at.
+    with session_scope() as session:
+        reanchor_open_cohort(session, settings)
 
     # cohort boundary (its own transaction: the transition lock must commit even
     # if later phases fail)

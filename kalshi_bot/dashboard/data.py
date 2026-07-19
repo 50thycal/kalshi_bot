@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import func, select
 
+from ..evo import announcements as announce
 from ..evo import budgets, paper, tickets
 from ..evo.cohorts import active_agents, current_cohort
 from ..evo.config import EvoSettings
@@ -78,6 +79,7 @@ def build_dashboard_data(session, settings: EvoSettings, *, now: datetime | None
             "activity": [],
             "components": _components(session, settings, cohort=None, now=now),
             "requests": _requests(session),
+            "announcements": _announcements(session, now),
         }
 
     agents = active_agents(session)
@@ -102,6 +104,7 @@ def build_dashboard_data(session, settings: EvoSettings, *, now: datetime | None
         "activity": _recent_activity(session, now),
         "components": _components(session, settings, cohort=cohort, now=now),
         "requests": _requests(session),
+        "announcements": _announcements(session, now),
     }
 
 
@@ -542,6 +545,25 @@ def _components(session, settings: EvoSettings, *, cohort, now: datetime) -> lis
         {"system": "Data registry", "status": run, "info": f"{active_sources} active sources"},
         {"system": "Request queue", "status": run, "info": f"{open_tickets} open requests"},
     ]
+
+
+# ---------------------------------------------------------------------------
+# Operator announcements (broadcast to every agent)
+# ---------------------------------------------------------------------------
+
+
+def _announcements(session, now: datetime) -> list[dict]:
+    """Currently-broadcasting operator notices. Operator-authored, no secrets;
+    length-capped like all other free text on the page."""
+    out = []
+    for a in announce.active_announcements(session, now=now):
+        out.append({
+            "title": _cap(a.title, 200),
+            "body": _cap(a.body, 600),
+            "category": a.category,
+            "effective_at": _iso(_aware(a.effective_at)),
+        })
+    return out
 
 
 # ---------------------------------------------------------------------------

@@ -9,8 +9,8 @@ Thirty named AI agents each manage an independent **paper** portfolio of Kalshi
 trades ($1,000 each, simulated fills against real market data — no real orders are
 possible from this mode). They wake up on heartbeats six times a day plus one deep
 reflection, research, build declarative strategies, set deterministic listeners,
-learn from each other, and revise how they think and trade. Every Monday at midnight
-Chicago time the week's cohort is scored; the bottom 30% retire permanently, the top
+learn from each other, and revise how they think and trade. Exactly one week after a
+cohort is born the week's cohort is scored; the bottom 30% retire permanently, the top
 30% produce children that inherit their knowledge and try to improve on it, and every
 fourth cohort one "wildcard" founder with a fresh surname joins. Everything is
 recorded, versioned, budgeted and auditable.
@@ -110,12 +110,45 @@ carries no credential-shaped strings.
 
 Everything below is automatic; the digest shows it happening:
 
-- **Mon 00:00 America/Chicago** — cohort boundary. Final marks, final scores,
+- **One week after the cohort was born** — cohort boundary. Final marks, final scores,
   bottom 9 retired (liquidated, forever searchable), 12+9 survive with positions carried
   over and capital re-normalized to exactly $1,000, top 9 produce children (8 + one
-  wildcard every 4th cohort), population back to 30, next cohort opens.
+  wildcard every 4th cohort), population back to 30, next cohort opens (its own week
+  starting from that moment). Each cohort gets a full `EVO_COHORT_DAYS` (7) — the window
+  is anchored to birth, not to a fixed calendar day.
 - A cohort can never finalize twice; children can never be duplicated by retries;
   heartbeats can never run twice — all enforced by database uniqueness, not by hope.
+
+## Telling the bots about a system change (announcements)
+
+When you change how the system works — a config change, a new rule, a fixed bug —
+you can broadcast it to the **whole population** so every agent learns it at once
+instead of each having to rediscover it. Active announcements are injected near the
+top of every agent's heartbeat prompt (marked as authoritative operator notices),
+and also shown on the phone dashboard and in the digest.
+
+There is no live write path (agents and the ops channel are read-only), so
+announcing something matches the model-price / graveyard seeds — declare it in code
+and deploy:
+
+1. Add an entry to `ANNOUNCEMENTS` in `kalshi_bot/evo/announcements.py`:
+   ```python
+   dict(
+       key="2026-08-new-data-source",          # stable, unique — the idempotency key
+       title="Short headline the agents see first",
+       category="system_change",
+       body="Plain-language explanation of what changed and what to do about it.",
+       expires_in_days=21,                      # 0 / omit = never expires
+   ),
+   ```
+2. Deploy the evo service. On the next cycle `seed_announcements()` inserts it once
+   (idempotent on `key`); every agent sees it on their next heartbeat.
+3. To retire an announcement, let it expire (`expires_in_days`). Seeding is
+   insert-only, so editing an already-seeded row's fields on a later deploy has no
+   effect — pick the right `expires_in_days` up front, or add a superseding entry.
+
+Announcements are operator-authored text only; they carry no secrets and never
+change agent behavior directly (agents read them and decide what to do).
 
 ## Your one real job: the ticket queue
 

@@ -136,8 +136,9 @@ Entities (≈ spec §32):
 - `evo_agents` — identity: `agent_uuid`, first/last name, display name, founder uuid,
   parent uuid, generation, birth cohort, status
   (`active|retired|suspended`), current genome revision ids, historical name (permanent).
-- `evo_cohorts` — number, start/end (Monday 00:00 America/Chicago boundaries), status
-  (`open|finalizing|finalized`), config version, rng seed, wildcard flag.
+- `evo_cohorts` — number, start/end (birth-anchored: start = creation time, end =
+  start + `cohort_days`), status (`open|finalizing|finalized`), config version, rng
+  seed, wildcard flag.
 - `evo_cohort_members` — (cohort, agent) membership: starting capital, group assignment
   (`top|middle|bottom`), final rank/scores, carried-position scaling factor.
 - `evo_genomes` — immutable versions, `kind` = `cognitive|trading`; JSON document,
@@ -215,7 +216,9 @@ trades, fitness history and retirement reason all remain queryable by active age
 
 ## 7. Cohort lifecycle
 
-- Cohorts are 7 calendar days, boundary Monday 00:00 `America/Chicago` (configurable).
+- Cohorts run for `cohort_days` (7) **from when the cohort is born** — birth-anchored,
+  so every cohort gets a full week rather than a stub cut short by a fixed calendar
+  boundary (configurable via `EVO_COHORT_DAYS`).
 - `cohorts.ensure_current_cohort()` is idempotent; the orchestrator calls it each cycle.
 - At the boundary the finalization pipeline (§ Evolution) runs inside one transaction
   guarded by the unique `evo_transitions.cohort_id` row (double-finalize impossible;

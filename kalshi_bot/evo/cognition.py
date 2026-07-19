@@ -19,6 +19,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, ValidationError
 
+from . import announcements as announce
 from . import budgets, graveyard, lineage, listeners, memory, peers, sandbox, tickets
 from . import datasources as ds
 from . import paper as papermod
@@ -94,6 +95,7 @@ class HeartbeatContext:
     graveyard_text: str
     market_summaries: list[dict]
     performance_summary: dict
+    announcements: list[dict] = field(default_factory=list)
     extra: dict = field(default_factory=dict)
 
 
@@ -170,6 +172,17 @@ def build_user_prompt(ctx: HeartbeatContext) -> str:
         f"You are {a.display_name} (uuid {a.agent_uuid}), origin={a.origin}, "
         f"cohort #{ctx.cohort.number} (ends {ctx.cohort.ends_at})."
     )
+    if ctx.announcements:
+        lines = "\n".join(
+            f"- [{x.get('category', 'system_change')}] {x.get('title', '')}\n"
+            f"  {x.get('body', '')}"
+            for x in ctx.announcements
+        )
+        parts.append(
+            "OPERATOR ANNOUNCEMENTS (official notices from your operator about the "
+            "system — read and act on these; they are authoritative and override stale "
+            "assumptions):\n" + lines
+        )
     parts.append("YOUR COGNITIVE GENOME (how you think):\n" + json.dumps(
         ctx.cognitive_genome, separators=(",", ":"))[:4000])
     parts.append("YOUR TRADING GENOME (your current trading system):\n" + json.dumps(
@@ -662,6 +675,10 @@ def assemble_context(
         })
     deep = heartbeat.kind in ("reflection", "birth", "cohort_end", "retirement")
     gy_rows = graveyard.search(session, limit=8) if deep else []
+    active_notices = [
+        {"key": n.key, "title": n.title, "body": n.body, "category": n.category}
+        for n in announce.active_announcements(session)
+    ]
     return HeartbeatContext(
         agent=agent,
         cohort=cohort,
@@ -685,5 +702,6 @@ def assemble_context(
         graveyard_text=graveyard.summarize_for_prompt(gy_rows) if gy_rows else "",
         market_summaries=market_summaries,
         performance_summary=perf,
+        announcements=active_notices,
         extra=extra or {},
     )

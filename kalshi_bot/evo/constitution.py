@@ -119,9 +119,8 @@ def _population_config(s: EvoSettings) -> dict:
     return {
         "population_size": s.population_size,
         "cohort_days": s.cohort_days,
+        "cohort_anchor": "birth",  # cohorts run cohort_days from creation
         "timezone": s.cohort_timezone,
-        "boundary_weekday": s.cohort_boundary_weekday,
-        "boundary_hour": s.cohort_boundary_hour,
         "bottom_fraction": s.bottom_fraction,
         "middle_fraction": s.middle_fraction,
         "top_fraction": s.top_fraction,

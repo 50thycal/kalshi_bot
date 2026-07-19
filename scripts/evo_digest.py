@@ -87,6 +87,21 @@ def main(argv: list[str] | None = None) -> int:
               f"  remaining {remaining_h:.1f}h  wildcard_next={wildcard}")
         print(f"  population: {n_active} active, {n_retired} retired, {n_families} families")
 
+        # --- ANNOUNCEMENTS (operator broadcasts every agent currently sees) ---
+        # Guarded so an older DB (table not yet migrated) never aborts the digest.
+        if _one(cur, "select to_regclass('public.evo_announcements')"):
+            ann = _rows(cur, """
+                select title, category, effective_at, expires_at
+                from evo_announcements
+                where active and effective_at <= now()
+                  and (expires_at is null or expires_at > now())
+                order by effective_at desc limit 10""")
+            if ann:
+                print(f"\nANNOUNCEMENTS ({len(ann)} active — shown to every agent)")
+                for title, cat, eff, exp in ann:
+                    exp_s = f", expires {exp:%Y-%m-%d}" if exp else ""
+                    print(f"  [{cat}] {title[:66]}  (since {eff:%Y-%m-%d}{exp_s})")
+
         # --- HEALTH ---
         hb = _rows(cur, """
             select status, count(*) from evo_heartbeats

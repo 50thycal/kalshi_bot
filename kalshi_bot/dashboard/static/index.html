@@ -37,6 +37,12 @@
   button:active{transform:translateY(1px)}
   button.chip{padding:5px 10px;font-size:12px;color:var(--muted)}
   button.chip.on{color:var(--text);border-color:var(--accent);background:#1a2135}
+  .announce{margin:14px 0 0}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--accent);
+    border-radius:10px;padding:11px 13px;margin-bottom:8px}
+  .note .nc{font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:.04em}
+  .note .nt{font-weight:600;margin:3px 0}
+  .note .nb{color:var(--muted);font-size:13px;white-space:normal}
   .cards{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
   .card .k{color:var(--muted);font-size:12px;margin-bottom:6px}
@@ -94,6 +100,9 @@
       <span class="muted" id="updated"></span>
     </div>
   </header>
+
+  <!-- 0. Operator announcements (broadcast to every agent) -->
+  <div class="announce" id="announce"></div>
 
   <!-- 1. Cohort summary cards -->
   <h2>Current cohort</h2>
@@ -183,6 +192,7 @@ function render(){
       ` · ${dur(d.cohort.seconds_remaining)}` +
       (d.cohort.wildcard_next?` · <span class="muted">wildcard next</span>`:"");
   } else { $("#cohortmeta").textContent = "No open cohort"; }
+  renderAnnouncements(d.announcements||[]);
   renderCards(d.cards);
   renderAgents(d.agents||[]);
   renderFeed(d.activity||[]);
@@ -190,6 +200,15 @@ function render(){
     c.system, `<span class="st ${c.status}">${c.status}</span>`, c.info]));
   renderRequests(d.requests||[]);
   tickUpdated();
+}
+
+function renderAnnouncements(items){
+  const el=$("#announce");
+  if(!items||!items.length){ el.innerHTML=""; return; }
+  el.innerHTML = items.map(a=>
+    `<div class="note"><div class="nc">${a.category||"notice"}</div>`+
+    `<div class="nt">${a.title||""}</div>`+
+    `<div class="nb">${a.body||""}</div></div>`).join("");
 }
 
 function renderCards(c){

@@ -6,8 +6,9 @@ and ScriptedCognition behavior profiles (including the adversarial roster), in
 minutes of wall time. Seed-reproducible: same seed => identical rankings,
 retirements and lineage.
 
-Time model: agent/cohort scheduling runs on a simulated clock (sim_now, starting
-on a Monday boundary); market quotes are rendered with real-relative timestamps
+Time model: agent/cohort scheduling runs on a simulated clock (sim_now); cohorts
+are birth-anchored, so each runs cohort_days from when the sim opens it. Market
+quotes are rendered with real-relative timestamps
 (captured_at = wall now, close_time = wall now + remaining sim hours) so the
 production staleness/fill/horizon logic operates unchanged.
 
@@ -103,9 +104,10 @@ class Simulation:
             markets_per_cycle=200,
             fill_latency_ms=0,
         )
-        # sim clock starts on the cohort boundary (Monday 00:00 America/Chicago)
+        # sim clock start (arbitrary fixed instant; cohorts are birth-anchored so
+        # the exact wall value only needs to be deterministic across runs)
         tz = ZoneInfo(self.settings.cohort_timezone)
-        anchor = datetime(2026, 1, 5, 0, 0, tzinfo=tz)  # a Monday
+        anchor = datetime(2026, 1, 5, 0, 0, tzinfo=tz)
         self.sim_now = anchor.astimezone(timezone.utc)
         self.md = StaticMarketData()
         self.markets: dict[str, SimMarket] = {}

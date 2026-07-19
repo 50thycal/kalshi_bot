@@ -117,6 +117,17 @@ def test_requests_surface_open_tickets():
     assert r["requested_by"] >= 1
 
 
+def test_announcements_surface_in_payload():
+    session = _session()
+    settings = EvoSettings(_env_file=None)
+    _seed(session, settings, n=1)
+    from kalshi_bot.evo import announcements as announce
+    announce.seed_announcements(session)
+    d = dash.build_dashboard_data(session, settings)
+    assert d["announcements"], "expected at least one active announcement"
+    assert any("7 days" in (a["body"] or "") for a in d["announcements"])
+
+
 def test_no_secrets_or_traces_in_payload():
     """The whole serialized payload must not contain credentials, prompts,
     raw genome dumps, DB URLs, or error tracebacks."""
