@@ -61,6 +61,42 @@ Through the existing ops channel (`ops` branch → GitHub Actions), same as PnL/
 
 Suggested cadence: run `evo_digest` in the same daily habit as the weather digest.
 
+## The phone dashboard (v0.1)
+
+A read-only web page you can open from your phone — the same numbers as the digest,
+but always live and tappable. It runs as its **own third Railway service** so it
+never shares a process with the trading worker or the evo worker, and it only ever
+reads the database (no write path exists, so it cannot change any agent behavior).
+
+**One-time setup:**
+
+1. Create a **third Railway service** on this same repo + database.
+2. Set env vars on it:
+   - `DATABASE_URL` — the same Postgres URL as the evo worker. (That's the only
+     required one. It needs **no** Kalshi keys and **no** `ANTHROPIC_API_KEY` — the
+     dashboard never calls Kalshi or the LLM.)
+3. Set the **start command** to: `python -m kalshi_bot.dashboard`
+   - Do **not** run `alembic upgrade head` here — the evo worker owns migrations;
+     the dashboard is read-only.
+4. Enable a public domain on the service (Railway → Settings → Networking →
+   Generate Domain). Railway injects `PORT` automatically; the server binds it.
+5. Open the generated URL on your phone and bookmark / add-to-home-screen it.
+
+**What it shows** (single scrolling page, auto-refreshes every 30s, plus a manual
+Refresh button): a status pill + cohort countdown; six summary cards (active agents,
+starting capital, cohort equity, cohort profit, completed trades, LLM cost vs
+ceiling); a sortable agent table split into projected top/middle/bottom groups where
+each row taps open to show thesis, open positions, fitness components, last-heartbeat
+summary, strategy revision, lineage and remaining LLM budget; a filterable recent-
+activity feed; the ten system-component statuses; and the open capability-request
+queue.
+
+**Safety:** the page is public (no login in v0.1), so the data layer deliberately
+never exposes secrets, env vars, raw prompts, hidden reasoning, DB connection info,
+or stack traces — only the structured operational fields above. It's read-only:
+nothing on the page can change agent behavior. A unit test asserts the payload
+carries no credential-shaped strings.
+
 ## The weekly rhythm (no action needed)
 
 Everything below is automatic; the digest shows it happening:
