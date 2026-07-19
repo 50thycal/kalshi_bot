@@ -1199,6 +1199,49 @@ def open_live_positions(session) -> list[tuple]:
     return out
 
 
+def _no_entry_order_for(session, ticker: str):
+    """The most recent NO entry buy for a ticker (any status) — mmsell's maker entries are
+    recorded side='no' (unlike weather's side='yes'), so open_live_positions' YES-only lookup
+    doesn't find them."""
+    return session.scalar(
+        select(m.LiveOrder).where(
+            m.LiveOrder.market_ticker == ticker,
+            m.LiveOrder.action == "buy", m.LiveOrder.side == "no",
+        ).order_by(m.LiveOrder.created_at.desc())
+    )
+
+
+def open_live_no_positions(session, strategy_prefix: str) -> list[tuple]:
+    """Open NO positions to close out for a given strategy prefix (e.g. 'mmsell3'), driven by
+    KALSHI TRUTH (the latest position snapshot per ticker, net-short-YES/net-long-NO). Unlike
+    open_live_positions this has NO date bound — it's a one-shot end-of-strategy closeout query
+    that must find every still-open position regardless of how long ago it was entered (mmsell
+    positions can be held up to mmsell_max_hours_to_close, up to 14 days). Returns
+    (ticker, strategy, entry_price_no_cents, entry_at, qty)."""
+    tickers = session.scalars(
+        select(m.LiveOrder.market_ticker).where(
+            m.LiveOrder.strategy.like(f"{strategy_prefix}%"),
+            m.LiveOrder.action == "buy", m.LiveOrder.side == "no",
+        ).distinct()
+    ).all()
+    out: list[tuple] = []
+    for tkr in tickers:
+        snap = latest_position_snapshot(session, tkr)
+        if snap is None:
+            continue
+        qty_fp = float(snap.quantity_fp) if snap.quantity_fp is not None else float(snap.quantity or 0)
+        if qty_fp > -0.01:  # flat / net-YES / dust -> nothing to close on the NO side
+            continue
+        entry = _no_entry_order_for(session, tkr)
+        strategy = (entry.strategy if entry else None) or strategy_prefix
+        entry_price = int(entry.limit_price) if (entry and entry.limit_price) \
+            else int(round(abs(snap.avg_price or 0)))
+        entry_at = entry.created_at if entry else snap.captured_at
+        qty = int(snap.quantity or round(abs(qty_fp)))
+        out.append((tkr, strategy, entry_price, entry_at, qty))
+    return out
+
+
 def bucket_bid_path(session, ticker: str, *, after: datetime | None = None) -> list[float]:
     """The recorded yes-bid path for a bucket since `after` (for live exit evaluation),
     mirroring how the offline exit sweep reconstructs paths from weather_bucket_snapshots."""

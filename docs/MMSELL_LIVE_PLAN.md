@@ -180,3 +180,32 @@ Fail-closed throughout: any gate/switch failure places nothing. `LIVE_ENABLED=fa
 `KILL_SWITCH=true`) instantly halts all new live entries; open positions hold to settlement (they
 can't be worse than their entry cost — max loss per contract is the ~92¢ already committed). The paper
 `mmsell3` book keeps running unchanged as the live-vs-paper counterfactual for the entire test.
+
+## 9. Wind-down / closeout (added 2026-07-19 — Stage 1 concluded, see `docs/MMSELL_LIVE_POSTMORTEM.md`)
+
+mmsell was built **hold-to-settlement only** — §8's "open positions hold to settlement" was the
+plan until it wasn't. `LiveExecutor.close_mmsell_positions` (config: `mmsell_closeout_enabled`,
+`mmsell_closeout_strategies`) is the one-shot mechanism added to actually exit early: it buys YES
+at the current ask (marketable IOC, crosses the spread — a close must guarantee execution, not
+rest as a maker) to flatten every open NO position for the listed strategy prefixes, tagged
+`strategy="<tag>_closeout"` and `client_order_id="closeout:..."` so closes are unambiguous in
+`live_orders` next to ordinary entries.
+
+**The sequencing matters and is easy to get backwards** — closing positions requires the client's
+order-placement guard to be open (`bot_mode=="live" and not kill_switch`), so `KILL_SWITCH=true`
+would block the CLOSE orders too, not just new entries:
+
+1. Stop new entries via the **allowlist**, not the kill switch: set `LIVE_STRATEGIES=""` (or
+   remove the target tag). Leave `KILL_SWITCH=false` / `LIVE_ENABLED=true` — order placement must
+   stay live for the closes to reach Kalshi.
+2. Set `MMSELL_CLOSEOUT_ENABLED=true` and `MMSELL_CLOSEOUT_STRATEGIES=<tag>` (e.g. `mmsell3`) and
+   redeploy. Every live cycle thereafter closes whatever's still open; it's self-limiting (once
+   flat, later cycles find nothing) so there's no rush to flip it back off.
+3. Confirm flat via the ops channel — `live_orders` where `strategy='<tag>_closeout'` all
+   `filled`/`submitted`, and zero open positions.
+4. **Only now** set `KILL_SWITCH=true` for the final, permanent, defense-in-depth stop.
+
+Skipping step 1 (leaving the entry allowlist live) races new entries against the closeout in the
+same cycle. Reaching for `KILL_SWITCH=true` first (before positions are flat) blocks the closes
+from executing at all — the fail-closed order-placement guard doesn't distinguish "close" from
+"open" intent, only that live money is moving.

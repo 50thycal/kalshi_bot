@@ -1043,6 +1043,102 @@ class LiveExecutor:
         except Exception:  # noqa: BLE001
             return None
 
+    def _current_yes_ask(self, ticker: str) -> int | None:
+        try:
+            from ..scanner.metrics import compute_metrics
+            ob = self.client.get_orderbook(ticker, depth=self.settings.orderbook_depth)
+            mx = compute_metrics({"ticker": ticker}, ob, top_n=self.settings.orderbook_depth)
+            return mx.best_yes_ask
+        except Exception:  # noqa: BLE001
+            return None
+
+    # --- mmsell one-shot closeout (end of strategy — no other path closes a NO position) -----
+
+    def close_mmsell_positions(self, session) -> int:
+        """ONE-SHOT: close every open NO position for `mmsell_closeout_strategies` by BUYING YES
+        at the current ask (marketable, crosses the spread deliberately — a close must guarantee
+        execution, not rest as a maker like the entry does). Uses the same V2 events endpoint as
+        mmsell entries. Tagged distinctly (client_order_id 'closeout:...', DB strategy suffixed
+        '_closeout') so it reads unambiguously in live_orders as an intentional end-of-strategy
+        exit. Gated on its OWN flag + explicit allowlist — independent of LIVE_STRATEGIES (so
+        clearing the entry allowlist stops new entries while this still closes what's open) —
+        but order placement is still subject to the client's own bot_mode+KILL_SWITCH guard, so
+        KILL_SWITCH must be false for closes to actually reach Kalshi. Self-guarded per-position:
+        one failure never blocks the rest. Returns the count of close orders placed."""
+        s = self.settings
+        if not s.mmsell_closeout_enabled or s.bot_mode != "live":
+            return 0
+        placed = 0
+        for prefix in s.mmsell_closeout_strategy_list:
+            for ticker, strategy, entry_price, _entry_at, qty in repo.open_live_no_positions(
+                session, prefix
+            ):
+                if qty <= 0:
+                    continue
+                if repo.live_open_order_exists(session, ticker):
+                    continue  # an order is already in flight -- let it resolve before retrying
+                ask = self._current_yes_ask(ticker)
+                if ask is None:
+                    logger.warning("mmsell closeout: no ask available, skipping this cycle",
+                                   extra={"extra_fields": {"ticker": ticker, "strategy": strategy}})
+                    continue
+                price = max(1, min(99, int(ask) + s.mmsell_closeout_slippage_cents))
+                client_order_id = f"closeout:{strategy}:{ticker}:{uuid.uuid4()}"
+                order = {
+                    "ticker": ticker,
+                    "client_order_id": client_order_id,
+                    "side": "bid",              # buy YES -> flattens a held NO position
+                    "count": f"{qty:.2f}",
+                    "price": f"{price / 100.0:.4f}",
+                    "time_in_force": "immediate_or_cancel",  # guarantee execution, don't rest
+                    "post_only": False,
+                }
+                row = repo.create_live_order(
+                    session, signal_id=None, ticker=ticker, event_ticker=None,
+                    strategy=f"{strategy}_closeout", side="yes", action="buy",
+                    limit_price=price, quantity=qty, status="pending",
+                    client_order_id=client_order_id, raw_order_json=order,
+                )
+                session.commit()  # durable intent before POST — survives a later cycle rollback
+                logger.warning("mmsell live position CLOSEOUT (end of strategy)", extra={
+                    "extra_fields": {"ticker": ticker, "strategy": strategy,
+                                     "entry_no_price": entry_price, "close_yes_price": price,
+                                     "qty": qty, "coid": client_order_id}})
+                try:
+                    resp = self.client.create_events_order(order)
+                except AuthError:
+                    repo.update_live_order_status(session, row, status="error", cancel_reason="auth")
+                    raise
+                except TransientError as exc:
+                    repo.update_live_order_status(session, row, status="unknown",
+                                                  cancel_reason=str(exc))
+                    continue
+                except KalshiAPIError as exc:
+                    if getattr(exc, "status_code", None) == 409:
+                        repo.update_live_order_status(session, row, status="submitted",
+                                                      cancel_reason="409_already_exists")
+                        placed += 1
+                        continue
+                    repo.update_live_order_status(session, row, status="rejected",
+                                                  cancel_reason=str(exc))
+                    logger.error("mmsell closeout REJECTED", extra={"extra_fields": {
+                        "ticker": ticker, "strategy": strategy, "coid": client_order_id,
+                        "error": str(exc)}})
+                    continue
+                except Exception as exc:  # noqa: BLE001 — one failure must not block the rest
+                    repo.update_live_order_status(session, row, status="error",
+                                                  cancel_reason=str(exc))
+                    logger.exception("mmsell closeout order failed")
+                    continue
+                koid = None
+                if isinstance(resp, dict):
+                    o = resp.get("order") if isinstance(resp.get("order"), dict) else resp
+                    koid = o.get("order_id") or o.get("id")
+                repo.update_live_order_status(session, row, status="submitted",
+                                              kalshi_order_id=koid, raw=resp)
+                placed += 1
+        return placed
+
     # --- startup recovery -------------------------------------------------------
 
     def recover(self, session) -> None:

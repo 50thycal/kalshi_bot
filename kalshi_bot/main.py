@@ -796,6 +796,7 @@ def _run_live_cycle(
             executor.reconcile(session, account_state)  # Kalshi truth first
             executor.manage_exits(session)
             executor.run_probe(session)                  # isolated fractional buy/sell probe (off by default)
+            executor.close_mmsell_positions(session)      # one-shot end-of-strategy closeout (off by default)
             engine.manage_open_positions(session)       # paper settle/mark (shadow record)
             summary = tracker.run_once(session)         # mirrors entries for allowlisted books
             repo.finish_bot_run(
