@@ -1084,9 +1084,12 @@ class LiveExecutor:
                     continue
                 price = max(1, min(99, int(ask) + s.mmsell_closeout_slippage_cents))
                 client_order_id = f"closeout:{strategy}:{ticker}:{uuid.uuid4()}"
-                # Body verified against Kalshi's OpenAPI CreateOrderV2Request schema (required:
-                # ticker, client_order_id, side, count, price, time_in_force,
-                # self_trade_prevention_type) AND a recorded status-201 taker-IOC request.
+                # EXACT field set of a recorded status-201 taker-IOC request (ground truth) -- do
+                # not add fields chasing "extra safety": doing so cost a live round. reduce_only,
+                # though documented on CreateOrderV2Request, is a perps-oriented field and produced
+                # 400 invalid_parameters on these event-contract orders (0/48 accepted with it vs
+                # 2 accepted without it) -- so it is deliberately NOT sent. post_only is also
+                # omitted: it contradicts immediate_or_cancel (400 invalid_parameters when paired).
                 order = {
                     "ticker": ticker,
                     "client_order_id": client_order_id,
@@ -1096,14 +1099,6 @@ class LiveExecutor:
                     "time_in_force": "immediate_or_cancel",  # guarantee execution, don't rest
                     "self_trade_prevention_type": "taker_at_cross",  # REQUIRED by the schema
                     #    (confirmed live: omitting it -> 400 missing_parameters).
-                    "reduce_only": True,        # a close may ONLY reduce/close the position, never
-                    #    open a reversed one -- the schema caps count by the current position and
-                    #    (per the spec) requires IOC/FOK, which is satisfied here. Belt-and-braces
-                    #    against a stale/mis-tracked position snapshot flipping us net-long YES.
-                    # NO post_only key: confirmed live -> 400 invalid_parameters when paired with
-                    # immediate_or_cancel (the recorded taker-IOC fixture omits it entirely --
-                    # post_only ("never cross") and IOC ("cross now or cancel") are contradictory,
-                    # so the API rejects the combination outright rather than just ignoring it).
                 }
                 row = repo.create_live_order(
                     session, signal_id=None, ticker=ticker, event_ticker=None,
