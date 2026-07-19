@@ -1,103 +1,126 @@
 # Strategy status loop — live report + carried-over suggestions
 
 *Auto-maintained by the strategy status loop (`kalshi_loop_checker_phase_3` skill; cadence
-changed from 4h to 8h on 2026-07-06, then to fixed 5:30 AM / 12:00 PM / 8:00 PM CT on 2026-07-12).
-Suggestions are **recommendations only** — the loop never acts on them; the user reviews
-and runs fable to change anything. Newest snapshot replaces the one above it; the
-suggestion list carries over run-to-run. All times CENTRAL (CDT/CST). Retired/fully-resolved
-books (pin15) and confirmed-stable data items are dropped from the table below once settled —
-nothing new to report on those unless flagged again.*
+changed from 4h to 8h on 2026-07-06, then to fixed 5:30 AM / 12:00 PM / 8:00 PM CT on 2026-07-12.
+As of run #56, the loop also pulls real live P&L for any LIVE book via `mmsell_live` — see the
+Live P&L section below, tracked separately from the paper books table since the two numbers
+will diverge by design.) Suggestions are **recommendations only** — the loop never acts on them;
+the user reviews and runs fable to change anything. Newest snapshot replaces the one above it;
+the suggestion list carries over run-to-run. All times CENTRAL (CDT/CST). Retired/fully-resolved
+books (pin15) and confirmed-stable data items are dropped from the table below once settled.*
 
 ---
 
-## Snapshot — 2026-07-18 12:05 PM CDT (run #55)
+## Snapshot — 2026-07-18 08:03 PM CDT (run #56)
 
-**Trading books (settled n / P&L / per-trade / open) — paper only; live P&L still not tracked
-here, see #1 below:**
+**Live P&L (real money — mmsell3, first report from the newly-wired `mmsell_live` check):**
+| book | n settled | live win% | live ¢/ct | paper win% | paper ¢/ct | open | capital deployed |
+|---|---|---|---|---|---|---|---|
+| mmsell3 (LIVE) | 278 | 91.4% | **+0.31¢** | 93.9% | +1.43¢ | 6 | $4.82 |
+
+**Trading books (settled n / P&L / per-trade / open) — PAPER only, separate from live above:**
 | book | n | P&L | ¢/trade | open | note |
 |---|---|---|---|---|---|
-| mmsell2 (paper) | 1,252 | +$33.57 | +2.7 | 10 | flat batch (+1c/trade), unaffected by the dip below |
-| mmsell1 (paper) | 1,912 | +$38.04 | +2.0 | 16 | negative batch (−5.7¢/trade) |
-| mmsell (control, paper) | 3,079 | +$46.88 | +1.5 | 20 | negative batch (−4.7¢/trade) |
-| mmsell3 (paper shadow) | 634 | +$9.89 | +1.6 | 10 | negative batch (−7.6¢/trade) — still see #1 for the real (live) number |
-| mmsell6 | 48 | +$0.09 | +0.2 | 7 | negative batch (−10.3¢/trade), cumulative dropped sharply |
-| mmsell4/5/7/8 | 38/23/9/13 | — | +2.2/+8.7/−4.3/+0.5 | no new settlements this run |
-| theta4 (fat-tail) | 30 | +$15.87 | +52.9 | 0 | unchanged, 2nd run with no new settles since the tail hit |
-| weather con (all) | 425 | −$15.04 | −3.5 | 12 | rough batch (−21.5¢/trade) |
-| weather_concity | 48 | −$7.43 | −15.5 | 4 | rough batch too (−34.5¢/trade) — moved with con(all) again |
+| mmsell3 (paper shadow) | 717 | +$10.12 | +1.4 | 18 | roughly flat batch — see live table above for the real number |
+| mmsell2 (paper) | 1,332 | +$26.82 | +2.0 | 13 | large negative batch (−8.4¢/trade, n=80) |
+| mmsell1 (paper) | 2,049 | +$31.14 | +1.5 | 28 | large negative batch (−5.0¢/trade, n=137) |
+| mmsell (control, paper) | 3,266 | +$41.00 | +1.3 | 39 | large negative batch (−3.1¢/trade, n=187) |
+| mmsell5 | 48 | −$1.87 | **−3.9** | 0 | **reversed from standout (+8.7¢) to negative** — big batch (n=25, −15.4¢/trade) |
+| mmsell4 | 53 | −$0.11 | −0.2 | 9 | turned negative (batch −6.3¢/trade, n=15) |
+| mmsell6 | 110 | +$0.15 | +0.1 | 16 | dropped near zero (batch −0.9¢/trade, n=62) |
+| mmsell7 | 11 | −$1.25 | −11.4 | 0 | small n, rough batch (−43¢/trade, n=2) |
+| mmsell8 | 15 | −$0.78 | −5.2 | 0 | small n, rough batch (−42.5¢/trade, n=2) |
+| theta4 (fat-tail) | 30 | +$15.87 | +52.9 | 0 | unchanged, 3rd run with no new settles since the tail hit |
+| weather con (all) | 425 | −$15.04 | −3.5 | 19 | unchanged settled/P&L, +4 new opens |
+| weather_concity | 48 | −$7.43 | −15.5 | 8 | unchanged settled/P&L, +2 new opens |
 | theta ctrl/1/2/3 | 560/201/98/134 | +$0.97/+$9.69/−$11.55/−$11.62 | — | 0 | SHELVED, quiet, unchanged |
 | tfav | 215 | −$7.54 | −3.5 | 0 | KILLED, quiet, unchanged |
 | weather (rest) | 4,709 | −$238.63 | — | 0 | pruned, done |
 
-**HEADLINE — the mmsell family dipped again this run, and the pattern across runs #53-55 (dip →
-recover → dip) is itself the finding: this is batch-to-batch variance at small n, not a trend in
-either direction.** mmsell6/mmsell3/mmsell1/control all had negative batches (−4.7¢ to −10.3¢/
-trade); mmsell2 was flat; mmsell4/5/7/8 had no new settlements at all. This mirrors run #53's dip
-→ run #54's recovery almost exactly — **recommend not reading any single run's direction here as
-signal until n is much larger.** mmsell5 remains the standout on a cumulative basis (+8.7¢,
-unchanged this run) but hasn't been tested by a bad batch yet since it had no new settlements.
+**HEADLINE — two things: the loop's first live P&L report (fixed last session), and a large,
+broad negative batch across the whole mmsell paper family tonight (Saturday — heavy weekend
+sports volume).**
 
-weather con(all) and weather_concity both had a rough batch together again (−21.5¢ and −34.5¢/
-trade respectively) — consistent with prior runs' observation that they move together when a
-shared adverse settlement window hits (they share underlying markets).
+**Live P&L, reported for the first time:** mmsell3's real money is at **n=278 settled, +0.31¢/
+contract, 91.4% win rate** — vs paper's +1.43¢/contract at 93.9% win. The adverse-selection gap
+(real fills getting picked off in ways paper's free-fill assumption can't see) is real and
+persists at roughly **1.1¢/contract**, but it has **improved since the ad-hoc check 3 days ago**
+(then: n=222, −0.27¢/contract, 90.5% win — live was actually negative). Live P&L is now
+positive again, just still trailing paper by a real margin. This is exactly the number this loop
+was blind to for 3+ days — now it's tracked every run.
 
-theta4 remains quiet — no new settlements for the second straight run since the tail hit in run
-#53. Live P&L visibility remains the top unresolved item — unchanged, restating.
+**The mmsell paper family took a large, broad hit tonight** — much bigger in volume than the
+smaller oscillations of runs #53-55 (the control alone settled 187 new trades this batch,
+consistent with a heavy Saturday-night sports slate). mmsell2/1/control all had clearly negative
+batches (−3.1¢ to −8.4¢/trade); mmsell3 was roughly flat. Among the new variants, **mmsell5 —
+last run's standout at +8.7¢/trade — reversed hard** on a real batch of 25 new trades at
+−15.4¢/trade, pulling its cumulative to −3.9¢/trade. mmsell4 also turned negative; mmsell6
+dropped near zero; mmsell7/8 are still too small-n to read (2 trades each this batch). Given the
+size of tonight's batch (187+ trades across the family) this reads as a genuine bad night for
+favorite-longshot maker-selling — likely a real correlated sports-results event — rather than
+pure statistical noise, though it's still one batch and the standing "don't over-read single
+swings" caution applies, especially for the small-n variants.
 
-**FREEZE gate check:** settled grain=0, soft=5 (5 of the n≥100 trigger) — unchanged across 7 runs
-now, not fired.
+theta4 remains quiet — third straight run with no new settlements since the tail hit in run #53.
 
 **Gate sweep (step 3b):** theta4 **30/80** (38%, quiet) · mmsell4-8 gates (n≥150, or n≥100 for
-5/8) — mmsell6 most-advanced at n=48 despite this batch's dip · weather_concity **48/120** (40%)
-· FREEZE **5/100** (not fired).
+5/8) — mmsell6 most-advanced at n=110, all now negative-to-flat after tonight's batch ·
+weather_concity **48/120** (40%) · FREEZE **5/100** (not fired, unchanged).
 
 **Data (last-24h / latest CDT):** crypto_spot, crypto_ladder, weather forecasts/obs/ensembles/
-buckets all fresh (11:59 AM–12:04 PM ✓). xgame_tapes continuing to collect normally (18,314
-rows/24h); xgame_matches still dark, unchanged.
+buckets all fresh (07:58–08:01 PM ✓). xgame_tapes very active (114,800 rows/24h — a busy
+Saturday for the shelved collector too); xgame_matches still dark, unchanged.
 
 **Research probes (on-demand):** WCPROP + XGAME families CLOSED. No standing probes.
 
-**Headline:** mmsell family dipped again (3rd swing in 3 runs: dip/recover/dip) — read as
-ongoing batch variance, not a trend, until n is larger. weather books had another shared rough
-batch. theta4 quiet, no new settles. Live P&L gap and FREEZE gate both unchanged.
+**Headline:** first-ever live P&L report — mmsell3 live is +0.31¢/contract (n=278), improved
+from negative 3 days ago but still trailing paper's +1.43¢ by ~1.1¢ (persistent adverse
+selection). Separately, a large Saturday-night sports batch hit the whole mmsell paper family;
+mmsell5 reversed from standout to negative on real volume (n=25). theta4 quiet. FREEZE unchanged.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[STILL TOP PRIORITY, UNCHANGED · get live P&L into this loop] mmsell3 continues trading real
-   money; this loop still has no live-P&L visibility.** No new investigation this run — restating.
-   Recommend a fable/build session add a live-P&L slice to step 1's query.
+1. **[RESOLVED · live P&L now tracked] The top-priority gap from runs #49-55 is fixed — this
+   loop now reports real mmsell3 P&L every run via `mmsell_live` (PR #50, merged).** Current
+   read: +0.31¢/contract live vs +1.43¢/contract paper (n=278), a ~1.1¢ adverse-selection gap
+   that has been present since the first ad-hoc check but is trending better (was negative 3
+   days ago). **New standing watch: track this gap run-to-run** — if it widens rather than
+   closes as n grows, that's the signal mmsell3's live execution has a structural problem paper
+   can't see; if it closes, the gap was just early-sample noise.
 
-2. **[mmsell4-8 (+control/mmsell3) · dip-recover-dip pattern across runs #53-55 — treat as
-   variance, not signal] mmsell6 −10.3¢, mmsell3 −7.6¢, mmsell1 −5.7¢, control −4.7¢/trade this
-   batch; mmsell2 flat; mmsell4/5/7/8 no new settlements.** This is the third distinct swing in
-   three runs (down/up/down) — **recommend the loop stop reading single-run direction as signal
-   for this cohort** until n is meaningfully larger (same lesson as pin15's and mmsell2-vs-3's
-   earlier whipsaws). mmsell5 remains the standout on cumulative P&L (+8.7¢) but hasn't yet had a
-   bad batch to test that against — worth watching specifically when it does.
+2. **[mmsell4-8 · large real batch, mmsell5 reversed from standout — watch closely, don't
+   over-read yet] All five variants negative-to-flat after a big Saturday-night batch** (mmsell5
+   −3.9¢ cum after a 25-trade batch at −15.4¢/trade; mmsell4 −0.2¢; mmsell6 +0.1¢; mmsell7/8
+   still tiny-n). This is a bigger, more voluminous swing than the runs #53-55 oscillations —
+   plausibly a real correlated sports-results event (heavy weekend volume across the whole
+   family) rather than pure noise, but still just one batch. **Recommend watching the next 1-2
+   runs before revising any read on mmsell5 specifically** — it went from best-performer to
+   worst-performer in one batch, which is exactly the kind of single-batch swing this loop has
+   learned (via pin15, mmsell2-vs-3) not to over-read either direction.
 
-3. **[theta4 · quiet, 2nd run with no new settles] n=30/80 (38%), +52.9¢/trade, unchanged since
+3. **[theta4 · quiet, 3rd run with no new settles] n=30/80 (38%), +52.9¢/trade, unchanged since
    the tail hit in run #53.** No new action. Continue watching the realized hit rate as more
    trades settle.
 
 4. **[idea-model queue · MMX/NEST unchanged] MMX's premise still worth checking against
-   mmsell4-8 for redundancy (unresolved since run #49).** NEST still behind theta4's n≥80 gate
-   (38% there). RTPIN/BOXPIN behind unbuilt scraper infra. RATELAG behind a live Fed event.
+   mmsell4-8 for redundancy (unresolved since run #49) — tonight's reversal is itself relevant
+   context for that check (the family's edge may be less stable than the early reads suggested).**
+   NEST still behind theta4's n≥80 gate (38% there). RTPIN/BOXPIN behind unbuilt scraper infra.
+   RATELAG behind a live Fed event.
 
-5. **[weather_concity / con(all) · shared rough batch again] concity −15.5¢/trade (40% to gate),
-   con(all) −3.5¢/trade — both took a hit together this batch (−34.5¢ and −21.5¢/trade
-   respectively), consistent with the pattern of moving together on shared adverse settlement
-   windows.** Carry forward, nothing to decide yet.
+5. **[weather_concity / con(all) · quiet, no new settles] concity −15.5¢/trade (40% to gate),
+   con(all) −3.5¢/trade — both flat this run (new opens only).** Carry forward.
 
-6. **[xgame_tapes / xgame_matches · stable, unchanged] xgame_tapes continuing to collect normally;
-   xgame_matches still dark.** Both low-urgency, no new information.
+6. **[xgame_tapes / xgame_matches · stable, unchanged] xgame_tapes very active tonight (busy
+   Saturday); xgame_matches still dark.** Both low-urgency, no new information.
 
 7. **[FREEZE gate · unchanged, not fired] Settled grain+soft = 5 of the n≥100 trigger, unchanged
-   across 7 runs now.** Standing background check, nothing to act on.
+   across 8 runs now.** Standing background check, nothing to act on.
 
-*(Changed this run: #2 mmsell4-8 — reframed from run-by-run narration to explicitly calling out
-the dip-recover-dip pattern as variance, recommending the loop stop over-reading single-run
-swings for this cohort (same lesson learned earlier from pin15 and mmsell2-vs-mmsell3). #3 theta4
-— unchanged, still quiet. #5 weather — another shared rough batch, consistent pattern. #1/#4/#6/#7
-restated/unchanged.)*
+*(Changed this run: #1 RESOLVED — live P&L is now tracked every run (PR #50 merged); reframed as
+a standing watch on the live-vs-paper adverse-selection gap rather than "still missing." #2
+mmsell4-8 — large real batch reversed mmsell5 from standout to worst-performer; flagged as
+possibly-real (heavy weekend volume) but still one batch, don't over-read yet. #3 theta4 —
+unchanged. #4 MMX — noted tonight's reversal as relevant context. #5/#6/#7 restated/unchanged.)*
