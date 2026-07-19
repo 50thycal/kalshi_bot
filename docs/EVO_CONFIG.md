@@ -9,10 +9,8 @@ they ran under. Defaults are the spec's initial system defaults.
 | Env var | Default | Meaning |
 |---|---|---|
 | `EVO_POPULATION_SIZE` | `30` | active-agent target per cohort |
-| `EVO_COHORT_DAYS` | `7` | cohort length |
-| `EVO_COHORT_TIMEZONE` | `America/Chicago` | boundary timezone |
-| `EVO_COHORT_BOUNDARY_WEEKDAY` | `0` | Monday |
-| `EVO_COHORT_BOUNDARY_HOUR` | `0` | 12:00 AM local |
+| `EVO_COHORT_DAYS` | `7` | cohort length; runs exactly this long **from when the cohort is born** (birth-anchored — no fixed calendar boundary, so every cohort gets a full week) |
+| `EVO_COHORT_TIMEZONE` | `America/Chicago` | display/reporting only (cohort timing is birth-anchored, not calendar-snapped) |
 | `EVO_BOTTOM_FRACTION` | `0.30` | retired each boundary |
 | `EVO_MIDDLE_FRACTION` | `0.40` | survive |
 | `EVO_TOP_FRACTION` | `0.30` | survive + reproduce |

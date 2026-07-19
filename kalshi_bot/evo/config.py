@@ -25,10 +25,8 @@ class EvoSettings(BaseSettings):
 
     # --- population / cohort (spec §4) ---
     population_size: int = 30
-    cohort_days: int = 7
-    cohort_timezone: str = "America/Chicago"
-    cohort_boundary_weekday: int = 0  # Monday
-    cohort_boundary_hour: int = 0  # 12:00 AM local
+    cohort_days: int = 7  # a cohort runs exactly this long from when it is born
+    cohort_timezone: str = "America/Chicago"  # display/reporting only
     bottom_fraction: float = 0.30
     middle_fraction: float = 0.40
     top_fraction: float = 0.30

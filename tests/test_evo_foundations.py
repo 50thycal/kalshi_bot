@@ -6,7 +6,6 @@ from __future__ import annotations
 import random
 import uuid as uuidlib
 from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 
@@ -23,9 +22,10 @@ from kalshi_bot.evo import (
 )
 from kalshi_bot.evo import models as em
 from kalshi_bot.evo.cohorts import (
-    cohort_boundary_before,
+    current_cohort,
     ensure_current_cohort,
     join_cohort,
+    reanchor_open_cohort,
 )
 from kalshi_bot.evo.config import EvoSettings
 from kalshi_bot.evo.genomes import (
@@ -288,12 +288,46 @@ def test_material_revision_cap_and_cooldown(evo_session, evo_settings):
 # --- cohorts ----------------------------------------------------------------
 
 
-def test_cohort_boundary_is_monday_midnight_chicago(evo_settings):
-    ts = datetime(2026, 7, 16, 15, 0, tzinfo=timezone.utc)  # a Thursday
-    boundary = cohort_boundary_before(ts, evo_settings)
-    local = boundary.astimezone(ZoneInfo("America/Chicago"))
-    assert local.weekday() == 0 and local.hour == 0 and local.minute == 0
-    assert boundary <= ts
+def test_cohort_is_birth_anchored_full_week(evo_session, evo_settings):
+    from datetime import timedelta
+
+    now = datetime(2026, 7, 16, 15, 0, tzinfo=timezone.utc)  # any moment (a Thursday)
+    cohort = ensure_current_cohort(evo_session, evo_settings, now=now)
+    # a cohort starts exactly at birth and runs the full configured week — no
+    # snapping back to a calendar boundary that would shorten the first week
+    assert cohort.starts_at == now
+    assert cohort.ends_at == now + timedelta(days=evo_settings.cohort_days)
+
+
+def test_reanchor_heals_legacy_calendar_snapped_cohort(evo_session, evo_settings):
+    from datetime import timedelta
+
+    # simulate the legacy bug: a cohort created now but with starts_at snapped
+    # ~6 days back to a Monday boundary, so it "ends" almost immediately
+    created = datetime(2026, 7, 19, 0, 5, tzinfo=timezone.utc)
+    snapped_start = datetime(2026, 7, 13, 5, 0, tzinfo=timezone.utc)
+    cohort = ensure_current_cohort(evo_session, evo_settings, now=snapped_start)
+    cohort.created_at = created
+    cohort.starts_at = snapped_start
+    cohort.ends_at = snapped_start + timedelta(days=evo_settings.cohort_days)
+    evo_session.flush()
+
+    assert reanchor_open_cohort(evo_session, evo_settings) is True
+    healed = current_cohort(evo_session)
+    assert healed.starts_at == created  # re-anchored to birth
+    assert healed.ends_at == created + timedelta(days=evo_settings.cohort_days)
+    # idempotent: a second pass is a no-op on the now birth-anchored cohort
+    assert reanchor_open_cohort(evo_session, evo_settings) is False
+
+
+def test_reanchor_is_noop_for_birth_anchored_cohort(evo_session, evo_settings):
+    now = datetime(2026, 7, 19, 12, 0, tzinfo=timezone.utc)
+    cohort = ensure_current_cohort(evo_session, evo_settings, now=now)
+    # in production starts_at ≈ created_at (both real wall-clock, ms apart); model
+    # that so the healing pass correctly sees nothing to fix
+    cohort.created_at = now
+    evo_session.flush()
+    assert reanchor_open_cohort(evo_session, evo_settings) is False
 
 
 def test_ensure_current_cohort_idempotent_and_wildcard_flag(evo_session, evo_settings):

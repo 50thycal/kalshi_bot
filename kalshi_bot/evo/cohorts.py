@@ -1,13 +1,15 @@
-"""Cohort lifecycle: boundary math (America/Chicago Mondays), idempotent cohort
-creation, membership, and boundary detection (spec §4, §22).
+"""Cohort lifecycle: birth-anchored windows, idempotent cohort creation,
+membership, and boundary detection (spec §4, §22).
 
-Finalization itself lives in evolution.py; this module owns the calendar."""
+A cohort runs for exactly `cohort_days` from the moment it is created — every
+population gets a full week, never a stub cut short by where a fixed calendar
+boundary happened to fall. Finalization itself lives in evolution.py; this module
+owns the calendar."""
 
 from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta, timezone
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 
@@ -19,19 +21,10 @@ from .models import EvoAgent, EvoCohort, EvoCohortMember, EvoPortfolio
 
 logger = logging.getLogger(__name__)
 
-
-def cohort_boundary_before(ts: datetime, settings: EvoSettings) -> datetime:
-    """The most recent cohort boundary at or before ts (default: Monday 00:00
-    America/Chicago), returned in UTC."""
-    tz = ZoneInfo(settings.cohort_timezone)
-    local = ts.astimezone(tz)
-    days_back = (local.weekday() - settings.cohort_boundary_weekday) % 7
-    boundary_local = (local - timedelta(days=days_back)).replace(
-        hour=settings.cohort_boundary_hour, minute=0, second=0, microsecond=0
-    )
-    if boundary_local > local:
-        boundary_local -= timedelta(days=7)
-    return boundary_local.astimezone(timezone.utc)
+# A cohort window that begins more than this far before the cohort row was created
+# is a legacy calendar-snapped window (see reanchor_open_cohort); a birth-anchored
+# cohort's starts_at sits within a breath of its created_at.
+_LEGACY_SNAP_TOLERANCE = timedelta(hours=1)
 
 
 def current_cohort(session) -> EvoCohort | None:
@@ -52,7 +45,7 @@ def ensure_current_cohort(
         return open_cohort
     prev = session.scalar(select(EvoCohort).order_by(EvoCohort.number.desc()).limit(1))
     number = (prev.number + 1) if prev else 1
-    starts = cohort_boundary_before(now, settings)
+    starts = now  # birth-anchored: the cohort runs exactly cohort_days from creation
     cfg = ensure_config_version(session, settings)
     wildcard = (
         settings.wildcard_every_n_cohorts > 0
@@ -72,6 +65,36 @@ def ensure_current_cohort(
     audit(session, "cohort_opened", cohort_id=cohort.id, number=number,
           starts_at=starts.isoformat(), wildcard=wildcard)
     return cohort
+
+
+def reanchor_open_cohort(session, settings: EvoSettings) -> bool:
+    """One-time healing for the legacy calendar-snapped cohort window.
+
+    Earlier versions snapped a new cohort's starts_at back to the previous Monday
+    00:00 America/Chicago, so a cohort created late in the week ran only a stub
+    before the fixed Monday boundary. If the open cohort's window began well before
+    the cohort row actually existed (created_at), re-anchor it to birth so the
+    population gets a full `cohort_days` week. Idempotent and safe to call every
+    cycle: birth-anchored cohorts (starts_at ≈ created_at) never match, so this is
+    a no-op the moment there is nothing left to fix. Returns True if it re-anchored."""
+    cohort = current_cohort(session)
+    if cohort is None:
+        return False
+    created = cohort.created_at if cohort.created_at.tzinfo else cohort.created_at.replace(
+        tzinfo=timezone.utc)
+    starts = cohort.starts_at if cohort.starts_at.tzinfo else cohort.starts_at.replace(
+        tzinfo=timezone.utc)
+    if created - starts <= _LEGACY_SNAP_TOLERANCE:
+        return False
+    cohort.starts_at = created
+    cohort.ends_at = created + timedelta(days=settings.cohort_days)
+    session.flush()
+    audit(session, "cohort_reanchored", cohort_id=cohort.id, number=cohort.number,
+          old_starts_at=starts.isoformat(), new_starts_at=created.isoformat(),
+          new_ends_at=cohort.ends_at.isoformat())
+    logger.info("re-anchored cohort #%s to birth: now ends %s",
+                cohort.number, cohort.ends_at.isoformat())
+    return True
 
 
 def cohort_is_over(cohort: EvoCohort, *, now: datetime | None = None) -> bool:
