@@ -25,6 +25,14 @@ class EvoSettings(BaseSettings):
 
     # --- population / cohort (spec §4) ---
     population_size: int = 30
+    # Ops throttle (NOT a spec parameter): cap how many active agents actually run
+    # live work per cycle — heartbeats (LLM spend), strategy execution (paper
+    # trades), snapshots and interim fitness. 0 = no cap (all active agents run).
+    # Set e.g. EVO_MAX_ACTIVE_AGENTS=3 to shrink the live footprint for end-to-end
+    # testing without retiring anyone; the capped-out agents stay in the cohort,
+    # dormant, and resume the moment the cap is lifted. Deterministic: the lowest-id
+    # (earliest-created) agents run.
+    max_active_agents: int = 0
     cohort_days: int = 7  # a cohort runs exactly this long from when it is born
     cohort_timezone: str = "America/Chicago"  # display/reporting only
     bottom_fraction: float = 0.30

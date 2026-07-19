@@ -9,6 +9,7 @@ they ran under. Defaults are the spec's initial system defaults.
 | Env var | Default | Meaning |
 |---|---|---|
 | `EVO_POPULATION_SIZE` | `30` | active-agent target per cohort |
+| `EVO_MAX_ACTIVE_AGENTS` | `0` | **ops throttle** (not a spec parameter): cap how many active agents run live work per cycle — heartbeats (LLM spend), strategy execution (paper trades), snapshots, interim fitness. `0` = no cap. Set e.g. `3` to shrink the live footprint for end-to-end testing without retiring anyone; the capped-out agents stay in the cohort, dormant, and resume the instant the cap is lifted. Deterministic (lowest-id agents run) |
 | `EVO_COHORT_DAYS` | `7` | cohort length; runs exactly this long **from when the cohort is born** (birth-anchored — no fixed calendar boundary, so every cohort gets a full week) |
 | `EVO_COHORT_TIMEZONE` | `America/Chicago` | display/reporting only (cohort timing is birth-anchored, not calendar-snapped) |
 | `EVO_BOTTOM_FRACTION` | `0.30` | retired each boundary |

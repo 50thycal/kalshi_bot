@@ -157,7 +157,13 @@ def cohort_members(session, cohort_id: int) -> list[EvoCohortMember]:
     )
 
 
-def active_agents(session) -> list[EvoAgent]:
-    return list(
-        session.scalars(select(EvoAgent).where(EvoAgent.status == "active").order_by(EvoAgent.id))
-    )
+def active_agents(session, settings: EvoSettings | None = None) -> list[EvoAgent]:
+    """Active agents, ordered by id (creation order). When `settings.max_active_agents`
+    is set (>0), only that many run — the ops throttle for shrinking the live
+    footprint during testing. Passing no settings (dashboard, tests, simulation)
+    returns the true, uncapped population."""
+    q = select(EvoAgent).where(EvoAgent.status == "active").order_by(EvoAgent.id)
+    cap = settings.max_active_agents if settings is not None else 0
+    if cap and cap > 0:
+        q = q.limit(cap)
+    return list(session.scalars(q))

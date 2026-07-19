@@ -15,9 +15,10 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 
 from . import paper as papermod
+from .cohorts import active_agents
 from .config import EvoSettings
 from .marketdata import MarketData
-from .models import EvoAgent, EvoOpportunity, EvoOrder, EvoStrategy
+from .models import EvoOpportunity, EvoOrder, EvoStrategy
 from .strategy_spec import entry_signal, exit_signal, validate_spec
 
 logger = logging.getLogger(__name__)
@@ -67,17 +68,15 @@ def run_cycle(
     """One pass: for every active agent's active strategies, evaluate entries over
     the candidate tickers and exits over open positions."""
     counts = {"strategies": 0, "signals": 0, "orders": 0, "exits": 0, "blocked": 0}
-    active_agents = {
-        a.agent_uuid: a
-        for a in session.scalars(select(EvoAgent).where(EvoAgent.status == "active"))
-    }
+    # Honors the max_active_agents ops throttle (only the live subset trades).
+    live_agents = {a.agent_uuid: a for a in active_agents(session, settings)}
     strategies = list(
         session.scalars(select(EvoStrategy).where(EvoStrategy.status == "active"))
     )
-    ledger_by_agent = {au: papermod.cohort_ledger(cohort_id) for au in active_agents}
+    ledger_by_agent = {au: papermod.cohort_ledger(cohort_id) for au in live_agents}
     for strategy in strategies:
         au = strategy.agent_uuid
-        if au not in active_agents:
+        if au not in live_agents:
             continue
         spec, err = validate_spec(strategy.spec_json)
         if err:

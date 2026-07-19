@@ -70,7 +70,7 @@ class EvoRuntime:
         self.llm.close()
 
 
-def _universe_prefixes(session) -> list[str]:
+def _universe_prefixes(session, settings: EvoSettings) -> list[str]:
     """Union of active agents' universe series prefixes (bounded)."""
     prefixes: set[str] = set()
     for strategy in session.scalars(
@@ -79,7 +79,7 @@ def _universe_prefixes(session) -> list[str]:
         spec, err = validate_spec(strategy.spec_json)
         if not err:
             prefixes.update(p.upper() for p in spec.universe.series_prefixes[:8])
-    for agent in active_agents(session):
+    for agent in active_agents(session, settings):
         trading = current_genome(session, agent.agent_uuid, "trading")
         doc = (trading.document_json if trading else {}) or {}
         prefixes.update(
@@ -93,7 +93,7 @@ def _scan_universe(runtime: EvoRuntime, session) -> list[str]:
     position/order tickers when no universe is declared yet."""
     settings = runtime.settings
     tickers: list[str] = []
-    prefixes = _universe_prefixes(session)
+    prefixes = _universe_prefixes(session, settings)
     if prefixes:
         try:
             markets = runtime.md.list_markets(status="open", limit=settings.markets_per_cycle)
@@ -186,7 +186,7 @@ def run_evo_cycle(runtime: EvoRuntime) -> None:
 
         # daily snapshots + hourly interim fitness
         day_label = f"daily:{now.strftime('%Y-%m-%d')}"
-        agents = active_agents(session)
+        agents = active_agents(session, settings)
         for agent in agents:
             papermod.snapshot_portfolio(
                 session, agent.agent_uuid, papermod.cohort_ledger(cohort.id), day_label
