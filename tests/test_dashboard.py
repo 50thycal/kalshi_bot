@@ -117,6 +117,26 @@ def test_requests_surface_open_tickets():
     assert r["requested_by"] >= 1
 
 
+def test_agents_are_throttled_when_capped():
+    session = _session()
+    settings = EvoSettings(_env_file=None, max_active_agents=3)
+    _seed(session, settings, n=6)  # config snapshot records the cap
+    d = dash.build_dashboard_data(session, settings)
+    # only the 3 live (lowest-id) agents are shown; the dormant ones are hidden
+    assert len(d["agents"]) == 3
+    assert d["throttle"] == {"live": 3, "total": 6, "throttled": True}
+    assert d["cards"]["active_agents"] == 3  # cards reflect the live set too
+
+
+def test_no_throttle_shows_full_population():
+    session = _session()
+    settings = EvoSettings(_env_file=None)  # max_active_agents=0
+    _seed(session, settings, n=5)
+    d = dash.build_dashboard_data(session, settings)
+    assert len(d["agents"]) == 5
+    assert d["throttle"] == {"live": 5, "total": 5, "throttled": False}
+
+
 def test_announcements_surface_in_payload():
     session = _session()
     settings = EvoSettings(_env_file=None)

@@ -118,6 +118,7 @@ def _fitness_config(s: EvoSettings) -> dict:
 def _population_config(s: EvoSettings) -> dict:
     return {
         "population_size": s.population_size,
+        "max_active_agents": s.max_active_agents,  # ops throttle; read by the dashboard
         "cohort_days": s.cohort_days,
         "cohort_anchor": "birth",  # cohorts run cohort_days from creation
         "timezone": s.cohort_timezone,
