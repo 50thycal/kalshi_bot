@@ -74,32 +74,40 @@ def c_worker_alive(cur):
 
 
 def c_heartbeat_health(cur):
+    # Recency-aware: an infra blip (credit/key/price) that has *already recovered* inside the
+    # window must not read as BROKEN. We only stop-the-line when infra is the *latest* signal —
+    # i.e. nothing has completed since the most recent infra failure.
     comp = _one(cur, "select count(*) from evo_heartbeats where status='completed' "
                      "and created_at > now()-interval '6 hours'") or 0
     deg = _one(cur, "select count(*) from evo_heartbeats where status='degraded' "
                     "and created_at > now()-interval '6 hours'") or 0
     if comp + deg == 0:
         return ("L-2", 0, "Heartbeat completion rate", NOT_YET, "no heartbeats in last 6h (lull)")
-    top = _rows(cur, """
-        select case
-            when status_detail ilike '%%credit balance is too low%%' then 'API credit exhausted'
-            when status_detail ilike '%%no anthropic_api_key%%' then 'no API key'
-            when status_detail ilike '%%no json object%%' or status_detail ilike 'invalid json%%'
-                then 'malformed model JSON'
-            when status_detail ilike 'no price%%' then 'no model price'
-            when status_detail ilike '%%ceiling%%' or status_detail ilike '%%budget%%' then 'budget ceiling'
-            else 'other' end as reason, count(*) n
-        from evo_heartbeats where status='degraded' and created_at > now()-interval '6 hours'
-        group by 1 order by 2 desc limit 1""")
     rate = comp / (comp + deg)
-    reason = f"; top degrade: {top[0][0]} x{top[0][1]}" if top else ""
-    infra = top and top[0][0] in ("API credit exhausted", "no API key", "no model price")
-    if infra:
+    # minutes since the most recent completed heartbeat (None if none in window)
+    last_comp = _one(cur, "select extract(epoch from (now()-max(created_at)))/60 "
+                          "from evo_heartbeats where status='completed' "
+                          "and created_at > now()-interval '6 hours'")
+    # minutes since the most recent *infra* degrade (credit exhausted / no key / no price)
+    infra_pred = ("status='degraded' and created_at > now()-interval '6 hours' and ("
+                  "status_detail ilike '%%credit balance is too low%%' "
+                  "or status_detail ilike '%%no anthropic_api_key%%' "
+                  "or status_detail ilike 'no price%%')")
+    last_infra = _one(cur, "select extract(epoch from (now()-max(created_at)))/60 "
+                           f"from evo_heartbeats where {infra_pred}")
+    # BROKEN only when an infra outage is the latest signal: no completion at all, or the last
+    # completion is *older* than the last infra failure (larger minutes-ago = older).
+    if last_infra is not None and (last_comp is None or last_infra < last_comp):
         return ("L-2", 0, "Heartbeat completion rate", BROKEN,
-                f"{rate:.0%} completed (6h){reason} — infra issue")
-    v = PASS if rate >= 0.8 else INFO
-    return ("L-2", 0, "Heartbeat completion rate", v,
-            f"{rate:.0%} completed ({comp}/{comp+deg}, 6h){reason}")
+                f"infra outage {last_infra:.0f} min ago, no completion since ({rate:.0%} 6h) — active")
+    recovered = f"; last infra blip {last_infra:.0f} min ago (recovered)" if last_infra is not None else ""
+    if last_comp is not None:
+        detail = f"last completion {last_comp:.0f} min ago; {rate:.0%} ok ({comp}/{comp+deg}, 6h){recovered}"
+    else:
+        detail = f"{rate:.0%} ok ({comp}/{comp+deg}, 6h){recovered}"
+    # Healthy if a completion happened recently, or the rolling completion rate is strong.
+    v = PASS if (last_comp is not None and last_comp < 60) or rate >= 0.8 else INFO
+    return ("L-2", 0, "Heartbeat completion rate", v, detail)
 
 
 def c_llm_cost(cur):
