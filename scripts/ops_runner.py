@@ -85,6 +85,7 @@ ALLOWED_SCRIPTS = (
     "mmsell_live",
     "evo_digest",
     "evo_tree",
+    "evo_selftest",
 )
 
 
