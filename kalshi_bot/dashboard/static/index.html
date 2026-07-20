@@ -187,10 +187,12 @@ function render(){
   $("#statuspill").className = "pill "+st;
   $("#statustext").textContent = STATUS_LABEL[st]||st;
   if(d.cohort){
+    const th = d.throttle||{};
     $("#cohortmeta").innerHTML =
       `<b>Cohort ${d.cohort.number}</b>` +
       ` · ${dur(d.cohort.seconds_remaining)}` +
-      (d.cohort.wildcard_next?` · <span class="muted">wildcard next</span>`:"");
+      (d.cohort.wildcard_next?` · <span class="muted">wildcard next</span>`:"") +
+      (th.throttled?` · <span class="muted">${th.live} of ${th.total} agents live (throttled)</span>`:"");
   } else { $("#cohortmeta").textContent = "No open cohort"; }
   renderAnnouncements(d.announcements||[]);
   renderCards(d.cards);

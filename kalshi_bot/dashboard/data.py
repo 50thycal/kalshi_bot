@@ -25,6 +25,7 @@ from ..evo.config import EvoSettings
 from ..evo.fitness import group_by_fractions
 from ..evo.models import (
     EvoAgent,
+    EvoConfigVersion,
     EvoDataSource,
     EvoExperiment,
     EvoFitness,
@@ -61,6 +62,22 @@ def _aware(dt: datetime) -> datetime:
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
+def _effective_cap(session) -> int:
+    """The evo worker's configured live-agent throttle (EVO_MAX_ACTIVE_AGENTS),
+    read from its latest config snapshot — the worker is the source of truth, so
+    the dashboard reflects the real cap without a duplicate env var here. 0 = none."""
+    row = session.scalar(
+        select(EvoConfigVersion).order_by(EvoConfigVersion.id.desc()).limit(1)
+    )
+    cfg = row.population_config_json if row else None
+    if isinstance(cfg, dict):
+        try:
+            return max(0, int(cfg.get("max_active_agents", 0) or 0))
+        except (TypeError, ValueError):
+            return 0
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # Top-level builder
 # ---------------------------------------------------------------------------
@@ -76,13 +93,21 @@ def build_dashboard_data(session, settings: EvoSettings, *, now: datetime | None
             "cohort": None,
             "cards": _empty_cards(settings),
             "agents": [],
+            "throttle": {"live": 0, "total": 0, "throttled": False},
             "activity": [],
             "components": _components(session, settings, cohort=None, now=now),
             "requests": _requests(session),
             "announcements": _announcements(session, now),
         }
 
-    agents = active_agents(session)
+    all_active = active_agents(session)
+    # Show only the agents that actually run live work. When the evo worker is
+    # throttled (EVO_MAX_ACTIVE_AGENTS), the lowest-id N run and the rest are
+    # dormant; hide the dormant ones. The cap is read from the worker's own config
+    # snapshot (single source of truth), not this service's env, so the two can't
+    # drift.
+    cap = _effective_cap(session)
+    agents = all_active[:cap] if cap > 0 else all_active
     ledger = paper.cohort_ledger(cohort.id)
     fitness_by_uuid = _latest_interim_fitness(session, cohort.id)
     groups = _projected_groups(fitness_by_uuid, settings)
@@ -101,6 +126,11 @@ def build_dashboard_data(session, settings: EvoSettings, *, now: datetime | None
         "cohort": _cohort_header(cohort, now),
         "cards": _cards(session, settings, cohort, agents, ledger),
         "agents": agent_rows,
+        "throttle": {
+            "live": len(agents),
+            "total": len(all_active),
+            "throttled": cap > 0 and len(agents) < len(all_active),
+        },
         "activity": _recent_activity(session, now),
         "components": _components(session, settings, cohort=cohort, now=now),
         "requests": _requests(session),
