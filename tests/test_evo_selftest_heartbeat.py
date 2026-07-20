@@ -66,6 +66,13 @@ def test_recovered_infra_blip_is_not_broken():
     assert _verdict(comp_6h=3, deg_6h=14, last_comp=5.0, last_infra=180.0) == st.PASS
 
 
+def test_completion_within_cadence_passes_despite_recovered_blip():
+    # The live selftest-3 shape: last completion 183 min ago (well within the ~4h
+    # routine cadence), 4/7 rate dented by a 359-min-ago recovered blip. A clean
+    # completion inside the cadence window is PASS, not a perpetual INFO.
+    assert _verdict(comp_6h=4, deg_6h=3, last_comp=183.0, last_infra=359.0) == st.PASS
+
+
 def test_active_infra_outage_with_no_completion_is_broken():
     assert _verdict(comp_6h=0, deg_6h=10, last_comp=None, last_infra=2.0) == st.BROKEN
 
@@ -85,6 +92,6 @@ def test_clean_run_is_pass():
 
 
 def test_stale_completion_no_infra_is_info_not_broken():
-    # No infra failure at all, but the last completion is old and the rate is
-    # mediocre (non-infra degradation) -> INFO context, never BROKEN.
-    assert _verdict(comp_6h=3, deg_6h=5, last_comp=120.0, last_infra=None) == st.INFO
+    # No infra failure, but the last completion is genuinely stale (well past the
+    # ~4h cadence) -> INFO context worth a look, never BROKEN.
+    assert _verdict(comp_6h=3, deg_6h=5, last_comp=340.0, last_infra=None) == st.INFO

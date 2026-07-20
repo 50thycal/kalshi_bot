@@ -105,8 +105,12 @@ def c_heartbeat_health(cur):
         detail = f"last completion {last_comp:.0f} min ago; {rate:.0%} ok ({comp}/{comp+deg}, 6h){recovered}"
     else:
         detail = f"{rate:.0%} ok ({comp}/{comp+deg}, 6h){recovered}"
-    # Healthy if a completion happened recently, or the rolling completion rate is strong.
-    v = PASS if (last_comp is not None and last_comp < 60) or rate >= 0.8 else INFO
+    # Routine heartbeats fire ~6x/day per agent (a ~4h cadence + up to ~2h jitter), so a clean
+    # completion within ~5h is healthy even when an earlier, now-recovered blip dented the 6h
+    # rate. Recency-first: the latest signal is a good completion -> PASS. INFO only when the
+    # newest completion is genuinely stale (well past the cadence) but no infra outage is active.
+    HEALTHY_GAP_MIN = 300
+    v = PASS if (last_comp is not None and last_comp <= HEALTHY_GAP_MIN) else INFO
     return ("L-2", 0, "Heartbeat completion rate", v, detail)
 
 
