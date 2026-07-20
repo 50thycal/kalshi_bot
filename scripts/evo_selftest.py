@@ -160,6 +160,12 @@ def c_beliefs(cur):
     if orphan:
         return ("MEM-2", 1, "Beliefs revise by supersession", BROKEN,
                 f"{orphan} superseded beliefs with no successor row")
+    if chains == 0 and n >= 10:
+        # Structural pass (no orphans) is necessarily true with zero chains — not
+        # real evidence supersession works. A meaningful sample of beliefs with
+        # never one real revision is worth a look, not a silent PASS.
+        return ("MEM-2", 1, "Beliefs revise by supersession", INFO,
+                f"{n} beliefs, 0 revision links yet — supersession unexercised despite volume")
     return ("MEM-2", 1, "Beliefs revise by supersession", PASS,
             f"{n} beliefs, {chains} revision link(s), chains intact")
 
