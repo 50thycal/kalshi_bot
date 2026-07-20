@@ -30,6 +30,7 @@ from .genomes import current_genome, rollback_genome, write_genome_revision
 from .llm import LlmClient
 from .marketdata import MarketData
 from .models import EvoAgent, EvoCohort, EvoHeartbeat, EvoOpportunity
+from .strategy_spec import METRICS, OPS
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +116,11 @@ expected_outcome, risk, rollback_condition, next_heartbeat_review.
 actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
 - no_action {}
 - revise_belief {title, new_belief, evidence_for, evidence_against, confidence (0-1),
-  supersedes_id?, tag?}
+  supersedes_id?, tag?}. supersedes_id, if given, MUST be the numeric id shown in
+  brackets on one of YOUR OWN entries under RETRIEVED MEMORY below (e.g. "[belief
+  id=1031 ...]" -> supersedes_id: 1031) — never an experiment id or a guess; a
+  wrong or another agent's id is rejected and audited. Omit it to write a fresh,
+  unlinked belief instead of a revision.
 - note_episode {title, detail, importance (0-1)}
 - register_experiment {hypothesis, falsifiable_prediction, dataset, promotion_criteria,
   kill_criteria, parameters?}
@@ -128,21 +133,45 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
 - create_listener {name, condition, purpose, effect: event|trigger_heartbeat|opportunity,
   cooldown_seconds?, expires_in_hours?, expected_value_note?}
 - remove_listener {listener_id}
-- run_backtest {spec, date_from?, date_to?} | also kind: "walkforward" {spec, split_date}
+- run_backtest {spec, date_from?, date_to?} | walkforward: add kind: "walkforward",
+  split_date instead of date_from/date_to
 - save_strategy {spec, graveyard_check {prior_attempt, prior_result, material_difference}?}
+  `spec` is validated against an EXACT schema — unlisted fields are REJECTED, do not
+  invent field names (no hypothesis_id, strategy_name, commission_bps, order_style,
+  kind, exit.method, etc.):
+  {"name": str (REQUIRED, 3-48 chars), "family"?: str, "description"?: str,
+   "universe"?: {"series_prefixes"?: [str] (e.g. ["KXHIGH","KXLOW"] — the only
+     dataset backtestable today is weather; leave empty to admit any),
+     "exclude_series_prefixes"?: [str], "categories"?: [str], "min_volume"?: float,
+     "max_spread_cents"?: int (1-99), "min_hours_to_close"?: float,
+     "max_hours_to_close"?: float},
+   "entry"?: {"side"?: "yes"|"no"|"cheap"|"expensive", "style"?: "taker"|"maker",
+     "conditions"?: [{"metric": METRICS_LIST, "op": OPS_LIST, "value": float}],
+     "min_price_cents"?: int (1-99), "max_price_cents"?: int (1-99),
+     "maker_offset_cents"?: int (0-10), "size_contracts"?: int (1-500)},
+   "exit"?: {"mode"?: "settlement"|"tp_sl"|"timed", "take_profit_cents"?: int (1-99),
+     "stop_loss_cents"?: int (1-99), "max_hold_hours"?: float},
+   "risk"?: {"max_concurrent_positions"?: int, "max_per_event"?: int,
+     "max_cost_per_position_usd"?: float}}
+  Every field except "name" is optional with a working default — start minimal.
+  Example: {"name": "weather_fade_v1", "universe": {"series_prefixes": ["KXHIGH"]},
+  "entry": {"conditions": [{"metric": "spread", "op": "<=", "value": 6}]}}
 - activate_strategy {strategy_id}
 - submit_trade_intent {market_ticker, side: yes|no, action: buy|sell, quantity,
   style: taker|maker, limit_price_cents?, thesis, confidence (0-1), opportunity_id?}
 - cancel_order {order_id}
 - record_influence {source_uuid, concept, interpretation, modifications, result}
 - submit_ticket {category, capability, problem, expected_strategy_benefit,
-  expected_cost?, urgency?}
+  expected_cost?, urgency?}. category MUST be one of: TICKET_CATEGORIES
 - support_ticket {ticket_id, note?}
 - register_data_source {name, provider, endpoint, update_frequency, cost_note: "free"}
 - set_working_state {state}  (your scratch state for next heartbeat, <= 4000 chars JSON)
 
 Invalid actions are rejected (with the reason recorded); the rest still execute.
-""".replace("MAXN", str(MAX_ACTIONS_PER_HEARTBEAT))
+""".replace("MAXN", str(MAX_ACTIONS_PER_HEARTBEAT)) \
+    .replace("METRICS_LIST", "|".join(METRICS)) \
+    .replace("OPS_LIST", "|".join(OPS)) \
+    .replace("TICKET_CATEGORIES", "|".join(tickets.CATEGORIES))
 
 
 def system_blocks(settings: EvoSettings) -> list[dict]:

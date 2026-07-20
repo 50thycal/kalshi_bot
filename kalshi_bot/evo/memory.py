@@ -301,13 +301,20 @@ def retrieve(
 
 
 def summarize_for_prompt(rows: list[EvoMemory], *, max_chars: int = 6000) -> str:
-    """Compact text rendering of retrieved memories for the heartbeat prompt."""
+    """Compact text rendering of retrieved memories for the heartbeat prompt.
+
+    Belief rows carry their row id in-line (`id=123`) — the ONLY way an agent can
+    ever learn its own memory ids, since retrieval never exposes them elsewhere.
+    Without this, revise_belief's supersedes_id is unguessable and every attempt
+    either omits it (no true supersession chain ever forms) or invents a number
+    from a different id space (e.g. an experiment id), which reads as an
+    integrity violation when it collides with another agent's row."""
     out: list[str] = []
     used = 0
     for m in rows:
         body = m.body_json or {}
         if m.kind == "belief":
-            text = f"[belief c={m.confidence:.2f}] {m.title}: {body.get('belief', '')}"
+            text = f"[belief id={m.id} c={m.confidence:.2f}] {m.title}: {body.get('belief', '')}"
         elif m.kind == "journal":
             text = f"[journal] {m.title}"
         else:

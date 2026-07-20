@@ -187,6 +187,22 @@ def test_belief_supersession_chain(evo_session):
     assert b3 is None and "already superseded" in err
 
 
+def test_summarize_for_prompt_exposes_belief_id(evo_session):
+    """The prompt-facing memory summary must carry each belief's real row id —
+    it is the only way an agent can ever learn a valid supersedes_id for its own
+    belief. Without it, agents either never supersede (no chain forms) or guess
+    a number from a different id space (e.g. an experiment id), which reads as a
+    cross-agent integrity violation if it happens to collide with another row."""
+    agent = _mk_agent(evo_session)
+    row, err = memory.revise_belief(
+        evo_session, agent.agent_uuid, title="b", new_belief="v1",
+        evidence_for="e", evidence_against=None, confidence_after=0.5, heartbeat_id=None,
+    )
+    assert err is None
+    text = memory.summarize_for_prompt([row])
+    assert f"id={row.id}" in text
+
+
 def test_cross_agent_belief_revision_is_integrity_event(evo_session):
     a, b = _mk_agent(evo_session), _mk_agent(evo_session, surname="Voss")
     belief, _ = memory.revise_belief(
