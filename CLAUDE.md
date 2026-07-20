@@ -89,6 +89,15 @@ To run a request:
      into the default branch and separate from the disposable `ops` branch. You do
      **not** need to hand-commit digests anywhere; to review past digests, read from
      `digest-archive` (e.g. `git fetch origin digest-archive && git ls-tree -r --name-only FETCH_HEAD digests/`).
+   - **"mmsell fill model"** -> `{"type":"script","name":"mmsell_fill_model"}` — the
+     paper→live alignment read for the mmsell books. Paper ASSUMES a resting maker order
+     always fills; live it fills ~70% and misses the winners (adverse selection). This
+     calibrates the live mmsell3 (price → fill, realizable P&L) relationship and projects
+     each book's price mix through it to report **realizable ¢/trade** (the number to gate
+     on) vs the optimistic blended paper number, with a coverage %. **Gate variants on the
+     realizable column, not blended paper** — see `docs/MMSELL_FILL_MODEL.md`. Companion
+     `mmsell_live` is the live execution scorecard (fill rate, fill economics, realized vs
+     paper shadow, open footprint).
 
    The individual probes can still be run alone:
    `weather_model_check` grades the ensemble forecast distribution against the
