@@ -161,7 +161,12 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
   "entry": {"conditions": [{"metric": "spread", "op": "<=", "value": 6}]}}
 - activate_strategy {strategy_id}
 - submit_trade_intent {market_ticker, side: yes|no, action: buy|sell, quantity,
-  style: taker|maker, limit_price_cents?, thesis, confidence (0-1), opportunity_id?}
+  style: taker|maker, limit_price_cents?, thesis, confidence (0-1), opportunity_id?}.
+  market_ticker MUST be one of the exact tickers shown under RELEVANT MARKETS
+  (live quotes) below — never a series prefix (like the ones you use in a
+  strategy's universe.series_prefixes, e.g. "KXHIGH"). A prefix is not itself a
+  tradable market; an order on one will never get a quote and will sit open
+  forever with no fill and no error.
 - cancel_order {order_id}
 - record_influence {source_uuid, concept, interpretation, modifications, result}
 - submit_ticket {category, capability, problem, expected_strategy_benefit,
@@ -773,8 +778,17 @@ def assemble_context(
         tags=tuple((trading_doc.get("universe") or {}).get("series_prefixes", [])[:4]),
         limit=12,
     )
-    # relevant markets: open positions + universe scan results provided via extra
-    tickers = [p.market_ticker for p in positions[:10]]
+    # relevant markets: open positions + the orchestrator's universe-scan candidate
+    # tickers. Without the latter, an agent holding zero positions (e.g. before its
+    # first trade) sees no live market data at all and has no legitimate ticker to
+    # reference for submit_trade_intent — it can only ever see prefixes like a
+    # strategy's universe.series_prefixes, which are not themselves tradable.
+    extra = dict(extra or {})
+    candidate_tickers = extra.pop("candidate_tickers", None) or []
+    position_tickers = [p.market_ticker for p in positions[:10]]
+    tickers = position_tickers + [
+        t for t in candidate_tickers if t not in position_tickers
+    ][:10]
     market_summaries = []
     for t in tickers:
         q = md.get_quote(t)

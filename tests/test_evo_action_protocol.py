@@ -12,6 +12,7 @@ that the worked example it gives agents actually validates."""
 from __future__ import annotations
 
 import random
+from datetime import datetime, timezone
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -22,7 +23,7 @@ from kalshi_bot.evo.cohorts import ensure_current_cohort
 from kalshi_bot.evo.config import EvoSettings
 from kalshi_bot.evo.evolution import create_agent
 from kalshi_bot.evo.heartbeats import run_heartbeat
-from kalshi_bot.evo.marketdata import StaticMarketData
+from kalshi_bot.evo.marketdata import Quote, StaticMarketData
 from kalshi_bot.evo.strategy_spec import METRICS, OPS, validate_spec
 from kalshi_bot.evo.tickets import CATEGORIES
 from kalshi_bot.models import Base
@@ -114,3 +115,52 @@ def test_closing_instruction_reframes_economical_as_prose_not_action_count():
 def test_routine_output_token_cap_doubled():
     # Doubled (3200 -> 6400) to give headroom for batched multi-backtest output.
     assert EvoSettings(_env_file=None).heartbeat_max_output_tokens == 6400
+
+
+def test_submit_trade_intent_warns_against_series_prefixes():
+    # The exact live bug: an agent used "KXHIGH" (a universe.series_prefixes
+    # value, correct for a strategy spec) as a market_ticker for a direct order —
+    # not a real, specific, tradable market, so the order got a quote for nothing
+    # and sat open forever with zero fills and no error.
+    assert "submit_trade_intent" in ACTION_PROTOCOL
+    assert "series prefix" in ACTION_PROTOCOL.lower()
+    assert "KXHIGH" in ACTION_PROTOCOL
+
+
+def test_candidate_tickers_extend_market_summaries_without_leaking_to_extra():
+    """candidate_tickers (the orchestrator's universe scan) must reach an agent
+    with zero open positions — otherwise market_summaries builds only from
+    existing positions (necessarily empty before an agent's first trade), and it
+    has no legitimate ticker to reference for submit_trade_intent at all. This is
+    exactly how the live "KXHIGH" bug happened."""
+    eng = create_engine("sqlite://")
+    Base.metadata.create_all(eng)
+    s = sessionmaker(bind=eng, expire_on_commit=False)()
+    settings = EvoSettings(_env_file=None)
+    llm.seed_model_prices(s, settings)
+    cohort = ensure_current_cohort(s, settings)
+    agent = create_agent(s, settings, cohort, random.Random(1),
+                         origin="founder", slot_key="founder:0")
+    budgets.ensure_budgets(s, agent.agent_uuid, cohort.id, settings)
+
+    md = StaticMarketData()
+    real_ticker = "KXHIGHNY-26JUL21-B85"
+    md.set_quote(Quote(ticker=real_ticker, captured_at=datetime.now(timezone.utc),
+                       status="active", yes_bid=45, yes_ask=55))
+
+    seen: dict = {}
+
+    def script(ctx):
+        seen["prompt"] = build_user_prompt(ctx)
+        seen["market_summaries"] = ctx.market_summaries
+        seen["extra"] = ctx.extra
+        return {"journal": {"decision": "ok"}, "actions": []}
+
+    run_heartbeat(s, settings, agent=agent, cohort=cohort, kind="routine",
+                  slot_id="s1", cognition=ScriptedCognition(script), md=md,
+                  extra_context={"candidate_tickers": [real_ticker]})
+
+    assert any(m["ticker"] == real_ticker for m in seen["market_summaries"])
+    assert real_ticker in seen["prompt"]
+    # consumed to build market_summaries, not dumped raw into ctx.extra
+    assert "candidate_tickers" not in seen["extra"]

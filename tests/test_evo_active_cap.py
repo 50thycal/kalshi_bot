@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import random
+from datetime import datetime, timezone
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -14,7 +15,7 @@ from kalshi_bot.evo.cohorts import active_agents, ensure_current_cohort
 from kalshi_bot.evo.config import EvoSettings
 from kalshi_bot.evo.evolution import create_agent
 from kalshi_bot.evo.heartbeats import run_due_heartbeats
-from kalshi_bot.evo.marketdata import StaticMarketData
+from kalshi_bot.evo.marketdata import Quote, StaticMarketData
 from kalshi_bot.models import Base
 
 
@@ -70,3 +71,23 @@ def test_lifting_the_cap_restores_the_full_population():
     assert len(active_agents(session, capped)) == 3
     uncapped = EvoSettings(_env_file=None, max_active_agents=0)
     assert len(active_agents(session, uncapped)) == 10  # same DB, cap lifted
+
+
+def test_run_due_heartbeats_threads_candidate_tickers_to_every_heartbeat():
+    # The orchestrator's universe scan must reach every agent's context, not just
+    # agents that already hold a position — otherwise an agent with zero
+    # positions has no legitimate market_ticker to reference for its first trade.
+    settings = EvoSettings(_env_file=None)
+    session, cohort = _seed(2, settings)
+    seen_tickers: list[list[str]] = []
+    cog = ScriptedCognition(lambda ctx: (
+        seen_tickers.append([m["ticker"] for m in ctx.market_summaries])
+        or {"journal": {"decision": "ok"}, "actions": []}
+    ))
+    md = StaticMarketData()
+    md.set_quote(Quote(ticker="KXHIGHNY-26JUL21-B85", captured_at=datetime.now(timezone.utc),
+                       status="active", yes_bid=45, yes_ask=55))
+    run_due_heartbeats(session, settings, cohort=cohort, cognition=cog, md=md,
+                       max_per_cycle=50, candidate_tickers=["KXHIGHNY-26JUL21-B85"])
+    assert seen_tickers  # at least one heartbeat ran
+    assert all("KXHIGHNY-26JUL21-B85" in tickers for tickers in seen_tickers)

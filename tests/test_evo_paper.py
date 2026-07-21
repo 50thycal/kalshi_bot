@@ -163,6 +163,24 @@ def test_stale_data_fails_closed(evo_session, evo_settings):
     assert evo_session.scalar(select(em.EvoDataHealthEvent)) is not None
 
 
+def test_no_quote_at_all_records_health_event_and_leaves_order_open(evo_session, evo_settings):
+    """Distinct from the stale-quote case: a ticker that never resolves to a quote
+    at all (e.g. an agent used a series prefix like "KXHIGH" instead of a real,
+    specific tradable market ticker) would otherwise leave the order open forever
+    with zero operator-visible signal. Must record a health event, not fail silently."""
+    _fund(evo_session, evo_settings)
+    md = StaticMarketData()  # no quote ever set for T1
+    order, _ = paper.place_order(
+        evo_session, evo_settings, agent_uuid=AU, cohort_id=1, idem_key="nq1",
+        market_ticker="T1", side="yes", action="buy", quantity=5,
+    )
+    paper.process_open_orders(evo_session, evo_settings, md)
+    assert order.status == "open" and order.filled_quantity == 0
+    event = evo_session.scalar(select(em.EvoDataHealthEvent))
+    assert event is not None and event.kind == "no_quote"
+    assert event.detail_json["order_id"] == order.id
+
+
 def test_terminal_market_expires_order(evo_session, evo_settings):
     _fund(evo_session, evo_settings)
     md = StaticMarketData()
