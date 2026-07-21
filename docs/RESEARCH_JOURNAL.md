@@ -16,6 +16,40 @@ Conventions:
 
 ---
 
+## IDEA-MODEL 2026-07-21 — Area 1 (untouched market universes): 3 promotions, pending probe
+
+Scoped idea-model run on **Area 1** of the session's whitespace review — Kalshi categories the
+bot has never built a book/feed/model for (politics/elections, econ prints, rates, equity-index
+ranges, entertainment/streaming, precipitation). Grounded in a fresh live-board survey
+(`kalshi_market_survey`, 8,130 events): the liquid-but-inefficient target profile is
+**Economics** (~92M vol, 17.3¢ avg spread, widest liquid category) and Sci/Tech (17.7¢);
+Elections is huge but mostly tight/arbitraged; **equity-index daily ranges are too thin to
+matter** (Financials volume is WTI oil, not S&P — killed on capacity); `KXRATECUTCOUNT` trades a
+0.3¢ spread (already sharp). Generated 15 candidates × 6 mechanics; screened on the six-axis
+rubric. **3 promoted, all uncorrelated with the existing book, all pending a first ops run:**
+
+- **ECON-REACT** (`docs/ECON_REACT_THESIS.md`, `scripts/econ_react_study.py`) — post-econ-print
+  reaction-lag pin: after an 8:30am release the determined winning bucket lags its own settle.
+  Obs-pin on a *scheduled release* (latency, not inattention — the honest distinction from the
+  "doesn't-generalize-off-weather" lesson). Promotes the parked PINNED post-jobs-print +43.4¢
+  residual with its own pre-registration + release-time audit. Top pick.
+- **FEDRV** (`docs/FEDRV_THESIS.md`, `scripts/fed_rv_study.py`) — internal-coherence RV:
+  convolved per-meeting `KXFEDDECISION` vs the direct `KXRATECUTCOUNT` ladder. Prior LOW (tight
+  count spread ⇒ likely efficient); a cheap, totally-uncorrelated ruling-out of the rates
+  category. Kalshi-only in v1; external Fed-funds-futures referee is v2.
+- **STREAMPIN** (`docs/STREAMPIN_CENSUS.md`, `scripts/kalshi_stream_survey.py`) — port the
+  `con`/`obs` thermometer to lagged music-streaming counts; census-first (C1 cumulative
+  instrument / C2 intra-window tape) before a thesis; C3 external stream-proxy feasibility is
+  the thesis gate.
+
+Killed at the screen (blunt): pre-release CPI nowcast-pin (dead inattention family off-weather),
+election vig-harvest (adverse selection + lumpy), Kalshi↔PM politics lead-lag (below cost, prior
+xvenue finding), equity-index EOD range (no capacity), tech ship-by-date buy-hope
+(directional/small-n), econ ladder mis-centering (17¢ spread cost). Verdicts land here when the
+probes run (after the scripts merge to default + `ops` is refreshed). Scorecard rows added.
+
+---
+
 ## PIN15 VERDICT 2026-07-16 — T-window slice FALSIFIES the thesis; RETIRED
 
 Requested check on the strategy-status loop's standing suggestion (runs #40-47 kept watching
