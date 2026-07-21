@@ -3,12 +3,44 @@ and the fail-closed staleness contract strategies depend on."""
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 
 from sqlalchemy import select
 
 from .audit import audit
 from .models import EvoDataHealthEvent, EvoDataSource
+
+# Near-duplicate detection (mirrors tickets.py's semantic dedup): different agents
+# independently name the same real feed differently (kalshi_markets_live vs
+# kalshi_official_api vs kalshi_markets_realtime are all the same Kalshi feed) —
+# exact-name matching alone never catches this. Source names/providers are short
+# slugs with no natural-language filler to strip (unlike ticket capability prose),
+# so every token counts and the bar is lower than tickets' 0.6.
+_DEDUP_JACCARD = 0.4
+
+
+def _name_tokens(name: str, provider: str | None) -> frozenset[str]:
+    raw = re.findall(r"[a-z0-9]+", f"{name} {provider or ''}".lower())
+    # light singular normalization catches market/markets-style mismatches that
+    # are otherwise invisible to exact token comparison
+    return frozenset(t[:-1] if len(t) > 3 and t.endswith("s") else t for t in raw)
+
+
+def _jaccard(a: frozenset[str], b: frozenset[str]) -> float:
+    if not a or not b:
+        return 0.0
+    return len(a & b) / len(a | b)
+
+
+def find_similar_source(session, name: str, provider: str | None) -> EvoDataSource | None:
+    tokens = _name_tokens(name, provider)
+    best, best_score = None, 0.0
+    for src in session.scalars(select(EvoDataSource)):
+        score = _jaccard(tokens, _name_tokens(src.name, src.provider))
+        if score > best_score:
+            best, best_score = src, score
+    return best if best_score >= _DEDUP_JACCARD else None
 
 # Sources available out of the box (already collected by the legacy workers into
 # provenance-labeled tables). Registered as operational at bootstrap.
@@ -74,6 +106,9 @@ def register_source(
     existing = session.scalar(select(EvoDataSource).where(EvoDataSource.name == name))
     if existing is not None:
         return existing, None
+    similar = find_similar_source(session, name, provider)
+    if similar is not None:
+        return similar, None
     row = EvoDataSource(
         registered_by_uuid=agent_uuid,
         name=name,
