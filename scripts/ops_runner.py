@@ -84,6 +84,7 @@ ALLOWED_SCRIPTS = (
     "kalshi_seasonpin_census",
     "mmsell_live",
     "mmsell_fill_model",
+    "mmsell_exit_study",
     "evo_digest",
     "evo_tree",
     "evo_selftest",

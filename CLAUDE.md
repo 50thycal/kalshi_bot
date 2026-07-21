@@ -98,6 +98,14 @@ To run a request:
      realizable column, not blended paper** — see `docs/MMSELL_FILL_MODEL.md`. Companion
      `mmsell_live` is the live execution scorecard (fill rate, fill economics, realized vs
      paper shadow, open footprint).
+   - **"mmsell exit study"** -> `{"type":"script","name":"mmsell_exit_study"}` — does a
+     stop-loss or volatility exit beat hold-to-settlement, per book, and by how much. Replays
+     each settled position's captured intraday path (`mmsell_position_ticks`, recorded live off
+     the orderbook) through a grid of confirmed catastrophic stops (yes-mid ≥ L for K ticks) and
+     volatility exits (yes-mid range over W ticks ≥ V), reporting mean, **5th-pctile tail**,
+     win%, %exit and the **Δ vs hold** per rule. Gate on **Δp5 (tail) up AND Δmean ≥ −0.3¢** at
+     n≥100 replayable — see `docs/MMSELL_EXIT_STUDY.md`. Coverage grows after deploy (a position
+     must be born + settle inside the capture window); empty early output is a data-maturity wait.
 
    The individual probes can still be run alone:
    `weather_model_check` grades the ensemble forecast distribution against the

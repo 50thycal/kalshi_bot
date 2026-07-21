@@ -122,6 +122,12 @@ class Settings(BaseSettings):
     # On by default now that we're forward-testing the maker edge; set false to disable.
     mmsell_paper_enabled: bool = True
     mmsell_interval_minutes: float = 30.0        # how often the ride-along entry scan runs
+    # Record one price tick per open-mmsell-position ticker each management cycle (off the
+    # orderbook already fetched — no extra API). Builds the intraday tape the sports tickers
+    # never had, feeding the offline exit-rule study (scripts/mmsell_exit_study.py): confirmed
+    # catastrophic stop + volatility exit vs hold-to-settlement. Positions still hold to
+    # settlement — this is pure DATA CAPTURE, not an exit; the study measures counterfactually.
+    mmsell_tick_capture_enabled: bool = True
     # Revision books (parallel paper variants next to the untouched `mmsell` control), from
     # the 2026-07-04 forward decomposition of 445 settled trades: the maker-sell-and-hold
     # edge lives in the CHEAP longshots (yes 5-10c +2.7c/ct 96%win, 10-20c +3.6c 91%) and is
@@ -1042,6 +1048,7 @@ class Settings(BaseSettings):
             "mmsell_max_open_positions": self.mmsell_max_open_positions,
             "mmsell_paper_enabled": self.mmsell_paper_enabled,
             "mmsell_interval_minutes": self.mmsell_interval_minutes,
+            "mmsell_tick_capture_enabled": self.mmsell_tick_capture_enabled,
             "mmsell_live_max_open_positions": self.mmsell_live_max_open_positions,
             "mmsell_live_price_offset_cents": self.mmsell_live_price_offset_cents,
             "mmsell_live_max_spread_cents": self.mmsell_live_max_spread_cents,
