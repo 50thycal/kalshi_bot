@@ -241,6 +241,10 @@ class PaperTradingEngine:
     # -- open-position management -----------------------------------------
     def manage_open_positions(self, session) -> PaperCycleSummary:
         s = self.settings
+        # One price tick per mmsell ticker per cycle (the path is ticker-level; many books can
+        # hold the same ticker). Records the intraday tape the mmsell books never captured, for
+        # the offline exit-rule study — free, off the orderbook we already fetch below.
+        mmsell_ticked: set[str] = set()
         for trade in repo.get_open_paper_trades(session):
             # XGAME positions are settled/exited by their own tracker on a seconds-scale
             # converge/timeout rule (the edge is a 20-90s window); the shared hold-to-
@@ -274,6 +278,13 @@ class PaperTradingEngine:
                 )
                 continue
             metrics = compute_metrics(market, ob, top_n=s.orderbook_depth)
+            if (s.mmsell_tick_capture_enabled and (trade.strategy or "").startswith("mmsell")
+                    and trade.market_ticker not in mmsell_ticked and metrics.two_sided):
+                mmsell_ticked.add(trade.market_ticker)
+                try:
+                    repo.insert_mmsell_tick(session, trade.market_ticker, metrics)
+                except Exception:  # noqa: BLE001 — a tick is diagnostic; never break settlement
+                    logger.exception("mmsell tick capture failed (position management unaffected)")
             self._mark_or_exit(session, trade, metrics)
 
         self.summary.open_positions = repo.count_open_paper_positions(session)

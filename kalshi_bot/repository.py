@@ -733,6 +733,24 @@ def mark_paper_position(session, ticker: str, strategy: str, unrealized_pnl: flo
         session.flush()
 
 
+def insert_mmsell_tick(
+    session, ticker: str, metrics: MarketMetrics, *, captured_at: datetime | None = None
+) -> None:
+    """Record one price tick for a market holding an open mmsell position (the intraday tape the
+    exit study replays). Cheap: reuses the orderbook metrics manage_open_positions already has."""
+    session.add(m.MmSellPositionTick(
+        market_ticker=ticker,
+        captured_at=captured_at or _now(),
+        yes_bid=metrics.best_yes_bid,
+        yes_ask=metrics.best_yes_ask,
+        no_bid=metrics.best_no_bid,
+        no_ask=metrics.best_no_ask,
+        mid=metrics.midpoint,
+        volume=metrics.volume,
+    ))
+    session.flush()
+
+
 def log_system_event(
     session, *, level: str, component: str, message: str, raw: dict | None = None
 ) -> m.SystemEvent:

@@ -190,6 +190,29 @@ class PaperPosition(Base):
     unrealized_pnl: Mapped[float | None] = mapped_column(Numeric(14, 4))
 
 
+class MmSellPositionTick(Base):
+    """Per-cycle price path for markets with an OPEN mmsell paper position — the intraday tape
+    the mmsell books never recorded (0 rows in market_snapshots for these sports tickers, which
+    is why a per-ticker fill/exit replay was impossible). Captured cheaply from the orderbook
+    `manage_open_positions` already fetches each cycle, deduped to one row per ticker per cycle
+    (the path is ticker-level; every book holding that ticker replays the same path from its own
+    entry). Feeds the offline exit-rule study (scripts/mmsell_exit_study.py): confirmed
+    catastrophic stop + volatility exit vs hold-to-settlement. Prices are integer cents."""
+
+    __tablename__ = "mmsell_position_ticks"
+    __table_args__ = (Index("ix_mmsell_ticks_ticker_time", "market_ticker", "captured_at"),)
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    market_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    captured_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    yes_bid: Mapped[int | None] = mapped_column(Integer)
+    yes_ask: Mapped[int | None] = mapped_column(Integer)
+    no_bid: Mapped[int | None] = mapped_column(Integer)
+    no_ask: Mapped[int | None] = mapped_column(Integer)
+    mid: Mapped[float | None] = mapped_column(Float)  # yes midpoint, cents
+    volume: Mapped[int | None] = mapped_column(Integer)
+
+
 class LiveOrder(Base):
     __tablename__ = "live_orders"
 
