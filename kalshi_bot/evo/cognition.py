@@ -134,7 +134,10 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
   cooldown_seconds?, expires_in_hours?, expected_value_note?}
 - remove_listener {listener_id}
 - run_backtest {spec, date_from?, date_to?} | walkforward: add kind: "walkforward",
-  split_date instead of date_from/date_to
+  split_date instead of date_from/date_to. You may include SEVERAL run_backtest
+  actions in the SAME heartbeat — if you have multiple ready hypotheses, test them
+  together now rather than spacing them one-per-heartbeat: heartbeats are hours
+  apart, sandbox runs are cheap, and your weekly budget (50 runs) is generous.
 - save_strategy {spec, graveyard_check {prior_attempt, prior_result, material_difference}?}
   `spec` is validated against an EXACT schema — unlisted fields are REJECTED, do not
   invent field names (no hypothesis_id, strategy_name, commission_bps, order_style,
@@ -245,11 +248,14 @@ def build_user_prompt(ctx: HeartbeatContext) -> str:
     for key, value in ctx.extra.items():
         parts.append(f"{key.upper()}:\n{str(value)[:2500]}")
     parts.append(
-        "Decide what to do this heartbeat per your cognitive genome. Be economical: "
-        "your token/cost budgets are real. Keep every journal field terse — a short "
-        "phrase per list item, not sentences; the journal is a log, not an essay. An "
-        "over-long journal can truncate the response before your actions are emitted. "
-        "Return ONLY the JSON object."
+        "Decide what to do this heartbeat per your cognitive genome. Heartbeats are "
+        "hours apart — batch every ready action into THIS one rather than spacing "
+        "one step across many heartbeats (e.g. run several backtests together if "
+        "you have several hypotheses ready). Be economical in PROSE, not in "
+        "productive action: your token/cost budgets are real, so keep every journal "
+        "field terse — a short phrase per list item, not sentences; the journal is "
+        "a log, not an essay. An over-long journal can truncate the response before "
+        "your actions are emitted. Return ONLY the JSON object."
     )
     return "\n\n".join(parts)
 

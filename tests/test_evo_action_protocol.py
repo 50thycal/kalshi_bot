@@ -11,9 +11,21 @@ that the worked example it gives agents actually validates."""
 
 from __future__ import annotations
 
-from kalshi_bot.evo.cognition import ACTION_PROTOCOL
+import random
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from kalshi_bot.evo import budgets, llm
+from kalshi_bot.evo.cognition import ACTION_PROTOCOL, ScriptedCognition, build_user_prompt
+from kalshi_bot.evo.cohorts import ensure_current_cohort
+from kalshi_bot.evo.config import EvoSettings
+from kalshi_bot.evo.evolution import create_agent
+from kalshi_bot.evo.heartbeats import run_heartbeat
+from kalshi_bot.evo.marketdata import StaticMarketData
 from kalshi_bot.evo.strategy_spec import METRICS, OPS, validate_spec
 from kalshi_bot.evo.tickets import CATEGORIES
+from kalshi_bot.models import Base
 
 
 def test_no_leftover_placeholder_tokens():
@@ -53,3 +65,52 @@ def test_worked_example_spec_actually_validates():
     assert spec is not None
     assert spec.universe.series_prefixes == ["KXHIGH"]
     assert spec.entry.conditions[0].metric == "spread"
+
+
+def test_protocol_encourages_batching_multiple_backtests_per_heartbeat():
+    # Real usage showed agents batching 3-7 DIFFERENT actions per heartbeat
+    # already, but never the SAME action (e.g. run_backtest) twice — nothing told
+    # them they could. Structurally there was always room: 12 actions/heartbeat,
+    # 50 sandbox runs/week.
+    assert "run_backtest" in ACTION_PROTOCOL
+    lower = ACTION_PROTOCOL.lower()
+    assert "same heartbeat" in lower
+    assert "cheap" in lower or "generous" in lower
+
+
+def _run_scripted_heartbeat_and_capture_prompt() -> str:
+    eng = create_engine("sqlite://")
+    Base.metadata.create_all(eng)
+    s = sessionmaker(bind=eng, expire_on_commit=False)()
+    settings = EvoSettings(_env_file=None)
+    llm.seed_model_prices(s, settings)
+    cohort = ensure_current_cohort(s, settings)
+    agent = create_agent(s, settings, cohort, random.Random(1),
+                         origin="founder", slot_key="founder:0")
+    budgets.ensure_budgets(s, agent.agent_uuid, cohort.id, settings)
+
+    seen: dict = {}
+
+    def script(ctx):
+        seen["prompt"] = build_user_prompt(ctx)
+        return {"journal": {"decision": "ok"}, "actions": []}
+
+    run_heartbeat(s, settings, agent=agent, cohort=cohort, kind="routine",
+                  slot_id="s1", cognition=ScriptedCognition(script), md=StaticMarketData())
+    return seen["prompt"]
+
+
+def test_closing_instruction_reframes_economical_as_prose_not_action_count():
+    # "Be economical" alone risked reading as "do less" — a real, if partial,
+    # contributor to agents deferring one step per heartbeat instead of batching
+    # everything ready. The closing instruction must now say so explicitly, in
+    # the actual assembled prompt (not just the static ACTION_PROTOCOL block).
+    prompt = _run_scripted_heartbeat_and_capture_prompt()
+    assert "hours apart" in prompt
+    assert "batch" in prompt.lower()
+    assert "economical in prose" in prompt.lower()
+
+
+def test_routine_output_token_cap_doubled():
+    # Doubled (3200 -> 6400) to give headroom for batched multi-backtest output.
+    assert EvoSettings(_env_file=None).heartbeat_max_output_tokens == 6400

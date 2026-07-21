@@ -480,6 +480,44 @@ def test_data_source_registry_rules(evo_session):
     assert src.status == "ok"
 
 
+def test_data_source_near_duplicate_resolves_to_existing_row(evo_session):
+    """Different agents independently name the same real feed differently — exact-
+    name matching alone never catches kalshi_markets_live vs kalshi_official_api
+    vs kalshi_markets_realtime as the same thing. This is the exact live pattern
+    (~20 of 27 registered sources turned out to be the same Kalshi feed)."""
+    a = _mk_agent(evo_session)
+    b = _mk_agent(evo_session, surname="Voss")
+    first, err = datasources.register_source(
+        evo_session, agent_uuid=a.agent_uuid,
+        name="kalshi_markets_live", provider="Kalshi", cost_note="free",
+    )
+    assert err is None
+    before = len(list(evo_session.scalars(select(em.EvoDataSource))))
+    dup, err = datasources.register_source(
+        evo_session, agent_uuid=b.agent_uuid,
+        name="kalshi_official_api", provider="Kalshi Markets", cost_note="free",
+    )
+    assert err is None
+    assert dup.id == first.id  # resolved to the existing row, no new insert
+    after = len(list(evo_session.scalars(select(em.EvoDataSource))))
+    assert after == before
+
+
+def test_data_source_dedup_does_not_merge_distinct_sources(evo_session):
+    a = _mk_agent(evo_session)
+    poly, err = datasources.register_source(
+        evo_session, agent_uuid=a.agent_uuid,
+        name="polymarket_snapshots", provider="Polymarket Gamma", cost_note="free",
+    )
+    assert err is None
+    crypto, err = datasources.register_source(
+        evo_session, agent_uuid=a.agent_uuid,
+        name="crypto_spot_candles", provider="Coinbase Exchange", cost_note="free",
+    )
+    assert err is None
+    assert crypto.id != poly.id  # genuinely different sources stay distinct
+
+
 # --- graveyard --------------------------------------------------------------
 
 
