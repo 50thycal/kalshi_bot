@@ -181,7 +181,7 @@ def run_evo_cycle(runtime: EvoRuntime) -> None:
 
         hb_counts = run_due_heartbeats(
             session, settings, cohort=cohort, cognition=runtime.cognition,
-            md=runtime.md, now=now,
+            md=runtime.md, now=now, candidate_tickers=tickers,
         )
 
         # daily snapshots + hourly interim fitness

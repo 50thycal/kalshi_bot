@@ -429,6 +429,23 @@ def _record_stale(session, order: EvoOrder, quote: Quote, max_age: float) -> Non
     session.flush()
 
 
+def _record_no_quote(session, order: EvoOrder) -> None:
+    """No quote at all for this ticker — distinct from _record_stale (a real
+    market whose data went stale). Most likely an invalid/non-existent ticker
+    (e.g. a series prefix like "KXHIGH" used where a specific tradable market
+    ticker was required), which would otherwise leave the order open forever
+    with zero operator-visible signal."""
+    session.add(
+        EvoDataHealthEvent(
+            source_name=f"kalshi:{order.market_ticker}",
+            level="warn",
+            kind="no_quote",
+            detail_json={"order_id": order.id, "ticker": order.market_ticker},
+        )
+    )
+    session.flush()
+
+
 def evaluate_order(
     session, settings: EvoSettings, order: EvoOrder, quote: Quote | None, *, fees: bool = True
 ) -> str:
@@ -436,6 +453,7 @@ def evaluate_order(
     status string (order row updated in place)."""
     now = _now()
     if quote is None:
+        _record_no_quote(session, order)
         return order.status  # no data this cycle; leave untouched
     if quote.age_seconds(now) > settings.stale_data_seconds:
         _record_stale(session, order, quote, settings.stale_data_seconds)

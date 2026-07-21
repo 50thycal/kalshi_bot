@@ -309,10 +309,19 @@ def run_due_heartbeats(
     md: MarketData,
     max_per_cycle: int = 10,
     now: datetime | None = None,
+    candidate_tickers: list[str] | None = None,
 ) -> dict[str, int]:
     """One orchestrator pass: sweep stale, run due routine/reflection slots and
-    triggered events, bounded per cycle so one pass never monopolizes the loop."""
+    triggered events, bounded per cycle so one pass never monopolizes the loop.
+
+    candidate_tickers (from the orchestrator's bounded universe scan) is threaded
+    into each heartbeat's context so agents have real, currently-open tickers to
+    reference for submit_trade_intent — without it, an agent with zero open
+    positions sees no live market data at all (market_summaries otherwise builds
+    only from the agent's own positions), and has no legitimate ticker to use for
+    its first trade."""
     counts = {"stale_abandoned": sweep_stale(session, settings), "run": 0, "skipped": 0}
+    extra_context = {"candidate_tickers": candidate_tickers} if candidate_tickers else None
     # Honors the max_active_agents ops throttle (only the live subset runs).
     agents = active_agents(session, settings)
     agents_by_uuid = {a.agent_uuid: a for a in agents}
@@ -320,7 +329,7 @@ def run_due_heartbeats(
     for agent, kind, slot_id, at in due[:max_per_cycle]:
         hb = run_heartbeat(
             session, settings, agent=agent, cohort=cohort, kind=kind, slot_id=slot_id,
-            cognition=cognition, md=md, scheduled_for=at,
+            cognition=cognition, md=md, scheduled_for=at, extra_context=extra_context,
         )
         counts["run" if hb is not None else "skipped"] += 1
     remaining = max_per_cycle - counts["run"]
@@ -332,7 +341,7 @@ def run_due_heartbeats(
                 session, settings, agent=agent, cohort=cohort, kind="triggered",
                 slot_id=f"levent:{event.id}", cognition=cognition, md=md,
                 trigger_reason=(event.payload_json or {}).get("listener"),
-                listener_event=event,
+                listener_event=event, extra_context=extra_context,
             )
             if hb is not None:
                 mark_listener_event_usefulness(session, hb)
