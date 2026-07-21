@@ -47,6 +47,26 @@ they ran under. Defaults are the spec's initial system defaults.
 Prices per model live in the `evo_model_prices` table (seeded on first run; update
 rows there — cost math never hardcodes a price).
 
+## Local (CPU) LLM backend
+
+Optional: route the `routine` alias to a self-hosted OpenAI-compatible server
+(Ollama / llama.cpp / vLLM) reachable over Railway's private network, instead of
+Anthropic. Zero marginal cost — the weekly `$` ceiling stops applying to routine
+heartbeats, so `EVO_HEARTBEAT_MAX_INPUT_TOKENS` / `EVO_HEARTBEAT_MAX_OUTPUT_TOKENS`
+become the real constraint (CPU generation time, not dollars). `deep` heartbeats
+(reflection/birth/cohort_end/retirement) always stay on Anthropic — low volume,
+highest stakes.
+
+| Env var | Default | Meaning |
+|---|---|---|
+| `EVO_LOCAL_LLM_ENABLED` | `false` | master switch; `routine` falls back to Anthropic when false or when base_url/model are unset |
+| `EVO_LOCAL_LLM_BASE_URL` | `""` | OpenAI-compat base URL, e.g. `http://ollama.railway.internal:11434/v1` (the client POSTs `<base_url>/chat/completions`) |
+| `EVO_LOCAL_LLM_MODEL` | `""` | model tag as the local server expects, e.g. `qwen2.5:7b-instruct` |
+| `EVO_LOCAL_LLM_TIMEOUT_SECONDS` | `180` | CPU generation is slow; longer than `EVO_LLM_TIMEOUT_SECONDS` |
+
+No pricing row is needed for the local backend — `evo_llm_usage` records `cost_usd=0`
+for these calls, so cost reporting stays correct without touching `evo_model_prices`.
+
 ## Market realism & listeners
 
 | Env var | Default | Meaning |

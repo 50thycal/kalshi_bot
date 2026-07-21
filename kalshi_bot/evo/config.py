@@ -59,6 +59,17 @@ class EvoSettings(BaseSettings):
     weekly_token_budget: int = 1_500_000  # per agent, input+output
     llm_timeout_seconds: float = 120.0
 
+    # --- local (CPU) LLM backend for routine heartbeats ---
+    # Optional: route the "routine" alias to a self-hosted OpenAI-compatible server
+    # (Ollama / llama.cpp / vLLM) instead of Anthropic — zero marginal cost, so
+    # compute becomes the binding constraint instead of the dollar ceiling. "deep"
+    # heartbeats (reflection/birth/cohort_end/retirement) always stay on Anthropic:
+    # low volume, highest stakes, exactly where quality matters most.
+    local_llm_enabled: bool = False
+    local_llm_base_url: str = ""  # e.g. "http://ollama.railway.internal:11434/v1"
+    local_llm_model: str = ""  # model tag as the local server expects
+    local_llm_timeout_seconds: float = 180.0  # CPU generation is slow
+
     # --- other per-cohort resource budgets ---
     weekly_tool_calls: int = 2000
     weekly_sandbox_runs: int = 50
