@@ -86,6 +86,7 @@ ALLOWED_SCRIPTS = (
     "fed_rv_study",
     "kalshi_stream_survey",
     "oflow_study",
+    "port_study",
     "mmsell_live",
     "mmsell_fill_model",
     "mmsell_exit_study",

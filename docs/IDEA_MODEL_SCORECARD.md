@@ -13,7 +13,7 @@ and **outcome**. Keep the base-rate and per-family tallies below in sync.
 
 ## Base rate (as of 2026-07-22, Area-2 scoped run)
 
-**15 idea-model promotions → 0 currently-live paper books** (PIN15, the one success, RETIRED
+**16 idea-model promotions → 0 currently-live paper books** (PIN15, the one success, RETIRED
 2026-07-16 when its target T-window was falsified live). The pipeline keeps working *as a filter*
 (most promotions are cheap ruling-outs, no paper bled), but the promote→book conversion is very
 low, so **promote conservatively and lean on the testability-NOW + venue-age gates.** The
@@ -25,7 +25,12 @@ corrected — the guilty-until-proven discipline holding. The 2026-07-22 Area-2 
 run added 1 promotion — **OFLOW** — which **ran and ruled the family out** (imbalance→next-move
 corr ≈ 0, net −3.4¢ after cost, on 933k tape samples): order-flow-as-signal is closed on Kalshi
 AND the decision to build per-market microstructure collection is a **no**. Area 2's binding
-constraint was **data collection**, not markets — and this cheap feasibility read settled it.
+constraint was **data collection**, not markets — and this cheap feasibility read settled it. The
+2026-07-22 Area-3 (portfolio construction) run added 1 promotion — **PORT**, a portfolio-measurement
+diagnostic — which ran and returned **ALLOCATION PREMATURE**: the portfolio holds ~1 independent
+realizable-+EV strategy (the mmsell maker-sell family; `mmsell10` the one genuine +EV book) where
+≥2 are needed, so the binding constraint is **edge supply, not allocation**. (Its first run falsely
+read PASS via a correlation-clustering artifact — caught + fixed, the discipline holding a third time.)
 
 | outcome | n | which |
 |---|---|---|
@@ -34,6 +39,7 @@ constraint was **data collection**, not markets — and this cheap feasibility r
 | **killed at probe** (clean ruling-out) | 8 | XGAME, TFAV, WCPROP, MLBWX, PINNED, DECAY, FEDRV (rates efficient), **OFLOW** (order-flow doesn't predict price) |
 | **UNTESTABLE — venue not ready** (data absence, not a kill) | 3 | FREEZE, COMPIN, **ECON-REACT** (only ~20 genuine econ-print settles yet) |
 | **census-stage HOLD/borderline** (not yet a full-probe go/no-go) | 2 | SEASONPIN (MLB HOLD, WNBA borderline), STREAMPIN (HOLD — no intra-window tape) |
+| **diagnostic — premature** (revisit at ≥2 independent +EV books) | 1 | PORT (portfolio construction — allocation premature) |
 
 Plus one run (2026-07-10 run2) that promoted **0 of 28** candidates — a legitimate, good outcome.
 
@@ -47,6 +53,7 @@ Plus one run (2026-07-10 run2) that promoted **0 of 28** candidates — a legiti
 | **favorite-buy** (back the underpriced favorite) | TFAV | **0** | 0-for-1 (−3.6¢). The FLB favorite side accrues to makers, not takers. |
 | **structural / deadline premium / internal-coherence** | DECAY, FEDRV | **0** | 0-for-2 (DECAY: by-date "hope" was *under*priced, not over; **FEDRV** ruled out 2026-07-21 — its flagged path "incoherence" was a `KXFED*` series-contamination + cross-meeting-independence artifact, so rates are internally efficient exactly as the ~0.1¢ `KXRATECUTCOUNT` spread predicted). Internal-coherence RV joins the structural graveyard. |
 | **microstructure / order-flow** (does book/tape flow predict the next price move) | OFLOW | **0** | First-ever attempt in this family (2026-07-22, Area 2), **RULED OUT** the same day. Area 2's binding constraint is **data collection** — full-depth `orderbook_snapshots` exist only for 77 scanner markets over 3 stale June days, and the traded markets have no books persisted — so OFLOW was a feasibility read on the one real order-flow tape (the killed WC slice). Result on **933k tape samples**: imbalance→next-move corr ≈ **+0.008** (net **−3.4¢** after cost; flat quintiles; no toxicity gradient) → **order-flow-as-signal is closed on Kalshi AND the per-market collection is not worth building.** LOW prior held (cost dominates on liquid markets; `edge_research` lesson 5). |
+| **portfolio construction** (meta / diagnostic — combine edges, not find them) | PORT | **n/a** | Not an edge family — the measurement layer the "$100/mo from any combination" goal implies. First run 2026-07-22 (Area 3): **allocation premature** — the portfolio has **1** independent realizable-+EV strategy (the mmsell maker-sell family; `mmsell10` the one genuine +EV book) where ≥2 are needed; diversification/sizing can't manufacture EV. Binding constraint = **edge supply, not allocation**. `port_study.py` kept as the standing portfolio view; the allocation question re-opens automatically the moment a 2nd independent +EV book lands. |
 
 **The one-line lesson the scorecard adds to the meta-lessons:** obs-pin/mechanics-blindness is the
 only family with any signal, and even it fails when the settled data doesn't exist yet — so the
@@ -58,6 +65,7 @@ highest-leverage screen is **testability-NOW**, not edge cleverness.
 
 | date | idea | family | scope source | verdict date | verdict | outcome |
 |---|---|---|---|---|---|---|
+| 2026-07-22 | **PORT** | portfolio construction (meta / diagnostic) | **scoped (Area 3: portfolio construction)** | 2026-07-22 | **ALLOCATION PREMATURE** | Portfolio-measurement probe (`port_study.py`) on `paper_trades` with fill-model realizable adjustment: effective **independent** realizable-+EV clusters = **1** (the mmsell maker-sell family; `mmsell10` the one genuine +EV book, Sharpe 1.48) where ≥2 are needed → **P1 FAIL**. v1 falsely read PASS (a realizable-sign-flip + correlation-only-clustering artifact split the mmsell family); v2 (family-structural clustering + paper-series correlations) gives the honest read. Binding constraint = **edge supply, not allocation**; hygiene = collapse mmsell→mmsell10, prune negative weather cells; keep as the standing portfolio view. `docs/PORT_THESIS.md`. |
 | 2026-07-22 | **OFLOW** | microstructure / order-flow | **scoped (Area 2: microstructure)** | 2026-07-22 | **RULING-OUT (family closed)** | Probe ran first-try on 823k Kalshi trades / 933k no-lookahead samples: imbalance→next-move corr ≈ +0.008, strong-imbalance net **−3.40¢** (gross +0.05¢), flat quintiles, no toxicity gradient → **P1 KILL**. Order-flow-as-signal closed on Kalshi AND the per-market microstructure collection is not worth building. Clean cheap ruling-out; LOW prior held. `docs/OFLOW_THESIS.md`. |
 | 2026-07-21 | **ECON-REACT** | obs-pin (scheduled-release reaction) | **scoped (Area 1: untouched universes)** | 2026-07-21 | **HOLD (testability-thin)** | Probe run (`econ_react_study` v2, de-contaminated): only ~20 settled genuine econ-print markets (most 2026 prints still open) → post-release window not measurable → P0 fails. v1's apparent "promote" was a lookahead/survivorship mirage + gas/TSA contamination, corrected to an honest HOLD. Re-run as prints settle (weekly claims fastest). Not a kill. `docs/ECON_REACT_THESIS.md`. |
 | 2026-07-21 | **FEDRV** | structural (internal coherence / RV) | scoped (Area 1) | 2026-07-21 | **RULING-OUT (coherent/efficient)** | Probe run (`fed_rv_study` v2, tightened regex): v1's −80¢ "incoherence" was a KXFED* contamination artifact. Clean convolution of 4 meetings vs the ladder leaves a +14¢ gap at "1 cut" that FAILS pre-registered P2 — an independence-assumption artifact (Fed cuts are positively correlated / come in cycles; the ladder's fat-0 + 6+ tail is the correlated signature). Matches the LOW prior. Rates category closed. `docs/FEDRV_THESIS.md`. |

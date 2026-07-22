@@ -16,6 +16,39 @@ Conventions:
 
 ---
 
+## IDEA-MODEL 2026-07-22 — Area 3 (portfolio construction): PORT → ALLOCATION PREMATURE
+
+Final scoped run — combining the edges we have, not finding new ones. Phase 1 pulled every book's
+realized `paper_trades` rollup: through the fill-model **realizable** lens, the portfolio's genuine
++EV content is ~1 book — **mmsell10** (+1.40¢ realizable, Sharpe 1.48, $0 max-DD) — while the other
+mmsell variants are paper mirages (mmsell3 realizable −1.06¢, etc.), `weather_con` is now net
+negative across every window, theta is a shelved flier, and the rest are stale/pruned or losers.
+
+Promoted + ran **PORT** (`docs/PORT_THESIS.md`, `scripts/port_study.py`) — the portfolio-measurement
+diagnostic the "$100/mo from any combination" north star implies but the bot never built (per-book
+realized stats, cross-book correlation matrix, effective-independent-book count, flat-vs-inverse-
+variance allocation).
+
+- **Verdict: ALLOCATION PREMATURE (P1 FAIL).** Every realizable-+EV active book is the **mmsell
+  maker-sell family** (one bet on overlapping markets, not five — P3), and no non-mmsell book is
+  realizably +EV → **1** independent +EV cluster where ≥2 are needed. Diversification/sizing reduce
+  variance; they can't manufacture EV. Binding constraint = **edge supply, not allocation**.
+- A probe bug was caught first: v1 falsely read *P1 PASS (2 clusters)* — the realizable scaling
+  sign-flipped mirage books (corrupting the correlation matrix) and correlation-only clustering
+  split the mmsell family (mmsell10, recent + low-variance). v2 (family-structural clustering +
+  paper-series correlations) gives the honest read. Third artifact caught + corrected this session.
+- **Actions:** (1) hygiene — collapse the mmsell variants to mmsell10, prune the negative weather
+  cells; (2) keep `port_study.py` as the standing portfolio view — it re-opens the allocation
+  question automatically when a 2nd independent +EV book lands.
+
+That closes the three-area exploration (untouched universes / microstructure / portfolio): **6
+probes, 0 new edges, 5 ruling-outs/holds + 1 "premature"** — the pipeline working as a filter. The
+consistent signal: the bottleneck is **edge supply**, and the nearest dollar levers are execution
+(the `mmsell10` live re-test + its fill-realism collection, ~1 week out) and hygiene, not a new
+market or clever allocation.
+
+---
+
 ## AREA-2 PROBE VERDICT 2026-07-22 — OFLOW ruled out (no within-market order-flow alpha)
 
 Ran `oflow_study` (first-try, clean) on the collected WC tape: **823,092 Kalshi trades, 100% with
