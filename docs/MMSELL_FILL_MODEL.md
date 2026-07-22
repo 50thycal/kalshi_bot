@@ -113,5 +113,11 @@ the clean re-live-test candidate, straight into the mmsell3 entry as a `maxyes` 
    direct measurement that also covers the rich cells the current calibration can't reach. This
    touches the trading loop and adds orderbook fetches for held positions, so it is proposed
    separately rather than bundled here.
+   **[2026-07-22] Promoted to a near-term prerequisite** — the operator expects a new mmsell live
+   re-test (target: `mmsell10`) within ~1 week; build this candidate-snapshot collection + replay
+   as **step 0** of that re-test (see the callout at the top of `docs/MMSELL_LIVE_PLAN.md`). The
+   held-position half already exists (`mmsell_position_ticks`); what remains is the in-band
+   *candidate* snapshot. (Area-2's OFLOW ruling-out means this is for fill realism only, not a
+   signal.)
 3. **Re-test live only from the cheap fillable band.** Any future mmsell live test enters only where
    realizable ≈ paper (≤7¢ / under a `maxyes` cap), i.e. mmsell10's regime — not the whole cohort.
