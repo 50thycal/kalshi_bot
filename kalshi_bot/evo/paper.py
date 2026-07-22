@@ -27,9 +27,9 @@ not an independently constrained balance."""
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from ..paper.engine import kalshi_fee
 from .audit import audit
@@ -52,6 +52,12 @@ LIFETIME = "lifetime"
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _hours_since(ts: datetime, now: datetime | None = None) -> float:
+    now = now or _now()
+    aware = ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
+    return (now - aware).total_seconds() / 3600.0
 
 
 def cohort_ledger(cohort_id: int) -> str:
@@ -105,6 +111,46 @@ def all_open_positions(session, ledger_prefix: str | None = None) -> list[EvoPos
     if ledger_prefix:
         q = q.where(EvoPosition.ledger.like(f"{ledger_prefix}%"))
     return list(session.scalars(q))
+
+
+def recent_orders(
+    session, agent_uuid: str, *, hours: float = 48.0, limit: int = 8
+) -> list[dict]:
+    """Compact view of the agent's own recent orders for the heartbeat prompt: every
+    still-open/partial order plus anything created in the window. Surfacing this makes
+    a stuck ("open", 0 fills) or rejected order a VISIBLE fact the agent can act on and
+    cite — instead of silently re-attempting the same mistake or narrating a stale one."""
+    since = _now() - timedelta(hours=hours)
+    rows = list(
+        session.scalars(
+            select(EvoOrder)
+            .where(
+                EvoOrder.agent_uuid == agent_uuid,
+                or_(
+                    EvoOrder.status.in_(("open", "partial")),
+                    EvoOrder.created_at >= since,
+                ),
+            )
+            .order_by(EvoOrder.created_at.desc())
+            .limit(limit)
+        )
+    )
+    out: list[dict] = []
+    for o in rows:
+        d: dict = {
+            "order_id": o.id,
+            "ticker": o.market_ticker,
+            "side": o.side,
+            "action": o.action,
+            "qty": o.quantity,
+            "filled": o.filled_quantity,
+            "status": o.status,
+            "age_h": round(_hours_since(o.created_at), 1),
+        }
+        if o.reject_reason:
+            d["reject_reason"] = o.reject_reason[:180]
+        out.append(d)
+    return out
 
 
 def _get_open_position(
@@ -454,6 +500,23 @@ def evaluate_order(
     now = _now()
     if quote is None:
         _record_no_quote(session, order)
+        # Backstop: an order that never filled and can get NO quote at all for a
+        # bounded window is unfillable (most likely an invalid/untradable ticker) —
+        # reject it with a reason the agent will see, instead of leaving it "open"
+        # forever with zero feedback. Fill-aware so a real, partially-filled market
+        # that briefly loses its book is never auto-rejected here.
+        if (
+            order.filled_quantity == 0
+            and _hours_since(order.created_at, now) >= settings.order_no_quote_reject_hours
+        ):
+            order.status = "rejected"
+            order.reject_reason = (
+                f"unfillable: no live quote for {order.market_ticker!r} in the "
+                f"{_hours_since(order.created_at, now):.0f}h since submission (0 fills) "
+                "— likely an invalid or untradable ticker"
+            )
+            session.flush()
+            return order.status
         return order.status  # no data this cycle; leave untouched
     if quote.age_seconds(now) > settings.stale_data_seconds:
         _record_stale(session, order, quote, settings.stale_data_seconds)

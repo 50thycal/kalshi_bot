@@ -97,6 +97,8 @@ class HeartbeatContext:
     market_summaries: list[dict]
     performance_summary: dict
     announcements: list[dict] = field(default_factory=list)
+    recent_orders: list[dict] = field(default_factory=list)
+    recent_backtests: list[dict] = field(default_factory=list)
     extra: dict = field(default_factory=dict)
 
 
@@ -138,6 +140,15 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
   actions in the SAME heartbeat — if you have multiple ready hypotheses, test them
   together now rather than spacing them one-per-heartbeat: heartbeats are hours
   apart, sandbox runs are cheap, and your weekly budget (50 runs) is generous.
+  CLOSE THE LOOP: a backtest is only useful if it feeds a DECISION. After running one
+  you MUST, in the same or the very next heartbeat, do exactly one of: conclude_experiment
+  with a verdict, revise_belief (superseding the prior belief), save_strategy (or record
+  the idea in the graveyard if it is -EV), OR name the SPECIFIC new variable you will
+  change before testing again. Do NOT re-run a spec you have already run: check YOUR
+  RECENT BACKTESTS below — a fingerprint with times_run_recently >= 1 is a KNOWN result,
+  and running the identical spec again returns the same numbers and wastes budget. A
+  stable negative result (e.g. a low win-rate that repeats) is a CONCLUSION to act on
+  (kill the idea, change a variable), never a reason to run it again.
 - save_strategy {spec, graveyard_check {prior_attempt, prior_result, material_difference}?}
   `spec` is validated against an EXACT schema — unlisted fields are REJECTED, do not
   invent field names (no hypothesis_id, strategy_name, commission_bps, order_style,
@@ -170,7 +181,12 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
 - cancel_order {order_id}
 - record_influence {source_uuid, concept, interpretation, modifications, result}
 - submit_ticket {category, capability, problem, expected_strategy_benefit,
-  expected_cost?, urgency?}. category MUST be one of: TICKET_CATEGORIES
+  expected_cost?, urgency?}. category MUST be one of: TICKET_CATEGORIES.
+  GROUND every factual claim (an error string, "N heartbeats", "since <when>") in
+  evidence visible to you NOW — cite the order_id + reject_reason from YOUR RECENT
+  ORDERS, the exact text from RETRIEVED MEMORY, or a run_id. Do NOT narrate from
+  memory; an uncited claim is likely stale (e.g. a past error already resolved) and
+  wastes an operator's review.
 - support_ticket {ticket_id, note?}
 - register_data_source {name, provider, endpoint, update_frequency, cost_note: "free"}
 - set_working_state {state}  (your scratch state for next heartbeat, <= 4000 chars JSON)
@@ -230,6 +246,21 @@ def build_user_prompt(ctx: HeartbeatContext) -> str:
     parts.append("PORTFOLIO:\n" + json.dumps(ctx.portfolio_summary, separators=(",", ":")))
     parts.append("PERFORMANCE:\n" + json.dumps(ctx.performance_summary, separators=(",", ":")))
     parts.append("BUDGETS REMAINING:\n" + json.dumps(ctx.budget_summary, separators=(",", ":")))
+    if ctx.recent_orders:
+        parts.append(
+            "YOUR RECENT ORDERS (act on these — an order stuck 'open' with 0 fills and a "
+            "rising age_h is on an untradable ticker and will be auto-rejected; a "
+            "'rejected' status tells you WHY, so fix the cause, do not resubmit the same "
+            "ticker; cite an order_id/reject_reason here rather than narrating from "
+            "memory):\n" + json.dumps(ctx.recent_orders, separators=(",", ":"))[:2500]
+        )
+    if ctx.recent_backtests:
+        parts.append(
+            "YOUR RECENT BACKTESTS (fingerprint identifies the exact spec; "
+            "times_run_recently >= 2 means you already ran this and the result is KNOWN "
+            "— do NOT run it again, act on it):\n"
+            + json.dumps(ctx.recent_backtests, separators=(",", ":"))[:2500]
+        )
     if ctx.listener_events:
         parts.append("TRIGGERED LISTENER EVENTS (why you may have been woken):\n"
                      + json.dumps(ctx.listener_events, separators=(",", ":"))[:2000])
@@ -256,7 +287,11 @@ def build_user_prompt(ctx: HeartbeatContext) -> str:
         "Decide what to do this heartbeat per your cognitive genome. Heartbeats are "
         "hours apart — batch every ready action into THIS one rather than spacing "
         "one step across many heartbeats (e.g. run several backtests together if "
-        "you have several hypotheses ready). Be economical in PROSE, not in "
+        "you have several hypotheses ready). CONVERT EVIDENCE INTO A DECISION: if a "
+        "recent backtest or a recent order already answers a question, ACT on it "
+        "(conclude an experiment, revise a belief, save or kill a strategy, fix a "
+        "rejected order's cause) instead of gathering the same evidence again. Be "
+        "economical in PROSE, not in "
         "productive action: your token/cost budgets are real, so keep every journal "
         "field terse — a short phrase per list item, not sentences; the journal is "
         "a log, not an essay. An over-long journal can truncate the response before "
@@ -641,6 +676,23 @@ def _execute_one(
         ticker = str(a.get("market_ticker", ""))
         if not ticker:
             return {"rejected": "market_ticker required"}
+        # Up-front validity gate: a tradable Kalshi market is a SPECIFIC market with a
+        # live quote right now (the agent is told to pick from RELEVANT MARKETS). If it
+        # cannot be quoted it is not tradable — reject immediately with a reason the
+        # agent gets THIS heartbeat, instead of creating an order that sits open forever
+        # with no fill and no signal. The bare-prefix case (e.g. "KXHIGH") gets a sharper
+        # message since a series/event prefix can never be a market.
+        if md.get_quote(ticker) is None:
+            if "-" not in ticker:
+                return {"rejected": (
+                    f"{ticker!r} is a series/event prefix, not a tradable market — "
+                    "submit a specific market ticker shown under RELEVANT MARKETS "
+                    "(e.g. KXHIGHNY-26JUN08-B70.5), never a bare prefix like KXHIGH"
+                )}
+            return {"rejected": (
+                f"no live quote for {ticker!r} — it is not a currently tradable market; "
+                "pick a ticker shown under RELEVANT MARKETS (live quotes)"
+            )}
         try:
             qty = int(a.get("quantity", 0))
         except (TypeError, ValueError):
@@ -830,5 +882,7 @@ def assemble_context(
         market_summaries=market_summaries,
         performance_summary=perf,
         announcements=active_notices,
+        recent_orders=papermod.recent_orders(session, au),
+        recent_backtests=sandbox.recent_runs(session, au),
         extra=extra or {},
     )

@@ -86,6 +86,15 @@ class EvoSettings(BaseSettings):
     maker_adverse_selection_haircut: float = 0.25  # fraction of trade-through fills forfeited
     max_position_fraction: float = 0.25  # max cost basis per market as fraction of NAV
     stale_data_seconds: int = 600  # market data older than this fails closed
+    # An order that never fills and can get NO live quote at all for this many hours
+    # since submission is treated as unfillable (an invalid/untradable ticker, e.g. a
+    # bare series prefix) and auto-rejected with a reason — instead of sitting "open"
+    # forever giving the agent zero feedback to learn from. The agent-facing submit
+    # gate rejects obviously-unquotable tickers immediately; this is the backstop for
+    # anything that slips through or goes permanently dark. Fill-aware: a partially
+    # filled order is never auto-rejected, so a real market that briefly loses its
+    # book cannot trip it.
+    order_no_quote_reject_hours: float = 6.0
 
     # --- sandbox limits (spec §15) ---
     sandbox_max_rows: int = 200_000

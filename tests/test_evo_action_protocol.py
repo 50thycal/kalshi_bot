@@ -127,6 +127,68 @@ def test_submit_trade_intent_warns_against_series_prefixes():
     assert "KXHIGH" in ACTION_PROTOCOL
 
 
+def test_protocol_requires_backtests_to_close_the_loop():
+    # Agents were re-running identical losing backtests without ever concluding.
+    # The protocol must now demand a decision after each run and forbid re-running a
+    # known (already-fingerprinted) spec.
+    lower = ACTION_PROTOCOL.lower()
+    assert "close the loop" in lower
+    assert "times_run_recently" in ACTION_PROTOCOL  # references the recent-backtests view
+    assert "conclude_experiment" in ACTION_PROTOCOL
+
+
+def test_protocol_requires_cited_evidence_for_tickets():
+    # A live ticket asserted a stale/hallucinated diagnosis ("error for 10+ heartbeats
+    # since cohort start") that the DB flatly contradicted. The protocol must require
+    # claims to be grounded in visible evidence, not narrated from memory.
+    lower = ACTION_PROTOCOL.lower()
+    assert "ground every factual claim" in lower
+    assert "do not narrate" in lower
+    assert "cite the order_id" in lower
+
+
+def test_recent_orders_and_backtests_render_in_prompt():
+    from kalshi_bot.evo import models as em
+    from kalshi_bot.evo import paper
+
+    eng = create_engine("sqlite://")
+    Base.metadata.create_all(eng)
+    s = sessionmaker(bind=eng, expire_on_commit=False)()
+    settings = EvoSettings(_env_file=None)
+    llm.seed_model_prices(s, settings)
+    cohort = ensure_current_cohort(s, settings)
+    agent = create_agent(s, settings, cohort, random.Random(1),
+                         origin="founder", slot_key="founder:0")
+    budgets.ensure_budgets(s, agent.agent_uuid, cohort.id, settings)
+    paper.ensure_portfolio(s, agent.agent_uuid, paper.cohort_ledger(cohort.id), 1000.0)
+
+    # a stuck open order + the SAME backtest already run twice, on the record
+    s.add(em.EvoOrder(
+        agent_uuid=agent.agent_uuid, cohort_id=cohort.id, idem_key="stuck1",
+        market_ticker="KXHIGH", side="yes", action="buy", quantity=5, status="open",
+    ))
+    spec = {"name": "wx", "universe": {"series_prefixes": ["KXHIGH"]}}
+    for _ in range(2):
+        s.add(em.EvoSandboxRun(
+            agent_uuid=agent.agent_uuid, kind="backtest", dataset="backfill_weather",
+            params_json={"spec": spec},
+            result_json={"n_trades": 100, "win_rate": 0.17, "total_pnl_usd": -22.0},
+        ))
+    s.flush()
+
+    seen: dict = {}
+
+    def script(ctx):
+        seen["prompt"] = build_user_prompt(ctx)
+        return {"journal": {"decision": "ok"}, "actions": []}
+
+    run_heartbeat(s, settings, agent=agent, cohort=cohort, kind="routine",
+                  slot_id="s1", cognition=ScriptedCognition(script), md=StaticMarketData())
+    prompt = seen["prompt"]
+    assert "YOUR RECENT ORDERS" in prompt and "KXHIGH" in prompt
+    assert "YOUR RECENT BACKTESTS" in prompt and "times_run_recently" in prompt
+
+
 def test_candidate_tickers_extend_market_summaries_without_leaking_to_extra():
     """candidate_tickers (the orchestrator's universe scan) must reach an agent
     with zero open positions — otherwise market_summaries builds only from
