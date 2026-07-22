@@ -14,6 +14,8 @@ market's close_time."""
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import time
 from datetime import datetime, timezone
@@ -32,6 +34,56 @@ from .strategy_spec import entry_signal, exit_signal, validate_spec
 logger = logging.getLogger(__name__)
 
 DATASETS = ("backfill_weather",)
+
+
+def spec_fingerprint(spec_doc: dict | None) -> str:
+    """Short stable hash of a strategy spec so a heartbeat prompt can show when the
+    agent has already run an IDENTICAL backtest (same fingerprint => same result)."""
+    try:
+        canonical = json.dumps(spec_doc or {}, sort_keys=True, separators=(",", ":"))
+    except (TypeError, ValueError):
+        canonical = str(spec_doc)
+    return hashlib.sha1(canonical.encode("utf-8")).hexdigest()[:10]
+
+
+def recent_runs(session, agent_uuid: str, *, limit: int = 8) -> list[dict]:
+    """Compact view of the agent's most recent sandbox runs for the heartbeat prompt,
+    each tagged with the spec fingerprint and how many of these recent runs share it
+    (times_run_recently >= 2 => a repeated identical backtest — a KNOWN result, not new
+    information). Makes self-repetition impossible to miss."""
+    rows = list(
+        session.scalars(
+            select(EvoSandboxRun)
+            .where(EvoSandboxRun.agent_uuid == agent_uuid)
+            .order_by(EvoSandboxRun.created_at.desc())
+            .limit(limit)
+        )
+    )
+    freq: dict[str, int] = {}
+    prepared: list[tuple] = []
+    for r in rows:
+        spec = (
+            (r.params_json or {}).get("spec") if isinstance(r.params_json, dict) else None
+        )
+        fp = spec_fingerprint(spec)
+        freq[fp] = freq.get(fp, 0) + 1
+        prepared.append((r, fp))
+    out: list[dict] = []
+    for r, fp in prepared:
+        res = r.result_json or {}
+        out.append(
+            {
+                "run_id": r.id,
+                "kind": r.kind,
+                "fingerprint": fp,
+                "times_run_recently": freq[fp],
+                "n_trades": res.get("n_trades"),
+                "win_rate": res.get("win_rate"),
+                "total_pnl_usd": res.get("total_pnl_usd"),
+                "per_trade_usd": res.get("per_trade_usd"),
+            }
+        )
+    return out
 
 
 def _quote_from_candle(

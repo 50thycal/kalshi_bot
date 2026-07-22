@@ -181,6 +181,84 @@ def test_no_quote_at_all_records_health_event_and_leaves_order_open(evo_session,
     assert event.detail_json["order_id"] == order.id
 
 
+def test_no_quote_backstop_rejects_unfillable_order_after_window(evo_session, evo_settings):
+    """An order that never fills and can get NO quote for longer than the configured
+    window is unfillable (invalid/untradable ticker) — auto-reject it with a reason the
+    agent will see, instead of leaving it open forever. This is what finally clears a
+    stuck order placed on a bare series prefix like "KXHIGH"."""
+    _fund(evo_session, evo_settings)
+    md = StaticMarketData()  # never a quote for T1
+    order, _ = paper.place_order(
+        evo_session, evo_settings, agent_uuid=AU, cohort_id=1, idem_key="nqb1",
+        market_ticker="KXHIGH", side="yes", action="buy", quantity=5,
+    )
+    # backdate creation past the reject window
+    order.created_at = datetime.now(timezone.utc) - timedelta(
+        hours=evo_settings.order_no_quote_reject_hours + 1
+    )
+    evo_session.flush()
+    paper.process_open_orders(evo_session, evo_settings, md)
+    assert order.status == "rejected"
+    assert "no live quote" in order.reject_reason
+    assert order.filled_quantity == 0
+
+
+def test_no_quote_backstop_spares_partially_filled_order(evo_session, evo_settings):
+    """Fill-aware: a real market that briefly loses its book must NOT be auto-rejected
+    if it already has fills — only never-filled orders are treated as unfillable."""
+    _fund(evo_session, evo_settings)
+    md = StaticMarketData()  # no quote this cycle
+    order, _ = paper.place_order(
+        evo_session, evo_settings, agent_uuid=AU, cohort_id=1, idem_key="nqb2",
+        market_ticker="T1", side="yes", action="buy", quantity=5, limit_price_cents=60,
+    )
+    order.filled_quantity = 2
+    order.status = "partial"
+    order.created_at = datetime.now(timezone.utc) - timedelta(
+        hours=evo_settings.order_no_quote_reject_hours + 5
+    )
+    evo_session.flush()
+    paper.process_open_orders(evo_session, evo_settings, md)
+    assert order.status == "partial"  # spared
+
+
+def test_recent_orders_surfaces_open_and_rejected(evo_session, evo_settings):
+    _fund(evo_session, evo_settings)
+    open_order, _ = paper.place_order(
+        evo_session, evo_settings, agent_uuid=AU, cohort_id=1, idem_key="ro-open",
+        market_ticker="T1", side="yes", action="buy", quantity=5, limit_price_cents=50,
+    )
+    # a rejected order (sell with nothing held) leaves an auditable row with a reason
+    paper.place_order(
+        evo_session, evo_settings, agent_uuid=AU, cohort_id=1, idem_key="ro-rej",
+        market_ticker="T1", side="yes", action="sell", quantity=9,
+    )
+    rows = paper.recent_orders(evo_session, AU)
+    by_status = {r["status"]: r for r in rows}
+    assert "open" in by_status and by_status["open"]["order_id"] == open_order.id
+    assert "rejected" in by_status and "cannot sell" in by_status["rejected"]["reject_reason"]
+
+
+def test_spec_fingerprint_stable_and_recent_runs_counts_repeats(evo_session, evo_settings):
+    spec_a = {"name": "wx_a", "universe": {"series_prefixes": ["KXHIGH"]}}
+    spec_b = {"name": "wx_b", "universe": {"series_prefixes": ["KXLOW"]}}
+    # identical specs must fingerprint identically regardless of key order
+    assert sandbox.spec_fingerprint(spec_a) == sandbox.spec_fingerprint(dict(spec_a))
+    assert sandbox.spec_fingerprint(spec_a) != sandbox.spec_fingerprint(spec_b)
+    for spec in (spec_a, spec_a, spec_b):  # spec_a run twice
+        evo_session.add(em.EvoSandboxRun(
+            agent_uuid=AU, kind="backtest", dataset="backfill_weather",
+            params_json={"spec": spec},
+            result_json={"n_trades": 100, "win_rate": 0.17, "total_pnl_usd": -22.0,
+                         "per_trade_usd": -0.22},
+        ))
+    evo_session.flush()
+    runs = sandbox.recent_runs(evo_session, AU)
+    fp_a = sandbox.spec_fingerprint(spec_a)
+    a_runs = [r for r in runs if r["fingerprint"] == fp_a]
+    assert len(a_runs) == 2 and all(r["times_run_recently"] == 2 for r in a_runs)
+
+
 def test_terminal_market_expires_order(evo_session, evo_settings):
     _fund(evo_session, evo_settings)
     md = StaticMarketData()

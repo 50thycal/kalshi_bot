@@ -228,6 +228,29 @@ def test_trade_intent_action_places_order(evo_session, evo_settings, evo_agent):
     assert fact is not None  # immutable trade-intent record
 
 
+def test_trade_intent_rejected_up_front_for_untradable_ticker(
+    evo_session, evo_settings, evo_agent
+):
+    """An order on a ticker with no live quote (e.g. a bare series prefix like
+    "KXHIGH") is rejected AT SUBMISSION with a clear reason — and crucially no order
+    row is created, so it can never become a stuck 'open' order with zero feedback."""
+    agent, cohort = evo_agent
+    cog = ScriptedCognition(lambda ctx: {
+        "journal": {"decision": "buy prefix"},
+        "actions": [{"type": "submit_trade_intent", "market_ticker": "KXHIGH",
+                     "side": "yes", "action": "buy", "quantity": 5,
+                     "limit_price_cents": 50, "thesis": "oops", "confidence": 0.7}],
+    })
+    hb = heartbeats.run_heartbeat(
+        evo_session, evo_settings, agent=agent, cohort=cohort, kind="routine",
+        slot_id="badtrade", cognition=cog, md=_md_with(ticker=None),
+    )
+    outcome = hb.actions_json[0]
+    assert "rejected" in outcome and "series/event prefix" in outcome["rejected"]
+    assert evo_session.scalar(select(em.EvoOrder).where(
+        em.EvoOrder.agent_uuid == agent.agent_uuid)) is None  # no limbo order
+
+
 # --- llm budgets ------------------------------------------------------------
 
 
