@@ -1,5 +1,17 @@
 # MMSELL3 — live real-money test plan (staged, pre-registered)
 
+> **⚠ PREREQUISITE for the NEXT live re-test (added 2026-07-22; re-test expected within ~1 week).**
+> The next mmsell live test targets **mmsell10** — the one realizable candidate (`maxyes` price
+> ceiling; `MMSELL_FILL_MODEL.md` §4), not the whole cohort. Before funding it, do **step 0: build
+> the fill-realism collection.** Persist a per-cycle snapshot of every in-band mmsell **candidate**
+> (not just held positions — `mmsell_position_ticks` already covers those): `market_ticker,
+> captured_at, yes/no bid/ask, last, volume`, written by `MmSellTracker` (which already fetches the
+> book to decide entry), plus a replay script. This converts today's live-*calibrated estimate*
+> (drawn from one 359-trade window) into a **direct per-ticker fill measurement** that also reaches
+> the rich price cells the estimate can't. Full rationale: `MMSELL_FILL_MODEL.md` §5 #2.
+> Note: the 2026-07-22 Area-2 idea-model run confirmed order-flow-as-a-*signal* is dead on Kalshi
+> (`docs/OFLOW_THESIS.md`), so this collection is worth building ONLY for fill realism, not alpha.
+
 *Plan written 2026-07-12, before any live order is placed. The sizing, gates and kill criteria
 below are **pre-registered** so the test can't be quietly re-scoped after the fact. Status:
 **BUILT 2026-07-13 (inert) — awaiting demo dry-run, then Stage 1 funding. The live path now
