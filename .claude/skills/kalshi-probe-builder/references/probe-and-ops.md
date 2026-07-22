@@ -138,27 +138,42 @@ DFLT=<default-branch>            # confirm via: git ls-remote origin refs/heads/
 git fetch origin "$DFLT" -q
 git checkout -B ops "origin/$DFLT" && git push -f origin ops    # or the recreate recipe in CLAUDE.md
 
-# 1. request a run on a clean worktree (don't disturb your branch); ALWAYS set a unique id
+# 1. request a run on a clean worktree (don't disturb your branch); ALWAYS set a unique id.
+#    HARD GUARD (do not omit): abort if the worktree `cd` fails. Without it, the `git reset
+#    --hard origin/ops` below runs in your MAIN checkout and silently resets your working
+#    branch to the ops tip — a real footgun that has bitten this workflow once.
 git fetch origin ops -q
-git worktree add /tmp/ops ops
-cd /tmp/ops
+WT=/tmp/ops-run; rm -rf "$WT"; git worktree prune
+git worktree add "$WT" ops || { echo "ABORT: worktree add failed"; exit 1; }
+cd "$WT" || { echo "ABORT: cd failed — resetting nothing"; exit 1; }
+[ "$(git rev-parse --show-toplevel)" = "$WT" ] || { echo "ABORT: not inside the worktree"; exit 1; }
+git reset --hard origin/ops -q            # safe: guaranteed inside $WT by the guard above
 printf '%s\n' '{"type":"script","name":"<name>","args":["--max-event-pages","60"],"id":"<slug>"}' \
   > ops/request.json
-git add ops/request.json && git commit -q -m "ops: run <name>" && git push origin ops
+git add ops/request.json && git commit -q -m "ops: run <name>"
+git push origin ops || { git fetch origin ops -q; git reset --hard origin/ops -q; echo \
+  "rejected (ops moved) — reconciled INSIDE the worktree; re-apply request.json and re-push"; }
 
 # 2. poll for YOUR result (~30-90s) — read ops/results/<slug>.txt (uniquely named; a concurrent
 #    /loop run can overwrite the shared ops/result.txt pointer but never your per-id file)
 git fetch origin ops -q && git show FETCH_HEAD:ops/results/<slug>.txt
 
-# 3. leave the channel idle
+# 3. leave the channel idle, then remove the worktree (cd OUT of it by ABSOLUTE path first)
 printf '%s\n' '{"type": "noop"}' > ops/request.json
 git add ops/request.json && git commit -q -m "ops: noop" && git push origin ops
-cd - && git worktree remove --force /tmp/ops
+cd /path/to/your/main/checkout && git worktree remove --force "$WT"
 ```
 
-If a push is rejected (a concurrent producer moved `ops`), `git reset --hard origin/ops`, re-apply
-`request.json`, and re-push. Never open a PR merging `ops` into the default branch (GitHub
-auto-deletes the branch on merge and kills the trigger).
+Reconcile a rejected push (a concurrent producer moved `ops`) with `git reset --hard origin/ops`
+**only ever inside the ops worktree** — the abort-guard in step 1 is what makes that safe. NEVER
+run `git reset --hard origin/ops` from your main checkout. Never open a PR merging `ops` into the
+default branch (GitHub auto-deletes the branch on merge and kills the trigger).
+
+**Test-before-merge variant.** To re-run a *fixed* probe without waiting for a merge (e.g. after
+a first run exposed a bug), the `ops` runner executes scripts from the **ops branch**, so you can
+overlay the fixed script directly: inside the guarded worktree above, `cp` your corrected
+`scripts/<name>.py` over the ops copy, commit it alongside `request.json`, and push. A later
+merge + `ops` refresh (step 0) makes the fix durable.
 
 ---
 
