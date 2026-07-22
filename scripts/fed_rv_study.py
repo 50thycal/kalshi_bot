@@ -42,7 +42,10 @@ import xvenue_leadlag as xl  # _get (browser UA + retries), _num
 
 KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
 
-DECISION_SERIES = re.compile(r"^KXFED(DECISION|FUNDS|RATE)?", re.I)
+# Exact prefix — the first run's greedy `^KXFED(...)?` (optional suffix) matched every KXFED*
+# event (KXFEDEMPLOYEES/KXFEDGOVNOM/KXFEDERALCHARGE), injecting a forced-1-cut distribution that
+# drove convolved P(0 cuts) to zero and faked an -80c "incoherence". Require the decision market.
+DECISION_SERIES = re.compile(r"^KXFEDDECISION", re.I)
 CUTCOUNT_SERIES = re.compile(r"^KX(RATECUTCOUNT|RATECUTS|FEDCUTS|CUTS2026)", re.I)
 YEAR = "2026"
 MAX_CUTS = 6  # bucket 0..5 explicit, 6 = "6+"
@@ -255,19 +258,28 @@ def main(argv: list[str] | None = None) -> int:
           f"at {max_gap_k} cuts")
 
     # ---- verdict ----------------------------------------------------------------------
+    # A valid full-year comparison needs enough upcoming meetings mapped that the convolution
+    # can represent the annual cut count; with only 1-2 meetings it is apples-to-oranges vs the
+    # annual ladder and any gap is a COVERAGE artifact, not incoherence.
+    min_meetings = 3
     print("\n== verdict (Kalshi-internal; external Fed-funds-futures cross-check is v2) ==")
-    if abs(max_gap) >= args.cost_cents:
-        print(f"  VERDICT: INCOHERENT-BEYOND-COST — the aggregate path disagrees with the "
-              f"convolved per-meeting decisions by {max_gap:+.1f}c at {max_gap_k} cuts "
-              f"(> {args.cost_cents:.0f}c cost). Potential structural RV; write the pre-registered "
-              "RV probe (fillability + persistence). CAUTION: verify the bps/bucket mapping and "
-              "the independence assumption before trusting the gap.")
+    if coverage < min_meetings:
+        print(f"  VERDICT: HOLD (INSUFFICIENT COVERAGE) — only {coverage} upcoming meeting(s) "
+              f"mapped (need >= {min_meetings}); a {coverage}-meeting convolution cannot "
+              "represent the full FOMC year, so the gap vs the annual ladder is a coverage "
+              "artifact, not incoherence. No promotable edge; re-run when more 2026 decision "
+              "meetings are priced. Prior stands: the ~0.1c ladder spread => efficient.")
+    elif abs(max_gap) >= args.cost_cents:
+        print(f"  VERDICT: INCOHERENCE FLAGGED (not yet promotable) — gap {max_gap:+.1f}c at "
+              f"{max_gap_k} cuts (> {args.cost_cents:.0f}c). Given the LOW prior (~0.1c ladder "
+              "spread) and the UNTESTED cross-meeting independence assumption in the convolution, "
+              "this promotes ONLY if it survives (a) a full-coverage rebuild and (b) an "
+              "independence sensitivity check (pre-registered P2). Treat as HOLD-leaning until then.")
     else:
         print(f"  VERDICT: COHERENT / EFFICIENT — max per-bucket gap {max_gap:+.1f}c is within "
-              f"cost ({args.cost_cents:.0f}c); the path is priced consistently with the "
-              "per-meeting decisions (as the 0.3c KXRATECUTCOUNT spread predicted). Clean "
-              "ruling-out — log rates as internally efficient and close unless the futures "
-              "cross-check (v2) later shows a Kalshi-vs-futures lag.")
+              f"cost ({args.cost_cents:.0f}c); the annual ladder is priced consistently with the "
+              "convolved per-meeting decisions (as the ~0.1c KXRATECUTCOUNT spread predicted). "
+              "Clean ruling-out — log rates as internally efficient.")
     return 0
 
 

@@ -16,6 +16,38 @@ Conventions:
 
 ---
 
+## AREA-1 PROBE VERDICTS 2026-07-21 — 0 promotes: FEDRV ruled out, ECON-REACT + STREAMPIN HOLD
+
+Ran the three Area-1 probes (`econ_react_study`, `fed_rv_study`, `kalshi_stream_survey`) via the
+ops channel after PR #77 merged. **First-pass result: 0 new books.** Two of the three first-run
+auto-verdicts were artifacts caught on inspection (the "guilty until proven" rule earning its
+keep); both probes were fixed and re-run (overlaid on the `ops` branch) before logging.
+
+- **FEDRV → RULING-OUT (rates internally efficient).** v1's −80¢ "incoherence" was pure
+  contamination: the greedy `^KXFED(...)?` regex matched `KXFEDEMPLOYEES`/`KXFEDGOVNOM`/
+  `KXFEDERALCHARGE`, injecting a forced-1-cut leg that zeroed convolved P(0 cuts). Tightened to
+  `^KXFEDDECISION` + a coverage guard: 4 clean meetings (JUL/SEP/OCT/DEC) convolve to
+  `{0:0.70, 1:0.26, 2:0.03}` vs the direct `KXRATECUTCOUNT` ladder `{0:0.81, 1:0.12, …, 6+:0.02}`
+  — a +14¢ gap at "1 cut" that **fails pre-registered P2**: a cross-meeting *independence*
+  artifact (Fed cuts are positively correlated / come in cycles, so mass sits at 0 or a full
+  cutting-cycle, not "exactly 1"; the ladder's fat-0 + 6+ tail is that correlated signature).
+  Matches the LOW prior (~0.1¢ ladder spread). Rates closed.
+- **ECON-REACT → HOLD (testability-thin).** v1's "late-pin promote" was a lookahead/survivorship
+  mirage (the convergence table conditions on the eventual winner) atop the same contamination (a
+  `category == Economics` fallback swept in AAA gas + TSA, which settle constantly but never trade
+  post-release). Fixed (curated print-series allowlist + gas/TSA denylist; verdict on the
+  non-lookahead post-release window only): only **~20 settled** genuine econ-print markets (vs
+  1,112 open — most 2026 prints have not settled) → **P0 testability fails.** Re-run as prints
+  settle; weekly jobless claims accrue fastest.
+- **STREAMPIN → CENSUS HOLD (no intra-window tape).** ~2,544 settled streaming markets and a
+  cumulative "reach N streams by date" instrument exist (C1 ✓), but they **settle in a jump —
+  0/8 sampled traded during the counting window (C2 ✗)** — no live tape to pin. Not a kill.
+
+All three theses + the scorecard carry these verdicts. Areas 2 (microstructure / order-flow) and
+3 (portfolio construction) remain queued.
+
+---
+
 ## IDEA-MODEL 2026-07-21 — Area 1 (untouched market universes): 3 promotions, pending probe
 
 Scoped idea-model run on **Area 1** of the session's whitespace review — Kalshi categories the

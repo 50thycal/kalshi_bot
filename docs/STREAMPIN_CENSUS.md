@@ -50,4 +50,10 @@ census even though the prior is uncertain.
 ## Status
 
 - Census script: `scripts/kalshi_stream_survey.py` (allowlisted in `ops_runner.py`).
-- Verdict: **pending first census run** via the ops channel.
+- Verdict (census run 2026-07-21): **HOLD — not testable yet.** ~2,544 settled streaming markets
+  exist, but the cumulative "reach N million streams by date" instruments (`KXARTISTSTREAMSY-…`)
+  **settle in a jump — 0/8 sampled traded during the counting window (C2 fails)** — so there is
+  no intra-window live tape to pin a running estimate against. C1 (a cumulative instrument
+  exists) passes; **C2 fails**; C3 (an external stream proxy) was not reached. Not a kill — the
+  obs-pin needs a live intra-window tape it does not yet have; re-run as the category matures and
+  these markets begin trading during accumulation.

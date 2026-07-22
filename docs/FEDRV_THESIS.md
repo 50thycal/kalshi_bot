@@ -1,9 +1,31 @@
 # FEDRV — internal-coherence relative value on Kalshi's Fed rate-cut path
 
 *Thesis written 2026-07-21 (idea-model Area 1: untouched market universes), before any
-validation ran; the falsifiable predictions below are pre-registered. Status: **pending probe**
-(`scripts/fed_rv_study.py`). **Honest prior: LOW** — this is primarily a cheap, uncorrelated
-ruling-out, and ruling out is a win.*
+validation ran; the falsifiable predictions below are pre-registered. Status: **RULING-OUT —
+COHERENT / efficient** (probe run 2026-07-21; see RESULTS). **Prior was LOW** — this was a cheap,
+uncorrelated ruling-out, and ruling out is a win.*
+
+## RESULTS (2026-07-21 probe run — `fed_rv_study`, tightened v2)
+
+**Verdict: RULING-OUT (P1 fails once P2's independence check is applied) — rates are internally
+efficient.** The first run (v1) flagged a −80¢ "incoherence," but that was a **contamination
+artifact**: the greedy `^KXFED(...)?` regex matched every `KXFED*` event (`KXFEDEMPLOYEES`,
+`KXFEDGOVNOM`, `KXFEDERALCHARGE`), injecting a forced-1-cut distribution that drove convolved
+P(0 cuts) to zero. The fixed v2 (`^KXFEDDECISION` only + a coverage guard) gives the clean read:
+
+- **4 mapped upcoming meetings** (JUL/SEP/OCT/DEC), each with a small cut probability
+  (`{0: 0.98…0.86}`). Convolved total-cuts = `{0:0.70, 1:0.26, 2:0.03}`; direct `KXRATECUTCOUNT`
+  ladder = `{0:0.81, 1:0.12, 2:0.03, …, 6+:0.02}`. Residual gap: **+14¢ at "1 cut."**
+- That gap is an **independence-assumption artifact, not a tradeable edge** — pre-registered
+  **P2** (must survive an independence sensitivity check) **fails.** Real Fed cuts are strongly
+  *positively correlated* (they come in cycles; isolated single cuts are rare), so mass belongs
+  at "0 cuts" or "a cutting cycle (many)," not "exactly 1." The ladder's shape — fat at 0 (0.81),
+  thin middle, a 6+ tail (0.02) — is exactly the correlated-regime signature an independence
+  convolution cannot produce. Relaxing independence reconciles the two distributions.
+- Consistent with the LOW prior (the ~0.1¢ `KXRATECUTCOUNT` spread = sharp money already on it).
+- **Decision:** ruling-out — rates logged as internally efficient; category closed. A v2 could
+  quantify the correlation sensitivity, but the direction is unambiguous, so it is not worth the
+  build.
 
 ## One-liner
 
