@@ -85,6 +85,7 @@ ALLOWED_SCRIPTS = (
     "econ_react_study",
     "fed_rv_study",
     "kalshi_stream_survey",
+    "oflow_study",
     "mmsell_live",
     "mmsell_fill_model",
     "mmsell_exit_study",

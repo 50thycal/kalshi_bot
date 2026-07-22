@@ -16,6 +16,57 @@ Conventions:
 
 ---
 
+## AREA-2 PROBE VERDICT 2026-07-22 — OFLOW ruled out (no within-market order-flow alpha)
+
+Ran `oflow_study` (first-try, clean) on the collected WC tape: **823,092 Kalshi trades, 100% with
+a usable `taker_side`, 27 markets → 933,073 no-lookahead (imbalance, forward-move) samples.**
+
+- Trailing aggressor-imbalance → next-60s-move correlation ≈ **+0.008** (pooled); per-market corr
+  all tiny / sign-inconsistent (−0.03..+0.10).
+- Strong-imbalance (|z|≥1) mean forward directional move = **+0.05¢ gross** (zero) → **−3.40¢ net**
+  of the ~3.4¢ taker round-trip. Imbalance quintiles flat (Q1 +0.02¢ → Q5 −0.01¢); the large-trade
+  slice is identical (no toxicity gradient).
+- Pre-registered **P1 KILL**: flow imbalance does not predict the next move net of cost.
+
+**Verdict: KILL — the microstructure/order-flow family is closed on Kalshi's tape.** And per the
+pre-committed decision rule, the money-saving half: **per-market microstructure collection
+(`MMSELL_FILL_MODEL.md` follow-up #2) is not worth building** for a signal that isn't there. The
+LOW prior (cost dominates on liquid markets; `edge_research` lesson 5) held. A cheap ruling-out on
+data already collected — exactly what a feasibility probe is for. Thesis + scorecard carry the
+verdict.
+
+---
+
+## IDEA-MODEL 2026-07-22 — Area 2 (microstructure / order-flow): 1 promotion, OFLOW (pending probe)
+
+Scoped idea-model run on **Area 2** — order-book microstructure, order-flow, and two-sided
+liquidity provision (the "how prices move / how you get filled" axis). An ops query pinned the
+binding constraint: **the microstructure data for the markets we trade isn't collected.**
+Full-depth `orderbook_snapshots` = 77 scanner markets over 3 stale June days; `market_snapshots`
+the same stale slice; `mmsell_position_ticks` live but thin (bid/ask/mid/vol, no depth); the only
+real order-flow tape is `game_tape_snapshots` — 1.08M trades but only the 27 **killed** World Cup
+markets (window closed). And the mmsell live post-mortem confirms fill mechanics were healthy
+(68.6% fill, non-WC live win% matched paper exactly) — mmsell's loss was **cell selection**, not
+execution, so there's no order-flow overlay to rescue it.
+
+So most Area-2 ideas screen as **HOLD (collection-gated)** or **KILL** (two-sided MM on info
+markets = the adverse-selection graveyard; no queue visibility on Kalshi). The run promotes **one**
+testable-now feasibility read:
+
+- **OFLOW** (`docs/OFLOW_THESIS.md`, `scripts/oflow_study.py`) — does within-market net aggressor
+  imbalance predict the next ~60s price move on Kalshi's tape, net of the taker round-trip? First-
+  ever attempt in the microstructure/order-flow family. **LOW prior** (cost dominates on liquid
+  markets; killed WC slice; h2h is the −EV cell), but the within-market flow→price question has no
+  prior attempt (xgame measured cross-venue *price* lead-lag, never within-market *flow*).
+  **Feasibility gate:** P1 fails → rule out order-flow-as-signal on Kalshi AND don't build per-
+  market collection (saves the eng cost); P1 passes → justify that collection, then re-probe live
+  tradeable markets. v1 is Kalshi-only (clean `taker_side` → signed flow); the cross-venue PM-flow
+  slice is deferred (ambiguous token-side mapping). Verdict lands here when the probe runs.
+
+Area 3 (portfolio construction) is the final scoped run.
+
+---
+
 ## AREA-1 PROBE VERDICTS 2026-07-21 — 0 promotes: FEDRV ruled out, ECON-REACT + STREAMPIN HOLD
 
 Ran the three Area-1 probes (`econ_react_study`, `fed_rv_study`, `kalshi_stream_survey`) via the

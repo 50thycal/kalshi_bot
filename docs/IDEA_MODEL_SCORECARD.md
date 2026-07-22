@@ -11,9 +11,9 @@ and **outcome**. Keep the base-rate and per-family tallies below in sync.
 
 ---
 
-## Base rate (as of 2026-07-21, Area-1 scoped run)
+## Base rate (as of 2026-07-22, Area-2 scoped run)
 
-**14 idea-model promotions → 0 currently-live paper books** (PIN15, the one success, RETIRED
+**15 idea-model promotions → 0 currently-live paper books** (PIN15, the one success, RETIRED
 2026-07-16 when its target T-window was falsified live). The pipeline keeps working *as a filter*
 (most promotions are cheap ruling-outs, no paper bled), but the promote→book conversion is very
 low, so **promote conservatively and lean on the testability-NOW + venue-age gates.** The
@@ -21,13 +21,17 @@ low, so **promote conservatively and lean on the testability-NOW + venue-age gat
 first probe pass**: FEDRV ruled out (rates internally efficient), ECON-REACT + STREAMPIN HOLD
 (testability-thin / no live tape yet). Two of the three first-run auto-verdicts were artifacts (a
 lookahead/survivorship mirage; a series-contamination mismatch) caught on inspection and
-corrected — the guilty-until-proven discipline holding.
+corrected — the guilty-until-proven discipline holding. The 2026-07-22 Area-2 (microstructure)
+run added 1 promotion — **OFLOW** — which **ran and ruled the family out** (imbalance→next-move
+corr ≈ 0, net −3.4¢ after cost, on 933k tape samples): order-flow-as-signal is closed on Kalshi
+AND the decision to build per-market microstructure collection is a **no**. Area 2's binding
+constraint was **data collection**, not markets — and this cheap feasibility read settled it.
 
 | outcome | n | which |
 |---|---|---|
 | **live paper book (gates passing)** | 1 | PIN15 (later RETIRED 2026-07-16 — T-window falsified) |
 | became a book, later shelved | 1 | THETA (distribution-shape model error) |
-| **killed at probe** (clean ruling-out) | 7 | XGAME, TFAV, WCPROP, MLBWX, PINNED, DECAY, **FEDRV** (rates internally efficient) |
+| **killed at probe** (clean ruling-out) | 8 | XGAME, TFAV, WCPROP, MLBWX, PINNED, DECAY, FEDRV (rates efficient), **OFLOW** (order-flow doesn't predict price) |
 | **UNTESTABLE — venue not ready** (data absence, not a kill) | 3 | FREEZE, COMPIN, **ECON-REACT** (only ~20 genuine econ-print settles yet) |
 | **census-stage HOLD/borderline** (not yet a full-probe go/no-go) | 2 | SEASONPIN (MLB HOLD, WNBA borderline), STREAMPIN (HOLD — no intra-window tape) |
 
@@ -42,6 +46,7 @@ Plus one run (2026-07-10 run2) that promoted **0 of 28** candidates — a legiti
 | **lead-lag / cross-venue** (one venue leads, trade the follower) | XGAME, WCPROP | **0** | 0-for-2. XGAME's symmetry finding (both venues track the shared feed) is structural and transfers across sports. |
 | **favorite-buy** (back the underpriced favorite) | TFAV | **0** | 0-for-1 (−3.6¢). The FLB favorite side accrues to makers, not takers. |
 | **structural / deadline premium / internal-coherence** | DECAY, FEDRV | **0** | 0-for-2 (DECAY: by-date "hope" was *under*priced, not over; **FEDRV** ruled out 2026-07-21 — its flagged path "incoherence" was a `KXFED*` series-contamination + cross-meeting-independence artifact, so rates are internally efficient exactly as the ~0.1¢ `KXRATECUTCOUNT` spread predicted). Internal-coherence RV joins the structural graveyard. |
+| **microstructure / order-flow** (does book/tape flow predict the next price move) | OFLOW | **0** | First-ever attempt in this family (2026-07-22, Area 2), **RULED OUT** the same day. Area 2's binding constraint is **data collection** — full-depth `orderbook_snapshots` exist only for 77 scanner markets over 3 stale June days, and the traded markets have no books persisted — so OFLOW was a feasibility read on the one real order-flow tape (the killed WC slice). Result on **933k tape samples**: imbalance→next-move corr ≈ **+0.008** (net **−3.4¢** after cost; flat quintiles; no toxicity gradient) → **order-flow-as-signal is closed on Kalshi AND the per-market collection is not worth building.** LOW prior held (cost dominates on liquid markets; `edge_research` lesson 5). |
 
 **The one-line lesson the scorecard adds to the meta-lessons:** obs-pin/mechanics-blindness is the
 only family with any signal, and even it fails when the settled data doesn't exist yet — so the
@@ -53,6 +58,7 @@ highest-leverage screen is **testability-NOW**, not edge cleverness.
 
 | date | idea | family | scope source | verdict date | verdict | outcome |
 |---|---|---|---|---|---|---|
+| 2026-07-22 | **OFLOW** | microstructure / order-flow | **scoped (Area 2: microstructure)** | 2026-07-22 | **RULING-OUT (family closed)** | Probe ran first-try on 823k Kalshi trades / 933k no-lookahead samples: imbalance→next-move corr ≈ +0.008, strong-imbalance net **−3.40¢** (gross +0.05¢), flat quintiles, no toxicity gradient → **P1 KILL**. Order-flow-as-signal closed on Kalshi AND the per-market microstructure collection is not worth building. Clean cheap ruling-out; LOW prior held. `docs/OFLOW_THESIS.md`. |
 | 2026-07-21 | **ECON-REACT** | obs-pin (scheduled-release reaction) | **scoped (Area 1: untouched universes)** | 2026-07-21 | **HOLD (testability-thin)** | Probe run (`econ_react_study` v2, de-contaminated): only ~20 settled genuine econ-print markets (most 2026 prints still open) → post-release window not measurable → P0 fails. v1's apparent "promote" was a lookahead/survivorship mirage + gas/TSA contamination, corrected to an honest HOLD. Re-run as prints settle (weekly claims fastest). Not a kill. `docs/ECON_REACT_THESIS.md`. |
 | 2026-07-21 | **FEDRV** | structural (internal coherence / RV) | scoped (Area 1) | 2026-07-21 | **RULING-OUT (coherent/efficient)** | Probe run (`fed_rv_study` v2, tightened regex): v1's −80¢ "incoherence" was a KXFED* contamination artifact. Clean convolution of 4 meetings vs the ladder leaves a +14¢ gap at "1 cut" that FAILS pre-registered P2 — an independence-assumption artifact (Fed cuts are positively correlated / come in cycles; the ladder's fat-0 + 6+ tail is the correlated signature). Matches the LOW prior. Rates category closed. `docs/FEDRV_THESIS.md`. |
 | 2026-07-21 | **STREAMPIN** | obs-pin (streaming-count) | scoped (Area 1) | 2026-07-21 | **CENSUS: HOLD (no intra-window tape)** | Census run (`kalshi_stream_survey`): ~2,544 settled streaming markets; C1 (cumulative instrument) passes, but **C2 fails** — the "reach N streams by date" markets settle in a jump (0/8 traded intra-window), so no live tape to pin. Not a kill; re-run as they begin trading intra-window. `docs/STREAMPIN_CENSUS.md`. |
