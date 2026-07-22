@@ -2,7 +2,29 @@
 
 *Thesis written 2026-07-21 (idea-model Area 1: untouched market universes), before any
 validation ran; the falsifiable predictions below are pre-registered so the test can't be
-quietly re-scoped after the fact. Status: **pending probe** (`scripts/econ_react_study.py`).*
+quietly re-scoped after the fact. Status: **HOLD — testability-thin** (probe run 2026-07-21;
+see RESULTS).*
+
+## RESULTS (2026-07-21 probe run — `econ_react_study`, de-contaminated v2)
+
+**Verdict: HOLD (P0 testability not yet met) — not a kill.** The first run (v1) appeared to
+promote a "late pin," but that was a **lookahead/survivorship mirage** (the convergence-by-TTC
+table conditions on the eventual winner) compounded by **contamination**: a `category ==
+Economics` fallback swept in continuous non-print series (AAA gas, TSA throughput) that don't
+trade post-release. The fixed v2 (curated print-series allowlist + gas/TSA denylist; verdict
+driven ONLY by the non-lookahead post-release window) shows the honest state:
+
+- Clean series set (KXCPI/KXCPIYOY/KXCPICORE/KXPCECORE/KXPAYROLLS/KXU3/KXGDP*/KXADP/KXECONSTAT*),
+  no gas/TSA. But only **~20 settled** genuine econ-print markets (all bucket ladders) vs **1,112
+  open** — most 2026 prints (monthly CPI/jobs/PCE, quarterly GDP) simply have not settled yet.
+- **0 extractable settled winners** → the post-release window can't be measured → **P0 fails**
+  (testability-thin). No evidence either way on the edge itself.
+- **Decision:** HOLD; re-run once genuine prints accumulate settled history — **weekly jobless
+  claims accrue fastest, so add `KXJOBLESS/KXICSA` coverage on the re-run.** The thesis is
+  neither confirmed nor killed; it is simply not yet testable on live-collected settled data.
+- **Method note:** the v1→v2 correction (a contaminated + lookahead-driven false "promote"
+  caught and reduced to an honest HOLD) is exactly the "treat any clean +EV as guilty until
+  proven" discipline working as intended.
 
 ## One-liner
 

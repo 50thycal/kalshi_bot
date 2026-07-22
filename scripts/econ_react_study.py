@@ -41,23 +41,27 @@ import xvenue_leadlag as xl  # _get (browser UA + retries), _num
 
 KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
 
-# Scheduled-release econ-print series. Precision over recall: gate on a known print-series
-# prefix OR the Economics category, and dump the matched (series [category]) so contamination
-# is visible. Deliberately EXCLUDES the Fed-decision complex (KXFED*/KXRATE*) — that path edge
-# is FEDRV's domain (docs/FEDRV_THESIS.md), a different mechanic on a non-8:30 release.
+# Scheduled-release econ-print series. Precision over recall: gate on a curated print-series
+# allowlist AND a contaminant denylist, and dump the matched (series [category]) so a mis-filter
+# stays visible. NO broad category fallback — the first run's `category == Economics` fallback
+# also swept in continuous series (AAA gas, TSA throughput) that are NOT scheduled 8:30 macro
+# prints. Deliberately EXCLUDES the Fed-decision complex (FEDRV's domain, a non-8:30 release).
 PRINT_SERIES = re.compile(
     r"^KX("
-    r"CPI|CORECPI|CPIYOY|"          # inflation
+    r"CPI|CPIYOY|CPICORE|CORECPI|"  # inflation (CPI + core)
     r"PCE|COREPCE|"                 # PCE inflation
     r"PPI|"                         # producer prices
     r"PAYROLL|NFP|JOBS|"            # employment situation (non-farm payrolls)
-    r"UNRATE|UNEMP|"                # unemployment rate
+    r"UNRATE|UNEMP|U3|"             # unemployment rate
     r"JOBLESS|CLAIMS|ICSA|"        # weekly initial jobless claims
     r"GDP|"                         # output
     r"RETAIL|"                      # retail sales
     r"ISM|PMI|"                     # activity surveys
-    r"JOLTS|ADP"                    # job openings / private payrolls
+    r"JOLTS|ADP|"                   # job openings / private payrolls
+    r"ECONSTAT"                     # Kalshi's econ-statistic release family (CPI/U3/...)
     r")", re.I)
+# Continuous / non-8:30-print series that share the Economics category — excluded explicitly.
+DENY_SERIES = re.compile(r"^KX(AAAGAS|USGAS|TSA)", re.I)
 FED_SERIES = re.compile(r"^KX(FED|RATE|RATECUT)", re.I)  # excluded (FEDRV's domain)
 
 # Structure classifier on the human title/subtitle (NOT the ticker). Order matters.
@@ -110,10 +114,10 @@ def events(status: str, max_pages: int) -> list[dict]:
 
 def is_print(ev: dict, m: dict) -> bool:
     series = m.get("series_ticker") or ev.get("series_ticker") or ""
-    if FED_SERIES.search(series):
+    if FED_SERIES.search(series) or DENY_SERIES.search(series):
         return False
-    cat = ev.get("category") or ""
-    return bool(PRINT_SERIES.search(series) or re.match(r"^econ", cat, re.I))
+    # Series allowlist only — no category fallback (it swept in continuous non-print series).
+    return bool(PRINT_SERIES.search(series))
 
 
 def candle_path(series: str, ticker: str, start: int, end: int) -> list[tuple[float, float, float, float]]:
@@ -259,9 +263,11 @@ def main(argv: list[str] | None = None) -> int:
                 if best is not None:
                     rel_ev[k].append((1.0 - best) * 100 - fee_cents(best))
 
-    print("\n  -- winning-bucket convergence by time-to-close (buyable EV = held-to-settle, "
-          "net entry fee) --")
-    print(f"  {'TTC (min)':>14s} {'n':>5s} {'avg yes':>8s} {'avg EV(c)':>10s} {'>bar%':>7s}")
+    print("\n  -- CALIBRATION ONLY (hindsight): winning-bucket price by time-to-close. This "
+          "CONDITIONS ON THE EVENTUAL WINNER, so the 'buyable EV' is survivorship, NOT a "
+          "tradeable edge (a real trader can't pre-select the winner). Shown only to confirm "
+          "the market is calibrated (winners drift toward 100c); it does NOT drive the verdict. --")
+    print(f"  {'TTC (min)':>14s} {'n':>5s} {'avg yes':>8s} {'hindsight EV':>12s} {'>bar%':>7s}")
     for lo, hi in ttc_bins:
         px = ttc_px[(lo, hi)]
         ev = ttc_ev[(lo, hi)]
@@ -292,33 +298,31 @@ def main(argv: list[str] | None = None) -> int:
               "tape) or candle coverage is too sparse to see the number land.")
 
     # ---- verdict ---------------------------------------------------------------------
-    late_ev = ttc_ev.get((5, 1), []) + ttc_ev.get((1, 0), [])
-    late_avg = sum(late_ev) / len(late_ev) if late_ev else 0.0
+    # ONLY the post-release window is a non-lookahead edge signal: after the number is public,
+    # is the DETERMINED winner still buyable while the quote lags? The TTC convergence table
+    # above is hindsight (it conditions on the winner) and deliberately does NOT drive this.
     post_ev_all = [e for k in (1, 5, 15, 30) for e in rel_ev[k]]
     post_avg = sum(post_ev_all) / len(post_ev_all) if post_ev_all else 0.0
     has_post_window = bool(rel_offsets_min) and post_rel_trading > 0
 
-    print("\n== verdict (structure pre-stage; the pre-registered EV probe follows if this "
-          "promotes) ==")
+    print("\n== verdict (non-lookahead: the post-release trading window only) ==")
     print(f"  settled winning markets probed:      {probed}")
-    print(f"  late-window (T-5..0) avg buyable EV:  {late_avg:+.2f}c")
-    print(f"  post-release trading window exists:   {has_post_window}")
-    print(f"  post-release avg buyable EV:          {post_avg:+.2f}c")
+    print(f"  markets with a detectable release:   {len(rel_offsets_min)}")
+    print(f"  ... that KEEP TRADING after it:       {post_rel_trading}")
+    print(f"  post-release avg buyable EV:          {post_avg:+.2f}c "
+          f"(only meaningful when trading occurs)")
     if has_post_window and post_avg >= args.min_ev_cents:
-        print("  VERDICT: PROMOTE-TO-EV-PROBE — a post-release window with trading and +EV "
-              "exists; run the full pre-registered convergence/EV measurement (P1-P3) with "
+        print("  VERDICT: PROMOTE-TO-EV-PROBE — a post-release window with ACTUAL TRADING and "
+              "+EV exists; run the full pre-registered convergence/EV measurement (P1-P3) with "
               "the release-time audit next.")
-    elif late_avg >= args.min_ev_cents and probed >= 20:
-        print("  VERDICT: PROMOTE-TO-EV-PROBE (late-pin variant) — the winning bucket is "
-              "buyable below fair into the final minutes even without a clean release jump; "
-              "the pin is real, characterize its timing precisely next.")
     elif probed < 20:
         print("  VERDICT: HOLD — too few settled winners with candle coverage to read the "
-              "pin (testability-thin). Re-run after more prints settle.")
+              "window (testability-thin). Re-run after more prints settle.")
     else:
-        print("  VERDICT: KILL-LEANING — the winner converges to ~100c at/near the release "
-              "(no takeable lag) or there is no post-release tape. Efficient; log and close "
-              "unless a specific high-cadence series (weekly claims) shows a residual.")
+        print("  VERDICT: KILL — no post-release trading window: the winner is determined at "
+              "the release, but the market does not keep trading (settles in a jump / closes at "
+              "release), so there is no lagging quote to take. Per P1's kill criterion the "
+              "post-release reaction-lag pin does not exist on these markets — clean ruling-out.")
     return 0
 
 
