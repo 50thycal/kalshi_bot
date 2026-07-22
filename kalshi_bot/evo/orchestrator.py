@@ -27,6 +27,7 @@ from sqlalchemy import select
 
 from ..db import session_scope
 from ..logging_config import log_event
+from ..weather.cities import CITIES
 from . import listeners as listeners_mod
 from . import paper as papermod
 from . import strategy_runner
@@ -52,6 +53,16 @@ from .models import EvoStrategy
 from .strategy_spec import validate_spec
 
 logger = logging.getLogger(__name__)
+
+# Concrete Kalshi weather series (per-city daily high + low). This is the DEFAULT
+# live universe the fleet scans: founder trading genomes ship with empty
+# universe.series_prefixes, so without a default the scan surfaces nothing and agents
+# never see a tradable ticker. Weather is also the only dataset the sandbox can
+# backtest (backfill_weather), so these are exactly the markets agents can both trade
+# live AND validate.
+_WEATHER_SERIES: tuple[str, ...] = tuple(
+    s for c in CITIES for s in (c.series_high, c.series_low) if s
+)
 
 
 class EvoRuntime:
@@ -88,25 +99,52 @@ def _universe_prefixes(session, settings: EvoSettings) -> list[str]:
     return sorted(prefixes)[:40]
 
 
-def _scan_universe(runtime: EvoRuntime, session) -> list[str]:
-    """Bounded open-market scan for the fleet's declared universes. Falls back to
-    position/order tickers when no universe is declared yet."""
-    settings = runtime.settings
-    tickers: list[str] = []
+def _universe_series(session, settings: EvoSettings) -> list[str]:
+    """Concrete Kalshi series to scan for live tradable markets this cycle. When
+    agents have declared universe prefixes (e.g. "KXHIGH", or a specific series),
+    expand them against the known weather series and keep any unrecognized ones as
+    direct series queries; with nothing declared (the founder default), scan the full
+    weather set so agents always have real, backtestable tickers to consider."""
     prefixes = _universe_prefixes(session, settings)
-    if prefixes:
+    if not prefixes:
+        return list(_WEATHER_SERIES)
+    matched = [s for s in _WEATHER_SERIES if any(s.startswith(p) for p in prefixes)]
+    extra = [
+        p
+        for p in prefixes
+        if p not in matched and not any(s.startswith(p) for s in _WEATHER_SERIES)
+    ]
+    return (matched + extra) or list(_WEATHER_SERIES)
+
+
+def _scan_universe(runtime: EvoRuntime, session) -> list[str]:
+    """Bounded open-market scan over the fleet's live universe, plus any tickers the
+    fleet already holds. Each concrete series is queried directly (series_ticker=) —
+    the same targeted path every other tracker in the repo uses; an untargeted
+    open-market listing would never surface the weather markets among Kalshi's full
+    open book. A data failure for one series is contained so the rest still scan."""
+    settings = runtime.settings
+    series_list = _universe_series(session, settings)
+    cap = settings.markets_per_cycle
+    per_series = max(1, cap // max(1, len(series_list)))
+    tickers: list[str] = []
+    for series in series_list:
+        if len(tickers) >= cap:
+            break
         try:
-            markets = runtime.md.list_markets(status="open", limit=settings.markets_per_cycle)
-        except Exception:  # noqa: BLE001
+            markets = runtime.md.list_markets(
+                status="open", series_ticker=series, max_markets=per_series,
+            )
+        except Exception:  # noqa: BLE001 — one series failing must not stop the rest
             markets = []
         for m in markets:
             t = str(m.get("ticker", ""))
-            if t and any(t.startswith(p) for p in prefixes):
+            if t and t not in tickers:
                 tickers.append(t)
     for pos in papermod.all_open_positions(session):
         if pos.market_ticker not in tickers:
             tickers.append(pos.market_ticker)
-    return tickers[: settings.markets_per_cycle]
+    return tickers[:cap]
 
 
 def run_evo_cycle(runtime: EvoRuntime) -> None:

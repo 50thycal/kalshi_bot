@@ -38,6 +38,70 @@ from kalshi_bot.evo.models import EvoLlmUsage, EvoModelPrice
 from kalshi_bot.models import Base
 
 
+class _FakeMD:
+    """Stub market data: records which series were queried, returns two live,
+    real-shaped (hyphenated) strike markets per series."""
+
+    def __init__(self):
+        self.queried: list[str | None] = []
+
+    def list_markets(self, *, status="open", series_ticker=None, max_markets=None):
+        self.queried.append(series_ticker)
+        return [
+            {"ticker": f"{series_ticker}-26JUL22-B70"},
+            {"ticker": f"{series_ticker}-26JUL22-B72"},
+        ]
+
+
+class _FakeRuntime:
+    def __init__(self, settings, md):
+        self.settings = settings
+        self.md = md
+
+
+def test_scan_universe_defaults_to_live_weather_markets_when_none_declared():
+    """Root-cause regression: founder trading genomes ship with empty
+    universe.series_prefixes, so _universe_prefixes() was empty and _scan_universe
+    short-circuited to [] every cycle — agents were NEVER shown a real tradable
+    ticker and so could never place a live (paper) trade. The scan must DEFAULT to
+    the concrete weather series and surface real market tickers."""
+    _init_sqlite_engine()
+    settings = EvoSettings(_env_file=None)
+    md = _FakeMD()
+    with db.session_scope() as session:  # empty DB: no agents/strategies declared
+        tickers = orchestrator._scan_universe(_FakeRuntime(settings, md), session)
+
+    assert tickers, "scan must surface live tickers even with no declared universe"
+    assert all("-" in t for t in tickers), "must be concrete markets, not bare prefixes"
+    assert any(t.startswith("KXHIGHNY") for t in tickers)
+    # it queried concrete weather series (targeted), not a bare prefix / unfiltered
+    assert "KXHIGHNY" in md.queried and "KXLOWTNYC" in md.queried
+    assert None not in md.queried
+
+
+def test_universe_series_defaults_to_full_weather_set_when_none_declared(monkeypatch):
+    settings = EvoSettings(_env_file=None)
+    monkeypatch.setattr(orchestrator, "_universe_prefixes", lambda s, st: [])
+    series = orchestrator._universe_series(object(), settings)
+    assert "KXHIGHNY" in series and "KXLOWTNYC" in series
+    assert len(series) >= 10  # all cities' high+low series
+
+
+def test_universe_series_expands_declared_prefix(monkeypatch):
+    settings = EvoSettings(_env_file=None)
+    monkeypatch.setattr(orchestrator, "_universe_prefixes", lambda s, st: ["KXHIGHNY"])
+    series = orchestrator._universe_series(object(), settings)
+    assert "KXHIGHNY" in series
+    assert "KXHIGHLAX" not in series  # narrowed to the declared prefix, not all weather
+
+
+def test_universe_series_keeps_unrecognized_declared_series(monkeypatch):
+    settings = EvoSettings(_env_file=None)
+    monkeypatch.setattr(orchestrator, "_universe_prefixes", lambda s, st: ["KXFED"])
+    series = orchestrator._universe_series(object(), settings)
+    assert series == ["KXFED"]  # a non-weather series the agent targets is queried directly
+
+
 def _init_sqlite_engine():
     db.init_engine("sqlite://")
     Base.metadata.create_all(db.get_engine())
