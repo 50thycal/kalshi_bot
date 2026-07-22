@@ -245,7 +245,7 @@ def test_spec_fingerprint_stable_and_recent_runs_counts_repeats(evo_session, evo
     # identical specs must fingerprint identically regardless of key order
     assert sandbox.spec_fingerprint(spec_a) == sandbox.spec_fingerprint(dict(spec_a))
     assert sandbox.spec_fingerprint(spec_a) != sandbox.spec_fingerprint(spec_b)
-    for i, spec in enumerate((spec_a, spec_a, spec_b)):  # spec_a run twice
+    for spec in (spec_a, spec_a, spec_b):  # spec_a run twice
         evo_session.add(em.EvoSandboxRun(
             agent_uuid=AU, kind="backtest", dataset="backfill_weather",
             params_json={"spec": spec},
