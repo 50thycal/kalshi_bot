@@ -148,8 +148,12 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
 - create_listener {name, condition, purpose, effect: event|trigger_heartbeat|opportunity,
   cooldown_seconds?, expires_in_hours?, expected_value_note?}
 - remove_listener {listener_id}
-- run_backtest {spec, date_from?, date_to?} | walkforward: add kind: "walkforward",
-  split_date instead of date_from/date_to. You may include SEVERAL run_backtest
+- run_backtest {spec, dataset?, date_from?, date_to?} | walkforward: add kind: "walkforward",
+  split_date instead of date_from/date_to. `dataset` selects the settled corpus to replay:
+  "backfill_weather" (default; Kalshi weather archive) or "mmsell" (the mmsell strategy's
+  OWN settled markets, replayed over its captured live orderbook ticks — use this to
+  backtest an mmsell-style spec, e.g. entry side=expensive style=maker exit mode=settlement,
+  on the real markets mmsell traded). You may include SEVERAL run_backtest
   actions in the SAME heartbeat — if you have multiple ready hypotheses, test them
   together now rather than spacing them one-per-heartbeat: heartbeats are hours
   apart, sandbox runs are cheap, and your weekly budget (50 runs) is generous.
@@ -186,8 +190,8 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
   invent field names (no hypothesis_id, strategy_name, commission_bps, order_style,
   kind, exit.method, etc.):
   {"name": str (REQUIRED, 3-48 chars), "family"?: str, "description"?: str,
-   "universe"?: {"series_prefixes"?: [str] (e.g. ["KXHIGH","KXLOW"] — the only
-     dataset backtestable today is weather; leave empty to admit any),
+   "universe"?: {"series_prefixes"?: [str] (e.g. ["KXHIGH","KXLOW"] for weather, or
+     the mmsell markets' prefixes when backtesting dataset="mmsell"; leave empty to admit any),
      "exclude_series_prefixes"?: [str], "categories"?: [str], "min_volume"?: float,
      "max_spread_cents"?: int (1-99), "min_hours_to_close"?: float,
      "max_hours_to_close"?: float},
@@ -678,15 +682,18 @@ def _execute_one(
         spec = a.get("spec")
         if not isinstance(spec, dict):
             return {"rejected": "spec object required"}
+        dataset = str(a.get("dataset", "backfill_weather"))
+        if dataset not in sandbox.DATASETS:
+            return {"rejected": f"unknown dataset {dataset!r} (available: {sandbox.DATASETS})"}
         if a.get("kind") == "walkforward" or a.get("split_date"):
             result, err = sandbox.run_walkforward(
                 session, settings, agent_uuid=au, cohort_id=cohort.id, spec_doc=spec,
-                split_date=str(a.get("split_date", "")), heartbeat_id=hb.id,
+                split_date=str(a.get("split_date", "")), dataset=dataset, heartbeat_id=hb.id,
             )
         else:
             result, err = sandbox.run_backtest(
                 session, settings, agent_uuid=au, cohort_id=cohort.id, spec_doc=spec,
-                date_from=a.get("date_from"), date_to=a.get("date_to"),
+                dataset=dataset, date_from=a.get("date_from"), date_to=a.get("date_to"),
                 heartbeat_id=hb.id,
             )
         return {"ok": True, "result": result} if result is not None else {"rejected": err}

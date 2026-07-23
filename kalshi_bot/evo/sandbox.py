@@ -18,11 +18,18 @@ import hashlib
 import json
 import logging
 import time
+from collections.abc import Iterator
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from sqlalchemy import select
 
-from ..models import BackfillWeatherCandle, BackfillWeatherMarket
+from ..models import (
+    BackfillWeatherCandle,
+    BackfillWeatherMarket,
+    MmSellPositionTick,
+    PaperTrade,
+)
 from ..paper.engine import kalshi_fee
 from . import budgets
 from .audit import audit
@@ -33,7 +40,36 @@ from .strategy_spec import entry_signal, exit_signal, validate_spec
 
 logger = logging.getLogger(__name__)
 
-DATASETS = ("backfill_weather",)
+# Each backtestable dataset maps to an adapter (see _ADAPTERS) that yields settled markets
+# with an ordered, no-lookahead candle path. Weather is the reference adapter; mmsell
+# replays the live orderbook tick path of settled mmsell paper trades (settlement from
+# paper_trades.resolved_value). The replay loop itself is dataset-agnostic.
+DATASETS = ("backfill_weather", "mmsell")
+
+_PROVENANCE = {
+    "backfill_weather": "kalshi_rest_backfill",
+    "mmsell": "mmsell_live_ticks",
+}
+
+
+@dataclass
+class _Candle:
+    """One normalized replay step: a quote at a point in time plus that interval's YES-cents
+    low, used to model whether a resting maker order would have filled (price traded through)."""
+
+    ts: datetime
+    quote: Quote
+    price_low: float | None
+
+
+@dataclass
+class _Market:
+    """A settled market to replay: ordered candles + the realized outcome ('yes'|'no')."""
+
+    ticker: str
+    result: str
+    month: str  # grouping key, YYYY-MM
+    candles: list[_Candle]
 
 
 def spec_fingerprint(spec_doc: dict | None) -> str:
@@ -144,6 +180,142 @@ def _hours_between(a: datetime, b: datetime) -> float:
     return (bb - aa).total_seconds() / 3600.0
 
 
+def _parse_date(s: str | None) -> datetime | None:
+    if not s:
+        return None
+    try:
+        return datetime.fromisoformat(str(s)).replace(tzinfo=timezone.utc)
+    except ValueError:
+        try:
+            return datetime.strptime(str(s)[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        except ValueError:
+            return None
+
+
+def _weather_markets(
+    session, spec, date_from: str | None, date_to: str | None
+) -> Iterator[_Market]:
+    """Reference adapter: settled backfill_weather markets + their hourly candles."""
+    q = select(BackfillWeatherMarket).where(
+        BackfillWeatherMarket.result.in_(("yes", "no")),
+        BackfillWeatherMarket.candles_fetched.is_(True),
+    )
+    if date_from:
+        q = q.where(BackfillWeatherMarket.target_date >= date_from)
+    if date_to:
+        q = q.where(BackfillWeatherMarket.target_date <= date_to)
+    for market in session.scalars(q.order_by(BackfillWeatherMarket.close_time)):
+        if not spec.universe.admits_ticker(market.market_ticker):
+            continue
+        candles = session.scalars(
+            select(BackfillWeatherCandle)
+            .where(BackfillWeatherCandle.market_ticker == market.market_ticker)
+            .order_by(BackfillWeatherCandle.end_period_ts)
+        )
+        yield _Market(
+            ticker=market.market_ticker,
+            result=market.result,
+            month=(market.target_date or "")[:7],
+            candles=[
+                _Candle(
+                    ts=c.end_period_ts,
+                    quote=_quote_from_candle(market, c),
+                    price_low=c.price_low,
+                )
+                for c in candles
+            ],
+        )
+
+
+def _mmsell_candle(ticker: str, closed_at: datetime, tick: MmSellPositionTick) -> _Candle:
+    """One mmsell orderbook tick -> a Quote, with close_time made wall-relative (now +
+    remaining-to-settlement at this tick) so the interpreter's hours_to_close gates see the
+    horizon the live strategy would have (no lookahead: uses only the tick's own timestamp)."""
+    ts = tick.captured_at if tick.captured_at.tzinfo else tick.captured_at.replace(
+        tzinfo=timezone.utc
+    )
+    wall_close = datetime.now(timezone.utc) + (closed_at - ts)
+    yes_bid, yes_ask = tick.yes_bid, tick.yes_ask
+    no_bid = tick.no_bid if tick.no_bid is not None else (
+        100 - yes_ask if yes_ask is not None else None
+    )
+    no_ask = tick.no_ask if tick.no_ask is not None else (
+        100 - yes_bid if yes_bid is not None else None
+    )
+    quote = Quote(
+        ticker=ticker,
+        captured_at=ts,
+        source="mmsell",
+        status="active",
+        result="",
+        yes_bid=yes_bid,
+        yes_ask=yes_ask,
+        no_bid=no_bid,
+        no_ask=no_ask,
+        yes_levels=[(yes_bid, 500)] if yes_bid else [],
+        no_levels=[(no_bid, 500)] if no_bid else [],
+        last_price=int(tick.mid) if tick.mid is not None else None,
+        volume=tick.volume,
+        close_time=wall_close,
+    )
+    # No OHLC low in a point tick; the YES bid is a conservative maker fill-through proxy.
+    return _Candle(ts=ts, quote=quote, price_low=yes_bid)
+
+
+def _mmsell_markets(
+    session, spec, date_from: str | None, date_to: str | None
+) -> Iterator[_Market]:
+    """mmsell adapter: each SETTLED mmsell paper trade is a settled market
+    (resolved_value 100->'yes', 0->'no'); its price path is that ticker's captured
+    orderbook ticks (mmsell_position_ticks). One market per ticker (settlement is a
+    property of the market, not the trade)."""
+    df, dt = _parse_date(date_from), _parse_date(date_to)
+    q = select(PaperTrade).where(
+        PaperTrade.strategy.like("mmsell%"),
+        PaperTrade.status == "settled",
+        PaperTrade.resolved_value.in_((0, 100)),
+        PaperTrade.assumed_price.isnot(None),
+        PaperTrade.created_at.isnot(None),
+        PaperTrade.closed_at.isnot(None),
+    )
+    if df:
+        q = q.where(PaperTrade.created_at >= df)
+    if dt:
+        q = q.where(PaperTrade.created_at <= dt)
+    seen: set[str] = set()
+    for tr in session.scalars(q.order_by(PaperTrade.closed_at)):
+        if tr.market_ticker in seen or not spec.universe.admits_ticker(tr.market_ticker):
+            continue
+        seen.add(tr.market_ticker)
+        ticks = list(
+            session.scalars(
+                select(MmSellPositionTick)
+                .where(
+                    MmSellPositionTick.market_ticker == tr.market_ticker,
+                    MmSellPositionTick.mid.isnot(None),
+                )
+                .order_by(MmSellPositionTick.captured_at)
+            )
+        )
+        if not ticks:
+            continue
+        closed_at = tr.closed_at if tr.closed_at.tzinfo else tr.closed_at.replace(
+            tzinfo=timezone.utc
+        )
+        yield _Market(
+            ticker=tr.market_ticker,
+            result="yes" if tr.resolved_value == 100 else "no",
+            month=(tr.created_at.isoformat()[:7] if tr.created_at else ""),
+            candles=[_mmsell_candle(tr.market_ticker, closed_at, t) for t in ticks],
+        )
+
+
+_ADAPTERS = {
+    "backfill_weather": _weather_markets,
+    "mmsell": _mmsell_markets,
+}
+
+
 def run_backtest(
     session,
     settings: EvoSettings,
@@ -174,46 +346,29 @@ def run_backtest(
     started = time.monotonic()
     deadline = started + settings.sandbox_max_seconds
     max_rows = settings.sandbox_max_rows
-
-    q = select(BackfillWeatherMarket).where(
-        BackfillWeatherMarket.result.in_(("yes", "no")),
-        BackfillWeatherMarket.candles_fetched.is_(True),
-    )
-    if date_from:
-        q = q.where(BackfillWeatherMarket.target_date >= date_from)
-    if date_to:
-        q = q.where(BackfillWeatherMarket.target_date <= date_to)
-    markets = list(session.scalars(q.order_by(BackfillWeatherMarket.close_time)))
+    provenance = _PROVENANCE[dataset]
 
     trades: list[dict] = []
     rows_processed = 0
     truncated = False
-    for market in markets:
+    markets_considered = 0
+    for market in _ADAPTERS[dataset](session, spec, date_from, date_to):
         if time.monotonic() > deadline or rows_processed >= max_rows:
             truncated = True
             break
-        if not spec.universe.admits_ticker(market.market_ticker):
-            continue
-        candles = list(
-            session.scalars(
-                select(BackfillWeatherCandle)
-                .where(BackfillWeatherCandle.market_ticker == market.market_ticker)
-                .order_by(BackfillWeatherCandle.end_period_ts)
-            )
-        )
-        rows_processed += len(candles)
+        markets_considered += 1
+        rows_processed += len(market.candles)
         open_pos: dict | None = None
-        for candle in candles:
-            quote = _quote_from_candle(market, candle)
+        for candle in market.candles:
+            quote = candle.quote
             if open_pos is None:
                 intent = entry_signal(spec, quote)
                 if intent is None:
                     continue
                 price = intent["limit_price_cents"]
                 if intent["style"] == "maker":
-                    # conservative: a resting maker order in candle history fills
-                    # only if a LATER candle trades strictly through the limit —
-                    # approximated by price_low < limit
+                    # conservative: a resting maker order fills only if the market
+                    # trades through the limit this step — approximated by price_low < limit
                     continue_fill = candle.price_low is not None and (
                         candle.price_low < price
                     )
@@ -226,14 +381,14 @@ def run_backtest(
                     "price": price,
                     "qty": qty,
                     "fee": fee,
-                    "entered_at": candle.end_period_ts,
+                    "entered_at": candle.ts,
                 }
                 continue
             # manage open position
             reason = exit_signal(
                 spec, quote, side=open_pos["side"],
                 entry_price_cents=open_pos["price"],
-                held_hours=_hours_between(open_pos["entered_at"], candle.end_period_ts),
+                held_hours=_hours_between(open_pos["entered_at"], candle.ts),
             )
             if reason is not None:
                 bid = quote.best_exit_bid(open_pos["side"])
@@ -243,8 +398,8 @@ def run_backtest(
                 # NB: entry side cost basis — yes positions exit at yes_bid, no at no_bid
                 gross = open_pos["qty"] * (bid - open_pos["price"]) / 100.0
                 trades.append({
-                    "ticker": market.market_ticker,
-                    "month": (market.target_date or "")[:7],
+                    "ticker": market.ticker,
+                    "month": market.month,
                     "pnl": gross - open_pos["fee"] - exit_fee,
                     "exit": reason,
                     "win": gross > 0,
@@ -255,8 +410,8 @@ def run_backtest(
             value = 100 if won else 0
             gross = open_pos["qty"] * (value - open_pos["price"]) / 100.0
             trades.append({
-                "ticker": market.market_ticker,
-                "month": (market.target_date or "")[:7],
+                "ticker": market.ticker,
+                "month": market.month,
                 "pnl": gross - open_pos["fee"],
                 "exit": "settlement",
                 "win": won,
@@ -277,8 +432,8 @@ def run_backtest(
         m["pnl"] = round(m["pnl"] + t["pnl"], 4)
     result = {
         "dataset": dataset,
-        "provenance": "kalshi_rest_backfill",
-        "markets_considered": len(markets),
+        "provenance": provenance,
+        "markets_considered": markets_considered,
         "rows_processed": rows_processed,
         "truncated": truncated,
         "n_trades": n,
@@ -301,7 +456,7 @@ def run_backtest(
         kind=kind,
         params_json={"spec": spec_doc, "date_from": date_from, "date_to": date_to},
         dataset=dataset,
-        provenance="kalshi_rest_backfill",
+        provenance=provenance,
         status="completed",
         result_json=result,
         rows_processed=rows_processed,
@@ -320,6 +475,7 @@ def run_walkforward(
     cohort_id: int,
     spec_doc: dict,
     split_date: str,
+    dataset: str = "backfill_weather",
     heartbeat_id: int | None = None,
 ) -> tuple[dict | None, str | None]:
     """Two-window walk-forward: fit-window read + held-out window read (the repo's
@@ -328,14 +484,14 @@ def run_walkforward(
         return None, "sandbox-run budget exhausted"
     in_sample, err = run_backtest(
         session, settings, agent_uuid=agent_uuid, cohort_id=cohort_id,
-        spec_doc=spec_doc, date_to=split_date, heartbeat_id=heartbeat_id,
+        spec_doc=spec_doc, dataset=dataset, date_to=split_date, heartbeat_id=heartbeat_id,
         kind="walkforward", charge_budget=False,
     )
     if err:
         return None, err
     out_sample, err = run_backtest(
         session, settings, agent_uuid=agent_uuid, cohort_id=cohort_id,
-        spec_doc=spec_doc, date_from=split_date, heartbeat_id=heartbeat_id,
+        spec_doc=spec_doc, dataset=dataset, date_from=split_date, heartbeat_id=heartbeat_id,
         kind="walkforward", charge_budget=False,
     )
     if err:

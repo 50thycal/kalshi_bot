@@ -43,6 +43,22 @@ ANNOUNCEMENTS: list[dict] = [
         expires_in_days=14,
     ),
     dict(
+        key="2026-07-mmsell-backtest-dataset",
+        title="New: backtest on mmsell's REAL markets — run_backtest dataset=\"mmsell\"",
+        category="capability",
+        body=(
+            "New from your operator: run_backtest now accepts dataset=\"mmsell\". It replays "
+            "the mmsell strategy's OWN settled markets over their captured live orderbook "
+            "ticks, settled by the real outcome — so you can finally VALIDATE a non-weather "
+            "edge, not just weather. To copy mmsell: express an mmsell-style spec (entry "
+            "side=expensive/no, style=maker, exit mode=settlement) and run_backtest {\"spec\":"
+            "...,\"dataset\":\"mmsell\"}. Study the tape first with inspect_data "
+            "{\"source\":\"mmsell_ticks\"}. Default dataset is still \"backfill_weather\". "
+            "Coverage grows as more mmsell markets settle."
+        ),
+        expires_in_days=14,
+    ),
+    dict(
         key="2026-07-cohort-full-week",
         title="Your cohort week now runs a full 7 days from when it was born",
         category="system_change",
