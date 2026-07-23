@@ -751,6 +751,29 @@ def insert_mmsell_tick(
     session.flush()
 
 
+def insert_mmsell_candidate_tick(
+    session, ticker: str, metrics: MarketMetrics, *, series: str | None = None,
+    hours_to_close: float | None = None, captured_at: datetime | None = None,
+) -> None:
+    """Record one orderbook tick for an IN-BAND mmsell CANDIDATE (opened this cycle or not) — the
+    pre-entry price path a per-ticker fill replay needs ('would a resting buy-NO at the no-bid have
+    been lifted before close?'). Complements insert_mmsell_tick (held positions only). Cheap:
+    reuses the orderbook metrics the entry scan already fetched; deliberately NOT flushed per row
+    (committed with the cycle) so bulk candidate capture doesn't flush hundreds of times."""
+    session.add(m.MmSellCandidateTick(
+        market_ticker=ticker,
+        captured_at=captured_at or _now(),
+        series=series,
+        hours_to_close=hours_to_close,
+        yes_bid=metrics.best_yes_bid,
+        yes_ask=metrics.best_yes_ask,
+        no_bid=metrics.best_no_bid,
+        no_ask=metrics.best_no_ask,
+        mid=metrics.midpoint,
+        volume=metrics.volume,
+    ))
+
+
 def log_system_event(
     session, *, level: str, component: str, message: str, raw: dict | None = None
 ) -> m.SystemEvent:

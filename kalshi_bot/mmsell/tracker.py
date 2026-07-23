@@ -114,6 +114,7 @@ class MmSellTracker:
 
         books = self._books()
         open_count = {b["tag"]: repo.count_open_paper_positions(session, b["tag"]) for b in books}
+        captured = 0  # per-cycle candidate-tick writes (bounded by mmsell_candidate_capture_max)
 
         # 2) per market: for each book whose band+htc admit it, open a maker BUY-NO at the
         #    no-bid (== sell yes at the ask), held to settlement. Books share one orderbook
@@ -169,6 +170,20 @@ class MmSellTracker:
                         continue
                     if tag == self.STRATEGY:
                         summ.in_band += 1
+                        # Candidate capture: tape one orderbook snapshot per in-band candidate
+                        # per cycle (off the book we already fetched — no extra API), whether or
+                        # not a position opens, for the offline fill replay. Scoped to the control
+                        # book so each market is taped once; fail-soft and per-cycle capped.
+                        if s.mmsell_capture_candidates \
+                                and captured < s.mmsell_candidate_capture_max:
+                            try:
+                                repo.insert_mmsell_candidate_tick(
+                                    session, ticker, metrics, series=series, hours_to_close=htc)
+                                captured += 1
+                            except Exception as exc:  # noqa: BLE001
+                                logger.warning(
+                                    "mmsell: candidate tick capture failed",
+                                    extra={"extra_fields": {"ticker": ticker, "error": str(exc)}})
 
                     if repo.get_open_paper_position(session, ticker, tag) is not None:
                         summ.already_open += 1
