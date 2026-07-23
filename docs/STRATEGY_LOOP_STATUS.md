@@ -21,6 +21,12 @@ actually changes.** Suggestions are **recommendations only** — the loop never 
 user reviews and runs fable to change anything. Newest snapshot replaces the one above it; the
 suggestion list carries over run-to-run. All times CENTRAL (CDT/CST).*
 
+*Reporting convention (confirmed 2026-07-23, standing going forward): every run's chat report
+and this file must state, for both the live P&L table and each paper book in the books table,
+the **realized P&L (total $)** AND the **per-trade profit (¢/trade)** side by side — not one or
+the other. This has been the practice since run #56 (live) / since inception (paper per-trade
+column); this note locks it in explicitly so it doesn't drift.*
+
 ---
 
 ## Snapshot — 2026-07-23 05:35 AM CDT (run #69)
