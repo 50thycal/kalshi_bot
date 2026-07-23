@@ -557,14 +557,15 @@ def test_backtest_runs_and_charges_budget(evo_session, evo_settings, evo_agent):
 
 
 def _seed_mmsell(session):
-    """Two settled mmsell markets (one YES-settled, one NO-settled), each with a captured
-    orderbook tick path — the shape the mmsell backtest adapter replays."""
+    """Two settled mmsell markets, each with a captured orderbook tick path. mmsell trades
+    the NO side, and resolved_value is that HELD side's settlement value: rv=100 -> NO paid
+    out -> market resolved NO; rv=0 -> market resolved YES."""
     base = datetime(2026, 6, 1, tzinfo=timezone.utc)
-    for i, resolved in enumerate((100, 0)):
+    for i, resolved in enumerate((100, 0)):  # market0 -> NO, market1 -> YES
         ticker = f"KXBTCD-26JUN0{i}-T60000"
         session.add(PaperTrade(
             market_ticker=ticker, strategy="mmsell", status="settled",
-            assumed_price=45, resolved_value=resolved, side="yes", quantity=5,
+            assumed_price=45, resolved_value=resolved, side="no", quantity=5,
             created_at=base + timedelta(days=i),
             closed_at=base + timedelta(days=i, hours=2),
         ))
@@ -587,7 +588,8 @@ def test_mmsell_backtest_replays_ticks_to_settlement(evo_session, evo_settings, 
         spec_doc=spec, dataset="mmsell",
     )
     assert err is None
-    # one trade per settled market, held to settlement; the resolved_value=100 market wins
+    # one trade per settled market, held to settlement. Spec buys YES; only the market that
+    # resolved YES (the NO-side rv=0 one) wins — proving side-adjusted settlement.
     assert result["n_trades"] == 2 and result["wins"] == 1
     assert result["dataset"] == "mmsell"
     assert result["provenance"] == "mmsell_live_ticks"
@@ -613,6 +615,17 @@ def test_backtest_persist_false_returns_result_without_writing(
     assert evo_session.scalar(
         select(em.EvoSandboxRun).where(em.EvoSandboxRun.dataset == "mmsell")
     ) is None
+
+
+def test_market_result_from_trade_is_side_adjusted():
+    # resolved_value is the HELD side's settlement value, not the market's YES value.
+    from kalshi_bot.evo.sandbox import _market_result_from_trade
+    assert _market_result_from_trade("no", 100) == "no"    # NO paid out -> market NO
+    assert _market_result_from_trade("no", 0) == "yes"     # NO lost -> market YES
+    assert _market_result_from_trade("yes", 100) == "yes"
+    assert _market_result_from_trade("yes", 0) == "no"
+    assert _market_result_from_trade(None, 100) is None    # unknown side -> undecidable
+    assert _market_result_from_trade("no", 50) is None     # non-terminal value
 
 
 def test_backtest_rejects_unknown_dataset(evo_session, evo_settings, evo_agent):

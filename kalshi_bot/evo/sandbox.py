@@ -227,6 +227,21 @@ def _weather_markets(
         )
 
 
+def _market_result_from_trade(side: str | None, resolved_value: int | None) -> str | None:
+    """Market outcome ('yes'/'no') from a settled paper trade. resolved_value is the
+    settlement value of the HELD side (100 = that side paid out), NOT the market's YES
+    value — so the market resolved YES iff a yes-side paid out or a no-side did not.
+    (Verified against the live crypto ladder: side-adjusted resolved_value matches the
+    spot-vs-strike outcome 231/231.) Returns None if the side is unknown."""
+    if resolved_value not in (0, 100):
+        return None
+    if side == "yes":
+        return "yes" if resolved_value == 100 else "no"
+    if side == "no":
+        return "yes" if resolved_value == 0 else "no"
+    return None
+
+
 def _mmsell_candle(ticker: str, closed_at: datetime, tick: MmSellPositionTick) -> _Candle:
     """One mmsell orderbook tick -> a Quote, with close_time made wall-relative (now +
     remaining-to-settlement at this tick) so the interpreter's hours_to_close gates see the
@@ -286,6 +301,9 @@ def _mmsell_markets(
     for tr in session.scalars(q.order_by(PaperTrade.closed_at)):
         if tr.market_ticker in seen or not spec.universe.admits_ticker(tr.market_ticker):
             continue
+        result = _market_result_from_trade(tr.side, tr.resolved_value)
+        if result is None:  # unknown side -> can't determine the market outcome
+            continue
         seen.add(tr.market_ticker)
         ticks = list(
             session.scalars(
@@ -304,7 +322,7 @@ def _mmsell_markets(
         )
         yield _Market(
             ticker=tr.market_ticker,
-            result="yes" if tr.resolved_value == 100 else "no",
+            result=result,
             month=(tr.created_at.isoformat()[:7] if tr.created_at else ""),
             candles=[_mmsell_candle(tr.market_ticker, closed_at, t) for t in ticks],
         )
