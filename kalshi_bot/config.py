@@ -128,6 +128,16 @@ class Settings(BaseSettings):
     # catastrophic stop + volatility exit vs hold-to-settlement. Positions still hold to
     # settlement — this is pure DATA CAPTURE, not an exit; the study measures counterfactually.
     mmsell_tick_capture_enabled: bool = True
+    # Candidate capture: one orderbook snapshot per IN-BAND mmsell candidate each entry cycle
+    # (off the book the entry scan already fetched — no extra API), whether or not a position was
+    # opened. mmsell_position_ticks only tapes markets already HELD, so the fill model still leans
+    # on a live-*calibrated* estimate (it can't replay the resting-order fill of the wider
+    # candidate universe). This builds the pre-entry price tape that makes a direct per-ticker
+    # fill replay possible ("would a resting buy-NO at the no-bid have been lifted before close?")
+    # — the step-0 collection for the next mmsell live re-test (docs/MMSELL_FILL_MODEL.md §5 #2).
+    # Pure DATA CAPTURE; changes no trading decision. Cap bounds the per-cycle write volume.
+    mmsell_capture_candidates: bool = True
+    mmsell_candidate_capture_max: int = 400
     # Revision books (parallel paper variants next to the untouched `mmsell` control), from
     # the 2026-07-04 forward decomposition of 445 settled trades: the maker-sell-and-hold
     # edge lives in the CHEAP longshots (yes 5-10c +2.7c/ct 96%win, 10-20c +3.6c 91%) and is
@@ -1049,6 +1059,8 @@ class Settings(BaseSettings):
             "mmsell_paper_enabled": self.mmsell_paper_enabled,
             "mmsell_interval_minutes": self.mmsell_interval_minutes,
             "mmsell_tick_capture_enabled": self.mmsell_tick_capture_enabled,
+            "mmsell_capture_candidates": self.mmsell_capture_candidates,
+            "mmsell_candidate_capture_max": self.mmsell_candidate_capture_max,
             "mmsell_live_max_open_positions": self.mmsell_live_max_open_positions,
             "mmsell_live_price_offset_cents": self.mmsell_live_price_offset_cents,
             "mmsell_live_max_spread_cents": self.mmsell_live_max_spread_cents,

@@ -110,14 +110,22 @@ the clean re-live-test candidate, straight into the mmsell3 entry as a `maxyes` 
 2. **Close the collection gap (durable follow-up).** Persist a per-cycle price snapshot for each
    in-band mmsell candidate *and each held mmsell position* (yes/no bid/ask, last, volume) so a true
    per-ticker replay fill model becomes possible — turning this live-calibrated estimate into a
-   direct measurement that also covers the rich cells the current calibration can't reach. This
-   touches the trading loop and adds orderbook fetches for held positions, so it is proposed
-   separately rather than bundled here.
+   direct measurement that also covers the rich cells the current calibration can't reach.
    **[2026-07-22] Promoted to a near-term prerequisite** — the operator expects a new mmsell live
    re-test (target: `mmsell10`) within ~1 week; build this candidate-snapshot collection + replay
-   as **step 0** of that re-test (see the callout at the top of `docs/MMSELL_LIVE_PLAN.md`). The
-   held-position half already exists (`mmsell_position_ticks`); what remains is the in-band
-   *candidate* snapshot. (Area-2's OFLOW ruling-out means this is for fill realism only, not a
-   signal.)
+   as **step 0** of that re-test (see the callout at the top of `docs/MMSELL_LIVE_PLAN.md`).
+   **[2026-07-23] Collection BUILT.** Both halves now exist: held positions in `mmsell_position_ticks`
+   (pre-existing) and the missing in-band **candidate** universe in the new `mmsell_candidate_ticks`
+   table — one orderbook snapshot per in-band candidate per entry cycle, captured off the book the
+   tracker already fetches (no extra API), config-gated (`mmsell_capture_candidates`, default on) and
+   per-cycle capped (`mmsell_candidate_capture_max`, default 400), fail-soft so it can never break
+   the trading loop. Coverage now **accrues per-cycle** — a candidate must be born, taped, and settle
+   inside the capture window before it is replayable, so it is a short data-maturity wait (days), not
+   instant. **What remains is the replay itself** — a `scripts/mmsell_fill_replay.py` that, per taped
+   candidate, asks "would a resting buy-NO at the no-bid at cycle T have been lifted before close, and
+   at what realizable P&L?", turning §2's calibrated *estimate* into a direct per-ticker measurement
+   that reaches the rich cells the live calibration can't. Run it once the table has enough settled
+   candidates (before the mmsell10 live re-test). (Area-2's OFLOW ruling-out means this is for fill
+   realism only, not a signal.)
 3. **Re-test live only from the cheap fillable band.** Any future mmsell live test enters only where
    realizable ≈ paper (≤7¢ / under a `maxyes` cap), i.e. mmsell10's regime — not the whole cohort.

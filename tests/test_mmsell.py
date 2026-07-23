@@ -349,3 +349,81 @@ def test_mmsell_variant_dedup_is_per_book(settings):
     with db.session_scope() as session:  # second pass dedups both books
         s2 = MmSellTracker(client=FakeClient([ev], books), settings=settings).run_once(session)
     assert s2.opened == 0 and s2.already_open == 2
+
+
+def test_captures_candidate_tick_for_in_band_market(settings):
+    """The fill-realism collection: every IN-BAND candidate is taped once per cycle (opened or not),
+    off the orderbook the entry scan already fetched, with the orderbook fields the fill replay needs."""
+    _setup(settings)
+    ev = _event([_mkt("KXTEAM-26-A", "A", 18, 20)])   # mid 19 in band; no_bid 80
+    client = FakeClient([ev], {"KXTEAM-26-A": _ob(18, 20)})
+    with db.session_scope() as session:
+        MmSellTracker(client, settings).run_once(session)
+    with db.session_scope() as session:
+        rows = session.scalars(select(m.MmSellCandidateTick)).all()
+        assert len(rows) == 1
+        r = rows[0]
+        assert r.market_ticker == "KXTEAM-26-A" and r.series == "KXTEAM"
+        assert r.yes_bid == 18 and r.yes_ask == 20 and r.no_bid == 80 and r.mid == 19
+        assert r.hours_to_close is not None and r.captured_at is not None
+
+
+def test_candidate_capture_taped_even_when_no_open(settings):
+    """A candidate already holding a position is still taped (pre-entry path is for ALL in-band
+    candidates, not just fresh opens) — the second cycle dedups the TRADE but re-tapes the tick."""
+    _setup(settings)
+    ev = _event([_mkt("KXTEAM-26-A", "A", 18, 20)])
+    client = FakeClient([ev], {"KXTEAM-26-A": _ob(18, 20)})
+    with db.session_scope() as session:
+        MmSellTracker(client, settings).run_once(session)
+    with db.session_scope() as session:
+        s2 = MmSellTracker(client, settings).run_once(session)
+        assert s2.opened == 0 and s2.already_open == 1   # trade dedups
+    with db.session_scope() as session:
+        assert session.scalar(select(func.count()).select_from(m.MmSellCandidateTick)) == 2  # tick re-taped
+
+
+def test_candidate_capture_can_be_disabled(settings):
+    _setup(settings)
+    settings.mmsell_capture_candidates = False
+    ev = _event([_mkt("KXTEAM-26-A", "A", 18, 20)])
+    client = FakeClient([ev], {"KXTEAM-26-A": _ob(18, 20)})
+    with db.session_scope() as session:
+        summ = MmSellTracker(client, settings).run_once(session)
+    assert summ.opened == 1                              # trading unaffected
+    with db.session_scope() as session:
+        assert session.scalar(select(func.count()).select_from(m.MmSellCandidateTick)) == 0
+
+
+def test_candidate_capture_is_per_cycle_capped(settings):
+    _setup(settings)
+    settings.mmsell_candidate_capture_max = 1            # only the first in-band candidate is taped
+    ev = _event([
+        _mkt("KXTEAM-26-A", "A", 18, 20),               # both in band
+        _mkt("KXTEAM-26-B", "B", 14, 16),
+    ])
+    books = {"KXTEAM-26-A": _ob(18, 20), "KXTEAM-26-B": _ob(14, 16)}
+    with db.session_scope() as session:
+        summ = MmSellTracker(client=FakeClient([ev], books), settings=settings).run_once(session)
+    assert summ.opened == 2                              # cap does not gate trading
+    with db.session_scope() as session:
+        assert session.scalar(select(func.count()).select_from(m.MmSellCandidateTick)) == 1
+
+
+def test_candidate_capture_is_fail_soft(settings, monkeypatch):
+    """A capture failure must never break the trading loop — the position still opens."""
+    from kalshi_bot.mmsell import tracker as tr
+
+    _setup(settings)
+
+    def _boom(*a, **k):
+        raise RuntimeError("capture blew up")
+
+    monkeypatch.setattr(tr.repo, "insert_mmsell_candidate_tick", _boom)
+    ev = _event([_mkt("KXTEAM-26-A", "A", 18, 20)])
+    client = FakeClient([ev], {"KXTEAM-26-A": _ob(18, 20)})
+    with db.session_scope() as session:
+        summ = MmSellTracker(client, settings).run_once(session)
+    assert summ.opened == 1                              # trade opened despite the capture error
+    with db.session_scope() as session:
+        assert session.scalar(select(func.count()).select_from(m.MmSellCandidateTick)) == 0

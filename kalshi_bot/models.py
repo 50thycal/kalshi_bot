@@ -213,6 +213,31 @@ class MmSellPositionTick(Base):
     volume: Mapped[int | None] = mapped_column(Integer)
 
 
+class MmSellCandidateTick(Base):
+    """Per-cycle orderbook snapshot for every IN-BAND mmsell CANDIDATE market — whether or not a
+    position was opened that cycle. This is the pre-entry price path the fill model needs to replace
+    its live-*calibrated* fill estimate (drawn from one 359-trade live window) with a DIRECT
+    per-ticker replay: 'if I'd rested a buy-NO at the no-bid at cycle T, would it have been lifted
+    before close, and at what realizable P&L?'. Complements `mmsell_position_ticks` (which captures
+    only markets already HELD); captured cheaply off the orderbook the entry scan already fetches,
+    config-gated + per-cycle capped so it never burdens the trading loop. Prices are integer cents."""
+
+    __tablename__ = "mmsell_candidate_ticks"
+    __table_args__ = (Index("ix_mmsell_cand_ticks_ticker_time", "market_ticker", "captured_at"),)
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    market_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    captured_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    series: Mapped[str | None] = mapped_column(String(32))
+    hours_to_close: Mapped[float | None] = mapped_column(Float)
+    yes_bid: Mapped[int | None] = mapped_column(Integer)
+    yes_ask: Mapped[int | None] = mapped_column(Integer)
+    no_bid: Mapped[int | None] = mapped_column(Integer)
+    no_ask: Mapped[int | None] = mapped_column(Integer)
+    mid: Mapped[float | None] = mapped_column(Float)  # yes midpoint, cents
+    volume: Mapped[int | None] = mapped_column(Integer)
+
+
 class LiveOrder(Base):
     __tablename__ = "live_orders"
 

@@ -16,6 +16,30 @@ Conventions:
 
 ---
 
+## INFRA 2026-07-23 — mmsell fill-realism collection BUILT (step 0 for the mmsell10 live re-test)
+
+Not a probe verdict — the data-collection prerequisite the fill model (`docs/MMSELL_FILL_MODEL.md`
+§2, §5 #2) has been asking for. The fill model corrects paper's "resting order always fills" fantasy
+with a live-*calibrated* estimate (adverse selection: live fills ~70%, missing the winners), but it
+can only calibrate from the one 359-trade live mmsell3 window and can't reach the rich price cells.
+The faithful fix is a **per-ticker replay** — "would a resting buy-NO at the no-bid have been lifted
+before close?" — which needs the pre-entry price path of the *candidate* universe, which the tracker
+fetched live but never persisted.
+
+- **Built:** `mmsell_candidate_ticks` (model + guarded migration `c2d3e4f5a6b7`), a repo helper, a
+  config-gated (`mmsell_capture_candidates`, default on) + per-cycle-capped (`mmsell_candidate_capture_max`,
+  default 400) + fail-soft hook in the mmsell entry scan that tapes **one orderbook snapshot per
+  in-band candidate per cycle**, off the book the scan already fetches (no extra API call, no trading
+  decision changed). Complements `mmsell_position_ticks` (held positions only). 5 new tests
+  (writes-for-in-band, re-taped-when-already-open, disabled-gate, per-cycle-cap, fail-soft).
+- **What it enables:** a future `scripts/mmsell_fill_replay.py` that turns the §2 calibrated estimate
+  into a direct per-ticker measurement, covering the rich cells the live window can't.
+- **What to expect:** coverage accrues **per-cycle over days** — a candidate must be born, taped, and
+  settle inside the capture window before it is replayable — so an early empty replay is a
+  data-maturity wait, not a bug. Ready before the ~1-week-out mmsell10 live re-test.
+
+---
+
 ## IDEA-MODEL 2026-07-22 — Area 3 (portfolio construction): PORT → ALLOCATION PREMATURE
 
 Final scoped run — combining the edges we have, not finding new ones. Phase 1 pulled every book's
