@@ -11,7 +11,12 @@ from kalshi_bot.evo import models as em
 from kalshi_bot.evo import paper, sandbox, strategy_runner
 from kalshi_bot.evo.marketdata import Quote, StaticMarketData, quote_from_kalshi
 from kalshi_bot.evo.strategy_spec import entry_signal, exit_signal, validate_spec
-from kalshi_bot.models import BackfillWeatherCandle, BackfillWeatherMarket
+from kalshi_bot.models import (
+    BackfillWeatherCandle,
+    BackfillWeatherMarket,
+    MmSellPositionTick,
+    PaperTrade,
+)
 from kalshi_bot.paper.engine import kalshi_fee
 
 AU = "a" * 36
@@ -549,6 +554,56 @@ def test_backtest_runs_and_charges_budget(evo_session, evo_settings, evo_agent):
         evo_session, agent.agent_uuid, cohort.id, "sandbox_runs"
     )
     assert used == 1
+
+
+def _seed_mmsell(session):
+    """Two settled mmsell markets (one YES-settled, one NO-settled), each with a captured
+    orderbook tick path — the shape the mmsell backtest adapter replays."""
+    base = datetime(2026, 6, 1, tzinfo=timezone.utc)
+    for i, resolved in enumerate((100, 0)):
+        ticker = f"KXBTCD-26JUN0{i}-T60000"
+        session.add(PaperTrade(
+            market_ticker=ticker, strategy="mmsell", status="settled",
+            assumed_price=45, resolved_value=resolved, side="yes", quantity=5,
+            created_at=base + timedelta(days=i),
+            closed_at=base + timedelta(days=i, hours=2),
+        ))
+        for h in range(3):
+            session.add(MmSellPositionTick(
+                market_ticker=ticker,
+                captured_at=base + timedelta(days=i, minutes=h * 20),
+                yes_bid=40, yes_ask=45, no_bid=55, no_ask=60, mid=42.5, volume=100,
+            ))
+    session.flush()
+
+
+def test_mmsell_backtest_replays_ticks_to_settlement(evo_session, evo_settings, evo_agent):
+    agent, cohort = evo_agent
+    _seed_mmsell(evo_session)
+    spec = {**BASE_SPEC, "universe": {**BASE_SPEC["universe"],
+                                      "series_prefixes": ["KXBTCD"]}}
+    result, err = sandbox.run_backtest(
+        evo_session, evo_settings, agent_uuid=agent.agent_uuid, cohort_id=cohort.id,
+        spec_doc=spec, dataset="mmsell",
+    )
+    assert err is None
+    # one trade per settled market, held to settlement; the resolved_value=100 market wins
+    assert result["n_trades"] == 2 and result["wins"] == 1
+    assert result["dataset"] == "mmsell"
+    assert result["provenance"] == "mmsell_live_ticks"
+    run = evo_session.scalar(
+        select(em.EvoSandboxRun).where(em.EvoSandboxRun.dataset == "mmsell")
+    )
+    assert run is not None and run.provenance == "mmsell_live_ticks"
+
+
+def test_backtest_rejects_unknown_dataset(evo_session, evo_settings, evo_agent):
+    agent, cohort = evo_agent
+    result, err = sandbox.run_backtest(
+        evo_session, evo_settings, agent_uuid=agent.agent_uuid, cohort_id=cohort.id,
+        spec_doc=BASE_SPEC, dataset="bogus",
+    )
+    assert result is None and err is not None and "unknown dataset" in err
 
 
 def test_walkforward_split(evo_session, evo_settings, evo_agent):
