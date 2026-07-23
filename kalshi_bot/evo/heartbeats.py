@@ -196,6 +196,12 @@ def run_heartbeat(
     """Full lifecycle: claim -> (budget for triggered) -> context -> cognition ->
     actions -> journal -> finalize. Returns the heartbeat row, or None when the
     slot was already claimed."""
+    # Self-heal budgets: back-fill any resource added to resource_allocations AFTER
+    # this agent joined its cohort (e.g. a newly-shipped action's budget). Idempotent
+    # — only inserts missing rows — so an agent provisioned before the resource
+    # existed can use the new capability on its very next heartbeat instead of being
+    # rejected with a misleading "budget exhausted" until its next cohort.
+    budgets.ensure_budgets(session, agent.agent_uuid, cohort.id, settings)
     if kind == "triggered":
         if not budgets.can_spend(
             session, agent.agent_uuid, cohort.id, "triggered_heartbeats", 1

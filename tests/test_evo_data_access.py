@@ -151,6 +151,40 @@ def test_inspect_data_action_records_read_and_surfaces_next_heartbeat():
     assert "YOUR RECENT DATA READS" in seen["p"] and "mmsell" in seen["p"]
 
 
+def test_missing_data_reads_budget_is_backfilled_on_heartbeat():
+    """Regression: agents provisioned BEFORE the data_reads resource existed had no
+    data_reads budget row, so inspect_data rejected with a misleading 'budget
+    exhausted' (this is exactly what happened to the live fleet). run_heartbeat must
+    self-heal via ensure_budgets so they can use the new capability next heartbeat."""
+    from sqlalchemy import select
+
+    from kalshi_bot.evo.heartbeats import run_heartbeat
+
+    s = _session()
+    settings = EvoSettings(_env_file=None)
+    agent, cohort = _agent(s, settings)
+    _seed(s)
+    # simulate a pre-data_reads agent: remove the data_reads budget row
+    row = s.scalar(select(em.EvoBudget).where(
+        em.EvoBudget.agent_uuid == agent.agent_uuid, em.EvoBudget.resource == "data_reads"))
+    assert row is not None
+    s.delete(row)
+    s.flush()
+    assert budgets.remaining(s, agent.agent_uuid, cohort.id, "data_reads") == 0.0
+
+    cog = ScriptedCognition(lambda ctx: {
+        "journal": {"decision": "look"},
+        "actions": [{"type": "inspect_data", "source": "paper_trades",
+                     "filters": {"strategy": "mmsell"}}],
+    })
+    hb = run_heartbeat(s, settings, agent=agent, cohort=cohort, kind="routine",
+                       slot_id="heal", cognition=cog, md=StaticMarketData())
+    assert hb.actions_json[0].get("ok"), hb.actions_json[0]  # no longer rejected
+    assert budgets.remaining(s, agent.agent_uuid, cohort.id, "data_reads") == (
+        settings.weekly_data_reads - 1
+    )
+
+
 def test_data_reads_do_not_pollute_recent_backtests_view():
     from kalshi_bot.evo import sandbox
     s = _session()
