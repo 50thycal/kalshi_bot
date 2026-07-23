@@ -70,6 +70,7 @@ PERMITTED_ACTIONS = frozenset({
     "update_listener",
     "remove_listener",
     "run_backtest",
+    "inspect_data",
     "save_strategy",
     "activate_strategy",
     "submit_trade_intent",
