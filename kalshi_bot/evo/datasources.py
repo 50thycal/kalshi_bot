@@ -43,23 +43,73 @@ def find_similar_source(session, name: str, provider: str | None) -> EvoDataSour
     return best if best_score >= _DEDUP_JACCARD else None
 
 # Sources available out of the box (already collected by the legacy workers into
-# provenance-labeled tables). Registered as operational at bootstrap.
+# provenance-labeled tables). Seeded at bootstrap. `fields_json.access` records HOW an
+# agent actually reaches each one (explore_markets / inspect_data source=X /
+# run_backtest dataset=Y) and `fields_json.capabilities` what it can do with it, so the
+# registry is an honest map of the data surface — not a list of names with no path to use.
+#   discover    = list live markets on demand      (explore_markets)
+#   trade_paper = tradeable in the paper portfolio (submit_trade_intent)
+#   inspect     = readable row-by-row              (inspect_data)
+#   backtest    = has a settled outcome to replay  (run_backtest dataset=…)
+#   read_only   = inspectable reference only — no Kalshi market and/or no settlement,
+#                 so NOT backtestable or tradeable (do not build a strategy that needs it)
+def _src(access, capabilities, **kw):
+    kw["fields_json"] = {"access": access, "capabilities": capabilities}
+    return kw
+
+
 BUILTIN_SOURCES = (
-    dict(name="kalshi_markets", provider="Kalshi", retrieval_method="rest",
+    _src("explore_markets {series,status,limit}; also the passive per-cycle scan",
+         ["discover", "trade_paper"],
+         name="kalshi_markets", provider="Kalshi", retrieval_method="rest",
          provenance="kalshi_live", update_frequency="per-cycle", auth_required=True,
          cost_note="free with account", approved_usage="operational"),
-    dict(name="weather_live_tables", provider="NWS/Open-Meteo/stations", retrieval_method="db",
+    _src("orchestrator weather scan (KXHIGH*/KXLOW*); tradeable + backtestable",
+         ["trade_paper", "backtest"],
+         name="weather_live_tables", provider="NWS/Open-Meteo/stations", retrieval_method="db",
          provenance="live_collected", update_frequency="5-60min", auth_required=False,
          cost_note="free", approved_usage="operational"),
-    dict(name="backfill_weather_history", provider="Kalshi REST archive", retrieval_method="db",
+    _src("run_backtest dataset='backfill_weather'", ["backtest"],
+         name="backfill_weather_history", provider="Kalshi REST archive", retrieval_method="db",
          provenance="backfill", update_frequency="static+append", auth_required=False,
          cost_note="free", approved_usage="operational"),
-    dict(name="crypto_spot_candles", provider="Coinbase Exchange", retrieval_method="db",
+    _src("inspect_data source='mmsell_ticks'; run_backtest dataset='mmsell'",
+         ["inspect", "backtest"],
+         name="mmsell_position_ticks", provider="internal mmsell book", retrieval_method="db",
+         provenance="live_collected", update_frequency="per-cycle", auth_required=False,
+         cost_note="free", approved_usage="operational"),
+    _src("inspect_data source='crypto_ladders'; run_backtest dataset='crypto' (BTC/ETH)",
+         ["inspect", "backtest"],
+         name="crypto_ladder_snapshots", provider="Kalshi", retrieval_method="db",
+         provenance="live_collected", update_frequency="per-cycle", auth_required=False,
+         cost_note="free", approved_usage="operational"),
+    _src("inspect_data source='crypto_spot'; settles the crypto backtest (spot vs strike)",
+         ["inspect", "settlement"],
+         name="crypto_spot_candles", provider="Coinbase Exchange", retrieval_method="db",
          provenance="exchange_feed", update_frequency="1min", auth_required=False,
          cost_note="free", approved_usage="operational"),
-    dict(name="polymarket_snapshots", provider="Polymarket Gamma", retrieval_method="db",
-         provenance="polymarket_gamma", update_frequency="5min", auth_required=False,
+    _src("inspect_data source='paper_trades' (filter strategy=mmsell/theta/weather/…) — "
+         "study what our OWN strategies did and copy them",
+         ["inspect"],
+         name="paper_trades", provider="internal", retrieval_method="db",
+         provenance="live_collected", update_frequency="per-trade", auth_required=False,
          cost_note="free", approved_usage="operational"),
+    _src("inspect_data source='signals'", ["inspect"],
+         name="signals", provider="internal", retrieval_method="db",
+         provenance="live_collected", update_frequency="per-cycle", auth_required=False,
+         cost_note="free", approved_usage="operational"),
+    _src("inspect_data source='polymarket' — READ-ONLY reference (not a Kalshi market: "
+         "not backtestable, not tradeable)",
+         ["inspect", "read_only"],
+         name="polymarket_snapshots", provider="Polymarket Gamma", retrieval_method="db",
+         provenance="polymarket_gamma", update_frequency="5min", auth_required=False,
+         cost_note="free", approved_usage="exploratory"),
+    _src("inspect_data source='game_tape' — READ-ONLY reference (no settlement captured: "
+         "not backtestable)",
+         ["inspect", "read_only"],
+         name="game_tape_snapshots", provider="internal xgame", retrieval_method="db",
+         provenance="live_collected", update_frequency="per-cycle", auth_required=False,
+         cost_note="free", approved_usage="exploratory"),
 )
 
 
@@ -164,14 +214,19 @@ def resolve_health_events(session, source_name: str) -> int:
 
 
 def sources_summary(session) -> list[dict]:
-    return [
-        {
-            "name": s.name,
-            "provider": s.provider,
-            "provenance": s.provenance,
-            "approved_usage": s.approved_usage,
-            "status": s.status,
-            "registered_by": s.registered_by_uuid,
-        }
-        for s in session.scalars(select(EvoDataSource).order_by(EvoDataSource.name))
-    ]
+    out: list[dict] = []
+    for s in session.scalars(select(EvoDataSource).order_by(EvoDataSource.name)):
+        meta = s.fields_json or {}
+        out.append(
+            {
+                "name": s.name,
+                "provider": s.provider,
+                "provenance": s.provenance,
+                "approved_usage": s.approved_usage,
+                "status": s.status,
+                "registered_by": s.registered_by_uuid,
+                "access": meta.get("access"),
+                "capabilities": meta.get("capabilities"),
+            }
+        )
+    return out
