@@ -20,7 +20,7 @@ from typing import Any
 from pydantic import BaseModel, Field, ValidationError
 
 from . import announcements as announce
-from . import budgets, graveyard, lineage, listeners, memory, peers, sandbox, tickets
+from . import budgets, data_access, graveyard, lineage, listeners, memory, peers, sandbox, tickets
 from . import datasources as ds
 from . import paper as papermod
 from .audit import audit, integrity_violation
@@ -99,6 +99,7 @@ class HeartbeatContext:
     announcements: list[dict] = field(default_factory=list)
     recent_orders: list[dict] = field(default_factory=list)
     recent_backtests: list[dict] = field(default_factory=list)
+    recent_data_reads: list[dict] = field(default_factory=list)
     extra: dict = field(default_factory=dict)
 
 
@@ -149,6 +150,16 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
   and running the identical spec again returns the same numbers and wastes budget. A
   stable negative result (e.g. a low win-rate that repeats) is a CONCLUSION to act on
   (kill the idea, change a variable), never a reason to run it again.
+- inspect_data {source, filters?, limit?}. READ any data we have collected — you are
+  NOT limited to weather. `source` is one of: DATA_SOURCES. `filters` is an object of
+  column->value on that source's allowlisted columns (e.g. {"market_ticker": "..."},
+  {"strategy": "mmsell"}, {"product": "BTC-USD"}); `limit` <= 50, most-recent-first.
+  Use this to study a domain before forming a hypothesis, or to see what our OTHER
+  strategies actually did and copy them — e.g. inspect_data {"source":"paper_trades",
+  "filters":{"strategy":"mmsell"}} shows mmsell's real trades + outcomes; then read its
+  intraday tape with {"source":"mmsell_ticks","filters":{"market_ticker":"..."}}. The
+  rows you pull appear under YOUR RECENT DATA READS in your NEXT heartbeat (not this
+  one), so inspect first, then act on what you saw.
 - save_strategy {spec, graveyard_check {prior_attempt, prior_result, material_difference}?}
   `spec` is validated against an EXACT schema — unlisted fields are REJECTED, do not
   invent field names (no hypothesis_id, strategy_name, commission_bps, order_style,
@@ -195,6 +206,7 @@ Invalid actions are rejected (with the reason recorded); the rest still execute.
 """.replace("MAXN", str(MAX_ACTIONS_PER_HEARTBEAT)) \
     .replace("METRICS_LIST", "|".join(METRICS)) \
     .replace("OPS_LIST", "|".join(OPS)) \
+    .replace("DATA_SOURCES", "|".join(data_access.SOURCES)) \
     .replace("TICKET_CATEGORIES", "|".join(tickets.CATEGORIES))
 
 
@@ -260,6 +272,12 @@ def build_user_prompt(ctx: HeartbeatContext) -> str:
             "times_run_recently >= 2 means you already ran this and the result is KNOWN "
             "— do NOT run it again, act on it):\n"
             + json.dumps(ctx.recent_backtests, separators=(",", ":"))[:2500]
+        )
+    if ctx.recent_data_reads:
+        parts.append(
+            "YOUR RECENT DATA READS (rows you pulled via inspect_data from our "
+            "collected data — study these to form a hypothesis, then backtest it):\n"
+            + json.dumps(ctx.recent_data_reads, separators=(",", ":"))[:3500]
         )
     if ctx.listener_events:
         parts.append("TRIGGERED LISTENER EVENTS (why you may have been woken):\n"
@@ -646,6 +664,25 @@ def _execute_one(
             )
         return {"ok": True, "result": result} if result is not None else {"rejected": err}
 
+    if t == "inspect_data":
+        source = str(a.get("source", ""))
+        filters = a.get("filters") or {}
+        if not isinstance(filters, dict):
+            return {"rejected": "filters must be an object of column->value"}
+        if not budgets.spend(session, au, cohort.id, "data_reads", 1):
+            return {"rejected": "weekly data-read budget exhausted"}
+        result, err = data_access.inspect(
+            session, source, filters=filters, limit=a.get("limit", 20)
+        )
+        if err:
+            return {"rejected": err}
+        data_access.record_read(
+            session, agent_uuid=au, heartbeat_id=hb.id, result=result
+        )
+        # The full rows resurface in YOUR RECENT DATA READS next heartbeat; the
+        # outcome here is just an ack (action outcomes are not re-fed this turn).
+        return {"ok": True, "source": source, "count": result["count"]}
+
     if t == "save_strategy":
         spec = a.get("spec")
         if not isinstance(spec, dict):
@@ -884,5 +921,6 @@ def assemble_context(
         announcements=active_notices,
         recent_orders=papermod.recent_orders(session, au),
         recent_backtests=sandbox.recent_runs(session, au),
+        recent_data_reads=data_access.recent_reads(session, au),
         extra=extra or {},
     )

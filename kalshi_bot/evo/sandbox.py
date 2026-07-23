@@ -54,7 +54,10 @@ def recent_runs(session, agent_uuid: str, *, limit: int = 8) -> list[dict]:
     rows = list(
         session.scalars(
             select(EvoSandboxRun)
-            .where(EvoSandboxRun.agent_uuid == agent_uuid)
+            .where(
+                EvoSandboxRun.agent_uuid == agent_uuid,
+                EvoSandboxRun.kind.in_(("backtest", "walkforward", "probe")),
+            )
             .order_by(EvoSandboxRun.created_at.desc())
             .limit(limit)
         )

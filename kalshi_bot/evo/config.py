@@ -73,6 +73,7 @@ class EvoSettings(BaseSettings):
     # --- other per-cohort resource budgets ---
     weekly_tool_calls: int = 2000
     weekly_sandbox_runs: int = 50
+    weekly_data_reads: int = 300  # inspect_data pulls over our collected data tables
 
     # --- leaderboard delay (spec §12) ---
     leaderboard_delay_hours: float = 6.0
@@ -136,5 +137,6 @@ def resource_allocations(s: EvoSettings) -> dict[str, float]:
         "tokens": float(s.weekly_token_budget),
         "tool_calls": float(s.weekly_tool_calls),
         "sandbox_runs": float(s.weekly_sandbox_runs),
+        "data_reads": float(s.weekly_data_reads),
         "triggered_heartbeats": float(s.triggered_heartbeats_per_week),
     }
