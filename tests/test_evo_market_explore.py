@@ -18,7 +18,7 @@ from kalshi_bot.evo.config import EvoSettings
 from kalshi_bot.evo.constitution import PERMITTED_ACTIONS
 from kalshi_bot.evo.evolution import create_agent
 from kalshi_bot.evo.heartbeats import run_heartbeat
-from kalshi_bot.evo.marketdata import Quote, StaticMarketData
+from kalshi_bot.evo.marketdata import Quote, StaticMarketData, quote_from_kalshi
 from kalshi_bot.models import Base
 
 NOW = datetime.now(timezone.utc)
@@ -88,6 +88,28 @@ def test_explore_degrades_to_bare_rows_without_quotes():
     row = res["markets"][0]
     assert row["ticker"].startswith("KXBTCD-")
     assert row["yes_bid"] is None and row["yes_mid"] is None
+
+
+def test_quote_from_kalshi_parses_dollars_and_fp_fields():
+    # the live elections API sends prices as '<f>_dollars' and counts as '<f>_fp' — with
+    # no orderbook, quote_from_kalshi must still produce a priced quote from those.
+    market = {
+        "ticker": "KXHIGHNY-26JUL24-T88", "status": "active", "title": "NYC high >88",
+        "yes_bid_dollars": "0.0000", "yes_ask_dollars": "0.0200",
+        "no_bid_dollars": "0.9800", "no_ask_dollars": "1.0000",
+        "volume_fp": "941.68", "open_interest_fp": "941.68", "last_price_dollars": "0.0100",
+    }
+    q = quote_from_kalshi(market, None)
+    assert q.yes_bid == 0 and q.yes_ask == 2  # yes_ask derived from no_bid (100-98)
+    assert q.mid == 1.0 and q.spread == 2
+    assert q.volume == 942 and q.open_interest == 942 and q.last_price == 1
+
+
+def test_quote_from_kalshi_still_reads_legacy_cents_fields():
+    q = quote_from_kalshi(
+        {"ticker": "X", "yes_bid": 40, "yes_ask": 44, "volume": 100, "open_interest": 7}, None
+    )
+    assert q.yes_bid == 40 and q.yes_ask == 44 and q.volume == 100 and q.open_interest == 7
 
 
 def test_explore_passes_series_and_caps_limit():

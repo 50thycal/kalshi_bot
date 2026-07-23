@@ -110,17 +110,49 @@ def _parse_levels(raw: list | None) -> list[tuple[int, int]]:
     return out
 
 
+def _to_cents(dollars: object) -> int | None:
+    """Kalshi's '<field>_dollars' price strings ('0.0200') -> integer cents."""
+    try:
+        return round(float(dollars) * 100)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+
+
+def _to_count(fp: object) -> int | None:
+    """Kalshi's '<field>_fp' fixed-point count strings ('941.68') -> int."""
+    try:
+        return round(float(fp))  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+
+
+def _mkt_cents(market: dict, name: str) -> int | None:
+    """Price (cents) from a market dict, tolerating BOTH the legacy integer-cents field
+    (`yes_bid`) and the current elections-API dollar-string field (`yes_bid_dollars`).
+    The live API only returns the latter, so without this prices/volume come back None."""
+    v = market.get(name)
+    return v if v is not None else _to_cents(market.get(f"{name}_dollars"))
+
+
+def _mkt_count(market: dict, name: str) -> int | None:
+    """Count (volume / open_interest) tolerating `volume` and `volume_fp` alike."""
+    v = market.get(name)
+    return v if v is not None else _to_count(market.get(f"{name}_fp"))
+
+
 def quote_from_kalshi(market: dict, orderbook: dict | None, *, source: str = "live") -> Quote:
-    """Build a Quote from a Kalshi market dict + orderbook response."""
+    """Build a Quote from a Kalshi market dict + orderbook response. Reads both the legacy
+    cents/int fields and the elections API's `_dollars`/`_fp` string fields (the live API
+    only sends the latter), so price, volume, open interest and last price populate."""
     ob = orderbook.get("orderbook") if isinstance(orderbook, dict) and "orderbook" in (
         orderbook or {}
     ) else orderbook
     yes_levels = _parse_levels((ob or {}).get("yes"))
     no_levels = _parse_levels((ob or {}).get("no"))
-    yes_bid = yes_levels[0][0] if yes_levels else market.get("yes_bid")
-    no_bid = no_levels[0][0] if no_levels else market.get("no_bid")
-    yes_ask = (100 - no_bid) if no_bid is not None else market.get("yes_ask")
-    no_ask = (100 - yes_bid) if yes_bid is not None else market.get("no_ask")
+    yes_bid = yes_levels[0][0] if yes_levels else _mkt_cents(market, "yes_bid")
+    no_bid = no_levels[0][0] if no_levels else _mkt_cents(market, "no_bid")
+    yes_ask = (100 - no_bid) if no_bid is not None else _mkt_cents(market, "yes_ask")
+    no_ask = (100 - yes_bid) if yes_bid is not None else _mkt_cents(market, "no_ask")
     close_time = market.get("close_time")
     if isinstance(close_time, str):
         try:
@@ -139,9 +171,9 @@ def quote_from_kalshi(market: dict, orderbook: dict | None, *, source: str = "li
         no_ask=no_ask,
         yes_levels=yes_levels,
         no_levels=no_levels,
-        last_price=market.get("last_price"),
-        volume=market.get("volume"),
-        open_interest=market.get("open_interest"),
+        last_price=_mkt_cents(market, "last_price"),
+        volume=_mkt_count(market, "volume"),
+        open_interest=_mkt_count(market, "open_interest"),
         close_time=close_time,
         event_ticker=market.get("event_ticker"),
         category=market.get("category"),
