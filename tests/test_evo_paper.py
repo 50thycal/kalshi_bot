@@ -14,6 +14,8 @@ from kalshi_bot.evo.strategy_spec import entry_signal, exit_signal, validate_spe
 from kalshi_bot.models import (
     BackfillWeatherCandle,
     BackfillWeatherMarket,
+    CryptoLadderSnapshot,
+    CryptoSpotCandle,
     MmSellPositionTick,
     PaperTrade,
 )
@@ -615,6 +617,53 @@ def test_backtest_persist_false_returns_result_without_writing(
     assert evo_session.scalar(
         select(em.EvoSandboxRun).where(em.EvoSandboxRun.dataset == "mmsell")
     ) is None
+
+
+def _seed_crypto(session):
+    """Two crypto ladder markets + a spot path; outcome is DERIVED from spot vs strike.
+    Spot at close = 65000: T64000 (greater) -> YES, T66000 (greater) -> NO."""
+    close_t = datetime(2026, 7, 20, 20, 0, tzinfo=timezone.utc)
+    for m in (-2, -1, 0):
+        session.add(CryptoSpotCandle(
+            product="BTC-USD", minute_ts=close_t + timedelta(minutes=m), close=65000.0))
+    for ticker, floor in (("KXBTCD-26JUL2020-T64000", 64000.0),
+                          ("KXBTCD-26JUL2020-T66000", 66000.0)):
+        for mins in (60, 30, 0):
+            session.add(CryptoLadderSnapshot(
+                series="KXBTCD", event_ticker="KXBTCD-26JUL2020", market_ticker=ticker,
+                captured_at=close_t - timedelta(minutes=mins), strike_type="greater",
+                floor_strike=floor, cap_strike=None, yes_bid_cents=48.0, yes_ask_cents=52.0,
+                mid_cents=50.0, volume=100.0, minutes_to_close=float(mins),
+            ))
+    session.flush()
+
+
+def test_settle_crypto_rules():
+    from kalshi_bot.evo.sandbox import _settle_crypto
+    assert _settle_crypto("greater", 64000, None, 65000) == "yes"
+    assert _settle_crypto("greater", 66000, None, 65000) == "no"
+    assert _settle_crypto("less", None, 66000, 65000) == "yes"
+    assert _settle_crypto("less", None, 64000, 65000) == "no"
+    assert _settle_crypto("between", 64000, 66000, 65000) == "yes"
+    assert _settle_crypto("between", 64000, 64900, 65000) == "no"
+    assert _settle_crypto("greater", 64000, None, None) is None  # no spot
+    assert _settle_crypto("greater", None, None, 65000) is None  # no strike
+
+
+def test_crypto_backtest_derives_settlement_from_spot(evo_session, evo_settings, evo_agent):
+    agent, cohort = evo_agent
+    _seed_crypto(evo_session)
+    spec = {**BASE_SPEC, "universe": {**BASE_SPEC["universe"],
+                                      "series_prefixes": ["KXBTCD"]}}
+    result, err = sandbox.run_backtest(
+        evo_session, evo_settings, agent_uuid=agent.agent_uuid, cohort_id=cohort.id,
+        spec_doc=spec, dataset="crypto",
+    )
+    assert err is None
+    # spec buys YES; only the T64000 market (spot 65000 > 64000 -> YES) wins
+    assert result["n_trades"] == 2 and result["wins"] == 1
+    assert result["dataset"] == "crypto"
+    assert result["provenance"] == "crypto_ladder_spot_settled"
 
 
 def test_market_result_from_trade_is_side_adjusted():

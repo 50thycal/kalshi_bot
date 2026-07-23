@@ -14,19 +14,23 @@ market's close_time."""
 
 from __future__ import annotations
 
+import bisect
 import hashlib
 import json
 import logging
 import time
+from collections import defaultdict
 from collections.abc import Iterator
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from ..models import (
     BackfillWeatherCandle,
     BackfillWeatherMarket,
+    CryptoLadderSnapshot,
+    CryptoSpotCandle,
     MmSellPositionTick,
     PaperTrade,
 )
@@ -44,11 +48,12 @@ logger = logging.getLogger(__name__)
 # with an ordered, no-lookahead candle path. Weather is the reference adapter; mmsell
 # replays the live orderbook tick path of settled mmsell paper trades (settlement from
 # paper_trades.resolved_value). The replay loop itself is dataset-agnostic.
-DATASETS = ("backfill_weather", "mmsell")
+DATASETS = ("backfill_weather", "mmsell", "crypto")
 
 _PROVENANCE = {
     "backfill_weather": "kalshi_rest_backfill",
     "mmsell": "mmsell_live_ticks",
+    "crypto": "crypto_ladder_spot_settled",
 }
 
 
@@ -328,9 +333,157 @@ def _mmsell_markets(
         )
 
 
+def _crypto_product(series: str | None) -> str | None:
+    """Map a Kalshi crypto series to its Coinbase spot product (only BTC/ETH have spot)."""
+    s = series or ""
+    if s.startswith("KXBTC"):
+        return "BTC-USD"
+    if s.startswith("KXETH"):
+        return "ETH-USD"
+    return None
+
+
+def _settle_crypto(
+    strike_type: str | None, floor: float | None, cap: float | None, spot: float | None
+) -> str | None:
+    """Crypto market outcome from the settling spot vs its strike. Validated against real
+    settled outcomes (side-adjusted paper_trades) at 231/231. None if undecidable."""
+    if spot is None:
+        return None
+    if strike_type == "greater":
+        return None if floor is None else ("yes" if spot > floor else "no")
+    if strike_type == "less":
+        return None if cap is None else ("yes" if spot < cap else "no")
+    if strike_type == "between":
+        if floor is None or cap is None:
+            return None
+        return "yes" if floor <= spot <= cap else "no"
+    return None
+
+
+def _load_spot(session) -> dict[str, tuple[list[datetime], list[float]]]:
+    """Preload crypto spot candles into {product: (sorted minute_ts[], close[])} for fast
+    in-memory settlement lookup (the whole table is small — a few days x 2 products)."""
+    out: dict[str, tuple[list, list]] = defaultdict(lambda: ([], []))
+    rows = session.execute(
+        select(CryptoSpotCandle.product, CryptoSpotCandle.minute_ts, CryptoSpotCandle.close)
+        .order_by(CryptoSpotCandle.product, CryptoSpotCandle.minute_ts)
+    )
+    for product, ts, close in rows:
+        ts = ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
+        tslist, closelist = out[product]
+        tslist.append(ts)
+        closelist.append(close)
+    return out
+
+
+def _spot_at(spot: dict, product: str, when: datetime) -> float | None:
+    """Latest spot close at/ before `when` for `product` (bisect on the sorted ts list)."""
+    entry = spot.get(product)
+    if not entry:
+        return None
+    tslist, closelist = entry
+    i = bisect.bisect_right(tslist, when) - 1
+    return closelist[i] if i >= 0 else None
+
+
+def _crypto_candle(ticker: str, closed_at: datetime, snap: CryptoLadderSnapshot) -> _Candle:
+    """One crypto ladder snapshot -> a Quote (close_time made wall-relative, no lookahead)."""
+    ts = snap.captured_at if snap.captured_at.tzinfo else snap.captured_at.replace(
+        tzinfo=timezone.utc
+    )
+    wall_close = datetime.now(timezone.utc) + (closed_at - ts)
+    yb = int(snap.yes_bid_cents) if snap.yes_bid_cents is not None else None
+    ya = int(snap.yes_ask_cents) if snap.yes_ask_cents is not None else None
+    nb = 100 - ya if ya is not None else None
+    quote = Quote(
+        ticker=ticker,
+        captured_at=ts,
+        source="crypto",
+        status="active",
+        result="",
+        yes_bid=yb,
+        yes_ask=ya,
+        no_bid=nb,
+        no_ask=100 - yb if yb is not None else None,
+        yes_levels=[(yb, 500)] if yb else [],
+        no_levels=[(nb, 500)] if nb else [],
+        last_price=int(snap.mid_cents) if snap.mid_cents is not None else None,
+        volume=int(snap.volume) if snap.volume is not None else None,
+        close_time=wall_close,
+    )
+    return _Candle(ts=ts, quote=quote, price_low=yb)
+
+
+def _crypto_markets(
+    session, spec, date_from: str | None, date_to: str | None
+) -> Iterator[_Market]:
+    """crypto adapter: each distinct crypto ladder market is a settled market whose outcome
+    is DERIVED from the underlying spot vs the strike at close (crypto has no result column).
+    Price path = that ticker's ladder snapshots. Only markets whose close falls within spot
+    coverage are settleable (spot collection is recent), newest first."""
+    spot = _load_spot(session)
+    bounds = {p: (ts[0], ts[-1]) for p, (ts, _) in spot.items() if ts}
+    if not bounds:
+        return
+    cov_min = min(lo for lo, _ in bounds.values())
+    cov_max = max(hi for _, hi in bounds.values())
+    df, dt = _parse_date(date_from), _parse_date(date_to)
+
+    candidates = (
+        select(
+            CryptoLadderSnapshot.market_ticker,
+            func.max(CryptoLadderSnapshot.series),
+            func.max(CryptoLadderSnapshot.strike_type),
+            func.max(CryptoLadderSnapshot.floor_strike),
+            func.max(CryptoLadderSnapshot.cap_strike),
+            func.max(CryptoLadderSnapshot.captured_at),
+            func.min(CryptoLadderSnapshot.minutes_to_close),
+        )
+        .where(CryptoLadderSnapshot.market_ticker.isnot(None))
+        .group_by(CryptoLadderSnapshot.market_ticker)
+        .having(func.max(CryptoLadderSnapshot.captured_at) >= cov_min)
+        .order_by(func.max(CryptoLadderSnapshot.captured_at).desc())
+    )
+    for ticker, series, st, floor, cap, last_cap, min_mtc in session.execute(candidates):
+        if not spec.universe.admits_ticker(ticker):
+            continue
+        product = _crypto_product(series)
+        if product is None:
+            continue
+        last_cap = last_cap if last_cap.tzinfo else last_cap.replace(tzinfo=timezone.utc)
+        close_t = last_cap + timedelta(minutes=float(min_mtc or 0.0))
+        if close_t > cov_max:  # closes after spot coverage -> not settleable yet
+            continue
+        if (df and close_t < df) or (dt and close_t > dt):
+            continue
+        result = _settle_crypto(st, floor, cap, _spot_at(spot, product, close_t))
+        if result is None:
+            continue
+        snaps = list(
+            session.scalars(
+                select(CryptoLadderSnapshot)
+                .where(
+                    CryptoLadderSnapshot.market_ticker == ticker,
+                    CryptoLadderSnapshot.mid_cents.isnot(None),
+                )
+                .order_by(CryptoLadderSnapshot.captured_at)
+            )
+        )
+        if not snaps:
+            continue
+        yield _Market(
+            ticker=ticker,
+            result=result,
+            month=close_t.isoformat()[:7],
+            candles=[_crypto_candle(ticker, close_t, s) for s in snaps],
+        )
+
+
 _ADAPTERS = {
     "backfill_weather": _weather_markets,
     "mmsell": _mmsell_markets,
+    "crypto": _crypto_markets,
 }
 
 
