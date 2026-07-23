@@ -454,8 +454,16 @@ def test_ticket_dedup_and_support(evo_session):
 
 
 def test_data_source_registry_rules(evo_session):
-    assert datasources.seed_builtin_sources(evo_session) == 5
-    assert datasources.seed_builtin_sources(evo_session) == 0
+    assert datasources.seed_builtin_sources(evo_session) == len(datasources.BUILTIN_SOURCES)
+    assert datasources.seed_builtin_sources(evo_session) == 0  # idempotent
+    # the registry is an honest map: every source says how it's reached + what it can do,
+    # and read-only reference feeds are marked exploratory (not backtestable/tradeable)
+    summ = {s["name"]: s for s in datasources.sources_summary(evo_session)}
+    assert summ["mmsell_position_ticks"]["capabilities"] == ["inspect", "backtest"]
+    assert "dataset='mmsell'" in summ["mmsell_position_ticks"]["access"]
+    assert "read_only" in summ["polymarket_snapshots"]["capabilities"]
+    assert summ["polymarket_snapshots"]["approved_usage"] == "exploratory"
+    assert all(s["access"] for s in summ.values())  # no source without an access path
     a = _mk_agent(evo_session)
     row, err = datasources.register_source(
         evo_session, agent_uuid=a.agent_uuid, name="NOAA tides", cost_note="free",

@@ -285,10 +285,11 @@ def _mmsell_candle(ticker: str, closed_at: datetime, tick: MmSellPositionTick) -
 def _mmsell_markets(
     session, spec, date_from: str | None, date_to: str | None
 ) -> Iterator[_Market]:
-    """mmsell adapter: each SETTLED mmsell paper trade is a settled market
-    (resolved_value 100->'yes', 0->'no'); its price path is that ticker's captured
-    orderbook ticks (mmsell_position_ticks). One market per ticker (settlement is a
-    property of the market, not the trade)."""
+    """mmsell adapter: each SETTLED mmsell paper trade is a settled market. mmsell trades
+    the NO side, so the market outcome is side-adjusted from resolved_value (via
+    _market_result_from_trade): a NO-side resolved_value=100 means NO paid out -> the market
+    resolved NO. Price path is that ticker's captured orderbook ticks (mmsell_position_ticks).
+    One market per ticker (settlement is a property of the market, not the trade)."""
     df, dt = _parse_date(date_from), _parse_date(date_to)
     q = select(PaperTrade).where(
         PaperTrade.strategy.like("mmsell%"),

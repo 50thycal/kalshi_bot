@@ -126,8 +126,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"\n=== VERDICT: {produced}/{len(_SPECS)} specs produced trades on real "
           f"{args.dataset} markets ===")
     if produced:
-        print("  PASS — an agent's run_backtest dataset='mmsell' executes end-to-end on the "
-              "real settled markets and returns a P&L result.")
+        print(f"  PASS — an agent's run_backtest dataset='{args.dataset}' executes end-to-end "
+              "on the real settled markets and returns a P&L result.")
         return 0
     print("  No trades produced — the replay ran but no spec entered (check entry bands vs "
           "the live price paths, or coverage is still too thin).")
