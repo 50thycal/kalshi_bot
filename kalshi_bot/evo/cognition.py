@@ -20,7 +20,18 @@ from typing import Any
 from pydantic import BaseModel, Field, ValidationError
 
 from . import announcements as announce
-from . import budgets, data_access, graveyard, lineage, listeners, memory, peers, sandbox, tickets
+from . import (
+    budgets,
+    data_access,
+    graveyard,
+    lineage,
+    listeners,
+    market_explore,
+    memory,
+    peers,
+    sandbox,
+    tickets,
+)
 from . import datasources as ds
 from . import paper as papermod
 from .audit import audit, integrity_violation
@@ -100,6 +111,7 @@ class HeartbeatContext:
     recent_orders: list[dict] = field(default_factory=list)
     recent_backtests: list[dict] = field(default_factory=list)
     recent_data_reads: list[dict] = field(default_factory=list)
+    recent_market_scans: list[dict] = field(default_factory=list)
     extra: dict = field(default_factory=dict)
 
 
@@ -160,6 +172,13 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
   intraday tape with {"source":"mmsell_ticks","filters":{"market_ticker":"..."}}. The
   rows you pull appear under YOUR RECENT DATA READS in your NEXT heartbeat (not this
   one), so inspect first, then act on what you saw.
+- explore_markets {series?, status?, limit?}. Discover LIVE Kalshi markets on demand
+  via the read-only API — find NEW domains/tickers to research or trade beyond weather.
+  Pass a series_ticker to target a domain (e.g. "KXBTCD" bitcoin, "KXHIGHNY" NYC
+  high-temp), or omit `series` to sample currently-open markets broadly; `status`
+  open|settled|closed (default open); `limit` <= 30. The discovered markets (ticker,
+  prices, volume, close_time) appear under YOUR RECENT MARKET SCANS on your NEXT
+  heartbeat; a specific ticker from there is a valid market_ticker for submit_trade_intent.
 - save_strategy {spec, graveyard_check {prior_attempt, prior_result, material_difference}?}
   `spec` is validated against an EXACT schema — unlisted fields are REJECTED, do not
   invent field names (no hypothesis_id, strategy_name, commission_bps, order_style,
@@ -278,6 +297,12 @@ def build_user_prompt(ctx: HeartbeatContext) -> str:
             "YOUR RECENT DATA READS (rows you pulled via inspect_data from our "
             "collected data — study these to form a hypothesis, then backtest it):\n"
             + json.dumps(ctx.recent_data_reads, separators=(",", ":"))[:3500]
+        )
+    if ctx.recent_market_scans:
+        parts.append(
+            "YOUR RECENT MARKET SCANS (live Kalshi markets you discovered via "
+            "explore_markets — candidate tickers/domains to research or trade):\n"
+            + json.dumps(ctx.recent_market_scans, separators=(",", ":"))[:3500]
         )
     if ctx.listener_events:
         parts.append("TRIGGERED LISTENER EVENTS (why you may have been woken):\n"
@@ -683,6 +708,24 @@ def _execute_one(
         # outcome here is just an ack (action outcomes are not re-fed this turn).
         return {"ok": True, "source": source, "count": result["count"]}
 
+    if t == "explore_markets":
+        status = str(a.get("status", "open"))
+        if status not in market_explore.STATUSES:
+            return {"rejected": f"status must be one of {market_explore.STATUSES}"}
+        series = a.get("series")
+        if not budgets.spend(session, au, cohort.id, "market_scans", 1):
+            return {"rejected": "weekly market-scan budget exhausted"}
+        result = market_explore.explore(
+            md, series=(str(series) if series else None), status=status,
+            limit=a.get("limit", 20),
+        )
+        market_explore.record_scan(
+            session, agent_uuid=au, heartbeat_id=hb.id, result=result
+        )
+        # Discovered markets resurface in YOUR RECENT MARKET SCANS next heartbeat.
+        return {"ok": True, "series": result["series"], "status": status,
+                "count": result["count"]}
+
     if t == "save_strategy":
         spec = a.get("spec")
         if not isinstance(spec, dict):
@@ -922,5 +965,6 @@ def assemble_context(
         recent_orders=papermod.recent_orders(session, au),
         recent_backtests=sandbox.recent_runs(session, au),
         recent_data_reads=data_access.recent_reads(session, au),
+        recent_market_scans=market_explore.recent_scans(session, au),
         extra=extra or {},
     )
