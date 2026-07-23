@@ -93,6 +93,7 @@ ALLOWED_SCRIPTS = (
     "evo_digest",
     "evo_tree",
     "evo_selftest",
+    "evo_explore_probe",
 )
 
 

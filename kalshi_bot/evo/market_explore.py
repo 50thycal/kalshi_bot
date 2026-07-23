@@ -14,10 +14,14 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
-from sqlalchemy import select
-
-from .models import EvoSandboxRun
+# NOTE: sqlalchemy + EvoSandboxRun are imported lazily inside record_scan/recent_scans
+# (not at module top) so the pure explore() path stays importable with only the stdlib.
+# That lets the read-only ops probe (scripts/evo_explore_probe.py) drive the REAL
+# explore() against live Kalshi without pulling in the ORM.
+if TYPE_CHECKING:
+    from .models import EvoSandboxRun
 
 DEFAULT_LIMIT = 20
 MAX_LIMIT = 30
@@ -77,6 +81,8 @@ def record_scan(
 ) -> EvoSandboxRun:
     """Persist an explore_markets scan (kind='market_scan') so the discovered markets
     resurface in the agent's next-heartbeat prompt."""
+    from .models import EvoSandboxRun
+
     run = EvoSandboxRun(
         agent_uuid=agent_uuid,
         heartbeat_id=heartbeat_id,
@@ -93,6 +99,10 @@ def record_scan(
 
 def recent_scans(session, agent_uuid: str, *, limit: int = 4) -> list[dict]:
     """The agent's most recent explore_markets scans, for its next-heartbeat prompt."""
+    from sqlalchemy import select
+
+    from .models import EvoSandboxRun
+
     rows = list(
         session.scalars(
             select(EvoSandboxRun)
