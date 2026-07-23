@@ -330,9 +330,13 @@ def run_backtest(
     heartbeat_id: int | None = None,
     kind: str = "backtest",
     charge_budget: bool = True,
+    persist: bool = True,
 ) -> tuple[dict | None, str | None]:
     """Replay the spec over settled history. Returns (result, None) or (None, err).
-    Result: n, wins, gross/net P&L, per-trade, max drawdown, by-month split."""
+    Result: n, wins, gross/net P&L, per-trade, max drawdown, by-month split.
+
+    persist=False skips writing the EvoSandboxRun row (and returns before any write), so
+    the whole call is pure SELECT — used by the read-only ops probe against a read-only DB."""
     if dataset not in DATASETS:
         return None, f"unknown dataset {dataset!r} (available: {DATASETS})"
     spec, err = validate_spec(spec_doc, max_bytes=settings.strategy_spec_max_bytes)
@@ -449,6 +453,8 @@ def run_backtest(
         "by_month": by_month,
         "elapsed_ms": int((time.monotonic() - started) * 1000),
     }
+    if not persist:
+        return result, None
     run = EvoSandboxRun(
         agent_uuid=agent_uuid,
         heartbeat_id=heartbeat_id,
