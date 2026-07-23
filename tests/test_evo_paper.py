@@ -597,6 +597,24 @@ def test_mmsell_backtest_replays_ticks_to_settlement(evo_session, evo_settings, 
     assert run is not None and run.provenance == "mmsell_live_ticks"
 
 
+def test_backtest_persist_false_returns_result_without_writing(
+    evo_session, evo_settings, evo_agent
+):
+    agent, cohort = evo_agent
+    _seed_mmsell(evo_session)
+    spec = {**BASE_SPEC, "universe": {**BASE_SPEC["universe"],
+                                      "series_prefixes": ["KXBTCD"]}}
+    result, err = sandbox.run_backtest(
+        evo_session, evo_settings, agent_uuid=agent.agent_uuid, cohort_id=cohort.id,
+        spec_doc=spec, dataset="mmsell", charge_budget=False, persist=False,
+    )
+    assert err is None and result["n_trades"] == 2  # replay still runs
+    # ...but nothing is persisted (safe on a read-only DB, as the ops probe uses it)
+    assert evo_session.scalar(
+        select(em.EvoSandboxRun).where(em.EvoSandboxRun.dataset == "mmsell")
+    ) is None
+
+
 def test_backtest_rejects_unknown_dataset(evo_session, evo_settings, evo_agent):
     agent, cohort = evo_agent
     result, err = sandbox.run_backtest(
