@@ -4,11 +4,21 @@ the `explore_markets` action: an agent names a series (or omits it for a broad s
 and gets a bounded, current snapshot of open/settled markets so it can find NEW
 domains to research beyond weather (crypto KXBTC*, sports, etc.).
 
-Read-only: goes through LiveMarketData.list_markets, which only calls the Kalshi read
-endpoints (get_markets/iter_markets) — never places an order. Bounded + budget-charged
-by the caller. Results persist (reusing the sandbox-run record, kind='market_scan')
-so they resurface in the agent's next-heartbeat prompt, since action outcomes are not
-re-fed within the same turn."""
+Two-stage, read-only:
+1. DISCOVER — LiveMarketData.list_markets (get_markets/iter_markets) yields the current
+   tickers for the series. The list endpoint is a ticker index; it does NOT carry live
+   prices (Kalshi returns those on the per-market quote), which is why a raw scan shows
+   bare tickers.
+2. ENRICH — each discovered ticker is run through LiveMarketData.get_quote, the SAME
+   live-quote path the worker trades on (market detail + orderbook), to fill live
+   yes_bid/yes_ask/mid/spread, volume, open interest, last price, category and title.
+   Markets are then ordered most-liquid-first so the agent sees the tradeable ones on top.
+
+Never places an order. Bounded + budget-charged by the caller. Degrades safely: a backend
+without list_markets/get_quote, or any per-ticker fetch failure, yields fewer/bare rows
+rather than raising. Results persist (sandbox-run record, kind='market_scan') so they
+resurface in the agent's next-heartbeat prompt, since action outcomes are not re-fed
+within the same turn."""
 
 from __future__ import annotations
 
@@ -23,15 +33,21 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .models import EvoSandboxRun
 
-DEFAULT_LIMIT = 20
+# A fully-enriched scan does up to `limit` per-ticker quote fetches, so the default is
+# kept modest for a responsive heartbeat; an agent can ask for up to MAX_LIMIT.
+DEFAULT_LIMIT = 12
 MAX_LIMIT = 30
 STATUSES = ("open", "settled", "closed")
 _CELL_CAP = 120
 
-# Fields lifted from each Kalshi market dict (everything else is dropped).
+# The snapshot each market is reduced to (stable shape; everything else is dropped).
+# ticker/event_ticker/close_time/status come from discovery; the rest are filled from
+# the live quote so the agent can judge price, spread and liquidity at a glance.
 _FIELDS = (
-    "ticker", "event_ticker", "category", "yes_bid", "yes_ask", "volume",
-    "close_time", "status",
+    "ticker", "event_ticker", "category", "title", "status",
+    "yes_bid", "yes_ask", "yes_mid", "spread",
+    "volume", "open_interest", "last_price",
+    "close_time", "hours_to_close",
 )
 
 
@@ -45,12 +61,50 @@ def _cap(v: object) -> object:
     return v
 
 
+def _enriched_row(base: dict, q) -> dict:
+    """One market's snapshot: discovery-level fields from the list dict, with the live
+    quote `q` (a marketdata.Quote or None) overlaid for price/liquidity."""
+    row: dict = dict.fromkeys(_FIELDS)
+    row["ticker"] = base.get("ticker")
+    row["event_ticker"] = base.get("event_ticker")
+    row["category"] = base.get("category")
+    row["status"] = base.get("status")
+    row["close_time"] = base.get("close_time")
+    # the list endpoint sometimes carries these; keep them as a fallback under the quote
+    row["yes_bid"] = base.get("yes_bid")
+    row["yes_ask"] = base.get("yes_ask")
+    row["volume"] = base.get("volume")
+    if q is not None:
+        row["event_ticker"] = q.event_ticker or row["event_ticker"]
+        row["category"] = q.category if q.category is not None else row["category"]
+        row["title"] = q.title
+        row["status"] = q.status or row["status"]
+        if q.yes_bid is not None:
+            row["yes_bid"] = q.yes_bid
+        if q.yes_ask is not None:
+            row["yes_ask"] = q.yes_ask
+        row["yes_mid"] = round(q.mid, 1) if q.mid is not None else None
+        row["spread"] = q.spread
+        if q.volume is not None:
+            row["volume"] = q.volume
+        row["open_interest"] = q.open_interest
+        row["last_price"] = q.last_price
+        if q.close_time is not None:
+            row["close_time"] = q.close_time
+        h = q.hours_to_close()
+        row["hours_to_close"] = round(h, 1) if h is not None else None
+    return {k: _cap(v) for k, v in row.items()}
+
+
 def explore(
-    md, *, series: str | None = None, status: str = "open", limit: int = DEFAULT_LIMIT
+    md, *, series: str | None = None, status: str = "open",
+    limit: int = DEFAULT_LIMIT, enrich: bool = True,
 ) -> dict:
-    """Snapshot of current Kalshi markets via the read-only client. Returns a bounded,
-    field-whitelisted list. Tolerant: a market-data backend without list_markets (or an
-    API error) yields an empty list rather than raising."""
+    """Snapshot of current Kalshi markets: discover tickers via the read-only list
+    endpoint, then enrich each with its live quote (price/spread/liquidity) so the agent
+    sees a tradeable picture, most-liquid-first. Tolerant: a backend without
+    list_markets/get_quote — or any per-ticker fetch failure — yields fewer/bare rows
+    rather than raising."""
     try:
         limit = int(limit)
     except (TypeError, ValueError):
@@ -68,12 +122,27 @@ def explore(
         except Exception:  # noqa: BLE001 — a data failure must degrade, not crash the heartbeat
             raw = []
 
-    markets = [
-        {f: _cap(m.get(f)) for f in _FIELDS}
-        for m in raw[:limit]
-        if isinstance(m, dict)
-    ]
-    return {"series": series, "status": status, "count": len(markets), "markets": markets}
+    discovered = [m for m in raw[:limit] if isinstance(m, dict)]
+    getq = getattr(md, "get_quote", None) if enrich else None
+    rows: list[dict] = []
+    for m in discovered:
+        q = None
+        ticker = str(m.get("ticker") or "")
+        if callable(getq) and ticker:
+            try:
+                q = getq(ticker)
+            except Exception:  # noqa: BLE001 — one bad ticker must not sink the whole scan
+                q = None
+        rows.append(_enriched_row(m, q))
+
+    # Lead with the most liquid markets (highest volume first; unknown volume last) so the
+    # tradeable ones are on top.
+    rows.sort(key=lambda r: (r.get("volume") is None, -(r.get("volume") or 0)))
+    priced = sum(1 for r in rows if r.get("yes_bid") is not None or r.get("yes_ask") is not None)
+    return {
+        "series": series, "status": status, "count": len(rows),
+        "priced": priced, "markets": rows,
+    }
 
 
 def record_scan(

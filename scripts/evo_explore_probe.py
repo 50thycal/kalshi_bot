@@ -74,9 +74,10 @@ def _get(path: str, params: dict) -> dict:
 
 
 class _PublicKalshiClient:
-    """Minimal read-only stand-in for KalshiClient: exposes the iter_markets/get_markets
-    contract LiveMarketData.list_markets depends on, backed by the PUBLIC /markets
-    endpoint (no credentials). Mirrors the production iter_markets pagination exactly."""
+    """Minimal read-only stand-in for KalshiClient over the PUBLIC endpoints (no
+    credentials). Exposes the iter_markets/get_markets contract for discovery AND the
+    get_market/get_orderbook contract get_quote uses for enrichment, so the probe drives
+    the real LiveMarketData.get_quote path. Mirrors production iter_markets pagination."""
 
     def get_markets(self, **params) -> dict:
         return _get("/markets", params)
@@ -104,19 +105,35 @@ class _PublicKalshiClient:
             if not cursor or not markets:
                 return
 
+    def get_market(self, ticker: str) -> dict:
+        # The per-market DETAIL endpoint carries the live quote (yes_bid/yes_ask/volume/
+        # open_interest/last_price) that the /markets LIST endpoint omits — this is what
+        # get_quote enrichment reads. Public, no key needed.
+        return _get(f"/markets/{ticker}", {})
+
+    def get_orderbook(self, ticker: str, depth: int = 10) -> dict:
+        # Best-effort: the public orderbook may be unavailable keyless. On any failure
+        # return an empty book, so get_quote falls back to the market-detail bid/ask
+        # rather than failing the whole enrichment (production uses the real depth).
+        try:
+            return _get(f"/markets/{ticker}/orderbook", {"depth": depth})
+        except Exception:  # noqa: BLE001
+            return {"orderbook": {"yes": [], "no": []}}
+
 
 def _print_scan(label: str, scan: dict) -> bool:
     series = scan.get("series")
     n = scan.get("count", 0)
     print(f"\n=== explore_markets(series={series!r}, status={scan.get('status')!r}) "
-          f"-> {n} markets  [{label}] ===")
+          f"-> {n} markets, {scan.get('priced', 0)} priced  [{label}] ===")
     if not n:
         print("  (no markets returned)")
         return False
     for m in scan.get("markets", [])[:12]:
-        print(f"  {str(m.get('ticker')):32} bid={m.get('yes_bid')!s:>4} "
-              f"ask={m.get('yes_ask')!s:>4} vol={m.get('volume')!s:>7} "
-              f"close={m.get('close_time')} cat={m.get('category')}")
+        print(f"  {str(m.get('ticker')):30} bid={m.get('yes_bid')!s:>4} "
+              f"ask={m.get('yes_ask')!s:>4} mid={m.get('yes_mid')!s:>5} "
+              f"spr={m.get('spread')!s:>4} vol={m.get('volume')!s:>8} "
+              f"oi={m.get('open_interest')!s:>8} h2c={m.get('hours_to_close')!s:>6}")
     return True
 
 
@@ -136,6 +153,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"# fields surfaced to the agent: {list(market_explore._FIELDS)}")
 
     non_empty = 0
+    total_priced = 0
     seen_series: Counter = Counter()
     for s in series_list:
         try:
@@ -148,11 +166,13 @@ def main(argv: list[str] | None = None) -> int:
             "broad-sample" if s is None else "series")
         if _print_scan(label, scan):
             non_empty += 1
+        total_priced += int(scan.get("priced", 0) or 0)
         for m in scan.get("markets", []):
             tkr = str(m.get("ticker") or "")
             seen_series[tkr.split("-", 1)[0] or "?"] += 1
 
-    print(f"\n=== VERDICT: {non_empty}/{len(series_list)} scans returned live markets ===")
+    print(f"\n=== VERDICT: {non_empty}/{len(series_list)} scans returned live markets; "
+          f"{total_priced} markets came back with a live quote ===")
     if seen_series:
         top = ", ".join(f"{k}:{v}" for k, v in seen_series.most_common(12))
         print(f"  distinct series discovered: {top}")
