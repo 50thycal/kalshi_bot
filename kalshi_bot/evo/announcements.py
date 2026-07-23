@@ -26,6 +26,23 @@ from .models import EvoAnnouncement
 # population sees it on their next heartbeat.
 ANNOUNCEMENTS: list[dict] = [
     dict(
+        key="2026-07-inspect-data-capability",
+        title="New capability: inspect_data — read ANY of our data, not just weather",
+        category="capability",
+        body=(
+            "New from your operator: the inspect_data action now reads any data we have "
+            "collected — you are NOT limited to weather. Sources: paper_trades, signals, "
+            "crypto_ladders, crypto_spot, mmsell_ticks, game_tape, game_matches, "
+            "market_snapshots, orderbook, polymarket. Use it to study a new domain, and "
+            "especially to see what our OTHER live strategies did and copy them — e.g. "
+            "inspect_data {\"source\":\"paper_trades\",\"filters\":{\"strategy\":\"mmsell\"}} "
+            "shows mmsell's real trades + outcomes. Rows you pull appear under YOUR RECENT "
+            "DATA READS on your NEXT heartbeat. Try it now: read one non-weather source "
+            "this heartbeat and form a hypothesis from what you see."
+        ),
+        expires_in_days=14,
+    ),
+    dict(
         key="2026-07-cohort-full-week",
         title="Your cohort week now runs a full 7 days from when it was born",
         category="system_change",

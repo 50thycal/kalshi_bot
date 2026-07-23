@@ -36,6 +36,15 @@ def test_seed_announcements_idempotent():
     assert "2026-07-cohort-full-week" in keys
 
 
+def test_inspect_data_capability_is_announced():
+    s = _session()
+    announce.seed_announcements(s)
+    live = {a.key: a for a in announce.active_announcements(s)}
+    ann = live.get("2026-07-inspect-data-capability")
+    assert ann is not None and "inspect_data" in ann.body
+    assert len(ann.body) <= 700  # fits summarize_for_prompt's body cap uncut
+
+
 def test_active_announcements_respects_window():
     s = _session()
     now = dt.datetime(2026, 7, 19, 12, 0, tzinfo=dt.timezone.utc)
