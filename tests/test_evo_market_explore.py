@@ -18,31 +18,42 @@ from kalshi_bot.evo.config import EvoSettings
 from kalshi_bot.evo.constitution import PERMITTED_ACTIONS
 from kalshi_bot.evo.evolution import create_agent
 from kalshi_bot.evo.heartbeats import run_heartbeat
-from kalshi_bot.evo.marketdata import StaticMarketData
+from kalshi_bot.evo.marketdata import Quote, StaticMarketData
 from kalshi_bot.models import Base
 
 NOW = datetime.now(timezone.utc)
 
 
 class _FakeMD:
-    """Market data with a list_markets like LiveMarketData; get_quote returns None so
-    assemble_context's market_summaries stays empty."""
+    """Market data like LiveMarketData: list_markets returns bare discovery rows (the
+    LIST endpoint carries no live prices), and get_quote returns the per-market quote
+    that explore() enriches with. The T60000 strike is the more liquid one so we can
+    assert most-liquid-first ordering."""
 
-    def __init__(self):
+    def __init__(self, *, quotes: bool = True):
         self.calls: list[dict] = []
+        self._quotes = quotes
 
     def get_quote(self, ticker):
-        return None
+        if not self._quotes:
+            return None  # backend that can discover but not quote → bare rows
+        liquid = ticker.endswith("T60000")
+        return Quote(
+            ticker=ticker, captured_at=NOW, status="active",
+            yes_bid=40 if liquid else 22, yes_ask=44 if liquid else 26,
+            volume=100 if liquid else 30, open_interest=200 if liquid else 60,
+            last_price=42 if liquid else 24, event_ticker=ticker.rsplit("-", 1)[0],
+            category="Crypto", title="BTC above strike", close_time=NOW + timedelta(hours=1),
+        )
 
     def list_markets(self, **params):
         self.calls.append(params)
         series = params.get("series_ticker") or "KXBTCD"
+        # bare rows, prices omitted — as the real /markets list endpoint returns them
         return [
-            {"ticker": f"{series}-26JUL2317-T60000", "event_ticker": f"{series}-26JUL2317",
-             "category": "Crypto", "yes_bid": 40, "yes_ask": 44, "volume": 100,
-             "close_time": NOW + timedelta(hours=1), "status": "active"},
             {"ticker": f"{series}-26JUL2317-T61000", "event_ticker": f"{series}-26JUL2317",
-             "category": "Crypto", "yes_bid": 22, "yes_ask": 26, "volume": 30,
+             "close_time": NOW + timedelta(hours=1), "status": "active"},
+            {"ticker": f"{series}-26JUL2317-T60000", "event_ticker": f"{series}-26JUL2317",
              "close_time": NOW + timedelta(hours=1), "status": "active"},
         ]
 
@@ -53,13 +64,30 @@ def _session():
     return sessionmaker(bind=eng, expire_on_commit=False)()
 
 
-def test_explore_formats_and_caps_whitelisted_fields():
+def test_explore_enriches_with_live_quote_and_leads_with_liquidity():
     res = market_explore.explore(_FakeMD(), series="KXBTCD", status="open", limit=10)
-    assert res["count"] == 2 and res["series"] == "KXBTCD"
+    assert res["count"] == 2 and res["series"] == "KXBTCD" and res["priced"] == 2
     row = res["markets"][0]
-    assert set(row) == set(market_explore._FIELDS)  # only whitelisted fields
+    assert set(row) == set(market_explore._FIELDS)  # stable whitelisted shape
     assert row["ticker"].startswith("KXBTCD-")
     assert isinstance(row["close_time"], str)  # datetime serialized
+    # most-liquid-first: the T60000 strike (volume 100) leads the T61000 (volume 30)
+    assert row["ticker"].endswith("T60000") and row["volume"] == 100
+    assert res["markets"][1]["volume"] == 30
+    # live-quote fields the LIST endpoint lacked are now filled from get_quote
+    assert row["yes_bid"] == 40 and row["yes_ask"] == 44
+    assert row["yes_mid"] == 42.0 and row["spread"] == 4
+    assert row["open_interest"] == 200 and row["last_price"] == 42
+    assert row["category"] == "Crypto" and row["title"] == "BTC above strike"
+
+
+def test_explore_degrades_to_bare_rows_without_quotes():
+    # a backend that can discover but not quote still returns tickers, just unpriced
+    res = market_explore.explore(_FakeMD(quotes=False), series="KXBTCD")
+    assert res["count"] == 2 and res["priced"] == 0
+    row = res["markets"][0]
+    assert row["ticker"].startswith("KXBTCD-")
+    assert row["yes_bid"] is None and row["yes_mid"] is None
 
 
 def test_explore_passes_series_and_caps_limit():
@@ -72,7 +100,8 @@ def test_explore_passes_series_and_caps_limit():
 def test_explore_tolerates_backend_without_list_markets():
     # StaticMarketData has no list_markets — must degrade to empty, not raise
     res = market_explore.explore(StaticMarketData(), series="KXBTCD")
-    assert res == {"series": "KXBTCD", "status": "open", "count": 0, "markets": []}
+    assert res == {"series": "KXBTCD", "status": "open", "count": 0,
+                   "priced": 0, "markets": []}
 
 
 def test_explore_markets_permitted_and_documented():

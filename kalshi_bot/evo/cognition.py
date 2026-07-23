@@ -174,11 +174,13 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
   one), so inspect first, then act on what you saw.
 - explore_markets {series?, status?, limit?}. Discover LIVE Kalshi markets on demand
   via the read-only API — find NEW domains/tickers to research or trade beyond weather.
-  Pass a series_ticker to target a domain (e.g. "KXBTCD" bitcoin, "KXHIGHNY" NYC
-  high-temp), or omit `series` to sample currently-open markets broadly; `status`
-  open|settled|closed (default open); `limit` <= 30. The discovered markets (ticker,
-  prices, volume, close_time) appear under YOUR RECENT MARKET SCANS on your NEXT
-  heartbeat; a specific ticker from there is a valid market_ticker for submit_trade_intent.
+  Pass a series_ticker to target a domain (e.g. "KXBTCD" bitcoin, "KXETHD" ether,
+  "KXHIGHNY" NYC high-temp), or omit `series` to sample currently-open markets broadly;
+  `status` open|settled|closed (default open); `limit` <= 30. Each market comes back with
+  its LIVE quote — yes_bid, yes_ask, yes_mid, spread, volume, open_interest, last_price,
+  category, hours_to_close — ordered most-liquid-first, so you can judge price and
+  liquidity directly. They appear under YOUR RECENT MARKET SCANS on your NEXT heartbeat;
+  a ticker from there is a valid market_ticker for submit_trade_intent.
 - save_strategy {spec, graveyard_check {prior_attempt, prior_result, material_difference}?}
   `spec` is validated against an EXACT schema — unlisted fields are REJECTED, do not
   invent field names (no hypothesis_id, strategy_name, commission_bps, order_style,
@@ -724,7 +726,7 @@ def _execute_one(
         )
         # Discovered markets resurface in YOUR RECENT MARKET SCANS next heartbeat.
         return {"ok": True, "series": result["series"], "status": status,
-                "count": result["count"]}
+                "count": result["count"], "priced": result.get("priced", 0)}
 
     if t == "save_strategy":
         spec = a.get("spec")
