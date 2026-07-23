@@ -7,9 +7,19 @@ run #65 (corrected), the live P&L query filters `strategy='mmsell3'` exactly —
 'mmsell%'`, which incorrectly sweeps in the `mmsell3_closeout` wind-down tag and double-counts
 tickers. mmsell3 LIVE trading itself was wound down 2026-07-19 (see run #65's snapshot and
 `docs/MMSELL_LIVE_POSTMORTEM.md`) — new live settlements should be rare/none going forward; flat
-live P&L is expected, not a red flag. Suggestions are **recommendations only** — the loop never
-acts on them; the user reviews and runs fable to change anything. Newest snapshot replaces the
-one above it; the suggestion list carries over run-to-run. All times CENTRAL (CDT/CST).*
+live P&L is expected, not a red flag. **CLOSED 2026-07-22 (post-run-#68 investigation): the
+account has been genuinely, verifiably 100% flat since 2026-07-20 10:20:56 CT — confirmed via
+`live_orders`' last-ever row (closeout retries stopped 08:58 CT) and `positions`' last-ever row
+(the final two stuck NO positions, `KXTRUMPSAY-26JUL20-URAN` and `KXRT-ODY-95`, settled
+NATURALLY — not via the broken closeout mechanism — at 9:51 AM and 10:20:56 AM CT respectively,
+realizing +$0.06/+$0.11, both already included in the running total). `mmsell3_closeout` is
+gated by `mmsell_closeout_enabled` (defaults False in code, toggled via a Railway env var not
+visible in git) — it silently returns 0 every cycle now, which is why the retry-storm stopped
+with no errors logged. The loop's flat live P&L across runs #65-68 was accurate the whole time,
+not stale — do not re-flag this as a data-staleness concern going forward unless something
+actually changes.** Suggestions are **recommendations only** — the loop never acts on them; the
+user reviews and runs fable to change anything. Newest snapshot replaces the one above it; the
+suggestion list carries over run-to-run. All times CENTRAL (CDT/CST).*
 
 ---
 
