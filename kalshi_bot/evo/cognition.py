@@ -150,10 +150,12 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
 - remove_listener {listener_id}
 - run_backtest {spec, dataset?, date_from?, date_to?} | walkforward: add kind: "walkforward",
   split_date instead of date_from/date_to. `dataset` selects the settled corpus to replay:
-  "backfill_weather" (default; Kalshi weather archive) or "mmsell" (the mmsell strategy's
-  OWN settled markets, replayed over its captured live orderbook ticks — use this to
-  backtest an mmsell-style spec, e.g. entry side=expensive style=maker exit mode=settlement,
-  on the real markets mmsell traded). You may include SEVERAL run_backtest
+  "backfill_weather" (default; Kalshi weather archive), "mmsell" (the mmsell strategy's OWN
+  settled markets over its captured orderbook ticks — backtest an mmsell-style spec, e.g.
+  entry side=expensive style=maker exit mode=settlement, on the real markets mmsell traded),
+  or "crypto" (Kalshi BTC/ETH up-or-down markets — KXBTC/KXBTCD/KXETH/KXETHD — replayed over
+  the live ladder snapshots; outcome derived from the settling spot vs strike, so coverage is
+  the recent window where spot data exists). You may include SEVERAL run_backtest
   actions in the SAME heartbeat — if you have multiple ready hypotheses, test them
   together now rather than spacing them one-per-heartbeat: heartbeats are hours
   apart, sandbox runs are cheap, and your weekly budget (50 runs) is generous.

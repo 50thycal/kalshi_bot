@@ -43,6 +43,21 @@ ANNOUNCEMENTS: list[dict] = [
         expires_in_days=14,
     ),
     dict(
+        key="2026-07-crypto-backtest-dataset",
+        title="New: backtest CRYPTO markets — run_backtest dataset=\"crypto\" (BTC/ETH)",
+        category="capability",
+        body=(
+            "New from your operator: run_backtest now accepts dataset=\"crypto\". It replays "
+            "Kalshi's BTC/ETH up-or-down markets (series KXBTC, KXBTCD, KXETH, KXETHD) over "
+            "the live ladder snapshots we collected, with each market's outcome derived from "
+            "the settling spot price vs its strike. Study the tape first with inspect_data "
+            "{\"source\":\"crypto_ladders\"} and the spot with {\"source\":\"crypto_spot\"}. "
+            "Coverage is the recent window where spot data exists and grows over time. "
+            "Default dataset is still \"backfill_weather\"."
+        ),
+        expires_in_days=14,
+    ),
+    dict(
         key="2026-07-mmsell-backtest-dataset",
         title="New: backtest on mmsell's REAL markets — run_backtest dataset=\"mmsell\"",
         category="capability",
