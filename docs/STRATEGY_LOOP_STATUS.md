@@ -29,21 +29,15 @@ column); this note locks it in explicitly so it doesn't drift.*
 
 ---
 
-## Snapshot — 2026-07-23 08:01 PM CDT (run #71)
+## Snapshot — 2026-07-24 05:35 AM CDT (run #72)
 
-**No gate crossings, but a notable split batch worth flagging without overreacting.** The
-original, unfiltered mmsell books (control/1/2) all had a **negative** batch this run, while
-every promoted/newer variant (mmsell3/6/7/8/9/10/11) had a **positive** batch on the same market
-flow — the opposite pattern from run #62's version of this split. Single 8-hour window on
-books this large (2,500–3,900 n) — small-n discipline says don't call it a trend yet.
-
-| book | n | realized P&L | ¢/trade (cum) | this batch |
-|---|---|---|---|---|
-| mmsell (control) | 3,892 (+12) | +$65.73 | +1.69¢ | **−24.1¢/trade** |
-| mmsell1 | 2,516 (+7) | +$52.69 | +2.09¢ | **−18.3¢/trade** |
-| mmsell2 | 1,656 (+5) | +$49.28 | +2.98¢ | **−27.6¢/trade** |
-| mmsell3 (shadow) | 1,024 (+3) | +$17.08 | +1.67¢ | +6.7¢/trade |
-| mmsell7 | 56 (+2) | +$0.05 | **+0.09¢** | +7¢/trade — **crossed to positive cumulative for the first time** |
+**No gate crossings — zero new settlements across the ENTIRE mmsell cohort AND theta4/weather,
+but a very large jump in open positions (mmsell 33→46, mmsell1 24→36, mmsell11 18→29, mmsell3
+18→29, mmsell4 17→28, mmsell7 3→15, etc.). Confirmed healthy** — checked `bot_runs` directly:
+167 completed cycles in the last 4 hours, zero non-completed. This is the same
+entries-outpacing-settlements pattern seen in runs #68/#70, just larger — reads as an overnight
+window where many new markets opened but few have reached their close time yet, not a worker or
+data problem.
 
 **Live P&L (real money — mmsell3):** unchanged, as expected — the account remains confirmed
 100% flat since 2026-07-20 10:20:56 CT.
@@ -54,89 +48,82 @@ books this large (2,500–3,900 n) — small-n discipline says don't call it a t
 | **TOTAL** | **367** | **335** | **+$1.33** | **+0.36¢** |
 
 **Trading books (settled n / realized P&L / ¢-per-trade / open) — PAPER only, separate from
-live above:**
+live above. All figures unchanged from run #71 except open counts:**
 | book | n | realized P&L | ¢/trade | open | note |
 |---|---|---|---|---|---|
-| **mmsell6** | 348 | +$9.12 | +2.62 | 18 | PROMOTE confirmed, essentially flat this run |
-| **mmsell11** | 250 | +$8.72 | +3.49 | 18 | PROMOTE confirmed, positive batch |
-| mmsell10 | 122 | +$4.62 | +3.79 | 18 | 81% to its own gate, positive batch |
-| mmsell9 | 26 | +$1.41 | +5.42 | 10 | small n, positive |
-| mmsell control (paper) | 3,892 | +$65.73 | +1.69 | 33 | negative batch (see above), still strongly cumulative-positive |
-| mmsell2 (paper) | 1,656 | +$49.28 | +2.98 | 20 | negative batch (see above) |
-| mmsell1 (paper) | 2,516 | +$52.69 | +2.09 | 24 | negative batch (see above) |
-| mmsell3 (paper shadow) | 1,024 | +$17.08 | +1.67 | 18 | positive batch |
+| **mmsell6** | 348 | +$9.12 | +2.62 | 25 | PROMOTE confirmed, no new settlements, +7 open |
+| **mmsell11** | 250 | +$8.72 | +3.49 | 29 | PROMOTE confirmed, no new settlements, +11 open |
+| mmsell10 | 122 | +$4.62 | +3.79 | 25 | 81% to its own gate, no new settlements, +7 open |
+| mmsell9 | 26 | +$1.41 | +5.42 | 10 | no new settlements |
+| mmsell control (paper) | 3,892 | +$65.73 | +1.69 | 46 | no new settlements, +13 open |
+| mmsell2 (paper) | 1,656 | +$49.28 | +2.98 | 28 | no new settlements, +8 open |
+| mmsell1 (paper) | 2,516 | +$52.69 | +2.09 | 36 | no new settlements, +12 open |
+| mmsell3 (paper shadow) | 1,024 | +$17.08 | +1.67 | 29 | no new settlements, +11 open |
 | mmsell5 | 115 | −$0.09 | −0.08 | 0 | no new settlements |
-| mmsell4 | 197 | +$2.02 | +1.03 | 17 | KILLED (run #61) — still not recorded, closing the gap to mmsell3 but still below |
-| **mmsell7** | 56 | +$0.05 | **+0.09** | 3 | **crossed to positive cumulative for the first time**, gate n≥150 (37%) |
-| mmsell8 | 31 | −$0.51 | −1.65 | 11 | improving, gate n≥100 (31%) |
-| **theta4** (fat-tail) | 48 | +$17.78 | +37.0 | 0 | +1 settlement, 60% to gate |
-| weather con (all) | 504 | −$12.66 | −2.51 | 13 | no new settlements, +9 open |
-| weather_concity | 84 | −$7.97 | −9.49 | 6 | no new settlements, +5 open |
+| mmsell4 | 197 | +$2.02 | +1.03 | 28 | KILLED (run #61) — still not recorded, +11 open |
+| mmsell7 | 56 | +$0.05 | +0.09 | 15 | still cumulative-positive, +12 open |
+| mmsell8 | 31 | −$0.51 | −1.65 | 11 | no new settlements |
+| **theta4** (fat-tail) | 48 | +$17.78 | +37.0 | 0 | no new activity, 60% to gate |
+| weather con (all) | 504 | −$12.66 | −2.51 | 14 | no new settlements |
+| weather_concity | 84 | −$7.97 | −9.49 | 6 | no new settlements, 70% to gate |
 | theta ctrl/1/2/3 | 560/201/98/134 | +$0.97/+$9.69/−$11.55/−$11.62 | — | 0 | SHELVED, quiet, unchanged |
 | tfav | 215 | −$7.54 | −3.5 | 0 | KILLED, quiet, unchanged |
 | weather (rest) | 4,709 | −$238.63 | — | 0 | pruned, done |
 
-**HEADLINE — a split batch (older unfiltered mmsell books negative, newer/promoted variants
-positive) — a single-window curiosity, not a trend. mmsell7 notably crossed to positive
-cumulative for the first time. No gate crossings; theta4 crossed 60% to its own gate.**
+**HEADLINE — a quiet-for-settlements but very active-for-entries run: no book settled anything
+new, but open counts jumped sharply across the board, and the worker's own run history is clean
+(167/167 completed in the last 4h). No gate crossings; live P&L unchanged as expected.**
 
-**Gate sweep (step 3b):** theta4 **48/80** (60%) · **mmsell6 CLEARED-PROMOTE** · **mmsell11
-CLEARED-PROMOTE** · **mmsell4 KILLED** (unchanged, still not recorded — now 10 runs) · mmsell7
-gate n≥150 (37%, now cumulative-positive) · mmsell8 gate n≥100 (31%) · mmsell9 gate n≥100 (26%)
-· mmsell10 gate n≥150 (81%) · weather_concity **84/120** (70%, unchanged) · FREEZE **6/100**
-(not fired, unchanged, 23 runs).
+**Gate sweep (step 3b):** theta4 **48/80** (60%, no new activity) · **mmsell6
+CLEARED-PROMOTE** · **mmsell11 CLEARED-PROMOTE** · **mmsell4 KILLED** (unchanged, still not
+recorded — now 11 runs) · mmsell7 gate n≥150 (37%, cumulative-positive) · mmsell8 gate n≥100
+(31%) · mmsell9 gate n≥100 (26%) · mmsell10 gate n≥150 (81%, unchanged) · weather_concity
+**84/120** (70%, unchanged) · FREEZE **6/100** (not fired, unchanged, 24 runs).
 
-**Data (last-24h / latest CDT, ~8:01 PM run):** crypto_spot, crypto_ladder, weather forecasts/
-obs/ensembles/buckets all fresh (7:51 PM–1:02 AM ✓ — some rows dated just past midnight UTC,
-still within the last 24h window). xgame_matches still dark (expected — book KILLED,
-collector-only). xgame_tapes still 0 rows/24h — consistent with the confirmed healthy-lull
-explanation, not re-flagging.
+**Data (last-24h / latest CDT, ~5:35 AM run):** crypto_spot, crypto_ladder, weather forecasts/
+obs/ensembles/buckets all fresh (5:19–5:35 AM ✓). xgame_matches still dark (expected — book
+KILLED, collector-only). xgame_tapes still 0 rows/24h — consistent with the confirmed
+healthy-lull explanation, not re-flagging.
 
 **Research probes (on-demand):** WCPROP + XGAME families CLOSED. No standing probes.
 
-**Headline:** no gate events. A split batch (older mmsell books negative, newer variants
-positive) — flagged, not alarmed, single window on large-n books. mmsell7 crossed to positive
-cumulative for the first time. theta4 now 60% to its gate. Live P&L unchanged, confirmed
-stable.
+**Headline:** quiet run for settlements (zero across the board) but very active for entries
+(open counts up sharply everywhere) — confirmed healthy via bot_runs, not a problem. No gate
+crossings. Live P&L unchanged, confirmed stable.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
 1. **[mmsell6 AND mmsell11 still PROMOTE — top actionable item] mmsell6: n=348, +2.62¢/trade.
-   mmsell11: n=250, +3.49¢/trade.** Unchanged recommendation: a fable session should decide
-   whether to promote one, both, or combine the mechanisms into the paper config — live mmsell3
-   itself is currently wound down, so any promotion is about the paper book / a future live
-   restart.
+   mmsell11: n=250, +3.49¢/trade.** No new settlements this run. Unchanged recommendation: a
+   fable session should decide whether to promote one, both, or combine the mechanisms into the
+   paper config — live mmsell3 itself is currently wound down, so any promotion is about the
+   paper book / a future live restart.
 
-2. **[mmsell4 · KILL verdict — still not recorded, 10 runs now] n=197, +1.03¢/trade cumulative
-   (closing the gap but still below mmsell3's +1.67¢).** Recommend a fable session record the
-   verdict in `docs/MMSELL_VARIANTS_THESIS.md`/`RESEARCH_JOURNAL.md` — this has now sat
-   unrecorded for 10 runs.
+2. **[mmsell4 · KILL verdict — still not recorded, 11 runs now] n=197, +1.03¢/trade cumulative,
+   still below mmsell3's +1.67¢.** Recommend a fable session record the verdict in
+   `docs/MMSELL_VARIANTS_THESIS.md`/`RESEARCH_JOURNAL.md`.
 
-3. **[mmsell10 · very close, gate 81%] n=122/150, +3.79¢/trade cumulative, positive batch.**
-   Likely resolves within the next run or two.
+3. **[mmsell10 · very close, gate 81%, unchanged] n=122/150, +3.79¢/trade cumulative.** Likely
+   resolves once settlements resume.
 
-4. **[weather_concity · gate 70%, unchanged] n=84/120, −9.49¢/trade cumulative.** No new
-   settlements this run; still approaching its decision point.
+4. **[weather_concity · gate 70%, unchanged] n=84/120, −9.49¢/trade cumulative.** Still
+   approaching its decision point.
 
-5. **[theta4 · 60% to gate] n=48/80, cumulative +37.0¢/trade.** Continue tracking toward the
-   gate.
+5. **[theta4 · 60% to gate, no new activity] n=48/80, cumulative +37.0¢/trade.** Continue
+   tracking toward the gate.
 
-6. **[mmsell7 · crossed to positive cumulative for the first time] n=56, now +0.09¢/trade (was
-   −0.17¢).** Still small n and 37% to its own gate (n≥150) — worth watching whether this holds
-   as n grows, not a gate event yet.
+6. **[mmsell7 · holding positive cumulative] n=56, +0.09¢/trade, no new settlements this run.**
+   Still small n and 37% to its own gate — watching whether this holds as n grows.
 
 7. **[idea-model queue · MMX/NEST] MMX's premise (extend the mmsell edge into new categories)
    should be built against whichever of mmsell6/mmsell11 gets promoted.** NEST still behind
-   theta4's n≥80 gate (60% there, getting close).
+   theta4's n≥80 gate (60% there).
 
 8. **[FREEZE gate · unchanged, not fired] Settled grain+soft = 6 of the n≥100 trigger, unchanged
-   across 23 runs now.** Standing background check, nothing to act on.
+   across 24 runs now.** Standing background check, nothing to act on.
 
-*(Changed this run: #1 mmsell6/mmsell11 — restated. #2 mmsell4 — restated, 10 runs unrecorded,
-gap closing slightly. #3 mmsell10 — restated (81%). #4 weather_concity — restated, unchanged
-this run. #5 theta4 — restated, closer (60%). #6 NEW — mmsell7 crossed to positive cumulative
-for the first time, worth watching. #7 MMX/NEST — restated. #8 restated/unchanged. Split-batch
-observation (older vs newer mmsell books) noted in the snapshot but not carried as its own
-numbered item — single window, small-n discipline applies.)*
+*(Changed this run: #1-8 all restated/unchanged — a settlement-quiet but entry-active run,
+confirmed healthy via bot_runs (167/167 completed, zero failures in the last 4h). No new
+findings; carrying the same picture as run #71 forward with updated open-position counts.)*
