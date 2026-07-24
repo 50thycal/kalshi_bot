@@ -197,11 +197,18 @@ def run_heartbeat(
     actions -> journal -> finalize. Returns the heartbeat row, or None when the
     slot was already claimed."""
     # Self-heal budgets: back-fill any resource added to resource_allocations AFTER
-    # this agent joined its cohort (e.g. a newly-shipped action's budget). Idempotent
-    # — only inserts missing rows — so an agent provisioned before the resource
-    # existed can use the new capability on its very next heartbeat instead of being
-    # rejected with a misleading "budget exhausted" until its next cohort.
+    # this agent joined its cohort (e.g. a newly-shipped action's budget), and top up
+    # an allocation the operator has raised. We COMMIT immediately after so these
+    # evo_budgets row locks are NOT held across the (slow) LLM call below: the LLM cost
+    # is booked in a SEPARATE transaction (llm._complete_*) that UPDATEs the SAME
+    # evo_budgets rows, and if the heartbeat's outer transaction still held the locks it
+    # would block that UPDATE while itself sitting idle-in-transaction waiting for the
+    # LLM call to return — an application-level self-deadlock Postgres cannot break (no
+    # lock cycle to detect) and statement_timeout cannot catch, which froze the whole
+    # single-threaded population. Budgets are infrastructure that must persist even if
+    # this heartbeat later rolls back, so committing them up front is also correct.
     budgets.ensure_budgets(session, agent.agent_uuid, cohort.id, settings)
+    session.commit()
     if kind == "triggered":
         if not budgets.can_spend(
             session, agent.agent_uuid, cohort.id, "triggered_heartbeats", 1
