@@ -22,9 +22,14 @@ def _now() -> datetime:
 
 
 def ensure_budgets(session, agent_uuid: str, cohort_id: int, settings: EvoSettings) -> None:
-    """Create the standard equal allocation rows for (agent, cohort). Idempotent."""
+    """Create the standard equal allocation rows for (agent, cohort). Idempotent.
+
+    Also tops UP an existing row's allocation when the operator has RAISED a budget in the
+    config (e.g. weekly_token_budget) — so a live budget increase reaches agents already in
+    the cohort, not only new ones. Never lowers an allocation and never touches `used`, so
+    tightening a budget can't strand an agent mid-spend."""
     existing = {
-        b.resource
+        b.resource: b
         for b in session.scalars(
             select(EvoBudget).where(
                 EvoBudget.agent_uuid == agent_uuid, EvoBudget.cohort_id == cohort_id
@@ -32,7 +37,8 @@ def ensure_budgets(session, agent_uuid: str, cohort_id: int, settings: EvoSettin
         )
     }
     for resource, allocated in resource_allocations(settings).items():
-        if resource not in existing:
+        b = existing.get(resource)
+        if b is None:
             session.add(
                 EvoBudget(
                     agent_uuid=agent_uuid,
@@ -42,6 +48,8 @@ def ensure_budgets(session, agent_uuid: str, cohort_id: int, settings: EvoSettin
                     used=0,
                 )
             )
+        elif float(b.allocated) < allocated - 1e-6:
+            b.allocated = allocated
     session.flush()
 
 

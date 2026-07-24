@@ -115,13 +115,13 @@ def test_degraded_heartbeat_still_journaled(evo_session, evo_settings, evo_agent
 
 def test_triggered_heartbeats_consume_weekly_pool(evo_session, evo_settings, evo_agent):
     agent, cohort = evo_agent
-    small = EvoSettings(_env_file=None, triggered_heartbeats_per_week=1)
-    budgets.ensure_budgets(evo_session, agent.agent_uuid, cohort.id, small)
-    # exhaust the pool: allocated rows already exist from join (20); overwrite
+    # leave exactly ONE triggered-heartbeat slot in the weekly pool by consuming the rest
+    # (exhaust via `used`, not by shrinking `allocated` below config — ensure_budgets now
+    # tops a below-config allocation back up, so the old "set allocated=1" trick no longer holds)
     b = evo_session.scalar(select(em.EvoBudget).where(
         em.EvoBudget.agent_uuid == agent.agent_uuid,
         em.EvoBudget.resource == "triggered_heartbeats"))
-    b.allocated = 1
+    b.used = float(b.allocated) - 1
     evo_session.flush()
     listener = em.EvoListener(owner_uuid=agent.agent_uuid, name="l",
                               condition_json={"all": []}, effect="trigger_heartbeat")

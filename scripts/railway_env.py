@@ -49,6 +49,12 @@ ALLOWED_VARS = frozenset({
     "WEATHER_STRATEGIES", "WEATHER_ENTRY_HOURS", "WEATHER_TOP_N", "WEATHER_TRACK_LOWS",
     "WEATHER_DIST_ENABLED", "WEATHER_DIST_SIGMA", "WEATHER_DIST_MIN_EDGE_CENTS",
     "WEATHER_CITY_WINDOW_ENABLED", "WEATHER_OBS_ENTRY_ENABLED", "WEATHER_POLYMARKET_ENABLED",
+    # Evo experiment tuning (live-adjustable so we can dial the population's iteration
+    # speed + budget without a code deploy). Heartbeat cadence and per-agent weekly LLM
+    # token / dollar budgets move together — raising cadence without budget just front-loads
+    # spend into dormancy. ensure_budgets tops up in-cohort agents when a budget is raised.
+    "EVO_ROUTINE_HEARTBEATS_PER_DAY", "EVO_DEEP_REFLECTIONS_PER_DAY",
+    "EVO_WEEKLY_TOKEN_BUDGET", "EVO_WEEKLY_LLM_CEILING_USD", "EVO_MAX_ACTIVE_AGENTS",
 })
 
 _UPSERT = "mutation($input: VariableUpsertInput!){ variableUpsert(input: $input) }"
