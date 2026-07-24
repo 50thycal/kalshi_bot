@@ -23,7 +23,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from ..db import session_scope
 from ..logging_config import log_event
@@ -53,6 +53,20 @@ from .models import EvoStrategy
 from .strategy_spec import validate_spec
 
 logger = logging.getLogger(__name__)
+
+# A single evo SQL statement must never freeze the whole (single-threaded) population
+# loop: a huge scan or a lock wait raises after this bound instead of hanging forever.
+_STMT_TIMEOUT_MS = 90_000
+
+
+def _guard(session) -> None:
+    """Bound every query in this evo transaction. SET LOCAL scopes it to the current
+    transaction, so it only affects the evo loop's own sessions. Postgres-only —
+    a no-op on other backends (e.g. SQLite in tests) which lack statement_timeout."""
+    bind = session.get_bind()
+    if bind is not None and bind.dialect.name == "postgresql":
+        session.execute(text(f"SET LOCAL statement_timeout = {_STMT_TIMEOUT_MS}"))
+
 
 # Concrete Kalshi weather series (per-city daily high + low). This is the DEFAULT
 # live universe the fleet scans: founder trading genomes ship with empty
@@ -178,82 +192,129 @@ def run_evo_cycle(runtime: EvoRuntime) -> None:
         bootstrap_founders(session, settings, cognition=runtime.cognition, md=runtime.md,
                            now=now)
 
+    # Every phase below runs in its OWN contained transaction and is wrapped so one
+    # failing (or slow) phase can NEVER stop the rest — honoring this function's
+    # contract that "each phase is contained so one failure never stops the rest".
+    # Each phase logs its start, so a stall is pinpointed to the last phase logged
+    # instead of silently freezing the whole single-threaded population loop.
+
     # Heal the legacy calendar-snapped cohort window so the population gets a full
-    # week. Its OWN transaction (idempotent + cheap): a failure in founder
-    # bootstrap above must never roll back this fix, and this must land before the
-    # boundary check below reads ends_at.
-    with session_scope() as session:
-        reanchor_open_cohort(session, settings)
+    # week (idempotent + cheap); must land before the boundary check reads ends_at.
+    log_event(logger, logging.INFO, "evo phase: reanchor")
+    try:
+        with session_scope() as session:
+            _guard(session)
+            reanchor_open_cohort(session, settings)
+    except Exception:  # noqa: BLE001 — one phase must never freeze the population
+        logger.exception("evo phase failed: reanchor")
 
-    # cohort boundary (its own transaction: the transition lock must commit even
-    # if later phases fail)
-    with session_scope() as session:
-        cohort = ensure_current_cohort(session, settings, now=now)
-        if cohort_is_over(cohort, now=now):
-            outcome = maybe_finalize_cohort(
-                session, settings, cohort, md=runtime.md, cognition=runtime.cognition,
-                now=now,
+    # cohort boundary -> finalization (locked, once)
+    log_event(logger, logging.INFO, "evo phase: cohort_boundary")
+    try:
+        with session_scope() as session:
+            _guard(session)
+            cohort = ensure_current_cohort(session, settings, now=now)
+            if cohort_is_over(cohort, now=now):
+                outcome = maybe_finalize_cohort(
+                    session, settings, cohort, md=runtime.md, cognition=runtime.cognition,
+                    now=now,
+                )
+                if outcome:
+                    log_event(logger, logging.INFO, "evo cohort finalized",
+                              cohort=outcome["cohort"], retired=len(outcome["retired"]),
+                              children=len(outcome["children"]),
+                              wildcard=bool(outcome["wildcard"]))
+    except Exception:  # noqa: BLE001
+        logger.exception("evo phase failed: cohort_boundary")
+
+    # Market scan + paper book (entries/exits/settlement). Contained so a bad market
+    # fetch or paper-layer error can NEVER prevent the agent heartbeats below — the
+    # population must keep thinking even when the market/paper layer has a bad cycle.
+    tickers: list[str] = []
+    listener_counts = {"fired": 0}
+    strat_counts = {"orders": 0}
+    order_counts = {"filled": 0}
+    settle_counts = {"settled": 0}
+    log_event(logger, logging.INFO, "evo phase: scan_and_books")
+    try:
+        with session_scope() as session:
+            _guard(session)
+            cohort = ensure_current_cohort(session, settings, now=now)
+            tickers = _scan_universe(runtime, session)
+            new_tickers = set(tickers) - runtime._known_tickers
+            runtime._known_tickers.update(tickers)
+
+            ctx = listeners_mod.ListenerContext(session, settings, runtime.md, now=now)
+            ctx.set_new_tickers(new_tickers)
+            listener_counts = listeners_mod.evaluate_all(ctx)
+
+            strat_counts = strategy_runner.run_cycle(
+                session, settings, runtime.md, cohort_id=cohort.id,
+                candidate_tickers=tickers,
             )
-            if outcome:
-                log_event(logger, logging.INFO, "evo cohort finalized",
-                          cohort=outcome["cohort"], retired=len(outcome["retired"]),
-                          children=len(outcome["children"]),
-                          wildcard=bool(outcome["wildcard"]))
+            order_counts = papermod.process_open_orders(session, settings, runtime.md)
+            settle_counts = papermod.mark_and_settle(session, runtime.md)
+    except Exception:  # noqa: BLE001
+        logger.exception("evo phase failed: scan_and_books")
 
-    with session_scope() as session:
-        cohort = ensure_current_cohort(session, settings, now=now)
-        tickers = _scan_universe(runtime, session)
-        new_tickers = set(tickers) - runtime._known_tickers
-        runtime._known_tickers.update(tickers)
-
-        ctx = listeners_mod.ListenerContext(session, settings, runtime.md, now=now)
-        ctx.set_new_tickers(new_tickers)
-        listener_counts = listeners_mod.evaluate_all(ctx)
-
-        strat_counts = strategy_runner.run_cycle(
-            session, settings, runtime.md, cohort_id=cohort.id,
-            candidate_tickers=tickers,
-        )
-        order_counts = papermod.process_open_orders(session, settings, runtime.md)
-        settle_counts = papermod.mark_and_settle(session, runtime.md)
-
-        hb_counts = run_due_heartbeats(
-            session, settings, cohort=cohort, cognition=runtime.cognition,
-            md=runtime.md, now=now, candidate_tickers=tickers,
-        )
-
-        # daily snapshots + hourly interim fitness
-        day_label = f"daily:{now.strftime('%Y-%m-%d')}"
-        agents = active_agents(session, settings)
-        for agent in agents:
-            papermod.snapshot_portfolio(
-                session, agent.agent_uuid, papermod.cohort_ledger(cohort.id), day_label
+    # Agent heartbeats — the core of the population. Its OWN contained transaction so
+    # nothing above can stop the agents from running, and a crash in one heartbeat
+    # batch can't freeze the loop for every future cycle.
+    hb_counts = {"run": 0}
+    cohort_number: int | None = None
+    log_event(logger, logging.INFO, "evo phase: heartbeats")
+    try:
+        with session_scope() as session:
+            _guard(session)
+            cohort = ensure_current_cohort(session, settings, now=now)
+            cohort_number = cohort.number
+            hb_counts = run_due_heartbeats(
+                session, settings, cohort=cohort, cognition=runtime.cognition,
+                md=runtime.md, now=now, candidate_tickers=tickers,
             )
-            papermod.snapshot_portfolio(
-                session, agent.agent_uuid, papermod.LIFETIME, day_label
-            )
-        if (
-            runtime._last_interim_fitness is None
-            or (now - runtime._last_interim_fitness).total_seconds() >= 3600
-        ):
-            evaluate_cohort(
-                session, settings, cohort.id,
-                [a.agent_uuid for a in agents], kind="interim", now=now,
-            )
-            runtime._last_interim_fitness = now
+    except Exception:  # noqa: BLE001
+        logger.exception("evo phase failed: heartbeats")
 
-        log_event(
-            logger, logging.INFO,
-            f"evo cycle: agents={len(agents)} tickers={len(tickers)} "
-            f"listeners_fired={listener_counts['fired']} "
-            f"orders={strat_counts['orders']} fills={order_counts['filled']} "
-            f"settled={settle_counts['settled']} heartbeats={hb_counts['run']}",
-            cohort=cohort.number,
-            agents=len(agents),
-            tickers=len(tickers),
-            listeners=listener_counts,
-            strategy=strat_counts,
-            orders=order_counts,
-            settlement=settle_counts,
-            heartbeats=hb_counts,
-        )
+    # daily snapshots + hourly interim fitness (own contained transaction)
+    agents: list = []
+    log_event(logger, logging.INFO, "evo phase: snapshots_fitness")
+    try:
+        with session_scope() as session:
+            _guard(session)
+            cohort = ensure_current_cohort(session, settings, now=now)
+            day_label = f"daily:{now.strftime('%Y-%m-%d')}"
+            agents = active_agents(session, settings)
+            for agent in agents:
+                papermod.snapshot_portfolio(
+                    session, agent.agent_uuid, papermod.cohort_ledger(cohort.id), day_label
+                )
+                papermod.snapshot_portfolio(
+                    session, agent.agent_uuid, papermod.LIFETIME, day_label
+                )
+            if (
+                runtime._last_interim_fitness is None
+                or (now - runtime._last_interim_fitness).total_seconds() >= 3600
+            ):
+                evaluate_cohort(
+                    session, settings, cohort.id,
+                    [a.agent_uuid for a in agents], kind="interim", now=now,
+                )
+                runtime._last_interim_fitness = now
+    except Exception:  # noqa: BLE001
+        logger.exception("evo phase failed: snapshots_fitness")
+
+    log_event(
+        logger, logging.INFO,
+        f"evo cycle: agents={len(agents)} tickers={len(tickers)} "
+        f"listeners_fired={listener_counts['fired']} "
+        f"orders={strat_counts['orders']} fills={order_counts['filled']} "
+        f"settled={settle_counts['settled']} heartbeats={hb_counts['run']}",
+        cohort=cohort_number,
+        agents=len(agents),
+        tickers=len(tickers),
+        listeners=listener_counts,
+        strategy=strat_counts,
+        orders=order_counts,
+        settlement=settle_counts,
+        heartbeats=hb_counts,
+    )
