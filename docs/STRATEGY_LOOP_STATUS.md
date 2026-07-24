@@ -29,15 +29,24 @@ column); this note locks it in explicitly so it doesn't drift.*
 
 ---
 
-## Snapshot — 2026-07-24 05:35 AM CDT (run #72)
+## Snapshot — 2026-07-24 12:04 PM CDT (run #73)
 
-**No gate crossings — zero new settlements across the ENTIRE mmsell cohort AND theta4/weather,
-but a very large jump in open positions (mmsell 33→46, mmsell1 24→36, mmsell11 18→29, mmsell3
-18→29, mmsell4 17→28, mmsell7 3→15, etc.). Confirmed healthy** — checked `bot_runs` directly:
-167 completed cycles in the last 4 hours, zero non-completed. This is the same
-entries-outpacing-settlements pattern seen in runs #68/#70, just larger — reads as an overnight
-window where many new markets opened but few have reached their close time yet, not a worker or
-data problem.
+**No gate crossings, but a broad negative batch across the ENTIRE mmsell cohort — traced to ONE
+shared market event, not independent bad luck.** Every mmsell variant lost roughly the same
+amount per-trade (~−41 to −49¢/trade) this run. Drilled into the underlying trades: nearly all
+of it is a single market, `KXNBATEAMANNOUNCE-...LJAMES23` (an NBA "LeBron James team
+announcement" contract) that every variant held a position in and that resolved unfavorably for
+almost the whole cohort simultaneously around 11:07 AM CT (an earlier related strike settled
+favorably at 7:50 AM CT). This is a correlated single-event loss, not a strategy-wide
+degradation — mmsell6/mmsell11 still clear their PROMOTE gates despite the dip.
+
+| book | n | realized P&L | ¢/trade (cum) | this batch |
+|---|---|---|---|---|
+| mmsell3 (control) | 1,026 (+2) | +$16.26 | +1.59¢ (was +1.67¢) | −41¢/trade |
+| mmsell6 | 350 (+2) | +$8.26 | +2.36¢ (was +2.62¢) | −43¢/trade — still clears vs mmsell3 |
+| mmsell11 | 252 (+2) | +$7.90 | +3.14¢ (was +3.49¢) | −41¢/trade — still clears vs mmsell3 |
+| mmsell7 | 58 (+2) | −$0.77 | −1.33¢ (was +0.09¢) | −41¢/trade — back to negative after crossing positive last run |
+| mmsell10 | 124 (+2) | +$3.74 | +3.02¢ (was +3.79¢) | −44¢/trade — 83% to its gate |
 
 **Live P&L (real money — mmsell3):** unchanged, as expected — the account remains confirmed
 100% flat since 2026-07-20 10:20:56 CT.
@@ -48,82 +57,103 @@ data problem.
 | **TOTAL** | **367** | **335** | **+$1.33** | **+0.36¢** |
 
 **Trading books (settled n / realized P&L / ¢-per-trade / open) — PAPER only, separate from
-live above. All figures unchanged from run #71 except open counts:**
+live above:**
 | book | n | realized P&L | ¢/trade | open | note |
 |---|---|---|---|---|---|
-| **mmsell6** | 348 | +$9.12 | +2.62 | 25 | PROMOTE confirmed, no new settlements, +7 open |
-| **mmsell11** | 250 | +$8.72 | +3.49 | 29 | PROMOTE confirmed, no new settlements, +11 open |
-| mmsell10 | 122 | +$4.62 | +3.79 | 25 | 81% to its own gate, no new settlements, +7 open |
-| mmsell9 | 26 | +$1.41 | +5.42 | 10 | no new settlements |
-| mmsell control (paper) | 3,892 | +$65.73 | +1.69 | 46 | no new settlements, +13 open |
-| mmsell2 (paper) | 1,656 | +$49.28 | +2.98 | 28 | no new settlements, +8 open |
-| mmsell1 (paper) | 2,516 | +$52.69 | +2.09 | 36 | no new settlements, +12 open |
-| mmsell3 (paper shadow) | 1,024 | +$17.08 | +1.67 | 29 | no new settlements, +11 open |
+| **mmsell6** | 350 | +$8.26 | +2.36 | 29 | PROMOTE confirmed, hit by the shared-event loss |
+| **mmsell11** | 252 | +$7.90 | +3.14 | 31 | PROMOTE confirmed, hit by the shared-event loss |
+| mmsell10 | 124 | +$3.74 | +3.02 | 29 | 83% to its own gate, hit by the shared-event loss |
+| mmsell9 | 26 | +$1.41 | +5.42 | 13 | no new settlements |
+| mmsell control (paper) | 3,899 | +$62.37 | +1.60 | 44 | hit by the shared-event loss |
+| mmsell2 (paper) | 1,659 | +$47.82 | +2.88 | 32 | hit by the shared-event loss |
+| mmsell1 (paper) | 2,519 | +$51.23 | +2.03 | 40 | hit by the shared-event loss |
+| mmsell3 (paper shadow) | 1,026 | +$16.26 | +1.59 | 34 | hit by the shared-event loss |
 | mmsell5 | 115 | −$0.09 | −0.08 | 0 | no new settlements |
-| mmsell4 | 197 | +$2.02 | +1.03 | 28 | KILLED (run #61) — still not recorded, +11 open |
-| mmsell7 | 56 | +$0.05 | +0.09 | 15 | still cumulative-positive, +12 open |
-| mmsell8 | 31 | −$0.51 | −1.65 | 11 | no new settlements |
+| mmsell4 | 199 | +$1.20 | +0.60 | 33 | KILLED (run #61) — still not recorded, hit by shared-event loss |
+| mmsell7 | 58 | −$0.77 | −1.33 | 18 | back to negative cumulative, gate n≥150 (39%) |
+| mmsell8 | 31 | −$0.51 | −1.65 | 14 | no new settlements |
 | **theta4** (fat-tail) | 48 | +$17.78 | +37.0 | 0 | no new activity, 60% to gate |
-| weather con (all) | 504 | −$12.66 | −2.51 | 14 | no new settlements |
-| weather_concity | 84 | −$7.97 | −9.49 | 6 | no new settlements, 70% to gate |
+| weather con (all) | 517 | −$12.03 | −2.33 | 3 | +13 settled, positive batch (improved) |
+| weather_concity | 90 | −$8.18 | −9.09 | 0 | +6 settled, roughly flat, 75% to gate |
 | theta ctrl/1/2/3 | 560/201/98/134 | +$0.97/+$9.69/−$11.55/−$11.62 | — | 0 | SHELVED, quiet, unchanged |
 | tfav | 215 | −$7.54 | −3.5 | 0 | KILLED, quiet, unchanged |
 | weather (rest) | 4,709 | −$238.63 | — | 0 | pruned, done |
 
-**HEADLINE — a quiet-for-settlements but very active-for-entries run: no book settled anything
-new, but open counts jumped sharply across the board, and the worker's own run history is clean
-(167/167 completed in the last 4h). No gate crossings; live P&L unchanged as expected.**
+**HEADLINE — a single shared-market event (an NBA "LeBron James team announcement" contract)
+dragged nearly every mmsell variant's per-trade cumulative down together this run. This is
+exactly the kind of correlated risk worth naming explicitly: the mmsell family isn't fully
+independent — variants sharing the same ticker/event will move together on a single surprising
+outcome. No gate crossings; mmsell6/mmsell11 still clear PROMOTE despite the hit. mmsell7 fell
+back to negative cumulative after crossing positive last run — a reminder that was likely
+small-n noise, not a real trend reversal.**
+
+Weather books had a positive batch, in contrast — weather_concity now 75% to its gate.
 
 **Gate sweep (step 3b):** theta4 **48/80** (60%, no new activity) · **mmsell6
-CLEARED-PROMOTE** · **mmsell11 CLEARED-PROMOTE** · **mmsell4 KILLED** (unchanged, still not
-recorded — now 11 runs) · mmsell7 gate n≥150 (37%, cumulative-positive) · mmsell8 gate n≥100
-(31%) · mmsell9 gate n≥100 (26%) · mmsell10 gate n≥150 (81%, unchanged) · weather_concity
-**84/120** (70%, unchanged) · FREEZE **6/100** (not fired, unchanged, 24 runs).
+CLEARED-PROMOTE** (holding despite the shared-loss hit) · **mmsell11 CLEARED-PROMOTE** (same) ·
+**mmsell4 KILLED** (unchanged, still not recorded — now 12 runs) · mmsell7 gate n≥150 (39%,
+back to cumulative-negative) · mmsell8 gate n≥100 (31%) · mmsell9 gate n≥100 (26%) · mmsell10
+gate n≥150 (83%) · weather_concity **90/120** (75%, up from 70%) · FREEZE **6/100** (not fired,
+unchanged, 25 runs).
 
-**Data (last-24h / latest CDT, ~5:35 AM run):** crypto_spot, crypto_ladder, weather forecasts/
-obs/ensembles/buckets all fresh (5:19–5:35 AM ✓). xgame_matches still dark (expected — book
+**Data (last-24h / latest CDT, ~12:04 PM run):** crypto_spot, crypto_ladder, weather forecasts/
+obs/ensembles/buckets all fresh (11:58 AM–12:03 PM ✓). xgame_matches still dark (expected — book
 KILLED, collector-only). xgame_tapes still 0 rows/24h — consistent with the confirmed
 healthy-lull explanation, not re-flagging.
 
 **Research probes (on-demand):** WCPROP + XGAME families CLOSED. No standing probes.
 
-**Headline:** quiet run for settlements (zero across the board) but very active for entries
-(open counts up sharply everywhere) — confirmed healthy via bot_runs, not a problem. No gate
-crossings. Live P&L unchanged, confirmed stable.
+**Headline:** no gate events. A single shared-market event (NBA team-announcement contract) hit
+nearly every mmsell variant's batch simultaneously — a real correlated-risk example worth
+naming, not independent degradation. mmsell6/11 still PROMOTE despite it. mmsell7 dipped back
+negative after one good batch. Weather books had a good batch; weather_concity now 75% to its
+gate. Live P&L unchanged, confirmed stable.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[mmsell6 AND mmsell11 still PROMOTE — top actionable item] mmsell6: n=348, +2.62¢/trade.
-   mmsell11: n=250, +3.49¢/trade.** No new settlements this run. Unchanged recommendation: a
-   fable session should decide whether to promote one, both, or combine the mechanisms into the
-   paper config — live mmsell3 itself is currently wound down, so any promotion is about the
-   paper book / a future live restart.
+1. **[mmsell6 AND mmsell11 still PROMOTE — top actionable item] mmsell6: n=350, +2.36¢/trade
+   (was +2.62¢, hit by the shared-event loss but still clears mmsell3). mmsell11: n=252,
+   +3.14¢/trade (was +3.49¢, same).** Unchanged recommendation: a fable session should decide
+   whether to promote one, both, or combine the mechanisms into the paper config — live mmsell3
+   itself is currently wound down, so any promotion is about the paper book / a future live
+   restart.
 
-2. **[mmsell4 · KILL verdict — still not recorded, 11 runs now] n=197, +1.03¢/trade cumulative,
-   still below mmsell3's +1.67¢.** Recommend a fable session record the verdict in
-   `docs/MMSELL_VARIANTS_THESIS.md`/`RESEARCH_JOURNAL.md`.
+2. **[NEW · correlated-event risk observed directly] A single shared market
+   (`KXNBATEAMANNOUNCE-...LJAMES23`) moved nearly every mmsell variant's batch together this
+   run — concrete evidence the mmsell family isn't fully independent when variants share a
+   ticker/event.** Not actionable by itself (this is inherent to running siblings off the same
+   scan), but worth keeping in mind when interpreting any future "whole-cohort" batch move —
+   check for a single shared ticker before treating it as a strategy-wide signal.
 
-3. **[mmsell10 · very close, gate 81%, unchanged] n=122/150, +3.79¢/trade cumulative.** Likely
-   resolves once settlements resume.
+3. **[mmsell4 · KILL verdict — still not recorded, 12 runs now] n=199, +0.60¢/trade cumulative
+   (dipped from +1.03¢ on the shared-event loss), still below mmsell3's +1.59¢.** Recommend a
+   fable session record the verdict in `docs/MMSELL_VARIANTS_THESIS.md`/`RESEARCH_JOURNAL.md`.
 
-4. **[weather_concity · gate 70%, unchanged] n=84/120, −9.49¢/trade cumulative.** Still
-   approaching its decision point.
+4. **[mmsell10 · very close, gate 83%] n=124/150, +3.02¢/trade cumulative (dipped from +3.79¢ on
+   the shared-event loss, still well positive).** Likely resolves within the next run or two.
 
-5. **[theta4 · 60% to gate, no new activity] n=48/80, cumulative +37.0¢/trade.** Continue
+5. **[weather_concity · gate 75%, positive batch] n=90/120, −9.09¢/trade cumulative (roughly
+   flat this batch).** Getting close to its gate.
+
+6. **[theta4 · 60% to gate, no new activity] n=48/80, cumulative +37.0¢/trade.** Continue
    tracking toward the gate.
 
-6. **[mmsell7 · holding positive cumulative] n=56, +0.09¢/trade, no new settlements this run.**
-   Still small n and 37% to its own gate — watching whether this holds as n grows.
+7. **[mmsell7 · back to negative cumulative] n=58, −1.33¢/trade (was +0.09¢) — the positive
+   cross last run didn't hold, consistent with it having been small-n noise rather than a real
+   trend.** Still 39% to its own gate; continue tracking without over-reading either direction.
 
-7. **[idea-model queue · MMX/NEST] MMX's premise (extend the mmsell edge into new categories)
+8. **[idea-model queue · MMX/NEST] MMX's premise (extend the mmsell edge into new categories)
    should be built against whichever of mmsell6/mmsell11 gets promoted.** NEST still behind
    theta4's n≥80 gate (60% there).
 
-8. **[FREEZE gate · unchanged, not fired] Settled grain+soft = 6 of the n≥100 trigger, unchanged
-   across 24 runs now.** Standing background check, nothing to act on.
+9. **[FREEZE gate · unchanged, not fired] Settled grain+soft = 6 of the n≥100 trigger, unchanged
+   across 25 runs now.** Standing background check, nothing to act on.
 
-*(Changed this run: #1-8 all restated/unchanged — a settlement-quiet but entry-active run,
-confirmed healthy via bot_runs (167/167 completed, zero failures in the last 4h). No new
-findings; carrying the same picture as run #71 forward with updated open-position counts.)*
+*(Changed this run: #1 mmsell6/mmsell11 — restated, both dipped on the shared-event loss but
+still clear their gates. #2 NEW — the correlated-event finding, worth keeping as a standing
+interpretive note. #3 mmsell4 — restated, 12 runs unrecorded. #4 mmsell10 — restated (83%). #5
+weather_concity — restated, closer to gate. #6 theta4 — restated. #7 mmsell7 — reversed back to
+negative, framed as likely-noise consistent with prior small-n caveat. #8 MMX/NEST — restated.
+#9 restated/unchanged.)*
