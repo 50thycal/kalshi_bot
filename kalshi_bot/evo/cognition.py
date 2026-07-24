@@ -817,7 +817,11 @@ def _execute_one(
 
     if t == "cancel_order":
         row, err = papermod.cancel_order(session, au, int(a.get("order_id", 0)))
-        return {"ok": True} if row else {"rejected": err}
+        # Echo order_id (like submit_trade_intent) so the action summary in
+        # actions_json records WHICH order was canceled — otherwise a cancel is an
+        # untraceable {"ok": true} and reconstructing what an agent did requires
+        # correlating timestamps by hand.
+        return {"ok": True, "order_id": row.id} if row else {"rejected": err}
 
     if t == "record_influence":
         row, err = lineage.record_influence(
