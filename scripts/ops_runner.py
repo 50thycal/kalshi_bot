@@ -13,6 +13,12 @@ ops/request.json shapes:
   {"type": "env", "set": {"KILL_SWITCH": "false"}}      # set allowlisted vars + redeploy
   {"type": "noop"}   # placeholder; do nothing
 
+`env` and `logs` requests may add "service" to pick which Railway service to act on:
+  {"type": "logs", "service": "evo"}                    # logs from the evo worker
+  {"type": "env",  "service": "evo", "set": {...}}      # read/set the evo worker's vars
+"main"/"live" (default) is the trading worker; "evo" is the evolutionary-agent worker.
+`db` requests are service-agnostic (both services share one Postgres via DATABASE_URL_RO).
+
 Reuses scripts/railway_logs.py and scripts/db_query.py by setting the env vars
 they already read, so all the read-only guards there still apply. Script requests
 are allowlisted to self-contained read-only analysis scripts in scripts/.
@@ -98,6 +104,34 @@ ALLOWED_SCRIPTS = (
 )
 
 
+# env/logs requests can target either Railway service in the project. Each name maps
+# to the secret holding that service's Railway service ID — never committed, since this
+# repo is public. "main"/"live" is the trading worker (BOT_MODE=live); "evo" is the
+# evolutionary-agent worker (BOT_MODE=evo). Absent -> "main" (backward compatible).
+_SERVICE_ID_SECRET = {
+    "main": "RAILWAY_SERVICE_ID",
+    "live": "RAILWAY_SERVICE_ID",
+    "evo": "RAILWAY_EVO_SERVICE_ID",
+}
+
+
+def _select_service(req: dict) -> str | None:
+    """Point RAILWAY_SERVICE_ID at the requested service for this env/logs request
+    (railway_env.py and railway_logs.py both read RAILWAY_SERVICE_ID). Returns None on
+    success, or an error message if the name is unknown or its ID secret is missing."""
+    name = (req.get("service") or "main").strip().lower()
+    secret = _SERVICE_ID_SECRET.get(name)
+    if secret is None:
+        return f"unknown service {name!r} (known: {sorted(set(_SERVICE_ID_SECRET))})"
+    svc_id = os.environ.get(secret, "").strip()
+    if not svc_id:
+        return (f"service {name!r} is not configured — add the {secret} secret "
+                "(that service's Railway service ID) to the repo's Actions secrets")
+    os.environ["RAILWAY_SERVICE_ID"] = svc_id
+    print(f"# target service: {name}")
+    return None
+
+
 def main() -> int:
     try:
         with open(REQUEST_PATH) as f:
@@ -117,6 +151,10 @@ def main() -> int:
         return 0
 
     if rtype == "logs":
+        err = _select_service(req)
+        if err:
+            print(err, file=sys.stderr)
+            return 1
         import railway_logs
 
         if req.get("limit") is not None:
@@ -139,6 +177,10 @@ def main() -> int:
         return db_query.main()
 
     if rtype == "env":
+        err = _select_service(req)
+        if err:
+            print(err, file=sys.stderr)
+            return 1
         import railway_env
 
         if req.get("set"):

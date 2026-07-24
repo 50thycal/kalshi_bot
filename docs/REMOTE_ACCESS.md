@@ -60,7 +60,14 @@ Repo → **Settings → Secrets and variables → Actions → New repository sec
 | `RAILWAY_TOKEN` | The Railway token from step 2 |
 | `RAILWAY_PROJECT_ID` | Railway project ID |
 | `RAILWAY_ENVIRONMENT_ID` | Railway environment ID (e.g. production) |
-| `RAILWAY_SERVICE_ID` | The worker service ID (optional but recommended) |
+| `RAILWAY_SERVICE_ID` | The **main/live** worker service ID (`BOT_MODE=live`) |
+| `RAILWAY_EVO_SERVICE_ID` | The **evo** worker service ID (`BOT_MODE=evo`), if you run the evolutionary-agent bot as a second Railway service. Enables `{"service":"evo"}` on `env`/`logs` ops requests so its logs + config are reachable exactly like the main service's. |
+
+Find a service's ID in its Railway URL:
+`…/project/<projectId>/service/<serviceId>?environmentId=<environmentId>`. The
+project + environment + token are **shared** across services in one project — only
+the service ID differs, so the evo service reuses the same `RAILWAY_TOKEN` /
+`RAILWAY_PROJECT_ID` / `RAILWAY_ENVIRONMENT_ID`.
 
 ### 4. Get the workflows onto the default branch
 
