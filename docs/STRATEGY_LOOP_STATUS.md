@@ -29,21 +29,21 @@ column); this note locks it in explicitly so it doesn't drift.*
 
 ---
 
-## Snapshot — 2026-07-23 12:04 PM CDT (run #70)
+## Snapshot — 2026-07-23 08:01 PM CDT (run #71)
 
-**No gate crossings this run.** Entire mmsell cohort had zero new settlements again (open counts
-rose a lot instead — mmsell 33→42, mmsell6 14→18, mmsell10 14→18, mmsell11 17→20 — the same
-entries-outpacing-settlements pattern seen in run #68, not a concern). Weather books, by
-contrast, had a good batch this run.
+**No gate crossings, but a notable split batch worth flagging without overreacting.** The
+original, unfiltered mmsell books (control/1/2) all had a **negative** batch this run, while
+every promoted/newer variant (mmsell3/6/7/8/9/10/11) had a **positive** batch on the same market
+flow — the opposite pattern from run #62's version of this split. Single 8-hour window on
+books this large (2,500–3,900 n) — small-n discipline says don't call it a trend yet.
 
-**Weather books reversed positive after the weaker batch two runs ago:**
 | book | n | realized P&L | ¢/trade (cum) | this batch |
 |---|---|---|---|---|
-| weather_con(all) | 504 (+15) | −$12.66 | −2.51¢ (was −2.79¢) | +6.7¢/trade batch |
-| weather_concity | 84 (+8) | −$7.97 | −9.49¢ (was −11.68¢) | +11.4¢/trade batch — **70% to gate** |
-
-**theta4** settled 2 more trades, another solidly positive batch (+58¢/trade) — cumulative
-realized +$17.69, +37.6¢/trade, now 47/80 (59%) to its gate.
+| mmsell (control) | 3,892 (+12) | +$65.73 | +1.69¢ | **−24.1¢/trade** |
+| mmsell1 | 2,516 (+7) | +$52.69 | +2.09¢ | **−18.3¢/trade** |
+| mmsell2 | 1,656 (+5) | +$49.28 | +2.98¢ | **−27.6¢/trade** |
+| mmsell3 (shadow) | 1,024 (+3) | +$17.08 | +1.67¢ | +6.7¢/trade |
+| mmsell7 | 56 (+2) | +$0.05 | **+0.09¢** | +7¢/trade — **crossed to positive cumulative for the first time** |
 
 **Live P&L (real money — mmsell3):** unchanged, as expected — the account remains confirmed
 100% flat since 2026-07-20 10:20:56 CT.
@@ -53,89 +53,90 @@ realized +$17.69, +37.6¢/trade, now 47/80 (59%) to its gate.
 | World Cup | 165 | 150 | −$0.41 | −0.25¢ |
 | **TOTAL** | **367** | **335** | **+$1.33** | **+0.36¢** |
 
-**Trading books (settled n / realized P&L / ¢-per-trade / open) — PAPER only, separate from live
-above:**
+**Trading books (settled n / realized P&L / ¢-per-trade / open) — PAPER only, separate from
+live above:**
 | book | n | realized P&L | ¢/trade | open | note |
 |---|---|---|---|---|---|
-| **mmsell6** | 346 | +$9.01 | +2.60 | 18 | PROMOTE confirmed, no new settlements, +4 open |
-| **mmsell11** | 247 | +$8.52 | +3.45 | 20 | PROMOTE confirmed, no new settlements, +3 open |
-| mmsell10 | 120 | +$4.51 | +3.76 | 18 | 80% to its own gate, no new settlements, +4 open |
-| mmsell9 | 25 | +$1.36 | +5.4 | 10 | no new settlements |
-| mmsell control (paper) | 3,880 | +$68.62 | +1.77 | 42 | no new settlements, +9 open |
-| mmsell2 (paper) | 1,651 | +$50.66 | +3.07 | 23 | no new settlements, +7 open |
-| mmsell1 (paper) | 2,509 | +$53.97 | +2.15 | 29 | no new settlements, +7 open |
-| mmsell3 (paper shadow) | 1,021 | +$16.88 | +1.65 | 20 | no new settlements, +3 open |
+| **mmsell6** | 348 | +$9.12 | +2.62 | 18 | PROMOTE confirmed, essentially flat this run |
+| **mmsell11** | 250 | +$8.72 | +3.49 | 18 | PROMOTE confirmed, positive batch |
+| mmsell10 | 122 | +$4.62 | +3.79 | 18 | 81% to its own gate, positive batch |
+| mmsell9 | 26 | +$1.41 | +5.42 | 10 | small n, positive |
+| mmsell control (paper) | 3,892 | +$65.73 | +1.69 | 33 | negative batch (see above), still strongly cumulative-positive |
+| mmsell2 (paper) | 1,656 | +$49.28 | +2.98 | 20 | negative batch (see above) |
+| mmsell1 (paper) | 2,516 | +$52.69 | +2.09 | 24 | negative batch (see above) |
+| mmsell3 (paper shadow) | 1,024 | +$17.08 | +1.67 | 18 | positive batch |
 | mmsell5 | 115 | −$0.09 | −0.08 | 0 | no new settlements |
-| mmsell4 | 195 | +$1.88 | +0.96 | 19 | KILLED (run #61) — still not recorded, no new settlements |
-| mmsell7 | 54 | −$0.09 | −0.17 | 4 | no new settlements |
-| mmsell8 | 29 | −$0.65 | −2.24 | 12 | no new settlements |
-| **theta4** (fat-tail) | 47 | +$17.69 | +37.6 | 0 | +2 settlements, positive batch, 59% to gate |
-| weather con (all) | 504 | −$12.66 | −2.51 | 4 | +15 settled, good batch (see above) |
-| weather_concity | 84 | −$7.97 | −9.49 | 1 | +8 settled, good batch, 70% to gate |
+| mmsell4 | 197 | +$2.02 | +1.03 | 17 | KILLED (run #61) — still not recorded, closing the gap to mmsell3 but still below |
+| **mmsell7** | 56 | +$0.05 | **+0.09** | 3 | **crossed to positive cumulative for the first time**, gate n≥150 (37%) |
+| mmsell8 | 31 | −$0.51 | −1.65 | 11 | improving, gate n≥100 (31%) |
+| **theta4** (fat-tail) | 48 | +$17.78 | +37.0 | 0 | +1 settlement, 60% to gate |
+| weather con (all) | 504 | −$12.66 | −2.51 | 13 | no new settlements, +9 open |
+| weather_concity | 84 | −$7.97 | −9.49 | 6 | no new settlements, +5 open |
 | theta ctrl/1/2/3 | 560/201/98/134 | +$0.97/+$9.69/−$11.55/−$11.62 | — | 0 | SHELVED, quiet, unchanged |
 | tfav | 215 | −$7.54 | −3.5 | 0 | KILLED, quiet, unchanged |
 | weather (rest) | 4,709 | −$238.63 | — | 0 | pruned, done |
 
-**HEADLINE — no gate crossings, but two solid pieces of good news: weather_con/weather_concity
-both had a strong batch (reversing the weaker run two cycles ago), and theta4 continues its
-positive streak, now 59% to its own gate. mmsell cohort itself was quiet on settlements again
-(entries outpacing closes), unchanged from the last two similar runs.**
+**HEADLINE — a split batch (older unfiltered mmsell books negative, newer/promoted variants
+positive) — a single-window curiosity, not a trend. mmsell7 notably crossed to positive
+cumulative for the first time. No gate crossings; theta4 crossed 60% to its own gate.**
 
-**Gate sweep (step 3b):** theta4 **47/80** (59%) · **mmsell6 CLEARED-PROMOTE** · **mmsell11
-CLEARED-PROMOTE** · **mmsell4 KILLED** (unchanged, still not recorded — now 9 runs) · mmsell7
-gate n≥150 (36%) · mmsell8 gate n≥100 (29%) · mmsell9 gate n≥100 (25%) · mmsell10 gate n≥150
-(80%, unchanged) · weather_concity **84/120** (70%, up from 63%) · FREEZE **6/100** (not fired,
-unchanged, 22 runs).
+**Gate sweep (step 3b):** theta4 **48/80** (60%) · **mmsell6 CLEARED-PROMOTE** · **mmsell11
+CLEARED-PROMOTE** · **mmsell4 KILLED** (unchanged, still not recorded — now 10 runs) · mmsell7
+gate n≥150 (37%, now cumulative-positive) · mmsell8 gate n≥100 (31%) · mmsell9 gate n≥100 (26%)
+· mmsell10 gate n≥150 (81%) · weather_concity **84/120** (70%, unchanged) · FREEZE **6/100**
+(not fired, unchanged, 23 runs).
 
-**Data (last-24h / latest CDT, ~12:04 PM run):** crypto_spot, crypto_ladder, weather forecasts/
-obs/ensembles/buckets all fresh (11:55 AM–12:04 PM ✓). xgame_matches still dark (expected — book
-KILLED, collector-only). xgame_tapes still 0 rows/24h — consistent with the confirmed
-healthy-lull explanation, not re-flagging.
+**Data (last-24h / latest CDT, ~8:01 PM run):** crypto_spot, crypto_ladder, weather forecasts/
+obs/ensembles/buckets all fresh (7:51 PM–1:02 AM ✓ — some rows dated just past midnight UTC,
+still within the last 24h window). xgame_matches still dark (expected — book KILLED,
+collector-only). xgame_tapes still 0 rows/24h — consistent with the confirmed healthy-lull
+explanation, not re-flagging.
 
 **Research probes (on-demand):** WCPROP + XGAME families CLOSED. No standing probes.
 
-**Headline:** no gate events. Weather books (con + concity) both had a strong reversal batch —
-weather_concity now 70% to its gate. theta4 continues positive, 59% to its own gate. mmsell
-cohort quiet on settlements again but entries are active (open counts way up). Live P&L
-unchanged, confirmed stable.
+**Headline:** no gate events. A split batch (older mmsell books negative, newer variants
+positive) — flagged, not alarmed, single window on large-n books. mmsell7 crossed to positive
+cumulative for the first time. theta4 now 60% to its gate. Live P&L unchanged, confirmed
+stable.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[mmsell6 AND mmsell11 still PROMOTE — top actionable item] mmsell6: n=346, +2.60¢/trade.
-   mmsell11: n=247, +3.45¢/trade.** No new settlements this run. Unchanged recommendation: a
-   fable session should decide whether to promote one, both, or combine the mechanisms into the
-   paper config — live mmsell3 itself is currently wound down, so any promotion is about the
-   paper book / a future live restart.
+1. **[mmsell6 AND mmsell11 still PROMOTE — top actionable item] mmsell6: n=348, +2.62¢/trade.
+   mmsell11: n=250, +3.49¢/trade.** Unchanged recommendation: a fable session should decide
+   whether to promote one, both, or combine the mechanisms into the paper config — live mmsell3
+   itself is currently wound down, so any promotion is about the paper book / a future live
+   restart.
 
-2. **[mmsell3_closeout — resolved, no remaining exposure] Both stuck positions settled naturally
-   on 2026-07-20; the mechanism is disabled and inert.** No further tracking needed unless a
-   future live restart reuses it.
+2. **[mmsell4 · KILL verdict — still not recorded, 10 runs now] n=197, +1.03¢/trade cumulative
+   (closing the gap but still below mmsell3's +1.67¢).** Recommend a fable session record the
+   verdict in `docs/MMSELL_VARIANTS_THESIS.md`/`RESEARCH_JOURNAL.md` — this has now sat
+   unrecorded for 10 runs.
 
-3. **[mmsell4 · KILL verdict — still not recorded, 9 runs now] n=195, +0.96¢/trade cumulative,
-   still below mmsell3's +1.65¢.** Recommend a fable session record the verdict in
-   `docs/MMSELL_VARIANTS_THESIS.md`/`RESEARCH_JOURNAL.md`.
+3. **[mmsell10 · very close, gate 81%] n=122/150, +3.79¢/trade cumulative, positive batch.**
+   Likely resolves within the next run or two.
 
-4. **[mmsell10 · very close, gate 80%, unchanged] n=120/150, +3.76¢/trade cumulative.** Likely
-   resolves once settlements resume.
+4. **[weather_concity · gate 70%, unchanged] n=84/120, −9.49¢/trade cumulative.** No new
+   settlements this run; still approaching its decision point.
 
-5. **[weather_concity · strong batch, gate 70%] n=84/120, −9.49¢/trade cumulative (was
-   −11.68¢) — a clearly positive reversal batch (+11.4¢/trade).** Getting close to its gate;
-   worth a closer look once it crosses n≥120.
+5. **[theta4 · 60% to gate] n=48/80, cumulative +37.0¢/trade.** Continue tracking toward the
+   gate.
 
-6. **[theta4 · 59% to gate, consistent positive streak] n=47/80, cumulative +37.6¢/trade, another
-   solidly positive batch.** Continue tracking toward the gate.
+6. **[mmsell7 · crossed to positive cumulative for the first time] n=56, now +0.09¢/trade (was
+   −0.17¢).** Still small n and 37% to its own gate (n≥150) — worth watching whether this holds
+   as n grows, not a gate event yet.
 
 7. **[idea-model queue · MMX/NEST] MMX's premise (extend the mmsell edge into new categories)
    should be built against whichever of mmsell6/mmsell11 gets promoted.** NEST still behind
-   theta4's n≥80 gate (59% there, getting close).
+   theta4's n≥80 gate (60% there, getting close).
 
 8. **[FREEZE gate · unchanged, not fired] Settled grain+soft = 6 of the n≥100 trigger, unchanged
-   across 22 runs now.** Standing background check, nothing to act on.
+   across 23 runs now.** Standing background check, nothing to act on.
 
-*(Changed this run: #1 mmsell6/mmsell11 — restated, no new activity. #2 mmsell3_closeout —
-restated as resolved. #3 mmsell4 — restated, 9 runs unrecorded. #4 mmsell10 — unchanged (80%),
-no new activity. #5 weather_concity — strong reversal batch, closer to gate (70%, was 63%). #6
-theta4 — consistent positive streak, closer to gate (59%, was 56%). #7 MMX/NEST — restated,
-NEST getting close. #8 restated/unchanged.)*
+*(Changed this run: #1 mmsell6/mmsell11 — restated. #2 mmsell4 — restated, 10 runs unrecorded,
+gap closing slightly. #3 mmsell10 — restated (81%). #4 weather_concity — restated, unchanged
+this run. #5 theta4 — restated, closer (60%). #6 NEW — mmsell7 crossed to positive cumulative
+for the first time, worth watching. #7 MMX/NEST — restated. #8 restated/unchanged. Split-batch
+observation (older vs newer mmsell books) noted in the snapshot but not carried as its own
+numbered item — single window, small-n discipline applies.)*
