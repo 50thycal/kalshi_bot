@@ -52,10 +52,25 @@ To run a request:
    {"type": "db",   "sql": "select ...", "max_rows": 200, "id": "pnl-check-1"}
    {"type": "logs", "limit": 200, "filter": "", "deployment_id": "", "id": "logs-1"}
    {"type": "script", "name": "weather_model_check", "args": ["--sigma", "1.5"]}
+   {"type": "env"}                                          # read allowlisted Railway vars
+   {"type": "env", "set": {"KILL_SWITCH": "false"}}         # set allowlisted vars + redeploy
    {"type": "noop"}
    ```
    `script` runs an allowlisted self-contained read-only analysis script from
    `scripts/` (see `ALLOWED_SCRIPTS` in `scripts/ops_runner.py`).
+
+   **Two Railway services, one channel.** `env` and `logs` requests accept a
+   `"service"` field selecting which worker to act on — `"main"`/`"live"` (default,
+   the `BOT_MODE=live` trading worker) or `"evo"` (the `BOT_MODE=evo` evolutionary-agent
+   worker). So the evo bot's logs/config are reachable the same way as the main bot's:
+   ```jsonc
+   {"type": "logs", "service": "evo", "limit": 120, "id": "evo-logs-1"}
+   {"type": "env",  "service": "evo", "id": "evo-env-1"}                    // read evo vars
+   {"type": "env",  "service": "evo", "set": {"EVO_MAX_ACTIVE_AGENTS": "5"}, "id": "evo-cad"}
+   ```
+   Each service's ID lives in a secret (`RAILWAY_SERVICE_ID` for main,
+   `RAILWAY_EVO_SERVICE_ID` for evo — never in this public repo). `db` requests are
+   **service-agnostic** (both workers share one Postgres via `DATABASE_URL_RO`).
 
    **Always set a unique `"id"`** (any short slug — sanitized to `[A-Za-z0-9._-]`).
    The runner writes your output to a durable per-run file `ops/results/<id>.txt`
@@ -177,7 +192,9 @@ unavailable.
 
 Live in **GitHub Actions secrets**, not the repo: `DATABASE_URL_RO`,
 `RAILWAY_TOKEN`, `RAILWAY_PROJECT_ID`, `RAILWAY_ENVIRONMENT_ID`,
-`RAILWAY_SERVICE_ID`. Human setup instructions are in `docs/REMOTE_ACCESS.md`.
+`RAILWAY_SERVICE_ID` (main/live worker), and `RAILWAY_EVO_SERVICE_ID` (the evo
+worker — enables `{"service":"evo"}` env/logs requests). Human setup instructions
+are in `docs/REMOTE_ACCESS.md`.
 
 ### Gotchas
 
