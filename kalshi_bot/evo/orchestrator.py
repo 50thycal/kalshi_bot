@@ -184,6 +184,14 @@ def run_evo_cycle(runtime: EvoRuntime) -> None:
             seed_graveyard(session)
             seed_builtin_sources(session)
             seed_announcements(session)
+        # One-shot local-LLM reachability diagnosis, logged at startup whenever a
+        # local backend is configured (independent of whether it is ENABLED for
+        # routing) — turns an otherwise-silent "every routine heartbeat degrades"
+        # into an explicit, greppable verdict (reachable / model missing / the exact
+        # connection error) an operator can act on from the logs alone.
+        if settings.local_llm_base_url:
+            log_event(logger, logging.INFO,
+                      f"evo local-llm probe: {runtime.llm.probe_local()}")
         runtime._bootstrapped = True
 
     with session_scope() as session:

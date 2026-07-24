@@ -172,3 +172,87 @@ def test_local_backend_http_error_is_surfaced_as_error():
             assert list(session.scalars(select(EvoLlmUsage))) == []
     finally:
         client.close()
+
+
+@respx.mock
+def test_local_backend_connection_error_is_logged_and_surfaced(caplog):
+    # A connection-level failure (unreachable host / connect timeout / refused) must
+    # surface as an error AND be logged with the real reason — otherwise every routine
+    # heartbeat degrades to a silent no-op with no clue why.
+    import logging as _logging
+
+    import httpx
+
+    _init_sqlite_engine()
+    settings = _local_settings()
+    with db.session_scope() as session:
+        agent_uuid, cohort_id = _make_agent(session, settings)
+
+    respx.post("http://ollama.local:11434/v1/chat/completions").mock(
+        side_effect=httpx.ConnectError("nodename nor servname provided")
+    )
+    client = llm.LlmClient(settings)
+    try:
+        with caplog.at_level(_logging.WARNING), db.session_scope() as session:
+            result = client.complete(
+                session, agent_uuid=agent_uuid, cohort_id=cohort_id,
+                heartbeat_id=None, alias="routine", system_blocks=[],
+                user_content="hi", max_tokens=100,
+            )
+        assert result.error is not None and "ConnectError" in result.error
+        assert any("local llm connection error" in r.message for r in caplog.records)
+    finally:
+        client.close()
+
+
+def test_probe_local_not_configured():
+    client = llm.LlmClient(EvoSettings(_env_file=None))
+    try:
+        assert "not configured" in client.probe_local()
+    finally:
+        client.close()
+
+
+@respx.mock
+def test_probe_local_reports_ok_when_model_present():
+    settings = _local_settings()
+    respx.get("http://ollama.local:11434/v1/models").mock(
+        return_value=Response(200, json={"data": [
+            {"id": "qwen2.5:7b-instruct"}, {"id": "llama3.2:3b"}]})
+    )
+    client = llm.LlmClient(settings)
+    try:
+        verdict = client.probe_local()
+        assert verdict.startswith("OK") and "qwen2.5:7b-instruct" in verdict
+    finally:
+        client.close()
+
+
+@respx.mock
+def test_probe_local_reports_missing_model():
+    settings = _local_settings()
+    respx.get("http://ollama.local:11434/v1/models").mock(
+        return_value=Response(200, json={"data": [{"id": "some-other-model"}]})
+    )
+    client = llm.LlmClient(settings)
+    try:
+        verdict = client.probe_local()
+        assert "MISSING" in verdict and "some-other-model" in verdict
+    finally:
+        client.close()
+
+
+@respx.mock
+def test_probe_local_reports_unreachable_with_exception_type():
+    import httpx
+
+    settings = _local_settings()
+    respx.get("http://ollama.local:11434/v1/models").mock(
+        side_effect=httpx.ConnectTimeout("timed out")
+    )
+    client = llm.LlmClient(settings)
+    try:
+        verdict = client.probe_local()
+        assert "UNREACHABLE" in verdict and "ConnectTimeout" in verdict
+    finally:
+        client.close()

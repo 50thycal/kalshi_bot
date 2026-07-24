@@ -105,7 +105,19 @@ class LlmClient:
         self.settings = settings
         self.api_key = api_key if api_key is not None else os.environ.get("ANTHROPIC_API_KEY", "")
         self._http = httpx.Client(timeout=settings.llm_timeout_seconds)
-        self._local_http = httpx.Client(timeout=settings.local_llm_timeout_seconds)
+        # Split the local timeout: a SHORT connect bound so an unreachable or
+        # misconfigured server (wrong private hostname, Ollama not bound to the
+        # private interface, wrong port) fails in seconds and the heartbeat degrades
+        # fast — instead of blocking the single-threaded orchestrator for the full
+        # generation timeout (a live incident: an unreachable Ollama + a 600s timeout
+        # froze the whole loop, mid-transaction, one heartbeat at a time). The long
+        # read timeout still covers genuinely slow CPU generation once connected.
+        self._local_http = httpx.Client(
+            timeout=httpx.Timeout(
+                settings.local_llm_timeout_seconds,
+                connect=min(10.0, settings.local_llm_timeout_seconds),
+            )
+        )
 
     def available(self) -> bool:
         return bool(self.api_key)
@@ -116,6 +128,34 @@ class LlmClient:
             and self.settings.local_llm_base_url
             and self.settings.local_llm_model
         )
+
+    def probe_local(self) -> str:
+        """One-shot reachability + model-presence check against the configured local
+        OpenAI-compatible server. Log-only diagnosis — never used by heartbeats, and
+        it runs whenever a base URL is configured (even if local_llm_enabled is off),
+        so the exact failure reason is visible in the worker log while routine
+        heartbeats stay safely on Anthropic. The exception TYPE is the diagnosis:
+        a name-resolution error means the private hostname is wrong or private
+        networking is off; a connect timeout means the host resolves but nothing is
+        listening on the private interface (Ollama bound to 127.0.0.1 instead of
+        0.0.0.0/[::]); connection refused means reachable host but wrong port."""
+        base = self.settings.local_llm_base_url
+        if not base:
+            return "not configured (no EVO_LOCAL_LLM_BASE_URL)"
+        url = base.rstrip("/") + "/models"
+        want = self.settings.local_llm_model
+        try:
+            resp = httpx.Client(timeout=10.0).get(url)
+            resp.raise_for_status()
+            ids = [str(m.get("id")) for m in (resp.json().get("data") or [])]
+        except httpx.HTTPStatusError as exc:
+            return f"reachable but HTTP {exc.response.status_code} at {url}: {exc.response.text[:150]}"
+        except Exception as exc:  # noqa: BLE001 — a probe must never raise into startup
+            return f"UNREACHABLE at {url}: {type(exc).__name__}: {exc}"
+        if want in ids:
+            return f"OK — reachable at {url}; target model {want!r} present ({len(ids)} model(s))"
+        return (f"reachable at {url} but target model {want!r} MISSING — "
+                f"have: {', '.join(ids[:8]) or '(none)'}")
 
     def close(self) -> None:
         self._http.close()
@@ -310,6 +350,13 @@ class LlmClient:
             return LlmResult(text="", model_id=model_id, alias=alias,
                              error=f"http {exc.response.status_code}: {body}")
         except Exception as exc:  # noqa: BLE001
+            # Connection-level failures (unreachable host, connect timeout, refused)
+            # land here, NOT in the HTTPStatusError branch — log the real reason so an
+            # operator can see WHY every routine heartbeat is degrading, instead of a
+            # silent no-op. The connect timeout above bounds how long this blocks.
+            logger.warning("evo local llm connection error", extra={"extra_fields": {
+                "error": f"{type(exc).__name__}: {exc}"[:200],
+                "url": self.settings.local_llm_base_url}})
             return LlmResult(text="", model_id=model_id, alias=alias,
                              error=f"{type(exc).__name__}: {exc}")
 
