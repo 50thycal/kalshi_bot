@@ -450,6 +450,27 @@ def test_ticket_dedup_and_support(evo_session):
     assert queue[0]["supporting_families"] == 1
 
 
+# --- budgets ----------------------------------------------------------------
+
+
+def test_ensure_budgets_tops_up_when_operator_raises_budget(evo_session):
+    from kalshi_bot.evo.config import EvoSettings
+    au, cid = "budget-topup-agent", 1
+    budgets.ensure_budgets(evo_session, au, cid, EvoSettings(_env_file=None,
+                                                             weekly_token_budget=1_500_000))
+    assert budgets.remaining(evo_session, au, cid, "tokens") == 1_500_000
+    budgets.spend(evo_session, au, cid, "tokens", 400_000)
+    # operator RAISES the token budget -> an agent already in the cohort is topped up,
+    # and the spend so far is preserved (remaining = new allocation - used)
+    budgets.ensure_budgets(evo_session, au, cid, EvoSettings(_env_file=None,
+                                                             weekly_token_budget=6_000_000))
+    assert budgets.remaining(evo_session, au, cid, "tokens") == 6_000_000 - 400_000
+    # LOWERING never cuts an existing allocation (can't strand an agent mid-spend)
+    budgets.ensure_budgets(evo_session, au, cid, EvoSettings(_env_file=None,
+                                                             weekly_token_budget=1_000_000))
+    assert budgets.remaining(evo_session, au, cid, "tokens") == 6_000_000 - 400_000
+
+
 # --- data sources -----------------------------------------------------------
 
 
