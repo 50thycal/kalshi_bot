@@ -59,16 +59,30 @@ class EvoSettings(BaseSettings):
     weekly_token_budget: int = 1_500_000  # per agent, input+output
     llm_timeout_seconds: float = 120.0
 
-    # --- local (CPU) LLM backend for routine heartbeats ---
-    # Optional: route the "routine" alias to a self-hosted OpenAI-compatible server
-    # (Ollama / llama.cpp / vLLM) instead of Anthropic — zero marginal cost, so
-    # compute becomes the binding constraint instead of the dollar ceiling. "deep"
-    # heartbeats (reflection/birth/cohort_end/retirement) always stay on Anthropic:
-    # low volume, highest stakes, exactly where quality matters most.
+    # --- OpenAI-compatible backend for routine heartbeats ---
+    # Optional: route the "routine" alias to any OpenAI-compatible /chat/completions
+    # server instead of Anthropic. Two shapes, same code path:
+    #   1. A self-hosted server (Ollama / llama.cpp / vLLM) — no api key, leave the
+    #      cost rates at 0.0, so compute (token caps) is the only constraint.
+    #   2. A hosted inference API (e.g. Groq) — set an api key and the per-Mtok cost
+    #      rates; real cost is then tracked and the weekly dollar ceiling is enforced
+    #      just like the Anthropic path.
+    # "deep" heartbeats (reflection/birth/cohort_end/retirement) always stay on
+    # Anthropic: low volume, highest stakes, exactly where quality matters most.
+    # (The env vars keep the EVO_LOCAL_LLM_* names for continuity even though a
+    # hosted provider isn't "local" — they mean "the OpenAI-compatible routine
+    # backend".)
     local_llm_enabled: bool = False
-    local_llm_base_url: str = ""  # e.g. "http://ollama.railway.internal:11434/v1"
-    local_llm_model: str = ""  # model tag as the local server expects
-    local_llm_timeout_seconds: float = 180.0  # CPU generation is slow
+    local_llm_base_url: str = ""  # e.g. "http://ollama.railway.internal:11434/v1" or "https://api.groq.com/openai/v1"
+    local_llm_model: str = ""  # model id as the server expects (e.g. "llama-3.1-8b-instant")
+    local_llm_timeout_seconds: float = 180.0  # generous: covers slow CPU generation; a hosted GPU API returns in seconds
+    local_llm_api_key: str = ""  # EVO_LOCAL_LLM_API_KEY — bearer token for a hosted provider; empty for a self-hosted server that needs no auth
+    # Per-million-token cost of the routine backend. Both 0.0 => treated as free
+    # (self-hosted): no dollar cost recorded, dollar ceiling skipped. Any value > 0
+    # => a paid provider: real cost is booked to evo_llm_usage and charged against
+    # the weekly llm_cost_usd ceiling. Groq llama-3.1-8b-instant: 0.05 in / 0.08 out.
+    local_llm_input_cost_per_mtok: float = 0.0   # EVO_LOCAL_LLM_INPUT_COST_PER_MTOK
+    local_llm_output_cost_per_mtok: float = 0.0  # EVO_LOCAL_LLM_OUTPUT_COST_PER_MTOK
 
     # --- other per-cohort resource budgets ---
     weekly_tool_calls: int = 2000

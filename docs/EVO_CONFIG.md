@@ -47,25 +47,37 @@ they ran under. Defaults are the spec's initial system defaults.
 Prices per model live in the `evo_model_prices` table (seeded on first run; update
 rows there — cost math never hardcodes a price).
 
-## Local (CPU) LLM backend
+## OpenAI-compatible routine LLM backend
 
-Optional: route the `routine` alias to a self-hosted OpenAI-compatible server
-(Ollama / llama.cpp / vLLM) reachable over Railway's private network, instead of
-Anthropic. Zero marginal cost — the weekly `$` ceiling stops applying to routine
-heartbeats, so `EVO_HEARTBEAT_MAX_INPUT_TOKENS` / `EVO_HEARTBEAT_MAX_OUTPUT_TOKENS`
-become the real constraint (CPU generation time, not dollars). `deep` heartbeats
-(reflection/birth/cohort_end/retirement) always stay on Anthropic — low volume,
-highest stakes.
+Optional: route the `routine` alias to any OpenAI-compatible `/chat/completions`
+server instead of Anthropic. `deep` heartbeats (reflection/birth/cohort_end/
+retirement) always stay on Anthropic — low volume, highest stakes. Two shapes,
+same code path (the env vars keep the `EVO_LOCAL_LLM_*` names even for a hosted
+provider — they mean "the OpenAI-compatible routine backend"):
+
+- **Self-hosted (free)** — a server on your own infra (Ollama / llama.cpp / vLLM),
+  no API key, cost rates left at `0`. `evo_llm_usage` records `cost_usd=0` and the
+  weekly `$` ceiling is skipped for routine, so `EVO_HEARTBEAT_MAX_INPUT_TOKENS` /
+  `EVO_HEARTBEAT_MAX_OUTPUT_TOKENS` (generation time) are the only constraint. A
+  CPU box is often too slow to finish a full heartbeat inside the read timeout.
+- **Hosted API (paid, e.g. Groq)** — set an API key and the per-Mtok cost rates.
+  A `Authorization: Bearer` header is sent, real `cost_usd` is booked to
+  `evo_llm_usage`, and the weekly `EVO_WEEKLY_LLM_CEILING_USD` is projected before
+  the call and charged after — exactly like the Anthropic path. GPU-class latency
+  at a small fraction of Haiku's cost, with no server to operate.
 
 | Env var | Default | Meaning |
 |---|---|---|
 | `EVO_LOCAL_LLM_ENABLED` | `false` | master switch; `routine` falls back to Anthropic when false or when base_url/model are unset |
-| `EVO_LOCAL_LLM_BASE_URL` | `""` | OpenAI-compat base URL, e.g. `http://ollama.railway.internal:11434/v1` (the client POSTs `<base_url>/chat/completions`) |
-| `EVO_LOCAL_LLM_MODEL` | `""` | model tag as the local server expects, e.g. `qwen2.5:7b-instruct` |
-| `EVO_LOCAL_LLM_TIMEOUT_SECONDS` | `180` | CPU generation is slow; longer than `EVO_LLM_TIMEOUT_SECONDS` |
+| `EVO_LOCAL_LLM_BASE_URL` | `""` | OpenAI-compat base URL, e.g. `http://ollama.railway.internal:11434/v1` or `https://api.groq.com/openai/v1` (the client POSTs `<base_url>/chat/completions`) |
+| `EVO_LOCAL_LLM_MODEL` | `""` | model id the server expects, e.g. `qwen2.5:7b-instruct` (self-host) or `llama-3.1-8b-instant` (Groq) |
+| `EVO_LOCAL_LLM_TIMEOUT_SECONDS` | `180` | read timeout; connect is bounded to ≤10s separately so an unreachable host fails fast instead of freezing the loop |
+| `EVO_LOCAL_LLM_API_KEY` | `""` | bearer token for a hosted provider; empty for a keyless self-host |
+| `EVO_LOCAL_LLM_INPUT_COST_PER_MTOK` | `0.0` | USD per 1M input tokens (`> 0` marks a paid provider). Groq `llama-3.1-8b-instant`: `0.05` |
+| `EVO_LOCAL_LLM_OUTPUT_COST_PER_MTOK` | `0.0` | USD per 1M output tokens. Groq `llama-3.1-8b-instant`: `0.08` |
 
-No pricing row is needed for the local backend — `evo_llm_usage` records `cost_usd=0`
-for these calls, so cost reporting stays correct without touching `evo_model_prices`.
+No `evo_model_prices` row is needed for this backend — cost comes from the two
+`_COST_PER_MTOK` rates (both `0` = free), recorded directly on `evo_llm_usage`.
 
 ## Market realism & listeners
 
