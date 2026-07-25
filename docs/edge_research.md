@@ -73,6 +73,23 @@ ceil(7p(1-p)) per-leg fee. **No real arb.** The 15 initial "hits" were all artif
   arbitraged clean. Scanner kept as a correct standing monitor (flags a real dislocation if one
   ever appears), but nothing to harvest.
 
+**Re-scan 2026-07-25 (1,021 events, 45-day horizon) — verdict unchanged, zero real arbs.**
+The board is if anything tighter: the liquid MECE sets cluster at Σ(yes_ask) 0.97–0.99, i.e.
+1–3¢ *short* of a lock, every time (Top-AI-model 0.93, MLB first-3-innings 0.99, ATL high temp
+0.99); widest Σ(yes_bid) was 1.05 on a weather ladder, which the buy-all-NO leg fees erase.
+One flagged +$0.65 MONO-VERTICAL on `KXMUSKNW-26JUL31` was **the same parser-bug class as the
+original 12** — `_UNIT` scaled `k/m/b` but not spelled-out *trillion*, so `Above $700 billion`
+→ 7e11 while `Above $1.00 trillion` → 1.0, inverting an otherwise-monotone ladder. Fixed
+(spelled-out units + a `(?![a-z])` lookahead so `5 to 10` isn't tera and `3 mph` isn't mega —
+the bare-letter alternation was silently mis-scaling those too) and locked down by
+`tests/test_kalshi_arb.py`. **Net: the locked-arb family stays dead for the taker.**
+
+Structural note worth keeping, because it kills the naive form on sight: on Kalshi YES and NO
+share **one** orderbook, so `no_ask = 100 − yes_bid` and buying both sides of a *single* market
+costs `yes_ask + (1 − yes_bid) = 100 + spread` ≥ $1 before fees. A one-market "buy YES and NO"
+lock is impossible by construction — any real Dutch book has to come from multiple legs, which
+is exactly what this scanner covers and finds arbitraged clean.
+
 ## RULED OUT — Favorite-longshot bias, taker side (`scripts/kalshi_flb.py`)
 
 Backtested settled markets (discover liquid series → pull settled history → price each at

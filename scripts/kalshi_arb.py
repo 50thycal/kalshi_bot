@@ -26,11 +26,17 @@ import time
 import xvenue_leadlag as xl  # _get, _num
 
 KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
-# capture an optional leading sign/$ blob, the number, and an optional K/M/B unit — so
+# capture an optional leading sign/$ blob, the number, and an optional magnitude unit — so
 # 'Above -0.3%' -> -0.3 and 'Above $1.1M' -> 1_100_000 (both were mis-parsed before, which
-# scrambled otherwise-monotone ladders into FALSE arbs).
-_NUM = re.compile(r"([-$]*)\s*([0-9][0-9,]*\.?[0-9]*)\s*([kmb]?)", re.I)
-_UNIT = {"": 1.0, "k": 1e3, "m": 1e6, "b": 1e9}
+# scrambled otherwise-monotone ladders into FALSE arbs). The unit is either a spelled-out word
+# ('$700 billion', '$1.00 trillion') or a bare letter NOT glued to more letters — the lookahead
+# is what stops '5 to 10' parsing as 5e12 and '3 mph' as 3e6.
+_NUM = re.compile(
+    r"([-$]*)\s*([0-9][0-9,]*\.?[0-9]*)\s*(thousand|million|billion|trillion|[kmbt](?![a-z]))?",
+    re.I,
+)
+_UNIT = {"": 1.0, "k": 1e3, "m": 1e6, "b": 1e9, "t": 1e12,
+         "thousand": 1e3, "million": 1e6, "billion": 1e9, "trillion": 1e12}
 
 
 def fee(p: float) -> float:
