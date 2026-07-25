@@ -82,7 +82,23 @@ original 12** — `_UNIT` scaled `k/m/b` but not spelled-out *trillion*, so `Abo
 → 7e11 while `Above $1.00 trillion` → 1.0, inverting an otherwise-monotone ladder. Fixed
 (spelled-out units + a `(?![a-z])` lookahead so `5 to 10` isn't tera and `3 mph` isn't mega —
 the bare-letter alternation was silently mis-scaling those too) and locked down by
-`tests/test_kalshi_arb.py`. **Net: the locked-arb family stays dead for the taker.**
+`tests/test_kalshi_arb.py`.
+
+**Post-merge verification re-run turned up a third, different false-positive class.**
+`KXXRP-26JUL2617` (XRP price range) flagged **+$0.62 BUY-ALL-YES** — but every one of its 19
+retained legs was quoted bid=0¢/ask=1¢ (worthless tails), with the entire **$0.88–$1.2999 band
+silently missing** between two retained legs. Root cause: `scan_event`'s illiquid-quote filter
+(`0 < ya <= 1`) drops a leg without re-checking that the survivors still tile the outcome space,
+so `mutually_exclusive=True` (which describes the *full* set) got applied to a *subset* —
+Σ(yes_ask) over the remaining legs is a subset sum, not Sum(yes)=1, and if the real settlement
+lands in the missing gap every retained leg pays zero. Same underlying trap as the July
+Peru-president/Netflix hits, but this time on a numeric ladder instead of a candidate-name set.
+Fixed with `_tiles_exhaustively`: for any MECE set where every leg parses numerically (le/range/
+ge), require the parsed buckets to tile with no gap wider than 2¢ before trusting the sum;
+named-candidate sets (no numeric structure to tile) still rely on the printed leg detail, as
+before. Locked down by 6 more tests in `tests/test_kalshi_arb.py`, including the exact
+KXXRP-26JUL2617 shape. **Net: the locked-arb family stays dead for the taker, and the monitor
+now suppresses (and reports) a gapped hit instead of trusting it.**
 
 Structural note worth keeping, because it kills the naive form on sight: on Kalshi YES and NO
 share **one** orderbook, so `no_ask = 100 − yes_bid` and buying both sides of a *single* market

@@ -12,6 +12,14 @@ Two checks across open Kalshi events:
 
 Reports actual violations (net of the ceil(7*p*(1-p)) per-leg fee) AND the tightness
 distribution (how close Sum(yes_ask) gets to $1) so we see how arbitraged the exchange is.
+
+For a numeric threshold/range ladder, a Dutch-book hit is only trusted if the retained legs
+tile the outcome space with no gap (`_tiles_exhaustively`) -- an illiquid leg silently dropped
+by the quote filter can otherwise turn "Sum(yes) over a subset" into a fake "Sum(yes)=1" arb,
+where every surviving leg is a worthless tail and the real probability mass sits in the missing
+gap. Named-candidate MECE sets (no numeric structure to tile) still rely on the printed leg
+detail for a manual reality check.
+
 Read-only public API, stdlib only. Usage: {"type":"script","name":"kalshi_arb","args":["--days","30"]}
 """
 
@@ -77,6 +85,44 @@ def _close_ts(m: dict) -> int:
         return 0
 
 
+def _tiles_exhaustively(mkts: list[dict], tol: float = 0.02) -> bool:
+    """True if every leg parsed as a numeric bucket (le/range/ge) AND those buckets tile the
+    outcome space with no gap wider than `tol` (in the subtitle's own units).
+
+    Guards the one failure mode both real-scan false positives shared: a leg gets silently
+    dropped by the illiquid-quote filter in `scan_event` (0 < ya <= 1), so the retained legs
+    stop being exhaustive. Summing yes_ask over a mutually_exclusive event's SURVIVING legs
+    then measures a subset sum, not Sum(yes)=1 -- and if the missing gap holds the real
+    probability mass, every retained leg can look like a worthless-tail "arb" (KXXRP-26JUL2617:
+    19 legs, all bid=0/ask=1c, with the entire $0.88-$1.30 band silently missing). A single
+    dropped leg always opens a gap strictly wider than one bucket width, so the interval check
+    below catches it without needing to compare against the event's raw market count.
+
+    Returns False (unverifiable, not proven exhaustive) for named-candidate MECE sets (election
+    winners, "who will be next X") -- there's no numeric structure to tile, so those still rely
+    on the printed leg detail for a manual reality check, same as before this guard existed.
+    """
+    if not mkts or any(not m["parse"] for m in mkts):
+        return False
+    intervals = []
+    n_le = n_ge = 0
+    for m in mkts:
+        kind, *bounds = m["parse"]
+        if kind == "le":
+            intervals.append((float("-inf"), bounds[0]))
+            n_le += 1
+        elif kind == "ge":
+            intervals.append((bounds[0], float("inf")))
+            n_ge += 1
+        else:  # "range"
+            intervals.append((bounds[0], bounds[1]))
+    if n_le != 1 or n_ge != 1:          # no open tails on both ends -> not a full partition
+        return False
+    intervals.sort(key=lambda iv: iv[0])
+    return all(lo2 - hi1 <= tol
+               for (_, hi1), (lo2, _) in zip(intervals, intervals[1:], strict=False))
+
+
 def scan_event(e: dict, fee_buf: float, max_close: int):
     """Return a dict of any arb found + tightness metrics for one event, or None if skipped."""
     mkts = []
@@ -103,12 +149,20 @@ def scan_event(e: dict, fee_buf: float, max_close: int):
         buy_all = 1.0 - sum_ask - sum(fee(m["ya"]) for m in mkts)          # buy every YES
         # buy-all-NO profit = Sum(yes_bid) - 1 - fees (each NO costs 1-yb, N-1 of N pay $1)
         sell_all = sum_bid - 1.0 - sum(fee(m["yb"]) for m in mkts)
+        # For a numeric threshold/range ladder, require the legs to tile with no gap before
+        # trusting Sum(yes) as a real partition sum -- a dropped illiquid leg turns a Dutch
+        # book into a subset sum over worthless tails (see _tiles_exhaustively docstring).
+        # Named-candidate sets have no numeric structure to verify and keep the prior
+        # flag-trusting behavior (still subject to the printed leg-detail reality check).
+        numeric = all(m["parse"] for m in mkts)
+        gapped = numeric and not _tiles_exhaustively(mkts)
         out.update(mece=True, sum_ask=sum_ask, sum_bid=sum_bid,
-                   arb_buy=buy_all, arb_sell=sell_all)
-        if buy_all > fee_buf:
-            out["ARB"] = ("BUY-ALL-YES", buy_all)
-        elif sell_all > fee_buf:
-            out["ARB"] = ("BUY-ALL-NO", sell_all)
+                   arb_buy=buy_all, arb_sell=sell_all, gapped=gapped)
+        if not gapped:
+            if buy_all > fee_buf:
+                out["ARB"] = ("BUY-ALL-YES", buy_all)
+            elif sell_all > fee_buf:
+                out["ARB"] = ("BUY-ALL-NO", sell_all)
         return out
 
     # (2) Monotonicity on a 'ge' threshold ladder
@@ -160,7 +214,12 @@ def main(argv: list[str] | None = None) -> int:
         if not cursor or not evs:
             break
 
+    gapped = [r for r in results if r.get("gapped")]
     print(f"=== Kalshi no-arbitrage scan — {scanned} multi-outcome events, {arbs} locked arbs ===\n")
+    if gapped:
+        print(f"  ({len(gapped)} numeric MECE set(s) had a gap in the retained legs -- likely an "
+              f"illiquid leg filtered out -- so a would-be Sum(yes) hit was suppressed, not "
+              f"trusted; see e.g. {gapped[0]['event']})\n")
     live = [r for r in results if "ARB" in r]
     if live:
         print("  *** LOCKED ARBS ***")
