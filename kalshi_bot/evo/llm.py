@@ -165,6 +165,20 @@ class LlmClient:
         """True when this tier's alias should go to the OpenAI-compatible backend."""
         return self.local_available() and alias in self.settings.local_alias_set()
 
+    def _max_input_tokens(self, alias: str) -> int:
+        """Input-size pre-flight cap for this tier. Tiers 2/3 carry richer context
+        (graveyard + peer roster on top of everything tier 1 gets — see
+        cognition.is_enriched_kind), so they legitimately need more headroom than
+        tier 1's cap. Discovered live: reflection heartbeats regularly ran
+        ~12.5-13.5K tokens and were rejected by the single shared cap that was
+        sized for tier 1 — every tier-2 heartbeat degraded as "input too large"
+        even though nothing was actually wrong with it."""
+        if alias == "strategic":
+            return self.settings.strategic_max_input_tokens
+        if alias == "deep":
+            return self.settings.reflection_max_input_tokens
+        return self.settings.heartbeat_max_input_tokens
+
     def _local_model_and_rates(self, alias: str) -> tuple[str, float, float]:
         """(model_id, input $/Mtok, output $/Mtok) for an alias routed to the
         OpenAI-compatible backend. Each tier may name its own model and rates;
@@ -300,7 +314,7 @@ class LlmClient:
         est_input = len(user_content) // 3 + sum(
             len(str(b.get("text", ""))) for b in system_blocks
         ) // 3
-        if est_input > self.settings.heartbeat_max_input_tokens:
+        if est_input > self._max_input_tokens(alias):
             return LlmResult(text="", model_id=price.model_id, alias=alias,
                              error=f"input too large (~{est_input} tokens)")
         projected = compute_cost_usd(price, est_input, 0, max_tokens)
@@ -414,7 +428,7 @@ class LlmClient:
         paid = in_rate > 0 or out_rate > 0
         system_text = "\n\n".join(str(b.get("text", "")) for b in system_blocks)
         est_input = (len(system_text) + len(user_content)) // 3
-        if est_input > self.settings.heartbeat_max_input_tokens:
+        if est_input > self._max_input_tokens(alias):
             return LlmResult(text="", model_id=model_id, alias=alias,
                              error=f"input too large (~{est_input} tokens)")
         # Paid hosted provider: refuse up front if the worst-case cost would breach
