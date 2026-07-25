@@ -5,13 +5,20 @@ caching (spec §11, §20).
 Two backends, chosen per call by LlmClient.complete(): the Anthropic Messages
 API over httpx (no new SDK dependency), and an optional OpenAI-compatible
 /chat/completions server for the "routine" alias when EVO_LOCAL_LLM_ENABLED is
-set. That second backend covers both a self-hosted server (Ollama / llama.cpp /
-vLLM — no api key, zero cost, so token caps are the only constraint) and a
-hosted inference API (e.g. Groq — a bearer key plus per-Mtok cost rates, so real
-cost is tracked and the weekly dollar ceiling is enforced exactly as on the
-Anthropic path). "deep" heartbeats (reflection/birth/cohort_end/retirement)
-always use Anthropic. One call per heartbeat, bounded max_tokens — there is no
-agent-side loop, so runaway recursion is impossible by construction.
+set. That second backend covers a self-hosted server (Ollama / llama.cpp /
+vLLM — no api key, zero cost, so token caps are the only constraint) or any
+hosted inference API/router that speaks the same OpenAI-compatible shape (Groq,
+OpenRouter, ... — a bearer key plus per-Mtok cost rates, so real cost is tracked
+and the weekly dollar ceiling is enforced exactly as on the Anthropic path).
+Groq's own free tier caps a single request's tokens-per-minute well below what
+a routine heartbeat's context needs (~9-10K input alone); OpenRouter fronts many
+providers behind one endpoint without that per-request ceiling, so it is the
+practical default for a paid hosted "routine" backend — same code path, no
+provider-specific logic beyond the bearer header and its (optional, harmless-
+elsewhere) HTTP-Referer/X-Title identification headers. "deep" heartbeats
+(reflection/birth/cohort_end/retirement) always use Anthropic. One call per
+heartbeat, bounded max_tokens — there is no agent-side loop, so runaway
+recursion is impossible by construction.
 
 No ANTHROPIC_API_KEY and no local backend configured => cognition fails closed
 (the orchestrator journals heartbeats as skipped; listeners/paper/audit keep
@@ -143,9 +150,18 @@ class LlmClient:
 
     def _local_headers(self) -> dict[str, str]:
         """Auth header for the OpenAI-compatible routine backend: a bearer token when
-        a hosted provider (Groq) is configured, nothing for a keyless self-host."""
+        a hosted provider (Groq, OpenRouter, ...) is configured, nothing for a keyless
+        self-host. OpenRouter additionally reads HTTP-Referer/X-Title identification
+        headers — optional per their docs (used for their public app-rankings page,
+        not required for a request to succeed) — sent only when the base URL is
+        OpenRouter's; harmless no-ops on any other provider, so this never affects
+        Groq or a self-hosted server."""
         key = self.settings.local_llm_api_key
-        return {"Authorization": f"Bearer {key}"} if key else {}
+        headers = {"Authorization": f"Bearer {key}"} if key else {}
+        if "openrouter.ai" in self.settings.local_llm_base_url:
+            headers["HTTP-Referer"] = "https://github.com/50thycal/kalshi_bot"
+            headers["X-Title"] = "kalshi-evo-bot"
+        return headers
 
     def _local_is_paid(self) -> bool:
         """A cost rate > 0 marks a paid hosted provider — then real cost is booked and

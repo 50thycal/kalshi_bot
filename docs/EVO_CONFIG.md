@@ -60,21 +60,32 @@ provider — they mean "the OpenAI-compatible routine backend"):
   weekly `$` ceiling is skipped for routine, so `EVO_HEARTBEAT_MAX_INPUT_TOKENS` /
   `EVO_HEARTBEAT_MAX_OUTPUT_TOKENS` (generation time) are the only constraint. A
   CPU box is often too slow to finish a full heartbeat inside the read timeout.
-- **Hosted API (paid, e.g. Groq)** — set an API key and the per-Mtok cost rates.
-  A `Authorization: Bearer` header is sent, real `cost_usd` is booked to
+- **Hosted API (paid)** — set an API key and the per-Mtok cost rates. A
+  `Authorization: Bearer` header is sent, real `cost_usd` is booked to
   `evo_llm_usage`, and the weekly `EVO_WEEKLY_LLM_CEILING_USD` is projected before
   the call and charged after — exactly like the Anthropic path. GPU-class latency
   at a small fraction of Haiku's cost, with no server to operate.
+  - **OpenRouter** (recommended default) — fronts many providers behind one
+    OpenAI-compatible endpoint with no low per-request tokens-per-minute ceiling.
+    `EVO_LOCAL_LLM_BASE_URL=https://openrouter.ai/api/v1`, model ids are
+    `provider/model` (e.g. `meta-llama/llama-3.1-8b-instruct`). The client also
+    sends OpenRouter's optional `HTTP-Referer` / `X-Title` identification headers
+    automatically whenever the base URL is `openrouter.ai` — harmless no-ops on
+    any other provider, not required for requests to succeed.
+  - **Groq** — same mechanics, but its free `on_demand` tier caps a single
+    request at 6000 tokens-per-minute (input + reserved `max_tokens` combined),
+    which a routine heartbeat's ~9-10K-token context already exceeds before any
+    output is counted. Only viable on a Groq paid tier with a higher TPM cap.
 
 | Env var | Default | Meaning |
 |---|---|---|
 | `EVO_LOCAL_LLM_ENABLED` | `false` | master switch; `routine` falls back to Anthropic when false or when base_url/model are unset |
-| `EVO_LOCAL_LLM_BASE_URL` | `""` | OpenAI-compat base URL, e.g. `http://ollama.railway.internal:11434/v1` or `https://api.groq.com/openai/v1` (the client POSTs `<base_url>/chat/completions`) |
-| `EVO_LOCAL_LLM_MODEL` | `""` | model id the server expects, e.g. `qwen2.5:7b-instruct` (self-host) or `llama-3.1-8b-instant` (Groq) |
+| `EVO_LOCAL_LLM_BASE_URL` | `""` | OpenAI-compat base URL, e.g. `http://ollama.railway.internal:11434/v1`, `https://openrouter.ai/api/v1`, or `https://api.groq.com/openai/v1` (the client POSTs `<base_url>/chat/completions`) |
+| `EVO_LOCAL_LLM_MODEL` | `""` | model id the server expects, e.g. `qwen2.5:7b-instruct` (self-host), `meta-llama/llama-3.1-8b-instruct` (OpenRouter), or `llama-3.1-8b-instant` (Groq) |
 | `EVO_LOCAL_LLM_TIMEOUT_SECONDS` | `180` | read timeout; connect is bounded to ≤10s separately so an unreachable host fails fast instead of freezing the loop |
 | `EVO_LOCAL_LLM_API_KEY` | `""` | bearer token for a hosted provider; empty for a keyless self-host |
-| `EVO_LOCAL_LLM_INPUT_COST_PER_MTOK` | `0.0` | USD per 1M input tokens (`> 0` marks a paid provider). Groq `llama-3.1-8b-instant`: `0.05` |
-| `EVO_LOCAL_LLM_OUTPUT_COST_PER_MTOK` | `0.0` | USD per 1M output tokens. Groq `llama-3.1-8b-instant`: `0.08` |
+| `EVO_LOCAL_LLM_INPUT_COST_PER_MTOK` | `0.0` | USD per 1M input tokens (`> 0` marks a paid provider). Check the chosen model's current price on the provider's site before setting this — rates change. |
+| `EVO_LOCAL_LLM_OUTPUT_COST_PER_MTOK` | `0.0` | USD per 1M output tokens. Same caveat — verify current pricing. |
 
 No `evo_model_prices` row is needed for this backend — cost comes from the two
 `_COST_PER_MTOK` rates (both `0` = free), recorded directly on `evo_llm_usage`.

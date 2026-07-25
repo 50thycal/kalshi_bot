@@ -64,18 +64,22 @@ class EvoSettings(BaseSettings):
     # server instead of Anthropic. Two shapes, same code path:
     #   1. A self-hosted server (Ollama / llama.cpp / vLLM) — no api key, leave the
     #      cost rates at 0.0, so compute (token caps) is the only constraint.
-    #   2. A hosted inference API (e.g. Groq) — set an api key and the per-Mtok cost
-    #      rates; real cost is then tracked and the weekly dollar ceiling is enforced
-    #      just like the Anthropic path.
+    #   2. A hosted inference API/router (OpenRouter, Groq, ...) — set an api key
+    #      and the per-Mtok cost rates; real cost is then tracked and the weekly
+    #      dollar ceiling is enforced just like the Anthropic path. OpenRouter is
+    #      the practical default here: it fronts many providers behind one endpoint
+    #      with no low per-request tokens-per-minute ceiling (Groq's free tier caps
+    #      a single request well below what a routine heartbeat's ~9-10K-token
+    #      context needs, before output is even counted).
     # "deep" heartbeats (reflection/birth/cohort_end/retirement) always stay on
     # Anthropic: low volume, highest stakes, exactly where quality matters most.
     # (The env vars keep the EVO_LOCAL_LLM_* names for continuity even though a
     # hosted provider isn't "local" — they mean "the OpenAI-compatible routine
     # backend".)
     local_llm_enabled: bool = False
-    local_llm_base_url: str = ""  # e.g. "http://ollama.railway.internal:11434/v1" or "https://api.groq.com/openai/v1"
-    local_llm_model: str = ""  # model id as the server expects (e.g. "llama-3.1-8b-instant")
-    local_llm_timeout_seconds: float = 180.0  # generous: covers slow CPU generation; a hosted GPU API returns in seconds
+    local_llm_base_url: str = ""  # e.g. "http://ollama.railway.internal:11434/v1", "https://openrouter.ai/api/v1", or "https://api.groq.com/openai/v1"
+    local_llm_model: str = ""  # model id as the server expects (e.g. "meta-llama/llama-3.1-8b-instruct" on OpenRouter)
+    local_llm_timeout_seconds: float = 180.0  # generous: covers slow CPU generation; a hosted GPU/router API returns in seconds
     local_llm_api_key: str = ""  # EVO_LOCAL_LLM_API_KEY — bearer token for a hosted provider; empty for a self-hosted server that needs no auth
     # Per-million-token cost of the routine backend. Both 0.0 => treated as free
     # (self-hosted): no dollar cost recorded, dollar ceiling skipped. Any value > 0
