@@ -62,7 +62,7 @@ def test_scan_event_finds_no_arb_in_correctly_priced_musk_ladder():
         "event_ticker": "KXMUSKNW-TEST", "title": "Elon Musk net worth", "mutually_exclusive": False,
         "markets": [
             {"yes_bid_dollars": yb, "yes_ask_dollars": ya, "yes_sub_title": s, "ticker": f"T{i}"}
-            for i, (s, (yb, ya)) in enumerate(zip(subs, prices))
+            for i, (s, (yb, ya)) in enumerate(zip(subs, prices, strict=True))
         ],
     }
     out = arb.scan_event(event, fee_buf=0.0, max_close=0)
