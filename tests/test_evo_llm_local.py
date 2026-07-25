@@ -1,6 +1,7 @@
-"""Tests for the local (CPU) OpenAI-compatible LLM backend: routing, budget
-checks, response parsing, and the same cost-recording discipline as the
-Anthropic path (own transaction, zero cost recorded)."""
+"""Tests for the OpenAI-compatible routine LLM backend: routing, budget checks,
+response parsing, and cost-recording discipline (own transaction). Covers both
+shapes — a free self-hosted server (no auth, zero cost) and a paid hosted
+provider like Groq (bearer token, real per-Mtok cost, dollar-ceiling enforced)."""
 
 from __future__ import annotations
 
@@ -23,11 +24,23 @@ def _init_sqlite_engine():
 
 
 def _local_settings(**overrides):
-    return EvoSettings(
+    base = dict(
         _env_file=None,
         local_llm_enabled=True,
         local_llm_base_url="http://ollama.local:11434/v1",
         local_llm_model="qwen2.5:7b-instruct",
+    )
+    base.update(overrides)  # let callers override any default (e.g. the model)
+    return EvoSettings(**base)
+
+
+def _paid_settings(**overrides):
+    """A hosted provider (Groq-shaped): bearer key + per-Mtok cost rates."""
+    return _local_settings(
+        local_llm_model="llama-3.1-8b-instant",
+        local_llm_api_key="gsk_test_key",
+        local_llm_input_cost_per_mtok=0.05,
+        local_llm_output_cost_per_mtok=0.08,
         **overrides,
     )
 
@@ -254,5 +267,118 @@ def test_probe_local_reports_unreachable_with_exception_type():
     try:
         verdict = client.probe_local()
         assert "UNREACHABLE" in verdict and "ConnectTimeout" in verdict
+    finally:
+        client.close()
+
+
+# --- paid hosted provider (Groq-shaped) --------------------------------------
+
+
+@respx.mock
+def test_paid_provider_sends_bearer_and_books_real_cost():
+    _init_sqlite_engine()
+    settings = _paid_settings()
+    with db.session_scope() as session:
+        agent_uuid, cohort_id = _make_agent(session, settings)
+
+    route = respx.post("http://ollama.local:11434/v1/chat/completions").mock(
+        return_value=Response(200, json={
+            "choices": [{"message": {"content": '{"journal": {}, "actions": []}'}}],
+            "usage": {"prompt_tokens": 800, "completion_tokens": 200},
+        })
+    )
+    client = llm.LlmClient(settings)
+    try:
+        with db.session_scope() as session:
+            result = client.complete(
+                session, agent_uuid=agent_uuid, cohort_id=cohort_id,
+                heartbeat_id=None, alias="routine",
+                system_blocks=[{"type": "text", "text": "sys"}],
+                user_content="hi", max_tokens=100,
+            )
+        expected = llm.rate_cost_usd(800, 200, 0.05, 0.08)
+        assert expected > 0
+        assert result.error is None
+        assert result.cost_usd == expected
+        assert result.model_id == "llama-3.1-8b-instant"
+        # bearer token was sent to the hosted provider
+        assert route.calls.last.request.headers.get("authorization") == "Bearer gsk_test_key"
+
+        with db.session_scope() as session:
+            rows = list(session.scalars(select(EvoLlmUsage)))
+            assert len(rows) == 1
+            assert float(rows[0].cost_usd) == expected
+            remaining = budgets.remaining(session, agent_uuid, cohort_id, "llm_cost_usd")
+            assert abs(remaining - (settings.weekly_llm_ceiling_usd - expected)) < 1e-9, (
+                "the real cost must be charged against the weekly dollar ceiling"
+            )
+    finally:
+        client.close()
+
+
+@respx.mock
+def test_paid_provider_refuses_when_dollar_ceiling_reached():
+    _init_sqlite_engine()
+    # ceiling of $0 => any projected cost > 0 must refuse before any network call
+    settings = _paid_settings(weekly_llm_ceiling_usd=0.0)
+    with db.session_scope() as session:
+        agent_uuid, cohort_id = _make_agent(session, settings)
+
+    route = respx.post("http://ollama.local:11434/v1/chat/completions")
+    client = llm.LlmClient(settings)
+    try:
+        with db.session_scope() as session:
+            result = client.complete(
+                session, agent_uuid=agent_uuid, cohort_id=cohort_id,
+                heartbeat_id=None, alias="routine", system_blocks=[],
+                user_content="hi", max_tokens=100,
+            )
+        assert result.error is not None and "ceiling" in result.error
+        assert route.call_count == 0
+        with db.session_scope() as session:
+            assert list(session.scalars(select(EvoLlmUsage))) == []
+    finally:
+        client.close()
+
+
+@respx.mock
+def test_free_local_backend_sends_no_auth_header():
+    _init_sqlite_engine()
+    settings = _local_settings()  # no key, no rates => free self-host
+    with db.session_scope() as session:
+        agent_uuid, cohort_id = _make_agent(session, settings)
+
+    route = respx.post("http://ollama.local:11434/v1/chat/completions").mock(
+        return_value=Response(200, json={
+            "choices": [{"message": {"content": "{}"}}],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 5},
+        })
+    )
+    client = llm.LlmClient(settings)
+    try:
+        with db.session_scope() as session:
+            result = client.complete(
+                session, agent_uuid=agent_uuid, cohort_id=cohort_id,
+                heartbeat_id=None, alias="routine", system_blocks=[],
+                user_content="hi", max_tokens=50,
+            )
+        assert result.error is None
+        assert result.cost_usd == 0.0
+        assert "authorization" not in route.calls.last.request.headers
+    finally:
+        client.close()
+
+
+@respx.mock
+def test_probe_local_sends_bearer_when_key_configured():
+    settings = _paid_settings()
+    route = respx.get("http://ollama.local:11434/v1/models").mock(
+        return_value=Response(200, json={"data": [{"id": "llama-3.1-8b-instant"}]})
+    )
+    client = llm.LlmClient(settings)
+    try:
+        verdict = client.probe_local()
+        assert verdict.startswith("OK")
+        assert route.calls.last.request.headers.get("authorization") == "Bearer gsk_test_key"
     finally:
         client.close()

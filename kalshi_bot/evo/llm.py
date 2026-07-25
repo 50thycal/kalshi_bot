@@ -3,13 +3,15 @@ DB-configured pricing, hard pre-call budget stops, per-call cost ledger, prompt
 caching (spec §11, §20).
 
 Two backends, chosen per call by LlmClient.complete(): the Anthropic Messages
-API over httpx (no new SDK dependency), and an optional self-hosted OpenAI-
-compatible server (Ollama / llama.cpp / vLLM) for the "routine" alias when
-EVO_LOCAL_LLM_ENABLED is set — zero marginal cost, so the token caps (not a
-dollar ceiling) are the constraint. "deep" heartbeats (reflection/birth/
-cohort_end/retirement) always use Anthropic. One call per heartbeat, bounded
-max_tokens — there is no agent-side loop, so runaway recursion is impossible
-by construction.
+API over httpx (no new SDK dependency), and an optional OpenAI-compatible
+/chat/completions server for the "routine" alias when EVO_LOCAL_LLM_ENABLED is
+set. That second backend covers both a self-hosted server (Ollama / llama.cpp /
+vLLM — no api key, zero cost, so token caps are the only constraint) and a
+hosted inference API (e.g. Groq — a bearer key plus per-Mtok cost rates, so real
+cost is tracked and the weekly dollar ceiling is enforced exactly as on the
+Anthropic path). "deep" heartbeats (reflection/birth/cohort_end/retirement)
+always use Anthropic. One call per heartbeat, bounded max_tokens — there is no
+agent-side loop, so runaway recursion is impossible by construction.
 
 No ANTHROPIC_API_KEY and no local backend configured => cognition fails closed
 (the orchestrator journals heartbeats as skipped; listeners/paper/audit keep
@@ -88,6 +90,16 @@ def compute_cost_usd(
     return round(cost, 6)
 
 
+def rate_cost_usd(
+    input_tokens: int, output_tokens: int, in_per_mtok: float, out_per_mtok: float
+) -> float:
+    """Flat per-Mtok cost for the OpenAI-compatible backend (no cache tier)."""
+    return round(
+        input_tokens / 1e6 * float(in_per_mtok) + output_tokens / 1e6 * float(out_per_mtok),
+        6,
+    )
+
+
 @dataclass
 class LlmResult:
     text: str
@@ -129,6 +141,20 @@ class LlmClient:
             and self.settings.local_llm_model
         )
 
+    def _local_headers(self) -> dict[str, str]:
+        """Auth header for the OpenAI-compatible routine backend: a bearer token when
+        a hosted provider (Groq) is configured, nothing for a keyless self-host."""
+        key = self.settings.local_llm_api_key
+        return {"Authorization": f"Bearer {key}"} if key else {}
+
+    def _local_is_paid(self) -> bool:
+        """A cost rate > 0 marks a paid hosted provider — then real cost is booked and
+        the weekly dollar ceiling applies. Both rates 0 => free self-hosted."""
+        return (
+            float(self.settings.local_llm_input_cost_per_mtok) > 0
+            or float(self.settings.local_llm_output_cost_per_mtok) > 0
+        )
+
     def probe_local(self) -> str:
         """One-shot reachability + model-presence check against the configured local
         OpenAI-compatible server. Log-only diagnosis — never used by heartbeats, and
@@ -144,8 +170,9 @@ class LlmClient:
             return "not configured (no EVO_LOCAL_LLM_BASE_URL)"
         url = base.rstrip("/") + "/models"
         want = self.settings.local_llm_model
+        headers = self._local_headers()  # bearer token for a hosted provider (Groq /models 401s without it)
         try:
-            resp = httpx.Client(timeout=10.0).get(url)
+            resp = httpx.Client(timeout=10.0).get(url, headers=headers)
             resp.raise_for_status()
             ids = [str(m.get("id")) for m in (resp.json().get("data") or [])]
         except httpx.HTTPStatusError as exc:
@@ -315,17 +342,32 @@ class LlmClient:
         user_content: str,
         max_tokens: int,
     ) -> LlmResult:
-        """Self-hosted OpenAI-compatible server (Ollama / llama.cpp / vLLM) reachable
-        over Railway's private network. Zero marginal cost, so there is no dollar
-        ceiling here — the input-size and weekly-token caps are the real constraint
-        on a CPU box, same idempotent cost-recording discipline as the Anthropic
-        path (own transaction, survives a later rollback in the caller's)."""
+        """OpenAI-compatible /chat/completions backend for routine heartbeats — a
+        self-hosted server (Ollama / llama.cpp / vLLM) or a hosted API (Groq). A
+        bearer token is sent when configured; when cost rates are set (a paid
+        provider) the weekly dollar ceiling is projected before the call and the
+        actual cost booked after, exactly like the Anthropic path. A keyless,
+        zero-rate self-host stays free: no dollar cost, no ceiling check. Same
+        idempotent cost-recording discipline (own transaction, survives a later
+        rollback in the caller's)."""
         model_id = self.settings.local_llm_model
+        paid = self._local_is_paid()
+        in_rate = float(self.settings.local_llm_input_cost_per_mtok)
+        out_rate = float(self.settings.local_llm_output_cost_per_mtok)
         system_text = "\n\n".join(str(b.get("text", "")) for b in system_blocks)
         est_input = (len(system_text) + len(user_content)) // 3
         if est_input > self.settings.heartbeat_max_input_tokens:
             return LlmResult(text="", model_id=model_id, alias=alias,
                              error=f"input too large (~{est_input} tokens)")
+        # Paid hosted provider: refuse up front if the worst-case cost would breach
+        # the weekly ceiling (mirrors the Anthropic path). Free self-host skips this.
+        if paid:
+            projected = rate_cost_usd(est_input, max_tokens, in_rate, out_rate)
+            if not budgets.can_spend(
+                session, agent_uuid, cohort_id, "llm_cost_usd", projected
+            ):
+                return LlmResult(text="", model_id=model_id, alias=alias,
+                                 error="weekly LLM cost ceiling reached")
         if not budgets.can_spend(
             session, agent_uuid, cohort_id, "tokens", est_input + max_tokens
         ):
@@ -339,6 +381,7 @@ class LlmClient:
         try:
             resp = self._local_http.post(
                 self.settings.local_llm_base_url.rstrip("/") + "/chat/completions",
+                headers=self._local_headers(),
                 json={"model": model_id, "messages": messages, "max_tokens": max_tokens},
             )
             resp.raise_for_status()
@@ -365,10 +408,15 @@ class LlmClient:
         usage = data.get("usage") or {}
         input_tokens = int(usage.get("prompt_tokens", 0) or est_input)
         output_tokens = int(usage.get("completion_tokens", 0) or max(1, len(text) // 3))
+        cost = rate_cost_usd(input_tokens, output_tokens, in_rate, out_rate) if paid else 0.0
 
         from ..db import session_scope  # local import: avoids a cycle at module load
 
         with session_scope() as cost_session:
+            if paid:
+                budgets.spend(
+                    cost_session, agent_uuid, cohort_id, "llm_cost_usd", cost, force=True
+                )
             budgets.spend(
                 cost_session, agent_uuid, cohort_id, "tokens",
                 float(input_tokens + output_tokens), force=True,
@@ -384,7 +432,7 @@ class LlmClient:
                     input_tokens=input_tokens,
                     cached_input_tokens=0,
                     output_tokens=output_tokens,
-                    cost_usd=0.0,
+                    cost_usd=cost,
                 )
             )
         return LlmResult(
@@ -394,5 +442,5 @@ class LlmClient:
             input_tokens=input_tokens,
             cached_input_tokens=0,
             output_tokens=output_tokens,
-            cost_usd=0.0,
+            cost_usd=cost,
         )
