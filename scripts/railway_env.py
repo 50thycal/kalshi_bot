@@ -54,7 +54,16 @@ ALLOWED_VARS = frozenset({
     # token / dollar budgets move together — raising cadence without budget just front-loads
     # spend into dormancy. ensure_budgets tops up in-cohort agents when a budget is raised.
     "EVO_ROUTINE_HEARTBEATS_PER_DAY", "EVO_DEEP_REFLECTIONS_PER_DAY",
+    "EVO_STRATEGIC_REVIEW_HOURS",
     "EVO_WEEKLY_TOKEN_BUDGET", "EVO_WEEKLY_LLM_CEILING_USD", "EVO_MAX_ACTIVE_AGENTS",
+    # Which tier runs on which backend/model. Readable + settable so a bad model id
+    # or a mis-set tier can be diagnosed and corrected without a deploy. The API KEY
+    # is deliberately NOT here — it is a credential, so it stays UI-only (this tool
+    # must never be able to read or rewrite secrets).
+    "EVO_LOCAL_LLM_ENABLED", "EVO_LOCAL_LLM_BASE_URL", "EVO_LOCAL_LLM_ALIASES",
+    "EVO_LOCAL_LLM_MODEL", "EVO_LOCAL_LLM_DEEP_MODEL",
+    "EVO_LOCAL_LLM_INPUT_COST_PER_MTOK", "EVO_LOCAL_LLM_OUTPUT_COST_PER_MTOK",
+    "EVO_LOCAL_LLM_DEEP_INPUT_COST_PER_MTOK", "EVO_LOCAL_LLM_DEEP_OUTPUT_COST_PER_MTOK",
 })
 
 _UPSERT = "mutation($input: VariableUpsertInput!){ variableUpsert(input: $input) }"

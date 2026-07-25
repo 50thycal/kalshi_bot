@@ -5,6 +5,8 @@ provider like Groq (bearer token, real per-Mtok cost, dollar-ceiling enforced)."
 
 from __future__ import annotations
 
+import json
+
 import respx
 from httpx import Response
 from sqlalchemy import select
@@ -39,6 +41,19 @@ def _paid_settings(**overrides):
     return _local_settings(
         local_llm_model="llama-3.1-8b-instant",
         local_llm_api_key="gsk_test_key",
+        local_llm_input_cost_per_mtok=0.05,
+        local_llm_output_cost_per_mtok=0.08,
+        **overrides,
+    )
+
+
+def _openrouter_settings(**overrides):
+    """A hosted router (OpenRouter-shaped): same paid-provider mechanics as Groq,
+    plus the base_url that triggers the optional identification headers."""
+    return _local_settings(
+        local_llm_base_url="https://openrouter.ai/api/v1",
+        local_llm_model="meta-llama/llama-3.1-8b-instruct",
+        local_llm_api_key="sk-or-test-key",
         local_llm_input_cost_per_mtok=0.05,
         local_llm_output_cost_per_mtok=0.08,
         **overrides,
@@ -108,9 +123,13 @@ def test_routine_routes_to_local_backend_when_enabled():
 
 
 @respx.mock
-def test_deep_alias_never_routes_to_local():
+def test_strategic_alias_never_routes_to_local_by_default():
+    """The tier-3 invariant: the top tier keeps its Anthropic tie-in even when a
+    local/hosted backend is configured, because it runs the irreversible
+    lifecycle beats (birth / cohort_end / retirement)."""
     _init_sqlite_engine()
     settings = _local_settings()
+    assert "strategic" not in settings.local_alias_set()
     with db.session_scope() as session:
         agent_uuid, cohort_id = _make_agent(session, settings)
         llm.seed_model_prices(session, settings)
@@ -123,15 +142,62 @@ def test_deep_alias_never_routes_to_local():
     )
     client = llm.LlmClient(settings, api_key="test-key")
     try:
+        assert client.routes_local("strategic") is False
+        with db.session_scope() as session:
+            result = client.complete(
+                session, agent_uuid=agent_uuid, cohort_id=cohort_id,
+                heartbeat_id=None, alias="strategic", system_blocks=[],
+                user_content="hi", max_tokens=100,
+            )
+        assert result.error is None
+        assert result.cost_usd > 0
+        assert result.model_id == settings.model_strategic
+    finally:
+        client.close()
+
+
+@respx.mock
+def test_deep_alias_routes_local_with_its_own_model_and_rates():
+    """Tier 2 rides the same OpenAI-compatible backend as routine but may name a
+    stronger model and pricier rates."""
+    _init_sqlite_engine()
+    settings = _openrouter_settings(
+        local_llm_deep_model="anthropic/claude-sonnet-4.6",
+        local_llm_deep_input_cost_per_mtok=3.0,
+        local_llm_deep_output_cost_per_mtok=15.0,
+    )
+    with db.session_scope() as session:
+        agent_uuid, cohort_id = _make_agent(session, settings)
+
+    route = respx.post("https://openrouter.ai/api/v1/chat/completions").mock(
+        return_value=Response(200, json={
+            "choices": [{"message": {"content": '{"journal": {}, "actions": []}'}}],
+            "usage": {"prompt_tokens": 1000, "completion_tokens": 500},
+        })
+    )
+    client = llm.LlmClient(settings)
+    try:
+        assert client.routes_local("deep") is True
         with db.session_scope() as session:
             result = client.complete(
                 session, agent_uuid=agent_uuid, cohort_id=cohort_id,
                 heartbeat_id=None, alias="deep", system_blocks=[],
                 user_content="hi", max_tokens=100,
             )
-        assert result.error is None
-        assert result.cost_usd > 0
-        assert result.model_id == settings.model_deep
+        # deep model + deep rates, NOT the routine ones
+        assert result.model_id == "anthropic/claude-sonnet-4.6"
+        assert result.cost_usd == llm.rate_cost_usd(1000, 500, 3.0, 15.0)
+        assert json.loads(route.calls.last.request.content)["model"] == "anthropic/claude-sonnet-4.6"
+    finally:
+        client.close()
+
+
+def test_deep_falls_back_to_routine_model_when_unset():
+    """A single-model setup keeps working: deep inherits routine's model+rates."""
+    settings = _openrouter_settings()  # no deep_* overrides
+    client = llm.LlmClient(settings)
+    try:
+        assert client._local_model_and_rates("deep") == client._local_model_and_rates("routine")
     finally:
         client.close()
 
@@ -380,5 +446,100 @@ def test_probe_local_sends_bearer_when_key_configured():
         verdict = client.probe_local()
         assert verdict.startswith("OK")
         assert route.calls.last.request.headers.get("authorization") == "Bearer gsk_test_key"
+    finally:
+        client.close()
+
+
+# --- OpenRouter (a second paid provider, same code path) ---------------------
+
+
+@respx.mock
+def test_openrouter_completes_with_bearer_and_identification_headers():
+    """OpenRouter is just another OpenAI-compatible /chat/completions provider —
+    no provider-specific branching beyond auth + its optional, harmless-elsewhere
+    HTTP-Referer/X-Title headers. Confirms the whole existing paid-provider path
+    (routing, cost, ceiling) works unmodified against a second real provider."""
+    _init_sqlite_engine()
+    settings = _openrouter_settings()
+    with db.session_scope() as session:
+        agent_uuid, cohort_id = _make_agent(session, settings)
+
+    route = respx.post("https://openrouter.ai/api/v1/chat/completions").mock(
+        return_value=Response(200, json={
+            "choices": [{"message": {"content": '{"journal": {}, "actions": []}'}}],
+            "usage": {"prompt_tokens": 900, "completion_tokens": 150},
+        })
+    )
+    client = llm.LlmClient(settings)
+    try:
+        with db.session_scope() as session:
+            result = client.complete(
+                session, agent_uuid=agent_uuid, cohort_id=cohort_id,
+                heartbeat_id=None, alias="routine",
+                system_blocks=[{"type": "text", "text": "sys"}],
+                user_content="hi", max_tokens=100,
+            )
+        expected = llm.rate_cost_usd(900, 150, 0.05, 0.08)
+        assert result.error is None
+        assert result.cost_usd == expected
+        assert result.model_id == "meta-llama/llama-3.1-8b-instruct"
+
+        sent = route.calls.last.request.headers
+        assert sent.get("authorization") == "Bearer sk-or-test-key"
+        assert sent.get("http-referer") == "https://github.com/50thycal/kalshi_bot"
+        assert sent.get("x-title") == "kalshi-evo-bot"
+
+        with db.session_scope() as session:
+            rows = list(session.scalars(select(EvoLlmUsage)))
+            assert len(rows) == 1
+            assert float(rows[0].cost_usd) == expected
+    finally:
+        client.close()
+
+
+@respx.mock
+def test_identification_headers_are_openrouter_only():
+    """The HTTP-Referer/X-Title headers must NOT leak to Groq or a self-hosted
+    server — they're gated strictly on the OpenRouter base_url."""
+    _init_sqlite_engine()
+    settings = _paid_settings()  # Groq-shaped, not OpenRouter
+    with db.session_scope() as session:
+        agent_uuid, cohort_id = _make_agent(session, settings)
+
+    route = respx.post("http://ollama.local:11434/v1/chat/completions").mock(
+        return_value=Response(200, json={
+            "choices": [{"message": {"content": "{}"}}],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 5},
+        })
+    )
+    client = llm.LlmClient(settings)
+    try:
+        with db.session_scope() as session:
+            client.complete(
+                session, agent_uuid=agent_uuid, cohort_id=cohort_id,
+                heartbeat_id=None, alias="routine", system_blocks=[],
+                user_content="hi", max_tokens=50,
+            )
+        sent = route.calls.last.request.headers
+        assert "http-referer" not in sent
+        assert "x-title" not in sent
+    finally:
+        client.close()
+
+
+@respx.mock
+def test_openrouter_probe_sends_identification_headers():
+    settings = _openrouter_settings()
+    route = respx.get("https://openrouter.ai/api/v1/models").mock(
+        return_value=Response(200, json={"data": [{"id": "meta-llama/llama-3.1-8b-instruct"}]})
+    )
+    client = llm.LlmClient(settings)
+    try:
+        verdict = client.probe_local()
+        assert verdict.startswith("OK")
+        sent = route.calls.last.request.headers
+        assert sent.get("authorization") == "Bearer sk-or-test-key"
+        assert sent.get("http-referer") == "https://github.com/50thycal/kalshi_bot"
+        assert sent.get("x-title") == "kalshi-evo-bot"
     finally:
         client.close()

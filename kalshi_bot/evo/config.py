@@ -41,48 +41,70 @@ class EvoSettings(BaseSettings):
     starting_capital_usd: float = 1000.0
     wildcard_every_n_cohorts: int = 4  # 0 disables wildcards
 
-    # --- heartbeats ---
+    # --- heartbeats (three tiers, cheapest/most frequent first) ---
+    # tier 1 "routine"   — small, hourly-ish: read the book, act on ready evidence.
+    # tier 2 "deep"      — medium, every ~12h: reflection/introspection.
+    # tier 3 "strategic" — large, every ~48h, plus every high-stakes lifecycle event
+    #                      (birth / cohort_end / retirement). Stays on Anthropic.
     routine_heartbeats_per_day: int = 6
-    deep_reflections_per_day: int = 1
+    deep_reflections_per_day: int = 2  # 2/day == every ~12h
+    strategic_review_hours: float = 48.0  # 0 disables the periodic strategic beat
     triggered_heartbeats_per_week: int = 20
     material_revisions_per_day: int = 2
     revision_cooldown_minutes: int = 240  # conservative default between material revisions
     heartbeat_stale_minutes: int = 30  # running->abandoned timeout
 
     # --- LLM routing / cost (spec §11, §20) ---
+    # One model alias per tier. Anthropic model ids here are only used when the
+    # alias is NOT routed to the OpenAI-compatible backend (see local_llm_aliases).
     model_routine: str = "claude-haiku-4-5-20251001"
     model_deep: str = "claude-sonnet-5"
+    model_strategic: str = "claude-sonnet-5"  # top tier stays on Anthropic by default
     weekly_llm_ceiling_usd: float = 2.0  # per active agent
     heartbeat_max_output_tokens: int = 6400  # doubled to give headroom for batching multiple backtests/actions in one heartbeat
     reflection_max_output_tokens: int = 6000  # reflections are verbose; 4000 truncated mid-JSON
+    strategic_max_output_tokens: int = 8000  # top tier reviews the most and writes the most
     heartbeat_max_input_tokens: int = 12000
     weekly_token_budget: int = 1_500_000  # per agent, input+output
     llm_timeout_seconds: float = 120.0
 
-    # --- OpenAI-compatible backend for routine heartbeats ---
-    # Optional: route the "routine" alias to any OpenAI-compatible /chat/completions
-    # server instead of Anthropic. Two shapes, same code path:
+    # --- OpenAI-compatible backend (routes whichever tiers you point at it) ---
+    # Optional: route one or more model aliases to any OpenAI-compatible
+    # /chat/completions server instead of Anthropic. Two shapes, same code path:
     #   1. A self-hosted server (Ollama / llama.cpp / vLLM) — no api key, leave the
     #      cost rates at 0.0, so compute (token caps) is the only constraint.
-    #   2. A hosted inference API (e.g. Groq) — set an api key and the per-Mtok cost
-    #      rates; real cost is then tracked and the weekly dollar ceiling is enforced
-    #      just like the Anthropic path.
-    # "deep" heartbeats (reflection/birth/cohort_end/retirement) always stay on
-    # Anthropic: low volume, highest stakes, exactly where quality matters most.
+    #   2. A hosted inference API/router (OpenRouter, Groq, ...) — set an api key
+    #      and the per-Mtok cost rates; real cost is then tracked and the weekly
+    #      dollar ceiling is enforced just like the Anthropic path. OpenRouter is
+    #      the practical default here: it fronts many providers behind one endpoint
+    #      with no low per-request tokens-per-minute ceiling (Groq's free tier caps
+    #      a single request well below what a routine heartbeat's ~9-10K-token
+    #      context needs, before output is even counted).
     # (The env vars keep the EVO_LOCAL_LLM_* names for continuity even though a
-    # hosted provider isn't "local" — they mean "the OpenAI-compatible routine
-    # backend".)
+    # hosted provider isn't "local" — they mean "the OpenAI-compatible backend".)
     local_llm_enabled: bool = False
-    local_llm_base_url: str = ""  # e.g. "http://ollama.railway.internal:11434/v1" or "https://api.groq.com/openai/v1"
-    local_llm_model: str = ""  # model id as the server expects (e.g. "llama-3.1-8b-instant")
-    local_llm_timeout_seconds: float = 180.0  # generous: covers slow CPU generation; a hosted GPU API returns in seconds
+    local_llm_base_url: str = ""  # e.g. "http://ollama.railway.internal:11434/v1", "https://openrouter.ai/api/v1", or "https://api.groq.com/openai/v1"
+    local_llm_timeout_seconds: float = 180.0  # generous: covers slow CPU generation; a hosted GPU/router API returns in seconds
     local_llm_api_key: str = ""  # EVO_LOCAL_LLM_API_KEY — bearer token for a hosted provider; empty for a self-hosted server that needs no auth
-    # Per-million-token cost of the routine backend. Both 0.0 => treated as free
-    # (self-hosted): no dollar cost recorded, dollar ceiling skipped. Any value > 0
-    # => a paid provider: real cost is booked to evo_llm_usage and charged against
-    # the weekly llm_cost_usd ceiling. Groq llama-3.1-8b-instant: 0.05 in / 0.08 out.
+    # Which model aliases route here (comma-separated). "strategic" is deliberately
+    # NOT in the default: the top tier keeps its Anthropic tie-in, because it runs
+    # the high-stakes lifecycle beats (birth / cohort_end / retirement) where a
+    # quality regression is expensive and irreversible. Put it here anyway if you
+    # explicitly want the whole fleet off Anthropic.
+    local_llm_aliases: str = "routine,deep"
+    # --- tier 1 "routine" model + rates on the OpenAI-compatible backend ---
+    local_llm_model: str = ""  # model id as the server expects (e.g. "qwen/qwen3-coder-next" on OpenRouter)
+    # Per-million-token cost. Both 0.0 => treated as free (self-hosted): no dollar
+    # cost recorded, dollar ceiling skipped. Any value > 0 => a paid provider: real
+    # cost is booked to evo_llm_usage and charged against the weekly ceiling.
     local_llm_input_cost_per_mtok: float = 0.0   # EVO_LOCAL_LLM_INPUT_COST_PER_MTOK
     local_llm_output_cost_per_mtok: float = 0.0  # EVO_LOCAL_LLM_OUTPUT_COST_PER_MTOK
+    # --- tier 2 "deep" model + rates (a stronger/pricier model than routine) ---
+    # Each falls back to the routine value when unset, so a single-model setup
+    # still works unchanged.
+    local_llm_deep_model: str = ""
+    local_llm_deep_input_cost_per_mtok: float = 0.0
+    local_llm_deep_output_cost_per_mtok: float = 0.0
 
     # --- other per-cohort resource budgets ---
     weekly_tool_calls: int = 2000
@@ -138,6 +160,16 @@ class EvoSettings(BaseSettings):
     # --- ops safety ---
     enabled: bool = True  # master gate for the evo loop (not a performance kill switch:
     #                       infrastructure pause only, per spec §20)
+
+    def local_alias_set(self) -> frozenset[str]:
+        """Model aliases routed to the OpenAI-compatible backend (parsed from the
+        comma-separated EVO_LOCAL_LLM_ALIASES). Unknown names are harmless — they
+        simply never match a tier."""
+        return frozenset(
+            part.strip().lower()
+            for part in (self.local_llm_aliases or "").split(",")
+            if part.strip()
+        )
 
 
 @lru_cache

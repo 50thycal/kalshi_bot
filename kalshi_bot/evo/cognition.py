@@ -116,6 +116,45 @@ class HeartbeatContext:
 
 
 # ---------------------------------------------------------------------------
+# Heartbeat tiers
+# ---------------------------------------------------------------------------
+
+# Three tiers, cheapest/most frequent first. The alias picks both the model
+# (EvoSettings.model_* / the OpenAI-compatible backend) and the output ceiling:
+#   routine   — tier 1, hourly-ish: act on evidence that is already in hand.
+#   deep      — tier 2, ~12-hourly: reflection / introspection.
+#   strategic — tier 3, ~48-hourly PLUS every high-stakes lifecycle event
+#               (birth / cohort_end / retirement), which is why it keeps the
+#               Anthropic tie-in by default — those are irreversible.
+# Anything unlisted falls through to "routine" (e.g. listener-"triggered").
+STRATEGIC_KINDS = frozenset({"strategic", "birth", "cohort_end", "retirement"})
+DEEP_KINDS = frozenset({"reflection"})
+
+
+def alias_for_kind(kind: str) -> str:
+    """Heartbeat kind -> model alias. Single source of truth for tier routing."""
+    if kind in STRATEGIC_KINDS:
+        return "strategic"
+    if kind in DEEP_KINDS:
+        return "deep"
+    return "routine"
+
+
+def is_enriched_kind(kind: str) -> bool:
+    """Tiers 2 and 3 get the expensive extra context (graveyard + peer roster)."""
+    return kind in STRATEGIC_KINDS or kind in DEEP_KINDS
+
+
+def max_output_tokens_for(settings: EvoSettings, kind: str) -> int:
+    alias = alias_for_kind(kind)
+    if alias == "strategic":
+        return settings.strategic_max_output_tokens
+    if alias == "deep":
+        return settings.reflection_max_output_tokens
+    return settings.heartbeat_max_output_tokens
+
+
+# ---------------------------------------------------------------------------
 # Prompt assembly
 # ---------------------------------------------------------------------------
 
@@ -256,6 +295,24 @@ def system_blocks(settings: EvoSettings) -> list[dict]:
     ]
 
 
+STRATEGIC_REVIEW_GUIDANCE = """\
+THIS IS A STRATEGIC REVIEW (tier 3 — your least frequent and most capable
+heartbeat, roughly every 48h). Do not spend it on the routine bookkeeping the
+hourly heartbeats already handle. Step back and take the long view:
+- Which of your strategies have actually earned their place since the last review,
+  and which are drifting, over-fitted, or quietly bleeding? Kill or revise what is
+  not working — a strategy you keep out of sentiment is a strategy that retires you.
+- Where is your evidence thinnest? Name the one experiment that would settle your
+  biggest open question and start it NOW rather than deferring it again.
+- Are you concentrated in a single book or regime? Say so explicitly, then either
+  diversify or double down with stated reasons.
+- Read the graveyard and the peer roster before proposing anything new: repeating a
+  buried idea without a documented material difference wastes the cohort.
+Your rank against peers is computed from realized fitness, not from this review —
+you cannot argue your way out of the bottom group. What you CAN do here is change
+the trajectory that puts you there. Be decisive and concrete."""
+
+
 def build_user_prompt(ctx: HeartbeatContext) -> str:
     parts: list[str] = []
     a = ctx.agent
@@ -332,6 +389,8 @@ def build_user_prompt(ctx: HeartbeatContext) -> str:
     if ctx.graveyard_text:
         parts.append("STRATEGY GRAVEYARD (do NOT regenerate these without a documented "
                      "material difference):\n" + ctx.graveyard_text)
+    if ctx.kind == "strategic":
+        parts.append(STRATEGIC_REVIEW_GUIDANCE)
     for key, value in ctx.extra.items():
         parts.append(f"{key.upper()}:\n{str(value)[:2500]}")
     parts.append(
@@ -475,12 +534,8 @@ class LlmCognition(Cognition):
         self.client = client
 
     def decide(self, session, settings: EvoSettings, ctx: HeartbeatContext) -> CognitionResult:
-        deep = ctx.kind in ("reflection", "birth", "cohort_end", "retirement")
-        alias = "deep" if deep else "routine"
-        max_tokens = (
-            settings.reflection_max_output_tokens if deep
-            else settings.heartbeat_max_output_tokens
-        )
+        alias = alias_for_kind(ctx.kind)
+        max_tokens = max_output_tokens_for(settings, ctx.kind)
         result = self.client.complete(
             session,
             agent_uuid=ctx.agent.agent_uuid,
@@ -947,7 +1002,7 @@ def assemble_context(
             "hours_to_close": round(q.hours_to_close() or -1, 1),
             "status": q.status, "result": q.result,
         })
-    deep = heartbeat.kind in ("reflection", "birth", "cohort_end", "retirement")
+    deep = is_enriched_kind(heartbeat.kind)
     gy_rows = graveyard.search(session, limit=8) if deep else []
     active_notices = [
         {"key": n.key, "title": n.title, "body": n.body, "category": n.category}
