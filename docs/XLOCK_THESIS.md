@@ -70,7 +70,13 @@ board the standing monitor actually covers.
   `kalshi_arb.py` (browser UA for Cloudflare 1010; `xvenue_leadlag._get/_num`). Needs
   allowlisting in `ALLOWED_SCRIPTS` in `scripts/ops_runner.py`. Reuses `kalshi_arb.fee`,
   `_nums`/`_parse_bucket` (post-fix, incl. spelled-out magnitude units), and
-  `kalshi_market_survey`'s pagination.
+  `kalshi_market_survey`'s pagination. **Must also reuse `kalshi_arb._tiles_exhaustively`
+  (added post-XLOCK-writeup, 2026-07-25) for P2's touch-vs-terminal side** — that check exists
+  precisely because an illiquid-quote filter silently dropping a leg turns a partition sum into
+  a subset sum (the live `KXXRP-26JUL2617` incident: a whole missing band read as a fake arb
+  because every retained leg was a worthless tail). P2 compares two *separate* series, so the
+  same trap applies doubly: verify each side's own leg set is complete before trusting either
+  side's aggregate, not just the cross-series gap.
 - **Dataset + provenance:** Kalshi **public** market-data API only (`/events?with_nested_markets`,
   `/markets`, `/series`) — live top-of-book, single provenance, no mixing with the
   `backfill_weather_*` or live `weather_*` tables. Nothing persisted to Postgres on the first

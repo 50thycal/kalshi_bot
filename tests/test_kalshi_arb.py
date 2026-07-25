@@ -1,8 +1,10 @@
 """Tests for scripts/kalshi_arb.py — strike parsing + the arb math it feeds.
 
-The scanner's only two false-positive incidents were both *parsing* bugs that scrambled a
+The scanner's false-positive incidents so far: two *parsing* bugs that scrambled a
 correctly-priced ladder into a fake vertical arb (dropped minus signs and K/M/B units in Jul,
-then spelled-out 'trillion' in the Musk net-worth ladder). These lock that down.
+then spelled-out 'trillion' in the Musk net-worth ladder), and one *coverage* bug (an illiquid
+leg silently dropped from a range ladder turned a Dutch book into a subset sum over worthless
+tails, KXXRP-26JUL2617). These lock all three down.
 """
 
 from __future__ import annotations
@@ -86,3 +88,102 @@ def test_scan_event_flags_a_genuine_vertical_arb():
     out = arb.scan_event(event, fee_buf=0.0, max_close=0)
     assert out["ARB"][0] == "MONO-VERTICAL"
     assert out["ARB"][1] > 0
+
+
+def _range_event(bucket_prices, ticker="KXFAKE-RANGE"):
+    """Build a mutually_exclusive range-bucket event: bucket_prices is a list of
+    (subtitle, yes_bid, yes_ask)."""
+    return {
+        "event_ticker": ticker, "title": "range test", "mutually_exclusive": True,
+        "markets": [
+            {"yes_bid_dollars": yb, "yes_ask_dollars": ya, "yes_sub_title": sub, "ticker": f"T{i}"}
+            for i, (sub, yb, ya) in enumerate(bucket_prices)
+        ],
+    }
+
+
+def test_tiles_exhaustively_true_for_a_full_partition():
+    mkts = [
+        {"parse": arb._parse_bucket("$10 or below")},
+        {"parse": arb._parse_bucket("$10 to $19.99")},
+        {"parse": arb._parse_bucket("$20 to $29.99")},
+        {"parse": arb._parse_bucket("$30 or above")},
+    ]
+    assert arb._tiles_exhaustively(mkts) is True
+
+
+def test_tiles_exhaustively_false_when_a_middle_bucket_is_missing():
+    """The exact KXXRP-26JUL2617 shape: a whole band silently dropped between two retained
+    legs — a gap far wider than one bucket width."""
+    mkts = [
+        {"parse": arb._parse_bucket("$10 or below")},
+        {"parse": arb._parse_bucket("$10 to $19.99")},
+        # $20-$29.99 missing here
+        {"parse": arb._parse_bucket("$30 to $39.99")},
+        {"parse": arb._parse_bucket("$40 or above")},
+    ]
+    assert arb._tiles_exhaustively(mkts) is False
+
+
+def test_tiles_exhaustively_false_without_both_open_tails():
+    """No 'or below' / 'or above' leg means the retained set can't be a full partition even if
+    the ranges it does have are contiguous."""
+    mkts = [
+        {"parse": arb._parse_bucket("$10 to $19.99")},
+        {"parse": arb._parse_bucket("$20 to $29.99")},
+    ]
+    assert arb._tiles_exhaustively(mkts) is False
+
+
+def test_scan_event_suppresses_arb_when_range_ladder_has_a_gap():
+    """The real failure: KXXRP-26JUL2617 kept 19 legs (all bid=0/ask=1c, the entire
+    $0.88-$1.30 band silently missing from the illiquid-quote filter) and Sum(yes_ask)=0.19
+    read as a bogus +$0.62 BUY-ALL-YES. Every retained leg being a worthless tail is the
+    tell — the true probability mass sits in the gap, so the subset sum is not a Dutch book."""
+    event = _range_event([
+        ("$0.6199999 or below", 0.00, 0.01),
+        ("$0.62 to $0.6399", 0.00, 0.01),
+        ("$0.86 to $0.8799", 0.00, 0.01),
+        # the $0.88-$1.2999 band is entirely missing, exactly like the live incident
+        ("$1.3 to $1.3199", 0.00, 0.01),
+        ("$1.37991 or above", 0.00, 0.01),
+    ], ticker="KXXRP-TEST")
+    out = arb.scan_event(event, fee_buf=0.0, max_close=0)
+    assert out["gapped"] is True
+    assert "ARB" not in out
+    assert out["sum_ask"] < 0.2   # the subset sum still reads as tiny -- exactly why it's dangerous
+
+
+def test_scan_event_still_flags_a_genuine_gapless_range_arb():
+    """The guard must not eat real hits: a fully-tiled range ladder priced under $1 must still
+    fire BUY-ALL-YES."""
+    event = _range_event([
+        ("$10 or below", 0.10, 0.12),
+        ("$10 to $19.99", 0.20, 0.22),
+        ("$20 to $29.99", 0.25, 0.27),
+        ("$30 or above", 0.30, 0.32),
+    ])
+    out = arb.scan_event(event, fee_buf=0.0, max_close=0)
+    assert out["gapped"] is False
+    assert out["ARB"][0] == "BUY-ALL-YES"
+    assert out["ARB"][1] > 0
+
+
+def test_named_candidate_set_is_unverifiable_not_gapped():
+    """Election-style candidate names have no numeric structure to tile — the guard must not
+    misclassify them as 'gapped' (which would suppress legitimate flag-trusting behavior); it
+    reports them as simply unverifiable, same as before this guard existed."""
+    event = {
+        "event_ticker": "KXCANDS-TEST", "title": "candidates", "mutually_exclusive": True,
+        "markets": [
+            {"yes_bid_dollars": 0.05, "yes_ask_dollars": 0.06, "yes_sub_title": "Alice",
+             "ticker": "A"},
+            {"yes_bid_dollars": 0.05, "yes_ask_dollars": 0.06, "yes_sub_title": "Bob",
+             "ticker": "B"},
+            {"yes_bid_dollars": 0.05, "yes_ask_dollars": 0.06, "yes_sub_title": "Carol",
+             "ticker": "C"},
+        ],
+    }
+    out = arb.scan_event(event, fee_buf=0.0, max_close=0)
+    assert out["gapped"] is False
+    assert out["ARB"][0] == "BUY-ALL-YES"
