@@ -2,23 +2,31 @@
 DB-configured pricing, hard pre-call budget stops, per-call cost ledger, prompt
 caching (spec §11, §20).
 
+Three model aliases, one per heartbeat tier (see cognition.alias_for_kind):
+"routine" (small, hourly), "deep" (medium, ~12-hourly reflection) and
+"strategic" (large, ~48-hourly plus every birth/cohort_end/retirement).
+
 Two backends, chosen per call by LlmClient.complete(): the Anthropic Messages
 API over httpx (no new SDK dependency), and an optional OpenAI-compatible
-/chat/completions server for the "routine" alias when EVO_LOCAL_LLM_ENABLED is
+/chat/completions server for whichever aliases are listed in
+EVO_LOCAL_LLM_ALIASES (default "routine,deep") when EVO_LOCAL_LLM_ENABLED is
 set. That second backend covers a self-hosted server (Ollama / llama.cpp /
 vLLM — no api key, zero cost, so token caps are the only constraint) or any
 hosted inference API/router that speaks the same OpenAI-compatible shape (Groq,
 OpenRouter, ... — a bearer key plus per-Mtok cost rates, so real cost is tracked
 and the weekly dollar ceiling is enforced exactly as on the Anthropic path).
+Each routed tier may name its own model + rates (the deep tier can be a stronger,
+pricier model than routine), falling back to the routine values when unset.
 Groq's own free tier caps a single request's tokens-per-minute well below what
 a routine heartbeat's context needs (~9-10K input alone); OpenRouter fronts many
 providers behind one endpoint without that per-request ceiling, so it is the
-practical default for a paid hosted "routine" backend — same code path, no
-provider-specific logic beyond the bearer header and its (optional, harmless-
-elsewhere) HTTP-Referer/X-Title identification headers. "deep" heartbeats
-(reflection/birth/cohort_end/retirement) always use Anthropic. One call per
-heartbeat, bounded max_tokens — there is no agent-side loop, so runaway
-recursion is impossible by construction.
+practical default for a paid hosted backend — same code path, no provider-
+specific logic beyond the bearer header and its (optional, harmless-elsewhere)
+HTTP-Referer/X-Title identification headers. "strategic" is deliberately NOT in
+the default alias set: the top tier keeps its Anthropic tie-in because it runs
+the high-stakes, irreversible lifecycle beats. One call per heartbeat, bounded
+max_tokens — there is no agent-side loop, so runaway recursion is impossible by
+construction.
 
 No ANTHROPIC_API_KEY and no local backend configured => cognition fails closed
 (the orchestrator journals heartbeats as skipped; listeners/paper/audit keep
@@ -49,13 +57,18 @@ SEED_PRICES = (
     # alias, model_id, input, output, cached_input
     ("routine", "claude-haiku-4-5-20251001", 1.00, 5.00, 0.10),
     ("deep", "claude-sonnet-5", 3.00, 15.00, 0.30),
+    ("strategic", "claude-sonnet-5", 3.00, 15.00, 0.30),
 )
 
 
 def seed_model_prices(session, settings: EvoSettings) -> int:
     """Idempotently seed pricing rows, honoring configured model overrides."""
     added = 0
-    overrides = {"routine": settings.model_routine, "deep": settings.model_deep}
+    overrides = {
+        "routine": settings.model_routine,
+        "deep": settings.model_deep,
+        "strategic": settings.model_strategic,
+    }
     for alias, model_id, inp, out, cached in SEED_PRICES:
         model_id = overrides.get(alias, model_id)
         exists = session.scalar(
@@ -148,6 +161,25 @@ class LlmClient:
             and self.settings.local_llm_model
         )
 
+    def routes_local(self, alias: str) -> bool:
+        """True when this tier's alias should go to the OpenAI-compatible backend."""
+        return self.local_available() and alias in self.settings.local_alias_set()
+
+    def _local_model_and_rates(self, alias: str) -> tuple[str, float, float]:
+        """(model_id, input $/Mtok, output $/Mtok) for an alias routed to the
+        OpenAI-compatible backend. Each tier may name its own model and rates;
+        anything left unset falls back to the routine values, so a single-model
+        setup keeps working unchanged."""
+        s = self.settings
+        model = s.local_llm_model
+        in_rate = float(s.local_llm_input_cost_per_mtok)
+        out_rate = float(s.local_llm_output_cost_per_mtok)
+        if alias == "deep":
+            model = s.local_llm_deep_model or model
+            in_rate = float(s.local_llm_deep_input_cost_per_mtok) or in_rate
+            out_rate = float(s.local_llm_deep_output_cost_per_mtok) or out_rate
+        return model, in_rate, out_rate
+
     def _local_headers(self) -> dict[str, str]:
         """Auth header for the OpenAI-compatible routine backend: a bearer token when
         a hosted provider (Groq, OpenRouter, ...) is configured, nothing for a keyless
@@ -163,13 +195,12 @@ class LlmClient:
             headers["X-Title"] = "kalshi-evo-bot"
         return headers
 
-    def _local_is_paid(self) -> bool:
-        """A cost rate > 0 marks a paid hosted provider — then real cost is booked and
-        the weekly dollar ceiling applies. Both rates 0 => free self-hosted."""
-        return (
-            float(self.settings.local_llm_input_cost_per_mtok) > 0
-            or float(self.settings.local_llm_output_cost_per_mtok) > 0
-        )
+    def _local_is_paid(self, alias: str = "routine") -> bool:
+        """A cost rate > 0 on this tier marks a paid hosted provider — then real cost
+        is booked and the weekly dollar ceiling applies. Both rates 0 => free
+        self-hosted."""
+        _, in_rate, out_rate = self._local_model_and_rates(alias)
+        return in_rate > 0 or out_rate > 0
 
     def probe_local(self) -> str:
         """One-shot reachability + model-presence check against the configured local
@@ -185,7 +216,17 @@ class LlmClient:
         if not base:
             return "not configured (no EVO_LOCAL_LLM_BASE_URL)"
         url = base.rstrip("/") + "/models"
-        want = self.settings.local_llm_model
+        # Every tier actually routed here must have its model present — a deep tier
+        # pointed at a typo'd model id would otherwise only surface at the first
+        # 12-hourly reflection, hours after deploy.
+        routed = self.settings.local_alias_set() or {"routine"}
+        wanted: list[str] = []
+        for alias in sorted(routed):
+            model, _, _ = self._local_model_and_rates(alias)
+            if model and model not in wanted:
+                wanted.append(model)
+        if not wanted:
+            return "not configured (no EVO_LOCAL_LLM_MODEL)"
         headers = self._local_headers()  # bearer token for a hosted provider (Groq /models 401s without it)
         try:
             resp = httpx.Client(timeout=10.0).get(url, headers=headers)
@@ -195,9 +236,12 @@ class LlmClient:
             return f"reachable but HTTP {exc.response.status_code} at {url}: {exc.response.text[:150]}"
         except Exception as exc:  # noqa: BLE001 — a probe must never raise into startup
             return f"UNREACHABLE at {url}: {type(exc).__name__}: {exc}"
-        if want in ids:
-            return f"OK — reachable at {url}; target model {want!r} present ({len(ids)} model(s))"
-        return (f"reachable at {url} but target model {want!r} MISSING — "
+        missing = [m for m in wanted if m not in ids]
+        if not missing:
+            return (f"OK — reachable at {url}; target model(s) "
+                    f"{', '.join(repr(m) for m in wanted)} present ({len(ids)} model(s))")
+        return (f"reachable at {url} but target model(s) "
+                f"{', '.join(repr(m) for m in missing)} MISSING — "
                 f"have: {', '.join(ids[:8]) or '(none)'}")
 
     def close(self) -> None:
@@ -216,10 +260,10 @@ class LlmClient:
         user_content: str,
         max_tokens: int,
     ) -> LlmResult:
-        """Budget-checked single completion. Routes "routine" to the local
-        OpenAI-compatible backend when configured (zero cost; token caps become
-        the real constraint); everything else goes to Anthropic."""
-        if alias == "routine" and self.local_available():
+        """Budget-checked single completion. Routes any alias listed in
+        EVO_LOCAL_LLM_ALIASES to the OpenAI-compatible backend when one is
+        configured; everything else goes to Anthropic."""
+        if self.routes_local(alias):
             return self._complete_local(
                 session, agent_uuid=agent_uuid, cohort_id=cohort_id,
                 heartbeat_id=heartbeat_id, alias=alias, system_blocks=system_blocks,
@@ -366,10 +410,8 @@ class LlmClient:
         zero-rate self-host stays free: no dollar cost, no ceiling check. Same
         idempotent cost-recording discipline (own transaction, survives a later
         rollback in the caller's)."""
-        model_id = self.settings.local_llm_model
-        paid = self._local_is_paid()
-        in_rate = float(self.settings.local_llm_input_cost_per_mtok)
-        out_rate = float(self.settings.local_llm_output_cost_per_mtok)
+        model_id, in_rate, out_rate = self._local_model_and_rates(alias)
+        paid = in_rate > 0 or out_rate > 0
         system_text = "\n\n".join(str(b.get("text", "")) for b in system_blocks)
         est_input = (len(system_text) + len(user_content)) // 3
         if est_input > self.settings.heartbeat_max_input_tokens:

@@ -56,12 +56,39 @@ def routine_slots(agent_uuid: str, day: datetime, per_day: int) -> list[tuple[st
     return out
 
 
-def reflection_slot(agent_uuid: str, day: datetime) -> tuple[str, datetime]:
+def reflection_slots(agent_uuid: str, day: datetime, per_day: int) -> list[tuple[str, datetime]]:
+    """Tier-2 (deep reflection) slots for one UTC day, spread evenly — per_day=2
+    is every ~12h. Slot ids carry the index so raising the cadence adds slots
+    rather than colliding with an already-claimed one."""
     base = day.replace(hour=0, minute=0, second=0, microsecond=0)
     day_key = base.strftime("%Y%m%d")
-    # deep reflection lands in the evening UTC window, jittered
-    minute = 20 * 60 + _jitter_minutes(agent_uuid, day_key, 99)
-    return (day_key, base + timedelta(minutes=min(minute, 24 * 60 - 1)))
+    interval = 24 * 60 // max(1, per_day)
+    out = []
+    for i in range(max(0, per_day)):
+        # offset the jitter seed (90+i) so a reflection never lands on the same
+        # deterministic minute as that agent's routine slot i.
+        minute = i * interval + _jitter_minutes(agent_uuid, day_key, 90 + i)
+        out.append((f"{day_key}:{i}", base + timedelta(minutes=min(minute, 24 * 60 - 1))))
+    return out
+
+
+def strategic_slots(agent_uuid: str, now: datetime, every_hours: float) -> list[tuple[str, datetime]]:
+    """Tier-3 (strategic review) slots. Anchored to fixed epoch periods rather than
+    to a UTC day, because the cadence (~48h) spans days: period = floor(epoch /
+    every_hours), so the schedule stays stable across restarts and never
+    double-fires. Returns the current and previous period so a worker that was
+    down doesn't silently skip one."""
+    if every_hours <= 0:
+        return []
+    span = every_hours * 3600.0
+    period = int(now.timestamp() // span)
+    out = []
+    for p in (period, period - 1):
+        start = datetime.fromtimestamp(p * span, tz=timezone.utc)
+        # jitter inside the period so the whole fleet doesn't fire at once
+        minute = _jitter_minutes(agent_uuid, f"strat{p}", 0)
+        out.append((f"strat:{p}", start + timedelta(minutes=minute)))
+    return out
 
 
 def idem_key(agent_uuid: str, kind: str, slot_id: str) -> str:
@@ -126,9 +153,11 @@ def sweep_stale(session, settings: EvoSettings) -> int:
 def due_routine_heartbeats(
     session, settings: EvoSettings, agents: list[EvoAgent], *, now: datetime | None = None
 ) -> list[tuple[EvoAgent, str, str, datetime]]:
-    """(agent, kind, slot_id, scheduled_for) for every routine/reflection slot due
-    now and not yet claimed. Looks back 1 day so restarts don't lose slots; a
-    recovery pass rather than re-execution decides what to do with old misses."""
+    """(agent, kind, slot_id, scheduled_for) for every scheduled slot due now and
+    not yet claimed, across all three tiers: routine (tier 1), reflection (tier 2)
+    and strategic (tier 3). Looks back 1 day (1 period for strategic) so restarts
+    don't lose slots; a recovery pass rather than re-execution decides what to do
+    with old misses."""
     now = now or _now()
     out: list[tuple[EvoAgent, str, str, datetime]] = []
     for agent in agents:
@@ -139,9 +168,16 @@ def due_routine_heartbeats(
             ):
                 if at <= now and not _claimed(session, agent.agent_uuid, "routine", slot_id):
                     out.append((agent, "routine", slot_id, at))
-            r_slot, r_at = reflection_slot(agent.agent_uuid, day)
-            if r_at <= now and not _claimed(session, agent.agent_uuid, "reflection", r_slot):
-                out.append((agent, "reflection", r_slot, r_at))
+            for slot_id, at in reflection_slots(
+                agent.agent_uuid, day, settings.deep_reflections_per_day
+            ):
+                if at <= now and not _claimed(session, agent.agent_uuid, "reflection", slot_id):
+                    out.append((agent, "reflection", slot_id, at))
+        for slot_id, at in strategic_slots(
+            agent.agent_uuid, now, settings.strategic_review_hours
+        ):
+            if at <= now and not _claimed(session, agent.agent_uuid, "strategic", slot_id):
+                out.append((agent, "strategic", slot_id, at))
     return out
 
 

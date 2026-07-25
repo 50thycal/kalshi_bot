@@ -123,7 +123,7 @@ def test_seeding_survives_a_later_bootstrap_failure(monkeypatch):
 
     with db.session_scope() as session:
         prices = list(session.scalars(select(EvoModelPrice)))
-    assert len(prices) == 2, "seeding must commit even though bootstrap_founders raised"
+    assert len(prices) == 3, "seeding must commit even though bootstrap_founders raised"
     assert runtime._bootstrapped is True
 
 

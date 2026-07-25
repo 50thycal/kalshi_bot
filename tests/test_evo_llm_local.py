@@ -5,6 +5,8 @@ provider like Groq (bearer token, real per-Mtok cost, dollar-ceiling enforced)."
 
 from __future__ import annotations
 
+import json
+
 import respx
 from httpx import Response
 from sqlalchemy import select
@@ -121,9 +123,13 @@ def test_routine_routes_to_local_backend_when_enabled():
 
 
 @respx.mock
-def test_deep_alias_never_routes_to_local():
+def test_strategic_alias_never_routes_to_local_by_default():
+    """The tier-3 invariant: the top tier keeps its Anthropic tie-in even when a
+    local/hosted backend is configured, because it runs the irreversible
+    lifecycle beats (birth / cohort_end / retirement)."""
     _init_sqlite_engine()
     settings = _local_settings()
+    assert "strategic" not in settings.local_alias_set()
     with db.session_scope() as session:
         agent_uuid, cohort_id = _make_agent(session, settings)
         llm.seed_model_prices(session, settings)
@@ -136,15 +142,62 @@ def test_deep_alias_never_routes_to_local():
     )
     client = llm.LlmClient(settings, api_key="test-key")
     try:
+        assert client.routes_local("strategic") is False
+        with db.session_scope() as session:
+            result = client.complete(
+                session, agent_uuid=agent_uuid, cohort_id=cohort_id,
+                heartbeat_id=None, alias="strategic", system_blocks=[],
+                user_content="hi", max_tokens=100,
+            )
+        assert result.error is None
+        assert result.cost_usd > 0
+        assert result.model_id == settings.model_strategic
+    finally:
+        client.close()
+
+
+@respx.mock
+def test_deep_alias_routes_local_with_its_own_model_and_rates():
+    """Tier 2 rides the same OpenAI-compatible backend as routine but may name a
+    stronger model and pricier rates."""
+    _init_sqlite_engine()
+    settings = _openrouter_settings(
+        local_llm_deep_model="anthropic/claude-sonnet-4.6",
+        local_llm_deep_input_cost_per_mtok=3.0,
+        local_llm_deep_output_cost_per_mtok=15.0,
+    )
+    with db.session_scope() as session:
+        agent_uuid, cohort_id = _make_agent(session, settings)
+
+    route = respx.post("https://openrouter.ai/api/v1/chat/completions").mock(
+        return_value=Response(200, json={
+            "choices": [{"message": {"content": '{"journal": {}, "actions": []}'}}],
+            "usage": {"prompt_tokens": 1000, "completion_tokens": 500},
+        })
+    )
+    client = llm.LlmClient(settings)
+    try:
+        assert client.routes_local("deep") is True
         with db.session_scope() as session:
             result = client.complete(
                 session, agent_uuid=agent_uuid, cohort_id=cohort_id,
                 heartbeat_id=None, alias="deep", system_blocks=[],
                 user_content="hi", max_tokens=100,
             )
-        assert result.error is None
-        assert result.cost_usd > 0
-        assert result.model_id == settings.model_deep
+        # deep model + deep rates, NOT the routine ones
+        assert result.model_id == "anthropic/claude-sonnet-4.6"
+        assert result.cost_usd == llm.rate_cost_usd(1000, 500, 3.0, 15.0)
+        assert json.loads(route.calls.last.request.content)["model"] == "anthropic/claude-sonnet-4.6"
+    finally:
+        client.close()
+
+
+def test_deep_falls_back_to_routine_model_when_unset():
+    """A single-model setup keeps working: deep inherits routine's model+rates."""
+    settings = _openrouter_settings()  # no deep_* overrides
+    client = llm.LlmClient(settings)
+    try:
+        assert client._local_model_and_rates("deep") == client._local_model_and_rates("routine")
     finally:
         client.close()
 

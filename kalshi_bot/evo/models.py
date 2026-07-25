@@ -306,7 +306,7 @@ class EvoHeartbeat(Base):
     agent_uuid: Mapped[str] = mapped_column(String(UUID_LEN), nullable=False)
     cohort_id: Mapped[int | None] = mapped_column(BigIntId, ForeignKey("evo_cohorts.id"))
     kind: Mapped[str] = mapped_column(String(16), nullable=False)
-    # routine | reflection | triggered | birth | cohort_end | retirement | recovery
+    # routine | reflection | strategic | triggered | birth | cohort_end | retirement | recovery
     idem_key: Mapped[str] = mapped_column(String(128), nullable=False)  # agent:kind:slot
     scheduled_for: Mapped[datetime | None] = mapped_column(TS)
     trigger_reason: Mapped[str | None] = mapped_column(Text)

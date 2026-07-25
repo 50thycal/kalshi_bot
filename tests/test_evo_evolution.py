@@ -55,6 +55,59 @@ def test_routine_slots_deterministic_and_spread():
     assert heartbeats.routine_slots("agent-y", day, 6) != s1  # jitter differs
 
 
+def test_reflection_slots_scale_with_cadence():
+    day = datetime(2026, 7, 15, tzinfo=timezone.utc)
+    two = heartbeats.reflection_slots("agent-x", day, 2)  # every ~12h
+    assert two == heartbeats.reflection_slots("agent-x", day, 2)  # deterministic
+    assert len(two) == 2
+    assert [sid for sid, _ in two] == ["20260715:0", "20260715:1"]
+    # the two land in different halves of the day
+    assert two[0][1] < day + timedelta(hours=12) <= two[1][1]
+    assert heartbeats.reflection_slots("agent-y", day, 2) != two  # jitter differs
+    # raising cadence adds slots rather than colliding with claimed slot ids
+    four = heartbeats.reflection_slots("agent-x", day, 4)
+    assert len(four) == 4 and four[0][0] == two[0][0]
+
+
+def test_strategic_slots_are_epoch_anchored_every_48h():
+    now = datetime(2026, 7, 15, 9, 0, tzinfo=timezone.utc)
+    slots = heartbeats.strategic_slots("agent-x", now, 48.0)
+    assert slots == heartbeats.strategic_slots("agent-x", now, 48.0)  # deterministic
+    assert len(slots) == 2  # current + previous period (restart recovery)
+    (cur_id, cur_at), (prev_id, prev_at) = slots
+    # consecutive periods: 48h apart, +/- the per-period jitter (<=2h each side)
+    assert int(cur_id.split(":")[1]) - int(prev_id.split(":")[1]) == 1
+    assert timedelta(hours=46) <= cur_at - prev_at <= timedelta(hours=50)
+    # anchored to the epoch, so it does NOT drift when 'now' moves within a period
+    later = heartbeats.strategic_slots("agent-x", now + timedelta(hours=3), 48.0)
+    assert later == slots
+    # ...and rolls over to a fresh, unclaimed slot id in the next period
+    nxt = heartbeats.strategic_slots("agent-x", now + timedelta(hours=48), 48.0)
+    assert nxt[0][0] != cur_id and nxt[1][0] == cur_id
+    assert heartbeats.strategic_slots("agent-x", now, 0) == []  # 0 disables
+
+
+def test_heartbeat_kind_maps_to_the_right_tier():
+    from kalshi_bot.evo import cognition as cog
+
+    settings = EvoSettings(_env_file=None)
+    assert cog.alias_for_kind("routine") == "routine"
+    assert cog.alias_for_kind("triggered") == "routine"  # unlisted -> cheapest tier
+    assert cog.alias_for_kind("reflection") == "deep"
+    # every high-stakes lifecycle beat rides the top tier
+    for kind in ("strategic", "birth", "cohort_end", "retirement"):
+        assert cog.alias_for_kind(kind) == "strategic", kind
+        assert cog.is_enriched_kind(kind) is True
+    assert cog.is_enriched_kind("routine") is False
+    # output ceilings widen as the tier gets more expensive
+    assert (cog.max_output_tokens_for(settings, "routine")
+            == settings.heartbeat_max_output_tokens)
+    assert (cog.max_output_tokens_for(settings, "reflection")
+            == settings.reflection_max_output_tokens)
+    assert (cog.max_output_tokens_for(settings, "birth")
+            == settings.strategic_max_output_tokens)
+
+
 def test_claim_heartbeat_idempotent(evo_session, evo_agent):
     agent, cohort = evo_agent
     hb = heartbeats.claim_heartbeat(
@@ -256,7 +309,7 @@ def test_trade_intent_rejected_up_front_for_untradable_ticker(
 
 def test_llm_pricing_and_no_key_fails_closed(evo_session, evo_settings, evo_agent):
     agent, cohort = evo_agent
-    assert llm.seed_model_prices(evo_session, evo_settings) == 2
+    assert llm.seed_model_prices(evo_session, evo_settings) == 3  # routine + deep + strategic
     assert llm.seed_model_prices(evo_session, evo_settings) == 0
     price = llm.get_price(evo_session, "routine")
     assert llm.compute_cost_usd(price, 1_000_000, 0, 0) == 1.0
