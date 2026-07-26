@@ -206,3 +206,28 @@ def test_agent_saves_activates_strategy_and_runner_trades_end_to_end(
         )
     )
     assert pos is not None and pos.quantity == 5
+
+
+def test_activate_strategy_with_non_numeric_id_rejects_cleanly(
+    evo_session, evo_settings, evo_agent
+):
+    """Regression for a live incident: an agent passed a strategy NAME
+    ("energy_maker_tight_spread_v1") instead of the numeric id from a prior
+    save_strategy result. The int() coercion isn't guarded here, so the bare
+    ValueError escaped to the generic action-execution catch-all and surfaced
+    as an opaque "internal error: ValueError: invalid literal for int() with
+    base 10: ..." — the heartbeat survived (caught, not a crash) but the agent
+    got no actionable signal for what it did wrong. It should reject cleanly
+    with a message the agent can act on next heartbeat."""
+    agent, cohort = evo_agent
+    md = StaticMarketData()
+    hb = run_heartbeat(
+        evo_session, evo_settings, agent=agent, cohort=cohort, kind="routine",
+        slot_id="e2e-bad-activate", md=md,
+        cognition=_script([{"type": "activate_strategy",
+                             "strategy_id": "energy_maker_tight_spread_v1"}]),
+    )
+    act = next(o for o in hb.actions_json if o["type"] == "activate_strategy")
+    assert act.get("ok") is not True
+    assert "strategy_id" in act["rejected"]
+    assert "internal error" not in act["rejected"]
