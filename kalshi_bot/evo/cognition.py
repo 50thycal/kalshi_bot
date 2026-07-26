@@ -676,8 +676,12 @@ def _execute_one(
         return {"ok": True, "experiment_id": row.id}
 
     if t == "conclude_experiment":
+        try:
+            experiment_id = int(a.get("experiment_id", 0))
+        except (TypeError, ValueError):
+            return {"rejected": f"invalid experiment_id {a.get('experiment_id')!r}"}
         row, err = memory.conclude_experiment(
-            session, au, int(a.get("experiment_id", 0)),
+            session, au, experiment_id,
             result=a.get("result") if isinstance(a.get("result"), dict) else {
                 "text": str(a.get("result", ""))[:2000]},
             confidence=float(a.get("confidence", 0.5)),
@@ -710,8 +714,12 @@ def _execute_one(
         kind = a.get("kind")
         if kind not in ("cognitive", "trading"):
             return {"rejected": "kind must be cognitive|trading"}
+        try:
+            to_revision = int(a.get("to_revision", 0))
+        except (TypeError, ValueError):
+            return {"rejected": f"invalid to_revision {a.get('to_revision')!r}"}
         row, err = rollback_genome(
-            session, agent, kind, int(a.get("to_revision", 0)),
+            session, agent, kind, to_revision,
             reason=str(a.get("reason", ""))[:500], heartbeat_id=hb.id,
         )
         return {"ok": True, "revision": row.revision} if row else {"rejected": err}
@@ -720,11 +728,15 @@ def _execute_one(
         cond = a.get("condition")
         if not isinstance(cond, dict):
             return {"rejected": "condition object required"}
+        try:
+            cooldown_seconds = int(a.get("cooldown_seconds", 300))
+        except (TypeError, ValueError):
+            return {"rejected": f"invalid cooldown_seconds {a.get('cooldown_seconds')!r}"}
         row, err = listeners.create_listener(
             session, settings, owner_uuid=au, name=str(a.get("name", "listener"))[:64],
             condition=cond, purpose=a.get("purpose"),
             effect=str(a.get("effect", "event")),
-            cooldown_seconds=int(a.get("cooldown_seconds", 300)),
+            cooldown_seconds=cooldown_seconds,
             expires_in_hours=(float(a["expires_in_hours"])
                               if a.get("expires_in_hours") else None),
             expected_value_note=a.get("expected_value_note"), heartbeat_id=hb.id,
@@ -732,7 +744,11 @@ def _execute_one(
         return {"ok": True, "listener_id": row.id} if row else {"rejected": err}
 
     if t == "remove_listener":
-        row, err = listeners.remove_listener(session, au, int(a.get("listener_id", 0)))
+        try:
+            listener_id = int(a.get("listener_id", 0))
+        except (TypeError, ValueError):
+            return {"rejected": f"invalid listener_id {a.get('listener_id')!r}"}
+        row, err = listeners.remove_listener(session, au, listener_id)
         return {"ok": True} if row else {"rejected": err}
 
     if t == "run_backtest":
@@ -815,7 +831,12 @@ def _execute_one(
         return {"ok": True, "strategy_id": row.id} if row else {"rejected": err}
 
     if t == "activate_strategy":
-        row, err = sandbox.activate_strategy(session, au, int(a.get("strategy_id", 0)))
+        try:
+            strategy_id = int(a.get("strategy_id", 0))
+        except (TypeError, ValueError):
+            return {"rejected": f"strategy_id must be the integer id from a prior "
+                                 f"save_strategy result, got {a.get('strategy_id')!r}"}
+        row, err = sandbox.activate_strategy(session, au, strategy_id)
         return {"ok": True, "strategy": row.name} if row else {"rejected": err}
 
     if t == "submit_trade_intent":
@@ -871,7 +892,11 @@ def _execute_one(
         return {"ok": True, "order_id": order.id}
 
     if t == "cancel_order":
-        row, err = papermod.cancel_order(session, au, int(a.get("order_id", 0)))
+        try:
+            order_id = int(a.get("order_id", 0))
+        except (TypeError, ValueError):
+            return {"rejected": f"invalid order_id {a.get('order_id')!r}"}
+        row, err = papermod.cancel_order(session, au, order_id)
         # Echo order_id (like submit_trade_intent) so the action summary in
         # actions_json records WHICH order was canceled — otherwise a cancel is an
         # untraceable {"ok": true} and reconstructing what an agent did requires
@@ -902,9 +927,11 @@ def _execute_one(
         return {"ok": True, "ticket_id": row.id, "deduplicated": dedup}
 
     if t == "support_ticket":
-        row, err = tickets.support_ticket(
-            session, au, int(a.get("ticket_id", 0)), note=a.get("note")
-        )
+        try:
+            ticket_id = int(a.get("ticket_id", 0))
+        except (TypeError, ValueError):
+            return {"rejected": f"invalid ticket_id {a.get('ticket_id')!r}"}
+        row, err = tickets.support_ticket(session, au, ticket_id, note=a.get("note"))
         return {"ok": True} if row else {"rejected": err}
 
     if t == "register_data_source":
