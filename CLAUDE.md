@@ -121,6 +121,15 @@ To run a request:
      win%, %exit and the **Δ vs hold** per rule. Gate on **Δp5 (tail) up AND Δmean ≥ −0.3¢** at
      n≥100 replayable — see `docs/MMSELL_EXIT_STUDY.md`. Coverage grows after deploy (a position
      must be born + settle inside the capture window); empty early output is a data-maturity wait.
+   - **"parity"** / **"live paper parity"** -> `{"type":"script","name":"live_paper_parity"}` — is
+     our paper trading system telling the truth about a LIVE book? Every live strategy runs a fresh
+     paper **twin** beside it (same start instant, same candidates, the LIVE price/size/cap knobs),
+     so the only difference is the fill assumption paper cannot test. Reports decision alignment
+     (and the exact gate that stopped live), fill rate + price gap, and settled twin-vs-live P&L —
+     including the **matched-market** pairs, which separate a wrong simulator (ACCOUNTING GAP —
+     invalidates every paper gate) from a real edge lost to execution (EXECUTION GAP). Lead with
+     ANOMALIES. Mechanism + traps: `docs/LIVE_PAPER_TWIN.md`; the arm-and-audit procedure is the
+     `live-paper-parallel` skill. **Standing policy: no strategy goes live without a twin.**
 
    The individual probes can still be run alone:
    `weather_model_check` grades the ensemble forecast distribution against the
@@ -181,7 +190,10 @@ unavailable.
   server-side (a SELECT-only role + a read-only transaction). Don't try to write.
 - Schema reference: `kalshi_bot/models.py`. Key tables: `bot_runs`, `markets`,
   `market_snapshots`, `orderbook_snapshots`, `signals`, `paper_trades`,
-  `paper_positions`, `account_snapshots`, `system_events`. Weather research:
+  `paper_positions`, `account_snapshots`, `system_events`. Live/paper parallel runs:
+  `live_paper_twins` (one epoch row per twin — `started_at` scopes BOTH sides of a
+  paper-vs-live comparison; always filter on it) and `live_paper_parity_events` (the
+  per-candidate decision tape: incumbent paper book / twin / real live outcome). Weather research:
   live-collected `weather_*` tables vs `backfill_weather_markets` /
   `backfill_weather_candles` (Kalshi REST history — separate provenance, never
   mix them silently in an analysis). `weather_forecast_outcomes` is the persisted

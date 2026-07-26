@@ -121,7 +121,11 @@ def _pctile(xs, q):
 
 
 def _load(cur, book_filter):
-    where = "AND strategy = %s" if book_filter else "AND strategy LIKE 'mmsell%%'"
+    # An explicit --book may name a twin; the unfiltered sweep excludes twins (they are the
+    # live-parallel control, read by scripts/live_paper_parity.py, not paper variants to gate).
+    where = ("AND strategy = %s" if book_filter else
+             "AND strategy LIKE 'mmsell%%'"
+             " AND strategy NOT IN (SELECT twin_tag FROM live_paper_twins)")
     params = (book_filter,) if book_filter else ()
     cur.execute(
         "SELECT id, strategy, market_ticker, assumed_price, resolved_value, created_at, closed_at"

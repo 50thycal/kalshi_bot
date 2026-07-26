@@ -612,6 +612,33 @@ class Settings(BaseSettings):
     #   "close:<ticker_prefix>"  -> targeted v1 close of ONLY positions matching that prefix
     live_probe: str = ""
 
+    # --- Live/paper PARALLEL TWIN books (docs/LIVE_PAPER_TWIN.md) ---
+    # Standing policy: every strategy promoted to real money runs a FRESH paper book beside it,
+    # started at the same instant and parameterized to the LIVE knobs (live entry price rule,
+    # live dollar sizing, live open cap, live market-quality gates) — so the ONLY difference
+    # between the two books is the fill assumption paper structurally cannot test. That converts
+    # "is our paper edge a mirage?" from an argument into a measurement.
+    #
+    # Why not just compare live against the incumbent paper book: the incumbent carries months of
+    # history and a different parameterization (1-contract clips, 200-position cap, paper's own
+    # entry price), so any gap conflates sample, regime, sizing and fills. The twin controls all
+    # of those; only fills differ.
+    live_paper_twin_enabled: bool = True
+    # Auto-twin every tag in LIVE_STRATEGIES (the standing policy). Explicit LIVE_PAPER_TWINS
+    # entries always win; set this false to opt a deployment out entirely.
+    live_paper_twin_auto: bool = True
+    # Explicit pairs, comma-separated: "mmsell10" (twin tag derived by suffix) or
+    # "mmsell10:mmsell10_pt" (explicit twin tag). Overrides/extends the auto list.
+    live_paper_twins: str = ""
+    live_paper_twin_suffix: str = "_pt"
+    # 0 = inherit the live book's own open cap (the faithful choice — the twin should be
+    # constrained exactly like live). Set >0 only to bound the extra paper bookkeeping.
+    live_paper_twin_max_open_positions: int = 0
+    # Record the per-candidate decision tape (parent paper / twin / live outcome per market per
+    # cycle) that makes divergence attributable. Capped per cycle to bound row volume.
+    live_paper_twin_parity_events: bool = True
+    live_paper_twin_parity_max: int = 400
+
     @field_validator("paper_momentum_direction", mode="before")
     @classmethod
     def _coerce_momentum_direction(cls, v: object) -> str:
@@ -752,6 +779,38 @@ class Settings(BaseSettings):
         """Allowlist of strategy prefixes permitted to place real orders. Book-agnostic:
         no whitelist filter — empty means nothing trades live."""
         return [s.strip() for s in self.live_strategies.split(",") if s.strip()]
+
+    @property
+    def live_paper_twin_pairs(self) -> list[tuple[str, str]]:
+        """Configured (live_tag, twin_tag) parallel-run pairs.
+
+        Sources, in precedence order: explicit `live_paper_twins` entries, then — when
+        `live_paper_twin_auto` is on — every tag in `LIVE_STRATEGIES` that has no explicit
+        entry. The twin tag defaults to `<live_tag><live_paper_twin_suffix>`, clamped to the
+        24-char `paper_trades.strategy` width. A pair whose two tags collide, or whose twin tag
+        is itself a live tag, is dropped (a twin must never be able to place real orders)."""
+        if not self.live_paper_twin_enabled:
+            return []
+        live_tags = self.live_strategy_list
+        suffix = (self.live_paper_twin_suffix or "_pt").strip()
+        pairs: dict[str, str] = {}   # live_tag -> twin_tag
+        for part in self.live_paper_twins.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            live_tag, _, twin_tag = part.partition(":")
+            live_tag = live_tag.strip()
+            twin_tag = (twin_tag.strip() or f"{live_tag}{suffix}")[:24]
+            if live_tag and twin_tag and live_tag != twin_tag:
+                pairs[live_tag] = twin_tag
+        if self.live_paper_twin_auto:
+            for live_tag in live_tags:
+                if live_tag not in pairs:
+                    twin_tag = f"{live_tag}{suffix}"[:24]
+                    if twin_tag != live_tag:
+                        pairs[live_tag] = twin_tag
+        # A twin tag that is also an allowlisted live tag would be able to place real orders.
+        return [(lt, tt) for lt, tt in sorted(pairs.items()) if tt not in live_tags]
 
     @property
     def live_city_list(self) -> list[str]:
@@ -1130,6 +1189,7 @@ class Settings(BaseSettings):
             "weather_validation_max_htc": self.weather_validation_max_htc,
             "live_enabled": self.live_enabled,
             "live_strategies": self.live_strategy_list,
+            "live_paper_twins": [f"{lt}->{tt}" for lt, tt in self.live_paper_twin_pairs],
             "live_cities": self.live_city_list,
             "live_windows": self.live_window_list,
             "live_cells": [f"{b}:{c}:{w}" for b, c, w in self.live_cell_list],

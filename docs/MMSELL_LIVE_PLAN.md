@@ -1,5 +1,22 @@
 # MMSELL3 — live real-money test plan (staged, pre-registered)
 
+> **⚠ ADDED 2026-07-26 — the mmsell10 live test runs with a PAPER TWIN in parallel.**
+> `LIVE_STRATEGIES=mmsell10` now automatically starts a fresh paper book `mmsell10_pt` at the same
+> instant, seeing the same candidates but priced/sized by the **live** knobs (maker no-bid + offset,
+> `LIVE_MAX_ORDER_DOLLARS` sizing, `MMSELL_LIVE_MAX_OPEN_POSITIONS` cap, live spread gate). This
+> matters because the incumbent `mmsell10` paper book carries months of history at 1-contract clips
+> and a 200-position cap — comparing live against it conflates sample, regime, sizing and
+> concurrency with the thing the test is for. The twin controls all four, so the twin-vs-live gap
+> **is** the fill/adverse-selection cost this plan set out to measure (§2), measured directly rather
+> than projected through the fill model's calibration.
+>
+> The read is `{"type":"script","name":"live_paper_parity"}`; its **matched-market** rows are the
+> new load-bearing statistic — a per-contract gap on tickers *both* sides settled cannot be fill
+> rate or adverse selection, so it would indict the simulator itself (and with it every paper gate
+> in this repo, not just this book). Mechanism, gates and traps: `docs/LIVE_PAPER_TWIN.md`;
+> arm-and-audit procedure: the `live-paper-parallel` skill. Retuning a live knob mid-test voids the
+> epoch — start a new twin tag (`mmsell10_pt2`) rather than re-reading the old one.
+
 > **⚠ PREREQUISITE for the NEXT live re-test (added 2026-07-22; re-test expected within ~1 week).**
 > The next mmsell live test targets **mmsell10** — the one realizable candidate (`maxyes` price
 > ceiling; `MMSELL_FILL_MODEL.md` §4), not the whole cohort. Before funding it, do **step 0: build

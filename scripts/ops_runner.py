@@ -98,6 +98,7 @@ ALLOWED_SCRIPTS = (
     "mmsell_fill_model",
     "mmsell_exit_study",
     "mmsell_fill_replay",
+    "live_paper_parity",
     "evo_digest",
     "evo_tree",
     "evo_selftest",

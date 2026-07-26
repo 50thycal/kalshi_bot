@@ -33,6 +33,12 @@ diffed against the last time this skill ran. Read-only; touches no trading confi
   sharply (even flip from disaster to clean) purely from n crossing that threshold,
   with no change in the underlying risk. Flag this explicitly when it happens instead
   of reporting it as "the exit fixed it" or "the risk went away."
+- **A `*_pt` book is a live/paper TWIN, not a variant.** Twins are the parallel paper control
+  beside a live run (`docs/LIVE_PAPER_TWIN.md`) and are deliberately filtered OUT of both reads
+  here — they already enter at the live price, so the fill model would double-count the
+  correction, and they must never be gated like a paper variant. If a live book is running, its
+  read is the `parity` command (`live_paper_parity`) / the `live-paper-parallel` skill; mention it
+  alongside this check rather than folding the twin into these tables.
 - **mmsell10 and mmsell9 have historically been the only REALIZABLE EDGE books**
   (positive realizable P&L at high coverage); mmsell3/6/11/4/7 have run MIRAGE (paper
   reads positive, realizable negative) — a confirmed 50¢ stop (L50, K1 or K2) has been
