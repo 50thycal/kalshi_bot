@@ -1,9 +1,10 @@
 # WIDEQUOTE — is there live flow inside the board's 55–92¢ spreads?
 
 *Census specification written 2026-07-25, before any data was pulled; the census gates below are
-pre-registered. Status: pending census. This is deliberately a **census, not a probe** — on the
-`STREAMPIN` / `SEASONPIN` precedent, where the promotable question was "does the instrument even
-trade?" rather than "is the edge real?".*
+pre-registered. Status: **CENSUSED 2026-07-26 — RULED OUT.** C1/C2 fail on every series tested,
+both auto-discovered and the originally-named candidates. See RESULTS below. This is deliberately
+a **census, not a probe** — on the `STREAMPIN` / `SEASONPIN` precedent, where the promotable
+question was "does the instrument even trade?" rather than "is the edge real?".*
 
 ## One-liner
 
@@ -99,3 +100,37 @@ as `STREAMPIN`, whose instrument existed but never traded intra-window.
 - **Value to $100/mo:** this is the run's only candidate for the **second independent +EV book**
   that PORT named as the binding constraint. That is precisely why it must clear a census before
   it gets a thesis — the failure mode to avoid is building the exciting one on cumulative volume.
+
+## RESULTS (2026-07-26, `scripts/kalshi_widequote_census.py` via the ops channel)
+
+**Two runs, same verdict: RULED OUT.** The census live-discovers its target series (ranked by
+current avg spread, volume-floored) rather than trusting the 07-25 survey's numbers, which
+already told the story before a single trade was examined:
+
+**Run 1 — auto-discovered widest-current-spread series** (`KXGOLFMAJOR` 95.5¢, `KXNASCARCHALLENGE`
+95.2¢, `KXGOVCA` 92.0¢, `KXWMARMAD1SEED` 90.9¢, `KXKENYASENATE` 89.9¢ — note none of the 07-25
+survey's named candidates even made this run's top 5, itself a sign of how fast this pocket
+drifts). **Every series fails C2** (recent wide-spread flow): best case `KXNASCARCHALLENGE` at
+22.2 wide-spread trades/week is closest but still well under the 100/week floor, and even there
+only 4% of its 2,113 sampled trades executed at a wide prior spread (C3 fail — the flow arrives
+after the quote has already tightened, so a resting order here competes at the touch, not in the
+vacuum). `KXGOLFMAJOR` is the one series with a real C3 signal (81% wide) but is too thin (5.8
+trades/week) and too lumpy (544-day gap between distinct settle dates, C4 fail).
+
+**Run 2 — the originally-named candidates directly** (`--series KXGOVCA,KXMAYORLA,KXPGATOUR`):
+**decisive.** All three now show razor-tight CURRENT spreads — `KXGOVCA` 0.4¢ median (2
+live-quoted markets), `KXMAYORLA` 1.0¢, `KXPGATOUR` 0.1¢ (66 live-quoted markets, out of 147
+total) — nothing like the 92.0¢/80.2¢/55.2¢ averages `kalshi_market_survey` reported on 07-25.
+**Zero wide-spread trades in any of the three, out of 3,960/4,000/20,000 total trades sampled
+respectively.** This is the exact averaging artifact the census was pre-registered to catch:
+the wide *average* was driven by a handful of illiquid rungs sitting at a default-quoted
+0¢/100¢, while the markets that actually trade are tight. C1 and C2 both fail on all three,
+cleanly, with large samples — not a close call.
+
+**Decision: RULED OUT, no promotion, no paper book.** Per the pre-registered decision rule, a
+C1-or-C2 failure closes the wide-spread pocket. The cumulative volume behind the 07-25 survey's
+wide-average numbers is real (thousands to tens of thousands of trades per series) but belongs
+to the *tight*, live-quoted rungs — the wide numbers were dead-rung noise, not a liquidity
+vacuum with anything to provide liquidity to. **This closes PORT's "second independent book"
+search down this specific avenue** — the binding constraint (edge supply, not allocation) is
+unchanged.
