@@ -64,7 +64,17 @@ class EvoSettings(BaseSettings):
     heartbeat_max_output_tokens: int = 6400  # doubled to give headroom for batching multiple backtests/actions in one heartbeat
     reflection_max_output_tokens: int = 6000  # reflections are verbose; 4000 truncated mid-JSON
     strategic_max_output_tokens: int = 8000  # top tier reviews the most and writes the most
-    heartbeat_max_input_tokens: int = 12000
+    # Input-size pre-flight caps, ALSO per tier: tiers 2 and 3 include extra context
+    # (graveyard + peer roster on top of everything tier 1 gets — see
+    # cognition.is_enriched_kind), so their real context is legitimately bigger.
+    # Discovered live: reflection heartbeats were regularly ~12.5-13.5K tokens and
+    # got rejected by a single shared 12000 cap meant for tier 1 — every tier-2
+    # heartbeat degraded with "input too large" even though nothing was actually
+    # wrong. Sized with real headroom above what's been observed, not just the
+    # observed max, since a bigger cohort/genome naturally grows this over time.
+    heartbeat_max_input_tokens: int = 14000  # tier 1 (routine) — observed max ~12.1K
+    reflection_max_input_tokens: int = 20000  # tier 2 (deep) — observed ~12.5-13.5K
+    strategic_max_input_tokens: int = 24000  # tier 3 — richest context, but rare enough that a generous cap costs little
     weekly_token_budget: int = 1_500_000  # per agent, input+output
     llm_timeout_seconds: float = 120.0
 

@@ -65,7 +65,9 @@ day (one period for tier 3) so a worker that was down doesn't silently skip a sl
 | `EVO_HEARTBEAT_MAX_OUTPUT_TOKENS` | `6400` | tier-1 output cap |
 | `EVO_REFLECTION_MAX_OUTPUT_TOKENS` | `6000` | tier-2 output cap |
 | `EVO_STRATEGIC_MAX_OUTPUT_TOKENS` | `8000` | tier-3 output cap |
-| `EVO_HEARTBEAT_MAX_INPUT_TOKENS` | `12000` | prompt-size guard |
+| `EVO_HEARTBEAT_MAX_INPUT_TOKENS` | `14000` | tier-1 prompt-size guard (observed max ~12.1K) |
+| `EVO_REFLECTION_MAX_INPUT_TOKENS` | `20000` | tier-2 prompt-size guard — richer context (graveyard + peer roster) observed ~12.5-13.5K |
+| `EVO_STRATEGIC_MAX_INPUT_TOKENS` | `24000` | tier-3 prompt-size guard — richest context, rare enough that a generous cap costs little |
 | `EVO_WEEKLY_TOKEN_BUDGET` | `1500000` | per-agent weekly tokens (in+out) |
 | `EVO_LLM_TIMEOUT_SECONDS` | `120` | API timeout |
 | `EVO_WEEKLY_TOOL_CALLS` | `2000` | per-agent action budget |
@@ -87,8 +89,8 @@ hosted provider — they mean "the OpenAI-compatible backend"):
 
 - **Self-hosted (free)** — a server on your own infra (Ollama / llama.cpp / vLLM),
   no API key, cost rates left at `0`. `evo_llm_usage` records `cost_usd=0` and the
-  weekly `$` ceiling is skipped for that tier, so `EVO_HEARTBEAT_MAX_INPUT_TOKENS` /
-  `EVO_HEARTBEAT_MAX_OUTPUT_TOKENS` (generation time) are the only constraint. A
+  weekly `$` ceiling is skipped for that tier, so each tier's `*_MAX_INPUT_TOKENS` /
+  `*_MAX_OUTPUT_TOKENS` (generation time) are the only constraint. A
   CPU box is often too slow to finish a full heartbeat inside the read timeout.
 - **Hosted API (paid)** — set an API key and the per-Mtok cost rates. A
   `Authorization: Bearer` header is sent, real `cost_usd` is booked to

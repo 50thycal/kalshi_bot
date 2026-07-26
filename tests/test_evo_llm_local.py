@@ -528,6 +528,52 @@ def test_identification_headers_are_openrouter_only():
 
 
 @respx.mock
+def test_deep_tier_gets_its_own_larger_input_cap():
+    """Regression for a live incident: tier 2 (deep/reflection) carries richer
+    context than tier 1 (graveyard + peer roster) and regularly ran ~12.5-13.5K
+    tokens — comfortably fitting the deep cap but rejected outright by the
+    single shared tier-1 cap, degrading every reflection heartbeat as "input
+    too large" even though nothing was wrong with it."""
+    _init_sqlite_engine()
+    settings = _openrouter_settings(
+        heartbeat_max_input_tokens=12000,
+        reflection_max_input_tokens=20000,
+    )
+    with db.session_scope() as session:
+        agent_uuid, cohort_id = _make_agent(session, settings)
+
+    # ~13000 tokens of system text: over tier 1's cap, comfortably under tier 2's
+    big_system = [{"type": "text", "text": "x" * (13000 * 3)}]
+    route = respx.post("https://openrouter.ai/api/v1/chat/completions").mock(
+        return_value=Response(200, json={
+            "choices": [{"message": {"content": '{"journal": {}, "actions": []}'}}],
+            "usage": {"prompt_tokens": 13000, "completion_tokens": 100},
+        })
+    )
+    client = llm.LlmClient(settings)
+    try:
+        with db.session_scope() as session:
+            routine_result = client.complete(
+                session, agent_uuid=agent_uuid, cohort_id=cohort_id,
+                heartbeat_id=None, alias="routine", system_blocks=big_system,
+                user_content="hi", max_tokens=100,
+            )
+        assert routine_result.error is not None and "too large" in routine_result.error
+        assert route.call_count == 0
+
+        with db.session_scope() as session:
+            deep_result = client.complete(
+                session, agent_uuid=agent_uuid, cohort_id=cohort_id,
+                heartbeat_id=None, alias="deep", system_blocks=big_system,
+                user_content="hi", max_tokens=100,
+            )
+        assert deep_result.error is None
+        assert route.call_count == 1
+    finally:
+        client.close()
+
+
+@respx.mock
 def test_openrouter_probe_sends_identification_headers():
     settings = _openrouter_settings()
     route = respx.get("https://openrouter.ai/api/v1/models").mock(
