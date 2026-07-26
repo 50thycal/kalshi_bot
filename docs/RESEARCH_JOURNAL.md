@@ -16,6 +16,29 @@ Conventions:
 
 ---
 
+## INFRA 2026-07-25 — XLOCK probe BUILT (`scripts/kalshi_xlock.py`), pending its first ops run
+
+Materializes `docs/XLOCK_THESIS.md` (the 2026-07-25 structural/arb-adjacent idea-model
+promotion) into a runnable probe: P1 parlay-containment (combo/parlay markets vs their
+component legs, discovered via each combo's own settlement rules text), P2 touch-vs-terminal
+containment (Crypto `MAX`/`MIN` touch series vs terminal threshold series, v1-scoped to Crypto),
+and P3 a coverage census of exactly why `kalshi_arb.py`'s within-event scan does or doesn't fire
+on every open event. Allowlisted in `scripts/ops_runner.py`; 22 tests in
+`tests/test_kalshi_xlock.py` + `tests/test_kalshi_arb.py`.
+
+**One correction caught before any run:** re-deriving P2's payoff table state-by-state while
+building the script found the thesis draft had the lock direction backwards
+(`touch_yes_bid − terminal_yes_ask`, which has an uncapped loss branch and is a directional bet,
+not a lock). Fixed to the only riskless direction, `terminal_yes_bid − touch_yes_ask` (sell
+terminal, buy touch) — `docs/XLOCK_THESIS.md` carries the correction note. Also found
+`_tiles_exhaustively` (built for PR #106's MECE-partition guard) doesn't apply to P1/P2's
+bilateral comparisons; the equivalent protection there is the fillability audit + per-leg
+quote-validity filter, not tiling.
+
+Verdict lands once merged and run via the ops channel — see the follow-up entry.
+
+---
+
 ## INFRA 2026-07-23 — mmsell fill-realism collection BUILT (step 0 for the mmsell10 live re-test)
 
 Not a probe verdict — the data-collection prerequisite the fill model (`docs/MMSELL_FILL_MODEL.md`
