@@ -58,6 +58,7 @@ ALLOWED_SCRIPTS = (
     "kalshi_crypto_probe",
     "kalshi_arb",
     "kalshi_xlock",
+    "kalshi_widequote_census",
     "kalshi_flb",
     "kalshi_mm",
     "kalshi_mm_exits",
