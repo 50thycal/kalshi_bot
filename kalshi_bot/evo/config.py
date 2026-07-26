@@ -62,7 +62,13 @@ class EvoSettings(BaseSettings):
     model_strategic: str = "claude-sonnet-5"  # top tier stays on Anthropic by default
     weekly_llm_ceiling_usd: float = 2.0  # per active agent
     heartbeat_max_output_tokens: int = 6400  # doubled to give headroom for batching multiple backtests/actions in one heartbeat
-    reflection_max_output_tokens: int = 6000  # reflections are verbose; 4000 truncated mid-JSON
+    # Bumped 6000->16000: with the input-cap fix live, a reflection heartbeat on
+    # z-ai/glm-5.2 (a reasoning model) finally dispatched for real and then burned
+    # its ENTIRE 6000-token budget on internal reasoning before ever writing a
+    # JSON answer — output_tokens landed at exactly 6000 and content came back
+    # empty ("no JSON object in output"). Headroom here is for reasoning tokens
+    # PLUS the actual answer, not just a verbose answer.
+    reflection_max_output_tokens: int = 16000
     strategic_max_output_tokens: int = 8000  # top tier reviews the most and writes the most
     # Input-size pre-flight caps, ALSO per tier: tiers 2 and 3 include extra context
     # (graveyard + peer roster on top of everything tier 1 gets — see

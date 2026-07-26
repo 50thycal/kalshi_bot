@@ -63,7 +63,7 @@ day (one period for tier 3) so a worker that was down doesn't silently skip a sl
 | `EVO_MODEL_STRATEGIC` | `claude-sonnet-5` | tier-3 model — the top layer's Anthropic tie-in |
 | `EVO_WEEKLY_LLM_CEILING_USD` | `2.0` | hard per-agent weekly cost stop |
 | `EVO_HEARTBEAT_MAX_OUTPUT_TOKENS` | `6400` | tier-1 output cap |
-| `EVO_REFLECTION_MAX_OUTPUT_TOKENS` | `6000` | tier-2 output cap |
+| `EVO_REFLECTION_MAX_OUTPUT_TOKENS` | `16000` | tier-2 output cap — sized for reasoning-model headroom (see gotcha below), not just verbose JSON |
 | `EVO_STRATEGIC_MAX_OUTPUT_TOKENS` | `8000` | tier-3 output cap |
 | `EVO_HEARTBEAT_MAX_INPUT_TOKENS` | `14000` | tier-1 prompt-size guard (observed max ~12.1K) |
 | `EVO_REFLECTION_MAX_INPUT_TOKENS` | `20000` | tier-2 prompt-size guard — richer context (graveyard + peer roster) observed ~12.5-13.5K |
@@ -108,6 +108,14 @@ hosted provider — they mean "the OpenAI-compatible backend"):
     request at 6000 tokens-per-minute (input + reserved `max_tokens` combined),
     which a routine heartbeat's ~9-10K-token context already exceeds before any
     output is counted. Only viable on a Groq paid tier with a higher TPM cap.
+  - **Reasoning models** (e.g. `z-ai/glm-5.2`) spend output tokens on internal
+    chain-of-thought before writing the final answer into `message.content` —
+    the client only reads `content`, not a separate reasoning field. Discovered
+    live: a tier-2 heartbeat burned its entire output cap on reasoning and
+    returned empty `content` (`"no JSON object in output"`), with real cost
+    booked despite the empty answer. Give a routed reasoning model's tier
+    generous `*_MAX_OUTPUT_TOKENS` headroom — enough for reasoning *plus* the
+    answer, not just a verbose answer.
 
 | Env var | Default | Meaning |
 |---|---|---|
