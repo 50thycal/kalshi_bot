@@ -16,6 +16,25 @@ Conventions:
 
 ---
 
+## INFRA 2026-07-26 — WIDEQUOTE census BUILT (`scripts/kalshi_widequote_census.py`), pending its first ops run
+
+Materializes `docs/WIDEQUOTE_CENSUS.md` (the 2026-07-25 structural/arb-adjacent idea-model
+promotion) into a runnable census over the C1-C4 gates: is there CURRENT flow crossing the
+board's widest-spread series (`KXGOVCA`/`KXMAYORLA`/`KXPGATOUR`-class), or is the cumulative
+volume `kalshi_market_survey` found a historical artifact? Target series are discovered live
+each run (ranked by current avg spread among series with real volume) rather than hardcoded, so
+the read stays valid as liquidity drifts. C2/C3 share one no-lookahead measurement: each trade's
+"prevailing spread" comes from the last hourly candle that closed **strictly before** the
+trade's own timestamp, never one at or after it. Reuses `kalshi_arb` (`_close_ts`, `fee`) and
+`kalshi_mm` (`fetch_trades`) — the same tape reader that produced the maker-sell finding.
+Allowlisted in `scripts/ops_runner.py`; 12 tests in `tests/test_kalshi_widequote_census.py`,
+including the no-lookahead guarantee (a later, wider-spread candle must never be used for an
+earlier trade) and the median-not-mean C1 read (one dead 0/100 rung mustn't drag the average).
+
+Verdict lands once merged and run via the ops channel — see the follow-up entry.
+
+---
+
 ## RE-SCAN 2026-07-26 — kalshi_arb wide-horizon sweep (`--days 1500`): 2 more bugs caught, no real arb
 
 Widened `kalshi_arb`'s horizon from the usual 30–45 days to 1,500 (out to 2028-29 markets never
