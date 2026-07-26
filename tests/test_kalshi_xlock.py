@@ -177,6 +177,34 @@ def test_p2_ignores_non_crypto_and_range_bucket_legs():
     assert r["hits"] == []
 
 
+def test_series_asset_extracts_the_underlying_symbol():
+    assert xk._series_asset("KXBTCD") == "BTC"
+    assert xk._series_asset("KXETHD") == "ETH"
+    assert xk._series_asset("KXBTCMAXY") == "BTC"
+    assert xk._series_asset("KXHYPEMAXMON") == "HYPE"
+    # 'DOGE' starts with the same letter as the 'D' terminal suffix -- must not truncate to ''
+    assert xk._series_asset("KXDOGED") == "DOGE"
+    assert xk._series_asset("KXNOTCRYPTOSERIES") is None
+
+
+def test_p2_does_not_pair_two_different_underlyings():
+    """The actual live false positive from the probe's first ops run: KXSOLD (SOL, terminal)
+    matched KXHYPEMAXMON (HYPE, touch) purely on shared strike + close time, with no asset
+    check at all -- reported a fake +$0.41 lead between two unrelated cryptocurrencies. Asset
+    alignment must be a hard precondition, not an afterthought."""
+    events = [
+        {"category": "Crypto", "series_ticker": "KXHYPEMAXMON", "mutually_exclusive": False,
+         "markets": [_mkt("$75 or above", 0.06, 0.08, "KXHYPEMAXMON-HYPE-26JUL31-7500",
+                          close_days=5.0)]},
+        {"category": "Crypto", "series_ticker": "KXSOLD", "mutually_exclusive": False,
+         "markets": [_mkt("$74.9999 or above", 0.52, 0.54, "KXSOLD-26JUL3117-T74.9999",
+                          close_days=5.7)]},
+    ]
+    r = xk.scan_p2(events, max_gap_hours=36.0)
+    assert r["matched"] == 0
+    assert r["hits"] == []
+
+
 # --- P3: coverage census -----------------------------------------------------------------
 
 

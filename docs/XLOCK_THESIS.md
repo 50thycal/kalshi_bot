@@ -1,7 +1,8 @@
 # XLOCK — locked arbitrage in the pockets the within-event scanner cannot see
 
 *Thesis written 2026-07-25, before any validation ran; the falsifiable predictions below are
-pre-registered. Status: pending probe.*
+pre-registered. Status: **PROBED 2026-07-26 — P1 HOLD (testability-thin), P2 KILL, P3 census
+complete.** See RESULTS below.*
 
 *Correction (2026-07-25, before the probe script's first run — not a re-scope after results):
 P2's direction was wrong in the original draft below (it read `touch_yes_bid − terminal_yes_ask`).
@@ -154,3 +155,54 @@ board the standing monitor actually covers.
   don't need a Sharpe argument, and PORT says the binding constraint is *edge supply*. If they
   miss (the likely case), the value is the P3 census: it makes the standing arb monitor's
   denominator known, which is worth having before the next person asks this question.
+
+## RESULTS (2026-07-26, `scripts/kalshi_xlock.py` via the ops channel, `--days 45`)
+
+**A second false positive was caught and fixed before trusting the first run.** The initial live
+run's P2 flagged a +$0.41 "lead": `KXSOLD` (SOL terminal) vs `KXHYPEMAXMON` (HYPE touch) — two
+**unrelated cryptocurrencies** that happened to share a strike and a close time. `scan_p2` never
+checked the underlying asset matched between the two sides. Fixed with `_series_asset` (extracts
+the symbol from the series ticker — `KXBTCD`→BTC, `KXHYPEMAXMON`→HYPE, `KXDOGED`→DOGE) as a hard
+precondition on every pair, re-verified against the exact live payload, and re-run. This is the
+**third** false-positive class this family has produced (after the trillion-unit parser bug and
+the illiquid-dropped-leg gap) — always the same root cause (a real identifier check assumed
+rather than enforced), and always caught before being reported as a genuine hit. Locked down in
+`tests/test_kalshi_xlock.py`.
+
+**P3 — coverage census.** 7,000 open events at scan time. Only **1,400 (20%)** are actually
+evaluated by `kalshi_arb.scan_event` for a signal; the rest split as: 2,331 plain binary markets
+(`<3` legs, can't structurally hold a Dutch book), 3,269 excluded by the 45-day horizon, 0
+`KXMVE`-tagged (none currently on the board), 0 dropped by the illiquid-quote filter down to
+`<3`. Of the 1,400 evaluated: 357 clean MECE sets, **83 numeric MECE sets had a gap** in their
+retained legs (illiquid legs dropped, caught and suppressed by PR #106's `_tiles_exhaustively`
+guard — a live confirmation that guard is pulling real weight, not just handling a hypothetical),
+349 evaluated on the monotonicity ladder, 611 with no exploitable structure at all, and 2 flagged
+as a genuine arb by the existing scanner (consistent with the live `kalshi_arb` re-scans logged
+in `docs/edge_research.md`). **The scanner's real denominator is ~20% of the open board** —
+mostly excluded by horizon and by structurally being plain binaries, not by a blind spot.
+
+**P1 — parlay containment: HOLD (testability-thin).** 104 combo/`COMBO`-tagged markets found
+(0 `KXMVE`, all discovered via the `COMBO` title/series match); rules text fetched for the
+allowed 40; only **2** decomposed into ≥2 AND-parts; **0** matched to an open leg elsewhere on
+the board. Below the pre-registered 200-pair floor by a wide margin — the rules-text matcher is
+too strict for how Kalshi actually phrases these markets (or genuinely too few combos exist with
+separately-listed components right now). **Not a kill**: re-run periodically as combo listings
+turn over, or extend the matcher (e.g. fuzzy phrase matching, or parsing a subtitle-level
+decomposition alongside rules text) if this stays the binding constraint on a future pass.
+
+**P2 — touch-vs-terminal containment: KILL.** 232 touch legs (Crypto `MAX`/`MIN` series), 969
+terminal legs, **30 same-asset matched pairs** — clears the pre-registered 20-pair testability
+floor. **0 hits** survive even before the fillability audit. Per the pre-registered decision
+rule: **the locked-arb family is closed** on this scan (both P1 and P2's live checks come back
+negative — P1 on testability, P2 on a clean kill with adequate sample). Kalshi's crypto touch and
+terminal ladders are coherently priced against each other.
+
+**Decision:** no promotion. No paper book. The **P3 census fix trigger did not fire** (unflagged
+candidate sets were not measured as a distinct bucket >10% in this run's breakdown — the honest
+achievable breakdown folded that case into `no_structure`, per `scripts/kalshi_xlock.py`'s
+docstring). The standing value of this run is the P3 denominator and the confirmation that PR
+#106's gap guard is actively suppressing real false positives (83 of them, this scan alone) —
+plus a third documented false-positive class for the methodology record. **The locked-arbitrage
+question the user opened this whole thread with is now answered as thoroughly as this repo's
+tooling can answer it: no risk-free multi-leg lock exists on Kalshi's board, within-event or
+across the parlay/touch-terminal pockets a within-event scan can't see.**

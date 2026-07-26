@@ -30,6 +30,15 @@ Three pre-registered checks over ONE board fetch:
   to match -- see that file's revision note. A same-scan-pass hit is only trusted in the
   terminal-bid-minus-touch-ask direction.
 
+  ASSET GUARD (fixed after the script's FIRST live run): the first real scan matched a SOL
+  terminal leg (KXSOLD) against a HYPE touch leg (KXHYPEMAXMON) purely because they shared a
+  strike and a close time -- two unrelated cryptocurrencies with no containment relation at all,
+  reported as a fake +$0.41 lead. `_series_asset` extracts the underlying symbol from the
+  series ticker (KXBTCD -> BTC, KXHYPEMAXMON -> HYPE, KXDOGED -> DOGE) and a pair is only
+  matched when both sides agree -- this is now a hard precondition, not an afterthought, exactly
+  the "match on real identifiers, drop the ambiguous one" rule this family has needed for every
+  prior false positive (KXMUSKNW's units, KXXRP's dropped legs, and now this).
+
   P3 COVERAGE CENSUS: reuses kalshi_arb.scan_event on the SAME fetch and tallies, for every
   event, exactly why it does or doesn't produce a signal -- KXMVE-excluded, raw <3 legs,
   horizon-excluded, illiquid-filtered <3 legs, MECE-clean, MECE-but-gapped, monotonicity-
@@ -241,13 +250,27 @@ def scan_p1(events: list[dict], all_legs: list[dict], max_combo_detail: int) -> 
 
 # --- P2: touch-vs-terminal containment (Crypto only, v1) -------------------------------
 
+# The asset symbol out of a crypto series ticker: KXBTCD -> BTC, KXBTCMAXY -> BTC,
+# KXHYPEMAXMON -> HYPE, KXDOGED -> DOGE (the D$ anchor keeps a 'D'-leading asset like DOGE from
+# matching the single-letter Daily suffix before its own name is captured).
+_ASSET = re.compile(r"^KX([A-Za-z0-9]+?)(?:MAX|MIN|D$)")
+
+
+def _series_asset(series: str) -> str | None:
+    m = _ASSET.match((series or "").upper())
+    return m.group(1) if m else None
+
 
 def scan_p2(events: list[dict], max_gap_hours: float) -> dict:
     touch, terminal = [], []
     for e in events:
         if (e.get("category") or "") != "Crypto":
             continue
-        is_touch = bool(re.search(r"MAX|MIN", (e.get("series_ticker") or "").upper()))
+        series = e.get("series_ticker") or ""
+        asset = _series_asset(series)
+        if not asset:
+            continue          # can't confirm the underlying -> never eligible, not guessed
+        is_touch = bool(re.search(r"MAX|MIN", series.upper()))
         if e.get("mutually_exclusive"):
             continue          # a range-bucket partition event, not independent thresholds --
                                # never eligible, so excluded here rather than counted then dropped
@@ -262,7 +285,7 @@ def scan_p2(events: list[dict], max_gap_hours: float) -> dict:
             if not (0 < ya <= 1) or yb < 0:
                 continue
             row = {"dir": parse[0], "strike": parse[1], "close": ct, "yb": yb, "ya": ya,
-                   "ticker": m.get("ticker")}
+                   "ticker": m.get("ticker"), "asset": asset}
             (touch if is_touch else terminal).append(row)
 
     matched = 0
@@ -271,6 +294,8 @@ def scan_p2(events: list[dict], max_gap_hours: float) -> dict:
     for t in terminal:
         best = None
         for u in touch:
+            if u["asset"] != t["asset"]:
+                continue      # different underlyings -> no containment relation, ever
             if u["dir"] != t["dir"]:
                 continue
             if abs(u["strike"] - t["strike"]) > max(1e-6, 0.001 * abs(t["strike"])):
