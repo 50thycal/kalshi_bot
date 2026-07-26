@@ -64,6 +64,27 @@ def test_active_announcements_respects_window():
     assert keys == {"live"}
 
 
+def test_active_announcements_breaks_effective_at_ties_deterministically():
+    """Regression: every announcement seeded in the SAME deploy shares the exact
+    same effective_at. Once the roster grows past `limit`, ordering by
+    effective_at alone leaves ties broken arbitrarily — a still-valid
+    announcement can silently vanish from every agent's prompt for no visible
+    reason, and which one vanishes can even change between calls. id DESC as a
+    secondary sort makes the truncation deterministic and repeatable."""
+    s = _session()
+    now = dt.datetime(2026, 7, 19, 12, 0, tzinfo=dt.timezone.utc)
+    s.add_all([
+        EvoAnnouncement(key=f"tied-{i}", title=f"tied {i}", body="x",
+                        category="system_change", effective_at=now, active=True)
+        for i in range(6)
+    ])
+    s.flush()
+    first = [a.key for a in announce.active_announcements(s, now=now, limit=3)]
+    second = [a.key for a in announce.active_announcements(s, now=now, limit=3)]
+    assert first == second  # stable across repeated calls, not arbitrary
+    assert first == ["tied-5", "tied-4", "tied-3"]  # most-recently-inserted wins ties
+
+
 def test_announcement_reaches_agent_heartbeat_prompt():
     s = _session()
     settings = EvoSettings(_env_file=None)
