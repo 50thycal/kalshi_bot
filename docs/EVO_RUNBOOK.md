@@ -213,6 +213,6 @@ Same seed ⇒ identical results. This is also part of the test suite
 | ↳ `per-agent budget/ceiling reached` | agents hit the `$2/agent/week` hard stop | expected late-cohort; raise `EVO_WEEKLY_LLM_CEILING_USD` only deliberately |
 | ↳ `malformed model JSON output` | the model emitted invalid JSON (captured in `evo_heartbeats.raw_output_text`) | inspect the captured raw output via the ops DB channel |
 | `abandoned` heartbeats | worker restarted mid-heartbeat | none needed (self-heals); investigate frequent restarts |
-| orders open > 24h | maker limits never traded through (conservative fills working as intended) or market data stalled | check data-health section |
+| orders open > 24h | **maker**: limit never traded through (conservative fills working as intended) or market data stalled — check data-health section. **taker**: orders now evaluate immediately on submission (no next-cycle wait), so a taker order still open this long means the price moved past its limit right after the agent priced it and was never re-checked/canceled — expected occasionally for thin/cheap contracts, but worth a look if frequent |
 | integrity events | an agent tried to break the rules | none needed — automatic fitness penalties / suspension already applied; the audit row is permanent |
 | population ≠ 30 after a boundary | finalization interrupted mid-way | it resumes idempotently next cycle; check `evo_transitions.status` |

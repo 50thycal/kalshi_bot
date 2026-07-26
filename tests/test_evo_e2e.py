@@ -50,16 +50,17 @@ def _script(actions):
 
 
 def test_agent_heartbeat_trade_to_settlement_end_to_end(evo_session, evo_settings, evo_agent):
-    """An agent decides to trade in a real heartbeat; the intent becomes an order,
-    the order fills, a position opens, the market settles YES, and realized P&L is
-    booked at exactly qty*(100-entry)/100."""
+    """An agent decides to trade in a real heartbeat; the intent becomes an order
+    that fills IMMEDIATELY against the live quote (no waiting for the next cycle's
+    process_open_orders pass), a position opens, the market settles YES, and
+    realized P&L is booked at exactly qty*(100-entry)/100."""
     agent, cohort = evo_agent
     ticker = "KXHIGHNY-26JUL24-B81.5"
     md = StaticMarketData()
     md.set_quote(_live_quote(ticker))
 
     # 1) The agent's decision drives the production heartbeat: assemble_context ->
-    #    cognition -> execute_actions -> paper.place_order.
+    #    cognition -> execute_actions -> paper.place_order -> immediate evaluate_order.
     hb = run_heartbeat(
         evo_session, evo_settings, agent=agent, cohort=cohort, kind="routine",
         slot_id="e2e-trade", md=md,
@@ -72,14 +73,10 @@ def test_agent_heartbeat_trade_to_settlement_end_to_end(evo_session, evo_setting
     assert hb is not None and hb.status == "completed"
     intent = next(o for o in hb.actions_json if o["type"] == "submit_trade_intent")
     assert intent["ok"] is True and isinstance(intent["order_id"], int)
+    assert intent["status"] == "filled" and intent["filled_quantity"] == 10
 
     order = evo_session.get(em.EvoOrder, intent["order_id"])
-    assert order is not None and order.market_ticker == ticker and order.status == "open"
-
-    # 2) The fill simulator fills the resting taker order.
-    paper.process_open_orders(evo_session, evo_settings, md)
-    evo_session.refresh(order)
-    assert order.status == "filled"
+    assert order is not None and order.market_ticker == ticker and order.status == "filled"
 
     pos = evo_session.scalar(
         select(em.EvoPosition).where(
@@ -136,6 +133,75 @@ def test_agent_heartbeat_cancel_order_echoes_order_id(evo_session, evo_settings,
 
     order = evo_session.get(em.EvoOrder, order_id)
     assert order.status == "canceled"
+
+
+def test_marketable_order_fills_same_heartbeat_no_next_cycle_needed(
+    evo_session, evo_settings, evo_agent
+):
+    """Root-cause regression for a live incident: agent-submitted orders used to
+    only get evaluated on the NEXT orchestrator cycle's process_open_orders pass
+    (which runs in scan_and_books, BEFORE heartbeats — so an order placed during
+    a heartbeat always missed that cycle's fill check). Combined with heartbeats
+    that can themselves take 60-250+ seconds, a thin/cheap contract's exact touch
+    price the agent priced against had often already drifted by the time the next
+    cycle finally checked it, so marketable taker orders sat 'open' with zero fills
+    even though nothing was actually wrong with the price. Fixed by evaluating the
+    order immediately, in the same action-execution step that creates it — proven
+    here by asserting fill + a position WITHOUT ever calling process_open_orders."""
+    agent, cohort = evo_agent
+    ticker = "KXHIGHNY-26JUL24-B81.5"
+    md = StaticMarketData()
+    md.set_quote(_live_quote(ticker))  # yes_ask = 47 with the defaults
+
+    hb = run_heartbeat(
+        evo_session, evo_settings, agent=agent, cohort=cohort, kind="routine",
+        slot_id="e2e-instant-fill", md=md,
+        cognition=_script([{
+            "type": "submit_trade_intent", "market_ticker": ticker,
+            "side": "yes", "action": "buy", "quantity": 3, "style": "taker",
+            "limit_price_cents": 47, "thesis": "priced exactly at the observed ask",
+        }]),
+    )
+    intent = next(o for o in hb.actions_json if o["type"] == "submit_trade_intent")
+    assert intent["ok"] is True
+    assert intent["status"] == "filled" and intent["filled_quantity"] == 3
+
+    order = evo_session.get(em.EvoOrder, intent["order_id"])
+    assert order.status == "filled"
+    pos = evo_session.scalar(
+        select(em.EvoPosition).where(
+            em.EvoPosition.market_ticker == ticker,
+            em.EvoPosition.ledger == f"cohort:{cohort.id}",
+        )
+    )
+    assert pos is not None and pos.quantity == 3  # order->fill->position, one heartbeat
+
+
+def test_unmarketable_order_still_rests_open_not_force_filled(
+    evo_session, evo_settings, evo_agent
+):
+    """The immediate-evaluate fix must not force-fill orders the market can't
+    actually satisfy — a taker buy priced BELOW the live ask should still rest
+    open, exactly as evaluate_order would decide on any later cycle."""
+    agent, cohort = evo_agent
+    ticker = "KXHIGHNY-26JUL24-B81.5"
+    md = StaticMarketData()
+    md.set_quote(_live_quote(ticker))  # yes_ask = 47
+
+    hb = run_heartbeat(
+        evo_session, evo_settings, agent=agent, cohort=cohort, kind="routine",
+        slot_id="e2e-instant-no-fill", md=md,
+        cognition=_script([{
+            "type": "submit_trade_intent", "market_ticker": ticker,
+            "side": "yes", "action": "buy", "quantity": 3, "style": "taker",
+            "limit_price_cents": 10, "thesis": "priced well below the ask",
+        }]),
+    )
+    intent = next(o for o in hb.actions_json if o["type"] == "submit_trade_intent")
+    assert intent["ok"] is True
+    assert intent["status"] == "open" and intent["filled_quantity"] == 0
+    order = evo_session.get(em.EvoOrder, intent["order_id"])
+    assert order.status == "open"
 
 
 # --- full agent-driven strategy lifecycle ----------------------------------
