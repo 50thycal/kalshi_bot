@@ -127,5 +127,23 @@ the clean re-live-test candidate, straight into the mmsell3 entry as a `maxyes` 
    that reaches the rich cells the live calibration can't. Run it once the table has enough settled
    candidates (before the mmsell10 live re-test). (Area-2's OFLOW ruling-out means this is for fill
    realism only, not a signal.)
+   **[2026-07-26] Replay BUILT + first pass run.** `mmsell_fill_replay` (`{"type":"script",
+   "name":"mmsell_fill_replay"}`) treats a resting buy-NO as filled if any later candidate snapshot
+   shows `no_ask <= entry_no` (the touch crossed our resting level) — a quote-based proxy, not a
+   verified execution (see the module docstring for what it can and can't see). It reports THREE
+   numbers per cell, not two: `opt_all` (paper's all-time cell average — reference only, a different
+   population), `opt_path` (that same fill-everything assumption restricted to the replayable
+   subset — the fair baseline), and `replay` (the fill-proxy-gated P&L over that identical subset).
+   Judge the proxy by `replay − opt_path`, never `replay − opt_all`.
+   First read (n=128/4119 settled trades replayable, i.e. 3% — expected, since the denominator is
+   ALL-TIME history and the collection is 3 days old): **`<=7c`** (mmsell10's regime) w/path=6,
+   replay +4.83¢ vs opt_path +5.83¢ — directionally sane (a bit below the fill-everything baseline)
+   but n=6 is noise, not a result. **`>=12c`** w/path=109 (the only cell with a real sample), replay
+   **−4.13¢** vs opt_path +0.67¢ — a sizeable adverse-selection drag, qualitatively consistent with
+   the live model's core thesis even though it lands in a different cell than the live-calibrated
+   read flagged (there it was 8–10¢). mmsell10 does not trade this cell (its `maxyes` cap keeps it
+   out), so this reading is not a caution against mmsell10 specifically — it's a caution against
+   trading the wider, uncapped control band live. **Re-run as the sample grows**; at these n's this
+   is a trend check per docs/RESEARCH_JOURNAL.md, not a promote/kill signal for anything.
 3. **Re-test live only from the cheap fillable band.** Any future mmsell live test enters only where
    realizable ≈ paper (≤7¢ / under a `maxyes` cap), i.e. mmsell10's regime — not the whole cohort.

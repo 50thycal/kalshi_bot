@@ -16,6 +16,40 @@ Conventions:
 
 ---
 
+## INFRA 2026-07-26 — mmsell_fill_replay BUILT + first pass (PRELIMINARY, small n)
+
+Follow-on to the 2026-07-23 candidate-tick collection below. `scripts/mmsell_fill_replay.py` replays
+each settled control-book (`mmsell`) trade's captured candidate price path: a resting buy-NO at
+`entry_no` is treated as filled if any later snapshot shows `no_ask <= entry_no` (the book's touch
+crossed our resting level) — a quote-based proxy (we have snapshots, not trade prints); documented
+caveats (misses a cross-and-revert between samples, no queue-position signal) live in the module
+docstring. Reports `opt_all` (paper's all-time cell average, reference only) / `opt_path` (that same
+assumption restricted to the replayable subset — the fair baseline) / `replay` (fill-proxy-gated P&L
+over that subset) — an early draft compared `replay` against `opt_all`, a different and much larger
+population; fixed before trusting any of it (12 tests, including a regression pin for that bug).
+
+**First read** (128/4119 settled trades replayable so far — 3 days of collection against an all-time
+denominator, so 3% is expected, not a red flag):
+
+| cell | w/path | fill% | opt_path | replay | Δ |
+|---|---|---|---|---|---|
+| ≤7¢ (mmsell10's regime) | 6 | 83% | +5.83¢ | +4.83¢ | −1.00¢ |
+| 8–11¢ | 13 | 54% | +8.31¢ | +4.54¢ | −3.77¢ |
+| ≥12¢ | 109 | 32% | +0.67¢ | **−4.13¢** | **−4.80¢** |
+| ALL | 128 | 37% | +1.69¢ | −2.83¢ | −4.52¢ |
+
+Every cell's `replay` sits below its `opt_path` — directionally consistent with the live-calibrated
+model's core adverse-selection thesis. The one cell with a real sample (≥12¢, n=109) shows a sizeable
+drag, though it lands in a different cell than the live-calibrated read flagged (there it was 8–10¢) —
+plausibly just two different measurement methods (verified live fills vs a price-crossing proxy)
+disagreeing on the exact boundary, not a contradiction of the thesis itself. **mmsell10 doesn't trade
+≥12¢** (its `maxyes` cap keeps it out), so this is not a caution against mmsell10 — it's a caution
+against the wider, uncapped control band. The ≤7¢ cell mmsell10 actually lives in has n=6: not a
+result, a coin flip. **Verdict: TREND CHECK ONLY, re-run as the sample grows** — no promote/kill
+action taken on this alone.
+
+---
+
 ## INFRA 2026-07-23 — mmsell fill-realism collection BUILT (step 0 for the mmsell10 live re-test)
 
 Not a probe verdict — the data-collection prerequisite the fill model (`docs/MMSELL_FILL_MODEL.md`
