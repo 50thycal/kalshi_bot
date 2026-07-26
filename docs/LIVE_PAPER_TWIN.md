@@ -162,6 +162,39 @@ twin costs paper bookkeeping and (because the shared paper engine fetches per op
 number of extra read-only API calls per management cycle — bound it with
 `LIVE_PAPER_TWIN_MAX_OPEN_POSITIONS` if a book's live cap is large.
 
+### Sizing: which knob is which (two different things, easy to conflate)
+
+| knob | what it caps | paper | live + twin |
+|---|---|---|---|
+| `PAPER_ORDER_SIZE` | contracts per **entry**, paper books | `1` | — |
+| `LIVE_MAX_ORDER_DOLLARS` / `MAX_ORDER_SIZE` | contracts per **entry**, live path: `min(floor(dollars / price), MAX_ORDER_SIZE)` | — | `min(floor(5.00/0.93), 1) = 1` |
+| `MMSELL_MAX_OPEN_POSITIONS` | concurrent **open positions**, paper books | `200` | — |
+| `MMSELL_LIVE_MAX_OPEN_POSITIONS` | concurrent **open positions**, live + twin | — | `60` |
+
+`MAX_ORDER_SIZE` is a per-order contract count, **not** a position count — the position count is the
+open-positions cap, a separate knob. At the defaults the live and twin clip is **1 contract**, which
+already matches `PAPER_ORDER_SIZE=1`, so all three books use identical clips and both the
+per-contract *and* the dollar comparison are apples-to-apples with no config change.
+
+**Fee-rounding consequence, worth knowing before changing the clip.** The Kalshi fee is
+`ceil(0.07 · C · P · (1−P))` rounded **up to a whole cent for the whole order**, so a 1-contract clip
+is the least fee-efficient size there is. On a mmsell longshot at NO 93¢:
+
+| clip | order fee | fee per contract |
+|---|---|---|
+| 1 | $0.01 | **1.00¢** |
+| 2 | $0.01 | 0.50¢ |
+| 5 | $0.03 | 0.60¢ |
+| 10 | $0.05 | 0.50¢ |
+
+Paper's reported per-contract P&L is already **net of the 1.00¢** worst case (paper trades at
+1-contract clips), so raising `MAX_ORDER_SIZE` to 2+ is worth roughly **+0.4–0.5¢/contract** of pure
+rounding relief — material against a book whose realizable edge is ~+1.4¢/contract. Raising it keeps
+twin/live parity intact (both read the same knob via `live/sizing.py`) but *does* make the twin's
+clip differ from the incumbent paper book's — which is fine, since the twin, not the incumbent, is
+the comparison. It also counts as param drift mid-epoch, so change it **before** arming, or start a
+new twin tag.
+
 ## 7. Cost, and what this does not do
 
 * It does **not** make the twin's fills realistic — that's the point. Fill realism is measured by
