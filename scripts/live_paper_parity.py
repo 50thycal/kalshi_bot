@@ -184,9 +184,12 @@ def report_execution(cur, epochs: list[dict], days: int) -> None:
         rest = int(st.get("resting", 0)) + int(st.get("submitted", 0)) + int(st.get("partial", 0))
         live_px = q(cur, "SELECT avg(limit_price) FROM live_orders WHERE strategy=%s"
                          " AND action='buy' AND created_at>=%s", (e["live_tag"], since))[0][0]
-        # Fills are quoted YES-side; the mmsell maker cost basis is the NO price = 100 - yes.
+        # fills.price is recorded on the SIDE TRADED (executor.reconcile: side='no' -> stores
+        # no_price_dollars directly) — for mmsell's buy-NO fills that's already the NO cost
+        # basis, matching live_orders.limit_price. No 100-x conversion (that would double-flip
+        # an already-NO price into a bogus ~7c "no cost" on a ~93c maker fill).
         fill_px = q(cur,
-                    "SELECT avg(100 - f.price) FROM fills f JOIN live_orders lo"
+                    "SELECT avg(f.price) FROM fills f JOIN live_orders lo"
                     "  ON lo.kalshi_order_id=f.kalshi_order_id"
                     " WHERE lo.strategy=%s AND lo.created_at>=%s", (e["live_tag"], since))[0][0]
         twin_px = q(cur, "SELECT avg(assumed_price) FROM paper_trades WHERE strategy=%s"
