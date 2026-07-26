@@ -11,16 +11,24 @@ and **outcome**. Keep the base-rate and per-family tallies below in sync.
 
 ---
 
-## Base rate (as of 2026-07-26, XLOCK probed)
+## Base rate (as of 2026-07-26, XLOCK + WIDEQUOTE both probed)
 
-**17 idea-model promotions → 0 currently-live paper books** (PIN15, the one success, RETIRED
+**18 idea-model promotions → 0 currently-live paper books** (PIN15, the one success, RETIRED
 2026-07-16 when its target T-window was falsified live). The 2026-07-25 structural/arb-adjacent
-run added **XLOCK** (2 sub-checks: P1 parlay containment, P2 touch-vs-terminal) — probed
-2026-07-26: **P2 cleanly KILLED** (30 same-asset matched pairs, 0 hits — clears its testability
-floor); **P1 HOLD** (0 of the pre-registered 200-pair floor — matcher-limited, not a kill). The
-live run also caught a **third false-positive class** in the same family that produced KXMUSKNW
-and KXXRP: a matched pair with no check that the two legs shared the same underlying asset
-(SOL vs HYPE). Fixed and re-verified before trusting the result — see `docs/XLOCK_THESIS.md`.
+run added **XLOCK** (2 sub-checks: P1 parlay containment, P2 touch-vs-terminal) and **WIDEQUOTE**
+(a liquidity-vacuum census) — both probed 2026-07-26. XLOCK: **P2 cleanly KILLED** (30 same-asset
+matched pairs, 0 hits — clears its testability floor); **P1 HOLD** (0 of the pre-registered
+200-pair floor — matcher-limited, not a kill). The live run also caught a **third false-positive
+class** in the same family that produced KXMUSKNW and KXXRP: a matched pair with no check that
+the two legs shared the same underlying asset (SOL vs HYPE). Fixed and re-verified before
+trusting the result — see `docs/XLOCK_THESIS.md`. WIDEQUOTE: **RULED OUT (C1/C2 fail)** on two
+runs — the board's widest-*average*-spread series (`KXGOVCA`/`KXMAYORLA`/`KXPGATOUR` and others)
+all trade at razor-tight CURRENT spreads (0.1–1.0¢) with zero recent wide-spread flow; the wide
+averages `kalshi_market_survey` reported were dead-rung noise, not a liquidity vacuum with
+anything to provide to — see `docs/WIDEQUOTE_CENSUS.md`. The same wide-horizon `kalshi_arb`
+re-scan (2026-07-26, `docs/edge_research.md`) caught two *more* false-positive classes on top of
+these (a scale-blind tiling tolerance, a bare-leading-dot decimal parser gap) — five
+false-positive classes now caught and fixed across this whole arc, all before being trusted.
 The pipeline keeps working *as a filter*
 (most promotions are cheap ruling-outs, no paper bled), but the promote→book conversion is very
 low, so **promote conservatively and lean on the testability-NOW + venue-age gates.** The
@@ -43,7 +51,7 @@ read PASS via a correlation-clustering artifact — caught + fixed, the discipli
 |---|---|---|
 | **live paper book (gates passing)** | 1 | PIN15 (later RETIRED 2026-07-16 — T-window falsified) |
 | became a book, later shelved | 1 | THETA (distribution-shape model error) |
-| **killed at probe** (clean ruling-out) | 9 | XGAME, TFAV, WCPROP, MLBWX, PINNED, DECAY, FEDRV (rates efficient), OFLOW (order-flow doesn't predict price), **XLOCK-P2** (crypto touch-vs-terminal, 30 pairs / 0 hits) |
+| **killed at probe** (clean ruling-out) | 10 | XGAME, TFAV, WCPROP, MLBWX, PINNED, DECAY, FEDRV (rates efficient), OFLOW (order-flow doesn't predict price), **XLOCK-P2** (crypto touch-vs-terminal, 30 pairs / 0 hits), **WIDEQUOTE** (C1/C2 fail — no current wide-spread flow, stale-average artifact) |
 | **UNTESTABLE — venue not ready** (data absence, not a kill) | 3 | FREEZE, COMPIN, **ECON-REACT** (only ~20 genuine econ-print settles yet) |
 | **census-stage HOLD/borderline** (not yet a full-probe go/no-go) | 3 | SEASONPIN (MLB HOLD, WNBA borderline), STREAMPIN (HOLD — no intra-window tape), **XLOCK-P1** (HOLD — rules-text matcher found 0 of 200 pre-registered pairs) |
 | **diagnostic — premature** (revisit at ≥2 independent +EV books) | 1 | PORT (portfolio construction — allocation premature) |
@@ -58,6 +66,7 @@ Plus one run (2026-07-10 run2) that promoted **0 of 28** candidates — a legiti
 | **model-vs-quote** (homegrown forecast/vol model beats the market) | THETA, MLBWX | **0** | 0-for-2. Distribution-shape/model error each time. **Do not re-promote without a genuinely new model** under fresh pre-registration. |
 | **lead-lag / cross-venue** (one venue leads, trade the follower) | XGAME, WCPROP | **0** | 0-for-2. XGAME's symmetry finding (both venues track the shared feed) is structural and transfers across sports. |
 | **favorite-buy** (back the underpriced favorite) | TFAV | **0** | 0-for-1 (−3.6¢). The FLB favorite side accrues to makers, not takers. |
+| **maker / liquidity provision** (rest quotes inside a structural spread vacuum) | WIDEQUOTE | **0** | 0-for-1 (idea-model promotions; `mmsell` predates this pipeline). Census-first, **RULED OUT 2026-07-26**: the board's widest-*average*-spread series (`KXGOVCA`/`KXMAYORLA`/`KXPGATOUR` and others) all trade at razor-tight CURRENT spreads with zero recent wide-spread flow — the averages were dead-rung noise, not a vacuum with anything to provide liquidity to. Confirms `edge_research` lesson: real edge in this family (`mmsell`) needed a measured trade tape to find, never a survey average. |
 | **structural / deadline premium / internal-coherence** | DECAY, FEDRV, XLOCK | **0** | 0-for-3 (DECAY: by-date "hope" was *under*priced, not over; **FEDRV** ruled out 2026-07-21 — its flagged path "incoherence" was a `KXFED*` series-contamination + cross-meeting-independence artifact, so rates are internally efficient exactly as the ~0.1¢ `KXRATECUTCOUNT` spread predicted; **XLOCK** P2 ruled out 2026-07-26 — 30 same-asset crypto touch-vs-terminal pairs, 0 hits, clean kill; P1 HOLD on testability). Internal-coherence RV joins the structural graveyard. |
 | **microstructure / order-flow** (does book/tape flow predict the next price move) | OFLOW | **0** | First-ever attempt in this family (2026-07-22, Area 2), **RULED OUT** the same day. Area 2's binding constraint is **data collection** — full-depth `orderbook_snapshots` exist only for 77 scanner markets over 3 stale June days, and the traded markets have no books persisted — so OFLOW was a feasibility read on the one real order-flow tape (the killed WC slice). Result on **933k tape samples**: imbalance→next-move corr ≈ **+0.008** (net **−3.4¢** after cost; flat quintiles; no toxicity gradient) → **order-flow-as-signal is closed on Kalshi AND the per-market collection is not worth building.** LOW prior held (cost dominates on liquid markets; `edge_research` lesson 5). |
 | **portfolio construction** (meta / diagnostic — combine edges, not find them) | PORT | **n/a** | Not an edge family — the measurement layer the "$100/mo from any combination" goal implies. First run 2026-07-22 (Area 3): **allocation premature** — the portfolio has **1** independent realizable-+EV strategy (the mmsell maker-sell family; `mmsell10` the one genuine +EV book) where ≥2 are needed; diversification/sizing can't manufacture EV. Binding constraint = **edge supply, not allocation**. `port_study.py` kept as the standing portfolio view; the allocation question re-opens automatically the moment a 2nd independent +EV book lands. |
@@ -72,7 +81,7 @@ highest-leverage screen is **testability-NOW**, not edge cleverness.
 
 | date | idea | family | scope source | verdict date | verdict | outcome |
 |---|---|---|---|---|---|---|
-| 2026-07-25 | **WIDEQUOTE** | maker / liquidity provision | **scoped (structural / arb-adjacent run)** | — | **pending census** | Census-first (STREAMPIN/SEASONPIN precedent): is there *current* flow crossing the board's 40–92¢ spreads (`KXGOVCA` 92.0¢, `KXMAYORLA` 80.2¢, `KXPGATOUR` 55.2¢), or is the 49–117M volume cumulative-historical? Four gates C1–C4 (spread real / flow recent / flow crosses wide / cadence readable); C4 is the one that decides whether the survivor is a weekly instrument or an unreadable one-off election. The run's only candidate for the **second independent +EV book** PORT named as the binding constraint. `docs/WIDEQUOTE_CENSUS.md`. |
+| 2026-07-25 | **WIDEQUOTE** | maker / liquidity provision | **scoped (structural / arb-adjacent run)** | 2026-07-26 | **RULED OUT (C1/C2 fail)** | Census-first (STREAMPIN/SEASONPIN precedent), two runs. Auto-discovered widest-current-spread series (`KXGOLFMAJOR`, `KXNASCARCHALLENGE`, `KXGOVCA`, `KXWMARMAD1SEED`, `KXKENYASENATE`) all fail C2 (best case 22/week, well under the 100/week floor). The originally-named candidates tested directly (`--series KXGOVCA,KXMAYORLA,KXPGATOUR`) are decisive: CURRENT spreads are razor-tight (0.1–1.0¢, not the 92.0¢/80.2¢/55.2¢ `kalshi_market_survey` averages) and **zero** wide-spread trades across 3,960/4,000/20,000 sampled trades respectively — exactly the stale-average artifact (a few dead 0/100 rungs dragging up the mean while the live-quoted rungs trade tight) the census was pre-registered to catch. No promotion. `docs/WIDEQUOTE_CENSUS.md` RESULTS section. |
 | 2026-07-25 | **XLOCK** | structural / locked arb | **scoped (structural / arb-adjacent run)** | 2026-07-26 | **P1 HOLD / P2 KILL** | Ran via ops (`--days 45`, 7,000 open events). **P2 (touch-vs-terminal, Crypto): KILL** — 232 touch legs, 969 terminal legs, 30 same-asset matched pairs (clears the 20-pair floor), 0 hits. The first live run's apparent +$0.41 lead was a false pair (`KXSOLD`/SOL vs `KXHYPEMAXMON`/HYPE — no asset check existed); fixed with `_series_asset`, re-verified, re-run clean — the **third** false-positive class this family has produced (after the trillion-unit parser bug and the illiquid-dropped-leg gap), always caught before being trusted. **P1 (parlay containment): HOLD** — 104 combo markets found, only 2 decomposed into ≥2 rules-text AND-parts, 0 matched to an open leg; well below the 200-pair testability floor (matcher-limited, not proof combos don't exist). **P3 census**: only 20% of the 7,000 open events are actually evaluated by `kalshi_arb.scan_event` (2,331 plain binaries, 3,269 horizon-excluded, 0 KXMVE currently listed); of those evaluated, 83 numeric MECE sets had a gap correctly suppressed by PR #106's `_tiles_exhaustively` guard — a live confirmation it's pulling real weight. `docs/XLOCK_THESIS.md` RESULTS section. |
 | 2026-07-22 | **PORT** | portfolio construction (meta / diagnostic) | **scoped (Area 3: portfolio construction)** | 2026-07-22 | **ALLOCATION PREMATURE** | Portfolio-measurement probe (`port_study.py`) on `paper_trades` with fill-model realizable adjustment: effective **independent** realizable-+EV clusters = **1** (the mmsell maker-sell family; `mmsell10` the one genuine +EV book, Sharpe 1.48) where ≥2 are needed → **P1 FAIL**. v1 falsely read PASS (a realizable-sign-flip + correlation-only-clustering artifact split the mmsell family); v2 (family-structural clustering + paper-series correlations) gives the honest read. Binding constraint = **edge supply, not allocation**; hygiene = collapse mmsell→mmsell10, prune negative weather cells; keep as the standing portfolio view. `docs/PORT_THESIS.md`. |
 | 2026-07-22 | **OFLOW** | microstructure / order-flow | **scoped (Area 2: microstructure)** | 2026-07-22 | **RULING-OUT (family closed)** | Probe ran first-try on 823k Kalshi trades / 933k no-lookahead samples: imbalance→next-move corr ≈ +0.008, strong-imbalance net **−3.40¢** (gross +0.05¢), flat quintiles, no toxicity gradient → **P1 KILL**. Order-flow-as-signal closed on Kalshi AND the per-market microstructure collection is not worth building. Clean cheap ruling-out; LOW prior held. `docs/OFLOW_THESIS.md`. |

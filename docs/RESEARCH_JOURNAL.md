@@ -16,6 +16,36 @@ Conventions:
 
 ---
 
+## CENSUS VERDICT 2026-07-26 — WIDEQUOTE: RULED OUT (C1/C2 fail, both auto-discovered and named candidates)
+
+Ran `kalshi_widequote_census` via the ops channel after PR #119 merged — two passes.
+
+**Pass 1 — live-discovered widest-current-spread series.** Deliberately did NOT trust the 07-25
+survey's named candidates; discovered fresh: `KXGOLFMAJOR` (95.5¢), `KXNASCARCHALLENGE` (95.2¢),
+`KXGOVCA` (92.0¢), `KXWMARMAD1SEED` (90.9¢), `KXKENYASENATE` (89.9¢) — notably, `KXMAYORLA` and
+`KXPGATOUR` didn't even make this run's top 5, a sign of how fast this pocket drifts. **Every
+series fails C2** (recent wide-spread flow): best case `KXNASCARCHALLENGE` at 22.2 trades/week,
+well under the 100/week floor, and only 4% of its 2,113 sampled trades executed at a wide prior
+spread (C3 fail — flow arrives after the quote tightens). `KXGOLFMAJOR` is the one series with a
+real C3 signal (81% wide) but too thin (5.8/week) and too lumpy (544-day gap between settle
+dates, C4 fail).
+
+**Pass 2 — the originally-named candidates directly** (`--series KXGOVCA,KXMAYORLA,KXPGATOUR`).
+**Decisive.** All three now show razor-tight CURRENT spreads — `KXGOVCA` 0.4¢, `KXMAYORLA` 1.0¢,
+`KXPGATOUR` 0.1¢ — nothing like the 92.0¢/80.2¢/55.2¢ averages `kalshi_market_survey` reported on
+07-25. **Zero wide-spread trades across 3,960/4,000/20,000 sampled trades respectively.** This is
+the exact averaging artifact the census was pre-registered to catch: the wide *average* was
+driven by a handful of illiquid rungs sitting at a default 0¢/100¢ quote, while the rungs that
+actually trade are tight.
+
+**Decision: RULED OUT, no promotion, no paper book.** Per the pre-registered decision rule, a
+C1-or-C2 failure closes the wide-spread pocket — confirmed with large samples on the named
+candidates, not a close call. `docs/WIDEQUOTE_CENSUS.md` carries the full RESULTS section;
+`docs/IDEA_MODEL_SCORECARD.md` updated. This closes PORT's "second independent book" search down
+this specific avenue — the binding constraint (edge supply, not allocation) is unchanged.
+
+---
+
 ## INFRA 2026-07-26 — WIDEQUOTE census BUILT (`scripts/kalshi_widequote_census.py`), pending its first ops run
 
 Materializes `docs/WIDEQUOTE_CENSUS.md` (the 2026-07-25 structural/arb-adjacent idea-model
