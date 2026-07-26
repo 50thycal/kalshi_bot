@@ -774,6 +774,95 @@ def insert_mmsell_candidate_tick(
     ))
 
 
+# --- live/paper twin harness (docs/LIVE_PAPER_TWIN.md) ---
+
+
+def get_twin_epoch(session, twin_tag: str) -> m.LivePaperTwin | None:
+    return session.scalar(
+        select(m.LivePaperTwin).where(m.LivePaperTwin.twin_tag == twin_tag)
+    )
+
+
+def active_twin_epochs(session) -> list[m.LivePaperTwin]:
+    return list(session.scalars(
+        select(m.LivePaperTwin).where(m.LivePaperTwin.ended_at.is_(None))
+        .order_by(m.LivePaperTwin.started_at)
+    ).all())
+
+
+def sync_twin_epoch(
+    session, *, twin_tag: str, live_tag: str, params: dict
+) -> tuple[m.LivePaperTwin, bool]:
+    """Get-or-create the twin's epoch row; returns (row, params_drifted).
+
+    `started_at` is written ONCE and never moved — a redeploy must not silently restart the
+    epoch, because the whole point is that both sides of the comparison are scoped to the same
+    window. If the live parameters have since changed, the stored snapshot is left intact and
+    `params_drifted=True` is returned so the caller can flag it: the comparison is no longer
+    apples-to-apples and the honest fix is a NEW twin tag, not a quiet re-parameterization."""
+    row = get_twin_epoch(session, twin_tag)
+    if row is None:
+        row = m.LivePaperTwin(
+            twin_tag=twin_tag[:24],
+            live_tag=live_tag[:32],
+            started_at=_now(),
+            params_json=params,
+        )
+        session.add(row)
+        session.flush()
+        return row, False
+    drifted = (row.params_json or {}) != params
+    return row, drifted
+
+
+def end_twin_epoch(session, twin_tag: str, *, notes: str | None = None) -> bool:
+    """Retire a twin epoch (stops nothing by itself — the config switch does that; this marks the
+    window closed so parity reports scope to it and stop treating it as running)."""
+    row = get_twin_epoch(session, twin_tag)
+    if row is None or row.ended_at is not None:
+        return False
+    row.ended_at = _now()
+    if notes:
+        row.notes = notes
+    session.flush()
+    return True
+
+
+def insert_parity_event(
+    session, *, twin_tag: str, live_tag: str, ticker: str, series: str | None = None,
+    hours_to_close: float | None = None,
+    parent_outcome: str | None = None, parent_price: int | None = None,
+    twin_outcome: str | None = None, twin_price: int | None = None,
+    twin_quantity: int | None = None,
+    live_outcome: str | None = None, live_price: int | None = None,
+    live_quantity: int | None = None,
+    yes_mid: float | None = None, no_bid: int | None = None, no_ask: int | None = None,
+    recorded_at: datetime | None = None,
+) -> None:
+    """Record one candidate-market decision across the three actors (incumbent paper book, fresh
+    twin, real live attempt). Deliberately NOT flushed per row — committed with the cycle, so
+    bulk per-candidate recording doesn't flush hundreds of times."""
+    session.add(m.LivePaperParityEvent(
+        recorded_at=recorded_at or _now(),
+        twin_tag=twin_tag[:24],
+        live_tag=live_tag[:32],
+        market_ticker=ticker,
+        series=(series or None) and series[:32],
+        hours_to_close=hours_to_close,
+        parent_outcome=(parent_outcome or None) and parent_outcome[:24],
+        parent_price=parent_price,
+        twin_outcome=(twin_outcome or None) and twin_outcome[:24],
+        twin_price=twin_price,
+        twin_quantity=twin_quantity,
+        live_outcome=(live_outcome or None) and live_outcome[:32],
+        live_price=live_price,
+        live_quantity=live_quantity,
+        yes_mid=yes_mid,
+        no_bid=no_bid,
+        no_ask=no_ask,
+    ))
+
+
 def log_system_event(
     session, *, level: str, component: str, message: str, raw: dict | None = None
 ) -> m.SystemEvent:

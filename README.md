@@ -179,6 +179,25 @@ Honest limitation: paper **assumes the resting ask fills** (enters at the maker 
 so it validates whether the +EV persists out-of-sample on new markets — **not** queue/fill
 realism, which only a small live test (a one-book `LIVE_STRATEGIES=mmsell` allowlist) can prove.
 
+## Live/paper parallel runs (the anti-mirage control)
+
+**Every strategy promoted to real money runs a fresh paper *twin* beside it.** For live tag `X`,
+a new paper book `X_pt` starts at the same instant, sees the same candidates, and uses the **live**
+parameters (maker price rule, dollar-cap sizing, live open cap, live spread gate) — so the only
+difference between the two books is the one thing paper structurally cannot test: the twin assumes
+its resting order fills, live has to actually get filled. A twin never places a real order and
+stands down whenever live does, keeping both sides scoped to one window
+(`live_paper_twins.started_at`).
+
+Why not just compare live against the long-running paper book: that comparison confounds sample,
+regime, sizing and concurrency all at once, so the gap can't be acted on. The twin controls all of
+them. Per-candidate decisions are taped in `live_paper_parity_events` (incumbent paper book / twin /
+the real live outcome, including the exact gate that stopped live), and
+`scripts/live_paper_parity.py` reads the experiment out — separating an **execution gap** (paper's
+arithmetic is right, live can't capture the trades) from an **accounting gap** (paper is wrong about
+trades we *did* get, which invalidates every paper gate in the repo). Twins are auto-derived from
+`LIVE_STRATEGIES`; see `docs/LIVE_PAPER_TWIN.md`.
+
 ## Theta book (ride-along paper — hourly crypto ladders)
 
 Model-anchored tail-selling on Kalshi's recurring hourly crypto ladders (`KXBTCD`/`KXBTC`

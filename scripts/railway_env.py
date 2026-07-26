@@ -46,6 +46,16 @@ ALLOWED_VARS = frozenset({
     "LIVE_STOP_LOSS_CENTS", "LIVE_BREAK_EVEN_ARM_CENTS", "LIVE_KILL_ON_DAILY_LOSS",
     "LIVE_SHAPE_PROBE", "LIVE_EXIT_SLIPPAGE_CENTS", "LIVE_EXIT_USE_MARKET_FALLBACK",
     "LIVE_EXIT_MAX_ATTEMPTS", "LIVE_USER_ID", "LIVE_FRACTIONAL", "LIVE_PROBE",
+    # mmsell live maker entry (the resting BUY-NO path) — settable so a live test can be
+    # armed, capped and re-tuned from the ops channel without a code deploy.
+    "MMSELL_LIVE_MAX_OPEN_POSITIONS", "MMSELL_LIVE_PRICE_OFFSET_CENTS",
+    "MMSELL_LIVE_MAX_SPREAD_CENTS",
+    # Live/paper parallel twin books (docs/LIVE_PAPER_TWIN.md). Standing policy is one twin per
+    # live strategy, auto-derived, so these normally stay at defaults; they are readable/settable
+    # so a twin can be named explicitly or its bookkeeping bounded on a large live book.
+    "LIVE_PAPER_TWIN_ENABLED", "LIVE_PAPER_TWIN_AUTO", "LIVE_PAPER_TWINS",
+    "LIVE_PAPER_TWIN_SUFFIX", "LIVE_PAPER_TWIN_MAX_OPEN_POSITIONS",
+    "LIVE_PAPER_TWIN_PARITY_EVENTS", "LIVE_PAPER_TWIN_PARITY_MAX",
     "WEATHER_STRATEGIES", "WEATHER_ENTRY_HOURS", "WEATHER_TOP_N", "WEATHER_TRACK_LOWS",
     "WEATHER_DIST_ENABLED", "WEATHER_DIST_SIGMA", "WEATHER_DIST_MIN_EDGE_CENTS",
     "WEATHER_CITY_WINDOW_ENABLED", "WEATHER_OBS_ENTRY_ENABLED", "WEATHER_POLYMARKET_ENABLED",

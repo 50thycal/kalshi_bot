@@ -28,6 +28,7 @@ from ..risk.manager import RiskDecision
 from ..scanner.metrics import _to_count, ask_depth_within, parse_dt, price_to_cents
 from ..weather.cities import CITIES
 from . import exit_rules
+from .sizing import maker_no_price, order_quantity
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +116,14 @@ class LiveExecutor:
         return s.bot_mode == "live" and not s.kill_switch and s.live_enabled
 
     def _allowed(self, strategy: str) -> bool:
+        # Paper TWIN books (docs/LIVE_PAPER_TWIN.md) must never place a real order. They can't
+        # reach here — the twin entry path never calls the executor — but the allowlist is
+        # PREFIX-matched, so "mmsell10_pt" would satisfy an "mmsell10" allowlist if a future
+        # refactor ever routed a twin through. Defense in depth: reject twin tags outright.
+        if strategy in {tt for _lt, tt in self.settings.live_paper_twin_pairs}:
+            logger.error("refused live order for a PAPER TWIN tag", extra={"extra_fields": {
+                "strategy": strategy}})
+            return False
         prefixes = self.settings.live_strategy_list
         return any(strategy.startswith(p) for p in prefixes)
 
@@ -346,7 +355,7 @@ class LiveExecutor:
     def mirror_mmsell_entry(
         self, session, *, strategy: str, event_ticker: str | None, ticker: str, metrics,
         no_price: int | None = None, account_state=None,
-    ) -> None:
+    ) -> str:
         """Mirror one allowlisted mmsell paper entry into a real resting MAKER order: BUY NO at
         the no-bid (== sell yes at the ask), held to settlement. Self-guarded + fail-closed — any
         gate failure places nothing, and any exception is swallowed so the paper record stands.
@@ -355,51 +364,54 @@ class LiveExecutor:
         window/city/one-per-event semantics, per-TICKER dedup (markets share an event), and its own
         gates — the shared risk.evaluate's spread<=max_spread_cents gate is antithetical to the
         cheap-longshot maker edge (a wide spread is what the maker collects), so it's not used here.
+
+        Returns a short outcome code ("placed", "gate:cap", "rejected", ...). The live/paper twin
+        harness records it in the parity tape so a live book that trades fewer candidates than its
+        paper twin is explained by the specific gate that stopped it, rather than guessed at.
         """
         s = self.settings
         if not self._allowed(strategy) or not self._switches_on():
             self.summary.skipped_gate += 1
-            return
+            return "gate:switches"
         if self._daily_loss_tripped or self._daily_loss_hit(session):
             self._daily_loss_tripped = True
             self.summary.skipped_gate += 1
-            return
+            return "gate:daily_loss"
         # Per-ticker dedup + any in-flight order on this market.
         if repo.live_buy_exists_for_ticker(session, ticker, strategy) \
                 or repo.live_open_order_exists(session, ticker):
             self.summary.skipped_dedup += 1
-            return
+            return "gate:dedup"
         # Cap the book's concurrent live footprint.
         if repo.count_live_book_open(session, strategy) >= s.mmsell_live_max_open_positions:
             self.summary.skipped_gate += 1
-            return
+            return "gate:open_cap"
         # Data-quality + balance + exposure gates (mmsell-scoped; NOT the weather spread gate).
         if metrics is None or metrics.best_no_bid is None or not metrics.two_sided:
             self.summary.skipped_gate += 1
-            return
+            return "gate:illiquid"
         if metrics.spread is not None and metrics.spread > s.mmsell_live_max_spread_cents:
             self.summary.skipped_gate += 1
-            return
+            return "gate:spread"
         balance = None if account_state is None else account_state.get("cash_balance")
         if balance is None:  # fail-closed: refuse to place without a real balance
             self.summary.skipped_gate += 1
-            return
+            return "gate:no_balance"
         if self._market_exposure(session, ticker) >= s.max_market_exposure:
             self.summary.risk_blocked += 1
-            return
+            return "gate:exposure"
 
         # Rest a BUY-NO limit at the no-bid (+offset to improve fill), never paying through the ask.
-        base = int(no_price) if no_price is not None else int(metrics.best_no_bid)
-        price = base + max(0, s.mmsell_live_price_offset_cents)
-        if metrics.best_no_ask is not None:
-            price = min(price, int(metrics.best_no_ask))
-        price = max(1, min(99, price))
-        # Dollar-cap sizing on the no-price, capped by the hard max order size.
-        qty = math.floor(s.live_max_order_dollars / (price / 100.0))
-        qty = min(qty, s.max_order_size)
+        # Price + size come from kalshi_bot/live/sizing.py — the SAME arithmetic the paper twin
+        # uses, so the two can't drift apart and turn the parity read into a bookkeeping artifact.
+        price = maker_no_price(s, metrics, no_price)
+        if price is None:
+            self.summary.skipped_gate += 1
+            return "gate:illiquid"
+        qty = order_quantity(s, price)
         if qty <= 0:
             self.summary.skipped_gate += 1
-            return
+            return "gate:size"
 
         # Audit trail: record an (approved) risk event so the live decision is inspectable.
         repo.insert_risk_event(session, None, ticker, RiskDecision(
@@ -444,20 +456,20 @@ class LiveExecutor:
             repo.update_live_order_status(session, row, status="unknown", cancel_reason=str(exc))
             logger.warning("mmsell live place_order transient; status=unknown",
                            extra={"extra_fields": {"ticker": ticker, "coid": client_order_id}})
-            return
+            return "unknown"
         except KalshiAPIError as exc:
             if getattr(exc, "status_code", None) == 409:  # a prior identical send landed
                 repo.update_live_order_status(session, row, status="submitted",
                                               cancel_reason="409_already_exists")
                 self.summary.placed += 1
-                return
+                return "placed"
             repo.update_live_order_status(session, row, status="rejected", cancel_reason=str(exc))
             self.summary.rejected += 1
-            return
+            return "rejected"
         except Exception as exc:  # noqa: BLE001 — never let live break the paper record
             repo.update_live_order_status(session, row, status="error", cancel_reason=str(exc))
             logger.exception("mmsell live place_order failed")
-            return
+            return "error"
 
         koid = None
         if isinstance(resp, dict):
@@ -469,6 +481,7 @@ class LiveExecutor:
         logger.info("mmsell live order placed (resting maker no-buy)", extra={"extra_fields": {
             "ticker": ticker, "strategy": strategy, "no_price": price, "sell_yes_price": yes_price,
             "count": qty, "coid": client_order_id, "kalshi_order_id": koid}})
+        return "placed"
 
     def _entry_price(self, metrics) -> int | None:
         ask = metrics.best_yes_ask

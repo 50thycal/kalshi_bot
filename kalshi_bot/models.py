@@ -301,6 +301,70 @@ class AccountSnapshot(Base):
     raw_json: Mapped[dict | None] = mapped_column(JSONType)
 
 
+class LivePaperTwin(Base):
+    """Epoch record for one live/paper TWIN book — a fresh paper book started at the same moment
+    as a live strategy, parameterized to the LIVE knobs (entry price rule, dollar sizing, open cap)
+    so the only difference between the two is the fill assumption paper cannot test.
+
+    Why an epoch row at all: the incumbent paper book (e.g. `mmsell10`) carries months of history
+    that the live run does not, so paper-vs-live comparisons over it are confounded by sample and
+    regime. The twin starts at zero, and `started_at` scopes BOTH sides of the comparison to the
+    same window — that is what makes it one-to-one. `params_json` is the parameter snapshot taken
+    at creation; if the live config later drifts away from it the parity read is no longer
+    apples-to-apples, which the harness detects and flags (see kalshi_bot/twin/harness.py).
+    """
+
+    __tablename__ = "live_paper_twins"
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    twin_tag: Mapped[str] = mapped_column(String(24), nullable=False, unique=True, index=True)
+    live_tag: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    started_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    ended_at: Mapped[datetime | None] = mapped_column(TS)
+    params_json: Mapped[dict | None] = mapped_column(JSONType)
+    notes: Mapped[str | None] = mapped_column(Text)
+
+
+class LivePaperParityEvent(Base):
+    """One row per candidate market per cycle per twin pair — the decision-alignment tape.
+
+    Records what each of the THREE actors did with the same candidate at the same instant: the
+    incumbent paper book (`parent_*`), the fresh twin paper book (`twin_*`), and the real live
+    order attempt (`live_*`). Divergence is then attributable rather than guessed: a live book
+    that trades less than its paper twin because of a gate is a different failure from one that
+    trades the same markets but fills worse. Only written for markets that were in-band for the
+    pair (real candidates), and capped per cycle."""
+
+    __tablename__ = "live_paper_parity_events"
+    __table_args__ = (
+        Index("ix_lp_parity_twin_time", "twin_tag", "recorded_at"),
+        Index("ix_lp_parity_ticker_time", "market_ticker", "recorded_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    recorded_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    twin_tag: Mapped[str] = mapped_column(String(24), nullable=False)
+    live_tag: Mapped[str] = mapped_column(String(32), nullable=False)
+    market_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    series: Mapped[str | None] = mapped_column(String(32))
+    hours_to_close: Mapped[float | None] = mapped_column(Float)
+    # Incumbent (long-running) paper book on the live tag.
+    parent_outcome: Mapped[str | None] = mapped_column(String(24))
+    parent_price: Mapped[int | None] = mapped_column(Integer)
+    # Fresh twin paper book (live-parameterized).
+    twin_outcome: Mapped[str | None] = mapped_column(String(24))
+    twin_price: Mapped[int | None] = mapped_column(Integer)
+    twin_quantity: Mapped[int | None] = mapped_column(Integer)
+    # The real live attempt, incl. the reason it placed nothing.
+    live_outcome: Mapped[str | None] = mapped_column(String(32))
+    live_price: Mapped[int | None] = mapped_column(Integer)
+    live_quantity: Mapped[int | None] = mapped_column(Integer)
+    # Market state at the decision (so a divergence can be read without a second table).
+    yes_mid: Mapped[float | None] = mapped_column(Float)
+    no_bid: Mapped[int | None] = mapped_column(Integer)
+    no_ask: Mapped[int | None] = mapped_column(Integer)
+
+
 class WeatherForecast(Base):
     __tablename__ = "weather_forecasts"
     __table_args__ = (Index("ix_weather_forecasts_event_time", "event_ticker", "captured_at"),)

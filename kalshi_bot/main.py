@@ -34,6 +34,7 @@ from .risk.manager import RiskManager
 from .scanner.scanner import MarketScanner, ScanSummary
 from .tfav.tracker import TfavTracker
 from .theta.tracker import ThetaTracker
+from .twin import TwinHarness
 from .wcprop.tracker import WcPropTracker
 from .weather.backfill import WeatherBackfill
 from .weather.ensemble import OpenMeteoEnsembleClient
@@ -119,6 +120,15 @@ def run() -> int:
     # allowlisted paper entries into orders. Built here so the ride-along mmsell tracker can
     # receive it (its NO-maker live path). INERT until the switches + LIVE_STRATEGIES are set.
     live_executor = LiveExecutor(client, settings, scanner.risk) if live else None
+    # Live/paper parallel-run harness (docs/LIVE_PAPER_TWIN.md): for every strategy armed for real
+    # money, run a FRESH paper book beside it — started at the same instant and parameterized to
+    # the LIVE knobs — so the only difference between the two is the fill assumption paper cannot
+    # test. Live mode only, and each twin is gated on its live tag actually being armed.
+    twin_harness = TwinHarness(settings) if live else None
+    if twin_harness is not None and twin_harness.enabled:
+        log_event(logger, logging.INFO, "live/paper twins configured",
+                  pairs=[f"{sp.live_tag}->{sp.twin_tag}" for sp in twin_harness.specs],
+                  armed=[sp.twin_tag for sp in twin_harness.active_specs()])
     mmsell_engine = PaperTradingEngine(client, settings, scanner.risk) if mmsell else None
     mmsell_tracker = MmSellTracker(client, settings) if mmsell else None
     # mmsell can ALSO ride along as a paper book inside the weather/live cycle (its positions
@@ -126,7 +136,8 @@ def run() -> int:
     # live mode it also mirrors allowlisted entries into real resting maker NO-buys via the executor.
     mmsell_paper = weather_like and settings.mmsell_paper_enabled
     mmsell_paper_tracker = (
-        MmSellTracker(client, settings, live_executor=live_executor) if mmsell_paper else None
+        MmSellTracker(client, settings, live_executor=live_executor, twin_harness=twin_harness)
+        if mmsell_paper else None
     )
     # theta rides along the same way (paper): model-anchored tail-selling on the hourly
     # crypto ladders; the shared weather_engine settles/marks its <1h positions.
@@ -514,8 +525,8 @@ def _run_mmsell_book(settings, tracker) -> None:
         log_event(
             logger, logging.INFO, "mmsell book",
             events=summ.events_seen, considered=summ.markets_considered, in_band=summ.in_band,
-            opened=summ.opened, already_open=summ.already_open, capped=summ.capped,
-            per_book=summ.per_book,
+            opened=summ.opened, twin_opened=summ.twin_opened,
+            already_open=summ.already_open, capped=summ.capped, per_book=summ.per_book,
         )
     except AuthError:
         raise
