@@ -16,6 +16,36 @@ Conventions:
 
 ---
 
+## RE-SCAN 2026-07-26 — kalshi_arb wide-horizon sweep (`--days 1500`): 2 more bugs caught, no real arb
+
+Widened `kalshi_arb`'s horizon from the usual 30–45 days to 1,500 (out to 2028-29 markets never
+previously scanned — e.g. presidential nominees, London mayor, Taiwan president). ~2,675
+multi-outcome events, initially 27 "locked arbs" — all traced and closed:
+
+- **`KXSHIBA` (Shiba Inu, strikes in millionths of a dollar): `_tiles_exhaustively`'s fixed 2¢
+  absolute gap tolerance doesn't scale down** — a ~14-bucket-wide missing span read as tiny in
+  absolute cents but was enormous relative to that ladder's own ~5e-7-wide buckets, so a
+  dropped-leg gap (same root cause as `KXXRP`) sailed through un-flagged and printed a fake
+  +$0.70. Fixed: tolerance is now relative to the ladder's own median bucket width, not a fixed
+  dollar amount.
+- **`KX10Y2Y` (Treasury spread): a bare leading-dot subtitle (`"Above .7%"`, no leading zero)
+  misparsed as strike `7`** instead of `0.7` — the number regex required a match to start at a
+  digit. Inverted an otherwise perfectly coherent 4-rung ladder into a fake +$0.22
+  MONO-VERTICAL. Fixed: the regex now also matches a bare leading-dot fraction.
+- Both re-verified against the exact live payload via the ops test-before-merge overlay before
+  being trusted, both locked down with regression tests. **Fourth and fifth false-positive
+  classes** this scanner has now produced and caught (after dropped signs/units, spelled-out
+  magnitude words, and the dropped-leg partition gap).
+- **The remaining ~19 "hits" are the same non-exhaustive-candidate-set artifact already
+  documented in `edge_research.md`** (Peru president, Netflix top-movie, July) — every leg
+  unparseable (a name, not a number), every set thin, none provably exhaustive. Reality-checked
+  via leg detail, same as every prior instance. This pattern is now closed for good: 5-for-5
+  across two scans, ~2,700+ events — not worth individually re-verifying again.
+- **Verdict: no real arb at any horizon from 45 days out to 2028+.** Full writeup in
+  `docs/edge_research.md`'s "RULED OUT" section for `kalshi_arb.py`.
+
+---
+
 ## PROBE VERDICT 2026-07-26 — XLOCK: P2 KILLED (crypto touch-vs-terminal coherent), P1 HOLD
 
 Ran `kalshi_xlock` via the ops channel (`--days 45`, 7,000 open events) after PR #112 merged.
