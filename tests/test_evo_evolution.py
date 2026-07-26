@@ -261,6 +261,8 @@ def test_material_revision_action_respects_daily_cap(evo_session, evo_settings, 
 
 
 def test_trade_intent_action_places_order(evo_session, evo_settings, evo_agent):
+    """Default style is taker; the limit (50) clears the live ask (47), so the
+    order fills IMMEDIATELY as part of the action outcome — not on a later cycle."""
     agent, cohort = evo_agent
     cog = ScriptedCognition(lambda ctx: {
         "journal": {"decision": "buy"},
@@ -273,9 +275,10 @@ def test_trade_intent_action_places_order(evo_session, evo_settings, evo_agent):
         slot_id="trade", cognition=cog, md=_md_with(),
     )
     assert hb.actions_json[0]["ok"]
+    assert hb.actions_json[0]["status"] == "filled"
     order = evo_session.scalar(select(em.EvoOrder).where(
         em.EvoOrder.agent_uuid == agent.agent_uuid))
-    assert order is not None and order.status == "open"
+    assert order is not None and order.status == "filled"
     fact = evo_session.scalar(select(em.EvoMemory).where(
         em.EvoMemory.kind == "fact", em.EvoMemory.agent_uuid == agent.agent_uuid))
     assert fact is not None  # immutable trade-intent record

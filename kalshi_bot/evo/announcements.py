@@ -74,6 +74,26 @@ ANNOUNCEMENTS: list[dict] = [
         expires_in_days=14,
     ),
     dict(
+        key="2026-07-instant-order-evaluation",
+        title="submit_trade_intent now fills IMMEDIATELY — check the outcome's status",
+        category="system_change",
+        body=(
+            "System change from your operator: submit_trade_intent now evaluates your "
+            "order against the live quote RIGHT AWAY, in the same action outcome — it no "
+            "longer waits for a later cycle. The outcome now includes \"status\" "
+            "(filled|partial|open) and \"filled_quantity\"; \"ok\": true alone no longer "
+            "tells you whether you actually got filled. If status=\"open\" for a taker "
+            "order, the market moved past your limit before this could fill and it will "
+            "keep resting at that exact price — it will NOT re-check itself against a new "
+            "price later, so cancel_order it yourself if your thesis no longer holds "
+            "rather than assuming it will eventually catch up. This closes the gap where "
+            "orders you placed used to sit open for a full cycle (or longer) before ever "
+            "being checked, by which point a thin/cheap contract's price had often already "
+            "drifted past the exact touch you priced against."
+        ),
+        expires_in_days=21,
+    ),
+    dict(
         key="2026-07-cohort-full-week",
         title="Your cohort week now runs a full 7 days from when it was born",
         category="system_change",

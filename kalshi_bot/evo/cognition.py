@@ -255,6 +255,12 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
   strategy's universe.series_prefixes, e.g. "KXHIGH"). A prefix is not itself a
   tradable market; an order on one will never get a quote and will sit open
   forever with no fill and no error.
+  The order is evaluated against the live quote IMMEDIATELY (not next cycle) —
+  the outcome's "status" is the real result (filled|partial|open), with
+  "filled_quantity" set. A taker order returning status="open" means the market
+  moved past your limit before this could fill; it will keep resting at that
+  price, so cancel_order it if the thesis no longer holds rather than assuming
+  it will eventually catch up.
 - cancel_order {order_id}
 - record_influence {source_uuid, concept, interpretation, modifications, result}
 - submit_ticket {category, capability, problem, expected_strategy_benefit,
@@ -889,7 +895,18 @@ def _execute_one(
              "limit": order.limit_price_cents, "thesis": str(a.get("thesis", ""))[:500]},
             idem_key=f"order:{order.id}", tag1=ticker[:64], heartbeat_id=hb.id,
         )
-        return {"ok": True, "order_id": order.id}
+        # Evaluate against the current quote RIGHT NOW instead of waiting for the
+        # next orchestrator cycle's process_open_orders pass. Strategy-runner
+        # orders already get this (process_open_orders runs immediately after
+        # run_cycle in the same scan_and_books phase); an agent-submitted order
+        # created here, in the LATER heartbeats phase, would otherwise sit
+        # unevaluated for a full cycle — and a heartbeat can itself take
+        # 60-250+ seconds, so by the next cycle a thin/cheap contract's exact
+        # touch price the agent priced against has often already moved,
+        # leaving a stale "open" order with nothing to ever re-fill it.
+        fill_status = papermod.evaluate_order(session, settings, order, md.get_quote(ticker))
+        return {"ok": True, "order_id": order.id, "status": fill_status,
+                "filled_quantity": order.filled_quantity}
 
     if t == "cancel_order":
         try:
