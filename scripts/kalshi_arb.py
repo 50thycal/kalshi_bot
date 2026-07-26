@@ -38,9 +38,14 @@ KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
 # 'Above -0.3%' -> -0.3 and 'Above $1.1M' -> 1_100_000 (both were mis-parsed before, which
 # scrambled otherwise-monotone ladders into FALSE arbs). The unit is either a spelled-out word
 # ('$700 billion', '$1.00 trillion') or a bare letter NOT glued to more letters — the lookahead
-# is what stops '5 to 10' parsing as 5e12 and '3 mph' as 3e6.
+# is what stops '5 to 10' parsing as 5e12 and '3 mph' as 3e6. The number itself is either
+# digit-first ('1.00') or a bare leading-dot fraction ('.7', as Kalshi renders some percent
+# strikes with no leading zero) -- without the second alternative 'Above .7%' mis-parsed as
+# strike=7 (the '.' consumed with no match, then '7' read as a lone integer), scrambling a
+# genuinely coherent Treasury-spread ladder (KX10Y2Y) into a fake +$0.22 vertical arb.
 _NUM = re.compile(
-    r"([-$]*)\s*([0-9][0-9,]*\.?[0-9]*)\s*(thousand|million|billion|trillion|[kmbt](?![a-z]))?",
+    r"([-$]*)\s*([0-9][0-9,]*\.?[0-9]*|\.[0-9]+)\s*"
+    r"(thousand|million|billion|trillion|[kmbt](?![a-z]))?",
     re.I,
 )
 _UNIT = {"": 1.0, "k": 1e3, "m": 1e6, "b": 1e9, "t": 1e12,
@@ -85,18 +90,29 @@ def _close_ts(m: dict) -> int:
         return 0
 
 
-def _tiles_exhaustively(mkts: list[dict], tol: float = 0.02) -> bool:
+def _tiles_exhaustively(mkts: list[dict], rel_tol: float = 0.5, min_tol: float = 1e-9) -> bool:
     """True if every leg parsed as a numeric bucket (le/range/ge) AND those buckets tile the
-    outcome space with no gap wider than `tol` (in the subtitle's own units).
+    outcome space with no gap wider than `rel_tol` times the ladder's own median bucket width
+    (in the subtitle's own units, whatever scale that is).
 
-    Guards the one failure mode both real-scan false positives shared: a leg gets silently
-    dropped by the illiquid-quote filter in `scan_event` (0 < ya <= 1), so the retained legs
-    stop being exhaustive. Summing yes_ask over a mutually_exclusive event's SURVIVING legs
-    then measures a subset sum, not Sum(yes)=1 -- and if the missing gap holds the real
-    probability mass, every retained leg can look like a worthless-tail "arb" (KXXRP-26JUL2617:
-    19 legs, all bid=0/ask=1c, with the entire $0.88-$1.30 band silently missing). A single
-    dropped leg always opens a gap strictly wider than one bucket width, so the interval check
-    below catches it without needing to compare against the event's raw market count.
+    Guards the failure mode every real-scan false positive in this family has shared: a leg
+    gets silently dropped by the illiquid-quote filter in `scan_event` (0 < ya <= 1), so the
+    retained legs stop being exhaustive. Summing yes_ask over a mutually_exclusive event's
+    SURVIVING legs then measures a subset sum, not Sum(yes)=1 -- and if the missing gap holds
+    the real probability mass, every retained leg can look like a worthless-tail "arb"
+    (KXXRP-26JUL2617: 19 legs, all bid=0/ask=1c, with the entire $0.88-$1.30 band missing).
+
+    The tolerance is RELATIVE to the ladder's own bucket width, not a fixed dollar amount --
+    a fixed absolute tol=0.02 (2 cents) worked for temperature/price-in-dollars ladders but
+    silently passed KXSHIBA-26JUL27's meme-coin ladder (strikes in millionths of a dollar,
+    ~5e-7-wide buckets): a dropped span of ~14 bucket-widths (7e-6 dollars, missing roughly
+    $0.000002-$0.000009) is enormous relative to that ladder's own scale but tiny in absolute
+    cents, so the old fixed tolerance passed it as "tiled" and it read as a fake +$0.70 arb on
+    the very first wide-horizon rescan that reached it. Scaling the tolerance to the ladder's
+    own median bucket width catches both: a dollar-scale ladder's genuine boundary rounding
+    (e.g. '$0.6199999 or below' meeting '$0.62 to...', a gap of 1e-7 against a $0.02 bucket)
+    passes; a dropped leg -- at ANY scale -- opens a gap of at least one full bucket width,
+    which is always caught relative to that same ladder's own bucket width.
 
     Returns False (unverifiable, not proven exhaustive) for named-candidate MECE sets (election
     winners, "who will be next X") -- there's no numeric structure to tile, so those still rely
@@ -105,6 +121,7 @@ def _tiles_exhaustively(mkts: list[dict], tol: float = 0.02) -> bool:
     if not mkts or any(not m["parse"] for m in mkts):
         return False
     intervals = []
+    widths = []
     n_le = n_ge = 0
     for m in mkts:
         kind, *bounds = m["parse"]
@@ -116,8 +133,12 @@ def _tiles_exhaustively(mkts: list[dict], tol: float = 0.02) -> bool:
             n_ge += 1
         else:  # "range"
             intervals.append((bounds[0], bounds[1]))
+            widths.append(bounds[1] - bounds[0])
     if n_le != 1 or n_ge != 1:          # no open tails on both ends -> not a full partition
         return False
+    widths.sort()
+    scale = widths[len(widths) // 2] if widths else 0.0     # median finite-bucket width
+    tol = max(min_tol, rel_tol * scale)
     intervals.sort(key=lambda iv: iv[0])
     return all(lo2 - hi1 <= tol
                for (_, hi1), (lo2, _) in zip(intervals, intervals[1:], strict=False))

@@ -106,6 +106,44 @@ costs `yes_ask + (1 − yes_bid) = 100 + spread` ≥ $1 before fees. A one-marke
 lock is impossible by construction — any real Dutch book has to come from multiple legs, which
 is exactly what this scanner covers and finds arbitraged clean.
 
+**Wide-horizon sweep 2026-07-26 (`--days 1500`, ~2,675 events out to 2028-29 markets never
+previously scanned at the standard 30–45-day horizon) — two MORE false-positive classes caught,
+verdict still unchanged.**
+- `KXSHIBA-26JUL27`/`-26JUL26` (Shiba Inu price-range ladders, strikes quoted in **millionths of
+  a dollar**) flagged **+$0.70 / +$0.69 BUY-ALL-YES**. `_tiles_exhaustively`'s gap tolerance was
+  a fixed **absolute** 2¢ — right for dollar/temperature-scale ladders, but a ~14-bucket-wide
+  span (~$0.000002–$0.000009) missing from a ladder whose own buckets are ~5e-7 wide is *tiny*
+  in absolute cents while being enormous relative to that ladder's own scale, so it passed the
+  old fixed check as "tiled." Fixed by making the tolerance **relative to the ladder's own
+  median bucket width** (`rel_tol=0.5`, i.e. half a bucket) instead of a fixed dollar amount —
+  catches a dropped leg at any scale while still absorbing the sub-bucket boundary rounding
+  every real ladder has.
+- `KX10Y2Y-26DEC31` (Treasury 10Y–2Y spread) flagged **+$0.22 MONO-VERTICAL** ("strikes 1/7" in
+  the printed summary — a `.0f`-formatting artifact of the real, mis-parsed values). The
+  subtitle read **`"Above .7%"`** — Kalshi renders this strike with **no leading zero**. The
+  `_NUM` regex required a match to start at a digit, so the leading `.` was skipped and only
+  the bare `7` matched: strike 0.7 misread as 7, an order-of-magnitude scramble that inverted
+  an otherwise perfectly coherent four-rung ladder (.7%/.8%/.9%/1.00%). Fixed by also matching
+  a bare leading-dot fraction (`\.[0-9]+`) in the number regex.
+- Both fixed, both locked down with regression tests reproducing the exact live payload, and
+  **both re-verified live** (ops test-before-merge overlay) before being reported here — neither
+  survived the fix.
+- **Everything else the wide sweep flagged (~19 more "hits," out to 2028 primaries/nominees/
+  matchups/word-of-the-year/etc.) is the exact same non-exhaustive-candidate-set artifact
+  documented above (Peru president, Netflix top-movie)** — every leg `parse=None` (no numeric
+  structure), every set thin (Σ(yes_ask) 0.07–0.75), every one missing an implicit "someone/
+  something else" residual. Manually reality-checked via the printed leg detail, same as every
+  prior instance; none is fillable free money. **This is now a five-for-five pattern across two
+  scans and a combined ~2,700+ multi-outcome events: named-candidate MECE sets on Kalshi are
+  never provably exhaustive, and it is never worth re-verifying one individually again — the
+  standing verdict is closed.**
+- **Net: the locked-arb family stays dead for the taker at every horizon tested (45 days through
+  2028+), and this is now the fifth distinct false-positive class this scanner has produced and
+  caught before trusting it** (dropped signs/units, spelled-out magnitude words, a dropped-leg
+  partition gap, a scale-blind tiling tolerance, and a bare-leading-dot decimal) — always the
+  same root lesson: a parsing or completeness assumption has to be verified against the real
+  payload, never trusted on the first read.
+
 ## RULED OUT — Favorite-longshot bias, taker side (`scripts/kalshi_flb.py`)
 
 Backtested settled markets (discover liquid series → pull settled history → price each at

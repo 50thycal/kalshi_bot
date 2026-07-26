@@ -1,10 +1,12 @@
 """Tests for scripts/kalshi_arb.py — strike parsing + the arb math it feeds.
 
-The scanner's false-positive incidents so far: two *parsing* bugs that scrambled a
-correctly-priced ladder into a fake vertical arb (dropped minus signs and K/M/B units in Jul,
-then spelled-out 'trillion' in the Musk net-worth ladder), and one *coverage* bug (an illiquid
-leg silently dropped from a range ladder turned a Dutch book into a subset sum over worthless
-tails, KXXRP-26JUL2617). These lock all three down.
+The scanner's false-positive incidents so far: parsing bugs that scrambled a correctly-priced
+ladder into a fake vertical arb (dropped minus signs and K/M/B units in Jul; spelled-out
+'trillion' in the Musk net-worth ladder; a bare leading-dot percent strike like '.7%' misread as
+strike=7 in the Treasury-spread ladder, KX10Y2Y), and two *coverage* bugs in the gap guard (an
+illiquid leg silently dropped from a range ladder turned a Dutch book into a subset sum over
+worthless tails, KXXRP-26JUL2617; a fixed absolute tolerance that didn't scale down to a
+meme-coin ladder's own tiny bucket widths, KXSHIBA). These lock all five down.
 """
 
 from __future__ import annotations
@@ -45,6 +47,15 @@ def test_nums_does_not_treat_stray_words_as_units():
     assert arb._nums("3 mph") == [3.0]
 
 
+def test_nums_parses_a_bare_leading_dot_decimal():
+    """The real KX10Y2Y-26DEC31 subtitle: 'Above .7%' with no leading zero. The old regex
+    required the match to start at a digit, so '.' was skipped and only '7' matched -- a strike
+    of 0.7 misread as 7, an order-of-magnitude scramble that inverted the ladder's true order."""
+    assert arb._nums("Above .7%") == [0.7]
+    assert arb._nums("Above .85") == [0.85]
+    assert arb._nums("Above 1.00%") == [1.0]  # digit-first form must still work unchanged
+
+
 def test_musk_networth_ladder_parses_monotone():
     """The real KXMUSKNW ladder: billions then trillions. Mis-scaling 'trillion' inverted it
     and produced a bogus +$0.65 MONO-VERTICAL arb."""
@@ -70,6 +81,54 @@ def test_scan_event_finds_no_arb_in_correctly_priced_musk_ladder():
     out = arb.scan_event(event, fee_buf=0.0, max_close=0)
     assert "ARB" not in out
     assert out["mono_best"] < 0
+
+
+def test_treasury_spread_ladder_parses_monotone_and_scans_clean():
+    """The real KX10Y2Y-26DEC31 ladder (Above .7%/.8%/.9%/1.00%) -- the bare-leading-dot bug
+    misread '.7' as strike 7, scrambling this coherent ladder into a fake +$0.22 MONO-VERTICAL
+    (printed as 'strikes 1/7' -- a rounding artifact of the real 0.7/1.00 strikes misparsed)."""
+    subs = ["Above .7%", "Above .8%", "Above .9%", "Above 1.00%"]
+    strikes = [arb._parse_bucket(s)[1] for s in subs]
+    assert strikes == [0.7, 0.8, 0.9, 1.0]
+    event = {
+        "event_ticker": "KX10Y2Y-26DEC31-TEST", "title": "Treasury spread", "mutually_exclusive": False,
+        "markets": [
+            {"yes_bid_dollars": yb, "yes_ask_dollars": ya, "yes_sub_title": s, "ticker": f"T{i}"}
+            for i, (s, (yb, ya)) in enumerate(zip(
+                subs, [(0.65, 0.67), (0.45, 0.47), (0.25, 0.27), (0.10, 0.12)], strict=True))
+        ],
+    }
+    out = arb.scan_event(event, fee_buf=0.0, max_close=0)
+    assert "ARB" not in out
+    assert out["mono_best"] < 0
+
+
+def test_tiles_exhaustively_scales_to_a_meme_coin_ladder():
+    """The real KXSHIBA-26JUL27 shape: strikes in millionths of a dollar. A whole ~14-bucket-wide
+    span ($0.000002-$0.000009) is missing, but the absolute gap (~7e-6) is tiny in dollar terms
+    -- the old fixed tol=0.02 passed this as tiled, reading a fake +$0.70 BUY-ALL-YES on 15 legs
+    that were all worthless tails. The tolerance must scale to the ladder's OWN bucket width."""
+    subs = [
+        "$0.0000009 or below", "$0.000001 to 0.000001499", "$0.0000015 to 0.000001999",
+        # a ~14-bucket-wide span is missing here ($0.000002 - $0.000009)
+        "$0.000009 to 0.000009499", "$0.0000095 to 0.000009999",
+        "$0.0000145 or above",
+    ]
+    mkts = [{"parse": arb._parse_bucket(s)} for s in subs]
+    assert all(m["parse"] for m in mkts)
+    assert arb._tiles_exhaustively(mkts) is False
+
+
+def test_tiles_exhaustively_still_passes_a_gapless_meme_coin_ladder():
+    """The guard must not become so sensitive it flags a genuinely complete fine-grained ladder
+    -- only real drops, regardless of the ladder's own scale."""
+    subs = [
+        "$0.0000009 or below", "$0.000001 to 0.000001499", "$0.0000015 to 0.000001999",
+        "$0.000002 to 0.000002499", "$0.0000025 to 0.000002999",
+        "$0.000003 or above",
+    ]
+    mkts = [{"parse": arb._parse_bucket(s)} for s in subs]
+    assert arb._tiles_exhaustively(mkts) is True
 
 
 def test_scan_event_flags_a_genuine_vertical_arb():
