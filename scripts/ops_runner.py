@@ -57,6 +57,7 @@ ALLOWED_SCRIPTS = (
     "kalshi_deribit",
     "kalshi_crypto_probe",
     "kalshi_arb",
+    "kalshi_xlock",
     "kalshi_flb",
     "kalshi_mm",
     "kalshi_mm_exits",
