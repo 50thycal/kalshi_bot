@@ -131,6 +131,45 @@ class StrategySpec(BaseModel):
     risk: RiskSpec = Field(default_factory=RiskSpec)
 
 
+_SECTION_MODELS = {"universe": UniverseSpec, "entry": EntrySpec, "exit": ExitSpec, "risk": RiskSpec}
+# field name -> the ONE section it actually belongs to (no collisions across
+# sections in this schema, so a bare name uniquely identifies its home).
+_FIELD_HOME = {
+    field: section for section, model in _SECTION_MODELS.items() for field in model.model_fields
+}
+
+
+def _hint_misplaced_fields(exc: ValidationError) -> str:
+    """Pydantic's raw message names the rejected field but never says WHERE it
+    actually belongs. Seen live, two variants of the same mistake: a field valid
+    on a DIFFERENT section (e.g. max_spread_cents submitted under "entry" when
+    it's a universe field — intuitive, since a spread filter reads like an
+    entry-time decision even though the schema treats it as a universe
+    pre-filter concept; or the reverse, entry's own max_price_cents submitted
+    under "universe"), and a whole section nested one level too deep (e.g.
+    {"entry": {"universe": {...}}} instead of "universe" as its own top-level
+    key next to "entry"). Append a concrete pointer for either, so the
+    rejection is something the agent can act on next attempt."""
+    hints = []
+    for err in exc.errors():
+        if err.get("type") != "extra_forbidden":
+            continue
+        loc = err.get("loc", ())
+        if len(loc) < 2:
+            continue
+        section, field = str(loc[0]), str(loc[-1])
+        home = _FIELD_HOME.get(field)
+        if home and home != section:
+            hints.append(f"{field!r} belongs under {home!r}, not {section!r}")
+        elif field in _SECTION_MODELS and len(loc) == 2:
+            hints.append(
+                f"{field!r} is a top-level spec section — put it next to "
+                f"{section!r}, not nested inside it"
+            )
+    base = str(exc)[:1500]
+    return f"{base}\nHINT: " + "; ".join(hints) if hints else base
+
+
 def validate_spec(doc: dict, *, max_bytes: int = 40_000) -> tuple[StrategySpec | None, str | None]:
     try:
         raw = json.dumps(doc)
@@ -141,7 +180,7 @@ def validate_spec(doc: dict, *, max_bytes: int = 40_000) -> tuple[StrategySpec |
     try:
         return StrategySpec.model_validate(doc), None
     except ValidationError as exc:
-        return None, str(exc)[:1500]
+        return None, _hint_misplaced_fields(exc)
 
 
 # ---------------------------------------------------------------------------

@@ -247,6 +247,21 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
   Every field except "name" is optional with a working default — start minimal.
   Example: {"name": "weather_fade_v1", "universe": {"series_prefixes": ["KXHIGH"]},
   "entry": {"conditions": [{"metric": "spread", "op": "<=", "value": 6}]}}
+  COMMON MISTAKES (both here and in run_backtest's spec, validated identically):
+  1. max_spread_cents / min_hours_to_close / max_hours_to_close go under
+     "universe" (a market-selection pre-filter), NOT "entry" — easy to misplace
+     since a spread check feels like an entry-time decision. entry's own
+     min_price_cents/max_price_cents belong under "entry", not "universe" (the
+     reverse mistake also happens). If you want a spread condition inside entry
+     instead, express it via entry.conditions with metric="spread" (see the
+     example above).
+  2. universe/entry/exit/risk are TOP-LEVEL keys of the spec, never nested
+     inside each other — {"entry": {"universe": {...}}} is invalid; universe
+     goes next to entry, both direct children of the spec object.
+  3. There is no min_open_interest (or any bare open_interest) field on
+     "universe" — universe only has min_volume as a liquidity floor. To filter
+     on open_interest, use an entry.conditions condition instead, e.g.
+     {"metric": "open_interest", "op": ">=", "value": 500}.
 - activate_strategy {strategy_id}
 - submit_trade_intent {market_ticker, side: yes|no, action: buy|sell, quantity,
   style: taker|maker, limit_price_cents?, thesis, confidence (0-1), opportunity_id?}.
@@ -258,9 +273,11 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
   The order is evaluated against the live quote IMMEDIATELY (not next cycle) —
   the outcome's "status" is the real result (filled|partial|open), with
   "filled_quantity" set. A taker order returning status="open" means the market
-  moved past your limit before this could fill; it will keep resting at that
-  price, so cancel_order it if the thesis no longer holds rather than assuming
-  it will eventually catch up.
+  wasn't at your limit yet; it keeps getting re-checked automatically every
+  cycle and will fill on its own the moment the market reaches that price — no
+  action needed just because it's still open. Only cancel_order it if your
+  thesis itself no longer holds, not because you think it needs to be
+  re-submitted to get re-evaluated.
 - cancel_order {order_id}
 - record_influence {source_uuid, concept, interpretation, modifications, result}
 - submit_ticket {category, capability, problem, expected_strategy_benefit,

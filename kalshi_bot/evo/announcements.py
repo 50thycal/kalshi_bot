@@ -94,6 +94,41 @@ ANNOUNCEMENTS: list[dict] = [
         expires_in_days=21,
     ),
     dict(
+        key="2026-07-order-repricing-correction",
+        title="Correction: your open orders DO keep re-checking every cycle",
+        category="system_change",
+        body=(
+            "Correction to the instant-order-evaluation notice: an earlier version said "
+            "a still-open taker order 'will NOT re-check itself against a new price later' "
+            "— that was wrong. Every order still open or partial gets re-evaluated against "
+            "a fresh quote EVERY cycle (this was already true before the instant-evaluation "
+            "change; that change only closed the gap on the FIRST check). So a resting order "
+            "will fill automatically the moment the market moves back to its price, with no "
+            "action needed from you. Cancel it only when your thesis itself is stale (you no "
+            "longer believe the trade), not because you think it's 'stuck' waiting to be "
+            "checked — it isn't."
+        ),
+        expires_in_days=21,
+    ),
+    dict(
+        key="2026-07-strategy-spec-common-mistakes",
+        title="save_strategy / run_backtest spec rejections now explain WHERE a field belongs",
+        category="system_change",
+        body=(
+            "System change: spec validation rejections now include a HINT, not just "
+            "a bare 'Extra inputs are not permitted'. Three real mistakes seen most "
+            "often: (1) max_spread_cents / min_hours_to_close / max_hours_to_close go "
+            "under \"universe\" (market-selection pre-filter), NOT \"entry\" — a spread "
+            "check feels entry-time but isn't; the reverse (entry's max_price_cents "
+            "under \"universe\") also happens. (2) universe/entry/exit/risk are "
+            "TOP-LEVEL keys, never nested inside each other. (3) There is no "
+            "min_open_interest on \"universe\" — filter open_interest via an "
+            "entry.conditions condition instead: {\"metric\": \"open_interest\", "
+            "\"op\": \">=\", \"value\": 500}. Same schema for save_strategy + run_backtest."
+        ),
+        expires_in_days=21,
+    ),
+    dict(
         key="2026-07-cohort-full-week",
         title="Your cohort week now runs a full 7 days from when it was born",
         category="system_change",
@@ -141,16 +176,23 @@ def seed_announcements(session, *, now: datetime | None = None) -> int:
 
 
 def active_announcements(
-    session, *, now: datetime | None = None, limit: int = 5
+    session, *, now: datetime | None = None, limit: int = 8
 ) -> list[EvoAnnouncement]:
     """Currently-broadcasting announcements, newest first: active, already effective,
     and not yet expired. Filtered in Python (the table is tiny) so it behaves the
-    same on sqlite and Postgres regardless of stored-tz quirks."""
+    same on sqlite and Postgres regardless of stored-tz quirks.
+
+    Ties on effective_at are real: every announcement seeded in the SAME deploy
+    shares the exact same `now`, and the roster has grown past `limit` — without
+    a deterministic tiebreaker, which announcement lands in the truncated top-N
+    is arbitrary, so a still-valid one can silently vanish from every agent's
+    prompt for no visible reason. id.desc() breaks ties by insertion order
+    (favor what was most recently added to the roster)."""
     now = now or datetime.now(timezone.utc)
     rows = session.scalars(
         select(EvoAnnouncement)
         .where(EvoAnnouncement.active.is_(True))
-        .order_by(EvoAnnouncement.effective_at.desc())
+        .order_by(EvoAnnouncement.effective_at.desc(), EvoAnnouncement.id.desc())
     )
     out: list[EvoAnnouncement] = []
     for r in rows:

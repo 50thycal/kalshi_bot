@@ -481,6 +481,42 @@ def test_spec_validation():
     assert validate_spec(BASE_SPEC, max_bytes=10)[1] is not None
 
 
+def test_spec_validation_hints_field_misplaced_on_wrong_section():
+    """Regression for a live incident: agents repeatedly submitted
+    max_spread_cents under "entry" (it's a universe field) and got a bare
+    pydantic 'extra_forbidden' rejection with no pointer to the fix. Same for
+    the reverse (entry's max_price_cents submitted under "universe")."""
+    bad = {**BASE_SPEC, "entry": {**BASE_SPEC["entry"], "max_spread_cents": 10}}
+    _, err = validate_spec(bad)
+    assert err is not None
+    assert "'max_spread_cents' belongs under 'universe', not 'entry'" in err
+
+    bad = {**BASE_SPEC, "universe": {**BASE_SPEC["universe"], "max_price_cents": 80}}
+    _, err = validate_spec(bad)
+    assert "'max_price_cents' belongs under 'entry', not 'universe'" in err
+
+
+def test_spec_validation_hints_section_nested_one_level_too_deep():
+    """Regression for a live incident: an agent nested {"universe": {...}} as a
+    field INSIDE "entry" instead of as its own top-level key next to it."""
+    bad = {**BASE_SPEC, "entry": {**BASE_SPEC["entry"], "universe": {"series_prefixes": ["X"]}}}
+    _, err = validate_spec(bad)
+    assert err is not None
+    assert "'universe' is a top-level spec section" in err
+    assert "not nested inside it" in err
+
+
+def test_spec_validation_no_bogus_hint_for_genuinely_unknown_field():
+    """A field that doesn't exist anywhere in the schema (e.g. min_open_interest,
+    seen live repeatedly — there's no bare open_interest field, only the
+    entry.conditions metric) should NOT get a fabricated 'belongs under X' hint."""
+    bad = {**BASE_SPEC, "universe": {**BASE_SPEC["universe"], "min_open_interest": 500}}
+    _, err = validate_spec(bad)
+    assert err is not None
+    assert "belongs under" not in err
+    assert "top-level spec section" not in err
+
+
 def test_entry_signal_gates():
     spec, _ = validate_spec(BASE_SPEC)
     assert entry_signal(spec, _quote()) is not None
