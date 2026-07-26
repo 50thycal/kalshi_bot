@@ -4,62 +4,67 @@
 fix a corrupted snapshot. Lives on the `mmsell-check-status` branch only — never merged
 into the default branch, never touched by `ops`. Diffed against on the next run.
 
-**Run #2 — 2026-07-26 09:25 AM CDT**
+**Run #3 — 2026-07-26 03:00 PM CDT**
 
 ## Standing realizable read (mmsell fill model)
 
 | book | n | realizable ¢/ct | verdict |
 |---|---|---|---|
-| mmsell | 4093 | +0.30 | low coverage |
-| mmsell1 | 2657 | +0.35 | thin + |
-| mmsell10 | 174 | +1.38 | REALIZABLE EDGE |
-| mmsell11 | 334 | -0.78 | MIRAGE |
-| mmsell2 | 1751 | +5.07 | low coverage |
-| mmsell3 | 1111 | -0.87 | MIRAGE |
-| mmsell4 | 272 | -0.76 | MIRAGE |
-| mmsell5 | 148 | +0.91 | thin + (first new settled trades after 5 flat checks) |
-| mmsell6 | 416 | -0.23 | MIRAGE |
-| mmsell7 | 77 | -0.80 | MIRAGE |
-| mmsell8 | 47 | +0.88 | thin + |
-| mmsell9 | 54 | +1.33 | REALIZABLE EDGE |
+| mmsell | 4119 | +0.30 | low coverage |
+| mmsell1 | 2678 | +0.36 | thin + |
+| mmsell10 | 185 | +1.37 | REALIZABLE EDGE |
+| mmsell11 | 349 | -0.73 | MIRAGE |
+| mmsell2 | 1764 | +5.09 | low coverage |
+| mmsell3 | 1126 | -0.85 | MIRAGE |
+| mmsell4 | 283 | -0.71 | MIRAGE |
+| mmsell5 | 155 | +0.89 | thin + |
+| mmsell6 | 428 | -0.21 | MIRAGE |
+| mmsell7 | 78 | -0.80 | dead (paper- too) — flipped from MIRAGE (opt went negative) |
+| mmsell8 | 47 | +0.88 | thin + (flat n for 2nd straight check) |
+| mmsell9 | 56 | +1.33 | REALIZABLE EDGE |
 
 ## Exit study — best exit per book (mmsell exit study)
 
 | book | replay n | HOLD mean/tail | best rule | Δmean | Δtail | gate (n>=100 + Δtail up + Δmean>=-0.3) |
 |---|---|---|---|---|---|---|
-| mmsell | 261 | +2.05 / -75 | none beats hold (best: stop L60 K2 +1.27/-64, Δmean -0.78) | -0.78 | +11 | NO — fails Δmean at gate size |
-| **mmsell1** | 169 | +3.30 / -83 | **stop L50 K2: +4.24/-52** | **+0.94** | **+31** | **YES — first clean gate-clear** |
-| mmsell10 | 59 | +3.85 / +5 | none beats hold | 0 | 0 | not yet (n<100) |
-| mmsell11 | 95 | +5.33 / +5 | none beats hold | 0 | 0 | not yet (n<100) |
-| **mmsell2** | 117 | +3.03 / -85 | **stop L50 K2: +4.13/-66** | **+1.10** | **+19** | **YES — first clean gate-clear** |
-| mmsell3 | 101 | +5.47 / +5 | borderline: stop L50 K2 +5.17/+5 (Δmean -0.30, Δtail 0.0) | -0.30 | 0 | NO — tail not clearly up |
-| mmsell4 | 87 | +6.29 / +5 | none beats hold | 0 | 0 | not yet (n<100) |
-| mmsell5 | 35 | +3.31 / -89 (first real loss in sample) | stop L40 K2: +4.83/-36 | +1.51 | +53 | not yet (n<100) |
-| mmsell6 | 78 | +5.00 / +5 | none beats hold | 0 | 0 | not yet (n<100) |
-| mmsell7 | 31 | +4.19 / +5 | none beats hold | 0 | 0 | not yet (n<100) |
-| mmsell8 | 24 | +7.92 / +5 | none beats hold | 0 | 0 | not yet (n<100) |
-| mmsell9 | 33 | +5.58 / +5 | none beats hold | 0 | 0 | not yet (n<100) |
+| mmsell | 286 | +3.62 / -75 | none beats hold (best: stop L60 K2 +2.62/-63, Δmean -1.00) | -1.00 | +12 | NO — confirmed fail, control book decay continues |
+| **mmsell1** | 189 | +4.07 / -83 | **stop L50 K2: +4.92/-48** | **+0.84** | **+35** | **YES — HELD on 2nd check (was +0.94/+31 last run)** |
+| mmsell10 | 69 | +4.10 / +5 | none beats hold | 0 | 0 | not yet (n<100) |
+| mmsell11 | 109 | +5.67 / +5 | stop L50 K2: +5.39/+5 | -0.28 | 0 | NO — just crossed n=100, tail flat, doesn't qualify |
+| **mmsell2** | 129 | +4.03 / -84 | **stop L50 K2: +5.03/-57** | **+1.00** | **+27** | **YES — HELD on 2nd check (was +1.10/+19 last run)** |
+| mmsell3 | 115 | +5.77 / +5 | stop L50 K2: +5.51/+5 | -0.26 | 0 | NO — same borderline-mean/flat-tail pattern as last run |
+| mmsell4 | 98 | +6.53 / +5 | none beats hold | 0 | 0 | not yet (n<100, close) |
+| mmsell5 | 42 | +4.14 / +5 (tail HEALED — was -89 at n=35 last run; percentile-artifact, not a fix) | stop L40 K2: +5.40/+5 (Δmean+1.26, no tail to cut) | +1.26 | 0 | not yet (n<100) |
+| mmsell6 | 89 | +5.29 / +5 | none beats hold | 0 | 0 | not yet (n<100) |
+| mmsell7 | 31 | +4.19 / +5 | none beats hold | 0 | 0 | **stalled — same n as last run, zero new replayable** |
+| mmsell8 | 24 | +7.92 / +5 | none beats hold | 0 | 0 | **stalled — same n as last run, zero new replayable** |
+| mmsell9 | 35 | +5.57 / +5 | none beats hold | 0 | 0 | not yet (n<100) |
 
 ## Notes carried into the next run
 
-- **mmsell1 and mmsell2 are the first two books to clear the exit-study promote gate**
-  cleanly (n>=100 replayable, Δp5 tail clearly up, Δmean positive) — both via
-  **stop L50 K2**. Watch whether this holds as n climbs further before treating it as
-  final; every earlier "positive at small n" read on other books has decayed toward
-  zero with more data, so one confirming check at a larger n would meaningfully
-  increase confidence this is real rather than a still-early read.
-- **mmsell (control) flipped the other way** — at n=123 (last run) its best rule
-  (vol V25 W6) showed Δmean +0.71; at n=261 now the same rule shows Δmean -0.86. No
-  rule beats hold for the control book anymore. This is the shrinking-benefit pattern
-  fully playing out for the biggest, oldest book.
-- **mmsell3 just crossed n=101** but sits right at the Δmean=-0.30 boundary with a
-  flat (not improved) tail — doesn't clearly qualify. Worth a clean re-check once it
-  has meaningfully more than 101.
-- **mmsell5 finally got new settled trades** after 5 consecutive flat checks (115->148
-  settled, 2->35 replayable) and immediately shows its first real loss in the
-  replayable sample (tail -89) with a promising stop L40K2 rescue (+53 tail, +1.51
-  mean) — too small (n=35) to trust yet, but this book is no longer stalled.
-- Entry/settlement pace has clearly recovered — replayable pool nearly doubled again
-  this run (539->1090), following last run's near-doubling too. Two strong-growth
-  checks in a row; no longer describe this as a post-World-Cup lull unless a future
-  check shows it stalling again.
+- **mmsell1 and mmsell2's gate-clear HELD on a second, larger-n check** (mmsell1: n
+  169->189, Δmean +0.94->+0.84, Δtail +31->+35; mmsell2: n 117->129, Δmean +1.10->+1.00,
+  Δtail +19->+27). Both still comfortably clear (n>=100, Δp5 up, Δmean well above
+  -0.3). This is now a real, twice-confirmed signal — stop L50 K2 is the rule on both.
+  One more confirming check at meaningfully larger n would make this solid enough to
+  discuss promoting into config.
+- **mmsell5's exit-study tail "healed" again** (was -89 at n=35 last run, now +5 at
+  n=42) — this is the percentile-statistic artifact explained in this skill's
+  background section (below ~n=20 the tail stat is the single worst trade; the earlier
+  -89 read was likely already stale by the time it was reported). Treat any single
+  sharp tail swing on a thin-n book with suspicion until it's confirmed at n>=~40-50.
+- **mmsell7 flipped verdict** in the standing read: MIRAGE -> "dead (paper- too)" as
+  its blended-paper number went negative for the first time. Its exit-study replay n
+  (31) and mmsell8's (24) were BOTH completely flat vs last run — zero new replayable
+  trades for either book in this window, worth a look if they stay flat next run too.
+- **mmsell (control) continued decaying** — best rule's Δmean went from -0.78 (last
+  run) to -1.00 (now) as n grew to 286. No longer ambiguous: hold-to-settlement is
+  simply better than any exit rule for this book at scale.
+- **mmsell11 and mmsell3 both just crossed n=100** but neither clears the gate — same
+  "Δmean borderline negative, Δtail flat at +5" shape both times, because HOLD's own
+  tail is already clean (no second disaster yet) so there's nothing for a stop to
+  usefully cut. Structurally different from mmsell1/mmsell2, which both have a real,
+  persistent tail loss the stop is rescuing.
+- Overall growth this run (1090->1216, +126) was more modest than the two prior
+  near-doublings — plausibly normal week-to-week variance rather than a renewed lull;
+  confirm pace next run before flagging it either way.
