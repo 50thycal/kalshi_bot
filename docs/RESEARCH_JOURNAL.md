@@ -16,6 +16,44 @@ Conventions:
 
 ---
 
+## PROBE VERDICT 2026-07-26 — XLOCK: P2 KILLED (crypto touch-vs-terminal coherent), P1 HOLD
+
+Ran `kalshi_xlock` via the ops channel (`--days 45`, 7,000 open events) after PR #112 merged.
+
+**A false positive on the first live run, caught before trusting it.** P2 flagged +$0.41 on
+`KXSOLD` (SOL terminal) vs `KXHYPEMAXMON` (HYPE touch) — two unrelated cryptocurrencies matched
+purely because they shared a strike and a close time; `scan_p2` never checked the underlying
+asset. Fixed with `_series_asset` (extracts the symbol from the series ticker) as a hard
+precondition, re-verified against the exact live payload, re-run. **Third false-positive class
+in this family** (after the trillion-unit parser bug and the illiquid-dropped-leg gap), same root
+cause each time — a real-identifier check assumed rather than enforced — and caught the same way
+each time: guilty until proven, verify before reporting.
+
+**P3 — coverage census.** Only **1,400 of 7,000 (20%)** open events are actually evaluated by
+`kalshi_arb.scan_event`: 2,331 are plain binaries (`<3` legs, can't structurally hold a Dutch
+book), 3,269 fall outside the 45-day horizon, 0 `KXMVE` currently listed. Of the 1,400 evaluated,
+**83 numeric MECE sets had a gap** in their retained legs — correctly suppressed by PR #106's
+`_tiles_exhaustively` guard, a live confirmation it's earning its keep, not just handling a
+hypothetical. 2 flagged as a genuine arb (consistent with the standing `kalshi_arb` monitor).
+
+**P2 — touch-vs-terminal containment (Crypto): KILL.** 232 touch legs, 969 terminal legs, **30
+same-asset matched pairs** (clears the pre-registered 20-pair floor). **0 hits** survive. Crypto's
+touch and terminal ladders price coherently against each other.
+
+**P1 — parlay containment: HOLD (testability-thin).** 104 combo-tagged markets found, only 2
+decomposed into ≥2 rules-text AND-parts, 0 matched to an open leg — far below the pre-registered
+200-pair floor. Not a kill: the rules-text matcher may simply be too strict for how Kalshi phrases
+combo rules right now.
+
+**Decision: no promotion, no paper book.** Per the pre-registered decision rule, P2's clean kill
+plus P1's HOLD closes this pass of the locked-arb family. `docs/XLOCK_THESIS.md` carries the full
+RESULTS section; `docs/IDEA_MODEL_SCORECARD.md` updated. This closes the loop the user opened by
+asking whether a risk-free multi-leg lock exists on Kalshi: **no** — not within one event
+(`kalshi_arb.py`, 1,021-event re-scan, `edge_research.md`), and not in the parlay or
+crypto-touch-vs-terminal pockets a within-event scan can't see either.
+
+---
+
 ## INFRA 2026-07-26 — mmsell_fill_replay BUILT + first pass (PRELIMINARY, small n)
 
 Follow-on to the 2026-07-23 candidate-tick collection below. `scripts/mmsell_fill_replay.py` replays
