@@ -403,6 +403,48 @@ def test_parity_tape_is_capped_per_cycle(settings):
 # --- shared live sizing ------------------------------------------------------
 
 
+class _FakeCursor:
+    """Routes SQL to a canned result by a matching substring — enough to test
+    live_paper_parity's report functions without a real Postgres connection."""
+
+    def __init__(self, routes: list[tuple[str, list[tuple]]]):
+        self._routes = routes
+        self._result: list[tuple] = []
+
+    def execute(self, sql, params=()):
+        for substr, result in self._routes:
+            if substr in sql:
+                self._result = result
+                return
+        raise AssertionError(f"unrouted query in fake cursor: {sql[:120]}")
+
+    def fetchall(self):
+        return self._result
+
+
+def test_report_execution_does_not_double_convert_fill_price(capsys):
+    """Regression: fills.price is recorded on the SIDE TRADED (executor.reconcile stores
+    no_price_dollars directly for side='no'), so for mmsell it is ALREADY the NO cost basis —
+    the same quantity as live_orders.limit_price. A `100 - f.price` conversion (the original,
+    buggy version of this query) double-flips it, turning a sane ~93c fill into a nonsense
+    ~7c one and a ~-87c px_gap. This pins avg(f.price) used directly, with fill_px landing
+    close to live_px rather than being its complement."""
+    cur = _FakeCursor([
+        ("GROUP BY 1", [("filled", 1)]),
+        ("avg(limit_price)", [(93.0,)]),
+        ("avg(f.price)", [(93.2,)]),          # fills.price is already the NO cost basis
+        ("avg(assumed_price)", [(93.4,)]),
+    ])
+    epoch = {"twin_tag": "mmsell10_pt", "live_tag": "mmsell10",
+             "started_at": "2026-07-26T21:09:46Z"}
+    lpp.report_execution(cur, [epoch], days=0)
+    out = capsys.readouterr().out
+    assert "93.2c" in out            # fill_px reported as-is, not flipped to ~6.8c
+    assert "6.8c" not in out
+    assert "-86" not in out          # the old bug's px_gap magnitude
+    assert "-0.20c" in out           # gap = fill_px(93.2) - twin_px(93.4), a sane small number
+
+
 def test_live_sizing_helpers_are_the_single_source_of_truth(settings):
     """The twin and the executor must price/size identically; both call these."""
     settings.mmsell_live_price_offset_cents = 5
