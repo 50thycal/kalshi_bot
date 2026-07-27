@@ -587,8 +587,14 @@ def evaluate_order(
     if not through:
         return order.status
     haircut = max(0.0, min(0.9, settings.maker_adverse_selection_haircut))
-    qty = int(remaining * (1.0 - haircut))
-    if qty <= 0:
+    # Floor at 1 once the market has genuinely traded through: int() alone made a
+    # 1-contract maker order unfillable BY CONSTRUCTION (int(1 * 0.75) == 0 -> the
+    # qty <= 0 early return), so it rested forever no matter how far the market
+    # moved past it. Agents place 1-lots routinely, so that silently swallowed a
+    # whole class of orders. The haircut still scales every larger order (10 -> 7);
+    # this only stops it rounding a real fill down to nothing.
+    qty = max(1, int(remaining * (1.0 - haircut)))
+    if qty <= 0:  # unreachable while remaining > 0; kept as a guard
         return order.status
     fee = kalshi_fee(limit, qty) if fees else 0.0
     _record_fill(

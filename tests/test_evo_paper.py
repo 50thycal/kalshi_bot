@@ -864,3 +864,42 @@ def test_live_orderbook_shape_fills_a_marketable_order(evo_session, evo_settings
         select(em.EvoFill).where(em.EvoFill.order_id == order.id)
     )
     assert fill is not None and fill.price_cents == 7  # 100 - 93c no_bid
+
+
+def test_one_lot_maker_order_fills_on_trade_through(evo_session, evo_settings):
+    """Regression: the adverse-selection haircut used int(), so a 1-contract
+    maker order computed int(1 * 0.75) == 0 and hit the `qty <= 0` early return —
+    unfillable BY CONSTRUCTION no matter how far the market traded through it.
+    Found live: order 44 rested at a 51c limit while the market taker cost was
+    22c (a 29c trade-through) and still never filled. Agents place 1-lots
+    routinely, so this silently swallowed a whole class of orders."""
+    _fund(evo_session, evo_settings)
+    md = StaticMarketData()
+    order, err = paper.place_order(
+        evo_session, evo_settings, agent_uuid=AU, cohort_id=1, idem_key="m-onelot",
+        market_ticker="T1", side="yes", action="buy", quantity=1, style="maker",
+        limit_price_cents=51,
+    )
+    assert order is not None, err
+
+    # market taker cost for YES = 100 - no_bid = 22c, far below the 51c limit
+    md.set_quote(_quote(yes_bid=20, no_bid=78))
+    paper.process_open_orders(evo_session, evo_settings, md)
+    assert order.status == "filled" and order.filled_quantity == 1
+    fill = evo_session.scalar(select(em.EvoFill).where(em.EvoFill.order_id == order.id))
+    assert fill is not None and fill.liquidity == "maker" and fill.price_cents == 51
+
+
+def test_maker_haircut_still_scales_larger_orders(evo_session, evo_settings):
+    """The 1-lot floor must not disable the haircut itself: a 10-lot still takes
+    the full 25% adverse-selection cut (10 -> 7), unchanged."""
+    _fund(evo_session, evo_settings)
+    md = StaticMarketData()
+    order, _ = paper.place_order(
+        evo_session, evo_settings, agent_uuid=AU, cohort_id=1, idem_key="m-tenlot",
+        market_ticker="T1", side="yes", action="buy", quantity=10, style="maker",
+        limit_price_cents=51,
+    )
+    md.set_quote(_quote(yes_bid=20, no_bid=78))
+    paper.process_open_orders(evo_session, evo_settings, md)
+    assert order.filled_quantity == 7
