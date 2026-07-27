@@ -443,12 +443,26 @@ def _recent_activity(session, now: datetime, limit: int = 20) -> list[dict]:
         select(EvoOrder).where(EvoOrder.status.in_(("filled", "partial", "open")))
         .order_by(EvoOrder.id.desc()).limit(25)
     ):
-        verb = "opened" if o.action == "buy" else "closed"
+        # A resting order is NOT a position. Saying "opened a position" for a
+        # status='open' row (zero fills, no position row, no capital deployed)
+        # reads as a completed trade and contradicts the same page's per-agent
+        # "no open positions" card. Describe what actually happened instead, and
+        # say how much of it filled when it did.
+        side_action = "buy" if o.action == "buy" else "sell"
+        if o.status == "open":
+            desc = (f"placed a {side_action} order for {o.quantity} {o.side} "
+                    f"in {o.market_ticker} (resting, unfilled)")
+        else:
+            verb = "opened" if o.action == "buy" else "closed"
+            filled = o.filled_quantity or 0
+            qualifier = "" if o.status == "filled" else f" ({filled}/{o.quantity} filled)"
+            desc = (f"{verb} a {o.side} position in {o.market_ticker}"
+                    f"{qualifier}")
         events.append({
             "at": _iso(o.created_at), "category": "trades",
             "agent": names.get(o.agent_uuid),
             "type": "paper order",
-            "description": f"{verb} a {o.side} position in {o.market_ticker}",
+            "description": desc,
         })
 
     for g in session.scalars(
