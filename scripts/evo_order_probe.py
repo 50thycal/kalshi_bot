@@ -73,23 +73,59 @@ def _get(path: str) -> dict | None:
 # --- level parsing -----------------------------------------------------------
 
 
+def _level_price_cents(v: object) -> int | None:
+    """Mirror of marketdata._level_price_cents."""
+    try:
+        f = float(v)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    return round(f * 100) if 0 < f < 1 else round(f)
+
+
 def _parse_levels_strict(raw: object) -> list[tuple[int, int]]:
-    """EXACT mirror of marketdata._parse_levels — what the engine actually sees,
-    including its except clause. Note it does NOT catch KeyError, so a dict-shaped
-    level (`{"price_dollars": ...}`) RAISES here rather than parsing to empty;
-    _strict_or_error() reports that as its own distinct failure mode, because in
-    the engine that exception escapes quote_from_kalshi (which sits outside
-    LiveMarketData.get_quote's try/except)."""
+    """EXACT mirror of the CURRENT marketdata._parse_levels — what the engine
+    actually sees. Kept in sync deliberately: when this disagrees with the
+    tolerant parser below, the engine's view of the book has drifted from what
+    the exchange is really sending, which is precisely the failure this tool
+    exists to catch (it previously found the engine parsing ZERO levels from a
+    full book, which made every taker order unfillable at any price)."""
     out: list[tuple[int, int]] = []
     for lvl in raw or []:  # type: ignore[union-attr]
         try:
-            price, qty = int(lvl[0]), int(lvl[1])
-        except (TypeError, ValueError, IndexError):
+            price = _level_price_cents(lvl[0])
+            qty_raw = float(lvl[1])
+        except (TypeError, ValueError, IndexError, KeyError):
             continue
-        if 0 < price < 100 and qty > 0:
+        qty = int(qty_raw)
+        if price is not None and 0 < price < 100 and qty > 0:
             out.append((price, qty))
     out.sort(key=lambda pq: -pq[0])
     return out
+
+
+# Mirror of marketdata._OB_ENVELOPES / _OB_SIDE_KEYS.
+_OB_ENVELOPES = ("orderbook", "orderbook_fp")
+_OB_SIDE_KEYS = {"yes": ("yes", "yes_dollars"), "no": ("no", "no_dollars")}
+
+
+def _orderbook_sides(orderbook: dict | None) -> tuple[list, list]:
+    """Mirror of marketdata._orderbook_sides: pull the yes/no level arrays out of
+    whichever envelope + side-key naming the API used."""
+    body: dict = orderbook if isinstance(orderbook, dict) else {}
+    for env in _OB_ENVELOPES:
+        inner = body.get(env)
+        if isinstance(inner, dict):
+            body = inner
+            break
+
+    def side(name: str) -> list:
+        for key in _OB_SIDE_KEYS[name]:
+            v = body.get(key)
+            if isinstance(v, list):
+                return v
+        return []
+
+    return side("yes"), side("no")
 
 
 def _strict_or_error(raw: object) -> tuple[list[tuple[int, int]], str | None]:
@@ -241,18 +277,18 @@ def main(argv: list[str] | None = None) -> int:
               f"· created {o['created_at']} ===")
         if t not in books:
             mkt = (_get(f"/markets/{t}") or {}).get("market") or {}
-            ob_raw = _get(f"/markets/{t}/orderbook?depth={_DEPTH}") or {}
-            ob = ob_raw.get("orderbook", ob_raw)
+            ob = _get(f"/markets/{t}/orderbook?depth={_DEPTH}") or {}
             raw = json.dumps(ob)
             print(f"  market status={mkt.get('status')!r} result={mkt.get('result')!r} "
                   f"yes_bid={mkt.get('yes_bid_dollars') or mkt.get('yes_bid')} "
                   f"yes_ask={mkt.get('yes_ask_dollars') or mkt.get('yes_ask')} "
                   f"no_bid={mkt.get('no_bid_dollars') or mkt.get('no_bid')}")
             print(f"  RAW orderbook: {raw[:_RAW_CAP]}{'…' if len(raw) > _RAW_CAP else ''}")
-            y_s, y_err = _strict_or_error((ob or {}).get("yes"))
-            n_s, n_err = _strict_or_error((ob or {}).get("no"))
-            y_t = _parse_levels_tolerant((ob or {}).get("yes"))
-            n_t = _parse_levels_tolerant((ob or {}).get("no"))
+            yes_raw, no_raw = _orderbook_sides(ob)
+            y_s, y_err = _strict_or_error(yes_raw)
+            n_s, n_err = _strict_or_error(no_raw)
+            y_t = _parse_levels_tolerant(yes_raw)
+            n_t = _parse_levels_tolerant(no_raw)
             print(f"  ENGINE parse (strict): yes={y_s or '[]'} no={n_s or '[]'}")
             print(f"  tolerant parse:        yes={y_t or '[]'} no={n_t or '[]'}")
             if y_err or n_err:
