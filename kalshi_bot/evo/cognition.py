@@ -112,6 +112,7 @@ class HeartbeatContext:
     recent_backtests: list[dict] = field(default_factory=list)
     recent_data_reads: list[dict] = field(default_factory=list)
     recent_market_scans: list[dict] = field(default_factory=list)
+    your_strategies: list[dict] = field(default_factory=list)
     extra: dict = field(default_factory=dict)
 
 
@@ -262,7 +263,11 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
      "universe" — universe only has min_volume as a liquidity floor. To filter
      on open_interest, use an entry.conditions condition instead, e.g.
      {"metric": "open_interest", "op": ">=", "value": 500}.
-- activate_strategy {strategy_id}
+- activate_strategy {strategy_id}. strategy_id is the INTEGER id, never the name:
+  take it from YOUR STRATEGIES below (or from a save_strategy result). Saving a
+  strategy does NOT deploy it — a 'validated' strategy places no orders at all.
+  Activation is what makes it trade, automatically, every cycle, with no further
+  action from you. If you saved something worth running, activate it.
 - submit_trade_intent {market_ticker, side: yes|no, action: buy|sell, quantity,
   style: taker|maker, limit_price_cents?, thesis, confidence (0-1), opportunity_id?}.
   market_ticker MUST be one of the exact tickers shown under RELEVANT MARKETS
@@ -379,6 +384,16 @@ def build_user_prompt(ctx: HeartbeatContext) -> str:
             "times_run_recently >= 2 means you already ran this and the result is KNOWN "
             "— do NOT run it again, act on it):\n"
             + json.dumps(ctx.recent_backtests, separators=(",", ":"))[:2500]
+        )
+    if ctx.your_strategies:
+        parts.append(
+            "YOUR STRATEGIES (use strategy_id — the INTEGER — with activate_strategy; "
+            "a strategy only trades once its status is 'active'. 'validated' means "
+            "saved but NOT deployed: it places no orders and earns you nothing until "
+            "you activate it. An ACTIVE strategy trades automatically every cycle "
+            "without you, so activating a good one is the highest-leverage action "
+            "available to you):\n"
+            + json.dumps(ctx.your_strategies, separators=(",", ":"))[:2000]
         )
     if ctx.recent_data_reads:
         parts.append(
@@ -851,16 +866,29 @@ def _execute_one(
             session, settings, agent_uuid=au, spec_doc=spec, heartbeat_id=hb.id,
             graveyard_check=check if isinstance(check, dict) else None,
         )
-        return {"ok": True, "strategy_id": row.id} if row else {"rejected": err}
+        if row is None:
+            return {"rejected": err}
+        # Spell out that saving is NOT deploying, and hand back the exact id the
+        # activate call needs: this outcome is the agent's only in-heartbeat sight
+        # of it, and agents were repeatedly retrying activation with the NAME.
+        return {"ok": True, "strategy_id": row.id, "status": row.status,
+                "next": f"NOT trading yet — call activate_strategy "
+                        f"{{\"strategy_id\": {row.id}}} to deploy it"}
 
     if t == "activate_strategy":
         try:
             strategy_id = int(a.get("strategy_id", 0))
         except (TypeError, ValueError):
-            return {"rejected": f"strategy_id must be the integer id from a prior "
-                                 f"save_strategy result, got {a.get('strategy_id')!r}"}
+            known = sandbox.your_strategies(session, au, limit=6)
+            return {"rejected": f"strategy_id must be the INTEGER id, not the name — "
+                                 f"got {a.get('strategy_id')!r}",
+                    "your_strategies": known}
         row, err = sandbox.activate_strategy(session, au, strategy_id)
-        return {"ok": True, "strategy": row.name} if row else {"rejected": err}
+        if row is None:
+            return {"rejected": err, "your_strategies": sandbox.your_strategies(
+                session, au, limit=6)}
+        return {"ok": True, "strategy_id": row.id, "strategy": row.name,
+                "status": row.status}
 
     if t == "submit_trade_intent":
         ticker = str(a.get("market_ticker", ""))
@@ -1097,5 +1125,6 @@ def assemble_context(
         recent_backtests=sandbox.recent_runs(session, au),
         recent_data_reads=data_access.recent_reads(session, au),
         recent_market_scans=market_explore.recent_scans(session, au),
+        your_strategies=sandbox.your_strategies(session, au),
         extra=extra or {},
     )
