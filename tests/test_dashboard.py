@@ -173,3 +173,47 @@ def test_agent_free_text_is_length_capped():
     long = "z" * 5000
     assert len(dash._cap(long)) <= dash.TEXT_CAP
     assert dash._cap(None) is None
+
+
+def test_resting_order_is_not_described_as_an_opened_position():
+    """Regression for a live incident: the Trades activity feed selected orders
+    with status in (filled, partial, open) and described EVERY one as "opened a
+    {side} position". A resting, never-filled order (0 fills, no position row, no
+    capital deployed) therefore read as a completed trade — and contradicted the
+    same page's per-agent "no open positions" card. An operator reported 4
+    "positions" that were all unfilled orders."""
+    from kalshi_bot.evo import models as em
+
+    session = _session()
+    settings = EvoSettings(_env_file=None)
+    cohort, agents = _seed(session, settings, n=1)
+    au = agents[0].agent_uuid
+    session.add_all([
+        em.EvoOrder(agent_uuid=au, cohort_id=cohort.id, idem_key="k-open",
+                    market_ticker="KXHIGHNY-26JUL27-B85.5", side="yes", action="buy",
+                    style="taker", quantity=10, filled_quantity=0,
+                    limit_price_cents=7, status="open"),
+        em.EvoOrder(agent_uuid=au, cohort_id=cohort.id, idem_key="k-filled",
+                    market_ticker="KXHIGHNY-26JUL27-T81", side="yes", action="buy",
+                    style="taker", quantity=5, filled_quantity=5,
+                    limit_price_cents=20, status="filled"),
+    ])
+    session.flush()
+
+    trades = [e for e in dash._recent_activity(session, _now_utc())
+              if e["category"] == "trades"]
+    by_ticker = {e["description"].split(" in ")[-1].split(" ")[0]: e["description"]
+                 for e in trades}
+
+    resting = by_ticker["KXHIGHNY-26JUL27-B85.5"]
+    assert "position" not in resting, f"resting order called a position: {resting!r}"
+    assert "placed a buy order" in resting and "unfilled" in resting
+
+    filled = by_ticker["KXHIGHNY-26JUL27-T81"]
+    assert "opened a yes position" in filled  # a real fill still reads as a position
+
+
+def _now_utc():
+    import datetime as _dt
+
+    return _dt.datetime.now(_dt.timezone.utc)
