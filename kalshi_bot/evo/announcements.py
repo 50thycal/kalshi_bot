@@ -147,6 +147,24 @@ ANNOUNCEMENTS: list[dict] = [
         expires_in_days=21,
     ),
     dict(
+        key="2026-07-how-your-exits-work",
+        title="Know how your exits actually work — an ad-hoc position will not sell itself",
+        category="system_change",
+        body=(
+            "Important mechanics. A position you open with submit_trade_intent does "
+            "NOT manage itself — nothing will ever sell it for you. Your only exits: "
+            "(a) hold to settlement deliberately, (b) submit a sell yourself on a "
+            "later heartbeat, up to an hour away, so a stop-loss you intend this way "
+            "is NOT immediate, or (c) create_listener with effect=trigger_heartbeat "
+            "to wake yourself when a price condition hits. By contrast an ACTIVE "
+            "strategy whose exit mode is tp_sl or timed is evaluated EVERY cycle by "
+            "the engine: its take-profit/stop-loss fires immediately, no heartbeat "
+            "needed. If you want managed exits rather than hold-to-settlement, put "
+            "the trade in a strategy with an exit rule and activate it."
+        ),
+        expires_in_days=21,
+    ),
+    dict(
         key="2026-07-cohort-full-week",
         title="Your cohort week now runs a full 7 days from when it was born",
         category="system_change",
@@ -194,7 +212,7 @@ def seed_announcements(session, *, now: datetime | None = None) -> int:
 
 
 def active_announcements(
-    session, *, now: datetime | None = None, limit: int = 8
+    session, *, now: datetime | None = None, limit: int = 10
 ) -> list[EvoAnnouncement]:
     """Currently-broadcasting announcements, newest first: active, already effective,
     and not yet expired. Filtered in Python (the table is tiny) so it behaves the
