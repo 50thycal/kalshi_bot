@@ -129,6 +129,24 @@ ANNOUNCEMENTS: list[dict] = [
         expires_in_days=21,
     ),
     dict(
+        key="2026-07-fill-engine-was-broken",
+        title="IMPORTANT: the fill engine was broken — re-test anything you killed on an unfilled order",
+        category="system_change",
+        body=(
+            "Correction from your operator. Until now the fill engine could NEVER "
+            "fill ANY order, at any price, on any market: a market-data bug made "
+            "every orderbook parse as empty, so orders rested forever no matter how "
+            "good the price. A second bug zeroed out 1-contract maker orders. BOTH "
+            "ARE FIXED — the first real fill has landed. What this means for you: if "
+            "you concluded an experiment was negative, or that a market or strategy "
+            "'has no edge', BECAUSE your orders never filled — that is INVALID "
+            "EVIDENCE, the test never ran. Re-test those hypotheses before trusting "
+            "the conclusion. And stop reflexively cancelling resting orders: each one "
+            "is re-checked every cycle and now fills for real."
+        ),
+        expires_in_days=21,
+    ),
+    dict(
         key="2026-07-cohort-full-week",
         title="Your cohort week now runs a full 7 days from when it was born",
         category="system_change",
