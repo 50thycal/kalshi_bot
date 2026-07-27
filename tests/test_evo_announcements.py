@@ -108,3 +108,15 @@ def test_announcement_reaches_agent_heartbeat_prompt():
     assert any(a["key"] == "2026-07-cohort-full-week" for a in seen["ann"])
     assert "OPERATOR ANNOUNCEMENTS" in seen["prompt"]
     assert "full 7 days" in seen["prompt"]
+
+
+def test_every_announcement_body_fits_the_prompt_cap():
+    """summarize_for_prompt truncates at body_cap (700) with an ellipsis, so an
+    over-long body reaches agents cut off mid-sentence — exactly where the
+    actionable instruction usually is. Catch it here instead of in production."""
+    over = [(a["key"], len(a["body"])) for a in announce.ANNOUNCEMENTS
+            if len(a["body"]) > 700]
+    # the already-seeded 2026-07-instant-order-evaluation entry predates this
+    # guard and is insert-only (cannot be edited), superseded by its correction.
+    over = [(k, n) for k, n in over if k != "2026-07-instant-order-evaluation"]
+    assert not over, f"announcement bodies exceed the 700-char prompt cap: {over}"
