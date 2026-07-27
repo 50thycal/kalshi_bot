@@ -95,19 +95,70 @@ class Quote:
         )
 
 
+def _level_price_cents(v: object) -> int | None:
+    """A level price as integer cents, from either the legacy integer-cents form
+    (93) or the current dollar-string form ('0.9300'). Valid prices are 1..99c
+    i.e. $0.01..$0.99, so a value below 1 is unambiguously dollars."""
+    try:
+        f = float(v)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    return round(f * 100) if 0 < f < 1 else round(f)
+
+
 def _parse_levels(raw: list | None) -> list[tuple[int, int]]:
-    """Kalshi orderbook levels: [[price, qty], ...] — normalize + sort best (highest
-    bid) first."""
+    """Kalshi orderbook levels -> [(price_cents, qty)], best (highest bid) first.
+
+    Tolerates both shapes the API has used: legacy `[[93, 52], ...]` integer
+    cents/counts, and the current `[["0.9300", "52.00"], ...]` dollar-string
+    price with a fixed-point (often fractional) size. Sizes are rounded down to
+    whole contracts — a partial contract is not fillable.
+
+    Live incident this guards: when this returned [] for every market, both
+    level lists were empty, so Quote.taker_levels() was always empty and
+    evaluate_order could not fill ANY order at ANY price — while quotes still
+    looked healthy, because top-of-book prices come from the market object.
+    Nothing surfaced the failure; orders just sat open forever."""
     out: list[tuple[int, int]] = []
     for lvl in raw or []:
         try:
-            price, qty = int(lvl[0]), int(lvl[1])
-        except (TypeError, ValueError, IndexError):
+            price = _level_price_cents(lvl[0])
+            qty_raw = float(lvl[1])
+        except (TypeError, ValueError, IndexError, KeyError):
             continue
-        if 0 < price < 100 and qty > 0:
+        qty = int(qty_raw)  # floor: partial contracts are not fillable
+        if price is not None and 0 < price < 100 and qty > 0:
             out.append((price, qty))
     out.sort(key=lambda pq: -pq[0])
     return out
+
+
+# Orderbook envelope + side keys the API has used. The live elections API returns
+# {"orderbook_fp": {"yes_dollars": [...], "no_dollars": [...]}}; older/other
+# responses use {"orderbook": {"yes": [...], "no": [...]}}. Accept both (and a
+# bare, unwrapped body) so a shape change on either axis cannot silently zero out
+# every fill again.
+_OB_ENVELOPES = ("orderbook", "orderbook_fp")
+_OB_SIDE_KEYS = {"yes": ("yes", "yes_dollars"), "no": ("no", "no_dollars")}
+
+
+def _orderbook_sides(orderbook: dict | None) -> tuple[list, list]:
+    """(yes_levels_raw, no_levels_raw) from any accepted orderbook envelope."""
+    body: dict = orderbook if isinstance(orderbook, dict) else {}
+    for env in _OB_ENVELOPES:
+        inner = body.get(env)
+        if isinstance(inner, dict):
+            body = inner
+            break
+
+    def side(name: str) -> list:
+        for key in _OB_SIDE_KEYS[name]:
+            v = body.get(key)
+            if isinstance(v, list):
+                return v
+        return []
+
+    return side("yes"), side("no")
 
 
 def _to_cents(dollars: object) -> int | None:
@@ -144,11 +195,9 @@ def quote_from_kalshi(market: dict, orderbook: dict | None, *, source: str = "li
     """Build a Quote from a Kalshi market dict + orderbook response. Reads both the legacy
     cents/int fields and the elections API's `_dollars`/`_fp` string fields (the live API
     only sends the latter), so price, volume, open interest and last price populate."""
-    ob = orderbook.get("orderbook") if isinstance(orderbook, dict) and "orderbook" in (
-        orderbook or {}
-    ) else orderbook
-    yes_levels = _parse_levels((ob or {}).get("yes"))
-    no_levels = _parse_levels((ob or {}).get("no"))
+    yes_raw, no_raw = _orderbook_sides(orderbook)
+    yes_levels = _parse_levels(yes_raw)
+    no_levels = _parse_levels(no_raw)
     yes_bid = yes_levels[0][0] if yes_levels else _mkt_cents(market, "yes_bid")
     no_bid = no_levels[0][0] if no_levels else _mkt_cents(market, "no_bid")
     yes_ask = (100 - no_bid) if no_bid is not None else _mkt_cents(market, "yes_ask")

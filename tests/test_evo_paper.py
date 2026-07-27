@@ -823,3 +823,44 @@ def test_strategy_runner_tp_exit_once(evo_session, evo_settings, evo_agent):
         )
     )
     assert pos.status == "closed" and float(pos.realized_pnl_usd) > 0
+
+
+# The EXACT orderbook payload the live Kalshi elections API returned for
+# KXHIGHNY-26JUL27-B85.5, captured via scripts/evo_order_probe.py.
+_LIVE_ORDERBOOK_B85_5 = {
+    "orderbook_fp": {
+        "no_dollars": [["0.8100", "1.00"], ["0.8400", "53.00"], ["0.8800", "10.05"],
+                       ["0.9200", "129.00"], ["0.9300", "52.00"]],
+        "yes_dollars": [["0.0100", "1530.00"], ["0.0600", "6.00"]],
+    }
+}
+
+
+def test_live_orderbook_shape_fills_a_marketable_order(evo_session, evo_settings):
+    """End-to-end guard on the real incident: order 38 was a taker buy of 10 YES
+    at a 7c limit while the live book had 52 contracts available at exactly 7c
+    (no_bid 93 -> taker cost 100-93), and it sat unfilled for hours. The parser
+    read an "orderbook"/"yes"/"no" shape the API no longer sends, so every level
+    list was empty and evaluate_order could never fill anything at any price.
+    This drives the production fill path with the captured payload."""
+    _fund(evo_session, evo_settings)
+    market = {"ticker": "KXHIGHNY-26JUL27-B85.5", "status": "active",
+              "yes_bid_dollars": "0.0600", "yes_ask_dollars": "0.0700",
+              "no_bid_dollars": "0.9300",
+              "close_time": (NOW + timedelta(hours=5)).isoformat().replace("+00:00", "Z")}
+    quote = quote_from_kalshi(market, _LIVE_ORDERBOOK_B85_5)
+
+    order, err = paper.place_order(
+        evo_session, evo_settings, agent_uuid=AU, cohort_id=1, idem_key="live-shape",
+        market_ticker=market["ticker"], side="yes", action="buy", quantity=10,
+        style="taker", limit_price_cents=7,
+    )
+    assert order is not None, err
+
+    status = paper.evaluate_order(evo_session, evo_settings, order, quote)
+    assert status == "filled", f"marketable order did not fill: {status}"
+    assert order.filled_quantity == 10
+    fill = evo_session.scalar(
+        select(em.EvoFill).where(em.EvoFill.order_id == order.id)
+    )
+    assert fill is not None and fill.price_cents == 7  # 100 - 93c no_bid

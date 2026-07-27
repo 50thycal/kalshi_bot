@@ -178,3 +178,37 @@ def test_explore_markets_rejects_bad_status():
     hb = run_heartbeat(s, settings, agent=agent, cohort=cohort, kind="routine",
                        slot_id="xbad", cognition=cog, md=_FakeMD())
     assert "rejected" in hb.actions_json[0] and "status must be" in hb.actions_json[0]["rejected"]
+
+
+# The EXACT orderbook payload the live Kalshi elections API returned for
+# KXHIGHNY-26JUL27-B85.5, captured by scripts/evo_order_probe.py. Pinned verbatim:
+# the previous parser looked for an "orderbook" envelope containing "yes"/"no",
+# so against this real shape both level lists parsed to [] on EVERY market —
+# Quote.taker_levels() was always empty and paper.evaluate_order could not fill
+# ANY order at ANY price. Quotes still looked healthy (top-of-book prices come
+# from the market object), so nothing surfaced it: 39 orders, zero fills, ever.
+_LIVE_ORDERBOOK_B85_5 = {
+    "orderbook_fp": {
+        "no_dollars": [["0.8100", "1.00"], ["0.8300", "3.00"], ["0.8400", "53.00"],
+                       ["0.8500", "25.00"], ["0.8600", "35.00"], ["0.8800", "10.05"],
+                       ["0.9000", "135.00"], ["0.9100", "72.18"], ["0.9200", "129.00"],
+                       ["0.9300", "52.00"]],
+        "yes_dollars": [["0.0100", "1530.00"], ["0.0200", "381.00"], ["0.0300", "74.00"],
+                        ["0.0400", "20.00"], ["0.0500", "31.00"], ["0.0600", "6.00"]],
+    }
+}
+
+
+def test_quote_from_kalshi_parses_the_live_orderbook_fp_shape():
+    market = {"ticker": "KXHIGHNY-26JUL27-B85.5", "status": "active",
+              "yes_bid_dollars": "0.0600", "yes_ask_dollars": "0.0700",
+              "no_bid_dollars": "0.9300"}
+    q = quote_from_kalshi(market, _LIVE_ORDERBOOK_B85_5)
+
+    # levels populate, best-first, with dollar prices converted to cents
+    assert q.no_levels[0] == (93, 52)
+    assert q.yes_levels[0] == (6, 6)
+    # fractional sizes floor to whole contracts ("10.05" -> 10, "72.18" -> 72)
+    assert (88, 10) in q.no_levels and (91, 72) in q.no_levels
+    # and the derived taker cost matches the market's own quoted ask (100-93=7)
+    assert q.best_taker_price("yes") == 7 == q.yes_ask
