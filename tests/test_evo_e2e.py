@@ -297,3 +297,86 @@ def test_activate_strategy_with_non_numeric_id_rejects_cleanly(
     assert act.get("ok") is not True
     assert "strategy_id" in act["rejected"]
     assert "internal error" not in act["rejected"]
+
+
+def test_agent_can_see_strategy_ids_and_activate_from_them(
+    evo_session, evo_settings, evo_agent
+):
+    """Root-cause regression: activate_strategy needs the INTEGER strategy_id, but
+    save_strategy's outcome is not re-fed in the same heartbeat and NOTHING in the
+    prompt listed the agent's own strategies — so an agent only retained the NAME
+    it chose and could never learn the id. Live result: 9 activation attempts, 0
+    successes (one agent retried the same name 5 times), 30 strategies stuck
+    'validated', and the autonomous strategy_runner never ran once."""
+    from kalshi_bot.evo.cognition import build_user_prompt
+
+    agent, cohort = evo_agent
+    md = StaticMarketData()
+    md.set_quote(_live_quote("T1"))
+
+    hb_save = run_heartbeat(
+        evo_session, evo_settings, agent=agent, cohort=cohort, kind="routine",
+        slot_id="ids-save", md=md,
+        cognition=_script([{"type": "save_strategy", "spec": STRAT_SPEC}]),
+    )
+    save = next(o for o in hb_save.actions_json if o["type"] == "save_strategy")
+    strategy_id = save["strategy_id"]
+    # the outcome must say plainly that saving did NOT deploy it
+    assert save["status"] == "validated"
+    assert "activate_strategy" in save["next"] and str(strategy_id) in save["next"]
+
+    # next heartbeat: the id is visible in context AND rendered into the prompt
+    seen: dict = {}
+
+    def peek(ctx):
+        seen["strategies"] = ctx.your_strategies
+        seen["prompt"] = build_user_prompt(ctx)
+        return {"journal": {"decision": "look"}, "actions": []}
+
+    run_heartbeat(
+        evo_session, evo_settings, agent=agent, cohort=cohort, kind="routine",
+        slot_id="ids-peek", md=md, cognition=ScriptedCognition(peek),
+    )
+    assert any(s["strategy_id"] == strategy_id and s["status"] == "validated"
+               for s in seen["strategies"])
+    assert "YOUR STRATEGIES" in seen["prompt"]
+    assert str(strategy_id) in seen["prompt"]
+
+    # and activating with that id actually works
+    hb_act = run_heartbeat(
+        evo_session, evo_settings, agent=agent, cohort=cohort, kind="routine",
+        slot_id="ids-activate", md=md,
+        cognition=_script([{"type": "activate_strategy", "strategy_id": strategy_id}]),
+    )
+    act = next(o for o in hb_act.actions_json if o["type"] == "activate_strategy")
+    assert act["ok"] is True and act["status"] == "active"
+    assert evo_session.get(em.EvoStrategy, strategy_id).status == "active"
+
+
+def test_activating_by_name_rejects_and_hands_back_the_real_ids(
+    evo_session, evo_settings, evo_agent
+):
+    """The exact live failure: an agent passed the strategy NAME. The rejection
+    must not be a dead end — it hands back the agent's real (id, name, status)
+    list so the very next heartbeat can succeed."""
+    agent, cohort = evo_agent
+    md = StaticMarketData()
+    md.set_quote(_live_quote("T1"))
+    hb_save = run_heartbeat(
+        evo_session, evo_settings, agent=agent, cohort=cohort, kind="routine",
+        slot_id="byname-save", md=md,
+        cognition=_script([{"type": "save_strategy", "spec": STRAT_SPEC}]),
+    )
+    strategy_id = next(o for o in hb_save.actions_json
+                       if o["type"] == "save_strategy")["strategy_id"]
+
+    hb = run_heartbeat(
+        evo_session, evo_settings, agent=agent, cohort=cohort, kind="routine",
+        slot_id="byname-act", md=md,
+        cognition=_script([{"type": "activate_strategy",
+                            "strategy_id": STRAT_SPEC["name"]}]),
+    )
+    act = next(o for o in hb.actions_json if o["type"] == "activate_strategy")
+    assert act.get("ok") is not True
+    assert "INTEGER id" in act["rejected"]
+    assert any(s["strategy_id"] == strategy_id for s in act["your_strategies"])

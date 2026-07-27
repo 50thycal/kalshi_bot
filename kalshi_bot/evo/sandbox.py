@@ -746,6 +746,28 @@ def activate_strategy(
     return row, None
 
 
+def your_strategies(session, agent_uuid: str, *, limit: int = 12) -> list[dict]:
+    """An agent's own strategies WITH their numeric ids, newest first.
+
+    activate_strategy takes the integer strategy_id, but save_strategy's outcome
+    (which carries it) is not re-fed to the agent in the same heartbeat, and
+    nothing else in the prompt listed the agent's strategies — so an agent only
+    retained the NAME it chose and had no way to learn the id. Observed live:
+    9 activation attempts, 0 successes, one agent retrying the same name five
+    times; 30 strategies sat 'validated' and never once reached 'active', so the
+    autonomous strategy_runner never ran at all. This is the missing link."""
+    rows = session.scalars(
+        select(EvoStrategy)
+        .where(EvoStrategy.agent_uuid == agent_uuid)
+        .order_by(EvoStrategy.id.desc())
+        .limit(limit)
+    )
+    return [
+        {"strategy_id": r.id, "name": r.name, "status": r.status, "revision": r.revision}
+        for r in rows
+    ]
+
+
 def active_strategies(session, agent_uuid: str) -> list[EvoStrategy]:
     return list(
         session.scalars(
