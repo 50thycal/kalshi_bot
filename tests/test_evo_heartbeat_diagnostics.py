@@ -122,5 +122,15 @@ def test_raw_output_never_reaches_dashboard_payload():
     assert hb.status == "degraded" and marker in hb.raw_output_text  # sanity: it was captured
 
     import json
-    blob = json.dumps(dash.build_dashboard_data(session, settings), default=str)
+
+    # every endpoint the public dashboard serves, not just one payload
+    payloads = [
+        dash.build_fleet(session, settings),
+        dash.build_bots(session, settings),
+        dash.build_events(session, category="all", limit=200),
+        dash.build_announcements(session, limit=100),
+        dash.build_bot_detail(session, settings, agent.agent_uuid),
+        dash.build_bot_trades(session, settings, agent.agent_uuid),
+    ]
+    blob = json.dumps(payloads, default=str)
     assert marker not in blob

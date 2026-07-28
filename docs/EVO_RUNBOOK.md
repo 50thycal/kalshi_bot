@@ -61,12 +61,13 @@ Through the existing ops channel (`ops` branch → GitHub Actions), same as PnL/
 
 Suggested cadence: run `evo_digest` in the same daily habit as the weather digest.
 
-## The phone dashboard (v0.1)
+## The fleet dashboard (v0.2)
 
-A read-only web page you can open from your phone — the same numbers as the digest,
-but always live and tappable. It runs as its **own third Railway service** so it
-never shares a process with the trading worker or the evo worker, and it only ever
-reads the database (no write path exists, so it cannot change any agent behavior).
+A read-only web page you can open from your phone or a laptop — the same numbers as
+the digest, but always live and tappable. It runs as its **own third Railway service**
+so it never shares a process with the trading worker or the evo worker, and it only
+ever reads the database (no write path exists, so it cannot change any agent
+behavior).
 
 **One-time setup:**
 
@@ -91,20 +92,66 @@ reads the database (no write path exists, so it cannot change any agent behavior
    Generate Domain). Railway injects `PORT` automatically; the server binds it.
 5. Open the generated URL on your phone and bookmark / add-to-home-screen it.
 
-**What it shows** (single scrolling page, auto-refreshes every 30s, plus a manual
-Refresh button): a status pill + cohort countdown; six summary cards (active agents,
-starting capital, cohort equity, cohort profit, completed trades, LLM cost vs
-ceiling); a sortable agent table split into projected top/middle/bottom groups where
-each row taps open to show thesis, open positions, fitness components, last-heartbeat
-summary, strategy revision, lineage and remaining LLM budget; a filterable recent-
-activity feed; the ten system-component statuses; and the open capability-request
-queue.
+**What it shows** (auto-refreshes every 30s, plus a manual Refresh button), in three
+levels:
 
-**Safety:** the page is public (no login in v0.1), so the data layer deliberately
-never exposes secrets, env vars, raw prompts, hidden reasoning, DB connection info,
-or stack traces — only the structured operational fields above. It's read-only:
-nothing on the page can change agent behavior. A unit test asserts the payload
-carries no credential-shaped strings.
+1. **Fleet overview** — status pill + generation countdown; eight tiles (bots
+   running, total / realized / unrealized P&L, trades closed vs open, win rate,
+   profitable bots, LLM spend); a **reconciliation line** that spells out
+   `realized + unrealized − entry fees = total`; best and worst bot as links; a
+   **fleet-health** panel that condenses heartbeats into "N of M bots checked in in
+   the last Xh" plus a 24h completed/degraded/failed count; a compact
+   **announcements** panel (collapsed to a count by default); and a per-generation
+   comparison — fleet P&L, median / best / worst bot, closed trades, promoted and
+   eliminated counts, with a small bar chart.
+2. **Bot leaderboard** — every bot in the generation with its strategy name and a
+   one-line plain-English summary of what it is actually testing, trades
+   (closed/open), realized, unrealized, total P&L, win rate, average, best and worst
+   trade, fitness, status and last activity. Sortable by any of those and filterable
+   by generation, status, strategy, profitability and activity — all server-side.
+   Selecting a row opens a **detail drawer** with three tabs:
+   - *Strategy* — the plain-English summary, thesis and falsifiable predictions,
+     the spec's market filters / entry rules / sizing and exit / risk limits rendered
+     as readable parameters, the bot's stated genome rules and self-imposed limits,
+     its lineage (parent, offspring) and what changed at each revision. The raw spec
+     JSON is behind a "debug" expander, never the only view. Descriptions are derived
+     deterministically in code — **no LLM call is made to render the page.**
+   - *Performance* — total/realized/unrealized, equity, win rate, average, median,
+     best and worst trade (clickable through to the trade), average hold, exposure,
+     fees, the per-bot reconciliation, all-time lifetime figures, an equity
+     sparkline from the daily snapshots, fitness components and last heartbeat.
+   - *Trades* — one row per position: market, side, size, entry price and time, exit
+     price and time, P&L (labelled realized vs unrealized), fees, hold time, status
+     and exit reason. Sortable, filterable by open/closed, paginated.
+3. **Activity** — categorised tabs (Important / Trades / Evolution / Strategy /
+   Announcements / System / All events), defaulting to **Important**. Filterable by
+   bot, generation, time range and free-text search, with cursor-based "Load more"
+   that walks back through the full history rather than stopping at a fixed recent
+   window. Heartbeats never appear in Important — routine beats live under System,
+   and only genuine failures are promoted.
+
+The API behind it: `/api/fleet`, `/api/bots`, `/api/bots/<uuid>`,
+`/api/bots/<uuid>/trades`, `/api/events`, `/api/announcements`.
+
+**Where the money numbers come from.** All aggregation is server-side, in
+`kalshi_bot/dashboard/metrics.py`, so the tiles, the leaderboard column and the bot
+detail can never disagree. A *trade* is one `evo_positions` row on the **cohort**
+ledger (`cohort:<id>`); the `lifetime` ledger mirrors the same fills and is never
+summed with it. `realized_pnl_usd` as written by the paper engine is net of exit
+fees but not entry fees, so the NAV-based total is always
+`realized + unrealized − entry-fee drag`, and that drag is computed as an exact
+residual and shown rather than hidden. Win rate excludes open trades and is `—`
+(not 0%) until at least one trade has closed; the same goes for average, median,
+best and worst trade.
+
+**Safety:** the page is public (no login), so the data layer deliberately never
+exposes secrets, env vars, raw prompts, hidden reasoning, DB connection info, or
+stack traces — only the structured operational fields above. Heartbeat
+`status_detail` and `raw_output_text` (which can carry internal tracebacks) are
+reduced to a status label. It's read-only: only GET/HEAD are served, there is no
+write path, and nothing on the page can change agent behavior. Unit tests assert
+that no endpoint's payload carries credential-shaped strings or heartbeat error
+detail.
 
 ## The weekly rhythm (no action needed)
 

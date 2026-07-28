@@ -553,7 +553,12 @@ class EvoOrder(Base):
 
 class EvoFill(Base):
     __tablename__ = "evo_fills"
-    __table_args__ = (Index("ix_evo_fills_order", "order_id"),)
+    __table_args__ = (
+        Index("ix_evo_fills_order", "order_id"),
+        # dashboard read path: a closed position's exit price is recovered from its
+        # own sell fills (kalshi_bot/dashboard/metrics.py).
+        Index("ix_evo_fills_agent_time", "agent_uuid", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
     created_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
@@ -582,6 +587,10 @@ class EvoPosition(Base):
         UniqueConstraint("agent_uuid", "ledger", "market_ticker", "side", "open_seq",
                          name="uq_evo_position"),
         Index("ix_evo_positions_agent", "agent_uuid", "ledger", "status"),
+        # dashboard read path: fleet/generation rollups and the closed-trade feed
+        # filter by ledger + status and order by close time, which the agent-leading
+        # index above cannot serve.
+        Index("ix_evo_positions_ledger_status", "ledger", "status", "closed_at"),
     )
 
     id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
