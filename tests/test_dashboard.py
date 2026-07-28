@@ -172,6 +172,9 @@ def test_bots_are_marked_dormant_when_the_worker_is_throttled():
     fleet = dash.build_fleet(session, settings)
     assert fleet["throttle"] == {"live": 3, "total": 6, "throttled": True}
     assert fleet["summary"]["live_bots"] == 3
+    # fleet health should track the 3 bots the worker actually runs, not all 6 —
+    # a dormant bot was never going to heartbeat and shouldn't read as "missed"
+    assert fleet["health"]["total"] == 3
 
 
 def test_no_throttle_runs_the_full_population():
