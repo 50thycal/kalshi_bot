@@ -511,6 +511,22 @@ def _recover_truncated_json(fragment: str) -> str | None:
     return None
 
 
+def describe_parse_failure(err: str | None, result) -> str | None:
+    """Name the output-token cap when THAT is why the JSON never closed.
+
+    "no JSON object in output" reads identically whether the model wrote
+    nonsense or simply ran out of room mid-sentence, and those need opposite
+    fixes. Both backends hand us the provider's stop reason, so when it says the
+    generation was cut off, say so — and say what the cap was, since the cap is
+    the thing an operator actually changes."""
+    if not err or result is None or not getattr(result, "truncated", False):
+        return err
+    return (
+        f"{err} (output truncated at the {result.output_tokens}-token cap; "
+        f"stop_reason={result.stop_reason})"
+    )
+
+
 def parse_output(text: str) -> tuple[dict, list[dict], str | None]:
     """Extract {journal, actions} from model text. Tolerates markdown fences and
     output that was truncated by the token cap (recovers the parseable prefix).
@@ -588,6 +604,7 @@ class LlmCognition(Cognition):
             return CognitionResult(journal={}, actions=[], error=result.error,
                                    model_alias=alias, model_id=result.model_id)
         journal, actions, perr = parse_output(result.text)
+        perr = describe_parse_failure(perr, result)
         return CognitionResult(
             journal=journal, actions=actions, raw_text=result.text, error=perr,
             model_alias=alias, model_id=result.model_id,

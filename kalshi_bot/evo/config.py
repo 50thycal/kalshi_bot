@@ -69,7 +69,14 @@ class EvoSettings(BaseSettings):
     # empty ("no JSON object in output"). Headroom here is for reasoning tokens
     # PLUS the actual answer, not just a verbose answer.
     reflection_max_output_tokens: int = 16000
-    strategic_max_output_tokens: int = 8000  # top tier reviews the most and writes the most
+    # Bumped 8000->16000 for the same reason, observed on the top tier once the
+    # Anthropic key was valid again: EVERY strategic heartbeat landed on
+    # output_tokens == 8000 exactly — the cap — including the one that recorded
+    # "completed" (it only survived because the truncated-JSON recovery salvaged
+    # a prefix, so even that beat lost content). A tier-3 beat reviews the whole
+    # lineage/graveyard/peer context and writes the longest answer, so it needs
+    # at least as much room as a tier-2 reflection, not half.
+    strategic_max_output_tokens: int = 16000
     # Input-size pre-flight caps, ALSO per tier: tiers 2 and 3 include extra context
     # (graveyard + peer roster on top of everything tier 1 gets — see
     # cognition.is_enriched_kind), so their real context is legitimately bigger.
@@ -78,9 +85,20 @@ class EvoSettings(BaseSettings):
     # heartbeat degraded with "input too large" even though nothing was actually
     # wrong. Sized with real headroom above what's been observed, not just the
     # observed max, since a bigger cohort/genome naturally grows this over time.
-    heartbeat_max_input_tokens: int = 14000  # tier 1 (routine) — observed max ~12.1K
-    reflection_max_input_tokens: int = 20000  # tier 2 (deep) — observed ~12.5-13.5K
-    strategic_max_input_tokens: int = 24000  # tier 3 — richest context, but rare enough that a generous cap costs little
+    # Re-sized again after the SAME failure recurred on tier 1: 16 of 17 routine
+    # heartbeats in a 6-hour window degraded with "input too large (~15614
+    # tokens)" against the 14000 cap — the highest-frequency tier was almost
+    # entirely down. The cause is not a bug, it is growth: every capability we
+    # add (open orders, YOUR STRATEGIES, recent data reads, explored markets)
+    # and every new announcement lands in the SHARED base context that tier 1
+    # also carries, so tier 1's prompt now sits near where tier 2's used to.
+    # Lesson from both incidents: a cap sized just above the observed max (14000
+    # vs ~12.1K, ~15% headroom) is breached within days. These are sized ~40%
+    # above what is observed now, and are a pre-flight guard against a runaway
+    # prompt — not a cost control (the weekly token + dollar budgets are that).
+    heartbeat_max_input_tokens: int = 22000  # tier 1 (routine) — observed max ~15.6K
+    reflection_max_input_tokens: int = 28000  # tier 2 (deep) — base + graveyard/peers
+    strategic_max_input_tokens: int = 32000  # tier 3 — richest context, but rare enough that a generous cap costs little
     weekly_token_budget: int = 1_500_000  # per agent, input+output
     llm_timeout_seconds: float = 120.0
 
