@@ -555,7 +555,7 @@ def build_fleet(session, settings: EvoSettings, *, now: datetime | None = None) 
             "throttled": _effective_cap(session) > 0,
         },
         "health": events_mod.fleet_health(
-            session, settings, [r["uuid"] for r in rows if r["status"] != STATUS_ELIMINATED],
+            session, settings, [r["uuid"] for r in rows if r["uuid"] in live],
             now=now,
         ),
         "generations": metrics.generation_history(session),
