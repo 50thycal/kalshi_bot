@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="dark" />
+<title>Live vs Paper</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230f1117'/%3E%3Cpath d='M2 12 6 6l3 3 5-7' stroke='%236d8cff' stroke-width='1.7' fill='none' stroke-linecap='round'/%3E%3Cpath d='M2 14 6 9l3 3 5-6' stroke='%23e8b64c' stroke-width='1.7' fill='none' stroke-linecap='round' stroke-dasharray='2 2'/%3E%3C/svg%3E" />
+<style>
+  :root{
+    --bg:#0f1117; --panel:#181b24; --panel2:#1f2330; --panel3:#252a3a; --line:#2a2f3d;
+    --text:#e6e8ee; --muted:#9aa3b2; --dim:#6c7583;
+    --live:#6d8cff; --paper:#e8b64c; --diff:#c86dd7;
+    --pos:#3ecf8e; --neg:#f2555a; --warn:#e8b64c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);padding-bottom:48px;
+    font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1440px;margin:0 auto;padding:0 16px 16px}
+  h1{font-size:18px;margin:0}
+  h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+    margin:22px 0 10px;font-weight:600}
+  h3{font-size:13px;margin:0 0 8px}
+  .num{font-variant-numeric:tabular-nums}
+  .pos{color:var(--pos)} .neg{color:var(--neg)} .muted{color:var(--muted)} .dim{color:var(--dim)}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+  header{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);
+    padding:12px 0 10px}
+  .hrow{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center}
+  .tag{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+    padding:2px 7px;border-radius:6px;background:var(--panel2);border:1px solid var(--line)}
+  .tag.live{color:var(--live);border-color:#2d3a63} .tag.paper{color:var(--paper);border-color:#4a3c1c}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;
+    font-weight:600;font-size:12px;background:var(--panel2);color:var(--muted)}
+  .dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+  .pill.running{background:#123024;color:var(--pos)}
+  .pill.idle,.pill.no_activity{background:#332314;color:var(--warn)}
+  .pill.ended{background:#1a2436;color:var(--live)}
+
+  button,select,input{font:inherit;color:var(--text);background:var(--panel2);
+    border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+  button{cursor:pointer}
+  button:hover,select:hover{border-color:#3d445a}
+  button:focus-visible,select:focus-visible,.tab:focus-visible{outline:2px solid var(--live);outline-offset:1px}
+  .ghost{background:transparent;border-color:transparent;color:var(--muted);padding:4px 8px}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+  .toolbar label{font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:5px}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px}
+  .pad{padding:12px 14px}
+  .grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:12px}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:13px}
+  .kv dt{color:var(--muted);white-space:nowrap} .kv dd{margin:0;text-align:right;
+    font-variant-numeric:tabular-nums}
+  .card-hd{display:flex;align-items:center;gap:8px;margin-bottom:10px;
+    border-bottom:1px solid var(--line);padding-bottom:8px}
+  .swatch{width:10px;height:10px;border-radius:3px;flex:none}
+  .swatch.live{background:var(--live)} .swatch.paper{background:var(--paper)}
+  .big{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:7px 9px;text-align:left;white-space:nowrap}
+  thead th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;
+    letter-spacing:.04em;border-bottom:1px solid var(--line);position:sticky;top:0;
+    background:var(--panel)}
+  th.r,td.r{text-align:right;font-variant-numeric:tabular-nums}
+  tbody tr{border-bottom:1px solid var(--line)} tbody tr:last-child{border-bottom:none}
+  tbody tr.sel{background:var(--panel2)}
+  .tk{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px}
+
+  .v{display:inline-block;padding:2px 8px;border-radius:11px;font-size:11px;font-weight:600;
+    background:var(--panel2);color:var(--muted);white-space:nowrap}
+  .v.match{color:var(--pos);background:#12281f}
+  .v.minor{color:var(--warn);background:#2a2213}
+  .v.material{color:var(--neg);background:#2a1618}
+  .v.stale{color:var(--warn);background:#2a2213}
+  .v.missing_live,.v.missing_paper{color:var(--neg);background:#2a1618}
+  .v.cannot_compare{color:var(--dim)}
+  .v.live{color:var(--live);background:#151c33} .v.paper{color:var(--paper);background:#2a2113}
+
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:6px}
+  .legend i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:5px;
+    vertical-align:middle}
+  svg.chart{display:block;width:100%;height:auto;touch-action:none}
+  .tip{position:fixed;pointer-events:none;background:var(--panel3);border:1px solid var(--line);
+    border-radius:8px;padding:8px 10px;font-size:12px;z-index:60;display:none;
+    box-shadow:0 6px 20px rgba(0,0,0,.45);font-variant-numeric:tabular-nums}
+  .tip b{display:block;margin-bottom:4px;color:var(--muted);font-weight:600}
+
+  .bars{display:grid;gap:6px}
+  .bar{display:grid;grid-template-columns:180px 1fr 92px;gap:10px;align-items:center;font-size:12px}
+  .bar .track{height:16px;background:var(--panel2);border-radius:4px;position:relative;overflow:hidden}
+  .bar .track i{position:absolute;top:0;bottom:0;border-radius:3px}
+  .bar .track i.p{background:var(--paper)} .bar .track i.n{background:var(--live)}
+  .bar .amt{text-align:right;font-variant-numeric:tabular-nums}
+
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}
+  .tab{padding:6px 12px;font-size:12px;border-radius:8px;background:transparent;
+    border:1px solid transparent;color:var(--muted)}
+  .tab[aria-selected="true"]{background:var(--panel2);border-color:var(--line);color:var(--text)}
+  .feed{list-style:none;margin:0;padding:0}
+  .feed li{display:grid;grid-template-columns:76px 54px 1fr;gap:10px;align-items:baseline;
+    padding:7px 14px;border-bottom:1px solid var(--line);font-size:13px}
+  .feed li:last-child{border-bottom:none}
+  .feed .t{color:var(--dim);font-size:11px;font-variant-numeric:tabular-nums}
+  .feed .m{white-space:normal}
+  .feed li.warn .m{color:var(--warn)} .feed li.error .m{color:var(--neg)}
+
+  .empty{color:var(--muted);padding:22px 14px;text-align:center;font-size:13px}
+  .empty b{display:block;color:var(--text);margin-bottom:4px}
+  .note{font-size:11px;color:var(--dim);margin-top:8px;line-height:1.5}
+  details>summary{cursor:pointer;color:var(--muted);font-size:12px;padding:4px 0}
+  .banner{border-radius:10px;padding:10px 13px;margin:12px 0;font-size:13px;
+    background:#2a2213;border:1px solid #4a3c1c;color:var(--warn)}
+  .banner.bad{background:#2a1618;border-color:#4a1f24;color:var(--neg)}
+  .banner.ok{background:#12281f;border-color:#1d4433;color:var(--pos)}
+  @media(max-width:700px){
+    .bar{grid-template-columns:110px 1fr 78px}
+    .feed li{grid-template-columns:60px 46px 1fr;padding:7px 10px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="hrow">
+      <h1>Live vs Paper</h1>
+      <select id="runsel" aria-label="Paired run"></select>
+      <span id="tags"></span>
+      <span id="states"></span>
+      <span style="margin-left:auto"></span>
+      <span class="dim" id="clock"></span>
+      <button id="refresh" title="Reload">↻</button>
+    </div>
+    <div class="hrow dim" id="meta" style="font-size:12px;margin-top:6px"></div>
+  </header>
+
+  <div id="fatal" hidden class="banner bad"></div>
+  <div id="verdict"></div>
+
+  <!-- 1. positions + discrepancy summary -->
+  <h2>Current position</h2>
+  <div class="grid2">
+    <div class="panel pad" id="livecard"></div>
+    <div class="panel pad" id="papercard"></div>
+  </div>
+  <!-- full width: the verdict column is the point of this table and must never be
+       pushed off the edge of a narrow card -->
+  <div class="panel pad" id="cmpcard" style="margin-top:12px"></div>
+
+  <!-- 2. P&L overlay -->
+  <h2>P&amp;L over time <span class="dim" style="text-transform:none;letter-spacing:0">— live vs paper, marked off the same tick</span></h2>
+  <div class="panel pad">
+    <div class="toolbar">
+      <label>Series <select id="sermode">
+        <option value="gross">Gross (realized + unrealized)</option>
+        <option value="net">Net of open-position fees</option>
+      </select></label>
+      <label>Window <select id="serwin">
+        <option value="">Whole run</option>
+        <option value="6">Last 6h</option><option value="24">Last 24h</option>
+        <option value="72" selected>Last 3 days</option>
+      </select></label>
+      <span class="dim" id="sermeta"></span>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--live)"></i>Live</span>
+      <span><i style="background:var(--paper)"></i>Paper twin</span>
+      <span><i style="background:var(--diff)"></i>Paper − live</span>
+      <span><i style="background:var(--dim)"></i>data gap</span>
+    </div>
+    <div id="pnlchart"></div>
+    <div class="note" id="pnlnote"></div>
+  </div>
+
+  <!-- 3. price + execution -->
+  <h2>Price &amp; execution</h2>
+  <div class="panel pad">
+    <div class="toolbar">
+      <label>Market <select id="tickersel"></select></label>
+      <span class="dim" id="pricemeta"></span>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--pos)"></i>NO bid (what we could sell at)</span>
+      <span><i style="background:var(--neg)"></i>NO ask</span>
+      <span><i style="background:var(--live)"></i>live fill</span>
+      <span><i style="background:var(--paper)"></i>paper assumed fill</span>
+    </div>
+    <div id="pricechart"></div>
+    <div class="note" id="pricenote"></div>
+  </div>
+
+  <!-- 4. divergence -->
+  <h2>Divergence analysis</h2>
+  <div class="grid2">
+    <div class="panel pad" id="divpanel"></div>
+    <div class="panel pad" id="gatepanel"></div>
+  </div>
+  <div class="panel" style="margin-top:12px"><div class="scroll"><table id="divtable">
+    <caption class="sr">Per-market divergence between live and paper</caption>
+    <thead><tr><th>Market</th><th class="r">Live P&amp;L</th><th class="r">Paper P&amp;L</th>
+      <th class="r">Gap</th><th class="r">Qty impact</th><th class="r">Price impact</th>
+      <th class="r">Fee impact</th><th class="r">Residual</th></tr></thead>
+    <tbody id="divbody"></tbody></table></div></div>
+  <details class="panel pad" style="margin-top:12px">
+    <summary>Individual discrepancies</summary>
+    <div class="scroll" id="discbox" style="margin-top:8px"></div>
+  </details>
+
+  <!-- 5. orders -->
+  <h2>Orders &amp; fills</h2>
+  <div class="toolbar">
+    <label>Environment <select id="ordenv">
+      <option value="">Both</option><option value="live">Live</option><option value="paper">Paper</option>
+    </select></label>
+    <span class="dim" id="ordmeta"></span>
+  </div>
+  <div class="panel"><div class="scroll"><table>
+    <caption class="sr">Live and paper orders, paired by market</caption>
+    <thead><tr><th>Env</th><th>Market</th><th>Side</th><th class="r">Req</th><th class="r">Filled</th>
+      <th class="r">Limit</th><th class="r">Avg fill</th><th>Submitted</th><th>First fill</th>
+      <th>Status</th><th class="r">Fees</th><th>Paired with</th></tr></thead>
+    <tbody id="ordbody"></tbody></table></div>
+    <div style="padding:10px 14px;border-top:1px solid var(--line)" id="ordmorewrap" hidden>
+      <button id="ordmore">Load more</button></div>
+  </div>
+
+  <!-- 6. timeline -->
+  <h2>Event timeline</h2>
+  <div class="tabs" role="tablist" id="evtabs"></div>
+  <div class="toolbar">
+    <label>Environment <select id="evenv">
+      <option value="">Both</option><option value="live">Live</option><option value="paper">Paper</option>
+    </select></label>
+  </div>
+  <div class="panel"><ul class="feed" id="feed" aria-live="polite"></ul>
+    <div style="padding:10px 14px;border-top:1px solid var(--line)" id="evmorewrap" hidden>
+      <button id="evmore">Load more</button></div>
+  </div>
+
+  <!-- 7. history -->
+  <h2>Paired runs</h2>
+  <div class="panel"><div class="scroll"><table>
+    <caption class="sr">All paired live/paper runs</caption>
+    <thead><tr><th>Pair</th><th>Live tag</th><th>Started</th><th>Ended</th><th class="r">Markets</th>
+      <th class="r">Live</th><th class="r">Paper</th><th class="r">Difference</th><th>Status</th></tr></thead>
+    <tbody id="histbody"></tbody></table></div></div>
+  <div id="unpaired"></div>
+
+  <details class="panel pad" style="margin-top:16px">
+    <summary>How every number on this page was calculated</summary>
+    <div id="diag" style="margin-top:8px"></div>
+  </details>
+</div>
+<div class="tip" id="tip" role="status"></div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c =>
+  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const EM = '<span class="dim">—</span>';
+const has = v => v !== null && v !== undefined;
+
+/* Missing data is never rendered as zero. */
+const usd = v => has(v) ? (v < 0 ? "−$" : "$") +
+  Math.abs(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : null;
+const signedUsd = v => has(v) ? (v > 0 ? "+" : "") + usd(v) : null;
+const cents = (v,d=1) => has(v) ? Number(v).toFixed(d) + "¢" : null;
+const cell = (t,k) => has(t) ? `<span class="${k||''}">${esc(t)}</span>` : EM;
+const sign = v => !has(v) ? "" : (v > 0 ? "pos" : (v < 0 ? "neg" : "muted"));
+const money = v => cell(signedUsd(v), sign(v));
+const int = v => has(v) ? Number(v).toLocaleString() : null;
+const hhmm = iso => iso ? new Date(iso).toISOString().slice(11,16) + "Z" : null;
+const dayTime = iso => iso ? new Date(iso).toISOString().slice(5,16).replace("T"," ") + "Z" : null;
+function ago(iso){
+  if(!iso) return null;
+  const s = (Date.now() - new Date(iso).getTime())/1000;
+  if(s < 60) return Math.max(0,Math.round(s)) + "s ago";
+  if(s < 3600) return Math.round(s/60) + "m ago";
+  if(s < 86400) return Math.round(s/3600) + "h ago";
+  return Math.round(s/86400) + "d ago";
+}
+function dur(sec){
+  if(!has(sec)) return "—";
+  // Durations are also used for signed differences, so format the magnitude and
+  // carry the sign — otherwise a negative gap renders as "-1d -19h".
+  const neg = sec < 0, s = Math.abs(sec);
+  const d = Math.floor(s/86400), h = Math.floor(s%86400/3600), m = Math.floor(s%3600/60);
+  const body = d ? `${d}d ${h}h` : (h ? `${h}h ${m}m` : `${m}m ${Math.floor(s%60)}s`);
+  return (neg ? "−" : "") + body;
+}
+
+const S = {
+  runs:null, run:null, series:null, orders:null, events:null,
+  tag:null, serMode:"gross", serWin:"72", ticker:"",
+  ordEnv:"", ordOffset:0, evCat:"all", evEnv:"", evCursor:null, evItems:[],
+};
+
+async function getJSON(url){
+  const r = await fetch(url,{cache:"no-store"});
+  const d = await r.json().catch(()=>({error:"bad response"}));
+  if(!r.ok || d.error) throw new Error(d.error || ("HTTP "+r.status));
+  return d;
+}
+const qs = o => {
+  const p = new URLSearchParams();
+  for(const [k,v] of Object.entries(o)) if(v!=="" && v!==null && v!==undefined) p.set(k,v);
+  return p.toString() ? "?"+p.toString() : "";
+};
+function fatal(msg){ $("#fatal").hidden=false; $("#fatal").textContent = "Dashboard unavailable — "+msg; }
+
+/* ============ header ============ */
+function renderHeader(){
+  const d = S.run; if(!d) return;
+  const p = d.pair, st = d.status;
+  $("#tags").innerHTML =
+    `<span class="tag live">live ${esc(p.live_tag)}</span> ` +
+    `<span class="tag paper">paper ${esc(p.twin_tag)}</span>`;
+  const pill = (k,label) => `<span class="pill ${esc(st[k].state)}"><span class="dot"></span>` +
+    `${esc(label)} ${esc(st[k].state.replace("_"," "))}</span>`;
+  $("#states").innerHTML = pill("live","Live") + " " + pill("paper","Paper");
+  const cov = d.marks || {};
+  $("#meta").innerHTML =
+    `Started <b>${esc(dayTime(p.started_at))}</b> · ran ${esc(dur(d.window.hours*3600))}` +
+    ` · ${esc(p.ended_at ? "ended "+dayTime(p.ended_at) : "still open")}` +
+    ` · pairing: <b>${esc(st.pairing.replace("_"," "))}</b> via <code>${esc(st.pairing_source)}</code>` +
+    ` · live last record ${esc(ago(st.live.last_at) || "never")}` +
+    ` · paper last record ${esc(ago(st.paper.last_at) || "never")}` +
+    ` · marks ${esc(cov.covered)}/${esc(cov.requested)} markets` +
+    (cov.missing_count ? ` <span class="warn">(${esc(cov.missing_count)} unmarked)</span>` : "");
+
+  const v = d.divergence.verdict;
+  const klass = v.code === "aligned" ? "ok" : (v.code === "accounting_gap" ? "bad" : "");
+  $("#verdict").innerHTML =
+    `<div class="banner ${klass}"><b>${esc(v.label)}</b> — ${esc(v.detail)}</div>`;
+}
+
+function positionCard(sel, side, s, positions){
+  const cls = side === "live" ? "live" : "paper";
+  const openRows = positions.filter(p => p.status === "open");
+  const rows = openRows.length ? openRows.map(p => `<tr>
+      <td class="tk">${esc(p.ticker)}</td>
+      <td class="r">${esc(int(p.quantity))}</td>
+      <td class="r">${esc(cents(p.entry_price_cents,2))}</td>
+      <td class="r">${has(p.mark_cents) ? esc(cents(p.mark_cents,0)) : EM}</td>
+      <td class="r">${money(p.unrealized_pnl_usd)}</td>
+      <td class="r dim">${esc(has(p.hold_hours) ? p.hold_hours.toFixed(1)+"h" : "—")}</td>
+    </tr>`).join("")
+    : `<tr><td colspan="6" class="empty">No open position.</td></tr>`;
+  $(sel).innerHTML =
+    `<div class="card-hd"><span class="swatch ${cls}"></span><h3>${side === "live" ? "Live (real money)" : "Paper twin"}</h3>
+      <span class="tag ${cls}" style="margin-left:auto">${esc(s.tag)}</span></div>
+     <div class="big ${sign(s.total_pnl_usd)}">${has(s.total_pnl_usd) ? esc(signedUsd(s.total_pnl_usd)) : EM}</div>
+     <div class="dim" style="font-size:11px;margin-bottom:10px">total P&amp;L = realized + unrealized</div>
+     <dl class="kv">
+       <dt>Realized</dt><dd>${money(s.realized_pnl_usd)}</dd>
+       <dt>Unrealized</dt><dd>${money(s.unrealized_pnl_usd)}</dd>
+       <dt>Entry fees</dt><dd>${has(s.entry_fees_usd)?esc(usd(s.entry_fees_usd)):EM}</dd>
+       <dt>Per contract (realized)</dt><dd>${cell(cents(s.pnl_per_contract_cents,2), sign(s.pnl_per_contract_cents))}</dd>
+       <dt>Positions closed</dt><dd>${esc(int(s.positions_closed))}</dd>
+       <dt>Positions open</dt><dd>${esc(int(s.positions_open))}</dd>
+       ${side==="live" ? `<dt>Orders never filled</dt><dd class="${s.positions_unfilled?'warn':''}">${esc(int(s.positions_unfilled))}</dd>` : ""}
+       <dt>Contracts closed</dt><dd>${esc(int(s.contracts_closed))}</dd>
+       <dt>Win rate</dt><dd>${has(s.win_rate)?esc(s.win_rate.toFixed(1)+"%"):EM}</dd>
+       <dt>Open cost basis</dt><dd>${has(s.cost_basis_open_usd)?esc(usd(s.cost_basis_open_usd)):EM}</dd>
+     </dl>
+     <div class="scroll" style="margin-top:10px"><table>
+       <thead><tr><th>Open market</th><th class="r">Qty</th><th class="r">Entry</th>
+         <th class="r">Mark</th><th class="r">Unreal.</th><th class="r">Held</th></tr></thead>
+       <tbody>${rows}</tbody></table></div>
+     ${(s.notes||[]).length ? `<div class="note warn">${s.notes.map(esc).join("<br>")}</div>` : ""}`;
+}
+
+function renderComparison(){
+  const d = S.run, c = d.comparison;
+  const rows = c.rows.map(r => {
+    const fmt = v => {
+      if(!has(v)) return EM;
+      if(r.unit === "usd") return esc(signedUsd(v));
+      if(r.unit === "cents") return esc(cents(v,2));
+      if(r.unit === "pct") return esc(Number(v).toFixed(1)+"%");
+      if(r.unit === "seconds") return esc(dur(v));
+      return esc(int(v));
+    };
+    return `<tr title="${esc(r.note||"")}">
+      <td>${esc(r.metric)}${r.note?`<span class="dim"> ⓘ</span>`:""}</td>
+      <td class="r">${fmt(r.live)}</td><td class="r">${fmt(r.paper)}</td>
+      <td class="r">${fmt(r.difference)}${has(r.pct_difference)?`<span class="dim"> (${esc(r.pct_difference)}%)</span>`:""}</td>
+      <td><span class="v ${esc(r.verdict)}">${esc(r.verdict.replace("_"," "))}</span></td></tr>`;
+  }).join("");
+  $("#cmpcard").innerHTML =
+    `<div class="card-hd"><h3>Live vs paper</h3>
+      <span class="v ${esc(c.worst_verdict)}" style="margin-left:auto">worst: ${esc(c.worst_verdict.replace("_"," "))}</span></div>
+     <div class="scroll"><table>
+       <thead><tr><th>Metric</th><th class="r">Live</th><th class="r">Paper</th>
+         <th class="r">Diff</th><th>Verdict</th></tr></thead>
+       <tbody>${rows}</tbody></table></div>
+     <div class="note">Difference is <b>paper minus live</b>. A verdict is set per metric against its
+       own tolerance — never "match because both are non-null".</div>`;
+}
+
+/* ============ charts (inline SVG, no libraries) ============ */
+function lineChart(el, opts){
+  const {points, series, height=230, yLabel="", fmtY=(v)=>v, fmtTip} = opts;
+  if(!points.length){
+    el.innerHTML = `<div class="empty"><b>No data in this window.</b>${esc(opts.emptyNote||"")}</div>`;
+    return;
+  }
+  const W = 1000, H = height, L = 56, R = 14, T = 12, B = 26;
+  const xs = points.map(p => new Date(p.at).getTime());
+  const x0 = Math.min(...xs), x1 = Math.max(...xs) || x0 + 1;
+  let vals = [];
+  for(const s of series) for(const p of points) if(has(p[s.key])) vals.push(p[s.key]);
+  if(!vals.length) vals = [0];
+  let lo = Math.min(...vals, 0), hi = Math.max(...vals, 0);
+  if(lo === hi){ lo -= 1; hi += 1; }
+  const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
+  const X = t => L + (x1===x0?0.5:(t-x0)/(x1-x0)) * (W-L-R);
+  const Y = v => T + (1 - (v-lo)/(hi-lo)) * (H-T-B);
+
+  const ticks = [];
+  for(let i=0;i<=4;i++){ const v = lo + (hi-lo)*i/4; ticks.push({v, y:Y(v)}); }
+  const grid = ticks.map(t =>
+    `<line x1="${L}" x2="${W-R}" y1="${t.y.toFixed(1)}" y2="${t.y.toFixed(1)}" stroke="#2a2f3d" stroke-width="1"/>
+     <text x="${L-6}" y="${(t.y+4).toFixed(1)}" fill="#6c7583" font-size="11" text-anchor="end">${esc(fmtY(t.v))}</text>`
+  ).join("");
+  const zero = (lo < 0 && hi > 0)
+    ? `<line x1="${L}" x2="${W-R}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" stroke="#4a5169" stroke-width="1" stroke-dasharray="3 3"/>` : "";
+
+  const paths = series.map(s => {
+    let d = "", pen = false;
+    points.forEach(p => {
+      if(!has(p[s.key])){ pen = false; return; }
+      const cmd = pen ? "L" : "M";
+      d += `${cmd}${X(new Date(p.at).getTime()).toFixed(1)},${Y(p[s.key]).toFixed(1)}`;
+      pen = true;
+    });
+    return `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.width||2}"
+      stroke-dasharray="${s.dash||""}" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }).join("");
+
+  const gaps = points.filter(p => p.partial).map(p =>
+    `<rect x="${(X(new Date(p.at).getTime())-1).toFixed(1)}" y="${T}" width="2" height="${H-T-B}"
+      fill="#6c7583" opacity=".18"/>`).join("");
+
+  const marks = (opts.markers||[]).filter(mk => {
+    const t = new Date(mk.at).getTime(); return t >= x0 && t <= x1;
+  }).map(mk => {
+    const x = X(new Date(mk.at).getTime()).toFixed(1);
+    return `<line x1="${x}" x2="${x}" y1="${T}" y2="${H-B}" stroke="${mk.color}"
+      stroke-width="1" opacity=".55" stroke-dasharray="2 3"><title>${esc(mk.label)}</title></line>`;
+  }).join("");
+
+  const t0 = new Date(x0), t1 = new Date(x1);
+  el.innerHTML =
+    `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
+       aria-label="${esc(opts.aria||yLabel)}">
+      ${grid}${zero}${gaps}${marks}${paths}
+      <text x="${L}" y="${H-8}" fill="#6c7583" font-size="11">${esc(dayTime(t0.toISOString()))}</text>
+      <text x="${W-R}" y="${H-8}" fill="#6c7583" font-size="11" text-anchor="end">${esc(dayTime(t1.toISOString()))}</text>
+      <rect id="hit" x="${L}" y="${T}" width="${W-L-R}" height="${H-T-B}" fill="transparent"/>
+    </svg>`;
+  const svg = el.querySelector("svg");
+  const tip = $("#tip");
+  const move = ev => {
+    const box = svg.getBoundingClientRect();
+    const px = (ev.touches ? ev.touches[0].clientX : ev.clientX);
+    const rel = (px - box.left) / box.width * W;
+    if(rel < L || rel > W-R){ tip.style.display="none"; return; }
+    const t = x0 + (rel - L)/(W-L-R) * (x1-x0);
+    let best = points[0], bd = Infinity;
+    for(const p of points){ const d = Math.abs(new Date(p.at).getTime()-t); if(d<bd){bd=d;best=p;} }
+    tip.innerHTML = fmtTip(best);
+    tip.style.display = "block";
+    const ty = (ev.touches ? ev.touches[0].clientY : ev.clientY);
+    tip.style.left = Math.min(window.innerWidth-230, px+14) + "px";
+    tip.style.top = Math.max(8, ty-10) + "px";
+  };
+  svg.addEventListener("mousemove", move);
+  svg.addEventListener("touchmove", move, {passive:true});
+  svg.addEventListener("mouseleave", ()=>{ tip.style.display="none"; });
+  svg.addEventListener("touchend", ()=>{ tip.style.display="none"; });
+}
+
+function renderPnlChart(){
+  const s = S.series; if(!s) return;
+  const p = s.pnl, mode = S.serMode;
+  const colors = {run_start:"#9aa3b2", entry:"#3ecf8e", exit:"#c86dd7", unfilled_order:"#f2555a"};
+  lineChart($("#pnlchart"), {
+    points: p.points,
+    emptyNote:" The series starts when the orderbook capture has data for a held market.",
+    markers: (p.markers||[]).map(mk => ({...mk, color: colors[mk.kind] || "#6c7583"})),
+    series: [
+      {key:`live_${mode}`, color:"var(--live)", width:2},
+      {key:`paper_${mode}`, color:"var(--paper)", width:2},
+      {key:"difference", color:"var(--diff)", width:1.5, dash:"4 3"},
+    ],
+    fmtY: v => (v<0?"−$":"$") + Math.abs(v).toFixed(2),
+    aria:"Live and paper profit and loss over time",
+    fmtTip: pt => `<b>${esc(dayTime(pt.at))}</b>`
+      + `Live &nbsp;<b>${esc(signedUsd(pt[`live_${mode}`]))}</b><br>`
+      + `Paper <b>${esc(signedUsd(pt[`paper_${mode}`]))}</b><br>`
+      + `Diff &nbsp;<b>${esc(signedUsd(pt.difference))}</b>`
+      + (pt.partial ? `<br><span style="color:var(--warn)">partial: a market had no mark</span>` : ""),
+  });
+  const ex = s.excursions || {};
+  $("#sermeta").textContent = `${p.points.length} points`;
+  $("#pnlnote").innerHTML =
+    esc(p.note) +
+    `<br>Reconstructed from real timestamped records — entries, settlements and the
+     <code>mmsell_position_ticks</code> orderbook capture read strictly as-of each point.
+     The current price is never applied backwards. Coverage begins when that capture has data.` +
+    (ex.live ? `<br>Live max favourable ${esc(signedUsd(ex.live.max_favorable_usd))},
+       max adverse ${esc(signedUsd(ex.live.max_adverse_usd))},
+       max drawdown ${esc(signedUsd(ex.live.max_drawdown_usd))},
+       ${has(ex.live.time_profitable_pct)?esc(ex.live.time_profitable_pct)+"% of samples above water":"time above water n/a"}.` : "");
+}
+
+function renderPriceChart(){
+  const s = S.series; if(!s) return;
+  const pr = s.price;
+  if(!pr){ $("#pricechart").innerHTML = `<div class="empty">No market selected.</div>`; return; }
+  const evColors = {live_order:"#6d8cff", live_fill:"#6d8cff", paper_fill:"#e8b64c", settle:"#c86dd7"};
+  lineChart($("#pricechart"), {
+    points: pr.points, height:210,
+    emptyNote:" This market has no captured orderbook ticks in the window.",
+    markers: (pr.events||[]).map(e => ({...e, color: evColors[e.kind]||"#6c7583",
+      label:`${e.label} ${has(e.price_cents)?e.price_cents+"¢":""}`})),
+    series: [
+      {key:"no_bid", color:"var(--pos)", width:2},
+      {key:"no_ask", color:"var(--neg)", width:1.5, dash:"4 3"},
+    ],
+    fmtY: v => Number(v).toFixed(0)+"¢",
+    aria:"NO-side order book with live and paper execution marked",
+    fmtTip: pt => `<b>${esc(dayTime(pt.at))}</b>`
+      + `NO bid <b>${esc(cents(pt.no_bid,0))}</b><br>NO ask <b>${esc(cents(pt.no_ask,0))}</b><br>`
+      + `YES mid <b>${esc(cents(pt.yes_mid,1))}</b>`,
+  });
+  const evs = (pr.events||[]).map(e =>
+    `<span class="v ${e.environment}">${esc(e.label)}${has(e.price_cents)?" @"+esc(e.price_cents)+"¢":""} · ${esc(hhmm(e.at))}</span>`
+  ).join(" ");
+  $("#pricemeta").textContent = `${pr.point_count} ticks`;
+  $("#pricenote").innerHTML = esc(pr.note) + (evs ? `<div style="margin-top:6px">${evs}</div>` : "");
+}
+
+/* ============ divergence ============ */
+function renderDivergence(){
+  const d = S.run.divergence;
+  const max = Math.max(0.01, ...d.components.map(c => Math.abs(c.amount_usd)));
+  const bars = d.components.map(c => {
+    const w = Math.abs(c.amount_usd)/max*100;
+    const positive = c.amount_usd >= 0;
+    return `<div class="bar" title="${esc(c.explanation)}">
+      <span>${esc(c.label)}${c.ticker_count?` <span class="dim">(${esc(c.ticker_count)})</span>`:""}</span>
+      <span class="track"><i class="${positive?'p':'n'}" style="left:${positive?50:50-w/2}%;width:${w/2}%"></i></span>
+      <span class="amt ${sign(c.amount_usd)}">${esc(signedUsd(c.amount_usd))}</span></div>`;
+  }).join("");
+  $("#divpanel").innerHTML =
+    `<h3>Where the gap comes from</h3>
+     <div class="dim" style="font-size:12px;margin-bottom:10px">
+       Paper realized ${esc(signedUsd(d.paper_realized_usd))} − live realized
+       ${esc(signedUsd(d.live_realized_usd))} =
+       <b class="${sign(d.total_gap_usd)}">${esc(signedUsd(d.total_gap_usd))}</b>
+       over ${esc(d.matched_settled)} markets settled on both sides.</div>
+     <div class="bars">${bars}</div>
+     <div class="note">Bars right of centre mean paper looked better than live.
+       ${d.reconciles
+         ? `Components sum to the total exactly (check ${esc(d.reconciliation_check_usd)}).`
+         : `<span class="warn">Components do not sum to the total — check ${esc(d.reconciliation_check_usd)}.</span>`}
+       The residual is the balancing term and is deliberately <b>not</b> distributed into the
+       other buckets: it is what the records cannot explain.
+       ${has(d.unrealized_gap_usd) ? `<br>Open positions differ by ${esc(signedUsd(d.unrealized_gap_usd))} unrealized. ${esc(d.unrealized_note)}` : ""}</div>`;
+
+  const g = S.run.gates;
+  const rows = (g.outcomes||[]).map(o => `<tr>
+    <td>${esc(o.outcome)}</td><td class="r">${esc(int(o.count))}</td>
+    <td>${o.blocked?'<span class="v minor">blocked</span>':'<span class="v match">acted</span>'}</td></tr>`).join("");
+  $("#gatepanel").innerHTML =
+    `<h3>Why live did not trade every candidate</h3>
+     <div class="dim" style="font-size:12px;margin-bottom:8px">
+       ${esc(int(g.live_placed))} of ${esc(int(g.total_candidates))} taped candidates reached the exchange.</div>
+     <div class="scroll"><table><thead><tr><th>Live outcome</th><th class="r">Count</th><th></th></tr></thead>
+       <tbody>${rows || `<tr><td colspan="3" class="empty">No decision tape yet.</td></tr>`}</tbody></table></div>
+     <div class="note">${esc(g.note)}</div>`;
+
+  $("#divbody").innerHTML = d.per_ticker.length
+    ? d.per_ticker.map(r => `<tr>
+        <td class="tk">${esc(r.ticker)}</td>
+        <td class="r">${money(r.live_pnl_usd)}</td><td class="r">${money(r.paper_pnl_usd)}</td>
+        <td class="r"><b>${money(r.gap_usd)}</b></td>
+        <td class="r">${money(r.quantity_impact_usd)}</td>
+        <td class="r">${money(r.price_impact_usd)}</td>
+        <td class="r">${money(r.fee_impact_usd)}</td>
+        <td class="r">${money(r.residual_usd)}</td></tr>`).join("")
+    : `<tr><td colspan="8" class="empty"><b>No market has settled on both sides yet.</b>
+        Per-market reconciliation appears once one has.</td></tr>`;
+
+  const disc = S.run.discrepancies || [];
+  $("#discbox").innerHTML = disc.length ? `<table>
+    <thead><tr><th>Kind</th><th>Market</th><th class="r">Magnitude</th><th>Direction</th>
+      <th>First observed</th><th>Status</th><th>Likely source</th></tr></thead>
+    <tbody>${disc.map(x => `<tr>
+      <td><span class="v ${x.kind==='missed_fill'?'material':'minor'}">${esc(x.kind.replace("_"," "))}</span></td>
+      <td class="tk">${esc(x.ticker)}</td>
+      <td class="r">${has(x.magnitude_usd)?money(x.magnitude_usd):
+        (has(x.magnitude_cents)?esc(cents(x.magnitude_cents,2)):
+         (has(x.magnitude_contracts)?esc(x.magnitude_contracts)+" ct":EM))}</td>
+      <td class="dim">${esc(x.direction)}</td>
+      <td class="dim">${esc(dayTime(x.first_observed)||"—")}</td>
+      <td>${esc(x.status)}</td><td class="dim">${esc(x.likely_source)}</td></tr>`).join("")}</tbody></table>`
+    : `<div class="empty">No discrepancies detected.</div>`;
+}
+
+/* ============ orders / events / history ============ */
+function renderOrders(append){
+  const d = S.orders;
+  const rows = d.orders.map(o => `<tr>
+    <td><span class="v ${esc(o.environment)}">${esc(o.environment)}</span></td>
+    <td class="tk">${esc(o.market)}</td><td>${esc(o.side)}</td>
+    <td class="r">${esc(int(o.requested_quantity))}</td>
+    <td class="r ${o.filled_quantity?'':'dim'}">${has(o.filled_quantity)?esc(int(o.filled_quantity)):EM}</td>
+    <td class="r">${esc(cents(o.limit_price_cents,0))}</td>
+    <td class="r">${has(o.avg_fill_price_cents)?esc(cents(o.avg_fill_price_cents,2)):EM}</td>
+    <td class="dim">${esc(dayTime(o.submitted_at))}</td>
+    <td class="dim">${esc(dayTime(o.first_fill_at)||"—")}</td>
+    <td><span class="v ${o.status==='filled'||o.status==='settled'?'match':(o.status==='canceled'||o.status==='rejected'?'material':'minor')}">${esc(o.status)}</span>
+      ${o.cancel_reason?`<span class="dim"> ${esc(o.cancel_reason)}</span>`:""}</td>
+    <td class="r">${has(o.fees_usd)?esc(usd(o.fees_usd)):EM}</td>
+    <td class="dim">${o.unpaired?'<span class="v material">unpaired</span>':esc(o.paired_order_id)}</td></tr>`).join("");
+  $("#ordbody").innerHTML = append
+    ? $("#ordbody").innerHTML + rows
+    : (rows || `<tr><td colspan="12" class="empty">No orders in this run yet.</td></tr>`);
+  $("#ordmeta").textContent = `${d.total} orders`;
+  $("#ordmorewrap").hidden = !d.has_more;
+}
+
+const EV_TABS = [["all","All"],["orders","Orders"],["fills","Fills"],["pnl","P&L"],
+  ["positions","Positions"],["decisions","Decisions"],["errors","Errors"]];
+function renderTabs(){
+  $("#evtabs").innerHTML = EV_TABS.map(([k,l]) =>
+    `<button class="tab" role="tab" data-cat="${k}" aria-selected="${S.evCat===k}">${esc(l)}</button>`).join("");
+  $("#evtabs").querySelectorAll("[data-cat]").forEach(b => b.onclick = () => {
+    S.evCat = b.dataset.cat; renderTabs(); loadEvents(true).catch(e=>fatal(e.message));
+  });
+}
+function renderFeed(){
+  const items = S.evItems;
+  $("#feed").innerHTML = items.length ? items.map(e => `<li class="${esc(e.severity)}">
+      <span class="t">${esc(hhmm(e.at))}</span>
+      <span><span class="v ${esc(e.environment)}">${esc(e.environment)}</span></span>
+      <span class="m">${esc(e.message)}</span></li>`).join("")
+    : `<li style="display:block"><div class="empty"><b>Nothing in this category.</b>
+        Decision-tape rows are under <em>Decisions</em> so they never crowd the rest.</div></li>`;
+  $("#evmorewrap").hidden = !S.evCursor;
+}
+
+function renderHistory(){
+  const d = S.runs;
+  $("#histbody").innerHTML = d.runs.length ? d.runs.map(r => `<tr class="${r.twin_tag===S.tag?'sel':''}">
+    <td><button class="ghost" data-run="${esc(r.twin_tag)}"><span class="tag paper">${esc(r.twin_tag)}</span></button></td>
+    <td><span class="tag live">${esc(r.live_tag)}</span></td>
+    <td class="dim">${esc(dayTime(r.started_at))}</td>
+    <td class="dim">${esc(r.ended_at?dayTime(r.ended_at):"—")}</td>
+    <td class="r">${esc(int(r.markets))}</td>
+    <td class="r">${money(r.live_realized_usd)}</td>
+    <td class="r">${money(r.paper_realized_usd)}</td>
+    <td class="r"><b>${money(r.difference_usd)}</b></td>
+    <td><span class="pill ${esc(r.status.live.state)}"><span class="dot"></span>${esc(r.status.live.state.replace("_"," "))}</span></td>
+  </tr>`).join("") : `<tr><td colspan="9" class="empty">No paired runs recorded.</td></tr>`;
+  $("#histbody").querySelectorAll("[data-run]").forEach(b => b.onclick = () => selectRun(b.dataset.run));
+
+  const un = d.unpaired_live_strategies || [];
+  $("#unpaired").innerHTML = un.length
+    ? `<div class="banner"><b>${un.length} live strategy(ies) have no pairing record</b> —
+        shown as unpaired rather than matched to a plausible-looking paper book.
+        ${un.map(u => `<div class="dim" style="margin-top:4px">
+          <code>${esc(u.live_tag)}</code> · ${esc(u.orders)} orders ·
+          last ${esc(dayTime(u.last_order_at)||"—")} · ${esc(u.reason)}</div>`).join("")}</div>`
+    : "";
+}
+
+function renderDiagnostics(){
+  const g = S.run.diagnostics;
+  const block = (title, obj) => `<div style="margin-bottom:12px"><b>${esc(title)}</b>
+    <dl class="kv" style="margin-top:4px">${Object.entries(obj).map(([k,v]) =>
+      `<dt>${esc(k)}</dt><dd style="text-align:left;white-space:normal">${
+        typeof v === "object" && v !== null ? esc(JSON.stringify(v)) : esc(v)}</dd>`).join("")}</dl></div>`;
+  $("#diag").innerHTML = Object.entries(g).map(([k,v]) =>
+    typeof v === "object" && v !== null ? block(k.replace(/_/g," "), v)
+      : `<div><b>${esc(k)}</b>: ${esc(v)}</div>`).join("");
+}
+
+/* ============ loading ============ */
+async function loadRun(){
+  S.run = await getJSON("/api/runs/"+encodeURIComponent(S.tag));
+  renderHeader();
+  positionCard("#livecard","live", S.run.live, S.run.live.positions);
+  positionCard("#papercard","paper", S.run.paper, S.run.paper.positions);
+  renderComparison();
+  renderDivergence();
+  renderDiagnostics();
+}
+async function loadSeries(){
+  const since = S.serWin ? new Date(Date.now()-Number(S.serWin)*3600e3).toISOString() : "";
+  S.series = await getJSON("/api/runs/"+encodeURIComponent(S.tag)+"/series"
+    + qs({since, ticker:S.ticker}));
+  const sel = $("#tickersel");
+  const cur = S.ticker || (S.series.price ? S.series.price.ticker : "");
+  sel.innerHTML = (S.series.available_tickers||[]).map(t =>
+    `<option value="${esc(t)}" ${t===cur?"selected":""}>${esc(t)}</option>`).join("")
+    || `<option value="">(no markets yet)</option>`;
+  renderPnlChart(); renderPriceChart();
+}
+async function loadOrders(append){
+  S.orders = await getJSON("/api/runs/"+encodeURIComponent(S.tag)+"/orders"
+    + qs({env:S.ordEnv, offset:S.ordOffset, limit:100}));
+  renderOrders(append);
+}
+async function loadEvents(reset){
+  if(reset){ S.evCursor = null; S.evItems = []; }
+  const d = await getJSON("/api/runs/"+encodeURIComponent(S.tag)+"/events"
+    + qs({category:S.evCat, env:S.evEnv, cursor:S.evCursor, limit:50}));
+  S.evItems = S.evItems.concat(d.events);
+  S.evCursor = d.next_cursor;
+  renderFeed();
+}
+async function selectRun(tag){
+  S.tag = tag; S.ticker = ""; S.ordOffset = 0;
+  history.replaceState(null,"", "?run="+encodeURIComponent(tag));
+  $("#runsel").value = tag;
+  await loadRun(); await loadSeries(); await loadOrders(false); await loadEvents(true);
+  renderHistory();
+}
+async function boot(){
+  try{
+    S.runs = await getJSON("/api/runs");
+    const wanted = new URLSearchParams(location.search).get("run");
+    const known = S.runs.runs.map(r => r.twin_tag);
+    S.tag = (wanted && known.includes(wanted)) ? wanted : (S.runs.default_run || known[0]);
+    $("#runsel").innerHTML = known.map(t =>
+      `<option value="${esc(t)}" ${t===S.tag?"selected":""}>${esc(t)}</option>`).join("")
+      || `<option value="">(no paired runs)</option>`;
+    renderHistory();
+    if(!S.tag){
+      $("#fatal").hidden = false;
+      $("#fatal").className = "banner";
+      $("#fatal").textContent = "No paired live/paper runs recorded yet.";
+      return;
+    }
+    await selectRun(S.tag);
+  }catch(e){ fatal(e.message); }
+}
+
+$("#runsel").onchange = e => selectRun(e.target.value).catch(x=>fatal(x.message));
+$("#refresh").onclick = () => selectRun(S.tag).catch(e=>fatal(e.message));
+$("#sermode").onchange = e => { S.serMode = e.target.value; renderPnlChart(); };
+$("#serwin").onchange = e => { S.serWin = e.target.value; loadSeries().catch(x=>fatal(x.message)); };
+$("#tickersel").onchange = e => { S.ticker = e.target.value; loadSeries().catch(x=>fatal(x.message)); };
+$("#ordenv").onchange = e => { S.ordEnv = e.target.value; S.ordOffset = 0; loadOrders(false).catch(x=>fatal(x.message)); };
+$("#ordmore").onclick = () => { S.ordOffset += 100; loadOrders(true).catch(e=>fatal(e.message)); };
+$("#evenv").onchange = e => { S.evEnv = e.target.value; loadEvents(true).catch(x=>fatal(x.message)); };
+$("#evmore").onclick = () => loadEvents(false).catch(e=>fatal(e.message));
+
+function tickClock(){
+  const now = new Date();
+  $("#clock").textContent = now.toISOString().slice(11,19) + "Z · local " +
+    now.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
+}
+renderTabs(); tickClock(); boot();
+setInterval(tickClock, 1000);
+setInterval(() => { if(S.tag) selectRun(S.tag).catch(()=>{}); }, 60000);
+</script>
+</body>
+</html>

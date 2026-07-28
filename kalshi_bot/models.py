@@ -276,6 +276,9 @@ class Fill(Base):
 
 class Position(Base):
     __tablename__ = "positions"
+    # Append-only snapshots: every read wants "the newest row for these tickers"
+    # (repository.latest_position_snapshot, the live/paper dashboard's live leg).
+    __table_args__ = (Index("ix_positions_ticker_time", "market_ticker", "captured_at"),)
 
     id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
     market_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
