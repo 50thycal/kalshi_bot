@@ -413,6 +413,14 @@ class EvoLlmUsage(Base):
     cached_input_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     output_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     cost_usd: Mapped[float] = mapped_column(Numeric(10, 6), nullable=False, default=0)
+    # The provider's own stop signal for this call (Anthropic stop_reason /
+    # OpenAI-compatible finish_reason), persisted so an operator can verify
+    # whether the configured output-token cap is actually a hard ceiling for a
+    # given model, rather than inferring it from output_tokens alone — a
+    # reasoning model can report output_tokens near or over a nominal cap while
+    # never actually being cut off by the provider. Empty when the backend
+    # reported none.
+    stop_reason: Mapped[str] = mapped_column(String(32), nullable=False, default="")
 
 
 # ---------------------------------------------------------------------------

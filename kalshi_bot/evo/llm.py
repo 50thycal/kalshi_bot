@@ -404,6 +404,7 @@ class LlmClient:
                     cached_input_tokens=cached,
                     output_tokens=output_tokens,
                     cost_usd=cost,
+                    stop_reason=stop_reason,
                 )
             )
         return LlmResult(
@@ -519,6 +520,7 @@ class LlmClient:
                     cached_input_tokens=0,
                     output_tokens=output_tokens,
                     cost_usd=cost,
+                    stop_reason=stop_reason,
                 )
             )
         return LlmResult(

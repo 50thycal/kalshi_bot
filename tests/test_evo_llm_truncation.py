@@ -15,6 +15,7 @@ import json
 
 import respx
 from httpx import Response
+from sqlalchemy import select
 
 import kalshi_bot.db as db
 from kalshi_bot.evo import budgets, llm
@@ -22,6 +23,7 @@ from kalshi_bot.evo.cognition import alias_for_kind, max_output_tokens_for
 from kalshi_bot.evo.cohorts import ensure_current_cohort
 from kalshi_bot.evo.config import EvoSettings
 from kalshi_bot.evo.evolution import create_agent
+from kalshi_bot.evo.models import EvoLlmUsage
 from kalshi_bot.models import Base
 
 
@@ -49,7 +51,11 @@ def test_strategic_tier_output_cap_clears_observed_truncation():
     # the routing helper must actually hand tier 3 its own (larger) cap
     assert alias_for_kind("strategic") == "strategic"
     assert max_output_tokens_for(s, "strategic") == s.strategic_max_output_tokens
-    assert max_output_tokens_for(s, "strategic") > max_output_tokens_for(s, "routine")
+    # NOTE: routine's cap is no longer the smallest of the three — it was
+    # separately raised to 22000 to clear a reasoning model's observed
+    # max_tokens overshoot, not because tier 1 writes more content. Tiers 2/3
+    # still share the same (smaller) content-driven ceiling.
+    assert max_output_tokens_for(s, "strategic") == max_output_tokens_for(s, "reflection")
 
 
 def test_input_caps_clear_observed_live_prompt_sizes_with_headroom():
@@ -172,3 +178,75 @@ def test_json_dumps_roundtrip_of_stop_reason_defaults():
     assert res.stop_reason == ""
     assert res.truncated is False
     json.dumps({"stop_reason": res.stop_reason})  # serializable, never None
+
+
+def test_routine_output_cap_clears_the_reasoning_model_overshoot_with_headroom():
+    """Live incident: routine heartbeats on deepseek/deepseek-v4-flash (a
+    reasoning model) reported completion_tokens up to 15384 against a 6400 cap
+    — 2.4x over — while the heartbeat still completed normally, meaning the old
+    number was never actually a ceiling for this model. The new cap must clear
+    that observed value with real headroom, and must equal the input cap (the
+    operator's explicit sizing choice, not derived)."""
+    s = EvoSettings(_env_file=None)
+    observed_overshoot = 15384
+    assert s.heartbeat_max_output_tokens >= observed_overshoot * 1.2
+    assert s.heartbeat_max_output_tokens == s.heartbeat_max_input_tokens == 22000
+
+
+@respx.mock
+def test_anthropic_stop_reason_is_persisted_to_evo_llm_usage():
+    """The whole point of persisting it: an operator must be able to query
+    whether a cap actually stopped a call, not just see it on the in-memory
+    result of the single call that happened to be under test."""
+    _init_sqlite_engine()
+    with db.session_scope() as session:
+        settings = EvoSettings(_env_file=None)
+        llm.seed_model_prices(session, settings)
+        cohort, agent = _agent(session, settings)
+
+        respx.post(llm.ANTHROPIC_URL).mock(return_value=Response(200, json={
+            "content": [{"type": "text", "text": '{"journal": {}, "actions": []}'}],
+            "usage": {"input_tokens": 1000, "output_tokens": 50},
+            "stop_reason": "end_turn",
+        }))
+        client = llm.LlmClient(settings, api_key="sk-ant-test")
+        client.complete(
+            session, agent_uuid=agent.agent_uuid, cohort_id=cohort.id, heartbeat_id=None,
+            alias="strategic", system_blocks=[{"type": "text", "text": "sys"}],
+            user_content="go", max_tokens=512,
+        )
+        row = session.scalars(
+            select(EvoLlmUsage).where(EvoLlmUsage.agent_uuid == agent.agent_uuid)
+        ).one()
+        assert row.stop_reason == "end_turn"
+
+
+@respx.mock
+def test_openai_finish_reason_is_persisted_to_evo_llm_usage():
+    _init_sqlite_engine()
+    with db.session_scope() as session:
+        settings = EvoSettings(
+            _env_file=None, local_llm_enabled=True,
+            local_llm_base_url="http://ollama.local:11434/v1",
+            local_llm_model="qwen2.5:7b-instruct",
+        )
+        llm.seed_model_prices(session, settings)
+        cohort, agent = _agent(session, settings)
+
+        respx.post("http://ollama.local:11434/v1/chat/completions").mock(
+            return_value=Response(200, json={
+                "choices": [{"message": {"content": '{"journal": {}, "actions": []}'},
+                             "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": 900, "completion_tokens": 40},
+            })
+        )
+        client = llm.LlmClient(settings, api_key="")
+        client.complete(
+            session, agent_uuid=agent.agent_uuid, cohort_id=cohort.id, heartbeat_id=None,
+            alias="routine", system_blocks=[{"type": "text", "text": "sys"}],
+            user_content="go", max_tokens=256,
+        )
+        row = session.scalars(
+            select(EvoLlmUsage).where(EvoLlmUsage.agent_uuid == agent.agent_uuid)
+        ).one()
+        assert row.stop_reason == "stop"
