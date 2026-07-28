@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from . import compare, legs, pairs, series
+from . import compare, legs, market_meta, pairs, series
 from . import events as events_mod
 from . import marks as marks_mod
 
@@ -57,6 +57,16 @@ def _pair_tickers(session, pair, since):
         ).distinct()
     ))
     return live, paper
+
+
+def _market_tags(session, *ticker_groups) -> dict[str, dict]:
+    """Human-readable category/subject/type tags for every ticker touched by a
+    payload, keyed by ticker so the frontend joins once instead of the response
+    repeating the same classification on every row that mentions a market."""
+    tickers: set[str] = set()
+    for group in ticker_groups:
+        tickers.update(t for t in group if t)
+    return {t: tag.to_dict() for t, tag in market_meta.classify_many(session, tickers).items()}
 
 
 def load_run(session, pair, *, now: datetime | None = None):
@@ -117,6 +127,8 @@ def build_run(session, twin_tag: str, *, now: datetime | None = None) -> dict | 
     live, paper, marks = load_run(session, pair, now=now)
     thresholds = compare.Thresholds.from_env()
     since, until = pair.window(now)
+    divergence = compare.decompose(live, paper, thresholds)
+    discrepancies = compare.discrepancies(live, paper, thresholds)
 
     return {
         "generated_at": now.isoformat(),
@@ -130,11 +142,17 @@ def build_run(session, twin_tag: str, *, now: datetime | None = None) -> dict | 
         # claimed — shown precisely so it is never mistaken for the twin comparison.
         "incumbent_paper": legs.paper_leg(session, pair.live_tag, None, marks).summary(),
         "comparison": compare.compare_legs(live, paper, thresholds, now=now),
-        "divergence": compare.decompose(live, paper, thresholds),
-        "discrepancies": compare.discrepancies(live, paper, thresholds),
+        "divergence": divergence,
+        "discrepancies": discrepancies,
         "gates": events_mod.gate_breakdown(session, pair, now=now),
         "marks": marks.coverage(),
         "diagnostics": _diagnostics(pair, live, paper, marks, now),
+        "market_tags": _market_tags(
+            session,
+            (p.ticker for p in live.positions), (p.ticker for p in paper.positions),
+            (r["ticker"] for r in divergence["per_ticker"]),
+            (d["ticker"] for d in discrepancies),
+        ),
     }
 
 
@@ -209,13 +227,14 @@ def build_series(
     price = (series.build_price_series(
         session, focus, live, paper, since=window_start, until=window_end,
         max_points=max_points) if focus else None)
+    available = sorted({p.ticker for p in live.positions} | {p.ticker for p in paper.positions})
     return {
         "generated_at": now.isoformat(),
         "twin_tag": pair.twin_tag,
         "pnl": pnl,
         "price": price,
-        "available_tickers": sorted({p.ticker for p in live.positions}
-                                    | {p.ticker for p in paper.positions}),
+        "available_tickers": available,
+        "market_tags": _market_tags(session, available),
         "excursions": {
             "live": series.excursions(pnl["points"], "live"),
             "paper": series.excursions(pnl["points"], "paper"),
@@ -267,6 +286,7 @@ def build_orders(
         "limit": limit,
         "has_more": offset + len(page) < len(rows),
         "environment": environment,
+        "market_tags": _market_tags(session, (r["market"] for r in page)),
     }
 
 
@@ -290,4 +310,5 @@ def build_events(
     )
     payload["twin_tag"] = pair.twin_tag
     payload["generated_at"] = now.isoformat()
+    payload["market_tags"] = _market_tags(session, (e.get("ticker") for e in payload["events"]))
     return payload

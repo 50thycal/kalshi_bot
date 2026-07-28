@@ -162,6 +162,9 @@ def compare_legs(live, paper, thresholds: Thresholds, *, now: datetime | None = 
     money("Total P&L", "total_pnl_usd", cover=any_cover)
     money("Entry fees", "entry_fees_usd",
           note="live from fills; paper from the simulator's fee model", cover=any_cover)
+    money("Capital deployed", "capital_deployed_usd",
+          note="sum of entry cost across every filled trade, open or closed — not netted "
+               "against exits", cover=any_cover)
 
     # Per-contract is the comparison that survives a size difference.
     lv, pv = live_s["pnl_per_contract_cents"], paper_s["pnl_per_contract_cents"]

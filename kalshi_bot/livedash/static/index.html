@@ -70,6 +70,20 @@
   tbody tr{border-bottom:1px solid var(--line)} tbody tr:last-child{border-bottom:none}
   tbody tr.sel{background:var(--panel2)}
   .tk{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px}
+  /* market tag chips: category badge + human subject line, raw ticker kept
+     underneath (smaller, muted) so the ground-truth ticker is never hidden */
+  .mktcell{display:flex;flex-direction:column;gap:2px;align-items:flex-start;
+    white-space:normal;max-width:260px}
+  .mcat{display:inline-block;padding:1px 6px;border-radius:8px;font-size:10px;
+    font-weight:700;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
+  .mcat-sports{background:#151c33;color:var(--live)}
+  .mcat-crypto{background:#2a2113;color:var(--paper)}
+  .mcat-commodities{background:#12281f;color:var(--pos)}
+  .mcat-weather{background:#123044;color:#5ec8e8}
+  .mcat-other{background:var(--panel2);color:var(--dim)}
+  .msub{font-size:12px;font-weight:600;line-height:1.3}
+  .tk-sub{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;
+    color:var(--dim)}
 
   .v{display:inline-block;padding:2px 8px;border-radius:11px;font-size:11px;font-weight:600;
     background:var(--panel2);color:var(--muted);white-space:nowrap}
@@ -274,6 +288,26 @@ const cell = (t,k) => has(t) ? `<span class="${k||''}">${esc(t)}</span>` : EM;
 const sign = v => !has(v) ? "" : (v > 0 ? "pos" : (v < 0 ? "neg" : "muted"));
 const money = v => cell(signedUsd(v), sign(v));
 const int = v => has(v) ? Number(v).toLocaleString() : null;
+
+// Market category/subject tag + the raw ticker underneath — the tag is a read
+// aid, never a replacement: an unclassified ticker still shows its full self,
+// and the tag map itself may simply be absent (older cached payload shape).
+function mktCell(ticker, tags){
+  const t = tags && tags[ticker];
+  if(!t || (t.category === "Other")){
+    return `<span class="tk">${esc(ticker)}</span>`;
+  }
+  const catClass = "mcat-" + t.category.toLowerCase();
+  return `<div class="mktcell">
+    <span class="mcat ${catClass}">${esc(t.category)}</span>
+    ${t.label ? `<span class="msub">${esc(t.label)}</span>` : ""}
+    <span class="tk-sub">${esc(ticker)}</span>
+  </div>`;
+}
+function mktLabel(ticker, tags){
+  const t = tags && tags[ticker];
+  return (t && t.label) ? `${t.label} — ${ticker}` : ticker;
+}
 const hhmm = iso => iso ? new Date(iso).toISOString().slice(11,16) + "Z" : null;
 const dayTime = iso => iso ? new Date(iso).toISOString().slice(5,16).replace("T"," ") + "Z" : null;
 function ago(iso){
@@ -339,11 +373,11 @@ function renderHeader(){
     `<div class="banner ${klass}"><b>${esc(v.label)}</b> — ${esc(v.detail)}</div>`;
 }
 
-function positionCard(sel, side, s, positions){
+function positionCard(sel, side, s, positions, tags){
   const cls = side === "live" ? "live" : "paper";
   const openRows = positions.filter(p => p.status === "open");
   const rows = openRows.length ? openRows.map(p => `<tr>
-      <td class="tk">${esc(p.ticker)}</td>
+      <td>${mktCell(p.ticker, tags)}</td>
       <td class="r">${esc(int(p.quantity))}</td>
       <td class="r">${esc(cents(p.entry_price_cents,2))}</td>
       <td class="r">${has(p.mark_cents) ? esc(cents(p.mark_cents,0)) : EM}</td>
@@ -367,6 +401,8 @@ function positionCard(sel, side, s, positions){
        <dt>Contracts closed</dt><dd>${esc(int(s.contracts_closed))}</dd>
        <dt>Win rate</dt><dd>${has(s.win_rate)?esc(s.win_rate.toFixed(1)+"%"):EM}</dd>
        <dt>Open cost basis</dt><dd>${has(s.cost_basis_open_usd)?esc(usd(s.cost_basis_open_usd)):EM}</dd>
+       <dt>Capital deployed</dt><dd title="sum of entry cost across every filled trade, open or closed">${has(s.capital_deployed_usd)?esc(usd(s.capital_deployed_usd)):EM}</dd>
+       <dt>Avg capital / trade</dt><dd>${has(s.avg_capital_per_trade_usd)?esc(usd(s.avg_capital_per_trade_usd)):EM}</dd>
      </dl>
      <div class="scroll" style="margin-top:10px"><table>
        <thead><tr><th>Open market</th><th class="r">Qty</th><th class="r">Entry</th>
@@ -587,9 +623,10 @@ function renderDivergence(){
        <tbody>${rows || `<tr><td colspan="3" class="empty">No decision tape yet.</td></tr>`}</tbody></table></div>
      <div class="note">${esc(g.note)}</div>`;
 
+  const mt = S.run.market_tags;
   $("#divbody").innerHTML = d.per_ticker.length
     ? d.per_ticker.map(r => `<tr>
-        <td class="tk">${esc(r.ticker)}</td>
+        <td>${mktCell(r.ticker, mt)}</td>
         <td class="r">${money(r.live_pnl_usd)}</td><td class="r">${money(r.paper_pnl_usd)}</td>
         <td class="r"><b>${money(r.gap_usd)}</b></td>
         <td class="r">${money(r.quantity_impact_usd)}</td>
@@ -605,7 +642,7 @@ function renderDivergence(){
       <th>First observed</th><th>Status</th><th>Likely source</th></tr></thead>
     <tbody>${disc.map(x => `<tr>
       <td><span class="v ${x.kind==='missed_fill'?'material':'minor'}">${esc(x.kind.replace("_"," "))}</span></td>
-      <td class="tk">${esc(x.ticker)}</td>
+      <td>${mktCell(x.ticker, mt)}</td>
       <td class="r">${has(x.magnitude_usd)?money(x.magnitude_usd):
         (has(x.magnitude_cents)?esc(cents(x.magnitude_cents,2)):
          (has(x.magnitude_contracts)?esc(x.magnitude_contracts)+" ct":EM))}</td>
@@ -620,7 +657,7 @@ function renderOrders(append){
   const d = S.orders;
   const rows = d.orders.map(o => `<tr>
     <td><span class="v ${esc(o.environment)}">${esc(o.environment)}</span></td>
-    <td class="tk">${esc(o.market)}</td><td>${esc(o.side)}</td>
+    <td>${mktCell(o.market, d.market_tags)}</td><td>${esc(o.side)}</td>
     <td class="r">${esc(int(o.requested_quantity))}</td>
     <td class="r ${o.filled_quantity?'':'dim'}">${has(o.filled_quantity)?esc(int(o.filled_quantity)):EM}</td>
     <td class="r">${esc(cents(o.limit_price_cents,0))}</td>
@@ -698,8 +735,8 @@ function renderDiagnostics(){
 async function loadRun(){
   S.run = await getJSON("/api/runs/"+encodeURIComponent(S.tag));
   renderHeader();
-  positionCard("#livecard","live", S.run.live, S.run.live.positions);
-  positionCard("#papercard","paper", S.run.paper, S.run.paper.positions);
+  positionCard("#livecard","live", S.run.live, S.run.live.positions, S.run.market_tags);
+  positionCard("#papercard","paper", S.run.paper, S.run.paper.positions, S.run.market_tags);
   renderComparison();
   renderDivergence();
   renderDiagnostics();
@@ -711,7 +748,7 @@ async function loadSeries(){
   const sel = $("#tickersel");
   const cur = S.ticker || (S.series.price ? S.series.price.ticker : "");
   sel.innerHTML = (S.series.available_tickers||[]).map(t =>
-    `<option value="${esc(t)}" ${t===cur?"selected":""}>${esc(t)}</option>`).join("")
+    `<option value="${esc(t)}" ${t===cur?"selected":""}>${esc(mktLabel(t, S.series.market_tags))}</option>`).join("")
     || `<option value="">(no markets yet)</option>`;
   renderPnlChart(); renderPriceChart();
 }

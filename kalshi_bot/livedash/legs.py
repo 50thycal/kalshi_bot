@@ -185,6 +185,15 @@ class Leg:
         gross = None
         if self.realized_pnl_usd is not None and self.unrealized_pnl_usd is not None:
             gross = self.realized_pnl_usd + self.unrealized_pnl_usd
+        # Capital deployed: the sum of entry cost basis across EVERY filled
+        # position this leg ever opened, open or closed. This is a distinct
+        # question from P&L or current exposure — "how many dollars did we
+        # actually put to work" — and it is not netted against exits, so 20
+        # trades at $2 each read as $40 deployed regardless of outcome. A
+        # position with no cost basis (an unfilled live order) contributes 0,
+        # since no capital was ever actually committed.
+        filled = [p for p in self.positions if p.status != "unfilled"]
+        capital_deployed = sum(p.cost_basis_usd or 0 for p in filled)
         return {
             "environment": self.environment,
             "tag": self.tag,
@@ -203,6 +212,10 @@ class Leg:
             "total_pnl_usd": _round(gross),
             "entry_fees_usd": _round(self.entry_fees_usd, 4),
             "cost_basis_open_usd": _round(sum(p.cost_basis_usd or 0 for p in opened)),
+            "capital_deployed_usd": _round(capital_deployed),
+            "avg_capital_per_trade_usd": (
+                _round(capital_deployed / len(filled)) if filled else None
+            ),
             "pnl_per_contract_cents": (
                 round(self.realized_pnl_usd / contracts_closed * 100, 2)
                 if (self.realized_pnl_usd is not None and contracts_closed) else None
