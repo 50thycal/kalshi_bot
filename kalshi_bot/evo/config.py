@@ -61,7 +61,16 @@ class EvoSettings(BaseSettings):
     model_deep: str = "claude-sonnet-5"
     model_strategic: str = "claude-sonnet-5"  # top tier stays on Anthropic by default
     weekly_llm_ceiling_usd: float = 2.0  # per active agent
-    heartbeat_max_output_tokens: int = 6400  # doubled to give headroom for batching multiple backtests/actions in one heartbeat
+    # Raised 6400->22000 to match heartbeat_max_input_tokens after live routine
+    # heartbeats on deepseek/deepseek-v4-flash (a reasoning model) were observed
+    # reporting completion_tokens up to 15384 — 2.4x the old 6400 cap — while
+    # still finishing normally (status=completed, not truncated). The provider
+    # is not treating our max_tokens as a strict ceiling on reasoning tokens, so
+    # this number was never actually bounding generation; 22000 gives enough
+    # room that observed behavior sits inside it with real headroom instead of
+    # silently exceeding it. See LlmResult.stop_reason / EvoLlmUsage.stop_reason
+    # for how enforcement is now verified going forward.
+    heartbeat_max_output_tokens: int = 22000
     # Bumped 6000->16000: with the input-cap fix live, a reflection heartbeat on
     # z-ai/glm-5.2 (a reasoning model) finally dispatched for real and then burned
     # its ENTIRE 6000-token budget on internal reasoning before ever writing a

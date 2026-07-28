@@ -99,7 +99,10 @@ def test_heartbeat_kind_maps_to_the_right_tier():
         assert cog.alias_for_kind(kind) == "strategic", kind
         assert cog.is_enriched_kind(kind) is True
     assert cog.is_enriched_kind("routine") is False
-    # output ceilings widen as the tier gets more expensive
+    # each kind routes to its own tier's output ceiling (routine's is the
+    # largest of the three despite being the cheapest tier — sized around a
+    # reasoning model's observed overshoot rather than content richness, see
+    # config.py's heartbeat_max_output_tokens comment)
     assert (cog.max_output_tokens_for(settings, "routine")
             == settings.heartbeat_max_output_tokens)
     assert (cog.max_output_tokens_for(settings, "reflection")

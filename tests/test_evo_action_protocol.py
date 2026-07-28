@@ -112,9 +112,14 @@ def test_closing_instruction_reframes_economical_as_prose_not_action_count():
     assert "economical in prose" in prompt.lower()
 
 
-def test_routine_output_token_cap_doubled():
-    # Doubled (3200 -> 6400) to give headroom for batched multi-backtest output.
-    assert EvoSettings(_env_file=None).heartbeat_max_output_tokens == 6400
+def test_routine_output_token_cap_matches_input_cap():
+    # Raised 6400 -> 22000 to match heartbeat_max_input_tokens: a reasoning
+    # model (deepseek-v4-flash) was observed reporting completion_tokens up to
+    # 15384 while still completing normally, so 6400 was never actually a hard
+    # ceiling — see the cap comment in config.py.
+    s = EvoSettings(_env_file=None)
+    assert s.heartbeat_max_output_tokens == 22000
+    assert s.heartbeat_max_output_tokens == s.heartbeat_max_input_tokens
 
 
 def test_submit_trade_intent_warns_against_series_prefixes():
