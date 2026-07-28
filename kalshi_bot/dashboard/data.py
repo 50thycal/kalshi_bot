@@ -106,8 +106,19 @@ def _effective_cap(session) -> int:
 
 
 def _live_uuids(session) -> set[str]:
-    """The bots the worker actually runs this cycle. When throttled, the lowest-id N
-    run and the rest sit dormant; the dashboard labels them rather than hiding them."""
+    """The bots the worker actually runs this cycle.
+
+    The cap is a real population bound now, not a filter over a larger fleet:
+    the worker keeps exactly that many agents `active` and marks the rest
+    `suspended`, so `active_agents` alone is already the live set. The slice
+    below only covers the window before the worker has reconciled (e.g. right
+    after a cap decrease), and must never become load-bearing — slicing
+    "lowest id first" is what previously made newborn children invisible to
+    the fleet, since reproduction assigns them the highest ids.
+
+    Suspended bots are NOT hidden: they stay in the cohort roster and are
+    labelled `paused` by _classify, so a shrunken fleet is visible as such
+    rather than silently disappearing."""
     everyone = active_agents(session)
     cap = _effective_cap(session)
     live = everyone[:cap] if cap > 0 else everyone

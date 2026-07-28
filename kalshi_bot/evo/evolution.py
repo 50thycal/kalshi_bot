@@ -143,12 +143,17 @@ def bootstrap_founders(
     md: MarketData | None = None, now: datetime | None = None,
 ) -> list[EvoAgent]:
     """Idempotently create founders up to the population target in the current
-    cohort. Safe to call every cycle."""
+    cohort. Safe to call every cycle.
+
+    Targets `effective_population_size()`, not `population_size`: with a cap in
+    force this must not keep manufacturing agents that will only be suspended
+    again on the next reconcile (and, before the cap became a real population
+    bound, refilling to 30 every cycle is what kept the dead 27 alive)."""
     cohort = ensure_current_cohort(session, settings, now=now)
     active = list(session.scalars(select(EvoAgent).where(EvoAgent.status == "active")))
     created: list[EvoAgent] = []
     rng = random.Random(cohort.rng_seed)
-    for i in range(len(active), settings.population_size):
+    for i in range(len(active), settings.effective_population_size()):
         agent = create_agent(
             session, settings, cohort, rng, origin="founder",
             slot_key=f"founder:{i}",
