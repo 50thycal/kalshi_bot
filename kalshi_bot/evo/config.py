@@ -69,7 +69,14 @@ class EvoSettings(BaseSettings):
     # empty ("no JSON object in output"). Headroom here is for reasoning tokens
     # PLUS the actual answer, not just a verbose answer.
     reflection_max_output_tokens: int = 16000
-    strategic_max_output_tokens: int = 8000  # top tier reviews the most and writes the most
+    # Bumped 8000->16000 for the same reason, observed on the top tier once the
+    # Anthropic key was valid again: EVERY strategic heartbeat landed on
+    # output_tokens == 8000 exactly — the cap — including the one that recorded
+    # "completed" (it only survived because the truncated-JSON recovery salvaged
+    # a prefix, so even that beat lost content). A tier-3 beat reviews the whole
+    # lineage/graveyard/peer context and writes the longest answer, so it needs
+    # at least as much room as a tier-2 reflection, not half.
+    strategic_max_output_tokens: int = 16000
     # Input-size pre-flight caps, ALSO per tier: tiers 2 and 3 include extra context
     # (graveyard + peer roster on top of everything tier 1 gets — see
     # cognition.is_enriched_kind), so their real context is legitimately bigger.

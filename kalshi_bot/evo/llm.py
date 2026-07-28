@@ -130,6 +130,17 @@ class LlmResult:
     output_tokens: int = 0
     cost_usd: float = 0.0
     error: str | None = None
+    # Why the provider stopped generating: Anthropic's `stop_reason`
+    # ("end_turn" | "max_tokens" | ...) or an OpenAI-compatible `finish_reason`
+    # ("stop" | "length" | ...). Empty when the backend reported none — never
+    # synthesized, so absence stays distinguishable from "stopped normally".
+    stop_reason: str = ""
+
+    @property
+    def truncated(self) -> bool:
+        """The generation was cut off by the output-token cap. Both provider
+        vocabularies mean the same thing here."""
+        return self.stop_reason in ("max_tokens", "length")
 
 
 class LlmClient:
@@ -361,6 +372,7 @@ class LlmClient:
         text = "".join(
             b.get("text", "") for b in data.get("content", []) if b.get("type") == "text"
         )
+        stop_reason = str(data.get("stop_reason") or "")
         cost = compute_cost_usd(price, input_tokens, cached, output_tokens)
         # The API call above already happened and was billed by Anthropic — it is
         # irreversible. Record it in its OWN committed transaction, independent of
@@ -402,6 +414,7 @@ class LlmClient:
             cached_input_tokens=cached,
             output_tokens=output_tokens,
             cost_usd=cost,
+            stop_reason=stop_reason,
         )
 
     def _complete_local(
@@ -477,6 +490,7 @@ class LlmClient:
 
         choices = data.get("choices") or []
         text = str((choices[0].get("message") or {}).get("content", "")) if choices else ""
+        stop_reason = str(choices[0].get("finish_reason") or "") if choices else ""
         usage = data.get("usage") or {}
         input_tokens = int(usage.get("prompt_tokens", 0) or est_input)
         output_tokens = int(usage.get("completion_tokens", 0) or max(1, len(text) // 3))
@@ -515,4 +529,5 @@ class LlmClient:
             cached_input_tokens=0,
             output_tokens=output_tokens,
             cost_usd=cost,
+            stop_reason=stop_reason,
         )
