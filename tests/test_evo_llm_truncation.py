@@ -52,6 +52,23 @@ def test_strategic_tier_output_cap_clears_observed_truncation():
     assert max_output_tokens_for(s, "strategic") > max_output_tokens_for(s, "routine")
 
 
+def test_input_caps_clear_observed_live_prompt_sizes_with_headroom():
+    """Tier 1 was capped at 14000 and live routine prompts reached ~15.6K — 16 of
+    17 routine beats in a 6-hour window degraded pre-flight. Every cap must clear
+    the largest size actually observed on that tier, with real headroom, and must
+    never invert (a tier carrying MORE context cannot have a SMALLER cap)."""
+    s = EvoSettings(_env_file=None)
+    observed_routine = 15614  # the live "input too large (~15614 tokens)" rejection
+    assert s.heartbeat_max_input_tokens >= observed_routine * 1.25
+    # tiers 2/3 carry the tier-1 base PLUS graveyard + peer roster
+    assert s.reflection_max_input_tokens > s.heartbeat_max_input_tokens
+    assert s.strategic_max_input_tokens >= s.reflection_max_input_tokens
+
+    client = llm.LlmClient(s, api_key="")
+    for alias in ("routine", "deep", "strategic"):
+        assert client._max_input_tokens(alias) >= observed_routine * 1.25
+
+
 @respx.mock
 def test_anthropic_stop_reason_is_carried_on_result():
     _init_sqlite_engine()
