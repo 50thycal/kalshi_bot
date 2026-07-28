@@ -17,7 +17,7 @@ Both back queries the dashboard introduced that the existing indexes cannot serv
   index is agent-leading and cannot answer a ledger-leading predicate.
 
 Revision ID: a1c4e70b92d3
-Revises: d5e6f7a8b9c0
+Revises: b7f3c2a91d54
 """
 
 from __future__ import annotations
@@ -25,7 +25,13 @@ from __future__ import annotations
 from alembic import op
 
 revision: str = "a1c4e70b92d3"
-down_revision: str | None = "d5e6f7a8b9c0"
+# Chained after the live/paper dashboard's index migration. Both were authored off
+# d5e6f7a8b9c0 on separate branches and merged within minutes of each other, which
+# left alembic with TWO heads on the default branch — and the worker's start
+# command is `alembic upgrade head && python -m kalshi_bot.main`, so it refuses to
+# start until they are linear again. Order is irrelevant here (both are index-only
+# and touch different tables), so the later branch simply follows the earlier one.
+down_revision: str | None = "b7f3c2a91d54"
 branch_labels = None
 depends_on = None
 
