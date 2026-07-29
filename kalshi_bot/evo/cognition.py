@@ -275,6 +275,12 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
   strategy's universe.series_prefixes, e.g. "KXHIGH"). A prefix is not itself a
   tradable market; an order on one will never get a quote and will sit open
   forever with no fill and no error.
+  limit_price_cents is OPTIONAL and must be 1-99 when given. OMIT it to trade at
+  the current market price (a taker order with no limit is marketable at the
+  touch). Do NOT write 0 to mean "no limit" — 0 is rejected, and a 0c bid could
+  never fill anyway.
+  action "sell" only CLOSES a position you already hold; it cannot open a short.
+  To bet AGAINST a side, BUY the opposite side (bet against yes => buy no).
   The order is evaluated against the live quote IMMEDIATELY (not next cycle) —
   the outcome's "status" is the real result (filled|partial|open), with
   "filled_quantity" set. A taker order returning status="open" means the market
