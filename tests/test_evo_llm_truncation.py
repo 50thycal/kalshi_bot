@@ -180,6 +180,72 @@ def test_json_dumps_roundtrip_of_stop_reason_defaults():
     json.dumps({"stop_reason": res.stop_reason})  # serializable, never None
 
 
+@respx.mock
+def test_openai_falls_back_to_native_finish_reason_when_normalized_is_null():
+    """Live incident: OpenRouter's normalized `finish_reason` came back null on
+    16 of 36 routine calls and 3 of 6 reflection calls in a 12h window — same
+    model, same tier, no pattern by model — while the underlying provider always
+    reports one via `native_finish_reason`. Without this fallback, cap
+    enforcement was only checkable for ~60% of calls instead of ~100%."""
+    _init_sqlite_engine()
+    with db.session_scope() as session:
+        settings = EvoSettings(
+            _env_file=None, local_llm_enabled=True,
+            local_llm_base_url="http://ollama.local:11434/v1",
+            local_llm_model="qwen2.5:7b-instruct",
+        )
+        llm.seed_model_prices(session, settings)
+        cohort, agent = _agent(session, settings)
+
+        respx.post("http://ollama.local:11434/v1/chat/completions").mock(
+            return_value=Response(200, json={
+                "choices": [{"message": {"content": "{\"journal\":"},
+                             "finish_reason": None,
+                             "native_finish_reason": "length"}],
+                "usage": {"prompt_tokens": 900, "completion_tokens": 256},
+            })
+        )
+        client = llm.LlmClient(settings, api_key="")
+        res = client.complete(
+            session, agent_uuid=agent.agent_uuid, cohort_id=cohort.id, heartbeat_id=None,
+            alias="routine", system_blocks=[{"type": "text", "text": "sys"}],
+            user_content="go", max_tokens=256,
+        )
+        assert res.stop_reason == "length"
+        assert res.truncated is True
+
+
+@respx.mock
+def test_openai_prefers_normalized_finish_reason_over_native_when_both_present():
+    """finish_reason must win when populated — native_finish_reason is only a
+    fallback for when the normalized field is null, not a replacement for it."""
+    _init_sqlite_engine()
+    with db.session_scope() as session:
+        settings = EvoSettings(
+            _env_file=None, local_llm_enabled=True,
+            local_llm_base_url="http://ollama.local:11434/v1",
+            local_llm_model="qwen2.5:7b-instruct",
+        )
+        llm.seed_model_prices(session, settings)
+        cohort, agent = _agent(session, settings)
+
+        respx.post("http://ollama.local:11434/v1/chat/completions").mock(
+            return_value=Response(200, json={
+                "choices": [{"message": {"content": "{}"},
+                             "finish_reason": "stop",
+                             "native_finish_reason": "end_turn"}],
+                "usage": {"prompt_tokens": 900, "completion_tokens": 10},
+            })
+        )
+        client = llm.LlmClient(settings, api_key="")
+        res = client.complete(
+            session, agent_uuid=agent.agent_uuid, cohort_id=cohort.id, heartbeat_id=None,
+            alias="routine", system_blocks=[{"type": "text", "text": "sys"}],
+            user_content="go", max_tokens=256,
+        )
+        assert res.stop_reason == "stop"
+
+
 def test_routine_output_cap_clears_the_reasoning_model_overshoot_with_headroom():
     """Live incident: routine heartbeats on deepseek/deepseek-v4-flash (a
     reasoning model) reported completion_tokens up to 15384 against a 6400 cap
