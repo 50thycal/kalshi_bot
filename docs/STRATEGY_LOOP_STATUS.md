@@ -16,144 +16,136 @@ state, for both the live P&L table and each paper book, the **realized P&L (tota
 
 ---
 
-## Snapshot — 2026-07-28 05:10 PM CDT (run #74)
+## Snapshot — 2026-07-29 05:45 PM CDT (run #75)
 
-**TWO GATES CLEARED, and the LIVE book changed identity since the last run.** This snapshot spans
-4 days (run #73 was 2026-07-24), so batches are large and the run-#73 correlated NBA-event loss has
-been fully washed out — every mmsell variant recovered and most improved their cumulative ¢/trade.
+**`weather_concity` gate CROSSED n≥120 (122 now) — but the actual verdict looks like RETIRE, not
+KEEP.** The gate was "keep concity (and consider retiring all-city con) only if concity beats
+all-city con." It does not: **weather_concity is at −6.85¢/trade cumulative vs weather_con(all)'s
+−2.35¢/trade** — con(all) is the less-bad book. Both remain net negative. This reads as a genuine
+gate resolution, just the opposite direction from a "promote" — a fable session should record the
+verdict (concity does not beat con) rather than treat the crossing as a green light.
 
-1. **`theta4` gate CLEARED — n=95 ≥ 80.** +$36.72 realized, **+38.65¢/trade**, 92.6% win,
-   realized tail-hit **7.4%** at an avg entry of 84.96¢ (market-implied tail ≈15%). Per-trade
-   positive ✓; the tail-hit side of the gate reads comfortably calibrated but a fable session
-   should confirm the exact modeled-tail number from the signal rows before writing the KEEP
-   verdict. **This unblocks NEST** (idea-model queue item that was waiting on theta4's n≥80).
-2. **`mmsell10` gate CLEARED — n=228 ≥ 150, +3.73¢/trade — and it is ALREADY LIVE** (real money
-   since 2026-07-26 21:09 UTC) with a paper twin `mmsell10_pt` running beside it.
-3. **Registry drift (step 3a):** `docs/BOOK_REGISTRY.md` still lists `mmsell10` as **paper** and
-   has **no row for `mmsell10_pt`** — the twin is an UNTRACKED book (26 settled, 24 open). Both
-   need a registry update from a fable session.
+No other gate crossed this run (a quiet ~24h since #74). Everything else is incremental:
+
+- **theta4** and **mmsell10** (both cleared last run, #74) continue accumulating cleanly:
+  theta4 n=95→112 (+38.62¢/trade, essentially unchanged from +38.65¢); mmsell10 n=228→243
+  (+3.84¢/trade, up from +3.73¢).
+- **mmsell10 live/twin parity**: twin side now n=39 (≥30, cleared), live side n=25 (still <30) —
+  script verdict remains **TOO EARLY**, but only the live leg is now the limiting sample.
+  Matched-market gap holds steady at −0.49¢ (was −0.48¢) — still no accounting-gap signal.
+- **Registry drift unresolved**: `docs/BOOK_REGISTRY.md` still lists `mmsell10` as `paper` only,
+  still no row for `mmsell10_pt`, one run later. Carrying forward.
+- **mmsell4's contradicted KILL verdict** keeps strengthening: now +2.80¢/trade (n=385), further
+  above mmsell3's +2.15¢/trade. Still unrecorded — do not record the old kill.
 
 **Live P&L (real money — `mmsell10`, epoch started 2026-07-26 21:09 UTC):**
-| metric | value |
-|---|---|
-| settled live positions | 20 (100% win) |
-| realized P&L | **+$2.67** |
-| per contract | **+6.68¢/ct** (twin assumed +6.20¢/ct on the SAME matched markets → gap −0.48¢) |
-| fill rate | 59.0% (39 placed, 23 filled, 16 canceled) |
-| fill price | 93.3¢ real vs 93.4¢ twin-assumed (px_gap −0.08¢ — pricing assumption is sound) |
-| open footprint | 4 positions, $5.84 deployed |
+| metric | this run | last run (#74) |
+|---|---|---|
+| settled live positions | 25 (100% win) | 20 |
+| realized P&L | **+$3.35** | +$2.67 |
+| per contract | **+6.71¢/ct** | +6.68¢/ct |
+| fill rate | 54.7% (53 placed, 29 filled, 24 canceled) | 59.0% |
+| fill price | 93.4¢ real vs 93.4¢ twin (px_gap −0.10¢) | −0.08¢ |
+| open footprint | 5 positions, $7.70 deployed | 4 pos, $5.84 |
 
-Parity verdict: **TOO EARLY** (needs n≥30 each side; twin 26 / live 20). No ACCOUNTING GAP —
-matched-market twin-vs-live is −0.48¢, i.e. live is running slightly *better* than its twin. The
-gap that exists is CAPACITY (11 of 50 twin entries live never attempted), not simulator error.
-
-**Legacy live (mmsell3, wound down):** 367 settled, 91.3% win, **+$1.33 total, +0.36¢/ct** —
-unchanged, as expected. `mmsell3_closeout` remains inert (2010 orders, 1972 rejected, 0 filled).
+Parity verdict: still **TOO EARLY** (twin n=39 now clears the n≥30 bar; live n=25 does not yet).
+Matched-market twin-vs-live gap −0.49¢ (consistent with last run, no ACCOUNTING GAP). Legacy
+`mmsell3` live unchanged: 367 settled, +$1.33, +0.36¢/ct. `mmsell3_closeout` still inert.
 
 **Trading books (settled n / realized P&L / ¢-per-trade / open) — PAPER, separate from live:**
-| book | n (Δ vs #73) | realized P&L | ¢/trade (was) | open | note |
+| book | n (Δ vs #74) | realized P&L | ¢/trade (was) | open | note |
 |---|---|---|---|---|---|
-| **mmsell10** | 228 (+104) | +$8.51 | **+3.73** (3.02) | 34 | **GATE CLEARED n≥150; LIVE since 07-26** |
-| **mmsell10_pt** (twin) | 26 (new) | +$3.16 | +12.15 | 24 | **UNTRACKED — no registry row** |
-| mmsell11 | 434 (+182) | +$16.43 | +3.79 (3.14) | 39 | clears on blended paper; MIRAGE under fill model |
-| mmsell6 | 502 (+152) | +$15.31 | +3.05 (2.36) | 37 | clears on blended paper; MIRAGE under fill model |
-| mmsell9 | 70 (+44) | +$3.83 | +5.47 (5.42) | 8 | best ¢/trade in cohort, gate n≥100 (70%) |
-| mmsell4 | 366 (+167) | +$9.62 | +2.63 (0.60) | 39 | **KILL verdict now contradicted** — beats mmsell3 |
-| mmsell8 | 56 (+25) | +$1.47 | +2.63 (−1.65) | 9 | flipped positive, gate n≥100 (56%) |
-| mmsell2 (paper) | 1,861 (+202) | +$55.00 | +2.96 (2.88) | 36 | steady |
-| mmsell1 (paper) | 2,822 (+303) | +$62.20 | +2.20 (2.03) | 44 | steady |
-| mmsell3 (paper shadow) | 1,217 (+191) | +$25.40 | +2.09 (1.59) | 39 | strong recovery batch |
-| mmsell5 | 185 (+70) | +$3.07 | +1.66 (−0.08) | 0 | flipped positive |
-| mmsell control (paper) | 4,321 (+422) | +$68.54 | +1.59 (1.60) | 49 | flat cumulative |
-| mmsell7 | 92 (+34) | +$0.65 | +0.71 (−1.33) | 0 | flipped positive again, gate n≥150 (61%) |
-| **theta4** (fat-tail) | 95 (+47) | +$36.72 | **+38.65** (37.0) | 0 | **GATE CLEARED n≥80** |
-| weather_con (all) | 572 (+55) | −$14.75 | −2.58 (−2.33) | 14 | negative batch, drifting worse |
-| weather_concity | 114 (+24) | −$7.82 | −6.86 (−9.09) | 8 | positive batch (+$0.36), **95% to gate** |
-| pin15 | 445 | −$19.74 | −4.43 | 0 | RETIRED 2026-07-16, quiet |
-| theta ctrl/1/2/3 | 560/201/98/134 | +$0.97/+$9.69/−$11.55/−$11.62 | — | 0 | SHELVED, unchanged |
-| tfav | 215 | −$7.54 | −3.5 | 0 | KILLED, unchanged |
-| weather (rest) | 4,709 | −$238.63 | — | 0 | pruned, done |
+| **mmsell10** | 243 (+15) | +$9.33 | +3.84 (3.73) | 33 | LIVE, gate stays cleared |
+| **mmsell10_pt** (twin) | 39 (+13) | +$4.73 | +12.13 (12.15) | 26 | still UNTRACKED — no registry row |
+| mmsell11 | 453 (+19) | +$17.58 | +3.88 (3.79) | 37 | blended-paper clear; MIRAGE under fill model |
+| mmsell6 | 518 (+16) | +$16.20 | +3.13 (3.05) | 37 | same caveat |
+| mmsell9 | 70 (+0) | +$3.83 | +5.47 | 8 | no new settlements, still 70% to gate |
+| mmsell4 | 385 (+19) | +$10.77 | +2.80 (2.63) | 37 | KILL verdict further contradicted |
+| mmsell8 | 56 (+0) | +$1.47 | +2.63 | 10 | no new settlements |
+| mmsell2 (paper) | 1,875 (+14) | +$57.01 | +3.04 (2.96) | 34 | steady |
+| mmsell1 (paper) | 2,849 (+27) | +$64.92 | +2.28 (2.20) | 42 | steady |
+| mmsell3 (paper shadow) | 1,236 (+19) | +$26.55 | +2.15 (2.09) | 37 | steady improvement |
+| mmsell5 | 185 (+0) | +$3.07 | +1.66 | 0 | no new settlements |
+| mmsell control (paper) | 4,350 (+29) | +$71.64 | +1.65 (1.59) | 48 | steady |
+| mmsell7 | 109 (+17) | +$1.70 | +1.56 (0.71) | 0 | improving further, gate n≥150 (73%) |
+| **theta4** (fat-tail) | 112 (+17) | +$43.25 | +38.62 (38.65) | 0 | cleared #74, still strong |
+| weather_con (all) | 586 (+14) | −$13.77 | −2.35 (−2.58) | 16 | slight improvement |
+| **weather_concity** | 122 (+8) | −$8.36 | −6.85 (−6.86) | 7 | **gate n≥120 CROSSED — reads as RETIRE, not keep** |
 
-**Gate sweep (step 3b):** theta4 **95/80 CLEARED** (+38.65¢/trade, tail-hit 7.4%) · mmsell10
-**228/150 CLEARED + LIVE** · mmsell6 502 / mmsell11 434 clear on blended paper but both read
-MIRAGE under the fill model — re-read realizable before any promote · mmsell9 70/100 (70%) ·
-mmsell7 92/150 (61%) · mmsell8 56/100 (56%) · mmsell4 366 (KILL verdict contradicted by 4 days of
-data: +2.63¢ now beats mmsell3's +2.09¢) · weather_concity **114/120 (95%)** · FREEZE **8/100**
-(up from 6, not fired, 26 runs).
+Shelved/killed (pin15, theta ctrl-3, tfav, weather rest) unchanged, quiet.
 
-**Data (last-24h rows / latest, ~5:05 PM CDT run):** crypto_spot 2,878 (2 products, 5:04 PM ✓) ·
-crypto_ladder 35,055 all with model_p (5:04 PM ✓) · weather forecasts 6,000 (5:04 PM ✓) ·
-observations 404 (4:58 PM ✓) · ensembles 1,176 (5:04 PM ✓) · bucket snapshots 8,214 (5:00 PM ✓).
+**Gate sweep (step 3b):** theta4 **112/80 CLEARED** (holding) · mmsell10 **243/150 CLEARED + LIVE**
+(holding) · mmsell6/mmsell11 clear on blended paper, still MIRAGE under fill model · mmsell9
+70/100 (70%, quiet) · mmsell7 109/150 (73%) · mmsell8 56/100 (56%, quiet) · **weather_concity
+122/120 CROSSED — verdict is concity does NOT beat con(all), recommend RETIRE concity /
+keep evaluating con** · FREEZE **8/100** (unchanged, 27 runs).
+
+**Data (last-24h rows / latest, ~5:40 PM CDT run):** crypto_spot 2,872 (2 products, 5:38 PM ✓) ·
+crypto_ladder 55,680 all with model_p (5:38 PM ✓) · weather forecasts 9,203 (5:41 PM ✓) ·
+observations 658 (5:38 PM ✓) · ensembles 1,712 (5:24 PM ✓) · bucket snapshots 12,738 (5:41 PM ✓).
 All fresh. xgame_matches/tapes still dark (expected — book KILLED, collector-only).
 
 **Research probes (on-demand):** none standing (TFAV/WCPROP/XGAME/PINNED/DECAY families closed).
 
-**Headline:** two gates cleared in one run — theta4 (n=95, +38.65¢/trade) which unblocks NEST, and
-mmsell10 (n=228) which is *already trading real money* and is +$2.67 / +6.68¢/ct across 20 settled
-live positions with no accounting gap vs its twin. The registry hasn't caught up: mmsell10 is still
-listed as paper and the twin `mmsell10_pt` has no row at all. The whole mmsell cohort recovered from
-the run-#73 shared-event loss; mmsell4/5/7/8 all flipped positive, which contradicts mmsell4's
-standing (unrecorded) KILL verdict. Weather remains the only negative family; weather_concity is
-95% to its gate and improving, all-city weather_con is drifting worse.
+**Headline:** weather_concity crossed its n≥120 decision point this run, but the resolution is a
+RETIRE signal, not a promote — it remains the more-negative of the two weather books
+(−6.85¢/trade vs con(all)'s −2.35¢/trade). theta4 and mmsell10 (both cleared last run) continue
+to accumulate cleanly with no new red flags; mmsell10's live/twin parity crossed n≥30 on the twin
+side but still needs the live side to catch up. Registry drift on mmsell10/mmsell10_pt persists
+one more run untouched.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[NEW · top actionable — theta4 gate CLEARED, NEST unblocked] n=95 ≥ 80, +$36.72,
-   +38.65¢/trade, 92.6% win, realized tail-hit 7.4% (avg entry 84.96¢).** Per-trade side of the
-   pre-registered gate passes outright. A fable session should (a) confirm the realized-vs-modeled
-   tail ratio from the signal rows and record the KEEP verdict in `docs/THETA_THESIS.md` /
-   `RESEARCH_JOURNAL.md`, and (b) **re-invoke `kalshi-strategy` on NEST**, which has been waiting
-   on exactly this gate.
+1. **[NEW · top actionable — weather_concity gate CROSSED, verdict = RETIRE] n=122 ≥ 120,
+   −6.85¢/trade cumulative vs weather_con(all)'s −2.35¢/trade — concity is worse, not better.**
+   The pre-registered rule was keep-concity-only-if-it-beats-con; it doesn't. Recommend a fable
+   session record the verdict in `RESEARCH_JOURNAL.md` and retire `weather_concity`, while
+   separately deciding whether all-city `weather_con` (still net negative at −2.35¢/trade) is
+   worth continuing at all.
 
-2. **[NEW · registry drift on the LIVE book] `docs/BOOK_REGISTRY.md` still lists `mmsell10` as
-   `paper`, and `mmsell10_pt` (26 settled / 24 open) has no row at all.** mmsell10 has been live
-   with real money since 2026-07-26. Registry rows are how this loop reconciles books — a fable
-   session should update mmsell10's status to LIVE and add the twin row.
+2. **[theta4 gate cleared #74 — still ready to build] n=112 ≥ 80, +38.62¢/trade holding steady,
+   92%+ win.** NEST is unblocked; re-invoke `kalshi-strategy` on it if not already started.
 
-3. **[NEW · mmsell4's KILL verdict is contradicted by the data] n=366, now +2.63¢/trade (was
-   +0.60¢), above mmsell3's +2.09¢.** The recommendation for 13 runs was "record the kill" — do
-   NOT record it now; re-evaluate instead. The variant's earlier weakness looks like it was the
-   small-n / shared-event window, not a real defect.
+3. **[registry drift on the LIVE book — unresolved 1 run later] `docs/BOOK_REGISTRY.md` still
+   lists `mmsell10` as `paper`, and `mmsell10_pt` (39 settled / 26 open) still has no row.**
+   mmsell10 has been live with real money since 2026-07-26 — a fable session should fix this.
 
-4. **[mmsell6 / mmsell11 promote question — gate on REALIZABLE, not blended paper] mmsell6 n=502
-   +3.05¢, mmsell11 n=434 +3.79¢ on blended paper, but `BOOK_REGISTRY.md` records both as
-   MIRAGE under the live-calibrated fill model.** Before any promotion decision, re-run
-   **`mmsell fill model`** (`mm_check_1`) for current realizable ¢/trade — the blended number is
-   the one that has already misled us once (mmsell3 live).
+4. **[mmsell4's KILL verdict continues to be contradicted] n=385, now +2.80¢/trade (was +2.63¢
+   last run, +0.60¢ two runs ago), still above mmsell3's +2.15¢.** Do not record the old kill;
+   the trend of improvement across two runs makes this look like a real result, not noise.
 
-5. **[mmsell10 live — running, parity TOO EARLY] live n=20 (+$2.67, +6.68¢/ct, 100% win, 59% fill
-   rate), twin n=26.** Parity needs n≥30 per side for a verdict; matched-market gap is −0.48¢ (no
-   simulator error) and px_gap −0.08¢. Keep both running untouched — the epoch IS the sample. The
-   only live-vs-twin divergence so far is CAPACITY (11 twin entries live never attempted).
+5. **[mmsell6 / mmsell11 promote question — gate on REALIZABLE, not blended paper] mmsell6 n=518
+   +3.13¢, mmsell11 n=453 +3.88¢ on blended paper, both still recorded MIRAGE under the
+   live-calibrated fill model in the registry.** Re-run `mmsell fill model` (`mm_check_1`) for
+   current realizable ¢/trade before any promotion decision.
 
-6. **[weather_concity · 95% to gate] n=114/120, −6.86¢/trade cumulative (improved from −9.09¢ on a
-   positive batch).** Resolves next run or two. Note the gate is "beats all-city con" — all-city
-   `weather_con` is at −2.58¢/trade and drifting worse, so the comparison is between two negative
-   books; a fable session should decide whether "beats con" is still the right bar or whether both
-   weather books should be wound down.
+6. **[mmsell10 live — parity closing in, twin side now cleared n≥30] live n=25 (+$3.35,
+   +6.71¢/ct, 100% win, 54.7% fill rate), twin n=39.** Matched-market gap steady at −0.49¢ (no
+   simulator error). Only the live leg's sample (25 < 30) still gates a verdict — should resolve
+   within a run or two at current pace.
 
-7. **[mmsell4/5/7/8 all flipped positive this run] mmsell5 +1.66¢ (n=185), mmsell7 +0.71¢ (n=92),
-   mmsell8 +2.63¢ (n=56).** Small-n discipline still applies — mmsell7 has now crossed sign three
-   times. Track, don't act.
+7. **[mmsell7 · improving trend, 73% to gate] n=109 (+17 this run), +1.56¢/trade cumulative (was
+   +0.71¢, and negative two runs ago).** Sign has flipped three times total — still track without
+   over-reading, but the trend over the last two runs is consistently positive.
 
 8. **[idea-model queue] MMX — premise (extend the mmsell edge into new categories) should be built
-   against mmsell10, which is now the promoted/live mechanism. NEST — gate CLEARED this run
-   (theta4 n=95≥80); ready to build, see #1.**
+   against mmsell10, the promoted/live mechanism. NEST — gate cleared (#74, theta4 n≥80); ready to
+   build, see #2.**
 
-9. **[FREEZE gate · not fired] Settled grain+soft = 8 of the n≥100 trigger (was 6; 28 open soft
-   listings now).** Standing background check, nothing to act on.
+9. **[FREEZE gate · not fired] Settled grain+soft = 8 of the n≥100 trigger, unchanged across 27
+   runs now (28→29 open soft listings, still 0 open grain).** Standing background check, nothing
+   to act on.
 
-10. **[correlated-event risk · standing interpretive note] Run #73's whole-cohort loss traced to a
-    single shared ticker (`KXNBATEAMANNOUNCE-...LJAMES23`), and it fully washed out over the
-    following 4 days.** Keep checking for a single shared ticker before reading any cohort-wide
-    batch move as a strategy-wide signal.
+10. **[correlated-event risk · standing interpretive note] Run #73's whole-cohort loss traced to
+    a single shared ticker (`KXNBATEAMANNOUNCE-...LJAMES23`) and fully washed out by #74.** Keep
+    checking for a single shared ticker before reading any cohort-wide batch move as a
+    strategy-wide signal.
 
-*(Changed this run: #1 NEW — theta4 gate cleared, NEST unblocked. #2 NEW — registry drift on
-mmsell10/mmsell10_pt. #3 mmsell4 — REVERSED: the 13-run "record the kill" recommendation is
-dropped, the data now contradicts the kill. #4 — restated mmsell6/mmsell11 with the explicit
-realizable-vs-blended caveat. #5 NEW — mmsell10 live + twin status. #6 weather_concity — restated
-at 95% with a new question about the bar. #7 — the sign flips. #8 — NEST moved from blocked to
-ready. #9/#10 restated. Dropped: mmsell10's "83% to gate" item — resolved, gate cleared and the
-book is live.)*
+*(Changed this run: #1 NEW — weather_concity gate crossed, verdict is RETIRE not promote (replaces
+the old "95% to gate" tracking item). #2 — theta4/NEST restated, one run further confirmed. #3 —
+registry drift restated, still unresolved. #4 — mmsell4 restated with a second run of improvement,
+language firmed up ("real result, not noise"). #5 — mmsell6/mmsell11 restated. #6 — mmsell10
+parity restated with twin side now clearing n≥30. #7 — mmsell7 restated with trend note. #8/#9/#10
+restated unchanged.)*
