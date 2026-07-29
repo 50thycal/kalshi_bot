@@ -84,6 +84,12 @@
   .msub{font-size:12px;font-weight:600;line-height:1.3}
   .tk-sub{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;
     color:var(--dim)}
+  .grp-count{font-size:10px;color:var(--dim)}
+  .grp-toggle{background:none;border:1px solid var(--line);border-radius:4px;color:var(--muted);
+    font-size:10px;padding:0 5px;margin-left:6px}
+  tr.grp-row{cursor:pointer}
+  tr.grp-detail td{padding-left:24px;color:var(--dim)}
+  tr.grp-detail{background:var(--panel2)}
 
   .v{display:inline-block;padding:2px 8px;border-radius:11px;font-size:11px;font-weight:600;
     background:var(--panel2);color:var(--muted);white-space:nowrap}
@@ -213,7 +219,12 @@
     <div class="panel pad" id="divpanel"></div>
     <div class="panel pad" id="gatepanel"></div>
   </div>
-  <div class="panel" style="margin-top:12px"><div class="scroll"><table id="divtable">
+  <div class="panel" style="margin-top:12px">
+    <div class="toolbar" style="padding:10px 14px 0">
+      <label><input type="checkbox" id="divgroup" checked> Group by market type</label>
+      <span class="dim" id="divgroupmeta"></span>
+    </div>
+    <div class="scroll"><table id="divtable">
     <caption class="sr">Per-market divergence between live and paper</caption>
     <thead><tr><th>Market</th><th class="r">Live P&amp;L</th><th class="r">Paper P&amp;L</th>
       <th class="r">Gap</th><th class="r">Qty impact</th><th class="r">Price impact</th>
@@ -332,6 +343,7 @@ const S = {
   runs:null, run:null, series:null, orders:null, events:null,
   tag:null, serMode:"gross", serWin:"72", ticker:"",
   ordEnv:"", ordOffset:0, evCat:"all", evEnv:"", evCursor:null, evItems:[],
+  divGroup:true, divExpanded:new Set(),
 };
 
 async function getJSON(url){
@@ -584,6 +596,55 @@ function renderPriceChart(){
 }
 
 /* ============ divergence ============ */
+
+// Same market family, summed: every MLB spread game or BTC-5pm-window instance
+// is one edge to reason about, not one row per ticker. Grouped by category+label
+// (from market_tags), which partitions identically to the series prefix — an
+// "Other" ticker with no subject/type falls back to its own series as the label,
+// so unclassified series still group with their own repeats instead of scattering.
+function divGroupKey(ticker, tags){
+  const t = tags && tags[ticker];
+  return t ? t.category + "␟" + t.label : "␟ticker␟" + ticker;
+}
+function groupDivRows(rows, tags){
+  const groups = new Map();
+  for(const r of rows){
+    const key = divGroupKey(r.ticker, tags);
+    if(!groups.has(key)) groups.set(key, {
+      key, tag: tags && tags[r.ticker], rows: [],
+      live_pnl_usd:0, paper_pnl_usd:0, gap_usd:0,
+      quantity_impact_usd:0, price_impact_usd:0, fee_impact_usd:0, residual_usd:0,
+    });
+    const g = groups.get(key);
+    g.rows.push(r);
+    g.live_pnl_usd += r.live_pnl_usd; g.paper_pnl_usd += r.paper_pnl_usd; g.gap_usd += r.gap_usd;
+    g.quantity_impact_usd += r.quantity_impact_usd; g.price_impact_usd += r.price_impact_usd;
+    g.fee_impact_usd += r.fee_impact_usd; g.residual_usd += r.residual_usd;
+  }
+  return [...groups.values()].sort((a,b) => Math.abs(b.gap_usd) - Math.abs(a.gap_usd));
+}
+// A group of one market is just noise over the plain per-ticker cell — render it
+// identically to the ungrouped view instead of a "1 market, show" affordance.
+function divGroupCell(g){
+  if(g.rows.length === 1) return mktCell(g.rows[0].ticker, S.run.market_tags);
+  const t = g.tag || {category:"Other", label:g.rows[0].ticker};
+  const expanded = S.divExpanded.has(g.key);
+  return `<div class="mktcell">
+    <span class="mcat mcat-${esc((t.category||"Other").toLowerCase())}">${esc(t.category||"Other")}</span>
+    <span class="msub">${esc(t.label)}</span>
+    <span class="grp-count">${g.rows.length} markets
+      <button class="grp-toggle" data-grpkey="${esc(g.key)}" type="button">${expanded?"hide":"show"}</button>
+    </span>
+  </div>`;
+}
+function divRowCells(r){
+  return `<td class="r">${money(r.live_pnl_usd)}</td><td class="r">${money(r.paper_pnl_usd)}</td>
+    <td class="r"><b>${money(r.gap_usd)}</b></td>
+    <td class="r">${money(r.quantity_impact_usd)}</td>
+    <td class="r">${money(r.price_impact_usd)}</td>
+    <td class="r">${money(r.fee_impact_usd)}</td>
+    <td class="r">${money(r.residual_usd)}</td>`;
+}
 function renderDivergence(){
   const d = S.run.divergence;
   const max = Math.max(0.01, ...d.components.map(c => Math.abs(c.amount_usd)));
@@ -624,17 +685,30 @@ function renderDivergence(){
      <div class="note">${esc(g.note)}</div>`;
 
   const mt = S.run.market_tags;
-  $("#divbody").innerHTML = d.per_ticker.length
-    ? d.per_ticker.map(r => `<tr>
-        <td>${mktCell(r.ticker, mt)}</td>
-        <td class="r">${money(r.live_pnl_usd)}</td><td class="r">${money(r.paper_pnl_usd)}</td>
-        <td class="r"><b>${money(r.gap_usd)}</b></td>
-        <td class="r">${money(r.quantity_impact_usd)}</td>
-        <td class="r">${money(r.price_impact_usd)}</td>
-        <td class="r">${money(r.fee_impact_usd)}</td>
-        <td class="r">${money(r.residual_usd)}</td></tr>`).join("")
-    : `<tr><td colspan="8" class="empty"><b>No market has settled on both sides yet.</b>
+  const pt = d.per_ticker;
+  if(!pt.length){
+    $("#divbody").innerHTML = `<tr><td colspan="8" class="empty"><b>No market has settled on both sides yet.</b>
         Per-market reconciliation appears once one has.</td></tr>`;
+    $("#divgroupmeta").textContent = "";
+  } else if(S.divGroup){
+    const groups = groupDivRows(pt, mt);
+    $("#divbody").innerHTML = groups.map(gr => {
+      const expandable = gr.rows.length > 1;
+      const head = `<tr${expandable?' class="grp-row" data-grpkey="'+esc(gr.key)+'"':""}>
+        <td>${divGroupCell(gr)}</td>${divRowCells(gr)}</tr>`;
+      const detail = (expandable && S.divExpanded.has(gr.key))
+        ? gr.rows.map(r => `<tr class="grp-detail">
+            <td>${mktCell(r.ticker, mt)}</td>${divRowCells(r)}</tr>`).join("")
+        : "";
+      return head + detail;
+    }).join("");
+    $("#divgroupmeta").textContent =
+      `${pt.length} market${pt.length===1?"":"s"} in ${groups.length} group${groups.length===1?"":"s"}`;
+  } else {
+    $("#divbody").innerHTML = pt.map(r => `<tr>
+        <td>${mktCell(r.ticker, mt)}</td>${divRowCells(r)}</tr>`).join("");
+    $("#divgroupmeta").textContent = `${pt.length} market${pt.length===1?"":"s"}`;
+  }
 
   const disc = S.run.discrepancies || [];
   $("#discbox").innerHTML = disc.length ? `<table>
@@ -801,6 +875,14 @@ $("#ordenv").onchange = e => { S.ordEnv = e.target.value; S.ordOffset = 0; loadO
 $("#ordmore").onclick = () => { S.ordOffset += 100; loadOrders(true).catch(e=>fatal(e.message)); };
 $("#evenv").onchange = e => { S.evEnv = e.target.value; loadEvents(true).catch(x=>fatal(x.message)); };
 $("#evmore").onclick = () => loadEvents(false).catch(e=>fatal(e.message));
+$("#divgroup").onchange = e => { S.divGroup = e.target.checked; renderDivergence(); };
+$("#divbody").addEventListener("click", e => {
+  const el = e.target.closest(".grp-toggle, .grp-row");
+  const key = el && el.dataset.grpkey;
+  if(!key) return;
+  if(S.divExpanded.has(key)) S.divExpanded.delete(key); else S.divExpanded.add(key);
+  renderDivergence();
+});
 
 function tickClock(){
   const now = new Date();
