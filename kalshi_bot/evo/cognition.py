@@ -159,6 +159,99 @@ def max_output_tokens_for(settings: EvoSettings, kind: str) -> int:
 # Prompt assembly
 # ---------------------------------------------------------------------------
 
+# Durable domain knowledge: how these markets and this simulator actually work.
+#
+# This exists because the constitution covers GOVERNANCE and the action protocol
+# covers CALL SYNTAX — neither told an agent anything about the instrument it
+# trades. Everything the fleet knew about Kalshi came from the base model's
+# pretraining or from getting an order rejected, and the resulting mistakes were
+# all domain gaps rather than schema gaps: selling to open a short (there is no
+# short side), limit_price_cents=0 (prices are 1-99), a bare series prefix as a
+# ticker, and uniform sizing across a 96c favorite and a 74c mid-price bet.
+#
+# Every number here is read off this repo's own implementation, not generic
+# Kalshi lore — fees from paper.engine.kalshi_fee, settlement from
+# paper.mark_and_settle, fill behavior from paper.evaluate_order. Keep it that
+# way: a primer that drifts from the simulator teaches agents to mispredict
+# their own fills. It is deliberately scoped to what the fleet has demonstrably
+# gotten wrong plus the arithmetic behind its P&L — not a general tutorial.
+MARKET_MECHANICS = """\
+HOW THESE MARKETS WORK (durable facts — not a message about a recent change)
+
+CONTRACT. A Kalshi market is a single yes/no question. You hold YES or NO
+contracts. At settlement the winning side pays exactly 100c per contract and the
+losing side pays 0c. There is nothing in between and no partial credit.
+
+PRICE IS PROBABILITY. Prices run 1c to 99c and are the market's implied
+probability: 70c means "the market thinks this is ~70% likely". YES and NO
+prices sum to ~100c. There is no 0c and no 100c — an order at 0 is rejected.
+
+THERE IS NO SHORTING. You cannot sell something you do not own. `action:"sell"`
+ONLY closes a position you already hold. To bet AGAINST an outcome, BUY the
+other side: bearish on YES means buy NO. Buying NO at 30c is the short.
+
+PAYOFF IS ASYMMETRIC BY CONSTRUCTION. Buying at price P risks P to win (100-P).
+At 90c you need >90% accuracy just to break even; at 10c you need >10% but will
+be wrong often. Favorites win often and pay little; longshots lose often and pay
+a lot. NEITHER is free money. Uniform position size across both is a mistake:
+25 contracts risks $24 to win $1 at 96c, but $18.50 to win $6.50 at 74c. Size
+from risk/reward, not habit.
+
+FEES. Each fill costs ceil(0.07 * contracts * P * (1-P)) dollars — highest near
+50c, near zero at the extremes. Charged on entry AND on any exit fill, so a
+mid-priced round trip is a real cost you must beat.
+
+TICKERS. A market ticker names ONE market: SERIES-EVENTDATE-STRIKE, e.g.
+KXHIGHNY-26JUL27-B85.5. "KXHIGHNY" alone is a series, not a market, and can
+never be quoted or traded. Only submit exact tickers shown under RELEVANT
+MARKETS.
+
+CLOSE vs SETTLE. Trading stops at close_time; the 100c/0c payout happens later,
+once the real result is known — often hours after. Between the two a position is
+frozen: you cannot exit, only wait. Plan exits BEFORE close.
+
+ORDER TYPES. taker crosses the spread and fills now against resting depth,
+paying the ask (with slippage past the top level). maker rests at your limit and
+fills only if the market trades THROUGH it, then only partially (25%
+adverse-selection haircut) — makers fill most reliably exactly when the market
+is moving against them. A maker order requires a limit; a taker one without a
+limit takes the current price.
+
+LIQUIDITY IS FINITE. You fill against real posted depth: wanting 100 where 12
+are offered fills 12 and rests the remainder. Size to the book.
+
+WHAT YOU CAN DO (capability map; exact call syntax is in the action protocol)
+
+RESEARCH — you are NOT limited to weather. explore_markets discovers live Kalshi
+markets in any series. inspect_data reads anything we hold: paper_trades,
+paper_positions, signals, market_snapshots, orderbook, mmsell_ticks,
+crypto_ladders, crypto_spot, game_tape, game_matches, polymarket — use
+paper_trades to study what our OTHER strategies did. run_backtest replays a spec
+over a settled dataset: backfill_weather (default), mmsell, crypto. Results
+arrive in your NEXT heartbeat, not this one.
+
+STRATEGY LOOP — how an idea becomes money: run_backtest (validate) ->
+save_strategy (returns an integer strategy_id) -> activate_strategy (that id).
+Only an ACTIVE strategy trades on its own; a backtest you never activate has
+earned nothing.
+
+TRADING — two paths with DIFFERENT exits. submit_trade_intent is a one-off order
+you place: Nothing will ever close it for you — your only exits are holding to
+settlement, submitting a sell yourself on a LATER heartbeat (up to an hour away,
+so an intended stop-loss is NOT immediate), or create_listener to wake yourself
+on a price condition. An ACTIVE strategy instead has its exit rule evaluated
+EVERY cycle: with exit mode tp_sl or timed, take-profit/stop-loss fire
+immediately without a heartbeat. Want managed exits? Use a strategy.
+
+LEARNING — register_experiment / conclude_experiment to run a real test,
+revise_belief to supersede a belief with evidence, note_episode to record what
+happened. Memory is append-only: revise by supersession, never by rewriting.
+
+SELF-MODIFICATION — revise_cognitive_genome / revise_trading_genome change how
+you think and trade and are inherited by descendants. Rate-limited: spend them
+on conclusions you have actually earned.
+"""
+
 ACTION_PROTOCOL = """\
 Respond with a single JSON object, nothing else:
 {"journal": {...}, "actions": [{...}, ...]}
@@ -275,12 +368,8 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
   strategy's universe.series_prefixes, e.g. "KXHIGH"). A prefix is not itself a
   tradable market; an order on one will never get a quote and will sit open
   forever with no fill and no error.
-  limit_price_cents is OPTIONAL and must be 1-99 when given. OMIT it to trade at
-  the current market price (a taker order with no limit is marketable at the
-  touch). Do NOT write 0 to mean "no limit" — 0 is rejected, and a 0c bid could
-  never fill anyway.
-  action "sell" only CLOSES a position you already hold; it cannot open a short.
-  To bet AGAINST a side, BUY the opposite side (bet against yes => buy no).
+  limit_price_cents is OPTIONAL, 1-99 when given; OMIT it to take the current
+  price. (Prices, shorting and payoff arithmetic: see HOW THESE MARKETS WORK.)
   The order is evaluated against the live quote IMMEDIATELY (not next cycle) —
   the outcome's "status" is the real result (filled|partial|open), with
   "filled_quantity" set. A taker order returning status="open" means the market
@@ -321,6 +410,8 @@ def system_blocks(settings: EvoSettings) -> list[dict]:
                 "goal: maximize risk-adjusted paper profit, learn efficiently, and pass "
                 "useful knowledge to descendants. You can never place real orders.\n\n"
                 + CONSTITUTION_TEXT
+                + "\n\n"
+                + MARKET_MECHANICS
                 + "\n\n"
                 + ACTION_PROTOCOL
             ),
