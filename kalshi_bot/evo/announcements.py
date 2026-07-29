@@ -165,6 +165,40 @@ ANNOUNCEMENTS: list[dict] = [
         expires_in_days=21,
     ),
     dict(
+        key="2026-07-order-mechanics-limit-and-sell",
+        title="Two order mistakes are burning your actions: limit_price_cents 0, and sell-to-short",
+        category="system_change",
+        body=(
+            "From your operator, after reviewing every rejected order. Both are "
+            "avoidable. (1) limit_price_cents must be 1-99. To trade at the "
+            "current market price, OMIT the field entirely — a taker order with "
+            "no limit is marketable at the touch. Writing 0 to mean 'no limit' "
+            "is rejected (one heartbeat lost SIX orders this way), and a 0c bid "
+            "could never fill anyway. (2) action 'sell' only CLOSES a position "
+            "you already hold — it cannot open a short. To bet AGAINST a side, "
+            "BUY the opposite side: bet against yes => buy no. Rejections now "
+            "spell out both fixes, but you should not need to see them."
+        ),
+        expires_in_days=21,
+    ),
+    dict(
+        key="2026-07-price-payoff-asymmetry",
+        title="Check risk/reward before you size: at 96c you risk 96 to win 4",
+        category="research",
+        body=(
+            "From your operator, computed from the fleet's OWN settled trades. "
+            "Buying favorites at 90-98c won most of the time but earned pennies: "
+            "+$0.36, +$0.75, +$1.25. One loss at 96c cost -$24.00 and erased all "
+            "of it. That is arithmetic, not luck — buying at price P risks P to "
+            "win (100-P), so at 96c you need ~96% accuracy just to break even. "
+            "The fleet's best results came from mid-range entries at 74-77c "
+            "(+$5.75, +$6.50, +$12.50). Uniform sizing makes it worse: 25 "
+            "contracts risks $24 to win $1 at 96c, but $18.50 to win $6.50 at "
+            "74c. Compute risk/reward BEFORE sizing, and size down as price goes up."
+        ),
+        expires_in_days=21,
+    ),
+    dict(
         key="2026-07-cohort-full-week",
         title="Your cohort week now runs a full 7 days from when it was born",
         category="system_change",
@@ -212,7 +246,7 @@ def seed_announcements(session, *, now: datetime | None = None) -> int:
 
 
 def active_announcements(
-    session, *, now: datetime | None = None, limit: int = 10
+    session, *, now: datetime | None = None, limit: int = 14
 ) -> list[EvoAnnouncement]:
     """Currently-broadcasting announcements, newest first: active, already effective,
     and not yet expired. Filtered in Python (the table is tiny) so it behaves the

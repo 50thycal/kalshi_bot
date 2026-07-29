@@ -903,3 +903,48 @@ def test_maker_haircut_still_scales_larger_orders(evo_session, evo_settings):
     md.set_quote(_quote(yes_bid=20, no_bid=78))
     paper.process_open_orders(evo_session, evo_settings, md)
     assert order.filled_quantity == 7
+
+
+# --- rejections must teach the agent the fix --------------------------------
+
+
+def test_zero_limit_price_names_the_actual_fix(evo_session, evo_settings):
+    """Live: one heartbeat burned SIX orders writing limit_price_cents=0 to mean
+    "no limit". The rejection must say to omit the field instead — and must NOT
+    silently reinterpret 0 as a market order, which would turn "pay nothing"
+    into "pay anything" and could fill at 99c."""
+    _fund(evo_session, evo_settings)
+    order, err = paper.place_order(
+        evo_session, evo_settings, agent_uuid=AU, cohort_id=1, idem_key="zero-limit",
+        market_ticker="T1", side="yes", action="buy", quantity=5,
+        limit_price_cents=0,
+    )
+    assert order is None
+    assert "OMIT limit_price_cents" in err
+    assert "0 is never a valid price" in err
+
+    # omitting it really is the working alternative the message points at
+    ok, err2 = paper.place_order(
+        evo_session, evo_settings, agent_uuid=AU, cohort_id=1, idem_key="no-limit",
+        market_ticker="T1", side="yes", action="buy", quantity=5,
+    )
+    assert ok is not None and err2 is None
+
+
+def test_sell_without_position_explains_that_shorts_do_not_exist(evo_session, evo_settings):
+    """Agents used sell to try to open a short. A sell only closes what is held;
+    the directional bet they want is a buy on the other side."""
+    _fund(evo_session, evo_settings)
+    order, err = paper.place_order(
+        evo_session, evo_settings, agent_uuid=AU, cohort_id=1, idem_key="short-yes",
+        market_ticker="T1", side="yes", action="sell", quantity=20,
+    )
+    assert order is None
+    assert "cannot open a short" in err
+    assert "BUY no" in err  # names the opposite side concretely
+
+    order2, err2 = paper.place_order(
+        evo_session, evo_settings, agent_uuid=AU, cohort_id=1, idem_key="short-no",
+        market_ticker="T1", side="no", action="sell", quantity=20,
+    )
+    assert order2 is None and "BUY yes" in err2

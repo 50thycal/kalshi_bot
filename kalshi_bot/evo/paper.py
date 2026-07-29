@@ -269,7 +269,18 @@ def place_order(
     if style == "maker" and limit_price_cents is None:
         return _reject("maker orders require a limit price")
     if limit_price_cents is not None and not (1 <= limit_price_cents <= 99):
-        return _reject(f"limit price {limit_price_cents} out of range 1..99")
+        # 0 is the mistake seen live (6 orders burned in a single heartbeat): the
+        # agent means "no limit / trade at market" and writes 0 for it. Never
+        # silently reinterpret that as a market order — a 0c bid is unfillable by
+        # definition, so coercing it would turn "pay nothing" into "pay anything"
+        # and could fill at 99c. Reject, but name the actual fix.
+        hint = (
+            " — to trade at the current market price OMIT limit_price_cents "
+            "entirely (a taker order with no limit is marketable at the touch); "
+            "0 is never a valid price"
+            if limit_price_cents <= 0 else ""
+        )
+        return _reject(f"limit price {limit_price_cents} out of range 1..99{hint}")
 
     ledger = cohort_ledger(cohort_id)
     pf = get_portfolio(session, agent_uuid, ledger)
@@ -298,7 +309,15 @@ def place_order(
         pos = _get_open_position(session, agent_uuid, ledger, market_ticker, side)
         held = float(pos.quantity) if pos else 0.0
         if held < quantity:
-            return _reject(f"cannot sell {quantity}: held {held}")
+            # Seen live: agents use sell to try to open a SHORT. There is no such
+            # thing here (or on Kalshi) — a sell only closes what you already
+            # own. The directional bet they want is a buy on the other side.
+            other = "no" if side == "yes" else "yes"
+            return _reject(
+                f"cannot sell {quantity} {side}: you hold {held}. A sell only CLOSES "
+                f"a position you already own — it cannot open a short. To bet "
+                f"against {side}, BUY {other} instead."
+            )
 
     row = EvoOrder(
         agent_uuid=agent_uuid,

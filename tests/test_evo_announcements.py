@@ -120,3 +120,20 @@ def test_every_announcement_body_fits_the_prompt_cap():
     # guard and is insert-only (cannot be edited), superseded by its correction.
     over = [(k, n) for k, n in over if k != "2026-07-instant-order-evaluation"]
     assert not over, f"announcement bodies exceed the 700-char prompt cap: {over}"
+
+
+def test_default_limit_fits_the_whole_declared_roster():
+    """active_announcements truncates to `limit`, so a roster that outgrows it
+    silently drops the OLDEST still-valid announcement from every agent's prompt
+    — no error, no log, it just stops being broadcast. This has already bitten
+    twice (8 -> 10, then 10 -> 14). Declaring a new announcement must fail here
+    rather than quietly evicting an existing one."""
+    import inspect
+
+    default_limit = inspect.signature(
+        announce.active_announcements).parameters["limit"].default
+    assert default_limit >= len(announce.ANNOUNCEMENTS), (
+        f"{len(announce.ANNOUNCEMENTS)} announcements declared but "
+        f"active_announcements defaults to limit={default_limit} — the oldest "
+        f"would be silently dropped from every prompt. Raise the default."
+    )
