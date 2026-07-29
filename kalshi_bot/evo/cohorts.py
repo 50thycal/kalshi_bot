@@ -158,12 +158,74 @@ def cohort_members(session, cohort_id: int) -> list[EvoCohortMember]:
 
 
 def active_agents(session, settings: EvoSettings | None = None) -> list[EvoAgent]:
-    """Active agents, ordered by id (creation order). When `settings.max_active_agents`
-    is set (>0), only that many run — the ops throttle for shrinking the live
-    footprint during testing. Passing no settings (dashboard, tests, simulation)
-    returns the true, uncapped population."""
+    """Active agents, ordered by id (creation order).
+
+    The LIMIT below is only a defensive backstop for the window before
+    `reconcile_population` has run: that function keeps the number of `active`
+    agents equal to the cap, so in steady state this limit matches everything
+    and truncates nothing.
+
+    It must NOT be load-bearing. Truncating "lowest id first" is precisely what
+    broke evolution before — children are created with the highest ids, so a
+    live set defined by this limit could never contain a single offspring.
+    Passing no settings (dashboard, tests, simulation) returns the true,
+    uncapped population."""
     q = select(EvoAgent).where(EvoAgent.status == "active").order_by(EvoAgent.id)
     cap = settings.max_active_agents if settings is not None else 0
     if cap and cap > 0:
         q = q.limit(cap)
     return list(session.scalars(q))
+
+
+def reconcile_population(session, settings: EvoSettings) -> dict[str, int]:
+    """Make the number of living agents equal `effective_population_size()`.
+
+    Suspends the excess when the population is over target (only ever after a
+    cap *decrease* — reproduction replaces exactly what retirement removes, so
+    steady state is already at target and this is a no-op). Returns a summary.
+
+    Suspension, not retirement, is deliberate: a capped-out agent did not fail
+    and must not get a retirement record, a graveyard entry, or a final rank —
+    that would fabricate a performance story for a bot whose only problem is
+    that the operator wanted a smaller fleet. `suspended` keeps it out of the
+    live set and out of scoring while leaving its history intact.
+
+    Which ones are kept: the lowest ids, i.e. exactly the agents that were
+    already running under the old limit. That maximizes continuity — the bots
+    holding open positions and carrying real P&L stay live, and nothing that
+    has been trading gets yanked out from under its own book.
+
+    Open positions of a suspended agent are deliberately NOT liquidated:
+    settlement runs off positions, not agents, so they resolve on their own
+    schedule. Force-closing them would realize arbitrary P&L for a bookkeeping
+    change."""
+    target = settings.effective_population_size()
+    living = list(
+        session.scalars(
+            select(EvoAgent).where(EvoAgent.status == "active").order_by(EvoAgent.id)
+        )
+    )
+    if len(living) <= target:
+        return {"target": target, "living": len(living), "suspended": 0}
+
+    excess = living[target:]
+    for agent in excess:
+        agent.status = "suspended"
+        agent.status_reason = (
+            f"suspended: population capped at {target} "
+            f"(EVO_MAX_ACTIVE_AGENTS); not a performance retirement"
+        )
+    session.flush()
+    audit(
+        session,
+        "population_reconciled",
+        target=target,
+        was=len(living),
+        suspended=len(excess),
+        suspended_uuids=[a.agent_uuid for a in excess][:50],
+    )
+    logger.info(
+        "evo population reconciled: %d active -> %d (suspended %d)",
+        len(living), target, len(excess),
+    )
+    return {"target": target, "living": target, "suspended": len(excess)}

@@ -25,13 +25,23 @@ class EvoSettings(BaseSettings):
 
     # --- population / cohort (spec §4) ---
     population_size: int = 30
-    # Ops throttle (NOT a spec parameter): cap how many active agents actually run
-    # live work per cycle — heartbeats (LLM spend), strategy execution (paper
-    # trades), snapshots and interim fitness. 0 = no cap (all active agents run).
-    # Set e.g. EVO_MAX_ACTIVE_AGENTS=3 to shrink the live footprint for end-to-end
-    # testing without retiring anyone; the capped-out agents stay in the cohort,
-    # dormant, and resume the moment the cap is lifted. Deterministic: the lowest-id
-    # (earliest-created) agents run.
+    # Ops control: the REAL size of the living population. 0 = no cap (use
+    # population_size). Set e.g. EVO_MAX_ACTIVE_AGENTS=3 to run a small fleet.
+    #
+    # This was originally a display-order "throttle" that only filtered which
+    # agents ran each cycle, leaving all `population_size` agents active in the
+    # DB. That silently broke evolution: the filter took the LOWEST-id agents,
+    # but reproduction creates children with the HIGHEST ids, so offspring could
+    # never enter the live set. Observed live at cap=3 — all 9 generation-2
+    # children sat at zero heartbeats and zero orders three days after birth,
+    # while the same 3 founders ran forever. Selection was equally meaningless:
+    # finalization ranked all 30 cohort members when only 3 had any recent
+    # activity, so 27 were scored on nothing and the bottom 30% retired were
+    # essentially arbitrary.
+    #
+    # It is now the population target itself: cohorts.reconcile_population()
+    # keeps exactly this many agents `active`, so retirement/reproduction
+    # fractions scale off the real number (cap=3 -> retire 1, keep 2, clone 1).
     max_active_agents: int = 0
     cohort_days: int = 7  # a cohort runs exactly this long from when it is born
     cohort_timezone: str = "America/Chicago"  # display/reporting only
@@ -203,6 +213,16 @@ class EvoSettings(BaseSettings):
     # --- ops safety ---
     enabled: bool = True  # master gate for the evo loop (not a performance kill switch:
     #                       infrastructure pause only, per spec §20)
+
+    def effective_population_size(self) -> int:
+        """How many agents should actually be alive.
+
+        `max_active_agents` (when set) IS the population, not a filter over a
+        larger one — every population-sized decision (how many founders to
+        create, how many compete, how many retire, how many are cloned) must
+        derive from this single number so they can never disagree."""
+        cap = self.max_active_agents
+        return min(self.population_size, cap) if cap and cap > 0 else self.population_size
 
     def local_alias_set(self) -> frozenset[str]:
         """Model aliases routed to the OpenAI-compatible backend (parsed from the

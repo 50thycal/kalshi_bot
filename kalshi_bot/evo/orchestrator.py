@@ -38,6 +38,7 @@ from .cohorts import (
     cohort_is_over,
     ensure_current_cohort,
     reanchor_open_cohort,
+    reconcile_population,
 )
 from .config import EvoSettings, get_evo_settings
 from .constitution import ensure_config_version
@@ -197,6 +198,10 @@ def run_evo_cycle(runtime: EvoRuntime) -> None:
     with session_scope() as session:
         ensure_config_version(session, settings)
         cohort = ensure_current_cohort(session, settings, now=now)
+        # Bring the living population to the configured size BEFORE topping it
+        # up, so a cap decrease sheds the excess instead of bootstrap_founders
+        # and the cap fighting each other every cycle.
+        reconcile_population(session, settings)
         bootstrap_founders(session, settings, cognition=runtime.cognition, md=runtime.md,
                            now=now)
 
