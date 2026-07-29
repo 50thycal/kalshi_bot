@@ -537,7 +537,15 @@ def build_fleet(session, settings: EvoSettings, *, now: datetime | None = None) 
     summary = metrics.fleet_summary(perf_by_uuid, names=names)
 
     live = _live_uuids(session)
+    # "active" here means status=='active' (excludes ELIMINATED/retired and PAUSED/
+    # suspended) — a suspended agent (EVO_MAX_ACTIVE_AGENTS capped it out) isn't
+    # running and shouldn't read as part of "how big is the fleet right now". This
+    # can still exceed `live` for one cycle right after a cap change, before the
+    # worker's next reconcile_population catches up (the dormant-but-not-yet-
+    # suspended window) — that gap is real signal, not noise, so it is kept rather
+    # than collapsed to `live` everywhere.
     active_rows = [r for r in rows if r["status"] not in (STATUS_ELIMINATED, STATUS_PAUSED)]
+    active_perf = [perf_by_uuid[r["uuid"]] for r in active_rows]
     llm_cost = 0.0
     if cohort is not None:
         llm_cost = float(session.scalar(
@@ -552,24 +560,42 @@ def build_fleet(session, settings: EvoSettings, *, now: datetime | None = None) 
         "generation": _cohort_header(cohort, now) if cohort else None,
         "summary": {
             **summary,
+            # "bots" (and the profitable/unprofitable/flat split derived from it) is
+            # the active population, not the cohort's full historical roster. Money
+            # aggregates above (`**summary`: total/realized/unrealized P&L, trades,
+            # fees) are deliberately left scoped to every cohort member, active or
+            # suspended — that history is real and must not disappear from the total.
+            "bots": len(active_rows),
             "active_bots": len(active_rows),
-            "live_bots": sum(1 for r in rows if r["uuid"] in live),
+            "live_bots": len(live),
             "eliminated_bots": sum(1 for r in rows if r["status"] == STATUS_ELIMINATED),
             "trading_bots": sum(1 for r in rows if r["status"] == STATUS_TRADING),
+            "profitable_bots": sum(1 for p in active_perf if p["total_pnl_usd"] > 0),
+            "unprofitable_bots": sum(1 for p in active_perf if p["total_pnl_usd"] < 0),
+            "flat_bots": sum(1 for p in active_perf if p["total_pnl_usd"] == 0),
             "per_bot_capital_usd": settings.starting_capital_usd,
             "llm_cost_usd": round(llm_cost, 2),
             "llm_budget_usd": round(len(active_rows) * settings.weekly_llm_ceiling_usd, 2),
         },
         "throttle": {
-            "live": sum(1 for r in rows if r["uuid"] in live),
-            "total": sum(1 for r in rows if r["status"] != STATUS_ELIMINATED),
+            "live": len(live),
+            "total": len(active_rows),
             "throttled": _effective_cap(session) > 0,
         },
         "health": events_mod.fleet_health(
             session, settings, [r["uuid"] for r in rows if r["uuid"] in live],
             now=now,
         ),
-        "generations": metrics.generation_history(session),
+        # generation_history reports `bots` as the cohort's full historical
+        # membership (correct and immutable for a FINALIZED generation — that really
+        # was its population). The still-OPEN generation is the one row where that
+        # figure is a live, moving thing, so it is overridden here to match the same
+        # active-population count as the summary tile above instead of the stale
+        # pre-cap roster size.
+        "generations": [
+            {**g, "bots": len(active_rows)} if cohort and g["cohort_id"] == cohort.id else g
+            for g in metrics.generation_history(session)
+        ],
         "components": _components(session, cohort=cohort, now=now),
         "requests": _requests(session),
         "announcement_count": events_mod.announcement_page(

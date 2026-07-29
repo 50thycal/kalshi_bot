@@ -177,6 +177,33 @@ def test_bots_are_marked_dormant_when_the_worker_is_throttled():
     assert fleet["health"]["total"] == 3
 
 
+def test_suspended_agents_drop_out_of_bot_counts_not_just_health():
+    """The production case: EVO_MAX_ACTIVE_AGENTS caused reconcile_population to
+    actually SUSPEND the excess (not just leave them dormant-forever). Every
+    headline bot count on the fleet overview must track the 3 that are actually
+    running, not the cohort's full historical roster — while the money totals
+    below stay scoped to everyone who ever traded in this generation."""
+    from kalshi_bot.evo.cohorts import reconcile_population
+
+    session = _session()
+    settings = EvoSettings(_env_file=None, max_active_agents=3)
+    cohort, agents = _seed(session, settings, n=6)
+    reconcile_population(session, settings)
+
+    fleet = dash.build_fleet(session, settings)
+    assert fleet["throttle"] == {"live": 3, "total": 3, "throttled": True}
+    assert fleet["summary"]["bots"] == 3
+    assert fleet["summary"]["live_bots"] == 3
+    assert fleet["summary"]["active_bots"] == 3
+    assert fleet["summary"]["profitable_bots"] + fleet["summary"]["unprofitable_bots"] \
+        + fleet["summary"]["flat_bots"] == 3
+    open_gen = next(g for g in fleet["generations"] if g["cohort_id"] == cohort.id)
+    assert open_gen["bots"] == 3
+    # the leaderboard is untouched — an operator can still filter to see who got
+    # suspended and why, it just no longer inflates the fleet-overview counts
+    assert len(dash.build_bots(session, settings)["bots"]) == 6
+
+
 def test_no_throttle_runs_the_full_population():
     session = _session()
     settings = EvoSettings(_env_file=None)  # max_active_agents=0
