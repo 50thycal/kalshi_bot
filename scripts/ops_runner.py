@@ -77,6 +77,7 @@ ALLOWED_SCRIPTS = (
     "weather_maker_study",
     "weather_maker_fills",
     "kalshi_theta_study",
+    "theta_fill_model",
     "kalshi_favbuy_study",
     "xmarket_wc",
     "xgame_tape_study",
