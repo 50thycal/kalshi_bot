@@ -14,6 +14,18 @@ the one above it; the suggestion list carries over run-to-run. All times CENTRAL
 state, for both the live P&L table and each paper book, the **realized P&L (total $)** AND the
 **per-trade profit (¢/trade)** side by side.*
 
+**[2026-07-29] `theta_fill_model` built and merged (`docs/THETA_FILL_MODEL.md`).** theta uses the
+identical maker-sell convention as mmsell, which paper trading overstates via adverse selection on
+resting fills. theta has never traded live (zero `theta*` rows in `live_orders`), so the script
+falls back to mmsell3's live calibration, clearly labeled BORROWED (cross-market-series, unproven
+transfer). First live run, all theta books at once: **theta4 (n=112) +38.62¢ optimistic → +0.51¢
+realizable at 27.7% coverage** — the same order-of-magnitude mirage that hit mmsell3. The other
+theta books (control/1/2/3) are all under 50% coverage too (theta3 at just 1.5%), and two
+paper-negative books (theta2, theta3) invert to realizable-positive under the borrowed calibration —
+a sign the calibration barely reaches these price cells, not a real result. **Every theta book
+reads "low coverage" — none of this is gate-worthy yet, treat it as a standing caution alongside
+theta4's paper-gate pass, not a verdict.**
+
 ---
 
 ## Snapshot — 2026-07-29 05:45 PM CDT (run #75)
@@ -105,8 +117,13 @@ one more run untouched.
    separately deciding whether all-city `weather_con` (still net negative at −2.35¢/trade) is
    worth continuing at all.
 
-2. **[theta4 gate cleared #74 — still ready to build] n=112 ≥ 80, +38.62¢/trade holding steady,
-   92%+ win.** NEST is unblocked; re-invoke `kalshi-strategy` on it if not already started.
+2. **[theta4 gate cleared #74 — but fill-model caution now attached, see 2026-07-29 note above]
+   n=112 ≥ 80, +38.62¢/trade paper, 92%+ win — collapses to +0.51¢ realizable at only 27.7%
+   coverage under `theta_fill_model`'s borrowed (mmsell3) calibration.** NEST is still unblocked on
+   the paper gate alone; re-invoke `kalshi-strategy` on it if not already started, but do NOT read
+   theta4 as live-ready off this gate — it needs either theta's own live fill data (a small pilot)
+   or improved coverage before the realizable number means anything. See suggestion below on
+   whether coverage can be raised without a live pilot.
 
 3. **[registry drift on the LIVE book — unresolved 1 run later] `docs/BOOK_REGISTRY.md` still
    lists `mmsell10` as `paper`, and `mmsell10_pt` (39 settled / 26 open) still has no row.**
@@ -143,9 +160,25 @@ one more run untouched.
     checking for a single shared ticker before reading any cohort-wide batch move as a
     strategy-wide signal.
 
+11. **[NEW · 2026-07-29 — path to raise theta4's fill-model coverage without a live pilot] Checked
+    whether `crypto_ladder_snapshots` (theta's own orderbook-quote research table, already
+    collected — unlike mmsell, which had to build brand-new capture tables from scratch) could
+    support a genuine per-ticker replay instead of the borrowed mmsell3 calibration. Current state:
+    only 29 of theta4's 112 settled tickers (26%) have ANY snapshot row, averaging ~9 rows/ticker
+    — thin, and it won't retroactively cover trades from before/outside the capture window.
+    Loosening the calibration's trust threshold (`MIN_CELL_FILLS`) is a cheap knob but barely
+    moves the needle (27.7%→~32%) and trades reliability for coverage, not a real fix. The
+    genuine path is building `theta_fill_replay.py` (mirroring `mmsell_fill_replay.py`'s
+    quote-crossing proxy) against the already-collecting `crypto_ladder_snapshots` table — no new
+    collection infrastructure needed, and its coverage grows automatically as theta keeps trading
+    (the table isn't pruned). Not yet built; recommend as the real next step once the operator
+    decides it's worth the build.
+
 *(Changed this run: #1 NEW — weather_concity gate crossed, verdict is RETIRE not promote (replaces
-the old "95% to gate" tracking item). #2 — theta4/NEST restated, one run further confirmed. #3 —
-registry drift restated, still unresolved. #4 — mmsell4 restated with a second run of improvement,
-language firmed up ("real result, not noise"). #5 — mmsell6/mmsell11 restated. #6 — mmsell10
-parity restated with twin side now clearing n≥30. #7 — mmsell7 restated with trend note. #8/#9/#10
-restated unchanged.)*
+the old "95% to gate" tracking item). #2 — theta4/NEST restated with the new fill-model caution
+folded in (2026-07-29 addendum). #3 — registry drift restated, still unresolved. #4 — mmsell4
+restated with a second run of improvement, language firmed up ("real result, not noise"). #5 —
+mmsell6/mmsell11 restated. #6 — mmsell10 parity restated with twin side now clearing n≥30. #7 —
+mmsell7 restated with trend note. #8/#9/#10 restated unchanged. #11 NEW — scoped a coverage-
+improvement path for theta_fill_model: crypto_ladder_snapshots exists already but is thin (26%
+ticker coverage), a real per-ticker replay is buildable but not yet built.)*
