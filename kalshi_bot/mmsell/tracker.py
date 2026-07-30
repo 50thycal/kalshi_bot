@@ -40,6 +40,7 @@ class MmSellCycleSummary:
     capped: int = 0
     skipped_illiquid: int = 0
     skipped_htc: int = 0
+    skipped_vol_gate: int = 0   # anchor-set volatility ENTRY gate rejections
     per_series: dict[str, int] = field(default_factory=dict)
     per_book: dict[str, int] = field(default_factory=dict)
 
@@ -64,6 +65,54 @@ class MmSellTracker:
         s = (series or "").upper()
         return any(s.startswith(p) for p in self.settings.mmsell_skip_series_list)
 
+    @staticmethod
+    def _vol_gate_blocks(session, book: dict, ticker: str) -> bool:
+        """True when the anchor-set volatility ENTRY gate should SKIP this entry: the market's own
+        pre-entry tape has already moved `volv` cents or more over the last `volw` candidate ticks.
+
+        Thesis (docs/MMSELL_ANCHOR_SET.md): a cheap tail that is already moving is one informed
+        flow is repricing, so resting into it is the adversely-selected side — the crypto backtest
+        measured calm pre-entry tape at +2.85/+5.25c (100% win) vs active at -39c.
+
+        Deliberately does NOT fire on thin history (a newly in-band market has no tape yet): those
+        entries are taken exactly as the control takes them, so the gated book differs from
+        mmsell10 ONLY by the entries the gate actually rejected — a clean A/B rather than a book
+        that also silently changed its market selection."""
+        w, v = book.get("volw"), book.get("volv")
+        if not w or v is None:
+            return False
+        try:
+            mids = repo.recent_candidate_mids(session, ticker, int(w))
+        except Exception:  # noqa: BLE001 — a gate read must never break the entry scan
+            logger.exception("mmsell vol gate: candidate history read failed (entering anyway)")
+            return False
+        if len(mids) < 3:
+            return False                      # not enough tape to judge -> behave like the control
+        return (max(mids) - min(mids)) >= float(v)
+
+    @staticmethod
+    def _event_has_both_tails(event: dict, maxyes: float) -> bool:
+        """True when this event carries BOTH a cheap-YES tail (a high strike) and a cheap-NO tail
+        (a low strike), i.e. a strangle is actually available on it.
+
+        Read straight off the nested market payload the scan already holds — no extra API call.
+        This pairing is the whole point: the backtest's +3.30c/pair came from events where both
+        tails were simultaneously cheap, which is a LOW-VOLATILITY selection. Entering one leg
+        alone would be an ordinary mmsell trade wearing a strangle label."""
+        cheap_yes = cheap_no = False
+        for mk in event.get("markets") or []:
+            yb, ya = mk.get("yes_bid"), mk.get("yes_ask")
+            if yb is None or ya is None:
+                continue
+            mid = (float(yb) + float(ya)) / 2.0
+            if 0 < mid <= maxyes:
+                cheap_yes = True              # high strike: YES is the cheap tail
+            elif 0 < (100.0 - mid) <= maxyes:
+                cheap_no = True               # low strike: NO is the cheap tail
+            if cheap_yes and cheap_no:
+                return True
+        return False
+
     def _books(self) -> list[dict]:
         """Control book (base knobs, tag 'mmsell' — NEVER reparameterized), then the configured
         revision books, then any live/paper twin books. All share the scan/orderbook; only the
@@ -79,6 +128,8 @@ class MmSellTracker:
             "skip": [],  # the control never filters by series (global mmsell_skip_series applies)
             "only": [],
             "maxyes": None,  # the control has no entry-price ceiling
+            # The control runs no anchor-set mechanic: no stop, no vol gate, no strangle leg.
+            "stopl": None, "stopk": 2, "volw": None, "volv": None, "strangle": False,
         }
         books = [control, *s.mmsell_variant_list]
         return [*books, *self._twin_books(books)]
@@ -236,15 +287,32 @@ class MmSellTracker:
                         if recorder is not None:
                             recorder.discard(ticker)  # no book could act: nothing to compare
                         break
+                    # A strangle book also admits the MIRROR band (yes trading near 100, where the
+                    # cheap tail is NO), and only when this event carries both tails — see
+                    # _event_has_both_tails. Every other book sees the ordinary cheap-YES band only.
+                    mirror_leg = False
                     if not (book["lo"] <= metrics.midpoint <= book["hi"]):
-                        continue
+                        if not (book.get("strangle")
+                                and (100.0 - book["hi"]) <= metrics.midpoint
+                                <= (100.0 - book["lo"])):
+                            continue
+                        mirror_leg = True
+                    if book.get("strangle"):
+                        cap_y = book.get("maxyes") or book["hi"]
+                        if not self._event_has_both_tails(event, float(cap_y)):
+                            continue
                     # Entry-price ceiling: the band gates the MIDPOINT, but P&L is driven by the
                     # actual sell price (yes-ask = 100 - no-bid), which is always >= the midpoint.
                     # maxyes caps that directly — the live decomposition found the edge lives only
                     # in the cheapest longshots (yes <=7c +2.3c; 8-11c net negative).
                     maxyes = book.get("maxyes")
-                    if maxyes is not None and (100 - metrics.best_no_bid) > maxyes:
-                        continue
+                    if maxyes is not None:
+                        # Cheap side's actual entry price: the YES tail costs (100 - no_bid); the
+                        # mirror NO tail costs (100 - yes_bid). Cap whichever leg this is.
+                        cheap_px = ((100 - metrics.best_yes_bid) if mirror_leg
+                                    else (100 - metrics.best_no_bid))
+                        if metrics.best_yes_bid is None or cheap_px > maxyes:
+                            continue
                     if tag == self.STRATEGY:
                         summ.in_band += 1
                         # Candidate capture: tape one orderbook snapshot per in-band candidate
@@ -304,9 +372,19 @@ class MmSellTracker:
                         summ.per_book[tag] = summ.per_book.get(tag, 0) + 1
                         continue
 
-                    # maker sells yes at the yes-ask == buys NO at the no-bid (100 - yes_ask)
-                    price = metrics.best_no_bid
-                    if not (0 < price < 100):
+                    # Volatility ENTRY gate (anchor set): skip if this market's pre-entry tape has
+                    # already moved. No-op for every book without volw/volv.
+                    if self._vol_gate_blocks(session, book, ticker):
+                        summ.skipped_vol_gate += 1
+                        continue
+
+                    # Ordinary leg: the maker sells YES at the yes-ask == buys NO at the no-bid.
+                    # Mirror leg (strangle only): sells the cheap NO tail == buys YES at the
+                    # yes-bid. Both are resting maker orders on the cheap side; the paper engine
+                    # already settles a side='yes' position correctly.
+                    side = "yes" if mirror_leg else "no"
+                    price = metrics.best_yes_bid if mirror_leg else metrics.best_no_bid
+                    if price is None or not (0 < price < 100):
                         summ.skipped_illiquid += 1
                         if recorder is not None:
                             recorder.discard(ticker)
@@ -316,16 +394,17 @@ class MmSellTracker:
                     sub = market.get("yes_sub_title") or market.get("subtitle") or ""
                     # fill_assumption is String(64); the repo layer also clamps, but keep the
                     # subtitle short and the prices first so truncation only costs subtitle chars.
+                    sold, at = ("no", 100 - price) if mirror_leg else ("yes", 100 - price)
                     assumption = (
-                        f"[{tag}] sell yes '{sub[:24]}' @ {100 - price}c "
-                        f"(no@{price}c mid{metrics.midpoint:.0f}c)"
+                        f"[{tag}] sell {sold} '{sub[:24]}' @ {at}c "
+                        f"({side}@{price}c mid{metrics.midpoint:.0f}c)"
                     )[:64]
                     repo.create_paper_trade(
                         session,
                         signal_id=None,
                         ticker=ticker,
                         strategy=tag,
-                        side="no",
+                        side=side,
                         action="buy",
                         assumed_price=price,
                         quantity=qty,
@@ -335,7 +414,7 @@ class MmSellTracker:
                         edge=0.0,
                     )
                     repo.open_paper_position_for_trade(
-                        session, ticker=ticker, strategy=tag, side="no",
+                        session, ticker=ticker, strategy=tag, side=side,
                         quantity=qty, avg_price=price,
                     )
                     self._note(recorder, ticker, tag, twin_codes.OPENED, price, qty)

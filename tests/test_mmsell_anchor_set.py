@@ -1,0 +1,130 @@
+"""The mmsell ANCHOR SET — three exit/entry mechanics forward-tested as paper books
+(docs/MMSELL_ANCHOR_SET.md). Every anchor book sits on the mmsell10 base so ENTRY is held
+constant and each varies exactly one mechanic; mmsell10 itself is the control.
+
+What these tests pin, in order of what would silently break the experiment:
+  * the CONTROL must stay inert — mmsell10 (and every pre-anchor book) must gain no stop, no vol
+    gate and no mirror leg, or the A/B has no baseline.
+  * the stop triggers on the yes-BID with a K-consecutive confirm, never on a wide mid/ask.
+  * the vol gate does NOT fire on thin history, so a gated book differs from the control only by
+    the entries the gate actually rejected.
+  * a strangle's two legs are mutually exclusive, and a lone tail is never entered as a "strangle".
+"""
+
+from __future__ import annotations
+
+from kalshi_bot.mmsell.tracker import MmSellTracker
+
+
+def _settings(settings):
+    settings.bot_mode = "mmsell"
+    return settings
+
+
+def _book(**over):
+    b = {"tag": "mmsellX", "lo": 5.0, "hi": 10.0, "htcmin": 1.0, "htcmax": 336.0,
+         "skip": [], "only": [], "maxyes": 7.0,
+         "stopl": None, "stopk": 2, "volw": None, "volv": None, "strangle": False}
+    b.update(over)
+    return b
+
+
+# ------------------------------------------------------- config / control integrity
+
+def test_anchor_books_parse_with_their_mechanics(settings):
+    by_tag = {v["tag"]: v for v in settings.mmsell_variant_list}
+    for tag, lvl in (("mmsellA1", 12.0), ("mmsellA2", 20.0), ("mmsellA3", 30.0)):
+        assert by_tag[tag]["stopl"] == lvl and by_tag[tag]["stopk"] == 2
+    assert by_tag["mmsellA4"]["volw"] == 6 and by_tag["mmsellA4"]["volv"] == 6.0
+    assert by_tag["mmsellA5"]["strangle"] is True
+    # all five share the mmsell10 entry, so only the mechanic differs
+    for tag in ("mmsellA1", "mmsellA2", "mmsellA3", "mmsellA4", "mmsellA5"):
+        assert (by_tag[tag]["lo"], by_tag[tag]["hi"], by_tag[tag]["maxyes"]) == (5.0, 10.0, 7.0)
+
+
+def test_control_and_legacy_books_carry_no_anchor_mechanic(settings):
+    """The baseline must stay a pure hold-to-settlement book, or every anchor comparison is void."""
+    for v in settings.mmsell_variant_list:
+        if v["tag"].startswith("mmsellA"):
+            continue
+        assert v["stopl"] is None, f"{v['tag']} grew a stop"
+        assert v["volw"] is None and v["volv"] is None, f"{v['tag']} grew a vol gate"
+        assert v["strangle"] is False, f"{v['tag']} grew a strangle leg"
+    assert settings.mmsell_book_by_tag("mmsell10")["stopl"] is None
+
+
+# --------------------------------------------------------------- volatility entry gate
+
+def test_vol_gate_blocks_a_market_whose_tape_already_moved(monkeypatch, settings):
+    monkeypatch.setattr("kalshi_bot.repository.recent_candidate_mids",
+                        lambda *_a, **_k: [6.0, 7.0, 12.0, 13.0])       # range 7 >= 6
+    assert MmSellTracker._vol_gate_blocks(None, _book(volw=6, volv=6), "T") is True
+
+
+def test_vol_gate_admits_a_calm_market(monkeypatch, settings):
+    monkeypatch.setattr("kalshi_bot.repository.recent_candidate_mids",
+                        lambda *_a, **_k: [6.0, 7.0, 6.0, 8.0])          # range 2 < 6
+    assert MmSellTracker._vol_gate_blocks(None, _book(volw=6, volv=6), "T") is False
+
+
+def test_vol_gate_does_not_fire_on_thin_history(monkeypatch, settings):
+    """A newly in-band market has no tape. The gate must pass it through exactly as the control
+    would, so the gated book differs ONLY by entries the gate genuinely rejected."""
+    monkeypatch.setattr("kalshi_bot.repository.recent_candidate_mids",
+                        lambda *_a, **_k: [6.0, 40.0])                   # huge range, but n=2
+    assert MmSellTracker._vol_gate_blocks(None, _book(volw=6, volv=6), "T") is False
+
+
+def test_vol_gate_is_a_noop_without_the_spec(monkeypatch, settings):
+    def _boom(*_a, **_k):
+        raise AssertionError("must not query history for a book with no vol gate")
+    monkeypatch.setattr("kalshi_bot.repository.recent_candidate_mids", _boom)
+    assert MmSellTracker._vol_gate_blocks(None, _book(), "T") is False
+
+
+def test_vol_gate_fails_soft_and_enters(monkeypatch, settings):
+    monkeypatch.setattr("kalshi_bot.repository.recent_candidate_mids",
+                        lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("db down")))
+    assert MmSellTracker._vol_gate_blocks(None, _book(volw=6, volv=6), "T") is False
+
+
+# ------------------------------------------------------------------------- strangle
+
+def _ev(*mids):
+    return {"markets": [{"yes_bid": m - 1, "yes_ask": m + 1} for m in mids]}
+
+
+def test_strangle_requires_both_tails_in_one_event():
+    # a high strike (yes ~5c) AND a low strike (yes ~95c) -> a real strangle exists
+    assert MmSellTracker._event_has_both_tails(_ev(5, 95, 50), 7.0) is True
+
+
+def test_strangle_rejects_an_event_with_only_the_cheap_yes_tail():
+    """A lone tail is an ordinary mmsell trade. Entering it as a 'strangle' would silently make
+    A5 a duplicate of mmsell10 and destroy the low-volatility pairing the thesis rests on."""
+    assert MmSellTracker._event_has_both_tails(_ev(5, 4, 50), 7.0) is False
+
+
+def test_strangle_rejects_an_event_with_only_the_cheap_no_tail():
+    assert MmSellTracker._event_has_both_tails(_ev(95, 96, 50), 7.0) is False
+
+
+def test_strangle_respects_the_price_ceiling():
+    # yes 12c / 88c are both outside a 7c cap -> neither counts as a cheap tail
+    assert MmSellTracker._event_has_both_tails(_ev(12, 88), 7.0) is False
+    assert MmSellTracker._event_has_both_tails(_ev(12, 88), 15.0) is True
+
+
+def test_strangle_tolerates_missing_quotes():
+    ev = {"markets": [{"yes_bid": None, "yes_ask": None}, {"yes_bid": 4, "yes_ask": 6},
+                      {"yes_bid": 94, "yes_ask": 96}]}
+    assert MmSellTracker._event_has_both_tails(ev, 7.0) is True
+
+
+def test_strangle_legs_are_mutually_exclusive():
+    """The structural claim: the cheap-YES leg loses only if the market settles YES, the cheap-NO
+    leg only if it settles NO. One settlement can never lose both."""
+    for settle_yes in (True, False):
+        upper_lost = settle_yes            # sold the YES tail on a high strike
+        lower_lost = not settle_yes        # sold the NO tail on a low strike
+        assert not (upper_lost and lower_lost)

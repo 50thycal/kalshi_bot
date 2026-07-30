@@ -308,6 +308,38 @@ class PaperTradingEngine:
         self.summary.closed_settled += 1
         self.summary.realized_pnl += pnl
 
+    def _anchor_stop_hit(self, session, trade, metrics: MarketMetrics) -> bool:
+        """True when an anchor-set book's CONFIRMED catastrophic stop has triggered on this held
+        position: the yes-BID has reached the book's level for K consecutive management cycles.
+
+        Only books carrying a `stopl` spec have a stop at all (docs/MMSELL_ANCHOR_SET.md); every
+        other book — including the mmsell10 control these are measured against — is untouched and
+        still holds to settlement. The trigger is the BID rather than the mid/ask deliberately: at
+        these prices thin books quote wide, and the crypto backtest measured a mid-triggered K=1
+        stop exiting ~100% of positions on quotes with no real buyer behind them.
+
+        Confirmation reads the taped history (mmsell_position_ticks), which the caller has already
+        written this cycle, so the last K ticks ARE the last K cycles. Fail-soft: any error leaves
+        the position held, which is the pre-anchor behaviour."""
+        strat = trade.strategy or ""
+        if not strat.startswith("mmsell") or trade.side != "no":
+            return False
+        book = self.settings.mmsell_book_by_tag(strat)
+        if not book or book.get("stopl") is None:
+            return False
+        level = float(book["stopl"])
+        k = max(1, int(book.get("stopk") or 2))
+        if metrics.best_yes_bid is None or metrics.best_yes_bid < level:
+            return False          # not at the level right now -> no confirm possible
+        if k == 1:
+            return True
+        try:
+            recent = repo.recent_position_yes_bids(session, trade.market_ticker, k)
+        except Exception:  # noqa: BLE001 — a diagnostic read must never block position management
+            logger.exception("anchor stop: tick history read failed (holding position)")
+            return False
+        return len(recent) >= k and all(b >= level for b in recent[-k:])
+
     def _mark_or_exit(self, session, trade, metrics: MarketMetrics) -> None:
         s = self.settings
         bid = _exit_bid(metrics, trade.side)
@@ -336,6 +368,8 @@ class PaperTradingEngine:
         exit_status: str | None = None
         if weather_hold:
             exit_status = None
+        elif self._anchor_stop_hit(session, trade, metrics):
+            exit_status, counter = "closed_sl", "closed_sl"
         elif s.paper_take_profit_cents is not None and gain_cents >= s.paper_take_profit_cents:
             exit_status, counter = "closed_tp", "closed_tp"
         elif s.paper_stop_loss_cents is not None and gain_cents <= -s.paper_stop_loss_cents:

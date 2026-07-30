@@ -186,7 +186,27 @@ class Settings(BaseSettings):
         "mmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;"
         "mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;"
         "mmsell10:lo=5,hi=10,maxyes=7;"
-        "mmsell11:lo=5,hi=10,htcmin=6"
+        "mmsell11:lo=5,hi=10,htcmin=6;"
+        # --- ANCHOR SET (2026-07-30, docs/MMSELL_ANCHOR_SET.md) -------------------------
+        # Every anchor book uses the mmsell10 base (lo=5,hi=10,maxyes=7) — the only
+        # REALIZABLE EDGE config — so ENTRY is held constant and each book varies exactly one
+        # MECHANIC. That makes mmsell10 itself the control: any anchor book's difference from
+        # it is attributable to its mechanic alone.
+        #   A1/A2/A3 = executing confirmed stop at yes-BID >= 12 / 20 / 30c for 2 cycles. The
+        #     tight-vs-loose question the crypto backtest answered only IN-SAMPLE over a grid
+        #     (docs/MMSELL_CRYPTO_STUDY.md); these are the pre-registered forward test, so the
+        #     level is fixed per book instead of chosen after the fact.
+        #   A4 = volatility ENTRY gate: skip when the pre-entry candidate tape has already moved
+        #     >=6c over the last 6 ticks (backtest: calm entries +2.85/+5.25c at 100% win,
+        #     active -39c). Fires only when history exists, so A4-vs-mmsell10 stays a clean A/B.
+        #   A5 = short strangle: sell BOTH mutually-exclusive tails of one event (cheap YES on a
+        #     high strike + cheap NO on a low strike), entered only when the event actually has
+        #     both — that pairing IS the low-vol selection the backtest's +3.30c/pair came from.
+        "mmsellA1:lo=5,hi=10,maxyes=7,stopl=12,stopk=2;"
+        "mmsellA2:lo=5,hi=10,maxyes=7,stopl=20,stopk=2;"
+        "mmsellA3:lo=5,hi=10,maxyes=7,stopl=30,stopk=2;"
+        "mmsellA4:lo=5,hi=10,maxyes=7,volw=6,volv=6;"
+        "mmsellA5:lo=5,hi=10,maxyes=7,strangle=1"
     )
     # --- mmsell LIVE entry (maker NO-buy; inert until LIVE_STRATEGIES lists a mmsell tag) ---
     # The mmsell books rest a BUY-NO limit at the no-bid (== sell yes at the ask) and HOLD to
@@ -934,6 +954,12 @@ class Settings(BaseSettings):
                 "skip": [],   # series-substring blocklist (case-insensitive; '+'-joined)
                 "only": [],   # series-substring allowlist (empty = admit all)
                 "maxyes": None,  # entry-price ceiling: cap the actual yes sell price (cents)
+                # --- anchor-set mechanics (docs/MMSELL_ANCHOR_SET.md); None = disabled ---
+                "stopl": None,   # EXECUTING catastrophic stop: exit when the yes-BID reaches this
+                "stopk": 2,      # ...for this many CONSECUTIVE management cycles (confirm)
+                "volw": None,    # vol ENTRY gate: look back this many candidate ticks
+                "volv": None,    # ...skip the entry if their yes-mid range reaches this many cents
+                "strangle": False,  # also sell the mirror (cheap-NO) tail, paired within an event
             }
             ok = True
             for kv in body.split(","):
@@ -943,8 +969,12 @@ class Settings(BaseSettings):
                 key, _, val = kv.partition("=")
                 key = key.strip().lower()
                 try:
-                    if key in ("lo", "hi", "htcmin", "htcmax", "maxyes"):
+                    if key in ("lo", "hi", "htcmin", "htcmax", "maxyes", "stopl", "volv"):
                         v[key] = float(val)
+                    elif key in ("stopk", "volw"):
+                        v[key] = int(val)
+                    elif key == "strangle":
+                        v[key] = str(val).strip() not in ("", "0", "false", "False")
                     elif key in ("skip", "only"):
                         # Series filter: '+'-joined substrings (can't use , ; : which the
                         # variant/spec grammar already claims). Matched against the series prefix.
@@ -956,6 +986,17 @@ class Settings(BaseSettings):
             if ok and v["lo"] < v["hi"] and v["htcmin"] < v["htcmax"]:
                 out.append(v)
         return out
+
+    def mmsell_book_by_tag(self, tag: str | None) -> dict | None:
+        """The parsed variant spec for one book tag, or None. Lets the shared paper engine look up
+        a held position's own exit mechanic (e.g. the anchor set's executing stop) from just the
+        `paper_trades.strategy` value, without the tracker having to hand it down."""
+        if not tag:
+            return None
+        for v in self.mmsell_variant_list:
+            if v["tag"] == tag:
+                return v
+        return None
 
     @property
     def mmsell_closeout_strategy_list(self) -> list[str]:

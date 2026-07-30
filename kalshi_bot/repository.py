@@ -774,6 +774,40 @@ def insert_mmsell_candidate_tick(
     ))
 
 
+def recent_candidate_mids(session, ticker: str, limit: int) -> list[float]:
+    """The last `limit` yes-mid values taped for this in-band CANDIDATE, oldest-first.
+
+    Feeds the anchor set's volatility ENTRY gate (docs/MMSELL_ANCHOR_SET.md): the range over these
+    is 'how much has this market already moved before we rest an order on it'. Returns fewer than
+    `limit` (possibly none) when the ticker is newly in-band — the caller decides what to do with
+    thin history, and the gate deliberately does NOT fire on it so the A/B stays clean."""
+    rows = session.scalars(
+        select(m.MmSellCandidateTick.mid)
+        .where(m.MmSellCandidateTick.market_ticker == ticker,
+               m.MmSellCandidateTick.mid.isnot(None))
+        .order_by(m.MmSellCandidateTick.captured_at.desc())
+        .limit(max(1, limit))
+    ).all()
+    return [float(x) for x in reversed(rows)]
+
+
+def recent_position_yes_bids(session, ticker: str, limit: int) -> list[float]:
+    """The last `limit` yes-BID values taped for this HELD position, oldest-first.
+
+    Feeds the anchor set's executing catastrophic stop. The trigger is the BID, not the mid or ask:
+    at these prices thin books quote wide, and a mid- or ask-triggered stop fires on quotes with no
+    real buyer behind them (docs/MMSELL_CRYPTO_STUDY.md measured a mid-triggered K=1 stop exiting
+    ~100% of positions — a pure artifact). A rising bid is real buying interest at that level."""
+    rows = session.scalars(
+        select(m.MmSellPositionTick.yes_bid)
+        .where(m.MmSellPositionTick.market_ticker == ticker,
+               m.MmSellPositionTick.yes_bid.isnot(None))
+        .order_by(m.MmSellPositionTick.captured_at.desc())
+        .limit(max(1, limit))
+    ).all()
+    return [float(x) for x in reversed(rows)]
+
+
 # --- live/paper twin harness (docs/LIVE_PAPER_TWIN.md) ---
 
 

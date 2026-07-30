@@ -121,6 +121,13 @@ To run a request:
      win%, %exit and the **Δ vs hold** per rule. Gate on **Δp5 (tail) up AND Δmean ≥ −0.3¢** at
      n≥100 replayable — see `docs/MMSELL_EXIT_STUDY.md`. Coverage grows after deploy (a position
      must be born + settle inside the capture window); empty early output is a data-maturity wait.
+
+     The **ANCHOR SET** (`mmsellA1`–`mmsellA5`, `docs/MMSELL_ANCHOR_SET.md`) forward-tests the
+     three mechanics the backtests liked but couldn't power: a confirmed **yes-BID** stop at
+     12/20/30¢ (A1–A3), a volatility **entry** gate (A4), and a two-sided **short strangle** (A5).
+     All five sit on the mmsell10 entry, so **mmsell10 is the control** — read them against it, not
+     in absolute terms. Paper-only; gates are pre-registered in the doc and `docs/BOOK_REGISTRY.md`.
+     They surface in the `mm check 1` skill alongside the other books.
    - **"parity"** / **"live paper parity"** -> `{"type":"script","name":"live_paper_parity"}` — is
      our paper trading system telling the truth about a LIVE book? Every live strategy runs a fresh
      paper **twin** beside it (same start instant, same candidates, the LIVE price/size/cap knobs),
