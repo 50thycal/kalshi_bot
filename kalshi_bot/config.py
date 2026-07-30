@@ -224,6 +224,28 @@ class Settings(BaseSettings):
     #                                              edge IS the spread — so this is generous, NOT the
     #                                              weather risk gate's 5c (which would reject the book).
 
+    # --- mmsell LIVE "hot market" defensive pricing ---
+    # A scheduled-event series (e.g. KXFEDMENTION, which reprices sharply as a Fed speech is
+    # transcribed/scored live) can move fast enough that a normal resting price gets crossed and
+    # Kalshi's post-only enforcement cancels it — confirmed live 2026-07-30: KXFEDMENTION-26JUL-PROJ's
+    # no-bid moved 73c -> 94c in 32 minutes, and the order rested into that same move got canceled
+    # with zero fill. This does NOT exclude any series — it still enters every candidate exactly as
+    # before; a "hot" entry just prices more defensively (see maker_no_price in live/sizing.py).
+    #
+    # "Hot" = the ticker's current no-bid differs from the last candidate tick captured for it
+    # (mmsell_candidate_ticks, already recorded every cycle for every in-band candidate, live or
+    # not) by at least this many cents...
+    mmsell_live_hot_market_move_cents: int = 5
+    # ...within this many minutes back. No qualifying tick at all (the ticker was out of the
+    # trading band for the whole lookback — itself what happened in the KXFEDMENTION case) also
+    # counts as hot, since an absence right when the market is being entered is not evidence of calm.
+    mmsell_live_hot_market_lookback_minutes: int = 30
+    # On a hot entry, price at the no-bid PLUS this offset instead of the normal
+    # mmsell_live_price_offset_cents. Negative (the default) rests BELOW the no-bid — extra
+    # headroom against continued momentum in the same direction — rather than joining/improving
+    # into the spread the way a calm entry does.
+    mmsell_live_hot_market_defensive_offset_cents: int = -3
+
     # --- mmsell LIVE closeout (one-shot, END-OF-STRATEGY only; inert by default) ---
     # mmsell was built hold-to-settlement only (the exit study proved TP/SL hurts) — there was
     # NEVER a path to exit a position early. This is that path, added 2026-07-19 to wind down
@@ -1197,6 +1219,10 @@ class Settings(BaseSettings):
             "mmsell_live_max_open_positions": self.mmsell_live_max_open_positions,
             "mmsell_live_price_offset_cents": self.mmsell_live_price_offset_cents,
             "mmsell_live_max_spread_cents": self.mmsell_live_max_spread_cents,
+            "mmsell_live_hot_market_move_cents": self.mmsell_live_hot_market_move_cents,
+            "mmsell_live_hot_market_lookback_minutes": self.mmsell_live_hot_market_lookback_minutes,
+            "mmsell_live_hot_market_defensive_offset_cents":
+                self.mmsell_live_hot_market_defensive_offset_cents,
             "mmsell_closeout_enabled": self.mmsell_closeout_enabled,
             "mmsell_closeout_strategies": self.mmsell_closeout_strategy_list,
             "mmsell_variants": [f"{v['tag']}:{v['lo']:.0f}-{v['hi']:.0f}"

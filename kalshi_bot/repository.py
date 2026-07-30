@@ -774,6 +774,26 @@ def insert_mmsell_candidate_tick(
     ))
 
 
+def latest_candidate_tick_before(
+    session, ticker: str, *, before: datetime
+) -> m.MmSellCandidateTick | None:
+    """The single most recent mmsell candidate tick for `ticker` captured strictly before `before`
+    — no lower time bound, so a ticker taped an hour ago still returns that tick rather than None.
+
+    Feeds the live "hot market" defensive-pricing check (live/sizing.py's is_hot_entry), which
+    itself decides what an old or missing tick means: `before` here only excludes the current
+    cycle's own just-inserted tick from being compared against itself."""
+    return session.scalar(
+        select(m.MmSellCandidateTick)
+        .where(
+            m.MmSellCandidateTick.market_ticker == ticker,
+            m.MmSellCandidateTick.captured_at < before,
+        )
+        .order_by(m.MmSellCandidateTick.captured_at.desc())
+        .limit(1)
+    )
+
+
 def recent_candidate_mids(session, ticker: str, limit: int) -> list[float]:
     """The last `limit` yes-mid values taped for this in-band CANDIDATE, oldest-first.
 

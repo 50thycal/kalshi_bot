@@ -28,7 +28,7 @@ from ..risk.manager import RiskDecision
 from ..scanner.metrics import _to_count, ask_depth_within, parse_dt, price_to_cents
 from ..weather.cities import CITIES
 from . import exit_rules
-from .sizing import maker_no_price, order_quantity
+from .sizing import is_hot_entry, maker_no_price, order_quantity
 
 logger = logging.getLogger(__name__)
 
@@ -401,10 +401,20 @@ class LiveExecutor:
             self.summary.risk_blocked += 1
             return "gate:exposure"
 
-        # Rest a BUY-NO limit at the no-bid (+offset to improve fill), never paying through the ask.
-        # Price + size come from kalshi_bot/live/sizing.py — the SAME arithmetic the paper twin
-        # uses, so the two can't drift apart and turn the parity read into a bookkeeping artifact.
-        price = maker_no_price(metrics, no_price, s.mmsell_live_price_offset_cents)
+        # Rest a BUY-NO limit at the no-bid (+offset to improve fill), never paying through the ask
+        # — UNLESS this ticker just repriced hard (is_hot_entry), in which case it prices
+        # defensively instead (see maker_no_price). Still enters every candidate; only the price
+        # changes. Price + size come from kalshi_bot/live/sizing.py — the SAME arithmetic the
+        # paper twin uses, so the two can't drift apart and turn the parity read into a
+        # bookkeeping artifact.
+        hot = is_hot_entry(
+            session, ticker, metrics.best_no_bid,
+            move_cents=s.mmsell_live_hot_market_move_cents,
+            lookback_minutes=s.mmsell_live_hot_market_lookback_minutes,
+        )
+        offset = (s.mmsell_live_hot_market_defensive_offset_cents if hot
+                 else s.mmsell_live_price_offset_cents)
+        price = maker_no_price(metrics, no_price, offset, hot=hot)
         if price is None:
             self.summary.skipped_gate += 1
             return "gate:illiquid"
@@ -414,8 +424,11 @@ class LiveExecutor:
             return "gate:size"
 
         # Audit trail: record an (approved) risk event so the live decision is inspectable.
+        # "hot_entry" flags a defensively-priced entry for later analysis — informational only,
+        # never blocks placement.
         repo.insert_risk_event(session, None, ticker, RiskDecision(
-            approved=True, reason_codes=[], max_allowed_quantity=qty, max_allowed_price=price))
+            approved=True, reason_codes=["hot_entry"] if hot else [],
+            max_allowed_quantity=qty, max_allowed_price=price))
 
         # Kalshi V2 order (POST /portfolio/events/orders): mmsell SELLS yes (== buys NO), so
         # side="ask" and price is the YES-side price in DOLLARS = (100 - no_price)/100. count and
