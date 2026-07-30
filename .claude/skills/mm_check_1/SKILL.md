@@ -5,7 +5,8 @@ description: Run one mmsell check — pull the standing per-book realizable P&L 
 
 # mm check 1 — mmsell standing read + exit-study check, with before/after
 
-One-shot status pass over all mmsell books (`mmsell`, `mmsell1`–`mmsell11`): the
+One-shot status pass over all mmsell books (`mmsell`, `mmsell1`–`mmsell11`, and the
+`mmsellA1`–`mmsellA5` anchor set): the
 live-calibrated realizable P&L read (no exit) and the exit-rule study (with exit),
 diffed against the last time this skill ran. Read-only; touches no trading config.
 
@@ -48,6 +49,17 @@ diffed against the last time this skill ran. Read-only; touches no trading confi
   is the one book where a real, durable improvement has held up across repeated
   checks. Don't assume the pattern from the last run still holds; each check should
   speak for its own numbers.
+- **`mmsellA1`–`mmsellA5` are the ANCHOR SET** (`docs/MMSELL_ANCHOR_SET.md`) — paper-only books
+  that each add ONE tail-mitigation mechanic on the `mmsell10` entry (`lo=5,hi=10,maxyes=7`), so
+  **`mmsell10` is their control and every anchor number must be read against it over the same
+  window**, never in absolute terms. A1/A2/A3 = confirmed yes-BID stop at 12/20/30¢ (K=2);
+  A4 = volatility ENTRY gate; A5 = two-sided short strangle. Two things to say correctly when
+  reporting them: (a) A1–A3 take their exit *inside the book*, so the exit study's replay is
+  redundant for them — their stop already happened; report their realized numbers vs mmsell10
+  instead of replaying a stop on top of a stop. (b) A5 accrues slowly (it needs an event with
+  both tails cheap) and its gate is a 95% lower bound on the pair win rate clearing 93.9% at
+  n≥82 pairs — a high raw win% at n=20 means nothing here, which is exactly how the backtest
+  failed. Full pre-registered gates: `docs/MMSELL_ANCHOR_SET.md` and `docs/BOOK_REGISTRY.md`.
 
 ## Procedure
 
