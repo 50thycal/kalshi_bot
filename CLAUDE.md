@@ -131,6 +131,17 @@ To run a request:
      ANOMALIES. Mechanism + traps: `docs/LIVE_PAPER_TWIN.md`; the arm-and-audit procedure is the
      `live-paper-parallel` skill. **Standing policy: no strategy goes live without a twin.**
 
+   - **"mmsell crypto study"** -> `{"type":"script","name":"mmsell_crypto_study"}` — backtests the
+     BTC/ETH cheap-tail sell over **Kalshi's own settled history** (our paper slice is n=38, which
+     can't decide anything): a stop-loss grid, volatility entry+exit gates, and the two-sided
+     short strangle. See `docs/MMSELL_CRYPTO_STUDY.md`. Key results already banked: the
+     bid-triggered stop improves mean AND tail on crypto (continuous-path, unlike sports jumps);
+     the vol EXIT gate is dead; the strangle is intriguing but needs ~82 clean pairs.
+     **Two traps this script documents — read before trusting any stop backtest:** trigger on the
+     yes-**BID** (or require a ≥2-tick confirm), never the raw mid/ask, or thin-book quotes fire
+     ~100% of stops as an artifact; and Kalshi only serves ~1h of candles for these series, so the
+     backtest population is `htc<1h` while mmsell trades `htc>=1h` — different trades.
+
    The individual probes can still be run alone:
    `weather_model_check` grades the ensemble forecast distribution against the
    market's bucket prices on settled events (Brier/log-loss + hypothetical EV)
