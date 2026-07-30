@@ -1207,6 +1207,18 @@ class LiveExecutor:
             ):
                 if qty <= 0:
                     continue
+                # SAFETY: `qty` above is the FULL Kalshi account-level position on this ticker,
+                # not scoped to `prefix` — Kalshi has no notion of our internal book tags. If
+                # another live strategy (e.g. theta4) also holds this exact ticker, closing it
+                # out here would sell THEIR contracts too, mislabeled as an mmsell exit. Skip
+                # rather than guess; a shared ticker needs a human, not an automated closeout.
+                other = repo.other_live_no_strategies_on_ticker(session, ticker, prefix)
+                if other:
+                    logger.error(
+                        "mmsell closeout SKIPPED shared ticker (also held by another live "
+                        "strategy) -- resolve manually", extra={"extra_fields": {
+                            "ticker": ticker, "strategy": prefix, "also_held_by": other}})
+                    continue
                 if repo.live_open_order_exists(session, ticker):
                     continue  # an order is already in flight -- let it resolve before retrying
                 ask = self._current_yes_ask(ticker)
@@ -1294,6 +1306,17 @@ class LiveExecutor:
                 session, prefix
             ):
                 if qty <= 0:
+                    continue
+                # SAFETY: see close_mmsell_positions's identical guard -- `qty` above is the FULL
+                # Kalshi account-level position on this ticker, not scoped to `prefix`. If another
+                # live strategy (e.g. mmsell10) also holds this exact ticker, closing it out here
+                # would sell THEIR contracts too. Skip rather than guess.
+                other = repo.other_live_no_strategies_on_ticker(session, ticker, prefix)
+                if other:
+                    logger.error(
+                        "theta closeout SKIPPED shared ticker (also held by another live "
+                        "strategy) -- resolve manually", extra={"extra_fields": {
+                            "ticker": ticker, "strategy": prefix, "also_held_by": other}})
                     continue
                 if repo.live_open_order_exists(session, ticker):
                     continue  # an order is already in flight -- let it resolve before retrying

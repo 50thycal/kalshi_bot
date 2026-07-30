@@ -174,6 +174,45 @@ def test_closeout_only_matches_listed_strategy_prefix(settings):
     assert n == 0 and client.placed == []  # mmsell3 not in the allowlist -> untouched
 
 
+def test_closeout_skips_ticker_also_held_by_another_live_strategy(settings):
+    """The cross-book safety guard: open_live_no_positions' qty is the FULL Kalshi
+    account-level position on a ticker, not scoped to one book. If theta4 ALSO holds this
+    exact ticker, closing out mmsell3 here must not sell theta4's contracts too."""
+    _closeout_settings(settings)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeCloseoutClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _seed_open_no_position(session, ticker="KXTEAM-26-A", strategy="mmsell3")
+        # a DIFFERENT live book also bought NO on the exact same ticker
+        repo.create_live_order(
+            session, signal_id=None, ticker="KXTEAM-26-A", event_ticker="KXTEAM-26",
+            strategy="theta4", side="no", action="buy", limit_price=79, quantity=2,
+            status="filled", client_order_id="theta4:shared", raw_order_json={})
+        n = ex.close_mmsell_positions(session)
+    assert n == 0 and client.placed == []  # skipped, not closed
+
+
+def test_closeout_still_closes_unshared_tickers_when_another_is_shared(settings):
+    """The shared-ticker skip must not block OTHER, genuinely-unshared tickers in the same run."""
+    _closeout_settings(settings)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeCloseoutClient(yes_ask=10)
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _seed_open_no_position(session, ticker="KXTEAM-26-A", strategy="mmsell3", no_price=90)
+        repo.create_live_order(
+            session, signal_id=None, ticker="KXTEAM-26-A", event_ticker="KXTEAM-26",
+            strategy="theta4", side="no", action="buy", limit_price=79, quantity=2,
+            status="filled", client_order_id="theta4:shared", raw_order_json={})
+        _seed_open_no_position(session, ticker="KXTEAM-26-B", strategy="mmsell3", no_price=90)
+        n = ex.close_mmsell_positions(session)
+    assert n == 1
+    assert client.placed[0]["client_order_id"].startswith("closeout:mmsell3:KXTEAM-26-B:")
+
+
 def test_closeout_one_rejection_does_not_block_others(settings):
     _closeout_settings(settings)
     db.init_engine(settings.database_url)

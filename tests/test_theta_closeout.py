@@ -165,6 +165,27 @@ def test_theta_closeout_only_matches_listed_strategy_prefix(settings):
     assert n == 0 and client.placed == []  # theta4 not in the allowlist -> untouched
 
 
+def test_theta_closeout_skips_ticker_also_held_by_another_live_strategy(settings):
+    """The cross-book safety guard: open_live_no_positions' qty is the FULL Kalshi
+    account-level position on a ticker, not scoped to one book. If mmsell10 ALSO holds this
+    exact ticker, closing out theta4 here must not sell mmsell10's contracts too."""
+    _closeout_settings(settings)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeCloseoutClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _seed_open_no_position(session, ticker="KXBTCD-26JUL0317-T60500", strategy="theta4")
+        # a DIFFERENT live book also bought NO on the exact same ticker
+        repo.create_live_order(
+            session, signal_id=None, ticker="KXBTCD-26JUL0317-T60500",
+            event_ticker="KXBTCD-26JUL0317", strategy="mmsell10", side="no", action="buy",
+            limit_price=90, quantity=1, status="filled", client_order_id="mmsell10:shared",
+            raw_order_json={})
+        n = ex.close_theta_positions(session)
+    assert n == 0 and client.placed == []  # skipped, not closed
+
+
 def test_theta_closeout_one_rejection_does_not_block_others(settings):
     _closeout_settings(settings)
     db.init_engine(settings.database_url)

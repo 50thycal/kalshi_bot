@@ -1410,6 +1410,28 @@ def open_live_no_positions(session, strategy_prefix: str) -> list[tuple]:
     return out
 
 
+def other_live_no_strategies_on_ticker(
+    session, ticker: str, exclude_prefix: str
+) -> list[str]:
+    """Distinct OTHER strategy tags (not matching `exclude_prefix`) that have ever placed a live
+    NO-buy on this ticker.
+
+    Exists because `open_live_no_positions`'s `qty` is the FULL Kalshi account-level position on
+    a ticker — Kalshi has no notion of our internal per-book tags, so if two live books both hold
+    contracts on the same market, one book's closeout would sell the OTHER book's contracts too,
+    labeled as if they were its own. A non-empty result here means the position can't be safely
+    attributed to `exclude_prefix` alone; the caller must skip the ticker rather than close it."""
+    rows = session.scalars(
+        select(m.LiveOrder.strategy).where(
+            m.LiveOrder.market_ticker == ticker,
+            m.LiveOrder.action == "buy", m.LiveOrder.side == "no",
+            m.LiveOrder.strategy.is_not(None),
+            m.LiveOrder.strategy.notlike(f"{exclude_prefix}%"),
+        ).distinct()
+    ).all()
+    return sorted(rows)
+
+
 def bucket_bid_path(session, ticker: str, *, after: datetime | None = None) -> list[float]:
     """The recorded yes-bid path for a bucket since `after` (for live exit evaluation),
     mirroring how the offline exit sweep reconstructs paths from weather_bucket_snapshots."""
