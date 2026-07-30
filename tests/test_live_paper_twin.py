@@ -1,4 +1,6 @@
 """The live/paper parallel-run harness (kalshi_bot/twin) and its first consumer, the mmsell book.
+(theta is a second consumer, with its own fixtures — see tests/test_theta_live_twin.py — since
+the harness itself, tested here, is fully generic over which book uses it.)
 
 The properties that make a twin a one-to-one control — and that a future refactor must not
 silently break:
@@ -445,8 +447,26 @@ def test_report_execution_does_not_double_convert_fill_price(capsys):
     assert "-0.20c" in out           # gap = fill_px(93.2) - twin_px(93.4), a sane small number
 
 
-def test_live_sizing_helpers_are_the_single_source_of_truth(settings):
-    """The twin and the executor must price/size identically; both call these."""
+def test_live_sizing_helpers_are_the_single_source_of_truth():
+    """The twin and the executor must price/size identically; both call these. Args are
+    explicit (not read off settings) so a caller can never silently borrow another book's
+    live knobs — pin the exact call shape both mmsell's executor and its twin use."""
+
+    class _M:
+        best_no_bid = 90
+        best_no_ask = 93
+
+    assert maker_no_price(_M(), None, 5) == 93          # offset capped at the no-ask
+    assert maker_no_price(_M(), 80, 5) == 85            # explicit base + offset
+    assert order_quantity(93, 5.0, 100) == 5            # $5 / 0.93 -> 5 contracts
+    assert order_quantity(93, 5.0, 2) == 2              # hard cap wins
+    assert order_quantity(0, 5.0, 100) == 0
+
+
+def test_mmsell_live_sizing_call_sites_pass_mmsells_own_knobs_unchanged(settings):
+    """Regression pin for the sizing.py signature change: mirror_mmsell_entry and the twin's
+    own pricing must derive the identical price/qty they did before the refactor — a second
+    live book (theta) getting its own knobs must not perturb mmsell10's already-live values."""
     settings.mmsell_live_price_offset_cents = 5
     settings.live_max_order_dollars = 5.0
     settings.max_order_size = 100
@@ -455,12 +475,12 @@ def test_live_sizing_helpers_are_the_single_source_of_truth(settings):
         best_no_bid = 90
         best_no_ask = 93
 
-    assert maker_no_price(settings, _M()) == 93          # offset capped at the no-ask
-    assert maker_no_price(settings, _M(), 80) == 85      # explicit base + offset
-    assert order_quantity(settings, 93) == 5             # $5 / 0.93 -> 5 contracts
+    price = maker_no_price(_M(), None, settings.mmsell_live_price_offset_cents)
+    assert price == 93                                   # offset capped at the no-ask
+    qty = order_quantity(price, settings.live_max_order_dollars, settings.max_order_size)
+    assert qty == 5                                       # $5 / 0.93 -> 5 contracts
     settings.max_order_size = 2
-    assert order_quantity(settings, 93) == 2             # hard cap wins
-    assert order_quantity(settings, 0) == 0
+    assert order_quantity(price, settings.live_max_order_dollars, settings.max_order_size) == 2
 
 
 def test_executor_returns_the_outcome_code_for_the_tape(settings):

@@ -353,11 +353,11 @@ class MmSellTracker:
                                 and metrics.spread > s.mmsell_live_max_spread_cents:
                             self._note(recorder, ticker, tag, twin_codes.SKIP_SPREAD)
                             continue
-                        price = maker_no_price(s, metrics)
+                        price = maker_no_price(metrics, None, s.mmsell_live_price_offset_cents)
                         if price is None:
                             self._note(recorder, ticker, tag, twin_codes.SKIP_ILLIQUID)
                             continue
-                        qty = order_quantity(s, price)
+                        qty = order_quantity(price, s.live_max_order_dollars, s.max_order_size)
                         if qty <= 0:
                             self._note(recorder, ticker, tag, twin_codes.SKIP_SIZE, price)
                             continue
@@ -431,10 +431,13 @@ class MmSellTracker:
                             if recorder is not None:
                                 # Record what live ACTUALLY did (placed, or the specific gate that
                                 # stopped it) so the twin/live gap is attributable, not guessed.
-                                live_px = maker_no_price(s, metrics, price)
+                                live_px = maker_no_price(
+                                    metrics, price, s.mmsell_live_price_offset_cents)
                                 recorder.note_live(
                                     ticker, tag, outcome or twin_codes.LIVE_NOT_ATTEMPTED,
-                                    live_px, order_quantity(s, live_px) if live_px else None)
+                                    live_px,
+                                    order_quantity(live_px, s.live_max_order_dollars,
+                                                   s.max_order_size) if live_px else None)
                         except AuthError:
                             raise
                         except Exception:  # noqa: BLE001 — paper record stays intact

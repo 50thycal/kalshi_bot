@@ -309,6 +309,35 @@ class Settings(BaseSettings):
     # the family. Currently: theta4 (the fat-tail calibration test).
     theta_live_variants: str = "theta4"
 
+    # --- theta LIVE entry (maker NO-buy; inert until LIVE_STRATEGIES lists a theta tag) ---
+    # Same maker convention as mmsell (rest a BUY-NO at the no-bid == sell yes at the ask, hold
+    # to settlement) and the same purpose: theta's paper gate assumes the resting order always
+    # fills, and docs/THETA_FILL_MODEL.md's borrowed-mmsell3-calibration read already flags that
+    # theta is exposed to the same adverse-selection gap that hit mmsell3 live. This live path
+    # exists to replace that borrowed calibration with theta's own ground truth. See
+    # docs/THETA_LIVE_PLAN.md.
+    #
+    # Deliberately its OWN knobs, not a reuse of the mmsell_live_*/live_max_order_dollars /
+    # max_order_size globals: two live books can now run at once, and sharing a dollar/contract
+    # cap would mean resizing one silently resizes the other. theta's own paper clip
+    # (theta_order_size=5) was chosen to amortize the fee ceiling; a shared cap tuned for mmsell
+    # would undercut that. kalshi_bot/live/sizing.py takes these as explicit arguments for
+    # exactly this reason — see its module docstring.
+    theta_live_max_order_dollars: float = 3.0    # per-order dollar cap -> qty = floor(cap / price)
+    theta_live_max_contracts: int = 5            # hard cap, independent of MAX_ORDER_SIZE
+    theta_live_max_open_positions: int = 15      # cap concurrent live theta positions (paper cap 60)
+    theta_live_price_offset_cents: int = 0       # 0 = join the queue at the no-bid, faithful to paper
+    theta_live_max_spread_cents: int = 40        # sanity guard only, matches mmsell's — the maker
+    #                                              edge IS the spread on these cheap tails
+
+    # --- theta LIVE closeout (one-shot, END-OF-STRATEGY only; inert by default) ---
+    # Mirrors mmsell_closeout_* exactly (see that block's comment for the full rationale): a
+    # manual flatten-everything escape hatch for a hold-to-settlement book that otherwise has no
+    # early-exit path. Runs from LiveExecutor.close_theta_positions regardless of LIVE_STRATEGIES.
+    theta_closeout_enabled: bool = False
+    theta_closeout_strategies: str = ""    # comma list of strategy prefixes, e.g. "theta4"
+    theta_closeout_slippage_cents: int = 3  # cross up to yes-ask + this many cents to guarantee the fill
+
     # --- TFAV book (ride-along paper, weather/live cycle) ---
     # The MIRROR of theta on the same recurring hourly crypto ladders: theta SELLS the
     # model-OVERpriced tails, tfav BUYS the model-UNDERpriced FAVORITES. Entry is a TAKER
@@ -1074,6 +1103,10 @@ class Settings(BaseSettings):
         return {t.strip() for t in self.theta_live_variants.split(",") if t.strip()}
 
     @property
+    def theta_closeout_strategy_list(self) -> list[str]:
+        return [s.strip() for s in self.theta_closeout_strategies.split(",") if s.strip()]
+
+    @property
     def weather_con_allow_city_set(self) -> set[str]:
         """City.code allowlist for the weather_concity book (upper-cased)."""
         return {c.strip().upper() for c in self.weather_con_allow_cities.split(",") if c.strip()}
@@ -1176,6 +1209,14 @@ class Settings(BaseSettings):
             "theta_order_size": self.theta_order_size,
             "theta_max_open_positions": self.theta_max_open_positions,
             "theta_variants": [v["tag"] for v in self.theta_variant_list],
+            "theta_live_variants": sorted(self.theta_live_variant_set),
+            "theta_live_max_order_dollars": self.theta_live_max_order_dollars,
+            "theta_live_max_contracts": self.theta_live_max_contracts,
+            "theta_live_max_open_positions": self.theta_live_max_open_positions,
+            "theta_live_price_offset_cents": self.theta_live_price_offset_cents,
+            "theta_live_max_spread_cents": self.theta_live_max_spread_cents,
+            "theta_closeout_enabled": self.theta_closeout_enabled,
+            "theta_closeout_strategies": self.theta_closeout_strategy_list,
             "xgame_enabled": self.xgame_enabled,
             "xgame_series": self.xgame_series_list,
             "xgame_pm_tags": self.xgame_pm_tag_list,

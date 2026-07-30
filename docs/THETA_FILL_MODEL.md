@@ -5,6 +5,12 @@ paper variant) has never traded real money — `live_orders` has zero rows for a
 This doc records why the check is needed, what it reads today with no theta ground truth of its
 own, and what changes once theta gets a live pilot.
 
+**Update 2026-07-30: the live pilot this doc called for now exists (inert).**
+`LiveExecutor.mirror_theta_entry` + a `theta4_pt` live/paper twin were built — see
+`docs/THETA_LIVE_PLAN.md` for the pre-registered sizing/gates. The moment it's armed and theta4
+has live fills, `_load_own_calibration()` below activates automatically and the borrowed-mmsell3
+read in §"First read" is superseded by theta's own ground truth.
+
 ## Why theta needs this at all
 
 `kalshi_bot/theta/tracker.py` uses the identical maker-sell convention as mmsell: "sell YES at the

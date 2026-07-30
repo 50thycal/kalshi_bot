@@ -170,11 +170,16 @@ class TwinHarness:
 
     def open_twin_entry(
         self, session, *, twin_tag: str, ticker: str, side: str, price: int, quantity: int,
-        note: str = "",
+        note: str = "", model_probability: float | None = None, edge: float | None = None,
     ) -> None:
         """Write the twin's paper entry: a trade row plus its open position, sized and priced the
         way the live book would have. Mirrors the paper engine's own bookkeeping so the shared
-        settle/mark path picks it up with no special-casing."""
+        settle/mark path picks it up with no special-casing.
+
+        `model_probability`/`edge` are optional pass-throughs for books (theta) whose own paper
+        entries carry a real model probability/edge, so the twin's record is directly comparable
+        to its parent's, not just to live's fills. mmsell has no model probability of its own and
+        leaves these at the default (None/0.0), matching what its own paper entries store."""
         fee = kalshi_fee(price, quantity, self.settings.paper_fees_enabled)
         assumption = f"[{twin_tag}] {note}"[:64] if note else f"[{twin_tag}] twin of live"[:64]
         repo.create_paper_trade(
@@ -188,8 +193,8 @@ class TwinHarness:
             quantity=quantity,
             fill_assumption=assumption,
             entry_fee=fee,
-            model_probability=None,
-            edge=0.0,
+            model_probability=model_probability,
+            edge=edge if edge is not None else 0.0,
         )
         repo.open_paper_position_for_trade(
             session, ticker=ticker, strategy=twin_tag, side=side,

@@ -140,9 +140,14 @@ def run() -> int:
         if mmsell_paper else None
     )
     # theta rides along the same way (paper): model-anchored tail-selling on the hourly
-    # crypto ladders; the shared weather_engine settles/marks its <1h positions.
+    # crypto ladders; the shared weather_engine settles/marks its <1h positions. In live mode
+    # it also mirrors allowlisted entries into real resting maker NO-buys via the executor,
+    # and runs its own live/paper twin(s) the same way mmsell does.
     theta_paper = weather_like and settings.theta_enabled
-    theta_tracker = ThetaTracker(client, settings) if theta_paper else None
+    theta_tracker = (
+        ThetaTracker(client, settings, live_executor=live_executor, twin_harness=twin_harness)
+        if theta_paper else None
+    )
     # tfav rides along the same way (paper): the MIRROR of theta — buy model-underpriced
     # favorites (taker buy YES) on the same crypto ladders, held to settlement.
     tfav_paper = weather_like and settings.tfav_enabled
@@ -509,6 +514,15 @@ def _wire_mmsell_live(tracker, account_state) -> None:
         tracker._account_state = account_state
 
 
+def _wire_theta_live(tracker, account_state) -> None:
+    """Give the ride-along theta tracker the account state so its live mirror can pass the real
+    balance to the entry gate (live cycle only; no-op if the tracker isn't set). Called
+    unconditionally every live cycle (like _wire_mmsell_live), not just when the throttled
+    _run_theta_book fires — the balance must stay fresh regardless of theta's own cadence."""
+    if tracker is not None:
+        tracker._account_state = account_state
+
+
 def _run_mmsell_book(settings, tracker) -> None:
     """Ride-along mmsell paper book inside the weather/live cycle: throttled entry scan only
     (the shared weather_engine already settles/marks mmsell positions). Never raises into the
@@ -562,6 +576,7 @@ def _run_theta_book(settings, tracker) -> None:
             products_ok=summ.products_ok, markets=summ.markets_seen,
             snapshots=summ.snapshot_rows, in_window=summ.in_window, in_band=summ.in_band,
             model_priced=summ.model_priced, edged=summ.edged, opened=summ.opened,
+            twin_opened=summ.twin_opened,
             already_open=summ.already_open, capped=summ.capped,
             no_model=summ.skipped_no_model, illiquid=summ.skipped_illiquid,
             per_series=summ.per_series, per_book=summ.per_book,
@@ -823,6 +838,7 @@ def _run_live_cycle(
             executor.manage_exits(session)
             executor.run_probe(session)                  # isolated fractional buy/sell probe (off by default)
             executor.close_mmsell_positions(session)      # one-shot end-of-strategy closeout (off by default)
+            executor.close_theta_positions(session)       # one-shot end-of-strategy closeout (off by default)
             engine.manage_open_positions(session)       # paper settle/mark (shadow record)
             summary = tracker.run_once(session)         # mirrors entries for allowlisted books
             repo.finish_bot_run(
@@ -850,6 +866,7 @@ def _run_live_cycle(
             logger.exception("weather backfill cycle failed")
     _run_validation_backfill(validation_backfill)
     _wire_mmsell_live(mmsell_tracker, account_state)  # live-only: pass real balance to the mirror
+    _wire_theta_live(theta_tracker, account_state)    # live-only: pass real balance to the mirror
     _run_mmsell_book(settings, mmsell_tracker)
     _run_theta_book(settings, theta_tracker)
     _run_tfav_book(settings, tfav_tracker)
