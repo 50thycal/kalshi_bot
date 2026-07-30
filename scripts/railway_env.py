@@ -50,6 +50,13 @@ ALLOWED_VARS = frozenset({
     # armed, capped and re-tuned from the ops channel without a code deploy.
     "MMSELL_LIVE_MAX_OPEN_POSITIONS", "MMSELL_LIVE_PRICE_OFFSET_CENTS",
     "MMSELL_LIVE_MAX_SPREAD_CENTS",
+    # theta live maker entry — its OWN knobs (deliberately not shared with mmsell's above; see
+    # docs/THETA_LIVE_PLAN.md), same rationale as the mmsell trio. Closeout knobs
+    # (THETA_CLOSEOUT_*) are intentionally NOT here, mirroring mmsell's own closeout knobs,
+    # which are also absent from this allowlist — that's a deliberate UI-only safety choice for
+    # both books, not an oversight.
+    "THETA_LIVE_MAX_OPEN_POSITIONS", "THETA_LIVE_PRICE_OFFSET_CENTS",
+    "THETA_LIVE_MAX_SPREAD_CENTS", "THETA_LIVE_MAX_ORDER_DOLLARS", "THETA_LIVE_MAX_CONTRACTS",
     # Live/paper parallel twin books (docs/LIVE_PAPER_TWIN.md). Standing policy is one twin per
     # live strategy, auto-derived, so these normally stay at defaults; they are readable/settable
     # so a twin can be named explicitly or its bookkeeping bounded on a large live book.

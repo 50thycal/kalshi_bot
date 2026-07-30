@@ -15,8 +15,22 @@ from kalshi_bot.theta.tracker import ThetaTracker
 NOW = int(time.time()) // 60 * 60
 
 
-def _flat_closes(n_minutes: int, price: float = 60000.0, end: int = NOW) -> dict[int, float]:
-    """n_minutes of constant 1-min closes ending at `end` (exclusive of end)."""
+def _flat_closes(
+    n_minutes: int, price: float = 60000.0, end: int | None = None
+) -> dict[int, float]:
+    """n_minutes of constant 1-min closes ending at `end` (exclusive of end).
+
+    `end` defaults to "right now" computed AT CALL TIME, not at module-import time — a caller
+    that needs a fixed, reproducible anchor (paired with its own `model.spot_at(NOW)` assertions)
+    passes `end=NOW` explicitly. Callers that just want fresh-enough data for a live `ThetaTracker`
+    run (whose own `now_unix` is real wall-clock time at whenever the test actually executes) must
+    NOT anchor to the frozen module-level `NOW`: `SpotModel.spot_at` only tolerates a 6-minute gap,
+    and a slow test suite can easily put minutes between module import and this test's execution,
+    silently starving the tracker's model and turning `opened` assertions into flaky failures on a
+    full-suite run (this exact bug — see the same pattern below, now fixed, in tracker-facing
+    callers)."""
+    if end is None:
+        end = int(time.time()) // 60 * 60
     return {end - i * 60: price for i in range(1, n_minutes + 1)}
 
 
@@ -31,7 +45,7 @@ def _trending_closes(n_minutes: int, per_min: float, price: float = 60000.0) -> 
 
 # ---------------------------------------------------------------- SpotModel
 def test_spot_model_extremes_on_flat_series():
-    model = SpotModel(_flat_closes(900), trail_days=1.0)
+    model = SpotModel(_flat_closes(900, end=NOW), trail_days=1.0)
     spot = model.spot_at(NOW)
     assert spot == 60000.0
     # flat series: no 30-min return ever exceeds 0 -> P(greater, strike above spot) = 0
@@ -43,9 +57,9 @@ def test_spot_model_extremes_on_flat_series():
 
 
 def test_spot_model_gates():
-    model = SpotModel(_flat_closes(100), trail_days=1.0)  # < MIN_SAMPLES
+    model = SpotModel(_flat_closes(100, end=NOW), trail_days=1.0)  # < MIN_SAMPLES
     assert model.p_yes(NOW, 30, "greater", 60500.0, None) is None
-    model = SpotModel(_flat_closes(900), trail_days=1.0)
+    model = SpotModel(_flat_closes(900, end=NOW), trail_days=1.0)
     assert model.p_yes(NOW, 0, "greater", 60500.0, None) is None      # no time left
     assert model.p_yes(NOW, 30, "between", None, None) is None        # unparseable strike
     empty = SpotModel({}, trail_days=1.0)

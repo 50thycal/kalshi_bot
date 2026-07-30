@@ -9,10 +9,16 @@ from kalshi_bot import db
 from kalshi_bot import models as m
 from kalshi_bot.tfav.tracker import TfavTracker
 
-NOW = int(time.time()) // 60 * 60
 
-
-def _flat_closes(n_minutes: int, price: float = 60000.0, end: int = NOW) -> dict[int, float]:
+def _flat_closes(
+    n_minutes: int, price: float = 60000.0, end: int | None = None
+) -> dict[int, float]:
+    """`end` defaults to "right now" computed AT CALL TIME, not at module-import time — a slow
+    full-suite run can put minutes between import and this test's actual execution, and
+    SpotModel.spot_at only tolerates a 6-minute gap, so a frozen default silently starves the
+    model and turns `opened` assertions into flaky failures that only show up on a full run."""
+    if end is None:
+        end = int(time.time()) // 60 * 60
     return {end - i * 60: price for i in range(1, n_minutes + 1)}
 
 

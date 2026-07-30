@@ -404,11 +404,11 @@ class LiveExecutor:
         # Rest a BUY-NO limit at the no-bid (+offset to improve fill), never paying through the ask.
         # Price + size come from kalshi_bot/live/sizing.py — the SAME arithmetic the paper twin
         # uses, so the two can't drift apart and turn the parity read into a bookkeeping artifact.
-        price = maker_no_price(s, metrics, no_price)
+        price = maker_no_price(metrics, no_price, s.mmsell_live_price_offset_cents)
         if price is None:
             self.summary.skipped_gate += 1
             return "gate:illiquid"
-        qty = order_quantity(s, price)
+        qty = order_quantity(price, s.live_max_order_dollars, s.max_order_size)
         if qty <= 0:
             self.summary.skipped_gate += 1
             return "gate:size"
@@ -479,6 +479,125 @@ class LiveExecutor:
         repo.update_live_order_status(session, row, status="resting", kalshi_order_id=koid, raw=resp)
         self.summary.placed += 1
         logger.info("mmsell live order placed (resting maker no-buy)", extra={"extra_fields": {
+            "ticker": ticker, "strategy": strategy, "no_price": price, "sell_yes_price": yes_price,
+            "count": qty, "coid": client_order_id, "kalshi_order_id": koid}})
+        return "placed"
+
+    def mirror_theta_entry(
+        self, session, *, strategy: str, event_ticker: str | None, ticker: str, metrics,
+        no_price: int | None = None, account_state=None,
+    ) -> str:
+        """Mirror one allowlisted theta paper entry into a real resting MAKER order: BUY NO at
+        the no-bid (== sell yes at the ask), held to settlement. Mechanically identical to
+        `mirror_mmsell_entry` (same maker convention, same V2 order shape) — this exists as a
+        SEPARATE method, not a shared call, because it reads theta's OWN live knobs
+        (`theta_live_*`) rather than mmsell's: two live books can run at once now, and sharing a
+        dollar/contract cap or an open-position/spread gate would mean resizing one silently
+        resizes or gates the other. See docs/THETA_LIVE_PLAN.md and docs/THETA_FILL_MODEL.md
+        (this live path is what replaces that doc's borrowed mmsell3 calibration with theta's
+        own ground truth).
+
+        Returns a short outcome code ("placed", "gate:cap", "rejected", ...), same vocabulary as
+        `mirror_mmsell_entry`, so the live/paper twin harness's parity tape works unmodified.
+        """
+        s = self.settings
+        if not self._allowed(strategy) or not self._switches_on():
+            self.summary.skipped_gate += 1
+            return "gate:switches"
+        if self._daily_loss_tripped or self._daily_loss_hit(session):
+            self._daily_loss_tripped = True
+            self.summary.skipped_gate += 1
+            return "gate:daily_loss"
+        # Per-ticker dedup + any in-flight order on this market.
+        if repo.live_buy_exists_for_ticker(session, ticker, strategy) \
+                or repo.live_open_order_exists(session, ticker):
+            self.summary.skipped_dedup += 1
+            return "gate:dedup"
+        # Cap the book's concurrent live footprint (theta's own cap, not mmsell's).
+        if repo.count_live_book_open(session, strategy) >= s.theta_live_max_open_positions:
+            self.summary.skipped_gate += 1
+            return "gate:open_cap"
+        # Data-quality + balance + exposure gates (theta-scoped; NOT the weather spread gate).
+        if metrics is None or metrics.best_no_bid is None or not metrics.two_sided:
+            self.summary.skipped_gate += 1
+            return "gate:illiquid"
+        if metrics.spread is not None and metrics.spread > s.theta_live_max_spread_cents:
+            self.summary.skipped_gate += 1
+            return "gate:spread"
+        balance = None if account_state is None else account_state.get("cash_balance")
+        if balance is None:  # fail-closed: refuse to place without a real balance
+            self.summary.skipped_gate += 1
+            return "gate:no_balance"
+        if self._market_exposure(session, ticker) >= s.max_market_exposure:
+            self.summary.risk_blocked += 1
+            return "gate:exposure"
+
+        # Rest a BUY-NO limit at the no-bid (+offset to improve fill), never paying through the ask.
+        price = maker_no_price(metrics, no_price, s.theta_live_price_offset_cents)
+        if price is None:
+            self.summary.skipped_gate += 1
+            return "gate:illiquid"
+        qty = order_quantity(price, s.theta_live_max_order_dollars, s.theta_live_max_contracts)
+        if qty <= 0:
+            self.summary.skipped_gate += 1
+            return "gate:size"
+
+        # Audit trail: record an (approved) risk event so the live decision is inspectable.
+        repo.insert_risk_event(session, None, ticker, RiskDecision(
+            approved=True, reason_codes=[], max_allowed_quantity=qty, max_allowed_price=price))
+
+        # Kalshi V2 order (POST /portfolio/events/orders): theta SELLS yes (== buys NO), so
+        # side="ask" and price is the YES-side price in DOLLARS = (100 - no_price)/100 — identical
+        # shape to mmsell's live order (see mirror_mmsell_entry's comment for the full rationale).
+        yes_price = max(1, min(99, 100 - price))
+        client_order_id = str(uuid.uuid4())
+        order = {
+            "ticker": ticker,
+            "client_order_id": client_order_id,
+            "side": "ask",
+            "count": f"{qty:.2f}",
+            "price": f"{yes_price / 100.0:.4f}",
+            "time_in_force": "good_till_canceled",
+            "post_only": True,
+            "self_trade_prevention_type": "taker_at_cross",
+        }
+        row = repo.create_live_order(
+            session, signal_id=None, ticker=ticker, event_ticker=event_ticker,
+            strategy=strategy, side="no", action="buy", limit_price=price, quantity=qty,
+            status="pending", client_order_id=client_order_id, raw_order_json=order,
+        )
+        session.commit()
+        try:
+            resp = self.client.create_events_order(order)
+        except AuthError:
+            repo.update_live_order_status(session, row, status="error", cancel_reason="auth")
+            raise
+        except TransientError as exc:
+            repo.update_live_order_status(session, row, status="unknown", cancel_reason=str(exc))
+            logger.warning("theta live place_order transient; status=unknown",
+                           extra={"extra_fields": {"ticker": ticker, "coid": client_order_id}})
+            return "unknown"
+        except KalshiAPIError as exc:
+            if getattr(exc, "status_code", None) == 409:  # a prior identical send landed
+                repo.update_live_order_status(session, row, status="submitted",
+                                              cancel_reason="409_already_exists")
+                self.summary.placed += 1
+                return "placed"
+            repo.update_live_order_status(session, row, status="rejected", cancel_reason=str(exc))
+            self.summary.rejected += 1
+            return "rejected"
+        except Exception as exc:  # noqa: BLE001 — never let live break the paper record
+            repo.update_live_order_status(session, row, status="error", cancel_reason=str(exc))
+            logger.exception("theta live place_order failed")
+            return "error"
+
+        koid = None
+        if isinstance(resp, dict):
+            o = resp.get("order") if isinstance(resp.get("order"), dict) else resp
+            koid = o.get("order_id") or o.get("id")
+        repo.update_live_order_status(session, row, status="resting", kalshi_order_id=koid, raw=resp)
+        self.summary.placed += 1
+        logger.info("theta live order placed (resting maker no-buy)", extra={"extra_fields": {
             "ticker": ticker, "strategy": strategy, "no_price": price, "sell_yes_price": yes_price,
             "count": qty, "coid": client_order_id, "kalshi_order_id": koid}})
         return "placed"
@@ -1149,6 +1268,87 @@ class LiveExecutor:
                     repo.update_live_order_status(session, row, status="error",
                                                   cancel_reason=str(exc))
                     logger.exception("mmsell closeout order failed")
+                    continue
+                koid = None
+                if isinstance(resp, dict):
+                    o = resp.get("order") if isinstance(resp.get("order"), dict) else resp
+                    koid = o.get("order_id") or o.get("id")
+                repo.update_live_order_status(session, row, status="submitted",
+                                              kalshi_order_id=koid, raw=resp)
+                placed += 1
+        return placed
+
+    def close_theta_positions(self, session) -> int:
+        """ONE-SHOT: close every open NO position for `theta_closeout_strategies`. Identical
+        mechanism to `close_mmsell_positions` (see its docstring for the full rationale) — a
+        separate method only because it reads `theta_closeout_*` instead of `mmsell_closeout_*`;
+        `repo.open_live_no_positions` is already generic over any strategy prefix. Gated on its
+        OWN flag + explicit allowlist, independent of LIVE_STRATEGIES. Self-guarded per-position.
+        Returns the count of close orders placed."""
+        s = self.settings
+        if not s.theta_closeout_enabled or s.bot_mode != "live":
+            return 0
+        placed = 0
+        for prefix in s.theta_closeout_strategy_list:
+            for ticker, strategy, entry_price, _entry_at, qty in repo.open_live_no_positions(
+                session, prefix
+            ):
+                if qty <= 0:
+                    continue
+                if repo.live_open_order_exists(session, ticker):
+                    continue  # an order is already in flight -- let it resolve before retrying
+                ask = self._current_yes_ask(ticker)
+                if ask is None:
+                    logger.warning("theta closeout: no ask available, skipping this cycle",
+                                   extra={"extra_fields": {"ticker": ticker, "strategy": strategy}})
+                    continue
+                price = max(1, min(99, int(ask) + s.theta_closeout_slippage_cents))
+                client_order_id = f"closeout:{strategy}:{ticker}:{uuid.uuid4()}"
+                order = {
+                    "ticker": ticker,
+                    "client_order_id": client_order_id,
+                    "side": "bid",              # buy YES -> flattens a held NO position
+                    "count": f"{qty:.2f}",
+                    "price": f"{price / 100.0:.4f}",
+                    "time_in_force": "immediate_or_cancel",  # guarantee execution, don't rest
+                    "self_trade_prevention_type": "taker_at_cross",  # REQUIRED by the schema
+                }
+                row = repo.create_live_order(
+                    session, signal_id=None, ticker=ticker, event_ticker=None,
+                    strategy=f"{strategy}_closeout", side="yes", action="buy",
+                    limit_price=price, quantity=qty, status="pending",
+                    client_order_id=client_order_id, raw_order_json=order,
+                )
+                session.commit()  # durable intent before POST — survives a later cycle rollback
+                logger.warning("theta live position CLOSEOUT (end of strategy)", extra={
+                    "extra_fields": {"ticker": ticker, "strategy": strategy,
+                                     "entry_no_price": entry_price, "close_yes_price": price,
+                                     "qty": qty, "coid": client_order_id}})
+                try:
+                    resp = self.client.create_events_order(order)
+                except AuthError:
+                    repo.update_live_order_status(session, row, status="error", cancel_reason="auth")
+                    raise
+                except TransientError as exc:
+                    repo.update_live_order_status(session, row, status="unknown",
+                                                  cancel_reason=str(exc))
+                    continue
+                except KalshiAPIError as exc:
+                    if getattr(exc, "status_code", None) == 409:
+                        repo.update_live_order_status(session, row, status="submitted",
+                                                      cancel_reason="409_already_exists")
+                        placed += 1
+                        continue
+                    repo.update_live_order_status(session, row, status="rejected",
+                                                  cancel_reason=str(exc))
+                    logger.error("theta closeout REJECTED", extra={"extra_fields": {
+                        "ticker": ticker, "strategy": strategy, "coid": client_order_id,
+                        "error": str(exc)}})
+                    continue
+                except Exception as exc:  # noqa: BLE001 — one failure must not block the rest
+                    repo.update_live_order_status(session, row, status="error",
+                                                  cancel_reason=str(exc))
+                    logger.exception("theta closeout order failed")
                     continue
                 koid = None
                 if isinstance(resp, dict):

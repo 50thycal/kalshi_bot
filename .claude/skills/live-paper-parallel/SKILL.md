@@ -25,12 +25,16 @@ accounting being wrong — a mirage.
 
 ## Phase A — arming a new live strategy
 
-1. **Confirm the book is wired.** mmsell is wired (`kalshi_bot/mmsell/tracker.py` is the reference).
-   For any other book family, wire the three hook points in `docs/LIVE_PAPER_TWIN.md` §5 first — do
-   not arm live without them, or there will be no twin.
+1. **Confirm the book is wired.** mmsell and theta are both wired (`kalshi_bot/mmsell/tracker.py`
+   and `kalshi_bot/theta/tracker.py` are the reference implementations — theta's is the one to copy
+   when the new book shares the maker-sell convention but needs its OWN live sizing knobs rather
+   than reusing another book's, per `docs/THETA_LIVE_PLAN.md` §3). For any other book family, wire
+   the three hook points in `docs/LIVE_PAPER_TWIN.md` §5 first — do not arm live without them, or
+   there will be no twin.
 2. **Pre-register the test** before flipping anything: bankroll, per-order cap, open cap, duration,
-   and the kill criteria. Write it into the book's plan doc (`docs/MMSELL_LIVE_PLAN.md` is the
-   template). This is what stops the test being quietly re-scoped after the fact.
+   and the kill criteria. Write it into the book's plan doc (`docs/MMSELL_LIVE_PLAN.md` /
+   `docs/THETA_LIVE_PLAN.md` are the templates). This is what stops the test being quietly
+   re-scoped after the fact.
 3. **Set the live config through the ops channel** (see `CLAUDE.md` for the `ops` branch mechanics).
    Twins are auto-derived from `LIVE_STRATEGIES`, so there is normally nothing twin-specific to set:
    ```jsonc

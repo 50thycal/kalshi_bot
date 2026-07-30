@@ -278,7 +278,13 @@ class PaperTradingEngine:
                 )
                 continue
             metrics = compute_metrics(market, ob, top_n=s.orderbook_depth)
-            if (s.mmsell_tick_capture_enabled and (trade.strategy or "").startswith("mmsell")
+            # Despite the name, this captures ticks for any maker-sell book holding the
+            # position (originally mmsell-only; theta shares the identical maker convention and
+            # was added 2026-07 so its live/paper twin also gets a price-history panel on
+            # kalshi_bot/livedash — the table is ticker+time keyed, not strategy-keyed, so
+            # broadening the write-side gate is the only change either side needs).
+            if (s.mmsell_tick_capture_enabled
+                    and (trade.strategy or "").startswith(("mmsell", "theta"))
                     and trade.market_ticker not in mmsell_ticked and metrics.two_sided):
                 mmsell_ticked.add(trade.market_ticker)
                 try:
