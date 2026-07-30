@@ -119,7 +119,13 @@ class EvoSettings(BaseSettings):
     reflection_max_input_tokens: int = 28000  # tier 2 (deep) — base + graveyard/peers
     strategic_max_input_tokens: int = 32000  # tier 3 — richest context, but rare enough that a generous cap costs little
     weekly_token_budget: int = 1_500_000  # per agent, input+output
-    llm_timeout_seconds: float = 120.0
+    # Raised 120->240: two consecutive strategic (tier-3, Anthropic) heartbeats
+    # landed within 0.4s of the old 120s cap — one timed out (ReadTimeout at
+    # 120.16s), the next completed at 119.79s. That is not one slow outlier;
+    # it is tier 3's real generation time (32000-token input cap, 16000-token
+    # output cap) sitting right at the wall. 240s gives real headroom instead
+    # of a coin flip on every strategic call.
+    llm_timeout_seconds: float = 240.0
 
     # --- OpenAI-compatible backend (routes whichever tiers you point at it) ---
     # Optional: route one or more model aliases to any OpenAI-compatible
