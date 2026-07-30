@@ -172,6 +172,27 @@ def test_describe_parse_failure_is_a_noop_when_output_was_not_truncated():
     assert describe_parse_failure(None, ok) is None
 
 
+def test_llm_client_timeout_has_real_headroom_over_the_observed_wall():
+    """Live incident (2026-07-30): two consecutive strategic (Anthropic) calls
+    landed within 0.4s of the old 120s client timeout — one timed out at
+    120.16s (ReadTimeout, ended up degraded with zero tokens billed), the next
+    completed at 119.79s. That is not one slow outlier, it is tier 3's real
+    generation time sitting right at the wall, so raising the cap alone
+    (this file's other tests) doesn't help if the CLIENT gives up first."""
+    observed_wall_seconds = 120.16
+    s = EvoSettings(_env_file=None)
+    assert s.llm_timeout_seconds >= observed_wall_seconds * 1.5
+
+    client = llm.LlmClient(s, api_key="sk-ant-test")
+    # httpx.Client(timeout=<float>) applies that value to every phase
+    # (connect/read/write/pool) — read is the one that actually matters here,
+    # since the request sends fine and it's waiting on the response that times
+    # out, but assert all four so a future refactor into a phase-specific
+    # httpx.Timeout(...) can't silently leave read on the old default.
+    t = client._http.timeout
+    assert t.read == t.connect == t.write == t.pool == s.llm_timeout_seconds
+
+
 def test_json_dumps_roundtrip_of_stop_reason_defaults():
     """A backend that reports no stop reason must not synthesize one."""
     res = llm.LlmResult(text="{}", model_id="m", alias="routine")
