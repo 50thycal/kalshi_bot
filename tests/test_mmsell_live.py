@@ -14,6 +14,7 @@ from sqlalchemy import func, select
 
 from kalshi_bot import db
 from kalshi_bot import models as m
+from kalshi_bot import repository as repo
 from kalshi_bot.live.executor import LiveExecutor
 from kalshi_bot.mmsell.tracker import MmSellTracker
 from kalshi_bot.risk.manager import RiskManager
@@ -143,6 +144,43 @@ def test_mmsell_live_price_offset_capped_at_no_ask(settings):
         _enter(ex, session)
     # 92 + 5 = 97, capped at no_ask 94 -> buy NO @ 94c == sell YES @ 6c == price "0.0600"
     assert client.placed[0]["price"] == "0.0600"
+
+
+def test_mmsell_live_hot_market_prices_defensively_but_still_places(settings):
+    """The KXFEDMENTION shape end-to-end: a candidate tape gone quiet just outside the lookback
+    window (mmsell_live_hot_market_lookback_minutes) must still place an order — never exclude
+    the market — but at the defensive offset instead of the normal one."""
+    _live_settings(settings, mmsell_live_hot_market_lookback_minutes=30,
+                   mmsell_live_hot_market_defensive_offset_cents=-3)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    stale_at = datetime.now(timezone.utc) - timedelta(minutes=45)
+    with db.session_scope() as session:
+        repo.insert_mmsell_candidate_tick(session, "KXTEAM-26-A", _metrics(), captured_at=stale_at)
+        _enter(ex, session)
+    assert len(client.placed) == 1                          # still entered — never excluded
+    # buy NO @ 92 - 3 = 89 == sell YES @ 11c == price "0.1100"
+    assert client.placed[0]["price"] == "0.1100"
+    with db.session_scope() as session:
+        row = session.scalar(select(m.RiskEvent))
+        assert row.reason_codes_json == ["hot_entry"]        # audited so it's verifiable later
+
+
+def test_mmsell_live_calm_market_ignores_stale_but_in_window_tick(settings):
+    """A recent, PRICE-STABLE tick inside the lookback window must price normally — hot pricing
+    is about the market having actually moved, not merely having a comparison point at all."""
+    _live_settings(settings, mmsell_live_price_offset_cents=0)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    recent_at = datetime.now(timezone.utc) - timedelta(minutes=5)
+    with db.session_scope() as session:
+        repo.insert_mmsell_candidate_tick(session, "KXTEAM-26-A", _metrics(), captured_at=recent_at)
+        _enter(ex, session)
+    assert client.placed[0]["price"] == "0.0800"             # unchanged: sell YES @ 8c (no-bid 92)
 
 
 def test_mmsell_live_wide_spread_guard(settings):

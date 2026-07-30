@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from .. import repository as repo
 from ..config import Settings
 from ..kalshi.errors import AuthError
-from ..live.sizing import maker_no_price, order_quantity
+from ..live.sizing import is_hot_entry, maker_no_price, order_quantity
 from ..paper.engine import kalshi_fee
 from ..scanner.metrics import compute_metrics, compute_time_to_close, market_volume
 from ..twin import harness as twin_codes
@@ -173,6 +173,9 @@ class MmSellTracker:
             "maxyes": book.get("maxyes"),
             "live_price_offset_cents": s.mmsell_live_price_offset_cents,
             "live_max_spread_cents": s.mmsell_live_max_spread_cents,
+            "live_hot_market_move_cents": s.mmsell_live_hot_market_move_cents,
+            "live_hot_market_lookback_minutes": s.mmsell_live_hot_market_lookback_minutes,
+            "live_hot_market_defensive_offset_cents": s.mmsell_live_hot_market_defensive_offset_cents,
             "live_max_open_positions": s.mmsell_live_max_open_positions,
             "live_max_order_dollars": s.live_max_order_dollars,
             "max_order_size": s.max_order_size,
@@ -353,7 +356,14 @@ class MmSellTracker:
                                 and metrics.spread > s.mmsell_live_max_spread_cents:
                             self._note(recorder, ticker, tag, twin_codes.SKIP_SPREAD)
                             continue
-                        price = maker_no_price(metrics, None, s.mmsell_live_price_offset_cents)
+                        hot = is_hot_entry(
+                            session, ticker, metrics.best_no_bid,
+                            move_cents=s.mmsell_live_hot_market_move_cents,
+                            lookback_minutes=s.mmsell_live_hot_market_lookback_minutes,
+                        )
+                        offset = (s.mmsell_live_hot_market_defensive_offset_cents if hot
+                                 else s.mmsell_live_price_offset_cents)
+                        price = maker_no_price(metrics, None, offset, hot=hot)
                         if price is None:
                             self._note(recorder, ticker, tag, twin_codes.SKIP_ILLIQUID)
                             continue
@@ -431,8 +441,17 @@ class MmSellTracker:
                             if recorder is not None:
                                 # Record what live ACTUALLY did (placed, or the specific gate that
                                 # stopped it) so the twin/live gap is attributable, not guessed.
-                                live_px = maker_no_price(
-                                    metrics, price, s.mmsell_live_price_offset_cents)
+                                # Recomputes the same hotness check mirror_mmsell_entry made
+                                # internally moments earlier — nothing in the candidate tape
+                                # changes within a cycle, so it agrees with what was actually sent.
+                                live_hot = is_hot_entry(
+                                    session, ticker, metrics.best_no_bid,
+                                    move_cents=s.mmsell_live_hot_market_move_cents,
+                                    lookback_minutes=s.mmsell_live_hot_market_lookback_minutes,
+                                )
+                                live_offset = (s.mmsell_live_hot_market_defensive_offset_cents
+                                              if live_hot else s.mmsell_live_price_offset_cents)
+                                live_px = maker_no_price(metrics, price, live_offset, hot=live_hot)
                                 recorder.note_live(
                                     ticker, tag, outcome or twin_codes.LIVE_NOT_ATTEMPTED,
                                     live_px,
