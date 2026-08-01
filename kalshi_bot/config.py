@@ -246,6 +246,24 @@ class Settings(BaseSettings):
     # into the spread the way a calm entry does.
     mmsell_live_hot_market_defensive_offset_cents: int = -3
 
+    # --- mmsell LIVE entry retry (recover the one-shot-per-ticker execution gap) ---
+    # Paper never misses a fill, so its position stays open to settlement and the entry loop's
+    # skip_already_open guard fires every later cycle — which ALSO skipped the live mirror, giving
+    # live exactly one attempt per ticker for the ticker's whole life. Measured live 2026-07-31:
+    # all 71 tickers in the epoch had exactly 1 live order, 29 of them never filled, and the missed
+    # set earned the same as the captured one in paper (6.15 vs 6.26 c/contract) — i.e. real money
+    # left on the table, NOT adverse selection being avoided. See mmsell/tracker.py's
+    # _maybe_retry_live. Paper books are untouched by this; only the live mirror re-fires.
+    #
+    # Total live BUY attempts allowed per (ticker, book), counting cancelled ones. 1 restores the
+    # old one-shot behaviour; 0 disables the retry path entirely.
+    mmsell_live_max_attempts_per_ticker: int = 6
+    # Retry only while the current no-bid is still within this many cents of the FIRST attempt's
+    # limit price, so a retry never chases a market that has repriced away from the edge we
+    # originally sized. The measured recoverable set sat inside 2c (13 of the 15 unfilled tickers
+    # that were still in-band afterwards). The band/maxyes checks upstream already apply too.
+    mmsell_live_retry_max_drift_cents: int = 2
+
     # --- mmsell LIVE closeout (one-shot, END-OF-STRATEGY only; inert by default) ---
     # mmsell was built hold-to-settlement only (the exit study proved TP/SL hurts) — there was
     # NEVER a path to exit a position early. This is that path, added 2026-07-19 to wind down
@@ -1223,6 +1241,8 @@ class Settings(BaseSettings):
             "mmsell_live_hot_market_lookback_minutes": self.mmsell_live_hot_market_lookback_minutes,
             "mmsell_live_hot_market_defensive_offset_cents":
                 self.mmsell_live_hot_market_defensive_offset_cents,
+            "mmsell_live_max_attempts_per_ticker": self.mmsell_live_max_attempts_per_ticker,
+            "mmsell_live_retry_max_drift_cents": self.mmsell_live_retry_max_drift_cents,
             "mmsell_closeout_enabled": self.mmsell_closeout_enabled,
             "mmsell_closeout_strategies": self.mmsell_closeout_strategy_list,
             "mmsell_variants": [f"{v['tag']}:{v['lo']:.0f}-{v['hi']:.0f}"
