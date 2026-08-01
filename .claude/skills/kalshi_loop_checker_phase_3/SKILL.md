@@ -33,12 +33,24 @@ database stores UTC; convert before reporting (`TZ=America/Chicago date`, or in 
 `... AT TIME ZONE 'America/Chicago'`). Label internal branch-file snapshots the same way.
 
 `<n>` = previous run number from `docs/STRATEGY_LOOP_STATUS.md` + 1 (times there are CDT too). After the banner:
-a books table (settled n / P&L / open / one-word trend), a data-health line or table
-(fresh / STALE / zero per collector), a 1-3 sentence headline read, then the current
-suggestion list — INCLUDING the idea-model queue item (step 3b) so gate-blocked ideas stay
-visible every run, not just when something changes. If a gate cleared this run, lead the
-headline with it (see step 3b) — don't bury it at the bottom of the suggestion list. Keep it
-tight — the durable detail goes in the status file, not chat.
+a books table, a data-health line or table (fresh / STALE / zero per collector), a 1-3 sentence
+headline read, then the current suggestion list — INCLUDING the idea-model queue item (step 3b) so
+gate-blocked ideas stay visible every run, not just when something changes. If a gate cleared this
+run, lead the headline with it (see step 3b) — don't bury it at the bottom of the suggestion list.
+Keep it tight — the durable detail (¢/trade, open count, per-book notes) goes in the status file,
+not chat.
+
+**Books table format (confirmed 2026-08-01, standing):** a plain 3-column markdown table — `book |
+n (Δ) | P&L` — nothing else crammed in. This renders cleanly on mobile; ¢/trade, open positions,
+and per-book commentary belong in the persisted status file, not squeezed into the chat table.
+Sort by family (mmsell cohort, then theta cohort, then weather, etc.), not by P&L. **Include every
+`theta*` variant every run** (`theta`, `theta1`, `theta2`, `theta3`, `theta4`, plus `theta4_pt` once
+it exists) — not just the currently-active/live one. The `theta_fill_model` caution and gate sweep
+apply to the whole family, not only theta4, so the whole family stays visible in the table even
+when the shelved variants (theta/theta1/theta2/theta3) show a 0 delta most runs — a reader should
+never have to open the status file to see theta's full picture. The same principle applies to any
+future multi-variant cohort (mmsellA1-5, etc.): once a family exists, every run's table shows every
+member, not just the interesting one.
 
 ## Procedure
 
