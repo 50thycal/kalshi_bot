@@ -50,6 +50,11 @@ ALLOWED_VARS = frozenset({
     # armed, capped and re-tuned from the ops channel without a code deploy.
     "MMSELL_LIVE_MAX_OPEN_POSITIONS", "MMSELL_LIVE_PRICE_OFFSET_CENTS",
     "MMSELL_LIVE_MAX_SPREAD_CENTS",
+    # Hot-market defensive pricing + the entry-retry cap: both change how aggressively live
+    # chases a fill, so they are the knobs most likely to need tuning mid-test from ops.
+    "MMSELL_LIVE_HOT_MARKET_MOVE_CENTS", "MMSELL_LIVE_HOT_MARKET_LOOKBACK_MINUTES",
+    "MMSELL_LIVE_HOT_MARKET_DEFENSIVE_OFFSET_CENTS",
+    "MMSELL_LIVE_MAX_ATTEMPTS_PER_TICKER", "MMSELL_LIVE_RETRY_MAX_DRIFT_CENTS",
     # theta live maker entry — its OWN knobs (deliberately not shared with mmsell's above; see
     # docs/THETA_LIVE_PLAN.md), same rationale as the mmsell trio. Closeout knobs
     # (THETA_CLOSEOUT_*) are intentionally NOT here, mirroring mmsell's own closeout knobs,

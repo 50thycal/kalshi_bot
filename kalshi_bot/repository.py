@@ -1144,7 +1144,10 @@ def live_order_exists(session, event_ticker: str, strategy: str) -> bool:
 def live_buy_exists_for_ticker(session, ticker: str, strategy: str) -> bool:
     """A committed live BUY already exists for this (market, strategy) — per-TICKER entry dedup
     for the mmsell books, which open one position per market (markets share an event, so the
-    per-EVENT live_order_exists would wrongly block a second market in the same event)."""
+    per-EVENT live_order_exists would wrongly block a second market in the same event).
+
+    Note `LIVE_COMMITTED_STATUSES` deliberately excludes `canceled`, so a cancelled attempt does
+    NOT block a fresh one — that is what makes the entry retry in mmsell/tracker.py possible."""
     return session.scalar(
         select(func.count()).select_from(m.LiveOrder).where(
             m.LiveOrder.market_ticker == ticker,
@@ -1153,6 +1156,28 @@ def live_buy_exists_for_ticker(session, ticker: str, strategy: str) -> bool:
             m.LiveOrder.action == "buy",
         )
     ) > 0
+
+
+def live_attempt_stats(session, ticker: str, strategy: str) -> tuple[int, int | None]:
+    """`(attempts, first_limit_price)` for this book's live BUY orders on `ticker`.
+
+    Counts EVERY attempt regardless of status — a cancelled order is still an attempt — so a
+    retry cap cannot be walked past by orders that never filled. The first attempt's limit price
+    is the drift anchor: a retry is only worth making while the market is still near the price
+    the original entry was sized against. Feeds mmsell/tracker.py's _maybe_retry_live."""
+    rows = session.execute(
+        select(m.LiveOrder.limit_price)
+        .where(
+            m.LiveOrder.market_ticker == ticker,
+            m.LiveOrder.strategy == strategy,
+            m.LiveOrder.action == "buy",
+        )
+        .order_by(m.LiveOrder.id)
+    ).all()
+    if not rows:
+        return 0, None
+    first = rows[0][0]
+    return len(rows), (int(first) if first is not None else None)
 
 
 def count_live_book_open(session, strategy: str) -> int:

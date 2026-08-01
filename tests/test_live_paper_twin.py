@@ -366,7 +366,12 @@ def test_parity_tape_names_the_gate_that_stopped_live(settings):
         assert row.twin_outcome == "skip_cap"
 
 
-def test_parity_tape_marks_live_not_attempted_when_paper_dedups(settings):
+def test_live_is_re_consulted_when_paper_dedups_but_will_not_double_up(settings):
+    """Paper holding a ticker must not lock LIVE out of it — paper's position is an assumption,
+    live's fill is a fact (see MmSellTracker._maybe_retry_live). So on the second cycle live is
+    genuinely re-consulted rather than recorded as `not_attempted` (which meant "never looked"),
+    and it stands down on its OWN dedup because the first order is still resting. A retry can
+    therefore never double up on a market live is already working."""
     _armed(settings)
     ev, books = _cheap_event()
     client = FakeClient([ev], books)
@@ -374,12 +379,13 @@ def test_parity_tape_marks_live_not_attempted_when_paper_dedups(settings):
         _tracker(settings, client).run_once(session)
     with db.session_scope() as session:      # second cycle: both books already hold the ticker
         _tracker(settings, client).run_once(session)
+    assert len(client.placed) == 1           # the retry did NOT place a duplicate real order
     with db.session_scope() as session:
         rows = session.scalars(select(m.LivePaperParityEvent).order_by(
             m.LivePaperParityEvent.id)).all()
         assert rows[-1].parent_outcome == "skip_already_open"
         assert rows[-1].twin_outcome == "skip_already_open"
-        assert rows[-1].live_outcome == "not_attempted"
+        assert rows[-1].live_outcome == "gate:dedup"
 
 
 def test_parity_tape_can_be_switched_off(settings):

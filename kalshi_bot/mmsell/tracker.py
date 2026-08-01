@@ -41,6 +41,9 @@ class MmSellCycleSummary:
     skipped_illiquid: int = 0
     skipped_htc: int = 0
     skipped_vol_gate: int = 0   # anchor-set volatility ENTRY gate rejections
+    live_retried: int = 0        # live entry re-posted on a ticker paper already holds
+    live_retry_capped: int = 0   # retry declined: mmsell_live_max_attempts_per_ticker reached
+    live_retry_drifted: int = 0  # retry declined: market moved off the first attempt's price
     per_series: dict[str, int] = field(default_factory=dict)
     per_book: dict[str, int] = field(default_factory=dict)
 
@@ -89,6 +92,83 @@ class MmSellTracker:
         if len(mids) < 3:
             return False                      # not enough tape to judge -> behave like the control
         return (max(mids) - min(mids)) >= float(v)
+
+    def _live_price_and_size(self, session, ticker: str, no_price: int | None, metrics):
+        """The (price, quantity) the live executor would use for this entry right now — the same
+        hot-market-aware arithmetic mirror_mmsell_entry runs internally, recomputed here so the
+        parity tape records what was actually sent rather than a guess. Nothing in the candidate
+        tape changes within a cycle, so the two agree."""
+        s = self.settings
+        hot = is_hot_entry(
+            session, ticker, metrics.best_no_bid,
+            move_cents=s.mmsell_live_hot_market_move_cents,
+            lookback_minutes=s.mmsell_live_hot_market_lookback_minutes,
+        )
+        offset = (s.mmsell_live_hot_market_defensive_offset_cents if hot
+                  else s.mmsell_live_price_offset_cents)
+        price = maker_no_price(metrics, no_price, offset, hot=hot)
+        qty = order_quantity(price, s.live_max_order_dollars, s.max_order_size) if price else None
+        return price, qty
+
+    def _maybe_retry_live(self, session, *, tag: str, event: dict, ticker: str, metrics,
+                          summ: MmSellCycleSummary, recorder) -> None:
+        """Re-post the LIVE maker order on a ticker the PAPER book already holds.
+
+        Why this exists: paper never misses a fill, so its position stays open to settlement and
+        the caller's skip_already_open guard fires on every later cycle. That guard also skipped
+        the live mirror, so live got exactly ONE attempt per ticker for the ticker's whole life.
+        Measured live 2026-07-31: all 71 tickers in the epoch had exactly 1 live order, 29 of them
+        never filled, and the missed set earned the SAME in paper as the captured one (6.15 vs
+        6.26 c/contract) — lost volume, not adverse selection dodged.
+
+        Paper is untouched here; only the live mirror re-fires. The caller has already applied this
+        book's band + maxyes checks to the CURRENT quote, so a retry can only happen while the
+        market is still a genuine candidate. On top of that:
+          * at most `mmsell_live_max_attempts_per_ticker` live attempts ever (cancelled included),
+          * only while the current no-bid is within `mmsell_live_retry_max_drift_cents` of the
+            FIRST attempt's price, so a retry never chases a market that has repriced away from
+            the edge the original entry was sized against,
+          * mirror_mmsell_entry's own dedup still refuses a duplicate while an order rests or
+            after a fill — that is what stops this from re-posting every single cycle.
+
+        A ticker live never attempted at all is deliberately out of scope: there is no price
+        anchor, and that is a different failure (a gate) than a missed retry."""
+        s = self.settings
+        if self.live_executor is None or metrics is None or metrics.best_no_bid is None:
+            return
+        attempts, first_price = repo.live_attempt_stats(session, ticker, tag)
+        if attempts == 0:
+            return
+        if attempts >= s.mmsell_live_max_attempts_per_ticker:
+            summ.live_retry_capped += 1
+            return
+        if first_price is not None and abs(int(metrics.best_no_bid) - first_price) \
+                > s.mmsell_live_retry_max_drift_cents:
+            summ.live_retry_drifted += 1
+            return
+        try:
+            outcome = self.live_executor.mirror_mmsell_entry(
+                session, strategy=tag, event_ticker=event.get("event_ticker"),
+                ticker=ticker, metrics=metrics, no_price=metrics.best_no_bid,
+                account_state=self._account_state,
+            )
+        except AuthError:
+            raise
+        except Exception:  # noqa: BLE001 — a retry must never break the scan
+            logger.exception("mmsell live entry retry failed")
+            if recorder is not None:
+                recorder.note_live(ticker, tag, "error")
+            return
+        if outcome == twin_codes.LIVE_PLACED:
+            summ.live_retried += 1
+            logger.info("mmsell live entry retried", extra={"extra_fields": {
+                "ticker": ticker, "strategy": tag, "attempt": attempts + 1,
+                "first_limit_price": first_price, "no_bid": metrics.best_no_bid}})
+        if recorder is not None:
+            live_px, live_qty = self._live_price_and_size(
+                session, ticker, metrics.best_no_bid, metrics)
+            recorder.note_live(ticker, tag, outcome or twin_codes.LIVE_NOT_ATTEMPTED,
+                               live_px, live_qty)
 
     @staticmethod
     def _event_has_both_tails(event: dict, maxyes: float) -> bool:
@@ -176,6 +256,8 @@ class MmSellTracker:
             "live_hot_market_move_cents": s.mmsell_live_hot_market_move_cents,
             "live_hot_market_lookback_minutes": s.mmsell_live_hot_market_lookback_minutes,
             "live_hot_market_defensive_offset_cents": s.mmsell_live_hot_market_defensive_offset_cents,
+            "live_max_attempts_per_ticker": s.mmsell_live_max_attempts_per_ticker,
+            "live_retry_max_drift_cents": s.mmsell_live_retry_max_drift_cents,
             "live_max_open_positions": s.mmsell_live_max_open_positions,
             "live_max_order_dollars": s.live_max_order_dollars,
             "max_order_size": s.max_order_size,
@@ -338,6 +420,11 @@ class MmSellTracker:
                     if repo.get_open_paper_position(session, ticker, tag) is not None:
                         summ.already_open += 1
                         self._note(recorder, ticker, tag, twin_codes.SKIP_ALREADY_OPEN)
+                        # Paper holding it must not also lock LIVE out of the ticker: paper's
+                        # position is an assumption, live's fill is a fact. See _maybe_retry_live.
+                        if not is_twin:
+                            self._maybe_retry_live(session, tag=tag, event=event, ticker=ticker,
+                                                   metrics=metrics, summ=summ, recorder=recorder)
                         continue
                     # A twin is capped like its LIVE parent (not like paper's much larger book) —
                     # the cap shapes which candidates each side ever sees, so it has to match.
@@ -441,22 +528,11 @@ class MmSellTracker:
                             if recorder is not None:
                                 # Record what live ACTUALLY did (placed, or the specific gate that
                                 # stopped it) so the twin/live gap is attributable, not guessed.
-                                # Recomputes the same hotness check mirror_mmsell_entry made
-                                # internally moments earlier — nothing in the candidate tape
-                                # changes within a cycle, so it agrees with what was actually sent.
-                                live_hot = is_hot_entry(
-                                    session, ticker, metrics.best_no_bid,
-                                    move_cents=s.mmsell_live_hot_market_move_cents,
-                                    lookback_minutes=s.mmsell_live_hot_market_lookback_minutes,
-                                )
-                                live_offset = (s.mmsell_live_hot_market_defensive_offset_cents
-                                              if live_hot else s.mmsell_live_price_offset_cents)
-                                live_px = maker_no_price(metrics, price, live_offset, hot=live_hot)
+                                live_px, live_qty = self._live_price_and_size(
+                                    session, ticker, price, metrics)
                                 recorder.note_live(
                                     ticker, tag, outcome or twin_codes.LIVE_NOT_ATTEMPTED,
-                                    live_px,
-                                    order_quantity(live_px, s.live_max_order_dollars,
-                                                   s.max_order_size) if live_px else None)
+                                    live_px, live_qty)
                         except AuthError:
                             raise
                         except Exception:  # noqa: BLE001 — paper record stays intact
