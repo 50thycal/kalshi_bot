@@ -103,6 +103,7 @@ class MmSellTracker:
             session, ticker, metrics.best_no_bid,
             move_cents=s.mmsell_live_hot_market_move_cents,
             lookback_minutes=s.mmsell_live_hot_market_lookback_minutes,
+            lookup=repo.latest_mmsell_no_bid_before,
         )
         offset = (s.mmsell_live_hot_market_defensive_offset_cents if hot
                   else s.mmsell_live_price_offset_cents)
@@ -447,6 +448,7 @@ class MmSellTracker:
                             session, ticker, metrics.best_no_bid,
                             move_cents=s.mmsell_live_hot_market_move_cents,
                             lookback_minutes=s.mmsell_live_hot_market_lookback_minutes,
+                            lookup=repo.latest_mmsell_no_bid_before,
                         )
                         offset = (s.mmsell_live_hot_market_defensive_offset_cents if hot
                                  else s.mmsell_live_price_offset_cents)
