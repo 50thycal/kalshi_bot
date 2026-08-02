@@ -89,6 +89,30 @@ Same pattern: `{"type":"script","id":"mmcheck-exit-<short-id>","name":"mmsell_ex
 Capture, per book: replay n, HOLD (mean/tail/win%), and every rule's mean/tail/Δmean/Δtail
 — you need the full per-rule table to pick each book's best exit, not just the headline.
 
+### 3b. Anchor set — direct read (REQUIRED; the two scripts cannot see it)
+
+`mmsell_fill_model.py` and `mmsell_exit_study.py` both select only `status='settled'`.
+The anchor stop books close their exits as **`status='closed_sl'`**, so every stopped
+trade is dropped from both tables — which made A1 read as "+1.56¢ REALIZABLE EDGE" on
+run #5 when its true resolved P&L was −4.64¢. **Never report the anchor books from those
+two tables.** Run this instead:
+
+```jsonc
+{"type":"db","id":"anchor-<short-id>","max_rows":60,"sql":"select strategy, count(*) as entries, count(*) filter (where status in ('open','pending')) as open_n, count(*) filter (where status='settled') as settled_n, count(*) filter (where status='closed_sl') as stops_n, count(*) filter (where pnl is not null) as resolved_n, round(sum(pnl) filter (where pnl is not null)::numeric,2) as total_pnl_usd, round((100*sum(pnl) filter (where pnl is not null)/nullif(count(*) filter (where pnl is not null),0))::numeric,2) as cents_per_trade from paper_trades where (strategy like 'mmsellA%' or strategy='mmsell10') and not legacy group by strategy order by strategy"}
+```
+
+Then run the **matched counterfactual** — the only read that actually decides whether a
+stop pays, because it compares the stop against what the control did on the *same market*:
+
+```jsonc
+{"type":"db","id":"anchormatch-<short-id>","max_rows":60,"sql":"select a.strategy, coalesce(m.status,'NO CTRL ROW') as ctrl_status, count(*) as n_stops, round((100*avg(a.pnl))::numeric,1) as stop_avg_c, round((100*avg(m.pnl))::numeric,1) as ctrl_avg_c, round((100*min(m.pnl))::numeric,1) as ctrl_worst_c, round((100*(avg(a.pnl)-avg(m.pnl)))::numeric,1) as stop_saved_c from paper_trades a left join paper_trades m on m.market_ticker=a.market_ticker and m.strategy='mmsell10' and not m.legacy where a.strategy like 'mmsellA%' and a.status='closed_sl' and not a.legacy group by a.strategy, coalesce(m.status,'NO CTRL ROW') order by a.strategy, ctrl_status"}
+```
+
+Read `stop_saved_c` on the `ctrl_status='settled'` rows only — that is the stop's true
+per-trade value. Rows with an `open` control are undecided, not evidence; **always say
+how many stops are still pending a control outcome**, because a favorable early
+`stop_saved_c` on a handful of matched pairs can invert entirely once the rest resolve.
+
 ### 4. Reset the ops channel
 
 `{"type":"noop"}` to `ops/request.json`, commit, push. Always do this even if a step
@@ -116,17 +140,33 @@ branch, never `ops`.
 
 ### 7. Report
 
-Two tables in chat, both ordered `mmsell, mmsell1, mmsell10, mmsell11, mmsell2, mmsell3,
-mmsell4, mmsell5, mmsell6, mmsell7, mmsell8, mmsell9` (natural strategy order, not
-alphabetical):
+**ALWAYS INCLUDE TOTAL P&L IN DOLLARS.** Every per-book table in the report carries a
+`total P&L` column alongside the per-trade figure — no exceptions, no table without it.
+Per-trade cents say whether an edge exists; total dollars say whether it is worth
+anything, and the project's north star is **$100/month realized**, which is a dollar
+number. A book at +5¢/trade on n=12 and a book at +1¢/trade on n=3000 read identically
+in a cents column and are not remotely the same thing. Also state the combined dollar
+total for the anchor set and note it against the $100/month goal.
+
+Three tables in chat. Tables 1–2 ordered `mmsell, mmsell1, mmsell10, mmsell11, mmsell2,
+mmsell3, mmsell4, mmsell5, mmsell6, mmsell7, mmsell8, mmsell9` (natural strategy order,
+not alphabetical):
 
 1. **Standing realizable read** — `book | n (last→now) | realizable ¢/ct (last→now) |
-   verdict`. Call out any verdict flip explicitly (edge↔mirage↔dead) and any book with
-   zero new settled trades for 2+ consecutive checks (a stall worth a separate look).
+   total P&L $ | verdict`. Call out any verdict flip explicitly (edge↔mirage↔dead) and
+   any book with zero new settled trades for 2+ consecutive checks (a stall worth a
+   separate look).
 2. **Exit study — best exit per book** — `book | replay n (last→now) | HOLD mean/tail
    (last→now) | best-performing rule this run | Δmean | Δtail`. If no rule beats hold,
    say so plainly rather than picking the least-bad one. Apply the percentile-statistic
    caveat above whenever a tail stat swings sharply at low n.
+3. **Anchor set** (from step 3b, never from the two scripts) — `book | entries | open |
+   settled | stops | resolved | total P&L $ | ¢/trade`, with `mmsell10` as the control
+   row. Follow it with the matched-counterfactual line per stop book (`stop_saved_c` and
+   how many stops still have an unresolved control). Always caveat that the resolved
+   column is biased low while positions are open: a stop closes instantly, a winner
+   waits days to settle, so the stop books' early numbers are a resolution-speed
+   artifact, not a verdict.
 
 Close with 2-4 sentences: what's actionable (a book crossing its gate, a rule holding
 up across repeated checks vs. one that's shrinking), and the one thing worth a
