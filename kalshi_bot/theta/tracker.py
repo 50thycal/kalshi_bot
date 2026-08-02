@@ -35,7 +35,7 @@ from datetime import datetime, timedelta, timezone
 from .. import repository as repo
 from ..config import Settings
 from ..kalshi.errors import AuthError
-from ..live.sizing import maker_no_price, order_quantity
+from ..live.sizing import is_hot_entry, maker_no_price, order_quantity
 from ..paper.engine import kalshi_fee
 from ..scanner.metrics import compute_metrics, compute_time_to_close
 from ..twin import harness as twin_codes
@@ -206,6 +206,10 @@ class ThetaTracker:
             "thronly": book["thronly"],
             "live_price_offset_cents": s.theta_live_price_offset_cents,
             "live_max_spread_cents": s.theta_live_max_spread_cents,
+            "live_hot_market_move_cents": s.theta_live_hot_market_move_cents,
+            "live_hot_market_lookback_minutes": s.theta_live_hot_market_lookback_minutes,
+            "live_hot_market_defensive_offset_cents":
+                s.theta_live_hot_market_defensive_offset_cents,
             "live_max_open_positions": s.theta_live_max_open_positions,
             "live_max_order_dollars": s.theta_live_max_order_dollars,
             "live_max_contracts": s.theta_live_max_contracts,
@@ -440,8 +444,16 @@ class ThetaTracker:
                                 and metrics.spread > s.theta_live_max_spread_cents:
                             self._note(recorder, ticker, tag, twin_codes.SKIP_SPREAD)
                             continue
+                        twin_hot = is_hot_entry(
+                            session, ticker, metrics.best_no_bid,
+                            move_cents=s.theta_live_hot_market_move_cents,
+                            lookback_minutes=s.theta_live_hot_market_lookback_minutes,
+                            lookup=repo.latest_theta_no_bid_before,
+                        )
+                        twin_offset = (s.theta_live_hot_market_defensive_offset_cents
+                                       if twin_hot else s.theta_live_price_offset_cents)
                         twin_price = maker_no_price(
-                            metrics, None, s.theta_live_price_offset_cents)
+                            metrics, None, twin_offset, hot=twin_hot)
                         if twin_price is None:
                             self._note(recorder, ticker, tag, twin_codes.SKIP_ILLIQUID)
                             continue
@@ -512,8 +524,20 @@ class ThetaTracker:
                                 account_state=self._account_state,
                             )
                             if recorder is not None:
+                                # Recomputes the same hot-market check mirror_theta_entry made
+                                # internally moments earlier, so the parity tape records the price
+                                # actually sent rather than the calm-path price. Nothing in the
+                                # ladder tape changes within a cycle, so the two agree.
+                                live_hot = is_hot_entry(
+                                    session, ticker, metrics.best_no_bid,
+                                    move_cents=s.theta_live_hot_market_move_cents,
+                                    lookback_minutes=s.theta_live_hot_market_lookback_minutes,
+                                    lookup=repo.latest_theta_no_bid_before,
+                                )
+                                live_offset = (s.theta_live_hot_market_defensive_offset_cents
+                                               if live_hot else s.theta_live_price_offset_cents)
                                 live_px = maker_no_price(
-                                    metrics, price, s.theta_live_price_offset_cents)
+                                    metrics, price, live_offset, hot=live_hot)
                                 recorder.note_live(
                                     ticker, tag, outcome or twin_codes.LIVE_NOT_ATTEMPTED,
                                     live_px,

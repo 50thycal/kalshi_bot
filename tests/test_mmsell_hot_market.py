@@ -29,61 +29,70 @@ class _Tick:
     no_bid: int | None
 
 
-def _hot(ticker="T", no_bid=90):
+def _lookup_returning(no_bid, captured_at):
+    def _lookup(_session, _ticker, *, before):
+        return no_bid, captured_at
+    return _lookup
+
+
+def _hot(lookup, ticker="T", no_bid=90):
     return is_hot_entry(
-        None, ticker, no_bid,
+        None, ticker, no_bid, lookup=lookup,
         move_cents=MOVE_CENTS, lookback_minutes=LOOKBACK_MINUTES, now=NOW)
 
 
 # --------------------------------------------------------------------------- is_hot_entry
+#
+# `lookup` is injected (see live/sizing.py), so these drive it directly rather than
+# monkeypatching a repository function — the decision logic is what is under test here, and the
+# real per-book readers are covered in test_repository_quote_tapes.py.
 
 
-def test_not_hot_with_no_tick_history_at_all(monkeypatch):
+def test_not_hot_with_no_prior_quote_at_all():
     """A brand-new candidate has no tape to judge by — must behave like a calm market, the same
     'don't fire on thin history' convention the anchor set's volatility gate already uses. A
     market's first-ever entry must never be penalized for lacking history it couldn't have had."""
-    monkeypatch.setattr("kalshi_bot.repository.latest_candidate_tick_before",
-                        lambda *_a, **_k: None)
-    assert _hot() is False
+    assert _hot(_lookup_returning(None, None)) is False
 
 
-def test_hot_when_the_only_tick_predates_the_lookback_window(monkeypatch):
-    """The exact KXFEDMENTION shape: a tick exists, but it is older than the lookback window —
+def test_hot_when_the_only_quote_predates_the_lookback_window():
+    """The exact KXFEDMENTION shape: a quote exists, but it is older than the lookback window —
     the ticker went quiet right when we'd want a comparison, which is the signal itself."""
-    tick = _Tick(captured_at=NOW - timedelta(minutes=31), no_bid=90)  # same price, just old
-    monkeypatch.setattr("kalshi_bot.repository.latest_candidate_tick_before",
-                        lambda *_a, **_k: tick)
-    assert _hot() is True
+    assert _hot(_lookup_returning(90, NOW - timedelta(minutes=31))) is True   # same price, just old
 
 
-def test_hot_when_recent_tick_shows_a_big_move(monkeypatch):
-    tick = _Tick(captured_at=NOW - timedelta(minutes=10), no_bid=85)  # 90 - 85 = 5 >= threshold 5
-    monkeypatch.setattr("kalshi_bot.repository.latest_candidate_tick_before",
-                        lambda *_a, **_k: tick)
-    assert _hot() is True
+def test_hot_when_recent_quote_shows_a_big_move():
+    assert _hot(_lookup_returning(85, NOW - timedelta(minutes=10))) is True   # 90-85 = 5 >= 5
 
 
-def test_not_hot_when_recent_tick_shows_a_small_move(monkeypatch):
-    tick = _Tick(captured_at=NOW - timedelta(minutes=10), no_bid=87)  # 90 - 87 = 3 < threshold 5
-    monkeypatch.setattr("kalshi_bot.repository.latest_candidate_tick_before",
-                        lambda *_a, **_k: tick)
-    assert _hot() is False
+def test_not_hot_when_recent_quote_shows_a_small_move():
+    assert _hot(_lookup_returning(87, NOW - timedelta(minutes=10))) is False  # 90-87 = 3 < 5
 
 
-def test_not_hot_at_exactly_the_lookback_boundary(monkeypatch):
+def test_not_hot_at_exactly_the_lookback_boundary():
     """Just inside the window (29m59s old) with a calm price -> not hot; confirms the boundary
     check compares against the window edge, not an off-by-one."""
-    tick = _Tick(captured_at=NOW - timedelta(minutes=29, seconds=59), no_bid=90)
-    monkeypatch.setattr("kalshi_bot.repository.latest_candidate_tick_before",
-                        lambda *_a, **_k: tick)
-    assert _hot() is False
+    assert _hot(_lookup_returning(90, NOW - timedelta(minutes=29, seconds=59))) is False
 
 
-def test_hot_check_fails_soft_and_enters(monkeypatch):
+def test_hot_check_fails_soft_and_enters():
     def _boom(*_a, **_k):
         raise RuntimeError("db down")
-    monkeypatch.setattr("kalshi_bot.repository.latest_candidate_tick_before", _boom)
-    assert _hot() is False
+    assert _hot(_boom) is False
+
+
+def test_a_quote_with_no_usable_price_is_not_hot():
+    """A tape row that exists and is recent but carries no price cannot be compared; that is a
+    reason to behave normally, not to price defensively."""
+    assert _hot(_lookup_returning(None, NOW - timedelta(minutes=5))) is False
+
+
+def test_lookup_is_required_so_a_book_cannot_inherit_another_books_tape():
+    """The whole point of injecting it: theta silently reading mmsell's candidate tape would be a
+    real (and very quiet) mispricing bug."""
+    import pytest
+    with pytest.raises(TypeError):
+        is_hot_entry(None, "T", 90, move_cents=5, lookback_minutes=30, now=NOW)
 
 
 # --------------------------------------------------------------------------- maker_no_price(hot=)

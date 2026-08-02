@@ -370,6 +370,22 @@ class Settings(BaseSettings):
     theta_live_max_spread_cents: int = 40        # sanity guard only, matches mmsell's — the maker
     #                                              edge IS the spread on these cheap tails
 
+    # --- theta LIVE "hot market" defensive pricing ---
+    # Same mechanism and rationale as mmsell_live_hot_market_* (see that block), with theta's OWN
+    # knobs per this book's no-shared-live-knobs rule. Extended to theta after a live order was
+    # HARD-REJECTED by Kalshi on 2026-08-02 — `400 invalid_order, details: "post only cross"` —
+    # i.e. the book moved through our resting price between quote and placement. mmsell saw the
+    # same failure as a cross-CANCEL; theta gets it as an outright rejection because the order
+    # never rests at all, so the market is lost for the rest of its (short) window.
+    #
+    # Defaults are theta-shaped, NOT copied from mmsell: theta only trades 10-55 minutes to expiry
+    # (theta_entry_min/max_minutes) and snapshots its ladder every theta_interval_minutes (5), so
+    # a 30-minute lookback would span most of the tradeable window and read as "stale" almost
+    # always. 15 minutes gives ~3 ladder rows to compare against while still being recent.
+    theta_live_hot_market_move_cents: int = 5
+    theta_live_hot_market_lookback_minutes: int = 15
+    theta_live_hot_market_defensive_offset_cents: int = -3
+
     # --- theta LIVE closeout (one-shot, END-OF-STRATEGY only; inert by default) ---
     # Mirrors mmsell_closeout_* exactly (see that block's comment for the full rationale): a
     # manual flatten-everything escape hatch for a hold-to-settlement book that otherwise has no
@@ -662,7 +678,20 @@ class Settings(BaseSettings):
     live_entry_slippage_cents: int = 2      # marketable: cross up to this many cents above the ask
     #                                         so a thin best-ask level can't shrink the dollar-cap
     #                                         size; count is capped to depth within ask+this band.
-    live_order_timeout_seconds: int = 600   # cancel an unfilled passive order after this long
+    # Cancel an unfilled RESTING order after this long. Both extremes are known-bad, from live:
+    #   * the old 600s (10min) cancelled maker orders long before a cheap tail could realistically
+    #     be lifted — 16 of mmsell10's 29 misses in the 07-26 epoch were this timeout — and back
+    #     then a cancel meant the ticker was lost forever (paper's open position blocked re-entry).
+    #   * the 20-day value it was raised to went too far the other way: orders stopped being
+    #     cancelled at all, so they were never re-priced. On 2026-08-02 the oldest resting mmsell
+    #     order was 46.7h old, i.e. quoting a two-day-old book — a free option written to the
+    #     market, which fills exactly when the market has moved against us.
+    # 4h is the middle setting that composes with the entry retry (mmsell tracker's
+    # _maybe_retry_live): the stale order is cancelled, and the next cycle re-posts at the CURRENT
+    # price. Cancel-and-reprice is what a maker actually does; neither half works alone.
+    # theta is unaffected either way — it only trades 10-55min to expiry, so its markets settle
+    # long before 4h elapses.
+    live_order_timeout_seconds: int = 14_400  # 4 hours
     live_max_order_dollars: float = 5.0     # per-order dollar cap -> qty = floor(cap / price)
     live_exit_mode: str = "settlement"      # "settlement" (hold) | "tp_sl" (TP/SL/break-even)
     live_take_profit_cents: int | None = None
@@ -1261,6 +1290,11 @@ class Settings(BaseSettings):
             "theta_live_max_open_positions": self.theta_live_max_open_positions,
             "theta_live_price_offset_cents": self.theta_live_price_offset_cents,
             "theta_live_max_spread_cents": self.theta_live_max_spread_cents,
+            "theta_live_hot_market_move_cents": self.theta_live_hot_market_move_cents,
+            "theta_live_hot_market_lookback_minutes":
+                self.theta_live_hot_market_lookback_minutes,
+            "theta_live_hot_market_defensive_offset_cents":
+                self.theta_live_hot_market_defensive_offset_cents,
             "theta_closeout_enabled": self.theta_closeout_enabled,
             "theta_closeout_strategies": self.theta_closeout_strategy_list,
             "xgame_enabled": self.xgame_enabled,

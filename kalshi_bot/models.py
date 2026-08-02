@@ -644,6 +644,10 @@ class CryptoLadderSnapshot(Base):
     __tablename__ = "crypto_ladder_snapshots"
     __table_args__ = (
         Index("ix_crypto_ladder_snapshots_event_time", "event_ticker", "captured_at"),
+        # theta's live hot-market check reads the newest quote for ONE market; the
+        # event-leading index above cannot serve a market_ticker-leading predicate, and this
+        # table grows by ~69k rows/day (see alembic b8c9d0e1f2a3).
+        Index("ix_crypto_ladder_mkt_time", "market_ticker", "captured_at"),
     )
 
     id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)

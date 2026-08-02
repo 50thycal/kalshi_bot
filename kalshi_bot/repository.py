@@ -774,24 +774,59 @@ def insert_mmsell_candidate_tick(
     ))
 
 
-def latest_candidate_tick_before(
-    session, ticker: str, *, before: datetime
-) -> m.MmSellCandidateTick | None:
-    """The single most recent mmsell candidate tick for `ticker` captured strictly before `before`
-    — no lower time bound, so a ticker taped an hour ago still returns that tick rather than None.
+# --- prior-quote lookups for the live hot-market check (live/sizing.py's is_hot_entry) ---
+#
+# One per live book, because each book keeps its own tape: mmsell writes mmsell_candidate_ticks,
+# theta writes crypto_ladder_snapshots. Both return the SAME normalized shape —
+# `(no_bid_cents, captured_at)`, or `(None, None)` when the market has no prior quote — so
+# is_hot_entry stays a pure decision function that never learns which book called it. The caller
+# passes its own book's reader explicitly; see the note in live/sizing.py about why nothing here
+# is defaulted.
+#
+# `before` excludes the current cycle's own just-written row from being compared against itself.
+# Neither reader applies a lower time bound: is_hot_entry decides what an OLD quote means, and
+# "no row at all" must stay distinguishable from "a stale row".
 
-    Feeds the live "hot market" defensive-pricing check (live/sizing.py's is_hot_entry), which
-    itself decides what an old or missing tick means: `before` here only excludes the current
-    cycle's own just-inserted tick from being compared against itself."""
-    return session.scalar(
-        select(m.MmSellCandidateTick)
+
+def latest_mmsell_no_bid_before(
+    session, ticker: str, *, before: datetime
+) -> tuple[int | None, datetime | None]:
+    """mmsell's prior quote, from the in-band candidate tape it writes every cycle."""
+    row = session.execute(
+        select(m.MmSellCandidateTick.no_bid, m.MmSellCandidateTick.captured_at)
         .where(
             m.MmSellCandidateTick.market_ticker == ticker,
             m.MmSellCandidateTick.captured_at < before,
         )
         .order_by(m.MmSellCandidateTick.captured_at.desc())
         .limit(1)
-    )
+    ).first()
+    if row is None:
+        return None, None
+    return (int(row[0]) if row[0] is not None else None), row[1]
+
+
+def latest_theta_no_bid_before(
+    session, ticker: str, *, before: datetime
+) -> tuple[int | None, datetime | None]:
+    """theta's prior quote, from the crypto ladder tape.
+
+    The ladder stores the YES side, so the NO bid theta's maker entry rests at is derived the
+    same way the entry itself derives it: `no_bid = 100 - yes_ask`. Served by
+    ix_crypto_ladder_mkt_time (alembic b8c9d0e1f2a3) — without it this is a sequential scan
+    inside the live trading loop."""
+    row = session.execute(
+        select(m.CryptoLadderSnapshot.yes_ask_cents, m.CryptoLadderSnapshot.captured_at)
+        .where(
+            m.CryptoLadderSnapshot.market_ticker == ticker,
+            m.CryptoLadderSnapshot.captured_at < before,
+        )
+        .order_by(m.CryptoLadderSnapshot.captured_at.desc())
+        .limit(1)
+    ).first()
+    if row is None or row[0] is None:
+        return None, (row[1] if row is not None else None)
+    return int(round(100.0 - float(row[0]))), row[1]
 
 
 def recent_candidate_mids(session, ticker: str, limit: int) -> list[float]:

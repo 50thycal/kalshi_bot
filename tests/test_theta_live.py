@@ -159,6 +159,73 @@ def test_theta_live_price_offset_capped_at_no_ask(settings):
     assert client.placed[0]["price"] == "0.1900"
 
 
+def test_theta_live_hot_market_prices_defensively_but_still_places(settings):
+    """A ladder quote that has gone quiet for longer than the lookback window marks this entry
+    hot, so it rests BELOW the no-bid instead of joining the queue. This is the defence against
+    the `400 invalid_order — "post only cross"` rejection theta took live on 2026-08-02: the book
+    moved through our resting price between quote and placement, and because the order never
+    rests at all, the market is lost for the rest of theta's short (10-55min) window."""
+    _live_settings(settings, theta_live_hot_market_lookback_minutes=15,
+                   theta_live_hot_market_defensive_offset_cents=-3)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    stale = datetime.now(timezone.utc) - timedelta(minutes=45)
+    with db.session_scope() as session:
+        session.add(m.CryptoLadderSnapshot(
+            captured_at=stale, event_ticker="KXBTCD-26JUL0317",
+            market_ticker="KXBTCD-26JUL0317-T60500", yes_bid_cents=19.0, yes_ask_cents=21.0))
+        session.flush()
+        _enter(ex, session)
+    assert len(client.placed) == 1                 # still entered — never excluded
+    # buy NO @ 79 - 3 = 76 == sell YES @ 24c
+    assert client.placed[0]["price"] == "0.2400"
+    with db.session_scope() as session:
+        assert session.scalar(select(m.RiskEvent)).reason_codes_json == ["hot_entry"]
+
+
+def test_theta_live_calm_ladder_prices_normally(settings):
+    """A recent, price-stable ladder quote must leave the entry on the normal path — hot pricing
+    is about the market having actually moved, not about having a comparison point at all."""
+    _live_settings(settings, theta_live_hot_market_lookback_minutes=15)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    recent = datetime.now(timezone.utc) - timedelta(minutes=5)
+    with db.session_scope() as session:
+        session.add(m.CryptoLadderSnapshot(
+            captured_at=recent, event_ticker="KXBTCD-26JUL0317",
+            market_ticker="KXBTCD-26JUL0317-T60500", yes_bid_cents=19.0, yes_ask_cents=21.0))
+        session.flush()
+        _enter(ex, session)
+    assert client.placed[0]["price"] == "0.2100"   # unchanged: sell yes @ 21c (no-bid 79)
+
+
+def test_theta_hot_pricing_does_not_read_mmsells_tape(settings):
+    """Each book reads its OWN tape. An mmsell candidate tick on the same ticker must not make a
+    theta entry look calm (or hot) — that cross-wiring is the bug the required `lookup` argument
+    in live/sizing.py exists to prevent."""
+    _live_settings(settings, theta_live_hot_market_lookback_minutes=15)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    recent = datetime.now(timezone.utc) - timedelta(minutes=5)
+    with db.session_scope() as session:
+        # a CALM mmsell tick; theta has no ladder row at all, so theta must read "no tape" (calm)
+        # from its own table rather than picking this up.
+        session.add(m.MmSellCandidateTick(
+            market_ticker="KXBTCD-26JUL0317-T60500", captured_at=recent,
+            no_bid=79, no_ask=81, yes_bid=19, yes_ask=21, mid=20.0))
+        session.flush()
+        _enter(ex, session)
+    assert client.placed[0]["price"] == "0.2100"   # normal path, from theta's own (empty) tape
+    with db.session_scope() as session:
+        assert session.scalar(select(m.RiskEvent)).reason_codes_json == []
+
+
 def test_theta_live_wide_spread_guard(settings):
     _live_settings(settings, theta_live_max_spread_cents=1)  # 2c spread exceeds the sanity cap
     db.init_engine(settings.database_url)
