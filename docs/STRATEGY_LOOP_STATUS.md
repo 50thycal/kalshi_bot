@@ -36,171 +36,188 @@ will strengthen automatically as the pilot accumulates fills.
 
 ---
 
-## Snapshot — 2026-07-31 08:26 PM CDT (run #77)
+## Snapshot — 2026-08-02 09:57 AM CDT (run #78)
 
-**HEADLINE: theta4's live Stage-1 pilot got its FIRST FILLS — 4 filled, 100% win, and
-`theta_fill_model` auto-upgraded from BORROWED to theta's OWN calibration the moment it happened.**
-Small sample (n=4), nothing gate-worthy yet, but the mechanism worked exactly as designed with zero
-code changes needed. Decision alignment: twin opened 5, live placed 4 (1 rejected) — 80% overlap.
-Execution realism: 100% fill rate (4/4, no cancels), live px 78.8¢ vs twin 78.8¢ (px_gap +0.20¢ on
-the one filled-price comparison — small, not concerning at this n). Matched-market read (n=4): twin
-+19.67¢/ct vs live +21.00¢/ct — **live so far running slightly BETTER than its twin**, no
-accounting-gap signal. `theta_fill_model` now reads "theta's OWN live orders" as its calibration
-source, but every price cell is still "thin" (<8 fills), so coverage is 0% everywhere — expected,
-watch this fill in as the pilot accumulates. Nowhere near Stage 1's ≥80-filled-round-trip gate yet.
+**HEADLINE: `mmsell10_pt`'s parity verdict flipped from TOO EARLY to EXECUTION GAP — but the epoch
+is already known-compromised by the still-unresolved PARAM DRIFT anomaly, so read this with real
+skepticism, not as a clean finding.** Both sides finally cleared n≥30 (twin 70, live 33).
+Matched-market accounting is still clean (gap −0.49¢, unchanged from every prior run — NOT an
+accounting gap). But the blended books diverge: twin (all 70 trades) averages +4.71¢/ct at 98.6%
+win, live (33 settled) averages +6.68¢/ct at 100% win — a −1.98¢/ct gap the script's own logic
+labels EXECUTION GAP (matched markets agree, but the full books don't). The catch: `docs/
+LIVE_PAPER_TWIN.md`'s own interpretation traps say param drift **voids the epoch** — "the old
+epoch's numbers describe a configuration that no longer exists" — and this exact epoch has an
+unresolved PARAM DRIFT anomaly logged since run #76. The verdict may be real, or may be an artifact
+of mixing pre/post-drift populations. **This elevates the "start a fresh twin tag" suggestion from
+a nice-to-have to the load-bearing fix** — no clean verdict is possible until it happens.
 
-Second: **`mmsell10_pt`'s PARAM DRIFT anomaly from run #76 is still unresolved** — `live_paper_parity`
-continues to flag it every run; no fresh twin tag has been started yet.
+Second: theta4's live pilot has grown to 11 fills (twin) / 9 (live), still TOO EARLY, but its first
+loser showed up (twin win% dropped to 90.9% from 100%) — small-n noise, not a flag yet.
 
-Third: a real live-infra bugfix landed on the default branch since #76 (`fc341cd`, "mmsell live:
-retry the entry paper's phantom position was locking live out of..."): live's own entry mirror was
-being skipped every cycle after the first because the paper book's `skip_already_open` check was
-also gating the live attempt underneath it — live got exactly one shot per ticker, ever. Already
-merged and fixed; noted here as background, not an open item.
+Third: `mmsellA3` and `mmsellA4` both went cumulative-negative for the first time this run (still
+tiny n, tracked in the table below, not yet gate-relevant).
 
 **Live P&L (real money — `mmsell10`, epoch started 2026-07-26 21:09 UTC):**
-| metric | this run | last run (#76) |
+| metric | this run | last run (#77) |
 |---|---|---|
-| settled live positions | 29 (100% win) | 26 |
-| realized P&L | +$3.91, +6.74¢/ct | +$3.49, +6.72¢/ct |
-| fill rate | 62.7% (71 placed, 42 filled, 25 canceled) | 60.0% |
-| open footprint | **14 positions, $24.44 deployed** | 11 positions, $18.90 |
+| settled live positions | 33 (100% win) | 29 |
+| realized P&L | +$4.41, +6.68¢/ct | +$3.91, +6.74¢/ct |
+| fill rate | 65.8% (77 placed, 48 filled, 25 canceled) | 62.7% |
+| open footprint | **19 positions, $27.90 deployed** | 14 positions, $24.44 |
 
-Open footprint has now grown for 3 consecutive runs (5→11→14 positions, $7.70→$18.90→$24.44) with
-fill economics and P&L staying flat throughout — still reads as normal accumulation given win rate
-and ¢/ct are stable, but worth a settlement-rate sanity check if it's still climbing next run.
+Open footprint has now grown for **4 consecutive runs** (5→11→14→19, deployed capital
+$7.70→$18.90→$24.44→$27.90) with fill economics and win rate still stable — remains a soft watch
+item pending a settlement-rate check.
 
-Parity verdict: still **TOO EARLY** (twin n=56, live n=29 — just 1 short of the n≥30 bar).
-Matched-market gap −0.48¢ (steady, no ACCOUNTING GAP). Legacy `mmsell3` live unchanged: 367
-settled, +$1.33, +0.36¢/ct. `mmsell3_closeout` still inert.
+Parity verdict: **EXECUTION GAP** (see headline — read with the param-drift caveat). Legacy
+`mmsell3` live unchanged: 367 settled, +$1.33, +0.36¢/ct. `mmsell3_closeout` still inert.
 
-**Live P&L (real money — `theta4`, Stage 1 pilot):** first fills this run — 4 settled, 100% win,
-+$2.52 total, +21.00¢/ct (twin: 5 settled, +$2.98, +19.87¢/ct). See headline for detail. Far too
-early for any verdict (need ≥80 filled round-trips for Stage 1).
+**Live P&L (real money — `theta4`, Stage 1 pilot):** 9 settled (was 4), 88.9% win (was 100%),
++$1.65 total, +6.11¢/ct blended (twin: 11 settled, 90.9% win, +$2.35, +7.12¢/ct blended). Matched
+markets (n=9): twin +4.96¢/ct vs live +6.11¢/ct, gap −1.15¢ — no accounting-gap signal, consistent
+direction with mmsell10's read (live still running ahead of twin on matched trades). Still **TOO
+EARLY** (need ≥30 each side) and nowhere near Stage 1's ≥80-round-trip gate.
 
-**Trading books (settled n / realized P&L / ¢-per-trade / open) — PAPER, separate from live:**
-| book | n (Δ vs #76) | realized P&L | ¢/trade (was) | open | note |
-|---|---|---|---|---|---|
-| mmsell10 | 261 (+17) | +$10.39 | +3.98 (3.85) | 33 | live, holding |
-| mmsell10_pt (twin) | 56 (+16) | +$6.93 | +12.38 | 27 | PARAM DRIFT still unresolved |
-| mmsell11 | 475 (+20) | +$19.46 | +4.10 (3.90) | 33 | mirage under fill model |
-| mmsell6 | 539 (+20) | +$17.64 | +3.27 (3.13) | 33 | mirage under fill model |
-| mmsell9 | 80 (+9) | +$4.41 | +5.51 (5.48) | 0 | 80% to gate |
-| mmsell4 | 407 (+20) | +$12.65 | +3.11 (2.82) | 33 | KILL verdict still contradicted |
-| mmsell8 | 68 (+10) | +$2.57 | +3.78 (2.79) | 0 | improving, 68% to gate |
-| mmsell2 (paper) | 1,898 (+22) | +$59.59 | +3.14 (3.05) | 26 | steady |
-| mmsell1 (paper) | 2,877 (+25) | +$67.76 | +2.36 (2.29) | 36 | steady |
-| mmsell3 (paper shadow) | 1,258 (+20) | +$28.43 | +2.26 (2.16) | 33 | steady improvement |
-| mmsell5 | 185 (+0) | +$3.07 | +1.66 | 0 | quiet |
-| mmsell control (paper) | 4,383 (+28) | +$77.97 | +1.78 (1.67) | 38 | steady |
-| mmsell7 | 117 (+6) | +$2.24 | +1.91 (1.67) | 4 | still improving, 78% to gate |
-| mmsellA1/A2/A3 (stop-loss L12/L20/L30) | 4 each (NEW settled) | +$0.21 each | ~+5.25 each | 20/20/21 | too new to read |
-| mmsellA4 (vol entry gate) | 3 (NEW settled) | +$0.16 | ~+5.33 | 19 | too new to read |
-| mmsellA5 (strangle) | 0 | $0 | — | 0 | selectivity gate still hasn't fired |
-| **theta4** (fat-tail) | 119 (+5) | +$49.67 | +41.74 (39.21) | 0 | holding; live pilot got first fills |
-| **theta4_pt** (twin) | 5 (NEW) | +$2.98 | +59.60 | 0 | brand new, see headline |
-| weather_con (all) | 618 (+16) | −$17.44 | −2.82 (−2.63) | 15 | negative batch, worse again |
-| weather_concity | 137 (+8) | −$10.14 | −7.40 (−7.51) | 6 | still past gate, RETIRE unresolved |
+**Trading books (Δ vs run #77):**
 
-Shelved/killed (pin15, theta ctrl-3, tfav, weather rest) unchanged, quiet.
+| book | n (Δ) | P&L |
+|---|---|---|
+| mmsell (control) | 4,406 (+23) | +$79.00 |
+| mmsell1 | 2,898 (+21) | +$68.93 |
+| mmsell2 | 1,912 (+14) | +$60.69 |
+| mmsell3 (shadow) | 1,278 (+20) | +$28.96 |
+| mmsell4 | 427 (+20) | +$13.18 |
+| mmsell5 | 185 (+0) | +$3.07 |
+| mmsell6 | 559 (+20) | +$17.88 |
+| mmsell7 | 122 (+5) | +$2.50 |
+| mmsell8 | 69 (+1) | +$2.62 |
+| mmsell9 | 81 (+1) | +$4.46 |
+| mmsell10 | 281 (+20) | +$10.50 |
+| mmsell10_pt | 70 (+14) | +$6.59 |
+| mmsell11 | 495 (+20) | +$19.99 |
+| mmsellA1 | 11 (+7) | +$0.61 |
+| mmsellA2 | 11 (+7) | +$0.59 |
+| mmsellA3 | 12 (+8) | −$0.35 |
+| mmsellA4 | 10 (+7) | −$0.46 |
+| mmsellA5 | 0 (+0) | $0.00 |
+| theta (control) | 560 (+0) | +$0.97 |
+| theta1 | 201 (+0) | +$9.69 |
+| theta2 | 98 (+0) | −$11.55 |
+| theta3 | 134 (+0) | −$11.62 |
+| **theta4** | 125 (+6) | +$52.38 |
+| theta4_pt | 11 (+6) | +$2.35 |
+| weather_con (all) | 646 (+28) | −$18.90 |
+| weather_concity | 148 (+11) | −$9.16 |
 
-**theta fill-model re-read:** calibration source auto-switched to theta's own live orders (see
-headline) — 0% coverage everywhere until cells clear the 8-fill trust bar. theta4 paper itself:
-n=119, +41.74¢/trade cumulative (was +39.21¢), holding well above its paper gate.
+Shelved/killed (pin15, tfav, weather rest) unchanged, quiet — not tabulated.
 
-**Gate sweep (step 3b):** theta4 **119/80 CLEARED** (holding; live Stage-1 pilot now has its first
-4 fills, nowhere near the ≥80-round-trip gate) · mmsell10 **261/150 CLEARED + LIVE** (holding) ·
-mmsell6/mmsell11 clear on blended paper, still MIRAGE under fill model · mmsell9 80/100 (80%) ·
-mmsell7 117/150 (78%) · mmsell8 68/100 (68%) · weather_concity **137/120** (past gate, RETIRE
-verdict from #75 still unrecorded, 3rd run reinforcing it) · FREEZE settled grain+soft **8/100**
-(up 1 from 7 — grain 0→1, soft unchanged at 7, still not fired, 29 runs) · mmsellA1-5 all still
-well pre-gate (n≥100/82).
+Notable moves: mmsell10_pt's P&L (+$6.93→+$6.59) actually *dropped* despite +14 new settled trades
+— the new batch was net negative, the first sign of the twin's blended win rate slipping (98.6%,
+was ~100%), consistent with the EXECUTION GAP headline. theta4_pt similarly dropped slightly
+(+$2.98→+$2.35) on its first loser. weather_concity improved this batch (−$10.14→−$9.16) but
+remains net negative and past its gate. weather_con(all) keeps getting worse (5th straight
+negative-leaning run).
 
-**Data (last-24h rows / latest, ~01:20 AM UTC / 8:20 PM CDT run):** crypto_spot 2,878 (2 products,
-8:20 PM ✓) · crypto_ladder 62,738 all with model_p (8:20 PM ✓) · weather forecasts 8,555 (8:19 PM
-✓) · observations 644 (8:14 PM ✓) · ensembles 1,744 (8:19 PM ✓) · bucket snapshots 14,148 (8:17 PM
+**theta fill-model re-read:** still theta's own calibration, still 0% coverage everywhere (largest
+cell has 2 fills, need 8 to trust) — expected at this pilot size, will strengthen as fills
+accumulate. theta4 paper itself: n=125, holding well above its paper gate.
+
+**Gate sweep (step 3b):** theta4 **125/80 CLEARED** (holding; live pilot at 9-11 fills, nowhere
+near ≥80) · mmsell10 **281/150 CLEARED + LIVE** (holding, parity now EXECUTION GAP pending
+twin-tag fix) · mmsell6/mmsell11 clear on blended paper, still MIRAGE under fill model · mmsell9
+81/100 (81%) · mmsell7 122/150 (81%) · mmsell8 69/100 (69%) · weather_concity **148/120** (past
+gate, RETIRE verdict from #75 still unrecorded, 4th run reinforcing it) · FREEZE settled
+grain+soft **8/100** (unchanged, still not fired, 30 runs) · mmsellA1-5 all still well pre-gate
+(n≥100/82), A3/A4 now cumulative-negative.
+
+**Data (last-24h rows / latest, ~02:51 PM UTC / 9:51 AM CDT run):** crypto_spot 2,878 (2 products,
+9:51 AM ✓) · crypto_ladder 61,673 all with model_p (9:51 AM ✓) · weather forecasts 10,248 (9:51 AM
+✓) · observations 661 (9:51 AM ✓) · ensembles 1,712 (9:20 AM ✓) · bucket snapshots 14,106 (9:51 AM
 ✓). All fresh. xgame_matches/tapes still dark (expected — book KILLED, collector-only).
 
 **Research probes (on-demand):** none standing (TFAV/WCPROP/XGAME/PINNED/DECAY families closed).
 
-**Headline (repeated for chat-report lead):** theta4's live pilot got its first 4 fills this run —
-100% win, running slightly ahead of its twin, and the fill model auto-upgraded to theta's own
-calibration exactly as designed (still 0% coverage, far too early to read). mmsell10's live
-footprint keeps growing (now 3 straight runs) with P&L staying flat — a soft watch item, not a
-flag yet. The mmsell10_pt PARAM DRIFT anomaly from run #76 remains unresolved. Both weather books
-had another negative batch, reinforcing weather_concity's still-unrecorded RETIRE verdict.
+**Headline (repeated for chat-report lead):** mmsell10_pt's parity verdict moved from TOO EARLY to
+EXECUTION GAP now that both sides cleared n≥30 — but the epoch has an unresolved PARAM DRIFT
+anomaly that, per the twin harness's own documented interpretation traps, voids a clean read. The
+fresh-twin-tag fix (flagged since run #76) is no longer just good hygiene — it's now required
+before this verdict can be trusted. theta4's live pilot keeps growing (9-11 fills) with its first
+loser. mmsellA3/A4 turned cumulative-negative for the first time. Both changes are small-n and not
+yet actionable, but worth watching.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[NEW · top actionable — theta4's live pilot has its first fills] n=4 filled, 100% win, twin
-   n=5 (1 rejected). Live +21.00¢/ct vs twin +19.87¢/ct — no accounting-gap signal, live slightly
-   ahead so far.** Nothing to do — watch it accumulate toward Stage 1's ≥80-filled-round-trip gate.
-   `theta_fill_model` has auto-switched to theta's own calibration (0% coverage until cells clear 8
-   fills) — track this rising each run as the real replacement for the old borrowed-calibration
-   caution.
+1. **[REWRITTEN · now the load-bearing fix, not a nice-to-have — mmsell10_pt needs a fresh twin tag
+   before its EXECUTION GAP verdict can be trusted] Parity flipped from TOO EARLY to EXECUTION GAP
+   this run (both sides cleared n≥30), but the epoch has carried an unresolved PARAM DRIFT anomaly
+   since run #76.** `docs/LIVE_PAPER_TWIN.md`'s own interpretation traps say param drift **voids
+   the epoch** — the fix is a new twin tag (e.g. `mmsell10_pt2`), not a quiet re-read. Until that
+   happens, no clean verdict is possible on whether mmsell10's live execution is genuinely
+   underperforming its twin or whether the −1.98¢/ct gap is a drift artifact. This has been flagged
+   for 3 runs; it's now blocking a real finding, not just data hygiene.
 
-2. **[mmsell10_pt PARAM DRIFT — unresolved 2nd run running] `live_paper_parity` continues to flag
-   that mmsell10's live knobs changed mid-epoch.** Still no fresh twin tag started. A fable session
-   should action this — the longer it runs unaddressed, the less trustworthy the parity numbers
-   built on the current epoch become.
+2. **[theta4's live pilot keeps growing, first loser appeared] n=9 live-settled (was 4), 11 twin
+   (was 5), win% dipped to 88.9%/90.9% from 100% on both sides — small-n noise, not a flag.**
+   Matched-market gap −1.15¢ (no accounting-gap signal, same direction as mmsell10's read: live
+   running ahead of twin so far). Nothing to do — keep watching toward Stage 1's ≥80-round-trip
+   gate. `theta_fill_model` stays at 0% coverage (largest cell has 2 of the needed 8 fills).
 
-3. **[mmsell10's live open footprint keeps growing — 3rd straight run] 5→11→14 open positions,
-   $7.70→$18.90→$24.44 deployed, while fill economics and P&L stay flat (100% win, ~6.7¢/ct
-   steady).** Not a red flag yet — reads as normal accumulation — but worth a settlement-rate
-   sanity check if it keeps climbing without more settlements next run.
+3. **[mmsell10's live open footprint — now 4 consecutive runs of growth] 5→11→14→19 open
+   positions, $7.70→$18.90→$24.44→$27.90 deployed, fill economics and win rate still stable.**
+   Escalating slightly from a soft watch to worth a real settlement-rate check next run if the
+   open count keeps climbing without settlements catching up.
 
-4. **[weather_concity · RETIRE verdict from #75, still unrecorded, 3rd run reinforcing it] n=137
-   (+8), −7.40¢/trade cumulative (was −7.51¢, marginal improvement but still deeply negative),
-   still behind weather_con(all)'s −2.82¢/trade (also worse this run).** A fable session should
-   record the retire verdict and separately reconsider all-city `weather_con`'s own viability.
+4. **[NEW · mmsellA3/A4 turned cumulative-negative for the first time] mmsellA3 (stop-loss L30):
+   n=12, −$0.35. mmsellA4 (vol entry gate): n=10, −$0.46.** Still far too small (n≥100 gate) to
+   mean anything — flagging only because it's a first-time sign change worth tracking alongside
+   mmsellA1/A2, which remain modestly positive (+$0.61/+$0.59 at similar n).
 
-5. **[registry drift on the mmsell10 LIVE book — unresolved 3 runs later] `docs/BOOK_REGISTRY.md`
-   still lists `mmsell10` as `paper`, and `mmsell10_pt` (56 settled / 27 open) still has no row.**
+5. **[weather_concity · RETIRE verdict from #75, still unrecorded, 4th run reinforcing it] n=148
+   (+11), improved this batch (−$9.16, was −$10.14) but still deeply net negative, still behind
+   weather_con(all) (also worse again this run, 5th straight negative-leaning run).** A fable
+   session should record the retire verdict and separately reconsider `weather_con`'s viability.
+
+6. **[registry drift on the mmsell10 LIVE book — unresolved 4 runs later] `docs/BOOK_REGISTRY.md`
+   still lists `mmsell10` as `paper`, and `mmsell10_pt` (70 settled / 19 open) still has no row.**
    mmsell10 has been live with real money since 2026-07-26 — still needs a fable session to fix.
 
-6. **[mmsell4's KILL verdict continues to be contradicted] n=407, +3.11¢/trade (was +2.82¢,
-   +2.80¢, +2.63¢ across the last four runs — a clean improving trend), still above mmsell3's
-   +2.26¢.** Do not record the old kill.
+7. **[mmsell4's KILL verdict continues to be contradicted] n=427, +$13.18 (was +$12.65) — five
+   consecutive improving runs now.** Do not record the old kill.
 
-7. **[mmsell6 / mmsell11 promote question — gate on REALIZABLE, not blended paper] mmsell6 n=539
-   +3.27¢, mmsell11 n=475 +4.10¢ on blended paper, both still recorded MIRAGE under the
+8. **[mmsell6 / mmsell11 promote question — gate on REALIZABLE, not blended paper] mmsell6 n=559
+   +$17.88, mmsell11 n=495 +$19.99 on blended paper, both still recorded MIRAGE under the
    live-calibrated fill model in the registry.** Re-run `mmsell fill model` before any promotion.
 
-8. **[mmsell7 · improving trend, 78% to gate] n=117 (+6), +1.91¢/trade cumulative (was +1.67¢).**
-   Continuing to track without over-reading a small-n book that has flipped sign before.
+9. **[mmsell7 · improving trend, 81% to gate] n=122 (+5), +$2.50 (was +$2.24).** Continuing to
+   track without over-reading a small-n book that has flipped sign before.
 
-9. **[idea-model queue] MMX — premise (extend the mmsell edge into new categories) should be built
-   against mmsell10, the promoted/live mechanism. NEST — gate cleared (#74, theta4 n≥80); ready to
-   build on the paper gate alone (independent of theta4's live pilot status).**
+10. **[idea-model queue] MMX — premise (extend the mmsell edge into new categories) should be built
+    against mmsell10, the promoted/live mechanism. NEST — gate cleared (#74, theta4 n≥80); ready to
+    build on the paper gate alone (independent of theta4's live pilot status).**
 
-10. **[FREEZE gate · not fired] Settled grain+soft = 8 of the n≥100 trigger (up 1 from 7 — grain
-    0→1, soft unchanged at 7), unchanged trend across 29 runs now.** Standing background check.
+11. **[FREEZE gate · not fired] Settled grain+soft = 8 of the n≥100 trigger, unchanged this run,
+    30 runs now.** Standing background check.
 
-11. **[correlated-event risk · standing interpretive note] Run #73's whole-cohort loss traced to
+12. **[correlated-event risk · standing interpretive note] Run #73's whole-cohort loss traced to
     a single shared ticker (`KXNBATEAMANNOUNCE-...LJAMES23`) and fully washed out by #74.** Keep
     checking for a single shared ticker before reading any cohort-wide batch move as a
     strategy-wide signal.
 
-12. **[path to raise theta4's fill-model coverage without a live pilot — now secondary] The live
-    pilot (see #1) is producing theta's own calibration data directly, which is the stronger fix
-    the moment coverage clears. `theta_fill_replay.py` (mirroring `mmsell_fill_replay.py` against
-    the already-collecting `crypto_ladder_snapshots` table) remains a valid fallback/parallel path
-    but is even lower priority now that live data is actually arriving.**
+13. **[path to raise theta4's fill-model coverage without a live pilot — still secondary] The live
+    pilot (see #2) is producing theta's own calibration data directly. `theta_fill_replay.py`
+    (mirroring `mmsell_fill_replay.py` against `crypto_ladder_snapshots`) remains a valid
+    fallback/parallel path but stays lower priority while live data is accumulating.**
 
-13. **[mmsellA1-A5 anchor set · first settlements this run, still far too early] mmsellA1/A2/A3
-    (stop-loss L12/L20/L30) each show 4 settled (+$0.21), mmsellA4 (vol entry gate) shows 3
-    (+$0.16); A5 (strangle) still shows 0 rows (selectivity gate hasn't paired yet).** Gates are
-    n≥100 (A1-A4) / n≥82 clean pairs (A5) in `docs/BOOK_REGISTRY.md` — track as they accumulate.
+14. **[mmsellA1/A2 · still modestly positive] n=11 each, +$0.61/+$0.59.** See #4 for A3/A4's
+    sign flip. mmsellA5 (strangle) still shows 0 rows — selectivity gate hasn't paired yet.
 
-*(Changed this run: #1 REWRITTEN — theta4's live pilot has real fills now (n=4, 100% win, live
-ahead of twin) and the fill model auto-switched calibration source; reframed from "watch for the
-first fill" to "watch it accumulate." #2 — mmsell10_pt PARAM DRIFT restated, now unresolved 2
-runs. #3 NEW — mmsell10's growing live open footprint, flagged as a soft watch item after 3
-straight runs of growth. #4 — weather_concity restated, 3rd run reinforcing the RETIRE verdict.
-#5 — registry drift restated (3 runs unresolved). #6 — mmsell4 restated, 4th consecutive run of
-improvement. #7/#8 restated. #9 — NEST unchanged. #10 — FREEZE restated (ticked up 1, not
-material). #11 restated unchanged. #12 — reframed as lower-priority now that live data is
-actually arriving via the pilot. #13 — the mmsellA anchor set's first settlements, still far too
-early to read.)*
+*(Changed this run: #1 ESCALATED — mmsell10_pt's parity verdict changed (TOO EARLY → EXECUTION
+GAP) but the fresh-twin-tag fix is now the load-bearing blocker for trusting it, not routine
+hygiene; moved to top slot. #2 — theta4 live pilot restated, first loser noted as noise. #3 —
+mmsell10 footprint escalated slightly after a 4th straight growth run. #4 NEW — mmsellA3/A4 sign
+flip. #5 — weather_concity restated, 4th run reinforcing RETIRE. #6 — registry drift restated (4
+runs unresolved). #7 — mmsell4 restated, 5th consecutive improving run. #8/#9 restated. #10 — NEST
+unchanged. #11 — FREEZE restated (unchanged this run). #12 restated unchanged. #13 restated. #14
+NEW — split out from the old combined mmsellA item now that A3/A4 diverged from A1/A2.)*
