@@ -289,14 +289,23 @@ mmsell book already runs (weather and live cycles), writing into `backfill_regim
    overlaps by design and rewriting a row would reset its `candles_fetched` flag and re-fetch
    the same candles forever;
 2. every cycle, take up to `MMSELL_HISTORY_MARKETS_PER_CYCLE` (default 30) markets still lacking
-   candles, **newest first**, and store their path over the final `MMSELL_HISTORY_CAPTURE_HOURS`
+   candles, **oldest first**, and store their path over the final `MMSELL_HISTORY_CAPTURE_HOURS`
    (default 336h = mmsell's whole holding window) at hourly granularity.
 
-Newest-first is load-bearing: **candle history ages out too**, so the freshest settlement is the
-one most likely to still be fetchable. A market whose candles Kalshi no longer serves is marked
-done at zero rows rather than left pending, so it cannot wedge the queue ahead of markets that
-are still recoverable. A 404 on the live candle endpoint falls back to the historical endpoint —
-the path that matters more as a market ages toward the wall.
+**Oldest-first is load-bearing, and it is the opposite of what the first version did.** The first
+real run made the difference concrete: enumeration queued 11,361 markets, of which **9,986 were
+MLB** — a series that settles daily and sits comfortably inside the retention window — while
+**1,361 were NBA/NHL markets from a season that has ended** and will never produce another row.
+Newest-first put ~10 hours of replaceable MLB work ahead of the irreplaceable set while it aged
+toward the wall. The original rationale ("a fresh market is likeliest to still have a fetchable
+path") confused *most-likely-to-succeed* with *most-valuable-to-attempt*: a market that settled
+today will still be fetchable tomorrow; one from two months ago may not be.
+
+A market whose candles Kalshi no longer serves is marked done at **zero rows** rather than left
+pending — which is exactly what makes oldest-first safe, since an expired block sits at the head
+of the queue and would otherwise wedge everything behind it. A 404 on the live candle endpoint
+falls back to the historical endpoint — the path that matters more as a market ages toward the
+wall.
 
 The one structural difference from `weather/backfill.py`: that job reaches back once and latches
 `_enumerated`. This one can never finish, because the window it reads keeps sliding away.

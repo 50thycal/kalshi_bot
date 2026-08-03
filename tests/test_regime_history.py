@@ -5,8 +5,9 @@ history it fails to store is gone permanently — there is no re-run that recove
 therefore concentrate on the ways it could silently capture LESS than it should:
 
   * re-enumeration must not re-fetch candles it already has (the queue would never drain);
-  * a market whose candles Kalshi no longer serves must not wedge the queue ahead of fresh
-    settlements that ARE still fetchable;
+  * the candle queue must drain OLDEST-first, so the rows closest to the wall (an ended season
+    that will never produce another market) are attempted before replaceable daily ones;
+  * a market whose candles Kalshi no longer serves must not wedge the queue behind it;
   * a failing series, or a failing candle fetch, must not abort the rest of the pass;
   * unsettled/void and thin markets must be skipped, since they cannot label a backtest;
   * the worker's regime map is a deliberate duplicate of the ops script's and must not drift.
@@ -205,8 +206,9 @@ def test_stores_candles_and_marks_the_market_done(session):
 
 
 def test_market_with_no_candles_is_marked_done_not_left_to_wedge_the_queue(session):
-    """Kalshi ages candles out too. If an unfetchable market stayed pending forever it would sit
-    at the head of a newest-first queue and starve the fresh settlements that ARE still there."""
+    """Kalshi ages candles out too. Since the queue drains oldest-first, an expired block sits at
+    its HEAD — so retiring a zero-candle market is what stops it from wedging everything behind
+    it. This is the guard that makes oldest-first safe."""
     client = FakeClient(markets=[_market("KXNFLGAME-GONE")], candles={})
     cap = RegimeHistoryCapture(client, _settings(), sleep_s=0)
 
@@ -263,9 +265,9 @@ def test_per_cycle_chunk_bounds_the_api_budget(session):
 
     assert summary.markets_fetched == 2
     assert summary.pending == 3
-    # Newest settlement first: candle history ages out, so the freshest rows are the ones most
-    # likely to still be fetchable.
-    assert client.candle_calls == ["KXNFLGAME-0", "KXNFLGAME-1"]
+    # OLDEST settlement first — the rows closest to Kalshi's wall, i.e. the ones about to become
+    # unrecoverable. _market(close_days_ago=i+1) makes KXNFLGAME-4 the oldest.
+    assert client.candle_calls == ["KXNFLGAME-4", "KXNFLGAME-3"]
 
 
 def test_repeated_series_in_config_are_not_enumerated_twice():
