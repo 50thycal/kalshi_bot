@@ -27,6 +27,7 @@ from .kalshi.client import KalshiClient
 from .kalshi.errors import AuthError
 from .live.executor import LiveExecutor
 from .logging_config import configure_logging, log_event
+from .mmsell.history import RegimeHistoryCapture
 from .mmsell.tracker import MmSellTracker
 from .paper.engine import PaperCycleSummary, PaperTradingEngine
 from .pin15.tracker import Pin15Tracker
@@ -193,6 +194,14 @@ def run() -> int:
         if weather_like and settings.weather_validation_enabled
         else None
     )
+    # Rides along wherever the mmsell book runs. Kalshi discards settled markets after ~70 days,
+    # so this is the only way the Sept-Nov regimes are still measurable in October
+    # (docs/MMSELL_SEASONAL_FORECAST.md).
+    regime_history = (
+        RegimeHistoryCapture(client, settings)
+        if weather_like and settings.mmsell_history_enabled
+        else None
+    )
 
     # Live mode is stricter: a real balance MUST be available (fail-closed, refuse to start).
     if live:
@@ -252,13 +261,14 @@ def run() -> int:
                         settings, client, weather_engine, weather_tracker, live_executor,
                         weather_backfill, validation_backfill, mmsell_paper_tracker,
                         theta_tracker, xgame_tracker, tfav_tracker, wcprop_tracker,
-                        pin15_tracker,
+                        pin15_tracker, regime_history=regime_history,
                     )
                 elif weather:
                     _run_weather_cycle(
                         settings, client, weather_engine, weather_tracker, weather_backfill,
                         validation_backfill, mmsell_paper_tracker, theta_tracker,
                         xgame_tracker, tfav_tracker, wcprop_tracker, pin15_tracker,
+                        regime_history=regime_history,
                     )
                 elif mmsell:
                     _run_mmsell_cycle(settings, client, mmsell_engine, mmsell_tracker)
@@ -450,7 +460,7 @@ def _run_validation_backfill(validation_backfill) -> None:
 def _run_weather_cycle(
     settings, client, engine, tracker, backfill=None, validation_backfill=None,
     mmsell_tracker=None, theta_tracker=None, xgame_tracker=None, tfav_tracker=None,
-    wcprop_tracker=None, pin15_tracker=None,
+    wcprop_tracker=None, pin15_tracker=None, regime_history=None,
 ) -> None:
     status = client.get_exchange_status()  # AuthError propagates -> hard fail
     log_event(
@@ -497,6 +507,7 @@ def _run_weather_cycle(
             logger.exception("weather backfill cycle failed")
     _run_validation_backfill(validation_backfill)
     _run_mmsell_book(settings, mmsell_tracker)
+    _run_regime_history(regime_history)
     _run_theta_book(settings, theta_tracker)
     _run_tfav_book(settings, tfav_tracker)
     _run_pin15_book(settings, pin15_tracker)
@@ -521,6 +532,28 @@ def _wire_theta_live(tracker, account_state) -> None:
     _run_theta_book fires — the balance must stay fresh regardless of theta's own cadence."""
     if tracker is not None:
         tracker._account_state = account_state
+
+
+def _run_regime_history(capture) -> None:
+    """Capture Kalshi's settled market history for the mmsell regime series.
+
+    Kalshi discards settled markets after ~70 days, so this is the only path by which the
+    Sept-Nov regimes stay measurable once the season has passed (docs/MMSELL_SEASONAL_FORECAST.md).
+    Never raises into the cycle: losing a capture pass costs a little history, while raising here
+    would stop the trading books."""
+    if capture is None:
+        return
+    try:
+        with session_scope() as session:
+            summ = capture.run_once(session)
+        log_event(
+            logger, logging.INFO, "regime history capture",
+            enumerated=summ.enumerated_this_cycle, series=summ.series_enumerated,
+            new_markets=summ.markets_enumerated, markets_fetched=summ.markets_fetched,
+            candles_stored=summ.candles_stored, errors=summ.errors, pending=summ.pending,
+        )
+    except Exception:  # noqa: BLE001 — history capture must never stop the books
+        logger.exception("regime history capture cycle failed")
 
 
 def _run_mmsell_book(settings, tracker) -> None:
@@ -821,7 +854,7 @@ def _fetch_account_state(client) -> dict:
 def _run_live_cycle(
     settings, client, engine, tracker, executor, backfill=None, validation_backfill=None,
     mmsell_tracker=None, theta_tracker=None, xgame_tracker=None, tfav_tracker=None,
-    wcprop_tracker=None, pin15_tracker=None,
+    wcprop_tracker=None, pin15_tracker=None, regime_history=None,
 ) -> None:
     """Live cycle: reconcile Kalshi truth, manage exits, settle/mark paper, then run the
     tracker (which mirrors allowlisted entries into real orders)."""
@@ -868,6 +901,7 @@ def _run_live_cycle(
     _wire_mmsell_live(mmsell_tracker, account_state)  # live-only: pass real balance to the mirror
     _wire_theta_live(theta_tracker, account_state)    # live-only: pass real balance to the mirror
     _run_mmsell_book(settings, mmsell_tracker)
+    _run_regime_history(regime_history)
     _run_theta_book(settings, theta_tracker)
     _run_tfav_book(settings, tfav_tracker)
     _run_pin15_book(settings, pin15_tracker)

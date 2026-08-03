@@ -105,6 +105,7 @@ ALLOWED_SCRIPTS = (
     "mmsell_crypto_study",
     "mmsell_supply_forecast",
     "mmsell_regime_backtest",
+    "mmsell_history_status",
     "evo_digest",
     "evo_tree",
     "evo_selftest",

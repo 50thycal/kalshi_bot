@@ -12,6 +12,7 @@ Two ops scripts, deliberately split so a supply number and an edge number never 
 |---|---|---|
 | **"mmsell supply forecast"** | `scripts/mmsell_supply_forecast.py` | how MANY tradeable markets each regime will offer, in which week, settling on which date |
 | **"mmsell regime backtest"** | `scripts/mmsell_regime_backtest.py` | what each regime's maker-sell trade has been WORTH, out-of-sample |
+| **"mmsell history status"** | `scripts/mmsell_history_status.py` | is the settled-history capture running, and how much history do we now own that the API has already discarded |
 
 Shared vocabulary (the mmsell10 entry filter, the regime map, the calendar helpers) lives in
 `scripts/mmsell_seasonal.py` so the two outputs stay multiplicable. Unit tests:
@@ -279,19 +280,42 @@ enumerates settled markets per series into `backfill_weather_markets` / `backfil
 on the Railway worker (the only place with Kalshi credentials and a read-write DB), as a bounded
 chunk per cycle. It has accumulated 9,984 markets and 364,184 candles this way.
 
-**Recommended next change** (deliberately not bundled into this one, since it touches the worker,
-the schema and a migration):
+**BUILT** — `kalshi_bot/mmsell/history.py` (`RegimeHistoryCapture`), riding along wherever the
+mmsell book already runs (weather and live cycles), writing into `backfill_regime_markets` /
+`backfill_regime_candles`:
 
-1. `backfill_regime_markets` / `backfill_regime_candles`, mirroring the weather tables' provenance
-   split, keyed on the `mmsell_seasonal` regime series list.
-2. Enumerate settled markets for the regime series every cycle, storing ticker, series, close,
-   result and volume; fetch hourly candles over the final 14 days for markets we do not have.
-3. Start it **now**. NFL week 1 settles in early September; capture started today means the NFL
-   regime is measurable at real n by October, and the whole 2026-27 winter season is owned before
-   the next off-season erases it.
+1. every `MMSELL_HISTORY_ENUMERATE_MINUTES` (default 6h), enumerate settled markets for each
+   configured series and **insert** the unseen ones — insert-only, because re-enumeration
+   overlaps by design and rewriting a row would reset its `candles_fetched` flag and re-fetch
+   the same candles forever;
+2. every cycle, take up to `MMSELL_HISTORY_MARKETS_PER_CYCLE` (default 30) markets still lacking
+   candles, **newest first**, and store their path over the final `MMSELL_HISTORY_CAPTURE_HOURS`
+   (default 336h = mmsell's whole holding window) at hourly granularity.
 
-Until that exists, `mmsell_regime_backtest` is bounded to the rolling 70-day window, and every
-run of it is the best measurement available at that moment — **re-run it monthly**, because its
+Newest-first is load-bearing: **candle history ages out too**, so the freshest settlement is the
+one most likely to still be fetchable. A market whose candles Kalshi no longer serves is marked
+done at zero rows rather than left pending, so it cannot wedge the queue ahead of markets that
+are still recoverable. A 404 on the live candle endpoint falls back to the historical endpoint —
+the path that matters more as a market ages toward the wall.
+
+The one structural difference from `weather/backfill.py`: that job reaches back once and latches
+`_enumerated`. This one can never finish, because the window it reads keeps sliding away.
+
+**Default series** (`MMSELL_HISTORY_SERIES`, env-overridable on Railway without a redeploy) lead
+with the regimes we have zero paper history for, since those are the ones that cannot be
+reconstructed later: NFL/NCAAF game+total+spread, NBA/NHL, NCAAB, MLB (the control — we have
+paper history there, so it validates the captured data), and the midterm election series.
+Deliberately explicit rather than prefix-discovered: Kalshi lists 3,000+ sports series, mostly
+per-team spin-offs of one driver, and enumerating them all would spend the whole API budget on
+noise. Use `--list-series` to find real tickers before adding one.
+
+**Check it is working** with `{"type":"script","name":"mmsell_history_status"}`, which leads with
+freshness (a stale write or a pending queue that only grows means the capture is failing quietly)
+and reports the **BEYOND-WALL** count — markets we hold whose close is already older than
+Kalshi's ~70-day window. That column is the whole point of the job, and it should only ever grow.
+
+`mmsell_regime_backtest` still reads the live API, so it stays bounded to the rolling window
+until the captured tables have enough depth to replace it — **re-run it monthly**, because its
 coverage moves with the calendar.
 
 ---
@@ -304,6 +328,7 @@ coverage moves with the calendar.
 {"type":"script","name":"mmsell_supply_forecast","args":["--list-series","NFL,Elections"]}    // real tickers, for SEED_SERIES
 {"type":"script","name":"mmsell_regime_backtest","args":["--regimes","NBA,NHL,MLB"],"id":"rb-1"}
 {"type":"script","name":"mmsell_regime_backtest","args":["--interval","1","--sample","60"]}   // fine 1-min pass
+{"type":"script","name":"mmsell_history_status","id":"hist-1"}                               // is the capture accumulating?
 ```
 
 **Traps these scripts encode** (each cost a wrong answer during development):

@@ -165,6 +165,18 @@ To run a request:
      happens — the pattern `kalshi_bot/weather/backfill.py` already implements. Gate on the YIELD
      column, not the P&L: the retained window yields n≈10 trades/regime, which decides nothing.
 
+   - **"mmsell history status"** -> `{"type":"script","name":"mmsell_history_status"}` — is the
+     settled-history CAPTURE working? `kalshi_bot/mmsell/history.py` (`RegimeHistoryCapture`) rides
+     along the weather/live cycles and stores settled regime markets + their candles into
+     `backfill_regime_markets` / `backfill_regime_candles` **before Kalshi's ~70-day window drops
+     them** — that is the only reason Sept–Nov will be measurable in October. It is silent by
+     design (it must never disturb the books), so this script is how you check it: lead with
+     FRESHNESS (a stale write, or a pending queue that only grows, means it is failing quietly)
+     and with **BEYOND-WALL** — markets we hold that the API no longer serves. That column is the
+     point of the job and should only ever grow. Series are `MMSELL_HISTORY_SERIES`
+     (env-overridable on Railway without a redeploy); find real tickers with
+     `mmsell_supply_forecast --list-series <regime>` before adding one.
+
    The individual probes can still be run alone:
    `weather_model_check` grades the ensemble forecast distribution against the
    market's bucket prices on settled events (Brier/log-loss + hypothetical EV)
