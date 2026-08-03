@@ -279,6 +279,13 @@ class Settings(BaseSettings):
     mmsell_closeout_enabled: bool = False
     mmsell_closeout_strategies: str = ""   # comma list of strategy prefixes, e.g. "mmsell3"
     mmsell_closeout_slippage_cents: int = 3  # cross up to yes-ask + this many cents to guarantee the fill
+    # Give up on a ticker after this many close attempts. "Self-limiting" above holds only when
+    # the closes actually FILL; a position that can't be closed is re-derived from Kalshi's
+    # snapshot every cycle and retried forever. The mmsell3 wind-down (2026-07-19) left this flag
+    # on with KILL_SWITCH=true and burned 1,942 dead live_orders rows over 8 tickers, 650 on the
+    # worst one. Past the cap the executor logs once and leaves the position to a human. 0 =
+    # unbounded (the old behaviour).
+    mmsell_closeout_max_attempts_per_ticker: int = 5
 
     # --- Theta book (ride-along paper, weather/live cycle) ---
     # Model-anchored tail-selling on the recurring hourly crypto ladders (docs/
@@ -393,6 +400,7 @@ class Settings(BaseSettings):
     theta_closeout_enabled: bool = False
     theta_closeout_strategies: str = ""    # comma list of strategy prefixes, e.g. "theta4"
     theta_closeout_slippage_cents: int = 3  # cross up to yes-ask + this many cents to guarantee the fill
+    theta_closeout_max_attempts_per_ticker: int = 5  # see mmsell_closeout_max_attempts_per_ticker
 
     # --- TFAV book (ride-along paper, weather/live cycle) ---
     # The MIRROR of theta on the same recurring hourly crypto ladders: theta SELLS the
@@ -1274,6 +1282,8 @@ class Settings(BaseSettings):
             "mmsell_live_retry_max_drift_cents": self.mmsell_live_retry_max_drift_cents,
             "mmsell_closeout_enabled": self.mmsell_closeout_enabled,
             "mmsell_closeout_strategies": self.mmsell_closeout_strategy_list,
+            "mmsell_closeout_max_attempts_per_ticker":
+                self.mmsell_closeout_max_attempts_per_ticker,
             "mmsell_variants": [f"{v['tag']}:{v['lo']:.0f}-{v['hi']:.0f}"
                                 for v in self.mmsell_variant_list],
             "theta_enabled": self.theta_enabled,
@@ -1297,6 +1307,8 @@ class Settings(BaseSettings):
                 self.theta_live_hot_market_defensive_offset_cents,
             "theta_closeout_enabled": self.theta_closeout_enabled,
             "theta_closeout_strategies": self.theta_closeout_strategy_list,
+            "theta_closeout_max_attempts_per_ticker":
+                self.theta_closeout_max_attempts_per_ticker,
             "xgame_enabled": self.xgame_enabled,
             "xgame_series": self.xgame_series_list,
             "xgame_pm_tags": self.xgame_pm_tag_list,

@@ -9,9 +9,13 @@ What these tests pin, in order of what would silently break the experiment:
   * the vol gate does NOT fire on thin history, so a gated book differs from the control only by
     the entries the gate actually rejected.
   * a strangle's two legs are mutually exclusive, and a lone tail is never entered as a "strangle".
+  * the strangle pairing gate reads the LIVE nested-market payload shape (`*_dollars`), not just
+    the documented integer-cent keys — reading only the latter is what kept A5 at zero trades.
 """
 
 from __future__ import annotations
+
+import pytest
 
 from kalshi_bot.mmsell.tracker import MmSellTracker
 
@@ -89,36 +93,69 @@ def test_vol_gate_fails_soft_and_enters(monkeypatch, settings):
 
 
 # ------------------------------------------------------------------------- strangle
+#
+# Every case below runs against BOTH nested-market payload shapes. The live events endpoint
+# sends only the `_dollars` strings; the integer-cent keys these tests originally used exist
+# in the docs but not in the live response. Testing one shape is what let A5 ship reading
+# `mk.get("yes_bid")` -> None on every market -> gate always False -> zero trades, ever.
 
-def _ev(*mids):
-    return {"markets": [{"yes_bid": m - 1, "yes_ask": m + 1} for m in mids]}
+_SHAPES = ("cents", "dollars")
 
 
-def test_strangle_requires_both_tails_in_one_event():
+def _mk(mid, shape):
+    yb, ya = mid - 1, mid + 1
+    if shape == "cents":
+        return {"yes_bid": yb, "yes_ask": ya}
+    return {"yes_bid_dollars": f"{yb / 100:.2f}", "yes_ask_dollars": f"{ya / 100:.2f}"}
+
+
+def _ev(*mids, shape="cents"):
+    return {"markets": [_mk(m, shape) for m in mids]}
+
+
+@pytest.mark.parametrize("shape", _SHAPES)
+def test_strangle_requires_both_tails_in_one_event(shape):
     # a high strike (yes ~5c) AND a low strike (yes ~95c) -> a real strangle exists
-    assert MmSellTracker._event_has_both_tails(_ev(5, 95, 50), 7.0) is True
+    assert MmSellTracker._event_has_both_tails(_ev(5, 95, 50, shape=shape), 7.0) is True
 
 
-def test_strangle_rejects_an_event_with_only_the_cheap_yes_tail():
+@pytest.mark.parametrize("shape", _SHAPES)
+def test_strangle_rejects_an_event_with_only_the_cheap_yes_tail(shape):
     """A lone tail is an ordinary mmsell trade. Entering it as a 'strangle' would silently make
     A5 a duplicate of mmsell10 and destroy the low-volatility pairing the thesis rests on."""
-    assert MmSellTracker._event_has_both_tails(_ev(5, 4, 50), 7.0) is False
+    assert MmSellTracker._event_has_both_tails(_ev(5, 4, 50, shape=shape), 7.0) is False
 
 
-def test_strangle_rejects_an_event_with_only_the_cheap_no_tail():
-    assert MmSellTracker._event_has_both_tails(_ev(95, 96, 50), 7.0) is False
+@pytest.mark.parametrize("shape", _SHAPES)
+def test_strangle_rejects_an_event_with_only_the_cheap_no_tail(shape):
+    assert MmSellTracker._event_has_both_tails(_ev(95, 96, 50, shape=shape), 7.0) is False
 
 
-def test_strangle_respects_the_price_ceiling():
+@pytest.mark.parametrize("shape", _SHAPES)
+def test_strangle_respects_the_price_ceiling(shape):
     # yes 12c / 88c are both outside a 7c cap -> neither counts as a cheap tail
-    assert MmSellTracker._event_has_both_tails(_ev(12, 88), 7.0) is False
-    assert MmSellTracker._event_has_both_tails(_ev(12, 88), 15.0) is True
+    assert MmSellTracker._event_has_both_tails(_ev(12, 88, shape=shape), 7.0) is False
+    assert MmSellTracker._event_has_both_tails(_ev(12, 88, shape=shape), 15.0) is True
 
 
-def test_strangle_tolerates_missing_quotes():
-    ev = {"markets": [{"yes_bid": None, "yes_ask": None}, {"yes_bid": 4, "yes_ask": 6},
-                      {"yes_bid": 94, "yes_ask": 96}]}
+@pytest.mark.parametrize("shape", _SHAPES)
+def test_strangle_tolerates_missing_quotes(shape):
+    ev = {"markets": [{"yes_bid": None, "yes_ask": None},
+                      _mk(5, shape), _mk(95, shape)]}
     assert MmSellTracker._event_has_both_tails(ev, 7.0) is True
+
+
+def test_strangle_reads_the_live_events_payload_shape():
+    """The A5 regression, stated directly: the live payload the scan actually holds carries
+    `yes_bid_dollars`/`yes_ask_dollars` and NO integer-cent keys. A gate that reads the cent
+    keys raw sees None everywhere and is silently always-False -- which is why mmsellA5 sat at
+    zero rows from the day it shipped rather than accruing slowly as its thesis predicted."""
+    live_event = {"markets": [
+        {"ticker": "KX-HI", "yes_bid_dollars": "0.04", "yes_ask_dollars": "0.06"},
+        {"ticker": "KX-LO", "yes_bid_dollars": "0.94", "yes_ask_dollars": "0.96"},
+    ]}
+    assert all("yes_bid" not in mk for mk in live_event["markets"])  # the shape that broke it
+    assert MmSellTracker._event_has_both_tails(live_event, 7.0) is True
 
 
 def test_strangle_legs_are_mutually_exclusive():

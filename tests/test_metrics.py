@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from kalshi_bot.scanner.metrics import compute_metrics, parse_dt
+from kalshi_bot.scanner.metrics import compute_metrics, market_price_cents, parse_dt
 
 
 def _market(**kw):
@@ -74,6 +74,19 @@ def test_new_fixed_point_market_and_orderbook():
     assert m.spread == 3
     assert m.two_sided is True
     assert m.top_depth == 900
+
+
+def test_market_price_cents_reads_both_payload_shapes():
+    """The live events endpoint sends `_dollars` strings and omits the integer-cent keys, so a
+    raw market.get('yes_bid') reads None on a fully-quoted market. Any gate written that way is
+    silently always-False (this is the mmsellA5 regression)."""
+    assert market_price_cents({"yes_bid": 4}, "yes_bid") == 4        # legacy int cents
+    assert market_price_cents({"yes_bid_dollars": "0.04"}, "yes_bid") == 4   # live shape
+    assert market_price_cents({"yes_bid_dollars": "0.945"}, "yes_bid") == 94  # rounds to cents
+    assert market_price_cents({}, "yes_bid") is None
+    assert market_price_cents({"yes_bid": None, "yes_bid_dollars": None}, "yes_bid") is None
+    # a genuine zero must not be mistaken for "absent" and fall through to the other key
+    assert market_price_cents({"yes_bid": 0, "yes_bid_dollars": "0.50"}, "yes_bid") == 0
 
 
 def test_parse_dt_variants():
