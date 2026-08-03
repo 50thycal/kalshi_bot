@@ -81,7 +81,8 @@ Corroborating checks:
 
 What the wall still leaves measurable: regimes that were in season within the last 70 days.
 NBA and NHL **playoffs** (May 25 – Jun 15) are retained, which makes two of the six unseen
-regimes partially measurable today, and MLB is fully retained as a control.
+regimes partially measurable today, and MLB is fully retained as a control. That turned out to
+be enough for a first real read (n=171 entries) — see Reading 2.
 
 ---
 
@@ -127,41 +128,89 @@ and Oct rows will fill in as Kalshi lists them.
 Replaying the mmsell10 entry (sell YES at the ask ≤7¢, mid in 5–10¢, htc 1–336h) over the
 retained window, hourly candles across the 14 days before close:
 
+4,254 markets sampled across 7 regimes, 5 series each:
+
 | regime | markets candled | ever cheap | entries | **YIELD** | med htc | med entry |
 |---|---|---|---|---|---|---|
-| NHL | 193 | 14 | 13 | **6.7%** | 38.6h | 6.0¢ |
-| NBA | 197 | 11 | 10 | **5.1%** | 11.9h | 6.0¢ |
-| MLB | 321 | 12 | 9 | **2.8%** | 2.2h | 6.0¢ |
-| Tennis | 120 | 1 | 1 | **0.8%** | 45.5h | 6.0¢ |
+| OtherSport | 69 | 12 | 12 | **17.4%** | 101.0h | 6.0¢ |
+| NBA | 798 | 94 | 86 | **10.8%** | 22.4h | 6.0¢ |
+| Tennis | 315 | 15 | 15 | **4.8%** | 192.0h | 6.0¢ |
+| NHL | 704 | 23 | 21 | **3.0%** | 10.4h | 6.0¢ |
+| MLB | 1,811 | 54 | 36 | **2.0%** | 1.9h | 6.0¢ |
+| Crypto | 557 | 1 | 1 | **0.2%** | 9.0h | 6.0¢ |
 | Elections | 10 | 0 | 0 | **0.0%** | — | — |
 
-**The yield column is the trustworthy output here** (n = 120–321 markets per regime). The P&L
-column is not:
+| regime | n | win% | mean ¢/trade | p5 | total |
+|---|---|---|---|---|---|
+| **NBA** | 86 | **98.8%** | **+3.84** | +5.0 | +$3.30 |
+| MLB | 36 | 97.2% | +2.22 | +5.0 | +$0.80 |
+| NHL | 21 | 95.2% | +0.24 | +5.0 | +$0.05 |
+| Tennis | 15 | 93.3% | −1.67 | −95.0 | −$0.25 |
+| OtherSport | 12 | 91.7% | −3.25 | −95.3 | −$0.39 |
+| **POOLED** | **171** | **97.1%** | **+2.08** | +5.0 | +$3.56 |
 
-| regime | n | win% | mean ¢/trade | p5 |
-|---|---|---|---|---|
-| NHL | 13 | 100.0% | +5.00 | +5.0 |
-| NBA | 10 | 80.0% | −15.00 | −95.0 |
-| MLB | 9 | 88.9% | −6.11 | −95.0 |
-| POOLED | 33 | 90.9% | −4.09 | −95.0 |
+**The headline: NBA is the strongest regime measured, at +3.84¢/trade on 98.8% wins with a
+10.8% yield** — both a better edge and 5× the entry rate of MLB. If it survives, the winter
+regime is not the supply collapse the World Cup ending implied; it is an *upgrade*.
 
-**n = 9–13 per regime decides nothing.** At a 6¢ entry one loss costs ~−94¢, so break-even needs
-~94% wins; separating 90% from 95% needs hundreds of trades. NBA's −15¢ is *two* losses. Do not
-act on these numbers — they are reported to show the machinery works and to set priors.
+**Three caveats that stop this being actionable yet**, in order of severity:
 
-Two structural readings that *are* worth carrying forward, because they come from the
-market-count sample rather than the trade sample:
+1. **Effective n is far smaller than 171.** §4b shows NBA's 86 entries fall on just **6
+   settlement dates, averaging 14.2 positions per date**. Markets settling on one date share a
+   driver, so NBA is closer to **n≈6 independent observations** than 86. Same for MLB (6 dates)
+   and NHL (8). This is the single biggest reason not to size on these numbers.
+2. **NBA/NHL data is playoffs-only** — the retention wall leaves only May 25 – Jun 15. Playoff
+   markets are more liquid, more heavily traded and pricier than a Tuesday-night regular-season
+   game. H3 is explicitly the regular-season test.
+3. **Paper fill assumption.** These use the same "a resting order always fills" convention as
+   the paper books, so the maker adverse-selection haircut (`docs/MMSELL_FILL_MODEL.md`) applies
+   on top. Compare to our *paper* books, never to live.
 
-* **Elections had a 0% yield on 10 candled markets with a median cheapest mid of 27¢.** Election
-  ladder rungs mostly do not get into the 5–10¢ band at all in the retained sample — the cheap
-  tails sit *below* 5¢ or well above the cap. If that holds, the November election-concentration
-  risk is **smaller than feared**, because the book will not find many eligible entries there.
-  This is the single most useful new fact for sizing the November risk, and it needs re-testing
-  once real midterm ladders enter the window in late October.
-* **NHL/NBA yield ~5–7% is 2× MLB's 2.8%**, and at much longer median htc (38.6h / 11.9h vs
-  2.2h). If that survives, the winter regime supplies *more* entries per market than the summer
-  one, and earlier — the opposite of the "supply collapse" worry. Playoff volatility may inflate
-  it; the regular season is the real test.
+Two structural readings worth carrying forward, because they rest on the market-count sample
+(hundreds to thousands) rather than the trade sample:
+
+* **Elections yielded 0 entries on 10 candled markets, median cheapest mid 27¢.** Ladder rungs
+  mostly never reach the 5–10¢ band — the cheap tails sit below 5¢ or well above the cap. If it
+  holds, the November concentration risk is **smaller than feared**, because the book will not
+  find many eligible entries there. This is the most useful new fact for sizing November, and
+  n=10 is thin enough that it must be re-measured when real midterm ladders enter the window in
+  late October (gate H5).
+* **Crypto yielded 0.2% on 557 markets.** The BTC/ETH tail that carries 44 of our settled
+  mmsell10 trades barely converts in the *retained* window — consistent with
+  `docs/MMSELL_CRYPTO_STUDY.md`'s finding that the measurable crypto window (`htc<1h`) is not
+  the window mmsell trades. Flagged UNMEASURABLE by the coverage gate rather than scored.
+
+### H7 (anchor stops) — first out-of-sample read
+
+| regime | hold mean | hold p5 | Δmean @12/20/30 | Δp5 @12/20/30 | %exit @12 |
+|---|---|---|---|---|---|
+| NBA | +3.84 | +5.0 | −3.47 / −2.10 / −2.10 | −33 / −36 / −36 | 13% |
+| NHL | +0.24 | +5.0 | −4.90 / −2.29 / **+0.00** | −50 / −50 / **+0** | 24% |
+| MLB | +2.22 | +5.0 | −0.17 / **+0.28** / **+0.28** | −16 / **+0** / **+0** | 6% |
+| Tennis | −1.67 | −95.0 | −0.87 / −2.87 / −0.53 | **+79 / +64 / +63** | 47% |
+| OtherSport | −3.25 | −95.3 | **+4.67 / +3.75 / +2.67** | **+85 / +70 / +66** | 25% |
+
+Coherent with the jump-vs-continuous thesis, and it sharpens it: **the stop only helps where
+hold actually has a tail.** NBA/NHL/MLB have p5 = +5.0¢ (no loss inside the 5th percentile in
+this sample), so a stop can only subtract. Tennis and OtherSport — the two regimes that *did*
+take losses — are the two where the stop lifts the tail sharply (+63 to +85¢) and OtherSport is
+the only regime where it improves mean **and** tail together, passing the anchor gate. Small n,
+but it says the stop is a **tail-regime tool**, not a universal one.
+
+### H6 (correlated settlement) — measured, and the answer is "not in sports"
+
+| regime | dates | avg/date | max/date | loss% | **overdispersion** | worst day |
+|---|---|---|---|---|---|---|
+| NBA | 6 | 14.2 | 18 | 1.2% | **0.89×** | −$0.35 |
+| MLB | 6 | 4.7 | 9 | 2.8% | **0.18×** | +$0.00 |
+| NHL | 8 | 2.5 | 6 | 4.8% | **0.63×** | −$0.70 |
+| Tennis | 5 | 2.2 | 3 | 6.7% | **1.23×** | −$0.90 |
+
+All at or **below** 1.0× — losses on a shared settlement date are not clustering in sports, even
+with NBA averaging 14.2 positions per date. That is the "many small independent positions"
+assumption holding up where it was measurable. It is **not** evidence about elections, which is
+the case the risk model actually fears: zero election entries means H6 is untested exactly where
+it matters. Re-run in late October.
 
 ---
 
