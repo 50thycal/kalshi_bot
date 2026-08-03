@@ -61,6 +61,9 @@ REGIMES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("NCAAF",      ("KXNCAAF", "KXCFP", "KXHEISMAN")),
     ("NBA",        ("KXNBA",)),
     ("NHL",        ("KXNHL", "KXSTANLEY")),
+    # NCAA BASEBALL must precede NCAAB: KXNCAABB*/KXNCAABASEBALL are baseball series that the
+    # basketball prefix would otherwise swallow, putting a spring sport in a winter regime.
+    ("NCAABase",   ("KXNCAABB", "KXNCAABASEBALL")),
     ("NCAAB",      ("KXNCAAB", "KXMARCH")),
     ("MLB",        ("KXMLB", "KXWORLDSERIES", "KXHRDERBY", "KXASG")),
     ("Soccer",     ("KXWC", "KXEPL", "KXUCL", "KXLALIGA", "KXSERIEA", "KXBUNDES", "KXLIGUE",
@@ -117,6 +120,45 @@ def event_of(ticker: str) -> str:
     """Event a market belongs to: drop the trailing strike/outcome segment. Same convention as
     mmsell_crypto_study.event_key — used to test ladder mutual-exclusivity."""
     return ticker.rsplit("-", 1)[0] if (ticker or "").count("-") >= 2 else ticker
+
+
+# Source ranking for series selection. Kalshi's catalogue is huge (3,000+ sports series alone,
+# most of them per-team or one-off), so a run that pulled history for every regime-matching
+# series would spend its whole budget on noise.
+#
+# SEEDS rank first, above even series trading today. That ordering was learned the hard way: the
+# NFL regime has 4,400+ open markets across dozens of side-series, so ranking "open" first filled
+# the whole NFL budget with short-tickered futures and left KXNFLGAME — the series that actually
+# carries the season's supply — unpulled, which read as "NFL has no history" in the forecast.
+_SOURCE_RANK = {"seed": 0, "open": 1}
+
+
+def select_series(known: dict[str, str], want: set[str], max_per_regime: int) -> list[str]:
+    """Bounded, deterministic pick of series to pull history for.
+
+    `known` maps series ticker -> the source it was discovered from (see _SOURCE_RANK). Within a
+    source, shorter tickers win: the base series (KXNFLGAME) is what carries a season's volume,
+    while the long tail (KXNFLGAMEXYZ, KXMLBWINS-TEX) is per-team spin-offs of the same driver.
+    Deterministic so two runs of the forecast are comparable to each other.
+
+    SEEDS are exempt from the per-regime cap. They are a small hand-curated list, and letting the
+    cap evict them is what produced an all-zero seasonal table on the first real run: the NFL
+    regime's 4,400+ open markets filled every slot with side-series and left KXNFLGAME unpulled.
+    A seed that turns out not to exist costs exactly one empty request, which is much cheaper
+    than a silently missing season."""
+    per: dict[str, list[str]] = {}
+    for s in sorted(known):
+        reg = regime(s)
+        if reg not in want or skip_series(s):
+            continue
+        per.setdefault(reg, []).append(s)
+    out: list[str] = []
+    for reg in sorted(per):
+        seeds = [s for s in per[reg] if known[s] == "seed"]
+        rest = sorted((s for s in per[reg] if known[s] != "seed"),
+                      key=lambda s: (_SOURCE_RANK.get(known[s], 2), len(s), s))
+        out.extend(seeds + rest[:max_per_regime])
+    return out
 
 
 # --- time helpers ---------------------------------------------------------------------------

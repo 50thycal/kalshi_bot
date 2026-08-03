@@ -17,9 +17,11 @@ Four questions, four sections:
      htc <= 336h (14 days), so a market closing in November is not supply until late October.
      Every already-listed cheap market is bucketed by the week it ENTERS that window
      (close - 14d). No modeling: these markets exist today and their close dates are published.
-  3. SEASONAL CADENCE — for weeks past a series' listing horizon, the prior year's settled
-     market counts in the same calendar week, per regime. This is where "Sept brings NFL"
-     becomes a number rather than an intuition.
+  3. SEASONAL CADENCE — the trailing settled-market cadence per regime, and an explicit report
+     of the RETENTION WALL. Kalshi serves only a rolling ~70-day settled window (paging to
+     cursor exhaustion bottoms out on the same date for every series; KXNFLGAME returns zero),
+     so a prior-year comparison cannot be computed from this API at any page budget. What the
+     section does show is which regimes are decaying and which are arriving inside that window.
   4. SETTLEMENT-DATE CONCENTRATION — the risk the forecast exists to surface. mmsell's risk
      model is "many small independent positions"; 60 positions settling on one election night
      is closer to ONE position at 60x size. Reports the busiest settlement dates as a fraction
@@ -59,24 +61,36 @@ SEED_SERIES = (
     "KXMLBGAME", "KXMLBTOTAL", "KXMLBSPREAD", "KXMLBHR", "KXWORLDSERIES",
     # college basketball
     "KXNCAABGAME", "KXNCAABTOTAL", "KXNCAABSPREAD",
-    # elections — the November concentration risk
-    "KXSENATE", "KXHOUSE", "KXGOV", "KXELECTION", "KXMIDTERM", "KXPRES", "KXPRESPARTY",
-    "KXSENATECONTROL", "KXHOUSECONTROL",
+    # Elections — the November concentration risk. These are the tickers Kalshi actually lists
+    # for the 2026 midterms (confirmed against --list-series Elections); the obvious guesses
+    # KXSENATE / KXHOUSE / KXGOV / KXMIDTERM do NOT exist as series.
+    "KXHOUSERACE", "KXSENATEMID", "KXPRESPARTY", "KXGOVWINS", "KXHOUSEWINSTATE",
+    "KXMIDTERMMOV", "KXSENATEDEMLEAD", "KXHOUSEPOPVOTEMARGIN",
 )
 
 # Position caps the concentration section measures against (kalshi_bot/config.py).
 PAPER_MAX_OPEN = 200
 LIVE_MAX_OPEN = 60
 
+# Regimes the cadence section pulls prior-year history for: the six we have NEVER traded, plus
+# the ones carrying the book today (so the forecast shows what we are trading DOWN from as the
+# summer regime ends, not just what is arriving).
+CADENCE_REGIMES = (*ms.UNSEEN_REGIMES, "MLB", "Soccer", "Tennis", "Golf", "OtherSport",
+                   "Crypto", "Politics", "Econ")
+
 
 # ------------------------------------------------------------------ fetch
 
 
-def fetch_open_markets(max_pages: int) -> list[dict]:
+def fetch_open_markets(max_pages: int, verbose: bool = False) -> list[dict]:
     """Every currently-open market with its series, close time, quote and volume.
 
     Uses /events?with_nested_markets=true rather than /markets because the event record carries
-    series_ticker and category, which the flat market feed does not reliably return."""
+    series_ticker and category, which the flat market feed does not reliably return.
+
+    Warns when `max_pages` cuts the scan short: every supply number in this script is a COUNT of
+    these markets, so a truncated scan understates all of them silently — the one failure mode
+    that would make the forecast quietly wrong rather than visibly incomplete."""
     out: list[dict] = []
     cursor = ""
     for _ in range(max_pages):
@@ -103,18 +117,28 @@ def fetch_open_markets(max_pages: int) -> list[dict]:
         cursor = (page or {}).get("cursor") or ""
         if not cursor or not evs:
             break
+    if cursor and verbose:
+        print(f"  WARNING: open-market scan hit the {max_pages}-page cap with more events "
+              f"pending — every supply count below is an UNDERCOUNT. Raise --event-pages.")
     return out
 
 
 def fetch_settled_deep(series: str, max_pages: int, min_vol: float,
-                       since: int) -> list[dict]:
+                       since: int) -> tuple[list[dict], int]:
     """Settled markets for one series back to `since` (unix), newest-first pagination.
 
+    Returns (rows, reach) where `reach` is the OLDEST close time the pagination actually got to.
+    Reach matters as much as the rows: a high-frequency series (KXBTCD lists ~300 markets a day)
+    exhausts the page budget inside a week, so its prior-year weeks come back empty — and an
+    empty week is indistinguishable from a week with no markets unless the caller knows how far
+    back the data goes. Callers must blank uncovered weeks rather than print them as zero.
+
     kalshi_flb.fetch_settled_for_series caps at 3 pages and stops on a count, which is right for
-    an edge sample but wrong for a CADENCE count — a season's worth of NFL markets needs to be
-    walked to the end. Stops early once a page's markets are all older than `since`."""
+    an edge sample but wrong for a CADENCE count — a season's worth of NFL markets needs walking
+    to the end."""
     out: list[dict] = []
     cursor = ""
+    reach = None
     for _ in range(max_pages):
         page = xl._get(f"{KALSHI}/markets?series_ticker={series}&status=settled"
                        f"&limit=1000&cursor={cursor}")
@@ -133,16 +157,28 @@ def fetch_settled_deep(series: str, max_pages: int, min_vol: float,
                 "result": (m.get("result") or "").lower(),
                 "volume": xl._num(m.get("volume") or m.get("volume_fp")),
             })
+        if oldest is not None:
+            reach = oldest if reach is None else min(reach, oldest)
         cursor = (page or {}).get("cursor") or ""
         if not cursor or not mkts or (oldest is not None and oldest < since):
             break
-    return [m for m in out if m["volume"] >= min_vol or min_vol <= 0]
+    rows = [m for m in out if m["volume"] >= min_vol or min_vol <= 0]
+    return rows, (reach if reach is not None else int(time.time()))
 
 
-def discover_series(open_markets: list[dict], max_pages: int) -> dict[str, str]:
-    """series ticker -> where it came from. Three sources, unioned:
-    the /series catalogue (includes dormant seasons), today's open markets, and SEED_SERIES."""
+def discover_series(open_markets: list[dict]) -> dict[str, str]:
+    """series ticker -> the highest-priority source it was discovered from.
+
+    Three sources, unioned in priority order (see mmsell_seasonal.select_series): series trading
+    TODAY, the hand-picked seasonal seeds, then Kalshi's full catalogue — which is what makes a
+    dormant season visible at all (an NFL game series has no open market in August), but is also
+    3,000+ sports series deep, so the caller must bound it."""
     found: dict[str, str] = {}
+    for m in open_markets:
+        if m["series"]:
+            found.setdefault(m["series"], "open")
+    for s in SEED_SERIES:
+        found.setdefault(s, "seed")
     for cat in ("Sports", "Politics", "Economics", "Financials", "Crypto", "Climate",
                 "Companies", "Culture", "World", "Health", "Science"):
         page = xl._get(f"{KALSHI}/series?category={cat}")
@@ -150,11 +186,6 @@ def discover_series(open_markets: list[dict], max_pages: int) -> dict[str, str]:
             tk = (s.get("ticker") or "").upper()
             if tk:
                 found.setdefault(tk, f"catalogue:{cat}")
-    for m in open_markets:
-        if m["series"]:
-            found.setdefault(m["series"], "open")
-    for s in SEED_SERIES:
-        found.setdefault(s, "seed")
     return found
 
 
@@ -209,6 +240,16 @@ def report_live_supply(markets: list[dict], now: int) -> dict[str, float]:
                      "UNSEEN" if reg in ms.UNSEEN_REGIMES else ""])
     _table(rows, ["regime", "open", "in-window", "ELIGIBLE", "bandrate", "cheap-far", "note"],
            [12, 6, 9, 8, 8, 9, 7])
+    # An unmapped series lands in "Other" and disappears from every per-regime table, so the
+    # biggest unmapped drivers are worth naming — that is how mmsell_seasonal.REGIMES grows.
+    other: dict[str, int] = defaultdict(int)
+    for m in markets:
+        if ms.regime(m["series"]) == "Other" and not ms.skip_series(m["series"]):
+            other[m["series"]] += 1
+    if other:
+        top = sorted(other.items(), key=lambda kv: -kv[1])[:10]
+        print("  biggest UNMAPPED series (candidates for mmsell_seasonal.REGIMES): "
+              + ", ".join(f"{s}={n}" for s, n in top))
     tot_w = sum(c["window"] for c in per.values())
     tot_e = sum(c["elig"] for c in per.values())
     pooled = (tot_e / tot_w) if tot_w else 0.0
@@ -262,58 +303,73 @@ def report_window_entry(markets: list[dict], now: int, weeks: int, rates: dict) 
 
 def report_cadence(series_map: dict[str, str], now: int, weeks: int, rates: dict,
                    args) -> dict[_dt.date, dict[str, float]]:
-    """Section 3: prior-year settled counts per regime per calendar week -> forward projection."""
-    print("\n=== 3) SEASONAL CADENCE — prior-year settled markets in the same calendar week ===")
+    """Section 3: trailing settled cadence per regime, bounded by Kalshi's retention wall."""
+    print("\n=== 3) SEASONAL CADENCE — settled-market cadence, and how far history actually goes ===")
     lookback_start = now - int(400 * 86400)
-    interesting = {s for s in series_map if ms.regime(s) != "Other" and not ms.skip_series(s)}
-    print(f"  pulling settled history for {len(interesting)} series "
-          f"(sources: {len({v.split(':')[0] for v in series_map.values()})}) ...")
+    want = {r.strip() for r in args.regimes.split(",") if r.strip()}
+    interesting = ms.select_series(series_map, want, args.max_series)
+    print(f"  discovered {len(series_map)} series; pulling settled history for "
+          f"{len(interesting)} (<= {args.max_series} per regime, active series first)")
 
-    # week-of-close -> regime -> settled market count, over the trailing ~13 months
+    # week-of-close -> regime -> settled market count, over the trailing ~13 months.
+    # `reach` is how far back each regime's pagination actually got: a high-frequency series
+    # exhausts the page budget in days, and printing its unreached weeks as 0 would fabricate
+    # "no supply" out of "no data" — the single easiest way for this forecast to mislead.
     hist: dict[_dt.date, dict[str, int]] = defaultdict(lambda: defaultdict(int))
-    per_series_n: dict[str, int] = {}
+    per_series: dict[str, tuple[int, int]] = {}
+    reach: dict[str, int] = {}
     for s in sorted(interesting):
-        rows = fetch_settled_deep(s, args.hist_pages, args.min_vol, lookback_start)
-        per_series_n[s] = len(rows)
+        rows, got = fetch_settled_deep(s, args.hist_pages, args.min_vol, lookback_start)
+        per_series[s] = (len(rows), got)
         reg = ms.regime(s)
+        reach[reg] = min(reach.get(reg, got), got) if rows else reach.get(reg, now)
         for m in rows:
             hist[ms.week_start(m["close"])][reg] += 1
         time.sleep(args.sleep)
 
-    live = [s for s, n in sorted(per_series_n.items(), key=lambda kv: -kv[1]) if n][:12]
-    print("  deepest series pulled: " + ", ".join(f"{s}={per_series_n[s]}" for s in live))
-    dead = [s for s, n in per_series_n.items() if n == 0]
+    live = sorted(((n, r, s) for s, (n, r) in per_series.items() if n), reverse=True)[:14]
+    print("  deepest series pulled (rows, oldest close reached): "
+          + ", ".join(f"{s}={n}@{_dt.datetime.utcfromtimestamp(r):%Y-%m-%d}"
+                      for n, r, s in live))
+    dead = [s for s, (n, _r) in per_series.items() if n == 0]
     if dead:
         print(f"  {len(dead)} series returned no settled history in the window "
               f"(dormant, renamed, or a bad seed guess): {', '.join(sorted(dead)[:14])}"
               + (" ..." if len(dead) > 14 else ""))
 
-    # Project: each forward week takes the count from the same week ~1 year earlier (364 days
-    # keeps the weekday alignment sports schedules actually follow).
-    print("\n  forward projection — settled-market supply, prior-year same week (364d back):")
-    forward: dict[_dt.date, dict[str, float]] = {}
-    regs = sorted({r for wk in hist.values() for r in wk},
-                  key=lambda r: -sum(wk.get(r, 0) for wk in hist.values()))[:9]
-    rows = []
+    # THE RETENTION WALL. Kalshi's settled-market feed serves only a rolling ~70 days: paging a
+    # series to cursor exhaustion (not a page cap) bottoms out on the same date for every series
+    # regardless of size, KXNFLGAME returns zero markets, and status=finalized/closed return
+    # nothing at all. So a prior-year comparison — the obvious way to forecast a season — is not
+    # available from this API at any page budget, and printing one would be inventing data.
+    # What IS available is the trailing cadence inside the wall, which shows the CURRENT regime
+    # decaying and the next one arriving.
+    wall = max(reach.values()) if reach else now
+    deepest = min(reach.values()) if reach else now
+    print(f"\n  RETENTION WALL: settled history reaches back to "
+          f"{_dt.datetime.utcfromtimestamp(deepest):%Y-%m-%d} "
+          f"({(now - deepest) / 86400:.0f}d) at best; the shallowest regime stops at "
+          f"{_dt.datetime.utcfromtimestamp(wall):%Y-%m-%d}.")
+    print("  Kalshi serves a rolling ~70-day settled window, so LAST season is unavailable at any")
+    print("  page budget — a prior-year projection cannot be computed and is not shown. The fix is")
+    print("  to CAPTURE settled history as it happens (the weather backfill already does exactly")
+    print("  this); see docs/MMSELL_SEASONAL_FORECAST.md. Trailing cadence inside the wall:")
+
+    regs = sorted(want & set(reach),
+                  key=lambda r: -sum(wk.get(r, 0) for wk in hist.values()))[:10]
     this_week = ms.week_start(now)
-    for i in range(weeks):
-        wk = this_week + _dt.timedelta(days=7 * i)
-        prior = wk - _dt.timedelta(days=364)
-        counts = hist.get(prior, {})
-        forward[wk] = {r: float(counts.get(r, 0)) for r in regs}
-        est_entries = sum(
-            counts.get(r, 0) * (rates.get(r) if rates.get(r) is not None else rates["_pooled"])
-            for r in counts)
-        rows.append([str(wk)] + [counts.get(r, 0) for r in regs]
-                    + [sum(counts.values()), f"{est_entries:.0f}"])
-    _table(rows, ["week-of"] + regs + ["ALL", "est-entr"],
-           [10] + [max(6, len(r)) for r in regs] + [6, 8])
-    print("  est-entr = prior-year market supply x this regime's live bandrate (pooled where a")
-    print("  regime has no live quote to measure). It is a SUPPLY estimate, not a P&L estimate —")
-    print("  mmsell_regime_backtest supplies the per-regime edge that multiplies against it.")
-    print("  A prior-year zero means Kalshi did not run that series a year ago; the series may")
-    print("  be new, so treat zeros in NEW regimes as unknown rather than as 'no supply'.")
-    return forward
+    back = sorted(w for w in hist if w <= this_week)[-10:]
+    rows = []
+    for wk in back:
+        counts = hist.get(wk, {})
+        covered = {r: wk >= ms.week_start(reach.get(r, now)) for r in regs}
+        rows.append([str(wk)] + [(counts.get(r, 0) if covered[r] else "?") for r in regs]
+                    + [sum(counts.get(r, 0) for r in regs if covered[r])])
+    _table(rows, ["week-of"] + regs + ["ALL"], [10] + [max(6, len(r)) for r in regs] + [6])
+    print("  Settled markets per week per regime. A '?' is outside that regime's retained window,")
+    print("  NOT an empty week. Read the trend, not the level: a regime falling toward zero is the")
+    print("  supply we are about to lose, which is what the World Cup collapse looked like.")
+    return {ms.week_start(now): {r: 0.0 for r in regs}}
 
 
 def report_concentration(markets: list[dict], now: int, weeks: int, rates: dict) -> None:
@@ -380,14 +436,24 @@ def report_concentration(markets: list[dict], now: int, weeks: int, rates: dict)
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--weeks", type=int, default=16, help="forward horizon in weeks")
-    ap.add_argument("--event-pages", type=int, default=60, help="open-event pages to scan")
-    ap.add_argument("--hist-pages", type=int, default=4, help="settled pages per series")
+    ap.add_argument("--event-pages", type=int, default=120,
+                    help="open-event pages to scan (200 events/page); a cap that cuts the "
+                         "scan short understates every supply count, so it warns")
+    ap.add_argument("--hist-pages", type=int, default=2, help="settled pages per series")
+    ap.add_argument("--regimes", default=",".join(CADENCE_REGIMES),
+                    help="regimes to pull seasonal history for (see mmsell_seasonal.REGIMES)")
+    ap.add_argument("--max-series", type=int, default=10,
+                    help="series per regime in the cadence pull — Kalshi lists 3,000+ sports "
+                         "series, most of them per-team spin-offs of one driver")
     ap.add_argument("--min-vol", type=float, default=0.0,
                     help="volume floor for the cadence counts (0 = count every settled market)")
     ap.add_argument("--sleep", type=float, default=0.0, help="pause between series pulls")
     ap.add_argument("--skip-cadence", action="store_true",
                     help="sections 1/2/4 only (skips the slow per-series history pull)")
     ap.add_argument("--probe", action="store_true", help="dump raw API shapes and exit")
+    ap.add_argument("--list-series", default="",
+                    help="comma list of regimes: print every discovered series in them and exit. "
+                         "Use this to pick accurate SEED_SERIES instead of guessing tickers.")
     args = ap.parse_args(argv)
 
     now = int(time.time())
@@ -405,11 +471,78 @@ def main(argv: list[str] | None = None) -> int:
         print(f"/series?category=Sports: {len(rows)} rows; keys="
               f"{sorted(rows[0].keys()) if rows else None}")
         print(f"  first 25 tickers: {[r.get('ticker') for r in rows[:25]]}")
+        # Does the settled feed honour a close-time window? Newest-first pagination cannot reach
+        # a year back on a busy series (KXBTCD lists ~300 markets/day), so the whole seasonal
+        # cadence depends on being able to ASK for the prior-year window directly.
+        lo = now - 371 * 86400
+        hi = now - 357 * 86400
+        variants = {
+            "no-ts (control)": "series_ticker=KXBTCD&status=settled&limit=1000",
+            "min+max_close_ts": (f"series_ticker=KXBTCD&status=settled"
+                                 f"&min_close_ts={lo}&max_close_ts={hi}&limit=1000"),
+            "max_close_ts only": (f"series_ticker=KXBTCD&status=settled"
+                                  f"&max_close_ts={hi}&limit=1000"),
+            "ts without status": (f"series_ticker=KXBTCD&min_close_ts={lo}"
+                                  f"&max_close_ts={hi}&limit=1000"),
+            "NFL min+max": (f"series_ticker=KXNFLGAME&status=settled"
+                            f"&min_close_ts={lo}&max_close_ts={hi}&limit=1000"),
+        }
+        for name, qs in variants.items():
+            page = xl._get(f"{KALSHI}/markets?{qs}")
+            if page is None:
+                print(f"  ts-probe {name:20s}: REQUEST FAILED (4xx/5xx -> params rejected)")
+                continue
+            mk = page.get("markets") or []
+            closes = sorted(ms.close_unix(m.get("close_time") or "") for m in mk)
+            span = (f"{_dt.datetime.utcfromtimestamp(closes[0]):%Y-%m-%d}"
+                    f"..{_dt.datetime.utcfromtimestamp(closes[-1]):%Y-%m-%d}") if closes else "-"
+            inside = sum(1 for c in closes if lo <= c <= hi)
+            print(f"  ts-probe {name:20s}: {len(mk):5d} markets, closes {span}, "
+                  f"{inside} inside window, cursor={bool(page.get('cursor'))}")
+
+        # RETENTION: how far back does the settled feed go AT ALL? Every series in a real run
+        # bottomed out on the same date regardless of row count, which looks like a retention
+        # window rather than a pagination limit. If it is, no amount of paging reaches last
+        # season, and the whole historical-regime plan needs a different data source.
+        print("\n  --- settled-history RETENTION probe (walk each series to exhaustion) ---")
+        for s in ("KXNHLGAME", "KXNBAGAME", "KXNFLGAME", "KXMLBGAME", "KXPRESPARTY"):
+            for status in ("settled", "finalized", "closed"):
+                rows, cursor, pages = [], "", 0
+                while pages < 25:
+                    page = xl._get(f"{KALSHI}/markets?series_ticker={s}&status={status}"
+                                   f"&limit=1000&cursor={cursor}")
+                    if page is None:
+                        break
+                    mk = page.get("markets") or []
+                    rows.extend(ms.close_unix(m.get("close_time") or "") for m in mk)
+                    cursor = page.get("cursor") or ""
+                    pages += 1
+                    if not cursor or not mk:
+                        break
+                cl = sorted(c for c in rows if c)
+                oldest = (f"{_dt.datetime.utcfromtimestamp(cl[0]):%Y-%m-%d}" if cl else "-")
+                newest = (f"{_dt.datetime.utcfromtimestamp(cl[-1]):%Y-%m-%d}" if cl else "-")
+                age = f"{(now - cl[0]) / 86400:.0f}d" if cl else "-"
+                print(f"    {s:14s} {status:10s}: n={len(cl):6d} pages={pages:3d} "
+                      f"exhausted={not cursor} oldest={oldest} ({age} ago) newest={newest}")
+        return 0
+
+    if args.list_series:
+        want = {r.strip() for r in args.list_series.split(",") if r.strip()}
+        known = discover_series(fetch_open_markets(args.event_pages))
+        by_reg: dict[str, list[str]] = defaultdict(list)
+        for s, src in sorted(known.items()):
+            if ms.regime(s) in want:
+                by_reg[ms.regime(s)].append(f"{s}[{src.split(':')[0]}]")
+        for reg in sorted(by_reg):
+            print(f"\n--- {reg} ({len(by_reg[reg])} series) ---")
+            for i in range(0, len(by_reg[reg]), 4):
+                print("  " + "  ".join(x.ljust(30) for x in by_reg[reg][i:i + 4]))
         return 0
 
     print("=== mmsell SUPPLY FORECAST — upcoming tradeable markets by regime, week and "
           f"settlement date (as of {_dt.datetime.utcfromtimestamp(now):%Y-%m-%d %H:%MZ}) ===")
-    markets = fetch_open_markets(args.event_pages)
+    markets = fetch_open_markets(args.event_pages, verbose=True)
     print(f"  scanned {len(markets)} open markets across "
           f"{len({m['series'] for m in markets})} series")
     if not markets:
@@ -419,7 +552,7 @@ def main(argv: list[str] | None = None) -> int:
     rates = report_live_supply(markets, now)
     report_window_entry(markets, now, args.weeks, rates)
     if not args.skip_cadence:
-        report_cadence(discover_series(markets, args.event_pages), now, args.weeks, rates, args)
+        report_cadence(discover_series(markets), now, args.weeks, rates, args)
     report_concentration(markets, now, args.weeks, rates)
 
     print("\n  Read this WITH scripts/mmsell_regime_backtest.py: this script says how many trades")

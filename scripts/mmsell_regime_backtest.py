@@ -126,8 +126,9 @@ def collect(series_list, args):
     """Replay every sampled settled market in `series_list`. Returns (entries, coverage rows)."""
     entries, coverage = [], []
     for s in sorted(series_list):
-        rows = sf.fetch_settled_deep(s, args.hist_pages, args.min_vol,
-                                     int(time.time()) - int(args.lookback_days * 86400))
+        rows, _reach = sf.fetch_settled_deep(
+            s, args.hist_pages, args.min_vol,
+            int(time.time()) - int(args.lookback_days * 86400))
         rows = [r for r in rows if r["result"] in ("yes", "no")]
         if not rows:
             coverage.append({"series": s, "regime": ms.regime(s), "settled": 0, "sampled": 0,
@@ -367,7 +368,10 @@ def main(argv: list[str] | None = None) -> int:
                          "fine pass and needs a small --sample")
     ap.add_argument("--min-vol", type=float, default=50.0)
     ap.add_argument("--sleep", type=float, default=0.0)
-    ap.add_argument("--max-series", type=int, default=8, help="series per regime, busiest first")
+    ap.add_argument("--max-series", type=int, default=6,
+                    help="series per regime (active series first, then the seasonal seeds)")
+    ap.add_argument("--event-pages", type=int, default=20,
+                    help="open-event pages scanned to rank series by 'trading today'")
     args = ap.parse_args(argv)
 
     want = {r.strip() for r in args.regimes.split(",") if r.strip()}
@@ -375,12 +379,10 @@ def main(argv: list[str] | None = None) -> int:
         chosen = [s.strip().upper() for s in args.series.split(",") if s.strip()]
     else:
         print("=== mmsell REGIME BACKTEST — discovering series ...")
-        known = sf.discover_series(sf.fetch_open_markets(20), 20)
-        per_reg: dict[str, list[str]] = defaultdict(list)
-        for s in sorted(known):
-            if ms.regime(s) in want and not ms.skip_series(s):
-                per_reg[ms.regime(s)].append(s)
-        chosen = [s for reg in sorted(per_reg) for s in per_reg[reg][:args.max_series]]
+        known = sf.discover_series(sf.fetch_open_markets(args.event_pages))
+        chosen = ms.select_series(known, want, args.max_series)
+        print(f"  {len(known)} series discovered -> {len(chosen)} selected "
+              f"(<= {args.max_series} per regime): {', '.join(chosen)}")
     if not chosen:
         print("  (no series matched the requested regimes)")
         return 0

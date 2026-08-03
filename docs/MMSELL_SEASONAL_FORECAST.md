@@ -1,0 +1,275 @@
+# mmsell seasonal forward-look — what the coming markets will actually offer
+
+**Question:** mmsell's entire settled history is **one regime**. Sept–Nov brings NFL (weekly,
+Sept), MLB playoffs (Oct), NBA/NHL openings (Oct) and the **November 3 midterms**, and we have
+zero settled paper trades on any of them. The World Cup collapse already showed what a regime
+change does to this book — entries fell ~5× and the best cell vanished. This doc is the
+forward-look that replaces "wait and find out" with a measurement.
+
+Two ops scripts, deliberately split so a supply number and an edge number never get confused:
+
+| command | script | answers |
+|---|---|---|
+| **"mmsell supply forecast"** | `scripts/mmsell_supply_forecast.py` | how MANY tradeable markets each regime will offer, in which week, settling on which date |
+| **"mmsell regime backtest"** | `scripts/mmsell_regime_backtest.py` | what each regime's maker-sell trade has been WORTH, out-of-sample |
+
+Shared vocabulary (the mmsell10 entry filter, the regime map, the calendar helpers) lives in
+`scripts/mmsell_seasonal.py` so the two outputs stay multiplicable. Unit tests:
+`tests/test_mmsell_seasonal.py`.
+
+---
+
+## Finding 1 (confirmed) — our entire history is one summer regime
+
+Per-series settled `mmsell10` tape, pulled 2026-08-03:
+
+* **Date range: 2026-07-19 → 2026-08-03.** Sixteen days. That is the whole book.
+* **n ≈ 310 settled trades across 64 series**, and the series list is almost entirely
+  KXWC\* (World Cup goals/mentions/assists/scores/corners), MLB totals/spreads/HR/game,
+  tennis (ATP/WTA/ITF), WNBA, PGA/LIV golf, KXBTCD, and a few news series (KXTRUMPSAY,
+  KXFEDMENTION).
+* **Zero NFL. Zero NBA/NHL regular season. Zero NCAAF/NCAAB. Zero elections.**
+
+The losses are concentrated in a handful of series, which is worth carrying into any new
+regime: KXCLUBFGAME −27.7¢/trade, KXWCATTEND −19.8¢, KXNBATEAMANNOUNCE −14.2¢, KXMLBGAME
+−6.8¢, KXTRUMPSAYMONTH −6.6¢. Head-to-head game winners and attendance/announcement props are
+the repeat offenders — consistent with `docs/MMSELL_VARIANTS_THESIS.md`.
+
+**Conclusion: seasonality cannot be backtested from our own paper books at all.** That was the
+premise of this work, and it holds.
+
+---
+
+## Finding 2 (new, and it reshapes the plan) — the 70-day retention wall
+
+The plan assumed `kalshi_flb.fetch_settled_for_series` could pull "Kalshi's own public history
+for any series", making last season's NFL/NBA/NHL and the 2024 election ladders available
+out-of-sample. **It cannot. Kalshi serves only a rolling ~70-day settled window.**
+
+Measured by walking each series' settled feed to **cursor exhaustion** (not a page cap):
+
+| series | status | n | pages | exhausted | oldest close |
+|---|---|---|---|---|---|
+| KXNHLGAME | settled | 22 | 1 | yes | 2026-05-25 (**70d**) |
+| KXNBAGAME | settled | 20 | 1 | yes | 2026-05-25 (**70d**) |
+| KXMLBGAME | settled | 1798 | 2 | yes | 2026-05-25 (**71d**) |
+| **KXNFLGAME** | settled | **0** | 1 | yes | — |
+| KXPRESPARTY | settled | **0** | 1 | yes | — |
+| any of the above | finalized / closed | 0 | — | yes | — |
+
+The tell is that series with wildly different sizes (22 rows vs 1798 rows) bottom out on the
+**same date**, with the cursor exhausted. That is a retention boundary, not a budget limit.
+Corroborating checks:
+
+* `min_close_ts` / `max_close_ts` are accepted but return **zero** rows for any window older
+  than the wall — the filter cannot reach behind it either.
+* `status=finalized` and `status=closed` return nothing at all.
+* **Authentication does not help.** Our own `backfill_weather_markets` table spans 119 days
+  (2026-04-06 → 2026-08-02) — but it was first fetched on 2026-06-11 and reached back only
+  ~66 days from then. It spans more than 70 days *because it has been accumulating for 53
+  days*, not because the API served more.
+
+**Consequences:**
+
+1. **The historical regime backtest on last season's NFL is impossible** — there is no NFL
+   settled data at any page budget. Same for NCAAF, NCAAB and the 2024 election ladders.
+2. **A prior-year seasonal cadence cannot be computed.** The supply forecast does not print one;
+   it prints the trailing cadence inside the wall and states the wall explicitly. (An earlier
+   draft printed prior-year zeros, which read as "no supply" when it meant "no data" — the
+   forecast now blanks uncovered cells with `?` rather than fabricating a zero.)
+3. **We are losing history permanently, every day.** See "The durable fix" below.
+
+What the wall still leaves measurable: regimes that were in season within the last 70 days.
+NBA and NHL **playoffs** (May 25 – Jun 15) are retained, which makes two of the six unseen
+regimes partially measurable today, and MLB is fully retained as a control.
+
+---
+
+## Reading 1 — supply (`mmsell supply forecast`, 2026-08-03)
+
+**Live supply is thin.** Across **72,508 open markets in 3,094 series**, only **33** clear the
+mmsell10 filter right now (17,412 are inside the 14-day window; pooled band rate **0.2%**).
+
+| regime | open | in-window | eligible now | band rate | cheap-but-far |
+|---|---|---|---|---|---|
+| Other | 35,167 | 9,911 | 13 | 0.1% | 182 |
+| Crypto | 3,137 | 1,004 | 7 | 0.7% | 10 |
+| Soccer | 3,076 | 1,854 | 4 | 0.2% | 7 |
+| MLB | 3,241 | 1,432 | 4 | 0.3% | 2 |
+| Econ | 2,032 | 543 | 3 | 0.6% | 41 |
+| Politics | 650 | 65 | 1 | 1.5% | 13 |
+| **NFL** | **4,408** | 84 | **0** | 0.0% | 13 |
+| **Elections** | **8,257** | 9 | **0** | 0.0% | 28 |
+| **NBA / NHL / NCAAF** | 1,595 / 92 / 2,491 | 0 / 0 / 0 | 0 | n/a | 2 / 2 / 14 |
+
+This is the seasonal setup stated numerically: **NFL already has 4,408 open markets and
+Elections 8,257, but essentially none are inside the 14-day window yet.** They are supply that
+has not arrived. `htcmax=336h` is what holds them out, exactly as expected.
+
+**The window-entry calendar** (already-listed markets bucketed by `close − 14d`, i.e. the week
+they become tradeable) is the assumption-free forward look. Reading the CHEAP column:
+
+* **Aug** — 83 cheap markets already in-window, then a sharp drop (1, 13, 2, 1 per week). The
+  summer book is thinning out well before the NFL supply arrives.
+* **Sept** — 1, 7, 6, 0. Still thin from already-listed supply.
+* **Oct** — 2, 4, **10** (week of Oct 19), 3. The Oct-19 bump is 8 Econ + MLB.
+* **Nov/Dec** — 0, 0, 1, 1, 0, then 11 in the week of Dec 7.
+
+**Caveat that matters:** the calendar can only see markets Kalshi has already listed. NFL game
+markets for week 5 do not exist yet, so the Sept/Oct rows are a **lower bound**, and the wall
+means we cannot supplement them with last year's counts. Re-run the forecast weekly; the Sept
+and Oct rows will fill in as Kalshi lists them.
+
+---
+
+## Reading 2 — edge (`mmsell regime backtest`, 2026-08-03)
+
+Replaying the mmsell10 entry (sell YES at the ask ≤7¢, mid in 5–10¢, htc 1–336h) over the
+retained window, hourly candles across the 14 days before close:
+
+| regime | markets candled | ever cheap | entries | **YIELD** | med htc | med entry |
+|---|---|---|---|---|---|---|
+| NHL | 193 | 14 | 13 | **6.7%** | 38.6h | 6.0¢ |
+| NBA | 197 | 11 | 10 | **5.1%** | 11.9h | 6.0¢ |
+| MLB | 321 | 12 | 9 | **2.8%** | 2.2h | 6.0¢ |
+| Tennis | 120 | 1 | 1 | **0.8%** | 45.5h | 6.0¢ |
+| Elections | 10 | 0 | 0 | **0.0%** | — | — |
+
+**The yield column is the trustworthy output here** (n = 120–321 markets per regime). The P&L
+column is not:
+
+| regime | n | win% | mean ¢/trade | p5 |
+|---|---|---|---|---|
+| NHL | 13 | 100.0% | +5.00 | +5.0 |
+| NBA | 10 | 80.0% | −15.00 | −95.0 |
+| MLB | 9 | 88.9% | −6.11 | −95.0 |
+| POOLED | 33 | 90.9% | −4.09 | −95.0 |
+
+**n = 9–13 per regime decides nothing.** At a 6¢ entry one loss costs ~−94¢, so break-even needs
+~94% wins; separating 90% from 95% needs hundreds of trades. NBA's −15¢ is *two* losses. Do not
+act on these numbers — they are reported to show the machinery works and to set priors.
+
+Two structural readings that *are* worth carrying forward, because they come from the
+market-count sample rather than the trade sample:
+
+* **Elections had a 0% yield on 10 candled markets with a median cheapest mid of 27¢.** Election
+  ladder rungs mostly do not get into the 5–10¢ band at all in the retained sample — the cheap
+  tails sit *below* 5¢ or well above the cap. If that holds, the November election-concentration
+  risk is **smaller than feared**, because the book will not find many eligible entries there.
+  This is the single most useful new fact for sizing the November risk, and it needs re-testing
+  once real midterm ladders enter the window in late October.
+* **NHL/NBA yield ~5–7% is 2× MLB's 2.8%**, and at much longer median htc (38.6h / 11.9h vs
+  2.2h). If that survives, the winter regime supplies *more* entries per market than the summer
+  one, and earlier — the opposite of the "supply collapse" worry. Playoff volatility may inflate
+  it; the regular season is the real test.
+
+---
+
+## Reading 3 — settlement-date concentration (the risk to size before November)
+
+Cheap already-listed markets grouped by settlement date, against the position caps
+(`mmsell_max_open_positions=200` paper, `mmsell_live_max_open_positions=60` live):
+
+| close date | cheap | % paper cap | % live cap | top regimes | flag |
+|---|---|---|---|---|---|
+| 2026-08-07 | 33 | 16% | **55%** | Other 13, MLB 13, Crypto 3 | |
+| 2026-08-06 | 14 | 7% | 23% | MLB 9, Soccer 4 | |
+| 2026-08-05 | 12 | 6% | 20% | Other 10, MLB 2 | |
+| **2026-11-03** | 11 | 6% | 18% | Econ 8, Other 2, Elections 1 | **CORRELATED** |
+
+Two things stand out. **Election day already shows up** even at 3 months out, and today's
+concentration is *not* an election problem — **55% of the live cap already settles on a single
+August date**. The concentration risk is real and present, not hypothetical and November-only.
+
+**Ladder structure** (the partial natural hedge): the Elections regime lists 40+ series with
+2–23 rungs per event — KXGOVCA 23, KXGOVSENDIFF 15, KXGOVMINOMR 15, KXSENATEFLR 10. Within one
+event the rungs are mutually exclusive, so **at most one cheap tail per event can lose**. Across
+events that protection vanishes: a national swing moves every race the same way at once.
+
+**Therefore: any settlement-date cap must count EVENTS, not markets.** Ten rungs of one
+governor's race is one bet; ten rungs across ten races is ten correlated bets.
+
+### Recommended cap (pre-registered, not yet implemented)
+
+* Cap **distinct settlement dates** at ≤ 25% of the live cap (≤ 15 positions on one date at
+  `mmsell_live_max_open_positions=60`). Today's Aug-07 date would breach this at 33.
+* Within a `CORRELATED_REGIMES` date, cap **distinct events** at ≤ 5.
+* Both are cheap to enforce at entry time (the tracker already knows each candidate's close
+  time). **Not implemented in this change** — it is a live-risk change and should land on its own
+  evidence, after the overdispersion measurement below has n to stand on.
+
+---
+
+## Pre-registered per-regime hypotheses (Phase 4)
+
+Registered **before** the regimes arrive, so the results cannot be re-scoped afterwards. Each is
+judged on **realizable** ¢/trade (`mmsell fill model`), not blended paper — the standing rule
+from `docs/MMSELL_FILL_MODEL.md`.
+
+| # | regime | hypothesis | gate |
+|---|---|---|---|
+| H1 | NFL | Game/total/spread markets yield entries at ≥3% and are **not** worse than the summer book | at n≥100 settled: KEEP if realizable ≥ 0; KILL if ≤ −1.0¢/trade |
+| H2 | NFL props (TD/yards) | Prop tails behave like the summer prop book (+EV), unlike h2h winners | same gate, judged separately from H1 |
+| H3 | NBA/NHL regular season | Yield ≥5% (as the playoff sample suggested) and edge ≥ summer book | at n≥100: KEEP if realizable ≥ 0 AND yield ≥3% |
+| H4 | MLB playoffs | Worse than MLB regular season — fewer games, more informed flow | at n≥60: flag if realizable is ≥1.0¢ below the regular-season book |
+| H5 | Elections | Yield stays **<2%**, so November never accumulates a large correlated book | re-measure in late Oct; if yield ≥5%, the concentration cap becomes a **blocker** before Nov 3 |
+| H6 | correlation | Per-settlement-date loss counts are overdispersed vs binomial (factor >1.5) in at least one regime | measured by `mmsell regime backtest` §4b at n≥5 multi-position dates |
+| H7 | anchor stops | The A1/A2/A3 bid stop helps on continuous-path regimes and hurts on jump regimes (games) | §4a: Δp5 up AND Δmean ≥ −0.3¢ |
+
+**Named killers.** H1/H3 fail if the new regimes' h2h winners reproduce the World Cup pattern
+(81.7% win, −9.9¢/trade). H5 fails if the midterm ladders list cheap rungs at scale in late
+October. Any of these firing means the book should **shrink** into the new regime, not follow it.
+
+---
+
+## The durable fix — capture settled history as it happens
+
+The retention wall is not going away, and every day we do not capture is a day of history
+permanently lost. **The repo already has the exact pattern**: `kalshi_bot/weather/backfill.py`
+enumerates settled markets per series into `backfill_weather_markets` / `backfill_weather_candles`,
+on the Railway worker (the only place with Kalshi credentials and a read-write DB), as a bounded
+chunk per cycle. It has accumulated 9,984 markets and 364,184 candles this way.
+
+**Recommended next change** (deliberately not bundled into this one, since it touches the worker,
+the schema and a migration):
+
+1. `backfill_regime_markets` / `backfill_regime_candles`, mirroring the weather tables' provenance
+   split, keyed on the `mmsell_seasonal` regime series list.
+2. Enumerate settled markets for the regime series every cycle, storing ticker, series, close,
+   result and volume; fetch hourly candles over the final 14 days for markets we do not have.
+3. Start it **now**. NFL week 1 settles in early September; capture started today means the NFL
+   regime is measurable at real n by October, and the whole 2026-27 winter season is owned before
+   the next off-season erases it.
+
+Until that exists, `mmsell_regime_backtest` is bounded to the rolling 70-day window, and every
+run of it is the best measurement available at that moment — **re-run it monthly**, because its
+coverage moves with the calendar.
+
+---
+
+## Running them
+
+```jsonc
+{"type":"script","name":"mmsell_supply_forecast","args":["--weeks","18"],"id":"fc-1"}
+{"type":"script","name":"mmsell_supply_forecast","args":["--probe"],"id":"fc-probe"}          // API shapes + the retention probe
+{"type":"script","name":"mmsell_supply_forecast","args":["--list-series","NFL,Elections"]}    // real tickers, for SEED_SERIES
+{"type":"script","name":"mmsell_regime_backtest","args":["--regimes","NBA,NHL,MLB"],"id":"rb-1"}
+{"type":"script","name":"mmsell_regime_backtest","args":["--interval","1","--sample","60"]}   // fine 1-min pass
+```
+
+**Traps these scripts encode** (each cost a wrong answer during development):
+
+* **A truncated open-market scan silently understates every supply count.** `--event-pages`
+  now warns when the cursor is still live at the cap.
+* **An unreached week is not an empty week.** Cadence cells outside a regime's retained window
+  print `?`, never `0`.
+* **Seed series must be exempt from the per-regime cap.** NFL has 4,400+ open markets across
+  dozens of side-series; ranking "currently trading" first filled the entire NFL budget with
+  short-tickered futures and left `KXNFLGAME` unpulled — which read as "NFL has no history".
+* **The entry price is the yes ASK, not the mid.** mmsell rests a BUY-NO at the no-bid, which
+  sells YES at `100 − no_bid == yes_ask`. Pricing the mid understates every entry by half a
+  spread — a large share of the whole edge at 5–7¢.
+* **`KXSENATE` / `KXHOUSE` / `KXGOV` / `KXMIDTERM` do not exist** as series tickers. Use
+  `--list-series` before adding a seed.
+* **`KXNCAABB*` is NCAA *baseball*,** not basketball — the prefix would put a spring sport in a
+  winter regime.
