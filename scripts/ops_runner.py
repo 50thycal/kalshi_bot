@@ -101,6 +101,7 @@ ALLOWED_SCRIPTS = (
     "mmsell_fill_model",
     "mmsell_exit_study",
     "mmsell_fill_replay",
+    "mmsell_ladder_probe",
     "live_paper_parity",
     "mmsell_crypto_study",
     "evo_digest",
