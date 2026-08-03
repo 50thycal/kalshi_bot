@@ -1047,16 +1047,28 @@ def upsert_regime_market(session, *, market_ticker: str, **fields) -> bool:
 
 
 def pending_regime_markets(session, *, limit: int) -> list:
-    """Captured markets still awaiting candles, NEWEST settlements first.
+    """Captured markets still awaiting candles, OLDEST settlements first.
 
-    Newest-first is the load-bearing choice: candle history ages out too, so a market that just
-    settled is the one most likely to still have a fetchable path. Draining oldest-first would
-    spend the budget on the rows most likely to come back empty."""
+    Oldest-first is the load-bearing choice, and it is the opposite of what this originally did.
+    The first real run made the difference concrete: the initial enumeration queued 11,361
+    markets, of which 9,986 were MLB — a series that settles daily and sits comfortably inside
+    Kalshi's retention window — while 1,361 were NBA/NHL markets from a season that has ENDED and
+    will never produce another row. Newest-first put ~10 hours of replaceable MLB work ahead of
+    the irreplaceable set, which was aging toward the wall the whole time.
+
+    The earlier rationale ("a fresh market is likeliest to still have a fetchable path") confused
+    most-likely-to-SUCCEED with most-valuable-to-ATTEMPT. A market that settled today will still
+    be fetchable tomorrow; one from two months ago may not be. Attempting the endangered rows
+    first costs one request each, and `mark_regime_fetched` retires a market even when zero
+    candles come back, so a genuinely-expired block drains immediately instead of wedging.
+
+    In steady state the queue is shallow and the order barely matters — this ordering is about
+    draining a backlog from the edge of the wall inward."""
     return list(
         session.scalars(
             select(m.BackfillRegimeMarket)
             .where(m.BackfillRegimeMarket.candles_fetched.is_(False))
-            .order_by(m.BackfillRegimeMarket.close_time.desc().nulls_last())
+            .order_by(m.BackfillRegimeMarket.close_time.asc().nulls_last())
             .limit(limit)
         )
     )
