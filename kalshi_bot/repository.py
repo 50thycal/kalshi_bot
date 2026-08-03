@@ -1025,6 +1025,74 @@ def replace_backfill_candles(session, market_ticker: str, rows: list[dict]) -> i
     return len(rows)
 
 
+# --- mmsell regime settled-history capture (rolling; Kalshi retains only ~70 days) -----
+
+
+def upsert_regime_market(session, *, market_ticker: str, **fields) -> bool:
+    """Insert a captured settled market if unseen; returns True when created.
+
+    Insert-only on purpose. Enumeration re-runs every few hours over an overlapping window, so
+    the same market is seen many times; re-writing it would keep resetting candles_fetched and
+    the capture would re-fetch the same candles forever."""
+    existing = session.scalar(
+        select(m.BackfillRegimeMarket).where(
+            m.BackfillRegimeMarket.market_ticker == market_ticker
+        )
+    )
+    if existing is not None:
+        return False
+    session.add(m.BackfillRegimeMarket(market_ticker=market_ticker, fetched_at=_now(), **fields))
+    session.flush()
+    return True
+
+
+def pending_regime_markets(session, *, limit: int) -> list:
+    """Captured markets still awaiting candles, NEWEST settlements first.
+
+    Newest-first is the load-bearing choice: candle history ages out too, so a market that just
+    settled is the one most likely to still have a fetchable path. Draining oldest-first would
+    spend the budget on the rows most likely to come back empty."""
+    return list(
+        session.scalars(
+            select(m.BackfillRegimeMarket)
+            .where(m.BackfillRegimeMarket.candles_fetched.is_(False))
+            .order_by(m.BackfillRegimeMarket.close_time.desc().nulls_last())
+            .limit(limit)
+        )
+    )
+
+
+def count_regime_pending(session) -> int:
+    return int(
+        session.scalar(
+            select(func.count())
+            .select_from(m.BackfillRegimeMarket)
+            .where(m.BackfillRegimeMarket.candles_fetched.is_(False))
+        )
+        or 0
+    )
+
+
+def mark_regime_fetched(session, market, *, candle_count: int) -> None:
+    """Mark a market done. Called even when zero candles came back, so a market whose path
+    Kalshi no longer serves cannot wedge the queue and starve fresh settlements."""
+    market.candles_fetched = True
+    market.candle_count = candle_count
+    session.add(market)
+    session.flush()
+
+
+def replace_regime_candles(session, market_ticker: str, rows: list[dict]) -> int:
+    """Idempotent per-market candle store: drop any prior rows, insert the new set."""
+    session.query(m.BackfillRegimeCandle).filter(
+        m.BackfillRegimeCandle.market_ticker == market_ticker
+    ).delete(synchronize_session=False)
+    for row in rows:
+        session.add(m.BackfillRegimeCandle(**row))
+    session.flush()
+    return len(rows)
+
+
 # --- forecast->settlement validation dataset (weather_forecast_outcomes) ----------
 
 
@@ -1488,6 +1556,26 @@ def open_live_no_positions(session, strategy_prefix: str) -> list[tuple]:
         qty = abs(int(snap.quantity or round(qty_fp)))
         out.append((tkr, strategy, entry_price, entry_at, qty))
     return out
+
+
+def closeout_attempt_count(session, ticker: str, strategy_prefix: str) -> int:
+    """How many end-of-strategy close orders `strategy_prefix` has already fired at `ticker`.
+
+    Bounds the closeout retry loop. `open_live_no_positions` re-derives its work list from
+    Kalshi's position snapshot every cycle, so a position that can never be closed comes back
+    every cycle and is tried again — the 2026-07-19 mmsell3 wind-down reached 650 attempts on
+    one ticker. Counts EVERY attempt, not just the failures: a marketable IOC that keeps not
+    filling leaves the position just as open as a rejection does, and both want a human.
+
+    Matched on the '<strategy>_closeout' tag the closeout path writes (autoescape so the
+    literal underscore isn't a LIKE wildcard)."""
+    return session.scalar(
+        select(func.count()).select_from(m.LiveOrder).where(
+            m.LiveOrder.market_ticker == ticker,
+            m.LiveOrder.strategy.like(f"{strategy_prefix}%"),
+            m.LiveOrder.strategy.endswith("_closeout", autoescape=True),
+        )
+    ) or 0
 
 
 def other_live_no_strategies_on_ticker(

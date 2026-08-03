@@ -552,10 +552,10 @@ arithmetic, and the bar is brutal.
    Selling both mutually-exclusive cheap tails of one event collects two premiums against **at
    most one loss**, because one settlement cannot make both tails hit. That is genuine tail
    reduction rather than tail insurance bought at a bad price — it is the only idea here that
-   improves the payoff *shape* instead of trading mean for variance. It has never traded (§12), and
-   this PR fixes the cause: `_event_has_both_tails` read the bare `yes_bid`/`yes_ask` keys, which
-   the nested event payload no longer carries (it serves the dollar-string form, and
-   `weather/tracker.py` already carried the fallback that mmsell never got). Its gate is already
+   improves the payoff *shape* instead of trading mean for variance. It had **never traded** — its
+   pairing gate read quote keys the live payload omits — which is now **fixed** (§12), so its n
+   starts from zero on 2026-08-03. Note this makes A5 a claim about *design*, not evidence. Its
+   gate is already
    pre-registered in `docs/MMSELL_ANCHOR_SET.md` (n ≥ 82 clean pairs, 95% lower bound on pair win
    rate clearing 93.9%) — it now needs to actually accrue data.
 2. **Daily exposure cap (§4).** Targets the one correlation that measurably exists: 7 losses in a
@@ -586,9 +586,11 @@ we cannot afford.
 4. **Live queue-offset A/B** (§5) — `docs/MMSELL_OFFSET_AB.md`. Randomized per-ticker within one
    book, so live exposure is unchanged. **Inert** until `MMSELL_LIVE_OFFSET_AB_ARMS` is set;
    arming is an operator decision because it puts real money on both arms.
-5. **`mmsellA5` strangle gate fixed** (§10a) — the book could never enter; it now can, and its
-   pre-registered gate starts accruing.
-6. **h2h structural study** (§9a) — gate FAILED, `mmsell12` not built, KXMLBGAME was noise.
+5. **h2h structural study** (§9a) — gate FAILED, `mmsell12` not built, KXMLBGAME was noise.
+
+**Landed separately (PR #154, not this branch):** the `mmsellA5` strangle gate fix and the
+closeout retry bound (§12). Both were found independently here and there; the shared
+`market_price_cents` helper from #154 is the version kept.
 
 **Next:**
 7. **Daily-exposure cap** (§4) — the only measured, non-slicing correlation control. *Before
@@ -602,19 +604,30 @@ outcome count (§7), per-event caps (§4), late-add sizing (§8), h2h exclusion 
 
 ---
 
-## 12. Operational anomalies found while doing this (not part of the roadmap)
+## 12. Operational anomalies found while doing this — both now FIXED
 
-Two things surfaced that are unrelated to strategy but should not sit unreported:
+Two things surfaced that were unrelated to strategy. **Both were independently found and fixed on
+the default branch by PR #154** (`fix: bound the closeout retry loop; unbreak the mmsellA5 strangle
+gate`) while this work was in flight; recorded here because the second one changes what §10a can
+claim.
 
-1. **`mmsell3_closeout` is stuck in a rejected-order loop.** 1,942 live orders with status
+1. **`mmsell3_closeout` was stuck in a rejected-order loop.** 1,942 live orders with status
    `rejected` (`invalid_order` / `invalid_parameters`), concentrated on ~8 tickers and retried
    160–644 times each (`KXRT-ODY-95` ×644, `KXTRUMPSAY-26JUL20-URAN` ×644, six
-   `KXWCMENTION-MENWORLDCUP-*` ×36–163). They are trying to close positions in markets that have
-   already expired, at ~4–6¢ limits. `mmsell_closeout_enabled` appears to have been left on after
-   the mmsell3 wind-down. Costs no money but is hammering the API.
-2. **`mmsellA5` (the short strangle) has never traded — zero rows in `paper_trades`.** Its entry
-   requires `_event_has_both_tails`, which reads `yes_bid`/`yes_ask` straight off the nested event
-   payload. This probe hit exactly that: those keys were absent from the nested markets and every
-   event read as unpriced until a `*_dollars` / `*_cents` fallback was added
-   (`scripts/mmsell_ladder_probe.py`). **The strangle gate is likely always False for the same
-   reason** — worth checking before concluding anything about A5.
+   `KXWCMENTION-MENWORLDCUP-*` ×36–163), trying to close positions in already-expired markets at
+   ~4–6¢ limits. Cost no money but hammered the API.
+   **FIXED** — `mmsell_closeout_max_attempts_per_ticker` (default 5) now bounds the retry, with
+   the same guard mirrored onto theta's closeout.
+2. **`mmsellA5` (the short strangle) had never traded — zero rows in `paper_trades`.** Its entry
+   gate `_event_has_both_tails` read the bare `yes_bid`/`yes_ask` keys, which the live events
+   payload **omits entirely** (it sends the `*_dollars` string form). The gate was therefore False
+   for every event since the book was built on 2026-07-30. This probe hit the identical bug — the
+   ladder probe classified all 250 events as unpriced until a `*_dollars`/`*_cents` fallback was
+   added (`scripts/mmsell_ladder_probe.py`).
+   **FIXED** — quotes now go through the shared `scanner/metrics.market_price_cents` helper, which
+   reads the legacy key when present and the `_dollars` form otherwise.
+
+**A5's n therefore starts from zero on 2026-08-03**, and its §10a role (the only structural tail
+reducer left) is a claim about its *design*, not about any data — it has none yet. Per the registry
+note: if A5 is still at n=0 several checks after that deploy, that is another bug rather than
+selectivity.

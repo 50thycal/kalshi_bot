@@ -26,8 +26,8 @@ from ..paper.engine import kalshi_fee
 from ..scanner.metrics import (
     compute_metrics,
     compute_time_to_close,
+    market_price_cents,
     market_volume,
-    price_to_cents,
 )
 from ..twin import harness as twin_codes
 
@@ -189,19 +189,16 @@ class MmSellTracker:
         Read straight off the nested market payload the scan already holds — no extra API call.
         This pairing is the whole point: the backtest's +3.30c/pair came from events where both
         tails were simultaneously cheap, which is a LOW-VOLATILITY selection. Entering one leg
-        alone would be an ordinary mmsell trade wearing a strangle label."""
+        alone would be an ordinary mmsell trade wearing a strangle label.
+
+        Prices go through `market_price_cents`, NOT a raw `.get("yes_bid")`: the live events
+        endpoint sends `yes_bid_dollars`/`yes_ask_dollars` and omits the integer-cent keys, so
+        the raw read returned None for every market and this returned False for every event —
+        which is why mmsellA5 never opened a single position."""
         cheap_yes = cheap_no = False
         for mk in event.get("markets") or []:
-            # The nested event payload no longer carries bare `yes_bid`/`yes_ask` — it uses the
-            # dollar-string form (`yes_bid_dollars`: '0.06'). Reading only the bare keys made this
-            # return False for EVERY event, which is why mmsellA5 has never opened a single
-            # position (0 rows in paper_trades) despite being live in config since 2026-07-30.
-            # weather/tracker.py already carried this fallback; mmsell never got it. price_to_cents
-            # accepts both forms, so this works whichever the API serves.
-            yb = price_to_cents(mk.get("yes_bid") if mk.get("yes_bid") is not None
-                                else mk.get("yes_bid_dollars"))
-            ya = price_to_cents(mk.get("yes_ask") if mk.get("yes_ask") is not None
-                                else mk.get("yes_ask_dollars"))
+            yb = market_price_cents(mk, "yes_bid")
+            ya = market_price_cents(mk, "yes_ask")
             if yb is None or ya is None:
                 continue
             mid = (float(yb) + float(ya)) / 2.0

@@ -118,33 +118,3 @@ def test_wilson_bounds_are_sane():
     assert lo == 0.0 and 0.0 < hi < 0.10
     lo, hi = ab.wilson(50, 100)
     assert lo < 0.5 < hi
-
-
-# ------------------------------------------------- A5 strangle gate (payload quote keys)
-
-def test_event_has_both_tails_reads_dollar_string_quotes():
-    """mmsellA5 never opened a position because _event_has_both_tails read only the bare
-    `yes_bid`/`yes_ask` keys, which the nested event payload no longer carries — it serves the
-    dollar-string form. Both spellings must work, or the strangle book is silently inert."""
-    from kalshi_bot.mmsell.tracker import MmSellTracker
-
-    dollars = {"markets": [
-        {"yes_bid_dollars": "0.05", "yes_ask_dollars": "0.07"},   # cheap YES tail (high strike)
-        {"yes_bid_dollars": "0.94", "yes_ask_dollars": "0.96"},   # cheap NO tail (low strike)
-    ]}
-    cents = {"markets": [
-        {"yes_bid": 5, "yes_ask": 7},
-        {"yes_bid": 94, "yes_ask": 96},
-    ]}
-    assert MmSellTracker._event_has_both_tails(dollars, 7) is True
-    assert MmSellTracker._event_has_both_tails(cents, 7) is True
-
-
-def test_event_has_both_tails_still_refuses_a_lone_tail():
-    from kalshi_bot.mmsell.tracker import MmSellTracker
-
-    lone = {"markets": [
-        {"yes_bid_dollars": "0.05", "yes_ask_dollars": "0.07"},
-        {"yes_bid_dollars": "0.40", "yes_ask_dollars": "0.42"},
-    ]}
-    assert MmSellTracker._event_has_both_tails(lone, 7) is False

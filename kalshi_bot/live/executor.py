@@ -103,6 +103,7 @@ class LiveExecutor:
         self.summary = LiveCycleSummary()
         self._daily_loss_tripped = False
         self._exit_abandoned: set[tuple[str, str]] = set()
+        self._closeout_abandoned: set[tuple[str, str]] = set()  # (book, ticker) past its attempt cap
         self._market_ids: dict[str, str] = {}  # ticker -> v1 market UUID (cached)
         self._cell_skips_noted: set = set()  # (book, event, reason, day) already logged this run
 
@@ -1222,6 +1223,65 @@ class LiveExecutor:
         except Exception:  # noqa: BLE001
             return None
 
+    # --- shared closeout guards -------------------------------------------------
+    # Both closeout paths below re-derive their work list from Kalshi's position snapshot every
+    # cycle, so a position they can never close is retried forever. The 2026-07-19 mmsell3
+    # wind-down produced 1,942 dead live_orders rows across 8 tickers, up to 650 attempts on a
+    # single one. These three guards bound that: refuse to start when no order could reach
+    # Kalshi, skip markets that can no longer be traded, and give up on a ticker after N tries.
+
+    def _closeout_can_place(self, label: str) -> bool:
+        """False when the closeout is enabled but no order it writes could reach Kalshi anyway.
+
+        The client self-guards `create_events_order` on bot_mode+kill_switch, so with
+        KILL_SWITCH=true every position still wrote a `pending` live_orders row and issued a
+        POST that raised — 1,913 of the 1,942 dead rows above, all with the same
+        "Live order placement is disabled" reason. Checking once here means the loop declines
+        to start rather than failing per position, per cycle, forever."""
+        if not self.settings.kill_switch:
+            return True
+        logger.error(
+            "closeout ENABLED but KILL_SWITCH is true -- no close order can reach Kalshi, so "
+            "none is attempted. Set KILL_SWITCH=false to finish the wind-down, or turn the "
+            "closeout flag off to stop trying.", extra={"extra_fields": {"book": label}})
+        return False
+
+    def _closeout_market_untradeable(self, ticker: str) -> bool:
+        """True when `ticker` no longer accepts orders (closed / determined / settled), so a
+        close can never fill and the position cash-settles on its own. Two of the wind-down's
+        tickers were exactly this — rejected `resolved_by_exchange_state`, 37 and 2 times.
+
+        Fail-soft: a lookup error returns False, so a flaky API never stalls a live wind-down."""
+        try:
+            mk = (self.client.get_market(ticker) or {}).get("market") or {}
+        except Exception:  # noqa: BLE001 — never block the closeout on a market lookup
+            return False
+        status = (mk.get("status") or "").strip().lower()
+        return bool(status) and status not in ("active", "open")
+
+    def _closeout_exhausted(self, session, *, ticker: str, prefix: str, cap: int,
+                            label: str) -> bool:
+        """True when this book has already fired `cap` close orders at `ticker` and the position
+        is STILL open — at that point the ticker needs a human, not attempt N+1.
+
+        Counts every attempt rather than only the failures: a marketable IOC that repeatedly
+        doesn't fill is just as unclosable as one that gets rejected, and both want the same
+        answer. Logged once per process so a capped ticker doesn't spam every cycle."""
+        if cap <= 0:  # 0 disables the cap (retry forever — the pre-fix behaviour)
+            return False
+        attempts = repo.closeout_attempt_count(session, ticker, prefix)
+        if attempts < cap:
+            return False
+        key = (prefix, ticker)
+        if key not in self._closeout_abandoned:
+            self._closeout_abandoned.add(key)
+            logger.error(
+                "closeout GIVING UP on ticker (attempt cap reached, position still open) -- "
+                "close it by hand or let it settle", extra={"extra_fields": {
+                    "book": label, "ticker": ticker, "strategy": prefix,
+                    "attempts": attempts, "cap": cap}})
+        return True
+
     # --- mmsell one-shot closeout (end of strategy — no other path closes a NO position) -----
 
     def close_mmsell_positions(self, session) -> int:
@@ -1237,6 +1297,8 @@ class LiveExecutor:
         one failure never blocks the rest. Returns the count of close orders placed."""
         s = self.settings
         if not s.mmsell_closeout_enabled or s.bot_mode != "live":
+            return 0
+        if not self._closeout_can_place("mmsell"):
             return 0
         placed = 0
         for prefix in s.mmsell_closeout_strategy_list:
@@ -1259,6 +1321,15 @@ class LiveExecutor:
                     continue
                 if repo.live_open_order_exists(session, ticker):
                     continue  # an order is already in flight -- let it resolve before retrying
+                if self._closeout_exhausted(session, ticker=ticker, prefix=prefix,
+                                            cap=s.mmsell_closeout_max_attempts_per_ticker,
+                                            label="mmsell"):
+                    continue
+                if self._closeout_market_untradeable(ticker):
+                    logger.warning("mmsell closeout: market no longer tradeable, leaving it to "
+                                   "settle", extra={"extra_fields": {"ticker": ticker,
+                                                                     "strategy": strategy}})
+                    continue
                 ask = self._current_yes_ask(ticker)
                 if ask is None:
                     logger.warning("mmsell closeout: no ask available, skipping this cycle",
@@ -1338,6 +1409,8 @@ class LiveExecutor:
         s = self.settings
         if not s.theta_closeout_enabled or s.bot_mode != "live":
             return 0
+        if not self._closeout_can_place("theta"):
+            return 0
         placed = 0
         for prefix in s.theta_closeout_strategy_list:
             for ticker, strategy, entry_price, _entry_at, qty in repo.open_live_no_positions(
@@ -1358,6 +1431,15 @@ class LiveExecutor:
                     continue
                 if repo.live_open_order_exists(session, ticker):
                     continue  # an order is already in flight -- let it resolve before retrying
+                if self._closeout_exhausted(session, ticker=ticker, prefix=prefix,
+                                            cap=s.theta_closeout_max_attempts_per_ticker,
+                                            label="theta"):
+                    continue
+                if self._closeout_market_untradeable(ticker):
+                    logger.warning("theta closeout: market no longer tradeable, leaving it to "
+                                   "settle", extra={"extra_fields": {"ticker": ticker,
+                                                                     "strategy": strategy}})
+                    continue
                 ask = self._current_yes_ask(ticker)
                 if ask is None:
                     logger.warning("theta closeout: no ask available, skipping this cycle",

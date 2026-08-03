@@ -525,6 +525,75 @@ class BackfillWeatherCandle(Base):
     open_interest: Mapped[int | None] = mapped_column(Integer)
 
 
+class BackfillRegimeMarket(Base):
+    """Settled markets for the mmsell REGIME series, captured from the Kalshi REST API.
+
+    Why this table exists: Kalshi serves only a rolling **~70-day** window of settled markets
+    (measured 2026-08-03 — paging any series to cursor exhaustion bottoms out on the same date,
+    KXNFLGAME returns zero rows, and `status=finalized/closed` and `min_close_ts` cannot reach
+    behind it; authentication does not help). So last season is permanently unavailable, and
+    every day we do not capture is a day of history lost for good. See
+    `docs/MMSELL_SEASONAL_FORECAST.md`.
+
+    Unlike `backfill_weather_markets` — a one-time reach back into the archive — this table is
+    filled FORWARD, forever: the capture re-enumerates on a schedule so markets are stored while
+    they are still inside the retention window. Same provenance rule though (Kalshi REST, not the
+    bot observing markets live), which is why it keeps the `backfill_` prefix: research must be
+    able to tell captured-history rows from live-collected ones.
+    """
+
+    __tablename__ = "backfill_regime_markets"
+    __table_args__ = (
+        Index("ix_backfill_regime_markets_close", "close_time"),
+        Index("ix_backfill_regime_markets_pending", "candles_fetched", "close_time"),
+        Index("ix_backfill_regime_markets_regime", "regime", "close_time"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    fetched_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    market_ticker: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    event_ticker: Mapped[str | None] = mapped_column(String(128), index=True)
+    series_ticker: Mapped[str | None] = mapped_column(String(64))
+    # Trading regime (NFL / NBA / Elections / ...) as classified at capture time. Stored rather
+    # than derived so a later change to the regime map cannot silently rewrite history.
+    regime: Mapped[str | None] = mapped_column(String(16))
+    title: Mapped[str | None] = mapped_column(String(256))
+    result: Mapped[str | None] = mapped_column(String(8))  # 'yes' | 'no'
+    volume: Mapped[float | None] = mapped_column(Float)
+    open_interest: Mapped[float | None] = mapped_column(Float)
+    open_time: Mapped[datetime | None] = mapped_column(TS)
+    close_time: Mapped[datetime | None] = mapped_column(TS)
+    candles_fetched: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    candle_count: Mapped[int] = mapped_column(Integer, default=0)
+    source: Mapped[str | None] = mapped_column(String(16), default="kalshi_rest")
+
+
+class BackfillRegimeCandle(Base):
+    """Candlesticks for a captured regime market over its final `MMSELL_HISTORY_CAPTURE_HOURS`.
+
+    This is the price path the mmsell entry filter is replayed against (yes-mid in the band, yes
+    ASK at or under the cap), so bid and ask closes are the load-bearing columns — a mid alone
+    cannot reproduce an entry. Same provenance rule as backfill_regime_markets."""
+
+    __tablename__ = "backfill_regime_candles"
+    __table_args__ = (
+        UniqueConstraint("market_ticker", "end_period_ts", name="uq_backfill_regime_candle"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    market_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    end_period_ts: Mapped[datetime] = mapped_column(TS, nullable=False)
+    period_minutes: Mapped[int | None] = mapped_column(Integer)
+    price_open: Mapped[float | None] = mapped_column(Float)  # cents
+    price_high: Mapped[float | None] = mapped_column(Float)
+    price_low: Mapped[float | None] = mapped_column(Float)
+    price_close: Mapped[float | None] = mapped_column(Float)
+    yes_bid_close: Mapped[float | None] = mapped_column(Float)
+    yes_ask_close: Mapped[float | None] = mapped_column(Float)
+    volume: Mapped[int | None] = mapped_column(Integer)
+    open_interest: Mapped[int | None] = mapped_column(Integer)
+
+
 class PolymarketSnapshot(Base):
     """Polymarket's per-bucket implied probability over time — a SEPARATE-provenance
     cross-market signal (public Gamma API, not Kalshi, not live-collected Kalshi data).

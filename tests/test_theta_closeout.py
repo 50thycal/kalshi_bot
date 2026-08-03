@@ -20,9 +20,10 @@ from kalshi_bot.risk.manager import RiskManager
 
 
 class FakeCloseoutClient:
-    def __init__(self, yes_ask=21):
+    def __init__(self, yes_ask=21, market_status="active"):
         self.placed: list[dict] = []
         self.yes_ask = yes_ask
+        self.market_status = market_status
         self.raise_exc: Exception | None = None
 
     def create_events_order(self, order):
@@ -38,9 +39,13 @@ class FakeCloseoutClient:
             "no_dollars": [[f"{no_bid / 100:.2f}", "300"]],
         }}
 
+    def get_market(self, ticker):
+        return {"market": {"ticker": ticker, "status": self.market_status}}
+
 
 def _closeout_settings(settings, **over):
     settings.bot_mode = "live"
+    settings.kill_switch = False  # required for a close to reach Kalshi -- see the mmsell file
     settings.theta_closeout_enabled = True
     settings.theta_closeout_strategies = "theta4"
     settings.theta_closeout_slippage_cents = 3
@@ -82,7 +87,7 @@ def test_theta_closeout_each_switch_blocks(settings):
     db.init_engine(settings.database_url)
     db.create_all()
     for over in ({"theta_closeout_enabled": False}, {"theta_closeout_strategies": ""},
-                 {"bot_mode": "weather"}):
+                 {"bot_mode": "weather"}, {"kill_switch": True}):
         client = FakeCloseoutClient()
         ex = _exec(_closeout_settings(settings, **over), client)
         with db.session_scope() as session:
@@ -226,3 +231,36 @@ def test_theta_closeout_does_not_touch_mmsell(settings):
         "closeout:theta4:")
     assert len(mmsell_client.placed) == 1 and mmsell_client.placed[0][
         "client_order_id"].startswith("closeout:mmsell3:")
+
+
+def test_theta_closeout_gives_up_on_a_ticker_after_the_attempt_cap(settings):
+    """theta inherits the same bound as mmsell -- see tests/test_mmsell_closeout.py for the
+    incident this exists to prevent (1,942 dead orders, 650 on one ticker)."""
+    _closeout_settings(settings, theta_closeout_max_attempts_per_ticker=3)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeCloseoutClient()
+    client.raise_exc = KalshiAPIError(400, "invalid_order", "/portfolio/events/orders")
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _seed_open_no_position(session)
+    for _ in range(10):
+        with db.session_scope() as session:
+            ex.close_theta_positions(session)
+    with db.session_scope() as session:
+        rows = session.scalars(
+            select(m.LiveOrder).where(m.LiveOrder.action == "buy", m.LiveOrder.side == "yes")
+        ).all()
+        assert len(rows) == 3
+
+
+def test_theta_closeout_skips_a_market_that_can_no_longer_be_traded(settings):
+    _closeout_settings(settings)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeCloseoutClient(market_status="settled")
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _seed_open_no_position(session)
+        n = ex.close_theta_positions(session)
+    assert n == 0 and client.placed == []

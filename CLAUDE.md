@@ -149,6 +149,34 @@ To run a request:
      ~100% of stops as an artifact; and Kalshi only serves ~1h of candles for these series, so the
      backtest population is `htc<1h` while mmsell trades `htc>=1h` — different trades.
 
+   - **"mmsell supply forecast"** -> `{"type":"script","name":"mmsell_supply_forecast"}` and
+     **"mmsell regime backtest"** -> `{"type":"script","name":"mmsell_regime_backtest"}` — the
+     seasonal forward-look (`docs/MMSELL_SEASONAL_FORECAST.md`). Our whole mmsell history is ONE
+     regime (16 days of summer sports + BTC daily), so Sept–Nov (NFL, MLB playoffs, NBA/NHL, the
+     Nov-3 midterms) cannot be backtested from our own books. The forecast script answers **how
+     many** markets each regime will offer — live supply, the assumption-free window-entry
+     calendar (`close − 14d`, since `htcmax=336h` is what holds November out), and the
+     **settlement-date concentration** that decides the election risk. The backtest script answers
+     **what each is worth**, replaying the mmsell10 entry over Kalshi's settled history per regime
+     (coverage, band yield, edge, the A1/A2/A3 bid-stop check, and a per-settlement-date
+     overdispersion measure). **The hard constraint both encode: Kalshi retains only a rolling
+     ~70-day settled window** (paged to cursor exhaustion; `KXNFLGAME` returns zero; auth does not
+     help), so last season is unavailable and the durable fix is to CAPTURE settled history as it
+     happens — the pattern `kalshi_bot/weather/backfill.py` already implements. Gate on the YIELD
+     column, not the P&L: the retained window yields n≈10 trades/regime, which decides nothing.
+
+   - **"mmsell history status"** -> `{"type":"script","name":"mmsell_history_status"}` — is the
+     settled-history CAPTURE working? `kalshi_bot/mmsell/history.py` (`RegimeHistoryCapture`) rides
+     along the weather/live cycles and stores settled regime markets + their candles into
+     `backfill_regime_markets` / `backfill_regime_candles` **before Kalshi's ~70-day window drops
+     them** — that is the only reason Sept–Nov will be measurable in October. It is silent by
+     design (it must never disturb the books), so this script is how you check it: lead with
+     FRESHNESS (a stale write, or a pending queue that only grows, means it is failing quietly)
+     and with **BEYOND-WALL** — markets we hold that the API no longer serves. That column is the
+     point of the job and should only ever grow. Series are `MMSELL_HISTORY_SERIES`
+     (env-overridable on Railway without a redeploy); find real tickers with
+     `mmsell_supply_forecast --list-series <regime>` before adding one.
+
    The individual probes can still be run alone:
    `weather_model_check` grades the ensemble forecast distribution against the
    market's bucket prices on settled events (Brier/log-loss + hypothetical EV)

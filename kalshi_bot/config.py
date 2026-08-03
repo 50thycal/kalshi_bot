@@ -300,6 +300,54 @@ class Settings(BaseSettings):
     mmsell_closeout_enabled: bool = False
     mmsell_closeout_strategies: str = ""   # comma list of strategy prefixes, e.g. "mmsell3"
     mmsell_closeout_slippage_cents: int = 3  # cross up to yes-ask + this many cents to guarantee the fill
+    # Give up on a ticker after this many close attempts. "Self-limiting" above holds only when
+    # the closes actually FILL; a position that can't be closed is re-derived from Kalshi's
+    # snapshot every cycle and retried forever. The mmsell3 wind-down (2026-07-19) left this flag
+    # on with KILL_SWITCH=true and burned 1,942 dead live_orders rows over 8 tickers, 650 on the
+    # worst one. Past the cap the executor logs once and leaves the position to a human. 0 =
+    # unbounded (the old behaviour).
+    mmsell_closeout_max_attempts_per_ticker: int = 5
+
+    # --- mmsell REGIME settled-history capture (kalshi_bot/mmsell/history.py) ---
+    # Kalshi serves only a rolling ~70-DAY window of settled markets (measured 2026-08-03: paging
+    # to cursor exhaustion bottoms out on the same date for every series, KXNFLGAME returns zero,
+    # finalized/closed return nothing, min_close_ts cannot reach behind it, and auth does not
+    # help). So last season is unobtainable and the seasonal regime backtest is boxed into
+    # whatever is inside the window on the day it runs. This capture writes history FORWARD so
+    # that by October we own the NFL season the API will already have discarded.
+    # See docs/MMSELL_SEASONAL_FORECAST.md.
+    mmsell_history_enabled: bool = True
+    # How often to re-enumerate. The window slides, so unlike the weather backfill this can never
+    # latch "done"; 6h is far inside the ~70-day wall while costing ~1 pass per few hundred cycles.
+    mmsell_history_enumerate_minutes: float = 360.0
+    mmsell_history_markets_per_cycle: int = 30    # candle fetches per cycle (API budget guard)
+    mmsell_history_capture_hours: float = 336.0   # 14d — mmsell's whole holding window (htcmax)
+    mmsell_history_period_minutes: int = 60       # candle granularity: 1, 60 or 1440
+    mmsell_history_min_volume: float = 100.0      # matches mmsell_min_volume: skip markets the
+    #                                               book would never have entered anyway
+    mmsell_history_max_markets_per_series: int = 3000  # per-series enumeration cap per pass
+    # Series to capture, comma-separated. Deliberately EXPLICIT rather than prefix-discovered:
+    # Kalshi lists 3,000+ sports series, most of them per-team spin-offs of one driver, and
+    # enumerating them all would spend the whole API budget on noise. The regimes we have zero
+    # paper history for come first — they are the ones we cannot reconstruct later.
+    # To find new tickers before adding them here (the obvious guesses KXSENATE / KXHOUSE /
+    # KXGOV / KXMIDTERM do NOT exist), run:
+    #   {"type":"script","name":"mmsell_supply_forecast","args":["--list-series","NFL,Elections"]}
+    # Env-overridable, so a series can be added on Railway without a redeploy.
+    mmsell_history_series: str = (
+        # NFL + college football — the September arrival, and completely unmeasurable today
+        "KXNFLGAME,KXNFLTOTAL,KXNFLSPREAD,KXNCAAFGAME,KXNCAAFTOTAL,KXNCAAFSPREAD,"
+        # NBA / NHL — October openings; our only sample today is 3 weeks of playoffs
+        "KXNBAGAME,KXNBATOTAL,KXNBASPREAD,KXNBAPTS,"
+        "KXNHLGAME,KXNHLTOTAL,KXNHLSPREAD,"
+        # college basketball — November onward
+        "KXNCAABGAME,KXNCAABTOTAL,KXNCAABSPREAD,"
+        # MLB — the control: we DO have paper history here, so it validates the captured data
+        "KXMLBGAME,KXMLBTOTAL,KXMLBSPREAD,KXMLBHR,"
+        # Elections — the Nov-3 concentration question the forecast could not answer (0 entries
+        # on 10 candled markets so far, which is exactly why the real ladders must be captured)
+        "KXHOUSERACE,KXSENATEMID,KXGOVWINS,KXHOUSEWINSTATE,KXPRESPARTY"
+    )
 
     # --- Theta book (ride-along paper, weather/live cycle) ---
     # Model-anchored tail-selling on the recurring hourly crypto ladders (docs/
@@ -414,6 +462,7 @@ class Settings(BaseSettings):
     theta_closeout_enabled: bool = False
     theta_closeout_strategies: str = ""    # comma list of strategy prefixes, e.g. "theta4"
     theta_closeout_slippage_cents: int = 3  # cross up to yes-ask + this many cents to guarantee the fill
+    theta_closeout_max_attempts_per_ticker: int = 5  # see mmsell_closeout_max_attempts_per_ticker
 
     # --- TFAV book (ride-along paper, weather/live cycle) ---
     # The MIRROR of theta on the same recurring hourly crypto ladders: theta SELLS the
@@ -1067,6 +1116,17 @@ class Settings(BaseSettings):
         return arms if len(arms) >= 2 else ()
 
     @property
+    def mmsell_history_series_list(self) -> list[str]:
+        """Series the settled-history capture enumerates. De-duplicated and order-preserving, so
+        an env override that repeats a ticker cannot double the enumeration cost."""
+        out: list[str] = []
+        for s in self.mmsell_history_series.split(","):
+            tk = s.strip().upper()
+            if tk and tk not in out:
+                out.append(tk)
+        return out
+
+    @property
     def mmsell_variant_list(self) -> list[dict]:
         """Parsed revision-book specs (unset keys inherit the base mmsell knobs). The tag
         must start with 'mmsell', differ from the control's own 'mmsell', and fit the
@@ -1313,6 +1373,8 @@ class Settings(BaseSettings):
             "mmsell_live_retry_max_drift_cents": self.mmsell_live_retry_max_drift_cents,
             "mmsell_closeout_enabled": self.mmsell_closeout_enabled,
             "mmsell_closeout_strategies": self.mmsell_closeout_strategy_list,
+            "mmsell_closeout_max_attempts_per_ticker":
+                self.mmsell_closeout_max_attempts_per_ticker,
             "mmsell_variants": [f"{v['tag']}:{v['lo']:.0f}-{v['hi']:.0f}"
                                 for v in self.mmsell_variant_list],
             "theta_enabled": self.theta_enabled,
@@ -1336,6 +1398,8 @@ class Settings(BaseSettings):
                 self.theta_live_hot_market_defensive_offset_cents,
             "theta_closeout_enabled": self.theta_closeout_enabled,
             "theta_closeout_strategies": self.theta_closeout_strategy_list,
+            "theta_closeout_max_attempts_per_ticker":
+                self.theta_closeout_max_attempts_per_ticker,
             "xgame_enabled": self.xgame_enabled,
             "xgame_series": self.xgame_series_list,
             "xgame_pm_tags": self.xgame_pm_tag_list,
