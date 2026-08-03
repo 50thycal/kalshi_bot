@@ -118,3 +118,91 @@ def test_wilson_bounds_are_sane():
     assert lo == 0.0 and 0.0 < hi < 0.10
     lo, hi = ab.wilson(50, 100)
     assert lo < 0.5 < hi
+
+
+# ------------------------------------------- two-book form (mmsell10a / mmsell10b)
+
+from kalshi_bot.live.sizing import arm_book_offset  # noqa: E402
+
+
+def _settings(**kw):
+    from kalshi_bot.config import Settings
+    return Settings(kalshi_api_key_id="x", kalshi_private_key="y",
+                    database_url="sqlite://", **kw)
+
+
+def test_arm_books_partition_every_ticker_exactly_once():
+    """The two live books must never contest a ticker. `live_open_order_exists` is strategy-
+    AGNOSTIC, so a contested ticker would be decided by book evaluation order, not at random —
+    which would make the A/B a race instead of an experiment."""
+    for i in range(500):
+        tk = f"KXMLBTOTAL-26AUG{i:04d}-T8.5"
+        a = arm_book_offset(tk, 0, arms=(0, 1), salt="s1")
+        b = arm_book_offset(tk, 1, arms=(0, 1), salt="s1")
+        assert (a is None) != (b is None), f"{tk} was contested or orphaned"
+
+
+def test_arm_books_split_roughly_evenly():
+    tks = [f"KX-{i}" for i in range(2000)]
+    a = sum(1 for t in tks if arm_book_offset(t, 0, arms=(0, 1), salt="s1") is not None)
+    assert 900 < a < 1100
+
+
+def test_arm_book_offset_is_its_declared_arms_offset():
+    # whichever book claims the ticker must price at ITS arm's offset, never the other's
+    for i in range(200):
+        tk = f"KX-{i}"
+        a = arm_book_offset(tk, 0, arms=(0, 1), salt="s1")
+        b = arm_book_offset(tk, 1, arms=(0, 1), salt="s1")
+        assert a in (0, None) and b in (1, None)
+
+
+def test_arm_book_claims_nothing_when_experiment_is_off():
+    """Fail CLOSED: an arm book has no defined price unless the experiment is running, so with no
+    arms configured it must trade nothing rather than silently fall back to the default offset."""
+    assert arm_book_offset("KX-1", 0, arms=(), salt="s1") is None
+    assert arm_book_offset("KX-1", None, arms=(0, 1), salt="s1") is None
+
+
+def test_configured_arm_books_are_mmsell10_plus_a_treatment():
+    s = _settings(mmsell_live_offset_ab_arms="0,1")
+    books = {b["tag"]: b for b in s.mmsell_variant_list}
+    base = books["mmsell10"]
+    for tag, arm in (("mmsell10a", 0), ("mmsell10b", 1)):
+        b = books[tag]
+        # identical ENTRY to mmsell10 -- the offset must be the only difference
+        assert (b["lo"], b["hi"], b["maxyes"]) == (base["lo"], base["hi"], base["maxyes"])
+        assert b["abarm"] == arm
+        assert b["size"] == 1
+
+
+def test_incumbent_mmsell10_is_not_an_arm_book():
+    """mmsell10 must keep trading exactly as before: no arm, no per-book size override."""
+    s = _settings(mmsell_live_offset_ab_arms="0,1")
+    base = next(b for b in s.mmsell_variant_list if b["tag"] == "mmsell10")
+    assert base["abarm"] is None and base["size"] is None
+
+
+def test_each_arm_book_gets_its_own_paper_twin():
+    s = _settings(live_strategies="mmsell10,mmsell10a,mmsell10b")
+    pairs = dict(s.live_paper_twin_pairs)
+    assert pairs["mmsell10a"] == "mmsell10a_pt"
+    assert pairs["mmsell10b"] == "mmsell10b_pt"
+    assert pairs["mmsell10"] == "mmsell10_pt"
+
+
+def test_tracker_admits_only_its_own_arm():
+    from kalshi_bot.mmsell.tracker import MmSellTracker
+    s = _settings(mmsell_live_offset_ab_arms="0,1")
+    t = MmSellTracker(client=None, settings=s)
+    books = {b["tag"]: b for b in s.mmsell_variant_list}
+    claimed = {"mmsell10a": 0, "mmsell10b": 0}
+    for i in range(200):
+        tk = f"KX-{i}"
+        hits = [tag for tag in claimed if t._book_admits_ticker(books[tag], tk)]
+        assert len(hits) == 1
+        claimed[hits[0]] += 1
+    assert all(v > 60 for v in claimed.values())
+    # the incumbent and every legacy book still admit everything
+    assert t._book_admits_ticker(books["mmsell10"], "KX-1") is True
+    assert t._book_admits_ticker(books["mmsell3"], "KX-1") is True

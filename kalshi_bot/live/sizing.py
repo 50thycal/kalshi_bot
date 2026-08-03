@@ -132,6 +132,29 @@ def offset_arm(ticker: str, *, arms, salt: str) -> tuple[int, int]:
     return idx, int(arms[idx])
 
 
+def arm_book_offset(ticker: str, abarm, *, arms, salt: str) -> int | None:
+    """The offset a per-arm BOOK should use for this ticker, or None when the ticker belongs to a
+    different arm and this book must skip it entirely.
+
+    This is the two-book form of the queue-position experiment (docs/MMSELL_OFFSET_AB.md): rather
+    than one book splitting its own orders, two separate live books each claim the tickers of one
+    arm. That gives each arm its own strategy tag, its own paper twin and its own P&L line, while
+    the hash — not book evaluation order — decides who gets which ticker.
+
+    Why the hash has to do the deciding: `repository.live_open_order_exists` is strategy-AGNOSTIC,
+    so whichever book is evaluated first claims a ticker and blocks the rest. Without per-arm
+    assignment the two books would be split by scan order, not at random, and the comparison would
+    be worthless. With it, no ticker is ever contested and the two books are disjoint by
+    construction — which also means they never queue against each other for the same fill.
+
+    Returns None (skip) when the experiment is off, when this book declares no arm, or when the
+    ticker hashes to another arm."""
+    if abarm is None or not tuple(arms):
+        return None
+    idx, offset = offset_arm(ticker, arms=arms, salt=salt)
+    return offset if idx == int(abarm) else None
+
+
 def maker_offset(
     ticker: str, *, hot: bool, calm_offset: int, hot_offset: int, ab_arms=(), ab_salt: str = "",
 ) -> tuple[int, int | None]:

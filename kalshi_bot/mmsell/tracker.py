@@ -21,7 +21,13 @@ from dataclasses import dataclass, field
 from .. import repository as repo
 from ..config import Settings
 from ..kalshi.errors import AuthError
-from ..live.sizing import is_hot_entry, maker_no_price, maker_offset, order_quantity
+from ..live.sizing import (
+    arm_book_offset,
+    is_hot_entry,
+    maker_no_price,
+    maker_offset,
+    order_quantity,
+)
 from ..paper.engine import kalshi_fee
 from ..scanner.metrics import (
     compute_metrics,
@@ -98,7 +104,29 @@ class MmSellTracker:
             return False                      # not enough tape to judge -> behave like the control
         return (max(mids) - min(mids)) >= float(v)
 
-    def _live_price_and_size(self, session, ticker: str, no_price: int | None, metrics):
+    def _book_arm_offset(self, book: dict, ticker: str) -> int | None:
+        """This book's own queue-position offset for `ticker`, or None when the book is not an
+        arm book. A per-arm book that returns None from arm_book_offset does not belong to this
+        ticker at all and must skip it — see _book_admits_ticker."""
+        s = self.settings
+        return arm_book_offset(
+            ticker, book.get("abarm"),
+            arms=s.mmsell_live_offset_ab_arm_list, salt=s.mmsell_live_offset_ab_salt,
+        )
+
+    def _book_admits_ticker(self, book: dict, ticker: str) -> bool:
+        """False when this is a queue-position ARM book and the ticker belongs to the other arm.
+
+        Every non-arm book (`abarm` unset) admits everything, so this is inert for the whole
+        existing cohort. An arm book whose experiment is switched off (no configured arms) admits
+        NOTHING rather than silently trading at the default offset — an arm book only has a
+        defined price when the experiment is running, so failing closed is the safe direction."""
+        if book.get("abarm") is None:
+            return True
+        return self._book_arm_offset(book, ticker) is not None
+
+    def _live_price_and_size(self, session, ticker: str, no_price: int | None, metrics,
+                             book: dict | None = None):
         """The (price, quantity) the live executor would use for this entry right now — the same
         hot-market-aware arithmetic mirror_mmsell_entry runs internally, recomputed here so the
         parity tape records what was actually sent rather than a guess. Nothing in the candidate
@@ -110,19 +138,26 @@ class MmSellTracker:
             lookback_minutes=s.mmsell_live_hot_market_lookback_minutes,
             lookup=repo.latest_mmsell_no_bid_before,
         )
-        offset, _arm = maker_offset(
-            ticker, hot=hot,
-            calm_offset=s.mmsell_live_price_offset_cents,
-            hot_offset=s.mmsell_live_hot_market_defensive_offset_cents,
-            ab_arms=s.mmsell_live_offset_ab_arm_list,
-            ab_salt=s.mmsell_live_offset_ab_salt,
-        )
+        arm_offset = self._book_arm_offset(book or {}, ticker)
+        if hot:
+            offset = s.mmsell_live_hot_market_defensive_offset_cents
+        elif arm_offset is not None:
+            offset = arm_offset          # this book IS an arm: its offset is the treatment
+        else:
+            offset, _arm = maker_offset(
+                ticker, hot=hot,
+                calm_offset=s.mmsell_live_price_offset_cents,
+                hot_offset=s.mmsell_live_hot_market_defensive_offset_cents,
+                ab_arms=s.mmsell_live_offset_ab_arm_list,
+                ab_salt=s.mmsell_live_offset_ab_salt,
+            )
         price = maker_no_price(metrics, no_price, offset, hot=hot)
-        qty = order_quantity(price, s.live_max_order_dollars, s.max_order_size) if price else None
+        size = (book or {}).get("size") or s.max_order_size
+        qty = order_quantity(price, s.live_max_order_dollars, size) if price else None
         return price, qty
 
     def _maybe_retry_live(self, session, *, tag: str, event: dict, ticker: str, metrics,
-                          summ: MmSellCycleSummary, recorder) -> None:
+                          summ: MmSellCycleSummary, recorder, book: dict | None = None) -> None:
         """Re-post the LIVE maker order on a ticker the PAPER book already holds.
 
         Why this exists: paper never misses a fill, so its position stays open to settlement and
@@ -162,6 +197,8 @@ class MmSellTracker:
                 session, strategy=tag, event_ticker=event.get("event_ticker"),
                 ticker=ticker, metrics=metrics, no_price=metrics.best_no_bid,
                 account_state=self._account_state,
+                arm_offset=self._book_arm_offset(book or {}, ticker),
+                max_contracts=(book or {}).get("size"),
             )
         except AuthError:
             raise
@@ -177,7 +214,7 @@ class MmSellTracker:
                 "first_limit_price": first_price, "no_bid": metrics.best_no_bid}})
         if recorder is not None:
             live_px, live_qty = self._live_price_and_size(
-                session, ticker, metrics.best_no_bid, metrics)
+                session, ticker, metrics.best_no_bid, metrics, book)
             recorder.note_live(ticker, tag, outcome or twin_codes.LIVE_NOT_ATTEMPTED,
                                live_px, live_qty)
 
@@ -375,6 +412,8 @@ class MmSellTracker:
                         continue
                     if not self._book_admits_series(book, series):
                         continue  # per-variant series skip/allow filter
+                    if not self._book_admits_ticker(book, ticker):
+                        continue  # queue-position arm book: this ticker is the other arm's
                     if metrics is None:
                         try:
                             ob = self.client.get_orderbook(ticker, depth=s.orderbook_depth)
@@ -446,7 +485,8 @@ class MmSellTracker:
                         # position is an assumption, live's fill is a fact. See _maybe_retry_live.
                         if not is_twin:
                             self._maybe_retry_live(session, tag=tag, event=event, ticker=ticker,
-                                                   metrics=metrics, summ=summ, recorder=recorder)
+                                                   metrics=metrics, summ=summ, recorder=recorder,
+                                                   book=book)
                         continue
                     # A twin is capped like its LIVE parent (not like paper's much larger book) —
                     # the cap shapes which candidates each side ever sees, so it has to match.
@@ -552,12 +592,14 @@ class MmSellTracker:
                                 session, strategy=tag, event_ticker=event.get("event_ticker"),
                                 ticker=ticker, metrics=metrics, no_price=price,
                                 account_state=self._account_state,
+                                arm_offset=self._book_arm_offset(book, ticker),
+                                max_contracts=book.get("size"),
                             )
                             if recorder is not None:
                                 # Record what live ACTUALLY did (placed, or the specific gate that
                                 # stopped it) so the twin/live gap is attributable, not guessed.
                                 live_px, live_qty = self._live_price_and_size(
-                                    session, ticker, price, metrics)
+                                    session, ticker, price, metrics, book)
                                 recorder.note_live(
                                     ticker, tag, outcome or twin_codes.LIVE_NOT_ATTEMPTED,
                                     live_px, live_qty)
