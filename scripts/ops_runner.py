@@ -103,6 +103,8 @@ ALLOWED_SCRIPTS = (
     "mmsell_fill_replay",
     "live_paper_parity",
     "mmsell_crypto_study",
+    "mmsell_supply_forecast",
+    "mmsell_regime_backtest",
     "evo_digest",
     "evo_tree",
     "evo_selftest",

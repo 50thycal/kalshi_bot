@@ -149,6 +149,22 @@ To run a request:
      ~100% of stops as an artifact; and Kalshi only serves ~1h of candles for these series, so the
      backtest population is `htc<1h` while mmsell trades `htc>=1h` — different trades.
 
+   - **"mmsell supply forecast"** -> `{"type":"script","name":"mmsell_supply_forecast"}` and
+     **"mmsell regime backtest"** -> `{"type":"script","name":"mmsell_regime_backtest"}` — the
+     seasonal forward-look (`docs/MMSELL_SEASONAL_FORECAST.md`). Our whole mmsell history is ONE
+     regime (16 days of summer sports + BTC daily), so Sept–Nov (NFL, MLB playoffs, NBA/NHL, the
+     Nov-3 midterms) cannot be backtested from our own books. The forecast script answers **how
+     many** markets each regime will offer — live supply, the assumption-free window-entry
+     calendar (`close − 14d`, since `htcmax=336h` is what holds November out), and the
+     **settlement-date concentration** that decides the election risk. The backtest script answers
+     **what each is worth**, replaying the mmsell10 entry over Kalshi's settled history per regime
+     (coverage, band yield, edge, the A1/A2/A3 bid-stop check, and a per-settlement-date
+     overdispersion measure). **The hard constraint both encode: Kalshi retains only a rolling
+     ~70-day settled window** (paged to cursor exhaustion; `KXNFLGAME` returns zero; auth does not
+     help), so last season is unavailable and the durable fix is to CAPTURE settled history as it
+     happens — the pattern `kalshi_bot/weather/backfill.py` already implements. Gate on the YIELD
+     column, not the P&L: the retained window yields n≈10 trades/regime, which decides nothing.
+
    The individual probes can still be run alone:
    `weather_model_check` grades the ensemble forecast distribution against the
    market's bucket prices on settled events (Brier/log-loss + hypothetical EV)
