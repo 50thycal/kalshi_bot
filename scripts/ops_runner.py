@@ -102,6 +102,8 @@ ALLOWED_SCRIPTS = (
     "mmsell_exit_study",
     "mmsell_fill_replay",
     "mmsell_ladder_probe",
+    "mmsell_h2h_study",
+    "mmsell_offset_ab",
     "live_paper_parity",
     "mmsell_crypto_study",
     "evo_digest",

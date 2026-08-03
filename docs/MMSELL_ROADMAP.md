@@ -413,6 +413,70 @@ worst point estimate in the book.
 > reading was small-sample noise and the exclusion cost us flow for nothing. Report the excluded
 > cohort's own P&L each check so the counterfactual stays visible.
 
+### 9a. RESOLVED 2026-08-03 — the gate FAILED, and the finding inverted
+
+`scripts/mmsell_h2h_study.py` (ops: `mmsell_h2h_study`) took the question to Kalshi's own settled
+history and built **1,137 entries across 2,074 settled markets** — 42× the n our paper book could
+supply. The pre-registered structural hypothesis was that **unclocked** sports (baseball, tennis,
+cricket — no way to run out the clock, so the trailing side always retains a live path) would
+carry the fat cheap tail, while **clocked** sports (soccer, basketball, hockey) would not.
+
+| cohort | n | losses | loss % | 95% CI | break-even | ¢/trade | verdict |
+|---|---|---|---|---|---|---|---|
+| **UNCLOCKED** | 586 | 31 | **5.3%** | [3.8, 7.4] | 8.1% | **+2.85** | **EARNS** — CI excludes break-even |
+| **CLOCKED** | 551 | 44 | **8.0%** | [6.0, 10.6] | 7.8% | **−0.23** | undecided / breakeven |
+| all h2h | 1137 | 75 | 6.6% | [5.3, 8.2] | 8.0% | +1.36 | |
+
+**The hypothesis is refuted, and it points the other way.** Unclocked h2h is the *profitable*
+cohort; clocked h2h is the breakeven-to-negative one. By sport: tennis +3.47¢, baseball **+2.19¢**
+(75 entries, 5.3% loss vs a 7.5% break-even), cricket +1.53¢ — against soccer −0.28¢ (375 entries)
+and basketball +0.48¢.
+
+**So the roadmap's own KXMLBGAME reading was small-sample noise**, exactly as its CI warned
+(n=27, [3.9%, 28.1%]). At 42× the sample, baseball h2h is fine. **`mmsell12` is NOT built** — the
+gate failed and the exclusion is not justified. This is the pre-registration doing its job: had
+we acted on the n=27 point estimate we would have cut a +2.19¢ cohort.
+
+**But a much stronger axis fell out of the same data — time to close:**
+
+| window | cohort | n | loss % | break-even | ¢/trade | p5 |
+|---|---|---|---|---|---|---|
+| **< 1h** | unclocked | 335 | **1.2%** | 7.8% | **+6.57** | **+4.0** |
+| < 1h | clocked | 330 | 7.6% | 7.7% | +0.08 | −91.0 |
+| **1–2h** | unclocked | 143 | 10.5% | 8.9% | **−1.64** | −91.0 |
+| 1–2h | clocked | 168 | 10.1% | 8.0% | **−2.10** | −92.0 |
+| **2–4h** | unclocked | 76 | **14.5%** | 8.7% | **−5.75** | −91.0 |
+| 4h+ | both | 61 | ~1.6% | ~7.1% | +5.4 | +3.0 |
+
+The dominant variable is **not the sport, it is how close to settlement the entry is.** The final
+hour is where essentially all the money is (+6.57¢ at a 1.2% loss rate, and a *positive* 5th
+percentile — the tail barely exists there); the 1–4h window is where both the mean and the tail
+are worst (−1.6 to −5.8¢, p5 ≈ −91¢).
+
+**Three caveats, all load-bearing:**
+
+1. **This is exploratory, not validated.** The htc cut was found by slicing the same dataset that
+   refuted the pre-registered hypothesis. It is a hypothesis *generated* from this data and must
+   be pre-registered and tested out-of-sample before anything is built on it.
+2. **It is fill-everything.** No adverse-selection haircut is applied, and the final hour of an
+   in-play market is exactly where a resting maker order is most likely to be picked off — mmsell's
+   own live decomposition found late/in-play entries were the adversely-selected ones. The
+   backtest says the *price path* is favourable there; whether a **maker** can capture it is a
+   different question, and the one `mmsell fill model` exists to answer.
+3. **The price band is richer than the live book's.** 783 of the 1,137 entries sit at 8–11¢, above
+   mmsell10's `maxyes=7` cap. Inside mmsell10's actual 5–8¢ band the split is: unclocked +2.77¢
+   (2 losses / 81), clocked **−1.42¢** (7 losses / 106) — same direction, but both undecided at
+   that n.
+
+> **Pre-registered gate — final-hour concentration (`mmsell13`), REPLACING the killed mmsell12.**
+> Paper variant of mmsell10 restricted to `htcmax = 1`. At **n ≥ 250 settled**, PROMOTE if
+> ¢/trade **> mmsell10 by ≥ 1.0¢ AND** its 5th-percentile P&L is no worse. KILL if ¢/trade
+> ≤ mmsell10 — the htc effect was an artifact of the fill-everything assumption, which is the
+> single most likely way this dies. **Live promotion additionally requires `mmsell fill model`
+> realizable ¢/trade**, because caveat 2 above is precisely where the paper→live gap lives. Note
+> this contradicts nothing prior: `mmsell11` (`htcmin=6`) and `mmsell7` (`htcmax=24`) both cut at
+> the wrong granularity to see a one-hour effect.
+
 ---
 
 ## 10. Why the existing tail controls did not work (the operator's premise, verified)
@@ -449,6 +513,68 @@ kill** — but the mechanism is clear and the direction is not marginal.
 
 ---
 
+## 10a. So what *does* reduce the tail?
+
+Collecting every result in this doc, the honest headline is a reframe:
+
+> **This book does not have a tail problem. It has a margin problem.**
+
+`mmsell10`'s 5th-percentile trade is **+5.0¢ — a win**. It loses 2.4–3.8% of the time at ~−94¢,
+and that is not a defect to be engineered away: it *is* the product. We are selling insurance on
+cheap tails, and the payout is supposed to be lumpy. Decomposed per trade:
+
+| | ¢/trade |
+|---|---|
+| premium collected (97.6% of the time) | +5.40 |
+| tail paid (2.4% × −94.3¢) | **−2.26** |
+| net | **+3.14** |
+
+The tail costs 2.26¢ of a 5.40¢ gross. Eliminating it entirely is worth +2.26¢ — but **every
+mechanism that reduces tail frequency also reduces premium**, and §10 measured the exchange rate:
+the L12 stop bought −41¢ worst-case instead of −95¢ and paid **−7.3¢/trade** for it. That is ~3×
+the entire value of the tail it was insuring against. Any future tail control has to beat that
+arithmetic, and the bar is brutal.
+
+**What is ruled out, and why (stop re-testing these):**
+
+| mechanism | status | why it fails |
+|---|---|---|
+| confirmed stop-loss (A1–A3) | measured, dead | fires on 52% of positions; −7.3¢/trade; p5 gets *worse* |
+| volatility entry gate (A4) | measured, dead | −7.13¢/trade at n=24 |
+| take-profit / early exit | measured (prior work) | hold-to-settlement wins on mean and Sharpe |
+| adding into winners | measured, dead (§8) | doubles tail severity for +55% premium; legs 100% correlated |
+| per-event cap | measured, no room (§4) | no event has ever produced >2 cheap-band losses |
+| h2h exclusion | gate failed (§9a) | the cohort earns +2.85¢ at 42× the sample |
+
+**What is left, ranked by evidence:**
+
+1. **Fix `mmsellA5` (the short strangle) — the only *structural* tail reducer in the design.**
+   Selling both mutually-exclusive cheap tails of one event collects two premiums against **at
+   most one loss**, because one settlement cannot make both tails hit. That is genuine tail
+   reduction rather than tail insurance bought at a bad price — it is the only idea here that
+   improves the payoff *shape* instead of trading mean for variance. It has never traded (§12), and
+   this PR fixes the cause: `_event_has_both_tails` read the bare `yes_bid`/`yes_ask` keys, which
+   the nested event payload no longer carries (it serves the dollar-string form, and
+   `weather/tracker.py` already carried the fallback that mmsell never got). Its gate is already
+   pre-registered in `docs/MMSELL_ANCHOR_SET.md` (n ≥ 82 clean pairs, 95% lower bound on pair win
+   rate clearing 93.9%) — it now needs to actually accrue data.
+2. **Daily exposure cap (§4).** Targets the one correlation that measurably exists: 7 losses in a
+   single day against 1.9 expected (Poisson p = 0.38%), spanning 6 unrelated series. Bounds
+   drawdown rather than per-trade severity, which is the axis the loss data actually shows.
+3. **Final-hour concentration (§9a, `mmsell13`).** The rare candidate that improves mean *and*
+   tail together — the <1h cell runs a 1.2% loss rate with a **positive** 5th percentile, against
+   −91¢ p5 in the 1–4h window. Exploratory and fill-everything, so it must clear its own gate and
+   the fill model before it means anything, but it is the only lever pointing both directions at
+   once.
+4. **True diversification — more distinct markets per unit of capital.** Note this is *not* more
+   books: §7 showed the books are 100%-overlapping nested subsets, so running eleven of them
+   diversifies nothing. It means more distinct tickers at smaller clips. §2 is what unlocks this:
+   with live maker fees measured at ~0.013¢/contract there is **no longer any fee-amortization
+   argument against small clips**, which was the only reason to prefer size over count.
+
+Everything else on the list trades mean for variance at a rate the stop experiment already proved
+we cannot afford.
+
 ## 11. Sequencing
 
 **Now — corrections, no experiment required:**
@@ -456,18 +582,23 @@ kill** — but the mechanism is clear and the direction is not marginal.
 2. Make all book reporting read distinct-ticker / distinct-event counts (§7).
 3. Read the anchor books as `settled + closed_sl` everywhere (§10) — the current view is biased.
 
-**Next — the two experiments worth running, in order:**
-4. **Daily-exposure cap** (§4) — the only measured, non-slicing correlation control. *Before
-   November.*
-5. **Live queue-offset A/B** (§5) — the only untested lever on the ~2¢ adverse-selection gap that
-   actually decides whether mmsell can ever be live-positive.
+**BUILT 2026-08-03 (this PR):**
+4. **Live queue-offset A/B** (§5) — `docs/MMSELL_OFFSET_AB.md`. Randomized per-ticker within one
+   book, so live exposure is unchanged. **Inert** until `MMSELL_LIVE_OFFSET_AB_ARMS` is set;
+   arming is an operator decision because it puts real money on both arms.
+5. **`mmsellA5` strangle gate fixed** (§10a) — the book could never enter; it now can, and its
+   pre-registered gate starts accruing.
+6. **h2h structural study** (§9a) — gate FAILED, `mmsell12` not built, KXMLBGAME was noise.
 
-**Then — gated on the above:**
-6. Tail-weighted entry sizing (§8) and the h2h in-play exclusion (§9), both paper, both with the
-   gates above. Neither is urgent; both are cheap.
+**Next:**
+7. **Daily-exposure cap** (§4) — the only measured, non-slicing correlation control. *Before
+   November.*
+8. **`mmsell13` final-hour concentration** (§9a) — paper only, and it must clear the fill model
+   before it means anything live.
+9. Tail-weighted entry sizing (§8) — paper, cheap, not urgent.
 
 **Parked, with reasons on record:** clip size (§2), ladder overround (§3), spread/depth (§6),
-outcome count (§7), per-event caps (§4), late-add sizing (§8).
+outcome count (§7), per-event caps (§4), late-add sizing (§8), h2h exclusion (§9a — gate failed).
 
 ---
 

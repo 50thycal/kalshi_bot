@@ -21,9 +21,14 @@ from dataclasses import dataclass, field
 from .. import repository as repo
 from ..config import Settings
 from ..kalshi.errors import AuthError
-from ..live.sizing import is_hot_entry, maker_no_price, order_quantity
+from ..live.sizing import is_hot_entry, maker_no_price, maker_offset, order_quantity
 from ..paper.engine import kalshi_fee
-from ..scanner.metrics import compute_metrics, compute_time_to_close, market_volume
+from ..scanner.metrics import (
+    compute_metrics,
+    compute_time_to_close,
+    market_volume,
+    price_to_cents,
+)
 from ..twin import harness as twin_codes
 
 logger = logging.getLogger(__name__)
@@ -105,8 +110,13 @@ class MmSellTracker:
             lookback_minutes=s.mmsell_live_hot_market_lookback_minutes,
             lookup=repo.latest_mmsell_no_bid_before,
         )
-        offset = (s.mmsell_live_hot_market_defensive_offset_cents if hot
-                  else s.mmsell_live_price_offset_cents)
+        offset, _arm = maker_offset(
+            ticker, hot=hot,
+            calm_offset=s.mmsell_live_price_offset_cents,
+            hot_offset=s.mmsell_live_hot_market_defensive_offset_cents,
+            ab_arms=s.mmsell_live_offset_ab_arm_list,
+            ab_salt=s.mmsell_live_offset_ab_salt,
+        )
         price = maker_no_price(metrics, no_price, offset, hot=hot)
         qty = order_quantity(price, s.live_max_order_dollars, s.max_order_size) if price else None
         return price, qty
@@ -182,7 +192,16 @@ class MmSellTracker:
         alone would be an ordinary mmsell trade wearing a strangle label."""
         cheap_yes = cheap_no = False
         for mk in event.get("markets") or []:
-            yb, ya = mk.get("yes_bid"), mk.get("yes_ask")
+            # The nested event payload no longer carries bare `yes_bid`/`yes_ask` — it uses the
+            # dollar-string form (`yes_bid_dollars`: '0.06'). Reading only the bare keys made this
+            # return False for EVERY event, which is why mmsellA5 has never opened a single
+            # position (0 rows in paper_trades) despite being live in config since 2026-07-30.
+            # weather/tracker.py already carried this fallback; mmsell never got it. price_to_cents
+            # accepts both forms, so this works whichever the API serves.
+            yb = price_to_cents(mk.get("yes_bid") if mk.get("yes_bid") is not None
+                                else mk.get("yes_bid_dollars"))
+            ya = price_to_cents(mk.get("yes_ask") if mk.get("yes_ask") is not None
+                                else mk.get("yes_ask_dollars"))
             if yb is None or ya is None:
                 continue
             mid = (float(yb) + float(ya)) / 2.0
@@ -253,6 +272,11 @@ class MmSellTracker:
             "only": list(book.get("only") or []),
             "maxyes": book.get("maxyes"),
             "live_price_offset_cents": s.mmsell_live_price_offset_cents,
+            # Changing either of these re-randomizes the queue-position experiment mid-flight,
+            # which makes twin-vs-live non-comparable across the change — recorded here so the
+            # harness reports it as param drift instead of silently blending two experiments.
+            "live_offset_ab_arms": list(s.mmsell_live_offset_ab_arm_list),
+            "live_offset_ab_salt": s.mmsell_live_offset_ab_salt,
             "live_max_spread_cents": s.mmsell_live_max_spread_cents,
             "live_hot_market_move_cents": s.mmsell_live_hot_market_move_cents,
             "live_hot_market_lookback_minutes": s.mmsell_live_hot_market_lookback_minutes,
@@ -450,8 +474,13 @@ class MmSellTracker:
                             lookback_minutes=s.mmsell_live_hot_market_lookback_minutes,
                             lookup=repo.latest_mmsell_no_bid_before,
                         )
-                        offset = (s.mmsell_live_hot_market_defensive_offset_cents if hot
-                                 else s.mmsell_live_price_offset_cents)
+                        offset, _arm = maker_offset(
+                            ticker, hot=hot,
+                            calm_offset=s.mmsell_live_price_offset_cents,
+                            hot_offset=s.mmsell_live_hot_market_defensive_offset_cents,
+                            ab_arms=s.mmsell_live_offset_ab_arm_list,
+                            ab_salt=s.mmsell_live_offset_ab_salt,
+                        )
                         price = maker_no_price(metrics, None, offset, hot=hot)
                         if price is None:
                             self._note(recorder, ticker, tag, twin_codes.SKIP_ILLIQUID)
