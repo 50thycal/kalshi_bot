@@ -23,7 +23,12 @@ from ..config import Settings
 from ..kalshi.errors import AuthError
 from ..live.sizing import is_hot_entry, maker_no_price, order_quantity
 from ..paper.engine import kalshi_fee
-from ..scanner.metrics import compute_metrics, compute_time_to_close, market_volume
+from ..scanner.metrics import (
+    compute_metrics,
+    compute_time_to_close,
+    market_price_cents,
+    market_volume,
+)
 from ..twin import harness as twin_codes
 
 logger = logging.getLogger(__name__)
@@ -179,10 +184,16 @@ class MmSellTracker:
         Read straight off the nested market payload the scan already holds — no extra API call.
         This pairing is the whole point: the backtest's +3.30c/pair came from events where both
         tails were simultaneously cheap, which is a LOW-VOLATILITY selection. Entering one leg
-        alone would be an ordinary mmsell trade wearing a strangle label."""
+        alone would be an ordinary mmsell trade wearing a strangle label.
+
+        Prices go through `market_price_cents`, NOT a raw `.get("yes_bid")`: the live events
+        endpoint sends `yes_bid_dollars`/`yes_ask_dollars` and omits the integer-cent keys, so
+        the raw read returned None for every market and this returned False for every event —
+        which is why mmsellA5 never opened a single position."""
         cheap_yes = cheap_no = False
         for mk in event.get("markets") or []:
-            yb, ya = mk.get("yes_bid"), mk.get("yes_ask")
+            yb = market_price_cents(mk, "yes_bid")
+            ya = market_price_cents(mk, "yes_ask")
             if yb is None or ya is None:
                 continue
             mid = (float(yb) + float(ya)) / 2.0

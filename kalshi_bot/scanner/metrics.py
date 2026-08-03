@@ -101,6 +101,18 @@ def market_last_price(market: dict) -> int | None:
     return price_to_cents(market.get("last_price_dollars"))
 
 
+def market_price_cents(market: dict, key: str) -> int | None:
+    """A quote field ('yes_bid', 'yes_ask', 'no_bid', ...) off a market payload, in cents.
+
+    Kalshi's current API sends these as `<key>_dollars` strings and OMITS the legacy integer-cent
+    keys entirely, so `market.get("yes_bid")` reads None on live data even though the market is
+    quoted — a gate written that way is silently always-False. (That is exactly what kept
+    mmsellA5 at zero trades.) Reads the legacy key when present, else the `_dollars` form."""
+    if market.get(key) is not None:
+        return price_to_cents(market.get(key))
+    return price_to_cents(market.get(f"{key}_dollars"))
+
+
 def _levels(side: Any) -> list[tuple[int, int]]:
     out: list[tuple[int, int]] = []
     for level in side or []:

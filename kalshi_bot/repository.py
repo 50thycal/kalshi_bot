@@ -1490,6 +1490,26 @@ def open_live_no_positions(session, strategy_prefix: str) -> list[tuple]:
     return out
 
 
+def closeout_attempt_count(session, ticker: str, strategy_prefix: str) -> int:
+    """How many end-of-strategy close orders `strategy_prefix` has already fired at `ticker`.
+
+    Bounds the closeout retry loop. `open_live_no_positions` re-derives its work list from
+    Kalshi's position snapshot every cycle, so a position that can never be closed comes back
+    every cycle and is tried again — the 2026-07-19 mmsell3 wind-down reached 650 attempts on
+    one ticker. Counts EVERY attempt, not just the failures: a marketable IOC that keeps not
+    filling leaves the position just as open as a rejection does, and both want a human.
+
+    Matched on the '<strategy>_closeout' tag the closeout path writes (autoescape so the
+    literal underscore isn't a LIKE wildcard)."""
+    return session.scalar(
+        select(func.count()).select_from(m.LiveOrder).where(
+            m.LiveOrder.market_ticker == ticker,
+            m.LiveOrder.strategy.like(f"{strategy_prefix}%"),
+            m.LiveOrder.strategy.endswith("_closeout", autoescape=True),
+        )
+    ) or 0
+
+
 def other_live_no_strategies_on_ticker(
     session, ticker: str, exclude_prefix: str
 ) -> list[str]:

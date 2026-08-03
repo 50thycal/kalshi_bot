@@ -84,6 +84,21 @@ strike under the price cap before either leg is entered. A lone tail is an ordin
 entering it as a "strangle" would silently make A5 a duplicate of mmsell10 and destroy the
 pairing the thesis rests on.
 
+**Fixed 2026-08-03 — A5 had never traded, and not because it was selective.** The pairing gate
+read `mk.get("yes_bid")` / `mk.get("yes_ask")` straight off the nested market payload. Kalshi's
+live events endpoint sends those quotes as `yes_bid_dollars` / `yes_ask_dollars` **strings and
+omits the integer-cent keys entirely**, so both reads returned `None` for every market, every
+market was skipped, and the gate returned `False` for every event — A5 was structurally incapable
+of opening a position from the day it shipped. Its zero rows were a plumbing bug wearing the
+costume of a selective book, which is the dangerous shape: the thesis predicted slow accrual, so
+"no trades yet" looked like the expected outcome. It now reads through
+`scanner.metrics.market_price_cents`, which accepts both shapes, and the strangle tests run
+against both payload shapes so the same gap can't reopen.
+
+Two transferable lessons: **never read a Kalshi price field raw** — the `_dollars`/`_fp` variants
+are what live data actually carries — and **a paper book at exactly zero rows is a bug report
+until proven otherwise**, never evidence of selectivity.
+
 Honest caveat, carried forward from the backtest: an event with both tails simultaneously cheap is
 an event the market *prices as low-volatility*. So A5 is a pure short-volatility bet on a
 subsample selected for low volatility. That is the same signal the A4 entry gate is chasing,
@@ -128,4 +143,6 @@ project's own history:
   mmsell program two books "cleared" and then reversed sign (+0.84 → −0.57, +1.00 → −0.45) as n
   doubled.
 - Expect A5 to accrue slowly — it needs an event with *both* tails cheap, which is a small subset
-  of the flow mmsell10 sees.
+  of the flow mmsell10 sees. **But slow is not zero:** A5's clock starts at the 2026-08-03 fix
+  (see above), and if it is still at n=0 several checks after that deploy, treat it as a second
+  bug rather than as selectivity.

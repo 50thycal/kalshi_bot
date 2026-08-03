@@ -22,9 +22,10 @@ from kalshi_bot.risk.manager import RiskManager
 
 
 class FakeCloseoutClient:
-    def __init__(self, yes_ask=10):
+    def __init__(self, yes_ask=10, market_status="active"):
         self.placed: list[dict] = []
         self.yes_ask = yes_ask
+        self.market_status = market_status
         self.raise_exc: Exception | None = None
 
     def create_events_order(self, order):
@@ -40,9 +41,15 @@ class FakeCloseoutClient:
             "no_dollars": [[f"{no_bid / 100:.2f}", "300"]],
         }}
 
+    def get_market(self, ticker):
+        return {"market": {"ticker": ticker, "status": self.market_status}}
+
 
 def _closeout_settings(settings, **over):
     settings.bot_mode = "live"
+    # KILL_SWITCH must be false for a close to reach Kalshi -- the closeout now refuses to write
+    # an order it knows the client will reject, so the realistic wind-down config sets it here.
+    settings.kill_switch = False
     settings.mmsell_closeout_enabled = True
     settings.mmsell_closeout_strategies = "mmsell3"
     settings.mmsell_closeout_slippage_cents = 3
@@ -88,7 +95,7 @@ def test_closeout_each_switch_blocks(settings):
     db.init_engine(settings.database_url)
     db.create_all()
     for over in ({"mmsell_closeout_enabled": False}, {"mmsell_closeout_strategies": ""},
-                 {"bot_mode": "weather"}):
+                 {"bot_mode": "weather"}, {"kill_switch": True}):
         client = FakeCloseoutClient()
         ex = _exec(_closeout_settings(settings, **over), client)
         with db.session_scope() as session:
@@ -230,3 +237,124 @@ def test_closeout_one_rejection_does_not_block_others(settings):
             select(m.LiveOrder).where(m.LiveOrder.action == "buy", m.LiveOrder.side == "yes")
         ).all()
         assert len(rows) == 2 and all(r.status == "rejected" for r in rows)
+
+
+# ------------------------------------------------- retry-loop bounds (2026-08-03 regression)
+# The closeout re-derives its work list from Kalshi's position snapshot every cycle, so a
+# position it cannot close comes back every cycle. Left unbounded during the mmsell3 wind-down
+# it wrote 1,942 dead live_orders rows across 8 tickers -- 650 on the worst one.
+
+
+def test_closeout_refuses_to_write_orders_it_knows_are_dead(settings):
+    """Root cause of 1,913 of those rows: the flag stayed on with KILL_SWITCH=true, so every
+    cycle wrote a `pending` row + a POST the client itself rejected. Nothing should be written
+    at all -- not just no order placed."""
+    _closeout_settings(settings, kill_switch=True)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeCloseoutClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _seed_open_no_position(session)
+        n = ex.close_mmsell_positions(session)
+    assert n == 0 and client.placed == []
+    with db.session_scope() as session:
+        rows = session.scalars(
+            select(m.LiveOrder).where(m.LiveOrder.action == "buy", m.LiveOrder.side == "yes")
+        ).all()
+        assert rows == [], "a close order was recorded that could never reach Kalshi"
+
+
+def test_closeout_gives_up_on_a_ticker_after_the_attempt_cap(settings):
+    """Simulates the real loop: the same unclosable position, cycle after cycle."""
+    _closeout_settings(settings, mmsell_closeout_max_attempts_per_ticker=3)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeCloseoutClient()
+    client.raise_exc = KalshiAPIError(400, "resolved_by_exchange_state",
+                                      "/portfolio/events/orders")
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _seed_open_no_position(session)
+    for _ in range(10):  # ten cycles
+        with db.session_scope() as session:
+            ex.close_mmsell_positions(session)
+    assert len(client.placed) == 0  # every attempt was rejected by the fake
+    with db.session_scope() as session:
+        rows = session.scalars(
+            select(m.LiveOrder).where(m.LiveOrder.action == "buy", m.LiveOrder.side == "yes")
+        ).all()
+        assert len(rows) == 3, f"cap is 3, wrote {len(rows)} orders over 10 cycles"
+
+
+def test_closeout_cap_is_scoped_per_ticker(settings):
+    """One exhausted ticker must not stop the closeout from working on the others."""
+    _closeout_settings(settings, mmsell_closeout_max_attempts_per_ticker=2)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeCloseoutClient(yes_ask=10)
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _seed_open_no_position(session, ticker="KXTEAM-26-A", no_price=90)
+        # A already burned its two attempts on earlier cycles
+        for i in range(2):
+            repo.create_live_order(
+                session, signal_id=None, ticker="KXTEAM-26-A", event_ticker=None,
+                strategy="mmsell3_closeout", side="yes", action="buy", limit_price=13,
+                quantity=1, status="rejected", client_order_id=f"closeout:old:{i}",
+                raw_order_json={})
+        _seed_open_no_position(session, ticker="KXTEAM-26-B", no_price=90)
+        n = ex.close_mmsell_positions(session)
+    assert n == 1
+    assert client.placed[0]["ticker"] == "KXTEAM-26-B"
+
+
+def test_closeout_cap_of_zero_restores_unbounded_retries(settings):
+    _closeout_settings(settings, mmsell_closeout_max_attempts_per_ticker=0)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeCloseoutClient()
+    client.raise_exc = KalshiAPIError(400, "invalid_order", "/portfolio/events/orders")
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _seed_open_no_position(session)
+    for _ in range(4):
+        with db.session_scope() as session:
+            ex.close_mmsell_positions(session)
+    with db.session_scope() as session:
+        rows = session.scalars(
+            select(m.LiveOrder).where(m.LiveOrder.action == "buy", m.LiveOrder.side == "yes")
+        ).all()
+        assert len(rows) == 4
+
+
+def test_closeout_skips_a_market_that_can_no_longer_be_traded(settings):
+    """A settled/determined market can't be closed and doesn't need to be -- it cash-settles.
+    Two wind-down tickers were exactly this, rejected `resolved_by_exchange_state` 37 and 2x."""
+    _closeout_settings(settings)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeCloseoutClient(market_status="determined")
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _seed_open_no_position(session)
+        n = ex.close_mmsell_positions(session)
+    assert n == 0 and client.placed == []
+
+
+def test_closeout_proceeds_when_the_market_lookup_fails(settings):
+    """Fail-soft: a flaky market lookup must never stall a live wind-down."""
+    _closeout_settings(settings)
+    db.init_engine(settings.database_url)
+    db.create_all()
+
+    class Flaky(FakeCloseoutClient):
+        def get_market(self, ticker):
+            raise RuntimeError("kalshi 502")
+
+    client = Flaky(yes_ask=10)
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _seed_open_no_position(session, no_price=90)
+        n = ex.close_mmsell_positions(session)
+    assert n == 1

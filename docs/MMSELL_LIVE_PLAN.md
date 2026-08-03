@@ -228,13 +228,36 @@ would block the CLOSE orders too, not just new entries:
    remove the target tag). Leave `KILL_SWITCH=false` / `LIVE_ENABLED=true` — order placement must
    stay live for the closes to reach Kalshi.
 2. Set `MMSELL_CLOSEOUT_ENABLED=true` and `MMSELL_CLOSEOUT_STRATEGIES=<tag>` (e.g. `mmsell3`) and
-   redeploy. Every live cycle thereafter closes whatever's still open; it's self-limiting (once
-   flat, later cycles find nothing) so there's no rush to flip it back off.
+   redeploy. Every live cycle thereafter closes whatever's still open.
 3. Confirm flat via the ops channel — `live_orders` where `strategy='<tag>_closeout'` all
    `filled`/`submitted`, and zero open positions.
 4. **Only now** set `KILL_SWITCH=true` for the final, permanent, defense-in-depth stop.
+5. Set `MMSELL_CLOSEOUT_ENABLED=false`. See below for why this step is not optional.
 
 Skipping step 1 (leaving the entry allowlist live) races new entries against the closeout in the
 same cycle. Reaching for `KILL_SWITCH=true` first (before positions are flat) blocks the closes
 from executing at all — the fail-closed order-placement guard doesn't distinguish "close" from
 "open" intent, only that live money is moving.
+
+### What actually happened, and the bounds added because of it (2026-08-03)
+
+The wind-down ran steps 1–4 but not 5, so the flag stayed on past `KILL_SWITCH=true`. "One-shot"
+described the intent, not the code: the closeout re-derives its work list from **Kalshi's position
+snapshot every cycle**, so a position it cannot close comes back every cycle and is tried again.
+The claim it was "self-limiting" holds only when the closes actually *fill*.
+
+Result: **1,942 dead `live_orders` rows across 8 tickers**, retried 160–644 times each — 1,913 of
+them the client's own `"Live order placement is disabled"` rejection (step 4 done before step 5),
+the rest markets that had already resolved and could never be closed at all. No money moved; each
+attempt cost a `pending` row, an orderbook fetch and a POST.
+
+Three guards now bound it, in `LiveExecutor` (all shared with the identical `theta` path):
+
+| guard | what it stops |
+| --- | --- |
+| `_closeout_can_place` | Refuses to start the loop when `KILL_SWITCH=true` — logs one line naming both fixes instead of writing an order per position per cycle. |
+| `_closeout_market_untradeable` | Skips markets whose status is no longer `active`/`open`: they cash-settle on their own, so there is nothing to close. Fail-soft — a lookup error proceeds, so a flaky API never stalls a wind-down. |
+| `_closeout_exhausted` | Gives up on a ticker after `MMSELL_CLOSEOUT_MAX_ATTEMPTS_PER_TICKER` (default 5) close orders, counting fills-that-didn't-happen as well as rejections; logged once per process. `0` restores unbounded retries. |
+
+These bound the blast radius; they don't replace step 5. A closeout left enabled still re-checks
+every position every cycle — turn it off when the book is flat.
