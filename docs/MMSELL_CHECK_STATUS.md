@@ -4,103 +4,112 @@
 fix a corrupted snapshot. Lives on the `mmsell-check-status` branch only — never merged
 into the default branch, never touched by `ops`. Diffed against on the next run.
 
-**Run #5 — 2026-08-01 01:22 UTC** (first run with the anchor set live)
+**Run #6 — 2026-08-03 21:22 UTC**
 
-## ⚠ KNOWN GAP FOUND THIS RUN — both standing reads are blind to anchor stop exits
+## Headline: A1's matched counterfactual INVERTED, exactly as pre-warned
 
-`mmsell_fill_model.py` and `mmsell_exit_study.py` both select only `status='settled'`
-rows. The anchor stop books close their exits as **`status='closed_sl'`**, so **every
-stopped trade is silently dropped from both tables.** This makes A1/A2/A3 read as
-identical "+5.25¢, 100% win, REALIZABLE EDGE" books when A1's true resolved P&L
-including its 9 stops is **−6.62¢/trade**. Until the scripts are fixed, read the anchor
-books from a direct `paper_trades` status breakdown, NOT from the two tables below.
+Run #5 measured A1's stop at **+7.0¢ saved/trade** on 4 matched-settled pairs, with 13
+pending. Those pending pairs resolved: at **n=25 matched, A1's stop now reads −2.4¢** —
+the stop costs more than it saves. This is the guardrail from the skill's step 3b doing
+its job; do not report a matched number without its pending count.
 
 ## Standing realizable read (mmsell fill model)
 
-| book | n (run4→5) | realizable ¢/ct (run4→5) | verdict |
-|---|---|---|---|
-| mmsell | 4315→4383 | +0.29→+0.29 | low coverage |
-| mmsell1 | 2818→2877 | +0.34→+0.34 | thin + |
-| mmsell10 | 227→261 | +1.35→+1.33 | REALIZABLE EDGE (3rd consecutive check) |
-| mmsell11 | 431→475 | −0.80→−0.74 | MIRAGE |
-| mmsell2 | 1858→1898 | +5.06→+5.01 | low coverage (20.7%) |
-| mmsell3 | 1214→1258 | −0.87→−0.84 | MIRAGE |
-| mmsell4 | 363→407 | −0.79→−0.72 | MIRAGE |
-| mmsell5 | 185→185 | +0.83→+0.83 | thin + — **STALLED, 0 new settled** |
-| mmsell6 | 500→539 | −0.23→−0.22 | MIRAGE |
-| mmsell7 | 89→117 | −0.88→−0.65 | MIRAGE |
-| mmsell8 | 53→68 | +0.55→+0.56 | thin + |
-| mmsell9 | 69→80 | +1.36→+1.33 | REALIZABLE EDGE |
-| mmsellA1 | —→4 | —→+1.56 | **DO NOT USE** — excludes 9 stops (see gap above) |
-| mmsellA2 | —→4 | —→+1.56 | **DO NOT USE** — excludes 1 stop |
-| mmsellA3 | —→4 | —→+1.56 | n=4, no stops fired yet |
-| mmsellA4 | —→3 | —→+1.49 | n=3 |
+| book | n (run5→6) | realizable ¢/ct (5→6) | total P&L $ | verdict |
+|---|---|---|---|---|
+| mmsell | 4383→4523 | +0.29→+0.26 | **+$67.36** | low coverage (32.8%) |
+| mmsell1 | 2877→2988 | +0.34→+0.33 | **+$60.44** | thin + |
+| mmsell10 | 261→314 | +1.33→+1.33 | **+$9.30** | REALIZABLE EDGE (4th consecutive) |
+| mmsell11 | 475→555 | −0.74→−0.79 | +$16.56 | MIRAGE |
+| mmsell2 | 1898→1969 | +5.01→+5.00 | **+$52.85** | low coverage (20.4%) |
+| mmsell3 | 1258→1338 | −0.84→−0.85 | +$25.47 | MIRAGE |
+| mmsell4 | 407→486 | −0.72→−0.77 | +$9.69 | MIRAGE |
+| mmsell5 | 185→203 | +0.83→+0.88 | **−$1.38** | thin + — **UNSTALLED** (was 0 new on run 5) |
+| mmsell6 | 539→607 | −0.22→−0.24 | +$14.01 | MIRAGE |
+| mmsell7 | 117→136 | −0.65→−0.61 | +$2.47 | MIRAGE (2nd repeat — stabilizing) |
+| mmsell8 | 68→75 | +0.56→+0.79 | +$2.10 | thin + |
+| mmsell9 | 80→92 | +1.33→+1.34 | +$3.06 | REALIZABLE EDGE |
 
-No verdict flips this run. Every book held its run-4 verdict.
+No verdict flips. **Ignore the A1–A4 rows this script emits** — they exclude `closed_sl`
+(see step 3b); the anchor table below is authoritative.
 
-## Anchor set — TRUE resolved numbers (direct from `paper_trades`, stops included)
+**Whole-family realized total: ~+$262 paper.** Note the dollar leaders (`mmsell` +$67,
+`mmsell1` +$60, `mmsell2` +$53) are all LOW-COVERAGE books whose realizable read is
++0.26 to +0.33¢ — the dollars are volume, not edge. `mmsell10`'s +$9.30 at +1.33¢
+realizable is the only high-coverage positive.
 
-Control = `mmsell10`, same entry (`lo=5,hi=10,maxyes=7`), read over the same window.
+## Exit study — best exit per book
 
-| book | mechanic | entries | open | settled | stops | stop rate | **true ¢/trade (all resolved)** |
-|---|---|---|---|---|---|---|---|
-| mmsellA1 | stop 12¢ K2 | 33 | 20 | 4 | **9** | **27%** | **−6.62** |
-| mmsellA2 | stop 20¢ K2 | 25 | 20 | 4 | 1 | 4% | +0.40 |
-| mmsellA3 | stop 30¢ K2 | 25 | 21 | 4 | 0 | 0% | +5.25 |
-| mmsellA4 | vol entry gate | 22 | 19 | 3 | — | — | +5.33 |
-| mmsellA5 | strangle | **0** | 0 | 0 | — | — | — |
-| mmsell10 | CONTROL | — | 33 | 261 | — | — | +3.98 |
+**Family-wide: every book's HOLD mean fell sharply this run** (mmsell10 +4.89→+3.02,
+mmsell8 +8.22→+6.21, mmsell +2.79→+0.73, mmsell5 to NEGATIVE −1.26). A bad stretch hit
+the whole family, not one book. Read every Δ below against a weaker base than run #5.
 
-- Stop rates are monotone in level (27% / 4% / 0%) — the sweep is discriminating properly.
-- **A1's settled-vs-stopped split is a resolution-speed artifact**: a stop closes now, a
-  winner waits days. With 20 of 33 still open, −6.62¢ is a biased-early read, not a verdict.
-- **Stop-and-re-enter churn confirmed**: A1 has 33 entries vs A2/A3's 25 because a stopped
-  market is freed for re-entry (`KXTRUMPSAYCOMPANY-26AUG01-CHAT` was stopped twice, −9¢ then
-  −23¢). Unmodeled in the backtest, which replayed one path per position. May need a cooldown.
-- **A4's vol gate is firing**: 22 entries vs the ungated 25 → **12% rejection**, above the 5%
-  floor below which the book would be a dead duplicate of mmsell10.
-- **A5 still at zero entries** after ~32h. Needs 82 pairs. If still empty in a few days the
-  both-tails condition may be too strict to ever test, not merely slow.
-- Entry mix is ~70% the "Trump says word" family (`KXTRUMPSAY*`), not sports — heavily
-  correlated legs on related settlement dates. Matters for any future 10× anchor sizing.
-
-## Exit study — best exit per book (mmsell exit study)
-
-| book | replay n (4→5) | HOLD mean/tail (4→5) | best rule this run | Δmean | Δtail | gate |
+| book | replay n (5→6) | HOLD mean/tail (5→6) | best rule this run | Δmean | Δtail | gate |
 |---|---|---|---|---|---|---|
-| mmsell | 482→549 | +1.63/−76 → +2.79/−76 | none beats hold (L60 K2 +1.27) | −1.51 | +13 | NO |
-| mmsell1 | 328→386 | +3.43/−84 → +4.18/−83 | stop L50 K2 +3.75/−52 | −0.42 | +31 | NO |
-| mmsell10 | 110→144 | +4.65/+5 → +4.89/+5 | none beats hold | 0 | 0 | NO — HOLD already clean |
-| mmsell11 | 190→234 | +4.34/+5 → +4.91/+5 | stop L50 K2 +4.64/+5 | −0.27 | 0 | NO — flat tail |
-| mmsell2 | 222→261 | +3.66/−84 → +4.60/−84 | stop L50 K2 +4.30/−56 | **−0.30** | +28 | **BOUNDARY — see notes** |
-| mmsell3 | 202→246 | +4.50/+5 → +5.01/+5 | stop L50 K2 +4.75/+5 | −0.26 | 0 | NO — flat tail |
-| mmsell4 | 177→221 | +4.68/+5 → +5.21/+5 | none beats hold (L50 K2 −0.43) | −0.43 | 0 | NO |
-| mmsell5 | 71→71 | +4.69/+5 → unchanged | L40 K2 +4.77/−36 | +0.08 | −41 | **STALLED**, n<100 |
-| mmsell6 | 160→199 | +4.74/+5 → +5.04/+5 | stop L50/L60 K2 +5.05/+5 | +0.01 | 0 | NO — negligible |
-| mmsell7 | 42→70 | +4.93/+5 → +5.53/+5 | none beats hold | 0 | 0 | not yet (n<100) |
-| mmsell8 | 30→45 | +7.97/+5 → +8.22/+5 | none beats hold | 0 | 0 | not yet (n<100) |
-| mmsell9 | 47→58 | +5.49/+5 → +5.53/+5 | none beats hold | 0 | 0 | not yet (n<100) |
-| mmsellA1–A4 | —→4/4, 4/4, 4/4, 3/3 | +5.25 or +5.33 / +5 | every rule Δ0, 0% exit | 0 | 0 | vacuous — see gap above |
+| mmsell | 549→688 | +2.79/−76 → +0.73/−80 | none beats hold (L60 K2 −0.16) | −0.89 | +16 | NO |
+| mmsell1 | 386→496 | +4.18/−83 → +1.82/−85 | stop L50 K2 +1.63/−61 | −0.19 | +24 | **BOUNDARY** |
+| mmsell10 | 144→197 | +4.89/+5 → +3.02/+5 | stop L50 K2 +3.03/+5 | +0.01 | 0 | NO — tail already clean |
+| mmsell11 | 234→313 | +4.91/+5 → +2.73/+4 | stop L50 K2 +2.67/−50 | −0.06 | **−54** | NO — tail worse |
+| mmsell2 | 261→332 | +4.60/−84 → +1.65/−86 | stop L50 K2 +1.74/−65 | **+0.08** | **+21** | **CLEARS — but see notes** |
+| mmsell3 | 246→325 | +5.01/+5 → +2.89/+5 | stop L50 K2 +2.83/−50 | −0.06 | −55 | NO |
+| mmsell4 | 221→300 | +5.21/+5 → +2.86/+4 | stop L50 K2 +2.69/−50 | −0.16 | −54 | NO |
+| mmsell5 | 71→89 | +4.69/+5 → **−1.26/−89** | **stop L30 K2 +0.48/−44** | **+1.74** | **+45** | not yet (n=89<100) |
+| mmsell6 | 199→266 | +5.04/+5 → +2.39/+5 | stop L50 K2 +2.57/+5 | +0.18 | 0 | NO — tail already clean |
+| mmsell7 | 70→89 | +5.53/+5 → +4.61/+5 | none beats hold | −0.93 | 0 | NO |
+| mmsell8 | 45→52 | +8.22/+5 → +6.21/+5 | none beats hold (L50 K2 −0.44) | −0.44 | 0 | NO |
+| mmsell9 | 58→70 | +5.53/+5 → +2.66/+5 | stop L40 K2 +2.89/−38 | +0.23 | −43 | NO — buys mean with tail |
+
+## Anchor set — direct read (step 3b; stops included)
+
+| book | entries | open | settled | stops | resolved | total P&L $ | ¢/trade |
+|---|---|---|---|---|---|---|---|
+| mmsellA1 (12¢) | 65 | 4 | 35 | **26** | 61 | **−$1.41** | −2.31 |
+| mmsellA2 (20¢) | 53 | 5 | 37 | 11 | 48 | **−$0.71** | −1.48 |
+| mmsellA3 (30¢) | 51 | 5 | 39 | 7 | 46 | **−$1.94** | −4.22 |
+| mmsellA4 (vol gate) | 47 | 5 | 42 | 0 | 42 | **−$1.73** | −4.12 |
+| mmsellA5 (strangle) | **5** | 5 | 0 | 0 | 0 | — | — |
+| **mmsell10 (CONTROL)** | 319 | 5 | 314 | 0 | 314 | **+$9.30** | **+2.96** |
+
+**Anchor set combined: −$5.79.** Control over the same period: +$9.30. Against the
+$100/month north star the anchor set is currently a −$5.79 information purchase.
+
+### Matched counterfactual (the deciding read)
+
+| book | matched-settled n | stop avg | control avg | ctrl worst | **stop saved** | pending |
+|---|---|---|---|---|---|---|
+| mmsellA1 (12¢) | 25 | −12.8¢ | −10.4¢ | −95¢ | **−2.4¢** | 1 |
+| mmsellA2 (20¢) | 11 | −24.8¢ | −30.9¢ | −95¢ | **+6.1¢** | 0 |
+| mmsellA3 (30¢) | 7 | −43.9¢ | −37.4¢ | −95¢ | **−6.4¢** | 0 |
+
+The mechanism is now visible in the control-average column. A1's stopped markets averaged
+only −10.4¢ under the control — most of its 26 stops fired on markets that were fine, so
+it pays ~12.8¢ to dodge ~10.4¢. A2's stopped markets averaged −30.9¢ — its stop set is
+genuinely enriched for disasters, which is why it's the only level saving money. A3 exits
+at −43.9¢ on markets the control resolved at −37.4¢: by the time 30¢ confirms, the damage
+is done and some of those recover.
 
 ## Notes carried into the next run
 
-- **FIX THE SCRIPTS.** Both `mmsell_fill_model.py` and `mmsell_exit_study.py` must include
-  `closed_sl` rows (or at minimum report them in a separate column) before the anchor set can
-  be read from the standing tables at all. This is the single highest-value follow-up: right
-  now the check reports the worst-performing anchor book as a "REALIZABLE EDGE".
-- **mmsell2 sits EXACTLY on the −0.30 gate boundary** with Δtail +28 at n=261. Do NOT call
-  this a clear. Its Δmean has now printed **+1.00 → −0.45 → −0.30** across three consecutive
-  checks — it is oscillating around the boundary, not converging to it. The standing rule
-  (3+ consecutive checks holding at growing n) is not met; it has never held twice in a row.
-- mmsell1 improved from −0.57 → −0.42 but is still short of the gate.
-- **mmsell5 is stalled** — 0 new settled trades and 0 new replayable positions since run #4
-  (n=185, replay 71 both runs). First observed stall; if it repeats next run, investigate
-  whether the book is still taking entries at all.
-- The long-running pattern is unchanged: on every book with a genuine tail, the confirmed
-  stop's benefit decays toward and through zero as n grows. The anchor set is the forward
-  test of whether that holds when the stop executes for real instead of in replay — and A1's
-  early 27% stop rate at ~−12¢ a stop is, so far, consistent with the pessimistic reading.
-- mmsell10 has now held REALIZABLE EDGE for 3 consecutive checks (+1.35 / +1.33 / +1.33) at
-  growing n (227→261). It is the only book meeting the "held across 3 checks" standard.
-- mmsell7's verdict has been noisy (MIRAGE→dead→MIRAGE→MIRAGE); it held MIRAGE this run,
-  which is the first repeat in four checks. Still treat as unsettled.
+- **A1's +7.0¢ from run #5 was an artifact of n=4.** At n=25 it is −2.4¢. Never quote a
+  matched number without its pending count; this is the second time in this program that a
+  favorable early reading reversed as n grew (mmsell1/mmsell2 in run #4 was the first).
+- **A2 (20¢) is the only stop level saving money** (+6.1¢ matched) but n=11. If a level
+  promotes it will be this one, not the tight one the crypto backtest pointed at. Needs
+  ≥3 checks holding.
+- **mmsell2 technically CLEARS the exit gate this run** (Δmean +0.08, Δtail +21, n=332).
+  Do NOT act on it. Its Δmean sequence is now **+1.00 → −0.45 → −0.30 → +0.08** — four
+  checks, four different signs/values. This is oscillation around zero, and the standing
+  3-consecutive-checks rule is not met. Treat a single clear as noise until it repeats.
+- **mmsell5 is the one genuinely new signal**: it unstalled, its HOLD went NEGATIVE
+  (−1.26¢), and stop L30 K2 improves **both** mean (+1.74) and tail (+45) — the only book
+  in the family where a stop does that. n=89, so 11 short of the gate. Check it next run.
+- **mmsell5 is also the only book with a negative total P&L (−$1.38)** among the legacy
+  twelve — consistent with it being the book that actually has an uncut tail.
+- **A5 finally took 5 entries** after ~4 days at zero. All open. The both-tails condition
+  is restrictive but not impossible; at this rate 82 pairs is many months away, so decide
+  whether to loosen it rather than wait.
+- Family-wide HOLD means dropped sharply this run across every book. If run #7 shows the
+  same, this is a regime change, not a bad week — and every "REALIZABLE EDGE" verdict
+  above should be re-examined rather than assumed durable.
+- mmsell10 held REALIZABLE EDGE for a 4th consecutive check (+1.35/+1.33/+1.33/+1.33) at
+  growing n (227→261→314). Still the only book meeting the multi-check standard.
