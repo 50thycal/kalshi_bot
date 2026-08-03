@@ -117,6 +117,25 @@ class Settings(BaseSettings):
     mmsell_top_events: int = 150                 # scan cap per cycle (liquid events, by volume)
     mmsell_max_open_positions: int = 200         # diversification is the real risk control
     mmsell_skip_series: str = "KXMVE,KXHIGH,KXLOW"  # skip parlays + weather (its own book)
+
+    # --- settlement-date concentration cap (docs/MMSELL_SEASONAL_FORECAST.md "Reading 3") ---
+    # mmsell's risk model IS diversification: many small positions, none individually able to
+    # sink the book. That model silently breaks when a book's positions cluster on one
+    # SETTLEMENT DATE against a shared driver (an election night; measured live 2026-08-03: 55%
+    # of the live cap already settled on a single August date, no election required). 60
+    # positions settling together is closer to one position at 60x size than to a diversified
+    # book. Applied PER BOOK, evaluated against that book's own max_open_positions (paper's 200
+    # or a twin's live-sized 60) — the same asymmetry the position cap already uses.
+    mmsell_settlement_cap_enabled: bool = True
+    mmsell_settlement_cap_pct: float = 0.25      # >=25% of a book's own cap on one date -> skip
+    # Regimes where positions settle on a shared driver, so the cap above is not enough on its
+    # own: a governor's race and a senate race both breaking the same way on election night is
+    # ONE outcome wearing many tickers. Within a single EVENT the rungs are mutually exclusive
+    # (at most one loses), which is a real hedge; across events that protection disappears, so
+    # this second cap counts DISTINCT EVENTS rather than markets. Comma list of
+    # kalshi_bot.mmsell.regimes names; env-overridable if a new correlated regime is identified.
+    mmsell_settlement_correlated_regimes: str = "Elections"
+    mmsell_settlement_event_cap: int = 5         # max distinct events open on one CORRELATED date
     # Ride-along: run the mmsell PAPER book inside the weather/live cycle (throttled), so it
     # collects alongside the weather books without a disruptive mode switch or any real money.
     # On by default now that we're forward-testing the maker edge; set false to disable.
@@ -1098,6 +1117,11 @@ class Settings(BaseSettings):
     @property
     def mmsell_skip_series_list(self) -> list[str]:
         return [s.strip().upper() for s in self.mmsell_skip_series.split(",") if s.strip()]
+
+    @property
+    def mmsell_settlement_correlated_regimes_list(self) -> set[str]:
+        return {s.strip() for s in self.mmsell_settlement_correlated_regimes.split(",")
+                if s.strip()}
 
     @property
     def mmsell_live_offset_ab_arm_list(self) -> tuple[int, ...]:
