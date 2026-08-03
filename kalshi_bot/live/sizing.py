@@ -19,6 +19,7 @@ silently measure volatility against mmsell's markets. Each book's `mirror_*_entr
 
 from __future__ import annotations
 
+import hashlib
 import math
 from datetime import datetime, timedelta, timezone
 
@@ -104,6 +105,51 @@ def maker_no_price(
     if ask is not None:
         price = min(price, int(ask))
     return max(1, min(99, price))
+
+
+def offset_arm(ticker: str, *, arms, salt: str) -> tuple[int, int]:
+    """(arm_index, offset_cents) for one ticker in the randomized queue-position A/B
+    (docs/MMSELL_OFFSET_AB.md).
+
+    Assignment is a deterministic hash of (salt, ticker), NOT a random draw, for three reasons:
+
+    1. A ticker keeps ONE arm for its entire life, so the entry-retry path (mmsell tracker's
+       _maybe_retry_live re-posts up to mmsell_live_max_attempts_per_ticker times) cannot flip
+       arms mid-market and blend the two prices into an uninterpretable average.
+    2. The analysis recomputes the assignment from the ticker alone, so attributing a fill to an
+       arm needs no new column and no join — see scripts/mmsell_offset_ab.py.
+    3. Re-running the study on the same salt reproduces exactly the same split.
+
+    Hashing the TICKER rather than the event is deliberate: mmsell rests one order per ticker and
+    several tickers of one event are often candidates at once, so per-ticker assignment keeps the
+    arms balanced inside an event instead of correlating a whole ladder into a single arm.
+    """
+    arms = tuple(arms)
+    if not arms:
+        raise ValueError("offset_arm requires at least one arm")
+    digest = hashlib.sha256(f"{salt}:{ticker}".encode()).digest()
+    idx = int.from_bytes(digest[:8], "big") % len(arms)
+    return idx, int(arms[idx])
+
+
+def maker_offset(
+    ticker: str, *, hot: bool, calm_offset: int, hot_offset: int, ab_arms=(), ab_salt: str = "",
+) -> tuple[int, int | None]:
+    """The price offset this maker entry rests at, plus the A/B arm it belongs to (None = not in
+    the experiment). One definition, called by BOTH the live executor and the paper twin, for the
+    same reason maker_no_price is shared: the moment the two derive the price differently the
+    parity report starts measuring our own bookkeeping.
+
+    A HOT entry is always priced defensively AND excluded from the experiment (arm None): its
+    offset is chosen by the momentum guard, not by the arm, so counting it in either arm would
+    measure the guard rather than queue position. With `ab_arms` empty the A/B is off entirely and
+    this returns exactly today's behaviour."""
+    if hot:
+        return int(hot_offset), None
+    if not tuple(ab_arms):
+        return int(calm_offset), None
+    idx, off = offset_arm(ticker, arms=ab_arms, salt=ab_salt)
+    return off, idx
 
 
 def order_quantity(price_cents: int, max_order_dollars: float, max_contracts: int) -> int:

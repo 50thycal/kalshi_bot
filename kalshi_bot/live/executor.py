@@ -28,7 +28,7 @@ from ..risk.manager import RiskDecision
 from ..scanner.metrics import _to_count, ask_depth_within, parse_dt, price_to_cents
 from ..weather.cities import CITIES
 from . import exit_rules
-from .sizing import is_hot_entry, maker_no_price, order_quantity
+from .sizing import is_hot_entry, maker_no_price, maker_offset, order_quantity
 
 logger = logging.getLogger(__name__)
 
@@ -414,8 +414,13 @@ class LiveExecutor:
             lookback_minutes=s.mmsell_live_hot_market_lookback_minutes,
             lookup=repo.latest_mmsell_no_bid_before,
         )
-        offset = (s.mmsell_live_hot_market_defensive_offset_cents if hot
-                 else s.mmsell_live_price_offset_cents)
+        offset, ab_arm = maker_offset(
+            ticker, hot=hot,
+            calm_offset=s.mmsell_live_price_offset_cents,
+            hot_offset=s.mmsell_live_hot_market_defensive_offset_cents,
+            ab_arms=s.mmsell_live_offset_ab_arm_list,
+            ab_salt=s.mmsell_live_offset_ab_salt,
+        )
         price = maker_no_price(metrics, no_price, offset, hot=hot)
         if price is None:
             self.summary.skipped_gate += 1
@@ -427,9 +432,15 @@ class LiveExecutor:
 
         # Audit trail: record an (approved) risk event so the live decision is inspectable.
         # "hot_entry" flags a defensively-priced entry for later analysis — informational only,
-        # never blocks placement.
+        # never blocks placement. "ab_arm:<i>/<offset>c" pins which queue-position arm this entry
+        # was priced under, so the experiment stays attributable even if the salt is later changed
+        # (the analysis recomputes from the ticker, but only the salt in force at the time is
+        # correct — this row is the durable record of what actually happened).
+        codes = ["hot_entry"] if hot else []
+        if ab_arm is not None:
+            codes.append(f"ab_arm:{ab_arm}/{offset}c")
         repo.insert_risk_event(session, None, ticker, RiskDecision(
-            approved=True, reason_codes=["hot_entry"] if hot else [],
+            approved=True, reason_codes=codes,
             max_allowed_quantity=qty, max_allowed_price=price))
 
         # Kalshi V2 order (POST /portfolio/events/orders): mmsell SELLS yes (== buys NO), so

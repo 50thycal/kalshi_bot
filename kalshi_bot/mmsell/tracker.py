@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from .. import repository as repo
 from ..config import Settings
 from ..kalshi.errors import AuthError
-from ..live.sizing import is_hot_entry, maker_no_price, order_quantity
+from ..live.sizing import is_hot_entry, maker_no_price, maker_offset, order_quantity
 from ..paper.engine import kalshi_fee
 from ..scanner.metrics import (
     compute_metrics,
@@ -110,8 +110,13 @@ class MmSellTracker:
             lookback_minutes=s.mmsell_live_hot_market_lookback_minutes,
             lookup=repo.latest_mmsell_no_bid_before,
         )
-        offset = (s.mmsell_live_hot_market_defensive_offset_cents if hot
-                  else s.mmsell_live_price_offset_cents)
+        offset, _arm = maker_offset(
+            ticker, hot=hot,
+            calm_offset=s.mmsell_live_price_offset_cents,
+            hot_offset=s.mmsell_live_hot_market_defensive_offset_cents,
+            ab_arms=s.mmsell_live_offset_ab_arm_list,
+            ab_salt=s.mmsell_live_offset_ab_salt,
+        )
         price = maker_no_price(metrics, no_price, offset, hot=hot)
         qty = order_quantity(price, s.live_max_order_dollars, s.max_order_size) if price else None
         return price, qty
@@ -264,6 +269,11 @@ class MmSellTracker:
             "only": list(book.get("only") or []),
             "maxyes": book.get("maxyes"),
             "live_price_offset_cents": s.mmsell_live_price_offset_cents,
+            # Changing either of these re-randomizes the queue-position experiment mid-flight,
+            # which makes twin-vs-live non-comparable across the change — recorded here so the
+            # harness reports it as param drift instead of silently blending two experiments.
+            "live_offset_ab_arms": list(s.mmsell_live_offset_ab_arm_list),
+            "live_offset_ab_salt": s.mmsell_live_offset_ab_salt,
             "live_max_spread_cents": s.mmsell_live_max_spread_cents,
             "live_hot_market_move_cents": s.mmsell_live_hot_market_move_cents,
             "live_hot_market_lookback_minutes": s.mmsell_live_hot_market_lookback_minutes,
@@ -461,8 +471,13 @@ class MmSellTracker:
                             lookback_minutes=s.mmsell_live_hot_market_lookback_minutes,
                             lookup=repo.latest_mmsell_no_bid_before,
                         )
-                        offset = (s.mmsell_live_hot_market_defensive_offset_cents if hot
-                                 else s.mmsell_live_price_offset_cents)
+                        offset, _arm = maker_offset(
+                            ticker, hot=hot,
+                            calm_offset=s.mmsell_live_price_offset_cents,
+                            hot_offset=s.mmsell_live_hot_market_defensive_offset_cents,
+                            ab_arms=s.mmsell_live_offset_ab_arm_list,
+                            ab_salt=s.mmsell_live_offset_ab_salt,
+                        )
                         price = maker_no_price(metrics, None, offset, hot=hot)
                         if price is None:
                             self._note(recorder, ticker, tag, twin_codes.SKIP_ILLIQUID)

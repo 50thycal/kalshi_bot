@@ -246,6 +246,27 @@ class Settings(BaseSettings):
     # into the spread the way a calm entry does.
     mmsell_live_hot_market_defensive_offset_cents: int = -3
 
+    # --- mmsell LIVE queue-position A/B (docs/MMSELL_OFFSET_AB.md; INERT by default) ---
+    # mmsell_live_price_offset_cents has always been 0 (join the no-bid) and has never been
+    # varied, so there is no data on what queue position is worth. It is the only untested live
+    # knob that acts on maker adverse selection — the ~2c/contract gap that decided the mmsell3
+    # live test (docs/MMSELL_FILL_MODEL.md) — and the retry data already showed the tickers live
+    # MISSED earned the same in paper as the ones it captured (6.15 vs 6.26 c/contract), i.e.
+    # lost volume rather than dodged bullets, which is the argument for paying to fill more.
+    #
+    # Rather than two live books (which would compete for the same tickers, double the exposure
+    # and cross each other), this randomizes WITHIN one book: each ticker is assigned to an arm
+    # by a deterministic hash, so total footprint is unchanged and the arms see the same market
+    # flow. Comma-separated offsets in cents, e.g. "0,1" = half the tickers join the no-bid, half
+    # bid 1c better. EMPTY (the default) disables the experiment entirely and restores exactly
+    # today's single-offset behaviour. Hot entries are excluded from the split (they are priced
+    # by the momentum guard) — see live/sizing.py maker_offset.
+    mmsell_live_offset_ab_arms: str = ""
+    # Changing the salt RE-RANDOMIZES every ticker's arm, which silently invalidates comparison
+    # with anything collected under the old salt (the analysis recomputes assignment from it).
+    # Bump it only to start a genuinely new experiment, and record the change in the doc.
+    mmsell_live_offset_ab_salt: str = "mmsell-offset-ab-v1"
+
     # --- mmsell LIVE entry retry (recover the one-shot-per-ticker execution gap) ---
     # Paper never misses a fill, so its position stays open to settlement and the entry loop's
     # skip_already_open guard fires every later cycle — which ALSO skipped the live mirror, giving
@@ -1079,6 +1100,22 @@ class Settings(BaseSettings):
         return [s.strip().upper() for s in self.mmsell_skip_series.split(",") if s.strip()]
 
     @property
+    def mmsell_live_offset_ab_arm_list(self) -> tuple[int, ...]:
+        """Parsed queue-position A/B arms (offsets in cents). Empty tuple = experiment off, which
+        is both the default and the fail-safe: a malformed token yields no arms rather than a
+        partial split, so a typo can never silently run half the book at an unintended price."""
+        raw = [s.strip() for s in self.mmsell_live_offset_ab_arms.split(",") if s.strip()]
+        if not raw:
+            return ()
+        try:
+            arms = tuple(int(s) for s in raw)
+        except ValueError:
+            return ()
+        # A single arm is not an experiment; treat it as off so the analysis never reports a
+        # one-armed "A/B" that cannot answer anything.
+        return arms if len(arms) >= 2 else ()
+
+    @property
     def mmsell_history_series_list(self) -> list[str]:
         """Series the settled-history capture enumerates. De-duplicated and order-preserving, so
         an env override that repeats a ticker cannot double the enumeration cost."""
@@ -1325,6 +1362,8 @@ class Settings(BaseSettings):
             "mmsell_candidate_capture_max": self.mmsell_candidate_capture_max,
             "mmsell_live_max_open_positions": self.mmsell_live_max_open_positions,
             "mmsell_live_price_offset_cents": self.mmsell_live_price_offset_cents,
+            "mmsell_live_offset_ab_arms": list(self.mmsell_live_offset_ab_arm_list),
+            "mmsell_live_offset_ab_salt": self.mmsell_live_offset_ab_salt,
             "mmsell_live_max_spread_cents": self.mmsell_live_max_spread_cents,
             "mmsell_live_hot_market_move_cents": self.mmsell_live_hot_market_move_cents,
             "mmsell_live_hot_market_lookback_minutes": self.mmsell_live_hot_market_lookback_minutes,
