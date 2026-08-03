@@ -1025,6 +1025,74 @@ def replace_backfill_candles(session, market_ticker: str, rows: list[dict]) -> i
     return len(rows)
 
 
+# --- mmsell regime settled-history capture (rolling; Kalshi retains only ~70 days) -----
+
+
+def upsert_regime_market(session, *, market_ticker: str, **fields) -> bool:
+    """Insert a captured settled market if unseen; returns True when created.
+
+    Insert-only on purpose. Enumeration re-runs every few hours over an overlapping window, so
+    the same market is seen many times; re-writing it would keep resetting candles_fetched and
+    the capture would re-fetch the same candles forever."""
+    existing = session.scalar(
+        select(m.BackfillRegimeMarket).where(
+            m.BackfillRegimeMarket.market_ticker == market_ticker
+        )
+    )
+    if existing is not None:
+        return False
+    session.add(m.BackfillRegimeMarket(market_ticker=market_ticker, fetched_at=_now(), **fields))
+    session.flush()
+    return True
+
+
+def pending_regime_markets(session, *, limit: int) -> list:
+    """Captured markets still awaiting candles, NEWEST settlements first.
+
+    Newest-first is the load-bearing choice: candle history ages out too, so a market that just
+    settled is the one most likely to still have a fetchable path. Draining oldest-first would
+    spend the budget on the rows most likely to come back empty."""
+    return list(
+        session.scalars(
+            select(m.BackfillRegimeMarket)
+            .where(m.BackfillRegimeMarket.candles_fetched.is_(False))
+            .order_by(m.BackfillRegimeMarket.close_time.desc().nulls_last())
+            .limit(limit)
+        )
+    )
+
+
+def count_regime_pending(session) -> int:
+    return int(
+        session.scalar(
+            select(func.count())
+            .select_from(m.BackfillRegimeMarket)
+            .where(m.BackfillRegimeMarket.candles_fetched.is_(False))
+        )
+        or 0
+    )
+
+
+def mark_regime_fetched(session, market, *, candle_count: int) -> None:
+    """Mark a market done. Called even when zero candles came back, so a market whose path
+    Kalshi no longer serves cannot wedge the queue and starve fresh settlements."""
+    market.candles_fetched = True
+    market.candle_count = candle_count
+    session.add(market)
+    session.flush()
+
+
+def replace_regime_candles(session, market_ticker: str, rows: list[dict]) -> int:
+    """Idempotent per-market candle store: drop any prior rows, insert the new set."""
+    session.query(m.BackfillRegimeCandle).filter(
+        m.BackfillRegimeCandle.market_ticker == market_ticker
+    ).delete(synchronize_session=False)
+    for row in rows:
+        session.add(m.BackfillRegimeCandle(**row))
+    session.flush()
+    return len(rows)
+
+
 # --- forecast->settlement validation dataset (weather_forecast_outcomes) ----------
 
 
