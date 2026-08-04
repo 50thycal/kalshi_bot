@@ -130,6 +130,17 @@ def run() -> int:
         log_event(logger, logging.INFO, "live/paper twins configured",
                   pairs=[f"{sp.live_tag}->{sp.twin_tag}" for sp in twin_harness.specs],
                   armed=[sp.twin_tag for sp in twin_harness.active_specs()])
+    # A live book dropped from LIVE_STRATEGIES (retired, e.g. mmsell10 -> mmsell10a/mmsell10b)
+    # otherwise leaves its dashboard pair open forever with no explanation — see
+    # repo.reconcile_stale_twin_epochs. Startup-only: retirement is a deliberate, infrequent
+    # config change that always comes with a redeploy, not a mid-cycle condition to watch for.
+    if live:
+        with session_scope() as _twin_session:
+            retired = repo.reconcile_stale_twin_epochs(
+                _twin_session, live_strategy_prefixes=settings.live_strategy_list)
+        if retired:
+            log_event(logger, logging.INFO, "live/paper twin epochs retired (dropped from LIVE_STRATEGIES)",
+                      twin_tags=retired)
     mmsell_engine = PaperTradingEngine(client, settings, scanner.risk) if mmsell else None
     mmsell_tracker = MmSellTracker(client, settings) if mmsell else None
     # mmsell can ALSO ride along as a paper book inside the weather/live cycle (its positions
