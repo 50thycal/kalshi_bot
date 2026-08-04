@@ -161,6 +161,28 @@ def test_params_snapshot_is_filtered_before_publication():
     assert published == {"lo": 5, "note": "ok"}
 
 
+def test_retirement_note_is_published_alongside_ended_at():
+    # repo.reconcile_stale_twin_epochs (kalshi_bot/repository.py) writes an explanatory `notes`
+    # string when it closes a book dropped from LIVE_STRATEGIES; the dashboard's whole reason for
+    # publishing `notes` is so an operator sees WHY a pair stopped, not just THAT it did.
+    session = _session()
+    ended = T0 + timedelta(hours=2)
+    row = _epoch(session, ended=ended)
+    row.notes = "mmsell10 removed from LIVE_STRATEGIES — no longer trading"
+    session.flush()
+    d = pairs.get_pair(session, "mm10_pt").to_dict()
+    assert d["ended_at"] is not None
+    assert d["notes"] == "mmsell10 removed from LIVE_STRATEGIES — no longer trading"
+
+
+def test_a_still_running_pair_publishes_no_note():
+    session = _session()
+    _epoch(session)  # no notes set -- the default, matching every currently-live pair
+    d = pairs.get_pair(session, "mm10_pt").to_dict()
+    assert d["ended_at"] is None
+    assert d["notes"] is None
+
+
 # ---------------------------------------------------------------------------
 # P&L extraction
 # ---------------------------------------------------------------------------

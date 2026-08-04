@@ -159,6 +159,7 @@
   </header>
 
   <div id="fatal" hidden class="banner bad"></div>
+  <div id="pairnote"></div>
   <div id="verdict"></div>
 
   <!-- 1. positions + discrepancy summary -->
@@ -378,6 +379,11 @@ function renderHeader(){
     ` · paper last record ${esc(ago(st.paper.last_at) || "never")}` +
     ` · marks ${esc(cov.covered)}/${esc(cov.requested)} markets` +
     (cov.missing_count ? ` <span class="warn">(${esc(cov.missing_count)} unmarked)</span>` : "");
+
+  // A pair the live cycle closed itself (e.g. reconcile_stale_twin_epochs on a book dropped
+  // from LIVE_STRATEGIES) carries an explanatory note — surface it plainly rather than making
+  // the reader infer "why did this stop?" from the ended timestamp alone.
+  $("#pairnote").innerHTML = p.notes ? `<div class="banner">${esc(p.notes)}</div>` : "";
 
   const v = d.divergence.verdict;
   const klass = v.code === "aligned" ? "ok" : (v.code === "accounting_gap" ? "bad" : "");
@@ -852,8 +858,9 @@ async function boot(){
     const wanted = new URLSearchParams(location.search).get("run");
     const known = S.runs.runs.map(r => r.twin_tag);
     S.tag = (wanted && known.includes(wanted)) ? wanted : (S.runs.default_run || known[0]);
+    const endedByTag = Object.fromEntries(S.runs.runs.map(r => [r.twin_tag, !!r.ended_at]));
     $("#runsel").innerHTML = known.map(t =>
-      `<option value="${esc(t)}" ${t===S.tag?"selected":""}>${esc(t)}</option>`).join("")
+      `<option value="${esc(t)}" ${t===S.tag?"selected":""}>${esc(t)}${endedByTag[t]?" (ended)":""}</option>`).join("")
       || `<option value="">(no paired runs)</option>`;
     renderHistory();
     if(!S.tag){

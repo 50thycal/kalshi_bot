@@ -24,6 +24,7 @@ from sqlalchemy import func, select
 
 from kalshi_bot import db
 from kalshi_bot import models as m
+from kalshi_bot import repository as repo
 from kalshi_bot.live.executor import LiveExecutor
 from kalshi_bot.live.sizing import maker_no_price, order_quantity
 from kalshi_bot.mmsell.tracker import MmSellTracker
@@ -330,6 +331,75 @@ def test_harness_reports_drift_via_return_value(settings):
         assert h.ensure_epoch(session, spec, {"a": 1}) is True
     with db.session_scope() as session:
         assert TwinHarness(settings).ensure_epoch(session, spec, {"a": 2}) is False
+
+
+# --- retirement ----------------------------------------------------------------
+
+
+def test_retiring_a_live_book_closes_its_stale_epoch(settings):
+    # mmsell10 was live, got an epoch, then the operator drops it from LIVE_STRATEGIES in favor
+    # of a replacement (e.g. mmsell10a/mmsell10b) -- the old epoch must not sit open forever.
+    _armed(settings)
+    ev, books = _cheap_event()
+    with db.session_scope() as session:
+        _tracker(settings, FakeClient([ev], books)).run_once(session)
+    with db.session_scope() as session:
+        row = session.scalar(select(m.LivePaperTwin))
+        assert row.ended_at is None  # sanity: the fixture actually opened one
+
+    closed = None
+    with db.session_scope() as session:
+        closed = repo.reconcile_stale_twin_epochs(
+            session, live_strategy_prefixes=["theta4", "mmsell10a", "mmsell10b"])
+    assert closed == ["mmsell10_pt"]
+
+    with db.session_scope() as session:
+        row = session.scalar(select(m.LivePaperTwin))
+        assert row.ended_at is not None
+        assert row.live_tag in row.notes and "no longer trading" in row.notes
+
+
+def test_reconcile_leaves_a_still_configured_epoch_open(settings):
+    _armed(settings)
+    ev, books = _cheap_event()
+    with db.session_scope() as session:
+        _tracker(settings, FakeClient([ev], books)).run_once(session)
+
+    with db.session_scope() as session:
+        closed = repo.reconcile_stale_twin_epochs(
+            session, live_strategy_prefixes=["mmsell10", "theta4"])
+    assert closed == []
+    with db.session_scope() as session:
+        assert session.scalar(select(m.LivePaperTwin)).ended_at is None
+
+
+def test_reconcile_uses_prefix_matching_like_active_for(settings):
+    # mirrors TwinHarness.active_for's own startswith semantics: a live_tag counts as still
+    # configured if it starts with ANY configured prefix, not just an exact match.
+    _armed(settings)
+    ev, books = _cheap_event()
+    with db.session_scope() as session:
+        _tracker(settings, FakeClient([ev], books)).run_once(session)
+
+    with db.session_scope() as session:
+        closed = repo.reconcile_stale_twin_epochs(session, live_strategy_prefixes=["mmsell1"])
+    assert closed == []  # "mmsell10" starts with the "mmsell1" prefix -> still counts as live
+
+
+def test_reconcile_is_idempotent_on_an_already_closed_epoch(settings):
+    _armed(settings)
+    ev, books = _cheap_event()
+    with db.session_scope() as session:
+        _tracker(settings, FakeClient([ev], books)).run_once(session)
+
+    with db.session_scope() as session:
+        first = repo.reconcile_stale_twin_epochs(session, live_strategy_prefixes=[])
+    assert first == ["mmsell10_pt"]
+
+    # a second reconcile pass (e.g. a later restart) must not re-touch an already-ended epoch
+    with db.session_scope() as session:
+        second = repo.reconcile_stale_twin_epochs(session, live_strategy_prefixes=[])
+    assert second == []
 
 
 # --- the parity tape ---------------------------------------------------------

@@ -965,6 +965,36 @@ def end_twin_epoch(session, twin_tag: str, *, notes: str | None = None) -> bool:
     return True
 
 
+def reconcile_stale_twin_epochs(session, *, live_strategy_prefixes: list[str]) -> list[str]:
+    """Close every open twin epoch whose live_tag no longer matches a configured LIVE_STRATEGIES
+    prefix — the case of a live book being retired (e.g. mmsell10 dropped in favor of the
+    mmsell10a/mmsell10b queue-position A/B). Without this, a retired book's dashboard pair just
+    goes quiet with no explanation: `pair_status`'s idle/running check has no way to distinguish
+    "stopped trading a few minutes ago" from "deliberately retired", and the twin_tag stays open
+    forever with no notes.
+
+    Mirrors TwinHarness.active_for's own startswith-prefix matching exactly, so this and the
+    harness's live-cycle activity gating can never disagree about what counts as "still live".
+
+    Scoped to LIVE_STRATEGIES membership only — NOT the master switches (LIVE_ENABLED,
+    KILL_SWITCH), which toggle for temporary/operational reasons and must not trigger a
+    retirement note on every pause. Called once at startup (a config change here is a deliberate,
+    infrequent operator action that always comes with a redeploy — not something needing
+    sub-minute detection), never mid-cycle.
+
+    Returns the closed twin_tags, for the caller to log."""
+    closed: list[str] = []
+    for row in active_twin_epochs(session):
+        if any(row.live_tag.startswith(p) for p in live_strategy_prefixes):
+            continue
+        end_twin_epoch(
+            session, row.twin_tag,
+            notes=f"{row.live_tag} removed from LIVE_STRATEGIES — no longer trading",
+        )
+        closed.append(row.twin_tag)
+    return closed
+
+
 def insert_parity_event(
     session, *, twin_tag: str, live_tag: str, ticker: str, series: str | None = None,
     hours_to_close: float | None = None,
