@@ -50,6 +50,11 @@ ALLOWED_VARS = frozenset({
     # armed, capped and re-tuned from the ops channel without a code deploy.
     "MMSELL_LIVE_MAX_OPEN_POSITIONS", "MMSELL_LIVE_PRICE_OFFSET_CENTS",
     "MMSELL_LIVE_MAX_SPREAD_CENTS",
+    # Queue-position A/B (docs/MMSELL_OFFSET_AB.md) — arming/disarming the mmsell10a/mmsell10b
+    # experiment is exactly the kind of mid-test tuning this allowlist exists for. Salt is
+    # included for completeness but should almost never be touched: changing it mid-experiment
+    # re-randomizes every ticker's arm, invalidating comparison with everything already collected.
+    "MMSELL_LIVE_OFFSET_AB_ARMS", "MMSELL_LIVE_OFFSET_AB_SALT",
     # Hot-market defensive pricing + the entry-retry cap: both change how aggressively live
     # chases a fill, so they are the knobs most likely to need tuning mid-test from ops.
     "MMSELL_LIVE_HOT_MARKET_MOVE_CENTS", "MMSELL_LIVE_HOT_MARKET_LOOKBACK_MINUTES",
