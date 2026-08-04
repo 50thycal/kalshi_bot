@@ -92,7 +92,7 @@ def family(book: str) -> str:
 def realizable_scale(book: str, paper_cpt_cents: float) -> float:
     """Multiplier turning a book's paper daily P&L into realizable. Non-mmsell: 1.0. mmsell: the
     fill-model realizable/paper ratio (sign-flipping for mirages); unknown mmsell variant -> 0."""
-    if not book.startswith("mmsell"):
+    if "mmsell" not in book:
         return 1.0
     r = MMSELL_REALIZABLE_CPT.get(book)
     if r is None:

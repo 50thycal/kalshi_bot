@@ -376,7 +376,7 @@ def load_trades(cur, statuses: tuple[str, ...], include_twins: bool) -> list[dic
         "SELECT market_ticker, strategy, status, assumed_price, quantity, pnl,"
         "       created_at, closed_at"
         " FROM paper_trades"
-        " WHERE strategy LIKE 'mmsell%%'"
+        " WHERE strategy LIKE '%%mmsell%%'"
         "   AND status = ANY(%s)"
         "   AND NOT coalesce(legacy, false)"
         "   AND pnl IS NOT NULL AND quantity IS NOT NULL AND quantity > 0"

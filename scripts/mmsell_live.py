@@ -51,7 +51,7 @@ def report_outcomes(cur) -> None:
     print("=== Order outcomes & fill rate (live_orders, mmsell buys) ===")
     rows = q(cur,
              "SELECT strategy, status, count(*) FROM live_orders"
-             " WHERE strategy LIKE 'mmsell%%' AND action='buy'"
+             " WHERE strategy LIKE '%%mmsell%%' AND action='buy'"
              " GROUP BY strategy, status ORDER BY strategy, status")
     if not rows:
         print("  (no live mmsell orders yet)")
@@ -82,7 +82,7 @@ def report_fills(cur) -> None:
              " round(avg(f.price)::numeric,1), round(sum(f.fee)::numeric,4),"
              " round((sum(f.fee)/nullif(sum(f.quantity),0))::numeric,4)"
              " FROM fills f JOIN live_orders lo ON lo.kalshi_order_id = f.kalshi_order_id"
-             " WHERE lo.strategy LIKE 'mmsell%%'"
+             " WHERE lo.strategy LIKE '%%mmsell%%'"
              " GROUP BY lo.strategy ORDER BY lo.strategy")
     if not rows:
         print("  (no fills yet)")
@@ -99,7 +99,7 @@ def report_settled(cur) -> None:
     print("\n=== Realized P&L on SETTLED live positions vs paper shadow ===")
     live = q(cur,
              "WITH mm AS (SELECT DISTINCT market_ticker, strategy FROM live_orders"
-             "  WHERE strategy LIKE 'mmsell%%' AND action='buy'),"
+             "  WHERE strategy LIKE '%%mmsell%%' AND action='buy'),"
              " latest AS (SELECT DISTINCT ON (p.market_ticker) p.market_ticker, p.quantity,"
              "   p.realized_pnl FROM positions p JOIN mm ON mm.market_ticker=p.market_ticker"
              "   ORDER BY p.market_ticker, p.captured_at DESC)"
@@ -112,7 +112,7 @@ def report_settled(cur) -> None:
     paper = {r[0]: r for r in q(cur,
              "SELECT strategy, count(*), round(avg(pnl)::numeric,4),"
              " round(100.0*avg((pnl>0)::int),1)"
-             " FROM paper_trades WHERE strategy LIKE 'mmsell%%' AND status='settled' AND NOT legacy"
+             " FROM paper_trades WHERE strategy LIKE '%%mmsell%%' AND status='settled' AND NOT legacy"
              " GROUP BY strategy")}
     if not live:
         print("  (no settled live positions yet — the win-rate/adverse-selection read starts here)")
@@ -133,7 +133,7 @@ def report_open(cur) -> None:
     print("\n=== Current open live footprint ===")
     rows = q(cur,
              "WITH mm AS (SELECT DISTINCT market_ticker FROM live_orders"
-             "  WHERE strategy LIKE 'mmsell%%' AND action='buy'),"
+             "  WHERE strategy LIKE '%%mmsell%%' AND action='buy'),"
              " latest AS (SELECT DISTINCT ON (p.market_ticker) p.market_ticker, p.quantity_fp,"
              "   p.market_exposure FROM positions p JOIN mm ON mm.market_ticker=p.market_ticker"
              "   ORDER BY p.market_ticker, p.captured_at DESC)"
