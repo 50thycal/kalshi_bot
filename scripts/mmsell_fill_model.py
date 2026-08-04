@@ -136,7 +136,7 @@ def _load_price_hists(cur) -> dict[str, dict[int, list]]:
     cur.execute(
         "SELECT strategy, (100 - assumed_price)::int yes_c, count(*), sum(pnl)"
         " FROM paper_trades"
-        " WHERE strategy LIKE 'mmsell%%' AND status='settled' AND NOT coalesce(legacy,false)"
+        " WHERE strategy LIKE '%%mmsell%%' AND status='settled' AND NOT coalesce(legacy,false)"
         "   AND assumed_price IS NOT NULL AND pnl IS NOT NULL"
         # Live/paper TWIN books are excluded: a twin already enters at the LIVE maker price, so
         # projecting it through the live fill calibration would double-count the correction, and a

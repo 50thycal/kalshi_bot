@@ -217,7 +217,7 @@ def main(argv: list[str] | None = None) -> int:
                 " count(*) FILTER (WHERE status='open') open_n"
                 " FROM paper_trades"
                 " WHERE strategy NOT LIKE 'weather%' AND NOT legacy"
-                "   AND (strategy LIKE 'mmsell%' OR strategy LIKE 'theta%')"
+                "   AND (strategy LIKE '%mmsell%' OR strategy LIKE 'theta%')"
                 " GROUP BY 1 ORDER BY 1")
             if other:
                 print("\n[RESEARCH BOOKS — mmsell / theta]")
