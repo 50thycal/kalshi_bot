@@ -284,7 +284,8 @@ class PaperTradingEngine:
             # kalshi_bot/livedash — the table is ticker+time keyed, not strategy-keyed, so
             # broadening the write-side gate is the only change either side needs).
             if (s.mmsell_tick_capture_enabled
-                    and (trade.strategy or "").startswith(("mmsell", "theta"))
+                    and ("mmsell" in (trade.strategy or "")
+                         or (trade.strategy or "").startswith("theta"))
                     and trade.market_ticker not in mmsell_ticked and metrics.two_sided):
                 mmsell_ticked.add(trade.market_ticker)
                 try:
@@ -328,7 +329,7 @@ class PaperTradingEngine:
         written this cycle, so the last K ticks ARE the last K cycles. Fail-soft: any error leaves
         the position held, which is the pre-anchor behaviour."""
         strat = trade.strategy or ""
-        if not strat.startswith("mmsell") or trade.side != "no":
+        if "mmsell" not in strat or trade.side != "no":
             return False
         book = self.settings.mmsell_book_by_tag(strat)
         if not book or book.get("stopl") is None:
@@ -366,7 +367,13 @@ class PaperTradingEngine:
         # the global one and closes at the current bid when it elapses.
         strat = trade.strategy or ""
         weather_hold = strat.startswith("weather")
-        no_timeout = weather_hold or strat.startswith(("mmsell", "theta", "tfav", "pin15"))
+        # "mmsell" as a SUBSTRING, not a prefix: the market-type books are tagged Wmmsell*/
+        # Tmmsell* (docs/MMSELL_TYPE_BOOKS.md). Matching on the prefix would have left them out
+        # of the hold-to-settlement set, so they alone would have been force-closed by the
+        # global max-hold timeout — silently making them a different experiment from every
+        # other mmsell book they are meant to be compared against.
+        no_timeout = weather_hold or "mmsell" in strat \
+            or strat.startswith(("theta", "tfav", "pin15"))
         max_hold_hours = s.paper_max_hold_hours
         if strat.startswith("wcprop"):
             max_hold_hours = s.wcprop_hold_minutes / 60.0

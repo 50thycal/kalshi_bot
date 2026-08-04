@@ -183,6 +183,51 @@ def test_mmsell_live_calm_market_ignores_stale_but_in_window_tick(settings):
     assert client.placed[0]["price"] == "0.0800"             # unchanged: sell YES @ 8c (no-bid 92)
 
 
+def test_mmsell_live_normal_scan_cadence_gap_is_not_hot(settings):
+    """Regression for the 2026-08-03 finding: mmsell_interval_minutes (the ride-along scan that
+    captures a candidate tick every cycle) is 30, so a healthy cycle-to-cycle gap always runs a
+    little OVER 30min in practice (measured live: p25-p95 30.2-31.7min across 4409 gaps, 141
+    tickers, every series). A lookback equal to the scan interval made 90% of ordinary re-scans
+    misfire as hot purely from cycle-time jitter. Uses the real config default (no override) so
+    this breaks if the default ever drifts back toward the scan interval."""
+    _live_settings(settings, mmsell_live_price_offset_cents=0)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    one_normal_cycle_ago = datetime.now(timezone.utc) - timedelta(minutes=31, seconds=42)
+    with db.session_scope() as session:
+        repo.insert_mmsell_candidate_tick(
+            session, "KXTEAM-26-A", _metrics(), captured_at=one_normal_cycle_ago)
+        _enter(ex, session)
+    assert client.placed[0]["price"] == "0.0800"              # normal price: not hot
+    with db.session_scope() as session:
+        row = session.scalar(select(m.RiskEvent))
+        assert row.reason_codes_json == []
+
+
+def test_mmsell_live_two_cycle_absence_is_still_hot(settings):
+    """The flip side of the cadence fix: a ticker that misses a WHOLE extra cycle (skipped the
+    trading band, or the scan ran unusually slow) is a genuine gone-quiet signal and must still
+    price defensively — raising the lookback must not blind the check entirely."""
+    _live_settings(settings, mmsell_live_price_offset_cents=0,
+                   mmsell_live_hot_market_defensive_offset_cents=-3)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    two_cycles_ago = datetime.now(timezone.utc) - timedelta(minutes=62)
+    with db.session_scope() as session:
+        repo.insert_mmsell_candidate_tick(
+            session, "KXTEAM-26-A", _metrics(), captured_at=two_cycles_ago)
+        _enter(ex, session)
+    # buy NO @ 92 - 3 = 89 == sell YES @ 11c == price "0.1100"
+    assert client.placed[0]["price"] == "0.1100"
+    with db.session_scope() as session:
+        row = session.scalar(select(m.RiskEvent))
+        assert row.reason_codes_json == ["hot_entry"]
+
+
 def test_mmsell_live_wide_spread_guard(settings):
     _live_settings(settings, mmsell_live_max_spread_cents=1)  # 2c spread exceeds the sanity cap
     db.init_engine(settings.database_url)

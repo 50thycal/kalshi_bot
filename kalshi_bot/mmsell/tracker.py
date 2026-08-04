@@ -38,6 +38,7 @@ from ..scanner.metrics import (
     parse_dt,
 )
 from ..twin import harness as twin_codes
+from .market_types import classify
 from .regimes import regime_of
 
 logger = logging.getLogger(__name__)
@@ -302,6 +303,9 @@ class MmSellTracker:
             "skip": [],  # the control never filters by series (global mmsell_skip_series applies)
             "only": [],
             "maxyes": None,  # the control has no entry-price ceiling
+            # ...and no market-type filter: the control trades every structure it finds, which
+            # is exactly what makes it the baseline the Wmmsell* type books are read against.
+            "mtype": [], "xmtype": [], "mode": [],
             # The control runs no anchor-set mechanic: no stop, no vol gate, no strangle leg.
             "stopl": None, "stopk": 2, "volw": None, "volv": None, "strangle": False,
         }
@@ -345,6 +349,9 @@ class MmSellTracker:
             "skip": list(book.get("skip") or []),
             "only": list(book.get("only") or []),
             "maxyes": book.get("maxyes"),
+            "mtype": list(book.get("mtype") or []),
+            "xmtype": list(book.get("xmtype") or []),
+            "mode": list(book.get("mode") or []),
             "live_price_offset_cents": s.mmsell_live_price_offset_cents,
             # Changing either of these re-randomizes the queue-position experiment mid-flight,
             # which makes twin-vs-live non-comparable across the change — recorded here so the
@@ -376,12 +383,39 @@ class MmSellTracker:
         """Per-variant series filter: a book with a `skip` list drops any series containing one of
         its substrings; a book with an `only` list trades ONLY series containing one of its
         substrings. Matched case-insensitively against the (already-uppercased) series prefix.
-        Empty lists (the control + band-only variants) admit everything."""
+        Empty lists (the control + band-only variants) admit everything.
+
+        Then the market-TYPE filters (docs/MMSELL_TYPE_BOOKS.md), which select on the contract's
+        structure via the taxonomy rather than on a series substring:
+          mtype  — allowlist of market types  (empty = admit all)
+          mode   — allowlist of settle modes  (empty = admit all)
+          xmtype — blocklist of market types, applied last so it always wins
+
+        A series the taxonomy does not know classifies as `unclassified`/`unknown`. That is in
+        no ALLOWLIST, so a book asking for specific types/modes never silently picks up a
+        contract nobody has classified. It is also in no BLOCKLIST, so a pure `xmtype` book
+        ("everything except the known bleeders") still takes it — which is the right asymmetry:
+        those books are defined as their control minus named types, and dropping unknowns too
+        would make them differ from the control by more than the thing under test.
+        Books with none of the three keys are unaffected."""
         skip = book.get("skip") or []
         if any(tok in series for tok in skip):
             return False
         only = book.get("only") or []
         if only and not any(tok in series for tok in only):
+            return False
+
+        mtype = book.get("mtype") or []
+        xmtype = book.get("xmtype") or []
+        mode = book.get("mode") or []
+        if not (mtype or xmtype or mode):
+            return True
+        m_type, m_mode = classify(series)
+        if mtype and m_type not in mtype:
+            return False
+        if mode and m_mode not in mode:
+            return False
+        if xmtype and m_type in xmtype:
             return False
         return True
 

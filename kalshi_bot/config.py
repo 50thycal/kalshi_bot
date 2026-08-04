@@ -15,6 +15,8 @@ from typing import Literal
 from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from kalshi_bot.mmsell.market_types import KNOWN_MODES, KNOWN_TYPES
+
 BotMode = Literal["scanner", "paper", "approval", "live", "weather"]
 KalshiEnv = Literal["demo", "production"]
 
@@ -237,7 +239,38 @@ class Settings(BaseSettings):
         # Both are INERT until MMSELL_LIVE_OFFSET_AB_ARMS is set AND the tag is in
         # LIVE_STRATEGIES: with no arms configured an arm book admits no tickers at all.
         "mmsell10a:lo=5,hi=10,maxyes=7,abarm=0,size=1;"
-        "mmsell10b:lo=5,hi=10,maxyes=7,abarm=1,size=1"
+        "mmsell10b:lo=5,hi=10,maxyes=7,abarm=1,size=1;"
+        # --- MARKET-TYPE books, added 2026-08-03 (docs/MMSELL_TYPE_BOOKS.md) ----------------
+        # From the market-type census (docs/MMSELL_MARKET_TYPES.md): mmsell sells any cheap tail
+        # it finds, so every book to date has been blind to what KIND of contract it is selling.
+        # The census scored all 118 traded series by contract structure and found the types are
+        # emphatically not interchangeable — and that the ranking CHANGES with the price band,
+        # which is why there are two families rather than one.
+        #
+        # Wmmsell* = WIDE band (lo=5,hi=40 — the control's own band, no maxyes). Control: `mmsell`.
+        # Tmmsell* = TIGHT band (lo=5,hi=10,maxyes=7 — mmsell10's band). Control: `mmsell10`.
+        # Each book differs from its control ONLY by the type filter, so the difference IS the
+        # type effect. No book carries a stop, vol gate or strangle: those mechanics are the
+        # anchor set's experiment and would confound this one.
+        #
+        # Wide-band books (read against `mmsell`):
+        "Wmmsell1:lo=5,hi=40,mode=in_play;"
+        "Wmmsell2:lo=5,hi=40,mtype=player_prop+spread+exact_score+game_prop+h2h_period;"
+        "Wmmsell3:lo=5,hi=40,mtype=player_prop+spread+game_prop;"
+        "Wmmsell4:lo=5,hi=40,mtype=price_strike;"
+        "Wmmsell5:lo=5,hi=40,mtype=mention;"
+        "Wmmsell6:lo=5,hi=40,xmtype=total+h2h+event_stat+announcement+politics;"
+        "Wmmsell7:lo=5,hi=40,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;"
+        "Wmmsell8:lo=5,hi=40,mtype=player_prop+mention+spread+outright;"
+        # Tight-band books (read against `mmsell10`):
+        "Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;"
+        "Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;"
+        "Tmmsell3:lo=5,hi=10,maxyes=7,mtype=player_prop+total+spread;"
+        "Tmmsell4:lo=5,hi=10,maxyes=7,xmtype=h2h+game_prop+event_stat+politics+announcement;"
+        "Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,"
+        "xmtype=event_stat+politics+announcement;"
+        "Tmmsell6:lo=5,hi=10,maxyes=7,"
+        "mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture"
     )
     # --- mmsell LIVE entry (maker NO-buy; inert until LIVE_STRATEGIES lists a mmsell tag) ---
     # The mmsell books rest a BUY-NO limit at the no-bid (== sell yes at the ask) and HOLD to
@@ -270,7 +303,20 @@ class Settings(BaseSettings):
     # ...within this many minutes back. No qualifying tick at all (the ticker was out of the
     # trading band for the whole lookback — itself what happened in the KXFEDMENTION case) also
     # counts as hot, since an absence right when the market is being entered is not evidence of calm.
-    mmsell_live_hot_market_lookback_minutes: int = 30
+    #
+    # Must stay comfortably above mmsell_interval_minutes (the ride-along scan cadence every
+    # candidate tick is captured on): a lookback equal to the scan interval means EVERY normal
+    # cycle-to-cycle gap trips the "no qualifying tick" case, since real cycles always run a little
+    # longer than the nominal interval. Measured live 2026-08-03 at the old value of 30 (== the
+    # scan's own 30min cadence): consecutive same-ticker candidate ticks land 30.2-31.7min apart
+    # (p25-p95, n=4409 over 7d, 141 tickers, every series including crypto) — 90% of ALL gaps
+    # exceeded the 30min lookback purely from cycle-time jitter, so 90% of "hot" classifications
+    # were false positives from scan cadence, not real repricing. The distribution has a hard cliff
+    # right after one cycle: only 3.9% of gaps exceed 40min (vs 4.3% at 35min), and that remainder
+    # is the genuine multi-cycle-absence population (out to a multi-hour/day tail) the check exists
+    # to catch. 40 clears the observed p95 (31.7) with margin against day-to-day jitter while
+    # sacrificing almost no sensitivity to real gone-quiet tickers.
+    mmsell_live_hot_market_lookback_minutes: int = 40
     # On a hot entry, price at the no-bid PLUS this offset instead of the normal
     # mmsell_live_price_offset_cents. Negative (the default) rests BELOW the no-bid — extra
     # headroom against continued momentum in the same direction — rather than joining/improving
@@ -1174,7 +1220,11 @@ class Settings(BaseSettings):
                 continue
             tag, _, body = spec.partition(":")
             tag = tag.strip()
-            if not tag.startswith("mmsell") or tag == "mmsell" or len(tag) > 24:
+            # "mmsell" anywhere in the tag, not just as a prefix: the market-type book families
+            # are named Wmmsell*/Tmmsell* (wide band / tight band) so the band regime reads at a
+            # glance. Everything downstream that identifies an mmsell book matches on the
+            # substring for the same reason — see docs/MMSELL_TYPE_BOOKS.md.
+            if "mmsell" not in tag or tag == "mmsell" or len(tag) > 24:
                 continue
             v = {
                 "tag": tag,
@@ -1185,6 +1235,14 @@ class Settings(BaseSettings):
                 "skip": [],   # series-substring blocklist (case-insensitive; '+'-joined)
                 "only": [],   # series-substring allowlist (empty = admit all)
                 "maxyes": None,  # entry-price ceiling: cap the actual yes sell price (cents)
+                # --- market-TYPE filters (docs/MMSELL_TYPE_BOOKS.md); empty = admit all ---
+                # These select on the contract's STRUCTURE via kalshi_bot/mmsell/market_types.py
+                # rather than on a series substring, so a newly listed series is picked up the
+                # moment it enters the taxonomy instead of needing every book's `only=` list
+                # hand-extended. An unclassified series is admitted by no filter at all.
+                "mtype": [],   # market-type allowlist  (h2h, total, player_prop, ...)
+                "xmtype": [],  # market-type blocklist  (applied after mtype/mode)
+                "mode": [],    # settle-mode allowlist  (in_play, scheduled, discrete)
                 # --- anchor-set mechanics (docs/MMSELL_ANCHOR_SET.md); None = disabled ---
                 "stopl": None,   # EXECUTING catastrophic stop: exit when the yes-BID reaches this
                 "stopk": 2,      # ...for this many CONSECUTIVE management cycles (confirm)
@@ -1220,9 +1278,20 @@ class Settings(BaseSettings):
                         # Series filter: '+'-joined substrings (can't use , ; : which the
                         # variant/spec grammar already claims). Matched against the series prefix.
                         v[key] = [t.strip().upper() for t in val.split("+") if t.strip()]
+                    elif key in ("mtype", "xmtype", "mode"):
+                        # Market-type / settle-mode filter: '+'-joined names, lower-cased to
+                        # match the taxonomy. Validated below — an unknown name is a typo that
+                        # would silently produce a book trading nothing.
+                        v[key] = [t.strip().lower() for t in val.split("+") if t.strip()]
                     else:
                         ok = False
                 except (TypeError, ValueError):
+                    ok = False
+            # A misspelled type/mode admits no market at all, so the book would run forever at
+            # n=0 and look like selectivity rather than a typo. Reject the spec instead.
+            for key, known in (("mtype", KNOWN_TYPES), ("xmtype", KNOWN_TYPES),
+                               ("mode", KNOWN_MODES)):
+                if any(t not in known for t in v[key]):
                     ok = False
             if ok and v["lo"] < v["hi"] and v["htcmin"] < v["htcmax"]:
                 out.append(v)
