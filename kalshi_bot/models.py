@@ -238,6 +238,30 @@ class MmSellCandidateTick(Base):
     volume: Mapped[int | None] = mapped_column(Integer)
 
 
+class MmSellSettlementMeta(Base):
+    """Settlement-date metadata for a market the mmsell scan has considered — one row per
+    ticker, written the first time it is seen. Exists ONLY to make the settlement-date
+    concentration cap queryable: `paper_positions` records a strategy + status but not WHEN a
+    market settles, so without this table there would be no way to ask "how many of this book's
+    currently-open positions settle on the same date as this new candidate?"
+
+    Deliberately NOT the regime — `series_ticker` is stored and `kalshi_bot.mmsell.regimes.
+    regime_of` is applied at query time, so a later change to the regime map is reflected in a
+    live risk check immediately (unlike `backfill_regime_markets`, where regime is stamped at
+    capture time to keep a BACKTEST reproducible — the two tables want opposite behavior for
+    the same fact, because one measures history and the other gates real risk right now)."""
+
+    __tablename__ = "mmsell_settlement_meta"
+    __table_args__ = (Index("ix_mmsell_settlement_meta_close", "close_time"),)
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    market_ticker: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    event_ticker: Mapped[str | None] = mapped_column(String(128), index=True)
+    series_ticker: Mapped[str | None] = mapped_column(String(64))
+    close_time: Mapped[datetime] = mapped_column(TS, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+
+
 class LiveOrder(Base):
     __tablename__ = "live_orders"
 
