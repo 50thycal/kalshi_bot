@@ -63,6 +63,8 @@ ALLOWED_VARS = frozenset({
     # theta's own hot-market knobs (never shared with mmsell's above, per this book's rule).
     "THETA_LIVE_HOT_MARKET_MOVE_CENTS", "THETA_LIVE_HOT_MARKET_LOOKBACK_MINUTES",
     "THETA_LIVE_HOT_MARKET_DEFENSIVE_OFFSET_CENTS",
+    # theta's own entry-retry cap (mirrors the mmsell pair above, same rationale).
+    "THETA_LIVE_MAX_ATTEMPTS_PER_TICKER", "THETA_LIVE_RETRY_MAX_DRIFT_CENTS",
     # theta live maker entry — its OWN knobs (deliberately not shared with mmsell's above; see
     # docs/THETA_LIVE_PLAN.md), same rationale as the mmsell trio. Closeout knobs
     # (THETA_CLOSEOUT_*) are intentionally NOT here, mirroring mmsell's own closeout knobs,
