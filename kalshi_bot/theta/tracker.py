@@ -61,6 +61,9 @@ class ThetaCycleSummary:
     capped: int = 0
     skipped_no_model: int = 0
     skipped_illiquid: int = 0
+    live_retried: int = 0        # live entry re-posted on a ticker paper already holds
+    live_retry_capped: int = 0   # retry declined: theta_live_max_attempts_per_ticker reached
+    live_retry_drifted: int = 0  # retry declined: market moved off the first attempt's price
     per_series: dict[str, int] = field(default_factory=dict)
     per_book: dict[str, int] = field(default_factory=dict)
 
@@ -213,6 +216,8 @@ class ThetaTracker:
             "live_max_open_positions": s.theta_live_max_open_positions,
             "live_max_order_dollars": s.theta_live_max_order_dollars,
             "live_max_contracts": s.theta_live_max_contracts,
+            "live_max_attempts_per_ticker": s.theta_live_max_attempts_per_ticker,
+            "live_retry_max_drift_cents": s.theta_live_retry_max_drift_cents,
             "twin_max_open_positions": self.twin_harness.max_open_positions(
                 s.theta_live_max_open_positions),
         }
@@ -223,6 +228,106 @@ class ThetaTracker:
         """Record one book's decision on one candidate in the parity tape (no-op without twins)."""
         if recorder is not None:
             recorder.note_paper(ticker, tag, outcome, price, quantity)
+
+    def _live_price_and_size(self, session, ticker: str, no_price: int | None, metrics):
+        """The (price, quantity) the live executor would use for this entry right now — the same
+        hot-market-aware arithmetic mirror_theta_entry runs internally, recomputed here so the
+        parity tape records what was actually sent rather than a guess. Nothing in the ladder
+        tape changes within a cycle, so the two agree. Mirrors mmsell/tracker.py's helper of the
+        same name."""
+        s = self.settings
+        hot = is_hot_entry(
+            session, ticker, metrics.best_no_bid,
+            move_cents=s.theta_live_hot_market_move_cents,
+            lookback_minutes=s.theta_live_hot_market_lookback_minutes,
+            lookup=repo.latest_theta_no_bid_before,
+        )
+        offset = (s.theta_live_hot_market_defensive_offset_cents if hot
+                 else s.theta_live_price_offset_cents)
+        price = maker_no_price(metrics, no_price, offset, hot=hot)
+        qty = order_quantity(price, s.theta_live_max_order_dollars,
+                             s.theta_live_max_contracts) if price else None
+        return price, qty
+
+    def _maybe_retry_live(self, session, *, tag: str, event_ticker: str, ticker: str, mkt: dict,
+                          summ: ThetaCycleSummary, recorder) -> None:
+        """Re-post the LIVE maker order on a ticker the PAPER book already holds.
+
+        Same root cause as mmsell/tracker.py's method of the same name: paper never misses a
+        fill, so its position stays open for the rest of the entry window and the caller's
+        already-open guard fires on every later cycle within that window too — which ALSO
+        skipped the live mirror, giving live exactly one attempt per ticker. Measured live
+        2026-08-04: of 21 theta4 twin-opened candidates, 3 never got a live fill (2 exchange
+        cross-cancels, 1 hard "post only cross" reject), and none were retried because this book
+        had no retry path at all.
+
+        Paper is untouched here; only the live mirror re-fires. The caller has already applied
+        this book's entry-window (ttemin/ttemax) and price-band checks to the CURRENT quote, so a
+        retry can only happen while the market is still a genuine candidate — once tte drops below
+        ttemin the window gate above this stops reaching the already-open branch at all. On top:
+          * at most `theta_live_max_attempts_per_ticker` live attempts ever (cancelled included),
+            same value as mmsell's,
+          * only while the current no-bid is within `theta_live_retry_max_drift_cents` of the
+            FIRST attempt's price, so a retry never chases a market that has repriced away from
+            the edge the original entry was sized against,
+          * mirror_theta_entry's own dedup still refuses a duplicate while an order rests or after
+            a fill — that is what stops this from re-posting every single cycle.
+
+        A ticker live never attempted at all is deliberately out of scope: there is no price
+        anchor, and that is a different failure (a gate) than a missed retry.
+
+        Unlike mmsell, theta's per-book loop doesn't fetch the orderbook until AFTER this check —
+        most theta "already open" hits are just the SAME position seen again on a later cycle
+        inside its own (short) entry window, so fetching unconditionally here would multiply the
+        book's API call volume. Fetching only when attempts >= 1 keeps that cost scoped to
+        tickers live already tried at least once."""
+        s = self.settings
+        if self.live_executor is None:
+            return
+        attempts, first_price = repo.live_attempt_stats(session, ticker, tag)
+        if attempts == 0:
+            return
+        if attempts >= s.theta_live_max_attempts_per_ticker:
+            summ.live_retry_capped += 1
+            return
+        try:
+            ob = self.client.get_orderbook(ticker, depth=s.orderbook_depth)
+        except AuthError:
+            raise
+        except Exception:  # noqa: BLE001 — a retry must never break the scan
+            logger.warning("theta live entry retry: orderbook fetch failed",
+                           extra={"extra_fields": {"ticker": ticker}})
+            return
+        metrics = compute_metrics(mkt, ob, top_n=s.orderbook_depth)
+        if not metrics.two_sided or metrics.best_no_bid is None:
+            return
+        if first_price is not None and abs(int(metrics.best_no_bid) - first_price) \
+                > s.theta_live_retry_max_drift_cents:
+            summ.live_retry_drifted += 1
+            return
+        try:
+            outcome = self.live_executor.mirror_theta_entry(
+                session, strategy=tag, event_ticker=event_ticker,
+                ticker=ticker, metrics=metrics, no_price=metrics.best_no_bid,
+                account_state=self._account_state,
+            )
+        except AuthError:
+            raise
+        except Exception:  # noqa: BLE001 — a retry must never break the scan
+            logger.exception("theta live entry retry failed")
+            if recorder is not None:
+                recorder.note_live(ticker, tag, "error")
+            return
+        if outcome == twin_codes.LIVE_PLACED:
+            summ.live_retried += 1
+            logger.info("theta live entry retried", extra={"extra_fields": {
+                "ticker": ticker, "strategy": tag, "attempt": attempts + 1,
+                "first_limit_price": first_price, "no_bid": metrics.best_no_bid}})
+        if recorder is not None:
+            live_px, live_qty = self._live_price_and_size(
+                session, ticker, metrics.best_no_bid, metrics)
+            recorder.note_live(ticker, tag, outcome or twin_codes.LIVE_NOT_ATTEMPTED,
+                               live_px, live_qty)
 
     # -- one cycle ------------------------------------------------------------
     def run_once(self, session) -> ThetaCycleSummary:
@@ -399,6 +504,12 @@ class ThetaTracker:
                     if ticker in open_tickers[tag]:
                         summ.already_open += 1
                         self._note(recorder, ticker, tag, twin_codes.SKIP_ALREADY_OPEN)
+                        # Paper holding it must not also lock LIVE out of the ticker: paper's
+                        # position is an assumption, live's fill is a fact. See _maybe_retry_live.
+                        if not is_twin:
+                            self._maybe_retry_live(session, tag=tag, event_ticker=event,
+                                                   ticker=ticker, mkt=mkt, summ=summ,
+                                                   recorder=recorder)
                         continue
                     # A twin is capped like its LIVE parent (not like paper's much larger book) —
                     # the cap shapes which candidates each side ever sees, so it has to match.
@@ -528,22 +639,11 @@ class ThetaTracker:
                                 # internally moments earlier, so the parity tape records the price
                                 # actually sent rather than the calm-path price. Nothing in the
                                 # ladder tape changes within a cycle, so the two agree.
-                                live_hot = is_hot_entry(
-                                    session, ticker, metrics.best_no_bid,
-                                    move_cents=s.theta_live_hot_market_move_cents,
-                                    lookback_minutes=s.theta_live_hot_market_lookback_minutes,
-                                    lookup=repo.latest_theta_no_bid_before,
-                                )
-                                live_offset = (s.theta_live_hot_market_defensive_offset_cents
-                                               if live_hot else s.theta_live_price_offset_cents)
-                                live_px = maker_no_price(
-                                    metrics, price, live_offset, hot=live_hot)
+                                live_px, live_qty = self._live_price_and_size(
+                                    session, ticker, price, metrics)
                                 recorder.note_live(
                                     ticker, tag, outcome or twin_codes.LIVE_NOT_ATTEMPTED,
-                                    live_px,
-                                    order_quantity(live_px, s.theta_live_max_order_dollars,
-                                                   s.theta_live_max_contracts)
-                                    if live_px else None)
+                                    live_px, live_qty)
                         except AuthError:
                             raise
                         except Exception:  # noqa: BLE001 — paper record stays intact

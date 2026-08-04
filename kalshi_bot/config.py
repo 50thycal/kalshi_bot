@@ -532,6 +532,25 @@ class Settings(BaseSettings):
     theta_live_hot_market_lookback_minutes: int = 15
     theta_live_hot_market_defensive_offset_cents: int = -3
 
+    # --- theta LIVE entry retry (recover the one-shot-per-ticker execution gap) ---
+    # Same mechanism and rationale as mmsell_live_max_attempts_per_ticker /
+    # mmsell_live_retry_max_drift_cents (see that block) — theta had the identical gap: paper's
+    # position stays open for the rest of the entry window, so the already-open guard skips the
+    # live mirror on every later cycle too, giving live exactly one attempt per ticker. Measured
+    # live 2026-08-04: of 21 theta4 twin-opened candidates, 3 never got a live fill (2 exchange
+    # cross-cancels, 1 hard "post only cross" reject) and none were retried — this book had no
+    # retry path at all. See theta/tracker.py's _maybe_retry_live.
+    #
+    # Total live BUY attempts allowed per (ticker, book), counting cancelled ones. 1 restores the
+    # old one-shot behaviour; 0 disables the retry path entirely. Same value as mmsell's — the
+    # per-book window gate (theta_entry_min/max_minutes, checked before this retry ever fires)
+    # already bounds how many of the 6 could actually be reached before the market closes, so
+    # there's no separate theta-specific number to derive here.
+    theta_live_max_attempts_per_ticker: int = 6
+    # Retry only while the current no-bid is still within this many cents of the FIRST attempt's
+    # limit price — same rationale and value as mmsell_live_retry_max_drift_cents.
+    theta_live_retry_max_drift_cents: int = 2
+
     # --- theta LIVE closeout (one-shot, END-OF-STRATEGY only; inert by default) ---
     # Mirrors mmsell_closeout_* exactly (see that block's comment for the full rationale): a
     # manual flatten-everything escape hatch for a hold-to-settlement book that otherwise has no
@@ -1511,6 +1530,8 @@ class Settings(BaseSettings):
                 self.theta_live_hot_market_lookback_minutes,
             "theta_live_hot_market_defensive_offset_cents":
                 self.theta_live_hot_market_defensive_offset_cents,
+            "theta_live_max_attempts_per_ticker": self.theta_live_max_attempts_per_ticker,
+            "theta_live_retry_max_drift_cents": self.theta_live_retry_max_drift_cents,
             "theta_closeout_enabled": self.theta_closeout_enabled,
             "theta_closeout_strategies": self.theta_closeout_strategy_list,
             "theta_closeout_max_attempts_per_ticker":
