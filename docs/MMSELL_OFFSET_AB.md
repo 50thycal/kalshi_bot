@@ -29,20 +29,31 @@ same in paper as the ones it captured (6.15 vs 6.26 ¢/contract). The misses wer
 not dodged bullets** — so filling more of them should be worth something. That is an argument, not
 a measurement. This is the measurement.
 
-## Design — randomized *within* one book
+## Design — two live books, partitioned by a per-ticker hash
 
-Two live books at different offsets would compete for the same tickers, double the live footprint,
-and cross each other (self-trade prevention). Instead each **ticker** is assigned to an arm by a
-deterministic hash (`kalshi_bot/live/sizing.py` `offset_arm`):
+**Shape (operator's choice, 2026-08-03):** two separate live books, `mmsell10a` (arm 0, rests AT
+the no-bid — the incumbent's behaviour) and `mmsell10b` (arm 1, rests 1¢ better). Each gets its own
+strategy tag, its own auto-created paper twin (`mmsell10a_pt` / `mmsell10b_pt`) and its own P&L
+line, so each arm's performance is directly visible next to the rest of the cohort. Both use
+**1-contract clips** (`size=1`). The incumbent **`mmsell10` is untouched** — same knobs, same
+2-contract clips, and it still evaluates first.
 
-- **Total live exposure is unchanged from today** — same book, same caps, same one order per ticker.
-- Both arms see the same market flow over the same window. This is a genuine randomized
-  experiment, not a before/after comparison contaminated by regime change.
+**The non-obvious part: the hash is what makes two books a valid experiment.**
+`repository.live_open_order_exists(ticker)` is **strategy-agnostic** — any in-flight live order on
+a market blocks every other book from it. So two books over the same entry spec would be split by
+*book evaluation order*, not at random: whichever ran first would claim nearly everything. Assigning
+each ticker to exactly one arm by a deterministic hash (`live/sizing.py` `arm_book_offset`) fixes
+that:
+
+- **No ticker is ever contested** — the two books are disjoint by construction, so neither can
+  block or queue against the other, and the split is random rather than a race.
+- Both arms see the same market flow over the same window: a genuine randomized experiment, not a
+  before/after comparison contaminated by regime change.
 - A ticker keeps **one arm for its whole life**, so the entry-retry path
   (`mmsell_live_max_attempts_per_ticker`, up to 6 attempts) cannot flip it mid-market and blend
   two prices into an uninterpretable average.
 - Assignment is recomputable from the ticker, so attribution needs **no schema change**. The
-  analysis imports the same `offset_arm` the executor called, so the two can never disagree.
+  analysis imports the same hash the executor called, so the two can never disagree.
 
 **Hot entries are excluded** (arm `None`). A hot entry is priced by the momentum guard
 (`mmsell_live_hot_market_defensive_offset_cents`), not by the arm, so counting it into either arm
@@ -50,18 +61,50 @@ would measure the guard rather than queue position. The analysis drops them via 
 risk-event code.
 
 Both the live executor (`live/executor.py mirror_mmsell_entry`) and the paper twin
-(`mmsell/tracker.py`) call the one shared `maker_offset`, for the same reason they already share
-`maker_no_price`: the moment the two derive the price differently, the parity report starts
-measuring our own bookkeeping instead of the market.
+(`mmsell/tracker.py`) resolve the offset through the same shared helpers, for the same reason they
+already share `maker_no_price`: the moment the two derive the price differently, the parity report
+starts measuring our own bookkeeping instead of the market.
+
+The single-book form (one book splitting its own orders, via `maker_offset`) is still supported and
+is what `mmsell_live_offset_ab_arms` drives when no arm book is armed. The two-book form is
+preferred because it gives each arm its own reportable P&L.
+
+### The cost of leaving `mmsell10` running
+
+Because the dedup gate is strategy-agnostic and `mmsell10` evaluates first, it claims a candidate
+before either arm book sees it. The arm books therefore trade **only the flow `mmsell10` did not
+take** (largely: candidates arriving while it sits at its 50-position cap).
+
+This is a deliberate, accepted trade:
+
+- **Internal validity is preserved.** `mmsell10` blocks both arms *symmetrically* and the hash
+  still randomizes whatever flow reaches them, so the A-vs-B comparison stays clean.
+- **External validity and power are reduced.** The arm books see a smaller, non-representative
+  slice, so n accrues more slowly than if `mmsell10`'s live arm were stood down. At 1 contract per
+  fill the gate below (150 settled contracts per arm) is a matter of weeks, not days.
+
+If the experiment is starved — check `mmsell_offset_ab`'s per-arm order counts — the lever is to
+stand `mmsell10` down from `LIVE_STRATEGIES` and let the arm books take the full flow. That is an
+operator decision, not something to change silently mid-experiment.
 
 ## Arming it
 
 ```jsonc
-{"type": "env", "set": {"MMSELL_LIVE_OFFSET_AB_ARMS": "0,1"}}
+{"type": "env", "set": {
+    "MMSELL_LIVE_OFFSET_AB_ARMS": "0,1",
+    "LIVE_STRATEGIES": "mmsell10,theta4,mmsell10a,mmsell10b"
+}}
 ```
 
-Empty (the default) disables the split entirely and restores exactly today's single-offset
-behaviour. A single arm is also treated as off — a one-armed "A/B" cannot answer anything.
+**Both are required.** With no arms configured an arm book claims *no* tickers at all — it fails
+closed rather than falling back to a default offset, because an arm book has no defined price
+unless the experiment is running. A single arm is likewise treated as off; a one-armed "A/B"
+cannot answer anything.
+
+Added live footprint: 2 books × 50 positions × 1 contract ≈ **$93 at ~93¢/contract**, on top of
+`mmsell10`'s existing ~$93 (50 × 2). Lower the arm books' share by dropping
+`MMSELL_LIVE_MAX_OPEN_POSITIONS` if that is more exposure than intended — it is a shared cap, so it
+applies to `mmsell10` too.
 
 **Do not change `mmsell_live_offset_ab_salt` mid-experiment.** It re-randomizes every ticker's arm,
 which silently invalidates comparison with everything collected under the old salt. It is recorded
@@ -88,16 +131,30 @@ the experiment is not actually running.
 ## Pre-registered gate
 
 Evaluated at **n ≥ 150 settled contracts per arm** (both arms must clear it — an underpowered
-comparison is reported as UNDERPOWERED, never as a verdict).
+comparison is reported as UNDERPOWERED, never as a verdict). Compare `mmsell10b` against
+`mmsell10a`, **not** against `mmsell10`: the incumbent trades a different slice of flow (it takes
+candidates first) and a different clip size, so it is not a valid control for this. `mmsell10a` is
+the control, and it exists precisely so there is one.
 
-- **PROMOTE** a non-zero offset only if its realized ¢/contract beats arm 0 (offset 0) by
+- **PROMOTE** the 1¢ offset only if `mmsell10b`'s realized ¢/contract beats `mmsell10a` by
   **≥ 0.5¢**. That bar is deliberately above zero: a 1¢ offset must earn back more than the 1¢ it
   pays away on every fill, so anything less than a clear margin is noise dressed as improvement.
-- **KILL** that offset if it lands at or below arm 0. Queue priority is not worth paying for, the
-  book keeps `offset = 0`, and the ~2¢ adverse-selection gap is confirmed as *not* addressable by
+- **KILL** it if it lands at or below `mmsell10a`. Queue priority is not worth paying for, the book
+  keeps `offset = 0`, and the ~2¢ adverse-selection gap is confirmed as *not* addressable by
   price — which redirects the effort to selection (what we enter) rather than execution.
-- **NO** (neither) if it beats arm 0 but by less than 0.5¢: not worth the added complexity and
-  standing cost; keep 0 and stop asking.
+- **NO** (neither) if it beats `mmsell10a` but by less than 0.5¢: not worth the added complexity
+  and standing cost; keep 0 and stop asking.
+
+Sanity checks to read alongside, before trusting either verdict:
+
+- **`mmsell10a`'s average fill price should sit ~1¢ above `mmsell10b`'s NO price.** If the two
+  arms show the same average price, the experiment is not actually running.
+- **Order counts per arm should be within ~10% of each other.** A large imbalance means the
+  partition is not working (or one arm is being starved by the incumbent), and the comparison is
+  confounded.
+- **Each arm's twin (`mmsell10a_pt` / `mmsell10b_pt`) vs its live book** — via `live_paper_parity`.
+  A twin/live gap that differs sharply *between* arms is itself the finding: it is adverse
+  selection responding to queue position, which is the mechanism under test.
 
 Report fill rate alongside the P&L in every read, so a promote can be attributed to *more fills*
 rather than *better fills* — those imply different next steps.

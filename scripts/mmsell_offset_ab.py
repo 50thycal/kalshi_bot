@@ -18,16 +18,27 @@ captured (6.15 vs 6.26 c/contract), i.e. lost volume rather than dodged bullets.
 argument for paying to fill more of them — but it is an argument, not a measurement. This is the
 measurement.
 
-DESIGN — randomized WITHIN one book, not two books
---------------------------------------------------
-Two live books at different offsets would compete for the same tickers, double the exposure, and
-cross each other (self-trade prevention). Instead each TICKER is assigned to an arm by a
-deterministic hash (kalshi_bot/live/sizing.py offset_arm), so:
-  * total live footprint is unchanged from today,
-  * both arms see the same market flow over the same window — this is a genuine randomized
-    experiment, not a before/after comparison contaminated by regime,
+DESIGN — two live books, partitioned by a per-ticker hash
+---------------------------------------------------------
+The arms are two separate live books — mmsell10a (arm 0, rests AT the no-bid = control) and
+mmsell10b (arm 1, rests 1c better) — so each has its own tag, its own paper twin and its own P&L
+line. The incumbent mmsell10 is untouched.
+
+The hash is what makes two books a valid experiment rather than a race.
+repository.live_open_order_exists(ticker) is strategy-AGNOSTIC, so any in-flight live order on a
+market blocks every other book from it; two books over the same entry spec would be split by book
+EVALUATION ORDER, not at random. Assigning each ticker to exactly one arm by a deterministic hash
+(live/sizing.py arm_book_offset) means:
+  * no ticker is ever contested, so neither arm can block or queue against the other,
+  * both arms see the same market flow over the same window — a genuine randomized experiment,
+    not a before/after comparison contaminated by regime,
   * a ticker keeps one arm for life, so the entry-retry path cannot blend two prices,
   * assignment is recomputable from the ticker, so no schema change was needed.
+
+Caveat this script cannot fix: mmsell10 evaluates FIRST, so the arm books trade only the flow it
+did not claim. That keeps the A-vs-B comparison internally valid (mmsell10 blocks both arms
+symmetrically) but reduces power. Watch the per-arm order counts below — a starved experiment is
+the signal to stand mmsell10 down, not to reinterpret the result.
 
 HOT entries are excluded: they are priced by the momentum guard, not the arm, so counting them
 would measure the guard. This script drops them by reading the `hot_entry` risk-event code.
@@ -41,6 +52,9 @@ WHAT IT REPORTS, per arm
 
 Read the last column, not the fill rate. A higher fill rate with WORSE realized P&L is the
 signature of buying adverse selection, and is a kill rather than a puzzle.
+
+Compare arm 1 against ARM 0, never against mmsell10: the incumbent trades a different slice of
+flow and a different clip size, so it is not a valid control. Arm 0 exists to be that control.
 
 Read-only, self-contained (stdlib + psycopg):
     DATABASE_URL_RO=postgresql://... python scripts/mmsell_offset_ab.py
@@ -142,7 +156,8 @@ def _fetch(cur, strategy_like: str):
     cur.execute(
         """
         WITH ord AS (
-            SELECT o.id, o.market_ticker, o.kalshi_order_id, o.status, o.created_at
+            SELECT o.id, o.market_ticker, o.kalshi_order_id, o.status, o.created_at,
+                   coalesce(o.strategy, '?') AS strategy
             FROM live_orders o
             WHERE o.strategy LIKE %s AND o.action = 'buy'
               AND o.status IN ('filled', 'canceled', 'submitted', 'resting')
@@ -163,7 +178,7 @@ def _fetch(cur, strategy_like: str):
             FROM risk_events r
             WHERE r.reason_codes_json::text LIKE '%%hot_entry%%'
         )
-        SELECT ord.market_ticker,
+        SELECT ord.market_ticker, ord.strategy,
                (fl.qty IS NOT NULL) AS is_filled,
                fl.px, fl.qty,
                CASE WHEN abs(coalesce(pos.quantity_fp, 0)) < 0.01
@@ -188,6 +203,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--strategy", default="mmsell%", help="live strategy LIKE pattern")
     ap.add_argument("--include-hot", action="store_true",
                     help="do NOT exclude momentum-guard (hot) entries — diagnostic only")
+    ap.add_argument("--by-hash", action="store_true",
+                    help="single-book form: recompute each ticker's arm from the salt instead of "
+                         "grouping by the live strategy tag")
+    ap.add_argument("--control", default="mmsell10a",
+                    help="the offset-0 arm book to compare against (NOT the incumbent mmsell10)")
+    ap.add_argument("--arm-books", default="mmsell10a=0,mmsell10b=1",
+                    help="tag=arm-index map, so each book's offset can be labelled")
     args = ap.parse_args(argv)
 
     try:
@@ -198,6 +220,12 @@ def main(argv: list[str] | None = None) -> int:
     if len(arms) < 2:
         print(f"--arms needs at least 2 offsets to be an experiment, got {arms}", file=sys.stderr)
         return 2
+
+    arm_by_tag: dict[str, int] = {}
+    for tok in args.arm_books.split(","):
+        tag, _, idx = tok.strip().partition("=")
+        if tag.strip() and idx.strip().isdigit():
+            arm_by_tag[tag.strip()] = int(idx)
 
     url = _to_libpq_url(os.environ.get("DATABASE_URL_RO", ""))
     if not url:
@@ -210,65 +238,108 @@ def main(argv: list[str] | None = None) -> int:
         with conn.cursor() as cur:
             rows = _fetch(cur, args.strategy)
 
-    by_arm: dict[int, list] = defaultdict(list)
+    # Two-book form (the deployed shape): each arm IS a strategy tag, so group by the tag —
+    # ground truth of what was actually sent, with no dependence on the salt still matching.
+    # --by-hash falls back to recomputing the assignment, for the single-book form where one
+    # tag carries both arms.
+    by_arm: dict[str, list] = defaultdict(list)
+    arm_offset_of: dict[str, int] = {}
     hot_dropped = 0
-    for ticker, is_filled, px, qty, realized, was_hot in rows:
+    for ticker, strategy, is_filled, px, qty, realized, was_hot in rows:
         if was_hot and not args.include_hot:
             hot_dropped += 1
             continue
-        idx, _off = offset_arm(ticker, arms=arms, salt=args.salt)
-        by_arm[idx].append((bool(is_filled), px, qty, realized))
+        if args.by_hash:
+            idx, off = offset_arm(ticker, arms=arms, salt=args.salt)
+            key = f"arm{idx}"
+            arm_offset_of[key] = off
+        else:
+            key = strategy
+            book_arm = arm_by_tag.get(strategy)
+            if book_arm is not None and book_arm < len(arms):
+                arm_offset_of[key] = arms[book_arm]
+        by_arm[key].append((bool(is_filled), px, qty, realized))
 
-    print("=" * 82)
-    print(f"MMSELL QUEUE-POSITION A/B — arms {arms} (cents above the no-bid), salt {args.salt!r}")
-    print(f"orders considered: {sum(len(v) for v in by_arm.values())}"
-          f"   hot entries excluded: {hot_dropped}"
+    print("=" * 88)
+    print(f"MMSELL QUEUE-POSITION A/B — arms {arms} (cents above the no-bid)"
+          f"{', salt ' + repr(args.salt) if args.by_hash else ''}")
+    print(f"grouping: {'per-ticker hash (single-book form)' if args.by_hash else 'live strategy tag'}"
+          f"   orders considered: {sum(len(v) for v in by_arm.values())}"
+          f"   hot excluded: {hot_dropped}"
           f"{' (INCLUDED via --include-hot)' if args.include_hot else ''}")
-    print("=" * 82)
+    print("=" * 88)
 
     if not by_arm:
-        print("\nNo live mmsell buy orders found. Either the book has never been armed, or the")
-        print("experiment has not run yet (mmsell_live_offset_ab_arms is empty by default).")
+        print("\nNo live mmsell buy orders found. Either the books have never been armed, or the")
+        print("experiment has not started (MMSELL_LIVE_OFFSET_AB_ARMS is empty by default, and an")
+        print("arm book claims NO tickers until it is set).")
         return 0
 
-    stats = {idx: summarize_arm(by_arm[idx]) for idx in sorted(by_arm)}
+    stats = {k: summarize_arm(v) for k, v in sorted(by_arm.items())}
 
-    print(f"\n{'arm':>4} {'offset':>7} {'orders':>7} {'filled':>7} {'fill%':>7} "
+    def _off(k):
+        o = arm_offset_of.get(k)
+        return f"{o:+d}c" if o is not None else "  -"
+
+    print(f"\n{'book/arm':<14} {'offset':>7} {'orders':>7} {'filled':>7} {'fill%':>7} "
           f"{'fill% 95CI':>15} {'avg fill px':>12}")
-    for idx, st in stats.items():
+    for k, st in stats.items():
         lo, hi = st["fill_ci"]
-        print(f"{idx:>4} {arms[idx]:>6}c {st['orders']:>7} {st['filled']:>7} "
+        print(f"{k:<14} {_off(k):>7} {st['orders']:>7} {st['filled']:>7} "
               f"{100 * st['fill_rate']:>6.1f}% [{100 * lo:>5.1f},{100 * hi:>5.1f}]% "
               f"{st['avg_fill_px']:>12.2f}")
 
-    print(f"\n{'arm':>4} {'offset':>7} {'settled pos':>12} {'contracts':>10} "
+    print(f"\n{'book/arm':<14} {'offset':>7} {'settled pos':>12} {'contracts':>10} "
           f"{'c/contract':>12} {'total c':>10}")
-    for idx, st in stats.items():
-        print(f"{idx:>4} {arms[idx]:>6}c {st['settled_positions']:>12} "
+    for k, st in stats.items():
+        print(f"{k:<14} {_off(k):>7} {st['settled_positions']:>12} "
               f"{st['settled_contracts']:>10} {st['cents_per_contract']:>12.2f} "
               f"{st['total_cents']:>10.1f}")
 
-    # The decision, stated against the pre-registered gate so the reader cannot re-scope it.
-    base = stats.get(0)
-    if base and len(stats) >= 2:
-        print("\nGATE (docs/MMSELL_OFFSET_AB.md): at n>=150 FILLS per arm, promote a non-zero")
-        print("offset only if its realized c/contract beats arm 0 by >= 0.5c. Any arm at or below")
-        print("arm 0 is a KILL for that offset.")
-        for idx, st in stats.items():
-            if idx == 0:
-                continue
-            n_ok = st["settled_contracts"] >= 150 and base["settled_contracts"] >= 150
-            delta = st["cents_per_contract"] - base["cents_per_contract"]
-            if not n_ok:
-                verdict = (f"UNDERPOWERED (need 150 settled contracts/arm; have "
-                           f"{base['settled_contracts']} vs {st['settled_contracts']})")
-            elif delta >= 0.5:
-                verdict = f"PROMOTE (+{delta:.2f}c vs arm 0)"
-            elif delta <= 0:
-                verdict = f"KILL ({delta:+.2f}c vs arm 0)"
-            else:
-                verdict = f"NO (+{delta:.2f}c, short of the +0.5c bar)"
-            print(f"  arm {idx} ({arms[idx]:+d}c): {verdict}")
+    # The decision, stated against the pre-registered gate so it cannot be re-scoped after the
+    # fact. The control is the OFFSET-0 ARM, never the incumbent mmsell10 — that book trades a
+    # different slice of flow (it claims candidates first) and a different clip size.
+    ctrl_key = args.control if args.by_hash is False else "arm0"
+    base = stats.get(ctrl_key)
+    print("\nGATE (docs/MMSELL_OFFSET_AB.md): at n>=150 settled CONTRACTS per arm, promote a")
+    print(f"non-zero offset only if it beats the control ({ctrl_key}) by >= 0.5c/contract.")
+    if base is None:
+        print(f"  control {ctrl_key!r} has no rows — pass --control <tag> if the arm books are "
+              f"named differently.")
+        return 0
+    for k, st in stats.items():
+        if k == ctrl_key:
+            continue
+        if arm_offset_of.get(k) is None and not args.by_hash:
+            print(f"  {k}: not an arm book (no configured arm) — reference only, not compared")
+            continue
+        n_ok = st["settled_contracts"] >= 150 and base["settled_contracts"] >= 150
+        delta = st["cents_per_contract"] - base["cents_per_contract"]
+        if not n_ok:
+            verdict = (f"UNDERPOWERED (need 150 settled contracts/arm; control has "
+                       f"{base['settled_contracts']}, this arm {st['settled_contracts']})")
+        elif delta >= 0.5:
+            verdict = f"PROMOTE ({delta:+.2f}c vs control)"
+        elif delta <= 0:
+            verdict = f"KILL ({delta:+.2f}c vs control)"
+        else:
+            verdict = f"NO ({delta:+.2f}c, short of the +0.5c bar)"
+        print(f"  {k}: {verdict}")
+
+    # Sanity checks — a silently-broken experiment looks exactly like a null result.
+    if not args.by_hash and len(stats) >= 2:
+        keys = [k for k in stats if arm_offset_of.get(k) is not None]
+        if len(keys) >= 2:
+            counts = [stats[k]["orders"] for k in keys]
+            pxs = [stats[k]["avg_fill_px"] for k in keys]
+            if min(counts) and max(counts) / max(1, min(counts)) > 1.25:
+                print(f"\n  WARNING: arm order counts are imbalanced ({dict(zip(keys, counts, strict=True))}) — "
+                      "the\n  partition may not be working, or one arm is being starved. The "
+                      "comparison is confounded.")
+            if all(p == p for p in pxs) and max(pxs) - min(pxs) < 0.25:
+                print("\n  WARNING: the arms' average fill prices are nearly identical — the "
+                      "offset does not\n  appear to be taking effect, so there is no treatment "
+                      "to measure.")
     return 0
 
 

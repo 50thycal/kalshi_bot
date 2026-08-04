@@ -228,6 +228,18 @@ class Settings(BaseSettings):
         "mmsellA3:lo=5,hi=10,maxyes=7,stopl=30,stopk=2;"
         "mmsellA4:lo=5,hi=10,maxyes=7,volw=6,volv=6;"
         "mmsellA5:lo=5,hi=10,maxyes=7,strangle=1;"
+        # Queue-position A/B as TWO live books (docs/MMSELL_OFFSET_AB.md). Same mmsell10 entry;
+        # the only difference between them is where they rest. `abarm` splits the candidate flow
+        # by a hash of the ticker, so neither book ever contests a ticker with the other and the
+        # split is random rather than decided by book order. 1-contract clips (`size=1`) keep the
+        # experiment's added live footprint small next to the incumbent mmsell10, which is
+        # untouched and still takes its candidates first.
+        #   mmsell10a = arm 0 -> rests AT the no-bid (the incumbent's behaviour = control)
+        #   mmsell10b = arm 1 -> rests 1c BETTER, buying queue priority for 1c of premium
+        # Both are INERT until MMSELL_LIVE_OFFSET_AB_ARMS is set AND the tag is in
+        # LIVE_STRATEGIES: with no arms configured an arm book admits no tickers at all.
+        "mmsell10a:lo=5,hi=10,maxyes=7,abarm=0,size=1;"
+        "mmsell10b:lo=5,hi=10,maxyes=7,abarm=1,size=1;"
         # --- MARKET-TYPE books, added 2026-08-03 (docs/MMSELL_TYPE_BOOKS.md) ----------------
         # From the market-type census (docs/MMSELL_MARKET_TYPES.md): mmsell sells any cheap tail
         # it finds, so every book to date has been blind to what KIND of contract it is selling.
@@ -1237,6 +1249,16 @@ class Settings(BaseSettings):
                 "volw": None,    # vol ENTRY gate: look back this many candidate ticks
                 "volv": None,    # ...skip the entry if their yes-mid range reaches this many cents
                 "strangle": False,  # also sell the mirror (cheap-NO) tail, paired within an event
+                # --- queue-position A/B (docs/MMSELL_OFFSET_AB.md); None = not in the experiment
+                # `abarm` makes this book take ONLY the tickers whose deterministic hash arm equals
+                # it, and price at mmsell_live_offset_ab_arms[abarm]. Two books declaring abarm=0
+                # and abarm=1 therefore split the candidate flow between them at random, with no
+                # ticker ever contested — which is what makes them a randomized A/B rather than a
+                # race decided by book order.
+                "abarm": None,
+                # Per-book live contract cap, overriding the global max_order_size. Lets an
+                # experiment run 1-contract clips beside an incumbent sized differently.
+                "size": None,
             }
             ok = True
             for kv in body.split(","):
@@ -1248,7 +1270,7 @@ class Settings(BaseSettings):
                 try:
                     if key in ("lo", "hi", "htcmin", "htcmax", "maxyes", "stopl", "volv"):
                         v[key] = float(val)
-                    elif key in ("stopk", "volw"):
+                    elif key in ("stopk", "volw", "abarm", "size"):
                         v[key] = int(val)
                     elif key == "strangle":
                         v[key] = str(val).strip() not in ("", "0", "false", "False")

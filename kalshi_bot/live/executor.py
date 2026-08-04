@@ -356,6 +356,7 @@ class LiveExecutor:
     def mirror_mmsell_entry(
         self, session, *, strategy: str, event_ticker: str | None, ticker: str, metrics,
         no_price: int | None = None, account_state=None,
+        arm_offset: int | None = None, max_contracts: int | None = None,
     ) -> str:
         """Mirror one allowlisted mmsell paper entry into a real resting MAKER order: BUY NO at
         the no-bid (== sell yes at the ask), held to settlement. Self-guarded + fail-closed — any
@@ -414,18 +415,28 @@ class LiveExecutor:
             lookback_minutes=s.mmsell_live_hot_market_lookback_minutes,
             lookup=repo.latest_mmsell_no_bid_before,
         )
-        offset, ab_arm = maker_offset(
-            ticker, hot=hot,
-            calm_offset=s.mmsell_live_price_offset_cents,
-            hot_offset=s.mmsell_live_hot_market_defensive_offset_cents,
-            ab_arms=s.mmsell_live_offset_ab_arm_list,
-            ab_salt=s.mmsell_live_offset_ab_salt,
-        )
+        # `arm_offset` is passed by a per-arm BOOK (mmsell10a/mmsell10b): that book's treatment
+        # price is already decided by the ticker's hash, so it wins over the single-book split.
+        # A hot entry still overrides both — the momentum guard is a safety rule, not a treatment,
+        # and an entry priced by it is excluded from the experiment (ab_arm None).
+        if hot:
+            offset, ab_arm = s.mmsell_live_hot_market_defensive_offset_cents, None
+        elif arm_offset is not None:
+            offset, ab_arm = int(arm_offset), int(arm_offset)
+        else:
+            offset, ab_arm = maker_offset(
+                ticker, hot=hot,
+                calm_offset=s.mmsell_live_price_offset_cents,
+                hot_offset=s.mmsell_live_hot_market_defensive_offset_cents,
+                ab_arms=s.mmsell_live_offset_ab_arm_list,
+                ab_salt=s.mmsell_live_offset_ab_salt,
+            )
         price = maker_no_price(metrics, no_price, offset, hot=hot)
         if price is None:
             self.summary.skipped_gate += 1
             return "gate:illiquid"
-        qty = order_quantity(price, s.live_max_order_dollars, s.max_order_size)
+        qty = order_quantity(price, s.live_max_order_dollars,
+                             max_contracts if max_contracts else s.max_order_size)
         if qty <= 0:
             self.summary.skipped_gate += 1
             return "gate:size"
