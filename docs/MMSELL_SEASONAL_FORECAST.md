@@ -239,14 +239,36 @@ events that protection vanishes: a national swing moves every race the same way 
 **Therefore: any settlement-date cap must count EVENTS, not markets.** Ten rungs of one
 governor's race is one bet; ten rungs across ten races is ten correlated bets.
 
-### Recommended cap (pre-registered, not yet implemented)
+### The cap — BUILT
 
-* Cap **distinct settlement dates** at ≤ 25% of the live cap (≤ 15 positions on one date at
-  `mmsell_live_max_open_positions=60`). Today's Aug-07 date would breach this at 33.
-* Within a `CORRELATED_REGIMES` date, cap **distinct events** at ≤ 5.
-* Both are cheap to enforce at entry time (the tracker already knows each candidate's close
-  time). **Not implemented in this change** — it is a live-risk change and should land on its own
-  evidence, after the overdispersion measurement below has n to stand on.
+Both halves of the recommendation above are now enforced at entry time, per book, in
+`MmSellTracker.run_once` (`_settlement_cap_blocks`):
+
+* **Settlement-date cap.** A book refuses a new entry once `>= mmsell_settlement_cap_pct`
+  (default 25%) of its OWN `max_open_positions` already settle on that candidate's date — 15
+  positions at `mmsell_live_max_open_positions=60`, 50 at paper's 200. Today's Aug-07 date (33
+  cheap markets, 55% of the live cap) is exactly the case this catches. A twin inherits the
+  tighter live-shaped number automatically, since the date cap is computed as a percentage of
+  the SAME `cap` value the existing position-count cap already uses (paper's 200 vs a twin's
+  live-sized 60) — no separate twin-vs-paper branch was needed.
+* **Correlated-event cap.** On a `mmsell_settlement_correlated_regimes` date (default
+  `"Elections"`), a NEW event is refused once `>= mmsell_settlement_event_cap` (default 5)
+  distinct events are already open that date. Adding another rung to an event ALREADY
+  represented stays allowed — that pairing is the mutual-exclusivity hedge itself (at most one
+  rung of one race can lose), not additional correlated exposure. Regime is evaluated at
+  decision time via `kalshi_bot.mmsell.regimes.regime_of`, not stamped once, so a later addition
+  to the correlated-regime list takes effect immediately rather than only for new markets.
+
+New table `mmsell_settlement_meta` (migration `d2e3f4a5b6c7`) records each candidate's close
+time + event ticker the first time it is seen (insert-only, mirroring the regime-history
+capture's pattern), which is what makes "how many of my OTHER open positions settle on this
+date" a queryable question — `paper_positions` tracks status and strategy but never recorded
+when a market closes. Both knobs are config-gated (`mmsell_settlement_cap_enabled`, on by
+default) and fail open on a read error, matching every other soft gate in this tracker (the vol
+gate, the anchor stop) — a broken risk check must never be what stops the book trading.
+
+Tests: `tests/test_mmsell_settlement_cap.py` — the per-book isolation, the twin-sized cap, the
+event-vs-market distinction, the own-ticker exclusion, and the calendar-date boundary.
 
 ---
 

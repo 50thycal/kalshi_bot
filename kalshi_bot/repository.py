@@ -846,6 +846,54 @@ def recent_candidate_mids(session, ticker: str, limit: int) -> list[float]:
     return [float(x) for x in reversed(rows)]
 
 
+def ensure_mmsell_settlement_meta(session, *, market_ticker: str, event_ticker: str | None,
+                                  series_ticker: str | None, close_time: datetime) -> None:
+    """Record a candidate market's settlement metadata the first time it is seen; a no-op on
+    every later cycle. Insert-only (like the regime-history capture's upsert): a market's close
+    time never changes, and re-writing it would just be wasted work on every subsequent cycle
+    the market stays a candidate."""
+    existing = session.scalar(
+        select(m.MmSellSettlementMeta.id).where(
+            m.MmSellSettlementMeta.market_ticker == market_ticker
+        )
+    )
+    if existing is not None:
+        return
+    session.add(m.MmSellSettlementMeta(
+        market_ticker=market_ticker, event_ticker=event_ticker,
+        series_ticker=series_ticker, close_time=close_time,
+    ))
+    session.flush()
+
+
+def open_positions_settlement_summary(
+    session, strategy: str, close_date, ticker: str
+) -> tuple[int, set[str]]:
+    """(count, distinct event tickers) of `strategy`'s OTHER currently-open positions settling
+    on `close_date` (a UTC calendar date) — the settlement-date concentration cap's read.
+    `ticker` is EXCLUDED so a position already open on the candidate's own market (the
+    `already_open` path handles that case separately) can never count against its own cap.
+
+    Filters with an explicit UTC datetime RANGE rather than a DB-side date() function: SQLite
+    (used by the test suite) and Postgres (production) parse timestamp strings differently
+    enough that a portable comparison is worth the extra two lines."""
+    day_start = datetime(close_date.year, close_date.month, close_date.day, tzinfo=timezone.utc)
+    day_end = day_start + timedelta(days=1)
+    rows = session.execute(
+        select(m.PaperPosition.market_ticker, m.MmSellSettlementMeta.event_ticker)
+        .join(m.MmSellSettlementMeta,
+              m.MmSellSettlementMeta.market_ticker == m.PaperPosition.market_ticker)
+        .where(
+            m.PaperPosition.strategy == strategy,
+            m.PaperPosition.status == "open",
+            m.PaperPosition.market_ticker != ticker,
+            m.MmSellSettlementMeta.close_time >= day_start,
+            m.MmSellSettlementMeta.close_time < day_end,
+        )
+    ).all()
+    return len(rows), {r[1] for r in rows if r[1]}
+
+
 def recent_position_yes_bids(session, ticker: str, limit: int) -> list[float]:
     """The last `limit` yes-BID values taped for this HELD position, oldest-first.
 

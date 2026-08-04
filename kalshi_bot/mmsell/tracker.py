@@ -16,6 +16,7 @@ risk control the exit study pointed to; hence the high max-open-positions defaul
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass, field
 
 from .. import repository as repo
@@ -34,8 +35,10 @@ from ..scanner.metrics import (
     compute_time_to_close,
     market_price_cents,
     market_volume,
+    parse_dt,
 )
 from ..twin import harness as twin_codes
+from .regimes import regime_of
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +55,8 @@ class MmSellCycleSummary:
     skipped_illiquid: int = 0
     skipped_htc: int = 0
     skipped_vol_gate: int = 0   # anchor-set volatility ENTRY gate rejections
+    skipped_settlement_cap: int = 0  # too many open positions already settle this candidate's date
+    skipped_event_cap: int = 0       # too many distinct events open on a CORRELATED-regime date
     live_retried: int = 0        # live entry re-posted on a ticker paper already holds
     live_retry_capped: int = 0   # retry declined: mmsell_live_max_attempts_per_ticker reached
     live_retry_drifted: int = 0  # retry declined: market moved off the first attempt's price
@@ -124,6 +129,41 @@ class MmSellTracker:
         if book.get("abarm") is None:
             return True
         return self._book_arm_offset(book, ticker) is not None
+
+    def _settlement_cap_blocks(self, session, s: Settings, *, book_cap: int, tag: str,
+                               ticker: str, close_dt, series: str, event_ticker: str,
+                               summ: MmSellCycleSummary, recorder) -> bool:
+        """True when the settlement-date concentration cap (docs/MMSELL_SEASONAL_FORECAST.md
+        "Reading 3") should SKIP this entry: too many of `tag`'s own open positions already
+        settle on this candidate's date, or (on a CORRELATED regime's date) too many distinct
+        EVENTS already do.
+
+        `book_cap` is the SAME cap `open_count[tag]` was just checked against (paper's 200 or a
+        twin's live-sized 60) — the date cap is a percentage OF that, so a twin gets the tighter
+        live-shaped number automatically, the same asymmetry the position cap already applies."""
+        if not s.mmsell_settlement_cap_enabled or close_dt is None:
+            return False
+        try:
+            n_on_date, events_on_date = repo.open_positions_settlement_summary(
+                session, tag, close_dt.date(), ticker)
+        except Exception:  # noqa: BLE001 — a gate read must never break the entry scan
+            logger.exception("mmsell settlement cap: read failed (entering anyway)")
+            return False
+        date_cap = max(1, math.ceil(book_cap * s.mmsell_settlement_cap_pct))
+        if n_on_date >= date_cap:
+            summ.skipped_settlement_cap += 1
+            self._note(recorder, ticker, tag, twin_codes.SKIP_SETTLEMENT_CAP)
+            return True
+        if (regime_of(series) in s.mmsell_settlement_correlated_regimes_list
+                and event_ticker not in events_on_date
+                and len(events_on_date) >= s.mmsell_settlement_event_cap):
+            # A NEW event on an already-saturated correlated date is refused; adding another
+            # rung to an event already represented is fine — that is the within-event hedge
+            # (mutually exclusive rungs), not additional correlated exposure.
+            summ.skipped_event_cap += 1
+            self._note(recorder, ticker, tag, twin_codes.SKIP_EVENT_CAP)
+            return True
+        return False
 
     def _live_price_and_size(self, session, ticker: str, no_price: int | None, metrics,
                              book: dict | None = None):
@@ -406,6 +446,15 @@ class MmSellTracker:
 
                 metrics = None  # lazy: fetched once for the first book that clears the band
                 series = (event.get("series_ticker") or ticker.split("-")[0]).upper()
+                close_dt = parse_dt(market.get("close_time"))
+                event_ticker = event.get("event_ticker") or ""
+                if close_dt is not None:
+                    # Written once per ticker (insert-only), before ANY book's cap check needs
+                    # it — a position can only open below in this same iteration, so the row
+                    # always exists by the time a later cycle's candidate joins against it.
+                    repo.ensure_mmsell_settlement_meta(
+                        session, market_ticker=ticker, event_ticker=event_ticker,
+                        series_ticker=series, close_time=close_dt)
                 for book in books:
                     tag = book["tag"]
                     if not (book["htcmin"] <= htc <= book["htcmax"]):
@@ -495,6 +544,12 @@ class MmSellTracker:
                     if open_count[tag] >= cap:
                         summ.capped += 1
                         self._note(recorder, ticker, tag, twin_codes.SKIP_CAP)
+                        continue
+
+                    if self._settlement_cap_blocks(session, s, book_cap=cap, tag=tag,
+                                                   ticker=ticker, close_dt=close_dt,
+                                                   series=series, event_ticker=event_ticker,
+                                                   summ=summ, recorder=recorder):
                         continue
 
                     if is_twin:
