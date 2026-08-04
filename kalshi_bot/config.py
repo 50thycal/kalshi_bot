@@ -291,7 +291,20 @@ class Settings(BaseSettings):
     # ...within this many minutes back. No qualifying tick at all (the ticker was out of the
     # trading band for the whole lookback — itself what happened in the KXFEDMENTION case) also
     # counts as hot, since an absence right when the market is being entered is not evidence of calm.
-    mmsell_live_hot_market_lookback_minutes: int = 30
+    #
+    # Must stay comfortably above mmsell_interval_minutes (the ride-along scan cadence every
+    # candidate tick is captured on): a lookback equal to the scan interval means EVERY normal
+    # cycle-to-cycle gap trips the "no qualifying tick" case, since real cycles always run a little
+    # longer than the nominal interval. Measured live 2026-08-03 at the old value of 30 (== the
+    # scan's own 30min cadence): consecutive same-ticker candidate ticks land 30.2-31.7min apart
+    # (p25-p95, n=4409 over 7d, 141 tickers, every series including crypto) — 90% of ALL gaps
+    # exceeded the 30min lookback purely from cycle-time jitter, so 90% of "hot" classifications
+    # were false positives from scan cadence, not real repricing. The distribution has a hard cliff
+    # right after one cycle: only 3.9% of gaps exceed 40min (vs 4.3% at 35min), and that remainder
+    # is the genuine multi-cycle-absence population (out to a multi-hour/day tail) the check exists
+    # to catch. 40 clears the observed p95 (31.7) with margin against day-to-day jitter while
+    # sacrificing almost no sensitivity to real gone-quiet tickers.
+    mmsell_live_hot_market_lookback_minutes: int = 40
     # On a hot entry, price at the no-bid PLUS this offset instead of the normal
     # mmsell_live_price_offset_cents. Negative (the default) rests BELOW the no-bid — extra
     # headroom against continued momentum in the same direction — rather than joining/improving
