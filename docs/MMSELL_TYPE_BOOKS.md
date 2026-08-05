@@ -90,6 +90,23 @@ two ways — out-of-sample persistence, and the Sept–Nov regime change (NFL, M
 the Nov-3 midterms) that `docs/MMSELL_SEASONAL_FORECAST.md` says our whole history cannot speak to.
 A type edge that survives a regime change is worth acting on; one that does not was a sample.
 
+## Known artefact in the first ~4 hours of history (2026-08-04 12:47 → 16:24)
+
+`abandon_open_paper_trades` clears books that are not part of the running experiment, and it
+matched the kept families on a **prefix**. `Wmmsell*`/`Tmmsell*` therefore looked foreign, so
+every worker start wiped their open positions — and because the entry scan's dedup guard keys off
+an OPEN position, each book re-entered the same market on the very next cycle. `Wmmsell6` ended up
+holding 9 markets behind **47 `abandoned` rows** in under four hours.
+
+Fixed by `repository.strategy_is_kept` (membership is no longer a plain prefix test), with a
+regression test. Two consequences for reading these books:
+
+* **Discount raw trade COUNTS before 2026-08-04 16:24.** The `abandoned` rows are duplicate
+  re-entries, not independent bets. Every gate here counts `status IN ('settled','closed_sl')`,
+  which excludes them, so the P&L numbers were never affected — only the row counts.
+* Before the fix no book could carry a position across a deploy, so **none of them could ever have
+  reached a settled-n gate.** The clock on all 14 gates effectively starts at the fix.
+
 ## Not included yet
 
 Entry-timing twins (`<tag>.timeX`) are deliberately **not** built here. The census showed
