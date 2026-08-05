@@ -36,252 +36,206 @@ will strengthen automatically as the pilot accumulates fills.
 
 ---
 
-## Snapshot — 2026-08-04 08:32 PM CDT (run #79)
+## Snapshot — 2026-08-05 09:25 AM CDT (run #80)
 
-*(2-day gap since run #78 — a lot moved.)*
+**HEADLINE: theta4's live money has gone net negative for the first time.** Real-money read: n=23
+settled, win% dropped to 78.3% (was 89.5%), −$4.14 total, **−6.00¢/ct** — a swing of roughly −$7 on
+just 4 new trades since run #79 (+$2.94 → −$4.14). Matched-market gap is −1.07¢ (twin −7.07¢/ct vs
+live −6.00¢/ct) — **not** an accounting-gap signal; both sides are genuinely losing on this batch,
+consistent direction with the paper twin's own move (theta4_pt: +$3.67 → **−$3.54**, and theta4
+itself dropped from +$54.20 to +$41.91, a −$12.29 hit on the same 4 trades). This is well within
+`docs/THETA_LIVE_PLAN.md`'s hard-kill threshold (−$15 cumulative live P&L) — not a stop-trading
+event — but it's the first real losing stretch since arming and worth watching closely, especially
+since `theta_fill_model`'s own-calibration cells are starting to show some ugly outliers (two thin
+cells at −435¢/−444¢) even though none are trusted yet (still 0% coverage, largest cell has 4/8
+needed fills).
 
-**HEADLINE 1: `mmsell10_pt`'s epoch has ENDED with the most severe possible verdict — ACCOUNTING
-GAP.** On n=60 matched markets (same ticker, same side, same window, both settled — the load-bearing
-statistic), twin paper realized +1.62¢/ct while live realized +2.21¢/ct, a −0.59¢ gap on trades we
-*did* get. Per `docs/LIVE_PAPER_TWIN.md`, this "can only be our own accounting — entry price, fee
-model, or settlement logic," and the standing instruction is **"stop trusting every paper book's
-gate until it's fixed."** The important caveat: this epoch carried an unresolved PARAM DRIFT flag
-for 3 straight runs (#76-78) before ending, and the same doc says drift **voids** an epoch's
-numbers — so this severe verdict may be a genuine accounting bug, or may be an artifact of the
-epoch mixing pre/post-drift populations right before it closed. Either reading argues for the same
-next step: investigate the accounting discrepancy directly (don't wait for another twin epoch to
-average it away).
+Everything else was quiet — this was a short (~13h) gap since run #79 and the **entire mmsell
+cohort had zero new settlements**: mmsell (control), 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10_pt, 11, and
+all of mmsellA1-5 are byte-identical to run #79's numbers. `mmsell10a`/`mmsell10b` are still
+building (still 0 settled, 1 and 4 live orders total) and the new `Tmmsell*`/`Wmmsell*` census
+books remain at 0 settled too.
 
-**HEADLINE 2: the original `mmsell10` live book appears wound down, superseded by a proper
-`mmsell10a`/`mmsell10b` queue-position A/B test.** `live_orders` shows mmsell10's last live order
-at 2026-08-03 14:43 UTC (matching mmsell10_pt's epoch end); `mmsell10a` (1 live order) and
-`mmsell10b` (3 live orders) started placing real orders 2026-08-04, each with a clean new
-param-drift-free twin (`mmsell10a_pt`/`mmsell10b_pt`, both TOO EARLY, n=0-1). This is a materially
-better fix than the "fresh twin tag" this loop had been recommending — it's a proper two-arm test
-of the exact queue-position lever (`docs/MMSELL_OFFSET_AB.md`: 10a rests at the no-bid control,
-10b rests 1¢ better) with a deterministic per-ticker split. `docs/BOOK_REGISTRY.md`'s own text
-still calls it "INERT" pending `MMSELL_LIVE_OFFSET_AB_ARMS` — that description is now stale (the
-switch is evidently flipped) but not itself an error to flag; just note for a fable session to
-update it once confirmed.
+**Background (already fixed, no action needed):** two live-executor bugfixes landed on the default
+branch since run #79 — `1309246` ("theta live: retry the entry paper's phantom position was
+locking live out of...") mirrors the same fix mmsell got a week earlier, applied to theta's live
+mirror; `99f6c49` ("mmsell: stop the start-up sweep abandoning the market-type books") likely
+explains why the new Tmmsell/Wmmsell books have taken a few days to show any activity.
 
-**HEADLINE 3 (secondary): `theta4_pt` now ALSO has its own PARAM DRIFT anomaly logged** — same
-failure mode as mmsell10_pt, a second live knob change mid-epoch. Recommend the same fix: a fresh
-twin tag before trusting theta4's parity numbers further.
-
-**Broad mmsell batch loss, checked and NOT a single correlated event this time.** Almost the whole
-classic mmsell cohort (control, 1, 2, 3, 4, 6, 9, 10, 10_pt, 11) had a negative 2-day batch —
-unlike run #73's single shared NBA ticker, a drill-down on this window's losing trades shows no
-dominant ticker (worst single loser only −$12.92 across 13 books; losses spread across many
-distinct MLB total/home-run/spread markets, one soccer game, and BTC ladder cells). Reads as
-genuine broad variance across the cohort, not a shared shock — still worth watching if it persists
-another run.
-
-**Live P&L (real money — `mmsell10`, ended 2026-08-03; see HEADLINE 2 for the successor):**
-| metric | final read | run #78 |
+**Live P&L (real money — `theta4`, Stage 1 pilot):**
+| metric | this run | run #79 |
 |---|---|---|
-| settled live positions | 60 (95.0% win) | 33 (100% win) |
-| realized P&L | +$2.65, +4.42¢/ct | +$4.41, +6.68¢/ct |
-| fill rate | 67.0% (97 placed, 65 filled, 32 canceled) | 65.8% |
-| open footprint | 7 positions, $13.37 deployed | 19 positions, $27.90 |
+| settled live positions | 23 (78.3% win) | 19 (89.5% win) |
+| realized P&L | **−$4.14, −6.00¢/ct** | +$2.94, +5.16¢/ct |
+| fill rate | 92.0% (26 placed, 23 filled, 2 canceled) | — |
 
-Win rate and ¢/ct both declined materially this batch (first real slippage from 100%/~6.7¢), and
-the 4-run-growing open footprint (flagged #76-78) has normalized (19→7) — the settlement catch-up
-happened as expected, no longer a watch item. Legacy `mmsell3` live unchanged: 367 settled, +$1.33,
-+0.36¢/ct. `mmsell3_closeout` still inert.
+Twin (26 settled, 80.8% win, −$3.54, −4.54¢/ct blended) moved the same direction. Still **TOO
+EARLY** for a parity verdict (need ≥30 each side) and nowhere near Stage 1's ≥80-round-trip gate —
+but this is the first batch where "watch for the hard-kill threshold" becomes a real, not
+theoretical, thing to track.
 
-**Live P&L (real money — `mmsell10a` / `mmsell10b`, armed 2026-08-04):** brand new — 1 and 3 live
-orders respectively, all filled (100%), 0 settled yet. Far too early for any read; watch both arms
-build toward their own n≥150-per-arm gate (`docs/MMSELL_OFFSET_AB.md`).
+**Live P&L (real money — `mmsell10`, wound down 2026-08-03 — unchanged):** 60 settled, 95.0% win,
++$2.65, +4.42¢/ct, 7 open positions / $13.37 deployed. No new activity since run #79 (confirms the
+wind-down). Legacy `mmsell3` live unchanged: 367 settled, +$1.33, +0.36¢/ct.
 
-**Live P&L (real money — `theta4`, Stage 1 pilot):** 19 settled (was 9), 89.5% win (was 88.9%),
-+$2.94 total, +5.16¢/ct blended (twin: 22 settled, 90.9% win, +$3.67, +5.56¢/ct blended). Matched
-markets (n=19): twin +4.09¢/ct vs live +5.16¢/ct, gap −1.07¢ — no accounting-gap signal so far
-(consistent direction with mmsell10's earlier reads: live ahead of twin on matched trades). Still
-**TOO EARLY** and nowhere near Stage 1's ≥80-round-trip gate — but now carries its own PARAM DRIFT
-flag (HEADLINE 3).
+**Live P&L (real money — `mmsell10a`/`mmsell10b`):** still building — 1 and 4 live orders total
+(all filled, 100%), 0 settled either side. Still far too early.
 
-**Trading books (Δ vs run #77 — 2-day gap covers what would have been run #78's normal cadence):**
+**Trading books (Δ vs run #79):**
 
 | book | n (Δ) | P&L |
 |---|---|---|
-| mmsell (control) | 4,523 (+117) | +$67.79 |
-| mmsell1 | 2,988 (+90) | +$60.74 |
-| mmsell2 | 1,969 (+57) | +$53.08 |
-| mmsell3 (shadow) | 1,338 (+60) | +$25.55 |
-| mmsell4 | 486 (+59) | +$9.70 |
-| mmsell5 | 203 (+18) | −$1.38 |
-| mmsell6 | 607 (+48) | +$14.05 |
-| mmsell7 | 136 (+14) | +$2.47 |
-| mmsell8 | 75 (+6) | +$2.10 |
-| mmsell9 | 92 (+11) | +$3.06 |
-| mmsell10 | 314 (+33) | +$9.30 |
-| mmsell10_pt | 103 (+33) | +$5.37 |
-| mmsell11 | 555 (+60) | +$16.58 |
-| mmsellA1 | 35 (+24) | +$1.92 |
-| mmsellA2 | 37 (+26) | +$2.02 |
-| mmsellA3 | 39 (+27) | +$1.13 |
-| mmsellA4 | 42 (+32) | −$1.73 |
+| mmsell (control) | 4,523 (+0) | +$67.79 |
+| mmsell1 | 2,988 (+0) | +$60.74 |
+| mmsell2 | 1,969 (+0) | +$53.08 |
+| mmsell3 (shadow) | 1,338 (+0) | +$25.55 |
+| mmsell4 | 486 (+0) | +$9.70 |
+| mmsell5 | 203 (+0) | −$1.38 |
+| mmsell6 | 607 (+0) | +$14.05 |
+| mmsell7 | 136 (+0) | +$2.47 |
+| mmsell8 | 75 (+0) | +$2.10 |
+| mmsell9 | 92 (+0) | +$3.06 |
+| mmsell10 | 314 (+0) | +$9.30 |
+| mmsell10_pt | 103 (+0) | +$5.37 |
+| mmsell11 | 555 (+0) | +$16.58 |
+| mmsellA1 | 35 (+0) | +$1.92 |
+| mmsellA2 | 37 (+0) | +$2.02 |
+| mmsellA3 | 39 (+0) | +$1.13 |
+| mmsellA4 | 42 (+0) | −$1.73 |
 | mmsellA5 | 0 (+0) | $0.00 |
-| mmsell10a | 0 (new) | $0.00 |
-| mmsell10a_pt | 0 (new) | $0.00 |
-| mmsell10b | 0 (new) | $0.00 |
-| mmsell10b_pt | 0 (new) | $0.00 |
-| Tmmsell1 | 0 (new) | $0.00 |
-| Tmmsell4 | 0 (new) | $0.00 |
-| Tmmsell5 | 0 (new) | $0.00 |
-| Tmmsell6 | 0 (new) | $0.00 |
-| Wmmsell1 | 0 (new) | $0.00 |
-| Wmmsell4 | 0 (new) | $0.00 |
-| Wmmsell6 | 0 (new) | $0.00 |
-| Wmmsell7 | 0 (new) | $0.00 |
+| mmsell10a / mmsell10a_pt | 0 / 0 (+0) | $0.00 |
+| mmsell10b / mmsell10b_pt | 0 / 0 (+0) | $0.00 |
+| Tmmsell1/4/5/6 | 0 each (+0) | $0.00 |
+| Wmmsell1/4/6/7 | 0 each (+0) | $0.00 |
 | theta (control) | 560 (+0) | +$0.97 |
 | theta1 | 201 (+0) | +$9.69 |
 | theta2 | 98 (+0) | −$11.55 |
 | theta3 | 134 (+0) | −$11.62 |
-| **theta4** | 136 (+11) | +$54.20 |
-| theta4_pt | 22 (+11) | +$3.67 |
-| weather_con (all) | 677 (+31) | −$20.41 |
-| weather_concity | 161 (+13) | −$8.51 |
+| **theta4** | 140 (+4) | **+$41.91** |
+| **theta4_pt** | 26 (+4) | **−$3.54** |
+| weather_con (all) | 690 (+13) | −$22.68 |
+| weather_concity | 168 (+7) | −$9.57 |
 
 Shelved/killed (pin15, tfav, weather rest) unchanged, quiet — not tabulated.
 
-**New book families this run, reconciled against the registry — NOT untracked:**
-- `mmsell10a`/`mmsell10b` (+ their `_pt` twins) — the queue-position A/B, see HEADLINE 2.
-  `docs/MMSELL_OFFSET_AB.md`, gate n≥150/arm.
-- `Wmmsell1`-`Wmmsell8` — WIDE-band market-TYPE census books (`docs/MMSELL_TYPE_BOOKS.md`), control
-  is plain `mmsell`, gate n≥150 vs control +1.0¢ AND realizable >0. Only W1/W4/W6/W7 show activity
-  so far (0 settled, 2-9 open each); W2/W3/W5/W8 not yet seen.
-- `Tmmsell1`-`Tmmsell6` — TIGHT-band (mmsell10 regime) market-TYPE census books, same doc, control
-  is `mmsell10`, gate n≥100 vs control +1.0¢ AND realizable >0. Only T1/T4/T5/T6 show activity (0
-  settled, 2-3 open each); T2/T3 not yet seen.
-- All fully specified with pre-registered gates in `docs/BOOK_REGISTRY.md` — no action needed,
-  just tracking from their first appearance per the loop's per-family convention.
+**theta fill-model re-read:** still theta's own calibration, still 0% coverage — largest cells
+(yes 15¢/16¢) have 4 of the needed 8 fills each. Two thin cells (12¢, 14¢) show very large negative
+realizable numbers (−435¢/−444¢ on single fills) consistent with this run's bad batch — not
+trustworthy yet, but worth watching as more fills land in those cells.
 
-**mmsellA3/A4 update:** A3 flipped back positive (+$1.13, was −$0.35) on a strong batch; A4 deepened
-further negative (−$1.73, was −$0.46). A1/A2 both had strong positive batches too. Still all well
-under the n≥100 gate.
+**Gate sweep (step 3b):** theta4 **140/80 CLEARED** (holding on paper cumulative despite this
+run's hit; live Stage-1 pilot now net negative, 23 fills, nowhere near ≥80) · mmsell10 **314/150**
+(live epoch ended, unchanged) · mmsell6/mmsell11 clear on blended paper, still MIRAGE under fill
+model · mmsell9 92/100 · mmsell7 136/150 (91%) · mmsell8 75/100 · weather_concity **168/120** (past
+gate, RETIRE verdict from #75 still unrecorded, 6th run reinforcing it) · FREEZE settled grain+soft
+**9/100** (unchanged; open grain still 231, unmoved) · mmsellA1-5 and all new families (10a/10b,
+T*/W*) still well pre-gate, most at 0 settled.
 
-**theta fill-model re-read:** still theta's own calibration, still 0% coverage (largest cell now
-has 4 of the needed 8 fills — closer, not there). theta4 paper itself: n=136, holding well above
-its paper gate.
-
-**Gate sweep (step 3b):** theta4 **136/80 CLEARED** (holding; live pilot at 19-22 fills, nowhere
-near ≥80) · mmsell10 **314/150 CLEARED**, live epoch ENDED (see headlines) · mmsell6/mmsell11 clear
-on blended paper, still MIRAGE under fill model · mmsell9 92/100 (92%) · mmsell7 136/150 (91%) ·
-mmsell8 75/100 (75%) · weather_concity **161/120** (past gate, RETIRE verdict from #75 still
-unrecorded, 5th run reinforcing it) · FREEZE settled grain+soft **9/100** (up 1; **open grain
-jumped 0→231** — a leading-indicator move worth watching, though the gate itself only counts
-settled) · mmsellA1-5 all still well pre-gate · new families (10a/10b/T*/W*) all pre-gate, most
-still at 0 settled.
-
-**Data (last-24h rows / latest, ~01:26 AM UTC / 8:26 PM CDT run):** crypto_spot 2,870 (2 products,
-8:22 PM ✓) · crypto_ladder 62,160 all with model_p (8:22 PM ✓) · weather forecasts 11,417 (8:26 PM
-✓) · observations 660 (8:25 PM ✓) · ensembles 1,720 (8:22 PM ✓) · bucket snapshots 14,112 (8:25 PM
+**Data (last-24h rows / latest, ~02:20 PM UTC / 9:20 AM CDT run):** crypto_spot 2,878 (2 products,
+9:19 AM ✓) · crypto_ladder 65,280 all with model_p (9:20 AM ✓) · weather forecasts 10,887 (9:19 AM
+✓) · observations 654 (9:14 AM ✓) · ensembles 1,736 (9:18 AM ✓) · bucket snapshots 14,820 (9:18 AM
 ✓). All fresh. xgame_matches/tapes still dark (expected — book KILLED, collector-only).
 
 **Research probes (on-demand):** none standing (TFAV/WCPROP/XGAME/PINNED/DECAY families closed).
 
-**Headline (repeated for chat-report lead):** mmsell10_pt's epoch ended with an ACCOUNTING GAP
-verdict — the most severe read the twin harness produces — though it's tangled with the epoch's
-own unresolved param drift, so the root cause needs direct investigation, not another epoch-average.
-Separately, mmsell10's live real-money book appears to have wound down in favor of a proper
-mmsell10a/mmsell10b queue-position A/B test, which is now live and building its own clean twins.
-theta4_pt picked up its own param-drift flag. A broad-but-not-correlated mmsell batch loss hit
-almost the whole cohort over the last 2 days. Several new pre-registered book families
-(mmsell10a/b, Tmmsell1-6, Wmmsell1-8) appeared and reconcile cleanly against the registry.
+**Headline (repeated for chat-report lead):** theta4's live money went net negative for the first
+time this run (−$4.14, 78.3% win, down from +$2.94/89.5%) — well short of the −$15 hard-kill line,
+but the first real losing stretch since arming, moving the same direction as its paper twin (which
+also flipped negative) and the underlying theta4 paper book (down $12.29 on the same 4 trades). No
+accounting-gap signal — this reads as genuine variance, not a simulator bug. Everything else was
+quiet: a short gap since #79 meant zero new settlements across the entire mmsell cohort.
 
 ---
 
 ## Carried-over suggestions (review these; do not expect the loop to act)
 
-1. **[RESOLVED-BY-EVENTS but escalated to a real finding — mmsell10_pt's epoch ended with an
-   ACCOUNTING GAP verdict] n=60 matched markets: twin +1.62¢/ct vs live +2.21¢/ct (−0.59¢ gap on
-   trades we actually got).** The 3-run-standing "start a fresh twin tag" recommendation is now
-   moot for this specific epoch (it ended on its own when mmsell10 wound down — see #2), but the
-   underlying question it was meant to protect against is now live: is this a real simulator
-   accounting bug (entry price, fee model, or settlement logic), or an artifact of the epoch's own
-   unresolved param drift mixing two populations right before it closed? **A fable session should
-   investigate this directly** — per `docs/LIVE_PAPER_TWIN.md`, an accounting gap means "stop
-   trusting every paper book's gate until it's fixed," which is a big claim to leave unexamined.
+1. **[NEW · top actionable — theta4's live money went net negative for the first time] n=23
+   settled, win% 78.3% (was 89.5%), −$4.14 total, −6.00¢/ct (was +$2.94, +5.16¢/ct) — a ~$7 swing
+   on 4 new trades, moving the same direction as its paper twin (also flipped negative) and the
+   theta4 paper book itself (−$12.29 on the same trades).** No accounting-gap signal (matched
+   markets: twin −7.07¢ vs live −6.00¢, live actually slightly better) — this reads as genuine
+   variance, not a simulator bug. Well within the −$15 hard-kill threshold from `docs/
+   THETA_LIVE_PLAN.md`, so nothing to act on yet, but this is the first real losing stretch since
+   arming — worth a close watch next run, especially since two theta_fill_model cells just showed
+   large negative single-fill outliers (−435¢/−444¢, still unconfirmed at n=1 each).
 
-2. **[NEW · mmsell10 live appears wound down, superseded by the mmsell10a/mmsell10b A/B] Original
-   mmsell10's last live order was 2026-08-03 14:43 UTC; mmsell10a (1 order) and mmsell10b (3
-   orders) started placing live orders 2026-08-04, each with a clean new param-drift-free twin.**
-   This is the queue-position lever test (`docs/MMSELL_OFFSET_AB.md`) — a fable session should
-   confirm the wind-down was intentional (vs. an outage) and update `docs/BOOK_REGISTRY.md`'s
-   mmsell10a/b row, which still says "INERT" pending an arm-flag that now appears to be flipped.
+2. **[mmsell10_pt's epoch ended with an ACCOUNTING GAP verdict — still needs investigation]
+   n=60 matched markets: twin +1.62¢/ct vs live +2.21¢/ct (−0.59¢ gap on trades we actually got).**
+   Unchanged since #79 (no new mmsell10 settlements this run). The underlying question remains
+   open: real simulator accounting bug, or an artifact of the epoch's own unresolved param drift
+   mixing two populations right before it closed? A fable session should investigate directly —
+   per `docs/LIVE_PAPER_TWIN.md`, an accounting gap means "stop trusting every paper book's gate
+   until it's fixed."
 
-3. **[NEW · theta4_pt now has its own PARAM DRIFT anomaly] Same failure mode as mmsell10_pt —
-   theta4's live knobs changed mid-epoch.** Recommend a fresh twin tag (e.g. `theta4_pt2`) before
-   this epoch runs long enough to produce its own hard-to-trust verdict, learning from how long
-   mmsell10_pt's drift sat unresolved.
+3. **[mmsell10 live appears wound down, superseded by the mmsell10a/mmsell10b A/B — still
+   unconfirmed] mmsell10a (1 live order) and mmsell10b (4 live orders) are still building, 0
+   settled either side.** A fable session should confirm the mmsell10 wind-down was intentional
+   and update `docs/BOOK_REGISTRY.md`'s mmsell10a/b row (still says "INERT," now confirmed stale
+   for the 2nd run running).
 
-4. **[Broad mmsell batch loss over the last 2 days — checked, NOT a single correlated event]
-   Control, 1, 2, 3, 4, 6, 9, 10, 10_pt, 11 all had a negative batch.** Drill-down found no
-   dominant shared ticker (worst single loser only −$12.92 across 13 books, spread across many
-   distinct MLB/BTC/soccer markets) — reads as genuine variance, not a shared shock like run #73's.
-   Worth a look next run if the negative trend persists rather than reverting.
+4. **[theta4_pt's PARAM DRIFT anomaly is still unresolved] Same failure mode as mmsell10_pt —
+   theta4's live knobs changed mid-epoch, still no fresh twin tag started.** This is now more
+   urgent given #1 — a losing-money epoch is exactly when a clean read matters most. Recommend
+   `theta4_pt2` before the epoch runs long enough to end the same murky way mmsell10_pt's did.
 
-5. **[mmsell10's live open footprint — resolved] Was 4 straight runs of growth (5→11→14→19); this
-   run it normalized to 7 positions / $13.37 deployed** as settlements caught up, alongside the
-   book's wind-down (#2). No longer a watch item.
+5. **[Broad mmsell batch loss from run #79 — no new data to update the read] Checked last run and
+   found not a single correlated event (no dominant ticker).** No new settlements happened this
+   run (short ~13h gap) to say whether it persists or reverts — re-check next run once volume
+   picks back up.
 
-6. **[mmsellA1-A4 update] A1 n=35 +$1.92, A2 n=37 +$2.02 — both had strong positive batches. A3
-   n=39 +$1.13 flipped back positive after a strong batch. A4 n=42 −$1.73 deepened negative.**
-   Still all well under the n≥100 gate; A4 is the one variant trending consistently negative so
-   far. mmsellA5 (strangle) still shows 0 rows — selectivity gate hasn't paired yet.
+6. **[mmsellA1-A4 — unchanged this run, no new settlements] A1 +$1.92, A2 +$2.02, A3 +$1.13
+   (positive), A4 −$1.73 (still the one trending negative).** All well under the n≥100 gate.
+   mmsellA5 (strangle) still 0 rows.
 
-7. **[New book families this run — reconciled, not untracked] `mmsell10a`/`mmsell10b` (see #2);
-   `Wmmsell1`-`Wmmsell8` (wide-band market-type census, control=`mmsell`, gate n≥150); `Tmmsell1`-
-   `Tmmsell6` (tight-band market-type census, control=`mmsell10`, gate n≥100).** All pre-registered
-   in `docs/BOOK_REGISTRY.md`/`docs/MMSELL_TYPE_BOOKS.md`/`docs/MMSELL_OFFSET_AB.md`. Only a subset
-   of each (W1/W4/W6/W7, T1/T4/T5/T6) show any activity yet (0 settled, single-digit open) — track
-   as they accumulate.
+7. **[New book families — still reconciled, still mostly at 0 settled] `mmsell10a`/`mmsell10b`
+   (see #3); `Wmmsell1`-`Wmmsell8` (control=`mmsell`, gate n≥150); `Tmmsell1`-`Tmmsell6`
+   (control=`mmsell10`, gate n≥100).** All pre-registered in `docs/BOOK_REGISTRY.md`. A recent
+   bugfix (`99f6c49`, "stop the start-up sweep abandoning the market-type books") likely explains
+   the slow start — watch for these to pick up activity next run.
 
-8. **[weather_concity · RETIRE verdict from #75, still unrecorded, 5th run reinforcing it] n=161
-   (+13), improved this batch (−$8.51, was −$9.16) but still deeply net negative; weather_con(all)
-   also worse again (6th straight negative-leaning run, −$20.41).** A fable session should record
-   the retire verdict and separately reconsider `weather_con`'s viability.
+8. **[weather_concity · RETIRE verdict from #75, still unrecorded, 6th run reinforcing it] n=168
+   (+7), worse again (−$9.57, was −$8.51); weather_con(all) also worse again (7th straight
+   negative-leaning run, −$22.68).** A fable session should record the retire verdict.
 
-9. **[registry drift on the mmsell10 LIVE book — largely overtaken by #2] `docs/BOOK_REGISTRY.md`
-   still lists `mmsell10` as `paper`.** Since mmsell10 itself appears wound down live, this is now
-   folded into #2's registry-update ask rather than a standalone item.
+9. **[registry drift — folded into #3] `docs/BOOK_REGISTRY.md` still lists `mmsell10` as `paper`
+   and theta4 as "inert — awaiting arming," both now confirmed stale given both books are live
+   with real losses/gains.** Worth a single registry pass covering mmsell10, mmsell10a/b, and
+   theta4 together rather than three separate fixes.
 
-10. **[mmsell4's KILL verdict continues to be contradicted] n=486, +$9.70 — dipped from +$13.18
-    on this run's broad batch loss (see #4), but the multi-run improving trend before this batch
-    was real.** Do not record the old kill; re-read after the batch settles out.
+10. **[mmsell4's KILL verdict continues to be contradicted] n=486, +$9.70 — unchanged this run
+    (no new settlements), still above mmsell3's level.** Do not record the old kill.
 
-11. **[mmsell6 / mmsell11 promote question — gate on REALIZABLE, not blended paper] mmsell6 n=607
-    +$14.05, mmsell11 n=555 +$16.58 on blended paper (both dipped this batch, see #4), both still
-    recorded MIRAGE under the live-calibrated fill model in the registry.** Re-run `mmsell fill
-    model` before any promotion.
+11. **[mmsell6 / mmsell11 promote question — gate on REALIZABLE, not blended paper] mmsell6
+    +$14.05, mmsell11 +$16.58 on blended paper (unchanged this run), both still recorded MIRAGE
+    under the live-calibrated fill model in the registry.** Re-run `mmsell fill model` before any
+    promotion.
 
-12. **[mmsell7 · 91% to gate] n=136 (+14), +$2.47 (roughly flat this batch).** Continuing to track.
+12. **[mmsell7 · 91% to gate] n=136 (unchanged this run), +$2.47.** Continuing to track.
 
 13. **[idea-model queue] MMX — premise (extend the mmsell edge into new categories) should be built
-    against mmsell10 or its A/B successor (see #2). NEST — gate cleared (#74, theta4 n≥80); ready
-    to build on the paper gate alone (independent of theta4's live pilot status).**
+    against mmsell10 or its A/B successor (see #3). NEST — gate cleared (#74, theta4 n≥80); ready
+    to build on the paper gate alone (independent of theta4's live pilot's current dip).**
 
-14. **[FREEZE gate · not fired, but open grain jumped 0→231] Settled grain+soft = 9 of the n≥100
-    trigger (still far).** The open-grain jump is a leading indicator worth watching — if a chunk
-    of those settle, the settled count could move faster than its historical trickle suggests.
+14. **[FREEZE gate · not fired, open grain unchanged at 231] Settled grain+soft = 9 of the n≥100
+    trigger (still far).** Still watching whether the open-grain backlog starts settling faster.
 
-15. **[correlated-event risk · standing interpretive note, reinforced by #4's negative check this
-    run] Always check for a single shared ticker (like run #73's) before reading any cohort-wide
-    batch move as a strategy-wide signal — this run's batch loss was checked and found to be broad
-    variance, not a shared event.**
+15. **[correlated-event risk · standing interpretive note] Always check for a single shared ticker
+    before reading any cohort-wide batch move as a strategy-wide signal — run #79's batch loss was
+    checked and found to be broad variance, not a shared event.**
 
-16. **[path to raise theta4's fill-model coverage without a live pilot — still secondary] The live
-    pilot is producing theta's own calibration data directly (largest cell now 4 of 8 needed
-    fills). `theta_fill_replay.py` remains a valid fallback but stays lower priority.**
+16. **[path to raise theta4's fill-model coverage without a live pilot — still secondary, but two
+    new cells hint at trouble] Largest cells now have 4/8 needed fills; two thin cells (12¢/14¢)
+    show large negative outliers (−435¢/−444¢) consistent with #1's bad batch, not yet trusted.**
+    `theta_fill_replay.py` remains a valid fallback but stays lower priority while live data
+    accumulates.
 
-*(Changed this run: #1 — mmsell10_pt's flagged param-drift issue resolved itself when the epoch
-ended, but escalated into a real ACCOUNTING GAP finding needing investigation. #2 NEW — mmsell10
-live appears wound down, superseded by the mmsell10a/b A/B. #3 NEW — theta4_pt picked up its own
-param-drift flag, recommend acting faster than mmsell10_pt's did. #4 NEW — the broad mmsell batch
-loss, checked and ruled not-correlated. #5 — mmsell10 footprint item RESOLVED (normalized). #6 —
-mmsellA1-4 restated with A3's reversal and A4's deepening. #7 NEW — new book families reconciled.
-#8 — weather_concity restated, 5th run reinforcing RETIRE. #9 — registry drift folded into #2. #10
-— mmsell4 restated with the batch-loss caveat. #11 — mmsell6/mmsell11 restated. #12 — mmsell7
-restated. #13 — NEST/MMX unchanged. #14 — FREEZE restated with the new open-grain trend noted. #15
-— correlated-event note restated, reinforced by this run's own check. #16 restated.)*
+*(Changed this run: #1 NEW — theta4's live money went net negative for the first time, promoted to
+top slot. #2 — mmsell10_pt's ACCOUNTING GAP restated, unchanged (no new mmsell10 settlements). #3
+— mmsell10 wind-down / A/B restated, still unconfirmed, registry still stale a 2nd run. #4 —
+theta4_pt param drift escalated given #1's losing batch. #5 — broad mmsell batch loss restated,
+no new data to update it. #6/#7 restated with no new settlements. #8 — weather_concity restated,
+6th run reinforcing RETIRE. #9 — registry drift folded together (mmsell10 + mmsell10a/b + theta4,
+all now confirmed stale). #10 — mmsell4 restated, unchanged (no new settlements). #11 —
+mmsell6/mmsell11 restated, unchanged. #12 — mmsell7 restated, unchanged. #13 — NEST/MMX unchanged.
+#14 — FREEZE restated, open grain unchanged at 231. #15 — correlated-event note restated unchanged.
+#16 — reframed with the two new fill-model outlier cells noted, still not trusted.)*
