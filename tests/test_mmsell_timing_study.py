@@ -111,7 +111,7 @@ def test_candidate_tick_captures_the_forward_looking_clock_and_strike():
 
     metrics = types.SimpleNamespace(
         best_yes_bid=6, best_yes_ask=8, best_no_bid=92, best_no_ask=94,
-        midpoint=7.0, volume=1234)
+        midpoint=7.0, volume=1234, depth_at_best_bid=3, depth_at_best_ask=40)
     market = {
         "strike_type": "greater", "floor_strike": "3", "cap_strike": None,
         "yes_sub_title": "LAA by 3+",
@@ -127,6 +127,11 @@ def test_candidate_tick_captures_the_forward_looking_clock_and_strike():
     assert row.floor_strike == 3.0             # numeric string coerced
     assert row.cap_strike is None
     assert row.yes_sub_title == "LAA by 3+"
+    # Depth at the touch: 3 contracts resting at the YES bid is the TAKER capacity ceiling
+    # (buy NO == sell YES into that bid), while 40 at the YES-ask queue is what a MAKER must
+    # sit behind. A 20-lot taker entry is impossible here regardless of how good the edge is.
+    assert row.depth_at_best_bid == 3
+    assert row.depth_at_best_ask == 40
 
 
 def test_candidate_tick_strike_parsing_never_fakes_a_line():
@@ -164,3 +169,55 @@ def test_candidate_tick_clamps_to_column_widths():
     row = captured["obj"]
     assert len(row.yes_sub_title) == 64
     assert len(row.strike_type) == 16
+
+
+def test_candidate_tick_survives_metrics_without_depth():
+    """The tape is a diagnostic and must never break an entry scan. A metrics object lacking the
+    depth attributes stores NULL rather than raising — NULL is honest (the analysis reports
+    coverage), an exception would cost the whole cycle's candidate capture."""
+    import types
+
+    from kalshi_bot import repository as repo
+
+    captured = {}
+
+    class _Session:
+        def add(self, obj):
+            captured["obj"] = obj
+
+    bare = types.SimpleNamespace(
+        best_yes_bid=6, best_yes_ask=7, best_no_bid=93, best_no_ask=94,
+        midpoint=6.5, volume=10)
+    repo.insert_mmsell_candidate_tick(_Session(), "T", bare)
+    row = captured["obj"]
+    assert row.depth_at_best_bid is None
+    assert row.depth_at_best_ask is None
+
+
+def test_study_runs_against_a_database_without_the_depth_column():
+    """The ops channel runs this against whatever is deployed, which may be either side of the
+    migration that adds the depth columns. A crash on a missing DIAGNOSTIC column is worse than
+    reporting it as uncovered — which is what its absence means anyway."""
+    class _Cur:
+        def __init__(self, has_col):
+            self.has_col = has_col
+            self.sql = None
+
+        def execute(self, sql, params=None):
+            self.sql = sql
+            self._rows = [(1,)] if (self.has_col and "information_schema" in sql) else []
+
+        def fetchone(self):
+            return self._rows[0] if self._rows else None
+
+        def fetchall(self):
+            return []
+
+    absent = _Cur(has_col=False)
+    ts.load_trades(absent)
+    assert "NULL::int AS dep" in absent.sql
+    assert "depth_at_best_bid" not in absent.sql
+
+    present = _Cur(has_col=True)
+    ts.load_trades(present)
+    assert "ct.depth_at_best_bid AS dep" in present.sql

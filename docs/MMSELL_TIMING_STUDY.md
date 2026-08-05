@@ -133,6 +133,73 @@ the direction, which is consistent across all seven windows.
    variant of its cohort, and `mmsell11` (`htcmin=6`) went +2.38¢ paper → −0.86¢ realizable.
    **Nothing here is promotable until it clears `mmsell fill model`.**
 
+## The TAKER route — why the verdict above is not the end of it
+
+The verdict kills timing **as a maker**. It does not kill timing, because the mechanism that
+killed it is specific to resting: a maker only fills when someone crosses into them, and those are
+the losers. A taker chooses the moment and keeps the whole distribution.
+
+And the arithmetic is exact. A maker rests at the no-bid and collects the **yes-ask**; a taker
+crosses to the no-ask and collects the **yes-bid**. Whether the tail hits or misses, the
+difference is the same:
+
+> **taker P&L = paper P&L − spread**
+
+Which makes paper's fill-everything number — the thing this whole doc discounts — *achievable*,
+just at a worse price. Measured over the candidate-tick window:
+
+| in-play window | n | spread | maker paper | **TAKER** | maker realizable |
+|---|---|---|---|---|---|
+| **<15 min** | 170 | 2.50¢ | +6.56 | **+4.06** | +0.50 |
+| **15–30 min** | 257 | 2.02¢ | +8.73 | **+6.71** | +0.46 |
+| 30–60 min | 450 | 2.27¢ | +2.47 | +0.20 | +0.29 |
+| 1–2h | 526 | 2.30¢ | −4.39 | **−6.68** | +0.55 |
+| 2–4h | 392 | 2.31¢ | −4.94 | −7.24 | −0.23 |
+
+The spread does **not** widen in the endgame — it is flat at ~2¢, and tighter still on h2h (1.65¢
+at <15min → **+4.64¢ taker**). But taking is not better in general: pooled across all in-play
+windows a taker runs **−2.64¢/trade**, and the 1–2h window is −6.68¢ taker vs +0.55¢ maker.
+
+**Timing alone (maker) is dead; taker alone is marginal (~+0.7¢); taker + endgame gate is +4 to
++6.7¢.** The two ideas only work together.
+
+### What the Kalshi API actually allows (checked against the docs, not inferred)
+
+* **There is no market order type.** Only limit orders. A "market order" is a marketable limit at
+  an aggressive price with `time_in_force: immediate_or_cancel` (or `fill_or_kill`).
+* `post_only: true` is the maker-only flag — it is what the current mmsell entry sets. **It cannot
+  be combined with `immediate_or_cancel`** (400 `invalid_parameters`), and
+  `self_trade_prevention_type` is required (400 `missing_parameters` if omitted). Both already
+  learned live and annotated in `live/executor.py`.
+* **The taker path already exists and is proven** — the closeout order is annotated as the "EXACT
+  field set of a recorded status-201 taker-IOC request". A taker entry is that payload with
+  `side: "ask"`, not new infrastructure.
+* **Fees do not penalise taking at our size.** Taker is `ceil(0.07 × C × P × (1−P))`, maker
+  `ceil(0.0175 × C × P × (1−P))` — a 4× discount that the per-trade round-up to a cent erases
+  entirely at 1-contract clips in the cheap band (both charge 1¢ at yes ≤11¢). It only becomes
+  real above ~15¢ or at larger clips (~0.3¢/contract at 20-lots). So the taker's only real cost is
+  the spread, and `taker = paper − spread` needs no fee correction.
+
+  This **contradicts `docs/MMSELL_ROADMAP.md`**, which claims paper overcharges makers ~1¢/contract
+  based on 492 measured contracts. If maker also ceils to 1¢ there is no correction owed. Either
+  that measurement predates Kalshi's July-2025 maker-fee change (it was a flat $0.0025/contract
+  before, now probability-scaled), or these series sit outside the schedule's "Maker Fees" section.
+  Unresolved, and worth a Kalshi statement — it moves maker realizable by a full cent, which is
+  most of the maker-vs-taker gap *outside* the endgame.
+
+### The gating unknown: depth
+
+`taker = paper − spread` silently assumes unlimited liquidity at the touch. It is a per-CONTRACT
+number, so a window can look excellent at 1 contract and be untradeable at 20 — and the endgame is
+exactly where books are thinnest.
+
+`mmsell_candidate_ticks` now captures `depth_at_best_bid` (contracts resting at the YES bid — what
+a taker entry lifts) and `depth_at_best_ask` (the YES-ask queue a maker sits behind). The study
+renders the median as a `takerQ` column with its coverage, e.g. `3(100%)`. **Capture is
+forward-only from 2026-08-05**, so historical windows read `n/a` by design; the column becomes
+meaningful as coverage accrues. No taker book should be sized above the median depth its window
+actually shows.
+
 ## Gates for a timing book
 
 Before building any `.timeX` book:

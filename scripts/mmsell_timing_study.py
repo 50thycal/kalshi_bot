@@ -128,6 +128,21 @@ def _to_libpq_url(url: str) -> str:
     return url
 
 
+def _has_column(cur, table: str, column: str) -> bool:
+    """Is `column` present on `table` right now?
+
+    The depth columns ship with alembic e3f4a5b6c7d8, and this script is run through the ops
+    channel against whatever is deployed — which may be either side of that migration. Probing
+    beats hard-depending: an analysis script that crashes on a missing diagnostic column is
+    worse than one that reports the column as 0% covered, which is what it means anyway."""
+    cur.execute(
+        "SELECT 1 FROM information_schema.columns"
+        " WHERE table_name = %s AND column_name = %s LIMIT 1",
+        (table, column),
+    )
+    return cur.fetchone() is not None
+
+
 def load_trades(cur, include_twins: bool = False) -> list[dict]:
     """Every settled mmsell trade with BOTH clocks attached where available.
 
@@ -137,13 +152,17 @@ def load_trades(cur, include_twins: bool = False) -> list[dict]:
     which costs nothing for in-play rows since they are scored on the hold clock anyway."""
     twin_clause = "" if include_twins else \
         " AND p.strategy NOT IN (SELECT twin_tag FROM live_paper_twins)"
+    # NULL::int keeps the row shape identical pre-migration, so nothing downstream branches.
+    dep_expr = ("ct.depth_at_best_bid" if _has_column(cur, "mmsell_candidate_ticks",
+                                                      "depth_at_best_bid") else "NULL::int")
     cur.execute(
         "SELECT p.market_ticker, p.strategy, p.assumed_price, p.quantity, p.pnl,"
         "       extract(epoch FROM (p.closed_at - p.created_at))/3600.0 AS hold_h,"
-        "       c.htc"
+        "       c.htc, c.dep"
         " FROM paper_trades p"
         " LEFT JOIN LATERAL ("
-        "   SELECT ct.hours_to_close AS htc FROM mmsell_candidate_ticks ct"
+        "   SELECT ct.hours_to_close AS htc, " + dep_expr + " AS dep"
+        "   FROM mmsell_candidate_ticks ct"
         "   WHERE ct.market_ticker = p.market_ticker"
         "     AND ct.captured_at BETWEEN p.created_at - interval '10 minutes'"
         "                            AND p.created_at + interval '10 minutes'"
@@ -155,7 +174,7 @@ def load_trades(cur, include_twins: bool = False) -> list[dict]:
         + twin_clause,
     )
     out: list[dict] = []
-    for tkr, book, px, qty, pnl, hold_h, htc in cur.fetchall():
+    for tkr, book, px, qty, pnl, hold_h, htc, dep in cur.fetchall():
         series = mt.series_of(tkr)
         mtype, mode = mt.classify(series)
         out.append({
@@ -165,6 +184,10 @@ def load_trades(cur, include_twins: bool = False) -> list[dict]:
             "pnl_c": float(pnl) / int(qty) * 100.0,
             "hold_h": float(hold_h) if hold_h is not None else None,
             "htc": float(htc) if htc is not None else None,
+            # Contracts resting at the YES bid = what a TAKER entry could actually lift here.
+            # NULL for every row captured before the depth column shipped, which is why the
+            # cell prints coverage rather than assuming the median speaks for the window.
+            "depth": int(dep) if dep is not None else None,
         })
     return out
 
@@ -182,7 +205,7 @@ def _f(x, spec="{:+.2f}") -> str:
 
 HDR = (f"  {'window':>10} {'n':>6} {'mkts':>5} {'c/trade':>9} {'REAL':>8} {'cov':>5}"
        f" {'loss%':>6} {'be%':>6} {'edge':>7} {'avgloss':>8} {'worst':>7} {'p5':>7}"
-       f" {'p50':>6} {'entry':>6}")
+       f" {'p50':>6} {'entry':>6} {'takerQ':>7}")
 
 
 def realizable_of(rows: list[dict], calib: dict | None) -> tuple[float | None, float | None]:
@@ -210,6 +233,20 @@ def realizable_of(rows: list[dict], calib: dict | None) -> tuple[float | None, f
     return (res["est_realizable_cents"], cover)
 
 
+def _taker_capacity(rows: list[dict]) -> str:
+    """Median contracts resting at the YES bid, over the rows that have it — i.e. the size a
+    TAKER entry could actually lift in this window, and the ceiling on the whole taker thesis.
+
+    Rendered as `median(coverage%)`, and as "n/a" until the depth column has coverage: the
+    numbers above are per-CONTRACT, so a window can look excellent at 1 contract and be
+    untradeable at 20. Depth is captured forward-only, so historical rows read n/a by design."""
+    vals = sorted(r["depth"] for r in rows if r.get("depth") is not None)
+    if not vals:
+        return "n/a"
+    med = mt.pctile([float(v) for v in vals], 0.50)
+    return f"{med:.0f}({100*len(vals)//len(rows)}%)"
+
+
 def _print_cells(rows_by_bucket: dict, order: tuple[str, ...], calib: dict | None = None) -> None:
     print(HDR)
     for lbl in order:
@@ -224,7 +261,7 @@ def _print_cells(rows_by_bucket: dict, order: tuple[str, ...], calib: dict | Non
               f" {100.0*s['loss_rate']:5.1f}% {_f(be, '{:5.1f}'):>5}% {_f(s['edge_pp'], '{:+6.1f}'):>7}"
               f" {_f(s['avg_loss'], '{:+7.1f}'):>8} {s['worst']:+6.0f}c"
               f" {_f(s['p5'], '{:+6.1f}'):>7} {_f(s['p50'], '{:+5.1f}'):>6}"
-              f" {_f(s['entry'], '{:5.1f}'):>6}")
+              f" {_f(s['entry'], '{:5.1f}'):>6} {_taker_capacity(rows):>7}")
 
 
 def print_clock_validation(trades: list[dict]) -> None:

@@ -10,8 +10,12 @@ Two capture gaps this closes, both on the same row the entry scan already writes
   * `strike_type` / `floor_strike` / `cap_strike` / `yes_sub_title` — the contract's
     sub-structure. The type taxonomy says a ticker is a `spread` or a `total`; these say which
     LINE, so a book can be cut at "MLB spreads of 3+ runs" rather than all spreads.
+  * `depth_at_best_bid` / `depth_at_best_ask` — book depth at the touch. A TAKER entry (buy NO
+    == sell YES into the bid) consumes the first; a MAKER entry queues behind the second. The
+    endgame taker result is `paper - spread`, which silently assumes liquidity at the touch is
+    unlimited — these are what turn that into a measurable capacity ceiling.
 
-Both are nullable and backfill-free by design: rows already captured keep NULL, and the
+All are nullable and backfill-free by design: rows already captured keep NULL, and the
 analysis scripts report coverage rather than assuming it.
 
 Revision ID: e3f4a5b6c7d8
@@ -36,6 +40,8 @@ _COLUMNS = (
     ("floor_strike", sa.Float()),
     ("cap_strike", sa.Float()),
     ("yes_sub_title", sa.String(64)),
+    ("depth_at_best_bid", sa.Integer()),
+    ("depth_at_best_ask", sa.Integer()),
 )
 
 

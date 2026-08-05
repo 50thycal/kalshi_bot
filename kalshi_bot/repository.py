@@ -818,6 +818,11 @@ def insert_mmsell_candidate_tick(
         no_ask=metrics.best_no_ask,
         mid=metrics.midpoint,
         volume=metrics.volume,
+        # Depth at the touch — the capacity ceiling a taker entry runs into. getattr-guarded
+        # because the only consequence of a metrics object without them is a NULL column, and a
+        # diagnostic tape must never be the thing that breaks an entry scan.
+        depth_at_best_bid=getattr(metrics, "depth_at_best_bid", None),
+        depth_at_best_ask=getattr(metrics, "depth_at_best_ask", None),
     ))
 
 

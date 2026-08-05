@@ -248,6 +248,17 @@ class MmSellCandidateTick(Base):
     floor_strike: Mapped[float | None] = mapped_column(Float)
     cap_strike: Mapped[float | None] = mapped_column(Float)
     yes_sub_title: Mapped[str | None] = mapped_column(String(64))  # "Above 3.5%", "LAA by 3+"
+    # Book DEPTH at the touch, the missing input to the taker-vs-maker question. mmsell sells the
+    # YES tail by buying NO, so the two sides mean different things to it:
+    #   depth_at_best_bid — contracts resting at the best YES bid. This is what a TAKER entry
+    #       consumes (buy NO == sell YES into the bid), so it is the capacity ceiling: a book
+    #       quoting 1 contract cannot fill a 20-lot no matter how good the edge looks.
+    #   depth_at_best_ask — contracts resting at the best NO bid (== the YES-ask queue). This is
+    #       what a MAKER entry joins, i.e. how many orders sit ahead of ours at our own price.
+    # Without these, `taker = paper - spread` silently assumes infinite liquidity at the touch,
+    # which is exactly the assumption that has to hold for the endgame result to be tradeable.
+    depth_at_best_bid: Mapped[int | None] = mapped_column(Integer)
+    depth_at_best_ask: Mapped[int | None] = mapped_column(Integer)
     yes_bid: Mapped[int | None] = mapped_column(Integer)
     yes_ask: Mapped[int | None] = mapped_column(Integer)
     no_bid: Mapped[int | None] = mapped_column(Integer)
