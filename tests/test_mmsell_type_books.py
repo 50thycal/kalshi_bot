@@ -222,3 +222,27 @@ def test_type_book_tags_are_resolvable_as_books():
     for tag in ("Wmmsell1", "Tmmsell6"):
         assert s.mmsell_book_by_tag(tag) is not None
     assert s.mmsell_book_by_tag("nosuchbook") is None
+
+
+# ------------------------------------------------------------------ the start-up abandon sweep
+
+
+def test_type_books_survive_the_foreign_position_sweep():
+    """`abandon_open_paper_trades` clears books that are not part of the running experiment.
+    It matched on a PREFIX, under which Wmmsell*/Tmmsell* looked foreign — so every worker
+    start wiped their open positions, and because the entry dedup guard keys off an OPEN
+    position each book re-entered the same market on the next cycle. Observed in production
+    2026-08-04: Wmmsell6 held 9 markets behind 47 `abandoned` rows in under four hours.
+
+    A book that cannot hold a position across a deploy can never reach its settled-n gate."""
+    from kalshi_bot.repository import strategy_is_kept
+
+    keep = ("weather", "mmsell", "theta")
+    for tag in ("mmsell", "mmsell10", "mmsellA1", "Wmmsell1", "Wmmsell8",
+                "Tmmsell1", "Tmmsell6", "mmsell10_pt"):
+        assert strategy_is_kept(tag, keep) is True, f"{tag} would be abandoned on restart"
+    for tag in ("pin15", "wcprop", "xgame", "tfav", None, ""):
+        assert strategy_is_kept(tag, keep) is False
+    # The substring rule is scoped to mmsell: it must not resurrect other families.
+    assert strategy_is_kept("Wmmsell1", ("weather",)) is False
+    assert strategy_is_kept("xtheta9", ("theta",)) is False

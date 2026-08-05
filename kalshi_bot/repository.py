@@ -452,14 +452,34 @@ def weather_entered(session, event_ticker: str, strategy: str) -> bool:
     ) > 0
 
 
+def strategy_is_kept(strategy: str | None, keep_prefixes: tuple[str, ...]) -> bool:
+    """Does this strategy tag belong to one of the book families we are keeping?
+
+    A plain prefix test is WRONG for the mmsell family, which deliberately has no common
+    prefix: the market-type books are tagged `Wmmsell*`/`Tmmsell*` so the band regime reads at
+    a glance (docs/MMSELL_TYPE_BOOKS.md). Under a prefix test those books look FOREIGN, so
+    `abandon_open_paper_trades` wiped every one of their open positions on each worker start —
+    and because the entry scan's dedup guard keys off an OPEN position, each book then re-entered
+    the same market on the very next cycle. Observed 2026-08-04 before this fix: Wmmsell6 held 9
+    markets but had accumulated 47 `abandoned` rows across them in under four hours, and no book
+    could ever have carried a position across a deploy.
+    """
+    tag = strategy or ""
+    if tag.startswith(keep_prefixes):
+        return True
+    # The one family whose members are identified by substring rather than prefix.
+    return "mmsell" in keep_prefixes and "mmsell" in tag
+
+
 def abandon_open_paper_trades(session, keep_prefixes: tuple[str, ...]) -> int:
-    """Close out open paper trades/positions whose strategy doesn't start with one of
-    keep_prefixes (used to clear a prior experiment when switching modes)."""
+    """Close out open paper trades/positions whose strategy isn't in one of the kept book
+    families (used to clear a prior experiment when switching modes). See strategy_is_kept —
+    membership is NOT a plain prefix test."""
     closed = 0
     for trade in session.scalars(
         select(m.PaperTrade).where(m.PaperTrade.status == "open")
     ).all():
-        if not (trade.strategy or "").startswith(keep_prefixes):
+        if not strategy_is_kept(trade.strategy, keep_prefixes):
             trade.status = "abandoned"
             trade.closed_at = _now()
             session.add(trade)
@@ -467,7 +487,7 @@ def abandon_open_paper_trades(session, keep_prefixes: tuple[str, ...]) -> int:
     for pos in session.scalars(
         select(m.PaperPosition).where(m.PaperPosition.status == "open")
     ).all():
-        if not (pos.strategy or "").startswith(keep_prefixes):
+        if not strategy_is_kept(pos.strategy, keep_prefixes):
             pos.status = "abandoned"
             pos.closed_at = _now()
             session.add(pos)
