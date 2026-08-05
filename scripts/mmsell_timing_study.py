@@ -66,6 +66,7 @@ import os
 import sys
 from collections import defaultdict
 
+import mmsell_fill_model as fm
 import mmsell_market_types as mt
 
 RO_OPTIONS = (
@@ -179,11 +180,37 @@ def _f(x, spec="{:+.2f}") -> str:
     return spec.format(x) if x is not None else "n/a"
 
 
-HDR = (f"  {'window':>10} {'n':>6} {'mkts':>5} {'c/trade':>9} {'loss%':>6} {'be%':>6}"
-       f" {'edge':>7} {'avgloss':>8} {'worst':>7} {'p5':>7} {'p50':>6} {'p95':>6} {'entry':>6}")
+HDR = (f"  {'window':>10} {'n':>6} {'mkts':>5} {'c/trade':>9} {'REAL':>8} {'cov':>5}"
+       f" {'loss%':>6} {'be%':>6} {'edge':>7} {'avgloss':>8} {'worst':>7} {'p5':>7}"
+       f" {'p50':>6} {'entry':>6}")
 
 
-def _print_cells(rows_by_bucket: dict, order: tuple[str, ...]) -> None:
+def realizable_of(rows: list[dict], calib: dict | None) -> tuple[float | None, float | None]:
+    """(realizable cents/contract, coverage) for one cell, projected through the LIVE maker-fill
+    calibration — or (None, None) without a calibration.
+
+    This is the column a timing rule must be gated on, not `c/trade`. Paper assumes a resting
+    maker order always fills; live it fills ~70% and misses the winners. The endgame windows are
+    the thinnest, fastest books in the whole universe, which is exactly where that gap is widest
+    — and where the two previous timing signals (mmsell7's htcmax=24, mmsell11's htcmin=6) both
+    died. See docs/MMSELL_FILL_MODEL.md."""
+    if not calib:
+        return (None, None)
+    hist: dict[int, list] = defaultdict(lambda: [0, 0.0])
+    for r in rows:
+        if r["entry_c"] is None:
+            continue
+        cell = hist[int(r["entry_c"])]
+        cell[0] += 1
+        cell[1] += r["pnl_c"]
+    if not hist:
+        return (None, None)
+    res = fm.project_realizable({k: tuple(v) for k, v in hist.items()}, calib)
+    cover = (res["covered_n"] / res["total_n"]) if res["total_n"] else 0.0
+    return (res["est_realizable_cents"], cover)
+
+
+def _print_cells(rows_by_bucket: dict, order: tuple[str, ...], calib: dict | None = None) -> None:
     print(HDR)
     for lbl in order:
         rows = rows_by_bucket.get(lbl)
@@ -191,11 +218,13 @@ def _print_cells(rows_by_bucket: dict, order: tuple[str, ...]) -> None:
             continue
         s = mt.summarize(rows)
         be = 100.0 * s["be_loss"] if s["be_loss"] is not None else None
+        real, cover = realizable_of(rows, calib)
         print(f"  {lbl:>10} {s['n']:6d} {s['mkts']:5d} {s['mean']:>+8.2f}c"
+              f" {_f(real, '{:+7.2f}'):>7}c {_f(100.0*cover if cover is not None else None, '{:4.0f}'):>4}%"
               f" {100.0*s['loss_rate']:5.1f}% {_f(be, '{:5.1f}'):>5}% {_f(s['edge_pp'], '{:+6.1f}'):>7}"
               f" {_f(s['avg_loss'], '{:+7.1f}'):>8} {s['worst']:+6.0f}c"
               f" {_f(s['p5'], '{:+6.1f}'):>7} {_f(s['p50'], '{:+5.1f}'):>6}"
-              f" {_f(s['p95'], '{:+5.1f}'):>6} {_f(s['entry'], '{:5.1f}'):>6}")
+              f" {_f(s['entry'], '{:5.1f}'):>6}")
 
 
 def print_clock_validation(trades: list[dict]) -> None:
@@ -221,7 +250,8 @@ def print_clock_validation(trades: list[dict]) -> None:
           "\n  htc measures nothing — in-play is scored on realized time-to-resolution instead.")
 
 
-def report(trades: list[dict], maxyes: int | None, by_type: bool, min_n: int) -> None:
+def report(trades: list[dict], maxyes: int | None, by_type: bool, min_n: int,
+           calib: dict | None = None) -> None:
     if not trades:
         print("(no settled mmsell trades matched)")
         return
@@ -253,7 +283,7 @@ def report(trades: list[dict], maxyes: int | None, by_type: bool, min_n: int) ->
         print(f"\n=== {mode.upper()} — by {src} ===")
         print(f"  {n_scored} of {len(rows)} trades scoreable"
               f"{f' ({unbucketed} without a clock value)' if unbucketed else ''}")
-        _print_cells(scored, tuple(lbl for lbl, _ in WINDOWS[mode]))
+        _print_cells(scored, tuple(lbl for lbl, _ in WINDOWS[mode]), calib)
 
         # The h2h thesis is type-specific, so in-play also gets a per-type cut. Without it a
         # real h2h effect can be masked by totals/props moving the other way in the same cell.
@@ -268,7 +298,7 @@ def report(trades: list[dict], maxyes: int | None, by_type: bool, min_n: int) ->
                     if b is not None:
                         cells[b].append(t)
                 print(f"\n  --- in_play / {mtype} (n={len(sub)}) ---")
-                _print_cells(cells, tuple(lbl for lbl, _ in WINDOWS[mode]))
+                _print_cells(cells, tuple(lbl for lbl, _ in WINDOWS[mode]), calib)
 
     print("\n  edge = be% - loss%, in percentage points: the loss rate this cell breaks even at"
           "\n  (given its own realized win/loss sizes) minus the one it actually ran. It is the"
@@ -286,6 +316,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="skip the per-type breakdown inside in_play")
     ap.add_argument("--min-n", type=int, default=40,
                     help="hide per-type in_play cuts below this n (default 40)")
+    ap.add_argument("--no-fill-model", action="store_true",
+                    help="skip the REALIZABLE projection (paper numbers only)")
     ap.add_argument("--include-twins", action="store_true",
                     help="include live/paper twin books (different entry convention)")
     args = ap.parse_args(argv)
@@ -301,7 +333,8 @@ def main(argv: list[str] | None = None) -> int:
         conn.read_only = True
         with conn.cursor() as cur:
             trades = load_trades(cur, args.include_twins)
-    report(trades, args.maxyes, not args.no_types, args.min_n)
+            calib = None if args.no_fill_model else fm._load_calibration(cur)
+    report(trades, args.maxyes, not args.no_types, args.min_n, calib)
     return 0
 
 

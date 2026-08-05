@@ -81,6 +81,42 @@ universal law, and the per-type cut is what separates them.
 scored on `hours_to_close`, so coverage is limited to the candidate-tick window (736 of 1,528
 scheduled trades; 544 of 1,619 discrete) and grows daily.
 
+## VERDICT (2026-08-05): the timing edge does NOT survive the fill haircut
+
+The `REAL` column projects each window's own entry-price mix through the live maker-fill
+calibration (`docs/MMSELL_FILL_MODEL.md`). It is the number to gate on. Paper vs realizable:
+
+| window | paper ¢/trade | **realizable** | coverage |
+|---|---|---|---|
+| <0.25h | +8.85 | **+0.50** | 63% |
+| 0.25–0.5h | +6.72 | **+0.46** | 50% |
+| 0.5–1h | +2.28 | +0.29 | 49% |
+| 1–2h | **−1.55** | **+0.55** | 48% |
+| 2–4h | +1.77 | −0.23 | 55% |
+| 4–12h | −4.28 | −0.95 | 43% |
+| 12h+ | +2.09 | −0.12 | 61% |
+
+**A 13.1¢ paper spread collapses to 1.45¢ realizable, and the ordering inverts where it matters:**
+the 1–2h window that looked worst on paper (−1.55¢) is the *best* realizable cell (+0.55¢), while
+the <0.25h endgame that looked best (+8.85¢) lands at +0.50¢ — indistinguishable from it.
+
+The endgame edge is composed almost entirely of fills a resting maker never gets. That is exactly
+what was predicted before the test: the final in-play window is the thinnest, fastest book in the
+universe, and it is where `mmsell7` (`htcmax=24`) and `mmsell11` (`htcmin=6`) both already died.
+This is the third timing signal to die at the same step.
+
+`scheduled` tells the same story — its 72h+ cell, the largest paper edge anywhere in the study at
++10.50¢, reads **−0.87¢ realizable**.
+
+**No `.timeX` book should be built on this.** The pre-registered gates below are retained for any
+future re-test (e.g. after a fill-model refresh on a larger live sample), but the current answer
+to "does entry timing pay" is: on paper yes, in reality no.
+
+Two honest limits on the verdict. Coverage is 43–63% on the in-play cells — the live calibration
+only spans the cheap price cells, so the realizable figure speaks for about half of each cell. And
+the calibration is borrowed from live `mmsell3` (n=359), a different market mix. Neither changes
+the direction, which is consistent across all seven windows.
+
 ## Three caveats before anyone trades this
 
 1. **Long-game confound (the serious one).** Hold time is *entry → resolution*, so a game that runs

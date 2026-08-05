@@ -91,6 +91,37 @@ ordering. That is trap 2 in action: pooled, both types are dominated by 16¢ ent
 difference between them is entry price rather than structure. The cheap-band cut is the one to
 read.
 
+## Next axis: sub-typing by the contract's LINE
+
+The taxonomy answers "is this a spread or a total". It does not answer "**which** spread" — a
+1-run handicap and a 7-run handicap are the same `spread` to every book we run. Probed 2026-08-05
+by parsing the trailing integer off the ticker's outcome token, there is structure there:
+
+| series | line | n | ¢/trade | loss% | entry¢ |
+|---|---|---|---|---|---|
+| `KXMLBSPREAD` | 2 | 124 | **+7.89** | 4.8% | 14.0 |
+| `KXMLBSPREAD` | 6 | 46 | −1.29 | 15.2% | 15.3 |
+| `KXMLBSPREAD` | 7 | 16 | **−13.63** | 37.5% | 25.5 |
+| `KXMLBTOTAL` | 10–11 | 452 | +4.64 / +3.53 | 9.7% | 15.7 / 14.5 |
+| `KXMLBTOTAL` | 15 | 85 | **−7.68** | 22.4% | 16.0 |
+| `KXMLBTOTAL` | 16 | 57 | **−10.63** | 26.3% | 17.1 |
+| `KXWCTEAMTOTAL` | 2 | 67 | −9.73 | 25.4% | 17.0 |
+
+MLB totals at the 10–11 run line run a 9.7% loss rate; at 15–16 the same market type runs 22–26%.
+That is a bigger spread than most of the type-level differences this whole doc is built on.
+
+**But do not build on the regex.** The ticker encoding is series-specific and silently wrong in
+places — `KXWNBATOTAL` puts raw points in the suffix (151–213), `KXMLBTOTAL` puts runs (4–21), a
+spread suffix embeds the line after a team code (`LAA3`), and an exact-score suffix
+(`ARG1CPV0`) yields `0`, which is not a line at all. Entry price is also confounded across lines
+(14.0¢ at MLB spread 2 vs 25.5¢ at 7), so some of the above is price, not structure.
+
+The durable fix shipped 2026-08-05: `mmsell_candidate_ticks` now captures `strike_type`,
+`floor_strike`, `cap_strike` and `yes_sub_title` straight from the market payload
+(`alembic e3f4a5b6c7d8`). Those are the line as Kalshi states it, uniform across series. Coverage
+starts at deploy and is forward-only — the fields cannot be backfilled, since Kalshi drops settled
+markets after ~70 days.
+
 ## Usage
 
 ```jsonc

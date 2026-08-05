@@ -230,6 +230,24 @@ class MmSellCandidateTick(Base):
     captured_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
     series: Mapped[str | None] = mapped_column(String(32))
     hours_to_close: Mapped[float | None] = mapped_column(Float)
+    # Hours to Kalshi's EXPECTED EXPIRATION, which for an in-play sports market is the only
+    # forward-looking estimate of when the contest actually resolves. `hours_to_close` above is
+    # derived from `close_time`, which Kalshi sets to a far-future fallback on sports: measured
+    # 2026-08-05, KXUFCFIGHT reported 335h to close on a fight that resolved in 0.4h, so every
+    # in-play trade buckets as "24-72h+" and a timing study on that column measures nothing
+    # (docs/MMSELL_TIMING_STUDY.md). The timing study can score history on realized
+    # closed_at - created_at, but a LIVE entry gate cannot — it needs this, known in advance.
+    hours_to_expiration: Mapped[float | None] = mapped_column(Float)
+    # Contract sub-structure, straight from the market payload. The market TYPE taxonomy
+    # (kalshi_bot/mmsell/market_types.py) says a ticker is a `spread` or a `total`; these say
+    # WHICH ONE — the run line, the over/under number, the strike. That is the difference
+    # between "sell cheap tails on MLB spreads" and "sell them only at 3+ runs", and it cannot
+    # be recovered later: the ticker suffix encodes it inconsistently across series and the
+    # subtitle is truncated into fill_assumption.
+    strike_type: Mapped[str | None] = mapped_column(String(16))   # greater | less | between | ...
+    floor_strike: Mapped[float | None] = mapped_column(Float)
+    cap_strike: Mapped[float | None] = mapped_column(Float)
+    yes_sub_title: Mapped[str | None] = mapped_column(String(64))  # "Above 3.5%", "LAA by 3+"
     yes_bid: Mapped[int | None] = mapped_column(Integer)
     yes_ask: Mapped[int | None] = mapped_column(Integer)
     no_bid: Mapped[int | None] = mapped_column(Integer)

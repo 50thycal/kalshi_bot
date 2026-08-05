@@ -91,3 +91,76 @@ def test_taxonomy_is_imported_not_redeclared():
     assert ts.mt is canonical
     assert ts.mt.classify("KXUFCFIGHT") == ("h2h", ts.mt.IN_PLAY)
     assert ts.mt.classify("KXBTCD") == ("price_strike", ts.mt.SCHEDULED)
+
+
+# --------------------------------------------------- the forward-looking capture this needs
+
+def test_candidate_tick_captures_the_forward_looking_clock_and_strike():
+    """The study can score HISTORY on realized hold, but a live in-play gate cannot — it needs a
+    clock known before the fact. And the strike fields are what let a book be cut at "MLB
+    spreads of 3+ runs" rather than all spreads; neither is recoverable after the fact."""
+    import types
+
+    from kalshi_bot import repository as repo
+
+    captured = {}
+
+    class _Session:
+        def add(self, obj):
+            captured["obj"] = obj
+
+    metrics = types.SimpleNamespace(
+        best_yes_bid=6, best_yes_ask=8, best_no_bid=92, best_no_ask=94,
+        midpoint=7.0, volume=1234)
+    market = {
+        "strike_type": "greater", "floor_strike": "3", "cap_strike": None,
+        "yes_sub_title": "LAA by 3+",
+    }
+    repo.insert_mmsell_candidate_tick(
+        _Session(), "KXMLBSPREAD-26AUG021515MILLAA-LAA3", metrics,
+        series="KXMLBSPREAD", hours_to_close=70.4, hours_to_expiration=1.4, market=market)
+
+    row = captured["obj"]
+    assert row.hours_to_close == 70.4
+    assert row.hours_to_expiration == 1.4      # the clock that is actually usable in-play
+    assert row.strike_type == "greater"
+    assert row.floor_strike == 3.0             # numeric string coerced
+    assert row.cap_strike is None
+    assert row.yes_sub_title == "LAA by 3+"
+
+
+def test_candidate_tick_strike_parsing_never_fakes_a_line():
+    """A strike of 0 is a real line (a 0-run handicap), so an unparseable value must store NULL
+    rather than coerce to 0.0 — otherwise the two are indistinguishable in the study."""
+    from kalshi_bot.repository import _strike_value
+
+    assert _strike_value(0) == 0.0
+    assert _strike_value("3.5") == 3.5
+    assert _strike_value(None) is None
+    assert _strike_value("") is None
+    assert _strike_value("n/a") is None
+    assert _strike_value(True) is None       # bool is an int subclass; not a strike
+
+
+def test_candidate_tick_clamps_to_column_widths():
+    """The tape is a diagnostic: it may lose detail, never rows. An over-long subtitle must not
+    abort a whole cycle's candidate capture."""
+    import types
+
+    from kalshi_bot import repository as repo
+
+    captured = {}
+
+    class _Session:
+        def add(self, obj):
+            captured["obj"] = obj
+
+    metrics = types.SimpleNamespace(
+        best_yes_bid=1, best_yes_ask=2, best_no_bid=98, best_no_ask=99,
+        midpoint=1.5, volume=0)
+    repo.insert_mmsell_candidate_tick(
+        _Session(), "T", metrics,
+        market={"yes_sub_title": "x" * 200, "strike_type": "y" * 40})
+    row = captured["obj"]
+    assert len(row.yes_sub_title) == 64
+    assert len(row.strike_type) == 16
