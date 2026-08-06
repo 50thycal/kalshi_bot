@@ -122,3 +122,38 @@ def test_breakeven_undefined_without_both_outcomes():
 def test_announcement_series_is_classified():
     # The one series the first census run reported as unclassified.
     assert mt.classify("KXNBATEAMANNOUNCE") == ("announcement", mt.DISCRETE)
+
+
+# ------------------------------------------------------------------ the LINE within a type
+
+
+def test_line_parses_the_handicap_or_total():
+    assert mt.line_of("KXMLBTOTAL-26AUG021510KCCOL-12") == 12.0
+    assert mt.line_of("KXMLBSPREAD-26AUG021515MILLAA-LAA3") == 3.0   # line sits after a team code
+    assert mt.line_of("KXWNBATOTAL-26AUG02LAPDX-200") == 200.0
+    assert mt.line_of("KXWCTEAMTOTAL-26JUL03ARGCPV-ARG3") == 3.0
+    assert mt.line_of("KXWCSPREAD-26JUL03ARGCPV-ARG2") == 2.0
+
+
+def test_line_is_an_allowlist_because_the_generic_parse_is_wrong_elsewhere():
+    """A blanket 'trailing digits' rule silently mislabels other series. An exact-score suffix
+    (ARG1CPV0) would yield 0, which is not a line at all; a player-prop suffix carries a jersey
+    number. Series outside LINE_SERIES must report None rather than a wrong number."""
+    assert mt.line_of("KXWCSCORE-26JUL03ARGCPV-ARG1CPV0") is None       # exact score, not a line
+    assert mt.line_of("KXMLBHR-26AUG021920BOSLAD-BOSAMONASTERIO32-1") is None  # jersey number
+    assert mt.line_of("KXMLBGAME-26AUG012110BOSLAD-BOS") is None        # h2h has no line
+    assert mt.line_of("KXBTCD-26AUG0117-T63249.99") is None             # strike, not a line
+
+
+def test_line_returns_none_rather_than_guessing():
+    assert mt.line_of("") is None
+    assert mt.line_of("KXMLBTOTAL") is None                 # no outcome token
+    assert mt.line_of("KXMLBTOTAL-26AUG021510KCCOL") is None  # only two segments
+    assert mt.line_of("KXMLBTOTAL-26AUG02KCCOL-OVER") is None  # no trailing digits
+
+
+def test_line_series_are_all_in_the_taxonomy():
+    """A series that can report a line but has no type would appear in the line table and
+    nowhere else, which would read as a new bucket rather than a gap."""
+    for ser in mt.LINE_SERIES:
+        assert mt.classify(ser) != mt.UNCLASSIFIED, f"{ser} has a line rule but no type"
