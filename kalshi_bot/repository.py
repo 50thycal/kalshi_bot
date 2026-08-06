@@ -771,26 +771,58 @@ def insert_mmsell_tick(
     session.flush()
 
 
+def _strike_value(raw) -> float | None:
+    """Kalshi strike fields arrive as numbers, numeric strings, or absent. Anything unparseable
+    stores NULL rather than 0.0 — a strike of zero is a real line (a 0-run handicap), so a
+    coerced default would be indistinguishable from data."""
+    if raw is None or isinstance(raw, bool):
+        return None
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
+
+
 def insert_mmsell_candidate_tick(
     session, ticker: str, metrics: MarketMetrics, *, series: str | None = None,
     hours_to_close: float | None = None, captured_at: datetime | None = None,
+    hours_to_expiration: float | None = None, market: dict | None = None,
 ) -> None:
     """Record one orderbook tick for an IN-BAND mmsell CANDIDATE (opened this cycle or not) — the
     pre-entry price path a per-ticker fill replay needs ('would a resting buy-NO at the no-bid have
     been lifted before close?'). Complements insert_mmsell_tick (held positions only). Cheap:
     reuses the orderbook metrics the entry scan already fetched; deliberately NOT flushed per row
-    (committed with the cycle) so bulk candidate capture doesn't flush hundreds of times."""
+    (committed with the cycle) so bulk candidate capture doesn't flush hundreds of times.
+
+    `hours_to_expiration` is the forward-looking resolution clock (see the model docstring — for
+    in-play markets `hours_to_close` is a far-future fallback and measures nothing). `market` is
+    the raw payload the scan already holds; its strike fields are recorded so a book can later be
+    cut by the contract's LINE (a 3-run handicap vs a 1-run one) rather than only by its type."""
+    mkt = market or {}
     session.add(m.MmSellCandidateTick(
         market_ticker=ticker,
         captured_at=captured_at or _now(),
         series=series,
         hours_to_close=hours_to_close,
+        hours_to_expiration=hours_to_expiration,
+        # Clamped to the column widths: a long subtitle must never abort a whole cycle's
+        # candidate capture (the tape is a diagnostic — it may lose detail, never rows).
+        strike_type=(str(mkt.get("strike_type"))[:16] if mkt.get("strike_type") else None),
+        floor_strike=_strike_value(mkt.get("floor_strike")),
+        cap_strike=_strike_value(mkt.get("cap_strike")),
+        yes_sub_title=(str(sub)[:64] if (sub := (mkt.get("yes_sub_title")
+                                                 or mkt.get("subtitle"))) else None),
         yes_bid=metrics.best_yes_bid,
         yes_ask=metrics.best_yes_ask,
         no_bid=metrics.best_no_bid,
         no_ask=metrics.best_no_ask,
         mid=metrics.midpoint,
         volume=metrics.volume,
+        # Depth at the touch — the capacity ceiling a taker entry runs into. getattr-guarded
+        # because the only consequence of a metrics object without them is a NULL column, and a
+        # diagnostic tape must never be the thing that breaks an entry scan.
+        depth_at_best_bid=getattr(metrics, "depth_at_best_bid", None),
+        depth_at_best_ask=getattr(metrics, "depth_at_best_ask", None),
     ))
 
 

@@ -230,6 +230,35 @@ class MmSellCandidateTick(Base):
     captured_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
     series: Mapped[str | None] = mapped_column(String(32))
     hours_to_close: Mapped[float | None] = mapped_column(Float)
+    # Hours to Kalshi's EXPECTED EXPIRATION, which for an in-play sports market is the only
+    # forward-looking estimate of when the contest actually resolves. `hours_to_close` above is
+    # derived from `close_time`, which Kalshi sets to a far-future fallback on sports: measured
+    # 2026-08-05, KXUFCFIGHT reported 335h to close on a fight that resolved in 0.4h, so every
+    # in-play trade buckets as "24-72h+" and a timing study on that column measures nothing
+    # (docs/MMSELL_TIMING_STUDY.md). The timing study can score history on realized
+    # closed_at - created_at, but a LIVE entry gate cannot — it needs this, known in advance.
+    hours_to_expiration: Mapped[float | None] = mapped_column(Float)
+    # Contract sub-structure, straight from the market payload. The market TYPE taxonomy
+    # (kalshi_bot/mmsell/market_types.py) says a ticker is a `spread` or a `total`; these say
+    # WHICH ONE — the run line, the over/under number, the strike. That is the difference
+    # between "sell cheap tails on MLB spreads" and "sell them only at 3+ runs", and it cannot
+    # be recovered later: the ticker suffix encodes it inconsistently across series and the
+    # subtitle is truncated into fill_assumption.
+    strike_type: Mapped[str | None] = mapped_column(String(16))   # greater | less | between | ...
+    floor_strike: Mapped[float | None] = mapped_column(Float)
+    cap_strike: Mapped[float | None] = mapped_column(Float)
+    yes_sub_title: Mapped[str | None] = mapped_column(String(64))  # "Above 3.5%", "LAA by 3+"
+    # Book DEPTH at the touch, the missing input to the taker-vs-maker question. mmsell sells the
+    # YES tail by buying NO, so the two sides mean different things to it:
+    #   depth_at_best_bid — contracts resting at the best YES bid. This is what a TAKER entry
+    #       consumes (buy NO == sell YES into the bid), so it is the capacity ceiling: a book
+    #       quoting 1 contract cannot fill a 20-lot no matter how good the edge looks.
+    #   depth_at_best_ask — contracts resting at the best NO bid (== the YES-ask queue). This is
+    #       what a MAKER entry joins, i.e. how many orders sit ahead of ours at our own price.
+    # Without these, `taker = paper - spread` silently assumes infinite liquidity at the touch,
+    # which is exactly the assumption that has to hold for the endgame result to be tradeable.
+    depth_at_best_bid: Mapped[int | None] = mapped_column(Integer)
+    depth_at_best_ask: Mapped[int | None] = mapped_column(Integer)
     yes_bid: Mapped[int | None] = mapped_column(Integer)
     yes_ask: Mapped[int | None] = mapped_column(Integer)
     no_bid: Mapped[int | None] = mapped_column(Integer)

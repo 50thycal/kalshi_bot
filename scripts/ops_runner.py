@@ -110,6 +110,7 @@ ALLOWED_SCRIPTS = (
     "mmsell_regime_backtest",
     "mmsell_history_status",
     "mmsell_market_types",
+    "mmsell_timing_study",
     "evo_digest",
     "evo_tree",
     "evo_selftest",

@@ -471,6 +471,16 @@ class MmSellTracker:
                     continue
                 htc_s = compute_time_to_close(market.get("close_time"))
                 htc = htc_s / 3600.0 if htc_s is not None else None   # seconds -> hours
+                # Forward-looking resolution clock, recorded (never gated on) alongside htc.
+                # For an in-play market `close_time` is a far-future fallback — KXUFCFIGHT
+                # reports ~335h to close on a fight that resolves in 0.4h — so htc cannot
+                # express "enter in the final 30 minutes" and the timing study has to score
+                # history on realized hold instead (docs/MMSELL_TIMING_STUDY.md). Kalshi's
+                # expected expiration is the only estimate available BEFORE the fact; capturing
+                # it now is what makes an in-play timing gate testable later.
+                exp_s = compute_time_to_close(
+                    market.get("expected_expiration_time") or market.get("expiration_time"))
+                hte = exp_s / 3600.0 if exp_s is not None else None
                 # control htc gate scopes the shared work + the skipped_htc counter; a variant
                 # with a wider htc than the control is not supported (control is the widest).
                 if htc is None or not (s.mmsell_min_hours_to_close <= htc
@@ -552,7 +562,8 @@ class MmSellTracker:
                                 and captured < s.mmsell_candidate_capture_max:
                             try:
                                 repo.insert_mmsell_candidate_tick(
-                                    session, ticker, metrics, series=series, hours_to_close=htc)
+                                    session, ticker, metrics, series=series, hours_to_close=htc,
+                                    hours_to_expiration=hte, market=market)
                                 captured += 1
                             except Exception as exc:  # noqa: BLE001
                                 logger.warning(
