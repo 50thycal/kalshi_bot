@@ -36,7 +36,9 @@ the no-bid — the incumbent's behaviour) and `mmsell10b` (arm 1, rests 1¢ bett
 strategy tag, its own auto-created paper twin (`mmsell10a_pt` / `mmsell10b_pt`) and its own P&L
 line, so each arm's performance is directly visible next to the rest of the cohort. Both use
 **1-contract clips** (`size=1`). The incumbent **`mmsell10` is untouched** — same knobs, same
-2-contract clips, and it still evaluates first.
+2-contract clips, and it still evaluates first. *(Status 2026-08-04: that described the initial
+arming; the operator has since stood `mmsell10`'s **live** arm down — see "The cost of leaving
+`mmsell10` running" below. The `mmsell10` paper book still runs unchanged.)*
 
 **The non-obvious part: the hash is what makes two books a valid experiment.**
 `repository.live_open_order_exists(ticker)` is **strategy-agnostic** — any in-flight live order on
@@ -87,22 +89,41 @@ If the experiment is starved — check `mmsell_offset_ab`'s per-arm order counts
 stand `mmsell10` down from `LIVE_STRATEGIES` and let the arm books take the full flow. That is an
 operator decision, not something to change silently mid-experiment.
 
+**Status 2026-08-04: that lever was pulled.** The operator stood `mmsell10` down from
+`LIVE_STRATEGIES` at ~16:00 UTC on 2026-08-04, one day into the experiment, so the arm books now
+take the full flow. The `mmsell10` paper book keeps running (and still evaluates first in the
+paper scan), but paper holdings do not trip the strategy-agnostic live dedup gate — only live
+orders do — so it no longer claims candidates ahead of the arms. The starvation caveat above only
+applies to data collected before this point. Two knock-on effects to expect when reading state:
+
+- **Live order volume dropped sharply at the switch, by design.** `mmsell10` was the live volume
+  driver (~10 orders/day at 2-contract clips); the arms are 1-contract clips and each claims only
+  its hash's half of the flow. A quiet live order feed after 2026-08-04 is the expected shape of
+  this experiment, not a stall.
+- **`mmsell10_pt`'s twin epoch auto-ended at the same moment** (the harness retires a twin when
+  its live book leaves `LIVE_STRATEGIES`), so mmsell10 paper-vs-live parity reads stop there.
+
 ## Arming it
 
 ```jsonc
 {"type": "env", "set": {
     "MMSELL_LIVE_OFFSET_AB_ARMS": "0,1",
-    "LIVE_STRATEGIES": "mmsell10,theta4,mmsell10a,mmsell10b"
+    "LIVE_STRATEGIES": "theta4,mmsell10a,mmsell10b"
 }}
 ```
+
+This is the configuration as armed since 2026-08-04: `mmsell10` is deliberately absent (stood
+down, see above). The original 2026-08-03 arming listed it
+(`"mmsell10,theta4,mmsell10a,mmsell10b"`) and ran that way for its first day.
 
 **Both are required.** With no arms configured an arm book claims *no* tickers at all — it fails
 closed rather than falling back to a default offset, because an arm book has no defined price
 unless the experiment is running. A single arm is likewise treated as off; a one-armed "A/B"
 cannot answer anything.
 
-Added live footprint: 2 books × 50 positions × 1 contract ≈ **$93 at ~93¢/contract**, on top of
-`mmsell10`'s existing ~$93 (50 × 2). Lower the arm books' share by dropping
+Added live footprint: 2 books × 50 positions × 1 contract ≈ **$93 at ~93¢/contract**. While
+`mmsell10` was still live (before 2026-08-04) its ~$93 (50 × 2) sat on top of that; since the
+stand-down the arm books are the only mmsell live exposure. Lower the arm books' share by dropping
 `MMSELL_LIVE_MAX_OPEN_POSITIONS` if that is more exposure than intended — it is a shared cap, so it
 applies to `mmsell10` too.
 
@@ -150,8 +171,8 @@ Sanity checks to read alongside, before trusting either verdict:
 - **`mmsell10a`'s average fill price should sit ~1¢ above `mmsell10b`'s NO price.** If the two
   arms show the same average price, the experiment is not actually running.
 - **Order counts per arm should be within ~10% of each other.** A large imbalance means the
-  partition is not working (or one arm is being starved by the incumbent), and the comparison is
-  confounded.
+  partition is not working (or, in pre-2026-08-04 data, one arm was being starved by the
+  incumbent), and the comparison is confounded.
 - **Each arm's twin (`mmsell10a_pt` / `mmsell10b_pt`) vs its live book** — via `live_paper_parity`.
   A twin/live gap that differs sharply *between* arms is itself the finding: it is adverse
   selection responding to queue position, which is the mechanism under test.
