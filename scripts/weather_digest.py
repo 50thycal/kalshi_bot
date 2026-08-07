@@ -6,7 +6,8 @@ Sections:
   HEALTH      worker liveness (last cycle), cycles today, error cycles (+ last error)
   ENTRIES     live buy orders in the window, by cell + fill status
   EXITS       live sell/close orders in the window, by status
-  POSITIONS   open live positions now (qty, avg cost, exposure, best-effort current bid + unreal)
+  POSITIONS   open live positions now (qty, avg cost, exposure, best-effort current mark + unreal;
+              marked on the side HELD — see `_mark_position`, NO positions mark at the no-bid)
   REALIZED    realized P&L today (the max_daily_loss breaker's number) per settled market
   PAPER       brief realized P&L per research book (settled), for the books we still collect
   ANOMALIES   the alert section — anything that needs a human: bad-status orders, fills with no
@@ -64,19 +65,51 @@ def _recent_date_codes(days: int = 3) -> list[str]:
     return out
 
 
-def _kalshi_yes_bid(ticker: str) -> int | None:
-    """Best-effort current yes-bid (cents) from Kalshi public market data; None on any failure."""
+def _kalshi_quote(ticker: str) -> tuple[int | None, int | None]:
+    """Best-effort current (yes_bid, yes_ask) in cents from Kalshi public market data;
+    (None, None) on any failure.
+
+    BOTH sides are needed because a position is marked on the side it is HELD (see
+    `_mark_position`): a YES position marks at the yes-bid, a NO position at the no-bid,
+    and the no-bid is `100 - yes_ask` — not derivable from the yes-bid alone."""
+    def _cents(mk, key):
+        v = mk.get(key)
+        if v is None and mk.get(f"{key}_dollars") is not None:
+            v = round(float(mk[f"{key}_dollars"]) * 100)
+        return int(v) if v is not None else None
+
     try:
         req = urllib.request.Request(f"{_KALSHI}/markets/{ticker}", method="GET",
                                      headers={"User-Agent": _UA, "Accept": "application/json"})
         with urllib.request.urlopen(req, timeout=10) as resp:
             mk = (json.loads(resp.read().decode("utf-8")) or {}).get("market") or {}
-        bid = mk.get("yes_bid")
-        if bid is None and mk.get("yes_bid_dollars") is not None:
-            bid = round(float(mk["yes_bid_dollars"]) * 100)
-        return int(bid) if bid is not None else None
+        return _cents(mk, "yes_bid"), _cents(mk, "yes_ask")
     except (urllib.error.URLError, TimeoutError, OSError, ValueError, KeyError):
-        return None
+        return None, None
+
+
+def _mark_position(qty_fp: float, avg: float, yes_bid: int | None, yes_ask: int | None):
+    """(mark_cents, unrealized_dollars) for one open position, marked on the side it is HELD.
+
+    `positions.quantity_fp` is SIGNED — negative is the NO side — and `positions.avg_price` is
+    the cost basis in cents ON THAT SAME SIDE (see kalshi_bot/livedash/legs.py). So a mmsell/theta
+    NO position bought at 93c must be compared against the NO quote, not the YES one.
+
+    Marked conservatively at the price the position could be SOLD at right now:
+      * YES position (qty > 0) -> yes_bid
+      * NO  position (qty < 0) -> no_bid == 100 - yes_ask
+
+    Getting this wrong is not a rounding error: valuing a 93c NO position against a 1c yes-bid
+    reports roughly -93c/contract on a position that is actually ~+6c/contract, i.e. it inverts
+    the sign of the P&L on every NO book the bot runs (mmsell, theta) — and those books are cheap-
+    tail sells, so a WINNING position is exactly the one whose yes-quote collapses toward zero."""
+    if qty_fp >= 0:
+        mark = yes_bid
+    else:
+        mark = None if yes_ask is None else 100 - yes_ask
+    if mark is None:
+        return None, None
+    return mark, (mark - avg) / 100.0 * abs(qty_fp)
 
 
 def _q(cur, sql, params=()):
@@ -169,11 +202,13 @@ def main(argv: list[str] | None = None) -> int:
             open_pos = [r for r in open_pos if r[1] is not None and abs(float(r[1])) >= 0.01]
             print(f"\n[OPEN POSITIONS] {len(open_pos)}")
             for mt, qfp, avg, expo, _ts in open_pos:
-                bid = None if args.no_prices else _kalshi_yes_bid(mt)
+                yes_bid, yes_ask = (None, None) if args.no_prices else _kalshi_quote(mt)
                 unreal = ""
-                if bid is not None and avg is not None:
-                    u = (bid - float(avg)) / 100.0 * abs(float(qfp))
-                    unreal = f"  now~{bid}c  unreal={u:+.2f}$"
+                if avg is not None:
+                    side = "YES" if float(qfp) >= 0 else "NO"
+                    mark, u = _mark_position(float(qfp), float(avg), yes_bid, yes_ask)
+                    if mark is not None:
+                        unreal = f"  {side}~{mark}c  unreal={u:+.2f}$"
                 cost = f"${float(expo):.2f}" if expo is not None else "?"
                 print(f"  {mt:<26} qty={float(qfp):.2f} @ {float(avg or 0):.0f}c  cost={cost}{unreal}")
 

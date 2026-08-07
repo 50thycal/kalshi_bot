@@ -8,6 +8,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))  # so weather_experiments can import its siblings
 
@@ -113,3 +115,38 @@ def test_ops_runner_allowlists_pnl_and_experiments(tmp_path, monkeypatch):
     assert {"weather_pnl", "weather_experiments"} <= set(runner.ALLOWED_SCRIPTS)
     req.write_text(json.dumps({"type": "script", "name": "weather_pnl", "args": []}))
     assert runner.main() == 1  # dispatches; exits 1 cleanly with no DB URL
+
+
+def test_digest_marks_no_positions_on_the_no_side():
+    """A NO position (signed negative qty, cost basis on the NO side) must be marked against the
+    NO quote (100 - yes_ask), not the yes-bid.
+
+    Regression: the digest previously did `(yes_bid - avg) * |qty|` for every position, which on a
+    mmsell/theta NO book reports a big LOSS on a winning position — these are cheap-tail sells, so
+    the yes-quote collapsing toward zero is exactly what a WIN looks like."""
+    digest = _load("weather_digest")
+
+    # Bought NO at 93c; yes now 1/2c -> no-bid = 98c -> +5c/contract on 3 contracts.
+    mark, unreal = digest._mark_position(-3.0, 93.0, yes_bid=1, yes_ask=2)
+    assert mark == 98
+    assert unreal == pytest.approx(0.15)
+
+    # The same position under the old yes-bid arithmetic would have read ~-$2.76.
+    assert unreal > 0
+
+    # A YES position still marks at the yes-bid (sell side), unchanged.
+    mark, unreal = digest._mark_position(3.0, 40.0, yes_bid=55, yes_ask=57)
+    assert mark == 55
+    assert unreal == pytest.approx(0.45)
+
+    # A losing NO position still reads as a loss: bought NO at 93c, yes ran to 60c -> no-bid 40c.
+    mark, unreal = digest._mark_position(-3.0, 93.0, yes_bid=58, yes_ask=60)
+    assert mark == 40
+    assert unreal == pytest.approx(-1.59)
+
+
+def test_digest_mark_is_best_effort_on_a_missing_quote():
+    """A quote lookup failure must omit the mark, never fall back to the wrong side."""
+    digest = _load("weather_digest")
+    assert digest._mark_position(-3.0, 93.0, yes_bid=1, yes_ask=None) == (None, None)
+    assert digest._mark_position(3.0, 40.0, yes_bid=None, yes_ask=57) == (None, None)
