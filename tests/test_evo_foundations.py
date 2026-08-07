@@ -203,7 +203,11 @@ def test_summarize_for_prompt_exposes_belief_id(evo_session):
     assert f"id={row.id}" in text
 
 
-def test_cross_agent_belief_revision_is_integrity_event(evo_session):
+def test_cross_agent_belief_revision_is_refused_and_audited(evo_session):
+    """The peer's belief is untouched and the attempt is on the record — but it is
+    NOT an integrity event. See tests/test_evo_fitness_activity_and_refusals.py for
+    why: the write is already refused, so scoring it as misconduct only punished
+    agents for guessing an id out of a shared integer space."""
     a, b = _mk_agent(evo_session), _mk_agent(evo_session, surname="Voss")
     belief, _ = memory.revise_belief(
         evo_session, a.agent_uuid, title="b", new_belief="mine",
@@ -215,12 +219,14 @@ def test_cross_agent_belief_revision_is_integrity_event(evo_session):
         heartbeat_id=None, supersedes_id=belief.id,
     )
     assert row is None and "another agent" in err
+    assert belief.body_json.get("belief") == "mine"
     events = list(
         evo_session.scalars(
-            select(em.EvoAuditEvent).where(em.EvoAuditEvent.severity == "integrity")
+            select(em.EvoAuditEvent).where(em.EvoAuditEvent.agent_uuid == b.agent_uuid)
         )
     )
-    assert any(e.agent_uuid == b.agent_uuid for e in events)
+    assert [e.kind for e in events] == ["cross_agent_belief_revision"]
+    assert events[0].severity == "warn"
 
 
 def test_experiment_conclusion_write_once(evo_session):

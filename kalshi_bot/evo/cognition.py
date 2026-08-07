@@ -272,7 +272,10 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
 - note_episode {title, detail, importance (0-1)}
 - register_experiment {hypothesis, falsifiable_prediction, dataset, promotion_criteria,
   kill_criteria, parameters?}
-- conclude_experiment {experiment_id, result, confidence, interpretation, follow_up?}
+- conclude_experiment {experiment_id, result, confidence, interpretation, follow_up?}.
+  experiment_id MUST be an id listed under OPEN EXPERIMENTS in your context — never a
+  belief id and never a guess. Experiment and belief ids share one number space, so a
+  guess silently lands on another agent's row and the call is rejected.
 - revise_cognitive_genome {document, hypothesis, evidence_for, evidence_against,
   expected_benefit, potential_downside, rollback_conditions}
 - revise_trading_genome {document, hypothesis, evidence_for, evidence_against,
