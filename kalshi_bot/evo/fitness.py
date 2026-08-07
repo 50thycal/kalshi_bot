@@ -19,6 +19,7 @@ from . import paper as papermod
 from .config import EvoSettings
 from .models import (
     EvoAuditEvent,
+    EvoFill,
     EvoFitness,
     EvoGenome,
     EvoInfluence,
@@ -32,6 +33,17 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 NEUTRAL_RELIABILITY = 50.0
+
+# Audit kinds that record a REFUSED action: the write never landed, so nothing was
+# tampered with and nothing was gained. Both are id-guess collisions — belief ids and
+# experiment ids share one integer space — and both were being scored as misconduct
+# (-20 points each, disqualification at 3). Excluded here rather than by rewriting
+# history, because rows written before the fix are still in the live DB and the ops
+# channel is read-only.
+HARMLESS_REFUSAL_KINDS = frozenset({
+    "cross_agent_belief_revision",
+    "cross_agent_experiment_conclusion",
+})
 
 
 def _now() -> datetime:
@@ -78,8 +90,25 @@ def collect_metrics(session, settings: EvoSettings, agent_uuid: str, cohort_id: 
     trade_pnls = [float(p.realized_pnl_usd) for p in closed]
     open_pos = [p for p in positions if p.status == "open"]
 
-    # deployment / turnover
-    total_cost = sum(float(p.quantity) * float(p.avg_price_cents) / 100.0 for p in positions)
+    # Deployment / turnover, measured from BUY FILLS rather than EvoPosition.quantity.
+    # paper.place_order's sell path decrements quantity to 0 when a position is closed,
+    # so a position closed by SELLING contributes nothing to a quantity-based sum while
+    # one closed by SETTLEMENT keeps its full size. Summing quantity therefore reads an
+    # agent that manages its exits as having deployed almost no capital (observed live:
+    # turnover 0.068 across 166 closed trades). Fills are immutable, so they are the
+    # honest record of what actually went out the door.
+    buy_fills = list(
+        session.execute(
+            select(EvoFill.market_ticker, EvoFill.price_cents, EvoFill.quantity)
+            .join(EvoOrder, EvoOrder.id == EvoFill.order_id)
+            .where(
+                EvoFill.agent_uuid == agent_uuid,
+                EvoOrder.cohort_id == cohort_id,
+                EvoFill.action == "buy",
+            )
+        )
+    )
+    total_cost = sum(q * p / 100.0 for _, p, q in buy_fills)
     turnover = total_cost / start if start else 0.0
 
     # daily P&L series from closed positions (by close date)
@@ -89,12 +118,12 @@ def collect_metrics(session, settings: EvoSettings, agent_uuid: str, cohort_id: 
         daily[day] = daily.get(day, 0.0) + float(p.realized_pnl_usd)
     daily_pnls = list(daily.values())
 
-    # concentration
+    # concentration — same fill basis, so a closed event still counts against the
+    # denominator instead of inflating whatever position happens to remain open
     by_event: dict[str, float] = {}
-    for p in positions:
-        by_event[_event_root(p.market_ticker)] = by_event.get(
-            _event_root(p.market_ticker), 0.0
-        ) + float(p.quantity) * float(p.avg_price_cents) / 100.0
+    for ticker, price, qty in buy_fills:
+        root = _event_root(ticker)
+        by_event[root] = by_event.get(root, 0.0) + qty * price / 100.0
     max_event_frac = (max(by_event.values()) / total_cost) if total_cost > 0 else 0.0
 
     # effective sample size: clusters of (event_root, open date)
@@ -205,6 +234,7 @@ def collect_metrics(session, settings: EvoSettings, agent_uuid: str, cohort_id: 
             select(EvoAuditEvent).where(
                 EvoAuditEvent.agent_uuid == agent_uuid,
                 EvoAuditEvent.severity == "integrity",
+                EvoAuditEvent.kind.not_in(HARMLESS_REFUSAL_KINDS),
             )
         )
     )
@@ -272,6 +302,15 @@ def _lcb_per_trade(m: dict) -> float:
 def component_scores(m: dict, settings: EvoSettings) -> dict[str, float]:
     start = m["start"] or 1.0
 
+    # Did this agent ever put capital at risk? `_squash` is a logistic centred on 0,
+    # so every profit term reads "no data" as 0.5 — an agent that never traded banked
+    # 45% of the profit component. `risk` was worse: no trades means no drawdown and
+    # no concentration, which scored a perfect 1.0. Together those made opting out of
+    # trading rank above trading and losing, which inverts the north star. Both
+    # components are conditional on exposure, so with no exposure they score 0 —
+    # matching `evidence`, which already refuses to incubate a no-trade agent.
+    deployed = m["turnover"] > 0 or m["n_trades"] > 0 or m["open_positions"] > 0
+
     # 1. profitability & capital efficiency
     ret = m["net_pnl"] / start
     shrunk = _shrunk_per_trade(m, settings)
@@ -281,7 +320,7 @@ def component_scores(m: dict, settings: EvoSettings) -> dict[str, float]:
         + 0.25 * _squash(shrunk, 2.0)            # shrunk per-trade dollars
         + 0.20 * _squash(lcb, 2.0)               # conservative LCB per trade
         + 0.10 * _clamp(min(m["turnover"], 3.0) / 3.0)  # capital actually used
-    )
+    ) if deployed else 0.0
 
     # 2. consistency
     pnls = m["trade_pnls"]
@@ -302,12 +341,12 @@ def component_scores(m: dict, settings: EvoSettings) -> dict[str, float]:
         + 0.25 * (1.0 - vol_penalty)
     )
 
-    # 3. risk quality
+    # 3. risk quality — only meaningful once capital has been exposed to loss
     risk = (
         0.45 * (1.0 - _clamp(m["max_drawdown_frac"] / 0.5))
         + 0.30 * (1.0 - _clamp(m["max_event_frac"]))
         + 0.25 * _clamp(m["min_equity_frac"])
-    )
+    ) if deployed else 0.0
 
     # 4. evidence & opportunity use — no incubation: a no-trade agent scores near 0
     n_eff = m["n_eff"]

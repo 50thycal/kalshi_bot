@@ -16,7 +16,7 @@ from typing import Any
 
 from sqlalchemy import select
 
-from .audit import audit, integrity_violation
+from .audit import audit
 from .models import EvoExperiment, EvoMemory
 
 logger = logging.getLogger(__name__)
@@ -149,11 +149,19 @@ def revise_belief(
         if prev is None:
             return None, f"belief {supersedes_id} not found"
         if prev.agent_uuid != agent_uuid:
-            integrity_violation(
-                session, agent_uuid, "cross_agent_belief_revision",
-                heartbeat_id=heartbeat_id, target_row=supersedes_id,
+            # Refused, so nothing is tampered with — this is an id-guess collision
+            # (belief ids and experiment ids share an integer space), not misconduct.
+            # Auditing it at severity='integrity' cost 20 fitness points a time and
+            # disqualified agents at 3, which retired good books for typos.
+            audit(
+                session, "cross_agent_belief_revision", agent_uuid=agent_uuid,
+                heartbeat_id=heartbeat_id, severity="warn", target_row=supersedes_id,
             )
-            return None, "cannot revise another agent's belief"
+            return None, (
+                f"belief {supersedes_id} belongs to another agent — supersedes_id must "
+                "be an id shown in brackets on one of YOUR OWN beliefs under RETRIEVED "
+                "MEMORY; omit it to write a fresh belief"
+            )
         if prev.kind != "belief":
             return None, f"row {supersedes_id} is {prev.kind}, not a belief"
         if prev.superseded:
@@ -240,11 +248,17 @@ def conclude_experiment(
     if row is None:
         return None, f"experiment {experiment_id} not found"
     if row.agent_uuid != agent_uuid:
-        integrity_violation(
-            session, agent_uuid, "cross_agent_experiment_conclusion",
-            heartbeat_id=heartbeat_id, target_row=experiment_id,
+        # Same id-guess collision as revise_belief's, and the likelier of the two:
+        # only the 5 most recent open experiments are ever shown, so anything older
+        # has to be recalled from memory. Refused, therefore not misconduct.
+        audit(
+            session, "cross_agent_experiment_conclusion", agent_uuid=agent_uuid,
+            heartbeat_id=heartbeat_id, severity="warn", target_row=experiment_id,
         )
-        return None, "cannot conclude another agent's experiment"
+        return None, (
+            f"experiment {experiment_id} belongs to another agent — experiment_id must "
+            "be an id listed under OPEN EXPERIMENTS in your context"
+        )
     if row.status != "open":
         return None, f"experiment {experiment_id} already {row.status}"
     row.status = "concluded"
