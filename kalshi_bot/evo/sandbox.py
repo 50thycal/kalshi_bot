@@ -746,6 +746,56 @@ def activate_strategy(
     return row, None
 
 
+def deactivate_strategy(
+    session, agent_uuid: str, strategy_id: int, *, reason: str = ""
+) -> tuple[EvoStrategy | None, str | None]:
+    """Stop a live strategy. The counterpart to activate_strategy.
+
+    Without this an agent could deploy but never withdraw: the only path to
+    'inactive' was activate_strategy demoting a same-named sibling, so a strategy
+    the owner had *measured* as negative-EV kept executing every cycle forever.
+    Live cost of the gap: 0bb6dd17 backtested its own mmsell books over 4,339
+    settled trades at -$0.0476/trade and filed eighteen capability tickets in six
+    days trying to switch them off while they kept trading.
+
+    Reversible on purpose — 'inactive' is already an activatable state, so an
+    agent can fix a spec and redeploy rather than being forced to mint a new one.
+    """
+    row = session.get(EvoStrategy, strategy_id)
+    if row is None:
+        return None, f"strategy {strategy_id} not found"
+    if row.agent_uuid != agent_uuid:
+        return None, "cannot deactivate another agent's strategy"
+    if row.status != "active":
+        return None, (
+            f"strategy {strategy_id} is {row.status}, not active — nothing to stop"
+        )
+    row.status = "inactive"
+    session.flush()
+    audit(session, "strategy_deactivated", agent_uuid=agent_uuid, strategy_id=row.id,
+          name=row.name, revision=row.revision, reason=str(reason)[:500])
+    return row, None
+
+
+def deactivate_agent_strategies(session, agent_uuid: str, *, reason: str) -> int:
+    """Turn off every live strategy an agent owns. Used at retirement: a retired
+    agent's strategies stayed `active`, so strategy_runner kept placing orders for
+    a bot that no longer exists and no longer has any way to intervene."""
+    n = 0
+    for row in session.scalars(
+        select(EvoStrategy).where(
+            EvoStrategy.agent_uuid == agent_uuid, EvoStrategy.status == "active"
+        )
+    ):
+        row.status = "inactive"
+        n += 1
+    if n:
+        session.flush()
+        audit(session, "strategies_deactivated_bulk", agent_uuid=agent_uuid,
+              count=n, reason=reason)
+    return n
+
+
 def your_strategies(session, agent_uuid: str, *, limit: int = 12) -> list[dict]:
     """An agent's own strategies WITH their numeric ids, newest first.
 

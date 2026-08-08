@@ -154,6 +154,7 @@ def review_queue(session) -> list[dict]:
     out = [
         {
             "id": t.id,
+            "requesting_uuid": t.requesting_uuid,
             "category": t.category,
             "capability": t.capability,
             "problem": (t.problem or "")[:300],

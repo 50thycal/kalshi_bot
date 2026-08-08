@@ -532,6 +532,7 @@ def build_fleet(session, settings: EvoSettings, *, now: datetime | None = None) 
     now = now or datetime.now(timezone.utc)
     cohort = _resolve_cohort(session, None)
     rows = _bot_rows(session, settings, cohort, now=now)
+    requests = _requests(session, now=now)
     perf_by_uuid = {r["uuid"]: r["performance"] for r in rows}
     names = {r["uuid"]: r["name"] for r in rows}
     summary = metrics.fleet_summary(perf_by_uuid, names=names)
@@ -597,7 +598,8 @@ def build_fleet(session, settings: EvoSettings, *, now: datetime | None = None) 
             for g in metrics.generation_history(session)
         ],
         "components": _components(session, cohort=cohort, now=now),
-        "requests": _requests(session),
+        "requests": requests,
+        "request_count": len(requests),
         "announcement_count": events_mod.announcement_page(
             session, cap=_cap, now=now, limit=1
         )["total"],
@@ -783,15 +785,52 @@ def build_announcements(session, *, now: datetime | None = None, **kwargs) -> di
 # ---------------------------------------------------------------------------
 
 
-def _requests(session) -> list[dict]:
-    return [
-        {
-            "request": _cap(t["capability"], 120),
-            "category": t["category"],
-            "requested_by": 1 + t["supporters"],  # requester + co-signers
-            "families": max(1, t["supporting_families"]),
-            "reason": _cap(t.get("problem"), 200) or "—",
-            "status": t["status"],
-        }
-        for t in tickets.review_queue(session)
-    ]
+_URGENCY_RANK = {"high": 0, "normal": 1, "low": 2}
+
+
+def _requests(session, *, now: datetime | None = None) -> list[dict]:
+    """Open capability requests, grouped so repetition reads as urgency.
+
+    Ticket dedup keys on (category, capability), and an agent that cannot get an
+    answer varies BOTH — one live agent cycled performance -> bug_report ->
+    infrastructure -> platform_deployment -> permissions filing eighteen versions
+    of the same ask over six days. Ungrouped, that buries every other request in
+    the fleet under one agent's repetition.
+
+    So group across category on the deduper's own token signature and surface the
+    repeat count: "asked 18 times over 6 days" is the operator signal, and one row
+    per distinct ask keeps a quieter agent's request visible next to it."""
+    now = now or datetime.now(timezone.utc)
+    groups: dict[frozenset[str], list[dict]] = {}
+    for t in tickets.review_queue(session):
+        _sig, tokens = tickets._signature(t["category"], t["capability"])
+        key = next(
+            (k for k in groups if tickets._jaccard(k, tokens) >= 0.6), tokens
+        )
+        groups.setdefault(key, []).append(t)
+
+    rows: list[dict] = []
+    for members in groups.values():
+        newest = max(members, key=lambda m: m["created_at"])
+        oldest = min(members, key=lambda m: m["created_at"])
+        first_at = _aware(datetime.fromisoformat(oldest["created_at"]))
+        # the most explanatory `problem` in the group, not just the latest
+        reason = max((m.get("problem") or "" for m in members), key=len)
+        rows.append({
+            "request": _cap(newest["capability"], 120),
+            "category": newest["category"],
+            "agent": newest["requesting_uuid"][:8],
+            "times_asked": len(members),
+            "requested_by": 1 + sum(m["supporters"] for m in members),
+            "families": max(1, max(m["supporting_families"] for m in members)),
+            "urgency": min((m["urgency"] for m in members),
+                           key=lambda u: _URGENCY_RANK.get(u, 1)),
+            "reason": _cap(reason, 240) or "—",
+            "age_days": max(0, int((now - first_at).total_seconds() // 86400)),
+            "first_asked": _iso(first_at),
+            "status": newest["status"],
+        })
+    # loudest first, then most urgent, then oldest — what an operator should read first
+    rows.sort(key=lambda r: (-r["times_asked"], _URGENCY_RANK.get(r["urgency"], 1),
+                             -r["age_days"]))
+    return rows

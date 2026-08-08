@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from . import graveyard
+from . import graveyard, sandbox
 from . import paper as papermod
 from .audit import audit
 from .cognition import Cognition
@@ -491,6 +491,12 @@ def maybe_finalize_cohort(
         agent.status_reason = f"bottom {int(settings.bottom_fraction * 100)}% of cohort "\
                               f"#{cohort.number} (rank {row.rank})"
         agent.retired_at = _now()
+        # A retired agent's strategies stayed `active`, so strategy_runner kept
+        # placing orders for a bot that no longer exists and has no way left to
+        # intervene. Liquidation above closes the book; this closes the tap.
+        sandbox.deactivate_agent_strategies(
+            session, agent.agent_uuid, reason=f"owner retired at cohort #{cohort.number}",
+        )
         graveyard.add_entry(
             session,
             slug=f"agent-{agent.agent_code.lower()}",
