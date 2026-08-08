@@ -250,6 +250,53 @@ SERIES_TYPES: tuple[tuple[str, str, str], ...] = (
 
 UNCLASSIFIED = ("unclassified", "unknown")
 
+# --- the LINE within a type ------------------------------------------------------------------
+# The taxonomy says a ticker is a `spread` or a `total`; the line says WHICH ONE — a 1-run
+# handicap and a 7-run handicap are the same type to every book we run. Probed 2026-08-05, MLB
+# totals run a 9.7% loss rate at the 10-11 run line and 22-26% at 15-16, a wider spread than most
+# type-level differences.
+#
+# Parsed from the ticker's outcome token, which is why this is an explicit ALLOWLIST rather than
+# a blanket regex: the encoding is series-specific and a generic "trailing digits" rule is
+# silently WRONG in places. KXWNBATOTAL carries raw points (151-213) while KXMLBTOTAL carries
+# runs (4-21) — same field, incomparable units, so they must never share a bucket. An
+# exact-score suffix like ARG1CPV0 would yield `0`, which is not a line at all. Any series not
+# listed here reports no line rather than a wrong one.
+#
+# This is the RETROSPECTIVE reader, usable on all history. Going forward the worker captures
+# Kalshi's own `floor_strike`/`cap_strike` on mmsell_candidate_ticks (alembic e3f4a5b6c7d8),
+# which is the same number stated uniformly across series and should be preferred once it has
+# coverage — see docs/MMSELL_MARKET_TYPES.md.
+LINE_SERIES: frozenset[str] = frozenset({
+    "KXMLBSPREAD", "KXMLBTOTAL",
+    "KXWNBASPREAD", "KXWNBATOTAL",
+    "KXNBASUMMERSPREAD", "KXNBASUMMERTOTAL",
+    "KXWCSPREAD", "KXWCTOTAL", "KXWCTEAMTOTAL", "KXWC1HTOTAL",
+    "KXLIGAMXTOTAL", "KXMLSTOTAL",
+    "KXWCCORNERS", "KXWCTCORNERS",
+})
+
+
+def line_of(market_ticker: str) -> float | None:
+    """The numeric line of a spread/total ticker, or None when the series has no parseable one.
+
+    Reads the trailing integer of the outcome token: KXMLBTOTAL-26AUG021510KCCOL-12 -> 12,
+    KXMLBSPREAD-26AUG021515MILLAA-LAA3 -> 3 (the line sits after a team code). Restricted to
+    LINE_SERIES because the same parse is wrong elsewhere."""
+    if mt_series := series_of(market_ticker):
+        if mt_series not in LINE_SERIES:
+            return None
+    parts = (market_ticker or "").split("-")
+    if len(parts) < 3:
+        return None
+    digits = ""
+    for ch in reversed(parts[-1]):
+        if ch.isdigit():
+            digits = ch + digits
+        else:
+            break
+    return float(digits) if digits else None
+
 
 def series_of(market_ticker: str) -> str:
     """KXMLBGAME-26AUG012110BOSLAD-BOS -> KXMLBGAME."""
@@ -392,6 +439,7 @@ def load_trades(cur, statuses: tuple[str, ...], include_twins: bool) -> list[dic
         out.append({
             "ticker": tkr,
             "series": series_of(tkr),
+            "line": line_of(tkr),
             "book": book,
             "status": status,
             "type": mtype,
@@ -430,6 +478,17 @@ def _row(label: str, mode: str, s: dict, flow_n: int) -> str:
             f" {_f(s['p95'], '{:+5.1f}'):>6}")
 
 
+def _table_rows(groups: dict[str, list[dict]], flow_n: int, order: list[str]) -> None:
+    """Same row rendering as _table but with a caller-supplied ordering (lines sort numerically,
+    not by volume)."""
+    print(HDR)
+    for key in order:
+        rows = groups[key]
+        s = summarize(rows)
+        modes = {r["mode"] for r in rows}
+        print(_row(key, modes.pop() if len(modes) == 1 else "mixed", s, flow_n))
+
+
 def _table(title: str, groups: dict[str, list[dict]], flow_n: int, min_n: int = 0) -> None:
     print(f"\n=== {title} ===")
     print(HDR)
@@ -448,7 +507,7 @@ def _table(title: str, groups: dict[str, list[dict]], flow_n: int, min_n: int = 
 
 
 def report(trades: list[dict], book: str | None, show_series: bool, min_n: int,
-           maxyes: int = 7) -> None:
+           maxyes: int = 7, show_lines: bool = False) -> None:
     if not trades:
         print("(no mmsell paper trades matched)")
         return
@@ -502,6 +561,31 @@ def report(trades: list[dict], book: str | None, show_series: bool, min_n: int,
                 g[t["type"]].append(t)
             _table(f"BY MARKET TYPE — single book '{book}' (no duplication)", g, len(sub))
 
+    # LINE detail: within a type, which handicap / over-under number. Only the series whose
+    # encoding is known (LINE_SERIES) report one, so a cell here is never a mis-parsed suffix.
+    if show_lines:
+        lined = [t for t in trades if t.get("line") is not None]
+        print(f"\n=== BY LINE (within type; {len(lined)} of {n_all} trades have a parseable line)"
+              " ===")
+        if not lined:
+            print("  none — no traded series is in LINE_SERIES.")
+        for mtype in sorted({t["type"] for t in lined}):
+            sub = [t for t in lined if t["type"] == mtype]
+            for ser in sorted({t["series"] for t in sub}):
+                cells = defaultdict(list)
+                for t in sub:
+                    if t["series"] == ser:
+                        cells[f"{t['line']:.0f}"].append(t)
+                shown = {k: v for k, v in cells.items() if len(v) >= min_n}
+                if not shown:
+                    continue
+                print(f"\n  --- {mtype} / {ser} ---")
+                _table_rows(shown, sum(len(v) for v in shown.values()),
+                            order=sorted(shown, key=lambda k: float(k)))
+        print("\n  Lines are NOT comparable across series — KXWNBATOTAL counts points (151-213),"
+              "\n  KXMLBTOTAL counts runs (4-21). Compare within a series only. Entry price also"
+              "\n  varies by line, so read `edge` (which divides it out) before c/trade.")
+
     if show_series:
         for mtype in sorted(by_type, key=lambda k: -len(by_type[k])):
             g = defaultdict(list)
@@ -538,6 +622,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--book", default="mmsell10",
                     help="book for the duplication-free table (default mmsell10, the live "
                          "candidate); 'none' to skip")
+    ap.add_argument("--lines", action="store_true",
+                    help="print the per-LINE breakdown within each type (spreads/totals)")
     ap.add_argument("--series", action="store_true",
                     help="also print the per-series detail inside each type")
     ap.add_argument("--min-n", type=int, default=5,
@@ -564,7 +650,7 @@ def main(argv: list[str] | None = None) -> int:
         with conn.cursor() as cur:
             trades = load_trades(cur, statuses, args.include_twins)
     book = None if args.book.strip().lower() in ("", "none") else args.book.strip()
-    report(trades, book, args.series, args.min_n, args.maxyes)
+    report(trades, book, args.series, args.min_n, args.maxyes, args.lines)
     return 0
 
 

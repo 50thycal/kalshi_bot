@@ -110,6 +110,27 @@ by parsing the trailing integer off the ticker's outcome token, there is structu
 MLB totals at the 10–11 run line run a 9.7% loss rate; at 15–16 the same market type runs 22–26%.
 That is a bigger spread than most of the type-level differences this whole doc is built on.
 
+### …but it does NOT survive scrutiny yet (`--lines`, 2026-08-06)
+
+The full per-line table across 3,496 trades looks structured and **is not**. Reading `KXMLBTOTAL`
+by line: 7–8 bad, 9–11 good, 12 bad, 13–14 fine, 15–16 bad, 17–18 strongly good. A real
+structural effect would be monotone or at least smooth in the line; this alternates.
+
+The reason is independence. Trades within one game are the same bet, so the honest denominator is
+`mkts`, not `n` — and the tail cells have 21–28 distinct markets, where the difference between
+four losses and eight is noise worth ~15¢/trade. Testing the best-looking contrast at the market
+level:
+
+> lines 10–11 (138 markets, 9.7% loss) vs 15–16 (49 markets, 24.4%): **z = 2.58, p = 0.010** —
+> but across 14 line-cells, Bonferroni-corrected **p = 0.14**.
+
+So: suggestive, not established. This is a cell that was found by looking at all of them, and it
+does not survive being scored that way. **Do not build a line-gated book on this table.**
+
+The right test is a *pre-registered monotone* hypothesis — e.g. "loss rate rises with the line's
+distance from the series median" — scored at the market level on the captured `floor_strike`
+data, rather than cell-by-cell mining of a 14-way split.
+
 **But do not build on the regex.** The ticker encoding is series-specific and silently wrong in
 places — `KXWNBATOTAL` puts raw points in the suffix (151–213), `KXMLBTOTAL` puts runs (4–21), a
 spread suffix embeds the line after a team code (`LAA3`), and an exact-score suffix
