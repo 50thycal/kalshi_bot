@@ -138,22 +138,93 @@ def create_agent(
     return agent
 
 
+def grow_to_target(
+    session,
+    settings: EvoSettings,
+    cohort: EvoCohort,
+    rng: random.Random,
+    *,
+    cognition: Cognition | None = None,
+    md: MarketData | None = None,
+) -> list[str]:
+    """Add agents until the living population reaches `effective_population_size()`.
+
+    Called once per cohort boundary, after retirement and reproduction have
+    settled, so it only ever fills a genuine shortfall — in steady state
+    reproduction already replaces retirement 1-for-1 and this is a no-op.
+
+    New agents are `wildcard`-origin, not clones of a survivor: extra capacity
+    should widen the search rather than deepen the incumbent's basin, and the
+    wildcard birth prompt already steers toward underexplored families.
+
+    Clamped to `max_growth_per_boundary`: each birth is a real LLM heartbeat
+    against the weekly budget, so a mistyped cap degrades into gradual growth
+    over several boundaries instead of minting a fleet in one tick."""
+    target = settings.effective_population_size()
+    living = session.scalars(
+        select(EvoAgent).where(EvoAgent.status == "active")
+    ).all()
+    shortfall = target - len(living)
+    if shortfall <= 0:
+        return []
+    wanted, capped = shortfall, min(shortfall, max(0, settings.max_growth_per_boundary))
+    grown: list[str] = []
+    for i in range(capped):
+        agent = create_agent(
+            session, settings, cohort, rng,
+            origin="wildcard", slot_key=f"growth:{cohort.id}:{i + 1}",
+        )
+        if agent is None:
+            continue
+        grown.append(agent.agent_uuid)
+        if cognition is not None and md is not None:
+            run_heartbeat(
+                session, settings, agent=agent, cohort=cohort, kind="birth",
+                slot_id=f"birth:{cohort.id}", cognition=cognition, md=md,
+                extra_context={
+                    "birth_note": (
+                        "You are a NEW founder added to grow the fleet, with a new "
+                        "surname and no parent memory. You exist to WIDEN the search: "
+                        "favor UNDEREXPLORED strategy families, data sources and market "
+                        "categories — check the graveyard and the peer roster and do not "
+                        "clone the dominant family. Produce a founder thesis, cognitive "
+                        "plan and research plan."
+                    ),
+                },
+            )
+    if grown:
+        audit(session, "population_grown", cohort_id=cohort.id, target=target,
+              was=len(living), added=len(grown), wanted=wanted,
+              clamped=wanted > capped, uuids=grown)
+    return grown
+
+
 def bootstrap_founders(
     session, settings: EvoSettings, *, cognition: Cognition | None = None,
     md: MarketData | None = None, now: datetime | None = None,
 ) -> list[EvoAgent]:
-    """Idempotently create founders up to the population target in the current
-    cohort. Safe to call every cycle.
+    """Cold-start the fleet to the population target. Safe to call every cycle.
 
     Targets `effective_population_size()`, not `population_size`: with a cap in
     force this must not keep manufacturing agents that will only be suspended
     again on the next reconcile (and, before the cap became a real population
-    bound, refilling to 30 every cycle is what kept the dead 27 alive)."""
+    bound, refilling to 30 every cycle is what kept the dead 27 alive).
+
+    COLD START ONLY — if any agent is already alive this is a no-op, and growth
+    toward a raised target happens at the next cohort boundary instead (see
+    `grow_to_target`). This runs every cycle, so without the guard raising
+    EVO_MAX_ACTIVE_AGENTS injected agents into the RUNNING cohort within a minute
+    of the redeploy. That is also wrong on the merits: fitness is windowed per
+    cohort, so an agent born on day 6 of a 7-day window is ranked against peers
+    holding seven times its evidence — and `bottom_fraction` retires on that
+    ranking."""
     cohort = ensure_current_cohort(session, settings, now=now)
     active = list(session.scalars(select(EvoAgent).where(EvoAgent.status == "active")))
+    if active:
+        return []
     created: list[EvoAgent] = []
     rng = random.Random(cohort.rng_seed)
-    for i in range(len(active), settings.effective_population_size()):
+    for i in range(settings.effective_population_size()):
         agent = create_agent(
             session, settings, cohort, rng, origin="founder",
             slot_key=f"founder:{i}",
@@ -519,6 +590,16 @@ def maybe_finalize_cohort(
                 },
             )
 
+    # 24b: grow toward a raised population target. Deliberately LAST, after
+    # reproduction and the wildcard slot have filled what they are going to fill,
+    # so it only ever covers the remaining shortfall — running it earlier
+    # double-counts the wildcard seat and overshoots the target. Deferred to the
+    # boundary (rather than the cycle that first sees a raised cap) so a new agent
+    # starts a cohort on the same footing as everyone it will be ranked against.
+    grown = grow_to_target(
+        session, settings, next_cohort, rng, cognition=cognition, md=md,
+    )
+
     # 28: audit + close the transition
     outcome = {
         "cohort": cohort.number,
@@ -529,6 +610,7 @@ def maybe_finalize_cohort(
         "retired": retired,
         "survivors": [r.agent_uuid for r in survivors],
         "children": children,
+        "grown": grown,
         "wildcard": wildcard_uuid,
         "skipped_parent": skipped_parent,
         "next_cohort": next_cohort.number,
@@ -538,6 +620,6 @@ def maybe_finalize_cohort(
     transition.outcome_json = outcome
     session.flush()
     audit(session, "cohort_finalized", cohort_id=cohort.id,
-          retired=len(retired), children=len(children),
+          retired=len(retired), children=len(children), grown=len(grown),
           wildcard=bool(wildcard_uuid))
     return outcome

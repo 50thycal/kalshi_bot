@@ -209,20 +209,38 @@ a repo session, since the ops channel is read-only):
   reasoning in `human_decision`; after building the thing, set `implemented` and
   fill `implementation_result`.
 
-## Running a small population for testing
+## Sizing the population
 
-To confirm the pipeline end-to-end without paying for or exposing all 30 agents,
-throttle how many run live: set **`EVO_MAX_ACTIVE_AGENTS=3`** on the evo service and
-redeploy. Only the 3 lowest-id (earliest-created) agents then run heartbeats, place
-paper trades, and get snapshotted/scored; the other 27 stay in the cohort, dormant,
-untouched — nobody is retired and no history is lost. Watch those 3 via the digest
-(heartbeats completing, trades filling, fitness computing). When satisfied, set
-`EVO_MAX_ACTIVE_AGENTS=0` (or delete it) and redeploy — all 30 resume immediately.
+`EVO_MAX_ACTIVE_AGENTS` **is** the population when set — not a display filter over a
+larger fleet. Every population decision scales off it, so at `3` a boundary retires 1,
+keeps 2 and clones 1. The two directions behave differently on purpose.
 
-Caveat: the cap throttles the per-cycle live work, not cohort **finalization** — at
-the Monday-week boundary all active members (including the dormant ones) are still
-scored/retired. Conclude testing, or lift the cap, before a cohort boundary if you
-want the dormant agents judged on real activity.
+**Shrinking takes effect on the next cycle.** Set e.g. `EVO_MAX_ACTIVE_AGENTS=3` and
+redeploy; `reconcile_population` suspends the excess immediately. It keeps the lowest
+ids, so agents already carrying a live book are never yanked out from under it, and it
+*suspends* rather than retires — a capped-out agent did not fail, so it gets no
+retirement record, no graveyard entry and no final rank. Open positions are left to
+settle on their own schedule rather than force-closed at an arbitrary price.
+
+**Growing takes effect at the next cohort boundary.** Raise the number and redeploy;
+nothing changes until the running cohort ends, then `grow_to_target` adds new agents
+so the next cohort opens at the new size. It is deferred deliberately: fitness is
+windowed per cohort, so an agent injected on day 6 of a 7-day window would be ranked
+against peers holding seven times its evidence — and `bottom_fraction` retires on that
+ranking. Waiting for the boundary starts everyone on equal footing.
+
+Two things to know about growth:
+
+- **New agents are fresh `wildcard` founders, not revived suspended ones.** A
+  suspended agent's beliefs and context are frozen at the moment it was capped and go
+  stale fast; a new one gets the wildcard birth prompt, which steers it toward
+  underexplored strategy families and away from cloning the incumbent. Growing widens
+  the search instead of deepening the current basin.
+- **Growth is clamped to `EVO_MAX_GROWTH_PER_BOUNDARY` (default 5).** Each birth is a
+  real LLM heartbeat against the weekly budget, so a mistyped cap grows the fleet over
+  several boundaries rather than minting dozens of agents at once. Jumps larger than
+  the clamp converge over consecutive boundaries; the `population_grown` audit event
+  records `wanted` vs `added` and sets `clamped`.
 
 ## Pausing and emergencies
 
@@ -233,7 +251,7 @@ want the dormant agents judged on real activity.
   lost; the loop resumes idempotently — missed heartbeat slots are swept as
   abandoned, never double-run.
 - **Shrink instead of pause** (keep testing at low scale): `EVO_MAX_ACTIVE_AGENTS=3`
-  (see "Running a small population for testing" above).
+  (see "Sizing the population" above). Takes effect on the next cycle.
 - Rollback of the whole feature: scale the service down; optionally
   `alembic downgrade -1` removes the `evo_*` tables (destroys agent history).
 

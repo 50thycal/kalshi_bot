@@ -43,6 +43,12 @@ class EvoSettings(BaseSettings):
     # keeps exactly this many agents `active`, so retirement/reproduction
     # fractions scale off the real number (cap=3 -> retire 1, keep 2, clone 1).
     max_active_agents: int = 0
+    # Growing the fleet is deferred to a cohort boundary (see evolution.grow_to_target)
+    # and clamped to this many new agents per boundary. Two reasons for the clamp:
+    # every birth is a real LLM heartbeat against the weekly budget, and a mistyped
+    # cap should degrade into "grows a bit each week" rather than minting a fleet in
+    # one tick. Raising the cap by more than this converges over several boundaries.
+    max_growth_per_boundary: int = 5
     cohort_days: int = 7  # a cohort runs exactly this long from when it is born
     cohort_timezone: str = "America/Chicago"  # display/reporting only
     bottom_fraction: float = 0.30
