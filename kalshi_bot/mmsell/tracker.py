@@ -46,7 +46,17 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class MmSellCycleSummary:
-    events_seen: int = 0
+    # --- scan-funnel counters (persisted per cycle; see MmSellTracker._record_scan_telemetry) --
+    # These exist because Railway's log endpoint returns only the message text and drops the
+    # structured fields, so a cycle's funnel was invisible in production. The 2026-08-08 scan
+    # starvation could not be measured directly for exactly that reason and had to be inferred.
+    pages_fetched: int = 0          # /events pages actually requested
+    pagination_exhausted: bool = False  # False => we stopped at the page cap, universe truncated
+    events_fetched: int = 0         # events returned by the API, before any filter
+    events_out_of_window: int = 0   # dropped: no market inside the htc window
+    events_eligible: int = 0        # survived skip/volume/window, i.e. the rankable universe
+    events_dropped_by_cap: int = 0  # eligible events the top-N cut left unscanned
+    events_seen: int = 0            # events actually scanned this cycle (post-cut)
     markets_considered: int = 0
     in_band: int = 0        # control-book scoped (stable across releases)
     opened: int = 0         # across control + revision books (twins excluded)
@@ -84,6 +94,31 @@ class MmSellTracker:
     def _skip_series(self, series: str) -> bool:
         s = (series or "").upper()
         return any(s.startswith(p) for p in self.settings.mmsell_skip_series_list)
+
+    @staticmethod
+    def _event_has_window_market(event: dict, s: Settings) -> bool:
+        """Does this event carry at least one market inside the control's entry window?
+
+        Applied BEFORE the top-N volume cut so the scan budget is spent on events we could
+        actually trade — see the note in run_once. Uses exactly the same bound the per-market
+        gate applies later, so an event admitted here can never be admitted for a reason the
+        market gate would then reject wholesale.
+
+        An event with no parseable close_time is KEPT: the per-market gate will drop it a moment
+        later, and dropping it here on a parse failure would silently shrink the universe for a
+        data problem rather than a trading decision."""
+        markets = event.get("markets") or []
+        if not markets:
+            return False
+        saw_time = False
+        for m in markets:
+            htc_s = compute_time_to_close(m.get("close_time"))
+            if htc_s is None:
+                continue
+            saw_time = True
+            if s.mmsell_min_hours_to_close <= htc_s / 3600.0 <= s.mmsell_max_hours_to_close:
+                return True
+        return not saw_time
 
     @staticmethod
     def _vol_gate_blocks(session, book: dict, ticker: str) -> bool:
@@ -372,6 +407,47 @@ class MmSellTracker:
         }
 
     @staticmethod
+    def _record_scan_telemetry(session, summ: MmSellCycleSummary) -> None:
+        """Persist this cycle's scan funnel to `system_events` so it can be QUERIED.
+
+        Railway's log endpoint returns only a log line's message and drops its structured
+        fields, so `log_event(..., in_band=..., out_of_window=...)` was write-only in
+        production — the counters existed but could never be read back. That is why the
+        2026-08-08 scan starvation had to be inferred from candidate-tick volume and a live
+        market survey instead of simply measured.
+
+        Fail-soft: a telemetry write must never break the trading cycle."""
+        try:
+            repo.log_system_event(
+                session, level="INFO", component="mmsell_scan",
+                message="mmsell scan funnel",
+                raw={
+                    "pages_fetched": summ.pages_fetched,
+                    "pagination_exhausted": summ.pagination_exhausted,
+                    "events_fetched": summ.events_fetched,
+                    "events_out_of_window": summ.events_out_of_window,
+                    "events_eligible": summ.events_eligible,
+                    "events_dropped_by_cap": summ.events_dropped_by_cap,
+                    "events_seen": summ.events_seen,
+                    "markets_considered": summ.markets_considered,
+                    "in_band": summ.in_band,
+                    "opened": summ.opened,
+                    "already_open": summ.already_open,
+                    "capped": summ.capped,
+                    "skipped_htc": summ.skipped_htc,
+                    "skipped_illiquid": summ.skipped_illiquid,
+                    "skipped_vol_gate": summ.skipped_vol_gate,
+                    "skipped_settlement_cap": summ.skipped_settlement_cap,
+                    "skipped_event_cap": summ.skipped_event_cap,
+                    "per_series": dict(sorted(summ.per_series.items(),
+                                              key=lambda kv: -kv[1])[:12]),
+                    "per_book": summ.per_book,
+                },
+            )
+        except Exception:  # noqa: BLE001 — diagnostics must never break the cycle
+            logger.exception("mmsell scan telemetry write failed (cycle unaffected)")
+
+    @staticmethod
     def _note(recorder, ticker: str, tag: str, outcome: str, price: int | None = None,
               quantity: int | None = None) -> None:
         """Record one book's decision on one candidate in the parity tape (no-op without twins)."""
@@ -423,26 +499,48 @@ class MmSellTracker:
         s = self.settings
         summ = MmSellCycleSummary()
 
-        # 1) collect liquid open events (skip parlays/weather), rank by volume, cap the scan.
+        # 1) collect liquid open events (skip parlays/weather), keep only those carrying a market
+        #    INSIDE the entry window, rank by volume, then cap the scan.
+        #
+        # The window filter runs BEFORE the cap deliberately. Ranking the whole universe by volume
+        # and taking the top N spends the scan budget on whatever is LARGEST, and Kalshi's largest
+        # events are long-dated futures — 2028 nominations, season championships, end-of-year
+        # crypto — which the htc gate then discards, leaving the cap spent on nothing.
+        #
+        # Measured 2026-08-08: in-band series seen per day fell from 32 to 2 over two weeks while
+        # Kalshi still listed 9,656 sports markets across 569 series. The cause was exactly this
+        # ordering — World Cup game events (high volume AND short-dated) rolled off and election
+        # futures took their slots. The cap exists to bound API/compute cost, never to choose
+        # which markets we trade.
         events: list[tuple[float, dict]] = []
         cursor = ""
-        for _ in range(40):
+        for _ in range(s.mmsell_event_pages):
             page = self.client.get_events(status="open", with_nested_markets=True,
                                           limit=200, cursor=cursor or None)
+            summ.pages_fetched += 1
             evs = (page or {}).get("events") or []
             for e in evs:
+                summ.events_fetched += 1
                 if self._skip_series(e.get("series_ticker") or ""):
                     continue
                 vol = sum(market_volume(m) for m in e.get("markets") or [])
                 if vol <= 0:
                     continue
+                if not self._event_has_window_market(e, s):
+                    summ.events_out_of_window += 1
+                    continue
                 events.append((vol, e))
             cursor = (page or {}).get("cursor") or ""
             if not cursor or not evs:
+                summ.pagination_exhausted = True
                 break
+        summ.events_eligible = len(events)
         events.sort(key=lambda ev: -ev[0])
         events = events[: s.mmsell_top_events]
         summ.events_seen = len(events)
+        # Did the top-N cut bind? If eligible > seen we are leaving tradeable events unscanned,
+        # which is a capacity signal rather than a fault — but it must be visible either way.
+        summ.events_dropped_by_cap = max(0, summ.events_eligible - summ.events_seen)
 
         books = self._books()
         open_count = {b["tag"]: repo.count_open_paper_positions(session, b["tag"]) for b in books}
@@ -718,4 +816,5 @@ class MmSellTracker:
                     recorder.flush(session, ticker, series=series,
                                    hours_to_close=htc, metrics=metrics)
 
+        self._record_scan_telemetry(session, summ)
         return summ
