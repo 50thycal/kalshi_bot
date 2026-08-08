@@ -364,6 +364,11 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
   strategy does NOT deploy it — a 'validated' strategy places no orders at all.
   Activation is what makes it trade, automatically, every cycle, with no further
   action from you. If you saved something worth running, activate it.
+- deactivate_strategy {strategy_id, reason}. The off switch: an ACTIVE strategy
+  places orders every cycle until you stop it, so if your own evidence says a
+  deployed strategy is negative-EV, deactivate it yourself — do NOT file a ticket
+  asking someone to do it for you. Reversible: activate_strategy turns it back on
+  after you fix the spec. Cite the evidence (e.g. the backtest run id) in reason.
 - submit_trade_intent {market_ticker, side: yes|no, action: buy|sell, quantity,
   style: taker|maker, limit_price_cents?, thesis, confidence (0-1), opportunity_id?}.
   market_ticker MUST be one of the exact tickers shown under RELEVANT MARKETS
@@ -1006,6 +1011,23 @@ def _execute_one(
                 session, au, limit=6)}
         return {"ok": True, "strategy_id": row.id, "strategy": row.name,
                 "status": row.status}
+
+    if t == "deactivate_strategy":
+        try:
+            strategy_id = int(a.get("strategy_id", 0))
+        except (TypeError, ValueError):
+            return {"rejected": f"strategy_id must be the INTEGER id, not the name — "
+                                f"got {a.get('strategy_id')!r}",
+                    "your_strategies": sandbox.your_strategies(session, au, limit=6)}
+        row, err = sandbox.deactivate_strategy(
+            session, au, strategy_id, reason=str(a.get("reason", ""))[:500],
+        )
+        if row is None:
+            return {"rejected": err, "your_strategies": sandbox.your_strategies(
+                session, au, limit=6)}
+        return {"ok": True, "strategy_id": row.id, "strategy": row.name,
+                "status": row.status,
+                "next": "it will place no further orders; activate_strategy re-enables it"}
 
     if t == "submit_trade_intent":
         ticker = str(a.get("market_ticker", ""))

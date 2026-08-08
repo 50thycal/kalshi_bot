@@ -74,6 +74,7 @@ PERMITTED_ACTIONS = frozenset({
     "explore_markets",
     "save_strategy",
     "activate_strategy",
+    "deactivate_strategy",
     "submit_trade_intent",
     "cancel_order",
     "record_influence",

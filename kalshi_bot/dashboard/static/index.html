@@ -214,8 +214,14 @@
         </h3>
         <div id="annlist" hidden></div>
       </div>
+      <div class="panel pad">
+        <h3 style="display:flex;align-items:center;justify-content:space-between">
+          <span>What the bots are asking for <span class="muted num" id="reqcount"></span></span>
+        </h3>
+        <div id="reqlist"></div>
+      </div>
       <details class="panel pad">
-        <summary>System components &amp; capability requests</summary>
+        <summary>System components</summary>
         <div id="systems" style="margin-top:8px"></div>
       </details>
     </div>
@@ -498,14 +504,37 @@ function renderSystems(d){
   const comps = (d.components || []).map(c =>
     `<tr><td>${esc(c.system)}</td><td><span class="st ${esc(c.status)}">${esc(c.status)}</span></td>
      <td class="muted">${esc(c.info)}</td></tr>`).join("");
-  const reqs = (d.requests || []).map(r =>
-    `<tr><td>${esc(r.request)}</td><td class="muted">${esc(r.category)}</td>
-     <td class="r">${esc(r.requested_by)}</td><td><span class="st">${esc(r.status)}</span></td></tr>`).join("");
   $("#systems").innerHTML =
-    `<div class="scroll"><table><tbody>${comps}</tbody></table></div>` +
-    `<h3 style="margin-top:12px">Capability requests</h3>` +
-    (reqs ? `<div class="scroll"><table><tbody>${reqs}</tbody></table></div>`
-          : `<div class="dim" style="font-size:12px">No open requests.</div>`);
+    `<div class="scroll"><table><tbody>${comps}</tbody></table></div>`;
+  renderRequests(d);
+}
+
+/* What the fleet is asking the operator for. Repetition is the signal: an agent
+   that files the same request eighteen times is telling you something louder
+   than one that files it once, so times_asked leads the row. */
+function renderRequests(d){
+  const reqs = d.requests || [];
+  const n = d.request_count != null ? d.request_count : reqs.length;
+  $("#reqcount").textContent = n ? n : "";
+  if(!reqs.length){
+    $("#reqlist").innerHTML = `<div class="dim" style="font-size:12px">Nothing outstanding.</div>`;
+    return;
+  }
+  $("#reqlist").innerHTML = `<div class="scroll"><table><tbody>` + reqs.map(r => {
+    const loud = r.times_asked > 1
+      ? `<span class="st bad" title="filed ${esc(r.times_asked)} times">asked ${esc(r.times_asked)}×</span>`
+      : "";
+    const age = r.age_days > 0 ? `${esc(r.age_days)}d open` : "today";
+    return `<tr>
+      <td><div>${esc(r.request)}</div>
+          <div class="dim" style="font-size:12px;margin-top:2px">${esc(r.reason)}</div></td>
+      <td class="muted" style="white-space:nowrap">${esc(r.agent)}<br>
+          <span class="dim" style="font-size:11px">${esc(r.category)}</span></td>
+      <td class="r" style="white-space:nowrap">${loud}
+          <div class="dim" style="font-size:11px;margin-top:2px">${age}</div></td>
+      <td><span class="st ${r.urgency === 'high' ? 'bad' : ''}">${esc(r.urgency)}</span></td>
+    </tr>`;
+  }).join("") + `</tbody></table></div>`;
 }
 
 /* ================= ANNOUNCEMENTS ================= */
