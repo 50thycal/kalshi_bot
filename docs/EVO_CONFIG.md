@@ -9,7 +9,8 @@ they ran under. Defaults are the spec's initial system defaults.
 | Env var | Default | Meaning |
 |---|---|---|
 | `EVO_POPULATION_SIZE` | `30` | active-agent target per cohort |
-| `EVO_MAX_ACTIVE_AGENTS` | `0` | **ops throttle** (not a spec parameter): cap how many active agents run live work per cycle — heartbeats (LLM spend), strategy execution (paper trades), snapshots, interim fitness. `0` = no cap. Set e.g. `3` to shrink the live footprint for end-to-end testing without retiring anyone; the capped-out agents stay in the cohort, dormant, and resume the instant the cap is lifted. Deterministic (lowest-id agents run) |
+| `EVO_MAX_ACTIVE_AGENTS` | `0` | **the real population target** when set (`0` = use `EVO_POPULATION_SIZE`). Every population decision scales off this number, so `3` means retire 1 / keep 2 / clone 1 at a boundary. **Lowering** it takes effect on the next cycle: `reconcile_population` *suspends* the excess (lowest ids kept, so nothing holding a live book gets yanked) — suspended, not retired, because a capped-out agent did not fail. **Raising** it takes effect at the next **cohort boundary**, where `grow_to_target` adds new wildcard founders to reach the number. Raising it does NOT wake previously-suspended agents: their context is stale, so the fleet grows with fresh agents instead |
+| `EVO_MAX_GROWTH_PER_BOUNDARY` | `5` | most new agents `grow_to_target` may add at one boundary. Each birth is a real LLM heartbeat against the weekly budget, so a mistyped cap grows gradually over several boundaries instead of minting a fleet in one tick |
 | `EVO_COHORT_DAYS` | `7` | cohort length; runs exactly this long **from when the cohort is born** (birth-anchored — no fixed calendar boundary, so every cohort gets a full week) |
 | `EVO_COHORT_TIMEZONE` | `America/Chicago` | display/reporting only (cohort timing is birth-anchored, not calendar-snapped) |
 | `EVO_BOTTOM_FRACTION` | `0.30` | retired each boundary |
