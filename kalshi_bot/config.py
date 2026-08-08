@@ -117,6 +117,12 @@ class Settings(BaseSettings):
     mmsell_min_hours_to_close: float = 1.0
     mmsell_max_hours_to_close: float = 336.0     # 14 days — bound how long capital is tied up
     mmsell_top_events: int = 150                 # scan cap per cycle (liquid events, by volume)
+    # /events pages to page through before ranking. Was a hard-coded 40 (= 8,000 events at
+    # limit=200), which Kalshi's open universe now MEETS exactly — so the scan was truncating
+    # before it ranked, and pages arrive in Kalshi's order rather than by volume, making the
+    # truncation arbitrary. `pagination_exhausted` in the per-cycle telemetry says whether this
+    # is still binding: if it ever reads False, the universe is being cut off again.
+    mmsell_event_pages: int = 100                # 20,000 events at limit=200
     mmsell_max_open_positions: int = 200         # diversification is the real risk control
     mmsell_skip_series: str = "KXMVE,KXHIGH,KXLOW"  # skip parlays + weather (its own book)
 
