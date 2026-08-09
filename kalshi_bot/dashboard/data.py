@@ -34,6 +34,7 @@ from ..evo.config import EvoSettings
 from ..evo.fitness import group_by_fractions
 from ..evo.models import (
     EvoAgent,
+    EvoBirth,
     EvoCohort,
     EvoCohortMember,
     EvoConfigVersion,
@@ -295,6 +296,69 @@ def _classify(agent, *, live: bool, has_strategy: bool, open_positions: int, ope
     return STATUS_IDLE
 
 
+def _lineage(session, agent_uuids: list[str]) -> dict[str, dict]:
+    """Where each bot came from, in words.
+
+    The roster showed `Name · Surname · G1 · CODE` and nothing else, so a founder
+    running for weeks, a survivor carried over, a clone of last generation's
+    winner, and a bot born minutes ago all looked identical. `origin` alone is
+    not enough either: `grow_to_target` creates its agents as origin='wildcard'
+    too, so the scheduled diversity slot and an operator-driven fleet expansion
+    are indistinguishable without the birth slot_key (`wildcard:N` vs
+    `growth:<cohort>:N`)."""
+    if not agent_uuids:
+        return {}
+    agents = {
+        a.agent_uuid: a
+        for a in session.scalars(
+            select(EvoAgent).where(EvoAgent.agent_uuid.in_(agent_uuids))
+        )
+    }
+    parent_uuids = [a.parent_uuid for a in agents.values() if a.parent_uuid]
+    parents = {
+        p.agent_uuid: p
+        for p in session.scalars(
+            select(EvoAgent).where(EvoAgent.agent_uuid.in_(parent_uuids))
+        )
+    } if parent_uuids else {}
+    slots = {
+        b.child_uuid: (b.slot_key or "")
+        for b in session.scalars(
+            select(EvoBirth).where(EvoBirth.child_uuid.in_(agent_uuids))
+        )
+    }
+    newest_cohort_id = session.scalar(select(func.max(EvoCohort.id)))
+
+    out: dict[str, dict] = {}
+    for au, a in agents.items():
+        slot = slots.get(au, "")
+        parent = parents.get(a.parent_uuid or "")
+        parent_name = parent.display_name.split(" · ")[0] if parent else None
+        if a.origin == "child":
+            kind = "child"
+            label = (f"child of {parent_name}" if parent_name else "child")
+            if parent is not None:
+                label += f" · inherits the {parent.surname} line"
+        elif slot.startswith("growth:"):
+            kind = "growth"
+            label = "new — added to grow the fleet"
+        elif a.origin == "wildcard":
+            kind = "wildcard"
+            label = "wildcard — fresh line, no parent"
+        else:
+            kind = "founder"
+            label = "founder — original fleet"
+        out[au] = {
+            "kind": kind,
+            "label": label,
+            "parent_name": parent_name,
+            "parent_code": parent.agent_code if parent else None,
+            "born_cohort_id": a.birth_cohort_id,
+            "is_new": a.birth_cohort_id == newest_cohort_id,
+        }
+    return out
+
+
 def _bot_rows(session, settings: EvoSettings, cohort, *, now: datetime) -> list[dict]:
     """One fully-costed row per bot in the generation. Batched: a fixed number of
     queries regardless of fleet size."""
@@ -315,6 +379,7 @@ def _bot_rows(session, settings: EvoSettings, cohort, *, now: datetime) -> list[
     fitness = _latest_interim_fitness(session, cohort.id) if cohort else {}
     groups = _projected_groups(fitness, settings)
     previous = _previous_results(session, uuids, cohort.id if cohort else -1)
+    lineage = _lineage(session, uuids)
 
     rows: list[dict] = []
     for agent in agents:
@@ -337,6 +402,10 @@ def _bot_rows(session, settings: EvoSettings, cohort, *, now: datetime) -> list[
             "family": agent.surname,
             "generation": agent.generation,
             "origin": agent.origin,
+            "lineage": lineage.get(uuid, {"kind": agent.origin, "label": agent.origin,
+                                          "parent_name": None, "parent_code": None,
+                                          "born_cohort_id": agent.birth_cohort_id,
+                                          "is_new": False}),
             "status": _classify(
                 agent, live=uuid in live, has_strategy=strategy is not None,
                 open_positions=p["trades_open"], open_experiments=experiments.get(uuid, 0),

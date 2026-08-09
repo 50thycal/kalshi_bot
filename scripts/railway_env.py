@@ -66,6 +66,15 @@ ALLOWED_VARS = frozenset({
     "EVO_ROUTINE_HEARTBEATS_PER_DAY", "EVO_DEEP_REFLECTIONS_PER_DAY",
     "EVO_STRATEGIC_REVIEW_HOURS",
     "EVO_WEEKLY_TOKEN_BUDGET", "EVO_WEEKLY_LLM_CEILING_USD", "EVO_MAX_ACTIVE_AGENTS",
+    "EVO_MAX_GROWTH_PER_BOUNDARY",
+    # Research ceilings. These bound how much EVIDENCE an agent can gather in a cohort,
+    # and unlike the LLM budgets they cost CPU against our own DB rather than dollars.
+    # Live-settable because exhausting them is invisible from the outside: the fleet's
+    # backtest counters simply stop moving and read as "the agents lost interest" when
+    # they are in fact blocked (observed: all three agents pinned at sandbox_runs 50/50
+    # for days while an agent filed a ticket saying its evidence base had been
+    # invalidated and it had no budget left to rebuild it).
+    "EVO_WEEKLY_SANDBOX_RUNS", "EVO_WEEKLY_DATA_READS", "EVO_WEEKLY_MARKET_SCANS",
     # Which tier runs on which backend/model. Readable + settable so a bad model id
     # or a mis-set tier can be diagnosed and corrected without a deploy. The API KEY
     # is deliberately NOT here — it is a credential, so it stays UI-only (this tool
