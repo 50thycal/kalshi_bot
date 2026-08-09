@@ -624,7 +624,9 @@ function renderBots(d){
     return `<tr class="bot" tabindex="0" role="button" data-uuid="${esc(b.uuid)}"
         aria-selected="${STATE.selected === b.uuid}"
         aria-label="Open detail for ${esc(b.name)}">
-      <td><b>${esc(b.name)}</b><span class="sub">${esc(b.family)} · G${esc(b.generation)} · ${esc(b.code)}</span></td>
+      <td><b>${esc(b.name)}</b>${b.lineage && b.lineage.is_new ? ` <span class="st">new</span>` : ""}
+          <span class="sub">${esc(b.family)} · G${esc(b.generation)} · ${esc(b.code)}</span>
+          ${b.lineage ? `<span class="sub dim">${esc(b.lineage.label)}</span>` : ""}</td>
       <td>${b.strategy_name ? `<b>${esc(b.strategy_name)}</b>` : `<span class="dim">no armed strategy</span>`}
           <span class="sub clamp" title="${esc(b.strategy_summary || "")}">${esc(b.strategy_summary || "")}</span></td>
       <td class="r">${esc(trades)}<span class="sub">closed/open</span></td>
