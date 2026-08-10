@@ -703,25 +703,20 @@ class MmSellTracker:
                                 and metrics.spread > s.mmsell_live_max_spread_cents:
                             self._note(recorder, ticker, tag, twin_codes.SKIP_SPREAD)
                             continue
-                        hot = is_hot_entry(
-                            session, ticker, metrics.best_no_bid,
-                            move_cents=s.mmsell_live_hot_market_move_cents,
-                            lookback_minutes=s.mmsell_live_hot_market_lookback_minutes,
-                            lookup=repo.latest_mmsell_no_bid_before,
-                        )
-                        offset, _arm = maker_offset(
-                            ticker, hot=hot,
-                            calm_offset=s.mmsell_live_price_offset_cents,
-                            hot_offset=s.mmsell_live_hot_market_defensive_offset_cents,
-                            ab_arms=s.mmsell_live_offset_ab_arm_list,
-                            ab_salt=s.mmsell_live_offset_ab_salt,
-                        )
-                        price = maker_no_price(metrics, None, offset, hot=hot)
+                        # Both price AND size come from the shared helper the live executor
+                        # uses. Inlining this arithmetic is how the twin silently drifts: it
+                        # previously re-derived the offset from the GLOBAL a/b config (ignoring
+                        # the arm book's own `abarm`) and sized off the global max_order_size
+                        # (2) while its live counterpart sized off the book's `size` (1) — so
+                        # mmsell10b_pt2 booked 2 contracts per position against live's 1 and
+                        # its dollar figures ran ~2x. A twin that sizes differently from live
+                        # is not a twin.
+                        price, qty = self._live_price_and_size(session, ticker, None, metrics,
+                                                               book)
                         if price is None:
                             self._note(recorder, ticker, tag, twin_codes.SKIP_ILLIQUID)
                             continue
-                        qty = order_quantity(price, s.live_max_order_dollars, s.max_order_size)
-                        if qty <= 0:
+                        if not qty or qty <= 0:
                             self._note(recorder, ticker, tag, twin_codes.SKIP_SIZE, price)
                             continue
                         self.twin_harness.open_twin_entry(
