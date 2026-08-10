@@ -137,7 +137,8 @@ def run() -> int:
     if live:
         with session_scope() as _twin_session:
             retired = repo.reconcile_stale_twin_epochs(
-                _twin_session, live_strategy_prefixes=settings.live_strategy_list)
+                _twin_session, live_strategy_prefixes=settings.live_strategy_list,
+                configured_pairs=settings.live_paper_twin_pairs)
         if retired:
             log_event(logger, logging.INFO, "live/paper twin epochs retired (dropped from LIVE_STRATEGIES)",
                       twin_tags=retired)

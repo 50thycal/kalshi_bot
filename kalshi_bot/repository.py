@@ -1017,32 +1017,46 @@ def end_twin_epoch(session, twin_tag: str, *, notes: str | None = None) -> bool:
     return True
 
 
-def reconcile_stale_twin_epochs(session, *, live_strategy_prefixes: list[str]) -> list[str]:
-    """Close every open twin epoch whose live_tag no longer matches a configured LIVE_STRATEGIES
-    prefix — the case of a live book being retired (e.g. mmsell10 dropped in favor of the
-    mmsell10a/mmsell10b queue-position A/B). Without this, a retired book's dashboard pair just
-    goes quiet with no explanation: `pair_status`'s idle/running check has no way to distinguish
-    "stopped trading a few minutes ago" from "deliberately retired", and the twin_tag stays open
-    forever with no notes.
+def reconcile_stale_twin_epochs(
+    session, *, live_strategy_prefixes: list[str], configured_pairs: list[tuple[str, str]] | None = None,
+) -> list[str]:
+    """Close every open twin epoch that no longer corresponds to a live book we are actually
+    running, so the dashboard never shows a dead pair as running. Two distinct ways an epoch goes
+    stale, both seen in production:
 
-    Mirrors TwinHarness.active_for's own startswith-prefix matching exactly, so this and the
-    harness's live-cycle activity gating can never disagree about what counts as "still live".
+    1. **The live book was retired** — its tag no longer matches any configured LIVE_STRATEGIES
+       prefix (e.g. mmsell10 dropped in favor of the mmsell10a/mmsell10b queue-position A/B).
+       Prefix matching mirrors TwinHarness.active_for exactly, so this and the harness's live-cycle
+       gating can never disagree about what counts as "still live".
+    2. **The twin tag was REPLACED while its live book kept running** — the prescribed response to
+       a PARAM DRIFT warning is literally "start a new twin tag", so an operator bumps the suffix
+       (`mmsell10a_pt` -> `mmsell10a_pt2`). The old epoch's live_tag is still armed, so rule 1 does
+       not catch it, and the orphan sits open forever accruing nothing. Observed: three orphaned
+       `_pt` epochs (1, 4 and 28 trades) still marked open beside their live `_pt2` successors.
 
-    Scoped to LIVE_STRATEGIES membership only — NOT the master switches (LIVE_ENABLED,
-    KILL_SWITCH), which toggle for temporary/operational reasons and must not trigger a
-    retirement note on every pause. Called once at startup (a config change here is a deliberate,
-    infrequent operator action that always comes with a redeploy — not something needing
-    sub-minute detection), never mid-cycle.
+    `configured_pairs` is settings.live_paper_twin_pairs — the (live_tag, twin_tag) list currently
+    in force. Omit it to check only rule 1 (the original behaviour).
+
+    Scoped to configuration only — NOT the master switches (LIVE_ENABLED, KILL_SWITCH), which
+    toggle for temporary/operational reasons and must not trigger a retirement note on every pause.
+    Called once at startup: both changes are deliberate, infrequent operator actions that always
+    come with a redeploy, not conditions needing sub-minute detection.
 
     Returns the closed twin_tags, for the caller to log."""
+    # twin tag currently configured for each live tag; a DIFFERENT open epoch on that live tag is
+    # a superseded twin rather than a retired book, and gets its own note.
+    current_twin: dict[str, str] = dict(configured_pairs or [])
     closed: list[str] = []
     for row in active_twin_epochs(session):
-        if any(row.live_tag.startswith(p) for p in live_strategy_prefixes):
+        live_ok = any(row.live_tag.startswith(p) for p in live_strategy_prefixes)
+        if not live_ok:
+            note = f"{row.live_tag} removed from LIVE_STRATEGIES — no longer trading"
+        elif configured_pairs is not None and current_twin.get(row.live_tag, row.twin_tag) != row.twin_tag:
+            note = (f"superseded by {current_twin[row.live_tag]} — {row.live_tag} is still live, "
+                    f"but this twin tag was replaced")
+        else:
             continue
-        end_twin_epoch(
-            session, row.twin_tag,
-            notes=f"{row.live_tag} removed from LIVE_STRATEGIES — no longer trading",
-        )
+        end_twin_epoch(session, row.twin_tag, notes=note)
         closed.append(row.twin_tag)
     return closed
 

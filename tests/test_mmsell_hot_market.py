@@ -120,7 +120,18 @@ def test_calm_price_offset_is_floored_at_zero_but_hot_is_not():
     assert maker_no_price(_M(no_bid=90, no_ask=99), None, -5, hot=False) == 90  # floored, not 85
 
 
-def test_hot_price_still_capped_at_no_ask_and_bounds():
-    # a pathological config must not place an unpriceable order
-    assert maker_no_price(_M(no_bid=90, no_ask=94), None, 50, hot=True) == 94
+def test_hot_price_still_capped_BELOW_no_ask_and_bounds():
+    # a pathological config must not place an unpriceable order -- and must not place a CROSSING
+    # one either: post_only rejects at the ask, so the ceiling is no_ask - 1.
+    assert maker_no_price(_M(no_bid=90, no_ask=94), None, 50, hot=True) == 93
     assert maker_no_price(_M(no_bid=5, no_ask=10), None, -500, hot=True) == 1
+
+
+def test_a_one_cent_spread_falls_back_to_the_bid_rather_than_crossing():
+    """The A/B regression, stated directly: on a 1c-wide book there is no non-crossing price above
+    the bid, so an improving offset must land ON the bid (a valid resting order) rather than at
+    the ask (rejected). The offset treatment is simply not applicable at this spread."""
+    assert maker_no_price(_M(no_bid=93, no_ask=94), None, 1) == 93
+    assert maker_no_price(_M(no_bid=93, no_ask=94), None, 0) == 93
+    # with room to work, the offset still applies normally
+    assert maker_no_price(_M(no_bid=93, no_ask=96), None, 1) == 94

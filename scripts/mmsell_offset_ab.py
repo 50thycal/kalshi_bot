@@ -70,6 +70,7 @@ import argparse
 import math
 import os
 import pathlib
+import statistics
 import sys
 from collections import defaultdict
 
@@ -120,6 +121,7 @@ def summarize_arm(rows) -> dict:
     settled_n = 0
     settled_c = 0.0
     settled_contracts = 0
+    per_ct: list[float] = []   # per-CONTRACT P&L, for the standard error the gate needs
     for is_filled, fill_px, qty, realized in rows:
         orders += 1
         if not is_filled:
@@ -133,7 +135,9 @@ def summarize_arm(rows) -> dict:
             settled_n += 1
             settled_c += float(realized) * 100.0   # dollars -> cents
             settled_contracts += q
+            per_ct.append(float(realized) * 100.0 / q)
     lo, hi = wilson(filled, orders)
+    sd = statistics.stdev(per_ct) if len(per_ct) > 1 else float("nan")
     return {
         "orders": orders,
         "filled": filled,
@@ -144,6 +148,7 @@ def summarize_arm(rows) -> dict:
         "settled_contracts": settled_contracts,
         "cents_per_contract": (settled_c / settled_contracts) if settled_contracts else float("nan"),
         "total_cents": settled_c,
+        "sd_cents": sd,
     }
 
 
@@ -194,6 +199,23 @@ def _fetch(cur, strategy_like: str):
     return cur.fetchall()
 
 
+def _fetch_rejected(cur, strategy_like: str) -> dict:
+    """Rejected orders per strategy. These are DELIBERATELY absent from the main fetch (they never
+    reached the book, so they are not fills or misses) — but a one-sided rejection rate silently
+    changes which markets an arm trades, so the report has to surface them or a confound hides as
+    a null. This is exactly how the post-only-cross bug was found."""
+    cur.execute(
+        """
+        SELECT coalesce(strategy, '?'), count(*)
+        FROM live_orders
+        WHERE strategy LIKE %s AND action = 'buy' AND status IN ('rejected', 'error')
+        GROUP BY 1
+        """,
+        (strategy_like,),
+    )
+    return {row[0]: int(row[1]) for row in cur.fetchall()}
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--salt", default=os.environ.get("MMSELL_OFFSET_AB_SALT", DEFAULT_SALT),
@@ -237,6 +259,7 @@ def main(argv: list[str] | None = None) -> int:
     with psycopg.connect(url, options=RO_OPTIONS, connect_timeout=15) as conn:
         with conn.cursor() as cur:
             rows = _fetch(cur, args.strategy)
+            rejected = _fetch_rejected(cur, args.strategy)
 
     # Two-book form (the deployed shape): each arm IS a strategy tag, so group by the tag —
     # ground truth of what was actually sent, with no dependence on the salt still matching.
@@ -299,10 +322,15 @@ def main(argv: list[str] | None = None) -> int:
     # The decision, stated against the pre-registered gate so it cannot be re-scoped after the
     # fact. The control is the OFFSET-0 ARM, never the incumbent mmsell10 — that book trades a
     # different slice of flow (it claims candidates first) and a different clip size.
+    #
+    # CRITICALLY: this reports the standard error, not just the point difference. mmsell per-trade
+    # P&L has a ~22c standard deviation (about +5.5c when the tail misses, about -94c when it
+    # hits), so a 0.5c difference between two arms needs ~30,000 contracts PER ARM to detect. An
+    # earlier version of this gate declared PROMOTE/KILL at n>=150, where the smallest detectable
+    # difference is ~7c — it would have called pure noise either way. See docs/MMSELL_OFFSET_AB.md.
     ctrl_key = args.control if args.by_hash is False else "arm0"
     base = stats.get(ctrl_key)
-    print("\nGATE (docs/MMSELL_OFFSET_AB.md): at n>=150 settled CONTRACTS per arm, promote a")
-    print(f"non-zero offset only if it beats the control ({ctrl_key}) by >= 0.5c/contract.")
+    print("\nGATE (docs/MMSELL_OFFSET_AB.md)")
     if base is None:
         print(f"  control {ctrl_key!r} has no rows — pass --control <tag> if the arm books are "
               f"named differently.")
@@ -313,18 +341,32 @@ def main(argv: list[str] | None = None) -> int:
         if arm_offset_of.get(k) is None and not args.by_hash:
             print(f"  {k}: not an arm book (no configured arm) — reference only, not compared")
             continue
-        n_ok = st["settled_contracts"] >= 150 and base["settled_contracts"] >= 150
+        na, nb = base["settled_contracts"], st["settled_contracts"]
+        sda, sdb = base["sd_cents"], st["sd_cents"]
         delta = st["cents_per_contract"] - base["cents_per_contract"]
-        if not n_ok:
-            verdict = (f"UNDERPOWERED (need 150 settled contracts/arm; control has "
-                       f"{base['settled_contracts']}, this arm {st['settled_contracts']})")
-        elif delta >= 0.5:
-            verdict = f"PROMOTE ({delta:+.2f}c vs control)"
-        elif delta <= 0:
-            verdict = f"KILL ({delta:+.2f}c vs control)"
+        if na < 2 or nb < 2 or sda != sda or sdb != sdb:
+            print(f"  {k}: too few settled contracts to say anything (control {na}, arm {nb})")
+            continue
+        se = math.sqrt(sda * sda / na + sdb * sdb / nb)
+        lo, hi = delta - 1.96 * se, delta + 1.96 * se
+        # smallest difference this sample size could actually detect (80% power, alpha .05)
+        mde = (1.96 + 0.8416) * math.sqrt(sda * sda / na + sdb * sdb / nb)
+        print(f"  {k} vs {ctrl_key}: {delta:+.2f}c/contract  SE {se:.2f}c  "
+              f"95% CI [{lo:+.2f}, {hi:+.2f}]")
+        print(f"     n = {nb} vs {na} contracts; smallest difference detectable at this n: "
+              f"~{mde:.1f}c")
+        if lo > 0.5:
+            print("     -> PROMOTE: the whole interval clears the +0.5c bar")
+        elif hi < 0:
+            print("     -> KILL: the whole interval is below zero")
         else:
-            verdict = f"NO ({delta:+.2f}c, short of the +0.5c bar)"
-        print(f"  {k}: {verdict}")
+            need = 2 * (1.96 + 0.8416) ** 2 * max(sda, sdb) ** 2 / (0.5 ** 2)
+            print(f"     -> UNDECIDED: the interval spans the bar. Detecting +0.5c needs "
+                  f"~{need:,.0f} contracts/arm;")
+            print("        at this accrual that is impractical — read the twin-paired gap "
+                  "(live_paper_parity) instead,")
+            print("        which cancels market luck within each arm. See the doc's "
+                  "'primary read' section.")
 
     # Sanity checks — a silently-broken experiment looks exactly like a null result.
     if not args.by_hash and len(stats) >= 2:
@@ -340,6 +382,14 @@ def main(argv: list[str] | None = None) -> int:
                 print("\n  WARNING: the arms' average fill prices are nearly identical — the "
                       "offset does not\n  appear to be taking effect, so there is no treatment "
                       "to measure.")
+    if rejected:
+        print(f"\n  REJECTED ORDERS (never reach the book, and never appear above): {rejected}")
+        vals = [rejected.get(k, 0) for k in stats if arm_offset_of.get(k) is not None]
+        if len(vals) >= 2 and max(vals) > 5 and max(vals) > 3 * max(1, min(vals)):
+            print("  WARNING: one arm is being rejected far more than the other. A one-sided")
+            print("  rejection rate changes WHICH MARKETS that arm trades and invalidates the")
+            print("  comparison outright — this is a confound, not lost volume. Check for")
+            print("  'post only cross' (an improving offset that reached the ask).")
     return 0
 
 

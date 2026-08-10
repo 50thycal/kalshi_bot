@@ -532,7 +532,9 @@ def test_live_sizing_helpers_are_the_single_source_of_truth():
         best_no_bid = 90
         best_no_ask = 93
 
-    assert maker_no_price(_M(), None, 5) == 93          # offset capped at the no-ask
+    # post_only means the ceiling is one cent BELOW the ask -- resting AT it is a cross, which
+    # Kalshi rejects outright rather than filling (see maker_no_price).
+    assert maker_no_price(_M(), None, 5) == 92          # offset capped just under the no-ask
     assert maker_no_price(_M(), 80, 5) == 85            # explicit base + offset
     assert order_quantity(93, 5.0, 100) == 5            # $5 / 0.93 -> 5 contracts
     assert order_quantity(93, 5.0, 2) == 2              # hard cap wins
@@ -552,9 +554,9 @@ def test_mmsell_live_sizing_call_sites_pass_mmsells_own_knobs_unchanged(settings
         best_no_ask = 93
 
     price = maker_no_price(_M(), None, settings.mmsell_live_price_offset_cents)
-    assert price == 93                                   # offset capped at the no-ask
+    assert price == 92                                   # capped just BELOW the no-ask (post_only)
     qty = order_quantity(price, settings.live_max_order_dollars, settings.max_order_size)
-    assert qty == 5                                       # $5 / 0.93 -> 5 contracts
+    assert qty == 5                                       # $5 / 0.92 -> 5 contracts
     settings.max_order_size = 2
     assert order_quantity(price, settings.live_max_order_dollars, settings.max_order_size) == 2
 
@@ -632,3 +634,53 @@ def test_verdict_confirms_alignment_when_both_agree():
 def test_per_contract_is_none_without_contracts():
     assert lpp._per_ct(1.0, 0) is None
     assert abs(lpp._per_ct(1.0, 100) - 1.0) < 1e-9
+
+
+def test_a_superseded_twin_tag_is_closed_even_though_its_live_book_runs_on(settings):
+    """The PARAM DRIFT warning says to "start a new twin tag", so an operator bumps the suffix
+    (mmsell10a_pt -> mmsell10a_pt2). The old epoch's live tag is STILL armed, so the retired-book
+    rule can't catch it, and it sits open forever accruing nothing. Seen in production: three
+    orphaned `_pt` epochs still open beside their live `_pt2` successors."""
+    _armed(settings)
+    ev, books = _cheap_event()
+    with db.session_scope() as session:
+        _tracker(settings, FakeClient([ev], books)).run_once(session)  # opens mmsell10_pt
+
+    # operator rotates the suffix; mmsell10 itself keeps trading
+    settings.live_paper_twin_suffix = "_pt2"
+    with db.session_scope() as session:
+        closed = repo.reconcile_stale_twin_epochs(
+            session, live_strategy_prefixes=settings.live_strategy_list,
+            configured_pairs=settings.live_paper_twin_pairs)
+    assert closed == ["mmsell10_pt"]
+
+    with db.session_scope() as session:
+        row = session.scalar(select(m.LivePaperTwin).where(
+            m.LivePaperTwin.twin_tag == "mmsell10_pt"))
+        assert row.ended_at is not None
+        assert "superseded by mmsell10_pt2" in row.notes
+        assert "still live" in row.notes   # distinguishes it from a retired book
+
+
+def test_the_currently_configured_twin_is_never_closed(settings):
+    _armed(settings)
+    ev, books = _cheap_event()
+    with db.session_scope() as session:
+        _tracker(settings, FakeClient([ev], books)).run_once(session)
+    with db.session_scope() as session:
+        closed = repo.reconcile_stale_twin_epochs(
+            session, live_strategy_prefixes=settings.live_strategy_list,
+            configured_pairs=settings.live_paper_twin_pairs)
+    assert closed == []
+
+
+def test_omitting_configured_pairs_keeps_the_retired_book_rule_only(settings):
+    # back-compat: without the pair list, only rule 1 applies and a suffix bump is invisible
+    _armed(settings)
+    ev, books = _cheap_event()
+    with db.session_scope() as session:
+        _tracker(settings, FakeClient([ev], books)).run_once(session)
+    settings.live_paper_twin_suffix = "_pt2"
+    with db.session_scope() as session:
+        assert repo.reconcile_stale_twin_epochs(
+            session, live_strategy_prefixes=settings.live_strategy_list) == []
