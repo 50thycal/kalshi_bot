@@ -68,9 +68,21 @@ class Settings(BaseSettings):
     kill_switch: bool = True
 
     # --- Risk limits ---
+    # Which books each one actually covers, because it is not uniform (RiskManager.evaluate runs
+    # on the WEATHER entry path only; mmsell/theta self-guard inline):
+    #   max_order_size        weather. mmsell uses it only as a fallback when the book declares no
+    #                         `size=` (mmsell10a/b declare size=1, so it is bypassed); theta uses
+    #                         theta_live_max_contracts instead.
+    #   max_market_exposure   ALL books — per TICKER (risk/manager.py + executor mmsell/theta).
+    #   max_total_exposure    ALL books — PORTFOLIO-wide, the only limit that sums across books.
+    #                         Every other cap is per book tag, so without this one the real
+    #                         ceiling was an emergent (books x per-book cap x clip) product.
+    #   max_daily_loss        ALL books, via live_kill_on_daily_loss. Measured on REALIZED P&L, so
+    #                         on hold-to-settlement books it lags an open drawdown until markets
+    #                         settle, and it halts NEW entries rather than flattening. Accepted.
     max_order_size: int = 1
     max_market_exposure: float = 25.0
-    max_total_exposure: float = 100.0
+    max_total_exposure: float = 100.0   # <= 0 disables; see LiveExecutor._total_exposure_hit
     max_daily_loss: float = 25.0
 
     # --- Scan cadence ---
@@ -82,13 +94,20 @@ class Settings(BaseSettings):
         "Economics,Financials,Companies,Climate and Weather,Commodities,Science and Technology"
     )
     target_series_prefixes: str = ""
+    # SCOPE of the four gates below: they run in SCANNER mode and on the WEATHER live path (via
+    # RiskManager.evaluate / scanner.signals). The mmsell and theta books do NOT read them — they
+    # carry their own equivalents (mmsell_min_volume, mmsell_min_hours_to_close,
+    # mmsell_live_max_spread_cents, theta_live_max_spread_cents). So changing these does not
+    # affect a deployment whose LIVE_STRATEGIES are mmsell*/theta* only.
     max_spread_cents: int = 5
     min_volume: int = 25
-    min_open_interest: int = 10
-    min_hours_to_close: float = 1.0
-    max_markets_per_scan: int = 75
-    max_markets_per_category: int = 12
+    min_open_interest: int = 10       # scanner mode only — no live path reads it
+    min_hours_to_close: float = 1.0   # NB: theta has no min-time-to-expiry equivalent
+    max_markets_per_scan: int = 75    # scanner mode only (mmsell uses mmsell_top_events)
+    max_markets_per_category: int = 12  # scanner mode only
     orderbook_depth: int = 10
+    # NOT WIRED: nothing anywhere reads this — no path rejects an orderbook on age. Kept as a
+    # placeholder for a real freshness gate; do not read it as protection until it has one.
     staleness_seconds: int = 120
     log_level: str = "INFO"
 
@@ -865,10 +884,26 @@ class Settings(BaseSettings):
     # long before 4h elapses.
     live_order_timeout_seconds: int = 14_400  # 4 hours
     live_max_order_dollars: float = 5.0     # per-order dollar cap -> qty = floor(cap / price)
+    # --- Managed exits (TP / SL / break-even) — YES-SIDE BOOKS ONLY -----------------------
+    # SCOPE, and it is narrower than these names suggest. The whole `manage_exits` path reaches a
+    # position only if BOTH hold:
+    #   1. live_exit_mode == "tp_sl"  (the default "settlement" makes manage_exits a no-op), AND
+    #   2. the position is net-long YES — `repository.open_live_positions` skips anything with
+    #      `qty_fp < 0.01`, which is every NO position.
+    # The live maker books (mmsell*, theta*) buy NO, so `quantity_fp` is NEGATIVE and they are
+    # ALWAYS skipped. Setting live_stop_loss_cents therefore does NOTHING for them — it does not
+    # error, it silently never fires, which is the failure mode that makes a stop-loss EXPERIMENT
+    # read as "the stop didn't help" when the stop was never armed. Those books are
+    # hold-to-settlement by design (the mmsell exit study found TP/SL hurts); their only early
+    # exit is the manual one-shot `<book>_closeout_enabled`.
+    # Portfolio-level protection is separate and DOES cover every book: max_daily_loss (realized,
+    # via LiveExecutor._daily_loss_hit) and max_total_exposure (LiveExecutor._total_exposure_hit).
+    # Kept rather than deleted because these knobs are live and correct for the YES/weather books
+    # and are used for exit experiments there.
     live_exit_mode: str = "settlement"      # "settlement" (hold) | "tp_sl" (TP/SL/break-even)
-    live_take_profit_cents: int | None = None
-    live_stop_loss_cents: int | None = None
-    live_break_even_arm_cents: int | None = None
+    live_take_profit_cents: int | None = None    # YES-side books only — see the scope note above
+    live_stop_loss_cents: int | None = None      # YES-side books only — NOT mmsell/theta
+    live_break_even_arm_cents: int | None = None  # YES-side books only
     # Per-entry-window take-profit (tp_sl mode), e.g. "20:5,14:20": the h20 entry scalps a tight
     # +5c, the h14 (higher-conviction) entry runs to +20c. A window listed here is TP-ONLY (no
     # stop — stops whipsaw these high-win favorites); windows not listed fall back to the global
