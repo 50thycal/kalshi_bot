@@ -440,3 +440,22 @@ def test_theta_tracker_without_executor_stays_paper_only(settings):
         tracker.run_once(session)
         assert session.scalar(select(func.count()).select_from(m.LiveOrder)) == 0
         assert session.scalar(select(func.count()).select_from(m.PaperTrade)) >= 1
+
+
+def test_theta_live_total_exposure_cap_blocks(settings):
+    """The portfolio-level breaker must gate the THETA path too, not just mmsell — the two
+    books share one bankroll, so a cap enforced on only one of them is not a cap."""
+    _live_settings(settings, max_total_exposure=2.0)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        for i in range(3):  # 3 x $0.94 of open NO exposure on OTHER tickers
+            session.add(m.Position(
+                market_ticker=f"KXOTHER-26-{i}", captured_at=datetime.now(timezone.utc),
+                side="no", quantity=1, quantity_fp=-1.0, avg_price=94.0,
+                market_exposure=0.94, realized_pnl=None, unrealized_pnl=None, raw_json=None))
+        session.flush()
+        _enter(ex, session)
+    assert client.placed == []

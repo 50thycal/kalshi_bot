@@ -182,6 +182,36 @@ class LiveExecutor:
         realized = repo.live_realized_pnl_today(session)
         return realized <= -abs(s.max_daily_loss)
 
+    def _total_exposure_hit(self, session) -> bool:
+        """True when open live positions already tie up `max_total_exposure` dollars, so no NEW
+        entry may be opened on any book.
+
+        The portfolio-level companion to the per-market `max_market_exposure` check. Without it
+        the only ceiling on total capital at risk is the product of each book's own
+        `*_live_max_open_positions` cap and its clip size — an emergent number that silently
+        grows every time a book is added to LIVE_STRATEGIES, rather than a limit anyone set.
+
+        Blocks ENTRIES only: an exit, a closeout or a reconcile must always be able to run, since
+        refusing to reduce an over-limit book is the opposite of a risk control. `<= 0` disables
+        the breaker, matching the convention used by the other limits."""
+        s = self.settings
+        cap = float(s.max_total_exposure)
+        if cap <= 0:
+            return False
+        try:
+            exposure = repo.live_total_exposure(session)
+        except Exception:  # noqa: BLE001
+            # Fail OPEN, like every other soft gate here: a breaker that cannot read its input
+            # must not be what silently halts the book. The per-market cap, the per-book position
+            # caps and the daily-loss breaker all still apply.
+            logger.exception("total-exposure breaker: read failed (entering anyway)")
+            return False
+        if exposure >= cap:
+            logger.warning("live entry blocked — total exposure cap reached", extra={
+                "extra_fields": {"exposure_usd": round(exposure, 2), "cap_usd": cap}})
+            return True
+        return False
+
     # --- entry ------------------------------------------------------------------
 
     def mirror_entry(
@@ -211,6 +241,9 @@ class LiveExecutor:
         if self._daily_loss_tripped or self._daily_loss_hit(session):
             self._daily_loss_tripped = True
             self.summary.skipped_gate += 1
+            return
+        if self._total_exposure_hit(session):
+            self.summary.risk_blocked += 1
             return
         if repo.live_order_exists(session, event_ticker, strategy):
             self.summary.skipped_dedup += 1
@@ -379,6 +412,9 @@ class LiveExecutor:
             self._daily_loss_tripped = True
             self.summary.skipped_gate += 1
             return "gate:daily_loss"
+        if self._total_exposure_hit(session):
+            self.summary.risk_blocked += 1
+            return "gate:total_exposure"
         # Per-ticker dedup + any in-flight order on this market.
         if repo.live_buy_exists_for_ticker(session, ticker, strategy) \
                 or repo.live_open_order_exists(session, ticker):
@@ -545,6 +581,9 @@ class LiveExecutor:
             self._daily_loss_tripped = True
             self.summary.skipped_gate += 1
             return "gate:daily_loss"
+        if self._total_exposure_hit(session):
+            self.summary.risk_blocked += 1
+            return "gate:total_exposure"
         # Per-ticker dedup + any in-flight order on this market.
         if repo.live_buy_exists_for_ticker(session, ticker, strategy) \
                 or repo.live_open_order_exists(session, ticker):

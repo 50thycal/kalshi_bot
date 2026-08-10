@@ -1773,6 +1773,38 @@ def live_realized_pnl_today(session) -> float:
     return sum(latest.values())
 
 
+def live_total_exposure(session, *, lookback_hours: float = 48.0) -> float:
+    """Total cost basis at risk across every OPEN live position, in dollars — the input to the
+    `max_total_exposure` breaker.
+
+    Denominated identically to the per-market check (`LiveExecutor._market_exposure`):
+    `|quantity| x avg_price / 100`, i.e. what we PAID, not the current mark. For the NO books
+    (mmsell/theta) `avg_price` is the cost basis on the held side, so a 94c NO contract counts
+    as $0.94 of capital at risk — which is exactly the real downside, since a losing tail-sell
+    settles at zero.
+
+    Takes the LATEST snapshot per ticker (Kalshi reports positions cumulatively) and counts a
+    position on EITHER side — `quantity_fp` is signed, so `abs()` is what makes a NO position
+    count at all. `lookback_hours` bounds the scan; a ticker with no snapshot in that window is
+    not an open position we are still tracking."""
+    since = _now() - timedelta(hours=lookback_hours)
+    rows = session.scalars(
+        select(m.Position).where(m.Position.captured_at >= since)
+        .order_by(m.Position.captured_at.desc())
+    ).all()
+    seen: set[str] = set()
+    total = 0.0
+    for row in rows:
+        if row.market_ticker in seen:
+            continue
+        seen.add(row.market_ticker)
+        qty = float(row.quantity_fp) if row.quantity_fp is not None else float(row.quantity or 0)
+        if abs(qty) < 0.01:  # flat / dust — nothing at risk
+            continue
+        total += abs(qty) * float(row.avg_price or 0.0) / 100.0
+    return total
+
+
 # --- theta book (crypto spot + ladder snapshots) ---------------------------------
 
 
