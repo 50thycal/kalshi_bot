@@ -216,6 +216,39 @@ def test_twin_opens_beside_live_priced_and_sized_LIKE_LIVE(settings):
         assert twin.side == "no" and twin.action == "buy"
 
 
+def test_twin_of_an_AB_ARM_book_sizes_and_prices_off_THAT_BOOKS_knobs(settings):
+    """Regression, found on the live dashboard: mmsell10b_pt2 showed 282 contracts across 141
+    positions (2.0/position) beside live mmsell10b's 98/98 (1.0), and ~3x the capital deployed.
+
+    Cause: the twin entry block inlined its own copy of the live price/size arithmetic, reading
+    the GLOBAL max_order_size and the GLOBAL a/b arm config instead of the arm book's own `size`
+    and `abarm`. So the twin of a 1-contract arm booked the global clip, and the twin of arm 1
+    could price at arm 0's offset. Both halves of a twin comparison have to come from the same
+    helper as live or `twin - live` stops meaning "the cost of not filling"."""
+    _armed(settings, live_max_order_dollars=5.0,      # global sizing alone would buy 5
+           live_strategies="mmsell10a,mmsell10b",
+           mmsell_live_offset_ab_arms="0,1",
+           mmsell_live_offset_ab_salt="t",
+           mmsell_variants=("mmsell10a:lo=5,hi=10,maxyes=7,abarm=0,size=1;"
+                            "mmsell10b:lo=5,hi=10,maxyes=7,abarm=1,size=1"))
+    ev, books = _cheap_event()
+    client = FakeClient([ev], books)
+    with db.session_scope() as session:
+        summ = _tracker(settings, client).run_once(session)
+
+    # exactly one arm admits the ticker, so exactly one live order and one twin entry
+    assert summ.twin_opened == 1
+    assert len(client.placed) == 1
+
+    with db.session_scope() as session:
+        live = session.scalar(select(m.LiveOrder))
+        twin = session.scalar(
+            select(m.PaperTrade).where(m.PaperTrade.strategy.endswith("_pt")))
+        assert twin.strategy == f"{live.strategy}_pt"       # the twin of the arm that traded
+        assert twin.quantity == live.quantity == 1          # the BOOK's size=1, not the global 5
+        assert twin.assumed_price == live.limit_price       # and the arm's own offset
+
+
 def test_twin_places_no_real_order_even_when_allowlisted_by_prefix(settings):
     # "mmsell10" is a prefix of "mmsell10_pt": the executor's prefix allowlist must not be the
     # only thing standing between a twin and real money — the twin path never calls it at all.
