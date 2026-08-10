@@ -151,40 +151,82 @@ the experiment is not actually running.
 
 ## Pre-registered gate
 
-Evaluated at **n ≥ 150 settled contracts per arm** (both arms must clear it — an underpowered
-comparison is reported as UNDERPOWERED, never as a verdict). Compare `mmsell10b` against
-`mmsell10a`, **not** against `mmsell10`: the incumbent trades a different slice of flow (it takes
-candidates first) and a different clip size, so it is not a valid control for this. `mmsell10a` is
-the control, and it exists precisely so there is one.
+> **CORRECTED 2026-08-05.** The original gate — "n ≥ 150 settled contracts per arm, promote at
+> ≥ 0.5¢" — was arithmetically unreachable. It was set by analogy to the other mmsell gates
+> without a power calculation, and those gates measure a *different quantity* (a book's own mean
+> against zero, pooled over its whole history) rather than a small difference between two arms.
+> The numbers below replace it.
 
-- **PROMOTE** the 1¢ offset only if `mmsell10b`'s realized ¢/contract beats `mmsell10a` by
-  **≥ 0.5¢**. That bar is deliberately above zero: a 1¢ offset must earn back more than the 1¢ it
-  pays away on every fill, so anything less than a clear margin is noise dressed as improvement.
-- **KILL** it if it lands at or below `mmsell10a`. Queue priority is not worth paying for, the book
-  keeps `offset = 0`, and the ~2¢ adverse-selection gap is confirmed as *not* addressable by
-  price — which redirects the effort to selection (what we enter) rather than execution.
-- **NO** (neither) if it beats `mmsell10a` but by less than 0.5¢: not worth the added complexity
-  and standing cost; keep 0 and stop asking.
+### Why the direct A-vs-B P&L comparison cannot settle this
 
-Sanity checks to read alongside, before trusting either verdict:
+mmsell's per-trade P&L is bimodal and violent: about +5.5¢ when the sold tail misses, about −94¢
+when it hits. The **measured** per-trade standard deviation is **22¢ in both arms**. Against that,
+detecting a 0.5¢ difference between two independent arms needs:
 
-- **`mmsell10a`'s average fill price should sit ~1¢ above `mmsell10b`'s NO price.** If the two
-  arms show the same average price, the experiment is not actually running.
-- **Order counts per arm should be within ~10% of each other.** A large imbalance means the
-  partition is not working (or, in pre-2026-08-04 data, one arm was being starved by the
-  incumbent), and the comparison is confounded.
-- **Each arm's twin (`mmsell10a_pt` / `mmsell10b_pt`) vs its live book** — via `live_paper_parity`.
-  A twin/live gap that differs sharply *between* arms is itself the finding: it is adverse
-  selection responding to queue position, which is the mechanism under test.
+| true difference to detect | n per arm (80% power, α=.05) |
+|---|---|
+| **0.5¢** (the original bar) | **30,391** |
+| 1.0¢ | 7,598 |
+| 2.0¢ | 1,899 |
+| 5.0¢ | 304 |
 
-Report fill rate alongside the P&L in every read, so a promote can be attributed to *more fills*
-rather than *better fills* — those imply different next steps.
+At n=150/arm the smallest detectable difference is **~7¢** — fourteen times the bar it was
+supposedly gating. At the observed accrual rate (~119 settled contracts per arm per day), a
+properly powered 0.5¢ read is **~250 days** away. The direct comparison is not a viable primary
+read and must not be treated as one.
 
-## Why the answer matters either way
+Concretely, at n≈139/99 the arms read `+2.62¢` vs `+2.32¢`, a difference of `−0.30¢ ± 2.89¢`
+(95% CI `[−5.97, +5.37]`) — and the sign flips depending on whether hot entries are included.
+That is what no signal looks like.
 
-- If **paying wins**, the fix to mmsell's live problem is execution, and it is a one-line config
-  change already built and measured.
-- If **paying loses**, adverse selection is not a queue-position problem — it is a selection
-  problem, and the remaining levers are all about *which* markets we rest in (the `maxyes` cap,
-  the timing work in `docs/MMSELL_ROADMAP.md` §9a), not what price we rest at. That closes off the
-  last untested execution knob, which is worth knowing before spending more on execution ideas.
+### The primary read: twin-paired (difference-in-differences)
+
+The two arms trade **disjoint markets** (the hash guarantees it), so a raw A-vs-B comparison is
+dominated by which markets each arm happened to draw. The twins fix this, and this is what they
+are *for*:
+
+    per arm:  gap = (twin ¢/contract) − (live ¢/contract)
+
+The twin trades the **same markets** as its live book under a 100%-fill assumption, so market luck
+largely cancels **within** each arm. `gap` isolates what non-fills cost that arm; comparing
+`gap_a` vs `gap_b` isolates the queue-position effect with far less variance than comparing the
+raw means. Every mmsell live book already runs a twin under standing policy, so this needs no new
+collection — only that the analysis use it.
+
+**PROMOTE** the 1¢ offset when `gap_b` is smaller than `gap_a` (the offset recovers more of the
+paper edge) by a margin exceeding the paired standard error, at **n ≥ 400 settled contracts per
+arm**. **KILL** when `gap_b ≥ gap_a` at that n. Re-derive the required n from the *observed paired*
+standard error on first read — the 400 is a planning figure from the paired design, not a
+measured one, and the honest move is to replace it with the real number once there is one.
+
+### The high-power secondary read: fill rate
+
+Fill rate is a proportion, not a heavy-tailed P&L, so it needs orders of magnitude less data. It
+does **not** answer "is the offset worth it" on its own — a higher fill rate bought with worse
+trades is the failure mode — but it definitively confirms **the mechanism is live**, and it does
+so within days rather than months. Report it always; treat a null here as evidence the experiment
+is not running rather than as a result.
+
+### Sanity checks, before trusting any verdict
+
+- **The arms' average fill prices must differ by ~1¢.** Identical prices mean the treatment is not
+  being applied. Note the offset is only applicable where the NO spread is **≥ 2¢** — on a 1¢-wide
+  book there is no non-crossing price above the bid, so both arms rest at the bid there (see
+  `maker_no_price`). Expect the realized average gap to be **under** 1¢ for that reason.
+- **Order counts per arm within ~25%.** A large imbalance means the partition is broken, an arm is
+  starved, or one arm is being rejected — all confounds. This check caught the post-only-cross
+  bug below.
+- **Rejected-order counts per arm must be comparable.** A one-sided rejection rate silently
+  changes *which markets* an arm trades and invalidates the comparison outright.
+
+### Invalidated data window
+
+**Orders placed before 2026-08-05 are not comparable and must be excluded.** `maker_no_price`
+capped the price at the no-ask, but every order is `post_only` — resting *at* the ask is a cross,
+which Kalshi rejects (`invalid_order` / "post only cross"). This never bound while the offset was
+0, and appeared the moment the +1¢ arm armed: on a 1¢-wide NO spread, `no_bid + 1` clamped to
+`no_ask` and was rejected. Measured: **140 of `mmsell10b`'s 331 orders rejected (42%) against 1
+for `mmsell10a`** — and because a 1¢ spread is the tightest, most liquid market, the treatment arm
+was systematically locked out of exactly the population the control arm traded freely. That is a
+confound, not lost volume. Fixed by capping at `no_ask − 1`; the clock on this experiment restarts
+from that deploy.

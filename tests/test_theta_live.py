@@ -146,8 +146,11 @@ def test_theta_live_places_resting_no_buy_at_no_bid(settings):
         assert session.scalar(select(func.count()).select_from(m.RiskEvent)) == 1  # audit trail
 
 
-def test_theta_live_price_offset_capped_at_no_ask(settings):
-    # offset improves the bid to fill faster, but never pays THROUGH the no-ask (81 here).
+def test_theta_live_price_offset_capped_BELOW_no_ask(settings):
+    """The offset improves the bid to fill faster, but a post_only order must stop one cent BELOW
+    the no-ask, not AT it: resting at exactly the ask is a cross, which Kalshi rejects outright
+    (`invalid_order` / "post only cross") — the very rejection this book took live on 2026-08-02,
+    and which the queue-position A/B then reproduced at scale on mmsell (140 rejected orders)."""
     _live_settings(settings, theta_live_price_offset_cents=5)
     db.init_engine(settings.database_url)
     db.create_all()
@@ -155,8 +158,8 @@ def test_theta_live_price_offset_capped_at_no_ask(settings):
     ex = _exec(settings, client)
     with db.session_scope() as session:
         _enter(ex, session)
-    # 79 + 5 = 84, capped at no_ask 81 -> buy NO @ 81c == sell YES @ 19c == price "0.1900"
-    assert client.placed[0]["price"] == "0.1900"
+    # 79 + 5 = 84, capped at no_ask 81 - 1 = 80 -> buy NO @ 80c == sell YES @ 20c == "0.2000"
+    assert client.placed[0]["price"] == "0.2000"
 
 
 def test_theta_live_hot_market_prices_defensively_but_still_places(settings):

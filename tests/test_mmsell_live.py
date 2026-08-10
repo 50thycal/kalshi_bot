@@ -133,8 +133,12 @@ def test_mmsell_live_places_resting_no_buy_at_no_bid(settings):
         assert session.scalar(select(func.count()).select_from(m.RiskEvent)) == 1  # audit trail
 
 
-def test_mmsell_live_price_offset_capped_at_no_ask(settings):
-    # offset improves the bid to fill faster, but never pays THROUGH the no-ask (94 here).
+def test_mmsell_live_price_offset_capped_BELOW_no_ask(settings):
+    """The offset improves the bid to fill faster, but a post_only order must stop one cent BELOW
+    the no-ask, not AT it. Resting at exactly the ask IS a cross, and Kalshi rejects the order
+    (`invalid_order` / "post only cross") instead of letting it take — so capping at the ask did
+    not cap, it rejected. Measured live once the +1c A/B arm armed: 140 of mmsell10b's 331 orders
+    rejected vs 1 for the +0c arm, concentrated in 1c-wide (tightest, most liquid) markets."""
     _live_settings(settings, mmsell_live_price_offset_cents=5)
     db.init_engine(settings.database_url)
     db.create_all()
@@ -142,8 +146,8 @@ def test_mmsell_live_price_offset_capped_at_no_ask(settings):
     ex = _exec(settings, client)
     with db.session_scope() as session:
         _enter(ex, session)
-    # 92 + 5 = 97, capped at no_ask 94 -> buy NO @ 94c == sell YES @ 6c == price "0.0600"
-    assert client.placed[0]["price"] == "0.0600"
+    # 92 + 5 = 97, capped at no_ask 94 - 1 = 93 -> buy NO @ 93c == sell YES @ 7c == "0.0700"
+    assert client.placed[0]["price"] == "0.0700"
 
 
 def test_mmsell_live_hot_market_prices_defensively_but_still_places(settings):

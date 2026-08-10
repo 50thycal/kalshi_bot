@@ -96,14 +96,32 @@ def maker_no_price(
     no-bid for headroom against continued momentum, instead of improving into the spread. Still
     enters every candidate exactly as a calm entry would; only the price changes.
 
-    Returns None when the book gives us nothing to price off."""
+    Returns None when the book gives us nothing to price off.
+
+    POST-ONLY CEILING (`no_ask - 1`, not `no_ask`). Every mmsell/theta live order is sent
+    `post_only: True` — a pure maker, so it must never cross. Resting a buy-NO at EXACTLY the
+    no-ask IS a cross, and Kalshi rejects the whole order (`invalid_order` / "post only cross")
+    rather than letting it take. Capping at the ask therefore did not cap, it rejected.
+
+    This was invisible while the offset was 0 (the no-bid is never >= the no-ask, so the cap never
+    bound), and appeared the moment the queue-position A/B armed a +1c arm: on a market whose NO
+    spread is exactly 1c, `no_bid + 1` clamped to `no_ask` and every such order was rejected —
+    140 of mmsell10b's 331 orders (42%), against 1 for the +0c arm. Because a 1c spread is the
+    TIGHTEST, most liquid market, that silently locked the treatment arm out of exactly the
+    population the control arm traded freely, confounding the comparison rather than merely
+    costing volume (docs/MMSELL_OFFSET_AB.md).
+
+    Consequence worth knowing: on a 1c-wide market there is no non-crossing price above the bid,
+    so an offset arm falls back to joining the bid — i.e. the offset treatment only actually
+    applies where the spread is >= 2c. That is a real limit of the experiment, not a bug; the
+    alternative (being rejected) is strictly worse and biased."""
     base = no_price if no_price is not None else metrics.best_no_bid if metrics else None
     if base is None:
         return None
     price = int(base) + (int(price_offset_cents) if hot else max(0, int(price_offset_cents)))
     ask = getattr(metrics, "best_no_ask", None) if metrics is not None else None
     if ask is not None:
-        price = min(price, int(ask))
+        price = min(price, int(ask) - 1)
     return max(1, min(99, price))
 
 
