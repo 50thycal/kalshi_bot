@@ -407,7 +407,9 @@ function positionCard(sel, side, s, positions, tags){
     `<div class="card-hd"><span class="swatch ${cls}"></span><h3>${side === "live" ? "Live (real money)" : "Paper twin"}</h3>
       <span class="tag ${cls}" style="margin-left:auto">${esc(s.tag)}</span></div>
      <div class="big ${sign(s.total_pnl_usd)}">${has(s.total_pnl_usd) ? esc(signedUsd(s.total_pnl_usd)) : EM}</div>
-     <div class="dim" style="font-size:11px;margin-bottom:10px">total P&amp;L = realized + unrealized</div>
+     <div class="dim" style="font-size:11px;margin-bottom:10px">total P&amp;L = realized + unrealized${
+       side === "live" ? "" :
+       " &middot; simulated — no real order was ever sent for this tag"}</div>
      <dl class="kv">
        <dt>Realized</dt><dd>${money(s.realized_pnl_usd)}</dd>
        <dt>Unrealized</dt><dd>${money(s.unrealized_pnl_usd)}</dd>
@@ -858,9 +860,16 @@ async function boot(){
     const wanted = new URLSearchParams(location.search).get("run");
     const known = S.runs.runs.map(r => r.twin_tag);
     S.tag = (wanted && known.includes(wanted)) ? wanted : (S.runs.default_run || known[0]);
-    const endedByTag = Object.fromEntries(S.runs.runs.map(r => [r.twin_tag, !!r.ended_at]));
+    // Label each option with BOTH tags. The value is keyed by the twin tag (it is the unique
+    // one), but showing only that read as "this whole page is about the paper book" -- and since
+    // every dollar figure on the live card is real money, a paper tag titling a real-money page
+    // is exactly the wrong impression. "<live> vs <twin>" says what this selects: a PAIR.
+    // (No literal tag may appear in this file: the run is chosen at runtime from /api/runs.)
+    const byTag = Object.fromEntries(S.runs.runs.map(r => [r.twin_tag, r]));
     $("#runsel").innerHTML = known.map(t =>
-      `<option value="${esc(t)}" ${t===S.tag?"selected":""}>${esc(t)}${endedByTag[t]?" (ended)":""}</option>`).join("")
+      `<option value="${esc(t)}" ${t===S.tag?"selected":""}>${
+        esc(byTag[t].live_tag ? `${byTag[t].live_tag} vs ${t}` : t)
+      }${byTag[t].ended_at?" (ended)":""}</option>`).join("")
       || `<option value="">(no paired runs)</option>`;
     renderHistory();
     if(!S.tag){
