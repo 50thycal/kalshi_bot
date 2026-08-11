@@ -103,7 +103,12 @@ def test_summary_carries_the_whole_funnel():
 
 
 def test_telemetry_write_never_breaks_the_cycle():
-    """A diagnostic must not be able to stop trading."""
+    """A diagnostic must not be able to stop trading.
+
+    Covers BOTH system_events writes the method makes — the scan funnel and the quote-parity
+    row — because the second was added later and a bare `return` on the first would have left
+    it untested."""
+    from kalshi_bot.mmsell.quote_parity import BandProbe, QuoteParityAccumulator
     from kalshi_bot.mmsell.tracker import MmSellCycleSummary
 
     class _Boom:
@@ -113,4 +118,47 @@ def test_telemetry_write_never_breaks_the_cycle():
         def flush(self):
             raise RuntimeError("db down")
 
-    MmSellTracker._record_scan_telemetry(_Boom(), MmSellCycleSummary())
+    class _Client:
+        def transient_counts(self):
+            return {429: 3, 502: 1}
+
+    class _Self:
+        client = _Client()
+
+    summ = MmSellCycleSummary()
+    summ.quote_parity = QuoteParityAccumulator(bands=(BandProbe("wide", 5.0, 40.0),))
+    MmSellTracker._record_scan_telemetry(_Self(), _Boom(), summ)
+
+
+def test_telemetry_survives_a_client_without_transient_counts():
+    """The counter is read off the client with getattr, so an older/stubbed client (or one
+    whose snapshot raises) must still produce a funnel row rather than lose the whole cycle's
+    telemetry to an AttributeError."""
+    from kalshi_bot.mmsell.tracker import MmSellCycleSummary
+
+    written: list[dict] = []
+
+    class _Session:
+        def add(self, row):
+            written.append(getattr(row, "raw_json", {}) or {})
+
+        def flush(self):
+            pass
+
+    class _Angry:
+        def transient_counts(self):
+            raise RuntimeError("boom")
+
+    class _NoCounter:
+        pass
+
+    for client in (_Angry(), _NoCounter()):
+        written.clear()
+
+        class _Self:
+            pass
+
+        _Self.client = client
+        MmSellTracker._record_scan_telemetry(_Self(), _Session(), MmSellCycleSummary())
+        assert written, f"no telemetry row written for {type(client).__name__}"
+        assert written[0]["transient"] == {}

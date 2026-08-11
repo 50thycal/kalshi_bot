@@ -76,11 +76,23 @@ Read every book against **its own control over the same window** — never in ab
 never against a control's lifetime number (the controls carry months of history and a different
 regime mix).
 
-- **KEEP** at n ≥ 150 settled (W books) / n ≥ 100 (T books) only if:
-  1. ¢/trade beats its control by **≥ +1.0¢** over the same window, **AND**
-  2. `mmsell fill model` realizable ¢/trade is **> 0** — the paper number carries no maker
+- **KEEP** at n ≥ 150 settled (W books) / n ≥ 100 (T books) only if **all three** hold:
+  1. the book's own ¢/trade is **> 0** in absolute terms;
+  2. ¢/trade beats its control by **≥ +1.0¢** over the same window;
+  3. `mmsell fill model` realizable ¢/trade is **> 0** — the paper number carries no maker
      adverse-selection haircut and is not promotable on its own.
-- **KILL** if ¢/trade ≤ control at n ≥ 150 / 100, or realizable ≤ 0.
+- **KILL** if ¢/trade ≤ control at n ≥ 150 / 100, or ≤ 0 absolute, or realizable ≤ 0.
+
+> **Condition 1 was added 2026-08-09 to fix a real flaw in this gate.** It originally required
+> only "beats control by ≥1.0¢". Once the scan starvation was fixed and the wide-band control
+> `mmsell` settled at **−1.80¢/trade**, five W books cleared that bar — `Wmmsell1` (+0.42),
+> `Wmmsell2` (+0.40), `Wmmsell8` (+0.10), `Wmmsell3` (−0.13), `Wmmsell6` (−0.73) — while three
+> of them were still **losing money**. Beating a losing control is not an edge. A relative test
+> alone silently promotes "less bad"; the absolute floor is what makes the gate mean something.
+>
+> Read the wide band as **dead** rather than as five passing books. Its problem is the entry
+> price (~18–22¢ average), which sits squarely in the adverse-selection zone the fill model
+> identified — not the type filter, which is doing its job on top of a bad base.
 - **Narrow books** (`Wmmsell4/5`, `Tmmsell1/2`) may take a quarter to reach n. An empty book early
   is a flow constraint, not a verdict — check `flow%` in the census before reading anything into it.
 

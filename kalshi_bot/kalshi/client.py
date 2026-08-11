@@ -41,6 +41,25 @@ class KalshiClient:
         self._signer = KalshiSigner(settings.kalshi_api_key_id, settings.private_key_pem)
         self._retry_backoffs = retry_backoffs
         self._client = httpx.Client(base_url=self._base_url, timeout=timeout, transport=transport)
+        # Cumulative count of transient (retryable) responses by HTTP status, since process
+        # start; key 0 is a network-level failure with no status. A 429 (rate limit) and a 502
+        # (Kalshi hiccup) are the same event to the retry loop but MEAN opposite things — the
+        # first says we are over Kalshi's token bucket and must scan less or slower, the second
+        # says nothing about us. They were indistinguishable in production because both logged
+        # the same message and Railway's log endpoint drops structured fields, so the status
+        # never survived. The client only COUNTS; a caller that owns a DB session persists the
+        # snapshot (see MmSellTracker._record_scan_telemetry) — the HTTP client stays I/O-pure.
+        self._transient_counts: dict[int, int] = {}
+
+    # -- diagnostics -------------------------------------------------------
+    def transient_counts(self) -> dict[int, int]:
+        """Snapshot of retryable responses by HTTP status since process start (0 = network
+        error). Cumulative on purpose: consecutive telemetry rows subtract to a per-cycle rate,
+        and a counter that resets loses every event between reads."""
+        return dict(self._transient_counts)
+
+    def _count_transient(self, status: int) -> None:
+        self._transient_counts[status] = self._transient_counts.get(status, 0) + 1
 
     # -- lifecycle ---------------------------------------------------------
     def close(self) -> None:
@@ -104,6 +123,7 @@ class KalshiClient:
                 )
             except httpx.HTTPError as exc:
                 last_exc = TransientError(f"network error: {exc}")
+                self._count_transient(0)
                 logger.warning(
                     "kalshi request network error",
                     extra={"extra_fields": {"method": method, "path": sign_path, "attempt": attempt}},
@@ -116,8 +136,13 @@ class KalshiClient:
                 raise AuthError(f"Kalshi auth failed ({status}) on {sign_path}")
             if status == 429 or status >= 500:
                 last_exc = TransientError(f"transient status {status}")
+                self._count_transient(status)
+                # The status is in the MESSAGE, not only in extra_fields: Railway's log endpoint
+                # returns the message text and drops the structured fields, so a 429 was
+                # indistinguishable from a 502 in production. This makes rate limiting greppable
+                # with {"type":"logs","filter":"transient response 429"}.
                 logger.warning(
-                    "kalshi transient response",
+                    f"kalshi transient response {status}",
                     extra={"extra_fields": {"method": method, "path": sign_path, "status": status, "attempt": attempt}},
                 )
                 self._sleep(attempt)

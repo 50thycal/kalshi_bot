@@ -184,6 +184,12 @@ class Settings(BaseSettings):
     # Pure DATA CAPTURE; changes no trading decision. Cap bounds the per-cycle write volume.
     mmsell_capture_candidates: bool = True
     mmsell_candidate_capture_max: int = 400
+    # Inline-quote pre-filter experiment (docs/MMSELL_QUOTE_PARITY.md): score the event page's
+    # own top-of-book against the orderbook the scan already fetched. Costs NO extra API call
+    # and changes no trading decision — it only decides whether a future scan may trust the
+    # inline quote to skip most orderbook fetches, which is what the ~650-1,600 calls/cycle
+    # (and therefore the top-150 event cap) currently hang on.
+    mmsell_quote_parity: bool = True
     # Revision books (parallel paper variants next to the untouched `mmsell` control), from
     # the 2026-07-04 forward decomposition of 445 settled trades: the maker-sell-and-hold
     # edge lives in the CHEAP longshots (yes 5-10c +2.7c/ct 96%win, 10-20c +3.6c 91%) and is
@@ -1535,6 +1541,7 @@ class Settings(BaseSettings):
             "mmsell_tick_capture_enabled": self.mmsell_tick_capture_enabled,
             "mmsell_capture_candidates": self.mmsell_capture_candidates,
             "mmsell_candidate_capture_max": self.mmsell_candidate_capture_max,
+            "mmsell_quote_parity": self.mmsell_quote_parity,
             "mmsell_live_max_open_positions": self.mmsell_live_max_open_positions,
             "mmsell_live_price_offset_cents": self.mmsell_live_price_offset_cents,
             "mmsell_live_offset_ab_arms": list(self.mmsell_live_offset_ab_arm_list),
