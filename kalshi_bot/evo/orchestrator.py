@@ -28,6 +28,7 @@ from sqlalchemy import select, text
 from ..db import session_scope
 from ..logging_config import log_event
 from ..weather.cities import CITIES
+from . import controls as controls_mod
 from . import listeners as listeners_mod
 from . import paper as papermod
 from . import strategy_runner
@@ -258,6 +259,9 @@ def run_evo_cycle(runtime: EvoRuntime) -> None:
         with session_scope() as session:
             _guard(session)
             cohort = ensure_current_cohort(session, settings, now=now)
+            # The benchmark the fleet is measured against. Idempotent, no LLM cost,
+            # and joined to the CURRENT cohort so it is scored over the same window.
+            controls_mod.ensure_controls(session, settings, cohort)
             tickers = _scan_universe(runtime, session)
             new_tickers = set(tickers) - runtime._known_tickers
             runtime._known_tickers.update(tickers)
@@ -318,6 +322,24 @@ def run_evo_cycle(runtime: EvoRuntime) -> None:
                     [a.agent_uuid for a in agents], kind="interim", now=now,
                 )
                 runtime._last_interim_fitness = now
+                # The absolute reference beside the ranking that scoring just wrote.
+                # Logged with the fitness pass so a ranking is never read without it.
+                bench = controls_mod.benchmark_summary(session, cohort.id)
+                log_event(
+                    logger, logging.INFO,
+                    "evo control arm: "
+                    f"participation={bench['participation_cents']}c/pos "
+                    f"longshot_gap={bench['longshot_gap_cents']}c "
+                    "(null is 0.00 by construction)",
+                    cohort=cohort.id, controls=bench["controls"],
+                    participation_cents=bench["participation_cents"],
+                    longshot_gap_cents=bench["longshot_gap_cents"],
+                )
+                for agent in controls_mod.control_agents(session):
+                    papermod.snapshot_portfolio(
+                        session, agent.agent_uuid,
+                        papermod.cohort_ledger(cohort.id), day_label,
+                    )
     except Exception:  # noqa: BLE001
         logger.exception("evo phase failed: snapshots_fitness")
 

@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import select
 
+from . import controls
 from . import paper as papermod
 from .cohorts import active_agents
 from .config import EvoSettings
@@ -108,6 +109,9 @@ def run_cycle(
     observed: dict[tuple, list[float]] = {}
     # Honors the max_active_agents ops throttle (only the live subset trades).
     live_agents = {a.agent_uuid: a for a in active_agents(session, settings)}
+    # The control arm trades here and ONLY here — status='control' keeps it out of
+    # every selection path, so this is the one place it has to be added back.
+    live_agents.update({a.agent_uuid: a for a in controls.control_agents(session)})
     strategies = list(
         session.scalars(select(EvoStrategy).where(EvoStrategy.status == "active"))
     )
