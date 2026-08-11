@@ -89,6 +89,11 @@ class EvoRuntime:
         self.llm = LlmClient(self.settings)
         self.cognition = LlmCognition(self.llm)
         self._known_tickers: set[str] = set()
+        # Per-position mid tape for the path-dependent exits (confirmed_stop /
+        # volatility_exit). Process-lived on purpose: the rules are about CONSECUTIVE
+        # observations, and a restart should fail closed rather than exit off a
+        # reconstructed path.
+        self._mid_history = strategy_runner.MidHistory()
         self._last_interim_fitness: datetime | None = None
         self._bootstrapped = False
 
@@ -263,7 +268,7 @@ def run_evo_cycle(runtime: EvoRuntime) -> None:
 
             strat_counts = strategy_runner.run_cycle(
                 session, settings, runtime.md, cohort_id=cohort.id,
-                candidate_tickers=tickers,
+                candidate_tickers=tickers, mid_history=runtime._mid_history,
             )
             order_counts = papermod.process_open_orders(session, settings, runtime.md)
             settle_counts = papermod.mark_and_settle(session, runtime.md)
