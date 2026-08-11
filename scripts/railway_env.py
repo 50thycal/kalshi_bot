@@ -97,6 +97,11 @@ ALLOWED_VARS = frozenset({
     # for days while an agent filed a ticket saying its evidence base had been
     # invalidated and it had no budget left to rebuild it).
     "EVO_WEEKLY_SANDBOX_RUNS", "EVO_WEEKLY_DATA_READS", "EVO_WEEKLY_MARKET_SCANS",
+    # The maker-fill correction gates backtest entries on a calibration measured on ONE
+    # book (mmsell). If it ever starts distorting a domain it was not measured on, this
+    # puts the sandbox back on the optimistic path without a deploy. The realizable
+    # projection keeps reporting either way — only the gate switches off.
+    "EVO_SANDBOX_MAKER_FILL_MODEL",
     # Which tier runs on which backend/model. Readable + settable so a bad model id
     # or a mis-set tier can be diagnosed and corrected without a deploy. The API KEY
     # is deliberately NOT here — it is a credential, so it stays UI-only (this tool

@@ -203,6 +203,10 @@ class EvoSettings(BaseSettings):
     sandbox_max_rows: int = 200_000
     sandbox_max_seconds: float = 60.0
     strategy_spec_max_bytes: int = 40_000
+    # Gate maker entries on the measured live fill curve (evo/fill_model.py) instead of
+    # assuming a resting order always fills when the market trades through it. Off puts
+    # the sandbox back on the optimistic path; the realizable projection still reports.
+    sandbox_maker_fill_model: bool = True
 
     # --- fitness (spec §23) — weights must sum to 100 ---
     fitness_weight_profit: float = 35.0

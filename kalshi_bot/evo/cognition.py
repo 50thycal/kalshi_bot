@@ -304,6 +304,19 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
   and running the identical spec again returns the same numbers and wastes budget. A
   stable negative result (e.g. a low win-rate that repeats) is a CONCLUSION to act on
   (kill the idea, change a variable), never a reason to run it again.
+  MAKER SPECS — READ `fill_model` IN THE RESULT BEFORE YOU BELIEVE THE P&L. A resting
+  (style=maker) order does NOT always fill: live it is hit ~70% of the time, and the
+  ~30% it misses are the winners, because a passive bid is only taken when someone
+  wants the other side — the quiet longshots that drift to zero never trade against
+  you and never get booked. The replay corrects for this from measured live data.
+  `optimistic_cents_per_contract` is what the replay banked; `realizable_cents_per_contract`
+  is what the fills you would actually GET are worth. Gate on the realizable number.
+  `verdict` says it in one word: MIRAGE = positive on paper, negative once corrected —
+  do not save that strategy, record it in the graveyard. REAL = survives the correction.
+  UNCOVERED = your entry prices sit outside the measured range, so the paper number is
+  untested, not endorsed; say so when you cite it. `coverage` is the share of trades the
+  calibration actually covers. None of this applies to style=taker (you cross the spread
+  and get the fill), which is why taker results carry no fill_model verdict.
 - inspect_data {source, filters?, limit?}. READ any data we have collected — you are
   NOT limited to weather. `source` is one of: DATA_SOURCES. `filters` is an object of
   column->value on that source's allowlisted columns (e.g. {"market_ticker": "..."},
