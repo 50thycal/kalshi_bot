@@ -106,6 +106,29 @@ def _fmt_c(x) -> str:
     return f"{x:+.2f}c" if x is not None else "n/a"
 
 
+# Kalshi's published maker coefficient — must equal kalshi_bot.paper.engine.MAKER_COEFF
+# (pinned by tests/test_mmsell_fill_model.py; this script stays stdlib-only so it can run on a
+# bare ops runner, which is why the constant is restated rather than imported).
+MAKER_COEFF = 0.0175
+
+# Normalize every P&L to ONE fee model, in dollars.
+#
+# Why this is not optional: `paper_trades.pnl` has whatever fee the engine charged AT THE TIME
+# subtracted from it, and the engine changed on 2026-08-11 (it had been billing resting maker
+# entries Kalshi's TAKER rate, ceiled to a whole cent -- 1.000c/contract against the 0.003c
+# Kalshi actually charges a maker). Averaging raw `pnl` across that boundary silently blends two
+# fee models and drifts as the post-fix sample grows, which would make every MIRAGE/EDGE label
+# here a function of WHEN a book traded rather than HOW it traded.
+#
+# So: add back the fee actually charged (stored per row) and re-apply the correct maker fee.
+# The result is fee-model-independent and directly comparable across the boundary.
+_PNL_NORM = (
+    "(p.pnl + coalesce(p.fees,0)"
+    f" - {MAKER_COEFF} * coalesce(p.quantity,1)"
+    " * (p.assumed_price/100.0) * (1 - p.assumed_price/100.0))"
+)
+
+
 def _load_calibration(cur) -> dict[int, tuple]:
     """Live mmsell3 ground truth, per YES entry cent: (n_fills, fill_rate, realizable_pnl_cents).
     realizable = avg paper pnl (cents) over the tickers live actually FILLED at that price — i.e.
@@ -117,7 +140,7 @@ def _load_calibration(cur) -> dict[int, tuple]:
         " SELECT (100 - p.assumed_price)::int yes_c,"
         "        count(*) FILTER (WHERE lf.filled) n_fill,"
         "        count(*) n_attempt,"
-        "        avg(p.pnl) FILTER (WHERE lf.filled) realizable_pnl"
+        f"        avg({_PNL_NORM}) FILTER (WHERE lf.filled) realizable_pnl"
         " FROM paper_trades p JOIN lf ON lf.market_ticker = p.market_ticker"
         " WHERE p.strategy='mmsell3' AND p.status='settled' AND NOT coalesce(p.legacy,false)"
         "   AND p.assumed_price IS NOT NULL AND p.pnl IS NOT NULL"
@@ -134,14 +157,15 @@ def _load_calibration(cur) -> dict[int, tuple]:
 def _load_price_hists(cur) -> dict[str, dict[int, list]]:
     """Per book: yes_cent -> [n_trades, sum_paper_pnl_cents]."""
     cur.execute(
-        "SELECT strategy, (100 - assumed_price)::int yes_c, count(*), sum(pnl)"
-        " FROM paper_trades"
-        " WHERE strategy LIKE '%%mmsell%%' AND status='settled' AND NOT coalesce(legacy,false)"
-        "   AND assumed_price IS NOT NULL AND pnl IS NOT NULL"
+        f"SELECT p.strategy, (100 - p.assumed_price)::int yes_c, count(*), sum({_PNL_NORM})"
+        " FROM paper_trades p"
+        " WHERE p.strategy LIKE '%%mmsell%%' AND p.status='settled'"
+        "   AND NOT coalesce(p.legacy,false)"
+        "   AND p.assumed_price IS NOT NULL AND p.pnl IS NOT NULL"
         # Live/paper TWIN books are excluded: a twin already enters at the LIVE maker price, so
         # projecting it through the live fill calibration would double-count the correction, and a
         # twin must never be gated like a paper variant. Its read is scripts/live_paper_parity.py.
-        "   AND strategy NOT IN (SELECT twin_tag FROM live_paper_twins)"
+        "   AND p.strategy NOT IN (SELECT twin_tag FROM live_paper_twins)"
         " GROUP BY 1, 2",
     )
     hists: dict[str, dict[int, list]] = defaultdict(dict)

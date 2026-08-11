@@ -9,8 +9,16 @@ out-of-sample evidence rather than on an 11–23 trade backtest slice.
 ## Why this exists
 
 mmsell sells cheap tails. The P&L shape is many small wins (+3–6¢) and a rare near-full-stake
-loss (−93¢). At a 7¢ entry the break-even win rate is **93.9%** — so the entire question is
+loss (−93¢). At a 7¢ entry the break-even win rate is **93.1%** — so the entire question is
 whether the loss tail can be cut without eating the thin premium that pays for it.
+
+> **[2026-08-11] The break-even moved, because the fee did.** It is
+> `p = (100 − entry + fee)/100`, so the fee sits inside it. This doc previously said **93.9%**,
+> computed with the paper engine's ~1¢ taker fee — but these entries REST, and Kalshi bills a
+> maker 0.003¢/contract, not 1¢ (n=342 live fills). With the corrected maker fee the bar is
+> **93.1%**. Everything downstream that was sized against 93.9% (notably A5's n≥82) is therefore
+> **conservative, not wrong** — a bar that got easier cannot invalidate a sample sized for a
+> harder one. See the FEE RE-BASELINE section of `docs/BOOK_REGISTRY.md`.
 
 Three candidate answers came out of `docs/MMSELL_CRYPTO_STUDY.md` (a Kalshi-history backtest) and
 `docs/MMSELL_EXIT_STUDY.md` (a replay of our own captured intraday ticks):
