@@ -177,6 +177,21 @@ To run a request:
      (env-overridable on Railway without a redeploy); find real tickers with
      `mmsell_supply_forecast --list-series <regime>` before adding one.
 
+   - **"quote parity"** -> `{"type":"script","name":"mmsell_quote_parity"}` — may the entry scan
+     PRE-FILTER on the event page's inline quote instead of fetching an orderbook per market?
+     `GET /events?with_nested_markets=true` (the one call the scan already makes) returns
+     top-of-book on every nested market, and the band gate needs only the midpoint + yes-ask. If
+     it can be trusted, the ~650–1,600 orderbook calls/cycle drop 3–7×, which is what the
+     top-150 event cap — and therefore ~1,740 unscanned eligible events/cycle — currently hangs
+     on. The worker scores the inline quote against the orderbook it already fetched, free, every
+     cycle. **Read the DECISION TABLE, not the agreement histograms**: `miss` is in-band markets a
+     pre-filter would silently throw away, and the `tight` band (mirroring live `mmsell10`) comes
+     before `wide`. Gate is pre-registered in `docs/MMSELL_QUOTE_PARITY.md`; empty output early is
+     a data-maturity wait (n ≥ 50,000 over ≥ 100 cycles). The same output carries **RATE LIMITS** —
+     retryable Kalshi responses split by HTTP status, so a 429 (over our API tier, actionable) is
+     finally distinguishable from a 502 (noise). Non-zero 429s make the pre-filter the fix rather
+     than an optimization. Also greppable now: `{"type":"logs","filter":"transient response 429"}`.
+
    The individual probes can still be run alone:
    `weather_model_check` grades the ensemble forecast distribution against the
    market's bucket prices on settled events (Brier/log-loss + hypothetical EV)

@@ -39,7 +39,18 @@ from ..scanner.metrics import (
 )
 from ..twin import harness as twin_codes
 from .market_types import classify
+from .quote_parity import BandProbe, QuoteParityAccumulator
 from .regimes import regime_of
+
+# Bands the inline-quote pre-filter experiment scores its decision table for
+# (docs/MMSELL_QUOTE_PARITY.md). FIXED constants, deliberately not reads of live book config:
+# the experiment accumulates over days, and a book retuned mid-run would silently redefine its
+# own result. "wide" mirrors the control book `mmsell`; "tight" mirrors `mmsell10`, the live
+# candidate — the one whose candidate stream a bad pre-filter would actually corrupt.
+QUOTE_PARITY_BANDS: tuple[BandProbe, ...] = (
+    BandProbe(name="wide", lo=5.0, hi=40.0, maxyes=None),
+    BandProbe(name="tight", lo=5.0, hi=10.0, maxyes=7.0),
+)
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +84,9 @@ class MmSellCycleSummary:
     live_retry_drifted: int = 0  # retry declined: market moved off the first attempt's price
     per_series: dict[str, int] = field(default_factory=dict)
     per_book: dict[str, int] = field(default_factory=dict)
+    # Inline-quote pre-filter experiment (docs/MMSELL_QUOTE_PARITY.md). Scored off the orderbook
+    # the scan already fetched, so it costs no extra API call; None until a cycle runs.
+    quote_parity: QuoteParityAccumulator | None = None
 
 
 class MmSellTracker:
@@ -406,8 +420,7 @@ class MmSellTracker:
                 s.mmsell_live_max_open_positions),
         }
 
-    @staticmethod
-    def _record_scan_telemetry(session, summ: MmSellCycleSummary) -> None:
+    def _record_scan_telemetry(self, session, summ: MmSellCycleSummary) -> None:
         """Persist this cycle's scan funnel to `system_events` so it can be QUERIED.
 
         Railway's log endpoint returns only a log line's message and drops its structured
@@ -417,6 +430,13 @@ class MmSellTracker:
         market survey instead of simply measured.
 
         Fail-soft: a telemetry write must never break the trading cycle."""
+        counts = getattr(self.client, "transient_counts", None)
+        transient = {}
+        if callable(counts):
+            try:
+                transient = {str(k): v for k, v in counts().items()}
+            except Exception:  # noqa: BLE001
+                transient = {}
         try:
             repo.log_system_event(
                 session, level="INFO", component="mmsell_scan",
@@ -442,10 +462,28 @@ class MmSellTracker:
                     "per_series": dict(sorted(summ.per_series.items(),
                                               key=lambda kv: -kv[1])[:12]),
                     "per_book": summ.per_book,
+                    # Retryable Kalshi responses by HTTP status, cumulative since process start
+                    # (0 = network error). Consecutive rows subtract to a per-cycle rate. This
+                    # is how a 429 becomes VISIBLE: the retry loop treats a rate limit and a
+                    # Kalshi 502 identically, and Railway's log endpoint drops the structured
+                    # `status` field, so the difference existed nowhere queryable — while a 429
+                    # is the one signal that says the scan is too big for our API tier.
+                    "transient": transient,
                 },
             )
         except Exception:  # noqa: BLE001 — diagnostics must never break the cycle
             logger.exception("mmsell scan telemetry write failed (cycle unaffected)")
+
+        if summ.quote_parity is None:
+            return
+        try:
+            repo.log_system_event(
+                session, level="INFO", component="mmsell_quote_parity",
+                message="mmsell inline-quote parity",
+                raw=summ.quote_parity.as_dict(),
+            )
+        except Exception:  # noqa: BLE001 — diagnostics must never break the cycle
+            logger.exception("mmsell quote-parity telemetry write failed (cycle unaffected)")
 
     @staticmethod
     def _note(recorder, ticker: str, tag: str, outcome: str, price: int | None = None,
@@ -498,6 +536,8 @@ class MmSellTracker:
     def run_once(self, session) -> MmSellCycleSummary:
         s = self.settings
         summ = MmSellCycleSummary()
+        if s.mmsell_quote_parity:
+            summ.quote_parity = QuoteParityAccumulator(bands=QUOTE_PARITY_BANDS)
 
         # 1) collect liquid open events (skip parlays/weather), keep only those carrying a market
         #    INSIDE the entry window, rank by volume, then cap the scan.
@@ -618,6 +658,22 @@ class MmSellTracker:
                                 recorder.discard(ticker)
                             break  # no book can enter this market this cycle
                         metrics = compute_metrics(market, ob, top_n=s.orderbook_depth)
+                        # Inline-quote parity: score the event page's own quote against the
+                        # orderbook we just fetched, for THIS market, once. Free — no extra
+                        # call — and it is the only place ground truth exists, since a market
+                        # we never fetch has no orderbook to compare against. Fail-soft: this
+                        # is a diagnostic and must never be what stops an entry scan.
+                        if summ.quote_parity is not None:
+                            try:
+                                summ.quote_parity.observe(
+                                    ob_bid=metrics.best_yes_bid,
+                                    ob_ask=metrics.best_yes_ask,
+                                    inline_bid=market_price_cents(market, "yes_bid"),
+                                    inline_ask=market_price_cents(market, "yes_ask"),
+                                )
+                            except Exception:  # noqa: BLE001
+                                logger.exception(
+                                    "mmsell quote-parity observe failed (cycle unaffected)")
                     if not metrics.two_sided or metrics.midpoint is None \
                             or metrics.best_no_bid is None:
                         summ.skipped_illiquid += 1
