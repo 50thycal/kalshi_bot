@@ -28,7 +28,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import func, select
 
-from ..evo import budgets, paper, tickets
+from ..evo import budgets, controls, paper, tickets
 from ..evo.cohorts import active_agents, current_cohort
 from ..evo.config import EvoSettings
 from ..evo.fitness import group_by_fractions
@@ -667,6 +667,9 @@ def build_fleet(session, settings: EvoSettings, *, now: datetime | None = None) 
             for g in metrics.generation_history(session)
         ],
         "components": _components(session, cohort=cohort, now=now),
+        # The absolute reference. Without it the roster only says who is winning,
+        # which on a losing fleet means "least-bad" and reads as success.
+        "benchmark": controls.benchmark_summary(session, cohort.id) if cohort else None,
         "requests": requests,
         "request_count": len(requests),
         "announcement_count": events_mod.announcement_page(
