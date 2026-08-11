@@ -748,7 +748,10 @@ class MmSellTracker:
                             recorder.discard(ticker)
                         break
                     qty = s.paper_order_size
-                    fee = kalshi_fee(price, qty, s.paper_fees_enabled)
+                    # Both legs REST (post_only) — the ordinary leg buys NO at the no-bid, the
+                    # strangle's mirror leg buys YES at the yes-bid. Neither crosses, so both
+                    # are billed maker.
+                    fee = kalshi_fee(price, qty, s.paper_fees_enabled, maker=True)
                     sub = market.get("yes_sub_title") or market.get("subtitle") or ""
                     # fill_assumption is String(64); the repo layer also clamps, but keep the
                     # subtitle short and the prices first so truncation only costs subtitle chars.

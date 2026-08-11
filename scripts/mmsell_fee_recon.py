@@ -40,13 +40,34 @@ TWO CONSEQUENCES, AND THEY POINT IN OPPOSITE DIRECTIONS
    avoids entirely, so switching to taking costs the spread AND ~0.5-1c/contract of fee that we
    currently pay nothing of.
 
-WHY THE ENGINE IS NOT PATCHED
------------------------------
-Tempting, but wrong right now: the correction is UNIFORM, so it preserves every ranking, while
-changing `kalshi_fee` mid-flight would split each book's history across two fee models. Fourteen
-Wmmsell*/Tmmsell* books are currently accumulating toward n>=100-150 settled gates; a change now
-would make the first half of each book non-comparable with the second. The correction belongs in
-the analysis layer until those gates close.
+THE ENGINE WAS PATCHED ON 2026-08-11 — WHY THE EARLIER "DON'T" WAS REVERSED
+---------------------------------------------------------------------------
+This section used to argue for leaving `kalshi_fee` alone: the correction is UNIFORM, so it
+preserves every ranking, while changing it mid-flight splits each book's history across two fee
+models, and fourteen Wmmsell*/Tmmsell* books were accumulating toward n>=100-150 settled gates.
+That reasoning was sound on the evidence available on 2026-08-06. Two things then broke its
+central premise:
+
+1. THE CORRECTION IS NOT UNIFORM. The taker formula ceilings per ORDER, so the per-contract fee
+   depends on CLIP SIZE: 1c/ct at a 1-contract clip, 0.5c/ct at 2. Measured 2026-08-10, the
+   mmsell10a/b paper books (1 contract) were billed 1.000c/ct while their own twins (2 contracts,
+   a sizing bug since fixed) were billed 0.624-0.687c/ct — same strategy, same markets, different
+   fee. It is also not uniform across maker/taker books: the weather books are billed correctly,
+   so any comparison spanning both is biased, and the portfolio total is a sum over both.
+2. IT BECAME A BLOCKING VERDICT. `live_paper_parity` now reports ACCOUNTING GAP on all three live
+   pairs — paper under-reports vs live on MATCHED markets, which indicts the simulator itself.
+   The gaps are 0.79c (mmsell10a, n=111), 0.69c (mmsell10b, n=57) and 0.98c (theta4, n=16)
+   against paper fees of 0.687, 0.624 and 0.979 c/ct. theta4 matches to a thousandth of a cent:
+   the accounting gap IS this fee, with nothing left over.
+
+So the analysis-layer correction could not be applied consistently, and the harness was correctly
+refusing to trust any paper gate until the simulator was fixed.
+
+THE COST OF THE FIX, STATED PLAINLY: every maker book's history now spans two fee models, split
+at the 2026-08-11 deploy. Trades before it are ~0.9c/contract too pessimistic; after it they are
+right. Any gate read across that boundary MUST either restrict to post-boundary trades or add
+back the difference this script measures. The three live books get fresh twin epochs at the same
+deploy for exactly this reason, so the pairs that decide promotion are clean on one model.
 
 Read-only, self-contained (stdlib + psycopg); runs locally or via the ops channel:
 

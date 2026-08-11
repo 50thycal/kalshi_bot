@@ -75,12 +75,41 @@ class PaperCycleSummary:
         return round(self.opened / denom, 3) if denom else None
 
 
-def kalshi_fee(price_cents: int | None, qty: int, enabled: bool = True) -> float:
-    """Kalshi trading fee in dollars: ceil(0.07 * C * P * (1-P)) rounded up to a cent."""
+# Kalshi's published coefficients (July 2026 fee schedule). The maker rate is a quarter of the
+# taker rate; scripts/mmsell_fee_recon.py measures both against real `fills.fee` rows.
+TAKER_COEFF = 0.07
+MAKER_COEFF = 0.0175
+
+
+def kalshi_fee(price_cents: int | None, qty: int, enabled: bool = True, *,
+               maker: bool = False) -> float:
+    """Kalshi trading fee in dollars: ceil(coeff * C * P * (1-P)) rounded up to a cent.
+
+    `maker=True` is for an order that RESTS (`post_only: true`) and is filled by someone else
+    crossing to it. Passing it is not a refinement — for the mmsell/theta books it is the
+    difference between a correct number and one that deletes half the edge:
+
+        1 contract at 93c, taker coeff:  0.07 * 0.93 * 0.07 = 0.455c -> ceil -> 1.00c
+        1 contract at 93c, maker coeff: 0.0175 * 0.93 * 0.07 = 0.114c -> ceil -> 1.00c (!)
+
+    Note the ceiling swallows the coefficient entirely at a 1-contract clip, which is why
+    `enabled` alone could never fix this and why the measured maker cost is ~0.003c/ct rather
+    than either model: on our series Kalshi appears not to charge maker fees at all (see the
+    reconciliation in scripts/mmsell_fee_recon.py, n=366). So a maker fill is billed the
+    published maker rate WITHOUT the per-order ceiling — rounding a 0.1c fee up to a whole cent
+    is what produced the 8x overcharge, not the coefficient.
+
+    Exits keep the taker rate: selling into the bid crosses the spread, so an early exit really
+    does pay taker. Only the resting ENTRY is maker.
+    """
     if not enabled or not qty or price_cents is None:
         return 0.0
     p = price_cents / 100.0
-    return math.ceil(0.07 * qty * p * (1 - p) * 100) / 100.0
+    if maker:
+        # No ceiling: a sub-cent maker fee is a sub-cent maker fee. Still rounded to the cent
+        # for storage sanity, but to NEAREST rather than up.
+        return round(MAKER_COEFF * qty * p * (1 - p), 4)
+    return math.ceil(TAKER_COEFF * qty * p * (1 - p) * 100) / 100.0
 
 
 def _entry_depth(metrics: MarketMetrics, side: str) -> int:
