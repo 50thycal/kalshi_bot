@@ -214,8 +214,7 @@ ORDER TYPES. taker crosses the spread and fills now against resting depth,
 paying the ask (with slippage past the top level). maker rests at your limit and
 fills only if the market trades THROUGH it, then only partially (25%
 adverse-selection haircut) — makers fill most reliably exactly when the market
-is moving against them. A maker order requires a limit; a taker one without a
-limit takes the current price.
+is moving against them.
 
 LIQUIDITY IS FINITE. You fill against real posted depth: wanting 100 where 12
 are offered fills 12 and rests the remainder. Size to the book.
@@ -240,8 +239,9 @@ you place: Nothing will ever close it for you — your only exits are holding to
 settlement, submitting a sell yourself on a LATER heartbeat (up to an hour away,
 so an intended stop-loss is NOT immediate), or create_listener to wake yourself
 on a price condition. An ACTIVE strategy instead has its exit rule evaluated
-EVERY cycle: with exit mode tp_sl or timed, take-profit/stop-loss fire
-immediately without a heartbeat. Want managed exits? Use a strategy.
+EVERY cycle: any mode but settlement (tp_sl, timed, confirmed_stop,
+volatility_exit) fires immediately, no heartbeat needed. Want managed exits?
+Use a strategy.
 
 LEARNING — register_experiment / conclude_experiment to run a real test,
 revise_belief to supersede a belief with evidence, note_episode to record what
@@ -304,6 +304,19 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
   and running the identical spec again returns the same numbers and wastes budget. A
   stable negative result (e.g. a low win-rate that repeats) is a CONCLUSION to act on
   (kill the idea, change a variable), never a reason to run it again.
+  MAKER SPECS — READ `fill_model` IN THE RESULT BEFORE YOU BELIEVE THE P&L. A resting
+  (style=maker) order does NOT always fill: live it is hit ~70% of the time, and the
+  ~30% it misses are the winners, because a passive bid is only taken when someone
+  wants the other side — the quiet longshots that drift to zero never trade against
+  you and never get booked. The replay corrects for this from measured live data.
+  `optimistic_cents_per_contract` is what the replay banked; `realizable_cents_per_contract`
+  is what the fills you would actually GET are worth. Gate on the realizable number.
+  `verdict` says it in one word: MIRAGE = positive on paper, negative once corrected —
+  do not save that strategy, record it in the graveyard. REAL = survives the correction.
+  UNCOVERED = your entry prices sit outside the measured range, so the paper number is
+  untested, not endorsed; say so when you cite it. `coverage` is the share of trades the
+  calibration actually covers. None of this applies to style=taker (you cross the spread
+  and get the fill), which is why taker results carry no fill_model verdict.
 - inspect_data {source, filters?, limit?}. READ any data we have collected — you are
   NOT limited to weather. `source` is one of: DATA_SOURCES. `filters` is an object of
   column->value on that source's allowlisted columns (e.g. {"market_ticker": "..."},
@@ -337,8 +350,26 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
      "conditions"?: [{"metric": METRICS_LIST, "op": OPS_LIST, "value": float}],
      "min_price_cents"?: int (1-99), "max_price_cents"?: int (1-99),
      "maker_offset_cents"?: int (0-10), "size_contracts"?: int (1-500)},
-   "exit"?: {"mode"?: "settlement"|"tp_sl"|"timed", "take_profit_cents"?: int (1-99),
-     "stop_loss_cents"?: int (1-99), "max_hold_hours"?: float},
+   "exit"?: {"mode"?: "settlement"|"tp_sl"|"timed"|"confirmed_stop"|"volatility_exit",
+     "take_profit_cents"?: int (1-99), "stop_loss_cents"?: int (1-99),
+     "max_hold_hours"?: float,
+     // confirmed_stop (REQUIRES stop_mid_cents): exit once the position's OWN mid sits
+     // at or below stop_mid_cents for confirm_ticks CONSECUTIVE observations. The
+     // confirmation is the point — at longshot prices a single print routinely lies and
+     // an unconfirmed stop (tp_sl's stop_loss_cents) sells that noise. The level is in
+     // YOUR side's cents: holding NO, "no-mid <= 20" is the same as "yes-mid >= 80".
+     "stop_mid_cents"?: int (1-99), "confirm_ticks"?: int (1-20, default 2),
+     // volatility_exit (REQUIRES vol_range_cents): exit once the mid's RANGE over the
+     // trailing vol_window_ticks reaches vol_range_cents. Direction-agnostic — the
+     // hypothesis is that a position being actively repriced is likelier to be a loser
+     // than a quiet one. Fires on a round trip that every price-level rule calls flat.
+     "vol_window_ticks"?: int (2-50, default 6), "vol_range_cents"?: int (1-99)},
+     // Both path-dependent modes read the position's mid tape, one observation per
+     // cycle from the moment you hold — so confirm_ticks=3 needs three cycles of held
+     // position before it can fire, and after a worker restart the tape starts empty
+     // and they HOLD until it refills. Backtest results report `by_exit` (which rule
+     // fired, how often), so a rule that never triggers is visible rather than
+     // mistaken for one that holds by design.
    "risk"?: {"max_concurrent_positions"?: int, "max_per_event"?: int,
      "max_cost_per_position_usd"?: float}}
   Every field except "name" is optional with a working default — start minimal.
@@ -376,8 +407,9 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
   strategy's universe.series_prefixes, e.g. "KXHIGH"). A prefix is not itself a
   tradable market; an order on one will never get a quote and will sit open
   forever with no fill and no error.
-  limit_price_cents is OPTIONAL, 1-99 when given; OMIT it to take the current
-  price. (Prices, shorting and payoff arithmetic: see HOW THESE MARKETS WORK.)
+  limit_price_cents is OPTIONAL for a taker, 1-99 when given; OMIT it to take the
+  current price. A maker order REQUIRES a limit — that limit is where it rests.
+  (Prices, shorting and payoff arithmetic: see HOW THESE MARKETS WORK.)
   The order is evaluated against the live quote IMMEDIATELY (not next cycle) —
   the outcome's "status" is the real result (filled|partial|open), with
   "filled_quantity" set. A taker order returning status="open" means the market

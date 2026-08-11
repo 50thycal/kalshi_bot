@@ -150,6 +150,23 @@ Note: `LIVE_ENTRY_STYLE` / `LIVE_PASSIVE_OFFSET_CENTS` are the **weather** YES-t
 not affect the mmsell maker path — the mmsell entry is always a resting BUY-NO at the no-bid, tuned
 by `MMSELL_LIVE_PRICE_OFFSET_CENTS`.
 
+### Which safety limits actually cover this book
+
+Audited 2026-08-10 against a live deployment of `mmsell10a` / `mmsell10b` / `theta4`. Several
+global-sounding knobs reach only the weather path (`RiskManager.evaluate` is called from
+`mirror_entry` alone; mmsell and theta self-guard inline), so it is worth being exact:
+
+| limit | covers mmsell/theta? | note |
+|---|---|---|
+| `MAX_DAILY_LOSS` + `LIVE_KILL_ON_DAILY_LOSS` | **yes** | checked on all three entry paths. Measured on **realized** P&L, so on a hold-to-settlement book it lags an open drawdown until markets settle, and it stops NEW entries rather than flattening. Accepted trade-off, not a defect. |
+| `MAX_TOTAL_EXPOSURE` | **yes** (since 2026-08-10) | the only portfolio-wide cap. Was defined but **never read** until then: every other cap is per book tag, so real exposure was an emergent (books × per-book cap × clip) product. Measured $77.27 peak against a nominal `25`. |
+| `MAX_MARKET_EXPOSURE` | yes | per ticker |
+| `MMSELL_LIVE_MAX_OPEN_POSITIONS` | yes | **per strategy tag** — `mmsell10a` and `mmsell10b` each get the full cap, they do not share one |
+| `LIVE_STOP_LOSS_CENTS` / `LIVE_TAKE_PROFIT_CENTS` / `LIVE_BREAK_EVEN_ARM_CENTS` | **no** | `manage_exits` needs `LIVE_EXIT_MODE=tp_sl` *and* a net-long **YES** position; `repository.open_live_positions` skips `qty_fp < 0.01`, which is every NO position. Setting these for a stop-loss experiment on this book silently never fires. Early exit here is the manual one-shot `MMSELL_CLOSEOUT_ENABLED`. |
+| `MAX_ORDER_SIZE` | bypassed | the arm books declare `size=1`, which takes precedence; theta uses `THETA_LIVE_MAX_CONTRACTS` |
+| `MAX_SPREAD_CENTS`, `MIN_VOLUME`, `MIN_OPEN_INTEREST`, `MIN_HOURS_TO_CLOSE` | no | weather/scanner only; mmsell carries its own `MMSELL_*` equivalents |
+| `STALENESS_SECONDS` | no | **not wired anywhere** — no path rejects an orderbook on age |
+
 **Bankroll: ~$150.** Working capital ≈ $63 (paper peak concurrency) + drawdown buffer ≈ $85. At ~92¢/
 contract that's ~160 contracts of buying power — comfortably above the ~68 peak, so the book is
 **never capital-blocked** (a block would bias the sample by stopping entries exactly when it

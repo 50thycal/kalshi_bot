@@ -10,6 +10,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timedelta, timezone
 
+import pytest
 from sqlalchemy import func, select
 
 from kalshi_bot import db
@@ -373,3 +374,98 @@ def test_tracker_without_executor_stays_paper_only(settings):
         tracker.run_once(session)
         assert session.scalar(select(func.count()).select_from(m.LiveOrder)) == 0
         assert session.scalar(select(func.count()).select_from(m.PaperTrade)) >= 1
+
+
+# --- portfolio-level exposure breaker ----------------------------------------------
+
+
+def _seed_position(session, ticker, *, qty_fp=-1.0, avg_price=94.0):
+    """One open NO position snapshot — signed qty, cost basis on the held side."""
+    session.add(m.Position(
+        market_ticker=ticker, captured_at=datetime.now(timezone.utc),
+        side="no", quantity=int(abs(qty_fp)) or 1, quantity_fp=qty_fp, avg_price=avg_price,
+        market_exposure=abs(qty_fp) * avg_price / 100.0,
+        realized_pnl=None, unrealized_pnl=None, raw_json=None))
+    session.flush()
+
+
+def test_total_exposure_cap_blocks_a_new_entry(settings):
+    """The portfolio breaker must stop a NEW entry once open positions across OTHER markets
+    already tie up max_total_exposure — the gap that let per-book caps multiply unbounded."""
+    _live_settings(settings, max_total_exposure=2.0)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        # 3 x $0.94 = $2.82 of open NO exposure, all on OTHER tickers so the per-market
+        # cap cannot be what blocks (that would make this test prove the wrong thing).
+        for i in range(3):
+            _seed_position(session, f"KXOTHER-26-{i}")
+        _enter(ex, session, ticker="KXTEAM-26-A")
+    assert client.placed == []
+
+
+def test_total_exposure_cap_allows_entry_below_the_cap(settings):
+    """Same seeded book, a cap above it — the entry must still go through, so the test above
+    is proving the cap and not some unrelated gate."""
+    _live_settings(settings, max_total_exposure=50.0)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        for i in range(3):
+            _seed_position(session, f"KXOTHER-26-{i}")
+        _enter(ex, session, ticker="KXTEAM-26-A")
+    assert len(client.placed) == 1
+
+
+def test_total_exposure_cap_of_zero_disables_the_breaker(settings):
+    """<= 0 means 'no portfolio cap', matching the convention of the other limits — so an
+    operator who has not set it is never silently halted."""
+    _live_settings(settings, max_total_exposure=0.0)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        for i in range(5):
+            _seed_position(session, f"KXOTHER-26-{i}")
+        _enter(ex, session, ticker="KXTEAM-26-A")
+    assert len(client.placed) == 1
+
+
+def test_total_exposure_counts_no_positions(settings):
+    """A NO position has NEGATIVE quantity_fp. Summing it unsigned is the whole point: the
+    live books are cheap-tail SELLS, so counting only long-YES would report ~zero at risk."""
+    db.init_engine(settings.database_url)
+    db.create_all()
+    with db.session_scope() as session:
+        _seed_position(session, "KXA-26-1", qty_fp=-1.0, avg_price=94.0)
+        _seed_position(session, "KXB-26-2", qty_fp=-3.0, avg_price=90.0)
+        total = repo.live_total_exposure(session)
+    assert total == pytest.approx(0.94 + 2.70)
+
+
+def test_total_exposure_uses_latest_snapshot_per_ticker(settings):
+    """Kalshi reports positions cumulatively, so repeated snapshots of one ticker must not be
+    summed — and a ticker that has since gone flat must drop out entirely."""
+    db.init_engine(settings.database_url)
+    db.create_all()
+    now = datetime.now(timezone.utc)
+    with db.session_scope() as session:
+        for qty, when in ((-1.0, now - timedelta(minutes=10)), (-2.0, now - timedelta(minutes=1))):
+            session.add(m.Position(
+                market_ticker="KXA-26-1", captured_at=when, side="no",
+                quantity=int(abs(qty)), quantity_fp=qty, avg_price=90.0,
+                market_exposure=abs(qty) * 0.90, realized_pnl=None,
+                unrealized_pnl=None, raw_json=None))
+        # a ticker that closed out -> latest snapshot is flat, contributes nothing
+        session.add(m.Position(
+            market_ticker="KXFLAT-26-9", captured_at=now, side="no",
+            quantity=0, quantity_fp=0.0, avg_price=90.0, market_exposure=0.0,
+            realized_pnl=1.0, unrealized_pnl=None, raw_json=None))
+        session.flush()
+        total = repo.live_total_exposure(session)
+    assert total == pytest.approx(1.80)  # the -2.0 snapshot only, not 1.0 + 2.0
