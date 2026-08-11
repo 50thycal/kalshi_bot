@@ -147,3 +147,31 @@ the clean re-live-test candidate, straight into the mmsell3 entry as a `maxyes` 
    is a trend check per docs/RESEARCH_JOURNAL.md, not a promote/kill signal for anything.
 3. **Re-test live only from the cheap fillable band.** Any future mmsell live test enters only where
    realizable ≈ paper (≤7¢ / under a `maxyes` cap), i.e. mmsell10's regime — not the whole cohort.
+
+## 6. Where the model is wired (evo sandbox)
+
+The same calibration now runs inside the evolutionary agents' backtester, because the evo
+sandbox had the *identical* bug this document exists to describe: a resting maker order was
+assumed to fill whenever the market traded through the limit — i.e. always, in the cheap
+longshot cells. Agents were being handed the optimistic number and told it was P&L.
+
+- `kalshi_bot/evo/fill_model.py` is a **versioned snapshot** of the §4 table, declared in code
+  (`CALIBRATION_VERSION`), so backtests stay reproducible, offline and cheap. Refresh it by
+  re-running `{"type":"script","name":"mmsell_fill_model"}` and bumping the version.
+- **Fill gate** — a maker entry is drawn once per market against that price cell's measured
+  fill rate. Once per *market*, not per candle: the calibration is a resting order's lifetime
+  fill rate, so re-rolling each step compounds to a certain fill and silently restores the 100%
+  assumption. Uncovered prices (`n_fills < MIN_CELL_FILLS`, or outside 6–12¢) keep the old
+  trade-through heuristic — never a guessed rate.
+- **Realizable number** — every backtest result carries a `fill_model` block with
+  `optimistic_cents_per_contract` beside `realizable_cents_per_contract`, `coverage`, and a
+  one-word `verdict` (MIRAGE / REAL / NEGATIVE / UNCOVERED). The projection is the same
+  contract as `project_realizable()` in the ops script, so the two agree by construction.
+  Agents are instructed to gate on the realizable column (`ACTION_PROTOCOL`), and the verdict
+  resurfaces in their RECENT BACKTESTS view.
+- Kill switch without a deploy: `EVO_SANDBOX_MAKER_FILL_MODEL=false` (allowlisted) puts the
+  gate back on the optimistic path. The realizable projection still reports either way.
+
+Caveat carried forward from §2: this is calibrated on mmsell's book and extrapolated to any
+maker entry landing in the same price cells. That is a real assumption — but the alternative
+it replaces (always fills) is measurably false, and coverage is reported rather than assumed.
