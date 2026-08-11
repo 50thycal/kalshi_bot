@@ -627,17 +627,22 @@ def run_backtest(
                     "qty": qty,
                     "fee": fee,
                     "entered_at": candle.ts,
+                    "mids": [],
                     "maker_yes_c": (
                         fill_model.yes_equivalent_cents(intent["side"], price)
                         if intent["style"] == "maker" else None
                     ),
                 }
                 continue
-            # manage open position
+            # manage open position. The mid tape starts at entry and is what the
+            # path-dependent exits (confirmed_stop / volatility_exit) read.
+            if quote.mid is not None:
+                open_pos["mids"].append(quote.mid)
             reason = exit_signal(
                 spec, quote, side=open_pos["side"],
                 entry_price_cents=open_pos["price"],
                 held_hours=_hours_between(open_pos["entered_at"], candle.ts),
+                mid_history=open_pos["mids"],
             )
             if reason is not None:
                 bid = quote.best_exit_bid(open_pos["side"])
@@ -651,6 +656,11 @@ def run_backtest(
                     win=gross > 0,
                 ))
                 open_pos = None
+                # One entry per market, matching the live runner's per-strategy/ticker
+                # dedup. Without this the replay re-enters the moment its own stop
+                # fires, so an exit-rule study would measure a re-entry policy rather
+                # than the exit rule it is comparing against holding.
+                break
         if open_pos is not None:
             won = open_pos["side"] == market.result
             value = 100 if won else 0
@@ -668,10 +678,12 @@ def run_backtest(
         peak = max(peak, equity)
         max_dd = max(max_dd, peak - equity)
     by_month: dict[str, dict] = {}
+    by_exit: dict[str, int] = {}
     for t in trades:
         m = by_month.setdefault(t["month"], {"n": 0, "pnl": 0.0})
         m["n"] += 1
         m["pnl"] = round(m["pnl"] + t["pnl"], 4)
+        by_exit[t["exit"]] = by_exit.get(t["exit"], 0) + 1
     result = {
         "dataset": dataset,
         "provenance": provenance,
@@ -689,6 +701,9 @@ def run_backtest(
         ),
         "max_drawdown_usd": round(max_dd, 4),
         "by_month": by_month,
+        # Which exit rule actually fired, and how often — an exit spec that never
+        # triggers is otherwise indistinguishable from one that holds by design.
+        "by_exit": by_exit,
         "fill_model": _fill_model_report(
             trades, applied=gate_applied, blocked=markets_blocked
         ),
