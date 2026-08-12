@@ -35,6 +35,11 @@ _ATTEMPTS = 4      # total tries per call before giving up
 # The ONLY vars this tool may set or print. Deliberately excludes every secret/infra var
 # (KALSHI_API_KEY_ID, KALSHI_PRIVATE_KEY, DATABASE_URL, RAILWAY_*, NWS_USER_AGENT).
 ALLOWED_VARS = frozenset({
+    # The one account-MUTATING switch on this list, and it is here on purpose: firing the free
+    # permanent Kalshi ADVANCED grant (200/100 -> 300/300 tokens/sec) should not require a code
+    # deploy, and the worker is the only process holding Kalshi credentials. It no-ops once the
+    # account reads above `basic`, so setting it is a one-way door that cannot repeat.
+    "KALSHI_UPGRADE_API_TIER",
     "BOT_MODE", "KILL_SWITCH", "RUN_ONCE", "SCAN_INTERVAL_SECONDS", "LOG_LEVEL",
     "MAX_ORDER_SIZE", "MAX_MARKET_EXPOSURE", "MAX_TOTAL_EXPOSURE", "MAX_DAILY_LOSS",
     "MAX_SPREAD_CENTS", "MIN_VOLUME", "MIN_OPEN_INTEREST", "MIN_HOURS_TO_CLOSE",

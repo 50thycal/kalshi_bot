@@ -182,9 +182,28 @@ class KalshiClient:
         eating 429 backoffs — and until now nothing in the system knew. Requires auth, which is
         why neither the sandbox nor the ops runner can answer it and the worker must.
 
-        Read-only: reports the tier, never changes it. Upgrading is a separate POST that this
-        client deliberately does not implement."""
+        Read-only: reports the tier, never changes it. Upgrading is the separate POST below,
+        which no code path reaches unless an operator sets KALSHI_UPGRADE_API_TIER."""
         return self._request("GET", "/account/limits")
+
+    def upgrade_api_usage_level(self) -> dict:
+        """Request the permanent ADVANCED API usage-level grant. Writes to the account.
+
+        Measured 2026-08-12, we are on `basic`: read 200 tokens/sec (20 requests/sec at the
+        default 10 tokens each), write 100/sec, `grants: []`. Advanced is 300/300 — reads +50%,
+        writes 3x — and it is free and self-service; the only requirement is that at least one
+        of the last 100 orders was placed via the API, which the live mmsell run satisfies. That
+        matters because the mmsell scan bursts at ~6-25 requests/sec against the 20/sec ceiling
+        and books hundreds of 429s a day, each costing a 2s backoff and, on final retry
+        failure, silently dropping that market's candidates.
+
+        This is the ONLY method on this client that changes account state rather than reading
+        it, so it is deliberately awkward to reach: nothing calls it unless the operator sets
+        `KALSHI_UPGRADE_API_TIER`, and main._maybe_upgrade_api_tier refuses to fire it when the
+        account is already above basic. Kalshi returns 201 with no body; the caller must re-read
+        get_account_limits() to see the resulting grant, which is also what makes the operation
+        verifiable rather than merely attempted."""
+        return self._request("POST", "/account/api_usage_level/upgrade")
 
     def get_markets(
         self,
