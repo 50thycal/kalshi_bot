@@ -102,6 +102,11 @@ def run() -> int:
     if settings.live_shape_probe:
         _probe_api_shapes(client)
 
+    # Which Kalshi API tier are we actually on? Read-only, once per start. The scan's request
+    # budget — and whether the 429s the client now counts are expected or a fault — is decided
+    # by this number, and nothing in the system knew it until now.
+    _probe_api_limits(client)
+
     # Weather AND live modes both run the focused weather pipeline; live adds a real-money
     # executor that mirrors allowlisted paper entries into orders (inert until configured).
     live = settings.bot_mode == "live"
@@ -847,6 +852,42 @@ def _probe_api_shapes(client) -> None:
             raise
         except Exception as exc:  # noqa: BLE001
             logger.warning("api shape probe failed [%s]: %s", name, exc)
+
+
+def _probe_api_limits(client) -> None:
+    """Record this account's Kalshi API TIER and rate limits once, at startup (read-only).
+
+    We have been reasoning about the mmsell scan's ~6-25 req/sec burst against an assumed Basic
+    bucket (200 tokens/sec, 10 per request -> 20 reads/sec) without ever knowing the real tier.
+    `GET /account/limits` is authoritative but needs auth, so neither the sandbox nor the ops
+    runner can ask it — only the worker can, which is why this lives here.
+
+    Written to `system_events` as well as the log because Railway retains roughly half an hour
+    of log lines: a startup-only line would be gone long before anyone asked. Persisted, the
+    tier sits next to the 429 counters the scan telemetry records, so `mmsell_quote_parity` can
+    report "we hit N rate limits against a ceiling of X" instead of just the numerator.
+
+    Fail-soft in both directions: a tier probe must never be what stops the bot, and an account
+    whose plan does not expose the endpoint should degrade to a warning, not a crash."""
+    import json
+
+    try:
+        limits = client.get_account_limits()
+    except AuthError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("api limits probe failed (tier unknown): %s", exc)
+        return
+    # In the MESSAGE, not just extra_fields — Railway's log view drops structured fields.
+    logger.info("api limits probe: %s", json.dumps(limits)[:600])
+    try:
+        with session_scope() as session:
+            repo.log_system_event(
+                session, level="INFO", component="kalshi_limits",
+                message="kalshi account api limits", raw=limits if isinstance(limits, dict) else {},
+            )
+    except Exception:  # noqa: BLE001
+        logger.exception("api limits persist failed (probe logged; cycle unaffected)")
 
 
 def _fetch_account_state(client) -> dict:
