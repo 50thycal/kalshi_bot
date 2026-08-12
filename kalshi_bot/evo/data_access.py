@@ -135,6 +135,17 @@ SOURCES: dict[str, dict] = {
 }
 
 
+def is_collected_source(name: str) -> bool:
+    """Does anything actually put rows behind this source name?
+
+    A source is 'collected' only if it is readable here — i.e. the main worker
+    ingests it into a table this module exposes. Registry metadata alone is not
+    collection, and treating it as such is what let agents believe they had gained
+    a feed by naming one."""
+    slug = (name or "").strip().lower()
+    return slug in SOURCES
+
+
 def source_catalog() -> list[dict]:
     """Compact description of every readable source, for the prompt."""
     return [

@@ -31,6 +31,7 @@ from ..weather.cities import CITIES
 from . import controls as controls_mod
 from . import listeners as listeners_mod
 from . import paper as papermod
+from . import signals as signals_mod
 from . import strategy_runner
 from .announcements import seed_announcements
 from .cognition import LlmCognition
@@ -263,6 +264,13 @@ def run_evo_cycle(runtime: EvoRuntime) -> None:
             # and joined to the CURRENT cohort so it is scored over the same window.
             controls_mod.ensure_controls(session, settings, cohort)
             tickers = _scan_universe(runtime, session)
+            # External signals for this cycle's universe, recomputed every cycle and
+            # REPLACING the last map — a collector that died must make its metric
+            # vanish rather than keep authorizing trades on a stale number.
+            runtime.md.set_signals(
+                signals_mod.compute_signals(
+                    session, tickers, now=now, settings=settings)
+            )
             new_tickers = set(tickers) - runtime._known_tickers
             runtime._known_tickers.update(tickers)
 

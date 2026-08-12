@@ -318,6 +318,25 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
   untested, not endorsed; say so when you cite it. `coverage` is the share of trades the
   calibration actually covers. None of this applies to style=taker (you cross the spread
   and get the fill), which is why taker results carry no fill_model verdict.
+  EXTERNAL SIGNALS — the metrics that are NOT the order book. Every other metric
+  (yes_bid, spread, mid, volume, hours_to_close...) is a property of Kalshi's own
+  book, so a spec using only those states a PRICE PATTERN, and price patterns on a
+  roughly efficient book earn the spread minus two fees. These two let you state
+  "information vs price" instead — the only kind of hypothesis with room to win:
+    pm_divergence   Polymarket's implied probability MINUS our mid, in cents, for
+                    the same weather bucket. Two venues price one event and
+                    disagree. POSITIVE => our YES is cheap vs the other venue.
+                    Weather markets only (KXHIGH*/KXLOW*, LAX/MIA/AUS).
+    spot_vs_strike  Percent distance from BTC/ETH spot to a crypto market's
+                    decision boundary, signed so POSITIVE always means YES is
+                    currently winning (any strike_type). Crypto markets only.
+  Both are None when there is no fresh signal for that market, and a None metric
+  FAILS its condition — so a market with no counterpart, or a feed that went stale,
+  blocks the entry rather than trading on a stale or absent number. Do not read a
+  missing signal as zero. Backtest support is per dataset: dataset="crypto" can
+  replay spot_vs_strike; nothing replays pm_divergence yet, and a spec using a
+  metric its dataset cannot compute is REJECTED with an explanation rather than
+  quietly returning zero trades.
 - inspect_data {source, filters?, limit?}. READ any data we have collected — you are
   NOT limited to weather. `source` is one of: DATA_SOURCES. `filters` is an object of
   column->value on that source's allowlisted columns (e.g. {"market_ticker": "..."},
@@ -1207,14 +1226,45 @@ def _execute_one(
         return {"ok": True} if row else {"rejected": err}
 
     if t == "register_data_source":
+        name = str(a.get("name", ""))
         row, err = ds.register_source(
-            session, agent_uuid=au, name=str(a.get("name", "")),
+            session, agent_uuid=au, name=name,
             provider=a.get("provider"), endpoint=a.get("endpoint"),
             update_frequency=a.get("update_frequency"),
             cost_note=str(a.get("cost_note", "free")),
             auth_required=bool(a.get("auth_required", False)),
         )
-        return {"ok": True, "source": row.name} if row else {"rejected": err}
+        if row is None:
+            return {"rejected": err}
+        # Registering a source we do not COLLECT changes nothing on its own: no
+        # fetcher exists, no rows appear, and the agent is left believing it gained
+        # a feed. Only the main worker ingests external data (evo/signals.py explains
+        # why an in-heartbeat API call could never be backtested), so the real path
+        # is a ticket the operator can action. File it automatically rather than
+        # letting the tempting action and the effective one be different actions.
+        if not data_access.is_collected_source(row.name):
+            ticket, terr, deduped = tickets.submit_ticket(
+                session, agent_uuid=au, category="external_data_pipeline",
+                capability=f"collect external data source '{row.name}' into our database",
+                problem=(
+                    f"registered {row.name!r} (provider={row.provider or '?'}, "
+                    f"endpoint={row.endpoint or '?'}) but nothing collects it, so it "
+                    "has no rows, no inspect_data source and no backtest dataset"
+                )[:2000],
+                expected_strategy_benefit=str(a.get("expected_use", ""))[:2000] or None,
+            )
+            return {
+                "ok": True, "source": row.name, "collected": False,
+                "ticket_id": ticket.id if ticket else None,
+                "deduplicated": deduped,
+                "note": (
+                    "Registered, but NOT collected — there is no data behind this name "
+                    "yet and no strategy can use it. A capability ticket was filed for "
+                    "your operator to build the collector. Do not build a strategy that "
+                    "depends on it until it appears as an inspect_data source."
+                ) if ticket else (terr or "ticket could not be filed"),
+            }
+        return {"ok": True, "source": row.name, "collected": True}
 
     if t == "set_working_state":
         state = a.get("state")

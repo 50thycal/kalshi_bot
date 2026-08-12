@@ -39,6 +39,12 @@ class Quote:
     event_ticker: str | None = None
     category: str | None = None
     title: str | None = None
+    # External signals (evo/signals.py) — NOT from Kalshi's book. None means "no
+    # fresh signal for this market", which fails any condition referencing it; it
+    # must never be read as zero. Stamped per cycle by MarketData.set_signals live,
+    # and by the backtest adapters from historical values, so both paths agree.
+    pm_divergence: float | None = None
+    spot_vs_strike: float | None = None
 
     @property
     def spread(self) -> int | None:
@@ -233,6 +239,25 @@ def quote_from_kalshi(market: dict, orderbook: dict | None, *, source: str = "li
 class MarketData:
     """Interface: get_quote / list_tickers. Implementations below."""
 
+    _signals: dict[str, dict[str, float | None]] = {}
+
+    def set_signals(self, mapping: dict[str, dict[str, float | None]]) -> None:
+        """Install this cycle's external signals (evo/signals.py).
+
+        REPLACES the previous cycle's map rather than merging it. A feed that stops
+        reporting must make its metric disappear — carrying forward the last value
+        that happened to authorize a trade is exactly the silent-staleness failure
+        the freshness gate exists to prevent."""
+        self._signals = mapping or {}
+
+    def _stamp(self, quote: Quote | None) -> Quote | None:
+        if quote is None:
+            return None
+        sig = self._signals.get(quote.ticker) or {}
+        quote.pm_divergence = sig.get("pm_divergence")
+        quote.spot_vs_strike = sig.get("spot_vs_strike")
+        return quote
+
     def get_quote(self, ticker: str) -> Quote | None:  # pragma: no cover - interface
         raise NotImplementedError
 
@@ -251,7 +276,7 @@ class StaticMarketData(MarketData):
         self.quotes[quote.ticker] = quote
 
     def get_quote(self, ticker: str) -> Quote | None:
-        return self.quotes.get(ticker)
+        return self._stamp(self.quotes.get(ticker))
 
     def known_tickers(self) -> list[str]:
         return sorted(self.quotes)
@@ -271,7 +296,7 @@ class LiveMarketData(MarketData):
 
     def get_quote(self, ticker: str) -> Quote | None:
         if ticker in self._cache:
-            return self._cache[ticker]
+            return self._stamp(self._cache[ticker])
         try:
             resp = self._client.get_market(ticker)
             market = resp.get("market") if isinstance(resp, dict) and "market" in resp else resp
@@ -288,7 +313,7 @@ class LiveMarketData(MarketData):
             return None
         quote = quote_from_kalshi(market, ob)
         self._cache[ticker] = quote
-        return quote
+        return self._stamp(quote)
 
     def known_tickers(self) -> list[str]:
         return sorted(self._cache)

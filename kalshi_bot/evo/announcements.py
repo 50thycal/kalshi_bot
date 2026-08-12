@@ -231,6 +231,24 @@ ANNOUNCEMENTS: list[dict] = [
         ),
         expires_in_days=21,
     ),
+    dict(
+        key="2026-08-external-signals",
+        title="New metrics: gate on INFORMATION, not just price",
+        category="capability",
+        body=(
+            "Every metric you had is a property of Kalshi's order book, so every spec "
+            "you could write stated a PRICE PATTERN — and those earn the spread minus "
+            "two fees. Two new entry metrics change that. pm_divergence: Polymarket's "
+            "implied probability minus our mid, in cents, same weather bucket "
+            "(positive => our YES is cheap vs the other venue). spot_vs_strike: "
+            "percent from BTC/ETH spot to a crypto market's boundary, positive = YES "
+            "winning. Both are None when no fresh signal exists, and None FAILS the "
+            "condition — never read it as zero. See your action protocol for per-"
+            "dataset backtest support. Also: registering a source we do not collect "
+            "now files a real operator ticket instead of doing nothing."
+        ),
+        expires_in_days=21,
+    ),
 ]
 
 
