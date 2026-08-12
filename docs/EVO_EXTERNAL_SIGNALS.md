@@ -47,32 +47,62 @@ Kalshi's boundaries fall at 98.5 / 100.5 / 102.5; Polymarket's at 97.5 / 99.5 / 
 sets — so no Austin bucket can *ever* equal a Polymarket bucket. Same in Miami. LAX matched only
 because Kalshi happened to start that ladder on an even degree.
 
-So we stop requiring the grids to agree. Polymarket's ladder is a distribution over the same
-temperatures; a Kalshi bucket is a range of them. `pm_probability_for_bucket` re-bins one onto the
-other by overlap:
+#### The obvious fix is wrong — do not re-bin by uniform allocation
+
+The tempting move is to treat Polymarket's ladder as a distribution over the same temperatures and
+split its buckets by overlap:
 
 ```
-P(Kalshi 99-100) = 0.5 * P(Poly 98-99) + 0.5 * P(Poly 100-101)
+P(Kalshi 99-100) ~= 0.5 * P(Poly 98-99) + 0.5 * P(Poly 100-101)
 ```
 
-**Read the estimate with its assumption.** Overlap allocation assumes mass is spread *uniformly
-inside* each Polymarket bucket. That is wrong in the third decimal — a peaked distribution puts
-more mass on the side nearer the mode — so a re-binned divergence carries roughly 1–3¢ of binning
-error, which matters if you gate at `>= 5`. An exact match, when one exists, is still used verbatim
-rather than estimated.
+**That was shipped, measured against production, and reverted.** Against the real Austin ladder it
+produced:
 
-Two cases fail closed rather than estimate, both being ways re-binning could invent information:
+| bucket | uniform estimate | Kalshi mid | "divergence" |
+|---|---|---|---|
+| AUS 99-100 | 38.2¢ | 6¢ | **+32.2¢** |
+| AUS 101-102 | 47.2¢ | 84¢ | **−36.8¢** |
+| MIA 91-92 | 48.8¢ | 0.5¢ | **+48.3¢** |
+| MIA 93-94 | 49.2¢ | 98¢ | **−48.8¢** |
 
-- **the ladder does not fully cover the bucket** — a half-covered bucket would report about half
-  its true probability, i.e. a large fake *negative* divergence, which is the direction that makes
-  an agent sell;
-- **the bucket would have to split an open-ended tail** (`107+`, `<=98`) — unbounded support has no
-  uniform to allocate over.
+All four are artifacts. Polymarket put 72.5% on AUS `100-101` while Kalshi put 84% on `101-102` —
+so essentially all of that 72.5% is P(101), and halving it fabricates a 37¢ disagreement between
+two venues that agree. Weather distributions are extremely peaked: one or two degrees hold nearly
+all the mass, so splitting a bucket is not a small approximation. And it fails in the direction
+that makes an agent *trade*.
 
-Coverage after the fix is bounded by Polymarket's own city list, not by the grid: cities it does
-not cover (CHI, DEN, NYC, PHIL) and dates it has not posted still yield no signal at all. Every
-cycle logs `evo pm_divergence coverage` with `kalshi_buckets` / `pm_buckets` / `matched_exact` /
-`matched_rebinned`, so inertness is visible instead of silent.
+#### What it does instead: bounds, and silence when they are wide
+
+```
+lower = mass of Polymarket buckets wholly INSIDE the Kalshi bucket
+upper = lower + mass of every bucket that merely OVERLAPS it
+```
+
+A partially-overlapping bucket could contribute all of its mass or none of it — that range is the
+honest answer, not a coin flip. If the ambiguous mass exceeds `MAX_REBIN_UNCERTAINTY` (4¢, chosen
+to stay meaningfully tighter than the `>= 5` gates agents write) the ladder does not pin the bucket
+down and the result is **None**. When it is narrow — the common quiet-tail case — the midpoint is
+returned, accurate to within half the band.
+
+On the same production data this keeps every honest value and suppresses every artifact: the four
+exact LAX matches (including a genuine **+7.0¢** and **−6.0¢**), plus small bounded tail values
+like AUS `105-106` at +0.1¢, while AUS `99-100`, `101-102`, `103-104` and MIA `91-92`, `93-94` all
+return nothing.
+
+Three further cases fail closed: a bucket the ladder does not cover, a bucket that would have to
+split an **open-ended tail** (`107+`, `<=98` — unbounded support cannot be bounded), and an exact
+match is never estimated at all.
+
+**Net effect on coverage: small.** Because the grids are offset by exactly one degree everywhere
+observed, most interleaved buckets straddle two Polymarket buckets with none wholly contained, so
+the band is wide and the answer is None. `pm_divergence` remains close to an exact-match-only
+metric, and it is bounded by Polymarket's city list besides — CHI, DEN, NYC, PHIL and un-posted
+dates yield nothing at all. That is the true state of this signal, not a bug to route around.
+
+Every cycle logs `evo pm_divergence coverage: kalshi_buckets=.. pm_buckets=.. matched_exact=..
+matched_rebinned=.. unmatched=..` in the message body (not `extra_fields`, which does not survive
+the ops log fetch), so inertness stays visible instead of silent.
 
 ### It cannot be backtested
 

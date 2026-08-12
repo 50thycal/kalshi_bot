@@ -67,6 +67,13 @@ SIGNAL_METRICS = ("pm_divergence", "spot_vs_strike")
 # Bucket bounds are whole or half degrees; this is well below the smallest real gap.
 _EPS = 1e-6
 
+# How much probability may sit in Polymarket buckets that only PARTIALLY overlap a
+# Kalshi bucket before we refuse to answer. Such mass could belong to the bucket or
+# not, so this is the width of the honest uncertainty band, and half of it bounds the
+# error of the midpoint we return. 4c keeps the estimate meaningfully tighter than the
+# gates agents write (`pm_divergence >= 5`).
+MAX_REBIN_UNCERTAINTY = 0.04
+
 
 def _aware(ts: datetime | None) -> datetime | None:
     if ts is None:
@@ -129,40 +136,52 @@ def pm_probability_for_bucket(
     low_f: float | None,
     high_f: float | None,
     ladder: list[tuple[float | None, float | None, float]],
+    *,
+    max_uncertainty: float = MAX_REBIN_UNCERTAINTY,
 ) -> tuple[float, bool] | None:
     """Polymarket's implied probability for a KALSHI bucket, as (probability, exact).
 
     The two venues do not share a bucket grid. Measured in production: Austin's
     Kalshi ladder starts on odd degrees (99-100, 101-102, ...) while Polymarket's
-    starts on even ones (98-99, 100-101, ...), so their bucket boundaries are
-    disjoint sets and an equality join matches nothing there however fresh both
-    feeds are. Only cities where the ladders happen to coincide ever produced a
-    signal — 4 of 60 markets on the day this was measured.
+    starts on even ones (98-99, 100-101, ...), so their boundaries are disjoint
+    sets and an equality join matches nothing there however fresh both feeds are.
 
-    So re-bin instead of matching. Polymarket's ladder is a distribution over the
-    same temperatures; a Kalshi bucket is a range of them. Overlap allocation:
+    The tempting fix is to re-bin by overlap, assuming mass is spread uniformly
+    inside each Polymarket bucket:
 
-        P(Kalshi 99-100) = 0.5 * P(Poly 98-99) + 0.5 * P(Poly 100-101)
+        P(Kalshi 99-100) ~= 0.5 * P(Poly 98-99) + 0.5 * P(Poly 100-101)
 
-    The estimate assumes mass is spread UNIFORMLY inside each Polymarket bucket.
-    That is wrong in the third decimal — a peaked distribution puts more mass on
-    the side nearer the mode — so an exact match is still used verbatim when one
-    exists, and the caller is told which it got.
+    DO NOT DO THAT. It was tried, shipped, and measured against production, where
+    it manufactured divergences of +32c and -37c between two venues that agreed.
+    These distributions are extremely peaked — one or two degrees carry nearly all
+    the mass — so halving a bucket is not a small approximation. Austin: Polymarket
+    put 72.5% on `100-101` while Kalshi's own ladder put 84% on `101-102`, i.e.
+    essentially all of that 72.5% is P(101). Splitting it evenly invents a 37c
+    disagreement, and it fails in the direction that makes an agent trade.
 
-    Returns None rather than a partial sum in the two cases where re-binning would
-    invent information:
-      - the ladder does not fully cover the Kalshi bucket (a half-covered bucket
-        would report about half its true probability, i.e. a large fake NEGATIVE
-        divergence — the direction that makes an agent sell);
-      - the bucket would have to split an open-ended tail, whose mass has no
-        defined shape.
+    So compute BOUNDS instead of a point estimate, and only answer when the data
+    determines the answer:
+
+      lower  = mass of Polymarket buckets wholly INSIDE the Kalshi bucket
+      upper  = lower + mass of every bucket that merely OVERLAPS it
+
+    A partially-overlapping bucket could contribute anything from none of its mass
+    to all of it — that is the honest range, not a coin flip. When the range is
+    wider than `max_uncertainty` the ladder simply does not pin this bucket down
+    and the answer is None. When it is narrow (the overlapping buckets are nearly
+    empty, which is the common tail case) the midpoint is accurate to within half
+    the range and gets returned.
+
+    An exact bucket match is not an estimate at all and is used verbatim, tails
+    included. Two further cases fail closed: a bucket the ladder does not cover,
+    and an open-ended Kalshi tail, which has no finite span to bound.
     """
     # An exact match is not an estimate; prefer it, tails included.
     for lo, hi, prob in ladder:
         if _same_bounds(lo, low_f) and _same_bounds(hi, high_f):
             return (float(prob), True)
 
-    # Re-binning needs a bounded target: an open Kalshi tail has no finite span.
+    # Bounding needs a bounded target: an open Kalshi tail has no finite span.
     if low_f is None or high_f is None:
         return None
     lo_t, hi_t = _interval(low_f, high_f)
@@ -170,7 +189,8 @@ def pm_probability_for_bucket(
     if span <= 0:
         return None
 
-    total = 0.0
+    inside = 0.0        # mass certainly in the bucket
+    straddling = 0.0    # mass that may or may not be
     covered = 0.0
     for lo, hi, prob in ladder:
         lo_b, hi_b = _interval(lo, hi)
@@ -178,15 +198,20 @@ def pm_probability_for_bucket(
         if overlap <= _EPS:
             continue
         if lo is None or hi is None:
-            return None  # would have to split a tail
+            return None  # an unbounded tail cannot be bounded
         width = hi_b - lo_b
         if width <= 0:
             continue
-        total += float(prob) * (overlap / width)
         covered += overlap
+        if overlap >= width - _EPS:
+            inside += float(prob)      # wholly contained: all of it counts
+        else:
+            straddling += float(prob)  # anywhere from 0 to all of it
     if abs(covered - span) > _EPS:
         return None  # ladder does not cover the bucket
-    return (total, False)
+    if straddling > max_uncertainty:
+        return None  # the ladder does not pin this bucket down
+    return (inside + straddling / 2.0, False)
 
 
 def _pm_divergence(session, tickers: list[str], cutoff: datetime) -> dict[str, float]:
