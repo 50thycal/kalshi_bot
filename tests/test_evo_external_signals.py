@@ -51,11 +51,25 @@ TICKER = "KXHIGHLAX-26AUG12-B85.5"
 
 
 def _quote(**kw):
+    """A quote that is always 5 hours from close, measured against the REAL clock.
+
+    `close_time` cannot be anchored to `NOW` here the way the rest of this file anchors things.
+    The signal tests below call `compute_signals(..., now=NOW)` and are deterministic because
+    they pass the instant in explicitly — but `entry_signal(spec, quote)` takes no clock, and
+    the universe gate it applies calls `Quote.hours_to_close()`, which falls back to
+    `datetime.now(timezone.utc)`. With a fixed `close_time` of NOW+5h (2026-08-12 20:00 UTC)
+    these tests passed until that wall-clock instant and then failed forever after, which is
+    exactly what happened: the suite went red at 20:00 UTC on 2026-08-12 with no code change.
+
+    Anchoring to real now keeps the property the tests actually care about — the market is
+    comfortably inside the universe's hours-to-close window, so any None they observe comes
+    from the SIGNAL condition under test rather than from the clock."""
+    real_now = datetime.now(timezone.utc)
     base = dict(
-        ticker=TICKER, captured_at=NOW, status="active",
+        ticker=TICKER, captured_at=real_now, status="active",
         yes_bid=44, yes_ask=47, no_bid=53, no_ask=56,
         yes_levels=[(44, 100)], no_levels=[(53, 100)],
-        volume=500, open_interest=1000, close_time=NOW + timedelta(hours=5),
+        volume=500, open_interest=1000, close_time=real_now + timedelta(hours=5),
     )
     base.update(kw)
     return Quote(**base)
