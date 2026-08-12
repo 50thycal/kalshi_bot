@@ -24,6 +24,7 @@ from . import (
     budgets,
     data_access,
     graveyard,
+    knowledge,
     lineage,
     listeners,
     market_explore,
@@ -213,8 +214,7 @@ frozen: you cannot exit, only wait. Plan exits BEFORE close.
 ORDER TYPES. taker crosses the spread and fills now against resting depth,
 paying the ask (with slippage past the top level). maker rests at your limit and
 fills only if the market trades THROUGH it, then only partially (25%
-adverse-selection haircut) — makers fill most reliably exactly when the market
-is moving against them.
+adverse-selection haircut; the full fill-model lesson is in the action protocol).
 
 LIQUIDITY IS FINITE. You fill against real posted depth: wanting 100 where 12
 are offered fills 12 and rests the remainder. Size to the book.
@@ -224,10 +224,11 @@ WHAT YOU CAN DO (capability map; exact call syntax is in the action protocol)
 RESEARCH — you are NOT limited to weather. explore_markets discovers live Kalshi
 markets in any series. inspect_data reads anything we hold: paper_trades,
 paper_positions, signals, market_snapshots, orderbook, mmsell_ticks,
-crypto_ladders, crypto_spot, game_tape, game_matches, polymarket — use
-paper_trades to study what our OTHER strategies did. run_backtest replays a spec
-over a settled dataset: backfill_weather (default), mmsell, crypto. Results
-arrive in your NEXT heartbeat, not this one.
+crypto_ladders, crypto_spot, game_tape, game_matches, polymarket, and
+book_performance — the operator's per-book P&L scoreboard. read_doc reads the
+operator's own research docs (start: BOOK_REGISTRY). run_backtest replays a
+spec over a settled dataset: backfill_weather (default), mmsell, crypto.
+Results arrive in your NEXT heartbeat, not this one.
 
 STRATEGY LOOP — how an idea becomes money: run_backtest (validate) ->
 save_strategy (returns an integer strategy_id) -> activate_strategy (that id).
@@ -327,6 +328,21 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
   intraday tape with {"source":"mmsell_ticks","filters":{"market_ticker":"..."}}. The
   rows you pull appear under YOUR RECENT DATA READS in your NEXT heartbeat (not this
   one), so inspect first, then act on what you saw.
+  The special source "book_performance" is your operator's SCOREBOARD: the per-book
+  rollup (n_settled, win_rate, total/per-trade P&L, open positions) of every book the
+  operator runs, grouped by its `strategy` tag. Filter {"strategy": "mmsell10"} or
+  {"strategy_prefix": "mmsell"}. Read it WITH the thesis (read_doc BOOK_REGISTRY maps
+  each tag to its thesis doc + pre-registered gate): numbers without the mechanism
+  invite copying noise; a thesis without its live numbers invites copying a loser.
+- read_doc {name, chunk?}. READ the operator's research library — the human running
+  this system does their own strategy research in the same repo, and these are their
+  actual writeups: theses, study results, postmortems, and the master index
+  BOOK_REGISTRY (every operator book: tag, status, edge, pre-registered gate). Docs:
+  DOC_INDEX. Long docs return in chunks (`total_chunks` in the result, pass
+  chunk: 1, 2, ... to continue; `headings` maps the whole doc). Costs one data_read.
+  The text resurfaces under YOUR RECENT DATA READS next heartbeat, like inspect_data.
+  START with BOOK_REGISTRY, and check a book's live rollup via the book_performance
+  source before adopting its idea — several operator books are documented mirages.
 - explore_markets {series?, status?, limit?}. Discover LIVE Kalshi markets on demand
   via the read-only API — find NEW domains/tickers to research or trade beyond weather.
   Pass a series_ticker to target a domain (e.g. "KXBTCD" bitcoin, "KXETHD" ether,
@@ -436,6 +452,7 @@ Invalid actions are rejected (with the reason recorded); the rest still execute.
     .replace("METRICS_LIST", "|".join(METRICS)) \
     .replace("OPS_LIST", "|".join(OPS)) \
     .replace("DATA_SOURCES", "|".join(data_access.SOURCES)) \
+    .replace("DOC_INDEX", ", ".join(knowledge.doc_names())) \
     .replace("TICKET_CATEGORIES", "|".join(tickets.CATEGORIES))
 
 
@@ -981,6 +998,28 @@ def _execute_one(
         # The full rows resurface in YOUR RECENT DATA READS next heartbeat; the
         # outcome here is just an ack (action outcomes are not re-fed this turn).
         return {"ok": True, "source": source, "count": result["count"]}
+
+    if t == "read_doc":
+        if not budgets.spend(session, au, cohort.id, "data_reads", 1):
+            return {"rejected": "weekly data-read budget exhausted"}
+        doc, err = knowledge.read_doc(str(a.get("name", "")), chunk=a.get("chunk", 0))
+        if err:
+            return {"rejected": err}
+        # Same persistence channel as inspect_data: the text resurfaces under YOUR
+        # RECENT DATA READS next heartbeat. The chunk rides as a single "row".
+        data_access.record_read(
+            session, agent_uuid=au, heartbeat_id=hb.id,
+            result={
+                "source": f"doc:{doc['doc']}",
+                "filters": {"chunk": doc["chunk"]},
+                "count": 1,
+                "rows": [{"title": doc["title"], "chunk": doc["chunk"],
+                          "total_chunks": doc["total_chunks"],
+                          "headings": doc["headings"][:20], "text": doc["text"]}],
+            },
+        )
+        return {"ok": True, "doc": doc["doc"], "chunk": doc["chunk"],
+                "total_chunks": doc["total_chunks"]}
 
     if t == "explore_markets":
         status = str(a.get("status", "open"))
