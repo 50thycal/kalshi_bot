@@ -202,8 +202,15 @@ class KalshiClient:
         `KALSHI_UPGRADE_API_TIER`, and main._maybe_upgrade_api_tier refuses to fire it when the
         account is already above basic. Kalshi returns 201 with no body; the caller must re-read
         get_account_limits() to see the resulting grant, which is also what makes the operation
-        verifiable rather than merely attempted."""
-        return self._request("POST", "/account/api_usage_level/upgrade")
+        verifiable rather than merely attempted.
+
+        The empty `json={}` is load-bearing, not decoration. This endpoint takes no parameters,
+        so the obvious call omits the body entirely — but httpx then sends no `Content-Type`
+        header at all, and Kalshi answers `400 invalid_content_type` (observed live 2026-08-12).
+        Passing an empty dict makes httpx emit `Content-Type: application/json` with a `{}`
+        body, which the endpoint accepts. Every other POST here happens to carry a real body,
+        so this is the first call to hit that."""
+        return self._request("POST", "/account/api_usage_level/upgrade", json={})
 
     def get_markets(
         self,
