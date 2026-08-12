@@ -35,7 +35,7 @@ from ..models import (
     PaperTrade,
 )
 from ..paper.engine import kalshi_fee
-from . import budgets, fill_model
+from . import budgets, fill_model, signals
 from .audit import audit
 from .config import EvoSettings
 from .marketdata import Quote
@@ -54,6 +54,21 @@ _PROVENANCE = {
     "backfill_weather": "kalshi_rest_backfill",
     "mmsell": "mmsell_live_ticks",
     "crypto": "crypto_ladder_spot_settled",
+}
+
+# Which EXTERNAL signal metrics (evo/signals.py) each dataset can actually reconstruct
+# during replay. A dataset can only offer a signal it has the historical inputs for:
+# crypto ladder snapshots carry strikes and the spot feed is preserved, but the Kalshi
+# REST weather archive has no Polymarket join and mmsell's tick tape has neither.
+#
+# A spec using a metric its dataset cannot compute is REJECTED rather than run. Left
+# unchecked, every such condition would silently evaluate to None -> fail -> zero
+# trades, and the agent would read "no edge" from a backtest that never evaluated its
+# hypothesis at all. That is the same shape of lie as assuming a maker order fills.
+DATASET_SIGNALS = {
+    "backfill_weather": frozenset(),
+    "mmsell": frozenset(),
+    "crypto": frozenset({"spot_vs_strike"}),
 }
 
 
@@ -392,8 +407,15 @@ def _spot_at(spot: dict, product: str, when: datetime) -> float | None:
     return closelist[i] if i >= 0 else None
 
 
-def _crypto_candle(ticker: str, closed_at: datetime, snap: CryptoLadderSnapshot) -> _Candle:
-    """One crypto ladder snapshot -> a Quote (close_time made wall-relative, no lookahead)."""
+def _crypto_candle(
+    ticker: str, closed_at: datetime, snap: CryptoLadderSnapshot,
+    spot_at: float | None = None,
+) -> _Candle:
+    """One crypto ladder snapshot -> a Quote (close_time made wall-relative, no lookahead).
+
+    `spot_at` is the underlying's close at THIS candle's timestamp (never later), so
+    spot_vs_strike replays with the value live would have seen — computed by the same
+    signals.spot_vs_strike the live path uses, not a parallel implementation."""
     ts = snap.captured_at if snap.captured_at.tzinfo else snap.captured_at.replace(
         tzinfo=timezone.utc
     )
@@ -416,6 +438,9 @@ def _crypto_candle(ticker: str, closed_at: datetime, snap: CryptoLadderSnapshot)
         last_price=int(snap.mid_cents) if snap.mid_cents is not None else None,
         volume=int(snap.volume) if snap.volume is not None else None,
         close_time=wall_close,
+        spot_vs_strike=signals.spot_vs_strike(
+            snap.strike_type, snap.floor_strike, snap.cap_strike, spot_at,
+        ),
     )
     return _Candle(ts=ts, quote=quote, price_low=yb)
 
@@ -481,7 +506,17 @@ def _crypto_markets(
             ticker=ticker,
             result=result,
             month=close_t.isoformat()[:7],
-            candles=[_crypto_candle(ticker, close_t, s) for s in snaps],
+            # spot as of EACH snapshot's own timestamp — _spot_at bisects to the
+            # latest close at/before it, so the replay never sees the future.
+            candles=[
+                _crypto_candle(
+                    ticker, close_t, s,
+                    _spot_at(spot, product,
+                             s.captured_at if s.captured_at.tzinfo
+                             else s.captured_at.replace(tzinfo=timezone.utc)),
+                )
+                for s in snaps
+            ],
         )
 
 
@@ -566,6 +601,19 @@ def run_backtest(
     spec, err = validate_spec(spec_doc, max_bytes=settings.strategy_spec_max_bytes)
     if err:
         return None, err
+    unsupported = sorted(
+        {c.metric for c in spec.entry.conditions if c.metric in signals.SIGNAL_METRICS}
+        - DATASET_SIGNALS.get(dataset, frozenset())
+    )
+    if unsupported:
+        # Reject loudly: a silent zero-trade result would be read as "no edge".
+        return None, (
+            f"dataset {dataset!r} cannot replay {', '.join(unsupported)} — it has no "
+            f"historical source for it, so this spec would evaluate to zero trades for "
+            f"a reason unrelated to your hypothesis. Datasets providing it: "
+            + (", ".join(sorted(d for d, s in DATASET_SIGNALS.items()
+                                if set(unsupported) <= s)) or "none yet")
+        )
     if charge_budget and not budgets.spend(
         session, agent_uuid, cohort_id, "sandbox_runs", 1
     ):

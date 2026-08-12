@@ -200,6 +200,13 @@ class EvoSettings(BaseSettings):
     order_no_quote_reject_hours: float = 6.0
 
     # --- sandbox limits (spec §15) ---
+    # External signals (evo/signals.py) go stale silently when a collector dies, so a
+    # value older than this is dropped to None and fails its condition rather than
+    # authorizing trades. Measured feed lag at build time was 2-10 min against
+    # sources that republish hourly, so 30 is generous; live-settable because a
+    # collector's cadence can change without a deploy.
+    signal_max_age_minutes: float = 30.0
+
     sandbox_max_rows: int = 200_000
     sandbox_max_seconds: float = 60.0
     strategy_spec_max_bytes: int = 40_000

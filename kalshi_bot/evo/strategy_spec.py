@@ -26,9 +26,16 @@ from .marketdata import Quote
 
 # Condition metric vocabulary (subset of listener metrics that exist on a Quote /
 # candle-derived quote — keeps backtests and live evaluation identical).
+# Order-book metrics, plus the EXTERNAL signals (evo/signals.py) — the first
+# vocabulary here that is not a property of Kalshi's own book, and therefore the
+# first way to state "information vs price" rather than a price pattern. They ride
+# on the Quote like any other field, so the interpreter stays one-argument and live
+# and replay cannot diverge. A signal that is missing or stale arrives as None,
+# which fails its condition (see _metric_value) — absence never reads as zero.
 METRICS = (
     "yes_bid", "yes_ask", "no_bid", "no_ask", "spread", "mid", "last_price",
     "volume", "open_interest", "hours_to_close",
+    "pm_divergence", "spot_vs_strike",
 )
 OPS = ("<", "<=", ">", ">=", "==", "!=")
 

@@ -102,6 +102,11 @@ ALLOWED_VARS = frozenset({
     # puts the sandbox back on the optimistic path without a deploy. The realizable
     # projection keeps reporting either way — only the gate switches off.
     "EVO_SANDBOX_MAKER_FILL_MODEL",
+    # External-signal staleness gate. A collector dying is invisible from the outside —
+    # the metric just stops appearing — so this is the knob that decides whether a
+    # slow feed still authorizes trades. Settable because a collector's cadence can
+    # change without a deploy.
+    "EVO_SIGNAL_MAX_AGE_MINUTES",
     # Which tier runs on which backend/model. Readable + settable so a bad model id
     # or a mis-set tier can be diagnosed and corrected without a deploy. The API KEY
     # is deliberately NOT here — it is a credential, so it stays UI-only (this tool
