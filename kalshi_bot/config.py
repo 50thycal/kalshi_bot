@@ -230,15 +230,12 @@ class Settings(BaseSettings):
     #              candidate mechanism to promote into the LIVE mmsell3 entry if it beats the control;
     #   mmsell11 = no-late-entry (htcmin=6) — skip the in-play window (adverse-selection lever).
     mmsell_variants: str = (
-        "mmsell1:lo=5,hi=20;mmsell2:lo=10,hi=20;mmsell3:lo=5,hi=10;"
-        "mmsell4:lo=5,hi=10,skip=WC+ATP+ITF+WTA+T20+ODI;"
         "mmsell5:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY;"
         "mmsell6:lo=5,hi=8;"
         "mmsell7:lo=5,hi=10,htcmax=24;"
         "mmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;"
         "mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;"
         "mmsell10:lo=5,hi=10,maxyes=7;"
-        "mmsell11:lo=5,hi=10,htcmin=6;"
         # --- ANCHOR SET (2026-07-30, docs/MMSELL_ANCHOR_SET.md) -------------------------
         # Every anchor book uses the mmsell10 base (lo=5,hi=10,maxyes=7) — the only
         # REALIZABLE EDGE config — so ENTRY is held constant and each book varies exactly one
@@ -254,9 +251,6 @@ class Settings(BaseSettings):
         #   A5 = short strangle: sell BOTH mutually-exclusive tails of one event (cheap YES on a
         #     high strike + cheap NO on a low strike), entered only when the event actually has
         #     both — that pairing IS the low-vol selection the backtest's +3.30c/pair came from.
-        "mmsellA1:lo=5,hi=10,maxyes=7,stopl=12,stopk=2;"
-        "mmsellA2:lo=5,hi=10,maxyes=7,stopl=20,stopk=2;"
-        "mmsellA3:lo=5,hi=10,maxyes=7,stopl=30,stopk=2;"
         "mmsellA4:lo=5,hi=10,maxyes=7,volw=6,volv=6;"
         "mmsellA5:lo=5,hi=10,maxyes=7,strangle=1;"
         # Queue-position A/B as TWO live books (docs/MMSELL_OFFSET_AB.md). Same mmsell10 entry;
@@ -271,6 +265,21 @@ class Settings(BaseSettings):
         # LIVE_STRATEGIES: with no arms configured an arm book admits no tickers at all.
         "mmsell10a:lo=5,hi=10,maxyes=7,abarm=0,size=1;"
         "mmsell10b:lo=5,hi=10,maxyes=7,abarm=1,size=1;"
+        # --- RETIRED 2026-08-12 --------------------------------------------------------------
+        # Removed from the default so they stop OPENING positions. History is untouched and any
+        # position still open settles normally (manage_open_positions iterates every open trade,
+        # not the configured book list). Verdicts + revival conditions:
+        # docs/MMSELL_VARIANTS_THESIS.md, docs/MMSELL_ANCHOR_SET.md, docs/MMSELL_TYPE_BOOKS.md.
+        #
+        #   mmsell1  lo=5,hi=20            superset of mmsell10, 49.6% fill coverage
+        #   mmsell2  lo=10,hi=20           19.5% coverage — the band we have no fill evidence for
+        #   mmsell3  lo=5,hi=10            +0.02c realizable; live ran it to +0.18c/trade at n=359
+        #   mmsell4  skip=WC+ATP+...       +0.04c realizable
+        #   mmsell11 htcmin=6              +0.04c realizable
+        #   mmsellA1/A2/A3 (bid stops)     gate FAILED: the stop fires on 52% of positions and
+        #                                  makes the 5th-pctile tail WORSE, not better
+        #   Wmmsell1-8 (wide-band types)   UNMEASURABLE, not disproven — see the thesis doc
+        #
         # --- MARKET-TYPE books, added 2026-08-03 (docs/MMSELL_TYPE_BOOKS.md) ----------------
         # From the market-type census (docs/MMSELL_MARKET_TYPES.md): mmsell sells any cheap tail
         # it finds, so every book to date has been blind to what KIND of contract it is selling.
@@ -284,16 +293,9 @@ class Settings(BaseSettings):
         # type effect. No book carries a stop, vol gate or strangle: those mechanics are the
         # anchor set's experiment and would confound this one.
         #
-        # Wide-band books (read against `mmsell`):
-        "Wmmsell1:lo=5,hi=40,mode=in_play;"
-        "Wmmsell2:lo=5,hi=40,mtype=player_prop+spread+exact_score+game_prop+h2h_period;"
-        "Wmmsell3:lo=5,hi=40,mtype=player_prop+spread+game_prop;"
-        "Wmmsell4:lo=5,hi=40,mtype=price_strike;"
-        "Wmmsell5:lo=5,hi=40,mtype=mention;"
-        "Wmmsell6:lo=5,hi=40,xmtype=total+h2h+event_stat+announcement+politics;"
-        "Wmmsell7:lo=5,hi=40,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;"
-        "Wmmsell8:lo=5,hi=40,mtype=player_prop+mention+spread+outright;"
-        # Tight-band books (read against `mmsell10`):
+        # Tight-band books (read against `mmsell10`). The WIDE-band half of this
+        # experiment was retired 2026-08-12; the type axis lives on here, in the
+        # only band we have live fill evidence for.
         "Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;"
         "Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;"
         "Tmmsell3:lo=5,hi=10,maxyes=7,mtype=player_prop+total+spread;"
@@ -830,7 +832,12 @@ class Settings(BaseSettings):
     #    trade only when it DEVIATES from the favorite (cheaper, model-preferred, +EV);
     #  - LOW / HIGH-late -> trade only a near-unanimous K agreement that lands ON the
     #    favorite (a high-confidence near-lock filter), else skip.
-    weather_consensus_enabled: bool = True
+    # RETIRED 2026-08-12 at n=775: -3.50c/trade, -$27.14, 34.7% win. The consensus layer
+    # was the last weather BOOK still entering; every other one was pruned by 2026-07-04.
+    # Weather books are TAKERS, so the 2026-08-11 maker-fee correction does not touch this
+    # number -- it is real. The consensus DATA flags (ensemble, obs, polymarket) stay ON:
+    # they feed weather_forecast_outcomes, which is the validation dataset, not a book.
+    weather_consensus_enabled: bool = False
     weather_consensus_tol: int = 1                      # bucket tolerance for "agree" (+/-)
     weather_consensus_weights: str = "fc=1,ens=1,obs=2,pm=2"
     weather_consensus_early_windows: str = "20,14"      # high windows that use the deviate mode
@@ -842,7 +849,12 @@ class Settings(BaseSettings):
     # -11.6c, DEN -9.5c, PHIL -6.1c; MIA ~flat. weather_concity rides the SAME consensus pick
     # as `weather_con` but only enters for the allowlisted edge cities — a parallel A/B to
     # test whether restricting to the winners turns the (barely-negative) con book positive.
-    weather_con_city_enabled: bool = True
+    # RETIRED 2026-08-12 -- and it answered its question, in the negative. The hypothesis
+    # was that con's loss is diluted by bad cities and restricting to the edge cities would
+    # turn it positive. Measured at n=203: concity is -8.29c/trade against con's -3.50c on
+    # the same picks. Restricting to the historical winners made it more than twice as bad,
+    # which is what per-city selection looks like when the per-city ranking was noise.
+    weather_con_city_enabled: bool = False
     # con-city allowlist = City.code values (NB: New York's code is 'NYC', not the 'NY' series
     # suffix). Winners AUS/CHI/NYC; excluded losers LAX/DEN/PHIL and flat MIA.
     weather_con_allow_cities: str = "AUS,CHI,NYC"

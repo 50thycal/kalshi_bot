@@ -76,7 +76,7 @@ def test_weather_strategies_none_disables_base_books(base_env):
     assert Settings(_env_file=None, weather_strategies="").weather_strategy_list == ["favorite"]
 
 
-def test_weather_prune_defaults_keep_only_con(base_env):
+def test_weather_prune_defaults_leave_no_book_entering(base_env):
     from kalshi_bot.config import Settings
     s = Settings(_env_file=None)
     # bleeders pruned to off by default...
@@ -87,7 +87,12 @@ def test_weather_prune_defaults_keep_only_con(base_env):
     assert s.weather_obs_entry_enabled is False
     assert s.weather_pm_book_enabled is False
     # ...while con + the data collectors that feed it stay on
-    assert s.weather_consensus_enabled is True
+    # RETIRED 2026-08-12 at n=775, -3.50c/trade — the consensus layer was the LAST weather
+    # book still entering, so weather now runs no book at all. Its city-restricted A/B went
+    # with it (n=203, -8.29c: restricting to the historical 'edge cities' was more than
+    # twice as bad). See docs/RESEARCH_JOURNAL.md (2026-08-12).
+    assert s.weather_consensus_enabled is False
+    assert s.weather_con_city_enabled is False
     assert s.weather_polymarket_enabled is True     # pm DATA for con
     assert s.weather_obs_enabled is True            # obs DATA for con
     assert s.weather_ensemble_enabled is True        # ensemble DATA for con

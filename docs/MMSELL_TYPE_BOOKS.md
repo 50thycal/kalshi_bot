@@ -2,6 +2,34 @@
 
 Built 2026-08-03 off the market-type census (`docs/MMSELL_MARKET_TYPES.md`). Paper only.
 
+> ## VERDICT 2026-08-12 — the WIDE half (`Wmmsell1`–`Wmmsell8`) is RETIRED. The TIGHT half runs on.
+>
+> **Retired as UNMEASURABLE, not as disproven.** That distinction is the whole point of this
+> entry, because "we could not measure it" and "it does not work" license completely different
+> future decisions.
+>
+> Two reasons, and the second is structural:
+>
+> 1. **Their control loses money.** `mmsell` (wide band) runs −1.80¢/trade, ≈−0.93¢ after the
+>    2026-08-11 maker-fee correction. The gate here is *relative* — beat the control by ≥1.0¢ —
+>    and five W books cleared that bar while still losing money in absolute terms. The absolute
+>    floor added on 2026-08-09 exists because of exactly this. Beating a losing control is not
+>    an edge.
+> 2. **We have no fill evidence for this band at all.** Fill coverage is **19–41%**. The live
+>    calibration in `docs/MMSELL_FILL_MODEL.md` comes from real maker orders in the CHEAP band;
+>    the wide band's 10–40¢ entries have never been tested live. So for the majority of every W
+>    book's trades we cannot say whether a resting order would have filled — and paper assumes
+>    it always does. Their realizable numbers are estimates over a minority of each book.
+>
+> **The type hypothesis itself survives.** `Tmmsell1`–`Tmmsell6` test the SAME contract-type
+> axis in the tight band at **99–100%** coverage. The axis lives on; only the band dies.
+>
+> **Revival condition — evidence, not patience.** Revive the wide band only if we obtain live
+> maker fills in the 10–40¢ range. More paper cannot resolve this: paper's fill assumption is
+> precisely the thing in question, so a larger paper sample would produce a more confident
+> version of the same unfounded number.
+
+
 ## The thesis
 
 Every mmsell book to date has been blind to what KIND of contract it is selling. The entry rule

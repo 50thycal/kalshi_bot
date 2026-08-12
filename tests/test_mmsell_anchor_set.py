@@ -37,12 +37,16 @@ def _book(**over):
 
 def test_anchor_books_parse_with_their_mechanics(settings):
     by_tag = {v["tag"]: v for v in settings.mmsell_variant_list}
-    for tag, lvl in (("mmsellA1", 12.0), ("mmsellA2", 20.0), ("mmsellA3", 30.0)):
-        assert by_tag[tag]["stopl"] == lvl and by_tag[tag]["stopk"] == 2
+    for tag in ("mmsellA1", "mmsellA2", "mmsellA3"):
+        # A1-A3 RETIRED 2026-08-12 — the gate failed on the half that mattered: the stop
+        # fires on 52% of positions and makes the 5th-pctile tail WORSE than holding
+        # (A1 -4.16c/trade vs the mmsell10 control's +3.14c; p5 -19.0 vs +5.0). Asserted as
+        # absence so a re-add has to argue with a test. See docs/MMSELL_ANCHOR_SET.md.
+        assert tag not in by_tag, "retired stop-loss book is configured again"
     assert by_tag["mmsellA4"]["volw"] == 6 and by_tag["mmsellA4"]["volv"] == 6.0
     assert by_tag["mmsellA5"]["strangle"] is True
-    # all five share the mmsell10 entry, so only the mechanic differs
-    for tag in ("mmsellA1", "mmsellA2", "mmsellA3", "mmsellA4", "mmsellA5"):
+    # the SURVIVING anchors share the mmsell10 entry, so only the mechanic differs
+    for tag in ("mmsellA4", "mmsellA5"):
         assert (by_tag[tag]["lo"], by_tag[tag]["hi"], by_tag[tag]["maxyes"]) == (5.0, 10.0, 7.0)
 
 
