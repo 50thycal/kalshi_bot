@@ -15,7 +15,7 @@ agents were not searching badly; they were searching a space with almost nothing
 
 | metric | definition | sign convention | applies to |
 |---|---|---|---|
-| `pm_divergence` | Polymarket's implied probability **minus** our mid, in cents, for the same weather bucket | **positive => our YES is cheap** vs the other venue | weather (`KXHIGH*`/`KXLOW*`, LAX/MIA/AUS only) |
+| `pm_divergence` | Polymarket's implied probability **minus** our mid, in cents, for the same weather bucket (re-binned across the two venues' grids — see below) | **positive => our YES is cheap** vs the other venue | weather (`KXHIGH*`/`KXLOW*`, only cities Polymarket posts: LAX/MIA/AUS) |
 | `spot_vs_strike` | percent distance from BTC/ETH spot to the market's decision boundary | **positive => YES is currently winning**, for every `strike_type` | crypto (`KXBTC*`/`KXETH*`) |
 
 Neither requires our forecast model to be any good, which is why they came first. `pm_divergence`
@@ -28,6 +28,61 @@ outside the band). Without that, an agent needs three different rules to express
 
 **`pm_divergence` is a signal, not an arbitrage.** We trade only Kalshi, so a disagreement is
 information about mispricing, not a two-sided trade we can capture.
+
+### The two venues do not share a bucket grid
+
+Measured in production the day after this shipped: over a 30-minute window, **60** Kalshi weather
+buckets had a fresh mid and **33** Polymarket buckets had a fresh price, and an exact
+`(city, kind, target_date, low_f, high_f)` join matched **4** — all of them LAX. The metric was not
+broken, it was inert.
+
+The cause is not staleness. Each venue picks its own 2°F grid, and the grids interleave:
+
+```
+AUS  Kalshi  <=98  99-100  101-102  103-104  105-106  107+
+     Poly    <=91  92-93   94-95    96-97    98-99    100-101 ...
+```
+
+Kalshi's boundaries fall at 98.5 / 100.5 / 102.5; Polymarket's at 97.5 / 99.5 / 101.5. Disjoint
+sets — so no Austin bucket can *ever* equal a Polymarket bucket. Same in Miami. LAX matched only
+because Kalshi happened to start that ladder on an even degree.
+
+So we stop requiring the grids to agree. Polymarket's ladder is a distribution over the same
+temperatures; a Kalshi bucket is a range of them. `pm_probability_for_bucket` re-bins one onto the
+other by overlap:
+
+```
+P(Kalshi 99-100) = 0.5 * P(Poly 98-99) + 0.5 * P(Poly 100-101)
+```
+
+**Read the estimate with its assumption.** Overlap allocation assumes mass is spread *uniformly
+inside* each Polymarket bucket. That is wrong in the third decimal — a peaked distribution puts
+more mass on the side nearer the mode — so a re-binned divergence carries roughly 1–3¢ of binning
+error, which matters if you gate at `>= 5`. An exact match, when one exists, is still used verbatim
+rather than estimated.
+
+Two cases fail closed rather than estimate, both being ways re-binning could invent information:
+
+- **the ladder does not fully cover the bucket** — a half-covered bucket would report about half
+  its true probability, i.e. a large fake *negative* divergence, which is the direction that makes
+  an agent sell;
+- **the bucket would have to split an open-ended tail** (`107+`, `<=98`) — unbounded support has no
+  uniform to allocate over.
+
+Coverage after the fix is bounded by Polymarket's own city list, not by the grid: cities it does
+not cover (CHI, DEN, NYC, PHIL) and dates it has not posted still yield no signal at all. Every
+cycle logs `evo pm_divergence coverage` with `kalshi_buckets` / `pm_buckets` / `matched_exact` /
+`matched_rebinned`, so inertness is visible instead of silent.
+
+### It cannot be backtested
+
+No dataset can replay `pm_divergence` — `sandbox.DATASET_SIGNALS` maps `backfill_weather` and
+`mmsell` to the empty set, and a backtest whose spec uses it is **rejected** rather than run
+silently. So an agent can gate a live strategy on it but cannot produce backtest evidence for it,
+which cuts against the standing "cite evidence" steering. Closing that needs a replay dataset
+joining `polymarket_snapshots` + `weather_bucket_snapshots` with settlement from
+`weather_settlements`. Until then `pm_divergence` is a live-only, forward-tested metric, and
+`spot_vs_strike` (replayable on the `crypto` dataset) is the one an agent can actually validate.
 
 ## Why the bots read a database and not the APIs
 

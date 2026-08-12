@@ -64,6 +64,9 @@ logger = logging.getLogger(__name__)
 # map and the prompt all agree on one list.
 SIGNAL_METRICS = ("pm_divergence", "spot_vs_strike")
 
+# Bucket bounds are whole or half degrees; this is well below the smallest real gap.
+_EPS = 1e-6
+
 
 def _aware(ts: datetime | None) -> datetime | None:
     if ts is None:
@@ -107,13 +110,94 @@ def spot_vs_strike(
     return None
 
 
-def _pm_divergence(session, tickers: list[str], cutoff: datetime) -> dict[str, float]:
-    """Match each Kalshi weather bucket to its Polymarket twin and difference them.
+def _interval(low: float | None, high: float | None) -> tuple[float, float]:
+    """A bucket labelled `low-high` catches temperatures that round into it, so
+    `99-100` is the continuous span [98.5, 100.5). An open side is unbounded."""
+    return (
+        float("-inf") if low is None else float(low) - 0.5,
+        float("inf") if high is None else float(high) + 0.5,
+    )
 
-    The join is (city, kind, target_date, low_f, high_f): `weather_bucket_snapshots`
-    carries the Kalshi side including the market_ticker, and target_date comes from
-    `weather_forecasts` via the shared event_ticker (bucket snapshots do not store
-    it). Mirrors the matching the weather tracker's own `_pm_best_bucket` does.
+
+def _same_bounds(a: float | None, b: float | None) -> bool:
+    if a is None or b is None:
+        return a is None and b is None
+    return abs(float(a) - float(b)) < _EPS
+
+
+def pm_probability_for_bucket(
+    low_f: float | None,
+    high_f: float | None,
+    ladder: list[tuple[float | None, float | None, float]],
+) -> tuple[float, bool] | None:
+    """Polymarket's implied probability for a KALSHI bucket, as (probability, exact).
+
+    The two venues do not share a bucket grid. Measured in production: Austin's
+    Kalshi ladder starts on odd degrees (99-100, 101-102, ...) while Polymarket's
+    starts on even ones (98-99, 100-101, ...), so their bucket boundaries are
+    disjoint sets and an equality join matches nothing there however fresh both
+    feeds are. Only cities where the ladders happen to coincide ever produced a
+    signal — 4 of 60 markets on the day this was measured.
+
+    So re-bin instead of matching. Polymarket's ladder is a distribution over the
+    same temperatures; a Kalshi bucket is a range of them. Overlap allocation:
+
+        P(Kalshi 99-100) = 0.5 * P(Poly 98-99) + 0.5 * P(Poly 100-101)
+
+    The estimate assumes mass is spread UNIFORMLY inside each Polymarket bucket.
+    That is wrong in the third decimal — a peaked distribution puts more mass on
+    the side nearer the mode — so an exact match is still used verbatim when one
+    exists, and the caller is told which it got.
+
+    Returns None rather than a partial sum in the two cases where re-binning would
+    invent information:
+      - the ladder does not fully cover the Kalshi bucket (a half-covered bucket
+        would report about half its true probability, i.e. a large fake NEGATIVE
+        divergence — the direction that makes an agent sell);
+      - the bucket would have to split an open-ended tail, whose mass has no
+        defined shape.
+    """
+    # An exact match is not an estimate; prefer it, tails included.
+    for lo, hi, prob in ladder:
+        if _same_bounds(lo, low_f) and _same_bounds(hi, high_f):
+            return (float(prob), True)
+
+    # Re-binning needs a bounded target: an open Kalshi tail has no finite span.
+    if low_f is None or high_f is None:
+        return None
+    lo_t, hi_t = _interval(low_f, high_f)
+    span = hi_t - lo_t
+    if span <= 0:
+        return None
+
+    total = 0.0
+    covered = 0.0
+    for lo, hi, prob in ladder:
+        lo_b, hi_b = _interval(lo, hi)
+        overlap = min(hi_t, hi_b) - max(lo_t, lo_b)
+        if overlap <= _EPS:
+            continue
+        if lo is None or hi is None:
+            return None  # would have to split a tail
+        width = hi_b - lo_b
+        if width <= 0:
+            continue
+        total += float(prob) * (overlap / width)
+        covered += overlap
+    if abs(covered - span) > _EPS:
+        return None  # ladder does not cover the bucket
+    return (total, False)
+
+
+def _pm_divergence(session, tickers: list[str], cutoff: datetime) -> dict[str, float]:
+    """Difference each Kalshi weather bucket against Polymarket's ladder for the
+    same (city, kind, target_date).
+
+    `weather_bucket_snapshots` carries the Kalshi side including the market_ticker;
+    target_date comes from `weather_forecasts` via the shared event_ticker (bucket
+    snapshots do not store it). The bucket-level match is `pm_probability_for_bucket`,
+    which re-bins across the two venues' misaligned grids rather than requiring
+    identical bounds the way the weather tracker's `_pm_best_bucket` does.
     """
     latest_bucket = (
         select(
@@ -182,12 +266,28 @@ def _pm_divergence(session, tickers: list[str], cutoff: datetime) -> dict[str, f
             seen_at[key] = cap_at
             pm[key] = float(prob)
 
+    # Group into one ladder per event so a bucket can be re-binned against the whole
+    # distribution rather than looked up by its exact bounds.
+    ladders: dict[tuple, list[tuple[float | None, float | None, float]]] = {}
+    for (city, kind, target, low, high), prob in pm.items():
+        ladders.setdefault((city, kind, target), []).append((low, high, prob))
+
     out: dict[str, float] = {}
+    exact_n = est_n = 0
     for ticker, event, city, kind, low, high, mid in rows:
-        prob = pm.get((city, kind, target_by_event.get(event), low, high))
-        if prob is None or mid is None:
+        ladder = ladders.get((city, kind, target_by_event.get(event)))
+        if not ladder or mid is None:
             continue
+        got = pm_probability_for_bucket(low, high, ladder)
+        if got is None:
+            continue
+        prob, exact = got
+        exact_n, est_n = (exact_n + 1, est_n) if exact else (exact_n, est_n + 1)
         out[ticker] = round(prob * 100.0 - float(mid), 4)
+    if rows:
+        logger.info("evo pm_divergence coverage", extra={"extra_fields": {
+            "kalshi_buckets": len(rows), "pm_buckets": len(pm),
+            "matched_exact": exact_n, "matched_rebinned": est_n}})
     return out
 
 
