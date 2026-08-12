@@ -285,9 +285,18 @@ def _pm_divergence(session, tickers: list[str], cutoff: datetime) -> dict[str, f
         exact_n, est_n = (exact_n + 1, est_n) if exact else (exact_n, est_n + 1)
         out[ticker] = round(prob * 100.0 - float(mid), 4)
     if rows:
-        logger.info("evo pm_divergence coverage", extra={"extra_fields": {
-            "kalshi_buckets": len(rows), "pm_buckets": len(pm),
-            "matched_exact": exact_n, "matched_rebinned": est_n}})
+        # Counts go in the MESSAGE, not extra_fields: this line exists so an operator
+        # can see whether the metric is alive, and `extra` does not survive the log
+        # fetch the ops channel reads (`scripts/railway_logs.py`). Same shape as the
+        # `evo cycle:` line in orchestrator.py.
+        logger.info(
+            f"evo pm_divergence coverage: kalshi_buckets={len(rows)} "
+            f"pm_buckets={len(pm)} matched_exact={exact_n} matched_rebinned={est_n} "
+            f"unmatched={len(rows) - exact_n - est_n}",
+            extra={"extra_fields": {
+                "kalshi_buckets": len(rows), "pm_buckets": len(pm),
+                "matched_exact": exact_n, "matched_rebinned": est_n}},
+        )
     return out
 
 
