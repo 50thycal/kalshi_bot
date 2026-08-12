@@ -170,12 +170,28 @@ def _print_tier(limits: dict | None) -> None:
         return
     # Kalshi has renamed these fields before, so search rather than assume one schema, and fall
     # back to printing the payload — an unrecognised shape must not hide the answer.
-    tier = next((limits[k] for k in ("tier", "api_usage_level", "level", "name")
+    # Measured 2026-08-12, the live shape is:
+    #   {"usage_tier": "basic", "grants": [],
+    #    "read":  {"refill_rate": 200, "bucket_capacity": 400},
+    #    "write": {"refill_rate": 100, "bucket_capacity": 100}}
+    tier = next((limits[k] for k in ("usage_tier", "tier", "api_usage_level", "level", "name")
                  if isinstance(limits.get(k), str)), None)
-    shown = {k: v for k, v in limits.items() if isinstance(v, (int, float, str, bool))}
     print(f"  tier: {tier or '(unnamed)'}")
-    if shown:
-        print("  " + "  ".join(f"{k}={v}" for k, v in list(shown.items())[:10]))
+    # The rate numbers live one level down, so a scalars-only filter drops exactly the part that
+    # matters. Flatten one level, and convert refill rate into the unit we actually reason in:
+    # requests/sec at Kalshi's default 10 tokens per request.
+    for side in ("read", "write"):
+        cfg = limits.get(side)
+        if isinstance(cfg, dict):
+            refill = cfg.get("refill_rate")
+            burst = cfg.get("bucket_capacity")
+            rps = f" = {refill / 10:.0f} req/sec" if isinstance(refill, (int, float)) else ""
+            print(f"  {side:<5s} refill={refill} tokens/sec{rps}  burst={burst}")
+    scalars = {k: v for k, v in limits.items()
+               if isinstance(v, (int, float, bool)) or (isinstance(v, str) and k != tier)}
+    extra = {k: v for k, v in scalars.items() if k not in ("usage_tier", "tier")}
+    if extra:
+        print("  " + "  ".join(f"{k}={v}" for k, v in list(extra.items())[:8]))
 
 
 def report(rows: list[dict], transient: list[dict], hours: float,
