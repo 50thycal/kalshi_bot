@@ -141,6 +141,44 @@ def test_twin_pairs_explicit_override_and_custom_suffix(settings):
     assert settings.live_paper_twin_pairs == [("mmsell10", "mmsell10_twin")]
 
 
+def test_an_explicit_twin_entry_that_shadows_the_suffix_is_reported(settings):
+    """The 2026-08-11 silent no-op. Cutting a fresh twin epoch is done by bumping the SUFFIX, but
+    LIVE_PAPER_TWINS outranks it — so with the old tags named explicitly the bump changed nothing,
+    the redeploy came up clean, and the previous epoch kept accumulating for hours. Nothing in the
+    system disagreed with anything; the losing setting was simply silent."""
+    settings.live_strategies = "mmsell10a,mmsell10b"
+    settings.live_paper_twin_suffix = "_pt3"
+    settings.live_paper_twins = "mmsell10a:mmsell10a_pt2,mmsell10b:mmsell10b_pt2"
+    assert settings.live_paper_twin_shadowed_pairs == [
+        ("mmsell10a", "mmsell10a_pt2", "mmsell10a_pt3"),
+        ("mmsell10b", "mmsell10b_pt2", "mmsell10b_pt3"),
+    ]
+    # and the pairs really do follow the explicit entry, which is what made it invisible
+    assert settings.live_paper_twin_pairs == [
+        ("mmsell10a", "mmsell10a_pt2"), ("mmsell10b", "mmsell10b_pt2")]
+
+    # clearing the explicit map is the fix — suffix takes over, nothing left to warn about
+    settings.live_paper_twins = ""
+    assert settings.live_paper_twin_shadowed_pairs == []
+    assert settings.live_paper_twin_pairs == [
+        ("mmsell10a", "mmsell10a_pt3"), ("mmsell10b", "mmsell10b_pt3")]
+
+
+def test_no_shadow_warning_when_the_explicit_entry_agrees_or_omits_the_tag(settings):
+    """Only a genuine DISAGREEMENT is worth a warning: an explicit entry naming exactly what the
+    suffix would produce is harmless, and an entry with no twin tag at all already follows it.
+    Warning on those would train everyone to ignore the log line."""
+    settings.live_strategies = "mmsell10a"
+    settings.live_paper_twin_suffix = "_pt3"
+    settings.live_paper_twins = "mmsell10a:mmsell10a_pt3"     # agrees
+    assert settings.live_paper_twin_shadowed_pairs == []
+    settings.live_paper_twins = "mmsell10a"                    # no tag -> derives from suffix
+    assert settings.live_paper_twin_shadowed_pairs == []
+    settings.live_paper_twin_enabled = False
+    settings.live_paper_twins = "mmsell10a:mmsell10a_pt2"
+    assert settings.live_paper_twin_shadowed_pairs == []       # twins off -> nothing to shadow
+
+
 def test_twin_tag_can_never_be_a_live_tag(settings):
     # A twin tag that is itself allowlisted for live could place real orders — drop the pair.
     settings.live_strategies = "mmsell10,mmsell10_pt"

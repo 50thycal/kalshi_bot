@@ -1144,6 +1144,36 @@ class Settings(BaseSettings):
         return [(lt, tt) for lt, tt in sorted(pairs.items()) if tt not in live_tags]
 
     @property
+    def live_paper_twin_shadowed_pairs(self) -> list[tuple[str, str, str]]:
+        """(live_tag, explicit_twin_tag, what_the_suffix_would_give) for every explicit entry in
+        `live_paper_twins` that DISAGREES with `live_paper_twin_suffix`.
+
+        Why this exists: the two settings are a precedence pair, and the loser is silent. Cutting
+        a fresh twin epoch is done by bumping the suffix — but if `LIVE_PAPER_TWINS` names the old
+        tags explicitly, the bump is a no-op and the worker keeps writing the previous epoch with
+        no error anywhere. That happened on 2026-08-11: the suffix was moved to `_pt3`, a redeploy
+        ran clean, and the `_pt2` epochs simply carried on for hours before anyone checked.
+
+        Empty for the standing configuration (one auto-derived twin per live strategy), which is
+        why this can be logged as a warning rather than tolerated as normal."""
+        if not self.live_paper_twin_enabled:
+            return []
+        suffix = (self.live_paper_twin_suffix or "_pt").strip()
+        out: list[tuple[str, str, str]] = []
+        for part in self.live_paper_twins.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            live_tag, _, twin_tag = part.partition(":")
+            live_tag, twin_tag = live_tag.strip(), twin_tag.strip()
+            if not (live_tag and twin_tag):
+                continue          # no explicit twin tag -> it already follows the suffix
+            derived = f"{live_tag}{suffix}"[:24]
+            if twin_tag[:24] != derived:
+                out.append((live_tag, twin_tag[:24], derived))
+        return out
+
+    @property
     def live_city_list(self) -> list[str]:
         """Optional city-code filter for live orders (empty = all cities)."""
         return [c.strip().upper() for c in self.live_cities.split(",") if c.strip()]
