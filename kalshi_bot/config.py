@@ -296,10 +296,16 @@ class Settings(BaseSettings):
         # Tight-band books (read against `mmsell10`). The WIDE-band half of this
         # experiment was retired 2026-08-12; the type axis lives on here, in the
         # only band we have live fill evidence for.
+        #
+        # `Tmmsell3` and `Tmmsell4` were ALSO retired 2026-08-12, on the opposite
+        # ground from the wide band: they were measurable and they FAILED. Both
+        # reached n and beat `mmsell10` by far less than the +1.0¢ their gate asks
+        # (the RELATIVE gate is untouched by the maker-fee correction — both sides
+        # are maker books at the same clip, so the fee cancels in the difference).
+        #   Tmmsell3:lo=5,hi=10,maxyes=7,mtype=player_prop+total+spread
+        #   Tmmsell4:lo=5,hi=10,maxyes=7,xmtype=h2h+game_prop+event_stat+politics+announcement
         "Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;"
         "Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;"
-        "Tmmsell3:lo=5,hi=10,maxyes=7,mtype=player_prop+total+spread;"
-        "Tmmsell4:lo=5,hi=10,maxyes=7,xmtype=h2h+game_prop+event_stat+politics+announcement;"
         "Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,"
         "xmtype=event_stat+politics+announcement;"
         "Tmmsell6:lo=5,hi=10,maxyes=7,"

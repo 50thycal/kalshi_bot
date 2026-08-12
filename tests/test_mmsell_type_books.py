@@ -67,27 +67,39 @@ def test_worker_taxonomy_matches_the_ops_script():
 # ------------------------------------------------------------------ spec parsing / validation
 
 
+# The tight-band books still entering. `Tmmsell3`/`Tmmsell4` are deliberately absent —
+# retired 2026-08-12 after reaching n and failing the relative gate.
+LIVE_TIGHT = ("Tmmsell1", "Tmmsell2", "Tmmsell5", "Tmmsell6")
+
+
 def test_only_the_TIGHT_band_type_books_are_configured():
     """The WIDE half (`Wmmsell1`–`Wmmsell8`) was RETIRED 2026-08-12 — see the VERDICT banner in
     docs/MMSELL_TYPE_BOOKS.md. It was retired as UNMEASURABLE rather than disproven: fill
     coverage was 19–41%, because our maker-fill calibration comes entirely from cheap-band live
     orders and the wide band's 10–40¢ entries have never been tested live.
 
+    `Tmmsell3`/`Tmmsell4` were retired the same day on the OPPOSITE ground: they were
+    measurable and they failed, beating `mmsell10` by far less than the +1.0¢ their gate asks.
+    The distinction is worth keeping straight — "we could not measure it" licenses a revival
+    once the wide band has live fill evidence; "we measured it and it lost" does not.
+
     Asserted as ABSENCE, not just by omission, so a merge that re-adds them has to argue with a
     test rather than slip through."""
     books = _books()
     for i in range(1, 9):
         assert f"Wmmsell{i}" not in books, "retired wide-band book is configured again"
-    for i in range(1, 7):
-        assert f"Tmmsell{i}" in books, "tight-band type book missing"
+    for tag in ("Tmmsell3", "Tmmsell4"):
+        assert tag not in books, f"{tag} failed its gate 2026-08-12 and was retired"
+    for tag in LIVE_TIGHT:
+        assert tag in books, "tight-band type book missing"
 
 
 def test_tight_books_share_the_mmsell10_band():
     """Each book differs from its control ONLY by the type filter — that is what makes the
     difference attributable to the type rather than to the band."""
     books = _books()
-    for i in range(1, 7):
-        b = books[f"Tmmsell{i}"]
+    for tag in LIVE_TIGHT:
+        b = books[tag]
         assert (b["lo"], b["hi"], b["maxyes"]) == (5.0, 10.0, 7.0)
 
 
@@ -187,8 +199,6 @@ def test_type_filter_composes_with_the_legacy_series_filters():
 
 
 @pytest.mark.parametrize("tag,series,expected", [
-    ("Tmmsell3", "KXMLBTOTAL", True),    # total is +EV in the TIGHT band only
-    ("Tmmsell4", "KXMLBGAME", False),    # h2h blocked in the tight band
     ("Tmmsell6", "KXMLBTOTAL", False),   # total not a both-band survivor
     ("Tmmsell6", "KXWCGOAL", True),
 ])

@@ -29,6 +29,42 @@ Built 2026-08-03 off the market-type census (`docs/MMSELL_MARKET_TYPES.md`). Pap
 > precisely the thing in question, so a larger paper sample would produce a more confident
 > version of the same unfounded number.
 
+> ## VERDICT 2026-08-12 (same day, second pass) — `Tmmsell3` and `Tmmsell4` are RETIRED.
+>
+> **Retired as MEASURED AND FAILED — the opposite of the wide band's verdict above, and the
+> distinction is load-bearing.** The wide band could not be measured, which licenses a revival
+> once live fill evidence exists. These two were measured, at 99–100% fill coverage in the one
+> band we do have live evidence for, and they lost the argument. Nothing pending would change
+> that.
+>
+> Both reached their pre-registered n and beat `mmsell10` by far less than the **+1.0¢** the
+> gate asks. That gate is *relative*, so the 2026-08-11 maker-fee correction does not touch it:
+> both sides are maker books at the same clip, and the fee cancels in the difference. (The
+> family's *absolute* floor did move by ~0.87¢ on pre-boundary data — which is exactly why the
+> relative clause, not the absolute one, is what these two are retired on.)
+>
+> **The family's collective result is the real finding, and it is bigger than either book.**
+> Every tight-band type book that reached n beat the control — and not one beat it by the gate's
+> margin. At n in the hundreds that is an answer, not a shortage of data: **once you are already
+> selling ≤7¢ tails, selecting on contract structure adds approximately nothing.** The price
+> band was doing the work the type filter was being credited with. The census cells were a
+> PRIOR, and out-of-sample the prior did not survive.
+>
+> A caution for anyone reading the surviving books' realizable column: **the fill model cannot
+> discriminate inside this band.** It projects entry price only, so every tight-band book —
+> *including the control* — lands at roughly the same realizable ¢/trade. Gate condition 3 does
+> no work here, and a book cannot be promoted on it.
+>
+> `Tmmsell6` is kept as the family's best remaining type signal, and `Tmmsell1`/`Tmmsell2`/
+> `Tmmsell5` are kept because they are flow-constrained rather than failing — their n is small
+> enough that their current numbers decide nothing.
+>
+> **Revival condition.** Revive a retired T book only if it clears the +1.0¢ relative gate in a
+> DIFFERENT regime — the Sept–Nov change (NFL, MLB playoffs, NBA/NHL, the Nov-3 midterms) that
+> `docs/MMSELL_SEASONAL_FORECAST.md` says our whole history cannot speak to. More of the same
+> summer tape is not evidence: these filters were derived from that tape, and it has now been
+> asked and answered.
+
 
 ## The thesis
 

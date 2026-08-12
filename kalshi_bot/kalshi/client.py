@@ -171,6 +171,21 @@ class KalshiClient:
     def get_balance(self) -> dict:
         return self._request("GET", "/portfolio/balance")
 
+    def get_account_limits(self) -> dict:
+        """This account's API tier and its rate limits — the authoritative answer to a question
+        we have otherwise been guessing at.
+
+        Kalshi meters reads and writes from separate token buckets (default 10 tokens per
+        request), and the tier decides their size: Basic 200/100 tokens/sec -> 20 reads/sec,
+        Advanced 300/300 -> 30/sec. The mmsell entry scan bursts at roughly 6-25 requests/sec,
+        so which side of 20 we are on determines whether the scan is inside its budget or
+        eating 429 backoffs — and until now nothing in the system knew. Requires auth, which is
+        why neither the sandbox nor the ops runner can answer it and the worker must.
+
+        Read-only: reports the tier, never changes it. Upgrading is a separate POST that this
+        client deliberately does not implement."""
+        return self._request("GET", "/account/limits")
+
     def get_markets(
         self,
         *,

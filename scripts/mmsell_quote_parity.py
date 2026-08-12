@@ -98,6 +98,18 @@ def load_transient(cur, hours: float) -> list[dict]:
     return [{"at": at, **(raw or {})} for at, raw in cur.fetchall() if raw]
 
 
+def load_limits(cur) -> dict | None:
+    """The account's Kalshi API tier, recorded once per worker start by main._probe_api_limits.
+    Newest wins. Without it a 429 count is a numerator with no denominator — 2 rate limits means
+    something very different against a 20/sec ceiling than against a 30/sec one."""
+    cur.execute(
+        "SELECT raw_json FROM system_events WHERE component = 'kalshi_limits'"
+        " ORDER BY created_at DESC LIMIT 1"
+    )
+    row = cur.fetchone()
+    return (row[0] or None) if row else None
+
+
 def _merge(rows: list[dict]) -> dict:
     """Sum the per-cycle summaries into one. Counts add; `max_*` take the max; the per-band
     decision tables add elementwise and `worst_margin` takes the max (the smallest safe margin
@@ -151,12 +163,33 @@ def _transient_totals(rows: list[dict]) -> dict[str, int]:
     return totals
 
 
-def report(rows: list[dict], transient: list[dict], hours: float) -> None:
+def _print_tier(limits: dict | None) -> None:
+    if not limits:
+        print("  tier: UNKNOWN — no `kalshi_limits` row yet. The worker records it at startup"
+              "\n        (main._probe_api_limits); redeploy, or the probe is failing.")
+        return
+    # Kalshi has renamed these fields before, so search rather than assume one schema, and fall
+    # back to printing the payload — an unrecognised shape must not hide the answer.
+    tier = next((limits[k] for k in ("tier", "api_usage_level", "level", "name")
+                 if isinstance(limits.get(k), str)), None)
+    shown = {k: v for k, v in limits.items() if isinstance(v, (int, float, str, bool))}
+    print(f"  tier: {tier or '(unnamed)'}")
+    if shown:
+        print("  " + "  ".join(f"{k}={v}" for k, v in list(shown.items())[:10]))
+
+
+def report(rows: list[dict], transient: list[dict], hours: float,
+           limits: dict | None = None) -> None:
     if not rows:
         print(f"=== mmsell quote parity: NO CYCLES in the last {hours:g}h ===")
         print("  Either the worker is not running its mmsell cycle, this predates the experiment"
               "\n  (added 2026-08-11), or mmsell_quote_parity is off. Check the worker is alive"
               "\n  before reading anything into it.")
+        # The tier still prints: it is recorded at worker STARTUP, so it is available in exactly
+        # the window (just after a deploy, before the first scan) where this branch fires — and
+        # that is when it is most wanted.
+        print("\n=== RATE LIMITS ===")
+        _print_tier(limits)
         return
 
     agg = _merge(rows)
@@ -198,9 +231,10 @@ def report(rows: list[dict], transient: list[dict], hours: float) -> None:
         print(f"    unrecoverable (no inline quote at all): {nq:,d}"
               f"  ({(100.0 * nq / ob_in if ob_in else 0.0):.3f}% of in-band)")
 
+    print("\n=== RATE LIMITS — retryable Kalshi responses by status ===")
+    _print_tier(limits)
     if transient:
         tot = _transient_totals(transient)
-        print("\n=== RATE LIMITS — retryable Kalshi responses by status ===")
         if tot:
             for status, n in sorted(tot.items(), key=lambda kv: -kv[1]):
                 label = {"0": "network error", "429": "RATE LIMITED"}.get(status, f"HTTP {status}")
@@ -214,7 +248,7 @@ def report(rows: list[dict], transient: list[dict], hours: float) -> None:
         else:
             print("  [OK] no 429s — we are inside our Kalshi tier at the current scan size.")
     else:
-        print("\n=== RATE LIMITS: no transient counters yet (worker predates the 2026-08-11 build)")
+        print("  no transient counters yet (worker predates the 2026-08-11 build)")
 
     print("\n=== VERDICT ===")
     if compared < MIN_COMPARED or len(rows) < MIN_CYCLES:
@@ -258,7 +292,8 @@ def main(argv: list[str] | None = None) -> int:
         with conn.cursor() as cur:
             rows = load_rows(cur, args.hours)
             transient = load_transient(cur, args.hours)
-    report(rows, transient, args.hours)
+            limits = load_limits(cur)
+    report(rows, transient, args.hours, limits)
     return 0
 
 
