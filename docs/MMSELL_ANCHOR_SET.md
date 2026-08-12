@@ -6,11 +6,48 @@ forward-tested n on the three mechanics that the backtests said were promising b
 so that a future "anchor" decision (a larger position size on one book) rests on measured
 out-of-sample evidence rather than on an 11–23 trade backtest slice.
 
+> ## VERDICT 2026-08-12 — `mmsellA1`/`A2`/`A3` (the bid-triggered stops) are RETIRED. A4 and A5 run on.
+>
+> **The pre-registered gate failed on the half that mattered.** The gate asked for a better
+> 5th-percentile tail AND a mean no worse than 0.3¢ below control. Read correctly — as
+> `status IN ('settled','closed_sl')`, which includes the positions the stop actually closed —
+> all three levels fail both halves:
+>
+> * A1 **−4.16¢/trade** against the `mmsell10` control's **+3.14¢**
+> * p5 **−19.0** against the control's **+5.0** — the stop makes the tail WORSE
+>
+> The mechanism is visible in one number: the stop fires on **52%** of positions. At that rate it
+> is not truncating a rare disaster, it is converting ordinary winners into realized losses. A
+> cheap tail that ticks up is usually still going to expire worthless; selling it on the way is
+> paying the spread to exit a position that was about to pay.
+>
+> This is a RELATIVE gate, so the 2026-08-11 maker-fee correction does not touch it — control and
+> book move together.
+>
+> **Why the backtest was wrong, specifically.** `docs/MMSELL_CRYPTO_STUDY.md` measured
+> bid-triggered stops improving both mean and tail. That was on `htc<1h` crypto, because Kalshi
+> only serves ~1h of candles for those series. mmsell trades `htc≥1h` sports. Crypto prices move
+> continuously, so a stop exits near its trigger; a sports contract JUMPS on a score, straight
+> through the trigger. The backtest population and the trading population were different, and the
+> study said so — this is the forward test confirming it mattered.
+>
+> **Revival condition:** a stop whose trigger cannot fire on a non-informative quote, plus fresh
+> pre-registration. Not a re-sweep of levels on this data — the level was never the problem.
+
+
 ## Why this exists
 
 mmsell sells cheap tails. The P&L shape is many small wins (+3–6¢) and a rare near-full-stake
-loss (−93¢). At a 7¢ entry the break-even win rate is **93.9%** — so the entire question is
+loss (−93¢). At a 7¢ entry the break-even win rate is **93.1%** — so the entire question is
 whether the loss tail can be cut without eating the thin premium that pays for it.
+
+> **[2026-08-11] The break-even moved, because the fee did.** It is
+> `p = (100 − entry + fee)/100`, so the fee sits inside it. This doc previously said **93.9%**,
+> computed with the paper engine's ~1¢ taker fee — but these entries REST, and Kalshi bills a
+> maker 0.003¢/contract, not 1¢ (n=342 live fills). With the corrected maker fee the bar is
+> **93.1%**. Everything downstream that was sized against 93.9% (notably A5's n≥82) is therefore
+> **conservative, not wrong** — a bar that got easier cannot invalidate a sample sized for a
+> harder one. See the FEE RE-BASELINE section of `docs/BOOK_REGISTRY.md`.
 
 Three candidate answers came out of `docs/MMSELL_CRYPTO_STUDY.md` (a Kalshi-history backtest) and
 `docs/MMSELL_EXIT_STUDY.md` (a replay of our own captured intraday ticks):
@@ -19,7 +56,7 @@ Three candidate answers came out of `docs/MMSELL_CRYPTO_STUDY.md` (a Kalshi-hist
 |---|---|---|
 | bid-triggered stop-loss | **works** — every bid-triggered level improved **both** mean and 5th-pctile tail vs hold (best: bid L15 K1, −0.56¢ vs −3.67¢ hold, p5 −21.5¢ vs −95.5¢) | measured on `htc<1h` crypto, because Kalshi only serves ~1h of candles for these series. mmsell trades `htc≥1h`. **Different population.** |
 | volatility **entry** gate | **right sign, underpowered** — calm tape +2.85 to +5.25¢ at 100% win; active tape −39¢. n=13–17. | n is far too small to separate the effect from noise |
-| short strangle | **most intriguing, most fragile** — +3.30¢/pair at 100% win, but n=23; the 95% lower confidence bound is 87.8% vs a 93.9% break-even | needs ~**82 clean pairs** to clear its bound. Free to accrue in paper. |
+| short strangle | **most intriguing, most fragile** — +3.30¢/pair at 100% win, but n=23; the 95% lower confidence bound is 87.8% vs a 93.1% break-even | needs ~**82 clean pairs** to clear its bound. Free to accrue in paper. |
 
 The volatility **exit** gate is deliberately absent: the backtest killed it (it fires on 71–100%
 of positions and is far worse than holding at every window/threshold).

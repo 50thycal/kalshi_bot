@@ -182,7 +182,11 @@ class TwinHarness:
         entries carry a real model probability/edge, so the twin's record is directly comparable
         to its parent's, not just to live's fills. mmsell has no model probability of its own and
         leaves these at the default (None/0.0), matching what its own paper entries store."""
-        fee = kalshi_fee(price, quantity, self.settings.paper_fees_enabled)
+        # A twin shadows a LIVE book, and every live book with a twin enters post_only — that is
+        # what the twin is for (measuring the fills a resting order misses). So the twin's entry
+        # is billed maker, exactly like the live order it mirrors. Charging it taker was the
+        # single largest term in the parity report's ACCOUNTING GAP.
+        fee = kalshi_fee(price, quantity, self.settings.paper_fees_enabled, maker=True)
         assumption = f"[{twin_tag}] {note}"[:64] if note else f"[{twin_tag}] twin of live"[:64]
         repo.create_paper_trade(
             session,

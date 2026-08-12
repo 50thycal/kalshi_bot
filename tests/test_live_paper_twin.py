@@ -141,6 +141,44 @@ def test_twin_pairs_explicit_override_and_custom_suffix(settings):
     assert settings.live_paper_twin_pairs == [("mmsell10", "mmsell10_twin")]
 
 
+def test_an_explicit_twin_entry_that_shadows_the_suffix_is_reported(settings):
+    """The 2026-08-11 silent no-op. Cutting a fresh twin epoch is done by bumping the SUFFIX, but
+    LIVE_PAPER_TWINS outranks it — so with the old tags named explicitly the bump changed nothing,
+    the redeploy came up clean, and the previous epoch kept accumulating for hours. Nothing in the
+    system disagreed with anything; the losing setting was simply silent."""
+    settings.live_strategies = "mmsell10a,mmsell10b"
+    settings.live_paper_twin_suffix = "_pt3"
+    settings.live_paper_twins = "mmsell10a:mmsell10a_pt2,mmsell10b:mmsell10b_pt2"
+    assert settings.live_paper_twin_shadowed_pairs == [
+        ("mmsell10a", "mmsell10a_pt2", "mmsell10a_pt3"),
+        ("mmsell10b", "mmsell10b_pt2", "mmsell10b_pt3"),
+    ]
+    # and the pairs really do follow the explicit entry, which is what made it invisible
+    assert settings.live_paper_twin_pairs == [
+        ("mmsell10a", "mmsell10a_pt2"), ("mmsell10b", "mmsell10b_pt2")]
+
+    # clearing the explicit map is the fix — suffix takes over, nothing left to warn about
+    settings.live_paper_twins = ""
+    assert settings.live_paper_twin_shadowed_pairs == []
+    assert settings.live_paper_twin_pairs == [
+        ("mmsell10a", "mmsell10a_pt3"), ("mmsell10b", "mmsell10b_pt3")]
+
+
+def test_no_shadow_warning_when_the_explicit_entry_agrees_or_omits_the_tag(settings):
+    """Only a genuine DISAGREEMENT is worth a warning: an explicit entry naming exactly what the
+    suffix would produce is harmless, and an entry with no twin tag at all already follows it.
+    Warning on those would train everyone to ignore the log line."""
+    settings.live_strategies = "mmsell10a"
+    settings.live_paper_twin_suffix = "_pt3"
+    settings.live_paper_twins = "mmsell10a:mmsell10a_pt3"     # agrees
+    assert settings.live_paper_twin_shadowed_pairs == []
+    settings.live_paper_twins = "mmsell10a"                    # no tag -> derives from suffix
+    assert settings.live_paper_twin_shadowed_pairs == []
+    settings.live_paper_twin_enabled = False
+    settings.live_paper_twins = "mmsell10a:mmsell10a_pt2"
+    assert settings.live_paper_twin_shadowed_pairs == []       # twins off -> nothing to shadow
+
+
 def test_twin_tag_can_never_be_a_live_tag(settings):
     # A twin tag that is itself allowlisted for live could place real orders — drop the pair.
     settings.live_strategies = "mmsell10,mmsell10_pt"
@@ -214,6 +252,39 @@ def test_twin_opens_beside_live_priced_and_sized_LIKE_LIVE(settings):
         assert twin.quantity == live.quantity == 5
         assert parent.quantity == settings.paper_order_size == 1
         assert twin.side == "no" and twin.action == "buy"
+
+
+def test_twin_of_an_AB_ARM_book_sizes_and_prices_off_THAT_BOOKS_knobs(settings):
+    """Regression, found on the live dashboard: mmsell10b_pt2 showed 282 contracts across 141
+    positions (2.0/position) beside live mmsell10b's 98/98 (1.0), and ~3x the capital deployed.
+
+    Cause: the twin entry block inlined its own copy of the live price/size arithmetic, reading
+    the GLOBAL max_order_size and the GLOBAL a/b arm config instead of the arm book's own `size`
+    and `abarm`. So the twin of a 1-contract arm booked the global clip, and the twin of arm 1
+    could price at arm 0's offset. Both halves of a twin comparison have to come from the same
+    helper as live or `twin - live` stops meaning "the cost of not filling"."""
+    _armed(settings, live_max_order_dollars=5.0,      # global sizing alone would buy 5
+           live_strategies="mmsell10a,mmsell10b",
+           mmsell_live_offset_ab_arms="0,1",
+           mmsell_live_offset_ab_salt="t",
+           mmsell_variants=("mmsell10a:lo=5,hi=10,maxyes=7,abarm=0,size=1;"
+                            "mmsell10b:lo=5,hi=10,maxyes=7,abarm=1,size=1"))
+    ev, books = _cheap_event()
+    client = FakeClient([ev], books)
+    with db.session_scope() as session:
+        summ = _tracker(settings, client).run_once(session)
+
+    # exactly one arm admits the ticker, so exactly one live order and one twin entry
+    assert summ.twin_opened == 1
+    assert len(client.placed) == 1
+
+    with db.session_scope() as session:
+        live = session.scalar(select(m.LiveOrder))
+        twin = session.scalar(
+            select(m.PaperTrade).where(m.PaperTrade.strategy.endswith("_pt")))
+        assert twin.strategy == f"{live.strategy}_pt"       # the twin of the arm that traded
+        assert twin.quantity == live.quantity == 1          # the BOOK's size=1, not the global 5
+        assert twin.assumed_price == live.limit_price       # and the arm's own offset
 
 
 def test_twin_places_no_real_order_even_when_allowlisted_by_prefix(settings):

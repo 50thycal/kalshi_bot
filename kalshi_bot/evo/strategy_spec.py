@@ -9,7 +9,7 @@ A spec:
   universe   — which markets (series prefixes / categories / liquidity floors)
   entry      — approved condition operators over market metrics + edge vs a
                reference price, side selection, order style, sizing
-  exit       — settlement | tp_sl | timed
+  exit       — settlement | tp_sl | timed | confirmed_stop | volatility_exit
   risk       — concurrent positions, per-event cap, cost caps
 
 The same interpreter runs live paper trading (orchestrator), probes and backtests
@@ -18,8 +18,9 @@ The same interpreter runs live paper trading (orchestrator), probes and backtest
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 from .marketdata import Quote
 
@@ -98,19 +99,53 @@ class EntrySpec(BaseModel):
         return v
 
 
+EXIT_MODES = ("settlement", "tp_sl", "timed", "confirmed_stop", "volatility_exit")
+
+
 class ExitSpec(BaseModel):
+    """settlement | tp_sl | timed act on a single quote. The last two are PATH-dependent
+    (docs/MMSELL_EXIT_STUDY.md) and read the position's mid tape:
+
+      confirmed_stop  — the position's own mid at/below `stop_mid_cents` for
+                        `confirm_ticks` CONSECUTIVE observations. The confirmation is the
+                        point: at longshot prices a single print routinely lies, and an
+                        unconfirmed stop sells that noise (which is what tp_sl's
+                        stop_loss_cents does).
+      volatility_exit — the mid's range over the trailing `vol_window_ticks` reaching
+                        `vol_range_cents`. Direction-agnostic: the thesis is that a
+                        position being actively repriced is likelier to be a loser than
+                        a quiet one.
+    """
+
     model_config = {"extra": "forbid"}
-    mode: str = "settlement"  # settlement | tp_sl | timed
+    mode: str = "settlement"
     take_profit_cents: int | None = Field(default=None, ge=1, le=99)
     stop_loss_cents: int | None = Field(default=None, ge=1, le=99)
     max_hold_hours: float | None = Field(default=None, gt=0)
+    # confirmed_stop. The level is on the position's OWN side, so one field works for
+    # either leg: for a NO position no-mid <= L is the study's yes-mid >= 100-L form.
+    stop_mid_cents: int | None = Field(default=None, ge=1, le=99)
+    confirm_ticks: int = Field(default=2, ge=1, le=20)
+    # volatility_exit
+    vol_window_ticks: int = Field(default=6, ge=2, le=50)
+    vol_range_cents: int | None = Field(default=None, ge=1, le=99)
 
     @field_validator("mode")
     @classmethod
     def _mode(cls, v: str) -> str:
-        if v not in ("settlement", "tp_sl", "timed"):
-            raise ValueError("mode must be settlement|tp_sl|timed")
+        if v not in EXIT_MODES:
+            raise ValueError(f"mode must be one of {'|'.join(EXIT_MODES)}")
         return v
+
+    @model_validator(mode="after")
+    def _mode_params(self) -> ExitSpec:
+        """A path-dependent mode without its threshold can never fire. Reject it here
+        rather than let it deploy as a strategy that silently never exits."""
+        if self.mode == "confirmed_stop" and self.stop_mid_cents is None:
+            raise ValueError("confirmed_stop requires stop_mid_cents")
+        if self.mode == "volatility_exit" and self.vol_range_cents is None:
+            raise ValueError("volatility_exit requires vol_range_cents")
+        return self
 
 
 class RiskSpec(BaseModel):
@@ -264,13 +299,43 @@ def entry_signal(spec: StrategySpec, quote: Quote) -> dict | None:
     }
 
 
+def _side_mid(yes_mid: float, side: str) -> float:
+    """The tape is YES mids; a rule about the position going against YOU reads in the
+    position's own side. no-mid = 100 - yes-mid."""
+    return yes_mid if side == "yes" else 100.0 - yes_mid
+
+
 def exit_signal(
     spec: StrategySpec, quote: Quote, *, side: str, entry_price_cents: float,
-    held_hours: float,
+    held_hours: float, mid_history: Sequence[float] | None = None,
 ) -> str | None:
-    """None = hold; else a reason string ('tp'|'sl'|'timed'). Settlement itself is
-    handled by the paper engine's mark_and_settle."""
+    """None = hold; else a reason string ('tp'|'sl'|'timed'|'confirmed_stop'|
+    'volatility_exit'). Settlement itself is handled by the paper engine's
+    mark_and_settle.
+
+    `mid_history` is this position's YES mids, oldest-first, INCLUDING the current
+    observation — the path the two path-dependent modes need. Absent or too short, they
+    hold: an exit rule that cannot see the path must never guess (this is the state
+    right after a worker restart)."""
     if spec.exit.mode == "settlement":
+        return None
+    if spec.exit.mode == "confirmed_stop":
+        tape = list(mid_history or ())
+        k = spec.exit.confirm_ticks
+        if len(tape) < k:
+            return None
+        level = float(spec.exit.stop_mid_cents)
+        if all(_side_mid(m, side) <= level for m in tape[-k:]):
+            return "confirmed_stop"
+        return None
+    if spec.exit.mode == "volatility_exit":
+        tape = list(mid_history or ())
+        w = spec.exit.vol_window_ticks
+        if len(tape) < w:
+            return None
+        window = tape[-w:]
+        if max(window) - min(window) >= float(spec.exit.vol_range_cents):
+            return "volatility_exit"
         return None
     bid = quote.best_exit_bid(side)
     if bid is None:

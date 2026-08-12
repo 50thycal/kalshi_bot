@@ -35,7 +35,7 @@ from ..models import (
     PaperTrade,
 )
 from ..paper.engine import kalshi_fee
-from . import budgets
+from . import budgets, fill_model
 from .audit import audit
 from .config import EvoSettings
 from .marketdata import Quote
@@ -115,18 +115,22 @@ def recent_runs(session, agent_uuid: str, *, limit: int = 8) -> list[dict]:
     out: list[dict] = []
     for r, fp in prepared:
         res = r.result_json or {}
-        out.append(
-            {
-                "run_id": r.id,
-                "kind": r.kind,
-                "fingerprint": fp,
-                "times_run_recently": freq[fp],
-                "n_trades": res.get("n_trades"),
-                "win_rate": res.get("win_rate"),
-                "total_pnl_usd": res.get("total_pnl_usd"),
-                "per_trade_usd": res.get("per_trade_usd"),
-            }
-        )
+        fmr = res.get("fill_model") or {}
+        row = {
+            "run_id": r.id,
+            "kind": r.kind,
+            "fingerprint": fp,
+            "times_run_recently": freq[fp],
+            "n_trades": res.get("n_trades"),
+            "win_rate": res.get("win_rate"),
+            "total_pnl_usd": res.get("total_pnl_usd"),
+            "per_trade_usd": res.get("per_trade_usd"),
+        }
+        # Only for maker specs, where the optimistic number is the one that lies.
+        if fmr.get("n_maker_trades"):
+            row["fill_model_verdict"] = fmr.get("verdict")
+            row["realizable_cents_per_contract"] = fmr.get("realizable_cents_per_contract")
+        out.append(row)
     return out
 
 
@@ -488,6 +492,54 @@ _ADAPTERS = {
 }
 
 
+def _trade(market: _Market, pos: dict, pnl: float, exit_reason: str, *, win: bool) -> dict:
+    """One closed replay trade. `cents_per_contract` and `maker_yes_c` are what the
+    realizable projection needs: the optimistic per-contract result, tagged with the
+    calibration cell of the resting order that produced it (None for taker entries,
+    which cross the spread and have no fill to miss)."""
+    qty = pos["qty"] or 1
+    return {
+        "ticker": market.ticker,
+        "month": market.month,
+        "pnl": pnl,
+        "exit": exit_reason,
+        "win": win,
+        "maker_yes_c": pos["maker_yes_c"],
+        "cents_per_contract": 100.0 * pnl / qty,
+    }
+
+
+def _fill_model_report(trades: list[dict], *, applied: bool, blocked: int) -> dict:
+    """Optimistic vs realizable, side by side, in the result an agent actually reads.
+
+    The optimistic number is what the replay banked assuming every resting order it
+    placed got hit. The realizable number projects the SAME trades' entry-price mix
+    through the live fill calibration, so it carries the adverse-selection correction:
+    what the fills a maker really gets are worth. `verdict` is the one-word gate —
+    MIRAGE means the paper edge is an artifact of fills we would never receive."""
+    hist: dict[int, list] = {}
+    for t in trades:
+        yes_c = t.get("maker_yes_c")
+        if yes_c is None:
+            continue
+        cell = hist.setdefault(int(yes_c), [0, 0.0])
+        cell[0] += 1
+        cell[1] += t["cents_per_contract"]
+    proj = fill_model.project_realizable({k: (v[0], v[1]) for k, v in hist.items()})
+    return {
+        "version": fill_model.CALIBRATION_VERSION,
+        "source": fill_model.CALIBRATION_SOURCE,
+        "applied": applied,
+        "markets_blocked": blocked,
+        "n_maker_trades": proj["total_n"],
+        "coverage": proj["coverage"] if proj["coverage"] is not None else 0.0,
+        "est_fill_rate": proj["est_fill_rate"],
+        "optimistic_cents_per_contract": proj["opt_cents"],
+        "realizable_cents_per_contract": proj["est_realizable_cents"],
+        "verdict": fill_model.verdict(proj),
+    }
+
+
 def run_backtest(
     session,
     settings: EvoSettings,
@@ -528,6 +580,8 @@ def run_backtest(
     rows_processed = 0
     truncated = False
     markets_considered = 0
+    markets_blocked = 0  # resting orders the measured fill curve says would never be hit
+    gate_applied = False
     for market in _ADAPTERS[dataset](session, spec, date_from, date_to):
         if time.monotonic() > deadline or rows_processed >= max_rows:
             truncated = True
@@ -535,6 +589,8 @@ def run_backtest(
         markets_considered += 1
         rows_processed += len(market.candles)
         open_pos: dict | None = None
+        maker_gate: bool | None = None  # calibrated verdict for THIS market
+        maker_gate_decided = False
         for candle in market.candles:
             quote = candle.quote
             if open_pos is None:
@@ -543,13 +599,26 @@ def run_backtest(
                     continue
                 price = intent["limit_price_cents"]
                 if intent["style"] == "maker":
-                    # conservative: a resting maker order fills only if the market
-                    # trades through the limit this step — approximated by price_low < limit
-                    continue_fill = candle.price_low is not None and (
-                        candle.price_low < price
-                    )
-                    if not continue_fill:
-                        continue
+                    if settings.sandbox_maker_fill_model and not maker_gate_decided:
+                        # Decided ONCE per market: the calibration measures a resting
+                        # order's lifetime fill rate, so re-drawing each candle would
+                        # compound to a certain fill and restore the very assumption
+                        # being corrected. See evo/fill_model.py.
+                        maker_gate = fill_model.maker_order_fills(
+                            ticker=market.ticker, side=intent["side"],
+                            limit_price_cents=price,
+                        )
+                        maker_gate_decided = True
+                        if maker_gate is not None:
+                            gate_applied = True
+                    if maker_gate is False:
+                        markets_blocked += 1
+                        break  # a maker never gets hit here — no entry on this market
+                    if maker_gate is None:
+                        # No trusted measurement at this price (or the model is off):
+                        # keep the trade-through heuristic rather than guess a rate.
+                        if candle.price_low is None or candle.price_low >= price:
+                            continue
                 qty = intent["quantity"]
                 fee = kalshi_fee(price, qty)
                 open_pos = {
@@ -558,13 +627,22 @@ def run_backtest(
                     "qty": qty,
                     "fee": fee,
                     "entered_at": candle.ts,
+                    "mids": [],
+                    "maker_yes_c": (
+                        fill_model.yes_equivalent_cents(intent["side"], price)
+                        if intent["style"] == "maker" else None
+                    ),
                 }
                 continue
-            # manage open position
+            # manage open position. The mid tape starts at entry and is what the
+            # path-dependent exits (confirmed_stop / volatility_exit) read.
+            if quote.mid is not None:
+                open_pos["mids"].append(quote.mid)
             reason = exit_signal(
                 spec, quote, side=open_pos["side"],
                 entry_price_cents=open_pos["price"],
                 held_hours=_hours_between(open_pos["entered_at"], candle.ts),
+                mid_history=open_pos["mids"],
             )
             if reason is not None:
                 bid = quote.best_exit_bid(open_pos["side"])
@@ -573,25 +651,23 @@ def run_backtest(
                 exit_fee = kalshi_fee(bid, open_pos["qty"])
                 # NB: entry side cost basis — yes positions exit at yes_bid, no at no_bid
                 gross = open_pos["qty"] * (bid - open_pos["price"]) / 100.0
-                trades.append({
-                    "ticker": market.ticker,
-                    "month": market.month,
-                    "pnl": gross - open_pos["fee"] - exit_fee,
-                    "exit": reason,
-                    "win": gross > 0,
-                })
+                trades.append(_trade(
+                    market, open_pos, gross - open_pos["fee"] - exit_fee, reason,
+                    win=gross > 0,
+                ))
                 open_pos = None
+                # One entry per market, matching the live runner's per-strategy/ticker
+                # dedup. Without this the replay re-enters the moment its own stop
+                # fires, so an exit-rule study would measure a re-entry policy rather
+                # than the exit rule it is comparing against holding.
+                break
         if open_pos is not None:
             won = open_pos["side"] == market.result
             value = 100 if won else 0
             gross = open_pos["qty"] * (value - open_pos["price"]) / 100.0
-            trades.append({
-                "ticker": market.ticker,
-                "month": market.month,
-                "pnl": gross - open_pos["fee"],
-                "exit": "settlement",
-                "win": won,
-            })
+            trades.append(_trade(
+                market, open_pos, gross - open_pos["fee"], "settlement", win=won,
+            ))
 
     n = len(trades)
     total = sum(t["pnl"] for t in trades)
@@ -602,10 +678,12 @@ def run_backtest(
         peak = max(peak, equity)
         max_dd = max(max_dd, peak - equity)
     by_month: dict[str, dict] = {}
+    by_exit: dict[str, int] = {}
     for t in trades:
         m = by_month.setdefault(t["month"], {"n": 0, "pnl": 0.0})
         m["n"] += 1
         m["pnl"] = round(m["pnl"] + t["pnl"], 4)
+        by_exit[t["exit"]] = by_exit.get(t["exit"], 0) + 1
     result = {
         "dataset": dataset,
         "provenance": provenance,
@@ -623,6 +701,12 @@ def run_backtest(
         ),
         "max_drawdown_usd": round(max_dd, 4),
         "by_month": by_month,
+        # Which exit rule actually fired, and how often — an exit spec that never
+        # triggers is otherwise indistinguishable from one that holds by design.
+        "by_exit": by_exit,
+        "fill_model": _fill_model_report(
+            trades, applied=gate_applied, blocked=markets_blocked
+        ),
         "elapsed_ms": int((time.monotonic() - started) * 1000),
     }
     if not persist:

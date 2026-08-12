@@ -268,6 +268,111 @@ SEED_ENTRIES: list[dict] = [
         revival_conditions="n/a",
         source_ref="docs/IDEA_MODEL_SCORECARD.md; docs/IDEA_MODEL_20260712.md",
     ),
+    # --- retired 2026-08-12 (the closeout pass; see docs/BOOK_REGISTRY.md) ---
+    dict(
+        slug="mmsell-wide-band-type-slicing",
+        title="Wmmsell1-8: contract-TYPE slicing of the mmsell WIDE band (5-40c)",
+        strategy_family="maker_sell",
+        market_categories="sports,all",
+        outcome="retired",
+        summary="Eight books slicing the wide maker-sell band by contract structure (in_play, "
+                "player_prop, price_strike, mention, ...). Retired 2026-08-12 as UNMEASURABLE, "
+                "not disproven: their control `mmsell` LOSES money in the wide band, and live "
+                "fill coverage is only 19-41% because our maker-fill calibration comes entirely "
+                "from CHEAP-band orders. The same type axis runs on in the TIGHT band "
+                "(Tmmsell1-6) at 99-100% coverage.",
+        why_failed="No live fill evidence exists for 10-40c maker entries, so paper's "
+                   "always-fills assumption is doing the work for most of every book. A larger "
+                   "paper sample would only produce a more confident version of an unfounded "
+                   "number. Beating a losing control is also not an edge.",
+        revival_conditions="Live maker fills in the 10-40c band. Evidence, not more paper — "
+                           "the fill assumption is precisely what is in question.",
+        source_ref="docs/MMSELL_TYPE_BOOKS.md; docs/MMSELL_FILL_MODEL.md; docs/BOOK_REGISTRY.md",
+    ),
+    dict(
+        slug="mmsell-bid-triggered-stop-loss",
+        title="mmsellA1/A2/A3: confirmed yes-BID stop-loss on the mmsell10 entry (L12/L20/L30)",
+        strategy_family="maker_sell",
+        market_categories="sports,crypto",
+        outcome="killed",
+        summary="Exit the short cheap tail when the yes-BID holds at/above 12, 20 or 30c for 2 "
+                "consecutive cycles. Pre-registered gate FAILED on both halves at every level: "
+                "A1 -4.16c/trade vs the mmsell10 control's +3.14c, and 5th-pctile -19.0 vs "
+                "+5.0 — the stop makes the TAIL WORSE, which is the opposite of its purpose.",
+        why_failed="The stop fires on 52% of positions. At that rate it is not truncating a "
+                   "rare disaster, it is converting ordinary winners into realized losses: a "
+                   "cheap tail that ticks up usually still expires worthless. The motivating "
+                   "backtest was measured on htc<1h CRYPTO (continuous paths, where a stop "
+                   "exits near its trigger) while mmsell trades htc>=1h SPORTS, which JUMP "
+                   "straight through a trigger on a score. Different population.",
+        revival_conditions="A stop whose trigger cannot fire on a non-informative quote, with "
+                           "fresh pre-registration. NOT a re-sweep of levels — the level was "
+                           "never the problem, the exit mechanic is.",
+        source_ref="docs/MMSELL_ANCHOR_SET.md; docs/MMSELL_CRYPTO_STUDY.md",
+    ),
+    dict(
+        slug="mmsell-band-variants-first-cohort",
+        title="mmsell1/2/3/4/11: first-cohort mmsell band + filter variants",
+        strategy_family="maker_sell",
+        market_categories="sports,all",
+        outcome="retired",
+        summary="Band variants (5-20, 10-20, 5-10), a series skip-list, and a no-late-entry "
+                "filter. Retired 2026-08-12 as indistinguishable from zero on the "
+                "fee-normalized fill model: mmsell3 +0.02c, mmsell11 +0.04c, mmsell4 +0.04c. "
+                "mmsell3 is the one with LIVE ground truth — it traded real money 2026-07-13/19 "
+                "and realized +0.18c/trade at n=359, i.e. paper and live agree it is breakeven. "
+                "mmsell1/mmsell2 additionally sit at 49.6%/19.5% fill coverage. Superseded by "
+                "mmsell10 (maxyes=7 price ceiling): 99.8% coverage, +2.19c realizable.",
+        why_failed="Breakeven, not losing — but breakeven does not earn capital. The price "
+                   "CEILING, not the band width or the filters, is what makes a cheap-tail "
+                   "book fillable, and that is the whole difference.",
+        revival_conditions="A mechanically different entry, pre-registered. Not a re-read of "
+                           "this data: it has been read against two fee models and a live "
+                           "postmortem and says the same thing each time.",
+        source_ref="docs/MMSELL_VARIANTS_THESIS.md; docs/MMSELL_LIVE_POSTMORTEM.md",
+    ),
+    dict(
+        slug="weather-consensus-book",
+        title="weather_con / weather_concity: multi-family consensus temperature pick",
+        strategy_family="model_vs_quote",
+        market_categories="weather",
+        outcome="retired",
+        summary="Buy the bucket where independent forecast families (NBM, ensemble, "
+                "observations, Polymarket) agree. Retired 2026-08-12 at n=775, -3.50c/trade, "
+                "-$27.14. Its city-restricted A/B (weather_concity) was RETIRED WITH IT at "
+                "n=203, -8.29c/trade — restricting to the historical 'edge cities' was more "
+                "than TWICE as bad as taking all of them. Weather books enter at the ask, so "
+                "the 2026-08-11 maker-fee correction does not flatter these numbers.",
+        why_failed="Consensus among correlated forecast families is not independent "
+                   "confirmation. The concity result is the sharper lesson: with n=23-63 per "
+                   "city the per-city ranking was NOISE, so selecting the top cells bought the "
+                   "sampling error rather than the signal.",
+        revival_conditions="A forecast edge demonstrated OFFLINE against "
+                           "weather_forecast_outcomes (the persisted forecast->settlement "
+                           "dataset, which collection continues to feed), pre-registered, "
+                           "before any weather book re-enters.",
+        source_ref="docs/RESEARCH_JOURNAL.md (2026-08-12); docs/BOOK_REGISTRY.md",
+    ),
+    dict(
+        slug="slice-a-losing-book-by-its-own-history",
+        title="PROCESS: rescuing a losing book by slicing on a dimension from its own history",
+        strategy_family="process",
+        market_categories="all",
+        outcome="killed",
+        summary="The recurring shape behind weather_concity (-8.29c vs the -3.50c parent it was "
+                "meant to rescue) and the wide-band type books. A losing book is examined "
+                "per-cell, some cells look positive, and a new book is built from the winners. "
+                "Forward performance is then WORSE than the parent, not better.",
+        why_failed="The per-cell ranking of a low-n book is mostly sampling noise, so the "
+                   "selected cells are the upper tail of a null distribution. Selecting on them "
+                   "buys the noise; the apparent edge cannot survive out of sample because it "
+                   "was never in the sample.",
+        revival_conditions="Cell selection is legitimate only when the cells are chosen on a "
+                           "PRIOR (a mechanism argued in advance) and tested out-of-sample, or "
+                           "when per-cell n is large enough that the ranking is not noise. "
+                           "Never re-slice the same history that produced the hypothesis.",
+        source_ref="docs/RESEARCH_JOURNAL.md (2026-08-12); docs/MMSELL_TYPE_BOOKS.md",
+    ),
 ]
 
 

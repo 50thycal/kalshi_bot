@@ -68,9 +68,21 @@ class Settings(BaseSettings):
     kill_switch: bool = True
 
     # --- Risk limits ---
+    # Which books each one actually covers, because it is not uniform (RiskManager.evaluate runs
+    # on the WEATHER entry path only; mmsell/theta self-guard inline):
+    #   max_order_size        weather. mmsell uses it only as a fallback when the book declares no
+    #                         `size=` (mmsell10a/b declare size=1, so it is bypassed); theta uses
+    #                         theta_live_max_contracts instead.
+    #   max_market_exposure   ALL books — per TICKER (risk/manager.py + executor mmsell/theta).
+    #   max_total_exposure    ALL books — PORTFOLIO-wide, the only limit that sums across books.
+    #                         Every other cap is per book tag, so without this one the real
+    #                         ceiling was an emergent (books x per-book cap x clip) product.
+    #   max_daily_loss        ALL books, via live_kill_on_daily_loss. Measured on REALIZED P&L, so
+    #                         on hold-to-settlement books it lags an open drawdown until markets
+    #                         settle, and it halts NEW entries rather than flattening. Accepted.
     max_order_size: int = 1
     max_market_exposure: float = 25.0
-    max_total_exposure: float = 100.0
+    max_total_exposure: float = 100.0   # <= 0 disables; see LiveExecutor._total_exposure_hit
     max_daily_loss: float = 25.0
 
     # --- Scan cadence ---
@@ -82,13 +94,20 @@ class Settings(BaseSettings):
         "Economics,Financials,Companies,Climate and Weather,Commodities,Science and Technology"
     )
     target_series_prefixes: str = ""
+    # SCOPE of the four gates below: they run in SCANNER mode and on the WEATHER live path (via
+    # RiskManager.evaluate / scanner.signals). The mmsell and theta books do NOT read them — they
+    # carry their own equivalents (mmsell_min_volume, mmsell_min_hours_to_close,
+    # mmsell_live_max_spread_cents, theta_live_max_spread_cents). So changing these does not
+    # affect a deployment whose LIVE_STRATEGIES are mmsell*/theta* only.
     max_spread_cents: int = 5
     min_volume: int = 25
-    min_open_interest: int = 10
-    min_hours_to_close: float = 1.0
-    max_markets_per_scan: int = 75
-    max_markets_per_category: int = 12
+    min_open_interest: int = 10       # scanner mode only — no live path reads it
+    min_hours_to_close: float = 1.0   # NB: theta has no min-time-to-expiry equivalent
+    max_markets_per_scan: int = 75    # scanner mode only (mmsell uses mmsell_top_events)
+    max_markets_per_category: int = 12  # scanner mode only
     orderbook_depth: int = 10
+    # NOT WIRED: nothing anywhere reads this — no path rejects an orderbook on age. Kept as a
+    # placeholder for a real freshness gate; do not read it as protection until it has one.
     staleness_seconds: int = 120
     log_level: str = "INFO"
 
@@ -211,15 +230,12 @@ class Settings(BaseSettings):
     #              candidate mechanism to promote into the LIVE mmsell3 entry if it beats the control;
     #   mmsell11 = no-late-entry (htcmin=6) — skip the in-play window (adverse-selection lever).
     mmsell_variants: str = (
-        "mmsell1:lo=5,hi=20;mmsell2:lo=10,hi=20;mmsell3:lo=5,hi=10;"
-        "mmsell4:lo=5,hi=10,skip=WC+ATP+ITF+WTA+T20+ODI;"
         "mmsell5:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY;"
         "mmsell6:lo=5,hi=8;"
         "mmsell7:lo=5,hi=10,htcmax=24;"
         "mmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;"
         "mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;"
         "mmsell10:lo=5,hi=10,maxyes=7;"
-        "mmsell11:lo=5,hi=10,htcmin=6;"
         # --- ANCHOR SET (2026-07-30, docs/MMSELL_ANCHOR_SET.md) -------------------------
         # Every anchor book uses the mmsell10 base (lo=5,hi=10,maxyes=7) — the only
         # REALIZABLE EDGE config — so ENTRY is held constant and each book varies exactly one
@@ -235,9 +251,6 @@ class Settings(BaseSettings):
         #   A5 = short strangle: sell BOTH mutually-exclusive tails of one event (cheap YES on a
         #     high strike + cheap NO on a low strike), entered only when the event actually has
         #     both — that pairing IS the low-vol selection the backtest's +3.30c/pair came from.
-        "mmsellA1:lo=5,hi=10,maxyes=7,stopl=12,stopk=2;"
-        "mmsellA2:lo=5,hi=10,maxyes=7,stopl=20,stopk=2;"
-        "mmsellA3:lo=5,hi=10,maxyes=7,stopl=30,stopk=2;"
         "mmsellA4:lo=5,hi=10,maxyes=7,volw=6,volv=6;"
         "mmsellA5:lo=5,hi=10,maxyes=7,strangle=1;"
         # Queue-position A/B as TWO live books (docs/MMSELL_OFFSET_AB.md). Same mmsell10 entry;
@@ -252,6 +265,21 @@ class Settings(BaseSettings):
         # LIVE_STRATEGIES: with no arms configured an arm book admits no tickers at all.
         "mmsell10a:lo=5,hi=10,maxyes=7,abarm=0,size=1;"
         "mmsell10b:lo=5,hi=10,maxyes=7,abarm=1,size=1;"
+        # --- RETIRED 2026-08-12 --------------------------------------------------------------
+        # Removed from the default so they stop OPENING positions. History is untouched and any
+        # position still open settles normally (manage_open_positions iterates every open trade,
+        # not the configured book list). Verdicts + revival conditions:
+        # docs/MMSELL_VARIANTS_THESIS.md, docs/MMSELL_ANCHOR_SET.md, docs/MMSELL_TYPE_BOOKS.md.
+        #
+        #   mmsell1  lo=5,hi=20            superset of mmsell10, 49.6% fill coverage
+        #   mmsell2  lo=10,hi=20           19.5% coverage — the band we have no fill evidence for
+        #   mmsell3  lo=5,hi=10            +0.02c realizable; live ran it to +0.18c/trade at n=359
+        #   mmsell4  skip=WC+ATP+...       +0.04c realizable
+        #   mmsell11 htcmin=6              +0.04c realizable
+        #   mmsellA1/A2/A3 (bid stops)     gate FAILED: the stop fires on 52% of positions and
+        #                                  makes the 5th-pctile tail WORSE, not better
+        #   Wmmsell1-8 (wide-band types)   UNMEASURABLE, not disproven — see the thesis doc
+        #
         # --- MARKET-TYPE books, added 2026-08-03 (docs/MMSELL_TYPE_BOOKS.md) ----------------
         # From the market-type census (docs/MMSELL_MARKET_TYPES.md): mmsell sells any cheap tail
         # it finds, so every book to date has been blind to what KIND of contract it is selling.
@@ -265,26 +293,17 @@ class Settings(BaseSettings):
         # type effect. No book carries a stop, vol gate or strangle: those mechanics are the
         # anchor set's experiment and would confound this one.
         #
-        # RETIRED 2026-08-12 — reached their pre-registered n and FAILED their gate. Five books
-        # are deliberately absent from the lists below; the entries stay commented here so the
-        # experiment's shape is still readable and a future census cannot silently "rediscover"
-        # a cell we already measured (docs/MMSELL_TYPE_BOOKS.md "Retired" table has the numbers):
-        #   Wmmsell1:lo=5,hi=40,mode=in_play                      n=1217  -0.13c  <- negative absolute
-        #   Wmmsell3:lo=5,hi=40,mtype=player_prop+spread+game_prop n=461  +0.68c over control
-        #   Wmmsell8:lo=5,hi=40,mtype=player_prop+mention+spread+outright n=475 realizable -0.04c
-        #   Tmmsell3:lo=5,hi=10,maxyes=7,mtype=player_prop+total+spread   n=332  +0.13c over control
-        #   Tmmsell4:lo=5,hi=10,maxyes=7,xmtype=h2h+game_prop+...         n=597  +0.10c over control
-        # Retiring a book only stops NEW entries: `repository.strategy_is_kept` still matches the
-        # mmsell family, so open positions are NOT abandoned and settle out normally — which is
-        # what we want, since the book is held to settlement and those trades are already paid for.
+        # Tight-band books (read against `mmsell10`). The WIDE-band half of this
+        # experiment was retired 2026-08-12; the type axis lives on here, in the
+        # only band we have live fill evidence for.
         #
-        # Wide-band books (read against `mmsell`):
-        "Wmmsell2:lo=5,hi=40,mtype=player_prop+spread+exact_score+game_prop+h2h_period;"
-        "Wmmsell4:lo=5,hi=40,mtype=price_strike;"
-        "Wmmsell5:lo=5,hi=40,mtype=mention;"
-        "Wmmsell6:lo=5,hi=40,xmtype=total+h2h+event_stat+announcement+politics;"
-        "Wmmsell7:lo=5,hi=40,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;"
-        # Tight-band books (read against `mmsell10`):
+        # `Tmmsell3` and `Tmmsell4` were ALSO retired 2026-08-12, on the opposite
+        # ground from the wide band: they were measurable and they FAILED. Both
+        # reached n and beat `mmsell10` by far less than the +1.0¢ their gate asks
+        # (the RELATIVE gate is untouched by the maker-fee correction — both sides
+        # are maker books at the same clip, so the fee cancels in the difference).
+        #   Tmmsell3:lo=5,hi=10,maxyes=7,mtype=player_prop+total+spread
+        #   Tmmsell4:lo=5,hi=10,maxyes=7,xmtype=h2h+game_prop+event_stat+politics+announcement
         "Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;"
         "Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;"
         "Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,"
@@ -819,7 +838,12 @@ class Settings(BaseSettings):
     #    trade only when it DEVIATES from the favorite (cheaper, model-preferred, +EV);
     #  - LOW / HIGH-late -> trade only a near-unanimous K agreement that lands ON the
     #    favorite (a high-confidence near-lock filter), else skip.
-    weather_consensus_enabled: bool = True
+    # RETIRED 2026-08-12 at n=775: -3.50c/trade, -$27.14, 34.7% win. The consensus layer
+    # was the last weather BOOK still entering; every other one was pruned by 2026-07-04.
+    # Weather books are TAKERS, so the 2026-08-11 maker-fee correction does not touch this
+    # number -- it is real. The consensus DATA flags (ensemble, obs, polymarket) stay ON:
+    # they feed weather_forecast_outcomes, which is the validation dataset, not a book.
+    weather_consensus_enabled: bool = False
     weather_consensus_tol: int = 1                      # bucket tolerance for "agree" (+/-)
     weather_consensus_weights: str = "fc=1,ens=1,obs=2,pm=2"
     weather_consensus_early_windows: str = "20,14"      # high windows that use the deviate mode
@@ -831,7 +855,12 @@ class Settings(BaseSettings):
     # -11.6c, DEN -9.5c, PHIL -6.1c; MIA ~flat. weather_concity rides the SAME consensus pick
     # as `weather_con` but only enters for the allowlisted edge cities — a parallel A/B to
     # test whether restricting to the winners turns the (barely-negative) con book positive.
-    weather_con_city_enabled: bool = True
+    # RETIRED 2026-08-12 -- and it answered its question, in the negative. The hypothesis
+    # was that con's loss is diluted by bad cities and restricting to the edge cities would
+    # turn it positive. Measured at n=203: concity is -8.29c/trade against con's -3.50c on
+    # the same picks. Restricting to the historical winners made it more than twice as bad,
+    # which is what per-city selection looks like when the per-city ranking was noise.
+    weather_con_city_enabled: bool = False
     # con-city allowlist = City.code values (NB: New York's code is 'NYC', not the 'NY' series
     # suffix). Winners AUS/CHI/NYC; excluded losers LAX/DEN/PHIL and flat MIA.
     weather_con_allow_cities: str = "AUS,CHI,NYC"
@@ -879,10 +908,26 @@ class Settings(BaseSettings):
     # long before 4h elapses.
     live_order_timeout_seconds: int = 14_400  # 4 hours
     live_max_order_dollars: float = 5.0     # per-order dollar cap -> qty = floor(cap / price)
+    # --- Managed exits (TP / SL / break-even) — YES-SIDE BOOKS ONLY -----------------------
+    # SCOPE, and it is narrower than these names suggest. The whole `manage_exits` path reaches a
+    # position only if BOTH hold:
+    #   1. live_exit_mode == "tp_sl"  (the default "settlement" makes manage_exits a no-op), AND
+    #   2. the position is net-long YES — `repository.open_live_positions` skips anything with
+    #      `qty_fp < 0.01`, which is every NO position.
+    # The live maker books (mmsell*, theta*) buy NO, so `quantity_fp` is NEGATIVE and they are
+    # ALWAYS skipped. Setting live_stop_loss_cents therefore does NOTHING for them — it does not
+    # error, it silently never fires, which is the failure mode that makes a stop-loss EXPERIMENT
+    # read as "the stop didn't help" when the stop was never armed. Those books are
+    # hold-to-settlement by design (the mmsell exit study found TP/SL hurts); their only early
+    # exit is the manual one-shot `<book>_closeout_enabled`.
+    # Portfolio-level protection is separate and DOES cover every book: max_daily_loss (realized,
+    # via LiveExecutor._daily_loss_hit) and max_total_exposure (LiveExecutor._total_exposure_hit).
+    # Kept rather than deleted because these knobs are live and correct for the YES/weather books
+    # and are used for exit experiments there.
     live_exit_mode: str = "settlement"      # "settlement" (hold) | "tp_sl" (TP/SL/break-even)
-    live_take_profit_cents: int | None = None
-    live_stop_loss_cents: int | None = None
-    live_break_even_arm_cents: int | None = None
+    live_take_profit_cents: int | None = None    # YES-side books only — see the scope note above
+    live_stop_loss_cents: int | None = None      # YES-side books only — NOT mmsell/theta
+    live_break_even_arm_cents: int | None = None  # YES-side books only
     # Per-entry-window take-profit (tp_sl mode), e.g. "20:5,14:20": the h20 entry scalps a tight
     # +5c, the h14 (higher-conviction) entry runs to +20c. A window listed here is TP-ONLY (no
     # stop — stops whipsaw these high-win favorites); windows not listed fall back to the global
@@ -1115,6 +1160,36 @@ class Settings(BaseSettings):
                         pairs[live_tag] = twin_tag
         # A twin tag that is also an allowlisted live tag would be able to place real orders.
         return [(lt, tt) for lt, tt in sorted(pairs.items()) if tt not in live_tags]
+
+    @property
+    def live_paper_twin_shadowed_pairs(self) -> list[tuple[str, str, str]]:
+        """(live_tag, explicit_twin_tag, what_the_suffix_would_give) for every explicit entry in
+        `live_paper_twins` that DISAGREES with `live_paper_twin_suffix`.
+
+        Why this exists: the two settings are a precedence pair, and the loser is silent. Cutting
+        a fresh twin epoch is done by bumping the suffix — but if `LIVE_PAPER_TWINS` names the old
+        tags explicitly, the bump is a no-op and the worker keeps writing the previous epoch with
+        no error anywhere. That happened on 2026-08-11: the suffix was moved to `_pt3`, a redeploy
+        ran clean, and the `_pt2` epochs simply carried on for hours before anyone checked.
+
+        Empty for the standing configuration (one auto-derived twin per live strategy), which is
+        why this can be logged as a warning rather than tolerated as normal."""
+        if not self.live_paper_twin_enabled:
+            return []
+        suffix = (self.live_paper_twin_suffix or "_pt").strip()
+        out: list[tuple[str, str, str]] = []
+        for part in self.live_paper_twins.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            live_tag, _, twin_tag = part.partition(":")
+            live_tag, twin_tag = live_tag.strip(), twin_tag.strip()
+            if not (live_tag and twin_tag):
+                continue          # no explicit twin tag -> it already follows the suffix
+            derived = f"{live_tag}{suffix}"[:24]
+            if twin_tag[:24] != derived:
+                out.append((live_tag, twin_tag[:24], derived))
+        return out
 
     @property
     def live_city_list(self) -> list[str]:

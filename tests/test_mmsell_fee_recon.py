@@ -32,6 +32,17 @@ def test_coefficients_match_the_published_schedule():
     assert round(fr.MAKER_COEFF / fr.TAKER_COEFF, 6) == 0.25
 
 
+def test_the_script_and_the_engine_cannot_drift_apart():
+    """This script is deliberately self-contained (stdlib only, so it runs on a bare ops runner),
+    which means it re-declares the coefficients the engine bills with. A reconciliation whose
+    'model' columns silently disagreed with what the engine actually charges would report a
+    clean bill on a broken engine -- the exact failure it exists to catch."""
+    from kalshi_bot.paper import engine
+
+    assert fr.TAKER_COEFF == engine.TAKER_COEFF
+    assert fr.MAKER_COEFF == engine.MAKER_COEFF
+
+
 def test_fee_formula_matches_the_paper_engine():
     """coeff=0.07 at qty=1 must reproduce paper/engine.py:kalshi_fee exactly — that equality is
     what makes the 'paper' column in the report the real booked number."""

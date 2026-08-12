@@ -2,6 +2,70 @@
 
 Built 2026-08-03 off the market-type census (`docs/MMSELL_MARKET_TYPES.md`). Paper only.
 
+> ## VERDICT 2026-08-12 — the WIDE half (`Wmmsell1`–`Wmmsell8`) is RETIRED. The TIGHT half runs on.
+>
+> **Retired as UNMEASURABLE, not as disproven.** That distinction is the whole point of this
+> entry, because "we could not measure it" and "it does not work" license completely different
+> future decisions.
+>
+> Two reasons, and the second is structural:
+>
+> 1. **Their control loses money.** `mmsell` (wide band) runs −1.80¢/trade, ≈−0.93¢ after the
+>    2026-08-11 maker-fee correction. The gate here is *relative* — beat the control by ≥1.0¢ —
+>    and five W books cleared that bar while still losing money in absolute terms. The absolute
+>    floor added on 2026-08-09 exists because of exactly this. Beating a losing control is not
+>    an edge.
+> 2. **We have no fill evidence for this band at all.** Fill coverage is **19–41%**. The live
+>    calibration in `docs/MMSELL_FILL_MODEL.md` comes from real maker orders in the CHEAP band;
+>    the wide band's 10–40¢ entries have never been tested live. So for the majority of every W
+>    book's trades we cannot say whether a resting order would have filled — and paper assumes
+>    it always does. Their realizable numbers are estimates over a minority of each book.
+>
+> **The type hypothesis itself survives.** `Tmmsell1`–`Tmmsell6` test the SAME contract-type
+> axis in the tight band at **99–100%** coverage. The axis lives on; only the band dies.
+>
+> **Revival condition — evidence, not patience.** Revive the wide band only if we obtain live
+> maker fills in the 10–40¢ range. More paper cannot resolve this: paper's fill assumption is
+> precisely the thing in question, so a larger paper sample would produce a more confident
+> version of the same unfounded number.
+
+> ## VERDICT 2026-08-12 (same day, second pass) — `Tmmsell3` and `Tmmsell4` are RETIRED.
+>
+> **Retired as MEASURED AND FAILED — the opposite of the wide band's verdict above, and the
+> distinction is load-bearing.** The wide band could not be measured, which licenses a revival
+> once live fill evidence exists. These two were measured, at 99–100% fill coverage in the one
+> band we do have live evidence for, and they lost the argument. Nothing pending would change
+> that.
+>
+> Both reached their pre-registered n and beat `mmsell10` by far less than the **+1.0¢** the
+> gate asks. That gate is *relative*, so the 2026-08-11 maker-fee correction does not touch it:
+> both sides are maker books at the same clip, and the fee cancels in the difference. (The
+> family's *absolute* floor did move by ~0.87¢ on pre-boundary data — which is exactly why the
+> relative clause, not the absolute one, is what these two are retired on.)
+>
+> **The family's collective result is the real finding, and it is bigger than either book.**
+> Every tight-band type book that reached n beat the control — and not one beat it by the gate's
+> margin. At n in the hundreds that is an answer, not a shortage of data: **once you are already
+> selling ≤7¢ tails, selecting on contract structure adds approximately nothing.** The price
+> band was doing the work the type filter was being credited with. The census cells were a
+> PRIOR, and out-of-sample the prior did not survive.
+>
+> A caution for anyone reading the surviving books' realizable column: **the fill model cannot
+> discriminate inside this band.** It projects entry price only, so every tight-band book —
+> *including the control* — lands at roughly the same realizable ¢/trade. Gate condition 3 does
+> no work here, and a book cannot be promoted on it.
+>
+> `Tmmsell6` is kept as the family's best remaining type signal, and `Tmmsell1`/`Tmmsell2`/
+> `Tmmsell5` are kept because they are flow-constrained rather than failing — their n is small
+> enough that their current numbers decide nothing.
+>
+> **Revival condition.** Revive a retired T book only if it clears the +1.0¢ relative gate in a
+> DIFFERENT regime — the Sept–Nov change (NFL, MLB playoffs, NBA/NHL, the Nov-3 midterms) that
+> `docs/MMSELL_SEASONAL_FORECAST.md` says our whole history cannot speak to. More of the same
+> summer tape is not evidence: these filters were derived from that tape, and it has now been
+> asked and answered.
+
+
 ## The thesis
 
 Every mmsell book to date has been blind to what KIND of contract it is selling. The entry rule
@@ -118,51 +182,6 @@ regression test. Two consequences for reading these books:
   which excludes them, so the P&L numbers were never affected — only the row counts.
 * Before the fix no book could carry a position across a deploy, so **none of them could ever have
   reached a settled-n gate.** The clock on all 14 gates effectively starts at the fix.
-
-## RETIRED 2026-08-12 — five books reached n and failed the gate
-
-Read over the **same window for every book** (post-scan-fix, `closed_at >= 2026-08-08 12:00`),
-which is the only fair comparison — the controls carry months of extra history and their lifetime
-numbers flatter them. Controls over that window: **`mmsell` +0.55¢/ct (n=915)**,
-**`mmsell10` +1.50¢/ct (n=678)**.
-
-| book | n | ¢/ct | vs control | realizable | failed on |
-|---|---|---|---|---|---|
-| `Wmmsell1` | 1,217 | **−0.13** | — | +0.79 | **condition 1** — negative absolute at the largest n in the set |
-| `Wmmsell3` | 461 | +1.23 | +0.68 | +0.13 | condition 2 (needs ≥ +1.0¢) |
-| `Wmmsell8` | 475 | +1.65 | +1.10 | **−0.04** | **condition 3** — cleared paper, realizable went negative |
-| `Tmmsell3` | 332 | +1.63 | +0.13 | +1.31 | condition 2 |
-| `Tmmsell4` | 597 | +1.60 | +0.10 | +1.27 | condition 2 |
-
-**`Wmmsell1` is the substantive finding, not just a failed book.** It was the pure in-play book —
-the clean test of whether the live-contest clock is itself an edge. At n=1,217, the largest sample
-in either family, it is *negative*. The clock alone is not an edge, and no future book should be
-built on it without new evidence.
-
-**The tight family's collective result is more useful than any single row.** Every T book that
-reached n beat `mmsell10` — and none by more than +0.51¢ (`Tmmsell6`, the best). At n=332–597 that
-is a real answer: **once you are already selling ≤7¢ tails, selecting on contract structure adds
-approximately nothing.** The price band was doing the work the type filter was credited with. The
-census cells were a prior, and out-of-sample they did not survive.
-
-**The wide family's paper edge is an artifact of the fill assumption.** `Wmmsell2` (+1.21¢ over
-control) and `Wmmsell6` (+1.19¢) clear conditions 1 and 2 cleanly, then the maker haircut takes
-+1.76¢ → +0.13¢ — a 92% cut, at only ~36% coverage. Compare `mmsell10`: +1.50¢ → +1.29¢, a 14%
-cut at 99.8% coverage. The difference is entry price: the W books enter at ~18–20¢, inside the
-adverse-selection zone the fill model identified; the T books at ~6.5¢, below it. **Neither W book
-is promoted** — they are kept running only for the Sept–Nov out-of-sample test.
-
-Retirement removes the book from `mmsell_variants` (entries stop). It does **not** abandon open
-positions: `repository.strategy_is_kept` still matches the mmsell family, so existing positions
-settle out and their P&L lands normally.
-
-### Still running
-
-| book | why it stays |
-|---|---|
-| `Tmmsell6` | best type signal in either family (+0.51¢ over control at n=341); wants the regime change |
-| `Wmmsell2`, `Wmmsell6` | pass paper conditions 1+2; kept to see whether the realizable haircut holds |
-| `Wmmsell4`, `Wmmsell5`, `Wmmsell7`, `Tmmsell1`, `Tmmsell2`, `Tmmsell5` | n=16–61, flow-constrained. Early emptiness is supply, not a verdict — do not read `Wmmsell4`'s −11.29¢ or `Tmmsell1`'s −7.53¢ as results |
 
 ## Not included yet
 

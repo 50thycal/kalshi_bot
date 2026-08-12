@@ -203,6 +203,9 @@ def test_tracker_admits_only_its_own_arm():
         assert len(hits) == 1
         claimed[hits[0]] += 1
     assert all(v > 60 for v in claimed.values())
-    # the incumbent and every legacy book still admit everything
+    # the incumbent and every non-arm book still admit everything: only a book that
+    # DECLARES an `abarm` is partitioned, so the arms can never starve the rest of the
+    # cohort of candidates. (mmsell3 stood here until it was retired 2026-08-12;
+    # mmsell9 is the surviving non-arm variant that makes the same point.)
     assert t._book_admits_ticker(books["mmsell10"], "KX-1") is True
-    assert t._book_admits_ticker(books["mmsell3"], "KX-1") is True
+    assert t._book_admits_ticker(books["mmsell9"], "KX-1") is True

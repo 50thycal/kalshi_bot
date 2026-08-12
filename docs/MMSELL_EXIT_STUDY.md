@@ -81,3 +81,28 @@ the book — the mean was). If no rule clears for any book, the finding is "hold
 size + diversification is the right risk control" — a legitimate, expected outcome given the prior,
 and itself worth recording. A rule that clears cleanly on a promotable book (e.g. mmsell10) becomes
 the exit for the next live re-test of that book.
+
+## Available to the evo agents (strategy DSL)
+
+Both mechanics are now expressible in the evolutionary agents' strategy spec, so the fleet can
+propose, backtest and run them rather than only read about them here:
+
+```jsonc
+{"exit": {"mode": "confirmed_stop",  "stop_mid_cents": 50, "confirm_ticks": 2}}
+{"exit": {"mode": "volatility_exit", "vol_window_ticks": 6, "vol_range_cents": 15}}
+```
+
+- The stop level is read in the **position's own side**, so one field covers either leg: holding
+  NO, `stop_mid_cents: 50` is this document's `yes-mid >= 50`. (`no-mid = 100 - yes-mid`.)
+- Both are path-dependent, so they read a per-position **mid tape**: built from the entry candle
+  onward in the sandbox, and one observation per orchestrator cycle live (`MidHistory`, held in
+  the worker process). A `confirm_ticks: 3` stop therefore needs three cycles of held position
+  before it can fire, and after a restart the tape starts empty and the mode **holds** — an exit
+  rule that cannot see the path never guesses.
+- A spec missing its threshold (`confirmed_stop` with no `stop_mid_cents`, `volatility_exit` with
+  no `vol_range_cents`) is rejected at validation rather than deployed as a strategy that silently
+  never exits.
+- Backtest results report `by_exit` — which rule fired and how often — so "the stop never
+  triggered" is visible instead of indistinguishable from "held by design". The replay takes **one
+  entry per market** (matching the live per-strategy/ticker dedup); without that it would buy back
+  in on the tick after its own stop and measure a re-entry policy rather than the exit rule.

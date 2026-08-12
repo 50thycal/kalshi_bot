@@ -72,6 +72,7 @@ PERMITTED_ACTIONS = frozenset({
     "run_backtest",
     "inspect_data",
     "explore_markets",
+    "read_doc",
     "save_strategy",
     "activate_strategy",
     "deactivate_strategy",

@@ -15,7 +15,7 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from ..models import (
     CryptoLadderSnapshot,
@@ -124,6 +124,14 @@ SOURCES: dict[str, dict] = {
         filters=("city", "kind", "target_date"),
         order="captured_at",
     ),
+    # The operator's per-book SCOREBOARD — an aggregate view, not raw rows: the same
+    # n / win% / total / per-trade rollup the operator's own "PnL" command reads,
+    # grouped by paper_trades.strategy tag. Pairs with read_doc: BOOK_REGISTRY names
+    # each tag's thesis + pre-registered gate; this is how the book is actually doing.
+    "book_performance": dict(
+        virtual=True,
+        filters=("strategy", "strategy_prefix"),
+    ),
 }
 
 
@@ -133,6 +141,72 @@ def source_catalog() -> list[dict]:
         {"source": name, "filters": list(cfg["filters"])}
         for name, cfg in SOURCES.items()
     ]
+
+
+def _book_performance(
+    session, filters: dict, limit: int
+) -> tuple[dict | None, str | None]:
+    """Per-book rollup over SETTLED, non-legacy paper_trades (legacy rows are a
+    different accounting era — mixing them silently is the provenance mix the repo's
+    conventions forbid), plus each book's open-position count. Sorted by per-trade,
+    the deciding number per CLAUDE.md."""
+    applied: dict = {}
+    q = (
+        select(
+            PaperTrade.strategy,
+            func.count(PaperTrade.id),
+            func.count(PaperTrade.id).filter(PaperTrade.pnl > 0),
+            func.sum(PaperTrade.pnl),
+            func.max(PaperTrade.closed_at),
+        )
+        .where(
+            PaperTrade.status == "settled",
+            PaperTrade.legacy.is_(False),
+            PaperTrade.strategy.isnot(None),
+            PaperTrade.pnl.isnot(None),
+        )
+        .group_by(PaperTrade.strategy)
+    )
+    open_q = (
+        select(PaperPosition.strategy, func.count(PaperPosition.id))
+        .where(PaperPosition.status == "open")
+        .group_by(PaperPosition.strategy)
+    )
+    for key, value in filters.items():
+        if key == "strategy":
+            q = q.where(PaperTrade.strategy == value)  # bound param
+            open_q = open_q.where(PaperPosition.strategy == value)
+        elif key == "strategy_prefix":
+            like = f"{value}%"
+            q = q.where(PaperTrade.strategy.like(like))  # bound param
+            open_q = open_q.where(PaperPosition.strategy.like(like))
+        else:
+            return None, (
+                "cannot filter 'book_performance' by "
+                f"{key!r}; filterable columns: ['strategy', 'strategy_prefix']"
+            )
+        applied[key] = value
+    open_counts = dict(session.execute(open_q).all())
+    rows = []
+    for tag, n, wins, total, last_closed in session.execute(q):
+        total = float(total or 0.0)
+        rows.append({
+            "strategy": tag,
+            "n_settled": int(n),
+            "wins": int(wins),
+            "win_rate": round(wins / n, 3) if n else None,
+            "total_pnl_usd": round(total, 2),
+            "per_trade_usd": round(total / n, 4) if n else None,
+            "open_positions": int(open_counts.get(tag, 0)),
+            "last_settled_at": _cap_cell(last_closed),
+        })
+    rows.sort(key=lambda r: r["per_trade_usd"] or 0.0, reverse=True)
+    return {
+        "source": "book_performance",
+        "filters": applied,
+        "count": len(rows[:limit]),
+        "rows": rows[:limit],
+    }, None
 
 
 def _cap_cell(v: object) -> object:
@@ -160,6 +234,9 @@ def inspect(
     except (TypeError, ValueError):
         limit = DEFAULT_LIMIT
     limit = max(1, min(limit, MAX_LIMIT))
+
+    if cfg.get("virtual"):  # aggregate views with their own query shape
+        return _book_performance(session, filters or {}, limit)
 
     model = cfg["model"]
     columns = cfg["columns"]

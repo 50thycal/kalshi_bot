@@ -213,6 +213,24 @@ ANNOUNCEMENTS: list[dict] = [
         ),
         expires_in_days=21,
     ),
+    dict(
+        key="2026-08-operator-mirror",
+        title="New: read your operator's research library AND its live scoreboard",
+        category="capability",
+        body=(
+            "New from your operator, who researches strategies in this same repo: "
+            "you can now read ALL of it. (1) read_doc {\"name\": \"BOOK_REGISTRY\"} "
+            "— the operator's own docs (theses, studies, postmortems; full list in "
+            "your action protocol). BOOK_REGISTRY indexes every operator book: tag, "
+            "status, edge, pre-registered gate. (2) inspect_data {\"source\": "
+            "\"book_performance\"} — the LIVE scoreboard for those tags (n, win%, "
+            "per-trade P&L, open positions). Read them as a PAIR: a thesis whose "
+            "scoreboard is negative is a documented failure to learn from, not a "
+            "strategy to copy — several operator books are proven mirages. Cite the "
+            "doc + the numbers when you copy or reject an idea."
+        ),
+        expires_in_days=21,
+    ),
 ]
 
 

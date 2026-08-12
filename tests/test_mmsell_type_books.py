@@ -67,38 +67,37 @@ def test_worker_taxonomy_matches_the_ops_script():
 # ------------------------------------------------------------------ spec parsing / validation
 
 
-# The set retired 2026-08-12 after reaching n and failing the pre-registered gate
-# (docs/MMSELL_TYPE_BOOKS.md §RETIRED). Pinned as a NEGATIVE assertion: a book we have already
-# spent 300-1,200 settled trades measuring must not quietly return because a later edit rebuilt
-# the variant string from the original census.
-RETIRED = ("Wmmsell1", "Wmmsell3", "Wmmsell8", "Tmmsell3", "Tmmsell4")
-LIVE_WIDE = ("Wmmsell2", "Wmmsell4", "Wmmsell5", "Wmmsell6", "Wmmsell7")
+# The tight-band books still entering. `Tmmsell3`/`Tmmsell4` are deliberately absent —
+# retired 2026-08-12 after reaching n and failing the relative gate.
 LIVE_TIGHT = ("Tmmsell1", "Tmmsell2", "Tmmsell5", "Tmmsell6")
 
 
-def test_the_surviving_type_books_are_configured():
+def test_only_the_TIGHT_band_type_books_are_configured():
+    """The WIDE half (`Wmmsell1`–`Wmmsell8`) was RETIRED 2026-08-12 — see the VERDICT banner in
+    docs/MMSELL_TYPE_BOOKS.md. It was retired as UNMEASURABLE rather than disproven: fill
+    coverage was 19–41%, because our maker-fill calibration comes entirely from cheap-band live
+    orders and the wide band's 10–40¢ entries have never been tested live.
+
+    `Tmmsell3`/`Tmmsell4` were retired the same day on the OPPOSITE ground: they were
+    measurable and they failed, beating `mmsell10` by far less than the +1.0¢ their gate asks.
+    The distinction is worth keeping straight — "we could not measure it" licenses a revival
+    once the wide band has live fill evidence; "we measured it and it lost" does not.
+
+    Asserted as ABSENCE, not just by omission, so a merge that re-adds them has to argue with a
+    test rather than slip through."""
     books = _books()
-    for tag in LIVE_WIDE:
-        assert tag in books, "wide-band type book missing"
+    for i in range(1, 9):
+        assert f"Wmmsell{i}" not in books, "retired wide-band book is configured again"
+    for tag in ("Tmmsell3", "Tmmsell4"):
+        assert tag not in books, f"{tag} failed its gate 2026-08-12 and was retired"
     for tag in LIVE_TIGHT:
         assert tag in books, "tight-band type book missing"
 
 
-def test_retired_type_books_stay_retired():
-    """Each of these answered its question at n and failed. Re-running one would burn flow on a
-    settled result and, worse, re-enter it into every future census as if it were untested."""
-    books = _books()
-    for tag in RETIRED:
-        assert tag not in books, f"{tag} was retired 2026-08-12 — see docs/MMSELL_TYPE_BOOKS.md"
-
-
-def test_wide_books_share_the_control_band_and_tight_books_the_mmsell10_band():
-    """Each family differs from its control ONLY by the type filter — that is what makes the
+def test_tight_books_share_the_mmsell10_band():
+    """Each book differs from its control ONLY by the type filter — that is what makes the
     difference attributable to the type rather than to the band."""
     books = _books()
-    for tag in LIVE_WIDE:
-        b = books[tag]
-        assert (b["lo"], b["hi"], b["maxyes"]) == (5.0, 40.0, None)
     for tag in LIVE_TIGHT:
         b = books[tag]
         assert (b["lo"], b["hi"], b["maxyes"]) == (5.0, 10.0, 7.0)
@@ -200,18 +199,32 @@ def test_type_filter_composes_with_the_legacy_series_filters():
 
 
 @pytest.mark.parametrize("tag,series,expected", [
-    ("Wmmsell4", "KXBTCD", True),        # price_strike only
-    ("Wmmsell4", "KXWCGOAL", False),
-    ("Wmmsell5", "KXTRUMPSAY", True),    # mention only
-    ("Wmmsell6", "KXMLBTOTAL", False),   # blocklist drops total
-    ("Wmmsell6", "KXWCGOAL", True),
-    ("Wmmsell7", "KXBTCD", True),        # no-clock
-    ("Wmmsell7", "KXMLBGAME", False),
     ("Tmmsell6", "KXMLBTOTAL", False),   # total not a both-band survivor
     ("Tmmsell6", "KXWCGOAL", True),
 ])
 def test_configured_books_admit_what_their_thesis_says(tag, series, expected):
     assert admits(_books()[tag], series) is expected
+
+
+# The wide-band books were the only exercise of several filter paths (`mode=in_play`,
+# `mtype=price_strike`, `mtype=mention`, a bare `xmtype` blocklist, and `mode` composed with
+# `xmtype`). Retiring the BOOKS must not retire the coverage, so the same cases run here against
+# ad-hoc specs — these assert the FILTER, which is still live for any future book that uses it.
+@pytest.mark.parametrize("spec,series,expected", [
+    ("mode=in_play", "KXMLBGAME", True),
+    ("mode=in_play", "KXBTCD", False),
+    ("mtype=price_strike", "KXBTCD", True),
+    ("mtype=price_strike", "KXWCGOAL", False),
+    ("mtype=mention", "KXTRUMPSAY", True),
+    ("xmtype=total+h2h+event_stat+announcement+politics", "KXMLBTOTAL", False),
+    ("xmtype=total+h2h+event_stat+announcement+politics", "KXWCGOAL", True),
+    ("mode=scheduled+discrete,xmtype=event_stat+politics+announcement", "KXBTCD", True),
+    ("mode=scheduled+discrete,xmtype=event_stat+politics+announcement", "KXMLBGAME", False),
+    ("mtype=player_prop+mention+spread+outright", "KXPGATOUR", True),
+])
+def test_the_type_filter_paths_the_retired_wide_books_used_still_work(spec, series, expected):
+    book = _books(mmsell_variants=f"Xmmsell1:lo=5,hi=40,{spec}")["Xmmsell1"]
+    assert admits(book, series) is expected
 
 
 # ------------------------------------------------------------------ downstream tag handling
@@ -231,7 +244,7 @@ def test_type_book_tags_hold_to_settlement():
 
 def test_type_book_tags_are_resolvable_as_books():
     s = _settings()
-    for tag in ("Wmmsell2", "Tmmsell6"):
+    for tag in ("Tmmsell1", "Tmmsell6"):
         assert s.mmsell_book_by_tag(tag) is not None
     assert s.mmsell_book_by_tag("nosuchbook") is None
 
@@ -250,12 +263,8 @@ def test_type_books_survive_the_foreign_position_sweep():
     from kalshi_bot.repository import strategy_is_kept
 
     keep = ("weather", "mmsell", "theta")
-    for tag in ("mmsell", "mmsell10", "mmsellA1", "Wmmsell2", "Wmmsell6",
-                "Tmmsell1", "Tmmsell6", "mmsell10_pt",
-                # Retired 2026-08-12. Retiring stops NEW entries; the open positions a retired
-                # book still holds MUST keep settling out rather than being abandoned, or its
-                # final trades vanish from the record that justified retiring it.
-                "Wmmsell1", "Tmmsell4"):
+    for tag in ("mmsell", "mmsell10", "mmsellA1", "Wmmsell1", "Wmmsell8",
+                "Tmmsell1", "Tmmsell6", "mmsell10_pt"):
         assert strategy_is_kept(tag, keep) is True, f"{tag} would be abandoned on restart"
     for tag in ("pin15", "wcprop", "xgame", "tfav", None, ""):
         assert strategy_is_kept(tag, keep) is False

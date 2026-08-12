@@ -20,6 +20,44 @@ def test_kalshi_fee_rounds_up_to_cent():
     assert kalshi_fee(50, 10) == 0.18  # 0.07*10*0.25 = 0.175 -> 0.18
     assert kalshi_fee(61, 0) == 0.0
     assert kalshi_fee(61, 1, enabled=False) == 0.0
+    # taker stays the default: a call site that says nothing is billed the crossing rate
+    assert kalshi_fee(93, 1) == kalshi_fee(93, 1, maker=False) == 0.01
+
+
+def test_maker_fee_is_the_published_maker_rate_and_is_not_ceilinged():
+    """The bug this pins, measured live on 2026-08-10: paper billed 1.000c/contract on mmsell
+    entries while Kalshi billed 0.003c/ct on the real maker fills (n=342). mmsell earns 1-2c/ct,
+    so paper was deleting roughly half the edge -- and the parity report called all three live
+    pairs an ACCOUNTING GAP of 0.69-0.98c/ct as a direct result.
+
+    Two things were wrong, and fixing only the coefficient would have fixed neither: the maker
+    rate is a quarter of the taker rate, AND the per-order ceiling rounds any sub-cent fee up to
+    a whole cent -- which at a 1-contract clip swallows the coefficient completely."""
+    # 0.07 * 0.93 * 0.07 = 0.4557c -> ceiled to a whole cent -> 1c. That is the overcharge.
+    assert kalshi_fee(93, 1) == 0.01
+    # maker: 0.0175 * 0.93 * 0.07 = 0.1139c, and NOT rounded up to a cent
+    assert kalshi_fee(93, 1, maker=True) == 0.0011
+    # the correction is worth ~0.9c/contract at the price mmsell actually trades
+    assert round((kalshi_fee(93, 1) - kalshi_fee(93, 1, maker=True)) * 100, 2) == 0.89
+    # `enabled=False` still wins over `maker`
+    assert kalshi_fee(93, 1, enabled=False, maker=True) == 0.0
+    assert kalshi_fee(93, 0, maker=True) == 0.0
+    assert kalshi_fee(None, 1, maker=True) == 0.0
+
+
+def test_maker_fee_scales_with_clip_instead_of_jumping_per_order():
+    """Why the ceiling mattered beyond its size: it made the fee depend on CLIP, so a 1-contract
+    book and a 2-contract book were charged different per-contract rates for identical trades.
+    That silently biased every cross-book comparison -- and it is exactly what made the 2-contract
+    twin look cheaper per contract than its 1-contract parent."""
+    # paper_trades.fees is Numeric(14,4), so the fee is quantized to $0.0001 and exact linearity
+    # is not available -- but the per-contract rate must be stable to within that one tick,
+    # rather than halving as the clip doubles the way the ceiling made it.
+    per_ct = [kalshi_fee(93, q, maker=True) / q for q in (1, 2, 5, 10, 50)]
+    assert max(per_ct) - min(per_ct) <= 0.0001
+    # the taker path does NOT have this property -- 1 contract and 2 contracts both cost 1c,
+    # so doubling the clip halves the per-contract fee. That is the artifact, stated as a test.
+    assert kalshi_fee(93, 1) == kalshi_fee(93, 2) == 0.01
 
 
 def test_directional_buys_favorite():

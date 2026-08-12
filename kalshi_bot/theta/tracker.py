@@ -601,7 +601,8 @@ class ThetaTracker:
                             recorder.discard(ticker)
                         break
 
-                    fee = kalshi_fee(price, qty, s.paper_fees_enabled)
+                    # Rests at the no-bid (post_only), so this entry is billed maker, not taker.
+                    fee = kalshi_fee(price, qty, s.paper_fees_enabled, maker=True)
                     repo.create_paper_trade(
                         session,
                         signal_id=None,

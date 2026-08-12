@@ -149,6 +149,8 @@
     <div class="hrow">
       <h1>Live vs Paper</h1>
       <select id="runsel" aria-label="Paired run"></select>
+      <label class="dim" style="font-size:11px" title="Retired pairs are kept for history but hidden by default">
+        <input type="checkbox" id="showretired"> retired</label>
       <span id="tags"></span>
       <span id="states"></span>
       <span style="margin-left:auto"></span>
@@ -407,7 +409,9 @@ function positionCard(sel, side, s, positions, tags){
     `<div class="card-hd"><span class="swatch ${cls}"></span><h3>${side === "live" ? "Live (real money)" : "Paper twin"}</h3>
       <span class="tag ${cls}" style="margin-left:auto">${esc(s.tag)}</span></div>
      <div class="big ${sign(s.total_pnl_usd)}">${has(s.total_pnl_usd) ? esc(signedUsd(s.total_pnl_usd)) : EM}</div>
-     <div class="dim" style="font-size:11px;margin-bottom:10px">total P&amp;L = realized + unrealized</div>
+     <div class="dim" style="font-size:11px;margin-bottom:10px">total P&amp;L = realized + unrealized${
+       side === "live" ? "" :
+       " &middot; simulated — no real order was ever sent for this tag"}</div>
      <dl class="kv">
        <dt>Realized</dt><dd>${money(s.realized_pnl_usd)}</dd>
        <dt>Unrealized</dt><dd>${money(s.unrealized_pnl_usd)}</dd>
@@ -852,16 +856,48 @@ async function selectRun(tag){
   await loadRun(); await loadSeries(); await loadOrders(false); await loadEvents(true);
   renderHistory();
 }
+// Two readability rules live here, both from operators misreading the header:
+//
+//  1. Label each option with BOTH tags. The value is keyed by the twin tag (it is the unique
+//     one), but showing only that read as "this whole page is about the paper book" -- and since
+//     every dollar figure on the live card is real money, a paper tag titling a real-money page
+//     is exactly the wrong impression. "<live> vs <twin>" says what this selects: a PAIR.
+//  2. Hide ENDED pairs unless asked for. Every parameter change to a live book supersedes its
+//     twin epoch and mints a new tag (twin_tag is UNIQUE, so an epoch can never be reopened), so
+//     retired pairs accumulate forever and drown the two or three that are actually trading.
+//     They stay reachable -- the checkbox, or ?run=<tag>, which also force-shows the selection.
+//
+// No literal tag may appear in this file: the run is chosen at runtime from /api/runs.
+function renderRunOptions(){
+  const all = S.runs.runs.map(r => r.twin_tag);
+  const live = all.filter(t => !S.byTag[t].ended_at);
+  const show = ($("#showretired").checked || !live.length)
+    ? all
+    : all.filter(t => live.includes(t) || t === S.tag);
+  const retired = all.length - live.length;
+  $("#runsel").innerHTML = show.map(t =>
+    `<option value="${esc(t)}" ${t===S.tag?"selected":""}>${
+      esc(S.byTag[t].live_tag ? `${S.byTag[t].live_tag} vs ${t}` : t)
+    }${S.byTag[t].ended_at?" (ended)":""}</option>`).join("")
+    || `<option value="">(no paired runs)</option>`;
+  $("#showretired").parentElement.hidden = !retired;
+  $("#showretired").parentElement.lastChild.textContent =
+    ` ${retired} retired`;
+}
+
 async function boot(){
   try{
     S.runs = await getJSON("/api/runs");
     const wanted = new URLSearchParams(location.search).get("run");
     const known = S.runs.runs.map(r => r.twin_tag);
-    S.tag = (wanted && known.includes(wanted)) ? wanted : (S.runs.default_run || known[0]);
-    const endedByTag = Object.fromEntries(S.runs.runs.map(r => [r.twin_tag, !!r.ended_at]));
-    $("#runsel").innerHTML = known.map(t =>
-      `<option value="${esc(t)}" ${t===S.tag?"selected":""}>${esc(t)}${endedByTag[t]?" (ended)":""}</option>`).join("")
-      || `<option value="">(no paired runs)</option>`;
+    S.byTag = Object.fromEntries(S.runs.runs.map(r => [r.twin_tag, r]));
+    // Landing on a retired pair is how you end up reading a dead book's numbers as current, so
+    // an explicit ?run= wins, then a still-running pair, and only then whatever the API defaults
+    // to (which may itself be retired once every book has been superseded).
+    const firstLive = known.find(t => !S.byTag[t].ended_at);
+    S.tag = (wanted && known.includes(wanted)) ? wanted
+      : (firstLive || S.runs.default_run || known[0]);
+    renderRunOptions();
     renderHistory();
     if(!S.tag){
       $("#fatal").hidden = false;
@@ -874,6 +910,7 @@ async function boot(){
 }
 
 $("#runsel").onchange = e => selectRun(e.target.value).catch(x=>fatal(x.message));
+$("#showretired").onchange = () => renderRunOptions();
 $("#refresh").onclick = () => selectRun(S.tag).catch(e=>fatal(e.message));
 $("#sermode").onchange = e => { S.serMode = e.target.value; renderPnlChart(); };
 $("#serwin").onchange = e => { S.serWin = e.target.value; loadSeries().catch(x=>fatal(x.message)); };

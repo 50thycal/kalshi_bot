@@ -531,9 +531,23 @@ def maybe_finalize_cohort(
     wildcard_slot = next_cohort.wildcard_cohort
     parents = list(groups["top"])
     skipped_parent: str | None = None
-    if wildcard_slot and parents:
+    if wildcard_slot and len(parents) > 1:
         skipped_parent = parents[-1].agent_uuid  # lowest-ranked top agent skips
         parents = parents[:-1]
+    elif wildcard_slot:
+        # Only ONE reproduction slot exists (top_fraction of a small fleet), so
+        # taking it for the wildcard would mean the winner produces no offspring
+        # at all and its genome dies with the cohort — observed live at the
+        # 2026-08-09 boundary, which finalized `children: 0` on a 3-agent fleet.
+        # Inheritance beats diversity when only one of them fits: defer the
+        # wildcard to the next wildcard cohort. It cannot simply be additive —
+        # births must equal retirements or the population overshoots
+        # effective_population_size() and reconcile_population suspends the
+        # newborn on the very next cycle.
+        wildcard_slot = False
+        audit(session, "wildcard_deferred", cohort_id=cohort.id,
+              reason="only one reproduction slot — the winner's child takes priority",
+              top_slots=len(parents))
     children: list[str] = []
     for row in parents:
         parent = agents[row.agent_uuid]

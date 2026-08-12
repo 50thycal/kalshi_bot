@@ -135,6 +135,14 @@ def run() -> int:
         log_event(logger, logging.INFO, "live/paper twins configured",
                   pairs=[f"{sp.live_tag}->{sp.twin_tag}" for sp in twin_harness.specs],
                   armed=[sp.twin_tag for sp in twin_harness.active_specs()])
+        # LIVE_PAPER_TWINS outranks LIVE_PAPER_TWIN_SUFFIX, and the loser is otherwise silent:
+        # bumping the suffix to cut a fresh epoch is a NO-OP while an explicit entry names the old
+        # tag, and the worker just keeps writing the previous epoch. Say so at startup — this is
+        # the one moment the disagreement is cheap to notice.
+        for live_tag, explicit, derived in settings.live_paper_twin_shadowed_pairs:
+            log_event(logger, logging.WARNING, "twin suffix is being ignored for this book",
+                      live_tag=live_tag, using=explicit, suffix_would_give=derived,
+                      fix="clear this book's entry from LIVE_PAPER_TWINS to follow the suffix")
     # A live book dropped from LIVE_STRATEGIES (retired, e.g. mmsell10 -> mmsell10a/mmsell10b)
     # otherwise leaves its dashboard pair open forever with no explanation — see
     # repo.reconcile_stale_twin_epochs. Startup-only: retirement is a deliberate, infrequent
