@@ -21,6 +21,25 @@ fm = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(fm)  # type: ignore[union-attr]
 
 
+def test_pnl_is_normalized_to_one_fee_model_and_that_model_matches_the_engine():
+    """The 2026-08-11 re-baseline. `paper_trades.pnl` carries whatever fee the engine charged at
+    the time, and the engine changed that day (resting maker entries had been billed the TAKER
+    rate, ~1c/contract against Kalshi's real 0.003c). Averaging raw pnl across the boundary blends
+    two fee models and makes each book's EDGE/MIRAGE label drift with WHEN it traded rather than
+    HOW -- so every P&L this script reads adds the stored fee back and re-applies the maker fee.
+
+    The coefficient is restated here rather than imported (the script must stay stdlib-only to run
+    on a bare ops runner), which is exactly the kind of duplicate that rots silently."""
+    from kalshi_bot.paper import engine
+
+    assert fm.MAKER_COEFF == engine.MAKER_COEFF
+    # the normalization must undo the stored fee, not stack on top of it
+    assert "p.pnl + coalesce(p.fees,0)" in fm._PNL_NORM
+    assert str(fm.MAKER_COEFF) in fm._PNL_NORM
+    # and it must scale with the clip, or multi-contract books are mis-normalized
+    assert "coalesce(p.quantity,1)" in fm._PNL_NORM
+
+
 def test_no_calibration_means_no_coverage():
     # A book at prices the live data never covered -> no estimate, but optimistic still computed.
     hist = {7: [10, 12.0]}  # 10 trades, +1.2c avg
