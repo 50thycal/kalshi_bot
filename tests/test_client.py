@@ -114,3 +114,40 @@ def test_cancel_events_order_deletes_v2_events_path(settings):
     with KalshiClient(settings) as client:
         client.cancel_events_order("K-1")
     assert route.call_count == 1
+
+
+@respx.mock
+def test_tier_upgrade_sends_a_json_content_type(settings):
+    """Kalshi rejects the ADVANCED upgrade with `400 invalid_content_type` unless the POST
+    carries a JSON content type — observed live 2026-08-12.
+
+    The endpoint takes no parameters, so the natural call omits the body; httpx then sends no
+    `Content-Type` header at all and the request is refused. An empty `{}` body is what makes
+    httpx emit the header. Asserted at the transport layer because nothing above it can see the
+    difference: the call looks identical either way, and the whole thing failed in production
+    while every unit test passed."""
+    base = settings.kalshi_base_url
+    route = respx.post(f"{base}/account/api_usage_level/upgrade").mock(
+        return_value=Response(201)
+    )
+    with KalshiClient(settings) as client:
+        client.upgrade_api_usage_level()
+
+    req = route.calls.last.request
+    assert req.headers.get("content-type", "").startswith("application/json")
+    assert req.content == b"{}"
+
+
+@respx.mock
+def test_account_limits_is_a_plain_get(settings):
+    """The read path must stay a GET with no body — it is the one call that must never be able
+    to mutate the account."""
+    base = settings.kalshi_base_url
+    route = respx.get(f"{base}/account/limits").mock(
+        return_value=Response(200, json={"usage_tier": "basic"})
+    )
+    with KalshiClient(settings) as client:
+        assert client.get_account_limits() == {"usage_tier": "basic"}
+
+    assert route.calls.last.request.method == "GET"
+    assert not route.calls.last.request.content
