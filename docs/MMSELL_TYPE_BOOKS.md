@@ -119,6 +119,51 @@ regression test. Two consequences for reading these books:
 * Before the fix no book could carry a position across a deploy, so **none of them could ever have
   reached a settled-n gate.** The clock on all 14 gates effectively starts at the fix.
 
+## RETIRED 2026-08-12 — five books reached n and failed the gate
+
+Read over the **same window for every book** (post-scan-fix, `closed_at >= 2026-08-08 12:00`),
+which is the only fair comparison — the controls carry months of extra history and their lifetime
+numbers flatter them. Controls over that window: **`mmsell` +0.55¢/ct (n=915)**,
+**`mmsell10` +1.50¢/ct (n=678)**.
+
+| book | n | ¢/ct | vs control | realizable | failed on |
+|---|---|---|---|---|---|
+| `Wmmsell1` | 1,217 | **−0.13** | — | +0.79 | **condition 1** — negative absolute at the largest n in the set |
+| `Wmmsell3` | 461 | +1.23 | +0.68 | +0.13 | condition 2 (needs ≥ +1.0¢) |
+| `Wmmsell8` | 475 | +1.65 | +1.10 | **−0.04** | **condition 3** — cleared paper, realizable went negative |
+| `Tmmsell3` | 332 | +1.63 | +0.13 | +1.31 | condition 2 |
+| `Tmmsell4` | 597 | +1.60 | +0.10 | +1.27 | condition 2 |
+
+**`Wmmsell1` is the substantive finding, not just a failed book.** It was the pure in-play book —
+the clean test of whether the live-contest clock is itself an edge. At n=1,217, the largest sample
+in either family, it is *negative*. The clock alone is not an edge, and no future book should be
+built on it without new evidence.
+
+**The tight family's collective result is more useful than any single row.** Every T book that
+reached n beat `mmsell10` — and none by more than +0.51¢ (`Tmmsell6`, the best). At n=332–597 that
+is a real answer: **once you are already selling ≤7¢ tails, selecting on contract structure adds
+approximately nothing.** The price band was doing the work the type filter was credited with. The
+census cells were a prior, and out-of-sample they did not survive.
+
+**The wide family's paper edge is an artifact of the fill assumption.** `Wmmsell2` (+1.21¢ over
+control) and `Wmmsell6` (+1.19¢) clear conditions 1 and 2 cleanly, then the maker haircut takes
++1.76¢ → +0.13¢ — a 92% cut, at only ~36% coverage. Compare `mmsell10`: +1.50¢ → +1.29¢, a 14%
+cut at 99.8% coverage. The difference is entry price: the W books enter at ~18–20¢, inside the
+adverse-selection zone the fill model identified; the T books at ~6.5¢, below it. **Neither W book
+is promoted** — they are kept running only for the Sept–Nov out-of-sample test.
+
+Retirement removes the book from `mmsell_variants` (entries stop). It does **not** abandon open
+positions: `repository.strategy_is_kept` still matches the mmsell family, so existing positions
+settle out and their P&L lands normally.
+
+### Still running
+
+| book | why it stays |
+|---|---|
+| `Tmmsell6` | best type signal in either family (+0.51¢ over control at n=341); wants the regime change |
+| `Wmmsell2`, `Wmmsell6` | pass paper conditions 1+2; kept to see whether the realizable haircut holds |
+| `Wmmsell4`, `Wmmsell5`, `Wmmsell7`, `Tmmsell1`, `Tmmsell2`, `Tmmsell5` | n=16–61, flow-constrained. Early emptiness is supply, not a verdict — do not read `Wmmsell4`'s −11.29¢ or `Tmmsell1`'s −7.53¢ as results |
+
 ## Not included yet
 
 Entry-timing twins (`<tag>.timeX`) are deliberately **not** built here. The census showed

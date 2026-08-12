@@ -67,23 +67,40 @@ def test_worker_taxonomy_matches_the_ops_script():
 # ------------------------------------------------------------------ spec parsing / validation
 
 
-def test_the_fourteen_type_books_are_configured():
+# The set retired 2026-08-12 after reaching n and failing the pre-registered gate
+# (docs/MMSELL_TYPE_BOOKS.md §RETIRED). Pinned as a NEGATIVE assertion: a book we have already
+# spent 300-1,200 settled trades measuring must not quietly return because a later edit rebuilt
+# the variant string from the original census.
+RETIRED = ("Wmmsell1", "Wmmsell3", "Wmmsell8", "Tmmsell3", "Tmmsell4")
+LIVE_WIDE = ("Wmmsell2", "Wmmsell4", "Wmmsell5", "Wmmsell6", "Wmmsell7")
+LIVE_TIGHT = ("Tmmsell1", "Tmmsell2", "Tmmsell5", "Tmmsell6")
+
+
+def test_the_surviving_type_books_are_configured():
     books = _books()
-    for i in range(1, 9):
-        assert f"Wmmsell{i}" in books, "wide-band type book missing"
-    for i in range(1, 7):
-        assert f"Tmmsell{i}" in books, "tight-band type book missing"
+    for tag in LIVE_WIDE:
+        assert tag in books, "wide-band type book missing"
+    for tag in LIVE_TIGHT:
+        assert tag in books, "tight-band type book missing"
+
+
+def test_retired_type_books_stay_retired():
+    """Each of these answered its question at n and failed. Re-running one would burn flow on a
+    settled result and, worse, re-enter it into every future census as if it were untested."""
+    books = _books()
+    for tag in RETIRED:
+        assert tag not in books, f"{tag} was retired 2026-08-12 — see docs/MMSELL_TYPE_BOOKS.md"
 
 
 def test_wide_books_share_the_control_band_and_tight_books_the_mmsell10_band():
     """Each family differs from its control ONLY by the type filter — that is what makes the
     difference attributable to the type rather than to the band."""
     books = _books()
-    for i in range(1, 9):
-        b = books[f"Wmmsell{i}"]
+    for tag in LIVE_WIDE:
+        b = books[tag]
         assert (b["lo"], b["hi"], b["maxyes"]) == (5.0, 40.0, None)
-    for i in range(1, 7):
-        b = books[f"Tmmsell{i}"]
+    for tag in LIVE_TIGHT:
+        b = books[tag]
         assert (b["lo"], b["hi"], b["maxyes"]) == (5.0, 10.0, 7.0)
 
 
@@ -183,8 +200,6 @@ def test_type_filter_composes_with_the_legacy_series_filters():
 
 
 @pytest.mark.parametrize("tag,series,expected", [
-    ("Wmmsell1", "KXMLBGAME", True),     # in_play
-    ("Wmmsell1", "KXBTCD", False),       # scheduled
     ("Wmmsell4", "KXBTCD", True),        # price_strike only
     ("Wmmsell4", "KXWCGOAL", False),
     ("Wmmsell5", "KXTRUMPSAY", True),    # mention only
@@ -192,9 +207,6 @@ def test_type_filter_composes_with_the_legacy_series_filters():
     ("Wmmsell6", "KXWCGOAL", True),
     ("Wmmsell7", "KXBTCD", True),        # no-clock
     ("Wmmsell7", "KXMLBGAME", False),
-    ("Wmmsell8", "KXPGATOUR", True),     # outright is in the high-conviction set
-    ("Tmmsell3", "KXMLBTOTAL", True),    # total is +EV in the TIGHT band only
-    ("Tmmsell4", "KXMLBGAME", False),    # h2h blocked in the tight band
     ("Tmmsell6", "KXMLBTOTAL", False),   # total not a both-band survivor
     ("Tmmsell6", "KXWCGOAL", True),
 ])
@@ -219,7 +231,7 @@ def test_type_book_tags_hold_to_settlement():
 
 def test_type_book_tags_are_resolvable_as_books():
     s = _settings()
-    for tag in ("Wmmsell1", "Tmmsell6"):
+    for tag in ("Wmmsell2", "Tmmsell6"):
         assert s.mmsell_book_by_tag(tag) is not None
     assert s.mmsell_book_by_tag("nosuchbook") is None
 
@@ -238,8 +250,12 @@ def test_type_books_survive_the_foreign_position_sweep():
     from kalshi_bot.repository import strategy_is_kept
 
     keep = ("weather", "mmsell", "theta")
-    for tag in ("mmsell", "mmsell10", "mmsellA1", "Wmmsell1", "Wmmsell8",
-                "Tmmsell1", "Tmmsell6", "mmsell10_pt"):
+    for tag in ("mmsell", "mmsell10", "mmsellA1", "Wmmsell2", "Wmmsell6",
+                "Tmmsell1", "Tmmsell6", "mmsell10_pt",
+                # Retired 2026-08-12. Retiring stops NEW entries; the open positions a retired
+                # book still holds MUST keep settling out rather than being abandoned, or its
+                # final trades vanish from the record that justified retiring it.
+                "Wmmsell1", "Tmmsell4"):
         assert strategy_is_kept(tag, keep) is True, f"{tag} would be abandoned on restart"
     for tag in ("pin15", "wcprop", "xgame", "tfav", None, ""):
         assert strategy_is_kept(tag, keep) is False

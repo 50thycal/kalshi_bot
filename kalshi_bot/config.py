@@ -265,20 +265,28 @@ class Settings(BaseSettings):
         # type effect. No book carries a stop, vol gate or strangle: those mechanics are the
         # anchor set's experiment and would confound this one.
         #
+        # RETIRED 2026-08-12 — reached their pre-registered n and FAILED their gate. Five books
+        # are deliberately absent from the lists below; the entries stay commented here so the
+        # experiment's shape is still readable and a future census cannot silently "rediscover"
+        # a cell we already measured (docs/MMSELL_TYPE_BOOKS.md "Retired" table has the numbers):
+        #   Wmmsell1:lo=5,hi=40,mode=in_play                      n=1217  -0.13c  <- negative absolute
+        #   Wmmsell3:lo=5,hi=40,mtype=player_prop+spread+game_prop n=461  +0.68c over control
+        #   Wmmsell8:lo=5,hi=40,mtype=player_prop+mention+spread+outright n=475 realizable -0.04c
+        #   Tmmsell3:lo=5,hi=10,maxyes=7,mtype=player_prop+total+spread   n=332  +0.13c over control
+        #   Tmmsell4:lo=5,hi=10,maxyes=7,xmtype=h2h+game_prop+...         n=597  +0.10c over control
+        # Retiring a book only stops NEW entries: `repository.strategy_is_kept` still matches the
+        # mmsell family, so open positions are NOT abandoned and settle out normally — which is
+        # what we want, since the book is held to settlement and those trades are already paid for.
+        #
         # Wide-band books (read against `mmsell`):
-        "Wmmsell1:lo=5,hi=40,mode=in_play;"
         "Wmmsell2:lo=5,hi=40,mtype=player_prop+spread+exact_score+game_prop+h2h_period;"
-        "Wmmsell3:lo=5,hi=40,mtype=player_prop+spread+game_prop;"
         "Wmmsell4:lo=5,hi=40,mtype=price_strike;"
         "Wmmsell5:lo=5,hi=40,mtype=mention;"
         "Wmmsell6:lo=5,hi=40,xmtype=total+h2h+event_stat+announcement+politics;"
         "Wmmsell7:lo=5,hi=40,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;"
-        "Wmmsell8:lo=5,hi=40,mtype=player_prop+mention+spread+outright;"
         # Tight-band books (read against `mmsell10`):
         "Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;"
         "Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;"
-        "Tmmsell3:lo=5,hi=10,maxyes=7,mtype=player_prop+total+spread;"
-        "Tmmsell4:lo=5,hi=10,maxyes=7,xmtype=h2h+game_prop+event_stat+politics+announcement;"
         "Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,"
         "xmtype=event_stat+politics+announcement;"
         "Tmmsell6:lo=5,hi=10,maxyes=7,"
