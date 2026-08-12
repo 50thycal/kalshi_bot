@@ -16,6 +16,44 @@ Conventions:
 
 ---
 
+## BOOK VERDICT 2026-08-12 — `weather_con` and `weather_concity` RETIRED. Weather has no book left.
+
+`weather_consensus_enabled=False`, `weather_con_city_enabled=False`. The consensus layer was the
+last weather book still entering; every other cell was pruned by 2026-07-04.
+
+| book | n | win% | total | EV/trade |
+|---|---|---|---|---|
+| `weather_con` | 775 | 34.7% | −$27.14 | **−3.50¢** |
+| `weather_concity` | 203 | 34.0% | −$16.83 | **−8.29¢** |
+
+**`concity` answered its own question, in the negative — that is the durable finding here.** The
+hypothesis (2026-07-10) was that con's loss is diluted by bad cities: the all-time by-city history
+showed AUS/CHI/NYC carrying an edge and MIA/DEN/PHIL bleeding, so restricting entries to the three
+winners should turn con positive. It did the opposite. On the SAME consensus picks, restricting to
+the historical edge cities was **more than twice as bad** as taking all of them.
+
+That is what per-city selection looks like when the per-city ranking was noise. With n=23–63 per
+city, the "edge cities" were the upper tail of a null distribution, and selecting on them bought
+the sampling error rather than the signal. **Generalize this before slicing any losing book by a
+dimension chosen from its own history** — the slice will look best exactly where the noise was
+kindest, and forward performance regresses to the book's true mean or worse.
+
+Note on the fee correction: weather books enter at the ASK — they are genuine takers, so the
+2026-08-11 maker-fee fix (`docs/BOOK_REGISTRY.md`, FEE RE-BASELINE) does not touch these numbers.
+Unlike the mmsell cohort, there is nothing to add back. −3.50¢ and −8.29¢ are what they are.
+
+**The DATA collection stays on.** `weather_ensemble_enabled`, `weather_obs_enabled` and
+`weather_polymarket_enabled` are unchanged: they feed `weather_forecast_outcomes`, the persisted
+forecast→settlement dataset that makes the cal/dist/pm questions answerable later. Retiring a book
+is not the same as abandoning the domain, and the dataset is the asset that survives the books.
+
+**Revival condition:** a forecast edge demonstrated OFFLINE against `weather_forecast_outcomes`
+(the validation dataset now exists precisely so this can be done without paying for it in paper
+trades), pre-registered, before any book re-enters.
+
+---
+
+
 ## CENSUS VERDICT 2026-07-26 — WIDEQUOTE: RULED OUT (C1/C2 fail, both auto-discovered and named candidates)
 
 Ran `kalshi_widequote_census` via the ops channel after PR #119 merged — two passes.

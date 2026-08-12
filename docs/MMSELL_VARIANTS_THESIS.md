@@ -7,6 +7,41 @@ Status: **BUILT as ride-along PAPER variants (config `mmsell_variants`), inert t
 (`docs/RESEARCH_JOURNAL.md`, `docs/edge_research.md`); the loop checker tracks them via
 `docs/BOOK_REGISTRY.md`.
 
+
+> ## VERDICT 2026-08-12 — `mmsell1`, `mmsell2`, `mmsell3`, `mmsell4` and `mmsell11` are RETIRED.
+> ## `mmsell5`, `mmsell8`, `mmsell9`, `mmsell10` run on; `mmsell6`/`mmsell7` are UNDECIDED.
+>
+> All figures below are realizable ¢/contract from `mmsell fill model`, normalized to one fee
+> model (see the FEE RE-BASELINE section of `docs/BOOK_REGISTRY.md`) — so they are directly
+> comparable to each other and to numbers taken after 2026-08-11.
+>
+> **Retired for being indistinguishable from zero**, not for losing:
+>
+> * `mmsell3` **+0.02¢** — and this is the one book with LIVE ground truth. It traded real money
+>   2026-07-13→19 and realized **+0.18¢/trade at n=359** (`docs/MMSELL_LIVE_POSTMORTEM.md`).
+>   Paper and live now agree that it is breakeven. Breakeven does not earn capital, and it does
+>   not earn a slot.
+> * `mmsell11` **+0.04¢** — the no-late-entry filter (`htcmin=6`) cost flow without moving
+>   per-trade.
+> * `mmsell4` **+0.04¢** — the skip-list variant never separated from its parent.
+> * `mmsell1` / `mmsell2` — retired for a different reason: **fill coverage of 49.6% and 19.5%.**
+>   Their wider bands trade at prices our live calibration has never observed a maker fill at, so
+>   their numbers describe a minority of each book.
+>
+> **The successor covers the same ground better.** `mmsell10` (the `maxyes=7` price ceiling) runs
+> **99.8%** coverage at **+2.19¢** realizable. The ceiling is what makes it fillable, and
+> fillability is the whole difference — it is not a smaller version of these books, it is the
+> part of them that a resting order can actually transact.
+>
+> **`mmsell6` (+0.64¢) and `mmsell7` (+0.59¢) are KEPT and explicitly UNDECIDED.** Positive but
+> thin. They are not being carried on sentiment: if they are still under +1.0¢ when the tight-band
+> cohort next reaches its gate, they should go the same way.
+>
+> **Revival condition for all five:** a mechanically different entry, pre-registered. Not a
+> re-read of this data — it has now been read against two fee models and a live postmortem, and
+> it says the same thing each time.
+
+
 ## What the data showed (the motivation)
 
 mmsell3 (yes 5–10¢ maker-sell, hold to settlement) went live 2026-07-13. By n≈163 settled its

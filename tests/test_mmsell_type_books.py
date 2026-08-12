@@ -67,21 +67,25 @@ def test_worker_taxonomy_matches_the_ops_script():
 # ------------------------------------------------------------------ spec parsing / validation
 
 
-def test_the_fourteen_type_books_are_configured():
+def test_only_the_TIGHT_band_type_books_are_configured():
+    """The WIDE half (`Wmmsell1`–`Wmmsell8`) was RETIRED 2026-08-12 — see the VERDICT banner in
+    docs/MMSELL_TYPE_BOOKS.md. It was retired as UNMEASURABLE rather than disproven: fill
+    coverage was 19–41%, because our maker-fill calibration comes entirely from cheap-band live
+    orders and the wide band's 10–40¢ entries have never been tested live.
+
+    Asserted as ABSENCE, not just by omission, so a merge that re-adds them has to argue with a
+    test rather than slip through."""
     books = _books()
     for i in range(1, 9):
-        assert f"Wmmsell{i}" in books, "wide-band type book missing"
+        assert f"Wmmsell{i}" not in books, "retired wide-band book is configured again"
     for i in range(1, 7):
         assert f"Tmmsell{i}" in books, "tight-band type book missing"
 
 
-def test_wide_books_share_the_control_band_and_tight_books_the_mmsell10_band():
-    """Each family differs from its control ONLY by the type filter — that is what makes the
+def test_tight_books_share_the_mmsell10_band():
+    """Each book differs from its control ONLY by the type filter — that is what makes the
     difference attributable to the type rather than to the band."""
     books = _books()
-    for i in range(1, 9):
-        b = books[f"Wmmsell{i}"]
-        assert (b["lo"], b["hi"], b["maxyes"]) == (5.0, 40.0, None)
     for i in range(1, 7):
         b = books[f"Tmmsell{i}"]
         assert (b["lo"], b["hi"], b["maxyes"]) == (5.0, 10.0, 7.0)
@@ -183,16 +187,6 @@ def test_type_filter_composes_with_the_legacy_series_filters():
 
 
 @pytest.mark.parametrize("tag,series,expected", [
-    ("Wmmsell1", "KXMLBGAME", True),     # in_play
-    ("Wmmsell1", "KXBTCD", False),       # scheduled
-    ("Wmmsell4", "KXBTCD", True),        # price_strike only
-    ("Wmmsell4", "KXWCGOAL", False),
-    ("Wmmsell5", "KXTRUMPSAY", True),    # mention only
-    ("Wmmsell6", "KXMLBTOTAL", False),   # blocklist drops total
-    ("Wmmsell6", "KXWCGOAL", True),
-    ("Wmmsell7", "KXBTCD", True),        # no-clock
-    ("Wmmsell7", "KXMLBGAME", False),
-    ("Wmmsell8", "KXPGATOUR", True),     # outright is in the high-conviction set
     ("Tmmsell3", "KXMLBTOTAL", True),    # total is +EV in the TIGHT band only
     ("Tmmsell4", "KXMLBGAME", False),    # h2h blocked in the tight band
     ("Tmmsell6", "KXMLBTOTAL", False),   # total not a both-band survivor
@@ -200,6 +194,27 @@ def test_type_filter_composes_with_the_legacy_series_filters():
 ])
 def test_configured_books_admit_what_their_thesis_says(tag, series, expected):
     assert admits(_books()[tag], series) is expected
+
+
+# The wide-band books were the only exercise of several filter paths (`mode=in_play`,
+# `mtype=price_strike`, `mtype=mention`, a bare `xmtype` blocklist, and `mode` composed with
+# `xmtype`). Retiring the BOOKS must not retire the coverage, so the same cases run here against
+# ad-hoc specs — these assert the FILTER, which is still live for any future book that uses it.
+@pytest.mark.parametrize("spec,series,expected", [
+    ("mode=in_play", "KXMLBGAME", True),
+    ("mode=in_play", "KXBTCD", False),
+    ("mtype=price_strike", "KXBTCD", True),
+    ("mtype=price_strike", "KXWCGOAL", False),
+    ("mtype=mention", "KXTRUMPSAY", True),
+    ("xmtype=total+h2h+event_stat+announcement+politics", "KXMLBTOTAL", False),
+    ("xmtype=total+h2h+event_stat+announcement+politics", "KXWCGOAL", True),
+    ("mode=scheduled+discrete,xmtype=event_stat+politics+announcement", "KXBTCD", True),
+    ("mode=scheduled+discrete,xmtype=event_stat+politics+announcement", "KXMLBGAME", False),
+    ("mtype=player_prop+mention+spread+outright", "KXPGATOUR", True),
+])
+def test_the_type_filter_paths_the_retired_wide_books_used_still_work(spec, series, expected):
+    book = _books(mmsell_variants=f"Xmmsell1:lo=5,hi=40,{spec}")["Xmmsell1"]
+    assert admits(book, series) is expected
 
 
 # ------------------------------------------------------------------ downstream tag handling
@@ -219,7 +234,7 @@ def test_type_book_tags_hold_to_settlement():
 
 def test_type_book_tags_are_resolvable_as_books():
     s = _settings()
-    for tag in ("Wmmsell1", "Tmmsell6"):
+    for tag in ("Tmmsell1", "Tmmsell6"):
         assert s.mmsell_book_by_tag(tag) is not None
     assert s.mmsell_book_by_tag("nosuchbook") is None
 
