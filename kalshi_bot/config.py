@@ -939,6 +939,12 @@ class Settings(BaseSettings):
     live_one_position_per_event: bool = False
     live_kill_on_daily_loss: bool = True    # self-trip entries when realized_today <= -max_daily_loss
     live_shape_probe: bool = False          # log live API response shapes once at startup (read-only)
+    # Request the permanent ADVANCED Kalshi API grant at startup (200/100 -> 300/300 tokens/sec,
+    # i.e. 20 -> 30 reads/sec). The ONLY account-mutating switch in this config, so it defaults
+    # OFF and is deliberate to turn on. Safe to LEAVE on afterwards: the upgrade is a one-way,
+    # permanent grant and main._maybe_upgrade_api_tier skips the call entirely once the account
+    # reads above `basic`, so it becomes a no-op rather than a repeated write.
+    kalshi_upgrade_api_tier: bool = False
     # Hardened exit (tp_sl mode): re-attempt the close until the position is flat, escalating
     # the buy-NO price. slippage_cents crosses deeper on re-attempts; market fallback is a
     # best-effort last resort (Kalshi market-order fields unconfirmed, default OFF); max_attempts

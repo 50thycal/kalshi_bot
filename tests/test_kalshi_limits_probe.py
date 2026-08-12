@@ -83,19 +83,138 @@ def test_a_non_dict_response_is_persisted_as_empty_not_crashed(monkeypatch):
 
 
 def test_client_limits_endpoint_is_read_only():
-    """The tier read must never become a tier CHANGE. Upgrading is a POST to a different path
-    that this client deliberately does not implement, so an accidental verb change here would
-    silently mutate the account."""
+    """The tier READ must never become a tier CHANGE. Upgrading is a POST to a different path
+    and a different method; an accidental verb change here would silently mutate the account on
+    every start, with no flag to stop it."""
     import inspect
 
     from kalshi_bot.kalshi.client import KalshiClient
 
-    # Body only — the docstring names the POST it is explaining that we do NOT make.
+    # Body only — the docstring names the POST it is explaining that this method does NOT make.
     src = inspect.getsource(KalshiClient.get_account_limits)
     body = src.rsplit('"""', 1)[-1]
     assert '"GET"' in body and "/account/limits" in body
     assert "POST" not in body
-    assert not hasattr(KalshiClient, "upgrade_api_usage_level")
+
+
+# ------------------------------------------------------------------ the ADVANCED upgrade
+#
+# The one account-MUTATING call the worker makes outside order placement. Every test below is
+# about a guard, because the failure modes are asymmetric: not upgrading costs us 10 reads/sec,
+# while upgrading when we did not mean to writes to the user's account. When in doubt, skip.
+
+
+class _UpgradeClient:
+    """Reads `basic`, then whatever `after` says once the upgrade is requested."""
+
+    def __init__(self, before="basic", after="advanced", upgrade_exc=None, read_exc=None):
+        self._before, self._after = before, after
+        self._upgrade_exc, self._read_exc = upgrade_exc, read_exc
+        self.upgrades = 0
+        self.upgraded = False
+
+    def get_account_limits(self):
+        if self._read_exc and self.upgraded:
+            raise self._read_exc
+        tier = self._after if self.upgraded else self._before
+        return {"usage_tier": tier} if tier else {}
+
+    def upgrade_api_usage_level(self):
+        self.upgrades += 1
+        if self._upgrade_exc:
+            raise self._upgrade_exc
+        self.upgraded = True
+        return {}
+
+
+class _Settings:
+    def __init__(self, on):
+        self.kalshi_upgrade_api_tier = on
+
+
+def test_no_upgrade_without_the_flag():
+    """Nothing writes to the account by default. This is the guard that makes every other
+    behaviour here opt-in."""
+    client = _UpgradeClient()
+    assert m._maybe_upgrade_api_tier(client, _Settings(False), {"usage_tier": "basic"}) is None
+    assert client.upgrades == 0
+
+
+def test_upgrade_fires_once_and_is_verified_by_a_re_read():
+    """Kalshi answers 201 with an empty body, so the POST alone proves nothing — the grant is
+    only real if a fresh read says so."""
+    client = _UpgradeClient()
+    after = m._maybe_upgrade_api_tier(client, _Settings(True), {"usage_tier": "basic"})
+
+    assert client.upgrades == 1
+    assert after == {"usage_tier": "advanced"}
+
+
+def test_upgrade_is_skipped_once_the_account_is_already_upgraded():
+    """This is what makes the switch safe to LEAVE ON. The grant is permanent, so a flag that
+    re-POSTed every deploy would write to the account forever for no benefit."""
+    client = _UpgradeClient(before="advanced")
+    assert m._maybe_upgrade_api_tier(client, _Settings(True), {"usage_tier": "advanced"}) is None
+    assert client.upgrades == 0
+
+
+def test_an_unknown_tier_does_not_qualify_as_basic():
+    """The dangerous direction. If the payload is renamed or unreadable we cannot confirm we are
+    on basic — and 'cannot confirm' must mean 'do not write', never 'probably fine'."""
+    for limits in ({}, None, {"weird": "shape"}, {"usage_tier": ""}, ["nope"]):
+        client = _UpgradeClient()
+        assert m._maybe_upgrade_api_tier(client, _Settings(True), limits) is None
+        assert client.upgrades == 0, f"wrote to the account on an unreadable payload: {limits!r}"
+
+
+def test_a_refused_upgrade_never_stops_the_bot():
+    """403 = Kalshi's eligibility rule (>=1 of the last 100 orders placed via API) was not met.
+    An account that cannot upgrade should keep trading on basic, not refuse to start."""
+    client = _UpgradeClient(upgrade_exc=RuntimeError("403 forbidden"))
+    assert m._maybe_upgrade_api_tier(client, _Settings(True), {"usage_tier": "basic"}) is None
+    assert client.upgrades == 1
+
+
+def test_an_upgrade_that_did_not_take_is_not_reported_as_success():
+    """Accepted-but-unchanged is a real outcome: the scan would still be running against the old
+    ceiling. Returning the payload keeps the STORED tier honest rather than optimistic."""
+    client = _UpgradeClient(after="basic")
+    after = m._maybe_upgrade_api_tier(client, _Settings(True), {"usage_tier": "basic"})
+    assert after == {"usage_tier": "basic"}
+
+
+def test_a_failed_re_read_leaves_the_tier_unconfirmed_rather_than_assumed():
+    client = _UpgradeClient(read_exc=RuntimeError("network"))
+    assert m._maybe_upgrade_api_tier(client, _Settings(True), {"usage_tier": "basic"}) is None
+
+
+def test_auth_errors_propagate_from_the_upgrade_too():
+    client = _UpgradeClient(upgrade_exc=AuthError("bad key"))
+    with pytest.raises(AuthError):
+        m._maybe_upgrade_api_tier(client, _Settings(True), {"usage_tier": "basic"})
+
+
+def test_tier_of_reads_kalshis_actual_field_and_tolerates_renames():
+    """`usage_tier` is what Kalshi sends (measured 2026-08-12); the rest are carried because the
+    payload has been renamed before."""
+    assert m._tier_of({"usage_tier": "BASIC"}) == "basic"
+    assert m._tier_of({"tier": " Advanced "}) == "advanced"
+    assert m._tier_of({"api_usage_level": "premier"}) == "premier"
+    assert m._tier_of({"grants": [], "read": {"refill_rate": 200}}) == ""
+    assert m._tier_of(None) == ""
+
+
+def test_the_upgrade_switch_is_settable_from_the_ops_channel():
+    """The worker is the only process with Kalshi credentials, so arming this from ops is the
+    only way to fire it without a code deploy."""
+    import importlib.util
+    import pathlib
+
+    path = pathlib.Path(__file__).resolve().parent.parent / "scripts" / "railway_env.py"
+    spec = importlib.util.spec_from_file_location("railway_env_script", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    assert "KALSHI_UPGRADE_API_TIER" in mod.ALLOWED_VARS
 
 
 # ------------------------------------------------------------------ helpers
