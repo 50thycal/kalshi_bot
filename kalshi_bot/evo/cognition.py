@@ -227,7 +227,7 @@ paper_positions, signals, market_snapshots, orderbook, mmsell_ticks,
 crypto_ladders, crypto_spot, game_tape, game_matches, polymarket, and
 book_performance — the operator's per-book P&L scoreboard. read_doc reads the
 operator's own research docs (start: BOOK_REGISTRY). run_backtest replays a
-spec over a settled dataset: backfill_weather (default), mmsell, crypto.
+spec over a settled dataset: backfill_weather (default), mmsell, crypto, econ.
 Results arrive in your NEXT heartbeat, not this one.
 
 STRATEGY LOOP — how an idea becomes money: run_backtest (validate) ->
