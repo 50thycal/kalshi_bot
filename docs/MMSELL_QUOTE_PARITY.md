@@ -174,10 +174,26 @@ neither does time-to-close, whose "1–3 days" reading is itself the known in-pl
 So the disagreement is **the scan's own latency**, not a bad feed — and it is predictable from
 the market's settle mode rather than from anything needing an orderbook.
 
-**The blocker on acting:** four of the six series are `unclassified` in
-`kalshi_bot/mmsell/market_types.py`, so `mode=in_play` cannot yet express the rule. Extending the
-taxonomy over those series is the prerequisite for an in-play exclusion, after which the
-pre-filter's miss rate on the non-in-play majority should be far below the blended ~1.4%.
+**The blocker is now cleared (2026-08-13).** The taxonomy was extended over every series with
+real flow, and doing so turned up something larger than the pre-filter question:
+
+> **Half of all candidate flow — 49 of 80 series, 49.5% of ticks — was `unclassified`.**
+> An unclassified series is admitted by no `mtype=`/`mode=` allowlist, so every type book ever
+> run had been selecting from roughly **half** the universe, and nothing surfaced that. The
+> `Wmmsell*`/`Tmmsell*` results in `docs/MMSELL_TYPE_BOOKS.md` were measured under that
+> constraint. It does not invalidate them — each book was still compared against a control
+> seeing the same universe — but "type X has no edge" was only ever a statement about the
+> classified half.
+
+Coverage is now **99.6% of flow** (46 series added, each classified from its own live subtitle
+rather than guessed from the ticker), and **63.5% of flow is identifiable as `in_play`** — which
+is what makes a settle-mode distrust rule expressible at all.
+
+The in-play exclusion is therefore buildable: a pre-filter can trust the inline quote for
+`scheduled`/`discrete` markets and fetch the orderbook anyway for `in_play` ones, using only the
+series taxonomy, with no orderbook needed to make the decision. The expected effect is that the
+~1.4% blended miss rate drops toward the non-in-play rate; that remains to be measured rather
+than assumed, and the parity telemetry already collects what is needed to measure it.
 
 Confidence: the definitional finding is solid (exact agreement, multiple markets). The in-play
 mechanism is a strong hypothesis from n=30 probed markets plus 50 sampled outliers, consistent
