@@ -402,7 +402,7 @@ class PaperTradingEngine:
         # global max-hold timeout — silently making them a different experiment from every
         # other mmsell book they are meant to be compared against.
         no_timeout = weather_hold or "mmsell" in strat \
-            or strat.startswith(("theta", "tfav", "pin15"))
+            or strat.startswith(("theta", "tfav", "pin15", "freeze"))
         max_hold_hours = s.paper_max_hold_hours
         if strat.startswith("wcprop"):
             max_hold_hours = s.wcprop_hold_minutes / 60.0

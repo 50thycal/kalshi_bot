@@ -23,6 +23,7 @@ import traceback
 from . import repository as repo
 from .config import Settings, get_settings
 from .db import create_all, init_engine, session_scope
+from .freeze.tracker import FreezeTracker
 from .kalshi.client import KalshiClient
 from .kalshi.errors import AuthError
 from .live.executor import LiveExecutor
@@ -189,6 +190,11 @@ def run() -> int:
     # held to settlement by the shared weather_engine. Forward-test of docs/PIN15_THESIS.md.
     pin15_paper = weather_like and settings.pin15_enabled
     pin15_tracker = Pin15Tracker(client, settings) if pin15_paper else None
+    # freeze rides along (paper): exchange-closure pin on the commodity hub — a TAKER buy of
+    # the favorite while the CBOT/ICE source is dark and the outcome is mechanically decided.
+    # Ships with its own open-window control arm; see kalshi_bot/freeze/tracker.py.
+    freeze_paper = weather_like and settings.freeze_enabled
+    freeze_tracker = FreezeTracker(client, settings) if freeze_paper else None
     # wcprop rides along (paper): ride the World Cup winner-ladder's lag after a decisive
     # match result (cross-market coherence forward-test). Timed exit via the shared engine.
     wcprop_paper = weather_like and settings.wcprop_enabled
@@ -261,6 +267,8 @@ def run() -> int:
                 keep += ("tfav",)
             if pin15_paper:
                 keep += ("pin15",)
+            if freeze_paper:
+                keep += ("freeze",)
             if wcprop_paper:
                 keep += ("wcprop",)
             if xgame_tracker is not None and settings.xgame_book_enabled:
@@ -292,14 +300,14 @@ def run() -> int:
                         settings, client, weather_engine, weather_tracker, live_executor,
                         weather_backfill, validation_backfill, mmsell_paper_tracker,
                         theta_tracker, xgame_tracker, tfav_tracker, wcprop_tracker,
-                        pin15_tracker, regime_history=regime_history,
+                        pin15_tracker, freeze_tracker, regime_history=regime_history,
                     )
                 elif weather:
                     _run_weather_cycle(
                         settings, client, weather_engine, weather_tracker, weather_backfill,
                         validation_backfill, mmsell_paper_tracker, theta_tracker,
                         xgame_tracker, tfav_tracker, wcprop_tracker, pin15_tracker,
-                        regime_history=regime_history,
+                        freeze_tracker, regime_history=regime_history,
                     )
                 elif mmsell:
                     _run_mmsell_cycle(settings, client, mmsell_engine, mmsell_tracker)
@@ -491,7 +499,7 @@ def _run_validation_backfill(validation_backfill) -> None:
 def _run_weather_cycle(
     settings, client, engine, tracker, backfill=None, validation_backfill=None,
     mmsell_tracker=None, theta_tracker=None, xgame_tracker=None, tfav_tracker=None,
-    wcprop_tracker=None, pin15_tracker=None, regime_history=None,
+    wcprop_tracker=None, pin15_tracker=None, freeze_tracker=None, regime_history=None,
 ) -> None:
     status = client.get_exchange_status()  # AuthError propagates -> hard fail
     log_event(
@@ -542,6 +550,7 @@ def _run_weather_cycle(
     _run_theta_book(settings, theta_tracker)
     _run_tfav_book(settings, tfav_tracker)
     _run_pin15_book(settings, pin15_tracker)
+    _run_freeze_book(settings, freeze_tracker)
     _run_wcprop_book(settings, wcprop_tracker)
     _run_xgame_collector(settings, xgame_tracker)
 
@@ -710,6 +719,38 @@ def _run_pin15_book(settings, tracker) -> None:
         raise
     except Exception:  # noqa: BLE001 — ride-along book must never stop the cycle
         logger.exception("pin15 ride-along book failed (weather/live unaffected)")
+
+
+_freeze_last_run = {"ts": 0.0}
+
+
+def _run_freeze_book(settings, tracker) -> None:
+    """Ride-along FREEZE paper book (commodity-hub exchange-closure pin): a TAKER buy of the
+    favorite on grain/soft markets whose settlement source is currently dark, held to settlement
+    by the shared weather_engine. Runs on a slow cadence — dark windows are hours long, so there
+    is nothing to gain from spinning. Never raises into the cycle."""
+    if tracker is None:
+        return
+    now = time.monotonic()
+    if now - _freeze_last_run["ts"] < settings.freeze_interval_minutes * 60.0:
+        return
+    _freeze_last_run["ts"] = now
+    try:
+        with session_scope() as session:
+            summ = tracker.run_once(session)
+        log_event(
+            logger, logging.INFO, "freeze book",
+            markets=summ.markets_seen, commodity=summ.commodity,
+            eligible=summ.freeze_eligible, pinned=summ.pinned, opened=summ.opened,
+            already_open=summ.already_open, capped=summ.capped,
+            illiquid=summ.skipped_illiquid, no_discount=summ.skipped_discount,
+            out_of_band=summ.skipped_price,
+            per_book=summ.per_book, per_commodity=summ.per_commodity,
+        )
+    except AuthError:
+        raise
+    except Exception:  # noqa: BLE001 — ride-along book must never stop the cycle
+        logger.exception("freeze ride-along book failed (weather/live unaffected)")
 
 
 _wcprop_last_run = {"ts": 0.0}
@@ -1001,7 +1042,7 @@ def _fetch_account_state(client) -> dict:
 def _run_live_cycle(
     settings, client, engine, tracker, executor, backfill=None, validation_backfill=None,
     mmsell_tracker=None, theta_tracker=None, xgame_tracker=None, tfav_tracker=None,
-    wcprop_tracker=None, pin15_tracker=None, regime_history=None,
+    wcprop_tracker=None, pin15_tracker=None, freeze_tracker=None, regime_history=None,
 ) -> None:
     """Live cycle: reconcile Kalshi truth, manage exits, settle/mark paper, then run the
     tracker (which mirrors allowlisted entries into real orders)."""
