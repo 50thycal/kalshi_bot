@@ -163,6 +163,63 @@ def _transient_totals(rows: list[dict]) -> dict[str, int]:
     return totals
 
 
+def _merge_ex_inplay(rows: list[dict]) -> tuple[int, dict]:
+    """Sum the in-play-EXCLUDED decision tables. Same arithmetic as _merge's band section, over
+    the shadow tables the worker keeps beside the blended ones."""
+    compared = 0
+    bands: dict = {}
+    for r in rows:
+        compared += int(r.get("compared_ex_inplay") or 0)
+        for name, b in (r.get("bands_ex_inplay") or {}).items():
+            acc = bands.setdefault(name, {"ob_in": 0, "miss_no_quote": 0, "worst_margin": 0.0,
+                                          "fetch_at": {}, "miss_at": {}})
+            acc["ob_in"] += int(b.get("ob_in") or 0)
+            acc["miss_no_quote"] += int(b.get("miss_no_quote") or 0)
+            acc["worst_margin"] = max(acc["worst_margin"], float(b.get("worst_margin") or 0.0))
+            for key in ("fetch_at", "miss_at"):
+                for m, n in (b.get(key) or {}).items():
+                    acc[key][m] = acc[key].get(m, 0) + int(n or 0)
+    return compared, bands
+
+
+def _print_ex_inplay(rows: list[dict], agg: dict, margins: list[str]) -> None:
+    """Does carving IN-PLAY markets out of the pre-filter actually help?
+
+    The proposed rule is: trust the inline quote for scheduled/discrete markets, always fetch
+    for in_play ones. It is decidable from the series alone, so it costs nothing to apply — the
+    only question is whether it works. This is the shadow test: the same decision table,
+    restricted to markets that are NOT in_play, scored on live data with no fetch skipped.
+
+    Read the MISS column against the blended one printed above. If the carve-out is the right
+    mechanism the miss rate should collapse; if it barely moves, settle mode is the wrong proxy
+    for "this quote is stale" and the rule buys nothing."""
+    compared, bands = _merge_ex_inplay(rows)
+    print("\n=== THE IN-PLAY CARVE-OUT — same table, in_play markets excluded ===")
+    if not compared:
+        print("  no data yet — the worker records this from the 2026-08-13 build onward."
+              "\n  (An UNCLASSIFIED series is scored into the blended table only, so this"
+              "\n  population is markets we positively know are scheduled or discrete.)")
+        return
+    blended = agg.get("compared") or 1
+    print(f"  {compared:,d} of {blended:,d} scored markets are known non-in-play"
+          f" ({100.0 * compared / blended:.1f}%)")
+    for name, b in sorted(bands.items()):
+        ob_in = b["ob_in"]
+        base = (agg.get("bands") or {}).get(name, {})
+        print(f"\n  --- band {name!r}: {ob_in:,d} in-band non-in-play markets ---")
+        print(f"    {'margin':>7} {'fetch':>10} {'miss':>8} {'miss%':>7}   {'blended miss%':>14}")
+        for m in margins:
+            f = int(b["fetch_at"].get(m) or 0)
+            miss = int(b["miss_at"].get(m) or 0)
+            b_in = int(base.get("ob_in") or 0)
+            b_miss = int((base.get("miss_at") or {}).get(m) or 0)
+            print(f"    {m:>6}c {f:>10,d} {miss:>8,d}"
+                  f" {(100.0 * miss / ob_in if ob_in else 0.0):>6.2f}%"
+                  f"   {(100.0 * b_miss / b_in if b_in else 0.0):>13.2f}%")
+        print(f"    smallest margin that misses nothing recoverable: {b['worst_margin']:.1f}c"
+              f"   (blended {float(base.get('worst_margin') or 0.0):.1f}c)")
+
+
 def _vol_bucket(v) -> str:
     try:
         v = float(v)
@@ -319,22 +376,41 @@ def report(rows: list[dict], transient: list[dict], hours: float,
         print(f"    unrecoverable (no inline quote at all): {nq:,d}"
               f"  ({(100.0 * nq / ob_in if ob_in else 0.0):.3f}% of in-band)")
 
+    _print_ex_inplay(rows, agg, margins)
     _print_outliers(rows, compared)
 
     print("\n=== RATE LIMITS — retryable Kalshi responses by status ===")
     _print_tier(limits)
     if transient:
         tot = _transient_totals(transient)
+        # Cycles in THIS window — the denominator that makes the count comparable across runs.
+        n_cycles = max(1, len(rows))
         if tot:
             for status, n in sorted(tot.items(), key=lambda kv: -kv[1]):
                 label = {"0": "network error", "429": "RATE LIMITED"}.get(status, f"HTTP {status}")
                 print(f"  {label:<16s} {n:>8,d}")
+        # Judge the RATE, not the raw count. The count grows with the window and with the
+        # number of cycles, so a flat "any 429 is over tier" banner shouted through a 44%
+        # improvement when the ADVANCED grant landed (11.6 -> 6.5 per cycle while the scan got
+        # 50% deeper). What matters operationally is how much of a cycle's request budget is
+        # being spent on backoffs, which is per-cycle and comparable across windows.
         rate_limited = int(tot.get("429") or 0)
-        if rate_limited:
-            print(f"  [OVER TIER] {rate_limited:,d} rate-limit responses. The current scan already"
-                  "\n          exceeds our Kalshi bucket — the pre-filter is not an optimization,"
-                  "\n          it is the fix. Every 429 costs a 2s backoff mid-scan, and on final"
-                  "\n          failure the tracker drops that market's candidates silently.")
+        per_cycle = rate_limited / max(1, n_cycles)
+        # ~5s of forced backoff per cycle at 2s each. Below that the scan absorbs it; above it
+        # the delay starts eating into a 30-minute cadence that also carries live order
+        # management, and candidates begin getting dropped on exhausted retries.
+        if per_cycle >= 25:
+            print(f"  [OVER TIER] {per_cycle:.1f} rate-limits per cycle ({rate_limited:,d} over"
+                  f" {n_cycles} cycles). At 2s of backoff each that is ~{per_cycle * 2:.0f}s"
+                  "\n          lost per scan, and on exhausted retries the tracker drops that"
+                  "\n          market's candidates silently. Stop widening the scan.")
+        elif per_cycle >= 2:
+            print(f"  [WATCH] {per_cycle:.1f} rate-limits per cycle ({rate_limited:,d} over"
+                  f" {n_cycles} cycles) — absorbed by the retry loop, but this is the number to"
+                  "\n          re-check before each step up in scan depth.")
+        elif rate_limited:
+            print(f"  [OK] {rate_limited:,d} rate-limits over {n_cycles} cycles"
+                  f" ({per_cycle:.2f}/cycle) — negligible.")
         else:
             print("  [OK] no 429s — we are inside our Kalshi tier at the current scan size.")
     else:

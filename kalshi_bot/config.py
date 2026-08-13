@@ -190,6 +190,23 @@ class Settings(BaseSettings):
     # inline quote to skip most orderbook fetches, which is what the ~650-1,600 calls/cycle
     # (and therefore the top-150 event cap) currently hang on.
     mmsell_quote_parity: bool = True
+    # INLINE-QUOTE PRE-FILTER (docs/MMSELL_QUOTE_PARITY.md). Skip the per-market orderbook fetch
+    # when the event page's own quote already puts the market far outside every interested
+    # book's band. Saves most of the ~1,100 orderbook calls a cycle.
+    #
+    # DEFAULT OFF, and it must stay off until the shadow measurement justifies it, because this
+    # is the one knob here that cannot be scoped to a single book: the orderbook fetch is SHARED
+    # (one call serves every book), so a skipped fetch removes that candidate from every paper
+    # book AND both live arms at once. There is no A/B form of it in production — only the
+    # shadow decision table can tell us the cost in advance.
+    #
+    # Measured at n=84,760: even at a 3c margin the tight band still loses ~1.2% of real
+    # candidates, and no margin under 71c loses none. `mmsell_prefilter_trust_in_play=False`
+    # carves out in_play markets (always fetch those), which is the proposed mitigation — the
+    # shadow table's `bands_ex_inplay` is what says whether that carve-out actually works.
+    mmsell_prefilter_enabled: bool = False
+    mmsell_prefilter_margin_cents: float = 3.0
+    mmsell_prefilter_trust_in_play: bool = False
     # Revision books (parallel paper variants next to the untouched `mmsell` control), from
     # the 2026-07-04 forward decomposition of 445 settled trades: the maker-sell-and-hold
     # edge lives in the CHEAP longshots (yes 5-10c +2.7c/ct 96%win, 10-20c +3.6c 91%) and is
@@ -254,6 +271,13 @@ class Settings(BaseSettings):
         # it decay with liquidity? Affordable now only because the ADVANCED grant took us from
         # 20 to 30 reads/sec — watch the RATE LIMITED line before widening further.
         "mmsell10d:lo=5,hi=10,maxyes=7,scanmax=225;"
+        # `mmsell10e` is the same experiment one step further out (300). Two depths rather than
+        # one because the question is not "is deeper better" but WHERE the edge decays: with a
+        # single deep book a null result cannot distinguish "the tail is worthless" from "225
+        # was not far enough to matter". Read as a LADDER — mmsell10 (150) -> 10d (225) ->
+        # 10e (300) — where each step's ¢/trade against the one above it locates the decay.
+        # 10e sees everything 10d sees plus ranks 225-299, so the two are nested, not disjoint.
+        "mmsell10e:lo=5,hi=10,maxyes=7,scanmax=300;"
         # --- ANCHOR SET (2026-07-30, docs/MMSELL_ANCHOR_SET.md) -------------------------
         # Every anchor book uses the mmsell10 base (lo=5,hi=10,maxyes=7) — the only
         # REALIZABLE EDGE config — so ENTRY is held constant and each book varies exactly one

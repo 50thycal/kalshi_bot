@@ -52,12 +52,13 @@ def test_a_non_numeric_scanmax_rejects_the_whole_spec():
 # ------------------------------------------------------------------ the isolation property
 
 
-def test_only_the_deep_book_carries_a_scanmax():
-    """The property that makes every other book's history still comparable. If a second book
-    ever acquires a scanmax, its control relationship needs re-deriving — so this is asserted
-    as an exhaustive list rather than a spot check."""
-    deep = [tag for tag, b in _books().items() if b.get("scanmax")]
-    assert deep == ["mmsell10d"], f"unexpected deep-scanning books: {deep}"
+def test_only_the_ladder_books_carry_a_scanmax():
+    """The property that makes every other book's history still comparable. Asserted as an
+    exhaustive list rather than a spot check: a book that quietly acquires a `scanmax` has had
+    its candidate stream widened, which silently breaks comparability with its own history and
+    with its control — and nothing else in the system would notice."""
+    deep = sorted(tag for tag, b in _books().items() if b.get("scanmax"))
+    assert deep == ["mmsell10d", "mmsell10e"], f"unexpected deep-scanning books: {deep}"
 
 
 def test_the_deep_book_differs_from_its_control_ONLY_by_scan_depth():
@@ -134,3 +135,29 @@ def test_the_summary_separates_deep_counters_from_the_control_scoped_ones():
               "events_scanned_deep", "markets_considered_deep"):
         assert hasattr(summ, f), f
         assert getattr(summ, f) == 0
+
+
+def test_the_deep_ladder_is_nested_and_ordered():
+    """`mmsell10` (150) -> `mmsell10d` (225) -> `mmsell10e` (300). Two depths rather than one
+    because the question is not "is deeper better" but WHERE the edge decays: with a single deep
+    book a null result cannot distinguish "the tail is worthless" from "225 was not far enough
+    to matter". Each book sees everything the shallower one sees plus more, so the steps are
+    nested and comparable rather than disjoint slices."""
+    books = _books()
+    top = _settings().mmsell_top_events
+    depths = [top, books["mmsell10d"]["scanmax"], books["mmsell10e"]["scanmax"]]
+
+    assert depths == sorted(depths), "the ladder must increase monotonically"
+    assert len(set(depths)) == len(depths), "two rungs at the same depth test nothing"
+    # Nested: every rank the shallower book sees, the deeper one also sees.
+    for shallower, deeper in zip(depths, depths[1:], strict=False):
+        assert all(_gate({"scanmax": deeper}, r, top)
+                   for r in range(shallower) if _gate({"scanmax": shallower}, r, top))
+
+
+def test_every_rung_differs_from_the_control_ONLY_by_depth():
+    books = _books()
+    control = books["mmsell10"]
+    for tag in ("mmsell10d", "mmsell10e"):
+        differing = {k for k in books[tag] if k != "tag" and books[tag][k] != control[k]}
+        assert differing == {"scanmax"}, f"{tag} differs by more than depth: {differing}"
