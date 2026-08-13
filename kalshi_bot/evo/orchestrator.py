@@ -32,7 +32,7 @@ from . import controls as controls_mod
 from . import listeners as listeners_mod
 from . import paper as papermod
 from . import signals as signals_mod
-from . import strategy_runner
+from . import strategy_runner, tickets
 from .announcements import seed_announcements
 from .cognition import LlmCognition
 from .cohorts import (
@@ -350,6 +350,22 @@ def run_evo_cycle(runtime: EvoRuntime) -> None:
                     )
     except Exception:  # noqa: BLE001
         logger.exception("evo phase failed: snapshots_fitness")
+
+    # Close tickets whose capability has since shipped. The review queue is what the
+    # operator reads to decide what to build and what agents read before re-asking, so a
+    # queue that only ever grows buries the live requests under delivered ones — which is
+    # exactly what happened to the off-switch wave. Idempotent and conservative; see
+    # tickets.SHIPPED_CAPABILITIES.
+    try:
+        closed = tickets.auto_resolve_shipped(session)
+        if closed:
+            log_event(
+                logger, logging.INFO,
+                f"evo tickets: auto-closed {closed} request(s) whose capability shipped",
+                closed=closed,
+            )
+    except Exception:  # noqa: BLE001
+        logger.exception("evo phase failed: ticket_auto_resolve")
 
     log_event(
         logger, logging.INFO,
