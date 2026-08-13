@@ -236,6 +236,24 @@ class Settings(BaseSettings):
         "mmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;"
         "mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;"
         "mmsell10:lo=5,hi=10,maxyes=7;"
+        # --- SCAN-DEPTH experiment (2026-08-13, docs/MMSELL_SCAN_DEPTH.md) --------------
+        # `mmsell10d` is `mmsell10` with ONE difference: it may look 225 events deep into the
+        # volume-ranked list instead of the global 150. Everything else — band, price ceiling,
+        # htc window, sizing, hold-to-settlement — is identical, so any divergence between the
+        # two is attributable to the extra events alone.
+        #
+        # It is a SEPARATE BOOK rather than a raised global cap on purpose. The cap decides
+        # which candidates every book is offered, so raising it globally would change the
+        # candidate stream of every paper book and BOTH live arms at once, and silently make
+        # every number collected before the change incomparable with every number after it.
+        # Here `mmsell10` keeps seeing exactly the top-150 it always saw and remains the control.
+        #
+        # The ~1,740 eligible events/cycle currently going unscanned are lower-volume than the
+        # top 150 by construction, so this tests a real question rather than a free lunch: is
+        # the maker edge in the thinner tail of the board as good as it is at the top, or does
+        # it decay with liquidity? Affordable now only because the ADVANCED grant took us from
+        # 20 to 30 reads/sec — watch the RATE LIMITED line before widening further.
+        "mmsell10d:lo=5,hi=10,maxyes=7,scanmax=225;"
         # --- ANCHOR SET (2026-07-30, docs/MMSELL_ANCHOR_SET.md) -------------------------
         # Every anchor book uses the mmsell10 base (lo=5,hi=10,maxyes=7) — the only
         # REALIZABLE EDGE config — so ENTRY is held constant and each book varies exactly one
@@ -1379,6 +1397,17 @@ class Settings(BaseSettings):
                 # Per-book live contract cap, overriding the global max_order_size. Lets an
                 # experiment run 1-contract clips beside an incumbent sized differently.
                 "size": None,
+                # How deep into the volume-ranked event list this book may look. None = the
+                # global `mmsell_top_events`, which is what every existing book uses.
+                #
+                # This exists so widening the SCAN cannot contaminate the books already running.
+                # The cap is not a per-book preference, it is the shape of the universe each
+                # book is offered — raising the global value would silently change the candidate
+                # stream of every paper book AND both live arms at once, making every number
+                # collected before the change incomparable with every number after it. With a
+                # per-book cap the scan can reach further while the incumbents keep seeing
+                # exactly the top-N they always saw, and only the book under test sees more.
+                "scanmax": None,
             }
             ok = True
             for kv in body.split(","):
@@ -1390,7 +1419,7 @@ class Settings(BaseSettings):
                 try:
                     if key in ("lo", "hi", "htcmin", "htcmax", "maxyes", "stopl", "volv"):
                         v[key] = float(val)
-                    elif key in ("stopk", "volw", "abarm", "size"):
+                    elif key in ("stopk", "volw", "abarm", "size", "scanmax"):
                         v[key] = int(val)
                     elif key == "strangle":
                         v[key] = str(val).strip() not in ("", "0", "false", "False")

@@ -163,6 +163,78 @@ def _transient_totals(rows: list[dict]) -> dict[str, int]:
     return totals
 
 
+def _vol_bucket(v) -> str:
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return "?"
+    for hi, label in ((100, "<100"), (500, "100-500"), (2_000, "500-2k"), (10_000, "2k-10k")):
+        if v < hi:
+            return label
+    return ">=10k"
+
+
+def _htc_bucket(h) -> str:
+    try:
+        h = float(h)
+    except (TypeError, ValueError):
+        return "?"
+    for hi, label in ((1, "<1h"), (6, "1-6h"), (24, "6-24h"), (72, "1-3d")):
+        if h < hi:
+            return label
+    return ">3d"
+
+
+def _print_outliers(rows: list[dict], compared: int) -> None:
+    """Do the large disagreements form an EXCLUDABLE CLASS?
+
+    The pre-filter's decision hinges on this. Its miss rate has an irreducible floor around 1%
+    that no margin removes, and that floor is made of quotes off by more than a few cents — one
+    was 90c. If those cluster in something the scan can recognise WITHOUT an orderbook (a thin
+    book, a particular series, a market near expiry), the pre-filter can decline to trust the
+    inline quote there and fetch anyway, and the loss largely disappears. If they are spread
+    uniformly, the ~1% is the honest price of the idea and the decision stays a judgement call.
+
+    Read the RATE column, not the count: a bucket holding 40% of the outliers is meaningless if
+    it also holds 40% of all markets. Only a bucket where outliers concentrate is a class."""
+    total = sum(int(r.get("outliers") or 0) for r in rows)
+    samples = [s for r in rows for s in (r.get("outlier_samples") or [])]
+    threshold = next((r.get("outlier_cents") for r in rows if r.get("outlier_cents")), 5.0)
+
+    print(f"\n=== LARGE DISAGREEMENTS (>{threshold:g}c on midpoint or ask) ===")
+    if not total:
+        print("  none recorded yet — either the capture predates this deploy, or the tape is"
+              "\n  unusually clean. Re-check once a few cycles have run.")
+        return
+    print(f"  {total:,d} of {compared:,d} scored markets ({100.0 * total / compared:.2f}%)"
+          f" — {len(samples):,d} sampled for characterization")
+    if not samples:
+        return
+
+    for label, keyfn in (("series", lambda s: s.get("series") or "?"),
+                         ("volume", lambda s: _vol_bucket(s.get("vol"))),
+                         ("hrs to close", lambda s: _htc_bucket(s.get("htc"))),
+                         ("bid depth", lambda s: _vol_bucket(s.get("d_bid")))):
+        counts: dict[str, int] = {}
+        for s in samples:
+            k = keyfn(s)
+            counts[k] = counts.get(k, 0) + 1
+        top = sorted(counts.items(), key=lambda kv: -kv[1])[:6]
+        cells = "  ".join(f"{k}:{n} ({100.0 * n / len(samples):.0f}%)" for k, n in top)
+        print(f"  by {label:<13s} {cells}")
+
+    worst = sorted(samples, key=lambda s: -max(s.get("d_mid") or 0, s.get("d_ask") or 0))[:5]
+    print("\n  worst sampled disagreements:")
+    for s in worst:
+        print(f"    {str(s.get('ticker', '?'))[:34]:<34s} d_mid={s.get('d_mid')}"
+              f" d_ask={s.get('d_ask')} ob={s.get('ob_bid')}/{s.get('ob_ask')}"
+              f" inline={s.get('in_bid')}/{s.get('in_ask')} vol={s.get('vol')}"
+              f" htc={s.get('htc')}")
+    print("\n  A class is a bucket where outliers CONCENTRATE relative to that bucket's share of"
+          "\n  all markets — not merely a bucket holding many of them. If one exists, the"
+          "\n  pre-filter can distrust the inline quote there and fetch the orderbook anyway.")
+
+
 def _print_tier(limits: dict | None) -> None:
     if not limits:
         print("  tier: UNKNOWN — no `kalshi_limits` row yet. The worker records it at startup"
@@ -246,6 +318,8 @@ def report(rows: list[dict], transient: list[dict], hours: float,
         print(f"    smallest margin that misses nothing recoverable: {b['worst_margin']:.1f}c")
         print(f"    unrecoverable (no inline quote at all): {nq:,d}"
               f"  ({(100.0 * nq / ob_in if ob_in else 0.0):.3f}% of in-band)")
+
+    _print_outliers(rows, compared)
 
     print("\n=== RATE LIMITS — retryable Kalshi responses by status ===")
     _print_tier(limits)
