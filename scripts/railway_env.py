@@ -35,6 +35,19 @@ _ATTEMPTS = 4      # total tries per call before giving up
 # The ONLY vars this tool may set or print. Deliberately excludes every secret/infra var
 # (KALSHI_API_KEY_ID, KALSHI_PRIVATE_KEY, DATABASE_URL, RAILWAY_*, NWS_USER_AGENT).
 ALLOWED_VARS = frozenset({
+    # The one account-MUTATING switch on this list, and it is here on purpose: firing the free
+    # permanent Kalshi ADVANCED grant (200/100 -> 300/300 tokens/sec) should not require a code
+    # deploy, and the worker is the only process holding Kalshi credentials. It no-ops once the
+    # account reads above `basic`, so setting it is a one-way door that cannot repeat.
+    "KALSHI_UPGRADE_API_TIER",
+    # The mmsell scan's coverage knobs. MMSELL_TOP_EVENTS is the per-cycle cap on events whose
+    # orderbooks we fetch, and it is the single binding constraint on how much of Kalshi the
+    # book can see — ~1,740 eligible events/cycle currently go unscanned because of it. It is
+    # settable from here because the ceiling it should sit under is our Kalshi request budget,
+    # which changed the moment the ADVANCED grant landed (20 -> 30 reads/sec) and will change
+    # again; retuning it against a measured 429 rate should not need a code deploy. Raise it in
+    # steps and watch the RATE LIMITED line in `mmsell quote parity`.
+    "MMSELL_TOP_EVENTS", "MMSELL_EVENT_PAGES",
     "BOT_MODE", "KILL_SWITCH", "RUN_ONCE", "SCAN_INTERVAL_SECONDS", "LOG_LEVEL",
     "MAX_ORDER_SIZE", "MAX_MARKET_EXPOSURE", "MAX_TOTAL_EXPOSURE", "MAX_DAILY_LOSS",
     "MAX_SPREAD_CENTS", "MIN_VOLUME", "MIN_OPEN_INTEREST", "MIN_HOURS_TO_CLOSE",

@@ -68,6 +68,12 @@ class MmSellCycleSummary:
     events_eligible: int = 0        # survived skip/volume/window, i.e. the rankable universe
     events_dropped_by_cap: int = 0  # eligible events the top-N cut left unscanned
     events_seen: int = 0            # events actually scanned this cycle (post-cut)
+    # Deep-scan counters (the per-book `scanmax` experiment). `events_seen` and
+    # `markets_considered` deliberately stay scoped to the CONTROL's depth so the funnel
+    # telemetry keeps meaning the same thing across this change — a jump in them would read as
+    # the scan recovering rather than as an experiment being added. These carry the extra reach.
+    events_scanned_deep: int = 0       # events actually fetched, incl. beyond the control cap
+    markets_considered_deep: int = 0   # markets seen ONLY because a book asked to scan deeper
     markets_considered: int = 0
     in_band: int = 0        # control-book scoped (stable across releases)
     opened: int = 0         # across control + revision books (twins excluded)
@@ -448,6 +454,8 @@ class MmSellTracker:
                     "events_out_of_window": summ.events_out_of_window,
                     "events_eligible": summ.events_eligible,
                     "events_dropped_by_cap": summ.events_dropped_by_cap,
+                    "events_scanned_deep": summ.events_scanned_deep,
+                    "markets_considered_deep": summ.markets_considered_deep,
                     "events_seen": summ.events_seen,
                     "markets_considered": summ.markets_considered,
                     "in_band": summ.in_band,
@@ -576,13 +584,25 @@ class MmSellTracker:
                 break
         summ.events_eligible = len(events)
         events.sort(key=lambda ev: -ev[0])
-        events = events[: s.mmsell_top_events]
-        summ.events_seen = len(events)
+        books = self._books()
+        # The scan reaches as deep as the DEEPEST book asks for, but each book is then gated on
+        # the event's RANK below, so a book with no `scanmax` sees exactly the top-N it always
+        # saw. That separation is the whole point: raising the global cap would change the
+        # candidate stream of every paper book and both live arms simultaneously, making every
+        # number collected before the change incomparable with every number after it. Here the
+        # incumbents are untouched and only the book under test is offered the extra events.
+        scan_depth = max([s.mmsell_top_events, *(b["scanmax"] for b in books
+                                                 if b.get("scanmax"))])
+        events = events[:scan_depth]
+        # `events_seen` stays scoped to the CONTROL's depth so the funnel telemetry means the
+        # same thing across this change — a jump in it would otherwise read as the scan
+        # recovering rather than as an experiment being added.
+        summ.events_seen = min(len(events), s.mmsell_top_events)
+        summ.events_scanned_deep = len(events)
         # Did the top-N cut bind? If eligible > seen we are leaving tradeable events unscanned,
         # which is a capacity signal rather than a fault — but it must be visible either way.
         summ.events_dropped_by_cap = max(0, summ.events_eligible - summ.events_seen)
 
-        books = self._books()
         open_count = {b["tag"]: repo.count_open_paper_positions(session, b["tag"]) for b in books}
         captured = 0  # per-cycle candidate-tick writes (bounded by mmsell_candidate_capture_max)
 
@@ -599,9 +619,16 @@ class MmSellTracker:
         # 2) per market: for each book whose band+htc admit it, open a maker BUY-NO at the
         #    no-bid (== sell yes at the ask), held to settlement. Books share one orderbook
         #    fetch; only the band (and htc) differ.
-        for _vol, event in events:
+        for rank, (_vol, event) in enumerate(events):
+            # An event past the control's depth exists only for books that asked to see deeper.
+            # Counted separately so the extra reach is visible as its own number rather than
+            # inflating markets_considered, which the funnel telemetry is read against.
+            deep = rank >= s.mmsell_top_events
             for market in event.get("markets") or []:
-                summ.markets_considered += 1
+                if deep:
+                    summ.markets_considered_deep += 1
+                else:
+                    summ.markets_considered += 1
                 ticker = market.get("ticker")
                 if not ticker:
                     continue
@@ -639,6 +666,11 @@ class MmSellTracker:
                         series_ticker=series, close_time=close_dt)
                 for book in books:
                     tag = book["tag"]
+                    # Rank gate: a book only sees events inside its own scan depth. Without a
+                    # `scanmax` that depth is the global cap, so every existing book's candidate
+                    # stream is byte-identical to what it was before deep scanning existed.
+                    if rank >= (book.get("scanmax") or s.mmsell_top_events):
+                        continue
                     if not (book["htcmin"] <= htc <= book["htcmax"]):
                         continue
                     if not self._book_admits_series(book, series):
@@ -670,6 +702,19 @@ class MmSellTracker:
                                     ob_ask=metrics.best_yes_ask,
                                     inline_bid=market_price_cents(market, "yes_bid"),
                                     inline_ask=market_price_cents(market, "yes_ask"),
+                                    # Recorded only for large-disagreement outliers, and only up
+                                    # to a per-cycle cap. These are the attributes a stale-quote
+                                    # CLASS could hide in — one bad series, thin books, markets
+                                    # near expiry — which is what decides whether the pre-filter
+                                    # can exclude them instead of eating a ~1% miss rate.
+                                    context={
+                                        "ticker": ticker, "series": series,
+                                        "vol": metrics.volume, "oi": metrics.open_interest,
+                                        "htc": round(htc, 2) if htc is not None else None,
+                                        "spread": metrics.spread,
+                                        "d_bid": getattr(metrics, "depth_at_best_bid", None),
+                                        "d_ask_sz": getattr(metrics, "depth_at_best_ask", None),
+                                    },
                                 )
                             except Exception:  # noqa: BLE001
                                 logger.exception(

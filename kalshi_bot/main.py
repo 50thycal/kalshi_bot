@@ -105,7 +105,13 @@ def run() -> int:
     # Which Kalshi API tier are we actually on? Read-only, once per start. The scan's request
     # budget — and whether the 429s the client now counts are expected or a fault — is decided
     # by this number, and nothing in the system knew it until now.
-    _probe_api_limits(client)
+    api_limits = _probe_api_limits(client)
+    # ...and, only when explicitly asked, request the free permanent ADVANCED grant. No-ops once
+    # the account is off `basic`, so the switch is safe to leave set. Re-records on success so
+    # the stored tier matches reality rather than the pre-upgrade read above.
+    upgraded = _maybe_upgrade_api_tier(client, settings, api_limits)
+    if upgraded is not None:
+        _record_api_limits(upgraded)
 
     # Weather AND live modes both run the focused weather pipeline; live adds a real-money
     # executor that mirrors allowlisted paper entries into orders (inert until configured).
@@ -862,7 +868,76 @@ def _probe_api_shapes(client) -> None:
             logger.warning("api shape probe failed [%s]: %s", name, exc)
 
 
-def _probe_api_limits(client) -> None:
+def _tier_of(limits) -> str:
+    """The tier name out of a limits payload, lowercased; '' when absent or oddly shaped.
+
+    Kalshi's field is `usage_tier` (measured 2026-08-12); the alternatives are carried because
+    this payload has been renamed before and an unrecognised shape must read as UNKNOWN rather
+    than silently as 'not basic' — the upgrade decision below turns on this string, and the safe
+    failure is to skip the write."""
+    if not isinstance(limits, dict):
+        return ""
+    for key in ("usage_tier", "tier", "api_usage_level", "level", "name"):
+        value = limits.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip().lower()
+    return ""
+
+
+def _maybe_upgrade_api_tier(client, settings, limits) -> dict | None:
+    """Request the permanent ADVANCED Kalshi grant, if the operator asked for it AND we are
+    still on basic. Returns the re-read limits on success, else None.
+
+    This is the only account-mutating call the worker makes outside of order placement, so it
+    is guarded three ways rather than one:
+
+      1. `KALSHI_UPGRADE_API_TIER` must be set — nothing fires by default;
+      2. the CURRENT tier must read exactly `basic`. An unknown or unreadable tier does NOT
+         qualify: if we cannot confirm we are on basic, we do not write. That also makes the
+         switch safe to leave on forever, since it no-ops the moment the grant lands, instead
+         of re-POSTing on every deploy;
+      3. the result is VERIFIED by re-reading `/account/limits`, because Kalshi returns 201 with
+         an empty body — without the re-read we would log an upgrade we never actually got.
+
+    Eligibility (≥1 of the last 100 orders placed via API) is Kalshi's, not ours, and a failure
+    there is a 403. That is reported as a warning and never raised: an account that cannot
+    upgrade should keep trading on basic, not refuse to start."""
+    if not getattr(settings, "kalshi_upgrade_api_tier", False):
+        return None
+    tier = _tier_of(limits)
+    if tier != "basic":
+        log_event(logger, logging.INFO, "kalshi api tier upgrade skipped",
+                  reason=("already upgraded" if tier else "current tier unknown"),
+                  current_tier=tier or "unknown")
+        return None
+
+    log_event(logger, logging.INFO, "requesting kalshi ADVANCED api tier", current_tier=tier)
+    try:
+        client.upgrade_api_usage_level()
+    except AuthError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        # 403 = the eligibility rule was not met. Either way the bot trades on unchanged.
+        logger.warning("kalshi api tier upgrade REFUSED (still on %s): %s", tier, exc)
+        return None
+
+    try:
+        after = client.get_account_limits()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("kalshi api tier upgrade sent, but re-read failed — tier UNCONFIRMED: %s",
+                       exc)
+        return None
+    new_tier = _tier_of(after)
+    if new_tier and new_tier != "basic":
+        log_event(logger, logging.INFO, "kalshi api tier UPGRADED", was=tier, now=new_tier)
+    else:
+        # Accepted but unchanged is a real outcome worth naming: it means the grant did not
+        # apply, and the scan is still running against the same ceiling it was before.
+        logger.warning("kalshi api tier upgrade accepted but tier still reads %r", new_tier or "?")
+    return after
+
+
+def _probe_api_limits(client) -> dict | None:
     """Record this account's Kalshi API TIER and rate limits once, at startup (read-only).
 
     We have been reasoning about the mmsell scan's ~6-25 req/sec burst against an assumed Basic
@@ -876,16 +951,27 @@ def _probe_api_limits(client) -> None:
     report "we hit N rate limits against a ceiling of X" instead of just the numerator.
 
     Fail-soft in both directions: a tier probe must never be what stops the bot, and an account
-    whose plan does not expose the endpoint should degrade to a warning, not a crash."""
-    import json
+    whose plan does not expose the endpoint should degrade to a warning, not a crash.
 
+    Returns the payload so the upgrade path can decide off the SAME read that was recorded,
+    rather than issuing a second one and deciding off a different answer."""
     try:
         limits = client.get_account_limits()
     except AuthError:
         raise
     except Exception as exc:  # noqa: BLE001
         logger.warning("api limits probe failed (tier unknown): %s", exc)
-        return
+        return None
+    _record_api_limits(limits)
+    return limits
+
+
+def _record_api_limits(limits) -> None:
+    """Log + persist one limits payload. Called again after an upgrade so the stored row shows
+    the tier we ended on, not the one we started with — `mmsell_quote_parity` reads the newest
+    row, and a stale one would report the old ceiling beside the new 429 counts."""
+    import json
+
     # In the MESSAGE, not just extra_fields — Railway's log view drops structured fields.
     logger.info("api limits probe: %s", json.dumps(limits)[:600])
     try:
