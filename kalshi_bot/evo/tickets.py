@@ -1,10 +1,20 @@
 """Capability-request queue (spec §16): submission with semantic dedup (a near-
 duplicate converts the submitter into a supporter of the existing ticket),
-unique supporter rows, and the human-review summary used by the evo digest."""
+unique supporter rows, the human-review summary used by the evo digest, and
+resolution — including auto-closing tickets whose capability has since shipped.
+
+Resolution was missing for the queue's whole life. `EvoTicket.status` always carried
+`open | in_review | approved | rejected | implemented | duplicate` plus `human_decision`
+and `implementation_result`, and nothing ever wrote them, so the queue could only grow.
+It showed: the fleet filed ~25 tickets for an off switch between 2026-07-31 and
+2026-08-08, `deactivate_strategy` shipped 2026-08-08, and all of them were still open
+five days later — burying the live requests (a CPI backtest corpus) under delivered ones.
+"""
 
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass, field
 
 from sqlalchemy import select
 
@@ -23,6 +33,62 @@ _STOPWORDS = frozenset(
     "a an the for to of in on with and or we i need want would like please new add".split()
 )
 DEDUP_JACCARD = 0.6
+
+# The closed set from the model comment. Validated on write so a typo cannot invent a
+# state no query filters on, which would hide a ticket from every view at once.
+TICKET_STATUSES = ("open", "in_review", "approved", "rejected", "implemented", "duplicate")
+
+
+@dataclass(frozen=True)
+class ShippedCapability:
+    """A capability agents asked for that now EXISTS, so their tickets can be closed.
+
+    Matching is deliberately a hand-written token predicate rather than fuzzy similarity.
+    A wrong auto-close silently discards an agent's request; being too shy only leaves a
+    ticket for the operator to read. So: every group in `all_of` must contribute at least
+    one token, and nothing in `none_of` may appear. Sharing a single word with a shipped
+    capability is not evidence — `strategy_execution` and `strategy_management` sit in the
+    same queue as `strategy_deactivation` and must survive untouched.
+    """
+
+    action: str          # the PERMITTED_ACTIONS entry that now exists
+    shipped_on: str      # ISO date, so a closed ticket stays auditable
+    note: str            # what to write into implementation_result
+    all_of: tuple[frozenset[str], ...]
+    none_of: frozenset[str] = field(default_factory=frozenset)
+
+
+SHIPPED_CAPABILITIES: tuple[ShippedCapability, ...] = (
+    # The off-switch wave: ~25 tickets across 8 categories, 2026-07-31..2026-08-08. Every
+    # phrasing the fleet actually used is covered by these two groups — see the test.
+    ShippedCapability(
+        action="deactivate_strategy",
+        shipped_on="2026-08-08",
+        note="shipped as the `deactivate_strategy` action; deactivate your own strategy "
+             "directly instead of filing a ticket",
+        all_of=(
+            frozenset({"deactivate", "deactivated", "deactivating", "deactivation"}),
+            frozenset({"strategy", "strategies"}),
+        ),
+    ),
+)
+
+
+def _tokens(text: str) -> frozenset[str]:
+    return frozenset(re.findall(r"[a-z0-9]+", (text or "").lower()))
+
+
+def _shipped_match(capability: str) -> ShippedCapability | None:
+    """The registry entry whose capability this ticket is asking for, or None."""
+    toks = _tokens(capability)
+    if not toks:
+        return None
+    for entry in SHIPPED_CAPABILITIES:
+        if entry.none_of & toks:
+            continue
+        if all(group & toks for group in entry.all_of):
+            return entry
+    return None
 
 
 def _signature(category: str, capability: str) -> tuple[str, frozenset[str]]:
@@ -170,3 +236,59 @@ def review_queue(session) -> list[dict]:
     ]
     out.sort(key=lambda r: (-r["supporters"], urgency_rank.get(r["urgency"], 1), r["id"]))
     return out
+
+
+def resolve_ticket(
+    session,
+    ticket_id: int,
+    *,
+    status: str,
+    decision: str | None = None,
+    result: str | None = None,
+) -> tuple[EvoTicket | None, str | None]:
+    """Close (or re-stage) a ticket, recording WHY. Returns (ticket, error).
+
+    `decision` is the operator's call (why it was approved/rejected); `result` is what was
+    actually delivered. A closed ticket without one of those is just silence with extra
+    steps — the queue exists so the fleet can see its requests being answered.
+    """
+    if status not in TICKET_STATUSES:
+        return None, f"unknown ticket status {status!r} (valid: {TICKET_STATUSES})"
+    row = session.get(EvoTicket, ticket_id)
+    if row is None:
+        return None, f"ticket {ticket_id} not found"
+    row.status = status
+    if decision:
+        row.human_decision = decision[:4000]
+    if result:
+        row.implementation_result = result[:4000]
+    session.flush()
+    audit(session, "ticket_resolved", ticket_id=row.id, status=status)
+    return row, None
+
+
+def auto_resolve_shipped(session) -> int:
+    """Close open tickets asking for a capability that has since shipped. Returns the count.
+
+    Runs every cycle and is idempotent: resolved tickets leave the `open`/`in_review` filter,
+    so a second pass matches nothing and rewrites nothing. Safety valve if this ever closes
+    something wrongly — `find_duplicate` only looks at open/in_review/approved, so the fleet
+    can raise the request again and it lands as a NEW ticket rather than being folded into
+    the one we closed.
+    """
+    rows = list(
+        session.scalars(
+            select(EvoTicket).where(EvoTicket.status.in_(("open", "in_review")))
+        )
+    )
+    n = 0
+    for row in rows:
+        entry = _shipped_match(row.capability or "")
+        if entry is None:
+            continue
+        resolve_ticket(
+            session, row.id, status="implemented",
+            result=f"{entry.note} (shipped {entry.shipped_on}, action `{entry.action}`)",
+        )
+        n += 1
+    return n
