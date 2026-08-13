@@ -12,8 +12,8 @@ import importlib.util
 import pathlib
 from datetime import datetime, timedelta, timezone
 
-from kalshi_bot.freeze import calendar as cal
 from kalshi_bot.config import Settings
+from kalshi_bot.freeze import calendar as cal
 
 
 def _et_to_ts(y, m, d, hh, mm) -> float:

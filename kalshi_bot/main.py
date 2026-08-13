@@ -23,6 +23,7 @@ import traceback
 from . import repository as repo
 from .config import Settings, get_settings
 from .db import create_all, init_engine, session_scope
+from .freeze.tracker import FreezeTracker
 from .kalshi.client import KalshiClient
 from .kalshi.errors import AuthError
 from .live.executor import LiveExecutor
@@ -30,7 +31,6 @@ from .logging_config import configure_logging, log_event
 from .mmsell.history import RegimeHistoryCapture
 from .mmsell.tracker import MmSellTracker
 from .paper.engine import PaperCycleSummary, PaperTradingEngine
-from .freeze.tracker import FreezeTracker
 from .pin15.tracker import Pin15Tracker
 from .risk.manager import RiskManager
 from .scanner.scanner import MarketScanner, ScanSummary

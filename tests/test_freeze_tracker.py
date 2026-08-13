@@ -10,7 +10,7 @@ The load-bearing behaviours pinned here:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from kalshi_bot.config import Settings
 from kalshi_bot.freeze.tracker import FreezeTracker, classify
