@@ -325,16 +325,34 @@ def report(rows: list[dict], transient: list[dict], hours: float,
     _print_tier(limits)
     if transient:
         tot = _transient_totals(transient)
+        # Cycles in THIS window — the denominator that makes the count comparable across runs.
+        n_cycles = max(1, len(rows))
         if tot:
             for status, n in sorted(tot.items(), key=lambda kv: -kv[1]):
                 label = {"0": "network error", "429": "RATE LIMITED"}.get(status, f"HTTP {status}")
                 print(f"  {label:<16s} {n:>8,d}")
+        # Judge the RATE, not the raw count. The count grows with the window and with the
+        # number of cycles, so a flat "any 429 is over tier" banner shouted through a 44%
+        # improvement when the ADVANCED grant landed (11.6 -> 6.5 per cycle while the scan got
+        # 50% deeper). What matters operationally is how much of a cycle's request budget is
+        # being spent on backoffs, which is per-cycle and comparable across windows.
         rate_limited = int(tot.get("429") or 0)
-        if rate_limited:
-            print(f"  [OVER TIER] {rate_limited:,d} rate-limit responses. The current scan already"
-                  "\n          exceeds our Kalshi bucket — the pre-filter is not an optimization,"
-                  "\n          it is the fix. Every 429 costs a 2s backoff mid-scan, and on final"
-                  "\n          failure the tracker drops that market's candidates silently.")
+        per_cycle = rate_limited / max(1, n_cycles)
+        # ~5s of forced backoff per cycle at 2s each. Below that the scan absorbs it; above it
+        # the delay starts eating into a 30-minute cadence that also carries live order
+        # management, and candidates begin getting dropped on exhausted retries.
+        if per_cycle >= 25:
+            print(f"  [OVER TIER] {per_cycle:.1f} rate-limits per cycle ({rate_limited:,d} over"
+                  f" {n_cycles} cycles). At 2s of backoff each that is ~{per_cycle * 2:.0f}s"
+                  "\n          lost per scan, and on exhausted retries the tracker drops that"
+                  "\n          market's candidates silently. Stop widening the scan.")
+        elif per_cycle >= 2:
+            print(f"  [WATCH] {per_cycle:.1f} rate-limits per cycle ({rate_limited:,d} over"
+                  f" {n_cycles} cycles) — absorbed by the retry loop, but this is the number to"
+                  "\n          re-check before each step up in scan depth.")
+        elif rate_limited:
+            print(f"  [OK] {rate_limited:,d} rate-limits over {n_cycles} cycles"
+                  f" ({per_cycle:.2f}/cycle) — negligible.")
         else:
             print("  [OK] no 429s — we are inside our Kalshi tier at the current scan size.")
     else:
