@@ -680,6 +680,36 @@ class Settings(BaseSettings):
     pin15_max_open_positions: int = 20         # <=20 concurrent 15-min windows
     pin15_max_per_event: int = 1               # one entry per window
 
+    # --- FREEZE book (ride-along paper; docs/FREEZE_THESIS.md) ---
+    # Exchange-closure pin on the commodity hub: CBOT grains / ICE softs go dark while Kalshi
+    # keeps trading 24/7, so a contract whose remaining window sits entirely inside a dark
+    # stretch is mechanically decided while retail still prices it cents from certainty.
+    # Promoted 2026-08-12 after scripts/kalshi_freeze_study.py cleared all five pre-registered
+    # gates (P1-P5, pooled +16.10c/ct on 39,429 post-pin trades).
+    #
+    # TAKER book: buys the market's own favorite at its ask and holds to settlement. The live
+    # book cannot know the settled result the backtest scored on, so "the decided side" is
+    # inferred as the favorite — which is why `freeze3` (the OPEN-window arm) exists as a
+    # same-shape control. See kalshi_bot/freeze/tracker.py for why that control is the point.
+    freeze_enabled: bool = True
+    freeze_interval_minutes: float = 15.0      # dark windows are hours long; no need to spin
+    # Commodity-hub series to scan. Grains/softs are the only freezable groups, but the scan is
+    # by series and the classifier drops anything Pyth-continuous, so a broad list is safe.
+    freeze_series: str = "KXCORN,KXWHEAT,KXSOYBEAN,KXCOFFEE,KXSUGAR,KXCOCOA,KXCOTTON"
+    freeze_max_pages: int = 4                  # pagination guard per series
+    freeze_order_size: int = 5
+    freeze_max_open_positions: int = 40        # per book
+    freeze_min_discount_cents: float = 3.0     # the thesis bar: >=3c from certainty
+    # Book specs: "tag:key=value,...;tag:..." — dark=1 requires a frozen source (the thesis),
+    # dark=0 is the open-window control. mindisc overrides freeze_min_discount_cents; maxprice
+    # caps the entry (skip the near-certain, low-headroom end).
+    freeze_books: str = (
+        "freeze1:dark=1;"
+        "freeze2:dark=1,mindisc=8;"
+        "freeze3:dark=0;"
+        "freeze4:dark=1,maxprice=95"
+    )
+
     # --- XGAME in-play tape collector (ride-along, weather/live cycle) ---
     # COLLECT ONLY, no trading: stores both venues' trade tapes for matched in-play game
     # markets (Kalshi per-team moneyline vs Polymarket same-team/day market) into
@@ -1479,6 +1509,58 @@ class Settings(BaseSettings):
             series, _, product = tok.partition(":")
             if series.strip() and product.strip():
                 out[series.strip().upper()] = product.strip().upper()
+        return out
+
+    @property
+    def freeze_series_list(self) -> list[str]:
+        """Commodity-hub series tickers to scan, upper-cased; blanks dropped."""
+        return [s.strip().upper() for s in self.freeze_series.split(",") if s.strip()]
+
+    @property
+    def freeze_book_list(self) -> list[dict]:
+        """Parsed FREEZE book specs from `freeze_books`.
+
+        Each dict is fully resolved: {tag, dark, mindisc, maxprice}. A malformed token is
+        skipped rather than raised on — a typo in one book must not silence the whole family.
+        `dark` decides which arm a book is: True = trade only mechanically-decided (source-dark)
+        markets (the thesis), False = the open-window control. Tags must start with 'freeze'
+        and fit the 24-char `paper_trades.strategy` column.
+        """
+        out: list[dict] = []
+        for spec in self.freeze_books.split(";"):
+            spec = spec.strip()
+            if not spec or ":" not in spec:
+                continue
+            tag, _, body = spec.partition(":")
+            tag = tag.strip()
+            if not tag.startswith("freeze") or len(tag) > 24:
+                continue
+            book: dict = {
+                "tag": tag,
+                "dark": True,
+                "mindisc": float(self.freeze_min_discount_cents),
+                "maxprice": None,
+            }
+            ok = True
+            for kv in body.split(","):
+                kv = kv.strip()
+                if not kv:
+                    continue
+                key, _, val = kv.partition("=")
+                key = key.strip().lower()
+                try:
+                    if key == "dark":
+                        book["dark"] = val.strip() in ("1", "true", "yes")
+                    elif key == "mindisc":
+                        book["mindisc"] = float(val)
+                    elif key == "maxprice":
+                        book["maxprice"] = float(val)
+                    else:
+                        ok = False
+                except (TypeError, ValueError):
+                    ok = False
+            if ok:
+                out.append(book)
         return out
 
     @property
