@@ -15,6 +15,17 @@ from datetime import datetime, timedelta, timezone
 from kalshi_bot.config import Settings
 from kalshi_bot.freeze import calendar as cal
 
+# Credentials are required Settings fields; the suite normally supplies them via conftest's
+# `base_env` fixture, but the book-spec tests below build Settings directly. `_env_file=None`
+# keeps a developer's local .env from changing the parsed fixture.
+CREDS = {
+    "_env_file": None,
+    "kalshi_env": "demo",
+    "kalshi_api_key_id": "test-key-id",
+    "kalshi_private_key": "test-private-key",
+    "database_url": "sqlite://",
+}
+
 
 def _et_to_ts(y, m, d, hh, mm) -> float:
     """Eastern wall clock -> epoch seconds, matching calendar._et's fixed -4h (EDT) offset."""
@@ -150,7 +161,7 @@ def test_live_calendar_matches_the_study_calendar():
 # --- book-spec parsing -------------------------------------------------------------
 
 def test_default_book_specs_parse_into_the_four_arms():
-    books = {b["tag"]: b for b in Settings().freeze_book_list}
+    books = {b["tag"]: b for b in Settings(**CREDS).freeze_book_list}
     assert set(books) == {"freeze1", "freeze2", "freeze3", "freeze4"}
     assert books["freeze1"]["dark"] is True and books["freeze1"]["maxprice"] is None
     assert books["freeze2"]["mindisc"] == 8.0
@@ -159,16 +170,16 @@ def test_default_book_specs_parse_into_the_four_arms():
 
 
 def test_book_specs_inherit_the_default_discount():
-    s = Settings(freeze_min_discount_cents=5.0, freeze_books="freeze1:dark=1")
+    s = Settings(**CREDS, freeze_min_discount_cents=5.0, freeze_books="freeze1:dark=1")
     assert s.freeze_book_list[0]["mindisc"] == 5.0
 
 
 def test_malformed_book_spec_is_skipped_not_raised():
-    s = Settings(freeze_books="freeze1:dark=1;nope:dark=1;freeze9:mindisc=abc")
+    s = Settings(**CREDS, freeze_books="freeze1:dark=1;nope:dark=1;freeze9:mindisc=abc")
     tags = [b["tag"] for b in s.freeze_book_list]
     assert tags == ["freeze1"]     # bad prefix and bad value both dropped, good one survives
 
 
 def test_series_list_normalizes():
-    s = Settings(freeze_series="kxcorn, KXWHEAT ,, KXCOFFEE")
+    s = Settings(**CREDS, freeze_series="kxcorn, KXWHEAT ,, KXCOFFEE")
     assert s.freeze_series_list == ["KXCORN", "KXWHEAT", "KXCOFFEE"]

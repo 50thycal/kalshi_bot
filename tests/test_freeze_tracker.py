@@ -15,6 +15,14 @@ from datetime import datetime, timezone
 from kalshi_bot.config import Settings
 from kalshi_bot.freeze.tracker import FreezeTracker, classify
 
+CREDS = {
+    "_env_file": None,
+    "kalshi_env": "demo",
+    "kalshi_api_key_id": "test-key-id",
+    "kalshi_private_key": "test-private-key",
+    "database_url": "sqlite://",
+}
+
 
 def _et_ts(y, m, d, hh, mm) -> float:
     return datetime(y, m, d, hh, mm, tzinfo=timezone.utc).timestamp() + 4 * 3600
@@ -54,7 +62,10 @@ def _mkt(ticker, title, close_ts):
 
 
 def _settings(**kw):
-    base = dict(freeze_enabled=True, freeze_order_size=5, freeze_max_open_positions=40,
+    # Credentials are required fields; the suite normally supplies them via conftest's
+    # `base_env` fixture, but these tests build Settings directly so they pass their own
+    # (and pin `_env_file=None` so a developer's local .env cannot change the fixture).
+    base = dict(CREDS, freeze_enabled=True, freeze_order_size=5, freeze_max_open_positions=40,
                 freeze_min_discount_cents=3.0, freeze_series="KXCORN,KXGOLD",
                 paper_fees_enabled=True)
     base.update(kw)
