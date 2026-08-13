@@ -66,6 +66,7 @@ ALLOWED_SCRIPTS = (
     "xvenue_game",
     "weather_digest",
     "weather_validation",
+    "pm_divergence_study",
     "weather_consensus_study",
     "weather_ratchet_study",
     "weather_entry_timing_study",
