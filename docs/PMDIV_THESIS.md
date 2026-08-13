@@ -1,8 +1,49 @@
 # PMDIV — does Polymarket know something Kalshi doesn't about tomorrow's temperature?
 
 *Thesis written 2026-08-13, before any validation ran; the falsifiable predictions below are
-pre-registered so the result can't be quietly re-scoped afterward. Status: **pending probe**
-(`scripts/pm_divergence_study.py`).*
+pre-registered so the result can't be quietly re-scoped afterward. Status: **KILLED 2026-08-13**
+(P0 PASS / P1 FAIL / **P2 KILL** / P3 FAIL) — see RESULTS.*
+
+## RESULTS (2026-08-13 probe run — `pm_divergence_study`, defaults, htc ≤ 24h)
+
+Sample: 39,740 scored cycles across **198 settled events**, 3 cities (AUS/LAX/MIA), Jun–Aug 2026.
+Polymarket ladders reconstructed into 41,192 batches of **exactly 11 buckets** (min 11, max 11) —
+the clustering sanity guard, so none of the numbers below are the single-bucket artifact. Median
+Polymarket ladder age at the decision point: 5.3 min.
+
+- **P0 — PASS.** Corrected `pm_err = 1.29°F`; the single-bucket artifact recomputed on the same
+  cycles gives **9.83°F**, reproducing `weather_validation`'s 9.38°F. **Confirmed: that number was
+  the defect, not Polymarket.** Polymarket is a perfectly reasonable forecaster in absolute terms.
+- **P1 — FAIL** (not a kill). `pm_err 1.29` vs Kalshi `mkt_err 0.74` = **1.75×** (bar ≤1.5×, kill
+  >2.0×). Polymarket is meaningfully worse than Kalshi but not catastrophically so.
+- **P2 — KILL.** The pre-registered kill criterion fired: **both outer bands ≤50% pm-better.**
+
+  | band (°F) | n | pm_err | mkt_err | pm_better% |
+  |---|---|---|---|---|
+  | (−inf,−3) | 146 | 4.60 | 1.02 | **1%** |
+  | [−3,−1) | 9,797 | 1.90 | 0.65 | 9% |
+  | [−1,+1) | 27,945 | 1.05 | 0.76 | 27% |
+  | [+1,+3) | 1,840 | 1.44 | 0.85 | 42% |
+  | [+3,+inf) | 12 | 3.48 | 1.40 | **8%** |
+
+  The gradient is the finding: pm_better% falls monotonically as disagreement grows on the
+  negative side (27% → 9% → 1%). **The more Polymarket disagrees with Kalshi, the more reliably
+  Polymarket is the one that's wrong** — the identical signature the NWS forecast produced in
+  `weather_validation` (0% / 4% in its outer bands).
+- **P3 — FAIL.** Buying the Kalshi bucket Polymarket favors: +0.83¢/trade (n=59) and −7.36¢
+  (n=11) in the outer bands, against a +2¢ bar, on n far too small to mean anything anyway.
+- **P4 — confirms, doesn't rescue.** Outer-band pm_better% by half: 3% / 1%. By city: AUS 0%
+  (n=144), MIA 8% (n=12), LAX 100% (n=2 — noise, not a counterexample).
+
+**Decision (per the pre-registered rule):** `pm_divergence` is **refuted as a concept**. Do not
+build the grid-free `pm_mean_gap_f` metric or the Polymarket backtest dataset — two PRs saved.
+Strip `pm_divergence` from the DSL rather than leave agents a metric we now know predicts the
+*opposite* of what its name implies. Family closed.
+
+**Independently of this verdict:** fix `validation.py::_pm_implied_mean` and re-materialize
+`weather_forecast_outcomes.pm_implied_mean_f` — a corrupt column is a defect regardless of whether
+anyone trades on it. The insert-side fix (hoisting `now` in `insert_polymarket_snapshots`) shipped
+with this probe.
 
 ## One-liner
 
