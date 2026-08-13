@@ -38,7 +38,7 @@ from ..scanner.metrics import (
     parse_dt,
 )
 from ..twin import harness as twin_codes
-from .market_types import classify
+from .market_types import DISCRETE, IN_PLAY, SCHEDULED, classify
 from .quote_parity import BandProbe, QuoteParityAccumulator
 from .regimes import regime_of
 
@@ -82,6 +82,10 @@ class MmSellCycleSummary:
     capped: int = 0
     skipped_illiquid: int = 0
     skipped_htc: int = 0
+    # Orderbook fetches the inline-quote pre-filter avoided (0 unless it is armed). This is the
+    # saving; the cost is invisible by construction, which is why it is only ever armed off the
+    # shadow decision table rather than off this number.
+    skipped_prefilter: int = 0
     skipped_vol_gate: int = 0   # anchor-set volatility ENTRY gate rejections
     skipped_settlement_cap: int = 0  # too many open positions already settle this candidate's date
     skipped_event_cap: int = 0       # too many distinct events open on a CORRELATED-regime date
@@ -463,6 +467,7 @@ class MmSellTracker:
                     "already_open": summ.already_open,
                     "capped": summ.capped,
                     "skipped_htc": summ.skipped_htc,
+                    "skipped_prefilter": summ.skipped_prefilter,
                     "skipped_illiquid": summ.skipped_illiquid,
                     "skipped_vol_gate": summ.skipped_vol_gate,
                     "skipped_settlement_cap": summ.skipped_settlement_cap,
@@ -499,6 +504,52 @@ class MmSellTracker:
         """Record one book's decision on one candidate in the parity tape (no-op without twins)."""
         if recorder is not None:
             recorder.note_paper(ticker, tag, outcome, price, quantity)
+
+    @staticmethod
+    def _prefilter_skips(s: Settings, market: dict, series: str,
+                         interested: list[dict]) -> bool:
+        """May we skip this market's ORDERBOOK fetch on the strength of the event page's own
+        quote alone? (docs/MMSELL_QUOTE_PARITY.md)
+
+        Off by default. Three properties make the difference between a saving and a silent leak:
+
+        1. **The union of bands, never one book's.** The orderbook fetch is SHARED — one call
+           serves every book that reaches this market — so skipping it removes the candidate
+           from all of them. The test is therefore against the widest band among the books that
+           actually got here, plus the loosest ceiling. A per-book test would starve whichever
+           book has the widest band the moment a narrower one declined.
+        2. **A missing or unreadable inline quote never skips.** No data is not evidence of
+           being out of band, and the failure is invisible — a skipped market produces no error,
+           it just stops existing as a candidate.
+        3. **in_play is always fetched** unless explicitly trusted. The large disagreements
+           concentrate in fast-moving contests, where the event page's one snapshot is stale by
+           the time the scan reaches this market. An UNCLASSIFIED series counts as in_play here:
+           the conservative reading of "we do not know what this is" is to spend the call."""
+        if not interested:
+            return False
+        mid = None
+        bid = market_price_cents(market, "yes_bid")
+        ask = market_price_cents(market, "yes_ask")
+        if bid is not None and ask is not None:
+            mid = (bid + ask) / 2.0
+        if mid is None:
+            return False
+        if not s.mmsell_prefilter_trust_in_play and classify(series)[1] not in (SCHEDULED,
+                                                                                DISCRETE):
+            return False
+
+        margin = float(s.mmsell_prefilter_margin_cents)
+        lo = min(b["lo"] for b in interested)
+        hi = max(b["hi"] for b in interested)
+        if lo - margin <= mid <= hi + margin:
+            return False
+        # Outside every band even after the margin. One more guard: a book with no `maxyes`
+        # cares only about the midpoint, but one WITH a ceiling could still be admitted by a
+        # cheap ask on a market whose midpoint sits high, so the ceiling is checked too.
+        ceilings = [b.get("maxyes") for b in interested if b.get("maxyes") is not None]
+        if ceilings and ask is not None and ask <= max(ceilings) + margin:
+            return False
+        return True
 
     @staticmethod
     def _book_admits_series(book: dict, series: str) -> bool:
@@ -664,6 +715,22 @@ class MmSellTracker:
                     repo.ensure_mmsell_settlement_meta(
                         session, market_ticker=ticker, event_ticker=event_ticker,
                         series_ticker=series, close_time=close_dt)
+                if s.mmsell_prefilter_enabled:
+                    # Computed ONLY when the pre-filter is armed, so the default path is
+                    # byte-identical to before this existed. The union matters: the orderbook
+                    # fetch below is shared, so the skip decision must satisfy every book that
+                    # reaches this market, not whichever one happens to be first.
+                    interested = [
+                        b for b in books
+                        if rank < (b.get("scanmax") or s.mmsell_top_events)
+                        and b["htcmin"] <= htc <= b["htcmax"]
+                        and self._book_admits_series(b, series)
+                        and self._book_admits_ticker(b, ticker)
+                    ]
+                    if self._prefilter_skips(s, market, series, interested):
+                        summ.skipped_prefilter += 1
+                        continue
+
                 for book in books:
                     tag = book["tag"]
                     # Rank gate: a book only sees events inside its own scan depth. Without a
@@ -702,6 +769,13 @@ class MmSellTracker:
                                     ob_ask=metrics.best_yes_ask,
                                     inline_bid=market_price_cents(market, "yes_bid"),
                                     inline_ask=market_price_cents(market, "yes_ask"),
+                                    # Scores the same market into a second, in-play-EXCLUDED
+                                    # decision table, which is the direct shadow test of the
+                                    # proposed distrust rule. None (unclassified) is scored
+                                    # into the blended table only — counting an unknown as
+                                    # "safe to pre-filter" would flatter the rule precisely
+                                    # where we know least.
+                                    in_play=(classify(series)[1] == IN_PLAY),
                                     # Recorded only for large-disagreement outliers, and only up
                                     # to a per-cycle cap. These are the attributes a stale-quote
                                     # CLASS could hide in — one bad series, thin books, markets

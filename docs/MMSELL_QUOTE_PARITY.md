@@ -138,6 +138,48 @@ a restart resets them.
 429 costs a 2s backoff mid-scan, and on final failure the tracker `break`s out of that market,
 dropping its candidates silently rather than erroring.
 
+## The in-play carve-out, and why it ships OFF (2026-08-13)
+
+The rule: trust the inline quote for `scheduled`/`discrete`, always fetch the orderbook for
+`in_play`. Decidable from the series alone, so it costs nothing to apply.
+
+**The evidence for it weakened as the sample grew, and that is recorded here rather than
+quietly dropped.** At 50 sampled outliers, six live in-play sports-prop series carried **74%**
+of them and the story looked clean. At **405** samples the same top six carry **32%**, and two
+of them — `KXRAIN` and `KXNATGASD` — are `scheduled`. The worst individual disagreements now
+include `KXSOLD` and `KXBTC`, scheduled crypto strikes, at 53–62¢ on the ask. Tennis
+(`KXITFMATCH`+`KXITFWMATCH`) is genuinely ~11× concentrated, but the 74% figure was a
+small-sample artifact.
+
+The mechanism still looks like **latency × volatility** — the event page is one snapshot and
+the scan takes 1–3 minutes to reach a given market. Settle mode is just a poor proxy for it:
+an hourly crypto strike near its boundary moves as fast as a live game.
+
+So both halves ship, and neither is armed:
+
+* **The shadow measurement.** Every market is now scored into a SECOND decision table
+  restricted to known-non-in-play markets (`bands_ex_inplay`). No fetch is skipped. This is the
+  direct test — if the carve-out is the right mechanism the miss rate collapses; if it barely
+  moves, the rule buys nothing. `mmsell quote parity` prints it beside the blended numbers.
+  An **unclassified** series scores into the blended table only: counting "we do not know what
+  this is" as safe would flatter the rule exactly where we know least.
+* **The pre-filter itself**, behind `MMSELL_PREFILTER_ENABLED` (default **off**), with
+  `MMSELL_PREFILTER_TRUST_IN_PLAY` (default **off**, i.e. always fetch in-play).
+
+### Why this one cannot be A/B'd like `scanmax`
+
+The orderbook fetch is **shared**: one call serves every book that reaches the market. A skipped
+fetch removes that candidate from every paper book **and both live arms** at once. Unlike the
+per-book scan depth, there is no isolated form of it in production — which is exactly why the
+shadow table exists, and why the filter tests the **union** of every interested book's band
+rather than any one book's. Skipping on the tight book's opinion would silently starve the wide
+one.
+
+Everything else in that filter is a refusal to skip: a missing or half-missing inline quote
+never skips (no data is not evidence of being out of band), an unclassified series never skips,
+and a market whose cheap ask is under some interested book's `maxyes` never skips even when its
+midpoint sits far above the band.
+
 ## What happens after the verdict
 
 - **PASS (tight, or both)** → build the pre-filter with the measured margin, then the A/B union

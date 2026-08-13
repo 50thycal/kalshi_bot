@@ -131,6 +131,28 @@ def excursion(mid: float | None, ask: float | None, lo: float, hi: float,
     return max(0.0, out)
 
 
+def _score_band(res, band, truth: bool, inline_mid: float | None,
+                inline_ask: float | None) -> None:
+    """Fold one market's inline-vs-truth comparison into one band's decision table.
+
+    Pulled out as a free function because the same market is now scored into TWO tables — the
+    blended one and the in-play-excluded one — and duplicating this arithmetic inline is exactly
+    how the two would drift into measuring subtly different things."""
+    if truth:
+        res.ob_in += 1
+        exc = excursion(inline_mid, inline_ask, band.lo, band.hi, band.maxyes)
+        if exc == float("inf"):
+            res.miss_no_quote += 1
+        else:
+            res.worst_margin = max(res.worst_margin, exc)
+    for m in MARGINS:
+        key = _mkey(m)
+        if admits(inline_mid, inline_ask, band.lo, band.hi, band.maxyes, margin=m):
+            res.fetch_at[key] += 1
+        elif truth:
+            res.miss_at[key] += 1
+
+
 @dataclass
 class BandProbe:
     """One band the decision table is evaluated for.
@@ -181,6 +203,13 @@ class QuoteParityAccumulator:
     max_mid_delta: float = 0.0
     max_ask_delta: float = 0.0
     results: dict[str, BandResult] = field(default_factory=dict)
+    # The SAME decision table, restricted to markets that are NOT in_play. This is the direct
+    # test of the proposed in-play distrust rule: trust the inline quote for scheduled/discrete
+    # and always fetch for in_play. If the mechanism really is scan latency meeting fast-moving
+    # contests, these misses should be far below the blended ones; if they are not, settle mode
+    # is the wrong proxy and the rule buys nothing. Scored in shadow — no fetch is skipped.
+    results_ex_inplay: dict[str, BandResult] = field(default_factory=dict)
+    compared_ex_inplay: int = 0
     # Large-disagreement characterization. `outliers` is the exact COUNT (never sampled, so the
     # rate stays honest); `outlier_samples` is a bounded sample carrying the market attributes a
     # class could hide in — series, liquidity, time to close, depth at the touch.
@@ -189,14 +218,15 @@ class QuoteParityAccumulator:
 
     def __post_init__(self) -> None:
         for b in self.bands:
-            r = self.results.setdefault(b.name, BandResult())
-            for m in MARGINS:
-                r.fetch_at.setdefault(_mkey(m), 0)
-                r.miss_at.setdefault(_mkey(m), 0)
+            for table in (self.results, self.results_ex_inplay):
+                r = table.setdefault(b.name, BandResult())
+                for m in MARGINS:
+                    r.fetch_at.setdefault(_mkey(m), 0)
+                    r.miss_at.setdefault(_mkey(m), 0)
 
     def observe(self, *, ob_bid: float | None, ob_ask: float | None,
                 inline_bid: float | None, inline_ask: float | None,
-                context: dict | None = None) -> None:
+                context: dict | None = None, in_play: bool | None = None) -> None:
         """`context` carries the market attributes recorded ONLY when this market turns out to
         be a large-disagreement outlier. Optional so the pure arithmetic stays testable without
         it, and evaluated lazily — a scan calls this thousands of times a cycle and must not pay
@@ -240,22 +270,18 @@ class QuoteParityAccumulator:
                     sample.update({k: v for k, v in context.items() if v is not None})
                 self.outlier_samples.append(sample)
 
+        # An UNKNOWN mode is not treated as non-in-play: the rule under test would have to
+        # decide something about it, and counting unclassified markets as safe would flatter
+        # the result exactly where we have least information.
+        tables = [self.results]
+        if in_play is False:
+            tables.append(self.results_ex_inplay)
+            self.compared_ex_inplay += 1
+
         for b in self.bands:
-            res = self.results[b.name]
             truth = admits(ob_mid, ob_ask, b.lo, b.hi, b.maxyes)
-            if truth:
-                res.ob_in += 1
-                exc = excursion(inline_mid, inline_ask, b.lo, b.hi, b.maxyes)
-                if exc == float("inf"):
-                    res.miss_no_quote += 1
-                else:
-                    res.worst_margin = max(res.worst_margin, exc)
-            for m in MARGINS:
-                key = _mkey(m)
-                if admits(inline_mid, inline_ask, b.lo, b.hi, b.maxyes, margin=m):
-                    res.fetch_at[key] += 1
-                elif truth:
-                    res.miss_at[key] += 1
+            for table in tables:
+                _score_band(table[b.name], b, truth, inline_mid, inline_ask)
 
     def as_dict(self) -> dict:
         return {
@@ -269,6 +295,8 @@ class QuoteParityAccumulator:
             "max_ask_delta": round(self.max_ask_delta, 2),
             "margins": [_mkey(m) for m in MARGINS],
             "bands": {name: r.as_dict() for name, r in self.results.items()},
+            "compared_ex_inplay": self.compared_ex_inplay,
+            "bands_ex_inplay": {n: r.as_dict() for n, r in self.results_ex_inplay.items()},
             "outliers": self.outliers,
             "outlier_cents": OUTLIER_CENTS,
             "outlier_samples": self.outlier_samples,
