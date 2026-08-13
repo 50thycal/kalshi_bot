@@ -670,6 +670,19 @@ class MmSellTracker:
                                     ob_ask=metrics.best_yes_ask,
                                     inline_bid=market_price_cents(market, "yes_bid"),
                                     inline_ask=market_price_cents(market, "yes_ask"),
+                                    # Recorded only for large-disagreement outliers, and only up
+                                    # to a per-cycle cap. These are the attributes a stale-quote
+                                    # CLASS could hide in — one bad series, thin books, markets
+                                    # near expiry — which is what decides whether the pre-filter
+                                    # can exclude them instead of eating a ~1% miss rate.
+                                    context={
+                                        "ticker": ticker, "series": series,
+                                        "vol": metrics.volume, "oi": metrics.open_interest,
+                                        "htc": round(htc, 2) if htc is not None else None,
+                                        "spread": metrics.spread,
+                                        "d_bid": getattr(metrics, "depth_at_best_bid", None),
+                                        "d_ask_sz": getattr(metrics, "depth_at_best_ask", None),
+                                    },
                                 )
                             except Exception:  # noqa: BLE001
                                 logger.exception(

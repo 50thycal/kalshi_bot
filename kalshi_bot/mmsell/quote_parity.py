@@ -76,6 +76,18 @@ def _bucket(delta: float) -> str:
     return _BUCKET_OVER
 
 
+# A disagreement this large is not rounding — it is a different market state, and it is what
+# drives the pre-filter's irreducible ~1% miss floor. 0.6% of quotes land here and one was 90c
+# off. Characterizing them is the difference between "a lossy pre-filter is a judgement call"
+# and "exclude this class and the loss nearly vanishes".
+OUTLIER_CENTS = 5.0
+# Per cycle. The accumulator must stay a fixed-size summary — a scan sees thousands of markets
+# and this rides in a JSON column — so outliers are SAMPLED, not enumerated. 25/cycle across
+# ~48 cycles/day is ample to test whether they cluster, and the aggregate counts below stay
+# exact regardless of what the sample caught.
+MAX_OUTLIER_SAMPLES = 25
+
+
 def admits(mid: float | None, ask: float | None, lo: float, hi: float,
            maxyes: float | None, margin: float = 0.0) -> bool:
     """The mmsell band decision, widened by `margin`.
@@ -169,6 +181,11 @@ class QuoteParityAccumulator:
     max_mid_delta: float = 0.0
     max_ask_delta: float = 0.0
     results: dict[str, BandResult] = field(default_factory=dict)
+    # Large-disagreement characterization. `outliers` is the exact COUNT (never sampled, so the
+    # rate stays honest); `outlier_samples` is a bounded sample carrying the market attributes a
+    # class could hide in — series, liquidity, time to close, depth at the touch.
+    outliers: int = 0
+    outlier_samples: list[dict] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         for b in self.bands:
@@ -178,7 +195,12 @@ class QuoteParityAccumulator:
                 r.miss_at.setdefault(_mkey(m), 0)
 
     def observe(self, *, ob_bid: float | None, ob_ask: float | None,
-                inline_bid: float | None, inline_ask: float | None) -> None:
+                inline_bid: float | None, inline_ask: float | None,
+                context: dict | None = None) -> None:
+        """`context` carries the market attributes recorded ONLY when this market turns out to
+        be a large-disagreement outlier. Optional so the pure arithmetic stays testable without
+        it, and evaluated lazily — a scan calls this thousands of times a cycle and must not pay
+        for a dict it will discard 99.4% of the time."""
         ob_mid = _mid(ob_bid, ob_ask)
         if ob_mid is None:
             # The scan itself skips these (`skipped_illiquid`) — with no ground truth there is
@@ -197,10 +219,26 @@ class QuoteParityAccumulator:
             d = abs(inline_ask - ob_ask)
             _bump(self.ask_hist, _bucket(d))
             self.max_ask_delta = max(self.max_ask_delta, d)
+        d_mid = None
         if inline_mid is not None:
-            d = abs(inline_mid - ob_mid)
-            _bump(self.mid_hist, _bucket(d))
-            self.max_mid_delta = max(self.max_mid_delta, d)
+            d_mid = abs(inline_mid - ob_mid)
+            _bump(self.mid_hist, _bucket(d_mid))
+            self.max_mid_delta = max(self.max_mid_delta, d_mid)
+
+        d_ask = (abs(inline_ask - ob_ask)
+                 if inline_ask is not None and ob_ask is not None else None)
+        if (d_mid is not None and d_mid > OUTLIER_CENTS) or \
+                (d_ask is not None and d_ask > OUTLIER_CENTS):
+            self.outliers += 1
+            if len(self.outlier_samples) < MAX_OUTLIER_SAMPLES:
+                sample = {"d_mid": round(d_mid, 1) if d_mid is not None else None,
+                          "d_ask": round(d_ask, 1) if d_ask is not None else None,
+                          "ob_bid": ob_bid, "ob_ask": ob_ask,
+                          "in_bid": inline_bid, "in_ask": inline_ask}
+                if context:
+                    # Clamped: a diagnostic must never be the thing that bloats a JSON column.
+                    sample.update({k: v for k, v in context.items() if v is not None})
+                self.outlier_samples.append(sample)
 
         for b in self.bands:
             res = self.results[b.name]
@@ -231,6 +269,9 @@ class QuoteParityAccumulator:
             "max_ask_delta": round(self.max_ask_delta, 2),
             "margins": [_mkey(m) for m in MARGINS],
             "bands": {name: r.as_dict() for name, r in self.results.items()},
+            "outliers": self.outliers,
+            "outlier_cents": OUTLIER_CENTS,
+            "outlier_samples": self.outlier_samples,
         }
 
 

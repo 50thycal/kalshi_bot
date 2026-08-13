@@ -225,8 +225,14 @@ def test_merge_takes_the_worst_margin_not_the_average():
 
 def test_output_is_json_round_trippable_and_bounded():
     """The whole thing is persisted into a system_events JSON column every cycle, and a scan
-    sees thousands of markets — the payload must be plain types and must not grow with them."""
+    sees thousands of markets — the payload must be plain types and must not grow with them.
+
+    The bound has to hold when EVERY market is an outlier, which is the case the sampling cap
+    exists for: an exchange-wide quote-feed stall would otherwise turn this diagnostic into a
+    per-market dump written every 30 minutes."""
     import json
+
+    from kalshi_bot.mmsell.quote_parity import MAX_OUTLIER_SAMPLES
 
     acc = _acc()
     for i in range(500):
@@ -237,3 +243,50 @@ def test_output_is_json_round_trippable_and_bounded():
     assert json.loads(blob) == out
     assert len(blob) < 4000, "parity payload should be a fixed-size summary, not per-market rows"
     assert out["compared"] == 500
+
+    # ...and again with every observation an outlier carrying full context.
+    worst = _acc()
+    for i in range(500):
+        worst.observe(ob_bid=5.0, ob_ask=7.0, inline_bid=80.0, inline_ask=82.0,
+                      context={"ticker": f"KXSOMEVERYLONGSERIESNAME-26AUG12-B{i}",
+                               "series": "KXSOMEVERYLONGSERIESNAME", "vol": 1234,
+                               "oi": 5678, "htc": 12.5, "spread": 3,
+                               "d_bid": 100, "d_ask_sz": 200})
+    blob = json.dumps(worst.as_dict())
+    assert len(blob) < 8000, "outlier samples must stay capped, not enumerate the scan"
+    assert worst.as_dict()["outliers"] == 500, "the COUNT must stay exact even when sampled"
+    assert len(worst.as_dict()["outlier_samples"]) == MAX_OUTLIER_SAMPLES
+
+
+def test_outliers_are_counted_exactly_but_sampled_for_detail():
+    """The rate must not depend on the sampling cap — it is what decides whether a lossy
+    pre-filter costs ~1% or ~10%."""
+    acc = _acc()
+    acc.observe(ob_bid=5.0, ob_ask=7.0, inline_bid=5.0, inline_ask=7.0)      # exact: not one
+    acc.observe(ob_bid=5.0, ob_ask=7.0, inline_bid=7.0, inline_ask=9.0)      # 2c: under thresh
+    acc.observe(ob_bid=5.0, ob_ask=7.0, inline_bid=40.0, inline_ask=42.0)    # 35c: outlier
+    out = acc.as_dict()
+
+    assert out["outliers"] == 1
+    assert len(out["outlier_samples"]) == 1
+    assert out["outlier_samples"][0]["d_mid"] == 35.0
+
+
+def test_an_ask_only_disagreement_still_registers_as_an_outlier():
+    """The ask is the derived side and gates `maxyes`, so it can be wildly wrong while the
+    midpoint looks fine. Keying outlier detection on the midpoint alone would miss exactly the
+    disagreements that break the live band."""
+    acc = _acc()
+    acc.observe(ob_bid=5.0, ob_ask=7.0, inline_bid=9.0, inline_ask=1.0)
+    out = acc.as_dict()
+    assert out["outliers"] == 1
+    assert out["outlier_samples"][0]["d_ask"] == 6.0
+
+
+def test_context_is_optional_and_never_required_for_the_arithmetic():
+    """The pure accumulator must stay testable and callable without market metadata; context is
+    a diagnostic enrichment, not an input to any count."""
+    acc = _acc()
+    acc.observe(ob_bid=5.0, ob_ask=7.0, inline_bid=40.0, inline_ask=42.0)
+    assert acc.as_dict()["outliers"] == 1
+    assert "ticker" not in acc.as_dict()["outlier_samples"][0]
