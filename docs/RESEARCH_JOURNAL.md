@@ -16,6 +16,46 @@ Conventions:
 
 ---
 
+## DATA DEFECT 2026-08-13 — `pm_implied_mean_f` is a single bucket, not a ladder. PMDIV probe promoted.
+
+**The defect.** `weather/validation.py::_pm_implied_mean` picks the newest Polymarket ladder with
+`latest = max(r.captured_at ...)` then keeps rows where `r.captured_at != latest → continue`. But
+`repository.insert_polymarket_snapshots` (line 1316) stamps `captured_at=_now()` **inside** its row
+loop, so every bucket of one capture gets its own microsecond timestamp. Confirmed over the whole
+table:
+
+```
+rows_per_ts  n_timestamps
+1            451198
+```
+
+All 451,198 timestamps hold exactly one row — no ladder ever shares one. So the filter always
+retains a **single bucket**, and `pm_implied_mean_f` is that bucket's midpoint temperature, not a
+probability-weighted mean. All 140,428 `weather_forecast_outcomes` rows carry this value, and the
+`pm_err=9.38F vs mkt_err=0.72F` line in `weather_validation` measures nothing about Polymarket.
+
+The contrast pins the cause: `insert_weather_bucket_snapshots` (line 733) hoists `now = _now()`
+**outside** its loop, so Kalshi ladders group correctly. Fix = hoist it on the Polymarket side too,
+then re-materialize the column. Live trading is unaffected — `consensus.pm_implied_mean` takes the
+bucket list directly and weights it correctly; the defect is confined to validation materialization.
+
+**Why it surfaced now.** `weather_validation` was run to decide whether to expose our NWS/ensemble
+forecast as evo DSL metrics. It said no, decisively: forecast error beats market error in *zero*
+window×kind cells (h8 highs 1.49 vs 0.57), ensemble-vs-market log-loss edge is −0.59/−0.80/−1.35,
+and in the two extreme forecast-vs-market divergence bands the forecast is right **0%** and **4%**
+of the time. Divergence from the market is not automatically signal here — it is an anti-signal.
+Forecast-based metrics are **not** being built.
+
+**PMDIV promoted** (`docs/PMDIV_THESIS.md`, `scripts/pm_divergence_study.py`). That result raises
+the question for the *other* divergence metric already shipped to the agents: `pm_divergence`
+rests on the never-tested premise that when two venues disagree, Polymarket is the informed one.
+The probe runs the same band analysis on the Polymarket side over the ~200 settled events where
+both venues quoted, reconstructing ladders by time-gap clustering rather than exact timestamp
+equality. Pre-registered kill: if both outer bands are ≤50% pm-better — the NWS signature — strip
+`pm_divergence` from the DSL rather than leave agents a metric that predicts nothing. Prior is LOW.
+
+---
+
 ## BOOK VERDICT 2026-08-12 — `weather_con` and `weather_concity` RETIRED. Weather has no book left.
 
 `weather_consensus_enabled=False`, `weather_con_city_enabled=False`. The consensus layer was the

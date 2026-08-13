@@ -46,6 +46,8 @@ from kalshi_bot.models import (
     WeatherForecast,
 )
 
+# Fixed, because the signal tests below drive `compute_signals(now=NOW)` explicitly and their
+# staleness assertions are relative to it. Do NOT derive close_time from this — see _quote.
 NOW = datetime(2026, 8, 12, 15, 0, tzinfo=timezone.utc)
 TICKER = "KXHIGHLAX-26AUG12-B85.5"
 
@@ -93,6 +95,16 @@ def _spec(conditions, **entry):
 
 
 # --- the metrics are real DSL citizens --------------------------------------
+
+
+def test_the_fixture_quote_is_not_a_time_bomb():
+    """Guard on the fixture itself. `entry_signal` reads Quote.hours_to_close(), which defaults
+    to the REAL clock, so a close_time pinned to this file's fixed NOW makes every entry test
+    below pass until wall-clock overtakes it and fail permanently after. That happened: pinned at
+    NOW + 5h, the suite went red ~14 hours later with htc = -9.6h. If this assertion fails,
+    close_time has been re-anchored to a constant — fix the fixture, not this test."""
+    htc = _quote().hours_to_close()
+    assert htc is not None and 4.9 < htc <= 5.0
 
 
 def test_both_signals_are_usable_metrics():

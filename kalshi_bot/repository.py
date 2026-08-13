@@ -1312,8 +1312,15 @@ def replace_event_outcomes(session, event_ticker: str, rows: list[dict]) -> int:
 
 
 def insert_polymarket_snapshots(session, rows: list[dict]) -> int:
+    # `now` is hoisted so every bucket of one capture shares a timestamp and the ladder stays
+    # recoverable as a unit — matching insert_weather_bucket_snapshots. Stamping per row (the
+    # previous behaviour) gave all 451,198 stored rows a distinct microsecond, which silently
+    # broke any "newest ladder" selection done by equality against max(captured_at): it matches
+    # exactly one bucket. That is the defect behind weather_validation's pm_err=9.38F — see
+    # docs/PMDIV_THESIS.md. Historical rows keep their per-row stamps and must be clustered.
+    now = _now()
     for row in rows:
-        session.add(m.PolymarketSnapshot(captured_at=_now(), source="polymarket_gamma", **row))
+        session.add(m.PolymarketSnapshot(captured_at=now, source="polymarket_gamma", **row))
     session.flush()
     return len(rows)
 
