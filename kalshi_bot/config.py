@@ -271,6 +271,13 @@ class Settings(BaseSettings):
         # it decay with liquidity? Affordable now only because the ADVANCED grant took us from
         # 20 to 30 reads/sec — watch the RATE LIMITED line before widening further.
         "mmsell10d:lo=5,hi=10,maxyes=7,scanmax=225;"
+        # `mmsell10e` is the same experiment one step further out (300). Two depths rather than
+        # one because the question is not "is deeper better" but WHERE the edge decays: with a
+        # single deep book a null result cannot distinguish "the tail is worthless" from "225
+        # was not far enough to matter". Read as a LADDER — mmsell10 (150) -> 10d (225) ->
+        # 10e (300) — where each step's ¢/trade against the one above it locates the decay.
+        # 10e sees everything 10d sees plus ranks 225-299, so the two are nested, not disjoint.
+        "mmsell10e:lo=5,hi=10,maxyes=7,scanmax=300;"
         # --- ANCHOR SET (2026-07-30, docs/MMSELL_ANCHOR_SET.md) -------------------------
         # Every anchor book uses the mmsell10 base (lo=5,hi=10,maxyes=7) — the only
         # REALIZABLE EDGE config — so ENTRY is held constant and each book varies exactly one

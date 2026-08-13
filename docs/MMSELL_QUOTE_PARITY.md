@@ -138,6 +138,67 @@ a restart resets them.
 429 costs a 2s backoff mid-scan, and on final failure the tracker `break`s out of that market,
 dropping its candidates silently rather than erroring.
 
+## What the large disagreements actually are (probed 2026-08-13)
+
+The gate failed on the safe margin: to miss nothing it needed 71¢ (tight) / 48.5¢ (wide) against
+a 3¢ cap, because ~0.9% of quotes disagree by more than a few cents and one was 90¢ off. Those
+outliers set an irreducible ~1% miss floor that no margin removes, so the whole decision turns on
+what they are. `scripts/kalshi_quote_probe.py` fetches the event page and each market's
+orderbook back-to-back and compares them directly.
+
+**The definitional hypothesis is disproven.** It looked like Kalshi's inline `yes_ask` might be a
+literal resting YES offer while ours is derived as `100 − no_bid`. It is not: on every market
+where both sides carry depth, `inline yes_ask == 100 − best_no_bid` **exactly**, and the inline
+`no_bid` matches the book's best NO level. Our derivation is right, and the inline sides are not
+independently useful — that possible cheap fix is closed.
+
+Two real drivers, only one of which matters:
+
+1. **Empty book sides.** Where a side has no levels, Kalshi reports `0` (bid) or `100` (ask)
+   while we report `None`. This produced most of the raw mismatches in the probe — and it is
+   **already excluded** from the parity measurement, which drops markets with no two-sided
+   orderbook into `ob_not_two_sided` before scoring. Not a source of the outliers.
+2. **Genuine movement between the two calls.** The event page is ONE snapshot covering every
+   market; each orderbook is fetched separately, seconds to minutes later, and the scan takes
+   1–3 minutes end to end. With both sides present the two quotes agree exactly or within 1–3¢
+   — except where the market is moving fast.
+
+**Which is why the outliers concentrate where they do.** Six series carry 74% of them on ~2% of
+candidate flow (17–120× concentration): `KXWNBAPTS`, `KXWTASETWINNER`, `KXLEAGUESCUPSCORE`,
+`KXWNBA1HTOTAL`, `KXMLBTEAMTOTAL`, `KXWNBASPREAD` — all **live in-play sports props**, the
+fastest-moving thing on the board. Volume does not predict them (38% sit in the ≥10k bucket) and
+neither does time-to-close, whose "1–3 days" reading is itself the known in-play artifact:
+`close_time` is a far-future fallback on live sports (measured elsewhere in this repo,
+`KXUFCFIGHT` reporting ~335h to close on a fight that resolved in 0.4h).
+
+So the disagreement is **the scan's own latency**, not a bad feed — and it is predictable from
+the market's settle mode rather than from anything needing an orderbook.
+
+**The blocker is now cleared (2026-08-13).** The taxonomy was extended over every series with
+real flow, and doing so turned up something larger than the pre-filter question:
+
+> **Half of all candidate flow — 49 of 80 series, 49.5% of ticks — was `unclassified`.**
+> An unclassified series is admitted by no `mtype=`/`mode=` allowlist, so every type book ever
+> run had been selecting from roughly **half** the universe, and nothing surfaced that. The
+> `Wmmsell*`/`Tmmsell*` results in `docs/MMSELL_TYPE_BOOKS.md` were measured under that
+> constraint. It does not invalidate them — each book was still compared against a control
+> seeing the same universe — but "type X has no edge" was only ever a statement about the
+> classified half.
+
+Coverage is now **99.6% of flow** (46 series added, each classified from its own live subtitle
+rather than guessed from the ticker), and **63.5% of flow is identifiable as `in_play`** — which
+is what makes a settle-mode distrust rule expressible at all.
+
+The in-play exclusion is therefore buildable: a pre-filter can trust the inline quote for
+`scheduled`/`discrete` markets and fetch the orderbook anyway for `in_play` ones, using only the
+series taxonomy, with no orderbook needed to make the decision. The expected effect is that the
+~1.4% blended miss rate drops toward the non-in-play rate; that remains to be measured rather
+than assumed, and the parity telemetry already collects what is needed to measure it.
+
+Confidence: the definitional finding is solid (exact agreement, multiple markets). The in-play
+mechanism is a strong hypothesis from n=30 probed markets plus 50 sampled outliers, consistent
+with every axis measured, but not yet independently confirmed.
+
 ## The in-play carve-out, and why it ships OFF (2026-08-13)
 
 The rule: trust the inline quote for `scheduled`/`discrete`, always fetch the orderbook for
