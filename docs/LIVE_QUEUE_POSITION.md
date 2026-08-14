@@ -42,6 +42,29 @@ not an A/B is armed.
 
 Read it with **`{"type":"script","name":"mmsell_queue_position"}`**.
 
+### What Kalshi actually sends — confirmed live 2026-08-14
+
+```json
+{"queue_position_fp": "0.00"}       ← front of the queue
+{"queue_position_fp": "2028.55"}    ← 2028.55 contracts resting ahead of us
+```
+
+**One fixed-point figure, and it is a CONTRACT QUANTITY, not an ordinal rank.** A rank cannot be
+`2028.55`. It is the same fixed-point convention as `count_fp` / `position_fp` / `volume_fp` and
+the `_dollars` prices — Kalshi's house style, applied here too.
+
+That is the *more* useful of the two possible measures, and it is what the read leads on: rank 3
+behind three 1-lots is a completely different queue from rank 3 behind three 500-lots. It
+populates `contracts_ahead`; `queue_position` carries the same figure rounded, kept populated only
+so the coverage check has something to key on.
+
+> **This shape was missed on the first two deploys.** The key list had `queue_position` and three
+> synonyms — but not the `_fp` spelling — so the parser read *nothing* in production while this
+> very document warned about the fixed-point migration. **The design still worked**: the failure
+> was loud, counted into `queue_unparsed`, and the raw payload was persisted, so the true shape was
+> recovered from `live_order_queue_ticks.raw_json` rather than guessed. That is precisely what the
+> next section is for, and it earned its keep on day one.
+
 ### The trap this is built around
 
 A queue sampler that silently writes nulls is worse than one that crashes: it runs every cycle,
@@ -119,10 +142,10 @@ Off with `LIVE_DRAIN_STOOD_DOWN=false`.
 
 This is measurement, so there is no P&L gate. The decision it feeds is the offset one:
 
-- **If `p50 contracts_ahead` is materially lower for `mmsell10b` than `mmsell10a`** — the cent
+- **If `p50 ahead` is materially lower for `mmsell10b` than `mmsell10a`** — the cent
   buys real priority. The offset stays a live question, and the next read is whether those extra
   fills are profitable (`mmsell_fill_model`), which is a different question this cannot answer.
-- **If the two arms' `contracts_ahead` distributions are indistinguishable** — the cent buys
+- **If the two arms' contracts-ahead distributions are indistinguishable** — the cent buys
   nothing at our sizes. **Stop paying it**, retire `mmsell10b`, and close the offset A/B as
   *measured and failed* rather than waiting for an n that arithmetic says will never arrive.
 - **If `null_rank%` is high** — decide nothing. Fix the parser first.

@@ -29,9 +29,20 @@ from __future__ import annotations
 
 from typing import Any
 
-# Keys that have carried a queue rank in the shapes we have seen or that Kalshi's own docs and
-# the third-party SDKs use. Ordered: the first present wins.
-_POSITION_KEYS = ("queue_position", "queue_pos", "position_in_queue", "queue_rank")
+# Keys that have carried a queue figure. Ordered: the first present wins.
+#
+# `queue_position_fp` is the one production actually sends, confirmed live 2026-08-14:
+#
+#     {"queue_position_fp": "0.00"}        <- front of the queue
+#     {"queue_position_fp": "2028.55"}     <- 2028.55 contracts resting ahead of us
+#
+# This module's own docstring warned about exactly this — Kalshi's fixed-point migration, the one
+# that grew `count_fp` / `position_fp` / `volume_fp` and the `_dollars` string prices — and the
+# first version of this tuple still omitted the `_fp` spelling. The design held even though the
+# key list did not: the failure was loud, counted, and the raw payload was persisted, so the true
+# shape was recovered from the database rather than guessed at.
+_POSITION_KEYS = ("queue_position_fp", "queue_position", "queue_pos",
+                  "position_in_queue", "queue_rank")
 
 # Contracts resting AHEAD of us at our price. Strictly more useful than the rank itself — rank 3
 # behind three 1-lots is a different trade from rank 3 behind three 500-lots — so it is captured
@@ -59,6 +70,16 @@ def _int_or_none(value: Any) -> int | None:
         return int(round(float(value)))
     except (TypeError, ValueError):
         return None
+
+
+def _is_quantity_like(value: Any) -> bool:
+    """True when the raw figure is Kalshi's fixed-point CONTRACT COUNT rather than an ordinal.
+
+    Decided on the delivery format, not on the value: `"0.00"` is as much a quantity as
+    `"2028.55"` is, and testing `float(v) != int(v)` would classify the front of the queue — the
+    single most important observation there is — as an ordinal purely because it happened to be a
+    round number."""
+    return isinstance(value, str) and "." in value
 
 
 def _first_key(payload: dict, keys: tuple[str, ...]) -> Any:
@@ -96,12 +117,26 @@ def parse_one(payload: Any) -> dict | None:
                         "order_id": _first_key(payload, _ORDER_ID_KEYS),
                         "market_ticker": _first_key(payload, _TICKER_KEYS)}
 
-    pos = _int_or_none(_first_key(node, _POSITION_KEYS))
+    raw_pos = _first_key(node, _POSITION_KEYS)
+    pos = _int_or_none(raw_pos)
     if pos is None:
         return None
+    # WHAT THE NUMBER IS. Kalshi sends one fixed-point figure, and a value of `2028.55` settles
+    # what it means: an ordinal rank cannot be fractional, so this is the QUANTITY of contracts
+    # resting ahead of us at our price — consistent with every other `_fp` field being a contract
+    # count. That is the more useful of the two measures anyway, and the one the read leads on:
+    # rank 3 behind three 1-lots is a completely different queue from rank 3 behind three 500-lots.
+    #
+    # So it populates `contracts_ahead`. It ALSO populates `queue_position` (rounded) because
+    # every downstream coverage check keys off that column, and leaving it null would make a
+    # working sampler indistinguishable from a broken one — the precise confusion this module
+    # exists to prevent. An explicit `contracts_ahead` field, if Kalshi ever sends one, still wins.
+    ahead = _int_or_none(_first_key(node, _AHEAD_KEYS))
+    if ahead is None and _is_quantity_like(raw_pos):
+        ahead = pos
     return {
         "queue_position": pos,
-        "contracts_ahead": _int_or_none(_first_key(node, _AHEAD_KEYS)),
+        "contracts_ahead": ahead,
         # Identity may sit on either the envelope or the inner node, so check both.
         "order_id": _first_key(node, _ORDER_ID_KEYS) or _first_key(payload, _ORDER_ID_KEYS),
         "market_ticker": _first_key(node, _TICKER_KEYS) or _first_key(payload, _TICKER_KEYS),

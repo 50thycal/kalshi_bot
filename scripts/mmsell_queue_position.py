@@ -24,16 +24,23 @@ it accrues whether or not any A/B is armed.
 READ IT IN THIS ORDER
 ---------------------
 1. **COVERAGE** first, and treat it as a gate on everything below. `null_rank%` is the share of
-   samples where the API answered but we could not read a rank. A high or rising number means the
-   payload shape moved under us (Kalshi has done this before -- `orderbook_fp`), and every table
-   after it is then describing a shrinking, non-random subset. Nothing here is trustworthy until
-   this is near zero.
-2. **RANK BY BOOK** — the direct arm comparison. `p50 rank` and `p50 ahead` are the answer to
-   what the cent bought. Read `ahead` in preference to `rank`: rank 3 behind three 1-lots is a
-   completely different queue from rank 3 behind three 500-lots.
-3. **RANK vs FILL** — the payoff. Each order's FIRST observed rank against whether it ever
-   filled. This is the P(fill | queue rank) relationship the fill model currently has to
+   samples where the API answered but we could not read a figure. A high or rising number means
+   the payload shape moved under us -- which has now happened TWICE (`orderbook_fp`, then
+   `queue_position_fp`), so treat it as likely rather than exotic. Every table after it then
+   describes a shrinking, non-random subset. Nothing here is trustworthy until this is near zero.
+2. **QUEUE DEPTH BY BOOK** — the direct arm comparison. `p50 ahead` is the answer to what the
+   cent bought.
+3. **CONTRACTS AHEAD vs FILL** — the payoff. Each order's FIRST observed depth against whether it
+   ever filled. This is the P(fill | queue depth) relationship the fill model currently has to
    approximate from price alone.
+
+WHAT THE NUMBER IS
+------------------
+Kalshi sends ONE fixed-point figure, `queue_position_fp`, and a value like `"2028.55"` settles
+what it means: an ordinal rank cannot be fractional, so it is the QUANTITY OF CONTRACTS resting
+ahead of us at our price. That is the more useful measure anyway -- rank 3 behind three 1-lots is
+a completely different queue from rank 3 behind three 500-lots -- and it is what the tables lead
+on. `0.00` is the front of the queue.
 
 WHAT THIS CANNOT TELL YOU
 -------------------------
@@ -115,38 +122,41 @@ def _coverage(cur, hours: int) -> bool:
 
 
 def _by_book(cur, hours: int) -> None:
-    print("\n=== RANK BY BOOK — what the offset actually buys ===")
+    print("\n=== QUEUE DEPTH BY BOOK — what the offset actually buys ===")
     cur.execute(
+        # Percentiles over `contracts_ahead` — the semantic column. `queue_position` carries the
+        # same figure and is used only as the "was this sample readable at all" filter, so the
+        # two can never disagree about which rows counted.
         "SELECT strategy, count(*) AS n, count(DISTINCT kalshi_order_id) AS orders,"
         "       round(avg(limit_price)::numeric,1) AS avg_px,"
-        "       percentile_disc(0.5) WITHIN GROUP (ORDER BY queue_position) AS p50_rank,"
-        "       percentile_disc(0.9) WITHIN GROUP (ORDER BY queue_position) AS p90_rank,"
-        "       count(*) FILTER (WHERE queue_position = 0) AS at_front,"
-        "       percentile_disc(0.5) WITHIN GROUP (ORDER BY contracts_ahead) AS p50_ahead"
+        "       percentile_disc(0.5) WITHIN GROUP (ORDER BY contracts_ahead) AS p50_ahead,"
+        "       percentile_disc(0.9) WITHIN GROUP (ORDER BY contracts_ahead) AS p90_ahead,"
+        "       count(*) FILTER (WHERE contracts_ahead = 0) AS at_front"
         " FROM live_order_queue_ticks"
         f" WHERE captured_at >= now() - interval '{int(hours)} hours'"
-        "   AND queue_position IS NOT NULL"
+        "   AND queue_position IS NOT NULL AND contracts_ahead IS NOT NULL"
         " GROUP BY 1 ORDER BY 1",
     )
     rows = cur.fetchall()
     if not rows:
-        print("  (no samples with a readable rank)")
+        print("  (no samples carry a readable contracts-ahead figure)")
         return
-    print(f"  {'book':11s} {'n':>6} {'orders':>7} {'avg_px':>7} {'p50 rank':>9} {'p90 rank':>9}"
-          f" {'at front':>9} {'p50 ahead':>10}")
-    for strat, n, orders, avg_px, p50, p90, front, ahead in rows:
+    print(f"  {'book':11s} {'n':>6} {'orders':>7} {'avg_px':>7} {'p50 ahead':>10}"
+          f" {'p90 ahead':>10} {'at front':>9}")
+    for strat, n, orders, avg_px, p50, p90, front in rows:
         flag = "" if n >= MIN_SAMPLES else "  (thin)"
-        print(f"  {str(strat)[:11]:11s} {n:>6} {orders:>7} {_num(avg_px):>7} {_num(p50, 0):>9}"
-              f" {_num(p90, 0):>9} {_pct(front / n):>9} {_num(ahead, 0):>10}{flag}")
-    print("  (Read 'p50 ahead' over 'p50 rank' — contracts ahead is what actually has to trade")
-    print("   before you do. A lower rank bought by an improving offset is the mechanism the")
-    print("   offset A/B is trying to price; this measures it directly instead of through P&L.)")
+        print(f"  {str(strat)[:11]:11s} {n:>6} {orders:>7} {_num(avg_px):>7}"
+              f" {_num(p50, 0):>10} {_num(p90, 0):>10} {_pct(front / n):>9}{flag}")
+    print("  ('ahead' is CONTRACTS that must trade before you do, not an ordinal rank.")
+    print("   Fewer contracts ahead, bought by an improving offset, is the mechanism the offset")
+    print("   A/B is trying to price; this measures it directly instead of through P&L.")
+    print("   'at front' is the share of samples with nothing ahead at all — first in line.)")
 
 
 def _rank_vs_fill(cur, hours: int) -> None:
     """P(fill | first observed rank). The relationship mmsell_fill_model currently approximates
     from entry price alone, because this data did not exist."""
-    print("\n=== RANK vs FILL — P(fill | rank when first seen resting) ===")
+    print("\n=== CONTRACTS AHEAD vs FILL — P(fill | queue depth when first seen resting) ===")
     cur.execute(
         "WITH first_seen AS ("
         "  SELECT DISTINCT ON (t.kalshi_order_id) t.kalshi_order_id, t.strategy,"
@@ -155,12 +165,16 @@ def _rank_vs_fill(cur, hours: int) -> None:
         f"  WHERE t.captured_at >= now() - interval '{int(hours)} hours'"
         "    AND t.queue_position IS NOT NULL"
         "  ORDER BY t.kalshi_order_id, t.captured_at"
+        # Bands are CONTRACT COUNTS, not ordinal ranks. Kalshi sends one fixed-point figure
+        # (`queue_position_fp`) and a value of 2028.55 settles what it is: the quantity resting
+        # ahead of us. Ordinal-shaped bands (1-2, 3-5, 6-10) would dump almost every real order
+        # into a single "11+" bucket and show a flat, meaningless gradient.
         ") SELECT f.strategy,"
-        "         CASE WHEN f.queue_position = 0 THEN '0 (front)'"
-        "              WHEN f.queue_position <= 2 THEN '1-2'"
-        "              WHEN f.queue_position <= 5 THEN '3-5'"
-        "              WHEN f.queue_position <= 10 THEN '6-10'"
-        "              ELSE '11+' END AS rank_band,"
+        "         CASE WHEN f.contracts_ahead = 0 THEN '0 (front)'"
+        "              WHEN f.contracts_ahead <= 10 THEN '1-10'"
+        "              WHEN f.contracts_ahead <= 100 THEN '11-100'"
+        "              WHEN f.contracts_ahead <= 1000 THEN '101-1k'"
+        "              ELSE '1k+' END AS ahead_band,"
         "         count(*) AS orders,"
         "         count(*) FILTER (WHERE o.status = 'filled') AS filled"
         "  FROM first_seen f JOIN live_orders o ON o.kalshi_order_id = f.kalshi_order_id"
@@ -172,11 +186,11 @@ def _rank_vs_fill(cur, hours: int) -> None:
         print("  (no orders have both a rank sample and a terminal status yet — this fills in")
         print("   as resting orders settle out; it is a data-maturity wait, not a fault)")
         return
-    print(f"  {'book':11s} {'rank band':>11} {'orders':>7} {'filled':>7} {'fill%':>7}")
+    print(f"  {'book':11s} {'ahead band':>11} {'orders':>7} {'filled':>7} {'fill%':>7}")
     for strat, band, orders, filled in rows:
         print(f"  {str(strat)[:11]:11s} {band:>11} {orders:>7} {filled:>7}"
               f" {_pct(filled / orders) if orders else 'n/a':>7}")
-    print("  (A steep fill% gradient across rank bands says queue position drives fills, which")
+    print("  (A steep fill% gradient across the bands says queue depth drives fills, which")
     print("   makes the offset a real lever. A flat one says it does not — and that we should")
     print("   stop paying a cent for it, which is the decision this whole line of work is for.")
     print("   Either way it does NOT say the fills are profitable: see mmsell_fill_model.)")
