@@ -46,6 +46,44 @@ def test_a_string_rank_parses_because_that_is_the_house_style():
     assert parse_one({"order_id": "K-1", "queue_position": "3"})["queue_position"] == 3
 
 
+def test_the_shape_production_actually_sends(settings=None):
+    """Confirmed live 2026-08-14, straight off `live_order_queue_ticks.raw_json`:
+
+        {"queue_position_fp": "0.00"}       -> front of the queue
+        {"queue_position_fp": "2028.55"}    -> 2028.55 contracts ahead
+
+    The first version of this parser omitted the `_fp` spelling and read NOTHING in production —
+    while this module's own docstring warned about precisely that migration. Pinned to the real
+    payload so the next person does not have to rediscover it from the database."""
+    front = parse_one({"queue_position_fp": "0.00"})
+    assert front is not None and front["queue_position"] == 0
+    deep = parse_one({"queue_position_fp": "2028.55"})
+    assert deep["queue_position"] == 2029
+
+
+def test_a_fixed_point_figure_is_read_as_contracts_ahead():
+    """A fractional value settles the semantics: an ordinal rank cannot be 2028.55, so the number
+    is a CONTRACT QUANTITY. That is the measure the read leads on, so it must land in
+    `contracts_ahead` rather than only in the rank column."""
+    assert parse_one({"queue_position_fp": "2028.55"})["contracts_ahead"] == 2029
+    # ...and the front of the queue is a quantity too — decided by the delivery format, not by
+    # whether the value happens to be round.
+    assert parse_one({"queue_position_fp": "0.00"})["contracts_ahead"] == 0
+
+
+def test_an_explicit_contracts_ahead_still_wins():
+    """If Kalshi ever sends both, the purpose-built field is the authority — the fixed-point
+    figure is only being interpreted as a quantity in its absence."""
+    s = parse_one({"queue_position_fp": "50.00", "contracts_ahead": 7})
+    assert s["contracts_ahead"] == 7 and s["queue_position"] == 50
+
+
+def test_an_integer_rank_is_not_relabelled_as_a_quantity():
+    """A plain integer under the non-`_fp` key is an ordinal as far as we know, so it must not
+    silently populate a contract-count column."""
+    assert parse_one({"order_id": "K", "queue_position": 3})["contracts_ahead"] is None
+
+
 def test_front_of_queue_is_not_confused_with_missing():
     """Rank 0 is the single most interesting value there is — it is the order about to fill. Any
     truthiness check anywhere in the parser turns it into 'no data'."""
