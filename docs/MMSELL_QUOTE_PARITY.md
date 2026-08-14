@@ -2,6 +2,62 @@
 
 Built 2026-08-11. **Measurement only** — no trading decision changes. Pre-registered gate below.
 
+> ## VERDICT 2026-08-14 — CLOSED. The gate failed, and then the question stopped mattering.
+>
+> **Measured and failed, twice over — not shelved.** Two independent closures, and the second is
+> the one that ends the line permanently.
+>
+> ### 1. The pre-registered gate FAILED (2026-08-13, 101 cycles)
+>
+> The smallest margin that misses nothing is **71¢ on the tight band** and **48.5¢ on the wide**,
+> against a 3¢ cap. That is not a near miss: a safe pre-filter would fetch essentially everything
+> and save nothing.
+>
+> The practical fallback was to accept being wrong sometimes — at a 3¢ margin, **1.20% of tight-band
+> candidates missed** in exchange for **~82% fewer orderbook fetches**. That trade was left open as
+> an operator decision.
+>
+> ### 2. The trade's entire payoff evaporated (2026-08-14)
+>
+> Both justifications for buying fetch headroom are now measured and gone:
+>
+> * **Rate limits are not binding.** 429s have been **zero** since the `advanced` grant — measured
+>   through a step that roughly doubled orderbook fetches per scan (~830 → ~1,800 markets
+>   considered) with the transient counter staying empty. The scan is not fetch-constrained.
+> * **Deeper scanning loses money.** `docs/MMSELL_SCAN_DEPTH.md`: depth 150 → +1.34¢/trade,
+>   225 → +0.70¢, 300 → **−1.05¢**, monotonic. The ~1,600 eligible events/scan the cap discards
+>   are worth about **−1.0¢/trade** to this entry.
+>
+> So the pre-filter would spend a **biased** ~1.2% miss rate to reach markets that lose money. The
+> miss is not random — it concentrates where the inline quote and the book disagree, i.e. thin or
+> lopsided books, which is the same population the depth result just showed is bad for a maker.
+> **Paying for that headroom is paying to lose faster.**
+>
+> ### What NOT to conclude
+>
+> * **Not** "the inline quote is unreliable." Where both sides have depth it is exact — the
+>   definitional hypothesis was tested directly (`scripts/kalshi_quote_probe.py`) and the inline
+>   `yes_ask` equals `100 − best_no_bid` on the nose. The disagreements are genuine staleness on
+>   thin books, not a derivation difference.
+> * **Not** "82% fewer calls was wrong." That number stands. It simply buys something we no longer
+>   want.
+> * The **in-play distrust rule** dies with the parent idea, undecided. Its carve-out was pointing
+>   the wrong way anyway (wide-band carve-out miss 2.63% vs 1.61% blended — in-play looked *more*
+>   reliable, not less), on n far too small to say so.
+>
+> ### Revival condition
+>
+> Only if a **fetch-constrained** mmsell entry ever exists again — a faster cycle, a much larger
+> universe, or a downgraded API tier — **and** deeper scanning is independently shown to be worth
+> reaching. Both must hold. Neither does today.
+>
+> ### Still running, deliberately
+>
+> The accumulator (`mmsell_quote_parity`, default on) keeps scoring inline-vs-orderbook every scan
+> at negligible cost. It is the only continuous check that Kalshi's payload has not silently
+> changed shape — the `orderbook_fp` / `_dollars` migration broke a naive read once already. Turn
+> it off with `MMSELL_QUOTE_PARITY=false` if that ever stops being worth a row per scan.
+
 ## The constraint this is trying to remove
 
 The mmsell entry scan fetches one `GET /markets/{ticker}/orderbook` per market that clears the

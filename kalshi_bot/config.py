@@ -253,31 +253,37 @@ class Settings(BaseSettings):
         "mmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;"
         "mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;"
         "mmsell10:lo=5,hi=10,maxyes=7;"
-        # --- SCAN-DEPTH experiment (2026-08-13, docs/MMSELL_SCAN_DEPTH.md) --------------
-        # `mmsell10d` is `mmsell10` with ONE difference: it may look 225 events deep into the
-        # volume-ranked list instead of the global 150. Everything else — band, price ceiling,
-        # htc window, sizing, hold-to-settlement — is identical, so any divergence between the
-        # two is attributable to the extra events alone.
+        # --- SCAN-DEPTH experiment: RETIRED 2026-08-14 (docs/MMSELL_SCAN_DEPTH.md) -------
+        # `mmsell10d` (225 events deep) and `mmsell10e` (300) were `mmsell10` with ONE
+        # difference each — how far into the volume-ranked event list they were allowed to
+        # look. The question was not "is deeper better" but WHERE the maker edge decays.
         #
-        # It is a SEPARATE BOOK rather than a raised global cap on purpose. The cap decides
-        # which candidates every book is offered, so raising it globally would change the
-        # candidate stream of every paper book and BOTH live arms at once, and silently make
-        # every number collected before the change incomparable with every number after it.
-        # Here `mmsell10` keeps seeing exactly the top-150 it always saw and remains the control.
+        # ANSWERED, and the answer is that it decays fast and goes NEGATIVE. Read against
+        # `mmsell10` over each book's own window:
         #
-        # The ~1,740 eligible events/cycle currently going unscanned are lower-volume than the
-        # top 150 by construction, so this tests a real question rather than a free lunch: is
-        # the maker edge in the thinner tail of the board as good as it is at the top, or does
-        # it decay with liquidity? Affordable now only because the ADVANCED grant took us from
-        # 20 to 30 reads/sec — watch the RATE LIMITED line before widening further.
-        "mmsell10d:lo=5,hi=10,maxyes=7,scanmax=225;"
-        # `mmsell10e` is the same experiment one step further out (300). Two depths rather than
-        # one because the question is not "is deeper better" but WHERE the edge decays: with a
-        # single deep book a null result cannot distinguish "the tail is worthless" from "225
-        # was not far enough to matter". Read as a LADDER — mmsell10 (150) -> 10d (225) ->
-        # 10e (300) — where each step's ¢/trade against the one above it locates the decay.
-        # 10e sees everything 10d sees plus ranks 225-299, so the two are nested, not disjoint.
-        "mmsell10e:lo=5,hi=10,maxyes=7,scanmax=300;"
+        #     depth 150 (control)   +1.34c/trade   (n=177 over 10d's window)
+        #     depth 225 (mmsell10d) +0.70c/trade   (n=243)  -> -0.64c vs control
+        #     depth 300 (mmsell10e) -1.05c/trade   (n=133)  -> -1.94c vs control
+        #
+        # Monotonic, and `mmsell10d` also lost on TOTAL dollars — the escape hatch its gate was
+        # built with ("equal per-trade across more trades is more total P&L"). Same window it
+        # took 66 MORE trades and made LESS money: 243 x +0.70c = +$1.70 against the control's
+        # 177 x +1.34c = +$2.37. Backing out the increment, ranks 150-225 run about -1.0c/trade.
+        #
+        # The mechanism, stated so this is not re-tried on a hunch: the volume rank cut selects
+        # for LIQUID events, and liquidity is exactly what a resting maker needs — both to fill
+        # at all and to avoid being picked off by the one trade that crosses into it. The cap
+        # was not a limitation we were suffering; it was doing work.
+        #
+        # Retiring both returns the shared scan depth to the global 150, which halves orderbook
+        # fetches per scan. Rate limits are NOT why: 429s have been zero since the ADVANCED
+        # grant, measured straight through the 225 -> 300 step that doubled the fetch load.
+        #   mmsell10d:lo=5,hi=10,maxyes=7,scanmax=225
+        #   mmsell10e:lo=5,hi=10,maxyes=7,scanmax=300
+        #
+        # REVIVE only on a mechanically different entry — a TAKER rule, or one that does not
+        # depend on someone crossing into a resting order. The finding here is about liquidity
+        # and maker fills, not about the tail of the board being uninteresting per se.
         # --- ANCHOR SET (2026-07-30, docs/MMSELL_ANCHOR_SET.md) -------------------------
         # Every anchor book uses the mmsell10 base (lo=5,hi=10,maxyes=7) — the only
         # REALIZABLE EDGE config — so ENTRY is held constant and each book varies exactly one
