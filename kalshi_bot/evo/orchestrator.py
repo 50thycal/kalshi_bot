@@ -356,14 +356,21 @@ def run_evo_cycle(runtime: EvoRuntime) -> None:
     # queue that only ever grows buries the live requests under delivered ones — which is
     # exactly what happened to the off-switch wave. Idempotent and conservative; see
     # tickets.SHIPPED_CAPABILITIES.
+    # Its OWN session_scope, and that is load-bearing: `session` leaks out of the earlier
+    # `with` blocks in this function, so calling this with the leaked name ran the queries
+    # and the flush against an already-committed, closed scope. The work happened, the log
+    # said "auto-closed 22", and nothing persisted — every ticket was still open on the next
+    # read. A write phase must own the transaction it writes in.
     try:
-        closed = tickets.auto_resolve_shipped(session)
-        if closed:
-            log_event(
-                logger, logging.INFO,
-                f"evo tickets: auto-closed {closed} request(s) whose capability shipped",
-                closed=closed,
-            )
+        with session_scope() as session:
+            _guard(session)
+            closed = tickets.auto_resolve_shipped(session)
+            if closed:
+                log_event(
+                    logger, logging.INFO,
+                    f"evo tickets: auto-closed {closed} request(s) whose capability shipped",
+                    closed=closed,
+                )
     except Exception:  # noqa: BLE001
         logger.exception("evo phase failed: ticket_auto_resolve")
 
