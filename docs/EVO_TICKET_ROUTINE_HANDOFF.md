@@ -60,6 +60,13 @@ rather than a wider matcher. Widening `all_of` until such a ticket matches is ho
 closing the near-misses the registry exists to protect (`strategy_execution`,
 `strategy_management`). Three tickets in the queue are in exactly this state — see §3.
 
+One live caveat on the econ entry, for whoever touches it next: its second group includes
+`pipeline`, which none of the three real CPI phrasings actually need (they all carry `backtest`
+or `backtesting`). So a future ask like "CPI data pipeline for live quotes" would match and close
+against a settled-history dataset it cannot use. Dropping `pipeline`, or adding
+`none_of={"live", "realtime"}`, would close that hole. Left as-is here rather than changed in
+passing, because the entry was merged deliberately and narrow matching is the house rule.
+
 Watch for this in the evo logs:
 
 ```
@@ -78,7 +85,7 @@ then. **13 survived.** What they are, and what the first run concluded:
 
 | id(s) | category | ask | verdict |
 |---|---|---|---|
-| 25, 27, 28 | `data_collection` + `external_data_pipeline` | Settled KXCPI corpus + official CPI actuals as a `run_backtest` dataset | **ALREADY SHIPPED** — delivered 2026-08-14 as `run_backtest dataset='econ'` (PR #203). Never closed because the registry had no entry; one added 2026-08-14, so they close on the next evo cycle. |
+| 25, 27, 28 | `data_collection` + `external_data_pipeline` | Settled KXCPI corpus + official CPI actuals as a `run_backtest` dataset | **PARTIALLY SHIPPED, now closing.** The corpus landed 2026-08-13 as `run_backtest dataset='econ'` (111 econ markets, 18,710 candles); the official CPI **actuals** they also asked for are not collected, so a spec still cannot gate on the released number. Registry entry added 2026-08-14 — its note names both halves on purpose, so the fleet re-asks for the missing one. Note this is **three** tickets, not the four §3 originally claimed: the fourth `data_collection` row was `weather_market_ticker_registry`. |
 | 21, 22, 30 | `other`, `bug_report` | "Deactivate strategies 49/50" / "[46,36,30,32,33] not yet deactivated" | **ALREADY SHIPPED**, but *not* registry-fixable: `_shipped_match()` reads `capability` only, and these carry `deactivation` / `strategy_management` / `shared_code_capability` there with the real ask in `problem`. Needs an operator decision, not a matcher change — widening the matcher to cover them would sweep up genuine near-misses. |
 | 9, 11 | `bug_report` | "8 active strategies show ZERO paper_trades across many heartbeats" | Filed 2026-08-01 by Havel. Reads as PAP-4 bait from the capability string ("live order placement"), but the `problem` text is a **fill-engine bug report**, not a request for real money. The fill engine was fixed after these were filed (agents reference the fix from 2026-08-05 on, and backtest 1855 ran 4,339 trades), so they are most likely stale. Verify, then close as fixed. |
 | 29 | `sandbox_operator` | `sandbox_runs` budget exhausted (50/50) | Genuinely pending — a quota bump, not a build. Blackwood wants to retest pre-fill-engine-fix conclusions it says are now invalid. |

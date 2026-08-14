@@ -71,24 +71,22 @@ SHIPPED_CAPABILITIES: tuple[ShippedCapability, ...] = (
             frozenset({"strategy", "strategies"}),
         ),
     ),
-    # The CPI-corpus wave: the fleet's own non-weather research thesis, filed four times
-    # 2026-07-22..2026-08-05 (Blackwood). Shipped as `run_backtest dataset="econ"` — settled
-    # Kalshi economic-release markets replayed from the regime backfill, so payrolls/PCE/GDP/
-    # Fed come with CPI. Regime-backed rather than CPI-specific, hence the wider first group.
+    # The econ corpus: 3 tickets (data_collection x2, external_data_pipeline x1) from
+    # 2026-07-22 asking for settled CPI history as a run_backtest dataset. PARTIAL delivery,
+    # and the note says so — the corpus shipped, the official CPI ACTUALS they also asked for
+    # are not collected. Closing with a note that claimed the whole ask would teach the fleet
+    # its request was met and stop it re-asking for the half that is missing.
     ShippedCapability(
         action="run_backtest",
-        shipped_on="2026-08-14",
-        note="shipped as `run_backtest` dataset='econ' — settled Kalshi economic-release "
-             "markets (CPI, payrolls, PCE, GDP, Fed) replayed over their recorded candle "
-             "path; use dataset='econ' instead of filing a ticket",
+        shipped_on="2026-08-13",
+        note="the settled econ corpus shipped: run_backtest with dataset='econ' replays "
+             "KXCPI/KXCPIYOY/KXPAYROLL/KXPCE/KXGDP/KXUNRATE/KXJOBLESS/KXPPI order-book "
+             "history. The official CPI actuals you also asked for are NOT collected, so a "
+             "spec cannot gate on the released number — file a new ticket for that half",
         all_of=(
-            frozenset({"cpi", "kxcpi", "kxcpiyoy", "inflation", "payroll", "payrolls",
-                       "kxpayroll", "pce", "kxpce", "econ", "economic"}),
-            frozenset({"backtest", "backtesting", "backtests", "corpus", "dataset", "datasets"}),
+            frozenset({"cpi", "kxcpi"}),
+            frozenset({"backtest", "backtests", "backtesting", "corpus", "dataset", "pipeline"}),
         ),
-        # What shipped is SETTLED history to replay, not a live feed or a release schedule.
-        # An agent asking for either of those is asking for something that does not exist.
-        none_of=frozenset({"calendar", "forecast", "nowcast", "live", "realtime"}),
     ),
 )
 
