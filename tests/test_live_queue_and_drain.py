@@ -211,14 +211,54 @@ def test_an_unreadable_payload_is_counted_not_swallowed(settings):
     assert ex.summary.queue_sampled == 0
 
 
-def test_a_dead_batch_endpoint_never_breaks_the_cycle(settings):
+def test_a_dead_batch_endpoint_degrades_to_per_order_instead_of_stalling(settings):
+    """The bug the first production deploy shipped. A total batch failure returned early and
+    collected NOTHING — when the per-order path was available and would have collected
+    everything. A batch failure is just the extreme case of 'the batch did not cover this
+    order', which is exactly what the fallback exists for. Degrade, don't stall."""
     _live(settings)
     _db(settings)
-    client = _QueueClient(batch=RuntimeError("500"))
+    client = _QueueClient(batch=RuntimeError("400 bad request"),
+                          single={"order_id": "K-1", "queue_position": 6})
+    ex = LiveExecutor(client, settings, RiskManager(settings))
+    with db.session_scope() as session:
+        _resting(session, koid="K-1")
+        assert ex.sample_queue_positions(session) == 1
+        assert session.scalar(select(m.LiveOrderQueueTick)).queue_position == 6
+    assert client.single_calls == 1
+    assert ex.summary.queue_sampled == 1
+
+
+def test_both_paths_failing_still_records_the_attempt_and_never_raises(settings):
+    _live(settings)
+    _db(settings)
+    client = _QueueClient(batch=RuntimeError("500"), single=RuntimeError("404"))
     ex = LiveExecutor(client, settings, RiskManager(settings))
     with db.session_scope() as session:
         _resting(session)
-        assert ex.sample_queue_positions(session) == 0  # returns, does not raise
+        assert ex.sample_queue_positions(session) == 1   # a row, so the gap is countable
+        assert session.scalar(select(m.LiveOrderQueueTick)).queue_position is None
+    assert ex.summary.queue_sampled == 0
+
+
+def test_the_batch_call_is_scoped_to_the_tickers_we_have_resting(settings):
+    """Smaller response, and the reference implementation always scopes this call — the
+    unfiltered form may not be accepted at all."""
+    seen = {}
+
+    class _Recorder(_QueueClient):
+        def get_queue_positions(self, **kw):
+            seen.update(kw)
+            return super().get_queue_positions(**kw)
+
+    _live(settings)
+    _db(settings)
+    ex = LiveExecutor(_Recorder(), settings, RiskManager(settings))
+    with db.session_scope() as session:
+        _resting(session, koid="K-1")
+        _resting(session, koid="K-2")
+        ex.sample_queue_positions(session)
+    assert seen.get("market_tickers") == "KXT-K-1,KXT-K-2"
 
 
 def test_the_per_order_fallback_is_bounded(settings):

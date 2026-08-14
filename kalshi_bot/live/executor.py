@@ -729,14 +729,31 @@ class LiveExecutor:
         if not resting:
             return 0
 
+        # Filter the batch to the tickers we actually have resting. Two reasons: a far smaller
+        # response, and the reference implementation in docs/EXTERNAL_REPO_RESEARCH.md §1 always
+        # scopes this call — the unfiltered form may not be accepted at all.
+        tickers = sorted({r.market_ticker for r in resting if r.market_ticker})
+        payload: object = None
         try:
-            payload = self.client.get_queue_positions()
+            payload = self.client.get_queue_positions(market_tickers=",".join(tickers))
         except AuthError:
             raise
-        except Exception:  # noqa: BLE001
-            logger.warning("queue-position batch fetch failed (cycle unaffected)", exc_info=True)
-            return 0
+        except Exception as exc:  # noqa: BLE001
+            # The error TEXT goes in the message, not in `extra`/`exc_info`. Railway's log
+            # endpoint returns only a log line's message and drops structured fields and
+            # tracebacks — the same trap that made the 429 counters write-only until the status
+            # was moved into the message string. Without this the failure is unreadable in
+            # production, which is exactly what happened on this call's first deploy.
+            logger.warning(
+                f"queue-position batch fetch failed: {type(exc).__name__}: {str(exc)[:300]} "
+                f"(tickers={len(tickers)}) — falling back to per-order")
 
+        # DEGRADE, DON'T STALL. A total batch failure is the extreme case of "the batch did not
+        # cover this order", which is precisely what the per-order path is for — so fall through
+        # to it instead of abandoning the cycle. The first deploy returned here and therefore
+        # collected nothing at all, when the bounded fallback would have collected everything.
+        # Same posture docs/EXTERNAL_REPO_RESEARCH.md §5 credits `rodlaf` with: on failure, back
+        # off to a lesser path rather than dropping the cycle.
         samples, unreadable = parse_batch(payload)
         if unreadable:
             # LOUD, because this is the failure that would otherwise be invisible: the sampler
@@ -754,6 +771,7 @@ class LiveExecutor:
 
         now = datetime.now(timezone.utc)
         written = 0
+        first_error: str | None = None
         for row in resting:
             koid = str(row.kalshi_order_id)
             sample = samples.get(koid)
@@ -765,8 +783,14 @@ class LiveExecutor:
                     raw = single
                 except AuthError:
                     raise
-                except Exception:  # noqa: BLE001 — order may have just filled or been cancelled
+                except Exception as exc:  # noqa: BLE001 — may have just filled or been cancelled
                     sample = None
+                    # First failure only. An order that filled a moment ago legitimately 404s
+                    # here, so this is noisy by nature — but if the ENDPOINT is wrong we would
+                    # otherwise have no record of why at all, and one line per cycle is the
+                    # cheapest way to tell "one order vanished" from "the path is broken".
+                    if first_error is None:
+                        first_error = f"{type(exc).__name__}: {str(exc)[:200]}"
             created = _aware(row.created_at)
             repo.insert_queue_tick(
                 session,
@@ -781,6 +805,13 @@ class LiveExecutor:
             written += 1
             if sample is not None:
                 self.summary.queue_sampled += 1
+        if first_error and not self.summary.queue_sampled:
+            # Nothing at all was readable this cycle by either path. That is a broken endpoint,
+            # not an order that happened to fill — say so in the message, where Railway will
+            # actually surface it.
+            logger.warning(
+                f"queue-position: no rank readable for any of {len(resting)} resting orders; "
+                f"first per-order error was {first_error}")
         return written
 
     # Cap on per-order fallback calls in one cycle. Sized above our observed resting footprint
