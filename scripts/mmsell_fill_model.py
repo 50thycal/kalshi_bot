@@ -129,6 +129,65 @@ _PNL_NORM = (
 )
 
 
+# --- COHORT BOUNDARIES: books whose UNIVERSE changed underneath them --------------------
+#
+# A book's trades are poolable only while the SET OF MARKETS it was offered stayed the same.
+# When a deploy changes what a book can see, the trades either side are drawn from different
+# populations, and their average describes neither.
+#
+# This is a different kind of boundary from the 2026-08-11 maker-fee correction that _PNL_NORM
+# above handles, and it needs the opposite remedy. The fee change was a UNIFORM SHIFT: every
+# maker trade moved by the same ~0.87c, so pre-boundary trades stay usable once the shift is
+# added back — which is exactly what _PNL_NORM does. A universe change admits no such
+# conversion: the pre-boundary trades are a BIASED SUBSAMPLE of the post-boundary population,
+# and no offset turns one into the other. The only correct treatment is to DROP them.
+#
+# The tags deliberately did NOT change. Each book's selection RULE is byte-identical either
+# side of its boundary, so forking the tag would assert a change that did not happen and would
+# leave two tags testing one rule. The cohort is the DATE — and this table is what makes that
+# enforceable instead of merely remembered. Every previous re-baseline in this repo lived only
+# in prose (docs/BOOK_REGISTRY.md, "the boundary is a date, not a flag"), which meant the
+# standing read still silently pooled across it.
+#
+#   tag: (first instant of the new cohort, the control to read the book against)
+#
+# 2026-08-13 18:09:40Z — THE TAXONOMY BOUNDARY (commit c75c6be, merged 18:04:24Z; this is the
+# first live cycle observed entering a newly classified series, ~5 min later). The market-type
+# taxonomy went from 50.5% to 99.6% of candidate flow: 46 series added, none reclassified.
+# The four surviving type books select with `mtype=`/`mode=`, and an unclassified series is
+# admitted by NO allowlist — so before this instant each was being offered roughly half its
+# intended universe, and specifically the half somebody had already classified, i.e. the very
+# series the census prior was fit on. Their entry rates jumped 5-9x across the boundary while
+# the un-filtered control `mmsell10` moved 1.6x with the ambient universe.
+#
+# The upside that pooling would destroy: those 46 series were never in the census, so
+# post-boundary flow is the first genuinely OUT-OF-SAMPLE test the type hypothesis has had.
+# docs/MMSELL_TYPE_BOOKS.md states the boundary and its consequences; this applies it.
+COHORT_START: dict[str, tuple[str, str]] = {
+    "Tmmsell1": ("2026-08-13 18:09:40+00", "mmsell10"),
+    "Tmmsell2": ("2026-08-13 18:09:40+00", "mmsell10"),
+    "Tmmsell5": ("2026-08-13 18:09:40+00", "mmsell10"),
+    "Tmmsell6": ("2026-08-13 18:09:40+00", "mmsell10"),
+}
+
+
+def cohort_floor_sql() -> tuple[str, list]:
+    """The per-book entry-time floor as a SQL predicate over `paper_trades p`, plus its params.
+
+    A CASE rather than a join so it drops into any existing per-book aggregate unchanged: books
+    with no boundary fall through to `-infinity` and keep their whole history. Returns ("", [])
+    when no book has a boundary, so the caller needs no special case."""
+    if not COHORT_START:
+        return "", []
+    whens: list[str] = []
+    params: list[str] = []
+    for tag, (start, _control) in sorted(COHORT_START.items()):
+        whens.append("WHEN p.strategy = %s THEN %s::timestamptz")
+        params += [tag, start]
+    return (" AND p.created_at >= CASE " + " ".join(whens)
+            + " ELSE '-infinity'::timestamptz END"), params
+
+
 def _load_calibration(cur) -> dict[int, tuple]:
     """Live mmsell3 ground truth, per YES entry cent: (n_fills, fill_rate, realizable_pnl_cents).
     realizable = avg paper pnl (cents) over the tickers live actually FILLED at that price — i.e.
@@ -155,7 +214,10 @@ def _load_calibration(cur) -> dict[int, tuple]:
 
 
 def _load_price_hists(cur) -> dict[str, dict[int, list]]:
-    """Per book: yes_cent -> [n_trades, sum_paper_pnl_cents]."""
+    """Per book: yes_cent -> [n_trades, sum_paper_pnl_cents]. Cohort books are floored at their
+    boundary (COHORT_START) — the number this table feeds is the one books get GATED on, so it
+    must not span a universe change."""
+    floor_sql, floor_params = cohort_floor_sql()
     cur.execute(
         f"SELECT p.strategy, (100 - p.assumed_price)::int yes_c, count(*), sum({_PNL_NORM})"
         " FROM paper_trades p"
@@ -166,11 +228,44 @@ def _load_price_hists(cur) -> dict[str, dict[int, list]]:
         # projecting it through the live fill calibration would double-count the correction, and a
         # twin must never be gated like a paper variant. Its read is scripts/live_paper_parity.py.
         "   AND p.strategy NOT IN (SELECT twin_tag FROM live_paper_twins)"
-        " GROUP BY 1, 2",
+        + floor_sql
+        + " GROUP BY 1, 2",
+        floor_params or None,
     )
     hists: dict[str, dict[int, list]] = defaultdict(dict)
     for strat, yes_c, n, spnl in cur.fetchall():
         hists[strat][int(yes_c)] = [int(n), float(spnl) * 100]
+    return hists
+
+
+def _load_cohort_controls(cur) -> dict[str, dict[int, list]]:
+    """Each cohort book's CONTROL, restricted to that book's own window — keyed by the COHORT
+    BOOK's tag, so the pair reads as one row.
+
+    The gate says "beats its control by >= +1.0c OVER THE SAME WINDOW", and until now nothing
+    computed the right-hand side: the control's own row in the main table is its whole lifetime.
+    That asymmetry is not cosmetic here — the cohort books' universe changed and `mmsell10`'s
+    did not, so its lifetime number is a legitimate figure for a window the books no longer
+    trade in, and differencing against it would silently compare two different regimes."""
+    if not COHORT_START:
+        return {}
+    values, params = [], []
+    for tag, (start, control) in sorted(COHORT_START.items()):
+        values.append("(%s, %s, %s::timestamptz)")
+        params += [tag, control, start]
+    cur.execute(
+        f"WITH win(tag, control, since) AS (VALUES {', '.join(values)})"
+        f" SELECT win.tag, (100 - p.assumed_price)::int yes_c, count(*), sum({_PNL_NORM})"
+        " FROM paper_trades p"
+        " JOIN win ON win.control = p.strategy AND p.created_at >= win.since"
+        " WHERE p.status='settled' AND NOT coalesce(p.legacy,false)"
+        "   AND p.assumed_price IS NOT NULL AND p.pnl IS NOT NULL"
+        " GROUP BY 1, 2",
+        params,
+    )
+    hists: dict[str, dict[int, list]] = defaultdict(dict)
+    for tag, yes_c, n, spnl in cur.fetchall():
+        hists[tag][int(yes_c)] = [int(n), float(spnl) * 100]
     return hists
 
 
@@ -183,6 +278,7 @@ def report(cur) -> None:
 
     _print_calibration(calib)
     _print_books(hists, calib)
+    _print_cohort_gate(hists, _load_cohort_controls(cur), calib)
 
 
 def _print_calibration(calib: dict[int, tuple]) -> None:
@@ -198,7 +294,7 @@ def _print_calibration(calib: dict[int, tuple]) -> None:
 
 def _print_books(hists: dict, calib: dict) -> None:
     print("\n=== Optimistic (fill-everything) vs REALIZABLE (live-calibrated) per book ===")
-    print(f"  {'book':9s} {'n':>5} {'cover':>6} {'est_fill':>8} {'opt_$/ct':>9}"
+    print(f"  {'book':9s} {'since':>6} {'n':>5} {'cover':>6} {'est_fill':>8} {'opt_$/ct':>9}"
           f" {'real_$/ct':>10}  read")
     for strat in sorted(hists):
         r = project_realizable(hists[strat], calib)
@@ -217,11 +313,68 @@ def _print_books(hists: dict, calib: dict) -> None:
             read = "MIRAGE (paper+ -> neg)"
         else:
             read = "dead (paper- too)"
-        print(f"  {strat:9s} {r['total_n']:5d} {_fmt_pct(cover):>6} {_fmt_pct(r['est_fill_rate']):>8}"
+        since = _since_label(strat)
+        print(f"  {strat:9s} {since:>6} {r['total_n']:5d} {_fmt_pct(cover):>6}"
+              f" {_fmt_pct(r['est_fill_rate']):>8}"
               f" {opt:>+8.2f}c {_fmt_c(real):>10}  {read}")
     print("  (real_$/ct is the number to GATE on. 'cover' = share of the book's trades priced in a"
           "\n   trusted live cell; low cover = estimate speaks for only part of the book. A book whose"
           "\n   optimistic edge survives at high coverage is the real live candidate.)")
+    if COHORT_START:
+        print("  ('since' = this book's universe changed on that date and its earlier trades are"
+              "\n   EXCLUDED here — see COHORT GATE READ below. A blank means the whole history.)")
+
+
+def _since_label(strat: str) -> str:
+    """`MM-DD` for a cohort book, blank otherwise. The marker exists because the alternative is a
+    row whose `n` quietly dropped between two runs of this script with no visible reason."""
+    entry = COHORT_START.get(strat)
+    return entry[0][5:10] if entry else ""
+
+
+def _print_cohort_gate(hists: dict, controls: dict, calib: dict) -> None:
+    """The gate's own arithmetic, for books whose universe changed: book vs its control over the
+    SAME window. Printed as its own section rather than folded into the table above because the
+    number that decides these books is the DIFFERENCE, and a table of absolutes invites reading
+    them against the control's lifetime row — the exact error the boundary creates."""
+    if not COHORT_START:
+        return
+    print("\n=== COHORT GATE READ — universe-changed books vs their control over the SAME window ===")
+    print(f"  {'book':9s} {'since':>11} {'n':>5} {'opt_$/ct':>9} {'real_$/ct':>10}"
+          f" {'ctl':>9} {'ctl_n':>6} {'ctl_opt':>9} {'D opt':>8}  gate")
+    for tag in sorted(COHORT_START):
+        start, control = COHORT_START[tag]
+        book = project_realizable(hists.get(tag, {}), calib)
+        ctl = project_realizable(controls.get(tag, {}), calib)
+        n, ctl_n = book["total_n"], ctl["total_n"]
+        opt, ctl_opt = book["opt_cents"], ctl["opt_cents"]
+        real = book["est_realizable_cents"]
+        delta = (opt - ctl_opt) if (n and ctl_n) else None
+        print(f"  {tag:9s} {start[5:10]:>11} {n:5d} {opt:>+8.2f}c {_fmt_c(real):>10}"
+              f" {control:>9} {ctl_n:>6} {ctl_opt:>+8.2f}c"
+              f" {(f'{delta:+.2f}c' if delta is not None else 'n/a'):>8}"
+              f"  {_cohort_verdict(n, opt, delta)}")
+    print("  (KEEP needs all three, per docs/MMSELL_TYPE_BOOKS.md: own opt > 0 absolute, D opt >="
+          "\n   +1.0c vs the control, realizable > 0. Condition 3 does NOT discriminate inside the"
+          "\n   tight band — the projection sees entry price only, so the control lands there too;"
+          "\n   it is printed to be checked for a sign flip, never to promote a book on.)")
+
+
+# The gate's n floor for the type books (docs/MMSELL_TYPE_BOOKS.md).
+COHORT_GATE_N = 100
+COHORT_GATE_EDGE_CENTS = 1.0
+
+
+def _cohort_verdict(n: int, opt: float, delta: float | None) -> str:
+    """Deliberately silent until the pre-registered n. Reporting a lead at n=12 is how a noise
+    draw becomes a decision; the honest output there is how far the book still has to go."""
+    if n < COHORT_GATE_N or delta is None:
+        return f"n {n}/{COHORT_GATE_N} — no verdict yet"
+    if opt <= 0:
+        return "KILL — loses money in absolute terms"
+    if delta < COHORT_GATE_EDGE_CENTS:
+        return f"KILL — beats control by only {delta:+.2f}c (needs >= +{COHORT_GATE_EDGE_CENTS:.1f}c)"
+    return "PASSES 1+2 — confirm realizable before promoting"
 
 
 def main(argv: list[str] | None = None) -> int:

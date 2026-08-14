@@ -25,6 +25,16 @@ diffed against the last time this skill ran. Read-only; touches no trading confi
   reporting mean, 5th-pctile tail, win%, %exit and the Δ vs hold, per book. Gate: at
   n≥100 **replayable**, promote a rule if Δp5-tail is clearly up AND Δmean ≥ −0.3¢.
   Full mechanism: `docs/MMSELL_EXIT_STUDY.md`.
+- **`COHORT GATE READ` (fill model, second table) — the `Tmmsell*` books restarted on
+  2026-08-13 18:09:40Z.** The taxonomy deploy took classified coverage from 50.5% to 99.6% of
+  candidate flow, so books selecting via `mtype=`/`mode=` were previously offered ~half their
+  intended universe. Their pre-boundary trades are **dropped, not adjusted** — a universe change
+  admits no offset, unlike the 2026-08-11 fee change. The script enforces this; what you must do
+  is **never quote a `Tmmsell*` n or ¢/trade from before that date, and never diff one against
+  `mmsell10`'s lifetime row in the main table** — the `COHORT GATE READ` section already computes
+  the control over the matched window, and that Δ is the number the gate turns on. Expect these
+  books to sit at "no verdict yet" for days; `Tmmsell2` (~1 entry/hr) longest. Full detail:
+  `docs/MMSELL_TYPE_BOOKS.md`.
 - **A position must be born AND settle inside the capture window to be replayable** —
   coverage grows slowly after deploy. `replay n` (exit study) and `settled n` (fill
   model) are different denominators; don't conflate them.

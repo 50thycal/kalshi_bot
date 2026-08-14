@@ -92,3 +92,90 @@ def test_price_ceiling_book_keeps_its_edge():
     r = fm.project_realizable(hist, calib, min_cell_fills=8)
     assert r["covered_n"] == 100
     assert r["est_realizable_cents"] > 0  # edge survives the fill model
+
+
+# --------------------------------------------------------------- COHORT BOUNDARIES
+#
+# The 2026-08-13 taxonomy deploy widened the type books' universe underneath them (50.5% ->
+# 99.6% of candidate flow classified, 46 series added, none reclassified). Their tags did not
+# change, and should not have — the selection RULE is identical either side. So the boundary is
+# a DATE, and these tests exist because a date is exactly the kind of boundary a standing read
+# forgets: before this, `mmsell_fill_model` pooled each tag's entire lifetime, which would have
+# blended the narrow pre-deploy sample into the wide post-deploy one forever, silently.
+
+
+def test_every_cohort_book_carries_a_start_and_a_control():
+    """A boundary with no control is unusable: the gate these books are read on is RELATIVE
+    ("beats its control by >= +1.0c over the same window"), so a start date alone would floor the
+    left-hand side of the comparison while leaving the right-hand side at lifetime."""
+    assert fm.COHORT_START, "the taxonomy boundary must be recorded somewhere the READ applies"
+    for tag, (start, control) in fm.COHORT_START.items():
+        assert start.startswith("2026-"), f"{tag}: {start!r} is not an absolute instant"
+        assert control and control != tag, f"{tag}: control must be a different book"
+        assert control not in fm.COHORT_START, (
+            f"{tag}: its control {control} is itself cohort-floored — the comparison would then"
+            " silently drop the control's trades too")
+
+
+def test_only_the_taxonomy_books_are_floored():
+    """The exhaustive list, not a spot check. A book that quietly acquires a boundary has had
+    part of its history deleted from the number it gets gated on, and nothing else would notice.
+    Only books selecting via `mtype=`/`mode=`/`xmtype=` saw their universe change on 2026-08-13:
+    every other mmsell book filters on a series substring or on price alone."""
+    assert sorted(fm.COHORT_START) == ["Tmmsell1", "Tmmsell2", "Tmmsell5", "Tmmsell6"]
+
+
+def test_the_floor_defaults_to_keeping_a_books_whole_history():
+    """The predicate is spliced into a query covering EVERY mmsell book, so the failure that
+    matters is not a missing floor — it is a floor that leaks onto books that never had one."""
+    sql, params = fm.cohort_floor_sql()
+    assert "-infinity" in sql, "books with no boundary must fall through to their full history"
+    assert sql.lstrip().startswith("AND "), "the fragment must compose into an existing WHERE"
+    # One (tag, start) pair per book, and the tags bound as PARAMETERS rather than interpolated.
+    assert len(params) == 2 * len(fm.COHORT_START)
+    assert set(params[::2]) == set(fm.COHORT_START)
+    assert sql.count("%s") == len(params)
+
+
+def test_an_empty_cohort_table_produces_no_predicate_at_all():
+    """The caller passes `params or None`, which is what keeps psycopg from reinterpreting the
+    `%%` in the LIKE pattern. An empty table must therefore yield an empty fragment, not a
+    vacuous `AND TRUE` that still carries placeholders."""
+    saved = fm.COHORT_START
+    try:
+        fm.COHORT_START = {}
+        assert fm.cohort_floor_sql() == ("", [])
+    finally:
+        fm.COHORT_START = saved
+
+
+def test_no_verdict_before_the_pre_registered_n():
+    """Reporting a lead at n=12 is how a noise draw becomes a decision. These books' n restarted
+    at the boundary, so they WILL sit under the floor for days — the read has to say so rather
+    than rank them."""
+    assert "no verdict" in fm._cohort_verdict(12, opt=+4.0, delta=+3.0)
+    assert "no verdict" in fm._cohort_verdict(fm.COHORT_GATE_N - 1, opt=+4.0, delta=+3.0)
+    # ...and a book with no control trades in the window cannot be verdicted either.
+    assert "no verdict" in fm._cohort_verdict(500, opt=+4.0, delta=None)
+
+
+def test_the_absolute_floor_outranks_the_relative_one():
+    """The 2026-08-09 gate fix, restated here because this is now where it executes: five W books
+    once cleared the relative bar while losing money, because their control lost more. Beating a
+    losing control is not an edge."""
+    v = fm._cohort_verdict(300, opt=-0.5, delta=+2.0)
+    assert v.startswith("KILL") and "absolute" in v
+
+
+def test_a_thin_relative_edge_is_a_kill_not_a_pass():
+    assert fm._cohort_verdict(300, opt=+2.0, delta=+0.9).startswith("KILL")
+    assert not fm._cohort_verdict(300, opt=+2.0, delta=+1.0).startswith("KILL")
+
+
+def test_passing_the_first_two_conditions_is_not_a_promotion():
+    """Condition 3 (realizable > 0) cannot be evaluated here as a discriminator — the projection
+    sees entry price only, so every tight-band book INCLUDING the control lands at roughly the
+    same realizable number. The verdict must therefore stop short of 'promote'."""
+    v = fm._cohort_verdict(300, opt=+3.0, delta=+2.0)
+    assert "PASSES" in v and "confirm" in v
+    assert "PROMOTE" not in v.upper().replace("PASSES", "")
