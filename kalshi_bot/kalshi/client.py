@@ -389,6 +389,26 @@ class KalshiClient:
     def get_settlements(self, **params: Any) -> dict:
         return self._request("GET", "/portfolio/settlements", params=params or None)
 
+    def get_queue_positions(self, **params: Any) -> dict:
+        """Queue rank for our resting orders, in one call (`market_tickers` / `event_ticker`
+        filter it). Kalshi assigns queue position by price-time priority.
+
+        This is a plain GET on our own portfolio — no order is created or modified — so it is
+        deliberately NOT behind the live-placement guard. It must keep working when the kill
+        switch is on, because a stood-down book's still-resting orders are exactly the ones whose
+        queue behaviour we most want on the record.
+
+        Why we want it: `docs/MMSELL_FILL_MODEL.md` names maker adverse selection as the entire
+        paper→live gap (~2¢/contract), and `docs/MMSELL_OFFSET_AB.md` is currently paying real
+        money to infer what 1¢ of queue priority buys — through downstream P&L, which its own
+        gate computes needs ~47,106 contracts/arm to resolve. Queue rank measures the mechanism
+        instead of the consequence. Response shapes are parsed in live/queue_position.py."""
+        return self._request("GET", "/portfolio/orders/queue_positions", params=params or None)
+
+    def get_order_queue_position(self, order_id: str) -> dict:
+        """One order's queue rank — the per-order fallback for anything the batch call omits."""
+        return self._request("GET", f"/portfolio/orders/{order_id}/queue_position")
+
     # -- guarded write endpoints (out of scope for Scanner MVP) ------------
     # LEGACY: Kalshi deprecated /portfolio/orders (2026-07) — a POST now returns
     # 410 deprecated_v1_order_endpoint. These remain only for the not-yet-migrated
@@ -398,7 +418,7 @@ class KalshiClient:
         return self._request("POST", "/portfolio/orders", json=order)
 
     def cancel_order(self, order_id: str) -> dict:
-        self._ensure_live_enabled()
+        self._ensure_can_cancel()
         return self._request("DELETE", f"/portfolio/orders/{order_id}")
 
     def create_events_order(self, order: dict[str, Any]) -> dict:
@@ -412,8 +432,9 @@ class KalshiClient:
 
     def cancel_events_order(self, order_id: str) -> dict:
         """Cancel a V2 order (DELETE /portfolio/events/orders/{order_id}) — the partner of
-        create_events_order."""
-        self._ensure_live_enabled()
+        create_events_order. Guarded by `_ensure_can_cancel`, NOT `_ensure_live_enabled`: see
+        that method for why a kill switch must not block a cancel."""
+        self._ensure_can_cancel()
         return self._request("DELETE", f"/portfolio/events/orders/{order_id}")
 
     def create_v1_order(self, user_id: str, order: dict[str, Any]) -> dict:
@@ -433,8 +454,28 @@ class KalshiClient:
         )
 
     def _ensure_live_enabled(self) -> None:
+        """Guard for RISK-INCREASING calls — anything that creates or grows exposure."""
         if self._settings.bot_mode != "live" or self._settings.kill_switch:
             raise RuntimeError(
                 "Live order placement is disabled: requires BOT_MODE=live and "
                 "KILL_SWITCH=false. This is out of scope for the scanner MVP."
             )
+
+    def _ensure_can_cancel(self) -> None:
+        """Guard for RISK-REDUCING calls — cancels. Requires live mode, and DELIBERATELY DOES
+        NOT CHECK THE KILL SWITCH.
+
+        A kill switch is meant to stop us taking on exposure. Routing cancels through the
+        placement guard inverted that: flipping the switch froze our resting orders ON the book,
+        working, unmanageable, with no way to pull them. The switch made the position *less*
+        controllable, which is the opposite of its purpose.
+
+        This is not hypothetical. The same coupling on the exit path is why `_closeout_can_place`
+        exists — a closeout loop retrying forever against a kill switch generated 1,913 dead
+        `pending` rows before anyone noticed. That was the exit side of one bug; this is the
+        cancel side of it.
+
+        Cancelling can only reduce exposure. There is no state of the world where we want the
+        kill switch on AND our orders left resting."""
+        if self._settings.bot_mode != "live":
+            raise RuntimeError("Order cancellation requires BOT_MODE=live.")
