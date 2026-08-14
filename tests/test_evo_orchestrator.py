@@ -200,3 +200,48 @@ def test_llm_cost_survives_a_later_rollback_in_the_callers_transaction():
             )
     finally:
         client.close()
+
+
+def test_ticket_auto_close_owns_the_transaction_it_writes_in(monkeypatch):
+    """Bug 3 — a write phase that ran outside its own transaction.
+
+    The ticket auto-close was added at run_evo_cycle's own indentation, passing the
+    `session` name that leaks out of the function's earlier `with session_scope()` blocks.
+    Python keeps that name bound after the block exits, so the phase queried and flushed
+    against an ALREADY-COMMITTED, closed scope: the matching ran, `resolve_ticket` set
+    every status, the deployed cycle logged "evo tickets: auto-closed 22 request(s)" — and
+    not one ticket changed. The next read still showed all 35 open. The nastiest shape of
+    persistence bug, because the log actively asserts success.
+
+    This is asserted STRUCTURALLY, which needs justifying. The obvious behavioural test —
+    run the cycle, then read the tickets back through another `session_scope` — was written
+    first and PASSES WITH THE BUG PRESENT: the suite's engine is in-memory SQLite on a
+    single shared connection, so one session sees another's uncommitted writes and the
+    read cannot distinguish flushed from committed. A test that passes either way is worse
+    than none here, since it re-creates the same false assurance at the test layer. The
+    lexical property is the one that actually failed, so that is what is pinned.
+    """
+    import inspect
+    import re
+
+    src = inspect.getsource(orchestrator.run_evo_cycle)
+    call = re.search(r"^(\s*)closed = tickets\.auto_resolve_shipped\(", src, re.M)
+    assert call, "the auto-close phase is gone; delete this test or re-point it"
+    indent = len(call.group(1))
+
+    # Walk back for the nearest enclosing block header at a shallower indent.
+    before = src[: call.start()].splitlines()
+    enclosing = None
+    for line in reversed(before):
+        if not line.strip():
+            continue
+        line_indent = len(line) - len(line.lstrip())
+        if line_indent < indent and line.strip().endswith(":"):
+            enclosing = line.strip()
+            if "with session_scope()" in enclosing or line_indent == 4:
+                break
+    assert enclosing and "with session_scope()" in enclosing, (
+        "tickets.auto_resolve_shipped must run inside its own `with session_scope()`; "
+        f"nearest enclosing block was {enclosing!r}. Writing through the leaked `session` "
+        "name flushes into a closed scope and silently persists nothing."
+    )
