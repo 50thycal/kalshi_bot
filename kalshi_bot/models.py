@@ -311,6 +311,50 @@ class LiveOrder(Base):
     raw_order_json: Mapped[dict | None] = mapped_column(JSONType)
 
 
+class LiveOrderQueueTick(Base):
+    """One sample of where a resting live order sat in Kalshi's queue.
+
+    The measurement that turns maker adverse selection from an inference into an observation.
+    `docs/MMSELL_FILL_MODEL.md` names it as the entire paper→live gap (~2¢/contract) and says we
+    cannot replay it because the books throw away the data a fill model needs. This is that data,
+    and it accrues on every resting order whether or not any experiment is armed.
+
+    What it unblocks immediately: `docs/MMSELL_OFFSET_AB.md` pays real money to learn what 1¢ of
+    queue priority buys, measured through downstream P&L — a comparison its own gate computes
+    needs ~47,106 contracts/arm to resolve at +0.5¢, against the ~270/arm we have actually
+    accrued. Queue rank answers the mechanism question directly: did the cent move us up, and
+    past how many contracts?
+
+    Append-only, one row per (order, cycle). `queue_position` is nullable because a sample can
+    legitimately fail — but a null is never written silently: the sampler logs a parse failure
+    and stores the raw payload so the shape can be inspected. `contracts_ahead` is captured only
+    when Kalshi offers it and is deliberately not derived from the rank; rank 3 behind three
+    1-lots is a different trade from rank 3 behind three 500-lots.
+    """
+
+    __tablename__ = "live_order_queue_ticks"
+    # Every read is "this order's samples over time" (did we move up?) or "this book's samples in
+    # a window" (does the offset arm rank better?).
+    __table_args__ = (
+        Index("ix_lqt_order_time", "live_order_id", "captured_at"),
+        Index("ix_lqt_strategy_time", "strategy", "captured_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    live_order_id: Mapped[int | None] = mapped_column(BigIntId, ForeignKey("live_orders.id"))
+    kalshi_order_id: Mapped[str | None] = mapped_column(String(128), index=True)
+    strategy: Mapped[str | None] = mapped_column(String(32))
+    market_ticker: Mapped[str | None] = mapped_column(String(128))
+    captured_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    queue_position: Mapped[int | None] = mapped_column(Integer)
+    contracts_ahead: Mapped[int | None] = mapped_column(Integer)
+    # The resting price and how long it has rested — the two covariates any P(fill) fit needs
+    # alongside the rank, stored here so the analysis never has to re-join and re-derive them.
+    limit_price: Mapped[int | None] = mapped_column(Integer)
+    rest_seconds: Mapped[int | None] = mapped_column(Integer)
+    raw_json: Mapped[dict | None] = mapped_column(JSONType)
+
+
 class Fill(Base):
     __tablename__ = "fills"
 

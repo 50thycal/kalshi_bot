@@ -968,6 +968,18 @@ class Settings(BaseSettings):
     # client also self-guards place_order on mode+kill_switch, so this is defense in depth.
     live_enabled: bool = False
     live_strategies: str = ""               # allowlist of strategy prefixes; empty = inert
+    # Sample each resting order's Kalshi QUEUE POSITION once per reconcile and store it
+    # (docs/LIVE_QUEUE_POSITION.md). Default ON: it is one GET per cycle, it is read-only, and it
+    # is the only measurement that turns maker adverse selection — the ~2c/contract our own fill
+    # model calls the entire paper->live gap — from an inference into an observation. In
+    # particular it is what makes the mmsell10a/10b offset A/B answerable at all; that experiment
+    # spends real money on a P&L comparison its own gate says needs ~47,106 contracts/arm.
+    live_queue_position_sampling: bool = True
+    # Cancel resting orders belonging to a book that has stood down — de-allowlisted from
+    # LIVE_STRATEGIES, or every book when the kill switch is on. Default ON because the absence
+    # of this was a real hole: turning a book off left its orders working on the exchange, and
+    # the kill switch used to make that WORSE by blocking the cancel path too.
+    live_drain_stood_down: bool = True
     live_cities: str = ""                   # restrict to these city codes (empty = all)
     live_windows: str = ""                  # restrict to these entry windows hN (empty = all)
     live_cells: str = ""                    # precise (book:CITY:window) allowlist; supersedes cities/windows

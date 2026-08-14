@@ -116,6 +116,7 @@ ALLOWED_SCRIPTS = (
     "mmsell_fee_recon",
     "mmsell_scan_health",
     "mmsell_quote_parity",
+    "mmsell_queue_position",
     "evo_digest",
     "evo_tree",
     "evo_selftest",

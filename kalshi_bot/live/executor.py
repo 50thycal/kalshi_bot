@@ -28,6 +28,7 @@ from ..risk.manager import RiskDecision
 from ..scanner.metrics import _to_count, ask_depth_within, parse_dt, price_to_cents
 from ..weather.cities import CITIES
 from . import exit_rules
+from .queue_position import order_id_of, parse_batch, parse_one
 from .sizing import is_hot_entry, maker_no_price, maker_offset, order_quantity
 
 logger = logging.getLogger(__name__)
@@ -81,6 +82,10 @@ class LiveCycleSummary:
     positions_snapshot: int = 0
     settlements: int = 0
     timed_out_canceled: int = 0
+    queue_sampled: int = 0          # resting orders we recorded a rank for
+    queue_unparsed: int = 0         # samples the API answered but we could not read
+    drained_canceled: int = 0       # resting orders pulled by a stand-down drain
+    drain_failed: int = 0           # ...and the ones the drain could NOT confirm gone
     exits_placed: int = 0
     exits_reattempted: int = 0
     exits_escalated: int = 0
@@ -705,6 +710,148 @@ class LiveExecutor:
             return 0.0
         return abs(pos.quantity) * float(pos.avg_price or 0.0) / 100.0
 
+    # --- queue position ---------------------------------------------------------
+
+    def sample_queue_positions(self, session) -> int:
+        """Record where each still-resting order sits in Kalshi's queue. Returns rows written.
+
+        Fail-soft by construction: a diagnostic must never break a trading cycle, so every path
+        out of here is a `return`, never a raise (AuthError excepted — that means our credentials
+        are wrong and the worker should hard-fail as it does everywhere else).
+
+        One batch call for all resting orders, with a per-order fallback ONLY for orders the
+        batch omitted. The fallback is bounded — an unbounded one would turn a Kalshi change that
+        empties the batch response into ~35 extra requests every cycle, forever, silently."""
+        if not self.settings.live_queue_position_sampling:
+            return 0
+        resting = repo.get_resting_live_orders(session)
+        resting = [r for r in resting if r.kalshi_order_id]
+        if not resting:
+            return 0
+
+        try:
+            payload = self.client.get_queue_positions()
+        except AuthError:
+            raise
+        except Exception:  # noqa: BLE001
+            logger.warning("queue-position batch fetch failed (cycle unaffected)", exc_info=True)
+            return 0
+
+        samples, unreadable = parse_batch(payload)
+        if unreadable:
+            # LOUD, because this is the failure that would otherwise be invisible: the sampler
+            # keeps running, rows keep landing, and every queue_position is null. The raw payload
+            # goes in the log so the shape can be read without waiting for a DB round trip — and
+            # each offending row is also filed against its own order below.
+            self.summary.queue_unparsed += len(unreadable)
+            logger.warning(
+                f"queue-position: {len(unreadable)} entries returned but unreadable — the payload "
+                "shape may have changed (see live/queue_position.py)",
+                extra={"extra_fields": {"sample_payload": str(unreadable[:2])[:600]}})
+        # Index the failures by order id so a null rank is stored WITH the payload that produced
+        # it. A row that lost its rank field almost always still carries its id.
+        failed_by_id = {oid: r for r in unreadable if (oid := order_id_of(r)) is not None}
+
+        now = datetime.now(timezone.utc)
+        written = 0
+        for row in resting:
+            koid = str(row.kalshi_order_id)
+            sample = samples.get(koid)
+            raw: object = sample if sample is not None else failed_by_id.get(koid)
+            if sample is None and len(resting) <= self._QUEUE_FALLBACK_MAX:
+                try:
+                    single = self.client.get_order_queue_position(row.kalshi_order_id)
+                    sample = parse_one(single)
+                    raw = single
+                except AuthError:
+                    raise
+                except Exception:  # noqa: BLE001 — order may have just filled or been cancelled
+                    sample = None
+            created = _aware(row.created_at)
+            repo.insert_queue_tick(
+                session,
+                live_order_id=row.id, kalshi_order_id=row.kalshi_order_id,
+                strategy=row.strategy, ticker=row.market_ticker,
+                queue_position=(sample or {}).get("queue_position"),
+                contracts_ahead=(sample or {}).get("contracts_ahead"),
+                limit_price=row.limit_price,
+                rest_seconds=int((now - created).total_seconds()) if created else None,
+                raw_json=raw,
+            )
+            written += 1
+            if sample is not None:
+                self.summary.queue_sampled += 1
+        return written
+
+    # Cap on per-order fallback calls in one cycle. Sized above our observed resting footprint
+    # (~35) so it never binds in normal operation, and low enough that a shape change which
+    # empties the batch response cannot silently multiply our request rate.
+    _QUEUE_FALLBACK_MAX = 60
+
+    # --- orderly drain ----------------------------------------------------------
+
+    def drain_stood_down_books(self, session) -> int:
+        """Cancel resting orders belonging to books that are no longer trading. Returns the
+        number confirmed cancelled.
+
+        Two stand-down conditions, and the second is the one that was actually broken:
+
+        1. **De-allowlisted** — a strategy dropped from `LIVE_STRATEGIES`. It stops placing
+           immediately, but until now its already-resting orders kept working indefinitely,
+           reachable only by the 4-hour per-order timeout. Turning a book off did not turn its
+           exposure off.
+        2. **Kill switch on** — and this is worse, because the switch made the position LESS
+           controllable. `cancel_events_order` used to sit behind the placement guard, so
+           flipping the switch froze every resting order on the book with no way to pull it.
+           `client._ensure_can_cancel` is the fix; this is what uses it.
+
+        Follows `rodlaf`'s discipline (docs/EXTERNAL_REPO_RESEARCH.md §6): **verify before
+        dropping state.** A row is only marked `canceled` when Kalshi accepted the cancel — a
+        failure leaves it `resting` so the next cycle retries, rather than recording a cleanup
+        that did not happen."""
+        if not self.settings.live_drain_stood_down:
+            return 0
+
+        if self.settings.kill_switch:
+            targets, reason = repo.get_resting_live_orders(session), "kill_switch"
+        else:
+            allowed = self.settings.live_strategy_list
+            targets = [r for r in repo.get_resting_live_orders(session)
+                       if not any((r.strategy or "") == a for a in allowed)]
+            reason = "book_stood_down"
+        targets = [r for r in targets if r.kalshi_order_id]
+        if not targets:
+            return 0
+
+        drained = 0
+        for row in targets:
+            try:
+                self.client.cancel_events_order(row.kalshi_order_id)
+            except AuthError:
+                raise
+            except Exception as exc:  # noqa: BLE001
+                # Left `resting` on purpose. It may genuinely be gone (filled a moment ago, in
+                # which case reconcile resolves it next cycle) or the cancel may have failed —
+                # and we cannot tell the two apart from here. Claiming `canceled` on a guess is
+                # how state drifts away from the exchange.
+                self.summary.drain_failed += 1
+                logger.warning("drain cancel failed — order left resting for retry",
+                               extra={"extra_fields": {
+                                   "kalshi_order_id": row.kalshi_order_id,
+                                   "strategy": row.strategy, "reason": reason,
+                                   "error": str(exc)[:200]}})
+                continue
+            repo.update_live_order_status(session, row, status="canceled", cancel_reason=reason)
+            self.summary.drained_canceled += 1
+            drained += 1
+
+        logger.info(
+            f"live drain: cancelled {drained}/{len(targets)} resting orders ({reason})",
+            extra={"extra_fields": {"reason": reason, "drained": drained,
+                                    "failed": self.summary.drain_failed,
+                                    "targets": len(targets)}})
+        return drained
+
     # --- reconciliation ---------------------------------------------------------
 
     def reconcile(self, session, account_state=None) -> None:
@@ -817,6 +964,13 @@ class LiveExecutor:
             except Exception:  # noqa: BLE001 — likely already filled/gone; next cycle resolves
                 logger.warning("live cancel failed", extra={"extra_fields": {
                     "kalshi_order_id": row.kalshi_order_id}})
+
+        # Sample queue position for whatever is still resting, then drain any book that has
+        # stood down. Order matters: sample BEFORE draining, or the drain destroys the last
+        # observation of the orders it cancels — which are the most interesting ones, since a
+        # stood-down book's rank is the record of what it never got filled at.
+        self.sample_queue_positions(session)
+        self.drain_stood_down_books(session)
 
         # Settled positions vanish from get_positions, so capture realized P&L from
         # /portfolio/settlements (feeds the daily-loss breaker). Record today's settlements

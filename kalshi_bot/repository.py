@@ -1558,6 +1558,39 @@ def get_nonterminal_live_orders(session) -> list[m.LiveOrder]:
     ).all())
 
 
+def get_resting_live_orders(session, strategies: list[str] | None = None) -> list[m.LiveOrder]:
+    """Live orders currently WORKING on the book — the drain target and the queue-sample set.
+
+    `resting` specifically, not the whole non-terminal set: `pending`/`submitted`/`unknown` rows
+    are in flight or unresolved, and cancelling one is either a no-op or a race against a fill
+    the next reconcile would have picked up cleanly. Only a `resting` row is known to be sitting
+    on the book with a Kalshi order id to act on.
+
+    `strategies=None` means every book — which is what a kill-switch drain wants."""
+    stmt = select(m.LiveOrder).where(m.LiveOrder.status == "resting")
+    if strategies is not None:
+        stmt = stmt.where(m.LiveOrder.strategy.in_(strategies))
+    return list(session.scalars(stmt).all())
+
+
+def insert_queue_tick(
+    session, *, live_order_id: int | None, kalshi_order_id: str | None, strategy: str | None,
+    ticker: str | None, queue_position: int | None, contracts_ahead: int | None,
+    limit_price: int | None, rest_seconds: int | None, raw_json: Any | None = None,
+) -> m.LiveOrderQueueTick:
+    """Append one queue sample. A null `queue_position` is stored rather than dropped so a
+    parse/API failure is COUNTABLE — silently writing nothing would make a broken sampler look
+    exactly like a book with no resting orders."""
+    row = m.LiveOrderQueueTick(
+        live_order_id=live_order_id, kalshi_order_id=kalshi_order_id, strategy=strategy,
+        market_ticker=ticker, queue_position=queue_position, contracts_ahead=contracts_ahead,
+        limit_price=limit_price, rest_seconds=rest_seconds, raw_json=_safe_json(raw_json),
+    )
+    session.add(row)
+    session.flush()
+    return row
+
+
 def fill_exists(session, kalshi_fill_id: str) -> bool:
     return session.scalar(
         select(func.count()).select_from(m.Fill).where(m.Fill.kalshi_fill_id == kalshi_fill_id)
