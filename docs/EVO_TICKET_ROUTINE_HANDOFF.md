@@ -117,14 +117,16 @@ identical in the queue and call for opposite responses.
 
 ## 5. Known gaps this routine will probably surface
 
-Two things agents can't currently do that nobody has ticketed, worth building if they come up:
+Things agents can't currently do that nobody has ticketed, worth building if they come up:
 
-- **`inspect_data` source `polymarket` omits `low_f`/`high_f`**, so an agent reading it gets a
-  probability with no idea which temperature bucket it belongs to. One-line fix in
-  `kalshi_bot/evo/data_access.py`.
+- ~~`inspect_data` source `polymarket` omits `low_f`/`high_f`~~ — **fixed 2026-08-14**. It now
+  carries the bucket bounds, so a Polymarket probability can actually be lined up against
+  something. Relevant because `pm_divergence` was retired the same day (it measured as an
+  ANTI-signal — see `docs/PMDIV_THESIS.md`): the derived metric is gone, but the venue's raw
+  prices stay readable so an agent can form its own view.
 - **No weather-forecast sources are exposed at all** — `weather_ensembles`, `weather_forecasts`,
   `weather_settlements`, `weather_forecast_outcomes` are absent from the `inspect_data` allowlist,
   so agents cannot reach the forecast data to reach their own conclusions about it.
 
-Both are cheap. Neither is urgent given §4's weather finding, but if an agent asks, the answer is
-"yes, and it's an hour of work".
+The remaining one is cheap and not urgent given §4's weather finding, but if an agent asks, the
+answer is "yes, and it's an hour of work".

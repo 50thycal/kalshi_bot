@@ -1,45 +1,37 @@
-"""External-signal metrics: the first DSL vocabulary that is not the order book.
+"""External-signal metrics: the DSL vocabulary that is not the order book.
 
-Every metric the strategy language had was a property of Kalshi's own book — bid,
-ask, spread, mid, volume, hours_to_close. So the only hypotheses an agent could
-state were price patterns ("buy when cheap", "buy when the spread is tight"), and
-on a roughly efficient book those earn the spread minus two fees. That is not a
-tuning problem, it is the shape of the search space: the fleet ran 900+ backtests
-inside a hypothesis space with almost nothing in it.
+Every metric the strategy language started with was a property of Kalshi's own book — bid,
+ask, spread, mid, volume, hours_to_close. So the only hypotheses an agent could state were
+price patterns ("buy when cheap", "buy when the spread is tight"), and on a roughly efficient
+book those earn the spread minus two fees. That is the shape of the search space, not a tuning
+problem: the fleet ran 900+ backtests inside a hypothesis space with almost nothing in it.
 
-These two metrics change what an agent is able to SAY. Neither requires our own
-forecast model to be any good, which is why they come first:
+  spot_vs_strike  Percent distance from the underlying's spot price to a crypto market's
+                  decision boundary, signed so POSITIVE always means "YES is currently
+                  winning" regardless of strike_type. One sign convention, or an agent needs
+                  three rules to say one thing.
 
-  pm_divergence   Polymarket's implied probability minus Kalshi's mid, in cents,
-                  for the same weather bucket. Two venues price one event and
-                  disagree; that disagreement is information Kalshi's book does not
-                  contain. Positive => Kalshi's YES is cheap vs the other venue.
-                  (A signal, not an arbitrage — we only trade one of the venues.)
+RETIRED — `pm_divergence` (Polymarket's implied probability minus our mid). It shipped here on
+an assumption-free premise: "do two venues disagree about the same event?" needs no forecasting
+skill of ours. The premise was then TESTED (`docs/PMDIV_THESIS.md`, 39,740 cycles / 198 settled
+events) and refuted. pm_better% by divergence band ran 27% -> 9% -> 1% as disagreement grew: the
+further Polymarket strays from the Kalshi price, the more reliably POLYMARKET is wrong. A large
+`pm_divergence` was an ANTI-signal, so gating on it meant trading toward the mistaken venue. Our
+own NWS/ensemble forecast produced the identical shape the same day (0%/4% in its outer bands).
+On Kalshi weather the market is the best forecaster we have access to, and "X disagrees with the
+market" is evidence against X. Polymarket's raw prices remain readable via inspect_data — what
+was withdrawn is the claim that differencing them against our mid is an edge.
 
-  spot_vs_strike  Percent distance from the underlying's spot price to a crypto
-                  market's decision boundary, signed so POSITIVE always means "YES
-                  is currently winning" regardless of strike_type. One sign
-                  convention, or an agent needs three rules to say one thing.
-
-WHERE THE NUMBERS COME FROM. The evo worker does not call any external API. The
-main worker already collects NWS, Open-Meteo, Coinbase and Polymarket into
-provenance-labeled Postgres tables; this module reads those. That is deliberate,
-not a shortcut: an API call made inside a heartbeat could never be replayed in a
-backtest, so no strategy using it could be validated — the same trap as assuming a
-maker order always fills. Reading a collected table means the live path and the
+WHERE THE NUMBERS COME FROM. The evo worker does not call any external API. The main worker
+already collects Coinbase spot and the crypto ladders into provenance-labeled Postgres tables;
+this module reads those. That is deliberate, not a shortcut: an API call made inside a heartbeat
+could never be replayed in a backtest, so no strategy using it could be validated — the same trap
+as assuming a maker order always fills. Reading a collected table means the live path and the
 replay path see the same number by construction.
 
-Nor is it stale. Measured lag at build time: Polymarket and the Kalshi bucket tape
-2 min, Coinbase spot 6 min, ensembles 10 min — against sources that themselves
-republish hourly (NWS) or six-hourly (ensemble runs). The DB copy refreshes faster
-than the upstream data changes.
-
-FAIL CLOSED. Feeds die quietly. Every signal here carries the age of its oldest
-input, and past `signal_max_age_minutes` the value is dropped to None rather than
-served. A None metric fails its condition (strategy_spec._metric_value), so a dead
-feed blocks entries instead of authorizing trades on a number nobody refreshed.
-Both legs of a difference must be fresh: a current Polymarket price against an
-hour-old Kalshi mid is a fabricated divergence, not a signal.
+FAIL CLOSED. Feeds die quietly. Past `signal_max_age_minutes` a value is dropped to None rather
+than served. A None metric fails its condition (strategy_spec._metric_value), so a dead feed
+blocks entries instead of authorizing trades on a number nobody refreshed.
 """
 
 from __future__ import annotations
@@ -49,30 +41,15 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, select
 
-from ..models import (
-    CryptoLadderSnapshot,
-    CryptoSpotCandle,
-    PolymarketSnapshot,
-    WeatherBucketSnapshot,
-    WeatherForecast,
-)
+from ..models import CryptoLadderSnapshot, CryptoSpotCandle
 from .config import EvoSettings
 
 logger = logging.getLogger(__name__)
 
 # Every external-signal metric name. Kept here so the DSL, the dataset capability
 # map and the prompt all agree on one list.
-SIGNAL_METRICS = ("pm_divergence", "spot_vs_strike")
+SIGNAL_METRICS = ("spot_vs_strike",)
 
-# Bucket bounds are whole or half degrees; this is well below the smallest real gap.
-_EPS = 1e-6
-
-# How much probability may sit in Polymarket buckets that only PARTIALLY overlap a
-# Kalshi bucket before we refuse to answer. Such mass could belong to the bucket or
-# not, so this is the width of the honest uncertainty band, and half of it bounds the
-# error of the midpoint we return. 4c keeps the estimate meaningfully tighter than the
-# gates agents write (`pm_divergence >= 5`).
-MAX_REBIN_UNCERTAINTY = 0.04
 
 
 def _aware(ts: datetime | None) -> datetime | None:
@@ -115,214 +92,6 @@ def spot_vs_strike(
         edge = floor if spot < floor else cap
         return -100.0 * abs(spot - edge) / spot
     return None
-
-
-def _interval(low: float | None, high: float | None) -> tuple[float, float]:
-    """A bucket labelled `low-high` catches temperatures that round into it, so
-    `99-100` is the continuous span [98.5, 100.5). An open side is unbounded."""
-    return (
-        float("-inf") if low is None else float(low) - 0.5,
-        float("inf") if high is None else float(high) + 0.5,
-    )
-
-
-def _same_bounds(a: float | None, b: float | None) -> bool:
-    if a is None or b is None:
-        return a is None and b is None
-    return abs(float(a) - float(b)) < _EPS
-
-
-def pm_probability_for_bucket(
-    low_f: float | None,
-    high_f: float | None,
-    ladder: list[tuple[float | None, float | None, float]],
-    *,
-    max_uncertainty: float = MAX_REBIN_UNCERTAINTY,
-) -> tuple[float, bool] | None:
-    """Polymarket's implied probability for a KALSHI bucket, as (probability, exact).
-
-    The two venues do not share a bucket grid. Measured in production: Austin's
-    Kalshi ladder starts on odd degrees (99-100, 101-102, ...) while Polymarket's
-    starts on even ones (98-99, 100-101, ...), so their boundaries are disjoint
-    sets and an equality join matches nothing there however fresh both feeds are.
-
-    The tempting fix is to re-bin by overlap, assuming mass is spread uniformly
-    inside each Polymarket bucket:
-
-        P(Kalshi 99-100) ~= 0.5 * P(Poly 98-99) + 0.5 * P(Poly 100-101)
-
-    DO NOT DO THAT. It was tried, shipped, and measured against production, where
-    it manufactured divergences of +32c and -37c between two venues that agreed.
-    These distributions are extremely peaked — one or two degrees carry nearly all
-    the mass — so halving a bucket is not a small approximation. Austin: Polymarket
-    put 72.5% on `100-101` while Kalshi's own ladder put 84% on `101-102`, i.e.
-    essentially all of that 72.5% is P(101). Splitting it evenly invents a 37c
-    disagreement, and it fails in the direction that makes an agent trade.
-
-    So compute BOUNDS instead of a point estimate, and only answer when the data
-    determines the answer:
-
-      lower  = mass of Polymarket buckets wholly INSIDE the Kalshi bucket
-      upper  = lower + mass of every bucket that merely OVERLAPS it
-
-    A partially-overlapping bucket could contribute anything from none of its mass
-    to all of it — that is the honest range, not a coin flip. When the range is
-    wider than `max_uncertainty` the ladder simply does not pin this bucket down
-    and the answer is None. When it is narrow (the overlapping buckets are nearly
-    empty, which is the common tail case) the midpoint is accurate to within half
-    the range and gets returned.
-
-    An exact bucket match is not an estimate at all and is used verbatim, tails
-    included. Two further cases fail closed: a bucket the ladder does not cover,
-    and an open-ended Kalshi tail, which has no finite span to bound.
-    """
-    # An exact match is not an estimate; prefer it, tails included.
-    for lo, hi, prob in ladder:
-        if _same_bounds(lo, low_f) and _same_bounds(hi, high_f):
-            return (float(prob), True)
-
-    # Bounding needs a bounded target: an open Kalshi tail has no finite span.
-    if low_f is None or high_f is None:
-        return None
-    lo_t, hi_t = _interval(low_f, high_f)
-    span = hi_t - lo_t
-    if span <= 0:
-        return None
-
-    inside = 0.0        # mass certainly in the bucket
-    straddling = 0.0    # mass that may or may not be
-    covered = 0.0
-    for lo, hi, prob in ladder:
-        lo_b, hi_b = _interval(lo, hi)
-        overlap = min(hi_t, hi_b) - max(lo_t, lo_b)
-        if overlap <= _EPS:
-            continue
-        if lo is None or hi is None:
-            return None  # an unbounded tail cannot be bounded
-        width = hi_b - lo_b
-        if width <= 0:
-            continue
-        covered += overlap
-        if overlap >= width - _EPS:
-            inside += float(prob)      # wholly contained: all of it counts
-        else:
-            straddling += float(prob)  # anywhere from 0 to all of it
-    if abs(covered - span) > _EPS:
-        return None  # ladder does not cover the bucket
-    if straddling > max_uncertainty:
-        return None  # the ladder does not pin this bucket down
-    return (inside + straddling / 2.0, False)
-
-
-def _pm_divergence(session, tickers: list[str], cutoff: datetime) -> dict[str, float]:
-    """Difference each Kalshi weather bucket against Polymarket's ladder for the
-    same (city, kind, target_date).
-
-    `weather_bucket_snapshots` carries the Kalshi side including the market_ticker;
-    target_date comes from `weather_forecasts` via the shared event_ticker (bucket
-    snapshots do not store it). The bucket-level match is `pm_probability_for_bucket`,
-    which re-bins across the two venues' misaligned grids rather than requiring
-    identical bounds the way the weather tracker's `_pm_best_bucket` does.
-    """
-    latest_bucket = (
-        select(
-            WeatherBucketSnapshot.market_ticker,
-            func.max(WeatherBucketSnapshot.captured_at).label("captured_at"),
-        )
-        .where(
-            WeatherBucketSnapshot.market_ticker.in_(tickers),
-            WeatherBucketSnapshot.captured_at >= cutoff,
-            WeatherBucketSnapshot.mid_cents.isnot(None),
-        )
-        .group_by(WeatherBucketSnapshot.market_ticker)
-        .subquery()
-    )
-    rows = list(
-        session.execute(
-            select(
-                WeatherBucketSnapshot.market_ticker,
-                WeatherBucketSnapshot.event_ticker,
-                WeatherBucketSnapshot.city,
-                WeatherBucketSnapshot.kind,
-                WeatherBucketSnapshot.low_f,
-                WeatherBucketSnapshot.high_f,
-                WeatherBucketSnapshot.mid_cents,
-            ).join(
-                latest_bucket,
-                (WeatherBucketSnapshot.market_ticker == latest_bucket.c.market_ticker)
-                & (WeatherBucketSnapshot.captured_at == latest_bucket.c.captured_at),
-            )
-        )
-    )
-    if not rows:
-        return {}
-
-    events = {r[1] for r in rows if r[1]}
-    target_by_event = {
-        event: target
-        for event, target in session.execute(
-            select(WeatherForecast.event_ticker, func.max(WeatherForecast.target_date))
-            .where(WeatherForecast.event_ticker.in_(events))
-            .group_by(WeatherForecast.event_ticker)
-        )
-    }
-
-    # One current Polymarket price per (city, kind, target_date, low_f, high_f).
-    pm: dict[tuple, float] = {}
-    pm_rows = session.execute(
-        select(
-            PolymarketSnapshot.city,
-            PolymarketSnapshot.kind,
-            PolymarketSnapshot.target_date,
-            PolymarketSnapshot.low_f,
-            PolymarketSnapshot.high_f,
-            PolymarketSnapshot.yes_prob,
-            PolymarketSnapshot.captured_at,
-        ).where(
-            PolymarketSnapshot.captured_at >= cutoff,
-            PolymarketSnapshot.yes_prob.isnot(None),
-        )
-    )
-    seen_at: dict[tuple, datetime] = {}
-    for city, kind, target, low, high, prob, cap_at in pm_rows:
-        key = (city, kind, target, low, high)
-        cap_at = _aware(cap_at)
-        if key not in seen_at or (cap_at and cap_at > seen_at[key]):
-            seen_at[key] = cap_at
-            pm[key] = float(prob)
-
-    # Group into one ladder per event so a bucket can be re-binned against the whole
-    # distribution rather than looked up by its exact bounds.
-    ladders: dict[tuple, list[tuple[float | None, float | None, float]]] = {}
-    for (city, kind, target, low, high), prob in pm.items():
-        ladders.setdefault((city, kind, target), []).append((low, high, prob))
-
-    out: dict[str, float] = {}
-    exact_n = est_n = 0
-    for ticker, event, city, kind, low, high, mid in rows:
-        ladder = ladders.get((city, kind, target_by_event.get(event)))
-        if not ladder or mid is None:
-            continue
-        got = pm_probability_for_bucket(low, high, ladder)
-        if got is None:
-            continue
-        prob, exact = got
-        exact_n, est_n = (exact_n + 1, est_n) if exact else (exact_n, est_n + 1)
-        out[ticker] = round(prob * 100.0 - float(mid), 4)
-    if rows:
-        # Counts go in the MESSAGE, not extra_fields: this line exists so an operator
-        # can see whether the metric is alive, and `extra` does not survive the log
-        # fetch the ops channel reads (`scripts/railway_logs.py`). Same shape as the
-        # `evo cycle:` line in orchestrator.py.
-        logger.info(
-            f"evo pm_divergence coverage: kalshi_buckets={len(rows)} "
-            f"pm_buckets={len(pm)} matched_exact={exact_n} matched_rebinned={est_n} "
-            f"unmatched={len(rows) - exact_n - est_n}",
-            extra={"extra_fields": {
-                "kalshi_buckets": len(rows), "pm_buckets": len(pm),
-                "matched_exact": exact_n, "matched_rebinned": est_n}},
-        )
-    return out
 
 
 def _spot_vs_strike(session, tickers: list[str], cutoff: datetime) -> dict[str, float]:
@@ -403,8 +172,7 @@ def compute_signals(
     now = now or datetime.now(timezone.utc)
     cutoff = now - timedelta(minutes=settings.signal_max_age_minutes)
     out: dict[str, dict[str, float | None]] = {}
-    for metric, fn in (("pm_divergence", _pm_divergence),
-                       ("spot_vs_strike", _spot_vs_strike)):
+    for metric, fn in (("spot_vs_strike", _spot_vs_strike),):
         try:
             for ticker, value in fn(session, tickers, cutoff).items():
                 out.setdefault(ticker, {})[metric] = value

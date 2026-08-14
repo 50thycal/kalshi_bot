@@ -120,7 +120,11 @@ SOURCES: dict[str, dict] = {
     ),
     "polymarket": dict(
         model=PolymarketSnapshot,
-        columns=("captured_at", "city", "kind", "target_date", "yes_prob"),
+        # low_f/high_f are load-bearing: a yes_prob without the bucket bounds is a
+        # probability with no idea WHICH temperature it refers to, so the source was
+        # unusable without them.
+        columns=("captured_at", "city", "kind", "target_date", "low_f", "high_f",
+                 "yes_prob"),
         filters=("city", "kind", "target_date"),
         order="captured_at",
     ),

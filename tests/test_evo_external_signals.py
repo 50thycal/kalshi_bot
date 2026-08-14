@@ -38,13 +38,7 @@ from kalshi_bot.evo import sandbox, signals
 from kalshi_bot.evo.config import EvoSettings
 from kalshi_bot.evo.marketdata import Quote, StaticMarketData
 from kalshi_bot.evo.strategy_spec import METRICS, entry_signal, validate_spec
-from kalshi_bot.models import (
-    CryptoLadderSnapshot,
-    CryptoSpotCandle,
-    PolymarketSnapshot,
-    WeatherBucketSnapshot,
-    WeatherForecast,
-)
+from kalshi_bot.models import CryptoLadderSnapshot, CryptoSpotCandle
 
 # Fixed, because the signal tests below drive `compute_signals(now=NOW)` explicitly and their
 # staleness assertions are relative to it. Do NOT derive close_time from this — see _quote.
@@ -107,85 +101,34 @@ def test_the_fixture_quote_is_not_a_time_bomb():
     assert htc is not None and 4.9 < htc <= 5.0
 
 
-def test_both_signals_are_usable_metrics():
-    assert "pm_divergence" in METRICS
-    assert "spot_vs_strike" in METRICS
-
-
-def test_a_strategy_can_finally_gate_on_information_not_price():
-    """THE point of the feature: an entry condition that references something the
-    order book does not contain."""
-    spec = _spec([{"metric": "pm_divergence", "op": ">=", "value": 5}])
-    # Polymarket 60c vs Kalshi mid 45.5c => +14.5c divergence, condition passes
-    assert entry_signal(spec, _quote(pm_divergence=14.5)) is not None
-    # the other venue agrees with us => no edge, no entry
-    assert entry_signal(spec, _quote(pm_divergence=0.5)) is None
+def test_a_strategy_can_gate_on_information_not_price():
+    """THE point of the feature, now carried by spot_vs_strike: an entry condition that
+    references something the order book does not contain. (pm_divergence used to carry this
+    test; it was retired after measurement — tests/test_evo_pm_divergence_retired.py.)"""
+    spec = _spec([{"metric": "spot_vs_strike", "op": ">=", "value": 1.0}])
+    # spot 1.56% above the strike => YES is winning by a clear margin, condition passes
+    assert entry_signal(spec, _quote(spot_vs_strike=1.5625)) is not None
+    # barely above the boundary => no margin, no entry
+    assert entry_signal(spec, _quote(spot_vs_strike=0.2)) is None
 
 
 def test_a_missing_signal_blocks_the_entry_rather_than_defaulting():
-    """None must never read as zero. A market with no Polymarket counterpart simply
-    cannot satisfy a pm_divergence condition."""
-    spec = _spec([{"metric": "pm_divergence", "op": ">=", "value": 5}])
-    assert entry_signal(spec, _quote(pm_divergence=None)) is None
-    assert entry_signal(spec, _quote()) is None  # field defaults to None
+    """None must never read as zero. A market with no fresh spot cannot satisfy the
+    condition, and a NEGATIVE gate is not satisfied by absence either."""
+    spec = _spec([{"metric": "spot_vs_strike", "op": ">=", "value": 1.0}])
+    assert entry_signal(spec, _quote(spot_vs_strike=None)) is None
+    assert entry_signal(spec, _quote()) is None
+    loose = _spec([{"metric": "spot_vs_strike", "op": "<=", "value": 100}])
+    assert entry_signal(loose, _quote(spot_vs_strike=None)) is None
 
-    # ...and a NEGATIVE gate is not satisfied by absence either
-    loose = _spec([{"metric": "pm_divergence", "op": "<=", "value": 100}])
-    assert entry_signal(loose, _quote(pm_divergence=None)) is None
+
+def test_the_surviving_external_signal_is_a_real_dsl_citizen():
+    """pm_divergence was retired after measurement (tests/test_evo_pm_divergence_retired.py);
+    spot_vs_strike is what is left, and it must stay reachable."""
+    assert "spot_vs_strike" in METRICS
 
 
 # --- computing them from our own tables -------------------------------------
-
-
-def _seed_pm(session, *, kalshi_mid_age_min=1, pm_age_min=1, pm_prob=0.60):
-    """One Kalshi bucket and its Polymarket twin: LAX high, 85-86F."""
-    session.add(WeatherForecast(
-        captured_at=NOW - timedelta(minutes=5), city="LAX",
-        event_ticker="KXHIGHLAX-26AUG12", target_date="2026-08-12", kind="high",
-        forecast_high_f=86.0, source="nws",
-    ))
-    session.add(WeatherBucketSnapshot(
-        captured_at=NOW - timedelta(minutes=kalshi_mid_age_min),
-        event_ticker="KXHIGHLAX-26AUG12", market_ticker=TICKER, city="LAX",
-        kind="high", subtitle="85 to 86", low_f=85.0, high_f=86.0,
-        yes_bid_cents=44.0, yes_ask_cents=47.0, mid_cents=45.5,
-    ))
-    session.add(PolymarketSnapshot(
-        captured_at=NOW - timedelta(minutes=pm_age_min), city="LAX", kind="high",
-        target_date="2026-08-12", subtitle="85-86", low_f=85.0, high_f=86.0,
-        yes_prob=pm_prob,
-    ))
-    session.flush()
-
-
-def test_pm_divergence_is_the_other_venue_minus_ours(evo_session, evo_settings):
-    _seed_pm(evo_session)
-    out = signals.compute_signals(evo_session, [TICKER], now=NOW, settings=evo_settings)
-    # Polymarket 0.60 -> 60c, Kalshi mid 45.5c
-    assert out[TICKER]["pm_divergence"] == 14.5
-
-
-def test_a_stale_polymarket_quote_is_dropped_not_used(evo_session, evo_settings):
-    """Feeds die quietly. A signal nobody refreshed must not keep authorizing trades,
-    so past the window it becomes None and every condition on it fails."""
-    _seed_pm(evo_session, pm_age_min=evo_settings.signal_max_age_minutes + 5)
-    out = signals.compute_signals(evo_session, [TICKER], now=NOW, settings=evo_settings)
-    assert out.get(TICKER, {}).get("pm_divergence") is None
-
-
-def test_a_stale_kalshi_bucket_is_also_dropped(evo_session, evo_settings):
-    """Both legs of a difference must be current — a fresh Polymarket price against
-    an hour-old Kalshi mid is a fabricated divergence."""
-    _seed_pm(evo_session, kalshi_mid_age_min=evo_settings.signal_max_age_minutes + 5)
-    out = signals.compute_signals(evo_session, [TICKER], now=NOW, settings=evo_settings)
-    assert out.get(TICKER, {}).get("pm_divergence") is None
-
-
-def test_an_unmatched_market_simply_has_no_signal(evo_session, evo_settings):
-    _seed_pm(evo_session)
-    out = signals.compute_signals(
-        evo_session, ["KXHIGHNY-26AUG12-B70.5"], now=NOW, settings=evo_settings)
-    assert out.get("KXHIGHNY-26AUG12-B70.5", {}).get("pm_divergence") is None
 
 
 def _seed_crypto(session, *, strike_type="greater", floor=64000.0, cap=None,
@@ -238,31 +181,6 @@ def test_stale_spot_blocks_the_crypto_signal(evo_session, evo_settings):
 # --- reaching the live interpreter ------------------------------------------
 
 
-def test_market_data_stamps_signals_onto_the_quotes_it_serves():
-    """The interpreter takes ONE argument, a Quote — so the only way a signal reaches
-    a live entry decision is riding on the quote itself."""
-    md = StaticMarketData()
-    md.set_quote(_quote())
-    md.set_signals({TICKER: {"pm_divergence": 9.0, "spot_vs_strike": None}})
-
-    q = md.get_quote(TICKER)
-    assert q.pm_divergence == 9.0
-    spec = _spec([{"metric": "pm_divergence", "op": ">=", "value": 5}])
-    assert entry_signal(spec, q) is not None
-
-
-def test_signals_from_a_previous_cycle_do_not_linger():
-    """Each cycle recomputes. A quote whose signal vanished this cycle must come back
-    unstamped, not carrying the last value that happened to work."""
-    md = StaticMarketData()
-    md.set_quote(_quote())
-    md.set_signals({TICKER: {"pm_divergence": 9.0}})
-    assert md.get_quote(TICKER).pm_divergence == 9.0
-
-    md.set_signals({})  # feed went away
-    assert md.get_quote(TICKER).pm_divergence is None
-
-
 # --- the backtest must not lie about coverage -------------------------------
 
 
@@ -277,7 +195,7 @@ def test_a_dataset_that_cannot_compute_a_metric_rejects_the_spec(
         "name": "pm_probe",
         "universe": {"series_prefixes": ["TBACK"]},
         "entry": {"side": "yes", "style": "taker",
-                  "conditions": [{"metric": "pm_divergence", "op": ">=", "value": 5}]},
+                  "conditions": [{"metric": "spot_vs_strike", "op": ">=", "value": 5}]},
         "exit": {"mode": "settlement"},
     }
     result, err = sandbox.run_backtest(
@@ -285,7 +203,7 @@ def test_a_dataset_that_cannot_compute_a_metric_rejects_the_spec(
         spec_doc=spec_doc, dataset="backfill_weather", charge_budget=False, persist=False,
     )
     assert result is None
-    assert "pm_divergence" in err and "backfill_weather" in err
+    assert "spot_vs_strike" in err and "backfill_weather" in err
 
 
 def test_the_crypto_dataset_accepts_the_metric_it_can_replay(
@@ -308,7 +226,7 @@ def test_the_crypto_dataset_accepts_the_metric_it_can_replay(
 
 def test_dataset_signal_support_is_declared_not_guessed():
     assert "spot_vs_strike" in sandbox.DATASET_SIGNALS["crypto"]
-    assert "pm_divergence" not in sandbox.DATASET_SIGNALS["backfill_weather"]
+    assert "spot_vs_strike" not in sandbox.DATASET_SIGNALS["backfill_weather"]
     for dataset in sandbox.DATASETS:
         assert dataset in sandbox.DATASET_SIGNALS, f"{dataset} declares no signal support"
 

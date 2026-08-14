@@ -43,7 +43,6 @@ class Quote:
     # fresh signal for this market", which fails any condition referencing it; it
     # must never be read as zero. Stamped per cycle by MarketData.set_signals live,
     # and by the backtest adapters from historical values, so both paths agree.
-    pm_divergence: float | None = None
     spot_vs_strike: float | None = None
 
     @property
@@ -254,7 +253,6 @@ class MarketData:
         if quote is None:
             return None
         sig = self._signals.get(quote.ticker) or {}
-        quote.pm_divergence = sig.get("pm_divergence")
         quote.spot_vs_strike = sig.get("spot_vs_strike")
         return quote
 

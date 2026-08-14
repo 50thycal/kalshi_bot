@@ -35,7 +35,7 @@ from .marketdata import Quote
 METRICS = (
     "yes_bid", "yes_ask", "no_bid", "no_ask", "spread", "mid", "last_price",
     "volume", "open_interest", "hours_to_close",
-    "pm_divergence", "spot_vs_strike",
+    "spot_vs_strike",
 )
 OPS = ("<", "<=", ">", ">=", "==", "!=")
 
