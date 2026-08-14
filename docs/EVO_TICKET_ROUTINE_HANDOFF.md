@@ -47,27 +47,27 @@ evo tickets: auto-closed N request(s) whose capability shipped
 
 ---
 
-## 3. State of the queue at handoff (2026-08-13)
+## 3. State of the queue at handoff (2026-08-14, verified in Postgres)
 
-35 open tickets. After the first auto-close pass runs, expect **~25 of them to close** — the
-off-switch wave (`deactivate_strategy`, `strategy_deactivation`, `deactivate_negative_ev_strategies`
-and five other phrasings, filed 2026-07-31..2026-08-08 across 8 categories). The capability shipped
-2026-08-08 in commit `9d34158`; the tickets were never closed because no closure path existed until
-now.
+**10 open, 25 implemented.** The off-switch wave (~22 tickets) and the three CPI-corpus requests
+have already been auto-closed — do not go looking for them.
 
-What should remain, and what to do with it:
+What remains open, and what to do with it:
 
-| category | n | ask | status at handoff |
-|---|---|---|---|
-| `data_collection` + `external_data_pipeline` | **4** | **Settled KXCPI corpus + official CPI actuals as a `run_backtest` dataset** | **Being built now** — the fleet's own non-weather thesis. Close these when it ships. |
-| `bug_report` | ~1 | Automated strategy execution / live order placement | **REJECT** — violates PAP-4 (paper only). Close with the invariant as the reason; it will be re-filed otherwise. |
-| `research_tooling` | 1 | `view_strategy_spec` | Genuinely pending — small, probably worth doing. |
-| `sandbox_operator` | 1 | `sandbox_runs` | Genuinely pending — needs a read to understand what's actually wanted. |
-| `api_credentials` | 1 | `live_quote_ticker_schema` | Genuinely pending. |
-| `infrastructure` | 1 | `data_pipeline_diagnostics` | Genuinely pending. |
-| `data_collection` | 1 | `weather_market_ticker_registry` | Low priority — weather research is closed (see below). |
+| category | ask | status |
+|---|---|---|
+| `bug_report` | Automated strategy execution / live order placement | **REJECT** — violates PAP-4 (paper only). Close with the invariant as the reason, or it gets re-filed. |
+| `research_tooling` | `view_strategy_spec` | Genuinely pending — small, probably worth doing. |
+| `sandbox_operator` | `sandbox_runs` | Pending — read the ticket body to see what is actually wanted. |
+| `api_credentials` | `live_quote_ticker_schema` | Pending. |
+| `infrastructure` | `data_pipeline_diagnostics` | Pending. |
+| `data_collection` | `weather_market_ticker_registry` | Low priority — weather research is closed (§4). |
+| — | `strategy_execution`, bare `deactivation` | **Near-misses the matcher deliberately would not touch.** Both are almost certainly covered by the shipped `deactivate_strategy` action, but neither carries enough evidence for a safe auto-close. Read them and close by hand if you agree. |
 
----
+The CPI tickets were closed as `implemented` with a note stating the **half that did not ship**:
+the `econ` corpus is live (111 markets, 18,710 candles, `run_backtest` with `dataset='econ'`), but
+the official CPI **actuals** are not collected, so no spec can gate on the released number. If the
+fleet files a fresh ticket for the actuals, that is the system working — not a duplicate.
 
 ## 4. Standing context the routine should respect
 
@@ -87,14 +87,14 @@ What should remain, and what to do with it:
 
 ## 5. Known gaps this routine will probably surface
 
-Two things agents can't currently do that nobody has ticketed, worth building if they come up:
+Things agents can't currently do that nobody has ticketed, worth building if they come up:
 
-- **`inspect_data` source `polymarket` omits `low_f`/`high_f`**, so an agent reading it gets a
-  probability with no idea which temperature bucket it belongs to. One-line fix in
-  `kalshi_bot/evo/data_access.py`.
+- ~~`inspect_data` source `polymarket` omits `low_f`/`high_f`~~ — **fixed 2026-08-14**; the source
+  now carries the bucket bounds, so an agent can actually line a Polymarket probability up
+  against something.
 - **No weather-forecast sources are exposed at all** — `weather_ensembles`, `weather_forecasts`,
   `weather_settlements`, `weather_forecast_outcomes` are absent from the `inspect_data` allowlist,
   so agents cannot reach the forecast data to reach their own conclusions about it.
 
-Both are cheap. Neither is urgent given §4's weather finding, but if an agent asks, the answer is
-"yes, and it's an hour of work".
+The remaining one is cheap and not urgent given §4's weather finding, but if an agent asks, the
+answer is "yes, and it's an hour of work".

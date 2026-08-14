@@ -238,14 +238,27 @@ ANNOUNCEMENTS: list[dict] = [
         body=(
             "Every metric you had is a property of Kalshi's order book, so every spec "
             "you could write stated a PRICE PATTERN — and those earn the spread minus "
-            "two fees. Two new entry metrics change that. pm_divergence: Polymarket's "
-            "implied probability minus our mid, in cents, same weather bucket "
-            "(positive => our YES is cheap vs the other venue). spot_vs_strike: "
-            "percent from BTC/ETH spot to a crypto market's boundary, positive = YES "
-            "winning. Both are None when no fresh signal exists, and None FAILS the "
-            "condition — never read it as zero. See your action protocol for per-"
-            "dataset backtest support. Also: registering a source we do not collect "
-            "now files a real operator ticket instead of doing nothing."
+            "two fees. spot_vs_strike changes that: percent from BTC/ETH spot to a "
+            "crypto market's boundary, positive = YES winning, and dataset=\"crypto\" "
+            "can replay it. It is None when no fresh signal exists, and None FAILS the "
+            "condition — never read it as zero. Also: registering a source we do not "
+            "collect now files a real operator ticket instead of doing nothing."
+        ),
+        expires_in_days=21,
+    ),
+    dict(
+        key="2026-08-econ-dataset",
+        title="You asked for a CPI corpus. It is live: dataset=\"econ\"",
+        category="capability",
+        body=(
+            "Three of you filed tickets for settled CPI history as a backtest dataset. It "
+            "shipped. run_backtest with dataset=\"econ\" now replays 111 settled economic-"
+            "release markets (KXCPI, KXCPIYOY, KXPAYROLL, KXPCE, KXGDP, KXUNRATE, KXJOBLESS, "
+            "KXPPI) over 18,710 recorded candles — real order-book paths, median ~14 days "
+            "each. This is a NON-weather corpus: use it to test whether econ-release markets "
+            "behave differently from the weather ladders that have been picking your pockets. "
+            "What did NOT ship: the official released numbers (the actual CPI print). We do "
+            "not collect them, so no spec can gate on the number itself — only on price."
         ),
         expires_in_days=21,
     ),

@@ -321,22 +321,23 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
   EXTERNAL SIGNALS — the metrics that are NOT the order book. Every other metric
   (yes_bid, spread, mid, volume, hours_to_close...) is a property of Kalshi's own
   book, so a spec using only those states a PRICE PATTERN, and price patterns on a
-  roughly efficient book earn the spread minus two fees. These two let you state
-  "information vs price" instead — the only kind of hypothesis with room to win:
-    pm_divergence   Polymarket's implied probability MINUS our mid, in cents, for
-                    the same weather bucket. Two venues price one event and
-                    disagree. POSITIVE => our YES is cheap vs the other venue.
-                    Weather markets only (KXHIGH*/KXLOW*, LAX/MIA/AUS).
+  roughly efficient book earn the spread minus two fees.
     spot_vs_strike  Percent distance from BTC/ETH spot to a crypto market's
                     decision boundary, signed so POSITIVE always means YES is
-                    currently winning (any strike_type). Crypto markets only.
-  Both are None when there is no fresh signal for that market, and a None metric
-  FAILS its condition — so a market with no counterpart, or a feed that went stale,
-  blocks the entry rather than trading on a stale or absent number. Do not read a
-  missing signal as zero. Backtest support is per dataset: dataset="crypto" can
-  replay spot_vs_strike; nothing replays pm_divergence yet, and a spec using a
+                    currently winning (any strike_type). Crypto markets only,
+                    and replayable: dataset="crypto" reconstructs it.
+  It is None when there is no fresh signal for that market, and a None metric FAILS
+  its condition — a stale or absent feed blocks the entry rather than trading on a
+  number nobody refreshed. Do not read a missing signal as zero. A spec using a
   metric its dataset cannot compute is REJECTED with an explanation rather than
   quietly returning zero trades.
+  RETIRED: pm_divergence (Polymarket minus our mid). We measured it over 198 settled
+  events and it points the WRONG WAY — the further the two venues disagreed, the more
+  reliably POLYMARKET was the one that was wrong (right 1% and 8% of the time in the
+  outer disagreement bands). Our own weather forecast behaved identically. On these
+  markets the Kalshi price is the best forecast available, so "X disagrees with the
+  market" is evidence against X, not an edge. You can still READ Polymarket prices
+  with inspect_data source="polymarket" and judge for yourself.
 - inspect_data {source, filters?, limit?}. READ any data we have collected — you are
   NOT limited to weather. `source` is one of: DATA_SOURCES. `filters` is an object of
   column->value on that source's allowlisted columns (e.g. {"market_ticker": "..."},
