@@ -123,6 +123,24 @@ per-trade value. Rows with an `open` control are undecided, not evidence; **alwa
 how many stops are still pending a control outcome**, because a favorable early
 `stop_saved_c` on a handful of matched pairs can invert entirely once the rest resolve.
 
+**A5's pairing gate has its own PAIRING BOUNDARY — `docs/BOOK_REGISTRY.md` and
+`docs/MMSELL_ANCHOR_SET.md`.** Before 2026-08-14T14:31:12Z (PR #213), `_event_has_both_tails`
+let a multi-strike ladder event (NFL spread/total) open several correlated same-side legs
+with no opposing leg — real trades, but not the hedged pair the n≥82 win-rate-bound gate
+assumes. This is a hard floor, the same species as the 2026-08-13 universe boundary — no
+offset converts a one-sided sample into a paired one. **Any read of A5's progress toward
+n≥82 clean pairs MUST filter to post-boundary trades:**
+
+```jsonc
+{"type":"db","id":"a5pairs-<short-id>","max_rows":10,"sql":"with ev as (select *, regexp_replace(market_ticker, '-[^-]+$', '') as event_root from paper_trades where strategy='mmsellA5' and not legacy and created_at >= '2026-08-14T14:31:12Z'), agg as (select event_root, count(*) filter (where side='no' and status='settled') as no_settled, count(*) filter (where side='yes' and status='settled') as yes_settled, bool_and(pnl>0) filter (where status='settled') as all_won from ev group by event_root having count(*) filter (where side='no')>0 and count(*) filter (where side='yes')>0) select count(*) as paired_events, count(*) filter (where no_settled>0 and yes_settled>0) as paired_events_settled, count(*) filter (where all_won) as paired_events_all_legs_won from agg"}
+```
+
+`paired_events_settled` is the n toward the 82 target; `paired_events_all_legs_won /
+paired_events_settled` is the raw win rate to run through the 95% lower-bound check against
+93.1%. If this boundary is ever superseded by a later empirical read, update the timestamp
+here AND in `docs/BOOK_REGISTRY.md` / `docs/MMSELL_ANCHOR_SET.md` together — a boundary
+recorded in only one place is a boundary that gets blended away.
+
 ### 4. Reset the ops channel
 
 `{"type":"noop"}` to `ops/request.json`, commit, push. Always do this even if a step

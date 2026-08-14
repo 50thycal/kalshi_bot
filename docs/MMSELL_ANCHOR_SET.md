@@ -161,9 +161,23 @@ per-trade economics don't change, since a leg's own P&L doesn't depend on whethe
 exists. What changes is that a large share of the pre-fix volume was NOT the hedged pair the
 promotion gate's confidence-interval math assumes; the pair win rate computed over that data
 mixes true pairs with the ordinary uncorrelated risk of a wide single-leg mmsell trade. **Read
-the pre-2026-08-14 sample as directional, not as clean evidence toward the n≥82 gate** — the
-clock on a trustworthy sample effectively restarts at this fix, the same way A5's original clock
-restarted at the 2026-08-03 payload-shape fix.
+the pre-boundary sample as directional, not as clean evidence toward the n≥82 gate.**
+
+**This is a PAIRING boundary, the same species as the 2026-08-13 UNIVERSE boundary
+(`docs/BOOK_REGISTRY.md`) — a hard floor, not a correctable offset.** There is no conversion that
+turns a one-sided-legs sample into a paired one; the only remedy is to drop pre-boundary trades
+from the pair-rate gate specifically (NOT from the book's own P&L history, which stays real and
+whole). **A boundary recorded only in prose gets blended away the next time someone reads the
+table** — that exact failure is why the universe boundary lives in code (`COHORT_START` in
+`scripts/mmsell_fill_model.py`), not just here. A5 has no dedicated analysis script yet, so until
+one exists the floor has to be applied by hand: **any query computing A5's pair count or pair
+win-rate bound must add `created_at >= '2026-08-14T14:31:12Z'`** (PR #213's merge time — the
+`mm check 1` skill's step 3b carries this filter; see there for the up-to-date boundary if this
+one is ever superseded). This timestamp is provisional pending empirical confirmation on the next
+check (too little post-merge volume existed at merge time to verify the deploy took effect the
+way the 2026-08-11 fee boundary's timestamp was empirically pinned) — if a later check finds
+same-side multi-leg events still forming after this timestamp, move the boundary to match and
+update both this doc and the skill.
 
 Honest caveat, carried forward from the backtest: an event with both tails simultaneously cheap is
 an event the market *prices as low-volatility*. So A5 is a pure short-volatility bet on a
