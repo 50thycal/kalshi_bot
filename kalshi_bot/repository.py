@@ -946,6 +946,24 @@ def open_positions_settlement_summary(
     return len(rows), {r[1] for r in rows if r[1]}
 
 
+def event_has_strangle_leg(session, strategy: str, event_ticker: str, side: str) -> bool:
+    """True when `strategy` has ALREADY entered a `side` ('no' or 'yes') leg on this event —
+    any status, not just open, since this dedups against the event's own outcome rather than
+    against currently-held risk. Caps the anchor set's strangle (mmsellA5) to one leg per side
+    per event; see MmSellTracker._strangle_leg_taken for why that cap has to exist."""
+    return session.scalar(
+        select(m.PaperTrade.id)
+        .join(m.MmSellSettlementMeta,
+              m.MmSellSettlementMeta.market_ticker == m.PaperTrade.market_ticker)
+        .where(
+            m.PaperTrade.strategy == strategy,
+            m.PaperTrade.side == side,
+            m.MmSellSettlementMeta.event_ticker == event_ticker,
+        )
+        .limit(1)
+    ) is not None
+
+
 def recent_position_yes_bids(session, ticker: str, limit: int) -> list[float]:
     """The last `limit` yes-BID values taped for this HELD position, oldest-first.
 

@@ -136,6 +136,35 @@ Two transferable lessons: **never read a Kalshi price field raw** — the `_doll
 are what live data actually carries — and **a paper book at exactly zero rows is a bug report
 until proven otherwise**, never evidence of selectivity.
 
+**Fixed 2026-08-14 — `_event_has_both_tails()` certifies the EVENT, not the PAIR, and NFL supply
+was the first regime to make that gap visible.** The check only asks "does this event carry a
+cheap-YES market and a cheap-NO market somewhere," then the entry loop lets EVERY market that
+individually clears either band open its own leg. On a two-market event that's harmless — the
+one market on each side IS the pair. On a multi-strike ladder (`KXNFLSPREAD`, `KXNFLTOTAL`, and
+any other series with several strikes per event) several markets can independently sit in the
+same band: one event opened four cheap-NO legs (`ARI2`/`ARI3`/`ARI4`/`ARI5`, four different
+spread lines on the same game) and zero cheap-YES legs. Those four legs are **positively
+correlated** — a single bad result on that game can move several strikes together — which is
+exactly the risk the strangle exists to avoid, not a strangle at all. A pairing audit across the
+book's full history found only **27% of events** (192/715) had actually taken a leg on both
+sides; 64% took the upper leg only, 9% the mirror leg only.
+
+The fix caps entry to **one leg per side per event**: `MmSellTracker._strangle_leg_taken` (via
+`repo.event_has_strangle_leg`) checks whether this book already holds ANY trade — open, stopped,
+or settled, since the dedup is against the event's own outcome, not current risk — of the
+candidate's side on this event, and skips the entry if so. The first market to clear each side's
+band still wins that leg; every later same-side candidate in the same event is refused. Fails
+open (like every anchor gate) if the read errors or the event has no `event_ticker`.
+
+**What this means for A5's numbers so far.** Every trade already recorded is genuine — the
+per-trade economics don't change, since a leg's own P&L doesn't depend on whether its partner
+exists. What changes is that a large share of the pre-fix volume was NOT the hedged pair the
+promotion gate's confidence-interval math assumes; the pair win rate computed over that data
+mixes true pairs with the ordinary uncorrelated risk of a wide single-leg mmsell trade. **Read
+the pre-2026-08-14 sample as directional, not as clean evidence toward the n≥82 gate** — the
+clock on a trustworthy sample effectively restarts at this fix, the same way A5's original clock
+restarted at the 2026-08-03 payload-shape fix.
+
 Honest caveat, carried forward from the backtest: an event with both tails simultaneously cheap is
 an event the market *prices as low-volatility*. So A5 is a pure short-volatility bet on a
 subsample selected for low volatility. That is the same signal the A4 entry gate is chasing,
@@ -166,8 +195,8 @@ number by more than the usual gap.
 |---|---|
 | book specs + spec-grammar keys (`stopl`, `stopk`, `volw`, `volv`, `strangle`) | `kalshi_bot/config.py` (`mmsell_variants`, `mmsell_book_by_tag`) |
 | stop execution | `kalshi_bot/paper/engine.py` (`_anchor_stop_hit`, wired into `_mark_or_exit` → `closed_sl`) |
-| vol gate + strangle pairing / mirror leg | `kalshi_bot/mmsell/tracker.py` (`_vol_gate_blocks`, `_event_has_both_tails`) |
-| tick history reads | `kalshi_bot/repository.py` (`recent_candidate_mids`, `recent_position_yes_bids`) |
+| vol gate + strangle pairing / mirror leg / one-leg-per-side cap | `kalshi_bot/mmsell/tracker.py` (`_vol_gate_blocks`, `_event_has_both_tails`, `_strangle_leg_taken`) |
+| tick history reads | `kalshi_bot/repository.py` (`recent_candidate_mids`, `recent_position_yes_bids`, `event_has_strangle_leg`) |
 | regression tests | `tests/test_mmsell_anchor_set.py` |
 
 ## Reading the results
@@ -183,3 +212,8 @@ project's own history:
   of the flow mmsell10 sees. **But slow is not zero:** A5's clock starts at the 2026-08-03 fix
   (see above), and if it is still at n=0 several checks after that deploy, treat it as a second
   bug rather than as selectivity.
+- **A5's clock restarted again at the 2026-08-14 one-leg-per-side fix.** Before it, ladder events
+  (NFL spread/total) could open several correlated same-side legs per event with no opposing leg
+  at all — genuine trades, but not the hedged pair the win-rate gate assumes. When reading the
+  pair win rate toward n≥82, check whether the sample spans the fix: pre-fix trades are real P&L
+  but should not be treated as clean "pair" evidence.

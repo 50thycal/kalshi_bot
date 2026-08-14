@@ -87,6 +87,7 @@ class MmSellCycleSummary:
     # shadow decision table rather than off this number.
     skipped_prefilter: int = 0
     skipped_vol_gate: int = 0   # anchor-set volatility ENTRY gate rejections
+    skipped_strangle_paired: int = 0  # A5: this event's side already has a leg (see below)
     skipped_settlement_cap: int = 0  # too many open positions already settle this candidate's date
     skipped_event_cap: int = 0       # too many distinct events open on a CORRELATED-regime date
     live_retried: int = 0        # live entry re-posted on a ticker paper already holds
@@ -347,6 +348,32 @@ class MmSellTracker:
                 return True
         return False
 
+    @staticmethod
+    def _strangle_leg_taken(session, tag: str, event_ticker: str, side: str) -> bool:
+        """True when `tag` already holds a `side` leg on this event — caps the strangle to
+        genuinely ONE leg per side per event.
+
+        `_event_has_both_tails` only certifies that a cheap-YES tail and a cheap-NO tail exist
+        SOMEWHERE among the event's markets — on a two-market event that is equivalent to "the
+        pair", but on a multi-strike ladder (NFL spread/total, weather buckets...) an event can
+        carry several markets that independently clear the SAME side's band. Without this check
+        every one of them opens its own leg: same-side legs on one ladder are positively
+        correlated (a single game result can move several strikes together), not the mutually
+        exclusive pair the strangle's whole thesis rests on. Found 2026-08-14 once NFL supply
+        made it visible — a spread ladder entered four cheap-NO legs on one event and zero
+        cheap-YES legs, so a bad result there could have lost all four together.
+
+        Any status counts (not just open): once an event has taken a side's leg, re-entering
+        that side later — even after the first leg has settled or stopped — is still the same
+        underlying game result repeated, not a fresh independent pair."""
+        if not event_ticker:
+            return False           # can't dedup without an event key; fail OPEN like the other gates
+        try:
+            return repo.event_has_strangle_leg(session, tag, event_ticker, side)
+        except Exception:  # noqa: BLE001 — a gate read must never break the entry scan
+            logger.exception("mmsell strangle pairing: leg-dedup read failed (entering anyway)")
+            return False
+
     def _books(self) -> list[dict]:
         """Control book (base knobs, tag 'mmsell' — NEVER reparameterized), then the configured
         revision books, then any live/paper twin books. All share the scan/orderbook; only the
@@ -470,6 +497,7 @@ class MmSellTracker:
                     "skipped_prefilter": summ.skipped_prefilter,
                     "skipped_illiquid": summ.skipped_illiquid,
                     "skipped_vol_gate": summ.skipped_vol_gate,
+                    "skipped_strangle_paired": summ.skipped_strangle_paired,
                     "skipped_settlement_cap": summ.skipped_settlement_cap,
                     "skipped_event_cap": summ.skipped_event_cap,
                     "per_series": dict(sorted(summ.per_series.items(),
@@ -812,6 +840,11 @@ class MmSellTracker:
                     if book.get("strangle"):
                         cap_y = book.get("maxyes") or book["hi"]
                         if not self._event_has_both_tails(event, float(cap_y)):
+                            continue
+                        # Caps the pair to ONE leg per side per event — see _strangle_leg_taken.
+                        leg_side = "yes" if mirror_leg else "no"
+                        if self._strangle_leg_taken(session, tag, event_ticker, leg_side):
+                            summ.skipped_strangle_paired += 1
                             continue
                     # Entry-price ceiling: the band gates the MIDPOINT, but P&L is driven by the
                     # actual sell price (yes-ask = 100 - no-bid), which is always >= the midpoint.
