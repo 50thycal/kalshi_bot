@@ -9,7 +9,7 @@ every one of those tickets was still `open` five days later.
 
 That is worse than untidy. The review queue is what the operator reads to decide what to build,
 and what agents see when deciding whether to re-ask. A queue that only grows buries the live
-requests — the four asking for a CPI backtest corpus — under a wall of already-delivered ones.
+requests — the three asking for a CPI backtest corpus — under a wall of already-delivered ones.
 
 Two things are pinned here:
 
@@ -136,16 +136,17 @@ def test_auto_close_names_the_capability_and_when_it_shipped(evo_session):
 
 
 def test_a_live_request_is_left_alone(evo_session):
-    """THE property that makes auto-close safe. The CPI corpus is the real ask sitting in
-    the queue; nothing about it resembles a shipped capability, and closing it would
-    destroy the fleet's only self-generated non-weather research request."""
-    t = _ticket(
-        evo_session,
-        "Add settled CPI market corpus + official CPI actuals as a run_backtest dataset",
-        category="data_collection",
-    )
+    """THE property that makes auto-close safe: a request for something that has NOT shipped
+    must survive every pass. (This test used to guard the CPI corpus, which was the live ask
+    at the time. The corpus shipped 2026-08-13, so it is now covered by the econ registry
+    entry below and this is re-pointed at requests that are still genuinely open — keeping
+    the assertion honest instead of deleting it.)"""
+    for cap, cat in (("view_strategy_spec so I can read back what I deployed", "research_tooling"),
+                     ("data_pipeline_diagnostics for the collectors", "infrastructure"),
+                     ("live_quote_ticker_schema", "api_credentials")):
+        t = _ticket(evo_session, cap, category=cat, agent=f"a-{cap[:9]}")
+        assert evo_session.get(EvoTicket, t.id).status == "open"
     assert tickets.auto_resolve_shipped(evo_session) == 0
-    assert evo_session.get(EvoTicket, t.id).status == "open"
 
 
 def test_a_merely_adjacent_request_is_not_swept_up(evo_session):
@@ -181,3 +182,46 @@ def test_every_registry_entry_points_at_a_real_permitted_action(evo_session):
 @pytest.mark.parametrize("cap", ["", "   ", "deactivate"])
 def test_degenerate_capability_text_never_matches(evo_session, cap):
     assert tickets._shipped_match(cap) is None
+
+
+# --- the econ corpus: closing a PARTIAL delivery honestly --------------------
+
+
+ECON_ASKS = (
+    "Add settled CPI market corpus + official CPI actuals as a run_backtest dataset "
+    "(like 'crypto')",
+    "CPI settled-data pipeline for backtesting",
+    "Add KXCPI (CPI inflation) settled-market data to the run_backtest corpus, similar to "
+    "backfill_weather, to enable backtesting CPI strategies.",
+)
+
+
+def test_the_cpi_corpus_requests_close_against_the_registry(evo_session):
+    """All three phrasings the fleet used for the econ corpus, verbatim from the queue."""
+    made = [_ticket(evo_session, cap, category="data_collection", agent=f"a{i}")
+            for i, cap in enumerate(ECON_ASKS)]
+    assert tickets.auto_resolve_shipped(evo_session) == len(made)
+    for t in made:
+        assert evo_session.get(EvoTicket, t.id).status == "implemented"
+
+
+def test_the_econ_closure_admits_what_did_NOT_ship(evo_session):
+    """THE point of this entry. The ask was corpus AND official CPI actuals; only the corpus
+    shipped. Closing as 'implemented' with a note that claims the whole thing would teach the
+    fleet its request was met when half of it was not — and it would stop re-asking for the
+    half that matters. The result text has to carry the gap."""
+    t = _ticket(evo_session, ECON_ASKS[0], category="data_collection")
+    tickets.auto_resolve_shipped(evo_session)
+    result = evo_session.get(EvoTicket, t.id).implementation_result.lower()
+    assert "econ" in result                      # what they can use
+    assert "actuals" in result                   # what they did not get
+    assert "not" in result                       # stated as absent, not glossed
+
+
+def test_neighbouring_data_requests_are_not_closed_by_the_econ_entry(evo_session):
+    """`data_pipeline_diagnostics` shares the word 'pipeline' with one CPI phrasing, and
+    `weather_market_ticker_registry` sat in the same category. Neither shipped."""
+    for cap, cat in (("data_pipeline_diagnostics for the collectors", "infrastructure"),
+                     ("weather_market_ticker_registry", "data_collection")):
+        _ticket(evo_session, cap, category=cat, agent=f"a-{cap[:8]}")
+    assert tickets.auto_resolve_shipped(evo_session) == 0

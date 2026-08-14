@@ -71,6 +71,23 @@ SHIPPED_CAPABILITIES: tuple[ShippedCapability, ...] = (
             frozenset({"strategy", "strategies"}),
         ),
     ),
+    # The econ corpus: 3 tickets (data_collection x2, external_data_pipeline x1) from
+    # 2026-07-22 asking for settled CPI history as a run_backtest dataset. PARTIAL delivery,
+    # and the note says so — the corpus shipped, the official CPI ACTUALS they also asked for
+    # are not collected. Closing with a note that claimed the whole ask would teach the fleet
+    # its request was met and stop it re-asking for the half that is missing.
+    ShippedCapability(
+        action="run_backtest",
+        shipped_on="2026-08-13",
+        note="the settled econ corpus shipped: run_backtest with dataset='econ' replays "
+             "KXCPI/KXCPIYOY/KXPAYROLL/KXPCE/KXGDP/KXUNRATE/KXJOBLESS/KXPPI order-book "
+             "history. The official CPI actuals you also asked for are NOT collected, so a "
+             "spec cannot gate on the released number — file a new ticket for that half",
+        all_of=(
+            frozenset({"cpi", "kxcpi"}),
+            frozenset({"backtest", "backtests", "backtesting", "corpus", "dataset", "pipeline"}),
+        ),
+    ),
 )
 
 
