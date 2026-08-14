@@ -378,6 +378,53 @@ def test_a_failed_cancel_leaves_the_order_resting_for_retry(settings):
     assert ex.summary.drained_canceled == 0
 
 
+def test_the_drain_stops_retrying_an_order_it_can_never_cancel(settings):
+    """Observed in production 2026-08-14: one order looped `cancelled 0/1` every cycle forever.
+
+    Kalshi refuses to cancel an order that is no longer open, so one that filled or expired in
+    the same instant the book stood down can NEVER be cancelled — and `reconcile` does not clean
+    it up either, because it leaves `resting` rows alone when they are absent from the exchange
+    feed. Unbounded, the row sits `resting` in our DB permanently and burns a request and a
+    warning every cycle. The retry must therefore terminate."""
+    _live(settings, live_strategies="")
+    _db(settings)
+    client = _QueueClient(cancel_exc=RuntimeError("400 order not open"))
+    ex = LiveExecutor(client, settings, RiskManager(settings))
+    with db.session_scope() as session:
+        _resting(session, strategy="mmsell10a", koid="GHOST")
+        for _ in range(ex._DRAIN_MAX_ATTEMPTS - 1):
+            ex.drain_stood_down_books(session)
+            assert session.scalar(select(m.LiveOrder)).status == "resting", "must still retry"
+        ex.drain_stood_down_books(session)   # the attempt that gives up
+        row = session.scalar(select(m.LiveOrder))
+        assert row.status == "canceled"
+        # NEVER the clean reason: the record must not claim a confirmed cancel we never got.
+        assert row.cancel_reason == "drain_unconfirmed"
+
+    # ...and once resolved it is not targeted again, so the loop truly ends.
+    before = ex.summary.drain_failed
+    with db.session_scope() as session:
+        assert ex.drain_stood_down_books(session) == 0
+    assert ex.summary.drain_failed == before
+
+
+def test_a_successful_cancel_clears_the_attempt_counter(settings):
+    """A transient failure followed by success must not leave the order one strike from being
+    given up on the next time its book stands down."""
+    _live(settings, live_strategies="")
+    _db(settings)
+    client = _QueueClient(cancel_exc=RuntimeError("503"))
+    ex = LiveExecutor(client, settings, RiskManager(settings))
+    with db.session_scope() as session:
+        _resting(session, strategy="mmsell10a", koid="FLAKY")
+        ex.drain_stood_down_books(session)
+        assert ex._drain_attempts.get("FLAKY") == 1
+        client.cancel_exc = None
+        assert ex.drain_stood_down_books(session) == 1
+        assert session.scalar(select(m.LiveOrder)).cancel_reason == "book_stood_down"
+    assert "FLAKY" not in ex._drain_attempts
+
+
 def test_the_drain_can_be_switched_off(settings):
     _live(settings, live_strategies="", live_drain_stood_down=False)
     _db(settings)

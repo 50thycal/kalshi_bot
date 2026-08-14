@@ -111,6 +111,7 @@ class LiveExecutor:
         self._closeout_abandoned: set[tuple[str, str]] = set()  # (book, ticker) past its attempt cap
         self._market_ids: dict[str, str] = {}  # ticker -> v1 market UUID (cached)
         self._cell_skips_noted: set = set()  # (book, event, reason, day) already logged this run
+        self._drain_attempts: dict[str, int] = {}  # kalshi_order_id -> consecutive failed cancels
 
     def reset_summary(self) -> None:
         self.summary = LiveCycleSummary()
@@ -814,6 +815,11 @@ class LiveExecutor:
                 f"first per-order error was {first_error}")
         return written
 
+    # Consecutive failed cancels before the drain stops retrying one order. Small: a genuinely
+    # transient failure clears within a cycle or two, while an order Kalshi will never cancel
+    # (already filled/expired) fails identically forever.
+    _DRAIN_MAX_ATTEMPTS = 5
+
     # Cap on per-order fallback calls in one cycle. Sized above our observed resting footprint
     # (~35) so it never binds in normal operation, and low enough that a shape change which
     # empties the batch response cannot silently multiply our request rate.
@@ -837,9 +843,17 @@ class LiveExecutor:
            `client._ensure_can_cancel` is the fix; this is what uses it.
 
         Follows `rodlaf`'s discipline (docs/EXTERNAL_REPO_RESEARCH.md §6): **verify before
-        dropping state.** A row is only marked `canceled` when Kalshi accepted the cancel — a
-        failure leaves it `resting` so the next cycle retries, rather than recording a cleanup
-        that did not happen."""
+        dropping state.** A row is marked `canceled` under `reason` only when Kalshi accepted the
+        cancel; a failure leaves it `resting` so the next cycle retries, rather than recording a
+        cleanup that did not happen.
+
+        That retry is BOUNDED (`_DRAIN_MAX_ATTEMPTS`). Kalshi refuses to cancel an order that is
+        no longer open, so an order which filled or expired in the same instant the book stood
+        down can never be cancelled — and `reconcile` will not clean it up either, because it
+        leaves `resting` rows alone when they are absent from the exchange feed. Unbounded, such
+        a row would sit `resting` forever and burn a request and a warning every cycle (observed
+        in production 2026-08-14). On exhaustion it is marked terminal under its own distinct
+        reason, `drain_unconfirmed`, so the record never claims a confirmed cancel."""
         if not self.settings.live_drain_stood_down:
             return 0
 
@@ -856,23 +870,46 @@ class LiveExecutor:
 
         drained = 0
         for row in targets:
+            koid = str(row.kalshi_order_id)
             try:
                 self.client.cancel_events_order(row.kalshi_order_id)
             except AuthError:
                 raise
             except Exception as exc:  # noqa: BLE001
-                # Left `resting` on purpose. It may genuinely be gone (filled a moment ago, in
-                # which case reconcile resolves it next cycle) or the cancel may have failed —
-                # and we cannot tell the two apart from here. Claiming `canceled` on a guess is
-                # how state drifts away from the exchange.
                 self.summary.drain_failed += 1
-                logger.warning("drain cancel failed — order left resting for retry",
-                               extra={"extra_fields": {
-                                   "kalshi_order_id": row.kalshi_order_id,
-                                   "strategy": row.strategy, "reason": reason,
-                                   "error": str(exc)[:200]}})
+                attempts = self._drain_attempts.get(koid, 0) + 1
+                self._drain_attempts[koid] = attempts
+                # The error TEXT goes in the MESSAGE. Railway's log endpoint returns only a log
+                # line's message and drops structured fields, so an error in `extra` is
+                # unreadable in production — the same trap that made the 429 counters and then
+                # the queue sampler write-only, both in this same file.
+                logger.warning(
+                    f"drain cancel failed ({attempts}/{self._DRAIN_MAX_ATTEMPTS}) for "
+                    f"{row.strategy} {koid}: {type(exc).__name__}: {str(exc)[:200]}")
+                if attempts < self._DRAIN_MAX_ATTEMPTS:
+                    continue  # genuinely transient; next cycle retries
+                # GIVE UP, DELIBERATELY. Retrying forever is the worse failure: Kalshi rejects a
+                # cancel for an order that is no longer open, so an order that filled or expired
+                # in the same instant we stood the book down can NEVER be cancelled — and
+                # `reconcile` will not resolve it either, because it leaves `resting` rows alone
+                # when they are absent from the exchange feed. Without a bound this row stays
+                # `resting` in our DB forever and burns a request and a warning every cycle.
+                #
+                # The row is marked terminal under its OWN reason, never the clean one, so the
+                # record still says we did not get a confirmed cancel. That is the honest middle
+                # between claiming a cleanup that did not happen and looping until the heat death
+                # of the universe.
+                repo.update_live_order_status(session, row, status="canceled",
+                                              cancel_reason="drain_unconfirmed")
+                self._drain_attempts.pop(koid, None)
+                logger.warning(
+                    f"drain: giving up on {row.strategy} {koid} after "
+                    f"{self._DRAIN_MAX_ATTEMPTS} failed cancels — marked drain_unconfirmed. "
+                    "Almost certainly already filled/expired (Kalshi refuses cancels on "
+                    "non-open orders); verify against the exchange if it matters.")
                 continue
             repo.update_live_order_status(session, row, status="canceled", cancel_reason=reason)
+            self._drain_attempts.pop(koid, None)
             self.summary.drained_canceled += 1
             drained += 1
 
