@@ -15,9 +15,15 @@ What these tests pin, in order of what would silently break the experiment:
 
 from __future__ import annotations
 
-import pytest
+import datetime as dt
 
+import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from kalshi_bot import repository as repo
 from kalshi_bot.mmsell.tracker import MmSellTracker
+from kalshi_bot.models import Base, MmSellSettlementMeta, PaperTrade
 
 
 def _settings(settings):
@@ -169,3 +175,99 @@ def test_strangle_legs_are_mutually_exclusive():
         upper_lost = settle_yes            # sold the YES tail on a high strike
         lower_lost = not settle_yes        # sold the NO tail on a low strike
         assert not (upper_lost and lower_lost)
+
+
+# ------------------------------------------------- strangle: one leg per side per event
+#
+# `_event_has_both_tails` only certifies a pair exists SOMEWHERE among an event's markets.
+# On a multi-strike ladder (NFL spread/total...) several markets can independently clear the
+# SAME side's band, and without a per-side cap every one of them opened its own leg -- same-side
+# legs on one ladder are positively correlated (a bad game result moves several strikes
+# together), not the mutually exclusive pair the thesis requires. Found 2026-08-14 once NFL
+# supply made the ladder shape common enough to see: one event took four cheap-NO legs and zero
+# cheap-YES legs.
+
+def _sqlite_session():
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    return sessionmaker(bind=engine, expire_on_commit=False)()
+
+
+@pytest.fixture
+def db_session():
+    session = _sqlite_session()
+    yield session
+    session.close()
+
+
+def _seed_leg(session, *, ticker, event_ticker, strategy, side):
+    session.add(MmSellSettlementMeta(
+        market_ticker=ticker, event_ticker=event_ticker, series_ticker="KXTEST",
+        close_time=dt.datetime(2026, 8, 14, tzinfo=dt.timezone.utc),
+    ))
+    session.add(PaperTrade(market_ticker=ticker, strategy=strategy, side=side, status="open"))
+    session.commit()
+
+
+def test_event_has_strangle_leg_true_after_a_leg_is_recorded(db_session):
+    _seed_leg(db_session, ticker="KXEV-HI", event_ticker="KXEV", strategy="mmsellA5", side="no")
+    assert repo.event_has_strangle_leg(db_session, "mmsellA5", "KXEV", "no") is True
+
+
+def test_event_has_strangle_leg_false_for_a_fresh_event(db_session):
+    assert repo.event_has_strangle_leg(db_session, "mmsellA5", "KXEV", "no") is False
+
+
+def test_event_has_strangle_leg_is_side_specific(db_session):
+    """A 'no' leg already open must not block the OPPOSITE side -- the mirror leg is exactly the
+    trade that completes the pair and must still be allowed in."""
+    _seed_leg(db_session, ticker="KXEV-HI", event_ticker="KXEV", strategy="mmsellA5", side="no")
+    assert repo.event_has_strangle_leg(db_session, "mmsellA5", "KXEV", "yes") is False
+
+
+def test_event_has_strangle_leg_is_strategy_specific(db_session):
+    """A different book's leg on the same event must not block mmsellA5 -- each anchor book's
+    exposure is independent."""
+    _seed_leg(db_session, ticker="KXEV-HI", event_ticker="KXEV", strategy="mmsell10", side="no")
+    assert repo.event_has_strangle_leg(db_session, "mmsellA5", "KXEV", "no") is False
+
+
+def test_event_has_strangle_leg_true_even_after_the_leg_settles(db_session):
+    """Dedup is against the event's own outcome, not against currently-held risk: a leg that has
+    already settled or stopped still means this event already got a 'no' leg."""
+    session = db_session
+    session.add(MmSellSettlementMeta(
+        market_ticker="KXEV-HI", event_ticker="KXEV", series_ticker="KXTEST",
+        close_time=dt.datetime(2026, 8, 14, tzinfo=dt.timezone.utc),
+    ))
+    session.add(PaperTrade(market_ticker="KXEV-HI", strategy="mmsellA5", side="no",
+                           status="settled", pnl=0.06))
+    session.commit()
+    assert repo.event_has_strangle_leg(session, "mmsellA5", "KXEV", "no") is True
+
+
+def test_strangle_leg_taken_true_when_a_leg_already_exists(db_session):
+    _seed_leg(db_session, ticker="KXEV-HI", event_ticker="KXEV", strategy="mmsellA5", side="no")
+    assert MmSellTracker._strangle_leg_taken(db_session, "mmsellA5", "KXEV", "no") is True
+
+
+def test_strangle_leg_taken_false_for_a_fresh_event(db_session):
+    assert MmSellTracker._strangle_leg_taken(db_session, "mmsellA5", "KXEV", "no") is False
+
+
+def test_strangle_leg_taken_is_a_noop_without_an_event_ticker(monkeypatch):
+    """No event key -> can't dedup -> fail OPEN like the other anchor-set gates, and don't even
+    query for it."""
+    def _boom(*_a, **_k):
+        raise AssertionError("must not query without an event_ticker")
+    monkeypatch.setattr("kalshi_bot.repository.event_has_strangle_leg", _boom)
+    assert MmSellTracker._strangle_leg_taken(None, "mmsellA5", "", "no") is False
+    assert MmSellTracker._strangle_leg_taken(None, "mmsellA5", None, "no") is False
+
+
+def test_strangle_leg_taken_fails_soft_and_enters(monkeypatch):
+    monkeypatch.setattr(
+        "kalshi_bot.repository.event_has_strangle_leg",
+        lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("db down")),
+    )
+    assert MmSellTracker._strangle_leg_taken(None, "mmsellA5", "KXEV", "no") is False
