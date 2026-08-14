@@ -27,6 +27,8 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select
 
 from ..models import (
+    BackfillRegimeCandle,
+    BackfillRegimeMarket,
     BackfillWeatherCandle,
     BackfillWeatherMarket,
     CryptoLadderSnapshot,
@@ -48,12 +50,17 @@ logger = logging.getLogger(__name__)
 # with an ordered, no-lookahead candle path. Weather is the reference adapter; mmsell
 # replays the live orderbook tick path of settled mmsell paper trades (settlement from
 # paper_trades.resolved_value). The replay loop itself is dataset-agnostic.
-DATASETS = ("backfill_weather", "mmsell", "crypto")
+DATASETS = ("backfill_weather", "mmsell", "crypto", "econ")
+
+# The regime label RegimeHistoryCapture stamps on economic-release markets. The same two
+# backfill tables also hold NFL/MLB/Elections, so this is what keeps "econ" meaning econ.
+ECON_REGIME = "Econ"
 
 _PROVENANCE = {
     "backfill_weather": "kalshi_rest_backfill",
     "mmsell": "mmsell_live_ticks",
     "crypto": "crypto_ladder_spot_settled",
+    "econ": "kalshi_rest_regime_backfill",
 }
 
 # Which EXTERNAL signal metrics (evo/signals.py) each dataset can actually reconstruct
@@ -69,6 +76,9 @@ DATASET_SIGNALS = {
     "backfill_weather": frozenset(),
     "mmsell": frozenset(),
     "crypto": frozenset({"spot_vs_strike"}),
+    # No external signal is reconstructable here yet: the official CPI/payroll ACTUALS the
+    # tickets also asked for are not collected, so only the order book replays.
+    "econ": frozenset(),
 }
 
 
@@ -445,6 +455,63 @@ def _crypto_candle(
     return _Candle(ts=ts, quote=quote, price_low=yb)
 
 
+def _econ_markets(
+    session, spec, date_from: str | None, date_to: str | None
+) -> Iterator[_Market]:
+    """econ adapter: settled Kalshi ECONOMIC-release markets (CPI, payrolls, PCE, GDP, Fed...)
+    from the regime backfill, replayed over their recorded candle path.
+
+    Built because the fleet asked for it — four tickets since 2026-07-22 wanting "settled CPI
+    market corpus ... as a run_backtest dataset (like 'crypto')", which is an agent-generated
+    non-weather thesis naming its own data requirement.
+
+    Regime-backed rather than CPI-specific on purpose: `backfill_regime_markets` /
+    `backfill_regime_candles` already exist, already carry `regime`, and are already filled by
+    the ride-along RegimeHistoryCapture, so payrolls/PCE/Fed come free with CPI. The same tables
+    hold NFL/MLB/Elections history, so the regime filter is load-bearing — without it an "econ"
+    backtest would quietly replay football and report a fabricated result under the right name.
+
+    Coverage measured before building (mmsell_regime_backtest over KXCPI/KXCPIYOY/KXPAYROLL/
+    KXPCE): 102 settled markets, 102 with candles, median candle span 335h. A monthly print
+    sounds too sparse to backtest, but each print is a LADDER quoted for weeks.
+    """
+    df, dt = _parse_date(date_from), _parse_date(date_to)
+    q = select(BackfillRegimeMarket).where(
+        BackfillRegimeMarket.regime == ECON_REGIME,
+        BackfillRegimeMarket.result.in_(("yes", "no")),  # unlabelled cannot score a trade
+        BackfillRegimeMarket.close_time.isnot(None),
+    )
+    if df:
+        q = q.where(BackfillRegimeMarket.close_time >= df)
+    if dt:
+        q = q.where(BackfillRegimeMarket.close_time <= dt)
+    for market in session.scalars(q.order_by(BackfillRegimeMarket.close_time)):
+        if not spec.universe.admits_ticker(market.market_ticker):
+            continue
+        candles = list(
+            session.scalars(
+                select(BackfillRegimeCandle)
+                .where(BackfillRegimeCandle.market_ticker == market.market_ticker)
+                .order_by(BackfillRegimeCandle.end_period_ts)
+            )
+        )
+        if not candles:
+            continue  # no price path -> nothing to replay; skipping beats scoring a loss
+        yield _Market(
+            ticker=market.market_ticker,
+            result=market.result,
+            month=(market.close_time.isoformat()[:7] if market.close_time else ""),
+            candles=[
+                _Candle(
+                    ts=c.end_period_ts,
+                    quote=_quote_from_candle(market, c),
+                    price_low=c.price_low,
+                )
+                for c in candles
+            ],
+        )
+
+
 def _crypto_markets(
     session, spec, date_from: str | None, date_to: str | None
 ) -> Iterator[_Market]:
@@ -524,6 +591,7 @@ _ADAPTERS = {
     "backfill_weather": _weather_markets,
     "mmsell": _mmsell_markets,
     "crypto": _crypto_markets,
+    "econ": _econ_markets,
 }
 
 

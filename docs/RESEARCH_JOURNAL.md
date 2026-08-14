@@ -16,6 +16,43 @@ Conventions:
 
 ---
 
+## PMDIV VERDICT 2026-08-13 — KILL. When Polymarket disagrees with Kalshi, Polymarket is wrong.
+
+Probe: `pm_divergence_study`, 39,740 cycles / **198 settled events** / AUS+LAX+MIA / Jun–Aug 2026.
+Ladders reconstructed into 41,192 batches of **exactly 11 buckets** (min 11, max 11) — the
+clustering sanity guard passing, so none of this is the single-bucket artifact.
+
+| band (°F) | n | pm_err | mkt_err | pm_better% |
+|---|---|---|---|---|
+| (−inf,−3) | 146 | 4.60 | 1.02 | **1%** |
+| [−3,−1) | 9,797 | 1.90 | 0.65 | 9% |
+| [−1,+1) | 27,945 | 1.05 | 0.76 | 27% |
+| [+1,+3) | 1,840 | 1.44 | 0.85 | 42% |
+| [+3,+inf) | 12 | 3.48 | 1.40 | **8%** |
+
+**P2's pre-registered kill fired**: both outer bands ≤50%. And the gradient is the real finding —
+27% → 9% → 1% as disagreement grows. Divergence is an **anti**-signal: the more the two venues
+disagree, the more reliably Polymarket is the one that's wrong. This is the *identical* signature
+`weather_validation` produced hours earlier for our NWS forecast (0%/4% in its outer bands). Two
+independent "someone disagrees with the Kalshi market" signals, same shape, same day.
+
+**The generalizable lesson: on Kalshi weather, the market is the best forecaster we have access
+to.** Every divergence-from-market signal we have tested — our NWS point forecast, our ensemble,
+and now another exchange's order book — is right *less* often the further it strays. Stop
+promoting "X disagrees with the market" ideas in this domain without a mechanism for why X sees
+something the market cannot; disagreement alone is evidence against X, not for it.
+
+Also P1 FAIL (pm_err 1.29°F = 1.75× Kalshi's 0.74°F) and P3 FAIL (+0.83¢ n=59 / −7.36¢ n=11 vs a
++2¢ bar). Two planned PRs — a grid-free `pm_mean_gap_f` metric and a Polymarket backtest dataset —
+**cancelled on the strength of one probe.** `pm_divergence` should come out of the DSL: one
+`validated` strategy references it, zero `active` ones. Full detail: `docs/PMDIV_THESIS.md`.
+
+**P0 PASS is the durable win** — see the defect entry below. Corrected `pm_err=1.29°F` vs the
+artifact's **9.83°F** confirms `weather_validation`'s 9.38°F was our bug, not Polymarket's skill.
+Polymarket forecasts these fine in absolute terms; it just doesn't beat Kalshi.
+
+---
+
 ## DATA DEFECT 2026-08-13 — `pm_implied_mean_f` is a single bucket, not a ladder. PMDIV probe promoted.
 
 **The defect.** `weather/validation.py::_pm_implied_mean` picks the newest Polymarket ladder with
