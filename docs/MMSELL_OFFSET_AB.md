@@ -3,6 +3,77 @@
 *Built 2026-08-03, **INERT by default** (`mmsell_live_offset_ab_arms=""`). Pre-registered before
 any data exists, per `docs/MMSELL_ROADMAP.md` §5.*
 
+> ## VERDICT 2026-08-14 — KILL. The 1¢ offset buys queue priority, and the priority loses money.
+>
+> **The experiment concluded on its primary read and answered its question.** Live trading for both
+> arms was ended 2026-08-14 (`LIVE_STRATEGIES=theta4`, `MMSELL_LIVE_OFFSET_AB_ARMS=""`); open
+> positions were left to settle naturally.
+>
+> ### The gate, applied
+>
+> `gap = (twin ¢/contract) − (live ¢/contract)`; **KILL when `gap_b ≥ gap_a`.**
+>
+> | arm | twin ¢/ct | live ¢/ct | **gap** | settled n |
+> |---|---|---|---|---|
+> | `mmsell10a` (+0¢, rests at the no-bid) | +0.78 | **+0.84** | **−0.06¢** | 420 |
+> | `mmsell10b` (+1¢, rests better) | +0.16 | **−3.29** | **+3.45¢** | 384 |
+>
+> `gap_b ≥ gap_a` by **3.51¢**. KILL, and not marginally. `mmsell10a`'s live execution *beat* its
+> own twin by a hair; `mmsell10b` gave up 3.45¢/contract to it.
+>
+> ### Why it failed, mechanically — the doc called this shot in advance
+>
+> The offset did exactly what it was bought to do. It is the *consequence* that kills it:
+>
+> | | `mmsell10a` | `mmsell10b` |
+> |---|---|---|
+> | fill rate | 55.3% | **58.2%** |
+> | at the front of the queue | 35.9% | **77.0%** |
+> | live win% vs its own twin | 93.3% vs 94.7% (−1.4pp) | 89.3% vs 94.1% (**−4.8pp**) |
+>
+> Better queue position, more fills, and a win rate that collapses against its own twin. That is
+> this document's own pre-registered failure signature: *"A higher fill rate with **worse** realized
+> P&L is the signature of buying adverse selection, and is a kill rather than a puzzle."* **The cent
+> gets you to the front of the queue, and the front of the queue is where the losers cross into
+> you.**
+>
+> The queue-position figures above come from `live_order_queue_ticks`
+> (`docs/LIVE_QUEUE_POSITION.md`), built 2026-08-14 — the mechanism leg was *observed*, not
+> inferred. It did not decide the verdict (the twin-paired P&L did) but it is what makes the
+> verdict explainable rather than merely measured.
+>
+> ### Two honesty notes on the record
+>
+> 1. **`mmsell10b` was killed at n=384 against its own n≥400 bar** — 96% of the way. The operator
+>    ended live trading for the whole mmsell family before it crossed. Called out because this repo
+>    reads gates literally: the verdict direction is unambiguous (a 3.51¢ margin where the design
+>    was powered for a fraction of that), but the bar was not formally cleared, and nothing should
+>    be promoted later on a claim that it was.
+> 2. **The between-arm P&L race never became decidable and never could have** — final read
+>    −2.77¢/contract, 95% CI [−7.09, +1.54], against a requirement of ~30,391 contracts/arm for a
+>    0.5¢ effect. That is not a shortfall; the §"Why the direct A-vs-B P&L comparison cannot settle
+>    this" section predicted it exactly, which is *why* the twin-paired read was pre-registered as
+>    primary. **The design's most valuable act was refusing to use the obvious comparison.**
+>
+> ### Sanity checks — all three passed, so the experiment genuinely ran
+>
+> * average fill prices differed (92.6¢ vs 93.0¢ — under 1¢, exactly as predicted, because 1¢-wide
+>   books force both arms to the bid);
+> * fill rate differed (mechanism live);
+> * queue depth differed (mechanism directly observed).
+>
+> ### What is NOT concluded
+>
+> This kills **improving** the price. It says nothing about the inverse — deliberately resting
+> *worse* than the no-bid to shed adverse selection at the cost of fill rate. The data points at
+> that as the natural follow-on, but it is a new hypothesis needing its own pre-registration, not a
+> repair of this one.
+>
+> **Do not re-arm `MMSELL_LIVE_OFFSET_AB_ARMS` on a hunch.** With it non-empty, `maker_offset`
+> silently splits **any** live mmsell book's orders across the arms by ticker hash — so a future
+> live book would inherit the losing treatment without anyone choosing it. It was cleared to `""`
+> as part of this retirement for exactly that reason.
+
 ## The question
 
 `mmsell_live_price_offset_cents` has always been `0` — rest at the no-bid, join the queue — and has

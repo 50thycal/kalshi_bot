@@ -138,6 +138,27 @@ book's rank is the record of what it never got filled at.
 
 Off with `LIVE_DRAIN_STOOD_DOWN=false`.
 
+## OUTCOME 2026-08-14 — it delivered the mechanism leg, then its data source was retired
+
+The sampler worked (93% of post-fix samples readable) and **directly observed the thing the offset
+A/B was built to infer**: `mmsell10b` (resting 1¢ better) sat at the front of the queue **77.0%** of
+the time against `mmsell10a`'s **35.9%**. The cent buys real priority.
+
+Combined with the twin-paired P&L, that closed the offset question —
+`docs/MMSELL_OFFSET_AB.md` **VERDICT: KILL**. The mechanism leg did not decide it (the P&L pairing
+did, at n≈400 per arm) but it is what makes the verdict *explainable*: the cent gets you to the
+front, and the front is where the losers cross into you.
+
+**Its data source is now nearly gone.** Live mmsell trading ended 2026-08-14, so the only resting
+maker orders left come from `theta4` — which placed 13 orders in 48h against mmsell's ~510, and
+typically holds **zero** resting at any moment. Expect this read to return almost nothing until a
+new live maker book exists.
+
+**Do not read that as a fault.** The COVERAGE section will correctly say "no queue samples yet",
+and the sampler will resume the moment a maker book is armed again — it needs no re-enabling. The
+one thing to check when that happens is that coverage is still ~93%+; a drop means Kalshi moved the
+payload again, which has now happened twice.
+
 ## Pre-registered read — what would make us act
 
 This is measurement, so there is no P&L gate. The decision it feeds is the offset one:
