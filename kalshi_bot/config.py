@@ -504,7 +504,13 @@ class Settings(BaseSettings):
         "KXMLBGAME,KXMLBTOTAL,KXMLBSPREAD,KXMLBHR,"
         # Elections — the Nov-3 concentration question the forecast could not answer (0 entries
         # on 10 candled markets so far, which is exactly why the real ladders must be captured)
-        "KXHOUSERACE,KXSENATEMID,KXGOVWINS,KXHOUSEWINSTATE,KXPRESPARTY"
+        "KXHOUSERACE,KXSENATEMID,KXGOVWINS,KXHOUSEWINSTATE,KXPRESPARTY,"
+        # Econ releases — added 2026-08-13 for the evo `econ` backtest dataset, which the FLEET
+        # asked for (4 tickets since 2026-07-22 wanting a settled CPI corpus like 'crypto').
+        # A monthly print sounds too sparse to backtest; censused before adding and it is not —
+        # mmsell_regime_backtest over KXCPI/KXCPIYOY/KXPAYROLL/KXPCE found 102 settled markets,
+        # 102 with candles, median span 335h, because each print is a LADDER quoted for weeks.
+        "KXCPI,KXCPIYOY,KXPAYROLL,KXPCE,KXGDP,KXUNRATE,KXJOBLESS,KXPPI"
     )
 
     # --- Theta book (ride-along paper, weather/live cycle) ---
