@@ -136,16 +136,57 @@ def test_auto_close_names_the_capability_and_when_it_shipped(evo_session):
 
 
 def test_a_live_request_is_left_alone(evo_session):
-    """THE property that makes auto-close safe. The CPI corpus is the real ask sitting in
-    the queue; nothing about it resembles a shipped capability, and closing it would
-    destroy the fleet's only self-generated non-weather research request."""
+    """THE property that makes auto-close safe. `view_strategy_spec` is a real ask sitting in
+    the queue — an agent cannot read back its own strategy's universe filters and entry
+    conditions, so it cannot diagnose a book that silently trades nothing. Nothing about it
+    resembles a shipped capability, and closing it would destroy the request.
+
+    (This test used to be pinned on the CPI corpus. That ask has since been delivered as
+    `run_backtest dataset='econ'`, so it now belongs in the closes-against-the-registry test
+    below — a live request has to be one that is actually still live.)"""
     t = _ticket(
         evo_session,
-        "Add settled CPI market corpus + official CPI actuals as a run_backtest dataset",
-        category="data_collection",
+        "view_strategy_spec so I can inspect an active strategy's universe filters and "
+        "entry conditions",
+        category="research_tooling",
     )
     assert tickets.auto_resolve_shipped(evo_session) == 0
     assert evo_session.get(EvoTicket, t.id).status == "open"
+
+
+def test_the_cpi_corpus_wave_closes_against_the_econ_entry(evo_session):
+    """The fleet's own non-weather thesis: four tickets 2026-07-22..2026-08-05 asking for
+    settled CPI history to backtest against. Delivered 2026-08-14 as `run_backtest`
+    dataset='econ'. Phrasings are verbatim from the live queue (tickets 25, 27, 28)."""
+    phrasings = [
+        "CPI settled-data pipeline for backtesting",
+        "Add KXCPI (CPI inflation) settled-market data to the run_backtest corpus, similar "
+        "to backfill_weather, to enable backtesting CPI strategies.",
+        "Add settled CPI market corpus + official CPI actuals as a run_backtest dataset "
+        "(like 'crypto')",
+    ]
+    made = [
+        _ticket(evo_session, p, category="data_collection", agent=f"cpi-{i}")
+        for i, p in enumerate(phrasings)
+    ]
+    assert tickets.auto_resolve_shipped(evo_session) == len(made)
+    for t in made:
+        row = evo_session.get(EvoTicket, t.id)
+        assert row.status == "implemented"
+        assert "econ" in row.implementation_result
+        assert "2026-08-14" in row.implementation_result
+
+
+def test_an_econ_request_for_something_else_is_not_swept_up(evo_session):
+    """What shipped is SETTLED economic history to replay. A live feed and a release
+    schedule are different asks that happen to say "CPI" — closing them would tell an agent
+    it has data it does not have, which is worse than leaving the ticket open."""
+    for i, cap in enumerate((
+        "live CPI quote feed so I can react to the print in realtime",
+        "economic calendar of upcoming CPI release times and consensus forecast",
+    )):
+        _ticket(evo_session, cap, category="external_data_pipeline", agent=f"econ-{i}")
+    assert tickets.auto_resolve_shipped(evo_session) == 0
 
 
 def test_a_merely_adjacent_request_is_not_swept_up(evo_session):

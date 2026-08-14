@@ -71,6 +71,25 @@ SHIPPED_CAPABILITIES: tuple[ShippedCapability, ...] = (
             frozenset({"strategy", "strategies"}),
         ),
     ),
+    # The CPI-corpus wave: the fleet's own non-weather research thesis, filed four times
+    # 2026-07-22..2026-08-05 (Blackwood). Shipped as `run_backtest dataset="econ"` — settled
+    # Kalshi economic-release markets replayed from the regime backfill, so payrolls/PCE/GDP/
+    # Fed come with CPI. Regime-backed rather than CPI-specific, hence the wider first group.
+    ShippedCapability(
+        action="run_backtest",
+        shipped_on="2026-08-14",
+        note="shipped as `run_backtest` dataset='econ' — settled Kalshi economic-release "
+             "markets (CPI, payrolls, PCE, GDP, Fed) replayed over their recorded candle "
+             "path; use dataset='econ' instead of filing a ticket",
+        all_of=(
+            frozenset({"cpi", "kxcpi", "kxcpiyoy", "inflation", "payroll", "payrolls",
+                       "kxpayroll", "pce", "kxpce", "econ", "economic"}),
+            frozenset({"backtest", "backtesting", "backtests", "corpus", "dataset", "datasets"}),
+        ),
+        # What shipped is SETTLED history to replay, not a live feed or a release schedule.
+        # An agent asking for either of those is asking for something that does not exist.
+        none_of=frozenset({"calendar", "forecast", "nowcast", "live", "realtime"}),
+    ),
 )
 
 

@@ -4,6 +4,18 @@ Paste the prompt in §1 into a fresh Claude Code session on this repo, on whatev
 want (daily or every few days is plenty — the fleet files a handful of tickets a week). Everything
 it needs is in the repo; no state has to carry between runs.
 
+**Scheduled 2026-08-14: daily at 09:47 local.** One caveat worth knowing — a `/loop` cron job is
+**session-only**: it lives in the Claude session that created it, is never written to disk, and
+auto-expires after 7 days. So the schedule has to be re-armed roughly weekly, or from a session
+that stays alive. A durable alternative is a Routine (`create_trigger`), which fires server-side
+into a fresh session on its own cron and survives container restarts; it needs one approval to
+create. Either way the prompt is §1.
+
+Because a fresh firing has no memory of the previous one, the routine defines "since the last run"
+from the data rather than from recall: a ticket is NEW if `created_at` is inside the last 25 hours,
+and something CHANGED if any ticket was created, auto-closed or resolved in that window. That is
+what makes §1's "stay silent when nothing changed" instruction actually executable statelessly.
+
 ---
 
 ## 1. The routine prompt (copy this verbatim)
@@ -37,7 +49,16 @@ tickets whose requested capability has since shipped, matching against the expli
 `implementation_result`.
 
 So the routine should find *already-shipped* tickets only when the registry is missing an entry —
-which is a signal in itself, and the skill says to add the entry rather than hand-close.
+which is a signal in itself, and the skill says to add the entry rather than hand-close. Adding
+that entry is the one build the routine may do without asking: it is bookkeeping for something
+that already exists, and the queue cannot be closed any other way (the ops DB role is SELECT-only).
+
+**Know what the matcher reads.** `_shipped_match()` tokenizes the `capability` string and nothing
+else — not `problem`, not the benefit fields. So a ticket whose real ask lives in its prose is
+invisible to the registry no matter how many entries you add, and the fix is an operator decision
+rather than a wider matcher. Widening `all_of` until such a ticket matches is how you start
+closing the near-misses the registry exists to protect (`strategy_execution`,
+`strategy_management`). Three tickets in the queue are in exactly this state — see §3.
 
 Watch for this in the evo logs:
 
@@ -47,25 +68,27 @@ evo tickets: auto-closed N request(s) whose capability shipped
 
 ---
 
-## 3. State of the queue at handoff (2026-08-13)
+## 3. State of the queue at handoff (2026-08-13), and the first run (2026-08-14)
 
-35 open tickets. After the first auto-close pass runs, expect **~25 of them to close** — the
-off-switch wave (`deactivate_strategy`, `strategy_deactivation`, `deactivate_negative_ev_strategies`
-and five other phrasings, filed 2026-07-31..2026-08-08 across 8 categories). The capability shipped
+35 open tickets at handoff. After the first auto-close pass ran, **22 closed** — the off-switch
+wave (`deactivate_strategy`, `strategy_deactivation`, `deactivate_negative_ev_strategies` and five
+other phrasings, filed 2026-07-31..2026-08-08 across 8 categories). The capability shipped
 2026-08-08 in commit `9d34158`; the tickets were never closed because no closure path existed until
-now.
+then. **13 survived.** What they are, and what the first run concluded:
 
-What should remain, and what to do with it:
-
-| category | n | ask | status at handoff |
+| id(s) | category | ask | verdict |
 |---|---|---|---|
-| `data_collection` + `external_data_pipeline` | **4** | **Settled KXCPI corpus + official CPI actuals as a `run_backtest` dataset** | **Being built now** — the fleet's own non-weather thesis. Close these when it ships. |
-| `bug_report` | ~1 | Automated strategy execution / live order placement | **REJECT** — violates PAP-4 (paper only). Close with the invariant as the reason; it will be re-filed otherwise. |
-| `research_tooling` | 1 | `view_strategy_spec` | Genuinely pending — small, probably worth doing. |
-| `sandbox_operator` | 1 | `sandbox_runs` | Genuinely pending — needs a read to understand what's actually wanted. |
-| `api_credentials` | 1 | `live_quote_ticker_schema` | Genuinely pending. |
-| `infrastructure` | 1 | `data_pipeline_diagnostics` | Genuinely pending. |
-| `data_collection` | 1 | `weather_market_ticker_registry` | Low priority — weather research is closed (see below). |
+| 25, 27, 28 | `data_collection` + `external_data_pipeline` | Settled KXCPI corpus + official CPI actuals as a `run_backtest` dataset | **ALREADY SHIPPED** — delivered 2026-08-14 as `run_backtest dataset='econ'` (PR #203). Never closed because the registry had no entry; one added 2026-08-14, so they close on the next evo cycle. |
+| 21, 22, 30 | `other`, `bug_report` | "Deactivate strategies 49/50" / "[46,36,30,32,33] not yet deactivated" | **ALREADY SHIPPED**, but *not* registry-fixable: `_shipped_match()` reads `capability` only, and these carry `deactivation` / `strategy_management` / `shared_code_capability` there with the real ask in `problem`. Needs an operator decision, not a matcher change — widening the matcher to cover them would sweep up genuine near-misses. |
+| 9, 11 | `bug_report` | "8 active strategies show ZERO paper_trades across many heartbeats" | Filed 2026-08-01 by Havel. Reads as PAP-4 bait from the capability string ("live order placement"), but the `problem` text is a **fill-engine bug report**, not a request for real money. The fill engine was fixed after these were filed (agents reference the fix from 2026-08-05 on, and backtest 1855 ran 4,339 trades), so they are most likely stale. Verify, then close as fixed. |
+| 29 | `sandbox_operator` | `sandbox_runs` budget exhausted (50/50) | Genuinely pending — a quota bump, not a build. Blackwood wants to retest pre-fill-engine-fix conclusions it says are now invalid. |
+| 7 | `research_tooling` | `view_strategy_spec` | Genuinely pending — small, probably worth doing. An agent cannot read back its own strategy's filters/entry conditions, so it cannot diagnose a book that silently trades nothing. |
+| 3, 4, 5 | `infrastructure`, `data_collection`, `api_credentials` | `data_pipeline_diagnostics`, `weather_market_ticker_registry`, `live_quote_ticker_schema` | All three are Ekstrom, 2026-07-21/22, all weather-cohort artifacts ("no live quote for KXHIGH", "no price configured"). Low priority — weather research is closed (§4). |
+
+**Queue liveness matters as much as queue content.** Nothing has been filed since 2026-08-06, but
+the fleet is alive (1,119 heartbeats in the 7 days to 2026-08-14, 6 active agents) — so the silence
+is an unblocked fleet, not a stalled worker. The routine checks both, because those two look
+identical in the queue and call for opposite responses.
 
 ---
 
