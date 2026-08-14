@@ -2,6 +2,58 @@
 
 Built 2026-08-03 off the market-type census (`docs/MMSELL_MARKET_TYPES.md`). Paper only.
 
+> ## COHORT BOUNDARY 2026-08-13 18:09:40 UTC — the surviving T books' n restarts here.
+>
+> **Do not pool a `Tmmsell*` number across this instant. There is no adjustment that makes the
+> earlier trades usable; they are dropped.**
+>
+> The taxonomy deploy (commit `c75c6be`, merged 18:04:24Z; first live cycle observed entering a
+> newly classified series at 18:09:40Z) took classified coverage from **50.5% → 99.6% of
+> candidate flow** — 46 series added, **none reclassified**. Every surviving type book selects
+> with `mtype=`/`mode=`, and an unclassified series is admitted by **no** allowlist. So until
+> that instant each book was being offered roughly *half* its intended universe — and specifically
+> the half somebody had already classified, which is the half the census prior was fit on.
+>
+> Measured across the boundary, entry rates jumped **5–9×** (`Tmmsell6` 4.8→29.0/hr, `Tmmsell5`
+> 1.8→15.5, `Tmmsell1` 1.5→7.7, `Tmmsell2` 0.0→1.0) while the un-filtered control `mmsell10`
+> moved **1.6×** (7.3→11.6) with the ambient universe. The control's move is the day; the
+> difference is the taxonomy.
+>
+> ### Why the tags did NOT change
+>
+> Every book's selection **rule** is byte-identical either side of the boundary — the taxonomy
+> change was purely additive, so no trade was retroactively misclassified and every pre-boundary
+> trade was a genuine instance of its book's filter. Forking the tags would assert a change that
+> did not happen and leave two tags testing one rule. **The cohort is the date.**
+>
+> ### Why this boundary is not like the 2026-08-11 fee boundary
+>
+> The fee correction was a **uniform shift** — every maker trade moved by the same ~0.87¢ — so
+> pre-boundary trades stay usable once the shift is added back, which is what
+> `mmsell_fill_model`'s P&L normalization does. A **universe change admits no such conversion**:
+> the pre-boundary trades are a *biased subsample* of the post-boundary population, and no offset
+> turns one into the other. The fee boundary says *adjust the bar*; this one says *discard the
+> data*.
+>
+> ### What is enforced, and where
+>
+> `COHORT_START` in `scripts/mmsell_fill_model.py` floors each book's trades at this instant, and
+> the read now prints a **COHORT GATE READ** section computing each book against `mmsell10`
+> **restricted to the same window** — the right-hand side the relative gate always asked for and
+> nothing previously computed. Both are pinned by `tests/test_mmsell_fill_model.py`. Before this,
+> the standing read pooled each tag's entire lifetime, so a boundary recorded only in prose would
+> have been blended away on the next `mm check 1`.
+>
+> ### What it costs, and what it buys
+>
+> **Costs:** all four gates restart at n=0. At post-boundary rates `Tmmsell6` and `Tmmsell5` reach
+> n≥100 settled within days; `Tmmsell1` a little slower; **`Tmmsell2` (~1/hr) is the casualty** and
+> was already the flow-constrained one.
+>
+> **Buys:** the 46 newly classified series were never in the census, so post-boundary flow is the
+> first genuinely **out-of-sample** test the type hypothesis has ever had — the exact thing the
+> "honest caveat" below says the family needs. Pooling would have spent it.
+
 > ## VERDICT 2026-08-12 — the WIDE half (`Wmmsell1`–`Wmmsell8`) is RETIRED. The TIGHT half runs on.
 >
 > **Retired as UNMEASURABLE, not as disproven.** That distinction is the whole point of this
@@ -139,6 +191,11 @@ unknowns there would make them differ from the control by more than the thing un
 Read every book against **its own control over the same window** — never in absolute terms, and
 never against a control's lifetime number (the controls carry months of history and a different
 regime mix).
+
+**For the surviving `Tmmsell*` books "the same window" now means `>= 2026-08-13 18:09:40Z`** — the
+cohort boundary above. `n` in every clause below counts post-boundary settled trades only, and the
+control side of clause 2 is `mmsell10` restricted to the same instant. `mmsell fill model` applies
+both; it is the only read that does.
 
 - **KEEP** at n ≥ 150 settled (W books) / n ≥ 100 (T books) only if **all three** hold:
   1. the book's own ¢/trade is **> 0** in absolute terms;

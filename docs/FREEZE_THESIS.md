@@ -4,7 +4,30 @@
 pre-registered and must not be re-scoped post-hoc. Promoted from `docs/IDEA_MODEL_20260711_run2.md`
 (candidate F1, absorbing F2 SETTLEPIN and F3 TOUCHPIN as co-measured cells).*
 
-**STATUS: UNTESTABLE — provisionally shelved 2026-07-11 (NOT killed).** Probe
+**STATUS: PROMOTED TO PAPER 2026-08-13 — books `freeze1`–`freeze4`.**
+
+The revisit trigger fired: settled grain/soft hub markets went from 8 to **241** (corn alone 0 →
+233) in the week to 2026-08-11, and the re-run of `scripts/kalshi_freeze_study.py` on 2026-08-12
+cleared **all five** pre-registered gates — P1 pooled **+16.10¢/ct** on 39,429 post-pin trades,
+P2 **+15.50¢** over the pre-pin favorite control, P3 the FREEZE cell itself at the same +16.10¢,
+P4 ~**$1.6M/week** post-pin notional, P5 **zero** wrong pins. Decision rule (P1∧P2∧P3∧P4∧P5) →
+paper book. Built as four arms in `kalshi_bot/freeze/`; registry row in `docs/BOOK_REGISTRY.md`.
+
+**Two things the promotion does NOT settle, both load-bearing:**
+
+1. **The live book cannot see the result the backtest scored on.** The study measured "buy the
+   side that won". A live book has no such column, so it infers the decided side from the
+   market's own favorite. That makes it a favorite-buy — the shape `tfav` died in (−3.6¢/trade at
+   n=210). The thesis is that favorites are underpriced *specifically while the source is dark*,
+   so the book ships arm **`freeze3`**, which takes the identical trade in an OPEN window. **The
+   gate is `freeze1` minus `freeze3`, never `freeze1` alone.**
+2. **The backtest number may itself be an artifact.** +16.10¢ sits close to the **+15.82¢** a v1
+   lookahead bug manufactured before it was caught (below), and 100% of the edge is one commodity
+   that appeared in a single week. Forward paper trading cannot have lookahead by construction, so
+   this book is the artifact check. **Read the paper arms, not the backtest, before live capital.**
+
+*Prior status, kept for the record — UNTESTABLE, provisionally shelved 2026-07-11 (NOT killed):*
+ Probe
 `scripts/kalshi_freeze_study.py` ran to verdict same-day (ops `freeze-0711-1`→`freeze-0711-2`; full
 write-up in `RESEARCH_JOURNAL.md`). The load-bearing analytical refinement: the hub settles on
 **Pyth (continuous 24/7 pricing)**, so metals/energy never truly freeze — only grains/softs can, and

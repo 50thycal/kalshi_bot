@@ -1,6 +1,68 @@
-# mmsell SCAN DEPTH — `mmsell10d`
+# mmsell SCAN DEPTH — `mmsell10d`, `mmsell10e`
 
 Built 2026-08-13. Paper only. Control: **`mmsell10`**.
+
+> ## VERDICT 2026-08-14 — RETIRED. Deeper scanning is worse, and the decay is monotonic.
+>
+> **Measured and failed** — not shelved, not unmeasurable. Each book against `mmsell10` over its
+> own window, fee-normalized:
+>
+> | depth | book n | book ¢/trade | control n | control ¢/trade | vs control |
+> |---|---|---|---|---|---|
+> | 150 (`mmsell10`, control) | — | — | — | — | — |
+> | **225** (`mmsell10d`) | 243 | +0.70¢ | 177 | +1.34¢ | **−0.64¢** |
+> | **300** (`mmsell10e`) | 133 | **−1.05¢** | 54 | +0.89¢ | **−1.94¢** |
+>
+> `mmsell10d` reached its pre-registered n≥200 and **failed the KEEP clause** (−0.64¢ against a
+> −0.5¢ tolerance). It did not trip the KILL clause (>1.0¢ below control) — the gate has a gap
+> there — but the second test settles it.
+>
+> **It also lost on TOTAL dollars, which was the escape hatch this gate was deliberately built
+> with.** The tolerance was asymmetric because a deep book takes strictly more trades than its
+> control, so equal per-trade across more trades would still be more money. It did not get equal
+> per-trade. Same window: **243 trades × +0.70¢ = +$1.70**, against the control's **177 × +1.34¢
+> = +$2.37**. Sixty-six more trades, less money. Backing out the increment, ranks 150–225 run
+> about **−1.0¢/trade**; ranks 150–300 worse still.
+>
+> `mmsell10e` never reached n=200 (n=133) and is retired without one. That is a judgement, and
+> the reason it is defensible here: it is **negative in absolute terms** and −1.94¢ below its
+> control, so it fails a clause that does not depend on n at all, and no plausible remaining
+> sample closes a gap that size.
+>
+> ### The mechanism — read this before re-trying it on a hunch
+>
+> The volume rank cut selects for **liquid** events, and liquidity is precisely what a resting
+> maker order needs: to fill at all, and to avoid being picked off by the one counterparty who
+> crosses into it. This family's largest known drag is maker adverse selection
+> (`docs/MMSELL_FILL_MODEL.md`), and thinning the book makes it worse. **The cap was never a
+> limitation we were suffering — it was doing work.**
+>
+> The design section below anticipated exactly this ("thinner books mean worse fills") as one of
+> two possible outcomes. It is the one that happened.
+>
+> ### What was NOT the reason
+>
+> **Rate limits were not the constraint, and the premise below that they were is now wrong.**
+> 429s have been **zero** since the `advanced` grant — measured straight through the 225 → 300
+> step, which roughly doubled orderbook fetches per scan (~830 → ~1,800 markets considered) with
+> the transient counter staying empty. Retiring both books returns the shared scan depth to the
+> global 150 and halves fetches, but that is a side benefit, not the motivation.
+>
+> ### Consequences
+>
+> * The **inline quote pre-filter** (`docs/MMSELL_QUOTE_PARITY.md`) is closed by this result. Its
+>   only surviving justification was affording deeper scanning; deeper scanning loses money, so
+>   paying a biased ~1.2% miss rate to reach it would be paying to lose faster.
+> * The ~1,600 eligible events/scan still discarded by the cap are **not** a missed opportunity
+>   for this entry. Stop citing that number as upside.
+>
+> ### Revival condition — evidence, not patience
+>
+> Revive only on a **mechanically different entry**: a taker rule, or anything that does not
+> depend on a counterparty crossing into a resting order. More paper on this entry cannot
+> resolve it — the finding is about liquidity and maker fills, and a larger sample would produce
+> a more confident version of the same answer. The `scanmax` mechanism is kept in the code (and
+> still tested) so a revival does not have to rebuild the isolation property from scratch.
 
 ## The question
 

@@ -171,6 +171,63 @@ SERIES_TYPES: tuple[tuple[str, str, str], ...] = (
     ("KXMEDNOMJUL", "politics", DISCRETE),
     # --- announcements --------------------------------------------------------------------
     ("KXNBATEAMANNOUNCE", "announcement", DISCRETE),
+    # ===== 2026-08-13 EXTENSION ==========================================================
+    # Half of all candidate flow was unclassified, so every mtype=/mode= book had been
+    # selecting from ~50% of the universe without that being visible anywhere. Each entry
+    # below is classified from the series' OWN live subtitle (quoted after it), fetched
+    # from production rather than guessed from the ticker — a wrong guess here silently
+    # sweeps markets into books that did not ask for them.
+    # --- in-play sports. These were HALF the candidate flow and invisible to every mtype=/mode=
+    #     book, because an unclassified series is admitted by no allowlist filter.
+    ("KXNFLSPREAD", "spread", IN_PLAY),  # Tennessee wins by over 9.5 points
+    ("KXNFLTOTAL", "total", IN_PLAY),  # Over 60.5 points scored
+    ("KXNFLGAME", "h2h", IN_PLAY),  # Washington
+    ("KXLEAGUESCUPGAME", "h2h", IN_PLAY),  # Vancouver
+    ("KXLEAGUESCUPTOTAL", "total", IN_PLAY),  # Over 6.5 goals scored
+    ("KXLEAGUESCUPSPREAD", "spread", IN_PLAY),  # Vancouver wins by more than 1.5 goals
+    ("KXMLBKS", "player_prop", IN_PLAY),  # Zebby Matthews: 9+ (strikeouts)
+    ("KXMLBHIT", "player_prop", IN_PLAY),  # Zach Neto: 2+ (hits)
+    ("KXMLBTEAMTOTAL", "total", IN_PLAY),  # Washington over 7.5 runs scored
+    ("KXMLBF5TOTAL", "total", IN_PLAY),  # Over 6.5 runs in the first 5 innings
+    ("KXMLBF5", "h2h_period", IN_PLAY),  # Washington wins first 5 innings
+    ("KXWNBAPTS", "player_prop", IN_PLAY),  # Veronica Burton: 20+
+    ("KXUEFASCSCORE", "exact_score", IN_PLAY),  # Reg Time: PSG wins 4-1
+    ("KXUEFASCGAME", "h2h", IN_PLAY),  # Reg Time: Tie
+    ("KXUEFASCTOTAL", "total", IN_PLAY),  # Reg Time: Over 6.5 goals scored
+    ("KXUCLTOTAL", "total", IN_PLAY),  # Reg Time: Over 6.5 goals scored
+    ("KXUCLSPREAD", "spread", IN_PLAY),  # Goal Diff Reg Time: wins by more than 1.5 goals
+    ("KXCLUBFTOTAL", "total", IN_PLAY),  # Over 8.5 goals scored
+    ("KXDIMAYORGAME", "h2h", IN_PLAY),  # Tie
+    ("KXCONMEBOLLIBGAME", "h2h", IN_PLAY),  # Universidad Catolica
+    ("KXCONMEBOLSUDGAME", "h2h", IN_PLAY),  # Tigre
+    ("KXATPDOUBLES", "h2h", IN_PLAY),  # Guido Andreozzi / Manuel Guinard
+    ("KXATPGTOTAL", "total", IN_PLAY),  # Over 29.5 games
+    # --- price strikes — a level printed at a fixed instant; nothing is revealed early
+    ("KXBTC", "price_strike", SCHEDULED),  # $66,000 to 66,499.99 (hourly BTC)
+    ("KXETHD", "price_strike", SCHEDULED),  # $1,980 or above
+    ("KXGOLDD", "price_strike", SCHEDULED),  # Above $4496
+    ("KXNATGASD", "price_strike", SCHEDULED),  # Above $2.895
+    ("KXBRENTD", "price_strike", SCHEDULED),  # Above $90.50
+    ("KXNASDAQ100U", "price_strike", SCHEDULED),  # 30,190 or above
+    ("KXINXU", "price_strike", SCHEDULED),  # 7,815 or above
+    ("KXAAAGASD", "price_strike", SCHEDULED),  # Above 4.090 (AAA gas)
+    ("KXH200WS", "price_strike", SCHEDULED),  # Above $5.50
+    # --- economic releases
+    ("KXCPICOMBO", "econ_release", SCHEDULED),  # Headline: Exactly 0.2%, Core: 0.3% or above
+    ("KXECONSTATCPI", "econ_release", SCHEDULED),  # Exactly 0.3%
+    ("KXCPINDEX", "econ_release", SCHEDULED),  # Above 334.3
+    ("KXCPI", "econ_release", SCHEDULED),  # Above 0.2%
+    ("KXUSGASCPI", "econ_release", SCHEDULED),  # Above 333
+    ("KXARMOMINF", "econ_release", SCHEDULED),  # Above 2.4% (Argentina monthly inflation)
+    ("KXUE", "econ_release", SCHEDULED),  # Above 4.6% (unemployment)
+    # --- culture / mentions / announcements / politics / measured statistics
+    ("KXALBUMEQUIV", "rank_culture", DISCRETE),  # Above 90K album-equivalent units
+    ("KXTRUTHSOCIAL", "mention", DISCRETE),  # >240 posts
+    ("KXGEMINI", "announcement", DISCRETE),  # Before Aug 21, 2026 (model release)
+    ("KXGPT", "announcement", DISCRETE),  # Before Aug 21, 2026 (model release)
+    ("KXAPRPOTUS", "politics", SCHEDULED),  # Below 38.8 (approval rating)
+    ("KXRAIN", "event_stat", SCHEDULED),  # per-city rainfall
+    ("KXHMONTH", "event_stat", SCHEDULED),  # Hottest ever
 )
 
 # Every type/mode name a book may legally name. A variant spec referencing anything outside

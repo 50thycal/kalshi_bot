@@ -190,6 +190,23 @@ class Settings(BaseSettings):
     # inline quote to skip most orderbook fetches, which is what the ~650-1,600 calls/cycle
     # (and therefore the top-150 event cap) currently hang on.
     mmsell_quote_parity: bool = True
+    # INLINE-QUOTE PRE-FILTER (docs/MMSELL_QUOTE_PARITY.md). Skip the per-market orderbook fetch
+    # when the event page's own quote already puts the market far outside every interested
+    # book's band. Saves most of the ~1,100 orderbook calls a cycle.
+    #
+    # DEFAULT OFF, and it must stay off until the shadow measurement justifies it, because this
+    # is the one knob here that cannot be scoped to a single book: the orderbook fetch is SHARED
+    # (one call serves every book), so a skipped fetch removes that candidate from every paper
+    # book AND both live arms at once. There is no A/B form of it in production — only the
+    # shadow decision table can tell us the cost in advance.
+    #
+    # Measured at n=84,760: even at a 3c margin the tight band still loses ~1.2% of real
+    # candidates, and no margin under 71c loses none. `mmsell_prefilter_trust_in_play=False`
+    # carves out in_play markets (always fetch those), which is the proposed mitigation — the
+    # shadow table's `bands_ex_inplay` is what says whether that carve-out actually works.
+    mmsell_prefilter_enabled: bool = False
+    mmsell_prefilter_margin_cents: float = 3.0
+    mmsell_prefilter_trust_in_play: bool = False
     # Revision books (parallel paper variants next to the untouched `mmsell` control), from
     # the 2026-07-04 forward decomposition of 445 settled trades: the maker-sell-and-hold
     # edge lives in the CHEAP longshots (yes 5-10c +2.7c/ct 96%win, 10-20c +3.6c 91%) and is
@@ -236,24 +253,37 @@ class Settings(BaseSettings):
         "mmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;"
         "mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;"
         "mmsell10:lo=5,hi=10,maxyes=7;"
-        # --- SCAN-DEPTH experiment (2026-08-13, docs/MMSELL_SCAN_DEPTH.md) --------------
-        # `mmsell10d` is `mmsell10` with ONE difference: it may look 225 events deep into the
-        # volume-ranked list instead of the global 150. Everything else — band, price ceiling,
-        # htc window, sizing, hold-to-settlement — is identical, so any divergence between the
-        # two is attributable to the extra events alone.
+        # --- SCAN-DEPTH experiment: RETIRED 2026-08-14 (docs/MMSELL_SCAN_DEPTH.md) -------
+        # `mmsell10d` (225 events deep) and `mmsell10e` (300) were `mmsell10` with ONE
+        # difference each — how far into the volume-ranked event list they were allowed to
+        # look. The question was not "is deeper better" but WHERE the maker edge decays.
         #
-        # It is a SEPARATE BOOK rather than a raised global cap on purpose. The cap decides
-        # which candidates every book is offered, so raising it globally would change the
-        # candidate stream of every paper book and BOTH live arms at once, and silently make
-        # every number collected before the change incomparable with every number after it.
-        # Here `mmsell10` keeps seeing exactly the top-150 it always saw and remains the control.
+        # ANSWERED, and the answer is that it decays fast and goes NEGATIVE. Read against
+        # `mmsell10` over each book's own window:
         #
-        # The ~1,740 eligible events/cycle currently going unscanned are lower-volume than the
-        # top 150 by construction, so this tests a real question rather than a free lunch: is
-        # the maker edge in the thinner tail of the board as good as it is at the top, or does
-        # it decay with liquidity? Affordable now only because the ADVANCED grant took us from
-        # 20 to 30 reads/sec — watch the RATE LIMITED line before widening further.
-        "mmsell10d:lo=5,hi=10,maxyes=7,scanmax=225;"
+        #     depth 150 (control)   +1.34c/trade   (n=177 over 10d's window)
+        #     depth 225 (mmsell10d) +0.70c/trade   (n=243)  -> -0.64c vs control
+        #     depth 300 (mmsell10e) -1.05c/trade   (n=133)  -> -1.94c vs control
+        #
+        # Monotonic, and `mmsell10d` also lost on TOTAL dollars — the escape hatch its gate was
+        # built with ("equal per-trade across more trades is more total P&L"). Same window it
+        # took 66 MORE trades and made LESS money: 243 x +0.70c = +$1.70 against the control's
+        # 177 x +1.34c = +$2.37. Backing out the increment, ranks 150-225 run about -1.0c/trade.
+        #
+        # The mechanism, stated so this is not re-tried on a hunch: the volume rank cut selects
+        # for LIQUID events, and liquidity is exactly what a resting maker needs — both to fill
+        # at all and to avoid being picked off by the one trade that crosses into it. The cap
+        # was not a limitation we were suffering; it was doing work.
+        #
+        # Retiring both returns the shared scan depth to the global 150, which halves orderbook
+        # fetches per scan. Rate limits are NOT why: 429s have been zero since the ADVANCED
+        # grant, measured straight through the 225 -> 300 step that doubled the fetch load.
+        #   mmsell10d:lo=5,hi=10,maxyes=7,scanmax=225
+        #   mmsell10e:lo=5,hi=10,maxyes=7,scanmax=300
+        #
+        # REVIVE only on a mechanically different entry — a TAKER rule, or one that does not
+        # depend on someone crossing into a resting order. The finding here is about liquidity
+        # and maker fills, not about the tail of the board being uninteresting per se.
         # --- ANCHOR SET (2026-07-30, docs/MMSELL_ANCHOR_SET.md) -------------------------
         # Every anchor book uses the mmsell10 base (lo=5,hi=10,maxyes=7) — the only
         # REALIZABLE EDGE config — so ENTRY is held constant and each book varies exactly one
@@ -685,6 +715,36 @@ class Settings(BaseSettings):
     pin15_order_size: int = 5
     pin15_max_open_positions: int = 20         # <=20 concurrent 15-min windows
     pin15_max_per_event: int = 1               # one entry per window
+
+    # --- FREEZE book (ride-along paper; docs/FREEZE_THESIS.md) ---
+    # Exchange-closure pin on the commodity hub: CBOT grains / ICE softs go dark while Kalshi
+    # keeps trading 24/7, so a contract whose remaining window sits entirely inside a dark
+    # stretch is mechanically decided while retail still prices it cents from certainty.
+    # Promoted 2026-08-12 after scripts/kalshi_freeze_study.py cleared all five pre-registered
+    # gates (P1-P5, pooled +16.10c/ct on 39,429 post-pin trades).
+    #
+    # TAKER book: buys the market's own favorite at its ask and holds to settlement. The live
+    # book cannot know the settled result the backtest scored on, so "the decided side" is
+    # inferred as the favorite — which is why `freeze3` (the OPEN-window arm) exists as a
+    # same-shape control. See kalshi_bot/freeze/tracker.py for why that control is the point.
+    freeze_enabled: bool = True
+    freeze_interval_minutes: float = 15.0      # dark windows are hours long; no need to spin
+    # Commodity-hub series to scan. Grains/softs are the only freezable groups, but the scan is
+    # by series and the classifier drops anything Pyth-continuous, so a broad list is safe.
+    freeze_series: str = "KXCORN,KXWHEAT,KXSOYBEAN,KXCOFFEE,KXSUGAR,KXCOCOA,KXCOTTON"
+    freeze_max_pages: int = 4                  # pagination guard per series
+    freeze_order_size: int = 5
+    freeze_max_open_positions: int = 40        # per book
+    freeze_min_discount_cents: float = 3.0     # the thesis bar: >=3c from certainty
+    # Book specs: "tag:key=value,...;tag:..." — dark=1 requires a frozen source (the thesis),
+    # dark=0 is the open-window control. mindisc overrides freeze_min_discount_cents; maxprice
+    # caps the entry (skip the near-certain, low-headroom end).
+    freeze_books: str = (
+        "freeze1:dark=1;"
+        "freeze2:dark=1,mindisc=8;"
+        "freeze3:dark=0;"
+        "freeze4:dark=1,maxprice=95"
+    )
 
     # --- XGAME in-play tape collector (ride-along, weather/live cycle) ---
     # COLLECT ONLY, no trading: stores both venues' trade tapes for matched in-play game
@@ -1485,6 +1545,58 @@ class Settings(BaseSettings):
             series, _, product = tok.partition(":")
             if series.strip() and product.strip():
                 out[series.strip().upper()] = product.strip().upper()
+        return out
+
+    @property
+    def freeze_series_list(self) -> list[str]:
+        """Commodity-hub series tickers to scan, upper-cased; blanks dropped."""
+        return [s.strip().upper() for s in self.freeze_series.split(",") if s.strip()]
+
+    @property
+    def freeze_book_list(self) -> list[dict]:
+        """Parsed FREEZE book specs from `freeze_books`.
+
+        Each dict is fully resolved: {tag, dark, mindisc, maxprice}. A malformed token is
+        skipped rather than raised on — a typo in one book must not silence the whole family.
+        `dark` decides which arm a book is: True = trade only mechanically-decided (source-dark)
+        markets (the thesis), False = the open-window control. Tags must start with 'freeze'
+        and fit the 24-char `paper_trades.strategy` column.
+        """
+        out: list[dict] = []
+        for spec in self.freeze_books.split(";"):
+            spec = spec.strip()
+            if not spec or ":" not in spec:
+                continue
+            tag, _, body = spec.partition(":")
+            tag = tag.strip()
+            if not tag.startswith("freeze") or len(tag) > 24:
+                continue
+            book: dict = {
+                "tag": tag,
+                "dark": True,
+                "mindisc": float(self.freeze_min_discount_cents),
+                "maxprice": None,
+            }
+            ok = True
+            for kv in body.split(","):
+                kv = kv.strip()
+                if not kv:
+                    continue
+                key, _, val = kv.partition("=")
+                key = key.strip().lower()
+                try:
+                    if key == "dark":
+                        book["dark"] = val.strip() in ("1", "true", "yes")
+                    elif key == "mindisc":
+                        book["mindisc"] = float(val)
+                    elif key == "maxprice":
+                        book["maxprice"] = float(val)
+                    else:
+                        ok = False
+                except (TypeError, ValueError):
+                    ok = False
+            if ok:
+                out.append(book)
         return out
 
     @property
