@@ -63,6 +63,7 @@ SKIP_SIZE = "skip_size"
 SKIP_ILLIQUID = "skip_illiquid"
 SKIP_SETTLEMENT_CAP = "skip_settlement_cap"  # too many open positions already settle this date
 SKIP_EVENT_CAP = "skip_event_cap"            # too many distinct events on a CORRELATED date
+SKIP_EVENT_RUNG_CAP = "skip_event_rung_cap"  # too many rungs open on ONE non-exclusive event
 
 # Live-side outcome codes (String(32)); the executor returns these from its mirror entry.
 LIVE_PLACED = "placed"

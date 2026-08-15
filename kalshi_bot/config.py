@@ -157,12 +157,24 @@ class Settings(BaseSettings):
     mmsell_settlement_cap_pct: float = 0.25      # >=25% of a book's own cap on one date -> skip
     # Regimes where positions settle on a shared driver, so the cap above is not enough on its
     # own: a governor's race and a senate race both breaking the same way on election night is
-    # ONE outcome wearing many tickers. Within a single EVENT the rungs are mutually exclusive
-    # (at most one loses), which is a real hedge; across events that protection disappears, so
+    # ONE outcome wearing many tickers. Across events the within-event hedge disappears, so
     # this second cap counts DISTINCT EVENTS rather than markets. Comma list of
     # kalshi_bot.mmsell.regimes names; env-overridable if a new correlated regime is identified.
     mmsell_settlement_correlated_regimes: str = "Elections"
     mmsell_settlement_event_cap: int = 5         # max distinct events open on one CORRELATED date
+    # Third cap, WITHIN one event. The two caps above exempt same-event rungs entirely, on the
+    # premise that they are mutually exclusive (at most one loses) and therefore a real hedge.
+    # That premise is a property of the EVENT, not of Kalshi generally, and Kalshi publishes it:
+    # `mutually_exclusive` on the event object. Measured 2026-08-15: `KXWTIW-26AUG1414` (the
+    # $1-wide `between` buckets) is mutually_exclusive=true — a genuine hedge, correctly exempt —
+    # but `KXWTI-26AUG1414` (the `-T` threshold ladder, "settlement above X") is
+    # mutually_exclusive=FALSE. Its rungs are nested, not disjoint: one print above the highest
+    # strike resolves EVERY rung the same way, so N rungs there is one position at N x size, the
+    # exact concentration the other two caps exist to prevent. Applied only when Kalshi says the
+    # event is not mutually exclusive, so every mutually-exclusive ladder keeps today's behavior.
+    # An event with no `mutually_exclusive` field is treated as NOT exclusive (fail safe: cap it).
+    mmsell_event_rung_cap_enabled: bool = True
+    mmsell_event_rung_cap: int = 3               # max open rungs on ONE non-exclusive event
     # Ride-along: run the mmsell PAPER book inside the weather/live cycle (throttled), so it
     # collects alongside the weather books without a disruptive mode switch or any real money.
     # On by default now that we're forward-testing the maker edge; set false to disable.

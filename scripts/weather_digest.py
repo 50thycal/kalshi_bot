@@ -65,27 +65,53 @@ def _recent_date_codes(days: int = 3) -> list[str]:
     return out
 
 
-def _kalshi_quote(ticker: str) -> tuple[int | None, int | None]:
-    """Best-effort current (yes_bid, yes_ask) in cents from Kalshi public market data;
-    (None, None) on any failure.
+def _kalshi_quote(ticker: str) -> tuple[int | None, int | None, str]:
+    """Best-effort current (yes_bid, yes_ask, source) in cents from Kalshi public market data;
+    (None, None, "none") on any failure.
 
     BOTH sides are needed because a position is marked on the side it is HELD (see
     `_mark_position`): a YES position marks at the yes-bid, a NO position at the no-bid,
-    and the no-bid is `100 - yes_ask` — not derivable from the yes-bid alone."""
+    and the no-bid is `100 - yes_ask` — not derivable from the yes-bid alone.
+
+    A side quoted with ZERO SIZE is not a price and is returned as None. This is the closed-
+    market case and it is not cosmetic: once a market stops trading Kalshi keeps serving the
+    market object with `yes_ask_dollars: "1.0000", yes_ask_size_fp: "0.00"` — a placeholder, not
+    an offer. Taken literally it marks every NO position at `100 - 100 = 0`, i.e. reports a total
+    loss on each one. Measured 2026-08-15: the 11 closed-but-unsettled WTI positions read
+    `-$10.33` unrealized this way while their last real prints (yes 1-2c) put them ~`+$0.60` to
+    the good — a sign inversion on winning positions, in the same family as the bug the
+    `_mark_position` docstring below already warns about. When no live two-sided quote survives
+    that filter we fall back to the last TRADED price, flagged `stale` so it is never mistaken
+    for a live mark."""
     def _cents(mk, key):
         v = mk.get(key)
         if v is None and mk.get(f"{key}_dollars") is not None:
             v = round(float(mk[f"{key}_dollars"]) * 100)
         return int(v) if v is not None else None
 
+    def _sized(mk, key):
+        """The quote for `key`, or None when nothing is actually resting at it."""
+        size = mk.get(f"{key}_size_fp", mk.get(f"{key}_size"))
+        if size is not None and float(size) <= 0:
+            return None
+        return _cents(mk, key)
+
     try:
         req = urllib.request.Request(f"{_KALSHI}/markets/{ticker}", method="GET",
                                      headers={"User-Agent": _UA, "Accept": "application/json"})
         with urllib.request.urlopen(req, timeout=10) as resp:
             mk = (json.loads(resp.read().decode("utf-8")) or {}).get("market") or {}
-        return _cents(mk, "yes_bid"), _cents(mk, "yes_ask")
+        bid, ask = _sized(mk, "yes_bid"), _sized(mk, "yes_ask")
+        if bid is not None or ask is not None:
+            return bid, ask, "live"
+        last = _cents(mk, "last_price")
+        if last is not None:
+            # Last trade marks BOTH sides: it is one price, not a two-sided quote, so the
+            # NO side reads 100 - last rather than 100 - ask.
+            return last, last, "stale"
+        return None, None, "none"
     except (urllib.error.URLError, TimeoutError, OSError, ValueError, KeyError):
-        return None, None
+        return None, None, "none"
 
 
 def _mark_position(qty_fp: float, avg: float, yes_bid: int | None, yes_ask: int | None):
@@ -202,13 +228,15 @@ def main(argv: list[str] | None = None) -> int:
             open_pos = [r for r in open_pos if r[1] is not None and abs(float(r[1])) >= 0.01]
             print(f"\n[OPEN POSITIONS] {len(open_pos)}")
             for mt, qfp, avg, expo, _ts in open_pos:
-                yes_bid, yes_ask = (None, None) if args.no_prices else _kalshi_quote(mt)
+                yes_bid, yes_ask, src = ((None, None, "none") if args.no_prices
+                                         else _kalshi_quote(mt))
                 unreal = ""
                 if avg is not None:
                     side = "YES" if float(qfp) >= 0 else "NO"
                     mark, u = _mark_position(float(qfp), float(avg), yes_bid, yes_ask)
                     if mark is not None:
-                        unreal = f"  {side}~{mark}c  unreal={u:+.2f}$"
+                        flag = "" if src == "live" else f" ({src})"
+                        unreal = f"  {side}~{mark}c{flag}  unreal={u:+.2f}$"
                 cost = f"${float(expo):.2f}" if expo is not None else "?"
                 print(f"  {mt:<26} qty={float(qfp):.2f} @ {float(avg or 0):.0f}c  cost={cost}{unreal}")
 
