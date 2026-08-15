@@ -40,6 +40,11 @@ def _dt(*args) -> datetime:
     return datetime(*args, tzinfo=UTC)
 
 
+def _naive(dt: datetime) -> datetime:
+    """sqlite drops tzinfo on round-trip; normalize for instant comparison."""
+    return dt.replace(tzinfo=None) if dt.tzinfo else dt
+
+
 GATE_SPEC = {
     "sample": {"treatment": {"metric": "settled_trades", "op": ">=", "value": 100}},
     "pass_all": [{"metric": "pnl_cents_per_trade", "arm": "treatment", "op": ">", "value": 0}],
@@ -133,6 +138,89 @@ def test_activation_retires_the_prior_revision(xos_session, xos_platform):
 def test_duplicate_revision_is_refused(xos_session, xos_platform):
     with pytest.raises(svc.ExperimentOsError, match="immutable"):
         svc.register_platform_revision(xos_session, "FEE_MODEL", version="v1")
+
+
+def test_pending_revision_semantics_are_still_editable(xos_session, xos_platform):
+    """A pending revision is a draft declaration — refining it is fine."""
+    rev = svc.register_platform_revision(
+        xos_session, "FEE_MODEL", version="v2", description="draft"
+    )
+    xos_session.commit()
+    rev.description = "maker entries billed at the measured maker rate"
+    rev.normalization_available = True
+    xos_session.flush()  # allowed: not yet activated
+
+
+def test_activated_revision_semantics_are_frozen(xos_session, xos_platform):
+    """Once activated, the semantic declaration history depends on is immutable —
+    only lifecycle fields (status / activated_at / retired_at) may change."""
+    rev = svc.register_platform_revision(
+        xos_session, "FEE_MODEL", version="v2",
+        description="the declared semantics", reason="fee fix",
+        fingerprint="abc123", normalization_available=True,
+        safety_class="routine", pr_ref="PR #150", activate=True,
+    )
+    xos_session.commit()
+    for field, value in [
+        ("fingerprint", "tampered"),
+        ("description", "quietly relabeled"),
+        ("reason", "revised rationale"),
+        ("backward_compatibility", "suddenly compatible"),
+        ("normalization_available", False),
+        ("safety_class", "critical"),
+        ("pr_ref", "PR #999"),
+    ]:
+        setattr(rev, field, value)
+        with pytest.raises(svc.ImmutableRecord, match="semantic declaration is frozen"):
+            xos_session.flush()
+        xos_session.rollback()
+    # Lifecycle transitions still work: active → retired.
+    rev2 = svc.register_platform_revision(
+        xos_session, "FEE_MODEL", version="v3", activate=True
+    )
+    assert rev2.status == "active"
+    refreshed = xos_session.get(type(rev2), rev.id)
+    assert refreshed.status == "retired" and refreshed.retired_at is not None
+
+
+def test_unknown_activation_boundary_stays_explicit(xos_session, xos_platform):
+    """boundary_unknown=True activates with activated_at NULL — the uncertainty is
+    recorded, never papered over with an import timestamp. The boundary can be
+    established later from measurement, exactly once, and doing so also closes the
+    predecessor's open retired_at."""
+    with pytest.raises(svc.ExperimentOsError, match="contradicts"):
+        svc.register_platform_revision(
+            xos_session, "FILL_MODEL", version="v2",
+            activate=True, activated_at=_dt(2026, 8, 1), boundary_unknown=True,
+        )
+    rev = svc.register_platform_revision(
+        xos_session, "FILL_MODEL", version="v2", activate=True, boundary_unknown=True
+    )
+    assert rev.status == "active"
+    assert rev.activated_at is None
+    # The prior revision's end boundary is equally unknown — NULL, not fabricated.
+    from kalshi_bot.experiment_os.models import PlatformRevision
+
+    v1 = xos_session.scalar(
+        select(PlatformRevision).where(
+            PlatformRevision.component_id == rev.component_id,
+            PlatformRevision.version == "v1",
+        )
+    )
+    assert v1.status == "retired" and v1.retired_at is None
+    # An unknown boundary does not block snapshot resolution (the set is what it is).
+    assert svc.resolve_active_platform_snapshot(xos_session) is not None
+
+    svc.establish_activation_boundary(
+        xos_session, rev, activated_at=_dt(2026, 8, 11, 14, 30)
+    )
+    assert _naive(rev.activated_at) == datetime(2026, 8, 11, 14, 30)
+    assert _naive(v1.retired_at) == datetime(2026, 8, 11, 14, 30)
+    # Established once: it cannot be moved.
+    with pytest.raises(svc.ExperimentOsError, match="cannot be moved"):
+        svc.establish_activation_boundary(
+            xos_session, rev, activated_at=_dt(2026, 8, 12)
+        )
 
 
 # ---------------------------------------------------------------------------

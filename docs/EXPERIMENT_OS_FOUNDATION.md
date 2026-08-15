@@ -74,7 +74,19 @@ in any process that imports the service; the trading worker doesn't). It rejects
 - any edit to a gate's spec after registration, and any edit at all (or delete) once
   `evidence_started_at` is set — a mis-specified gate is recorded and superseded,
   never rescued by moving the threshold;
+- any edit to a platform revision's **semantic declaration** (fingerprint,
+  description, reason, backward compatibility, normalization judgment, safety class,
+  PR reference) once the revision has been activated — only the lifecycle fields
+  (`status`, `activated_at`, `retired_at`) stay mutable, and `activated_at` only so
+  an initially unknown boundary can be *established* from measurement
+  (`establish_activation_boundary`), never moved once set;
 - deleting snapshots, un-freezing, un-starting evidence.
+
+Activation boundaries are never fabricated: `activate_platform_revision(...,
+boundary_unknown=True)` records an active revision with `activated_at` NULL —
+explicitly unknown — rather than stamping an import or merge timestamp. Gates whose
+evidence spans an unestablished boundary must evaluate `BLOCKED_PLATFORM` (spec
+§17.4; enforced by the PR 3 evaluator).
 
 Core `update()`/`delete()` statements bypass ORM events; nothing issues them against
 these tables. DB-level protection can come with the enforcement PR if ever needed.
@@ -151,10 +163,15 @@ experiments end to end, with data from `docs/BOOK_REGISTRY.md`:
 
 - Migration classification for every live tag in `BOOK_REGISTRY` /
   `paper_trades.strategy` (legacy classes §22.1, integrity levels A–D §23).
-- The **baseline Platform Snapshot** describing current deployed semantics — real
-  revisions for FEE_MODEL (the 2026-08-11 maker-fee model), MARKET_TAXONOMY (the
-  2026-08-13 99.6%-coverage taxonomy), FILL_MODEL (depth-aware), etc., with measured
-  `activated_at` boundaries where known.
+- The **baseline Platform Snapshot** describing current deployed semantics, with
+  **measured activation boundaries where they exist and explicitly-unknown ones
+  where they don't** (never the merge/import timestamp): the 2026-08-11 maker-fee
+  model; the 2026-08-13 18:09:40Z taxonomy (measured); and FILL_MODEL described as
+  the semantics actually deployed — the paper engine's assumed-fill plus the
+  live-calibrated realizable projection (`docs/MMSELL_FILL_MODEL.md`). The
+  depth-proxy queue model was **measured and rejected** (PR #218 closed the
+  paper-side queue route) — it is recorded as history, not registered as active
+  platform truth.
 - Import mapping: registry rows + thesis docs + `live_paper_twins` → experiments,
   versions where reconstructable, arms/controls, grandfathered deployment records,
   migration epochs at the import boundary, `legacy_evidence` attachments.
@@ -164,3 +181,11 @@ experiments end to end, with data from `docs/BOOK_REGISTRY.md`:
 Later PRs per the spec: metrics + gate evaluator (PR 3), NEW_ONLY enforcement +
 trade lineage (PR 4, where the enforcement cutover is recorded), platform impact
 engine (PR 5), loop/docs/evo integration (PR 6–7), STRICT (PR 8+).
+
+Explicitly on the PR 3 list (review follow-up from the foundation PR): **stricter
+gate-result binding on promotions**. Today a real-money transition verifies the
+supplied result is PASS and belongs to the experiment; PR 3's evaluator must also
+verify the PASS came from the promotion gate registered for that exact transition
+(`from_state`/`to_state`), on the active version, over the correct epoch and
+platform snapshot — so a PASS from an unrelated gate (or a stale epoch) can never
+justify a promotion.
