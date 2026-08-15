@@ -89,6 +89,13 @@ class Settings(BaseSettings):
     scan_interval_seconds: int = 300
     run_once: bool = False
 
+    # --- Experiment OS (foundation: enforcement OFF; nothing else reads these) ---
+    # One-shot idempotent legacy import at worker boot (docs/EXPERIMENT_OS_FOUNDATION.md).
+    # Default False so a deploy stays inert; flip via the ops env channel, let one boot
+    # run it, flip back (leaving it on is safe — re-runs are no-ops — just noisier).
+    # Import failure is logged to system_events and never blocks the worker.
+    experiment_os_import_on_boot: bool = False
+
     # --- Scanner tuning ---
     target_categories: str = (
         "Economics,Financials,Companies,Climate and Weather,Commodities,Science and Technology"

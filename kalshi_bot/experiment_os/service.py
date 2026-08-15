@@ -572,18 +572,25 @@ def import_legacy_experiment(
     verdict: str | None = None,
     imported_at: datetime | None = None,
     retired_at: datetime | None = None,
+    paused_from: LifecycleState | str | None = None,
+    predecessor: Experiment | None = None,
 ) -> Experiment:
     """Import a pre-Experiment-OS strategy with exactly the metadata history supports.
 
     Deliberately does NOT require a platform snapshot, does NOT create versions, arms,
     epochs, or gates, and records the caller-stated migration integrity level (A–D) —
     nothing is reconstructed here, so nothing can be invented here. `verdict` becomes
-    the audit-row reason (e.g. the registry's kill verdict for a retired book)."""
+    the audit-row reason (e.g. the registry's kill verdict for a retired book).
+    A PAUSED import should state `paused_from` (the state it shelved out of) so a
+    later resume is legal; without it the record can only retire."""
     if session.scalar(select(Experiment).where(Experiment.key == key)) is not None:
         raise ExperimentOsError(f"experiment key {key!r} already exists")
     st = LifecycleState(state)
     lc = LegacyClass(legacy_class)
     mi = MigrationIntegrity(migration_integrity)
+    pf = LifecycleState(paused_from).value if paused_from is not None else None
+    if pf is not None and st is not LifecycleState.PAUSED:
+        raise ExperimentOsError("paused_from is only meaningful when importing PAUSED")
     at = imported_at or _now()
     exp = Experiment(
         key=key,
@@ -594,6 +601,8 @@ def import_legacy_experiment(
         docs_json=docs,
         notes=notes,
         state=st.value,
+        paused_from_state=pf,
+        predecessor_experiment_id=predecessor.id if predecessor is not None else None,
         legacy_class=lc.value,
         migration_integrity=mi.value,
         imported_at=at,

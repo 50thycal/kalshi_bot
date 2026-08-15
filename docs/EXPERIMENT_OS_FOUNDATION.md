@@ -159,6 +159,13 @@ experiments end to end, with data from `docs/BOOK_REGISTRY.md`:
    real 2026-07-16 retirement date, kill verdict preserved verbatim, `context_only`
    evidence, and — deliberately — no tag mapping and no invented history.
 
+## PR 2 status
+
+The legacy importer + cutover baseline shipped — see
+`docs/EXPERIMENT_OS_MIGRATION.md` for the manifest, the baseline snapshot's
+boundary provenance, how the flag-gated boot import runs, and the coverage
+report. The list below is preserved as the scope it was built against.
+
 ## What remains for PR 2 (legacy importer + cutover baseline)
 
 - Migration classification for every live tag in `BOOK_REGISTRY` /

@@ -86,6 +86,21 @@ def run() -> int:
         )
         return 1
 
+    # 2b) Experiment OS legacy import (flag-gated, idempotent, read-mostly; runs
+    # once and no-ops thereafter). MUST NOT be able to stop the worker: the hook
+    # swallows its own errors, and this guard covers even the session/commit path.
+    if settings.experiment_os_import_on_boot:
+        try:
+            from .experiment_os.importer import run_boot_import
+
+            with session_scope() as session:
+                run_boot_import(session)
+        except Exception as exc:  # noqa: BLE001
+            logger.error(
+                "experiment OS import hook failed; continuing to trade",
+                extra={"extra_fields": {"error": str(exc)}},
+            )
+
     # 3) Kalshi client.
     try:
         client = KalshiClient(settings)

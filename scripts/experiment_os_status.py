@@ -135,6 +135,57 @@ def report(cur, n_transitions: int) -> None:
     else:
         _table(["detected_at", "experiment", "kind", "severity", "description"], rows)
 
+    # --- 5) legacy coverage -----------------------------------------------------------
+    # Every strategy tag that has ever traded, resolved against the imported
+    # classification: concrete deployment-arm tags, plus each experiment's declared
+    # covered_tags / covered_tag_prefixes (docs_json). An UNMAPPED tag traded real
+    # (paper or live) volume but resolves to no experiment — the migration is not
+    # done while this list is non-empty.
+    print("\n=== 5) LEGACY COVERAGE (paper_trades/live_orders tags vs imports) ===")
+    if not total:
+        print("    no experiments imported yet — every tag is unmapped by definition.")
+    else:
+        rows = _rows(cur, """
+            WITH tags AS (
+                SELECT DISTINCT strategy AS tag FROM paper_trades WHERE strategy IS NOT NULL
+                UNION
+                SELECT DISTINCT strategy FROM live_orders WHERE strategy IS NOT NULL
+            ),
+            covered AS (
+                SELECT DISTINCT strategy_tag AS tag
+                FROM experiment_deployment_arms WHERE strategy_tag IS NOT NULL
+            )
+            SELECT t.tag FROM tags t
+            WHERE t.tag NOT IN (SELECT tag FROM covered)
+              AND NOT EXISTS (
+                    SELECT 1 FROM experiments e
+                    WHERE e.docs_json IS NOT NULL
+                      AND (e.docs_json::jsonb -> 'covered_tags') ? t.tag)
+              AND NOT EXISTS (
+                    SELECT 1 FROM experiments e,
+                         jsonb_array_elements_text(
+                             COALESCE(e.docs_json::jsonb -> 'covered_tag_prefixes',
+                                      '[]'::jsonb)) p
+                    WHERE t.tag LIKE p.value || '%')
+            ORDER BY 1
+        """)
+        ntags = _rows(cur, """
+            SELECT count(*) FROM (
+                SELECT DISTINCT strategy FROM paper_trades WHERE strategy IS NOT NULL
+                UNION
+                SELECT DISTINCT strategy FROM live_orders WHERE strategy IS NOT NULL
+            ) t
+        """)[0][0]
+        if not rows:
+            print(f"    all {ntags} traded tags map to an experiment — coverage complete.")
+        else:
+            print(f"    {len(rows)} of {ntags} traded tags are UNMAPPED:")
+            for (tag,) in rows:
+                print(f"      - {tag}")
+            print("    (classify them in the manifest, or record HISTORICAL_UNTRACKED;")
+            print("     nothing is auto-stubbed. Evo tags never appear here — evo trades")
+            print("     live in evo_* tables under evo lineage.)")
+
 
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
