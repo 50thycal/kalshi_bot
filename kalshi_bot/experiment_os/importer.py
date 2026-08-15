@@ -237,6 +237,9 @@ def _import_one(session, entry: dict, snapshot: PlatformSnapshot, now: datetime)
             config=dspec.get("config"),
             started_at=started_at or now,
             notes=dspec.get("notes"),
+            # Every migration-created deployment is grandfathered: its runtime
+            # continues under enforcement, its evolution goes through Experiment OS.
+            grandfathered=True,
         )
         if dspec.get("ended_at"):
             svc.end_deployment(session, created[dspec["key"]], ended_at=dspec["ended_at"])

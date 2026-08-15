@@ -172,6 +172,13 @@ class PaperTrade(Base):
     # Trades from retired entry windows/strategies (e.g. the day-1 h12 window): kept for
     # the record but excluded from the PnL report so it only reflects live strategies.
     legacy: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Experiment OS lineage (spec §14): the deployment-arm link this entry was written
+    # under, from which the whole chain (deployment → epoch → version → experiment →
+    # platform snapshot) is derivable losslessly. NULL on legacy/pre-enforcement rows —
+    # history is never rewritten to populate it. Plain column (no ORM-level FK) so this
+    # module stays importable without the experiment_os package; the real FK constraint
+    # is added by the alembic migration on Postgres.
+    experiment_deployment_arm_id: Mapped[int | None] = mapped_column(BigIntId, index=True)
 
 
 class PaperPosition(Base):
@@ -309,6 +316,9 @@ class LiveOrder(Base):
     status: Mapped[str | None] = mapped_column(String(24))
     cancel_reason: Mapped[str | None] = mapped_column(Text)
     raw_order_json: Mapped[dict | None] = mapped_column(JSONType)
+    # Experiment OS lineage — same semantics as paper_trades.experiment_deployment_arm_id
+    # (NULL = legacy/pre-enforcement; FK added by migration, not the ORM).
+    experiment_deployment_arm_id: Mapped[int | None] = mapped_column(BigIntId, index=True)
 
 
 class LiveOrderQueueTick(Base):

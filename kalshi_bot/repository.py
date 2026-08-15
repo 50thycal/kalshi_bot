@@ -16,6 +16,7 @@ from typing import Any
 from sqlalchemy import func, select
 
 from . import models as m
+from .experiment_os import enforcement as xos_enforcement
 from .risk.manager import RiskDecision
 from .scanner.metrics import MarketMetrics, orderbook_levels, parse_dt
 from .scanner.signals import SignalResult
@@ -206,6 +207,11 @@ def create_paper_trade(
     model_probability: float | None = None,
     edge: float | None = None,
 ) -> m.PaperTrade:
+    # Experiment OS admission + lineage (spec §14): under NEW_ONLY/STRICT an
+    # unregistered NEW tag raises LineageBlocked here — no new experimental
+    # exposure without lineage. Registered (native or grandfathered) tags get their
+    # deployment-arm stamp; under OFF/WARN nothing is ever blocked.
+    arm_link_id = xos_enforcement.stamp_or_block(session, strategy, channel="paper")
     row = m.PaperTrade(
         signal_id=signal_id,
         market_ticker=ticker,
@@ -223,6 +229,7 @@ def create_paper_trade(
         fill_assumption=(fill_assumption or "")[:64],
         status="open",
         fees=entry_fee,
+        experiment_deployment_arm_id=arm_link_id,
     )
     session.add(row)
     session.flush()
@@ -1384,6 +1391,9 @@ def create_live_order(
     client_order_id: str,
     raw_order_json: Any | None = None,
 ) -> m.LiveOrder:
+    # Same admission + lineage rule as create_paper_trade: a live order for an
+    # unregistered NEW tag fails closed under NEW_ONLY/STRICT.
+    arm_link_id = xos_enforcement.stamp_or_block(session, strategy, channel="live")
     row = m.LiveOrder(
         signal_id=signal_id,
         kalshi_order_id=None,
@@ -1397,6 +1407,7 @@ def create_live_order(
         limit_price=limit_price,
         quantity=quantity,
         status=status,
+        experiment_deployment_arm_id=arm_link_id,
         raw_order_json=_safe_json(raw_order_json),
     )
     session.add(row)

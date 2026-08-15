@@ -342,7 +342,13 @@ class ExperimentDeployment(Base):
     `twin_of_deployment_id` makes the live/paper twin pair first-class: a PAPER_TWIN
     deployment points at the LIVE deployment it shadows. `platform_snapshot_id` is
     normally NULL (= the epoch's snapshot); set only if a deployment genuinely pins a
-    different snapshot than its epoch, which the integrity machinery treats as a flag."""
+    different snapshot than its epoch, which the integrity machinery treats as a flag.
+
+    `grandfathered` marks a deployment imported by the legacy migration: its runtime
+    may continue under enforcement, but its research evolution (new arms, config
+    changes, stage advances, new live deployments) must go through Experiment OS.
+    `config_fingerprint` = canonical hash of `config_json` at registration — the
+    baseline the drift check compares runtime configuration against."""
 
     __tablename__ = "experiment_deployments"
     __table_args__ = (Index("ix_experiment_deployments_epoch", "epoch_id"),)
@@ -361,7 +367,11 @@ class ExperimentDeployment(Base):
         BigIntId, ForeignKey("platform_snapshots.id")
     )
     code_fingerprint: Mapped[str | None] = mapped_column(String(64))
+    config_fingerprint: Mapped[str | None] = mapped_column(String(64))
     config_json: Mapped[dict | None] = mapped_column(JSONType)
+    grandfathered: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="0"
+    )
     started_at: Mapped[datetime] = mapped_column(TS, nullable=False)
     ended_at: Mapped[datetime | None] = mapped_column(TS)
     notes: Mapped[str | None] = mapped_column(Text)
@@ -529,6 +539,27 @@ class ExperimentIntegrityEvent(Base):
     details_json: Mapped[dict | None] = mapped_column(JSONType)
     resolved_at: Mapped[datetime | None] = mapped_column(TS)
     resolution: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+
+
+class ExperimentOsEnforcement(Base):
+    """The recorded enforcement state (spec §4.2) — append-only; the newest row by
+    effective_at is authoritative. The enforcement cutover is an EXPLICIT recorded
+    event: mode, effective instant, actor, reason, system version, a unique cutover
+    id, and the readiness evidence captured at the moment of the decision. Never
+    inferred from a deploy, a merge, the first row, or the importer's run time."""
+
+    __tablename__ = "experiment_os_enforcement"
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    cutover_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    mode: Mapped[str] = mapped_column(String(12), nullable=False)  # EnforcementMode
+    preceding_mode: Mapped[str | None] = mapped_column(String(12))
+    effective_at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    actor: Mapped[str] = mapped_column(String(64), nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    system_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    readiness_json: Mapped[dict | None] = mapped_column(JSONType)
     created_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
 
 
