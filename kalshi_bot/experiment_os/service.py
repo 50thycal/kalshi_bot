@@ -114,7 +114,15 @@ _APPEND_ONLY = (
 _GATE_MUTABLE = {"evidence_started_at", "superseded_by_gate_id", "notes"}
 _INTEGRITY_MUTABLE = {"resolved_at", "resolution"}
 _SNAPSHOT_MUTABLE = {"label", "description"}
-_REVISION_IMMUTABLE = {"component_id", "version", "created_at"}
+# Platform revisions: identity is immutable from creation; once a revision has been
+# activated, its SEMANTIC declaration (fingerprint, compatibility/normalization
+# judgment, safety class, reason, PR reference, description) freezes too — history
+# depends on it. Only the lifecycle remains mutable: status (active → retired),
+# retired_at, and activated_at — the last stays editable because an initially
+# uncertain activation boundary is *established* later from measurement (spec §17.4),
+# which is a lifecycle fact, not a semantic edit.
+_REVISION_IDENTITY = {"component_id", "version", "created_at"}
+_REVISION_LIFECYCLE = {"status", "activated_at", "retired_at"}
 
 
 def _changed_fields(obj) -> set[str]:
@@ -177,12 +185,24 @@ def _guard_dirty(obj) -> None:
                 f"(attempted: {sorted(illegal)})"
             )
     elif isinstance(obj, PlatformRevision):
-        illegal = changed & _REVISION_IMMUTABLE
+        illegal = changed & _REVISION_IDENTITY
         if illegal:
             raise ImmutableRecord(
                 f"platform revision {obj.id} identity is immutable "
                 f"(attempted: {sorted(illegal)})"
             )
+        was_activated = (
+            _pre_flush_value(obj, "status") != "pending"
+            or _pre_flush_value(obj, "activated_at") is not None
+        )
+        if was_activated:
+            illegal = changed - _REVISION_LIFECYCLE
+            if illegal:
+                raise ImmutableRecord(
+                    f"platform revision {obj.id} has been activated; its semantic "
+                    "declaration is frozen — a changed judgment is a NEW revision "
+                    f"(attempted: {sorted(illegal)})"
+                )
 
 
 def _guard_deleted(obj) -> None:
@@ -243,8 +263,13 @@ def register_platform_revision(
     pr_ref: str | None = None,
     activate: bool = False,
     activated_at: datetime | None = None,
+    boundary_unknown: bool = False,
 ) -> PlatformRevision:
     """Register an immutable revision of one component; optionally activate it."""
+    if boundary_unknown and activated_at is not None:
+        raise ExperimentOsError(
+            "boundary_unknown contradicts an explicit activated_at — pass one"
+        )
     if isinstance(component, str):
         component = register_platform_component(session, component)
     existing = session.scalar(
@@ -274,20 +299,41 @@ def register_platform_revision(
     session.add(rev)
     session.flush()
     if activate:
-        activate_platform_revision(session, rev, activated_at=activated_at)
+        activate_platform_revision(
+            session, rev, activated_at=activated_at, boundary_unknown=boundary_unknown
+        )
     return rev
 
 
 def activate_platform_revision(
-    session, revision: PlatformRevision, *, activated_at: datetime | None = None
+    session,
+    revision: PlatformRevision,
+    *,
+    activated_at: datetime | None = None,
+    boundary_unknown: bool = False,
 ) -> PlatformRevision:
     """Activate a revision at a (preferably measured) runtime boundary, retiring the
-    previously-active revision of the same component."""
+    previously-active revision of the same component.
+
+    When the real activation boundary is NOT known, pass `boundary_unknown=True`:
+    the revision goes active with `activated_at` (and the prior revision's
+    `retired_at`) left NULL, keeping the uncertainty explicit instead of stamping a
+    fabricated import/merge timestamp. Establish the boundary later — from
+    measurement — with establish_activation_boundary(). Calling with neither an
+    explicit `activated_at` nor `boundary_unknown` uses now(), which is only correct
+    when the activation is genuinely happening now."""
     if revision.status == "retired":
         raise ExperimentOsError(
             f"platform revision {revision.id} is retired and cannot be re-activated"
         )
-    at = activated_at or _now()
+    if boundary_unknown:
+        if activated_at is not None:
+            raise ExperimentOsError(
+                "boundary_unknown contradicts an explicit activated_at — pass one"
+            )
+        at = None
+    else:
+        at = activated_at or _now()
     prior = session.scalars(
         select(PlatformRevision).where(
             PlatformRevision.component_id == revision.component_id,
@@ -300,6 +346,41 @@ def activate_platform_revision(
         old.retired_at = at
     revision.status = "active"
     revision.activated_at = at
+    session.flush()
+    return revision
+
+
+def establish_activation_boundary(
+    session, revision: PlatformRevision, *, activated_at: datetime
+) -> PlatformRevision:
+    """Set the measured activation boundary on a revision that went active with an
+    unknown one (spec §17.4: gates over the boundary stay BLOCKED_PLATFORM until it
+    is established). Also closes the predecessor's open retired_at, since the same
+    instant ends the old revision. Refuses to move an already-established boundary —
+    that would be rewriting history; if the measurement was wrong, record an
+    integrity event and register a corrected revision."""
+    if revision.status != "active":
+        raise ExperimentOsError(
+            f"revision {revision.id} is {revision.status}, not active"
+        )
+    if revision.activated_at is not None:
+        raise ExperimentOsError(
+            f"revision {revision.id} already has a measured boundary "
+            f"({revision.activated_at}) — it cannot be moved"
+        )
+    revision.activated_at = activated_at
+    predecessor = session.scalar(
+        select(PlatformRevision)
+        .where(
+            PlatformRevision.component_id == revision.component_id,
+            PlatformRevision.status == "retired",
+            PlatformRevision.retired_at.is_(None),
+        )
+        .order_by(PlatformRevision.created_at.desc())
+        .limit(1)
+    )
+    if predecessor is not None:
+        predecessor.retired_at = activated_at
     session.flush()
     return revision
 
@@ -491,18 +572,25 @@ def import_legacy_experiment(
     verdict: str | None = None,
     imported_at: datetime | None = None,
     retired_at: datetime | None = None,
+    paused_from: LifecycleState | str | None = None,
+    predecessor: Experiment | None = None,
 ) -> Experiment:
     """Import a pre-Experiment-OS strategy with exactly the metadata history supports.
 
     Deliberately does NOT require a platform snapshot, does NOT create versions, arms,
     epochs, or gates, and records the caller-stated migration integrity level (A–D) —
     nothing is reconstructed here, so nothing can be invented here. `verdict` becomes
-    the audit-row reason (e.g. the registry's kill verdict for a retired book)."""
+    the audit-row reason (e.g. the registry's kill verdict for a retired book).
+    A PAUSED import should state `paused_from` (the state it shelved out of) so a
+    later resume is legal; without it the record can only retire."""
     if session.scalar(select(Experiment).where(Experiment.key == key)) is not None:
         raise ExperimentOsError(f"experiment key {key!r} already exists")
     st = LifecycleState(state)
     lc = LegacyClass(legacy_class)
     mi = MigrationIntegrity(migration_integrity)
+    pf = LifecycleState(paused_from).value if paused_from is not None else None
+    if pf is not None and st is not LifecycleState.PAUSED:
+        raise ExperimentOsError("paused_from is only meaningful when importing PAUSED")
     at = imported_at or _now()
     exp = Experiment(
         key=key,
@@ -513,6 +601,8 @@ def import_legacy_experiment(
         docs_json=docs,
         notes=notes,
         state=st.value,
+        paused_from_state=pf,
+        predecessor_experiment_id=predecessor.id if predecessor is not None else None,
         legacy_class=lc.value,
         migration_integrity=mi.value,
         imported_at=at,
