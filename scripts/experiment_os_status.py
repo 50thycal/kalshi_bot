@@ -186,6 +186,76 @@ def report(cur, n_transitions: int) -> None:
             print("     nothing is auto-stubbed. Evo tags never appear here — evo trades")
             print("     live in evo_* tables under evo lineage.)")
 
+    # --- 6) scoreboard ----------------------------------------------------------------
+    # Per active experiment: universal paper metrics per arm over the CURRENT epoch's
+    # window (epoch start floor — the clean evidence floor; individual gates may carry
+    # tighter recorded floors), and each gate's latest recorded verdict. Settled =
+    # every terminal-with-P&L status; filtering 'settled' alone would silently drop
+    # stop-closed trades (the recorded mmsellA1-A3 reading error).
+    print("\n=== 6) SCOREBOARD (current-epoch evidence + latest gate verdicts) ===")
+    rows = _rows(cur, """
+        WITH cur AS (
+            SELECT e.id AS exp_id, e.key, v.id AS ver_id, ep.id AS epoch_id,
+                   ep.epoch_number, ep.started_at,
+                   COALESCE(ep.ended_at, now()) AS window_end
+            FROM experiments e
+            JOIN experiment_versions v ON v.experiment_id = e.id
+                 AND v.version = (SELECT max(version) FROM experiment_versions
+                                  WHERE experiment_id = e.id)
+            JOIN experiment_epochs ep ON ep.version_id = v.id
+                 AND ep.epoch_number = (SELECT max(epoch_number) FROM experiment_epochs
+                                        WHERE version_id = v.id)
+            WHERE e.state NOT IN ('RETIRED')
+        )
+        SELECT cur.key, cur.epoch_number, a.arm_key, da.strategy_tag,
+               count(pt.id) FILTER (WHERE pt.status IN
+                   ('settled','closed_sl','closed_tp','closed_timeout')) AS settled,
+               ROUND(COALESCE(sum(pt.pnl) FILTER (WHERE pt.status IN
+                   ('settled','closed_sl','closed_tp','closed_timeout')), 0)::numeric
+                   * 100 / NULLIF(count(pt.id) FILTER (WHERE pt.status IN
+                   ('settled','closed_sl','closed_tp','closed_timeout')), 0), 2)
+                   AS cents_per_trade,
+               ROUND(100.0 * count(pt.id) FILTER (WHERE pt.pnl > 0 AND pt.status IN
+                   ('settled','closed_sl','closed_tp','closed_timeout'))
+                   / NULLIF(count(pt.id) FILTER (WHERE pt.status IN
+                   ('settled','closed_sl','closed_tp','closed_timeout')), 0), 1)
+                   AS win_pct,
+               count(pt.id) FILTER (WHERE pt.status = 'open') AS open_n
+        FROM cur
+        JOIN experiment_epochs ep ON ep.id = cur.epoch_id
+        JOIN experiment_deployments d ON d.epoch_id = ep.id AND d.kind = 'paper'
+        JOIN experiment_deployment_arms da ON da.deployment_id = d.id
+        JOIN experiment_arms a ON a.id = da.arm_id
+        LEFT JOIN paper_trades pt ON pt.strategy = da.strategy_tag
+             AND pt.created_at >= cur.started_at AND pt.created_at < cur.window_end
+        GROUP BY 1, 2, 3, 4
+        ORDER BY 1, 3
+    """)
+    if not rows:
+        print("    no active experiments with paper deployments.")
+    else:
+        _table(["experiment", "epoch", "arm", "tag", "settled", "c/trade", "win%", "open"],
+               rows)
+    rows = _rows(cur, """
+        SELECT e.key, g.gate_key, r.verdict, r.computed_at::timestamp(0), r.computed_by
+        FROM experiment_gates g
+        JOIN experiment_versions v ON v.id = g.version_id
+        JOIN experiments e ON e.id = v.experiment_id
+        JOIN LATERAL (
+            SELECT verdict, computed_at, computed_by
+            FROM experiment_gate_results r
+            WHERE r.gate_id = g.id
+            ORDER BY r.computed_at DESC, r.id DESC LIMIT 1
+        ) r ON true
+        WHERE e.state NOT IN ('RETIRED')
+        ORDER BY 1, 2
+    """)
+    if not rows:
+        print("    no gate results recorded yet (evaluate via the CLI or PR 3 evaluator).")
+    else:
+        print("\n    latest gate verdicts:")
+        _table(["experiment", "gate", "verdict", "computed_at", "by"], rows)
+
 
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)

@@ -240,7 +240,7 @@ def test_creation_writes_the_audit_row(xos_session, xos_platform):
 def test_full_forward_walk_is_audited(xos_session, xos_platform):
     exp = _experiment(xos_session)
     ver = _frozen_version(xos_session, exp)
-    gate = svc.register_gate(
+    paper_gate = svc.register_gate(
         xos_session,
         ver,
         gate_key="paper_to_live_canary",
@@ -249,17 +249,29 @@ def test_full_forward_walk_is_audited(xos_session, xos_platform):
         to_state="LIVE_CANARY",
         spec=GATE_SPEC,
     )
+    canary_gate = svc.register_gate(
+        xos_session,
+        ver,
+        gate_key="live_canary_to_production",
+        kind="promotion",
+        from_state="LIVE_CANARY",
+        to_state="PRODUCTION",
+        spec=GATE_SPEC,
+    )
+    epoch = svc.open_epoch(xos_session, ver, reason="initial")
     svc.transition_experiment(xos_session, exp, "PROBE", actor="operator")
     svc.transition_experiment(xos_session, exp, "PAPER", actor="operator")
     result = svc.record_gate_result(
-        xos_session, gate, verdict="PASS", explanation="paper gate cleared"
+        xos_session, paper_gate, verdict="PASS", epoch=epoch,
+        explanation="paper gate cleared",
     )
     svc.transition_experiment(
         xos_session, exp, "LIVE_CANARY",
         actor="operator", approved_by="operator", gate_result=result,
     )
     result2 = svc.record_gate_result(
-        xos_session, gate, verdict="PASS", explanation="canary gate cleared"
+        xos_session, canary_gate, verdict="PASS", epoch=epoch,
+        explanation="canary gate cleared",
     )
     svc.transition_experiment(
         xos_session, exp, "PRODUCTION",
@@ -299,6 +311,7 @@ def test_live_canary_needs_pass_result_and_approval(xos_session, xos_platform):
         xos_session, ver, gate_key="paper_gate", kind="promotion",
         from_state="PAPER", to_state="LIVE_CANARY", spec=GATE_SPEC,
     )
+    epoch = svc.open_epoch(xos_session, ver, reason="initial")
     svc.transition_experiment(xos_session, exp, "PROBE", actor="operator")
     svc.transition_experiment(xos_session, exp, "PAPER", actor="operator")
 
@@ -311,7 +324,7 @@ def test_live_canary_needs_pass_result_and_approval(xos_session, xos_platform):
             xos_session, exp, "LIVE_CANARY", actor="operator", approved_by="operator"
         )
     # A FAIL verdict cannot be argued past.
-    fail = svc.record_gate_result(xos_session, gate, verdict="FAIL")
+    fail = svc.record_gate_result(xos_session, gate, verdict="FAIL", epoch=epoch)
     with pytest.raises(svc.ExperimentOsError, match="not PASS"):
         svc.transition_experiment(
             xos_session, exp, "LIVE_CANARY",
@@ -324,7 +337,10 @@ def test_live_canary_needs_pass_result_and_approval(xos_session, xos_platform):
         xos_session, other_ver, gate_key="paper_gate", kind="promotion",
         from_state="PAPER", to_state="LIVE_CANARY", spec=GATE_SPEC,
     )
-    foreign = svc.record_gate_result(xos_session, other_gate, verdict="PASS")
+    other_epoch = svc.open_epoch(xos_session, other_ver, reason="initial")
+    foreign = svc.record_gate_result(
+        xos_session, other_gate, verdict="PASS", epoch=other_epoch
+    )
     with pytest.raises(svc.ExperimentOsError, match="different experiment"):
         svc.transition_experiment(
             xos_session, exp, "LIVE_CANARY",
@@ -332,7 +348,7 @@ def test_live_canary_needs_pass_result_and_approval(xos_session, xos_platform):
         )
     assert exp.state == "PAPER"  # nothing above moved it
 
-    ok = svc.record_gate_result(xos_session, gate, verdict="PASS")
+    ok = svc.record_gate_result(xos_session, gate, verdict="PASS", epoch=epoch)
     svc.transition_experiment(
         xos_session, exp, "LIVE_CANARY",
         actor="operator", approved_by="operator", gate_result=ok,

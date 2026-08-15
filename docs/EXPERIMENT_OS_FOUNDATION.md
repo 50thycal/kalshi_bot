@@ -189,10 +189,9 @@ Later PRs per the spec: metrics + gate evaluator (PR 3), NEW_ONLY enforcement +
 trade lineage (PR 4, where the enforcement cutover is recorded), platform impact
 engine (PR 5), loop/docs/evo integration (PR 6–7), STRICT (PR 8+).
 
-Explicitly on the PR 3 list (review follow-up from the foundation PR): **stricter
-gate-result binding on promotions**. Today a real-money transition verifies the
-supplied result is PASS and belongs to the experiment; PR 3's evaluator must also
-verify the PASS came from the promotion gate registered for that exact transition
-(`from_state`/`to_state`), on the active version, over the correct epoch and
-platform snapshot — so a PASS from an unrelated gate (or a stale epoch) can never
-justify a promotion.
+PR 3 shipped the metrics + gate evaluator — see `docs/EXPERIMENT_OS_METRICS.md`
+for the metric addressing contract, evaluation semantics, BLOCKED_* behavior, and
+the now-implemented **strict gate-result binding on promotions** (the review
+follow-up from this PR): a promotion PASS must come from the promotion gate
+registered for that exact transition, on the current version, bound to the current
+epoch and its still-active platform snapshot, and be the gate's latest result.

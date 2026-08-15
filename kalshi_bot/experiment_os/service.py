@@ -799,6 +799,18 @@ def freeze_version(
         .where(ExperimentGate.version_id == version.id)
         .order_by(ExperimentGate.gate_key)
     ).all()
+    # The freeze is the pre-registration lock: every gate registered so far must
+    # resolve unambiguously against the FINAL arm set — a gate that would need
+    # its scope guessed at evaluation time is refused now, not reinterpreted later.
+    from .evaluator import validate_gate_scopes  # lazy: evaluator imports service
+
+    for gate in gates:
+        problems = validate_gate_scopes(session, version, gate.spec_json)
+        if problems:
+            raise GateSpecError(
+                f"gate {gate.gate_key!r} does not resolve against the final arm "
+                f"set: {'; '.join(problems)}"
+            )
     version.fingerprint = canonical_hash(contract)
     version.pre_registration_hash = canonical_hash(
         {"contract": version.fingerprint, "gates": [g.spec_hash for g in gates]}
@@ -1075,6 +1087,17 @@ def register_gate(
         # The promotion a gate guards must itself be a legal forward move (approval is
         # a transition-time concern, not a registration-time one).
         validate_transition(fs, ts, approved_by="registration-shape-check")
+    if version.frozen_at is not None:
+        # Arms are final on a frozen version, so full scope validation runs at
+        # registration (gates registered pre-freeze are validated by the freeze).
+        from .evaluator import validate_gate_scopes  # lazy: evaluator imports service
+
+        problems = validate_gate_scopes(session, version, spec)
+        if problems:
+            raise GateSpecError(
+                f"gate {gate_key!r} does not resolve against the frozen arm set: "
+                f"{'; '.join(problems)}"
+            )
     gate = ExperimentGate(
         version_id=version.id,
         gate_key=gate_key,
@@ -1165,6 +1188,102 @@ def record_gate_result(
 _NEEDS_PASS_RESULT = {LifecycleState.LIVE_CANARY.value, LifecycleState.PRODUCTION.value}
 
 
+def _validate_promotion_result(
+    session,
+    experiment: Experiment,
+    current: LifecycleState,
+    target: LifecycleState,
+    gate_result: ExperimentGateResult,
+) -> None:
+    """A PASS is not a reusable permission slip. Before a result may authorize a
+    real-money promotion it must be THE result for THIS promotion:
+
+      * from the promotion gate registered for exactly (current → target);
+      * on the experiment's CURRENT version;
+      * bound to the CURRENT operating epoch (a NULL-epoch result never promotes);
+      * carrying that epoch's pinned platform snapshot, which must still BE the
+        active snapshot (a platform change since pinning stales the epoch);
+      * the LATEST result recorded for that gate — a newer FAIL/HOLD/BLOCKED
+        invalidates an older PASS, which can never be cherry-picked back.
+    """
+    if gate_result.experiment_id != experiment.id:
+        raise ExperimentOsError("gate result belongs to a different experiment")
+    if gate_result.verdict != GateVerdict.PASS.value:
+        raise ExperimentOsError(
+            f"gate result verdict is {gate_result.verdict}, not PASS — a gate "
+            "verdict cannot be argued past"
+        )
+    gate = session.get(ExperimentGate, gate_result.gate_id)
+    if (
+        gate.kind != "promotion"
+        or gate.from_state != current.value
+        or gate.to_state != target.value
+    ):
+        raise ExperimentOsError(
+            f"result is from gate {gate.gate_key!r} ({gate.kind} "
+            f"{gate.from_state}→{gate.to_state}), not the promotion gate for "
+            f"{current.value} → {target.value}"
+        )
+    version = session.scalar(
+        select(ExperimentVersion)
+        .where(ExperimentVersion.experiment_id == experiment.id)
+        .order_by(ExperimentVersion.version.desc())
+        .limit(1)
+    )
+    if version is None or gate.version_id != version.id:
+        raise ExperimentOsError(
+            "result is not from the experiment's CURRENT version — a stale "
+            "version's PASS never authorizes a current promotion"
+        )
+    epoch = session.scalar(
+        select(ExperimentEpoch).where(
+            ExperimentEpoch.version_id == version.id,
+            ExperimentEpoch.ended_at.is_(None),
+        )
+    ) or session.scalar(
+        select(ExperimentEpoch)
+        .where(ExperimentEpoch.version_id == version.id)
+        .order_by(ExperimentEpoch.epoch_number.desc())
+        .limit(1)
+    )
+    if epoch is None:
+        raise ExperimentOsError("the current version has no operating epoch")
+    if gate_result.epoch_id is None:
+        raise ExperimentOsError(
+            "the result is not bound to an epoch — an epoch-less PASS never "
+            "authorizes a promotion"
+        )
+    if gate_result.epoch_id != epoch.id:
+        raise ExperimentOsError(
+            f"result is bound to epoch #{gate_result.epoch_id}, not the current "
+            f"operating epoch (#{epoch.id}) — stale-epoch evidence never promotes"
+        )
+    if gate_result.platform_snapshot_id != epoch.platform_snapshot_id:
+        raise ExperimentOsError(
+            "result was computed under a different platform snapshot than the "
+            "epoch pins — re-evaluate under the pinned snapshot"
+        )
+    active = get_active_platform_snapshot(session)
+    if active is None or active.id != epoch.platform_snapshot_id:
+        raise ExperimentOsError(
+            "the platform has changed since this epoch pinned its snapshot — "
+            "classify the impact / open a new epoch and re-evaluate before promoting"
+        )
+    newest = session.scalar(
+        select(ExperimentGateResult)
+        .where(ExperimentGateResult.gate_id == gate.id)
+        .order_by(
+            ExperimentGateResult.computed_at.desc(), ExperimentGateResult.id.desc()
+        )
+        .limit(1)
+    )
+    if newest is not None and newest.id != gate_result.id:
+        raise ExperimentOsError(
+            f"result #{gate_result.id} has been superseded by result #{newest.id} "
+            f"({newest.verdict}) — only the gate's latest result can authorize"
+        )
+
+
 def transition_experiment(
     session,
     experiment: Experiment,
@@ -1207,13 +1326,7 @@ def transition_experiment(
                 f"{current.value} → {target.value} requires the PASS gate result that "
                 "justified it (record_gate_result first)"
             )
-        if gate_result.experiment_id != experiment.id:
-            raise ExperimentOsError("gate result belongs to a different experiment")
-        if gate_result.verdict != GateVerdict.PASS.value:
-            raise ExperimentOsError(
-                f"gate result verdict is {gate_result.verdict}, not PASS — a gate "
-                "verdict cannot be argued past"
-            )
+        _validate_promotion_result(session, experiment, current, target, gate_result)
 
     at = occurred_at or _now()
     row = ExperimentStateTransition(
