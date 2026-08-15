@@ -117,6 +117,7 @@ ALLOWED_SCRIPTS = (
     "mmsell_scan_health",
     "mmsell_quote_parity",
     "mmsell_queue_position",
+    "mmsell_depth_fill_model",
     "evo_digest",
     "evo_tree",
     "evo_selftest",
