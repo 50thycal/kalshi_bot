@@ -3,7 +3,7 @@
     python -m kalshi_bot.experiment_os.cli list [--state PAPER] [--legacy/--native]
     python -m kalshi_bot.experiment_os.cli show <experiment-key>
     python -m kalshi_bot.experiment_os.cli transitions <experiment-key>
-    python -m kalshi_bot.experiment_os.cli platform
+    python -m kalshi_bot.experiment_os.cli platform [review <COMPONENT:version>]
     python -m kalshi_bot.experiment_os.cli tag <strategy-tag>
     python -m kalshi_bot.experiment_os.cli scoreboard [key] [--evaluate]
 
@@ -108,6 +108,20 @@ def cmd_transitions(session: Session, args) -> int:
 
 
 def cmd_platform(session: Session, args) -> int:
+    # `platform review <COMPONENT:version|id>` (or just `platform <ref>`) prints
+    # the one canonical change-impact review for a revision.
+    ref = [a for a in (args.args or []) if a != "review"]
+    if ref:
+        from . import platform_impact
+
+        revision = platform_impact.get_revision(session, ref[0])
+        if revision is None:
+            print(f"no platform revision {ref[0]!r} (use COMPONENT:version or id)",
+                  file=sys.stderr)
+            return 1
+        print(json.dumps(platform_impact.revision_review(session, revision),
+                         indent=2, default=str))
+        return 0
     comps = session.scalars(
         select(PlatformComponent).order_by(PlatformComponent.key)
     ).all()
@@ -276,7 +290,12 @@ def main(argv: list[str] | None = None) -> int:
     p_tr.add_argument("key")
     p_tr.set_defaults(fn=cmd_transitions)
 
-    p_plat = sub.add_parser("platform", help="platform components/revisions/snapshot")
+    p_plat = sub.add_parser(
+        "platform",
+        help="platform components/revisions/snapshot; "
+        "`platform review <COMPONENT:version>` prints the change-impact review",
+    )
+    p_plat.add_argument("args", nargs="*", metavar="[review] [revision]")
     p_plat.set_defaults(fn=cmd_platform)
 
     p_tag = sub.add_parser("tag", help="strategy tag → experiment lineage")

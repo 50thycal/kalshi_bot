@@ -265,47 +265,108 @@ def report(cur, n_transitions: int) -> None:
     has_enf = _rows(cur, "SELECT to_regclass('public.experiment_os_enforcement') IS NOT NULL")[0][0]
     if not has_enf:
         print("    enforcement table not migrated yet (pre-PR4 database).")
-        return
-    row = _rows(cur, """
-        SELECT mode, cutover_id, effective_at::timestamp(0), actor, system_version
-        FROM experiment_os_enforcement
-        ORDER BY effective_at DESC, id DESC LIMIT 1
-    """)
-    if not row:
-        print("    mode: OFF (no enforcement change ever recorded — the cutover is an")
-        print("    explicit act, never inferred from a deploy or import)")
-        cutover_at = None
     else:
-        mode, cutover_id, eff, actor, sysver = row[0]
-        print(f"    mode: {mode}   cutover: {cutover_id}   effective: {eff}")
-        print(f"    actor: {actor}   system: {sysver}")
-        cutover_at = eff
-    deps = _rows(cur, """
-        SELECT count(*),
-               count(*) FILTER (WHERE grandfathered),
-               count(*) FILTER (WHERE NOT grandfathered)
-        FROM experiment_deployments WHERE ended_at IS NULL
-    """)[0]
-    print(f"    active deployments: {deps[0]} (grandfathered {deps[1]}, native {deps[2]})")
-    if cutover_at is not None:
-        for table in ("paper_trades", "live_orders"):
-            rows = _rows(cur, f"""
-                SELECT strategy, count(*) FROM {table}
-                WHERE created_at >= %s AND experiment_deployment_arm_id IS NULL
-                      AND strategy IS NOT NULL
-                GROUP BY 1 ORDER BY 2 DESC LIMIT 15
-            """, (cutover_at,))
-            if rows:
-                print(f"    POST-CUTOVER {table} rows WITHOUT lineage (outside Experiment OS):")
-                _table(["tag", "rows"], rows)
-            else:
-                print(f"    post-cutover {table}: all rows carry lineage.")
-    rej = _rows(cur, """
-        SELECT count(*) FROM system_events
-        WHERE component = 'experiment_os_enforcement' AND level = 'error'
-              AND created_at >= now() - interval '7 days'
+        row = _rows(cur, """
+            SELECT mode, cutover_id, effective_at::timestamp(0), actor, system_version
+            FROM experiment_os_enforcement
+            ORDER BY effective_at DESC, id DESC LIMIT 1
+        """)
+        if not row:
+            print("    mode: OFF (no enforcement change ever recorded — the cutover is an")
+            print("    explicit act, never inferred from a deploy or import)")
+            cutover_at = None
+        else:
+            mode, cutover_id, eff, actor, sysver = row[0]
+            print(f"    mode: {mode}   cutover: {cutover_id}   effective: {eff}")
+            print(f"    actor: {actor}   system: {sysver}")
+            cutover_at = eff
+        deps = _rows(cur, """
+            SELECT count(*),
+                   count(*) FILTER (WHERE grandfathered),
+                   count(*) FILTER (WHERE NOT grandfathered)
+            FROM experiment_deployments WHERE ended_at IS NULL
+        """)[0]
+        print(f"    active deployments: {deps[0]} (grandfathered {deps[1]}, native {deps[2]})")
+        if cutover_at is not None:
+            for table in ("paper_trades", "live_orders"):
+                rows = _rows(cur, f"""
+                    SELECT strategy, count(*) FROM {table}
+                    WHERE created_at >= %s AND experiment_deployment_arm_id IS NULL
+                          AND strategy IS NOT NULL
+                    GROUP BY 1 ORDER BY 2 DESC LIMIT 15
+                """, (cutover_at,))
+                if rows:
+                    print(f"    POST-CUTOVER {table} rows WITHOUT lineage (outside Experiment OS):")
+                    _table(["tag", "rows"], rows)
+                else:
+                    print(f"    post-cutover {table}: all rows carry lineage.")
+        rej = _rows(cur, """
+            SELECT count(*) FROM system_events
+            WHERE component = 'experiment_os_enforcement' AND level = 'error'
+                  AND created_at >= now() - interval '7 days'
+        """)[0][0]
+        print(f"    enforcement rejections/errors logged (7d): {rej}")
+        degraded = _rows(cur, """
+            SELECT count(*) FROM system_events
+            WHERE component = 'experiment_os_enforcement'
+                  AND message LIKE 'enforcement DEGRADED%%'
+                  AND created_at >= now() - interval '24 hours'
+        """)[0][0]
+        if degraded:
+            print(f"    RESOLVER DEGRADED alarms (24h): {degraded} — known lineage "
+                  "continued from cache; unknown tags stayed fail-closed")
+        else:
+            print("    resolver health: no degraded alarms in 24h")
+
+    # --- 8) platform changes ------------------------------------------------------------
+    # The change-impact ledger (PR 5): pending revisions and whether they are safe
+    # to activate, dispositions still awaiting acceptance/application, and forced
+    # activations that left experiments unclassified.
+    print("\n=== 8) PLATFORM CHANGES ===")
+    has_impact_cols = _rows(cur, """
+        SELECT count(*) FROM information_schema.columns
+        WHERE table_name = 'platform_impact_actions' AND column_name = 'status'
     """)[0][0]
-    print(f"    enforcement rejections/errors logged (7d): {rej}")
+    if not has_impact_cols:
+        print("    impact-engine columns not migrated yet (pre-PR5 database).")
+        return
+    pend = _rows(cur, """
+        SELECT c.key, r.version, r.created_at::timestamp(0)
+        FROM platform_revisions r JOIN platform_components c ON c.id = r.component_id
+        WHERE r.status = 'pending' ORDER BY 1, 2
+    """)
+    if pend:
+        print("    PENDING revisions (registered, not yet activated):")
+        _table(["component", "version", "created_at"], pend)
+    else:
+        print("    no pending platform revisions.")
+    open_impacts = _rows(cur, """
+        SELECT c.key, r.version, e.key, a.impact_class, a.action, a.status,
+               a.blocks_activation
+        FROM platform_impact_actions a
+        JOIN platform_revisions r ON r.id = a.revision_id
+        JOIN platform_components c ON c.id = r.component_id
+        JOIN experiments e ON e.id = a.experiment_id
+        WHERE a.status IN ('proposed', 'accepted')
+        ORDER BY 1, 3
+    """)
+    if open_impacts:
+        print("    UNRESOLVED impact dispositions (evidence blocked until applied):")
+        _table(["component", "revision", "experiment", "class", "action", "status",
+                "blocks_act"], open_impacts)
+    else:
+        print("    no unresolved impact dispositions.")
+    forced = _rows(cur, """
+        SELECT e.key, i.detected_at::timestamp(0)
+        FROM experiment_integrity_events i JOIN experiments e ON e.id = i.experiment_id
+        WHERE i.kind = 'PLATFORM_ACTIVATION_FORCED' AND i.resolved_at IS NULL
+        ORDER BY 2 DESC LIMIT 15
+    """)
+    if forced:
+        print("    FORCED activations with UNCLASSIFIED experiments (gate-blocked):")
+        _table(["experiment", "forced_at"], forced)
+    else:
+        print("    no unresolved forced-activation overrides.")
 
 
 def main(argv=None) -> int:

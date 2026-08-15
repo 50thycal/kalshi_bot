@@ -57,6 +57,7 @@ from .models import (
     ExperimentStateTransition,
     ExperimentVersion,
     PlatformComponent,
+    PlatformImpactAction,
     PlatformRevision,
     PlatformSnapshot,
     PlatformSnapshotItem,
@@ -127,6 +128,12 @@ _SNAPSHOT_MUTABLE = {"label", "description"}
 # which is a lifecycle fact, not a semantic edit.
 _REVISION_IDENTITY = {"component_id", "version", "created_at"}
 _REVISION_LIFECYCLE = {"status", "activated_at", "retired_at"}
+# Impact actions: classification freezes at acceptance; application/lifecycle
+# fields stay writable until the disposition settles (applied/exempted = terminal).
+_IMPACT_APPLY_MUTABLE = {
+    "status", "applied_by", "applied_at",
+    "resulting_epoch_id", "resulting_version_id", "details_json",
+}
 
 
 def _changed_fields(obj) -> set[str]:
@@ -207,6 +214,22 @@ def _guard_dirty(obj) -> None:
                     "declaration is frozen — a changed judgment is a NEW revision "
                     f"(attempted: {sorted(illegal)})"
                 )
+    elif isinstance(obj, PlatformImpactAction):
+        prior_status = _pre_flush_value(obj, "status")
+        if prior_status in ("applied", "exempted"):
+            raise ImmutableRecord(
+                f"impact action {obj.id} is {prior_status} — a settled disposition "
+                f"is history; record a new decision instead (attempted: "
+                f"{sorted(changed)})"
+            )
+        if prior_status == "accepted":
+            illegal = changed - _IMPACT_APPLY_MUTABLE
+            if illegal:
+                raise ImmutableRecord(
+                    f"impact action {obj.id} is accepted; its classification is "
+                    "frozen — only application fields may change (attempted: "
+                    f"{sorted(illegal)})"
+                )
 
 
 def _guard_deleted(obj) -> None:
@@ -220,6 +243,11 @@ def _guard_deleted(obj) -> None:
         raise ImmutableRecord(f"frozen experiment version {obj.id} may not be deleted")
     if isinstance(obj, ExperimentStateTransition):
         raise ImmutableRecord("state transitions may not be deleted")
+    if isinstance(obj, PlatformImpactAction) and _pre_flush_value(obj, "status") != "proposed":
+        raise ImmutableRecord(
+            f"impact action {obj.id} is {_pre_flush_value(obj, 'status')} and may "
+            "not be deleted — only an unaccepted proposal can be withdrawn"
+        )
 
 
 @event.listens_for(SASession, "before_flush")
@@ -268,8 +296,12 @@ def register_platform_revision(
     activate: bool = False,
     activated_at: datetime | None = None,
     boundary_unknown: bool = False,
+    actor: str = "operator",
+    force: bool = False,
+    force_reason: str | None = None,
 ) -> PlatformRevision:
-    """Register an immutable revision of one component; optionally activate it."""
+    """Register an immutable revision of one component; optionally activate it
+    (activation is impact-gated — see activate_platform_revision)."""
     if boundary_unknown and activated_at is not None:
         raise ExperimentOsError(
             "boundary_unknown contradicts an explicit activated_at — pass one"
@@ -304,7 +336,8 @@ def register_platform_revision(
     session.flush()
     if activate:
         activate_platform_revision(
-            session, rev, activated_at=activated_at, boundary_unknown=boundary_unknown
+            session, rev, activated_at=activated_at, boundary_unknown=boundary_unknown,
+            actor=actor, force=force, force_reason=force_reason,
         )
     return rev
 
@@ -315,9 +348,21 @@ def activate_platform_revision(
     *,
     activated_at: datetime | None = None,
     boundary_unknown: bool = False,
+    actor: str = "operator",
+    force: bool = False,
+    force_reason: str | None = None,
 ) -> PlatformRevision:
     """Activate a revision at a (preferably measured) runtime boundary, retiring the
     previously-active revision of the same component.
+
+    Activation is GATED (spec §17): while any active experiment whose current epoch
+    pins the superseded revision has no accepted impact disposition — or any
+    blocks_activation disposition (I4) is not yet applied — activation refuses,
+    naming the stragglers. `force=True` with a `force_reason` overrides, durably:
+    the override is recorded as a system event plus one UNRESOLVED integrity event
+    per unaccounted experiment, so a forced activation can never be silent and the
+    skipped experiments stay gate-blocked until classified. Impact handling and
+    activation are one deliberate workflow — not activate-first, discover later.
 
     When the real activation boundary is NOT known, pass `boundary_unknown=True`:
     the revision goes active with `activated_at` (and the prior revision's
@@ -338,6 +383,30 @@ def activate_platform_revision(
         at = None
     else:
         at = activated_at or _now()
+
+    from . import platform_impact  # lazy: platform_impact imports this module
+
+    gate = platform_impact.activation_gate(session, revision)
+    if not gate["safe"]:
+        if not force:
+            raise ExperimentOsError(
+                "activation refused — affected active experiments without an "
+                f"accepted impact disposition: {gate['unaccounted'] or 'none'}; "
+                f"blocking dispositions not yet applied: "
+                f"{gate['blocking_unapplied'] or 'none'}. Classify every affected "
+                "experiment (propose_impact/accept_impact), apply the blocking "
+                "actions, or pass force=True with force_reason to override — the "
+                "override is durably recorded"
+            )
+        if not (force_reason or "").strip():
+            raise ExperimentOsError(
+                "a forced activation requires force_reason — the override must own "
+                "its rationale"
+            )
+        platform_impact.record_forced_activation(
+            session, revision, gate, actor=actor, reason=force_reason
+        )
+
     prior = session.scalars(
         select(PlatformRevision).where(
             PlatformRevision.component_id == revision.component_id,
@@ -351,6 +420,16 @@ def activate_platform_revision(
     revision.status = "active"
     revision.activated_at = at
     session.flush()
+    # The changed platform is a new world: mint (or resolve) the snapshot for the
+    # new active set so epochs/experiments can pin it. Best-effort — during
+    # baseline imports the registry is legitimately incomplete mid-sequence.
+    try:
+        resolve_active_platform_snapshot(
+            session,
+            description=f"active set after revision #{revision.id} activation",
+        )
+    except MissingPlatformSnapshot:
+        pass
     return revision
 
 
@@ -1488,10 +1567,91 @@ def _validate_promotion_result(
         )
     active = get_active_platform_snapshot(session)
     if active is None or active.id != epoch.platform_snapshot_id:
-        raise ExperimentOsError(
-            "the platform has changed since this epoch pinned its snapshot — "
-            "classify the impact / open a new epoch and re-evaluate before promoting"
+        # One licensed exception (spec §18 I0/I1): every differing component is
+        # covered by an APPLIED NO_ACTION/RECOMPUTE disposition for this
+        # experiment — the change was judged immaterial or exactly normalized on
+        # the same epoch. Even then the authorizing result must POSTDATE the
+        # licensed boundary: I1 requires re-evaluation under the normalization,
+        # never reuse of a pre-change PASS.
+        licensed_boundary = (
+            _licensed_snapshot_divergence(session, experiment, epoch, active)
+            if active is not None
+            else None
         )
+        if licensed_boundary is None:
+            raise ExperimentOsError(
+                "the platform has changed since this epoch pinned its snapshot — "
+                "classify the impact / open a new epoch and re-evaluate before "
+                "promoting"
+            )
+        computed = gate_result.computed_at
+        if computed is None or _naive_utc(computed) < _naive_utc(licensed_boundary):
+            raise ExperimentOsError(
+                "the result predates the licensed platform boundary "
+                f"({licensed_boundary}) — an I1 disposition requires a FRESH "
+                "evaluation under the named normalization; a pre-change PASS is "
+                "not reusable"
+            )
+    _validate_latest_result(session, gate, gate_result)
+
+
+def _naive_utc(dt: datetime) -> datetime:
+    """sqlite drops tzinfo — compare in naive-UTC space."""
+    return dt.astimezone(timezone.utc).replace(tzinfo=None) if dt.tzinfo else dt
+
+
+def _licensed_snapshot_divergence(session, experiment, epoch, active) -> datetime | None:
+    """When the epoch's pinned snapshot differs from the active one, is every
+    differing component covered by an APPLIED NO_ACTION/RECOMPUTE impact
+    disposition for this experiment (spec §18 I0/I1)? Returns the latest licensed
+    activation boundary when fully licensed, else None. A revision whose boundary
+    is unestablished can never license — there is no instant to re-evaluate after."""
+    pinned = {
+        item.component_id: item.revision_id
+        for item in session.scalars(
+            select(PlatformSnapshotItem).where(
+                PlatformSnapshotItem.snapshot_id == epoch.platform_snapshot_id
+            )
+        )
+    }
+    current = {
+        item.component_id: item.revision_id
+        for item in session.scalars(
+            select(PlatformSnapshotItem).where(
+                PlatformSnapshotItem.snapshot_id == active.id
+            )
+        )
+    }
+    differing_revision_ids = {
+        rev_id
+        for comp_id, rev_id in current.items()
+        if pinned.get(comp_id) != rev_id
+    }
+    if not differing_revision_ids or set(pinned) - set(current):
+        # nothing differs (shouldn't reach here) or a component vanished — refuse.
+        return None
+    licensed = set(
+        session.scalars(
+            select(PlatformImpactAction.revision_id).where(
+                PlatformImpactAction.experiment_id == experiment.id,
+                PlatformImpactAction.status == "applied",
+                PlatformImpactAction.action.in_(("NO_ACTION", "RECOMPUTE")),
+                PlatformImpactAction.revision_id.in_(differing_revision_ids),
+            )
+        )
+    )
+    if differing_revision_ids - licensed:
+        return None
+    boundaries = [
+        session.get(PlatformRevision, rev_id).activated_at
+        for rev_id in differing_revision_ids
+    ]
+    if any(b is None for b in boundaries):
+        return None
+    return max(boundaries)
+
+
+def _validate_latest_result(session, gate, gate_result) -> None:
     newest = session.scalar(
         select(ExperimentGateResult)
         .where(ExperimentGateResult.gate_id == gate.id)

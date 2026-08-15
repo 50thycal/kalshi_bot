@@ -413,9 +413,13 @@ def test_environment_change_is_a_new_epoch_same_version(xos_session, xos_platfor
     assert (e1.epoch_number, e1.platform_snapshot_id) == (1, xos_platform.id)
 
     # Taxonomy expands (I2 sample boundary): same question, new world → new epoch.
+    # (Forced here: this test predates the impact engine and exercises the raw
+    # epoch mechanics; the canonical classify-then-activate walk is proven in
+    # test_experiment_os_platform_impact.py.)
     svc.register_platform_revision(
         xos_session, "MARKET_TAXONOMY", version="v2", activate=True,
         reason="46 series classified",
+        force=True, force_reason="test: raw epoch mechanics without classification",
     )
     svc.close_epoch(xos_session, e1, ended_at=_dt(2026, 8, 13))
     e2 = svc.open_epoch(

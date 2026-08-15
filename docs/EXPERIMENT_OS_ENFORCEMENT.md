@@ -23,7 +23,7 @@ epoch not ended, experiment not RETIRED) from a per-cycle cached snapshot:
 | OFF      | stamp lineage        | allow, unstamped | allow, unstamped          |
 | WARN     | stamp                | allow + `system_events` warning (once per tag per boot) + counter | same |
 | NEW_ONLY | stamp                | **`LineageBlocked`** — no row written | **blocked** |
-| STRICT   | stamp, **unless** the deployment has an unresolved config-drift event → blocked | **blocked** | **blocked** |
+| STRICT   | stamp, **unless** the deployment has an unresolved config-drift event or the experiment an unresolved material platform-impact disposition → blocked | **blocked** | **blocked** |
 
 Notes that matter:
 
@@ -131,7 +131,7 @@ version, current epoch, active snapshot, latest result):
 `arm_live_canary` applies the same rule: under OFF a caller-supplied recorded
 result is accepted (historical replays); under any enforcement it re-evaluates.
 
-## 7. Config drift (v1 — detection, not the PR 5 impact engine)
+## 7. Config drift (v1 — detection; classification lands in the impact engine)
 
 Live deployments registered from the manifest carry a `config_json["material"]`
 dict of the facts that define the book (`live_strategies` membership, twin
@@ -147,21 +147,35 @@ on mismatch, records an unresolved **`EXPERIMENT_CONFIG_DRIFT`** integrity event
 - under WARN/NEW_ONLY the book keeps trading (continuity) but the drift is loud,
   and resolution requires the operator to *classify* it: harmless revision → new
   deployment record; changed question → new version; changed world → new epoch.
+- when the drift turns out to be a platform-level semantic change, promote it
+  into the change-impact workflow: `platform_impact.classify_drift()` resolves
+  the event against a registered `PlatformRevision`, and the revision's impact
+  records take over (see `docs/EXPERIMENT_OS_PLATFORM_IMPACT.md`).
 
 Silent drift — the registered experiment described one config while the runtime
 ran another — is what this kills.
 
-## 8. Failure behavior (outage ≠ shutdown)
+## 8. Failure behavior (outage ≠ shutdown, and never a permission window)
 
 - `refresh()` failures keep the previous snapshot (stale-but-safe), mark the
-  resolver **degraded**, and log — never raise into the trading loop.
-- Under **NEW_ONLY**, a degraded resolver behaves as WARN with a loud
-  `system_events` error ("enforcement DEGRADED…"): a metadata outage must not
-  become an uncontrolled shutdown of grandfathered live books.
-- Under **STRICT**, degradation does *not* relax anything: integrity outranks
-  continuity, by declaration.
-- Observability writes (`_log_once`, counters) can never break the entry path;
-  the drift check and boot hooks are fully guarded.
+  resolver **degraded**, log, and durably alarm (`system_events` error, once per
+  outage) — never raise into the trading loop.
+- **The invariant:** metadata degradation may preserve continuity for previously
+  KNOWN lineage; it may never create permission for previously UNKNOWN lineage.
+  Under NEW_ONLY/STRICT, known grandfathered and native tags continue stamped
+  from the cached snapshot, while unknown/ambiguous tags STAY fail-closed — an
+  outage is not a window in which new tags can accumulate exposure outside
+  Experiment OS. Block messages note the stale snapshot (a tag registered
+  during the outage is also blocked until refresh succeeds — fail-closed by
+  design).
+- Under **STRICT**, degradation additionally keeps the cached drift/impact
+  blocks: integrity outranks continuity, by declaration.
+- Residual honesty: if the very FIRST refresh of a process fails, there is no
+  cached snapshot or mode — the recorded-mode contract ("no readable record ⇒
+  OFF") applies, degraded and alarmed; in practice the write path shares the
+  same database, so a total outage cannot accumulate rows either.
+- Observability writes (`_log_once`, counters, the degraded alarm) can never
+  break the entry path; the drift check and boot hooks are fully guarded.
 
 ## 9. Production readiness — the mechanical pre-cutover checklist
 
@@ -180,14 +194,23 @@ what `record_enforcement_change` demands for NEW_ONLY/STRICT:
    epoch (grandfathered boundary asymmetry = recorded note; native mismatch =
    failure);
 7. `no_unresolved_integrity` — zero open integrity events;
-8. `lineage_columns_present` — the migration actually ran on this DB.
+8. `no_unresolved_platform_impact` — no impact dispositions awaiting
+   acceptance/application (see the platform-impact doc);
+9. `lineage_columns_present` — the migration actually ran on this DB, verified
+   **independently on BOTH runtime tables** (`paper_trades` AND `live_orders`;
+   the detail names any missing one — NEW_ONLY must not enforce blind on either
+   write path);
+10. `resolver_health` — no resolver-degraded alarms in the last 6 hours (do not
+    cut over during or immediately after a metadata outage).
 
 Surfaces: `python -m kalshi_bot.experiment_os.cli readiness` (exit 1 when not
 ready), `... cli enforcement` (mode, cutover, coverage, canary links), ops
 `{"type":"script","name":"experiment_os_status"}` §7 (mode + cutover +
 grandfathered/native counts + post-cutover unstamped rows by tag + 7-day
-rejections), and `enforcement_report()` — the mechanical answer to *"is anything
-trading or accumulating experimental evidence outside Experiment OS?"*
+rejections + 24h degraded-resolver alarms) and §8 (pending revisions +
+unresolved impact dispositions + forced activations), and
+`enforcement_report()` — the mechanical answer to *"is anything trading or
+accumulating experimental evidence outside Experiment OS?"*
 
 ## 10. What blocked turning NEW_ONLY on (and the go-live path)
 
@@ -213,5 +236,6 @@ Go-live, in order, once this PR is deployed:
    system. WARN-first (steps 1–3, then `mode="WARN"`) is a legitimate softer
    ramp if the first cutover attempt wants a dress rehearsal.
 
-STRICT stays out of scope until the PR 5 impact engine and a period of clean
-NEW_ONLY operation.
+The impact engine (PR 5) has landed — see
+`docs/EXPERIMENT_OS_PLATFORM_IMPACT.md`. STRICT still waits for a period of
+clean NEW_ONLY operation after the production cutover.

@@ -206,3 +206,12 @@ The compatibility note above is superseded in one respect: the repository write
 helpers now consult the enforcement module on every new paper entry / live
 order — with mode OFF (the shipped state; the production import prerequisite is
 still unmet) that means stamp-when-resolvable and never block.
+
+PR 5 shipped the Platform Change Impact Engine — see
+`docs/EXPERIMENT_OS_PLATFORM_IMPACT.md` for the canonical
+propose→classify→accept→activate→apply workflow, the I0–I4 → action semantics,
+gated (and durably forced) activation, measured-boundary discipline, the
+evaluator/enforcement integration for unresolved dispositions, and the
+`platform review` surface. With it, the core Experiment OS build is complete;
+what remains is operational: run the production import, drive readiness green,
+record the NEW_ONLY cutover, then build the session system (PR #220) on top.
