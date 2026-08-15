@@ -369,7 +369,37 @@ class Settings(BaseSettings):
         "Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,"
         "xmtype=event_stat+politics+announcement;"
         "Tmmsell6:lo=5,hi=10,maxyes=7,"
-        "mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture"
+        "mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;"
+        # --- LIVE-COHORT books, added 2026-08-15 (docs/LIVE_PAPER_TWIN.md "Arming") ----------
+        # `Lmmsell8` / `Lmmsell10` are byte-identical replicas of `mmsell8` / `mmsell10`. They
+        # exist for ONE reason: a live book must be armed on a tag with NO open paper positions.
+        #
+        # The pathology, measured 2026-08-15 within hours of arming `mmsell8`+`mmsell10` live.
+        # The live mirror only fires when the PAPER book opens; when paper already holds the
+        # ticker the scan takes the `skip_already_open` branch, and the retry that exists for
+        # exactly that case (`_maybe_retry_live`) returns early at `attempts == 0` — deliberately,
+        # since with no prior live order there is no price anchor. Arming a tag whose paper book
+        # has been running for days therefore hands live a book full of tickers it can NEVER
+        # trade, for the life of those positions:
+        #
+        #     mmsell10   87 open positions predating arming -> 0 live orders, ever
+        #     mmsell8     3 open positions predating arming -> 0 live orders, ever
+        #
+        # 94% of candidates opened AFTER arming did get a live order, so the entry path is
+        # healthy — the lockout is purely inherited state. Note the ASYMMETRY above: it silently
+        # throttled the control (87) far harder than the treatment (3), which is backwards for
+        # the comparison those two books were armed to make.
+        #
+        # A fresh tag has no inherited positions, so live gets a first attempt on every candidate
+        # and the retry's price anchor exists from then on — the steady state the retry was
+        # designed for. The parents keep running as PAPER (their long-run history is the
+        # registry's control series) and are simply no longer live-armed.
+        #
+        # Naming: `L` for live-cohort, following the `Wmmsell*`/`Tmmsell*` family-prefix
+        # convention, and deliberately NOT `mmsell10L` — LIVE_STRATEGIES matches by PREFIX, so a
+        # tag starting with `mmsell10` would be captured by an allowlist entry naming the parent.
+        "Lmmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;"
+        "Lmmsell10:lo=5,hi=10,maxyes=7"
     )
     # --- mmsell LIVE entry (maker NO-buy; inert until LIVE_STRATEGIES lists a mmsell tag) ---
     # The mmsell books rest a BUY-NO limit at the no-bid (== sell yes at the ask) and HOLD to
