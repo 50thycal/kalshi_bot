@@ -309,6 +309,110 @@ def strategy_tag_lineage(session, strategy_tag: str) -> list[dict]:
     ]
 
 
+def arm_strategy_tags(
+    session, epoch: ExperimentEpoch, arm_key: str | None, kind: str = "paper"
+) -> tuple[str, ...]:
+    """Concrete tags backing one arm (None = all arms) in one epoch, one kind."""
+    tags: list[str] = []
+    for dep in deployments_for(session, epoch):
+        if dep.kind != kind:
+            continue
+        for arm, tag in deployment_arms(session, dep):
+            if (arm_key is None or arm.arm_key == arm_key) and tag:
+                tags.append(tag)
+    return tuple(sorted(set(tags)))
+
+
+def experiment_scoreboard(session, experiment: Experiment) -> dict:
+    """Current evidence + gate standing for one experiment, from structured state.
+
+    Per-arm universal paper metrics over the CURRENT epoch's evidence window, plus
+    each gate's registered floors and its LATEST recorded result. Metrics are
+    computed on demand (the immutable copies live inside gate results); this read
+    never writes."""
+    from datetime import datetime, timezone  # local: keep read import-light
+
+    from .metrics import MetricScope, compute_metric
+
+    board: dict = {
+        "key": experiment.key,
+        "state": experiment.state,
+        "legacy_class": experiment.legacy_class,
+        "integrity": experiment.migration_integrity,
+        "arms": [],
+        "gates": [],
+    }
+    ver = latest_version(session, experiment)
+    if ver is None:
+        board["note"] = "no version (minimal legacy stub)"
+        return board
+    epoch = open_epoch_for(session, ver) or (
+        epochs_for(session, ver)[-1] if epochs_for(session, ver) else None
+    )
+    if epoch is None:
+        board["note"] = "no operating epoch"
+        return board
+    snap = session.get(PlatformSnapshot, epoch.platform_snapshot_id)
+    now = datetime.now(timezone.utc)
+    end = min(now, epoch.ended_at) if epoch.ended_at is not None else now
+    board["version"] = ver.version
+    board["epoch"] = epoch.epoch_number
+    board["window"] = [str(epoch.started_at), str(end)]
+    board["platform_snapshot"] = snap.fingerprint[:16]
+
+    for arm in arms_for(session, ver):
+        tags = arm_strategy_tags(session, epoch, arm.arm_key, "paper")
+        scope = MetricScope(
+            experiment_key=experiment.key,
+            version=ver.version,
+            epoch_number=epoch.epoch_number,
+            arm_key=arm.arm_key,
+            deployment_kind="paper",
+            strategy_tags=tags,
+            deployment_keys=(),
+            window_start=epoch.started_at,
+            window_end=end,
+            platform_snapshot_fingerprint=snap.fingerprint,
+        )
+        row = {"arm": arm.arm_key, "role": arm.role, "tags": list(tags)}
+        for key in ("settled_trades", "pnl_cents_per_trade", "win_rate_pct",
+                    "open_trades", "entries"):
+            mv = compute_metric(session, key, scope)
+            row[key] = mv.value
+        board["arms"].append(row)
+
+    for gate in gates_for(session, ver):
+        latest = session.scalar(
+            select(ExperimentGateResult)
+            .where(ExperimentGateResult.gate_id == gate.id)
+            .order_by(
+                ExperimentGateResult.computed_at.desc(), ExperimentGateResult.id.desc()
+            )
+            .limit(1)
+        )
+        board["gates"].append(
+            {
+                "gate_key": gate.gate_key,
+                "kind": gate.kind,
+                "from_state": gate.from_state,
+                "to_state": gate.to_state,
+                "evidence_started_at": str(gate.evidence_started_at)
+                if gate.evidence_started_at
+                else None,
+                "floors": gate.spec_json.get("sample"),
+                "latest_result": None
+                if latest is None
+                else {
+                    "verdict": latest.verdict,
+                    "computed_at": str(latest.computed_at),
+                    "computed_by": latest.computed_by,
+                    "explanation": latest.explanation,
+                },
+            }
+        )
+    return board
+
+
 def experiment_tree(session, experiment: Experiment) -> dict:
     """The whole experiment as one nested, JSON-serializable structure — the
     inspect_experiment read the CLI and later surfaces render."""

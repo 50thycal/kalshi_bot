@@ -5,10 +5,13 @@
     python -m kalshi_bot.experiment_os.cli transitions <experiment-key>
     python -m kalshi_bot.experiment_os.cli platform
     python -m kalshi_bot.experiment_os.cli tag <strategy-tag>
+    python -m kalshi_bot.experiment_os.cli scoreboard [key] [--evaluate]
 
 Connects with DATABASE_URL_RO when set (preferred), else DATABASE_URL. Every command
-is a pure read — this tool can never move an experiment. For the ops channel there is
-a self-contained equivalent: `{"type": "script", "name": "experiment_os_status"}`.
+is a pure read — this tool can never move an experiment; `scoreboard --evaluate`
+runs the gate evaluator in DRY-RUN mode (persist=False), so even a verdict shown
+here writes nothing. For the ops channel there is a self-contained equivalent:
+`{"type": "script", "name": "experiment_os_status"}`.
 """
 
 from __future__ import annotations
@@ -163,6 +166,76 @@ def cmd_tag(session: Session, args) -> int:
     return 0
 
 
+def cmd_scoreboard(session: Session, args) -> int:
+    if args.key:
+        exp = read.get_experiment(session, args.key)
+        if exp is None:
+            print(f"no experiment {args.key!r}", file=sys.stderr)
+            return 1
+        exps = [exp]
+    else:
+        exps = read.active_experiments(session)
+    if not exps:
+        print("no active experiments recorded")
+        return 0
+    for exp in exps:
+        board = read.experiment_scoreboard(session, exp)
+        head = f"{board['key']}  [{board['state']}]"
+        if board.get("version") is not None:
+            head += (
+                f"  v{board['version']} epoch {board['epoch']}  "
+                f"snapshot {board['platform_snapshot']}…  window {board['window'][0]} →"
+            )
+        print(head)
+        if board.get("note"):
+            print(f"  ({board['note']})")
+        if board["arms"]:
+            print(
+                _table(
+                    ["arm", "role", "tags", "settled", "¢/trade", "win%", "open", "entries"],
+                    [
+                        [
+                            a["arm"], a["role"], ",".join(a["tags"]) or "-",
+                            a["settled_trades"], a["pnl_cents_per_trade"],
+                            a["win_rate_pct"], a["open_trades"], a["entries"],
+                        ]
+                        for a in board["arms"]
+                    ],
+                )
+            )
+        for g in board["gates"]:
+            latest = g["latest_result"]
+            line = (
+                f"  gate {g['gate_key']} [{g['kind']}"
+                + (f" {g['from_state']}→{g['to_state']}" if g["from_state"] else "")
+                + "]"
+            )
+            line += (
+                f"  latest: {latest['verdict']} @ {latest['computed_at']}"
+                if latest
+                else "  latest: (never evaluated)"
+            )
+            print(line)
+            if latest and latest.get("explanation"):
+                print(f"    {latest['explanation'][:160]}")
+        if args.evaluate:
+            from .evaluator import evaluate_gate  # dry-run only — never persists here
+
+            ver = read.latest_version(session, exp)
+            for gate in read.gates_for(session, ver) if ver else []:
+                if gate.evidence_started_at is None:
+                    continue
+                try:
+                    outcome = evaluate_gate(session, gate, persist=False)
+                except Exception as exc:  # noqa: BLE001 — a dry-run must not abort the report
+                    print(f"  dry-run {gate.gate_key}: evaluation error: {exc}")
+                    continue
+                print(f"  dry-run {gate.gate_key}: {outcome.verdict} — "
+                      f"{outcome.explanation[:200]}")
+        print()
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="experiment_os", description="Inspect Experiment OS state (read-only)."
@@ -189,6 +262,17 @@ def main(argv: list[str] | None = None) -> int:
     p_tag = sub.add_parser("tag", help="strategy tag → experiment lineage")
     p_tag.add_argument("tag")
     p_tag.set_defaults(fn=cmd_tag)
+
+    p_sb = sub.add_parser(
+        "scoreboard", help="current metrics + gate standing per active experiment"
+    )
+    p_sb.add_argument("key", nargs="?", default=None)
+    p_sb.add_argument(
+        "--evaluate", action="store_true",
+        help="also run each started gate through the evaluator in dry-run "
+        "(nothing is persisted)",
+    )
+    p_sb.set_defaults(fn=cmd_scoreboard)
 
     args = parser.parse_args(argv)
     session = _connect()

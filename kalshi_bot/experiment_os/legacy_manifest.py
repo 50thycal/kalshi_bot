@@ -32,6 +32,22 @@ Baseline platform snapshot: BASELINE_REVISIONS describes the semantics actually
 deployed at migration time. Activation boundaries are measured where a measurement
 exists and explicitly unknown (`boundary_unknown`) where it does not — never the
 import or merge timestamp.
+
+Manifest 2026-08-15.2 — gate ADDRESSING normalization (PR 3). Verified via the ops
+channel before this change that the production import had NOT yet run (0 experiments
+recorded), so no registered gate existed anywhere outside test databases: this is a
+pre-first-registration translation fix, not a mutation of recorded state. The
+scientific content of every gate (metrics, thresholds, floors, evidence boundaries)
+is untouched; only the clause SYNTAX moves to the evaluator's explicit addressing
+contract: multi-arm absolute clauses now say `"arm": "*"` (each arm individually);
+cross-experiment controls the registry states in prose ("read against mmsell10 over
+the same window") become explicit `external_control` references instead of
+name-smuggled metric suffixes; mmsellA4's rejection rate uses the registry's own
+measurement method (entry-count differential vs the control) as the canonical paired
+metric `relative_entry_deficit_pct`; the Lmmsell floors name their LIVE basis
+(`live_settled_contracts`) because the registry row gates "on the LIVE read". The
+prose registry rows in docs/BOOK_REGISTRY.md remain the authoritative historical
+pre-registrations these translate.
 """
 
 from __future__ import annotations
@@ -40,7 +56,7 @@ from datetime import datetime, timezone
 
 UTC = timezone.utc
 
-MANIFEST_VERSION = "2026-08-15.1"
+MANIFEST_VERSION = "2026-08-15.2"
 
 # Measured platform boundaries (sources cited inline below).
 FEE_BOUNDARY = datetime(2026, 8, 11, 15, 0, 0, tzinfo=UTC)
@@ -464,11 +480,12 @@ LEGACY_EXPERIMENTS: list[dict] = [
                     to_state="PRODUCTION",
                     spec={
                         "sample": {
+                            # LIVE basis — the registry row gates "on the LIVE read".
                             "scheduled_settle": {
-                                "metric": "settled_contracts", "op": ">=", "value": 150
+                                "metric": "live_settled_contracts", "op": ">=", "value": 150
                             },
                             "price_ceiling": {
-                                "metric": "settled_contracts", "op": ">=", "value": 150
+                                "metric": "live_settled_contracts", "op": ">=", "value": 150
                             },
                         },
                         "pass_all": [
@@ -823,6 +840,7 @@ LEGACY_EXPERIMENTS: list[dict] = [
                         "pass_all": [
                             {
                                 "metric": "realizable_cents_per_trade",
+                                "arm": "*",  # each variant individually
                                 "op": ">", "value": 0,
                             },
                         ],
@@ -907,6 +925,7 @@ LEGACY_EXPERIMENTS: list[dict] = [
                         "pass_all": [
                             {
                                 "metric": "realizable_cents_per_trade",
+                                "arm": "*",  # each book individually
                                 "op": ">", "value": 0,
                             },
                         ],
@@ -994,22 +1013,42 @@ LEGACY_EXPERIMENTS: list[dict] = [
                         },
                         "pass_all": [
                             {
-                                "metric": "delta.mean_cents_per_trade_vs_mmsell10",
-                                "arm": "vol_entry_gate", "op": ">=", "value": 1.0,
+                                "metric": "delta.pnl_cents_per_trade",
+                                "arm": "vol_entry_gate",
+                                "external_control": {
+                                    "experiment_key": "mmsell-price-ceiling",
+                                    "arm_key": "mmsell10",
+                                },
+                                "op": ">=", "value": 1.0,
                             },
                             {
-                                "metric": "candidate_rejection_rate_pct",
-                                "arm": "vol_entry_gate", "op": ">=", "value": 15.0,
+                                "metric": "relative_entry_deficit_pct",
+                                "arm": "vol_entry_gate",
+                                "external_control": {
+                                    "experiment_key": "mmsell-price-ceiling",
+                                    "arm_key": "mmsell10",
+                                },
+                                "op": ">=", "value": 15.0,
                             },
                         ],
                         "fail_any": [
                             {
-                                "metric": "delta.mean_cents_per_trade_vs_mmsell10",
-                                "arm": "vol_entry_gate", "op": "<=", "value": 0,
+                                "metric": "delta.pnl_cents_per_trade",
+                                "arm": "vol_entry_gate",
+                                "external_control": {
+                                    "experiment_key": "mmsell-price-ceiling",
+                                    "arm_key": "mmsell10",
+                                },
+                                "op": "<=", "value": 0,
                             },
                             {
-                                "metric": "candidate_rejection_rate_pct",
-                                "arm": "vol_entry_gate", "op": "<", "value": 5.0,
+                                "metric": "relative_entry_deficit_pct",
+                                "arm": "vol_entry_gate",
+                                "external_control": {
+                                    "experiment_key": "mmsell-price-ceiling",
+                                    "arm_key": "mmsell10",
+                                },
+                                "op": "<", "value": 5.0,
                             },
                         ],
                     },
@@ -1017,9 +1056,13 @@ LEGACY_EXPERIMENTS: list[dict] = [
                     evidence_started_at=FEE_BOUNDARY,
                     notes=(
                         "rejection <5% = gate inert (book is a duplicate of "
-                        "mmsell10). Rejection measured by entry-count differential "
-                        "(skipped_vol_gate is counted but never persisted) — valid "
-                        "only while A4 and mmsell10 differ ONLY by the gate. "
+                        "mmsell10). Rejection is the registry's own measurement: "
+                        "the entry-count differential vs the control "
+                        "(relative_entry_deficit_pct; skipped_vol_gate is counted "
+                        "but never persisted) — valid only while A4 and mmsell10 "
+                        "differ ONLY by the gate. The mmsell10 control is an "
+                        "explicit external_control reference (manifest .2 "
+                        "addressing normalization; scientific content unchanged). "
                         "Evidence floor = the measured 2026-08-11 15:00 UTC fee "
                         "boundary, the floor the registry's own reading uses."
                     ),
@@ -1214,14 +1257,22 @@ LEGACY_EXPERIMENTS: list[dict] = [
                             "Tmmsell6": {"metric": "settled_trades", "op": ">=", "value": 100},
                         },
                         "pass_all": [
-                            {"metric": "pnl_cents_per_trade", "op": ">", "value": 0},
                             {
-                                "metric": "delta.pnl_cents_per_trade_vs_mmsell10",
+                                "metric": "pnl_cents_per_trade",
+                                "arm": "*", "op": ">", "value": 0,
+                            },
+                            {
+                                "metric": "delta.pnl_cents_per_trade",
+                                "arm": "*",
+                                "external_control": {
+                                    "experiment_key": "mmsell-price-ceiling",
+                                    "arm_key": "mmsell10",
+                                },
                                 "op": ">=", "value": 1.0,
                             },
                             {
                                 "metric": "realizable_cents_per_trade",
-                                "op": ">", "value": 0,
+                                "arm": "*", "op": ">", "value": 0,
                             },
                         ],
                     },

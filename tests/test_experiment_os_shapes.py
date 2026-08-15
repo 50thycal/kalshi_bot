@@ -123,9 +123,9 @@ def freeze_experiment(xos_session, xos_platform):
         from_state="PROBE", to_state="PAPER",
         spec={
             "pass_all": [
-                {"metric": "pooled_cents_per_contract", "op": ">", "value": 0},
-                {"metric": "delta_vs_favorite_control_cents", "op": ">=", "value": 3.0},
-                {"metric": "wrong_pins", "op": "==", "value": 0},
+                {"metric": "pooled_cents_per_contract", "scope": "experiment", "op": ">", "value": 0},
+                {"metric": "delta_vs_favorite_control_cents", "scope": "experiment", "op": ">=", "value": 3.0},
+                {"metric": "wrong_pins", "scope": "experiment", "op": "==", "value": 0},
             ],
         },
         registered_at=_dt(2026, 8, 11),
@@ -347,8 +347,10 @@ def mmsell_offset_experiment(xos_session, xos_platform):
         from_state="PAPER", to_state="LIVE_CANARY",
         spec={
             "pass_all": [
-                {"metric": "realizable_cents_per_trade", "op": ">", "value": 0},
-                {"metric": "fill_model_coverage_pct", "op": ">=", "value": 99.0},
+                {"metric": "realizable_cents_per_trade", "arm": "offset_0c",
+                 "op": ">", "value": 0},
+                {"metric": "fill_model_coverage_pct", "arm": "offset_0c",
+                 "op": ">=", "value": 99.0},
             ],
         },
         registered_at=_dt(2026, 7, 20),
