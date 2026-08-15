@@ -195,3 +195,14 @@ the now-implemented **strict gate-result binding on promotions** (the review
 follow-up from this PR): a promotion PASS must come from the promotion gate
 registered for that exact transition, on the current version, bound to the current
 epoch and its still-active platform snapshot, and be the gate's latest result.
+
+PR 4 shipped enforcement — see `docs/EXPERIMENT_OS_ENFORCEMENT.md` for the
+recorded cutover record, per-mode admission semantics (OFF/WARN/NEW_ONLY/STRICT),
+the runtime lineage stamp (`paper_trades.experiment_deployment_arm_id` /
+`live_orders.experiment_deployment_arm_id`), grandfather rules, the sanctioned
+`arm_live_canary` path, promotion hardening (trusted evaluator + synchronous
+re-evaluation), config-drift detection, and the production-readiness checklist.
+The compatibility note above is superseded in one respect: the repository write
+helpers now consult the enforcement module on every new paper entry / live
+order — with mode OFF (the shipped state; the production import prerequisite is
+still unmet) that means stamp-when-resolvable and never block.

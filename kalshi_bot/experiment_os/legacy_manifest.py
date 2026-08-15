@@ -56,7 +56,10 @@ from datetime import datetime, timezone
 
 UTC = timezone.utc
 
-MANIFEST_VERSION = "2026-08-15.2"
+# .3 (PR 4): live deployments carry a `material` config sub-dict — the canonical
+# facts the runtime drift check recomputes from Settings and compares (additive;
+# no scientific content changed; production still un-imported at authoring).
+MANIFEST_VERSION = "2026-08-15.3"
 
 # Measured platform boundaries (sources cited inline below).
 FEE_BOUNDARY = datetime(2026, 8, 11, 15, 0, 0, tzinfo=UTC)
@@ -378,7 +381,14 @@ LEGACY_EXPERIMENTS: list[dict] = [
                     stage="LIVE_CANARY",
                     kind="live",
                     tags={"theta4": "theta4"},
-                    config={"live_strategies_entry": "theta4", "stage": "Stage 1 pilot"},
+                    config={
+                        "live_strategies_entry": "theta4",
+                        "stage": "Stage 1 pilot",
+                        "material": {
+                            "live_strategies_contains": ["theta4"],
+                            "twin_pairs": {"theta4": "theta4_pt3"},
+                        },
+                    },
                     started_at=_day(2026, 7, 30),
                     notes="registry date is day-precision (LIVE since 2026-07-30)",
                 ),
@@ -525,6 +535,17 @@ LEGACY_EXPERIMENTS: list[dict] = [
                     config={
                         "live_strategies_entry": "theta4,Lmmsell8,Lmmsell10",
                         "clip": "$2 / 2 contracts",
+                        "material": {
+                            "live_strategies_contains": ["Lmmsell8", "Lmmsell10"],
+                            "twin_pairs": {
+                                "Lmmsell8": "Lmmsell8_pt3",
+                                "Lmmsell10": "Lmmsell10_pt3",
+                            },
+                            "book_params": {
+                                "Lmmsell8": "lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY",
+                                "Lmmsell10": "lo=5,hi=10,maxyes=7",
+                            },
+                        },
                     },
                     started_at=_day(2026, 8, 15),
                     twin_started_at_from="Lmmsell10_pt3",  # arming instant == twin start

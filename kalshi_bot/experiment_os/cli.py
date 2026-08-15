@@ -236,6 +236,26 @@ def cmd_scoreboard(session: Session, args) -> int:
     return 0
 
 
+def cmd_enforcement(session: Session, args) -> int:
+    from .enforcement import enforcement_report
+
+    print(json.dumps(enforcement_report(session), indent=2, default=str))
+    return 0
+
+
+def cmd_readiness(session: Session, args) -> int:
+    from .enforcement import production_readiness
+
+    report = production_readiness(session)
+    print(json.dumps(report, indent=2, default=str))
+    print(
+        "\nREADY for NEW_ONLY"
+        if report["ok"]
+        else "\nNOT READY — fix the failing checks before recording a cutover"
+    )
+    return 0 if report["ok"] else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="experiment_os", description="Inspect Experiment OS state (read-only)."
@@ -262,6 +282,16 @@ def main(argv: list[str] | None = None) -> int:
     p_tag = sub.add_parser("tag", help="strategy tag → experiment lineage")
     p_tag.add_argument("tag")
     p_tag.set_defaults(fn=cmd_tag)
+
+    p_enf = sub.add_parser(
+        "enforcement", help="current mode, cutover, lineage coverage, canary links"
+    )
+    p_enf.set_defaults(fn=cmd_enforcement)
+
+    p_rdy = sub.add_parser(
+        "readiness", help="the mechanical pre-cutover checklist (exit 1 when not ready)"
+    )
+    p_rdy.set_defaults(fn=cmd_readiness)
 
     p_sb = sub.add_parser(
         "scoreboard", help="current metrics + gate standing per active experiment"

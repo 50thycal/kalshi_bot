@@ -101,6 +101,35 @@ def run() -> int:
                 extra={"extra_fields": {"error": str(exc)}},
             )
 
+    # 2c) Experiment OS enforcement: load the recorded mode (OFF when never
+    # recorded), and when enforcement is on, check the live books' registered
+    # config for drift. Guarded like 2b — enforcement state must never stop the
+    # worker; per-mode blocking happens inside the write helpers, per tag.
+    try:
+        from .experiment_os import enforcement as xos_enforcement
+        from .experiment_os.lifecycle import EnforcementMode
+
+        with session_scope() as session:
+            xos_enforcement.refresh(session)
+            mode = xos_enforcement.current_mode(session)
+            log_event(
+                logger, logging.INFO, "experiment OS enforcement",
+                mode=mode.value,
+                system_version=xos_enforcement.ENFORCEMENT_SYSTEM_VERSION,
+            )
+            if mode is not EnforcementMode.OFF:
+                drift = xos_enforcement.runtime_config_check(session, settings)
+                if drift:
+                    logger.error(
+                        "experiment OS config drift detected at boot",
+                        extra={"extra_fields": {"drift": drift}},
+                    )
+    except Exception as exc:  # noqa: BLE001
+        logger.error(
+            "experiment OS enforcement boot check failed; continuing",
+            extra={"extra_fields": {"error": str(exc)}},
+        )
+
     # 3) Kalshi client.
     try:
         client = KalshiClient(settings)
@@ -376,6 +405,17 @@ def _interruptible_sleep(seconds: int) -> bool:
 
 def _run_cycle(settings: Settings, client: KalshiClient, scanner: MarketScanner) -> None:
     account_state: dict | None = None
+
+    # Refresh the Experiment OS enforcement snapshot (mode + tag→lineage map) so
+    # this cycle's writes stamp/admit against current state. Guarded: a failed
+    # refresh keeps the previous snapshot (stale-but-safe) and never stops trading.
+    try:
+        from .experiment_os import enforcement as xos_enforcement
+
+        with session_scope() as session:
+            xos_enforcement.refresh(session)
+    except Exception:  # noqa: BLE001 — enforcement refresh must never stop the cycle
+        logger.exception("experiment OS enforcement refresh failed")
 
     # Connectivity proof: exchange status + balance.
     status = client.get_exchange_status()  # AuthError propagates -> hard fail

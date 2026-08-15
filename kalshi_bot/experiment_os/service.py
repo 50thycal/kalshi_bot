@@ -29,9 +29,11 @@ from sqlalchemy import event, func, select
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.orm import Session as SASession
 
+from ..models import PaperTrade as PaperTradeRef
 from .lifecycle import (
     ArmRole,
     DeploymentKind,
+    EnforcementMode,
     EvidenceClass,
     GateVerdict,
     ImpactClass,
@@ -51,6 +53,7 @@ from .models import (
     ExperimentGateResult,
     ExperimentIntegrityEvent,
     ExperimentLegacyEvidence,
+    ExperimentOsEnforcement,
     ExperimentStateTransition,
     ExperimentVersion,
     PlatformComponent,
@@ -108,6 +111,7 @@ _APPEND_ONLY = (
     ExperimentGateResult,
     ExperimentLegacyEvidence,
     PlatformSnapshotItem,
+    ExperimentOsEnforcement,
 )
 
 # Mutable-field allowlists for records that are otherwise immutable.
@@ -921,12 +925,20 @@ def register_deployment(
     code_fingerprint: str | None = None,
     started_at: datetime | None = None,
     notes: str | None = None,
+    grandfathered: bool = False,
+    _sanctioned_canary: bool = False,
 ) -> ExperimentDeployment:
     """Register a concrete deployment of arms within an epoch.
 
     `arms` maps arm_key → concrete strategy tag (None when the deployment has no
     per-arm tag). A PAPER_TWIN must name the LIVE deployment it shadows, in the same
-    epoch — the twin relationship is structural, not a tag-suffix convention."""
+    epoch — the twin relationship is structural, not a tag-suffix convention.
+
+    LIVE deployments are additionally mode-guarded: once enforcement is past OFF, a
+    live canary must be armed through arm_live_canary() (which registers live + twin
+    atomically with the structural checks); under WARN a direct live registration is
+    allowed but leaves an integrity event, and under NEW_ONLY/STRICT it is refused.
+    `grandfathered` is reserved for the legacy importer."""
     stage_v = LifecycleState(stage).value
     if stage_v not in _DEPLOYABLE_STAGES:
         raise ExperimentOsError(f"{stage_v} is not a deployable stage")
@@ -939,6 +951,33 @@ def register_deployment(
     kind_v = DeploymentKind(kind).value
     if kind_v == DeploymentKind.LIVE.value and stage_v not in _LIVE_STAGES:
         raise ExperimentOsError("a live deployment runs at LIVE_CANARY or PRODUCTION")
+    if kind_v == DeploymentKind.LIVE.value and not _sanctioned_canary and not grandfathered:
+        from .enforcement import current_mode  # lazy: enforcement imports models only
+
+        mode = current_mode(session)
+        if mode in (EnforcementMode.NEW_ONLY, EnforcementMode.STRICT):
+            raise ExperimentOsError(
+                "a live deployment must be armed through arm_live_canary() under "
+                f"{mode.value} — direct registration cannot guarantee the twin, "
+                "fresh-tag, and boundary requirements"
+            )
+        if mode is EnforcementMode.WARN:
+            session.add(
+                ExperimentIntegrityEvent(
+                    experiment_id=owner.id,
+                    version_id=epoch_version.id,
+                    epoch_id=epoch.id,
+                    kind="LIVE_REGISTERED_OUTSIDE_CANARY_PATH",
+                    severity="warning",
+                    detected_at=_now(),
+                    description=(
+                        f"live deployment {deployment_key!r} registered directly "
+                        "under WARN — no twin/fresh-tag/boundary guarantees; use "
+                        "arm_live_canary()"
+                    ),
+                    created_at=_now(),
+                )
+            )
     if kind_v == DeploymentKind.PAPER_TWIN.value:
         if twin_of is None:
             raise ExperimentOsError("a paper twin must reference its live deployment")
@@ -978,6 +1017,8 @@ def register_deployment(
         twin_of_deployment_id=twin_of.id if twin_of is not None else None,
         config_json=config,
         code_fingerprint=code_fingerprint,
+        config_fingerprint=canonical_hash(config) if config is not None else None,
+        grandfathered=grandfathered,
         started_at=started_at or _now(),
         notes=notes,
         created_at=_now(),
@@ -1005,6 +1046,169 @@ def end_deployment(
     deployment.ended_at = ended_at or _now()
     session.flush()
     return deployment
+
+
+def arm_live_canary(
+    session,
+    experiment: Experiment,
+    *,
+    gate: ExperimentGate,
+    approved_by: str,
+    live_key: str,
+    twin_key: str,
+    live_tags: dict[str, str],
+    twin_tags: dict[str, str],
+    config: dict | None = None,
+    started_at: datetime | None = None,
+    actor: str = "operator",
+    reason: str | None = None,
+    gate_result: ExperimentGateResult | None = None,
+) -> tuple[ExperimentDeployment, ExperimentDeployment, ExperimentEpoch]:
+    """The one sanctioned path from PAPER to an armed live canary (spec §8.4).
+
+    Atomically: validates the promotion (operator approval + the gate's authorizing
+    PASS — re-evaluated synchronously when enforcement is on), transitions to
+    LIVE_CANARY, closes the paper epoch and opens a fresh I2 live epoch, and
+    registers the live deployment AND its paper twin at the SAME instant.
+
+    Structural rules enforced here, so the 2026-08-15 inherited-state failure
+    (mmsell10 armed live on a tag with 87 pre-existing paper positions, throttling
+    the control ~29x harder than the treatment) cannot recur:
+
+      * every live/twin tag must be FRESH — no paper_trades history before the
+        arming instant, and no reuse of any active deployment's tag;
+      * live and twin arm sets must each map the version's declared arms exactly;
+      * the version must carry a pre-registered risk envelope (risk_json);
+      * live and twin start at the identical effective boundary in the same epoch.
+    """
+    if experiment.state != LifecycleState.PAPER.value:
+        raise ExperimentOsError(
+            f"live canary arms from PAPER; experiment is {experiment.state}"
+        )
+    version = session.scalar(
+        select(ExperimentVersion)
+        .where(ExperimentVersion.experiment_id == experiment.id)
+        .order_by(ExperimentVersion.version.desc())
+        .limit(1)
+    )
+    if version is None or version.frozen_at is None:
+        raise ExperimentOsError("live canary requires a frozen current version")
+    if not version.risk_json:
+        raise ExperimentOsError(
+            "live canary requires a pre-registered risk envelope on the version "
+            "(risk_json) — the approved canary envelope is part of the contract"
+        )
+    declared = {
+        a.arm_key
+        for a in session.scalars(
+            select(ExperimentArm).where(ExperimentArm.version_id == version.id)
+        )
+    }
+    for label, mapping in (("live", live_tags), ("twin", twin_tags)):
+        if set(mapping) != declared:
+            raise ExperimentOsError(
+                f"{label} arm mapping {sorted(mapping)} must equal the declared arm "
+                f"set {sorted(declared)} — the deployment must match the "
+                "pre-registered contract"
+            )
+        if any(not t for t in mapping.values()):
+            raise ExperimentOsError(f"every {label} arm needs a concrete tag")
+    at = started_at or _now()
+
+    # Fresh identity: a tag with prior paper history hands live a book of tickers
+    # it can never trade (the live mirror fires from the paper-open branch).
+    all_tags = list(live_tags.values()) + list(twin_tags.values())
+    if len(set(all_tags)) != len(all_tags):
+        raise ExperimentOsError("live/twin tags must be distinct")
+    for tag in all_tags:
+        clash = session.scalar(
+            select(ExperimentDeploymentArm)
+            .join(
+                ExperimentDeployment,
+                ExperimentDeployment.id == ExperimentDeploymentArm.deployment_id,
+            )
+            .where(
+                ExperimentDeploymentArm.strategy_tag == tag,
+                ExperimentDeployment.ended_at.is_(None),
+            )
+        )
+        if clash is not None:
+            raise ExperimentOsError(
+                f"tag {tag!r} is already carried by an active deployment — tag "
+                "reuse would suppress live candidates"
+            )
+        prior = session.scalar(
+            select(func.count()).select_from(PaperTradeRef).where(
+                PaperTradeRef.strategy == tag, PaperTradeRef.created_at < at
+            )
+        )
+        if prior:
+            raise ExperimentOsError(
+                f"tag {tag!r} has {prior} paper_trades rows before the arming "
+                "instant — a live canary must start on FRESH tags with no "
+                "inherited paper state (the 2026-08-15 Lmmsell lesson)"
+            )
+
+    # The authorizing PASS: with enforcement on, only a fresh synchronous run of the
+    # canonical evaluator counts (transition_experiment enforces this); under OFF the
+    # caller may supply a recorded result (historical replays, fixtures).
+    from .enforcement import current_mode
+
+    if current_mode(session) is not EnforcementMode.OFF or gate_result is None:
+        from .evaluator import evaluate_gate  # lazy: evaluator imports service
+
+        outcome = evaluate_gate(session, gate)
+        if outcome.verdict != GateVerdict.PASS.value:
+            raise ExperimentOsError(
+                f"promotion gate {gate.gate_key!r} evaluated {outcome.verdict}, not "
+                f"PASS: {outcome.explanation[:300]}"
+            )
+        gate_result = session.get(ExperimentGateResult, outcome.result_id)
+
+    transition_experiment(
+        session,
+        experiment,
+        LifecycleState.LIVE_CANARY,
+        actor=actor,
+        approved_by=approved_by,
+        gate_result=gate_result,
+        reason=reason or f"live canary armed ({live_key})",
+        occurred_at=at,
+        version=version,
+    )
+
+    paper_epoch = session.scalar(
+        select(ExperimentEpoch).where(
+            ExperimentEpoch.version_id == version.id,
+            ExperimentEpoch.ended_at.is_(None),
+        )
+    )
+    if paper_epoch is not None:
+        close_epoch(session, paper_epoch, ended_at=at)
+    live_epoch = open_epoch(
+        session,
+        version,
+        reason=(
+            "live execution boundary: paper assumed fills; live must earn them — "
+            "fresh deployment identities, no pooled paper evidence"
+        ),
+        impact_class=ImpactClass.I2_SAMPLE_BOUNDARY,
+        started_at=at,
+    )
+    live_dep = register_deployment(
+        session, live_epoch,
+        deployment_key=live_key, stage=LifecycleState.LIVE_CANARY, kind="live",
+        arms=live_tags, config=config, started_at=at, _sanctioned_canary=True,
+    )
+    twin_dep = register_deployment(
+        session, live_epoch,
+        deployment_key=twin_key, stage=LifecycleState.LIVE_CANARY, kind="paper_twin",
+        arms=twin_tags, twin_of=live_dep,
+        config={"parameterized_to": "live knobs (twin harness)"},
+        started_at=at, _sanctioned_canary=True,
+    )
+    session.flush()
+    return live_dep, twin_dep, live_epoch
 
 
 # ---------------------------------------------------------------------------
@@ -1213,6 +1417,25 @@ def _validate_promotion_result(
             f"gate result verdict is {gate_result.verdict}, not PASS — a gate "
             "verdict cannot be argued past"
         )
+    from .enforcement import (
+        ALLOWED_METRIC_REVISIONS,
+        TRUSTED_EVALUATORS,
+        current_mode,
+    )
+
+    if current_mode(session) is not EnforcementMode.OFF:
+        if gate_result.computed_by not in TRUSTED_EVALUATORS:
+            raise ExperimentOsError(
+                f"result was computed_by={gate_result.computed_by!r} — only the "
+                f"canonical evaluator ({sorted(TRUSTED_EVALUATORS)}) can authorize a "
+                "real-money promotion under enforcement"
+            )
+        if gate_result.metric_revision not in ALLOWED_METRIC_REVISIONS:
+            raise ExperimentOsError(
+                f"result was computed under metric revision "
+                f"{gate_result.metric_revision!r}, not an allowed current revision "
+                f"({sorted(ALLOWED_METRIC_REVISIONS)}) — re-evaluate"
+            )
     gate = session.get(ExperimentGate, gate_result.gate_id)
     if (
         gate.kind != "promotion"
@@ -1321,11 +1544,39 @@ def transition_experiment(
                 "pre-registration locked)"
             )
     if target.value in _NEEDS_PASS_RESULT and current is not LifecycleState.PAUSED:
+        # Context-only reconstructions can never certify real money, in any mode:
+        # a C/D-integrity import is preserved history, not promotable evidence.
+        if experiment.migration_integrity in ("C", "D"):
+            raise ExperimentOsError(
+                f"experiment {experiment.key} was imported at integrity "
+                f"{experiment.migration_integrity} (context-only) — its evidence "
+                "cannot certify a real-money promotion; re-migrate or rebuild it "
+                "as a native experiment"
+            )
         if gate_result is None:
             raise ExperimentOsError(
                 f"{current.value} → {target.value} requires the PASS gate result that "
                 "justified it (record_gate_result first)"
             )
+        from .enforcement import current_mode
+
+        if current_mode(session) is not EnforcementMode.OFF:
+            # Enforcement on: the authorizing result must be a FRESH synchronous run
+            # of the canonical evaluator — a recorded PASS (however recent) only
+            # names the gate; authority comes from re-evaluating it now. A manually
+            # inserted PASS can never become a real-money capability token.
+            from .evaluator import evaluate_gate  # lazy: evaluator imports service
+
+            gate = session.get(ExperimentGate, gate_result.gate_id)
+            outcome = evaluate_gate(session, gate)
+            fresh = session.get(ExperimentGateResult, outcome.result_id)
+            if fresh.verdict != GateVerdict.PASS.value:
+                raise ExperimentOsError(
+                    f"synchronous re-evaluation of gate {gate.gate_key!r} returned "
+                    f"{fresh.verdict}, not PASS — the supplied result no longer "
+                    "represents current evidence"
+                )
+            gate_result = fresh
         _validate_promotion_result(session, experiment, current, target, gate_result)
 
     at = occurred_at or _now()

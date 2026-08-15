@@ -256,6 +256,57 @@ def report(cur, n_transitions: int) -> None:
         print("\n    latest gate verdicts:")
         _table(["experiment", "gate", "verdict", "computed_at", "by"], rows)
 
+    # --- 7) enforcement ---------------------------------------------------------------
+    # The Control Tower question: is anything trading or accumulating experimental
+    # evidence OUTSIDE Experiment OS? Current recorded mode + cutover, grandfathered
+    # vs native deployments, and — after a cutover — every post-cutover row that
+    # carries no lineage, by tag.
+    print("\n=== 7) ENFORCEMENT ===")
+    has_enf = _rows(cur, "SELECT to_regclass('public.experiment_os_enforcement') IS NOT NULL")[0][0]
+    if not has_enf:
+        print("    enforcement table not migrated yet (pre-PR4 database).")
+        return
+    row = _rows(cur, """
+        SELECT mode, cutover_id, effective_at::timestamp(0), actor, system_version
+        FROM experiment_os_enforcement
+        ORDER BY effective_at DESC, id DESC LIMIT 1
+    """)
+    if not row:
+        print("    mode: OFF (no enforcement change ever recorded — the cutover is an")
+        print("    explicit act, never inferred from a deploy or import)")
+        cutover_at = None
+    else:
+        mode, cutover_id, eff, actor, sysver = row[0]
+        print(f"    mode: {mode}   cutover: {cutover_id}   effective: {eff}")
+        print(f"    actor: {actor}   system: {sysver}")
+        cutover_at = eff
+    deps = _rows(cur, """
+        SELECT count(*),
+               count(*) FILTER (WHERE grandfathered),
+               count(*) FILTER (WHERE NOT grandfathered)
+        FROM experiment_deployments WHERE ended_at IS NULL
+    """)[0]
+    print(f"    active deployments: {deps[0]} (grandfathered {deps[1]}, native {deps[2]})")
+    if cutover_at is not None:
+        for table in ("paper_trades", "live_orders"):
+            rows = _rows(cur, f"""
+                SELECT strategy, count(*) FROM {table}
+                WHERE created_at >= %s AND experiment_deployment_arm_id IS NULL
+                      AND strategy IS NOT NULL
+                GROUP BY 1 ORDER BY 2 DESC LIMIT 15
+            """, (cutover_at,))
+            if rows:
+                print(f"    POST-CUTOVER {table} rows WITHOUT lineage (outside Experiment OS):")
+                _table(["tag", "rows"], rows)
+            else:
+                print(f"    post-cutover {table}: all rows carry lineage.")
+    rej = _rows(cur, """
+        SELECT count(*) FROM system_events
+        WHERE component = 'experiment_os_enforcement' AND level = 'error'
+              AND created_at >= now() - interval '7 days'
+    """)[0][0]
+    print(f"    enforcement rejections/errors logged (7d): {rej}")
+
 
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
