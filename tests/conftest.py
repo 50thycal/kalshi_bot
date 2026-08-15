@@ -62,6 +62,40 @@ def evo_settings():
     return EvoSettings(_env_file=None, fill_latency_ms=0)
 
 
+# --- experiment OS (kalshi_bot/experiment_os) fixtures ---
+
+
+@pytest.fixture
+def xos_session():
+    """In-memory sqlite session over the full schema including the experiment OS
+    tables, with the append-only/frozen-record flush guard installed."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    import kalshi_bot.experiment_os.models  # noqa: F401 — register tables on Base
+    import kalshi_bot.experiment_os.service  # noqa: F401 — install the flush guard
+    from kalshi_bot.models import Base
+
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    session = sessionmaker(bind=engine, expire_on_commit=False)()
+    yield session
+    session.close()
+
+
+@pytest.fixture
+def xos_platform(xos_session):
+    """Standard platform components each with one active v1 revision, and the
+    resolved complete snapshot. Returns the snapshot."""
+    from kalshi_bot.experiment_os import service as svc
+    from kalshi_bot.experiment_os.models import STANDARD_PLATFORM_COMPONENTS
+
+    svc.ensure_standard_components(xos_session)
+    for key in STANDARD_PLATFORM_COMPONENTS:
+        svc.register_platform_revision(xos_session, key, version="v1", activate=True)
+    return svc.resolve_active_platform_snapshot(xos_session, label="test-baseline")
+
+
 @pytest.fixture
 def evo_agent(evo_session, evo_settings):
     """One founder agent joined to the current cohort, with default genomes,

@@ -123,6 +123,7 @@ ALLOWED_SCRIPTS = (
     "evo_selftest",
     "evo_explore_probe",
     "evo_backtest_probe",
+    "experiment_os_status",
 )
 
 
