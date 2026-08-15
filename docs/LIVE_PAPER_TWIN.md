@@ -145,6 +145,45 @@ The live entry price/size arithmetic lives in **`kalshi_bot/live/sizing.py`** an
 both the executor and the twin. Keep it that way — the moment the two re-derive it independently,
 the parity report starts measuring our own bookkeeping instead of the market.
 
+## 5b. Arming — always arm a FRESH tag, never a mature paper book
+
+**Rule: the tag you put in `LIVE_STRATEGIES` must have no open paper positions at the moment you
+arm it.** Arm a replica (`Lmmsell8`, `Lmmsell10`) and leave the long-running parent as paper.
+
+Why, mechanically. The live mirror fires only from the branch where the **paper** book opens a
+position. When paper already holds the ticker the scan takes `skip_already_open` instead, and the
+retry built for exactly that case (`MmSellTracker._maybe_retry_live`) returns early at
+`attempts == 0` — deliberately, because with no prior live order there is no price anchor to
+apply the drift guard against. Net effect: **a ticker whose paper position predates arming never
+gets a live order at all, for the entire life of that position.**
+
+Measured 2026-08-15, hours after arming `mmsell8` + `mmsell10`:
+
+| book | open positions predating arming, zero live orders | opened since arming, with a live order |
+|---|---:|---:|
+| `mmsell10` | **87** | 16 of 17 (94%) |
+| `mmsell8` | **3** | 2 of 2 |
+
+The entry path was healthy the whole time — 94% of post-arming candidates got a live order. The
+suppression was entirely inherited state. And note the direction: `mmsell10` was armed as the
+**control** for `mmsell8`, so the artifact throttled the control ~29x harder than the treatment,
+which is exactly backwards for the comparison the pair existed to make.
+
+Two traps worth stating separately, because each would have silently defeated the fix:
+
+* **The replica tag must contain the substring `mmsell`** — `mmsell_variant_list` drops any tag
+  without it, so a name like `mm10live` parses to nothing and the allowlist ends up naming a book
+  that does not exist.
+* **`LIVE_STRATEGIES` matches by PREFIX** (`LiveExecutor._strategy_allowed` uses `startswith`), so
+  a replica named `mmsell10L` would be armed by an entry naming only `mmsell10` — and, because the
+  stand-down drain matches EXACTLY (`==`), it would then have its resting orders cancelled every
+  cycle as `book_stood_down`. Hence `Lmmsell10`, not `mmsell10L`.
+  `tests/test_mmsell_live_cohort.py` asserts no configured tag prefix-shadows another.
+
+Once a replica has been running, this problem does not recur: live gets a first attempt on each
+candidate, the price anchor exists, and `_maybe_retry_live` operates in the steady state it was
+designed for. The rule only bites at the arming transition.
+
 ## 6. Config
 
 | env var | default | meaning |
