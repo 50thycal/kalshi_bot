@@ -146,11 +146,18 @@ class PlatformSnapshotItem(Base):
 
 
 class PlatformImpactAction(Base):
-    """Per-experiment classification of a platform revision's impact (spec §17–18).
+    """Per-experiment disposition of one platform revision (spec §17–18) — the
+    canonical impact record of the change-impact engine.
 
-    Schema-only in the foundation release — the automatic affected-experiment engine is
-    the platform-impact PR. Recording the table now means the systemic-change protocol
-    has somewhere durable to write from its first manual use."""
+    One row answers, durably: which revision, superseding what, hit which
+    experiment (at which version/epoch/snapshot), how materially (I0–I4), what
+    must happen (ImpactAction), decided and accepted by whom, whether it has been
+    APPLIED, what the application produced (new epoch/version ids), and — for I1 —
+    the NAMED normalizer that licenses pooling. Status walks
+    proposed → accepted → applied (or exempted, with rationale). Classification
+    fields freeze at acceptance (flush-guard); only application/lifecycle fields
+    may change after. `blocks_activation` marks dispositions (I4 by default) that
+    must be APPLIED — not merely accepted — before the revision may activate."""
 
     __tablename__ = "platform_impact_actions"
     __table_args__ = (
@@ -161,15 +168,49 @@ class PlatformImpactAction(Base):
     revision_id: Mapped[int] = mapped_column(
         BigIntId, ForeignKey("platform_revisions.id"), nullable=False
     )
+    # Provenance of "before": the revision this one supersedes for the component,
+    # and the snapshot the experiment's current epoch pinned at decision time.
+    superseded_revision_id: Mapped[int | None] = mapped_column(
+        BigIntId, ForeignKey("platform_revisions.id")
+    )
+    prior_snapshot_id: Mapped[int | None] = mapped_column(
+        BigIntId, ForeignKey("platform_snapshots.id")
+    )
     experiment_id: Mapped[int] = mapped_column(
         BigIntId, ForeignKey("experiments.id"), nullable=False
+    )
+    version_id: Mapped[int | None] = mapped_column(
+        BigIntId, ForeignKey("experiment_versions.id")
     )
     epoch_id: Mapped[int | None] = mapped_column(BigIntId, ForeignKey("experiment_epochs.id"))
     impact_class: Mapped[str] = mapped_column(String(4), nullable=False)  # I0..I4
     action: Mapped[str] = mapped_column(String(28), nullable=False)  # ImpactAction
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="proposed", server_default="proposed"
+    )  # proposed | accepted | applied | exempted
     rationale: Mapped[str | None] = mapped_column(Text)
+    # I1 only: the registered transformation that makes history exactly comparable
+    # (e.g. "metric:pnl_cents_per_trade" or "metrics_engine:<revision>"). Presence
+    # is VALIDATED against the metric registry — never a magic boolean.
+    normalization_ref: Mapped[str | None] = mapped_column(String(200))
     decided_by: Mapped[str | None] = mapped_column(String(64))
     decided_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    accepted_by: Mapped[str | None] = mapped_column(String(64))
+    accepted_at: Mapped[datetime | None] = mapped_column(TS)
+    applied_by: Mapped[str | None] = mapped_column(String(64))
+    applied_at: Mapped[datetime | None] = mapped_column(TS)
+    # What applying the action produced — auditable forward lineage.
+    resulting_epoch_id: Mapped[int | None] = mapped_column(
+        BigIntId, ForeignKey("experiment_epochs.id")
+    )
+    resulting_version_id: Mapped[int | None] = mapped_column(
+        BigIntId, ForeignKey("experiment_versions.id")
+    )
+    # Safety blocker: activation refuses until this row reaches "applied".
+    blocks_activation: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="0"
+    )
+    details_json: Mapped[dict | None] = mapped_column(JSONType)
     created_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
 
 

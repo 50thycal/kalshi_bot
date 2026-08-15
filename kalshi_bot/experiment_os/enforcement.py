@@ -28,12 +28,22 @@ deployment-arm links (open deployment, open epoch, non-retired experiment):
              but allowed.
   NEW_ONLY — stamp; a tag that resolves (native or grandfathered) is allowed; an
              UNKNOWN or AMBIGUOUS tag is BLOCKED (LineageBlocked) — no new
-             experimental exposure without lineage. If the resolver itself cannot
-             load (metadata outage), NEW_ONLY degrades to WARN behavior with a
-             loud alarm so a metadata failure cannot shut down grandfathered
-             books; the degradation is itself recorded.
-  STRICT   — NEW_ONLY without the degradation escape (integrity outranks
-             continuity) and with config-drifted deployments' tags also blocked.
+             experimental exposure without lineage.
+  STRICT   — NEW_ONLY plus config-drifted deployments' tags are also blocked.
+
+## Resolver outage (degraded state)
+
+A refresh failure keeps the LAST GOOD snapshot and marks the state degraded:
+already-known lineage keeps resolving from cache, so grandfathered and native
+books are never shut down by a metadata outage — but unknown/ambiguous tags STAY
+fail-closed under NEW_ONLY/STRICT. The invariant: degradation may preserve
+continuity for previously known lineage; it may never create permission for
+previously unknown lineage. Entering the degraded state records a loud
+system_events error (surfaced by enforcement_report, readiness and the ops
+status script). Residual honesty: if the very first refresh of a process fails,
+there is no cached snapshot OR mode — the recorded-mode contract ("no readable
+record ⇒ OFF") applies, degraded + alarmed; in practice the write path shares
+the same database, so a total outage cannot accumulate rows either.
 
 Blocking is per-tag: a refused NEW tag can only interrupt its own book's entry
 path (cycle code isolates books), never a registered sibling's.
@@ -43,7 +53,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, select
 
@@ -58,6 +68,7 @@ from .models import (
     ExperimentIntegrityEvent,
     ExperimentOsEnforcement,
     ExperimentVersion,
+    PlatformImpactAction,
 )
 
 logger = logging.getLogger(__name__)
@@ -191,8 +202,9 @@ def record_enforcement_change(
 class _ResolverState:
     mode: EnforcementMode
     effective_at: datetime | None
-    # tag → list of (arm_link_id, deployment_id, grandfathered, drifted)
-    tag_map: dict[str, list[tuple[int, int, bool, bool]]]
+    # tag → list of (arm_link_id, deployment_id, grandfathered, drifted,
+    #                impact_blocked)
+    tag_map: dict[str, list[tuple[int, int, bool, bool, bool]]]
     loaded_at: datetime
     degraded: bool = False
     # per-boot dedup so a blocked tag logs once, not every cycle
@@ -216,6 +228,26 @@ def _drifted_deployment_ids(session) -> set[int]:
     return set(rows)
 
 
+def _impact_blocked_experiment_ids(session) -> set[int]:
+    """Experiments with an unresolved MATERIAL platform-impact disposition:
+    proposed (classification open), or accepted with an action that changes the
+    world/numbers but has not been applied. Mirrors
+    platform_impact._BLOCKING_WHEN_ACCEPTED — duplicated as a plain query because
+    this module deliberately imports only models/lifecycle."""
+    rows = session.execute(
+        select(
+            PlatformImpactAction.experiment_id,
+            PlatformImpactAction.status,
+            PlatformImpactAction.action,
+        ).where(PlatformImpactAction.status.in_(("proposed", "accepted")))
+    ).all()
+    return {
+        exp_id
+        for exp_id, status, action in rows
+        if status == "proposed" or action != "NO_ACTION"
+    }
+
+
 def refresh(session) -> None:
     """Reload the enforcement mode + active tag map. Called once per cycle by the
     worker; failures keep the previous snapshot (stale-but-safe) and mark the
@@ -231,6 +263,7 @@ def refresh(session) -> None:
                 ExperimentDeploymentArm.id,
                 ExperimentDeployment.id,
                 ExperimentDeployment.grandfathered,
+                Experiment.id,
             )
             .join(
                 ExperimentDeployment,
@@ -247,10 +280,12 @@ def refresh(session) -> None:
             )
         ).all()
         drifted = _drifted_deployment_ids(session)
-        tag_map: dict[str, list[tuple[int, int, bool, bool]]] = {}
-        for tag, arm_link_id, dep_id, grand in rows:
+        impact_blocked = _impact_blocked_experiment_ids(session)
+        tag_map: dict[str, list[tuple[int, int, bool, bool, bool]]] = {}
+        for tag, arm_link_id, dep_id, grand, exp_id in rows:
             tag_map.setdefault(tag, []).append(
-                (arm_link_id, dep_id, bool(grand), dep_id in drifted)
+                (arm_link_id, dep_id, bool(grand), dep_id in drifted,
+                 exp_id in impact_blocked)
             )
         prev_logged = _STATE.logged if _STATE is not None else set()
         _STATE = _ResolverState(
@@ -260,8 +295,10 @@ def refresh(session) -> None:
     except Exception as exc:  # noqa: BLE001 — an outage must not kill the loop
         session.rollback()
         if _STATE is not None:
+            entering = not _STATE.degraded
             _STATE.degraded = True
         else:
+            entering = True
             _STATE = _ResolverState(
                 mode=EnforcementMode.OFF, effective_at=None, tag_map={},
                 loaded_at=_now(), degraded=True,
@@ -270,6 +307,26 @@ def refresh(session) -> None:
             "experiment OS enforcement refresh failed; keeping previous snapshot",
             extra={"extra_fields": {"error": str(exc)}},
         )
+        if entering:  # loud, durable, once per outage (reset by a good refresh)
+            try:
+                session.add(
+                    SystemEvent(
+                        created_at=_now(), level="error",
+                        component="experiment_os_enforcement",
+                        message=(
+                            "enforcement DEGRADED: resolver refresh failed — admission "
+                            "continues on the LAST GOOD snapshot (known lineage keeps "
+                            "trading; unknown tags stay fail-closed under "
+                            f"NEW_ONLY/STRICT); error: {exc}"
+                        ),
+                        raw_json={"error": str(exc),
+                                  "cached_tags": len(_STATE.tag_map),
+                                  "cached_mode": _STATE.mode.value},
+                    )
+                )
+                session.flush()
+            except Exception:  # noqa: BLE001 — the alarm must not break the loop either
+                session.rollback()
 
 
 def _log_once(session, tag: str, level: str, message: str) -> None:
@@ -302,18 +359,13 @@ def stamp_or_block(session, tag: str | None, *, channel: str) -> int | None:
 
     candidates = state.tag_map.get(tag, [])
     mode = state.mode
-    # A metadata outage under NEW_ONLY degrades to WARN so grandfathered books
-    # keep trading; STRICT deliberately does not degrade.
-    if state.degraded and mode is EnforcementMode.NEW_ONLY:
-        _log_once(
-            session, f"__degraded__{tag}", "error",
-            "enforcement DEGRADED: resolver unavailable — NEW_ONLY behaving as WARN "
-            f"for continuity (first affected tag: {tag})",
-        )
-        mode = EnforcementMode.WARN
+    # A resolver outage does NOT relax admission: known lineage continues from the
+    # cached snapshot below; unknown/ambiguous tags keep the mode's semantics.
+    # Degradation preserves continuity for known lineage — never permission for
+    # unknown lineage.
 
     if len(candidates) == 1:
-        arm_link_id, dep_id, grandfathered, drifted = candidates[0]
+        arm_link_id, dep_id, grandfathered, drifted, impact_blocked = candidates[0]
         if drifted and mode is EnforcementMode.STRICT:
             state.blocked_count += 1
             _log_once(
@@ -325,6 +377,18 @@ def stamp_or_block(session, tag: str | None, *, channel: str) -> int | None:
                 tag, "deployment config has drifted from its registered fingerprint "
                 "(unresolved EXPERIMENT_CONFIG_DRIFT) and mode is STRICT"
             )
+        if impact_blocked and mode is EnforcementMode.STRICT:
+            state.blocked_count += 1
+            _log_once(
+                session, tag, "error",
+                f"BLOCKED ({channel}): tag {tag!r} belongs to an experiment with an "
+                "unresolved platform-impact disposition and mode is STRICT — apply "
+                "(or exempt) the impact action before it may accumulate evidence",
+            )
+            raise LineageBlocked(
+                tag, "the experiment has an unresolved material platform-impact "
+                "disposition (proposed, or accepted-but-unapplied) and mode is STRICT"
+            )
         return arm_link_id
 
     if mode is EnforcementMode.OFF:
@@ -334,6 +398,12 @@ def stamp_or_block(session, tag: str | None, *, channel: str) -> int | None:
         if candidates
         else "is not registered to any active Experiment OS deployment arm"
     )
+    if state.degraded:
+        problem += (
+            " [resolver DEGRADED: deciding from the last good snapshot of "
+            f"{state.loaded_at:%Y-%m-%dT%H:%M:%SZ}; a tag registered during the "
+            "outage stays blocked until refresh succeeds]"
+        )
     if mode is EnforcementMode.WARN:
         state.warned_count += 1
         _log_once(
@@ -597,18 +667,60 @@ def production_readiness(session, settings=None) -> dict:
     check("no_unresolved_integrity", open_integrity == 0,
           f"{open_integrity} unresolved integrity events")
 
+    open_impact = session.scalar(
+        select(func.count()).select_from(PlatformImpactAction).where(
+            PlatformImpactAction.status.in_(("proposed", "accepted"))
+        )
+    ) or 0
+    check(
+        "no_unresolved_platform_impact",
+        open_impact == 0,
+        f"{open_impact} platform-impact dispositions awaiting acceptance/application",
+    )
+
+    # Both runtime write paths must be able to persist lineage — NEW_ONLY on a DB
+    # where live_orders (or paper_trades) cannot stamp would enforce blind.
     try:
         from sqlalchemy import inspect as sa_inspect
 
-        cols = {c["name"] for c in sa_inspect(session.get_bind()).get_columns("paper_trades")}
-        check(
-            "lineage_columns_present",
-            "experiment_deployment_arm_id" in cols,
-            "paper_trades.experiment_deployment_arm_id present"
-            if "experiment_deployment_arm_id" in cols else "migration not applied",
-        )
+        # Inspect over the session's OWN connection: an engine-level inspector
+        # checks a pooled connection back in with a rollback, which on sqlite's
+        # shared-connection pool silently wipes the session's uncommitted work.
+        inspector = sa_inspect(session.connection())
+        detail: dict[str, str] = {}
+        both = True
+        for table in ("paper_trades", "live_orders"):
+            try:
+                cols = {c["name"] for c in inspector.get_columns(table)}
+                present = "experiment_deployment_arm_id" in cols
+            except Exception as exc:  # noqa: BLE001 — a missing table is a failure, not a crash
+                present = False
+                detail[table] = f"error inspecting table: {exc}"
+            else:
+                detail[table] = (
+                    "experiment_deployment_arm_id present"
+                    if present
+                    else "experiment_deployment_arm_id MISSING — migration not applied"
+                )
+            both = both and present
+        check("lineage_columns_present", both, detail)
     except Exception as exc:  # noqa: BLE001
         check("lineage_columns_present", False, f"error: {exc}")
+
+    recent_degraded = session.scalar(
+        select(func.count()).select_from(SystemEvent).where(
+            SystemEvent.component == "experiment_os_enforcement",
+            SystemEvent.message.like("enforcement DEGRADED%"),
+            SystemEvent.created_at >= _now() - timedelta(hours=6),
+        )
+    ) or 0
+    check(
+        "resolver_health",
+        recent_degraded == 0,
+        f"{recent_degraded} resolver-degraded alarms in the last 6h"
+        + ("" if recent_degraded == 0 else " — do not cut over during/right after "
+           "a metadata outage"),
+    )
 
     return {
         "ok": all(c["ok"] for c in checks.values()),
@@ -685,12 +797,21 @@ def enforcement_report(session) -> dict:
         )
     ) or 0
 
+    degraded_alarms_24h = session.scalar(
+        select(func.count()).select_from(SystemEvent).where(
+            SystemEvent.component == "experiment_os_enforcement",
+            SystemEvent.message.like("enforcement DEGRADED%"),
+            SystemEvent.created_at >= _now() - timedelta(hours=24),
+        )
+    ) or 0
+
     state = _STATE
     return {
         "mode": mode,
         "cutover_id": record.cutover_id if record else None,
         "effective_at": str(cutover_at) if cutover_at else None,
         "system_version": record.system_version if record else None,
+        "resolver_degraded_alarms_24h": degraded_alarms_24h,
         "deployments": {"total": n_deps, "grandfathered": n_grand,
                         "native": n_deps - n_grand},
         "post_cutover_unstamped": {

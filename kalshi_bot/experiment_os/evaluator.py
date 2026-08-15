@@ -79,6 +79,7 @@ from .models import (
     ExperimentIntegrityEvent,
     ExperimentVersion,
     PlatformComponent,
+    PlatformImpactAction,
     PlatformRevision,
     PlatformSnapshot,
 )
@@ -443,22 +444,40 @@ def platform_block_reasons(
     The epoch pinned a snapshot; if the active revision set has since changed for
     any component, the epoch is stale. The change is harmless to THIS evidence
     only when its activation boundary is established and lies beyond the window's
-    end; an unestablished boundary always blocks (no convenient timestamp is ever
+    end, OR when the experiment carries an APPLIED impact disposition for the new
+    revision that licenses comparability (NO_ACTION: judged immaterial; RECOMPUTE:
+    a named, registered normalization restores exactness — spec §18 I0/I1). An
+    unestablished boundary always blocks (no convenient timestamp is ever
     substituted), and an established one inside the window blocks until a new
-    epoch splits the sample."""
+    epoch splits the sample or a disposition licenses it. An EXEMPTED record
+    never licenses anything — declining to act is not a comparability claim."""
     pinned = dict(read.snapshot_contents(session, session.get(PlatformSnapshot,
                                                               epoch.platform_snapshot_id)))
+    version_row = session.get(ExperimentVersion, epoch.version_id)
+    experiment_id = version_row.experiment_id if version_row is not None else None
+    licensed_revision_ids = set(
+        session.scalars(
+            select(PlatformImpactAction.revision_id).where(
+                PlatformImpactAction.experiment_id == experiment_id,
+                PlatformImpactAction.status == "applied",
+                PlatformImpactAction.action.in_(("NO_ACTION", "RECOMPUTE")),
+            )
+        )
+    ) if experiment_id is not None else set()
     reasons: list[str] = []
     active = session.execute(
         select(PlatformComponent.key, PlatformRevision.version,
-               PlatformRevision.activated_at)
+               PlatformRevision.activated_at, PlatformRevision.id)
         .join(PlatformRevision, PlatformRevision.component_id == PlatformComponent.id)
         .where(PlatformRevision.status == "active")
     ).all()
-    for key, version, activated_at in active:
+    for key, version, activated_at, revision_id in active:
         pinned_version = pinned.get(key)
         if pinned_version is None or pinned_version == version:
             continue
+        if revision_id in licensed_revision_ids:
+            continue  # dispositioned: NO_ACTION judged it immaterial, or the
+            #           applied RECOMPUTE's named normalizer restores comparability
         if activated_at is None:
             reasons.append(
                 f"{key}: active revision {version!r} supersedes the epoch's pinned "
@@ -611,8 +630,16 @@ def evaluate_gate(
         return _finish(session, gate, experiment, version, epoch, outcome,
                        persist, computed_by)
 
-    # 2) platform comparability.
-    plat = platform_block_reasons(session, epoch, end) + platform_problems
+    # 2) platform comparability — snapshot staleness AND unresolved impact
+    # dispositions (a proposed classification, or an accepted material action not
+    # yet applied, leaves the evidence uninterpretable — spec §17.4/§18).
+    from .platform_impact import evidence_block_reasons  # lazy: imports service
+
+    plat = (
+        platform_block_reasons(session, epoch, end)
+        + evidence_block_reasons(session, experiment)
+        + platform_problems
+    )
     if plat:
         outcome.verdict = GateVerdict.BLOCKED_PLATFORM.value
         outcome.blocking_reasons = plat

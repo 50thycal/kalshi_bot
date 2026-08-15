@@ -404,7 +404,8 @@ def test_unestablished_boundary_blocks(xos_session, xos_platform):
     for _ in range(3):
         _trade(s, "t_tag", pnl=0.05)
     svc.register_platform_revision(
-        s, "FEE_MODEL", version="v2", activate=True, boundary_unknown=True
+        s, "FEE_MODEL", version="v2", activate=True, boundary_unknown=True,
+        force=True, force_reason="test: simulate an unclassified platform change",
     )
     s.commit()
     out = evaluator.evaluate_gate(s, gate, persist=False)
@@ -424,8 +425,20 @@ def test_known_mid_window_boundary_blocks_until_new_epoch(xos_session, xos_platf
         _trade(s, "t_tag", pnl=0.05)
     boundary = T0 + timedelta(days=1)
     svc.register_platform_revision(
-        s, "MARKET_TAXONOMY", version="v2", activate=True, activated_at=boundary
+        s, "MARKET_TAXONOMY", version="v2", activate=True, activated_at=boundary,
+        force=True, force_reason="test: simulate an unclassified platform change",
     )
+    # This test isolates the WINDOW-vs-boundary mechanics — resolve the forced-
+    # activation integrity event so it does not shadow the platform verdicts.
+    from sqlalchemy import select
+
+    from kalshi_bot.experiment_os.models import ExperimentIntegrityEvent
+
+    for ev in s.scalars(select(ExperimentIntegrityEvent).where(
+        ExperimentIntegrityEvent.kind == "PLATFORM_ACTIVATION_FORCED"
+    )):
+        ev.resolved_at = _dt(2026, 8, 2)
+        ev.resolution = "test fixture: classified out-of-band"
     s.commit()
     # Window spans the boundary → blocked.
     out = evaluator.evaluate_gate(
@@ -474,7 +487,8 @@ def test_cross_snapshot_external_control_blocks(xos_session, xos_platform):
     # snapshot, the external control's epoch stays pinned to the old one.
     boundary = T0 + timedelta(days=1)
     svc.register_platform_revision(
-        s, "FILL_MODEL", version="v2", activate=True, activated_at=boundary
+        s, "FILL_MODEL", version="v2", activate=True, activated_at=boundary,
+        force=True, force_reason="test: simulate an unclassified platform change",
     )
     svc.close_epoch(s, epoch, ended_at=boundary)
     epoch2 = svc.open_epoch(s, ver, reason="fill model", impact_class="I2",
@@ -681,6 +695,7 @@ def test_platform_change_stales_a_pass(xos_session, promotable):
     svc.register_platform_revision(
         s, "FEE_MODEL", version="v2", activate=True,
         activated_at=T0 + timedelta(days=5),
+        force=True, force_reason="test: simulate an unclassified platform change",
     )
     s.commit()
     with pytest.raises(svc.ExperimentOsError, match="platform has changed"):

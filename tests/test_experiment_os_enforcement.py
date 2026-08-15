@@ -176,13 +176,8 @@ def test_ambiguous_tag_blocked(xos_session, xos_platform):
         _paper_entry(s, "shared_tag")
 
 
-def test_outage_degrades_new_only_but_not_strict(xos_session, xos_platform, monkeypatch):
-    s = xos_session
-    _experiment_with_deployment(s, key="gf", tag="gf_tag", grandfathered=True)
-    _set_mode(s, "NEW_ONLY", readiness=_ok_readiness())
-    enf.refresh(s)
-    # Simulate a metadata outage on the NEXT refresh: the resolver keeps the last
-    # snapshot and marks itself degraded.
+def _degrade_resolver(s, monkeypatch):
+    """Fail the NEXT refresh so the resolver keeps its last snapshot, degraded."""
     real_execute = type(s).execute
 
     def boom(self, *a, **k):
@@ -192,19 +187,74 @@ def test_outage_degrades_new_only_but_not_strict(xos_session, xos_platform, monk
     enf.refresh(s)
     monkeypatch.setattr(type(s), "execute", real_execute)
     assert enf._STATE.degraded is True
-    # Grandfathered tag still trades (stale snapshot), unknown tag now WARNs
-    # through instead of blocking — a metadata outage must not create an
-    # uncontrolled shutdown, and must not block the known books.
-    assert _paper_entry(s, "gf_tag").experiment_deployment_arm_id is not None
-    _paper_entry(s, "sneaky_new_tag")  # allowed under degraded NEW_ONLY (alarmed)
-    alarm = s.scalar(
-        select(SystemEvent).where(SystemEvent.message.like("%DEGRADED%"))
+
+
+def test_degraded_resolver_preserves_known_lineage_continuity(
+    xos_session, xos_platform, monkeypatch
+):
+    """The invariant, half one: degradation preserves continuity for PREVIOUSLY
+    KNOWN lineage — grandfathered and native books continue, stamped from the
+    cached snapshot, through a metadata outage under NEW_ONLY."""
+    s = xos_session
+    _, _, _, gf_dep = _experiment_with_deployment(
+        s, key="gf", tag="gf_tag", grandfathered=True
     )
-    assert alarm is not None
-    # STRICT does not degrade: unknown stays blocked.
-    _set_mode(s, "STRICT", readiness=_ok_readiness(), cutover_id="strict-1")
+    _, _, _, nat_dep = _experiment_with_deployment(
+        s, key="nat", tag="native_tag", grandfathered=False
+    )
+    _set_mode(s, "NEW_ONLY", readiness=_ok_readiness())
     enf.refresh(s)
-    enf._STATE.degraded = True
+    _degrade_resolver(s, monkeypatch)
+    gf_row = _paper_entry(s, "gf_tag")
+    nat_row = _paper_entry(s, "native_tag")
+    assert gf_row.experiment_deployment_arm_id is not None      # stamped from cache
+    assert nat_row.experiment_deployment_arm_id is not None
+    # Entering the degraded state was alarmed durably, exactly once.
+    alarms = s.scalars(
+        select(SystemEvent).where(SystemEvent.message.like("enforcement DEGRADED%"))
+    ).all()
+    assert len(alarms) == 1
+    enf.refresh(s)  # second failed refresh would re-alarm only after a recovery
+    assert len(s.scalars(
+        select(SystemEvent).where(SystemEvent.message.like("enforcement DEGRADED%"))
+    ).all()) == 1
+    # The outage is visible to the pre-cutover checklist and the report.
+    assert enf.production_readiness(s)["checks"]["resolver_health"]["ok"] is False
+    assert enf.enforcement_report(s)["resolver_degraded_alarms_24h"] == 1
+
+
+def test_degraded_resolver_never_creates_permission_for_unknown_lineage(
+    xos_session, xos_platform, monkeypatch
+):
+    """The invariant, half two: an outage is NOT a window in which new
+    experimental tags can start accumulating exposure — unknown and ambiguous
+    tags stay fail-closed under NEW_ONLY while degraded."""
+    s = xos_session
+    _experiment_with_deployment(s, key="gf", tag="gf_tag", grandfathered=True)
+    _experiment_with_deployment(s, key="amb-1", tag="shared_tag")
+    _experiment_with_deployment(s, key="amb-2", tag="shared_tag")
+    _set_mode(s, "NEW_ONLY", readiness=_ok_readiness())
+    enf.refresh(s)
+    _degrade_resolver(s, monkeypatch)
+    with pytest.raises(enf.LineageBlocked, match="not registered"):
+        _paper_entry(s, "sneaky_new_tag")
+    assert s.scalar(
+        select(PaperTrade).where(PaperTrade.strategy == "sneaky_new_tag")
+    ) is None  # no row — fail closed even mid-outage
+    with pytest.raises(enf.LineageBlocked, match="ambiguous"):
+        _paper_entry(s, "shared_tag")
+    # The block message says the decision came from a stale snapshot.
+    with pytest.raises(enf.LineageBlocked, match="resolver DEGRADED"):
+        _paper_entry(s, "sneaky_new_tag")
+
+
+def test_strict_stays_fail_closed_while_degraded(xos_session, xos_platform, monkeypatch):
+    s = xos_session
+    _experiment_with_deployment(s, key="gf", tag="gf_tag", grandfathered=True)
+    _set_mode(s, "STRICT", readiness=_ok_readiness())
+    enf.refresh(s)
+    _degrade_resolver(s, monkeypatch)
+    assert _paper_entry(s, "gf_tag").experiment_deployment_arm_id is not None
     with pytest.raises(enf.LineageBlocked):
         _paper_entry(s, "sneaky_new_tag2")
 
@@ -488,6 +538,37 @@ def test_direct_live_registration_blocked_under_new_only(xos_session, xos_platfo
 # ---------------------------------------------------------------------------
 # Readiness + observability
 # ---------------------------------------------------------------------------
+
+
+def test_readiness_requires_lineage_columns_on_both_runtime_tables(
+    xos_session, monkeypatch
+):
+    """NEW_ONLY must be able to persist lineage on BOTH write paths — a missing
+    live_orders column fails readiness and the detail names the exact table."""
+    s = xos_session
+    ready = enf.production_readiness(s)
+    detail = ready["checks"]["lineage_columns_present"]["detail"]
+    assert detail["paper_trades"] == "experiment_deployment_arm_id present"
+    assert detail["live_orders"] == "experiment_deployment_arm_id present"
+    assert ready["checks"]["lineage_columns_present"]["ok"]
+
+    from sqlalchemy.engine.reflection import Inspector
+
+    real = Inspector.get_columns
+
+    def live_column_missing(self, table, *a, **k):
+        cols = real(self, table, *a, **k)
+        if table == "live_orders":
+            return [c for c in cols if c["name"] != "experiment_deployment_arm_id"]
+        return cols
+
+    monkeypatch.setattr(Inspector, "get_columns", live_column_missing)
+    again = enf.production_readiness(s)
+    chk = again["checks"]["lineage_columns_present"]
+    assert chk["ok"] is False
+    assert "MISSING" in chk["detail"]["live_orders"]
+    assert chk["detail"]["paper_trades"] == "experiment_deployment_arm_id present"
+    assert again["ok"] is False
 
 
 def test_readiness_fails_on_empty_db_and_passes_after_clean_import(xos_session):
