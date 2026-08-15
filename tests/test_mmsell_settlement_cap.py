@@ -50,8 +50,11 @@ def _mkt(ticker, sub, yes_bid_c, yes_ask_c, close_dt, vol=500):
     }
 
 
-def _event(markets, event_ticker, series):
-    return {"event_ticker": event_ticker, "series_ticker": series, "markets": markets}
+def _event(markets, event_ticker, series, mutually_exclusive=None):
+    ev = {"event_ticker": event_ticker, "series_ticker": series, "markets": markets}
+    if mutually_exclusive is not None:
+        ev["mutually_exclusive"] = mutually_exclusive
+    return ev
 
 
 def _ob(yes_bid_c, yes_ask_c):
@@ -116,7 +119,7 @@ def test_settlement_summary_excludes_the_candidates_own_ticker(session):
     n, events = repo.open_positions_settlement_summary(
         session, "mmsell", close_dt.date(), "KXTEAM-A")
     assert n == 1                      # KXTEAM-B only; KXTEAM-A excludes itself
-    assert events == {"KXTEAM-B-EV"}
+    assert dict(events) == {"KXTEAM-B-EV": 1}
 
 
 def test_settlement_summary_is_isolated_by_strategy_and_status(session):
@@ -142,7 +145,7 @@ def test_settlement_summary_is_isolated_by_strategy_and_status(session):
 
     n, events = repo.open_positions_settlement_summary(
         session, "mmsell", close_dt.date(), "KXTEAM-ZZZ")
-    assert n == 1 and events == {"EV-A"}
+    assert n == 1 and dict(events) == {"EV-A": 1}
 
 
 def test_settlement_summary_respects_the_calendar_date_boundary(session):
@@ -274,6 +277,81 @@ def test_event_cap_does_not_apply_outside_correlated_regimes(settings):
     with db.session_scope() as session:
         summ = MmSellTracker(FakeClient(events, books), settings).run_once(session)
     assert summ.opened == 3 and summ.skipped_event_cap == 0
+
+
+# ------------------------------------------------------ within-event rung cap (mutual exclusivity)
+
+
+def test_rung_cap_does_not_apply_to_a_mutually_exclusive_event(settings):
+    """A disjoint bucket ladder (Kalshi `mutually_exclusive: true`, e.g. KXWTIW's $1-wide
+    `between` strikes) is the case the exemption was written for: at most ONE rung can resolve
+    YES, so stacking rungs really is a hedge and must stay uncapped."""
+    _setup(settings, mmsell_event_rung_cap=2)
+    day1 = _anchor()
+    markets = [_mkt(f"KXWTIW-EV-B{i}", f"B{i}", 6, 7, day1) for i in range(4)]
+    ev = _event(markets, "KXWTIW-EV", "KXWTIW", mutually_exclusive=True)
+    books = {f"KXWTIW-EV-B{i}": _ob(6, 7) for i in range(4)}
+    with db.session_scope() as session:
+        summ = MmSellTracker(FakeClient([ev], books), settings).run_once(session)
+    assert summ.opened == 4                     # all four rungs, cap of 2 notwithstanding
+    assert summ.skipped_event_rung_cap == 0
+
+
+def test_rung_cap_blocks_stacking_on_a_non_exclusive_ladder(settings):
+    """A NESTED threshold ladder (`mutually_exclusive: false`, e.g. KXWTI's `-T` "above X"
+    strikes) resolves every rung the same way off one print, so N rungs is one position at N x
+    size. Past the cap, further rungs of that same event are refused."""
+    _setup(settings, mmsell_event_rung_cap=2)
+    day1 = _anchor()
+    markets = [_mkt(f"KXWTI-EV-T{i}", f"T{i}", 6, 7, day1) for i in range(4)]
+    ev = _event(markets, "KXWTI-EV", "KXWTI", mutually_exclusive=False)
+    books = {f"KXWTI-EV-T{i}": _ob(6, 7) for i in range(4)}
+    with db.session_scope() as session:
+        summ = MmSellTracker(FakeClient([ev], books), settings).run_once(session)
+    assert summ.opened == 2                     # rungs 3 and 4 refused
+    assert summ.skipped_event_rung_cap == 2
+
+
+def test_rung_cap_treats_a_missing_exclusivity_flag_as_not_exclusive(settings):
+    """Fail safe: an event page without `mutually_exclusive` gets the cap. Guessing "exclusive"
+    on an unknown event is the expensive direction — it is exactly the concentration the cap
+    exists to prevent, and an over-strict cap only costs a few marginal entries."""
+    _setup(settings, mmsell_event_rung_cap=2)
+    day1 = _anchor()
+    markets = [_mkt(f"KXUNK-EV-T{i}", f"T{i}", 6, 7, day1) for i in range(3)]
+    ev = _event(markets, "KXUNK-EV", "KXUNK")           # no mutually_exclusive key at all
+    books = {f"KXUNK-EV-T{i}": _ob(6, 7) for i in range(3)}
+    with db.session_scope() as session:
+        summ = MmSellTracker(FakeClient([ev], books), settings).run_once(session)
+    assert summ.opened == 2 and summ.skipped_event_rung_cap == 1
+
+
+def test_rung_cap_counts_only_the_same_event(settings):
+    """The cap is per EVENT, not per date — a different non-exclusive event on the same date
+    starts its own count, otherwise this would silently become a much tighter date cap."""
+    _setup(settings, mmsell_event_rung_cap=2)
+    day1 = _anchor()
+    ev_a = _event([_mkt(f"KXWTI-A-T{i}", f"T{i}", 6, 7, day1) for i in range(3)],
+                  "KXWTI-A", "KXWTI", mutually_exclusive=False)
+    ev_b = _event([_mkt("KXWTI-B-T0", "T0", 6, 7, day1)], "KXWTI-B", "KXWTI",
+                  mutually_exclusive=False)
+    books = {f"KXWTI-A-T{i}": _ob(6, 7) for i in range(3)}
+    books["KXWTI-B-T0"] = _ob(6, 7)
+    with db.session_scope() as session:
+        summ = MmSellTracker(FakeClient([ev_a, ev_b], books), settings).run_once(session)
+    assert summ.opened == 3                     # 2 from event A (capped) + 1 from event B
+    assert summ.skipped_event_rung_cap == 1
+
+
+def test_rung_cap_can_be_disabled(settings):
+    _setup(settings, mmsell_event_rung_cap=2, mmsell_event_rung_cap_enabled=False)
+    day1 = _anchor()
+    markets = [_mkt(f"KXWTI-EV-T{i}", f"T{i}", 6, 7, day1) for i in range(4)]
+    ev = _event(markets, "KXWTI-EV", "KXWTI", mutually_exclusive=False)
+    books = {f"KXWTI-EV-T{i}": _ob(6, 7) for i in range(4)}
+    with db.session_scope() as session:
+        summ = MmSellTracker(FakeClient([ev], books), settings).run_once(session)
+    assert summ.opened == 4 and summ.skipped_event_rung_cap == 0
 
 
 @pytest.fixture()

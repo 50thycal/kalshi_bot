@@ -233,8 +233,10 @@ August date**. The concentration risk is real and present, not hypothetical and 
 
 **Ladder structure** (the partial natural hedge): the Elections regime lists 40+ series with
 2–23 rungs per event — KXGOVCA 23, KXGOVSENDIFF 15, KXGOVMINOMR 15, KXSENATEFLR 10. Within one
-event the rungs are mutually exclusive, so **at most one cheap tail per event can lose**. Across
-events that protection vanishes: a national swing moves every race the same way at once.
+event the rungs are *usually* mutually exclusive, so **at most one cheap tail per event can
+lose**. Across events that protection vanishes: a national swing moves every race the same way at
+once. Do not assume the within-event half — it holds for a disjoint bucket ladder and fails for a
+nested threshold ladder; check the event's `mutually_exclusive` flag (see the rung cap below).
 
 **Therefore: any settlement-date cap must count EVENTS, not markets.** Ten rungs of one
 governor's race is one bet; ten rungs across ten races is ten correlated bets.
@@ -254,10 +256,22 @@ Both halves of the recommendation above are now enforced at entry time, per book
 * **Correlated-event cap.** On a `mmsell_settlement_correlated_regimes` date (default
   `"Elections"`), a NEW event is refused once `>= mmsell_settlement_event_cap` (default 5)
   distinct events are already open that date. Adding another rung to an event ALREADY
-  represented stays allowed — that pairing is the mutual-exclusivity hedge itself (at most one
-  rung of one race can lose), not additional correlated exposure. Regime is evaluated at
+  represented stays allowed — subject to the rung cap below. Regime is evaluated at
   decision time via `kalshi_bot.mmsell.regimes.regime_of`, not stamped once, so a later addition
   to the correlated-regime list takes effect immediately rather than only for new markets.
+* **Within-event rung cap** (added 2026-08-15). Both caps above rest on "within one event the
+  rungs are mutually exclusive, so at most one cheap tail can lose". That is true of a **disjoint
+  bucket** ladder and false of a **nested threshold** ladder, and Kalshi publishes which is which
+  as `mutually_exclusive` on the event object — already present on the event page the scan
+  fetches, so reading it costs nothing. Measured 2026-08-15 on one settlement date: the WTI
+  weekly buckets `KXWTIW-26AUG1414` (`$74.00 to $74.99`, `$87.00 to $87.99`, …) are
+  `mutually_exclusive: true` — the hedge is real and stays uncapped — while `KXWTI-26AUG1414`,
+  the `-T` "settlement above X" ladder on the *same underlying and same date*, is
+  `mutually_exclusive: FALSE`. Its rungs are nested: one print above the top strike resolves
+  every rung identically, so N rungs is one position at N× size. So a book now refuses a further
+  rung once `>= mmsell_event_rung_cap` (default 3) are open on the same **non-exclusive** event.
+  An event with no `mutually_exclusive` field is treated as NOT exclusive — over-strictness costs
+  a few marginal entries, the concentration it prevents costs the book.
 
 New table `mmsell_settlement_meta` (migration `d2e3f4a5b6c7`) records each candidate's close
 time + event ticker the first time it is seen (insert-only, mirroring the regime-history
@@ -268,7 +282,9 @@ default) and fail open on a read error, matching every other soft gate in this t
 gate, the anchor stop) — a broken risk check must never be what stops the book trading.
 
 Tests: `tests/test_mmsell_settlement_cap.py` — the per-book isolation, the twin-sized cap, the
-event-vs-market distinction, the own-ticker exclusion, and the calendar-date boundary.
+event-vs-market distinction, the own-ticker exclusion, the calendar-date boundary, and (for the
+rung cap) both ladder shapes, the missing-flag fail-safe, per-event rather than per-date
+counting, and the disable switch.
 
 ---
 

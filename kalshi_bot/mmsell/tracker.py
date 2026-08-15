@@ -90,6 +90,7 @@ class MmSellCycleSummary:
     skipped_strangle_paired: int = 0  # A5: this event's side already has a leg (see below)
     skipped_settlement_cap: int = 0  # too many open positions already settle this candidate's date
     skipped_event_cap: int = 0       # too many distinct events open on a CORRELATED-regime date
+    skipped_event_rung_cap: int = 0  # too many rungs open on ONE non-mutually-exclusive event
     live_retried: int = 0        # live entry re-posted on a ticker paper already holds
     live_retry_capped: int = 0   # retry declined: mmsell_live_max_attempts_per_ticker reached
     live_retry_drifted: int = 0  # retry declined: market moved off the first attempt's price
@@ -193,11 +194,12 @@ class MmSellTracker:
 
     def _settlement_cap_blocks(self, session, s: Settings, *, book_cap: int, tag: str,
                                ticker: str, close_dt, series: str, event_ticker: str,
+                               mutually_exclusive: bool | None,
                                summ: MmSellCycleSummary, recorder) -> bool:
-        """True when the settlement-date concentration cap (docs/MMSELL_SEASONAL_FORECAST.md
-        "Reading 3") should SKIP this entry: too many of `tag`'s own open positions already
-        settle on this candidate's date, or (on a CORRELATED regime's date) too many distinct
-        EVENTS already do.
+        """True when a concentration cap should SKIP this entry: too many of `tag`'s own open
+        positions already settle on this candidate's date (docs/MMSELL_SEASONAL_FORECAST.md
+        "Reading 3"), or (on a CORRELATED regime's date) too many distinct EVENTS already do, or
+        too many rungs are already open on THIS event and the event is not mutually exclusive.
 
         `book_cap` is the SAME cap `open_count[tag]` was just checked against (paper's 200 or a
         twin's live-sized 60) — the date cap is a percentage OF that, so a twin gets the tighter
@@ -219,10 +221,22 @@ class MmSellTracker:
                 and event_ticker not in events_on_date
                 and len(events_on_date) >= s.mmsell_settlement_event_cap):
             # A NEW event on an already-saturated correlated date is refused; adding another
-            # rung to an event already represented is fine — that is the within-event hedge
-            # (mutually exclusive rungs), not additional correlated exposure.
+            # rung to an event already represented is handled by the rung cap below, which knows
+            # whether those rungs actually hedge each other.
             summ.skipped_event_cap += 1
             self._note(recorder, ticker, tag, twin_codes.SKIP_EVENT_CAP)
+            return True
+        # Within-event rung cap. Same-event rungs are only a hedge when at most one can resolve
+        # YES, which is exactly what Kalshi's event-level `mutually_exclusive` asserts. On a
+        # disjoint bucket ladder (KXWTIW `between` strikes, mutually_exclusive=true) stacking
+        # rungs stays free. On a NESTED threshold ladder (KXWTI `-T` "above X",
+        # mutually_exclusive=false) one print resolves every rung the same way, so N rungs is one
+        # position at N x size and gets capped. Unknown (field absent) is treated as not
+        # exclusive: the cap is cheap and the concentration it prevents is not.
+        if (s.mmsell_event_rung_cap_enabled and event_ticker and not mutually_exclusive
+                and events_on_date.get(event_ticker, 0) >= s.mmsell_event_rung_cap):
+            summ.skipped_event_rung_cap += 1
+            self._note(recorder, ticker, tag, twin_codes.SKIP_EVENT_RUNG_CAP)
             return True
         return False
 
@@ -500,6 +514,7 @@ class MmSellTracker:
                     "skipped_strangle_paired": summ.skipped_strangle_paired,
                     "skipped_settlement_cap": summ.skipped_settlement_cap,
                     "skipped_event_cap": summ.skipped_event_cap,
+                    "skipped_event_rung_cap": summ.skipped_event_rung_cap,
                     "per_series": dict(sorted(summ.per_series.items(),
                                               key=lambda kv: -kv[1])[:12]),
                     "per_book": summ.per_book,
@@ -736,6 +751,11 @@ class MmSellTracker:
                 series = (event.get("series_ticker") or ticker.split("-")[0]).upper()
                 close_dt = parse_dt(market.get("close_time"))
                 event_ticker = event.get("event_ticker") or ""
+                # Kalshi's own answer to "can more than one of these rungs resolve YES?", read
+                # straight off the event page the scan already fetched (no extra call). Absent
+                # on an event we somehow got without the field -> None, which the rung cap
+                # treats as NOT exclusive.
+                event_exclusive = event.get("mutually_exclusive")
                 if close_dt is not None:
                     # Written once per ticker (insert-only), before ANY book's cap check needs
                     # it — a position can only open below in this same iteration, so the row
@@ -900,6 +920,7 @@ class MmSellTracker:
                     if self._settlement_cap_blocks(session, s, book_cap=cap, tag=tag,
                                                    ticker=ticker, close_dt=close_dt,
                                                    series=series, event_ticker=event_ticker,
+                                                   mutually_exclusive=event_exclusive,
                                                    summ=summ, recorder=recorder):
                         continue
 

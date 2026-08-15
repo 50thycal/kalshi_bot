@@ -150,3 +150,68 @@ def test_digest_mark_is_best_effort_on_a_missing_quote():
     digest = _load("weather_digest")
     assert digest._mark_position(-3.0, 93.0, yes_bid=1, yes_ask=None) == (None, None)
     assert digest._mark_position(3.0, 40.0, yes_bid=None, yes_ask=57) == (None, None)
+
+
+class _FakeResp:
+    def __init__(self, payload):
+        self._payload = json.dumps(payload).encode("utf-8")
+
+    def read(self):
+        return self._payload
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+def _quote_with(monkeypatch, digest, market: dict):
+    monkeypatch.setattr(digest.urllib.request, "urlopen",
+                        lambda *a, **k: _FakeResp({"market": market}))
+    return digest._kalshi_quote("KXANY-TICKER")
+
+
+def test_digest_ignores_a_zero_size_quote_on_a_closed_market(monkeypatch):
+    """A closed market keeps serving `yes_ask: 1.0000` with `yes_ask_size_fp: 0.00` — a
+    placeholder, not an offer. Marking a NO position against it gives 100 - 100 = 0, i.e. a
+    total loss reported on a position that is actually winning.
+
+    Regression: measured 2026-08-15, 11 closed-but-unsettled WTI positions read -$10.33
+    unrealized this way while their last prints (yes 1-2c) put them ~+$0.60 to the good."""
+    digest = _load("weather_digest")
+    bid, ask, src = _quote_with(monkeypatch, digest, {
+        "status": "closed",
+        "yes_bid_dollars": "0.0000", "yes_bid_size_fp": "0.00",
+        "yes_ask_dollars": "1.0000", "yes_ask_size_fp": "0.00",
+        "last_price_dollars": "0.0100",
+    })
+    assert src == "stale"
+    assert (bid, ask) == (1, 1)                       # falls back to the last TRADE, not the book
+
+    # And the mark that comes out is the winning one, not a wipeout.
+    mark, unreal = digest._mark_position(-1.0, 94.0, bid, ask)
+    assert mark == 99 and unreal == pytest.approx(0.05)
+
+
+def test_digest_keeps_a_live_quote_with_real_size(monkeypatch):
+    """The ordinary open-market path is untouched: sized quotes are used as-is and flagged live."""
+    digest = _load("weather_digest")
+    bid, ask, src = _quote_with(monkeypatch, digest, {
+        "status": "active",
+        "yes_bid_dollars": "0.0100", "yes_bid_size_fp": "250.00",
+        "yes_ask_dollars": "0.0200", "yes_ask_size_fp": "300.00",
+        "last_price_dollars": "0.5000",
+    })
+    assert (bid, ask, src) == (1, 2, "live")
+
+
+def test_digest_omits_the_mark_when_nothing_priceable_survives(monkeypatch):
+    """No sized quote AND no last trade -> no mark at all, rather than a fabricated one."""
+    digest = _load("weather_digest")
+    bid, ask, src = _quote_with(monkeypatch, digest, {
+        "status": "closed",
+        "yes_ask_dollars": "1.0000", "yes_ask_size_fp": "0.00",
+    })
+    assert (bid, ask, src) == (None, None, "none")
+    assert digest._mark_position(-1.0, 94.0, bid, ask) == (None, None)
