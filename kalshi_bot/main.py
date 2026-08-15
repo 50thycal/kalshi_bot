@@ -1093,6 +1093,7 @@ def _run_live_cycle(
     _run_theta_book(settings, theta_tracker)
     _run_tfav_book(settings, tfav_tracker)
     _run_pin15_book(settings, pin15_tracker)
+    _run_freeze_book(settings, freeze_tracker)
     _run_wcprop_book(settings, wcprop_tracker)
     _run_xgame_collector(settings, xgame_tracker)
 
