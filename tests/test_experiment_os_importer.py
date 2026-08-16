@@ -77,9 +77,14 @@ def test_import_counts_and_classification(xos_session, imported):
     assert s.scalar(select(func.count()).select_from(Experiment)) == len(LEGACY_EXPERIMENTS)
     assert imported["by_legacy_class"] == {
         "ACTIVE_LIVE": 2, "ACTIVE_PAPER": 8, "RETIRED_OR_KILLED": 15,
+        # Traded, but with no reconstructable experiment behind them: the origin
+        # scanner books and the operational live shape probe. Classified so
+        # coverage is honest rather than complete-looking; they map no tag to a
+        # running deployment, so they can never stamp lineage on new activity.
+        "HISTORICAL_UNTRACKED": 2,
     }
     # Integrity is visible and never silently VERIFIED (no A grades were earned).
-    assert imported["by_integrity"] == {"B": 9, "C": 15, "D": 1}
+    assert imported["by_integrity"] == {"B": 9, "C": 15, "D": 3}
     assert "A" not in imported["by_integrity"]
     # One import transition per experiment, actor=import, from nothing.
     for exp in read.list_experiments(s):
@@ -135,7 +140,7 @@ def test_baseline_boundaries_measured_or_explicitly_unknown(xos_session, importe
 def test_retired_stubs_invent_nothing(xos_session, imported):
     s = xos_session
     retired = read.list_experiments(s, state="RETIRED")
-    assert len(retired) == 15
+    assert len(retired) == 17  # 15 killed books + 2 HISTORICAL_UNTRACKED
     for exp in retired:
         assert read.versions_for(s, exp) == [], exp.key  # no reconstruction for dead books
         assert exp.platform_snapshot_id is None, exp.key
@@ -328,3 +333,43 @@ def test_manifest_is_internally_consistent():
             declared = {a["arm_key"] for a in e["active"]["arms"]}
             for d in e["active"].get("deployments") or []:
                 assert set(d["tags"]) <= declared, f"{e['key']}: deployment uses undeclared arm"
+
+
+# The strategy-tag census taken from PRODUCTION on 2026-08-16 (paper_trades +
+# live_orders, every distinct non-NULL tag). Coverage is asserted against the real
+# population rather than a hand-picked sample, so a manifest edit that silently
+# drops a live book's tag — or a new untracked tag reaching production — fails
+# here instead of at the enforcement cutover.
+PRODUCTION_TAG_CENSUS_20260816 = (
+    "Lmmsell10 Lmmsell10_pt3 Lmmsell8 Lmmsell8_pt3 Tmmsell1 Tmmsell2 Tmmsell3 "
+    "Tmmsell4 Tmmsell5 Tmmsell6 Wmmsell1 Wmmsell2 Wmmsell3 Wmmsell4 Wmmsell5 "
+    "Wmmsell6 Wmmsell7 Wmmsell8 buy_favorite freeze1 freeze2 freeze3 freeze4 "
+    "mmsell mmsell1 mmsell10 mmsell10_pt mmsell10_pt3 mmsell10a mmsell10a_pt "
+    "mmsell10a_pt2 mmsell10a_pt3 mmsell10b mmsell10b_pt mmsell10b_pt2 "
+    "mmsell10b_pt3 mmsell10d mmsell10e mmsell11 mmsell2 mmsell3 mmsell3_closeout "
+    "mmsell4 mmsell5 mmsell6 mmsell7 mmsell8 mmsell8_pt3 mmsell9 mmsellA1 "
+    "mmsellA2 mmsellA3 mmsellA4 mmsellA5 momentum pin15 probe reversion tfav "
+    "theta theta1 theta2 theta3 theta4 theta4_pt theta4_pt2 theta4_pt3 "
+    "weather_cal_h14 weather_con_h20 weather_concity_h8 weather_dist_h20 "
+    "weather_fav_h20 weather_favband_h17 weather_low_fav_h8 weather_low_pm_h25 "
+    "weather_nws_h14 weather_obs weather_pm_h30"
+).split()
+
+
+def test_production_tag_census_is_fully_covered(xos_session):
+    """Every tag that has actually traded resolves to a classified experiment.
+
+    This is the `coverage_complete` readiness gate, evaluated against real
+    production data: with it red, the NEW_ONLY cutover cannot be recorded."""
+    s = xos_session
+    for tag in PRODUCTION_TAG_CENSUS_20260816:
+        s.add(PaperTrade(market_ticker=f"T-{tag}", strategy=tag))
+    s.commit()
+    importer.import_legacy(s, now=IMPORT_INSTANT)
+    s.commit()
+    report = importer.migration_report(s)
+    assert report["unmapped_tags"] == [], (
+        "unclassified production tags — classify them in the reviewed manifest "
+        "(a real book, a retired tag, an operational non-experiment, or "
+        "HISTORICAL_UNTRACKED); never leave them to be guessed at runtime"
+    )
