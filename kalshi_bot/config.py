@@ -96,6 +96,17 @@ class Settings(BaseSettings):
     # Import failure is logged to system_events and never blocks the worker.
     experiment_os_import_on_boot: bool = False
 
+    # The operator-declared enforcement cutover (docs/EXPERIMENT_OS_ENFORCEMENT.md).
+    # Empty = no-op. Set to OFF/WARN/NEW_ONLY/STRICT to have the worker RECORD that
+    # mode once, gated on a readiness report computed at that instant; it is a no-op
+    # on every later boot because the recorded mode already matches. The worker owns
+    # this because the ops channel is read-only against production Postgres.
+    # There is deliberately no env force: a red checklist refuses and changes nothing.
+    experiment_os_enforcement_mode: str = ""
+    experiment_os_cutover_id: str = ""
+    experiment_os_cutover_actor: str = ""
+    experiment_os_cutover_reason: str = ""
+
     # --- Scanner tuning ---
     target_categories: str = (
         "Economics,Financials,Companies,Climate and Weather,Commodities,Science and Technology"

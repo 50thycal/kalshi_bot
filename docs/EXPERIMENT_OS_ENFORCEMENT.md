@@ -52,6 +52,30 @@ override is recorded as such (readiness evidence with `ok=False` stays attached,
 the system event says FORCED). An incomplete baseline cannot be enforced by
 accident, and a bypassed checklist cannot be denied later.
 
+### How the cutover is actually executed (worker-side, by design)
+
+The ops channel is deliberately **read-only** against production Postgres: the
+GitHub Actions runner holds `DATABASE_URL_RO` and a SELECT-only role, so it can
+observe everything and write nothing. The worker is the only process with a
+writable `DATABASE_URL`, which makes it the only place the enforcement record
+can be written. Hence two boot hooks, both idempotent, both unable to stop
+trading:
+
+| env var | effect |
+|---|---|
+| `EXPERIMENT_OS_IMPORT_ON_BOOT=true` | runs the idempotent legacy import once; no-ops thereafter |
+| `EXPERIMENT_OS_ENFORCEMENT_MODE=<mode>` | records that mode **once**, gated on readiness computed at that instant; no-op when already in it |
+| `EXPERIMENT_OS_CUTOVER_ID` / `_ACTOR` / `_REASON` | required attribution for the record (refuses without all three) |
+
+`run_boot_cutover()` is not an inference of the boundary — the operator declares
+the target mode and identity, and the append-only record it writes (whose
+`effective_at` is the real instant) stays the single boundary everything reads.
+Moving to NEW_ONLY/STRICT requires readiness to be ok **right now**; a red
+checklist refuses loudly (error log + `system_events`) and changes nothing.
+There is deliberately **no env-driven force** — overriding a red checklist stays
+a human decision made through a different door, so a config typo can never
+bypass the gate.
+
 ## 3. Lineage propagation path
 
 `paper_trades` and `live_orders` gained one nullable column:

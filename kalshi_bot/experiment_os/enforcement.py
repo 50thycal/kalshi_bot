@@ -830,6 +830,131 @@ def enforcement_report(session) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# The operator-declared cutover hook (worker-side, because ops is read-only)
+# ---------------------------------------------------------------------------
+
+
+def run_boot_cutover(session, settings) -> dict | None:
+    """Record the operator's declared enforcement mode, gated on a readiness
+    report computed at that instant. Idempotent, and NEVER raises.
+
+    Why this lives in the worker: the ops channel is deliberately read-only
+    against production Postgres (it holds DATABASE_URL_RO and a SELECT-only
+    role), so the worker is the only process that can write the enforcement
+    record. This hook is NOT an inference of the boundary — the operator
+    declares the target mode, cutover id, identity and reason explicitly, and
+    the canonical append-only record written here (whose `effective_at` is the
+    real instant) remains the one boundary anything else reads.
+
+    Safety: moving to NEW_ONLY/STRICT requires `production_readiness(...)` to be
+    ok RIGHT NOW; a red checklist refuses loudly and changes nothing. There is
+    deliberately NO env-driven force — overriding the checklist stays a human
+    decision made through a different door (`record_enforcement_change(
+    force=True)`), so a config typo can never bypass the gate."""
+    declared = (getattr(settings, "experiment_os_enforcement_mode", "") or "").strip()
+    if not declared:
+        return None
+    try:
+        try:
+            target = EnforcementMode(declared.upper())
+        except ValueError:
+            logger.error(
+                "EXPERIMENT_OS_ENFORCEMENT_MODE is not a valid mode; ignoring",
+                extra={"extra_fields": {"declared": declared,
+                                        "valid": [m.value for m in EnforcementMode]}},
+            )
+            return {"ok": False, "reason": "invalid mode", "declared": declared}
+
+        current = current_mode(session)
+        if target is current:
+            return None  # already there — idempotent, silent, safe to leave set
+
+        cutover_id = (getattr(settings, "experiment_os_cutover_id", "") or "").strip()
+        actor = (getattr(settings, "experiment_os_cutover_actor", "") or "").strip()
+        reason = (getattr(settings, "experiment_os_cutover_reason", "") or "").strip()
+        missing = [
+            name
+            for name, value in (
+                ("EXPERIMENT_OS_CUTOVER_ID", cutover_id),
+                ("EXPERIMENT_OS_CUTOVER_ACTOR", actor),
+                ("EXPERIMENT_OS_CUTOVER_REASON", reason),
+            )
+            if not value
+        ]
+        if missing:
+            logger.error(
+                "enforcement cutover declared but not attributable; refusing",
+                extra={"extra_fields": {"target": target.value, "missing": missing}},
+            )
+            return {"ok": False, "reason": "missing attribution", "missing": missing}
+
+        readiness = production_readiness(session, settings)
+        gated = target in (EnforcementMode.NEW_ONLY, EnforcementMode.STRICT)
+        if gated and not readiness.get("ok"):
+            failing = [k for k, v in (readiness.get("checks") or {}).items()
+                       if not v.get("ok")]
+            logger.error(
+                "enforcement cutover REFUSED — readiness is not ok",
+                extra={"extra_fields": {"target": target.value, "failing": failing,
+                                        "cutover_id": cutover_id}},
+            )
+            session.add(
+                SystemEvent(
+                    created_at=_now(), level="error",
+                    component="experiment_os_enforcement",
+                    message=(
+                        f"enforcement cutover to {target.value} REFUSED: readiness "
+                        f"checks failing {failing} (cutover {cutover_id}). Mode "
+                        f"remains {current.value}."
+                    ),
+                    raw_json={"target": target.value, "failing": failing,
+                              "cutover_id": cutover_id},
+                )
+            )
+            session.flush()
+            return {"ok": False, "reason": "readiness not ok", "failing": failing,
+                    "readiness": readiness}
+
+        record = record_enforcement_change(
+            session,
+            mode=target,
+            actor=actor,
+            reason=reason,
+            cutover_id=cutover_id,
+            readiness=readiness,
+        )
+        logger.info(
+            "enforcement cutover RECORDED",
+            extra={"extra_fields": {
+                "mode": target.value, "preceding": current.value,
+                "cutover_id": cutover_id, "actor": actor,
+                "effective_at": str(record.effective_at),
+            }},
+        )
+        return {"ok": True, "mode": target.value, "cutover_id": cutover_id,
+                "effective_at": str(record.effective_at), "readiness": readiness}
+    except Exception as exc:  # noqa: BLE001 — a cutover attempt must not stop the worker
+        logger.error(
+            "enforcement cutover hook failed (trading unaffected)",
+            extra={"extra_fields": {"error": str(exc)}},
+        )
+        try:
+            session.rollback()
+            session.add(
+                SystemEvent(
+                    created_at=_now(), level="error",
+                    component="experiment_os_enforcement",
+                    message=f"enforcement cutover hook failed: {exc}",
+                    raw_json={"declared": declared},
+                )
+            )
+            session.flush()
+        except Exception:  # noqa: BLE001
+            logger.exception("could not record the cutover failure either")
+        return None
+
+
 def reset_for_tests() -> None:
     """Test hook: clear the module resolver state."""
     global _STATE

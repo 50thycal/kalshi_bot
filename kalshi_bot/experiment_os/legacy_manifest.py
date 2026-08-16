@@ -59,7 +59,7 @@ UTC = timezone.utc
 # .3 (PR 4): live deployments carry a `material` config sub-dict — the canonical
 # facts the runtime drift check recomputes from Settings and compares (additive;
 # no scientific content changed; production still un-imported at authoring).
-MANIFEST_VERSION = "2026-08-15.3"
+MANIFEST_VERSION = "2026-08-16.1"
 
 # Measured platform boundaries (sources cited inline below).
 FEE_BOUNDARY = datetime(2026, 8, 11, 15, 0, 0, tzinfo=UTC)
@@ -803,6 +803,9 @@ LEGACY_EXPERIMENTS: list[dict] = [
             "studies": ["docs/MMSELL_FILL_MODEL.md"],
         },
         covers_tags=["mmsell5", "mmsell6", "mmsell7", "mmsell8"],
+        # mmsell8_pt3: the twin minted while LIVE_STRATEGIES briefly carried the
+        # unprefixed mmsell8 on 2026-08-15, before the Lmmsell8/Lmmsell10 rename.
+        covers_tag_prefixes=["mmsell8_pt"],
         notes=(
             "Built 2026-07-15. Gate on REALIZABLE (live-calibrated) per-trade — "
             "mmsell fill model, never blended paper (blended paper overstates edge "
@@ -907,6 +910,11 @@ LEGACY_EXPERIMENTS: list[dict] = [
             "studies": ["docs/MMSELL_FILL_MODEL.md"],
         },
         covers_tags=["mmsell9", "mmsell10"],
+        # The book's paper twins (mmsell10_pt from the first twin generation,
+        # mmsell10_pt3 from the _pt3 generation cut at the fee re-baseline). Same
+        # form as the twin prefixes already declared on theta4 / mmsell10a-b /
+        # Lmmsell10 — this book's was simply missed.
+        covers_tag_prefixes=["mmsell10_pt"],
         notes=(
             "Built 2026-07-18 (2nd cohort). Under the fill model mmsell10 is the "
             "one true live candidate (100% coverage, +3.80c opt -> +1.40c "
@@ -1463,7 +1471,7 @@ LEGACY_EXPERIMENTS: list[dict] = [
             "thesis": "docs/MMSELL_VARIANTS_THESIS.md",
             "verdict": "docs/MMSELL_LIVE_POSTMORTEM.md",
         },
-        covers_tags=["mmsell1", "mmsell2", "mmsell3"],
+        covers_tags=["mmsell1", "mmsell2", "mmsell3", "mmsell3_closeout"],
         verdict=(
             "RETIRED 2026-08-12 — breakeven, superseded by mmsell10. mmsell3 is "
             "the one book with live ground truth: real money 2026-07-13..19, "
@@ -1798,5 +1806,59 @@ LEGACY_EXPERIMENTS: list[dict] = [
             "exploitable lag. The tape collector remains (game_market_matches / "
             "game_tape_snapshots are research data, not a book)."
         ),
+    ),
+    # ======================================================================
+    # HISTORICAL_UNTRACKED — traded, but no reconstructable experiment behind it
+    # ======================================================================
+    # These exist so migration coverage is HONEST rather than complete-looking.
+    # Both are recorded at integrity D: we know the rows happened and what code
+    # produced them, and we deliberately reconstruct nothing else — no versions,
+    # arms, epochs, deployments or evidence. They map no tag to any running
+    # deployment, so they can never stamp lineage on new activity.
+    dict(
+        key="origin-scanner-books",
+        title="Origin scanner books — buy_favorite / momentum / reversion",
+        family="scanner",
+        origin="operator",
+        state="RETIRED",
+        legacy_class="HISTORICAL_UNTRACKED",
+        integrity="D",
+        hypothesis=(
+            "UNRECONSTRUCTED. The paper engine's original built-in strategies "
+            "(kalshi_bot/paper/strategies.py) ran on the generic scanner for the "
+            "bot's first two days, before any thesis-driven book existed."
+        ),
+        docs={},
+        covers_tags=["buy_favorite", "momentum", "reversion"],
+        notes=(
+            "1,168 paper rows over 2026-06-07/08. No thesis doc, no BOOK_REGISTRY "
+            "row, no recorded gate or verdict — abandoned when the weather books "
+            "began, not killed by a decision we can cite. Integrity D: the rows "
+            "are evidence that they ran, and nothing more is claimed."
+        ),
+        verdict="ABANDONED (undocumented) — superseded by the weather books 2026-06-09.",
+    ),
+    dict(
+        key="live-shape-probe",
+        title="Live shape probe — operational, not an experiment",
+        family="operational",
+        origin="operator",
+        state="RETIRED",
+        legacy_class="HISTORICAL_UNTRACKED",
+        integrity="D",
+        hypothesis=(
+            "NOT A HYPOTHESIS. LiveExecutor's shape probe (LIVE_PROBE / "
+            "LIVE_SHAPE_PROBE) placed tiny real orders to learn the v1 order "
+            "body the API would accept — a connectivity/plumbing check."
+        ),
+        docs={"runbook": "docs/LIVE_DRYRUN.md"},
+        covers_tags=["probe"],
+        notes=(
+            "16 live orders over 2026-06-15/16 tagged 'probe' by "
+            "live/executor.py. Classified so coverage does not report it as an "
+            "unclassified experimental book: it never tested a hypothesis and "
+            "has no arms, control or evidence. Recorded, not dignified."
+        ),
+        verdict="N/A — operational probe; the order shape it proved is now in the client.",
     ),
 ]
