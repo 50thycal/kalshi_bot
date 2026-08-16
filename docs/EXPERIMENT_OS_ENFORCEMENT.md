@@ -8,8 +8,10 @@ live canary can no longer arm on inherited paper state (the 2026-08-15
 Lmmsell8/Lmmsell10 failure), and a hand-inserted PASS can no longer become a
 real-money capability token.
 
-Everything here ships with enforcement **OFF**. The blocker and the go-live path
-are at the bottom — read that section before touching the mode.
+**Status: enforcement is LIVE in production at `NEW_ONLY` since
+2026-08-16T14:34:42.892897Z** (cutover `prod-new-only-20260816`). §10 records
+the boundary and what the migration established — read it before touching the
+mode.
 
 ## 1. Enforcement semantics (exact)
 
@@ -236,30 +238,65 @@ unresolved impact dispositions + forced activations), and
 `enforcement_report()` — the mechanical answer to *"is anything trading or
 accumulating experimental evidence outside Experiment OS?"*
 
-## 10. What blocked turning NEW_ONLY on (and the go-live path)
+## 10. The production cutover (DONE — 2026-08-16T14:34:42.892897Z)
 
-**The production import has never run.** Verified over the ops channel on
-2026-08-15 (PR 4 precheck, `ops/results/xos-pr4-precheck.txt`): the Experiment
-OS tables exist (PR 1 migration deployed) but hold **0 experiments** —
-`EXPERIMENT_OS_IMPORT_ON_BOOT` has never been enabled on Railway. Readiness
-check 1 fails, so `record_enforcement_change(mode=NEW_ONLY, ...)` refuses, as
-designed. Enforcement therefore ships **OFF**; stamping is live, refusal is not.
+Experiment OS is production truth as of the recorded boundary:
 
-Go-live, in order, once this PR is deployed:
+| | |
+|---|---|
+| **cutover_id** | `prod-new-only-20260816` |
+| **mode** | `NEW_ONLY` (preceding: none — OFF was never itself recorded) |
+| **effective_at** | **2026-08-16T14:34:42.892897+00:00** |
+| **actor** | `claude-code`, operator-directed |
+| **readiness** | attached to the record, `ok=true` |
 
-1. `{"type":"env","set":{"EXPERIMENT_OS_IMPORT_ON_BOOT":"true"}}` via the ops
-   channel (redeploys the worker; the import is idempotent and flag-gated);
-2. confirm via `experiment_os_status`: experiments imported, migration report
-   clean, §7 shows every live tag resolving;
-3. run `readiness` — all eight checks green (theta4's twin-boundary note is
-   expected and non-blocking);
-4. record the cutover: `record_enforcement_change(session, mode="NEW_ONLY",
-   actor=<who>, reason=<why now>, cutover_id=<slug>, readiness=<the report>)`;
-5. watch §7 for a few days: post-cutover unstamped rows should be **zero**, and
-   any `LineageBlocked` rejection names the tag that tried to trade outside the
-   system. WARN-first (steps 1–3, then `mode="WARN"`) is a legitimate softer
-   ramp if the first cutover attempt wants a dress rehearsal.
+Before this instant, legacy experimental activity may exist without native
+lineage. After it, NEW experimental activity requires Experiment OS lineage.
+The record is the boundary — not the deploy, the import, the merge, or the
+first stamped trade.
 
-The impact engine (PR 5) has landed — see
-`docs/EXPERIMENT_OS_PLATFORM_IMPACT.md`. STRICT still waits for a period of
-clean NEW_ONLY operation after the production cutover.
+What the migration established:
+
+- **27 experiments** imported and grandfathered — 2 ACTIVE_LIVE, 8 ACTIVE_PAPER,
+  15 RETIRED_OR_KILLED, 2 HISTORICAL_UNTRACKED; integrity 9×B, 15×C, 3×D, and
+  deliberately **no A grades** (none were earned).
+- **0 unmapped strategy tags** across the entire history of `paper_trades` +
+  `live_orders`. Getting there required classifying eight stragglers honestly
+  rather than absorbing them: three twin-tag prefixes and the `mmsell3_closeout`
+  exit traffic joined the books they belong to, while the origin scanner books
+  (`buy_favorite`/`momentum`/`reversion`) and the operational `probe` became
+  HISTORICAL_UNTRACKED entries at integrity D that reconstruct nothing.
+- **11 active grandfathered deployments, 0 native** — the expected starting
+  point. The first native deployment will be the first experiment born after
+  the boundary.
+- A complete baseline platform snapshot: 10/10 components pinned, with only the
+  two genuinely measured activation boundaries stamped (FEE_MODEL
+  2026-08-11T15:00Z, MARKET_TAXONOMY 2026-08-13T18:09:40Z) and the other eight
+  left explicitly NULL.
+
+Verified after the cutover: every post-cutover row across paper and live
+carries lineage (zero unstamped), no blocks or warnings fired, no resolver
+degradation, and zero unresolved integrity or platform-impact records.
+
+### The declared mode is persistent desired state
+
+`EXPERIMENT_OS_ENFORCEMENT_MODE` stays set on the worker. It is a *declaration*,
+not a one-shot trigger: every boot compares it against the recorded mode and
+records the difference (readiness permitting). So if the mode were later changed
+in the database — say, downgraded to WARN for debugging — the next deploy would
+record it back to the declared mode. Change the declaration, not just the
+database. Readiness still gates every such transition, and there is no env-driven
+force.
+
+`EXPERIMENT_OS_IMPORT_ON_BOOT` was returned to `false` after the import: the
+legacy import was a migration event, not an ongoing process. Turn it on again
+only to apply a reviewed manifest change, remembering that the importer creates
+*grandfathered* deployments — which is exactly why it does not stay on.
+
+### What remains before STRICT
+
+STRICT waits on: a period of clean NEW_ONLY operation, the Claude Session
+System (PR #220) and Control Tower migration, retirement of the overlapping
+legacy status workflows, and Evo integration. See
+`docs/EXPERIMENT_OS_PLATFORM_IMPACT.md` for the impact engine that landed in
+PR 5.
