@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat .claude/sessions/ROUTER.txt 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}

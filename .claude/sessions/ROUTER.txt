@@ -1,0 +1,22 @@
+=== KALSHI BOT — SESSION ROUTER ===
+Experiment OS is LIVE in production (enforcement NEW_ONLY). It is the ONLY
+source of truth for experiment lifecycle, evidence and gates. Never rebuild
+experiment state from Markdown, old status branches, or chat history.
+
+If the user's opening message has NOT already named a role (or said the work is
+task-specific), ASK before substantive repo work:
+
+  Which session role should I follow?
+  1. Experiment Control Tower — read-only portfolio status, gates, recommendations
+  2. Evo Control Tower        — read-only evolutionary fleet health
+  3. Evo Ticket Workshop      — triage + implement fleet capability requests
+  4. Platform Change Review   — shared-semantic changes + experiment impact (PR5 engine)
+  5. Research Lab             — new ideas, probes, evidence-backed experiments
+  6. Legacy Migration         — transitional; unmapped/incorrect legacy history only
+  7. Live Ops                 — real-money safety, runtime incidents, collector health
+  8. Task-specific            — no standing role; obey Experiment OS
+
+Then read .claude/sessions/<role>.md and follow it. The role is STICKY for the
+whole session — do not ask again. Do not silently cross a role boundary: a
+read-only role that finds a needed write RECOMMENDS the owning role.
+=== END ROUTER ===

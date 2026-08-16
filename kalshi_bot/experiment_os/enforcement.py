@@ -487,8 +487,23 @@ def runtime_config_check(session, settings) -> list[dict]:
     """Compare each ACTIVE live deployment's registered material config against the
     running Settings. A mismatch records an unresolved EXPERIMENT_CONFIG_DRIFT
     integrity event (which already blocks gate evaluation via the PR 3 evaluator,
-    and blocks the tags under STRICT). Never raises; returns the drift findings."""
+    and blocks the tags under STRICT). Never raises; returns the drift findings.
+
+    ONLY THE LIVE TRADING WORKER MAY JUDGE LIVE CONFIG. Several workers share this
+    database — the evo worker runs the same boot path with `BOT_MODE=evo` and no
+    live configuration at all. To such a process every live book looks like it
+    vanished, and it would record drift on all of them: exactly what happened in
+    production on 2026-08-16T16:01:40Z, blocking gate evaluation on both live
+    canaries (and, under STRICT, it would have blocked real trading). "I cannot
+    see the live config" is not evidence that the live config changed. A process
+    that does not run the live books is not a witness to them."""
     findings: list[dict] = []
+    if (getattr(settings, "bot_mode", None) or "") != "live":
+        logger.debug(
+            "skipping live-config drift check: not the live trading worker",
+            extra={"extra_fields": {"bot_mode": getattr(settings, "bot_mode", None)}},
+        )
+        return findings
     try:
         deployments = session.scalars(
             select(ExperimentDeployment).where(
@@ -505,6 +520,30 @@ def runtime_config_check(session, settings) -> list[dict]:
             )
             expected = _canonical_material({k: material[k] for k in observed})
             if observed == expected:
+                # The authority on this book's config says it matches. Any open
+                # drift event about it is therefore stale — clear it, with the
+                # observation recorded. Without this, a false drift written by a
+                # non-live worker (see the docstring) would block this
+                # experiment's gates forever, since nothing else can resolve it.
+                for stale in session.scalars(
+                    select(ExperimentIntegrityEvent).where(
+                        ExperimentIntegrityEvent.deployment_id == dep.id,
+                        ExperimentIntegrityEvent.kind == "EXPERIMENT_CONFIG_DRIFT",
+                        ExperimentIntegrityEvent.resolved_at.is_(None),
+                    )
+                ):
+                    stale.resolved_at = _now()
+                    stale.resolution = (
+                        "resolved automatically: the LIVE trading worker observed "
+                        f"{dep.deployment_key}'s runtime config matching its "
+                        "registered material config"
+                    )
+                    session.flush()
+                    logger.info(
+                        "cleared stale config-drift event",
+                        extra={"extra_fields": {"deployment": dep.deployment_key,
+                                                "event_id": stale.id}},
+                    )
                 continue
             finding = {
                 "deployment": dep.deployment_key,

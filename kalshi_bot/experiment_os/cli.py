@@ -250,6 +250,21 @@ def cmd_scoreboard(session: Session, args) -> int:
     return 0
 
 
+def cmd_control_tower(session: Session, args) -> int:
+    """The Experiment Control Tower report — read-only by construction."""
+    from .control_tower import build_report, render, report_text
+
+    if args.json:
+        import dataclasses
+
+        rep = build_report(session, evaluate=not args.no_evaluate)
+        print(json.dumps(dataclasses.asdict(rep), indent=2, default=str))
+        return 0
+    _ = (build_report, render)
+    print(report_text(session, evaluate=not args.no_evaluate))
+    return 0
+
+
 def cmd_enforcement(session: Session, args) -> int:
     from .enforcement import enforcement_report
 
@@ -301,6 +316,18 @@ def main(argv: list[str] | None = None) -> int:
     p_tag = sub.add_parser("tag", help="strategy tag → experiment lineage")
     p_tag.add_argument("tag")
     p_tag.set_defaults(fn=cmd_tag)
+
+    p_ct = sub.add_parser(
+        "control-tower",
+        help="the Experiment Control Tower report: every non-terminal experiment "
+        "grouped by lifecycle state, integrity first (read-only)",
+    )
+    p_ct.add_argument("--json", action="store_true", help="structured output")
+    p_ct.add_argument(
+        "--no-evaluate", action="store_true",
+        help="skip the DRY-RUN gate evaluation (faster; shows recorded verdicts only)",
+    )
+    p_ct.set_defaults(fn=cmd_control_tower)
 
     p_enf = sub.add_parser(
         "enforcement", help="current mode, cutover, lineage coverage, canary links"

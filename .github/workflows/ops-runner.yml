@@ -46,6 +46,19 @@ jobs:
       - name: Install psycopg
         run: pip install "psycopg[binary]>=3.1,<4.0"
 
+      # `xos` requests run the canonical Experiment OS read CLI (SQLAlchemy + the
+      # kalshi_bot package) rather than a SQL re-implementation, so they need the
+      # full dependency set. Installed only for that request type — every other
+      # request keeps the fast psycopg-only path.
+      - name: Install full deps for Experiment OS reads
+        run: |
+          if [ "$(jq -r '.type // empty' ops/request.json)" = "xos" ]; then
+            echo "xos request — installing requirements.txt"
+            pip install -r requirements.txt
+          else
+            echo "not an xos request — skipping"
+          fi
+
       - name: Run ops request
         env:
           DATABASE_URL_RO: ${{ secrets.DATABASE_URL_RO }}

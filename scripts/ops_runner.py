@@ -9,6 +9,7 @@ ops/request.json shapes:
   {"type": "logs", "limit": 200, "filter": "", "deployment_id": ""}
   {"type": "db",   "sql": "select ...", "max_rows": 200}
   {"type": "script", "name": "weather_model_check", "args": ["--sigma", "1.5"]}
+  {"type": "xos", "command": "control-tower"}           # canonical Experiment OS read CLI
   {"type": "env"}                                       # read allowlisted Railway env vars
   {"type": "env", "set": {"KILL_SWITCH": "false"}}      # set allowlisted vars + redeploy
   {"type": "noop"}   # placeholder; do nothing
@@ -22,6 +23,13 @@ ops/request.json shapes:
 Reuses scripts/railway_logs.py and scripts/db_query.py by setting the env vars
 they already read, so all the read-only guards there still apply. Script requests
 are allowlisted to self-contained read-only analysis scripts in scripts/.
+
+`xos` requests run the Experiment OS read CLI itself (read-only subcommands only,
+against DATABASE_URL_RO). This is how the Experiment Control Tower and the other
+session roles read production: through the SAME canonical code the worker runs,
+so the operating layer can never drift from Experiment OS the way the retired
+status checkers drifted from each other. It needs the full dependency set, which
+the workflow installs only for this request type.
 """
 
 from __future__ import annotations
@@ -209,6 +217,34 @@ def main() -> int:
         if req.get("set"):
             return railway_env.run_set(dict(req["set"]), redeploy=req.get("redeploy", True))
         return railway_env.run_get()
+
+    if rtype == "xos":
+        # Run the CANONICAL Experiment OS read CLI (read-only subcommands only)
+        # against DATABASE_URL_RO. This exists so the Experiment Control Tower and
+        # the other session roles read production through the same code the worker
+        # runs — not a SQL re-implementation that could drift from it. It needs the
+        # full dependency set, which the workflow installs when it sees this type.
+        allowed = {
+            "control-tower", "list", "show", "transitions", "platform", "tag",
+            "scoreboard", "enforcement", "readiness",
+        }
+        command = (req.get("command") or "control-tower").strip()
+        if command not in allowed:
+            print(f"xos command {command!r} is not allowlisted (allowed: "
+                  f"{sorted(allowed)})", file=sys.stderr)
+            return 1
+        argv = [command] + [str(a) for a in (req.get("args") or [])]
+        ro = os.environ.get("DATABASE_URL_RO")
+        if ro:
+            # The CLI prefers DATABASE_URL_RO already; set both so nothing can
+            # accidentally resolve a writable URL in this process.
+            os.environ["DATABASE_URL"] = ro
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if repo_root not in sys.path:
+            sys.path.insert(0, repo_root)
+        from kalshi_bot.experiment_os.cli import main as xos_main
+
+        return xos_main(argv)
 
     if rtype == "script":
         name = (req.get("name") or "").strip()

@@ -1,5 +1,16 @@
 # Book registry — every trading book the worker runs
 
+> **HISTORICAL RESEARCH DOCUMENTATION — not a lifecycle database.**
+> Since the 2026-08-16 `NEW_ONLY` cutover, Experiment OS owns lifecycle state,
+> arms, epochs, gates and evidence. The rows below are preserved for their thesis
+> pointers, verdicts and measured history, which remain valuable. Do **not** read
+> current state here — run `{"type":"xos","command":"control-tower"}`. Where a row
+> disagrees with Experiment OS, Experiment OS is right.
+>
+> The "UNTRACKED book" reconciliation described below is obsolete by
+> construction: under `NEW_ONLY` an unregistered tag cannot write a row at all.
+
+
 **Canonical index of every book that writes `paper_trades` (or trades live).** The strategy
 status loop reconciles the live `paper_trades.strategy` rows against this table every run: a
 `book:<tag>` the query finds with **no row here is UNTRACKED** — the loop flags it (a book must
