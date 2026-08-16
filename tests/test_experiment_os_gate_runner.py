@@ -832,3 +832,67 @@ def test_a_completed_cycle_always_logs_its_counts(xos_session, xos_platform, cap
         summary = gate_runner.run_scheduled_evaluation(s, LIVE)  # no experiments at all
     assert summary is not None and summary["considered"] == 0
     assert any("gate evaluation cycle" == r.getMessage() for r in caplog.records)
+
+
+def test_progress_compares_like_with_like_across_clause_widths(xos_session,
+                                                               xos_platform):
+    """The 2026-08-16 production duplicate, made a regression test.
+
+    mmsell-anchor-vol-entry's sample FLOOR clause counted 29 trades while its
+    widest pass_all clause counted 77. The old check measured the prior from
+    `sample_json` (floors only) and the present from every clause, so the fixed
+    48-wide gap read as "+48 of progress" on every cycle and re-recorded the same
+    HOLD forever. Same gate, same evidence, one row."""
+    s = xos_session
+    exp = svc.create_experiment(s, key="exp-widths", origin="operator")
+    ver = svc.create_experiment_version(
+        s, exp, hypothesis="h", independent_variable="lever", now=T0,
+    )
+    svc.add_arm(s, ver, arm_key="treatment", role="treatment", strategy_tag="w_t")
+    svc.add_arm(s, ver, arm_key="control", role="control", strategy_tag="w_c")
+    svc.freeze_version(s, ver, now=T0)
+    epoch = svc.open_epoch(s, ver, reason="initial", started_at=T0)
+    svc.register_deployment(
+        s, epoch, deployment_key="w-paper-1", stage="PAPER", kind="paper",
+        arms={"treatment": "w_t", "control": "w_c"}, started_at=T0,
+    )
+    svc.transition_experiment(s, exp, "PROBE", actor="operator")
+    svc.transition_experiment(s, exp, "PAPER", actor="operator")
+    # Floor on the THIN treatment arm; the pass clause is scored on the WIDE
+    # control — exactly the production shape.
+    gate = svc.register_gate(
+        s, ver, gate_key="paper_keep", kind="promotion",
+        spec={
+            "sample": {"treatment": {"metric": "settled_trades", "op": ">=",
+                                     "value": 100}},
+            "pass_all": [{"metric": "pnl_cents_per_trade", "arm": "control",
+                          "op": ">", "value": 0}],
+        },
+        from_state="PAPER", to_state="LIVE_CANARY", registered_at=T0,
+    )
+    svc.mark_gate_evidence_started(s, gate, at=T0)
+    for _ in range(29):
+        _trade(s, "w_t", pnl=0.05)
+    for _ in range(77):
+        _trade(s, "w_c", pnl=0.05)
+    s.commit()
+
+    assert _run(s)["written"] == 1
+    row = _results(s, gate)[-1]
+    assert row.verdict == "HOLD"  # floor 29/100
+    # The asymmetry is real in the stored row: floors say 29, clauses say 77.
+    assert max(v["n"] for v in row.sample_json.values()) == 29
+    assert max(c["n"] for c in row.metrics_json["clauses"]) == 77
+
+    for _ in range(3):  # every subsequent cycle, unchanged evidence
+        out = _run(s)
+        assert out["written"] == 0, out["written_rows"]
+        assert out["skipped_unchanged"] == 1
+    assert len(_results(s, gate)) == 1
+
+    # Real progress on the widest clause still records.
+    for _ in range(40):
+        _trade(s, "w_c", pnl=0.05)
+    s.commit()
+    assert _run(s)["written"] == 1
+    assert len(_results(s, gate)) == 2
