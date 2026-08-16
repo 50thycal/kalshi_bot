@@ -437,6 +437,22 @@ def tag_admissible(session, tag: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
+def _canonical_material(value):
+    """Order-insensitive canonical form of a material-config fact.
+
+    Membership facts are SETS in meaning — `live_strategies_contains`
+    ["Lmmsell8", "Lmmsell10"] and ["Lmmsell10", "Lmmsell8"] describe the same
+    world. The observed side is rebuilt by iterating live config, so its order
+    is incidental; comparing it raw against the manifest's hand-written order
+    reports drift that does not exist, and a false EXPERIMENT_CONFIG_DRIFT is
+    expensive: it blocks gate evaluation and, under STRICT, the book's tags."""
+    if isinstance(value, list):
+        return sorted(_canonical_material(v) for v in value)
+    if isinstance(value, dict):
+        return {k: _canonical_material(value[k]) for k in sorted(value)}
+    return value
+
+
 def _material_runtime_config(settings, material: dict) -> dict:
     """Recompute the registered 'material' config shape from live Settings so the
     two fingerprint-comparable dicts describe the same facts."""
@@ -484,8 +500,10 @@ def runtime_config_check(session, settings) -> list[dict]:
             material = (dep.config_json or {}).get("material")
             if not material:
                 continue
-            observed = _material_runtime_config(settings, material)
-            expected = {k: material[k] for k in observed}
+            observed = _canonical_material(
+                _material_runtime_config(settings, material)
+            )
+            expected = _canonical_material({k: material[k] for k in observed})
             if observed == expected:
                 continue
             finding = {
