@@ -318,7 +318,15 @@ def _data_health(session) -> list[dict]:
                         "rows": int(row[1] or 0) if row else 0})
             continue
         age_min = (now - latest).total_seconds() / 60.0
-        status = "STALE" if age_min > 3 * cadence else "fresh"
+        # A stall is hours; months means the collector is simply not part of the
+        # current deployment (e.g. market_snapshots only runs in scanner mode).
+        # Calling that STALE every run trains the reader to ignore the column.
+        if age_min > 7 * 24 * 60:
+            status = "INACTIVE"
+        elif age_min > 3 * cadence:
+            status = "STALE"
+        else:
+            status = "fresh"
         out.append({"collector": table, "status": status,
                     "age_min": round(age_min, 1), "cadence_min": cadence,
                     "latest": str(latest)})
@@ -423,7 +431,7 @@ def _derive_actions(rep: TowerReport) -> None:
                             "Live Ops"
                         )
 
-    stale = [c for c in rep.data_health if c["status"] in ("STALE", "EMPTY")]
+    stale = [c for c in rep.data_health if c["status"] == "STALE"]
     if stale:
         rep.recommendations.append(
             "data collectors not fresh: "
@@ -544,10 +552,15 @@ def render(rep: TowerReport, *, session=None) -> str:
                       c.get("cadence_min")] for c in rep.data_health])
 
     p = rep.portfolio
+    gap = p["gap_to_north_star_usd"]
+    standing = (f"AHEAD by ${abs(gap):.2f}" if gap < 0
+                else f"short by ${gap:.2f}")
     lines += ["", "=== PORTFOLIO (north star: $100/month realized) ===",
-              f"    paper realized 30d: ${p['paper_realized_30d_usd']}   "
-              f"all-time: ${p['paper_realized_all_time_usd']}   "
-              f"gap to goal: ${p['gap_to_north_star_usd']}"]
+              f"    PAPER realized 30d: ${p['paper_realized_30d_usd']}  "
+              f"(all-time ${p['paper_realized_all_time_usd']})  → {standing}",
+              "    Paper assumes fills it would not always get; the north star is "
+              "REAL money. Live realized is per-canary — see `mmsell_live` / "
+              "`live_paper_parity`."]
 
     lines += ["", "=== READY / DUE ==="]
     lines += [f"    - {r}" for r in rep.ready_due] or ["    (none)"]
