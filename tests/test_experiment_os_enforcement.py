@@ -343,6 +343,46 @@ def test_live_orders_fail_closed_too(xos_session, xos_platform):
 # ---------------------------------------------------------------------------
 
 
+def test_matching_config_is_never_reported_as_drift(xos_session, base_env):
+    """The production configuration must read as CLEAN.
+
+    Regression: the observed side is rebuilt by iterating live config, so its
+    list order is incidental; comparing it raw against the manifest's
+    hand-written order reported drift on a book whose config had not changed.
+    A false EXPERIMENT_CONFIG_DRIFT is expensive — it blocks gate evaluation,
+    turns readiness red, and under STRICT blocks the book's tags."""
+    from kalshi_bot.config import Settings
+
+    s = xos_session
+    for twin_tag, live_tag in [
+        ("Lmmsell8_pt3", "Lmmsell8"), ("Lmmsell10_pt3", "Lmmsell10"),
+        ("theta4_pt3", "theta4"),
+    ]:
+        s.add(LivePaperTwin(twin_tag=twin_tag, live_tag=live_tag, started_at=T0))
+    s.commit()
+    importer.import_legacy(s, now=_dt(2026, 8, 15, 16, 0))
+    s.commit()
+    # Exactly production's values, in production's declaration order.
+    settings = Settings(
+        _env_file=None,
+        live_strategies="theta4,Lmmsell8,Lmmsell10",
+        live_paper_twins="",
+        live_paper_twin_suffix="_pt3",
+        mmsell_variants=(
+            "Lmmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;Lmmsell10:lo=5,hi=10,maxyes=7"
+        ),
+    )
+    assert enf.runtime_config_check(s, settings) == []
+    s.commit()
+    assert s.scalar(
+        select(func.count()).select_from(ExperimentIntegrityEvent).where(
+            ExperimentIntegrityEvent.kind == "EXPERIMENT_CONFIG_DRIFT"
+        )
+    ) == 0
+    # ...and the checklist stays green, so the cutover is not blocked by a phantom.
+    assert enf.production_readiness(s, settings)["ok"] is True
+
+
 def test_config_drift_detected_and_blocks_under_strict(xos_session, base_env, monkeypatch):
     from kalshi_bot.config import Settings
 
