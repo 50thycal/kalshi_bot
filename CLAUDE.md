@@ -43,8 +43,11 @@ Enforcement is **`NEW_ONLY`** in production since **2026-08-16T14:34:42.892897Z*
   change is a new epoch (changed world), new version (changed question), or new
   experiment (new question).
 - Lifecycle moves are recorded transitions, never a side effect of merging code.
+- Gate verdicts are **recorded**, by the designated evaluator, on a bounded
+  cadence. Automatic evaluation is allowed; automatic promotion never is. A dry
+  run (including the Control Tower's) authorizes nothing.
 - Read it: `docs/EXPERIMENT_OS_FOUNDATION.md`, `_METRICS`, `_ENFORCEMENT`,
-  `_PLATFORM_IMPACT`, `_MIGRATION`; spec in
+  `_PLATFORM_IMPACT`, `_GATE_RESULTS`, `_MIGRATION`; spec in
   `docs/EXPERIMENT_OPERATING_SYSTEM_SPEC.md`.
 
 ## Session role — establish this first

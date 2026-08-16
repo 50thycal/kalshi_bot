@@ -12,6 +12,8 @@ confirmation.
 
 ## LOAD FIRST
 - `docs/EXPERIMENT_OS_ENFORCEMENT.md` (lineage/admission behaviour under NEW_ONLY)
+- `docs/EXPERIMENT_OS_GATE_RESULTS.md` when the evaluator needs running or its
+  cadence flag changing — this role owns that write
 - ops channel: worker logs, `weather_digest`, `{"type":"xos","command":"control-tower"}`
 
 ## STARTUP ROUTINE
@@ -39,7 +41,9 @@ A shared semantic change → **Platform Change Review**.
 
 ## MAY MODIFY
 Operational config within the allowlist, order/drain state, collector processes,
-runtime fixes.
+runtime fixes. Also the gate evaluator: `EXPERIMENT_OS_EVALUATE_GATES` /
+`_INTERVAL_MINUTES`, and running `evaluate-gates`. That records verdicts only —
+it can never promote, and a recorded PASS still buys nothing here.
 
 ## MUST NOT MODIFY
 Experiment lifecycle state, gates, or pre-registered contracts. Never expand

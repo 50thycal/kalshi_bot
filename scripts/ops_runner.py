@@ -226,7 +226,7 @@ def main() -> int:
         # full dependency set, which the workflow installs when it sees this type.
         allowed = {
             "control-tower", "list", "show", "transitions", "platform", "tag",
-            "scoreboard", "enforcement", "readiness",
+            "scoreboard", "enforcement", "readiness", "evaluate-gates",
         }
         command = (req.get("command") or "control-tower").strip()
         if command not in allowed:
