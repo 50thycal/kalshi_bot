@@ -166,7 +166,9 @@ def report(cur, n_transitions: int) -> None:
                          jsonb_array_elements_text(
                              COALESCE(e.docs_json::jsonb -> 'covered_tag_prefixes',
                                       '[]'::jsonb)) p
-                    WHERE t.tag LIKE p.value || '%')
+                    -- '%%' not '%': _rows always passes a params tuple, so psycopg
+                    -- parses placeholders and a bare % aborts the whole report.
+                    WHERE t.tag LIKE p.value || '%%')
             ORDER BY 1
         """)
         ntags = _rows(cur, """
