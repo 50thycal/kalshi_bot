@@ -31,6 +31,7 @@ from kalshi_bot.experiment_os import evaluator, importer, read
 from kalshi_bot.experiment_os import service as svc
 from kalshi_bot.experiment_os.lifecycle import EnforcementMode
 from kalshi_bot.experiment_os.models import (
+    ExperimentDeployment,
     ExperimentGateResult,
     ExperimentIntegrityEvent,
     ExperimentOsEnforcement,
@@ -365,6 +366,7 @@ def test_matching_config_is_never_reported_as_drift(xos_session, base_env):
     # Exactly production's values, in production's declaration order.
     settings = Settings(
         _env_file=None,
+        bot_mode="live",
         live_strategies="theta4,Lmmsell8,Lmmsell10",
         live_paper_twins="",
         live_paper_twin_suffix="_pt3",
@@ -383,6 +385,62 @@ def test_matching_config_is_never_reported_as_drift(xos_session, base_env):
     assert enf.production_readiness(s, settings)["ok"] is True
 
 
+def test_only_the_live_worker_may_judge_live_config(xos_session, base_env):
+    """A worker that does not run the live books is not a witness to them.
+
+    Production regression (2026-08-16T16:01:40Z): the evo worker shares this
+    database and runs the same boot path with BOT_MODE=evo and no live
+    configuration. It saw every live book as "vanished" and recorded drift on
+    both live canaries — blocking gate evaluation on both, turning readiness
+    red, and (under STRICT) it would have blocked real trading."""
+    from kalshi_bot.config import Settings
+
+    s = xos_session
+    for twin_tag, live_tag in [
+        ("Lmmsell8_pt3", "Lmmsell8"), ("Lmmsell10_pt3", "Lmmsell10"),
+        ("theta4_pt3", "theta4"),
+    ]:
+        s.add(LivePaperTwin(twin_tag=twin_tag, live_tag=live_tag, started_at=T0))
+    s.commit()
+    importer.import_legacy(s, now=_dt(2026, 8, 15, 16, 0))
+    s.commit()
+
+    # The evo worker: same DB, same boot path, no live config whatsoever.
+    evo = Settings(_env_file=None, bot_mode="evo", live_strategies="",
+                   live_paper_twins="", mmsell_variants="")
+    assert enf.runtime_config_check(s, evo) == []
+    s.commit()
+    assert s.scalar(
+        select(func.count()).select_from(ExperimentIntegrityEvent).where(
+            ExperimentIntegrityEvent.kind == "EXPERIMENT_CONFIG_DRIFT"
+        )
+    ) == 0, "a non-live worker must never record drift on the live books"
+
+    # And the live worker still clears a stale event some other process wrote.
+    live_ok = Settings(
+        _env_file=None, bot_mode="live",
+        live_strategies="theta4,Lmmsell8,Lmmsell10", live_paper_twins="",
+        live_paper_twin_suffix="_pt3",
+        mmsell_variants=(
+            "Lmmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;Lmmsell10:lo=5,hi=10,maxyes=7"
+        ),
+    )
+    dep = s.scalar(select(ExperimentDeployment).where(
+        ExperimentDeployment.deployment_key == "theta4-live-1"))
+    exp = read.get_experiment(s, "theta4-fat-tail")
+    svc.record_integrity_event(
+        s, exp, kind="EXPERIMENT_CONFIG_DRIFT", deployment=dep,
+        description="false drift written by a non-live worker",
+    )
+    s.commit()
+    assert enf.runtime_config_check(s, live_ok) == []
+    s.commit()
+    stale = s.scalar(select(ExperimentIntegrityEvent).where(
+        ExperimentIntegrityEvent.kind == "EXPERIMENT_CONFIG_DRIFT"))
+    assert stale.resolved_at is not None
+    assert "LIVE trading worker observed" in stale.resolution
+
+
 def test_config_drift_detected_and_blocks_under_strict(xos_session, base_env, monkeypatch):
     from kalshi_bot.config import Settings
 
@@ -398,6 +456,7 @@ def test_config_drift_detected_and_blocks_under_strict(xos_session, base_env, mo
 
     settings = Settings(
         _env_file=None,
+        bot_mode="live",
         live_strategies="theta4,Lmmsell8,Lmmsell10",
         # Lmmsell10's registered band quietly widened — material drift.
         mmsell_variants="Lmmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;Lmmsell10:lo=5,hi=14",
