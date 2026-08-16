@@ -48,6 +48,17 @@ ALLOWED_VARS = frozenset({
     # again; retuning it against a measured 429 rate should not need a code deploy. Raise it in
     # steps and watch the RATE LIMITED line in `mmsell quote parity`.
     "MMSELL_TOP_EVENTS", "MMSELL_EVENT_PAGES",
+    # Experiment OS operational migration (docs/EXPERIMENT_OS_ENFORCEMENT.md). These are
+    # here because the ops channel is deliberately READ-ONLY against Postgres: the worker
+    # is the only process holding a writable DATABASE_URL, so the legacy import and the
+    # enforcement cutover can only be executed by setting these and letting it boot.
+    # Both hooks are idempotent, both refuse loudly rather than forcing, and neither can
+    # stop trading. EXPERIMENT_OS_ENFORCEMENT_MODE only RECORDS the declared mode after
+    # production_readiness() passes at that instant — a red checklist changes nothing,
+    # and force stays a human decision made through a different door.
+    "EXPERIMENT_OS_IMPORT_ON_BOOT", "EXPERIMENT_OS_ENFORCEMENT_MODE",
+    "EXPERIMENT_OS_CUTOVER_ID", "EXPERIMENT_OS_CUTOVER_ACTOR",
+    "EXPERIMENT_OS_CUTOVER_REASON",
     "BOT_MODE", "KILL_SWITCH", "RUN_ONCE", "SCAN_INTERVAL_SECONDS", "LOG_LEVEL",
     "MAX_ORDER_SIZE", "MAX_MARKET_EXPOSURE", "MAX_TOTAL_EXPOSURE", "MAX_DAILY_LOSS",
     "MAX_SPREAD_CENTS", "MIN_VOLUME", "MIN_OPEN_INTEREST", "MIN_HOURS_TO_CLOSE",

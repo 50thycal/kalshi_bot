@@ -101,15 +101,25 @@ def run() -> int:
                 extra={"extra_fields": {"error": str(exc)}},
             )
 
-    # 2c) Experiment OS enforcement: load the recorded mode (OFF when never
-    # recorded), and when enforcement is on, check the live books' registered
-    # config for drift. Guarded like 2b — enforcement state must never stop the
-    # worker; per-mode blocking happens inside the write helpers, per tag.
+    # 2c) Experiment OS enforcement: record an operator-declared cutover (no-op
+    # unless EXPERIMENT_OS_ENFORCEMENT_MODE names a mode we are not already in,
+    # and only after readiness passes), then load the recorded mode (OFF when
+    # never recorded), and when enforcement is on, check the live books'
+    # registered config for drift. Guarded like 2b — enforcement state must never
+    # stop the worker; per-mode blocking happens inside the write helpers, per tag.
     try:
         from .experiment_os import enforcement as xos_enforcement
         from .experiment_os.lifecycle import EnforcementMode
 
         with session_scope() as session:
+            cutover = xos_enforcement.run_boot_cutover(session, settings)
+            if cutover is not None:
+                log_event(
+                    logger,
+                    logging.INFO if cutover.get("ok") else logging.ERROR,
+                    "experiment OS enforcement cutover",
+                    **{k: v for k, v in cutover.items() if k != "readiness"},
+                )
             xos_enforcement.refresh(session)
             mode = xos_enforcement.current_mode(session)
             log_event(

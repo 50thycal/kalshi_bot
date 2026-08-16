@@ -23,7 +23,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from kalshi_bot import repository as repo
 from kalshi_bot.experiment_os import enforcement as enf
@@ -119,6 +119,73 @@ def test_new_only_requires_ok_readiness_or_explicit_force(xos_session):
     forced = _set_mode(s, "NEW_ONLY", readiness=bad, force=True, cutover_id="forced-1")
     assert forced.mode == "NEW_ONLY"  # audited override, not a silent bypass
     assert forced.readiness_json["ok"] is False
+
+
+def _cutover_settings(**kw):
+    from kalshi_bot.config import Settings
+
+    base = dict(
+        _env_file=None,
+        experiment_os_enforcement_mode="NEW_ONLY",
+        experiment_os_cutover_id="cutover-test-1",
+        experiment_os_cutover_actor="operator",
+        experiment_os_cutover_reason="production cutover",
+        live_strategies="",
+    )
+    base.update(kw)
+    return Settings(**base)
+
+
+def test_boot_cutover_hook_refuses_red_readiness_and_cannot_force(xos_session, base_env):
+    """The worker-side cutover hook is the only writable path to the enforcement
+    record (ops is read-only), so its gate must be unbypassable from config."""
+    s = xos_session
+    # Empty DB ⇒ readiness is red (import never ran).
+    out = enf.run_boot_cutover(s, _cutover_settings())
+    assert out["ok"] is False and out["reason"] == "readiness not ok"
+    assert "import_ran" in out["failing"]
+    assert enf.current_mode(s) is EnforcementMode.OFF        # nothing changed
+    assert enf.current_enforcement(s) is None                # nothing recorded
+    refusal = s.scalar(select(SystemEvent).where(
+        SystemEvent.message.like("%cutover to NEW_ONLY REFUSED%")))
+    assert refusal is not None                               # loud, durable
+    # There is no env-driven force: no combination of settings records it.
+    assert not hasattr(_cutover_settings(), "experiment_os_cutover_force")
+
+
+def test_boot_cutover_hook_requires_attribution(xos_session, base_env):
+    s = xos_session
+    out = enf.run_boot_cutover(s, _cutover_settings(experiment_os_cutover_id=""))
+    assert out["ok"] is False and out["missing"] == ["EXPERIMENT_OS_CUTOVER_ID"]
+    assert enf.current_mode(s) is EnforcementMode.OFF
+    bad = enf.run_boot_cutover(s, _cutover_settings(
+        experiment_os_enforcement_mode="TURBO"))
+    assert bad["ok"] is False and bad["reason"] == "invalid mode"
+
+
+def test_boot_cutover_hook_records_once_then_no_ops(xos_session, xos_platform, base_env):
+    s = xos_session
+    for twin_tag, live_tag in [("Lmmsell8_pt3", "Lmmsell8"),
+                               ("Lmmsell10_pt3", "Lmmsell10"),
+                               ("theta4_pt3", "theta4")]:
+        s.add(LivePaperTwin(twin_tag=twin_tag, live_tag=live_tag, started_at=T0))
+    s.commit()
+    importer.import_legacy(s, now=_dt(2026, 8, 15, 16, 0))
+    s.commit()
+    assert enf.production_readiness(s)["ok"] is True          # green baseline
+
+    out = enf.run_boot_cutover(s, _cutover_settings())
+    assert out["ok"] is True and out["mode"] == "NEW_ONLY"
+    record = enf.current_enforcement(s)
+    assert record.cutover_id == "cutover-test-1"
+    assert record.actor == "operator"
+    assert record.preceding_mode is None      # OFF was never itself recorded
+    assert record.readiness_json["ok"] is True                # evidence attached
+    # The reported boundary IS the recorded one (sqlite drops the tz suffix).
+    assert out["effective_at"][:19] == str(record.effective_at)[:19]
+    # Idempotent: the same settings on every later boot record nothing new.
+    assert enf.run_boot_cutover(s, _cutover_settings()) is None
+    assert s.scalar(select(func.count()).select_from(ExperimentOsEnforcement)) == 1
 
 
 # ---------------------------------------------------------------------------
