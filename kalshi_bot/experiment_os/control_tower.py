@@ -107,6 +107,9 @@ class TowerReport:
     # The window `retired_recent` covers, carried so the render states it rather
     # than leaving the reader to call it "this cycle".
     retired_days: int = 7
+    # Retired records with no `retired_at` at all — their date is unknown, not
+    # recent. Named so the window's coverage is honest about what it cannot place.
+    retired_undated: list[str] = field(default_factory=list)
     blocked: list[dict] = field(default_factory=list)
 
 
@@ -475,13 +478,31 @@ def build_report(session, *, evaluate: bool = True,
             _experiment_view(session, exp, evaluate=evaluate)
         )
 
+    # Select on when the book ACTUALLY died (`retired_at`), not on when its
+    # RETIRED transition row was written. The legacy import stamped every
+    # transition at one instant, so filtering on the transition puts the entire
+    # graveyard inside any window — a stated "last 7 days" that is wrong is worse
+    # than an unstated one. Undated legacy records (retired_at NULL) fall back to
+    # the transition and are labelled, so the guess is never silent.
     cutoff = _now() - timedelta(days=retired_days)
     for exp in read.list_experiments(session, state=LifecycleState.RETIRED.value):
         transitions = read.transitions_for(session, exp)
-        if transitions and _utc(transitions[-1].occurred_at) >= cutoff:
-            rep.retired_recent.append({"key": exp.key,
-                                       "at": str(transitions[-1].occurred_at),
-                                       "reason": (transitions[-1].reason or "")[:120]})
+        retired_at = _utc(exp.retired_at)
+        when = retired_at or (_utc(transitions[-1].occurred_at) if transitions else None)
+        if when is None or when < cutoff:
+            continue
+        rep.retired_recent.append({
+            "key": exp.key,
+            "at": str(when),
+            "dated": retired_at is not None,
+            "reason": (transitions[-1].reason if transitions else None) or "",
+        })
+    rep.retired_recent.sort(key=lambda r: r["at"], reverse=True)
+    rep.retired_undated = [
+        exp.key
+        for exp in read.list_experiments(session, state=LifecycleState.RETIRED.value)
+        if exp.retired_at is None
+    ]
 
     rep.data_health = _data_health(session)
     rep.portfolio = _portfolio(session)
@@ -754,12 +775,21 @@ def render(rep: TowerReport, *, session=None) -> str:
     lines += [f"    - {r}" for r in rep.ready_due] or ["    (none)"]
     # State the window. "Recently" with no number was read as "this cycle", which
     # turned a 7-day lookback into a claim that 14 books died in one run.
-    lines += ["", f"=== RECENTLY RETIRED — last {rep.retired_days} days ==="]
+    lines += ["", f"=== RECENTLY RETIRED — last {rep.retired_days} days ===",
+              "    Dated by the experiment's retired_at (when the book actually "
+              "died), not by when its record was written."]
     if rep.retired_recent:
-        lines += [f"    - {r['key']} @ {r['at']}: {r['reason']}"
-                  for r in rep.retired_recent]
+        for r in rep.retired_recent:
+            mark = "" if r.get("dated") else "  [no retired_at — transition date]"
+            lines.append(f"    - {r['key']} @ {r['at']}{mark}: {r['reason']}")
     else:
         lines.append(f"    (none retired in the last {rep.retired_days} days)")
+    if rep.retired_undated:
+        lines.append(
+            f"    {len(rep.retired_undated)} retired record(s) carry NO retired_at "
+            "— undated legacy history, not recent: "
+            + ", ".join(sorted(rep.retired_undated))
+        )
     lines += ["", "=== RECOMMENDED NEXT ACTIONS ==="]
     lines += [f"    - {r}" for r in rep.recommendations] or [
         "    - none; continue accumulating evidence"]

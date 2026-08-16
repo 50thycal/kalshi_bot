@@ -307,3 +307,43 @@ def test_recently_retired_states_its_real_lookback(xos_session, xos_platform):
 def test_empty_retired_section_still_states_the_window(xos_session, xos_platform):
     out = ct.render(ct.build_report(xos_session, evaluate=False, retired_days=14))
     assert "(none retired in the last 14 days)" in out
+
+
+def test_retired_window_selects_on_when_the_book_died(xos_session, xos_platform):
+    """The fresh-session finding: filtering on the RETIRED transition put the
+    whole graveyard inside every window, because the legacy import stamped all of
+    them at one instant. 17 shown, 10 actually retired that week. A stated window
+    that is wrong is worse than an unstated one."""
+    s = xos_session
+    now = datetime.now(UTC)
+    import_instant = now - timedelta(hours=1)  # when the import wrote every row
+
+    for key, retired_at in (
+        ("gone-recently", now - timedelta(days=2)),
+        ("gone-long-ago", now - timedelta(days=90)),
+        ("gone-undated", None),
+    ):
+        exp = svc.create_experiment(s, key=key, origin="operator")
+        svc.transition_experiment(s, exp, "PROBE", actor="import",
+                                  occurred_at=import_instant)
+        svc.transition_experiment(s, exp, "RETIRED", actor="import",
+                                  reason="killed", occurred_at=import_instant)
+        exp.retired_at = retired_at
+    s.commit()
+
+    rep = ct.build_report(s, evaluate=False, retired_days=7)
+    keys = [r["key"] for r in rep.retired_recent]
+    assert "gone-recently" in keys
+    assert "gone-long-ago" not in keys, (
+        "a book retired 90 days ago is not recent just because its transition row "
+        "was written during today's import"
+    )
+    # Undated records fall back to the transition, but say so rather than pretend.
+    undated = next(r for r in rep.retired_recent if r["key"] == "gone-undated")
+    assert undated["dated"] is False
+    assert rep.retired_undated == ["gone-undated"]
+
+    out = ct.render(rep)
+    assert "[no retired_at — transition date]" in out
+    assert "carry NO retired_at" in out
+    assert "not by when its record was written" in out
