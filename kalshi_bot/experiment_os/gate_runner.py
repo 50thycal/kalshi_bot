@@ -300,25 +300,38 @@ def run_scheduled_evaluation(session, settings) -> dict | None:
     """Cycle hook: evaluate at a bounded cadence. Never raises.
 
     Returns None when this process is not the designated writer or the cadence
-    has not elapsed — the overwhelmingly common case, so it is cheap and silent."""
-    allowed, _why = _may_write(settings)
+    has not elapsed — the overwhelmingly common case, so it is cheap.
+
+    An inert evaluator says so ONCE per process. Silence is indistinguishable
+    from "running and finding nothing", which is how the first production deploy
+    of this module looked while its hook was wired into a cycle function the live
+    worker never calls. One line at startup makes that visible."""
+    global _LAST_RUN, _ANNOUNCED
+    allowed, why = _may_write(settings)
     if not allowed:
+        if not _ANNOUNCED:
+            _ANNOUNCED = True
+            logger.info(
+                "gate evaluation inert on this process",
+                extra={"extra_fields": {"reason": why}},
+            )
         return None
     interval = int(getattr(settings, "experiment_os_evaluate_interval_minutes", 60) or 60)
-    global _LAST_RUN
     now = _now()
     if _LAST_RUN is not None and (now - _LAST_RUN).total_seconds() < interval * 60:
         return None
     _LAST_RUN = now
     try:
         summary = run_evaluation_cycle(session, settings=settings)
-        if summary["written"] or summary["errors"]:
-            logger.info(
-                "gate evaluation cycle",
-                extra={"extra_fields": {k: summary[k] for k in
-                                        ("considered", "evaluated", "written",
-                                         "skipped_unchanged", "errors", "verdicts")}},
-            )
+        # Always log a completed cycle, not only a productive one: at most one
+        # line per interval, and "considered=0" is itself the diagnosis when a
+        # gate that should be evaluated never is.
+        logger.info(
+            "gate evaluation cycle",
+            extra={"extra_fields": {k: summary[k] for k in
+                                    ("considered", "evaluated", "written",
+                                     "skipped_unchanged", "errors", "verdicts")}},
+        )
         return summary
     except Exception as exc:  # noqa: BLE001 — evaluation must never stop trading
         logger.error(
@@ -333,11 +346,13 @@ def run_scheduled_evaluation(session, settings) -> dict | None:
 
 
 _LAST_RUN: datetime | None = None
+_ANNOUNCED: bool = False
 
 
 def reset_for_tests() -> None:
-    global _LAST_RUN
+    global _LAST_RUN, _ANNOUNCED
     _LAST_RUN = None
+    _ANNOUNCED = False
 
 
 __all__ = [

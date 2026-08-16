@@ -751,3 +751,84 @@ def test_cli_refuses_to_persist_over_the_read_only_connection(xos_session, xos_p
     monkeypatch.delenv("DATABASE_URL_RO")
     assert cli.cmd_evaluate_gates(s, args) == 0
     assert s.query(ExperimentGateResult).count() == 1
+
+
+# ---------------------------------------------------------------------------
+# Runtime wiring: the hook must run in the mode production actually uses
+# ---------------------------------------------------------------------------
+
+
+def test_experiment_os_hook_runs_in_every_mode_not_just_the_scanner():
+    """The 2026-08-16 production miss, made structural.
+
+    `main._run_cycle` is only the SCANNER fallback: with BOT_MODE=live the loop
+    calls `_run_live_cycle`, with weather `_run_weather_cycle`, and so on. The
+    first deploy of this module wired the evaluator into `_run_cycle`, so on the
+    live worker it never executed once — no error, no log, no rows.
+
+    The maintenance hook therefore belongs in the LOOP BODY, which every mode
+    passes through. This pins that: it is called from `run()`, before the mode
+    dispatch, and not from any individual cycle function (which would double-run
+    it in one mode and skip it in the rest)."""
+    import ast
+    import inspect
+
+    from kalshi_bot import main as main_mod
+
+    HOOK = "_experiment_os_cycle"
+    assert callable(getattr(main_mod, HOOK)), "the maintenance hook must exist"
+
+    tree = ast.parse(inspect.getsource(main_mod))
+    fns = {n.name: n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)}
+
+    def calls_hook(node) -> bool:
+        return any(
+            isinstance(c, ast.Call) and isinstance(c.func, ast.Name) and c.func.id == HOOK
+            for c in ast.walk(node)
+        )
+
+    loops = [n for n in ast.walk(fns["run"]) if isinstance(n, ast.While)]
+    assert loops, "run() must still drive a cycle loop"
+    assert any(calls_hook(loop) for loop in loops), (
+        f"{HOOK}() must be called from run()'s cycle loop — a hook inside a single "
+        "cycle function does not run in the modes that use a different one"
+    )
+
+    for name in ("_run_cycle", "_run_live_cycle", "_run_weather_cycle",
+                 "_run_mmsell_cycle"):
+        if name in fns:
+            assert not calls_hook(fns[name]), (
+                f"{name} must not call {HOOK}() — the loop body owns it, so calling "
+                "it here would double-run in one mode and still skip the others"
+            )
+
+    # And the hook itself must do both jobs, each independently guarded.
+    src = inspect.getsource(getattr(main_mod, HOOK))
+    assert "enforcement" in src and "gate_runner" in src
+    assert src.count("except Exception") >= 2
+
+
+def test_an_inert_evaluator_announces_itself_once(xos_session, xos_platform, caplog):
+    """Silence is indistinguishable from 'ran and found nothing' — which is what
+    made the production miss invisible. Say it once, then stay quiet."""
+    import logging
+
+    s = xos_session
+    _experiment(s, key="exp-inert")
+    evo = FakeSettings(bot_mode="evo")
+    with caplog.at_level(logging.INFO, logger="kalshi_bot.experiment_os.gate_runner"):
+        assert gate_runner.run_scheduled_evaluation(s, evo) is None
+        assert gate_runner.run_scheduled_evaluation(s, evo) is None
+    inert = [r for r in caplog.records if "inert" in r.getMessage()]
+    assert len(inert) == 1  # once per process, not once per cycle
+
+
+def test_a_completed_cycle_always_logs_its_counts(xos_session, xos_platform, caplog):
+    """Including a cycle that writes nothing: `considered=0` is the diagnosis."""
+    import logging
+
+    s = xos_session
+    with caplog.at_level(logging.INFO, logger="kalshi_bot.experiment_os.gate_runner"):
+        summary = gate_runner.run_scheduled_evaluation(s, LIVE)  # no experiments at all
+    assert summary is not None and summary["considered"] == 0
+    assert any("gate evaluation cycle" == r.getMessage() for r in caplog.records)

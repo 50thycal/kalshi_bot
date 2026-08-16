@@ -348,6 +348,12 @@ def run() -> int:
     exit_code = 0
     try:
         while True:
+            # Experiment OS per-cycle maintenance, for EVERY mode. This lives in the
+            # loop body, not inside one cycle function, because `_run_cycle` is only
+            # the scanner fallback — a hook placed there silently never runs under
+            # BOT_MODE=live/weather/mmsell/evo, which is exactly how the first
+            # deploy of the gate evaluator recorded nothing in production.
+            _experiment_os_cycle(settings)
             try:
                 if live:
                     _run_live_cycle(
@@ -404,6 +410,38 @@ def run() -> int:
     return exit_code
 
 
+def _experiment_os_cycle(settings: Settings) -> None:
+    """Per-cycle Experiment OS maintenance, run once per loop iteration in EVERY mode.
+
+    Two independent, individually guarded steps — neither may ever stop trading:
+
+    1. Refresh the enforcement snapshot (mode + tag→lineage map) so this cycle's
+       writes stamp and admit against current state. A failed refresh keeps the
+       previous snapshot: stale-but-safe.
+    2. Evaluate gates and persist results, at a bounded cadence and only on the
+       designated writer (`EXPERIMENT_OS_EVALUATE_GATES` on the live worker).
+       Records verdicts; never promotes.
+
+    Called from the main loop rather than from a cycle function on purpose: the
+    cycle function differs per BOT_MODE, and the live worker never calls
+    `_run_cycle` at all."""
+    try:
+        from .experiment_os import enforcement as xos_enforcement
+
+        with session_scope() as session:
+            xos_enforcement.refresh(session)
+    except Exception:  # noqa: BLE001 — enforcement refresh must never stop the cycle
+        logger.exception("experiment OS enforcement refresh failed")
+
+    try:
+        from .experiment_os import gate_runner as xos_gates
+
+        with session_scope() as session:
+            xos_gates.run_scheduled_evaluation(session, settings)
+    except Exception:  # noqa: BLE001 — evaluation must never stop the cycle
+        logger.exception("experiment OS gate evaluation failed")
+
+
 def _interruptible_sleep(seconds: int) -> bool:
     """Sleep up to `seconds`, returning False early if shutdown was requested."""
     for _ in range(max(0, seconds)):
@@ -415,28 +453,6 @@ def _interruptible_sleep(seconds: int) -> bool:
 
 def _run_cycle(settings: Settings, client: KalshiClient, scanner: MarketScanner) -> None:
     account_state: dict | None = None
-
-    # Refresh the Experiment OS enforcement snapshot (mode + tag→lineage map) so
-    # this cycle's writes stamp/admit against current state. Guarded: a failed
-    # refresh keeps the previous snapshot (stale-but-safe) and never stops trading.
-    try:
-        from .experiment_os import enforcement as xos_enforcement
-
-        with session_scope() as session:
-            xos_enforcement.refresh(session)
-    except Exception:  # noqa: BLE001 — enforcement refresh must never stop the cycle
-        logger.exception("experiment OS enforcement refresh failed")
-
-    # Persisted gate evaluation, at a bounded cadence, only on the designated
-    # writer (EXPERIMENT_OS_EVALUATE_GATES on the live worker). Records verdicts;
-    # never promotes. Fully guarded — evaluation must never stop trading.
-    try:
-        from .experiment_os import gate_runner as xos_gates
-
-        with session_scope() as session:
-            xos_gates.run_scheduled_evaluation(session, settings)
-    except Exception:  # noqa: BLE001 — evaluation must never stop the cycle
-        logger.exception("experiment OS gate evaluation failed")
 
     # Connectivity proof: exchange status + balance.
     status = client.get_exchange_status()  # AuthError propagates -> hard fail
