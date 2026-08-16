@@ -427,6 +427,17 @@ def _run_cycle(settings: Settings, client: KalshiClient, scanner: MarketScanner)
     except Exception:  # noqa: BLE001 — enforcement refresh must never stop the cycle
         logger.exception("experiment OS enforcement refresh failed")
 
+    # Persisted gate evaluation, at a bounded cadence, only on the designated
+    # writer (EXPERIMENT_OS_EVALUATE_GATES on the live worker). Records verdicts;
+    # never promotes. Fully guarded — evaluation must never stop trading.
+    try:
+        from .experiment_os import gate_runner as xos_gates
+
+        with session_scope() as session:
+            xos_gates.run_scheduled_evaluation(session, settings)
+    except Exception:  # noqa: BLE001 — evaluation must never stop the cycle
+        logger.exception("experiment OS gate evaluation failed")
+
     # Connectivity proof: exchange status + balance.
     status = client.get_exchange_status()  # AuthError propagates -> hard fail
     log_event(

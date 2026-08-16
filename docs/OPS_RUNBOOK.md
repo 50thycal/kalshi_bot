@@ -44,12 +44,28 @@ To run a request:
    {"type": "db",   "sql": "select ...", "max_rows": 200, "id": "pnl-check-1"}
    {"type": "logs", "limit": 200, "filter": "", "deployment_id": "", "id": "logs-1"}
    {"type": "script", "name": "weather_model_check", "args": ["--sigma", "1.5"]}
+   {"type": "xos",  "command": "control-tower", "id": "ct-1"}   # canonical Experiment OS read
    {"type": "env"}                                          # read allowlisted Railway vars
    {"type": "env", "set": {"KILL_SWITCH": "false"}}         # set allowlisted vars + redeploy
    {"type": "noop"}
    ```
    `script` runs an allowlisted self-contained read-only analysis script from
    `scripts/` (see `ALLOWED_SCRIPTS` in `scripts/ops_runner.py`).
+
+   `xos` runs the **canonical Experiment OS CLI** — the same code the worker runs,
+   so the operating layer can never drift from Experiment OS the way the retired
+   status checkers drifted from each other. Allowlisted commands: `control-tower`,
+   `list`, `show`, `transitions`, `platform`, `tag`, `scoreboard`, `enforcement`,
+   `readiness`, `evaluate-gates`. Extra CLI flags go in `"args"`.
+
+   This channel is **read-only against Postgres** (`DATABASE_URL_RO`), so
+   `evaluate-gates` is dry-run only here — it prints what it *would* record and
+   exits 2 if asked to persist. Actually recording results is the live worker's
+   job (`EXPERIMENT_OS_EVALUATE_GATES`, settable via `env`), or an operator run on
+   a writable connection: `docs/EXPERIMENT_OS_GATE_RESULTS.md`.
+   ```jsonc
+   {"type": "xos", "command": "evaluate-gates", "args": ["--dry-run"], "id": "ev-1"}
+   ```
 
    **Two Railway services, one channel.** `env` and `logs` requests accept a
    `"service"` field selecting which worker to act on — `"main"`/`"live"` (default,

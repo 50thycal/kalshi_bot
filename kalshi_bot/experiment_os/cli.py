@@ -1,4 +1,4 @@
-"""Read-only CLI to inspect Experiment OS state.
+"""CLI to inspect Experiment OS state — and to record gate evaluations.
 
     python -m kalshi_bot.experiment_os.cli list [--state PAPER] [--legacy/--native]
     python -m kalshi_bot.experiment_os.cli show <experiment-key>
@@ -6,11 +6,16 @@
     python -m kalshi_bot.experiment_os.cli platform [review <COMPONENT:version>]
     python -m kalshi_bot.experiment_os.cli tag <strategy-tag>
     python -m kalshi_bot.experiment_os.cli scoreboard [key] [--evaluate]
+    python -m kalshi_bot.experiment_os.cli evaluate-gates [--dry-run]
 
-Connects with DATABASE_URL_RO when set (preferred), else DATABASE_URL. Every command
-is a pure read — this tool can never move an experiment; `scoreboard --evaluate`
-runs the gate evaluator in DRY-RUN mode (persist=False), so even a verdict shown
-here writes nothing. For the ops channel there is a self-contained equivalent:
+Connects with DATABASE_URL_RO when set (preferred), else DATABASE_URL.
+
+Every command here is a pure read EXCEPT `evaluate-gates`, which persists gate
+results (docs/EXPERIMENT_OS_GATE_RESULTS.md) and refuses to run against
+DATABASE_URL_RO. Even that one cannot move an experiment: it records verdicts and
+never transitions, promotes or arms anything. `scoreboard --evaluate` runs the
+evaluator in DRY-RUN mode (persist=False), so a verdict shown there writes
+nothing. For the ops channel there is a self-contained equivalent:
 `{"type": "script", "name": "experiment_os_status"}`.
 """
 
@@ -265,6 +270,49 @@ def cmd_control_tower(session: Session, args) -> int:
     return 0
 
 
+def cmd_evaluate_gates(session: Session, args) -> int:
+    """Evaluate eligible gates and PERSIST the results (unless --dry-run).
+
+    This is the one operator-accessible write path. It records verdicts; it can
+    never promote, transition, or modify a gate."""
+    from .gate_runner import NotAuthorized, run_evaluation_cycle
+
+    dry = args.dry_run
+    if not dry:
+        # _connect() prefers DATABASE_URL_RO, so if it is set this session is the
+        # read-only one — including every ops-channel run. Fail loudly here rather
+        # than deep in a Postgres permission error halfway through a cycle.
+        if os.environ.get("DATABASE_URL_RO"):
+            print(
+                "refusing to persist over DATABASE_URL_RO: this is the read-only "
+                "connection (the ops channel always is). Run where only a writable "
+                "DATABASE_URL is set, or pass --dry-run.",
+                file=sys.stderr,
+            )
+            return 2
+        print("MODE: WRITE — persisting gate results (no promotion, ever)\n")
+    else:
+        print("MODE: DRY RUN — nothing will be written\n")
+    try:
+        summary = run_evaluation_cycle(
+            session, settings=None, dry_run=dry,
+            only_experiment=args.experiment, only_gate=args.gate,
+        )
+    except NotAuthorized as exc:
+        print(f"not authorized: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps(summary, indent=2, default=str))
+    print(
+        f"\nconsidered={summary['considered']} evaluated={summary['evaluated']} "
+        f"{'would_write' if dry else 'written'}="
+        f"{len(summary['written_rows']) if dry else summary['written']} "
+        f"skipped_unchanged={summary['skipped_unchanged']} "
+        f"errors={summary['errors']}"
+    )
+    print(f"verdicts: {summary['verdicts']}")
+    return 0
+
+
 def cmd_enforcement(session: Session, args) -> int:
     from .enforcement import enforcement_report
 
@@ -328,6 +376,17 @@ def main(argv: list[str] | None = None) -> int:
         help="skip the DRY-RUN gate evaluation (faster; shows recorded verdicts only)",
     )
     p_ct.set_defaults(fn=cmd_control_tower)
+
+    p_ev = sub.add_parser(
+        "evaluate-gates",
+        help="evaluate eligible gates and PERSIST results (--dry-run to preview). "
+        "Records verdicts only — never promotes or transitions anything.",
+    )
+    p_ev.add_argument("--dry-run", action="store_true",
+                      help="evaluate and report, write nothing")
+    p_ev.add_argument("--experiment", default=None, help="limit to one experiment key")
+    p_ev.add_argument("--gate", default=None, help="limit to one gate key")
+    p_ev.set_defaults(fn=cmd_evaluate_gates)
 
     p_enf = sub.add_parser(
         "enforcement", help="current mode, cutover, lineage coverage, canary links"

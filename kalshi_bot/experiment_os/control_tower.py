@@ -418,6 +418,21 @@ def _derive_actions(rep: TowerReport) -> None:
                         f"{verdict} {v['key']} · {g['gate_key']} — resolve the block "
                         "before any interpretation of this experiment's numbers"
                     )
+            for g in v["gates"]:
+                recorded = (g.get("latest_result") or {}).get("verdict")
+                live = g.get("live_verdict")
+                if recorded is None and live and not live.startswith("NOT_"):
+                    rep.ready_due.append(
+                        f"NEVER RECORDED {v['key']} · {g['gate_key']} — dry-run says "
+                        f"{live}; no official result exists, so this gate cannot "
+                        "authorize anything until an evaluation is persisted"
+                    )
+                elif recorded and live and recorded != live:
+                    rep.ready_due.append(
+                        f"DIVERGENCE {v['key']} · {g['gate_key']} — recorded "
+                        f"{recorded}, dry-run now {live}; an official re-evaluation "
+                        "is due"
+                    )
             if v["integrity_events"]:
                 rep.recommendations.append(
                     f"{v['key']}: unresolved integrity event(s) — Platform Change "
@@ -494,6 +509,9 @@ def render(rep: TowerReport, *, session=None) -> str:
         + (f" (cutover {enf.get('cutover_id')})" if enf.get("cutover_id") else ""),
         f"PLATFORM SNAPSHOT: {snap}",
         f"AS OF: {_central(rep.generated_at)}",
+        "",
+        "GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED "
+        "evaluator result can authorize a transition.",
         "",
         "=== SYSTEM / INTEGRITY ===",
     ]
@@ -594,19 +612,38 @@ def _primary_arms(arms: list[dict]) -> tuple[dict | None, dict | None]:
     return treatment, control
 
 
+def _gate_standing(g: dict) -> str:
+    """One gate's standing as `recorded/dry-run`.
+
+    The two are kept visibly distinct: only a RECORDED evaluator result can
+    authorize anything, while the dry run says what the evidence implies right
+    now. When they differ the dry run is shown with `*` — that is the signal that
+    an official re-evaluation is due, not that a promotion is available."""
+    recorded = (g.get("latest_result") or {}).get("verdict")
+    live = g.get("live_verdict")
+    if recorded and live and recorded != live:
+        return f"{recorded}/{live}*"
+    if recorded:
+        return recorded
+    if live:
+        return f"none/{live}"
+    return "not evaluated"
+
+
 def _verdict_of(view: dict) -> str:
     """The promotion gate's current standing, or the most blocking verdict."""
     best = None
     for g in view.get("gates", []):
-        v = g.get("live_verdict") or (g.get("latest_result") or {}).get("verdict")
-        if v is None:
+        standing = _gate_standing(g)
+        if standing == "not evaluated":
             continue
-        if v.startswith("BLOCKED"):
-            return v
+        v = g.get("live_verdict") or (g.get("latest_result") or {}).get("verdict")
+        if v and v.startswith("BLOCKED"):
+            return standing
         if g.get("kind") == "promotion":
-            best = v
+            best = standing
         elif best is None:
-            best = v
+            best = standing
     if best:
         return best
     return "no gate" if not view.get("gates") else "not evaluated"

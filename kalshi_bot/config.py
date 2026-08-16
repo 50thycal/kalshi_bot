@@ -107,6 +107,13 @@ class Settings(BaseSettings):
     experiment_os_cutover_actor: str = ""
     experiment_os_cutover_reason: str = ""
 
+    # Persisted gate evaluation (docs/EXPERIMENT_OS_GATE_RESULTS.md). Default OFF
+    # so a deploy stays inert. Only the LIVE worker with this on is the
+    # designated writer — evaluation is allowed to be automatic, promotion never
+    # is. Cadence is bounded so a periodic evaluator cannot become a write storm.
+    experiment_os_evaluate_gates: bool = False
+    experiment_os_evaluate_interval_minutes: int = 60
+
     # --- Scanner tuning ---
     target_categories: str = (
         "Economics,Financials,Companies,Climate and Weather,Commodities,Science and Technology"

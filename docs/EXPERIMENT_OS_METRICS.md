@@ -100,7 +100,9 @@ these is honestly BLOCKED_DATA until its canonical provider lands.
   `experiment_gate_results` row, `computed_by="system"`, carrying epoch, snapshot,
   window, `metric_revision` (`metrics_engine:pr3_v1`), per-clause detail with full
   provenance, and a human-readable explanation. `persist=False` is the CLI's
-  dry-run and writes nothing.
+  dry-run and writes nothing. *Who* runs the evaluator on a cadence, and when a
+  new row is a new decision point rather than a heartbeat, is
+  `docs/EXPERIMENT_OS_GATE_RESULTS.md`.
 
 ## Strict gate-result → transition binding
 

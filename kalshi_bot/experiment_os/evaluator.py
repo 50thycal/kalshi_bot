@@ -743,9 +743,33 @@ def _fmt(v) -> str:
     return "undefined" if v is None else f"{v:g}"
 
 
+def persist_outcome(
+    session, gate, outcome: EvaluationOutcome, *, computed_by: str = "system",
+    epoch=None, extra_metrics: dict | None = None,
+) -> EvaluationOutcome:
+    """Record an ALREADY-COMPUTED outcome as an immutable result.
+
+    Exists so a caller can evaluate once (dry run), decide whether the result is
+    a new decision point, and then persist *that exact outcome* — rather than
+    re-evaluating and silently recording a different one because evidence moved
+    in between. Same provenance as an evaluate_gate(persist=True) call.
+
+    `extra_metrics` is merged into the metrics payload AT CREATION (the gate
+    runner's dedupe fingerprint travels this way). It cannot be added afterwards:
+    gate results are append-only, so a later edit is refused by the flush guard —
+    correctly, since that would be rewriting recorded history."""
+    version = session.get(ExperimentVersion, gate.version_id)
+    experiment = session.get(Experiment, version.experiment_id)
+    if epoch is None:
+        epoch = read.open_epoch_for(session, version)
+    return _finish(session, gate, experiment, version, epoch, outcome, True, computed_by,
+                   extra_metrics=extra_metrics)
+
+
 def _finish(
     session, gate, experiment, version, epoch,
     outcome: EvaluationOutcome, persist: bool, computed_by: str,
+    extra_metrics: dict | None = None,
 ) -> EvaluationOutcome:
     if persist:
         floors = {
@@ -765,6 +789,7 @@ def _finish(
             metrics={
                 "clauses": [c.as_json() for c in outcome.clauses],
                 "blocking_reasons": outcome.blocking_reasons,
+                **(extra_metrics or {}),
             },
             metric_revision=METRICS_ENGINE_REVISION,
             evidence_ref=(
