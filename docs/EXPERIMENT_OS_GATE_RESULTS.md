@@ -58,6 +58,16 @@ The ops channel is read-only against Postgres by design, and the CLI refuses to
 persist when it resolves `DATABASE_URL_RO` (exit 2). Reads and dry runs are
 always allowed from anywhere — the Control Tower depends on that.
 
+**One designated writer is a role, not a process.** During a Railway redeploy the
+old container drains while the new one boots, so two live workers can briefly
+both qualify, and each runs its own first cycle. The semantic dedupe absorbs this
+— the second process reads the first's committed result and skips — which is why
+dedupe correctness matters beyond tidiness. Duplicates are not dangerous even if
+one slips through (identical verdict, identical binding, no promotion power), so
+there is deliberately **no unique index** on the fingerprint: a gate legitimately
+returns to a previously seen state (HOLD → PASS → HOLD under the same binding),
+and a uniqueness constraint would refuse to record that reversal.
+
 `EXPERIMENT_OS_EVALUATE_GATES` defaults to **false**, so deploying this code
 changes nothing until the flag is set on the live worker (allowlisted in
 `scripts/railway_env.py`, so it is settable through the ops channel).
@@ -115,6 +125,12 @@ Two escape hatches keep the trail honest despite that:
 1. **Sample progress.** A long HOLD still records when the largest clause sample
    grows by `max(25, 25%)` since the last recorded result — so a book
    accumulating evidence shows a visible, dated trail without spamming.
+   The prior's sample is read from its **own clause list**, the same quantity the
+   current outcome reports. Measuring the prior from `sample_json` (floor clauses
+   only) against a current maximum over *all* clauses compares two different
+   things: the first production run hit exactly that on mmsell-anchor-vol-entry,
+   whose floor counted 29 trades while its widest clause counted 77 — a fixed
+   48-wide gap that looked like fresh progress on every cycle.
 2. **Unfingerprinted priors.** Results recorded before this module existed (or by
    hand) have no fingerprint. Those re-record only on a real verdict change, so
    adopting the writer does not rewrite the entire history on first run.

@@ -162,7 +162,29 @@ def evaluation_fingerprint(outcome, gate: ExperimentGate, epoch) -> str:
 
 
 def _max_n(outcome) -> int:
+    """Largest sample behind any clause of a freshly computed outcome."""
     return max((c.n or 0 for c in outcome.clauses), default=0)
+
+
+def _prior_max_n(prior) -> int:
+    """The SAME quantity as `_max_n`, recovered from a recorded result.
+
+    Symmetry is the whole point. `sample_json` holds only the gate's sample-floor
+    clauses, so measuring the prior from it and the current outcome from every
+    clause compares two different things: in production, mmsell-anchor-vol-entry
+    had floor n=29 against a widest-clause n=77, a fixed 48-wide gap that read as
+    "+48 of progress" on every single cycle and re-recorded an identical HOLD
+    forever. Read the prior's own clause list first; fall back to the floors only
+    when a result predates it."""
+    if isinstance(prior.metrics_json, dict):
+        clauses = prior.metrics_json.get("clauses")
+        if isinstance(clauses, list) and clauses:
+            return max((c.get("n") or 0 for c in clauses if isinstance(c, dict)),
+                       default=0)
+    if isinstance(prior.sample_json, dict):
+        return max((v.get("n") or 0 for v in prior.sample_json.values()
+                    if isinstance(v, dict)), default=0)
+    return 0
 
 
 def should_record(session, gate: ExperimentGate, outcome, epoch) -> tuple[bool, str]:
@@ -185,14 +207,7 @@ def should_record(session, gate: ExperimentGate, outcome, epoch) -> tuple[bool, 
             return True, f"verdict {prior.verdict} → {outcome.verdict}"
         return True, "binding or blocking state changed"
 
-    prior_n = 0
-    if isinstance(prior.sample_json, dict):
-        prior_n = max((v.get("n") or 0 for v in prior.sample_json.values()
-                       if isinstance(v, dict)), default=0)
-    if not prior_n and isinstance(prior.metrics_json, dict):
-        prior_n = max((c.get("n") or 0
-                       for c in prior.metrics_json.get("clauses", [])
-                       if isinstance(c, dict)), default=0)
+    prior_n = _prior_max_n(prior)
     now_n = _max_n(outcome)
     step = max(PROGRESS_STEP_ABS, int(prior_n * PROGRESS_STEP_REL))
     if now_n - prior_n >= step:
