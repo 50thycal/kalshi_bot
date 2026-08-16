@@ -166,8 +166,10 @@ def report(cur, n_transitions: int) -> None:
                          jsonb_array_elements_text(
                              COALESCE(e.docs_json::jsonb -> 'covered_tag_prefixes',
                                       '[]'::jsonb)) p
-                    -- '%%' not '%': _rows always passes a params tuple, so psycopg
-                    -- parses placeholders and a bare % aborts the whole report.
+                    -- The wildcard below is DOUBLED on purpose: _rows always passes
+                    -- a params tuple, so psycopg scans this whole string —
+                    -- comments included — for placeholders, and a lone percent
+                    -- sign aborts the entire report. Never write a bare one here.
                     WHERE t.tag LIKE p.value || '%%')
             ORDER BY 1
         """)
