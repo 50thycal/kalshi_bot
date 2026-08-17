@@ -124,14 +124,36 @@ independent check.
 **The pairing boundary is not in this code.** It is carried by the gate's
 `evidence_started_at`, so moving it is a contract change, not a code change.
 
-**No `METRICS_ENGINE_REVISION` bump for this one.** The constant's contract is
-"bump when the meaning/implementation of any universal metric changes" — adding a
-provider for a previously-unprovided metric changes no existing metric's meaning,
-so a result recorded under the current revision means exactly what it did before.
-The affected gate re-records anyway, because the dedupe fingerprint includes the
-verdict and clause shape, and `mmsell-anchor-strangle` moves off `BLOCKED_DATA`.
-(The `pr6_fill_model_v1` bump was conservative rather than required; taking a bump
-each time needlessly de-authorizes every standing recorded PASS for a cycle.)
+### Provider revisions — versioning at the right granularity
+
+Two things need versioning, and they are not the same thing:
+
+* **`METRICS_ENGINE_REVISION`** — engine-wide semantics. Bumping it de-authorizes
+  every standing recorded result until re-evaluated, which is correct when the
+  meaning of an existing metric moves, and far too blunt when a previously
+  unavailable provider is simply implemented.
+* **`MetricDefinition.revision`** — that provider's OWN implementation revision:
+  `universal_v1`, `fill_model_v1`, `pair_metrics_v1`, and the sentinel
+  `unprovided` while no implementation exists.
+
+Every computed value records `provider_revision` in its provenance; every gate
+result records the `provider_revisions` it actually used; and the gate runner's
+dedupe fingerprint binds to that set. Three consequences, each pinned by a test:
+
+1. **"Provider unavailable" and "provider implemented" never share an identity.**
+   A result recorded while `clean_pairs` had no provider carries `unprovided`; one
+   computed by the implementation carries `pair_metrics_v1`. The recorded evidence
+   distinguishes them, which a single engine-wide string could not.
+2. **Changing one provider re-records exactly the gates that read it.** Shipping
+   `pair_metrics_v2` changes the fingerprint of every gate with a pair clause and
+   leaves every other gate's standing result untouched.
+3. **Adding a provider needs no engine bump.** `mmsell-anchor-strangle` re-records
+   because its verdict, clause shape and provider set all changed; nothing else
+   is disturbed.
+
+`pr6_fill_model_v1` (the fill-model bump) predates this mechanism and stays as
+recorded history — it is not rewritten. Future provider work versions the provider,
+and `METRICS_ENGINE_REVISION` is reserved for genuine engine-wide semantic changes.
 
 **`METRICS_ENGINE_REVISION` bumped to `metrics_engine:pr6_fill_model_v1`** — the
 engine can now compute what it previously refused, and a verdict must never

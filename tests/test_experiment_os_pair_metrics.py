@@ -24,6 +24,7 @@ What must never happen, pinned here:
 from __future__ import annotations
 
 import itertools
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 
 from kalshi_bot.experiment_os.metrics import (
@@ -242,11 +243,10 @@ def test_another_books_legs_never_enter_this_scope(xos_session):
 # ---------------------------------------------------------------------------
 
 
-def test_the_strangle_gate_evaluates_instead_of_blocking(xos_session, xos_platform):
-    from kalshi_bot.experiment_os import evaluator
+def _a5_gate(s):
+    """The registered A5 shape, as imported."""
     from kalshi_bot.experiment_os import service as svc
 
-    s = xos_session
     exp = svc.create_experiment(s, key="mmsell-anchor-strangle", origin="operator")
     ver = svc.create_experiment_version(
         s, exp, hypothesis="two-sided strangle", independent_variable="strangle",
@@ -274,6 +274,14 @@ def test_the_strangle_gate_evaluates_instead_of_blocking(xos_session, xos_platfo
     )
     svc.mark_gate_evidence_started(s, gate, at=T0)
     s.commit()
+    return gate
+
+
+def test_the_strangle_gate_evaluates_instead_of_blocking(xos_session, xos_platform):
+    from kalshi_bot.experiment_os import evaluator
+
+    s = xos_session
+    gate = _a5_gate(s)
 
     # Thin sample: a real verdict, and the right one — underpowered is HOLD.
     for i in range(10):
@@ -294,3 +302,114 @@ def test_the_strangle_gate_evaluates_instead_of_blocking(xos_session, xos_platfo
     by_metric = {c.clause["metric"]: c for c in out.clauses}
     assert by_metric["clean_pairs"].value == 90.0
     assert by_metric["pair_win_rate_95lb_pct"].value > 93.9
+
+
+# ---------------------------------------------------------------------------
+# Provider-specific revisions: a narrow blast radius, and no shared identity
+# between "provider missing" and "provider implemented"
+# ---------------------------------------------------------------------------
+
+
+def test_every_value_records_the_implementation_that_produced_it(xos_session):
+    from kalshi_bot.experiment_os.metrics import UNPROVIDED_REVISION
+
+    s = xos_session
+    _leg(s, "EVT-REV", side="yes", pnl=0.06)
+    _leg(s, "EVT-REV", side="no", pnl=0.06)
+    s.commit()
+    assert _pairs(s).provenance["provider_revision"] == "pair_metrics_v1"
+    assert compute_metric(
+        s, "settled_trades", _scope()
+    ).provenance["provider_revision"] == "universal_v1"
+    assert compute_metric(
+        s, "realizable_cents_per_trade", _scope()
+    ).provenance["provider_revision"] == "fill_model_v1"
+    # And a metric with no implementation is NOT recorded as some version of one.
+    assert compute_metric(
+        s, "live_cents_per_contract", _scope()
+    ).provenance["provider_revision"] == UNPROVIDED_REVISION
+
+
+def test_unprovided_and_implemented_never_share_an_identity(xos_session,
+                                                            xos_platform):
+    """The reason this mechanism exists. A result recorded while clean_pairs had
+    no provider, and one computed by pair_metrics_v1, must be distinguishable in
+    the recorded evidence — not collapsed into one engine-wide revision string."""
+    from kalshi_bot.experiment_os.metrics import UNPROVIDED_REVISION, provider_revisions
+
+    blocked_era = [{"clause": {"metric": "clean_pairs"},
+                    "provenance": {"provider_revision": UNPROVIDED_REVISION}}]
+    implemented = [{"clause": {"metric": "clean_pairs"},
+                    "provenance": {"provider_revision": "pair_metrics_v1"}}]
+    assert provider_revisions(blocked_era) != provider_revisions(implemented)
+
+
+def test_the_fingerprint_binds_to_the_providers_actually_used(xos_session,
+                                                              xos_platform):
+    """Changing one provider must re-record the gates that READ it and leave every
+    other gate's standing result alone — the whole point of not bumping a global
+    constant for every new provider."""
+    from kalshi_bot.experiment_os import evaluator, gate_runner
+    from kalshi_bot.experiment_os import metrics as met
+    from kalshi_bot.experiment_os import service as svc
+
+    s = xos_session
+    exp = svc.create_experiment(s, key="exp-rev", origin="operator")
+    ver = svc.create_experiment_version(
+        s, exp, hypothesis="h", independent_variable="lever", now=T0,
+        control_exemption_reason="single-arm test shape",
+    )
+    svc.add_arm(s, ver, arm_key="strangle", role="treatment", strategy_tag="mmsellA5")
+    svc.freeze_version(s, ver, now=T0)
+    epoch = svc.open_epoch(s, ver, reason="initial", started_at=T0)
+    svc.register_deployment(s, epoch, deployment_key="rev-paper-1", stage="PAPER",
+                            kind="paper", arms={"strangle": "mmsellA5"}, started_at=T0)
+    svc.transition_experiment(s, exp, "PROBE", actor="operator")
+    svc.transition_experiment(s, exp, "PAPER", actor="operator")
+    pair_gate = svc.register_gate(
+        s, ver, gate_key="paper_keep", kind="promotion",
+        spec={"pass_all": [{"metric": "clean_pairs", "arm": "strangle",
+                            "op": ">=", "value": 0}]},
+        from_state="PAPER", to_state="LIVE_CANARY", registered_at=T0,
+    )
+    svc.mark_gate_evidence_started(s, pair_gate, at=T0)
+    plain_gate = svc.register_gate(
+        s, ver, gate_key="plain", kind="kill",
+        spec={"pass_all": [{"metric": "settled_trades", "arm": "strangle",
+                            "op": ">=", "value": 0}]},
+        registered_at=T0,
+    )
+    svc.mark_gate_evidence_started(s, plain_gate, at=T0)
+    _leg(s, "EVT-FP", side="yes", pnl=0.06)
+    _leg(s, "EVT-FP", side="no", pnl=0.06)
+    s.commit()
+
+    def fp(gate):
+        out = evaluator.evaluate_gate(s, gate, epoch=epoch, persist=False)
+        return gate_runner.evaluation_fingerprint(out, gate, epoch)
+
+    pair_before, plain_before = fp(pair_gate), fp(plain_gate)
+
+    # Ship "pair_metrics_v2" — a change to the pair implementation only.
+    bumped = met.REGISTRY["clean_pairs"]
+    met.REGISTRY["clean_pairs"] = replace(bumped, revision="pair_metrics_v2")
+    try:
+        assert fp(pair_gate) != pair_before      # the gate that reads it re-records
+        assert fp(plain_gate) == plain_before    # every other gate is untouched
+    finally:
+        met.REGISTRY["clean_pairs"] = bumped
+
+
+def test_recorded_results_carry_the_provider_revisions(xos_session, xos_platform):
+    from kalshi_bot.experiment_os import evaluator
+    from kalshi_bot.experiment_os.models import ExperimentGateResult
+
+    s = xos_session
+    _leg(s, "EVT-REC", side="yes", pnl=0.06)
+    _leg(s, "EVT-REC", side="no", pnl=0.06)
+    s.commit()
+    gate = _a5_gate(s)
+    out = evaluator.evaluate_gate(s, gate)
+    s.commit()
+    row = s.get(ExperimentGateResult, out.result_id)
+    assert row.metrics_json["provider_revisions"]["clean_pairs"] == "pair_metrics_v1"

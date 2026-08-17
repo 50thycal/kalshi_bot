@@ -69,6 +69,7 @@ from .metrics import (
     compute_metric,
     compute_paired_metric,
     is_delta_metric,
+    provider_revisions,
     resolve_definition,
 )
 from .models import (
@@ -789,6 +790,14 @@ def _finish(
             metrics={
                 "clauses": [c.as_json() for c in outcome.clauses],
                 "blocking_reasons": outcome.blocking_reasons,
+                # WHICH provider implementations produced this verdict. Recorded
+                # per metric, so a verdict binds to the implementations it used
+                # rather than to one engine-wide constant — and so a result
+                # computed while a provider was missing is never confusable with
+                # one computed by the implementation.
+                "provider_revisions": provider_revisions(
+                    [c.as_json() for c in outcome.clauses]
+                ),
                 **(extra_metrics or {}),
             },
             metric_revision=METRICS_ENGINE_REVISION,

@@ -32,7 +32,7 @@ not an outcome, and is surfaced as its own metric instead of polluting n.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 
 from sqlalchemy import func, select
@@ -42,6 +42,12 @@ from ..models import PaperTrade
 # Bump when the meaning/implementation of any universal metric changes; recorded on
 # every evaluation so a verdict can never outlive the semantics that computed it.
 METRICS_ENGINE_REVISION = "metrics_engine:pr6_fill_model_v1"
+
+# Recorded in place of a provider revision while a metric is declared but has no
+# implementation. Distinguishing this from a real revision is the whole point:
+# a gate blocked for want of a provider and a gate evaluated by one must not share
+# an identity.
+UNPROVIDED_REVISION = "unprovided"
 
 # Terminal paper-trade statuses that carry a real economic outcome.
 SETTLED_STATUSES = ("settled", "closed_sl", "closed_tp", "closed_timeout")
@@ -93,6 +99,17 @@ class MetricDefinition:
     source: str  # what the provider reads (documentation + BLOCKED_DATA reporting)
     provided: bool = True  # False => declared, provider not yet implemented
     reference: str | None = None  # reference implementation for unprovided metrics
+    # This metric's OWN implementation revision. Bumped when THIS provider's
+    # meaning changes, which is a far smaller blast radius than the engine-wide
+    # constant: a fill-model change must not invalidate a pair-metric verdict.
+    # `UNPROVIDED_REVISION` is used while no provider exists, so "we could not
+    # compute this" and "we computed it with implementation v1" are never the
+    # same recorded identity.
+    revision: str = "universal_v1"
+
+    @property
+    def effective_revision(self) -> str:
+        return self.revision if self.provided else UNPROVIDED_REVISION
 
 
 # ---------------------------------------------------------------------------
@@ -104,6 +121,7 @@ _UNIVERSAL: tuple[MetricDefinition, ...] = (
         key="realizable_cents_per_trade", unit="cents/trade", kind="mean",
         source="paper_trades x FILL_MODEL calibration",
         reference="kalshi_bot/fill_calibration.py (docs/MMSELL_FILL_MODEL.md)",
+        revision="fill_model_v1",
         description="paper P&L corrected for maker fillability via the live "
         "calibration; MISSING when no trusted cell covers the book's price mix",
     ),
@@ -111,6 +129,7 @@ _UNIVERSAL: tuple[MetricDefinition, ...] = (
         key="fill_model_coverage_pct", unit="%", kind="rate",
         source="paper_trades x FILL_MODEL calibration",
         reference="kalshi_bot/fill_calibration.py (docs/MMSELL_FILL_MODEL.md)",
+        revision="fill_model_v1",
         description="share of a book's settled trades priced in a trusted live "
         "fill cell — read the realizable number against this",
     ),
@@ -118,6 +137,7 @@ _UNIVERSAL: tuple[MetricDefinition, ...] = (
         key="clean_pairs", unit="pairs", kind="count",
         source="paper_trades x mmsell_settlement_meta (per-event legs)",
         reference="docs/MMSELL_ANCHOR_SET.md (pairing audit)",
+        revision="pair_metrics_v1",
         description="events holding exactly one settled YES leg and one settled NO "
         "leg; one-sided, same-side-multi-leg and part-settled events are excluded "
         "and counted in provenance",
@@ -126,6 +146,7 @@ _UNIVERSAL: tuple[MetricDefinition, ...] = (
         key="pair_win_rate_95lb_pct", unit="%", kind="rate",
         source="paper_trades x mmsell_settlement_meta (per-event legs)",
         reference="docs/MMSELL_ANCHOR_SET.md (pairing audit)",
+        revision="pair_metrics_v1",
         description="Clopper-Pearson exact one-sided 95% lower bound on the share of "
         "complete pairs with positive combined P&L",
     ),
@@ -555,6 +576,44 @@ def _provenance(scope: MetricScope) -> dict:
 
 
 def compute_metric(session, key: str, scope: MetricScope) -> MetricValue:
+    """Compute one metric and stamp the PROVIDER REVISION that produced it.
+
+    Every value carries which implementation computed it, so a gate result binds
+    to the providers it actually used rather than to one engine-wide constant.
+    That matters both ways: implementing a provider must not invalidate verdicts
+    that never touched it, and a verdict recorded while the provider was missing
+    must never share an identity with one computed by the implementation."""
+    definition = REGISTRY.get(key)
+    revision = definition.effective_revision if definition else UNPROVIDED_REVISION
+    mv = _compute_metric(session, key, scope)
+    return replace(mv, provenance=(mv.provenance or {}) | {"provider_revision": revision})
+
+
+def provider_revisions(values) -> dict[str, str]:
+    """metric key -> the provider revision that computed it, over any iterable of
+    MetricValues or their recorded clause dicts."""
+    out: dict[str, str] = {}
+    for v in values or ():
+        if isinstance(v, MetricValue):
+            metric, prov = v.metric, v.provenance or {}
+        elif isinstance(v, dict):
+            metric = (v.get("clause") or {}).get("metric") or v.get("metric")
+            prov = v.get("provenance") or {}
+        else:
+            continue
+        rev = prov.get("provider_revision")
+        if metric and rev:
+            out[str(metric)] = str(rev)
+        # Paired metrics carry their legs' revisions instead of their own.
+        for leg in ("treatment", "control"):
+            sub = prov.get(leg)
+            if isinstance(sub, dict) and sub.get("provider_revision"):
+                out.setdefault(str(sub.get("metric") or metric),
+                               str(sub["provider_revision"]))
+    return out
+
+
+def _compute_metric(session, key: str, scope: MetricScope) -> MetricValue:
     """Compute one non-delta metric for one scope. Never raises for empty data —
     empty is an answer; only an unknown/unprovided metric is `missing`."""
     definition = REGISTRY.get(key)
