@@ -519,17 +519,34 @@ def _derive_actions(rep: TowerReport) -> None:
                 verdict = g.get("live_verdict") or (
                     (g.get("latest_result") or {}).get("verdict")
                 )
+                recorded_v = (g.get("latest_result") or {}).get("verdict")
                 if verdict == "PASS" and g.get("kind") == "promotion":
-                    rep.ready_due.append(
-                        f"GATE PASS (dry-run) {v['key']} · {g['gate_key']} "
-                        f"{g.get('from_state')}→{g.get('to_state')} — a RECORDED "
-                        "evaluator PASS is still required to authorize; hand to "
-                        "Research Lab (paper) or the operator (live promotion)"
-                    )
+                    # Say which KIND of PASS this is. Hard-coding "(dry-run)"
+                    # told a reader that a real recorded PASS still needed one —
+                    # the same misreading in reverse, on the one line where the
+                    # distinction decides whether there is a decision to make.
+                    if recorded_v == "PASS":
+                        rep.ready_due.append(
+                            f"GATE PASS (RECORDED, {g['latest_result']['computed_by']}"
+                            f" @ {g['latest_result']['computed_at']}) {v['key']} · "
+                            f"{g['gate_key']} {g.get('from_state')}→"
+                            f"{g.get('to_state')} — this result CAN authorize the "
+                            "transition. Promotion remains an operator act "
+                            "(re-evaluated at authorization); it is not automatic"
+                        )
+                    else:
+                        rep.ready_due.append(
+                            f"GATE PASS (dry-run only) {v['key']} · {g['gate_key']} "
+                            f"{g.get('from_state')}→{g.get('to_state')} — no "
+                            "RECORDED evaluator PASS exists, so nothing is "
+                            "authorized yet; hand to Research Lab (paper) or the "
+                            "operator (live promotion)"
+                        )
                 elif verdict == "FAIL" and g.get("kind") == "promotion":
                     rep.ready_due.append(
-                        f"GATE FAIL {v['key']} · {g['gate_key']} — kill/retire "
-                        "candidate; decision belongs to Research Lab"
+                        f"GATE FAIL ({'recorded' if recorded_v == 'FAIL' else 'dry-run'})"
+                        f" {v['key']} · {g['gate_key']} — kill/retire candidate; "
+                        "decision belongs to Research Lab"
                     )
                 elif verdict and verdict.startswith("BLOCKED"):
                     entry = _blocked_gate_entry(v, g)
