@@ -347,3 +347,66 @@ def test_retired_window_selects_on_when_the_book_died(xos_session, xos_platform)
     assert "[no retired_at — transition date]" in out
     assert "carry NO retired_at" in out
     assert "not by when its record was written" in out
+
+
+# ---------------------------------------------------------------------------
+# A PASS must say which KIND of PASS it is
+# ---------------------------------------------------------------------------
+
+
+def test_a_recorded_pass_is_not_labelled_a_dry_run(xos_session, xos_platform):
+    """The second fresh-session finding. READY/DUE hard-coded "(dry-run)" on every
+    promotion PASS while sourcing the verdict from `live_verdict or latest_result`,
+    so a real recorded PASS — the only thing that can authorize a transition —
+    read as "a RECORDED evaluator PASS is still required". A reader triaging off
+    that line would conclude there was no decision to make."""
+    from kalshi_bot.experiment_os import evaluator
+
+    s = xos_session
+    _, _, _, gate, tag = _experiment(s, "exp-passing", spec=COMPUTABLE_SPEC)
+    for _ in range(10):
+        _trade(s, tag, pnl=0.05)
+    s.commit()
+
+    # Dry run only: nothing recorded yet.
+    rep = ct.build_report(s, evaluate=True)
+    line = next(r for r in rep.ready_due if "GATE PASS" in r)
+    assert "dry-run only" in line
+    assert "nothing is authorized yet" in line
+
+    # Now record it. The same evidence, but an official result exists.
+    out = evaluator.evaluate_gate(s, gate)
+    s.commit()
+    assert out.verdict == "PASS"
+
+    rep = ct.build_report(s, evaluate=True)
+    line = next(r for r in rep.ready_due if "GATE PASS" in r)
+    assert "RECORDED" in line and "dry-run" not in line
+    assert "system" in line  # provenance, so the reader can check it
+    assert "CAN authorize" in line
+    # And it still refuses to imply the promotion happens by itself.
+    assert "operator act" in line and "not automatic" in line
+
+
+def test_a_recorded_fail_is_not_labelled_a_dry_run(xos_session, xos_platform):
+    from kalshi_bot.experiment_os import evaluator
+
+    s = xos_session
+    _, _, _, gate, tag = _experiment(s, "exp-failing", spec={
+        "sample": {"treatment": {"metric": "settled_trades", "op": ">=", "value": 5}},
+        "pass_all": [{"metric": "pnl_cents_per_trade", "arm": "treatment",
+                      "op": ">", "value": 0}],
+        "fail_any": [{"metric": "pnl_cents_per_trade", "arm": "treatment",
+                      "op": "<=", "value": 0}],
+    })
+    for _ in range(10):
+        _trade(s, tag, pnl=-0.30)
+    s.commit()
+
+    rep = ct.build_report(s, evaluate=True)
+    assert "GATE FAIL (dry-run)" in next(r for r in rep.ready_due if "GATE FAIL" in r)
+
+    evaluator.evaluate_gate(s, gate)
+    s.commit()
+    rep = ct.build_report(s, evaluate=True)
+    assert "GATE FAIL (recorded)" in next(r for r in rep.ready_due if "GATE FAIL" in r)
