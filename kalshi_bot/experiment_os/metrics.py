@@ -31,6 +31,7 @@ not an outcome, and is surfaced as its own metric instead of polluting n.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -114,6 +115,21 @@ _UNIVERSAL: tuple[MetricDefinition, ...] = (
         "fill cell — read the realizable number against this",
     ),
     MetricDefinition(
+        key="clean_pairs", unit="pairs", kind="count",
+        source="paper_trades x mmsell_settlement_meta (per-event legs)",
+        reference="docs/MMSELL_ANCHOR_SET.md (pairing audit)",
+        description="events holding exactly one settled YES leg and one settled NO "
+        "leg; one-sided, same-side-multi-leg and part-settled events are excluded "
+        "and counted in provenance",
+    ),
+    MetricDefinition(
+        key="pair_win_rate_95lb_pct", unit="%", kind="rate",
+        source="paper_trades x mmsell_settlement_meta (per-event legs)",
+        reference="docs/MMSELL_ANCHOR_SET.md (pairing audit)",
+        description="Clopper-Pearson exact one-sided 95% lower bound on the share of "
+        "complete pairs with positive combined P&L",
+    ),
+    MetricDefinition(
         key="settled_trades", unit="trades", kind="count", source="paper_trades",
         description="terminal-with-P&L trades entered in the window "
         f"(status in {SETTLED_STATUSES})",
@@ -186,18 +202,6 @@ _DECLARED_UNPROVIDED: tuple[MetricDefinition, ...] = (
         source="live outcomes vs twin paper book", provided=False,
         reference="scripts/mmsell_offset_ab.py (docs/MMSELL_OFFSET_AB.md)",
         description="twin paper c/ct minus live realized c/ct (the execution gap)",
-    ),
-    MetricDefinition(
-        key="clean_pairs", unit="pairs", kind="count",
-        source="paired strangle legs", provided=False,
-        reference="docs/MMSELL_ANCHOR_SET.md (pairing audit)",
-        description="settled two-sided strangle pairs after the pairing boundary",
-    ),
-    MetricDefinition(
-        key="pair_win_rate_95lb_pct", unit="%", kind="rate",
-        source="paired strangle legs", provided=False,
-        reference="docs/MMSELL_ANCHOR_SET.md (pairing audit)",
-        description="95% lower confidence bound on the pair win rate",
     ),
     MetricDefinition(
         key="candidate_rejection_rate_pct", unit="%", kind="rate",
@@ -337,6 +341,145 @@ def _price_histogram(session, scope: MetricScope) -> dict[int, tuple[int, float]
         hist.setdefault(-1, (0, 0.0))
         hist[-1] = (hist[-1][0] + unpriced, hist[-1][1])
     return hist
+
+
+def binomial_lower_bound_95(wins: int, n: int) -> float | None:
+    """Clopper-Pearson exact one-sided 95% lower bound on a win rate, in percent.
+
+    Exact rather than normal-approximate because the whole point of A5's gate is a
+    small sample: the backtest's 23/23 (a 100% observed rate) has a lower bound of
+    87.79%, which is why it FAILED a 93.9% bar. A Wald/normal interval collapses to
+    zero width at 100% and would have passed it — the approximation error is the
+    entire decision.
+
+    Solved by bisection on the binomial tail P(X >= wins | p) = 0.05, which is
+    monotonic in p, so no special-function dependency is needed. For wins == n this
+    reduces to the closed form 0.05 ** (1/n), which the tests pin."""
+    if n <= 0:
+        return None
+    if wins <= 0:
+        return 0.0
+    alpha = 0.05
+
+    def tail(p: float) -> float:
+        return sum(math.comb(n, k) * (p ** k) * ((1.0 - p) ** (n - k))
+                   for k in range(wins, n + 1))
+
+    lo, hi = 0.0, 1.0
+    for _ in range(200):
+        mid = (lo + hi) / 2.0
+        if tail(mid) < alpha:
+            lo = mid
+        else:
+            hi = mid
+    return round(100.0 * lo, 4)
+
+
+def _pair_rows(session, scope: MetricScope) -> dict:
+    """Group the scope's settled evidence into per-EVENT legs.
+
+    A5's strangle is a two-sided position: one cheap-YES leg and one cheap-NO leg on
+    the same event. One settlement can never lose both, which is the whole thesis —
+    so the unit of evidence is the PAIR, not the trade. Events are resolved through
+    `mmsell_settlement_meta`, the same canonical ticker→event mapping the tracker's
+    one-leg-per-side cap uses (`repository.event_has_strangle_leg`); market tickers
+    are never string-parsed into events here.
+
+    `docs/MMSELL_ANCHOR_SET.md` records why anything other than exactly-one-leg-per-
+    side is not a pair: before the 2026-08-14 pairing boundary a single event could
+    open four same-side legs on different strikes of one game. Those are positively
+    correlated — precisely the risk a strangle exists to avoid — and counting them
+    as pairs is what the boundary exists to prevent. The boundary itself is enforced
+    by the GATE (its `evidence_started_at`), not hard-coded here."""
+    from ..models import MmSellSettlementMeta
+
+    rows = session.execute(
+        select(PaperTrade.side, PaperTrade.pnl, PaperTrade.status,
+               MmSellSettlementMeta.event_ticker)
+        # OUTER join: a trade whose ticker has no settlement-meta row has no
+        # resolvable event. It must be COUNTED as unmapped, not silently dropped
+        # by an inner join — an event we cannot resolve is not an event we can
+        # assert is one-sided.
+        .outerjoin(MmSellSettlementMeta,
+                   MmSellSettlementMeta.market_ticker == PaperTrade.market_ticker)
+        .where(
+            PaperTrade.strategy.in_(scope.strategy_tags),
+            PaperTrade.created_at >= scope.window_start,
+            PaperTrade.created_at <= scope.window_end,
+        )
+    ).all()
+
+    events: dict[str, dict] = {}
+    unmapped = 0
+    for side, pnl, status, event in rows:
+        if not event:
+            unmapped += 1
+            continue
+        e = events.setdefault(event, {"yes": [], "no": []})
+        leg = {"pnl": float(pnl) if pnl is not None else None,
+               "settled": status in SETTLED_STATUSES}
+        key = (side or "").lower()
+        if key in e:
+            e[key].append(leg)
+
+    clean, one_sided, multi_leg, incomplete = [], 0, 0, 0
+    for _event, legs in events.items():
+        ny, nn = len(legs["yes"]), len(legs["no"])
+        if ny == 0 or nn == 0:
+            one_sided += 1
+            continue
+        if ny > 1 or nn > 1:
+            # Same-side multi-leg: correlated strikes on one game, not a strangle.
+            multi_leg += 1
+            continue
+        pair = legs["yes"] + legs["no"]
+        if not all(p["settled"] and p["pnl"] is not None for p in pair):
+            # Censored: one leg still open, so the pair's outcome is UNKNOWN. It is
+            # not a loss and not a win; it is excluded and counted.
+            incomplete += 1
+            continue
+        clean.append(sum(p["pnl"] for p in pair))
+    return {
+        "clean_pnls": clean,
+        "one_sided_events": one_sided,
+        "multi_leg_events": multi_leg,
+        "incomplete_pairs": incomplete,
+        "events_seen": len(events),
+        "trades_without_event_mapping": unmapped,
+    }
+
+
+def _pair_metric(session, key: str, scope: MetricScope, prov: dict) -> MetricValue:
+    """`clean_pairs` / `pair_win_rate_95lb_pct` for the two-sided strangle."""
+    agg = _pair_rows(session, scope)
+    pnls = agg["clean_pnls"]
+    n = len(pnls)
+    wins = sum(1 for p in pnls if p > 0)
+    prov = prov | {
+        "unit_of_evidence": "event pair (one YES leg + one NO leg)",
+        "event_source": "mmsell_settlement_meta.event_ticker",
+        "events_seen": agg["events_seen"],
+        "clean_pairs": n,
+        "one_sided_events": agg["one_sided_events"],
+        "multi_leg_events": agg["multi_leg_events"],
+        "incomplete_pairs_censored": agg["incomplete_pairs"],
+        "trades_without_event_mapping": agg["trades_without_event_mapping"],
+        "pair_wins": wins,
+        "pairing_boundary": "enforced by the gate's evidence_started_at, not by this "
+                            "provider",
+    }
+    if key == "clean_pairs":
+        # A count: zero complete pairs over healthy sources is a MEANINGFUL zero.
+        return MetricValue(key, float(n), n, "pairs", provenance=prov)
+
+    if n == 0:
+        return MetricValue(
+            key, None, 0, "%",
+            reason="no complete pairs in window — a bound over an empty sample is "
+                   "undefined, not 0",
+            provenance=prov,
+        )
+    return MetricValue(key, binomial_lower_bound_95(wins, n), n, "%", provenance=prov)
 
 
 def _fill_model_metric(session, key: str, scope: MetricScope, prov: dict) -> MetricValue:
@@ -485,6 +628,8 @@ def compute_metric(session, key: str, scope: MetricScope) -> MetricValue:
                            provenance=prov)
     if key in ("realizable_cents_per_trade", "fill_model_coverage_pct"):
         return _fill_model_metric(session, key, scope, prov)
+    if key in ("clean_pairs", "pair_win_rate_95lb_pct"):
+        return _pair_metric(session, key, scope, prov)
 
     return MetricValue(
         metric=key, value=None, n=0, unit=definition.unit, missing=True,

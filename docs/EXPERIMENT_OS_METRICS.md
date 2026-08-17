@@ -88,6 +88,51 @@ an impact classification, never an edit in place, and every computed value recor
 `fill_calibration_version` in its provenance so evidence from two calibrations can
 never be pooled silently.
 
+### `clean_pairs` / `pair_win_rate_95lb_pct` — the strangle's unit of evidence
+
+A5 is a two-sided position: one cheap-YES leg and one cheap-NO leg on the same
+event. One settlement can never lose both, which is the whole thesis — so the unit
+of evidence is the **pair**, not the trade, and the gate's confidence-interval math
+assumes every counted observation carries the hedge.
+
+`docs/MMSELL_ANCHOR_SET.md` records what happens when it does not: before the
+2026-08-14 pairing boundary, one event opened four same-side legs on four strikes
+of one game. Those are positively correlated — precisely the risk a strangle
+exists to avoid.
+
+A **clean pair** is an event holding *exactly one* settled YES leg and *exactly
+one* settled NO leg, resolved through `mmsell_settlement_meta.event_ticker` — the
+same canonical ticker→event mapping the tracker's own one-leg-per-side cap uses
+(`repository.event_has_strangle_leg`). Market tickers are never string-parsed into
+events. Everything excluded is counted in provenance rather than dropped:
+`one_sided_events`, `multi_leg_events`, `incomplete_pairs_censored`,
+`trades_without_event_mapping`.
+
+A **part-settled pair is censored, not a loss.** One open leg means the pair's
+outcome is unknown; scoring it zero would be the missing-is-not-zero error on the
+exact unit that decides the gate.
+
+`pair_win_rate_95lb_pct` is the **Clopper-Pearson exact one-sided 95% lower bound**
+on the share of complete pairs with positive *combined* P&L. Exact, not
+normal-approximate, because the approximation error *is* the decision: the
+strangle backtest observed 23/23 — a 100% win rate — whose exact lower bound is
+**87.79%**, which is why it FAILED the 93.9% bar. A Wald interval has zero width at
+100% and would have passed it. The provider reproduces that documented 87.8%
+exactly, and the closed form `0.05 ** (1/n)` at a perfect record is pinned as an
+independent check.
+
+**The pairing boundary is not in this code.** It is carried by the gate's
+`evidence_started_at`, so moving it is a contract change, not a code change.
+
+**No `METRICS_ENGINE_REVISION` bump for this one.** The constant's contract is
+"bump when the meaning/implementation of any universal metric changes" — adding a
+provider for a previously-unprovided metric changes no existing metric's meaning,
+so a result recorded under the current revision means exactly what it did before.
+The affected gate re-records anyway, because the dedupe fingerprint includes the
+verdict and clause shape, and `mmsell-anchor-strangle` moves off `BLOCKED_DATA`.
+(The `pr6_fill_model_v1` bump was conservative rather than required; taking a bump
+each time needlessly de-authorizes every standing recorded PASS for a cycle.)
+
 **`METRICS_ENGINE_REVISION` bumped to `metrics_engine:pr6_fill_model_v1`** — the
 engine can now compute what it previously refused, and a verdict must never
 outlive the semantics that produced it. `ALLOWED_METRIC_REVISIONS` tracks the
