@@ -119,9 +119,11 @@ def test_counts_are_meaningful_zero_and_means_are_undefined(xos_session):
 
 
 def test_unprovided_metric_is_missing_with_reference(xos_session):
-    mv = compute_metric(xos_session, "realizable_cents_per_trade", _scope(("t_tag",)))
+    # realizable_cents_per_trade now HAS a canonical provider; the still-unprovided
+    # live-execution metrics carry the same contract.
+    mv = compute_metric(xos_session, "live_cents_per_contract", _scope(("t_tag",)))
     assert mv.missing is True
-    assert "mmsell_fill_model" in mv.reason  # the reference implementation is named
+    assert "mmsell_live" in mv.reason  # the reference implementation is named
 
 
 def test_settled_includes_stop_closed_trades(xos_session):
@@ -304,8 +306,8 @@ def test_missing_metric_blocks_data_not_zero(xos_session, xos_platform):
     s = xos_session
     exp, ver, epoch = _experiment(s, key="exp-miss")
     gate = _gate(s, ver, {
-        "pass_all": [{"metric": "realizable_cents_per_trade", "arm": "treatment",
-                      "op": ">", "value": 0}],
+        "pass_all": [{"metric": "realized_tail_hit_ratio_vs_modeled",
+                      "arm": "treatment", "op": ">", "value": 0}],
     })
     for _ in range(200):
         _trade(s, "t_tag", pnl=0.05)
@@ -313,7 +315,7 @@ def test_missing_metric_blocks_data_not_zero(xos_session, xos_platform):
     out = evaluator.evaluate_gate(s, gate, persist=False)
     assert out.verdict == "BLOCKED_DATA"
     assert "missing is not zero" in out.explanation
-    assert "mmsell_fill_model" in out.blocking_reasons[0]
+    assert "theta_fill_model" in out.blocking_reasons[0]
 
 
 def test_hold_if_clause_holds(xos_session, xos_platform):

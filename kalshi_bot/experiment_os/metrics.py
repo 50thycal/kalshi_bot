@@ -40,7 +40,7 @@ from ..models import PaperTrade
 
 # Bump when the meaning/implementation of any universal metric changes; recorded on
 # every evaluation so a verdict can never outlive the semantics that computed it.
-METRICS_ENGINE_REVISION = "metrics_engine:pr3_v1"
+METRICS_ENGINE_REVISION = "metrics_engine:pr6_fill_model_v1"
 
 # Terminal paper-trade statuses that carry a real economic outcome.
 SETTLED_STATUSES = ("settled", "closed_sl", "closed_tp", "closed_timeout")
@@ -100,6 +100,20 @@ class MetricDefinition:
 
 _UNIVERSAL: tuple[MetricDefinition, ...] = (
     MetricDefinition(
+        key="realizable_cents_per_trade", unit="cents/trade", kind="mean",
+        source="paper_trades x FILL_MODEL calibration",
+        reference="kalshi_bot/fill_calibration.py (docs/MMSELL_FILL_MODEL.md)",
+        description="paper P&L corrected for maker fillability via the live "
+        "calibration; MISSING when no trusted cell covers the book's price mix",
+    ),
+    MetricDefinition(
+        key="fill_model_coverage_pct", unit="%", kind="rate",
+        source="paper_trades x FILL_MODEL calibration",
+        reference="kalshi_bot/fill_calibration.py (docs/MMSELL_FILL_MODEL.md)",
+        description="share of a book's settled trades priced in a trusted live "
+        "fill cell — read the realizable number against this",
+    ),
+    MetricDefinition(
         key="settled_trades", unit="trades", kind="count", source="paper_trades",
         description="terminal-with-P&L trades entered in the window "
         f"(status in {SETTLED_STATUSES})",
@@ -143,18 +157,6 @@ _UNIVERSAL: tuple[MetricDefinition, ...] = (
 # implementations remain the existing analysis scripts; a gate clause requiring one
 # evaluates BLOCKED_DATA — never silently skipped, never faked from a proxy.
 _DECLARED_UNPROVIDED: tuple[MetricDefinition, ...] = (
-    MetricDefinition(
-        key="realizable_cents_per_trade", unit="cents/trade", kind="mean",
-        source="fill model (live-calibrated projection)", provided=False,
-        reference="scripts/mmsell_fill_model.py (docs/MMSELL_FILL_MODEL.md)",
-        description="paper P&L corrected for maker fillability via the live calibration",
-    ),
-    MetricDefinition(
-        key="fill_model_coverage_pct", unit="%", kind="rate",
-        source="fill model (live-calibrated projection)", provided=False,
-        reference="scripts/mmsell_fill_model.py (docs/MMSELL_FILL_MODEL.md)",
-        description="share of a book's trades priced in a trusted live fill cell",
-    ),
     MetricDefinition(
         key="realized_tail_hit_ratio_vs_modeled", unit="ratio", kind="mean",
         source="theta tail model", provided=False,
@@ -302,6 +304,98 @@ def _paper_aggregates(session, scope: MetricScope) -> dict:
     }
 
 
+def _price_histogram(session, scope: MetricScope) -> dict[int, tuple[int, float]]:
+    """The scope's settled trades as yes-equivalent cent -> (n, sum P&L in cents).
+
+    This is the only new read the fill-model metrics need: the projection is a
+    property of a book's ENTRY-PRICE MIX, because fillability is a property of the
+    price cell (a resting NO bid at 92c and a resting YES bid at 8c are the same
+    book event). Trades with no recorded entry price cannot be placed in a cell and
+    are counted as uncovered rather than guessed into one."""
+    from ..fill_calibration import yes_equivalent_cents
+
+    rows = session.execute(
+        select(PaperTrade.side, PaperTrade.assumed_price, PaperTrade.pnl)
+        .where(
+            PaperTrade.strategy.in_(scope.strategy_tags),
+            PaperTrade.created_at >= scope.window_start,
+            PaperTrade.created_at <= scope.window_end,
+            PaperTrade.status.in_(SETTLED_STATUSES),
+        )
+    ).all()
+    hist: dict[int, tuple[int, float]] = {}
+    unpriced = 0
+    for side, price, pnl in rows:
+        if price is None:
+            unpriced += 1
+            continue
+        cent = yes_equivalent_cents((side or "yes").lower(), float(price))
+        n, s = hist.get(cent, (0, 0.0))
+        hist[cent] = (n + 1, s + float(pnl or 0.0) * 100.0)
+    if unpriced:
+        # Surfaced through the projection's coverage, never silently dropped.
+        hist.setdefault(-1, (0, 0.0))
+        hist[-1] = (hist[-1][0] + unpriced, hist[-1][1])
+    return hist
+
+
+def _fill_model_metric(session, key: str, scope: MetricScope, prov: dict) -> MetricValue:
+    """`realizable_cents_per_trade` / `fill_model_coverage_pct`, from the canonical
+    calibration — the same numbers the evo sandbox and the ops report use.
+
+    The projection corrects paper's headline for which trades a maker actually
+    gets. Uncovered price cells (too few live fills to trust) are EXCLUDED, never
+    estimated from a neighbour, so a book whose price mix the live calibration
+    never reached reports `missing` rather than a confident wrong number."""
+    from ..fill_calibration import (
+        CALIBRATION_SOURCE,
+        CALIBRATION_VERSION,
+        MIN_CELL_FILLS,
+        project_realizable,
+    )
+
+    hist = _price_histogram(session, scope)
+    proj = project_realizable(hist)
+    prov = prov | {
+        "fill_calibration_version": CALIBRATION_VERSION,
+        "fill_calibration_source": CALIBRATION_SOURCE,
+        "min_cell_fills": MIN_CELL_FILLS,
+        "platform_component": "FILL_MODEL",
+        "total_n": proj["total_n"],
+        "covered_n": proj["covered_n"],
+        "optimistic_cents_per_trade": proj["opt_cents"],
+    }
+    total_n, covered_n = proj["total_n"], proj["covered_n"]
+
+    if key == "fill_model_coverage_pct":
+        if total_n == 0:
+            return MetricValue(key, None, 0, "%",
+                               reason="no settled trades in window", provenance=prov)
+        return MetricValue(key, round(100.0 * covered_n / total_n, 2), total_n, "%",
+                           provenance=prov)
+
+    # realizable_cents_per_trade
+    if total_n == 0:
+        return MetricValue(key, None, 0, "cents/trade",
+                           reason="no settled trades in window", provenance=prov)
+    if covered_n == 0:
+        # MISSING, not zero and not the optimistic number: the live calibration has
+        # no trusted cell anywhere in this book's price mix, so it cannot say what a
+        # maker would realize here. Answering anyway is the mmsell6/mmsell11 mistake.
+        return MetricValue(
+            key, None, 0, "cents/trade", missing=True,
+            reason=(
+                f"no trusted fill-model cell covers any of this book's {total_n} "
+                f"settled entry prices (calibration {CALIBRATION_VERSION}, cells need "
+                f">= {MIN_CELL_FILLS} live fills) — realizable P&L is unmeasured here, "
+                "not zero"
+            ),
+            provenance=prov,
+        )
+    return MetricValue(key, round(proj["est_realizable_cents"], 4), covered_n,
+                       "cents/trade", provenance=prov)
+
+
 def _provenance(scope: MetricScope) -> dict:
     return {
         "source": "paper_trades",
@@ -389,6 +483,8 @@ def compute_metric(session, key: str, scope: MetricScope) -> MetricValue:
                                reason="no settled trades in window", provenance=prov)
         return MetricValue(key, round(100.0 * agg["n_wins"] / n, 2), n, "%",
                            provenance=prov)
+    if key in ("realizable_cents_per_trade", "fill_model_coverage_pct"):
+        return _fill_model_metric(session, key, scope, prov)
 
     return MetricValue(
         metric=key, value=None, n=0, unit=definition.unit, missing=True,
