@@ -62,7 +62,7 @@ def _experiment(s, key, *, spec, tag=None, state="PAPER"):
 
 # A gate whose clause has no canonical provider — the real production shape.
 UNPROVIDED_SPEC = {
-    "pass_all": [{"metric": "realizable_cents_per_trade", "arm": "treatment",
+    "pass_all": [{"metric": "realized_tail_hit_ratio_vs_modeled", "arm": "treatment",
                   "op": ">", "value": 0}],
 }
 COMPUTABLE_SPEC = {
@@ -159,15 +159,15 @@ def test_blocked_data_names_the_missing_provider(xos_session, xos_platform):
     assert len(rep.blocked) == 1
     b = rep.blocked[0]
     assert b["verdict"] == "BLOCKED_DATA"
-    assert b["missing_metrics"] == ["realizable_cents_per_trade"]
+    assert b["missing_metrics"] == ["realized_tail_hit_ratio_vs_modeled"]
     assert any("no canonical provider" in r for r in b["reasons"])
 
     out = ct.render(rep)
     assert "=== BLOCKED EVIDENCE ===" in out
-    assert "missing provider: realizable_cents_per_trade" in out
+    assert "missing provider: realized_tail_hit_ratio_vs_modeled" in out
     # And READY/DUE leads with the cause rather than the bare verdict.
     ready = [r for r in rep.ready_due if "BLOCKED_DATA" in r]
-    assert ready and "realizable_cents_per_trade" in ready[0]
+    assert ready and "realized_tail_hit_ratio_vs_modeled" in ready[0]
 
 
 def test_the_cause_comes_from_the_recorded_result_when_one_exists(xos_session,
@@ -186,8 +186,8 @@ def test_the_cause_comes_from_the_recorded_result_when_one_exists(xos_session,
     assert len(rep.blocked) == 1
     b = rep.blocked[0]
     assert b["source"] == "recorded"
-    assert b["missing_metrics"] == ["realizable_cents_per_trade"]
-    assert "missing provider: realizable_cents_per_trade" in ct.render(rep)
+    assert b["missing_metrics"] == ["realized_tail_hit_ratio_vs_modeled"]
+    assert "missing provider: realized_tail_hit_ratio_vs_modeled" in ct.render(rep)
 
 
 def test_a_computable_gate_is_not_listed_as_blocked(xos_session, xos_platform):

@@ -48,6 +48,54 @@ computed from `paper_trades` through deployment-arm tags:
 `relative_entry_deficit_pct` (the registry's own entry-count-differential method
 for mmsellA4's rejection rate).
 
+### `realizable_cents_per_trade` — the fill-model provider
+
+The metric the mmsell cohort's promotion decisions actually turn on. Paper assumes
+a resting maker order always fills; live it fills ~70% of the time and the ~30% it
+misses are disproportionately the winners, so paper's headline averages in P&L a
+maker can never capture. `docs/MMSELL_FILL_MODEL.md` has the analysis and the
+mistake this prevents: on blended paper, mmsell6 and mmsell11 looked promotable
+and are **mirages** under the correction.
+
+The provider projects the scope's settled entry-price mix through the live
+calibration in `kalshi_bot/fill_calibration.py` — one shared module, because the
+evo sandbox's backtests and the promotion gates must read the same numbers. Its
+companion `fill_model_coverage_pct` is not decoration: **read the realizable
+number against its coverage**, since an estimate speaking for a fifth of a book is
+not the same claim as one speaking for all of it.
+
+Rules that keep it honest, each pinned by a test:
+
+* a price cell with fewer than 8 live fills is **untrusted** — excluded from the
+  estimate, never borrowed from a neighbouring cell;
+* a book whose price mix no trusted cell reaches is **MISSING**, not zero and not
+  paper's number. Answering anyway would restore the exact mirage the model exists
+  to catch;
+* a trade with no recorded entry price cannot be placed in a cell, so it counts as
+  uncovered rather than being dropped from the denominator (which would inflate
+  coverage);
+* fillability is keyed by the market's **yes-equivalent cent**, so a resting NO bid
+  at 92¢ and a resting YES bid at 8¢ are one book event.
+
+**This is not a platform change.** The calibration is already declared in the
+active `FILL_MODEL` revision (`assumed_fill_plus_mmsell3_calibration`), and
+`METRICS_ENGINE` (`pnl_scripts_2026_08`) already names `mmsell_fill_model` as part
+of the measurement layer. The provider implements what the active revision already
+declares; it moves a pinned platform fact out of a script and into the canonical
+engine. No snapshot changes, so no epoch goes `BLOCKED_PLATFORM`. **Changing the
+calibration numbers is a different act** — that is a new `FILL_MODEL` revision with
+an impact classification, never an edit in place, and every computed value records
+`fill_calibration_version` in its provenance so evidence from two calibrations can
+never be pooled silently.
+
+**`METRICS_ENGINE_REVISION` bumped to `metrics_engine:pr6_fill_model_v1`** — the
+engine can now compute what it previously refused, and a verdict must never
+outlive the semantics that produced it. `ALLOWED_METRIC_REVISIONS` tracks the
+single current revision, so every result recorded under `pr3_v1` stops authorizing
+promotions until it is re-evaluated. That is the intended "re-evaluate" path, and
+it self-heals: the gate runner's fingerprint includes the metric revision, so the
+next evaluation cycle re-records every gate under the new one.
+
 **Settled** = every terminal status carrying real P&L (`settled`, `closed_sl`,
 `closed_tp`, `closed_timeout`); filtering `settled` alone silently drops
 stop-closed trades — the recorded mmsellA1–A3 reading error, pinned by test.
