@@ -416,6 +416,9 @@ def experiment_scoreboard(session, experiment: Experiment) -> dict:
                     "missing_metrics": _missing_metrics(
                         (latest.metrics_json or {}).get("clauses")
                     ),
+                    # The recorded per-clause detail, carried forward so a reader
+                    # can see WHAT a verdict claims without recomputing anything.
+                    "clauses": list((latest.metrics_json or {}).get("clauses") or []),
                 },
             }
         )

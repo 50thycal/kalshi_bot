@@ -111,6 +111,9 @@ class TowerReport:
     # recent. Named so the window's coverage is honest about what it cannot place.
     retired_undated: list[str] = field(default_factory=list)
     blocked: list[dict] = field(default_factory=list)
+    # Gates whose decision turns on the live-fill projection. Carried so the render
+    # can state what the verdict actually claims, beside what paper observed.
+    realizable_context: list[dict] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -219,6 +222,7 @@ def _gate_view(session, board_gate: dict, gate_obj, evaluate: bool) -> dict:
     out["live_explanation"] = None
     out["live_blocking_reasons"] = []
     out["live_missing_metrics"] = []
+    out["live_clauses"] = []
     if not evaluate or gate_obj is None:
         return out
     if gate_obj.evidence_started_at is None:
@@ -233,10 +237,9 @@ def _gate_view(session, board_gate: dict, gate_obj, evaluate: bool) -> dict:
         out["live_explanation"] = outcome.explanation
         # Carry the evaluator's OWN account of why, so no surface has to infer a
         # cause from what happens to be near it in the report.
+        out["live_clauses"] = [c.as_json() for c in outcome.clauses]
         out["live_blocking_reasons"] = list(outcome.blocking_reasons or [])
-        out["live_missing_metrics"] = missing_metrics(
-            [c.as_json() for c in outcome.clauses]
-        )
+        out["live_missing_metrics"] = missing_metrics(out["live_clauses"])
     except Exception as exc:  # noqa: BLE001
         out["live_verdict"] = "EVAL_ERROR"
         out["live_explanation"] = str(exc)
@@ -526,13 +529,27 @@ def _derive_actions(rep: TowerReport) -> None:
                     # the same misreading in reverse, on the one line where the
                     # distinction decides whether there is a decision to make.
                     if recorded_v == "PASS":
+                        ctx = _realizable_context(v, g)
+                        claim = (
+                            " The claim is exactly: this registered gate's clauses "
+                            "are satisfied — not that the book is broadly profitable, "
+                            "that other diagnostics are positive, or that historical "
+                            "cautions have lapsed."
+                        )
+                        if ctx and ctx["any_sign_disagreement"]:
+                            claim += (
+                                " CAUTION: it passes on the calibrated live-fill "
+                                "projection while observed paper P&L is negative — "
+                                "see REALIZABLE-PROJECTION CONTEXT."
+                            )
                         rep.ready_due.append(
                             f"GATE PASS (RECORDED, {g['latest_result']['computed_by']}"
                             f" @ {g['latest_result']['computed_at']}) {v['key']} · "
                             f"{g['gate_key']} {g.get('from_state')}→"
                             f"{g.get('to_state')} — this result CAN authorize the "
                             "transition. Promotion remains an operator act "
-                            "(re-evaluated at authorization); it is not automatic"
+                            "(re-evaluated at authorization); it is not automatic."
+                            + claim
                         )
                     else:
                         rep.ready_due.append(
@@ -581,6 +598,9 @@ def _derive_actions(rep: TowerReport) -> None:
                 entry = _blocked_gate_entry(v, g)
                 if entry is not None:
                     rep.blocked.append(entry)
+                ctx = _realizable_context(v, g)
+                if ctx is not None:
+                    rep.realizable_context.append(ctx)
             for ev in v["integrity_events"]:
                 owner = INTEGRITY_OWNER.get(
                     ev.get("kind") or "", BLOCK_OWNER["BLOCKED_INTEGRITY"]
@@ -651,6 +671,10 @@ def _table(headers: list[str], rows: list[list]) -> list[str]:
     out += ["    " + "  ".join(c.ljust(w) for c, w in zip(r, widths, strict=False))
             for r in cells]
     return out
+
+
+def _signed(v) -> str:
+    return "n/a" if v is None else f"{float(v):+.3f}c/trade"
 
 
 def _central(dt: datetime) -> str:
@@ -748,6 +772,53 @@ def render(rep: TowerReport, *, session=None) -> str:
     else:
         lines.append("    (none)")
 
+    if rep.realizable_context:
+        lines += ["", "=== REALIZABLE-PROJECTION CONTEXT ===",
+                  "    These gates decide on the live-fill projection, NOT on paper "
+                  "profitability. Both numbers are shown so the",
+                  "    verdict is read as the claim it is."]
+        for ctx in rep.realizable_context:
+            head = f"    {ctx['experiment']} · {ctx['gate_key']}"
+            if ctx.get("kind") == "promotion":
+                head += f"  [promotion {ctx.get('from_state')}→{ctx.get('to_state')}]"
+            lines.append(head)
+            lines.append(f"        verdict: {ctx['verdict']} ({ctx['source']})")
+            for r in ctx["rows"]:
+                if r["missing"]:
+                    lines.append(
+                        f"        {r['scope']}: realizable UNMEASURED — no trusted "
+                        f"calibration cell (covered {r['covered_n']}/{r['total_n']})"
+                    )
+                    continue
+                lines.append(
+                    f"        {r['scope']}:"
+                    f"  realizable projection {_signed(r['projected_cents'])}"
+                    f"  ·  observed paper {_signed(r['observed_paper_cents'])}"
+                    f"  ·  calibration coverage {r['covered_n']}/{r['total_n']}"
+                    + (f" (calib {r['calibration_version']})"
+                       if r.get("calibration_version") else "")
+                )
+            lines.append(
+                "        Interpretation: the gate is satisfied on the calibrated "
+                "live-fill projection."
+            )
+            lines.append(
+                "        This is NOT a claim that observed paper P&L was positive."
+            )
+            if ctx["any_sign_disagreement"]:
+                lines.append(
+                    "        CAUTION: calibrated realizable projection and observed "
+                    "paper P&L disagree in sign."
+                )
+                lines.append(
+                    "        The registered gate passes on realizable economics, not "
+                    "paper profitability. Informational —"
+                )
+                lines.append(
+                    "        the verdict is unchanged; only the pre-registered gate "
+                    "decides."
+                )
+
     lines += ["", "=== DATA COLLECTORS ==="]
     active = [c for c in rep.data_health if c["status"] != "INACTIVE"]
     inactive = [c for c in rep.data_health if c["status"] == "INACTIVE"]
@@ -826,6 +897,71 @@ def render(rep: TowerReport, *, session=None) -> str:
         "actually changed or need to change.",
     ]
     return "\n".join(lines)
+
+
+REALIZABLE_METRIC = "realizable_cents_per_trade"
+
+
+def _realizable_context(view: dict, gate: dict) -> dict | None:
+    """What a verdict resting on the live-fill projection actually claims.
+
+    `realizable_cents_per_trade` answers "what could a maker with this price mix
+    realistically capture", projected from live-calibrated fill cells. Observed
+    paper P&L answers "what did the paper engine record under its assumed-fill
+    mechanics". They are different questions, and a gate registered on the first
+    can pass while the second is negative — which is exactly what
+    mmsell-price-ceiling does (+1.269c projected, -1.625c observed, 185/185
+    covered). Rendered as a bare `PASS · realizable +1.269c`, a reader turns that
+    into "this strategy is profitable", which is stronger than the evidence
+    licenses.
+
+    Every number here is lifted from the evaluator's own recorded clauses —
+    including the observed paper figure, which the provider already computes over
+    the identical scope and stores as `optimistic_cents_per_trade`. Nothing is
+    recomputed: a second calculation would be a second answer."""
+    recorded = gate.get("latest_result") or {}
+    source = "recorded"
+    clauses = (recorded.get("clauses") if isinstance(recorded, dict) else None) or []
+    if not clauses:
+        clauses = gate.get("live_clauses") or []
+        source = "dry-run"
+    rows: list[dict] = []
+    for c in clauses:
+        if not isinstance(c, dict) or (c.get("clause") or {}).get("metric") != REALIZABLE_METRIC:
+            continue
+        prov = c.get("provenance") or {}
+        observed = prov.get("optimistic_cents_per_trade")
+        projected = c.get("value")
+        rows.append({
+            "list": c.get("list"),
+            "scope": c.get("scope"),
+            "projected_cents": projected,
+            "observed_paper_cents": observed,
+            "covered_n": prov.get("covered_n"),
+            "total_n": prov.get("total_n"),
+            "calibration_version": prov.get("fill_calibration_version"),
+            "missing": bool(c.get("missing")),
+            "passed": c.get("passed"),
+            # The caution this whole block exists for. Informational only — it
+            # never changes a verdict, because the registered gate decides.
+            "sign_disagreement": (
+                projected is not None and observed is not None
+                and projected > 0 > observed
+            ),
+        })
+    if not rows:
+        return None
+    return {
+        "experiment": view["key"],
+        "gate_key": gate.get("gate_key"),
+        "verdict": recorded.get("verdict") or gate.get("live_verdict"),
+        "source": source,
+        "kind": gate.get("kind"),
+        "from_state": gate.get("from_state"),
+        "to_state": gate.get("to_state"),
+        "rows": rows,
+        "any_sign_disagreement": any(r["sign_disagreement"] for r in rows),
+    }
 
 
 def _block_cause_line(entry: dict | None) -> str:
