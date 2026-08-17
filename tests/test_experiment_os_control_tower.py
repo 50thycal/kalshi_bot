@@ -410,3 +410,144 @@ def test_a_recorded_fail_is_not_labelled_a_dry_run(xos_session, xos_platform):
     s.commit()
     rep = ct.build_report(s, evaluate=True)
     assert "GATE FAIL (recorded)" in next(r for r in rep.ready_due if "GATE FAIL" in r)
+
+
+# ---------------------------------------------------------------------------
+# A realizable-driven PASS states the claim it actually makes
+# ---------------------------------------------------------------------------
+
+
+REALIZABLE_SPEC = {
+    "sample": {"treatment": {"metric": "settled_trades", "op": ">=", "value": 5}},
+    "pass_all": [{"metric": "realizable_cents_per_trade", "arm": "treatment",
+                  "op": ">", "value": 0}],
+}
+
+
+def _priced_trade(s, tag, *, side="yes", price=6, pnl, at=None):
+    s.add(PaperTrade(
+        market_ticker=f"T-{tag}-{id(object())}", strategy=tag, status="settled",
+        side=side, assumed_price=price, pnl=pnl, quantity=1,
+        created_at=at or (T0 + timedelta(hours=1)),
+    ))
+
+
+def _sign_disagreeing_experiment(s, key="exp-signgap"):
+    """The mmsell-price-ceiling shape: entries in the cheap 6c cell, whose measured
+    realizable is +1.77c, while the book's OWN paper result over the window is
+    negative. Projection positive, observation negative, 100% covered."""
+    exp, ver, epoch, gate, tag = _experiment(s, key, spec=REALIZABLE_SPEC)
+    for _ in range(20):
+        _priced_trade(s, tag, side="yes", price=6, pnl=-0.02)
+    s.commit()
+    return exp, gate, tag
+
+
+def test_a_realizable_pass_shows_projection_observation_and_coverage(xos_session,
+                                                                     xos_platform):
+    from kalshi_bot import fill_calibration as fc
+    from kalshi_bot.experiment_os import evaluator
+
+    s = xos_session
+    _, gate, _ = _sign_disagreeing_experiment(s)
+    out = evaluator.evaluate_gate(s, gate)  # record it
+    s.commit()
+    assert out.verdict == "PASS"
+
+    rep = ct.build_report(s, evaluate=False)
+    assert len(rep.realizable_context) == 1
+    ctx = rep.realizable_context[0]
+    assert ctx["source"] == "recorded" and ctx["verdict"] == "PASS"
+    row = ctx["rows"][0]
+    assert row["projected_cents"] == fc.MAKER_FILL_CALIBRATION[6].realizable_cents
+    assert row["observed_paper_cents"] == -2.0        # the book's own number
+    assert (row["covered_n"], row["total_n"]) == (20, 20)
+    assert row["calibration_version"] == fc.CALIBRATION_VERSION
+    assert ctx["any_sign_disagreement"] is True
+
+    out_text = ct.render(rep)
+    assert "=== REALIZABLE-PROJECTION CONTEXT ===" in out_text
+    assert "realizable projection +1.770c/trade" in out_text
+    assert "observed paper -2.000c/trade" in out_text
+    assert "calibration coverage 20/20" in out_text  # counts, not just a percentage
+    assert "NOT a claim that observed paper P&L was positive" in out_text
+    assert "CAUTION: calibrated realizable projection and observed paper P&L "\
+           "disagree in sign" in out_text
+
+
+def test_the_sign_caution_never_changes_the_verdict(xos_session, xos_platform):
+    """Informational only. A pre-registered gate is not re-decided because its
+    result is uncomfortable to read."""
+    from kalshi_bot.experiment_os import evaluator
+
+    s = xos_session
+    _, gate, _ = _sign_disagreeing_experiment(s)
+    evaluator.evaluate_gate(s, gate)
+    s.commit()
+
+    rep = ct.build_report(s, evaluate=True)
+    assert rep.realizable_context[0]["any_sign_disagreement"] is True
+    # The verdict everywhere is still PASS — not HOLD, FAIL or BLOCKED_*.
+    assert rep.blocked == []
+    view = next(v for vs in rep.by_state.values() for v in vs
+                if v["key"] == "exp-signgap")
+    assert ct._verdict_of(view) == "PASS"
+    assert (view["gates"][0]["latest_result"]["verdict"]) == "PASS"
+
+
+def test_the_pass_line_states_the_exact_claim(xos_session, xos_platform):
+    from kalshi_bot.experiment_os import evaluator
+
+    s = xos_session
+    _, gate, _ = _sign_disagreeing_experiment(s)
+    evaluator.evaluate_gate(s, gate)
+    s.commit()
+    rep = ct.build_report(s, evaluate=False)
+    line = next(r for r in rep.ready_due if "GATE PASS" in r)
+    assert "RECORDED" in line                      # still authoritative
+    assert "not that the book is broadly profitable" in line
+    assert "historical cautions have lapsed" in line
+    assert "CAUTION" in line and "observed paper P&L is negative" in line
+
+
+def test_agreeing_signs_get_context_without_the_caution(xos_session, xos_platform):
+    from kalshi_bot.experiment_os import evaluator
+
+    s = xos_session
+    _, _, _, gate, tag = _experiment(s, "exp-agree", spec=REALIZABLE_SPEC)
+    for _ in range(20):
+        _priced_trade(s, tag, side="yes", price=6, pnl=0.03)
+    s.commit()
+    evaluator.evaluate_gate(s, gate)
+    s.commit()
+    rep = ct.build_report(s, evaluate=False)
+    ctx = next(c for c in rep.realizable_context if c["experiment"] == "exp-agree")
+    assert ctx["any_sign_disagreement"] is False
+    text = ct.render(rep)
+    assert "NOT a claim that observed paper P&L was positive" in text
+    assert "disagree in sign" not in text
+
+
+def test_an_unmeasured_realizable_clause_says_so_rather_than_showing_a_number(
+    xos_session, xos_platform
+):
+    s = xos_session
+    _experiment(s, "exp-uncov", spec=REALIZABLE_SPEC)
+    for _ in range(20):
+        _priced_trade(s, "exp-uncov-t", side="yes", price=40, pnl=0.20)
+    s.commit()
+    rep = ct.build_report(s, evaluate=True)
+    ctx = next(c for c in rep.realizable_context if c["experiment"] == "exp-uncov")
+    assert ctx["rows"][0]["missing"] is True
+    assert "realizable UNMEASURED" in ct.render(rep)
+
+
+def test_a_gate_that_does_not_use_realizable_gets_no_context_block(xos_session,
+                                                                   xos_platform):
+    s = xos_session
+    _experiment(s, "exp-plain", spec=COMPUTABLE_SPEC)
+    _trade(s, "exp-plain-t")
+    s.commit()
+    rep = ct.build_report(s, evaluate=True)
+    assert rep.realizable_context == []
+    assert "REALIZABLE-PROJECTION CONTEXT" not in ct.render(rep)

@@ -35,6 +35,34 @@ live, or retire an experiment.
   evidence implies right now. `none/PASS` and `PASS/HOLD*` are both "an official
   evaluation is due", never "promote this". Persisting one is a write — recommend
   **Live Ops** (`docs/EXPERIMENT_OS_GATE_RESULTS.md`); do not run it here.
+
+### What a recorded PASS establishes — and what it does not
+
+A recorded PASS means exactly one thing: **the registered gate's clauses are
+satisfied under its canonical metrics, so it may authorize the exact transition
+it is bound to.** State that claim; do not enlarge it.
+
+It does **not** mean the book is broadly profitable, that other diagnostics are
+positive, that the operator should promote now, or that unrelated historical
+cautions have lapsed. Report a PASS as authoritative gate evidence — never
+downgrade it to a dry run — and in the same breath say what it is a claim about.
+
+**Realizable vs observed paper.** Where a gate decides on
+`realizable_cents_per_trade`, the report prints a REALIZABLE-PROJECTION CONTEXT
+block with the projection, the observed paper number and the calibration coverage
+side by side. They answer different questions: the projection is what a maker with
+that price mix could realistically capture (live-fill-calibrated); observed paper
+is what the paper engine recorded under its assumed-fill mechanics. They can
+disagree in sign — `mmsell-price-ceiling` passes at **+1.269¢ projected against
+−1.625¢ observed, 185/185 covered**. That disagreement is flagged and is
+**informational**: the pre-registered gate decides, and a sign disagreement never
+becomes HOLD, FAIL or BLOCKED_DATA. Never write "this strategy is profitable" off
+a realizable-driven PASS.
+
+**Never propose changing a frozen gate because its result is uncomfortable.** If
+the structured contract looks wrong — e.g. a thesis doc pre-registers a
+precondition the imported gate does not carry — that is a **new native Version**,
+which is a **Research Lab** follow-up, not an edit to imported science.
 - Never pool evidence across epochs Experiment OS declares non-poolable.
 
 ### Collector statuses — what each one licenses you to say
@@ -87,6 +115,15 @@ Route by **what is actually blocking**, not by what the problem sounds like.
   **Research Lab**.
 - runtime break / stuck orders / real-money anomaly → **Live Ops**
 - collector `STALE` / `EMPTY` / `UNAVAILABLE` → **Live Ops**
+- **an experiment with zero evidence** (a registered book that has never traded,
+  e.g. `freeze-dark-window-pin`) → **Live Ops first**. The Tower detects the
+  absence; it cannot tell whether the runtime is broken or the opportunity simply
+  is not there. Live Ops checks whether candidate production actually works, then:
+  runtime / config / filter / wiring / enforcement defect → **Live Ops owns the
+  fix**; runtime healthy and genuinely zero qualifying opportunities → **Research
+  Lab** owns the criteria question. Do not skip to Research Lab on a guess.
+- a gate contract that no longer matches its thesis doc → **Research Lab** (a new
+  native Version), never an in-place edit of an imported gate
 - a shared semantic that actually changed or needs to change (fee model, fill
   model, taxonomy, metric definition) → **Platform Change Review**
 - new hypothesis or successor experiment → **Research Lab**
