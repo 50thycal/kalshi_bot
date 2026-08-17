@@ -803,6 +803,23 @@ def _finish(
     return outcome
 
 
+def missing_metrics(clauses: list[dict] | None) -> list[str]:
+    """The metric keys a recorded/computed outcome marked as MISSING.
+
+    One extraction, shared by every surface, so "why is this gate blocked" is read
+    out of the evaluator's own clause record rather than re-derived — a second
+    opinion on the cause is exactly the drift Experiment OS exists to prevent.
+    Accepts the `as_json()` clause shape, which is what gate results persist."""
+    out: list[str] = []
+    for c in clauses or []:
+        if not isinstance(c, dict) or not c.get("missing"):
+            continue
+        metric = (c.get("clause") or {}).get("metric")
+        if metric and metric not in out:
+            out.append(str(metric))
+    return sorted(out)
+
+
 def latest_result(session, gate: ExperimentGate) -> ExperimentGateResult | None:
     return session.scalar(
         select(ExperimentGateResult)

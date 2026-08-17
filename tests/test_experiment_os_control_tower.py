@@ -1,0 +1,349 @@
+"""Control Tower rendering — tests target MISREADINGS, not formatting.
+
+The Tower's numbers were already right; a fresh Claude session still drew four
+wrong conclusions from them. Each is pinned here:
+
+  * `INACTIVE` read as "dead for 69 days" (it means "not part of this
+    deployment") and then blamed for six unrelated blocked gates;
+  * `BLOCKED_DATA` shown without its cause, so the reader inferred one from
+    whatever else was on screen;
+  * every block routed to Platform Change Review, when a missing metric
+    provider is experiment/metrics work and changes no shared semantic;
+  * a 7-day retirement lookback described as "the last cycle".
+
+A report that is correct but easy to misread is not finished.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+
+import pytest
+
+from kalshi_bot.experiment_os import control_tower as ct
+from kalshi_bot.experiment_os import service as svc
+from kalshi_bot.models import PaperTrade
+
+UTC = timezone.utc
+T0 = datetime(2026, 8, 1, tzinfo=UTC)
+
+
+def _trade(s, tag, *, pnl=0.05, at=None, status="settled"):
+    s.add(PaperTrade(
+        market_ticker=f"T-{tag}-{id(object())}", strategy=tag, status=status,
+        pnl=pnl, quantity=1, created_at=at or (T0 + timedelta(hours=1)),
+    ))
+
+
+def _experiment(s, key, *, spec, tag=None, state="PAPER"):
+    tag = tag or f"{key}-t"
+    exp = svc.create_experiment(s, key=key, origin="operator")
+    ver = svc.create_experiment_version(
+        s, exp, hypothesis="h", independent_variable="lever", now=T0,
+        control_exemption_reason="test shape: absolute threshold, no control arm",
+    )
+    svc.add_arm(s, ver, arm_key="treatment", role="treatment", strategy_tag=tag)
+    svc.freeze_version(s, ver, now=T0)
+    epoch = svc.open_epoch(s, ver, reason="initial", started_at=T0)
+    svc.register_deployment(
+        s, epoch, deployment_key=f"{key}-paper-1", stage="PAPER", kind="paper",
+        arms={"treatment": tag}, started_at=T0,
+    )
+    svc.transition_experiment(s, exp, "PROBE", actor="operator")
+    svc.transition_experiment(s, exp, "PAPER", actor="operator")
+    gate = svc.register_gate(
+        s, ver, gate_key="paper_to_live_canary", kind="promotion", spec=spec,
+        from_state="PAPER", to_state="LIVE_CANARY", registered_at=T0,
+    )
+    svc.mark_gate_evidence_started(s, gate, at=T0)
+    s.commit()
+    return exp, ver, epoch, gate, tag
+
+
+# A gate whose clause has no canonical provider — the real production shape.
+UNPROVIDED_SPEC = {
+    "pass_all": [{"metric": "realizable_cents_per_trade", "arm": "treatment",
+                  "op": ">", "value": 0}],
+}
+COMPUTABLE_SPEC = {
+    "sample": {"treatment": {"metric": "settled_trades", "op": ">=", "value": 5}},
+    "pass_all": [{"metric": "pnl_cents_per_trade", "arm": "treatment",
+                  "op": ">", "value": 0}],
+}
+
+
+# ---------------------------------------------------------------------------
+# INACTIVE is informational, not an outage
+# ---------------------------------------------------------------------------
+
+
+def test_inactive_collector_is_not_a_warning_and_never_an_action(xos_session,
+                                                                 xos_platform):
+    s = xos_session
+    health = ct._data_health(s)
+    by_name = {c["collector"]: c for c in health}
+    # Every collector reports whether it is a PROBLEM, separately from its label.
+    for c in health:
+        assert "warning" in c, c
+        assert c["warning"] is (c["status"] in ct.COLLECTOR_WARNING_STATUSES)
+    assert "market_snapshots" in by_name
+
+    rep = ct.build_report(s, evaluate=False)
+    rep.data_health = [
+        {"collector": "market_snapshots", "status": "INACTIVE", "warning": False,
+         "age_min": 99704.2, "age_days": 69.2, "cadence_min": 60,
+         "note": "scanner-mode table; the live worker does not write it"},
+        {"collector": "weather_forecasts", "status": "fresh", "warning": False,
+         "age_min": 1.0, "age_days": 0.0, "cadence_min": 15, "note": None},
+    ]
+    rep.recommendations = []
+    ct._derive_actions(rep)
+    joined = " ".join(rep.recommendations)
+    assert "market_snapshots" not in joined, (
+        "an INACTIVE collector must not generate a health action — that is what "
+        "invites a fresh reader to invent a cause for it"
+    )
+
+
+@pytest.mark.parametrize("status", sorted(ct.COLLECTOR_WARNING_STATUSES))
+def test_real_collector_problems_are_still_surfaced_prominently(xos_session,
+                                                                xos_platform,
+                                                                status):
+    s = xos_session
+    rep = ct.build_report(s, evaluate=False)
+    rep.data_health = [{"collector": "weather_observations", "status": status,
+                        "warning": True, "age_min": 900.0, "age_days": 0.6,
+                        "cadence_min": 15, "note": None}]
+    rep.recommendations = []
+    ct._derive_actions(rep)
+    text = " ".join(rep.recommendations)
+    assert "weather_observations" in text and status in text
+    assert "Live Ops" in text
+    out = ct.render(rep)
+    assert f"weather_observations  {status}" in out or "weather_observations" in out
+
+
+def test_render_separates_inactive_and_says_what_it_means(xos_session, xos_platform):
+    s = xos_session
+    rep = ct.build_report(s, evaluate=False)
+    rep.data_health = [
+        {"collector": "weather_forecasts", "status": "fresh", "warning": False,
+         "age_min": 1.0, "age_days": 0.0, "cadence_min": 15, "note": None},
+        {"collector": "market_snapshots", "status": "INACTIVE", "warning": False,
+         "age_min": 99704.2, "age_days": 69.2, "cadence_min": 60,
+         "note": "scanner-mode table; the live worker does not write it"},
+    ]
+    out = ct.render(rep)
+    assert "NOT ACTIVE IN THIS DEPLOYMENT" in out
+    assert "informational, NOT an outage" in out
+    assert "not expected to be active in the current deployment" in out
+    assert "Only STALE / EMPTY / UNAVAILABLE warrant collector-health" in out
+    assert "scanner-mode table" in out
+    # The freshness table itself no longer mixes the two.
+    table = out.split("=== DATA COLLECTORS ===")[1].split("NOT ACTIVE")[0]
+    assert "weather_forecasts" in table and "market_snapshots" not in table
+
+
+# ---------------------------------------------------------------------------
+# BLOCKED_DATA leads with the evaluator's own cause
+# ---------------------------------------------------------------------------
+
+
+def test_blocked_data_names_the_missing_provider(xos_session, xos_platform):
+    s = xos_session
+    _experiment(s, "exp-unprovided", spec=UNPROVIDED_SPEC)
+    _trade(s, "exp-unprovided-t")
+    s.commit()
+
+    rep = ct.build_report(s, evaluate=True)
+    assert len(rep.blocked) == 1
+    b = rep.blocked[0]
+    assert b["verdict"] == "BLOCKED_DATA"
+    assert b["missing_metrics"] == ["realizable_cents_per_trade"]
+    assert any("no canonical provider" in r for r in b["reasons"])
+
+    out = ct.render(rep)
+    assert "=== BLOCKED EVIDENCE ===" in out
+    assert "missing provider: realizable_cents_per_trade" in out
+    # And READY/DUE leads with the cause rather than the bare verdict.
+    ready = [r for r in rep.ready_due if "BLOCKED_DATA" in r]
+    assert ready and "realizable_cents_per_trade" in ready[0]
+
+
+def test_the_cause_comes_from_the_recorded_result_when_one_exists(xos_session,
+                                                                  xos_platform):
+    """The official record outranks a dry run — and carries the same provenance."""
+    from kalshi_bot.experiment_os import evaluator
+
+    s = xos_session
+    _, _, _, gate, _ = _experiment(s, "exp-recorded", spec=UNPROVIDED_SPEC)
+    _trade(s, "exp-recorded-t")
+    s.commit()
+    evaluator.evaluate_gate(s, gate)  # records BLOCKED_DATA
+    s.commit()
+
+    rep = ct.build_report(s, evaluate=False)  # no dry run at all
+    assert len(rep.blocked) == 1
+    b = rep.blocked[0]
+    assert b["source"] == "recorded"
+    assert b["missing_metrics"] == ["realizable_cents_per_trade"]
+    assert "missing provider: realizable_cents_per_trade" in ct.render(rep)
+
+
+def test_a_computable_gate_is_not_listed_as_blocked(xos_session, xos_platform):
+    s = xos_session
+    _experiment(s, "exp-ok", spec=COMPUTABLE_SPEC)
+    for _ in range(10):
+        _trade(s, "exp-ok-t")
+    s.commit()
+    rep = ct.build_report(s, evaluate=True)
+    assert rep.blocked == []
+    assert "=== BLOCKED EVIDENCE ===\n    (none)" in ct.render(rep)
+
+
+def test_missing_metrics_extraction_reads_the_evaluator_record(xos_session):
+    """One extraction shared by every surface — no second opinion on the cause."""
+    from kalshi_bot.experiment_os.evaluator import missing_metrics
+
+    clauses = [
+        {"clause": {"metric": "pnl_cents_per_trade"}, "missing": False},
+        {"clause": {"metric": "clean_pairs"}, "missing": True},
+        {"clause": {"metric": "realizable_cents_per_trade"}, "missing": True},
+        {"clause": {"metric": "clean_pairs"}, "missing": True},  # deduped
+        "not a dict",
+    ]
+    assert missing_metrics(clauses) == ["clean_pairs", "realizable_cents_per_trade"]
+    assert missing_metrics(None) == []
+
+
+# ---------------------------------------------------------------------------
+# Routing: a missing provider is not a platform change
+# ---------------------------------------------------------------------------
+
+
+def test_blocked_data_routes_to_research_lab_not_platform_change_review(
+    xos_session, xos_platform
+):
+    s = xos_session
+    _experiment(s, "exp-route-data", spec=UNPROVIDED_SPEC)
+    _trade(s, "exp-route-data-t")
+    s.commit()
+    rep = ct.build_report(s, evaluate=True)
+
+    owner = rep.blocked[0]["owner"]
+    assert "Research Lab" in owner
+    assert "NOT a Platform Revision" in owner
+
+    handoffs = [r for r in rep.recommendations if "blocked evidence" in r]
+    assert handoffs, rep.recommendations
+    assert "Research Lab" in handoffs[0]
+    # No unqualified platform-review handoff was manufactured for this block.
+    assert not any(
+        r.strip().endswith("Platform Change Review") for r in rep.recommendations
+    )
+
+
+def test_blocked_platform_routes_to_platform_change_review():
+    assert "Platform Change Review" in ct.BLOCK_OWNER["BLOCKED_PLATFORM"]
+    assert "Platform Change Review" not in ct.BLOCK_OWNER["BLOCKED_DATA"].split(
+        "NOT a Platform Revision")[0]
+    entry = ct._blocked_gate_entry(
+        {"key": "e"},
+        {"gate_key": "g", "latest_result": {"verdict": "BLOCKED_PLATFORM",
+                                            "blocking_reasons": ["snapshot moved"],
+                                            "missing_metrics": []}},
+    )
+    assert entry["owner"] == ct.BLOCK_OWNER["BLOCKED_PLATFORM"]
+    assert ct._block_cause_line(entry) == "snapshot moved"
+
+
+def test_blocked_integrity_routing_names_the_cause_not_one_role():
+    owner = ct.BLOCK_OWNER["BLOCKED_INTEGRITY"]
+    for role in ("Live Ops", "Platform Change Review", "Research Lab"):
+        assert role in owner
+
+
+def test_integrity_event_recommendation_uses_the_event_kind(xos_session,
+                                                            xos_platform):
+    s = xos_session
+    exp, _, _, _, _ = _experiment(s, "exp-integ", spec=COMPUTABLE_SPEC)
+    svc.record_integrity_event(
+        s, exp, kind="EXPERIMENT_CONFIG_DRIFT",
+        description="deployed config differs from the registered arm",
+    )
+    s.commit()
+    rep = ct.build_report(s, evaluate=False)
+    rec = [r for r in rep.recommendations if "exp-integ" in r]
+    assert rec and "EXPERIMENT_CONFIG_DRIFT" in rec[0]
+    assert ct.INTEGRITY_OWNER["EXPERIMENT_CONFIG_DRIFT"] in rec[0]
+
+
+def test_render_states_the_routing_rule_explicitly(xos_session, xos_platform):
+    out = ct.render(ct.build_report(xos_session, evaluate=False))
+    assert "Route the write by what is actually blocking" in out
+    assert "This is NOT automatically a Platform Revision." in out
+    assert "BLOCKED_PLATFORM → Platform Change Review" in out
+    assert ("Recommend Platform Change Review only when shared platform semantics"
+            in out)
+
+
+# ---------------------------------------------------------------------------
+# The retirement window is stated, not implied
+# ---------------------------------------------------------------------------
+
+
+def test_recently_retired_states_its_real_lookback(xos_session, xos_platform):
+    s = xos_session
+    rep = ct.build_report(s, evaluate=False, retired_days=7)
+    assert rep.retired_days == 7
+    out = ct.render(rep)
+    assert "=== RECENTLY RETIRED — last 7 days ===" in out
+    assert "cycle" not in out.split("RECENTLY RETIRED")[1].split("===")[0]
+
+    rep30 = ct.build_report(s, evaluate=False, retired_days=30)
+    assert "=== RECENTLY RETIRED — last 30 days ===" in ct.render(rep30)
+
+
+def test_empty_retired_section_still_states_the_window(xos_session, xos_platform):
+    out = ct.render(ct.build_report(xos_session, evaluate=False, retired_days=14))
+    assert "(none retired in the last 14 days)" in out
+
+
+def test_retired_window_selects_on_when_the_book_died(xos_session, xos_platform):
+    """The fresh-session finding: filtering on the RETIRED transition put the
+    whole graveyard inside every window, because the legacy import stamped all of
+    them at one instant. 17 shown, 10 actually retired that week. A stated window
+    that is wrong is worse than an unstated one."""
+    s = xos_session
+    now = datetime.now(UTC)
+    import_instant = now - timedelta(hours=1)  # when the import wrote every row
+
+    for key, retired_at in (
+        ("gone-recently", now - timedelta(days=2)),
+        ("gone-long-ago", now - timedelta(days=90)),
+        ("gone-undated", None),
+    ):
+        exp = svc.create_experiment(s, key=key, origin="operator")
+        svc.transition_experiment(s, exp, "PROBE", actor="import",
+                                  occurred_at=import_instant)
+        svc.transition_experiment(s, exp, "RETIRED", actor="import",
+                                  reason="killed", occurred_at=import_instant)
+        exp.retired_at = retired_at
+    s.commit()
+
+    rep = ct.build_report(s, evaluate=False, retired_days=7)
+    keys = [r["key"] for r in rep.retired_recent]
+    assert "gone-recently" in keys
+    assert "gone-long-ago" not in keys, (
+        "a book retired 90 days ago is not recent just because its transition row "
+        "was written during today's import"
+    )
+    # Undated records fall back to the transition, but say so rather than pretend.
+    undated = next(r for r in rep.retired_recent if r["key"] == "gone-undated")
+    assert undated["dated"] is False
+    assert rep.retired_undated == ["gone-undated"]
+
+    out = ct.render(rep)
+    assert "[no retired_at — transition date]" in out
+    assert "carry NO retired_at" in out
+    assert "not by when its record was written" in out

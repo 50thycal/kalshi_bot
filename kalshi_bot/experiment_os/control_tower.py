@@ -51,20 +51,33 @@ ACTIVE_ORDER: tuple[str, ...] = (
     LifecycleState.PAUSED.value,
 )
 
-# Collector → (timestamp column, nominal cadence minutes). Freshness is the one
-# health signal the retired loop checkers owned that Experiment OS cannot express:
-# a stalled collector starves evidence without failing any gate. Stale is >3x
-# cadence, matching the threshold those checkers used.
-COLLECTORS: tuple[tuple[str, str, int], ...] = (
-    ("weather_forecasts", "captured_at", 15),
-    ("weather_observations", "captured_at", 15),
-    ("weather_ensembles", "captured_at", 60),
-    ("weather_bucket_snapshots", "captured_at", 5),
-    ("crypto_spot_candles", "minute_ts", 5),
-    ("crypto_ladder_snapshots", "captured_at", 5),
-    ("mmsell_position_ticks", "captured_at", 5),
-    ("market_snapshots", "captured_at", 60),
+# Collector → (timestamp column, nominal cadence minutes, why it may be idle).
+# Freshness is the one health signal the retired loop checkers owned that
+# Experiment OS cannot express: a stalled collector starves evidence without
+# failing any gate. Stale is >3x cadence, matching the threshold those checkers
+# used. The fourth field documents collectors that are legitimately not part of
+# every deployment, so a long silence is not read as a fault.
+COLLECTORS: tuple[tuple[str, str, int, str | None], ...] = (
+    ("weather_forecasts", "captured_at", 15, None),
+    ("weather_observations", "captured_at", 15, None),
+    ("weather_ensembles", "captured_at", 60, None),
+    ("weather_bucket_snapshots", "captured_at", 5, None),
+    ("crypto_spot_candles", "minute_ts", 5, None),
+    ("crypto_ladder_snapshots", "captured_at", 5, None),
+    ("mmsell_position_ticks", "captured_at", 5, None),
+    ("market_snapshots", "captured_at", 60,
+     "scanner-mode table; the live worker does not write it"),
 )
+
+# Silence longer than this is not a stall — it means the collector is not part of
+# the deployment that is running. Reported as INACTIVE, which is informational.
+INACTIVE_AFTER_DAYS = 7
+
+# The statuses that are actually collector-health problems. INACTIVE is NOT one:
+# it says "not expected here", and treating it as an outage trains a reader to
+# invent causes for it (a fresh session read market_snapshots INACTIVE as "dead
+# for 69 days" and blamed it for six unrelated BLOCKED_DATA gates).
+COLLECTOR_WARNING_STATUSES: frozenset[str] = frozenset({"STALE", "EMPTY", "UNAVAILABLE"})
 
 NORTH_STAR_USD_PER_MONTH = 100.0
 
@@ -91,6 +104,13 @@ class TowerReport:
     ready_due: list[str] = field(default_factory=list)
     recommendations: list[str] = field(default_factory=list)
     retired_recent: list[dict] = field(default_factory=list)
+    # The window `retired_recent` covers, carried so the render states it rather
+    # than leaving the reader to call it "this cycle".
+    retired_days: int = 7
+    # Retired records with no `retired_at` at all — their date is unknown, not
+    # recent. Named so the window's coverage is honest about what it cannot place.
+    retired_undated: list[str] = field(default_factory=list)
+    blocked: list[dict] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -197,6 +217,8 @@ def _gate_view(session, board_gate: dict, gate_obj, evaluate: bool) -> dict:
     out = dict(board_gate)
     out["live_verdict"] = None
     out["live_explanation"] = None
+    out["live_blocking_reasons"] = []
+    out["live_missing_metrics"] = []
     if not evaluate or gate_obj is None:
         return out
     if gate_obj.evidence_started_at is None:
@@ -204,15 +226,84 @@ def _gate_view(session, board_gate: dict, gate_obj, evaluate: bool) -> dict:
         out["live_explanation"] = "gate registered but evidence has not started"
         return out
     try:
-        from .evaluator import evaluate_gate
+        from .evaluator import evaluate_gate, missing_metrics
 
         outcome = evaluate_gate(session, gate_obj, persist=False)  # DRY RUN
         out["live_verdict"] = outcome.verdict
         out["live_explanation"] = outcome.explanation
+        # Carry the evaluator's OWN account of why, so no surface has to infer a
+        # cause from what happens to be near it in the report.
+        out["live_blocking_reasons"] = list(outcome.blocking_reasons or [])
+        out["live_missing_metrics"] = missing_metrics(
+            [c.as_json() for c in outcome.clauses]
+        )
     except Exception as exc:  # noqa: BLE001
         out["live_verdict"] = "EVAL_ERROR"
         out["live_explanation"] = str(exc)
     return out
+
+
+# Who owns unblocking each verdict. A block is not automatically a platform
+# problem: BLOCKED_DATA is usually a metric provider nobody has written yet,
+# which is experiment/metrics work, and routing it to Platform Change Review
+# invites a Platform Revision that no evidence calls for.
+BLOCK_OWNER: dict[str, str] = {
+    "BLOCKED_DATA": (
+        "Research Lab (or task-specific Experiment OS metrics work) — a metric "
+        "provider or evidence transform has to be implemented. NOT a Platform "
+        "Revision unless a shared semantic actually changed"
+    ),
+    "BLOCKED_PLATFORM": (
+        "Platform Change Review — evidence comparability across a platform "
+        "revision is what is blocking"
+    ),
+    "BLOCKED_INTEGRITY": (
+        "route by cause: runtime/live-execution/collector malfunction → Live Ops; "
+        "shared semantic or config change → Platform Change Review; experiment "
+        "definition or evidence-contract problem → Research Lab"
+    ),
+}
+
+# Integrity kinds with an unambiguous owner. Anything else keeps the explicit
+# three-way decision above rather than guessing.
+INTEGRITY_OWNER: dict[str, str] = {
+    "EXPERIMENT_CONFIG_DRIFT": (
+        "Platform Change Review (deployed config no longer matches the registered "
+        "arm) — Live Ops if the runtime config is what is wrong"
+    ),
+    "HELD_CONSTANT_CHANGED": (
+        "Platform Change Review — something the experiment held constant moved"
+    ),
+}
+
+
+def _blocked_gate_entry(view: dict, gate: dict) -> dict | None:
+    """One blocked gate, with the evaluator's cause and the owning role.
+
+    Prefers the RECORDED result's reasons when the recorded verdict is the blocked
+    one — that is the official record — and otherwise the dry run's."""
+    recorded = gate.get("latest_result") or {}
+    rec_verdict = recorded.get("verdict")
+    live_verdict = gate.get("live_verdict")
+    if rec_verdict and str(rec_verdict).startswith("BLOCKED"):
+        verdict, source = rec_verdict, "recorded"
+        reasons = list(recorded.get("blocking_reasons") or [])
+        metrics = list(recorded.get("missing_metrics") or [])
+    elif live_verdict and str(live_verdict).startswith("BLOCKED"):
+        verdict, source = live_verdict, "dry-run"
+        reasons = list(gate.get("live_blocking_reasons") or [])
+        metrics = list(gate.get("live_missing_metrics") or [])
+    else:
+        return None
+    return {
+        "experiment": view["key"],
+        "gate_key": gate.get("gate_key"),
+        "verdict": verdict,
+        "source": source,
+        "missing_metrics": metrics,
+        "reasons": reasons,
+        "owner": BLOCK_OWNER.get(verdict, "Research Lab"),
+    }
 
 
 def _experiment_view(session, exp: Experiment, *, evaluate: bool) -> dict:
@@ -300,9 +391,14 @@ def _experiment_view(session, exp: Experiment, *, evaluate: bool) -> dict:
 
 
 def _data_health(session) -> list[dict]:
+    """Collector freshness, with each status carrying whether it is a PROBLEM.
+
+    `warning` is the field to act on, not the status string: only STALE, EMPTY and
+    UNAVAILABLE mean something may be wrong. INACTIVE means the collector is not
+    part of the running deployment, and is reported for completeness only."""
     out: list[dict] = []
     now = _now()
-    for table, column, cadence in COLLECTORS:
+    for table, column, cadence, idle_note in COLLECTORS:
         try:
             row = session.execute(
                 text(f"SELECT max({column}) AS latest, count(*) AS n FROM {table}")  # noqa: S608
@@ -310,25 +406,29 @@ def _data_health(session) -> list[dict]:
         except Exception:  # noqa: BLE001 — table absent on this deployment
             session.rollback()
             out.append({"collector": table, "status": "UNAVAILABLE",
-                        "detail": "table not present"})
+                        "warning": True, "note": "table not present"})
             continue
         latest = _utc(row[0]) if row and row[0] else None
         if latest is None:
             out.append({"collector": table, "status": "EMPTY", "age_min": None,
+                        "warning": True, "note": idle_note,
                         "rows": int(row[1] or 0) if row else 0})
             continue
         age_min = (now - latest).total_seconds() / 60.0
         # A stall is hours; months means the collector is simply not part of the
         # current deployment (e.g. market_snapshots only runs in scanner mode).
         # Calling that STALE every run trains the reader to ignore the column.
-        if age_min > 7 * 24 * 60:
+        if age_min > INACTIVE_AFTER_DAYS * 24 * 60:
             status = "INACTIVE"
         elif age_min > 3 * cadence:
             status = "STALE"
         else:
             status = "fresh"
         out.append({"collector": table, "status": status,
+                    "warning": status in COLLECTOR_WARNING_STATUSES,
                     "age_min": round(age_min, 1), "cadence_min": cadence,
+                    "age_days": round(age_min / 1440.0, 1),
+                    "note": idle_note if status == "INACTIVE" else None,
                     "latest": str(latest)})
     return out
 
@@ -366,7 +466,7 @@ def build_report(session, *, evaluate: bool = True,
                  retired_days: int = 7) -> TowerReport:
     """The whole Control Tower view. Pure read; `evaluate` runs the canonical
     evaluator in DRY-RUN (persist=False) for a current verdict."""
-    rep = TowerReport(generated_at=_now())
+    rep = TowerReport(generated_at=_now(), retired_days=retired_days)
     rep.enforcement, rep.platform, rep.anomalies = _system_section(session)
 
     for state in ACTIVE_ORDER:
@@ -378,13 +478,31 @@ def build_report(session, *, evaluate: bool = True,
             _experiment_view(session, exp, evaluate=evaluate)
         )
 
+    # Select on when the book ACTUALLY died (`retired_at`), not on when its
+    # RETIRED transition row was written. The legacy import stamped every
+    # transition at one instant, so filtering on the transition puts the entire
+    # graveyard inside any window — a stated "last 7 days" that is wrong is worse
+    # than an unstated one. Undated legacy records (retired_at NULL) fall back to
+    # the transition and are labelled, so the guess is never silent.
     cutoff = _now() - timedelta(days=retired_days)
     for exp in read.list_experiments(session, state=LifecycleState.RETIRED.value):
         transitions = read.transitions_for(session, exp)
-        if transitions and _utc(transitions[-1].occurred_at) >= cutoff:
-            rep.retired_recent.append({"key": exp.key,
-                                       "at": str(transitions[-1].occurred_at),
-                                       "reason": (transitions[-1].reason or "")[:120]})
+        retired_at = _utc(exp.retired_at)
+        when = retired_at or (_utc(transitions[-1].occurred_at) if transitions else None)
+        if when is None or when < cutoff:
+            continue
+        rep.retired_recent.append({
+            "key": exp.key,
+            "at": str(when),
+            "dated": retired_at is not None,
+            "reason": (transitions[-1].reason if transitions else None) or "",
+        })
+    rep.retired_recent.sort(key=lambda r: r["at"], reverse=True)
+    rep.retired_undated = [
+        exp.key
+        for exp in read.list_experiments(session, state=LifecycleState.RETIRED.value)
+        if exp.retired_at is None
+    ]
 
     rep.data_health = _data_health(session)
     rep.portfolio = _portfolio(session)
@@ -414,13 +532,22 @@ def _derive_actions(rep: TowerReport) -> None:
                         "candidate; decision belongs to Research Lab"
                     )
                 elif verdict and verdict.startswith("BLOCKED"):
+                    entry = _blocked_gate_entry(v, g)
+                    cause = _block_cause_line(entry) if entry else ""
                     rep.ready_due.append(
-                        f"{verdict} {v['key']} · {g['gate_key']} — resolve the block "
-                        "before any interpretation of this experiment's numbers"
+                        f"{verdict} {v['key']} · {g['gate_key']}"
+                        + (f" — {cause}" if cause else "")
+                        + " — this experiment's numbers cannot be interpreted "
+                        "until it clears"
                     )
             for g in v["gates"]:
                 recorded = (g.get("latest_result") or {}).get("verdict")
                 live = g.get("live_verdict")
+                if (recorded or live or "").startswith("BLOCKED"):
+                    # BLOCKED EVIDENCE owns this gate. Repeating it here as
+                    # "never recorded" adds a second line about a gate that
+                    # cannot authorize anything either way.
+                    continue
                 if recorded is None and live and not live.startswith("NOT_"):
                     rep.ready_due.append(
                         f"NEVER RECORDED {v['key']} · {g['gate_key']} — dry-run says "
@@ -433,10 +560,17 @@ def _derive_actions(rep: TowerReport) -> None:
                         f"{recorded}, dry-run now {live}; an official re-evaluation "
                         "is due"
                     )
-            if v["integrity_events"]:
+            for g in v["gates"]:
+                entry = _blocked_gate_entry(v, g)
+                if entry is not None:
+                    rep.blocked.append(entry)
+            for ev in v["integrity_events"]:
+                owner = INTEGRITY_OWNER.get(
+                    ev.get("kind") or "", BLOCK_OWNER["BLOCKED_INTEGRITY"]
+                )
                 rep.recommendations.append(
-                    f"{v['key']}: unresolved integrity event(s) — Platform Change "
-                    "Review (if a shared semantic changed) or Live Ops (if runtime)"
+                    f"{v['key']}: unresolved integrity event "
+                    f"[{ev.get('kind') or 'unknown'}] — {owner}"
                 )
             if state == LifecycleState.LIVE_CANARY.value:
                 for d in v["deployments"]:
@@ -446,13 +580,30 @@ def _derive_actions(rep: TowerReport) -> None:
                             "Live Ops"
                         )
 
-    stale = [c for c in rep.data_health if c["status"] == "STALE"]
-    if stale:
+    # Only real collector problems become an action. INACTIVE deliberately does
+    # not: it means "not part of this deployment", and recommending an
+    # investigation for it manufactures work and invites false causal stories.
+    bad = [c for c in rep.data_health if c.get("warning")]
+    if bad:
         rep.recommendations.append(
-            "data collectors not fresh: "
-            + ", ".join(f"{c['collector']}({c['status']})" for c in stale)
+            "collector health: "
+            + ", ".join(f"{c['collector']}({c['status']})" for c in bad)
             + " — Live Ops owns collector health; starved evidence fails no gate"
         )
+
+    # Group blocked gates by owner so the handoff is one line per role, and the
+    # cause is the evaluator's, not an inference from nearby output.
+    by_owner: dict[str, list[str]] = {}
+    for b in rep.blocked:
+        label = f"{b['experiment']}·{b['gate_key']}"
+        if b["missing_metrics"]:
+            label += f" ({', '.join(b['missing_metrics'])})"
+        by_owner.setdefault(b["owner"], []).append(label)
+    for owner, labels in by_owner.items():
+        rep.recommendations.append(
+            f"blocked evidence — {', '.join(sorted(set(labels)))} → {owner}"
+        )
+
     if rep.platform.get("unresolved_impacts"):
         rep.recommendations.append(
             "unresolved platform-impact dispositions — Platform Change Review"
@@ -564,10 +715,50 @@ def render(rep: TowerReport, *, session=None) -> str:
         lines += _table(["experiment", "ver/epoch", "treatment", "n", "c/trade",
                          "control c/trade", "gate", "last evidence"], rows)
 
+    lines += ["", "=== BLOCKED EVIDENCE ==="]
+    if rep.blocked:
+        lines.append(
+            "    Cause is the canonical evaluator's, not an inference. Do not "
+            "attribute a block to anything not named here."
+        )
+        for b in rep.blocked:
+            lines.append(f"    {b['experiment']} · {b['gate_key']}")
+            lines.append(f"        {b['verdict']} ({b['source']})"
+                         + (f" — {_block_cause_line(b)}" if _block_cause_line(b) else ""))
+            for reason in b["reasons"][:4]:
+                lines.append(f"        · {reason}")
+            lines.append(f"        owner: {b['owner']}")
+    else:
+        lines.append("    (none)")
+
     lines += ["", "=== DATA COLLECTORS ==="]
+    active = [c for c in rep.data_health if c["status"] != "INACTIVE"]
+    inactive = [c for c in rep.data_health if c["status"] == "INACTIVE"]
     lines += _table(["collector", "status", "age_min", "cadence"],
                     [[c["collector"], c["status"], c.get("age_min"),
-                      c.get("cadence_min")] for c in rep.data_health])
+                      c.get("cadence_min")] for c in active])
+    if inactive:
+        lines += [
+            "",
+            f"    NOT ACTIVE IN THIS DEPLOYMENT (no data for >{INACTIVE_AFTER_DAYS}d) "
+            "— informational, NOT an outage:",
+        ]
+        for c in inactive:
+            note = f" — {c['note']}" if c.get("note") else ""
+            lines.append(
+                f"        {c['collector']}: INACTIVE, last write "
+                f"{c.get('age_days')}d ago{note}"
+            )
+    lines += [
+        "",
+        "    COLLECTOR LEGEND: fresh = running normally · STALE = overdue, may be "
+        "stalled · EMPTY = no rows · UNAVAILABLE = table absent ·",
+        "    INACTIVE = not expected to be active in the current deployment.",
+        "    Only STALE / EMPTY / UNAVAILABLE warrant collector-health "
+        "investigation (Live Ops). INACTIVE is informational and is never, on its",
+        "    own, the cause of a blocked gate — see BLOCKED EVIDENCE for the "
+        "evaluator's actual reasons.",
+    ]
 
     p = rep.portfolio
     gap = p["gap_to_north_star_usd"]
@@ -582,17 +773,53 @@ def render(rep: TowerReport, *, session=None) -> str:
 
     lines += ["", "=== READY / DUE ==="]
     lines += [f"    - {r}" for r in rep.ready_due] or ["    (none)"]
+    # State the window. "Recently" with no number was read as "this cycle", which
+    # turned a 7-day lookback into a claim that 14 books died in one run.
+    lines += ["", f"=== RECENTLY RETIRED — last {rep.retired_days} days ===",
+              "    Dated by the experiment's retired_at (when the book actually "
+              "died), not by when its record was written."]
     if rep.retired_recent:
-        lines += ["", "=== RECENTLY RETIRED ==="]
-        lines += [f"    - {r['key']} @ {r['at']}: {r['reason']}"
-                  for r in rep.retired_recent]
+        for r in rep.retired_recent:
+            mark = "" if r.get("dated") else "  [no retired_at — transition date]"
+            lines.append(f"    - {r['key']} @ {r['at']}{mark}: {r['reason']}")
+    else:
+        lines.append(f"    (none retired in the last {rep.retired_days} days)")
+    if rep.retired_undated:
+        lines.append(
+            f"    {len(rep.retired_undated)} retired record(s) carry NO retired_at "
+            "— undated legacy history, not recent: "
+            + ", ".join(sorted(rep.retired_undated))
+        )
     lines += ["", "=== RECOMMENDED NEXT ACTIONS ==="]
     lines += [f"    - {r}" for r in rep.recommendations] or [
         "    - none; continue accumulating evidence"]
-    lines += ["", "Control Tower is READ ONLY. Writes belong to: Research Lab "
-              "(experiments), Platform Change Review (shared semantics), Live Ops "
-              "(runtime/real money)."]
+    lines += [
+        "",
+        "Control Tower is READ ONLY. Route the write by what is actually blocking:",
+        "    BLOCKED_DATA (missing metric provider / analysis / evidence transform)"
+        " → Research Lab or task-specific Experiment OS metrics work.",
+        "        This is NOT automatically a Platform Revision.",
+        "    BLOCKED_PLATFORM → Platform Change Review (evidence comparability "
+        "across a revision).",
+        "    BLOCKED_INTEGRITY → by cause: runtime/live/collector → Live Ops; "
+        "shared semantic or config → Platform Change Review;",
+        "        experiment definition or evidence contract → Research Lab.",
+        "    New hypothesis or successor experiment → Research Lab.",
+        "    Recommend Platform Change Review only when shared platform semantics "
+        "actually changed or need to change.",
+    ]
     return "\n".join(lines)
+
+
+def _block_cause_line(entry: dict | None) -> str:
+    """The one-line cause: the missing providers if any, else the first reason."""
+    if not entry:
+        return ""
+    if entry["missing_metrics"]:
+        return "missing provider: " + ", ".join(entry["missing_metrics"])
+    if entry["reasons"]:
+        return entry["reasons"][0]
+    return ""
 
 
 def _primary_arms(arms: list[dict]) -> tuple[dict | None, dict | None]:

@@ -332,6 +332,7 @@ def experiment_scoreboard(session, experiment: Experiment) -> dict:
     never writes."""
     from datetime import datetime, timezone  # local: keep read import-light
 
+    from .evaluator import missing_metrics as _missing_metrics
     from .metrics import MetricScope, compute_metric
 
     board: dict = {
@@ -407,6 +408,14 @@ def experiment_scoreboard(session, experiment: Experiment) -> dict:
                     "computed_at": str(latest.computed_at),
                     "computed_by": latest.computed_by,
                     "explanation": latest.explanation,
+                    # The recorded cause, carried forward verbatim: a reader must
+                    # never have to guess why a gate is blocked.
+                    "blocking_reasons": list(
+                        (latest.metrics_json or {}).get("blocking_reasons") or []
+                    ),
+                    "missing_metrics": _missing_metrics(
+                        (latest.metrics_json or {}).get("clauses")
+                    ),
                 },
             }
         )
