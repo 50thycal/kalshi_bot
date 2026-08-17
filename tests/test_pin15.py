@@ -9,10 +9,20 @@ from kalshi_bot import db
 from kalshi_bot import models as m
 from kalshi_bot.pin15.tracker import Pin15Tracker
 
-NOW = int(time.time()) // 60 * 60
+
+def _now_minute() -> int:
+    return int(time.time()) // 60 * 60
 
 
-def _closes(price: float, n_minutes: int = 20, end: int = NOW) -> dict[int, float]:
+def _closes(price: float, n_minutes: int = 20, end: int | None = None) -> dict[int, float]:
+    """Canned spot candles ending NOW — evaluated when the test runs, not at import.
+
+    Pinning `end` to import time made these a time bomb: the tracker asks for a
+    window relative to the current clock, so once the suite took longer than the
+    20 minutes of candles here, pin15 saw no spot at all (`skipped_no_spot`) and
+    four tests failed purely because they ran late. That is a function of suite
+    duration, not of anything under test — CI hit it at ~10 minutes in."""
+    end = _now_minute() if end is None else end
     return {end - i * 60: price for i in range(0, n_minutes)}
 
 

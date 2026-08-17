@@ -58,7 +58,7 @@ from datetime import datetime, timezone
 from . import read
 from .evaluator import evaluate_gate, latest_result, persist_outcome
 from .lifecycle import LifecycleState
-from .metrics import METRICS_ENGINE_REVISION
+from .metrics import METRICS_ENGINE_REVISION, provider_revisions
 from .models import ExperimentGate
 from .service import ExperimentOsError, canonical_hash
 
@@ -150,6 +150,14 @@ def evaluation_fingerprint(outcome, gate: ExperimentGate, epoch) -> str:
         "epoch_id": epoch.id,
         "snapshot": outcome.platform_snapshot_fingerprint,
         "metric_revision": METRICS_ENGINE_REVISION,
+        # The PROVIDER implementations this verdict actually used. Binding here
+        # rather than only to the engine-wide constant means implementing or
+        # changing one provider re-records exactly the gates that read it, and
+        # leaves every other gate's standing result untouched.
+        "provider_revisions": sorted(
+            f"{k}={v}" for k, v in
+            provider_revisions([c.as_json() for c in outcome.clauses]).items()
+        ),
         "verdict": outcome.verdict,
         "blocking": sorted(outcome.blocking_reasons or []),
         # Which clauses are undecidable/missing is semantic; their values are not.

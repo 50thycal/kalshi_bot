@@ -831,11 +831,14 @@ def test_live_canaries_block_on_unprovided_live_metrics(xos_session, migrated):
     ):
         out = evaluator.evaluate_gate(s, _gate_of(s, key, gate_key), persist=False)
         assert out.verdict == "BLOCKED_DATA", key
+    # A5 no longer blocks: clean_pairs / pair_win_rate_95lb_pct have canonical
+    # providers, so the gate renders a real verdict. With no paired evidence yet
+    # that verdict is HOLD on the sample floor — underpowered, not un-evaluatable.
     a5 = evaluator.evaluate_gate(
         s, _gate_of(s, "mmsell-anchor-strangle", "paper_keep"), persist=False
     )
-    assert a5.verdict == "BLOCKED_DATA"
-    assert any("clean_pairs" in r or "pair_win_rate" in r for r in a5.blocking_reasons)
+    assert a5.verdict == "HOLD"
+    assert not a5.blocking_reasons
 
 
 def test_scoreboard_reads_the_same_state(xos_session, migrated):
