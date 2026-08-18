@@ -381,3 +381,58 @@ def test_every_live_provider_records_its_own_revision(xos_session):
     for key in ("live_settled_contracts", "live_cents_per_contract"):
         mv = compute_metric(s, key, _scope())
         assert mv.provenance["provider_revision"] == "live_exec_v1"
+
+
+# ---------------------------------------------------------------------------
+# The read-only metric probe
+# ---------------------------------------------------------------------------
+
+
+def test_metric_probe_reports_value_and_provenance(xos_session, xos_platform, capsys):
+    """A provider must be verifiable against real data BEFORE a gate depends on
+    it. Without this the only way to exercise one is for some registered gate to
+    happen to use it — which is backwards, since the point of verifying is to
+    decide whether a gate should."""
+    from kalshi_bot.experiment_os import cli
+
+    s = xos_session
+    _armed_pair(s, key="probe-exp", live_tag="Lprobe", twin_tag="Lprobe-pt")
+    _live_market(s, tag="Lprobe", contracts=4, realized=0.80)
+    s.commit()
+
+    args = type("A", (), {"metric": "live_cents_per_contract", "key": "probe-exp",
+                          "arm": "treatment", "kind": "live"})()
+    assert cli.cmd_metric(s, args) == 0
+    out = capsys.readouterr().out
+    assert "value:       20.0" in out          # 0.80 USD over 4 contracts
+    assert "Lprobe" in out
+    assert "provider_revision: live_exec_v1" in out
+
+
+def test_metric_probe_shows_the_addressing_refusal_rather_than_hiding_it(
+        xos_session, xos_platform, capsys):
+    """Asking for a live metric at kind=paper is a legitimate question with a
+    real answer. Quietly answering a different one would defeat the reason to
+    run the probe."""
+    from kalshi_bot.experiment_os import cli
+
+    s = xos_session
+    _armed_pair(s, key="probe-addr", live_tag="Laddr", twin_tag="Laddr-pt")
+    _live_market(s, tag="Laddr", contracts=4, realized=0.80)
+    s.commit()
+
+    args = type("A", (), {"metric": "live_cents_per_contract", "key": "probe-addr",
+                          "arm": "treatment", "kind": "paper"})()
+    assert cli.cmd_metric(s, args) == 0
+    out = capsys.readouterr().out
+    assert "MISSING" in out
+    assert "deployment_kind='live'" in out
+    assert "addressing_error: True" in out
+
+
+def test_metric_probe_rejects_an_unknown_metric(xos_session, xos_platform):
+    from kalshi_bot.experiment_os import cli
+
+    args = type("A", (), {"metric": "not_a_metric", "key": "x",
+                          "arm": None, "kind": "paper"})()
+    assert cli.cmd_metric(xos_session, args) == 1

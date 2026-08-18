@@ -222,9 +222,19 @@ _UNIVERSAL: tuple[MetricDefinition, ...] = (
 _DECLARED_UNPROVIDED: tuple[MetricDefinition, ...] = (
     MetricDefinition(
         key="realized_tail_hit_ratio_vs_modeled", unit="ratio", kind="mean",
-        source="theta tail model", provided=False,
-        reference="scripts/theta_fill_model.py (docs/THETA_THESIS.md)",
-        description="observed tail-hit frequency over the model's prediction",
+        source="paper_trades.model_probability x settled outcome", provided=False,
+        # NO reference implementation exists. scripts/theta_fill_model.py was
+        # cited here and does not compute this metric at all — it is a maker-fill
+        # realizable projection, the theta counterpart of mmsell_fill_model.py.
+        # Sending a reader there to resolve a BLOCKED_DATA is worse than sending
+        # them nowhere, so the message now says what is actually true.
+        reference=(
+            "NONE — no reference implementation exists; specified in "
+            "docs/THETA_THESIS.md (decision rule) and validated in "
+            "docs/RESEARCH_LIVE_CANARY_SUCCESSOR_INPUTS.md"
+        ),
+        description="observed tail-hit frequency over the model's prediction; "
+        "counts MARKETS, not contracts (one tail hits or does not, once)",
     ),
     MetricDefinition(
         key="twin_live_gap_cents", unit="cents/contract", kind="mean",

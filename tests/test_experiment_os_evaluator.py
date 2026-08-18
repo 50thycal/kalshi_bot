@@ -126,7 +126,10 @@ def test_unprovided_metric_is_missing_with_reference(xos_session):
         xos_session, "realized_tail_hit_ratio_vs_modeled", _scope(("t_tag",))
     )
     assert mv.missing is True
-    assert "theta_fill_model" in mv.reason  # the reference implementation is named
+    # No reference implementation exists for this one, and the message says so
+    # rather than pointing at a script that computes something else.
+    assert "no canonical provider yet" in mv.reason
+    assert "NONE" in mv.reason
 
 
 def test_settled_includes_stop_closed_trades(xos_session):
@@ -318,7 +321,7 @@ def test_missing_metric_blocks_data_not_zero(xos_session, xos_platform):
     out = evaluator.evaluate_gate(s, gate, persist=False)
     assert out.verdict == "BLOCKED_DATA"
     assert "missing is not zero" in out.explanation
-    assert "theta_fill_model" in out.blocking_reasons[0]
+    assert "realized_tail_hit_ratio_vs_modeled" in out.blocking_reasons[0]
 
 
 def test_hold_if_clause_holds(xos_session, xos_platform):
