@@ -151,6 +151,32 @@ _UNIVERSAL: tuple[MetricDefinition, ...] = (
         "complete pairs with positive combined P&L",
     ),
     MetricDefinition(
+        key="live_settled_contracts", unit="contracts", kind="count",
+        source="live_orders x fills x positions (settled live markets)",
+        reference="scripts/mmsell_live.py (docs/LIVE_PAPER_TWIN.md)",
+        revision="live_exec_v1",
+        description="filled contracts on live markets whose position has closed; "
+        "MISSING unless addressed at deployment_kind='live'",
+    ),
+    MetricDefinition(
+        key="live_cents_per_contract", unit="cents/contract", kind="mean",
+        source="live_orders x fills x positions (settled live markets)",
+        reference="scripts/mmsell_live.py (docs/LIVE_PAPER_TWIN.md)",
+        revision="live_exec_v1",
+        description="total realized live P&L / actual filled contracts on settled "
+        "markets — per CONTRACT, not per position; MISSING unless addressed at "
+        "deployment_kind='live'",
+    ),
+    MetricDefinition(
+        key="twin_live_winrate_gap_pp", unit="pp", kind="mean",
+        source="positions (live) vs paper_trades (the registered twin)",
+        reference="scripts/live_paper_parity.py (docs/LIVE_PAPER_TWIN.md)",
+        revision="live_exec_v1",
+        description="twin paper win% minus live win%; addressed at the LIVE scope "
+        "and resolved against that deployment's registered twin — MISSING when no "
+        "twin is registered",
+    ),
+    MetricDefinition(
         key="settled_trades", unit="trades", kind="count", source="paper_trades",
         description="terminal-with-P&L trades entered in the window "
         f"(status in {SETTLED_STATUSES})",
@@ -199,24 +225,6 @@ _DECLARED_UNPROVIDED: tuple[MetricDefinition, ...] = (
         source="theta tail model", provided=False,
         reference="scripts/theta_fill_model.py (docs/THETA_THESIS.md)",
         description="observed tail-hit frequency over the model's prediction",
-    ),
-    MetricDefinition(
-        key="live_settled_contracts", unit="contracts", kind="count",
-        source="live orders/fills + settlements", provided=False,
-        reference="scripts/mmsell_live.py (docs/LIVE_PAPER_TWIN.md)",
-        description="live-executed contracts with settled outcomes",
-    ),
-    MetricDefinition(
-        key="live_cents_per_contract", unit="cents/contract", kind="mean",
-        source="live orders/fills + settlements", provided=False,
-        reference="scripts/mmsell_live.py (docs/LIVE_PAPER_TWIN.md)",
-        description="realized live P&L per settled contract",
-    ),
-    MetricDefinition(
-        key="twin_live_winrate_gap_pp", unit="pp", kind="mean",
-        source="live outcomes vs twin paper book", provided=False,
-        reference="scripts/live_paper_parity.py (docs/LIVE_PAPER_TWIN.md)",
-        description="twin paper win% minus live win% over matched windows",
     ),
     MetricDefinition(
         key="twin_live_gap_cents", unit="cents/contract", kind="mean",
@@ -560,6 +568,270 @@ def _fill_model_metric(session, key: str, scope: MetricScope, prov: dict) -> Met
                        "cents/trade", provenance=prov)
 
 
+# ---------------------------------------------------------------------------
+# Live execution
+# ---------------------------------------------------------------------------
+
+#: Metrics that can ONLY be answered from real-money execution. Addressing one at
+#: any other deployment kind is structurally impossible, not merely empty, and
+#: returns MISSING — see `_live_metric`.
+LIVE_ONLY_METRICS: frozenset[str] = frozenset({
+    "live_settled_contracts", "live_cents_per_contract", "twin_live_winrate_gap_pp",
+})
+
+
+def _live_market_rows(session, tags: tuple[str, ...], scope: MetricScope) -> dict:
+    """Settled live economics for one arm's live tags, per CONTRACT.
+
+    Three decisions here are deliberate and each one can move a promotion verdict:
+
+    **Per contract, not per position.** `scripts/mmsell_live.py` reports
+    `avg(realized_pnl)` over settled positions and labels it `live_$/ct`. That is
+    dollars per POSITION; it equals per-contract only while every position is a
+    1-lot. This provider divides total realized P&L by the contracts actually
+    filled, so a 5-lot that lost a dollar counts as five contracts losing 20c
+    each. The two agree on 1-contract positions and diverge on multi-contract
+    ones, by design — `tests/test_experiment_os_live_metrics.py` pins both.
+
+    **The denominator is restricted to SETTLED markets.** Realized P&L only
+    exists for closed positions, so dividing it by every filled contract —
+    including contracts still open — would understate the rate and would make the
+    number move simply because new positions opened. Numerator and denominator
+    are drawn from the same set of markets.
+
+    **Entry fills only.** A position is entered by buys and closed by sells, and
+    both produce fill rows. Counting both would double the denominator, so only
+    fills belonging to `action='buy'` orders count as contracts transacted.
+
+    Markets that more than one strategy tag traded are CONTESTED and excluded:
+    `positions` is keyed by market, not by strategy, so a shared market's P&L
+    cannot be split between arms. The reference script silently attributes the
+    full position to every strategy that touched it; for an A/B promotion gate
+    that would be double-counting. Exclusions are counted in provenance, never
+    dropped silently."""
+    from ..models import Fill, LiveOrder, Position
+
+    # Markets this arm entered inside the window, and every strategy that traded
+    # them (the contested check needs the full set, not just ours).
+    mine = session.execute(
+        select(LiveOrder.market_ticker)
+        .where(
+            LiveOrder.strategy.in_(tags),
+            LiveOrder.action == "buy",
+            LiveOrder.created_at >= scope.window_start,
+            LiveOrder.created_at <= scope.window_end,
+        )
+        .distinct()
+    ).scalars().all()
+    mine = set(mine)
+    if not mine:
+        return {"markets": 0, "settled_markets": 0, "contracts": 0, "pnl_usd": 0.0,
+                "wins": 0, "contested_markets": 0, "open_markets": 0,
+                "unpriced_markets": 0}
+
+    contested = set(session.execute(
+        select(LiveOrder.market_ticker)
+        .where(LiveOrder.market_ticker.in_(mine), LiveOrder.strategy.notin_(tags))
+        .distinct()
+    ).scalars().all())
+    ours = mine - contested
+
+    settled, open_markets, unpriced = set(), 0, 0
+    pnl_usd, wins = 0.0, 0
+    for ticker in ours:
+        # The NEWEST snapshot decides: `positions` is append-only, so an older row
+        # showing quantity=0 may simply predate a re-entry.
+        row = session.execute(
+            select(Position.quantity, Position.realized_pnl)
+            .where(Position.market_ticker == ticker)
+            .order_by(Position.captured_at.desc())
+            .limit(1)
+        ).first()
+        if row is None:
+            unpriced += 1
+            continue
+        qty, realized = row
+        if qty is None or int(qty) != 0:
+            open_markets += 1          # still carrying risk — outcome UNKNOWN
+            continue
+        if realized is None:
+            unpriced += 1              # closed but unpriced — not a zero
+            continue
+        settled.add(ticker)
+        pnl_usd += float(realized)
+        if float(realized) > 0:
+            wins += 1
+
+    contracts = 0
+    if settled:
+        contracts = int(session.execute(
+            select(func.coalesce(func.sum(Fill.quantity), 0))
+            .join(LiveOrder, LiveOrder.kalshi_order_id == Fill.kalshi_order_id)
+            .where(
+                LiveOrder.strategy.in_(tags),
+                LiveOrder.action == "buy",
+                LiveOrder.market_ticker.in_(settled),
+                LiveOrder.created_at >= scope.window_start,
+                LiveOrder.created_at <= scope.window_end,
+            )
+        ).scalar() or 0)
+
+    return {
+        "markets": len(mine),
+        "settled_markets": len(settled),
+        "contracts": contracts,
+        "pnl_usd": pnl_usd,
+        "wins": wins,
+        "contested_markets": len(contested),
+        "open_markets": open_markets,
+        "unpriced_markets": unpriced,
+    }
+
+
+def _twin_tags(session, scope: MetricScope) -> tuple[tuple[str, ...], str | None]:
+    """The registered twin's tags for this arm, or a reason there are none.
+
+    Resolved from the deployment graph — `twin_of_deployment_id` — not from a
+    naming convention. A tag that merely looks like a twin (`*_pt3`) is not one."""
+    from .models import ExperimentArm, ExperimentDeployment, ExperimentDeploymentArm
+
+    if not scope.deployment_keys:
+        return (), "the live scope names no deployment to find a twin of"
+    live_ids = session.execute(
+        select(ExperimentDeployment.id).where(
+            ExperimentDeployment.deployment_key.in_(scope.deployment_keys),
+            ExperimentDeployment.kind == "live",
+        )
+    ).scalars().all()
+    if not live_ids:
+        return (), "no live deployment in this scope"
+    tags = session.execute(
+        select(ExperimentDeploymentArm.strategy_tag)
+        .join(ExperimentDeployment,
+              ExperimentDeployment.id == ExperimentDeploymentArm.deployment_id)
+        # Match the SAME arm: a twin runs every arm the live book runs, and
+        # comparing one arm's live outcomes against another arm's paper twin
+        # would silently answer a different question.
+        .join(ExperimentArm, ExperimentArm.id == ExperimentDeploymentArm.arm_id)
+        .where(
+            ExperimentDeployment.twin_of_deployment_id.in_(live_ids),
+            ExperimentArm.arm_key == scope.arm_key,
+            ExperimentDeploymentArm.strategy_tag.is_not(None),
+        )
+    ).scalars().all()
+    if not tags:
+        return (), (
+            "no paper_twin deployment is registered against this live deployment "
+            f"for arm {scope.arm_key!r}"
+        )
+    return tuple(sorted(set(tags))), None
+
+
+def _live_metric(session, key: str, scope: MetricScope) -> MetricValue:
+    """The three live-execution providers.
+
+    The addressing rule is the point of this function. A live metric requested at
+    `deployment_kind="paper"` returns MISSING with the mismatch named — it does
+    NOT quietly read the live deployment instead. Two imported live-canary gates
+    are malformed in exactly that way (their clauses default to `"paper"` while
+    their epochs hold only live and paper_twin). A provider that inferred "they
+    probably meant live" would make those gates appear to work, hide the defect
+    that a corrected Version exists to fix, and let a promotion turn on evidence
+    the registered contract never asked for."""
+    definition = REGISTRY[key]
+    if scope.deployment_kind != "live":
+        return MetricValue(
+            metric=key, value=None, n=0, unit=definition.unit, missing=True,
+            reason=(
+                f"{key!r} measures real-money execution and is only defined at "
+                f"deployment_kind='live'; this clause addresses "
+                f"{scope.deployment_kind!r}. The provider will not substitute a "
+                "different deployment kind — correct the gate's addressing"
+            ),
+            provenance=_live_provenance(scope) | {"addressing_error": True},
+        )
+    if not scope.strategy_tags:
+        return MetricValue(
+            metric=key, value=None, n=0, unit=definition.unit, missing=True,
+            reason="no live deployment tags for this scope in this epoch",
+            provenance=_live_provenance(scope),
+        )
+
+    agg = _live_market_rows(session, scope.strategy_tags, scope)
+    prov = _live_provenance(scope) | {
+        "live_markets_entered": agg["markets"],
+        "settled_markets": agg["settled_markets"],
+        "filled_contracts_on_settled_markets": agg["contracts"],
+        "realized_pnl_usd": round(agg["pnl_usd"], 4),
+        "winning_settled_markets": agg["wins"],
+        "excluded_contested_markets": agg["contested_markets"],
+        "excluded_still_open_markets": agg["open_markets"],
+        "excluded_unpriced_markets": agg["unpriced_markets"],
+    }
+
+    if key == "live_settled_contracts":
+        # A count: zero settled contracts is a real answer, and a sample floor
+        # reading it as 0 is exactly right.
+        return MetricValue(key, float(agg["contracts"]), agg["settled_markets"],
+                           "contracts", provenance=prov)
+
+    if key == "live_cents_per_contract":
+        if agg["contracts"] == 0:
+            return MetricValue(
+                key, None, 0, "cents/contract",
+                reason="no settled live contracts in window", provenance=prov,
+            )
+        return MetricValue(
+            key, round(agg["pnl_usd"] * 100.0 / agg["contracts"], 4),
+            agg["settled_markets"], "cents/contract", provenance=prov,
+        )
+
+    # twin_live_winrate_gap_pp
+    twin_tags, why = _twin_tags(session, scope)
+    prov = prov | {"twin_tags": list(twin_tags)}
+    if not twin_tags:
+        return MetricValue(
+            key, None, 0, "pp", missing=True,
+            reason=f"cannot compare against a twin: {why}", provenance=prov,
+        )
+    live_n = agg["settled_markets"]
+    twin = _paper_aggregates(session, replace(
+        scope, deployment_kind="paper_twin", strategy_tags=twin_tags,
+    ))
+    prov = prov | {"twin_settled_trades": twin["n_settled"],
+                   "twin_wins": twin["n_wins"], "live_settled_markets": live_n}
+    if live_n == 0 or twin["n_settled"] == 0:
+        return MetricValue(
+            key, None, 0, "pp",
+            reason=(
+                "win-rate gap is undefined without settled evidence on both legs "
+                f"(live {live_n}, twin {twin['n_settled']})"
+            ),
+            provenance=prov,
+        )
+    live_win = 100.0 * agg["wins"] / live_n
+    twin_win = 100.0 * twin["n_wins"] / twin["n_settled"]
+    prov = prov | {"live_win_pct": round(live_win, 4),
+                   "twin_win_pct": round(twin_win, 4)}
+    # n is the SMALLER leg: a sample floor must bind on the leg that limits the
+    # comparison, not on whichever side happens to have more evidence.
+    return MetricValue(key, round(twin_win - live_win, 4),
+                       min(live_n, twin["n_settled"]), "pp", provenance=prov)
+
+
+def _live_provenance(scope: MetricScope) -> dict:
+    return _provenance(scope) | {
+        "source": "live_orders x fills x positions",
+        "window_basis": "live_orders.created_at (entry time)",
+        "settled_basis": "newest positions snapshot with quantity=0 and realized_pnl",
+        "per_contract_basis": (
+            "total realized P&L / filled BUY contracts on settled markets — "
+            "deliberately NOT scripts/mmsell_live.py's per-position average"
+        ),
+        "fee_basis": "realized_pnl as reported by Kalshi (fees already netted)",
+    }
+
+
 def _provenance(scope: MetricScope) -> dict:
     return {
         "source": "paper_trades",
@@ -630,6 +902,12 @@ def _compute_metric(session, key: str, scope: MetricScope) -> MetricValue:
                 f"{definition.reference}"
             ),
         )
+    if key in LIVE_ONLY_METRICS:
+        # Routed BEFORE the empty-tags fallback below. That fallback answers 0 for
+        # a count, which for `live_settled_contracts` under a paper scope would be
+        # a confident, wrong "no live contracts" rather than "you addressed the
+        # wrong deployment kind" — and a `<=` clause could even pass on it.
+        return _live_metric(session, key, scope)
     if not scope.strategy_tags:
         # A scope with no concrete tags of the requested deployment kind is a real
         # structural emptiness, not missing data — but a mean over it is undefined.

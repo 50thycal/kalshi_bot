@@ -119,11 +119,14 @@ def test_counts_are_meaningful_zero_and_means_are_undefined(xos_session):
 
 
 def test_unprovided_metric_is_missing_with_reference(xos_session):
-    # realizable_cents_per_trade now HAS a canonical provider; the still-unprovided
-    # live-execution metrics carry the same contract.
-    mv = compute_metric(xos_session, "live_cents_per_contract", _scope(("t_tag",)))
+    # The example moves as providers land: realizable_cents_per_trade and the
+    # live-execution metrics now HAVE canonical providers. The theta tail ratio
+    # does not, and carries the same contract.
+    mv = compute_metric(
+        xos_session, "realized_tail_hit_ratio_vs_modeled", _scope(("t_tag",))
+    )
     assert mv.missing is True
-    assert "mmsell_live" in mv.reason  # the reference implementation is named
+    assert "theta_fill_model" in mv.reason  # the reference implementation is named
 
 
 def test_settled_includes_stop_closed_trades(xos_session):
