@@ -56,7 +56,22 @@ To run a request:
    so the operating layer can never drift from Experiment OS the way the retired
    status checkers drifted from each other. Allowlisted commands: `control-tower`,
    `list`, `show`, `transitions`, `platform`, `tag`, `scoreboard`, `enforcement`,
-   `readiness`, `evaluate-gates`. Extra CLI flags go in `"args"`.
+   `readiness`, `evaluate-gates`, `metric`. Extra CLI flags go in `"args"`.
+
+   `metric` computes ONE canonical metric at an explicit scope and prints its
+   value with full provenance — the only way to exercise a provider against
+   production before any gate depends on it:
+
+   ```bash
+   {"type":"xos","command":"metric","args":[
+      "live_cents_per_contract","--experiment","mmsell-scheduled-settle-live",
+      "--arm","price_ceiling","--kind","live"],"id":"m-1"}
+   ```
+
+   `--kind` is required semantics and is never inferred. Asking for a live metric
+   at `--kind paper` is a legitimate question whose real answer is MISSING with the
+   addressing mismatch named — which is exactly how the imported live-canary
+   contract defect shows up from the outside.
 
    This channel is **read-only against Postgres** (`DATABASE_URL_RO`), so
    `evaluate-gates` is dry-run only here — it prints what it *would* record and

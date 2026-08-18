@@ -25,7 +25,7 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
@@ -255,6 +255,56 @@ def cmd_scoreboard(session: Session, args) -> int:
     return 0
 
 
+def cmd_metric(session: Session, args) -> int:
+    """Compute one canonical metric at an EXPLICIT scope, and show its provenance.
+
+    A pure read, and the only way to exercise a provider against production before
+    any gate depends on it. Without this a new provider can only be verified once
+    some registered gate happens to use it — which is exactly backwards: the point
+    of verifying is to find out whether a gate SHOULD depend on it.
+
+    `deployment_kind` is required and never inferred. Asking for a live metric at
+    `--kind paper` is a legitimate question with a real answer (MISSING, with the
+    addressing mismatch named), and silently answering a different question would
+    defeat the reason to run this at all."""
+    from .evaluator import _arm_scope
+    from .metrics import REGISTRY, compute_metric
+
+    if args.metric not in REGISTRY:
+        print(f"unknown metric {args.metric!r}", file=sys.stderr)
+        return 1
+    exp = read.get_experiment(session, args.key)
+    if exp is None:
+        print(f"no experiment {args.key!r}", file=sys.stderr)
+        return 1
+    ver = read.latest_version(session, exp)
+    epoch = read.open_epoch_for(session, ver) if ver else None
+    if ver is None or epoch is None:
+        print("experiment has no version/open epoch", file=sys.stderr)
+        return 1
+    from .models import PlatformSnapshot
+
+    snap = session.get(PlatformSnapshot, epoch.platform_snapshot_id)
+    now = datetime.now(timezone.utc)
+    end = min(now, epoch.ended_at) if epoch.ended_at is not None else now
+    scope = _arm_scope(
+        session, exp, ver, epoch, args.arm, args.kind,
+        (epoch.started_at, end), snap.fingerprint if snap else "",
+    )
+    mv = compute_metric(session, args.metric, scope)
+    print(f"{args.metric}  @  {scope.label()}  kind={args.kind}")
+    print(f"  tags:        {', '.join(scope.strategy_tags) or '(none)'}")
+    print(f"  deployments: {', '.join(scope.deployment_keys) or '(none)'}")
+    print(f"  window:      {scope.window_start} -> {scope.window_end}")
+    print(f"  value:       {mv.value}  ({mv.unit})   n={mv.n}"
+          + ("   MISSING" if mv.missing else ""))
+    if mv.reason:
+        print(f"  reason:      {mv.reason}")
+    for k, v in sorted((mv.provenance or {}).items()):
+        print(f"    {k}: {v}")
+    return 0
+
+
 def cmd_control_tower(session: Session, args) -> int:
     """The Experiment Control Tower report — read-only by construction."""
     from .control_tower import build_report, render, report_text
@@ -364,6 +414,18 @@ def main(argv: list[str] | None = None) -> int:
     p_tag = sub.add_parser("tag", help="strategy tag → experiment lineage")
     p_tag.add_argument("tag")
     p_tag.set_defaults(fn=cmd_tag)
+
+    p_metric = sub.add_parser(
+        "metric", help="compute one canonical metric at an explicit scope (read-only)"
+    )
+    p_metric.add_argument("metric")
+    p_metric.add_argument("--experiment", dest="key", required=True)
+    p_metric.add_argument("--arm", default=None,
+                          help="arm key; omit for an experiment-wide scope")
+    p_metric.add_argument("--kind", default="paper",
+                          choices=["paper", "live", "paper_twin"],
+                          help="deployment kind — required semantics, never inferred")
+    p_metric.set_defaults(func=cmd_metric)
 
     p_ct = sub.add_parser(
         "control-tower",
