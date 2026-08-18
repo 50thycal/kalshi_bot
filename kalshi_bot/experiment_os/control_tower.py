@@ -36,6 +36,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select, text
 
 from ..models import LiveOrder, PaperTrade
+from . import findings as findings_mod
 from . import read
 from .lifecycle import LifecycleState
 from .models import Experiment
@@ -114,6 +115,10 @@ class TowerReport:
     # Gates whose decision turns on the live-fill projection. Carried so the render
     # can state what the verdict actually claims, beside what paper observed.
     realizable_context: list[dict] = field(default_factory=list)
+    # Proven contract defects (see `findings.py`). A SECOND, independent blocker
+    # class: research output, not evaluator output, and never lifecycle truth.
+    # Kept in its own field precisely so it cannot be mistaken for a verdict.
+    contract_findings: list[dict] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -334,6 +339,12 @@ def _experiment_view(session, exp: Experiment, *, evaluate: bool) -> dict:
         "evidence_fresh_at": None,
         "exposure": None,
     }
+    # Bound to the OPERATING version, so a corrected successor Version drops the
+    # finding automatically instead of it having to be remembered and deleted.
+    view["contract_findings"] = [
+        findings_mod.as_json(f)
+        for f in findings_mod.findings_for(exp.key, board.get("version"))
+    ]
 
     gate_objs = {g.gate_key: g for g in (read.gates_for(session, ver) if ver else [])}
     for g in board.get("gates", []):
@@ -568,11 +579,16 @@ def _derive_actions(rep: TowerReport) -> None:
                 elif verdict and verdict.startswith("BLOCKED"):
                     entry = _blocked_gate_entry(v, g)
                     cause = _block_cause_line(entry) if entry else ""
+                    extra = [f for f in (v.get("contract_findings") or [])
+                             if f.get("independent_of_evaluator")]
                     rep.ready_due.append(
                         f"{verdict} {v['key']} · {g['gate_key']}"
                         + (f" — {cause}" if cause else "")
                         + " — this experiment's numbers cannot be interpreted "
                         "until it clears"
+                        + (" — AND a contract defect is proven against "
+                           f"v{extra[0]['version']}: clearing the block above "
+                           "does NOT make this Version evaluable" if extra else "")
                     )
             for g in v["gates"]:
                 recorded = (g.get("latest_result") or {}).get("verdict")
@@ -594,9 +610,22 @@ def _derive_actions(rep: TowerReport) -> None:
                         f"{recorded}, dry-run now {live}; an official re-evaluation "
                         "is due"
                     )
+            for f in v.get("contract_findings") or []:
+                rep.contract_findings.append(f)
+                rep.recommendations.append(
+                    f"{v['key']}: CONTRACT DEFECT proven against v{f['version']} "
+                    f"— {f['headline']}; owner: {f['owner']}"
+                )
             for g in v["gates"]:
                 entry = _blocked_gate_entry(v, g)
                 if entry is not None:
+                    # An evaluator block and a proven contract defect are
+                    # INDEPENDENT. Carrying the second onto the first stops the
+                    # evaluator's cause from reading as the whole diagnosis.
+                    entry["also_contract_defect"] = [
+                        f for f in (v.get("contract_findings") or [])
+                        if f.get("independent_of_evaluator")
+                    ]
                     rep.blocked.append(entry)
                 ctx = _realizable_context(v, g)
                 if ctx is not None:
@@ -757,20 +786,63 @@ def render(rep: TowerReport, *, session=None) -> str:
                          "control c/trade", "gate", "last evidence"], rows)
 
     lines += ["", "=== BLOCKED EVIDENCE ==="]
-    if rep.blocked:
+    if rep.blocked or rep.contract_findings:
         lines.append(
-            "    Cause is the canonical evaluator's, not an inference. Do not "
-            "attribute a block to anything not named here."
+            "    An experiment can carry MORE THAN ONE blocker class. The "
+            "evaluator's verdict and a proven contract"
         )
+        lines.append(
+            "    defect are independent: clearing one does not clear the other. "
+            "Read every class listed for a book"
+        )
+        lines.append("    before deciding what would unblock it.")
+    if rep.blocked:
+        lines.append("")
+        lines.append(
+            "    EVALUATOR BLOCK — cause is the canonical evaluator's, not an "
+            "inference. Do not attribute a block"
+        )
+        lines.append("    to anything not named here.")
         for b in rep.blocked:
             lines.append(f"    {b['experiment']} · {b['gate_key']}")
-            lines.append(f"        {b['verdict']} ({b['source']})"
-                         + (f" — {_block_cause_line(b)}" if _block_cause_line(b) else ""))
+            lines.append(f"        {b['verdict']} ({b['source']})")
+            if b["missing_metrics"]:
+                lines.append("            missing providers:")
+                lines += [f"              - {m}" for m in b["missing_metrics"]]
+            elif b["reasons"]:
+                lines.append(f"            {b['reasons'][0]}")
             for reason in b["reasons"][:4]:
                 lines.append(f"        · {reason}")
             lines.append(f"        owner: {b['owner']}")
+            for f in b.get("also_contract_defect") or []:
+                lines.append(
+                    f"        ALSO: CONTRACT DEFECT proven against v{f['version']} "
+                    "— the block above is NOT the whole"
+                )
+                lines.append(
+                    "        diagnosis; clearing it would leave this Version "
+                    "structurally unevaluable. See below."
+                )
     else:
         lines.append("    (none)")
+
+    if rep.contract_findings:
+        lines += ["", "    CONTRACT DEFECT — proven by research, NOT evaluator "
+                  "output and NOT lifecycle state.",
+                  "    Nothing here changes a verdict; the registered gate still "
+                  "decides. Each finding is bound to the",
+                  "    version it was proven against and stops applying on its own "
+                  "once a corrected Version exists."]
+        for f in rep.contract_findings:
+            lines.append(f"    {f['experiment']} · v{f['version']}")
+            lines.append(f"        {f['headline']}")
+            for d in f["detail"]:
+                lines.append(f"            {d}")
+            lines.append(f"        owner: {f['owner']}")
+            lines.append(
+                f"        proven: {f['proven_at']} by {f['proven_by']}"
+            )
+            lines.append(f"        evidence: {f['evidence_doc']}")
 
     if rep.realizable_context:
         lines += ["", "=== REALIZABLE-PROJECTION CONTEXT ===",
@@ -805,6 +877,9 @@ def render(rep: TowerReport, *, session=None) -> str:
             lines.append(
                 "        This is NOT a claim that observed paper P&L was positive."
             )
+            obs = ctx.get("observed_paper") or {}
+            if obs.get("phrase"):
+                lines.append(f"        Describe paper as: {obs['phrase']}.")
             if ctx["any_sign_disagreement"]:
                 lines.append(
                     "        CAUTION: calibrated realizable projection and observed "
@@ -961,7 +1036,49 @@ def _realizable_context(view: dict, gate: dict) -> dict | None:
         "to_state": gate.get("to_state"),
         "rows": rows,
         "any_sign_disagreement": any(r["sign_disagreement"] for r in rows),
+        "observed_paper": _observed_paper_summary(rows),
     }
+
+
+# Below this magnitude a per-trade figure is not evidence of a direction: on the
+# books here it is a fraction of one tick, inside the noise of any realistic
+# sample. Named so "near-flat" is a stated threshold, not a vibe.
+NEAR_FLAT_CENTS = 0.5
+
+
+def _observed_paper_summary(rows: list[dict]) -> dict:
+    """How to describe observed paper P&L ACROSS arms, in one honest phrase.
+
+    A gate's rows are per-arm, and arms routinely disagree. Left to summarize a
+    +0.04c arm and a -0.39c arm by hand, a reader collapses them into "negative"
+    — which is not what the data says and is not recoverable by whoever reads the
+    summary next. So the characterization is computed here, once, from the same
+    clause values the table prints, and the render states it verbatim."""
+    vals = [(r["scope"], r["observed_paper_cents"]) for r in rows
+            if not r["missing"] and r["observed_paper_cents"] is not None]
+    if not vals:
+        return {"sign": "unknown", "phrase": "", "values": []}
+    nums = [float(v) for _s, v in vals]
+    near_flat = max(abs(n) for n in nums) < NEAR_FLAT_CENTS
+    detail = ", ".join(f"{_signed(v)} on {sc}" for sc, v in vals)
+    if all(n > 0 for n in nums):
+        sign = "positive"
+        phrase = f"observed paper results are positive on every arm: {detail}"
+    elif all(n < 0 for n in nums):
+        sign = "negative"
+        phrase = f"observed paper results are negative on every arm: {detail}"
+    else:
+        sign = "mixed"
+        phrase = (
+            "observed paper results are MIXED IN SIGN across arms: " + detail
+            + " — do not describe this as simply negative or simply positive"
+        )
+    if near_flat:
+        phrase += (
+            f" (all arms near-flat: every |value| < {NEAR_FLAT_CENTS:.1f}c/trade)"
+        )
+    return {"sign": sign, "near_flat": near_flat, "phrase": phrase,
+            "values": [[sc, float(v)] for sc, v in vals]}
 
 
 def _block_cause_line(entry: dict | None) -> str:
