@@ -390,7 +390,14 @@ def cmd_readiness(session: Session, args) -> int:
     return 0 if report["ok"] else 1
 
 
-def main(argv: list[str] | None = None) -> int:
+def build_parser() -> argparse.ArgumentParser:
+    """The CLI's argument parser, separate from `main` so the WIRING is testable.
+
+    Every subcommand is dispatched through `args.fn`. `metric` originally shipped
+    with `set_defaults(func=...)`, which parses fine and then dies on
+    AttributeError at dispatch — invisible to tests that call the command
+    function directly. A test now walks every subparser and asserts it carries a
+    callable `fn`."""
     parser = argparse.ArgumentParser(
         prog="experiment_os", description="Inspect Experiment OS state (read-only)."
     )
@@ -432,7 +439,7 @@ def main(argv: list[str] | None = None) -> int:
     p_metric.add_argument("--kind", default="paper",
                           choices=["paper", "live", "paper_twin"],
                           help="deployment kind — required semantics, never inferred")
-    p_metric.set_defaults(func=cmd_metric)
+    p_metric.set_defaults(fn=cmd_metric)
 
     p_ct = sub.add_parser(
         "control-tower",
@@ -478,7 +485,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_sb.set_defaults(fn=cmd_scoreboard)
 
-    args = parser.parse_args(argv)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
     session = _connect()
     try:
         return args.fn(session, args)

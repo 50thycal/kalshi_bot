@@ -436,3 +436,30 @@ def test_metric_probe_rejects_an_unknown_metric(xos_session, xos_platform):
     args = type("A", (), {"metric": "not_a_metric", "key": "x",
                           "arm": None, "kind": "paper"})()
     assert cli.cmd_metric(xos_session, args) == 1
+
+
+def test_metric_probe_is_reachable_through_the_argument_parser(xos_session,
+                                                               xos_platform):
+    """Calling cmd_metric directly proved the provider and skipped the wiring.
+    The subcommand shipped with `set_defaults(func=...)` while the dispatcher
+    reads `args.fn`, so every real invocation died on AttributeError. Parse the
+    argv the way the CLI does, and assert the parser hands back a callable."""
+    from kalshi_bot.experiment_os import cli
+
+    parser = cli.build_parser()
+    args = parser.parse_args([
+        "metric", "live_cents_per_contract", "--experiment", "x",
+        "--arm", "treatment", "--kind", "live",
+    ])
+    assert getattr(args, "fn", None) is cli.cmd_metric
+    assert args.kind == "live" and args.arm == "treatment" and args.key == "x"
+
+
+def test_every_subcommand_is_dispatchable(xos_session, xos_platform):
+    """The same wiring gap, closed for the whole CLI rather than one command."""
+    from kalshi_bot.experiment_os import cli
+
+    parser = cli.build_parser()
+    sub = next(a for a in parser._actions if hasattr(a, "choices") and a.choices)
+    for name, p in sub.choices.items():
+        assert callable(p.get_default("fn")), f"{name} has no dispatchable fn"
