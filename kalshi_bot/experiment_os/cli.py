@@ -266,7 +266,14 @@ def cmd_metric(session: Session, args) -> int:
     `deployment_kind` is required and never inferred. Asking for a live metric at
     `--kind paper` is a legitimate question with a real answer (MISSING, with the
     addressing mismatch named), and silently answering a different question would
-    defeat the reason to run this at all."""
+    defeat the reason to run this at all.
+
+    The window is the EPOCH's, `[epoch.started_at, now]`. A gate's window is
+    narrower — `[max(epoch start, gate evidence_started_at), …]` — so a probe
+    value is not automatically the number a gate would see, and the window is
+    printed so the difference is visible rather than assumed. This command
+    deliberately takes no gate: it answers "what does this provider compute over
+    this scope", which is the question you ask *before* a gate exists."""
     from .evaluator import _arm_scope
     from .metrics import REGISTRY, compute_metric
 
