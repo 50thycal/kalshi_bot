@@ -21,6 +21,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from kalshi_bot.experiment_os import control_tower as ct
+from kalshi_bot.experiment_os import findings as fx
 from kalshi_bot.experiment_os import service as svc
 from kalshi_bot.models import PaperTrade
 
@@ -551,3 +552,161 @@ def test_a_gate_that_does_not_use_realizable_gets_no_context_block(xos_session,
     rep = ct.build_report(s, evaluate=True)
     assert rep.realizable_context == []
     assert "REALIZABLE-PROJECTION CONTEXT" not in ct.render(rep)
+
+
+# ---------------------------------------------------------------------------
+# One blocker class is not the whole diagnosis
+#
+# The imported live canaries carry TWO independent blockers: the evaluator's
+# BLOCKED_DATA (no provider for the clause metric) and a proven contract defect
+# (the clause addresses `deployment_kind="paper"` while the epoch holds only
+# live + paper_twin). A fresh session read the first and concluded that
+# implementing the providers would unblock the book. It would not.
+# ---------------------------------------------------------------------------
+
+
+def _register_finding(monkeypatch, *, key, version=1, headline="addresses paper",
+                      independent=True):
+    finding = fx.ContractFinding(
+        experiment_key=key, version=version, headline=headline,
+        detail=("clauses default to paper", "epoch has live + paper_twin only"),
+        owner="Research Lab — corrected native successor Version required",
+        independent_of_evaluator=independent,
+        evidence_doc="docs/RESEARCH_LIVE_CANARY_CONTRACT_DEFECT.md",
+        proven_at="2026-08-17", proven_by="Research Lab",
+    )
+    monkeypatch.setattr(fx, "CONTRACT_FINDINGS", (finding,))
+    return finding
+
+
+def test_blocked_data_and_contract_defect_are_shown_as_separate_blockers(
+        xos_session, xos_platform, monkeypatch):
+    s = xos_session
+    _experiment(s, "malformed-book", spec=UNPROVIDED_SPEC)
+    _register_finding(monkeypatch, key="malformed-book")
+
+    rep = ct.build_report(s, evaluate=True)
+    out = ct.render(rep, session=s)
+
+    # The evaluator's own block is still reported, with its own cause.
+    assert "BLOCKED_DATA" in out
+    assert "missing providers:" in out
+    assert "realized_tail_hit_ratio_vs_modeled" in out
+    # And so is the second, independent class.
+    assert "CONTRACT DEFECT" in out
+    assert "epoch has live + paper_twin only" in out
+    # The reader is told explicitly that the first is not the whole diagnosis.
+    assert "is NOT the whole" in out
+    assert "docs/RESEARCH_LIVE_CANARY_CONTRACT_DEFECT.md" in out
+
+
+def test_contract_defect_never_changes_a_verdict(xos_session, xos_platform,
+                                                 monkeypatch):
+    """The registry is display-only. A wrong entry can mislead a reader; it must
+    not be able to authorize or block anything."""
+    s = xos_session
+    _experiment(s, "verdict-stable", spec=COMPUTABLE_SPEC, tag="verdict-stable-t")
+    for _ in range(6):
+        _trade(s, "verdict-stable-t", pnl=0.10)
+    s.commit()
+
+    before = ct.build_report(s, evaluate=True)
+    before_verdicts = {
+        (v["key"], g["gate_key"]): (g.get("live_verdict"),
+                                    (g.get("latest_result") or {}).get("verdict"))
+        for views in before.by_state.values() for v in views for g in v["gates"]
+    }
+    _register_finding(monkeypatch, key="verdict-stable")
+    after = ct.build_report(s, evaluate=True)
+    after_verdicts = {
+        (v["key"], g["gate_key"]): (g.get("live_verdict"),
+                                    (g.get("latest_result") or {}).get("verdict"))
+        for views in after.by_state.values() for v in views for g in v["gates"]
+    }
+    assert before_verdicts == after_verdicts
+    assert after.contract_findings, "the finding should still be REPORTED"
+
+
+def test_finding_expires_when_a_corrected_version_exists(xos_session,
+                                                         xos_platform, monkeypatch):
+    """Bound to the version it was proven against — so a corrected successor
+    drops it automatically instead of it lingering as a permanent scare line."""
+    s = xos_session
+    _experiment(s, "outgrown", spec=UNPROVIDED_SPEC)
+    _register_finding(monkeypatch, key="outgrown", version=2)  # proven vs v2
+
+    rep = ct.build_report(s, evaluate=True)
+    assert rep.contract_findings == [], (
+        "a finding proven against v2 must not attach to a book operating v1"
+    )
+    assert "CONTRACT DEFECT" not in ct.render(rep, session=s)
+
+
+def test_no_finding_is_manufactured_by_heuristic(xos_session, xos_platform):
+    """Nothing infers a defect from the shape of a gate. An unregistered book
+    with an equally unprovided metric gets no contract-defect claim."""
+    s = xos_session
+    _experiment(s, "unregistered-book", spec=UNPROVIDED_SPEC)
+    rep = ct.build_report(s, evaluate=True)
+    assert rep.contract_findings == []
+    out = ct.render(rep, session=s)
+    assert "BLOCKED_DATA" in out          # the real blocker is still shown
+    assert "CONTRACT DEFECT" not in out   # an invented one is not
+
+
+def test_registered_findings_point_at_a_document_that_exists():
+    """A finding's authority is the research that proved it. A citation that does
+    not resolve is an assertion."""
+    import pathlib
+
+    root = pathlib.Path(__file__).resolve().parents[1]
+    assert fx.CONTRACT_FINDINGS, "the registry should not be silently emptied"
+    for f in fx.CONTRACT_FINDINGS:
+        assert (root / f.evidence_doc).is_file(), f.evidence_doc
+
+
+# ---------------------------------------------------------------------------
+# Mixed-sign paper results must not be collapsed into "negative"
+# ---------------------------------------------------------------------------
+
+
+def test_mixed_sign_paper_results_are_described_as_mixed():
+    rows = [
+        {"scope": "arm=a", "observed_paper_cents": 0.04, "missing": False},
+        {"scope": "arm=b", "observed_paper_cents": -0.39, "missing": False},
+    ]
+    summary = ct._observed_paper_summary(rows)
+    assert summary["sign"] == "mixed"
+    assert "MIXED IN SIGN" in summary["phrase"]
+    assert "+0.040" in summary["phrase"] and "-0.390" in summary["phrase"]
+    assert "do not describe this as simply negative" in summary["phrase"]
+    # Both of these are near a tick of noise, so say so rather than implying a
+    # direction the magnitudes do not support.
+    assert summary["near_flat"] is True
+    assert "near-flat" in summary["phrase"]
+
+
+def test_uniform_signs_are_still_described_plainly():
+    neg = ct._observed_paper_summary([
+        {"scope": "arm=a", "observed_paper_cents": -1.6, "missing": False},
+        {"scope": "arm=b", "observed_paper_cents": -2.4, "missing": False},
+    ])
+    assert neg["sign"] == "negative"
+    assert "negative on every arm" in neg["phrase"]
+    assert neg["near_flat"] is False
+
+    pos = ct._observed_paper_summary([
+        {"scope": "arm=a", "observed_paper_cents": 1.2, "missing": False},
+    ])
+    assert pos["sign"] == "positive"
+    assert "positive on every arm" in pos["phrase"]
+
+
+def test_unmeasured_paper_rows_are_not_summarized_as_a_sign():
+    """Missing is not zero, and it is not a direction either."""
+    summary = ct._observed_paper_summary([
+        {"scope": "arm=a", "observed_paper_cents": None, "missing": True},
+        {"scope": "arm=b", "observed_paper_cents": None, "missing": False},
+    ])
+    assert summary["sign"] == "unknown"
+    assert summary["phrase"] == ""

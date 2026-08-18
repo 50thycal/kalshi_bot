@@ -206,3 +206,49 @@ Continuous, on the live worker (ops channel, redeploys the service):
 
 Both paths print the same accounting: `considered`, `evaluated`, `written`,
 `skipped_unchanged`, `errors`, and the verdict histogram.
+
+---
+
+## 9. The blocker the evaluator cannot see
+
+A gate verdict names why *the evaluator* could not decide. That is the truth, and
+it is not always the whole diagnosis.
+
+The imported live canaries are the worked case. Their clauses omit
+`deployment_kind`, so it defaults to `"paper"`; their epochs hold only `live` and
+`paper_twin` deployments. Every clause therefore addresses a scope with no arms
+in it. The evaluator does exactly the right thing — it reports `BLOCKED_DATA` and
+names the providers its clause metrics lack — but implementing every one of those
+providers would leave both gates precisely as unevaluable as before. The
+addressing is what is wrong, and a well-formed contract that resolves to nothing
+is indistinguishable, from inside the evaluator, from one whose evidence has not
+arrived yet.
+
+So a second, independent blocker class is recorded by hand:
+`kalshi_bot/experiment_os/findings.py`.
+
+**It is not lifecycle state.** Four properties keep that true:
+
+1. **A finding never changes a verdict.** Nothing in it feeds the evaluator, the
+   gate runner, enforcement, admission, or any transition. It is display-only, so
+   a wrong entry can mislead a reader but cannot authorize or block anything.
+2. **Findings are hand-registered** against a specific `(experiment, version)`,
+   citing a merged research document (a test asserts the file exists). Nothing is
+   inferred from the shape of a gate — a heuristic guessing "this looks
+   malformed" would be a second, unreviewed opinion competing with the canonical
+   contract, and would eventually be wrong about a contract that is merely
+   unusual.
+3. **Findings expire structurally.** Each binds to the version it was proven
+   against, so a corrected successor Version drops it automatically. Nothing has
+   to remember to delete it.
+4. **`owner` names a role, not a schedule.** It says who *would* do the work; it
+   does not queue or approve it.
+
+The Control Tower renders the two classes separately under `BLOCKED EVIDENCE`,
+with an explicit `ALSO: CONTRACT DEFECT` marker on the evaluator entry so the
+first block read is never mistaken for the diagnosis. Registering a finding is
+**Research Lab's**; the Control Tower reads and routes them.
+
+This registry is deliberately an interim mechanism, pending the investigation /
+issue workflow. When that exists, findings become tickets with real state and
+this module goes away.

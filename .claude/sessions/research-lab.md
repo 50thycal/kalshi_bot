@@ -42,7 +42,27 @@ Shared semantics → **Platform Change Review**. Portfolio questions →
 
 ## MAY MODIFY
 Research docs, probe scripts, new Experiment OS experiments/versions/arms/gates,
-paper deployments.
+paper deployments, and the contract-findings registry
+(`kalshi_bot/experiment_os/findings.py`).
+
+### Registering a contract finding
+When an investigation proves that a *registered contract* is defective — the
+class of problem the evaluator cannot see, because from its side the contract is
+well-formed and simply resolves to no evidence — record it so the Control Tower
+stops reporting the evaluator's cause as the whole diagnosis.
+
+Rules, all load-bearing:
+- **A finding is not a fix.** It never changes a verdict and never edits the
+  frozen gate. Correcting a defective contract is a new native **Version**.
+- **Bind it to the version it was proven against.** It then expires on its own
+  when a corrected Version exists — nothing has to remember to delete it.
+- **Cite a merged document.** The finding's authority is the research; a citation
+  that does not resolve is an assertion, and a test enforces the file exists.
+- **Never infer one from the shape of a gate.** A heuristic would be a second,
+  unreviewed opinion competing with the canonical contract.
+
+This registry is explicitly an interim mechanism, pending the investigation /
+issue workflow. Keep it small.
 
 ## MUST NOT MODIFY
 An active experiment's frozen contract; a gate after evidence has started;

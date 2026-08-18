@@ -59,11 +59,40 @@ disagree in sign — `mmsell-price-ceiling` passes at **+1.269¢ projected again
 becomes HOLD, FAIL or BLOCKED_DATA. Never write "this strategy is profitable" off
 a realizable-driven PASS.
 
+**Describe mixed signs as mixed.** Where a gate's rows disagree in sign, the
+report computes the phrasing for you and prints `Describe paper as: …`. Use it.
+`+0.04¢` on one arm and `−0.39¢` on the other is **mixed / near-flat**, not
+"negative" — collapsing a two-sided result into one direction is an error the
+next reader cannot recover from, because the arm that disagreed is gone from the
+summary. The same holds anywhere you aggregate arms by hand: report the spread,
+or report each arm.
+
 **Never propose changing a frozen gate because its result is uncomfortable.** If
 the structured contract looks wrong — e.g. a thesis doc pre-registers a
 precondition the imported gate does not carry — that is a **new native Version**,
 which is a **Research Lab** follow-up, not an edit to imported science.
 - Never pool evidence across epochs Experiment OS declares non-poolable.
+
+### More than one blocker class at a time
+BLOCKED EVIDENCE can list **two independent classes** for the same book, and
+clearing one does not clear the other:
+
+| class | source | what clears it |
+|---|---|---|
+| **EVALUATOR BLOCK** (`BLOCKED_DATA` / `_PLATFORM` / `_INTEGRITY`) | the canonical evaluator, per gate | whatever its own named cause is — usually a provider |
+| **CONTRACT DEFECT** | a merged research finding (`experiment_os/findings.py`), hand-registered against a specific version | only a corrected native **Version** — Research Lab |
+
+Never report the first one you read as the whole diagnosis. Both imported live
+canaries are the standing example: their evaluator verdict is `BLOCKED_DATA —
+missing providers`, **and** their clauses address `deployment_kind="paper"` while
+their epochs hold only `live` + `paper_twin`. Implementing every named provider
+would leave both gates exactly as unevaluable as they are now. When the report
+prints `ALSO: CONTRACT DEFECT`, say so explicitly and route it to Research Lab.
+
+A CONTRACT DEFECT entry is **not lifecycle state and never changes a verdict** —
+it is research output rendered beside the evaluator's, and it disappears on its
+own once a corrected Version exists. Do not treat its `owner:` line as scheduled
+or approved work; it names who *would* own it.
 
 ### Collector statuses — what each one licenses you to say
 | status | meaning | is it a problem? |
@@ -139,7 +168,9 @@ Nothing. (Reporting only. Scratch files are fine.)
 
 ## MUST NOT MODIFY
 Experiment OS state, gates, config, risk, Platform Revisions, live settings,
-trading code.
+trading code, and the contract-findings registry (`experiment_os/findings.py`) —
+you *read* findings and route them; registering one is Research Lab's, and takes
+a merged research document.
 ## SHARED SKILLS
 - `mmsell-fill-model` / exit-study and other specialist diagnostics via the ops
   channel when a gate explicitly depends on them — they are *analyses*, never a
