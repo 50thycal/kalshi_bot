@@ -637,7 +637,7 @@ def _live_market_rows(session, tags: tuple[str, ...], scope: MetricScope) -> dic
     if not mine:
         return {"markets": 0, "settled_markets": 0, "contracts": 0, "pnl_usd": 0.0,
                 "wins": 0, "contested_markets": 0, "open_markets": 0,
-                "unpriced_markets": 0}
+                "unpriced_markets": 0, "never_held_markets": 0}
 
     contested = set(session.execute(
         select(LiveOrder.market_ticker)
@@ -646,7 +646,7 @@ def _live_market_rows(session, tags: tuple[str, ...], scope: MetricScope) -> dic
     ).scalars().all())
     ours = mine - contested
 
-    settled, open_markets, unpriced = set(), 0, 0
+    settled, open_markets, unpriced, never_held = set(), 0, 0, 0
     pnl_usd, wins = 0.0, 0
     for ticker in ours:
         # The NEWEST snapshot decides: `positions` is append-only, so an older row
@@ -658,7 +658,12 @@ def _live_market_rows(session, tags: tuple[str, ...], scope: MetricScope) -> dic
             .limit(1)
         ).first()
         if row is None:
-            unpriced += 1
+            # An order that never became a position — a resting maker order that
+            # was cancelled or timed out. Counted SEPARATELY from a settled
+            # position with a missing price: they are excluded for opposite
+            # reasons, and merging them makes a normal book (most maker orders
+            # never fill) look like a data-quality incident.
+            never_held += 1
             continue
         qty, realized = row
         if qty is None or int(qty) != 0:
@@ -695,6 +700,7 @@ def _live_market_rows(session, tags: tuple[str, ...], scope: MetricScope) -> dic
         "contested_markets": len(contested),
         "open_markets": open_markets,
         "unpriced_markets": unpriced,
+        "never_held_markets": never_held,
     }
 
 
@@ -777,6 +783,7 @@ def _live_metric(session, key: str, scope: MetricScope) -> MetricValue:
         "excluded_contested_markets": agg["contested_markets"],
         "excluded_still_open_markets": agg["open_markets"],
         "excluded_unpriced_markets": agg["unpriced_markets"],
+        "orders_that_never_held_a_position": agg["never_held_markets"],
     }
 
     if key == "live_settled_contracts":
@@ -791,9 +798,12 @@ def _live_metric(session, key: str, scope: MetricScope) -> MetricValue:
                 key, None, 0, "cents/contract",
                 reason="no settled live contracts in window", provenance=prov,
             )
+        # n is CONTRACTS — the rate's own denominator — so `value * n` reproduces
+        # the realized total. Reporting markets here would describe a per-contract
+        # rate with a per-market sample count.
         return MetricValue(
             key, round(agg["pnl_usd"] * 100.0 / agg["contracts"], 4),
-            agg["settled_markets"], "cents/contract", provenance=prov,
+            agg["contracts"], "cents/contract", provenance=prov,
         )
 
     # twin_live_winrate_gap_pp
