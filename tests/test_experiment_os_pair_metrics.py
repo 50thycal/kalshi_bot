@@ -38,10 +38,10 @@ UTC = timezone.utc
 T0 = datetime(2026, 8, 1, tzinfo=UTC)
 
 
-def _scope(tags=("mmsellA5",), arm="strangle"):
+def _scope(tags=("mmsellA5",), arm="strangle", kind="paper"):
     return MetricScope(
         experiment_key="mmsell-anchor-strangle", version=1, epoch_number=1,
-        arm_key=arm, deployment_kind="paper", strategy_tags=tuple(tags),
+        arm_key=arm, deployment_kind=kind, strategy_tags=tuple(tags),
         deployment_keys=(), window_start=T0,
         window_end=T0 + timedelta(days=30),
         platform_snapshot_fingerprint="f" * 64,
@@ -324,9 +324,12 @@ def test_every_value_records_the_implementation_that_produced_it(xos_session):
     assert compute_metric(
         s, "realizable_cents_per_trade", _scope()
     ).provenance["provider_revision"] == "fill_model_v1"
+    assert compute_metric(
+        s, "live_cents_per_contract", _scope(kind="live")
+    ).provenance["provider_revision"] == "live_exec_v1"
     # And a metric with no implementation is NOT recorded as some version of one.
     assert compute_metric(
-        s, "live_cents_per_contract", _scope()
+        s, "realized_tail_hit_ratio_vs_modeled", _scope()
     ).provenance["provider_revision"] == UNPROVIDED_REVISION
 
 

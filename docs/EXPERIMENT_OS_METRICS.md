@@ -177,15 +177,55 @@ Zero / empty / missing are three different facts:
 - a metric with **no provider** is `missing` → the gate evaluates **BLOCKED_DATA**
   naming the metric and its reference implementation.
 
-Declared-but-unprovided metrics (the model-based book metrics) keep the existing
-analysis scripts as their **reference implementations**: `realizable_cents_per_trade`
-and `fill_model_coverage_pct` (`scripts/mmsell_fill_model.py`),
-`realized_tail_hit_ratio_vs_modeled` (theta), `live_settled_contracts` /
-`live_cents_per_contract` / `twin_live_winrate_gap_pp` (`mmsell_live`,
-`live_paper_parity`), `clean_pairs` / `pair_win_rate_95lb_pct` (A5 pairing audit),
-and the FREEZE probe quantities. Those scripts stay the parity checks and deep
-reads; they are no longer the source of lifecycle truth — a gate needing one of
-these is honestly BLOCKED_DATA until its canonical provider lands.
+Declared-but-unprovided metrics keep the existing analysis scripts as their
+**reference implementations**: `realized_tail_hit_ratio_vs_modeled`,
+`twin_live_gap_cents`, and the FREEZE probe quantities. Those scripts stay the
+parity checks and deep reads; they are not the source of lifecycle truth — a gate
+needing one of these is honestly BLOCKED_DATA until its canonical provider lands.
+
+### Live-execution providers (`live_exec_v1`)
+
+`live_settled_contracts`, `live_cents_per_contract` and `twin_live_winrate_gap_pp`
+read real-money execution: `live_orders` × `fills` × `positions`.
+
+**Addressing is obeyed, never repaired.** All three are defined only at
+`deployment_kind="live"`. Requested at `paper` or `paper_twin` they return
+**MISSING**, with the mismatch named and `addressing_error` in provenance — they
+do **not** substitute the live deployment. Two imported live-canary gates are
+malformed in exactly that way, and a provider that inferred "they probably meant
+live" would make those gates appear to work, hide the defect a corrected Version
+exists to fix, and let a promotion turn on evidence the registered contract never
+asked for. This routes *before* the empty-scope fallback, which answers `0` for a
+count — a confident wrong "no live contracts" that a `>=` floor would read as
+real evidence, and a `<=` clause could even pass on.
+
+**`live_cents_per_contract` is per CONTRACT.** `scripts/mmsell_live.py` divides
+realized P&L by settled *positions* and labels it `live_$/ct`; that equals per
+contract only while every position is a 1-lot. The canonical definition is **total
+realized live P&L / actual filled contracts**, so a 5-lot losing $1.00 is five
+contracts losing 20¢ — not one −100¢ observation. Parity on 1-lots and the
+divergence on multi-lots are both pinned in
+`tests/test_experiment_os_live_metrics.py`.
+
+Three exclusions, each counted in provenance rather than dropped silently:
+
+| excluded | why |
+|---|---|
+| still-open markets | realized P&L exists only for closed positions; counting open contracts in the denominator would make the rate worsen simply because a position opened. Numerator and denominator come from the same market set. |
+| contested markets | `positions` is keyed by market, not strategy, so a market two arms traded cannot be split. The reference script attributes it fully to *both*; for an A/B promotion gate that is double-counting. |
+| closed-but-unpriced markets | a settled position with no `realized_pnl` is unknown, not zero. |
+
+Only **entry** fills count (`action='buy'`): a position is entered by buys and
+closed by sells, and both write fill rows, so counting both would double the
+denominator. Only the **newest** `positions` snapshot decides, because the table is
+append-only and an older `quantity=0` row may simply predate a re-entry.
+
+`twin_live_winrate_gap_pp` resolves the twin through `twin_of_deployment_id` and
+the matching `arm_key` — the structural edge, never a `*_pt3` naming convention —
+and is **MISSING** when no twin is registered. Its `n` binds on the **smaller**
+leg, so a sample floor binds on the side that limits the comparison. With no
+settled evidence on a leg it is undefined, not zero: two books with nothing
+settled are not two books that agree.
 
 ## Evaluation semantics (`evaluator.py`)
 
