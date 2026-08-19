@@ -208,6 +208,41 @@ def test_a_market_two_arms_traded_is_excluded_and_counted(xos_session):
     assert mv.provenance["excluded_contested_markets"] == 1
 
 
+def test_unfilled_orders_are_counted_apart_from_unpriced_settlements(xos_session):
+    """Two different exclusions that must not share a counter.
+
+    Most maker orders never fill — that is normal, and on the production control
+    arm it is the single largest exclusion. A settled position with a missing
+    price is a data problem. Merging them makes a healthy book look like an
+    incident, which is how a reader talks themselves into distrusting a number
+    that was fine."""
+    s = xos_session
+    _live_market(s, contracts=2, realized=1.00)                 # settled
+    ticker = f"MKT-{next(_SEQ)}"
+    s.add(LiveOrder(kalshi_order_id=f"ord-{next(_SEQ)}", market_ticker=ticker,
+                    strategy="Lmm-live", action="buy", side="yes", quantity=3,
+                    status="canceled", created_at=T0 + timedelta(hours=1)))
+    s.commit()                                                  # never held
+
+    mv = compute_metric(s, "live_settled_contracts", _scope())
+    assert mv.value == 2.0
+    assert mv.provenance["orders_that_never_held_a_position"] == 1
+    assert mv.provenance["excluded_unpriced_markets"] == 0
+
+
+def test_per_contract_rate_reports_contracts_as_its_n(xos_session):
+    """`value * n` must reproduce the realized total. A per-contract rate with a
+    per-market n describes two different samples in one row."""
+    s = xos_session
+    _live_market(s, contracts=5, realized=-1.00)
+    _live_market(s, contracts=1, realized=0.20)
+    s.commit()
+
+    mv = compute_metric(s, "live_cents_per_contract", _scope())
+    assert mv.n == 6
+    assert round(mv.value * mv.n / 100.0, 4) == -0.80
+
+
 def test_a_closed_but_unpriced_position_is_not_a_zero(xos_session):
     s = xos_session
     _live_market(s, contracts=4, realized=None, closed=True)
@@ -436,3 +471,30 @@ def test_metric_probe_rejects_an_unknown_metric(xos_session, xos_platform):
     args = type("A", (), {"metric": "not_a_metric", "key": "x",
                           "arm": None, "kind": "paper"})()
     assert cli.cmd_metric(xos_session, args) == 1
+
+
+def test_metric_probe_is_reachable_through_the_argument_parser(xos_session,
+                                                               xos_platform):
+    """Calling cmd_metric directly proved the provider and skipped the wiring.
+    The subcommand shipped with `set_defaults(func=...)` while the dispatcher
+    reads `args.fn`, so every real invocation died on AttributeError. Parse the
+    argv the way the CLI does, and assert the parser hands back a callable."""
+    from kalshi_bot.experiment_os import cli
+
+    parser = cli.build_parser()
+    args = parser.parse_args([
+        "metric", "live_cents_per_contract", "--experiment", "x",
+        "--arm", "treatment", "--kind", "live",
+    ])
+    assert getattr(args, "fn", None) is cli.cmd_metric
+    assert args.kind == "live" and args.arm == "treatment" and args.key == "x"
+
+
+def test_every_subcommand_is_dispatchable(xos_session, xos_platform):
+    """The same wiring gap, closed for the whole CLI rather than one command."""
+    from kalshi_bot.experiment_os import cli
+
+    parser = cli.build_parser()
+    sub = next(a for a in parser._actions if hasattr(a, "choices") and a.choices)
+    for name, p in sub.choices.items():
+        assert callable(p.get_default("fn")), f"{name} has no dispatchable fn"

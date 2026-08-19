@@ -46,6 +46,43 @@ Note `theta4`: **+1.292¢/contract** on the honest definition versus **+1.477¢*
 as the mean of per-market rates. Same data, two definitions — the divergence the
 new provider exists to make explicit.
 
+### 0b. …and what the EPOCH can actually count is much less
+
+The table above is each **book's whole live history**. It is not what Experiment
+OS may count, and running the canonical provider against production made the
+difference concrete.
+
+Both imported epochs `e1` start at the **migration instant**,
+`2026-08-16 14:14:43.720928+00`, not at live arming. A gate's window is
+`[max(epoch start, gate evidence_started_at), …]`, so every row before the
+migration falls outside it. Verified provider output over the epoch window:
+
+| | `Lmmsell10` | `Lmmsell8` | `theta4` |
+|---|---|---|---|
+| live arming | 2026-08-15 | 2026-08-15 | **2026-07-30** |
+| settled markets, whole history | 230 | 7 | 86 |
+| **settled markets, in-epoch** | **119** | **5** | **9** |
+| **settled contracts, in-epoch** | **235** | **10** | **28** |
+| **realized P&L, in-epoch** | **+$0.8195** | **−$4.96** | **+$2.44** |
+| **¢/contract, in-epoch** | **+0.349** | **−49.6** | **+8.714** |
+
+`theta4` is the striking one: **77 of its 86 settled markets sit outside its own
+epoch**, because the book traded live for 17 days before Experiment OS imported
+it. Its in-epoch rate reads **+8.714¢/contract on 28 contracts** against
+**+1.292¢ on 260** across its life. Both are true; only the first is countable,
+and it is far too small to mean anything.
+
+Two consequences for the decisions below:
+
+* **Time-to-floor is unaffected.** A v2 starts at n=0 regardless, so what matters
+  is the accrual *rate*, which is measured over the book's live history and is
+  unchanged.
+* **The "80 is already cleared" concern is about the book, not the epoch.**
+  theta4 has 86 settled markets *in its lifetime* and 9 *in its epoch*. Reusing
+  80 would still be wrong — it was registered against paper trades, and a floor
+  should never be anchored on observed history — but the reason is the anchoring,
+  not that the epoch has already passed it.
+
 ---
 
 ## 1. mmsell — is the 150-contract floor operationally reachable?
@@ -381,6 +418,50 @@ of the operator, and it has three honest answers:
 The money is genuinely small: at 1,600 contracts the standard deviation of total
 P&L is about **$13**. What a longer floor really costs is months of operator
 attention on a book whose measured edge is ~1.3¢/contract.
+
+---
+
+## 3.5 Provider production verification
+
+Run through the ops channel against production, `2026-08-18`.
+
+**Values match an independently written SQL reference exactly.** For
+`mmsell-scheduled-settle-live/v1/e1/price_ceiling` at `kind=live`:
+
+| | provider | independent SQL |
+|---|---|---|
+| settled markets | 119 | 119 |
+| settled contracts | 235 | 235 |
+| realized P&L | $0.8195 | $0.8195 |
+| ¢/contract | **0.3487** | **0.3487** |
+| contested, excluded | 2 | 2 |
+
+**The addressing refusal was verified on the real malformed scope.** Asking for
+`live_settled_contracts` at `kind=paper` on the actual imported contract returns:
+
+```
+value:       None  (contracts)   n=0   MISSING
+reason:      'live_settled_contracts' measures real-money execution and is only
+             defined at deployment_kind='live'; this clause addresses 'paper'.
+             The provider will not substitute a different deployment kind —
+             correct the gate's addressing
+    addressing_error: True
+    strategy_tags: []
+```
+
+That is the malformed contract's defect, reproduced from production through the
+canonical code path rather than argued.
+
+Two refinements the production run exposed, both now fixed:
+
+* the control arm reported **82 "unpriced" markets**, which reads as a data
+  incident. They are almost entirely maker orders that never filled — normal, and
+  the largest single exclusion on any maker book. Unfilled orders are now counted
+  separately from settled positions with a missing price; merging two exclusions
+  with opposite meanings makes a healthy book look broken.
+* `live_cents_per_contract` reported `n` in **markets** while its value is per
+  **contract**. It now reports contracts, so `value × n` reproduces the realized
+  total.
 
 ---
 
