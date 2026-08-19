@@ -172,16 +172,18 @@ rather than by argument.
 * **false promotion at true delta = 0: exactly 5%**, by construction, at every n.
   This is the property the raw `>= 1.0` clause never had — it passed ~39% of the
   time on an identical pair.
-* **power** (σ = 24¢/market on each of four legs, equal n per arm, SE = 48/√n):
+* **power.** *Corrected:* this clause is a **two-leg** delta between the two live
+  arms, so SE = σ√(2/n) = **33.94/√n**, not the four-leg twin-gap SE of 48/√n an
+  earlier draft used. The corrected numbers are about 2× kinder and the
+  conclusion is unchanged:
 
-| true delta | markets/arm for 80% power | treatment calendar time |
+| true delta | markets/arm for 80% power (single look) | treatment calendar time |
 |---|---|---|
-| +1¢ | **14,246** | ~8 years |
-| +2¢ | 3,562 | ~2 years |
-| +3¢ | 1,583 | ~11 months |
-| +5¢ | 570 | ~4 months |
-| +7¢ | **291** | **~8.5 weeks** |
-| +10¢ | 142 | ~4 weeks |
+| +1¢ | **7,125** | ~4 years |
+| +2¢ | 1,781 | ~1 year |
+| +3¢ | 792 | ~5.5 months |
+| +5¢ | **285** | **~8.5 weeks** |
+| +7¢ | 145 | ~4 weeks |
 
 The bound fixes the **error rate** and does nothing for the **power**. At the
 inherited 1¢ effect this design is unreachable by three orders of magnitude.
@@ -212,10 +214,10 @@ diagnostics (recorded, never gating):
 
 | property | value |
 |---|---|
-| false promotion at true delta = 0 | **5%** |
-| power to promote at +7¢ | 80% |
-| power to promote at +1¢ | ~10% (correctly near-zero) |
-| **power to KILL at true delta = −8¢** | **88%** |
+| lifetime false promotion at true delta = 0 | **~5%** (99% bound, §9g) |
+| lifetime power to promote at +5¢ / +3¢ | 99.0% / 74.8% |
+| lifetime power to promote at +1¢ | 17.6% (correctly low) |
+| **lifetime power to KILL at true delta = −8¢** | **~100%** |
 | treatment calendar time to floor | **~8.5 weeks** |
 | control calendar time to floor | ~4 days |
 
@@ -1020,6 +1022,101 @@ taken.
 
 ---
 
+## 9g. Sequential false promotion — and a retraction
+
+A previous draft argued that promotion bounds could stay at 95% "because a human
+reads every PASS". **That was wrong and is retracted.** Human review prevents
+*automation*; it does not undo *repeated testing*. A recorded PASS is explicitly
+capable of authorizing a transition, so evaluating a 95% bound on every cadence
+until one clears zero inflates the lifetime false-promotion rate whether or not a
+person clicks the button.
+
+### Measured, for the two actual promotion gates
+
+Monte Carlo, 20,000 trials, true effect exactly zero, evaluated on every market
+from the floor to the horizon. mmsell uses σ_delta = 24·√2 = 33.94¢ (two live
+arms); theta4 uses σ = 35.14¢.
+
+| gate | horizon | **95% continuous** | **99% continuous** |
+|---|---|---|---|
+| MMSELL | 291 → 582 (2×) | 14.31% | **3.54%** |
+| MMSELL | 291 → 873 (3×) | 17.73% | **4.95%** |
+| THETA4 | 600 → 1200 (2×) | 14.62% | **3.60%** |
+| THETA4 | 600 → 1800 (3×) | 17.71% | **5.01%** |
+
+A continuously-evaluated 95% bound promotes a **worthless** book about one time
+in six.
+
+### 95% at preregistered checkpoints
+
+| gate | looks | checkpoints | lifetime false promotion |
+|---|---|---|---|
+| MMSELL | 1 | 291 | 5.17% |
+| MMSELL | 2 | 291, 582 | 7.67% |
+| MMSELL | 3 | 291, 436, 582 | 8.98% |
+| MMSELL | 4 | 291, 388, 485, 582 | 9.51% |
+| THETA4 | 1 | 600 | 5.10% |
+| THETA4 | 2 | 600, 1200 | 8.04% |
+| THETA4 | 3 | 600, 900, 1200 | 9.06% |
+| THETA4 | 4 | 600, 800, 1000, 1200 | 10.54% |
+
+Checkpoints reach ≤5% only at a **single** look. That is operationally brittle —
+one shot, on one day, and a book a few markets short of the floor waits for a
+horizon that no longer has a second look in it. Two looks already cost 8%.
+
+### The power comparison, done honestly
+
+The instinct is that 99% costs power. Compared like-for-like — **lifetime against
+lifetime**, which is the only fair comparison once evaluation is continuous — the
+99% bound is *stronger* than the single-look 95% numbers quoted earlier:
+
+| gate | true effect | 95% single look | **99% lifetime** |
+|---|---|---|---|
+| MMSELL (floor 291) | +3¢ | 44.5% | **74.8%** |
+| MMSELL | +5¢ | 80.7% | **99.0%** |
+| MMSELL | +1¢ | 12.7% | 17.6% |
+| THETA4 (floor 600) | +2¢ | 40.1% | **69.3%** |
+| THETA4 | +3¢ | 67.2% | **94.7%** |
+| THETA4 | +5¢ | 96.7% | **100%** |
+
+So the move to 99% is a **strict improvement on both axes**: lifetime false
+promotion falls from ~18% to ~5%, *and* power rises above the single-look 95%
+figures the floors were originally justified on. A 95% lifetime looks more
+powerful still, but it buys that power with the 18% false-promotion rate this
+whole section exists to refuse.
+
+**The floors do not move.** 291 and 600 stand.
+
+### Recommendation
+
+> **Option 1 — continuous 99% one-sided bounds on both promotion clauses, and on
+> mmsell's kill clause.** No new machinery beyond the confidence level, which the
+> bound schema already carries as a field.
+
+Option 3 (anytime-valid / alpha-spending) is not needed: option 1 already hits
+the target, and a full sequential-testing framework would be substantial scope for
+no measured gain here.
+
+**One caveat, and its fix.** The ~5% figure is calibrated to a **3× horizon**. Run
+longer and the rate creeps up — that is the nature of any fixed-α sequential
+procedure. So the contract should **pre-register a maximum evidence horizon**:
+
+| gate | promotion floor | max evidence horizon | calendar |
+|---|---|---|---|
+| MMSELL | 291 markets/arm | **873 markets/arm** | ~6 months |
+| THETA4 | 600 markets | **1,800 markets** | ~13 months |
+
+Past the horizon the gate stops accruing looks and the experiment goes to an
+explicit operator decision rather than continuing to peek. That makes the ≤5%
+claim exact for the contract's own lifetime instead of aspirational, and it costs
+one line in each spec.
+
+**Kill clauses go to 99% too**, for the same reason and at no cost — mmsell's kill
+power at true −8¢ is ~100% lifetime under either bound, and theta4's tail blocker
+was already set to 99% in §9b.
+
+---
+
 ## 9f. Final gate definitions
 
 ### MMSELL v2 — `mmsell-scheduled-settle-live` v2/e1
@@ -1033,16 +1130,18 @@ orientation:  delta.<metric> = treatment - control
 
 sample (PROMOTION floor):
               live_settled_markets >= 291        [kind=live]  on BOTH arms
+max evidence horizon:
+              live_settled_markets  = 873        [kind=live]  on BOTH arms
 
 promote (pass_all):
               delta.live_cents_per_contract
-                bound:     {direction: lower, confidence: 0.95, method: normal}
-                condition: LCB95(delta) > 0                   [kind=live]
+                bound:     {direction: lower, confidence: 0.99, method: normal}
+                condition: LCB99(delta) > 0                   [kind=live]
 
 block (fail_any):
               delta.live_cents_per_contract
-                bound:     {direction: upper, confidence: 0.95, method: normal}
-                condition: UCB95(delta) < 0                   [kind=live]
+                bound:     {direction: upper, confidence: 0.99, method: normal}
+                condition: UCB99(delta) < 0                   [kind=live]
                 min_evidence: NONE — inherits the promotion floor, intentionally
                               (see 9d: mmsell's failure mode is underperformance,
                                which the risk envelope already watches)
@@ -1073,9 +1172,13 @@ realized less per live contract."* That is the kill.
 ```text
 sample (PROMOTION floor):
               live_settled_markets >= 600        [kind=live]
+max evidence horizon:
+              live_settled_markets  = 1800       [kind=live]
 
 promote (pass_all):
-              LCB95(live_cents_per_contract) > 0             [kind=live]
+              live_cents_per_contract
+                bound:     {direction: lower, confidence: 0.99, method: normal}
+                condition: LCB99(live_cents_per_contract) > 0 [kind=live]
               twin_model_coverage_pct >= 90                  [kind=live]
 
 block (fail_any):
@@ -1104,9 +1207,9 @@ often than the model predicted."*
 
 | | |
 |---|---|
-| false promotion at true edge = 0 | 5% |
-| power at +3¢ / +5¢ | 67% / 97% |
-| power at the inherited +0.87¢ | ~15% |
+| lifetime false promotion at true edge = 0 | ~5% (99% bound, 3x horizon) |
+| lifetime power at +2¢ / +3¢ / +5¢ | 69% / 95% / 100% |
+| lifetime power at the inherited +0.87¢ | ~24% |
 | **lifetime** false block at true R = 1.0 | 4.8% (99% bound, continuous evaluation) |
 | block power at R = 1.5 / 2.0 / 5.0 | 88% / ~100% / 100% |
 | earliest possible block | **~11 days** (50-market failure floor) |
