@@ -744,7 +744,283 @@ the contracts they serve.
 
 ---
 
-## 9b. Final gate definitions
+## 9a. Evidence floors — a promotion floor must not silence a safety clause
+
+### The defect, stated generally
+
+The evaluator's precedence is (`evaluator.py`, step 5 before step 6):
+
+```
+4. any required metric missing   -> BLOCKED_DATA
+5. sample floors unmet           -> HOLD        <-- returns here
+6. any fail_any clause true      -> FAIL
+7. all pass_all clauses true     -> PASS
+```
+
+`sample` is a **promotion** floor — "how much evidence before a PASS may
+authorize advancement" — but it currently gates *everything*. A `fail_any` clause
+cannot fire while any floor is unmet. Observed on `mmsell-anchor-strangle`: a
+clause on the failing side, verdict HOLD, because the floor was short.
+
+For theta4 v2 that is not a nuisance, it is a defect: a shared 600-market floor
+would make a catastrophic tail failure at n = 50, 100 or 300 **unable to fail the
+experiment**, which is the entire reason the tail clause was retained.
+
+These are two different questions and they deserve two different numbers:
+
+| | question | current key |
+|---|---|---|
+| **promotion evidence floor** | how much evidence before PASS may authorize advancement? | `sample` |
+| **failure evidence floor** | how much evidence before sufficiently bad evidence may terminate? | *(none)* |
+
+### The generic mechanism
+
+Add an **optional** per-clause `min_evidence` to `fail_any` clauses:
+
+```json
+{
+  "list": "fail_any",
+  "metric": "realized_tail_hit_ratio_vs_modeled",
+  "bound": {"direction": "lower", "confidence": 0.99, "method": "poisson_exact"},
+  "op": ">", "value": 1.0,
+  "arm": "theta4", "deployment_kind": "live",
+  "min_evidence": {"metric": "live_settled_markets", "op": ">=", "value": 50}
+}
+```
+
+Semantics:
+
+* a `fail_any` clause with **`min_evidence`** becomes *eligible* when its own floor
+  is met, **independently** of the promotion floor;
+* a `fail_any` clause **without** `min_evidence` inherits the promotion floor —
+  **exactly today's behavior**;
+* an eligible-and-true `fail_any` clause yields FAIL even when the promotion floor
+  is unmet.
+
+Revised precedence:
+
+```
+1. structural ambiguity                        -> BLOCKED_INTEGRITY
+2. platform incomparability                    -> BLOCKED_PLATFORM
+3. unresolved integrity events                 -> BLOCKED_INTEGRITY
+4. metric missing for an ELIGIBLE clause       -> BLOCKED_DATA
+5. any ELIGIBLE fail_any clause true           -> FAIL          <-- moved up
+6. promotion floor unmet                       -> HOLD
+7. any remaining fail_any clause true          -> FAIL
+8. all pass_all true                           -> PASS
+9. otherwise                                   -> HOLD
+```
+
+**This is backwards compatible by construction.** No existing frozen gate carries
+`min_evidence`, so every existing clause remains gated by the promotion floor and
+no recorded verdict changes — including `mmsell-anchor-strangle`'s HOLD. The
+change is additive and opt-in per clause, which matters because imported
+contracts must not be reinterpreted.
+
+**`sample` is not renamed.** Every frozen gate's `spec_hash` binds to the current
+key; renaming it to `promotion_floor` would either break those hashes or require
+two spellings forever. It is documented as the promotion floor instead.
+
+**The general rule for when an early-failure floor is warranted:** when the
+failure mode is one the **risk envelope cannot detect**. A book that simply loses
+money is caught by exposure limits and the kill switch. A book whose *model* is
+wrong about tail frequency looks fine on P&L until the tail arrives. That is the
+distinction, and it is why theta4 needs this and mmsell does not (§9c).
+
+---
+
+## 9b. theta4 early-tail-failure floor
+
+### The estimator at small n
+
+The normal approximation is wrong here: at n = 50 the expected hit count is
+E ≈ 4. The clause uses the **exact one-sided Poisson lower bound** on the hit
+rate, `λ_L(O)`, with `LCB(R) = λ_L(O) / E`. O is Poisson-binomial over
+heterogeneous pᵢ; the Poisson form is an excellent approximation for rare events
+and is **conservative here** — the measured mix is under-dispersed
+(Var/mean = 15.544/17.181 = **0.905**), so the true tail is thinner than Poisson
+and the test fires slightly *less* often than nominal. The conservatism is in the
+direction of not falsely killing.
+
+**Valid versus stable — the distinction matters.** The bound is mathematically
+valid at *every* n, including n = 25 where E < 2: it controls the per-look error
+rate by construction. What degrades at tiny n is **resolution and denominator
+stability**, not validity:
+
+| n | E | k_min (99%) | smallest realized ratio that can fire | largest single market's p as a share of E |
+|---|---|---|---|---|
+| 25 | 1.98 | 7 | **3.54×** | 7.0% |
+| 50 | 3.96 | 10 | **2.53×** | 3.5% |
+| 100 | 7.92 | 16 | 2.02× | 1.8% |
+| 150 | 11.88 | 22 | 1.85× | 1.2% |
+
+At n = 25 the test can express only "≥3.5× miscalibration" and one market carries
+7% of the denominator. It is not wrong; it is coarse.
+
+### The sequential problem, and why the confidence level changes
+
+A `fail_any` bound is re-evaluated on every cadence as evidence accrues. That is a
+**sequential test**, and a nominal 5% per-look rate is not a 5% lifetime rate.
+Simulated over continuous evaluation from the floor to 600 markets, 40,000 trials:
+
+| bound | floor 25 | 50 | 100 | 150 | 300 |
+|---|---|---|---|---|---|
+| **95%** — lifetime false kill at true R = 1.0 | 20.3% | 19.2% | 15.9% | 14.6% | 11.0% |
+| **99%** — lifetime false kill at true R = 1.0 | **5.0%** | **4.8%** | **3.9%** | **3.4%** | **2.2%** |
+
+A 95% bound evaluated continuously kills a **perfectly calibrated** book about one
+time in six. A 99% bound restores the intended ~5% *lifetime* rate.
+
+Detection is barely affected where it matters — lifetime, at the 99% bound and a
+floor of 50: R = 1.25 → 40%, R = 1.5 → **88%**, R = 2.0 → **~100%**, R = 5.0 →
+**100%**.
+
+> **Recommendation: the early-failure clause uses a 99% one-sided bound.**
+
+Note the floor barely moves the false-kill rate (5.0% → 2.2% across 25 → 300).
+**The error rate is controlled by the confidence level, not by the floor.** The
+floor is therefore an *operational* choice: the smallest denominator on which we
+are willing to let a statistic terminate a real-money experiment.
+
+### Recommended floor
+
+> **`N_tail_fail` = 50 settled markets (~11 days).**
+
+* E ≈ 4 — the smallest denominator at which no single market exceeds ~3.5% of it
+* lifetime false kill **4.8%**, inside the 5% budget
+* catches R = 5.0 (the failure that killed the original theta family) at **100%**,
+  R = 2.0 at ~100%, R = 1.5 at 88%
+* eligible **~12 weeks before** the 600-market promotion floor — which is the
+  entire point of separating the two
+* n = 25 is rejected not as invalid but as coarse (3.5× to fire, 7% denominator
+  concentration) for a clause allowed to terminate a live experiment
+
+Chosen from the statistic's stability and the sequential error budget. No theta4
+outcome enters the derivation — the current evidence does not fire it in any case
+(O = 20, E = 17.18, LCB₉₅(R) = **0.771**, well under 1.0).
+
+---
+
+## 9c. Twin coverage interaction — conservative, with the catastrophe elsewhere
+
+> **The tail clause is MISSING — BLOCKED_DATA — whenever
+> `twin_model_coverage_pct < 90`. It can neither PASS nor FAIL below that.**
+
+This matches the conservative default and I did not find a justification to
+override it inside the gate. Coverage loss selects a subset by a data defect; R
+computed on it has an unknown bias *direction*, which is worse than a wide
+interval because an interval advertises its own width. Failing on such a subset
+would turn missing model data into evidence against the experiment, which is
+exactly the inference to refuse.
+
+The one argument *for* an exception is worth recording and then declining:
+coverage is determined **at entry**, before any outcome exists, so it cannot be
+correlated with outcomes except through entry-time characteristics. That makes
+the bias channel weaker than outcome-based selection — but "weaker" is not
+"absent", and it does not license terminating a real-money experiment.
+
+**Where the catastrophic case belongs instead.** If coverage is short *and* the
+covered subset is catastrophically bad, that is an **operational alert, not a
+gate verdict**. The recommendation is that the tail provider record an
+**integrity event** for Live Ops in that case, leaving the gate honestly
+BLOCKED_DATA. This uses machinery that already exists, keeps the gate's
+evidential standard intact, and still means nobody has to notice a five-alarm
+fire by reading a HOLD.
+
+---
+
+## 9d. mmsell floor semantics — one floor, intentionally
+
+**Confirmed: both promotion and kill wait for the 291-market floor, and no
+early-failure machinery is added.**
+
+Three reasons, recorded so it reads as a decision rather than an oversight:
+
+1. The −8¢ kill power (88%) was **derived at that horizon**. An earlier floor
+   would be a different test with characteristics nobody has priced.
+2. mmsell's failure mode is *underperformance*, which the **risk envelope already
+   watches** — $2 / 2-contract clips, exposure limits, the kill switch. The gate
+   is not the safety mechanism there. theta4's tail miscalibration is invisible to
+   a P&L-based safeguard until the tail arrives, which is why it needs one.
+3. Both mmsell clauses read the **same** metric at the same floor, so splitting
+   them would create two floors on one quantity for no statistical gain.
+
+Per §9a this needs no new syntax: a `fail_any` clause with no `min_evidence`
+inherits the promotion floor, which is exactly the intended behavior.
+
+---
+
+## 9e. Generic bound-clause schema
+
+**Clause form:**
+
+```json
+{
+  "metric": "<canonical metric key>",
+  "bound": {
+    "direction": "lower" | "upper",
+    "confidence": 0.95 | 0.99,
+    "method": "poisson_exact" | "normal" | "clopper_pearson"
+  },
+  "op": ">" | ">=" | "<" | "<=",
+  "value": <threshold>,
+  "arm": "<arm_key>",
+  "deployment_kind": "live",
+  "min_evidence": {"metric": "...", "op": ">=", "value": N}   // optional
+}
+```
+
+The clause compares the **computed bound** to `value` — never the point estimate.
+`direction` is required and never inferred from the operator: an upper bound with
+`>` and a lower bound with `>` mean opposite things, and a metric's own
+`direction` field (§2) does not determine which bound a contract wants.
+
+**Recorded provenance, per clause:**
+
+```json
+{
+  "estimator": "R = observed_tail_hits / sum(model_probability)",
+  "bound_direction": "lower",
+  "confidence": 0.99,
+  "method": "poisson_exact_one_sided",
+  "estimate": 1.1641,
+  "uncertainty_inputs": {
+    "observed": 20,
+    "expected": 17.1808,
+    "variance_basis": "poisson_binomial sum p(1-p) = 15.5440",
+    "dispersion_ratio": 0.9047
+  },
+  "standard_error": 0.2295,
+  "computed_bound": 0.7715,
+  "threshold": 1.0,
+  "fired": false,
+  "provider_revision": "tail_v1",
+  "evidence_n": 217,
+  "evidence_unit": "settled markets",
+  "min_evidence": {"metric": "live_settled_markets", "value": 50, "observed": 217, "met": true},
+  "evaluations_since_eligible": 41
+}
+```
+
+`evaluations_since_eligible` is there because §9b showed a continuously-evaluated
+bound inflates its nominal per-look error rate. Recording the look count lets a
+reader see how many chances a clause had, rather than reading a 99% bound as a 1%
+lifetime claim.
+
+**The sentence a fresh Control Tower session should be able to write from this,
+without recomputing anything:**
+
+> `FAIL — the 99% lower bound on the tail ratio (1.34) exceeded 1.0 after 112
+> eligible settled markets (observed 21 hits against 8.9 expected, provider
+> tail_v1, 9th evaluation since the 50-market failure floor).`
+
+Contrast with what a bare number licenses today: `FAIL — realized_tail_hit_ratio_vs_modeled=1.34 > 1.0`,
+which says nothing about how much evidence stood behind it or which bound was
+taken.
+
+---
+
+## 9f. Final gate definitions
 
 ### MMSELL v2 — `mmsell-scheduled-settle-live` v2/e1
 
@@ -755,13 +1031,21 @@ orientation:  delta.<metric> = treatment - control
               live_cents_per_contract is higher_better, so a POSITIVE delta
               means the treatment earned more per contract.
 
-sample:       live_settled_markets >= 291        [kind=live]  on BOTH arms
+sample (PROMOTION floor):
+              live_settled_markets >= 291        [kind=live]  on BOTH arms
 
 promote (pass_all):
-              LCB95(delta.live_cents_per_contract) > 0        [kind=live]
+              delta.live_cents_per_contract
+                bound:     {direction: lower, confidence: 0.95, method: normal}
+                condition: LCB95(delta) > 0                   [kind=live]
 
 block (fail_any):
-              UCB95(delta.live_cents_per_contract) < 0        [kind=live]
+              delta.live_cents_per_contract
+                bound:     {direction: upper, confidence: 0.95, method: normal}
+                condition: UCB95(delta) < 0                   [kind=live]
+                min_evidence: NONE — inherits the promotion floor, intentionally
+                              (see 9d: mmsell's failure mode is underperformance,
+                               which the risk envelope already watches)
 
 diagnostics (recorded, never gating):
               twin_live_gap_cents           per arm   [lower_better]
@@ -787,14 +1071,20 @@ realized less per live contract."* That is the kill.
 ### THETA4 v2 — `theta4-fat-tail` v2/e1
 
 ```text
-sample:       live_settled_markets >= 600        [kind=live]
+sample (PROMOTION floor):
+              live_settled_markets >= 600        [kind=live]
 
 promote (pass_all):
               LCB95(live_cents_per_contract) > 0             [kind=live]
               twin_model_coverage_pct >= 90                  [kind=live]
 
 block (fail_any):
-              LCB95(realized_tail_hit_ratio_vs_modeled) > 1.0  [kind=live]
+              realized_tail_hit_ratio_vs_modeled
+                bound:        {direction: lower, confidence: 0.99,
+                               method: poisson_exact}
+                condition:    LCB99(R) > 1.0                 [kind=live]
+                min_evidence: live_settled_markets >= 50     [kind=live]
+                MISSING while twin_model_coverage_pct < 90
 
 notes (frozen into the contract):
               A PASS does NOT establish that the tail model is calibrated.
@@ -817,9 +1107,10 @@ often than the model predicted."*
 | false promotion at true edge = 0 | 5% |
 | power at +3¢ / +5¢ | 67% / 97% |
 | power at the inherited +0.87¢ | ~15% |
-| false block at true R = 1.0 | 5% |
-| block power at R = 1.5 / 2.0 | 98% / ~100% |
-| time to decision | ~19 weeks |
+| **lifetime** false block at true R = 1.0 | 4.8% (99% bound, continuous evaluation) |
+| block power at R = 1.5 / 2.0 / 5.0 | 88% / ~100% / 100% |
+| earliest possible block | **~11 days** (50-market failure floor) |
+| time to promotion decision | ~19 weeks |
 
 ---
 
