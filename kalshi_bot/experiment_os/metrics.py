@@ -106,10 +106,26 @@ class MetricDefinition:
     # compute this" and "we computed it with implementation v1" are never the
     # same recorded identity.
     revision: str = "universal_v1"
+    # Which way is "good" for THIS metric. Load-bearing because a delta inherits
+    # its base metric's direction, and the two mmsell diagnostics point opposite
+    # ways: `delta.live_cents_per_contract` positive means the treatment earned
+    # more (better), while `delta.twin_live_gap_cents` positive means the
+    # treatment suffered more adverse selection (worse). Left as prose, that is a
+    # sign error waiting to happen in a gate; recorded here, provenance can state
+    # what a positive value means and a test can check it.
+    direction: str = "higher_better"  # higher_better | lower_better | neutral
 
     @property
     def effective_revision(self) -> str:
         return self.revision if self.provided else UNPROVIDED_REVISION
+
+    @property
+    def positive_means(self) -> str:
+        return {
+            "higher_better": "better",
+            "lower_better": "worse",
+        }.get(self.direction, "neither better nor worse — this metric is a count "
+              "or a neutral quantity")
 
 
 # ---------------------------------------------------------------------------
@@ -134,7 +150,7 @@ _UNIVERSAL: tuple[MetricDefinition, ...] = (
         "fill cell — read the realizable number against this",
     ),
     MetricDefinition(
-        key="clean_pairs", unit="pairs", kind="count",
+        key="clean_pairs", direction="neutral", unit="pairs", kind="count",
         source="paper_trades x mmsell_settlement_meta (per-event legs)",
         reference="docs/MMSELL_ANCHOR_SET.md (pairing audit)",
         revision="pair_metrics_v1",
@@ -151,7 +167,7 @@ _UNIVERSAL: tuple[MetricDefinition, ...] = (
         "complete pairs with positive combined P&L",
     ),
     MetricDefinition(
-        key="live_settled_contracts", unit="contracts", kind="count",
+        key="live_settled_contracts", direction="neutral", unit="contracts", kind="count",
         source="live_orders x fills x positions (settled live markets)",
         reference="scripts/mmsell_live.py (docs/LIVE_PAPER_TWIN.md)",
         revision="live_exec_v1",
@@ -168,7 +184,7 @@ _UNIVERSAL: tuple[MetricDefinition, ...] = (
         "deployment_kind='live'",
     ),
     MetricDefinition(
-        key="twin_live_winrate_gap_pp", unit="pp", kind="mean",
+        key="twin_live_winrate_gap_pp", direction="lower_better", unit="pp", kind="mean",
         source="positions (live) vs paper_trades (the registered twin)",
         reference="scripts/live_paper_parity.py (docs/LIVE_PAPER_TWIN.md)",
         revision="live_exec_v1",
@@ -177,24 +193,24 @@ _UNIVERSAL: tuple[MetricDefinition, ...] = (
         "twin is registered",
     ),
     MetricDefinition(
-        key="settled_trades", unit="trades", kind="count", source="paper_trades",
+        key="settled_trades", direction="neutral", unit="trades", kind="count", source="paper_trades",
         description="terminal-with-P&L trades entered in the window "
         f"(status in {SETTLED_STATUSES})",
     ),
     MetricDefinition(
-        key="settled_contracts", unit="contracts", kind="count", source="paper_trades",
+        key="settled_contracts", direction="neutral", unit="contracts", kind="count", source="paper_trades",
         description="sum of contract quantity over settled trades",
     ),
     MetricDefinition(
-        key="entries", unit="trades", kind="count", source="paper_trades",
+        key="entries", direction="neutral", unit="trades", kind="count", source="paper_trades",
         description="all trades entered in the window, any status (exposure basis)",
     ),
     MetricDefinition(
-        key="open_trades", unit="trades", kind="count", source="paper_trades",
+        key="open_trades", direction="neutral", unit="trades", kind="count", source="paper_trades",
         description="trades entered in the window still open",
     ),
     MetricDefinition(
-        key="voided_trades", unit="trades", kind="count", source="paper_trades",
+        key="voided_trades", direction="neutral", unit="trades", kind="count", source="paper_trades",
         description="annulled-market trades (censored — excluded from settled n)",
     ),
     MetricDefinition(
@@ -221,7 +237,7 @@ _UNIVERSAL: tuple[MetricDefinition, ...] = (
 # evaluates BLOCKED_DATA — never silently skipped, never faked from a proxy.
 _DECLARED_UNPROVIDED: tuple[MetricDefinition, ...] = (
     MetricDefinition(
-        key="realized_tail_hit_ratio_vs_modeled", unit="ratio", kind="mean",
+        key="realized_tail_hit_ratio_vs_modeled", direction="lower_better", unit="ratio", kind="mean",
         source="paper_trades.model_probability x settled outcome", provided=False,
         # NO reference implementation exists. scripts/theta_fill_model.py was
         # cited here and does not compute this metric at all — it is a maker-fill
@@ -237,13 +253,13 @@ _DECLARED_UNPROVIDED: tuple[MetricDefinition, ...] = (
         "counts MARKETS, not contracts (one tail hits or does not, once)",
     ),
     MetricDefinition(
-        key="twin_live_gap_cents", unit="cents/contract", kind="mean",
+        key="twin_live_gap_cents", direction="lower_better", unit="cents/contract", kind="mean",
         source="live outcomes vs twin paper book", provided=False,
         reference="scripts/mmsell_offset_ab.py (docs/MMSELL_OFFSET_AB.md)",
         description="twin paper c/ct minus live realized c/ct (the execution gap)",
     ),
     MetricDefinition(
-        key="candidate_rejection_rate_pct", unit="%", kind="rate",
+        key="candidate_rejection_rate_pct", direction="neutral", unit="%", kind="rate",
         source="scan cycle counters (not persisted)", provided=False,
         reference="MmsellCycleSummary.skipped_vol_gate (counted, never persisted)",
         description="share of candidates a book's entry gate rejected",
@@ -267,7 +283,7 @@ _DECLARED_UNPROVIDED: tuple[MetricDefinition, ...] = (
         description="FREEZE probe: edge over the open-window favorite control",
     ),
     MetricDefinition(
-        key="wrong_pins", unit="markets", kind="count",
+        key="wrong_pins", direction="lower_better", unit="markets", kind="count",
         source="probe instrument (backtest over settled REST history)", provided=False,
         reference="scripts/kalshi_freeze_study.py (docs/FREEZE_THESIS.md)",
         description="FREEZE probe: markets wrongly called dark/decided",
@@ -1016,6 +1032,15 @@ def compute_paired_metric(
             return MetricValue(key, None, min(t.n, c.n), t.unit,
                                reason=f"undefined over empty sample on {side}",
                                provenance=prov)
+        base_def = REGISTRY.get(base)
+        prov = prov | {
+            "orientation": "delta = treatment - control",
+            "base_metric_direction": base_def.direction if base_def else "unknown",
+            "positive_delta_means": (
+                f"treatment {base_def.positive_means} than control"
+                if base_def else "unknown — base metric not in the registry"
+            ),
+        }
         return MetricValue(key, round(t.value - c.value, 4), min(t.n, c.n), t.unit,
                            provenance=prov)
 

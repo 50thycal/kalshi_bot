@@ -109,14 +109,49 @@ adverse selection than `price_ceiling`** — a difference-in-differences on the
 *unpaired* twin gap, which is the shape `docs/BOOK_REGISTRY.md` already
 pre-registered as primary for the `mmsell10a`/`mmsell10b` offset A/B.
 
+### Orientation, stated once and pinned in code
+
+The canonical rule, enforced by `compute_paired_metric` and now recorded in every
+delta's provenance:
+
+> **`delta.<metric>` = treatment − control**
+
+What a positive delta *means* depends on the base metric's own direction, and the
+two mmsell quantities point opposite ways:
+
+| metric | direction | positive delta means |
+|---|---|---|
+| `live_cents_per_contract` | higher is better | treatment **better** |
+| `twin_live_gap_cents` (a gap *is* adverse selection) | lower is better | treatment **worse** |
+| `twin_live_winrate_gap_pp` | lower is better | treatment **worse** |
+
+`MetricDefinition.direction` now carries this, delta provenance records
+`positive_delta_means`, and `tests/test_experiment_os_live_metrics.py` pins a
+synthetic case where the treatment is known better and asserts both the sign and
+the gate result. Arm ordering is never relied on implicitly.
+
+**Correction to the previous draft.** It described the current pair as
+"+8.14¢ pointing in the wrong direction" beside a gate reading
+`LCB₉₅(delta.live_cents_per_contract) > 0`. Both statements were true and they
+were about **different metrics**: +8.14¢ is the twin-*gap* delta, where positive
+is worse. On the gate's own metric the current value is **−17.23¢**. The gate's
+inequalities were correct; the prose mixed two senses of "positive".
+
 Current state, for context only (the treatment has n=11 and this is not
 evidence):
 
-| | gap = twin − live | SE |
+| quantity | value | reading |
 |---|---|---|
-| `price_ceiling` (control) | **−0.495¢** (live *beat* its twin) | ±2.64 |
-| `scheduled_settle` (treatment) | **+7.643¢** | ±17.85 |
-| difference-in-differences | **+8.138¢** — treatment looks *worse* | ±18.05 |
+| live ¢/ct, `price_ceiling` (control) | +1.957 | |
+| live ¢/ct, `scheduled_settle` (treatment) | −15.273 | |
+| **`delta.live_cents_per_contract`** (the gate's metric) | **−17.230¢** | treatment **worse** |
+| gap = twin − live, control | −0.495 | live *beat* its twin |
+| gap = twin − live, treatment | +7.643 | heavy adverse selection |
+| `delta.twin_live_gap_cents` (diagnostic) | **+8.138¢** | treatment **worse** |
+
+Both deltas agree that the treatment currently looks worse. They say so with
+**opposite signs**, which is precisely why the direction is now a registry field
+rather than a sentence.
 
 ### Design A — paired twin as primary evidence
 
@@ -217,11 +252,16 @@ floor — the defined false-promotion standard the point-estimate form never had
 
 **Recommended floor: 600 settled markets (~1,800 contracts, ~19 weeks).**
 
-Derivation, not preference: 600 is the smallest floor at which the **tail clause**
-(§5) also becomes strong — it detects R ≥ 1.5 at 97%. Running one floor that
-makes both clauses informative is worth more than optimizing either alone. On the
-profitability side it buys 67% power at +3¢ and 97% at +5¢, with false promotion
-pinned at 5%.
+**Reconfirmed after the tail-bound correction (§5.5), on a different
+justification.** The earlier draft justified 600 as the floor that made the tail
+clause strong. Once the tail criterion moves into `fail_any` it needs no floor of
+its own to be valid (§5.7), so the shared floor is now set by the **profitability
+clause alone**: 600 markets buys 67% power at +3¢ and 97% at +5¢, with false
+promotion pinned at 5% by construction.
+
+The number is unchanged; the reason it survives is that it was already the right
+answer for the promotion clause, and the tail blocker happens to reach 98% against
+R ≥ 1.5 there — a bonus rather than the derivation.
 
 **The honest limitation, stated rather than buried.** theta4's *inherited*
 minimum useful effect is **+0.87¢/contract** (the fee-re-baselined reading of the
@@ -378,38 +418,160 @@ clause could never bind first.** A clause that cannot bind is not a clause.
 Neither number in that derivation is the observed result. p̄ is the model's own
 output and +0.87¢ is the inherited bar.
 
-### 5.2 Point estimate versus bound
+### 5.2 Bound direction — the previous recommendation was wrong
 
-| form | false-fail at true R = 1.0 | kills R = 1.5 (n=600) | kills R = 2.0 |
-|---|---|---|---|
-| `R̂ ≤ 1.0` (thesis, literal) | **50%** | ~100% | ~100% |
-| `UCB₉₅(R) ≤ 1.0` | ~95% | ~100% | ~100% |
-| **`LCB₉₅(R) ≤ 1.0`** (recommended) | **5%** | **97%** | **~100%** |
+`LCB₉₅(R) ≤ 1.0` was recommended as a promotion clause. **That was a category
+error**, and the challenge to it is correct.
 
-**Is 1.0 operationally too brittle?** As a point estimate, yes — a perfectly
-calibrated model coin-flips the clause, and killing a good book half the time is
-a real cost. `UCB ≤ 1.0` is worse in the other direction: it demands proof that
-R is *below* 1 and fails a perfectly calibrated book ~95% of the time.
+R is a lower-is-better quantity. The two one-sided bounds answer different
+questions, and only one of them is a promotion claim:
 
-**Recommended: `LCB₉₅(R) ≤ 1.0`.** It keeps the thesis threshold **exactly** —
-no re-derivation, no outcome-aware drift — and changes only the inferential form,
-in the direction that stops noise from killing a calibrated book. Its role beside
-a properly-bounded profitability clause is mechanism confirmation: fail only when
-there is 95% evidence that realized tails exceed modeled. The historical failure
-mode it exists to catch was R ≈ 5 (40% tail-hit against ~8% modeled), which it
-catches essentially always.
+| clause | what a PASS licenses you to say |
+|---|---|
+| **A** `LCB₉₅(R) ≤ 1.0` | *"We have **not demonstrated** that the tails hit more often than modeled."* Absence of evidence. |
+| **B** `UCB₉₅(R) ≤ 1.0` | *"We have 95% **evidence** that the tails hit no more often than modeled."* The thesis claim. |
 
-False-pass behavior is its weakness and should be stated: at n = 600 a book with
-true R = 1.25 still passes **43%** of the time. That is the price of a 5%
-false-fail rate, and it is why the profitability clause carries the promotion
-burden.
+A is a **kill** criterion wearing a promotion clause's clothes. Putting it in
+`pass_all` means a book with no evidence either way is treated as having
+demonstrated calibration — which is exactly the inference the thesis exists to
+prevent.
 
-### 5.3 Candidate tail market floors
+### 5.3 The three designs, priced
 
-SE(R) = 3.38/√n; kill = P(LCB₉₅(R) > 1.0); ~4.5 settled markets/day.
+SE(R) = 3.38/√n; ≈4.5 settled markets/day. Probability of **PASS**:
 
-| | **T1** | **T2** | **T3 (recommended)** |
-|---|---|---|---|
+**A — `LCB₉₅(R) ≤ 1.0`**
+
+| n | days | SE | R=0.75 | R=1.00 | R=1.10 | R=1.25 | R=1.50 |
+|---|---|---|---|---|---|---|---|
+| 300 | 67 | 0.195 | 99.8% | 95.0% | 87.1% | 64.2% | 18.0% |
+| 600 | 133 | 0.138 | 100.0% | 95.0% | 82.1% | 43.4% | 2.4% |
+| 900 | 200 | 0.113 | 100.0% | 95.0% | 77.6% | 28.3% | 0.3% |
+
+*False-promotion reading:* a book at R = 1.25 — miscalibrated enough to consume
+twice its own profitability bar — passes 43% of the time at n=600.
+*False-fail reading:* 5% at perfect calibration, by construction.
+
+**B — `UCB₉₅(R) ≤ 1.0`**
+
+| n | days | SE | R=0.75 | R=1.00 | R=1.10 | R=1.25 | R=1.50 |
+|---|---|---|---|---|---|---|---|
+| 300 | 67 | 0.195 | 35.8% | 5.0% | 1.5% | 0.2% | 0.0% |
+| 600 | 133 | 0.138 | 56.6% | 5.0% | 0.9% | 0.0% | 0.0% |
+| 900 | 200 | 0.113 | 71.7% | 5.0% | 0.6% | 0.0% | 0.0% |
+
+*False-promotion reading:* 5% at exactly R = 1.0, by construction — the correct
+standard for a promotion claim.
+*False-fail reading:* **95% at perfect calibration.** B does not ask whether the
+model is calibrated; it asks whether the model is demonstrably *conservative*. A
+model that is exactly right fails 19 times out of 20.
+
+**C — `UCB₉₅(R) ≤ M` for a margin M > 1**
+
+The margin must be justified without reference to theta4's outcomes. The only
+independent anchor available is §5.1's arithmetic: extra tail cost is
+`7.92 (R−1)` ¢/contract, and the inherited profitability bar is +0.87¢/contract,
+so miscalibration reaches the bar's worth at **M = 1.11**.
+
+| n | days | SE | R=0.75 | R=1.00 | R=1.10 | R=1.25 | R=1.50 |
+|---|---|---|---|---|---|---|---|
+| 300 | 67 | 0.195 | 57.9% | 14.0% | 5.5% | 0.9% | 0.0% |
+| 600 | 133 | 0.138 | 83.2% | 19.8% | 5.8% | 0.4% | 0.0% |
+| 900 | 200 | 0.113 | 93.9% | 25.2% | 6.0% | 0.2% | 0.0% |
+
+Still 20–25% at perfect calibration, because M − 1 = 0.11 is under one standard
+error at every reachable n.
+
+### 5.4 Saying it plainly: the promotion form is unreachable
+
+Sample needed for `UCB₉₅(R) ≤ M` to reach 80% power at a **perfectly calibrated**
+model (true R = 1.0):
+
+| margin M | markets needed | calendar |
+|---|---|---|
+| 1.05 | 28,256 | **~17 years** |
+| **1.11** (the coherent margin) | **5,838** | **~3.6 years** |
+| 1.25 (the imported bar) | 1,130 | ~0.7 years |
+
+Only the imported 1.25 is reachable, and §5.1 rejects it on coherence: it permits
+1.98¢/contract of tail cost against a +0.87¢ bar, so it could never bind before
+the profitability clause. **Widening the margin to whatever the sample can carry
+is precisely the move to refuse.**
+
+**Conclusion: theta4 v2 cannot carry a positive calibration claim at any
+practical horizon.** The correct response is not a permissive bound. It is to
+stop asserting a claim the evidence cannot support, and to put the tail clause
+where its statistics actually work.
+
+### 5.5 Recommended structure — tail clause becomes a BLOCKER, not a promoter
+
+```text
+sample:               live_settled_markets >= 600               [kind=live]
+promote (pass_all):   LCB95(live_cents_per_contract) > 0        [kind=live]
+                      twin_model_coverage_pct >= 90             [kind=live]
+block   (fail_any):   LCB95(realized_tail_hit_ratio_vs_modeled) > 1.0  [kind=live]
+```
+
+The tail criterion is unchanged in arithmetic from design A — but it is stated as
+what it is: **a failure condition, evaluated in `fail_any`, that blocks promotion
+when miscalibration is demonstrated.** It never contributes affirmative evidence.
+
+**What a PASS of the whole gate licenses, exactly:**
+
+> "Over the epoch's live evidence, this book's realized per-contract economics
+> are positive at one-sided 95% confidence, **and** no demonstrated tail
+> miscalibration was found. It is **not** established that the tail model is
+> calibrated; the evidence is merely consistent with calibration."
+
+That sentence belongs in the v2 contract's notes so that no future reader — human
+or otherwise — upgrades "not disconfirmed" into "confirmed".
+
+**Operating characteristics of the blocker** (probability of BLOCK):
+
+| n | R = 1.0 (false block) | R = 1.25 | R = 1.5 | R = 2.0 |
+|---|---|---|---|---|
+| 300 | 5.0% | 35.8% | 82.0% | ~100% |
+| 600 | 5.0% | 56.6% | 97.6% | ~100% |
+| 900 | 5.0% | 71.7% | 99.7% | ~100% |
+
+It catches the failure mode it exists for — the original theta family died at
+R ≈ 5 (40% tail-hit against ~8% modeled) — and it does not kill a calibrated book
+on noise.
+
+### 5.6 Why not the literal point estimate
+
+For completeness, the thesis's rule read literally:
+
+| form | false-fail at true R = 1.0 | blocks R = 1.5 (n=600) |
+|---|---|---|
+| `R̂ ≤ 1.0` (thesis, literal) | **50%** | ~100% |
+| `LCB₉₅(R) ≤ 1.0` (recommended blocker) | **5%** | 98% |
+
+The point estimate coin-flips a perfectly calibrated book. As a *blocker* — the
+role §5.5 assigns it — a 50% false-block rate is not defensible, and the bound
+form achieves the same protection against real miscalibration at a tenth of the
+false-block cost. **The threshold 1.0 is unchanged in both**; only the inferential
+form differs, so nothing is re-derived from outcomes.
+
+### 5.7 Tail sample floor — it no longer sets the shared floor
+
+Under §5.5 the tail criterion sits in `fail_any`, and a `fail_any` clause with a
+5%-by-construction false-block rate needs **no floor of its own to be valid** at
+any n. Its precision only changes how much miscalibration it catches:
+
+| floor (settled markets) | calendar | SE(R) | blocks R = 1.25 | R = 1.5 | R = 2.0 |
+|---|---|---|---|---|---|
+| 100 | ~22 d | 0.342 | 18% | 43% | 90% |
+| 300 | ~67 d | 0.195 | 36% | 82% | ~100% |
+| **600** | **~133 d** | **0.138** | **57%** | **98%** | **~100%** |
+| 900 | ~200 d | 0.113 | 72% | ~100% | ~100% |
+
+So the shared floor is now set by the **profitability clause alone** (§3), and the
+tail blocker inherits whatever n that produces. At 600 markets it blocks R ≥ 1.5
+at 98% — comfortably covering the failure mode that killed the original theta
+family — which is a reason to be content with 600, not a reason to have chosen it.
+
+---|---|---|---|
 | floor (settled markets) | **100** | **300** | **600** |
 | calendar | ~22 d | ~67 d | **~133 d** |
 | SE(R) | 0.342 | 0.197 | **0.139** |
@@ -421,6 +583,69 @@ SE(R) = 3.38/√n; kill = P(LCB₉₅(R) > 1.0); ~4.5 settled markets/day.
 **T3 = 600 settled markets**, matching the profitability floor exactly, so one
 floor serves both clauses. T1 is a catastrophe detector only — it would have
 caught the original theta family's R ≈ 5, and little else.
+
+---
+
+## 5.8 Twin coverage as an explicit prerequisite
+
+A same-instant twin *existing* is not enough. The control arm's twin mirrors 25%
+of its live settled markets (§1), and nothing in a gate's wording detects that.
+
+### The metric
+
+> **`twin_model_coverage_pct`** = 100 × (settled live markets in the evidence set
+> whose modeled probability resolves from the registered same-instant twin) ÷
+> (settled live markets in the evidence set)
+
+**The denominator is the evidence set itself** — exactly the markets the gate
+would otherwise count. That is the right denominator because it makes the metric
+answer the question that matters: *of the evidence this gate is about to decide
+on, how much carries the model information the decision requires?* A denominator
+of "markets the twin traded" would be self-satisfying, and a denominator of "all
+markets in the universe" would measure the strategy's selectivity instead.
+
+**What missing coverage means:** the excluded markets were chosen by a data
+defect, not by the experiment. R is then computed on a subset with unknown
+selection, and the direction of the resulting bias is unknown — which is worse
+than a wide interval, because an interval at least advertises its own width.
+
+For mmsell, where the twin is an execution control rather than a model-probability
+source, the parallel quantity is **`twin_mirror_coverage_pct`** over live markets
+*entered* (not settled), since the mirror should fire at entry.
+
+### Threshold, derived
+
+Let `f` be the excluded fraction and suppose the excluded markets' true ratio
+differs from the included ones by a factor `k`. The bias in R is approximately
+`f · (k − 1) · R`. Taking `k = 2` as a deliberately pessimistic bound on how
+different a data-defect-selected subset could be, and requiring the bias to stay
+below **half a standard error at the recommended floor** (SE = 0.138 at n = 600,
+so bias ≤ 0.069):
+
+> f · 1 · 1.0 ≤ 0.069  →  f ≤ 6.9%  →  **coverage ≥ 93%**
+
+Rounded down to a round number that is not derived from any current measurement:
+
+> **`twin_model_coverage_pct >= 90`** — pre-registered.
+
+At 90% the worst-case bias under the same pessimistic `k = 2` is 0.10, about
+three-quarters of one standard error — visible in the interval rather than hidden
+under it. The threshold is deliberately **not** set from theta4's observed 43% or
+mmsell's observed 25%; both would fail it, which is the point.
+
+### Where it binds
+
+| book | clause | blocking? |
+|---|---|---|
+| theta4 v2 | `twin_model_coverage_pct >= 90` in `pass_all` | **yes** — the tail metric has no denominator without it |
+| theta4 v2 | tail metric returns **MISSING** below 90% | **yes** — BLOCKED_DATA, never a promotable value |
+| mmsell v2 | `twin_mirror_coverage_pct` **recorded and reported** | **no** — Design D's primary clause compares the two *live* arms and does not use the twin |
+
+Being honest about the mmsell case matters: adding a blocking coverage clause
+there would block promotion for a reason unrelated to the hypothesis being
+tested. It is reported and alerted on, not gated. **If the operator ever makes a
+twin-based read primary for mmsell, coverage becomes blocking there too** — but
+§2 showed the twin-gap DiD is unreachable, so it is not primary.
 
 ---
 
@@ -485,8 +710,9 @@ tags, and the epoch boundary is enforced by the evidence window, not the tag.
 | `LCB₉₅ > 0` clause form (both books) | **new** — inferential form only; thresholds unchanged |
 | mmsell floor 291 markets | **new** — derived from a reachable MDE, not inherited |
 | theta4 floor 600 markets | **new** — derived; aligned to the tail clause |
-| tail clause `LCB₉₅(R) ≤ 1.0` | form **new**, threshold **inherited** from the thesis |
-| tail floor 600 markets | **new** — derived from SE(R) |
+| tail criterion `LCB₉₅(R) > 1.0` as a **blocker** | placement **new**; threshold **inherited** from the thesis |
+| that v2 carries no positive calibration claim | **new** — a consequence of §5.4, not a choice |
+| `twin_model_coverage_pct >= 90` | **new** — derived from a bias bound, not from observed coverage |
 | tag convention | **new** |
 
 Nothing in the "new" column was chosen by looking at whether it makes either book
@@ -500,12 +726,100 @@ inherited effect, mmsell undecidable at 1¢ — that is what is reported.
 1. **`live_settled_markets`** — the sample-floor metric. The provider already
    computes it (`settled_markets` in provenance); it needs to be a registered
    metric so a floor can bind on the independent unit instead of on contracts.
-2. **`realized_tail_hit_ratio_vs_modeled`** — per §4, with `twin_live_paired_gap_cents`
-   as a diagnostic. No reference implementation exists, so it needs pinned tests
-   rather than a parity check.
+2. **`realized_tail_hit_ratio_vs_modeled`** — per §4. No reference implementation
+   exists, so it needs pinned tests rather than a parity check.
+3. **`twin_model_coverage_pct`** and **`twin_mirror_coverage_pct`** — per §5.8.
+   The tail provider must consult the first and return MISSING below the
+   threshold, so they ship together.
+4. **`twin_live_gap_cents`** and **`twin_live_paired_gap_cents`** — mmsell
+   diagnostics. Both are `lower_better`; §2's orientation rules apply.
 
-Both are ordinary metric work, blocked on nothing except the operator approving
+Bound-valued clauses (`LCB95(...)`, `UCB95(...)`) are a **clause form**, not new
+metrics: the evaluator needs to express a one-sided bound on a metric's sampling
+distribution. That is the one genuinely new piece of gate machinery this design
+requires, and it should be built once rather than per metric.
+
+All are ordinary metric work, blocked on nothing except the operator approving
 the contracts they serve.
+
+---
+
+## 9b. Final gate definitions
+
+### MMSELL v2 — `mmsell-scheduled-settle-live` v2/e1
+
+```text
+orientation:  delta.<metric> = treatment - control
+              treatment = scheduled_settle (Lmmsell8v2)
+              control    = price_ceiling   (Lmmsell10v2)
+              live_cents_per_contract is higher_better, so a POSITIVE delta
+              means the treatment earned more per contract.
+
+sample:       live_settled_markets >= 291        [kind=live]  on BOTH arms
+
+promote (pass_all):
+              LCB95(delta.live_cents_per_contract) > 0        [kind=live]
+
+block (fail_any):
+              UCB95(delta.live_cents_per_contract) < 0        [kind=live]
+
+diagnostics (recorded, never gating):
+              twin_live_gap_cents           per arm   [lower_better]
+              twin_live_paired_gap_cents    per arm   [lower_better]
+              twin_live_winrate_gap_pp      per arm   [lower_better]
+              twin_mirror_coverage_pct      per arm
+```
+
+**What a PASS licenses:** *"At one-sided 95% confidence, the scheduled-settle arm
+realized more per live contract than the price-ceiling arm over this epoch."*
+Nothing about magnitude, and nothing about why.
+
+**What a BLOCK licenses:** *"At one-sided 95% confidence, the scheduled-settle arm
+realized less per live contract."* That is the kill.
+
+| | |
+|---|---|
+| false promotion at true delta = 0 | 5% |
+| power at +7¢ / +1¢ | 80% / ~10% |
+| power to block at −8¢ | 88% |
+| time to decision | ~8.5 weeks (treatment-bound) |
+
+### THETA4 v2 — `theta4-fat-tail` v2/e1
+
+```text
+sample:       live_settled_markets >= 600        [kind=live]
+
+promote (pass_all):
+              LCB95(live_cents_per_contract) > 0             [kind=live]
+              twin_model_coverage_pct >= 90                  [kind=live]
+
+block (fail_any):
+              LCB95(realized_tail_hit_ratio_vs_modeled) > 1.0  [kind=live]
+
+notes (frozen into the contract):
+              A PASS does NOT establish that the tail model is calibrated.
+              It establishes positive realized economics at 95% confidence,
+              with no DEMONSTRATED tail miscalibration. Establishing
+              calibration would need ~5,838 settled markets (~3.6 years) at
+              the only economically coherent margin (1.11), and is therefore
+              out of reach. Do not upgrade "not disconfirmed" to "confirmed".
+```
+
+**What a PASS licenses:** *"Over this epoch's live evidence, realized
+per-contract economics are positive at one-sided 95% confidence, model-probability
+coverage was adequate, and no tail miscalibration was demonstrated."*
+
+**What a BLOCK licenses:** *"At one-sided 95% confidence, realized tails hit more
+often than the model predicted."*
+
+| | |
+|---|---|
+| false promotion at true edge = 0 | 5% |
+| power at +3¢ / +5¢ | 67% / 97% |
+| power at the inherited +0.87¢ | ~15% |
+| false block at true R = 1.0 | 5% |
+| block power at R = 1.5 / 2.0 | 98% / ~100% |
+| time to decision | ~19 weeks |
 
 ---
 

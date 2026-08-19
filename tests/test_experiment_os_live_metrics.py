@@ -498,3 +498,88 @@ def test_every_subcommand_is_dispatchable(xos_session, xos_platform):
     sub = next(a for a in parser._actions if hasattr(a, "choices") and a.choices)
     for name, p in sub.choices.items():
         assert callable(p.get_default("fn")), f"{name} has no dispatchable fn"
+
+
+# ---------------------------------------------------------------------------
+# Delta orientation — pinned, because prose got it wrong once
+#
+# A design document described the mmsell pair as "+8.14c pointing the wrong
+# direction" while proposing `LCB95(delta.live_cents_per_contract) > 0` to
+# promote. Both statements were individually true and they are about DIFFERENT
+# metrics with OPPOSITE senses of good: +8.14c was the twin-GAP delta (a gap is
+# adverse selection, so higher is worse), while the gate's metric is live
+# economics (higher is better). Nothing in the code could catch that, because
+# the orientation lived only in sentences.
+# ---------------------------------------------------------------------------
+
+
+def test_delta_is_treatment_minus_control_with_a_known_better_treatment(
+        xos_session, xos_platform):
+    """The synthetic case: treatment genuinely earns more per contract.
+
+    Asserts the SIGN and the gate result together, so a future reordering of
+    arms cannot flip the meaning without failing here."""
+    from kalshi_bot.experiment_os.metrics import compute_paired_metric
+
+    s = xos_session
+    # treatment: +$1.00 over 2 contracts = +50c/contract
+    _live_market(s, tag="Ltreat", contracts=2, realized=1.00)
+    # control:   +$0.20 over 2 contracts = +10c/contract
+    _live_market(s, tag="Lctrl", contracts=2, realized=0.20)
+    s.commit()
+
+    treat = _scope(tags=("Ltreat",), arm="treatment")
+    ctrl = _scope(tags=("Lctrl",), arm="control")
+    mv = compute_paired_metric(s, "delta.live_cents_per_contract", treat, ctrl)
+
+    assert mv.value == 40.0, "delta must be treatment - control (50 - 10)"
+    assert mv.value > 0, "a better treatment must produce a POSITIVE delta"
+    # …which is exactly what the promotion inequality tests.
+    assert mv.value > 0, "LCB > 0 would promote; the point estimate agrees in sign"
+    assert mv.provenance["orientation"] == "delta = treatment - control"
+    assert mv.provenance["positive_delta_means"] == "treatment better than control"
+
+
+def test_delta_sign_flips_when_the_treatment_is_worse(xos_session, xos_platform):
+    from kalshi_bot.experiment_os.metrics import compute_paired_metric
+
+    s = xos_session
+    _live_market(s, tag="Ltreat", contracts=2, realized=0.20)   # +10c/ct
+    _live_market(s, tag="Lctrl", contracts=2, realized=1.00)    # +50c/ct
+    s.commit()
+
+    mv = compute_paired_metric(
+        s, "delta.live_cents_per_contract",
+        _scope(tags=("Ltreat",), arm="treatment"),
+        _scope(tags=("Lctrl",), arm="control"),
+    )
+    assert mv.value == -40.0
+    assert mv.value < 0, "a worse treatment must produce a NEGATIVE delta — the "
+    # …which is exactly what the kill inequality (UCB < 0) tests.
+
+
+def test_a_delta_states_which_direction_is_good_for_its_base_metric(
+        xos_session, xos_platform):
+    """The two mmsell deltas point opposite ways, and provenance says so.
+
+    `live_cents_per_contract` is higher-better, so a positive delta is a better
+    treatment. `twin_live_gap_cents` is a GAP — lower-better — so a positive
+    delta is a WORSE treatment. Reading both as "positive is good" is the error
+    this records against."""
+    from kalshi_bot.experiment_os.metrics import REGISTRY
+
+    assert REGISTRY["live_cents_per_contract"].direction == "higher_better"
+    assert REGISTRY["live_cents_per_contract"].positive_means == "better"
+    assert REGISTRY["twin_live_gap_cents"].direction == "lower_better"
+    assert REGISTRY["twin_live_gap_cents"].positive_means == "worse"
+    assert REGISTRY["twin_live_winrate_gap_pp"].direction == "lower_better"
+    assert REGISTRY["realized_tail_hit_ratio_vs_modeled"].direction == "lower_better"
+
+
+def test_every_registered_metric_declares_a_direction():
+    """A metric with no declared direction is a sign error waiting for a gate."""
+    from kalshi_bot.experiment_os.metrics import REGISTRY
+
+    allowed = {"higher_better", "lower_better", "neutral"}
+    for key, d in REGISTRY.items():
+        assert d.direction in allowed, f"{key} has direction {d.direction!r}"
