@@ -337,3 +337,20 @@ Note the asymmetry this leaves in readiness: `live_books_represented` checks tha
 every **configured** live strategy resolves to a registered tag, so with an empty
 allowlist it passes vacuously. Readiness therefore does not flag a stand-down —
 the integrity event is what carries it.
+
+### Not blocking is not enough — the surfaces have to agree
+
+Making the evaluator ignore the kind only stops the *verdict* from lying. The
+reporting surfaces count and route open events on their own, so until they agree,
+a deliberate pause still reads as an unexplained failure. Two counts, one rule:
+
+| count | includes | drives |
+|---|---|---|
+| `unresolved_integrity_events` | blocking kinds only | the Control Tower's `!!` banner, the `no_unresolved_integrity` readiness check |
+| `recorded_state_events` | `NON_BLOCKING_INTEGRITY_KINDS` | nothing that gates — informational |
+
+And the Control Tower does **not** emit a *route by cause* recommendation for a
+non-blocking kind. Its cause is already recorded; asking a reader to diagnose it
+is precisely the masquerade this classification exists to stop. It is still shown
+— under `RECORDED STATE` in `SYSTEM / INTEGRITY`, labelled as not an anomaly —
+because *not routed* must not become *not visible*.
