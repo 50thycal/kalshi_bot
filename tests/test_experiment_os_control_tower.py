@@ -710,3 +710,83 @@ def test_unmeasured_paper_rows_are_not_summarized_as_a_sign():
     ])
     assert summary["sign"] == "unknown"
     assert summary["phrase"] == ""
+
+
+# ---------------------------------------------------------------------------
+# Exposure during a stand-down
+#
+# `at risk` counted only RESTING orders. That survives while a book trades
+# continuously, because there are always resting orders to see. It fails exactly
+# when it matters: stand a book down, its resting orders drain within a cycle,
+# the column reads $0.00 — and the filled positions those orders produced sit
+# open, worth real money. Measured in production mid-pause on 2026-08-20: 25 open
+# positions holding $43.04, reported as "$0.00 at risk".
+# ---------------------------------------------------------------------------
+
+
+def _live_order(s, tag, ticker, *, status, qty=2, price=45):
+    from kalshi_bot.models import LiveOrder
+
+    s.add(LiveOrder(kalshi_order_id=f"o-{ticker}-{status}", market_ticker=ticker,
+                    strategy=tag, action="buy", side="yes", quantity=qty,
+                    limit_price=price, status=status, created_at=T0))
+
+
+def _position(s, ticker, *, qty, exposure, at=None):
+    from kalshi_bot.models import Position
+
+    s.add(Position(market_ticker=ticker, captured_at=at or (T0 + timedelta(days=1)),
+                   quantity=qty, quantity_fp=qty, market_exposure=exposure))
+
+
+def test_held_positions_count_as_exposure_when_no_order_is_resting(xos_session):
+    """The stand-down case. Nothing resting, real money held."""
+    s = xos_session
+    _live_order(s, "Lx", "MKT-A", status="filled")
+    _position(s, "MKT-A", qty=2, exposure=33.96)
+    s.commit()
+
+    exp = ct._live_exposure(s, ["Lx"])
+    assert exp["open_orders"] == 0, "the entry order is filled, not resting"
+    assert exp["open_positions"] == 1
+    assert exp["position_usd"] == 33.96
+    assert exp["total_usd"] == 33.96, "at-risk must not read $0.00 here"
+
+
+def test_resting_and_held_exposure_are_added_not_substituted(xos_session):
+    s = xos_session
+    _live_order(s, "Lx", "MKT-R", status="resting", qty=2, price=50)   # $1.00
+    _live_order(s, "Lx", "MKT-F", status="filled")
+    _position(s, "MKT-F", qty=3, exposure=9.08)
+    s.commit()
+
+    exp = ct._live_exposure(s, ["Lx"])
+    assert exp["notional_usd"] == 1.0
+    assert exp["position_usd"] == 9.08
+    assert exp["total_usd"] == 10.08
+
+
+def test_a_closed_position_is_not_exposure(xos_session):
+    s = xos_session
+    _live_order(s, "Lx", "MKT-C", status="filled")
+    _position(s, "MKT-C", qty=0, exposure=0.0)
+    s.commit()
+    assert ct._live_exposure(s, ["Lx"])["total_usd"] == 0.0
+
+
+def test_only_the_newest_position_snapshot_counts(xos_session):
+    """`positions` is append-only: an old open row may predate a later exit."""
+    s = xos_session
+    _live_order(s, "Lx", "MKT-N", status="filled")
+    _position(s, "MKT-N", qty=5, exposure=25.0, at=T0 + timedelta(days=1))
+    _position(s, "MKT-N", qty=0, exposure=0.0, at=T0 + timedelta(days=2))
+    s.commit()
+    assert ct._live_exposure(s, ["Lx"])["open_positions"] == 0
+
+
+def test_sub_penny_dust_is_not_reported_as_an_open_position(xos_session):
+    s = xos_session
+    _live_order(s, "Lx", "MKT-D", status="filled")
+    _position(s, "MKT-D", qty=0.001, exposure=0.001)
+    s.commit()
+    assert ct._live_exposure(s, ["Lx"])["open_positions"] == 0
