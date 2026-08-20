@@ -329,7 +329,7 @@ def test_every_value_records_the_implementation_that_produced_it(xos_session):
     ).provenance["provider_revision"] == "live_exec_v1"
     # And a metric with no implementation is NOT recorded as some version of one.
     assert compute_metric(
-        s, "realized_tail_hit_ratio_vs_modeled", _scope()
+        s, "candidate_rejection_rate_pct", _scope()
     ).provenance["provider_revision"] == UNPROVIDED_REVISION
 
 

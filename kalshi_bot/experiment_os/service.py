@@ -1319,10 +1319,13 @@ def validate_gate_spec(spec: dict) -> None:
 
     Shape: {"sample": {arm_key: clause}, "pass_all": [clause...], "fail_any": [...],
     "hold_if": [...]} where a clause is {"metric", "op", "value", + optional arm /
-    treatment / control keys}. At least one decision list is required."""
+    treatment / control / bound / min_evidence keys}. At least one decision list is
+    required. `max_evidence_horizon` optionally bounds how far evidence may accrue
+    before the gate stops rendering verdicts and demands an operator decision."""
     if not isinstance(spec, dict):
         raise GateSpecError("gate spec must be a mapping")
-    unknown = set(spec) - {"sample", *_CLAUSE_LIST_KEYS, "description"}
+    unknown = set(spec) - {"sample", "max_evidence_horizon", *_CLAUSE_LIST_KEYS,
+                           "description"}
     if unknown:
         raise GateSpecError(f"unknown gate spec keys: {sorted(unknown)}")
     if not any(spec.get(k) for k in _CLAUSE_LIST_KEYS):

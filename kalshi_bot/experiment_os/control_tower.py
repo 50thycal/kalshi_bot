@@ -609,6 +609,21 @@ def _derive_actions(rep: TowerReport) -> None:
                             "authorized yet; hand to Research Lab (paper) or the "
                             "operator (live promotion)"
                         )
+                elif verdict == "HORIZON_EXHAUSTED":
+                    # NOT a HOLD. A HOLD means "wait for more evidence"; past the
+                    # horizon more evidence will never come, and reading this as
+                    # "keep waiting" is how a decision gets deferred forever.
+                    rec = g.get("latest_result") or {}
+                    rep.ready_due.append(
+                        f"HORIZON EXHAUSTED "
+                        f"({'recorded' if recorded_v == 'HORIZON_EXHAUSTED' else 'dry-run'})"
+                        f" {v['key']} · {g['gate_key']} — the contract's "
+                        "pre-registered evidence horizon is spent. This is NOT a "
+                        "hold: no further authorization look accrues, and nothing "
+                        "will change by waiting. An OPERATOR DECISION is required "
+                        "— promote, kill, or register a successor Version. "
+                        + (rec.get("explanation") or "")[:400]
+                    )
                 elif verdict == "FAIL" and g.get("kind") == "promotion":
                     rep.ready_due.append(
                         f"GATE FAIL ({'recorded' if recorded_v == 'FAIL' else 'dry-run'})"

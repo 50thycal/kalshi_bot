@@ -220,6 +220,61 @@ closed by sells, and both write fill rows, so counting both would double the
 denominator. Only the **newest** `positions` snapshot decides, because the table is
 append-only and an older `quantity=0` row may simply predate a re-entry.
 
+### Twin-resolved providers (`twin_coverage_v1`, `tail_v1`, `twin_gap_v1`)
+
+All are addressed at the **live** scope and resolved against that deployment's
+registered twin — the structural `twin_of_deployment_id` edge, never a `_pt`
+naming convention.
+
+**The twin is the measurement instrument.** `live_orders` carries no
+`model_probability`, and a live position exited early under TP/SL carries a P&L
+sign that is *not* a settlement outcome. So both the modeled probability and the
+tail-hit outcome come from the twin, which holds to settlement on the same
+market. Settlement is a property of the market, not of who held it.
+
+| metric | what it measures |
+|---|---|
+| `live_settled_markets` | the **independent unit** — contracts on one market share one settlement, so a floor in contracts overstates precision by 1.4–3.0× on these books |
+| `twin_mirror_coverage_pct` | share of live markets **entered** that the twin also entered. The denominator is entries, not settlements, because the mirror fires at entry — which is where a 25%-coverage twin hid in production |
+| `twin_model_coverage_pct` | share of **settled** live markets whose modeled probability resolves from the twin — the evidence set itself as denominator |
+| `realized_tail_hit_ratio_vs_modeled` | `R = O / Σpᵢ` over settled markets. Exposes `observed`/`expected` for the `poisson_exact` bound. **MISSING below 90% model coverage** |
+
+**The tail outcome is the market's settlement, and three substitutions are
+refused** — each would change the numerator without changing the denominator:
+
+1. **not the live P&L sign** — a position exited early under TP/SL loses money
+   without the tail hitting at all;
+2. **not the twin trade's P&L classification** — `resolved_value` is the
+   settlement value *for that trade's side*, not a property of the market, so it
+   is translated into the market's own outcome (did YES resolve) before use;
+3. **not a twin on the other side of the same market** — a twin holding the
+   opposite side is not a mirror, and such a market is excluded and counted
+   (`excluded_side_mismatch`) rather than read as though the sides agreed.
+
+A tail "hits" when the side the **live** book sold loses: the YES outcome for a
+NO-side book, the NO outcome for a YES-side book. A market the live book entered
+on both sides is `excluded_side_ambiguous`, never guessed.
+| `twin_live_gap_cents` | twin rate − live rate over **each leg's own** settled set — the adverse-selection read |
+| `twin_live_paired_gap_cents` | per-market **paired** difference — an execution *fidelity* check |
+
+**The two gaps are not interchangeable, and this is the trap.** Pairing collapses
+the variance ~15×, which makes the paired gap look like the answer to every power
+problem. It isn't: it conditions on live having **filled**, and a maker's adverse
+selection operates through *which orders fill*. Measured on theta4, the paired gap
+read **−0.22¢** against an unpaired **+5.83¢** — six cents apart and opposite in
+sign. Use the unpaired gap for the hypothesis and the paired one to check the twin
+is really a twin.
+
+Both gaps are **lower-is-better**: a gap *is* adverse selection, so a positive
+`delta.twin_live_gap_cents` means the treatment is **worse** — the opposite
+reading from `delta.live_cents_per_contract`.
+
+Missing model data is never imputed. Imputing the book's mean pulls `R` toward 1,
+which is toward **passing**; below the coverage threshold the metric is MISSING
+instead, because the surviving markets were selected by a data defect and the
+bias then has an unknown *direction* — worse than a wide interval, which at least
+advertises its own width.
+
 `twin_live_winrate_gap_pp` resolves the twin through `twin_of_deployment_id` and
 the matching `arm_key` — the structural edge, never a `*_pt3` naming convention —
 and is **MISSING** when no twin is registered. Its `n` binds on the **smaller**
@@ -263,6 +318,51 @@ its per-look confidence is not its lifetime rate. Measured on the two live-canar
 promotion gates, a 95% bound evaluated continuously over a 3× horizon carries
 ~18% lifetime false promotion against ~5% for a 99% bound. Clause provenance
 records the look count so a reader does not mistake one for the other.
+
+## The evidence horizon
+
+A bound clause fixes the error rate **per look**. A gate evaluated on every
+cadence takes many looks, and the lifetime rate is not the per-look rate —
+measured on the two live-canary promotion gates, a 99% bound holds ~5% lifetime
+false promotion over a 3× horizon and creeps upward past it.
+
+`max_evidence_horizon` is the half of that calibration that lives in the
+contract:
+
+```json
+"sample": {"theta4": {"metric": "live_settled_markets", "op": ">=", "value": 600}},
+"max_evidence_horizon": {"metric": "live_settled_markets", "value": 1800}
+```
+
+**The horizon is the last permitted look, not a cutoff before it:**
+
+| evidence n | behavior |
+|---|---|
+| `n < horizon` | evaluate normally |
+| `n == horizon` | evaluate normally — this **is** the final permitted look, so a PASS stands and a **FAIL stands**. Only an inconclusive result becomes `HORIZON_EXHAUSTED`. |
+| `n > horizon` | no further statistical look accrues → `HORIZON_EXHAUSTED` |
+
+The `==` case matters most for an eligible safety clause: a failure that only
+becomes demonstrable on the final pre-registered observation is a real failure,
+and hiding it would discard the very observation the contract paid for. Past the
+horizon there is no safety peeking either — operational alerting may continue
+elsewhere, but the frozen statistical gate stops taking looks.
+
+At the horizon the verdict is **`HORIZON_EXHAUSTED`**, and:
+
+- **no further authorization look accrues** — never auto-PASS, never auto-FAIL;
+- it is deliberately **not HOLD**. A HOLD says "wait for more evidence"; past the
+  horizon more evidence will never come, and reading it as a hold is how a
+  decision gets deferred forever;
+- every clause's standing **is named in the explanation**, so the operator decides
+  on the evidence rather than on silence;
+- it can never authorize a transition — every authorization path tests `== PASS`.
+
+Freeze-time validation refuses a horizon that is **below its own promotion floor**
+(the gate could never render a verdict) or **denominated in a different unit from
+the floor it bounds** (a horizon in contracts bounding a floor in markets cannot
+be reasoned about). A gate with **no** horizon is unaffected — every contract
+frozen before this existed behaves exactly as before.
 
 ## Promotion floors versus failure floors
 

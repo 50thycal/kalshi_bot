@@ -342,3 +342,183 @@ def test_the_failure_explanation_is_readable_without_recomputing_anything(
     clause = next(c for c in out.clauses if c.list_name == "fail_any")
     me = clause.provenance["min_evidence"]
     assert me["met"] is True and me["observed"] == 12 and me["value"] == 10
+
+
+# ---------------------------------------------------------------------------
+# The evidence horizon
+#
+# A continuously-evaluated bound is a sequential test: its per-look confidence is
+# not its lifetime rate. Measured on the two live-canary promotion gates, a 99%
+# bound holds ~5% lifetime false promotion over a 3x horizon and creeps up past
+# it. The horizon is the half of that calibration that lives in the contract —
+# without it the "~5%" claim is aspirational rather than exact.
+# ---------------------------------------------------------------------------
+
+
+HORIZON_SPEC = {
+    "sample": {"treatment": {"metric": "settled_trades", "op": ">=", "value": 5}},
+    "max_evidence_horizon": {"metric": "settled_trades", "value": 20},
+    "pass_all": [{"metric": "pnl_cents_per_trade", "arm": "treatment",
+                  "op": ">", "value": 0}],
+    "fail_any": [{"metric": "pnl_cents_per_trade", "arm": "treatment",
+                  "op": "<", "value": -100}],
+}
+
+
+def test_a_gate_decides_normally_before_its_horizon(xos_session, xos_platform):
+    s = xos_session
+    exp, ver, epoch = _experiment(s, key="pre-horizon")
+    gate = _gate(s, ver, HORIZON_SPEC)
+    for _ in range(10):
+        _trade(s, "t_tag", pnl=0.20)
+    s.commit()
+    assert evaluator.evaluate_gate(s, gate, persist=False).verdict == "PASS"
+
+
+# The horizon is the LAST PERMITTED LOOK, not a cutoff before it:
+#
+#   n <  horizon : evaluate normally
+#   n == horizon : evaluate normally — PASS stands, FAIL stands, otherwise EXHAUSTED
+#   n >  horizon : no further statistical look accrues
+#
+# The `==` case matters most for a safety clause. A failure that only becomes
+# demonstrable on the final pre-registered observation is a real failure, and
+# hiding it behind HORIZON_EXHAUSTED would discard the observation the contract
+# paid for.
+
+
+def test_PASS_stands_exactly_at_the_horizon(xos_session, xos_platform):
+    s = xos_session
+    exp, ver, epoch = _experiment(s, key="pass-at-horizon")
+    gate = _gate(s, ver, HORIZON_SPEC)
+    for _ in range(20):                    # exactly the horizon
+        _trade(s, "t_tag", pnl=0.20)
+    s.commit()
+
+    out = evaluator.evaluate_gate(s, gate, persist=False)
+    assert out.verdict == "PASS", "the final permitted look still decides"
+
+
+def test_FAIL_stands_exactly_at_the_horizon(xos_session, xos_platform):
+    """The case the inclusive rule exists for: a genuine failure that becomes
+    demonstrable on the last pre-registered observation."""
+    s = xos_session
+    exp, ver, epoch = _experiment(s, key="fail-at-horizon")
+    gate = _gate(s, ver, HORIZON_SPEC)
+    for _ in range(20):
+        _trade(s, "t_tag", pnl=-9.99)      # trips the fail_any clause
+    s.commit()
+
+    out = evaluator.evaluate_gate(s, gate, persist=False)
+    assert out.verdict == "FAIL", "a failure on the final look is a real failure"
+
+
+def test_an_inconclusive_final_look_becomes_horizon_exhausted(xos_session,
+                                                              xos_platform):
+    s = xos_session
+    exp, ver, epoch = _experiment(s, key="flat-at-horizon")
+    gate = _gate(s, ver, HORIZON_SPEC)
+    for _ in range(20):
+        _trade(s, "t_tag", pnl=0.0)        # neither passes nor fails
+    s.commit()
+
+    out = evaluator.evaluate_gate(s, gate, persist=False)
+    assert out.verdict == "HORIZON_EXHAUSTED"
+    assert "final permitted look was taken and did not decide" in out.explanation
+
+
+def test_evidence_beyond_the_horizon_cannot_create_a_new_PASS(xos_session,
+                                                              xos_platform):
+    s = xos_session
+    exp, ver, epoch = _experiment(s, key="past-horizon-pass")
+    gate = _gate(s, ver, HORIZON_SPEC)
+    for _ in range(25):                    # past the horizon
+        _trade(s, "t_tag", pnl=0.20)
+    s.commit()
+
+    out = evaluator.evaluate_gate(s, gate, persist=False)
+    assert out.verdict == "HORIZON_EXHAUSTED"
+    assert out.verdict != "PASS"
+    assert "No further statistical look accrues" in out.explanation
+
+
+def test_evidence_beyond_the_horizon_cannot_create_a_new_statistical_FAIL(
+        xos_session, xos_platform):
+    """No indefinite safety peeking. Operational alerting may continue elsewhere;
+    the frozen statistical gate stops taking looks."""
+    s = xos_session
+    exp, ver, epoch = _experiment(s, key="past-horizon-fail")
+    gate = _gate(s, ver, HORIZON_SPEC)
+    for _ in range(25):
+        _trade(s, "t_tag", pnl=-9.99)
+    s.commit()
+
+    out = evaluator.evaluate_gate(s, gate, persist=False)
+    assert out.verdict == "HORIZON_EXHAUSTED"
+    assert out.verdict != "FAIL"
+
+
+def test_the_horizon_verdict_reports_where_every_clause_stood(xos_session,
+                                                              xos_platform):
+    """A decision point, not a wait — so the operator decides on the evidence
+    rather than on silence."""
+    s = xos_session
+    exp, ver, epoch = _experiment(s, key="horizon-informative")
+    gate = _gate(s, ver, HORIZON_SPEC)
+    for _ in range(25):
+        _trade(s, "t_tag", pnl=0.20)
+    s.commit()
+
+    out = evaluator.evaluate_gate(s, gate, persist=False)
+    assert "Clause standing" in out.explanation
+    assert "pass_all:pnl_cents_per_trade" in out.explanation
+    assert "met" in out.explanation
+
+
+def test_a_horizon_below_its_own_promotion_floor_is_refused(xos_session,
+                                                            xos_platform):
+    """Such a gate could never render a verdict at all."""
+    s = xos_session
+    exp, ver, epoch = _experiment(s, key="horizon-inverted")
+    with pytest.raises(Exception) as ei:
+        _gate(s, ver, {**HORIZON_SPEC,
+                       "max_evidence_horizon": {"metric": "settled_trades",
+                                                "value": 5}})
+    assert "not above the promotion floor" in str(ei.value)
+
+
+def test_a_horizon_in_a_different_unit_from_its_floor_is_refused(xos_session,
+                                                                 xos_platform):
+    """A horizon in contracts bounding a floor in markets cannot be reasoned
+    about — the two count different things."""
+    s = xos_session
+    exp, ver, epoch = _experiment(s, key="horizon-unit")
+    with pytest.raises(Exception) as ei:
+        _gate(s, ver, {**HORIZON_SPEC,
+                       "max_evidence_horizon": {"metric": "settled_contracts",
+                                                "value": 900}})
+    assert "different unit" in str(ei.value)
+
+
+def test_a_gate_with_no_horizon_is_unaffected(xos_session, xos_platform):
+    """Every contract frozen so far has no horizon and must behave as before."""
+    s = xos_session
+    exp, ver, epoch = _experiment(s, key="no-horizon")
+    gate = _gate(s, ver, {
+        "sample": {"treatment": {"metric": "settled_trades", "op": ">=", "value": 5}},
+        "pass_all": [{"metric": "pnl_cents_per_trade", "arm": "treatment",
+                      "op": ">", "value": 0}],
+    })
+    for _ in range(500):
+        _trade(s, "t_tag", pnl=0.20)
+    s.commit()
+    assert evaluator.evaluate_gate(s, gate, persist=False).verdict == "PASS"
+
+
+def test_horizon_exhausted_can_never_authorize_a_transition():
+    """Fail-safe by construction: every authorization path tests `== PASS`."""
+    from kalshi_bot.experiment_os.lifecycle import GateVerdict
+
+    assert GateVerdict.HORIZON_EXHAUSTED.value != GateVerdict.PASS.value
+    assert GateVerdict.HORIZON_EXHAUSTED.value not in {
+        GateVerdict.PASS.value, GateVerdict.FAIL.value, GateVerdict.HOLD.value}

@@ -67,6 +67,13 @@ class GateVerdict(enum.StrEnum):
     BLOCKED_DATA = "BLOCKED_DATA"
     BLOCKED_INTEGRITY = "BLOCKED_INTEGRITY"
     BLOCKED_PLATFORM = "BLOCKED_PLATFORM"
+    #: The contract's pre-registered evidence horizon is spent. Deliberately NOT
+    #: HOLD: a HOLD invites "wait for more evidence", and past the horizon more
+    #: evidence will never come — a decision is required instead. Deliberately not
+    #: PASS or FAIL either, because the point of a horizon is that no further
+    #: authorization look accrues. Every authorization path tests `== PASS`, so
+    #: this can never authorize a transition.
+    HORIZON_EXHAUSTED = "HORIZON_EXHAUSTED"
 
 
 class ArmRole(enum.StrEnum):

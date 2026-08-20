@@ -123,13 +123,13 @@ def test_unprovided_metric_is_missing_with_reference(xos_session):
     # live-execution metrics now HAVE canonical providers. The theta tail ratio
     # does not, and carries the same contract.
     mv = compute_metric(
-        xos_session, "realized_tail_hit_ratio_vs_modeled", _scope(("t_tag",))
+        xos_session, "candidate_rejection_rate_pct", _scope(("t_tag",))
     )
     assert mv.missing is True
-    # No reference implementation exists for this one, and the message says so
-    # rather than pointing at a script that computes something else.
+    # The example moves as providers land — this one counts a quantity the scan
+    # cycle never persists, so it stays unprovided by construction.
     assert "no canonical provider yet" in mv.reason
-    assert "NONE" in mv.reason
+    assert "never persisted" in mv.reason
 
 
 def test_settled_includes_stop_closed_trades(xos_session):
@@ -312,7 +312,7 @@ def test_missing_metric_blocks_data_not_zero(xos_session, xos_platform):
     s = xos_session
     exp, ver, epoch = _experiment(s, key="exp-miss")
     gate = _gate(s, ver, {
-        "pass_all": [{"metric": "realized_tail_hit_ratio_vs_modeled",
+        "pass_all": [{"metric": "candidate_rejection_rate_pct",
                       "arm": "treatment", "op": ">", "value": 0}],
     })
     for _ in range(200):
@@ -321,7 +321,7 @@ def test_missing_metric_blocks_data_not_zero(xos_session, xos_platform):
     out = evaluator.evaluate_gate(s, gate, persist=False)
     assert out.verdict == "BLOCKED_DATA"
     assert "missing is not zero" in out.explanation
-    assert "realized_tail_hit_ratio_vs_modeled" in out.blocking_reasons[0]
+    assert "candidate_rejection_rate_pct" in out.blocking_reasons[0]
 
 
 def test_hold_if_clause_holds(xos_session, xos_platform):
