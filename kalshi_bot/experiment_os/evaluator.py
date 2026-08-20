@@ -41,10 +41,25 @@ one is a new gate on a new version.
      is unestablished, spec §17.4; no convenient timestamp is ever substituted)
   3. unresolved integrity events         → BLOCKED_INTEGRITY
   4. any required metric missing         → BLOCKED_DATA (missing ≠ zero)
+  4b. an ELIGIBLE early-safety clause true → FAIL (a fail_any clause carrying its
+     own `min_evidence`, checked BEFORE the promotion floor — see below)
   5. sample floors unmet                 → HOLD (underpowered is HOLD, not FAIL)
-  6. any fail_any clause true            → FAIL
+  6. any eligible fail_any clause true   → FAIL
   7. all pass_all clauses true           → PASS
   8. otherwise                           → HOLD
+
+`sample` is the PROMOTION evidence floor: how much evidence before a PASS may
+authorize advancement. It is not the same question as how much evidence before
+bad evidence may terminate, and using one number for both silently makes safety
+clauses unreachable — a catastrophic failure at a fifth of the promotion floor
+would sit at HOLD while real money kept trading. A `fail_any` clause may
+therefore carry its own `min_evidence`, which makes it eligible on that floor
+alone. A clause without `min_evidence` inherits the promotion floor, so no gate
+frozen before this existed behaves differently.
+
+A clause may also carry a `bound` — see `bounds.py`. The comparison is then
+against the one-sided confidence bound, never the point estimate, and an
+uncomputable bound is MISSING rather than a silent fallback to the estimate.
 
 Evidence windows are hard-bounded: [max(epoch start, gate evidence start),
 min(requested end, epoch end)]. Pre-epoch rows can never count after an I2
@@ -60,6 +75,7 @@ from sqlalchemy import select
 
 from . import read
 from . import service as svc
+from .bounds import compute_bound, validate_bound_spec
 from .lifecycle import GateVerdict
 from .metrics import (
     METRICS_ENGINE_REVISION,
@@ -119,6 +135,13 @@ class ClauseOutcome:
     missing: bool = False
     reason: str | None = None
     provenance: dict = field(default_factory=dict)
+    #: The one-sided bound actually compared, when the clause carries `bound`.
+    #: `value` stays the point estimate so both are visible in the record.
+    bound_value: float | None = None
+    #: fail_any only. False when the clause carries `min_evidence` that is not yet
+    #: met, which makes it inert rather than false — an important difference: an
+    #: ineligible clause has not been tested, it has not passed.
+    eligible: bool = True
 
     def as_json(self) -> dict:
         return {
@@ -131,6 +154,8 @@ class ClauseOutcome:
             "missing": self.missing,
             "reason": self.reason,
             "provenance": self.provenance,
+            "bound_value": self.bound_value,
+            "eligible": self.eligible,
         }
 
 
@@ -393,6 +418,29 @@ def validate_gate_scopes(session, version: ExperimentVersion, spec: dict) -> lis
             if resolve_definition(metric) is None:
                 problems.append(f"{where}: metric is not in the canonical registry")
                 continue
+            if clause.get("bound") is not None:
+                problems += [f"{where}: {m}"
+                             for m in validate_bound_spec(clause["bound"])]
+            me = clause.get("min_evidence")
+            if me is not None:
+                if list_name != "fail_any":
+                    problems.append(
+                        f"{where}: min_evidence is only meaningful on a fail_any "
+                        "clause — a promotion clause's floor is the gate's `sample`"
+                    )
+                elif not isinstance(me, dict) or not {"metric", "op", "value"} <= me.keys():
+                    problems.append(
+                        f"{where}: min_evidence needs metric, op and value"
+                    )
+                elif resolve_definition(me.get("metric") or "") is None:
+                    problems.append(
+                        f"{where}: min_evidence metric {me.get('metric')!r} is not "
+                        "in the canonical registry"
+                    )
+                elif me.get("op") not in _OPS:
+                    problems.append(
+                        f"{where}: min_evidence op {me.get('op')!r} is not supported"
+                    )
             needs_pair = is_delta_metric(metric) or metric in PAIRED_METRICS
             external = clause.get("external_control")
             treatment = clause.get("treatment") or clause.get("arm")
@@ -520,6 +568,55 @@ def _unresolved_integrity(session, experiment, version, epoch) -> list[str]:
     return reasons
 
 
+def _min_evidence_state(session, clause: dict, scope: MetricScope) -> dict | None:
+    """Whether a fail_any clause's own evidence floor is met, or None if it has one.
+
+    A `fail_any` clause carrying `min_evidence` becomes eligible on its OWN floor,
+    independently of the gate's promotion floor. That separation exists because a
+    promotion floor answers "how much evidence before a PASS may authorize
+    advancement", while a safety clause answers "how much evidence before bad
+    evidence may terminate" — and a shared number silently makes the second
+    unreachable. A clause without `min_evidence` inherits the promotion floor,
+    which is the pre-existing behavior for every gate frozen so far."""
+    spec = clause.get("min_evidence")
+    if not spec:
+        return None
+    mv = compute_metric(session, spec["metric"], scope)
+    met = (not mv.missing and mv.value is not None
+           and bool(_OPS[spec["op"]](mv.value, spec["value"])))
+    return {"metric": spec["metric"], "op": spec["op"], "value": spec["value"],
+            "observed": mv.value, "met": met}
+
+
+def _clause_sentence(c: ClauseOutcome) -> str:
+    """One clause, stated so a reader never has to recompute anything.
+
+    A bare `metric=1.34 > 1.0` says nothing about how much evidence stood behind
+    it or which bound was taken. When a clause carries a bound, the sentence names
+    the bound, the confidence, the point estimate, the evidence and the clause's
+    own floor."""
+    b = (c.provenance or {}).get("bound") or {}
+    if b.get("computed_bound") is not None:
+        conf = b.get("confidence")
+        pct = f"{float(conf) * 100:g}%" if conf is not None else "?"
+        side = "lower" if b.get("bound_direction") == "lower" else "upper"
+        sent = (
+            f"the {pct} {side} bound on {c.clause['metric']} "
+            f"({_fmt(b['computed_bound'])}) {c.clause['op']} {c.clause['value']} "
+            f"on {c.scope} — point estimate {_fmt(c.value)}, n={c.n}"
+        )
+        ui = b.get("uncertainty_inputs") or {}
+        if "observed" in ui:
+            sent += f" (observed {ui['observed']} against {_fmt(ui['expected'])} expected)"
+        me = (c.provenance or {}).get("min_evidence")
+        if me:
+            sent += (f", eligible since {me['metric']} {me['op']} {me['value']} "
+                     f"(now {_fmt(me['observed'])})")
+        return sent
+    return (f"{c.scope} {c.clause['metric']}={_fmt(c.value)} {c.clause['op']} "
+            f"{c.clause['value']}")
+
+
 def _evaluate_clause_plan(
     session, list_name: str, clause: dict,
     treatment: MetricScope, control: MetricScope | None,
@@ -531,15 +628,42 @@ def _evaluate_clause_plan(
     else:
         mv = compute_metric(session, metric, treatment)
         scope_label = treatment.label()
+
+    prov = dict(mv.provenance or {})
+    compared, bound_value = mv.value, None
+    missing, reason = mv.missing, mv.reason
+
+    bound_spec = clause.get("bound")
+    if bound_spec is not None and not missing:
+        br = compute_bound(estimate=mv.value, stderr=mv.stderr,
+                           provenance=prov, spec=bound_spec)
+        prov = prov | {"bound": br.provenance | {"computed_bound": br.value}}
+        if br.missing:
+            # A contract asked for a bound. Comparing the point estimate instead
+            # would restore exactly the error rate the bound exists to remove, so
+            # an uncomputable bound is MISSING.
+            missing, reason = True, br.reason
+        else:
+            compared, bound_value = br.value, br.value
+
     passed: bool | None
-    if mv.missing or mv.value is None:
+    if missing or compared is None:
         passed = None
     else:
-        passed = bool(_OPS[clause["op"]](mv.value, clause["value"]))
+        passed = bool(_OPS[clause["op"]](compared, clause["value"]))
+
+    eligible = True
+    if list_name == "fail_any":
+        me = _min_evidence_state(session, clause, treatment)
+        if me is not None:
+            eligible = me["met"]
+            prov = prov | {"min_evidence": me}
+
     return ClauseOutcome(
         list_name=list_name, clause=clause, scope=scope_label,
         value=mv.value, n=mv.n, passed=passed,
-        missing=mv.missing, reason=mv.reason, provenance=mv.provenance,
+        missing=missing, reason=reason, provenance=prov,
+        bound_value=bound_value, eligible=eligible,
     )
 
 
@@ -678,6 +802,24 @@ def evaluate_gate(
         return _finish(session, gate, experiment, version, epoch, outcome,
                        persist, computed_by)
 
+    # 4b) EARLY safety failure — a fail_any clause carrying its own `min_evidence`
+    # is eligible on that floor alone, and is checked BEFORE the promotion floor.
+    # Without this, one shared floor silently makes a safety clause unreachable:
+    # a catastrophic failure at a fifth of the promotion floor would sit at HOLD
+    # while real money kept trading. A clause with no `min_evidence` is not
+    # included here and still waits for the promotion floor, so no gate frozen
+    # before this change behaves differently.
+    early = [c for c in outcome.clauses
+             if c.list_name == "fail_any" and c.clause.get("min_evidence")
+             and c.eligible and c.passed is True]
+    if early:
+        outcome.verdict = GateVerdict.FAIL.value
+        outcome.explanation = "early safety failure: " + "; ".join(
+            _clause_sentence(c) for c in early
+        )
+        return _finish(session, gate, experiment, version, epoch, outcome,
+                       persist, computed_by)
+
     # 5) sample floors — underpowered is HOLD, never FAIL.
     floors = [c for c in outcome.clauses if c.list_name == "sample"]
     unmet = [c for c in floors if c.passed is not True]
@@ -692,13 +834,12 @@ def evaluate_gate(
                        persist, computed_by)
 
     # 6) kill clauses.
-    fails = [c for c in outcome.clauses if c.list_name == "fail_any" and c.passed is True]
+    fails = [c for c in outcome.clauses
+             if c.list_name == "fail_any" and c.passed is True and c.eligible]
     if fails:
         outcome.verdict = GateVerdict.FAIL.value
         outcome.explanation = "fail condition met: " + "; ".join(
-            f"{c.scope} {c.clause['metric']}={_fmt(c.value)} {c.clause['op']} "
-            f"{c.clause['value']}"
-            for c in fails
+            _clause_sentence(c) for c in fails
         )
         return _finish(session, gate, experiment, version, epoch, outcome,
                        persist, computed_by)
