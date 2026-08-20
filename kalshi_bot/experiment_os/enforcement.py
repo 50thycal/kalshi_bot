@@ -799,9 +799,14 @@ def production_readiness(session, settings=None) -> dict:
         else "all linked",
     )
 
+    # Split by whether the event actually stops anything. A recorded-state kind
+    # (an intentional stand-down) is open on purpose and blocks no evaluation;
+    # counting it beside real integrity failures is what made a deliberate pause
+    # read as an unexplained one.
     open_integrity = session.scalar(
         select(func.count()).select_from(ExperimentIntegrityEvent).where(
-            ExperimentIntegrityEvent.resolved_at.is_(None)
+            ExperimentIntegrityEvent.resolved_at.is_(None),
+            ExperimentIntegrityEvent.kind.not_in(NON_BLOCKING_INTEGRITY_KINDS),
         )
     ) or 0
     check("no_unresolved_integrity", open_integrity == 0,
@@ -931,9 +936,18 @@ def enforcement_report(session) -> dict:
             ExperimentIntegrityEvent.resolved_at.is_(None),
         )
     ) or 0
+    # Blocking events only. A recorded-state kind is open on purpose; counting it
+    # here is what let a deliberate stand-down read as an unexplained failure.
     open_integrity = session.scalar(
         select(func.count()).select_from(ExperimentIntegrityEvent).where(
-            ExperimentIntegrityEvent.resolved_at.is_(None)
+            ExperimentIntegrityEvent.resolved_at.is_(None),
+            ExperimentIntegrityEvent.kind.not_in(NON_BLOCKING_INTEGRITY_KINDS),
+        )
+    ) or 0
+    open_recorded_state = session.scalar(
+        select(func.count()).select_from(ExperimentIntegrityEvent).where(
+            ExperimentIntegrityEvent.resolved_at.is_(None),
+            ExperimentIntegrityEvent.kind.in_(NON_BLOCKING_INTEGRITY_KINDS),
         )
     ) or 0
 
@@ -960,6 +974,7 @@ def enforcement_report(session) -> dict:
         },
         "live_canaries": live_canaries,
         "unresolved_integrity_events": open_integrity,
+        "recorded_state_events": open_recorded_state,
         "unresolved_config_drift": open_drift,
         "session_counters": {
             "blocked": state.blocked_count if state else 0,

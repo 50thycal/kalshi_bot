@@ -907,3 +907,31 @@ def test_a_real_drift_is_still_reported_when_books_are_configured(xos_session, b
     findings = enf.runtime_config_check(s, wrong)
     s.commit()
     assert findings, "a configured-but-mismatched book is still drift"
+
+
+def test_the_report_counts_a_stand_down_separately_from_real_failures(
+        xos_session, base_env):
+    """`unresolved_integrity_events` drives the Control Tower's "!!" banner and
+    the `no_unresolved_integrity` readiness check. A deliberate pause must not
+    inflate either — it is open on purpose and stops nothing."""
+    s = xos_session
+    _seed_live_books(s)
+    enf.runtime_config_check(s, _stood_down_settings())
+    s.commit()
+
+    rep = enf.enforcement_report(s)
+    assert rep["unresolved_integrity_events"] == 0
+    assert rep["recorded_state_events"] == 2, "one per stood-down live deployment"
+
+
+def test_readiness_is_not_failed_by_an_intentional_stand_down(xos_session,
+                                                              base_env):
+    s = xos_session
+    _seed_live_books(s)
+    enf.runtime_config_check(s, _stood_down_settings())
+    s.commit()
+
+    checks = enf.production_readiness(s, _stood_down_settings())["checks"]
+    assert checks["no_unresolved_integrity"]["ok"], (
+        "a pause the operator chose is not a reason the system is unready"
+    )

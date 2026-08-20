@@ -817,3 +817,59 @@ def test_horizon_exhausted_is_not_reported_as_something_to_wait_out(
     assert "HORIZON EXHAUSTED" in joined
     assert "NOT a hold" in joined
     assert "OPERATOR DECISION is required" in joined
+
+
+# ---------------------------------------------------------------------------
+# A recorded state is not an unexplained failure
+#
+# The classification only did half the job if the surfaces still ask a reader to
+# diagnose the pause. These pin the other half: the count that drives the "!!"
+# banner excludes it, and no recommendation asks anyone to route it by cause.
+# ---------------------------------------------------------------------------
+
+
+def test_a_stand_down_produces_no_route_by_cause_recommendation(xos_session,
+                                                                xos_platform):
+    s = xos_session
+    exp, _, _, _, _ = _experiment(s, "exp-stood-down", spec=COMPUTABLE_SPEC)
+    svc.record_integrity_event(
+        s, exp, kind="EXPERIMENT_EXECUTION_STOOD_DOWN",
+        description="the runtime live allowlist is empty",
+    )
+    s.commit()
+    rep = ct.build_report(s, evaluate=False)
+    assert not [r for r in rep.recommendations if "exp-stood-down" in r], (
+        "a stand-down's cause is already recorded — asking to route it by cause "
+        "is exactly the masquerade the classification exists to stop"
+    )
+
+
+def test_a_stand_down_is_still_visible_as_recorded_state(xos_session,
+                                                         xos_platform):
+    """Not routed is not the same as hidden. It must still show, labelled."""
+    s = xos_session
+    exp, _, _, _, _ = _experiment(s, "exp-stood-down-2", spec=COMPUTABLE_SPEC)
+    svc.record_integrity_event(
+        s, exp, kind="EXPERIMENT_EXECUTION_STOOD_DOWN",
+        description="the runtime live allowlist is empty",
+    )
+    s.commit()
+    rep = ct.build_report(s, evaluate=False)
+    assert any("exp-stood-down-2" in n for n in rep.recorded_state)
+    out = ct.render(rep)
+    assert "RECORDED STATE (not an anomaly" in out
+    assert "exp-stood-down-2" in out
+
+
+def test_a_real_integrity_event_is_still_routed(xos_session, xos_platform):
+    """The filter is by kind, not a blanket amnesty for open events."""
+    s = xos_session
+    exp, _, _, _, _ = _experiment(s, "exp-real-drift", spec=COMPUTABLE_SPEC)
+    svc.record_integrity_event(
+        s, exp, kind="EXPERIMENT_CONFIG_DRIFT",
+        description="deployed config differs from the registered arm",
+    )
+    s.commit()
+    rep = ct.build_report(s, evaluate=False)
+    assert [r for r in rep.recommendations if "exp-real-drift" in r]
+    assert not [n for n in rep.recorded_state if "exp-real-drift" in n]

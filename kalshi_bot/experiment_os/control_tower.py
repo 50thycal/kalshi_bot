@@ -99,6 +99,10 @@ class TowerReport:
     enforcement: dict = field(default_factory=dict)
     platform: dict = field(default_factory=dict)
     anomalies: list[str] = field(default_factory=list)
+    # Open integrity events that record a state rather than report a failure —
+    # an intentional stand-down is the case that exists. Kept OUT of `anomalies`
+    # on purpose: it is explained by construction, so it needs no diagnosis.
+    recorded_state: list[str] = field(default_factory=list)
     by_state: dict[str, list[dict]] = field(default_factory=dict)
     data_health: list[dict] = field(default_factory=list)
     portfolio: dict = field(default_factory=dict)
@@ -566,6 +570,7 @@ def build_report(session, *, evaluate: bool = True,
 def _derive_actions(rep: TowerReport) -> None:
     """READY/DUE + recommendations. Every recommendation names the role that owns
     the write — the Control Tower is read-only and hands off explicitly."""
+    from . import enforcement as enf
     for state, views in rep.by_state.items():
         for v in views:
             for g in v["gates"]:
@@ -685,12 +690,21 @@ def _derive_actions(rep: TowerReport) -> None:
                 if ctx is not None:
                     rep.realizable_context.append(ctx)
             for ev in v["integrity_events"]:
+                kind = ev.get("kind") or ""
+                if kind in enf.NON_BLOCKING_INTEGRITY_KINDS:
+                    # Its cause is already recorded, so "route by cause" is not a
+                    # question anyone needs to answer. Asking it is exactly how a
+                    # deliberate pause starts reading as an unexplained failure.
+                    rep.recorded_state.append(
+                        f"{v['key']}: {kind} — {ev.get('description') or 'recorded state'}"
+                    )
+                    continue
                 owner = INTEGRITY_OWNER.get(
-                    ev.get("kind") or "", BLOCK_OWNER["BLOCKED_INTEGRITY"]
+                    kind, BLOCK_OWNER["BLOCKED_INTEGRITY"]
                 )
                 rep.recommendations.append(
                     f"{v['key']}: unresolved integrity event "
-                    f"[{ev.get('kind') or 'unknown'}] — {owner}"
+                    f"[{kind or 'unknown'}] — {owner}"
                 )
             if state == LifecycleState.LIVE_CANARY.value:
                 for d in v["deployments"]:
@@ -795,6 +809,12 @@ def render(rep: TowerReport, *, session=None) -> str:
     else:
         lines.append("    all clear — no enforcement, lineage, integrity or "
                      "platform anomalies")
+    if rep.recorded_state:
+        lines.append(
+            "    RECORDED STATE (not an anomaly — explained by construction, blocks "
+            "no evaluation):"
+        )
+        lines += [f"        {n}" for n in rep.recorded_state]
     deps = enf.get("deployments") or {}
     lines.append(
         f"    active deployments: {deps.get('total', 0)} "
