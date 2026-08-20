@@ -483,6 +483,70 @@ def _material_runtime_config(settings, material: dict) -> dict:
     return out
 
 
+#: Integrity kinds that record a STATE rather than a contamination. They stay open
+#: for as long as the state holds and deliberately do not block gate evaluation —
+#: see `_record_stand_down` for why the distinction is load-bearing.
+NON_BLOCKING_INTEGRITY_KINDS: frozenset[str] = frozenset({
+    "EXPERIMENT_EXECUTION_STOOD_DOWN",
+})
+
+
+def _record_stand_down(session, dep) -> None:
+    """Mark one live deployment as intentionally stood down, and clear its drift.
+
+    The canonical classification for "the operator emptied the live allowlist".
+    Without it a deliberate pause masquerades as an unexplained integrity failure:
+    the drift detector fires per book, the gates go BLOCKED_INTEGRITY, and the
+    event text asks the reader to classify the cause as a deployment revision, a
+    new epoch, a new version or platform impact — none of which is "someone turned
+    it off on purpose"."""
+    epoch = session.get(ExperimentEpoch, dep.epoch_id)
+    version = session.get(ExperimentVersion, epoch.version_id)
+    for drift in session.scalars(
+        select(ExperimentIntegrityEvent).where(
+            ExperimentIntegrityEvent.deployment_id == dep.id,
+            ExperimentIntegrityEvent.kind == "EXPERIMENT_CONFIG_DRIFT",
+            ExperimentIntegrityEvent.resolved_at.is_(None),
+        )
+    ):
+        drift.resolved_at = _now()
+        drift.resolution = (
+            "reclassified as an intentional operator stand-down: the runtime live "
+            "allowlist is empty, so no book is configured to trade. This is a "
+            "recorded state, not a contamination — the evidence gathered before "
+            "the stand-down is unaffected."
+        )
+    already = session.scalar(
+        select(func.count()).select_from(ExperimentIntegrityEvent).where(
+            ExperimentIntegrityEvent.deployment_id == dep.id,
+            ExperimentIntegrityEvent.kind == "EXPERIMENT_EXECUTION_STOOD_DOWN",
+            ExperimentIntegrityEvent.resolved_at.is_(None),
+        )
+    )
+    if not already:
+        session.add(
+            ExperimentIntegrityEvent(
+                experiment_id=version.experiment_id,
+                version_id=version.id,
+                epoch_id=epoch.id,
+                deployment_id=dep.id,
+                kind="EXPERIMENT_EXECUTION_STOOD_DOWN",
+                severity="info",
+                detected_at=_now(),
+                description=(
+                    f"{dep.deployment_key} is intentionally stood down — the "
+                    "runtime live allowlist is empty, so this book places no new "
+                    "entries. Open positions still exit and settle. Evidence "
+                    "accrual is paused; existing evidence is unaffected and gate "
+                    "evaluation is NOT blocked."
+                ),
+                details_json={"live_strategies": "", "stood_down": True},
+                created_at=_now(),
+            )
+        )
+    session.flush()
+
+
 def runtime_config_check(session, settings) -> list[dict]:
     """Compare each ACTIVE live deployment's registered material config against the
     running Settings. A mismatch records an unresolved EXPERIMENT_CONFIG_DRIFT
@@ -505,6 +569,11 @@ def runtime_config_check(session, settings) -> list[dict]:
         )
         return findings
     try:
+        # An EMPTY live allowlist is an operator stand-down, not per-book drift.
+        # `config.live_strategy_list` is explicit that empty means nothing trades.
+        stood_down = not [
+            t for t in (settings.live_strategies or "").split(",") if t.strip()
+        ]
         deployments = session.scalars(
             select(ExperimentDeployment).where(
                 ExperimentDeployment.kind == "live",
@@ -518,6 +587,20 @@ def runtime_config_check(session, settings) -> list[dict]:
             observed = _canonical_material(
                 _material_runtime_config(settings, material)
             )
+            if stood_down:
+                # An OPERATOR STAND-DOWN, not drift. Every registered live book
+                # "differs" from its registered config the moment the allowlist is
+                # emptied, so the drift detector would report one unexplained
+                # integrity failure per book — telling the operator N times that
+                # they did the thing they did, in the vocabulary of a malfunction.
+                #
+                # Recorded as its own kind instead, and NON-BLOCKING: a stand-down
+                # means no NEW evidence accrues, not that existing evidence is
+                # contaminated. Blocking gate evaluation would conflate "nothing is
+                # running" with "what ran cannot be trusted", which are different
+                # claims about different things.
+                _record_stand_down(session, dep)
+                continue
             expected = _canonical_material({k: material[k] for k in observed})
             if observed == expected:
                 # The authority on this book's config says it matches. Any open

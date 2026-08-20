@@ -589,11 +589,20 @@ def _unresolved_integrity(session, experiment, version, epoch) -> list[str]:
             ExperimentIntegrityEvent.resolved_at.is_(None),
         )
     ).all()
+    from .enforcement import NON_BLOCKING_INTEGRITY_KINDS
+
     reasons = []
     for ev in rows:
         if ev.version_id not in (None, version.id):
             continue
         if ev.epoch_id not in (None, epoch.id):
+            continue
+        if ev.kind in NON_BLOCKING_INTEGRITY_KINDS:
+            # Records a STATE, not a contamination. An intentional stand-down
+            # means no new evidence accrues; it does not mean the evidence already
+            # gathered cannot be trusted. Blocking here would conflate "nothing is
+            # running" with "what ran is suspect" — different claims about
+            # different things, and only the second should stop a verdict.
             continue
         reasons.append(f"unresolved integrity event #{ev.id} [{ev.kind}]: "
                        f"{ev.description or 'no description'}")
