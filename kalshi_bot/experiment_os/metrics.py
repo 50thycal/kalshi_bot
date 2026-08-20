@@ -86,6 +86,10 @@ class MetricValue:
     missing: bool = False  # True only when the metric could not be computed AT ALL
     reason: str | None = None
     provenance: dict = field(default_factory=dict)
+    # Standard error of `value`, when the provider can compute one. Required by
+    # any clause carrying a `normal` bound; None means such a clause evaluates
+    # MISSING rather than silently falling back to the point estimate.
+    stderr: float | None = None
 
 
 @dataclass(frozen=True)
@@ -653,7 +657,7 @@ def _live_market_rows(session, tags: tuple[str, ...], scope: MetricScope) -> dic
     if not mine:
         return {"markets": 0, "settled_markets": 0, "contracts": 0, "pnl_usd": 0.0,
                 "wins": 0, "contested_markets": 0, "open_markets": 0,
-                "unpriced_markets": 0, "never_held_markets": 0}
+                "unpriced_markets": 0, "never_held_markets": 0, "per_market": []}
 
     contested = set(session.execute(
         select(LiveOrder.market_ticker)
@@ -664,6 +668,7 @@ def _live_market_rows(session, tags: tuple[str, ...], scope: MetricScope) -> dic
 
     settled, open_markets, unpriced, never_held = set(), 0, 0, 0
     pnl_usd, wins = 0.0, 0
+    cents_by_market: dict[str, float] = {}   # settled market -> realized cents
     for ticker in ours:
         # The NEWEST snapshot decides: `positions` is append-only, so an older row
         # showing quantity=0 may simply predate a re-entry.
@@ -692,12 +697,16 @@ def _live_market_rows(session, tags: tuple[str, ...], scope: MetricScope) -> dic
         pnl_usd += float(realized)
         if float(realized) > 0:
             wins += 1
+        cents_by_market[ticker] = float(realized) * 100.0
 
     contracts = 0
+    per_market: list[tuple[float, float]] = []
     if settled:
-        contracts = int(session.execute(
-            select(func.coalesce(func.sum(Fill.quantity), 0))
-            .join(LiveOrder, LiveOrder.kalshi_order_id == Fill.kalshi_order_id)
+        # Per market, so the ratio estimator's standard error can be computed from
+        # the same rows the value comes from rather than from a second query.
+        by_market = dict(session.execute(
+            select(LiveOrder.market_ticker, func.coalesce(func.sum(Fill.quantity), 0))
+            .join(Fill, Fill.kalshi_order_id == LiveOrder.kalshi_order_id)
             .where(
                 LiveOrder.strategy.in_(tags),
                 LiveOrder.action == "buy",
@@ -705,7 +714,14 @@ def _live_market_rows(session, tags: tuple[str, ...], scope: MetricScope) -> dic
                 LiveOrder.created_at >= scope.window_start,
                 LiveOrder.created_at <= scope.window_end,
             )
-        ).scalar() or 0)
+            .group_by(LiveOrder.market_ticker)
+        ).all())
+        contracts = int(sum(by_market.values()))
+        # Keyed by ticker on both sides — never positional, since `settled` is a set.
+        per_market = [
+            (cents_by_market[t], float(by_market.get(t, 0) or 0))
+            for t in sorted(settled)
+        ]
 
     return {
         "markets": len(mine),
@@ -717,7 +733,31 @@ def _live_market_rows(session, tags: tuple[str, ...], scope: MetricScope) -> dic
         "open_markets": open_markets,
         "unpriced_markets": unpriced,
         "never_held_markets": never_held,
+        "per_market": per_market,
     }
+
+
+def _ratio_stderr(per_market: list[tuple[float, float]], ratio: float) -> float | None:
+    """Standard error of a pooled per-contract rate, on the MARKET as the unit.
+
+    The value is a ratio estimator, `sum(cents) / sum(contracts)`, not a mean of
+    per-market rates — so its uncertainty is the ratio-estimator variance, not the
+    dispersion of the rates. Contracts held on one market share one settlement and
+    are perfectly correlated for it, which is why n here counts markets:
+
+        r_i = cents_i - R * contracts_i          (residuals, mean 0 by construction)
+        SE  = sqrt( sum r_i^2 / (n-1) ) / ( sqrt(n) * mean(contracts) )
+
+    Returns None below two markets, where the variance is undefined — a clause
+    carrying a normal bound then evaluates MISSING rather than inventing one."""
+    n = len(per_market)
+    if n < 2:
+        return None
+    qbar = sum(q for _c, q in per_market) / n
+    if qbar <= 0:
+        return None
+    ss = sum((c - ratio * q) ** 2 for c, q in per_market)
+    return math.sqrt(ss / (n - 1)) / (math.sqrt(n) * qbar)
 
 
 def _twin_tags(session, scope: MetricScope) -> tuple[tuple[str, ...], str | None]:
@@ -816,10 +856,17 @@ def _live_metric(session, key: str, scope: MetricScope) -> MetricValue:
             )
         # n is CONTRACTS — the rate's own denominator — so `value * n` reproduces
         # the realized total. Reporting markets here would describe a per-contract
-        # rate with a per-market sample count.
+        # rate with a per-market sample count. The STANDARD ERROR, by contrast,
+        # counts markets: that is the independent unit.
+        ratio = agg["pnl_usd"] * 100.0 / agg["contracts"]
+        se = _ratio_stderr(agg["per_market"], ratio)
         return MetricValue(
-            key, round(agg["pnl_usd"] * 100.0 / agg["contracts"], 4),
-            agg["contracts"], "cents/contract", provenance=prov,
+            key, round(ratio, 4), agg["contracts"], "cents/contract",
+            provenance=prov | {
+                "stderr_basis": "ratio estimator over settled MARKETS",
+                "stderr_n_markets": agg["settled_markets"],
+            },
+            stderr=se,
         )
 
     # twin_live_winrate_gap_pp
@@ -1041,8 +1088,17 @@ def compute_paired_metric(
                 if base_def else "unknown — base metric not in the registry"
             ),
         }
+        # Independent arms, so the variances add. None if either leg lacks one —
+        # a half-known uncertainty is not an uncertainty.
+        se = (math.sqrt(t.stderr ** 2 + c.stderr ** 2)
+              if t.stderr is not None and c.stderr is not None else None)
         return MetricValue(key, round(t.value - c.value, 4), min(t.n, c.n), t.unit,
-                           provenance=prov)
+                           provenance=prov | {
+                               "treatment_stderr": t.stderr,
+                               "control_stderr": c.stderr,
+                               "stderr_basis": "independent arms, variances added",
+                           },
+                           stderr=se)
 
     if key == "relative_entry_deficit_pct":
         t = compute_metric(session, "entries", treatment)

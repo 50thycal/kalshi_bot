@@ -227,6 +227,75 @@ leg, so a sample floor binds on the side that limits the comparison. With no
 settled evidence on a leg it is undefined, not zero: two books with nothing
 settled are not two books that agree.
 
+## Bound clauses (`bounds.py`)
+
+A clause normally compares a **point estimate** to a threshold. That is right for
+a count or a coverage percentage and wrong for a promotion decision: `mean > 0`
+passes half the time when the true effect is exactly zero, **at every sample
+size**, so a sample floor controls variance without ever defining a
+false-promotion standard.
+
+A clause carrying `bound` compares the **bound** instead:
+
+```json
+{"metric": "live_cents_per_contract",
+ "bound": {"direction": "lower", "confidence": 0.99, "method": "normal"},
+ "op": ">", "value": 0, "arm": "theta4", "deployment_kind": "live"}
+```
+
+- **`direction` is never inferred from the operator.** `UCB > t` and `LCB > t` are
+  different tests, and a metric's own higher/lower-is-better direction does not
+  decide which bound a contract wants.
+- **`method` must match the statistic.** `normal` needs the provider to supply a
+  standard error. `poisson_exact` exists for rare-event ratios — the theta tail
+  statistic has an expected count near 4 at its failure floor, where a normal
+  bound is simply wrong — and reads `observed`/`expected` from provenance.
+- **An uncomputable bound is MISSING**, never a fallback to the point estimate.
+  Falling back would restore exactly the error rate the bound was bought to
+  remove.
+- Standard errors count the **independent unit**. `live_cents_per_contract` is a
+  ratio estimator over settled *markets*, so its SE is the ratio-estimator
+  variance on markets even though its `n` is contracts. A delta adds its two
+  arms' variances, and is None if either leg lacks one.
+
+**Sequential caveat.** A bound re-evaluated every cadence is a sequential test and
+its per-look confidence is not its lifetime rate. Measured on the two live-canary
+promotion gates, a 95% bound evaluated continuously over a 3× horizon carries
+~18% lifetime false promotion against ~5% for a 99% bound. Clause provenance
+records the look count so a reader does not mistake one for the other.
+
+## Promotion floors versus failure floors
+
+`sample` is the **promotion** evidence floor: how much evidence before a PASS may
+authorize advancement. That is a different question from how much evidence before
+bad evidence may terminate, and one number for both silently makes safety clauses
+unreachable — a catastrophic failure at a fifth of the promotion floor sat at
+HOLD while real money kept trading (observed on `mmsell-anchor-strangle`).
+
+A `fail_any` clause may carry its own floor:
+
+```json
+{"metric": "realized_tail_hit_ratio_vs_modeled",
+ "bound": {"direction": "lower", "confidence": 0.99, "method": "poisson_exact"},
+ "op": ">", "value": 1.0,
+ "min_evidence": {"metric": "live_settled_markets", "op": ">=", "value": 50}}
+```
+
+Such a clause becomes **eligible** on that floor alone and is checked *before* the
+promotion floor. A clause **without** `min_evidence` inherits the promotion floor
+— the behavior of every gate frozen before this existed, so none of them changes.
+`min_evidence` is refused outside `fail_any`: a promotion clause's floor is the
+gate's `sample`, and two floors on the pass side would be two answers to one
+question.
+
+An ineligible clause is **inert, not false** — it has not been tested, so it
+neither fails the gate nor counts as satisfied.
+
+**When an early-failure floor is warranted:** when the failure mode is one the
+risk envelope cannot detect. A book that simply loses money is caught by exposure
+limits and the kill switch. A book whose *model* is wrong about tail frequency
+looks fine on P&L until the tail arrives.
+
 ## Evaluation semantics (`evaluator.py`)
 
 `evaluate_gate(session, gate, window_end=None, epoch=None, persist=True)`:
