@@ -788,3 +788,122 @@ def test_report_finds_post_cutover_unstamped_rows(xos_session, xos_platform):
     assert unstamped == {"outside_tag"}  # the mechanical Control Tower answer
     assert report["deployments"]["grandfathered"] == 1
     assert report["session_counters"]["warned"] >= 1
+
+
+# ---------------------------------------------------------------------------
+# An intentional stand-down is a STATE, not an unexplained integrity failure
+#
+# Emptying LIVE_STRATEGIES stops every book at once. The drift detector then
+# fires per book, the canaries go BLOCKED_INTEGRITY, and the event text asks the
+# reader to classify the cause as a deployment revision, a new epoch, a new
+# version or platform impact — none of which is "someone turned it off on
+# purpose". Observed in production on 2026-08-19: two EXPERIMENT_CONFIG_DRIFT
+# events for one operator action.
+# ---------------------------------------------------------------------------
+
+
+def _seed_live_books(s):
+    """The imported live universe: three live books with their registered twins."""
+    for twin_tag, live_tag in [
+        ("Lmmsell8_pt3", "Lmmsell8"), ("Lmmsell10_pt3", "Lmmsell10"),
+        ("theta4_pt3", "theta4"),
+    ]:
+        s.add(LivePaperTwin(twin_tag=twin_tag, live_tag=live_tag, started_at=T0))
+    s.commit()
+    importer.import_legacy(s, now=_dt(2026, 8, 15, 16, 0))
+    s.commit()
+
+
+def _stood_down_settings():
+    from kalshi_bot.config import Settings
+
+    return Settings(_env_file=None, bot_mode="live", live_strategies="",
+                    live_paper_twins="", live_paper_twin_suffix="_pt3",
+                    mmsell_variants="")
+
+
+def test_an_empty_allowlist_records_a_stand_down_not_drift(xos_session, base_env):
+    s = xos_session
+    _seed_live_books(s)
+
+    assert enf.runtime_config_check(s, _stood_down_settings()) == []
+    s.commit()
+
+    assert s.scalar(select(func.count()).select_from(ExperimentIntegrityEvent).where(
+        ExperimentIntegrityEvent.kind == "EXPERIMENT_CONFIG_DRIFT",
+        ExperimentIntegrityEvent.resolved_at.is_(None),
+    )) == 0, "a stand-down must not be reported as unexplained drift"
+    stood = s.scalars(select(ExperimentIntegrityEvent).where(
+        ExperimentIntegrityEvent.kind == "EXPERIMENT_EXECUTION_STOOD_DOWN")).all()
+    assert stood, "the stand-down itself must be recorded"
+    assert all(e.severity == "info" for e in stood)
+    assert "intentionally stood down" in stood[0].description
+
+
+def test_an_existing_drift_event_is_reclassified_not_left_open(xos_session, base_env):
+    """The production case: two drift events already open when the pause lands."""
+    s = xos_session
+    _seed_live_books(s)
+    dep = s.scalar(select(ExperimentDeployment).where(
+        ExperimentDeployment.deployment_key == "theta4-live-1"))
+    exp = read.get_experiment(s, "theta4-fat-tail")
+    svc.record_integrity_event(
+        s, exp, kind="EXPERIMENT_CONFIG_DRIFT", deployment=dep,
+        description="drift recorded when the allowlist was emptied")
+    s.commit()
+
+    enf.runtime_config_check(s, _stood_down_settings())
+    s.commit()
+
+    drift = s.scalar(select(ExperimentIntegrityEvent).where(
+        ExperimentIntegrityEvent.kind == "EXPERIMENT_CONFIG_DRIFT"))
+    assert drift.resolved_at is not None
+    assert "intentional operator stand-down" in drift.resolution
+    assert "not a contamination" in drift.resolution
+
+
+def test_a_stand_down_does_not_block_gate_evaluation(xos_session, base_env):
+    """No new evidence accrues; the evidence already gathered is unaffected.
+
+    Blocking here would conflate "nothing is running" with "what ran cannot be
+    trusted" — different claims, and only the second should stop a verdict."""
+    s = xos_session
+    _seed_live_books(s)
+    enf.runtime_config_check(s, _stood_down_settings())
+    s.commit()
+
+    exp = read.get_experiment(s, "theta4-fat-tail")
+    ver = read.latest_version(s, exp)
+    epoch = read.open_epoch_for(s, ver)
+    from kalshi_bot.experiment_os.evaluator import _unresolved_integrity
+
+    assert _unresolved_integrity(s, exp, ver, epoch) == []
+
+
+def test_the_stand_down_event_is_not_duplicated_every_cycle(xos_session, base_env):
+    s = xos_session
+    _seed_live_books(s)
+    for _ in range(3):
+        enf.runtime_config_check(s, _stood_down_settings())
+        s.commit()
+    per_dep = s.scalars(select(ExperimentIntegrityEvent).where(
+        ExperimentIntegrityEvent.kind == "EXPERIMENT_EXECUTION_STOOD_DOWN")).all()
+    keys = [e.deployment_id for e in per_dep]
+    assert len(keys) == len(set(keys)), "one open stand-down per deployment, not one per cycle"
+
+
+def test_a_real_drift_is_still_reported_when_books_are_configured(xos_session, base_env):
+    """The stand-down path must not swallow genuine drift."""
+    s = xos_session
+    _seed_live_books(s)
+    from kalshi_bot.config import Settings
+
+    wrong = Settings(
+        _env_file=None, bot_mode="live",
+        live_strategies="theta4",          # Lmmsell8/10 registered but not configured
+        live_paper_twins="", live_paper_twin_suffix="_pt3",
+        mmsell_variants="Lmmsell8:lo=9,hi=99;Lmmsell10:lo=1,hi=2",
+    )
+    findings = enf.runtime_config_check(s, wrong)
+    s.commit()
+    assert findings, "a configured-but-mismatched book is still drift"

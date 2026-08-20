@@ -300,3 +300,40 @@ System (PR #220) and Control Tower migration, retirement of the overlapping
 legacy status workflows, and Evo integration. See
 `docs/EXPERIMENT_OS_PLATFORM_IMPACT.md` for the impact engine that landed in
 PR 5.
+
+
+---
+
+## Intentional stand-down versus drift
+
+Emptying `LIVE_STRATEGIES` stops every live book at once. Without a
+classification for that, the drift detector fires **once per book** — the
+canaries go `BLOCKED_INTEGRITY`, and the event text asks the reader to classify
+the cause as a deployment revision, a new epoch, a new version or platform
+impact. **None of those is "someone turned it off on purpose."** Observed in
+production on 2026-08-19: two `EXPERIMENT_CONFIG_DRIFT` events for one operator
+action.
+
+So an empty runtime allowlist is recognised as its own state:
+
+| | |
+|---|---|
+| detected when | the runtime live allowlist is empty — `config.live_strategy_list` is explicit that empty means nothing trades |
+| recorded as | `EXPERIMENT_EXECUTION_STOOD_DOWN`, severity `info`, one open event per live deployment |
+| effect on existing drift | any open `EXPERIMENT_CONFIG_DRIFT` on that deployment is **resolved and reclassified**, with the reason recorded |
+| effect on gates | **none** — the kind is in `NON_BLOCKING_INTEGRITY_KINDS` |
+
+**Why it does not block.** A stand-down means **no new evidence accrues**. It does
+not mean the evidence already gathered is contaminated. Blocking gate evaluation
+would conflate *"nothing is running"* with *"what ran cannot be trusted"* — two
+different claims about two different things, and only the second should stop a
+verdict.
+
+**What it does not swallow.** A book that is configured but whose material config
+genuinely mismatches is still ordinary drift, still `error`, still blocking. The
+stand-down path applies only when *no book at all* is configured to trade.
+
+Note the asymmetry this leaves in readiness: `live_books_represented` checks that
+every **configured** live strategy resolves to a registered tag, so with an empty
+allowlist it passes vacuously. Readiness therefore does not flag a stand-down —
+the integrity event is what carries it.
