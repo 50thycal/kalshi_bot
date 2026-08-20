@@ -62,8 +62,10 @@ def _experiment(s, key, *, spec, tag=None, state="PAPER"):
 
 
 # A gate whose clause has no canonical provider — the real production shape.
+# The example moves as providers land: this one is quantities the scan cycle
+# counts but never persists, so it stays unprovided by construction.
 UNPROVIDED_SPEC = {
-    "pass_all": [{"metric": "realized_tail_hit_ratio_vs_modeled", "arm": "treatment",
+    "pass_all": [{"metric": "candidate_rejection_rate_pct", "arm": "treatment",
                   "op": ">", "value": 0}],
 }
 COMPUTABLE_SPEC = {
@@ -160,15 +162,15 @@ def test_blocked_data_names_the_missing_provider(xos_session, xos_platform):
     assert len(rep.blocked) == 1
     b = rep.blocked[0]
     assert b["verdict"] == "BLOCKED_DATA"
-    assert b["missing_metrics"] == ["realized_tail_hit_ratio_vs_modeled"]
+    assert b["missing_metrics"] == ["candidate_rejection_rate_pct"]
     assert any("no canonical provider" in r for r in b["reasons"])
 
     out = ct.render(rep)
     assert "=== BLOCKED EVIDENCE ===" in out
-    assert "missing provider: realized_tail_hit_ratio_vs_modeled" in out
+    assert "missing provider: candidate_rejection_rate_pct" in out
     # And READY/DUE leads with the cause rather than the bare verdict.
     ready = [r for r in rep.ready_due if "BLOCKED_DATA" in r]
-    assert ready and "realized_tail_hit_ratio_vs_modeled" in ready[0]
+    assert ready and "candidate_rejection_rate_pct" in ready[0]
 
 
 def test_the_cause_comes_from_the_recorded_result_when_one_exists(xos_session,
@@ -187,8 +189,8 @@ def test_the_cause_comes_from_the_recorded_result_when_one_exists(xos_session,
     assert len(rep.blocked) == 1
     b = rep.blocked[0]
     assert b["source"] == "recorded"
-    assert b["missing_metrics"] == ["realized_tail_hit_ratio_vs_modeled"]
-    assert "missing provider: realized_tail_hit_ratio_vs_modeled" in ct.render(rep)
+    assert b["missing_metrics"] == ["candidate_rejection_rate_pct"]
+    assert "missing provider: candidate_rejection_rate_pct" in ct.render(rep)
 
 
 def test_a_computable_gate_is_not_listed_as_blocked(xos_session, xos_platform):
@@ -591,7 +593,7 @@ def test_blocked_data_and_contract_defect_are_shown_as_separate_blockers(
     # The evaluator's own block is still reported, with its own cause.
     assert "BLOCKED_DATA" in out
     assert "missing providers:" in out
-    assert "realized_tail_hit_ratio_vs_modeled" in out
+    assert "candidate_rejection_rate_pct" in out
     # And so is the second, independent class.
     assert "CONTRACT DEFECT" in out
     assert "epoch has live + paper_twin only" in out
@@ -790,3 +792,28 @@ def test_sub_penny_dust_is_not_reported_as_an_open_position(xos_session):
     _position(s, "MKT-D", qty=0.001, exposure=0.001)
     s.commit()
     assert ct._live_exposure(s, ["Lx"])["open_positions"] == 0
+
+
+def test_horizon_exhausted_is_not_reported_as_something_to_wait_out(
+        xos_session, xos_platform):
+    """A HOLD says "wait for more evidence". Past the horizon more evidence will
+    never come, and reading it as a hold is how a decision gets deferred forever."""
+    s = xos_session
+    _experiment(s, "spent-book", spec=COMPUTABLE_SPEC, tag="spent-t")
+    rep = ct.build_report(s, evaluate=False)
+    for views in rep.by_state.values():
+        for v in views:
+            for g in v["gates"]:
+                g["live_verdict"] = "HORIZON_EXHAUSTED"
+                g["latest_result"] = {
+                    "verdict": "HORIZON_EXHAUSTED",
+                    "explanation": "EVIDENCE HORIZON EXHAUSTED — OPERATOR DECISION REQUIRED.",
+                    "computed_by": "system", "computed_at": "2026-08-20",
+                    "blocking_reasons": [], "missing_metrics": [], "clauses": [],
+                }
+    rep.ready_due = []
+    ct._derive_actions(rep)
+    joined = " ".join(rep.ready_due)
+    assert "HORIZON EXHAUSTED" in joined
+    assert "NOT a hold" in joined
+    assert "OPERATOR DECISION is required" in joined

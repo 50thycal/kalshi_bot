@@ -197,6 +197,44 @@ _UNIVERSAL: tuple[MetricDefinition, ...] = (
         "twin is registered",
     ),
     MetricDefinition(
+        key="live_settled_markets", direction="neutral", unit="markets", kind="count",
+        source="live_orders x fills x positions (settled live markets)",
+        revision="live_exec_v1",
+        description="settled live markets — the INDEPENDENT unit, since contracts "
+        "on one market share one settlement; MISSING unless kind='live'",
+    ),
+    MetricDefinition(
+        key="twin_mirror_coverage_pct", direction="higher_better", unit="%", kind="rate",
+        source="live_orders vs the registered twin's paper_trades",
+        revision="twin_coverage_v1",
+        description="share of live markets ENTERED that the twin also entered — a "
+        "twin mirroring a fraction of the book is not an execution control",
+    ),
+    MetricDefinition(
+        key="twin_model_coverage_pct", direction="higher_better", unit="%", kind="rate",
+        source="settled live markets vs the twin's model_probability",
+        revision="twin_coverage_v1",
+        description="share of settled live markets whose modeled probability "
+        "resolves from the registered twin — the tail metric's denominator",
+    ),
+    MetricDefinition(
+        key="twin_live_gap_cents", direction="lower_better", unit="cents/contract",
+        kind="mean", source="twin paper rate vs live realized rate (each own set)",
+        reference="scripts/mmsell_offset_ab.py (docs/MMSELL_OFFSET_AB.md)",
+        revision="twin_gap_v1",
+        description="twin c/ct minus live c/ct over each leg's OWN settled set — "
+        "the adverse-selection read; higher is worse",
+    ),
+    MetricDefinition(
+        key="twin_live_paired_gap_cents", direction="lower_better",
+        unit="cents/contract", kind="mean",
+        source="twin vs live on markets BOTH legs settled",
+        revision="twin_gap_v1",
+        description="per-market paired twin-minus-live difference — an execution "
+        "FIDELITY check, not adverse selection: it conditions on live having "
+        "filled, which is the channel adverse selection operates through",
+    ),
+    MetricDefinition(
         key="settled_trades", direction="neutral", unit="trades", kind="count", source="paper_trades",
         description="terminal-with-P&L trades entered in the window "
         f"(status in {SETTLED_STATUSES})",
@@ -242,25 +280,15 @@ _UNIVERSAL: tuple[MetricDefinition, ...] = (
 _DECLARED_UNPROVIDED: tuple[MetricDefinition, ...] = (
     MetricDefinition(
         key="realized_tail_hit_ratio_vs_modeled", direction="lower_better", unit="ratio", kind="mean",
-        source="paper_trades.model_probability x settled outcome", provided=False,
-        # NO reference implementation exists. scripts/theta_fill_model.py was
-        # cited here and does not compute this metric at all — it is a maker-fill
-        # realizable projection, the theta counterpart of mmsell_fill_model.py.
-        # Sending a reader there to resolve a BLOCKED_DATA is worse than sending
-        # them nowhere, so the message now says what is actually true.
-        reference=(
-            "NONE — no reference implementation exists; specified in "
-            "docs/THETA_THESIS.md (decision rule) and validated in "
-            "docs/RESEARCH_LIVE_CANARY_SUCCESSOR_INPUTS.md"
-        ),
-        description="observed tail-hit frequency over the model's prediction; "
+        source="settled markets x model_probability x settlement outcome",
+        # Built from a written specification, since no reference implementation
+        # exists to check against — scripts/theta_fill_model.py was cited here and
+        # computes a maker-fill projection with no tail logic at all.
+        reference=("NONE — specified in docs/RESEARCH_SUCCESSOR_GATE_DESIGN.md §4, "
+                   "hypothesis in docs/THETA_THESIS.md"),
+        revision="tail_v1",
+        description="observed tail hits over the sum of modeled probabilities; "
         "counts MARKETS, not contracts (one tail hits or does not, once)",
-    ),
-    MetricDefinition(
-        key="twin_live_gap_cents", direction="lower_better", unit="cents/contract", kind="mean",
-        source="live outcomes vs twin paper book", provided=False,
-        reference="scripts/mmsell_offset_ab.py (docs/MMSELL_OFFSET_AB.md)",
-        description="twin paper c/ct minus live realized c/ct (the execution gap)",
     ),
     MetricDefinition(
         key="candidate_rejection_rate_pct", direction="neutral", unit="%", kind="rate",
@@ -607,6 +635,16 @@ def _fill_model_metric(session, key: str, scope: MetricScope, prov: dict) -> Met
 #: returns MISSING — see `_live_metric`.
 LIVE_ONLY_METRICS: frozenset[str] = frozenset({
     "live_settled_contracts", "live_cents_per_contract", "twin_live_winrate_gap_pp",
+    "live_settled_markets",
+})
+
+#: Metrics that compare a live book against its REGISTERED twin. Same live-only
+#: addressing rule, resolved through `twin_of_deployment_id` rather than a `_pt`
+#: naming convention.
+TWIN_METRICS: frozenset[str] = frozenset({
+    "twin_mirror_coverage_pct", "twin_model_coverage_pct",
+    "realized_tail_hit_ratio_vs_modeled",
+    "twin_live_gap_cents", "twin_live_paired_gap_cents",
 })
 
 
@@ -657,7 +695,9 @@ def _live_market_rows(session, tags: tuple[str, ...], scope: MetricScope) -> dic
     if not mine:
         return {"markets": 0, "settled_markets": 0, "contracts": 0, "pnl_usd": 0.0,
                 "wins": 0, "contested_markets": 0, "open_markets": 0,
-                "unpriced_markets": 0, "never_held_markets": 0, "per_market": []}
+                "unpriced_markets": 0, "never_held_markets": 0, "per_market": [],
+                "settled_tickers": [], "entered_tickers": [],
+                "per_market_by_ticker": []}
 
     contested = set(session.execute(
         select(LiveOrder.market_ticker)
@@ -734,6 +774,12 @@ def _live_market_rows(session, tags: tuple[str, ...], scope: MetricScope) -> dic
         "unpriced_markets": unpriced,
         "never_held_markets": never_held,
         "per_market": per_market,
+        "settled_tickers": sorted(settled),
+        "entered_tickers": sorted(ours),
+        "per_market_by_ticker": [
+            (t, cents_by_market[t], float(by_market.get(t, 0) or 0))
+            for t in sorted(settled)
+        ] if settled else [],
     }
 
 
@@ -842,6 +888,12 @@ def _live_metric(session, key: str, scope: MetricScope) -> MetricValue:
         "orders_that_never_held_a_position": agg["never_held_markets"],
     }
 
+    if key == "live_settled_markets":
+        # The INDEPENDENT unit. Contracts on one market share one settlement, so a
+        # floor denominated in contracts overstates precision by the contracts-per-
+        # market factor — measured 1.4x to 3.0x on these books.
+        return MetricValue(key, float(agg["settled_markets"]), agg["settled_markets"],
+                           "markets", provenance=prov)
     if key == "live_settled_contracts":
         # A count: zero settled contracts is a real answer, and a sample floor
         # reading it as 0 is exactly right.
@@ -900,6 +952,218 @@ def _live_metric(session, key: str, scope: MetricScope) -> MetricValue:
     # comparison, not on whichever side happens to have more evidence.
     return MetricValue(key, round(twin_win - live_win, 4),
                        min(live_n, twin["n_settled"]), "pp", provenance=prov)
+
+
+#: Minimum share of the evidence set whose modeled probability must resolve from
+#: the twin before the tail ratio is trustworthy. Below it the metric is MISSING:
+#: the surviving markets were selected by a data defect, so the bias in R has an
+#: unknown DIRECTION — worse than a wide interval, which at least advertises its
+#: own width. Derived in docs/RESEARCH_SUCCESSOR_GATE_DESIGN.md §5.8 from a bias
+#: bound, not from any observed coverage.
+MIN_TWIN_MODEL_COVERAGE_PCT = 90.0
+
+
+def _twin_paper_rows(session, twin_tags: tuple[str, ...], scope: MetricScope) -> dict:
+    """The twin's settled rows, keyed by market, with model probability and outcome.
+
+    The twin is the measurement instrument for anything the live tables cannot
+    record. `live_orders` carries no `model_probability`, and a live position that
+    was exited early carries a P&L sign that is not a settlement outcome — so both
+    the modeled probability AND the tail-hit outcome come from the twin, which
+    holds to settlement on the same market. Settlement is a property of the
+    market, not of who held it."""
+    rows = session.execute(
+        select(PaperTrade.market_ticker, PaperTrade.model_probability,
+               PaperTrade.resolved_value, PaperTrade.pnl, PaperTrade.quantity,
+               PaperTrade.status)
+        .where(
+            PaperTrade.strategy.in_(twin_tags),
+            PaperTrade.created_at >= scope.window_start,
+            PaperTrade.created_at <= scope.window_end,
+        )
+    ).all()
+    out: dict[str, dict] = {}
+    for ticker, p, resolved, pnl, qty, status in rows:
+        cur = out.setdefault(ticker, {"model_p": None, "resolved": None,
+                                      "pnl": 0.0, "qty": 0, "settled": False})
+        if p is not None and cur["model_p"] is None:
+            cur["model_p"] = float(p)
+        if resolved is not None and cur["resolved"] is None:
+            cur["resolved"] = int(resolved)
+        if status in SETTLED_STATUSES and pnl is not None:
+            cur["settled"] = True
+            cur["pnl"] += float(pnl)
+            cur["qty"] += int(qty or 0)
+    return out
+
+
+def _twin_metric(session, key: str, scope: MetricScope) -> MetricValue:
+    """Coverage, the tail ratio, and the two gap diagnostics.
+
+    All are addressed at the LIVE scope and resolved against that deployment's
+    registered twin — the structural `twin_of_deployment_id` edge, never a `_pt`
+    naming convention."""
+    definition = REGISTRY[key]
+    if scope.deployment_kind != "live":
+        return MetricValue(
+            metric=key, value=None, n=0, unit=definition.unit, missing=True,
+            reason=(
+                f"{key!r} compares a live book against its registered twin and is "
+                f"only defined at deployment_kind='live'; this clause addresses "
+                f"{scope.deployment_kind!r}"
+            ),
+            provenance=_live_provenance(scope) | {"addressing_error": True},
+        )
+    if not scope.strategy_tags:
+        return MetricValue(metric=key, value=None, n=0, unit=definition.unit,
+                           missing=True,
+                           reason="no live deployment tags for this scope in this epoch",
+                           provenance=_live_provenance(scope))
+    twin_tags, why = _twin_tags(session, scope)
+    prov = _live_provenance(scope) | {"twin_tags": list(twin_tags)}
+    if not twin_tags:
+        return MetricValue(metric=key, value=None, n=0, unit=definition.unit,
+                           missing=True,
+                           reason=f"cannot compare against a twin: {why}",
+                           provenance=prov)
+
+    twin = _twin_paper_rows(session, twin_tags, scope)
+    agg = _live_market_rows(session, scope.strategy_tags, scope)
+    settled_live = agg["settled_tickers"]
+    prov = prov | {"settled_live_markets": len(settled_live),
+                   "twin_markets_seen": len(twin)}
+
+    if key == "twin_mirror_coverage_pct":
+        # Denominator is markets ENTERED, not settled: the mirror fires at entry,
+        # so a mirror that never fired is invisible in the settled set.
+        entered = agg["entered_tickers"]
+        if not entered:
+            return MetricValue(key, None, 0, "%", reason="no live markets entered",
+                               provenance=prov)
+        hit = sum(1 for t in entered if t in twin)
+        return MetricValue(key, round(100.0 * hit / len(entered), 2), len(entered),
+                           "%", provenance=prov | {"live_markets_entered": len(entered),
+                                                   "mirrored": hit})
+
+    if key == "twin_model_coverage_pct":
+        if not settled_live:
+            return MetricValue(key, None, 0, "%",
+                               reason="no settled live markets in window",
+                               provenance=prov)
+        covered = sum(1 for t in settled_live
+                      if twin.get(t, {}).get("model_p") is not None)
+        return MetricValue(key, round(100.0 * covered / len(settled_live), 2),
+                           len(settled_live), "%",
+                           provenance=prov | {"covered": covered,
+                                              "uncovered": len(settled_live) - covered})
+
+    if key == "realized_tail_hit_ratio_vs_modeled":
+        return _tail_ratio(key, settled_live, twin, prov)
+
+    if key == "twin_live_gap_cents":
+        # Each leg over its OWN settled set — different denominators on purpose.
+        # The adverse selection this measures lives in WHICH markets each book
+        # ends up holding, so restricting to shared markets would define it away.
+        tw = [(v["pnl"] * 100.0, v["qty"]) for v in twin.values()
+              if v["settled"] and v["qty"] > 0]
+        tq = sum(q for _c, q in tw)
+        if not tw or tq == 0 or agg["contracts"] == 0:
+            return MetricValue(key, None, 0, "cents/contract",
+                               reason="both legs need settled contracts for a gap",
+                               provenance=prov)
+        twin_rate = sum(c for c, _q in tw) / tq
+        live_rate = agg["pnl_usd"] * 100.0 / agg["contracts"]
+        return MetricValue(
+            key, round(twin_rate - live_rate, 4),
+            min(len(tw), len(settled_live)), "cents/contract",
+            provenance=prov | {"twin_cents_per_contract": round(twin_rate, 4),
+                               "live_cents_per_contract": round(live_rate, 4),
+                               "basis": "each leg over its own settled set (unpaired)"},
+        )
+
+    # twin_live_paired_gap_cents — per-market, both legs settled.
+    pairs = []
+    for ticker, live_c, live_q in agg["per_market_by_ticker"]:
+        t = twin.get(ticker)
+        if not t or not t["settled"] or t["qty"] <= 0 or live_q <= 0:
+            continue
+        pairs.append((t["pnl"] * 100.0 / t["qty"]) - (live_c / live_q))
+    if not pairs:
+        return MetricValue(key, None, 0, "cents/contract",
+                           reason="no market has BOTH legs settled",
+                           provenance=prov)
+    mean = sum(pairs) / len(pairs)
+    se = None
+    if len(pairs) >= 2:
+        var = sum((x - mean) ** 2 for x in pairs) / (len(pairs) - 1)
+        se = math.sqrt(var / len(pairs))
+    return MetricValue(
+        key, round(mean, 4), len(pairs), "cents/contract",
+        provenance=prov | {
+            "paired_markets": len(pairs),
+            "basis": (
+                "per-market paired difference; conditions on live having FILLED, "
+                "so it measures execution fidelity and NOT adverse selection — "
+                "adverse selection operates through which orders fill"
+            ),
+        },
+        stderr=se,
+    )
+
+
+def _tail_ratio(key: str, settled_live: list[str], twin: dict, prov: dict) -> MetricValue:
+    """R = observed tail hits / sum of modeled probabilities, over settled MARKETS.
+
+    A tail "hits" when the sold tail resolves in the money — the twin's
+    `resolved_value == 0`, i.e. its position lost. The twin's settlement is used
+    rather than the live position's P&L sign because a live position exited early
+    under TP/SL can lose money without the tail hitting at all, which would
+    inflate O against an unchanged E.
+
+    Markets whose modeled probability cannot be resolved are excluded from BOTH O
+    and E, never imputed from the book's mean: imputing pulls R toward 1, which is
+    toward PASSING. Above the coverage threshold that exclusion is small enough to
+    bound; below it the metric is MISSING."""
+    covered = [(t, twin[t]) for t in settled_live
+               if twin.get(t, {}).get("model_p") is not None]
+    total = len(settled_live)
+    if total == 0:
+        return MetricValue(key, None, 0, "ratio",
+                           reason="no settled live markets in window",
+                           provenance=prov)
+    coverage = 100.0 * len(covered) / total
+    prov = prov | {"coverage_pct": round(coverage, 2),
+                   "covered_markets": len(covered),
+                   "excluded_uncovered": total - len(covered),
+                   "coverage_threshold_pct": MIN_TWIN_MODEL_COVERAGE_PCT}
+    if coverage < MIN_TWIN_MODEL_COVERAGE_PCT:
+        return MetricValue(
+            key, None, 0, "ratio", missing=True,
+            reason=(
+                f"twin model-probability coverage {coverage:.1f}% is below the "
+                f"pre-registered {MIN_TWIN_MODEL_COVERAGE_PCT:.0f}% — the surviving "
+                "markets were selected by a data defect, so the bias in this ratio "
+                "has an unknown direction. Missing model data is not evidence"
+            ),
+            provenance=prov,
+        )
+    expected = sum(v["model_p"] for _t, v in covered)
+    observed = sum(1 for _t, v in covered if v["resolved"] == 0)
+    unresolved = sum(1 for _t, v in covered if v["resolved"] is None)
+    prov = prov | {
+        # `observed` and `expected` are the exact keys the poisson_exact bound
+        # reads — the clause form this metric exists to serve.
+        "observed": observed, "expected": round(expected, 6),
+        "markets_without_a_settlement_value": unresolved,
+        "outcome_basis": "twin resolved_value == 0 (the sold tail resolved in the money)",
+        "unit_of_evidence": "settled market",
+    }
+    if expected <= 0:
+        return MetricValue(key, None, 0, "ratio",
+                           reason="modeled probabilities sum to zero — ratio undefined",
+                           provenance=prov)
+    return MetricValue(key, round(observed / expected, 4), len(covered), "ratio",
+                       provenance=prov)
 
 
 def _live_provenance(scope: MetricScope) -> dict:
@@ -985,6 +1249,8 @@ def _compute_metric(session, key: str, scope: MetricScope) -> MetricValue:
                 f"{definition.reference}"
             ),
         )
+    if key in TWIN_METRICS:
+        return _twin_metric(session, key, scope)
     if key in LIVE_ONLY_METRICS:
         # Routed BEFORE the empty-tags fallback below. That fallback answers 0 for
         # a count, which for `live_settled_contracts` under a paper scope would be

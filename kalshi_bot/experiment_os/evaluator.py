@@ -41,6 +41,8 @@ one is a new gate on a new version.
      is unestablished, spec §17.4; no convenient timestamp is ever substituted)
   3. unresolved integrity events         → BLOCKED_INTEGRITY
   4. any required metric missing         → BLOCKED_DATA (missing ≠ zero)
+  4a. the pre-registered evidence horizon is reached → HORIZON_EXHAUSTED
+     (no further authorization look accrues; never auto-PASS, never auto-FAIL)
   4b. an ELIGIBLE early-safety clause true → FAIL (a fail_any clause carrying its
      own `min_evidence`, checked BEFORE the promotion floor — see below)
   5. sample floors unmet                 → HOLD (underpowered is HOLD, not FAIL)
@@ -411,6 +413,36 @@ def validate_gate_scopes(session, version: ExperimentVersion, spec: dict) -> lis
                 f"sample floor names arm {arm_key!r} which is not declared "
                 f"(declared: {sorted(arm_keys)})"
             )
+    horizon = spec.get("max_evidence_horizon")
+    if horizon is not None:
+        if not isinstance(horizon, dict) or not {"metric", "value"} <= horizon.keys():
+            problems.append("max_evidence_horizon needs metric and value")
+        elif resolve_definition(horizon.get("metric") or "") is None:
+            problems.append(
+                f"max_evidence_horizon metric {horizon.get('metric')!r} is not in "
+                "the canonical registry"
+            )
+        else:
+            floor_metrics = {
+                f.get("metric") for f in (spec.get("sample") or {}).values()
+                if isinstance(f, dict)
+            }
+            if floor_metrics and horizon["metric"] not in floor_metrics:
+                problems.append(
+                    f"max_evidence_horizon counts {horizon['metric']!r} but the "
+                    f"promotion floor counts {sorted(m for m in floor_metrics if m)} "
+                    "— a horizon in a different unit from the floor it bounds "
+                    "cannot be reasoned about"
+                )
+            for f in (spec.get("sample") or {}).values():
+                if (isinstance(f, dict) and f.get("metric") == horizon["metric"]
+                        and isinstance(f.get("value"), (int, float))
+                        and horizon["value"] <= f["value"]):
+                    problems.append(
+                        f"max_evidence_horizon ({horizon['value']}) is not above "
+                        f"the promotion floor ({f['value']}) — the gate could "
+                        "never render a verdict"
+                    )
     for list_name in ("pass_all", "fail_any", "hold_if"):
         for clause in spec.get(list_name) or []:
             where = f"{list_name} clause {clause.get('metric')!r}"
@@ -735,6 +767,15 @@ def evaluate_gate(
             session, experiment, version, epoch, arm_key, kind, window, snap.fingerprint
         )
         plans.append(("sample", floor_clause, tscope, None))
+    horizon = spec.get("max_evidence_horizon")
+    if horizon:
+        for arm_key in (horizon.get("arms") or [None]):
+            hscope = _arm_scope(
+                session, experiment, version, epoch, arm_key,
+                horizon.get("deployment_kind", _DEFAULT_KIND), window,
+                snap.fingerprint,
+            )
+            plans.append(("horizon", {**horizon, "op": ">="}, hscope, None))
     for list_name in ("pass_all", "fail_any", "hold_if"):
         for clause in spec.get(list_name) or []:
             for plan in _resolve_clause_scopes(
@@ -798,6 +839,36 @@ def evaluate_gate(
         outcome.explanation = (
             "required metrics cannot be computed (missing is not zero): "
             + " | ".join(outcome.blocking_reasons)
+        )
+        return _finish(session, gate, experiment, version, epoch, outcome,
+                       persist, computed_by)
+
+    # 4a) EVIDENCE HORIZON. Past it the contract has spent the looks its error
+    # rate was calibrated for, so NO further authorization look may accrue — no
+    # auto-PASS and no auto-FAIL. This is a decision point, not a wait: the
+    # clause outcomes are still recorded and named in the explanation so the
+    # operator decides on the evidence rather than on silence.
+    spent = [c for c in outcome.clauses if c.list_name == "horizon" and c.passed is True]
+    if spent:
+        outcome.verdict = GateVerdict.HORIZON_EXHAUSTED.value
+        would = [
+            f"{c.list_name}:{c.clause['metric']}={_fmt(c.bound_value if c.bound_value is not None else c.value)}"
+            f" {c.clause['op']} {c.clause['value']} -> "
+            f"{'met' if c.passed else 'not met' if c.passed is False else 'undecidable'}"
+            for c in outcome.clauses if c.list_name in ("pass_all", "fail_any")
+        ]
+        outcome.explanation = (
+            "EVIDENCE HORIZON EXHAUSTED — OPERATOR DECISION REQUIRED. "
+            + "; ".join(
+                f"{c.scope} {c.clause['metric']}={_fmt(c.value)} reached the "
+                f"pre-registered horizon of {c.clause['value']}"
+                for c in spent
+            )
+            + ". No further authorization look accrues: the contract's error rate "
+            "was calibrated over a bounded number of evaluations, and continuing "
+            "to look past that is the multiple-testing this horizon exists to "
+            "stop. Nothing is auto-passed or auto-failed."
+            + (" Clause standing at the horizon: " + "; ".join(would) if would else "")
         )
         return _finish(session, gate, experiment, version, epoch, outcome,
                        persist, computed_by)
