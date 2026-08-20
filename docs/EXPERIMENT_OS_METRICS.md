@@ -238,6 +238,22 @@ market. Settlement is a property of the market, not of who held it.
 | `twin_mirror_coverage_pct` | share of live markets **entered** that the twin also entered. The denominator is entries, not settlements, because the mirror fires at entry — which is where a 25%-coverage twin hid in production |
 | `twin_model_coverage_pct` | share of **settled** live markets whose modeled probability resolves from the twin — the evidence set itself as denominator |
 | `realized_tail_hit_ratio_vs_modeled` | `R = O / Σpᵢ` over settled markets. Exposes `observed`/`expected` for the `poisson_exact` bound. **MISSING below 90% model coverage** |
+
+**The tail outcome is the market's settlement, and three substitutions are
+refused** — each would change the numerator without changing the denominator:
+
+1. **not the live P&L sign** — a position exited early under TP/SL loses money
+   without the tail hitting at all;
+2. **not the twin trade's P&L classification** — `resolved_value` is the
+   settlement value *for that trade's side*, not a property of the market, so it
+   is translated into the market's own outcome (did YES resolve) before use;
+3. **not a twin on the other side of the same market** — a twin holding the
+   opposite side is not a mirror, and such a market is excluded and counted
+   (`excluded_side_mismatch`) rather than read as though the sides agreed.
+
+A tail "hits" when the side the **live** book sold loses: the YES outcome for a
+NO-side book, the NO outcome for a YES-side book. A market the live book entered
+on both sides is `excluded_side_ambiguous`, never guessed.
 | `twin_live_gap_cents` | twin rate − live rate over **each leg's own** settled set — the adverse-selection read |
 | `twin_live_paired_gap_cents` | per-market **paired** difference — an execution *fidelity* check |
 
@@ -317,6 +333,20 @@ contract:
 "sample": {"theta4": {"metric": "live_settled_markets", "op": ">=", "value": 600}},
 "max_evidence_horizon": {"metric": "live_settled_markets", "value": 1800}
 ```
+
+**The horizon is the last permitted look, not a cutoff before it:**
+
+| evidence n | behavior |
+|---|---|
+| `n < horizon` | evaluate normally |
+| `n == horizon` | evaluate normally — this **is** the final permitted look, so a PASS stands and a **FAIL stands**. Only an inconclusive result becomes `HORIZON_EXHAUSTED`. |
+| `n > horizon` | no further statistical look accrues → `HORIZON_EXHAUSTED` |
+
+The `==` case matters most for an eligible safety clause: a failure that only
+becomes demonstrable on the final pre-registered observation is a real failure,
+and hiding it would discard the very observation the contract paid for. Past the
+horizon there is no safety peeking either — operational alerting may continue
+elsewhere, but the frozen statistical gate stops taking looks.
 
 At the horizon the verdict is **`HORIZON_EXHAUSTED`**, and:
 

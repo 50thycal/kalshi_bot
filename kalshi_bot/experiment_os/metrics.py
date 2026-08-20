@@ -681,8 +681,8 @@ def _live_market_rows(session, tags: tuple[str, ...], scope: MetricScope) -> dic
 
     # Markets this arm entered inside the window, and every strategy that traded
     # them (the contested check needs the full set, not just ours).
-    mine = session.execute(
-        select(LiveOrder.market_ticker)
+    mine_rows = session.execute(
+        select(LiveOrder.market_ticker, LiveOrder.side)
         .where(
             LiveOrder.strategy.in_(tags),
             LiveOrder.action == "buy",
@@ -690,13 +690,19 @@ def _live_market_rows(session, tags: tuple[str, ...], scope: MetricScope) -> dic
             LiveOrder.created_at <= scope.window_end,
         )
         .distinct()
-    ).scalars().all()
-    mine = set(mine)
+    ).all()
+    # Side is carried per market because the tail metric needs the LIVE side to
+    # decide what "the tail hit" means. A market entered on both sides is
+    # ambiguous for that purpose and is recorded as such rather than guessed.
+    sides: dict[str, set[str]] = {}
+    for ticker, side in mine_rows:
+        sides.setdefault(ticker, set()).add((side or "").lower())
+    mine = set(sides)
     if not mine:
         return {"markets": 0, "settled_markets": 0, "contracts": 0, "pnl_usd": 0.0,
                 "wins": 0, "contested_markets": 0, "open_markets": 0,
                 "unpriced_markets": 0, "never_held_markets": 0, "per_market": [],
-                "settled_tickers": [], "entered_tickers": [],
+                "settled_tickers": [], "entered_tickers": [], "sides": {},
                 "per_market_by_ticker": []}
 
     contested = set(session.execute(
@@ -775,6 +781,8 @@ def _live_market_rows(session, tags: tuple[str, ...], scope: MetricScope) -> dic
         "never_held_markets": never_held,
         "per_market": per_market,
         "settled_tickers": sorted(settled),
+        "sides": {t: (next(iter(v)) if len(v) == 1 else None)
+                  for t, v in sides.items()},
         "entered_tickers": sorted(ours),
         "per_market_by_ticker": [
             (t, cents_by_market[t], float(by_market.get(t, 0) or 0))
@@ -975,7 +983,7 @@ def _twin_paper_rows(session, twin_tags: tuple[str, ...], scope: MetricScope) ->
     rows = session.execute(
         select(PaperTrade.market_ticker, PaperTrade.model_probability,
                PaperTrade.resolved_value, PaperTrade.pnl, PaperTrade.quantity,
-               PaperTrade.status)
+               PaperTrade.status, PaperTrade.side)
         .where(
             PaperTrade.strategy.in_(twin_tags),
             PaperTrade.created_at >= scope.window_start,
@@ -983,13 +991,24 @@ def _twin_paper_rows(session, twin_tags: tuple[str, ...], scope: MetricScope) ->
         )
     ).all()
     out: dict[str, dict] = {}
-    for ticker, p, resolved, pnl, qty, status in rows:
+    for ticker, p, resolved, pnl, qty, status, side in rows:
         cur = out.setdefault(ticker, {"model_p": None, "resolved": None,
-                                      "pnl": 0.0, "qty": 0, "settled": False})
+                                      "pnl": 0.0, "qty": 0, "settled": False,
+                                      "sides": set(), "yes_resolved": None})
+        cur["sides"].add((side or "").lower())
         if p is not None and cur["model_p"] is None:
             cur["model_p"] = float(p)
         if resolved is not None and cur["resolved"] is None:
             cur["resolved"] = int(resolved)
+            # `resolved_value` is the settlement value FOR THAT TRADE'S SIDE, not
+            # a property of the market. Translate it into the market's own
+            # outcome — did YES resolve — so the tail classification cannot
+            # silently invert when the twin holds the opposite side.
+            sl = (side or "").lower()
+            if sl == "yes":
+                cur["yes_resolved"] = int(resolved) == 100
+            elif sl == "no":
+                cur["yes_resolved"] = int(resolved) == 0
         if status in SETTLED_STATUSES and pnl is not None:
             cur["settled"] = True
             cur["pnl"] += float(pnl)
@@ -1058,7 +1077,7 @@ def _twin_metric(session, key: str, scope: MetricScope) -> MetricValue:
                                               "uncovered": len(settled_live) - covered})
 
     if key == "realized_tail_hit_ratio_vs_modeled":
-        return _tail_ratio(key, settled_live, twin, prov)
+        return _tail_ratio(key, settled_live, twin, agg["sides"], prov)
 
     if key == "twin_live_gap_cents":
         # Each leg over its OWN settled set — different denominators on purpose.
@@ -1111,21 +1130,42 @@ def _twin_metric(session, key: str, scope: MetricScope) -> MetricValue:
     )
 
 
-def _tail_ratio(key: str, settled_live: list[str], twin: dict, prov: dict) -> MetricValue:
+def _tail_ratio(key: str, settled_live: list[str], twin: dict,
+                live_sides: dict, prov: dict) -> MetricValue:
     """R = observed tail hits / sum of modeled probabilities, over settled MARKETS.
 
-    A tail "hits" when the sold tail resolves in the money — the twin's
-    `resolved_value == 0`, i.e. its position lost. The twin's settlement is used
-    rather than the live position's P&L sign because a live position exited early
-    under TP/SL can lose money without the tail hitting at all, which would
-    inflate O against an unchanged E.
+    A tail "hits" when the side the LIVE book sold loses at settlement. Three
+    substitutions are deliberately refused along the way, because each would
+    change the numerator without changing the denominator:
+
+    * **not the live P&L sign.** A live position exited early under TP/SL loses
+      money without the tail hitting at all.
+    * **not the twin trade's P&L classification.** `resolved_value` is the
+      settlement value FOR THAT TRADE'S SIDE, not a property of the market. It is
+      translated into the market's own outcome — did YES resolve — so the
+      classification cannot invert when the twin holds the other side.
+    * **not a twin on the other side of the same market.** A twin holding the
+      opposite side is not a mirror of the live position; such a market is
+      excluded and counted, never read as though the sides agreed.
 
     Markets whose modeled probability cannot be resolved are excluded from BOTH O
     and E, never imputed from the book's mean: imputing pulls R toward 1, which is
     toward PASSING. Above the coverage threshold that exclusion is small enough to
     bound; below it the metric is MISSING."""
-    covered = [(t, twin[t]) for t in settled_live
-               if twin.get(t, {}).get("model_p") is not None]
+    covered, side_mismatch, side_unknown = [], 0, 0
+    for t in settled_live:
+        row = twin.get(t)
+        if not row or row.get("model_p") is None:
+            continue
+        live_side = live_sides.get(t)
+        twin_sides = row.get("sides") or set()
+        if live_side is None or len(twin_sides) != 1:
+            side_unknown += 1          # entered on both sides — not a clean mirror
+            continue
+        if next(iter(twin_sides)) != live_side:
+            side_mismatch += 1
+            continue
+        covered.append((t, row))
     total = len(settled_live)
     if total == 0:
         return MetricValue(key, None, 0, "ratio",
@@ -1135,6 +1175,8 @@ def _tail_ratio(key: str, settled_live: list[str], twin: dict, prov: dict) -> Me
     prov = prov | {"coverage_pct": round(coverage, 2),
                    "covered_markets": len(covered),
                    "excluded_uncovered": total - len(covered),
+                   "excluded_side_mismatch": side_mismatch,
+                   "excluded_side_ambiguous": side_unknown,
                    "coverage_threshold_pct": MIN_TWIN_MODEL_COVERAGE_PCT}
     if coverage < MIN_TWIN_MODEL_COVERAGE_PCT:
         return MetricValue(
@@ -1148,14 +1190,25 @@ def _tail_ratio(key: str, settled_live: list[str], twin: dict, prov: dict) -> Me
             provenance=prov,
         )
     expected = sum(v["model_p"] for _t, v in covered)
-    observed = sum(1 for _t, v in covered if v["resolved"] == 0)
-    unresolved = sum(1 for _t, v in covered if v["resolved"] is None)
+    unresolved = sum(1 for _t, v in covered if v.get("yes_resolved") is None)
+    observed = 0
+    for t, v in covered:
+        yes_resolved = v.get("yes_resolved")
+        if yes_resolved is None:
+            continue
+        # The live book SOLD this side; the tail hit when that side lost.
+        observed += int(yes_resolved if live_sides.get(t) == "no"
+                        else not yes_resolved)
     prov = prov | {
         # `observed` and `expected` are the exact keys the poisson_exact bound
         # reads — the clause form this metric exists to serve.
         "observed": observed, "expected": round(expected, 6),
         "markets_without_a_settlement_value": unresolved,
-        "outcome_basis": "twin resolved_value == 0 (the sold tail resolved in the money)",
+        "outcome_basis": (
+            "the underlying market's own settlement (did YES resolve), derived "
+            "from the twin's (side, resolved_value) and compared against the LIVE "
+            "side — not the twin trade's P&L classification"
+        ),
         "unit_of_evidence": "settled market",
     }
     if expected <= 0:

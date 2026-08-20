@@ -775,7 +775,7 @@ def evaluate_gate(
                 horizon.get("deployment_kind", _DEFAULT_KIND), window,
                 snap.fingerprint,
             )
-            plans.append(("horizon", {**horizon, "op": ">="}, hscope, None))
+            plans.append(("horizon", {**horizon, "op": ">"}, hscope, None))
     for list_name in ("pass_all", "fail_any", "hold_if"):
         for clause in spec.get(list_name) or []:
             for plan in _resolve_clause_scopes(
@@ -843,34 +843,70 @@ def evaluate_gate(
         return _finish(session, gate, experiment, version, epoch, outcome,
                        persist, computed_by)
 
-    # 4a) EVIDENCE HORIZON. Past it the contract has spent the looks its error
-    # rate was calibrated for, so NO further authorization look may accrue — no
-    # auto-PASS and no auto-FAIL. This is a decision point, not a wait: the
-    # clause outcomes are still recorded and named in the explanation so the
-    # operator decides on the evidence rather than on silence.
-    spent = [c for c in outcome.clauses if c.list_name == "horizon" and c.passed is True]
-    if spent:
-        outcome.verdict = GateVerdict.HORIZON_EXHAUSTED.value
-        would = [
-            f"{c.list_name}:{c.clause['metric']}={_fmt(c.bound_value if c.bound_value is not None else c.value)}"
+    # 4a) EVIDENCE HORIZON. The horizon is the LAST PERMITTED LOOK, not a cutoff
+    # before it. Three cases:
+    #
+    #   n <  horizon : evaluate normally
+    #   n == horizon : evaluate normally — this IS the final permitted look, so a
+    #                  PASS stands and a FAIL stands. Only an inconclusive result
+    #                  becomes HORIZON_EXHAUSTED.
+    #   n >  horizon : no further statistical look accrues at all.
+    #
+    # The `==` case matters most for an eligible safety clause: a failure that
+    # only becomes demonstrable on the final pre-registered observation is a real
+    # failure, and hiding it behind HORIZON_EXHAUSTED would discard the very
+    # observation the contract paid for.
+    horizon_clauses = [c for c in outcome.clauses if c.list_name == "horizon"]
+    beyond = [c for c in horizon_clauses if c.passed is True]           # n > horizon
+    at_horizon = [c for c in horizon_clauses
+                  if c.value is not None and c.value == c.clause["value"]]
+
+    def _horizon_explanation(cs, *, final_look: bool) -> str:
+        standing = [
+            f"{c.list_name}:{c.clause['metric']}="
+            f"{_fmt(c.bound_value if c.bound_value is not None else c.value)}"
             f" {c.clause['op']} {c.clause['value']} -> "
             f"{'met' if c.passed else 'not met' if c.passed is False else 'undecidable'}"
             for c in outcome.clauses if c.list_name in ("pass_all", "fail_any")
         ]
-        outcome.explanation = (
+        head = (
             "EVIDENCE HORIZON EXHAUSTED — OPERATOR DECISION REQUIRED. "
             + "; ".join(
-                f"{c.scope} {c.clause['metric']}={_fmt(c.value)} reached the "
-                f"pre-registered horizon of {c.clause['value']}"
-                for c in spent
+                f"{c.scope} {c.clause['metric']}={_fmt(c.value)} "
+                + ("is the final permitted look at the pre-registered horizon of "
+                   if final_look else "is past the pre-registered horizon of ")
+                + f"{c.clause['value']}"
+                for c in cs
             )
-            + ". No further authorization look accrues: the contract's error rate "
-            "was calibrated over a bounded number of evaluations, and continuing "
-            "to look past that is the multiple-testing this horizon exists to "
-            "stop. Nothing is auto-passed or auto-failed."
-            + (" Clause standing at the horizon: " + "; ".join(would) if would else "")
         )
+        return (
+            head
+            + (". The final permitted look was taken and did not decide."
+               if final_look else
+               ". No further statistical look accrues.")
+            + " The contract's error rate was calibrated over a bounded number of "
+            "evaluations; continuing to look past that is the multiple testing "
+            "this horizon exists to stop. Nothing is auto-passed or auto-failed."
+            + (" Clause standing: " + "; ".join(standing) if standing else "")
+        )
+
+    if beyond:
+        outcome.verdict = GateVerdict.HORIZON_EXHAUSTED.value
+        outcome.explanation = _horizon_explanation(beyond, final_look=False)
         return _finish(session, gate, experiment, version, epoch, outcome,
+                       persist, computed_by)
+
+    def _finish_statistical(oc):
+        """Apply the final-look rule, then record.
+
+        Used for every STATISTICAL verdict below. The BLOCKED_* paths above do not
+        route through it: a blocked gate never took a look, so a horizon has
+        nothing to say about it."""
+        if at_horizon and oc.verdict not in (GateVerdict.PASS.value,
+                                             GateVerdict.FAIL.value):
+            oc.verdict = GateVerdict.HORIZON_EXHAUSTED.value
+            oc.explanation = _horizon_explanation(at_horizon, final_look=True)
+        return _finish(session, gate, experiment, version, epoch, oc,
                        persist, computed_by)
 
     # 4b) EARLY safety failure — a fail_any clause carrying its own `min_evidence`
@@ -888,8 +924,7 @@ def evaluate_gate(
         outcome.explanation = "early safety failure: " + "; ".join(
             _clause_sentence(c) for c in early
         )
-        return _finish(session, gate, experiment, version, epoch, outcome,
-                       persist, computed_by)
+        return _finish_statistical(outcome)
 
     # 5) sample floors — underpowered is HOLD, never FAIL.
     floors = [c for c in outcome.clauses if c.list_name == "sample"]
@@ -901,8 +936,7 @@ def evaluate_gate(
             f"{c.clause['value']}"
             for c in unmet
         )
-        return _finish(session, gate, experiment, version, epoch, outcome,
-                       persist, computed_by)
+        return _finish_statistical(outcome)
 
     # 6) kill clauses.
     fails = [c for c in outcome.clauses
@@ -912,8 +946,7 @@ def evaluate_gate(
         outcome.explanation = "fail condition met: " + "; ".join(
             _clause_sentence(c) for c in fails
         )
-        return _finish(session, gate, experiment, version, epoch, outcome,
-                       persist, computed_by)
+        return _finish_statistical(outcome)
 
     # 6b) explicit hold conditions (pre-declared revisit gates).
     holds = [c for c in outcome.clauses if c.list_name == "hold_if" and c.passed is True]
@@ -922,8 +955,7 @@ def evaluate_gate(
         outcome.explanation = "hold condition met: " + "; ".join(
             f"{c.scope} {c.clause['metric']}={_fmt(c.value)}" for c in holds
         )
-        return _finish(session, gate, experiment, version, epoch, outcome,
-                       persist, computed_by)
+        return _finish_statistical(outcome)
 
     # 7) pass conditions — an undecidable clause (empty sample) cannot pass.
     passes = [c for c in outcome.clauses if c.list_name == "pass_all"]
@@ -932,8 +964,7 @@ def evaluate_gate(
         outcome.explanation = "all pass conditions met: " + "; ".join(
             f"{c.scope} {c.clause['metric']}={_fmt(c.value)}" for c in passes
         )
-        return _finish(session, gate, experiment, version, epoch, outcome,
-                       persist, computed_by)
+        return _finish_statistical(outcome)
 
     # 8) evidence sufficient but not decisive.
     outcome.verdict = GateVerdict.HOLD.value
@@ -948,8 +979,7 @@ def evaluate_gate(
         )
         or "no pass conditions registered"
     )
-    return _finish(session, gate, experiment, version, epoch, outcome,
-                   persist, computed_by)
+    return _finish_statistical(outcome)
 
 
 def _fmt(v) -> str:

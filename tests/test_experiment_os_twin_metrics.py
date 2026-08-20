@@ -74,10 +74,12 @@ def _armed(s):
     s.commit()
 
 
-def _live(s, ticker, *, contracts=1, realized=0.10, filled=True):
+def _live(s, ticker, *, contracts=1, realized=0.10, filled=True, side="no"):
+    """A live entry. `side="no"` is the real convention for these books: they SELL
+    the YES tail by buying NO, so the tail hits when YES resolves."""
     oid = f"o-{next(_SEQ)}"
     s.add(LiveOrder(kalshi_order_id=oid, market_ticker=ticker, strategy=LIVE_TAG,
-                    action="buy", side="yes", quantity=contracts,
+                    action="buy", side=side, quantity=contracts,
                     status="filled" if filled else "canceled",
                     created_at=T0 + timedelta(hours=1)))
     if not filled:
@@ -91,9 +93,11 @@ def _live(s, ticker, *, contracts=1, realized=0.10, filled=True):
 
 
 def _twin(s, ticker, *, pnl=0.10, qty=1, model_p=0.08, resolved=100,
-          status="settled"):
+          status="settled", side="no"):
+    """The twin leg. On a NO position `resolved_value == 0` means the position
+    lost, i.e. YES resolved, i.e. the sold tail HIT."""
     s.add(PaperTrade(market_ticker=ticker, strategy=TWIN_TAG, status=status,
-                     pnl=pnl, quantity=qty, model_probability=model_p,
+                     side=side, pnl=pnl, quantity=qty, model_probability=model_p,
                      resolved_value=resolved, created_at=T0 + timedelta(hours=1)))
 
 
@@ -329,3 +333,85 @@ def test_live_settled_markets_counts_markets_not_contracts(xos_session, xos_plat
     s.commit()
     assert compute_metric(s, "live_settled_markets", _scope()).value == 2.0
     assert compute_metric(s, "live_settled_contracts", _scope()).value == 8.0
+
+
+# ---------------------------------------------------------------------------
+# The twin must be a mirror of the same market AND the same side
+#
+# `resolved_value` is the settlement value FOR THAT TRADE'S SIDE, not a property
+# of the market. Read as a P&L classification it inverts silently whenever the
+# twin holds the other side — turning every win into a "tail hit" and doubling
+# the numerator against an unchanged denominator.
+# ---------------------------------------------------------------------------
+
+
+def test_the_outcome_is_the_markets_settlement_not_the_twins_pnl_label(
+        xos_session, xos_platform):
+    """Same market, same settlement, twin on the OPPOSITE side.
+
+    The twin's own trade won (`resolved_value == 100` on its YES), and the live
+    NO position lost — the tail DID hit. Copying the twin's P&L label would score
+    this as a miss."""
+    s = xos_session
+    _armed(s)
+    for i in range(20):
+        t = _live(s, f"SD-{i}", side="no")
+        # twin holds YES; YES resolved, so the live NO lost -> tail hit
+        _twin(s, t, side="yes", resolved=100, pnl=0.9)
+    s.commit()
+
+    mv = compute_metric(s, "realized_tail_hit_ratio_vs_modeled", _scope())
+    # every market is excluded as a side mismatch rather than mis-scored
+    assert mv.provenance["excluded_side_mismatch"] == 20
+    assert mv.missing is True, "an unmirrored twin is not evidence"
+
+
+def test_a_matched_side_reads_the_market_outcome_correctly(xos_session,
+                                                           xos_platform):
+    """Both legs on NO. `resolved_value == 0` means the NO lost, i.e. YES
+    resolved, i.e. the sold tail hit."""
+    s = xos_session
+    _armed(s)
+    for i in range(20):
+        t = _live(s, f"OK-{i}", side="no")
+        _twin(s, t, side="no", resolved=0 if i < 3 else 100)
+    s.commit()
+
+    mv = compute_metric(s, "realized_tail_hit_ratio_vs_modeled", _scope())
+    assert mv.provenance["observed"] == 3
+    assert mv.provenance["excluded_side_mismatch"] == 0
+    assert "not the twin trade's P&L classification" in mv.provenance["outcome_basis"]
+
+
+def test_a_market_entered_on_both_sides_is_ambiguous_not_guessed(xos_session,
+                                                                 xos_platform):
+    s = xos_session
+    _armed(s)
+    for i in range(19):
+        t = _live(s, f"AM-{i}", side="no")
+        _twin(s, t, side="no", resolved=100)
+    both = _live(s, "AM-BOTH", side="no")
+    s.add(LiveOrder(kalshi_order_id=f"o-{next(_SEQ)}", market_ticker=both,
+                    strategy=LIVE_TAG, action="buy", side="yes", quantity=1,
+                    status="filled", created_at=T0 + timedelta(hours=2)))
+    _twin(s, both, side="no", resolved=100)
+    s.commit()
+
+    mv = compute_metric(s, "realized_tail_hit_ratio_vs_modeled", _scope())
+    assert mv.provenance["excluded_side_ambiguous"] == 1
+
+
+def test_a_yes_side_book_inverts_the_tail_definition(xos_session, xos_platform):
+    """The tail hits when the side the LIVE book sold loses — which is the YES
+    outcome for a NO book and the NO outcome for a YES book."""
+    s = xos_session
+    _armed(s)
+    for i in range(20):
+        t = _live(s, f"YS-{i}", side="yes")
+        # both on YES; resolved_value 0 means the YES lost -> for a YES book that
+        # IS the tail hitting
+        _twin(s, t, side="yes", resolved=0 if i < 4 else 100)
+    s.commit()
+
+    mv = compute_metric(s, "realized_tail_hit_ratio_vs_modeled", _scope())
+    assert mv.provenance["observed"] == 4

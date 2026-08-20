@@ -375,28 +375,82 @@ def test_a_gate_decides_normally_before_its_horizon(xos_session, xos_platform):
     assert evaluator.evaluate_gate(s, gate, persist=False).verdict == "PASS"
 
 
-def test_at_the_horizon_no_further_authorization_look_accrues(xos_session,
-                                                              xos_platform):
-    """The same evidence that PASSed at n=10 must not PASS at the horizon."""
+# The horizon is the LAST PERMITTED LOOK, not a cutoff before it:
+#
+#   n <  horizon : evaluate normally
+#   n == horizon : evaluate normally — PASS stands, FAIL stands, otherwise EXHAUSTED
+#   n >  horizon : no further statistical look accrues
+#
+# The `==` case matters most for a safety clause. A failure that only becomes
+# demonstrable on the final pre-registered observation is a real failure, and
+# hiding it behind HORIZON_EXHAUSTED would discard the observation the contract
+# paid for.
+
+
+def test_PASS_stands_exactly_at_the_horizon(xos_session, xos_platform):
     s = xos_session
-    exp, ver, epoch = _experiment(s, key="at-horizon")
+    exp, ver, epoch = _experiment(s, key="pass-at-horizon")
     gate = _gate(s, ver, HORIZON_SPEC)
-    for _ in range(25):
+    for _ in range(20):                    # exactly the horizon
+        _trade(s, "t_tag", pnl=0.20)
+    s.commit()
+
+    out = evaluator.evaluate_gate(s, gate, persist=False)
+    assert out.verdict == "PASS", "the final permitted look still decides"
+
+
+def test_FAIL_stands_exactly_at_the_horizon(xos_session, xos_platform):
+    """The case the inclusive rule exists for: a genuine failure that becomes
+    demonstrable on the last pre-registered observation."""
+    s = xos_session
+    exp, ver, epoch = _experiment(s, key="fail-at-horizon")
+    gate = _gate(s, ver, HORIZON_SPEC)
+    for _ in range(20):
+        _trade(s, "t_tag", pnl=-9.99)      # trips the fail_any clause
+    s.commit()
+
+    out = evaluator.evaluate_gate(s, gate, persist=False)
+    assert out.verdict == "FAIL", "a failure on the final look is a real failure"
+
+
+def test_an_inconclusive_final_look_becomes_horizon_exhausted(xos_session,
+                                                              xos_platform):
+    s = xos_session
+    exp, ver, epoch = _experiment(s, key="flat-at-horizon")
+    gate = _gate(s, ver, HORIZON_SPEC)
+    for _ in range(20):
+        _trade(s, "t_tag", pnl=0.0)        # neither passes nor fails
+    s.commit()
+
+    out = evaluator.evaluate_gate(s, gate, persist=False)
+    assert out.verdict == "HORIZON_EXHAUSTED"
+    assert "final permitted look was taken and did not decide" in out.explanation
+
+
+def test_evidence_beyond_the_horizon_cannot_create_a_new_PASS(xos_session,
+                                                              xos_platform):
+    s = xos_session
+    exp, ver, epoch = _experiment(s, key="past-horizon-pass")
+    gate = _gate(s, ver, HORIZON_SPEC)
+    for _ in range(25):                    # past the horizon
         _trade(s, "t_tag", pnl=0.20)
     s.commit()
 
     out = evaluator.evaluate_gate(s, gate, persist=False)
     assert out.verdict == "HORIZON_EXHAUSTED"
     assert out.verdict != "PASS"
-    assert "OPERATOR DECISION REQUIRED" in out.explanation
+    assert "No further statistical look accrues" in out.explanation
 
 
-def test_the_horizon_does_not_auto_fail_either(xos_session, xos_platform):
+def test_evidence_beyond_the_horizon_cannot_create_a_new_statistical_FAIL(
+        xos_session, xos_platform):
+    """No indefinite safety peeking. Operational alerting may continue elsewhere;
+    the frozen statistical gate stops taking looks."""
     s = xos_session
-    exp, ver, epoch = _experiment(s, key="horizon-losing")
+    exp, ver, epoch = _experiment(s, key="past-horizon-fail")
     gate = _gate(s, ver, HORIZON_SPEC)
     for _ in range(25):
-        _trade(s, "t_tag", pnl=-9.99)     # trips the fail_any clause
+        _trade(s, "t_tag", pnl=-9.99)
     s.commit()
 
     out = evaluator.evaluate_gate(s, gate, persist=False)
@@ -416,7 +470,7 @@ def test_the_horizon_verdict_reports_where_every_clause_stood(xos_session,
     s.commit()
 
     out = evaluator.evaluate_gate(s, gate, persist=False)
-    assert "Clause standing at the horizon" in out.explanation
+    assert "Clause standing" in out.explanation
     assert "pass_all:pnl_cents_per_trade" in out.explanation
     assert "met" in out.explanation
 
