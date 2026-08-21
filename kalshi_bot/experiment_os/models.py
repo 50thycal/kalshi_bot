@@ -696,16 +696,20 @@ class ExperimentIssue(Base):
         String(20), nullable=False, default="OPEN", server_default="OPEN"
     )
     severity: Mapped[str] = mapped_column(
-        String(8), nullable=False, default="MEDIUM", server_default="MEDIUM"
+        String(12), nullable=False, default="MEDIUM", server_default="MEDIUM"
     )
     priority: Mapped[str] = mapped_column(
         String(2), nullable=False, default="P2", server_default="P2"
     )
     #: Who is working it now. Never EXPERIMENT_CONTROL_TOWER (read-only) and
     #: never a generic fixer role — an issue routes to an existing session role.
-    current_owner_role: Mapped[str] = mapped_column(String(24), nullable=False)
-    #: The detecting context, which MAY be the read-only Control Tower.
-    opened_by_role: Mapped[str] = mapped_column(String(24), nullable=False)
+    #: Width carries headroom over the longest role name on purpose: Postgres
+    #: enforces VARCHAR limits and SQLite does not, so a role added later that
+    #: happened to be one character longer would fail in production only.
+    current_owner_role: Mapped[str] = mapped_column(String(32), nullable=False)
+    #: The detecting context, which MAY be the read-only Control Tower —
+    #: EXPERIMENT_CONTROL_TOWER is the longest role name the system has.
+    opened_by_role: Mapped[str] = mapped_column(String(32), nullable=False)
     opened_by_actor: Mapped[str | None] = mapped_column(String(64))
     opened_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
@@ -755,7 +759,7 @@ class ExperimentIssue(Base):
     # --- investigation content ---
     evidence_summary: Mapped[str | None] = mapped_column(Text)
     proposed_fix: Mapped[str | None] = mapped_column(Text)
-    disposition: Mapped[str | None] = mapped_column(String(24))
+    disposition: Mapped[str | None] = mapped_column(String(32))
     validation_plan: Mapped[str | None] = mapped_column(Text)
     resolution_summary: Mapped[str | None] = mapped_column(Text)
 
@@ -805,14 +809,14 @@ class ExperimentIssueEvent(Base):
     issue_id: Mapped[int] = mapped_column(
         BigIntId, ForeignKey("experiment_issues.id"), nullable=False
     )
-    event_type: Mapped[str] = mapped_column(String(24), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(32), nullable=False)
     actor: Mapped[str | None] = mapped_column(String(64))
-    actor_role: Mapped[str | None] = mapped_column(String(24))
+    actor_role: Mapped[str | None] = mapped_column(String(32))
     occurred_at: Mapped[datetime] = mapped_column(TS, nullable=False)
     from_status: Mapped[str | None] = mapped_column(String(20))
     to_status: Mapped[str | None] = mapped_column(String(20))
-    from_owner_role: Mapped[str | None] = mapped_column(String(24))
-    to_owner_role: Mapped[str | None] = mapped_column(String(24))
+    from_owner_role: Mapped[str | None] = mapped_column(String(32))
+    to_owner_role: Mapped[str | None] = mapped_column(String(32))
     from_classification: Mapped[str | None] = mapped_column(String(16))
     to_classification: Mapped[str | None] = mapped_column(String(16))
     reason: Mapped[str | None] = mapped_column(Text)
@@ -840,7 +844,7 @@ class ExperimentIssueEvidence(Base):
     issue_id: Mapped[int] = mapped_column(
         BigIntId, ForeignKey("experiment_issues.id"), nullable=False
     )
-    evidence_type: Mapped[str] = mapped_column(String(24), nullable=False)
+    evidence_type: Mapped[str] = mapped_column(String(32), nullable=False)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     source_ref: Mapped[str | None] = mapped_column(Text)
     captured_at: Mapped[datetime] = mapped_column(TS, nullable=False)
@@ -868,7 +872,7 @@ class ExperimentIssueLink(Base):
     issue_id: Mapped[int] = mapped_column(
         BigIntId, ForeignKey("experiment_issues.id"), nullable=False
     )
-    link_type: Mapped[str] = mapped_column(String(24), nullable=False)
+    link_type: Mapped[str] = mapped_column(String(32), nullable=False)
     reference: Mapped[str] = mapped_column(Text, nullable=False)
     label: Mapped[str | None] = mapped_column(String(200))
     created_by: Mapped[str | None] = mapped_column(String(64))

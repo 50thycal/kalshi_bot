@@ -27,6 +27,12 @@ from kalshi_bot.experiment_os.service import ImmutableRecord
 UTC = timezone.utc
 T0 = datetime(2026, 8, 1, tzinfo=UTC)
 
+#: Every detector constant, so a new one cannot quietly outgrow its column.
+_ALL_DETECTORS = [
+    getattr(ipol, name) for name in dir(ipol) if name.startswith("DETECTOR_")
+    and isinstance(getattr(ipol, name), str)
+]
+
 
 def _experiment(s, key="book-a", *, tag=None):
     """A fully registered experiment: version, arm, frozen contract, epoch,
@@ -893,3 +899,68 @@ def test_every_issue_subcommand_is_dispatchable():
         assert callable(parser.get_default("fn")), f"{' '.join(path)} has no fn"
 
     walk(cli.build_parser())
+
+
+def test_every_enum_value_fits_the_column_that_stores_it():
+    """SQLite ignores VARCHAR limits; Postgres enforces them.
+
+    So a value one character too long for its column passes the whole test suite
+    and then fails in production — the single worst place to discover it. This
+    walks the real ORM columns and asserts every enum value fits with room to
+    spare, so adding a longer role or event type fails here instead.
+
+    `EXPERIMENT_CONTROL_TOWER` (24) is the longest name in the system and sat at
+    exactly the original column width; the headroom below is deliberate."""
+    from sqlalchemy import String
+
+    from kalshi_bot.experiment_os.models import (
+        ExperimentIssue,
+        ExperimentIssueEvent,
+        ExperimentIssueEvidence,
+        ExperimentIssueLink,
+    )
+
+    role_values = sorted(ipol.OPENING_ROLES)
+    checks = [
+        (ExperimentIssue, "classification", [c.value for c in ipol.IssueClassification]),
+        (ExperimentIssue, "status", [s.value for s in ipol.IssueStatus]),
+        (ExperimentIssue, "severity", [s.value for s in ipol.IssueSeverity]),
+        (ExperimentIssue, "priority", [p.value for p in ipol.IssuePriority]),
+        (ExperimentIssue, "current_owner_role", role_values),
+        (ExperimentIssue, "opened_by_role", role_values),
+        (ExperimentIssue, "disposition", [d.value for d in ipol.IssueDisposition]),
+        (ExperimentIssue, "detector", _ALL_DETECTORS),
+        (ExperimentIssueEvent, "event_type", [e.value for e in ipol.IssueEventType]),
+        (ExperimentIssueEvent, "actor_role", role_values),
+        (ExperimentIssueEvent, "from_owner_role", role_values),
+        (ExperimentIssueEvent, "to_owner_role", role_values),
+        (ExperimentIssueEvent, "from_status", [s.value for s in ipol.IssueStatus]),
+        (ExperimentIssueEvent, "to_status", [s.value for s in ipol.IssueStatus]),
+        (ExperimentIssueEvent, "from_classification",
+         [c.value for c in ipol.IssueClassification]),
+        (ExperimentIssueEvent, "to_classification",
+         [c.value for c in ipol.IssueClassification]),
+        (ExperimentIssueEvidence, "evidence_type",
+         [e.value for e in ipol.IssueEvidenceType]),
+        (ExperimentIssueLink, "link_type", [link.value for link in ipol.IssueLinkType]),
+    ]
+    for model, column, values in checks:
+        col = model.__table__.c[column]
+        assert isinstance(col.type, String), f"{column} is not a String column"
+        width = col.type.length
+        longest = max(values, key=len)
+        assert len(longest) <= width, (
+            f"{model.__tablename__}.{column} is VARCHAR({width}) but must hold "
+            f"{longest!r} ({len(longest)} chars)"
+        )
+
+
+def test_the_issue_key_column_holds_far_more_keys_than_we_will_ever_open():
+    """`XOS-` plus six digits is 10 characters in a VARCHAR(24); the generator
+    widens past six digits rather than wrapping, so the column has room for
+    ~10^19 issues before the format itself is the limit."""
+    from kalshi_bot.experiment_os.models import ExperimentIssue
+
+    width = ExperimentIssue.__table__.c["issue_key"].type.length
+    assert len(ipol.format_issue_key(10**6 - 1)) == 10
+    assert len(ipol.format_issue_key(10**18)) <= width

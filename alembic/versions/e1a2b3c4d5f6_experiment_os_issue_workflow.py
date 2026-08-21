@@ -43,7 +43,20 @@ depends_on = None
 # Integer on sqlite, timezone-aware timestamps, JSON payloads.
 _BIGINT = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
 _TS = sa.DateTime(timezone=True)
+# `sa.JSON()`, matching every existing Experiment OS migration, which means these
+# land as Postgres `json` rather than the `jsonb` that `models.JSONType` would
+# produce under create_all(). That divergence is repo-wide and pre-existing — all
+# sixteen earlier Experiment OS tables are `json` in production for the same
+# reason — so this follows the neighbours deliberately. Introducing `jsonb` for
+# four tables and not the other sixteen would be a worse inconsistency than the
+# one it fixed, and nothing here queries inside the payload.
 _JSON = sa.JSON()
+
+# Column widths carry headroom over the longest value each column holds.
+# Postgres enforces VARCHAR limits and SQLite does not, so a value one character
+# too long passes the whole test suite and fails only in production; roles are
+# 32 for a longest name of 24 (EXPERIMENT_CONTROL_TOWER). A test walks the ORM
+# columns and asserts every enum value still fits.
 
 _ISSUES = "experiment_issues"
 _EVENTS = "experiment_issue_events"
@@ -88,10 +101,10 @@ def upgrade() -> None:
             sa.Column("classification", sa.String(16), nullable=False,
                       server_default="UNCLASSIFIED"),
             sa.Column("status", sa.String(20), nullable=False, server_default="OPEN"),
-            sa.Column("severity", sa.String(8), nullable=False, server_default="MEDIUM"),
+            sa.Column("severity", sa.String(12), nullable=False, server_default="MEDIUM"),
             sa.Column("priority", sa.String(2), nullable=False, server_default="P2"),
-            sa.Column("current_owner_role", sa.String(24), nullable=False),
-            sa.Column("opened_by_role", sa.String(24), nullable=False),
+            sa.Column("current_owner_role", sa.String(32), nullable=False),
+            sa.Column("opened_by_role", sa.String(32), nullable=False),
             sa.Column("opened_by_actor", sa.String(64)),
             sa.Column("opened_at", _TS, nullable=False),
             sa.Column("updated_at", _TS, nullable=False),
@@ -119,7 +132,7 @@ def upgrade() -> None:
                       server_default="1"),
             sa.Column("evidence_summary", sa.Text()),
             sa.Column("proposed_fix", sa.Text()),
-            sa.Column("disposition", sa.String(24)),
+            sa.Column("disposition", sa.String(32)),
             sa.Column("validation_plan", sa.Text()),
             sa.Column("resolution_summary", sa.Text()),
             # Tri-state on purpose: NULL means "not yet determined", which is not
@@ -144,14 +157,14 @@ def upgrade() -> None:
             sa.Column("id", _BIGINT, primary_key=True, autoincrement=True),
             sa.Column("issue_id", _BIGINT, sa.ForeignKey("experiment_issues.id"),
                       nullable=False),
-            sa.Column("event_type", sa.String(24), nullable=False),
+            sa.Column("event_type", sa.String(32), nullable=False),
             sa.Column("actor", sa.String(64)),
-            sa.Column("actor_role", sa.String(24)),
+            sa.Column("actor_role", sa.String(32)),
             sa.Column("occurred_at", _TS, nullable=False),
             sa.Column("from_status", sa.String(20)),
             sa.Column("to_status", sa.String(20)),
-            sa.Column("from_owner_role", sa.String(24)),
-            sa.Column("to_owner_role", sa.String(24)),
+            sa.Column("from_owner_role", sa.String(32)),
+            sa.Column("to_owner_role", sa.String(32)),
             sa.Column("from_classification", sa.String(16)),
             sa.Column("to_classification", sa.String(16)),
             sa.Column("reason", sa.Text()),
@@ -165,7 +178,7 @@ def upgrade() -> None:
             sa.Column("id", _BIGINT, primary_key=True, autoincrement=True),
             sa.Column("issue_id", _BIGINT, sa.ForeignKey("experiment_issues.id"),
                       nullable=False),
-            sa.Column("evidence_type", sa.String(24), nullable=False),
+            sa.Column("evidence_type", sa.String(32), nullable=False),
             sa.Column("summary", sa.Text(), nullable=False),
             sa.Column("source_ref", sa.Text()),
             sa.Column("captured_at", _TS, nullable=False),
@@ -181,7 +194,7 @@ def upgrade() -> None:
             sa.Column("id", _BIGINT, primary_key=True, autoincrement=True),
             sa.Column("issue_id", _BIGINT, sa.ForeignKey("experiment_issues.id"),
                       nullable=False),
-            sa.Column("link_type", sa.String(24), nullable=False),
+            sa.Column("link_type", sa.String(32), nullable=False),
             sa.Column("reference", sa.Text(), nullable=False),
             sa.Column("label", sa.String(200)),
             sa.Column("created_by", sa.String(64)),
