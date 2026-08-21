@@ -36,10 +36,12 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import importlib.util
+import json
 import math
 import os
 import pathlib
 import sys
+import time
 from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -66,9 +68,17 @@ tm = importlib.util.module_from_spec(_TM_SPEC)
 sys.modules[_TM_SPEC.name] = tm
 _TM_SPEC.loader.exec_module(tm)
 
-TRAIL_DAYS = 5.0            # theta_trail_days
+INCUMBENT_TRAIL_DAYS = 5.0   # theta_trail_days — the incumbent is scored AS IT RUNS
+
+# A configuration must power at least this share of TRAIN quotes to be eligible for freezing.
+# Without it the sweep rewards configurations that power almost nothing: an unnormalised
+# deviance falls simply because there is less data, and the quotes a thin configuration DOES
+# power are the ones carrying the most tail evidence — a biased subsample, not a better fit.
+MIN_POWERED_COVERAGE = 0.90
 H_BUCKETS = (10, 15, 20, 25, 30, 35)
 PRODUCTS = ("BTC", "ETH")
+COINBASE = "https://api.exchange.coinbase.com"
+COINBASE_PRODUCT = {"BTC": "BTC-USD", "ETH": "ETH-USD"}
 
 
 def h_bucket(minutes: float) -> int:
@@ -85,6 +95,66 @@ def product_of(series: str | None) -> str:
 
 
 # --- data ------------------------------------------------------------------------------------
+
+def load_spot_coinbase(since: str, until: str | None = None) -> dict[str, dict[int, float]]:
+    """1-minute closes straight from Coinbase's PUBLIC candles endpoint.
+
+    Exists because the database cannot answer the question. `crypto_spot_candles` was pruned at
+    6 days, and the ladder-snapshot reconstruction is ~5-minute sampled — too sparse to build
+    non-overlapping blocks from. Coinbase serves 1-minute candles at least 365 days back (probe
+    `cb-probe-5`, 2026-08-21), so the fit window can be filled from history rather than waited
+    for, and this analysis writes NOTHING: it is a read against a public endpoint.
+
+    stdlib urllib, not httpx — the ops runner installs psycopg alone for `script` requests.
+    """
+    import urllib.error
+    import urllib.request
+
+    start = dt.datetime.fromisoformat(since).replace(tzinfo=dt.timezone.utc)
+    end = (dt.datetime.fromisoformat(until).replace(tzinfo=dt.timezone.utc)
+           if until else dt.datetime.now(dt.timezone.utc))
+    out: dict[str, dict[int, float]] = {p: {} for p in PRODUCTS}
+    for key, product in COINBASE_PRODUCT.items():
+        cursor = int(start.timestamp())
+        stop = int(end.timestamp())
+        while cursor < stop:
+            chunk_end = min(stop, cursor + 300 * 60)
+            url = (f"{COINBASE}/products/{product}/candles?granularity=60"
+                   f"&start={dt.datetime.fromtimestamp(cursor, tz=dt.timezone.utc):%Y-%m-%dT%H:%M:%SZ}"
+                   f"&end={dt.datetime.fromtimestamp(chunk_end, tz=dt.timezone.utc):%Y-%m-%dT%H:%M:%SZ}")
+            req = urllib.request.Request(url, headers={
+                "User-Agent": "kalshi-bot theta refit (research)", "Accept": "application/json"})
+            rows = None
+            # Coinbase's public tier throttles around 10 req/s and a 90-day window is ~430
+            # requests per product. An unthrottled loop earns a 429 partway through, which
+            # truncates the NEWEST data — precisely the minutes the quotes need — and silently
+            # scores zero. Pace, and retry the throttle rather than treating it as the end of
+            # history.
+            for attempt in range(5):
+                try:
+                    with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
+                        rows = json.loads(resp.read().decode())
+                    break
+                except urllib.error.HTTPError as exc:
+                    if exc.code == 429:
+                        time.sleep(1.0 * (attempt + 1))
+                        continue
+                    print(f"  coinbase fetch stopped for {product}: HTTP {exc.code}")
+                    break
+                except Exception as exc:  # noqa: BLE001
+                    print(f"  coinbase fetch stopped for {product}: {str(exc)[:80]}")
+                    break
+            if rows is None:
+                print(f"  coinbase fetch INCOMPLETE for {product} at "
+                      f"{dt.datetime.fromtimestamp(cursor, tz=dt.timezone.utc):%Y-%m-%d}; "
+                      "results below are not usable")
+                break
+            for r in rows or []:
+                out[key][int(r[0])] = float(r[4])
+            cursor = chunk_end
+            time.sleep(0.15)
+    return out
+
 
 def load_spot(cur, since: str, source: str) -> dict[str, dict[int, float]]:
     """{product: {minute_unix: close}}.
@@ -160,37 +230,56 @@ def load_quotes(cur, since: str, tte_max: float) -> list[dict]:
 # --- model plumbing --------------------------------------------------------------------------
 
 class FitCache:
-    """Spliced fits keyed by (product, hour, horizon), each built ONLY from returns whose window
-    closed before that hour started. Refitting hourly rather than per quote is an approximation
-    of a 5-day trailing window that moves by 1/7200 per minute; refitting per quote would be
-    111k fits and would not move a single reported digit."""
+    """Spliced fits keyed by (product, hour, horizon), each built ONLY from blocks whose window
+    closed before that hour started.
 
-    # Return SAMPLES depend only on (product, hour, horizon) — not on tail_q — so they are
-    # shared across the sweep's FitCache instances. Rebuilding them per tail_q would triple the
-    # dominant cost of the run for identical numbers.
-    _RETS: dict[tuple[str, int, int], list[float]] = {}
+    Two corrections over the first draft, both load-bearing:
 
-    def __init__(self, spot: dict[str, dict[int, float]], tail_q: float):
+    * the sample is NON-OVERLAPPING h-minute blocks (step h), not one return per minute. An
+      overlapping sample turns a single shock into ~h neighbouring extremes and biases the
+      fitted shape, scale and exceedance count all at once.
+    * the window is `fit_days`, an explicit pre-registered parameter, NOT the incumbent's 5-day
+      model window. The first draft retained 90 days and still fitted on 5, which made every
+      claim about what retention bought false.
+
+    Refitting hourly rather than per quote approximates a window that moves by one block per
+    hour; refitting per quote would be ~100k fits and would not move a reported digit.
+    """
+
+    # Block samples depend only on (product, hour, horizon, fit_days) — not on tail_q — so they
+    # are shared across the sweep's FitCache instances.
+    _BLOCKS: dict[tuple[str, int, int, float], list[float]] = {}
+
+    def __init__(self, spot: dict[str, dict[int, float]], tail_q: float, fit_days: float):
         self.spot = spot
         self.tail_q = tail_q
+        self.fit_days = float(fit_days)
         self._cache: dict[tuple[str, int, int], object] = {}
-        self._rets = FitCache._RETS
         self.misses = 0
 
-    def _returns(self, product: str, as_of: int, h_min: int) -> list[float]:
-        key = (product, as_of, h_min)
-        got = self._rets.get(key)
+    def _blocks(self, product: str, as_of: int, h_min: int) -> list[float]:
+        """Non-overlapping h-minute log returns ending at or before `as_of`, in TIME ORDER.
+
+        Mirrors `SpotModel.block_returns`; duplicated here rather than imported because the ops
+        runner has no SQLAlchemy and the package import would pull it in. `tests/
+        test_theta_tailmodel.py::TestRefitHarness` pins that the two agree.
+        """
+        key = (product, as_of, h_min, self.fit_days)
+        got = FitCache._BLOCKS.get(key)
         if got is not None:
             return got
         closes = self.spot.get(product) or {}
         h = h_min * 60
-        lo = as_of - int(TRAIL_DAYS * 86400)
+        lo = as_of - int(self.fit_days * 86400)
         out: list[float] = []
-        for t in range(lo, as_of - h + 60, 60):
+        t = as_of - h
+        while t >= lo:
             a, b = closes.get(t), closes.get(t + h)
             if a and b and a > 0 and b > 0:
                 out.append(math.log(b / a))
-        self._rets[key] = out
+            t -= h
+        out.reverse()
+        FitCache._BLOCKS[key] = out
         return out
 
     def get(self, product: str, at: dt.datetime, h_min: int):
@@ -198,7 +287,8 @@ class FitCache:
         key = (product, hour, h_min)
         if key in self._cache:
             return self._cache[key]
-        model = tm.build(self._returns(product, hour, h_min), h_min, tail_q=self.tail_q)
+        model = tm.build(self._blocks(product, hour, h_min), h_min,
+                         tail_q=self.tail_q, fit_days=self.fit_days)
         if model is None:
             self.misses += 1
         self._cache[key] = model
@@ -206,12 +296,21 @@ class FitCache:
 
     def empirical_p(self, product: str, at: dt.datetime, h_min: int, spot: float,
                     strike_type: str, floor, cap, vol_mult: float) -> float | None:
-        """The INCUMBENT model's answer, recomputed from the same return sample so the two are
-        compared on identical inputs rather than against a stored column captured on a different
-        cadence. This is `SpotModel.prob_from_returns` inlined — one expression, and copying it
-        here keeps the ops script free of the SQLAlchemy-bearing package."""
+        """The INCUMBENT's answer, over its OWN 5-day OVERLAPPING window.
+
+        Deliberately not the block sample: the incumbent is being scored as it actually runs,
+        not as a version of it that adopted the replacement's sampling. `SpotModel.
+        prob_from_returns` inlined, since the ops runner cannot import the package.
+        """
         hour = int(at.replace(minute=0, second=0, microsecond=0).timestamp())
-        rets = self._returns(product, hour, h_min)
+        closes = self.spot.get(product) or {}
+        h = h_min * 60
+        lo = hour - int(INCUMBENT_TRAIL_DAYS * 86400)
+        rets = []
+        for t in range(lo, hour - h + 60, 60):
+            a, b = closes.get(t), closes.get(t + h)
+            if a and b and a > 0 and b > 0:
+                rets.append(math.log(b / a))
         if not rets or spot is None or spot <= 0:
             return None
         k = vol_mult if vol_mult and vol_mult > 0 else 1.0
@@ -245,8 +344,15 @@ def score(rows: list[dict], cache: FitCache, vol_mult: float) -> list[dict]:
         if p_new is None or p_old is None:
             continue
         out.append({**r, "p_new": p_new, "p_old": p_old, "h": h,
-                    "n_eff": model.n_eff, "upper_xi": model.upper.xi,
-                    "lower_xi": model.lower.xi, "underpowered": model.underpowered})
+                    "blocks": model.n,
+                    "upper_xi": model.upper.xi, "lower_xi": model.lower.xi,
+                    "upper_clusters": model.upper.n_clusters,
+                    "lower_clusters": model.lower.n_clusters,
+                    "active_xi": model.active_xi(r["strike_type"]),
+                    "active_clusters": model.active_clusters(r["strike_type"]),
+                    # Power is judged on the tail THIS strike prices off, not on both.
+                    "powered": model.powered_for(r["strike_type"]),
+                    "underpowered": not model.powered_for(r["strike_type"])})
     return out
 
 
@@ -282,6 +388,9 @@ def calib(rows: list[dict], key: str) -> dict:
 
 def degeneracy(rows: list[dict]) -> None:
     head("1. DEGENERACY — how much of each model's output is not a probability")
+    if not rows:
+        print("  no quotes scored — nothing to report")
+        return
     print(f"  {'model':<28} {'n':>8} {'exactly 0':>12} {'exactly 1':>12} {'in (0,1)':>12}")
     print("  " + "-" * 76)
     for label, key in (("incumbent (empirical)", "p_old"), ("spliced EVT", "p_new")):
@@ -304,36 +413,98 @@ def compare_calibration(rows: list[dict], title: str) -> None:
                 "modeled P bucket")
 
 
-def sweep(rows_by_q: dict[float, list[dict]], train_end: str) -> None:
-    head("3. TAIL_Q SWEEP — chosen on TRAIN, scored on TEST")
+def poisson_deviance(observed: int, expected: float) -> float:
+    """Poisson deviance of `observed` against `expected`, the selection statistic.
+
+    D = 2 * (o * ln(o/e) - (o - e)), with the standard convention 0 * ln(0) = 0 so D = 2e when
+    nothing was observed.
+
+    It replaces |log(o/e)|, which was UNDEFINED at o = 0 and therefore silently dropped every
+    configuration whose deep tail produced no hits — which is exactly what a well-calibrated deep
+    tail looks like on a short window. A selection statistic that cannot score its best candidates
+    is not a selection statistic. Deviance is symmetric in the sense that matters here (it
+    penalises over- and under-prediction alike), always defined, and lower is better.
+    """
+    if expected <= 0:
+        return float("nan")
+    if observed <= 0:
+        return 2.0 * expected
+    return 2.0 * (observed * math.log(observed / expected) - (observed - expected))
+
+
+def sweep(rows_by_cfg: dict[tuple[float, float], list[dict]], train_end: str
+          ) -> tuple[float, float] | None:
+    """Score every (fit_days, tail_q) on TRAIN, pick ONE, and report it. TEST is not read here.
+
+    Returns the winning config so `main` can score it on TEST exactly once. Choosing on TEST —
+    or choosing after seeing several TEST rows — is the outcome-aware fitting this whole
+    programme exists to stop, so the split is enforced by control flow rather than by a note.
+    """
+    head("3. CONFIGURATION SELECTION — scored on TRAIN only")
     cut = dt.datetime.fromisoformat(train_end).replace(tzinfo=dt.timezone.utc)
-    print(f"  train: quotes before {train_end}   test: on/after it")
-    print(f"  {'tail_q':>7} {'split':<6} {'n':>7} {'expected':>10} {'observed':>9} {'R':>7} "
-          f"{'|log R| deep':>13}")
-    print("  " + "-" * 68)
-    for q in sorted(rows_by_q):
-        for split in ("train", "test"):
-            rs = [r for r in rows_by_q[q]
-                  if (r["captured_at"] < cut) == (split == "train")]
-            if not rs:
-                continue
-            exp = sum(r["p_new"] for r in rs)
-            obs = sum(1 for r in rs if r["yes_resolved"])
-            deep = [r for r in rs if r["p_new"] < 0.02]
-            de = sum(r["p_new"] for r in deep)
-            do = sum(1 for r in deep if r["yes_resolved"])
-            dl = abs(math.log((do / de) if de > 0 and do > 0 else 1e-9)) if de > 0 else float("nan")
-            r_all = obs / exp if exp > 0 else float("nan")
-            print(f"  {q:>7.2f} {split:<6} {len(rs):>7} {exp:>10.2f} {obs:>9} {r_all:>7.2f} "
-                  f"{dl:>13.3f}")
+    print(f"  train: quotes before {train_end}. TEST is not consulted in this section.")
+    print(f"  eligibility: a configuration must power at least "
+          f"{MIN_POWERED_COVERAGE * 100:.0f}% of TRAIN quotes.")
+    print("  A configuration that powers a small subset is not a better configuration — it is")
+    print("  answering a different question on the quotes that happened to carry the most tail")
+    print("  evidence, and its deviance is lower only because it has less data. Scoring is the")
+    print("  MEAN deviance per deep-tail quote, so eligible configurations compare like for like.")
     print()
-    print("  `|log R| deep` is the miss on the sub-2% population, on a log scale so a 4x")
-    print("  understatement and a 4x overstatement score the same. Lower is better. Pick the")
-    print("  tail_q that minimises it ON TRAIN, then read its TEST row and nothing else.")
+    print(f"  {'fit_days':>9} {'tail_q':>7} {'powered':>9} {'cover':>7} {'expected':>10} "
+          f"{'observed':>9} {'R':>7} {'deviance/quote':>15} {'':>4}")
+    print("  " + "-" * 88)
+    total_train = len({(r["ticker"], r["captured_at"]) for rows in rows_by_cfg.values()
+                       for r in rows if r["captured_at"] < cut}) or 1
+    best: tuple[float, float] | None = None
+    best_score = float("inf")
+    for cfg in sorted(rows_by_cfg):
+        fit_days, q = cfg
+        rs = [r for r in rows_by_cfg[cfg] if r["captured_at"] < cut and r["powered"]]
+        cover = len(rs) / total_train
+        if not rs:
+            print(f"  {fit_days:>9.0f} {q:>7.2f} {0:>9} {0.0:>6.1%}  no powered fits on TRAIN")
+            continue
+        exp = sum(r["p_new"] for r in rs)
+        obs = sum(1 for r in rs if r["yes_resolved"])
+        deep = [r for r in rs if r["p_new"] < 0.02]
+        de = sum(r["p_new"] for r in deep)
+        do = sum(1 for r in deep if r["yes_resolved"])
+        dl = poisson_deviance(do, de) / max(1, len(deep))
+        r_all = obs / exp if exp > 0 else float("nan")
+        eligible = cover >= MIN_POWERED_COVERAGE
+        mark = "" if eligible else "  (coverage too low — not a candidate)"
+        print(f"  {fit_days:>9.0f} {q:>7.2f} {len(rs):>9} {cover:>6.1%} {exp:>10.2f} "
+              f"{obs:>9} {r_all:>7.2f} {dl:>15.5f}{mark}")
+        if eligible and not math.isnan(dl) and dl < best_score:
+            best_score, best = dl, cfg
+    print()
+    if best is None:
+        print("  NO configuration produced a powered, scorable TRAIN fit. Nothing is frozen and")
+        print("  no TEST score may be reported — see the blocker in the summary.")
+        return None
+    print(f"  FROZEN on TRAIN: fit_days={best[0]:.0f}, tail_q={best[1]:.2f} "
+          f"(deep-tail deviance/quote = {best_score:.5f})")
+    return best
+
+
+def test_once(rows: list[dict], train_end: str, cfg: tuple[float, float]) -> None:
+    """The single permitted look at TEST, for the configuration frozen on TRAIN."""
+    head("4. OUT-OF-SAMPLE SCORE — the frozen configuration, read once")
+    cut = dt.datetime.fromisoformat(train_end).replace(tzinfo=dt.timezone.utc)
+    rs = [r for r in rows if r["captured_at"] >= cut and r["powered"]]
+    print(f"  frozen: fit_days={cfg[0]:.0f}, tail_q={cfg[1]:.2f}   "
+          f"test quotes with a powered fit: {len(rs)}")
+    if not rs:
+        print("  no powered fits in the TEST period — no out-of-sample score exists.")
+        return
+    print()
+    calib_table("SPLICED, out of sample:", calib(rs, "p_new"), "modeled P bucket")
+    print()
+    calib_table("INCUMBENT, same quotes:", calib(rs, "p_old"), "modeled P bucket")
 
 
 def selection(rows: list[dict]) -> None:
-    head("4. SELECTION — the diagnosis's split, recomputed under each model's own excess")
+    head("5. SELECTION — the diagnosis's split, recomputed under each model's own excess")
     print(f"  A quote is SELECTED when mid - 100*P >= {THETA4_EDGE_CENTS:.0f}c, mid is in")
     print(f"  {THETA4_BAND[0]:.0f}..{THETA4_BAND[1]:.0f}c and volume >= {THETA_MIN_VOLUME:.0f}.")
     print("  Each model is judged by the trades IT would have chosen, not by the incumbent's.")
@@ -361,33 +532,52 @@ def selection(rows: list[dict]) -> None:
 
 
 def fit_health(rows: list[dict]) -> None:
-    head("5. FIT HEALTH — what the tails were actually fitted on")
-    xs = sorted(r["upper_xi"] for r in rows)
-    ns = sorted(r["n_eff"] for r in rows)
-    if not xs:
+    head("6. FIT HEALTH — what each tail was actually fitted on")
+    if not rows:
         return
-    def pct(v, q):
-        return v[min(len(v) - 1, int(q * (len(v) - 1)))]
-    print(f"  upper xi   p10={pct(xs, .1):+.3f}  p50={pct(xs, .5):+.3f}  p90={pct(xs, .9):+.3f}")
-    print(f"  n_eff      p10={pct(ns, .1):>6}  p50={pct(ns, .5):>6}  p90={pct(ns, .9):>6}")
-    neg = sum(1 for x in xs if x < 0) / len(xs) * 100
-    print(f"  fits with a BOUNDED tail (xi < 0): {neg:.1f}% — these are the ones whose deep")
-    print("  extrapolation is least trustworthy and where the resolution floor still applies.")
+
+    def pct(vals, q):
+        v = sorted(x for x in vals if x is not None)
+        return v[min(len(v) - 1, int(q * (len(v) - 1)))] if v else float("nan")
+
+    print(f"  {'quantity':<34} {'p10':>10} {'p50':>10} {'p90':>10}")
+    print("  " + "-" * 68)
+    for label, key in (("non-overlapping blocks", "blocks"),
+                       ("upper-tail declustered exceedances", "upper_clusters"),
+                       ("lower-tail declustered exceedances", "lower_clusters"),
+                       ("upper xi", "upper_xi"), ("lower xi", "lower_xi")):
+        vals = [r[key] for r in rows]
+        fmt = "{:>10.3f}" if "xi" in key else "{:>10.0f}"
+        print(f"  {label:<34} " + " ".join(fmt.format(pct(vals, q)) for q in (.1, .5, .9)))
+    powered = sum(1 for r in rows if r["powered"])
+    print()
+    print(f"  quotes whose ACTIVE tail is powered: {powered}/{len(rows)} "
+          f"({powered / len(rows) * 100:.1f}%)")
+    print(f"  bar: >= {tm.MIN_TAIL_EXCEEDANCES_FOR_POWER} declustered exceedances on the tail")
+    print(f"  the strike prices off, run separation {tm.RUN_SEPARATION} blocks.")
+    neg = [r for r in rows if (r["active_xi"] or 0) < 0]
+    print(f"  fits with a BOUNDED active tail (xi < 0): {len(neg) / len(rows) * 100:.1f}% — "
+          "extrapolated with max(xi, 0).")
 
 
 # --- main --------------------------------------------------------------------------------------
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--since", default="2026-07-11")
+    ap.add_argument("--since", default="2026-07-11", help="first decision quote to score")
     ap.add_argument("--train-end", default="2026-08-11",
-                    help="train/test boundary for the tail_q sweep")
+                    help="TRAIN/TEST boundary. Configuration is chosen on TRAIN and scored "
+                         "once on TEST.")
+    ap.add_argument("--fit-days", default="5,30,90",
+                    help="candidate fit windows for the PAPER model, in days. Never the "
+                         "incumbent's window, which stays at 5 whatever this says.")
     ap.add_argument("--tail-qs", default="0.90,0.95,0.99")
-    ap.add_argument("--primary-q", type=float, default=0.95,
-                    help="tail_q used for the calibration and selection sections")
-    ap.add_argument("--spot-source", default="candles", choices=("candles", "ladder"),
-                    help="candles = true 1-minute feed (last ~6 days only); "
-                         "ladder = ~5-minute reconstruction over the full history")
+    ap.add_argument("--spot-source", default="coinbase",
+                    choices=("coinbase", "candles", "ladder"),
+                    help="coinbase = true 1-minute closes fetched from the public endpoint, "
+                         "deep enough for a 90-day fit window and writing nothing; "
+                         "candles = crypto_spot_candles (retained window only); "
+                         "ladder = ~5-minute reconstruction, too sparse to fit blocks on")
     ap.add_argument("--vol-mult", type=float, default=1.0,
                     help="incumbent's vol_mult (1.0 = base model, 2.0 = theta4's)")
     args = ap.parse_args(argv)
@@ -400,43 +590,65 @@ def main(argv: list[str] | None = None) -> int:
     import psycopg
 
     qs = [float(x) for x in args.tail_qs.split(",") if x.strip()]
+    fds = [float(x) for x in args.fit_days.split(",") if x.strip()]
+
+    # Fetch spot back far enough for the LONGEST candidate window before the first quote.
+    spot_since = (dt.datetime.fromisoformat(args.since).replace(tzinfo=dt.timezone.utc)
+                  - dt.timedelta(days=max(fds) + 1)).date().isoformat()
+
+    # The database work is done and the connection CLOSED before any Coinbase fetch. Fetching
+    # ~1,000 chunks inside an open transaction trips `idle_in_transaction_session_timeout` and
+    # kills the run at the very end, after all the work.
     with psycopg.connect(url, options=RO_OPTIONS, connect_timeout=15) as conn:
         conn.read_only = True
         with conn.cursor() as cur:
-            spot = load_spot(cur, args.since, args.spot_source)
             quotes = load_quotes(cur, args.since, 35.0)
-    print(f"spot source: {args.spot_source}   minutes: "
+            spot = (None if args.spot_source == "coinbase"
+                    else load_spot(cur, spot_since, args.spot_source))
+    if spot is None:
+        print(f"fetching 1-minute closes from Coinbase since {spot_since} "
+              "(no database connection held)...")
+        spot = load_spot_coinbase(spot_since)
+    print(f"spot source: {args.spot_source}   window from {spot_since}   minutes: "
           + ", ".join(f"{p}={len(spot.get(p, {}))}" for p in PRODUCTS))
     print(f"ladder quotes with a derivable outcome and mid <= 40c: {len(quotes)}")
+    print(f"incumbent window fixed at {INCUMBENT_TRAIL_DAYS:.0f}d; paper fit windows: "
+          + ", ".join(f"{d:.0f}d" for d in fds))
 
-    by_q: dict[float, list[dict]] = {}
-    for q in qs:
-        cache = FitCache(spot, q)
-        by_q[q] = score(quotes, cache, args.vol_mult)
-        print(f"  tail_q={q}: scored {len(by_q[q])} quotes ({cache.misses} horizons unpriceable)")
+    by_cfg: dict[tuple[float, float], list[dict]] = {}
+    for fd in fds:
+        for q in qs:
+            cache = FitCache(spot, q, fd)
+            scored = score(quotes, cache, args.vol_mult)
+            by_cfg[(fd, q)] = scored
+            powered = sum(1 for r in scored if r["powered"])
+            print(f"  fit_days={fd:>4.0f} tail_q={q:.2f}: scored {len(scored):>6}  "
+                  f"powered {powered:>6}  ({cache.misses} horizons unfittable)")
 
-    primary = by_q.get(args.primary_q) or by_q[qs[0]]
-    powered = [r for r in primary if not r["underpowered"]]
-    under = [r for r in primary if r["underpowered"]]
-    print(f"  well-powered fits (n_eff >= {tm.MIN_N_EFF_FOR_TAIL}): {len(powered)}   "
-          f"underpowered: {len(under)}")
-    if not powered:
+    # Degeneracy is a property of the model form, not of the configuration, so it is reported
+    # on the largest scored set rather than waiting for a frozen config.
+    widest = max(by_cfg.values(), key=len)
+    if not widest:
         print()
-        print("  NO fit in this window clears the independent-observation bar. Every spliced")
-        print("  probability below is floor-dominated and must NOT be read as an estimate;")
-        print("  the tables run on the underpowered set purely to show the shape of the gap.")
-        powered = primary
-    degeneracy(primary)
-    compare_calibration(powered,
-                        f"2. CALIBRATION — incumbent (vol_mult={args.vol_mult}) vs spliced "
-                        f"(tail_q={args.primary_q})")
-    sweep(by_q, args.train_end)
-    selection(powered)
+        print("NO QUOTE COULD BE SCORED. Every fit window came back empty, which means the spot "
+              "series does not cover the decision timestamps — almost always a truncated "
+              "Coinbase fetch (see any 'INCOMPLETE' line above). Nothing below would be "
+              "meaningful, so nothing is reported.", file=sys.stderr)
+        return 1
+    degeneracy(widest)
+
+    frozen = sweep(by_cfg, args.train_end)
+    if frozen is None:
+        head("4. OUT-OF-SAMPLE SCORE — withheld")
+        print("  No configuration was frozen on TRAIN, so there is nothing to score on TEST.")
+        print("  Reporting a TEST number here would be choosing on the test set.")
+    else:
+        test_once(by_cfg[frozen], args.train_end, frozen)
+
+    primary = by_cfg[frozen] if frozen else widest
+    powered = [r for r in primary if r["powered"]]
+    selection(powered if powered else primary)
     fit_health(primary)
-    if under and len(under) != len(primary):
-        print()
-        print(f"  ({len(under)} of {len(primary)} quotes were scored on an underpowered fit and")
-        print("   are excluded from sections 2 and 4.)")
     return 0
 
 

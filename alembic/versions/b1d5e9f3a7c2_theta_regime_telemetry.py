@@ -47,10 +47,20 @@ _COLUMNS = (
     # a selloff, and the diagnosis could only bucket on |move|.
     ("trailing_move_15m", sa.Float()),
     ("trailing_move_60m", sa.Float()),
-    # Replacement-model shadow.
+    # Replacement-model shadow. Everything needed to interpret the probability travels with it:
+    # the shape of the tail the strike ACTUALLY prices off (upper for `greater`, lower for
+    # `less`, NULL for `between`), both sides for reference, the declustered exceedance count
+    # backing the active tail, and the fit settings that produced it. Storing only an upper xi
+    # describes the wrong distribution beside a `less` strike.
     ("spliced_model_p", sa.Float()),
+    ("spliced_active_xi", sa.Float()),
     ("spliced_upper_xi", sa.Float()),
-    ("spliced_n_eff", sa.Integer()),
+    ("spliced_lower_xi", sa.Float()),
+    ("spliced_active_clusters", sa.Integer()),
+    ("spliced_blocks", sa.Integer()),
+    ("spliced_fit_days", sa.Float()),
+    ("spliced_tail_q", sa.Float()),
+    ("spliced_underpowered", sa.Boolean()),
 )
 
 

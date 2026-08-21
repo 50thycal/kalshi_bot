@@ -36,11 +36,19 @@ true xi = 2 returns ~0.95). That biases the deep tail DOWN, which for a seller i
 direction, so it is stated here rather than buried: an xi near or above 0.5 should be read as
 "at least this heavy", not as a point estimate.
 
-THE SAMPLE IS SMALLER THAN IT LOOKS. `_returns` walks 1-minute closes and emits an h-minute
-return from every minute, so consecutive samples share h-1 of their h minutes. ~7,200 raw
-samples over a 5-day window at h=35 carry roughly **n/h ~= 206 independent observations**. The
-raw count is not evidence. `n_eff` is reported, is what the probability floor is derived from,
-and is the honest denominator for anyone reading a fitted tail parameter.
+NON-OVERLAPPING BLOCKS, NOT A METADATA DISCLAIMER. `SpotModel._returns` emits an h-minute return
+from EVERY minute, so consecutive samples share h-1 of their h minutes and one underlying shock
+appears as ~h neighbouring extreme observations. Fitting a GPD to that is pseudo-replication: the
+exceedance count, the scale AND the shape are estimated as though one move were dozens of
+independent ones. An earlier version of this module reported an `n_eff` disclaimer alongside an
+overlapping fit and called that honest. It was not — a denominator in the metadata does not
+correct a fitted shape.
+
+The fit therefore consumes **non-overlapping** h-minute blocks (`SpotModel.block_returns`,
+stepping by h rather than by 1). On top of that, runs-declustering collapses exceedances
+separated by fewer than `RUN_SEPARATION` blocks into one cluster represented by its maximum,
+because volatility clusters survive de-overlapping. What is reported, and what gates "powered",
+is the DECLUSTERED exceedance count, computed per tail SEPARATELY.
 
 NO PROBABILITY IS EVER EXACTLY ZERO. Where the GPD produces an estimate, that estimate stands,
 however small — extrapolating is the point. The floor `1 / (2 * n_eff)` (half of what ~n_eff
@@ -73,19 +81,22 @@ DEFAULT_TAIL_Q = 0.90
 # exponential (xi = 0) special case, which is the memoryless default rather than a fitted claim.
 MIN_TAIL_EXCESSES = 8
 
-# Refuse to price off a thin window at all, matching SpotModel.MIN_SAMPLES.
-MIN_SAMPLES = 300
+# Refuse to fit at all below this many non-overlapping blocks. Lower than SpotModel's 300
+# because blocks are ~h times scarcer than overlapping returns by construction; the per-tail
+# power test above is what actually decides whether a fit may be read as an estimate.
+MIN_SAMPLES = 60
 
-# Below this many INDEPENDENT observations the tail is not estimable and the model says so.
-# A GPD at the 95th percentile needs ~20 independent excesses to mean anything; 20 / 0.05 = 400.
+# A GPD needs this many DECLUSTERED exceedances on a side before that side is an estimate.
 #
-# This bar is not decoration. theta's 5-day trailing window at a 35-minute horizon carries
-# 7200 / 35 ~= 205 independent blocks, so the DESIGN POINT is already under it — ~10 excesses.
-# Reaching 400 needs roughly a 10-day window of true 1-minute closes; `crypto_spot_candles` is
-# pruned at trail_days + 1 = 6. That retention, not the estimator, is the binding constraint on
-# ever validating a tail refit, which is why the stage-5 telemetry work is a prerequisite for
-# stage 2 rather than a nice-to-have beside it.
-MIN_N_EFF_FOR_TAIL = 400
+# The bar is on exceedances, not on blocks, because the two are not interchangeable: 400 blocks
+# give ~40 exceedances at tail_q=0.90 and ~4 at tail_q=0.99. An earlier version gated on a fixed
+# block count and would have called the second one powered.
+MIN_TAIL_EXCEEDANCES_FOR_POWER = 20
+
+# Runs-declustering separation, in BLOCKS. Exceedances closer together than this belong to one
+# storm and count once. 2 is the conventional minimum; it is reported with every fit so a reader
+# sees what was assumed instead of inferring it.
+RUN_SEPARATION = 2
 
 
 @dataclass(frozen=True)
@@ -95,9 +106,15 @@ class TailFit:
     threshold: float      # u, in log-return units, on this side's own sign convention
     scale: float          # sigma
     xi: float             # shape
-    exceedance: float     # zeta_u = P(X beyond u), empirical
-    n_excess: int
+    exceedance: float     # zeta_u = P(block beyond u), empirical over non-overlapping blocks
+    n_excess: int         # raw exceedances over u
+    n_clusters: int       # exceedances AFTER runs-declustering — the evidence that counts
     fitted: bool          # False = exponential fallback (too few excesses)
+
+    @property
+    def powered(self) -> bool:
+        """Whether THIS side carries enough declustered evidence to be read as an estimate."""
+        return self.fitted and self.n_clusters >= MIN_TAIL_EXCEEDANCES_FOR_POWER
 
     def sf(self, x: float) -> float:
         """P(X beyond x), for x at or past the threshold. Strictly positive, always.
@@ -165,18 +182,49 @@ def fit_gpd(excesses: list[float]) -> tuple[float, float, bool]:
     return (sigma, xi, True)
 
 
+def decluster(vals: list[float], u: float, run_separation: int = RUN_SEPARATION) -> list[float]:
+    """Runs-declustering: exceedances of `u` separated by fewer than `run_separation`
+    non-exceeding blocks form ONE cluster, represented by its maximum.
+
+    `vals` must be in TIME ORDER — the construction is entirely about adjacency, so handing it a
+    sorted list would collapse everything into one cluster and silently report 1. Volatility
+    clusters, so even non-overlapping blocks put several exceedances inside a single storm;
+    counting those separately is the same pseudo-replication de-overlapping removed, one level
+    up."""
+    clusters: list[float] = []
+    current: float | None = None
+    gap = 0
+    for v in vals:
+        if v > u:
+            current = v if current is None else max(current, v)
+            gap = 0
+        elif current is not None:
+            gap += 1
+            if gap >= run_separation:
+                clusters.append(current)
+                current = None
+    if current is not None:
+        clusters.append(current)
+    return clusters
+
+
 def _fit_side(vals: list[float], q: float) -> TailFit:
-    """Fit the UPPER tail of `vals`. The lower tail is fitted by passing negated values."""
+    """Fit the UPPER tail of `vals`, which must be in TIME ORDER (see `decluster`).
+
+    The lower tail is fitted by passing negated values."""
     n = len(vals)
-    s = sorted(vals)
-    u = _quantile(s, q)
-    excesses = [v - u for v in s if v > u]
-    zeta = len(excesses) / n if n else 0.0
-    sigma, xi, fitted = fit_gpd(excesses)
+    u = _quantile(sorted(vals), q)
+    raw = [v - u for v in vals if v > u]
+    clusters = [c - u for c in decluster(vals, u)]
+    # zeta stays on the RAW count: it answers "how often is a block extreme", which clustering
+    # does not change. Only the FIT and the power test run on clusters, because those ask how
+    # many INDEPENDENT extremes there were.
+    zeta = len(raw) / n if n else 0.0
+    sigma, xi, fitted = fit_gpd(clusters)
     if sigma <= 0:
         sigma = 1e-9
     return TailFit(threshold=u, scale=sigma, xi=xi, exceedance=zeta,
-                   n_excess=len(excesses), fitted=fitted)
+                   n_excess=len(raw), n_clusters=len(clusters), fitted=fitted)
 
 
 @dataclass(frozen=True)
@@ -186,25 +234,67 @@ class SplicedReturnModel:
     `p_greater(x)` = P(R > x); `p_less(x)` = P(R < x). Both are strictly inside (0, 1).
     """
 
-    n: int
-    n_eff: int
+    n: int                  # non-overlapping blocks the fit consumed
+    horizon_min: int
+    fit_days: float
+    tail_q: float
     upper: TailFit
     lower: TailFit          # fitted on NEGATED returns; its axis is -r
     _sorted: tuple[float, ...]
 
     @property
-    def underpowered(self) -> bool:
-        """True when the window carries too few independent observations to fit a tail.
+    def n_eff(self) -> int:
+        """Blocks ARE the independent unit now, so this is `n`. Kept as a name because stored
+        telemetry and reports ask for it."""
+        return self.n
 
-        An underpowered model still returns probabilities — they are just floor-dominated, and
-        a caller that pools them with well-powered ones will read the floor as though it were an
-        estimate. Segregate on this flag; do not average across it."""
-        return self.n_eff < MIN_N_EFF_FOR_TAIL
+    @property
+    def underpowered(self) -> bool:
+        """True when EITHER tail has too little declustered evidence to be read as an estimate.
+
+        Either-side rather than both, deliberately: a `less` strike prices off the lower tail, so
+        a model whose upper tail is powered and lower tail is not would still hand out an
+        unsupported number half the time. Callers who care about one direction should ask
+        `powered_for(strike_type)`.
+
+        An underpowered model still returns probabilities — they are just not evidence.
+        Segregate on this flag; never average across it."""
+        return not (self.upper.powered and self.lower.powered)
+
+    def powered_for(self, strike_type: str) -> bool:
+        """Whether the tail THIS strike is priced off has enough declustered evidence."""
+        st = (strike_type or "").lower()
+        if st == "greater":
+            return self.upper.powered
+        if st == "less":
+            return self.lower.powered
+        return self.upper.powered and self.lower.powered
+
+    def active_xi(self, strike_type: str) -> float | None:
+        """The shape parameter of the tail this strike actually uses.
+
+        Storing `upper_xi` beside a `less` strike's probability describes the wrong tail — the
+        defect this replaces. A `between` strike uses both, so it has no single active xi."""
+        st = (strike_type or "").lower()
+        if st == "greater":
+            return self.upper.xi
+        if st == "less":
+            return self.lower.xi
+        return None
+
+    def active_clusters(self, strike_type: str) -> int | None:
+        """Declustered exceedances backing the tail this strike uses."""
+        st = (strike_type or "").lower()
+        if st == "greater":
+            return self.upper.n_clusters
+        if st == "less":
+            return self.lower.n_clusters
+        return min(self.upper.n_clusters, self.lower.n_clusters)
 
     @property
     def p_floor(self) -> float:
-        """Half of what ~n_eff independent observations can resolve. Never zero."""
-        return 1.0 / (2.0 * max(1, self.n_eff))
+        """Half of what `n` independent blocks can resolve. Never zero."""
+        return 1.0 / (2.0 * max(1, self.n))
 
     def _clamp(self, p: float) -> float:
         """Keep the answer strictly inside (0, 1) WITHOUT flattening the fitted tail.
@@ -248,34 +338,37 @@ class SplicedReturnModel:
     def describe(self) -> dict:
         """Everything a calibration report needs to explain a probability it disagrees with."""
         return {
-            "n": self.n, "n_eff": self.n_eff, "p_floor": self.p_floor,
+            "blocks": self.n, "n_eff": self.n_eff, "p_floor": self.p_floor,
+            "horizon_min": self.horizon_min, "fit_days": self.fit_days,
+            "tail_q": self.tail_q, "run_separation": RUN_SEPARATION,
+            "min_tail_exceedances": MIN_TAIL_EXCEEDANCES_FOR_POWER,
             "upper_xi": self.upper.xi, "upper_sigma": self.upper.scale,
             "upper_threshold": self.upper.threshold, "upper_n_excess": self.upper.n_excess,
-            "upper_fitted": self.upper.fitted,
+            "upper_n_clusters": self.upper.n_clusters, "upper_fitted": self.upper.fitted,
+            "upper_powered": self.upper.powered,
             "lower_xi": self.lower.xi, "lower_sigma": self.lower.scale,
             "lower_threshold": self.lower.threshold, "lower_n_excess": self.lower.n_excess,
-            "lower_fitted": self.lower.fitted,
+            "lower_n_clusters": self.lower.n_clusters, "lower_fitted": self.lower.fitted,
+            "lower_powered": self.lower.powered,
             "underpowered": self.underpowered,
         }
 
 
-def build(rets: list[float], h_min: int, *, tail_q: float = DEFAULT_TAIL_Q
-          ) -> SplicedReturnModel | None:
-    """Fit both tails over one horizon's returns, or None if the window is too thin.
+def build(blocks: list[float], h_min: int, *, tail_q: float = DEFAULT_TAIL_Q,
+          fit_days: float = 0.0) -> SplicedReturnModel | None:
+    """Fit both tails over one horizon's NON-OVERLAPPING blocks, in TIME ORDER.
 
-    `h_min` is needed only to derive `n_eff`: overlapping h-minute returns drawn every minute
-    carry about n/h independent observations, and every uncertainty statement here is made
-    against that number rather than the raw count.
+    `blocks` must come from `SpotModel.block_returns` (step h), never `SpotModel.returns`
+    (step 1) — passing overlapping returns restores the pseudo-replication this module exists to
+    remove, and the time ordering is load-bearing for declustering.
     """
-    if not rets or len(rets) < MIN_SAMPLES:
+    if not blocks or len(blocks) < MIN_SAMPLES:
         return None
-    n = len(rets)
-    n_eff = max(1, n // max(1, int(h_min)))
     return SplicedReturnModel(
-        n=n, n_eff=n_eff,
-        upper=_fit_side(rets, tail_q),
-        lower=_fit_side([-r for r in rets], tail_q),
-        _sorted=tuple(sorted(rets)),
+        n=len(blocks), horizon_min=int(h_min), fit_days=float(fit_days), tail_q=float(tail_q),
+        upper=_fit_side(blocks, tail_q),
+        lower=_fit_side([-r for r in blocks], tail_q),
+        _sorted=tuple(sorted(blocks)),
     )
 
 

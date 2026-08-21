@@ -256,17 +256,35 @@ To run a request:
      live money. Findings: `docs/RESEARCH_THETA_TAIL_MODEL_DIAGNOSIS.md`. Check the
      derived-vs-recorded settlement agreement line before quoting sections B onward.
 
+   - **"forward path"** / **"toxic flow"** -> `{"type":"script","name":"theta_forward_path"}`
+     — what the underlying did AFTER each theta decision, joined from retained 1-minute closes:
+     forward return at +5m/+15m/+30m/close, plus maximum favourable and adverse excursion
+     oriented by the side the book SOLD. **Read section 1 (COVERAGE) first and treat anything
+     below ~95% as unusable**: missing rows cluster around feed outages, so dropping them
+     silently selects on the regime being studied. Retention makes this join possible; this
+     script is what proves it complete.
+
+   - **"candle depth"** -> `{"type":"script","name":"theta_candle_backfill_probe"}` — how far
+     back Coinbase serves 1-minute candles, i.e. whether a fit window can be backfilled from
+     history or has to accumulate forward. Touches no database. Measured 2026-08-21: at least
+     365 days for BTC-USD and ETH-USD.
+
    - **"theta refit"** / **"tail model validation"** -> `{"type":"script","name":"theta_tail_refit"}`
      — scores the replacement probability model (`kalshi_bot/theta/tailmodel.py`) against the
      incumbent, strictly out of sample. Reports degeneracy (what fraction of each model's output
      is exactly 0 or 1), calibration by probability bucket with the sub-2% region broken out,
      a `tail_q` sweep chosen on TRAIN and scored on TEST, the SELECTED-vs-REJECTED split under
      each model's own excess, and fit health.
-     **Read `well-powered fits` on line 7 before anything else.** A fit below
-     `MIN_N_EFF_FOR_TAIL` is a resolution floor, not an estimate, and sections 2 and 4 exclude
-     them. `--spot-source candles` (default) uses the true 1-minute feed and therefore only the
-     retained window; `--spot-source ladder` reaches further back but at ~5-minute sampling,
-     which is too sparse to fit a tail. Findings: `docs/RESEARCH_THETA_REMEDIATION.md`.
+     **Read the `powered` counts before anything else.** A fit below
+     `MIN_TAIL_EXCEEDANCES_FOR_POWER` declustered exceedances ON THE TAIL THE STRIKE USES is a
+     resolution floor, not an estimate, and the calibration/selection sections exclude those
+     rows. Configuration (`--fit-days` x `--tail-qs`) is chosen on TRAIN and scored **once** on
+     TEST; the split is enforced by control flow, so a TEST number cannot be reported for a
+     configuration that was not frozen first. `--spot-source coinbase` (default) fetches true
+     1-minute closes from the public endpoint — deep enough for a 90-day fit window and writing
+     nothing; `candles` uses only the retained window; `ladder` reaches further back at
+     ~5-minute sampling, which is too sparse to build blocks from.
+     Findings: `docs/RESEARCH_THETA_REMEDIATION.md`.
 
    The individual probes can still be run alone:
    `weather_model_check` grades the ensemble forecast distribution against the

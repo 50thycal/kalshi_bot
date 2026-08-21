@@ -147,11 +147,15 @@ class ThetaTracker:
             closes = self.spot.candles(product, start_unix, end_unix)
             if closes:
                 repo.insert_spot_candles(session, product, closes)
+        # Backfill BACKWARD toward the retention horizon, a bounded number of requests per
+        # cycle. Coinbase serves 1-minute candles at least 365 days back, so the paper model's
+        # fit window can be filled from history instead of waited for; without this the
+        # retention knob only takes effect at the speed of wall-clock time.
+        self._backfill_spot(session, product, now)
+
         # Prune on RETENTION, not on the model window (Settings.theta_spot_retention_days).
-        # 6 days of closes carries ~205 independent 35-minute blocks, which is below what any
-        # tail estimator needs; keeping more history is the prerequisite for validating one.
-        # `load_spot_closes` below is still bounded by `trail_start`, so no probability, entry
-        # or fill changes because of this.
+        # `load_spot_closes` below is still bounded by `trail_start`, so the INCUMBENT sees
+        # exactly the 5 days it always saw and no probability, entry or fill changes.
         keep = max(float(s.theta_spot_retention_days), s.theta_trail_days + 1.0)
         repo.prune_spot_candles(session, product, now - timedelta(days=keep))
         stored = repo.load_spot_closes(session, product, trail_start)
@@ -163,17 +167,76 @@ class ThetaTracker:
             return None
         return SpotModel(stored, trail_days=s.theta_trail_days)
 
-    def _spliced(self, model: SpotModel, now_unix: int, h_min: int):
-        """The replacement model for this horizon, fitted once per (cycle, horizon).
+    def _backfill_spot(self, session, product: str, now: datetime) -> int:
+        """Extend stored 1-minute closes BACKWARD toward the retention horizon.
 
-        A ladder cycle prices hundreds of strikes across a handful of distinct
-        minutes-to-close, and the fit depends only on the horizon — refitting per strike would
-        repeat identical work hundreds of times inside the trading loop."""
+        Bounded to `theta_spot_backfill_requests_per_cycle` requests, so a cold start fills in
+        over a few hours rather than issuing ~432 requests per product in one cycle. Returns the
+        number of closes written, and never raises into the trading loop: a failed backfill
+        leaves the incumbent's own 5-day window untouched, because that window is gap-filled by
+        the caller before this runs."""
+        s = self.settings
+        budget = int(s.theta_spot_backfill_requests_per_cycle or 0)
+        if budget <= 0:
+            return 0
+        target = now - timedelta(days=max(float(s.theta_spot_retention_days),
+                                          s.theta_trail_days + 1.0))
+        try:
+            oldest = repo.oldest_spot_minute(session, product)
+        except Exception:  # noqa: BLE001
+            return 0
+        if oldest is None:
+            return 0
+        if oldest.tzinfo is None:
+            oldest = oldest.replace(tzinfo=timezone.utc)
+        if oldest <= target:
+            return 0
+        written = 0
+        cursor = int(oldest.timestamp())
+        stop = int(target.timestamp())
+        for _ in range(budget):
+            if cursor <= stop:
+                break
+            start = max(stop, cursor - 300 * 60)
+            try:
+                closes = self.spot.candles(product, start, cursor)
+            except Exception:  # noqa: BLE001 — backfill is best-effort, never fatal
+                break
+            if not closes:
+                break
+            try:
+                written += repo.insert_spot_candles(session, product, closes)
+            except Exception:  # noqa: BLE001
+                break
+            cursor = start
+        if written:
+            logger.info("theta: spot backfill", extra={"extra_fields": {
+                "product": product, "closes": written,
+                "reached": datetime.fromtimestamp(cursor, tz=timezone.utc).isoformat()}})
+        return written
+
+    def _spliced(self, model: SpotModel, now_unix: int, h_min: int):
+        """The PAPER replacement model for this horizon, fitted once per (cycle, horizon).
+
+        Two things this must get right, both of which an earlier version got wrong:
+
+        * it fits NON-OVERLAPPING blocks (`block_returns`), not the overlapping returns the
+          incumbent counts — otherwise one shock enters the fit as ~h neighbouring extremes;
+        * it fits over `theta_spliced_fit_days`, NOT the incumbent's `theta_trail_days`. The
+          first draft retained 90 days and still fitted on 5, so every claim about what
+          retention bought was false.
+
+        A ladder cycle prices hundreds of strikes across a handful of distinct minutes-to-close,
+        and the fit depends only on the horizon, so it is cached per (cycle, horizon).
+        """
+        s = self.settings
         key = (id(model), now_unix // 60, h_min)
         if key in self._spliced_cache:
             return self._spliced_cache[key]
         try:
-            built = tailmodel.build(model.returns(now_unix, h_min), h_min)
+            blocks = model.block_returns(now_unix, h_min,
+                                         window_days=float(s.theta_spliced_fit_days))
+            built = tailmodel.build(blocks, h_min, fit_days=float(s.theta_spliced_fit_days))
         except Exception:  # noqa: BLE001 — telemetry must never break a trading cycle
             built = None
         # One cycle's worth; the ids and minutes move on and the dict would otherwise grow.
@@ -453,15 +516,22 @@ class ThetaTracker:
                 # gate reads `spliced_*` — but its calibration accrues on live data from the day
                 # this ships, which is the only way stage 2 of the theta remediation ever gets
                 # an out-of-sample window to be validated on.
-                spliced_p = spliced_xi = None
-                spliced_n = None
+                sp: dict = {}
                 if model is not None:
                     sm = self._spliced(model, now_unix, max(1, int(tte_min)))
                     if sm is not None:
-                        spliced_p = tailmodel.p_yes(
-                            sm, model.spot_at(now_unix), strike_type, floor_k, cap_k)
-                        spliced_xi = sm.upper.xi
-                        spliced_n = sm.n_eff
+                        sp = {
+                            "spliced_model_p": tailmodel.p_yes(
+                                sm, model.spot_at(now_unix), strike_type, floor_k, cap_k),
+                            "spliced_active_xi": sm.active_xi(strike_type),
+                            "spliced_upper_xi": sm.upper.xi,
+                            "spliced_lower_xi": sm.lower.xi,
+                            "spliced_active_clusters": sm.active_clusters(strike_type),
+                            "spliced_blocks": sm.n,
+                            "spliced_fit_days": sm.fit_days,
+                            "spliced_tail_q": sm.tail_q,
+                            "spliced_underpowered": not sm.powered_for(strike_type),
+                        }
 
                 snapshot_rows.append({
                     "series": series,
@@ -488,9 +558,7 @@ class ThetaTracker:
                                           if model is not None else None),
                     "trailing_move_60m": (model.trailing_move_bps(now_unix, 60)
                                           if model is not None else None),
-                    "spliced_model_p": spliced_p,
-                    "spliced_upper_xi": spliced_xi,
-                    "spliced_n_eff": spliced_n,
+                    **sp,
                 })
 
                 # SHELVED (theta_collect_only): keep snapshotting the model-priced ladder

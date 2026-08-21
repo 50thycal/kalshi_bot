@@ -609,20 +609,33 @@ class Settings(BaseSettings):
     # SERIES:COINBASE_PRODUCT pairs; wrong series fail soft (logged, skipped).
     theta_series: str = "KXBTCD:BTC-USD,KXBTC:BTC-USD,KXETHD:ETH-USD,KXETH:ETH-USD"
     theta_trail_days: float = 5.0             # spot window behind the return distribution
-    # How long 1-minute closes are KEPT, as opposed to how far back the model looks. These were
-    # the same number until 2026-08-21, when the pruner ran at trail_days + 1 = 6 days — and
-    # that is why no tail refit can be validated today.
+    # How long 1-minute closes are KEPT. Distinct from BOTH the incumbent's model window
+    # (`theta_trail_days`) and the paper research model's fit window
+    # (`theta_spliced_fit_days`); conflating retention with a fit window was the defect in the
+    # first draft of this work, which retained 90 days and then still fitted on 5.
     #
-    # A 5-day window at a 35-minute horizon carries 7200 / 35 ~= 205 INDEPENDENT return blocks,
-    # of which ~10 are tail excesses at the 95th percentile. Measured on the true 1-minute feed,
-    # 7,204 of 7,209 fits fall below the bar a Generalized Pareto needs
-    # (`kalshi_bot/theta/tailmodel.py` MIN_N_EFF_FOR_TAIL). The estimator is not the problem;
-    # 6 days of retained history is. 90 days gives ~3,700 independent blocks and ~185 excesses,
-    # at a storage cost of ~1,440 rows/day/product (~260k rows for two products).
-    #
-    # Retention does NOT change what any book sees: `refresh_spot_model` still loads only
-    # `trail_days` of closes, so widening this alters no probability, no entry and no fill.
+    # Retention does NOT change what any book sees: `_refresh_spot` still loads only
+    # `trail_days` of closes for the incumbent, so widening this alters no probability, no
+    # entry and no fill. Storage is ~1,440 rows/day/product (~260k rows for two products at 90
+    # days).
     theta_spot_retention_days: float = 90.0
+
+    # Fit window for the PAPER replacement model (`kalshi_bot/theta/tailmodel.py`) only. Never
+    # read by the incumbent, and no book prices off it.
+    #
+    # Why it must exceed `theta_trail_days`: a fitted tail consumes NON-OVERLAPPING h-minute
+    # blocks, so a 5-day window at a 35-minute horizon yields 7200/35 ~= 205 blocks and ~10
+    # declustered exceedances at the 95th percentile — far below the ~20 a Generalized Pareto
+    # needs on a side. 90 days yields ~3,700 blocks and enough exceedances to fit. The estimator
+    # was never the constraint; the window was.
+    theta_spliced_fit_days: float = 90.0
+
+    # Per-cycle budget for backfilling 1-minute closes BACKWARD toward the retention horizon.
+    # Coinbase serves 1-minute candles at least 365 days back (probe `cb-probe-5`, 2026-08-21),
+    # so the fit window can be filled from history rather than waited for; 300 candles/request
+    # means 90 days is ~432 requests per product. Spread over cycles so a cold start never
+    # hammers the public endpoint or stalls a trading loop. 0 disables backfill.
+    theta_spot_backfill_requests_per_cycle: int = 12
     theta_entry_min_minutes: float = 10.0     # don't sell inside the last 10min (stale loop)
     theta_entry_max_minutes: float = 55.0     # the tape edge lives <60min to expiry
     theta_snapshot_max_minutes: float = 90.0  # snapshot ladders this close to settlement

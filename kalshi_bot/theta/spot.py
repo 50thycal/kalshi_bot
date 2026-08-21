@@ -129,8 +129,43 @@ class SpotModel:
 
     def returns(self, ts_unix: int, h_min: int) -> list[float]:
         """Public accessor so a caller can compute several variant probabilities from one
-        pass over the trailing window (the per-cycle hot path)."""
+        pass over the trailing window (the per-cycle hot path).
+
+        OVERLAPPING by construction — one h-minute return per minute. Correct for the incumbent
+        empirical model, which only counts them, and WRONG for anything that fits a distribution
+        to them: see `block_returns`."""
         return self._returns(ts_unix, h_min)
+
+    def block_returns(self, ts_unix: int, h_min: int, *, window_days: float | None = None
+                      ) -> list[float]:
+        """NON-OVERLAPPING h-minute log returns ending at or before `ts_unix`, in TIME ORDER.
+
+        Steps by h rather than by 1, so no two samples share a minute and one shock cannot appear
+        as ~h neighbouring extremes. This is the sample any FITTED model must consume
+        (`kalshi_bot/theta/tailmodel.py`); `returns` above is for counting, not fitting.
+
+        `window_days` overrides the model's own trailing window. It exists so a PAPER research
+        model can be fitted over a longer history than the incumbent prices off, without
+        changing what the incumbent sees — the two are separate questions and were conflated in
+        an earlier version, which retained 90 days and then fitted on 5.
+
+        Strictly backward-looking: the last block CLOSES at or before `ts_unix`, so no fit ever
+        sees a minute after the decision it is being scored against.
+        """
+        h = int(h_min) * 60
+        if h <= 0:
+            return []
+        span = int((window_days * 86400) if window_days else self.trail)
+        lo = ts_unix - span
+        out: list[float] = []
+        t = ts_unix - h
+        while t >= lo:
+            a, b = self.closes.get(t), self.closes.get(t + h)
+            if a and b and a > 0 and b > 0:
+                out.append(math.log(b / a))
+            t -= h
+        out.reverse()          # time order — declustering depends on adjacency
+        return out
 
     @staticmethod
     def prob_from_returns(

@@ -13,15 +13,17 @@ programme. **Paper only. No theta parameter changed, no book re-armed, no live m
 
 | stage | status |
 |---|---|
-| 1. replace the degenerate 0/1 output | **done and verified** — 80.3% exactly-0 → **0.0%** |
-| 2. refit the tail shape, validate out of sample | **blocked on data, not on modelling** |
-| 3. re-measure calibration + residual selection bias | **blocked by the same limit** |
-| 4. selection-rule A/B that does not rank on model error | **designed, below** |
-| 5. telemetry for momentum/regime | **implemented, below** |
+| 1. replace the degenerate 0/1 output | **done and verified** — 90.9% exactly-0 → **0.0%** |
+| 2. refit the tail shape, validate out of sample | **run, powered, and FAILED** — see §3.3 |
+| 3. re-measure calibration + residual selection bias | **done** — selection bias survives §3.4 |
+| 4. selection-rule A/B that does not rank on model error | **redesigned**, below; still unregistered |
+| 5. telemetry for momentum/regime | **implemented and tested**, below |
 
-The blocker is the finding. **theta's 5-day spot window cannot support a tail estimate at all** —
-not the incumbent's, not a GPD's, not any. That is why stage 5 turns out to be a *prerequisite*
-for stage 2 rather than a task beside it.
+**Stage 2 now has a real answer, and the answer is no.** With a 90-day fit window, non-overlapping
+blocks and declustered per-tail power, every quote is powered — so the model could finally be
+judged, and it does not meet the stated bar. Removing the 0/1 degeneracy did not remove the tail
+miss, and repairing the model did not reduce the selection bias. **Checkpoint item 3 is complete
+in the sense that a powered out-of-sample calibration exists; it is not a success.**
 
 ---
 
@@ -62,167 +64,259 @@ asserting the data's edge is the world's edge.
 
 | element | choice | why |
 |---|---|---|
-| body | empirical, unchanged | there is no reason to model what can be counted |
-| tail | GPD, both directions | `greater` and `less` strikes need opposite tails |
-| estimator | probability-weighted moments | closed form, no optimiser, no scipy, better than MLE at ~20 excesses |
-| threshold | `tail_q`, default 0.90, swept | bias/variance: higher = less biased, more variable |
-| floor | `1 / (2 · n_eff)` | degenerate cases only — see below |
+| sample | **non-overlapping h-minute blocks** | see §2.1 — this is the correction that mattered most |
+| declustering | runs, separation 2 blocks | volatility clusters survive de-overlapping |
+| body | empirical, unchanged | no reason to model what can be counted |
+| tail | GPD, both directions, fitted **separately** | `greater` and `less` strikes use opposite tails |
+| estimator | probability-weighted moments | closed form, no optimiser, no scipy, better than MLE at small counts |
+| threshold | `tail_q`, swept and frozen on TRAIN | bias/variance: higher = less biased, more variable |
+| fit window | `theta_spliced_fit_days`, **paper only** | see §2.2 |
+| power test | **per tail, on declustered exceedances** | see §2.3 |
+| floor | `1 / (2·blocks)` | degenerate cases only |
 | bounded fits | extrapolate with `max(ξ, 0)` | a fitted ξ<0 asserts a hard maximum move |
 
-**Two design decisions that took a failed attempt each, and are pinned by regression tests:**
+### 2.1 Non-overlapping blocks, not an `n_eff` disclaimer
 
-1. **The floor must not be a blanket clamp.** A first draft floored every probability. Past the
-   sample maximum the GPD's estimate is far below one resolution step, so it returned the *same*
-   number for a strike 1×, 1.5× and 2× beyond the data — shape destroyed, deep tail overstated
-   ~40×. The floor now catches only non-finite and non-positive results.
-2. **A bounded fit must still extrapolate.** ξ<0 gives a finite endpoint past which the GPD says
-   exactly zero — reinstating "impossible", merely relocated from the sample maximum to a fitted
-   endpoint. **49.4% of production fits are bounded**, so this was not hypothetical.
-   Extrapolation therefore uses `max(ξ, 0)`: the exponential is the least-committal unbounded
-   tail. ξ is kept unmodified for reporting, so a bounded fit stays visible.
+`SpotModel.returns` emits an h-minute return from **every minute**, so consecutive samples share
+h−1 of their h minutes. At h=35 the overlap factor is exactly **35×** (verified:
+7,165 overlapping returns against 205 blocks over the same window). One shock therefore enters an
+overlapping fit as ~35 neighbouring extremes, and the exceedance count, the scale **and** the
+shape are all estimated as though a single move were dozens of independent ones.
 
-**Stated limitations, not buried:**
+The previous revision fitted overlapping returns and reported an `n_eff = n/h` disclaimer beside
+the result. That was not a correction — **a denominator in the metadata does not correct a fitted
+shape.** The fit now consumes `SpotModel.block_returns` (step h, time-ordered), and
+runs-declustering collapses exceedances within 2 blocks of each other into one cluster
+represented by its maximum. `tests/test_theta_tailmodel.py::TestDeclustering` pins that a single
+ten-block storm reads as **one** exceedance, not ten.
 
-- PWM is consistent only for **ξ < 0.5**. Against a heavier tail it *saturates* — a Pareto with
-  true ξ=2 returns ~0.95. The bias runs **downward**, the dangerous direction for a seller, so an
-  ξ near 0.5 must read as "at least this heavy", never as a point estimate.
-- `n_eff = n / h`. Overlapping h-minute returns drawn every minute are ~97% shared at h=35; the
-  raw count is not evidence.
+### 2.2 The fit window is separate from BOTH retention and the incumbent's window
+
+The previous revision raised retention to 90 days and then still fitted on 5, because the shadow
+called `model.returns(...)` on a `SpotModel` built with `theta_trail_days=5` and the harness
+hard-coded `TRAIL_DAYS = 5.0`. **Every claim it made about what 90-day retention bought was
+therefore false.** Three now-distinct settings:
+
+| setting | value | who reads it |
+|---|---|---|
+| `theta_trail_days` | 5 | the **incumbent**, unchanged, still prices exactly as before |
+| `theta_spot_retention_days` | 90 | the pruner only |
+| `theta_spliced_fit_days` | 90 | the **paper** replacement model only |
+
+Widening the fit window cannot touch a live decision: `_refresh_spot` still loads only
+`trail_days` of closes for the incumbent, and no book prices off the replacement.
+
+### 2.3 Power is per tail and depends on `tail_q`
+
+The previous bar was a fixed block count, which is wrong twice over. 400 blocks give ~40
+exceedances at `tail_q=0.90` and **~4** at `tail_q=0.99` — the old rule would have called the
+second one powered. And a model whose upper tail is well evidenced and lower tail is not still
+hands out an unsupported number on every `less` strike.
+
+So: **≥20 declustered exceedances on the tail the strike actually prices off**. Every fit reports
+blocks, upper and lower declustered exceedance counts, per-side fit/fallback status, and the
+chosen window and threshold. `powered_for(strike_type)` is what callers ask.
+
+### 2.4 Stated limitations, not buried
+
+- PWM is consistent only for **ξ < 0.5**; against a heavier tail it *saturates* (true ξ=2 returns
+  ~0.95). The bias runs **downward**, the dangerous direction for a seller, so an ξ near 0.5 must
+  read as "at least this heavy", never as a point estimate.
 - No SOL candle feed exists, so a SOL strike is priced off BTC returns.
+- Runs-declustering with a fixed separation is a convention, not a fact about the market; the
+  separation travels with every fit so a reader can see what was assumed.
 
----
+## 3. Baseline calibration — powered, out of sample, and the model does not pass
 
-## 3. Baseline calibration of the replacement model
+Run `refit-5`: 30,923 decision quotes, 2026-08-01 → 08-21, TRAIN/TEST split at 08-14, spot from
+Coinbase's public 1-minute feed. **Every result below is on quotes whose active tail cleared the
+power bar.**
 
-### 3.1 Degeneracy — fixed
+### 3.1 The window, not the estimator, was the constraint — and it is now lifted
 
-| model | n | exactly 0 | exactly 1 | in (0,1) |
-|---|---|---|---|---|
-| incumbent (empirical) | 7,209 | **5,792 (80.3%)** | 0 | 1,417 (19.7%) |
-| spliced EVT | 7,209 | **0 (0.0%)** | **0 (0.0%)** | **7,209 (100.0%)** |
+| fit window | tail_q | quotes with a POWERED active tail |
+|---|---|---|
+| 5 days | 0.90 | 1,766 / 30,923 |
+| 5 days | 0.95 | 14 |
+| 5 days | 0.99 | **0** |
+| 30 days | 0.90 / 0.95 | 30,923 |
+| 30 days | 0.99 | 34 |
+| **90 days** | 0.90 / 0.95 / 0.99 | **30,923** |
 
-Stage 1 passes on its own terms: every output is now a probability.
+This table is the whole of blocker 1 and blocker 2 in one place. At theta's own 5-day window a
+99th-percentile fit is powered **nowhere**, which is exactly the `tail_q` dependence a fixed
+block-count bar could not express. At 90 days every configuration is powered.
 
-### 3.2 Calibration — NOT estimable, and here is the proof
+Fit health at the frozen configuration: 1,440 non-overlapping blocks (p50), **95 declustered
+upper-tail exceedances** and **93 lower** (p50), upper ξ +0.061, lower ξ +0.094, 16.2% bounded
+active tails. That is a real fit, on both sides, for the first time.
 
-Of 7,209 scored quotes, **5 clear the independent-observation bar**. The other 7,204 are fitted on
-too little to mean anything, and the model says so (`SplicedReturnModel.underpowered`) rather than
-returning a floor dressed as an estimate.
+### 3.2 Degeneracy — fixed
 
-Fit health over the production window:
-
-| | p10 | p50 | p90 |
+| model | n | exactly 0 | in (0,1) |
 |---|---|---|---|
-| `n_eff` (independent blocks) | 34 | **116** | 208 |
-| upper ξ | −0.451 | +0.045 | +0.429 |
+| incumbent (empirical) | 30,923 | **28,100 (90.9%)** | 2,823 (9.1%) |
+| spliced EVT | 30,923 | **0 (0.0%)** | **30,923 (100.0%)** |
 
-The bar is 400 — roughly 20 independent excesses at the 95th percentile. **Even the best fits sit
-at half of it.** The arithmetic: 5 days = 7,200 minutes; at h=35 that is 7,200/35 ≈ **205
-independent blocks**, of which ~10 are tail excesses. No estimator recovers a tail shape from ten
-observations.
+### 3.3 Out-of-sample calibration — the replacement FAILS its acceptance bar
 
-The `tail_q` sweep confirms it is sample size and not threshold choice:
+Configuration frozen on TRAIN (`fit_days=30, tail_q=0.90`), then TEST read **once**: 10,685
+powered quotes.
 
-| tail_q | train R | test R | \|log R\| deep, train | \|log R\| deep, test |
+| modeled P | spliced R | 99% CI | incumbent R | 99% CI |
 |---|---|---|---|---|
-| 0.90 | 0.47 | 2.12 | 2.493 | 1.410 |
-| 0.95 | 0.48 | 2.12 | 2.489 | 1.381 |
-| 0.99 | 0.48 | 2.09 | 2.470 | 1.316 |
+| 0.000–0.002 | **7.05** | [3.14, 13.52] | **21.68** | [8.06, 46.38] |
+| 0.002–0.005 | 9.97 | [2.90, 24.41] | 2.46 | [0.13, 11.40] |
+| 0.005–0.010 | 4.74 | [0.80, 14.93] | 3.79 | [0.82, 10.73] |
+| 0.010–0.020 | 6.71 | [2.64, 13.90] | 3.16 | [1.17, 6.76] |
+| 0.020–0.050 | 3.57 | [1.73, 6.47] | 2.44 | [1.05, 4.79] |
+| 0.050–0.100 | 2.14 | [1.04, 3.88] | 2.31 | [1.17, 4.05] |
+| 0.100–0.200 | 1.44 | [0.76, 2.46] | 1.74 | [0.99, 2.83] |
+| 0.200–0.350 | 0.80 | [0.36, 1.54] | 1.07 | [0.56, 1.83] |
+| 0.350–0.500 | 0.69 | [0.24, 1.53] | 0.75 | [0.22, 1.83] |
+| **ALL** | **1.81** | [1.40, 2.29] | **1.75** | [1.35, 2.21] |
 
-Two readings, both damning for a premature refit:
+> **The stated bar was: "a model that looks calibrated near 10–50% and materially understates
+> 1–5% events is not acceptable for a short-tail strategy." The spliced model is exactly that
+> model.** It is calibrated from 10% up (R = 1.44, 0.80, 0.69) and understates the 1–5% region by
+> 3.6× to 10×. **It does not pass, and stage 2 is not complete.**
 
-- **R swings 4.4× between adjacent 4-day windows** (0.48 → 2.12). That is the sampling noise of
-  ~10 tail observations, not a property of the model.
-- **`tail_q` barely moves the deep-tail miss** (2.47–2.49 train). The threshold is not the lever.
+What it does buy is real but narrow: in the deepest bucket the incumbent misses by **21.7×** and
+the spliced model by **7.1×**, because the incumbent assigns ~zero there and cannot be wrong by a
+ratio at all until it stops doing so. Overall the two are indistinguishable (1.81 vs 1.75).
 
-> **Reporting a "refitted and validated" tail from this window would be fitting noise.** The
-> honest stage-2 result is that the estimate does not exist yet.
+**The honest conclusion is that removing the truncation did not remove the tail miss.** The
+degeneracy was a real defect and is fixed; it was not the cause of R ≈ 4. Something else is
+mispricing the deep tail, and a GPD splice over realized spot returns does not capture it.
 
-### 3.3 Stage 3 — blocked by the same limit
+### 3.4 Stage 3 — selection bias survives the repair, and grows
 
-With 5 well-powered quotes, the SELECTED arm is empty (n=0), so the residual selection bias under
-refitted probabilities cannot be measured. The diagnosis's finding stands unrevised: on the
-incumbent model, SELECTED R = 4.03 [2.22, 6.67] against REJECTED 1.00.
+Now measurable on 30,923 powered quotes:
 
-### 3.4 What unblocks stages 2 and 3
+| | SELECTED R | 99% CI | REJECTED R | 99% CI | ratio |
+|---|---|---|---|---|---|
+| incumbent | 5.44 | [3.04, 8.92] | 1.20 | [0.95, 1.48] | **4.5×** |
+| spliced | 6.61 | [3.60, 11.05] | 1.09 | [0.87, 1.34] | **6.1×** |
 
-Retention. `crypto_spot_candles` was pruned at `trail_days + 1` = 6 days, which is why the
-diagnosis could not reconstruct a spot path and why nothing here can be fitted.
+**Repairing the model did not reduce the selection bias — it slightly increased it.** This is the
+review's point 4 confirmed with data: a residual ranking finds whatever error remains, so a better
+model does not stop it selecting on that error. It is the strongest available argument that the
+selection RULE, not the probability model, is what has to change.
 
-| retained history | independent blocks at h=35 | tail excesses at q=0.95 | verdict |
-|---|---|---|---|
-| 6 days (before) | ~205 | ~10 | not estimable |
-| 10 days | ~410 | ~20 | bare minimum |
-| **90 days (now)** | **~3,700** | **~185** | a real fit |
+### 3.5 A correction to the selection statistic used to freeze the configuration
 
-Storage cost: ~1,440 rows/day/product, ~260k rows for two products. **The pruner, not the
-estimator, was the binding constraint.**
-
----
+The first run of this sweep scored candidates by `|log(observed/expected)|` on the sub-2%
+population. That statistic is **undefined when nothing was observed**, so all three 90-day
+candidates went unscored and a 30-day window was frozen by default — the statistic silently
+discarded exactly the configurations whose deep tail behaved best. It is now the Poisson deviance
+`2·(o·ln(o/e) − (o − e))`, which is defined at o = 0 (`= 2e`), penalises over- and
+under-prediction alike, and is pinned by tests.
 
 ## 4. Stage 4 — the selection-rule A/B (design; not registered, not running)
 
-The diagnosis showed `excess = mid − 100·P_model` ranks candidates by **model error**: it is
-large exactly where the model is most wrong in the direction that makes selling look attractive.
-Selecting on it selects the right tail of that error. A better model shrinks the error; it does
-not stop the ranking from finding whatever error remains.
+### 4.1 Why the earlier recommendation was withdrawn
 
-**Design.** Two paper arms on the same candidate stream, identical in every other respect:
+The previous revision recommended **split-sample residual ranking**: fit on one half of the
+trailing window, price on the other. That was wrong, and the objection is decisive — it still
+ranks candidates by `mid − P_model`. Disjoint fitting samples do not give independent errors when
+both halves share the same market quote, the same regime, the same model family and the same
+structural miss. The dominant term in the residual is not sampling noise in the fit; it is the
+tail-shape error §2 measured, and that error is common to both halves by construction. Splitting
+the sample attacks the smallest component of the problem.
 
-| arm | selection score |
+### 4.2 The replacement: rank on price, veto on model
+
+**Selection must not be a function of model disagreement at all.**
+
+| element | specification |
 |---|---|
-| control | `excess = mid − 100·P_model` (today's rule) |
-| treatment | a score that is not the model-error residual |
+| **Candidate eligibility** | crypto ladder markets, `minutes_to_close` in [10, 35], yes mid in **[3, 20]¢**, `volume ≥ 100`, two-sided book. Identical in both arms — eligibility is not the treatment. |
+| **Control selection score** | `excess = mid − 100·P_model`, descending. Today's rule, unchanged. |
+| **Treatment selection score** | `mid` **ascending** — the cheapest eligible tail first. Exogenous to the model: it is the market's own price, which the model does not produce. |
+| **Treatment veto** | take only if `P_model ≤ ceiling`, ceiling pre-registered at **0.10**. The model may *refuse* a candidate; it may never *promote* one. A veto cannot generate winner's curse, because it removes candidates rather than ordering them. |
+| **Tie handling** | equal `mid` broken by the deterministic ticker hash already used by `abarm` (`docs/MMSELL_OFFSET_AB.md`), so ties are split reproducibly and identically across arms rather than by scan order. |
+| **Per-event cap** | `theta_max_per_event = 3`, both arms, so neither can concentrate on one hourly ladder. |
+| **Independent unit** | the **settled market**. Contracts in one market share one settlement, and strikes in one event share one spot path — the per-event cap keeps that dependence bounded rather than removing it. |
+| **Primary metric** | `realized_tail_hit_ratio_vs_modeled` (R) on the treatment arm. |
+| **Minimum useful effect** | R ≤ **1.5** with the 99% lower bound below it, against the incumbent's measured ~4.0. |
+| **Secondary** | cents/contract, reported but **not gated** — one gate, one estimand. |
+| **Twin coverage** | both arms carry a paper twin at the same instant; a market whose twin is missing is excluded from BOTH arms and counted, and the pair is `BLOCKED_DATA` above 10% exclusion (the standing `MIN_TWIN_MODEL_COVERAGE_PCT` contract). |
+| **Evidence floor** | to be set from stage 2's measured variance. Not guessable now, and inventing one here is exactly the outcome-aware floor-setting this programme exists to stop. |
+| **Maximum horizon** | inclusive, per #247, set with the floor. |
+| **Early failure** | separate `fail_any` floor, so a treatment that is materially worse stops without waiting for the promotion floor. |
 
-Three treatment candidates, to be chosen **before** the data exists:
+### 4.3 What this design buys, and what it cannot
 
-1. **Shrunk excess.** `excess − λ·SE(P_model)`, penalising candidates whose probability is itself
-   uncertain. Requires a usable SE, which is stage 2's output — so this arm cannot be specified
-   until stage 2 completes.
-2. **Rank on price, not disagreement.** Sell the cheap tail on a fixed band and let the model act
-   only as a *veto* (`P_model ≤ ceiling`), never as the ranker. Selection then depends on the
-   market's price, and the model can no longer pick its own errors.
-3. **Split-sample.** Rank on a model fitted to one half of the trailing window; price and gate on
-   a model fitted to the disjoint half. The ranking error and the pricing error become
-   independent, which is the textbook remedy for winner's curse.
+Ranking on `mid` ascending makes the selected set a function of the **market's** price, so the
+model can no longer find its own errors. The veto still uses the model — deliberately, because
+some filter is needed and refusing is safe in a way promoting is not.
 
-**Recommendation: candidate 3.** It is the only one that attacks the mechanism directly rather
-than damping its symptom, it needs no SE estimate, and it is measurable — the SELECTED/REJECTED
-ratio should collapse toward 1 if selection was the cause.
+It is not free of selection: the cheapest tail is cheap for a reason, and adverse selection may
+simply move from "the model is most wrong here" to "the market prices this lowest because it
+knows something". That is a **different**, measurable mechanism rather than a self-inflicted one,
+and the arms are constructed so the two can be told apart.
 
-**Pre-registration, to be fixed before the first trade.** Primary metric: the SELECTED/REJECTED R
-ratio. Minimum useful effect: a fall from ~4.0 to ≤1.5. Independent unit: the settled market.
-Evidence floor and horizon: to be set from stage 2's measured variance, using the standing 99%
-sequential bounds and the inclusive maximum-evidence horizon from #245/#247.
+**Still unregistered.** Both the evidence floor and the horizon depend on numbers stage 2 does not
+have. Registering it now would mean choosing a floor before knowing the variance it is supposed to
+control.
 
-**This arm cannot be registered yet**, because both its treatment definition and its floor depend
-on numbers stage 2 does not yet have.
-
----
-
-## 5. Stage 5 — telemetry (implemented)
+## 5. Stage 5 — telemetry (implemented and tested)
 
 All additive. **No existing semantic changes**: no probability, entry, fill or gate reads any new
-column, and `refresh_spot_model` still loads exactly `trail_days` of closes.
+column, and `_refresh_spot` still loads exactly `trail_days` of closes for the incumbent.
 
-**`crypto_ladder_snapshots`** (migration `b1d5e9f3a7c2`, eight nullable columns):
+### 5.1 Decision-time context
+
+`crypto_ladder_snapshots`, migration `b1d5e9f3a7c2`:
 
 | column | what it answers |
 |---|---|
-| `trailing_vol_15m/60m/240m` | realized vol at the decision, bps/minute — the regime the trade was placed into |
+| `trailing_vol_15m/60m/240m` | realized vol at the decision, bps/minute — the regime the trade entered |
 | `trailing_move_15m/60m` | **signed** trailing move, bps — a tail sold into a rally is not the same trade as one sold into a selloff, and the diagnosis could only bucket on \|move\| |
-| `spliced_model_p` | the replacement model's answer for the same strike at the same instant |
-| `spliced_upper_xi`, `spliced_n_eff` | so a floor-dominated probability is never pooled with an estimated one |
 
-**`theta_spot_retention_days = 90.0`** — retention decoupled from the model window, per §3.4.
+### 5.2 Replacement-model shadow, with tail-CORRECT metadata
 
-Why this is the right shape: the diagnosis could not test momentum because only 11,435 of 63,758
-tail quotes had a usable trailing move and the high-momentum buckets carried expected counts below
-1. Recording the context at decision time makes it a measurement instead of a reconstruction.
-The shadow probability means the replacement model's calibration accrues on live data from the
-day this ships, while deciding nothing.
+The first draft stored `spliced_upper_xi` beside every probability. **That is the wrong tail for
+a `less` strike**, which prices off the lower one. Corrected, and everything needed to interpret a
+stored probability now travels with it:
 
----
+`spliced_model_p`, `spliced_active_xi` (upper for `greater`, lower for `less`, NULL for
+`between`), `spliced_upper_xi`, `spliced_lower_xi`, `spliced_active_clusters` (declustered
+exceedances backing the **active** tail), `spliced_blocks`, `spliced_fit_days`, `spliced_tail_q`,
+`spliced_underpowered`.
+
+Without the fit settings, two probabilities produced under different windows or thresholds are
+indistinguishable in storage; without `spliced_underpowered`, a resolution floor pools with an
+estimate and is read as evidence.
+
+### 5.3 Subsequent spot path — a tested research product, not a retention promise
+
+Retention makes the decision→candle join possible. It does not make it complete, and a forward-path
+feature set with silent gaps is worse than none: the missing markets cluster around feed outages,
+so dropping them silently selects on the regime being studied.
+
+`scripts/theta_forward_path.py` is the product and the proof. Per decision snapshot, deterministic
+from retained 1-minute closes:
+
+- forward log return at **+5m, +15m, +30m and market close**, in basis points;
+- **maximum favourable and adverse excursion** over the hold, oriented by the side the book SOLD —
+  for a sold `greater` strike a rising market is adverse, for a sold `less` strike it is
+  favourable;
+- **coverage per offset, reported before any economics**, with a stated ~95% usability bar.
+
+Tests pin the orientation in both directions (a single sign error would invert MFE/MAE for half
+the book), that a missing offset stays `None` rather than becoming a number, and that the
+close offset follows `minutes_to_close`.
+
+### 5.4 Backfill, so the window exists now rather than in three months
+
+`crypto_spot_candles` was pruned at `trail_days + 1` = 6 days, and the first draft's "90 days of
+retention" would have taken 90 days of wall-clock to mean anything. Probe `cb-probe-5`
+(2026-08-21) measured Coinbase serving 1-minute candles **at least 365 days back** for both
+products, so `_backfill_spot` extends the stored history *backward* toward the retention horizon
+at `theta_spot_backfill_requests_per_cycle` requests per cycle (default 12), filling ~90 days over
+a few hours instead of hammering a public endpoint in one pass. Best-effort and never fatal: a
+failed backfill leaves the incumbent's own gap-filled 5-day window untouched.
 
 ## 6. A precision correction to the diagnosis
 

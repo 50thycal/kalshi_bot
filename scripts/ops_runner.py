@@ -143,6 +143,8 @@ ALLOWED_SCRIPTS = (
     "mmsell_deconfound_study",
     "theta_tail_diagnosis",
     "theta_tail_refit",
+    "theta_candle_backfill_probe",
+    "theta_forward_path",
     "evo_digest",
     "evo_tree",
     "evo_selftest",

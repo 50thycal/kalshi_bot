@@ -862,12 +862,27 @@ class CryptoLadderSnapshot(Base):
     # --- replacement-model shadow (kalshi_bot/theta/tailmodel.py) ---
     # The spliced EVT model's answer for the SAME strike at the SAME instant. Recorded beside
     # the incumbent rather than replacing it, so its calibration accrues on live data while no
-    # book prices off it. `spliced_n_eff` travels with it because a probability from an
-    # underpowered fit is a floor, not an estimate, and pooling the two would read the floor as
-    # though it were evidence.
+    # book prices off it.
+    #
+    # Everything needed to interpret one of these probabilities travels WITH it. An earlier
+    # draft stored only the upper tail's shape, which describes the wrong distribution beside a
+    # `less` strike, and no fit settings at all — so a stored probability could not be told
+    # apart from one produced under a different window or threshold.
     spliced_model_p: Mapped[float | None] = mapped_column(Float)
+    # The shape of the tail THIS strike prices off: upper for `greater`, lower for `less`,
+    # NULL for `between` (which uses both). Both sides are kept beside it.
+    spliced_active_xi: Mapped[float | None] = mapped_column(Float)
     spliced_upper_xi: Mapped[float | None] = mapped_column(Float)
-    spliced_n_eff: Mapped[int | None] = mapped_column(Integer)
+    spliced_lower_xi: Mapped[float | None] = mapped_column(Float)
+    # Declustered exceedances backing the ACTIVE tail — the evidence count that decides whether
+    # this probability is an estimate or a resolution floor.
+    spliced_active_clusters: Mapped[int | None] = mapped_column(Integer)
+    spliced_blocks: Mapped[int | None] = mapped_column(Integer)   # non-overlapping blocks fitted
+    spliced_fit_days: Mapped[float | None] = mapped_column(Float)
+    spliced_tail_q: Mapped[float | None] = mapped_column(Float)
+    # True when the active tail is below the power bar; such a row must never be pooled with a
+    # powered one, and must never be read as evidence.
+    spliced_underpowered: Mapped[bool | None] = mapped_column(Boolean)
 
 
 class GameMarketMatch(Base):

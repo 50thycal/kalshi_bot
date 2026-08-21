@@ -1931,6 +1931,18 @@ def latest_spot_minute(session, product: str) -> datetime | None:
     )
 
 
+def oldest_spot_minute(session, product: str) -> datetime | None:
+    """The earliest stored close, i.e. how far back the history currently reaches.
+
+    Mirror of `latest_spot_minute`, and the input the BACKWARD backfill needs: forward gap
+    filling asks "where did I stop", backfilling asks "where did I start"."""
+    return session.scalar(
+        select(func.min(m.CryptoSpotCandle.minute_ts)).where(
+            m.CryptoSpotCandle.product == product
+        )
+    )
+
+
 def load_spot_closes(session, product: str, since: datetime) -> dict[int, float]:
     """{unix_minute: close} for the model's trailing window."""
     rows = session.execute(
