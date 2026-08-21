@@ -106,6 +106,25 @@ class Settings(BaseSettings):
     # `{"type":"xos","command":"issue-findings-plan"}`.
     experiment_os_reconcile_findings_on_boot: bool = False
 
+    # One Experiment OS issue command, executed once at worker boot
+    # (kalshi_bot/experiment_os/issue_commands.py, docs/EXPERIMENT_OS_ISSUES.md).
+    # Empty = inert. Same door and same reasoning as the two flags above: the ops
+    # channel is read-only against Postgres, so ordinary ticket writes — adopt,
+    # triage, transfer, validate, resolve — have no production path without this.
+    # Bounded to a fixed vocabulary of seventeen issue operations that call the
+    # existing service functions; it cannot run SQL, Python or shell, and cannot
+    # touch a lifecycle state, gate, verdict, Version, Epoch, Platform Revision or
+    # exposure. Repeated boots are provably inert because each command_id gets a
+    # durable, terminal receipt.
+    #
+    # THIS VALUE IS PUBLIC. It reaches the worker by being committed in plaintext
+    # to ops/request.json on the public `ops` branch. It is kept out of logs and
+    # ops output as hygiene, NOT as confidentiality: never put secrets,
+    # credentials, personal data, private logs, account/order identifiers or
+    # sensitive raw evidence in a payload. Deliberately absent from
+    # redacted_summary() so a boot line can never echo it.
+    experiment_os_issue_command: str = ""
+
     # The operator-declared enforcement cutover (docs/EXPERIMENT_OS_ENFORCEMENT.md).
     # Empty = no-op. Set to OFF/WARN/NEW_ONLY/STRICT to have the worker RECORD that
     # mode once, gated on a readiness report computed at that instant; it is a no-op

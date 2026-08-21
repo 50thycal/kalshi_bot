@@ -19,6 +19,7 @@ so a retried — even a read-timed-out — upsert is safe). A browser UA clears 
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -60,6 +61,13 @@ ALLOWED_VARS = frozenset({
     # (docs/EXPERIMENT_OS_ISSUES.md): bounded to that one operation, idempotent,
     # and previewable read-only first via the xos `issue-findings-plan` command.
     "EXPERIMENT_OS_RECONCILE_FINDINGS_ON_BOOT",
+    # One bounded Experiment OS issue command, executed once at worker boot
+    # (docs/EXPERIMENT_OS_ISSUES.md). Same door, same reasoning: ordinary ticket
+    # writes have no other production path. Its VALUE is redacted from this
+    # tool's output — see REDACTED_VARS — which is output hygiene, not privacy:
+    # the envelope is committed in plaintext to ops/request.json on this public
+    # branch, so payloads must be safe to disclose.
+    "EXPERIMENT_OS_ISSUE_COMMAND",
     "EXPERIMENT_OS_IMPORT_ON_BOOT", "EXPERIMENT_OS_ENFORCEMENT_MODE",
     "EXPERIMENT_OS_CUTOVER_ID", "EXPERIMENT_OS_CUTOVER_ACTOR",
     "EXPERIMENT_OS_CUTOVER_REASON",
@@ -146,6 +154,38 @@ ALLOWED_VARS = frozenset({
     "EVO_LOCAL_LLM_DEEP_INPUT_COST_PER_MTOK", "EVO_LOCAL_LLM_DEEP_OUTPUT_COST_PER_MTOK",
 })
 
+# Allowlisted vars whose NAME may be printed but whose VALUE may not. Ops results
+# are committed to a public repository and worker logs are shared, so a variable
+# that carries a structured command body is echoed as a hash and a length instead
+# of its contents. This is OUTPUT HYGIENE, NOT CONFIDENTIALITY: the same bytes are
+# committed in plaintext to ops/request.json on the public `ops` branch and stay
+# in Git history. A payload must therefore be safe for public disclosure — no
+# secrets, credentials, personal data, private logs, account/order identifiers or
+# sensitive raw evidence. If private content is genuinely required, stop and
+# propose an encrypted transport; redaction cannot make this channel private.
+REDACTED_VARS = frozenset({"EXPERIMENT_OS_ISSUE_COMMAND"})
+
+# Upper bound on a settable value, checked BEFORE the Railway API call so an
+# oversized body is refused locally rather than uploaded and then rejected (or
+# accepted) by an API whose own limits we do not control. Matches
+# issue_commands.MAX_ENVELOPE_BYTES; deliberately duplicated rather than imported
+# because this script is stdlib-only and runs without the package installed.
+MAX_VALUE_BYTES = 8192
+
+
+def _digest(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _echo(name: str, value: str, prefix: str) -> str:
+    """How a variable may be printed: in full, or as an identifier for a body."""
+    if name in REDACTED_VARS:
+        text = str(value)
+        return (f"{prefix}{name}=<redacted {len(text.encode('utf-8'))} bytes, "
+                f"sha256:{_digest(text)[:16]}>")
+    return f"{prefix}{name}={value}"
+
+
 _UPSERT = "mutation($input: VariableUpsertInput!){ variableUpsert(input: $input) }"
 _QUERY = "query($p:String!,$e:String!,$s:String){ variables(projectId:$p, environmentId:$e, serviceId:$s) }"
 _REDEPLOY = "mutation($e:String!,$s:String!){ serviceInstanceRedeploy(environmentId:$e, serviceId:$s) }"
@@ -216,7 +256,7 @@ def run_get() -> int:
     print("# current allowlisted env vars (secrets hidden):")
     for k in sorted(ALLOWED_VARS):
         if k in allvars:
-            print(f"  {k}={allvars[k]}")
+            print(_echo(k, allvars[k], "  "))
     return 0
 
 
@@ -231,6 +271,17 @@ def run_set(mapping: dict, redeploy: bool = True) -> int:
     if not mapping:
         print("env set request has no variables", file=sys.stderr)
         return 1
+    # Bound every value BEFORE touching the network — a body too large to be a
+    # legitimate command should never leave this process, and fail-closed here
+    # keeps the batch all-or-nothing the same way a bad name does.
+    oversized = [
+        k for k, v in mapping.items()
+        if len(str(v).encode("utf-8")) > MAX_VALUE_BYTES
+    ]
+    if oversized:
+        print(f"refusing to set oversized vars (limit {MAX_VALUE_BYTES} bytes): "
+              f"{sorted(oversized)}", file=sys.stderr)
+        return 1
     ctx = _ctx()
     if not ctx:
         return 1
@@ -243,7 +294,7 @@ def run_set(mapping: dict, redeploy: bool = True) -> int:
                "name": name, "value": str(value)}
         try:
             _graphql(_UPSERT, {"input": inp}, token)
-            print(f"  set {name}={value}")
+            print(_echo(name, value, "  set "))
             ok += 1
         except RailwayError as exc:
             print(f"  FAILED {name}: {exc}", file=sys.stderr)

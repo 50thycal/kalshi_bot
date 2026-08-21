@@ -877,3 +877,63 @@ class ExperimentIssueLink(Base):
     label: Mapped[str | None] = mapped_column(String(200))
     created_by: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+
+
+class ExperimentOsIssueCommand(Base):
+    """Durable receipt for one worker-executed issue command (the transport's
+    exactly-once ledger — docs/EXPERIMENT_OS_ISSUES.md).
+
+    The ops channel is read-only against Postgres and the sandbox cannot reach
+    Railway, so an issue mutation reaches production as a strictly-validated
+    envelope carried by an allowlisted environment variable and executed once at
+    worker boot. This table is what makes "once" true: `command_id` is UNIQUE, and
+    the claim is an `INSERT … ON CONFLICT DO NOTHING RETURNING`, so two workers
+    booting together cannot both execute, and a worker that restarts ten times
+    under the ON_FAILURE policy re-reads the same variable and does nothing.
+
+    **A committed receipt is terminal.** SUCCEEDED, REJECTED and FAILED are all
+    final for that `command_id`; retrying means submitting a new one. The absence
+    of a receipt is the only state that permits another attempt — which is
+    exactly the case where the mutation cannot have committed either.
+
+    `payload_json` is the canonicalized envelope payload, kept so a replay can be
+    proven identical and so the receipt explains itself later. It is NOT secret
+    and must never be treated as though it were: the same bytes are committed in
+    plaintext to `ops/request.json` on a public branch. See the module docstring
+    of `issue_commands.py` for what may therefore be put in a payload.
+    """
+
+    __tablename__ = "experiment_os_issue_commands"
+    __table_args__ = (
+        Index("ix_experiment_os_issue_commands_status", "status", "requested_at"),
+        Index("ix_experiment_os_issue_commands_issue", "issue_key"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    #: Caller-supplied, globally unique, and the whole basis of exactly-once.
+    command_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    action: Mapped[str] = mapped_column(String(32), nullable=False)
+    #: Attribution, NOT authorization. The transport cannot verify who anyone is;
+    #: the authority is who can push to the ops branch. Recorded so the issue
+    #: history names a person and a role, never so a permission can be inferred.
+    actor: Mapped[str] = mapped_column(String(64), nullable=False)
+    actor_role: Mapped[str] = mapped_column(String(32), nullable=False)
+    #: sha256 over the canonical envelope. A second submission of the same
+    #: command_id with a DIFFERENT hash is a collision and executes nothing.
+    payload_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload_json: Mapped[dict | None] = mapped_column(JSONType)
+    schema_version: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default="1"
+    )
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    requested_at: Mapped[datetime | None] = mapped_column(TS)
+    started_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(TS)
+    #: The issue the command acted on, once known. Null for a rejected envelope
+    #: that never resolved to one.
+    issue_key: Mapped[str | None] = mapped_column(String(24))
+    result_json: Mapped[dict | None] = mapped_column(JSONType)
+    #: Bounded and sanitized: an exception class and a truncated message, never
+    #: a traceback and never the envelope.
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)

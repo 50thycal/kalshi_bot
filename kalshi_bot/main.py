@@ -122,6 +122,40 @@ def run() -> int:
                 extra={"extra_fields": {"error": str(exc)}},
             )
 
+    # 2b-iii) One Experiment OS issue command (docs/EXPERIMENT_OS_ISSUES.md).
+    # The ops channel is read-only against Postgres, so this hook is the only
+    # production path for an ordinary ticket write. Bounded to seventeen issue
+    # operations that call the existing service functions; it can never touch a
+    # lifecycle state, gate, verdict, Version, Epoch, Platform Revision or
+    # exposure. Repeated boots are inert: each command_id gets a durable terminal
+    # receipt, so a restart re-reads the same variable and executes nothing.
+    # Guarded exactly like 2b — a refused or broken command must never stop the
+    # worker, and the receipt is how the operator finds out what happened.
+    if settings.experiment_os_issue_command:
+        try:
+            from .experiment_os.issue_commands import run_boot_command
+
+            with session_scope() as session:
+                receipt = run_boot_command(
+                    session, settings.experiment_os_issue_command
+                )
+            # The view is metadata only. The envelope itself is never logged: it
+            # rides a public branch, so keeping copies of it out of the log stream
+            # is hygiene we get for free by never putting it there.
+            if receipt is not None:
+                log_event(
+                    logger,
+                    logging.INFO if receipt.get("status") == "SUCCEEDED"
+                    else logging.ERROR,
+                    "experiment OS issue command",
+                    **receipt,
+                )
+        except Exception as exc:  # noqa: BLE001
+            logger.error(
+                "experiment OS issue command hook failed; continuing to trade",
+                extra={"extra_fields": {"error": str(exc)}},
+            )
+
     # 2c) Experiment OS enforcement: record an operator-declared cutover (no-op
     # unless EXPERIMENT_OS_ENFORCEMENT_MODE names a mode we are not already in,
     # and only after readiness passes), then load the recorded mode (OFF when
