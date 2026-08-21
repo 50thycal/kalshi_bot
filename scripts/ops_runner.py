@@ -128,6 +128,7 @@ ALLOWED_SCRIPTS = (
     "mmsell_depth_fill_model",
     "mmsell_deconfound_study",
     "theta_tail_diagnosis",
+    "theta_tail_refit",
     "evo_digest",
     "evo_tree",
     "evo_selftest",

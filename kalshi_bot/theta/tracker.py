@@ -39,6 +39,7 @@ from ..live.sizing import is_hot_entry, maker_no_price, order_quantity
 from ..paper.engine import kalshi_fee
 from ..scanner.metrics import compute_metrics, compute_time_to_close
 from ..twin import harness as twin_codes
+from . import tailmodel
 from .spot import CoinbaseSpotClient, SpotModel
 
 logger = logging.getLogger(__name__)
@@ -125,6 +126,9 @@ class ThetaTracker:
         self.twin_harness = twin_harness
         # Set by the live cycle before run_once so the live mirror can pass it to the balance gate.
         self._account_state: dict | None = None
+        # Replacement-model fits, keyed by (model, minute, horizon) — telemetry only, cleared
+        # once per cycle. See `_spliced`.
+        self._spliced_cache: dict[tuple, object] = {}
 
     # -- spot maintenance ---------------------------------------------------
     def _refresh_spot(self, session, product: str) -> SpotModel | None:
@@ -143,7 +147,13 @@ class ThetaTracker:
             closes = self.spot.candles(product, start_unix, end_unix)
             if closes:
                 repo.insert_spot_candles(session, product, closes)
-        repo.prune_spot_candles(session, product, trail_start - timedelta(days=1))
+        # Prune on RETENTION, not on the model window (Settings.theta_spot_retention_days).
+        # 6 days of closes carries ~205 independent 35-minute blocks, which is below what any
+        # tail estimator needs; keeping more history is the prerequisite for validating one.
+        # `load_spot_closes` below is still bounded by `trail_start`, so no probability, entry
+        # or fill changes because of this.
+        keep = max(float(s.theta_spot_retention_days), s.theta_trail_days + 1.0)
+        repo.prune_spot_candles(session, product, now - timedelta(days=keep))
         stored = repo.load_spot_closes(session, product, trail_start)
         if len(stored) < SpotModel.MIN_SAMPLES:
             logger.warning(
@@ -152,6 +162,25 @@ class ThetaTracker:
             )
             return None
         return SpotModel(stored, trail_days=s.theta_trail_days)
+
+    def _spliced(self, model: SpotModel, now_unix: int, h_min: int):
+        """The replacement model for this horizon, fitted once per (cycle, horizon).
+
+        A ladder cycle prices hundreds of strikes across a handful of distinct
+        minutes-to-close, and the fit depends only on the horizon — refitting per strike would
+        repeat identical work hundreds of times inside the trading loop."""
+        key = (id(model), now_unix // 60, h_min)
+        if key in self._spliced_cache:
+            return self._spliced_cache[key]
+        try:
+            built = tailmodel.build(model.returns(now_unix, h_min), h_min)
+        except Exception:  # noqa: BLE001 — telemetry must never break a trading cycle
+            built = None
+        # One cycle's worth; the ids and minutes move on and the dict would otherwise grow.
+        if len(self._spliced_cache) > 64:
+            self._spliced_cache.clear()
+        self._spliced_cache[key] = built
+        return built
 
     def _books(self) -> list[dict]:
         """The control book (base knobs, tag 'theta' — NEVER reparameterized), then the
@@ -420,6 +449,20 @@ class ThetaTracker:
                     summ.model_priced += 1
                 excess = (mid - p * 100.0) if p is not None else None
 
+                # Shadow the replacement model beside the incumbent. It decides NOTHING — no
+                # gate reads `spliced_*` — but its calibration accrues on live data from the day
+                # this ships, which is the only way stage 2 of the theta remediation ever gets
+                # an out-of-sample window to be validated on.
+                spliced_p = spliced_xi = None
+                spliced_n = None
+                if model is not None:
+                    sm = self._spliced(model, now_unix, max(1, int(tte_min)))
+                    if sm is not None:
+                        spliced_p = tailmodel.p_yes(
+                            sm, model.spot_at(now_unix), strike_type, floor_k, cap_k)
+                        spliced_xi = sm.upper.xi
+                        spliced_n = sm.n_eff
+
                 snapshot_rows.append({
                     "series": series,
                     "event_ticker": ticker.rsplit("-", 1)[0],
@@ -435,6 +478,19 @@ class ThetaTracker:
                     "spot": model.spot_at(now_unix) if model is not None else None,
                     "model_p": p,
                     "model_excess_cents": excess,
+                    "trailing_vol_15m": (model.realized_vol_bps(now_unix, 15)
+                                         if model is not None else None),
+                    "trailing_vol_60m": (model.realized_vol_bps(now_unix, 60)
+                                         if model is not None else None),
+                    "trailing_vol_240m": (model.realized_vol_bps(now_unix, 240)
+                                          if model is not None else None),
+                    "trailing_move_15m": (model.trailing_move_bps(now_unix, 15)
+                                          if model is not None else None),
+                    "trailing_move_60m": (model.trailing_move_bps(now_unix, 60)
+                                          if model is not None else None),
+                    "spliced_model_p": spliced_p,
+                    "spliced_upper_xi": spliced_xi,
+                    "spliced_n_eff": spliced_n,
                 })
 
                 # SHELVED (theta_collect_only): keep snapshotting the model-priced ladder

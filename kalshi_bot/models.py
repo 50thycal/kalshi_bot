@@ -842,6 +842,32 @@ class CryptoLadderSnapshot(Base):
     spot: Mapped[float | None] = mapped_column(Float)  # underlying at capture
     model_p: Mapped[float | None] = mapped_column(Float)  # theta model P(YES), 0..1
     model_excess_cents: Mapped[float | None] = mapped_column(Float)  # mid - 100*model_p
+    # --- decision-time regime telemetry (docs/RESEARCH_THETA_TAIL_MODEL_DIAGNOSIS.md §2.5) ---
+    # The momentum/regime hypothesis is the one mechanism the tail diagnosis could NOT test:
+    # only 11,435 of 63,758 tail quotes had a usable trailing move, because nothing recorded the
+    # spot path at decision time and `crypto_spot_candles` is pruned at ~6 days. These are
+    # computed from the closes the model already holds in memory, so they cost one pass over a
+    # window that has been loaded regardless.
+    #
+    # Realized vol is the sample sd of 1-minute log returns over the trailing window, in
+    # BASIS POINTS PER MINUTE — a unit that does not change meaning when the horizon does.
+    trailing_vol_15m: Mapped[float | None] = mapped_column(Float)
+    trailing_vol_60m: Mapped[float | None] = mapped_column(Float)
+    trailing_vol_240m: Mapped[float | None] = mapped_column(Float)
+    # Signed trailing move over the same lookbacks, in basis points. Signed, not absolute: a
+    # tail sold into a rally is a different trade from one sold into a selloff, and the
+    # diagnosis's |move| bucketing could not tell them apart.
+    trailing_move_15m: Mapped[float | None] = mapped_column(Float)
+    trailing_move_60m: Mapped[float | None] = mapped_column(Float)
+    # --- replacement-model shadow (kalshi_bot/theta/tailmodel.py) ---
+    # The spliced EVT model's answer for the SAME strike at the SAME instant. Recorded beside
+    # the incumbent rather than replacing it, so its calibration accrues on live data while no
+    # book prices off it. `spliced_n_eff` travels with it because a probability from an
+    # underpowered fit is a floor, not an estimate, and pooling the two would read the floor as
+    # though it were evidence.
+    spliced_model_p: Mapped[float | None] = mapped_column(Float)
+    spliced_upper_xi: Mapped[float | None] = mapped_column(Float)
+    spliced_n_eff: Mapped[int | None] = mapped_column(Integer)
 
 
 class GameMarketMatch(Base):

@@ -237,6 +237,18 @@ To run a request:
      live money. Findings: `docs/RESEARCH_THETA_TAIL_MODEL_DIAGNOSIS.md`. Check the
      derived-vs-recorded settlement agreement line before quoting sections B onward.
 
+   - **"theta refit"** / **"tail model validation"** -> `{"type":"script","name":"theta_tail_refit"}`
+     — scores the replacement probability model (`kalshi_bot/theta/tailmodel.py`) against the
+     incumbent, strictly out of sample. Reports degeneracy (what fraction of each model's output
+     is exactly 0 or 1), calibration by probability bucket with the sub-2% region broken out,
+     a `tail_q` sweep chosen on TRAIN and scored on TEST, the SELECTED-vs-REJECTED split under
+     each model's own excess, and fit health.
+     **Read `well-powered fits` on line 7 before anything else.** A fit below
+     `MIN_N_EFF_FOR_TAIL` is a resolution floor, not an estimate, and sections 2 and 4 exclude
+     them. `--spot-source candles` (default) uses the true 1-minute feed and therefore only the
+     retained window; `--spot-source ladder` reaches further back but at ~5-minute sampling,
+     which is too sparse to fit a tail. Findings: `docs/RESEARCH_THETA_REMEDIATION.md`.
+
    The individual probes can still be run alone:
    `weather_model_check` grades the ensemble forecast distribution against the
    market's bucket prices on settled events (Brier/log-loss + hypothetical EV)

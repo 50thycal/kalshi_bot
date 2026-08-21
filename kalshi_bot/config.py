@@ -609,6 +609,20 @@ class Settings(BaseSettings):
     # SERIES:COINBASE_PRODUCT pairs; wrong series fail soft (logged, skipped).
     theta_series: str = "KXBTCD:BTC-USD,KXBTC:BTC-USD,KXETHD:ETH-USD,KXETH:ETH-USD"
     theta_trail_days: float = 5.0             # spot window behind the return distribution
+    # How long 1-minute closes are KEPT, as opposed to how far back the model looks. These were
+    # the same number until 2026-08-21, when the pruner ran at trail_days + 1 = 6 days — and
+    # that is why no tail refit can be validated today.
+    #
+    # A 5-day window at a 35-minute horizon carries 7200 / 35 ~= 205 INDEPENDENT return blocks,
+    # of which ~10 are tail excesses at the 95th percentile. Measured on the true 1-minute feed,
+    # 7,204 of 7,209 fits fall below the bar a Generalized Pareto needs
+    # (`kalshi_bot/theta/tailmodel.py` MIN_N_EFF_FOR_TAIL). The estimator is not the problem;
+    # 6 days of retained history is. 90 days gives ~3,700 independent blocks and ~185 excesses,
+    # at a storage cost of ~1,440 rows/day/product (~260k rows for two products).
+    #
+    # Retention does NOT change what any book sees: `refresh_spot_model` still loads only
+    # `trail_days` of closes, so widening this alters no probability, no entry and no fill.
+    theta_spot_retention_days: float = 90.0
     theta_entry_min_minutes: float = 10.0     # don't sell inside the last 10min (stale loop)
     theta_entry_max_minutes: float = 55.0     # the tape edge lives <60min to expiry
     theta_snapshot_max_minutes: float = 90.0  # snapshot ladders this close to settlement
