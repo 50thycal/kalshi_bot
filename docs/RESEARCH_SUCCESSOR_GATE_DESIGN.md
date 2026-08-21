@@ -1,5 +1,30 @@
 # Research Lab — statistical design for the mmsell and theta4 v2 gates
 
+> ## WITHDRAWN 2026-08-21 — do not freeze either design from this document
+>
+> The operator withdrew both v2 contracts after
+> `RESEARCH_LIVE_FILL_SELECTION_STUDY.md` and
+> `RESEARCH_MMSELL_UNIVERSE_DECONFOUNDING.md`. What is invalidated is the
+> **scientific question**, not the machinery: the bound clauses, the promotion /
+> failure evidence-floor split, the 99% sequential bounds and the inclusive
+> maximum-evidence horizon (PRs #245/#247) all remain valid and in force.
+>
+> * **MMSELL Design D — the 291-market delta gate is NOT to be frozen.**
+>   Treatment and control differ in universe, entry-price band and settle-mode
+>   mix simultaneously, so `delta.live_cents_per_contract` has no single
+>   interpretation. See `RESEARCH_MMSELL_UNIVERSE_DECONFOUNDING.md` §0, §4, §5.
+>   No sample size repairs it.
+> * **theta4 v2 — not to be created.** theta4 is not eligible for rearm in its
+>   current form: a tail-shape miscalibration *and* a fill-selection haircut,
+>   two independent failures. The strategy needs research before another live
+>   canary, not a different gate. See
+>   `RESEARCH_THETA_TAIL_MODEL_DIAGNOSIS.md`.
+>
+> The **50-market historical v2 early-failure floor stays as pre-registered**
+> and was not moved by any of these outcomes. Sections below are kept for the
+> record and for the reusable statistical machinery; read them as history, not
+> as a design to pick up.
+
 **Session:** Research Lab, 2026-08-19. **Status:** design. **No lifecycle state
 was changed and nothing here is frozen.** Third in the series after
 `RESEARCH_LIVE_CANARY_CONTRACT_DEFECT.md` (the defect) and

@@ -126,6 +126,8 @@ ALLOWED_SCRIPTS = (
     "mmsell_quote_parity",
     "mmsell_queue_position",
     "mmsell_depth_fill_model",
+    "mmsell_deconfound_study",
+    "theta_tail_diagnosis",
     "evo_digest",
     "evo_tree",
     "evo_selftest",
