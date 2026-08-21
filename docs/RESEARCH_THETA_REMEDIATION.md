@@ -4,8 +4,8 @@ Follow-on to `RESEARCH_THETA_TAIL_MODEL_DIAGNOSIS.md`, which found two composing
 tail-shape error in the model and a threshold-selection bias on top. This is the repair
 programme. **Paper only. No theta parameter changed, no book re-armed, no live money.**
 
-**Reproduce:** `{"type":"script","name":"theta_tail_refit","args":["--since","2026-08-15",
-"--train-end","2026-08-19","--spot-source","candles"]}` (run id `refit-3`).
+**Reproduce:** `{"type":"script","name":"theta_tail_refit","args":["--since","2026-08-01",
+"--train-end","2026-08-14","--fit-days","5,30,90","--spot-source","coinbase"]}` (run `refit-8`).
 
 ---
 
@@ -14,7 +14,7 @@ programme. **Paper only. No theta parameter changed, no book re-armed, no live m
 | stage | status |
 |---|---|
 | 1. replace the degenerate 0/1 output | **done and verified** — 90.9% exactly-0 → **0.0%** |
-| 2. refit the tail shape, validate out of sample | **run, powered, and FAILED** — see §3.3 |
+| 2. refit the tail shape, validate out of sample | **run, powered, and FAILED its bar** — §3.3 |
 | 3. re-measure calibration + residual selection bias | **done** — selection bias survives §3.4 |
 | 4. selection-rule A/B that does not rank on model error | **redesigned**, below; still unregistered |
 | 5. telemetry for momentum/regime | **implemented and tested**, below |
@@ -128,89 +128,102 @@ chosen window and threshold. `powered_for(strike_type)` is what callers ask.
 
 ## 3. Baseline calibration — powered, out of sample, and the model does not pass
 
-Run `refit-5`: 30,923 decision quotes, 2026-08-01 → 08-21, TRAIN/TEST split at 08-14, spot from
-Coinbase's public 1-minute feed. **Every result below is on quotes whose active tail cleared the
-power bar.**
+Run **`refit-8`**: 30,960 decision quotes, 2026-08-01 → 08-21, TRAIN/TEST split at 08-14, spot
+from Coinbase's public 1-minute feed. Cited in preference to the earlier `refit-5` because that
+run's configuration was frozen by a selection statistic since found broken (§3.5) — it happened
+to pick the same configuration, but a defensible number has to come from the run whose freezing
+rule is defensible.
 
 ### 3.1 The window, not the estimator, was the constraint — and it is now lifted
 
-| fit window | tail_q | quotes with a POWERED active tail |
-|---|---|---|
-| 5 days | 0.90 | 1,766 / 30,923 |
-| 5 days | 0.95 | 14 |
-| 5 days | 0.99 | **0** |
-| 30 days | 0.90 / 0.95 | 30,923 |
-| 30 days | 0.99 | 34 |
-| **90 days** | 0.90 / 0.95 / 0.99 | **30,923** |
+Quotes whose **active** tail cleared the power bar, per configuration:
 
-This table is the whole of blocker 1 and blocker 2 in one place. At theta's own 5-day window a
-99th-percentile fit is powered **nowhere**, which is exactly the `tail_q` dependence a fixed
-block-count bar could not express. At 90 days every configuration is powered.
+| fit window | tail_q | powered | coverage |
+|---|---|---|---|
+| 5 days | 0.90 | 1,767 | 5.0% |
+| 5 days | 0.95 | 14 | 0.0% |
+| 5 days | 0.99 | **0** | **0.0%** |
+| 30 days | 0.90 / 0.95 | 30,960 | 100% |
+| 30 days | 0.99 | 35 | 0.1% |
+| **90 days** | 0.90 / 0.95 / 0.99 | **30,960** | **100%** |
 
-Fit health at the frozen configuration: 1,440 non-overlapping blocks (p50), **95 declustered
-upper-tail exceedances** and **93 lower** (p50), upper ξ +0.061, lower ξ +0.094, 16.2% bounded
-active tails. That is a real fit, on both sides, for the first time.
+This is blockers 1 and 2 in one table. At theta's own 5-day window a 99th-percentile fit is
+powered **nowhere**, which is precisely the `tail_q` dependence a fixed block-count bar could not
+express. At 30 days and beyond every quote is powered at the thresholds that matter.
+
+Fit health at the frozen configuration: **1,440 non-overlapping blocks** (p50), **95 declustered
+upper-tail exceedances** and **93 lower** (p50), upper ξ +0.061, lower ξ +0.094. A real fit, on
+both sides, for the first time.
 
 ### 3.2 Degeneracy — fixed
 
 | model | n | exactly 0 | in (0,1) |
 |---|---|---|---|
-| incumbent (empirical) | 30,923 | **28,100 (90.9%)** | 2,823 (9.1%) |
-| spliced EVT | 30,923 | **0 (0.0%)** | **30,923 (100.0%)** |
+| incumbent (empirical) | 30,960 | **28,100 (90.8%)** | 2,860 (9.2%) |
+| spliced EVT | 30,960 | **0 (0.0%)** | **30,960 (100.0%)** |
 
 ### 3.3 Out-of-sample calibration — the replacement FAILS its acceptance bar
 
-Configuration frozen on TRAIN (`fit_days=30, tail_q=0.90`), then TEST read **once**: 10,685
-powered quotes.
+Configuration frozen on TRAIN (`fit_days=30, tail_q=0.90`, deviance/quote 0.00040), then TEST
+read **once**: 10,722 powered quotes.
 
 | modeled P | spliced R | 99% CI | incumbent R | 99% CI |
 |---|---|---|---|---|
-| 0.000–0.002 | **7.05** | [3.14, 13.52] | **21.68** | [8.06, 46.38] |
-| 0.002–0.005 | 9.97 | [2.90, 24.41] | 2.46 | [0.13, 11.40] |
-| 0.005–0.010 | 4.74 | [0.80, 14.93] | 3.79 | [0.82, 10.73] |
-| 0.010–0.020 | 6.71 | [2.64, 13.90] | 3.16 | [1.17, 6.76] |
-| 0.020–0.050 | 3.57 | [1.73, 6.47] | 2.44 | [1.05, 4.79] |
-| 0.050–0.100 | 2.14 | [1.04, 3.88] | 2.31 | [1.17, 4.05] |
-| 0.100–0.200 | 1.44 | [0.76, 2.46] | 1.74 | [0.99, 2.83] |
-| 0.200–0.350 | 0.80 | [0.36, 1.54] | 1.07 | [0.56, 1.83] |
+| 0.000–0.002 | **7.00** | [3.11, 13.41] | **21.34** | [7.93, 45.67] |
+| 0.002–0.005 | 9.80 | [2.85, 23.98] | 2.41 | [0.12, 11.16] |
+| 0.005–0.010 | 4.62 | [0.78, 14.56] | 3.71 | [0.80, 10.49] |
+| 0.010–0.020 | 6.66 | [2.62, 13.79] | 3.09 | [1.15, 6.61] |
+| 0.020–0.050 | 3.53 | [1.71, 6.40] | 2.40 | [1.03, 4.70] |
+| 0.050–0.100 | 2.10 | [1.02, 3.80] | 2.27 | [1.15, 3.99] |
+| 0.100–0.200 | 1.41 | [0.74, 2.41] | 1.69 | [0.96, 2.75] |
+| 0.200–0.350 | 0.80 | [0.36, 1.54] | 1.04 | [0.55, 1.78] |
 | 0.350–0.500 | 0.69 | [0.24, 1.53] | 0.75 | [0.22, 1.83] |
-| **ALL** | **1.81** | [1.40, 2.29] | **1.75** | [1.35, 2.21] |
+| **ALL** | **1.79** | [1.39, 2.27] | **1.71** | [1.32, 2.17] |
 
 > **The stated bar was: "a model that looks calibrated near 10–50% and materially understates
 > 1–5% events is not acceptable for a short-tail strategy." The spliced model is exactly that
-> model.** It is calibrated from 10% up (R = 1.44, 0.80, 0.69) and understates the 1–5% region by
-> 3.6× to 10×. **It does not pass, and stage 2 is not complete.**
+> model.** Calibrated from 10% up (R = 1.41, 0.80, 0.69); understating the 1–5% region by **3.5×
+> to 9.8×**. **It does not pass. Stage 2 is complete as a measurement and negative as a result.**
 
-What it does buy is real but narrow: in the deepest bucket the incumbent misses by **21.7×** and
-the spliced model by **7.1×**, because the incumbent assigns ~zero there and cannot be wrong by a
-ratio at all until it stops doing so. Overall the two are indistinguishable (1.81 vs 1.75).
+What it does buy is real but narrow: in the deepest bucket the incumbent misses by **21.3×** and
+the spliced model by **7.0×** — because the incumbent assigns ~zero there and cannot even be wrong
+by a ratio until it stops doing so. Overall the two are indistinguishable (1.79 vs 1.71).
 
-**The honest conclusion is that removing the truncation did not remove the tail miss.** The
-degeneracy was a real defect and is fixed; it was not the cause of R ≈ 4. Something else is
-mispricing the deep tail, and a GPD splice over realized spot returns does not capture it.
+**Removing the truncation did not remove the tail miss.** The degeneracy was a real defect and is
+fixed; it was not the cause of R ≈ 4. Something else misprices the deep tail, and a GPD splice
+over realized spot returns does not capture it.
 
 ### 3.4 Stage 3 — selection bias survives the repair, and grows
 
-Now measurable on 30,923 powered quotes:
+Measured on all 30,960 powered quotes:
 
 | | SELECTED R | 99% CI | REJECTED R | 99% CI | ratio |
 |---|---|---|---|---|---|
-| incumbent | 5.44 | [3.04, 8.92] | 1.20 | [0.95, 1.48] | **4.5×** |
-| spliced | 6.61 | [3.60, 11.05] | 1.09 | [0.87, 1.34] | **6.1×** |
+| incumbent | 5.44 | [3.04, 8.92] | 1.18 | [0.94, 1.46] | **4.6×** |
+| spliced | 6.54 | [3.56, 10.94] | 1.08 | [0.86, 1.33] | **6.1×** |
 
 **Repairing the model did not reduce the selection bias — it slightly increased it.** This is the
 review's point 4 confirmed with data: a residual ranking finds whatever error remains, so a better
 model does not stop it selecting on that error. It is the strongest available argument that the
 selection RULE, not the probability model, is what has to change.
 
-### 3.5 A correction to the selection statistic used to freeze the configuration
+### 3.5 Two corrections to the statistic that freezes a configuration
 
-The first run of this sweep scored candidates by `|log(observed/expected)|` on the sub-2%
-population. That statistic is **undefined when nothing was observed**, so all three 90-day
-candidates went unscored and a 30-day window was frozen by default — the statistic silently
-discarded exactly the configurations whose deep tail behaved best. It is now the Poisson deviance
-`2·(o·ln(o/e) − (o − e))`, which is defined at o = 0 (`= 2e`), penalises over- and
-under-prediction alike, and is pinned by tests.
+Both were found by running the sweep, and each would have frozen the wrong thing:
+
+1. **`|log(observed/expected)|` is undefined when nothing was observed.** All three 90-day
+   candidates went unscored and a 30-day window was frozen by default — the statistic silently
+   discarded exactly the configurations whose deep tail behaved best. Replaced by the Poisson
+   deviance `2·(o·ln(o/e) − (o − e))`, defined at o = 0 (`= 2e`).
+2. **Raw deviance rewards a configuration that powers almost nothing**, because it is an absolute
+   quantity and less data means a smaller sum. Run `refit-7` froze `fit_days=5, tail_q=0.90` on a
+   deviance of 0.778 while powering **1,766 of 30,923 quotes (5.7%)**. Scoring is now the **mean
+   deviance per deep-tail quote**, and a configuration must power **≥90% of TRAIN quotes** to be
+   a candidate at all. Under that rule `refit-8` rejects three configurations outright and freezes
+   `fit_days=30, tail_q=0.90` on merit.
+
+Both are pinned by tests, and the coverage gate is the reason the numbers above can be compared
+across configurations at all.
 
 ## 4. Stage 4 — the selection-rule A/B (design; not registered, not running)
 
