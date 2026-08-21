@@ -69,7 +69,13 @@ To run a request:
    {"type":"xos","command":"issue-list","args":["--owner","LIVE_OPS"],"id":"iss-2"}
    {"type":"xos","command":"issue-show","args":["XOS-000123"],"id":"iss-3"}
    {"type":"xos","command":"issue-candidates","id":"iss-4"}
+   {"type":"xos","command":"issue-findings-plan","id":"iss-5"}
    ```
+
+   `issue-findings-plan` previews the historical contract-findings import and
+   reconciliation without writing. Executing it is a WORKER action — set
+   `EXPERIMENT_OS_RECONCILE_FINDINGS_ON_BOOT=true` via `env` and let one boot run
+   it (idempotent; switch it back off after). See `docs/EXPERIMENT_OS_ISSUES.md`.
 
    Only those three are allowlisted, and only those three are reads. Every other
    `issue` subcommand WRITES and refuses to run against `DATABASE_URL_RO` — which

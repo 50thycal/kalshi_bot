@@ -340,6 +340,7 @@ Reads — allowlisted on the ops channel:
 python -m kalshi_bot.experiment_os.cli issue list [--all --status --owner --classification --experiment]
 python -m kalshi_bot.experiment_os.cli issue show XOS-000123
 python -m kalshi_bot.experiment_os.cli issue candidates [--json]
+python -m kalshi_bot.experiment_os.cli issue findings-plan
 ```
 
 ```json
@@ -354,6 +355,7 @@ worker remains the only writer; these run where a writable `DATABASE_URL` is the
 only one present.
 
 ```bash
+issue open-candidate <fingerprint> --actor ... --opened-by-role ...
 issue create --title ... --opened-by-role ... [--owner --classification --experiment --detector]
 issue triage XOS-000123   --actor A --actor-role LIVE_OPS --reason ...
 issue classify XOS-000123 --actor A --actor-role ... --classification STRATEGY --reason ...
@@ -375,7 +377,9 @@ issue import-findings [--dry-run]
 ```
 Control Tower: experiment has zero evidence
     → detected as a candidate; the Tower recommends but cannot open it
-XOS ticket opened — UNCLASSIFIED, owner LIVE_OPS
+    → `issue open-candidate <fingerprint>` ADOPTS it, carrying the detector,
+      fingerprint, anomaly kind, exact lineage, verdict and routing
+XOS ticket opened — UNCLASSIFIED, owner LIVE_OPS, and the candidate is COVERED
     → Live Ops verifies runtime health and candidate production
        if broken   → classify OPS, repair, validate, resolve
        if healthy but zero qualifying opportunities
@@ -387,11 +391,26 @@ XOS ticket opened — UNCLASSIFIED, owner LIVE_OPS
     → resolved, linked to the PR / Version / decision
 ```
 
+**Adopt the candidate — do not hand-open a ticket.** `issue create` cannot carry
+a candidate's fingerprint or its exact Version/Epoch/Deployment/Gate scope, so an
+issue opened that way never *covers* the candidate that caused it: the Tower goes
+on reporting the same anomaly as UNTICKETED forever, and you end up with two
+records of one problem, neither aware of the other. `open-candidate` copies the
+detection verbatim.
+
 ```bash
-xos issue create --title "freeze-dark-window-pin has produced zero evidence" \
-    --opened-by-role EXPERIMENT_CONTROL_TOWER --actor tower \
-    --experiment freeze-dark-window-pin --detector experiment.zero_evidence
+# Read the current candidates and take the fingerprint of the one you mean.
+xos issue candidates --json
+
+xos issue open-candidate 9f2c…e41 \
+    --actor cal --opened-by-role EXPERIMENT_CONTROL_TOWER
 # → XOS-000042  [OPEN] UNCLASSIFIED/LOW/P2  owner LIVE_OPS
+#     detector:    experiment.zero_evidence
+#     fingerprint: 9f2c…e41
+#     scope:       freeze-dark-window-pin · v1/e1
+#
+#   This anomaly is now COVERED — the next control-tower read shows it under
+#   OPEN INVESTIGATIONS, not UNTICKETED ANOMALIES.
 
 xos issue triage XOS-000042 --actor cal --actor-role LIVE_OPS \
     --reason "runtime diagnosis before any criteria question"
@@ -419,36 +438,109 @@ xos issue resolve XOS-000042 --actor cal --actor-role RESEARCH_LAB \
     --summary "corrected successor Version 2 registered and producing evidence"
 ```
 
-## Migrating the contract-findings registry
+## The two historical contract findings
 
 `experiment_os/findings.py` is now a deprecation shim returning nothing. Its two
 entries — the `mmsell-scheduled-settle-live` and `theta4-fat-tail` v1 contract
-defects — move into durable issues via:
+defects — become durable issues through an idempotent import that also **settles
+them against the operator's later decision**.
 
-```bash
-python -m kalshi_bot.experiment_os.cli issue import-findings [--dry-run]
+### Why they are closed rather than actionable
+
+The remedy recorded when the defects were proven was "a corrected native
+successor Version". That is **stale**. Per merged research:
+
+* both live canaries were stood down and remain stood down —
+  `docs/RESEARCH_LIVE_FILL_SELECTION_STUDY.md` ("All three live books remain
+  stood down");
+* the proposed successor live-v2 contracts were **withdrawn** —
+  `docs/RESEARCH_SUCCESSOR_GATE_DESIGN.md`, WITHDRAWN 2026-08-21 (merged in
+  `50thycal/kalshi_bot#251`). MMSELL Design D is not to be frozen because
+  treatment and control differ in universe, entry-price band and settle mode at
+  once, which no sample size repairs
+  (`docs/RESEARCH_MMSELL_UNIVERSE_DECONFOUNDING.md`); theta4 v2 is not to be
+  created because the book carries two independent failures and needs research
+  before another canary (`docs/RESEARCH_THETA_TAIL_MODEL_DIAGNOSIS.md`).
+
+The defect is **not** withdrawn — it remains true of the historical Version, and
+the issue keeps its original evidence and Version binding. What changes is what
+follows from it, which is nothing. So each closes as:
+
+```text
+status                       = CLOSED_NO_ACTION
+disposition                  = NO_ACTION
+requires_new_version         = false
+requires_new_epoch           = false
+requires_platform_revision   = false
+requires_pause_or_stand_down = true     # the contract is stood down
 ```
 
-Idempotent (keyed on a deterministic fingerprint over detector + experiment +
-version), it preserves the evidence citation and the `proven_at`/`proven_by`
-provenance verbatim, binds each issue to the exact Experiment and Version by
-foreign key, fabricates nothing for an absent experiment or version (it skips
-with a reason), and changes no experiment state and no gate verdict.
+with the closure explanation:
 
-Each lands as `STRATEGY` / `HIGH` / `P1`, owned by Research Lab, status
-`ACTION_REQUIRED`, disposition `NEW_VERSION` — the state the work is actually in:
-the defect is proven and the remedy is known, so it is neither `OPEN` (nobody has
-looked) nor `RESOLVED` (nothing is fixed).
+> The defect remains true of historical Version 1, but that live contract was
+> stood down and its proposed successor live Version was withdrawn. It will not
+> be repaired in place or replaced by the rejected live-v2 design. Subsequent
+> MMSELL/theta work proceeds as separate paper research.
 
-`STRATEGY`, not `DATA`, on purpose. The evaluator reports `BLOCKED_DATA` and names
-missing providers, which is true and incomplete: the clauses address
-`deployment_kind="paper"` while the epochs hold only `live` and `paper_twin`, so
-the **addressing** is what is wrong. Implementing every named provider would leave
-both gates exactly as unevaluable.
+Importing them un-reconciled would put two tickets in front of the next reader
+asking for work that has already been declined; deleting them would erase a
+proven finding. Closing them with the decision recorded does neither.
 
-Binding to the version keeps the old behaviour: a corrected successor Version
-drops the finding automatically, nothing has to remember to delete it, and the
-historical issue stays queryable.
+The event history keeps the whole arc — `CREATED` → the migration's own
+`NEW_VERSION` disposition → the withdrawal evidence → back to `INVESTIGATING`
+(the documented back edge, whose purpose is exactly a proposed remedy that turned
+out to be wrong) → `NO_ACTION` → `CLOSED_NO_ACTION`. A reader can see that a
+successor Version *was* the plan and that it was withdrawn, not just the tidy end
+state.
+
+Neither closed issue is an active Control Tower blocker any more
+(`contract_defect_findings` returns only OPEN issues), and both stay fully
+queryable through `issue show`.
+
+### Running it in production
+
+The ops channel is read-only against Postgres and the Claude sandbox cannot
+reach Railway, so "invoke the importer" needs a real door. It uses the
+**established worker-write pattern** — the same one the legacy import and the
+enforcement cutover already use: the worker is the only process holding a
+writable `DATABASE_URL`, so a bounded, flag-gated boot hook executes it.
+
+**1. Preview, read-only** (safe on the ops channel; a write-and-rollback dry run
+cannot run there at all):
+
+```json
+{"type":"xos","command":"issue-findings-plan","id":"fp-1"}
+```
+
+Each finding reports one of `IMPORT_THEN_CLOSE_NO_ACTION`, `RECONCILE_ONLY`,
+`NO_OP`, or `SKIP` with a reason.
+
+**2. Execute once, on the worker:**
+
+```json
+{"type":"env","set":{"EXPERIMENT_OS_RECONCILE_FINDINGS_ON_BOOT":"true"},"id":"fr-1"}
+```
+
+Setting the var redeploys the worker; the boot hook runs the import and the
+reconciliation, logs the result, and cannot stop trading (`main.py` guards it and
+swallows its own errors). It is **bounded to this one operation** — not arbitrary
+SQL, and the general database channel stays read-only.
+
+**3. Verify and switch it back off:**
+
+```json
+{"type":"xos","command":"issue-list","args":["--all"],"id":"fv-1"}
+{"type":"xos","command":"issue-show","args":["XOS-000001"],"id":"fv-2"}
+{"type":"env","set":{"EXPERIMENT_OS_RECONCILE_FINDINGS_ON_BOOT":"false"},"id":"fr-2"}
+```
+
+Leaving the flag on is safe — every re-run is a no-op — just noisier. The
+reconciliation is keyed on `RECONCILIATION_KEY`, so a repeat can never reopen a
+closed issue, reset its status, restore `NEW_VERSION`, or duplicate an event.
+
+The equivalent on a writable connection is
+`python -m kalshi_bot.experiment_os.cli issue import-findings [--dry-run]`, which
+refuses `DATABASE_URL_RO` like every other issue write.
 
 ## Registering a new contract defect
 

@@ -96,6 +96,16 @@ class Settings(BaseSettings):
     # Import failure is logged to system_events and never blocks the worker.
     experiment_os_import_on_boot: bool = False
 
+    # One-shot idempotent import + reconciliation of the two historical contract
+    # findings (docs/EXPERIMENT_OS_ISSUES.md). Same rationale as the flag above:
+    # the ops channel is read-only against Postgres, so the worker is the only
+    # process that can execute this. Bounded to that one operation, idempotent
+    # (a re-run is a no-op, and can never reopen a closed issue or restore a
+    # stale disposition), and incapable of stopping the worker — main.py guards
+    # it. Preview it first, without writing, via
+    # `{"type":"xos","command":"issue-findings-plan"}`.
+    experiment_os_reconcile_findings_on_boot: bool = False
+
     # The operator-declared enforcement cutover (docs/EXPERIMENT_OS_ENFORCEMENT.md).
     # Empty = no-op. Set to OFF/WARN/NEW_ONLY/STRICT to have the worker RECORD that
     # mode once, gated on a readiness report computed at that instant; it is a no-op
