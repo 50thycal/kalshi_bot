@@ -8,6 +8,7 @@
     python -m kalshi_bot.experiment_os.cli scoreboard [key] [--evaluate]
     python -m kalshi_bot.experiment_os.cli evaluate-gates [--dry-run]
     python -m kalshi_bot.experiment_os.cli issue list|show|candidates      (read)
+    python -m kalshi_bot.experiment_os.cli issue open-candidate <fp>       (write)
     python -m kalshi_bot.experiment_os.cli issue create|triage|assign|...  (write)
 
 Connects with DATABASE_URL_RO when set (preferred), else DATABASE_URL.
@@ -478,6 +479,15 @@ def cmd_issue(session: Session, args) -> int:
         print(json.dumps(read.issue_detail(session, issue), indent=2, default=str))
         return 0
 
+    if action == "findings-plan":
+        # A READ-ONLY preview of what import-findings would do. The ops channel
+        # is read-only against Postgres, so a write-and-rollback dry run cannot
+        # run there at all; this answers the same question with plain selects.
+        from .issue_import import plan as findings_plan
+
+        print(json.dumps(findings_plan(session), indent=2, default=str))
+        return 0
+
     if action == "candidates":
         # Deterministic ticket candidates from the canonical Control Tower read.
         # Building the report writes nothing (the evaluator runs persist=False).
@@ -504,6 +514,30 @@ def cmd_issue(session: Session, args) -> int:
         ))
         print("\nThese are RECOMMENDATIONS. Opening one is a write, owned by the "
               "recommended role.")
+        return 0
+
+    if action == "open-candidate":
+        # Adopt a Control Tower candidate into a real issue with its exact
+        # fingerprint and lineage, so the ticket actually covers the anomaly
+        # that caused it. A write; the guard above already refused RO.
+        try:
+            issue = ix.open_issue_from_candidate(
+                session, args.fingerprint, actor=args.actor,
+                opened_by_role=args.opened_by_role,
+                evaluate=not args.no_evaluate,
+            )
+        except ix.CandidateNotAdoptable as exc:
+            print(f"refused: {exc}", file=sys.stderr)
+            return 1
+        session.commit()
+        print(f"{issue.issue_key}  [{issue.status}] {issue.classification}/"
+              f"{issue.severity}/{issue.priority}  owner {issue.current_owner_role}")
+        print(f"  detector:    {issue.detector}")
+        print(f"  fingerprint: {issue.detector_fingerprint}")
+        print(f"  scope:       {read.issue_scope_label(session, issue)}")
+        print("\nThis anomaly is now COVERED — the next control-tower read shows "
+              "it under OPEN INVESTIGATIONS,")
+        print("not UNTICKETED ANOMALIES.")
         return 0
 
     if action == "create":
@@ -609,16 +643,23 @@ def cmd_issue(session: Session, args) -> int:
 
 
 def cmd_issue_import_findings(session: Session, args) -> int:
-    """Migrate the retired contract-findings registry into durable issues.
+    """Migrate the retired contract-findings registry AND settle it.
 
-    Idempotent: a second run reports `already_present` and writes nothing. It
-    creates issue rows only — no experiment state, no gate, no verdict changes."""
+    Two steps in one idempotent operation: import each historical finding as a
+    durable, Version-bound issue with its original research evidence, then
+    record the operator's later withdrawal decision and close it
+    CLOSED_NO_ACTION / NO_ACTION. Running it twice reports `already_present` /
+    `already_reconciled` and writes nothing — it cannot reopen a closed issue,
+    reset its status, restore a stale disposition or duplicate an event.
+
+    Creates issue rows only. No experiment state, gate, verdict, Epoch, Version,
+    Platform Revision, exposure or live action."""
     refusal = _issue_write_guard()
     if refusal is not None:
         return refusal
-    from .issue_import import import_contract_findings
+    from .issue_import import import_and_reconcile
 
-    report = import_contract_findings(session)
+    report = import_and_reconcile(session)
     if args.dry_run:
         session.rollback()
         print("MODE: DRY RUN — rolled back\n")
@@ -629,7 +670,9 @@ def cmd_issue_import_findings(session: Session, args) -> int:
 
 
 #: Subcommands that are pure reads, and therefore safe on the ops channel.
-_ISSUE_READ_ACTIONS: frozenset[str] = frozenset({"list", "show", "candidates"})
+_ISSUE_READ_ACTIONS: frozenset[str] = frozenset(
+    {"list", "show", "candidates", "findings-plan"}
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -781,6 +824,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_icr.add_argument("--reason", default=None,
                        help="rationale, required when overriding the recommended owner")
 
+    p_ioc = isub.add_parser(
+        "open-candidate",
+        help="adopt a Control Tower candidate by fingerprint into a durable "
+        "issue, carrying its exact detector/scope/routing",
+    )
+    p_ioc.add_argument("fingerprint", help="from `issue candidates --json`")
+    p_ioc.add_argument("--actor", required=True)
+    p_ioc.add_argument("--opened-by-role", required=True,
+                       help="detecting context; may be EXPERIMENT_CONTROL_TOWER")
+    p_ioc.add_argument("--no-evaluate", action="store_true",
+                       help="skip the dry-run gate evaluation when detecting")
+
     p_it = _actor(isub.add_parser("triage", help="first look: severity/priority/owner"))
     p_it.add_argument("key")
     p_it.add_argument("--reason", required=True)
@@ -881,10 +936,17 @@ def build_parser() -> argparse.ArgumentParser:
     p_irc.add_argument("key")
     p_irc.add_argument("--reason", default=None)
 
-    for parser_obj in (p_il, p_is, p_ic, p_icr, p_it, p_icl, p_ia, p_itr, p_ist,
+    for parser_obj in (p_il, p_is, p_ic, p_icr, p_ioc, p_it, p_icl, p_ia, p_itr, p_ist,
                        p_ie, p_ilk, p_ipf, p_id, p_ivp, p_iv, p_ir, p_icn,
                        p_idup, p_iro, p_irc):
         parser_obj.set_defaults(fn=cmd_issue)
+
+    p_ifp = isub.add_parser(
+        "findings-plan",
+        help="READ-ONLY: what import-findings would do right now (safe on the "
+        "read-only ops channel, where a write-and-rollback dry run cannot run)",
+    )
+    p_ifp.set_defaults(fn=cmd_issue)
 
     p_if = isub.add_parser(
         "import-findings",

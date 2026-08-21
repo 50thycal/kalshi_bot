@@ -853,11 +853,24 @@ def test_the_ops_channel_exposes_only_issue_reads():
     sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "scripts"))
     import ops_runner
 
-    assert set(ops_runner.XOS_ISSUE_READS) == {
-        "issue-list", "issue-show", "issue-candidates"}
-    for argv in ops_runner.XOS_ISSUE_READS.values():
+    from kalshi_bot.experiment_os import cli
+
+    # The invariant, not a frozen list: every subcommand reachable from the ops
+    # channel must be one the CLI itself classifies as a read. Pinning the exact
+    # set instead would fail the day a read is added and pass the day a WRITE is
+    # added under a name that happens to look read-only.
+    assert ops_runner.XOS_ISSUE_READS, "the read surface should not be empty"
+    for name, argv in ops_runner.XOS_ISSUE_READS.items():
+        assert name.startswith("issue-")
         assert argv[0] == "issue"
-        assert argv[1] in {"list", "show", "candidates"}
+        assert argv[1] in cli._ISSUE_READ_ACTIONS, (
+            f"ops exposes `{name}` -> `issue {argv[1]}`, which is a WRITE"
+        )
+    exposed = {argv[1] for argv in ops_runner.XOS_ISSUE_READS.values()}
+    assert exposed <= cli._ISSUE_READ_ACTIONS
+    # ...and no write ever leaks in under any alias.
+    assert not (exposed & {"create", "open-candidate", "resolve", "close",
+                           "import-findings", "transfer", "reopen"})
 
 
 def test_every_issue_write_command_refuses_the_read_only_connection(monkeypatch):

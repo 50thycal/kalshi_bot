@@ -131,6 +131,12 @@ class TowerReport:
     # that no open issue currently covers. A candidate is a recommendation to
     # open an issue — rendering one writes nothing (spec §2.7).
     issue_candidates: list[dict] = field(default_factory=list)
+    # The same detections that an open issue ALREADY covers, each carrying
+    # `covered_by`. Kept rather than dropped so a caller adopting a candidate by
+    # fingerprint can tell "already ticketed" apart from "never detected" — two
+    # very different answers that would otherwise both look like "not found".
+    # Not rendered: the covering issue is already listed above.
+    covered_candidates: list[dict] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -809,6 +815,9 @@ def _candidate(
     return {
         "detector": detector,
         "anomaly_kind": anomaly_kind,
+        # Carried so an ADOPTED issue records the verdict that caused it, and so
+        # re-deriving the routing from the stored issue gives the same answer.
+        "gate_verdict": gate_verdict,
         "fingerprint": issue_policy.issue_fingerprint(
             detector=detector, experiment_id=experiment_id, version_id=version_id,
             epoch_id=epoch_id, deployment_id=deployment_id, gate_id=gate_id,
@@ -985,6 +994,18 @@ _EVIDENCE_EXPECTED_STATES: frozenset[str] = frozenset({
 })
 
 
+def detected_candidates(session, *, evaluate: bool = True) -> list[dict]:
+    """Every ticket candidate the Tower currently detects, covered or not.
+
+    A PURE READ, and the resolution surface for adopting a candidate into a real
+    issue (`issues.open_issue_from_candidate`). Both lists are returned together
+    and un-deduplicated on purpose: the caller must be able to distinguish a
+    fingerprint that is already ticketed from one that was never detected, and to
+    refuse an ambiguous fingerprint rather than silently pick one of two."""
+    rep = build_report(session, evaluate=evaluate)
+    return [*rep.issue_candidates, *rep.covered_candidates]
+
+
 def _issue_sections(session, rep: TowerReport) -> None:
     """Populate `open_issues` and `issue_candidates`. Writes nothing."""
     try:
@@ -1023,6 +1044,7 @@ def _issue_sections(session, rep: TowerReport) -> None:
             cand["covered_by"] = match.issue_key
             cand["covering_status"] = match.status
             cand["covering_owner"] = match.current_owner_role
+            rep.covered_candidates.append(cand)
             continue
         rep.issue_candidates.append(cand)
 
