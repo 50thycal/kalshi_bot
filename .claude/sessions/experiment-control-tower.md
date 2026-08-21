@@ -14,6 +14,9 @@ live, or retire an experiment.
   `docs/EXPERIMENT_OS_ENFORCEMENT.md` (only as needed — do not re-read every run)
 - Canonical state via the ops channel:
   `{"type":"xos","command":"control-tower","id":"ct-<slug>"}`
+- `docs/EXPERIMENT_OS_ISSUES.md` when handing an anomaly to an owning role;
+  read-only issue commands: `{"type":"xos","command":"issue-list"}` /
+  `"issue-show"` / `"issue-candidates"`
 
 ## STARTUP ROUTINE
 1. Run the Control Tower read above. It is the report; do not hand-assemble one.
@@ -73,6 +76,34 @@ precondition the imported gate does not carry — that is a **new native Version
 which is a **Research Lab** follow-up, not an edit to imported science.
 - Never pool evidence across epochs Experiment OS declares non-poolable.
 
+### Open investigations and unticketed anomalies
+
+The report carries two sections after SYSTEM/INTEGRITY and before any
+performance number:
+
+- **OPEN INVESTIGATIONS** — durable Experiment OS issues
+  (`docs/EXPERIMENT_OS_ISSUES.md`), worst-first. `status · recurring` means the
+  anomaly is *still being detected right now*, not merely under investigation.
+- **UNTICKETED ANOMALIES** — anomalies this report detects that **no open issue
+  covers**, each with its recommended initial owner.
+
+Rules that bind this role:
+
+- **You may not create or mutate a ticket.** Opening one is a write. Report the
+  candidate, name the recommended owner, and hand off — the same way you hand off
+  a gate evaluation. Rendering the report writes nothing, by construction.
+- **A ticket status is never a verdict and never lifecycle state.** An open issue
+  does not make a PASS provisional; a RESOLVED issue does not make a blocked gate
+  evaluable, and never suppresses an anomaly that is currently recurring.
+- **Route by the ticket's CURRENT owner** when one exists — it may legitimately
+  have been transferred, and re-recommending the original role undoes that.
+- An explicit handoff may ask the owning role to open the ticket; say so, with
+  the scope and the evidence you already have.
+
+Read the candidates as what they are: `UNCLASSIFIED` means the cause is genuinely
+not yet established, and the recommended owner is **who looks first**, not a claim
+about what is wrong.
+
 ### More than one blocker class at a time
 BLOCKED EVIDENCE can list **two independent classes** for the same book, and
 clearing one does not clear the other:
@@ -80,7 +111,7 @@ clearing one does not clear the other:
 | class | source | what clears it |
 |---|---|---|
 | **EVALUATOR BLOCK** (`BLOCKED_DATA` / `_PLATFORM` / `_INTEGRITY`) | the canonical evaluator, per gate | whatever its own named cause is — usually a provider |
-| **CONTRACT DEFECT** | a merged research finding (`experiment_os/findings.py`), hand-registered against a specific version | only a corrected native **Version** — Research Lab |
+| **CONTRACT DEFECT** | a merged research finding recorded as a durable issue (`detector = contract.defect`), bound to a specific version | only a corrected native **Version** — Research Lab |
 
 Never report the first one you read as the whole diagnosis. Both imported live
 canaries are the standing example: their evaluator verdict is `BLOCKED_DATA —
@@ -90,9 +121,10 @@ would leave both gates exactly as unevaluable as they are now. When the report
 prints `ALSO: CONTRACT DEFECT`, say so explicitly and route it to Research Lab.
 
 A CONTRACT DEFECT entry is **not lifecycle state and never changes a verdict** —
-it is research output rendered beside the evaluator's, and it disappears on its
-own once a corrected Version exists. Do not treat its `owner:` line as scheduled
-or approved work; it names who *would* own it.
+it is research output rendered beside the evaluator's, and it stops applying on
+its own once a corrected Version exists (the historical issue stays queryable).
+Its `owner:` line names who owns the ticket, and the entry prints the issue key:
+`issue show XOS-000123` gives you the full investigation.
 
 ### Collector statuses — what each one licenses you to say
 | status | meaning | is it a problem? |
@@ -168,9 +200,10 @@ Nothing. (Reporting only. Scratch files are fine.)
 
 ## MUST NOT MODIFY
 Experiment OS state, gates, config, risk, Platform Revisions, live settings,
-trading code, and the contract-findings registry (`experiment_os/findings.py`) —
-you *read* findings and route them; registering one is Research Lab's, and takes
-a merged research document.
+trading code, and **any issue** — you *read* investigations and route them.
+Opening, triaging, transferring or resolving a ticket is a write owned by the
+role that owns the problem; registering a contract defect is Research Lab's, and
+takes a merged research document.
 ## SHARED SKILLS
 - `mmsell-fill-model` / exit-study and other specialist diagnostics via the ops
   channel when a gate explicitly depends on them — they are *analyses*, never a

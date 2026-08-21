@@ -52,6 +52,9 @@ from .models import (
     ExperimentGate,
     ExperimentGateResult,
     ExperimentIntegrityEvent,
+    ExperimentIssueEvent,
+    ExperimentIssueEvidence,
+    ExperimentIssueLink,
     ExperimentLegacyEvidence,
     ExperimentOsEnforcement,
     ExperimentStateTransition,
@@ -113,6 +116,14 @@ _APPEND_ONLY = (
     ExperimentLegacyEvidence,
     PlatformSnapshotItem,
     ExperimentOsEnforcement,
+    # Investigation history. The issue ROW caches current workflow state and is
+    # freely updatable; the events, the evidence and the links that explain how
+    # it got there are not. An investigation whose record can be tidied up
+    # afterwards documents nothing — which is exactly why the interim registry
+    # this replaces had to be hand-audited.
+    ExperimentIssueEvent,
+    ExperimentIssueEvidence,
+    ExperimentIssueLink,
 )
 
 # Mutable-field allowlists for records that are otherwise immutable.

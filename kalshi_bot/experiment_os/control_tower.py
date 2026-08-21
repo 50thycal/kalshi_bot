@@ -36,8 +36,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select, text
 
 from ..models import LiveOrder, PaperTrade, Position
-from . import findings as findings_mod
-from . import read
+from . import issue_policy, read
 from .lifecycle import LifecycleState
 from .models import Experiment
 
@@ -119,10 +118,19 @@ class TowerReport:
     # Gates whose decision turns on the live-fill projection. Carried so the render
     # can state what the verdict actually claims, beside what paper observed.
     realizable_context: list[dict] = field(default_factory=list)
-    # Proven contract defects (see `findings.py`). A SECOND, independent blocker
-    # class: research output, not evaluator output, and never lifecycle truth.
-    # Kept in its own field precisely so it cannot be mistaken for a verdict.
+    # Proven contract defects, now DURABLE ISSUES bound to the version they were
+    # proven against (`read.contract_defect_findings`). A SECOND, independent
+    # blocker class: research output, not evaluator output, and never lifecycle
+    # truth. Kept in its own field precisely so it cannot be mistaken for a verdict.
     contract_findings: list[dict] = field(default_factory=list)
+    # Open investigations (docs/EXPERIMENT_OS_ISSUES.md) — displayed, never
+    # created here. An issue's status is workflow, not a verdict and not
+    # lifecycle state, so nothing in this list can change what a gate says.
+    open_issues: list[dict] = field(default_factory=list)
+    # Deterministic ticket CANDIDATES: anomalies this report already understands
+    # that no open issue currently covers. A candidate is a recommendation to
+    # open an issue — rendering one writes nothing (spec §2.7).
+    issue_candidates: list[dict] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -266,6 +274,7 @@ def _gate_view(session, board_gate: dict, gate_obj, evaluate: bool) -> dict:
     recorded, promotion-authorizing result — only a persisted evaluator PASS can
     authorize a transition (PR 3/PR 4 binding rules)."""
     out = dict(board_gate)
+    out["gate_id"] = getattr(gate_obj, "id", None)
     out["live_verdict"] = None
     out["live_explanation"] = None
     out["live_blocking_reasons"] = []
@@ -348,6 +357,9 @@ def _blocked_gate_entry(view: dict, gate: dict) -> dict | None:
         return None
     return {
         "experiment": view["key"],
+        "experiment_id": view.get("experiment_id"),
+        "version_id": view.get("version_id"),
+        "gate_id": gate.get("gate_id"),
         "gate_key": gate.get("gate_key"),
         "verdict": verdict,
         "source": source,
@@ -362,6 +374,10 @@ def _experiment_view(session, exp: Experiment, *, evaluate: bool) -> dict:
     ver = read.latest_version(session, exp)
     view: dict = {
         "key": exp.key,
+        # Canonical ids, carried so a ticket candidate can be fingerprinted and
+        # scoped to real foreign keys rather than to display strings.
+        "experiment_id": exp.id,
+        "version_id": ver.id if ver is not None else None,
         "title": exp.title,
         "state": exp.state,
         "origin": exp.origin,
@@ -384,10 +400,12 @@ def _experiment_view(session, exp: Experiment, *, evaluate: bool) -> dict:
     }
     # Bound to the OPERATING version, so a corrected successor Version drops the
     # finding automatically instead of it having to be remembered and deleted.
-    view["contract_findings"] = [
-        findings_mod.as_json(f)
-        for f in findings_mod.findings_for(exp.key, board.get("version"))
-    ]
+    # Now read from durable issues rather than a hand-written registry — same
+    # binding rule, same display-only status, but with real workflow state and a
+    # history behind it.
+    view["contract_findings"] = read.contract_defect_findings(
+        session, exp, board.get("version")
+    )
 
     gate_objs = {g.gate_key: g for g in (read.gates_for(session, ver) if ver else [])}
     for g in board.get("gates", []):
@@ -396,6 +414,7 @@ def _experiment_view(session, exp: Experiment, *, evaluate: bool) -> dict:
         )
 
     epoch = read.open_epoch_for(session, ver) if ver else None
+    view["epoch_id"] = epoch.id if epoch is not None else None
     if epoch is not None:
         live_tags: list[str] = []
         for dep in read.deployments_for(session, epoch):
@@ -403,6 +422,7 @@ def _experiment_view(session, exp: Experiment, *, evaluate: bool) -> dict:
             tags = [tag for _arm, tag in read.deployment_arms(session, dep) if tag]
             view["deployments"].append({
                 "key": dep.deployment_key,
+                "deployment_id": dep.id,
                 "kind": dep.kind,
                 "stage": dep.stage,
                 "grandfathered": bool(dep.grandfathered),
@@ -423,6 +443,7 @@ def _experiment_view(session, exp: Experiment, *, evaluate: bool) -> dict:
     for ev in read.integrity_events_for(session, exp):
         if ev.resolved_at is None:
             view["integrity_events"].append({"kind": ev.kind,
+                                             "integrity_event_id": ev.id,
                                              "description": ev.description})
 
     transitions = read.transitions_for(session, exp)
@@ -433,6 +454,11 @@ def _experiment_view(session, exp: Experiment, *, evaluate: bool) -> dict:
             "actor": last.actor, "reason": (last.reason or "")[:160],
         }
 
+    # The Tower's own count of observed evidence, so "zero evidence" is derived
+    # from the same numbers the report prints rather than from a second query.
+    view["total_entries"] = sum(
+        int(a.get("entries") or 0) for a in view["arms"]
+    )
     all_tags = [t for d in view["deployments"] for t in d["tags"]]
     if all_tags:
         newest = session.scalar(
@@ -564,6 +590,10 @@ def build_report(session, *, evaluate: bool = True,
     rep.data_health = _data_health(session)
     rep.portfolio = _portfolio(session)
     _derive_actions(rep)
+    # Last: ticket candidates are derived from the anomalies above, so they
+    # can never introduce a finding the rest of the report does not already
+    # make. Still a pure read — see `_issue_sections`.
+    _issue_sections(session, rep)
     return rep
 
 
@@ -745,6 +775,278 @@ def _derive_actions(rep: TowerReport) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Investigations: open issues + deterministic ticket candidates (spec §9)
+# ---------------------------------------------------------------------------
+#
+# READ-ONLY, structurally. Everything below queries `read` (plain selects) and
+# `issue_policy` (pure logic). Nothing here imports the issue service, so the
+# Tower cannot open, update or dedupe a ticket even by mistake — and in
+# particular it never advances `occurrence_count`, because a counter that moves
+# when a report is rendered measures how often somebody ran the report.
+#
+# A candidate is a RECOMMENDATION to open an issue, matched to existing open
+# issues by deterministic fingerprint. Candidates cover only anomalies the Tower
+# already understands and already prints elsewhere; nothing here invents a new
+# class of finding. Contract defects in particular get NO candidate detector —
+# a defect in a registered contract is proven by research and recorded as an
+# issue, and a heuristic that guessed "this gate looks malformed" would be a
+# second, unreviewed opinion competing with the canonical contract.
+
+
+def _candidate(
+    *, detector: str, title: str, scope: str, anomaly_kind: str | None = None,
+    experiment: str | None = None, experiment_id: int | None = None,
+    version_id: int | None = None, epoch_id: int | None = None,
+    deployment_id: int | None = None, gate_id: int | None = None,
+    gate_verdict: str | None = None, integrity_cause: str | None = None,
+    detail: str | None = None,
+) -> dict:
+    """One ticket candidate, carrying its own fingerprint and routing."""
+    rec = issue_policy.recommend_owner(
+        detector=detector, anomaly_kind=anomaly_kind,
+        gate_verdict=gate_verdict, integrity_cause=integrity_cause,
+    )
+    return {
+        "detector": detector,
+        "anomaly_kind": anomaly_kind,
+        "fingerprint": issue_policy.issue_fingerprint(
+            detector=detector, experiment_id=experiment_id, version_id=version_id,
+            epoch_id=epoch_id, deployment_id=deployment_id, gate_id=gate_id,
+            anomaly_kind=anomaly_kind,
+        ),
+        "title": title,
+        "scope": scope,
+        "detail": detail,
+        "experiment": experiment,
+        "experiment_id": experiment_id,
+        "version_id": version_id,
+        "epoch_id": epoch_id,
+        "deployment_id": deployment_id,
+        "gate_id": gate_id,
+        "recommended_owner": rec.owner_role,
+        "recommended_classification": rec.classification,
+        "severity": rec.severity,
+        "priority": rec.priority,
+        "rationale": rec.rationale,
+        "requires_operator_triage": rec.requires_operator_triage,
+        # Filled in by the matcher below.
+        "covered_by": None,
+        "covering_status": None,
+        "covering_owner": None,
+    }
+
+
+def _detect_candidates(session, rep: TowerReport) -> list[dict]:
+    """Every anomaly this report understands, expressed as a ticket candidate."""
+    out: list[dict] = []
+    enf = rep.enforcement or {}
+
+    if enf.get("resolver_degraded_alarms_24h"):
+        out.append(_candidate(
+            detector=issue_policy.DETECTOR_RESOLVER_DEGRADED,
+            title="lineage resolver degraded in the last 24h",
+            scope="system-wide",
+            detail=f"{enf['resolver_degraded_alarms_24h']} alarm(s) — lineage "
+                   "decisions came from a stale snapshot",
+        ))
+    for table, rows in (enf.get("post_cutover_unstamped") or {}).items():
+        for row in rows:
+            out.append(_candidate(
+                detector=issue_policy.DETECTOR_UNSTAMPED_LINEAGE,
+                anomaly_kind=f"{table}:{row['tag']}",
+                title=f"post-cutover rows without lineage in {table}",
+                scope=f"tag {row['tag']!r}",
+                detail=f"{row['rows']} row(s) — something is trading outside "
+                       "Experiment OS",
+            ))
+
+    for imp in (rep.platform.get("unresolved_impacts") or []):
+        exp = read.get_experiment(session, imp["experiment"])
+        out.append(_candidate(
+            detector=issue_policy.DETECTOR_PLATFORM_IMPACT,
+            anomaly_kind=f"{imp['component']}:{imp['revision']}",
+            title=f"unresolved platform impact {imp['component']}:{imp['revision']}",
+            scope=imp["experiment"],
+            experiment=imp["experiment"],
+            experiment_id=exp.id if exp is not None else None,
+            detail=f"[{imp['impact_class']}/{imp['action']}] status={imp['status']} "
+                   "— this experiment's evidence is blocked until it is applied",
+        ))
+    for rev in (rep.platform.get("pending_revisions") or []):
+        if rev.get("activation_safe"):
+            continue
+        out.append(_candidate(
+            detector=issue_policy.DETECTOR_REVISION_UNSAFE,
+            anomaly_kind=f"{rev['component']}:{rev['version']}",
+            title=f"pending revision {rev['component']}:{rev['version']} is not "
+                  "safe to activate",
+            scope="platform",
+            detail=f"unaccounted: {rev['unaccounted']}",
+        ))
+
+    # Collector health. INACTIVE deliberately produces NO candidate: it means
+    # "not part of this deployment", and manufacturing a ticket for it is how a
+    # scanner-mode table ends up with an investigation nobody can close.
+    for col in rep.data_health:
+        if not col.get("warning"):
+            continue
+        out.append(_candidate(
+            detector=issue_policy.DETECTOR_COLLECTOR_HEALTH,
+            anomaly_kind=f"{col['collector']}:{col['status']}",
+            title=f"collector {col['collector']} is {col['status']}",
+            scope="system-wide",
+            detail=col.get("note") or "starved evidence fails no gate",
+        ))
+
+    from . import enforcement as enf_mod
+
+    for views in rep.by_state.values():
+        for v in views:
+            # An event that RECORDS A STATE rather than reporting a failure —
+            # an intentional stand-down is the case that exists — gets no
+            # candidate. Its cause is already recorded, so there is nothing to
+            # diagnose, and manufacturing a ticket for it is exactly how a
+            # deliberate pause starts reading as an unexplained failure.
+            recorded_state = {
+                ev.get("kind") for ev in v["integrity_events"]
+                if ev.get("kind") in enf_mod.NON_BLOCKING_INTEGRITY_KINDS
+            }
+            for ev in v["integrity_events"]:
+                if ev.get("kind") in enf_mod.NON_BLOCKING_INTEGRITY_KINDS:
+                    continue
+                out.append(_candidate(
+                    detector=issue_policy.DETECTOR_INTEGRITY_EVENT,
+                    anomaly_kind=ev.get("kind") or "unknown",
+                    title=f"unresolved integrity event [{ev.get('kind') or 'unknown'}]",
+                    scope=v["key"],
+                    experiment=v["key"], experiment_id=v.get("experiment_id"),
+                    version_id=v.get("version_id"), epoch_id=v.get("epoch_id"),
+                    detail=ev.get("description"),
+                ))
+            for d in v["deployments"]:
+                if d["kind"] == "live" and not d["twin"]:
+                    out.append(_candidate(
+                        detector=issue_policy.DETECTOR_MISSING_TWIN,
+                        title=f"live deployment {d['key']} has no paper twin",
+                        scope=f"{v['key']} · {d['key']}",
+                        experiment=v["key"], experiment_id=v.get("experiment_id"),
+                        version_id=v.get("version_id"), epoch_id=v.get("epoch_id"),
+                        deployment_id=d.get("deployment_id"),
+                        detail="the live/paper comparison that detects adverse "
+                               "selection is missing",
+                    ))
+            # Zero evidence: a registered book that is deployed and has produced
+            # nothing. The Tower can see the absence and cannot explain it — the
+            # candidate exists precisely to route that diagnosis, not to assert
+            # a cause (spec §2.3).
+            if (
+                v["state"] in _EVIDENCE_EXPECTED_STATES
+                and v["deployments"]
+                and any(d["tags"] for d in v["deployments"])
+                and not v.get("total_entries")
+                # ...unless the absence is already EXPLAINED. A book that was
+                # deliberately stood down has produced nothing for a recorded
+                # reason; opening an investigation into it would be asking a
+                # question the system has already answered.
+                and not recorded_state
+            ):
+                out.append(_candidate(
+                    detector=issue_policy.DETECTOR_ZERO_EVIDENCE,
+                    title=f"{v['key']} is deployed but has produced zero evidence",
+                    scope=v["key"],
+                    experiment=v["key"], experiment_id=v.get("experiment_id"),
+                    version_id=v.get("version_id"), epoch_id=v.get("epoch_id"),
+                    detail="cause unknown: broken runtime/config/wiring, "
+                           "enforcement rejection, filters eliminating every "
+                           "candidate, or genuinely no qualifying opportunities",
+                ))
+
+    for b in rep.blocked:
+        out.append(_candidate(
+            detector=issue_policy.DETECTOR_GATE_BLOCKED,
+            anomaly_kind=b["verdict"],
+            gate_verdict=b["verdict"],
+            title=f"{b['gate_key']} is {b['verdict']}",
+            scope=f"{b['experiment']} · {b['gate_key']}",
+            experiment=b["experiment"], experiment_id=b.get("experiment_id"),
+            version_id=b.get("version_id"), gate_id=b.get("gate_id"),
+            detail=(", ".join(b["missing_metrics"]) or (b["reasons"][0]
+                    if b["reasons"] else None)),
+        ))
+    return out
+
+
+#: States in which a deployed experiment is expected to be producing evidence.
+#: IDEA/PROBE are excluded: an idea that has traded nothing is not an anomaly.
+_EVIDENCE_EXPECTED_STATES: frozenset[str] = frozenset({
+    LifecycleState.PAPER.value,
+    LifecycleState.LIVE_CANARY.value,
+    LifecycleState.PRODUCTION.value,
+})
+
+
+def _issue_sections(session, rep: TowerReport) -> None:
+    """Populate `open_issues` and `issue_candidates`. Writes nothing."""
+    try:
+        open_issues = read.list_issues(session, open_only=True)
+    except Exception as exc:  # noqa: BLE001 — a read must degrade, not abort
+        rep.anomalies.append(f"issue read failed: {exc}")
+        return
+
+    candidates = _detect_candidates(session, rep)
+    by_fingerprint = {c["fingerprint"]: c for c in candidates}
+
+    for issue in open_issues:
+        summary = read.issue_summary(session, issue)
+        # An open issue whose fingerprint is among today's candidates is not just
+        # open — the anomaly is happening RIGHT NOW. That distinction is the one
+        # a reader needs: "under investigation" and "still occurring" are
+        # different states and only one of them is urgent.
+        summary["currently_recurring"] = (
+            issue.detector_fingerprint in by_fingerprint
+            if issue.detector_fingerprint else False
+        )
+        summary["age_days"] = round(
+            (_now() - _utc(issue.opened_at)).total_seconds() / 86400.0, 1
+        ) if issue.opened_at else None
+        rep.open_issues.append(summary)
+
+    covered = {
+        i.detector_fingerprint for i in open_issues if i.detector_fingerprint
+    }
+    for cand in candidates:
+        if cand["fingerprint"] in covered:
+            match = next(
+                i for i in open_issues
+                if i.detector_fingerprint == cand["fingerprint"]
+            )
+            cand["covered_by"] = match.issue_key
+            cand["covering_status"] = match.status
+            cand["covering_owner"] = match.current_owner_role
+            continue
+        rep.issue_candidates.append(cand)
+
+    # Routing: an existing ticket's CURRENT owner wins over the policy's initial
+    # recommendation — the ticket may legitimately have been transferred, and
+    # re-recommending the original role would undo that in the reader's head.
+    for cand in candidates:
+        if cand["covered_by"]:
+            rep.recommendations.append(
+                f"{cand['scope']}: {cand['title']} — covered by "
+                f"{cand['covered_by']} ({cand['covering_status']}), owner "
+                f"{cand['covering_owner']}"
+            )
+        else:
+            rep.recommendations.append(
+                f"{cand['scope']}: {cand['title']} — NO open issue covers this; "
+                f"recommended owner {cand['recommended_owner']} "
+                f"[{cand['recommended_classification']}/{cand['severity']}/"
+                f"{cand['priority']}]. Opening it is a WRITE: hand off to that "
+                "role (the Control Tower cannot open one)"
+            )
+
+
+# ---------------------------------------------------------------------------
 # Rendering
 # ---------------------------------------------------------------------------
 
@@ -786,6 +1088,106 @@ def _central(dt: datetime) -> str:
         return dt.strftime("%Y-%m-%d %H:%M UTC")
 
 
+
+
+def _render_investigations(rep: TowerReport) -> list[str]:
+    """OPEN INVESTIGATIONS + UNTICKETED ANOMALIES.
+
+    Placed after SYSTEM/INTEGRITY and before any performance section, for the
+    same reason integrity precedes performance everywhere else in this report:
+    an open investigation is a statement about whether the numbers below can be
+    trusted, and reading it afterwards is reading it too late.
+
+    Neither section can change a verdict. An issue's status is workflow state —
+    a RESOLVED ticket does not make a gate evaluable, and an OPEN one does not
+    make a PASS provisional."""
+    lines: list[str] = [
+        "",
+        "=== OPEN INVESTIGATIONS ===",
+        # Stated whether or not there are rows: a reader who arrives at an empty
+        # section still needs to know what a full one would and would not mean.
+        "    Durable Experiment OS issues. Ticket status is WORKFLOW state: it "
+        "never changes a gate verdict,",
+        "    a lifecycle state or a recorded result.",
+    ]
+    if rep.open_issues:
+        lines.append(
+            "    `recurring` = the anomaly is still being detected right now, not "
+            "merely under investigation."
+        )
+        rows = []
+        for i in rep.open_issues:
+            rows.append([
+                i["issue_key"],
+                i["severity"],
+                i["priority"],
+                i["classification"],
+                i["owner_role"],
+                i["status"] + (" · recurring" if i.get("currently_recurring") else ""),
+                i["scope"],
+                f"{i['age_days']}d" if i.get("age_days") is not None else "-",
+                (i.get("latest_evidence") or "(no evidence recorded)")[:60],
+            ])
+        lines += _table(
+            ["issue", "severity", "pri", "classification", "owner", "status",
+             "scope", "age", "latest evidence"],
+            rows,
+        )
+        for i in rep.open_issues:
+            lines.append(f"    {i['issue_key']}  {i['title']}")
+    else:
+        lines.append("    (none open)")
+
+    lines += ["", "=== UNTICKETED ANOMALIES ==="]
+    if rep.issue_candidates:
+        lines.append(
+            "    Anomalies above that NO open issue covers. Each is a ticket "
+            "CANDIDATE — this report cannot open one"
+        )
+        lines.append(
+            "    (it is read-only); hand off to the recommended owner, who opens "
+            "it with `issue create`."
+        )
+        lines.append(
+            "    The recommended owner is who looks FIRST. Where the "
+            "classification reads UNCLASSIFIED, the cause is"
+        )
+        lines.append(
+            "    genuinely not yet established — that is the honest state, not a "
+            "gap to be filled in by guessing."
+        )
+        rows = []
+        for c in rep.issue_candidates:
+            rows.append([
+                c["detector"],
+                c["severity"],
+                c["priority"],
+                c["recommended_classification"],
+                c["recommended_owner"],
+                c["scope"],
+                c["title"][:56],
+            ])
+        lines += _table(
+            ["detector", "severity", "pri", "would-classify", "recommended owner",
+             "scope", "anomaly"],
+            rows,
+        )
+        for c in rep.issue_candidates:
+            if c.get("detail"):
+                lines.append(f"    {c['scope']} · {c['detector']}: {c['detail']}")
+            if c.get("requires_operator_triage"):
+                lines.append(
+                    f"        operator triage suggested — {c['rationale']}"
+                )
+    else:
+        lines.append(
+            "    (none — every anomaly this report detects is covered by an open "
+            "issue, or there are none)"
+        )
+    return lines
+
+
+
 def render(rep: TowerReport, *, session=None) -> str:
     enf = rep.enforcement
     snap = rep.platform.get("active_snapshot") or "-"
@@ -820,6 +1222,8 @@ def render(rep: TowerReport, *, session=None) -> str:
         f"    active deployments: {deps.get('total', 0)} "
         f"(grandfathered {deps.get('grandfathered', 0)}, native {deps.get('native', 0)})"
     )
+
+    lines += _render_investigations(rep)
 
     for state in ACTIVE_ORDER:
         views = rep.by_state.get(state) or []
@@ -913,19 +1317,32 @@ def render(rep: TowerReport, *, session=None) -> str:
         lines += ["", "    CONTRACT DEFECT — proven by research, NOT evaluator "
                   "output and NOT lifecycle state.",
                   "    Nothing here changes a verdict; the registered gate still "
-                  "decides. Each finding is bound to the",
-                  "    version it was proven against and stops applying on its own "
-                  "once a corrected Version exists."]
+                  "decides. Each finding is a durable",
+                  "    Experiment OS issue bound to the version it was proven "
+                  "against, and stops applying on its own",
+                  "    once a corrected Version exists — the historical issue "
+                  "remains queryable either way."]
         for f in rep.contract_findings:
-            lines.append(f"    {f['experiment']} · v{f['version']}")
+            head = f"    {f['experiment']} · v{f['version']}"
+            if f.get("issue_key"):
+                head += f"  [{f['issue_key']} {f.get('status') or 'OPEN'}]"
+            lines.append(head)
             lines.append(f"        {f['headline']}")
             for d in f["detail"]:
                 lines.append(f"            {d}")
             lines.append(f"        owner: {f['owner']}")
-            lines.append(
-                f"        proven: {f['proven_at']} by {f['proven_by']}"
-            )
-            lines.append(f"        evidence: {f['evidence_doc']}")
+            if f.get("proven_at") or f.get("proven_by"):
+                lines.append(
+                    f"        proven: {f.get('proven_at') or 'date unrecorded'} by "
+                    f"{f.get('proven_by') or 'unrecorded'}"
+                )
+            if f.get("evidence_doc"):
+                lines.append(f"        evidence: {f['evidence_doc']}")
+            if f.get("issue_key"):
+                lines.append(
+                    f"        investigation: {f['issue_key']} — full history via "
+                    f"`issue show {f['issue_key']}`"
+                )
 
     if rep.realizable_context:
         lines += ["", "=== REALIZABLE-PROJECTION CONTEXT ===",
@@ -1111,6 +1528,9 @@ def _realizable_context(view: dict, gate: dict) -> dict | None:
         return None
     return {
         "experiment": view["key"],
+        "experiment_id": view.get("experiment_id"),
+        "version_id": view.get("version_id"),
+        "gate_id": gate.get("gate_id"),
         "gate_key": gate.get("gate_key"),
         "verdict": recorded.get("verdict") or gate.get("live_verdict"),
         "source": source,

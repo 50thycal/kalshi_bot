@@ -41,6 +41,26 @@ AS OF: <timestamp America/Chicago>
 
 The Control Tower emits this automatically (`control-tower` renders it).
 
+## Durable problems
+
+A problem that outlives the session — an anomaly, a suspected defect, an
+operational incident, a scientific question, a shared-platform problem — belongs
+in an **Experiment OS issue** (`docs/EXPERIMENT_OS_ISSUES.md`), not in prose.
+
+Tickets route work to the **existing** role that owns the problem. There is
+deliberately no "Issue Workshop" and no "Fixer" in the menu above: a generic
+remediation role would compete with the four that already own these problems, and
+would end up holding the tickets nobody else claimed.
+
+A ticket records ownership, evidence, the remedy decision, validation and
+resolution. It **never** changes a lifecycle state, a gate, a verdict, an epoch,
+a Version, a Platform Revision or real-money exposure — those keep their own
+services and approval rules, and the ticket links the canonical record afterwards.
+
+Where uncertainty is real it stays visible: a ticket may sit `UNCLASSIFIED` with
+Live Ops for operational diagnosis before anyone can say whether the runtime or
+the science is at fault.
+
 ## Crossing a boundary
 
 A read-only role that finds a needed write hands off by naming the owning role
@@ -50,6 +70,7 @@ and the canonical object — it does not quietly start writing:
 FROM: Experiment Control Tower
 TO: Platform Change Review
 OBJECT: PlatformComponent FILL_MODEL / Experiment <key>
+ISSUE: XOS-000123 (or: none yet — the receiving role opens it)
 FINDING: ...
 EVIDENCE: <ops request id / read model>
 REQUIRED NEXT ACTION: ...
