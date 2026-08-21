@@ -215,6 +215,28 @@ To run a request:
      finally distinguishable from a 502 (noise). Non-zero 429s make the pre-filter the fix rather
      than an optimization. Also greppable now: `{"type":"logs","filter":"transient response 429"}`.
 
+   - **"deconfound"** / **"universe study"** -> `{"type":"script","name":"mmsell_deconfound_study"}`
+     — how much of an apparent mmsell book-vs-book difference is the ENTRY RULE and how much is
+     the UNIVERSE it happens to trade. Reads the same `only=`/`mode=`/`maxyes` specs the books
+     run, then holds one factor fixed at a time: same logic across universes (`mmsell5` vs
+     `mmsell8`), same book split by asset class, same asset class across rules, and the cell
+     where both books' filters admit the same market. Also prints fill rate and fill-selection
+     haircut **by asset class**, hold-time and entry-price distributions, and the settled-market
+     sample each detectable effect size would need. Read `13. SUCCESSOR CANDIDATES` before
+     designing any mmsell A/B: it shows which comparisons are already available in paper.
+     Findings: `docs/RESEARCH_MMSELL_UNIVERSE_DECONFOUNDING.md`. Never quote its "NAIVE" row as
+     a treatment effect — it is labelled that way because it is the confound.
+
+   - **"theta diagnosis"** / **"tail model"** -> `{"type":"script","name":"theta_tail_diagnosis"}`
+     — WHY theta's tail model misses, as opposed to by how much. Separates six mechanisms:
+     stale spot (checked against the independent candle feed at matched minutes), volatility
+     LEVEL vs tail SHAPE (R by standardized strike distance — flat means a scale error, rising
+     means a shape error), probability calibration, threshold-selection bias (the same quotes
+     split by whether theta's entry filter would have fired), momentum, and time to expiry.
+     Runs on theta4's PAPER history plus every ladder quote in the entry window, so it needs no
+     live money. Findings: `docs/RESEARCH_THETA_TAIL_MODEL_DIAGNOSIS.md`. Check the
+     derived-vs-recorded settlement agreement line before quoting sections B onward.
+
    The individual probes can still be run alone:
    `weather_model_check` grades the ensemble forecast distribution against the
    market's bucket prices on settled events (Brier/log-loss + hypothetical EV)
