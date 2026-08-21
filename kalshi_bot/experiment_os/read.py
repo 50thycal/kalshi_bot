@@ -14,8 +14,9 @@ The two lineage directions the spec makes load-bearing:
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
+from . import issue_policy
 from .lifecycle import LifecycleState
 from .models import (
     Experiment,
@@ -26,6 +27,10 @@ from .models import (
     ExperimentGate,
     ExperimentGateResult,
     ExperimentIntegrityEvent,
+    ExperimentIssue,
+    ExperimentIssueEvent,
+    ExperimentIssueEvidence,
+    ExperimentIssueLink,
     ExperimentLegacyEvidence,
     ExperimentStateTransition,
     ExperimentVersion,
@@ -548,3 +553,322 @@ def experiment_tree(session, experiment: Experiment) -> dict:
             vnode["epochs"].append(enode)
         tree["versions"].append(vnode)
     return tree
+
+
+# ---------------------------------------------------------------------------
+# Issue workflow — READ surface (docs/EXPERIMENT_OS_ISSUES.md)
+# ---------------------------------------------------------------------------
+#
+# These live here, not in `issues.py`, for one structural reason: the Experiment
+# Control Tower must display open investigations and it must remain incapable of
+# writing. It already imports `read`; if it imported the issue SERVICE to get a
+# listing, "the Tower cannot mutate state" would rest on nobody calling the wrong
+# function rather than on the Tower not having it. `issues.py` re-exports
+# everything below, so the service API is still complete in one place.
+
+
+def get_issue(session, ref) -> ExperimentIssue | None:
+    """Look up by `issue_key` (`XOS-000123`, case-insensitive) or raw id."""
+    if isinstance(ref, ExperimentIssue):
+        return ref
+    text = str(ref).strip()
+    if issue_policy.parse_issue_key(text) is not None:
+        return session.scalar(
+            select(ExperimentIssue).where(ExperimentIssue.issue_key == text.upper())
+        )
+    if text.isdigit():
+        return session.get(ExperimentIssue, int(text))
+    return session.scalar(
+        select(ExperimentIssue).where(ExperimentIssue.issue_key == text)
+    )
+
+
+def list_issues(
+    session,
+    *,
+    status: str | None = None,
+    open_only: bool = False,
+    owner_role: str | None = None,
+    classification: str | None = None,
+    severity: str | None = None,
+    priority: str | None = None,
+    detector: str | None = None,
+    experiment_id: int | None = None,
+    version_id: int | None = None,
+    limit: int | None = None,
+) -> list[ExperimentIssue]:
+    """Query issues, worst-first (priority, then severity, then oldest).
+
+    `open_only` means "still live work" — every status except RESOLVED,
+    CLOSED_NO_ACTION and DUPLICATE. That is what the Control Tower, recurrence
+    matching and duplicate suggestion all mean by open, so it is defined once."""
+    stmt = select(ExperimentIssue)
+    if status is not None:
+        stmt = stmt.where(ExperimentIssue.status == str(status))
+    if open_only:
+        stmt = stmt.where(ExperimentIssue.status.in_(sorted(issue_policy.OPEN_STATUSES)))
+    if owner_role is not None:
+        stmt = stmt.where(ExperimentIssue.current_owner_role == str(owner_role))
+    if classification is not None:
+        stmt = stmt.where(ExperimentIssue.classification == str(classification))
+    if severity is not None:
+        stmt = stmt.where(ExperimentIssue.severity == str(severity))
+    if priority is not None:
+        stmt = stmt.where(ExperimentIssue.priority == str(priority))
+    if detector is not None:
+        stmt = stmt.where(ExperimentIssue.detector == str(detector))
+    if experiment_id is not None:
+        stmt = stmt.where(ExperimentIssue.experiment_id == experiment_id)
+    if version_id is not None:
+        stmt = stmt.where(ExperimentIssue.version_id == version_id)
+    rows = list(session.scalars(stmt))
+    rows.sort(
+        key=lambda i: (
+            issue_policy.priority_rank(i.priority),
+            issue_policy.severity_rank(i.severity),
+            i.opened_at,
+        )
+    )
+    return rows[:limit] if limit else rows
+
+
+def open_issue_by_fingerprint(session, fingerprint: str) -> ExperimentIssue | None:
+    """The OPEN issue already covering this exact problem scope, if any.
+
+    Open ones only, deliberately: a RESOLVED issue must never suppress a
+    genuinely recurring anomaly (§9). "We fixed that once" is not evidence that
+    it is fixed now, and a report that hid the recurrence would be worse than one
+    that never had tickets at all."""
+    return session.scalar(
+        select(ExperimentIssue)
+        .where(
+            ExperimentIssue.detector_fingerprint == fingerprint,
+            ExperimentIssue.status.in_(sorted(issue_policy.OPEN_STATUSES)),
+        )
+        .order_by(ExperimentIssue.opened_at)
+    )
+
+
+def issue_events(session, issue: ExperimentIssue) -> list[ExperimentIssueEvent]:
+    return list(
+        session.scalars(
+            select(ExperimentIssueEvent)
+            .where(ExperimentIssueEvent.issue_id == issue.id)
+            .order_by(ExperimentIssueEvent.occurred_at, ExperimentIssueEvent.id)
+        )
+    )
+
+
+def issue_evidence(session, issue: ExperimentIssue) -> list[ExperimentIssueEvidence]:
+    return list(
+        session.scalars(
+            select(ExperimentIssueEvidence)
+            .where(ExperimentIssueEvidence.issue_id == issue.id)
+            .order_by(ExperimentIssueEvidence.captured_at, ExperimentIssueEvidence.id)
+        )
+    )
+
+
+def issue_links(session, issue: ExperimentIssue) -> list[ExperimentIssueLink]:
+    return list(
+        session.scalars(
+            select(ExperimentIssueLink)
+            .where(ExperimentIssueLink.issue_id == issue.id)
+            .order_by(ExperimentIssueLink.created_at, ExperimentIssueLink.id)
+        )
+    )
+
+
+def issue_scope_label(session, issue: ExperimentIssue) -> str:
+    """A compact human scope: `mmsell-live v1/e1 · promo-gate`, or `system-wide`.
+
+    Assembled from the foreign keys rather than from stored text, so it cannot
+    drift from the lineage it claims to describe."""
+    parts: list[str] = []
+    if issue.experiment_id is not None:
+        exp = session.get(Experiment, issue.experiment_id)
+        parts.append(exp.key if exp is not None else f"experiment:{issue.experiment_id}")
+    if issue.version_id is not None:
+        ver = session.get(ExperimentVersion, issue.version_id)
+        tail = f"v{ver.version}" if ver is not None else f"version:{issue.version_id}"
+        if issue.epoch_id is not None:
+            epoch = session.get(ExperimentEpoch, issue.epoch_id)
+            if epoch is not None:
+                tail += f"/e{epoch.epoch_number}"
+        parts.append(tail)
+    if issue.gate_id is not None:
+        gate = session.get(ExperimentGate, issue.gate_id)
+        parts.append(gate.gate_key if gate is not None else f"gate:{issue.gate_id}")
+    if issue.deployment_id is not None:
+        dep = session.get(ExperimentDeployment, issue.deployment_id)
+        if dep is not None:
+            parts.append(dep.deployment_key)
+    if issue.platform_revision_id is not None:
+        rev = session.get(PlatformRevision, issue.platform_revision_id)
+        if rev is not None:
+            parts.append(f"revision:{rev.version}")
+    return " · ".join(parts) if parts else "system-wide"
+
+
+def issue_summary(session, issue: ExperimentIssue) -> dict:
+    """The compact row both read surfaces render."""
+    latest = None
+    evidence = issue_evidence(session, issue)
+    if evidence:
+        newest = evidence[-1]
+        latest = f"{newest.evidence_type}: {newest.summary[:80]}"
+    return {
+        "issue_key": issue.issue_key,
+        "title": issue.title,
+        "status": issue.status,
+        "classification": issue.classification,
+        "severity": issue.severity,
+        "priority": issue.priority,
+        "owner_role": issue.current_owner_role,
+        "opened_by_role": issue.opened_by_role,
+        "opened_at": str(issue.opened_at) if issue.opened_at else None,
+        "scope": issue_scope_label(session, issue),
+        "experiment_id": issue.experiment_id,
+        "version_id": issue.version_id,
+        "detector": issue.detector,
+        "detector_fingerprint": issue.detector_fingerprint,
+        "occurrence_count": issue.occurrence_count,
+        "disposition": issue.disposition,
+        "latest_evidence": latest,
+    }
+
+
+def issue_detail(session, issue: ExperimentIssue) -> dict:
+    """The whole investigation as JSON: row, append-only history, evidence, links."""
+    out = issue_summary(session, issue)
+    out.update({
+        "problem_statement": issue.problem_statement,
+        "evidence_summary": issue.evidence_summary,
+        "proposed_fix": issue.proposed_fix,
+        "validation_plan": issue.validation_plan,
+        "resolution_summary": issue.resolution_summary,
+        "resolved_at": str(issue.resolved_at) if issue.resolved_at else None,
+        "requires_new_version": issue.requires_new_version,
+        "requires_new_epoch": issue.requires_new_epoch,
+        "requires_platform_revision": issue.requires_platform_revision,
+        "requires_pause_or_stand_down": issue.requires_pause_or_stand_down,
+        "duplicate_of_issue_id": issue.duplicate_of_issue_id,
+        "supersedes_issue_id": issue.supersedes_issue_id,
+        "discovered_from_issue_id": issue.discovered_from_issue_id,
+        "first_observed_at": str(issue.first_observed_at)
+        if issue.first_observed_at else None,
+        "last_observed_at": str(issue.last_observed_at)
+        if issue.last_observed_at else None,
+        "details_json": issue.details_json,
+        "events": [
+            {
+                "event_type": e.event_type,
+                "occurred_at": str(e.occurred_at),
+                "actor": e.actor,
+                "actor_role": e.actor_role,
+                "from_status": e.from_status,
+                "to_status": e.to_status,
+                "from_owner_role": e.from_owner_role,
+                "to_owner_role": e.to_owner_role,
+                "from_classification": e.from_classification,
+                "to_classification": e.to_classification,
+                "reason": e.reason,
+                "payload": e.payload_json,
+            }
+            for e in issue_events(session, issue)
+        ],
+        "evidence": [
+            {
+                "evidence_type": e.evidence_type,
+                "summary": e.summary,
+                "source_ref": e.source_ref,
+                "captured_at": str(e.captured_at),
+                "captured_by": e.captured_by,
+                "content_hash": e.content_hash,
+            }
+            for e in issue_evidence(session, issue)
+        ],
+        "links": [
+            {
+                "link_type": row.link_type,
+                "reference": row.reference,
+                "label": row.label,
+                "created_at": str(row.created_at),
+            }
+            for row in issue_links(session, issue)
+        ],
+    })
+    return out
+
+
+def contract_defect_findings(
+    session, experiment: Experiment, version_number: int | None
+) -> list[dict]:
+    """Proven contract defects that apply to this experiment AT THIS VERSION.
+
+    The database-backed successor to the hand-written `findings.py` registry, and
+    it keeps that registry's two load-bearing properties:
+
+      * **Bound to the version it was proven against.** A corrected successor
+        Version drops the finding automatically — nothing has to remember to
+        delete it, and it can never linger as a permanent scare line over a book
+        that was already fixed. A `None` version matches nothing: a finding is a
+        claim about a specific registered contract.
+      * **Display-only.** Nothing here feeds the evaluator, the gate runner,
+        enforcement, admission or any transition, so a wrong entry can mislead a
+        reader but cannot authorize or block anything.
+
+    Only OPEN issues are returned. A resolved defect stays queryable through the
+    normal issue surfaces — it just stops being reported as an active blocker."""
+    if version_number is None:
+        return []
+    out: list[dict] = []
+    for issue in list_issues(
+        session, open_only=True, experiment_id=experiment.id,
+        detector=issue_policy.DETECTOR_CONTRACT_DEFECT,
+    ):
+        if issue.version_id is None:
+            continue
+        ver = session.get(ExperimentVersion, issue.version_id)
+        if ver is None or ver.version != version_number:
+            continue
+        details = issue.details_json or {}
+        evidence_doc = details.get("evidence_doc")
+        if not evidence_doc:
+            docs = [
+                e.source_ref for e in issue_evidence(session, issue)
+                if e.evidence_type == "RESEARCH_DOCUMENT" and e.source_ref
+            ]
+            evidence_doc = docs[0] if docs else None
+        out.append({
+            "issue_key": issue.issue_key,
+            "experiment": experiment.key,
+            "version": version_number,
+            "headline": issue.title,
+            "detail": list(details.get("detail") or []),
+            "owner": details.get("owner_label")
+            or f"{issue.current_owner_role}"
+            + (f" — {issue.disposition}" if issue.disposition else ""),
+            # Whether clearing the evaluator's own named blocker would still
+            # leave this Version unevaluable. The whole reason the second
+            # blocker class exists, so it is never inferred.
+            "independent_of_evaluator": bool(
+                details.get("independent_of_evaluator", True)
+            ),
+            "evidence_doc": evidence_doc,
+            "proven_at": details.get("proven_at"),
+            "proven_by": details.get("proven_by"),
+            "status": issue.status,
+            "disposition": issue.disposition,
+        })
+    return out
+
+
+def open_issue_counts(session) -> dict[str, int]:
+    """Open-issue counts by classification — a one-line health figure."""
+    rows = session.execute(
+        select(ExperimentIssue.classification, func.count())
+        .where(ExperimentIssue.status.in_(sorted(issue_policy.OPEN_STATUSES)))
+        .group_by(ExperimentIssue.classification)
+    ).all()
+    return {str(k): int(n) for k, n in rows}

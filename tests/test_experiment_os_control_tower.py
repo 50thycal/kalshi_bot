@@ -22,6 +22,8 @@ import pytest
 
 from kalshi_bot.experiment_os import control_tower as ct
 from kalshi_bot.experiment_os import findings as fx
+from kalshi_bot.experiment_os import issue_policy as ipol
+from kalshi_bot.experiment_os import issues as ix
 from kalshi_bot.experiment_os import service as svc
 from kalshi_bot.models import PaperTrade
 
@@ -567,25 +569,43 @@ def test_a_gate_that_does_not_use_realizable_gets_no_context_block(xos_session,
 # ---------------------------------------------------------------------------
 
 
-def _register_finding(monkeypatch, *, key, version=1, headline="addresses paper",
+def _register_finding(s, *, exp, version_obj, headline="addresses paper",
                       independent=True):
-    finding = fx.ContractFinding(
-        experiment_key=key, version=version, headline=headline,
-        detail=("clauses default to paper", "epoch has live + paper_twin only"),
-        owner="Research Lab — corrected native successor Version required",
-        independent_of_evaluator=independent,
-        evidence_doc="docs/RESEARCH_LIVE_CANARY_CONTRACT_DEFECT.md",
-        proven_at="2026-08-17", proven_by="Research Lab",
+    """Record a proven contract defect the way Research Lab now does: as a
+    durable issue bound by foreign key to the exact Experiment and Version."""
+    issue = ix.create_issue(
+        s, title=headline, opened_by_role="RESEARCH_LAB", opened_by_actor="rl",
+        classification="STRATEGY", severity="HIGH", priority="P1",
+        current_owner_role="RESEARCH_LAB",
+        owner_rationale="corrected native successor Version required",
+        experiment=exp, version=version_obj,
+        detector=ipol.DETECTOR_CONTRACT_DEFECT,
+        anomaly_kind="frozen_contract_addressing",
+        detector_fingerprint=ipol.issue_fingerprint(
+            detector=ipol.DETECTOR_CONTRACT_DEFECT,
+            experiment_id=exp.id, version_id=version_obj.id,
+            anomaly_kind="frozen_contract_addressing",
+        ),
+        details_json={
+            "detail": ["clauses default to paper",
+                       "epoch has live + paper_twin only"],
+            "owner_label": "Research Lab — corrected native successor Version required",
+            "independent_of_evaluator": independent,
+            "evidence_doc": "docs/RESEARCH_LIVE_CANARY_CONTRACT_DEFECT.md",
+            "proven_at": "2026-08-17",
+            "proven_by": "Research Lab",
+        },
     )
-    monkeypatch.setattr(fx, "CONTRACT_FINDINGS", (finding,))
-    return finding
+    s.commit()
+    return issue
 
 
 def test_blocked_data_and_contract_defect_are_shown_as_separate_blockers(
-        xos_session, xos_platform, monkeypatch):
+        xos_session, xos_platform):
     s = xos_session
-    _experiment(s, "malformed-book", spec=UNPROVIDED_SPEC)
-    _register_finding(monkeypatch, key="malformed-book")
+    exp, ver, _epoch, _gate, _tag = _experiment(s, "malformed-book",
+                                                spec=UNPROVIDED_SPEC)
+    _register_finding(s, exp=exp, version_obj=ver)
 
     rep = ct.build_report(s, evaluate=True)
     out = ct.render(rep, session=s)
@@ -602,12 +622,14 @@ def test_blocked_data_and_contract_defect_are_shown_as_separate_blockers(
     assert "docs/RESEARCH_LIVE_CANARY_CONTRACT_DEFECT.md" in out
 
 
-def test_contract_defect_never_changes_a_verdict(xos_session, xos_platform,
-                                                 monkeypatch):
-    """The registry is display-only. A wrong entry can mislead a reader; it must
-    not be able to authorize or block anything."""
+def test_contract_defect_never_changes_a_verdict(xos_session, xos_platform):
+    """Contract findings are display-only, whether they live in a registry or in
+    a durable issue. A wrong entry can mislead a reader; it must not be able to
+    authorize or block anything — and an issue's workflow status is not a
+    verdict."""
     s = xos_session
-    _experiment(s, "verdict-stable", spec=COMPUTABLE_SPEC, tag="verdict-stable-t")
+    exp, ver, _epoch, _gate, _tag = _experiment(
+        s, "verdict-stable", spec=COMPUTABLE_SPEC, tag="verdict-stable-t")
     for _ in range(6):
         _trade(s, "verdict-stable-t", pnl=0.10)
     s.commit()
@@ -618,7 +640,7 @@ def test_contract_defect_never_changes_a_verdict(xos_session, xos_platform,
                                     (g.get("latest_result") or {}).get("verdict"))
         for views in before.by_state.values() for v in views for g in v["gates"]
     }
-    _register_finding(monkeypatch, key="verdict-stable")
+    _register_finding(s, exp=exp, version_obj=ver)
     after = ct.build_report(s, evaluate=True)
     after_verdicts = {
         (v["key"], g["gate_key"]): (g.get("live_verdict"),
@@ -630,18 +652,29 @@ def test_contract_defect_never_changes_a_verdict(xos_session, xos_platform,
 
 
 def test_finding_expires_when_a_corrected_version_exists(xos_session,
-                                                         xos_platform, monkeypatch):
+                                                         xos_platform):
     """Bound to the version it was proven against — so a corrected successor
-    drops it automatically instead of it lingering as a permanent scare line."""
+    drops it automatically instead of it lingering as a permanent scare line.
+
+    The issue itself stays queryable: expiring means "no longer an active
+    blocker for the operating Version", not "deleted"."""
     s = xos_session
-    _experiment(s, "outgrown", spec=UNPROVIDED_SPEC)
-    _register_finding(monkeypatch, key="outgrown", version=2)  # proven vs v2
+    exp, ver, _epoch, _gate, _tag = _experiment(s, "outgrown", spec=UNPROVIDED_SPEC)
+    successor = svc.create_experiment_version(
+        s, exp, hypothesis="h", independent_variable="lever", now=T0,
+        control_exemption_reason="test shape", change_reason="corrected addressing",
+    )
+    s.commit()
+    issue = _register_finding(s, exp=exp, version_obj=successor)  # proven vs v2
 
     rep = ct.build_report(s, evaluate=True)
     assert rep.contract_findings == [], (
         "a finding proven against v2 must not attach to a book operating v1"
     )
     assert "CONTRACT DEFECT" not in ct.render(rep, session=s)
+    # ...but the historical investigation is still there to be read.
+    assert ix.get_issue(s, issue.issue_key) is not None
+    assert issue.issue_key in {i.issue_key for i in ix.list_issues(s, open_only=True)}
 
 
 def test_no_finding_is_manufactured_by_heuristic(xos_session, xos_platform):
@@ -656,15 +689,30 @@ def test_no_finding_is_manufactured_by_heuristic(xos_session, xos_platform):
     assert "CONTRACT DEFECT" not in out   # an invented one is not
 
 
-def test_registered_findings_point_at_a_document_that_exists():
+def test_migrated_findings_point_at_a_document_that_exists():
     """A finding's authority is the research that proved it. A citation that does
-    not resolve is an assertion."""
+    not resolve is an assertion.
+
+    The registry is gone; the same rule now applies to the migration payload
+    that carries its two entries into durable issues."""
     import pathlib
 
+    from kalshi_bot.experiment_os import issue_import
+
     root = pathlib.Path(__file__).resolve().parents[1]
-    assert fx.CONTRACT_FINDINGS, "the registry should not be silently emptied"
-    for f in fx.CONTRACT_FINDINGS:
-        assert (root / f.evidence_doc).is_file(), f.evidence_doc
+    assert issue_import.LEGACY_CONTRACT_FINDINGS, (
+        "the migration payload should not be silently emptied"
+    )
+    for f in issue_import.LEGACY_CONTRACT_FINDINGS:
+        assert (root / f["evidence_doc"]).is_file(), f["evidence_doc"]
+
+
+def test_the_retired_registry_supplies_nothing(xos_session, xos_platform):
+    """`findings.py` is a deprecation shim. If it still returned entries the same
+    defect would render twice, from two sources that could disagree."""
+    assert fx.CONTRACT_FINDINGS == ()
+    with pytest.warns(DeprecationWarning):
+        assert fx.findings_for("anything", 1) == []
 
 
 # ---------------------------------------------------------------------------

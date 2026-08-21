@@ -7,12 +7,18 @@
     python -m kalshi_bot.experiment_os.cli tag <strategy-tag>
     python -m kalshi_bot.experiment_os.cli scoreboard [key] [--evaluate]
     python -m kalshi_bot.experiment_os.cli evaluate-gates [--dry-run]
+    python -m kalshi_bot.experiment_os.cli issue list|show|candidates      (read)
+    python -m kalshi_bot.experiment_os.cli issue create|triage|assign|...  (write)
 
 Connects with DATABASE_URL_RO when set (preferred), else DATABASE_URL.
 
-Every command here is a pure read EXCEPT `evaluate-gates`, which persists gate
-results (docs/EXPERIMENT_OS_GATE_RESULTS.md) and refuses to run against
-DATABASE_URL_RO. Even that one cannot move an experiment: it records verdicts and
+Every command here is a pure read EXCEPT `evaluate-gates` and the writing
+`issue` subcommands, which persist gate results
+(docs/EXPERIMENT_OS_GATE_RESULTS.md) and investigation state
+(docs/EXPERIMENT_OS_ISSUES.md) and refuse to run against DATABASE_URL_RO.
+No issue subcommand can transition an experiment, alter a gate, change a
+verdict, create a Version or Epoch, register a Platform Revision or change
+real-money exposure — `issue disposition` RECORDS that one is required. Even that one cannot move an experiment: it records verdicts and
 never transitions, promotes or arms anything. `scoreboard --evaluate` runs the
 evaluator in DRY-RUN mode (persist=False), so a verdict shown there writes
 nothing. For the ops channel there is a self-contained equivalent:
@@ -390,6 +396,242 @@ def cmd_readiness(session: Session, args) -> int:
     return 0 if report["ok"] else 1
 
 
+# ---------------------------------------------------------------------------
+# Investigation / issue workflow (docs/EXPERIMENT_OS_ISSUES.md)
+# ---------------------------------------------------------------------------
+#
+# `issue list|show|candidates` are pure reads and are allowlisted on the ops
+# channel. Every other issue subcommand WRITES, and follows the same rule as
+# `evaluate-gates`: it refuses to run when DATABASE_URL_RO is set, which is the
+# read-only connection the ops channel always uses. The worker-only write path
+# is unchanged — the ops channel does not gain a way to mutate anything.
+#
+# No issue subcommand can transition an experiment, alter a gate, change a
+# verdict, open an epoch, create a Version, register a Platform Revision, arm a
+# canary or change exposure. `issue disposition` RECORDS that one of those is
+# required; performing it stays where it already lives.
+
+
+def _issue_write_guard() -> int | None:
+    """Refuse a write over the read-only connection, loudly and early."""
+    if os.environ.get("DATABASE_URL_RO"):
+        print(
+            "refusing to write over DATABASE_URL_RO: this is the read-only "
+            "connection (the ops channel always is). Issue writes run where only "
+            "a writable DATABASE_URL is set — the worker-only write path is "
+            "deliberate. Read commands: issue list | issue show | issue candidates.",
+            file=sys.stderr,
+        )
+        return 2
+    return None
+
+
+def _issue_or_exit(session: Session, key: str):
+    from . import issues as ix
+
+    issue = ix.get_issue(session, key)
+    if issue is None:
+        print(f"no issue {key!r}", file=sys.stderr)
+        raise SystemExit(1)
+    return issue
+
+
+def cmd_issue(session: Session, args) -> int:
+    """Dispatch to the `issue` subcommand, guarding every write."""
+    from . import issues as ix
+
+    action = args.issue_action
+    if action not in _ISSUE_READ_ACTIONS:
+        refusal = _issue_write_guard()
+        if refusal is not None:
+            return refusal
+
+    if action == "list":
+        exp = read.get_experiment(session, args.experiment) if args.experiment else None
+        if args.experiment and exp is None:
+            print(f"no experiment {args.experiment!r}", file=sys.stderr)
+            return 1
+        rows = ix.list_issues(
+            session,
+            open_only=not args.all,
+            status=args.status,
+            owner_role=args.owner,
+            classification=args.classification,
+            experiment=exp,
+        )
+        if not rows:
+            print("no issues match" if args.all else "no open issues")
+            return 0
+        print(_table(
+            ["issue", "sev", "pri", "classification", "owner", "status", "scope",
+             "title"],
+            [[
+                r.issue_key, r.severity, r.priority, r.classification,
+                r.current_owner_role, r.status,
+                read.issue_scope_label(session, r), r.title[:60],
+            ] for r in rows],
+        ))
+        return 0
+
+    if action == "show":
+        issue = _issue_or_exit(session, args.key)
+        print(json.dumps(read.issue_detail(session, issue), indent=2, default=str))
+        return 0
+
+    if action == "candidates":
+        # Deterministic ticket candidates from the canonical Control Tower read.
+        # Building the report writes nothing (the evaluator runs persist=False).
+        from .control_tower import build_report
+
+        rep = build_report(session, evaluate=not args.no_evaluate)
+        if args.json:
+            print(json.dumps(
+                {"open_issues": rep.open_issues,
+                 "issue_candidates": rep.issue_candidates},
+                indent=2, default=str,
+            ))
+            return 0
+        if not rep.issue_candidates:
+            print("no unticketed anomalies — every detected anomaly is covered "
+                  "by an open issue, or there are none")
+            return 0
+        print(_table(
+            ["detector", "sev", "pri", "would-classify", "recommended owner",
+             "scope", "anomaly"],
+            [[c["detector"], c["severity"], c["priority"],
+              c["recommended_classification"], c["recommended_owner"],
+              c["scope"], c["title"][:60]] for c in rep.issue_candidates],
+        ))
+        print("\nThese are RECOMMENDATIONS. Opening one is a write, owned by the "
+              "recommended role.")
+        return 0
+
+    if action == "create":
+        issue = ix.create_issue(
+            session,
+            title=args.title,
+            problem_statement=args.problem,
+            opened_by_role=args.opened_by_role,
+            opened_by_actor=args.actor,
+            classification=args.classification,
+            severity=args.severity,
+            priority=args.priority,
+            current_owner_role=args.owner,
+            owner_rationale=args.reason,
+            experiment=args.experiment,
+            detector=args.detector,
+            anomaly_kind=args.anomaly_kind,
+            gate_verdict=args.gate_verdict,
+        )
+        session.commit()
+        print(f"{issue.issue_key}  [{issue.status}] {issue.classification}/"
+              f"{issue.severity}/{issue.priority}  owner {issue.current_owner_role}")
+        return 0
+
+    issue = _issue_or_exit(session, args.key)
+
+    if action == "triage":
+        ix.triage_issue(session, issue, actor=args.actor, actor_role=args.actor_role,
+                        reason=args.reason, severity=args.severity,
+                        priority=args.priority, classification=args.classification,
+                        owner_role=args.owner)
+    elif action == "classify":
+        ix.classify_issue(session, issue, classification=args.classification,
+                          actor=args.actor, actor_role=args.actor_role,
+                          reason=args.reason)
+    elif action == "assign":
+        ix.assign_issue(session, issue, owner_role=args.owner, actor=args.actor,
+                        actor_role=args.actor_role, reason=args.reason)
+    elif action == "transfer":
+        ix.transfer_issue(session, issue, to_owner_role=args.owner,
+                          actor=args.actor, actor_role=args.actor_role,
+                          reason=args.reason, classification=args.classification,
+                          evidence_waiver_reason=args.evidence_waiver)
+    elif action == "status":
+        ix.set_issue_status(session, issue, status=args.status, actor=args.actor,
+                            actor_role=args.actor_role, reason=args.reason)
+    elif action == "evidence-add":
+        ix.add_issue_evidence(session, issue, evidence_type=args.type,
+                              summary=args.summary, source_ref=args.source,
+                              captured_by=args.actor, actor_role=args.actor_role)
+    elif action == "link-add":
+        ix.add_issue_link(session, issue, link_type=args.type,
+                          reference=args.reference, label=args.label,
+                          created_by=args.actor, actor_role=args.actor_role)
+    elif action == "propose-fix":
+        ix.propose_issue_fix(session, issue, proposed_fix=args.fix,
+                             actor=args.actor, actor_role=args.actor_role,
+                             reason=args.reason)
+    elif action == "disposition":
+        ix.record_disposition(
+            session, issue, disposition=args.disposition, actor=args.actor,
+            actor_role=args.actor_role, reason=args.reason,
+            requires_new_version=args.requires_new_version,
+            requires_new_epoch=args.requires_new_epoch,
+            requires_platform_revision=args.requires_platform_revision,
+            requires_pause_or_stand_down=args.requires_pause,
+            version_and_epoch_rationale=args.version_and_epoch_rationale,
+        )
+    elif action == "validate-plan":
+        ix.record_validation_plan(session, issue, validation_plan=args.plan,
+                                  actor=args.actor, actor_role=args.actor_role,
+                                  reason=args.reason)
+    elif action == "validate":
+        ix.record_validation_result(session, issue, passed=not args.failed,
+                                    summary=args.summary, actor=args.actor,
+                                    actor_role=args.actor_role,
+                                    source_ref=args.source)
+    elif action == "resolve":
+        ix.resolve_issue(session, issue, resolution_summary=args.summary,
+                         actor=args.actor, actor_role=args.actor_role,
+                         validation_waiver_reason=args.validation_waiver)
+    elif action == "close":
+        ix.close_no_action(session, issue, reason=args.reason, actor=args.actor,
+                           actor_role=args.actor_role)
+    elif action == "duplicate":
+        ix.mark_duplicate(session, issue, duplicate_of=args.of, actor=args.actor,
+                          actor_role=args.actor_role, reason=args.reason)
+    elif action == "reopen":
+        ix.reopen_issue(session, issue, reason=args.reason, actor=args.actor,
+                        actor_role=args.actor_role, owner_role=args.owner)
+    elif action == "recurrence":
+        ix.record_recurrence(session, issue, actor=args.actor,
+                             actor_role=args.actor_role, note=args.reason)
+    else:  # pragma: no cover — argparse constrains the set
+        print(f"unknown issue action {action!r}", file=sys.stderr)
+        return 2
+
+    session.commit()
+    print(f"{issue.issue_key}  [{issue.status}] {issue.classification}  owner "
+          f"{issue.current_owner_role}"
+          + (f"  disposition {issue.disposition}" if issue.disposition else ""))
+    return 0
+
+
+def cmd_issue_import_findings(session: Session, args) -> int:
+    """Migrate the retired contract-findings registry into durable issues.
+
+    Idempotent: a second run reports `already_present` and writes nothing. It
+    creates issue rows only — no experiment state, no gate, no verdict changes."""
+    refusal = _issue_write_guard()
+    if refusal is not None:
+        return refusal
+    from .issue_import import import_contract_findings
+
+    report = import_contract_findings(session)
+    if args.dry_run:
+        session.rollback()
+        print("MODE: DRY RUN — rolled back\n")
+    else:
+        session.commit()
+    print(json.dumps(report, indent=2, default=str))
+    return 0
+
+
+#: Subcommands that are pure reads, and therefore safe on the ops channel.
+_ISSUE_READ_ACTIONS: frozenset[str] = frozenset({"list", "show", "candidates"})
+
+
 def build_parser() -> argparse.ArgumentParser:
     """The CLI's argument parser, separate from `main` so the WIRING is testable.
 
@@ -484,6 +726,173 @@ def build_parser() -> argparse.ArgumentParser:
         "(nothing is persisted)",
     )
     p_sb.set_defaults(fn=cmd_scoreboard)
+
+    # --- investigation / issue workflow -----------------------------------
+    p_issue = sub.add_parser(
+        "issue",
+        help="durable investigations: list/show/candidates are reads; every "
+        "other action writes and refuses DATABASE_URL_RO",
+    )
+    # The group carries a dispatchable default too, so the "every subcommand has
+    # a callable fn" invariant holds at every level. A child's own default wins.
+    p_issue.set_defaults(fn=cmd_issue)
+    isub = p_issue.add_subparsers(dest="issue_action", required=True)
+
+    def _actor(parser, *, role_required=True):
+        parser.add_argument("--actor", required=True, help="who is doing this")
+        parser.add_argument(
+            "--actor-role", required=role_required, default=None,
+            help="the session role acting (LIVE_OPS, RESEARCH_LAB, ...)",
+        )
+        return parser
+
+    p_il = isub.add_parser("list", help="open issues (--all for every status)")
+    p_il.add_argument("--all", action="store_true")
+    p_il.add_argument("--status", default=None)
+    p_il.add_argument("--owner", default=None)
+    p_il.add_argument("--classification", default=None)
+    p_il.add_argument("--experiment", default=None)
+
+    p_is = isub.add_parser("show", help="one investigation, with full history")
+    p_is.add_argument("key")
+
+    p_ic = isub.add_parser(
+        "candidates",
+        help="anomalies no open issue covers, with the recommended owner",
+    )
+    p_ic.add_argument("--json", action="store_true")
+    p_ic.add_argument("--no-evaluate", action="store_true")
+
+    p_icr = isub.add_parser("create", help="open a durable issue")
+    p_icr.add_argument("--title", required=True)
+    p_icr.add_argument("--problem", default=None)
+    p_icr.add_argument("--opened-by-role", required=True,
+                       help="detecting context; may be EXPERIMENT_CONTROL_TOWER")
+    p_icr.add_argument("--actor", default=None)
+    p_icr.add_argument("--owner", default=None,
+                       help="owning role; omit to use the routing recommendation")
+    p_icr.add_argument("--classification", default=None)
+    p_icr.add_argument("--severity", default=None)
+    p_icr.add_argument("--priority", default=None)
+    p_icr.add_argument("--experiment", default=None, help="experiment key")
+    p_icr.add_argument("--detector", default=None)
+    p_icr.add_argument("--anomaly-kind", default=None)
+    p_icr.add_argument("--gate-verdict", default=None)
+    p_icr.add_argument("--reason", default=None,
+                       help="rationale, required when overriding the recommended owner")
+
+    p_it = _actor(isub.add_parser("triage", help="first look: severity/priority/owner"))
+    p_it.add_argument("key")
+    p_it.add_argument("--reason", required=True)
+    p_it.add_argument("--severity", default=None)
+    p_it.add_argument("--priority", default=None)
+    p_it.add_argument("--classification", default=None)
+    p_it.add_argument("--owner", default=None)
+
+    p_icl = _actor(isub.add_parser("classify", help="change classification (reason required)"))
+    p_icl.add_argument("key")
+    p_icl.add_argument("--classification", required=True)
+    p_icl.add_argument("--reason", required=True)
+
+    p_ia = _actor(isub.add_parser("assign", help="set the owning role"))
+    p_ia.add_argument("key")
+    p_ia.add_argument("--owner", required=True)
+    p_ia.add_argument("--reason", required=True)
+
+    p_itr = _actor(isub.add_parser(
+        "transfer", help="hand the same problem to another role (evidence required)"))
+    p_itr.add_argument("key")
+    p_itr.add_argument("--owner", required=True)
+    p_itr.add_argument("--reason", required=True)
+    p_itr.add_argument("--classification", default=None)
+    p_itr.add_argument("--evidence-waiver", default=None)
+
+    p_ist = _actor(isub.add_parser("status", help="move through the workflow"))
+    p_ist.add_argument("key")
+    p_ist.add_argument("--status", required=True)
+    p_ist.add_argument("--reason", default=None)
+
+    p_ie = _actor(isub.add_parser("evidence-add", help="cite evidence"))
+    p_ie.add_argument("key")
+    p_ie.add_argument("--type", required=True)
+    p_ie.add_argument("--summary", required=True)
+    p_ie.add_argument("--source", default=None, help="ops result id, doc path, PR, ...")
+
+    p_ilk = _actor(isub.add_parser("link-add", help="attach a canonical/external reference"))
+    p_ilk.add_argument("key")
+    p_ilk.add_argument("--type", required=True)
+    p_ilk.add_argument("--reference", required=True)
+    p_ilk.add_argument("--label", default=None)
+
+    p_ipf = _actor(isub.add_parser("propose-fix", help="record the proposed remedy"))
+    p_ipf.add_argument("key")
+    p_ipf.add_argument("--fix", required=True)
+    p_ipf.add_argument("--reason", default=None)
+
+    p_id = _actor(isub.add_parser(
+        "disposition",
+        help="RECORD what must happen (new Version/Epoch/Platform Revision/...). "
+        "Records only — performs nothing",
+    ))
+    p_id.add_argument("key")
+    p_id.add_argument("--disposition", required=True)
+    p_id.add_argument("--reason", required=True)
+    p_id.add_argument("--requires-new-version", action="store_true", default=None)
+    p_id.add_argument("--requires-new-epoch", action="store_true", default=None)
+    p_id.add_argument("--requires-platform-revision", action="store_true", default=None)
+    p_id.add_argument("--requires-pause", action="store_true", default=None)
+    p_id.add_argument("--version-and-epoch-rationale", default=None)
+
+    p_ivp = _actor(isub.add_parser(
+        "validate-plan", help="state what would demonstrate the fix worked"))
+    p_ivp.add_argument("key")
+    p_ivp.add_argument("--plan", required=True)
+    p_ivp.add_argument("--reason", default=None)
+
+    p_iv = _actor(isub.add_parser("validate", help="record what validation showed"))
+    p_iv.add_argument("key")
+    p_iv.add_argument("--summary", required=True)
+    p_iv.add_argument("--failed", action="store_true",
+                      help="record a FAILED validation (the default is passed)")
+    p_iv.add_argument("--source", default=None)
+
+    p_ir = _actor(isub.add_parser("resolve", help="close as fixed"))
+    p_ir.add_argument("key")
+    p_ir.add_argument("--summary", required=True)
+    p_ir.add_argument("--validation-waiver", default=None,
+                      help="why this remedy cannot be validated directly")
+
+    p_icn = _actor(isub.add_parser("close", help="close with no action taken"))
+    p_icn.add_argument("key")
+    p_icn.add_argument("--reason", required=True)
+
+    p_idup = _actor(isub.add_parser("duplicate", help="confirm a semantic duplicate"))
+    p_idup.add_argument("key")
+    p_idup.add_argument("--of", required=True, help="the surviving issue key")
+    p_idup.add_argument("--reason", required=True)
+
+    p_iro = _actor(isub.add_parser("reopen", help="reopen a resolved/closed issue"))
+    p_iro.add_argument("key")
+    p_iro.add_argument("--reason", required=True)
+    p_iro.add_argument("--owner", default=None)
+
+    p_irc = _actor(isub.add_parser(
+        "recurrence", help="record that the same problem was observed again"))
+    p_irc.add_argument("key")
+    p_irc.add_argument("--reason", default=None)
+
+    for parser_obj in (p_il, p_is, p_ic, p_icr, p_it, p_icl, p_ia, p_itr, p_ist,
+                       p_ie, p_ilk, p_ipf, p_id, p_ivp, p_iv, p_ir, p_icn,
+                       p_idup, p_iro, p_irc):
+        parser_obj.set_defaults(fn=cmd_issue)
+
+    p_if = isub.add_parser(
+        "import-findings",
+        help="migrate the retired contract-findings registry into durable issues "
+        "(idempotent)",
+    )
+    p_if.add_argument("--dry-run", action="store_true")
+    p_if.set_defaults(fn=cmd_issue_import_findings, issue_action="import-findings")
 
     return parser
 

@@ -631,3 +631,249 @@ class ExperimentLegacyEvidence(Base):
     summary_json: Mapped[dict | None] = mapped_column(JSONType)
     notes: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+
+
+# ---------------------------------------------------------------------------
+# Investigation / issue workflow (docs/EXPERIMENT_OS_ISSUES.md)
+# ---------------------------------------------------------------------------
+#
+# The durable home for problems: anomalies, suspected defects, operational
+# incidents, scientific questions and shared-platform problems. Before these
+# tables the only record of an investigation was session prose and a small
+# hand-written registry, so a problem survived exactly as long as the chat
+# window did.
+#
+# These tables are workflow, NOT truth. Nothing here is an input to a gate, a
+# verdict, a lifecycle transition, admission, enforcement or a platform
+# revision — an issue records that one of those is required and links the
+# canonical record once it exists. The distinction is the reason an issue can
+# be opened on a hunch without endangering anything.
+
+
+class ExperimentIssue(Base):
+    """One durable investigation: a problem, its ownership, remedy and outcome.
+
+    `status`, `current_owner_role`, `classification`, `occurrence_count` and
+    `resolved_at` are CACHED current values for efficient reads; the append-only
+    `experiment_issue_events` table is the authority for how they got there, in
+    exactly the relationship `experiments.state` has to
+    `experiment_state_transitions`.
+
+    Every lineage column is nullable because an issue may legitimately be
+    system-wide (a collector outage belongs to no experiment) — but present
+    values are VALIDATED against each other by the service, so a version always
+    belongs to its experiment and a gate result always belongs to its gate.
+    Canonical identity lives in these foreign keys and never in `details_json`.
+
+    The four `requires_*` flags are tri-state on purpose: NULL means "not yet
+    determined", which is not the same as False. Recording "this does not need a
+    new Version" is a finding; not having looked yet is not.
+    """
+
+    __tablename__ = "experiment_issues"
+    __table_args__ = (
+        Index("ix_experiment_issues_status", "status", "opened_at"),
+        Index("ix_experiment_issues_owner", "current_owner_role", "status"),
+        Index("ix_experiment_issues_classification", "classification", "status"),
+        Index("ix_experiment_issues_experiment", "experiment_id", "status"),
+        Index("ix_experiment_issues_version", "version_id"),
+        Index("ix_experiment_issues_deployment", "deployment_id"),
+        Index("ix_experiment_issues_fingerprint", "detector_fingerprint", "status"),
+        Index("ix_experiment_issues_updated", "updated_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    #: Stable, unique, human-readable, CLI-safe: "XOS-000123". Never the title —
+    #: a title is a description and descriptions get rewritten.
+    issue_key: Mapped[str] = mapped_column(String(24), unique=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    problem_statement: Mapped[str | None] = mapped_column(Text)
+    classification: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="UNCLASSIFIED",
+        server_default="UNCLASSIFIED",
+    )
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="OPEN", server_default="OPEN"
+    )
+    severity: Mapped[str] = mapped_column(
+        String(12), nullable=False, default="MEDIUM", server_default="MEDIUM"
+    )
+    priority: Mapped[str] = mapped_column(
+        String(2), nullable=False, default="P2", server_default="P2"
+    )
+    #: Who is working it now. Never EXPERIMENT_CONTROL_TOWER (read-only) and
+    #: never a generic fixer role — an issue routes to an existing session role.
+    #: Width carries headroom over the longest role name on purpose: Postgres
+    #: enforces VARCHAR limits and SQLite does not, so a role added later that
+    #: happened to be one character longer would fail in production only.
+    current_owner_role: Mapped[str] = mapped_column(String(32), nullable=False)
+    #: The detecting context, which MAY be the read-only Control Tower —
+    #: EXPERIMENT_CONTROL_TOWER is the longest role name the system has.
+    opened_by_role: Mapped[str] = mapped_column(String(32), nullable=False)
+    opened_by_actor: Mapped[str | None] = mapped_column(String(64))
+    opened_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        TS, default=utcnow, onupdate=utcnow, nullable=False
+    )
+    resolved_at: Mapped[datetime | None] = mapped_column(TS)
+
+    # --- canonical scope (nullable, but validated together when present) ---
+    experiment_id: Mapped[int | None] = mapped_column(
+        BigIntId, ForeignKey("experiments.id")
+    )
+    version_id: Mapped[int | None] = mapped_column(
+        BigIntId, ForeignKey("experiment_versions.id")
+    )
+    epoch_id: Mapped[int | None] = mapped_column(
+        BigIntId, ForeignKey("experiment_epochs.id")
+    )
+    deployment_id: Mapped[int | None] = mapped_column(
+        BigIntId, ForeignKey("experiment_deployments.id")
+    )
+    gate_id: Mapped[int | None] = mapped_column(
+        BigIntId, ForeignKey("experiment_gates.id")
+    )
+    gate_result_id: Mapped[int | None] = mapped_column(
+        BigIntId, ForeignKey("experiment_gate_results.id")
+    )
+    platform_revision_id: Mapped[int | None] = mapped_column(
+        BigIntId, ForeignKey("platform_revisions.id")
+    )
+    integrity_event_id: Mapped[int | None] = mapped_column(
+        BigIntId, ForeignKey("experiment_integrity_events.id")
+    )
+
+    # --- detection + recurrence (spec §8) ---
+    detector: Mapped[str | None] = mapped_column(String(64))
+    #: Deterministic hash of the problem SCOPE only. Volatile values never enter
+    #: it, or the same recurring anomaly would hash differently every run.
+    detector_fingerprint: Mapped[str | None] = mapped_column(String(64))
+    first_observed_at: Mapped[datetime | None] = mapped_column(TS)
+    last_observed_at: Mapped[datetime | None] = mapped_column(TS)
+    #: Advanced ONLY by an explicit write. A Control Tower read must never
+    #: increment it — rendering a report is not an observation event.
+    occurrence_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default="1"
+    )
+
+    # --- investigation content ---
+    evidence_summary: Mapped[str | None] = mapped_column(Text)
+    proposed_fix: Mapped[str | None] = mapped_column(Text)
+    disposition: Mapped[str | None] = mapped_column(String(32))
+    validation_plan: Mapped[str | None] = mapped_column(Text)
+    resolution_summary: Mapped[str | None] = mapped_column(Text)
+
+    # --- what the remedy REQUIRES (recorded, never performed) ---
+    requires_new_version: Mapped[bool | None] = mapped_column(Boolean)
+    requires_new_epoch: Mapped[bool | None] = mapped_column(Boolean)
+    requires_platform_revision: Mapped[bool | None] = mapped_column(Boolean)
+    requires_pause_or_stand_down: Mapped[bool | None] = mapped_column(Boolean)
+
+    # --- issue-to-issue lineage ---
+    duplicate_of_issue_id: Mapped[int | None] = mapped_column(
+        BigIntId, ForeignKey("experiment_issues.id")
+    )
+    supersedes_issue_id: Mapped[int | None] = mapped_column(
+        BigIntId, ForeignKey("experiment_issues.id")
+    )
+    #: Set when investigating one issue uncovered this INDEPENDENTLY actionable
+    #: problem (spec §6.1) — so unrelated remedies do not stay trapped together
+    #: in one permanently ambiguous ticket.
+    discovered_from_issue_id: Mapped[int | None] = mapped_column(
+        BigIntId, ForeignKey("experiment_issues.id")
+    )
+    details_json: Mapped[dict | None] = mapped_column(JSONType)
+    created_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+
+
+class ExperimentIssueEvent(Base):
+    """Append-only workflow history: one row per consequential change (§4.1).
+
+    Written in the SAME transaction as the change it describes, so the cached
+    columns on the issue can never drift from the history that explains them.
+    Guarded against UPDATE/DELETE by the service flush guard: an investigation
+    that can be quietly edited afterwards is not a record of anything.
+
+    The paired from_/to_ columns are populated only for the dimension that
+    actually moved — a classification change leaves the status pair NULL — so
+    "what changed here" is answerable without diffing adjacent rows.
+    """
+
+    __tablename__ = "experiment_issue_events"
+    __table_args__ = (
+        Index("ix_experiment_issue_events_issue", "issue_id", "occurred_at"),
+        Index("ix_experiment_issue_events_type", "event_type", "occurred_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    issue_id: Mapped[int] = mapped_column(
+        BigIntId, ForeignKey("experiment_issues.id"), nullable=False
+    )
+    event_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    actor: Mapped[str | None] = mapped_column(String(64))
+    actor_role: Mapped[str | None] = mapped_column(String(32))
+    occurred_at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    from_status: Mapped[str | None] = mapped_column(String(20))
+    to_status: Mapped[str | None] = mapped_column(String(20))
+    from_owner_role: Mapped[str | None] = mapped_column(String(32))
+    to_owner_role: Mapped[str | None] = mapped_column(String(32))
+    from_classification: Mapped[str | None] = mapped_column(String(16))
+    to_classification: Mapped[str | None] = mapped_column(String(16))
+    reason: Mapped[str | None] = mapped_column(Text)
+    payload_json: Mapped[dict | None] = mapped_column(JSONType)
+    created_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+
+
+class ExperimentIssueEvidence(Base):
+    """Append-only evidence cited by an issue (§4.2).
+
+    Evidence is REFERENCED and summarized, not copied: `source_ref` points at the
+    gate result, ops result id, document path, PR or bounded query that a reader
+    can go and check, and `content_hash` optionally pins what was seen at the
+    time. Inlining whole payloads would turn the issue into an unreviewable blob
+    and would silently duplicate canonical records that already exist.
+    """
+
+    __tablename__ = "experiment_issue_evidence"
+    __table_args__ = (
+        Index("ix_experiment_issue_evidence_issue", "issue_id", "captured_at"),
+        Index("ix_experiment_issue_evidence_type", "evidence_type"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    issue_id: Mapped[int] = mapped_column(
+        BigIntId, ForeignKey("experiment_issues.id"), nullable=False
+    )
+    evidence_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    source_ref: Mapped[str | None] = mapped_column(Text)
+    captured_at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    captured_by: Mapped[str | None] = mapped_column(String(64))
+    payload_json: Mapped[dict | None] = mapped_column(JSONType)
+    content_hash: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+
+
+class ExperimentIssueLink(Base):
+    """Append-only supporting references (§4.3).
+
+    Foreign-key columns on the issue remain preferable for PRIMARY scope; this
+    table exists for the second gate, the third PR, the successor issue and the
+    external artifacts (GitHub issue, ops result) that have no column of their
+    own. It is a pointer list, never a place to restate canonical identity.
+    """
+
+    __tablename__ = "experiment_issue_links"
+    __table_args__ = (
+        Index("ix_experiment_issue_links_issue", "issue_id", "link_type"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    issue_id: Mapped[int] = mapped_column(
+        BigIntId, ForeignKey("experiment_issues.id"), nullable=False
+    )
+    link_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    reference: Mapped[str] = mapped_column(Text, nullable=False)
+    label: Mapped[str | None] = mapped_column(String(200))
+    created_by: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
