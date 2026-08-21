@@ -18,9 +18,15 @@ the fact either.
 
 The `spliced_*` columns shadow `kalshi_bot/theta/tailmodel.py` beside the incumbent model. They
 decide nothing — no gate, no entry and no fill reads them — but they let the replacement model's
-calibration accrue on live data while it is still being validated. `spliced_n_eff` travels with
-the probability because a probability from an underpowered fit is a resolution floor rather than
-an estimate, and pooling the two would read the floor as evidence.
+calibration accrue on live data while it is still being validated.
+
+Everything needed to interpret one of those probabilities travels with it: the shape of the tail
+the strike ACTUALLY prices off (`spliced_active_xi`; upper for `greater`, lower for `less`, NULL
+for `between`), both sides for reference, the declustered exceedance count backing the active
+tail, the fit settings, and BOTH the actual and the requested fit window — those two differ on a
+cold start, and recording only the request would describe a window the fit never saw.
+`spliced_underpowered` marks a row whose active tail is below the evidence bar; such a row
+carries no probability at all, because a floor that looks like an estimate is worse than a null.
 
 Revision ID: b1d5e9f3a7c2
 Revises: e1a2b3c4d5f6
@@ -59,6 +65,7 @@ _COLUMNS = (
     ("spliced_active_clusters", sa.Integer()),
     ("spliced_blocks", sa.Integer()),
     ("spliced_fit_days", sa.Float()),
+    ("spliced_requested_fit_days", sa.Float()),
     ("spliced_tail_q", sa.Float()),
     ("spliced_underpowered", sa.Boolean()),
 )

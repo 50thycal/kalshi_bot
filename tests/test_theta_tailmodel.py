@@ -461,6 +461,38 @@ class TestForwardPath:
         assert out["fwd_5m"] == pytest.approx(25.0, rel=0.02)
         assert out["fwd_15m"] > out["fwd_5m"]
 
+    def test_excursions_are_withheld_when_the_path_is_incomplete(self):
+        # An excursion is a statement about a PATH. Two surviving candle points do not make a
+        # smaller excursion, they make a different quantity — so it is missing, not small.
+        mod = self._mod()
+        row, base = self._row("greater", mtc=30.0)
+        sparse = {base: 100.0, base + 30 * 60: 101.0}      # 2 of 31 expected minutes
+        out = mod.forward(row, sparse)
+        assert out["mae_bps"] is None if "mae_bps" in out else True
+        assert out.get("mae_bps") is None
+        assert out["excursion_excluded"] == "path incomplete"
+        assert out["path_completeness"] < 0.2
+
+    def test_path_completeness_is_observed_over_expected(self):
+        mod = self._mod()
+        row, base = self._row("greater", mtc=30.0)
+        out = mod.forward(row, self._rising(base, n=40))
+        assert out["expected_path_minutes"] == 31
+        assert out["path_completeness"] == pytest.approx(1.0, abs=0.05)
+
+    def test_BETWEEN_strikes_are_excluded_from_directional_excursion(self):
+        # From inside the band a move toward either edge is favourable; from outside a move
+        # toward the band is adverse. One signed excursion cannot represent that, and the
+        # earlier `max(up, -dn)` was wrong from inside and meaningless from outside.
+        mod = self._mod()
+        row, base = self._row("between", mtc=30.0)
+        out = mod.forward(row, self._rising(base, n=40))
+        assert out.get("mae_bps") is None
+        assert out.get("mfe_bps") is None
+        assert out["excursion_excluded"] == "non-directional strike type"
+        # The forward RETURNS are still computed — only the orientation-dependent part is out.
+        assert out["fwd_5m"] is not None
+
     def test_a_rising_market_is_ADVERSE_to_a_sold_greater_strike(self):
         mod = self._mod()
         row, base = self._row("greater")
@@ -517,11 +549,19 @@ class TestForwardPath:
 
 
 class TestSelectionStatistic:
-    """The TRAIN statistic that freezes a configuration must be able to score every candidate.
+    """The TRAIN statistic that freezes a configuration.
 
-    `|log(o/e)|` was undefined at o=0 and silently dropped exactly the configurations whose deep
-    tail produced no hits — which is what a well-calibrated deep tail looks like on a short
-    window. It froze a 30-day window while three 90-day candidates went unscored.
+    Three versions failed here, each found by running it:
+
+    1. `|log(o/e)|` was undefined at zero observed and silently dropped every 90-day candidate.
+    2. Raw Poisson deviance rewarded a configuration that powered almost nothing, because it is
+       an absolute quantity and less data means a smaller sum — `refit-7` froze a window covering
+       5.7% of quotes on that basis.
+    3. Both were AGGREGATE counts over a set each configuration defined for itself
+       (`p_new < 0.02`), so quotes crossed the objective boundary between configurations and the
+       numbers being compared described different populations.
+
+    Now: a proper per-prediction scoring rule on a population fixed by the market's own price.
     """
 
     @staticmethod
@@ -537,30 +577,166 @@ class TestSelectionStatistic:
         spec.loader.exec_module(mod)
         return mod
 
-    def test_a_perfect_match_scores_zero(self):
-        assert self._mod().poisson_deviance(10, 10.0) == pytest.approx(0.0)
-
-    def test_zero_observed_is_SCORED_not_discarded(self):
-        d = self._mod().poisson_deviance(0, 5.0)
-        assert math.isfinite(d)
-        assert d == pytest.approx(10.0)      # 2 * expected
-
-    def test_it_penalises_over_and_under_prediction_alike(self):
+    def test_log_loss_rewards_a_confident_correct_call(self):
         mod = self._mod()
-        assert mod.poisson_deviance(20, 10.0) > 0
-        assert mod.poisson_deviance(5, 10.0) > 0
+        assert mod.log_loss(0.9, True) < mod.log_loss(0.6, True) < mod.log_loss(0.1, True)
 
-    def test_a_closer_match_always_scores_lower(self):
+    def test_log_loss_is_symmetric_between_the_outcomes(self):
         mod = self._mod()
-        assert mod.poisson_deviance(11, 10.0) < mod.poisson_deviance(20, 10.0)
-        assert mod.poisson_deviance(9, 10.0) < mod.poisson_deviance(2, 10.0)
+        assert mod.log_loss(0.3, True) == pytest.approx(mod.log_loss(0.7, False))
 
-    def test_no_expectation_means_no_score_rather_than_a_default(self):
-        assert math.isnan(self._mod().poisson_deviance(3, 0.0))
+    def test_a_certain_wrong_call_is_penalised_but_finite(self):
+        # The eps clamp exists so one confident miss cannot make the whole score infinite and
+        # silently disqualify a configuration on a single market.
+        v = self._mod().log_loss(0.0, True)
+        assert math.isfinite(v) and v > 10
+
+    def test_both_rules_are_proper_the_truth_minimises_expected_score(self):
+        # With a true rate of 0.3, no other forecast beats 0.3 in expectation. That is what
+        # "proper" means, and it is why an aggregate count statistic was the wrong tool.
+        mod = self._mod()
+
+        def expected(rule, p, truth=0.3):
+            return truth * rule(p, True) + (1 - truth) * rule(p, False)
+
+        for rule in (mod.log_loss, mod.brier):
+            best = expected(rule, 0.3)
+            for p in (0.05, 0.15, 0.45, 0.6, 0.9):
+                assert expected(rule, p) > best, (rule.__name__, p)
+
+    def test_brier_is_bounded_where_log_loss_is_not(self):
+        mod = self._mod()
+        assert mod.brier(0.0, True) == pytest.approx(1.0)
+        assert mod.log_loss(0.0, True) > 1.0
+
+    def test_score_population_averages_per_prediction(self):
+        mod = self._mod()
+        rows = [{"p": 0.5, "yes_resolved": True}, {"p": 0.5, "yes_resolved": False}]
+        out = mod.score_population(rows, "p")
+        assert out["n"] == 2
+        assert out["log_loss"] == pytest.approx(math.log(2))
+        assert out["brier"] == pytest.approx(0.25)
+
+    def test_an_empty_population_scores_nothing_rather_than_zero(self):
+        assert self._mod().score_population([], "p") == {"n": 0}
+
+    def test_the_common_population_is_defined_by_the_MARKET_not_the_model(self):
+        # A model-defined population lets quotes cross the boundary between configurations, so
+        # the numbers compared describe different sets. The ceiling is theta's own band.
+        mod = self._mod()
+        assert mod.COMMON_POPULATION_MAX_MID == 20.0
 
     def test_coverage_gate_exists_and_is_strict(self):
         # Without it the sweep rewards a configuration that powers almost nothing: unnormalised
-        # deviance falls with less data, and the quotes a thin configuration powers are the ones
-        # carrying the most tail evidence. Observed for real in run `refit-7`, where a 5-day
-        # window powering 5% of TRAIN scored "best" and was frozen.
+        # scores fall with less data, and the quotes a thin configuration powers are the ones
+        # carrying the most tail evidence. Observed for real in run `refit-7`.
         assert self._mod().MIN_POWERED_COVERAGE >= 0.9
+
+
+class TestShadowUsesItsOwnWindow:
+    """The live shadow must fit over `theta_spliced_fit_days`, not the incumbent's five days.
+
+    An earlier version loaded ONE close set bounded by `theta_trail_days`, handed that object to
+    the shadow, and asked it for `block_returns(window_days=90)`. A 5-day object cannot yield a
+    90-day fit however it is asked — the result was ~205 blocks tagged `fit_days=90`, so the
+    stored metadata described a window the fit never saw. These run a 90-day store through both
+    paths and assert they diverge in exactly the right way.
+    """
+
+    @pytest.fixture(scope="class")
+    def ninety_days(self):
+        rng = random.Random(12)
+        base = 1_700_000_000 // 60 * 60
+        px, out = 65000.0, {}
+        for i in range(90 * 1440):
+            px *= math.exp(rng.gauss(0.0, 0.0006))
+            out[base + i * 60] = px
+        return out
+
+    @pytest.fixture(scope="class")
+    def five_days(self, ninety_days):
+        cutoff = max(ninety_days) - 5 * 86400
+        return {k: v for k, v in ninety_days.items() if k > cutoff}
+
+    def test_the_incumbent_still_sees_only_five_days(self, ninety_days):
+        # `returns` is bounded by the model's OWN trail, so a 90-day store does not widen it.
+        incumbent = SpotModel(ninety_days, trail_days=5.0)
+        n = len(incumbent.returns(max(ninety_days), 35))
+        assert 7000 < n < 7300, n
+
+    def test_the_shadow_window_yields_a_ninety_day_block_sample(self, ninety_days):
+        shadow = SpotModel(ninety_days, trail_days=90.0)
+        blocks = shadow.block_returns(max(ninety_days), 35, window_days=90.0)
+        # 90 days is ~129,600 minutes; at h=35 that is ~3,700 non-overlapping blocks.
+        assert 3500 < len(blocks) < 3800, len(blocks)
+
+    def test_a_five_day_object_CANNOT_produce_a_ninety_day_sample(self, five_days):
+        # The defect, pinned: asking for a wider window than the object holds silently returns
+        # the narrow one, so the fix has to be a second LOAD, not a second argument.
+        model = SpotModel(five_days, trail_days=5.0)
+        blocks = model.block_returns(max(five_days), 35, window_days=90.0)
+        assert len(blocks) < 300, len(blocks)
+
+    def test_stored_fit_metadata_reports_the_ACTUAL_span_not_the_request(self, five_days):
+        model = SpotModel(five_days, trail_days=5.0)
+        blocks = model.block_returns(max(five_days), 35, window_days=90.0)
+        actual = (max(model.closes) - min(model.closes)) / 86400.0
+        m = tm.build(blocks, 35, fit_days=min(90.0, actual), requested_fit_days=90.0)
+        assert m is not None
+        assert m.requested_fit_days == 90.0
+        assert m.fit_days < 6.0, "the actual span must not be reported as the request"
+        assert m.describe()["requested_fit_days"] == 90.0
+
+    def test_a_full_window_reports_matching_requested_and_actual(self, ninety_days):
+        model = SpotModel(ninety_days, trail_days=90.0)
+        blocks = model.block_returns(max(ninety_days), 35, window_days=90.0)
+        actual = (max(model.closes) - min(model.closes)) / 86400.0
+        m = tm.build(blocks, 35, fit_days=min(90.0, actual), requested_fit_days=90.0)
+        assert m.fit_days == pytest.approx(m.requested_fit_days, abs=0.5)
+        assert m.underpowered is False
+
+
+class TestMarginalCoherence:
+    """`zeta` and the severity must describe the SAME distribution.
+
+    An earlier version paired a marginal per-block exceedance rate with a severity fitted to
+    declustered cluster MAXIMA, which is the survival function of nothing.
+    """
+
+    @staticmethod
+    def _clustered(n: int = 2000) -> list[float]:
+        rng = random.Random(21)
+        out = [rng.gauss(0.0, 0.002) for _ in range(n)]
+        for start in (300, 900, 1500):
+            for i in range(start, start + 8):
+                out[i] = 0.03 + rng.random() * 0.01
+        return out
+
+    def test_zeta_is_the_marginal_per_block_exceedance_frequency(self):
+        blocks = self._clustered()
+        fit = tm._fit_side(blocks, 0.95)
+        assert fit.exceedance == pytest.approx(fit.n_excess / len(blocks))
+
+    def test_the_severity_is_fitted_to_marginal_excesses_not_cluster_maxima(self):
+        blocks = self._clustered()
+        fit = tm._fit_side(blocks, 0.95)
+        u = tm._quantile(sorted(blocks), 0.95)
+        marginal = tm.fit_gpd([v - u for v in blocks if v > u])
+        clustered = tm.fit_gpd([c - u for c in tm.decluster(blocks, u)])
+        assert (fit.scale, fit.xi) == pytest.approx((marginal[0], marginal[1]))
+        # And the two really do differ, so the test is not vacuous.
+        assert (marginal[0], marginal[1]) != pytest.approx((clustered[0], clustered[1]))
+
+    def test_declustering_still_governs_POWER_only(self):
+        blocks = self._clustered()
+        fit = tm._fit_side(blocks, 0.95)
+        assert fit.n_clusters < fit.n_excess          # clustering still bites
+        assert fit.powered == (fit.n_clusters >= tm.MIN_TAIL_EXCEEDANCES_FOR_POWER)
+
+    def test_the_survival_function_is_continuous_at_the_threshold(self):
+        # A coherent splice means sf(u) equals the empirical exceedance rate there.
+        blocks = self._clustered()
+        m = tm.build(blocks, 35, tail_q=0.95)
+        u = m.upper.threshold
+        assert m.upper.sf(u) == pytest.approx(m.upper.exceedance)
+        assert m.p_greater(u) == pytest.approx(m.upper.exceedance, rel=0.05)

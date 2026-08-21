@@ -75,6 +75,13 @@ INCUMBENT_TRAIL_DAYS = 5.0   # theta_trail_days — the incumbent is scored AS I
 # deviance falls simply because there is less data, and the quotes a thin configuration DOES
 # power are the ones carrying the most tail evidence — a biased subsample, not a better fit.
 MIN_POWERED_COVERAGE = 0.90
+
+# The scoring population is defined by the MARKET, never by a model's own output. Scoring each
+# configuration on its self-defined `p_new < 0.02` set let quotes cross the objective boundary
+# between configurations, so the numbers being compared described different populations. The
+# common set is every eligible quote whose yes mid is at or below this — theta's own band ceiling,
+# fixed in advance and independent of any model.
+COMMON_POPULATION_MAX_MID = 20.0
 H_BUCKETS = (10, 15, 20, 25, 30, 35)
 PRODUCTS = ("BTC", "ETH")
 COINBASE = "https://api.exchange.coinbase.com"
@@ -413,45 +420,71 @@ def compare_calibration(rows: list[dict], title: str) -> None:
                 "modeled P bucket")
 
 
-def poisson_deviance(observed: int, expected: float) -> float:
-    """Poisson deviance of `observed` against `expected`, the selection statistic.
+def log_loss(p: float, outcome: bool, eps: float = 1e-9) -> float:
+    """Bernoulli log loss for ONE prediction. Lower is better; a proper scoring rule.
 
-    D = 2 * (o * ln(o/e) - (o - e)), with the standard convention 0 * ln(0) = 0 so D = 2e when
-    nothing was observed.
-
-    It replaces |log(o/e)|, which was UNDEFINED at o = 0 and therefore silently dropped every
-    configuration whose deep tail produced no hits — which is exactly what a well-calibrated deep
-    tail looks like on a short window. A selection statistic that cannot score its best candidates
-    is not a selection statistic. Deviance is symmetric in the sense that matters here (it
-    penalises over- and under-prediction alike), always defined, and lower is better.
+    Proper means it is minimised in expectation only by the true probability, so a configuration
+    cannot win by being systematically over- or under-confident — which an aggregate count
+    statistic can be gamed by.
     """
-    if expected <= 0:
-        return float("nan")
-    if observed <= 0:
-        return 2.0 * expected
-    return 2.0 * (observed * math.log(observed / expected) - (observed - expected))
+    q = min(1.0 - eps, max(eps, p))
+    return -(math.log(q) if outcome else math.log(1.0 - q))
+
+
+def brier(p: float, outcome: bool) -> float:
+    """Squared error of one probabilistic prediction. Also proper; reported beside log loss
+    because it is bounded and therefore less dominated by a single confident miss."""
+    return (p - (1.0 if outcome else 0.0)) ** 2
+
+
+def score_population(rows: list[dict], key: str) -> dict:
+    """Mean log loss and Brier over a COMMON population — the same quotes for every
+    configuration, selected on the market's own price rather than on any model's output.
+
+    Two earlier statistics failed here and are worth naming. `|log(o/e)|` on a deep bucket was
+    undefined at zero observed. Aggregate Poisson deviance replaced it but was still computed on
+    a set each configuration defined for itself (`p_new < 0.02`), so quotes crossed the boundary
+    between configurations and the numbers described different populations. Both were also
+    aggregate counts rather than per-prediction scores, which cannot distinguish a model that is
+    right about individual markets from one whose errors happen to cancel.
+    """
+    if not rows:
+        return {"n": 0}
+    ll = sum(log_loss(r[key], r["yes_resolved"]) for r in rows) / len(rows)
+    br = sum(brier(r[key], r["yes_resolved"]) for r in rows) / len(rows)
+    return {"n": len(rows), "log_loss": ll, "brier": br}
 
 
 def sweep(rows_by_cfg: dict[tuple[float, float], list[dict]], train_end: str
           ) -> tuple[float, float] | None:
     """Score every (fit_days, tail_q) on TRAIN, pick ONE, and report it. TEST is not read here.
 
-    Returns the winning config so `main` can score it on TEST exactly once. Choosing on TEST —
-    or choosing after seeing several TEST rows — is the outcome-aware fitting this whole
-    programme exists to stop, so the split is enforced by control flow rather than by a note.
+    Two rules make the comparison mean something:
+
+    * **a common population.** Every configuration is scored on the SAME quotes, selected by the
+      market's own price (`mid <= COMMON_POPULATION_MAX_MID`) and never by a model's output. An
+      earlier version let each configuration define its own deep set from `p_new < 0.02`, so
+      quotes crossed the boundary between configurations and the numbers compared described
+      different populations.
+    * **a proper scoring rule.** Mean Bernoulli log loss per prediction, with Brier beside it.
+      Proper means only the true probability minimises it, so a configuration cannot win by being
+      systematically over-confident — which an aggregate count statistic can be.
+
+    A configuration must also power at least `MIN_POWERED_COVERAGE` of TRAIN quotes: one that
+    powers a thin subset is answering a different question on the quotes that happened to carry
+    the most tail evidence.
+
+    Returns the winning configuration so `main` can score it on the holdout exactly once.
     """
     head("3. CONFIGURATION SELECTION — scored on TRAIN only")
     cut = dt.datetime.fromisoformat(train_end).replace(tzinfo=dt.timezone.utc)
-    print(f"  train: quotes before {train_end}. TEST is not consulted in this section.")
-    print(f"  eligibility: a configuration must power at least "
-          f"{MIN_POWERED_COVERAGE * 100:.0f}% of TRAIN quotes.")
-    print("  A configuration that powers a small subset is not a better configuration — it is")
-    print("  answering a different question on the quotes that happened to carry the most tail")
-    print("  evidence, and its deviance is lower only because it has less data. Scoring is the")
-    print("  MEAN deviance per deep-tail quote, so eligible configurations compare like for like.")
+    print(f"  train: quotes before {train_end}. The holdout is not consulted in this section.")
+    print(f"  common population: yes mid <= {COMMON_POPULATION_MAX_MID:.0f}c, identical for every")
+    print(f"  configuration. Eligibility: powers >= {MIN_POWERED_COVERAGE:.0%} of TRAIN quotes.")
+    print("  Score: mean Bernoulli log loss per prediction (proper; lower is better).")
     print()
-    print(f"  {'fit_days':>9} {'tail_q':>7} {'powered':>9} {'cover':>7} {'expected':>10} "
-          f"{'observed':>9} {'R':>7} {'deviance/quote':>15} {'':>4}")
+    print(f"  {'fit_days':>9} {'tail_q':>7} {'powered':>9} {'cover':>7} {'common n':>9} "
+          f"{'log loss':>10} {'brier':>9} {'R':>7} {'':>4}")
     print("  " + "-" * 88)
     total_train = len({(r["ticker"], r["captured_at"]) for rows in rows_by_cfg.values()
                        for r in rows if r["captured_at"] < cut}) or 1
@@ -461,35 +494,42 @@ def sweep(rows_by_cfg: dict[tuple[float, float], list[dict]], train_end: str
         fit_days, q = cfg
         rs = [r for r in rows_by_cfg[cfg] if r["captured_at"] < cut and r["powered"]]
         cover = len(rs) / total_train
-        if not rs:
-            print(f"  {fit_days:>9.0f} {q:>7.2f} {0:>9} {0.0:>6.1%}  no powered fits on TRAIN")
+        common = [r for r in rs if (r["mid"] or 999) <= COMMON_POPULATION_MAX_MID]
+        if not common:
+            print(f"  {fit_days:>9.0f} {q:>7.2f} {len(rs):>9} {cover:>6.1%}  "
+                  "no quotes in the common population")
             continue
-        exp = sum(r["p_new"] for r in rs)
-        obs = sum(1 for r in rs if r["yes_resolved"])
-        deep = [r for r in rs if r["p_new"] < 0.02]
-        de = sum(r["p_new"] for r in deep)
-        do = sum(1 for r in deep if r["yes_resolved"])
-        dl = poisson_deviance(do, de) / max(1, len(deep))
+        sc = score_population(common, "p_new")
+        exp = sum(r["p_new"] for r in common)
+        obs = sum(1 for r in common if r["yes_resolved"])
         r_all = obs / exp if exp > 0 else float("nan")
         eligible = cover >= MIN_POWERED_COVERAGE
         mark = "" if eligible else "  (coverage too low — not a candidate)"
-        print(f"  {fit_days:>9.0f} {q:>7.2f} {len(rs):>9} {cover:>6.1%} {exp:>10.2f} "
-              f"{obs:>9} {r_all:>7.2f} {dl:>15.5f}{mark}")
-        if eligible and not math.isnan(dl) and dl < best_score:
-            best_score, best = dl, cfg
+        print(f"  {fit_days:>9.0f} {q:>7.2f} {len(rs):>9} {cover:>6.1%} {sc['n']:>9} "
+              f"{sc['log_loss']:>10.5f} {sc['brier']:>9.5f} {r_all:>7.2f}{mark}")
+        if eligible and sc["log_loss"] < best_score:
+            best_score, best = sc["log_loss"], cfg
     print()
     if best is None:
         print("  NO configuration produced a powered, scorable TRAIN fit. Nothing is frozen and")
-        print("  no TEST score may be reported — see the blocker in the summary.")
+        print("  no holdout score may be reported — see the blocker in the summary.")
         return None
     print(f"  FROZEN on TRAIN: fit_days={best[0]:.0f}, tail_q={best[1]:.2f} "
-          f"(deep-tail deviance/quote = {best_score:.5f})")
+          f"(mean log loss = {best_score:.5f})")
     return best
 
 
 def test_once(rows: list[dict], train_end: str, cfg: tuple[float, float]) -> None:
-    """The single permitted look at TEST, for the configuration frozen on TRAIN."""
-    head("4. OUT-OF-SAMPLE SCORE — the frozen configuration, read once")
+    """The frozen configuration scored on the held-back period.
+
+    Labelled HISTORICAL VALIDATION rather than a pristine holdout, deliberately. Run `refit-7`
+    exposed results from this same August period BEFORE the selection statistic and coverage rule
+    were changed for `refit-8`, so the window has informed the scoring design and cannot also
+    certify it. A genuine one-look holdout has to be a period that comes AFTER the specification
+    is frozen; see the reservation in the write-up.
+    """
+    head("4. HISTORICAL VALIDATION — frozen configuration on the held-back period")
+    print("  NOT a pristine holdout: this period was seen before the scoring rule was fixed.")
     cut = dt.datetime.fromisoformat(train_end).replace(tzinfo=dt.timezone.utc)
     rs = [r for r in rows if r["captured_at"] >= cut and r["powered"]]
     print(f"  frozen: fit_days={cfg[0]:.0f}, tail_q={cfg[1]:.2f}   "

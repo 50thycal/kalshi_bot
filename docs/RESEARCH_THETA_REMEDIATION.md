@@ -225,6 +225,24 @@ Both were found by running the sweep, and each would have frozen the wrong thing
 Both are pinned by tests, and the coverage gate is the reason the numbers above can be compared
 across configurations at all.
 
+### 3.6 August is historical validation, not a pristine holdout — and a forward holdout is reserved
+
+Run `refit-7` exposed results from the August test period **before** the selection statistic and
+the coverage rule were changed for `refit-8`. A window that informed the scoring design cannot
+also certify it, however the split is drawn afterwards. So §3.3 is **historical validation**, and
+it is labelled that way in the harness output too.
+
+The negative finding stands regardless — it is a rejection, and seeing the window can only have
+made the model look *better*, not worse. What the window can no longer do is certify a *positive*
+result.
+
+**Reserved:** the model specification, the scoring rule (mean Bernoulli log loss on the common
+`mid ≤ 20¢` population), the coverage gate and the frozen configuration are now fixed. The next
+period of ladder data — from the merge of this work forward — is a genuine one-look holdout, and
+is not to be inspected until the specification has been unchanged across it.
+
+---
+
 ## 4. Stage 4 — the selection-rule A/B (design; not registered, not running)
 
 ### 4.1 Why the earlier recommendation was withdrawn
@@ -243,20 +261,72 @@ the sample attacks the smallest component of the problem.
 
 | element | specification |
 |---|---|
-| **Candidate eligibility** | crypto ladder markets, `minutes_to_close` in [10, 35], yes mid in **[3, 20]¢**, `volume ≥ 100`, two-sided book. Identical in both arms — eligibility is not the treatment. |
+| **Candidate eligibility** | crypto ladder markets, `minutes_to_close` ∈ [10, 35], yes mid ∈ **[3, 20]¢**, `volume ≥ 100`, two-sided book. Identical in both arms — eligibility is not the treatment. |
 | **Control selection score** | `excess = mid − 100·P_model`, descending. Today's rule, unchanged. |
-| **Treatment selection score** | `mid` **ascending** — the cheapest eligible tail first. Exogenous to the model: it is the market's own price, which the model does not produce. |
-| **Treatment veto** | take only if `P_model ≤ ceiling`, ceiling pre-registered at **0.10**. The model may *refuse* a candidate; it may never *promote* one. A veto cannot generate winner's curse, because it removes candidates rather than ordering them. |
-| **Tie handling** | equal `mid` broken by the deterministic ticker hash already used by `abarm` (`docs/MMSELL_OFFSET_AB.md`), so ties are split reproducibly and identically across arms rather than by scan order. |
-| **Per-event cap** | `theta_max_per_event = 3`, both arms, so neither can concentrate on one hourly ladder. |
-| **Independent unit** | the **settled market**. Contracts in one market share one settlement, and strikes in one event share one spot path — the per-event cap keeps that dependence bounded rather than removing it. |
-| **Primary metric** | `realized_tail_hit_ratio_vs_modeled` (R) on the treatment arm. |
-| **Minimum useful effect** | R ≤ **1.5** with the 99% lower bound below it, against the incumbent's measured ~4.0. |
-| **Secondary** | cents/contract, reported but **not gated** — one gate, one estimand. |
-| **Twin coverage** | both arms carry a paper twin at the same instant; a market whose twin is missing is excluded from BOTH arms and counted, and the pair is `BLOCKED_DATA` above 10% exclusion (the standing `MIN_TWIN_MODEL_COVERAGE_PCT` contract). |
-| **Evidence floor** | to be set from stage 2's measured variance. Not guessable now, and inventing one here is exactly the outcome-aware floor-setting this programme exists to stop. |
-| **Maximum horizon** | inclusive, per #247, set with the floor. |
-| **Early failure** | separate `fail_any` floor, so a treatment that is materially worse stops without waiting for the promotion floor. |
+| **Treatment selection score** | `mid` **ascending** — the cheapest eligible tail first. Exogenous: the market's own price, which the model does not produce. |
+| **Treatment veto** | take only if `P_model ≤ 0.10`. The model may *refuse* a candidate; it may never *promote* one. A veto removes candidates rather than ordering them, so it cannot generate winner's curse. |
+| **Tie handling** | equal `mid` broken by the deterministic ticker hash already used by `abarm` (`docs/MMSELL_OFFSET_AB.md`) — reproducible and identical across arms. |
+| **Per-event cap** | `theta_max_per_event = 3`, both arms. |
+| **Independent unit** | the **settled market**. |
+
+### 4.2.1 Primary estimand — treatment versus control, not an arm in isolation
+
+An earlier revision named "treatment-arm R ≤ 1.5" as the primary metric. **That is not an A/B
+estimand at all** — it describes one arm and never compares them. Corrected:
+
+> **Primary:** `log(R_T / R_C)`, with a two-sided 99% interval from the Poisson counts of both
+> arms. Promotion requires the **upper** bound of `log(R_T / R_C)` to be **< 0**, i.e. the
+> treatment's tail miss is smaller than the control's by more than sampling error.
+
+`log` of the ratio rather than the raw ratio because the sampling distribution of a ratio of
+counts is badly skewed and its normal interval misbehaves near zero; on the log scale the two
+directions are symmetric, which is what a comparison needs.
+
+### 4.2.2 Absolute safety clause — the bound direction, corrected
+
+An earlier revision wrote "R ≤ 1.5 with the 99% lower bound below it". **That is backwards**: a
+lower bound below 1.5 is satisfied by a model that misses by 10×. Establishing that a quantity is
+SMALL requires bounding it from ABOVE.
+
+> **Safety:** the one-sided 99% **UPPER** confidence bound on `R_T` must be **≤ 1.5**.
+
+This is a `fail_any`-style clause, not a promotion clause: it can stop the arm on its own, and
+satisfying it does not by itself promote anything. Both conditions must hold to promote.
+
+### 4.2.3 Floors, from stage 2's measured variance
+
+Stage 2 is powered, so these are derived rather than deferred. From `refit-8`, the control-arm
+tail rate on the eligible population is **R_C ≈ 5.4** against an expected count of 4.60 over 105
+selected markets — about **0.044 expected tail events per selected market**.
+
+To resolve `log(R_T / R_C)` at the minimum useful effect (a halving, `log 0.5 = −0.69`) with 80%
+power at a two-sided 99% interval, each arm needs roughly `2·(z_{.995}+z_{.80})² / (0.69²·λ)`
+markets, with λ = 0.044 expected events per market:
+
+| quantity | value |
+|---|---|
+| expected tail events per market (λ) | 0.044 |
+| **promotion evidence floor** | **≈ 1,050 settled markets per arm** |
+| **maximum evidence horizon** (inclusive, #247) | **1,600 settled markets per arm** |
+| **early-failure floor** (`fail_any`) | **300 settled markets per arm** |
+
+At theta4's observed cadence (~48 live orders over five days ≈ 10 markets/day/arm) the promotion
+floor is ~105 days per arm. **That is the honest cost, and it is stated before the arm exists.**
+
+### 4.2.4 Coverage — candidate stream, not twins
+
+Calling two independently-selecting paper arms "twins" was wrong. A twin mirrors another book's
+decisions; these arms *choose differently on purpose*, and a market taken by one and not the
+other **is the treatment effect**, not missing data.
+
+What must be verified instead is that both arms saw the same **candidate stream**:
+
+> **Candidate-stream coverage:** the share of eligible candidates evaluated by both arms in the
+> same cycle. Below **95%**, the comparison is `BLOCKED_DATA` — at that point the arms are being
+> offered different opportunities, which is a scan defect rather than a rule difference.
+
+Divergence in what each arm *takes* from a shared stream is the measurement. Divergence in what
+each arm is *offered* is a bug.
 
 ### 4.3 What this design buys, and what it cannot
 
@@ -269,9 +339,10 @@ simply move from "the model is most wrong here" to "the market prices this lowes
 knows something". That is a **different**, measurable mechanism rather than a self-inflicted one,
 and the arms are constructed so the two can be told apart.
 
-**Still unregistered.** Both the evidence floor and the horizon depend on numbers stage 2 does not
-have. Registering it now would mean choosing a floor before knowing the variance it is supposed to
-control.
+**Still unregistered** — but no longer for want of numbers. The floors in §4.2.3 are derived and
+fixed; what is missing is the operator's decision to run it, and the forward holdout in §3.6 that
+the model specification now needs. Registering it today would put a paper arm on a candidate
+stream whose scoring rule has not yet faced an untouched window.
 
 ## 5. Stage 5 — telemetry (implemented and tested)
 
@@ -345,10 +416,40 @@ bought, and §1 of this document explains mechanically why it could not buy more
 
 ---
 
-## 7. What was deliberately not done
+## 7. The record, stated plainly
 
-`mult` was not increased — the evidence says the failure is shape, not level. No theta parameter
-changed at all; `SpotModel` is untouched and every book prices exactly as before. No refitted tail
-is claimed as validated, because it is not. No book re-armed, retired or created; no gate written
-or re-interpreted; the 50-market early-failure floor was not moved. No live restart. The stage-4
-design is a proposal, not a registration.
+**Degeneracy was a real defect. Removing it improved the deepest probabilities. Historical
+validation still rejects the replacement model, and does not establish degeneracy as the cause of
+theta4's failure.**
+
+Concretely, and without hedging in either direction:
+
+- The incumbent priced **90.8%** of ladder quotes at exactly 0.0, which is not a probability. The
+  spliced model prices none of them there. That is a genuine repair.
+- In the deepest bucket the miss fell from **21.3× to 7.0×** — the incumbent could not even be
+  wrong by a ratio there, because it assigned ~zero.
+- **Overall the two are indistinguishable** (R 1.79 [1.39, 2.27] against 1.71 [1.32, 2.17]), and
+  the replacement still understates 1–5% events by **3.5×–9.8×**, which is the failure mode the
+  acceptance bar names as unacceptable for a short-tail book.
+- **Residual selection bias remains large** under the replacement probabilities.
+
+An earlier revision of this section said "no refitted tail is claimed as validated", which was
+true when written and became false once §3 reported a powered validation. Both statements cannot
+stand: a refitted tail **was** fitted and **was** validated, and it **failed**. That is the claim.
+
+### 7.1 What is still unproven
+
+The cause of theta4's R ≈ 4 is **not identified**. Degeneracy is ruled out as a sufficient
+explanation, and the deep-tail miss survives a coherent EVT refit over a 30–90 day window — so
+whatever misprices theta's tail is not captured by an extreme-value model of realized spot
+returns. The momentum/regime hypothesis remains untested (§5.1 supplies the telemetry; §5.3
+supplies the forward path), and the selection-rule A/B in §4 tests a different mechanism again.
+
+### 7.2 What was deliberately not done
+
+`mult` was not increased — the evidence says the failure is not a scale error, and a second
+doubling would repeat a settled mistake. No theta parameter changed at all; `SpotModel` is
+untouched and every book prices exactly as before. No book re-armed, retired or created; no gate
+written or re-interpreted; the 50-market early-failure floor not moved. No live restart. The
+stage-4 design is a proposal with derived floors, not a registration. `SERIES_TYPES` is untouched
+and the taxonomy repair is routed to Platform Change Review.

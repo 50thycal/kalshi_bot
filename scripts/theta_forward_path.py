@@ -35,6 +35,12 @@ from mmsell_market_types import RO_OPTIONS, _to_libpq_url  # noqa: E402
 OFFSETS_MIN = (5, 15, 30)
 PRODUCTS = ("BTC", "ETH")
 
+# Minimum share of the expected hold that must actually be observed before MFE/MAE mean
+# anything. An excursion is a statement about a PATH; computing it from two surviving candle
+# points and reporting it beside a complete one is how a feed gap becomes a finding. Below this
+# the excursion is missing, not small.
+MIN_PATH_COMPLETENESS = 0.90
+
 
 def product_of(series: str | None) -> str:
     return "ETH" if (series or "").upper().startswith("KXETH") else "BTC"
@@ -102,18 +108,34 @@ def forward(row: dict, closes: dict[int, float]) -> dict:
 
     # Excursions over the whole hold, oriented by what the book SOLD. theta sells the overpriced
     # side, so for a `greater` strike it is short the up-move: spot rising is ADVERSE.
+    expected = max(1, int(round((close_ts - t0) / 60.0)) + 1)
     path = [closes[t] for t in range(t0 // 60 * 60, close_ts + 60, 60) if t in closes]
-    if len(path) >= 2:
-        rets = [math.log(p / s0) * 1e4 for p in path]
-        up, dn = max(rets), min(rets)
-        st = row["strike_type"]
-        if st == "greater":
-            out["mae_bps"], out["mfe_bps"] = up, -dn
-        elif st == "less":
-            out["mae_bps"], out["mfe_bps"] = -dn, up
-        else:                       # `between`: either direction leaves the band
-            out["mae_bps"], out["mfe_bps"] = max(up, -dn), 0.0
-        out["path_minutes"] = len(path)
+    out["path_minutes"] = len(path)
+    out["expected_path_minutes"] = expected
+    out["path_completeness"] = len(path) / expected
+    st = row["strike_type"]
+
+    # BETWEEN is EXCLUDED from directional excursion, not approximated. For a sold `greater` or
+    # `less` the adverse direction is fixed by the strike. For a sold BETWEEN — the book is short
+    # "spot finishes inside [floor, cap]" — it is not: from inside the band a move toward either
+    # edge is favourable, from outside a move toward the band is adverse, and which case applies
+    # changes as spot travels. A single signed excursion cannot represent that, and an earlier
+    # version reported `max(up, -dn)` as adverse and 0.0 as favourable, which is wrong from
+    # inside the band and meaningless from outside. Boundary-aware orientation is possible but
+    # needs its own design and tests; until then these markets are counted and skipped.
+    if st not in ("greater", "less"):
+        out["excursion_excluded"] = "non-directional strike type"
+        return out
+    if out["path_completeness"] < MIN_PATH_COMPLETENESS or len(path) < 2:
+        out["excursion_excluded"] = "path incomplete"
+        return out
+
+    rets = [math.log(p / s0) * 1e4 for p in path]
+    up, dn = max(rets), min(rets)
+    if st == "greater":
+        out["mae_bps"], out["mfe_bps"] = up, -dn
+    else:                                   # `less`
+        out["mae_bps"], out["mfe_bps"] = -dn, up
     return out
 
 
@@ -137,6 +159,25 @@ def section_coverage(rows: list[dict]) -> None:
     for k in keys:
         got = sum(1 for r in rows if r.get(k) is not None and r.get(k) is not False)
         print(f"  {k:<16} {got:>10} {got / n * 100:>9.1f}%")
+    print()
+    print("  PATH COMPLETENESS — observed minutes / expected minutes over the hold. MFE/MAE are")
+    print(f"  withheld below {MIN_PATH_COMPLETENESS:.0%}; an excursion computed from a few")
+    print("  surviving candle points is not a smaller excursion, it is a different quantity.")
+    comp = sorted(r["path_completeness"] for r in rows if r.get("path_completeness") is not None)
+    if comp:
+        def pct(q):
+            return comp[min(len(comp) - 1, int(q * (len(comp) - 1)))]
+        full = sum(1 for c in comp if c >= MIN_PATH_COMPLETENESS)
+        print(f"    p10={pct(.1):.2%}  p50={pct(.5):.2%}  p90={pct(.9):.2%}   "
+              f"at or above threshold: {full}/{len(comp)} ({full / len(comp):.1%})")
+    excl: dict[str, int] = defaultdict(int)
+    for r in rows:
+        if r.get("excursion_excluded"):
+            excl[r["excursion_excluded"]] += 1
+    if excl:
+        print("    excursion exclusions:")
+        for reason, c in sorted(excl.items(), key=lambda kv: -kv[1]):
+            print(f"      {reason:<28} {c:>7} ({c / n * 100:.1f}%)")
     print()
     print("  A feature below ~95% is not usable as a control: the missing rows cluster around")
     print("  feed outages, so dropping them silently selects on exactly the regime being")

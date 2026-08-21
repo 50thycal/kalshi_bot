@@ -167,6 +167,25 @@ class ThetaTracker:
             return None
         return SpotModel(stored, trail_days=s.theta_trail_days)
 
+    def _refresh_shadow_spot(self, session, product: str) -> SpotModel | None:
+        """A SEPARATE close set for the PAPER replacement model, over its own fit window.
+
+        The incumbent's `SpotModel` holds `theta_trail_days` (5) of closes. Asking it for
+        `block_returns(window_days=90)` cannot conjure candles the object does not contain — an
+        earlier version did exactly that and then tagged the result `fit_days=90`, so the stored
+        metadata described a window the fit never saw. The fix is a second load, not a second
+        argument.
+
+        Reads only; the incumbent's object is untouched and still prices every live decision.
+        """
+        s = self.settings
+        want = max(float(s.theta_spliced_fit_days), s.theta_trail_days)
+        since = datetime.now(timezone.utc) - timedelta(days=want)
+        stored = repo.load_spot_closes(session, product, since)
+        if len(stored) < SpotModel.MIN_SAMPLES:
+            return None
+        return SpotModel(stored, trail_days=want)
+
     def _backfill_spot(self, session, product: str, now: datetime) -> int:
         """Extend stored 1-minute closes BACKWARD toward the retention horizon.
 
@@ -230,13 +249,21 @@ class ThetaTracker:
         and the fit depends only on the horizon, so it is cached per (cycle, horizon).
         """
         s = self.settings
+        if model is None:
+            return None
         key = (id(model), now_unix // 60, h_min)
         if key in self._spliced_cache:
             return self._spliced_cache[key]
         try:
-            blocks = model.block_returns(now_unix, h_min,
-                                         window_days=float(s.theta_spliced_fit_days))
-            built = tailmodel.build(blocks, h_min, fit_days=float(s.theta_spliced_fit_days))
+            requested = float(s.theta_spliced_fit_days)
+            blocks = model.block_returns(now_unix, h_min, window_days=requested)
+            # ACTUAL span of the closes this object holds, which is what the fit really saw.
+            # Recorded beside the requested window so a shadow probability can never claim a
+            # history it did not have — a cold start or a partial backfill shows up as a short
+            # `actual_fit_days` instead of a silently mislabelled 90.
+            actual = ((max(model.closes) - min(model.closes)) / 86400.0) if model.closes else 0.0
+            built = tailmodel.build(blocks, h_min, fit_days=min(requested, actual),
+                                    requested_fit_days=requested)
         except Exception:  # noqa: BLE001 — telemetry must never break a trading cycle
             built = None
         # One cycle's worth; the ids and minutes move on and the dict would otherwise grow.
@@ -431,10 +458,18 @@ class ThetaTracker:
         live_tags = s.theta_live_variant_set if s.theta_collect_only else None
 
         models: dict[str, SpotModel | None] = {}
+
+        # Separate close sets for the PAPER replacement model — see _refresh_shadow_spot.
+
+        shadow_models: dict[str, SpotModel | None] = {}
         for product in sorted(set(s.theta_series_map.values())):
             models[product] = self._refresh_spot(session, product)
             if models[product] is not None:
                 summ.products_ok += 1
+            # The paper replacement model gets its OWN closes over its own fit window. Loading
+            # it here rather than reusing the incumbent's object is the whole of the fix: a
+            # 5-day object cannot yield a 90-day fit however it is asked.
+            shadow_models[product] = self._refresh_shadow_spot(session, product)
 
         books = self._books()
         open_count: dict[str, int] = {}
@@ -465,6 +500,7 @@ class ThetaTracker:
         snapshot_rows: list[dict] = []
         for series, product in s.theta_series_map.items():
             model = models.get(product)
+            shadow_model = shadow_models.get(product)
             markets: list[dict] = []
             cursor: str | None = None
             for _ in range(4):
@@ -517,20 +553,28 @@ class ThetaTracker:
                 # this ships, which is the only way stage 2 of the theta remediation ever gets
                 # an out-of-sample window to be validated on.
                 sp: dict = {}
-                if model is not None:
-                    sm = self._spliced(model, now_unix, max(1, int(tte_min)))
+                if shadow_model is not None:
+                    sm = self._spliced(shadow_model, now_unix, max(1, int(tte_min)))
                     if sm is not None:
+                        # A probability is only WRITTEN when the tail it prices off is
+                        # genuinely backed. The metadata is written either way, so an
+                        # unpowered cycle is visible as such rather than absent — but the
+                        # number itself stays NULL, because a floor-dominated value that
+                        # looks like an estimate is worse than no value at all.
+                        powered = sm.powered_for(strike_type)
                         sp = {
-                            "spliced_model_p": tailmodel.p_yes(
-                                sm, model.spot_at(now_unix), strike_type, floor_k, cap_k),
+                            "spliced_model_p": (tailmodel.p_yes(
+                                sm, shadow_model.spot_at(now_unix), strike_type,
+                                floor_k, cap_k) if powered else None),
                             "spliced_active_xi": sm.active_xi(strike_type),
                             "spliced_upper_xi": sm.upper.xi,
                             "spliced_lower_xi": sm.lower.xi,
                             "spliced_active_clusters": sm.active_clusters(strike_type),
                             "spliced_blocks": sm.n,
                             "spliced_fit_days": sm.fit_days,
+                            "spliced_requested_fit_days": sm.requested_fit_days,
                             "spliced_tail_q": sm.tail_q,
-                            "spliced_underpowered": not sm.powered_for(strike_type),
+                            "spliced_underpowered": not powered,
                         }
 
                 snapshot_rows.append({

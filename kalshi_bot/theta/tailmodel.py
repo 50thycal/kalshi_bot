@@ -11,12 +11,19 @@ strike inside the smallest at exactly 1.0. Measured over 111,242 ladder quotes i
 window: **53.7% price at exactly 0 and 39.4% at exactly 1** — 93.1% of the model's output is not
 a probability at all (`docs/RESEARCH_THETA_TAIL_MODEL_DIAGNOSIS.md` §2.3).
 
-That single fact explains the strategy's failure shape. The realized-hit ratio R is 1.00 where
-the model is near the money and rises monotonically to 4.58 beyond z=2.5 — the exact signature
-of a truncated tail. It also explains why `mult=2.0` did not repair it: `vol_mult` rescales the
-THRESHOLD (`x / k`), so it can pull a strike back inside the empirical support, but where
-`x / k` still exceeds `max(rets)` the answer is still exactly zero. Widening a distribution that
-ends at a hard edge moves the edge; it does not remove it.
+It also explains why `mult=2.0` did not repair anything: `vol_mult` rescales the THRESHOLD
+(`x / k`), so it can pull a strike back inside the empirical support, but where `x / k` still
+exceeds `max(rets)` the answer is still exactly zero. Widening a distribution that ends at a hard
+edge moves the edge; it does not remove it.
+
+WHAT THIS MODULE DOES **NOT** CLAIM. An earlier draft of this docstring said the truncation
+"explains the strategy's failure shape". It does not, and the historical validation says so:
+replacing the degenerate output improved the deepest probabilities substantially (the 0–0.2%
+bucket's miss fell from ~21x to ~7x) while leaving the overall miss unchanged (R 1.79 against the
+incumbent's 1.71), still understating 1–5% events by 3.5–9.8x, and leaving residual selection
+bias large. Degeneracy was a real defect and removing it was worth doing. It was not the cause of
+theta4's failure, and this module is not a fix for that failure — see
+`docs/RESEARCH_THETA_REMEDIATION.md`.
 
 WHAT THIS DOES INSTEAD. Extreme-value theory's standard construction — Pickands-Balkema-de Haan:
 the excesses of ANY reasonable distribution over a high threshold converge to a Generalized
@@ -45,10 +52,26 @@ overlapping fit and called that honest. It was not — a denominator in the meta
 correct a fitted shape.
 
 The fit therefore consumes **non-overlapping** h-minute blocks (`SpotModel.block_returns`,
-stepping by h rather than by 1). On top of that, runs-declustering collapses exceedances
-separated by fewer than `RUN_SEPARATION` blocks into one cluster represented by its maximum,
-because volatility clusters survive de-overlapping. What is reported, and what gates "powered",
-is the DECLUSTERED exceedance count, computed per tail SEPARATELY.
+stepping by h rather than by 1).
+
+WHAT THE PROBABILITY IS, AND WHY THE FIT MATCHES IT. The quantity a strike needs is MARGINAL:
+"what is P(the next h-minute return exceeds x)". So both halves of the survival function are
+estimated on the marginal distribution — `zeta` is the per-block exceedance frequency, and the
+GPD severity is fitted to **all** marginal excesses over the threshold.
+
+An earlier version fitted the severity to declustered CLUSTER MAXIMA while keeping `zeta` as the
+raw per-block frequency. That was incoherent: it multiplied a marginal exceedance rate by a
+cluster-max conditional severity, which is the survival function of nothing. Either both halves
+are marginal (this) or both are cluster-based, in which case `zeta` becomes a cluster arrival
+rate and an extremal-index adjustment is needed to return to a per-block probability. The
+marginal form is chosen because a single upcoming block is exactly what a strike asks about, and
+because it needs no extremal-index estimate stacked on an already thin sample.
+
+Declustering did not go away; it changed job. Runs-declustering collapses exceedances separated
+by fewer than `RUN_SEPARATION` blocks into one cluster, and the resulting count measures how much
+INDEPENDENT evidence stands behind the fit — reported per tail, and what gates "powered". It no
+longer touches the estimate. Estimation and uncertainty are different questions, and they were
+conflated.
 
 NO PROBABILITY IS EVER EXACTLY ZERO. Where the GPD produces an estimate, that estimate stands,
 however small — extrapolating is the point. The floor `1 / (2 * n_eff)` (half of what ~n_eff
@@ -107,13 +130,18 @@ class TailFit:
     scale: float          # sigma
     xi: float             # shape
     exceedance: float     # zeta_u = P(block beyond u), empirical over non-overlapping blocks
-    n_excess: int         # raw exceedances over u
-    n_clusters: int       # exceedances AFTER runs-declustering — the evidence that counts
+    n_excess: int         # marginal exceedances over u — what the severity is FITTED to
+    n_clusters: int       # after runs-declustering — the INDEPENDENT evidence behind the fit
     fitted: bool          # False = exponential fallback (too few excesses)
 
     @property
     def powered(self) -> bool:
-        """Whether THIS side carries enough declustered evidence to be read as an estimate."""
+        """Whether THIS side carries enough INDEPENDENT evidence to be read as an estimate.
+
+        The fit uses every marginal excess; the power test uses the declustered count, because
+        dependent excesses inflate a sample without adding information. A fit can therefore be
+        arithmetically well-determined and still unpowered, which is the honest description of
+        one storm's worth of data."""
         return self.fitted and self.n_clusters >= MIN_TAIL_EXCEEDANCES_FOR_POWER
 
     def sf(self, x: float) -> float:
@@ -216,11 +244,11 @@ def _fit_side(vals: list[float], q: float) -> TailFit:
     u = _quantile(sorted(vals), q)
     raw = [v - u for v in vals if v > u]
     clusters = [c - u for c in decluster(vals, u)]
-    # zeta stays on the RAW count: it answers "how often is a block extreme", which clustering
-    # does not change. Only the FIT and the power test run on clusters, because those ask how
-    # many INDEPENDENT extremes there were.
+    # BOTH halves marginal: `zeta` is the per-block exceedance frequency and the severity is
+    # fitted to every marginal excess. Fitting cluster maxima here while keeping a marginal
+    # `zeta` multiplies two different distributions together — see the module docstring.
     zeta = len(raw) / n if n else 0.0
-    sigma, xi, fitted = fit_gpd(clusters)
+    sigma, xi, fitted = fit_gpd(raw)
     if sigma <= 0:
         sigma = 1e-9
     return TailFit(threshold=u, scale=sigma, xi=xi, exceedance=zeta,
@@ -236,7 +264,8 @@ class SplicedReturnModel:
 
     n: int                  # non-overlapping blocks the fit consumed
     horizon_min: int
-    fit_days: float
+    fit_days: float         # ACTUAL span of history the fit saw
+    requested_fit_days: float   # what was ASKED for — the two differ on a cold start
     tail_q: float
     upper: TailFit
     lower: TailFit          # fitted on NEGATED returns; its axis is -r
@@ -340,6 +369,7 @@ class SplicedReturnModel:
         return {
             "blocks": self.n, "n_eff": self.n_eff, "p_floor": self.p_floor,
             "horizon_min": self.horizon_min, "fit_days": self.fit_days,
+            "requested_fit_days": self.requested_fit_days,
             "tail_q": self.tail_q, "run_separation": RUN_SEPARATION,
             "min_tail_exceedances": MIN_TAIL_EXCEEDANCES_FOR_POWER,
             "upper_xi": self.upper.xi, "upper_sigma": self.upper.scale,
@@ -355,7 +385,8 @@ class SplicedReturnModel:
 
 
 def build(blocks: list[float], h_min: int, *, tail_q: float = DEFAULT_TAIL_Q,
-          fit_days: float = 0.0) -> SplicedReturnModel | None:
+          fit_days: float = 0.0, requested_fit_days: float | None = None
+          ) -> SplicedReturnModel | None:
     """Fit both tails over one horizon's NON-OVERLAPPING blocks, in TIME ORDER.
 
     `blocks` must come from `SpotModel.block_returns` (step h), never `SpotModel.returns`
@@ -365,7 +396,9 @@ def build(blocks: list[float], h_min: int, *, tail_q: float = DEFAULT_TAIL_Q,
     if not blocks or len(blocks) < MIN_SAMPLES:
         return None
     return SplicedReturnModel(
-        n=len(blocks), horizon_min=int(h_min), fit_days=float(fit_days), tail_q=float(tail_q),
+        n=len(blocks), horizon_min=int(h_min), fit_days=float(fit_days),
+        requested_fit_days=float(fit_days if requested_fit_days is None else requested_fit_days),
+        tail_q=float(tail_q),
         upper=_fit_side(blocks, tail_q),
         lower=_fit_side([-r for r in blocks], tail_q),
         _sorted=tuple(sorted(blocks)),

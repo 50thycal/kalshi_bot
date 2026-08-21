@@ -104,6 +104,68 @@ its own classification rather than being folded into `scheduled`.
 
 ---
 
+## 2A. PRE-START CHECK — FAILED. Do not create the arms.
+
+The operator's approval was conditional on returning the measured `unclassified_excluded_pct`
+for the eligible non-crypto 5–7¢ population before any arm exists. Measured (ops run
+`unclass-2`, `mmsell_candidate_ticks`, 2026-07-19 → 08-21, 2,139 candidates across 278 series):
+
+| settle mode | markets | share |
+|---|---|---|
+| `in_play` | 1,367 | 63.91% |
+| **`unknown` (unclassified)** | **514** | **24.03%** |
+| `scheduled` | 228 | 10.66% |
+| `discrete` | 30 | 1.40% |
+
+> **`unclassified_excluded_pct` = 24.03%, against a pre-registered block threshold of 5%.**
+> The design would be `BLOCKED_DATA` on its first evaluation. **The arms must not be created.**
+
+That threshold was fixed in §3.2 before this was measured, precisely so the number could not be
+chosen after seeing which side the exclusions fell on. It did its job: it says stop.
+
+### 2A.1 The taxonomy debt is far larger than the six crypto series
+
+The Platform Change Review scope in §2 was drawn from the crypto universe alone. The non-crypto
+gap is an order of magnitude bigger — 514 markets across many series, led by soccer score/spread/
+total families and a long tail:
+
+`KXMLSSCORE` (35), `KXLEAGUESCUPSCORE` (31), `KXLIGAMXSCORE` (30), `KXKFTOUR` (15),
+`KXENGCSSCORE` (11), `KXARGPREMDIVTOTAL` (11), `KXCLUBFSPREAD` (10), `KXCONMEBOLSUDTOTAL` (9),
+`KXBRASILEIROTOTAL` (8), `KXMLSSPREAD` (8), `KXCOPPERD` (7), `KXLOLMAP` (7), …
+
+**The taxonomy repair is therefore a prerequisite for this experiment, not a task running beside
+it.** Any `mode=`-defined arm today silently discards a quarter of its own universe, and which
+quarter is decided by classification debt rather than by settlement behaviour.
+
+### 2A.2 The treatment arm is scarcer than §3.6 estimated
+
+§3.6's ~13 markets/day for the treatment arm was derived from `mmsell10`'s settled-trade
+composition. Measured against the **candidate stream** — the thing that actually limits an arm —
+it is **6.7/day** (228 over 34 days). The control arm runs at 41.1/day.
+
+| | earlier estimate | measured |
+|---|---|---|
+| T supply | ~13/day | **6.7/day** |
+| days to 2,711 markets at +2¢ | ~209 | **~404** |
+
+**At the +2¢ minimum useful effect the experiment takes about thirteen months, not seven.** The
+figure below is corrected accordingly; the earlier one was wrong and is retracted here rather
+than quietly replaced.
+
+### 2A.3 What this changes, and what it does not
+
+The **design** is unaffected — the disjoint partition, the single primary estimand, the derived
+secondary and the stopping rule all stand. What has changed is that two of its preconditions are
+not met today:
+
+1. the universe cannot be partitioned cleanly while 24% of it is unclassifiable;
+2. at measured supply the approved effect size implies a ~13-month horizon.
+
+Both are decisions for the operator, and neither is repairable by a Research Lab session. Until
+they are settled, **nothing is created**.
+
+---
+
 ## 3. Pre-registration
 
 ### 3.1 Primary estimand — disjoint, one comparison
@@ -177,17 +239,18 @@ Per-market sd 23.2¢ (non-crypto). Two-sample, equal cells, 80% power, settled m
 | +3¢ | 943 | 1,205 |
 | +5¢ | 339 | 434 |
 
-**Supply is the binding constraint and is pre-registered as such.** `mmsell10` accrues ~86
-non-crypto settled markets/day in this band. Its flow is ~15% scheduled and ~70% in_play, so:
+**Supply is the binding constraint and is pre-registered as such.** Measured on the CANDIDATE
+STREAM (ops run `unclass-2`), which is what actually limits an arm — an earlier estimate derived
+from settled-trade composition was roughly double the truth and is retracted in §2A.2:
 
-| arm | est. markets/day | days to 2,711 |
+| arm | measured markets/day | days to 2,711 |
 |---|---|---|
-| T (scheduled, non-crypto) | ~13 | **~209** |
-| C (in_play + discrete, non-crypto) | ~64 | ~42 |
+| T (scheduled, non-crypto) | **6.7** | **~404** |
+| C (in_play + discrete, non-crypto) | 41.1 | ~66 |
 
-**At +2¢ this experiment takes about seven months, bounded by the treatment arm.** If that is
-unacceptable the effect size must move **before** the first trade — at +3¢ T needs ~93 days, at
-+5¢ ~33 days. Stating the calendar now is the point; discovering it at month four is how floors
+**At +2¢ this experiment takes about thirteen months, bounded by the treatment arm.** If that is
+unacceptable the effect size must move **before** the first trade — at +3¢ T needs ~180 days, at
++5¢ ~65 days. Stating the calendar now is the point; discovering it at month four is how floors
 get quietly relaxed.
 
 ### 3.7 Stopping rule
@@ -212,15 +275,29 @@ series-substring blocklist. Exact specs are in §3.1 and are the whole implement
 
 ## 4. What is still open, and needs the operator
 
-1. **Approve or move the +2¢ effect**, knowing it implies ~7 months (§3.6).
-2. **Approve the disjoint partition** (T vs C) as the primary, with concentration as a derived
-   secondary (§3.1, §3.3).
-3. **Approve the 5% unclassified block threshold** (§3.2).
-4. **Route the taxonomy repair** through Platform Change Review (§2).
+The four decisions were approved **subject to the pre-start measurement**. That measurement came
+back at 24.03% against a 5% threshold (§2A), so two of them now need revisiting rather than
+executing:
 
-Nothing is created until these are settled.
+| # | decision | status |
+|---|---|---|
+| 1 | disjoint `scheduled` vs `in_play+discrete` primary | **approved, unaffected** |
+| 2 | 5% unclassified coverage block | **approved, and it FIRED** — 24.03% measured |
+| 3 | +2¢ minimum useful effect | approved at a ~7-month horizon; the measured horizon is **~13 months** (§2A.2) |
+| 4 | route six crypto series to Platform Change Review | approved, but the real scope is **~40+ series / 514 markets** (§2A.1) |
 
----
+So the open questions are:
+
+1. **Repair the taxonomy first, or relax the block?** Repair is the honest path — 24% of the
+   universe silently excluded is not a partition — and it makes decision 4 a prerequisite rather
+   than a parallel task. Relaxing the threshold after seeing it fire is the thing the threshold
+   exists to prevent, and is not recommended.
+2. **Accept ~13 months at +2¢, or move the effect size?** At +3¢ the treatment arm needs ~180
+   days, at +5¢ ~65. This is a scope decision, not a statistical one.
+3. **Scope of the Platform Change Review** — six crypto series, or the full non-crypto tail too?
+   The crypto six block the crypto column (§2); the non-crypto ~514 block this design.
+
+**Nothing is created until these are settled.** No Version, no epoch, no deployment, no arm.
 
 ## 5. What this design deliberately does not do
 

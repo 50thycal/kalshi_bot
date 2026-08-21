@@ -878,7 +878,11 @@ class CryptoLadderSnapshot(Base):
     # this probability is an estimate or a resolution floor.
     spliced_active_clusters: Mapped[int | None] = mapped_column(Integer)
     spliced_blocks: Mapped[int | None] = mapped_column(Integer)   # non-overlapping blocks fitted
+    # ACTUAL span of history the fit saw, and what was ASKED for. They differ on a cold start
+    # or a partial backfill, and an earlier version recorded only the request — so a fit over
+    # five days of closes was stored as though it had ninety.
     spliced_fit_days: Mapped[float | None] = mapped_column(Float)
+    spliced_requested_fit_days: Mapped[float | None] = mapped_column(Float)
     spliced_tail_q: Mapped[float | None] = mapped_column(Float)
     # True when the active tail is below the power bar; such a row must never be pooled with a
     # powered one, and must never be read as evidence.
