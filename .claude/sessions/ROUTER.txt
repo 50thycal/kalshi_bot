@@ -19,4 +19,9 @@ task-specific), ASK before substantive repo work:
 Then read .claude/sessions/<role>.md and follow it. The role is STICKY for the
 whole session — do not ask again. Do not silently cross a role boundary: a
 read-only role that finds a needed write RECOMMENDS the owning role.
+
+Problems are durable too: an anomaly, defect, incident or open question belongs
+in an Experiment OS ISSUE (docs/EXPERIMENT_OS_ISSUES.md), not in chat. A ticket
+routes work to the role that owns the problem — there is no fixer role — and it
+never changes a lifecycle state, a gate or a verdict.
 === END ROUTER ===

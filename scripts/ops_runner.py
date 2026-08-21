@@ -10,6 +10,9 @@ ops/request.json shapes:
   {"type": "db",   "sql": "select ...", "max_rows": 200}
   {"type": "script", "name": "weather_model_check", "args": ["--sigma", "1.5"]}
   {"type": "xos", "command": "control-tower"}           # canonical Experiment OS read CLI
+  {"type": "xos", "command": "issue-list"}              # open investigations
+  {"type": "xos", "command": "issue-show", "args": ["XOS-000123"]}
+  {"type": "xos", "command": "issue-candidates"}        # anomalies with no open issue
   {"type": "env"}                                       # read allowlisted Railway env vars
   {"type": "env", "set": {"KILL_SWITCH": "false"}}      # set allowlisted vars + redeploy
   {"type": "noop"}   # placeholder; do nothing
@@ -44,6 +47,17 @@ REQUEST_PATH = os.environ.get("OPS_REQUEST_PATH", "ops/request.json")
 
 # Read-only analysis scripts (stdlib + psycopg only) runnable via the ops channel.
 # Each connects with DATABASE_URL_RO and a read-only session, like db_query.py.
+# Read-only `issue` subcommands, exposed on the ops channel under flat names.
+# Investigations are durable Experiment OS state (docs/EXPERIMENT_OS_ISSUES.md),
+# so every role reads them through the canonical CLI like everything else. The
+# WRITING subcommands are deliberately not here — this channel is read-only
+# against Postgres by design and the worker remains the only writer.
+XOS_ISSUE_READS: dict[str, list[str]] = {
+    "issue-list": ["issue", "list"],
+    "issue-show": ["issue", "show"],
+    "issue-candidates": ["issue", "candidates"],
+}
+
 ALLOWED_SCRIPTS = (
     "weather_pnl",
     "weather_experiments",
@@ -229,13 +243,18 @@ def main() -> int:
         allowed = {
             "control-tower", "list", "show", "transitions", "platform", "tag",
             "scoreboard", "enforcement", "readiness", "evaluate-gates", "metric",
-        }
+        } | set(XOS_ISSUE_READS)
         command = (req.get("command") or "control-tower").strip()
         if command not in allowed:
             print(f"xos command {command!r} is not allowlisted (allowed: "
                   f"{sorted(allowed)})", file=sys.stderr)
             return 1
-        argv = [command] + [str(a) for a in (req.get("args") or [])]
+        # The issue READS are exposed under hyphenated names so the allowlist is
+        # a flat set of exact strings. The writing `issue` subcommands are
+        # deliberately absent and cannot be reached from here: they refuse to run
+        # against DATABASE_URL_RO, which is the only URL this channel ever has.
+        argv = list(XOS_ISSUE_READS.get(command, [command]))
+        argv += [str(a) for a in (req.get("args") or [])]
         ro = os.environ.get("DATABASE_URL_RO")
         if ro:
             # The CLI prefers DATABASE_URL_RO already; set both so nothing can

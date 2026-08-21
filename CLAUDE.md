@@ -46,8 +46,14 @@ Enforcement is **`NEW_ONLY`** in production since **2026-08-16T14:34:42.892897Z*
 - Gate verdicts are **recorded**, by the designated evaluator, on a bounded
   cadence. Automatic evaluation is allowed; automatic promotion never is. A dry
   run (including the Control Tower's) authorizes nothing.
+- Problems are durable state too. An anomaly, suspected defect, incident,
+  scientific question or shared-platform problem belongs in an **Experiment OS
+  issue** (`docs/EXPERIMENT_OS_ISSUES.md`), not in prose. A ticket routes work to
+  the existing role that owns the problem — there is no fixer role — and it never
+  changes a lifecycle state, gate, verdict, epoch, Version, Platform Revision or
+  exposure as a side effect.
 - Read it: `docs/EXPERIMENT_OS_FOUNDATION.md`, `_METRICS`, `_ENFORCEMENT`,
-  `_PLATFORM_IMPACT`, `_GATE_RESULTS`, `_MIGRATION`; spec in
+  `_PLATFORM_IMPACT`, `_GATE_RESULTS`, `_ISSUES`, `_MIGRATION`; spec in
   `docs/EXPERIMENT_OPERATING_SYSTEM_SPEC.md`.
 
 ## Session role — establish this first
@@ -121,6 +127,7 @@ Full mechanism, standing analysis commands and gotchas: **`docs/OPS_RUNBOOK.md`*
 - Session roles → `.claude/sessions/README.md`
 - Ops + standing analyses → `docs/OPS_RUNBOOK.md`
 - Platform change protocol → `docs/EXPERIMENT_OS_PLATFORM_IMPACT.md`
+- Investigation / issue workflow → `docs/EXPERIMENT_OS_ISSUES.md`
 - Shared skills → `.claude/skills/` (research: `kalshi-idea-model`,
   `kalshi-probe-builder`, `kalshi-strategy`; evo: `evo-ticket-triage`;
   live canary: `live-paper-parallel`; evo readability: `bot-readable-strategy`)

@@ -56,7 +56,26 @@ To run a request:
    so the operating layer can never drift from Experiment OS the way the retired
    status checkers drifted from each other. Allowlisted commands: `control-tower`,
    `list`, `show`, `transitions`, `platform`, `tag`, `scoreboard`, `enforcement`,
-   `readiness`, `evaluate-gates`, `metric`. Extra CLI flags go in `"args"`.
+   `readiness`, `evaluate-gates`, `metric`, `issue-list`, `issue-show`,
+   `issue-candidates`. Extra CLI flags go in `"args"`.
+
+   `issue-*` reads the durable investigation queue
+   (`docs/EXPERIMENT_OS_ISSUES.md`): open issues, one investigation with its full
+   append-only history, and the anomalies the Control Tower detects that no open
+   issue covers.
+
+   ```jsonc
+   {"type":"xos","command":"issue-list","id":"iss-1"}
+   {"type":"xos","command":"issue-list","args":["--owner","LIVE_OPS"],"id":"iss-2"}
+   {"type":"xos","command":"issue-show","args":["XOS-000123"],"id":"iss-3"}
+   {"type":"xos","command":"issue-candidates","id":"iss-4"}
+   ```
+
+   Only those three are allowlisted, and only those three are reads. Every other
+   `issue` subcommand WRITES and refuses to run against `DATABASE_URL_RO` — which
+   is the only connection this channel ever has. **The worker remains the only
+   writer**; issue writes happen where a writable `DATABASE_URL` is the only URL
+   present. Do not add a writable path here.
 
    `metric` computes ONE canonical metric at an explicit scope and prints its
    value with full provenance — the only way to exercise a provider against
