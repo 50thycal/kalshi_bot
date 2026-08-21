@@ -56,6 +56,10 @@ XOS_ISSUE_READS: dict[str, list[str]] = {
     "issue-list": ["issue", "list"],
     "issue-show": ["issue", "show"],
     "issue-candidates": ["issue", "candidates"],
+    # READ-ONLY preview of the findings import/reconciliation. The write itself
+    # is NOT reachable from here — it runs on the worker via
+    # EXPERIMENT_OS_RECONCILE_FINDINGS_ON_BOOT.
+    "issue-findings-plan": ["issue", "findings-plan"],
 }
 
 ALLOWED_SCRIPTS = (

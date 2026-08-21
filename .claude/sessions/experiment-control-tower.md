@@ -90,8 +90,14 @@ performance number:
 Rules that bind this role:
 
 - **You may not create or mutate a ticket.** Opening one is a write. Report the
-  candidate, name the recommended owner, and hand off — the same way you hand off
-  a gate evaluation. Rendering the report writes nothing, by construction.
+  candidate **with its fingerprint**, name the recommended owner, and hand off —
+  the same way you hand off a gate evaluation. Rendering writes nothing.
+  The owning role adopts it with
+  `issue open-candidate <fingerprint> --actor … --opened-by-role …`, which copies
+  the detector, fingerprint, exact lineage, verdict and routing so the ticket
+  actually **covers** the candidate. Never hand off "open a ticket for this"
+  without the fingerprint: an issue opened by hand cannot match the candidate,
+  and this report will keep listing the anomaly as unticketed forever.
 - **A ticket status is never a verdict and never lifecycle state.** An open issue
   does not make a PASS provisional; a RESOLVED issue does not make a blocked gate
   evaluable, and never suppresses an anomaly that is currently recurring.

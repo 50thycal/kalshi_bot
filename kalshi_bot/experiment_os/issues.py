@@ -71,6 +71,7 @@ from .models import (
 from .service import ExperimentOsError
 
 __all__ = [
+    "CandidateNotAdoptable",
     "IssueClassification",
     "IssueDisposition",
     "IssueError",
@@ -94,6 +95,7 @@ __all__ = [
     "list_issues",
     "mark_duplicate",
     "open_child_issue",
+    "open_issue_from_candidate",
     "propose_issue_fix",
     "recommend_owner",
     "record_disposition",
@@ -439,6 +441,123 @@ def create_issue(
         payload=payload, to_status=IssueStatus.OPEN.value,
         to_owner_role=owner, to_classification=resolved_classification,
         occurred_at=stamp,
+    )
+    return issue
+
+
+class CandidateNotAdoptable(IssueError):
+    """A fingerprint could not be resolved to exactly one open ticket candidate.
+
+    Deliberately distinct from a generic error so the CLI can say WHICH of the
+    four refusals happened — unknown/stale, ambiguous, or already covered are
+    different facts about the world and lead to different next actions."""
+
+
+def open_issue_from_candidate(
+    session,
+    fingerprint: str,
+    *,
+    actor: str,
+    opened_by_role: str,
+    candidates: list[dict] | None = None,
+    evaluate: bool = True,
+    now: datetime | None = None,
+) -> ExperimentIssue:
+    """Adopt a Control Tower candidate into a durable issue, scope intact.
+
+    This closes the gap that made the documented workflow unusable end to end.
+    The Tower detects an anomaly and computes its deterministic fingerprint and
+    exact lineage; opening a ticket by hand could not carry either, so the new
+    issue never matched the candidate that caused it and the Tower went on
+    reporting the same anomaly as UNTICKETED forever. Adoption copies the
+    candidate's own detector, fingerprint, anomaly kind, scope, verdict and
+    routing, so the ticket covers the thing it was opened for.
+
+    The candidate set comes from the read-only Tower path, so what is adopted is
+    what the report currently shows — not a fingerprint a caller typed from
+    memory. A stale one is refused rather than resurrected as a ticket for an
+    anomaly that has since cleared.
+
+    Writes an issue, its CREATED event and one CONTROL_TOWER evidence row. It
+    performs no lifecycle, gate, Version, Epoch, Platform Revision, exposure or
+    live action — like every other function in this module.
+    """
+    fingerprint = _require_text(fingerprint, "fingerprint")
+    if candidates is None:
+        from . import control_tower  # lazy: heavy, and only this path needs it
+
+        candidates = control_tower.detected_candidates(session, evaluate=evaluate)
+
+    matches = [c for c in candidates if c.get("fingerprint") == fingerprint]
+    if not matches:
+        raise CandidateNotAdoptable(
+            f"no candidate with fingerprint {fingerprint[:16]}… is currently "
+            "detected. Either it is not a fingerprint this report produces, or "
+            "the anomaly has cleared since it was read — run `issue candidates` "
+            "for the current set. A cleared anomaly must not become a ticket"
+        )
+    if len(matches) > 1:
+        scopes = ", ".join(sorted(c["scope"] for c in matches))
+        raise CandidateNotAdoptable(
+            f"fingerprint {fingerprint[:16]}… matches {len(matches)} candidates "
+            f"({scopes}); refusing to guess which one to open"
+        )
+
+    candidate = matches[0]
+    if candidate.get("covered_by"):
+        raise CandidateNotAdoptable(
+            f"{candidate['covered_by']} ({candidate.get('covering_status')}) "
+            f"already covers this anomaly, owned by "
+            f"{candidate.get('covering_owner')}. Update that investigation "
+            "instead of opening a second ticket for one problem"
+        )
+
+    issue = create_issue(
+        session,
+        title=candidate["title"],
+        problem_statement=candidate.get("detail"),
+        opened_by_role=opened_by_role,
+        opened_by_actor=actor,
+        # The candidate's OWN routing, not a fresh opinion: the report the
+        # operator read and the ticket they opened must agree.
+        classification=candidate["recommended_classification"],
+        severity=candidate["severity"],
+        priority=candidate["priority"],
+        current_owner_role=candidate["recommended_owner"],
+        owner_rationale=candidate["rationale"],
+        # Exact lineage, straight from the detection.
+        experiment=candidate.get("experiment_id"),
+        version=candidate.get("version_id"),
+        epoch=candidate.get("epoch_id"),
+        deployment=candidate.get("deployment_id"),
+        gate=candidate.get("gate_id"),
+        detector=candidate["detector"],
+        detector_fingerprint=candidate["fingerprint"],
+        anomaly_kind=candidate.get("anomaly_kind"),
+        gate_verdict=candidate.get("gate_verdict"),
+        evidence_summary=candidate.get("detail"),
+        details_json={
+            "adopted_from_candidate": True,
+            "candidate_scope": candidate.get("scope"),
+            # `anomaly_kind` and the verdict have no column of their own: the
+            # kind is encoded in the fingerprint and both are on the CREATED
+            # event, but neither is readable without work. Adoption's whole
+            # point is that the ticket carries what was actually seen.
+            "anomaly_kind": candidate.get("anomaly_kind"),
+            "gate_verdict": candidate.get("gate_verdict"),
+            "requires_operator_triage": candidate.get("requires_operator_triage"),
+        },
+        now=now,
+    )
+    add_issue_evidence(
+        session, issue,
+        evidence_type=IssueEvidenceType.CONTROL_TOWER.value,
+        summary=(
+            f"detected by {candidate['detector']} at {candidate['scope']}"
+            + (f": {candidate['detail']}" if candidate.get("detail") else "")
+        ),
+        source_ref="experiment_os.cli control-tower (UNTICKETED ANOMALIES)",
+        captured_by=actor, actor_role=opened_by_role, captured_at=now,
     )
     return issue
 

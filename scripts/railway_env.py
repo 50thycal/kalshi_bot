@@ -56,6 +56,10 @@ ALLOWED_VARS = frozenset({
     # stop trading. EXPERIMENT_OS_ENFORCEMENT_MODE only RECORDS the declared mode after
     # production_readiness() passes at that instant — a red checklist changes nothing,
     # and force stays a human decision made through a different door.
+    # Same door, same reasoning, for the contract-findings import + reconciliation
+    # (docs/EXPERIMENT_OS_ISSUES.md): bounded to that one operation, idempotent,
+    # and previewable read-only first via the xos `issue-findings-plan` command.
+    "EXPERIMENT_OS_RECONCILE_FINDINGS_ON_BOOT",
     "EXPERIMENT_OS_IMPORT_ON_BOOT", "EXPERIMENT_OS_ENFORCEMENT_MODE",
     "EXPERIMENT_OS_CUTOVER_ID", "EXPERIMENT_OS_CUTOVER_ACTOR",
     "EXPERIMENT_OS_CUTOVER_REASON",

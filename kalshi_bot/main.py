@@ -101,6 +101,27 @@ def run() -> int:
                 extra={"extra_fields": {"error": str(exc)}},
             )
 
+    # 2b-ii) Experiment OS contract-findings import + reconciliation (flag-gated,
+    # idempotent, bounded to that one operation). The ops channel is read-only
+    # against Postgres, so this hook is the only path that can execute it in
+    # production. Guarded exactly like 2b: it creates issue rows and can never
+    # transition an experiment, touch a gate or verdict, or stop the worker.
+    if settings.experiment_os_reconcile_findings_on_boot:
+        try:
+            from .experiment_os.issue_import import run_boot_reconciliation
+
+            with session_scope() as session:
+                result = run_boot_reconciliation(session)
+            logger.info(
+                "experiment OS findings import/reconciliation complete",
+                extra={"extra_fields": {"result": result}},
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.error(
+                "experiment OS findings reconciliation hook failed; continuing to trade",
+                extra={"extra_fields": {"error": str(exc)}},
+            )
+
     # 2c) Experiment OS enforcement: record an operator-declared cutover (no-op
     # unless EXPERIMENT_OS_ENFORCEMENT_MODE names a mode we are not already in,
     # and only after readiness passes), then load the recorded mode (OFF when
