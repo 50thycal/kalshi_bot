@@ -351,3 +351,288 @@ def test_the_control_tower_no_longer_reads_the_registry():
     source = pathlib.Path(ct.__file__).read_text()
     assert "findings as findings_mod" not in source
     assert "findings_mod" not in source
+
+
+# ---------------------------------------------------------------------------
+# Reconciliation with the operator's later decision
+# ---------------------------------------------------------------------------
+#
+# The remedy recorded at migration time — "a corrected native successor Version"
+# — is STALE. Both live canaries were stood down and both proposed v2 contracts
+# were withdrawn, so importing the findings unreconciled would put two tickets in
+# front of the next reader asking for work that has already been declined.
+#
+# The defect itself is NOT withdrawn: it remains true of the historical Version,
+# keeps its original evidence and Version binding, and stays queryable. What
+# changes is only what follows from it, which is nothing.
+
+
+def _import_and_reconcile(s):
+    report = issue_import.import_and_reconcile(s)
+    s.commit()
+    return report
+
+
+def test_the_withdrawal_artifacts_all_exist():
+    """The closure's authority is the merged decision. A citation that does not
+    resolve is an assertion — the same rule that governs the defect itself."""
+    import pathlib
+
+    root = pathlib.Path(__file__).resolve().parents[1]
+    docs = [
+        issue_import.WITHDRAWAL_EVIDENCE_DOC,
+        issue_import.STAND_DOWN_EVIDENCE_DOC,
+        *issue_import.WITHDRAWAL_CAUSE_DOC.values(),
+    ]
+    for doc in docs:
+        assert (root / doc).is_file(), doc
+    # ...and the withdrawal document actually says it was withdrawn.
+    banner = (root / issue_import.WITHDRAWAL_EVIDENCE_DOC).read_text()
+    assert "WITHDRAWN" in banner
+    assert "not to be frozen" in banner or "not to be created" in banner
+    assert set(issue_import.WITHDRAWAL_CAUSE_DOC) == set(FINDING_KEYS)
+
+
+def test_both_findings_close_no_action_with_the_stand_down_recorded(xos_session,
+                                                                    xos_platform):
+    s = xos_session
+    _both_books(s)
+    report = _import_and_reconcile(s)
+
+    assert {r["experiment"] for r in report["reconcile"]["reconciled"]} == set(
+        FINDING_KEYS)
+    issues = ix.list_issues(s, detector=ipol.DETECTOR_CONTRACT_DEFECT)
+    assert len(issues) == 2
+    for issue in issues:
+        assert issue.status == "CLOSED_NO_ACTION"
+        assert issue.disposition == "NO_ACTION"
+        assert issue.requires_new_version is False
+        assert issue.requires_new_epoch is False
+        assert issue.requires_platform_revision is False
+        # TRUE and staying true: the contract is stood down, and that is the
+        # standing operational state this issue is closed against.
+        assert issue.requires_pause_or_stand_down is True
+        # Not RESOLVED: nothing was fixed.
+        assert issue.resolved_at is None
+
+
+def test_the_closure_explains_itself_without_erasing_the_defect(xos_session,
+                                                                xos_platform):
+    s = xos_session
+    _both_books(s)
+    _import_and_reconcile(s)
+
+    for issue in ix.list_issues(s, detector=ipol.DETECTOR_CONTRACT_DEFECT):
+        closing = [e for e in ix.issue_events(s, issue)
+                   if e.event_type == "CLOSED_NO_ACTION"]
+        assert len(closing) == 1
+        reason = closing[0].reason
+        assert "remains true of historical Version 1" in reason
+        assert "stood down" in reason
+        assert "withdrawn" in reason
+        assert "paper research" in reason
+        # The original defect detail is still on the issue, untouched.
+        assert issue.details_json["detail"], "the proven defect must survive"
+        assert issue.details_json["evidence_doc"] == (
+            "docs/RESEARCH_LIVE_CANARY_CONTRACT_DEFECT.md")
+
+
+def test_the_history_shows_the_remedy_being_withdrawn(xos_session, xos_platform):
+    """The point of an append-only history: a reader can see that a successor
+    Version WAS the plan and that the operator withdrew it, not just the tidy
+    end state."""
+    s = xos_session
+    _both_books(s)
+    _import_and_reconcile(s)
+
+    for issue in ix.list_issues(s, detector=ipol.DETECTOR_CONTRACT_DEFECT):
+        events = ix.issue_events(s, issue)
+        types = [e.event_type for e in events]
+        # The migration's own reasoning survives...
+        dispositions = [e for e in events if e.event_type == "DISPOSITION_DECIDED"]
+        assert [d.payload_json["disposition"] for d in dispositions] == [
+            "NEW_VERSION", "NO_ACTION"]
+        # ...and so does the moment it stopped applying.
+        withdrawn = [e for e in events
+                     if e.event_type == "STATUS_CHANGED"
+                     and e.to_status == "INVESTIGATING"
+                     and "WITHDRAWN" in (e.reason or "")]
+        assert len(withdrawn) == 1
+        assert types[-1] == "CLOSED_NO_ACTION"
+
+
+def test_the_decision_is_linked_not_just_asserted(xos_session, xos_platform):
+    s = xos_session
+    _both_books(s)
+    _import_and_reconcile(s)
+
+    for issue in ix.list_issues(s, detector=ipol.DETECTOR_CONTRACT_DEFECT):
+        refs = {link_row.reference for link_row in ix.issue_links(s, issue)}
+        assert issue_import.WITHDRAWAL_EVIDENCE_DOC in refs
+        assert issue_import.STAND_DOWN_EVIDENCE_DOC in refs
+        assert issue_import.WITHDRAWAL_PR_REF in refs
+        # the per-book cause doc is linked too
+        assert any(r.endswith("_DECONFOUNDING.md") or r.endswith("_DIAGNOSIS.md")
+                   for r in refs)
+        # ...and the withdrawal is cited as evidence, not only as a link.
+        docs = [e.source_ref for e in ix.issue_evidence(s, issue)]
+        assert issue_import.WITHDRAWAL_EVIDENCE_DOC in docs
+        assert "docs/RESEARCH_LIVE_CANARY_CONTRACT_DEFECT.md" in docs, (
+            "the ORIGINAL research evidence must be preserved"
+        )
+
+
+def test_reconciliation_is_idempotent(xos_session, xos_platform):
+    """A repeat run must not reopen, reset status, restore NEW_VERSION, or
+    duplicate evidence and events."""
+    s = xos_session
+    _both_books(s)
+    _import_and_reconcile(s)
+
+    def _snapshot():
+        return {
+            i.issue_key: (
+                i.status, i.disposition, i.requires_new_version,
+                i.requires_pause_or_stand_down,
+                len(ix.issue_events(s, i)), len(ix.issue_evidence(s, i)),
+                len(ix.issue_links(s, i)),
+            )
+            for i in ix.list_issues(s)
+        }
+
+    before = _snapshot()
+    for _ in range(3):
+        again = _import_and_reconcile(s)
+        assert again["import"]["created"] == []
+        assert again["reconcile"]["reconciled"] == []
+        assert {r["issue_key"] for r in again["reconcile"]["already_reconciled"]} == (
+            set(before)
+        )
+    assert _snapshot() == before
+
+
+def test_a_rerun_cannot_resurrect_the_stale_disposition(xos_session, xos_platform):
+    """The specific regression this guards: a second import restoring
+    ACTION_REQUIRED / NEW_VERSION and re-scheduling withdrawn work."""
+    s = xos_session
+    _both_books(s)
+    _import_and_reconcile(s)
+    for _ in range(2):
+        _import_and_reconcile(s)
+    for issue in ix.list_issues(s):
+        assert issue.status != "ACTION_REQUIRED"
+        assert issue.disposition != "NEW_VERSION"
+        assert issue.requires_new_version is False
+
+
+def test_reconciling_before_importing_is_a_clean_skip(xos_session, xos_platform):
+    s = xos_session
+    _both_books(s)
+    report = issue_import.reconcile_withdrawn_successors(s)
+    s.commit()
+    assert report["reconciled"] == []
+    assert {r["reason"] for r in report["skipped"]} == {
+        "finding has not been imported yet"}
+
+
+def test_reconciliation_changes_no_experiment_state_or_gate(xos_session,
+                                                            xos_platform):
+    """Closing a ticket about a stood-down contract must not touch the contract."""
+    s = xos_session
+    books = _both_books(s)
+    before = {
+        key: (exp.state, ver.frozen_at, gate.spec_hash, gate.evidence_started_at,
+              epoch.ended_at, len(read.transitions_for(s, exp)),
+              len(read.gate_results_for(s, gate)),
+              len(read.versions_for(s, exp)), len(read.epochs_for(s, ver)))
+        for key, (exp, ver, epoch, gate) in books.items()
+    }
+    _import_and_reconcile(s)
+    for key, (exp, ver, epoch, gate) in books.items():
+        s.refresh(exp)
+        assert before[key] == (
+            exp.state, ver.frozen_at, gate.spec_hash, gate.evidence_started_at,
+            epoch.ended_at, len(read.transitions_for(s, exp)),
+            len(read.gate_results_for(s, gate)),
+            len(read.versions_for(s, exp)), len(read.epochs_for(s, ver)))
+
+
+def test_no_withdrawn_successor_version_is_created(xos_session, xos_platform):
+    """The reconciliation records that v2 will NOT be created. Creating one
+    would be the exact opposite of the decision it is recording."""
+    s = xos_session
+    books = _both_books(s)
+    _import_and_reconcile(s)
+    for _key, (exp, _ver, _epoch, _gate) in books.items():
+        versions = read.versions_for(s, exp)
+        assert [v.version for v in versions] == [1], (
+            "no successor Version may exist after recording that it was withdrawn"
+        )
+
+
+def test_a_closed_finding_is_no_longer_an_active_control_tower_blocker(
+        xos_session, xos_platform):
+    """The stood-down contracts must stop demanding attention — while the
+    investigation stays queryable for anyone asking what happened."""
+    s = xos_session
+    books = _both_books(s)
+    _import_and_reconcile(s)
+
+    rep = ct.build_report(s, evaluate=True)
+    assert rep.contract_findings == []
+    assert "CONTRACT DEFECT" not in ct.render(rep, session=s)
+    for _key, (exp, _ver, _epoch, _gate) in books.items():
+        assert read.contract_defect_findings(s, exp, 1) == []
+
+    # ...and it is still fully readable.
+    assert len(ix.list_issues(s)) == 2
+    for issue in ix.list_issues(s):
+        detail = read.issue_detail(s, issue)
+        assert detail["status"] == "CLOSED_NO_ACTION"
+        assert detail["events"] and detail["evidence"] and detail["links"]
+
+
+# ---------------------------------------------------------------------------
+# The read-only production preview
+# ---------------------------------------------------------------------------
+
+
+def test_the_plan_is_read_only_and_describes_the_work(xos_session, xos_platform):
+    """The ops channel cannot run a write-and-rollback dry run, so the plan must
+    answer the same question with plain selects."""
+    from sqlalchemy import event
+
+    s = xos_session
+    _both_books(s)
+    written: list[str] = []
+
+    def _spy(session, flush_context, instances):
+        for obj in list(session.new) + list(session.dirty) + list(session.deleted):
+            written.append(type(obj).__name__)
+
+    event.listen(type(s), "before_flush", _spy)
+    try:
+        plan = issue_import.plan(s)
+    finally:
+        event.remove(type(s), "before_flush", _spy)
+
+    assert written == []
+    assert {r["action"] for r in plan["plan"]} == {"IMPORT_THEN_CLOSE_NO_ACTION"}
+    assert plan["reconciliation_key"] == issue_import.RECONCILIATION_KEY
+
+
+def test_the_plan_reports_a_no_op_once_reconciled(xos_session, xos_platform):
+    s = xos_session
+    _both_books(s)
+    _import_and_reconcile(s)
+    plan = issue_import.plan(s)
+    assert {r["action"] for r in plan["plan"]} == {"NO_OP"}
+    assert all(r["status"] == "CLOSED_NO_ACTION" for r in plan["plan"])
+
+
+def test_the_plan_says_skip_when_the_experiment_is_absent(xos_session,
+                                                          xos_platform):
+    s = xos_session
+    plan = issue_import.plan(s)
+    assert {r["action"] for r in plan["plan"]} == {"SKIP"}
+    assert all("not registered" in r["reason"] for r in plan["plan"])
