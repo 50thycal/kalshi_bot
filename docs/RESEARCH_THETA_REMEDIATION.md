@@ -14,8 +14,8 @@ programme. **Paper only. No theta parameter changed, no book re-armed, no live m
 | stage | status |
 |---|---|
 | 1. replace the degenerate 0/1 output | **done and verified** — 90.9% exactly-0 → **0.0%** |
-| 2. refit the tail shape, validate out of sample | **run, powered, and FAILED its bar** — §3.3 |
-| 3. re-measure calibration + residual selection bias | **done** — selection bias survives §3.4 |
+| 2. refit the tail shape, validate out of sample | **run, powered, FAILED its bar, and WORSE than theta4's actual incumbent** — §3.3, §3.7 |
+| 3. re-measure calibration + residual selection bias | **done** — bias remains large; §3.8 |
 | 4. selection-rule A/B that does not rank on model error | **redesigned**, below; still unregistered |
 | 5. telemetry for momentum/regime | **implemented and tested**, below |
 
@@ -225,6 +225,66 @@ Both were found by running the sweep, and each would have frozen the wrong thing
 Both are pinned by tests, and the coverage gate is the reason the numbers above can be compared
 across configurations at all.
 
+### 3.7 Against theta4's ACTUAL incumbent (`mult=2.0`) the replacement is WORSE
+
+`refit-8` scored the replacement against the **base** model (`vol_mult=1.0`). theta4 does not run
+the base model — it runs `mult=2.0`. Run **`refit-t4b`** repeats the comparison against the book's
+real incumbent. The two are reported separately and must not be pooled.
+
+| overall R, historical validation | spliced | incumbent |
+|---|---|---|
+| vs **base** model (`mult=1.0`, `refit-8`) | 1.79 [1.39, 2.27] | 1.71 [1.32, 2.17] |
+| vs **theta4's** model (`mult=2.0`, `refit-t4b`) | 1.79 [1.39, 2.27] | **0.96 [0.75, 1.22]** |
+
+> **theta4's fattened model is essentially calibrated in aggregate (R = 0.96, interval spanning
+> 1.0), and the replacement is not (R = 1.79, interval excluding 1.0).** Against the incumbent
+> that actually trades, the spliced model is a regression, not an improvement.
+
+That is the opposite of what the base-model comparison suggested, and it is the comparison that
+matters. It also disposes of any remaining case for adopting the replacement as it stands.
+
+**But aggregate R is not a sufficient statistic, and this is the clearest demonstration in the
+whole programme.** The `mult=2.0` incumbent still prices **85.5%** of quotes at exactly zero.
+Those quotes carry ~0 expected hits, so they cost almost nothing in an aggregate ratio — the
+aggregate is dominated by the mid-range buckets, where fattening happens to calibrate well. Read
+per bucket, the incumbent's deepest bucket is 2 observed against 0.42 expected on 8,869 quotes:
+it is not calibrated there, it is *silent* there.
+
+So the two models fail differently:
+
+- the **incumbent** declares 85.5% of its universe impossible and is well calibrated on what
+  remains;
+- the **replacement** produces a probability everywhere and is 1.8× miscalibrated across the
+  board, badly so in the 1–5% region.
+
+Neither is acceptable for a short-tail seller, and picking between them on aggregate R would pick
+the one that refuses to answer. This is why the frozen scoring rule is a **proper per-prediction
+score** on a common population (§3.5) rather than a ratio of counts.
+
+### 3.8 The selection comparison is NOT like-for-like, and is reported as such
+
+| | SELECTED n | SELECTED R | REJECTED R |
+|---|---|---|---|
+| incumbent `mult=1.0` | 105 | 5.44 [3.04, 8.92] | 1.18 [0.94, 1.46] |
+| incumbent `mult=2.0` | **15** | 2.85 [0.32, 10.43] | 0.67 [0.54, 0.82] |
+| spliced | 117 | 6.79 [3.70, 11.37] | 1.10 [0.88, 1.36] |
+
+Fattening shrinks `excess = mid − 100·P_model`, so `mult=2.0` selects **15** quotes where the
+spliced model selects **117**. Those are different populations, and a ratio between them is not a
+comparison.
+
+An earlier revision claimed selection bias "grew from 4.6× to 6.1×". **Retracted** — that
+compared arms drawn from different populations with no uncertainty on the ratio. The supported
+statement is narrower and still decisive:
+
+> **Residual selection bias remains large under the replacement probabilities** (SELECTED 6.79
+> [3.70, 11.37] against REJECTED 1.10 [0.88, 1.36], intervals disjoint).
+
+Whether it is *larger* than under the incumbent is not established by this evidence and is not
+claimed.
+
+---
+
 ### 3.6 August is historical validation, not a pristine holdout — and a forward holdout is reserved
 
 Run `refit-7` exposed results from the August test period **before** the selection statistic and
@@ -431,7 +491,13 @@ Concretely, and without hedging in either direction:
 - **Overall the two are indistinguishable** (R 1.79 [1.39, 2.27] against 1.71 [1.32, 2.17]), and
   the replacement still understates 1–5% events by **3.5×–9.8×**, which is the failure mode the
   acceptance bar names as unacceptable for a short-tail book.
-- **Residual selection bias remains large** under the replacement probabilities.
+- **Residual selection bias remains large** under the replacement probabilities (SELECTED 6.79
+  against REJECTED 1.10, intervals disjoint). Whether it is *larger* than under the incumbent is
+  not established and is not claimed.
+- Against theta4's **actual** `mult=2.0` incumbent the replacement is a **regression**: R 1.79
+  (interval excluding 1.0) against 0.96 (interval spanning it). The incumbent achieves that while
+  calling 85.5% of its universe impossible, so neither model is acceptable — but the replacement
+  is not the better of the two.
 
 An earlier revision of this section said "no refitted tail is claimed as validated", which was
 true when written and became false once §3 reported a powered validation. Both statements cannot
