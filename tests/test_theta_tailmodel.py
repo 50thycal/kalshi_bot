@@ -14,6 +14,7 @@ different set of numbers:
 
 from __future__ import annotations
 
+import datetime as _dt
 import math
 import random
 
@@ -842,23 +843,17 @@ class TestRuntimeOfflineParity:
 
     @pytest.mark.parametrize("tte_min", [10.0, 17.0, 22.4, 31.0, 35.0])
     def test_probability_and_metadata_match_at_every_horizon(self, tracker, candles, tte_min):
-        as_of = max(candles)
+        # A decision time deliberately NOT on the hour: both sides must anchor it the same way.
+        as_of = max(candles) - 1_500
         model = SpotModel(candles, trail_days=30.0)
-        runtime = tracker._spliced(model, as_of, tte_min)
+        runtime = tracker._spliced(model, "BTC", as_of, tte_min)
         assert runtime is not None
 
         mod = self._harness()
         cache = mod.FitCache({"BTC": candles, "ETH": {}}, tracker.settings.theta_spliced_tail_q,
                              fit_days=tracker.settings.theta_spliced_fit_days)
-        # Same as_of. The harness's HOURLY refit bucket is a declared approximation of a window
-        # that moves one block per hour; it is not part of the frozen spec, so parity is asked
-        # at a shared decision time.
-        blocks, meta = cache._blocks("BTC", as_of, tm.h_bucket(tte_min))
-        offline = tm.build(blocks, tm.h_bucket(tte_min),
-                           tail_q=tracker.settings.theta_spliced_tail_q,
-                           fit_days=tracker.settings.theta_spliced_fit_days,
-                           expected_blocks=meta["expected_blocks"],
-                           max_gap_min=meta["max_gap_min"])
+        offline = cache.get("BTC", _dt.datetime.fromtimestamp(as_of, tz=_dt.timezone.utc),
+                            tm.h_bucket(tte_min))
         assert offline is not None
 
         spot = model.spot_at(as_of)
@@ -880,23 +875,76 @@ class TestRuntimeOfflineParity:
         # runtime fits a horizon the harness never scored.
         as_of = max(candles)
         model = SpotModel(candles, trail_days=30.0)
-        assert tracker._spliced(model, as_of, 22.4).horizon_min == 20
-        assert tracker._spliced(model, as_of, 24.0).horizon_min == 25
-        assert tracker._spliced(model, as_of, 99.0).horizon_min == 35
+        assert tracker._spliced(model, "BTC", as_of, 22.4).horizon_min == 20
+        assert tracker._spliced(model, "BTC", as_of, 24.0).horizon_min == 25
+        assert tracker._spliced(model, "BTC", as_of, 99.0).horizon_min == 35
 
     def test_the_runtime_uses_the_CONFIGURED_tail_quantile(self, tracker, candles):
         as_of = max(candles)
         model = SpotModel(candles, trail_days=30.0)
         tracker.settings.theta_spliced_tail_q = 0.97
         tracker._spliced_cache.clear()
-        assert tracker._spliced(model, as_of, 30.0).tail_q == 0.97
+        assert tracker._spliced(model, "BTC", as_of, 30.0).tail_q == 0.97
 
     def test_the_shadow_stops_when_its_cycle_budget_is_spent(self, tracker, candles):
         as_of = max(candles)
         model = SpotModel(candles, trail_days=30.0)
         tracker.settings.theta_spliced_budget_ms = 1e-6   # exhausted by the first fit
-        assert tracker._spliced(model, as_of, 30.0) is not None
+        assert tracker._spliced(model, "BTC", as_of, 30.0) is not None
         tracker._spliced_cache.clear()
         # A gap in a research series is recoverable; a late quote is not.
-        assert tracker._spliced(model, as_of, 35.0) is None
+        assert tracker._spliced(model, "BTC", as_of, 35.0) is None
         assert tracker._shadow_budget_hit is True
+
+    def test_a_fit_is_reused_across_cycles_inside_one_hour(self, tracker, candles):
+        # The saving that keeps the shadow off the scan's critical path: a 90-day window cannot
+        # be moved by one 5-minute cycle, so refitting every cycle buys nothing.
+        as_of = max(candles) // 3600 * 3600 + 120
+        model = SpotModel(candles, trail_days=30.0)
+        first = tracker._spliced(model, "BTC", as_of, 30.0)
+        fits_after_first = tracker._shadow_fits
+        # A later cycle in the same hour, and a REBUILT SpotModel: the cache must not key on
+        # the object's identity, or every cycle would refit.
+        again = tracker._spliced(SpotModel(candles, trail_days=30.0), "BTC", as_of + 600, 30.0)
+        assert again is first
+        assert tracker._shadow_fits == fits_after_first
+        # The hour turns: a fresh fit.
+        tracker._spliced(model, "BTC", as_of + 3600, 30.0)
+        assert tracker._shadow_fits == fits_after_first + 1
+
+    def test_the_shadow_close_set_is_held_for_the_refit_anchor(self, tracker, candles,
+                                                              monkeypatch):
+        """The shadow's dominant cost is loading ~130,000 closes per product. Reloading that
+        every five minutes to feed a fit that is itself anchored to the hour is pure waste, and
+        it is database work on the trading loop's thread."""
+        import kalshi_bot.repository as repo
+        from kalshi_bot.theta import tracker as trk
+
+        calls = {"n": 0}
+
+        def fake_load(_session, _product, _since):
+            calls["n"] += 1
+            return candles
+
+        monkeypatch.setattr(repo, "load_spot_closes", fake_load)
+        monkeypatch.setattr(trk.repo, "load_spot_closes", fake_load, raising=False)
+        base = max(candles) // 3600 * 3600
+        monkeypatch.setattr(trk.time, "time", lambda: base + 60)
+        assert tracker._refresh_shadow_spot(None, "BTC") is not None
+        assert calls["n"] == 1
+        # Another cycle inside the same hour: no second load.
+        monkeypatch.setattr(trk.time, "time", lambda: base + 900)
+        tracker._refresh_shadow_spot(None, "BTC")
+        assert calls["n"] == 1
+        # The hour turns.
+        monkeypatch.setattr(trk.time, "time", lambda: base + 3700)
+        tracker._refresh_shadow_spot(None, "BTC")
+        assert calls["n"] == 2
+
+    def test_products_do_not_share_a_fit(self, tracker, candles):
+        as_of = max(candles)
+        btc = SpotModel(candles, trail_days=30.0)
+        eth = SpotModel({k: v * 0.03 for k, v in candles.items()}, trail_days=30.0)
+        a = tracker._spliced(btc, "BTC", as_of, 30.0)
+        b = tracker._spliced(eth, "ETH", as_of, 30.0)
+        assert a is not b

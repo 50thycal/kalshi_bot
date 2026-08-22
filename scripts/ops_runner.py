@@ -145,6 +145,7 @@ ALLOWED_SCRIPTS = (
     "mmsell_queue_position",
     "mmsell_depth_fill_model",
     "mmsell_deconfound_study",
+    "mmsell_taxonomy_audit",
     "theta_tail_diagnosis",
     "theta_tail_refit",
     "theta_candle_backfill_probe",

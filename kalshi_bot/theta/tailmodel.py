@@ -145,6 +145,23 @@ H_BUCKETS = (10, 15, 20, 25, 30, 35)
 MIN_BLOCK_COVERAGE = 0.90
 
 
+# Fits are anchored to the top of the hour. A 90-day window moves by one 5-minute cycle at a
+# time, which cannot move a tail fitted on ~3,700 blocks, so refitting every cycle buys nothing
+# and costs an order of magnitude more than refitting hourly. Making it part of the frozen spec
+# rather than a harness convenience means the runtime and the offline validation fit the SAME
+# window from the same anchor — measured at ~56 ms per fit, 12 fits per cycle became 12 per hour.
+REFIT_ANCHOR_SECONDS = 3600
+
+
+def refit_anchor(now_unix: int) -> int:
+    """The instant a fit's window ends: the top of the hour at or before `now_unix`.
+
+    Strictly backward-looking, so anchoring can only ever make a fit STALER, never let it see a
+    minute after the decision it prices.
+    """
+    return int(now_unix) // REFIT_ANCHOR_SECONDS * REFIT_ANCHOR_SECONDS
+
+
 def h_bucket(minutes: float) -> int:
     """Snap a horizon onto the fixed grid. Ties go to the smaller bucket, deterministically."""
     best = H_BUCKETS[0]

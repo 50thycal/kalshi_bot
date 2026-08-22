@@ -647,12 +647,21 @@ class Settings(BaseSettings):
     # shadow measures and is a Platform Change Review event, not a knob.
     theta_spliced_tail_q: float = 0.90
 
-    # Per-cycle wall-clock budget for the shadow fits, in milliseconds. The shadow is research
+    # Per-cycle wall-clock budget for the shadow FITS, in milliseconds. The shadow is research
     # riding along inside a trading cycle; it must never be the reason a quote is late. When a
     # cycle's fits exceed this the remaining markets record metadata with no probability and
     # the next cycle starts fresh — a gap in a research series is recoverable, a delayed scan
     # is not. 0 disables the budget (tests).
-    theta_spliced_budget_ms: float = 750.0
+    #
+    # 3,000 comes from `scripts/theta_shadow_bench.py` at 480 markets/cycle over a full 90-day
+    # window: the fits cost ~700 ms on the one cycle per hour where the anchor turns and 0 ms on
+    # the other eleven. The first draft of this said 750, which is BELOW that measured maximum —
+    # a backstop that fires during normal operation is not a backstop, it would have gapped the
+    # research series every hour. Set above the measurement, and still 1% of the 5-minute scan
+    # interval. What actually bounds the work is the horizon grid and the hourly refit anchor
+    # (`tailmodel.H_BUCKETS`, `REFIT_ANCHOR_SECONDS`); this is only the guard for a pathological
+    # window that those two do not anticipate.
+    theta_spliced_budget_ms: float = 3000.0
 
     # Per-cycle budget for backfilling 1-minute closes BACKWARD toward the retention horizon.
     # Coinbase serves 1-minute candles at least 365 days back (probe `cb-probe-5`, 2026-08-21),

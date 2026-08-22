@@ -233,7 +233,11 @@ class FitCache:
         return out
 
     def get(self, product: str, at: dt.datetime, h_min: int):
-        hour = int(at.replace(minute=0, second=0, microsecond=0).timestamp())
+        # The frozen refit anchor, from `tailmodel` — the same call the live shadow makes, so
+        # the two fit the same window from the same instant. This used to be a local hour
+        # truncation here and a per-minute refit there, which meant the harness and the runtime
+        # were never scoring the same model even when everything else agreed.
+        hour = tm.refit_anchor(int(at.timestamp()))
         key = (product, hour, h_min)
         if key in self._cache:
             return self._cache[key]
