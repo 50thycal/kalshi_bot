@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"xos","command":"issue-show","args":["XOS-000003"],"id":"lo-x3-show-1"}
