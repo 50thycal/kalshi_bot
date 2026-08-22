@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "script", "id": "refit-14", "name": "theta_tail_refit", "args": ["--since", "2026-07-11", "--train-end", "2026-08-11", "--fit-days", "90", "--tail-qs", "0.90", "--spot-source", "coinbase", "--vol-mult", "2.0", "--labels", "kalshi"]}

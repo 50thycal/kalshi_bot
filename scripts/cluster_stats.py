@@ -218,6 +218,101 @@ def paired_mean_ci(rows: Sequence[dict], cluster_key: str, diff: Callable[[dict]
     return res
 
 
+# Haldane-Anscombe continuity correction, applied to observed counts in EVERY replicate and in
+# the point estimate — never only where a zero appears. log(R_a / R_b) is undefined when either
+# group observes nothing, which a bootstrap replicate can easily produce on a small selected set;
+# correcting only those replicates would delete exactly the tail of the sampling distribution the
+# interval exists to describe. Applying it uniformly shifts the estimate slightly and is
+# reported alongside the uncorrected value so the shift is visible.
+HALDANE_C = 0.5
+
+
+def ratio_contrast_ci(rows: Sequence[dict], cluster_key: str, p_key: str, outcome_key: str,
+                      group: Callable[[dict], bool], *, alpha: float = 0.01,
+                      b: int = DEFAULT_B, seed: int = DEFAULT_SEED) -> dict:
+    """`log(R_A / R_B)` for two groups of ONE population, resampled TOGETHER.
+
+    WHY THIS AND NOT TWO INTERVALS. Computing a 99% interval for each group separately and
+    calling the effect established because they do not overlap is not a test of the contrast. The
+    two groups come from the same events; their errors covary, and marginal intervals throw that
+    covariance away. Disjointness is sufficient for significance but not necessary — and it is
+    not the question. The question is whether `log(R_A / R_B)` differs from zero, so that is what
+    is resampled: whole clusters drawn from the COMBINED population, with both groups recomputed
+    inside each replicate from the rows that replicate happens to contain.
+
+    `group(row)` is a deterministic property of the row, evaluated once before resampling, so a
+    row's membership never changes between replicates.
+
+    Degenerate replicates, predeclared:
+      * **zero EXPECTED** in either group makes the ratio undefined; the replicate is INVALID,
+        dropped, and counted. `valid_replicates` is reported.
+      * **zero OBSERVED** in either group is handled by `HALDANE_C`, applied uniformly.
+    """
+    a_rows = [r for r in rows if group(r)]
+    b_rows = [r for r in rows if not group(r)]
+
+    def summary(rs: Sequence[dict]) -> dict:
+        exp = sum(r[p_key] for r in rs)
+        obs = sum(1 for r in rs if r[outcome_key])
+        return {"n": len(rs), "expected": exp, "observed": obs,
+                "r": (obs / exp) if exp > 0 else float("nan"),
+                "clusters": cluster_profile(rs, cluster_key)["clusters"] if rs else 0}
+
+    out = {"a": summary(a_rows), "b": summary(b_rows),
+           "clusters": cluster_profile(rows, cluster_key)["clusters"],
+           "haldane_c": HALDANE_C,
+           "point": float("nan"), "point_uncorrected": float("nan"),
+           "lo": None, "hi": None, "valid_replicates": 0, "replicates": b,
+           "excludes_zero": False}
+
+    def contrast(oa: float, ea: float, ob: float, eb: float, c: float) -> float:
+        if ea <= 0 or eb <= 0:
+            return float("nan")
+        ra, rb = (oa + c) / ea, (ob + c) / eb
+        if ra <= 0 or rb <= 0:
+            return float("nan")
+        return math.log(ra / rb)
+
+    out["point"] = contrast(out["a"]["observed"], out["a"]["expected"],
+                            out["b"]["observed"], out["b"]["expected"], HALDANE_C)
+    out["point_uncorrected"] = contrast(out["a"]["observed"], out["a"]["expected"],
+                                        out["b"]["observed"], out["b"]["expected"], 0.0)
+    if out["clusters"] < MIN_CLUSTERS_FOR_CI:
+        return out
+
+    # Per cluster: (obs_a, exp_a, obs_b, exp_b). Resampling these keeps the two groups' counts
+    # attached to the same event, which is exactly the covariance two marginal intervals lose.
+    cells: list[tuple[float, float, float, float]] = []
+    for v in group_by_cluster(rows, cluster_key).values():
+        oa = sum(1 for r in v if group(r) and r[outcome_key])
+        ea = sum(r[p_key] for r in v if group(r))
+        ob = sum(1 for r in v if not group(r) and r[outcome_key])
+        eb = sum(r[p_key] for r in v if not group(r))
+        cells.append((oa, ea, ob, eb))
+
+    rng = random.Random(seed)
+    k = len(cells)
+    rand = rng.randrange
+    reps: list[float] = []
+    for _ in range(b):
+        oa = ea = ob = eb = 0.0
+        for _ in range(k):
+            c0, c1, c2, c3 = cells[rand(k)]
+            oa += c0
+            ea += c1
+            ob += c2
+            eb += c3
+        v = contrast(oa, ea, ob, eb, HALDANE_C)
+        if math.isfinite(v):
+            reps.append(v)
+    out["valid_replicates"] = len(reps)
+    if reps:
+        out["lo"], out["hi"] = _ci(reps, alpha)
+        out["excludes_zero"] = bool(out["lo"] is not None and out["hi"] is not None
+                                    and (out["lo"] > 0.0 or out["hi"] < 0.0))
+    return out
+
+
 def design_effect(rows: Sequence[dict], cluster_key: str, value: Callable[[dict], float], *,
                   b: int = DEFAULT_DEFF_B, seed: int = DEFAULT_SEED) -> dict:
     """How much the clustering costs, measured rather than assumed.
