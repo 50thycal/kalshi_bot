@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_market_survey","args":["--max-pages","60","--top-series","600","--min-volume","1"],"id":"lo-x3-survey-1"}
+{"type":"script","name":"kalshi_market_survey","args":["--max-pages","60","--top-series","4000","--min-volume","1"],"id":"lo-x3-survey-2"}
