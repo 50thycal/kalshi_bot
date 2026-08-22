@@ -517,21 +517,26 @@ def main(argv: list[str] | None = None) -> int:
     covered = sum(len(v) for _, v in ranked[:args.top])
 
     # Kalshi's own rules text, per prefix, because the database has none. One request per
-    # prefix, applied to every market under it: settlement mode is a property of the SERIES,
-    # so a representative market answers for all of them.
+    # prefix. Settlement mode is a property of the SERIES, so a sample of its markets answers
+    # for all of them — but it answers ONCE, however many markets carry the same rule text.
     fetched: dict[str, dict] = {}
     schema: list[str] = []
     if not args.no_fetch:
-        for prefix, rs in ranked[:args.top]:
-            blob, keys = fetch_series_text(prefix)
-            if not blob:
+        for prefix, _rs in ranked[:args.top]:
+            got = fetch_series_text(prefix)
+            if not got.get("docs"):
                 continue
-            schema = schema or keys
-            fetched[prefix] = blob
-            for r in rs:
-                text[r["ticker"]] = {**text.get(r["ticker"], {}), **blob}
+            schema = schema or got["schema"]
+            fetched[prefix] = got
+        n_docs = sum(len(g["docs"]) for g in fetched.values())
+        n_mkts = sum(g["unique_markets"] for g in fetched.values())
         print(f"  Kalshi rules text fetched for {len(fetched)}/{min(args.top, len(ranked))} "
-              "prefixes (public market-data endpoint, no key)")
+              f"prefixes: {n_mkts:,} unique markets inspected yielding {n_docs:,} DISTINCT rule")
+        print(f"  documents (up to {SAMPLE_MARKETS_PER_PREFIX} markets per prefix, drawn from "
+              f"{'+'.join(SAMPLE_STATUSES)}; public endpoint, no key)")
+        print("  Strong signals below are counted over DOCUMENTS, never markets: a series that")
+        print("  shares one rule text across forty markets is ONE observation of what Kalshi")
+        print("  says, and reporting it as forty was the accounting error in run `tax-6`.")
         if schema:
             print(f"  market fields seen: {', '.join(schema[:18])}"
                   + (" ..." if len(schema) > 18 else ""))
@@ -543,26 +548,27 @@ def main(argv: list[str] | None = None) -> int:
           f"{covered / len(unknown):.1%} of unclassified markets")
 
     head("3. EVIDENCE AND PROPOSAL — one row per prefix, signals shown beside the proposal")
-    print("  Signals: SRC = Kalshi's settlement_source text; RULES = title + rules text;")
-    print("  GAP = median |expiration - close| hours; PATH = share still quoting 15-85c at the")
-    print("  last tick; EARLY = share with can_close_early set. SRC and RULES are STRONG; GAP")
-    print("  and PATH corroborate but cannot decide; EARLY is reported and votes on nothing —")
-    print("  run tax-2 showed Kalshi sets it on index-close markets too, so it does not")
-    print("  discriminate settlement mode.")
+    print("  seen = unique Kalshi markets inspected; docs = DISTINCT rule documents among them.")
+    print("  SRC = Kalshi's settlement_source text; RULES = title + rules text. Both are STRONG")
+    print("  and are counted over DOCUMENTS. GAP = median |expiration - close| hours; PATH =")
+    print("  share still quoting 15-85c at the last tick; both corroborate and neither can")
+    print("  decide alone, because a scheduled print and a discrete announcement both jump.")
+    print("  `can_close_early` is not shown: run tax-2 found Kalshi sets it on 100% of these")
+    print("  markets, index-close ones included, so it does not discriminate anything.")
     print()
-    print(f"  {'prefix':<26} {'mkts':>6} {'SRC':>10} {'RULES':>10} {'GAP h':>8} {'PATH':>7} "
-          f"{'EARLY':>7}  {'PROPOSED':<22}")
-    print("  " + "-" * 100)
+    print(f"  {'prefix':<26} {'mkts':>6} {'seen':>5} {'docs':>5} {'SRC':>10} {'RULES':>10} "
+          f"{'GAP h':>8} {'PATH':>7}  {'PROPOSED':<22}")
+    print("  " + "-" * 108)
     proposals: list[tuple[str, int, str, str]] = []
     for prefix, rs in ranked[:args.top]:
-        ev = prefix_evidence(rs, text, late)
+        ev = prefix_evidence(rs, text, fetched.get(prefix, {}), late)
         mode, why = propose(ev)
         proposals.append((prefix, ev["markets"], mode, why))
         gap = f"{ev['median_gap_h']:.1f}" if ev["median_gap_h"] is not None else "-"
         path = f"{ev['late_midbook']:.0%}" if ev["late_midbook"] is not None else "-"
-        _early = f"{ev['early_share']:.0%}" if ev["early_share"] is not None else "-"
-        print(f"  {prefix:<26} {ev['markets']:>6,} {ev['source'][0] or '-':>10} "
-              f"{ev['rules'][0] or '-':>10} {gap:>8} {path:>7} {_early:>7}  {mode:<22}")
+        print(f"  {prefix:<26} {ev['markets']:>6,} {ev['unique_markets']:>5} "
+              f"{ev['unique_docs']:>5} {ev['source'][0] or '-':>10} "
+              f"{ev['rules'][0] or '-':>10} {gap:>8} {path:>7}  {mode:<22}")
     print()
     for prefix, _n, mode, why in proposals:
         print(f"  {prefix:<26} {mode:<22} {why}")

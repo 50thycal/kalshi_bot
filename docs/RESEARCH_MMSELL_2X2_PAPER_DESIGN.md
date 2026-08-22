@@ -116,7 +116,7 @@ created.** The census, the audit and the full evidence package are in §2A.1 and
 
 ```
 {"type":"script","name":"mmsell_taxonomy_audit","args":[
-  "--since","2026-07-19","--until","2026-08-21","--top","200","--dump-text"]}
+  "--since","2026-07-19","--until","2026-08-21","--top","200","--dump-text"]}   # run tax-9
 ```
 
 That threshold was fixed in §3.2 before any of this was measured, precisely so the number could
@@ -201,42 +201,54 @@ markets across 198 series prefixes**, against six.
 **The database cannot supply the evidence.** `markets` holds no row for any of the 861
 unclassified markets, so the first pass of the audit had no strong signal for any prefix and
 correctly refused to propose anything at all. Kalshi's market-data endpoints are public and need
-no key, so the audit now fetches the rules text per series — **198 of 198 prefixes retrieved**.
+no key, so the audit fetches the rules text per series — **198 of 198 prefixes retrieved, 1,558
+unique markets inspected** (up to eight per prefix, drawn from settled and open status).
 
-Four signals per prefix. Two are strong and come from Kalshi itself (`settlement_source`, and
-title + rules text); two corroborate but cannot decide alone (median |expiration − close|, and
-whether the price path is still mid-book at the last tick — a scheduled print and a discrete
-announcement both look like a jump). A proposal needs a strong signal, no strong signal pointing
-elsewhere, and no *lone* corroborator against it.
+**Evidence is counted over DOCUMENTS, never markets.** Settlement semantics are a property of the
+series, so one rule document answers for every market under a prefix — but it answers **once**.
+Run `tax-6` fetched one market per prefix, copied its blob onto all forty-six markets under it,
+and reported *"100% of 46 texts"*: one document counted forty-six times. Deduplicated, the 1,558
+inspected markets yield **1,558 distinct documents** — Kalshi writes team names and strikes into
+each rule text, so eight markets really are eight independently-worded statements, and a prefix
+proposed on eight unanimous documents is proposed on eight observations rather than one.
+
+Four signals. Two are strong and come from Kalshi itself (`settlement_source`, and title + rules
+text); two corroborate but cannot decide alone (median |expiration − close|, and whether the price
+path is still mid-book at the last tick — a scheduled print and a discrete announcement both look
+like a jump). A proposal needs a strong signal, no strong signal pointing elsewhere, **no
+disagreement among the documents inspected**, and no *lone* corroborator against it.
 
 | | prefixes | markets |
 |---|---|---|
-| proposed mode | **45** | 526 |
-| INSUFFICIENT_EVIDENCE | 153 | 335 |
+| proposed mode | **43** | 501 |
+| INSUFFICIENT_EVIDENCE | 155 | 360 |
 
-> **If every one of the 45 proposals is accepted, `unclassified_excluded_pct` falls from 14.31%
-> to 5.57% — still above the 5% bar.** The design stays `BLOCKED_DATA`.
+> **If every one of the 43 proposals is accepted, `unclassified_excluded_pct` falls from 14.31%
+> to 5.98% — still above the 5% bar.** The design stays `BLOCKED_DATA`.
 
-The 153 refusals are almost all long-tail series carrying two or three markets each, below the
-five-market floor at which a per-prefix read stops being anecdote. They are not unclassifiable —
-Kalshi's rules text for each is printed verbatim in the run (`--dump-text`), and a human can
-decide them in minutes. The audit declines to, and that is deliberate: **an unknown series
-recorded as `scheduled` would enter the treatment arm and make the primary comparison measure the
-very confound this design controls for.**
+The refusals are mostly long-tail series carrying two or three markets each, below the
+five-market floor at which a per-prefix read stops being anecdote, plus a handful where the eight
+documents do not agree with each other. They are not unclassifiable — Kalshi's rules text for each
+is printed verbatim in the run (`--dump-text`), and a human can decide them in minutes. The audit
+declines to, and that is deliberate: **an unknown series recorded as `scheduled` would enter the
+treatment arm and make the primary comparison measure the very confound this design controls
+for.**
 
-**Two defects in the audit's own classifier, found by dumping the corpus and disclosed rather
-than quietly fixed:**
+**Three defects in the audit's own classifier, found by running it and disclosed rather than
+quietly fixed:**
 
-- A bare `at 8:10 PM EDT` was read as a scheduled settlement. Kalshi writes *"the game originally
+- **One document reported as N.** The accounting error above. Fixed by sampling and
+  deduplicating; the run now prints unique markets and unique documents beside every proposal.
+- **A bare `at 8:10 PM EDT` read as a scheduled settlement.** Kalshi writes *"the game originally
   scheduled for Aug 22, 2026 at 8:10 PM EDT"* on **in-play** markets, so MLB player props and KBO
   baseball came back `scheduled` — precisely the error described above. A clock time does not
   discriminate; genuinely scheduled markets name the close they settle to (*"the end-of-day S&P
   500 index value"*, *"the close price of the 1-minute candlestick"*). Seven verbatim texts are
   now pinned as tests, one per mode they must separate.
-- `can_close_early` was tried as a strong signal on the theory that Kalshi sets it where
-  settlement follows the event. It is set on **100%** of these markets, including index-close
-  ones: it proposed `in_play` for `KXINX` and `KXNASDAQ100` while blocking four prefixes whose
-  rules text correctly said `scheduled`. It is now reported and votes on nothing.
+- **`can_close_early` tried as a strong signal.** It is set on **100%** of these markets,
+  including index-close ones: it proposed `in_play` for `KXINX` and `KXNASDAQ100` while blocking
+  four prefixes whose rules text correctly said `scheduled`. It is now reported and votes on
+  nothing.
 
 **Nothing here edits `SERIES_TYPES`, in either copy.** That table is shared platform semantics
 read by every `mode=` book, so a change to it is a Platform Change Review event with its own
@@ -271,7 +283,7 @@ secondary and the stopping rule all stand. What has changed is that three of its
 are not met today:
 
 1. the universe cannot be partitioned cleanly while 14.31% of it is unclassifiable, and the
-   largest repair the evidence supports leaves 5.57% — still above the bar;
+   largest repair the evidence supports leaves 5.98% — still above the bar;
 2. at measured supply the approved effect size implies a ~13-month horizon, and that estimate is
    an iid one;
 3. the sample floor has not been recomputed with the event as the independent unit.
@@ -420,7 +432,7 @@ executing:
 | # | decision | status |
 |---|---|---|
 | 1 | disjoint `scheduled` vs `in_play+discrete` primary | **approved, unaffected** |
-| 2 | 5% unclassified coverage block | **approved, and it FIRED** — 14.31% measured, 5.57% even after the largest repair the evidence supports |
+| 2 | 5% unclassified coverage block | **approved, and it FIRED** — 14.31% measured, 5.98% even after the largest repair the evidence supports |
 | 3 | +2¢ minimum useful effect | approved at a ~7-month horizon; the measured horizon is **~13 months**, and that figure is an iid one (§2A.2) |
 | 4 | route six crypto series to Platform Change Review | approved, but the real scope is **198 series prefixes / 861 markets** (§2A.1) |
 
@@ -430,8 +442,8 @@ So the open questions are:
    universe silently excluded is not a partition — and it makes decision 4 a prerequisite rather
    than a parallel task. Relaxing the threshold after seeing it fire is the thing the threshold
    exists to prevent, and is not recommended. But note what the audit found: **even accepting all
-   45 evidence-backed proposals, the census lands at 5.57%.** Clearing 5% needs a human pass over
-   the long tail — 153 prefixes whose rules text is printed verbatim in the run and each of which
+   43 evidence-backed proposals, the census lands at 5.98%.** Clearing 5% needs a human pass over
+   the long tail — 155 prefixes whose rules text is printed verbatim in the run and each of which
    takes seconds to read, but which the audit will not guess at.
 2. **Accept ~13 months at +2¢, or move the effect size?** At +3¢ the treatment arm needs ~180
    days, at +5¢ ~65 — but all three figures are **iid** counts, and §2A.2 explains why the
@@ -439,7 +451,8 @@ So the open questions are:
    decision rather than follow it. This is a scope decision, not a statistical one.
 3. **Scope of the Platform Change Review** — six crypto series, or all 198 prefixes? The crypto
    six block the crypto column (§2); the non-crypto 198 block this design. The package for the
-   latter is ready: proposals with evidence for 45, Kalshi's own words for all 198.
+   latter is ready: proposals with evidence for 43, Kalshi's own words for all 198, and 1,558
+   rule documents behind them.
 
 **Nothing is created until these are settled.** No Version, no epoch, no deployment, no arm.
 
