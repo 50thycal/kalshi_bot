@@ -13,6 +13,26 @@ no real money, and the paper book has ~9× the live canary's sample.
 **Reproduce.** `{"type":"script","name":"theta_tail_diagnosis"}`
 (`scripts/theta_tail_diagnosis.py`). All intervals are two-sided 99% Poisson, by inversion.
 
+> **TWO CORRECTIONS, both established after this document was written. Read them before
+> quoting any interval or any calibration verdict below.**
+>
+> 1. **Every interval here is too narrow, by about 2.5×.** A Poisson interval treats each
+>    market as an independent observation, but a crypto ladder publishes ~66 markets and
+>    settles all of them against ONE spot print. The measured design effect is 4–7
+>    (`RESEARCH_THETA_REMEDIATION.md` §3.2). The **point estimates are unaffected** — R was
+>    never wrong, the confidence in it was — so the mechanism findings stand and the
+>    *significance* of any contrast below does not. Event-clustered replacements are in §3 of
+>    the remediation document.
+> 2. **The outcome label needed a gate this document does not apply.** §B reports
+>    derived-vs-recorded settlement agreement of 96.9% against its own 97% bar and proceeds
+>    anyway. That bar is now enforced before anything is scored, with a near-strike exclusion
+>    for markets whose strike sits inside the unobserved residual move
+>    (`scripts/theta_settlement_labels.py`). On the retained population agreement is 100%; on
+>    the full one it is not, and this document's sections B/C/E/F/G are advisory for that
+>    reason.
+>
+> Kept as written. The corrections are the useful part of the record.
+
 **What R is measured against.** `model_probability` as the book **actually used it** — theta4
 runs `mult=2.0`, so its model tails are already doubled before anything is sold. Every R below
 is a miss *on top of a doubling*. "Fatten further" is therefore a parameter change, not a
