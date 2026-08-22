@@ -4,11 +4,13 @@ Additive-only. No table or column is altered or dropped — every column below i
 nullable, so existing rows keep reading exactly as they did and a downgrade is lossless for
 anything written before it.
 
-Ordered after `e1a2b3c4d5f6` (the issue workflow) rather than beside it. Both were authored
-against `d8e9f0a1b2c3` on separate branches, which git merges without complaint — the files do
-not overlap — while leaving alembic with TWO heads and `alembic upgrade head` unable to resolve
-them. The two touch different tables, so the order between them carries no meaning; what matters
-is that there is one.
+Ordered after `f2b3c4d5e6a7` (issue-command receipts) rather than beside it — and after
+`e1a2b3c4d5f6` (the issue workflow) before that. Each was authored on a separate branch against
+a shared parent, which git merges without complaint since the files do not overlap, while leaving
+alembic with TWO heads and `alembic upgrade head` unable to resolve them. This is a semantic
+conflict git cannot see, so it recurs on every base move and the fix is always the same: repoint
+this chain's `down_revision` at the newly arrived head. They touch different tables, so the order
+between them carries no meaning; what matters is that there is one.
 
 WHY. `docs/RESEARCH_THETA_TAIL_MODEL_DIAGNOSIS.md` §2.5 could not answer the momentum/regime
 question: only 11,435 of 63,758 tail quotes had a usable trailing move, and the high-momentum
@@ -29,7 +31,7 @@ cold start, and recording only the request would describe a window the fit never
 carries no probability at all, because a floor that looks like an estimate is worse than a null.
 
 Revision ID: b1d5e9f3a7c2
-Revises: e1a2b3c4d5f6
+Revises: f2b3c4d5e6a7
 Create Date: 2026-08-21
 """
 
@@ -40,7 +42,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "b1d5e9f3a7c2"
-down_revision = "e1a2b3c4d5f6"
+down_revision = "f2b3c4d5e6a7"
 branch_labels = None
 depends_on = None
 
