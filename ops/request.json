@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-show","args":["XOS-000003"],"id":"rl-x3-verify"}
+{"type":"env","set":{"EXPERIMENT_OS_ISSUE_COMMAND":""},"id":"rl-x3-clear"}
