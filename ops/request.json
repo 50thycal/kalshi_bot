@@ -1,1 +1,1 @@
-{"type":"db","id":"dep-final-state","sql":"select (select count(*) from experiment_os_issue_commands) as receipts, (select count(*) from experiment_os_issue_commands where status='SUCCEEDED') as succeeded, (select version_num from alembic_version) as head, (select count(*) from experiment_issues) as issues, (select max(created_at) from paper_trades) as latest_paper_trade"}
+{"type":"noop"}
