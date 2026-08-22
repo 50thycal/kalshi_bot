@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_freeze_study","args":["--max-event-pages","300","--max-markets","150","--trade-pages","3","--open-pages","2","--depth-samples","1"],"id":"rl-x3-repro"}
+{"type":"xos","command":"list","args":["--all"],"id":"rl-x3-list"}
