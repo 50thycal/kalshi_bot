@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-candidates","args":["--json"],"id":"dep-cover-1"}
+{"type":"env","id":"dep-clear-1","set":{"EXPERIMENT_OS_ISSUE_COMMAND":""}}
