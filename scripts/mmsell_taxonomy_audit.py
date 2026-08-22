@@ -32,6 +32,7 @@ Read-only; stdlib + psycopg only.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -194,6 +195,55 @@ def load_late_shape(cur, tickers: list[str]) -> dict[str, float]:
     return out
 
 
+# --- Kalshi's own words, fetched ------------------------------------------------------------------
+
+KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
+_UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+
+
+def _get_json(url: str, timeout: float) -> dict:
+    import urllib.request
+    req = urllib.request.Request(url, headers={"User-Agent": _UA, "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:       # noqa: S310 — fixed host
+        return json.loads(resp.read().decode())
+
+
+def fetch_series_text(prefix: str, timeout: float = 20.0) -> tuple[dict, list[str]]:
+    """Title, rules and settlement source for one representative market in `prefix`.
+
+    The database cannot answer this: `markets` holds no row for any of these tickers, so the
+    first run of this audit had zero strong signals and correctly refused to propose anything
+    for all 216 prefixes. Kalshi's market-data endpoints are PUBLIC and need no key, and the
+    ops runner has open egress, so the rules text is fetchable rather than absent.
+
+    Returns (evidence, field names seen) so a schema change at Kalshi surfaces as a reported
+    field list rather than as silently empty evidence.
+    """
+    markets: list[dict] = []
+    for suffix in ("&status=open", ""):
+        try:
+            markets = _get_json(
+                f"{KALSHI}/markets?series_ticker={prefix}&limit=1{suffix}",
+                timeout).get("markets") or []
+        except Exception:                                            # noqa: BLE001
+            markets = []
+        if markets:
+            break
+    if not markets:
+        return {}, []
+    m = markets[0]
+    rules = " ".join(str(m.get(k) or "")
+                     for k in ("rules_primary", "rules_secondary", "rules_summary"))
+    return {
+        "title": " ".join(str(m.get(k) or "") for k in ("title", "subtitle")),
+        "rules": rules,
+        "source": str(m.get("settlement_source") or ""),
+        "category": str(m.get("category") or ""),
+        "can_close_early": m.get("can_close_early"),
+    }, sorted(m.keys())
+
+
 # --- signals ---------------------------------------------------------------------------------------
 
 def _match_mode(text: str, patterns) -> str | None:
@@ -242,7 +292,15 @@ def prefix_evidence(rows: list[dict], text: dict[str, dict], late: dict[str, flo
                   else IN_PLAY if late_mid >= LATE_MIDBOOK_IN_PLAY
                   else SCHEDULED if late_mid <= LATE_MIDBOOK_SCHEDULED else None)
 
+    early = [b.get("can_close_early") for b in blobs if b.get("can_close_early") is not None]
+    # Kalshi sets `can_close_early` on a market that resolves when its underlying event
+    # concludes rather than at a scheduled instant. That is what in-play MEANS, and it is
+    # Kalshi's own field rather than an inference from price shape.
+    early_mode = (None if not early
+                  else IN_PLAY if sum(1 for e in early if e) / len(early) >= 0.8
+                  else SCHEDULED if sum(1 for e in early if e) / len(early) <= 0.2 else None)
     return {
+        "early_mode": early_mode,
         "markets": len(rows),
         "events": cs.cluster_profile(
             [{"ev": r["ticker"].rsplit("-", 1)[0]} for r in rows], "ev")["clusters"],
@@ -265,7 +323,7 @@ def propose(ev: dict) -> tuple[str, str]:
     """
     if ev["markets"] < MIN_MARKETS_TO_PROPOSE:
         return "INSUFFICIENT_EVIDENCE", f"only {ev['markets']} markets in the population"
-    strong = [m for m in (ev["source"][0], ev["rules"][0]) if m]
+    strong = [m for m in (ev["source"][0], ev["rules"][0], ev.get("early_mode")) if m]
     if not strong:
         weak = [m for m in (ev["gap_mode"], ev["shape_mode"]) if m]
         if weak:
@@ -274,8 +332,10 @@ def propose(ev: dict) -> tuple[str, str]:
                 "rules text to confirm it")
         return "INSUFFICIENT_EVIDENCE", "no settlement source, rules text or shape signal"
     if len(set(strong)) > 1:
-        return "INSUFFICIENT_EVIDENCE", (
-            f"settlement source says {ev['source'][0]}, rules text says {ev['rules'][0]}")
+        named = ", ".join(f"{n} says {m}" for n, m in (
+            ("settlement source", ev["source"][0]), ("rules text", ev["rules"][0]),
+            ("can_close_early", ev.get("early_mode"))) if m)
+        return "INSUFFICIENT_EVIDENCE", f"strong signals disagree: {named}"
     mode = strong[0]
     corroborating = [m for m in (ev["gap_mode"], ev["shape_mode"]) if m]
     if any(m != mode for m in corroborating):
@@ -285,9 +345,12 @@ def propose(ev: dict) -> tuple[str, str]:
     agree = "corroborated by " + " + ".join(
         n for n, m in (("expiration gap", ev["gap_mode"]), ("price path", ev["shape_mode"]))
         if m == mode) if corroborating else "no corroborating shape evidence"
-    which = "settlement source" if ev["source"][0] else "rules text"
-    return mode, f"{which} ({ev['source'][1] if ev['source'][0] else ev['rules'][1]:.0%} of "\
-                 f"{ev['source'][2] if ev['source'][0] else ev['rules'][2]} texts); {agree}"
+    which = ("settlement source" if ev["source"][0]
+             else "rules text" if ev["rules"][0] else "can_close_early")
+    votes = ev["source"] if ev["source"][0] else ev["rules"] if ev["rules"][0] else None
+    detail = (f"{votes[1]:.0%} of {votes[2]} texts" if votes
+              else "Kalshi's own early-close flag")
+    return mode, f"{which} ({detail}); {agree}"
 
 
 # --- report ------------------------------------------------------------------------------------------
@@ -331,6 +394,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--since", default=None)
     ap.add_argument("--until", default=None)
     ap.add_argument("--top", type=int, default=60, help="unknown prefixes to detail")
+    ap.add_argument("--no-fetch", action="store_true",
+                    help="skip the Kalshi metadata fetch. `markets` holds no row for any of "
+                         "these tickers, so this leaves the audit with shape evidence only "
+                         "and it will refuse to propose anything — which is the point of "
+                         "keeping the flag: it shows what the database alone can support.")
     args = ap.parse_args(argv)
 
     import psycopg
@@ -348,7 +416,8 @@ def main(argv: list[str] | None = None) -> int:
             late = load_late_shape(cur, tickers)
 
     print("commit: " + (os.environ.get("GITHUB_SHA") or "unknown (not run from CI)"))
-    print(f"window: since={args.since or 'all'} until={args.until or 'now'}")
+    print(f"window: since={args.since or 'all'} until={args.until or 'now'}  "
+          f"kalshi_fetch={'off' if args.no_fetch else 'on'}")
     unc = census(rows)
 
     head("2. UNKNOWN PREFIXES — the whole repair, not the crypto corner of it")
@@ -362,6 +431,30 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     ranked = sorted(groups.items(), key=lambda kv: -len(kv[1]))
     covered = sum(len(v) for _, v in ranked[:args.top])
+
+    # Kalshi's own rules text, per prefix, because the database has none. One request per
+    # prefix, applied to every market under it: settlement mode is a property of the SERIES,
+    # so a representative market answers for all of them.
+    fetched: dict[str, dict] = {}
+    schema: list[str] = []
+    if not args.no_fetch:
+        for prefix, rs in ranked[:args.top]:
+            blob, keys = fetch_series_text(prefix)
+            if not blob:
+                continue
+            schema = schema or keys
+            fetched[prefix] = blob
+            for r in rs:
+                text[r["ticker"]] = {**text.get(r["ticker"], {}), **blob}
+        print(f"  Kalshi rules text fetched for {len(fetched)}/{min(args.top, len(ranked))} "
+              "prefixes (public market-data endpoint, no key)")
+        if schema:
+            print(f"  market fields seen: {', '.join(schema[:18])}"
+                  + (" ..." if len(schema) > 18 else ""))
+        if not fetched:
+            print("  NOTHING fetched — every proposal below rests on shape evidence alone and")
+            print("  will therefore be INSUFFICIENT_EVIDENCE. Check egress before reading this")
+            print("  as a finding about Kalshi's series.")
     print(f"  detailing the top {min(args.top, len(ranked))} by supply, covering "
           f"{covered / len(unknown):.1%} of unclassified markets")
 

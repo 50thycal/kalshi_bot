@@ -289,9 +289,11 @@ rationale — see §6 for what those runs said and why it no longer stands.
 `--vol-mult 2.0` is deliberate: **theta4 does not run the base model.** Scoring against
 `mult=1.0` would compare the replacement to a model that never traded.
 
-The cluster bootstrap is seeded (`seed=20260822`) and the same seed reproduces the same
-interval endpoints exactly. An analysis whose uncertainty moves between runs cannot be a frozen
-result.
+The cluster bootstrap is seeded (`seed=20260822`) and the same seed reproduces the same interval
+endpoints exactly. An analysis whose uncertainty moves between runs cannot be a frozen result —
+so it was checked rather than asserted: runs `refit-10` and `refit-11`, thirteen minutes apart,
+differ in exactly one line, the count of Coinbase minutes fetched. Every reported number is
+byte-identical.
 
 ### 3.1 Label quality — the gate, passed
 
