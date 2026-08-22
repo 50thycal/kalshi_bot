@@ -1,36 +1,34 @@
-"""What the paper shadow costs a live trading cycle, measured rather than asserted.
+"""FIT and MEMORY cost of the paper shadow. **This does not measure PostgreSQL.**
 
-WHY. The replacement model is research riding along inside the loop that prices real money. It
-decides nothing, but it runs in the same thread as the scan, and "it's only telemetry" is not a
-latency argument. Before that rider is allowed to keep running, its cost has to be bounded and
-the bound has to be observed under the worst load the book actually sees.
+WHAT THIS IS FOR. The replacement model is research riding along inside the loop that prices
+real money, and "it's only telemetry" is not a latency argument. This bounds the ARITHMETIC half
+of that cost — how many fits a cycle performs, how long they take, how much the close set holds —
+deterministically and without a database.
 
-WHAT IS MEASURED, at representative MAXIMUM market load:
+WHAT IT IS NOT. The close set is generated in-process, so the "load" line measures materialising
+~43,000 closes per product into Python objects. **Production adds the Postgres round trip, the
+row decode and whatever the database is doing at that moment**, and that is the dominant term.
+A number from this script is a LOWER BOUND on the production cost and must not be quoted as a
+production measurement.
 
-  * closes loaded          rows the shadow's own `SpotModel` load pulls, per product per cycle
-  * distinct fits          how many GPD fits a cycle really performs, versus markets priced
-  * fit time               wall-clock inside `_spliced`, which is what the budget governs
-  * per-market overhead    the marginal cost of the shadow on one quote
-  * cycle latency          shadow milliseconds added to a scan
-  * peak memory            what the close set and the fits hold at once
-  * cache behaviour        hit rate, and what the horizon grid buys
+WHERE THE PRODUCTION NUMBER COMES FROM. The worker logs one `theta: shadow cost` line per cycle
+with `theta_shadow_ms` (TOTAL: load + decode + construction + fits), `theta_shadow_load_ms`,
+`theta_shadow_loads` and `theta_shadow_fits`. Collect it over several hourly reloads with:
 
-WHY IT IS BOUNDED BY CONSTRUCTION. Three mechanisms, in order of how much they matter:
+    {"type":"logs","service":"main","filter":"theta: shadow cost"}
 
-  1  the HORIZON GRID. Fits are keyed by bucketed horizon, so a cycle performs at most
-     len(H_BUCKETS) fits per product no matter how many strikes the ladder publishes. This is
-     the mechanism; without it a 240-strike ladder could ask for 240 fits.
-  2  the PER-CYCLE CACHE, which makes the second market at a given horizon free.
-  3  the TIME BUDGET (`theta_spliced_budget_ms`), the backstop for a pathological window: when
-     it is spent the remaining markets record metadata and no probability. A gap in a research
-     series is recoverable; a late quote is not.
+and report p50/p90/p99/max of `theta_shadow_ms` before calling any budget production-derived.
 
-No database, no network: a synthetic close set of the same size and shape as a full 90-day
-window, so the number is reproducible and the benchmark can be re-run on any change to the
-model. Read the "load" line accordingly — it is the cost of MATERIALISING 130,000 closes per
-product into Python objects, which is the part this can measure honestly. Production adds the
-Postgres round trip and row decode on top, which makes the case for holding the close set
-across cycles stronger than the number here, not weaker.
+WHAT BOUNDS THE COST, in order of how much it matters:
+
+  1  the close set is HELD FOR ITS REFIT ANCHOR rather than reloaded every cycle. This is the
+     dominant term and it is database work on the trading loop's thread.
+  2  the HORIZON GRID caps fits at len(H_BUCKETS) per product per anchor, so a 240-strike ladder
+     costs the same as a 6-strike one.
+  3  `theta_spliced_budget_ms` bounds TOTAL shadow elapsed time — load, decode, construction and
+     fits — and the load additionally carries a database statement timeout, because a
+     Python-side deadline cannot interrupt a query that has already been issued. Over budget
+     means metadata without a probability, and the scan continues.
 
 Run it directly; it is not an ops script.
 """
@@ -211,8 +209,8 @@ def run(fit_days: float, tail_q: float, budget_ms: float, markets: int, cycles: 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--fit-days", type=float, default=90.0)
-    ap.add_argument("--tail-q", type=float, default=0.90)
+    ap.add_argument("--fit-days", type=float, default=tm.FROZEN_FIT_DAYS)
+    ap.add_argument("--tail-q", type=float, default=tm.FROZEN_TAIL_Q)
     ap.add_argument("--budget-ms", type=float, default=3000.0)
     ap.add_argument("--markets", type=int, default=MAX_MARKETS_PER_CYCLE)
     ap.add_argument("--cycles", type=int, default=12)

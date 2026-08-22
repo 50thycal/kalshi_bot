@@ -133,6 +133,19 @@ RUN_SEPARATION = 2
 # This module is deliberately dependency-free (math + dataclasses) so the ops runner can load it
 # by path without importing the SQLAlchemy-bearing package.
 
+# THE FROZEN CONFIGURATION, chosen on TRAIN by mean Bernoulli log loss over a common population
+# and recorded in run `refit-12` (2026-08-22). These are what the offline validation actually
+# scored, so they are what the runtime must run: a shadow fitted on a window the validation never
+# evaluated produces probabilities no verdict covers. `Settings.theta_spliced_fit_days` and
+# `theta_spliced_tail_q` carry them into the worker, and
+# `tests/test_theta_tailmodel.py::TestRuntimeOfflineParity` asserts the DEFAULTS equal these.
+#
+# 30 days rather than 90 is a measurement, not a preference: at 30/0.90 the TRAIN log loss is
+# 0.00374 against 0.00382 at 90/0.90, both at 100% powered coverage. Note this is the FIT window
+# and is unrelated to `theta_spot_retention_days` (90), which governs how long closes are KEPT.
+FROZEN_FIT_DAYS = 30.0
+FROZEN_TAIL_Q = 0.90
+
 # Horizons are snapped onto a fixed grid. Without this the runtime fits at whatever integer
 # minutes-to-close a market happens to show while the harness fits on a grid, so the probability
 # that was validated is not the probability that would trade.

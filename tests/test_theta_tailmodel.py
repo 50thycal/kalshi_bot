@@ -17,6 +17,7 @@ from __future__ import annotations
 import datetime as _dt
 import math
 import random
+import time
 
 import pytest
 
@@ -833,13 +834,28 @@ class TestRuntimeOfflineParity:
         return out
 
     @pytest.fixture
-    def tracker(self, settings, candles):
+    def tracker(self, settings):
         from kalshi_bot.theta.tracker import ThetaTracker
 
-        settings.theta_spliced_fit_days = 30.0
-        settings.theta_spliced_tail_q = 0.90
-        settings.theta_spliced_budget_ms = 0.0          # no budget: parity, not throughput
+        # The REAL defaults. Nothing about the frozen specification is set here: if a default
+        # drifts away from what `refit-12` scored, these tests must fail rather than paper over
+        # it by configuring the tracker into agreement.
+        settings.theta_spliced_budget_ms = 0.0          # parity, not throughput — not the spec
         return ThetaTracker(object(), settings, spot_client=object())
+
+    def test_the_shipped_defaults_ARE_the_frozen_specification(self, settings):
+        """The runtime must fit the window the offline validation actually scored.
+
+        This shipped at 90 days while the sweep was still open, so the live shadow would have
+        produced probabilities from a configuration `refit-12` did not select — no verdict
+        covers those. The fit window is also NOT the retention window; the two were the same
+        number once and every claim about what retention bought was false as a result.
+        """
+        assert settings.theta_spliced_fit_days == tm.FROZEN_FIT_DAYS == 30.0
+        assert settings.theta_spliced_tail_q == tm.FROZEN_TAIL_Q == 0.90
+        assert settings.theta_spot_retention_days == 90.0
+        assert settings.theta_spot_retention_days > settings.theta_spliced_fit_days
+        assert settings.theta_spliced_fit_days > settings.theta_trail_days
 
     @pytest.mark.parametrize("tte_min", [10.0, 17.0, 22.4, 31.0, 35.0])
     def test_probability_and_metadata_match_at_every_horizon(self, tracker, candles, tte_min):
@@ -850,8 +866,8 @@ class TestRuntimeOfflineParity:
         assert runtime is not None
 
         mod = self._harness()
-        cache = mod.FitCache({"BTC": candles, "ETH": {}}, tracker.settings.theta_spliced_tail_q,
-                             fit_days=tracker.settings.theta_spliced_fit_days)
+        cache = mod.FitCache({"BTC": candles, "ETH": {}}, tm.FROZEN_TAIL_Q,
+                             fit_days=tm.FROZEN_FIT_DAYS)
         offline = cache.get("BTC", _dt.datetime.fromtimestamp(as_of, tz=_dt.timezone.utc),
                             tm.h_bucket(tte_min))
         assert offline is not None
@@ -922,8 +938,9 @@ class TestRuntimeOfflineParity:
 
         calls = {"n": 0}
 
-        def fake_load(_session, _product, _since):
+        def fake_load(_session, _product, _since, *, statement_timeout_ms=None):
             calls["n"] += 1
+            calls["timeout"] = statement_timeout_ms
             return candles
 
         monkeypatch.setattr(repo, "load_spot_closes", fake_load)
@@ -940,6 +957,47 @@ class TestRuntimeOfflineParity:
         monkeypatch.setattr(trk.time, "time", lambda: base + 3700)
         tracker._refresh_shadow_spot(None, "BTC")
         assert calls["n"] == 2
+
+    def test_the_budget_covers_the_LOAD_not_just_the_fits(self, tracker, candles,
+                                                          monkeypatch):
+        """The dominant cost is the close-set load, and a budget that gates only fit time
+        bounds the cheap half. A Python-side deadline also cannot interrupt a query already
+        issued, so the load carries a database statement timeout as well."""
+        import kalshi_bot.repository as repo
+        from kalshi_bot.theta import tracker as trk
+
+        seen = {}
+
+        def slow_load(_session, _product, _since, *, statement_timeout_ms=None):
+            seen["timeout"] = statement_timeout_ms
+            time.sleep(0.02)
+            return candles
+
+        monkeypatch.setattr(trk.repo, "load_spot_closes", slow_load, raising=False)
+        monkeypatch.setattr(repo, "load_spot_closes", slow_load)
+        tracker.settings.theta_spliced_budget_ms = 10.0     # smaller than the load
+        base = max(candles) // 3600 * 3600
+        monkeypatch.setattr(trk.time, "time", lambda: base + 60)
+
+        assert tracker._refresh_shadow_spot(None, "BTC") is not None
+        # The load itself is charged to the budget...
+        assert tracker._shadow_load_ms >= 20.0
+        assert tracker._shadow_ms == tracker._shadow_load_ms
+        # ...and the timeout is handed to the database, not merely checked afterwards.
+        assert seen["timeout"] == 10
+        # ...so the NEXT product gets nothing rather than delaying the scan further.
+        assert tracker._refresh_shadow_spot(None, "ETH") is None
+        assert tracker._shadow_budget_hit is True
+
+    def test_a_failed_shadow_load_does_not_break_the_cycle(self, tracker, monkeypatch):
+        from kalshi_bot.theta import tracker as trk
+
+        def boom(*_a, **_k):
+            raise RuntimeError("statement timeout")
+
+        monkeypatch.setattr(trk.repo, "load_spot_closes", boom, raising=False)
+        assert tracker._refresh_shadow_spot(None, "BTC") is None
+        assert tracker._shadow_loads == 1
 
     def test_products_do_not_share_a_fit(self, tracker, candles):
         as_of = max(candles)

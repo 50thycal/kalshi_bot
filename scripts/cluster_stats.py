@@ -248,6 +248,75 @@ def design_effect(rows: Sequence[dict], cluster_key: str, value: Callable[[dict]
     return {"deff": deff, "n_eff": (n / deff) if deff and deff > 0 else float("nan"), "n": n}
 
 
+def _log_binom_tail_ge(k: int, n: int, p: float) -> float:
+    """log P(X >= k) for X ~ Binomial(n, p), summed in log space so large n does not overflow."""
+    if p <= 0.0:
+        return 0.0 if k <= 0 else float("-inf")
+    if p >= 1.0:
+        return 0.0 if k <= n else float("-inf")
+    total = float("-inf")
+    lp, lq = math.log(p), math.log1p(-p)
+    for i in range(max(k, 0), n + 1):
+        term = (math.lgamma(n + 1) - math.lgamma(i + 1) - math.lgamma(n - i + 1)
+                + i * lp + (n - i) * lq)
+        # log-sum-exp, running
+        if term > total:
+            total, term = term, total
+        total = total + math.log1p(math.exp(term - total)) if term > float("-inf") else total
+    return total
+
+
+def cluster_success_lower_bound(rows: Sequence[dict], cluster_key: str,
+                                ok: Callable[[dict], bool], *, alpha: float = 0.01) -> dict:
+    """One-sided exact lower confidence bound on a success rate, with the CLUSTER as the unit.
+
+    WHY NOT A BOOTSTRAP. A percentile bootstrap on an all-success sample returns [1, 1]: every
+    resample is drawn from observations that all succeeded, so no replicate can ever contain a
+    failure. That is a boundary artefact of the method, not evidence of certainty, and reporting
+    it as a 99% interval overstates what a few dozen clusters can establish.
+
+    WHAT THIS DOES INSTEAD. Clopper-Pearson on the number of CLUSTERS, where a cluster counts as
+    a failure if ANY of its rows fails. Conservative twice over — it never credits the extra
+    rows inside a cluster, and it takes the worst row in each — and it is exactly valid at zero
+    observed failures, which is the case that matters. With F = 0 the bound reduces to the
+    familiar `alpha ** (1/C)`: 63 clusters and no failures give 92.9% at 99% confidence, not
+    100%. Clearing a 97% bar at zero failures needs `ln(alpha)/ln(0.97)` = 151 clusters.
+    """
+    groups = group_by_cluster(rows, cluster_key)
+    n_clusters = len(groups)
+    failed = sum(1 for v in groups.values() if not all(ok(r) for r in v))
+    n_rows = len(rows)
+    row_ok = sum(1 for r in rows if ok(r))
+    out = {"rows": n_rows, "row_successes": row_ok,
+           "row_rate": (row_ok / n_rows) if n_rows else float("nan"),
+           "clusters": n_clusters, "cluster_failures": failed,
+           "cluster_rate": ((n_clusters - failed) / n_clusters) if n_clusters else float("nan"),
+           "lower": None, "alpha": alpha}
+    if not n_clusters:
+        return out
+    if failed == 0:
+        out["lower"] = alpha ** (1.0 / n_clusters)
+        return out
+    successes = n_clusters - failed
+    lo, hi = 0.0, 1.0
+    target = math.log(alpha)
+    for _ in range(200):                 # P(X >= successes | p) is increasing in p
+        mid = (lo + hi) / 2.0
+        if _log_binom_tail_ge(successes, n_clusters, mid) < target:
+            lo = mid
+        else:
+            hi = mid
+    out["lower"] = lo
+    return out
+
+
+def clusters_needed_for(bound: float, *, alpha: float = 0.01) -> int:
+    """How many all-succeeding clusters it takes to put the lower bound at `bound`."""
+    if not 0.0 < bound < 1.0:
+        return 0
+    return int(math.ceil(math.log(alpha) / math.log(bound)))
+
+
 def fmt_ci(lo: float | None, hi: float | None, digits: int = 2) -> str:
     if lo is None or hi is None or not (math.isfinite(lo) and math.isfinite(hi)):
         return "n/a"

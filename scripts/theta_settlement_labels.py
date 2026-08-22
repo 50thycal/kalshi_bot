@@ -279,6 +279,61 @@ def load_universe(cur, since: str, tte_max: float) -> list[dict]:
     return rows
 
 
+# --- Kalshi's own settled results ----------------------------------------------------------------
+
+KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
+_UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+
+
+def fetch_kalshi_results(events: list[str], timeout: float = 20.0,
+                         limit_events: int | None = None) -> tuple[dict[str, bool], int]:
+    """{market_ticker: yes_resolved} straight from Kalshi, per EVENT.
+
+    This is the evidence the database does not hold. `markets` carries no crypto ladder row, so
+    the only recorded settlement in Postgres is `paper_trades.resolved_value` — 0.33% of the
+    universe, and only where a book traded, which is the selected subset. Kalshi's market-data
+    endpoints are public and serve a `result` field on settled markets, so the population's real
+    outcomes are fetchable rather than derivable.
+
+    One request per event (~66 markets each), so ~2,100 requests covers the whole window.
+    Returns the results and how many events were successfully read, because partial coverage
+    must be visible: a label set that silently covers 60% of the universe is worse than one
+    that says so.
+    """
+    import urllib.request
+
+    out: dict[str, bool] = {}
+    ok_events = 0
+    for i, ev in enumerate(events):
+        if limit_events is not None and i >= limit_events:
+            break
+        url = f"{KALSHI}/markets?event_ticker={ev}&limit=200"
+        req = urllib.request.Request(url, headers={"User-Agent": _UA,
+                                                   "Accept": "application/json"})
+        markets = None
+        for attempt in range(2):
+            try:
+                with urllib.request.urlopen(req, timeout=timeout) as resp:   # noqa: S310
+                    markets = json.loads(resp.read().decode()).get("markets") or []
+                break
+            except Exception:                                        # noqa: BLE001
+                time.sleep(0.4 * (attempt + 1))
+        if markets is None:
+            continue
+        got = 0
+        for m in markets:
+            res = str(m.get("result") or "").lower()
+            tkr = str(m.get("ticker") or "")
+            if tkr and res in ("yes", "no"):
+                out[tkr] = (res == "yes")
+                got += 1
+        if got:
+            ok_events += 1
+        time.sleep(0.08)
+    return out, ok_events
+
+
 # --- the rule ------------------------------------------------------------------------------------
 
 def strike_distance(r: dict) -> float | None:
@@ -362,10 +417,7 @@ def report(rows: list[dict], truth: dict[str, bool], scale: dict[str, dict[int, 
     print()
     print(f"  residual window actually used, by market count: {spread}")
 
-    head("3. AGREEMENT — derived label vs recorded Kalshi settlement")
-    if len(overlap) < 30:
-        print(f"  only {len(overlap)} markets have both labels — too few to audit. BLOCKED_DATA.")
-        return False
+    head("3. AGREEMENT — derived label vs recorded settlement, and what it can support")
     for r in rows:
         r["amb"] = ambiguous(r, scale)
     for r in overlap:
@@ -377,30 +429,88 @@ def report(rows: list[dict], truth: dict[str, bool], scale: dict[str, dict[int, 
     # universe the rule discards", which is the question the bar exists to ask.
     kept_all = [r for r in rows if r["amb"] is False]
     dropped = [r for r in rows if r["amb"] is not False]
-    prof = cs.cluster_profile(overlap, "event")
-    print(f"  audit sample: {len(overlap):,} markets across {prof['clusters']:,} events "
-          f"(mean {prof['mean_size']:.1f}/event, max {prof['max_size']}, "
-          f"Kish effective events {prof['kish_effective_clusters']:.1f})")
-    print("  Intervals are event-clustered percentile bootstrap at 99%: markets on one ladder")
-    print("  share one settlement print and are not independent checks of the derivation.")
-    print()
-    print(f"  {'population':<34} {'n':>8} {'agreement':>11}   {'99% CI (event-clustered)':<26}")
-    print("  " + "-" * 88)
-    for label, rs in (("ALL overlapping markets", overlap),
-                      (f"near-strike EXCLUDED (K={NEAR_STRIKE_K:g})", kept)):
-        if not rs:
-            print(f"  {label:<34} {0:>8}   (empty)")
-            continue
-        m = cs.mean_ci(rs, "event", lambda r: r["agree"], seed=seed)
-        print(f"  {label:<34} {len(rs):>8} {m['mean']:>10.2%}   "
-              f"{cs.fmt_ci(m['lo'], m['hi'], 4):<26}")
+    if len(overlap) < 30:
+        print(f"  only {len(overlap)} markets have both labels — too few to audit. BLOCKED_DATA.")
+        return False
     retained = len(kept_all) / len(rows) if rows else 0.0
-    audit_retained = len(kept) / len(overlap) if overlap else 0.0
+    print(f"  audit sample after the near-strike exclusion: {len(kept):,} markets across "
+          f"{cs.cluster_profile(kept, 'event')['clusters']:,} events")
     print()
     print(f"  on the POPULATION ({len(rows):,} markets) the rule discards {len(dropped):,} "
           f"({1 - retained:.2%}); retained coverage {retained:.2%}  <- the bar applies here")
-    print(f"  on the audit overlap ({len(overlap):,} markets) it retains {audit_retained:.2%}, "
-          "which is a different and easier question")
+    print()
+    print("  UNCERTAINTY. An earlier revision reported a percentile bootstrap interval here and")
+    print("  got [1.0000, 1.0000] when every retained market agreed. That is a BOUNDARY ARTEFACT:")
+    print("  every resample is drawn from observations that all succeeded, so no replicate can")
+    print("  contain a failure. It is not evidence of certainty and it is withdrawn.")
+    print("  Replaced by an exact one-sided Clopper-Pearson bound with the EVENT as the unit — a")
+    print("  cluster counts as a failure if ANY of its markets disagrees — which stays valid at")
+    print("  zero observed failures. The BAR APPLIES TO THE LOWER BOUND, not the point estimate.")
+    print()
+    print(f"  {'population':<30} {'markets':>8} {'events':>7} {'ev fail':>8} {'rate':>9} "
+          f"{'99% LOWER':>11}")
+    print("  " + "-" * 84)
+    stats = {}
+    for label, rs in (("ALL overlapping markets", overlap),
+                      (f"near-strike EXCLUDED (K={NEAR_STRIKE_K:g})", kept)):
+        st = cs.cluster_success_lower_bound(rs, "event", lambda r: r["agree"] == 1.0)
+        stats[label] = st
+        lb = f"{st['lower']:.4f}" if st["lower"] is not None else "n/a"
+        print(f"  {label:<30} {st['rows']:>8,} {st['clusters']:>7,} "
+              f"{st['cluster_failures']:>8} {st['row_rate']:>8.2%} {lb:>11}")
+    need = cs.clusters_needed_for(AGREEMENT_BAR)
+    print()
+    print(f"  To put the lower bound at the {AGREEMENT_BAR:.0%} bar with zero failures takes "
+          f"{need} independent events.")
+
+    head("3B. AUDIT COVERAGE — what this sample is, and what it is not")
+    print("  The overlap is every market some paper book traded and settled. It is a SELECTED")
+    print("  subset: theta sells deep tails, so the audit is dense where the strategy trades and")
+    print("  empty everywhere else. Nothing below generalises to the full population without")
+    print("  saying so, and the breakdowns are here so the gaps are visible rather than assumed")
+    print("  away.")
+    print()
+    print(f"  audited markets {len(overlap):,} of {len(rows):,} "
+          f"({len(overlap) / max(1, len(rows)):.2%} of the scored universe)")
+
+    def _breakdown(title: str, key) -> None:
+        pop: dict = defaultdict(int)
+        aud: dict = defaultdict(int)
+        for r in rows:
+            pop[key(r)] += 1
+        for r in overlap:
+            aud[key(r)] += 1
+        print()
+        print(f"  {title:<26} {'population':>11} {'audited':>9} {'coverage':>10} "
+              f"{'disagree':>9}")
+        print("  " + "-" * 72)
+        for k in sorted(pop, key=lambda k: -pop[k]):
+            a = aud.get(k, 0)
+            bad = sum(1 for r in overlap if key(r) == k and r["agree"] == 0.0)
+            print(f"  {str(k):<26} {pop[k]:>11,} {a:>9,} {a / pop[k]:>9.2%} {bad:>9}")
+
+    def _sigma_band(r: dict) -> str:
+        d, sg = strike_distance(r), sigma_for(r, scale)
+        if d is None or not math.isfinite(sg) or sg <= 0:
+            return "unclassifiable"
+        x = d / sg
+        for lo, hi in ((0.0, 0.5), (0.5, 1.0), (1.0, 2.0), (2.0, 4.0)):
+            if lo <= x < hi:
+                return f"{lo:g}-{hi:g} sigma"
+        return ">=4 sigma"
+
+    _breakdown("by product", lambda r: r["product"])
+    _breakdown("by strike type", lambda r: r["strike_type"] or "?")
+    _breakdown("by residual lag (min)", lambda r: f"{int(round(r['final_mtc']))}m")
+    _breakdown("by distance from strike", _sigma_band)
+    prof_pop = cs.cluster_profile(rows, "event")
+    prof_aud = cs.cluster_profile(overlap, "event")
+    print()
+    print(f"  {'by event':<26} {'population':>11} {'audited':>9} {'coverage':>10}")
+    print("  " + "-" * 60)
+    print(f"  {'distinct events':<26} {prof_pop['clusters']:>11,} {prof_aud['clusters']:>9,} "
+          f"{prof_aud['clusters'] / max(1, prof_pop['clusters']):>9.2%}")
+    print(f"  {'markets per audited event':<26} {'':>11} {prof_aud['mean_size']:>9.1f}")
 
     head("4. DISAGREEMENTS — where the derived label goes wrong")
     print("  Distance from the settlement proxy to the binding strike, in residual sigmas. If")
@@ -412,10 +522,10 @@ def report(rows: list[dict], truth: dict[str, bool], scale: dict[str, dict[int, 
     for lo, hi in bands:
         band = []
         for r in overlap:
-            d, s = strike_distance(r), sigma_for(r, scale)
-            if d is None or not math.isfinite(s) or s <= 0:
+            d, sg = strike_distance(r), sigma_for(r, scale)
+            if d is None or not math.isfinite(sg) or sg <= 0:
                 continue
-            if lo <= d / s < hi:
+            if lo <= d / sg < hi:
                 band.append(r)
         if not band:
             continue
@@ -427,22 +537,36 @@ def report(rows: list[dict], truth: dict[str, bool], scale: dict[str, dict[int, 
     if not kept:
         print("  the exclusion rule leaves nothing. BLOCKED_DATA.")
         return False
-    m = cs.mean_ci(kept, "event", lambda r: r["agree"], seed=seed)
-    agree_ok = m["mean"] >= AGREEMENT_BAR
+    st = stats[f"near-strike EXCLUDED (K={NEAR_STRIKE_K:g})"]
+    lower = st["lower"]
+    agree_ok = lower is not None and lower >= AGREEMENT_BAR
     cov_ok = retained >= COVERAGE_BAR
-    print(f"  agreement after exclusion   {m['mean']:.2%}  bar {AGREEMENT_BAR:.0%}   "
-          f"{'PASS' if agree_ok else 'FAIL'}")
-    print(f"  retained coverage           {retained:.2%}  bar {COVERAGE_BAR:.0%}   "
+    print(f"  agreement, point estimate      {st['row_rate']:.2%}  "
+          f"({st['cluster_failures']} of {st['clusters']} events carry a disagreement)")
+    print(f"  agreement, 99% LOWER bound     {lower:.2%}  bar {AGREEMENT_BAR:.0%}   "
+          f"{'PASS' if agree_ok else 'FAIL'}   <- this is the gate")
+    print(f"  retained coverage              {retained:.2%}  bar {COVERAGE_BAR:.0%}   "
           f"{'PASS' if cov_ok else 'FAIL'}")
     print()
     if agree_ok and cov_ok:
         print("  LABELS USABLE on the retained population. Every calibration number downstream")
         print("  must be computed on that same retained population, not on the full universe.")
     else:
-        print("  BLOCKED_DATA. The outcome labels do not meet their own quality bar, so no")
-        print("  calibration computed against them is validated — including any that already")
-        print("  reports a verdict. This blocks the stage, it does not adjust the bar.")
-    return agree_ok and cov_ok
+        print("  BLOCKED_DATA. The derived outcome labels do not meet their own preregistered")
+        print("  bar, so no calibration computed against them is VALIDATED — including one that")
+        print("  already reports a verdict. Such results are ADVISORY: the point estimates stand")
+        print("  as descriptions and the verdicts do not.")
+        print()
+        print("  The point estimate is not the problem. What is missing is EVIDENCE: a few dozen")
+        print("  events cannot put a lower bound above 97% however well they agree, and the")
+        print("  sample is the traded subset rather than the population. Two ways out, neither")
+        print("  of which is moving the bar:")
+        print("    1. real settled results from Kalshi for the population (--kalshi-results),")
+        print("       which replaces the derivation instead of auditing it;")
+        print(f"    2. {cs.clusters_needed_for(AGREEMENT_BAR)} independent events in the audit "
+              "overlap, against")
+        print(f"       {st['clusters']} today.")
+    return bool(agree_ok and cov_ok)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -450,6 +574,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--since", default="2026-07-11")
     ap.add_argument("--tte-max", type=float, default=35.0)
     ap.add_argument("--seed", type=int, default=cs.DEFAULT_SEED)
+    ap.add_argument("--kalshi-results", action="store_true",
+                    help="fetch REAL settled results from Kalshi's public market-data endpoint, "
+                         "one request per event, and report how much of the population they "
+                         "cover. This is the path that replaces the derivation rather than "
+                         "auditing it; ~2,100 requests for a six-week window.")
+    ap.add_argument("--kalshi-max-events", type=int, default=None,
+                    help="cap the number of events fetched, for a coverage probe")
     ap.add_argument("--spot-source", default="coinbase", choices=("coinbase", "ladder"),
                     help="coinbase = true 1-minute closes, dense enough to measure a 1-5 "
                          "minute move scale; ladder = the ~5-minute snapshot reconstruction, "
@@ -477,6 +608,36 @@ def main(argv: list[str] | None = None) -> int:
     print(f"settlement label audit   since={args.since}  tte_max={args.tte_max:g}  "
           f"K={NEAR_STRIKE_K:g}  seed={args.seed}  spot={args.spot_source}")
     print("commit: " + (os.environ.get("GITHUB_SHA") or "unknown (not run from CI)"))
+
+    if args.kalshi_results:
+        events = sorted({r["event"] for r in rows})
+        print(f"fetching REAL settled results from Kalshi for {len(events):,} events"
+              + (f" (capped at {args.kalshi_max_events})" if args.kalshi_max_events else "")
+              + "...")
+        real, ok_events = fetch_kalshi_results(events, limit_events=args.kalshi_max_events)
+        covered = [r for r in rows if r["ticker"] in real]
+        head("0. REAL KALSHI RESULTS — the path that replaces the derivation")
+        print(f"  events read successfully: {ok_events:,} of "
+              f"{min(len(events), args.kalshi_max_events or len(events)):,}")
+        print(f"  markets with a REAL result: {len(covered):,} of {len(rows):,} "
+              f"({len(covered) / max(1, len(rows)):.2%} of the scored universe)")
+        if covered:
+            agree = sum(1 for r in covered if r["derived"] == real[r["ticker"]])
+            st = cs.cluster_success_lower_bound(
+                [{**r, "ok": r["derived"] == real[r["ticker"]]} for r in covered],
+                "event", lambda r: r["ok"])
+            print(f"  derived label agrees with the REAL result: {agree:,}/{len(covered):,} "
+                  f"= {agree / len(covered):.2%}")
+            print(f"  events {st['clusters']:,}, of which {st['cluster_failures']:,} carry a "
+                  f"disagreement; 99% lower bound {st['lower']:.2%}")
+            print()
+            print("  If this coverage is high, the correct move is to SCORE ON THESE RESULTS")
+            print("  rather than audit a derivation against them — which changes the scored")
+            print("  population and therefore needs a fresh refit. That is an operator call, not")
+            print("  something to slip into a correction pass.")
+        else:
+            print("  NOTHING retrieved. Treat the derived label as the only available outcome.")
+
     ok = report(rows, truth, residual_scale(spot), sources, args.seed)
     print()
     print(f"RESULT: {'labels usable on the retained population' if ok else 'BLOCKED_DATA'}")

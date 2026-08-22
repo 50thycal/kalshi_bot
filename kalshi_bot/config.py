@@ -630,21 +630,31 @@ class Settings(BaseSettings):
     # days).
     theta_spot_retention_days: float = 90.0
 
-    # Fit window for the PAPER replacement model (`kalshi_bot/theta/tailmodel.py`) only. Never
+    # FIT WINDOW for the PAPER replacement model (`kalshi_bot/theta/tailmodel.py`) only. Never
     # read by the incumbent, and no book prices off it.
+    #
+    # NOT the same thing as `theta_spot_retention_days` (90), which governs how long 1-minute
+    # closes are KEPT. Retention has to exceed the fit window so the window can be filled at all;
+    # conflating the two was the defect in the first draft of this work, which retained 90 days
+    # and then still fitted on 5.
+    #
+    # 30 is the configuration frozen on TRAIN in run `refit-12` and equals
+    # `tailmodel.FROZEN_FIT_DAYS`. It was 90 here while the sweep was still open, which meant the
+    # shadow would have run a window the validation did not select — TRAIN log loss 0.00382 at
+    # 90 days against 0.00374 at 30, both fully powered. A shadow fitted outside the frozen
+    # specification produces probabilities no verdict covers.
     #
     # Why it must exceed `theta_trail_days`: a fitted tail consumes NON-OVERLAPPING h-minute
     # blocks, so a 5-day window at a 35-minute horizon yields 7200/35 ~= 205 blocks and ~10
     # declustered exceedances at the 95th percentile — far below the ~20 a Generalized Pareto
-    # needs on a side. 90 days yields ~3,700 blocks and enough exceedances to fit. The estimator
-    # was never the constraint; the window was.
-    theta_spliced_fit_days: float = 90.0
+    # needs on a side. At 30 days the same horizon yields ~1,230 blocks and every quote powers.
+    theta_spliced_fit_days: float = 30.0
 
     # Peaks-over-threshold quantile for the PAPER replacement model. Explicit rather than left
     # to the module default so the runtime cannot silently price off a different tail than the
-    # one the offline harness froze — the two are compared directly by
-    # `tests/test_theta_tailmodel.py::TestRuntimeOfflineParity`. Changing it changes what the
-    # shadow measures and is a Platform Change Review event, not a knob.
+    # one the offline harness froze; equals `tailmodel.FROZEN_TAIL_Q`, and
+    # `tests/test_theta_tailmodel.py::TestRuntimeOfflineParity` asserts that it does. Changing it
+    # changes what the shadow measures and is a Platform Change Review event, not a knob.
     theta_spliced_tail_q: float = 0.90
 
     # Per-cycle wall-clock budget for the shadow FITS, in milliseconds. The shadow is research

@@ -1,12 +1,17 @@
 """The Platform Change Review package for MMSELL's settlement taxonomy — and the census it gates.
 
-WHY. The MMSELL 2x2 paper design cannot start: 24.03% of its eligible non-crypto 5-7c
+WHY. The MMSELL 2x2 paper design cannot start: a seventh of its eligible non-crypto 5-7c
 population classifies as `unknown` against a 5% bar fixed before the measurement. The first
-scoping of the repair named six crypto series. That was wrong by an order of magnitude, and
+scoping of the repair named six crypto series. That was wrong by two orders of magnitude, and
 worse, it carried an assumption — that an unknown series is a scheduled one — which is exactly
 the kind of guess a taxonomy exists to eliminate. An `unknown` prefix silently treated as
 `scheduled` would put in-play markets into the treatment arm and make the primary comparison
 measure the thing the design is trying to hold constant.
+
+HOW EVIDENCE IS COUNTED. Over DISTINCT rule documents, never over markets. Settlement semantics
+are a property of the SERIES, so one rule document answers for every market under a prefix — but
+it answers once. Run `tax-6` fetched one market per prefix, copied its blob onto all forty-six
+markets, and reported "100% of 46 texts". That is one document counted forty-six times.
 
 WHAT THIS DOES.
 
@@ -14,9 +19,10 @@ WHAT THIS DOES.
                   pct` against its bar. This is the SAME function that must be re-run after the
                   repair, so "rerun the exact same census" is one command rather than a promise
   2  PREFIXES     every unclassified series in that population, with its supply
-  3  EVIDENCE     per prefix, four independent signals read from the data: what Kalshi says the
-                  settlement source is, what the rules text says, how far expiration sits from
-                  close, and whether the price path resolves continuously or jumps
+  3  EVIDENCE     per prefix, up to eight Kalshi markets inspected across settled and open
+                  status, deduplicated to DISTINCT rule documents; then four signals — what
+                  Kalshi says the settlement source is, what the rules text says, how far
+                  expiration sits from close, and whether the price path resolves or jumps
   4  PROPOSAL     a mode proposed by a DECLARED rule over those signals, with the signals shown
                   beside it, or INSUFFICIENT_EVIDENCE where they conflict or are missing
   5  PACKAGE      the review table, ready to hand to Platform Change Review
@@ -219,47 +225,78 @@ def _get_json(url: str, timeout: float) -> dict:
         return json.loads(resp.read().decode())
 
 
-def fetch_series_text(prefix: str, timeout: float = 20.0) -> tuple[dict, list[str]]:
-    """Title, rules and settlement source for one representative market in `prefix`.
+# How many markets to inspect per prefix, and the statuses to draw them from. One document is
+# one document however many markets carry it: run `tax-6` fetched ONE market per prefix, copied
+# its blob onto every market under that prefix, and then reported "100% of 46 texts" — one
+# document counted forty-six times. Settlement semantics are a property of the series, so a
+# single representative document is a legitimate human-review aid; it is not N confirmations.
+SAMPLE_MARKETS_PER_PREFIX = 8
+SAMPLE_STATUSES = ("settled", "open")
 
-    The database cannot answer this: `markets` holds no row for any of these tickers, so the
-    first run of this audit had zero strong signals and correctly refused to propose anything
-    for all 216 prefixes. Kalshi's market-data endpoints are PUBLIC and need no key, and the
-    ops runner has open egress, so the rules text is fetchable rather than absent.
+# Distinct rule documents needed before a prefix's text counts as more than one observation.
+# Below this the proposal still stands or falls on the document's CONTENT — it is simply
+# reported as resting on one document, which is what it does.
+MIN_UNIQUE_DOCS_FOR_CONSISTENCY = 2
 
-    Returns (evidence, field names seen) so a schema change at Kalshi surfaces as a reported
-    field list rather than as silently empty evidence.
+
+def _norm(text: str) -> str:
+    """Collapse whitespace so two renderings of the same rule document compare equal."""
+    return " ".join((text or "").split()).lower()
+
+
+def fetch_series_text(prefix: str, want: int = SAMPLE_MARKETS_PER_PREFIX,
+                      timeout: float = 20.0) -> dict:
+    """Up to `want` markets for `prefix`, with their DISTINCT rule documents.
+
+    The database cannot answer this: `markets` holds no row for any of these tickers, so an
+    audit that reads only the database has no strong signal for any prefix and correctly
+    refuses to propose anything. Kalshi's market-data endpoints are public and need no key, and
+    the ops runner has open egress.
+
+    Draws from settled markets first, then open ones, so the sample spans a series' history
+    rather than whatever happens to be listed today — a rule document that changed mid-season
+    should show up as a conflict, not as whichever version was fetched.
+
+    Returns unique markets inspected, the deduplicated documents, and the raw field names seen,
+    so a schema change at Kalshi surfaces as a reported field list rather than empty evidence.
     """
+    seen_tickers: set[str] = set()
     markets: list[dict] = []
-    for suffix in ("&status=open", ""):
-        # Two attempts with a pause. Run `tax-5` fetched 146 of 198 prefixes in one pass and the
-        # 52 misses cost five proposals that the smaller `tax-4` run had produced from the same
-        # series — i.e. they were transient, and a single-shot fetch makes the package's contents
-        # depend on the weather.
+    schema: list[str] = []
+    for status in SAMPLE_STATUSES:
+        if len(markets) >= want:
+            break
         for attempt in range(2):
             try:
-                markets = _get_json(
-                    f"{KALSHI}/markets?series_ticker={prefix}&limit=1{suffix}",
-                    timeout).get("markets") or []
+                payload = _get_json(
+                    f"{KALSHI}/markets?series_ticker={prefix}&limit={want}"
+                    f"&status={status}", timeout)
                 break
             except Exception:                                        # noqa: BLE001
-                markets = []
+                payload = {}
                 time.sleep(0.5 * (attempt + 1))
-        if markets:
-            break
-    time.sleep(0.1)                                                  # pace ~200 prefixes
-    if not markets:
-        return {}, []
-    m = markets[0]
-    rules = " ".join(str(m.get(k) or "")
-                     for k in ("rules_primary", "rules_secondary", "rules_summary"))
-    return {
-        "title": " ".join(str(m.get(k) or "") for k in ("title", "subtitle")),
-        "rules": rules,
-        "source": str(m.get("settlement_source") or ""),
-        "category": str(m.get("category") or ""),
-        "can_close_early": m.get("can_close_early"),
-    }, sorted(m.keys())
+        for m in (payload.get("markets") or []):
+            tkr = str(m.get("ticker") or "")
+            if tkr and tkr in seen_tickers:
+                continue
+            seen_tickers.add(tkr)
+            markets.append(m)
+            schema = schema or sorted(m.keys())
+        time.sleep(0.1)
+    docs: dict[str, dict] = {}
+    for m in markets:
+        rules = " ".join(str(m.get(k) or "")
+                         for k in ("rules_primary", "rules_secondary", "rules_summary"))
+        title = " ".join(str(m.get(k) or "") for k in ("title", "subtitle"))
+        source = str(m.get("settlement_source") or "")
+        key = _norm(f"{rules}|{source}")
+        docs.setdefault(key, {
+            "title": title, "rules": rules, "source": source,
+            "category": str(m.get("category") or ""),
+            "can_close_early": m.get("can_close_early"), "n_markets": 0})
+        docs[key]["n_markets"] += 1
+    return {"unique_markets": len(markets), "docs": list(docs.values()), "schema": schema,
+            "statuses": SAMPLE_STATUSES}
 
 
 # --- signals ---------------------------------------------------------------------------------------
@@ -269,22 +306,30 @@ def _match_mode(text: str, patterns) -> str | None:
     return hits[0] if len(set(hits)) == 1 else None
 
 
-def prefix_evidence(rows: list[dict], text: dict[str, dict], late: dict[str, float]) -> dict:
-    """The four signals for ONE series prefix, each with the sample it rests on."""
-    tickers = [r["ticker"] for r in rows]
-    blobs = [text.get(t, {}) for t in tickers]
+def prefix_evidence(rows: list[dict], db_text: dict[str, dict], kalshi: dict,
+                    late: dict[str, float]) -> dict:
+    """The signals for ONE series prefix, each with the sample it actually rests on.
 
-    src_votes = [m for m in (_match_mode(b.get("source", ""), _SOURCE_PATTERNS)
-                             for b in blobs) if m]
-    rule_votes = [m for m in (_match_mode(f"{b.get('title', '')} {b.get('rules', '')}",
-                                          _RULES_PATTERNS) for b in blobs) if m]
+    STRONG signals are counted over DISTINCT rule documents, never over markets. A prefix with
+    forty markets and one rule document has one observation of what Kalshi says, and reporting
+    it as forty was the accounting error `tax-6` shipped.
+    """
+    tickers = [r["ticker"] for r in rows]
+    blobs = [db_text.get(t, {}) for t in tickers]
+    docs = list(kalshi.get("docs") or [])
+
+    src_votes = [m for m in (_match_mode(d.get("source", ""), _SOURCE_PATTERNS)
+                             for d in docs) if m]
+    rule_votes = [m for m in (_match_mode(f"{d.get('title', '')} {d.get('rules', '')}",
+                                          _RULES_PATTERNS) for d in docs) if m]
 
     gaps = []
     for b in blobs:
         ct, et = b.get("close_time"), b.get("expiration_time")
         if ct and et:
             gaps.append(abs((et - ct).total_seconds()) / 3600.0)
-    # Fall back to the candidate stream's own two clocks where `markets` has no row.
+    # Fall back to the candidate stream's own two clocks where `markets` has no row — which,
+    # for every prefix in this population, is all of them.
     if not gaps:
         gaps = [abs(r["hours_to_close"] - r["hours_to_expiration"]) for r in rows
                 if r["hours_to_close"] is not None and r["hours_to_expiration"] is not None]
@@ -292,8 +337,11 @@ def prefix_evidence(rows: list[dict], text: dict[str, dict], late: dict[str, flo
     lates = [late[t] for t in tickers if t in late]
     late_mid = (sum(1 for v in lates if MIDBOOK[0] <= v <= MIDBOOK[1]) / len(lates)
                 if lates else None)
+    early = [d.get("can_close_early") for d in docs if d.get("can_close_early") is not None]
+    early_share = (sum(1 for e in early if e) / len(early)) if early else None
 
     def majority(votes: list[str]) -> tuple[str | None, float, int]:
+        """(winner, its share, number of DOCUMENTS that voted)."""
         if not votes:
             return None, 0.0, 0
         counts: dict[str, int] = defaultdict(int)
@@ -310,24 +358,18 @@ def prefix_evidence(rows: list[dict], text: dict[str, dict], late: dict[str, flo
                   else IN_PLAY if late_mid >= LATE_MIDBOOK_IN_PLAY
                   else SCHEDULED if late_mid <= LATE_MIDBOOK_SCHEDULED else None)
 
-    early = [b.get("can_close_early") for b in blobs if b.get("can_close_early") is not None]
-    early_share = (sum(1 for e in early if e) / len(early)) if early else None
-    # `can_close_early` was tried as a strong signal on the theory that Kalshi sets it on
-    # markets resolving when their event concludes. Run `tax-2` refuted that: it proposed
-    # in_play for KXINX and KXNASDAQ100 — index-close markets, unambiguously scheduled — and
-    # simultaneously blocked four prefixes whose RULES TEXT said scheduled, because the flag
-    # disagreed. Kalshi evidently sets it broadly. It is reported and it votes on nothing.
     return {
         "early_share": early_share,
         "markets": len(rows),
         "events": cs.cluster_profile(
             [{"ev": r["ticker"].rsplit("-", 1)[0]} for r in rows], "ev")["clusters"],
+        "unique_markets": int(kalshi.get("unique_markets") or 0),
+        "unique_docs": len(docs),
         "source": majority(src_votes), "rules": majority(rule_votes),
         "median_gap_h": med_gap, "gap_mode": gap_mode,
         "late_midbook": late_mid, "shape_mode": shape_mode,
-        "text_rows": sum(1 for b in blobs if b),
-        "sample_title": next((b.get("title", "") for b in blobs if b.get("title")), ""),
-        "sample_source": next((b.get("source", "") for b in blobs if b.get("source")), ""),
+        "sample_title": next((d.get("title", "") for d in docs if d.get("title")), ""),
+        "sample_source": next((d.get("source", "") for d in docs if d.get("source")), ""),
     }
 
 
@@ -335,29 +377,40 @@ def propose(ev: dict) -> tuple[str, str]:
     """(proposed_mode, why) under the declared rule. INSUFFICIENT_EVIDENCE is a real answer.
 
     A proposal needs at least one STRONG signal — Kalshi's own settlement source or its rules
-    text — and no strong signal pointing somewhere else. The two shape signals corroborate; on
-    their own they cannot name a mode, because both a scheduled print and a discrete
+    text — with no strong signal pointing elsewhere, no *lone* weak signal against it, and no
+    DISAGREEMENT among the distinct rule documents inspected. The two shape signals corroborate;
+    on their own they cannot name a mode, because both a scheduled print and a discrete
     announcement look like a jump.
+
+    Counted over DOCUMENTS, not markets. A prefix with one rule document has one observation of
+    what Kalshi says however many markets carry it.
     """
     if ev["markets"] < MIN_MARKETS_TO_PROPOSE:
         return "INSUFFICIENT_EVIDENCE", f"only {ev['markets']} markets in the population"
+    if not ev["unique_docs"]:
+        return "INSUFFICIENT_EVIDENCE", "no Kalshi rules text retrieved for this series"
     strong = [m for m in (ev["source"][0], ev["rules"][0]) if m]
     if not strong:
         weak = [m for m in (ev["gap_mode"], ev["shape_mode"]) if m]
         if weak:
             return "INSUFFICIENT_EVIDENCE", (
-                f"only shape evidence ({'/'.join(sorted(set(weak)))}); no settlement source or "
-                "rules text to confirm it")
+                f"only shape evidence ({'/'.join(sorted(set(weak)))}); "
+                f"{ev['unique_docs']} rule doc(s) name no settlement mode")
         return "INSUFFICIENT_EVIDENCE", "no settlement source, rules text or shape signal"
     if len(set(strong)) > 1:
         return "INSUFFICIENT_EVIDENCE", (
             f"settlement source says {ev['source'][0]}, rules text says {ev['rules'][0]}")
     mode = strong[0]
+    # Documents that disagree with each other are the strongest possible reason to refuse: the
+    # series does not have ONE settlement semantics, or the sample spans a rule change.
+    for label, votes in (("settlement source", ev["source"]), ("rules text", ev["rules"])):
+        if votes[0] and votes[1] < 1.0:
+            return "INSUFFICIENT_EVIDENCE", (
+                f"{votes[2]} distinct {label} documents disagree "
+                f"({votes[1]:.0%} say {votes[0]})")
     corroborating = [m for m in (ev["gap_mode"], ev["shape_mode"]) if m]
     # A weak signal only blocks when it stands ALONE against the text. Two corroborators that
-    # disagree with each other cancel: an earlier version let either one veto, so a prefix whose
-    # expiration gap agreed with the rules text and whose price path did not came back
-    # INSUFFICIENT even though the evidence was, on balance, consistent.
+    # disagree with each other cancel.
     against = [m for m in corroborating if m != mode]
     if against and not any(m == mode for m in corroborating):
         return "INSUFFICIENT_EVIDENCE", (
@@ -371,7 +424,12 @@ def propose(ev: dict) -> tuple[str, str]:
         agree += f" ({'/'.join(sorted(set(against)))} disagrees)"
     which = "settlement source" if ev["source"][0] else "rules text"
     votes = ev["source"] if ev["source"][0] else ev["rules"]
-    return mode, f"{which} ({votes[1]:.0%} of {votes[2]} texts); {agree}"
+    basis = (f"{votes[2]} distinct {which} document(s) from {ev['unique_markets']} markets, "
+             f"unanimous" if votes[2] >= MIN_UNIQUE_DOCS_FOR_CONSISTENCY
+             else f"ONE {which} document from {ev['unique_markets']} markets — "
+                  "the series shares one rule text, so this is one observation, not "
+                  f"{ev['unique_markets']}")
+    return mode, f"{basis}; {agree}"
 
 
 # --- report ------------------------------------------------------------------------------------------
@@ -511,20 +569,24 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.dump_text and fetched:
         head("3B. KALSHI'S OWN WORDS — the evidence, verbatim, for a human to read")
-        print("  One representative market per series. Settlement mode is a property of the")
-        print("  SERIES, so this answers for every market under the prefix.")
+        print("  Every DISTINCT rule document found for each series, with how many of the")
+        print("  inspected markets carried it. Settlement mode is a property of the series, so")
+        print("  one document answers for the prefix — but it answers ONCE, not once per market.")
         for prefix, _rs in ranked[:args.top]:
-            blob = fetched.get(prefix)
-            if not blob:
+            got = fetched.get(prefix)
+            if not got:
                 continue
             print()
-            print(f"  {prefix}  ({len(groups[prefix])} markets)")
-            for label, key in (("title", "title"), ("source", "source"), ("rules", "rules")):
-                val = " ".join((blob.get(key) or "").split())
-                if val:
-                    print(f"    {label:<8} {val[:400]}")
-            if blob.get("can_close_early") is not None:
-                print(f"    {'early':<8} can_close_early={blob['can_close_early']}")
+            print(f"  {prefix}  ({len(groups[prefix])} markets in the population; "
+                  f"{got['unique_markets']} Kalshi markets inspected, "
+                  f"{len(got['docs'])} distinct rule document(s))")
+            for i, doc in enumerate(got["docs"], 1):
+                print(f"    doc {i}/{len(got['docs'])} — carried by {doc['n_markets']} of the "
+                      "inspected markets")
+                for label, key in (("title", "title"), ("source", "source"), ("rules", "rules")):
+                    val = " ".join((doc.get(key) or "").split())
+                    if val:
+                        print(f"      {label:<7} {val[:400]}")
 
     head("4. PACKAGE — what Platform Change Review is being asked to decide")
     decided = [p for p in proposals if p[2] in (SCHEDULED, IN_PLAY, DISCRETE)]

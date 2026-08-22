@@ -13,7 +13,7 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 
 from . import models as m
 from .experiment_os import enforcement as xos_enforcement
@@ -1943,8 +1943,19 @@ def oldest_spot_minute(session, product: str) -> datetime | None:
     )
 
 
-def load_spot_closes(session, product: str, since: datetime) -> dict[int, float]:
-    """{unix_minute: close} for the model's trailing window."""
+def load_spot_closes(session, product: str, since: datetime,
+                     *, statement_timeout_ms: int | None = None) -> dict[int, float]:
+    """{unix_minute: close} for the model's trailing window.
+
+    `statement_timeout_ms` bounds the query at the DATABASE, not in Python. It exists for the
+    paper shadow, which loads tens of thousands of rows on the trading loop's own thread: an
+    application-side deadline can only notice a slow query after it returns, so without this a
+    stalled read delays the scan for as long as Postgres takes. `SET LOCAL` scopes it to the
+    surrounding transaction and needs no cleanup. Silently skipped on backends that do not
+    support it (SQLite, in tests), which is safe — the bound is a production concern.
+    """
+    if statement_timeout_ms and session.get_bind().dialect.name == "postgresql":
+        session.execute(text(f"SET LOCAL statement_timeout = {int(statement_timeout_ms)}"))
     rows = session.execute(
         select(m.CryptoSpotCandle.minute_ts, m.CryptoSpotCandle.close).where(
             m.CryptoSpotCandle.product == product,

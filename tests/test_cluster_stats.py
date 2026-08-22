@@ -179,3 +179,63 @@ class TestFormatting:
         assert cs._percentile([0.0, 1.0], 0.5) == pytest.approx(0.5)
         assert cs._percentile([1.0], 0.99) == 1.0
         assert math.isnan(cs._percentile([], 0.5))
+
+
+class TestZeroFailureBound:
+    """A percentile bootstrap on an all-success sample returns [1, 1] — every resample is drawn
+    from observations that all succeeded, so no replicate can contain a failure. That is a
+    boundary artefact of the method, not evidence of certainty, and it is exactly the case the
+    settlement-label gate lands in."""
+
+    @staticmethod
+    def _rows(clusters: int, per: int = 4, failures: int = 0):
+        rows = []
+        for c in range(clusters):
+            for i in range(per):
+                rows.append({"ev": f"E{c}", "ok": not (c < failures and i == 0)})
+        return rows
+
+    def test_the_bootstrap_collapses_to_a_point_on_an_all_success_sample(self):
+        rows = self._rows(63)
+        m = cs.mean_ci(rows, "ev", lambda r: 1.0 if r["ok"] else 0.0)
+        assert (m["lo"], m["hi"]) == (1.0, 1.0), "the artefact this class exists to replace"
+
+    def test_the_exact_bound_is_well_below_one(self):
+        st = cs.cluster_success_lower_bound(self._rows(63), "ev", lambda r: r["ok"])
+        assert st["clusters"] == 63
+        assert st["cluster_failures"] == 0
+        assert st["row_rate"] == 1.0
+        # alpha ** (1/C) — the rule of three, generalised.
+        assert st["lower"] == pytest.approx(0.01 ** (1 / 63), rel=1e-9)
+        assert 0.92 < st["lower"] < 0.94
+
+    def test_more_clusters_buy_a_tighter_bound(self):
+        a = cs.cluster_success_lower_bound(self._rows(63), "ev", lambda r: r["ok"])["lower"]
+        b = cs.cluster_success_lower_bound(self._rows(152), "ev", lambda r: r["ok"])["lower"]
+        assert b > a
+        assert b >= 0.97, "152 clean events is what a 97% bar costs"
+
+    def test_the_cluster_is_the_unit_so_extra_rows_buy_nothing(self):
+        narrow = cs.cluster_success_lower_bound(self._rows(40, per=2), "ev", lambda r: r["ok"])
+        wide = cs.cluster_success_lower_bound(self._rows(40, per=60), "ev", lambda r: r["ok"])
+        assert narrow["lower"] == pytest.approx(wide["lower"])
+        assert wide["rows"] == 2400 and wide["clusters"] == 40
+
+    def test_one_failing_row_fails_its_whole_cluster(self):
+        st = cs.cluster_success_lower_bound(self._rows(63, failures=1), "ev", lambda r: r["ok"])
+        assert st["cluster_failures"] == 1
+        assert st["row_rate"] > 0.99          # 1 bad row in 252
+        assert st["lower"] < 0.92             # but the bound is charged a whole cluster
+
+    def test_a_failure_lowers_the_bound(self):
+        clean = cs.cluster_success_lower_bound(self._rows(63), "ev", lambda r: r["ok"])["lower"]
+        dirty = cs.cluster_success_lower_bound(
+            self._rows(63, failures=1), "ev", lambda r: r["ok"])["lower"]
+        assert dirty < clean
+
+    @pytest.mark.parametrize("bound,expected", [(0.97, 152), (0.95, 90), (0.99, 459)])
+    def test_clusters_needed_is_the_inverse(self, bound, expected):
+        assert cs.clusters_needed_for(bound) == expected
+        got = cs.cluster_success_lower_bound(
+            self._rows(expected), "ev", lambda r: r["ok"])["lower"]
+        assert got >= bound

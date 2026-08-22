@@ -187,17 +187,22 @@ class ThetaTracker:
         """A SEPARATE close set for the PAPER replacement model, over its own fit window.
 
         The incumbent's `SpotModel` holds `theta_trail_days` (5) of closes. Asking it for
-        `block_returns(window_days=90)` cannot conjure candles the object does not contain — an
+        `block_returns(window_days=30)` cannot conjure candles the object does not contain — an
         earlier version did exactly that and then tagged the result `fit_days=90`, so the stored
         metadata described a window the fit never saw. The fix is a second load, not a second
         argument.
 
-        Held for the hour, not the cycle. Ninety days of 1-minute closes is ~130,000 rows per
+        Held for the hour, not the cycle. Thirty days of 1-minute closes is ~43,000 rows per
         product, and reloading that every five minutes to feed a fit that is itself anchored to
         the hour is the shadow's real cost — an order of magnitude above the fits, and it is
-        database work on the trading loop's thread rather than arithmetic. Measured by
-        `scripts/theta_shadow_bench.py`. Reusing the object inside its own refit anchor changes
-        no probability: the fit ends at the anchor either way.
+        database work on the trading loop's thread rather than arithmetic. Reusing the object
+        inside its own refit anchor changes no probability: the fit ends at the anchor either way.
+
+        THE BUDGET COVERS THIS. `theta_spliced_budget_ms` used to gate the fits alone, which
+        bounded the cheap half and left the expensive half unbounded — and a Python-side deadline
+        cannot interrupt a query that has already been issued, so the load also carries a
+        DATABASE statement timeout. Over budget, or a timed-out load, means no shadow model this
+        cycle: metadata without a probability, and the scan continues.
 
         Reads only; the incumbent's object is untouched and still prices every live decision.
         """
@@ -206,15 +211,44 @@ class ThetaTracker:
         cached = self._shadow_spot_cache.get(product)
         if cached is not None and cached[0] == anchor:
             return cached[1]
+        if self._over_budget():
+            return None
         want = max(float(s.theta_spliced_fit_days), s.theta_trail_days)
         since = datetime.now(timezone.utc) - timedelta(days=want)
+        budget = float(getattr(s, "theta_spliced_budget_ms", 0.0) or 0.0)
         t0 = time.perf_counter()
-        stored = repo.load_spot_closes(session, product, since)
-        self._shadow_load_ms += (time.perf_counter() - t0) * 1000.0
-        self._shadow_loads += 1
-        model = SpotModel(stored, trail_days=want) if len(stored) >= SpotModel.MIN_SAMPLES else None
+        try:
+            stored = repo.load_spot_closes(
+                session, product, since,
+                statement_timeout_ms=int(budget) if budget > 0 else None)
+            model = (SpotModel(stored, trail_days=want)
+                     if len(stored) >= SpotModel.MIN_SAMPLES else None)
+        except Exception as exc:  # noqa: BLE001 — research must never break a trading cycle
+            logger.warning("theta: shadow close load failed; no shadow model this cycle",
+                           extra={"extra_fields": {"product": product,
+                                                   "error": str(exc)[:200]}})
+            model = None
+        finally:
+            # Load, row decode and SpotModel construction all land here: the elapsed time the
+            # scan actually paid, not the fraction of it spent inside the fit.
+            spent = (time.perf_counter() - t0) * 1000.0
+            self._shadow_ms += spent
+            self._shadow_load_ms += spent
+            self._shadow_loads += 1
         self._shadow_spot_cache[product] = (anchor, model)
         return model
+
+    def _over_budget(self) -> bool:
+        """True once this cycle's shadow work has spent its whole wall-clock budget.
+
+        Checked before the load and before each fit. A gap in a research series is recoverable;
+        a late quote is not.
+        """
+        budget = float(getattr(self.settings, "theta_spliced_budget_ms", 0.0) or 0.0)
+        if budget > 0 and self._shadow_ms >= budget:
+            self._shadow_budget_hit = True
+            return True
+        return False
 
     def _backfill_spot(self, session, product: str, now: datetime) -> int:
         """Extend stored 1-minute closes BACKWARD toward the retention horizon.
@@ -291,11 +325,9 @@ class ThetaTracker:
         key = (product, anchor, h_min)
         if key in self._spliced_cache:
             return self._spliced_cache[key]
-        budget = float(getattr(s, "theta_spliced_budget_ms", 0.0) or 0.0)
-        if budget > 0 and self._shadow_ms >= budget:
-            # Out of research budget for this cycle. A gap in a shadow series is recoverable;
-            # a late quote is not. Nothing is cached, so the next cycle starts clean.
-            self._shadow_budget_hit = True
+        if self._over_budget():
+            # Out of research budget for this cycle. Nothing is cached, so the next cycle
+            # starts clean.
             return None
         started = time.perf_counter()
         try:
@@ -899,10 +931,18 @@ class ThetaTracker:
         summ.shadow_fits = self._shadow_fits
         summ.shadow_loads = self._shadow_loads
         summ.shadow_load_ms = round(self._shadow_load_ms, 1)
-        summ.shadow_ms = round(self._shadow_ms + self._shadow_load_ms, 1)
+        summ.shadow_ms = round(self._shadow_ms, 1)
         summ.shadow_budget_hit = self._shadow_budget_hit
+        # One line per cycle, always: the telemetry that turns the synthetic benchmark's number
+        # into a production-derived one. `theta_shadow_ms` is TOTAL — load, decode, construction
+        # and fits — which is what the scan actually paid.
+        logger.info("theta: shadow cost", extra={"extra_fields": {
+            "theta_shadow_ms": summ.shadow_ms, "theta_shadow_load_ms": summ.shadow_load_ms,
+            "theta_shadow_loads": summ.shadow_loads, "theta_shadow_fits": summ.shadow_fits,
+            "theta_shadow_budget_hit": summ.shadow_budget_hit,
+            "budget_ms": float(self.settings.theta_spliced_budget_ms)}})
         if self._shadow_budget_hit:
-            logger.warning("theta: shadow fit budget exhausted; probabilities withheld for the "
+            logger.warning("theta: shadow budget exhausted; probabilities withheld for the "
                            "rest of the cycle", extra={"extra_fields": {
                                "fits": self._shadow_fits, "ms": round(self._shadow_ms, 1),
                                "budget_ms": float(self.settings.theta_spliced_budget_ms)}})
