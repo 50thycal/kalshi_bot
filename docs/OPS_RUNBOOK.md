@@ -276,16 +276,22 @@ To run a request:
      365 days for BTC-USD and ETH-USD.
 
    - **"settlement labels"** / **"are the outcomes trustworthy"** ->
-     `{"type":"script","name":"theta_settlement_labels","args":["--spot-source","coinbase"]}`
+     `{"type":"script","name":"theta_settlement_labels","args":["--spot-source","coinbase","--kalshi-results"]}`
      — audits the DERIVED outcome label every theta calibration rests on. The label is the last
      ladder snapshot's spot against the strike, which is not Kalshi's settlement print: Kalshi
      settles off its own index at the close, up to three minutes later. Measures the residual
      move scale from the spot series, applies a fixed near-strike exclusion, and reports
      agreement against recorded settlement with **event-clustered** intervals.
-     **Read the VERDICT line.** `BLOCKED_DATA` means no calibration computed against these
-     labels is validated — including one that already reports a verdict. Use `--spot-source
-     coinbase` (default); the ladder reconstruction is ~5-minute sampled and cannot measure a
-     1-3 minute move scale (it reported a 4-minute RMS ETH move of $0.20).
+     `--kalshi-results` fetches Kalshi's OWN settled results per event from the public endpoint
+     and reports how much of the population they cover — measured at **100%**, which is why the
+     refit no longer scores against the derivation at all.
+     **Read the VERDICT line.** The bar applies to the one-sided LOWER bound, not the point
+     estimate: a percentile bootstrap on an all-agreeing sample returns `[1, 1]` because no
+     resample of successes can contain a failure, so the interval is an exact clustered
+     Clopper-Pearson one. `BLOCKED_DATA` means no calibration computed against those labels is
+     validated — including one that already reports a verdict. Use `--spot-source coinbase`
+     (default); the ladder reconstruction is ~5-minute sampled and cannot measure a 1-3 minute
+     move scale (it reported a 4-minute RMS ETH move of $0.20).
 
    - **"taxonomy audit"** / **"what are the unknown series"** ->
      `{"type":"script","name":"mmsell_taxonomy_audit","args":["--top","200","--dump-text"]}`
@@ -299,12 +305,18 @@ To run a request:
      command. Note `can_close_early` is reported and votes on nothing: Kalshi sets it on 100% of
      these markets, index-close ones included.
 
-   - **shadow cost** -> `PYTHONPATH=. python3 scripts/theta_shadow_bench.py` — **local, not an
-     ops script.** What the paper shadow costs a live trading cycle at maximum market load: DB
-     rows loaded, distinct fits, cycle latency, memory, cache behaviour. No database, no
-     network. Run it after any change to the model or its cadence; the
-     `theta_spliced_budget_ms` default is set from its output, and a budget below the measured
-     maximum is not a backstop.
+   - **shadow cost, synthetic** -> `PYTHONPATH=. python3 scripts/theta_shadow_bench.py` —
+     **local, not an ops script, and it does NOT measure PostgreSQL.** Fits, cache behaviour and
+     memory only; the "load" line is in-process object construction, so the total is a LOWER
+     BOUND on production. Run it after any change to the model or its cadence.
+
+   - **shadow cost, production** -> `{"type":"logs","service":"main","filter":"theta: shadow cost"}`
+     — one line per cycle carrying `theta_shadow_ms` (TOTAL: load + decode + construction +
+     fits), `theta_shadow_load_ms`, `theta_shadow_loads`, `theta_shadow_fits`. **This is the only
+     number that may be called production-derived.** Report p50/p90/p99/max over several hourly
+     reloads before treating `theta_spliced_budget_ms` as anything but a synthetic figure, and
+     remember a budget below the measured maximum is not a backstop — it is an hourly gap in the
+     research series.
 
    - **"theta refit"** / **"tail model validation"** -> `{"type":"script","name":"theta_tail_refit"}`
      — scores the replacement probability model (`kalshi_bot/theta/tailmodel.py`) against the
@@ -313,8 +325,11 @@ To run a request:
      a `tail_q` sweep chosen on TRAIN and scored on TEST, the **paired** proper-score comparison
      between the two models, the SELECTED-vs-REJECTED split under each model's own excess, and
      fit health.
-     **Section 0 is a gate.** The outcome labels are audited before anything is scored and the
-     run says so; `BLOCKED_DATA` there means nothing below it is a validated calibration result.
+     **Section 0 is a gate.** `--labels kalshi` (the default) scores against Kalshi's own settled
+     results, fetched per event, which cover 100% of this universe; `--labels derived` reproduces
+     the old last-snapshot-spot proxy and its near-strike exclusion, kept because the record has
+     to be able to reproduce what earlier runs scored. `BLOCKED_DATA` there means nothing below it
+     is a validated calibration result.
      **Section 6 is the comparison.** The per-model R columns in sections 3 and 5 describe two
      different partitions and are not a test of a difference — aggregate R also rewards
      predicting exactly zero, which is the incumbent's shape. Every interval is an

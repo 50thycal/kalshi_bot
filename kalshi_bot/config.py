@@ -628,27 +628,33 @@ class Settings(BaseSettings):
     # `trail_days` of closes for the incumbent, so widening this alters no probability, no
     # entry and no fill. Storage is ~1,440 rows/day/product (~260k rows for two products at 90
     # days).
-    theta_spot_retention_days: float = 90.0
+    # Must EXCEED `theta_spliced_fit_days` (90), or the pruner deletes closes the paper fit
+    # needs and its block coverage falls below the emission gate.
+    theta_spot_retention_days: float = 100.0
 
     # FIT WINDOW for the PAPER replacement model (`kalshi_bot/theta/tailmodel.py`) only. Never
     # read by the incumbent, and no book prices off it.
     #
-    # NOT the same thing as `theta_spot_retention_days` (90), which governs how long 1-minute
-    # closes are KEPT. Retention has to exceed the fit window so the window can be filled at all;
-    # conflating the two was the defect in the first draft of this work, which retained 90 days
+    # NOT the same thing as `theta_spot_retention_days` (100), which governs how long 1-minute
+    # closes are KEPT and must EXCEED this, or the pruner deletes the history the fit needs.
+    # Conflating the two was the defect in the first draft of this work, which retained 90 days
     # and then still fitted on 5.
     #
-    # 30 is the configuration frozen on TRAIN in run `refit-12` and equals
-    # `tailmodel.FROZEN_FIT_DAYS`. It was 90 here while the sweep was still open, which meant the
-    # shadow would have run a window the validation did not select — TRAIN log loss 0.00382 at
-    # 90 days against 0.00374 at 30, both fully powered. A shadow fitted outside the frozen
-    # specification produces probabilities no verdict covers.
+    # 90 is the configuration frozen on TRAIN in run `refit-13` and equals
+    # `tailmodel.FROZEN_FIT_DAYS`. A shadow fitted outside the frozen specification produces
+    # probabilities no verdict covers, which is why this tracks the freeze rather than a
+    # preference — including when the freeze moves, as it did when the labels were corrected
+    # from the derived proxy to Kalshi's own settled results.
+    #
+    # The 30-vs-90 margin is in the fifth decimal (0.006674 against 0.006670) and Brier
+    # marginally prefers 30. What the sweep actually establishes is that the window matters
+    # enormously from 5 to 30 — 3% of quotes powered against 100% — and not at all beyond it.
     #
     # Why it must exceed `theta_trail_days`: a fitted tail consumes NON-OVERLAPPING h-minute
     # blocks, so a 5-day window at a 35-minute horizon yields 7200/35 ~= 205 blocks and ~10
     # declustered exceedances at the 95th percentile — far below the ~20 a Generalized Pareto
-    # needs on a side. At 30 days the same horizon yields ~1,230 blocks and every quote powers.
-    theta_spliced_fit_days: float = 30.0
+    # needs on a side.
+    theta_spliced_fit_days: float = 90.0
 
     # Peaks-over-threshold quantile for the PAPER replacement model. Explicit rather than left
     # to the module default so the runtime cannot silently price off a different tail than the

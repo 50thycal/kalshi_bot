@@ -22,15 +22,16 @@ touched.**
 
 | stage | status |
 |---|---|
-| 1. replace the degenerate 0/1 output | **done and verified** — 86.1% exactly-0 → **0.0%** |
+| 1. replace the degenerate 0/1 output | **done and verified** — 85.3% exactly-0 → **0.0%** |
 | 2. refit the tail shape, validate out of sample | **run, powered, label-gated — and it does not beat the incumbent** (§3.6) |
-| 3. re-measure calibration + residual selection bias | **done** — bias suggested, not established (§3.7) |
+| 3. re-measure calibration + residual selection bias | **done** — bias **established** on real labels (§3.7) |
 | 4. selection-rule A/B that does not rank on model error | **redesigned**, floors recomputed on the event (§4); still unregistered |
 | 5. telemetry for momentum/regime | **implemented, benchmarked and tested** (§5) |
 
-**The headline, before the detail.** With a 30-day fit window, non-overlapping blocks, a coherent
-marginal EVT construction and declustered per-tail power, every quote is powered, so the
-replacement model could finally be judged. Judged **paired**, on proper scores, with the ladder
+**The headline, before the detail.** With a 30-day-or-wider fit window, non-overlapping blocks, a
+coherent marginal EVT construction, declustered per-tail power and **Kalshi's own settled results
+as the outcome**, every quote is powered and every label is real, so the replacement model could
+finally be judged. Judged **paired**, on proper scores, with the ladder
 event as the independent unit and against the incumbent theta4 actually runs, it is **not better
 and not worse**: all four comparisons contain zero and the two proper scores disagree in sign.
 
@@ -41,7 +42,14 @@ were 66 independent observations. Correcting those two things dissolves the find
 been established about which model is better, and this document no longer claims otherwise.
 
 **What has not changed:** neither model is acceptable for a short-tail seller, the cause of
-theta4's failure is still unidentified, and every theta book stays stood down.
+theta4's failure is still unidentified, and every theta book stays stood down. The paired verdict
+survived the label correction — it held on the derived proxy and holds on real settlement — which
+is the strongest support it has.
+
+**What did change under real labels:** the frozen window moved from 30 days to 90 (a fifth-decimal
+margin, §3.4), the deepest bucket's miss grew from ~4× to **8×** because the proxy's near-strike
+exclusion had been removing exactly the markets that hit, and **residual selection bias went from
+suggested to established** — [1.70, 7.38] against [0.75, 1.19], disjoint (§3.7).
 
 ---
 
@@ -69,77 +77,58 @@ inflation is a number in the output, not an assertion here.
 
 A per-event position cap bounds **exposure**. It does nothing to the statistics.
 
-### 1.2 The outcome label is derived, and had to be qualified before use
+### 1.2 The outcome label is Kalshi's own settlement print, not a derivation
 
-Every calibration number rests on an outcome. That outcome is **not** Kalshi's settlement print:
-it is the last ladder snapshot's spot before close, compared to the strike. Kalshi settles off
-its own index at the close, up to three minutes later, and whatever spot did in those minutes is
-unobserved.
+Every calibration number rests on an outcome. For most of this programme that outcome was
+**derived**: the last ladder snapshot's spot before close, compared to the strike. Kalshi settles
+off its own index at the close, up to three minutes later, and whatever spot did in those minutes
+is unobserved. The derivation is a proxy, and it was treated as one — audited, gated, and
+excluded near the strike where the unobserved move could carry a market across.
 
-`scripts/theta_settlement_labels.py` establishes what that is worth, and it is a gate rather than
-a footnote — the refit applies it before anything is scored.
+**It does not clear its own bar, and the replacement is not a looser bar.**
 
-**Recorded settlement cannot replace the derivation.** Every table that could hold a real Kalshi
-result was checked rather than assumed empty:
+Measured against Kalshi's real results on the **whole population** rather than the 0.33% a book
+happened to trade (run `refit-13`): agreement **99.90%** over 66,522 markets, but **54 of 992
+events** carry at least one disagreement, so the exact event-clustered 99% lower bound is
+**92.64%** — below the 97% the design fixed in advance. The proxy is good and not good *enough*.
 
-| source | ladder rows | note |
-|---|---|---|
-| `markets` | 0 | no result column, and the ladder collector does not write here |
-| `market_snapshots` | 0 | a terminal price would be a settlement print |
-| `backfill_regime_markets` / `backfill_weather_markets` | absent | table/column not present |
-| `paper_trades.resolved_value` | 1,275 | real settlement — but only where a book traded |
+An earlier revision reported this as `[1.0000, 1.0000]` from a percentile bootstrap and called it
+a PASS. **That is withdrawn.** A bootstrap on an all-agreeing sample can never produce a
+disagreement — every resample is drawn from observations that all agreed — so `[1, 1]` is a
+boundary artefact of the method, not evidence of certainty. The bound is now an exact
+Clopper–Pearson one with the **event** as the unit (a cluster fails if any of its markets
+disagrees), which stays valid at zero observed failures. Sixty-three clean events buy 92.9%, not
+100%; clearing 97% at zero failures takes 152 of them.
 
-Of 66,201 markets in the scored universe, **220 (0.33%)** have a recorded settlement. Those exist
-only where a book traded, which is the selected subset, so they can **audit** the derivation but
-not replace it.
+**So the derivation is retired.** Kalshi's market-data endpoints are public, serve a `result`
+field on settled markets, and cover this universe completely:
 
-**How wrong the proxy can be, measured from the spot series alone.** RMS absolute move over the
-unobserved remainder, from dense Coinbase 1-minute closes (n = 61,321 pairs per lag):
+| | |
+|---|---|
+| events read | **992 / 992** |
+| markets with a real settled result | **66,522 / 66,522 (100.00%)** |
+| derived label's agreement with them | 99.90% |
+| events carrying a disagreement | 54 |
 
-| product | 1m | 2m | 3m | 4m | 5m |
-|---|---|---|---|---|---|
-| BTC | $30.9 | $43.4 | $52.8 | $61.0 | $67.9 |
-| ETH | $1.3 | $1.9 | $2.3 | $2.6 | $2.9 |
+The near-strike exclusion retires with the proxy. It existed only to drop markets whose true side
+the derivation could not determine, and a settlement print determines every one of them — so the
+scored population is the full covered universe rather than a retained subset.
 
-Both scale as √t to two figures, which is what a diffusion does and a good sign the estimator is
-sound. The first version of this ran on the ladder-snapshot reconstruction, which is ~5-minute
-sampled and only near settlement; for ETH almost no (t, t−lag) pair existed and it reported a
-4-minute RMS move of **$0.20**. That was a bug in my own instrument, and the fix was a denser
-series, not a different threshold. A cell built on fewer than 500 observed pairs is now marked
-thin and refused.
+What the database holds is unchanged and remains inadequate on its own: `markets` and
+`market_snapshots` carry **no** crypto ladder rows (checked per run, not assumed), and
+`paper_trades.resolved_value` covers 0.33% of the universe and only where a book traded, which is
+the selected subset. That is why the audit could never have been more than an audit.
 
-**The exclusion rule, fixed from the geometry before the agreement was recomputed.** A market
-whose strike sits within **K = 2** residual sigmas of the final observed spot is ambiguous by
-construction — the unobserved move is large enough to have carried it across. Two sigma is a
-~95% band. It is a property of the measurement, not of which side of the bar the answer lands.
+**Two bugs in my own audit, found by running it and disclosed rather than repaired in silence.**
+The residual-move scale first ran on the ~5-minute ladder reconstruction and reported a 4-minute
+RMS ETH move of **$0.20**; the fix was a denser series, not a different threshold, and a scale
+cell built on fewer than 500 observed pairs is now refused. And the first version measured
+retained coverage on the 220-market audit overlap instead of the population — a different and
+easier question than the bar was written to ask.
 
-**Result**, against bars fixed before the run (agreement ≥ 97%, retained coverage ≥ 90%):
-
-| population | n | agreement | 99% CI (event-clustered) |
-|---|---|---|---|
-| all overlapping markets | 220 | 98.18% | [0.9524, 1.0000] |
-| near-strike excluded (K=2) | 197 | **100.00%** | [1.0000, 1.0000] |
-
-Disagreements sit exactly where the mechanism predicts and vanish where it predicts:
-
-| distance from strike (σ) | n | disagree | rate |
-|---|---|---|---|
-| 0 – 0.5 | 5 | 2 | 40.0% |
-| 0.5 – 1 | 8 | 0 | 0.0% |
-| 1 – 2 | 10 | 2 | 20.0% |
-| 2 – 4 | 26 | 0 | 0.0% |
-| 4 – ∞ | 171 | 0 | 0.0% |
-
-On the **population** the rule discards 490 of 66,201 markets — retained coverage **99.26%** —
-because theta sells deep strikes, which are far from spot by construction.
-
-**VERDICT: labels usable on the retained population.** Every number in §3 is computed on exactly
-that population.
-
-Two corrections to my own audit, both found by running it and both disclosed rather than quietly
-repaired: the ETH scale above, and a first version that computed retained coverage on the
-220-market **audit overlap** instead of the population. The overlap is the traded subset; asking
-what share of it survives is a different and easier question than the bar was written to ask.
+`scripts/theta_settlement_labels.py` still runs the full audit, and
+`theta_tail_refit --labels derived` still reproduces the old path, because the record has to be
+able to reproduce what earlier runs scored.
 
 ### 1.3 Two models are compared PAIRED, on proper scores — never on aggregate R
 
@@ -181,7 +170,7 @@ asserting the data's edge is the world's edge.
 | tail | GPD, both directions, fitted **separately** | `greater` and `less` strikes use opposite tails |
 | estimator | probability-weighted moments | closed form, no optimiser, no scipy, better than MLE at small counts |
 | threshold | `theta_spliced_tail_q`, swept and frozen on TRAIN | bias/variance: higher = less biased, more variable |
-| fit window | `theta_spliced_fit_days`, **paper only** | §2.2 |
+| fit window | `theta_spliced_fit_days` = **90**, frozen by `refit-13`, **paper only** | §2.2, §3.4 |
 | power | **≥20 declustered exceedances on the ACTIVE tail** | §2.3 |
 | completeness | **≥90% block coverage of the requested window** | §2.5 |
 | floor | `1 / (2·blocks)` | degenerate cases only |
@@ -210,8 +199,12 @@ made about what 90-day retention bought was therefore false.** Three now-distinc
 | setting | value | who reads it |
 |---|---|---|
 | `theta_trail_days` | 5 | the **incumbent**, unchanged, still prices exactly as before |
-| `theta_spot_retention_days` | 90 | the pruner only |
-| `theta_spliced_fit_days` | 90 | the **paper** replacement model only |
+| `theta_spot_retention_days` | **100** | the pruner only — must EXCEED the fit window |
+| `theta_spliced_fit_days` | **90** | the **paper** replacement model only; the frozen value |
+
+Retention was 90 while the fit window was 90, which leaves the pruner deleting the oldest closes
+the fit needs. It is 100 now. Retention and the fit window are different questions and the config
+says so where each is defined.
 
 The fix was a second **load** (`_refresh_shadow_spot`), not a second argument: a 5-day object
 cannot yield a 90-day fit however it is asked. Widening the fit window cannot touch a live
@@ -281,180 +274,166 @@ One run, one command, one commit. Nothing below is combined with an earlier run'
 rationale — see §6 for what those runs said and why it no longer stands.
 
 ```
-{"type":"script","id":"refit-12","name":"theta_tail_refit","args":[
+{"type":"script","id":"refit-13","name":"theta_tail_refit","args":[
   "--since","2026-07-11","--train-end","2026-08-11","--fit-days","5,30,90",
-  "--tail-qs","0.90,0.95,0.99","--spot-source","coinbase","--vol-mult","2.0"]}
+  "--tail-qs","0.90,0.95,0.99","--spot-source","coinbase","--vol-mult","2.0",
+  "--labels","kalshi"]}
 ```
 
 `--vol-mult 2.0` is deliberate: **theta4 does not run the base model.** Scoring against
-`mult=1.0` would compare the replacement to a model that never traded.
+`mult=1.0` would compare the replacement to a model that never traded. `--labels kalshi` is the
+correction in §1.2: real settled results, not the derivation.
 
-The cluster bootstrap is seeded (`seed=20260822`) and the same seed reproduces the same interval
-endpoints exactly. An analysis whose uncertainty moves between runs cannot be a frozen result —
-so it was checked rather than asserted: runs `refit-10` and `refit-11`, thirteen minutes apart on
-identical inputs, differ in exactly one line — the count of Coinbase minutes fetched. Every
-reported number is byte-identical. `refit-12` two hours later moves only where two more ladders
-settled (65,630 → 65,790 markets, 988 → 990 events); the frozen configuration, its TRAIN score
-and the verdict are unchanged.
+The cluster bootstrap is seeded (`seed=20260822`) and reproduces its interval endpoints exactly —
+checked rather than asserted: `refit-10` and `refit-11`, thirteen minutes apart on identical
+inputs, differ in exactly one line, the count of Coinbase minutes fetched.
 
-### 3.1 Label quality — the gate, passed
+### 3.1 Outcome labels — Kalshi's own, at 100% coverage
 
-572 of 66,362 markets fall inside the near-strike exclusion (retained coverage **99.14%**, bar
-90%). On the retained overlap the derived label agrees with recorded Kalshi settlement
-**100.00%** of the time across 193 markets in 63 events (bar 97%, event-clustered). **PASS.**
-Everything below is scored on that retained population: 65,790 markets.
+992 of 992 events read; **66,522 of 66,522 markets** carry a real settled result. **PASS.** The
+derivation this replaces, and why, is §1.2.
 
-### 3.2 Evidence structure — 65,790 markets are worth about 10,000 observations
+### 3.2 Evidence structure — 66,522 markets are worth about 13,000 observations
 
 | quantity | value |
 |---|---|
-| scored markets | 65,790 |
-| distinct events | 990 |
-| markets per event (mean / p50 / p90 / max) | 66.5 / 52 / 97 / 113 |
-| Kish effective events | 888.1 |
+| scored markets | 66,522 |
+| distinct events | 992 |
+| markets per event (mean / p50 / p90 / max) | 67.1 / 52 / 98 / 114 |
+| Kish effective events | 889.0 |
 | largest single event's share | 0.17% |
 
 | statistic | design effect | effective n |
 |---|---|---|
-| hit indicator | 4.2 | 15,520 |
-| spliced log loss | 6.4 | 10,247 |
-| incumbent log loss | 6.6 | 10,025 |
+| hit indicator | 3.2 | 21,005 |
+| spliced log loss | 5.0 | 13,245 |
+| incumbent log loss | 4.8 | 13,985 |
 
-An interval computed as though these rows were independent is about **√6 ≈ 2.5× too narrow**.
+An interval computed as though these rows were independent is about **√5 ≈ 2.2× too narrow**.
 That is the size of the error the previous revisions' Poisson intervals carried.
 
-### 3.3 Degeneracy — fixed, and it was the one unambiguous success
+### 3.3 Degeneracy — fixed, and it is the one unambiguous success
 
 | model | n | exactly 0 | exactly 1 | in (0,1) |
 |---|---|---|---|---|
-| incumbent (empirical, `mult=2.0`) | 65,790 | 56,645 (**86.1%**) | 0 | 9,145 (13.9%) |
-| spliced EVT | 65,790 | 0 (**0.0%**) | 0 | 65,790 (100%) |
+| incumbent (empirical, `mult=2.0`) | 66,522 | 56,711 (**85.3%**) | 0 | 9,811 (14.7%) |
+| spliced EVT | 66,522 | 0 (**0.0%**) | 0 | 66,522 (100%) |
 
 `SpotModel.prob_from_returns` is a raw empirical frequency, so it has no mass beyond its own
 sample maximum. `vol_mult` rescales the *threshold* (`x / k`), which pulls some strikes back
 inside the support but cannot escape a hard edge — pinned in
-`test_vol_mult_cannot_escape_the_truncation`. Doubling the volatility left 86.1% of this
-universe priced at exactly zero.
+`test_vol_mult_cannot_escape_the_truncation`. Doubling the volatility left 85.3% of this universe
+priced at exactly zero.
 
-### 3.4 The window, not the estimator, was the constraint
+### 3.4 The window mattered from 5 to 30, and not beyond
 
-| fit window | tail_q | powered share of TRAIN |
-|---|---|---|
-| 5 d | 0.90 | 2.8% |
-| 5 d | 0.95 | 0.0% |
-| 5 d | 0.99 | 0% |
-| 30 d | 0.90 / 0.95 | 100% |
-| 30 d | 0.99 | 0.1% |
-| 90 d | 0.90 / 0.95 / 0.99 | 100% |
+| fit window | tail_q | powered share of TRAIN | log loss | Brier |
+|---|---|---|---|---|
+| 5 d | 0.90 | **3.0%** | — | — |
+| 5 d | 0.95 / 0.99 | 0.1% / 0% | — | — |
+| 30 d | 0.90 | 100% | 0.006674 | **0.00156** |
+| 30 d | 0.95 | 100% | 0.00669 | 0.00156 |
+| 30 d | 0.99 | 0.2% | — | — |
+| **90 d** | **0.90** | 100% | **0.006670** | 0.00157 |
+| 90 d | 0.95 | 100% | 0.00667 | 0.00157 |
+| 90 d | 0.99 | 100% | 0.00670 | 0.00157 |
 
-At theta's own five-day window a peaks-over-threshold fit is powered essentially **nowhere**.
-Selection, on TRAIN only, by mean Bernoulli log loss on the common population (`mid ≤ 20c`), with
-configurations below 90% coverage refused:
+Selection is on TRAIN only, by mean Bernoulli log loss on the common population (`mid ≤ 20c`),
+with configurations below 90% powered coverage refused.
 
-| fit_days | tail_q | coverage | common n | log loss | Brier |
-|---|---|---|---|---|---|
-| 30 | **0.90** | 100% | 50,365 | **0.00374** | 0.00074 |
-| 30 | 0.95 | 100% | 50,365 | 0.00375 | 0.00074 |
-| 90 | 0.90 | 100% | 50,365 | 0.00382 | 0.00075 |
-| 90 | 0.95 | 100% | 50,365 | 0.00382 | 0.00075 |
-| 90 | 0.99 | 100% | 50,365 | 0.00385 | 0.00075 |
+**FROZEN on TRAIN: `fit_days=90`, `tail_q=0.90`** — and the margin is honest about itself. 30 and
+90 differ in the **fifth decimal** of the log loss, and Brier marginally prefers 30. What the
+sweep establishes is not that 90 beats 30; it is that at theta's own five-day window a
+peaks-over-threshold fit powers **3%** of quotes and at thirty days it powers all of them. A
+future freeze could reasonably pick 30 on cost — it halves the rows the shadow loads. It has not,
+so the runtime runs 90 (§5.3).
 
-**FROZEN on TRAIN: `fit_days=30`, `tail_q=0.90`.** The spread across eligible configurations is
-under 3% of the score; the window mattered, the threshold barely did.
+### 3.5 Historical validation — 15,591 quotes, 250 events
 
-### 3.5 Historical validation — 15,227 quotes, 248 events
-
-Aggregate R, spliced **1.09 [0.33, 2.17]**; incumbent **0.47 [0.16, 0.91]**. Read as two separate
-descriptions, not a comparison: the incumbent over-predicts hits by about 2× in aggregate while
-declaring 12,678 of these 15,227 quotes impossible, and the spliced model's aggregate R now
-contains 1 — but its deep buckets do not.
-
-Deep tail, spliced, out of sample:
+Aggregate R, spliced **1.31 [0.82, 2.10]**; incumbent **0.80 [0.51, 1.27]**. Read as two separate
+descriptions, not a comparison. Deep tail, spliced:
 
 | modeled P | n | events | expected | observed | R | 99% CI |
 |---|---|---|---|---|---|---|
-| 0.000–0.002 | 14,107 | 248 | 2.81 | 11 | 3.92 | [0.00, 12.79] |
-| 0.002–0.005 | 340 | 154 | 1.11 | 4 | 3.60 | [0.00, 13.18] |
-| 0.005–0.010 | 185 | 132 | 1.34 | 2 | 1.49 | [0.00, 6.15] |
-| 0.010–0.020 | 140 | 110 | 2.01 | 6 | 2.98 | [0.00, 6.79] |
-| 0.020–0.050 | 170 | 137 | 5.38 | 9 | 1.67 | [0.36, 3.65] |
+| 0.000–0.002 | 13,835 | 248 | 1.67 | 14 | 8.38 | [0.00, 27.75] |
+| 0.002–0.005 | 440 | 160 | 1.45 | 6 | 4.14 | [0.00, 12.87] |
+| 0.005–0.010 | 278 | 156 | 2.03 | 5 | 2.46 | [0.00, 6.07] |
+| 0.010–0.020 | 236 | 152 | 3.42 | 6 | 1.75 | [0.00, 4.58] |
+| 0.020–0.050 | 267 | 152 | 8.78 | 17 | 1.94 | [0.70, 3.47] |
 
-Every deep-bucket interval now **contains 1**. The point estimates still say the model
-understates 0.2–2% events by 3–4×, and that is the shape a short-tail seller cannot afford — but
-once the shared settlement print is respected, **none of it is established**. The previous
-revision's disjoint deep-bucket intervals were an artefact of counting one ladder as a hundred
-observations.
+The point estimate in the deepest bucket is **8.4×** on real labels — worse than the derivation
+implied, because the derivation's near-strike exclusion removed exactly the near-money markets
+that hit. Its interval still contains 1. **The miss is large and it is not established.**
 
 ### 3.6 The paired comparison — what actually decides between the models
 
 Common population: powered quotes with `mid ≤ 20c`, fixed by the market's own price, identical
-for both models. **n = 15,100 markets across 248 events** (Kish effective events 212.0).
+for both models. **n = 15,391 markets across 250 events** (Kish effective events 214.3).
 
 | weighting | model | mean log loss | mean Brier |
 |---|---|---|---|
-| market | incumbent | 0.01200 | 0.00223 |
-| market | spliced | 0.01295 | 0.00203 |
-| event | incumbent | 0.01970 | 0.00413 |
-| event | spliced | 0.02263 | 0.00410 |
+| market | incumbent | 0.02144 | 0.00484 |
+| market | spliced | 0.02303 | 0.00463 |
+| event | incumbent | 0.03227 | 0.00769 |
+| event | spliced | 0.03666 | 0.00765 |
 
 Paired difference, spliced − incumbent (negative favours the spliced model), event-clustered 99%:
 
 | weighting | statistic | difference | 99% CI | favours |
 |---|---|---|---|---|
-| market | log loss | +0.00095 | [−0.00452, +0.01054] | neither |
-| market | Brier | −0.00021 | [−0.00054, +0.00020] | neither |
-| event | log loss | +0.00293 | [−0.00726, +0.01935] | neither |
-| event | Brier | −0.00003 | [−0.00083, +0.00115] | neither |
+| market | log loss | +0.00159 | [−0.00346, +0.01264] | neither |
+| market | Brier | −0.00021 | [−0.00054, +0.00023] | neither |
+| event | log loss | +0.00439 | [−0.00555, +0.02481] | neither |
+| event | Brier | −0.00003 | [−0.00083, +0.00112] | neither |
 
 > **The models fail differently; superiority is not established.**
 
 The two proper scores disagree even in sign — log loss slightly prefers the incumbent, Brier
-slightly prefers the spliced model — and every interval contains zero on both weightings. That
-is a genuine result, not a null from thin data: 15,100 markets is not a small sample, it is a
-sample worth ~2,400 independent observations once the ladder structure is respected.
+slightly prefers the spliced model — and every interval contains zero on both weightings. **This
+conclusion is unchanged by the label correction**, which is the strongest thing that can be said
+for it: it held under the derived labels (`refit-12`) and holds under Kalshi's real ones.
 
-The two failure modes are not symmetric, and neither is acceptable for a short-tail seller. The
-incumbent declares 84% of this population impossible and is roughly calibrated on the remainder;
-the spliced model answers everywhere and understates its deepest buckets by 3–4× at the point
-estimate. **Choosing on aggregate R would pick the one that refuses to answer**, since a zero
-costs nothing in a denominator. That is why the frozen rule is a per-prediction proper score.
+Neither failure mode is acceptable for a short-tail seller. The incumbent declares 85% of the
+universe impossible and is roughly calibrated on the rest; the spliced model answers everywhere
+and misses its deepest bucket by 8× at the point estimate. **Choosing on aggregate R would pick
+the one that refuses to answer**, since a zero costs nothing in a denominator. That is why the
+frozen rule is a per-prediction proper score.
 
-### 3.7 Selection bias after the repair — suggested, not established
+### 3.7 Selection bias after the repair — established on real labels
 
 | model | set | n | events | expected | observed | R | 99% CI |
 |---|---|---|---|---|---|---|---|
-| incumbent | SELECTED | 22 | 15 | 1.32 | 2 | 1.51 | [0.00, 6.64] |
-| incumbent | REJECTED | 65,768 | 990 | 406.96 | 149 | 0.37 | [0.23, 0.53] |
-| spliced | SELECTED | 148 | 79 | 4.95 | 17 | **3.44** | [0.84, 7.54] |
-| spliced | REJECTED | 65,642 | 990 | 198.39 | 134 | **0.68** | [0.43, 0.92] |
+| incumbent | SELECTED | 25 | 18 | 1.64 | 4 | 2.43 | [0.00, 6.84] |
+| incumbent | REJECTED | 66,497 | 992 | 559.12 | 343 | 0.61 | [0.47, 0.78] |
+| spliced | SELECTED | 135 | 68 | 6.13 | 25 | **4.08** | **[1.70, 7.38]** |
+| spliced | REJECTED | 66,387 | 992 | 338.97 | 322 | **0.95** | **[0.75, 1.19]** |
 
-Under the spliced model the selected set still misses by 3.4× against 0.68 on its complement —
-but the intervals **overlap** in [0.84, 0.92] once clustered, so at 99% this is a strong
-suggestion rather than a finding. The incumbent's selected set is 22 markets across 15 events and
-says nothing at all.
+Under the spliced model the selected set misses by 4.1× against 0.95 on its complement, and the
+intervals are now **disjoint** — [1.70, 7.38] against [0.75, 1.19]. Under the derived labels they
+overlapped; on real settlement they do not. **Residual selection bias survives the calibration
+repair and is established**, which is precisely the finding stage 4 exists to act on.
 
 The two SELECTED sets are **different populations of different sizes** — fattening the tails
-shrinks `excess`, so the models select 148 and 22 markets respectively. A ratio between them is
-not a comparison, and none is drawn.
+shrinks `excess`, so the models select 135 and 25 markets respectively. A ratio between them is
+not a comparison, and none is drawn. The incumbent's 25 markets across 18 events say nothing.
 
 ### 3.8 Fit health
 
 | quantity | p10 | p50 | p90 |
 |---|---|---|---|
-| non-overlapping blocks | 1,234 | 1,440 | 1,440 |
-| expected block slots | 1,234 | 1,440 | 1,440 |
-| **block coverage** | 1.000 | 1.000 | 1.000 |
-| longest window gap (min) | 0.0 | 0.0 | 0.0 |
-| upper-tail declustered exceedances | 85 | 95 | 102 |
-| lower-tail declustered exceedances | 88 | 95 | 107 |
-| upper ξ | 0.045 | 0.129 | 0.245 |
-| lower ξ | 0.046 | 0.170 | 0.251 |
+| non-overlapping blocks | 3,687 | 4,302 | 4,318 |
+| expected block slots | 3,702 | 4,320 | 4,320 |
+| **block coverage** | 0.996 | 0.996 | 1.000 |
+| longest window gap (min) | 0.0 | 420.0 | 420.0 |
+| upper-tail declustered exceedances | 256 | 298 | 303 |
+| lower-tail declustered exceedances | 252 | 299 | 305 |
+| upper ξ | 0.138 | 0.164 | 0.219 |
+| lower ξ | 0.166 | 0.205 | 0.227 |
 
-All 65,790 quotes have a powered active tail; **0** have a powered tail on an incomplete window.
-Coverage is 1.000 throughout because this run reads Coinbase, which has no gaps — the coverage
-gate exists for the **live** shadow, where the close set is the bot's own collection and the
-holes are its own restarts. 1.0% of active tails are bounded (ξ<0) and extrapolate with max(ξ, 0);
-a fitted ξ<0 asserts a hard maximum move, which is the claim that started this programme.
+All 66,522 quotes have a powered active tail; **0** have a powered tail on an incomplete window.
+A 90-day window carries ~300 declustered exceedances a side, fifteen times the bar. The 420-minute
+median gap is a real hole in Coinbase's series and coverage still reads 0.996, which is the point
+of measuring completeness separately from span. **0.0%** of active tails are bounded.
 
 ---
 
@@ -615,7 +594,7 @@ the horizon that produced it.
 AND ≥90% block coverage. The metadata is written either way, so a refusing cycle is visible as
 such rather than absent.
 
-### 5.3 Runtime/offline parity — the same model, proved
+### 5.3 Runtime/offline parity — the same model, proved, and it runs the frozen one
 
 `tests/test_theta_tailmodel.py::TestRuntimeOfflineParity` runs identical candles through the live
 shadow path (`ThetaTracker._spliced`) and the offline harness (`FitCache`) at a decision time
@@ -625,33 +604,65 @@ for `greater`, `less` and `between`, and that `n`, `horizon_min`, `tail_q`, `exp
 
 That test would have failed before this revision, three times over: different horizon, different
 refit cadence, different tail quantile (the runtime silently used the module default while the
-harness used whichever the sweep was scoring). It also pins that the runtime reads
-`theta_spliced_tail_q` rather than a default, that fits are reused across cycles inside one hour,
-that BTC and ETH do not share a fit, and that the cycle budget withholds rather than delays.
+harness used whichever the sweep was scoring).
+
+**It also asserts the shipped defaults ARE the frozen specification.** The tracker in that test is
+built from the real default `Settings` with nothing configured into agreement, and
+`test_the_shipped_defaults_ARE_the_frozen_specification` pins
+`theta_spliced_fit_days == tailmodel.FROZEN_FIT_DAYS == 90`, `theta_spliced_tail_q == 0.90`, and
+`theta_spot_retention_days == 100 > 90 > theta_trail_days`. A shadow fitted outside the frozen
+window produces probabilities no verdict covers, and this catches the drift in both directions:
+the default was 90 while the sweep was open, went to 30 when `refit-12` froze that under the
+derived labels, and is 90 again now that `refit-13` froze it under real settlement. It tracks the
+freeze, not a preference.
+
+The rest of the class pins that the runtime reads `theta_spliced_tail_q` rather than a default,
+that fits are reused across cycles inside one hour, that BTC and ETH do not share a fit, that a
+failed shadow load does not break the cycle, and that the budget withholds rather than delays.
 
 ### 5.4 What the shadow costs a trading cycle
 
-`scripts/theta_shadow_bench.py`, at 480 markets/cycle over a full 90-day window:
+**The production number does not exist yet, and this section does not pretend otherwise.**
+
+`scripts/theta_shadow_bench.py` measures the **arithmetic and memory** half — fits, cache
+behaviour, close-set materialisation — with no database and no network. At 480 markets/cycle over
+a full frozen window:
 
 | quantity | value |
 |---|---|
-| closes per load (both products) | 259,200 |
 | close-set loads over 24 cycles | **6** (was 48) |
 | distinct GPD fits | **36** for 11,520 quotes priced |
 | fit cache hit rate | 99.7% |
-| shadow ms per cycle, p50 / p90 / max | **0.0 / 0.0 / 1,806** |
-| peak memory, one product's close set | 14.1 MB |
+| shadow ms per cycle, p50 / p90 / max | **0.0 / 0.0 / ~1,800** |
 
-Three mechanisms bound it, in order of how much they matter: the close set is **held for its
-refit anchor** rather than reloaded every cycle (this is the dominant cost, and it is database
-work on the trading loop's thread, not arithmetic); the horizon grid caps fits at 6 per product
-per anchor, so a 240-strike ladder costs the same as a 6-strike one; and
-`theta_spliced_budget_ms` is the backstop for a pathological window.
+**That is a lower bound.** The "load" line is in-process object construction; production adds the
+Postgres round trip and row decode, and that is the dominant term. The synthetic figure cannot
+measure it.
 
-The budget is **3,000 ms**, set from this measurement. The first draft said 750 ms, which is
-*below* the measured maximum — a backstop that fires during normal operation is not a backstop,
-it would have silently gapped the research series every hour. Against a 300,000 ms scan interval
-the worst cycle is 0.6%.
+Three mechanisms bound the cost, in order of how much they matter: the close set is **held for its
+refit anchor** rather than reloaded every cycle; the horizon grid caps fits at 6 per product per
+anchor, so a 240-strike ladder costs the same as a 6-strike one; and `theta_spliced_budget_ms` is
+the backstop.
+
+**The budget now covers the whole shadow.** It gated fit time — the cheap half — while the
+expensive half was reported after the fact and could not be stopped. It bounds total elapsed time
+now (load, row decode, model construction, fits), and the load additionally carries a **database
+statement timeout**, because a Python-side deadline cannot interrupt a query that has already been
+issued. Over budget, or a timed-out load, means metadata without a probability and the scan
+continues.
+
+**Outstanding, and stated as such:** `theta_spliced_budget_ms = 3000` is derived from the
+synthetic benchmark, not from production. The worker now logs one `theta: shadow cost` line per
+cycle carrying `theta_shadow_ms` (total), `theta_shadow_load_ms`, `theta_shadow_loads` and
+`theta_shadow_fits`. **After this merges and deploys**, collect it over several hourly reloads —
+
+```
+{"type":"logs","service":"main","filter":"theta: shadow cost"}
+```
+
+— and report p50, p90, p99 and maximum before calling the backstop production-derived. Until then
+it is a synthetic figure with a database timeout behind it, and the claim in an earlier revision
+that it was measured in production is withdrawn.
 
 ### 5.5 Subsequent spot path — a tested research product, not a retention promise
 
@@ -689,6 +700,11 @@ Kept because the corrections are the useful part of the record, not because the 
 | "TEST is read once" | **false as written** | the August window had already been reported on before the scoring rule was fixed. It is labelled **historical validation** throughout, and a forward one-look holdout is reserved. |
 | Selection bias "grew from 4.6× to 6.1×" | **retracted** | fattening the tails shrinks `excess`, so the two models select different populations of different sizes. A ratio between them is not a comparison. |
 | Calibration validated while the settlement-label bar was failing at 96.9% | **retracted** | a calibration computed against labels that fail their own quality bar is not validated. The bar is now a gate that runs before anything is scored (§1.2, §3.1), and it passes on the retained population — but it passes *because* the audit was repaired, not because the bar moved. |
+| `refit-12`'s freeze at `fit_days=30` | **superseded** | frozen under the DERIVED labels, which do not clear their own agreement bar. Under Kalshi's real settled results the selector picks 90 — by a fifth-decimal margin (§3.4). The runtime tracks the current freeze. |
+| Settlement-label agreement reported as `[1.0000, 1.0000]`, 99% | **withdrawn** | a percentile bootstrap on an all-agreeing sample cannot produce a disagreement, so the interval is a boundary artefact of the method. The exact clustered bound on the same evidence is 92.6%. |
+| The derived outcome labels PASS their quality bar | **withdrawn** | they do not, under a bound valid at zero failures. They are replaced rather than argued with: Kalshi's own results cover 100% of the universe (§1.2). |
+| `theta_spliced_budget_ms` described as production-derived | **withdrawn** | it comes from a synthetic benchmark that cannot measure PostgreSQL. The production telemetry exists in the code and has not been collected (§5.4). |
+| Taxonomy evidence reported as "100% of N texts" | **withdrawn** | one rule document copied onto N markets is one observation, not N. See `RESEARCH_MMSELL_2X2_PAPER_DESIGN.md` §2A.1b. |
 | "Against theta4's actual incumbent the replacement is a **regression**" | **withdrawn** | that rested on two separate unclustered aggregate-R intervals over a one-month window. The paired proper-score comparison on a longer window (§3.6) returns **neither**, on both weightings and both scores. The correct statement is that the models fail differently and superiority is not established. |
 | "No refitted tail is claimed as validated" | **false once §3 existed** | a tail was fitted and was validated. What that validation says has changed; that it happened has not. |
 
@@ -701,7 +717,7 @@ established, and the cause of theta4's failure remains unidentified.**
 
 Concretely, and without hedging in either direction:
 
-- The incumbent prices **86.1%** of this universe at exactly 0.0, which is not a probability, and
+- The incumbent prices **85.3%** of this universe at exactly 0.0, which is not a probability, and
   it does that *at `mult=2.0`* — the doubling theta4 actually ran. The spliced model prices none
   of them there. That is a genuine repair and it is the only unambiguous success here.
 - **Neither model is better than the other.** All four paired differences — two proper scores ×
@@ -710,13 +726,17 @@ Concretely, and without hedging in either direction:
   impossible and calibrates on the remainder; the other answers everywhere and understates its
   deepest buckets by 3–4× at the point estimate. Choosing between them on aggregate R would pick
   the one that refuses to answer.
-- **The deep-tail miss is no longer statistically established.** Every deep bucket's interval
-  contains 1 once the shared settlement print is respected. The point estimates still describe a
-  model that would lose money on the tail; the evidence no longer rules out chance.
-- **Residual selection bias is suggested, not established**: SELECTED 3.44 [0.84, 7.54] against
-  REJECTED 0.68 [0.43, 0.92], overlapping in [0.84, 0.92].
-- **The outcome labels are usable**, at 100% agreement on the retained population — but only after
-  two bugs in my own audit were found and disclosed (§1.2).
+- **The deep-tail miss is not statistically established.** Every deep bucket's interval contains
+  1 once the shared settlement print is respected, though the deepest point estimate is **8.4×**.
+  The point estimates describe a model that would lose money on the tail; the evidence does not
+  rule out chance.
+- **Residual selection bias IS established** on real labels: SELECTED 4.08 [1.70, 7.38] against
+  REJECTED 0.95 [0.75, 1.19], **disjoint**. Repairing calibration did not remove it, which is
+  what stage 4 exists to act on.
+- **The outcome labels are Kalshi's own settled results, at 100% coverage.** The derivation they
+  replace agrees 99.90% but cannot clear its own 97% bar under a bound valid at zero failures
+  (92.64%, 54 of 992 events) — and two bugs in my own audit of it were found and disclosed
+  (§1.2).
 
 ### 7.1 What is still unproven
 

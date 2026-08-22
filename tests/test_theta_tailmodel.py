@@ -825,10 +825,11 @@ class TestRuntimeOfflineParity:
 
     @pytest.fixture(scope="class")
     def candles(self):
+        # A full frozen window, so the fit the runtime asks for is the fit it can build.
         rng = random.Random(77)
         base = 1_700_000_000 // 60 * 60
         px, out = 65000.0, {}
-        for i in range(30 * 1440):
+        for i in range(int(tm.FROZEN_FIT_DAYS) * 1440):
             px *= math.exp(rng.gauss(0.0, 0.0006))
             out[base + i * 60] = px
         return out
@@ -846,14 +847,16 @@ class TestRuntimeOfflineParity:
     def test_the_shipped_defaults_ARE_the_frozen_specification(self, settings):
         """The runtime must fit the window the offline validation actually scored.
 
-        This shipped at 90 days while the sweep was still open, so the live shadow would have
-        produced probabilities from a configuration `refit-12` did not select — no verdict
-        covers those. The fit window is also NOT the retention window; the two were the same
-        number once and every claim about what retention bought was false as a result.
+        This shipped at 90 days while the sweep was still open, so the shadow would have
+        produced probabilities from a configuration no run had selected. It tracks the freeze in
+        both directions: `refit-12` froze 30 under the derived labels and `refit-13` froze 90
+        under Kalshi's own settled results, and the default follows the current one rather than
+        whichever is convenient. The fit window is also NOT the retention window; the two were
+        the same number once and every claim about what retention bought was false as a result.
         """
-        assert settings.theta_spliced_fit_days == tm.FROZEN_FIT_DAYS == 30.0
+        assert settings.theta_spliced_fit_days == tm.FROZEN_FIT_DAYS == 90.0
         assert settings.theta_spliced_tail_q == tm.FROZEN_TAIL_Q == 0.90
-        assert settings.theta_spot_retention_days == 90.0
+        assert settings.theta_spot_retention_days == 100.0
         assert settings.theta_spot_retention_days > settings.theta_spliced_fit_days
         assert settings.theta_spliced_fit_days > settings.theta_trail_days
 
@@ -861,7 +864,7 @@ class TestRuntimeOfflineParity:
     def test_probability_and_metadata_match_at_every_horizon(self, tracker, candles, tte_min):
         # A decision time deliberately NOT on the hour: both sides must anchor it the same way.
         as_of = max(candles) - 1_500
-        model = SpotModel(candles, trail_days=30.0)
+        model = SpotModel(candles, trail_days=tm.FROZEN_FIT_DAYS)
         runtime = tracker._spliced(model, "BTC", as_of, tte_min)
         assert runtime is not None
 
@@ -890,21 +893,21 @@ class TestRuntimeOfflineParity:
         # 22.4 and 20.0 minutes are the same fit; 22.4 and 25.0 are too. Without this the
         # runtime fits a horizon the harness never scored.
         as_of = max(candles)
-        model = SpotModel(candles, trail_days=30.0)
+        model = SpotModel(candles, trail_days=tm.FROZEN_FIT_DAYS)
         assert tracker._spliced(model, "BTC", as_of, 22.4).horizon_min == 20
         assert tracker._spliced(model, "BTC", as_of, 24.0).horizon_min == 25
         assert tracker._spliced(model, "BTC", as_of, 99.0).horizon_min == 35
 
     def test_the_runtime_uses_the_CONFIGURED_tail_quantile(self, tracker, candles):
         as_of = max(candles)
-        model = SpotModel(candles, trail_days=30.0)
+        model = SpotModel(candles, trail_days=tm.FROZEN_FIT_DAYS)
         tracker.settings.theta_spliced_tail_q = 0.97
         tracker._spliced_cache.clear()
         assert tracker._spliced(model, "BTC", as_of, 30.0).tail_q == 0.97
 
     def test_the_shadow_stops_when_its_cycle_budget_is_spent(self, tracker, candles):
         as_of = max(candles)
-        model = SpotModel(candles, trail_days=30.0)
+        model = SpotModel(candles, trail_days=tm.FROZEN_FIT_DAYS)
         tracker.settings.theta_spliced_budget_ms = 1e-6   # exhausted by the first fit
         assert tracker._spliced(model, "BTC", as_of, 30.0) is not None
         tracker._spliced_cache.clear()
@@ -916,12 +919,12 @@ class TestRuntimeOfflineParity:
         # The saving that keeps the shadow off the scan's critical path: a 90-day window cannot
         # be moved by one 5-minute cycle, so refitting every cycle buys nothing.
         as_of = max(candles) // 3600 * 3600 + 120
-        model = SpotModel(candles, trail_days=30.0)
+        model = SpotModel(candles, trail_days=tm.FROZEN_FIT_DAYS)
         first = tracker._spliced(model, "BTC", as_of, 30.0)
         fits_after_first = tracker._shadow_fits
         # A later cycle in the same hour, and a REBUILT SpotModel: the cache must not key on
         # the object's identity, or every cycle would refit.
-        again = tracker._spliced(SpotModel(candles, trail_days=30.0), "BTC", as_of + 600, 30.0)
+        again = tracker._spliced(SpotModel(candles, trail_days=tm.FROZEN_FIT_DAYS), "BTC", as_of + 600, 30.0)
         assert again is first
         assert tracker._shadow_fits == fits_after_first
         # The hour turns: a fresh fit.
@@ -1001,8 +1004,8 @@ class TestRuntimeOfflineParity:
 
     def test_products_do_not_share_a_fit(self, tracker, candles):
         as_of = max(candles)
-        btc = SpotModel(candles, trail_days=30.0)
-        eth = SpotModel({k: v * 0.03 for k, v in candles.items()}, trail_days=30.0)
+        btc = SpotModel(candles, trail_days=tm.FROZEN_FIT_DAYS)
+        eth = SpotModel({k: v * 0.03 for k, v in candles.items()}, trail_days=tm.FROZEN_FIT_DAYS)
         a = tracker._spliced(btc, "BTC", as_of, 30.0)
         b = tracker._spliced(eth, "ETH", as_of, 30.0)
         assert a is not b
