@@ -22,7 +22,7 @@ touched.**
 
 | stage | status |
 |---|---|
-| 1. replace the degenerate 0/1 output | **done and verified** — 86.2% exactly-0 → **0.0%** |
+| 1. replace the degenerate 0/1 output | **done and verified** — 86.1% exactly-0 → **0.0%** |
 | 2. refit the tail shape, validate out of sample | **run, powered, label-gated — and it does not beat the incumbent** (§3.6) |
 | 3. re-measure calibration + residual selection bias | **done** — bias suggested, not established (§3.7) |
 | 4. selection-rule A/B that does not rank on model error | **redesigned**, floors recomputed on the event (§4); still unregistered |
@@ -291,47 +291,49 @@ rationale — see §6 for what those runs said and why it no longer stands.
 
 The cluster bootstrap is seeded (`seed=20260822`) and the same seed reproduces the same interval
 endpoints exactly. An analysis whose uncertainty moves between runs cannot be a frozen result —
-so it was checked rather than asserted: runs `refit-10` and `refit-11`, thirteen minutes apart,
-differ in exactly one line, the count of Coinbase minutes fetched. Every reported number is
-byte-identical.
+so it was checked rather than asserted: runs `refit-10` and `refit-11`, thirteen minutes apart on
+identical inputs, differ in exactly one line — the count of Coinbase minutes fetched. Every
+reported number is byte-identical. `refit-12` two hours later moves only where two more ladders
+settled (65,630 → 65,790 markets, 988 → 990 events); the frozen configuration, its TRAIN score
+and the verdict are unchanged.
 
 ### 3.1 Label quality — the gate, passed
 
-571 of 66,201 markets fall inside the near-strike exclusion (retained coverage **99.14%**, bar
+572 of 66,362 markets fall inside the near-strike exclusion (retained coverage **99.14%**, bar
 90%). On the retained overlap the derived label agrees with recorded Kalshi settlement
 **100.00%** of the time across 193 markets in 63 events (bar 97%, event-clustered). **PASS.**
-Everything below is scored on that retained population: 65,630 markets.
+Everything below is scored on that retained population: 65,790 markets.
 
-### 3.2 Evidence structure — 65,630 markets are worth about 12,000 observations
+### 3.2 Evidence structure — 65,790 markets are worth about 10,000 observations
 
 | quantity | value |
 |---|---|
-| scored markets | 65,630 |
-| distinct events | 988 |
-| markets per event (mean / p50 / p90 / max) | 66.4 / 52 / 97 / 113 |
-| Kish effective events | 886.4 |
+| scored markets | 65,790 |
+| distinct events | 990 |
+| markets per event (mean / p50 / p90 / max) | 66.5 / 52 / 97 / 113 |
+| Kish effective events | 888.1 |
 | largest single event's share | 0.17% |
 
 | statistic | design effect | effective n |
 |---|---|---|
-| hit indicator | 4.6 | 14,414 |
-| spliced log loss | 5.4 | 12,182 |
-| incumbent log loss | 5.2 | 12,544 |
+| hit indicator | 4.2 | 15,520 |
+| spliced log loss | 6.4 | 10,247 |
+| incumbent log loss | 6.6 | 10,025 |
 
-An interval computed as though these rows were independent is about **√5 ≈ 2.3× too narrow**.
+An interval computed as though these rows were independent is about **√6 ≈ 2.5× too narrow**.
 That is the size of the error the previous revisions' Poisson intervals carried.
 
 ### 3.3 Degeneracy — fixed, and it was the one unambiguous success
 
 | model | n | exactly 0 | exactly 1 | in (0,1) |
 |---|---|---|---|---|
-| incumbent (empirical, `mult=2.0`) | 65,630 | 56,569 (**86.2%**) | 0 | 9,061 (13.8%) |
-| spliced EVT | 65,630 | 0 (**0.0%**) | 0 | 65,630 (100%) |
+| incumbent (empirical, `mult=2.0`) | 65,790 | 56,645 (**86.1%**) | 0 | 9,145 (13.9%) |
+| spliced EVT | 65,790 | 0 (**0.0%**) | 0 | 65,790 (100%) |
 
 `SpotModel.prob_from_returns` is a raw empirical frequency, so it has no mass beyond its own
 sample maximum. `vol_mult` rescales the *threshold* (`x / k`), which pulls some strikes back
 inside the support but cannot escape a hard edge — pinned in
-`test_vol_mult_cannot_escape_the_truncation`. Doubling the volatility left 86.2% of this
+`test_vol_mult_cannot_escape_the_truncation`. Doubling the volatility left 86.1% of this
 universe priced at exactly zero.
 
 ### 3.4 The window, not the estimator, was the constraint
@@ -360,22 +362,22 @@ configurations below 90% coverage refused:
 **FROZEN on TRAIN: `fit_days=30`, `tail_q=0.90`.** The spread across eligible configurations is
 under 3% of the score; the window mattered, the threshold barely did.
 
-### 3.5 Historical validation — 15,067 quotes, 246 events
+### 3.5 Historical validation — 15,227 quotes, 248 events
 
-Aggregate R, spliced **1.10 [0.37, 2.21]**; incumbent **0.48 [0.16, 0.95]**. Read as two separate
+Aggregate R, spliced **1.09 [0.33, 2.17]**; incumbent **0.47 [0.16, 0.91]**. Read as two separate
 descriptions, not a comparison: the incumbent over-predicts hits by about 2× in aggregate while
-declaring 12,564 of these 15,067 quotes impossible, and the spliced model's aggregate R now
+declaring 12,678 of these 15,227 quotes impossible, and the spliced model's aggregate R now
 contains 1 — but its deep buckets do not.
 
 Deep tail, spliced, out of sample:
 
 | modeled P | n | events | expected | observed | R | 99% CI |
 |---|---|---|---|---|---|---|
-| 0.000–0.002 | 13,959 | 246 | 2.77 | 11 | 3.96 | [0.00, 13.78] |
-| 0.002–0.005 | 336 | 153 | 1.10 | 4 | 3.64 | [0.00, 14.15] |
-| 0.005–0.010 | 183 | 131 | 1.33 | 2 | 1.50 | [0.00, 6.25] |
-| 0.010–0.020 | 138 | 109 | 1.99 | 6 | 3.02 | [0.00, 7.14] |
-| 0.020–0.050 | 169 | 136 | 5.36 | 9 | 1.68 | [0.37, 3.82] |
+| 0.000–0.002 | 14,107 | 248 | 2.81 | 11 | 3.92 | [0.00, 12.79] |
+| 0.002–0.005 | 340 | 154 | 1.11 | 4 | 3.60 | [0.00, 13.18] |
+| 0.005–0.010 | 185 | 132 | 1.34 | 2 | 1.49 | [0.00, 6.15] |
+| 0.010–0.020 | 140 | 110 | 2.01 | 6 | 2.98 | [0.00, 6.79] |
+| 0.020–0.050 | 170 | 137 | 5.38 | 9 | 1.67 | [0.36, 3.65] |
 
 Every deep-bucket interval now **contains 1**. The point estimates still say the model
 understates 0.2–2% events by 3–4×, and that is the shape a short-tail seller cannot afford — but
@@ -386,30 +388,30 @@ observations.
 ### 3.6 The paired comparison — what actually decides between the models
 
 Common population: powered quotes with `mid ≤ 20c`, fixed by the market's own price, identical
-for both models. **n = 14,941 markets across 246 events** (Kish effective events 210.3).
+for both models. **n = 15,100 markets across 248 events** (Kish effective events 212.0).
 
 | weighting | model | mean log loss | mean Brier |
 |---|---|---|---|
-| market | incumbent | 0.01197 | 0.00223 |
-| market | spliced | 0.01307 | 0.00205 |
-| event | incumbent | 0.01977 | 0.00415 |
-| event | spliced | 0.02280 | 0.00414 |
+| market | incumbent | 0.01200 | 0.00223 |
+| market | spliced | 0.01295 | 0.00203 |
+| event | incumbent | 0.01970 | 0.00413 |
+| event | spliced | 0.02263 | 0.00410 |
 
 Paired difference, spliced − incumbent (negative favours the spliced model), event-clustered 99%:
 
 | weighting | statistic | difference | 99% CI | favours |
 |---|---|---|---|---|
-| market | log loss | +0.00110 | [−0.00422, +0.01106] | neither |
-| market | Brier | −0.00018 | [−0.00049, +0.00029] | neither |
-| event | log loss | +0.00303 | [−0.00672, +0.02016] | neither |
-| event | Brier | −0.00001 | [−0.00078, +0.00127] | neither |
+| market | log loss | +0.00095 | [−0.00452, +0.01054] | neither |
+| market | Brier | −0.00021 | [−0.00054, +0.00020] | neither |
+| event | log loss | +0.00293 | [−0.00726, +0.01935] | neither |
+| event | Brier | −0.00003 | [−0.00083, +0.00115] | neither |
 
 > **The models fail differently; superiority is not established.**
 
 The two proper scores disagree even in sign — log loss slightly prefers the incumbent, Brier
 slightly prefers the spliced model — and every interval contains zero on both weightings. That
-is a genuine result, not a null from thin data: 14,941 markets is not a small sample, it is a
-sample worth ~2,900 independent observations once the ladder structure is respected.
+is a genuine result, not a null from thin data: 15,100 markets is not a small sample, it is a
+sample worth ~2,400 independent observations once the ladder structure is respected.
 
 The two failure modes are not symmetric, and neither is acceptable for a short-tail seller. The
 incumbent declares 84% of this population impossible and is roughly calibrated on the remainder;
@@ -422,12 +424,12 @@ costs nothing in a denominator. That is why the frozen rule is a per-prediction 
 | model | set | n | events | expected | observed | R | 99% CI |
 |---|---|---|---|---|---|---|---|
 | incumbent | SELECTED | 22 | 15 | 1.32 | 2 | 1.51 | [0.00, 6.64] |
-| incumbent | REJECTED | 65,608 | 988 | 404.35 | 149 | 0.37 | [0.23, 0.53] |
+| incumbent | REJECTED | 65,768 | 990 | 406.96 | 149 | 0.37 | [0.23, 0.53] |
 | spliced | SELECTED | 148 | 79 | 4.95 | 17 | **3.44** | [0.84, 7.54] |
-| spliced | REJECTED | 65,482 | 988 | 197.87 | 134 | **0.68** | [0.43, 0.96] |
+| spliced | REJECTED | 65,642 | 990 | 198.39 | 134 | **0.68** | [0.43, 0.92] |
 
 Under the spliced model the selected set still misses by 3.4× against 0.68 on its complement —
-but the intervals **overlap** in [0.84, 0.96] once clustered, so at 99% this is a strong
+but the intervals **overlap** in [0.84, 0.92] once clustered, so at 99% this is a strong
 suggestion rather than a finding. The incumbent's selected set is 22 markets across 15 events and
 says nothing at all.
 
@@ -448,7 +450,7 @@ not a comparison, and none is drawn.
 | upper ξ | 0.045 | 0.129 | 0.245 |
 | lower ξ | 0.046 | 0.170 | 0.251 |
 
-All 65,630 quotes have a powered active tail; **0** have a powered tail on an incomplete window.
+All 65,790 quotes have a powered active tail; **0** have a powered tail on an incomplete window.
 Coverage is 1.000 throughout because this run reads Coinbase, which has no gaps — the coverage
 gate exists for the **live** shadow, where the close set is the bot's own collection and the
 holes are its own restarts. 1.0% of active tails are bounded (ξ<0) and extrapolate with max(ξ, 0);
@@ -513,7 +515,8 @@ The previous floors were derived from an **iid** count of settled markets. That 
 error as §1.1 in a different place, and it made the arm look about 2.6× cheaper than it is.
 
 From §3.7, the spliced rule's selected set is 148 markets across **79 events**, carrying 4.95
-expected tail events — λ ≈ **0.0334** expected events per selected market. Its design effect is
+expected tail events — λ ≈ **0.0334** expected events per selected market. (Those three figures
+are identical in `refit-10`, `-11` and `-12`; the selected set is small and stable.) Its design effect is
 **not** the population's 4.6: selection spreads thinly across ladders, 1.87 markets per event, so
 the worst-case inflation (ρ = 1, every selected market on a ladder sharing its outcome) is 1.87.
 
@@ -698,7 +701,7 @@ established, and the cause of theta4's failure remains unidentified.**
 
 Concretely, and without hedging in either direction:
 
-- The incumbent prices **86.2%** of this universe at exactly 0.0, which is not a probability, and
+- The incumbent prices **86.1%** of this universe at exactly 0.0, which is not a probability, and
   it does that *at `mult=2.0`* — the doubling theta4 actually ran. The spliced model prices none
   of them there. That is a genuine repair and it is the only unambiguous success here.
 - **Neither model is better than the other.** All four paired differences — two proper scores ×
@@ -711,7 +714,7 @@ Concretely, and without hedging in either direction:
   contains 1 once the shared settlement print is respected. The point estimates still describe a
   model that would lose money on the tail; the evidence no longer rules out chance.
 - **Residual selection bias is suggested, not established**: SELECTED 3.44 [0.84, 7.54] against
-  REJECTED 0.68 [0.43, 0.96], overlapping in [0.84, 0.96].
+  REJECTED 0.68 [0.43, 0.92], overlapping in [0.84, 0.92].
 - **The outcome labels are usable**, at 100% agreement on the retained population — but only after
   two bugs in my own audit were found and disclosed (§1.2).
 
