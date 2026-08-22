@@ -1,1 +1,1 @@
-{"type":"db","id":"dep-base-1","sql":"select (select version_num from alembic_version) as migration_head, (select count(*) from experiment_os_issue_commands) as receipts, (select count(*) from experiment_issues) as issues, (select count(*) from experiment_issues where status not in ('CLOSED_NO_ACTION','RESOLVED','CLOSED_DUPLICATE')) as open_issues"}
+{"type":"logs","id":"dep-health-1","lines":120}
