@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-show","args":["XOS-000003"],"id":"lo-x3-show-1"}
+{"type":"logs","limit":400,"filter":"freeze","id":"lo-x3-logs-1"}
