@@ -489,7 +489,7 @@ def compare_calibration(rows: list[dict], title: str, seed: int) -> None:
     print("  A tail 'hits' when YES resolves — the side theta sells. R = observed / modeled.")
     print("  The 0.000-0.020 rows are the test: this is a short-tail book and they are where it")
     print("  lives. Buckets are each model's OWN output, so the two tables are descriptions of")
-    print("  two different partitions — they are NOT a comparison. Section 5 is the comparison.")
+    print("  two different partitions — they are NOT a comparison. Section 6 is the comparison.")
     print()
     clustered_calib_table("INCUMBENT (empirical frequency):", rows, "p_old", seed)
     print()
@@ -552,7 +552,7 @@ def sweep(rows_by_cfg: dict[tuple[float, float], list[dict]], train_end: str
 
     Returns the winning configuration so `main` can score it on the holdout exactly once.
     """
-    head("3. CONFIGURATION SELECTION — scored on TRAIN only")
+    head("4. CONFIGURATION SELECTION — scored on TRAIN only")
     cut = dt.datetime.fromisoformat(train_end).replace(tzinfo=dt.timezone.utc)
     print(f"  train: quotes before {train_end}. The holdout is not consulted in this section.")
     print(f"  common population: yes mid <= {COMMON_POPULATION_MAX_MID:.0f}c, identical for every")
@@ -605,7 +605,7 @@ def test_once(rows: list[dict], train_end: str, cfg: tuple[float, float],
     rule were fixed, so the window has informed the scoring design and cannot also certify it.
     A genuine one-look holdout has to be a period that comes AFTER the specification is frozen.
     """
-    head("4. HISTORICAL VALIDATION — frozen configuration on the held-back period")
+    head("5. HISTORICAL VALIDATION — frozen configuration on the held-back period")
     print("  NOT a pristine holdout: this period was seen before the scoring rule was fixed.")
     cut = dt.datetime.fromisoformat(train_end).replace(tzinfo=dt.timezone.utc)
     rs = [r for r in rows if r["captured_at"] >= cut and r["powered"]]
@@ -620,7 +620,7 @@ def test_once(rows: list[dict], train_end: str, cfg: tuple[float, float],
     clustered_calib_table("INCUMBENT, same quotes:", rs, "p_old", seed)
     print()
     print("  Read these as two separate descriptions. Whether either model is BETTER is the")
-    print("  paired question in section 5, not a comparison of these two R columns.")
+    print("  paired question in section 6, not a comparison of these two R columns.")
     return rs
 
 
@@ -640,7 +640,7 @@ def paired_comparison(rows: list[dict], seed: int, when: str) -> str:
     on the markets it refuses to price. A proper scoring rule cannot be gamed that way, because
     it is minimised in expectation only by the true probability.
     """
-    head(f"5. PAIRED MODEL COMPARISON — the same markets, both models ({when})")
+    head(f"6. PAIRED MODEL COMPARISON — the same markets, both models ({when})")
     common = [r for r in rows if (r["mid"] or 999) <= COMMON_POPULATION_MAX_MID]
     if not common:
         print("  no quotes in the common population — no comparison exists")
@@ -703,7 +703,7 @@ def paired_comparison(rows: list[dict], seed: int, when: str) -> str:
 
 
 def selection(rows: list[dict], seed: int) -> None:
-    head("6. SELECTION — the diagnosis's split, recomputed under each model's own excess")
+    head("7. SELECTION — the diagnosis's split, recomputed under each model's own excess")
     print(f"  A quote is SELECTED when mid - 100*P >= {THETA4_EDGE_CENTS:.0f}c, mid is in")
     print(f"  {THETA4_BAND[0]:.0f}..{THETA4_BAND[1]:.0f}c and volume >= {THETA_MIN_VOLUME:.0f}.")
     print("  Each model is judged by the trades IT would have chosen, not by the incumbent's.")
@@ -732,7 +732,7 @@ def selection(rows: list[dict], seed: int) -> None:
 
 
 def fit_health(rows: list[dict]) -> None:
-    head("6. FIT HEALTH — what each tail was actually fitted on")
+    head("8. FIT HEALTH — what each tail was actually fitted on")
     if not rows:
         return
 
@@ -869,7 +869,7 @@ def main(argv: list[str] | None = None) -> int:
     frozen = sweep(by_cfg, args.train_end)
     test_rows: list[dict] = []
     if frozen is None:
-        head("4. OUT-OF-SAMPLE SCORE — withheld")
+        head("5. OUT-OF-SAMPLE SCORE — withheld")
         print("  No configuration was frozen on TRAIN, so there is nothing to score on TEST.")
         print("  Reporting a TEST number here would be choosing on the test set.")
     else:
@@ -882,7 +882,7 @@ def main(argv: list[str] | None = None) -> int:
     selection(powered if powered else primary, args.seed)
     fit_health(primary)
 
-    head("7. WHAT THIS RUN ESTABLISHES")
+    head("9. WHAT THIS RUN ESTABLISHES")
     print(f"  paired model comparison: {verdict}.")
     if labels_ok:
         print("  outcome labels: PASS on the retained population.")
