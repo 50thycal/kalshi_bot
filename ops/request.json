@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_freeze_listing_check","args":["--max-settled-pages","300","--max-open-pages","2"],"id":"rl-x3-deep-settled"}
+{"type":"script","name":"kalshi_market_probe","args":["KXSDCORNYIELD-26","KXSDCORNYIELD-2026","KXIACORN-26","KXKSWHEAT-26","KXNECORNYIELD-26","KXWICORNYIELD-26","KXINCORNYIELD-26","KXMSCOTTON-27"],"id":"rl-x3-usda-probe"}
