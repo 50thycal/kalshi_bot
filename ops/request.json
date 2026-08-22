@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-candidates","args":["--json"],"id":"dep-cand-1"}
+{"type": "env", "id": "dep-cmd-1", "set": {"EXPERIMENT_OS_ISSUE_COMMAND": "{\"command_id\":\"prod-verify-20260822\",\"action\":\"OPEN_CANDIDATE\",\"actor\":\"claude-code\",\"actor_role\":\"EXPERIMENT_CONTROL_TOWER\",\"schema_version\":1,\"payload\":{\"fingerprint\":\"bd04d0eee32588f64bfe81121befa7d03ab3f5dd31d6787aa9051366badcf060\"}}"}}
