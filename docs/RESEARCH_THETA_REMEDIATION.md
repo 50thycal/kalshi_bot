@@ -459,10 +459,17 @@ model, 18 against 1,000 for the incumbent. The Haldane correction moves the spli
 small enough for a continuity correction to matter, which is itself a statement about how little
 evidence it carries.
 
-The two SELECTED sets are **different populations of different sizes** — fattening the tails
-shrinks `excess`, so the models select 135 and 25 markets respectively. A ratio between them is
-not a comparison, and none is drawn; each is compared only to its own complement, which is what
-the contrast does.
+The two SELECTED sets are **different populations of different sizes** — 135 markets against 25.
+An earlier draft of this paragraph explained that backwards, saying a fattened tail shrinks
+`excess` and therefore selects less; that would predict the spliced model selecting *fewer*, and
+it selects more. What §3.1 actually measures is that the incumbent's output is **bimodal** —
+exactly zero on 84.9% of markets and comparatively large on the 15.1% where it is not — so it
+rejects a market on its own large estimate, while the spliced model's smooth small probabilities
+leave `excess` above the 6¢ threshold on quotes the incumbent declines. The direction of the
+mechanism is inferred from that degeneracy table, not separately measured; what is *not* inferred
+is the consequence, which is the only thing the analysis rests on: **a ratio between the two
+SELECTED sets would not be a comparison, and none is drawn.** Each is compared only to its own
+complement, which is what the contrast does.
 
 ### 3.8 Fit health
 
