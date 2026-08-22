@@ -1,1 +1,1 @@
-{"type": "script", "id": "refit-13", "name": "theta_tail_refit", "args": ["--since", "2026-07-11", "--train-end", "2026-08-11", "--fit-days", "5,30,90", "--tail-qs", "0.90,0.95,0.99", "--spot-source", "coinbase", "--vol-mult", "2.0", "--labels", "kalshi"]}
+{"type": "script", "id": "tax-8", "name": "mmsell_taxonomy_audit", "args": ["--since", "2026-07-19", "--until", "2026-08-21", "--top", "200", "--dump-text"]}

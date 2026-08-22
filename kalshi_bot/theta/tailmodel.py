@@ -134,16 +134,26 @@ RUN_SEPARATION = 2
 # by path without importing the SQLAlchemy-bearing package.
 
 # THE FROZEN CONFIGURATION, chosen on TRAIN by mean Bernoulli log loss over a common population
-# and recorded in run `refit-12` (2026-08-22). These are what the offline validation actually
+# and recorded in run `refit-13` (2026-08-22), which scores against KALSHI'S OWN SETTLED RESULTS
+# rather than the last-snapshot-spot derivation. These are what the offline validation actually
 # scored, so they are what the runtime must run: a shadow fitted on a window the validation never
 # evaluated produces probabilities no verdict covers. `Settings.theta_spliced_fit_days` and
 # `theta_spliced_tail_q` carry them into the worker, and
 # `tests/test_theta_tailmodel.py::TestRuntimeOfflineParity` asserts the DEFAULTS equal these.
 #
-# 30 days rather than 90 is a measurement, not a preference: at 30/0.90 the TRAIN log loss is
-# 0.00374 against 0.00382 at 90/0.90, both at 100% powered coverage. Note this is the FIT window
-# and is unrelated to `theta_spot_retention_days` (90), which governs how long closes are KEPT.
-FROZEN_FIT_DAYS = 30.0
+# 90 rather than 30 is where the selector landed, and the margin is honest about itself: at 30
+# days TRAIN log loss is 0.006674 and at 90 days 0.006670, a difference in the fifth decimal,
+# while Brier marginally prefers 30. **The window mattered enormously from 5 to 30 and not at all
+# from 30 to 90** — at 5 days a peaks-over-threshold fit powers 3% of quotes; at 30 it powers all
+# of them. A future freeze could reasonably pick 30 on cost, since it halves the rows the shadow
+# loads. It has not, so the runtime runs 90.
+#
+# `refit-12` froze 30 under the DERIVED labels, which do not clear their own agreement bar. That
+# freeze is superseded, not overridden by preference.
+#
+# Note this is the FIT window and is unrelated to `theta_spot_retention_days` (100), which governs
+# how long closes are KEPT and must exceed it.
+FROZEN_FIT_DAYS = 90.0
 FROZEN_TAIL_Q = 0.90
 
 # Horizons are snapped onto a fixed grid. Without this the runtime fits at whatever integer
