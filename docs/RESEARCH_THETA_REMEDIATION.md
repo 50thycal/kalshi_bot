@@ -420,9 +420,12 @@ frozen rule is a per-prediction proper score.
 The estimand is **`log(R_selected / R_rejected)`**, and it is now tested as such. An earlier
 revision computed a 99% interval for each group separately and called the effect established
 because they did not overlap. **That is not a test of the contrast.** The two groups come from
-the same events, their errors covary, and marginal intervals discard exactly that covariance;
-disjointness is sufficient for significance but not necessary, and it is not the question being
-asked. Whole events are resampled from the **combined** population and both groups recomputed
+the same events, their errors covary, and marginal intervals discard exactly that covariance.
+Non-overlap is **not necessary** for a ratio to exclude 1, and it is only reliably *sufficient*
+when the two estimates are independent — which these are not, since the split partitions the same
+ladders. Whether the dependence makes the marginal comparison conservative or anti-conservative
+depends on a covariance the marginal intervals never computed, so the honest position is that
+disjointness answers a different question. Whole events are resampled from the **combined** population and both groups recomputed
 inside each replicate.
 
 Degeneracy handling, predeclared: a replicate with **zero expected** in either group makes the
@@ -771,7 +774,7 @@ Kept because the corrections are the useful part of the record, not because the 
 | "TEST is read once" | **false as written** | the August window had already been reported on before the scoring rule was fixed. It is labelled **historical validation** throughout, and a forward one-look holdout is reserved. |
 | Selection bias "grew from 4.6× to 6.1×" | **retracted** | fattening the tails shrinks `excess`, so the two models select different populations of different sizes. A ratio between them is not a comparison. |
 | Calibration validated while the settlement-label bar was failing at 96.9% | **retracted** | a calibration computed against labels that fail their own quality bar is not validated. The bar is now a gate that runs before anything is scored (§1.2, §3.1), and it passes on the retained population — but it passes *because* the audit was repaired, not because the bar moved. |
-| Selection bias "established" because the SELECTED and REJECTED intervals were disjoint | **withdrawn as a TEST** | two marginal intervals computed on different populations are not a test of `log(R_sel/R_rej)`: the groups share events, their errors covary, and disjointness is sufficient for significance but not necessary. Replaced by a direct event-clustered contrast (§3.7). The spliced model's finding survives it; the incumbent's does not. |
+| Selection bias "established" because the SELECTED and REJECTED intervals were disjoint | **withdrawn as a TEST** | two marginal intervals are not a test of `log(R_sel/R_rej)`: the groups partition the same ladders, so their errors covary, and non-overlap is neither necessary for the ratio to exclude 1 nor reliably sufficient once the estimates are dependent. Replaced by a direct event-clustered contrast (§3.7). The spliced model's finding survives it; the incumbent's does not. |
 | `theta_spliced_budget_ms` handed in full to every load | **fixed** | N loads authorised N budgets, so the advertised total-cycle bound held for one product and failed for two. Each load now receives `budget − already_spent` (§5.4). |
 | A bare `SET LOCAL statement_timeout` around the shadow read | **fixed** | a statement timeout ABORTS the transaction, so catching the exception left the shared session unusable for the trading loop's own writes; and `SET LOCAL` outlives a savepoint release, so on the success path the research budget silently became a timeout on those writes. Both now confined by `repo.bounded_statement` and proved against real Postgres. |
 | `refit-12`'s freeze at `fit_days=30` | **superseded** | frozen under the DERIVED labels, which do not clear their own agreement bar. Under Kalshi's real settled results the selector picks 90 — by a fifth-decimal margin (§3.4). The runtime tracks the current freeze. |

@@ -160,9 +160,10 @@ filter (excess ≥ 6¢, yes 3–20¢, volume ≥ 100) would have fired:
 | **pooled** | **4.03** (n=142) | **[2.22, 6.67]** | 1.00 (n=111,100) | — |
 
 In the 0.02–0.05 bucket the intervals do not overlap: [2.28, 12.02] against [0.69, 2.24]. An
-earlier revision called that disjointness decisive. It is not — non-overlap of two marginal
-intervals is neither necessary nor sufficient for their ratio to exclude 1, and these intervals
-are also unclustered (correction 1). Read the table as what it is: a point-estimate gap of
+earlier revision called that disjointness decisive. It is not: non-overlap is not necessary for
+the ratio to exclude 1, and it is only reliably sufficient when the two estimates are independent
+— which these are not, since the split partitions the same ladders. These intervals are also
+unclustered (correction 1). Read the table as what it is: a point-estimate gap of
 **4–5×** within one probability bucket, tested properly elsewhere.
 
 This is winner's curse, and it is structural rather than incidental. `excess = mid − 100·P_model`
