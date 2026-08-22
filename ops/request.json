@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-show","args":["lo-x3-triage-20260822"],"id":"lo-x3-rcpt1"}
+{"type":"xos","command":"issue-show","args":["XOS-000003"],"id":"lo-x3-v1"}
