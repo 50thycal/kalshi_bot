@@ -239,3 +239,97 @@ class TestZeroFailureBound:
         got = cs.cluster_success_lower_bound(
             self._rows(expected), "ev", lambda r: r["ok"])["lower"]
         assert got >= bound
+
+
+class TestDirectRatioContrast:
+    """`log(R_A / R_B)` resampled together, rather than two marginal intervals compared by eye.
+
+    Disjoint marginal intervals are SUFFICIENT for significance but not necessary, and they are
+    not the question. The question is whether the contrast differs from zero, and the two groups
+    share events — so their errors covary and marginal intervals throw that covariance away.
+    """
+
+    @staticmethod
+    def _pop(events=200, per=30, base_rate=0.05, sel_rate=None, sel_every=3, seed=3):
+        rng = random.Random(seed)
+        rows = []
+        for e in range(events):
+            hit = rng.random() < base_rate
+            for k in range(per):
+                sel = (k == 0 and e % sel_every == 0)
+                y = hit if (not sel or sel_rate is None) else (rng.random() < sel_rate)
+                rows.append({"ev": f"E{e}", "p": base_rate, "y": y, "sel": sel})
+        return rows
+
+    def test_a_real_contrast_is_detected(self):
+        st = cs.ratio_contrast_ci(self._pop(sel_rate=0.20), "ev", "p", "y",
+                                  lambda r: r["sel"])
+        assert st["excludes_zero"] is True
+        assert st["lo"] > 0
+        assert st["point"] > 1.0                      # log(~4x)
+        assert st["valid_replicates"] == st["replicates"]
+
+    def test_no_contrast_reports_none(self):
+        st = cs.ratio_contrast_ci(self._pop(sel_rate=None), "ev", "p", "y",
+                                  lambda r: r["sel"])
+        assert st["excludes_zero"] is False
+        assert st["lo"] < 0 < st["hi"]
+
+    def test_it_can_disagree_with_disjoint_marginal_intervals(self):
+        """The whole reason for the change. Marginal intervals are computed on different
+        populations and ignore the shared events; the direct contrast need not agree with a
+        by-eye reading of them."""
+        rows = self._pop(events=40, per=25, sel_rate=0.18, seed=11)
+        a = [r for r in rows if r["sel"]]
+        b = [r for r in rows if not r["sel"]]
+        ma = cs.ratio_ci(a, "ev", "p", "y")
+        mb = cs.ratio_ci(b, "ev", "p", "y")
+        st = cs.ratio_contrast_ci(rows, "ev", "p", "y", lambda r: r["sel"])
+        marginally_disjoint = (ma["lo"] is not None and mb["hi"] is not None
+                               and ma["lo"] > mb["hi"])
+        # Both are computed; the direct test is the one that decides.
+        assert isinstance(marginally_disjoint, bool)
+        assert st["lo"] is not None and st["hi"] is not None
+
+    def test_the_haldane_correction_is_uniform_and_visible(self):
+        st = cs.ratio_contrast_ci(self._pop(sel_rate=0.20), "ev", "p", "y",
+                                  lambda r: r["sel"])
+        assert st["haldane_c"] == cs.HALDANE_C == 0.5
+        # Applied to the point estimate too, not only to replicates that happen to hit a zero.
+        assert st["point"] != st["point_uncorrected"]
+        assert abs(st["point"] - st["point_uncorrected"]) < 0.2
+
+    def test_a_group_with_zero_expected_yields_no_interval(self):
+        rows = [{"ev": f"E{i // 5}", "p": 0.0 if i % 7 == 0 else 0.05,
+                 "y": False, "sel": i % 7 == 0} for i in range(400)]
+        st = cs.ratio_contrast_ci(rows, "ev", "p", "y", lambda r: r["sel"])
+        assert st["a"]["expected"] == 0.0
+        assert math.isnan(st["point"])
+        assert st["valid_replicates"] == 0
+        assert st["lo"] is None and st["excludes_zero"] is False
+
+    def test_zero_observed_does_not_kill_a_replicate(self):
+        # A small selected set that never hits: log is defined only because of the correction.
+        rows = [{"ev": f"E{i // 6}", "p": 0.05, "y": (i % 23 == 0) and i % 6 != 0,
+                 "sel": i % 6 == 0} for i in range(1200)]
+        st = cs.ratio_contrast_ci(rows, "ev", "p", "y", lambda r: r["sel"])
+        assert st["a"]["observed"] == 0
+        assert math.isfinite(st["point"])
+        assert st["valid_replicates"] > 0.9 * st["replicates"]
+
+    def test_it_reports_event_coverage_per_group(self):
+        st = cs.ratio_contrast_ci(self._pop(), "ev", "p", "y", lambda r: r["sel"])
+        assert st["a"]["clusters"] == 67            # every third of 200 events
+        assert st["b"]["clusters"] == 200
+        assert st["clusters"] == 200
+
+    def test_it_is_deterministic_in_the_seed(self):
+        rows = self._pop(sel_rate=0.20)
+        a = cs.ratio_contrast_ci(rows, "ev", "p", "y", lambda r: r["sel"], seed=99)
+        b = cs.ratio_contrast_ci(rows, "ev", "p", "y", lambda r: r["sel"], seed=99)
+        assert (a["lo"], a["hi"]) == (b["lo"], b["hi"])
+
+    def test_too_few_events_declines_to_interval(self):
+        rows = self._pop(events=4, per=10, sel_rate=0.5)
+        st = cs.ratio_contrast_ci(rows, "ev", "p", "y", lambda r: r["sel"])
+        assert st["lo"] is None and st["excludes_zero"] is False

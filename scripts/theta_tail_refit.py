@@ -748,33 +748,68 @@ def paired_comparison(rows: list[dict], seed: int, when: str) -> str:
     return verdict
 
 
-def selection(rows: list[dict], seed: int) -> None:
-    head("7. SELECTION — the diagnosis's split, recomputed under each model's own excess")
+def _is_selected(r: dict, key: str) -> bool:
+    """theta4's own entry rule under a given model's probability. A deterministic property of
+    the row, evaluated once, so a market's membership never changes between bootstrap
+    replicates."""
+    excess = r["mid"] - 100.0 * r[key]
+    return bool(excess >= THETA4_EDGE_CENTS
+                and THETA4_BAND[0] <= r["mid"] <= THETA4_BAND[1]
+                and (r["volume"] or 0) >= THETA_MIN_VOLUME)
+
+
+def selection(rows: list[dict], seed: int) -> str:
+    head("7. SELECTION — the diagnosis's split, tested directly")
     print(f"  A quote is SELECTED when mid - 100*P >= {THETA4_EDGE_CENTS:.0f}c, mid is in")
     print(f"  {THETA4_BAND[0]:.0f}..{THETA4_BAND[1]:.0f}c and volume >= {THETA_MIN_VOLUME:.0f}.")
     print("  Each model is judged by the trades IT would have chosen, not by the incumbent's.")
-    print("  The two SELECTED sets are DIFFERENT populations of different sizes, so their Rs")
-    print("  are not comparable to each other — only to their own REJECTED complement.")
-    for label, key in (("INCUMBENT", "p_old"), ("SPLICED", "p_new")):
-        sel_, rej = [], []
-        for r in rows:
-            excess = r["mid"] - 100.0 * r[key]
-            ok = (excess >= THETA4_EDGE_CENTS
-                  and THETA4_BAND[0] <= r["mid"] <= THETA4_BAND[1]
-                  and (r["volume"] or 0) >= THETA_MIN_VOLUME)
-            (sel_ if ok else rej).append(r)
-        print()
-        for name, rs in ((f"{label} SELECTED", sel_), (f"{label} REJECTED", rej)):
-            st = cs.ratio_ci(rs, "event", key, "yes_resolved", seed=seed)
-            print(f"    {name:<22} n={st['n']:>6}  ev={st['clusters']:>5}  "
-                  f"expected={st['expected']:>8.2f}  observed={st['observed']:>5}  "
-                  f"R={st['r']:>6.2f}  99% CI {cs.fmt_ci(st['lo'], st['hi'])}")
     print()
-    print("  Stage 3's question is what REMAINS after calibration is repaired. A SELECTED R that")
-    print("  falls but stays above REJECTED is residual selection bias, and no re-fit removes")
-    print("  it — that is what the stage-4 selection-rule A/B is for. Intervals are")
-    print("  event-clustered: a SELECTED set concentrated in a few ladders carries far less")
-    print("  evidence than its market count suggests.")
+    print("  THE ESTIMAND IS log(R_selected / R_rejected), tested DIRECTLY. An earlier revision")
+    print("  computed a 99% interval for each group separately and called the effect established")
+    print("  because they did not overlap. That is not a test of the contrast: the two groups")
+    print("  come from the same events, their errors covary, and marginal intervals discard")
+    print("  exactly that covariance. Whole events are resampled from the COMBINED population and")
+    print("  both groups are recomputed inside each replicate.")
+    print()
+    print("  Predeclared degeneracy handling: a replicate with zero EXPECTED in either group is")
+    print("  INVALID (the ratio is undefined) and is dropped and counted; zero OBSERVED is")
+    print(f"  handled by a Haldane-Anscombe correction of {cs.HALDANE_C} applied uniformly to")
+    print("  every replicate AND to the point estimate, never only where a zero appears.")
+    verdicts: list[str] = []
+    for label, key in (("INCUMBENT", "p_old"), ("SPLICED", "p_new")):
+        st = cs.ratio_contrast_ci(rows, "event", key, "yes_resolved",
+                                  lambda r, k=key: _is_selected(r, k), seed=seed)
+        a, bgrp = st["a"], st["b"]
+        print()
+        print(f"    {label}")
+        print(f"      {'group':<10} {'n':>7} {'events':>7} {'expected':>10} {'observed':>9} "
+              f"{'R':>7}")
+        print(f"      {'SELECTED':<10} {a['n']:>7,} {a['clusters']:>7,} {a['expected']:>10.2f} "
+              f"{a['observed']:>9} {a['r']:>7.2f}")
+        print(f"      {'REJECTED':<10} {bgrp['n']:>7,} {bgrp['clusters']:>7,} "
+              f"{bgrp['expected']:>10.2f} {bgrp['observed']:>9} {bgrp['r']:>7.2f}")
+        ci = cs.fmt_ci(st["lo"], st["hi"], 3)
+        print(f"      log(R_sel / R_rej) = {st['point']:+.3f} "
+              f"(uncorrected {st['point_uncorrected']:+.3f})   99% CI {ci}")
+        print(f"      valid replicates {st['valid_replicates']:,}/{st['replicates']:,}   "
+              f"events contributing: {a['clusters']:,} selected / {bgrp['clusters']:,} rejected "
+              f"of {st['clusters']:,} total")
+        if st["lo"] is None:
+            verdict = "no interval — too few events"
+        elif st["excludes_zero"]:
+            verdict = (f"ESTABLISHED: the selected set misses by {math.exp(st['point']):.2f}x "
+                       "its complement, interval excludes zero")
+        else:
+            verdict = ("SUGGESTIVE ONLY: the interval contains zero, so the contrast is not "
+                       "established")
+        print(f"      VERDICT: {verdict}")
+        verdicts.append(f"{label.lower()} {verdict.split(':')[0].lower()}")
+    print()
+    print("  Stage 3's question is what REMAINS after calibration is repaired. The two SELECTED")
+    print("  sets are DIFFERENT populations of different sizes — fattening the tails shrinks")
+    print("  `excess` — so their Rs are not comparable to each other, only to their own")
+    print("  complement, which is what the contrast above does.")
+    return "; ".join(verdicts)
 
 
 def fit_health(rows: list[dict]) -> None:
@@ -933,11 +968,12 @@ def main(argv: list[str] | None = None) -> int:
     powered = [r for r in primary if r["powered"]]
     verdict = paired_comparison(test_rows if test_rows else powered, args.seed,
                                 "held-back period" if test_rows else "full retained period")
-    selection(powered if powered else primary, args.seed)
+    sel_verdict = selection(powered if powered else primary, args.seed)
     fit_health(primary)
 
     head("9. WHAT THIS RUN ESTABLISHES")
     print(f"  paired model comparison: {verdict}.")
+    print(f"  selection contrast: {sel_verdict}.")
     if labels_ok:
         print(f"  outcome labels: {args.labels} — PASS.")
     else:

@@ -340,8 +340,8 @@ To run a request:
      incumbent, strictly out of sample. Reports degeneracy (what fraction of each model's output
      is exactly 0 or 1), calibration by probability bucket with the sub-2% region broken out,
      a `tail_q` sweep chosen on TRAIN and scored on TEST, the **paired** proper-score comparison
-     between the two models, the SELECTED-vs-REJECTED split under each model's own excess, and
-     fit health.
+     between the two models, a **direct** event-clustered test of the SELECTED-vs-REJECTED
+     contrast under each model's own excess, and fit health.
      **Section 0 is a gate.** `--labels kalshi` (the default) scores against Kalshi's own settled
      results, fetched per event, which cover 100% of this universe; `--labels derived` reproduces
      the old last-snapshot-spot proxy and its near-strike exclusion, kept because the record has
@@ -353,6 +353,15 @@ To run a request:
      **event-clustered** bootstrap: a crypto ladder settles all its strikes against one spot
      print, so a Poisson interval over markets is ~2.3x too narrow (measured design effect ~5).
      `--seed` is fixed so a recorded run reproduces its own intervals exactly.
+     **Section 7 is the selection test.** The estimand is `log(R_selected / R_rejected)`, and it
+     is bootstrapped as one quantity — whole events resampled from the combined eligible
+     population, both groups recomputed inside every replicate, so the covariance between them is
+     retained. The two groups' separate intervals in the table above it are descriptive; they are
+     NOT the test, and non-overlap of them proves nothing. A Haldane–Anscombe `c = 0.5` is added
+     to both observed counts uniformly (the uncorrected point estimate is printed beside the
+     corrected one); a replicate drawing zero *expected* events in either group is invalid and
+     dropped, and the run declines to report an interval if too few survive. Read
+     `valid_replicates` and the per-group event coverage before the verdict.
      **Read the `powered` counts before anything else.** A fit below
      `MIN_TAIL_EXCEEDANCES_FOR_POWER` declustered exceedances ON THE TAIL THE STRIKE USES is a
      resolution floor, not an estimate, and the calibration/selection sections exclude those

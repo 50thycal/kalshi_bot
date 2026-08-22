@@ -23,13 +23,25 @@ no real money, and the paper book has ~9× the live canary's sample.
 >    never wrong, the confidence in it was — so the mechanism findings stand and the
 >    *significance* of any contrast below does not. Event-clustered replacements are in §3 of
 >    the remediation document.
-> 2. **The outcome label needed a gate this document does not apply.** §B reports
+> 2. **The outcome label was a proxy, and the proxy fails its own bar.** §B reports
 >    derived-vs-recorded settlement agreement of 96.9% against its own 97% bar and proceeds
->    anyway. That bar is now enforced before anything is scored, with a near-strike exclusion
->    for markets whose strike sits inside the unobserved residual move
->    (`scripts/theta_settlement_labels.py`). On the retained population agreement is 100%; on
->    the full one it is not, and this document's sections B/C/E/F/G are advisory for that
->    reason.
+>    anyway. The label is no longer derived at all: Kalshi's public market-data endpoint serves
+>    a real settled `result` for **67,022 of 67,022 markets (100.00%)** of the scored universe,
+>    and that is what everything downstream now scores against
+>    (`scripts/theta_settlement_labels.py`). Measured against those real results the derivation
+>    agrees 99.90% — but 54 of 1,000 events carry a disagreement, so its exact clustered 99%
+>    lower bound is **92.70%**, below the 97% bar. The proxy was good and not good *enough*;
+>    sections B/C/E/F/G, which rest on it, are advisory for that reason. The near-strike
+>    exclusion an earlier revision proposed is retired with the proxy — with real labels there
+>    is nothing to exclude.
+> 3. **Disjoint marginal intervals are not a test of a contrast.** §2.4 below argues from two
+>    separately-computed intervals failing to overlap. That is not the estimand: the estimand is
+>    `log(R_selected / R_rejected)`, and it has to be resampled as one quantity so the two
+>    groups' covariance is retained. Done directly and event-clustered
+>    (`RESEARCH_THETA_REMEDIATION.md` §3.7), residual selection bias is **established for the
+>    spliced model** (+1.486, 99% CI [+0.660, +1.982], 4.42×) and **suggestive only for the
+>    incumbent** (+1.510, 99% CI [−0.764, +2.534] — spans zero). §2.4's *mechanism* survives;
+>    its claim to be decisive does not.
 >
 > Kept as written. The corrections are the useful part of the record.
 
@@ -128,9 +140,15 @@ exactly 1 for 39.4%** — 93.1% of its output is a hard 0 or 1, not a probabilit
 terms both are tiny; as a ratio it is 2.8×, and a strike the model calls impossible is a strike
 the edge filter will always find attractive.
 
-### 2.4 Threshold-selection bias — **SUPPORTED, and the largest single factor**
+### 2.4 Threshold-selection bias — **SUPPORTED as a mechanism; see correction 3**
 
-The decisive test. Same model, same window, same markets — split only by whether theta4's entry
+> The mechanism is real and it is the largest single factor found here. What this section
+> cannot do is *establish* it: the argument below is two marginal intervals failing to
+> overlap, which is not a test of their ratio. The direct, event-clustered test of
+> `log(R_selected / R_rejected)` lives in `RESEARCH_THETA_REMEDIATION.md` §3.7. Under it the
+> effect is established for the spliced model and **suggestive only for this one**.
+
+Same model, same window, same markets — split only by whether theta4's entry
 filter (excess ≥ 6¢, yes 3–20¢, volume ≥ 100) would have fired:
 
 | modeled P | **SELECTED** R | 99% CI | **REJECTED** R | 99% CI |
@@ -141,9 +159,11 @@ filter (excess ≥ 6¢, yes 3–20¢, volume ≥ 100) would have fired:
 | 0.10–0.20 | 0.00 (n=6) | [0.00, 7.55] | 1.02 | [0.69, 1.46] |
 | **pooled** | **4.03** (n=142) | **[2.22, 6.67]** | 1.00 (n=111,100) | — |
 
-In the 0.02–0.05 bucket the intervals are **disjoint**: [2.28, 12.02] against [0.69, 2.24].
-Within one probability bucket, the quotes the filter selects miss **4–5× more** than the ones it
-declines.
+In the 0.02–0.05 bucket the intervals do not overlap: [2.28, 12.02] against [0.69, 2.24]. An
+earlier revision called that disjointness decisive. It is not — non-overlap of two marginal
+intervals is neither necessary nor sufficient for their ratio to exclude 1, and these intervals
+are also unclustered (correction 1). Read the table as what it is: a point-estimate gap of
+**4–5×** within one probability bucket, tested properly elsewhere.
 
 This is winner's curse, and it is structural rather than incidental. `excess = mid − 100·P_model`
 is large exactly when the model is most wrong *in the direction that makes selling look

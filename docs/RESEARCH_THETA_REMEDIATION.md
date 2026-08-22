@@ -24,7 +24,7 @@ touched.**
 |---|---|
 | 1. replace the degenerate 0/1 output | **done and verified** — 85.3% exactly-0 → **0.0%** |
 | 2. refit the tail shape, validate out of sample | **run, powered, label-gated — and it does not beat the incumbent** (§3.6) |
-| 3. re-measure calibration + residual selection bias | **done** — bias **established** on real labels (§3.7) |
+| 3. re-measure calibration + residual selection bias | **done** — bias **established for the spliced model** by a direct contrast; suggestive only for the incumbent (§3.7) |
 | 4. selection-rule A/B that does not rank on model error | **redesigned**, floors recomputed on the event (§4); still unregistered |
 | 5. telemetry for momentum/regime | **implemented, benchmarked and tested** (§5) |
 
@@ -47,9 +47,14 @@ survived the label correction — it held on the derived proxy and holds on real
 is the strongest support it has.
 
 **What did change under real labels:** the frozen window moved from 30 days to 90 (a fifth-decimal
-margin, §3.4), the deepest bucket's miss grew from ~4× to **8×** because the proxy's near-strike
-exclusion had been removing exactly the markets that hit, and **residual selection bias went from
-suggested to established** — [1.70, 7.38] against [0.75, 1.19], disjoint (§3.7).
+margin, §3.4), and the deepest bucket's miss grew from ~4× to **8×** because the proxy's
+near-strike exclusion had been removing exactly the markets that hit.
+
+**And what the direct test changed:** residual selection bias is **established for the spliced
+model** — `log(R_sel/R_rej) = +1.486`, 99% CI **[+0.660, +1.982]**, a 4.42× miss — and
+**suggestive only for the incumbent**, whose interval spans zero on 25 markets in 18 events. An
+earlier revision read two separately-computed intervals and called both established because they
+did not overlap; that is not a test of the contrast (§3.7).
 
 ---
 
@@ -88,9 +93,9 @@ excluded near the strike where the unobserved move could carry a market across.
 **It does not clear its own bar, and the replacement is not a looser bar.**
 
 Measured against Kalshi's real results on the **whole population** rather than the 0.33% a book
-happened to trade (run `refit-13`): agreement **99.90%** over 66,522 markets, but **54 of 992
+happened to trade (run `refit-14`): agreement **99.90%** over 67,022 markets, but **54 of 1,000
 events** carry at least one disagreement, so the exact event-clustered 99% lower bound is
-**92.64%** — below the 97% the design fixed in advance. The proxy is good and not good *enough*.
+**92.70%** — below the 97% the design fixed in advance. The proxy is good and not good *enough*.
 
 An earlier revision reported this as `[1.0000, 1.0000]` from a percentile bootstrap and called it
 a PASS. **That is withdrawn.** A bootstrap on an all-agreeing sample can never produce a
@@ -105,8 +110,8 @@ field on settled markets, and cover this universe completely:
 
 | | |
 |---|---|
-| events read | **992 / 992** |
-| markets with a real settled result | **66,522 / 66,522 (100.00%)** |
+| events read | **1,000 / 1,000** |
+| markets with a real settled result | **67,022 / 67,022 (100.00%)** |
 | derived label's agreement with them | 99.90% |
 | events carrying a disagreement | 54 |
 
@@ -274,11 +279,17 @@ One run, one command, one commit. Nothing below is combined with an earlier run'
 rationale — see §6 for what those runs said and why it no longer stands.
 
 ```
-{"type":"script","id":"refit-13","name":"theta_tail_refit","args":[
-  "--since","2026-07-11","--train-end","2026-08-11","--fit-days","5,30,90",
-  "--tail-qs","0.90,0.95,0.99","--spot-source","coinbase","--vol-mult","2.0",
-  "--labels","kalshi"]}
+{"type":"script","id":"refit-14","name":"theta_tail_refit","args":[
+  "--since","2026-07-11","--train-end","2026-08-11","--fit-days","90","--tail-qs","0.90",
+  "--spot-source","coinbase","--vol-mult","2.0","--labels","kalshi"]}
 ```
+
+**`refit-14` is the run of record** for every number below except the configuration sweep. It
+ran the frozen configuration only, on a slightly larger population (1,000 events / 67,022
+markets, eight more ladders having settled), to add the direct selection contrast in §3.7 without
+paying for a nine-configuration sweep a second time. Every conclusion it shares with `refit-13`
+is unchanged. **`refit-13` remains the sweep of record** (§3.4), because `refit-14` did not run
+one.
 
 `--vol-mult 2.0` is deliberate: **theta4 does not run the base model.** Scoring against
 `mult=1.0` would compare the replacement to a model that never traded. `--labels kalshi` is the
@@ -290,39 +301,43 @@ inputs, differ in exactly one line, the count of Coinbase minutes fetched.
 
 ### 3.1 Outcome labels — Kalshi's own, at 100% coverage
 
-992 of 992 events read; **66,522 of 66,522 markets** carry a real settled result. **PASS.** The
-derivation this replaces, and why, is §1.2.
+1,000 of 1,000 events read; **67,022 of 67,022 markets** carry a real settled result. **PASS.**
+The derivation this replaces agrees 99.90% but puts its exact event-clustered 99% lower bound at
+**92.70%** — below the 97% bar it had to clear. Why that matters, and the two bugs found in the
+audit of it, is §1.2.
 
-### 3.2 Evidence structure — 66,522 markets are worth about 13,000 observations
+### 3.2 Evidence structure — 67,022 markets are worth about 8,000–17,000 observations
 
 | quantity | value |
 |---|---|
-| scored markets | 66,522 |
-| distinct events | 992 |
-| markets per event (mean / p50 / p90 / max) | 67.1 / 52 / 98 / 114 |
-| Kish effective events | 889.0 |
+| scored markets | 67,022 |
+| distinct events | 1,000 |
+| markets per event (mean / p50 / p90 / max) | 67.0 / 52 / 98 / 114 |
+| Kish effective events | 895.5 |
 | largest single event's share | 0.17% |
 
 | statistic | design effect | effective n |
 |---|---|---|
-| hit indicator | 3.2 | 21,005 |
-| spliced log loss | 5.0 | 13,245 |
-| incumbent log loss | 4.8 | 13,985 |
+| hit indicator | 3.9 | 17,173 |
+| spliced log loss | **8.0** | **8,372** |
+| incumbent log loss | 6.0 | 11,108 |
 
-An interval computed as though these rows were independent is about **√5 ≈ 2.2× too narrow**.
-That is the size of the error the previous revisions' Poisson intervals carried.
+An interval computed as though these rows were independent is **2–3× too narrow** — that is the
+size of the error the previous revisions' Poisson intervals carried. The design effect is itself
+noisy between runs (5.0 on `refit-13`, 8.0 here, same construction) because it is a variance
+ratio estimated from a bootstrap; the order of magnitude is the finding, not the digit.
 
 ### 3.3 Degeneracy — fixed, and it is the one unambiguous success
 
 | model | n | exactly 0 | exactly 1 | in (0,1) |
 |---|---|---|---|---|
-| incumbent (empirical, `mult=2.0`) | 66,522 | 56,711 (**85.3%**) | 0 | 9,811 (14.7%) |
-| spliced EVT | 66,522 | 0 (**0.0%**) | 0 | 66,522 (100%) |
+| incumbent (empirical, `mult=2.0`) | 67,022 | 56,924 (**84.9%**) | 0 | 10,098 (15.1%) |
+| spliced EVT | 67,022 | 0 (**0.0%**) | 0 | 67,022 (100%) |
 
 `SpotModel.prob_from_returns` is a raw empirical frequency, so it has no mass beyond its own
 sample maximum. `vol_mult` rescales the *threshold* (`x / k`), which pulls some strikes back
 inside the support but cannot escape a hard edge — pinned in
-`test_vol_mult_cannot_escape_the_truncation`. Doubling the volatility left 85.3% of this universe
+`test_vol_mult_cannot_escape_the_truncation`. Doubling the volatility left 84.9% of this universe
 priced at exactly zero.
 
 ### 3.4 The window mattered from 5 to 30, and not beyond
@@ -348,50 +363,51 @@ peaks-over-threshold fit powers **3%** of quotes and at thirty days it powers al
 future freeze could reasonably pick 30 on cost — it halves the rows the shadow loads. It has not,
 so the runtime runs 90 (§5.3).
 
-### 3.5 Historical validation — 15,591 quotes, 250 events
+### 3.5 Historical validation — 16,091 quotes, 258 events
 
-Aggregate R, spliced **1.31 [0.82, 2.10]**; incumbent **0.80 [0.51, 1.27]**. Read as two separate
+Aggregate R, spliced **1.27 [0.82, 2.00]**; incumbent **0.76 [0.49, 1.20]**. Read as two separate
 descriptions, not a comparison. Deep tail, spliced:
 
 | modeled P | n | events | expected | observed | R | 99% CI |
 |---|---|---|---|---|---|---|
-| 0.000–0.002 | 13,835 | 248 | 1.67 | 14 | 8.38 | [0.00, 27.75] |
-| 0.002–0.005 | 440 | 160 | 1.45 | 6 | 4.14 | [0.00, 12.87] |
-| 0.005–0.010 | 278 | 156 | 2.03 | 5 | 2.46 | [0.00, 6.07] |
-| 0.010–0.020 | 236 | 152 | 3.42 | 6 | 1.75 | [0.00, 4.58] |
-| 0.020–0.050 | 267 | 152 | 8.78 | 17 | 1.94 | [0.70, 3.47] |
+| 0.000–0.002 | 14,292 | 256 | 1.72 | 14 | 8.13 | [0.00, 25.69] |
+| 0.002–0.005 | 449 | 165 | 1.48 | 6 | 4.05 | [0.00, 12.69] |
+| 0.005–0.010 | 287 | 162 | 2.09 | 5 | 2.39 | [0.00, 6.06] |
+| 0.010–0.020 | 241 | 155 | 3.49 | 6 | 1.72 | [0.00, 4.48] |
+| 0.020–0.050 | 273 | 156 | 9.00 | 17 | 1.89 | [0.76, 3.31] |
 
-The point estimate in the deepest bucket is **8.4×** on real labels — worse than the derivation
+The point estimate in the deepest bucket is **8.1×** on real labels — worse than the derivation
 implied, because the derivation's near-strike exclusion removed exactly the near-money markets
 that hit. Its interval still contains 1. **The miss is large and it is not established.**
 
 ### 3.6 The paired comparison — what actually decides between the models
 
 Common population: powered quotes with `mid ≤ 20c`, fixed by the market's own price, identical
-for both models. **n = 15,391 markets across 250 events** (Kish effective events 214.3).
+for both models. **n = 15,884 markets across 258 events**.
 
 | weighting | model | mean log loss | mean Brier |
 |---|---|---|---|
-| market | incumbent | 0.02144 | 0.00484 |
-| market | spliced | 0.02303 | 0.00463 |
-| event | incumbent | 0.03227 | 0.00769 |
-| event | spliced | 0.03666 | 0.00765 |
+| market | incumbent | 0.02119 | 0.00475 |
+| market | spliced | 0.02240 | 0.00449 |
+| event | incumbent | 0.03162 | 0.00750 |
+| event | spliced | 0.03560 | 0.00742 |
 
 Paired difference, spliced − incumbent (negative favours the spliced model), event-clustered 99%:
 
 | weighting | statistic | difference | 99% CI | favours |
 |---|---|---|---|---|
-| market | log loss | +0.00159 | [−0.00346, +0.01264] | neither |
-| market | Brier | −0.00021 | [−0.00054, +0.00023] | neither |
-| event | log loss | +0.00439 | [−0.00555, +0.02481] | neither |
-| event | Brier | −0.00003 | [−0.00083, +0.00112] | neither |
+| market | log loss | +0.00121 | [−0.00372, +0.01183] | neither |
+| market | Brier | −0.00025 | [−0.00057, +0.00016] | neither |
+| event | log loss | +0.00397 | [−0.00576, +0.02378] | neither |
+| event | Brier | −0.00008 | [−0.00081, +0.00093] | neither |
 
 > **The models fail differently; superiority is not established.**
 
 The two proper scores disagree even in sign — log loss slightly prefers the incumbent, Brier
 slightly prefers the spliced model — and every interval contains zero on both weightings. **This
-conclusion is unchanged by the label correction**, which is the strongest thing that can be said
-for it: it held under the derived labels (`refit-12`) and holds under Kalshi's real ones.
+conclusion has now survived three separate corrections**, which is the strongest thing that can
+be said for it: it held under the derived labels (`refit-12`), under Kalshi's real settled
+results (`refit-13`), and on the larger population here.
 
 Neither failure mode is acceptable for a short-tail seller. The incumbent declares 85% of the
 universe impossible and is roughly calibrated on the rest; the spliced model answers everywhere
@@ -399,23 +415,51 @@ and misses its deepest bucket by 8× at the point estimate. **Choosing on aggreg
 the one that refuses to answer**, since a zero costs nothing in a denominator. That is why the
 frozen rule is a per-prediction proper score.
 
-### 3.7 Selection bias after the repair — established on real labels
+### 3.7 Selection bias after the repair — tested DIRECTLY
 
-| model | set | n | events | expected | observed | R | 99% CI |
-|---|---|---|---|---|---|---|---|
-| incumbent | SELECTED | 25 | 18 | 1.64 | 4 | 2.43 | [0.00, 6.84] |
-| incumbent | REJECTED | 66,497 | 992 | 559.12 | 343 | 0.61 | [0.47, 0.78] |
-| spliced | SELECTED | 135 | 68 | 6.13 | 25 | **4.08** | **[1.70, 7.38]** |
-| spliced | REJECTED | 66,387 | 992 | 338.97 | 322 | **0.95** | **[0.75, 1.19]** |
+The estimand is **`log(R_selected / R_rejected)`**, and it is now tested as such. An earlier
+revision computed a 99% interval for each group separately and called the effect established
+because they did not overlap. **That is not a test of the contrast.** The two groups come from
+the same events, their errors covary, and marginal intervals discard exactly that covariance;
+disjointness is sufficient for significance but not necessary, and it is not the question being
+asked. Whole events are resampled from the **combined** population and both groups recomputed
+inside each replicate.
 
-Under the spliced model the selected set misses by 4.1× against 0.95 on its complement, and the
-intervals are now **disjoint** — [1.70, 7.38] against [0.75, 1.19]. Under the derived labels they
-overlapped; on real settlement they do not. **Residual selection bias survives the calibration
-repair and is established**, which is precisely the finding stage 4 exists to act on.
+Degeneracy handling, predeclared: a replicate with **zero expected** in either group makes the
+ratio undefined, so it is invalid, dropped and counted; **zero observed** is handled by a
+Haldane–Anscombe correction of 0.5 applied **uniformly** — to every replicate and to the point
+estimate, never only where a zero appears, since correcting selectively would delete exactly the
+tail of the sampling distribution the interval exists to describe.
+
+| model | group | n | events | expected | observed | R |
+|---|---|---|---|---|---|---|
+| incumbent | SELECTED | 25 | 18 | 1.64 | 4 | 2.43 |
+| incumbent | REJECTED | 66,997 | 1,000 | 568.27 | 343 | 0.60 |
+| spliced | SELECTED | 135 | 68 | 6.13 | 25 | 4.08 |
+| spliced | REJECTED | 66,887 | 1,000 | 342.33 | 322 | 0.94 |
+
+| model | log(R_sel / R_rej) | uncorrected | 99% CI | valid replicates | verdict |
+|---|---|---|---|---|---|
+| incumbent | +1.510 | +1.394 | **[−0.764, +2.534]** | 2,000/2,000 | **suggestive only** |
+| spliced | +1.486 | +1.467 | **[+0.660, +1.982]** | 2,000/2,000 | **established** |
+
+> **Under the spliced model, residual selection bias IS established**: the selected set misses by
+> **4.42×** its complement and the direct interval excludes zero. Repairing calibration did not
+> remove it, which is what stage 4 exists to act on.
+>
+> **Under the incumbent it is suggestive only** — 25 markets across 18 events, and the interval
+> spans zero. Nothing about the incumbent's selection is established here.
+
+Event coverage behind those intervals: 68 selected events against 1,000 rejected for the spliced
+model, 18 against 1,000 for the incumbent. The Haldane correction moves the spliced estimate by
+0.02 and the incumbent's by 0.12 — the difference being that the incumbent's selected set is
+small enough for a continuity correction to matter, which is itself a statement about how little
+evidence it carries.
 
 The two SELECTED sets are **different populations of different sizes** — fattening the tails
 shrinks `excess`, so the models select 135 and 25 markets respectively. A ratio between them is
-not a comparison, and none is drawn. The incumbent's 25 markets across 18 events say nothing.
+not a comparison, and none is drawn; each is compared only to its own complement, which is what
+the contrast does.
 
 ### 3.8 Fit health
 
@@ -430,7 +474,7 @@ not a comparison, and none is drawn. The incumbent's 25 markets across 18 events
 | upper ξ | 0.138 | 0.164 | 0.219 |
 | lower ξ | 0.166 | 0.205 | 0.227 |
 
-All 66,522 quotes have a powered active tail; **0** have a powered tail on an incomplete window.
+All 67,022 quotes have a powered active tail; **0** have a powered tail on an incomplete window.
 A 90-day window carries ~300 declustered exceedances a side, fifteen times the bar. The 420-minute
 median gap is a real hole in Coinbase's series and coverage still reads 0.996, which is the point
 of measuring completeness separately from span. **0.0%** of active tails are bounded.
@@ -644,12 +688,39 @@ refit anchor** rather than reloaded every cycle; the horizon grid caps fits at 6
 anchor, so a 240-strike ladder costs the same as a 6-strike one; and `theta_spliced_budget_ms` is
 the backstop.
 
-**The budget now covers the whole shadow.** It gated fit time — the cheap half — while the
-expensive half was reported after the fact and could not be stopped. It bounds total elapsed time
-now (load, row decode, model construction, fits), and the load additionally carries a **database
-statement timeout**, because a Python-side deadline cannot interrupt a query that has already been
-issued. Over budget, or a timed-out load, means metadata without a probability and the scan
-continues.
+**The budget covers the whole shadow, and only what is left of it.** Three defects, in the order
+they were found:
+
+1. It gated **fit time** — the cheap half — while the expensive half, the close-set load, was
+   reported after the fact and could not be stopped. It bounds total elapsed time now: load, row
+   decode, model construction and fits.
+2. It then handed the **full configured budget to every load**, so two products could authorise
+   two full budgets and the advertised total-cycle bound was not a bound. Each load now receives
+   the **remainder** — `budget − already_spent`, computed immediately before it — and a load does
+   not start with less than `MIN_LOAD_BUDGET_MS` (50 ms) left. The invariant is
+   `spent + authorised ≤ budget` at every load, so no load can push the cycle past its bound.
+3. The remainder is enforced by Postgres, because a Python-side deadline cannot interrupt a query
+   already issued — and enforcing it there brings two hazards a bare `SET LOCAL` plus `try/except`
+   does not handle. **A statement timeout aborts the transaction**, so catching the exception left
+   the shared session unusable and the trading loop's own writes would have failed with
+   `InFailedSqlTransaction`; and **`SET LOCAL` outlives a savepoint release**, so on the success
+   path the shadow's research budget silently became a timeout on those writes for the rest of the
+   cycle. Both are confined by `repo.bounded_statement`: a savepoint whose rollback restores the
+   enclosing transaction, and an explicit reset before release.
+
+Over budget, or a timed-out load, means metadata without a probability and the scan continues.
+
+**Proved against real PostgreSQL**, not a mock — `tests/test_theta_shadow_postgres.py`. A fake
+loader that raises can never exhibit transaction abort, which is the behaviour that matters. The
+tests force a real timeout and assert the outer transaction still executes afterwards, that the
+timeout does not leak past the bounded block, that successive loads see a shrinking remainder, and
+that `spent + authorised ≤ budget` holds at each one.
+
+All seven pass on PostgreSQL 16, and they are **not vacuous**: replacing `bounded_statement` with
+the naive version — bare `SET LOCAL`, no savepoint — fails exactly the three transaction-recovery
+tests, each with `psycopg.errors.InFailedSqlTransaction` on the statement standing in for the
+trading loop's next write. That is the production defect, reproduced on demand. CI runs the whole
+suite against a `postgres:16` service, so these execute on every PR rather than skipping.
 
 **Outstanding, and stated as such:** `theta_spliced_budget_ms = 3000` is derived from the
 synthetic benchmark, not from production. The worker now logs one `theta: shadow cost` line per
@@ -700,6 +771,9 @@ Kept because the corrections are the useful part of the record, not because the 
 | "TEST is read once" | **false as written** | the August window had already been reported on before the scoring rule was fixed. It is labelled **historical validation** throughout, and a forward one-look holdout is reserved. |
 | Selection bias "grew from 4.6× to 6.1×" | **retracted** | fattening the tails shrinks `excess`, so the two models select different populations of different sizes. A ratio between them is not a comparison. |
 | Calibration validated while the settlement-label bar was failing at 96.9% | **retracted** | a calibration computed against labels that fail their own quality bar is not validated. The bar is now a gate that runs before anything is scored (§1.2, §3.1), and it passes on the retained population — but it passes *because* the audit was repaired, not because the bar moved. |
+| Selection bias "established" because the SELECTED and REJECTED intervals were disjoint | **withdrawn as a TEST** | two marginal intervals computed on different populations are not a test of `log(R_sel/R_rej)`: the groups share events, their errors covary, and disjointness is sufficient for significance but not necessary. Replaced by a direct event-clustered contrast (§3.7). The spliced model's finding survives it; the incumbent's does not. |
+| `theta_spliced_budget_ms` handed in full to every load | **fixed** | N loads authorised N budgets, so the advertised total-cycle bound held for one product and failed for two. Each load now receives `budget − already_spent` (§5.4). |
+| A bare `SET LOCAL statement_timeout` around the shadow read | **fixed** | a statement timeout ABORTS the transaction, so catching the exception left the shared session unusable for the trading loop's own writes; and `SET LOCAL` outlives a savepoint release, so on the success path the research budget silently became a timeout on those writes. Both now confined by `repo.bounded_statement` and proved against real Postgres. |
 | `refit-12`'s freeze at `fit_days=30` | **superseded** | frozen under the DERIVED labels, which do not clear their own agreement bar. Under Kalshi's real settled results the selector picks 90 — by a fifth-decimal margin (§3.4). The runtime tracks the current freeze. |
 | Settlement-label agreement reported as `[1.0000, 1.0000]`, 99% | **withdrawn** | a percentile bootstrap on an all-agreeing sample cannot produce a disagreement, so the interval is a boundary artefact of the method. The exact clustered bound on the same evidence is 92.6%. |
 | The derived outcome labels PASS their quality bar | **withdrawn** | they do not, under a bound valid at zero failures. They are replaced rather than argued with: Kalshi's own results cover 100% of the universe (§1.2). |
@@ -730,12 +804,13 @@ Concretely, and without hedging in either direction:
   1 once the shared settlement print is respected, though the deepest point estimate is **8.4×**.
   The point estimates describe a model that would lose money on the tail; the evidence does not
   rule out chance.
-- **Residual selection bias IS established** on real labels: SELECTED 4.08 [1.70, 7.38] against
-  REJECTED 0.95 [0.75, 1.19], **disjoint**. Repairing calibration did not remove it, which is
-  what stage 4 exists to act on.
+- **Residual selection bias is established for the spliced model, by a direct test of the
+  contrast**: `log(R_sel/R_rej) = +1.486`, 99% CI [+0.660, +1.982] — a 4.42× miss that survives
+  the calibration repair, which is what stage 4 exists to act on. **For the incumbent it is
+  suggestive only**: 25 markets, 18 events, interval spanning zero.
 - **The outcome labels are Kalshi's own settled results, at 100% coverage.** The derivation they
   replace agrees 99.90% but cannot clear its own 97% bar under a bound valid at zero failures
-  (92.64%, 54 of 992 events) — and two bugs in my own audit of it were found and disclosed
+  (92.70%, 54 of 1,000 events) — and two bugs in my own audit of it were found and disclosed
   (§1.2).
 
 ### 7.1 What is still unproven

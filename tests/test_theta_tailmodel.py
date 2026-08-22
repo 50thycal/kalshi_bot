@@ -961,36 +961,80 @@ class TestRuntimeOfflineParity:
         tracker._refresh_shadow_spot(None, "BTC")
         assert calls["n"] == 2
 
-    def test_the_budget_covers_the_LOAD_not_just_the_fits(self, tracker, candles,
-                                                          monkeypatch):
-        """The dominant cost is the close-set load, and a budget that gates only fit time
-        bounds the cheap half. A Python-side deadline also cannot interrupt a query already
-        issued, so the load carries a database statement timeout as well."""
-        import kalshi_bot.repository as repo
+    def test_each_load_authorises_only_the_REMAINING_cycle_budget(self, tracker, candles,
+                                                                  monkeypatch):
+        """The dominant cost is the close-set load, and a budget that gates only fit time bounds
+        the cheap half. Worse, an earlier version handed every load the CONFIGURED total, so two
+        products could authorise two full budgets and the advertised total-cycle bound held for
+        one product and failed for two.
+
+        The invariant that matters is not the sum of authorisations — it is that at every load,
+        `already_spent + authorised <= budget`, so no load can push the cycle past its bound.
+        """
         from kalshi_bot.theta import tracker as trk
 
-        seen = {}
+        seen: list[tuple[float, int | None]] = []
 
         def slow_load(_session, _product, _since, *, statement_timeout_ms=None):
-            seen["timeout"] = statement_timeout_ms
+            seen.append((tracker._shadow_ms, statement_timeout_ms))
             time.sleep(0.02)
             return candles
 
         monkeypatch.setattr(trk.repo, "load_spot_closes", slow_load, raising=False)
-        monkeypatch.setattr(repo, "load_spot_closes", slow_load)
-        tracker.settings.theta_spliced_budget_ms = 10.0     # smaller than the load
+        budget = 400.0
+        tracker.settings.theta_spliced_budget_ms = budget
         base = max(candles) // 3600 * 3600
         monkeypatch.setattr(trk.time, "time", lambda: base + 60)
 
         assert tracker._refresh_shadow_spot(None, "BTC") is not None
-        # The load itself is charged to the budget...
-        assert tracker._shadow_load_ms >= 20.0
+        assert tracker._refresh_shadow_spot(None, "ETH") is not None
+        assert len(seen) == 2
+
+        spent_before_first, authorised_first = seen[0]
+        spent_before_second, authorised_second = seen[1]
+        # The first load is charged to the budget, so the second sees less of it.
+        assert spent_before_first == 0.0
+        assert spent_before_second >= 20.0
+        assert authorised_second < authorised_first
+        # THE invariant: no load can authorise more than what is left.
+        for spent, authorised in seen:
+            assert spent + authorised <= budget + 1e-6
+        # ...and the load really is charged, not just the fits.
+        assert tracker._shadow_load_ms >= 40.0
         assert tracker._shadow_ms == tracker._shadow_load_ms
-        # ...and the timeout is handed to the database, not merely checked afterwards.
-        assert seen["timeout"] == 10
-        # ...so the NEXT product gets nothing rather than delaying the scan further.
-        assert tracker._refresh_shadow_spot(None, "ETH") is None
+
+    def test_a_load_is_not_started_on_a_scrap_of_budget(self, tracker, candles, monkeypatch):
+        """Authorising the database for a few milliseconds cannot finish a ~43,000-row read, so
+        it would spend the remainder to produce nothing and still risk an abort."""
+        from kalshi_bot.theta import tracker as trk
+
+        calls = {"n": 0}
+
+        def load(_session, _product, _since, *, statement_timeout_ms=None):
+            calls["n"] += 1
+            return candles
+
+        monkeypatch.setattr(trk.repo, "load_spot_closes", load, raising=False)
+        tracker.settings.theta_spliced_budget_ms = 100.0
+        tracker._shadow_ms = 100.0 - trk.MIN_LOAD_BUDGET_MS / 2.0    # under the floor
+        assert tracker._refresh_shadow_spot(None, "BTC") is None
+        assert calls["n"] == 0
         assert tracker._shadow_budget_hit is True
+
+    def test_an_unbudgeted_tracker_authorises_no_timeout(self, tracker, candles, monkeypatch):
+        from kalshi_bot.theta import tracker as trk
+
+        seen = {}
+
+        def load(_session, _product, _since, *, statement_timeout_ms=None):
+            seen["timeout"] = statement_timeout_ms
+            return candles
+
+        monkeypatch.setattr(trk.repo, "load_spot_closes", load, raising=False)
+        tracker.settings.theta_spliced_budget_ms = 0.0
+        assert tracker._refresh_shadow_spot(None, "BTC") is not None
+        assert seen["timeout"] is None
+        assert tracker._shadow_remaining_ms() == float("inf")
 
     def test_a_failed_shadow_load_does_not_break_the_cycle(self, tracker, monkeypatch):
         from kalshi_bot.theta import tracker as trk

@@ -7,6 +7,7 @@ owned by the caller's `session_scope`.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 from collections import Counter
@@ -1943,25 +1944,58 @@ def oldest_spot_minute(session, product: str) -> datetime | None:
     )
 
 
+@contextlib.contextmanager
+def bounded_statement(session, timeout_ms: int | None):
+    """Run reads under a DATABASE statement timeout, confined to a SAVEPOINT.
+
+    Exists for the paper shadow, which loads tens of thousands of rows on the trading loop's own
+    thread. An application-side deadline can only notice a slow query after it returns, so the
+    bound has to be enforced by Postgres — and enforcing it there brings two hazards a bare
+    `SET LOCAL` plus `try/except` does not handle. Both were live defects:
+
+    1. **A statement timeout ABORTS the transaction.** Catching the exception without rolling
+       back leaves the session in a failed state, and every later statement on it — including
+       the trading loop's own writes — fails with `InFailedSqlTransaction`. Research would take
+       the book down with it. The savepoint confines the abort: rolling it back restores the
+       enclosing transaction to a usable state.
+    2. **`SET LOCAL` survives a savepoint RELEASE**, and without a savepoint it survives to the
+       end of the transaction. Either way the shadow's research budget would silently become a
+       timeout on the trading loop's own queries for the rest of the cycle. It is reset to
+       DEFAULT before release; on the failure path the rollback reverts it.
+
+    On a backend without statement timeouts (SQLite, in tests) the block runs plain — the bound
+    is a production concern and its absence must not change behaviour. Proved against real
+    Postgres by `tests/test_theta_shadow_postgres.py`; a mock cannot exhibit transaction abort.
+    """
+    if not timeout_ms or timeout_ms <= 0 or session.get_bind().dialect.name != "postgresql":
+        yield
+        return
+    sp = session.begin_nested()
+    try:
+        session.execute(text(f"SET LOCAL statement_timeout = {int(timeout_ms)}"))
+        yield
+        session.execute(text("SET LOCAL statement_timeout = DEFAULT"))
+        sp.commit()
+    except BaseException:
+        sp.rollback()
+        raise
+
+
 def load_spot_closes(session, product: str, since: datetime,
                      *, statement_timeout_ms: int | None = None) -> dict[int, float]:
     """{unix_minute: close} for the model's trailing window.
 
-    `statement_timeout_ms` bounds the query at the DATABASE, not in Python. It exists for the
-    paper shadow, which loads tens of thousands of rows on the trading loop's own thread: an
-    application-side deadline can only notice a slow query after it returns, so without this a
-    stalled read delays the scan for as long as Postgres takes. `SET LOCAL` scopes it to the
-    surrounding transaction and needs no cleanup. Silently skipped on backends that do not
-    support it (SQLite, in tests), which is safe — the bound is a production concern.
+    `statement_timeout_ms` bounds the query at the database. See `bounded_statement` for why
+    that needs a savepoint rather than a bare `SET LOCAL`, and `ThetaTracker._refresh_shadow_spot`
+    for why the caller must pass the REMAINING cycle budget rather than the configured total.
     """
-    if statement_timeout_ms and session.get_bind().dialect.name == "postgresql":
-        session.execute(text(f"SET LOCAL statement_timeout = {int(statement_timeout_ms)}"))
-    rows = session.execute(
-        select(m.CryptoSpotCandle.minute_ts, m.CryptoSpotCandle.close).where(
-            m.CryptoSpotCandle.product == product,
-            m.CryptoSpotCandle.minute_ts >= since,
-        )
-    ).all()
+    with bounded_statement(session, statement_timeout_ms):
+        rows = session.execute(
+            select(m.CryptoSpotCandle.minute_ts, m.CryptoSpotCandle.close).where(
+                m.CryptoSpotCandle.product == product,
+                m.CryptoSpotCandle.minute_ts >= since,
+            )
+        ).all()
     out: dict[int, float] = {}
     for ts, close in rows:
         ts = ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
