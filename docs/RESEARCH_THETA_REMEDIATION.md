@@ -1,59 +1,168 @@
-# Research Lab — theta remediation, stages 1–5
+# Research Lab — theta remediation
 
 Follow-on to `RESEARCH_THETA_TAIL_MODEL_DIAGNOSIS.md`, which found two composing mechanisms: a
-tail-shape error in the model and a threshold-selection bias on top. This is the repair
-programme. **Paper only. No theta parameter changed, no book re-armed, no live money.**
+tail-shape error in the model, and a threshold-selection bias on top of it. This is the repair
+programme, and it is the **current** account of it — §6 lists what earlier revisions of this
+document claimed and why those claims no longer stand.
 
-**Reproduce:** `{"type":"script","name":"theta_tail_refit","args":["--since","2026-08-01",
-"--train-end","2026-08-14","--fit-days","5,30,90","--spot-source","coinbase"]}` (run `refit-8`).
+**Paper only. No theta parameter changed, no book re-armed, no live money, no lifecycle state
+touched.**
+
+**Reproduce** (ops `script` requests, `docs/OPS_RUNBOOK.md`):
+
+| run | request |
+|---|---|
+| label audit | `{"type":"script","name":"theta_settlement_labels","args":["--since","2026-07-11","--spot-source","coinbase"]}` |
+| the refit | `{"type":"script","name":"theta_tail_refit","args":["--since","2026-07-11","--train-end","2026-08-11","--fit-days","5,30,90","--tail-qs","0.90,0.95,0.99","--spot-source","coinbase","--vol-mult","2.0"]}` |
+| shadow cost | `PYTHONPATH=. python3 scripts/theta_shadow_bench.py` (local; no database, no network) |
 
 ---
 
-## 0. The headline, before the detail
+## 0. Status
 
 | stage | status |
 |---|---|
-| 1. replace the degenerate 0/1 output | **done and verified** — 90.9% exactly-0 → **0.0%** |
-| 2. refit the tail shape, validate out of sample | **run, powered, FAILED its bar, and WORSE than theta4's actual incumbent** — §3.3, §3.7 |
-| 3. re-measure calibration + residual selection bias | **done** — bias remains large; §3.8 |
-| 4. selection-rule A/B that does not rank on model error | **redesigned**, below; still unregistered |
-| 5. telemetry for momentum/regime | **implemented and tested**, below |
+| 1. replace the degenerate 0/1 output | **done and verified** — 86.2% exactly-0 → **0.0%** |
+| 2. refit the tail shape, validate out of sample | **run, powered, label-gated — and it does not beat the incumbent** (§3.6) |
+| 3. re-measure calibration + residual selection bias | **done** — bias suggested, not established (§3.7) |
+| 4. selection-rule A/B that does not rank on model error | **redesigned**, floors recomputed on the event (§4); still unregistered |
+| 5. telemetry for momentum/regime | **implemented, benchmarked and tested** (§5) |
 
-**Stage 2 now has a real answer, and the answer is no.** With a 90-day fit window, non-overlapping
-blocks and declustered per-tail power, every quote is powered — so the model could finally be
-judged, and it does not meet the stated bar. Removing the 0/1 degeneracy did not remove the tail
-miss, and repairing the model did not reduce the selection bias. **Checkpoint item 3 is complete
-in the sense that a powered out-of-sample calibration exists; it is not a success.**
+**The headline, before the detail.** With a 30-day fit window, non-overlapping blocks, a coherent
+marginal EVT construction and declustered per-tail power, every quote is powered, so the
+replacement model could finally be judged. Judged **paired**, on proper scores, with the ladder
+event as the independent unit and against the incumbent theta4 actually runs, it is **not better
+and not worse**: all four comparisons contain zero and the two proper scores disagree in sign.
 
----
+That is a different answer from the one this document gave a day ago, and the reason is not new
+data. It is that the previous comparison read two separately-computed aggregate-R intervals as
+though that were a test of a difference, and computed both of them as if 66 markets on one ladder
+were 66 independent observations. Correcting those two things dissolves the finding. Nothing has
+been established about which model is better, and this document no longer claims otherwise.
 
-## 1. Why the incumbent output was degenerate — the mechanism
-
-`SpotModel.prob_from_returns` is the raw empirical frequency:
-
-```python
-sum(1 for r in rets if r > x) / n
-```
-
-An empirical distribution has **no mass beyond its own sample maximum**. Every strike further
-out prices at exactly 0.0; every strike inside the minimum at exactly 1.0.
-
-This also explains, mechanically, why `mult=2.0` did not repair it. `vol_mult` rescales the
-*threshold* (`x / k`), so it pulls some strikes back inside the support — but where `x / k` still
-exceeds `max(rets)` the answer is still exactly zero. Widening a distribution that ends at a hard
-edge moves the edge; it does not remove it. Pinned in
-`tests/test_theta_tailmodel.py::test_vol_mult_cannot_escape_the_truncation`:
-
-```
-old model, strike at 3x the sample max:  mult=1.0 -> 0.0    mult=2.0 -> 0.0
-```
-
-That is the whole of theta4's history in one line — a doubling that reduced the miss (R fell from
-~4 on the base model's selected set to 1.72 on theta4's traded set) without being able to reach 1.
+**What has not changed:** neither model is acceptable for a short-tail seller, the cause of
+theta4's failure is still unidentified, and every theta book stays stood down.
 
 ---
 
-## 2. The replacement model — specification
+## 1. What is being measured, and against what
+
+Three questions had to be settled before any calibration number meant anything. All three had
+been got wrong in earlier revisions, and each was wrong in the direction that flatters a result.
+
+### 1.1 The independent unit is the EVENT, not the market
+
+A crypto ladder publishes one market per strike and settles **all of them against one spot
+print**. If spot gapped up in the final minutes, every `greater` strike hits together and every
+`less` strike misses together. Treating those markets as independent Poisson observations counts
+one move as dozens.
+
+`load_quotes` retrieved `event_ticker` and discarded it as `_ev`. It is now carried on every
+scored row, and every interval in this document is an **event-cluster bootstrap**
+(`scripts/cluster_stats.py`): resample whole ladders with replacement, recompute the statistic,
+take percentile bounds. The point estimates are unchanged — R was never wrong, the confidence in
+it was.
+
+The cost of the correction is measured rather than assumed. `design_effect` runs the same
+statistic through a clustered bootstrap and an iid one and reports the variance ratio, so the
+inflation is a number in the output, not an assertion here.
+
+A per-event position cap bounds **exposure**. It does nothing to the statistics.
+
+### 1.2 The outcome label is derived, and had to be qualified before use
+
+Every calibration number rests on an outcome. That outcome is **not** Kalshi's settlement print:
+it is the last ladder snapshot's spot before close, compared to the strike. Kalshi settles off
+its own index at the close, up to three minutes later, and whatever spot did in those minutes is
+unobserved.
+
+`scripts/theta_settlement_labels.py` establishes what that is worth, and it is a gate rather than
+a footnote — the refit applies it before anything is scored.
+
+**Recorded settlement cannot replace the derivation.** Every table that could hold a real Kalshi
+result was checked rather than assumed empty:
+
+| source | ladder rows | note |
+|---|---|---|
+| `markets` | 0 | no result column, and the ladder collector does not write here |
+| `market_snapshots` | 0 | a terminal price would be a settlement print |
+| `backfill_regime_markets` / `backfill_weather_markets` | absent | table/column not present |
+| `paper_trades.resolved_value` | 1,275 | real settlement — but only where a book traded |
+
+Of 66,201 markets in the scored universe, **220 (0.33%)** have a recorded settlement. Those exist
+only where a book traded, which is the selected subset, so they can **audit** the derivation but
+not replace it.
+
+**How wrong the proxy can be, measured from the spot series alone.** RMS absolute move over the
+unobserved remainder, from dense Coinbase 1-minute closes (n = 61,321 pairs per lag):
+
+| product | 1m | 2m | 3m | 4m | 5m |
+|---|---|---|---|---|---|
+| BTC | $30.9 | $43.4 | $52.8 | $61.0 | $67.9 |
+| ETH | $1.3 | $1.9 | $2.3 | $2.6 | $2.9 |
+
+Both scale as √t to two figures, which is what a diffusion does and a good sign the estimator is
+sound. The first version of this ran on the ladder-snapshot reconstruction, which is ~5-minute
+sampled and only near settlement; for ETH almost no (t, t−lag) pair existed and it reported a
+4-minute RMS move of **$0.20**. That was a bug in my own instrument, and the fix was a denser
+series, not a different threshold. A cell built on fewer than 500 observed pairs is now marked
+thin and refused.
+
+**The exclusion rule, fixed from the geometry before the agreement was recomputed.** A market
+whose strike sits within **K = 2** residual sigmas of the final observed spot is ambiguous by
+construction — the unobserved move is large enough to have carried it across. Two sigma is a
+~95% band. It is a property of the measurement, not of which side of the bar the answer lands.
+
+**Result**, against bars fixed before the run (agreement ≥ 97%, retained coverage ≥ 90%):
+
+| population | n | agreement | 99% CI (event-clustered) |
+|---|---|---|---|
+| all overlapping markets | 220 | 98.18% | [0.9524, 1.0000] |
+| near-strike excluded (K=2) | 197 | **100.00%** | [1.0000, 1.0000] |
+
+Disagreements sit exactly where the mechanism predicts and vanish where it predicts:
+
+| distance from strike (σ) | n | disagree | rate |
+|---|---|---|---|
+| 0 – 0.5 | 5 | 2 | 40.0% |
+| 0.5 – 1 | 8 | 0 | 0.0% |
+| 1 – 2 | 10 | 2 | 20.0% |
+| 2 – 4 | 26 | 0 | 0.0% |
+| 4 – ∞ | 171 | 0 | 0.0% |
+
+On the **population** the rule discards 490 of 66,201 markets — retained coverage **99.26%** —
+because theta sells deep strikes, which are far from spot by construction.
+
+**VERDICT: labels usable on the retained population.** Every number in §3 is computed on exactly
+that population.
+
+Two corrections to my own audit, both found by running it and both disclosed rather than quietly
+repaired: the ETH scale above, and a first version that computed retained coverage on the
+220-market **audit overlap** instead of the population. The overlap is the traded subset; asking
+what share of it survives is a different and easier question than the bar was written to ask.
+
+### 1.3 Two models are compared PAIRED, on proper scores — never on aggregate R
+
+Both models priced the same markets, so their errors share every source of market-to-market
+variation: which strike, which hour, how far spot happened to travel. Differencing per market
+removes all of it.
+
+Reading two separately-computed intervals and concluding a difference because one excludes some
+reference value and the other does not **is not a test**. Overlapping intervals routinely hide a
+real paired difference, and separated ones can manufacture one.
+`tests/test_cluster_stats.py::TestPairedComparison` builds both cases explicitly.
+
+And aggregate R is the wrong instrument for the choice regardless. R = observed/expected rewards
+a model for predicting **exactly zero**: a zero costs nothing in the denominator whatever
+happens. A model that declares most of its universe impossible can post an excellent aggregate R
+while being useless on the markets it refuses to price — which is precisely the incumbent's
+shape. The comparison is therefore mean Bernoulli log loss and Brier score, per prediction, on a
+common population fixed by the **market's own price**, reported market-weighted and
+event-weighted, with event-clustered intervals on the **paired difference**.
+
+---
+
+## 2. The replacement model — the frozen specification
 
 `kalshi_bot/theta/tailmodel.py`. **Additive: no book prices off it.**
 
@@ -64,38 +173,39 @@ asserting the data's edge is the world's edge.
 
 | element | choice | why |
 |---|---|---|
-| sample | **non-overlapping h-minute blocks** | see §2.1 — this is the correction that mattered most |
-| declustering | runs, separation 2 blocks | volatility clusters survive de-overlapping |
+| horizon | **snapped to a fixed grid** (10, 15, 20, 25, 30, 35) | §2.6 — the runtime and the validation must fit the same horizon |
+| refit anchor | **top of the hour**, strictly backward-looking | §2.6 |
+| sample | **non-overlapping h-minute blocks** | §2.1 — the correction that mattered most |
+| declustering | runs, separation 2 blocks — **power only** | §2.3 |
 | body | empirical, unchanged | no reason to model what can be counted |
 | tail | GPD, both directions, fitted **separately** | `greater` and `less` strikes use opposite tails |
 | estimator | probability-weighted moments | closed form, no optimiser, no scipy, better than MLE at small counts |
-| threshold | `tail_q`, swept and frozen on TRAIN | bias/variance: higher = less biased, more variable |
-| fit window | `theta_spliced_fit_days`, **paper only** | see §2.2 |
-| power test | **per tail, on declustered exceedances** | see §2.3 |
+| threshold | `theta_spliced_tail_q`, swept and frozen on TRAIN | bias/variance: higher = less biased, more variable |
+| fit window | `theta_spliced_fit_days`, **paper only** | §2.2 |
+| power | **≥20 declustered exceedances on the ACTIVE tail** | §2.3 |
+| completeness | **≥90% block coverage of the requested window** | §2.5 |
 | floor | `1 / (2·blocks)` | degenerate cases only |
 | bounded fits | extrapolate with `max(ξ, 0)` | a fitted ξ<0 asserts a hard maximum move |
 
 ### 2.1 Non-overlapping blocks, not an `n_eff` disclaimer
 
 `SpotModel.returns` emits an h-minute return from **every minute**, so consecutive samples share
-h−1 of their h minutes. At h=35 the overlap factor is exactly **35×** (verified:
-7,165 overlapping returns against 205 blocks over the same window). One shock therefore enters an
-overlapping fit as ~35 neighbouring extremes, and the exceedance count, the scale **and** the
-shape are all estimated as though a single move were dozens of independent ones.
+h−1 of their h minutes. At h=35 the overlap factor is exactly **35×** (7,165 overlapping returns
+against 205 blocks over the same window). One shock therefore enters an overlapping fit as ~35
+neighbouring extremes, and the exceedance count, the scale **and** the shape are all estimated as
+though a single move were dozens of independent ones.
 
-The previous revision fitted overlapping returns and reported an `n_eff = n/h` disclaimer beside
+An earlier revision fitted overlapping returns and reported an `n_eff = n/h` disclaimer beside
 the result. That was not a correction — **a denominator in the metadata does not correct a fitted
-shape.** The fit now consumes `SpotModel.block_returns` (step h, time-ordered), and
-runs-declustering collapses exceedances within 2 blocks of each other into one cluster
-represented by its maximum. `tests/test_theta_tailmodel.py::TestDeclustering` pins that a single
-ten-block storm reads as **one** exceedance, not ten.
+shape.** The fit consumes non-overlapping blocks in time order, and
+`tests/test_theta_tailmodel.py::TestDeclustering` pins that a single ten-block storm reads as
+**one** exceedance, not ten.
 
 ### 2.2 The fit window is separate from BOTH retention and the incumbent's window
 
-The previous revision raised retention to 90 days and then still fitted on 5, because the shadow
-called `model.returns(...)` on a `SpotModel` built with `theta_trail_days=5` and the harness
-hard-coded `TRAIL_DAYS = 5.0`. **Every claim it made about what 90-day retention bought was
-therefore false.** Three now-distinct settings:
+An earlier revision raised retention to 90 days and then still fitted on 5, because the shadow
+called `model.returns(...)` on a `SpotModel` built with `theta_trail_days=5`. **Every claim it
+made about what 90-day retention bought was therefore false.** Three now-distinct settings:
 
 | setting | value | who reads it |
 |---|---|---|
@@ -103,19 +213,26 @@ therefore false.** Three now-distinct settings:
 | `theta_spot_retention_days` | 90 | the pruner only |
 | `theta_spliced_fit_days` | 90 | the **paper** replacement model only |
 
-Widening the fit window cannot touch a live decision: `_refresh_spot` still loads only
-`trail_days` of closes for the incumbent, and no book prices off the replacement.
+The fix was a second **load** (`_refresh_shadow_spot`), not a second argument: a 5-day object
+cannot yield a 90-day fit however it is asked. Widening the fit window cannot touch a live
+decision — `_refresh_spot` still loads only `trail_days` of closes for the incumbent, and no book
+prices off the replacement.
 
-### 2.3 Power is per tail and depends on `tail_q`
+### 2.3 Power is per tail, depends on `tail_q`, and does not use the declustered sample
 
-The previous bar was a fixed block count, which is wrong twice over. 400 blocks give ~40
-exceedances at `tail_q=0.90` and **~4** at `tail_q=0.99` — the old rule would have called the
-second one powered. And a model whose upper tail is well evidenced and lower tail is not still
-hands out an unsupported number on every `less` strike.
+Two separate corrections live here.
 
-So: **≥20 declustered exceedances on the tail the strike actually prices off**. Every fit reports
-blocks, upper and lower declustered exceedance counts, per-side fit/fallback status, and the
-chosen window and threshold. `powered_for(strike_type)` is what callers ask.
+**The bar.** A fixed block count is wrong twice over: 400 blocks give ~40 exceedances at
+`tail_q=0.90` and **~4** at `tail_q=0.99`, and a model whose upper tail is well evidenced and
+lower tail is not still hands out an unsupported number on every `less` strike. The bar is
+**≥20 declustered exceedances on the tail the strike actually prices off**.
+
+**Coherence.** An earlier revision fitted the GPD severity to declustered **cluster maxima**
+while leaving `zeta`, the exceedance frequency, a **marginal** per-block rate. Multiplying those
+two produces the survival function of nothing: the frequency describes one distribution and the
+severity another. Both halves are marginal now. Declustering measures how much *independent*
+evidence a tail carries — it gates power — and no longer touches the estimate.
+`tests/test_theta_tailmodel.py::TestMarginalCoherence` pins it.
 
 ### 2.4 Stated limitations, not buried
 
@@ -126,180 +243,214 @@ chosen window and threshold. `powered_for(strike_type)` is what callers ask.
 - Runs-declustering with a fixed separation is a convention, not a fact about the market; the
   separation travels with every fit so a reader can see what was assumed.
 
-## 3. Baseline calibration — powered, out of sample, and the model does not pass
+### 2.5 Window completeness is not window span
 
-Run **`refit-8`**: 30,960 decision quotes, 2026-08-01 → 08-21, TRAIN/TEST split at 08-14, spot
-from Coinbase's public 1-minute feed. Cited in preference to the earlier `refit-5` because that
-run's configuration was frozen by a selection statistic since found broken (§3.5) — it happened
-to pick the same configuration, but a defensible number has to come from the run whose freezing
-rule is defensible.
+`fit_days` records the distance from the oldest stored minute to the newest. **A span cannot
+express completeness**: a window that reaches ninety days back and is missing a third of its
+minutes has the same span as a full one. The holes are not random either — they are collector
+restarts and deploys, which cluster around exactly the market conditions a tail model exists to
+price, so a gappy fit is not merely smaller, it is biased in an unknown direction.
 
-### 3.1 The window, not the estimator, was the constraint — and it is now lifted
+`block_sample` therefore returns, beside the sample: how many block slots the requested window
+contains, how many were usable, and the longest contiguous hole. Coverage below **90%** means the
+row carries metadata and **no probability** — `emittable_for(strike_type)` is `powered_for` AND
+coverage, and it is the same predicate on both sides of §5.3.
 
-Quotes whose **active** tail cleared the power bar, per configuration:
+### 2.6 The horizon grid and the refit anchor are part of the spec, not conveniences
 
-| fit window | tail_q | powered | coverage |
-|---|---|---|---|
-| 5 days | 0.90 | 1,767 | 5.0% |
-| 5 days | 0.95 | 14 | 0.0% |
-| 5 days | 0.99 | **0** | **0.0%** |
-| 30 days | 0.90 / 0.95 | 30,960 | 100% |
-| 30 days | 0.99 | 35 | 0.1% |
-| **90 days** | 0.90 / 0.95 / 0.99 | **30,960** | **100%** |
+Two parameters that used to differ silently between the validation and the runtime:
 
-This is blockers 1 and 2 in one table. At theta's own 5-day window a 99th-percentile fit is
-powered **nowhere**, which is precisely the `tail_q` dependence a fixed block-count bar could not
-express. At 30 days and beyond every quote is powered at the thresholds that matter.
+- **Horizon.** The runtime fitted at whatever integer minutes-to-close a market happened to show;
+  the harness fitted on a 10–35 grid. So the probability being validated was never the
+  probability that would trade. Both now call `tailmodel.h_bucket`.
+- **Refit cadence.** The runtime refitted every cycle; the harness refitted hourly and called it
+  an approximation. A 90-day window cannot be moved by one 5-minute cycle, so refitting every
+  cycle bought nothing and cost an order of magnitude. Both now anchor to
+  `tailmodel.refit_anchor` — the top of the hour at or before the decision, strictly
+  backward-looking, so anchoring can only make a fit staler, never let it see a minute after the
+  decision it prices.
 
-Fit health at the frozen configuration: **1,440 non-overlapping blocks** (p50), **95 declustered
-upper-tail exceedances** and **93 lower** (p50), upper ξ +0.061, lower ξ +0.094. A real fit, on
-both sides, for the first time.
-
-### 3.2 Degeneracy — fixed
-
-| model | n | exactly 0 | in (0,1) |
-|---|---|---|---|
-| incumbent (empirical) | 30,960 | **28,100 (90.8%)** | 2,860 (9.2%) |
-| spliced EVT | 30,960 | **0 (0.0%)** | **30,960 (100.0%)** |
-
-### 3.3 Out-of-sample calibration — the replacement FAILS its acceptance bar
-
-Configuration frozen on TRAIN (`fit_days=30, tail_q=0.90`, deviance/quote 0.00040), then TEST
-read **once**: 10,722 powered quotes.
-
-| modeled P | spliced R | 99% CI | incumbent R | 99% CI |
-|---|---|---|---|---|
-| 0.000–0.002 | **7.00** | [3.11, 13.41] | **21.34** | [7.93, 45.67] |
-| 0.002–0.005 | 9.80 | [2.85, 23.98] | 2.41 | [0.12, 11.16] |
-| 0.005–0.010 | 4.62 | [0.78, 14.56] | 3.71 | [0.80, 10.49] |
-| 0.010–0.020 | 6.66 | [2.62, 13.79] | 3.09 | [1.15, 6.61] |
-| 0.020–0.050 | 3.53 | [1.71, 6.40] | 2.40 | [1.03, 4.70] |
-| 0.050–0.100 | 2.10 | [1.02, 3.80] | 2.27 | [1.15, 3.99] |
-| 0.100–0.200 | 1.41 | [0.74, 2.41] | 1.69 | [0.96, 2.75] |
-| 0.200–0.350 | 0.80 | [0.36, 1.54] | 1.04 | [0.55, 1.78] |
-| 0.350–0.500 | 0.69 | [0.24, 1.53] | 0.75 | [0.22, 1.83] |
-| **ALL** | **1.79** | [1.39, 2.27] | **1.71** | [1.32, 2.17] |
-
-> **The stated bar was: "a model that looks calibrated near 10–50% and materially understates
-> 1–5% events is not acceptable for a short-tail strategy." The spliced model is exactly that
-> model.** Calibrated from 10% up (R = 1.41, 0.80, 0.69); understating the 1–5% region by **3.5×
-> to 9.8×**. **It does not pass. Stage 2 is complete as a measurement and negative as a result.**
-
-What it does buy is real but narrow: in the deepest bucket the incumbent misses by **21.3×** and
-the spliced model by **7.0×** — because the incumbent assigns ~zero there and cannot even be wrong
-by a ratio until it stops doing so. Overall the two are indistinguishable (1.79 vs 1.71).
-
-**Removing the truncation did not remove the tail miss.** The degeneracy was a real defect and is
-fixed; it was not the cause of R ≈ 4. Something else misprices the deep tail, and a GPD splice
-over realized spot returns does not capture it.
-
-### 3.4 Stage 3 — selection bias survives the repair, and grows
-
-Measured on all 30,960 powered quotes:
-
-| | SELECTED R | 99% CI | REJECTED R | 99% CI | ratio |
-|---|---|---|---|---|---|
-| incumbent | 5.44 | [3.04, 8.92] | 1.18 | [0.94, 1.46] | **4.6×** |
-| spliced | 6.54 | [3.56, 10.94] | 1.08 | [0.86, 1.33] | **6.1×** |
-
-**Repairing the model did not reduce the selection bias — it slightly increased it.** This is the
-review's point 4 confirmed with data: a residual ranking finds whatever error remains, so a better
-model does not stop it selecting on that error. It is the strongest available argument that the
-selection RULE, not the probability model, is what has to change.
-
-### 3.5 Two corrections to the statistic that freezes a configuration
-
-Both were found by running the sweep, and each would have frozen the wrong thing:
-
-1. **`|log(observed/expected)|` is undefined when nothing was observed.** All three 90-day
-   candidates went unscored and a 30-day window was frozen by default — the statistic silently
-   discarded exactly the configurations whose deep tail behaved best. Replaced by the Poisson
-   deviance `2·(o·ln(o/e) − (o − e))`, defined at o = 0 (`= 2e`).
-2. **Raw deviance rewards a configuration that powers almost nothing**, because it is an absolute
-   quantity and less data means a smaller sum. Run `refit-7` froze `fit_days=5, tail_q=0.90` on a
-   deviance of 0.778 while powering **1,766 of 30,923 quotes (5.7%)**. Scoring is now the **mean
-   deviance per deep-tail quote**, and a configuration must power **≥90% of TRAIN quotes** to be
-   a candidate at all. Under that rule `refit-8` rejects three configurations outright and freezes
-   `fit_days=30, tail_q=0.90` on merit.
-
-Both are pinned by tests, and the coverage gate is the reason the numbers above can be compared
-across configurations at all.
-
-### 3.7 Against theta4's ACTUAL incumbent (`mult=2.0`) the replacement is WORSE
-
-`refit-8` scored the replacement against the **base** model (`vol_mult=1.0`). theta4 does not run
-the base model — it runs `mult=2.0`. Run **`refit-t4b`** repeats the comparison against the book's
-real incumbent. The two are reported separately and must not be pooled.
-
-| overall R, historical validation | spliced | incumbent |
-|---|---|---|
-| vs **base** model (`mult=1.0`, `refit-8`) | 1.79 [1.39, 2.27] | 1.71 [1.32, 2.17] |
-| vs **theta4's** model (`mult=2.0`, `refit-t4b`) | 1.79 [1.39, 2.27] | **0.96 [0.75, 1.22]** |
-
-> **theta4's fattened model is essentially calibrated in aggregate (R = 0.96, interval spanning
-> 1.0), and the replacement is not (R = 1.79, interval excluding 1.0).** Against the incumbent
-> that actually trades, the spliced model is a regression, not an improvement.
-
-That is the opposite of what the base-model comparison suggested, and it is the comparison that
-matters. It also disposes of any remaining case for adopting the replacement as it stands.
-
-**But aggregate R is not a sufficient statistic, and this is the clearest demonstration in the
-whole programme.** The `mult=2.0` incumbent still prices **85.5%** of quotes at exactly zero.
-Those quotes carry ~0 expected hits, so they cost almost nothing in an aggregate ratio — the
-aggregate is dominated by the mid-range buckets, where fattening happens to calibrate well. Read
-per bucket, the incumbent's deepest bucket is 2 observed against 0.42 expected on 8,869 quotes:
-it is not calibrated there, it is *silent* there.
-
-So the two models fail differently:
-
-- the **incumbent** declares 85.5% of its universe impossible and is well calibrated on what
-  remains;
-- the **replacement** produces a probability everywhere and is 1.8× miscalibrated across the
-  board, badly so in the 1–5% region.
-
-Neither is acceptable for a short-tail seller, and picking between them on aggregate R would pick
-the one that refuses to answer. This is why the frozen scoring rule is a **proper per-prediction
-score** on a common population (§3.5) rather than a ratio of counts.
-
-### 3.8 The selection comparison is NOT like-for-like, and is reported as such
-
-| | SELECTED n | SELECTED R | REJECTED R |
-|---|---|---|---|
-| incumbent `mult=1.0` | 105 | 5.44 [3.04, 8.92] | 1.18 [0.94, 1.46] |
-| incumbent `mult=2.0` | **15** | 2.85 [0.32, 10.43] | 0.67 [0.54, 0.82] |
-| spliced | 117 | 6.79 [3.70, 11.37] | 1.10 [0.88, 1.36] |
-
-Fattening shrinks `excess = mid − 100·P_model`, so `mult=2.0` selects **15** quotes where the
-spliced model selects **117**. Those are different populations, and a ratio between them is not a
-comparison.
-
-An earlier revision claimed selection bias "grew from 4.6× to 6.1×". **Retracted** — that
-compared arms drawn from different populations with no uncertainty on the ratio. The supported
-statement is narrower and still decisive:
-
-> **Residual selection bias remains large under the replacement probabilities** (SELECTED 6.79
-> [3.70, 11.37] against REJECTED 1.10 [0.88, 1.36], intervals disjoint).
-
-Whether it is *larger* than under the incumbent is not established by this evidence and is not
-claimed.
+The block construction itself was a *copy* in the harness, kept in step by a test. A copy kept in
+step by a test is still a copy; there is now one definition and both call it.
 
 ---
 
-### 3.6 August is historical validation, not a pristine holdout — and a forward holdout is reserved
+## 3. The refit of record
 
-Run `refit-7` exposed results from the August test period **before** the selection statistic and
-the coverage rule were changed for `refit-8`. A window that informed the scoring design cannot
-also certify it, however the split is drawn afterwards. So §3.3 is **historical validation**, and
-it is labelled that way in the harness output too.
+One run, one command, one commit. Nothing below is combined with an earlier run's selection
+rationale — see §6 for what those runs said and why it no longer stands.
 
-The negative finding stands regardless — it is a rejection, and seeing the window can only have
-made the model look *better*, not worse. What the window can no longer do is certify a *positive*
+```
+{"type":"script","id":"refit-12","name":"theta_tail_refit","args":[
+  "--since","2026-07-11","--train-end","2026-08-11","--fit-days","5,30,90",
+  "--tail-qs","0.90,0.95,0.99","--spot-source","coinbase","--vol-mult","2.0"]}
+```
+
+`--vol-mult 2.0` is deliberate: **theta4 does not run the base model.** Scoring against
+`mult=1.0` would compare the replacement to a model that never traded.
+
+The cluster bootstrap is seeded (`seed=20260822`) and the same seed reproduces the same
+interval endpoints exactly. An analysis whose uncertainty moves between runs cannot be a frozen
 result.
 
-**Reserved:** the model specification, the scoring rule (mean Bernoulli log loss on the common
-`mid ≤ 20¢` population), the coverage gate and the frozen configuration are now fixed. The next
-period of ladder data — from the merge of this work forward — is a genuine one-look holdout, and
-is not to be inspected until the specification has been unchanged across it.
+### 3.1 Label quality — the gate, passed
+
+571 of 66,201 markets fall inside the near-strike exclusion (retained coverage **99.14%**, bar
+90%). On the retained overlap the derived label agrees with recorded Kalshi settlement
+**100.00%** of the time across 193 markets in 63 events (bar 97%, event-clustered). **PASS.**
+Everything below is scored on that retained population: 65,630 markets.
+
+### 3.2 Evidence structure — 65,630 markets are worth about 12,000 observations
+
+| quantity | value |
+|---|---|
+| scored markets | 65,630 |
+| distinct events | 988 |
+| markets per event (mean / p50 / p90 / max) | 66.4 / 52 / 97 / 113 |
+| Kish effective events | 886.4 |
+| largest single event's share | 0.17% |
+
+| statistic | design effect | effective n |
+|---|---|---|
+| hit indicator | 4.6 | 14,414 |
+| spliced log loss | 5.4 | 12,182 |
+| incumbent log loss | 5.2 | 12,544 |
+
+An interval computed as though these rows were independent is about **√5 ≈ 2.3× too narrow**.
+That is the size of the error the previous revisions' Poisson intervals carried.
+
+### 3.3 Degeneracy — fixed, and it was the one unambiguous success
+
+| model | n | exactly 0 | exactly 1 | in (0,1) |
+|---|---|---|---|---|
+| incumbent (empirical, `mult=2.0`) | 65,630 | 56,569 (**86.2%**) | 0 | 9,061 (13.8%) |
+| spliced EVT | 65,630 | 0 (**0.0%**) | 0 | 65,630 (100%) |
+
+`SpotModel.prob_from_returns` is a raw empirical frequency, so it has no mass beyond its own
+sample maximum. `vol_mult` rescales the *threshold* (`x / k`), which pulls some strikes back
+inside the support but cannot escape a hard edge — pinned in
+`test_vol_mult_cannot_escape_the_truncation`. Doubling the volatility left 86.2% of this
+universe priced at exactly zero.
+
+### 3.4 The window, not the estimator, was the constraint
+
+| fit window | tail_q | powered share of TRAIN |
+|---|---|---|
+| 5 d | 0.90 | 2.8% |
+| 5 d | 0.95 | 0.0% |
+| 5 d | 0.99 | 0% |
+| 30 d | 0.90 / 0.95 | 100% |
+| 30 d | 0.99 | 0.1% |
+| 90 d | 0.90 / 0.95 / 0.99 | 100% |
+
+At theta's own five-day window a peaks-over-threshold fit is powered essentially **nowhere**.
+Selection, on TRAIN only, by mean Bernoulli log loss on the common population (`mid ≤ 20c`), with
+configurations below 90% coverage refused:
+
+| fit_days | tail_q | coverage | common n | log loss | Brier |
+|---|---|---|---|---|---|
+| 30 | **0.90** | 100% | 50,365 | **0.00374** | 0.00074 |
+| 30 | 0.95 | 100% | 50,365 | 0.00375 | 0.00074 |
+| 90 | 0.90 | 100% | 50,365 | 0.00382 | 0.00075 |
+| 90 | 0.95 | 100% | 50,365 | 0.00382 | 0.00075 |
+| 90 | 0.99 | 100% | 50,365 | 0.00385 | 0.00075 |
+
+**FROZEN on TRAIN: `fit_days=30`, `tail_q=0.90`.** The spread across eligible configurations is
+under 3% of the score; the window mattered, the threshold barely did.
+
+### 3.5 Historical validation — 15,067 quotes, 246 events
+
+Aggregate R, spliced **1.10 [0.37, 2.21]**; incumbent **0.48 [0.16, 0.95]**. Read as two separate
+descriptions, not a comparison: the incumbent over-predicts hits by about 2× in aggregate while
+declaring 12,564 of these 15,067 quotes impossible, and the spliced model's aggregate R now
+contains 1 — but its deep buckets do not.
+
+Deep tail, spliced, out of sample:
+
+| modeled P | n | events | expected | observed | R | 99% CI |
+|---|---|---|---|---|---|---|
+| 0.000–0.002 | 13,959 | 246 | 2.77 | 11 | 3.96 | [0.00, 13.78] |
+| 0.002–0.005 | 336 | 153 | 1.10 | 4 | 3.64 | [0.00, 14.15] |
+| 0.005–0.010 | 183 | 131 | 1.33 | 2 | 1.50 | [0.00, 6.25] |
+| 0.010–0.020 | 138 | 109 | 1.99 | 6 | 3.02 | [0.00, 7.14] |
+| 0.020–0.050 | 169 | 136 | 5.36 | 9 | 1.68 | [0.37, 3.82] |
+
+Every deep-bucket interval now **contains 1**. The point estimates still say the model
+understates 0.2–2% events by 3–4×, and that is the shape a short-tail seller cannot afford — but
+once the shared settlement print is respected, **none of it is established**. The previous
+revision's disjoint deep-bucket intervals were an artefact of counting one ladder as a hundred
+observations.
+
+### 3.6 The paired comparison — what actually decides between the models
+
+Common population: powered quotes with `mid ≤ 20c`, fixed by the market's own price, identical
+for both models. **n = 14,941 markets across 246 events** (Kish effective events 210.3).
+
+| weighting | model | mean log loss | mean Brier |
+|---|---|---|---|
+| market | incumbent | 0.01197 | 0.00223 |
+| market | spliced | 0.01307 | 0.00205 |
+| event | incumbent | 0.01977 | 0.00415 |
+| event | spliced | 0.02280 | 0.00414 |
+
+Paired difference, spliced − incumbent (negative favours the spliced model), event-clustered 99%:
+
+| weighting | statistic | difference | 99% CI | favours |
+|---|---|---|---|---|
+| market | log loss | +0.00110 | [−0.00422, +0.01106] | neither |
+| market | Brier | −0.00018 | [−0.00049, +0.00029] | neither |
+| event | log loss | +0.00303 | [−0.00672, +0.02016] | neither |
+| event | Brier | −0.00001 | [−0.00078, +0.00127] | neither |
+
+> **The models fail differently; superiority is not established.**
+
+The two proper scores disagree even in sign — log loss slightly prefers the incumbent, Brier
+slightly prefers the spliced model — and every interval contains zero on both weightings. That
+is a genuine result, not a null from thin data: 14,941 markets is not a small sample, it is a
+sample worth ~2,900 independent observations once the ladder structure is respected.
+
+The two failure modes are not symmetric, and neither is acceptable for a short-tail seller. The
+incumbent declares 84% of this population impossible and is roughly calibrated on the remainder;
+the spliced model answers everywhere and understates its deepest buckets by 3–4× at the point
+estimate. **Choosing on aggregate R would pick the one that refuses to answer**, since a zero
+costs nothing in a denominator. That is why the frozen rule is a per-prediction proper score.
+
+### 3.7 Selection bias after the repair — suggested, not established
+
+| model | set | n | events | expected | observed | R | 99% CI |
+|---|---|---|---|---|---|---|---|
+| incumbent | SELECTED | 22 | 15 | 1.32 | 2 | 1.51 | [0.00, 6.64] |
+| incumbent | REJECTED | 65,608 | 988 | 404.35 | 149 | 0.37 | [0.23, 0.53] |
+| spliced | SELECTED | 148 | 79 | 4.95 | 17 | **3.44** | [0.84, 7.54] |
+| spliced | REJECTED | 65,482 | 988 | 197.87 | 134 | **0.68** | [0.43, 0.96] |
+
+Under the spliced model the selected set still misses by 3.4× against 0.68 on its complement —
+but the intervals **overlap** in [0.84, 0.96] once clustered, so at 99% this is a strong
+suggestion rather than a finding. The incumbent's selected set is 22 markets across 15 events and
+says nothing at all.
+
+The two SELECTED sets are **different populations of different sizes** — fattening the tails
+shrinks `excess`, so the models select 148 and 22 markets respectively. A ratio between them is
+not a comparison, and none is drawn.
+
+### 3.8 Fit health
+
+| quantity | p10 | p50 | p90 |
+|---|---|---|---|
+| non-overlapping blocks | 1,234 | 1,440 | 1,440 |
+| expected block slots | 1,234 | 1,440 | 1,440 |
+| **block coverage** | 1.000 | 1.000 | 1.000 |
+| longest window gap (min) | 0.0 | 0.0 | 0.0 |
+| upper-tail declustered exceedances | 85 | 95 | 102 |
+| lower-tail declustered exceedances | 88 | 95 | 107 |
+| upper ξ | 0.045 | 0.129 | 0.245 |
+| lower ξ | 0.046 | 0.170 | 0.251 |
+
+All 65,630 quotes have a powered active tail; **0** have a powered tail on an incomplete window.
+Coverage is 1.000 throughout because this run reads Coinbase, which has no gaps — the coverage
+gate exists for the **live** shadow, where the close set is the bot's own collection and the
+holes are its own restarts. 1.0% of active tails are bounded (ξ<0) and extrapolate with max(ξ, 0);
+a fitted ξ<0 asserts a hard maximum move, which is the claim that started this programme.
 
 ---
 
@@ -307,13 +458,13 @@ is not to be inspected until the specification has been unchanged across it.
 
 ### 4.1 Why the earlier recommendation was withdrawn
 
-The previous revision recommended **split-sample residual ranking**: fit on one half of the
-trailing window, price on the other. That was wrong, and the objection is decisive — it still
-ranks candidates by `mid − P_model`. Disjoint fitting samples do not give independent errors when
-both halves share the same market quote, the same regime, the same model family and the same
+An earlier revision recommended **split-sample residual ranking**: fit on one half of the trailing
+window, price on the other. That was wrong, and the objection is decisive — it still ranks
+candidates by `mid − P_model`. Disjoint fitting samples do not give independent errors when both
+halves share the same market quote, the same regime, the same model family and the same
 structural miss. The dominant term in the residual is not sampling noise in the fit; it is the
-tail-shape error §2 measured, and that error is common to both halves by construction. Splitting
-the sample attacks the smallest component of the problem.
+tail-shape error, and that error is common to both halves by construction. Splitting the sample
+attacks the smallest component of the problem.
 
 ### 4.2 The replacement: rank on price, veto on model
 
@@ -326,21 +477,22 @@ the sample attacks the smallest component of the problem.
 | **Treatment selection score** | `mid` **ascending** — the cheapest eligible tail first. Exogenous: the market's own price, which the model does not produce. |
 | **Treatment veto** | take only if `P_model ≤ 0.10`. The model may *refuse* a candidate; it may never *promote* one. A veto removes candidates rather than ordering them, so it cannot generate winner's curse. |
 | **Tie handling** | equal `mid` broken by the deterministic ticker hash already used by `abarm` (`docs/MMSELL_OFFSET_AB.md`) — reproducible and identical across arms. |
-| **Per-event cap** | `theta_max_per_event = 3`, both arms. |
-| **Independent unit** | the **settled market**. |
+| **Per-event cap** | `theta_max_per_event = 3`, both arms. Note this caps *exposure*; it is not what makes the evidence independent. |
+| **Independent unit** | the **event**, not the settled market — §4.2.3. |
 
 ### 4.2.1 Primary estimand — treatment versus control, not an arm in isolation
 
 An earlier revision named "treatment-arm R ≤ 1.5" as the primary metric. **That is not an A/B
 estimand at all** — it describes one arm and never compares them. Corrected:
 
-> **Primary:** `log(R_T / R_C)`, with a two-sided 99% interval from the Poisson counts of both
-> arms. Promotion requires the **upper** bound of `log(R_T / R_C)` to be **< 0**, i.e. the
-> treatment's tail miss is smaller than the control's by more than sampling error.
+> **Primary:** `log(R_T / R_C)`, with a two-sided 99% **event-clustered bootstrap** interval over
+> both arms. Promotion requires the **upper** bound to be **< 0**, i.e. the treatment's tail miss
+> is smaller than the control's by more than sampling error.
 
 `log` of the ratio rather than the raw ratio because the sampling distribution of a ratio of
 counts is badly skewed and its normal interval misbehaves near zero; on the log scale the two
-directions are symmetric, which is what a comparison needs.
+directions are symmetric, which is what a comparison needs. The interval is the same machinery as
+§1.1 — `scripts/cluster_stats.py`, seeded, resampling whole ladders.
 
 ### 4.2.2 Absolute safety clause — the bound direction, corrected
 
@@ -353,31 +505,48 @@ SMALL requires bounding it from ABOVE.
 This is a `fail_any`-style clause, not a promotion clause: it can stop the arm on its own, and
 satisfying it does not by itself promote anything. Both conditions must hold to promote.
 
-### 4.2.3 Floors, from stage 2's measured variance
+### 4.2.3 Floors, recomputed with the event as the unit
 
-Stage 2 is powered, so these are derived rather than deferred. From `refit-8`, the control-arm
-tail rate on the eligible population is **R_C ≈ 5.4** against an expected count of 4.60 over 105
-selected markets — about **0.044 expected tail events per selected market**.
+The previous floors were derived from an **iid** count of settled markets. That was the same
+error as §1.1 in a different place, and it made the arm look about 2.6× cheaper than it is.
 
-To resolve `log(R_T / R_C)` at the minimum useful effect (a halving, `log 0.5 = −0.69`) with 80%
-power at a two-sided 99% interval, each arm needs roughly `2·(z_{.995}+z_{.80})² / (0.69²·λ)`
-markets, with λ = 0.044 expected events per market:
+From §3.7, the spliced rule's selected set is 148 markets across **79 events**, carrying 4.95
+expected tail events — λ ≈ **0.0334** expected events per selected market. Its design effect is
+**not** the population's 4.6: selection spreads thinly across ladders, 1.87 markets per event, so
+the worst-case inflation (ρ = 1, every selected market on a ladder sharing its outcome) is 1.87.
+
+To resolve `log(R_T / R_C)` at the minimum useful effect — a halving, `|log 0.5| = 0.693` — with
+80% power at a two-sided 99% interval:
 
 | quantity | value |
 |---|---|
-| expected tail events per market (λ) | 0.044 |
-| **promotion evidence floor** | **≈ 1,050 settled markets per arm** |
-| **maximum evidence horizon** (inclusive, #247) | **1,600 settled markets per arm** |
-| **early-failure floor** (`fail_any`) | **300 settled markets per arm** |
+| expected tail events per selected market (λ) | 0.0334 |
+| iid requirement per arm | ≈ 1,450 settled markets |
+| design effect inside the selected set | 1.87 |
+| **promotion evidence floor** | **≈ 2,725 settled markets per arm** |
+| **maximum evidence horizon** (inclusive, #247) | **4,100 settled markets per arm** |
+| **early-failure floor** (`fail_any`) | **300 settled markets per arm**, unchanged |
 
-At theta4's observed cadence (~48 live orders over five days ≈ 10 markets/day/arm) the promotion
-floor is ~105 days per arm. **That is the honest cost, and it is stated before the arm exists.**
+The early-failure floor is deliberately **not** inflated. It is a stopping clause: requiring less
+evidence to stop errs toward stopping a good arm, which is the safe direction, and inflating it
+would slow the detection of a bad one. Its power is correspondingly lower under clustering and
+that is accepted.
+
+**The calendar cost is not yet measurable, and is stated as unmeasured.** The previous revision
+put it at ~105 days per arm from a live-order cadence of ~10 markets/day. That number came from
+theta4's live order count, not from this candidate stream, and the two are not the same
+population. On the snapshot universe the *spliced* rule selects 3.5 markets/day and the incumbent
+rule 0.5/day — but the treatment rule (cheapest eligible tail, model veto) selects from a broader
+set than either and its cadence has not been measured. **Measuring the treatment rule's candidate
+cadence is a prerequisite to registering this arm**, because a 2,725-market floor at 3.5
+markets/day is over two years and at 10 markets/day is nine months, and the difference decides
+whether the experiment is worth running at all.
 
 ### 4.2.4 Coverage — candidate stream, not twins
 
 Calling two independently-selecting paper arms "twins" was wrong. A twin mirrors another book's
-decisions; these arms *choose differently on purpose*, and a market taken by one and not the
-other **is the treatment effect**, not missing data.
+decisions; these arms *choose differently on purpose*, and a market taken by one and not the other
+**is the treatment effect**, not missing data.
 
 What must be verified instead is that both arms saw the same **candidate stream**:
 
@@ -399,10 +568,11 @@ simply move from "the model is most wrong here" to "the market prices this lowes
 knows something". That is a **different**, measurable mechanism rather than a self-inflicted one,
 and the arms are constructed so the two can be told apart.
 
-**Still unregistered** — but no longer for want of numbers. The floors in §4.2.3 are derived and
-fixed; what is missing is the operator's decision to run it, and the forward holdout in §3.6 that
-the model specification now needs. Registering it today would put a paper arm on a candidate
-stream whose scoring rule has not yet faced an untouched window.
+**Still unregistered.** Three things are missing, and none of them is the operator's patience:
+the treatment rule's candidate cadence (§4.2.3), a forward holdout the scoring rule has not seen
+(§6), and the operator's decision to spend the horizon.
+
+---
 
 ## 5. Stage 5 — telemetry (implemented and tested)
 
@@ -418,104 +588,149 @@ column, and `_refresh_spot` still loads exactly `trail_days` of closes for the i
 | `trailing_vol_15m/60m/240m` | realized vol at the decision, bps/minute — the regime the trade entered |
 | `trailing_move_15m/60m` | **signed** trailing move, bps — a tail sold into a rally is not the same trade as one sold into a selloff, and the diagnosis could only bucket on \|move\| |
 
-### 5.2 Replacement-model shadow, with tail-CORRECT metadata
+### 5.2 Replacement-model shadow, with tail-correct metadata and window completeness
 
-The first draft stored `spliced_upper_xi` beside every probability. **That is the wrong tail for
-a `less` strike**, which prices off the lower one. Corrected, and everything needed to interpret a
+The first draft stored `spliced_upper_xi` beside every probability. **That is the wrong tail for a
+`less` strike**, which prices off the lower one. Corrected, and everything needed to interpret a
 stored probability now travels with it:
 
 `spliced_model_p`, `spliced_active_xi` (upper for `greater`, lower for `less`, NULL for
-`between`), `spliced_upper_xi`, `spliced_lower_xi`, `spliced_active_clusters` (declustered
-exceedances backing the **active** tail), `spliced_blocks`, `spliced_fit_days`, `spliced_tail_q`,
-`spliced_underpowered`.
+`between`), `spliced_upper_xi`, `spliced_lower_xi`, `spliced_active_clusters`, `spliced_blocks`,
+`spliced_fit_days`, `spliced_requested_fit_days`, `spliced_tail_q`, `spliced_underpowered`, plus
+migration `c4f7a2b8e1d9`: `spliced_expected_blocks`, `spliced_block_coverage`,
+`spliced_max_gap_min`, `spliced_horizon_min`.
 
 Without the fit settings, two probabilities produced under different windows or thresholds are
-indistinguishable in storage; without `spliced_underpowered`, a resolution floor pools with an
-estimate and is read as evidence.
+indistinguishable in storage. Without `spliced_underpowered`, a resolution floor pools with an
+estimate. Without `spliced_expected_blocks`, a window that is a third holes is indistinguishable
+from a full one (§2.5). Without `spliced_horizon_min`, a stored probability cannot be matched to
+the horizon that produced it.
 
-### 5.3 Subsequent spot path — a tested research product, not a retention promise
+**A probability is written only when `emittable_for(strike_type)` holds** — powered active tail
+AND ≥90% block coverage. The metadata is written either way, so a refusing cycle is visible as
+such rather than absent.
 
-Retention makes the decision→candle join possible. It does not make it complete, and a forward-path
-feature set with silent gaps is worse than none: the missing markets cluster around feed outages,
-so dropping them silently selects on the regime being studied.
+### 5.3 Runtime/offline parity — the same model, proved
+
+`tests/test_theta_tailmodel.py::TestRuntimeOfflineParity` runs identical candles through the live
+shadow path (`ThetaTracker._spliced`) and the offline harness (`FitCache`) at a decision time
+deliberately **not** on the hour, across five horizons, and asserts that `p_yes` agrees to 1e-12
+for `greater`, `less` and `between`, and that `n`, `horizon_min`, `tail_q`, `expected_blocks`,
+`max_gap_min`, both ξ and both cluster counts are identical.
+
+That test would have failed before this revision, three times over: different horizon, different
+refit cadence, different tail quantile (the runtime silently used the module default while the
+harness used whichever the sweep was scoring). It also pins that the runtime reads
+`theta_spliced_tail_q` rather than a default, that fits are reused across cycles inside one hour,
+that BTC and ETH do not share a fit, and that the cycle budget withholds rather than delays.
+
+### 5.4 What the shadow costs a trading cycle
+
+`scripts/theta_shadow_bench.py`, at 480 markets/cycle over a full 90-day window:
+
+| quantity | value |
+|---|---|
+| closes per load (both products) | 259,200 |
+| close-set loads over 24 cycles | **6** (was 48) |
+| distinct GPD fits | **36** for 11,520 quotes priced |
+| fit cache hit rate | 99.7% |
+| shadow ms per cycle, p50 / p90 / max | **0.0 / 0.0 / 1,806** |
+| peak memory, one product's close set | 14.1 MB |
+
+Three mechanisms bound it, in order of how much they matter: the close set is **held for its
+refit anchor** rather than reloaded every cycle (this is the dominant cost, and it is database
+work on the trading loop's thread, not arithmetic); the horizon grid caps fits at 6 per product
+per anchor, so a 240-strike ladder costs the same as a 6-strike one; and
+`theta_spliced_budget_ms` is the backstop for a pathological window.
+
+The budget is **3,000 ms**, set from this measurement. The first draft said 750 ms, which is
+*below* the measured maximum — a backstop that fires during normal operation is not a backstop,
+it would have silently gapped the research series every hour. Against a 300,000 ms scan interval
+the worst cycle is 0.6%.
+
+### 5.5 Subsequent spot path — a tested research product, not a retention promise
+
+Retention makes the decision→candle join possible. It does not make it complete, and a
+forward-path feature set with silent gaps is worse than none: the missing markets cluster around
+feed outages, so dropping them silently selects on the regime being studied.
 
 `scripts/theta_forward_path.py` is the product and the proof. Per decision snapshot, deterministic
-from retained 1-minute closes:
+from retained 1-minute closes: forward log return at **+5m, +15m, +30m and market close**;
+**maximum favourable and adverse excursion** oriented by the side the book SOLD; and **coverage
+per offset, reported before any economics**, with excursions withheld below 90% path completeness.
+`between` strikes are excluded from directional MAE/MFE and counted, because `max(up, −dn)` is
+wrong from inside the band and meaningless from outside it.
 
-- forward log return at **+5m, +15m, +30m and market close**, in basis points;
-- **maximum favourable and adverse excursion** over the hold, oriented by the side the book SOLD —
-  for a sold `greater` strike a rising market is adverse, for a sold `less` strike it is
-  favourable;
-- **coverage per offset, reported before any economics**, with a stated ~95% usability bar.
+### 5.6 Backfill, so the window exists now rather than in three months
 
-Tests pin the orientation in both directions (a single sign error would invert MFE/MAE for half
-the book), that a missing offset stays `None` rather than becoming a number, and that the
-close offset follows `minutes_to_close`.
+`crypto_spot_candles` was pruned at `trail_days + 1` = 6 days, and a "90 days of retention" that
+takes 90 days of wall-clock to mean anything is not a fit window. Probe `cb-probe-5` (2026-08-21)
+measured Coinbase serving 1-minute candles **at least 365 days back** for both products, so
+`_backfill_spot` extends the stored history *backward* at
+`theta_spot_backfill_requests_per_cycle` requests per cycle (default 12), filling ~90 days over a
+few hours instead of hammering a public endpoint in one pass. Best-effort and never fatal.
 
-### 5.4 Backfill, so the window exists now rather than in three months
+---
 
-`crypto_spot_candles` was pruned at `trail_days + 1` = 6 days, and the first draft's "90 days of
-retention" would have taken 90 days of wall-clock to mean anything. Probe `cb-probe-5`
-(2026-08-21) measured Coinbase serving 1-minute candles **at least 365 days back** for both
-products, so `_backfill_spot` extends the stored history *backward* toward the retention horizon
-at `theta_spot_backfill_requests_per_cycle` requests per cycle (default 12), filling ~90 days over
-a few hours instead of hammering a public endpoint in one pass. Best-effort and never fatal: a
-failed backfill leaves the incumbent's own gap-filled 5-day window untouched.
+## 6. Superseded — what earlier revisions of this document claimed
 
-## 6. A precision correction to the diagnosis
+Kept because the corrections are the useful part of the record, not because the claims are.
+**None of the following stands.**
 
-`RESEARCH_THETA_TAIL_MODEL_DIAGNOSIS.md` §2.2–§2.4 and §2.6 read
-`crypto_ladder_snapshots.model_p`, which the tracker writes at `vol_mult = 1.0` — the **base**
-model. §1's per-book table reads `paper_trades.model_probability`, which for theta4 carries
-`mult=2.0`. The two are different objects and the doc should have said so.
-
-No conclusion changes. The SELECTED-vs-REJECTED contrast is within one model either way, and the
-z-monotonicity is a property of the base model that `mult=2.0` demonstrably failed to remove —
-theta4's traded R of 1.72 against the base model's selected 4.03 is the size of what doubling
-bought, and §1 of this document explains mechanically why it could not buy more.
+| claim | status | why |
+|---|---|---|
+| `refit-8` is the defensible current freeze | **superseded** | ran before the event was the evidence unit, before the label gate, and on a one-month window. Every interval it reported was ~2.3× too narrow. Replaced by §3. |
+| Configuration selection by deviance per deep quote | **superseded** | three defects, each found by running it: `\|log(o/e)\|` is undefined at zero observed and silently discarded every 90-day candidate; raw Poisson deviance rewarded configurations that powered almost nothing (an earlier run froze a window covering 5.7% of quotes); and both were aggregate counts on a set each configuration defined for itself. Replaced by mean Bernoulli log loss on a market-price-defined common population, gated at ≥90% coverage. |
+| "TEST is read once" | **false as written** | the August window had already been reported on before the scoring rule was fixed. It is labelled **historical validation** throughout, and a forward one-look holdout is reserved. |
+| Selection bias "grew from 4.6× to 6.1×" | **retracted** | fattening the tails shrinks `excess`, so the two models select different populations of different sizes. A ratio between them is not a comparison. |
+| Calibration validated while the settlement-label bar was failing at 96.9% | **retracted** | a calibration computed against labels that fail their own quality bar is not validated. The bar is now a gate that runs before anything is scored (§1.2, §3.1), and it passes on the retained population — but it passes *because* the audit was repaired, not because the bar moved. |
+| "Against theta4's actual incumbent the replacement is a **regression**" | **withdrawn** | that rested on two separate unclustered aggregate-R intervals over a one-month window. The paired proper-score comparison on a longer window (§3.6) returns **neither**, on both weightings and both scores. The correct statement is that the models fail differently and superiority is not established. |
+| "No refitted tail is claimed as validated" | **false once §3 existed** | a tail was fitted and was validated. What that validation says has changed; that it happened has not. |
 
 ---
 
 ## 7. The record, stated plainly
 
-**Degeneracy was a real defect. Removing it improved the deepest probabilities. Historical
-validation still rejects the replacement model, and does not establish degeneracy as the cause of
-theta4's failure.**
+**Degeneracy was a real defect and removing it worked. Nothing else in this programme has been
+established, and the cause of theta4's failure remains unidentified.**
 
 Concretely, and without hedging in either direction:
 
-- The incumbent priced **90.8%** of ladder quotes at exactly 0.0, which is not a probability. The
-  spliced model prices none of them there. That is a genuine repair.
-- In the deepest bucket the miss fell from **21.3× to 7.0×** — the incumbent could not even be
-  wrong by a ratio there, because it assigned ~zero.
-- **Overall the two are indistinguishable** (R 1.79 [1.39, 2.27] against 1.71 [1.32, 2.17]), and
-  the replacement still understates 1–5% events by **3.5×–9.8×**, which is the failure mode the
-  acceptance bar names as unacceptable for a short-tail book.
-- **Residual selection bias remains large** under the replacement probabilities (SELECTED 6.79
-  against REJECTED 1.10, intervals disjoint). Whether it is *larger* than under the incumbent is
-  not established and is not claimed.
-- Against theta4's **actual** `mult=2.0` incumbent the replacement is a **regression**: R 1.79
-  (interval excluding 1.0) against 0.96 (interval spanning it). The incumbent achieves that while
-  calling 85.5% of its universe impossible, so neither model is acceptable — but the replacement
-  is not the better of the two.
-
-An earlier revision of this section said "no refitted tail is claimed as validated", which was
-true when written and became false once §3 reported a powered validation. Both statements cannot
-stand: a refitted tail **was** fitted and **was** validated, and it **failed**. That is the claim.
+- The incumbent prices **86.2%** of this universe at exactly 0.0, which is not a probability, and
+  it does that *at `mult=2.0`* — the doubling theta4 actually ran. The spliced model prices none
+  of them there. That is a genuine repair and it is the only unambiguous success here.
+- **Neither model is better than the other.** All four paired differences — two proper scores ×
+  two weightings — contain zero, and the two scores disagree even in sign.
+- **Neither model is acceptable for a short-tail seller.** One declares most of its universe
+  impossible and calibrates on the remainder; the other answers everywhere and understates its
+  deepest buckets by 3–4× at the point estimate. Choosing between them on aggregate R would pick
+  the one that refuses to answer.
+- **The deep-tail miss is no longer statistically established.** Every deep bucket's interval
+  contains 1 once the shared settlement print is respected. The point estimates still describe a
+  model that would lose money on the tail; the evidence no longer rules out chance.
+- **Residual selection bias is suggested, not established**: SELECTED 3.44 [0.84, 7.54] against
+  REJECTED 0.68 [0.43, 0.96], overlapping in [0.84, 0.96].
+- **The outcome labels are usable**, at 100% agreement on the retained population — but only after
+  two bugs in my own audit were found and disclosed (§1.2).
 
 ### 7.1 What is still unproven
 
 The cause of theta4's R ≈ 4 is **not identified**. Degeneracy is ruled out as a sufficient
-explanation, and the deep-tail miss survives a coherent EVT refit over a 30–90 day window — so
-whatever misprices theta's tail is not captured by an extreme-value model of realized spot
-returns. The momentum/regime hypothesis remains untested (§5.1 supplies the telemetry; §5.3
-supplies the forward path), and the selection-rule A/B in §4 tests a different mechanism again.
+explanation, and no extreme-value model of realized spot returns fitted over 30–90 days
+distinguishes itself from the incumbent. The momentum/regime hypothesis remains untested (§5.1
+supplies the telemetry, §5.5 the forward path). The selection-rule A/B (§4) tests a different
+mechanism again and is not registered.
+
+There is no forward holdout. The August window informed the scoring rule and cannot also certify
+it, so the next honest test of this specification is a period that starts **after** this document
+is merged — which is exactly what the live shadow (§5.2) is accumulating.
 
 ### 7.2 What was deliberately not done
 
 `mult` was not increased — the evidence says the failure is not a scale error, and a second
 doubling would repeat a settled mistake. No theta parameter changed at all; `SpotModel` is
 untouched and every book prices exactly as before. No book re-armed, retired or created; no gate
-written or re-interpreted; the 50-market early-failure floor not moved. No live restart. The
-stage-4 design is a proposal with derived floors, not a registration. `SERIES_TYPES` is untouched
-and the taxonomy repair is routed to Platform Change Review.
+written or re-interpreted; the 50-market early-failure floor not moved; no threshold changed
+because a result was inconvenient. No live restart. The stage-4 design is a proposal with derived
+floors, not a registration. `SERIES_TYPES` is untouched and the taxonomy repair is routed to
+Platform Change Review (`docs/RESEARCH_MMSELL_2X2_PAPER_DESIGN.md`).
