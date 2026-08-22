@@ -395,18 +395,19 @@ class TestRefitHarness:
         b = mod.FitCache({"BTC": {}, "ETH": {}}, 0.99, fit_days=90.0)
         assert a._BLOCKS is b._BLOCKS
 
-    def test_the_harness_block_builder_agrees_with_the_models(self):
-        """The harness duplicates `SpotModel.block_returns` because the ops runner has no
-        SQLAlchemy. A drift between the two would validate a model the worker does not run."""
+    def test_the_harness_block_builder_IS_the_models(self):
+        """Both call `tailmodel.block_sample`. The harness used to hold a copy of the loop,
+        kept in step by a test — and a copy kept in step by a test is still a copy."""
         mod = self._mod()
         base = 1_700_000_000 // 60 * 60
         closes = {base + i * 60: 100.0 * math.exp(i * 0.0001) for i in range(6000)}
         as_of = base + 5999 * 60
 
         cache = mod.FitCache({"BTC": closes, "ETH": {}}, 0.95, fit_days=3.0)
-        from_harness = cache._blocks("BTC", as_of, 35)
-        from_model = SpotModel(closes).block_returns(as_of, 35, window_days=3.0)
+        from_harness, meta = cache._blocks("BTC", as_of, 35)
+        from_model, meta_model = SpotModel(closes).block_sample(as_of, 35, window_days=3.0)
         assert from_harness == pytest.approx(from_model)
+        assert meta == meta_model
         assert len(from_harness) > 0
 
     def test_the_harness_scores_the_incumbent_over_its_OWN_window(self):
@@ -740,3 +741,162 @@ class TestMarginalCoherence:
         u = m.upper.threshold
         assert m.upper.sf(u) == pytest.approx(m.upper.exceedance)
         assert m.p_greater(u) == pytest.approx(m.upper.exceedance, rel=0.05)
+
+
+class TestBlockCoverage:
+    """A span is not completeness. `fit_days` measures the distance from the oldest stored
+    minute to the newest; a window can reach ninety days back and be a third holes, and those
+    holes are collector restarts and deploys — not random with respect to what the model is
+    being asked to price."""
+
+    @staticmethod
+    def _closes(minutes: int, *, drop=()):
+        base = 1_700_000_000 // 60 * 60
+        out = {}
+        for i in range(minutes):
+            if any(lo <= i < hi for lo, hi in drop):
+                continue
+            out[base + i * 60] = 100.0 * math.exp(i * 1e-5)
+        return out, base + (minutes - 1) * 60
+
+    def test_a_complete_window_reports_full_coverage(self):
+        closes, as_of = self._closes(4320)                    # 3 days
+        blocks, meta = tm.block_sample(closes, as_of, 30, 3.0)
+        assert meta["block_coverage"] > 0.99
+        assert meta["max_gap_min"] == 0.0
+        assert len(blocks) == meta["usable_blocks"]
+
+    def test_a_gappy_window_reports_the_hole_the_span_hides(self):
+        # Same first and last minute, so the SPAN is identical — a third of the middle is gone.
+        full, as_of = self._closes(4320)
+        gappy, _ = self._closes(4320, drop=((1000, 2400),))
+        assert max(full) == max(gappy) and min(full) == min(gappy)
+        _, m_full = tm.block_sample(full, as_of, 30, 3.0)
+        _, m_gap = tm.block_sample(gappy, as_of, 30, 3.0)
+        assert m_full["block_coverage"] > 0.99
+        assert m_gap["block_coverage"] < 0.75
+        assert m_gap["max_gap_min"] >= 1400
+
+    def test_a_model_below_the_coverage_bar_is_not_emittable(self):
+        rng = random.Random(5)
+        blocks = [rng.gauss(0.0, 0.01) for _ in range(4000)]
+        powered = tm.build(blocks, 30, fit_days=90.0, expected_blocks=len(blocks))
+        starved = tm.build(blocks, 30, fit_days=90.0, expected_blocks=int(len(blocks) / 0.5))
+        # Identical fits — identical tails, identical evidence. Only the window differs.
+        assert powered.upper.n_clusters == starved.upper.n_clusters
+        assert powered.powered_for("greater") and starved.powered_for("greater")
+        assert powered.emittable_for("greater") is True
+        assert starved.emittable_for("greater") is False
+        assert starved.block_coverage == pytest.approx(0.5, abs=0.01)
+
+    def test_coverage_defaults_to_complete_when_the_caller_does_not_measure_it(self):
+        # Only the two real callers measure it; a bare build() must not be silently blocked.
+        blocks = [0.001 * i for i in range(200)]
+        m = tm.build(blocks, 30, fit_days=90.0)
+        assert m.expected_blocks == len(blocks)
+        assert m.block_coverage == 1.0
+
+
+class TestRuntimeOfflineParity:
+    """The live shadow and the offline validation harness must produce the SAME probability
+    and the SAME fit metadata from the same candles.
+
+    This is the requirement the earlier revisions failed in three separate ways, each silent:
+    the runtime fitted at whatever integer minutes-to-close a market showed while the harness
+    fitted on a 10..35 grid; the runtime used the module's default tail quantile while the
+    harness used whichever one the sweep was scoring; and the block loop existed twice. A
+    verdict about a model the runtime does not run is not a verdict about anything.
+    """
+
+    @staticmethod
+    def _harness():
+        import importlib.util
+        import pathlib
+        import sys as _sys
+
+        path = pathlib.Path(__file__).resolve().parent.parent / "scripts" / "theta_tail_refit.py"
+        spec = importlib.util.spec_from_file_location("theta_tail_refit_parity", path)
+        mod = importlib.util.module_from_spec(spec)
+        _sys.modules[spec.name] = mod
+        spec.loader.exec_module(mod)
+        return mod
+
+    @pytest.fixture(scope="class")
+    def candles(self):
+        rng = random.Random(77)
+        base = 1_700_000_000 // 60 * 60
+        px, out = 65000.0, {}
+        for i in range(30 * 1440):
+            px *= math.exp(rng.gauss(0.0, 0.0006))
+            out[base + i * 60] = px
+        return out
+
+    @pytest.fixture
+    def tracker(self, settings, candles):
+        from kalshi_bot.theta.tracker import ThetaTracker
+
+        settings.theta_spliced_fit_days = 30.0
+        settings.theta_spliced_tail_q = 0.90
+        settings.theta_spliced_budget_ms = 0.0          # no budget: parity, not throughput
+        return ThetaTracker(object(), settings, spot_client=object())
+
+    @pytest.mark.parametrize("tte_min", [10.0, 17.0, 22.4, 31.0, 35.0])
+    def test_probability_and_metadata_match_at_every_horizon(self, tracker, candles, tte_min):
+        as_of = max(candles)
+        model = SpotModel(candles, trail_days=30.0)
+        runtime = tracker._spliced(model, as_of, tte_min)
+        assert runtime is not None
+
+        mod = self._harness()
+        cache = mod.FitCache({"BTC": candles, "ETH": {}}, tracker.settings.theta_spliced_tail_q,
+                             fit_days=tracker.settings.theta_spliced_fit_days)
+        # Same as_of. The harness's HOURLY refit bucket is a declared approximation of a window
+        # that moves one block per hour; it is not part of the frozen spec, so parity is asked
+        # at a shared decision time.
+        blocks, meta = cache._blocks("BTC", as_of, tm.h_bucket(tte_min))
+        offline = tm.build(blocks, tm.h_bucket(tte_min),
+                           tail_q=tracker.settings.theta_spliced_tail_q,
+                           fit_days=tracker.settings.theta_spliced_fit_days,
+                           expected_blocks=meta["expected_blocks"],
+                           max_gap_min=meta["max_gap_min"])
+        assert offline is not None
+
+        spot = model.spot_at(as_of)
+        for strike_type, floor_k, cap_k in (("greater", spot * 1.004, None),
+                                            ("less", None, spot * 0.996),
+                                            ("between", spot * 0.998, spot * 1.002)):
+            a = tm.p_yes(runtime, spot, strike_type, floor_k, cap_k)
+            b = tm.p_yes(offline, spot, strike_type, floor_k, cap_k)
+            assert a == pytest.approx(b, rel=1e-12), strike_type
+        for field in ("n", "horizon_min", "tail_q", "expected_blocks", "max_gap_min"):
+            assert getattr(runtime, field) == getattr(offline, field), field
+        assert runtime.upper.xi == pytest.approx(offline.upper.xi, rel=1e-12)
+        assert runtime.lower.xi == pytest.approx(offline.lower.xi, rel=1e-12)
+        assert runtime.upper.n_clusters == offline.upper.n_clusters
+        assert runtime.lower.n_clusters == offline.lower.n_clusters
+
+    def test_the_runtime_snaps_the_horizon_onto_the_frozen_grid(self, tracker, candles):
+        # 22.4 and 20.0 minutes are the same fit; 22.4 and 25.0 are too. Without this the
+        # runtime fits a horizon the harness never scored.
+        as_of = max(candles)
+        model = SpotModel(candles, trail_days=30.0)
+        assert tracker._spliced(model, as_of, 22.4).horizon_min == 20
+        assert tracker._spliced(model, as_of, 24.0).horizon_min == 25
+        assert tracker._spliced(model, as_of, 99.0).horizon_min == 35
+
+    def test_the_runtime_uses_the_CONFIGURED_tail_quantile(self, tracker, candles):
+        as_of = max(candles)
+        model = SpotModel(candles, trail_days=30.0)
+        tracker.settings.theta_spliced_tail_q = 0.97
+        tracker._spliced_cache.clear()
+        assert tracker._spliced(model, as_of, 30.0).tail_q == 0.97
+
+    def test_the_shadow_stops_when_its_cycle_budget_is_spent(self, tracker, candles):
+        as_of = max(candles)
+        model = SpotModel(candles, trail_days=30.0)
+        tracker.settings.theta_spliced_budget_ms = 1e-6   # exhausted by the first fit
+        assert tracker._spliced(model, as_of, 30.0) is not None
+        tracker._spliced_cache.clear()
+        # A gap in a research series is recoverable; a late quote is not.
+        assert tracker._spliced(model, as_of, 35.0) is None
+        assert tracker._shadow_budget_hit is True

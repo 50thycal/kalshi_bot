@@ -640,6 +640,20 @@ class Settings(BaseSettings):
     # was never the constraint; the window was.
     theta_spliced_fit_days: float = 90.0
 
+    # Peaks-over-threshold quantile for the PAPER replacement model. Explicit rather than left
+    # to the module default so the runtime cannot silently price off a different tail than the
+    # one the offline harness froze — the two are compared directly by
+    # `tests/test_theta_tailmodel.py::TestRuntimeOfflineParity`. Changing it changes what the
+    # shadow measures and is a Platform Change Review event, not a knob.
+    theta_spliced_tail_q: float = 0.90
+
+    # Per-cycle wall-clock budget for the shadow fits, in milliseconds. The shadow is research
+    # riding along inside a trading cycle; it must never be the reason a quote is late. When a
+    # cycle's fits exceed this the remaining markets record metadata with no probability and
+    # the next cycle starts fresh — a gap in a research series is recoverable, a delayed scan
+    # is not. 0 disables the budget (tests).
+    theta_spliced_budget_ms: float = 750.0
+
     # Per-cycle budget for backfilling 1-minute closes BACKWARD toward the retention horizon.
     # Coinbase serves 1-minute candles at least 365 days back (probe `cb-probe-5`, 2026-08-21),
     # so the fit window can be filled from history rather than waited for; 300 candles/request

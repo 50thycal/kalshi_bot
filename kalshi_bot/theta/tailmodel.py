@@ -122,6 +122,84 @@ MIN_TAIL_EXCEEDANCES_FOR_POWER = 20
 RUN_SEPARATION = 2
 
 
+# --- THE FROZEN SPECIFICATION ------------------------------------------------------------------
+#
+# Everything below defines HOW a fit is built, as opposed to what it is fitted to. The offline
+# validation harness (`scripts/theta_tail_refit.py`) and the live paper shadow
+# (`kalshi_bot/theta/tracker.py`) both call these, so the thing that gets validated and the
+# thing that runs cannot drift apart. `tests/test_theta_tailmodel.py::TestRuntimeOfflineParity`
+# pins that they agree end to end on identical candles.
+#
+# This module is deliberately dependency-free (math + dataclasses) so the ops runner can load it
+# by path without importing the SQLAlchemy-bearing package.
+
+# Horizons are snapped onto a fixed grid. Without this the runtime fits at whatever integer
+# minutes-to-close a market happens to show while the harness fits on a grid, so the probability
+# that was validated is not the probability that would trade.
+H_BUCKETS = (10, 15, 20, 25, 30, 35)
+
+# A fit whose window is missing more than this share of its block slots is not emitted. The
+# holes are not random — they are collector restarts and deploys, which cluster around exactly
+# the market conditions a tail model exists to price. Same 90% bar as every other coverage gate
+# in this programme.
+MIN_BLOCK_COVERAGE = 0.90
+
+
+def h_bucket(minutes: float) -> int:
+    """Snap a horizon onto the fixed grid. Ties go to the smaller bucket, deterministically."""
+    best = H_BUCKETS[0]
+    for h in H_BUCKETS:
+        if abs(h - minutes) < abs(best - minutes):
+            best = h
+    return best
+
+
+def block_sample(closes: dict[int, float], as_of: int, h_min: int,
+                 window_days: float) -> tuple[list[float], dict]:
+    """NON-OVERLAPPING h-minute log returns ending at or before `as_of`, in TIME ORDER, plus
+    how completely the window was covered.
+
+    Steps by h rather than by 1, so no two samples share a minute and one shock cannot enter
+    the fit as ~h neighbouring extremes.
+
+    Strictly backward-looking: the last block CLOSES at or before `as_of`, so no fit ever sees
+    a minute after the decision it is being scored against.
+
+    The metadata is the part a span alone cannot tell you. `max(closes) - min(closes)` says the
+    history REACHES ninety days; it says nothing about how much of it is actually there. A
+    window that is 40% holes still spans ninety days.
+    """
+    h = int(h_min) * 60
+    if h <= 0:
+        return [], {"expected_blocks": 0, "usable_blocks": 0, "block_coverage": 0.0,
+                    "max_gap_min": 0.0}
+    span = int(window_days * 86400)
+    lo = as_of - span
+    out: list[float] = []
+    expected = 0
+    last_ok: int | None = None
+    max_gap = 0
+    t = as_of - h
+    while t >= lo:
+        expected += 1
+        a, b = closes.get(t), closes.get(t + h)
+        if a and b and a > 0 and b > 0:
+            out.append(math.log(b / a))
+            if last_ok is not None:
+                max_gap = max(max_gap, last_ok - (t + h))
+            last_ok = t
+        t -= h
+    out.reverse()                     # time order — declustering depends on adjacency
+    return out, {
+        "expected_blocks": expected,
+        "usable_blocks": len(out),
+        "block_coverage": (len(out) / expected) if expected else 0.0,
+        # Walking backwards, the gap is measured between a usable block's END and the START of
+        # the next usable one further back, in minutes.
+        "max_gap_min": max_gap / 60.0,
+    }
+
+
 @dataclass(frozen=True)
 class TailFit:
     """One side's fitted tail. `xi` > 0 is heavy, 0 is exponential, < 0 is bounded."""
@@ -270,12 +348,37 @@ class SplicedReturnModel:
     upper: TailFit
     lower: TailFit          # fitted on NEGATED returns; its axis is -r
     _sorted: tuple[float, ...]
+    # Window COMPLETENESS, which a span cannot express: a window 40% full of holes still
+    # reaches ninety days back. `expected_blocks` is how many block slots the requested window
+    # contains; `n` is how many were usable.
+    expected_blocks: int = 0
+    max_gap_min: float = 0.0
 
     @property
     def n_eff(self) -> int:
         """Blocks ARE the independent unit now, so this is `n`. Kept as a name because stored
         telemetry and reports ask for it."""
         return self.n
+
+    @property
+    def block_coverage(self) -> float:
+        """Share of the requested window's block slots that produced a usable return."""
+        return (self.n / self.expected_blocks) if self.expected_blocks else 0.0
+
+    def emittable_for(self, strike_type: str) -> bool:
+        """Whether a probability from this fit may be RECORDED for this strike.
+
+        Two independent requirements, and both are structural rather than advisory:
+
+        * the tail the strike prices off carries enough declustered evidence, and
+        * the fit window is at least `MIN_BLOCK_COVERAGE` complete.
+
+        Coverage matters separately from power because the two fail in different ways. A
+        window can hold plenty of exceedances and still be missing a third of its minutes —
+        collector restarts and deploys — and those absences are not random with respect to
+        what the model is being asked to price.
+        """
+        return self.powered_for(strike_type) and self.block_coverage >= MIN_BLOCK_COVERAGE
 
     @property
     def underpowered(self) -> bool:
@@ -371,6 +474,9 @@ class SplicedReturnModel:
             "horizon_min": self.horizon_min, "fit_days": self.fit_days,
             "requested_fit_days": self.requested_fit_days,
             "tail_q": self.tail_q, "run_separation": RUN_SEPARATION,
+            "expected_blocks": self.expected_blocks,
+            "block_coverage": self.block_coverage, "max_gap_min": self.max_gap_min,
+            "min_block_coverage": MIN_BLOCK_COVERAGE,
             "min_tail_exceedances": MIN_TAIL_EXCEEDANCES_FOR_POWER,
             "upper_xi": self.upper.xi, "upper_sigma": self.upper.scale,
             "upper_threshold": self.upper.threshold, "upper_n_excess": self.upper.n_excess,
@@ -385,7 +491,8 @@ class SplicedReturnModel:
 
 
 def build(blocks: list[float], h_min: int, *, tail_q: float = DEFAULT_TAIL_Q,
-          fit_days: float = 0.0, requested_fit_days: float | None = None
+          fit_days: float = 0.0, requested_fit_days: float | None = None,
+          expected_blocks: int | None = None, max_gap_min: float = 0.0
           ) -> SplicedReturnModel | None:
     """Fit both tails over one horizon's NON-OVERLAPPING blocks, in TIME ORDER.
 
@@ -402,6 +509,10 @@ def build(blocks: list[float], h_min: int, *, tail_q: float = DEFAULT_TAIL_Q,
         upper=_fit_side(blocks, tail_q),
         lower=_fit_side([-r for r in blocks], tail_q),
         _sorted=tuple(sorted(blocks)),
+        # Absent an explicit count, assume the window was complete. Callers that know better —
+        # both real ones do, via `block_sample` — pass the measured value.
+        expected_blocks=int(len(blocks) if expected_blocks is None else expected_blocks),
+        max_gap_min=float(max_gap_min),
     )
 
 

@@ -149,6 +149,7 @@ ALLOWED_SCRIPTS = (
     "theta_tail_refit",
     "theta_candle_backfill_probe",
     "theta_forward_path",
+    "theta_settlement_labels",
     "evo_digest",
     "evo_tree",
     "evo_selftest",

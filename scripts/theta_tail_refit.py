@@ -36,24 +36,30 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import importlib.util
-import json
 import math
 import os
 import pathlib
 import sys
-import time
 from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import cluster_stats as cs  # noqa: E402
+import theta_settlement_labels as _sl  # noqa: E402
 from mmsell_market_types import RO_OPTIONS, _to_libpq_url  # noqa: E402
+from theta_settlement_labels import (  # noqa: E402
+    NEAR_STRIKE_K,
+    load_recorded_truth,
+    load_spot_coinbase,
+    residual_scale,
+    sigma_for,
+    strike_distance,
+)
 from theta_tail_diagnosis import (  # noqa: E402
     THETA4_BAND,
     THETA4_EDGE_CENTS,
     THETA_MIN_VOLUME,
     _yes_resolved,
-    calib_table,
-    poisson_ratio_ci,
 )
 
 # Load kalshi_bot/theta/tailmodel.py by PATH. Importing `kalshi_bot.theta.tailmodel` normally
@@ -82,19 +88,20 @@ MIN_POWERED_COVERAGE = 0.90
 # common set is every eligible quote whose yes mid is at or below this — theta's own band ceiling,
 # fixed in advance and independent of any model.
 COMMON_POPULATION_MAX_MID = 20.0
-H_BUCKETS = (10, 15, 20, 25, 30, 35)
+
+# Label-quality bars, imported so this script and the standalone audit cannot drift apart.
+AGREEMENT_BAR = _sl.AGREEMENT_BAR
+COVERAGE_BAR = _sl.COVERAGE_BAR
+MIN_AUDIT_MARKETS = 30
+H_BUCKETS = tm.H_BUCKETS
 PRODUCTS = ("BTC", "ETH")
 COINBASE = "https://api.exchange.coinbase.com"
 COINBASE_PRODUCT = {"BTC": "BTC-USD", "ETH": "ETH-USD"}
 
 
 def h_bucket(minutes: float) -> int:
-    """Round a quote's minutes-to-close onto the horizon grid the fits are cached on."""
-    best = H_BUCKETS[0]
-    for h in H_BUCKETS:
-        if abs(h - minutes) < abs(best - minutes):
-            best = h
-    return best
+    """The frozen horizon grid, from `tailmodel` so the harness and the runtime cannot differ."""
+    return tm.h_bucket(minutes)
 
 
 def product_of(series: str | None) -> str:
@@ -102,66 +109,6 @@ def product_of(series: str | None) -> str:
 
 
 # --- data ------------------------------------------------------------------------------------
-
-def load_spot_coinbase(since: str, until: str | None = None) -> dict[str, dict[int, float]]:
-    """1-minute closes straight from Coinbase's PUBLIC candles endpoint.
-
-    Exists because the database cannot answer the question. `crypto_spot_candles` was pruned at
-    6 days, and the ladder-snapshot reconstruction is ~5-minute sampled — too sparse to build
-    non-overlapping blocks from. Coinbase serves 1-minute candles at least 365 days back (probe
-    `cb-probe-5`, 2026-08-21), so the fit window can be filled from history rather than waited
-    for, and this analysis writes NOTHING: it is a read against a public endpoint.
-
-    stdlib urllib, not httpx — the ops runner installs psycopg alone for `script` requests.
-    """
-    import urllib.error
-    import urllib.request
-
-    start = dt.datetime.fromisoformat(since).replace(tzinfo=dt.timezone.utc)
-    end = (dt.datetime.fromisoformat(until).replace(tzinfo=dt.timezone.utc)
-           if until else dt.datetime.now(dt.timezone.utc))
-    out: dict[str, dict[int, float]] = {p: {} for p in PRODUCTS}
-    for key, product in COINBASE_PRODUCT.items():
-        cursor = int(start.timestamp())
-        stop = int(end.timestamp())
-        while cursor < stop:
-            chunk_end = min(stop, cursor + 300 * 60)
-            url = (f"{COINBASE}/products/{product}/candles?granularity=60"
-                   f"&start={dt.datetime.fromtimestamp(cursor, tz=dt.timezone.utc):%Y-%m-%dT%H:%M:%SZ}"
-                   f"&end={dt.datetime.fromtimestamp(chunk_end, tz=dt.timezone.utc):%Y-%m-%dT%H:%M:%SZ}")
-            req = urllib.request.Request(url, headers={
-                "User-Agent": "kalshi-bot theta refit (research)", "Accept": "application/json"})
-            rows = None
-            # Coinbase's public tier throttles around 10 req/s and a 90-day window is ~430
-            # requests per product. An unthrottled loop earns a 429 partway through, which
-            # truncates the NEWEST data — precisely the minutes the quotes need — and silently
-            # scores zero. Pace, and retry the throttle rather than treating it as the end of
-            # history.
-            for attempt in range(5):
-                try:
-                    with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
-                        rows = json.loads(resp.read().decode())
-                    break
-                except urllib.error.HTTPError as exc:
-                    if exc.code == 429:
-                        time.sleep(1.0 * (attempt + 1))
-                        continue
-                    print(f"  coinbase fetch stopped for {product}: HTTP {exc.code}")
-                    break
-                except Exception as exc:  # noqa: BLE001
-                    print(f"  coinbase fetch stopped for {product}: {str(exc)[:80]}")
-                    break
-            if rows is None:
-                print(f"  coinbase fetch INCOMPLETE for {product} at "
-                      f"{dt.datetime.fromtimestamp(cursor, tz=dt.timezone.utc):%Y-%m-%d}; "
-                      "results below are not usable")
-                break
-            for r in rows or []:
-                out[key][int(r[0])] = float(r[4])
-            cursor = chunk_end
-            time.sleep(0.15)
-    return out
-
 
 def load_spot(cur, since: str, source: str) -> dict[str, dict[int, float]]:
     """{product: {minute_unix: close}}.
@@ -200,7 +147,8 @@ def load_quotes(cur, since: str, tte_max: float) -> list[dict]:
     settlement spot — the same construction the diagnosis used, so the two are comparable."""
     cur.execute(
         "WITH fin AS ("
-        "  SELECT DISTINCT ON (event_ticker) event_ticker, spot AS final_spot"
+        "  SELECT DISTINCT ON (event_ticker) event_ticker, spot AS final_spot,"
+        "         minutes_to_close AS final_mtc"
         "    FROM crypto_ladder_snapshots"
         "   WHERE captured_at >= %s AND spot IS NOT NULL"
         "     AND minutes_to_close IS NOT NULL AND minutes_to_close <= 3"
@@ -215,20 +163,23 @@ def load_quotes(cur, since: str, tte_max: float) -> list[dict]:
         "     AND s.minutes_to_close <= %s AND s.minutes_to_close >= 10"
         "     AND s.mid_cents IS NOT NULL AND s.mid_cents <= 40"
         "   ORDER BY s.market_ticker, s.minutes_to_close DESC"
-        ") SELECT q.*, fin.final_spot FROM q JOIN fin USING (event_ticker)",
+        ") SELECT q.*, fin.final_spot, fin.final_mtc FROM q JOIN fin USING (event_ticker)",
         (since, since, tte_max))
     rows: list[dict] = []
-    for (tkr, _ev, series, st, fs, cs, mid, mp, excess, mtc, spot, ts, vol, final) in cur.fetchall():
-        yr = _yes_resolved(st, fs, cs, float(final))
+    for (tkr, ev, series, st, fs, cap, mid, mp, excess, mtc, spot, ts, vol,
+         final, final_mtc) in cur.fetchall():
+        yr = _yes_resolved(st, fs, cap, float(final))
         if yr is None:
             continue
         rows.append({
-            "ticker": tkr, "series": series, "product": product_of(series),
-            "strike_type": st, "floor": fs, "cap": cs,
+            "ticker": tkr, "event": ev, "series": series, "product": product_of(series),
+            "strike_type": (st or "").lower(), "floor": fs, "cap": cap,
             "mid": float(mid), "stored_p": float(mp) if mp is not None else None,
             "stored_excess": float(excess) if excess is not None else None,
             "mtc": float(mtc), "spot": float(spot), "captured_at": ts,
             "volume": float(vol) if vol is not None else None,
+            "final": float(final),
+            "final_mtc": float(final_mtc) if final_mtc is not None else 3.0,
             "yes_resolved": yr,
         })
     return rows
@@ -255,7 +206,7 @@ class FitCache:
 
     # Block samples depend only on (product, hour, horizon, fit_days) — not on tail_q — so they
     # are shared across the sweep's FitCache instances.
-    _BLOCKS: dict[tuple[str, int, int, float], list[float]] = {}
+    _BLOCKS: dict[tuple[str, int, int, float], tuple[list[float], dict]] = {}
 
     def __init__(self, spot: dict[str, dict[int, float]], tail_q: float, fit_days: float):
         self.spot = spot
@@ -264,28 +215,20 @@ class FitCache:
         self._cache: dict[tuple[str, int, int], object] = {}
         self.misses = 0
 
-    def _blocks(self, product: str, as_of: int, h_min: int) -> list[float]:
-        """Non-overlapping h-minute log returns ending at or before `as_of`, in TIME ORDER.
+    def _blocks(self, product: str, as_of: int, h_min: int) -> tuple[list[float], dict]:
+        """Non-overlapping h-minute log returns ending at or before `as_of`, in TIME ORDER,
+        plus the window-completeness metadata.
 
-        Mirrors `SpotModel.block_returns`; duplicated here rather than imported because the ops
-        runner has no SQLAlchemy and the package import would pull it in. `tests/
-        test_theta_tailmodel.py::TestRefitHarness` pins that the two agree.
+        Delegates to `tailmodel.block_sample`, the SAME function the live shadow calls through
+        `SpotModel.block_sample`. It used to be a copy here — kept in step by a test — and a
+        copy kept in step by a test is still a copy. Now there is one definition, so the sample
+        that produces a verdict and the sample that would trade cannot be different samples.
         """
         key = (product, as_of, h_min, self.fit_days)
         got = FitCache._BLOCKS.get(key)
         if got is not None:
             return got
-        closes = self.spot.get(product) or {}
-        h = h_min * 60
-        lo = as_of - int(self.fit_days * 86400)
-        out: list[float] = []
-        t = as_of - h
-        while t >= lo:
-            a, b = closes.get(t), closes.get(t + h)
-            if a and b and a > 0 and b > 0:
-                out.append(math.log(b / a))
-            t -= h
-        out.reverse()
+        out = tm.block_sample(self.spot.get(product) or {}, as_of, h_min, self.fit_days)
         FitCache._BLOCKS[key] = out
         return out
 
@@ -294,8 +237,10 @@ class FitCache:
         key = (product, hour, h_min)
         if key in self._cache:
             return self._cache[key]
-        model = tm.build(self._blocks(product, hour, h_min), h_min,
-                         tail_q=self.tail_q, fit_days=self.fit_days)
+        blocks, meta = self._blocks(product, hour, h_min)
+        model = tm.build(blocks, h_min, tail_q=self.tail_q, fit_days=self.fit_days,
+                         expected_blocks=meta["expected_blocks"],
+                         max_gap_min=meta["max_gap_min"])
         if model is None:
             self.misses += 1
         self._cache[key] = model
@@ -357,9 +302,17 @@ def score(rows: list[dict], cache: FitCache, vol_mult: float) -> list[dict]:
                     "lower_clusters": model.lower.n_clusters,
                     "active_xi": model.active_xi(r["strike_type"]),
                     "active_clusters": model.active_clusters(r["strike_type"]),
-                    # Power is judged on the tail THIS strike prices off, not on both.
-                    "powered": model.powered_for(r["strike_type"]),
-                    "underpowered": not model.powered_for(r["strike_type"])})
+                    "expected_blocks": model.expected_blocks,
+                    "block_coverage": model.block_coverage,
+                    "max_gap_min": model.max_gap_min,
+                    # `powered` is the SAME predicate the live shadow uses to decide whether to
+                    # record a probability: enough declustered evidence on the tail this strike
+                    # prices off, AND a window complete enough to have found it. Scoring on a
+                    # looser rule than the runtime emits on would validate a model the runtime
+                    # never runs.
+                    "powered": model.emittable_for(r["strike_type"]),
+                    "tail_powered": model.powered_for(r["strike_type"]),
+                    "underpowered": not model.emittable_for(r["strike_type"])})
     return out
 
 
@@ -382,15 +335,60 @@ def head(t: str) -> None:
     print("=" * 96)
 
 
-def calib(rows: list[dict], key: str) -> dict:
-    b: dict[str, list] = defaultdict(lambda: [0, 0.0, 0])
+def label_quality(rows: list[dict], truth: dict[str, bool],
+                  scale: dict[str, dict[int, float]], seed: int) -> tuple[list[dict], bool]:
+    """Gate the whole run on whether the outcome labels are good enough to calibrate against.
+
+    The label is DERIVED: the last ladder snapshot's spot before close, compared to the strike.
+    It is not Kalshi's settlement print, which is struck at the close off Kalshi's own index up
+    to three minutes later. Whatever spot did in those minutes is unobserved, and a strike
+    sitting inside that unobserved move is a coin flip the derivation resolves by guessing.
+
+    The near-strike exclusion, its multiplier, and both bars are constants in
+    `theta_settlement_labels` fixed before any of this was measured. This function applies
+    them; it does not choose them. Returns the retained rows and whether the bars were met.
+    """
+    head("0. OUTCOME LABEL QUALITY — can these labels support a calibration verdict?")
     for r in rows:
-        c = b[deep_bucket(r[key])]
-        c[0] += 1
-        c[1] += r[key]
-        c[2] += 1 if r["yes_resolved"] else 0
-    order = [f"{lo:.3f}-{hi:.3f}" for lo, hi in zip(DEEP_EDGES, DEEP_EDGES[1:], strict=False)]
-    return {k: tuple(b[k]) for k in order if k in b}
+        d, sg = strike_distance(r), sigma_for(r, scale)
+        r["ambiguous"] = (None if d is None or not math.isfinite(sg) or sg <= 0
+                          else d < NEAR_STRIKE_K * sg)
+    kept = [r for r in rows if r["ambiguous"] is False]
+    retained = len(kept) / len(rows) if rows else 0.0
+    overlap = [r for r in kept if r["ticker"] in truth]
+    for r in overlap:
+        r["agree"] = 1.0 if r["yes_resolved"] == truth[r["ticker"]] else 0.0
+    print(f"  markets with a RECORDED Kalshi settlement: {len(truth):,} "
+          f"({len([r for r in rows if r['ticker'] in truth]) / max(1, len(rows)):.2%} of the "
+          "scored universe)")
+    print("  Recorded results exist only where a book traded — the selected subset, not the")
+    print("  universe — so they audit the derivation rather than replace it.")
+    print()
+    print(f"  near-strike exclusion at K={NEAR_STRIKE_K:g} residual sigma: "
+          f"{len(rows) - len(kept):,} of {len(rows):,} markets dropped, "
+          f"retained coverage {retained:.2%} (bar {COVERAGE_BAR:.0%})")
+    if len(overlap) < MIN_AUDIT_MARKETS:
+        print(f"  audit overlap after exclusion is {len(overlap)} markets, below the "
+              f"{MIN_AUDIT_MARKETS} needed to measure agreement at all.")
+        print("  VERDICT: BLOCKED_DATA — the derivation is unvalidated on this population.")
+        return kept, False
+    m = cs.mean_ci(overlap, "event", lambda r: r["agree"], seed=seed)
+    prof = cs.cluster_profile(overlap, "event")
+    print(f"  derived-vs-recorded agreement on the retained overlap: {m['mean']:.2%} "
+          f"{cs.fmt_ci(m['lo'], m['hi'], 4)}")
+    print(f"  audit sample {prof['rows']:,} markets across {prof['clusters']:,} events "
+          f"(bar {AGREEMENT_BAR:.0%}; interval event-clustered)")
+    ok = m["mean"] >= AGREEMENT_BAR and retained >= COVERAGE_BAR
+    print()
+    if ok:
+        print("  VERDICT: labels usable ON THE RETAINED POPULATION. Everything below is scored")
+        print("  on exactly that population.")
+    else:
+        print("  VERDICT: BLOCKED_DATA. The labels do not meet their own preregistered bar, so")
+        print("  NOTHING below is a validated calibration result. The sections still print —")
+        print("  suppressing them would hide the evidence — but they are advisory, and no")
+        print("  promotion, freeze or model choice may rest on them.")
+    return kept, ok
 
 
 def degeneracy(rows: list[dict]) -> None:
@@ -408,16 +406,80 @@ def degeneracy(rows: list[dict]) -> None:
               f"{n - z - o:>7} {(n - z - o) / n * 100:>4.1f}%")
 
 
-def compare_calibration(rows: list[dict], title: str) -> None:
+def bucket_rows(rows: list[dict], key: str) -> dict[str, list[dict]]:
+    """Group scored rows by the bucket of THIS model's probability, keeping the rows so an
+    interval can be bootstrapped over them rather than derived from counts alone."""
+    b: dict[str, list[dict]] = defaultdict(list)
+    for r in rows:
+        b[deep_bucket(r[key])].append(r)
+    order = [f"{lo:.3f}-{hi:.3f}" for lo, hi in zip(DEEP_EDGES, DEEP_EDGES[1:], strict=False)]
+    return {k: b[k] for k in order if k in b}
+
+
+def clustered_calib_table(title: str, rows: list[dict], key: str, seed: int) -> None:
+    """Calibration by probability bucket with EVENT-CLUSTERED intervals.
+
+    The point estimates are unchanged from the Poisson version. What changes is the width:
+    every market on one ladder resolves against a single spot print, so a Poisson interval
+    that treats them as independent hits is too narrow by roughly the square root of the
+    average ladder width. The bucket rows are resampled by event, keeping each ladder whole.
+    """
+    print(f"  {title}")
+    print(f"    {'modeled P bucket':<18} {'n':>7} {'ev':>5} {'expected':>10} {'observed':>9} "
+          f"{'R':>7} {'99% CI (clustered)':>22}")
+    print("    " + "-" * 86)
+    for label, rs in bucket_rows(rows, key).items():
+        st = cs.ratio_ci(rs, "event", key, "yes_resolved", seed=seed)
+        print(f"    {label:<18} {st['n']:>7} {st['clusters']:>5} {st['expected']:>10.2f} "
+              f"{st['observed']:>9} {st['r']:>7.2f} {cs.fmt_ci(st['lo'], st['hi']):>22}")
+    st = cs.ratio_ci(rows, "event", key, "yes_resolved", seed=seed)
+    print("    " + "-" * 86)
+    print(f"    {'ALL':<18} {st['n']:>7} {st['clusters']:>5} {st['expected']:>10.2f} "
+          f"{st['observed']:>9} {st['r']:>7.2f} {cs.fmt_ci(st['lo'], st['hi']):>22}")
+
+
+def evidence_structure(rows: list[dict], seed: int) -> None:
+    head("2. EVIDENCE STRUCTURE — how many independent observations are really here")
+    if not rows:
+        print("  nothing scored")
+        return
+    prof = cs.cluster_profile(rows, "event")
+    print("  A crypto ladder publishes one market per strike and settles all of them against")
+    print("  ONE spot print. If spot gapped up in the last minutes, every 'above' strike hits")
+    print("  together and every 'below' strike misses together. The independent unit is the")
+    print("  EVENT, not the market. A per-event position cap bounds exposure; it does not make")
+    print("  the markets independent observations.")
+    print()
+    print(f"  scored markets                       {prof['rows']:>10,}")
+    print(f"  distinct events                      {prof['clusters']:>10,}")
+    print(f"  markets per event   mean/p50/p90/max "
+          f"{prof['mean_size']:>6.1f} {prof['p50_size']:>5.0f} {prof['p90_size']:>5.0f} "
+          f"{prof['max_size']:>5.0f}")
+    print(f"  Kish effective events                {prof['kish_effective_clusters']:>10,.1f}   "
+          "(= events, if every ladder were the same width)")
+    print(f"  largest single event's share         {prof['largest_cluster_share']:>10.2%}")
+    print()
+    for label, fn in (("hit indicator", lambda r: 1.0 if r["yes_resolved"] else 0.0),
+                      ("spliced log loss", lambda r: log_loss(r["p_new"], r["yes_resolved"])),
+                      ("incumbent log loss", lambda r: log_loss(r["p_old"], r["yes_resolved"]))):
+        d = cs.design_effect(rows, "event", fn, seed=seed)
+        print(f"  design effect on {label:<22} {d['deff']:>8.1f}   "
+              f"effective n {d['n_eff']:>10,.0f}  (nominal {d['n']:,})")
+    print()
+    print("  A design effect of D means an interval computed as if the rows were independent")
+    print("  is about sqrt(D) times too narrow. Every interval below is event-clustered.")
+
+
+def compare_calibration(rows: list[dict], title: str, seed: int) -> None:
     head(title)
     print("  A tail 'hits' when YES resolves — the side theta sells. R = observed / modeled.")
     print("  The 0.000-0.020 rows are the test: this is a short-tail book and they are where it")
-    print("  lives. Intervals are two-sided 99% Poisson.")
+    print("  lives. Buckets are each model's OWN output, so the two tables are descriptions of")
+    print("  two different partitions — they are NOT a comparison. Section 5 is the comparison.")
     print()
-    calib_table("INCUMBENT (empirical frequency):", calib(rows, "p_old"), "modeled P bucket")
+    clustered_calib_table("INCUMBENT (empirical frequency):", rows, "p_old", seed)
     print()
-    calib_table("SPLICED (empirical body + fitted GPD tails):", calib(rows, "p_new"),
-                "modeled P bucket")
+    clustered_calib_table("SPLICED (empirical body + fitted GPD tails):", rows, "p_new", seed)
 
 
 def log_loss(p: float, outcome: bool, eps: float = 1e-9) -> float:
@@ -519,14 +581,15 @@ def sweep(rows_by_cfg: dict[tuple[float, float], list[dict]], train_end: str
     return best
 
 
-def test_once(rows: list[dict], train_end: str, cfg: tuple[float, float]) -> None:
-    """The frozen configuration scored on the held-back period.
+def test_once(rows: list[dict], train_end: str, cfg: tuple[float, float],
+              seed: int) -> list[dict]:
+    """The frozen configuration scored on the held-back period. Returns the scored TEST rows so
+    the paired comparison runs on exactly this population.
 
-    Labelled HISTORICAL VALIDATION rather than a pristine holdout, deliberately. Run `refit-7`
-    exposed results from this same August period BEFORE the selection statistic and coverage rule
-    were changed for `refit-8`, so the window has informed the scoring design and cannot also
-    certify it. A genuine one-look holdout has to be a period that comes AFTER the specification
-    is frozen; see the reservation in the write-up.
+    Labelled HISTORICAL VALIDATION rather than a pristine holdout, deliberately. Earlier runs
+    reported results from this same August period BEFORE the selection statistic and coverage
+    rule were fixed, so the window has informed the scoring design and cannot also certify it.
+    A genuine one-look holdout has to be a period that comes AFTER the specification is frozen.
     """
     head("4. HISTORICAL VALIDATION — frozen configuration on the held-back period")
     print("  NOT a pristine holdout: this period was seen before the scoring rule was fixed.")
@@ -536,18 +599,102 @@ def test_once(rows: list[dict], train_end: str, cfg: tuple[float, float]) -> Non
           f"test quotes with a powered fit: {len(rs)}")
     if not rs:
         print("  no powered fits in the TEST period — no out-of-sample score exists.")
-        return
+        return []
     print()
-    calib_table("SPLICED, out of sample:", calib(rs, "p_new"), "modeled P bucket")
+    clustered_calib_table("SPLICED, out of sample:", rs, "p_new", seed)
     print()
-    calib_table("INCUMBENT, same quotes:", calib(rs, "p_old"), "modeled P bucket")
+    clustered_calib_table("INCUMBENT, same quotes:", rs, "p_old", seed)
+    print()
+    print("  Read these as two separate descriptions. Whether either model is BETTER is the")
+    print("  paired question in section 5, not a comparison of these two R columns.")
+    return rs
 
 
-def selection(rows: list[dict]) -> None:
-    head("5. SELECTION — the diagnosis's split, recomputed under each model's own excess")
+def paired_comparison(rows: list[dict], seed: int, when: str) -> str:
+    """The comparison between the two models. Everything else describes them separately.
+
+    WHY PAIRED. Both models priced the SAME markets, so their errors share every source of
+    market-to-market variation — which strike, which hour, how far spot happened to travel.
+    Differencing per market removes all of it and leaves only the part attributable to the
+    models. Reading two separately-computed intervals and concluding a difference because one
+    excludes some reference value and the other does not is not a test: overlapping intervals
+    routinely hide a real paired difference, and separated ones can manufacture one.
+
+    WHY NOT AGGREGATE R. R = observed/expected rewards a model for predicting exactly zero: a
+    zero costs nothing in the denominator no matter what happens. A model that declares most
+    of its universe impossible can therefore post an excellent aggregate R while being useless
+    on the markets it refuses to price. A proper scoring rule cannot be gamed that way, because
+    it is minimised in expectation only by the true probability.
+    """
+    head(f"5. PAIRED MODEL COMPARISON — the same markets, both models ({when})")
+    common = [r for r in rows if (r["mid"] or 999) <= COMMON_POPULATION_MAX_MID]
+    if not common:
+        print("  no quotes in the common population — no comparison exists")
+        return "no data"
+    prof = cs.cluster_profile(common, "event")
+    print(f"  population: powered quotes with yes mid <= {COMMON_POPULATION_MAX_MID:.0f}c, "
+          "fixed by the market's own price and identical for both models.")
+    print(f"  n = {prof['rows']:,} markets across {prof['clusters']:,} events "
+          f"(Kish effective events {prof['kish_effective_clusters']:.1f})")
+    print()
+    print(f"  {'weighting':<12} {'model':<12} {'mean log loss':>16} {'mean Brier':>14}")
+    print("  " + "-" * 58)
+    for ew, wlabel in ((False, "market"), (True, "event")):
+        for mlabel, key in (("incumbent", "p_old"), ("spliced", "p_new")):
+            ll = cs.mean_ci(common, "event", lambda r, k=key: log_loss(r[k], r["yes_resolved"]),
+                            seed=seed, event_weighted=ew)
+            br = cs.mean_ci(common, "event", lambda r, k=key: brier(r[k], r["yes_resolved"]),
+                            seed=seed, event_weighted=ew)
+            print(f"  {wlabel:<12} {mlabel:<12} {ll['mean']:>16.5f} {br['mean']:>14.5f}")
+    print()
+    print("  PAIRED DIFFERENCE, spliced minus incumbent. Negative favours the spliced model;")
+    print("  an interval containing zero establishes nothing. Event-clustered, 99%.")
+    print()
+    print(f"  {'weighting':<12} {'statistic':<12} {'difference':>14} "
+          f"{'99% CI (clustered)':>26}  {'favours':<10}")
+    print("  " + "-" * 82)
+    verdicts: list[str] = []
+    for ew, wlabel in ((False, "market"), (True, "event")):
+        for slabel, fn in (
+                ("log loss", lambda r: (log_loss(r["p_new"], r["yes_resolved"])
+                                        - log_loss(r["p_old"], r["yes_resolved"]))),
+                ("brier", lambda r: (brier(r["p_new"], r["yes_resolved"])
+                                     - brier(r["p_old"], r["yes_resolved"])))):
+            d = cs.paired_mean_ci(common, "event", fn, seed=seed, event_weighted=ew)
+            verdicts.append(d["favors"])
+            print(f"  {wlabel:<12} {slabel:<12} {d['mean']:>14.5f} "
+                  f"{cs.fmt_ci(d['lo'], d['hi'], 5):>26}  {d['favors']:<10}")
+    print()
+    uniq = set(verdicts)
+    if uniq == {"candidate"}:
+        verdict = "the spliced model is better on every weighting and both proper scores"
+    elif uniq == {"reference"}:
+        verdict = "the incumbent is better on every weighting and both proper scores"
+    elif uniq == {"neither"}:
+        verdict = ("the models fail differently; superiority is not established. Every paired "
+                   "difference is compatible with zero once the shared event is respected")
+    else:
+        verdict = ("MIXED — the answer depends on the weighting or the score, so no single "
+                   "model is established as better: " + ", ".join(sorted(uniq)))
+    print(f"  VERDICT: {verdict}.")
+    print()
+    print("  Extreme-tail calibration for BOTH models on this same population follows. Each")
+    print("  table is bucketed by its own model's output, so they partition the population")
+    print("  differently and are descriptions, not the comparison above.")
+    print()
+    clustered_calib_table("INCUMBENT:", common, "p_old", seed)
+    print()
+    clustered_calib_table("SPLICED:", common, "p_new", seed)
+    return verdict
+
+
+def selection(rows: list[dict], seed: int) -> None:
+    head("6. SELECTION — the diagnosis's split, recomputed under each model's own excess")
     print(f"  A quote is SELECTED when mid - 100*P >= {THETA4_EDGE_CENTS:.0f}c, mid is in")
     print(f"  {THETA4_BAND[0]:.0f}..{THETA4_BAND[1]:.0f}c and volume >= {THETA_MIN_VOLUME:.0f}.")
     print("  Each model is judged by the trades IT would have chosen, not by the incumbent's.")
+    print("  The two SELECTED sets are DIFFERENT populations of different sizes, so their Rs")
+    print("  are not comparable to each other — only to their own REJECTED complement.")
     for label, key in (("INCUMBENT", "p_old"), ("SPLICED", "p_new")):
         sel_, rej = [], []
         for r in rows:
@@ -558,17 +705,16 @@ def selection(rows: list[dict]) -> None:
             (sel_ if ok else rej).append(r)
         print()
         for name, rs in ((f"{label} SELECTED", sel_), (f"{label} REJECTED", rej)):
-            exp = sum(r[key] for r in rs)
-            obs = sum(1 for r in rs if r["yes_resolved"])
-            rr = obs / exp if exp > 0 else float("nan")
-            lo, hi = poisson_ratio_ci(obs, exp)
-            ci = f"[{lo:.2f}, {hi:.2f}]" if lo is not None else "n/a"
-            print(f"    {name:<22} n={len(rs):>6}  expected={exp:>8.2f}  observed={obs:>5}  "
-                  f"R={rr:>6.2f}  99% CI {ci}")
+            st = cs.ratio_ci(rs, "event", key, "yes_resolved", seed=seed)
+            print(f"    {name:<22} n={st['n']:>6}  ev={st['clusters']:>5}  "
+                  f"expected={st['expected']:>8.2f}  observed={st['observed']:>5}  "
+                  f"R={st['r']:>6.2f}  99% CI {cs.fmt_ci(st['lo'], st['hi'])}")
     print()
     print("  Stage 3's question is what REMAINS after calibration is repaired. A SELECTED R that")
     print("  falls but stays above REJECTED is residual selection bias, and no re-fit removes")
-    print("  it — that is what the stage-4 selection-rule A/B is for.")
+    print("  it — that is what the stage-4 selection-rule A/B is for. Intervals are")
+    print("  event-clustered: a SELECTED set concentrated in a few ladders carries far less")
+    print("  evidence than its market count suggests.")
 
 
 def fit_health(rows: list[dict]) -> None:
@@ -583,18 +729,26 @@ def fit_health(rows: list[dict]) -> None:
     print(f"  {'quantity':<34} {'p10':>10} {'p50':>10} {'p90':>10}")
     print("  " + "-" * 68)
     for label, key in (("non-overlapping blocks", "blocks"),
+                       ("expected block slots", "expected_blocks"),
+                       ("block coverage", "block_coverage"),
+                       ("longest window gap (min)", "max_gap_min"),
                        ("upper-tail declustered exceedances", "upper_clusters"),
                        ("lower-tail declustered exceedances", "lower_clusters"),
                        ("upper xi", "upper_xi"), ("lower xi", "lower_xi")):
         vals = [r[key] for r in rows]
-        fmt = "{:>10.3f}" if "xi" in key else "{:>10.0f}"
+        fmt = ("{:>10.3f}" if ("xi" in key or "coverage" in key)
+               else "{:>10.1f}" if "gap" in key else "{:>10.0f}")
         print(f"  {label:<34} " + " ".join(fmt.format(pct(vals, q)) for q in (.1, .5, .9)))
     powered = sum(1 for r in rows if r["powered"])
     print()
     print(f"  quotes whose ACTIVE tail is powered: {powered}/{len(rows)} "
           f"({powered / len(rows) * 100:.1f}%)")
     print(f"  bar: >= {tm.MIN_TAIL_EXCEEDANCES_FOR_POWER} declustered exceedances on the tail")
-    print(f"  the strike prices off, run separation {tm.RUN_SEPARATION} blocks.")
+    print(f"  the strike prices off (run separation {tm.RUN_SEPARATION} blocks), AND block")
+    print(f"  coverage >= {tm.MIN_BLOCK_COVERAGE:.0%} of the requested window. Same predicate")
+    print("  the live shadow uses to decide whether a probability may be recorded at all.")
+    tail_only = sum(1 for r in rows if r.get("tail_powered") and not r["powered"])
+    print(f"  fits with a powered tail but an INCOMPLETE window: {tail_only}")
     neg = [r for r in rows if (r["active_xi"] or 0) < 0]
     print(f"  fits with a BOUNDED active tail (xi < 0): {len(neg) / len(rows) * 100:.1f}% — "
           "extrapolated with max(xi, 0).")
@@ -620,7 +774,17 @@ def main(argv: list[str] | None = None) -> int:
                          "ladder = ~5-minute reconstruction, too sparse to fit blocks on")
     ap.add_argument("--vol-mult", type=float, default=1.0,
                     help="incumbent's vol_mult (1.0 = base model, 2.0 = theta4's)")
+    ap.add_argument("--seed", type=int, default=cs.DEFAULT_SEED,
+                    help="cluster-bootstrap seed. Fixed so a recorded run reproduces its own "
+                         "intervals exactly; an analysis whose uncertainty moves between runs "
+                         "cannot be a frozen result.")
     args = ap.parse_args(argv)
+
+    # Provenance, printed first so the recorded output identifies exactly what produced it.
+    print("command: theta_tail_refit " + " ".join(
+        argv if argv is not None else sys.argv[1:]))
+    print("commit:  " + (os.environ.get("GITHUB_SHA") or "unknown (not run from CI)"))
+    print(f"seed:    {args.seed}")
 
     url = _to_libpq_url(os.environ.get("DATABASE_URL_RO") or os.environ.get("DATABASE_URL") or "")
     if not url:
@@ -643,6 +807,7 @@ def main(argv: list[str] | None = None) -> int:
         conn.read_only = True
         with conn.cursor() as cur:
             quotes = load_quotes(cur, args.since, 35.0)
+            truth = load_recorded_truth(cur, args.since)
             spot = (None if args.spot_source == "coinbase"
                     else load_spot(cur, spot_since, args.spot_source))
     if spot is None:
@@ -654,6 +819,13 @@ def main(argv: list[str] | None = None) -> int:
     print(f"ladder quotes with a derivable outcome and mid <= 40c: {len(quotes)}")
     print(f"incumbent window fixed at {INCUMBENT_TRAIL_DAYS:.0f}d; paper fit windows: "
           + ", ".join(f"{d:.0f}d" for d in fds))
+
+    # The label gate runs BEFORE anything is scored, so every configuration and every section
+    # below describes one population: the markets whose derived outcome can be trusted.
+    quotes, labels_ok = label_quality(quotes, truth, residual_scale(spot), args.seed)
+    if not quotes:
+        print("no markets survive the near-strike exclusion — nothing to score", file=sys.stderr)
+        return 1
 
     by_cfg: dict[tuple[float, float], list[dict]] = {}
     for fd in fds:
@@ -676,19 +848,35 @@ def main(argv: list[str] | None = None) -> int:
               "meaningful, so nothing is reported.", file=sys.stderr)
         return 1
     degeneracy(widest)
+    evidence_structure(widest, args.seed)
+    compare_calibration(widest, "3. CALIBRATION — each model on the full retained period",
+                        args.seed)
 
     frozen = sweep(by_cfg, args.train_end)
+    test_rows: list[dict] = []
     if frozen is None:
         head("4. OUT-OF-SAMPLE SCORE — withheld")
         print("  No configuration was frozen on TRAIN, so there is nothing to score on TEST.")
         print("  Reporting a TEST number here would be choosing on the test set.")
     else:
-        test_once(by_cfg[frozen], args.train_end, frozen)
+        test_rows = test_once(by_cfg[frozen], args.train_end, frozen, args.seed)
 
     primary = by_cfg[frozen] if frozen else widest
     powered = [r for r in primary if r["powered"]]
-    selection(powered if powered else primary)
+    verdict = paired_comparison(test_rows if test_rows else powered, args.seed,
+                                "held-back period" if test_rows else "full retained period")
+    selection(powered if powered else primary, args.seed)
     fit_health(primary)
+
+    head("7. WHAT THIS RUN ESTABLISHES")
+    print(f"  paired model comparison: {verdict}.")
+    if labels_ok:
+        print("  outcome labels: PASS on the retained population.")
+    else:
+        print("  outcome labels: BLOCKED_DATA — the derived outcome does not meet its own")
+        print("  preregistered agreement/coverage bar, so no section above is a validated")
+        print("  calibration result and no model may be chosen on them.")
+    print("  No book is changed by this script. theta prices off SpotModel exactly as before.")
     return 0
 
 

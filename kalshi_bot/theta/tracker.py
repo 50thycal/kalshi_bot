@@ -67,6 +67,10 @@ class ThetaCycleSummary:
     live_retry_drifted: int = 0  # retry declined: market moved off the first attempt's price
     per_series: dict[str, int] = field(default_factory=dict)
     per_book: dict[str, int] = field(default_factory=dict)
+    # Shadow-model cost, so the research rider's budget is observable rather than assumed.
+    shadow_fits: int = 0
+    shadow_ms: float = 0.0
+    shadow_budget_hit: bool = False
 
 
 def _price_c(market: dict, key: str) -> float | None:
@@ -129,6 +133,12 @@ class ThetaTracker:
         # Replacement-model fits, keyed by (model, minute, horizon) — telemetry only, cleared
         # once per cycle. See `_spliced`.
         self._spliced_cache: dict[tuple, object] = {}
+        # Per-cycle shadow cost, reset at the top of every run_once. The horizon grid already
+        # bounds the work to at most len(H_BUCKETS) fits per product per cycle; this is the
+        # belt-and-braces guard that keeps a pathological window from delaying a scan.
+        self._shadow_ms = 0.0
+        self._shadow_fits = 0
+        self._shadow_budget_hit = False
 
     # -- spot maintenance ---------------------------------------------------
     def _refresh_spot(self, session, product: str) -> SpotModel | None:
@@ -234,38 +244,55 @@ class ThetaTracker:
                 "reached": datetime.fromtimestamp(cursor, tz=timezone.utc).isoformat()}})
         return written
 
-    def _spliced(self, model: SpotModel, now_unix: int, h_min: int):
+    def _spliced(self, model: SpotModel, now_unix: int, tte_min: float):
         """The PAPER replacement model for this horizon, fitted once per (cycle, horizon).
 
-        Two things this must get right, both of which an earlier version got wrong:
+        Every choice here is imported from `tailmodel`, which owns the frozen specification;
+        none of it is re-decided locally. That is the point: the offline harness that produces
+        a verdict and this shadow that would produce the traded number call the same
+        definitions of horizon bucketing, block construction, tail quantile and power, so the
+        probability that gets validated is the probability that would run.
 
-        * it fits NON-OVERLAPPING blocks (`block_returns`), not the overlapping returns the
-          incumbent counts — otherwise one shock enters the fit as ~h neighbouring extremes;
-        * it fits over `theta_spliced_fit_days`, NOT the incumbent's `theta_trail_days`. The
-          first draft retained 90 days and still fitted on 5, so every claim about what
-          retention bought was false.
+        Three things an earlier version got wrong, all of them silent:
 
-        A ladder cycle prices hundreds of strikes across a handful of distinct minutes-to-close,
-        and the fit depends only on the horizon, so it is cached per (cycle, horizon).
+        * it fitted OVERLAPPING returns, so one shock entered the sample ~h times;
+        * it fitted over the incumbent's 5-day window while labelling the result 90;
+        * it fitted at whatever integer minutes-to-close the market showed, while the harness
+          fitted on a 10..35 grid — so the two were never scoring the same model.
+
+        A ladder cycle prices hundreds of strikes across a handful of distinct horizons, and
+        the fit depends only on the bucketed horizon, so it is cached per (cycle, bucket).
         """
         s = self.settings
         if model is None:
             return None
+        h_min = tailmodel.h_bucket(max(1.0, float(tte_min)))
         key = (id(model), now_unix // 60, h_min)
         if key in self._spliced_cache:
             return self._spliced_cache[key]
+        budget = float(getattr(s, "theta_spliced_budget_ms", 0.0) or 0.0)
+        if budget > 0 and self._shadow_ms >= budget:
+            # Out of research budget for this cycle. A gap in a shadow series is recoverable;
+            # a late quote is not. Nothing is cached, so the next cycle starts clean.
+            self._shadow_budget_hit = True
+            return None
+        started = time.perf_counter()
         try:
             requested = float(s.theta_spliced_fit_days)
-            blocks = model.block_returns(now_unix, h_min, window_days=requested)
-            # ACTUAL span of the closes this object holds, which is what the fit really saw.
-            # Recorded beside the requested window so a shadow probability can never claim a
-            # history it did not have — a cold start or a partial backfill shows up as a short
-            # `actual_fit_days` instead of a silently mislabelled 90.
+            blocks, meta = model.block_sample(now_unix, h_min, window_days=requested)
+            # ACTUAL span of the closes this object holds, recorded beside the requested window
+            # so a shadow probability can never claim a history it did not have. `expected_blocks`
+            # is the other half of that: a window can SPAN ninety days and still be half holes,
+            # and only the block count can tell you which.
             actual = ((max(model.closes) - min(model.closes)) / 86400.0) if model.closes else 0.0
-            built = tailmodel.build(blocks, h_min, fit_days=min(requested, actual),
-                                    requested_fit_days=requested)
+            built = tailmodel.build(
+                blocks, h_min, tail_q=float(s.theta_spliced_tail_q),
+                fit_days=min(requested, actual), requested_fit_days=requested,
+                expected_blocks=meta["expected_blocks"], max_gap_min=meta["max_gap_min"])
         except Exception:  # noqa: BLE001 — telemetry must never break a trading cycle
             built = None
+        self._shadow_ms += (time.perf_counter() - started) * 1000.0
+        self._shadow_fits += 1
         # One cycle's worth; the ids and minutes move on and the dict would otherwise grow.
         if len(self._spliced_cache) > 64:
             self._spliced_cache.clear()
@@ -453,6 +480,9 @@ class ThetaTracker:
         s = self.settings
         summ = ThetaCycleSummary()
         now_unix = int(time.time())
+        self._shadow_ms = 0.0
+        self._shadow_fits = 0
+        self._shadow_budget_hit = False
         # In collect-only (shelved) mode, only these variant tags may still trade; the rest of
         # the family snapshots only. Empty set => fully shelved.
         live_tags = s.theta_live_variant_set if s.theta_collect_only else None
@@ -554,23 +584,29 @@ class ThetaTracker:
                 # an out-of-sample window to be validated on.
                 sp: dict = {}
                 if shadow_model is not None:
-                    sm = self._spliced(shadow_model, now_unix, max(1, int(tte_min)))
+                    sm = self._spliced(shadow_model, now_unix, tte_min)
                     if sm is not None:
                         # A probability is only WRITTEN when the tail it prices off is
-                        # genuinely backed. The metadata is written either way, so an
-                        # unpowered cycle is visible as such rather than absent — but the
-                        # number itself stays NULL, because a floor-dominated value that
-                        # looks like an estimate is worse than no value at all.
+                        # genuinely backed AND its window is complete enough to have found the
+                        # evidence. The metadata is written either way, so a refusing cycle is
+                        # visible as such rather than absent — but the number itself stays
+                        # NULL, because a value that looks like an estimate and is not is worse
+                        # than no value at all.
                         powered = sm.powered_for(strike_type)
+                        emit = sm.emittable_for(strike_type)
                         sp = {
                             "spliced_model_p": (tailmodel.p_yes(
                                 sm, shadow_model.spot_at(now_unix), strike_type,
-                                floor_k, cap_k) if powered else None),
+                                floor_k, cap_k) if emit else None),
                             "spliced_active_xi": sm.active_xi(strike_type),
                             "spliced_upper_xi": sm.upper.xi,
                             "spliced_lower_xi": sm.lower.xi,
                             "spliced_active_clusters": sm.active_clusters(strike_type),
                             "spliced_blocks": sm.n,
+                            "spliced_expected_blocks": sm.expected_blocks,
+                            "spliced_block_coverage": sm.block_coverage,
+                            "spliced_max_gap_min": sm.max_gap_min,
+                            "spliced_horizon_min": sm.horizon_min,
                             "spliced_fit_days": sm.fit_days,
                             "spliced_requested_fit_days": sm.requested_fit_days,
                             "spliced_tail_q": sm.tail_q,
@@ -834,4 +870,12 @@ class ThetaTracker:
             summ.snapshot_rows = repo.insert_crypto_ladder_snapshots(
                 session, snapshot_rows[: s.theta_snapshot_rows_cap]
             )
+        summ.shadow_fits = self._shadow_fits
+        summ.shadow_ms = round(self._shadow_ms, 1)
+        summ.shadow_budget_hit = self._shadow_budget_hit
+        if self._shadow_budget_hit:
+            logger.warning("theta: shadow fit budget exhausted; probabilities withheld for the "
+                           "rest of the cycle", extra={"extra_fields": {
+                               "fits": self._shadow_fits, "ms": round(self._shadow_ms, 1),
+                               "budget_ms": float(self.settings.theta_spliced_budget_ms)}})
         return summ

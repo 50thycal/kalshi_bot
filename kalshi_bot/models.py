@@ -878,6 +878,17 @@ class CryptoLadderSnapshot(Base):
     # this probability is an estimate or a resolution floor.
     spliced_active_clusters: Mapped[int | None] = mapped_column(Integer)
     spliced_blocks: Mapped[int | None] = mapped_column(Integer)   # non-overlapping blocks fitted
+    # Window COMPLETENESS, which the span below cannot express: a window can reach ninety days
+    # back and still be a third holes. `spliced_expected_blocks` is how many block slots the
+    # requested window contains, so coverage = blocks / expected. `spliced_max_gap_min` is the
+    # longest contiguous hole. A row below the frozen coverage bar carries no probability.
+    spliced_expected_blocks: Mapped[int | None] = mapped_column(Integer)
+    spliced_block_coverage: Mapped[float | None] = mapped_column(Float)
+    spliced_max_gap_min: Mapped[float | None] = mapped_column(Float)
+    # The BUCKETED horizon the fit was actually built at, which is not the market's raw
+    # minutes_to_close. Recorded because the offline harness and the runtime must agree on it,
+    # and a stored probability is uninterpretable without knowing which horizon produced it.
+    spliced_horizon_min: Mapped[int | None] = mapped_column(Integer)
     # ACTUAL span of history the fit saw, and what was ASKED for. They differ on a cold start
     # or a partial backfill, and an earlier version recorded only the request — so a fit over
     # five days of closes was stored as though it had ninety.
