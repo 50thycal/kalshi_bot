@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_freeze_study","args":["--max-event-pages","4","--max-markets","30","--trade-pages","1","--open-pages","80","--depth-samples","6"],"id":"lo-x3-study-1"}
+{"type":"db","sql":"select strategy, count(*) as n, count(experiment_deployment_arm_id) as stamped, min(created_at) as first_at, max(created_at) as last_at from paper_trades where strategy like 'freeze%' group by strategy order by strategy","max_rows":50,"id":"lo-x3-db-trades"}
