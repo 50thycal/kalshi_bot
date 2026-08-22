@@ -1,1 +1,1 @@
-{"type":"db","id":"dep-ev-1","sql":"select e.event_type, e.actor, e.actor_role, e.occurred_at from experiment_issue_events e join experiment_issues i on i.id=e.issue_id where i.issue_key='XOS-000003' order by e.id"}
+{"type":"xos","command":"issue-candidates","args":["--json"],"id":"dep-cover-1"}
