@@ -82,17 +82,26 @@ _SOURCE_PATTERNS = (
         r"court (filing|docket)|sec filing", re.I)),
 )
 
+# Patterns read against the corpus they classify (run `tax-3` dumped it verbatim), not guessed.
+# The first draft matched a bare "at 8:10 PM EDT" as SCHEDULED, which is a game START time —
+# Kalshi writes "the game originally scheduled for Aug 22, 2026 at 8:10 PM EDT" on in-play
+# markets, so that pattern proposed `scheduled` for MLB player props and KBO baseball. A bare
+# clock time does not discriminate; genuinely scheduled markets say what CLOSE they settle to.
 _RULES_PATTERNS = (
     (SCHEDULED, re.compile(
-        r"\bat \d{1,2}:\d{2}\s*(am|pm)?\s*(et|est|edt|utc)|closing (price|level|value)|"
-        r"as of \d{1,2}:\d{2}|scheduled (release|print|announcement)|"
-        r"settlement (price|value|time)", re.I)),
+        r"end-of-day .{0,40}(value|price|level)|close price of the|"
+        r"closing (price|level|value)|settles? to the .{0,30}clos|"
+        r"official (settlement|closing) (price|value)|"
+        r"first release of the data|as reported by .{0,40}at \d{1,2}:\d{2}", re.I)),
     (IN_PLAY, re.compile(
-        r"final score|wins? the (game|match|contest|series)|defeats?|at the end of (the )?"
-        r"(game|match|regulation|contest)|full ?time|end of the \d+(st|nd|rd|th)", re.I)),
+        r"after 90 minutes plus stoppage time|originally scheduled for|"
+        r"final score|wins? the .{0,60}(game|match|contest|series|championship|tournament)|"
+        r"records? \d+\+|at the end of (the )?(game|match|regulation|contest)|"
+        r"full ?time|end of the \d+(st|nd|rd|th)|at any point during|"
+        r"if (this|the) (game|match) is postponed", re.I)),
     (DISCRETE, re.compile(
-        r"on or before|announce[sd]?|is confirmed|resigns?|steps? down|is (nominated|indicted)|"
-        r"before \w+ \d{1,2}", re.I)),
+        r"on or before|is (nominated|indicted|confirmed)|resigns?|steps? down|"
+        r"is eliminated|announce[sd]? (that|the)", re.I)),
 )
 
 # An expiration essentially AT the close is the signature of a scheduled settle. Kalshi sets a
@@ -293,14 +302,14 @@ def prefix_evidence(rows: list[dict], text: dict[str, dict], late: dict[str, flo
                   else SCHEDULED if late_mid <= LATE_MIDBOOK_SCHEDULED else None)
 
     early = [b.get("can_close_early") for b in blobs if b.get("can_close_early") is not None]
-    # Kalshi sets `can_close_early` on a market that resolves when its underlying event
-    # concludes rather than at a scheduled instant. That is what in-play MEANS, and it is
-    # Kalshi's own field rather than an inference from price shape.
-    early_mode = (None if not early
-                  else IN_PLAY if sum(1 for e in early if e) / len(early) >= 0.8
-                  else SCHEDULED if sum(1 for e in early if e) / len(early) <= 0.2 else None)
+    early_share = (sum(1 for e in early if e) / len(early)) if early else None
+    # `can_close_early` was tried as a strong signal on the theory that Kalshi sets it on
+    # markets resolving when their event concludes. Run `tax-2` refuted that: it proposed
+    # in_play for KXINX and KXNASDAQ100 — index-close markets, unambiguously scheduled — and
+    # simultaneously blocked four prefixes whose RULES TEXT said scheduled, because the flag
+    # disagreed. Kalshi evidently sets it broadly. It is reported and it votes on nothing.
     return {
-        "early_mode": early_mode,
+        "early_share": early_share,
         "markets": len(rows),
         "events": cs.cluster_profile(
             [{"ev": r["ticker"].rsplit("-", 1)[0]} for r in rows], "ev")["clusters"],
@@ -323,7 +332,7 @@ def propose(ev: dict) -> tuple[str, str]:
     """
     if ev["markets"] < MIN_MARKETS_TO_PROPOSE:
         return "INSUFFICIENT_EVIDENCE", f"only {ev['markets']} markets in the population"
-    strong = [m for m in (ev["source"][0], ev["rules"][0], ev.get("early_mode")) if m]
+    strong = [m for m in (ev["source"][0], ev["rules"][0]) if m]
     if not strong:
         weak = [m for m in (ev["gap_mode"], ev["shape_mode"]) if m]
         if weak:
@@ -332,25 +341,28 @@ def propose(ev: dict) -> tuple[str, str]:
                 "rules text to confirm it")
         return "INSUFFICIENT_EVIDENCE", "no settlement source, rules text or shape signal"
     if len(set(strong)) > 1:
-        named = ", ".join(f"{n} says {m}" for n, m in (
-            ("settlement source", ev["source"][0]), ("rules text", ev["rules"][0]),
-            ("can_close_early", ev.get("early_mode"))) if m)
-        return "INSUFFICIENT_EVIDENCE", f"strong signals disagree: {named}"
+        return "INSUFFICIENT_EVIDENCE", (
+            f"settlement source says {ev['source'][0]}, rules text says {ev['rules'][0]}")
     mode = strong[0]
     corroborating = [m for m in (ev["gap_mode"], ev["shape_mode"]) if m]
-    if any(m != mode for m in corroborating):
+    # A weak signal only blocks when it stands ALONE against the text. Two corroborators that
+    # disagree with each other cancel: an earlier version let either one veto, so a prefix whose
+    # expiration gap agreed with the rules text and whose price path did not came back
+    # INSUFFICIENT even though the evidence was, on balance, consistent.
+    against = [m for m in corroborating if m != mode]
+    if against and not any(m == mode for m in corroborating):
         return "INSUFFICIENT_EVIDENCE", (
             f"text says {mode} but the price path/expiration says "
-            f"{'/'.join(sorted({m for m in corroborating if m != mode}))}")
-    agree = "corroborated by " + " + ".join(
-        n for n, m in (("expiration gap", ev["gap_mode"]), ("price path", ev["shape_mode"]))
-        if m == mode) if corroborating else "no corroborating shape evidence"
-    which = ("settlement source" if ev["source"][0]
-             else "rules text" if ev["rules"][0] else "can_close_early")
-    votes = ev["source"] if ev["source"][0] else ev["rules"] if ev["rules"][0] else None
-    detail = (f"{votes[1]:.0%} of {votes[2]} texts" if votes
-              else "Kalshi's own early-close flag")
-    return mode, f"{which} ({detail}); {agree}"
+            f"{'/'.join(sorted(set(against)))}")
+    agreeing = [n for n, m in (("expiration gap", ev["gap_mode"]),
+                               ("price path", ev["shape_mode"])) if m == mode]
+    agree = ("corroborated by " + " + ".join(agreeing) if agreeing
+             else "no corroborating shape evidence")
+    if against:
+        agree += f" ({'/'.join(sorted(set(against)))} disagrees)"
+    which = "settlement source" if ev["source"][0] else "rules text"
+    votes = ev["source"] if ev["source"][0] else ev["rules"]
+    return mode, f"{which} ({votes[1]:.0%} of {votes[2]} texts); {agree}"
 
 
 # --- report ------------------------------------------------------------------------------------------
@@ -394,6 +406,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--since", default=None)
     ap.add_argument("--until", default=None)
     ap.add_argument("--top", type=int, default=60, help="unknown prefixes to detail")
+    ap.add_argument("--dump-text", action="store_true",
+                    help="print Kalshi's title, rules and settlement source verbatim for each "
+                         "prefix. THIS is the Platform Change Review package: a human reading "
+                         "Kalshi's own words decides each mode, and the automated proposal is "
+                         "a reading aid beside it, not the decision.")
     ap.add_argument("--no-fetch", action="store_true",
                     help="skip the Kalshi metadata fetch. `markets` holds no row for any of "
                          "these tickers, so this leaves the audit with shape evidence only "
@@ -459,12 +476,15 @@ def main(argv: list[str] | None = None) -> int:
           f"{covered / len(unknown):.1%} of unclassified markets")
 
     head("3. EVIDENCE AND PROPOSAL — one row per prefix, signals shown beside the proposal")
-    print("  Signals: SRC = Kalshi's settlement_source text; RULES = title + rules_summary;")
+    print("  Signals: SRC = Kalshi's settlement_source text; RULES = title + rules text;")
     print("  GAP = median |expiration - close| hours; PATH = share still quoting 15-85c at the")
-    print("  last tick. SRC and RULES are STRONG; GAP and PATH corroborate but cannot decide.")
+    print("  last tick; EARLY = share with can_close_early set. SRC and RULES are STRONG; GAP")
+    print("  and PATH corroborate but cannot decide; EARLY is reported and votes on nothing —")
+    print("  run tax-2 showed Kalshi sets it on index-close markets too, so it does not")
+    print("  discriminate settlement mode.")
     print()
-    print(f"  {'prefix':<26} {'mkts':>6} {'SRC':>10} {'RULES':>10} {'GAP h':>8} {'PATH':>7}  "
-          f"{'PROPOSED':<22}")
+    print(f"  {'prefix':<26} {'mkts':>6} {'SRC':>10} {'RULES':>10} {'GAP h':>8} {'PATH':>7} "
+          f"{'EARLY':>7}  {'PROPOSED':<22}")
     print("  " + "-" * 100)
     proposals: list[tuple[str, int, str, str]] = []
     for prefix, rs in ranked[:args.top]:
@@ -473,11 +493,29 @@ def main(argv: list[str] | None = None) -> int:
         proposals.append((prefix, ev["markets"], mode, why))
         gap = f"{ev['median_gap_h']:.1f}" if ev["median_gap_h"] is not None else "-"
         path = f"{ev['late_midbook']:.0%}" if ev["late_midbook"] is not None else "-"
+        _early = f"{ev['early_share']:.0%}" if ev["early_share"] is not None else "-"
         print(f"  {prefix:<26} {ev['markets']:>6,} {ev['source'][0] or '-':>10} "
-              f"{ev['rules'][0] or '-':>10} {gap:>8} {path:>7}  {mode:<22}")
+              f"{ev['rules'][0] or '-':>10} {gap:>8} {path:>7} {_early:>7}  {mode:<22}")
     print()
     for prefix, _n, mode, why in proposals:
         print(f"  {prefix:<26} {mode:<22} {why}")
+
+    if args.dump_text and fetched:
+        head("3B. KALSHI'S OWN WORDS — the evidence, verbatim, for a human to read")
+        print("  One representative market per series. Settlement mode is a property of the")
+        print("  SERIES, so this answers for every market under the prefix.")
+        for prefix, _rs in ranked[:args.top]:
+            blob = fetched.get(prefix)
+            if not blob:
+                continue
+            print()
+            print(f"  {prefix}  ({len(groups[prefix])} markets)")
+            for label, key in (("title", "title"), ("source", "source"), ("rules", "rules")):
+                val = " ".join((blob.get(key) or "").split())
+                if val:
+                    print(f"    {label:<8} {val[:400]}")
+            if blob.get("can_close_early") is not None:
+                print(f"    {'early':<8} can_close_early={blob['can_close_early']}")
 
     head("4. PACKAGE — what Platform Change Review is being asked to decide")
     decided = [p for p in proposals if p[2] in (SCHEDULED, IN_PLAY, DISCRETE)]

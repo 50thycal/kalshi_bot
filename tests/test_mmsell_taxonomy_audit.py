@@ -25,6 +25,7 @@ def _rows(n: int, prefix: str = "KXFOO"):
 
 
 def _text(rows, *, source="", rules="", title="", gap_h=None):
+    """Kalshi-shaped evidence for every ticker in `rows`."""
     base = dt.datetime(2026, 8, 20, 12, 0, tzinfo=dt.timezone.utc)
     out = {}
     for r in rows:
@@ -75,6 +76,26 @@ class TestProposalRule:
         mode, why = ta.propose(ev)
         assert mode == "INSUFFICIENT_EVIDENCE"
         assert "only shape evidence" in why
+
+    def test_can_close_early_does_not_vote(self):
+        """It was tried as a strong signal and run `tax-2` refuted it: Kalshi sets the flag on
+        index-close markets too, so it proposed in_play for KXINX and KXNASDAQ100 while
+        simultaneously blocking four prefixes whose rules text said scheduled. It is reported
+        and it decides nothing."""
+        rows = _rows(30)
+        text = _text(rows, rules="settles to the closing price at 4:00 pm ET")
+        for t in text.values():
+            t["can_close_early"] = True
+        ev = ta.prefix_evidence(rows, text, {})
+        assert ev["early_share"] == 1.0            # measured and reported...
+        assert ta.propose(ev)[0] == ta.SCHEDULED   # ...and the rules text still decides
+
+    def test_can_close_early_alone_proposes_nothing(self):
+        rows = _rows(30)
+        text = _text(rows)
+        for t in text.values():
+            t["can_close_early"] = True
+        assert ta.propose(ta.prefix_evidence(rows, text, {}))[0] == "INSUFFICIENT_EVIDENCE"
 
     def test_no_evidence_at_all_refuses_rather_than_defaulting(self):
         # THE regression this file exists for: silence must not become `scheduled`.
@@ -134,3 +155,71 @@ class TestEvidenceSignals:
     def test_the_bar_and_band_are_the_designs_not_this_scripts(self):
         assert ta.UNCLASSIFIED_BAR == 0.05
         assert ta.BAND == (5.0, 7.0)
+
+
+class TestAgainstKalshisRealProse:
+    """Verbatim rules text from run `tax-3`, one per settlement mode it must separate.
+
+    The regexes were written against guesses first and got two of these backwards: a bare
+    "at 8:10 PM EDT" was read as a scheduled settlement, but Kalshi writes
+    "the game originally scheduled for Aug 22, 2026 at 8:10 PM EDT" on IN-PLAY markets, so MLB
+    player props and KBO baseball came back `scheduled`. A clock time does not discriminate;
+    genuinely scheduled markets say which CLOSE they settle to.
+    """
+
+    CORPUS = [
+        (ta.IN_PLAY, "KXMLSSCORE",
+         "If Atlanta United FC wins 5-2 in the Atlanta United FC vs Sporting Kansas City "
+         "professional MLS soccer game originally scheduled for Aug 23, 2026 after 90 minutes "
+         "plus stoppage time (does not include extra time or penalties), then the market "
+         "resolves to Yes."),
+        (ta.IN_PLAY, "KXMLBTB",
+         "If Steven Kwan records 5+ total bases in the Cleveland vs Colorado professional "
+         "baseball game originally scheduled for Aug 22, 2026 at 8:10 PM EDT, then the market "
+         "resolves to Yes."),
+        (ta.IN_PLAY, "KXKBOGAME",
+         "If Lotte Giants wins the Lotte Giants vs Kia Tigers Korea KBO game originally "
+         "scheduled for Aug 25, 2026 at 6:00 AM EDT, then the market resolves to Yes. If this "
+         "game is postponed or delayed, the market will remain open and close after the "
+         "rescheduled game has finished"),
+        (ta.IN_PLAY, "KXKFTOUR",
+         "If Jamie Wilson wins the AdventHealth Championship, then the market resolves to Yes."),
+        (ta.IN_PLAY, "KXYTVIEWSW",
+         "If Bad Bunny has above 34M Global daily views on YouTube at any point during "
+         "August 17, 2026 - August 23, 2026, then the market resolves to Yes."),
+        (ta.SCHEDULED, "KXINX",
+         "If the end-of-day S&P 500 index value on August 28, 2026 is above 7974.9999, then the "
+         "market resolves to Yes. The market will expire at the sooner of the first release of "
+         "the data, or one week after August 28, 2026."),
+        (ta.SCHEDULED, "KXCOPPERD",
+         "If the close price of the 1-minute candlestick for copper using the CCU6 contract on "
+         "August 24, 2026 at 5:00 PM EDT is above 6.40 USD/Lbs, then the market resolves to Yes."),
+    ]
+
+    @pytest.mark.parametrize("expected,prefix,rules",
+                             CORPUS, ids=[c[1] for c in CORPUS])
+    def test_kalshis_own_words_classify_correctly(self, expected, prefix, rules):
+        assert ta._match_mode(rules, ta._RULES_PATTERNS) == expected
+
+    def test_a_game_start_time_is_not_a_scheduled_settlement(self):
+        # The exact defect, isolated.
+        assert ta._match_mode("originally scheduled for Aug 22, 2026 at 8:10 PM EDT",
+                              ta._RULES_PATTERNS) == ta.IN_PLAY
+
+
+class TestWeakSignalsCancel:
+    def test_two_disagreeing_corroborators_do_not_veto_the_text(self):
+        # An earlier version let EITHER weak signal veto, so a prefix whose expiration gap
+        # agreed with the rules text and whose price path did not came back INSUFFICIENT.
+        rows = _rows(30)
+        text = _text(rows, rules="settles to the closing price", gap_h=0.0)   # gap -> scheduled
+        late = {r["ticker"]: 50.0 for r in rows}                              # path -> in_play
+        mode, why = ta.propose(ta.prefix_evidence(rows, text, late))
+        assert mode == ta.SCHEDULED
+        assert "disagrees" in why
+
+    def test_a_lone_disagreeing_corroborator_still_blocks(self):
+        rows = _rows(30)
+        text = _text(rows, rules="settles to the closing price")             # no gap signal
+        late = {r["ticker"]: 50.0 for r in rows}                              # path -> in_play
+        assert ta.propose(ta.prefix_evidence(rows, text, late))[0] == "INSUFFICIENT_EVIDENCE"
