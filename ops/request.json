@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_freeze_listing_check","args":[],"id":"lo-x3-listing-1"}
+{"type":"logs","limit":30,"filter":"@markets:0","id":"lo-x3-logs-attr"}
