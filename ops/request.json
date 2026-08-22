@@ -1,1 +1,1 @@
-{"type":"logs","id":"dep-health-1","lines":120}
+{"type":"xos","command":"issue-candidates","args":["--json"],"id":"dep-cand-1"}
