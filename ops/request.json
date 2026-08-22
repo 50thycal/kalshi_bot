@@ -1,1 +1,1 @@
-{"type":"db","sql":"select strategy, count(*) as n, count(experiment_deployment_arm_id) as stamped, min(created_at) as first_at, max(created_at) as last_at from paper_trades where strategy like 'freeze%' group by strategy order by strategy","max_rows":50,"id":"lo-x3-db-trades"}
+{"type":"script","name":"kalshi_market_survey","args":["--max-pages","60","--top-series","600","--min-volume","1"],"id":"lo-x3-survey-1"}
