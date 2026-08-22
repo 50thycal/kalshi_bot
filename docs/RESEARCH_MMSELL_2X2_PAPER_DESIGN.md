@@ -107,41 +107,101 @@ its own classification rather than being folded into `scheduled`.
 ## 2A. PRE-START CHECK — FAILED. Do not create the arms.
 
 The operator's approval was conditional on returning the measured `unclassified_excluded_pct`
-for the eligible non-crypto 5–7¢ population before any arm exists. Measured (ops run
-`unclass-2`, `mmsell_candidate_ticks`, 2026-07-19 → 08-21, 2,139 candidates across 278 series):
+for the eligible non-crypto 5–7¢ population before any arm exists.
+
+**Measured: `unclassified_excluded_pct` = 14.31%, against a pre-registered block threshold of
+5%.** The design would be `BLOCKED_DATA` on its first evaluation. **The arms must not be
+created.** The census, the audit and the full evidence package are in §2A.1 and §2A.1b; run
+`tax-6`, reproducible with one command:
+
+```
+{"type":"script","name":"mmsell_taxonomy_audit","args":[
+  "--since","2026-07-19","--until","2026-08-21","--top","200","--dump-text"]}
+```
+
+That threshold was fixed in §3.2 before any of this was measured, precisely so the number could
+not be chosen after seeing which side the exclusions fell on. It did its job: it says stop, and
+it still says stop after the largest repair the evidence supports.
+
+### 2A.1 The taxonomy debt is 198 series prefixes, not six
+
+The Platform Change Review scope in §2 was drawn from the crypto universe alone. The full audit
+(`scripts/mmsell_taxonomy_audit.py`, run `tax-6`) puts it two orders of magnitude higher.
+
+**A correction to the census itself.** `unclass-2` reported 2,139 candidates across 278 series
+and 24.03% unclassified. The audit script re-runs the census from
+`mmsell_candidate_ticks`, one row per market at its first in-band tick, over the same window —
+and gets **6,018 candidates across 319 series, 14.31% unclassified**. The two constructions
+differ and the earlier one cannot now be reproduced exactly, so **the audit script's census is
+canonical from here**: it is one command, it is the same function that must be re-run after the
+repair, and it prints its own window. Both numbers fail the 5% bar by a wide margin, so the
+operator decision is unchanged; the figure is not.
 
 | settle mode | markets | share |
 |---|---|---|
-| `in_play` | 1,367 | 63.91% |
-| **`unknown` (unclassified)** | **514** | **24.03%** |
-| `scheduled` | 228 | 10.66% |
-| `discrete` | 30 | 1.40% |
+| `in_play` | 4,374 | 72.68% |
+| **`unknown`** | **861** | **14.31%** |
+| `scheduled` | 671 | 11.15% |
+| `discrete` | 112 | 1.86% |
 
-> **`unclassified_excluded_pct` = 24.03%, against a pre-registered block threshold of 5%.**
-> The design would be `BLOCKED_DATA` on its first evaluation. **The arms must not be created.**
+> **`unclassified_excluded_pct` = 14.31%, against a pre-registered block threshold of 5%.**
+> `BLOCKED_DATA`. **The arms must not be created.**
 
-That threshold was fixed in §3.2 before this was measured, precisely so the number could not be
-chosen after seeing which side the exclusions fell on. It did its job: it says stop.
+**The taxonomy repair is a prerequisite for this experiment, not a task running beside it.** Any
+`mode=`-defined arm today silently discards a seventh of its own universe, and which seventh is
+decided by classification debt rather than by settlement behaviour.
 
-### 2A.1 The taxonomy debt is far larger than the six crypto series
+### 2A.1b The Platform Change Review package
 
-The Platform Change Review scope in §2 was drawn from the crypto universe alone. The non-crypto
-gap is an order of magnitude bigger — 514 markets across many series, led by soccer score/spread/
-total families and a long tail:
+**The database cannot supply the evidence.** `markets` holds no row for any of the 861
+unclassified markets, so the first pass of the audit had no strong signal for any prefix and
+correctly refused to propose anything at all. Kalshi's market-data endpoints are public and need
+no key, so the audit now fetches the rules text per series — **198 of 198 prefixes retrieved**.
 
-`KXMLSSCORE` (35), `KXLEAGUESCUPSCORE` (31), `KXLIGAMXSCORE` (30), `KXKFTOUR` (15),
-`KXENGCSSCORE` (11), `KXARGPREMDIVTOTAL` (11), `KXCLUBFSPREAD` (10), `KXCONMEBOLSUDTOTAL` (9),
-`KXBRASILEIROTOTAL` (8), `KXMLSSPREAD` (8), `KXCOPPERD` (7), `KXLOLMAP` (7), …
+Four signals per prefix. Two are strong and come from Kalshi itself (`settlement_source`, and
+title + rules text); two corroborate but cannot decide alone (median |expiration − close|, and
+whether the price path is still mid-book at the last tick — a scheduled print and a discrete
+announcement both look like a jump). A proposal needs a strong signal, no strong signal pointing
+elsewhere, and no *lone* corroborator against it.
 
-**The taxonomy repair is therefore a prerequisite for this experiment, not a task running beside
-it.** Any `mode=`-defined arm today silently discards a quarter of its own universe, and which
-quarter is decided by classification debt rather than by settlement behaviour.
+| | prefixes | markets |
+|---|---|---|
+| proposed mode | **45** | 526 |
+| INSUFFICIENT_EVIDENCE | 153 | 335 |
+
+> **If every one of the 45 proposals is accepted, `unclassified_excluded_pct` falls from 14.31%
+> to 5.57% — still above the 5% bar.** The design stays `BLOCKED_DATA`.
+
+The 153 refusals are almost all long-tail series carrying two or three markets each, below the
+five-market floor at which a per-prefix read stops being anecdote. They are not unclassifiable —
+Kalshi's rules text for each is printed verbatim in the run (`--dump-text`), and a human can
+decide them in minutes. The audit declines to, and that is deliberate: **an unknown series
+recorded as `scheduled` would enter the treatment arm and make the primary comparison measure the
+very confound this design controls for.**
+
+**Two defects in the audit's own classifier, found by dumping the corpus and disclosed rather
+than quietly fixed:**
+
+- A bare `at 8:10 PM EDT` was read as a scheduled settlement. Kalshi writes *"the game originally
+  scheduled for Aug 22, 2026 at 8:10 PM EDT"* on **in-play** markets, so MLB player props and KBO
+  baseball came back `scheduled` — precisely the error described above. A clock time does not
+  discriminate; genuinely scheduled markets name the close they settle to (*"the end-of-day S&P
+  500 index value"*, *"the close price of the 1-minute candlestick"*). Seven verbatim texts are
+  now pinned as tests, one per mode they must separate.
+- `can_close_early` was tried as a strong signal on the theory that Kalshi sets it where
+  settlement follows the event. It is set on **100%** of these markets, including index-close
+  ones: it proposed `in_play` for `KXINX` and `KXNASDAQ100` while blocking four prefixes whose
+  rules text correctly said `scheduled`. It is now reported and votes on nothing.
+
+**Nothing here edits `SERIES_TYPES`, in either copy.** That table is shared platform semantics
+read by every `mode=` book, so a change to it is a Platform Change Review event with its own
+impact review — not a side effect of an analysis script.
 
 ### 2A.2 The treatment arm is scarcer than §3.6 estimated
 
 §3.6's ~13 markets/day for the treatment arm was derived from `mmsell10`'s settled-trade
 composition. Measured against the **candidate stream** — the thing that actually limits an arm —
-it is **6.7/day** (228 over 34 days). The control arm runs at 41.1/day.
+it is **6.7/day**. The control arm runs at 41.1/day.
 
 | | earlier estimate | measured |
 |---|---|---|
@@ -149,20 +209,33 @@ it is **6.7/day** (228 over 34 days). The control arm runs at 41.1/day.
 | days to 2,711 markets at +2¢ | ~209 | **~404** |
 
 **At the +2¢ minimum useful effect the experiment takes about thirteen months, not seven.** The
-figure below is corrected accordingly; the earlier one was wrong and is retracted here rather
-than quietly replaced.
+earlier figure was wrong and is retracted here rather than quietly replaced.
+
+Two qualifications, both of which push the horizon further out rather than in. The supply figure
+predates the census correction in §2A.1 and is measured on the *settled* stream; and the floor of
+2,711 markets is an **iid** count. Markets that share an event share an outcome, and §4.2.3 of
+`RESEARCH_THETA_REMEDIATION.md` shows what that costs a floor derived the same way — a design
+effect of 1.87 on a thinly-spread selected set, and 4.6 on a dense one. **The MMSELL floor has
+not yet been recomputed on the event**, and it must be before any arm is registered, because the
+correction runs in one direction only: up.
 
 ### 2A.3 What this changes, and what it does not
 
 The **design** is unaffected — the disjoint partition, the single primary estimand, the derived
-secondary and the stopping rule all stand. What has changed is that two of its preconditions are
-not met today:
+secondary and the stopping rule all stand. What has changed is that three of its preconditions
+are not met today:
 
-1. the universe cannot be partitioned cleanly while 24% of it is unclassifiable;
-2. at measured supply the approved effect size implies a ~13-month horizon.
+1. the universe cannot be partitioned cleanly while 14.31% of it is unclassifiable, and the
+   largest repair the evidence supports leaves 5.57% — still above the bar;
+2. at measured supply the approved effect size implies a ~13-month horizon, and that estimate is
+   an iid one;
+3. the sample floor has not been recomputed with the event as the independent unit.
 
-Both are decisions for the operator, and neither is repairable by a Research Lab session. Until
-they are settled, **nothing is created**.
+None is repairable by a Research Lab session: (1) is a Platform Change Review decision on 198
+series, (2) is an operator decision about whether the horizon is worth spending, and (3) waits on
+(1) because the eligible population changes when the taxonomy does. Until they are settled,
+**nothing is created**.
+
 
 ---
 
@@ -276,26 +349,32 @@ series-substring blocklist. Exact specs are in §3.1 and are the whole implement
 ## 4. What is still open, and needs the operator
 
 The four decisions were approved **subject to the pre-start measurement**. That measurement came
-back at 24.03% against a 5% threshold (§2A), so two of them now need revisiting rather than
+back at 14.31% against a 5% threshold (§2A), so three of them now need revisiting rather than
 executing:
 
 | # | decision | status |
 |---|---|---|
 | 1 | disjoint `scheduled` vs `in_play+discrete` primary | **approved, unaffected** |
-| 2 | 5% unclassified coverage block | **approved, and it FIRED** — 24.03% measured |
-| 3 | +2¢ minimum useful effect | approved at a ~7-month horizon; the measured horizon is **~13 months** (§2A.2) |
-| 4 | route six crypto series to Platform Change Review | approved, but the real scope is **~40+ series / 514 markets** (§2A.1) |
+| 2 | 5% unclassified coverage block | **approved, and it FIRED** — 14.31% measured, 5.57% even after the largest repair the evidence supports |
+| 3 | +2¢ minimum useful effect | approved at a ~7-month horizon; the measured horizon is **~13 months**, and that figure is an iid one (§2A.2) |
+| 4 | route six crypto series to Platform Change Review | approved, but the real scope is **198 series prefixes / 861 markets** (§2A.1) |
 
 So the open questions are:
 
-1. **Repair the taxonomy first, or relax the block?** Repair is the honest path — 24% of the
+1. **Repair the taxonomy first, or relax the block?** Repair is the honest path — a seventh of the
    universe silently excluded is not a partition — and it makes decision 4 a prerequisite rather
    than a parallel task. Relaxing the threshold after seeing it fire is the thing the threshold
-   exists to prevent, and is not recommended.
+   exists to prevent, and is not recommended. But note what the audit found: **even accepting all
+   45 evidence-backed proposals, the census lands at 5.57%.** Clearing 5% needs a human pass over
+   the long tail — 153 prefixes whose rules text is printed verbatim in the run and each of which
+   takes seconds to read, but which the audit will not guess at.
 2. **Accept ~13 months at +2¢, or move the effect size?** At +3¢ the treatment arm needs ~180
-   days, at +5¢ ~65. This is a scope decision, not a statistical one.
-3. **Scope of the Platform Change Review** — six crypto series, or the full non-crypto tail too?
-   The crypto six block the crypto column (§2); the non-crypto ~514 block this design.
+   days, at +5¢ ~65 — but all three figures are **iid** counts, and §2A.2 explains why the
+   event-clustered floor can only be larger. Recomputing it is cheap and should precede this
+   decision rather than follow it. This is a scope decision, not a statistical one.
+3. **Scope of the Platform Change Review** — six crypto series, or all 198 prefixes? The crypto
+   six block the crypto column (§2); the non-crypto 198 block this design. The package for the
+   latter is ready: proposals with evidence for 45, Kalshi's own words for all 198.
 
 **Nothing is created until these are settled.** No Version, no epoch, no deployment, no arm.
 

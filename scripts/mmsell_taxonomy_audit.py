@@ -36,6 +36,7 @@ import json
 import os
 import re
 import sys
+import time
 from collections import defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -231,14 +232,22 @@ def fetch_series_text(prefix: str, timeout: float = 20.0) -> tuple[dict, list[st
     """
     markets: list[dict] = []
     for suffix in ("&status=open", ""):
-        try:
-            markets = _get_json(
-                f"{KALSHI}/markets?series_ticker={prefix}&limit=1{suffix}",
-                timeout).get("markets") or []
-        except Exception:                                            # noqa: BLE001
-            markets = []
+        # Two attempts with a pause. Run `tax-5` fetched 146 of 198 prefixes in one pass and the
+        # 52 misses cost five proposals that the smaller `tax-4` run had produced from the same
+        # series — i.e. they were transient, and a single-shot fetch makes the package's contents
+        # depend on the weather.
+        for attempt in range(2):
+            try:
+                markets = _get_json(
+                    f"{KALSHI}/markets?series_ticker={prefix}&limit=1{suffix}",
+                    timeout).get("markets") or []
+                break
+            except Exception:                                        # noqa: BLE001
+                markets = []
+                time.sleep(0.5 * (attempt + 1))
         if markets:
             break
+    time.sleep(0.1)                                                  # pace ~200 prefixes
     if not markets:
         return {}, []
     m = markets[0]

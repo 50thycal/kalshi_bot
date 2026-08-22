@@ -275,12 +275,52 @@ To run a request:
      history or has to accumulate forward. Touches no database. Measured 2026-08-21: at least
      365 days for BTC-USD and ETH-USD.
 
+   - **"settlement labels"** / **"are the outcomes trustworthy"** ->
+     `{"type":"script","name":"theta_settlement_labels","args":["--spot-source","coinbase"]}`
+     — audits the DERIVED outcome label every theta calibration rests on. The label is the last
+     ladder snapshot's spot against the strike, which is not Kalshi's settlement print: Kalshi
+     settles off its own index at the close, up to three minutes later. Measures the residual
+     move scale from the spot series, applies a fixed near-strike exclusion, and reports
+     agreement against recorded settlement with **event-clustered** intervals.
+     **Read the VERDICT line.** `BLOCKED_DATA` means no calibration computed against these
+     labels is validated — including one that already reports a verdict. Use `--spot-source
+     coinbase` (default); the ladder reconstruction is ~5-minute sampled and cannot measure a
+     1-3 minute move scale (it reported a 4-minute RMS ETH move of $0.20).
+
+   - **"taxonomy audit"** / **"what are the unknown series"** ->
+     `{"type":"script","name":"mmsell_taxonomy_audit","args":["--top","200","--dump-text"]}`
+     — the candidate census by settlement mode AND the Platform Change Review package for every
+     unclassified series prefix. `markets` holds no row for these tickers, so the evidence is
+     fetched from Kalshi's public market-data endpoint (no key). Proposes a mode only on a
+     STRONG signal — Kalshi's settlement source or rules text — and returns
+     `INSUFFICIENT_EVIDENCE` otherwise; `--dump-text` prints Kalshi's own words verbatim so a
+     human can decide the rest. **It edits no `SERIES_TYPES` entry.** The census it runs is the
+     same function that must be re-run after a repair, so "rerun the exact same census" is one
+     command. Note `can_close_early` is reported and votes on nothing: Kalshi sets it on 100% of
+     these markets, index-close ones included.
+
+   - **shadow cost** -> `PYTHONPATH=. python3 scripts/theta_shadow_bench.py` — **local, not an
+     ops script.** What the paper shadow costs a live trading cycle at maximum market load: DB
+     rows loaded, distinct fits, cycle latency, memory, cache behaviour. No database, no
+     network. Run it after any change to the model or its cadence; the
+     `theta_spliced_budget_ms` default is set from its output, and a budget below the measured
+     maximum is not a backstop.
+
    - **"theta refit"** / **"tail model validation"** -> `{"type":"script","name":"theta_tail_refit"}`
      — scores the replacement probability model (`kalshi_bot/theta/tailmodel.py`) against the
      incumbent, strictly out of sample. Reports degeneracy (what fraction of each model's output
      is exactly 0 or 1), calibration by probability bucket with the sub-2% region broken out,
-     a `tail_q` sweep chosen on TRAIN and scored on TEST, the SELECTED-vs-REJECTED split under
-     each model's own excess, and fit health.
+     a `tail_q` sweep chosen on TRAIN and scored on TEST, the **paired** proper-score comparison
+     between the two models, the SELECTED-vs-REJECTED split under each model's own excess, and
+     fit health.
+     **Section 0 is a gate.** The outcome labels are audited before anything is scored and the
+     run says so; `BLOCKED_DATA` there means nothing below it is a validated calibration result.
+     **Section 6 is the comparison.** The per-model R columns in sections 3 and 5 describe two
+     different partitions and are not a test of a difference — aggregate R also rewards
+     predicting exactly zero, which is the incumbent's shape. Every interval is an
+     **event-clustered** bootstrap: a crypto ladder settles all its strikes against one spot
+     print, so a Poisson interval over markets is ~2.3x too narrow (measured design effect ~5).
+     `--seed` is fixed so a recorded run reproduces its own intervals exactly.
      **Read the `powered` counts before anything else.** A fit below
      `MIN_TAIL_EXCEEDANCES_FOR_POWER` declustered exceedances ON THE TAIL THE STRIKE USES is a
      resolution floor, not an estimate, and the calibration/selection sections exclude those
