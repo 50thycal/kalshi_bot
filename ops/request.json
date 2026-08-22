@@ -1,1 +1,1 @@
-{"type":"db","sql":"select ticker, category, status, close_time, left(coalesce(title,''),60) as title, left(coalesce(settlement_source,''),40) as src, created_at from markets where ticker ~* '(CORN|WHEAT|SOY|COFFEE|SUGAR|COCOA|COTTON)' or title ~* '(corn|wheat|soybean|coffee|sugar|cocoa|cotton)' order by created_at desc","max_rows":60,"id":"rl-x3-db-markets"}
+{"type":"script","name":"kalshi_freeze_study","args":["--max-event-pages","300","--max-markets","150","--trade-pages","3","--open-pages","2","--depth-samples","1"],"id":"rl-x3-repro"}
