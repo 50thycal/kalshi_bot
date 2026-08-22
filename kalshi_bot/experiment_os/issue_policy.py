@@ -480,6 +480,14 @@ DETECTOR_MISSING_TWIN = "ops.live_deployment_without_twin"
 DETECTOR_ZERO_EVIDENCE = "experiment.zero_evidence"
 DETECTOR_GATE_BLOCKED = "gate.blocked"
 DETECTOR_CONTRACT_DEFECT = "contract.defect"
+#: Not a detector at all: the fixed source value for a problem a PERSON found —
+#: Live Ops watching the runtime, Research Lab reading evidence, an integrity
+#: review, or an operator noticing something the Tower's detector surface does
+#: not cover. It is recorded so the provenance of every issue is legible, and it
+#: deliberately carries NO fingerprint: fabricating one would make a manual
+#: ticket look like it covers a candidate that was never detected, which is the
+#: exact confusion `open_issue_from_candidate` exists to prevent.
+DETECTOR_MANUAL = "manual.reported"
 
 #: The exact, ordered fingerprint components. Nothing else may enter the hash:
 #: a fingerprint identifies a PROBLEM SCOPE, so a volatile value (current P&L,

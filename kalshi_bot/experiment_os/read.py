@@ -32,6 +32,7 @@ from .models import (
     ExperimentIssueEvidence,
     ExperimentIssueLink,
     ExperimentLegacyEvidence,
+    ExperimentOsIssueCommand,
     ExperimentStateTransition,
     ExperimentVersion,
     PlatformComponent,
@@ -872,3 +873,94 @@ def open_issue_counts(session) -> dict[str, int]:
         .group_by(ExperimentIssue.classification)
     ).all()
     return {str(k): int(n) for k, n in rows}
+
+
+# ---------------------------------------------------------------------------
+# Issue-command receipts (the worker transport's ledger)
+# ---------------------------------------------------------------------------
+
+# What a receipt may print. METADATA ONLY: identity, action, actor, timing,
+# outcome. `payload_json` is deliberately absent — it holds whatever prose the
+# author wrote, and this surface is read by tools that print everything they are
+# given. `result_json` IS printed because the executor generates it: bounded
+# identifiers and states, never the submitted text. What proves the payload is
+# `payload_hash` plus the key NAMES, which come from a fixed vocabulary.
+
+
+def issue_command(session, command_id: str) -> ExperimentOsIssueCommand | None:
+    """One receipt by its command id."""
+    return session.execute(
+        select(ExperimentOsIssueCommand).where(
+            ExperimentOsIssueCommand.command_id == str(command_id)
+        )
+    ).scalar_one_or_none()
+
+
+#: Clamp for `issue_commands(limit=…)`. A negative or zero LIMIT is a SQL error
+#: on some dialects and silently unbounded on others, and an arbitrarily large
+#: one turns a status read into a table scan printed to an ops result. Bounded
+#: here, at the read, so no caller has to remember.
+ISSUE_COMMAND_LIMIT_MIN = 1
+ISSUE_COMMAND_LIMIT_MAX = 100
+
+
+def clamp_issue_command_limit(limit) -> int:
+    """Coerce any caller's limit into [1, 100]. Non-numeric falls back to 20."""
+    try:
+        value = int(limit)
+    except (TypeError, ValueError):
+        return 20
+    return max(ISSUE_COMMAND_LIMIT_MIN, min(ISSUE_COMMAND_LIMIT_MAX, value))
+
+
+def issue_commands(
+    session, *, limit: int = 20, status: str | None = None,
+    issue_key: str | None = None,
+) -> list[ExperimentOsIssueCommand]:
+    """Recent receipts, newest first. `limit` is clamped to [1, 100]."""
+    stmt = select(ExperimentOsIssueCommand)
+    if status:
+        stmt = stmt.where(ExperimentOsIssueCommand.status == str(status).upper())
+    if issue_key:
+        stmt = stmt.where(ExperimentOsIssueCommand.issue_key == str(issue_key))
+    stmt = (
+        stmt.order_by(ExperimentOsIssueCommand.id.desc())
+        .limit(clamp_issue_command_limit(limit))
+    )
+    return list(session.execute(stmt).scalars())
+
+
+def issue_command_summary(row: ExperimentOsIssueCommand) -> dict:
+    """A receipt as safe-to-print metadata (see the note above)."""
+    payload = row.payload_json if isinstance(row.payload_json, dict) else {}
+    # Recognised field NAMES only, plus a count of the rest. A rejected envelope
+    # can carry any key its author invented, and "the payload's field names come
+    # from a fixed vocabulary" is only true of the ones the action recognises —
+    # so the unrecognised ones are counted, never printed. Values are never
+    # included at all; `payload_hash` is what proves what was submitted.
+    from . import issue_commands  # local: issue_commands imports this module
+
+    known = (
+        issue_commands.vocabulary(row.action)
+        if row.action in issue_commands.ACTIONS
+        else frozenset()
+    )
+    recognised = sorted(k for k in payload if k in known)
+    unrecognised = sum(1 for k in payload if k not in known)
+    return {
+        "command_id": row.command_id,
+        "action": row.action,
+        "actor": row.actor,
+        "actor_role": row.actor_role,
+        "status": row.status,
+        "issue_key": row.issue_key,
+        "schema_version": row.schema_version,
+        "payload_hash": row.payload_hash,
+        "payload_fields": recognised,
+        "payload_unrecognised_fields": unrecognised,
+        "requested_at": row.requested_at,
+        "started_at": row.started_at,
+        "completed_at": row.completed_at,
+        "result": row.result_json,
+        "error": row.error,
+    }

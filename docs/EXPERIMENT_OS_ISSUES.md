@@ -347,7 +347,12 @@ python -m kalshi_bot.experiment_os.cli issue findings-plan
 {"type":"xos","command":"issue-list","id":"iss-1"}
 {"type":"xos","command":"issue-show","args":["XOS-000123"],"id":"iss-2"}
 {"type":"xos","command":"issue-candidates","id":"iss-3"}
+{"type":"xos","command":"issue-command-show","args":["lo-adopt-20260821"],"id":"iss-4"}
+{"type":"xos","command":"issue-command-list","id":"iss-5"}
 ```
+
+The last two read **receipts** for the worker command transport below. They
+report; they cannot execute or retry anything.
 
 Writes — these refuse to run when `DATABASE_URL_RO` is set, exactly like
 `evaluate-gates`. The ops channel is read-only against Postgres by design and the
@@ -371,6 +376,231 @@ issue resolve XOS-000123 --summary ... [--validation-waiver ...]
 issue close|duplicate|reopen|recurrence XOS-000123 ...
 issue import-findings [--dry-run]
 ```
+
+## Running an issue write in production
+
+A local CLI that cannot reach production is not an operational workflow. The ops
+channel connects with `DATABASE_URL_RO`, every mutation refuses that connection,
+and the Claude sandbox cannot reach Railway or Postgres — so until this existed,
+a ticket could be adopted, triaged and resolved locally and never in production.
+
+The worker executes **one** issue command per boot, from the environment variable
+`EXPERIMENT_OS_ISSUE_COMMAND` (`kalshi_bot/experiment_os/issue_commands.py`, boot
+hook 2b-iii). The same door as the two Experiment OS boot flags, and the same
+reasoning: the worker is the only writer.
+
+### ⚠ The transport is PUBLIC
+
+The envelope reaches the worker by being committed **in plaintext** to
+`ops/request.json` on the **public `ops` branch**, where it stays in Git history
+forever. `scripts/railway_env.py` redacts the value from ops results and the
+worker never logs it, but that is **output hygiene, not confidentiality**. It
+narrows accidental copies; it does not make the channel private.
+
+A payload must therefore be **safe for public disclosure**. Never put in one:
+
+* secrets or credentials of any kind;
+* personal information;
+* private logs or raw operational captures;
+* account, order, fill or position identifiers;
+* sensitive raw evidence.
+
+Prefer a **bounded summary and a public source reference** — a document path, a
+PR number, an `xos` command someone else can run — over pasted content. That is
+the same rule the workflow already applies to evidence, which is cited rather
+than copied.
+
+**If a ticket genuinely requires private content, STOP and propose an encrypted
+transport.** Redaction cannot make this channel private, and using it anyway
+publishes the content.
+
+### The envelope
+
+Exactly six top-level keys; unknown fields are refused, not ignored.
+
+```json
+{
+  "command_id": "lo-adopt-20260821",
+  "action": "OPEN_CANDIDATE",
+  "actor": "cal",
+  "actor_role": "LIVE_OPS",
+  "schema_version": 1,
+  "payload": {"fingerprint": "…"}
+}
+```
+
+* `command_id` — 8–64 chars of `[A-Za-z0-9._-]`, globally unique and stable. It
+  is the entire basis of exactly-once, so reusing one is a collision, not a retry.
+* `action` — one of the eighteen below. Nothing else is reachable.
+* `actor` / `actor_role` — **attribution, not authorization.** This transport
+  cannot verify identity. The real authority is who can push to `ops` and who
+  holds the Railway token, and this changes neither. The role is validated so the
+  recorded history is well formed and then handed to the issue service, which
+  applies its own routing rules — the Control Tower can still hand a candidate
+  over and still cannot own the resulting ticket.
+* `payload` — flat: strings and booleans only, no nesting, ≤ 4000 chars per
+  string, ≤ 8 KB per envelope.
+
+### The vocabulary
+
+Two ways in, and choosing between them is a **rule, not a preference**:
+
+> **`OPEN_CANDIDATE` is MANDATORY whenever the Control Tower has a matching
+> candidate.** Only adoption carries the deterministic fingerprint and exact
+> lineage the detector computed, so only adoption makes the ticket *cover* the
+> anomaly. A hand-opened ticket for a detected problem leaves the Tower reporting
+> it as UNTICKETED forever — the defect that made this workflow unusable end to
+> end before PR #254. Run `issue-candidates` first; if the problem is listed
+> there, adopt it.
+>
+> **`OPEN_MANUAL` is only for problems outside the candidate detector surface** —
+> a Live Ops runtime observation, a Research Lab reading of the evidence, an
+> integrity review, a person noticing something no detector watches for.
+
+| action | required payload | optional |
+|---|---|---|
+| `OPEN_CANDIDATE` | `fingerprint` | — |
+| `OPEN_MANUAL` | `title`, `problem_statement`, `classification`, `owner_role`, `reason` | `severity`, `priority`, `experiment`, `version`, `deployment`, `gate`, `platform_revision` |
+| `TRIAGE` | `issue`, `reason` | `severity`, `priority`, `classification`, `owner_role` |
+| `CLASSIFY` | `issue`, `classification`, `reason` | — |
+| `ASSIGN` | `issue`, `owner_role`, `reason` | — |
+| `TRANSFER` | `issue`, `to_owner_role`, `reason` | `classification`, `evidence_waiver_reason` |
+| `STATUS` | `issue`, `status` | `reason`, `event_type` |
+| `ADD_EVIDENCE` | `issue`, `evidence_type`, `summary` | `source_ref`, `content_hash` |
+| `ADD_LINK` | `issue`, `link_type`, `reference` | `label` |
+| `PROPOSE_FIX` | `issue`, `proposed_fix` | `reason`, `advance` |
+| `RECORD_DISPOSITION` | `issue`, `disposition`, `reason` | `requires_new_version`, `requires_new_epoch`, `requires_platform_revision`, `requires_pause_or_stand_down`, `version_and_epoch_rationale` |
+| `RECORD_VALIDATION_PLAN` | `issue`, `validation_plan` | `reason`, `advance` |
+| `RECORD_VALIDATION_RESULT` | `issue`, `passed`, `summary` | `source_ref`, `evidence_type` |
+| `RESOLVE` | `issue`, `resolution_summary` | `validation_waiver_reason` |
+| `CLOSE_NO_ACTION` | `issue`, `reason` | — |
+| `MARK_DUPLICATE` | `issue`, `duplicate_of`, `reason` | — |
+| `REOPEN` | `issue`, `reason` | `owner_role` |
+| `RECORD_RECURRENCE` | `issue` | `note` |
+
+Each calls the matching function in `experiment_os/issues.py` and reimplements
+none of its rules: an illegal transition, a transfer with no evidence, a stale
+candidate fingerprint and a disposition without its rationale are all refused
+exactly as they are locally.
+
+`OPEN_MANUAL` is **not** a generic `create_issue(**payload)`. It names five
+required fields and a fixed optional set, resolves every lineage reference
+explicitly by human-legible key — an experiment key, a version *number* under
+that experiment, a deployment key, a gate key under that version,
+`COMPONENT:version` for a revision — and passes no `**payload` through. A
+reference that cannot be resolved, or a version that does not belong to the named
+experiment, is a refusal rather than a half-scoped ticket. Raw primary keys are
+not accepted: a bare integer in a public envelope is unreadable in review and one
+typo away from scoping a ticket to the wrong contract.
+
+It records the fixed source `manual.reported` and **no fingerprint**. Fabricating
+one would make a manual ticket look like it covers a candidate that was never
+detected, which is the exact confusion adoption exists to prevent.
+
+There is deliberately no generic `CREATE`, and no `OPEN_CHILD` — whose
+parent-scoped keyword arguments are wide enough to be an escape hatch. It stays
+on the local CLI, where a human sees the result. Free-form JSON blobs are
+withheld for the same reason the section above gives.
+
+The executor cannot run SQL, Python or shell; cannot name a module or function;
+and cannot transition an experiment, evaluate or mutate a gate, create a Version
+or Epoch, register a Platform Revision, or arm, configure or expose live trading.
+Not by declining to — no code path exists, and a test asserts the module never
+imports one.
+
+### Exactly once
+
+`railway.json` restarts the worker on failure up to ten times and every restart
+re-reads the same variable, so "one-shot" cannot be a property of the transport.
+It is a property of the ledger, `experiment_os_issue_commands`:
+
+```
+validate + canonicalize + hash the envelope        (no database work yet)
+claim  INSERT … ON CONFLICT DO NOTHING RETURNING id
+  no row  → read the receipt, compare hashes, return it; execute NOTHING
+  row     → SAVEPOINT
+              validate the payload, call the one issues.py function
+            success  → receipt SUCCEEDED; COMMIT (mutation + receipt together)
+            refusal  → ROLLBACK TO SAVEPOINT; receipt REJECTED; COMMIT
+            failure  → ROLLBACK TO SAVEPOINT; receipt FAILED;   COMMIT
+```
+
+The claim row is inserted **outside** the savepoint, so rolling a failed mutation
+back never rolls back the explanation, and no second transaction is needed to
+record it. If the database is broken badly enough that even the receipt cannot
+commit, nothing commits — no receipt, no mutation — and the next boot may
+legitimately retry.
+
+**A committed receipt is terminal.** `SUCCEEDED`, `REJECTED` and `FAILED` are all
+final for that `command_id`. **Retrying means a NEW `command_id`.** The absence of
+a receipt is the only state that permits another attempt, and it is exactly the
+state in which the mutation cannot have committed either.
+
+Same id, different envelope — including a different actor — is a **collision**:
+it executes nothing and changes nothing, because the stored receipt belongs to
+whatever really ran under that name.
+
+### Doing it
+
+```bash
+# 1. Read what needs doing, and get the exact argument.
+{"type":"xos","command":"control-tower","id":"ct-1"}          # prints `adopt: …`
+
+# 2. Submit ONE command. The value is redacted in the result.
+{"type":"env","set":{"EXPERIMENT_OS_ISSUE_COMMAND":
+  "{\"command_id\":\"lo-adopt-20260821\",\"action\":\"OPEN_CANDIDATE\",\"actor\":\"cal\",\"actor_role\":\"LIVE_OPS\",\"schema_version\":1,\"payload\":{\"fingerprint\":\"…\"}}"},
+  "id":"cmd-1"}
+
+# 3. Setting it redeploys the worker; ~60-90s later, read the receipt.
+{"type":"xos","command":"issue-command-show","args":["lo-adopt-20260821"],"id":"cmd-2"}
+
+# 4. Confirm the effect through the canonical read, not the receipt alone.
+{"type":"xos","command":"issue-show","args":["XOS-000123"],"id":"cmd-3"}
+
+# 5. Clear the transport and reset ops.
+{"type":"env","set":{"EXPERIMENT_OS_ISSUE_COMMAND":""},"id":"cmd-4"}
+```
+
+Step 5 is hygiene, not safety: leaving the variable set is inert, because the
+receipt is terminal. Clear it anyway so the next reader is not left wondering
+whether something is pending.
+
+Receipts are **metadata only** on the read surface: identity, action, actor,
+timing, outcome, its hash, and the payload's *recognised* field names plus a
+count of the rest. The submitted payload is stored — a receipt that cannot prove
+what it ran is not an audit record — but it is never printed, because this
+channel's own results are public too. An unrecognised field name is counted and
+never echoed: it came from the envelope, so it is as author-controlled as a value.
+
+`issue-command-list --limit` is clamped to 1–100.
+
+### What a failure is allowed to say
+
+Success writes what the executor chose to write. **Failure writes whatever an
+exception happened to say** — and exceptions quote things: the offending value,
+the failing SQL statement, its bound parameters (`payload_json` among them), the
+whole document. So every failure path is bounded:
+
+* the error recorded on a receipt is sanitized — the canonical envelope, each
+  submitted value **and each word inside it**, and every unrecognised key name
+  are removed. Word-level matters: an exception usually quotes a *fragment* of a
+  value, and stripping only whole values leaves every fragment intact;
+* no failure path logs with `exc_info`. A traceback carries the original,
+  unsanitized message past every redaction, so the FAILED path logs bounded
+  fields and the receipt holds the account;
+* a failure that produces **no receipt at all** — a malformed envelope, or a
+  database error during the claim or commit — is reported by the boot hook as an
+  exception class, a stable code, and the **hash and length** of the value that
+  failed. Never `str(exc)`. That is enough to match a log line to a submitted
+  envelope and nothing more;
+* a driver exception around the claim, the receipt read or the final commit is
+  re-raised as a sanitized `IssueCommandTransportError` with the original
+  dropped rather than chained, because a chained `__cause__` puts the raw text
+  back into any traceback that formats it.
+
+The trade-off is accepted deliberately: a common word an author happened to use
+is also blanked out of the framework's own message, so a refusal can read a
+little redacted. The message is a debugging aid; the channel is public.
 
 ## Worked example — zero evidence, end to end
 

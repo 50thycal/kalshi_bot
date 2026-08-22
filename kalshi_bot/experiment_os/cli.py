@@ -516,6 +516,33 @@ def cmd_issue(session: Session, args) -> int:
               "recommended role.")
         return 0
 
+    if action in ("command-show", "command-list"):
+        # Receipts only. This surface reports; it cannot execute or retry a
+        # command — the executor runs on the worker and nowhere else. Output is
+        # metadata (see read.issue_command_summary): the submitted payload is
+        # never printed, because this channel's own results are public.
+        if action == "command-show":
+            row = read.issue_command(session, args.command_id)
+            if row is None:
+                print(f"no issue command {args.command_id!r}", file=sys.stderr)
+                return 1
+            print(json.dumps(
+                read.issue_command_summary(row), indent=2, default=str
+            ))
+            return 0
+        rows = read.issue_commands(
+            session, limit=args.limit, status=args.status, issue_key=args.issue,
+        )
+        if not rows:
+            print("no issue commands recorded")
+            return 0
+        print(_table(
+            ["command", "action", "status", "issue", "actor", "role", "completed"],
+            [[r.command_id, r.action, r.status, r.issue_key or "-", r.actor,
+              r.actor_role, str(r.completed_at or "-")] for r in rows],
+        ))
+        return 0
+
     if action == "open-candidate":
         # Adopt a Control Tower candidate into a real issue with its exact
         # fingerprint and lineage, so the ticket actually covers the anomaly
@@ -671,7 +698,11 @@ def cmd_issue_import_findings(session: Session, args) -> int:
 
 #: Subcommands that are pure reads, and therefore safe on the ops channel.
 _ISSUE_READ_ACTIONS: frozenset[str] = frozenset(
-    {"list", "show", "candidates", "findings-plan"}
+    {"list", "show", "candidates", "findings-plan",
+     # Receipts for the worker-side issue-command transport. Reads: they report
+     # what a command DID and must never execute or retry one. The transport's
+     # only trigger is EXPERIMENT_OS_ISSUE_COMMAND on the worker.
+     "command-show", "command-list"}
 )
 
 
@@ -805,6 +836,25 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_ic.add_argument("--json", action="store_true")
     p_ic.add_argument("--no-evaluate", action="store_true")
+
+    # Receipts for the worker-side command transport (docs/EXPERIMENT_OS_ISSUES.md).
+    # READS. They report what a submitted command did; nothing here can execute,
+    # retry or clear one — a terminal receipt is final, and a retry is a NEW
+    # command_id submitted through the ops branch.
+    p_icmd = isub.add_parser(
+        "command-show", help="one issue-command receipt (metadata only)"
+    )
+    p_icmd.add_argument("command_id")
+
+    p_icml = isub.add_parser(
+        "command-list", help="recent issue-command receipts, newest first"
+    )
+    p_icml.add_argument("--limit", type=int, default=20)
+    p_icml.add_argument("--status", default=None,
+                        help="SUCCEEDED / REJECTED / FAILED / RUNNING")
+    p_icml.add_argument("--issue", default=None, help="issue key")
+    p_icmd.set_defaults(fn=cmd_issue)
+    p_icml.set_defaults(fn=cmd_issue)
 
     p_icr = isub.add_parser("create", help="open a durable issue")
     p_icr.add_argument("--title", required=True)

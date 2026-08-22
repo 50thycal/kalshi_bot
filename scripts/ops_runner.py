@@ -60,6 +60,12 @@ XOS_ISSUE_READS: dict[str, list[str]] = {
     # is NOT reachable from here — it runs on the worker via
     # EXPERIMENT_OS_RECONCILE_FINDINGS_ON_BOOT.
     "issue-findings-plan": ["issue", "findings-plan"],
+    # Receipts for the worker-side issue-command transport. READS: they report
+    # what a submitted command did and cannot execute or retry one. The executor
+    # is reachable only by setting EXPERIMENT_OS_ISSUE_COMMAND on the worker,
+    # which is an `env` request, not an `xos` one.
+    "issue-command-show": ["issue", "command-show"],
+    "issue-command-list": ["issue", "command-list"],
 }
 
 ALLOWED_SCRIPTS = (

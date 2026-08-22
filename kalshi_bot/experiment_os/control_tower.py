@@ -1167,8 +1167,16 @@ def _render_investigations(rep: TowerReport) -> list[str]:
             "CANDIDATE — this report cannot open one"
         )
         lines.append(
-            "    (it is read-only); hand off to the recommended owner, who opens "
-            "it with `issue create`."
+            "    (it is read-only); hand off to the recommended owner, who "
+            "ADOPTS it with `issue open-candidate <fingerprint>`."
+        )
+        lines.append(
+            "    Adoption, not `issue create`: only it carries the fingerprint "
+            "printed under each anomaly, so the"
+        )
+        lines.append(
+            "    ticket covers this anomaly instead of leaving it listed here "
+            "forever."
         )
         lines.append(
             "    The recommended owner is who looks FIRST. Where the "
@@ -1201,6 +1209,11 @@ def _render_investigations(rep: TowerReport) -> list[str]:
                 lines.append(
                     f"        operator triage suggested — {c['rationale']}"
                 )
+            # The exact argument adoption needs. Printing it here is the whole
+            # difference between an instruction and an actionable one: the
+            # fingerprint is deterministic but not something anyone can retype
+            # from the scope, and adoption refuses a fingerprint it cannot match.
+            lines.append(f"        adopt: issue open-candidate {c['fingerprint']}")
     else:
         lines.append(
             "    (none — every anomaly this report detects is covered by an open "

@@ -70,6 +70,8 @@ To run a request:
    {"type":"xos","command":"issue-show","args":["XOS-000123"],"id":"iss-3"}
    {"type":"xos","command":"issue-candidates","id":"iss-4"}
    {"type":"xos","command":"issue-findings-plan","id":"iss-5"}
+   {"type":"xos","command":"issue-command-show","args":["lo-adopt-1"],"id":"iss-6"}
+   {"type":"xos","command":"issue-command-list","id":"iss-7"}
    ```
 
    `issue-findings-plan` previews the historical contract-findings import and
@@ -77,11 +79,26 @@ To run a request:
    `EXPERIMENT_OS_RECONCILE_FINDINGS_ON_BOOT=true` via `env` and let one boot run
    it (idempotent; switch it back off after). See `docs/EXPERIMENT_OS_ISSUES.md`.
 
-   Only those three are allowlisted, and only those three are reads. Every other
-   `issue` subcommand WRITES and refuses to run against `DATABASE_URL_RO` — which
-   is the only connection this channel ever has. **The worker remains the only
-   writer**; issue writes happen where a writable `DATABASE_URL` is the only URL
-   present. Do not add a writable path here.
+   Only those are allowlisted, and every one of them is a READ. Every `issue`
+   subcommand that WRITES refuses to run against `DATABASE_URL_RO` — which is the
+   only connection this channel ever has. **The worker remains the only writer.**
+   Do not add a writable path here.
+
+   An ordinary issue write reaches production through the worker, not through
+   this channel: set **one** strictly validated envelope in
+   `EXPERIMENT_OS_ISSUE_COMMAND` via `env`, and boot hook 2b-iii executes it once.
+   `issue-command-show`/`issue-command-list` read the resulting receipts —
+   metadata only, and they can neither execute nor retry anything. Exactly-once is
+   the receipt: a committed `SUCCEEDED`/`REJECTED`/`FAILED` is terminal, so a
+   restart re-reads the same variable and does nothing, and **retrying means a new
+   `command_id`**.
+
+   ⚠ **That envelope is PUBLIC.** It is committed in plaintext to
+   `ops/request.json` on this public branch and stays in Git history. The
+   redaction in `env` output is hygiene, not privacy: no secrets, credentials,
+   personal data, private logs, account/order identifiers or sensitive raw
+   evidence in a payload — bounded summaries and public references only. Full
+   contract, vocabulary and worked sequence: `docs/EXPERIMENT_OS_ISSUES.md`.
 
    `metric` computes ONE canonical metric at an explicit scope and prints its
    value with full provenance — the only way to exercise a provider against
