@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["freeze-dark-window-pin"],"id":"lo-x3-lineage"}
+{"type":"env","id":"lo-x3-env"}
