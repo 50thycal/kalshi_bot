@@ -124,7 +124,7 @@ def run() -> int:
 
     # 2b-iii) One Experiment OS issue command (docs/EXPERIMENT_OS_ISSUES.md).
     # The ops channel is read-only against Postgres, so this hook is the only
-    # production path for an ordinary ticket write. Bounded to seventeen issue
+    # production path for an ordinary ticket write. Bounded to eighteen issue
     # operations that call the existing service functions; it can never touch a
     # lifecycle state, gate, verdict, Version, Epoch, Platform Revision or
     # exposure. Repeated boots are inert: each command_id gets a durable terminal
@@ -133,7 +133,10 @@ def run() -> int:
     # worker, and the receipt is how the operator finds out what happened.
     if settings.experiment_os_issue_command:
         try:
-            from .experiment_os.issue_commands import run_boot_command
+            from .experiment_os.issue_commands import (
+                run_boot_command,
+                safe_error_fields,
+            )
 
             with session_scope() as session:
                 receipt = run_boot_command(
@@ -151,9 +154,19 @@ def run() -> int:
                     **receipt,
                 )
         except Exception as exc:  # noqa: BLE001
+            # NOT str(exc), and no traceback. A failure here is one that produced
+            # no receipt — a malformed envelope, or a database error whose
+            # message can carry the failing statement and its bound parameters,
+            # `payload_json` among them. The operator gets the exception class, a
+            # stable code, and the hash and length of the value that failed:
+            # enough to match this line to the envelope they submitted, and
+            # nothing that says what was in it. Read the rest with
+            # `{"type":"xos","command":"issue-command-show","args":["<id>"]}`.
             logger.error(
                 "experiment OS issue command hook failed; continuing to trade",
-                extra={"extra_fields": {"error": str(exc)}},
+                extra={"extra_fields": safe_error_fields(
+                    settings.experiment_os_issue_command, exc
+                )},
             )
 
     # 2c) Experiment OS enforcement: record an operator-declared cutover (no-op

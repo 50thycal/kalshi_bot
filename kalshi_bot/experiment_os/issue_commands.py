@@ -11,7 +11,7 @@ workflow.
 
 This module is the missing door, and it is deliberately a narrow one. It executes
 ONE strictly validated envelope per boot, chosen from a fixed vocabulary of
-seventeen issue operations, each of which calls the existing function in
+eighteen issue operations, each of which calls the existing function in
 `issues.py` and reimplements none of its rules. It cannot run SQL, Python, shell,
 a lifecycle transition, a gate evaluation or mutation, a Version or Epoch
 creation, a Platform Revision operation, or anything that arms live trading or
@@ -85,6 +85,7 @@ Experiment OS action whatsoever.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import logging
@@ -94,8 +95,10 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
+from sqlalchemy import select
+
 from . import issue_policy as policy
-from . import issues
+from . import issues, models, read
 from .models import ExperimentOsIssueCommand
 
 logger = logging.getLogger(__name__)
@@ -104,10 +107,12 @@ __all__ = [
     "ACTIONS",
     "CommandStatus",
     "IssueCommandRejected",
+    "IssueCommandTransportError",
     "SCHEMA_VERSION",
     "canonical_envelope",
     "envelope_hash",
     "execute_envelope",
+    "safe_error_fields",
     "run_boot_command",
 ]
 
@@ -128,8 +133,12 @@ ENVELOPE_KEYS = frozenset(
 # malformed or hostile value cannot become a memory or storage problem.
 MAX_ENVELOPE_BYTES = 8192
 MAX_STRING_CHARS = 4000
-MAX_PAYLOAD_KEYS = 12
 MAX_ERROR_CHARS = 400
+#: Ceiling on any ONE action's field vocabulary, asserted at import time rather
+#: than checked per request: unknown-field rejection already bounds a payload to
+#: its action's fixed field set, so the only way a command could carry more
+#: fields than this is if someone widened the vocabulary itself.
+MAX_PAYLOAD_KEYS = 16
 
 _COMMAND_ID_RE = re.compile(r"^[A-Za-z0-9._-]{8,64}$")
 _ACTOR_RE = re.compile(r"^[A-Za-z0-9._@ -]{1,64}$")
@@ -154,7 +163,34 @@ class IssueCommandRejected(ValueError):
 
     Distinct from the issue service's own refusals: this one means the command
     never reached the workflow at all.
+
+    Carries a stable `code` because the message is not always safe to print. The
+    boot hook and the ops surfaces report the CODE — a fixed, enumerable string —
+    where a raw exception message could echo submitted content back out onto a
+    public branch.
     """
+
+    def __init__(self, message: str, code: str = "ENVELOPE_REJECTED"):
+        super().__init__(message)
+        self.code = code
+
+
+class IssueCommandTransportError(RuntimeError):
+    """The database plumbing around a command failed — the claim, the receipt
+    read, or the final commit — so NO receipt was written.
+
+    Raised in place of the driver's own exception, whose message can quote the
+    failing statement and its bound parameters (which include `payload_json`).
+    The message here is already sanitized and the original is dropped rather than
+    chained, because a chained `__cause__` puts the raw text back into any
+    traceback that formats it. No receipt means the next boot may legitimately
+    retry, which is correct: without one, the mutation cannot have committed
+    either.
+    """
+
+    def __init__(self, message: str, code: str = "TRANSPORT_DB_ERROR"):
+        super().__init__(message)
+        self.code = code
 
 
 # ---------------------------------------------------------------------------
@@ -203,22 +239,26 @@ def _validate_envelope(envelope: Any) -> _Envelope:
     """
     if not isinstance(envelope, dict):
         raise IssueCommandRejected(
-            f"envelope must be a JSON object, got {type(envelope).__name__}"
+            f"envelope must be a JSON object, got {type(envelope).__name__}",
+            "NOT_AN_OBJECT"
         )
 
     unknown = sorted(set(envelope) - ENVELOPE_KEYS)
     if unknown:
         raise IssueCommandRejected(
-            f"unknown top-level field(s) {unknown}; legal: {sorted(ENVELOPE_KEYS)}"
+            f"unknown top-level field(s) {unknown}; legal: {sorted(ENVELOPE_KEYS)}",
+            "UNKNOWN_TOP_LEVEL_FIELD"
         )
     missing = sorted(ENVELOPE_KEYS - set(envelope))
     if missing:
-        raise IssueCommandRejected(f"envelope is missing required field(s) {missing}")
+        raise IssueCommandRejected(f"envelope is missing required field(s) {missing}",
+            "MISSING_TOP_LEVEL_FIELD")
 
     version = envelope["schema_version"]
     if version != SCHEMA_VERSION:
         raise IssueCommandRejected(
-            f"schema_version must be {SCHEMA_VERSION}, got {version!r}"
+            f"schema_version must be {SCHEMA_VERSION}, got {version!r}",
+            "BAD_SCHEMA_VERSION"
         )
 
     command_id = envelope["command_id"]
@@ -231,7 +271,8 @@ def _validate_envelope(envelope: Any) -> _Envelope:
     action = envelope["action"]
     if not isinstance(action, str) or action not in ACTIONS:
         raise IssueCommandRejected(
-            f"action {action!r} is not in the allowed vocabulary: {sorted(ACTIONS)}"
+            f"action {action!r} is not in the allowed vocabulary: {sorted(ACTIONS)}",
+            "UNKNOWN_ACTION"
         )
 
     actor = envelope["actor"]
@@ -252,7 +293,8 @@ def _validate_envelope(envelope: Any) -> _Envelope:
     payload = envelope["payload"]
     if not isinstance(payload, dict):
         raise IssueCommandRejected(
-            f"payload must be a JSON object, got {type(payload).__name__}"
+            f"payload must be a JSON object, got {type(payload).__name__}",
+            "PAYLOAD_NOT_AN_OBJECT"
         )
 
     canonical = canonical_envelope(envelope)
@@ -293,21 +335,36 @@ _BOOL_KEYS = frozenset({
 })
 
 
-def _check_payload(action: str, payload: dict) -> None:
+def vocabulary(action: str) -> frozenset[str]:
+    """Every payload field name this action recognises. Fixed at import time."""
     spec = ACTIONS[action]
+    return spec.required | spec.optional
+
+
+def _check_payload(action: str, payload: dict) -> None:
+    """Validate the payload against one action's fixed field vocabulary.
+
+    Every refusal below names only things from that fixed vocabulary — never a
+    submitted key name and never a submitted value. An unknown field is reported
+    as a COUNT: the name came from the envelope, so printing it would echo
+    author-controlled text into an ops result, a worker log and a receipt, all of
+    which are read (and the first of which is committed to a public branch).
+    """
+    spec = ACTIONS[action]
+    legal = sorted(vocabulary(action))
     keys = set(payload)
-    unknown = sorted(keys - spec.required - spec.optional)
+
+    unknown = keys - spec.required - spec.optional
     if unknown:
-        legal = sorted(spec.required | spec.optional)
         raise IssueCommandRejected(
-            f"{action}: unknown payload field(s) {unknown}; legal: {legal}"
+            f"{action}: {len(unknown)} unrecognised payload field(s) — names not "
+            f"echoed because they are author-supplied. Legal fields: {legal}",
+            "UNKNOWN_PAYLOAD_FIELD",
         )
     missing = sorted(spec.required - keys)
     if missing:
-        raise IssueCommandRejected(f"{action}: missing required field(s) {missing}")
-    if len(keys) > MAX_PAYLOAD_KEYS:
         raise IssueCommandRejected(
-            f"{action}: {len(keys)} payload fields exceeds the cap of {MAX_PAYLOAD_KEYS}"
+            f"{action}: missing required field(s) {missing}", "MISSING_PAYLOAD_FIELD"
         )
 
     for key in sorted(keys):
@@ -316,21 +373,26 @@ def _check_payload(action: str, payload: dict) -> None:
             if not isinstance(value, bool):
                 raise IssueCommandRejected(
                     f"{action}.{key} must be a JSON boolean, got "
-                    f"{type(value).__name__}"
+                    f"{type(value).__name__}",
+                    "BAD_PAYLOAD_TYPE",
                 )
             continue
         # `isinstance(True, int)` is True in Python, so booleans are excluded above
         # before the string check rather than after it.
         if not isinstance(value, str):
             raise IssueCommandRejected(
-                f"{action}.{key} must be a string, got {type(value).__name__}"
+                f"{action}.{key} must be a string, got {type(value).__name__}",
+                "BAD_PAYLOAD_TYPE",
             )
         if not value.strip():
-            raise IssueCommandRejected(f"{action}.{key} may not be blank")
+            raise IssueCommandRejected(
+                f"{action}.{key} may not be blank", "BLANK_PAYLOAD_FIELD"
+            )
         if len(value) > MAX_STRING_CHARS:
             raise IssueCommandRejected(
                 f"{action}.{key} is {len(value)} chars; the limit is "
-                f"{MAX_STRING_CHARS}. Summarise and cite a source instead"
+                f"{MAX_STRING_CHARS}. Summarise and cite a source instead",
+                "PAYLOAD_FIELD_TOO_LONG",
             )
 
 
@@ -524,21 +586,215 @@ def _record_recurrence(session, env: _Envelope):
     )
 
 
-#: The complete vocabulary. Seventeen ordinary issue operations, no more.
+# ---------------------------------------------------------------------------
+# Manual lineage resolution
+# ---------------------------------------------------------------------------
+
+# OPEN_MANUAL is the one action that may name canonical objects it did not get
+# from a detector, so every reference is resolved HERE, by an explicit function
+# per kind, against a human-legible key. Raw primary keys are deliberately not
+# accepted: a bare integer in a public envelope is unreadable, unverifiable in
+# review, and one typo away from scoping a ticket to the wrong contract. Nothing
+# is passed to `create_issue` as an opaque kwarg — each resolver returns a real
+# row or refuses, and `create_issue._resolve_scope` then cross-checks the
+# combination, so a version that does not belong to the named experiment is a
+# refusal rather than a silently corrected row.
+
+
+def _need(session, payload: dict, key: str):
+    """The value of a lineage field, or None when it was not supplied."""
+    return payload.get(key)
+
+
+def _resolve_experiment(session, value):
+    exp = read.get_experiment(session, value)
+    if exp is None:
+        raise issues.IssueScopeError(f"no experiment with key {value!r}")
+    return exp
+
+
+def _resolve_version(session, experiment, value):
+    """`version` is a version NUMBER and is meaningless without its experiment."""
+    if experiment is None:
+        raise issues.IssueScopeError(
+            "version requires experiment: a version number identifies a contract "
+            "only within one experiment"
+        )
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        raise issues.IssueScopeError(
+            f"version must be a version number, got {value!r}"
+        ) from None
+    for ver in read.versions_for(session, experiment):
+        if ver.version == number:
+            return ver
+    raise issues.IssueScopeError(
+        f"experiment {experiment.key} has no version {number}"
+    )
+
+
+def _resolve_deployment(session, value):
+    row = session.execute(
+        select(models.ExperimentDeployment).where(
+            models.ExperimentDeployment.deployment_key == str(value)
+        )
+    ).scalars().all()
+    if not row:
+        raise issues.IssueScopeError(f"no deployment with key {value!r}")
+    if len(row) > 1:
+        raise issues.IssueScopeError(
+            f"deployment key {value!r} matches {len(row)} deployments; refusing "
+            "to guess which one this issue is about"
+        )
+    return row[0]
+
+
+def _resolve_gate(session, version, value):
+    """`gate` is a gate KEY, unique only within its version."""
+    if version is None:
+        raise issues.IssueScopeError(
+            "gate requires experiment and version: a gate key identifies a gate "
+            "only within one version"
+        )
+    for gate in read.gates_for(session, version):
+        if gate.gate_key == str(value):
+            return gate
+    raise issues.IssueScopeError(
+        f"version {version.version} has no gate {value!r}"
+    )
+
+
+def _resolve_platform_revision(session, value):
+    """`platform_revision` is `COMPONENT:version`, the form the CLI prints."""
+    text = str(value)
+    if ":" not in text:
+        raise issues.IssueScopeError(
+            f"platform_revision must be COMPONENT:version, got {text!r}"
+        )
+    component_key, _, version = text.partition(":")
+    row = session.execute(
+        select(models.PlatformRevision)
+        .join(models.PlatformComponent)
+        .where(
+            models.PlatformComponent.key == component_key.strip(),
+            models.PlatformRevision.version == version.strip(),
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise issues.IssueScopeError(f"no platform revision {text!r}")
+    return row
+
+
+def _manual_lineage(session, payload: dict) -> dict:
+    """Resolve every supplied lineage reference into a real row.
+
+    Order matters: an experiment must exist before a version number means
+    anything, and a version before a gate key does. Anything absent stays absent
+    — a system-wide problem legitimately has no scope at all.
+    """
+    experiment = version = deployment = gate = revision = None
+    if "experiment" in payload:
+        experiment = _resolve_experiment(session, payload["experiment"])
+    if "version" in payload:
+        version = _resolve_version(session, experiment, payload["version"])
+    if "deployment" in payload:
+        deployment = _resolve_deployment(session, payload["deployment"])
+    if "gate" in payload:
+        gate = _resolve_gate(session, version, payload["gate"])
+    if "platform_revision" in payload:
+        revision = _resolve_platform_revision(session, payload["platform_revision"])
+    return {
+        "experiment": experiment,
+        "version": version,
+        "deployment": deployment,
+        "gate": gate,
+        "platform_revision": revision,
+    }
+
+
+def _open_manual(session, env: _Envelope):
+    """Open a ticket for a problem a PERSON found.
+
+    The Tower's detector surface does not cover everything — a Live Ops runtime
+    observation, a Research Lab reading of the evidence, an integrity review, an
+    operator noticing something odd. Before this existed those problems had no
+    production path at all, and "use the local CLI" is not an answer when the
+    local CLI is precisely what cannot write production.
+
+    Narrow by construction: five required fields, a fixed optional set, and NO
+    `**payload` passthrough to `create_issue`. It records the manual source and
+    deliberately no fingerprint — see `policy.DETECTOR_MANUAL`.
+    """
+    payload = env.payload
+    scope = _manual_lineage(session, payload)
+    return issues.create_issue(
+        session,
+        title=payload["title"],
+        problem_statement=payload["problem_statement"],
+        classification=payload["classification"],
+        current_owner_role=payload["owner_role"],
+        # How it was found. Required, because a manual ticket has no detector to
+        # explain itself and "someone said so" is not provenance.
+        owner_rationale=payload["reason"],
+        evidence_summary=payload["reason"],
+        opened_by_role=env.actor_role,
+        opened_by_actor=env.actor,
+        detector=policy.DETECTOR_MANUAL,
+        detector_fingerprint=None,
+        **_opt(payload, "severity", "priority"),
+        **scope,
+        details_json={
+            "manual_report": True,
+            "reported_via": "issue_command_transport",
+            "discovery": payload["reason"],
+        },
+    )
+
+
+#: The complete vocabulary. Eighteen ordinary issue operations, no more.
 #:
-#: What is absent is as deliberate as what is present. There is no `CREATE` — a
-#: ticket that carries no fingerprint cannot cover the candidate it was opened
-#: for, which is the defect `OPEN_CANDIDATE` exists to prevent — and no
-#: `OPEN_CHILD`, whose parent-scoped kwargs are wide enough to be an escape hatch.
-#: Both remain available through the local CLI, where a human reviews the result.
-#: Free-form JSON blobs (`set_issue_status(payload=…)`, `add_issue_evidence`'s
-#: `payload_json`) are also withheld: this transport is public, so it carries
-#: bounded prose and references, not captures.
+#: Two ways in, and choosing between them is a rule, not a preference:
+#: **`OPEN_CANDIDATE` is MANDATORY whenever the Control Tower has a matching
+#: candidate.** Only adoption carries the deterministic fingerprint and exact
+#: lineage the detector computed, so only adoption makes the ticket cover the
+#: anomaly; a hand-opened ticket for a detected problem leaves the Tower
+#: reporting it as UNTICKETED forever, which is the defect that made the
+#: documented workflow unusable end to end. `OPEN_MANUAL` is for problems
+#: OUTSIDE the detector surface — a Live Ops runtime observation, a Research Lab
+#: reading of the evidence, an integrity review, a person noticing something.
+#: Run `issue-candidates` first; if the problem is listed there, adopt it.
+#:
+#: What is still absent is as deliberate as what is present. There is no generic
+#: `CREATE`: `OPEN_MANUAL` names five required fields and a fixed optional set,
+#: resolves every lineage reference explicitly, and passes no `**payload` through
+#: to `create_issue`. There is no `OPEN_CHILD`, whose parent-scoped kwargs are
+#: wide enough to be an escape hatch; it stays on the local CLI, where a human
+#: reviews the result. Free-form JSON blobs (`set_issue_status(payload=…)`,
+#: `add_issue_evidence`'s `payload_json`) are also withheld: this transport is
+#: public, so it carries bounded prose and references, not captures.
 ACTIONS: dict[str, _Action] = {
     "OPEN_CANDIDATE": _Action(
         required=frozenset({"fingerprint"}), optional=frozenset(),
         run=_open_candidate,
         doc="Adopt a currently detected Control Tower candidate into a real issue.",
+    ),
+    "OPEN_MANUAL": _Action(
+        required=frozenset({
+            "title", "problem_statement", "classification", "owner_role", "reason",
+        }),
+        optional=frozenset({
+            "severity", "priority",
+            # Lineage, by human-legible reference, never by raw id.
+            "experiment",          # experiment key
+            "version",             # version number (needs experiment)
+            "deployment",          # deployment key
+            "gate",                # gate key (needs experiment + version)
+            "platform_revision",   # COMPONENT:version
+        }),
+        run=_open_manual,
+        doc=("Open a ticket for a problem found outside the detector surface. "
+             "Use OPEN_CANDIDATE instead whenever the Tower has a candidate."),
     ),
     "TRIAGE": _Action(
         required=frozenset({"issue", "reason"}),
@@ -648,20 +904,101 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _sanitize(exc: BaseException, env: _Envelope | None) -> str:
-    """A bounded, envelope-free error string.
+#: Submitted strings shorter than this are not redacted from an error message.
+#: A payload value that short comes from a fixed enum (`P1`, `OPS`) and can carry
+#: no disclosure, while blanking two-character substrings everywhere would shred
+#: the message without protecting anything.
+MIN_REDACTED_CHARS = 3
+#: Word-level redaction is more aggressive still, because an exception usually
+#: quotes a FRAGMENT of a value rather than the whole of it.
+MIN_REDACTED_TOKEN_CHARS = 4
+REDACTION = "<redacted>"
 
-    Never a traceback, never the raw envelope: an exception message is one of the
-    output paths the transport value must not reach, so the canonical envelope is
-    stripped from it if it somehow appears before the message is truncated.
+#: Where a submitted string is cut into the words worth protecting. Hyphens,
+#: underscores and dots stay INSIDE a token so an identifier like
+#: `mmsell-scheduled-settle` survives as one unit rather than three common words.
+_TOKEN_SPLIT = re.compile(r"""[\s/\\,;:()\[\]{}"'=<>|?!*&%$#@+~`^]+""")
+
+
+def _redactions(env: _Envelope | None) -> list[str]:
+    """Every author-supplied string that must not survive into an error message.
+
+    Three sources, all author-controlled: the whole canonical envelope; every
+    submitted VALUE **and each word inside it**; and every submitted KEY NAME the
+    action does not recognise — an unknown key is as author-controlled as a value
+    and can smuggle content just as easily.
+
+    Word-level matters more than it looks. Exceptions rarely quote a value whole:
+    they say "boom while handling <one word of it>", or name the single offending
+    path segment. Redacting only the complete value leaves every one of those
+    fragments intact, which is how the original version of this passed its own
+    marker test while still leaking.
+
+    The cost is real and accepted: a common word an author happened to use is
+    also removed from our own message, so a refusal can read a little blanked.
+    That is the right way round — the message is a debugging aid, and this
+    channel is public.
+
+    Longest first, so replacing one never leaves a fragment of another behind.
+    """
+    if env is None:
+        return []
+    out = {env.canonical}
+    known = vocabulary(env.action) if env.action in ACTIONS else frozenset()
+    for key, value in env.payload.items():
+        if isinstance(value, str):
+            if len(value) >= MIN_REDACTED_CHARS:
+                out.add(value)
+            out.update(
+                tok for tok in _TOKEN_SPLIT.split(value)
+                if len(tok) >= MIN_REDACTED_TOKEN_CHARS
+            )
+        if key not in known and len(str(key)) >= MIN_REDACTED_CHARS:
+            out.add(str(key))
+    return sorted(out, key=len, reverse=True)
+
+
+def _sanitize(exc: BaseException, env: _Envelope | None) -> str:
+    """A bounded error string with every author-supplied substring removed.
+
+    Never a traceback and never the submitted content. Removing only the COMPLETE
+    canonical envelope was not enough: a workflow refusal, a SQLAlchemy statement
+    error, or any exception that quotes one offending value re-exposes that value
+    through the receipt, the ops read surface and the worker log. So each
+    submitted string is stripped individually, and what is left is the shape of
+    the failure rather than its contents.
     """
     text = f"{type(exc).__name__}: {exc}"
-    if env is not None:
-        text = text.replace(env.canonical, "<envelope redacted>")
+    for secret in _redactions(env):
+        text = text.replace(secret, REDACTION)
     text = " ".join(text.split())
     if len(text) > MAX_ERROR_CHARS:
         text = text[: MAX_ERROR_CHARS - 1] + "…"
     return text
+
+
+def safe_error_fields(raw: str | None, exc: BaseException) -> dict:
+    """Log-safe metadata for a transport failure that produced NO receipt.
+
+    Used by the boot hook, which sees exceptions raised before a `command_id`
+    could be trusted — a malformed envelope, an unreadable value, a database that
+    would not take the claim. Those exceptions may quote the offending document
+    or, from SQLAlchemy, the bound parameters (which include `payload_json`), so
+    the message is never logged at all. What the operator gets instead is the
+    exception class, a stable code where one exists, and the hash and length of
+    the value that failed — enough to match a log line to the envelope they
+    submitted, and nothing that reveals what was in it.
+    """
+    text = raw or ""
+    encoded = text.encode("utf-8")
+    return {
+        "error_class": type(exc).__name__,
+        "error_code": getattr(exc, "code", None) or "TRANSPORT_ERROR",
+        "command_bytes": len(encoded),
+        "command_hash": (
+            hashlib.sha256(encoded).hexdigest()[:16] if encoded else None
+        ),
+    }
 
 
 def _result_of(session, obj: Any) -> dict:
@@ -764,6 +1101,33 @@ def _receipt_view(row: ExperimentOsIssueCommand, **extra) -> dict:
     return view
 
 
+@contextlib.contextmanager
+def _db_errors(env: _Envelope, stage: str):
+    """Translate a driver exception into a sanitized `IssueCommandTransportError`.
+
+    These are the three places a failure produces no receipt at all, so nothing
+    downstream can hold a redacted account of it — which makes the exception
+    itself the only record, and therefore the thing that must not carry the
+    payload out. SQLAlchemy's `StatementError` helpfully appends the statement
+    and its bound parameters to `str(exc)`; `payload_json` is one of them.
+    """
+    try:
+        yield
+    except Exception as exc:  # noqa: BLE001 — deliberately broad; see above
+        logger.error(
+            "issue command transport failure",
+            extra={"extra_fields": {
+                "stage": stage,
+                "command_id": env.command_id,
+                "payload_hash": env.payload_hash,
+                "error_class": type(exc).__name__,
+            }},
+        )
+        raise IssueCommandTransportError(
+            f"{stage} failed: {_sanitize(exc, env)}"
+        ) from None
+
+
 def execute_envelope(session, envelope: Any, *, now: datetime | None = None) -> dict:
     """Execute one issue command exactly once and return its receipt view.
 
@@ -779,13 +1143,15 @@ def execute_envelope(session, envelope: Any, *, now: datetime | None = None) -> 
     now = now or _now()
     env = _validate_envelope(envelope)   # before any database work, per the design
 
-    receipt_id = _claim(session, env, now)
+    with _db_errors(env, "claim"):
+        receipt_id = _claim(session, env, now)
     if receipt_id is None:
-        existing = (
-            session.query(ExperimentOsIssueCommand)
-            .filter(ExperimentOsIssueCommand.command_id == env.command_id)
-            .one()
-        )
+        with _db_errors(env, "read_receipt"):
+            existing = (
+                session.query(ExperimentOsIssueCommand)
+                .filter(ExperimentOsIssueCommand.command_id == env.command_id)
+                .one()
+            )
         replayed = existing.payload_hash == env.payload_hash
         if not replayed:
             # Same name, different command. Execute nothing and change nothing:
@@ -823,17 +1189,26 @@ def execute_envelope(session, envelope: Any, *, now: datetime | None = None) -> 
         savepoint.rollback()
         row.status = CommandStatus.FAILED
         row.error = _sanitize(exc, env)
-        logger.exception(
+        # Deliberately NOT logger.exception: a traceback carries the original,
+        # unsanitized exception message and every frame's locals through the
+        # handler's formatter, which is exactly the content this transport must
+        # not copy into a log. The receipt already holds a bounded, redacted
+        # account of the failure, and the receipt is the place to read it.
+        logger.error(
             "issue command executor failed",
             extra={"extra_fields": {
-                "command_id": env.command_id, "action": env.action,
+                "command_id": env.command_id,
+                "action": env.action,
+                "payload_hash": env.payload_hash,
+                "error": row.error,
             }},
         )
     row.completed_at = _now()
     # One commit, whichever way it went: on success this makes the mutation and
     # its SUCCEEDED receipt atomic; on refusal or failure the mutation is already
     # rolled back to the savepoint and only the terminal receipt lands.
-    session.commit()
+    with _db_errors(env, "commit"):
+        session.commit()
     return _receipt_view(row, replayed=False, collision=False, executed=True)
 
 

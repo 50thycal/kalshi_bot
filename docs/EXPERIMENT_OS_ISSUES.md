@@ -431,7 +431,7 @@ Exactly six top-level keys; unknown fields are refused, not ignored.
 
 * `command_id` — 8–64 chars of `[A-Za-z0-9._-]`, globally unique and stable. It
   is the entire basis of exactly-once, so reusing one is a collision, not a retry.
-* `action` — one of the seventeen below. Nothing else is reachable.
+* `action` — one of the eighteen below. Nothing else is reachable.
 * `actor` / `actor_role` — **attribution, not authorization.** This transport
   cannot verify identity. The real authority is who can push to `ops` and who
   holds the Railway token, and this changes neither. The role is validated so the
@@ -443,9 +443,24 @@ Exactly six top-level keys; unknown fields are refused, not ignored.
 
 ### The vocabulary
 
+Two ways in, and choosing between them is a **rule, not a preference**:
+
+> **`OPEN_CANDIDATE` is MANDATORY whenever the Control Tower has a matching
+> candidate.** Only adoption carries the deterministic fingerprint and exact
+> lineage the detector computed, so only adoption makes the ticket *cover* the
+> anomaly. A hand-opened ticket for a detected problem leaves the Tower reporting
+> it as UNTICKETED forever — the defect that made this workflow unusable end to
+> end before PR #254. Run `issue-candidates` first; if the problem is listed
+> there, adopt it.
+>
+> **`OPEN_MANUAL` is only for problems outside the candidate detector surface** —
+> a Live Ops runtime observation, a Research Lab reading of the evidence, an
+> integrity review, a person noticing something no detector watches for.
+
 | action | required payload | optional |
 |---|---|---|
 | `OPEN_CANDIDATE` | `fingerprint` | — |
+| `OPEN_MANUAL` | `title`, `problem_statement`, `classification`, `owner_role`, `reason` | `severity`, `priority`, `experiment`, `version`, `deployment`, `gate`, `platform_revision` |
 | `TRIAGE` | `issue`, `reason` | `severity`, `priority`, `classification`, `owner_role` |
 | `CLASSIFY` | `issue`, `classification`, `reason` | — |
 | `ASSIGN` | `issue`, `owner_role`, `reason` | — |
@@ -468,10 +483,22 @@ none of its rules: an illegal transition, a transfer with no evidence, a stale
 candidate fingerprint and a disposition without its rationale are all refused
 exactly as they are locally.
 
-There is deliberately **no `CREATE`** — a hand-opened ticket carries no
-fingerprint and so cannot cover the candidate it was opened for, which is the
-defect `OPEN_CANDIDATE` exists to prevent — and no `OPEN_CHILD`, whose
-parent-scoped keyword arguments are wide enough to be an escape hatch. Both stay
+`OPEN_MANUAL` is **not** a generic `create_issue(**payload)`. It names five
+required fields and a fixed optional set, resolves every lineage reference
+explicitly by human-legible key — an experiment key, a version *number* under
+that experiment, a deployment key, a gate key under that version,
+`COMPONENT:version` for a revision — and passes no `**payload` through. A
+reference that cannot be resolved, or a version that does not belong to the named
+experiment, is a refusal rather than a half-scoped ticket. Raw primary keys are
+not accepted: a bare integer in a public envelope is unreadable in review and one
+typo away from scoping a ticket to the wrong contract.
+
+It records the fixed source `manual.reported` and **no fingerprint**. Fabricating
+one would make a manual ticket look like it covers a candidate that was never
+detected, which is the exact confusion adoption exists to prevent.
+
+There is deliberately no generic `CREATE`, and no `OPEN_CHILD` — whose
+parent-scoped keyword arguments are wide enough to be an escape hatch. It stays
 on the local CLI, where a human sees the result. Free-form JSON blobs are
 withheld for the same reason the section above gives.
 
@@ -539,9 +566,41 @@ receipt is terminal. Clear it anyway so the next reader is not left wondering
 whether something is pending.
 
 Receipts are **metadata only** on the read surface: identity, action, actor,
-timing, outcome, the payload's key *names* and its hash. The submitted payload is
-stored — a receipt that cannot prove what it ran is not an audit record — but it
-is never printed, because this channel's own results are public too.
+timing, outcome, its hash, and the payload's *recognised* field names plus a
+count of the rest. The submitted payload is stored — a receipt that cannot prove
+what it ran is not an audit record — but it is never printed, because this
+channel's own results are public too. An unrecognised field name is counted and
+never echoed: it came from the envelope, so it is as author-controlled as a value.
+
+`issue-command-list --limit` is clamped to 1–100.
+
+### What a failure is allowed to say
+
+Success writes what the executor chose to write. **Failure writes whatever an
+exception happened to say** — and exceptions quote things: the offending value,
+the failing SQL statement, its bound parameters (`payload_json` among them), the
+whole document. So every failure path is bounded:
+
+* the error recorded on a receipt is sanitized — the canonical envelope, each
+  submitted value **and each word inside it**, and every unrecognised key name
+  are removed. Word-level matters: an exception usually quotes a *fragment* of a
+  value, and stripping only whole values leaves every fragment intact;
+* no failure path logs with `exc_info`. A traceback carries the original,
+  unsanitized message past every redaction, so the FAILED path logs bounded
+  fields and the receipt holds the account;
+* a failure that produces **no receipt at all** — a malformed envelope, or a
+  database error during the claim or commit — is reported by the boot hook as an
+  exception class, a stable code, and the **hash and length** of the value that
+  failed. Never `str(exc)`. That is enough to match a log line to a submitted
+  envelope and nothing more;
+* a driver exception around the claim, the receipt read or the final commit is
+  re-raised as a sanitized `IssueCommandTransportError` with the original
+  dropped rather than chained, because a chained `__cause__` puts the raw text
+  back into any traceback that formats it.
+
+The trade-off is accepted deliberately: a common word an author happened to use
+is also blanked out of the framework's own message, so a refusal can read a
+little redacted. The message is a debugging aid; the channel is public.
 
 ## Worked example — zero evidence, end to end
 

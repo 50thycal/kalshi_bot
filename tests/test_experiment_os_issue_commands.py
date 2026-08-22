@@ -181,20 +181,24 @@ def test_a_full_investigation_can_be_driven_entirely_by_command(xos_session,
 
 
 def test_every_allowed_action_is_reachable_and_no_others_exist(xos_session):
-    """The vocabulary is exactly the seventeen operations, each wired to a real
+    """The vocabulary is exactly the eighteen operations, each wired to a real
     function. A typo in the table would otherwise surface only in production."""
     assert set(ic.ACTIONS) == {
-        "OPEN_CANDIDATE", "TRIAGE", "CLASSIFY", "ASSIGN", "TRANSFER", "STATUS",
-        "ADD_EVIDENCE", "ADD_LINK", "PROPOSE_FIX", "RECORD_DISPOSITION",
-        "RECORD_VALIDATION_PLAN", "RECORD_VALIDATION_RESULT", "RESOLVE",
-        "CLOSE_NO_ACTION", "MARK_DUPLICATE", "REOPEN", "RECORD_RECURRENCE",
+        "OPEN_CANDIDATE", "OPEN_MANUAL", "TRIAGE", "CLASSIFY", "ASSIGN",
+        "TRANSFER", "STATUS", "ADD_EVIDENCE", "ADD_LINK", "PROPOSE_FIX",
+        "RECORD_DISPOSITION", "RECORD_VALIDATION_PLAN",
+        "RECORD_VALIDATION_RESULT", "RESOLVE", "CLOSE_NO_ACTION",
+        "MARK_DUPLICATE", "REOPEN", "RECORD_RECURRENCE",
     }
+    openers = {"OPEN_CANDIDATE", "OPEN_MANUAL"}
     for name, spec in ic.ACTIONS.items():
         assert callable(spec.run), name
         assert spec.doc.strip(), name
-        # Every action except adoption addresses an existing issue.
-        if name != "OPEN_CANDIDATE":
+        # Every action except the two openers addresses an existing issue.
+        if name not in openers:
             assert "issue" in spec.required, name
+        # No action's vocabulary may outgrow the ceiling the module asserts.
+        assert len(spec.required | spec.optional) <= ic.MAX_PAYLOAD_KEYS, name
 
 
 # ---------------------------------------------------------------------------
@@ -296,7 +300,7 @@ def test_concurrent_claims_cannot_both_execute(xos_session, xos_platform):
 
 @pytest.mark.skipif(
     not __import__("os").environ.get("XOS_TEST_POSTGRES_URL"),
-    reason="set XOS_TEST_POSTGRES_URL to run the real-concurrency check",
+    reason="XOS_TEST_POSTGRES_URL unset (CI always sets it — see ci.yml)",
 )
 def test_concurrent_claims_on_postgres(tmp_path):
     """The same race under genuine parallelism, against the database production
@@ -305,8 +309,12 @@ def test_concurrent_claims_on_postgres(tmp_path):
     SQLite serialises writers, so the test above proves the LOGIC and not the
     locking. Here four threads submit the identical command in overlapping
     transactions: three block on the uncommitted unique key, then find no row
-    returned and read the winner's receipt. Opt-in because the repository has no
-    standing Postgres fixture — run it with
+    returned and read the winner's receipt.
+
+    **CI sets `XOS_TEST_POSTGRES_URL` to its own Postgres service**, so this runs
+    on every PR and a SKIP fails the build — `.github/workflows/ci.yml` runs it
+    again on its own and greps the result. It skips only on a developer machine
+    with no Postgres, where the sqlite tests above still cover the logic. Locally:
 
         XOS_TEST_POSTGRES_URL=postgresql+psycopg://… pytest -k postgres
     """
@@ -318,9 +326,13 @@ def test_concurrent_claims_on_postgres(tmp_path):
 
     import kalshi_bot.experiment_os.models  # noqa: F401 — register tables
     import kalshi_bot.experiment_os.service  # noqa: F401 — install the guard
+    from kalshi_bot.config import normalize_database_url
     from kalshi_bot.models import Base
 
-    engine = create_engine(os.environ["XOS_TEST_POSTGRES_URL"])
+    # CI supplies a bare `postgresql://` URL; the repo standardises on psycopg3.
+    engine = create_engine(
+        normalize_database_url(os.environ["XOS_TEST_POSTGRES_URL"])
+    )
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine, expire_on_commit=False)
 
@@ -431,10 +443,19 @@ def test_a_bad_payload_produces_a_terminal_rejected_receipt(xos_session,
         command_id="typo-00000001",
     ))
     assert receipt["status"] == ic.CommandStatus.REJECTED
-    assert "sevirity" in receipt["error"]
+    # The refusal says WHAT was wrong, how many fields, and what the legal
+    # vocabulary is — but never echoes the author's own key back out. That key is
+    # author-controlled text and every surface that prints this one is public.
+    assert "sevirity" not in receipt["error"]
+    assert "1 unrecognised payload field" in receipt["error"]
+    assert "severity" in receipt["error"]          # the LEGAL name is printed
     stored = read.issue_command(s, "typo-00000001")
     assert stored.status == ic.CommandStatus.REJECTED
     assert stored.completed_at is not None
+    view = read.issue_command_summary(stored)
+    assert "sevirity" not in json.dumps(view, default=str)
+    assert view["payload_unrecognised_fields"] == 1
+    assert view["payload_fields"] == ["issue", "reason"]
 
 
 def test_an_illegal_transition_is_still_refused(xos_session, xos_platform):
@@ -812,3 +833,437 @@ def test_the_ops_channel_exposes_only_reads(xos_session):
     import pathlib
     src = pathlib.Path(ops_runner.__file__).read_text()
     assert "issue_commands" not in src
+
+
+# ---------------------------------------------------------------------------
+# OPEN_MANUAL — a production path for problems a PERSON found
+# ---------------------------------------------------------------------------
+
+
+def _manual(payload, **kw):
+    base = {
+        "title": "collector stopped mid-cycle",
+        "problem_statement": "the NWS collector logged no observations after 03:00",
+        "classification": "OPS",
+        "owner_role": "LIVE_OPS",
+        "reason": "noticed during the morning Live Ops read of the runtime",
+    }
+    base.update(payload)
+    return _envelope("OPEN_MANUAL", base, **kw)
+
+
+def test_a_manual_report_opens_an_unscoped_issue(xos_session, xos_platform):
+    """The gap this closes: before OPEN_MANUAL, a problem the Tower's detectors
+    do not cover had NO production path at all — and "use the local CLI" is not
+    an answer when the local CLI is exactly what cannot write production."""
+    s = xos_session
+    receipt = ic.execute_envelope(s, _manual({}, command_id="manual-000001"))
+
+    assert receipt["status"] == ic.CommandStatus.SUCCEEDED
+    issue = ix.get_issue(s, receipt["issue_key"])
+    assert issue.title == "collector stopped mid-cycle"
+    assert issue.classification == "OPS"
+    assert issue.current_owner_role == "LIVE_OPS"
+    assert issue.opened_by_role == "LIVE_OPS"
+    assert issue.opened_by_actor == "cal"
+    # A fixed source, and NO fingerprint: fabricating one would make a manual
+    # ticket look like it covers a candidate that was never detected.
+    assert issue.detector == ipol.DETECTOR_MANUAL
+    assert issue.detector_fingerprint is None
+    assert issue.details_json["manual_report"] is True
+    # Unscoped is legitimate — not every problem belongs to one experiment.
+    assert issue.experiment_id is None
+    assert issue.version_id is None
+
+
+def test_a_manual_report_records_how_it_was_discovered(xos_session, xos_platform):
+    """`reason` is required because a manual ticket has no detector to explain
+    itself, and "someone said so" is not provenance."""
+    s = xos_session
+    receipt = ic.execute_envelope(s, _manual({}, command_id="manual-000002"))
+    issue = ix.get_issue(s, receipt["issue_key"])
+    created = [e for e in ix.issue_events(s, issue) if e.event_type == "CREATED"]
+    assert len(created) == 1
+    assert "morning Live Ops read" in (created[0].reason or "")
+    assert "morning Live Ops read" in (issue.evidence_summary or "")
+
+
+@pytest.mark.parametrize("missing", [
+    "title", "problem_statement", "classification", "owner_role", "reason",
+])
+def test_a_manual_report_requires_all_five_fields(xos_session, missing):
+    payload = {
+        "title": "t", "problem_statement": "p", "classification": "OPS",
+        "owner_role": "LIVE_OPS", "reason": "r",
+    }
+    payload.pop(missing)
+    receipt = ic.execute_envelope(xos_session, _envelope(
+        "OPEN_MANUAL", payload, command_id=f"manual-req-{missing[:4]}"))
+    assert receipt["status"] == ic.CommandStatus.REJECTED
+    assert missing in receipt["error"]        # a LEGAL field name; safe to print
+    assert not ix.list_issues(xos_session)
+
+
+def test_a_manual_report_can_be_scoped_to_an_experiment_and_version(
+        xos_session, xos_platform):
+    s = xos_session
+    exp, ver, _epoch = _book(s, "scoped-book")
+    receipt = ic.execute_envelope(s, _manual(
+        {"experiment": "scoped-book", "version": "1"},
+        command_id="manual-scope-1",
+    ))
+    assert receipt["status"] == ic.CommandStatus.SUCCEEDED, receipt
+    issue = ix.get_issue(s, receipt["issue_key"])
+    assert issue.experiment_id == exp.id
+    assert issue.version_id == ver.id
+
+
+def test_a_manual_report_can_be_scoped_to_a_deployment(xos_session, xos_platform):
+    """A deployment KEY, not a raw id — and the epoch, version and experiment
+    above it are derived, because the lineage chain already knows them."""
+    s = xos_session
+    exp, ver, epoch = _book(s, "dep-book")
+    receipt = ic.execute_envelope(s, _manual(
+        {"deployment": "dep-book-paper"}, command_id="manual-scope-2"))
+    assert receipt["status"] == ic.CommandStatus.SUCCEEDED, receipt
+    issue = ix.get_issue(s, receipt["issue_key"])
+    assert issue.epoch_id == epoch.id
+    assert issue.version_id == ver.id
+    assert issue.experiment_id == exp.id
+
+
+def test_a_manual_report_can_be_scoped_to_a_gate(xos_session, xos_platform):
+    s = xos_session
+    exp, ver, _epoch = _book(s, "gate-book")
+    gate = svc.register_gate(
+        s, ver, gate_key="paper_to_live_canary", kind="promotion",
+        spec={"pass_all": [{"metric": "candidate_rejection_rate_pct",
+                            "arm": "treatment", "op": ">", "value": 0}]},
+        from_state="PAPER", to_state="LIVE_CANARY", registered_at=T0,
+    )
+    s.commit()
+    receipt = ic.execute_envelope(s, _manual(
+        {"experiment": "gate-book", "version": "1",
+         "gate": "paper_to_live_canary"},
+        command_id="manual-scope-3",
+    ))
+    assert receipt["status"] == ic.CommandStatus.SUCCEEDED, receipt
+    issue = ix.get_issue(s, receipt["issue_key"])
+    assert issue.gate_id == gate.id
+    assert issue.version_id == ver.id
+
+
+def test_a_manual_report_can_be_scoped_to_a_platform_revision(xos_session,
+                                                              xos_platform):
+    s = xos_session
+    from kalshi_bot.experiment_os.models import (
+        PlatformComponent,
+        PlatformRevision,
+    )
+    component = s.query(PlatformComponent).first()
+    revision = (
+        s.query(PlatformRevision)
+        .filter(PlatformRevision.component_id == component.id)
+        .first()
+    )
+    receipt = ic.execute_envelope(s, _manual(
+        {"classification": "PLATFORM", "owner_role": "PLATFORM_CHANGE_REVIEW",
+         "platform_revision": f"{component.key}:{revision.version}"},
+        command_id="manual-scope-4",
+    ))
+    assert receipt["status"] == ic.CommandStatus.SUCCEEDED, receipt
+    issue = ix.get_issue(s, receipt["issue_key"])
+    assert issue.platform_revision_id == revision.id
+
+
+@pytest.mark.parametrize("bad, why", [
+    ({"experiment": "no-such-book"}, "unknown experiment key"),
+    ({"experiment": "lineage-book", "version": "99"}, "no such version"),
+    ({"version": "1"}, "version without its experiment"),
+    ({"gate": "paper_to_live_canary"}, "gate without its version"),
+    ({"deployment": "no-such-deployment"}, "unknown deployment key"),
+    ({"platform_revision": "no-colon-here"}, "malformed revision reference"),
+    ({"platform_revision": "NOPE:v9"}, "unknown revision"),
+])
+def test_a_manual_report_refuses_invalid_lineage(xos_session, xos_platform,
+                                                 bad, why):
+    """Every reference is resolved explicitly before `create_issue` is called, so
+    a lineage that cannot be resolved is a refusal, never a half-scoped ticket."""
+    s = xos_session
+    _book(s, "lineage-book")
+    receipt = ic.execute_envelope(s, _manual(bad, command_id=f"bad-{abs(hash(why))%10**8:08d}"))
+    assert receipt["status"] == ic.CommandStatus.REJECTED, why
+    assert not ix.list_issues(s), why
+
+
+def test_a_manual_report_refuses_mismatched_lineage(xos_session, xos_platform):
+    """A version that belongs to a DIFFERENT experiment than the one named. The
+    resolver catches it because the version number is looked up within the named
+    experiment; nothing is silently corrected."""
+    s = xos_session
+    _book(s, "book-a")
+    _book(s, "book-b")
+    # book-a has version 1; ask for version 2 under it after creating a second
+    # version elsewhere — the number simply does not exist on book-a.
+    receipt = ic.execute_envelope(s, _manual(
+        {"experiment": "book-a", "version": "2"}, command_id="mismatch-0001"))
+    assert receipt["status"] == ic.CommandStatus.REJECTED
+    assert not ix.list_issues(s)
+
+
+def test_a_manual_report_cannot_smuggle_extra_create_issue_kwargs(xos_session):
+    """There is no `**payload` passthrough. A field `create_issue` would happily
+    accept is still not part of OPEN_MANUAL's vocabulary."""
+    receipt = ic.execute_envelope(xos_session, _manual(
+        {"detector_fingerprint": "0" * 64}, command_id="smuggle-0001"))
+    assert receipt["status"] == ic.CommandStatus.REJECTED
+    assert not ix.list_issues(xos_session)
+
+
+def test_adoption_is_still_the_rule_when_a_candidate_exists(xos_session,
+                                                            xos_platform):
+    """OPEN_MANUAL does not make OPEN_CANDIDATE optional. A manual ticket for a
+    DETECTED problem carries no fingerprint, so the Tower goes on reporting the
+    anomaly as unticketed — which is the defect adoption exists to prevent. The
+    rule is documented; this test pins the consequence so nobody rediscovers it
+    in production."""
+    s = xos_session
+    _book(s, "quiet-book")
+    before = ct.build_report(s, evaluate=False)
+    cand = next(c for c in before.issue_candidates
+                if c["detector"] == ipol.DETECTOR_ZERO_EVIDENCE)
+
+    ic.execute_envelope(s, _manual(
+        {"title": "quiet-book has no evidence"}, command_id="manual-wrong-1"))
+
+    after = ct.build_report(s, evaluate=False)
+    still = [c for c in after.issue_candidates
+             if c["fingerprint"] == cand["fingerprint"]]
+    assert still, "a manual ticket must NOT be mistaken for coverage"
+
+
+# ---------------------------------------------------------------------------
+# Failure-path disclosure — the harder half of "the transport is public"
+# ---------------------------------------------------------------------------
+#
+# The success-path marker test above is not enough. Success writes exactly what
+# the executor chose to write; FAILURE writes whatever an exception happened to
+# say, and exceptions quote things: the offending value, the failing SQL
+# statement, its bound parameters (which include `payload_json`), the whole
+# document. Each test below drives one such path and asserts the marker reaches
+# no output surface at all.
+
+
+FAIL_MARKER = "leak-me-nowhere-9d41f2"
+
+
+def _log_text(caplog) -> str:
+    """Everything a handler could format, not just the rendered message: a
+    traceback lives on the record, not in `getMessage()`."""
+    parts = [caplog.text]
+    for record in caplog.records:
+        parts.append(str(record.getMessage()))
+        parts.append(str(getattr(record, "extra_fields", "")))
+        if record.exc_info:
+            import traceback
+            parts.append("".join(traceback.format_exception(*record.exc_info)))
+        if record.exc_text:
+            parts.append(record.exc_text)
+    return "\n".join(parts)
+
+
+def _cli_text(session, command_id, capsys) -> str:
+    for argv in (["issue", "command-show", command_id], ["issue", "command-list"]):
+        args = cli.build_parser().parse_args(argv)
+        cli.cmd_issue(session, args)
+    return capsys.readouterr().out
+
+
+def test_an_executor_failure_after_writing_leaks_nothing(
+        xos_session, xos_platform, monkeypatch, caplog, capsys):
+    """An action that writes and THEN raises with the payload in its message.
+
+    This is the FAILED path: savepoint rolled back, terminal receipt committed,
+    nothing logged with `exc_info`. The marker must not survive into the receipt,
+    the stored summary, the CLI, or the log.
+    """
+    import logging
+
+    s = xos_session
+    issue, _ = _open_ticket(s)
+    real = ix.record_recurrence
+
+    def explode(session, target, **kwargs):
+        real(session, target, **kwargs)          # write, then die loudly
+        raise RuntimeError(f"boom while handling {FAIL_MARKER}")
+
+    monkeypatch.setattr(ic.issues, "record_recurrence", explode)
+    with caplog.at_level(logging.DEBUG):
+        receipt = ic.execute_envelope(s, _envelope(
+            "RECORD_RECURRENCE",
+            {"issue": issue.issue_key, "note": f"context {FAIL_MARKER}"},
+            command_id="leak-fail-001",
+        ))
+
+    assert receipt["status"] == ic.CommandStatus.FAILED
+    assert "RuntimeError" in receipt["error"]
+    stored = read.issue_command(s, "leak-fail-001")
+    assert stored.status == ic.CommandStatus.FAILED
+
+    assert FAIL_MARKER not in json.dumps(receipt, default=str)
+    assert FAIL_MARKER not in json.dumps(
+        read.issue_command_summary(stored), default=str)
+    assert FAIL_MARKER not in _cli_text(s, "leak-fail-001", capsys)
+    assert FAIL_MARKER not in _log_text(caplog)
+    # And no failure path may attach a traceback, which would carry the original
+    # unsanitized message straight past every redaction above.
+    assert not any(r.exc_info for r in caplog.records)
+
+
+def test_an_unknown_key_carrying_the_marker_is_never_echoed(
+        xos_session, xos_platform, caplog, capsys):
+    """The key NAME is as author-controlled as a value. Reported as a count."""
+    import logging
+
+    s = xos_session
+    issue, _ = _open_ticket(s)
+    with caplog.at_level(logging.DEBUG):
+        receipt = ic.execute_envelope(s, _envelope(
+            "TRIAGE",
+            {"issue": issue.issue_key, "reason": "r", FAIL_MARKER: "x"},
+            command_id="leak-key-0001",
+        ))
+
+    assert receipt["status"] == ic.CommandStatus.REJECTED
+    stored = read.issue_command(s, "leak-key-0001")
+    view = read.issue_command_summary(stored)
+    assert view["payload_unrecognised_fields"] == 1
+    assert FAIL_MARKER not in json.dumps(receipt, default=str)
+    assert FAIL_MARKER not in json.dumps(view, default=str)
+    assert FAIL_MARKER not in _cli_text(s, "leak-key-0001", capsys)
+    assert FAIL_MARKER not in _log_text(caplog)
+    # It IS stored, because a receipt that cannot prove what ran is not an audit
+    # record. Stored is not the same as printed.
+    assert FAIL_MARKER in json.dumps(stored.payload_json)
+
+
+def test_a_database_failure_during_the_claim_leaks_nothing(
+        xos_session, xos_platform, monkeypatch, caplog):
+    """SQLAlchemy's StatementError appends the statement AND its bound
+    parameters to `str(exc)` — and `payload_json` is one of them. A claim that
+    fails writes no receipt, so the exception is the only record of it, which
+    makes the exception the thing that must not carry the payload out."""
+    import logging
+
+    s = xos_session
+
+    def boom(session, env, now):
+        raise RuntimeError(f"could not insert … parameters: {FAIL_MARKER}")
+
+    monkeypatch.setattr(ic, "_claim", boom)
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(ic.IssueCommandTransportError) as exc:
+            ic.execute_envelope(s, _envelope(
+                "RECORD_RECURRENCE",
+                {"issue": "XOS-000001", "note": FAIL_MARKER},
+                command_id="leak-claim-01",
+            ))
+
+    assert FAIL_MARKER not in str(exc.value)
+    assert exc.value.__cause__ is None      # the raw original is not chained
+    assert FAIL_MARKER not in _log_text(caplog)
+
+
+def test_the_boot_hook_error_output_leaks_nothing(xos_session, caplog):
+    """The outer hook catches what produced no receipt at all. It logs an
+    exception CLASS, a stable code, and the hash and length of the value — never
+    `str(exc)`, which is where the document or the bound parameters live."""
+    import logging
+
+    raw = json.dumps(_envelope(
+        "RECORD_RECURRENCE", {"issue": "XOS-000001", "note": FAIL_MARKER},
+        command_id="leak-boot-001",
+    ))
+
+    # 1. Whatever the hook would log for a transport failure.
+    fields = ic.safe_error_fields(raw, RuntimeError(f"raw {FAIL_MARKER}"))
+    assert FAIL_MARKER not in json.dumps(fields, default=str)
+    assert fields["error_class"] == "RuntimeError"
+    assert fields["command_bytes"] == len(raw.encode())
+    assert len(fields["command_hash"]) == 16
+
+    # 2. A rejection carries its stable code through instead of prose.
+    rejected = ic.safe_error_fields(raw, ic.IssueCommandRejected("x", "NOT_JSON"))
+    assert rejected["error_code"] == "NOT_JSON"
+
+    # 3. And the real hook path: a malformed value never reaches the log.
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(ic.IssueCommandRejected):
+            ic.run_boot_command(xos_session, "{not json " + FAIL_MARKER)
+    assert FAIL_MARKER not in _log_text(caplog)
+
+
+def test_main_boot_hook_logs_only_safe_fields():
+    """Pinned at the source: hook 2b-iii must not reach for `str(exc)`.
+
+    A structural check rather than a behavioural one because the leak would be a
+    single edit away and would only show up in a production log nobody diffs."""
+    import ast
+    import pathlib
+
+    import kalshi_bot.main as main_module
+
+    src = pathlib.Path(main_module.__file__).read_text()
+    start = src.index("2b-iii")
+    end = src.index("# 2c)", start)
+    # CODE only: the comment above the handler quotes `str(exc)` to say it is
+    # exactly what must not be logged, and that explanation should not be the
+    # thing that fails the test.
+    hook = "\n".join(
+        line for line in src[start:end].splitlines()
+        if not line.strip().startswith("#")
+    )
+    assert "safe_error_fields" in hook
+    assert "str(exc)" not in hook
+    assert "exc_info" not in hook
+    ast.parse(src)          # the slice above must not have been a stale index
+
+
+def test_sanitize_removes_individual_values_not_only_the_whole_envelope():
+    """The unit that the four tests above depend on."""
+    env = ic._validate_envelope(_envelope(
+        "ADD_LINK",
+        {"issue": "XOS-000001", "link_type": "RESEARCH_DOC",
+         "reference": f"docs/{FAIL_MARKER}.md"},
+        command_id="sanitize-001",
+    ))
+    text = ic._sanitize(
+        RuntimeError(f"failed on docs/{FAIL_MARKER}.md while parsing"), env
+    )
+    assert FAIL_MARKER not in text
+    assert "RuntimeError" in text
+    assert ic.REDACTION in text
+    # Bounded, and never a traceback.
+    assert len(text) <= ic.MAX_ERROR_CHARS
+    assert "Traceback" not in text
+
+
+def test_the_receipt_list_limit_is_clamped(xos_session, xos_platform):
+    """A negative LIMIT is a SQL error on some dialects and unbounded on others;
+    an enormous one turns a status read into a table scan printed to ops."""
+    s = xos_session
+    issue, _ = _open_ticket(s)
+    for n in range(3):
+        ic.execute_envelope(s, _envelope(
+            "RECORD_RECURRENCE", {"issue": issue.issue_key},
+            command_id=f"limit-{n:08d}"))
+
+    assert read.clamp_issue_command_limit(-5) == 1
+    assert read.clamp_issue_command_limit(0) == 1
+    assert read.clamp_issue_command_limit(10 ** 9) == read.ISSUE_COMMAND_LIMIT_MAX
+    assert read.clamp_issue_command_limit("nonsense") == 20
+    assert len(read.issue_commands(s, limit=-1)) == 1
+    assert len(read.issue_commands(s, limit=10 ** 9)) == 4
+
+    args = cli.build_parser().parse_args(["issue", "command-list", "--limit", "-3"])
+    assert cli.cmd_issue(s, args) == 0

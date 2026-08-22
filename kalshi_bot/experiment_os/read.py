@@ -896,23 +896,57 @@ def issue_command(session, command_id: str) -> ExperimentOsIssueCommand | None:
     ).scalar_one_or_none()
 
 
+#: Clamp for `issue_commands(limit=…)`. A negative or zero LIMIT is a SQL error
+#: on some dialects and silently unbounded on others, and an arbitrarily large
+#: one turns a status read into a table scan printed to an ops result. Bounded
+#: here, at the read, so no caller has to remember.
+ISSUE_COMMAND_LIMIT_MIN = 1
+ISSUE_COMMAND_LIMIT_MAX = 100
+
+
+def clamp_issue_command_limit(limit) -> int:
+    """Coerce any caller's limit into [1, 100]. Non-numeric falls back to 20."""
+    try:
+        value = int(limit)
+    except (TypeError, ValueError):
+        return 20
+    return max(ISSUE_COMMAND_LIMIT_MIN, min(ISSUE_COMMAND_LIMIT_MAX, value))
+
+
 def issue_commands(
     session, *, limit: int = 20, status: str | None = None,
     issue_key: str | None = None,
 ) -> list[ExperimentOsIssueCommand]:
-    """Recent receipts, newest first."""
+    """Recent receipts, newest first. `limit` is clamped to [1, 100]."""
     stmt = select(ExperimentOsIssueCommand)
     if status:
         stmt = stmt.where(ExperimentOsIssueCommand.status == str(status).upper())
     if issue_key:
         stmt = stmt.where(ExperimentOsIssueCommand.issue_key == str(issue_key))
-    stmt = stmt.order_by(ExperimentOsIssueCommand.id.desc()).limit(int(limit))
+    stmt = (
+        stmt.order_by(ExperimentOsIssueCommand.id.desc())
+        .limit(clamp_issue_command_limit(limit))
+    )
     return list(session.execute(stmt).scalars())
 
 
 def issue_command_summary(row: ExperimentOsIssueCommand) -> dict:
     """A receipt as safe-to-print metadata (see the note above)."""
-    payload = row.payload_json or {}
+    payload = row.payload_json if isinstance(row.payload_json, dict) else {}
+    # Recognised field NAMES only, plus a count of the rest. A rejected envelope
+    # can carry any key its author invented, and "the payload's field names come
+    # from a fixed vocabulary" is only true of the ones the action recognises —
+    # so the unrecognised ones are counted, never printed. Values are never
+    # included at all; `payload_hash` is what proves what was submitted.
+    from . import issue_commands  # local: issue_commands imports this module
+
+    known = (
+        issue_commands.vocabulary(row.action)
+        if row.action in issue_commands.ACTIONS
+        else frozenset()
+    )
+    recognised = sorted(k for k in payload if k in known)
+    unrecognised = sum(1 for k in payload if k not in known)
     return {
         "command_id": row.command_id,
         "action": row.action,
@@ -922,9 +956,8 @@ def issue_command_summary(row: ExperimentOsIssueCommand) -> dict:
         "issue_key": row.issue_key,
         "schema_version": row.schema_version,
         "payload_hash": row.payload_hash,
-        # Names only. The vocabulary is fixed in issue_commands.ACTIONS, so a key
-        # name can never be author-supplied text.
-        "payload_fields": sorted(payload) if isinstance(payload, dict) else [],
+        "payload_fields": recognised,
+        "payload_unrecognised_fields": unrecognised,
         "requested_at": row.requested_at,
         "started_at": row.started_at,
         "completed_at": row.completed_at,

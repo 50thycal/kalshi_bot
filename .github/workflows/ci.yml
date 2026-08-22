@@ -26,6 +26,14 @@ jobs:
     env:
       # Used by `alembic upgrade head` to exercise the migration on real Postgres.
       DATABASE_URL: postgresql://kalshi:kalshi@localhost:5432/kalshi_bot
+      # The issue-command transport's exactly-once claim is an
+      # `INSERT … ON CONFLICT DO NOTHING RETURNING` whose mutual exclusion comes
+      # from Postgres row locking. SQLite serialises writers, so the sqlite tests
+      # prove the LOGIC and not the locking. Pointing the race test at this same
+      # service makes the four-worker proof run on every PR instead of being an
+      # opt-in someone has to remember; the test FAILS rather than skips if the
+      # database is unreachable.
+      XOS_TEST_POSTGRES_URL: postgresql://kalshi:kalshi@localhost:5432/kalshi_bot
 
     steps:
       - uses: actions/checkout@v4
@@ -43,5 +51,22 @@ jobs:
       - name: Apply migrations on Postgres
         run: alembic upgrade head
 
+      # NOTE: `-q` already comes from pyproject's addopts. Passing it again makes
+      # it `-qq`, which suppresses the summary line the next step greps for.
       - name: Run tests
-        run: pytest -q
+        run: pytest -rs
+
+      # The exactly-once proof, run on its own so a SKIP is a build failure
+      # rather than a quiet dot in a thousand-test summary. If this ever starts
+      # skipping, the transport's mutual exclusion is no longer being verified
+      # against the database production actually runs on.
+      - name: Exactly-once claim race must RUN on Postgres (never skip)
+        shell: bash
+        run: |
+          set -euo pipefail
+          pytest -rs -k test_concurrent_claims_on_postgres | tee race.log
+          grep -qE "^1 passed" race.log
+          if grep -q "skipped" race.log; then
+            echo "::error::the Postgres claim race SKIPPED; exactly-once is unproven"
+            exit 1
+          fi

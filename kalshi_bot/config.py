@@ -111,7 +111,7 @@ class Settings(BaseSettings):
     # Empty = inert. Same door and same reasoning as the two flags above: the ops
     # channel is read-only against Postgres, so ordinary ticket writes — adopt,
     # triage, transfer, validate, resolve — have no production path without this.
-    # Bounded to a fixed vocabulary of seventeen issue operations that call the
+    # Bounded to a fixed vocabulary of eighteen issue operations that call the
     # existing service functions; it cannot run SQL, Python or shell, and cannot
     # touch a lifecycle state, gate, verdict, Version, Epoch, Platform Revision or
     # exposure. Repeated boots are provably inert because each command_id gets a
