@@ -207,6 +207,8 @@ class FitCache:
     # Block samples depend only on (product, hour, horizon, fit_days) — not on tail_q — so they
     # are shared across the sweep's FitCache instances.
     _BLOCKS: dict[tuple[str, int, int, float], tuple[list[float], dict]] = {}
+    # The INCUMBENT's overlapping 5-day return window, same sharing rationale.
+    _RETS: dict[tuple[str, int, int], list[float]] = {}
 
     def __init__(self, spot: dict[str, dict[int, float]], tail_q: float, fit_days: float):
         self.spot = spot
@@ -258,15 +260,23 @@ class FitCache:
         not as a version of it that adopted the replacement's sampling. `SpotModel.
         prob_from_returns` inlined, since the ops runner cannot import the package.
         """
-        hour = int(at.replace(minute=0, second=0, microsecond=0).timestamp())
-        closes = self.spot.get(product) or {}
-        h = h_min * 60
-        lo = hour - int(INCUMBENT_TRAIL_DAYS * 86400)
-        rets = []
-        for t in range(lo, hour - h + 60, 60):
-            a, b = closes.get(t), closes.get(t + h)
-            if a and b and a > 0 and b > 0:
-                rets.append(math.log(b / a))
+        hour = tm.refit_anchor(int(at.timestamp()))
+        # The incumbent's window depends on (product, anchor, horizon) and NOTHING else, so it
+        # is built once and shared across the sweep — the same reason the block samples are.
+        # Rebuilding it per quote meant ~7,200 log() calls on every one of ~400,000 scored
+        # quotes; the sweep spent almost all of its wall clock recomputing an identical list.
+        key = (product, hour, h_min)   # NOT vol_mult: that scales the STRIKE, not the returns
+        rets = FitCache._RETS.get(key)
+        if rets is None:
+            closes = self.spot.get(product) or {}
+            h = h_min * 60
+            lo = hour - int(INCUMBENT_TRAIL_DAYS * 86400)
+            rets = []
+            for t in range(lo, hour - h + 60, 60):
+                a, b = closes.get(t), closes.get(t + h)
+                if a and b and a > 0 and b > 0:
+                    rets.append(math.log(b / a))
+            FitCache._RETS[key] = rets
         if not rets or spot is None or spot <= 0:
             return None
         k = vol_mult if vol_mult and vol_mult > 0 else 1.0
