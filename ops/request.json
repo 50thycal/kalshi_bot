@@ -1,1 +1,1 @@
-{"type": "script", "id": "tax-7", "name": "mmsell_taxonomy_audit", "args": ["--since", "2026-07-19", "--until", "2026-08-21", "--top", "200", "--dump-text"]}
+{"type": "script", "id": "settle-6", "name": "theta_settlement_labels", "args": ["--since", "2026-07-11", "--spot-source", "coinbase", "--kalshi-results", "--kalshi-max-events", "400"]}
