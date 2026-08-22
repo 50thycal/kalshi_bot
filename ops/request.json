@@ -1,1 +1,1 @@
-{"type":"logs","limit":30,"filter":"@markets:0","id":"lo-x3-logs-attr"}
+{"type":"script","name":"kalshi_freeze_study","args":["--max-event-pages","4","--max-markets","30","--trade-pages","1","--open-pages","80","--depth-samples","6"],"id":"lo-x3-study-1"}
