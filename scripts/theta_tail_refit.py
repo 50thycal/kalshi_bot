@@ -49,6 +49,7 @@ import theta_settlement_labels as _sl  # noqa: E402
 from mmsell_market_types import RO_OPTIONS, _to_libpq_url  # noqa: E402
 from theta_settlement_labels import (  # noqa: E402
     NEAR_STRIKE_K,
+    fetch_kalshi_results,
     load_recorded_truth,
     load_spot_coinbase,
     residual_scale,
@@ -349,20 +350,74 @@ def head(t: str) -> None:
     print("=" * 96)
 
 
-def label_quality(rows: list[dict], truth: dict[str, bool],
-                  scale: dict[str, dict[int, float]], seed: int) -> tuple[list[dict], bool]:
-    """Gate the whole run on whether the outcome labels are good enough to calibrate against.
+def real_labels(rows: list[dict]) -> tuple[list[dict], bool]:
+    """Score against KALSHI'S OWN SETTLED RESULTS instead of a derivation.
 
-    The label is DERIVED: the last ladder snapshot's spot before close, compared to the strike.
-    It is not Kalshi's settlement print, which is struck at the close off Kalshi's own index up
-    to three minutes later. Whatever spot did in those minutes is unobserved, and a strike
-    sitting inside that unobserved move is a coin flip the derivation resolves by guessing.
+    The derived label — last snapshot's spot against the strike — was always a proxy, and under a
+    zero-failure-valid clustered bound it does not clear its own 97% agreement bar: 992 events
+    with 54 carrying a disagreement puts the lower bound at 92.6%. That is a real blocker for a
+    proxy, and the right answer to it is not a looser bound. It is to stop using the proxy.
 
-    The near-strike exclusion, its multiplier, and both bars are constants in
-    `theta_settlement_labels` fixed before any of this was measured. This function applies
-    them; it does not choose them. Returns the retained rows and whether the bars were met.
+    Kalshi's market-data endpoints are public and serve `result` on settled markets, and they
+    cover **100%** of this universe. The near-strike exclusion retires with the proxy: it existed
+    only to drop markets whose true side the proxy could not determine, and a settlement print
+    determines every one of them.
+
+    Returns the rows carrying a real result, and whether coverage clears the bar.
     """
-    head("0. OUTCOME LABEL QUALITY — can these labels support a calibration verdict?")
+    head("0. OUTCOME LABELS — Kalshi's own settled results, not a derivation")
+    events = sorted({r["event"] for r in rows})
+    print(f"  fetching settled results for {len(events):,} events from Kalshi's public "
+          "market-data endpoint (no key)...")
+    real, ok_events = fetch_kalshi_results(events)
+    covered = []
+    for r in rows:
+        got = real.get(r["ticker"])
+        if got is None:
+            continue
+        r["derived_resolved"] = r["yes_resolved"]
+        r["yes_resolved"] = got
+        covered.append(r)
+    cov = len(covered) / len(rows) if rows else 0.0
+    print(f"  events read: {ok_events:,}/{len(events):,}   markets with a real result: "
+          f"{len(covered):,}/{len(rows):,} ({cov:.2%})   bar {COVERAGE_BAR:.0%}")
+    if not covered:
+        print("  NOTHING retrieved. Nothing below can be scored.")
+        return [], False
+    st = cs.cluster_success_lower_bound(
+        covered, "event", lambda r: r["derived_resolved"] == r["yes_resolved"])
+    print()
+    print("  For the record, the derivation this REPLACES — measured against the real results on")
+    print("  the whole population rather than the 0.33% a book happened to trade:")
+    print(f"    agreement {st['row_rate']:.2%} over {st['rows']:,} markets; "
+          f"{st['cluster_failures']:,} of {st['clusters']:,} events carry a disagreement")
+    print(f"    99% lower bound (event-clustered, exact, valid at zero failures) "
+          f"{st['lower']:.2%} — below the {AGREEMENT_BAR:.0%} bar it had to clear")
+    print("  The proxy was good and not good ENOUGH, which is why this run does not use it.")
+    print()
+    print("  The near-strike exclusion retires with it: it dropped markets whose side the proxy")
+    print("  could not determine, and a settlement print determines all of them. The scored")
+    print("  population is the full covered universe.")
+    ok = cov >= COVERAGE_BAR
+    print()
+    print("  VERDICT: labels are Kalshi's recorded settlement. "
+          + ("PASS." if ok else f"COVERAGE BELOW {COVERAGE_BAR:.0%} — BLOCKED_DATA."))
+    return covered, ok
+
+
+def label_quality(rows: list[dict], truth: dict[str, bool],
+                  scale: dict[str, dict[int, tuple[float, int]]]) -> tuple[list[dict], bool]:
+    """The DERIVED-label gate, kept for the `--labels derived` path and for the record.
+
+    The label is the last ladder snapshot's spot against the strike. It is not Kalshi's
+    settlement print, which is struck at the close off Kalshi's own index up to three minutes
+    later, and a strike sitting inside that unobserved move is a coin flip the derivation
+    resolves by guessing.
+
+    The exclusion rule, its multiplier and both bars are constants in `theta_settlement_labels`
+    fixed before any of this was measured. This applies them; it does not choose them.
+    """
+    head("0. OUTCOME LABEL QUALITY — can these DERIVED labels support a verdict?")
     for r in rows:
         d, sg = strike_distance(r), sigma_for(r, scale)
         r["ambiguous"] = (None if d is None or not math.isfinite(sg) or sg <= 0
@@ -371,37 +426,28 @@ def label_quality(rows: list[dict], truth: dict[str, bool],
     retained = len(kept) / len(rows) if rows else 0.0
     overlap = [r for r in kept if r["ticker"] in truth]
     for r in overlap:
-        r["agree"] = 1.0 if r["yes_resolved"] == truth[r["ticker"]] else 0.0
-    print(f"  markets with a RECORDED Kalshi settlement: {len(truth):,} "
+        r["agree"] = r["yes_resolved"] == truth[r["ticker"]]
+    print(f"  markets with a RECORDED settlement in the database: {len(truth):,} "
           f"({len([r for r in rows if r['ticker'] in truth]) / max(1, len(rows)):.2%} of the "
-          "scored universe)")
-    print("  Recorded results exist only where a book traded — the selected subset, not the")
-    print("  universe — so they audit the derivation rather than replace it.")
-    print()
+          "scored universe) — traded markets only, which is the selected subset")
     print(f"  near-strike exclusion at K={NEAR_STRIKE_K:g} residual sigma: "
-          f"{len(rows) - len(kept):,} of {len(rows):,} markets dropped, "
-          f"retained coverage {retained:.2%} (bar {COVERAGE_BAR:.0%})")
+          f"{len(rows) - len(kept):,} of {len(rows):,} dropped, retained coverage "
+          f"{retained:.2%} (bar {COVERAGE_BAR:.0%})")
     if len(overlap) < MIN_AUDIT_MARKETS:
-        print(f"  audit overlap after exclusion is {len(overlap)} markets, below the "
-              f"{MIN_AUDIT_MARKETS} needed to measure agreement at all.")
+        print(f"  audit overlap is {len(overlap)} markets, below the {MIN_AUDIT_MARKETS} needed.")
         print("  VERDICT: BLOCKED_DATA — the derivation is unvalidated on this population.")
         return kept, False
-    m = cs.mean_ci(overlap, "event", lambda r: r["agree"], seed=seed)
-    prof = cs.cluster_profile(overlap, "event")
-    print(f"  derived-vs-recorded agreement on the retained overlap: {m['mean']:.2%} "
-          f"{cs.fmt_ci(m['lo'], m['hi'], 4)}")
-    print(f"  audit sample {prof['rows']:,} markets across {prof['clusters']:,} events "
-          f"(bar {AGREEMENT_BAR:.0%}; interval event-clustered)")
-    ok = m["mean"] >= AGREEMENT_BAR and retained >= COVERAGE_BAR
+    st = cs.cluster_success_lower_bound(overlap, "event", lambda r: r["agree"])
+    print(f"  agreement {st['row_rate']:.2%} over {st['rows']:,} markets in "
+          f"{st['clusters']:,} events; 99% LOWER bound {st['lower']:.2%} (bar "
+          f"{AGREEMENT_BAR:.0%})")
+    print("  The bar applies to the LOWER BOUND. A percentile bootstrap here returns [1, 1] on")
+    print("  an all-agreeing sample — a boundary artefact, since no resample of successes can")
+    print("  contain a failure — so the interval is an exact clustered Clopper-Pearson one.")
+    ok = st["lower"] is not None and st["lower"] >= AGREEMENT_BAR and retained >= COVERAGE_BAR
     print()
-    if ok:
-        print("  VERDICT: labels usable ON THE RETAINED POPULATION. Everything below is scored")
-        print("  on exactly that population.")
-    else:
-        print("  VERDICT: BLOCKED_DATA. The labels do not meet their own preregistered bar, so")
-        print("  NOTHING below is a validated calibration result. The sections still print —")
-        print("  suppressing them would hide the evidence — but they are advisory, and no")
-        print("  promotion, freeze or model choice may rest on them.")
+    print("  VERDICT: " + ("labels usable ON THE RETAINED POPULATION."
+                           if ok else "BLOCKED_DATA — advisory only, no verdict rests on this."))
     return kept, ok
 
 
@@ -788,6 +834,11 @@ def main(argv: list[str] | None = None) -> int:
                          "ladder = ~5-minute reconstruction, too sparse to fit blocks on")
     ap.add_argument("--vol-mult", type=float, default=1.0,
                     help="incumbent's vol_mult (1.0 = base model, 2.0 = theta4's)")
+    ap.add_argument("--labels", default="kalshi", choices=("kalshi", "derived"),
+                    help="kalshi = Kalshi's own settled results, fetched per event from the "
+                         "public endpoint, which cover 100%% of this universe; derived = the "
+                         "last-snapshot-spot proxy with its near-strike exclusion, kept for the "
+                         "record and because it is what earlier runs scored")
     ap.add_argument("--seed", type=int, default=cs.DEFAULT_SEED,
                     help="cluster-bootstrap seed. Fixed so a recorded run reproduces its own "
                          "intervals exactly; an analysis whose uncertainty moves between runs "
@@ -836,7 +887,10 @@ def main(argv: list[str] | None = None) -> int:
 
     # The label gate runs BEFORE anything is scored, so every configuration and every section
     # below describes one population: the markets whose derived outcome can be trusted.
-    quotes, labels_ok = label_quality(quotes, truth, residual_scale(spot), args.seed)
+    if args.labels == "kalshi":
+        quotes, labels_ok = real_labels(quotes)
+    else:
+        quotes, labels_ok = label_quality(quotes, truth, residual_scale(spot))
     if not quotes:
         print("no markets survive the near-strike exclusion — nothing to score", file=sys.stderr)
         return 1
@@ -885,7 +939,7 @@ def main(argv: list[str] | None = None) -> int:
     head("9. WHAT THIS RUN ESTABLISHES")
     print(f"  paired model comparison: {verdict}.")
     if labels_ok:
-        print("  outcome labels: PASS on the retained population.")
+        print(f"  outcome labels: {args.labels} — PASS.")
     else:
         print("  outcome labels: BLOCKED_DATA — the derived outcome does not meet its own")
         print("  preregistered agreement/coverage bar, so no section above is a validated")

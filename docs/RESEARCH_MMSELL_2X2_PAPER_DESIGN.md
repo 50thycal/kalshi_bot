@@ -123,19 +123,58 @@ That threshold was fixed in §3.2 before any of this was measured, precisely so 
 not be chosen after seeing which side the exclusions fell on. It did its job: it says stop, and
 it still says stop after the largest repair the evidence supports.
 
-### 2A.1 The taxonomy debt is 198 series prefixes, not six
+### 2A.0 STATUS — read this before anything else
 
-The Platform Change Review scope in §2 was drawn from the crypto universe alone. The full audit
-(`scripts/mmsell_taxonomy_audit.py`, run `tax-6`) puts it two orders of magnitude higher.
+- The experiment is **`BLOCKED_DATA`**.
+- It is **not ready to register.** No Version, no epoch, no deployment, no arm exists.
+- The **taxonomy repair must happen first.** It is a prerequisite, not a parallel task.
+- **Supply and calendar time must be remeasured after the repair**, because the repair changes
+  which markets are eligible.
+- The **event-clustered sample requirements are outstanding.** Every floor in §3.6 is an iid
+  count and must be recomputed with the event as the unit before any arm is registered.
+- **No decision between +2¢, +3¢ and +5¢ is being requested yet.** That question is downstream
+  of the two measurements above and asking it now would be asking the operator to choose a
+  horizon from numbers that are known to be wrong.
 
-**A correction to the census itself.** `unclass-2` reported 2,139 candidates across 278 series
-and 24.03% unclassified. The audit script re-runs the census from
-`mmsell_candidate_ticks`, one row per market at its first in-band tick, over the same window —
-and gets **6,018 candidates across 319 series, 14.31% unclassified**. The two constructions
-differ and the earlier one cannot now be reproduced exactly, so **the audit script's census is
-canonical from here**: it is one command, it is the same function that must be re-run after the
-repair, and it prints its own window. Both numbers fail the 5% bar by a wide margin, so the
-operator decision is unchanged; the figure is not.
+### 2A.0b Why the census moved: 2,139 versus 6,018
+
+The two constructions differ by **where the price-band filter sits**, and the difference is not
+cosmetic. Both read `mmsell_candidate_ticks` over 2026-07-19 → 08-21, non-crypto:
+
+```sql
+-- unclass-2:  first tick of the market, THEN require 5-7c
+SELECT DISTINCT ON (market_ticker) ... ORDER BY market_ticker, captured_at ASC   -- first tick
+...  WHERE mid BETWEEN 5 AND 7                                                   -- filter after
+
+-- audit:      first tick AT WHICH the market is 5-7c
+SELECT DISTINCT ON (market_ticker) ... WHERE mid BETWEEN 5 AND 7                 -- filter first
+     ORDER BY market_ticker, captured_at ASC
+```
+
+Measured side by side (run `census-recon-1`):
+
+| construction | markets | series |
+|---|---|---|
+| A — first tick already in band (`unclass-2`) | 2,070 | 264 |
+| B — first tick at which in band (audit) | **6,018** | **319** |
+| C — ever in band, at any tick (sanity check on B) | 6,018 | 319 |
+| D — in B but not in A: **entered the band later** | **3,948** | 236 |
+| E — all non-crypto candidates in the window | 19,968 | 440 |
+
+B and C being identical confirms what B measures: *was in band at some point*. D is the gap —
+**3,948 markets, 66% of the eligible population**, that opened outside 5–7¢ and drifted in.
+
+(`unclass-2` reported 2,139 rather than 2,070 because it had no upper date bound and ran a day
+longer. That is a footnote; the construction is the finding.)
+
+**Which one matches the arms?** The mmsell scan evaluates every candidate every cycle and takes
+it when it is in band *at that moment*. A market that drifts into 5–7¢ **is** eligible and would
+be traded. So **B is the population the arms would actually see**, and A measured something the
+design never proposed: markets *born* in the band. The audit's census is canonical because it
+matches the arms' behaviour — not because it is newer.
+
+Both fail the 5% bar, so the operator decision is unchanged. The figure is not, and neither is
+the supply estimate in §2A.2, which was computed on the narrower population.
 
 | settle mode | markets | share |
 |---|---|---|
@@ -150,6 +189,12 @@ operator decision is unchanged; the figure is not.
 **The taxonomy repair is a prerequisite for this experiment, not a task running beside it.** Any
 `mode=`-defined arm today silently discards a seventh of its own universe, and which seventh is
 decided by classification debt rather than by settlement behaviour.
+
+### 2A.1 The taxonomy debt is 198 series prefixes, not six
+
+The Platform Change Review scope in §2 was drawn from the crypto universe alone. The audit
+(`scripts/mmsell_taxonomy_audit.py`) puts it two orders of magnitude higher: **861 unclassified
+markets across 198 series prefixes**, against six.
 
 ### 2A.1b The Platform Change Review package
 
@@ -251,9 +296,17 @@ T (treatment)  lo=5,hi=10,maxyes=7, mode=scheduled,             skip=BTC+ETH+SOL
 C (control)    lo=5,hi=10,maxyes=7, mode=in_play+discrete,      skip=BTC+ETH+SOL+DOGE+XRP+CRYPTO
 ```
 
-**Primary metric:** `delta.cents_per_contract`, T − C, per **settled market** — the independent
-unit, since contracts on one market share one settlement. Paper fills, so no execution or
+**Primary metric:** `delta.cents_per_contract`, T − C. Paper fills, so no execution or
 fill-selection term enters: this is a rule question, not an execution question.
+
+**Independent unit: the EVENT, not the settled market.** An earlier revision called the settled
+market the independent unit "since contracts on one market share one settlement". That is true
+and insufficient — markets that share an **event** share the *thing being settled*, so their
+outcomes are correlated even though each settles separately. A four-way MLB total on one game is
+not four independent draws on whether that game went over. The same correction the theta work
+had to make (`RESEARCH_THETA_REMEDIATION.md` §1.1, measured design effect 4–7 on crypto ladders),
+in a different place. Every interval on this estimand must be event-clustered, and the floors in
+§3.6 are iid counts that have not yet been recomputed on that basis.
 
 There is exactly **one** primary estimand. Everything else below is explicitly secondary.
 
@@ -312,19 +365,31 @@ Per-market sd 23.2¢ (non-crypto). Two-sample, equal cells, 80% power, settled m
 | +3¢ | 943 | 1,205 |
 | +5¢ | 339 | 434 |
 
-**Supply is the binding constraint and is pre-registered as such.** Measured on the CANDIDATE
-STREAM (ops run `unclass-2`), which is what actually limits an arm — an earlier estimate derived
-from settled-trade composition was roughly double the truth and is retracted in §2A.2:
+> **Every number in that table is an IID count and is therefore too small.** Markets sharing an
+> event share an outcome, so the effective sample is smaller than the market count by the design
+> effect. The theta work measures 4–7 on crypto ladders and 1.87 on a thinly-spread selected set
+> (`RESEARCH_THETA_REMEDIATION.md` §4.2.3). MMSELL's own design effect has **not been measured**,
+> and it must be before any arm is registered. The correction runs in one direction: up.
 
-| arm | measured markets/day | days to 2,711 |
+**Supply is the binding constraint and is pre-registered as such.** Measured on the CANDIDATE
+STREAM, which is what actually limits an arm — an earlier estimate derived from settled-trade
+composition was roughly double the truth and is retracted in §2A.2:
+
+| arm | measured markets/day | days to 2,711 (iid) |
 |---|---|---|
 | T (scheduled, non-crypto) | **6.7** | **~404** |
 | C (in_play + discrete, non-crypto) | 41.1 | ~66 |
 
-**At +2¢ this experiment takes about thirteen months, bounded by the treatment arm.** If that is
-unacceptable the effect size must move **before** the first trade — at +3¢ T needs ~180 days, at
-+5¢ ~65 days. Stating the calendar now is the point; discovering it at month four is how floors
-get quietly relaxed.
+> **This supply figure is also provisional**, on two counts. It was measured on the narrower
+> `unclass-2` population (§2A.0b), which excluded the 66% of markets that drift into the band
+> rather than opening in it; and it predates the taxonomy repair, which will move markets between
+> the arms. It must be remeasured after the repair, on the population the arms actually see.
+
+**So the calendar is not yet known.** At +2¢ on iid counts and the old supply figure it is about
+thirteen months; the event-clustered floor is larger and the repaired supply is unknown. **No
+choice between +2¢, +3¢ and +5¢ is being requested** — asking the operator to pick a horizon from
+numbers known to be wrong is worse than not asking. Stating the calendar before the first trade
+is still the point; stating a calendar that will move is not.
 
 ### 3.7 Stopping rule
 

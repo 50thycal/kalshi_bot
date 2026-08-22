@@ -1006,3 +1006,75 @@ class TestRuntimeOfflineParity:
         a = tracker._spliced(btc, "BTC", as_of, 30.0)
         b = tracker._spliced(eth, "ETH", as_of, 30.0)
         assert a is not b
+
+
+class TestRealLabelPath:
+    """`scripts/theta_tail_refit.py --labels kalshi` — scoring against Kalshi's own settled
+    results rather than the last-snapshot-spot derivation.
+
+    The derivation was a proxy from the start, and under a zero-failure-valid clustered bound it
+    does not clear its own 97% agreement bar. The answer to a proxy that fails its bar is not a
+    looser bar; it is the real thing, which Kalshi's public endpoint serves for 100% of this
+    universe.
+    """
+
+    @staticmethod
+    def _mod():
+        import importlib.util
+        import pathlib as _p
+        import sys as _sys
+
+        path = _p.Path(__file__).resolve().parent.parent / "scripts" / "theta_tail_refit.py"
+        spec = importlib.util.spec_from_file_location("theta_tail_refit_labels", path)
+        mod = importlib.util.module_from_spec(spec)
+        _sys.modules[spec.name] = mod
+        spec.loader.exec_module(mod)
+        return mod
+
+    @staticmethod
+    def _rows(n=40, flip=0):
+        return [{"ticker": f"KXBTCD-T{i}", "event": f"E{i // 8}",
+                 "yes_resolved": (i >= flip)} for i in range(n)]
+
+    def test_real_results_replace_the_derived_label_and_keep_the_old_one(self, monkeypatch):
+        mod = self._mod()
+        rows = self._rows()
+        # Kalshi says the opposite on exactly one market.
+        real = {r["ticker"]: r["yes_resolved"] for r in rows}
+        real["KXBTCD-T3"] = not real["KXBTCD-T3"]
+        monkeypatch.setattr(mod, "fetch_kalshi_results", lambda ev, **k: (real, len(ev)))
+        kept, ok = mod.real_labels(rows)
+        assert ok is True
+        assert len(kept) == len(rows)
+        flipped = next(r for r in kept if r["ticker"] == "KXBTCD-T3")
+        assert flipped["yes_resolved"] == real["KXBTCD-T3"]
+        assert flipped["derived_resolved"] != flipped["yes_resolved"]
+
+    def test_markets_without_a_real_result_are_dropped_not_guessed(self, monkeypatch):
+        mod = self._mod()
+        rows = self._rows()
+        partial = {r["ticker"]: r["yes_resolved"] for r in rows[:30]}
+        monkeypatch.setattr(mod, "fetch_kalshi_results", lambda ev, **k: (partial, len(ev)))
+        kept, ok = mod.real_labels(rows)
+        assert len(kept) == 30
+        assert ok is False, "30/40 is below the 90% coverage bar"
+
+    def test_no_results_at_all_blocks(self, monkeypatch):
+        mod = self._mod()
+        monkeypatch.setattr(mod, "fetch_kalshi_results", lambda ev, **k: ({}, 0))
+        kept, ok = mod.real_labels(self._rows())
+        assert kept == [] and ok is False
+
+    def test_the_derived_gate_now_tests_the_LOWER_bound(self, monkeypatch):
+        # An all-agreeing overlap used to "PASS" on a bootstrap [1, 1]. With an exact clustered
+        # bound, a few dozen events cannot clear 97% however perfectly they agree.
+        mod = self._mod()
+        rows = self._rows(n=200)
+        for r in rows:
+            r.update({"strike_type": "greater", "floor": 100.0, "cap": None,
+                      "final": 200.0, "final_mtc": 1.0, "product": "BTC"})
+        truth = {r["ticker"]: r["yes_resolved"] for r in rows}       # perfect agreement
+        scale = {"BTC": {1: (1.0, 10_000)}}
+        kept, ok = mod.label_quality(rows, truth, scale)
+        assert len(kept) == len(rows), "every strike is 99 sigma from spot; none is ambiguous"
+        assert ok is False, "25 events cannot put a lower bound above 97%"
