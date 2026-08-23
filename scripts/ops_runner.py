@@ -217,9 +217,20 @@ STALE_RUNNER_MESSAGE = (
 def refuse_if_stale() -> int | None:
     """Fail closed when the runner cannot prove its code is the default branch's.
 
-    Only enforced under GitHub Actions. A developer running this locally, and the
-    tests, are executing a checkout they can see, so the attestation is
-    meaningless there and demanding it would just be friction.
+    Called from `serve()` — the SCRIPT entry point — and deliberately not from
+    `main()`. The question this guard asks is "am I serving a production ops
+    request from possibly-stale code", and the first version answered a different
+    one, "am I running under GitHub Actions". Those are not the same: the CI test
+    job also runs under Actions, and several tests exercise `main()` directly with
+    a temp request file, so the guard refused them and turned a real invariant
+    into a broken build.
+
+    Enforcement therefore keys on how the runner was INVOKED. `python
+    scripts/ops_runner.py` under Actions is the served-request path and must
+    attest; importing the module and calling `main()` is dispatch, which tests and
+    other callers may do freely. The `GITHUB_ACTIONS` check remains so a developer
+    running the script by hand against their own checkout is not nagged for an
+    attestation that means nothing locally.
     """
     if os.environ.get("GITHUB_ACTIONS", "").strip().lower() != "true":
         return None
@@ -230,9 +241,6 @@ def refuse_if_stale() -> int | None:
 
 
 def main() -> int:
-    stale = refuse_if_stale()
-    if stale is not None:
-        return stale
     try:
         with open(REQUEST_PATH) as f:
             req = json.load(f)
@@ -335,5 +343,18 @@ def main() -> int:
     return 1
 
 
+def serve() -> int:
+    """The production entry point: prove the code is current, then dispatch.
+
+    Split from `main()` so that "serve a request" and "dispatch a request" are
+    separately testable, and so the freshness attestation is demanded of exactly
+    the caller that needs it.
+    """
+    stale = refuse_if_stale()
+    if stale is not None:
+        return stale
+    return main()
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(serve())

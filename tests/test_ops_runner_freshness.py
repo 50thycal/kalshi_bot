@@ -142,7 +142,7 @@ def test_the_guard_is_inert_outside_github_actions(monkeypatch):
 
 
 def test_a_stale_runner_serves_no_request_at_all(monkeypatch, tmp_path, capsys):
-    """Fail closed end to end: main() returns before reading the request."""
+    """Fail closed end to end: serve() returns before dispatching the request."""
     import ops_runner
 
     request = tmp_path / "request.json"
@@ -151,11 +151,50 @@ def test_a_stale_runner_serves_no_request_at_all(monkeypatch, tmp_path, capsys):
     monkeypatch.setenv("GITHUB_ACTIONS", "true")
     monkeypatch.delenv(ops_runner.CODE_SOURCE_ENV, raising=False)
 
-    assert ops_runner.main() == 1
+    assert ops_runner.serve() == 1
     err = capsys.readouterr().err
     assert "REFUSING TO SERVE" in err
     # The message must tell the operator what to do, not just that it failed.
     assert "ops-runner.yml" in err
+
+
+def test_the_guard_does_not_fire_on_plain_dispatch_under_actions(monkeypatch, tmp_path, capsys):
+    """The regression this test exists for: the guard used to live in main().
+
+    CI's own test job runs under GitHub Actions and never sets the attestation,
+    and several existing tests dispatch a request by calling main() directly — so
+    a guard keyed on "am I under Actions" refused them and broke the build. The
+    question it must ask is "am I SERVING a request", which is what serve() means.
+    """
+    import ops_runner
+
+    request = tmp_path / "request.json"
+    request.write_text('{"type":"noop"}')
+    monkeypatch.setattr(ops_runner, "REQUEST_PATH", str(request))
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.delenv(ops_runner.CODE_SOURCE_ENV, raising=False)
+
+    assert ops_runner.main() == 0
+    assert "REFUSING TO SERVE" not in capsys.readouterr().err
+
+
+def test_serve_dispatches_when_the_attestation_is_present(monkeypatch, tmp_path):
+    import ops_runner
+
+    request = tmp_path / "request.json"
+    request.write_text('{"type":"noop"}')
+    monkeypatch.setattr(ops_runner, "REQUEST_PATH", str(request))
+    monkeypatch.setenv("GITHUB_ACTIONS", "true")
+    monkeypatch.setenv(ops_runner.CODE_SOURCE_ENV, ops_runner.EXPECTED_CODE_SOURCE)
+
+    assert ops_runner.serve() == 0
+
+
+def test_the_script_entry_point_serves_rather_than_dispatching():
+    """The guard is only worth anything if the production entry point calls it."""
+    source = pathlib.Path(REPO / "scripts/ops_runner.py").read_text()
+    assert "raise SystemExit(serve())" in source
+    assert "raise SystemExit(main())" not in source
 
 
 def test_the_refusal_names_the_defect_it_prevents(monkeypatch, capsys):
