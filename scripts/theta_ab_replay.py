@@ -31,7 +31,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import cluster_stats as cs  # noqa: E402
 import theta_tail_refit as ref  # noqa: E402
 
-from kalshi_bot.theta import tailmodel as tm  # noqa: E402
+# The refit already loads `kalshi_bot/theta/tailmodel.py` BY PATH — importing the package
+# normally pulls SQLAlchemy, which is not installed for `script` ops requests. Reuse that module
+# object rather than repeating the dance, so there is exactly one model definition in the run.
+tm = ref.tm
 
 # --- the rules, exactly as §4.2 specifies them ------------------------------------------------
 
