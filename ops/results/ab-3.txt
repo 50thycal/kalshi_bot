@@ -1,6 +1,6 @@
 # ops request: type='script'
 command: theta_ab_replay 
-commit:  9e279b238d3338ce63dccab886e6e0612d11fe91
+commit:  e4fc40857f26e45a0b946e4098dfce304a5c3339
 seed:    20260822
 frozen model: fit_days=90 tail_q=0.90
 
@@ -65,7 +65,25 @@ fetching 1-minute closes from Coinbase since 2026-04-11...
   CONTROL-inc       23      18    1.28      1.59         4   2.51   0.0692     0.0884      0.52   1.43
 
 ================================================================================================
-4. EVIDENCE REQUIREMENT, DERIVED FROM THE REPLAY
+4. THE REPLAY'S OWN CONTRAST — DESCRIPTIVE, NOT A RESULT
+================================================================================================
+  This is the sizing sample. It is NOT the experiment, and nothing here promotes,
+  rejects or registers anything: the rules were chosen after seeing this window, so
+  the estimate below is contaminated by exactly the selection the A/B exists to
+  remove. It is reported because a sizing exercise that hides its own effect estimate
+  invites someone to rediscover it later and call it news.
+
+  The arms OVERLAP, so this is not a partition of one population. Whole events are
+  resampled from the UNION and a market taken by both arms contributes to both.
+
+    log(R_treatment / R_control) = -0.861 (uncorrected -0.853)   99% CI [-1.442, -0.170]
+    valid replicates 2,000/2,000   events in the union 288
+    minimum useful effect for the A/B is -0.693 (a halving)
+    The interval excludes zero. On a sample the rules were chosen against, that is
+    a reason to RUN the experiment, not a substitute for running it.
+
+================================================================================================
+5. EVIDENCE REQUIREMENT, DERIVED FROM THE REPLAY
 ================================================================================================
   minimum useful effect          |log 0.5| = 0.693 (a halving)
   two-sided 99%, 80% power       z = 2.576 + 0.842
@@ -76,6 +94,16 @@ fetching 1-minute closes from Coinbase since 2026-04-11...
   PROMOTION EVIDENCE FLOOR       760 settled markets per arm
   MAXIMUM EVIDENCE HORIZON       1,141 settled markets per arm (1.5x the floor)
   early-failure floor            300 settled markets per arm (unchanged; a stopping clause is deliberately not inflated)
+
+  THE FLOOR IS CONDITIONAL ON THE CONTROL'S MISS. It is sized from the control's
+  replayed R, and a control that regresses toward calibration produces fewer losses
+  per market and therefore needs more markets. One number would hide that:
+
+    if control R settles at     floor/arm  horizon/arm   slower arm
+    3.93                              760        1,141       288 d
+    2.00                            1,496        2,244       567 d
+    1.00                            2,992        4,487     1,135 d
+  The registered floor should be the CONSERVATIVE row, not the flattering one.
 
   CALENDAR TIME at the measured cadence: control 288 days (0.8 years), treatment 66 days (0.2 years)
   The binding arm is the SLOWER one — both must reach the floor for the comparison
