@@ -13,13 +13,15 @@ XOS-000003 and to Research Lab.
 from __future__ import annotations
 
 import logging
+import pathlib
+import re
 
 import pytest
 
 from kalshi_bot.config import Settings
 from kalshi_bot.freeze.tracker import FreezeTracker
 from kalshi_bot.main import _funnel_line
-from kalshi_bot.obs.funnel import SUMMARY_MARKER
+from kalshi_bot.obs.funnel import MAX_SUMMARY_CHARS, SUMMARY_MARKER
 
 
 def _settings(**over) -> Settings:
@@ -128,7 +130,7 @@ def test_the_funnel_line_is_bounded_and_carries_no_ticker():
         _Client({"KXCORN": [_corn(f"KXCORN-26DEC-T{i}") for i in range(50)]}), _settings()
     )
     line = _funnel_line(tracker.run_once(_Session()))
-    assert len(line) <= 400
+    assert len(line) <= MAX_SUMMARY_CHARS
     assert "26DEC" not in line
 
 
@@ -141,19 +143,93 @@ def test_the_funnel_line_never_breaks_a_cycle():
     assert _funnel_line(Broken()) == ""
 
 
-def test_pin15_uses_the_same_shared_helper_so_the_fix_is_cross_book():
-    """The defect is a property of the series-addressed shape, not of one book."""
+#: Every tracker that addresses its universe with `get_markets(series_ticker=...)`.
+#: Six, not the four the first draft of this PR claimed — `theta` and `tfav`
+#: carry the identical loop and were missed until this list was derived from
+#: the source instead of from memory.
+EVERY_SERIES_ADDRESSED_BOOK = ("freeze", "pin15", "wcprop", "xgame", "theta", "tfav")
+
+
+@pytest.mark.parametrize("book", EVERY_SERIES_ADDRESSED_BOOK)
+def test_every_series_addressed_book_uses_the_shared_fetch(book):
+    """The coverage claim, asserted rather than described.
+
+    The defect is a property of the series-addressed fetch SHAPE, so a fix that
+    reached only some of the books that have that shape would leave the rest
+    failing silently — and would make "cross-book" a claim the code does not
+    support. This enumerates them and checks each one.
+    """
+    import importlib
     import inspect
 
-    from kalshi_bot.pin15 import tracker as pin15
+    module = importlib.import_module(f"kalshi_bot.{book}.tracker")
+    source = inspect.getsource(module)
+    assert "fetch_markets_by_series" in source, f"{book} still fetches series on its own"
+    # ...and no book keeps a hand-rolled series loop, which is where the blind
+    # spot lived: an empty HTTP 200 that no `except` clause can see.
+    assert "series_ticker=series" not in source, f"{book} still has a raw series loop"
+    assert "series_ticker=s." not in source, f"{book} still has a raw series loop"
 
-    source = inspect.getsource(pin15)
-    assert "fetch_markets_by_series" in source
-    assert "warn_on_empty_series" in source
-    # ...and the old blind loop is gone from both books.
-    from kalshi_bot.freeze import tracker as freeze
 
-    assert "series_ticker=series" not in inspect.getsource(freeze)
+#: `get_markets(... series_ticker=...)` — the exact call shape whose empty
+#: HTTP 200 is invisible. Deliberately narrow: `get_events(series_ticker=...)`
+#: returns a different object and needs its own helper (see the test below).
+_GET_MARKETS_BY_SERIES = re.compile(
+    r"get_markets\((?:[^()]|\([^()]*\))*series_ticker\s*=", re.S
+)
+
+
+def test_no_tracker_anywhere_fetches_by_series_outside_the_shared_helper():
+    """The durable form: catches a SEVENTH book added later without the helper.
+
+    The enumeration above can go stale the moment someone writes a new tracker.
+    This derives the set from the source every run, so the coverage claim cannot
+    quietly become false again — which is how it became false the first time.
+    """
+    repo = pathlib.Path(__file__).resolve().parents[1]
+    # The client module DEFINES get_markets; it is the layer the helper calls, not
+    # a caller that could adopt it.
+    defines_the_call = {"kalshi_bot/kalshi/client.py"}
+    offenders = []
+    for path in sorted((repo / "kalshi_bot").rglob("*.py")):
+        rel = path.relative_to(repo).as_posix()
+        if rel in defines_the_call:
+            continue
+        text = path.read_text()
+        if _GET_MARKETS_BY_SERIES.search(text) and "fetch_markets_by_series" not in text:
+            offenders.append(rel)
+    assert not offenders, f"series-addressed fetches bypassing the shared helper: {offenders}"
+
+
+def test_the_two_remaining_uncovered_shapes_are_recorded_not_omitted():
+    """Two known gaps, asserted rather than left as a silence.
+
+    Both address a universe by series and neither fits the `get_markets` helper:
+
+    * `weather` uses `get_events(series_ticker=...)`, which returns
+      events-with-nested-markets rather than a market list;
+    * the evo fleet's `_scan_universe` goes through its own market-data adapter
+      (`list_markets`) on a different worker, and swallows a failing series to
+      `[]` — the same blind spot in a different abstraction.
+
+    They are named here so the coverage claim stays honest and so neither can be
+    quietly forgotten. When an events-shaped helper lands, each moves into
+    EVERY_SERIES_ADDRESSED_BOOK and its clause here is deleted.
+    """
+    repo = pathlib.Path(__file__).resolve().parents[1]
+
+    weather = (repo / "kalshi_bot/weather/tracker.py").read_text()
+    assert "get_events(" in weather
+    assert not _GET_MARKETS_BY_SERIES.search(weather), (
+        "weather now uses get_markets by series — it must adopt the shared helper "
+        "and move into EVERY_SERIES_ADDRESSED_BOOK"
+    )
+
+    evo = (repo / "kalshi_bot/evo/orchestrator.py").read_text()
+    assert "list_markets(" in evo
+    assert not _GET_MARKETS_BY_SERIES.search(evo), (
+        "evo now uses get_markets by series — it must adopt the shared helper"
+    )
 
 
 def test_the_books_do_not_change_their_universe_or_eligibility_rules():
@@ -164,3 +240,43 @@ def test_the_books_do_not_change_their_universe_or_eligibility_rules():
     assert defaults.freeze_series == "KXCORN,KXWHEAT,KXSOYBEAN,KXCOFFEE,KXSUGAR,KXCOCOA,KXCOTTON"
     assert defaults.freeze_min_discount_cents == 3.0
     assert defaults.freeze_books.startswith("freeze1:dark=1;")
+
+
+def test_a_failed_fetch_is_not_reported_as_an_empty_venue(caplog):
+    """End to end: every configured series raises, so the cycle must not claim
+    the venue returned nothing (the review's blocker)."""
+
+    class Broken:
+        def get_markets(self, **kw):
+            raise RuntimeError("connection reset")
+
+    tracker = FreezeTracker(Broken(), _settings())
+    with caplog.at_level(logging.WARNING):
+        summ = tracker.run_once(_Session())
+
+    line = _funnel_line(summ)
+    assert "state=FETCH_FAILED" in line
+    assert "NO_MARKETS" not in line
+    assert "fetch=FETCH_FAILED" in line
+    assert "failed_series=2/2" in line
+    assert any("EVERY configured series FAILED" in r.message for r in caplog.records)
+    assert not any("ENTIRE configured universe" in r.message for r in caplog.records)
+    # No exception text reaches the operator-visible cycle line.
+    assert "connection reset" not in line
+
+
+def test_a_partial_fetch_failure_is_visible_in_the_cycle_line(caplog):
+    class OneBroken:
+        def get_markets(self, *, series_ticker=None, **kw):
+            if series_ticker == "KXWHEAT":
+                raise RuntimeError("boom")
+            return {"markets": [], "cursor": None}
+
+    tracker = FreezeTracker(OneBroken(), _settings())
+    with caplog.at_level(logging.WARNING):
+        summ = tracker.run_once(_Session())
+
+    line = _funnel_line(summ)
+    assert "state=NO_MARKETS_INCOMPLETE" in line
+    assert "empty_series=1/2" in line and "failed_series=1/2" in line
+    assert any("INCOMPLETE fetch" in r.message for r in caplog.records)

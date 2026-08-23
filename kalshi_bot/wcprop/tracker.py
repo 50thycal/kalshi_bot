@@ -32,6 +32,7 @@ from datetime import datetime, timezone
 from .. import repository as repo
 from ..config import Settings
 from ..kalshi.errors import AuthError
+from ..obs.series_fetch import SeriesFetchResult, fetch_markets_by_series
 from ..paper.engine import kalshi_fee
 from ..scanner.metrics import compute_metrics, compute_time_to_close
 
@@ -66,6 +67,8 @@ class WcPropCycleSummary:
     skipped_illiquid: int = 0
     skipped_spread: int = 0
     per_side: dict[str, int] = field(default_factory=dict)
+    # The series-addressed fetch's own report (XOS-000004).
+    fetch: SeriesFetchResult = field(default_factory=SeriesFetchResult)
 
     def bump_side(self, side: str) -> None:
         self.per_side[side] = self.per_side.get(side, 0) + 1
@@ -86,59 +89,45 @@ class WcPropTracker:
         now = datetime.now(timezone.utc)
         min_close_ts = int((now.timestamp()) - s.wcprop_lookback_minutes * 60.0)
         count = 0
-        for series in s.wcprop_match_series_list:
-            cursor: str | None = None
-            for _ in range(4):
-                try:
-                    page = self.client.get_markets(
-                        status="settled", series_ticker=series, limit=200,
-                        cursor=cursor, min_close_ts=min_close_ts,
-                    )
-                except AuthError:
-                    raise
-                except Exception as exc:  # noqa: BLE001 — one series must not kill the cycle
-                    logger.warning(
-                        "wcprop: settled-match fetch failed",
-                        extra={"extra_fields": {"series": series, "error": str(exc)[:200]}},
-                    )
-                    break
-                for mkt in (page or {}).get("markets") or []:
-                    if (mkt.get("result") or "").lower() not in ("yes", "no"):
-                        continue
-                    ttc = compute_time_to_close(mkt.get("close_time"), now=now)
-                    if ttc is None:
-                        continue
-                    age_min = -ttc / 60.0  # settled -> close_time in the past -> ttc negative
-                    if s.wcprop_min_age_minutes <= age_min <= s.wcprop_lookback_minutes:
-                        count += 1
-                cursor = (page or {}).get("cursor") or None
-                if not cursor:
-                    break
+        # `warn=False`: an empty settled window is this scan's NORMAL state (no
+        # match has finished recently), so a cycle-level empty warning would be
+        # pure noise. A fetch FAILURE still warns, from inside the helper.
+        fetched = fetch_markets_by_series(
+            self.client,
+            s.wcprop_match_series_list,
+            book="wcprop",
+            status="settled",
+            max_pages=4,
+            min_close_ts=min_close_ts,
+            log=logger,
+            warn=False,
+        )
+        for mkt in fetched.markets:
+            if (mkt.get("result") or "").lower() not in ("yes", "no"):
+                continue
+            ttc = compute_time_to_close(mkt.get("close_time"), now=now)
+            if ttc is None:
+                continue
+            age_min = -ttc / 60.0  # settled -> close_time in the past -> ttc negative
+            if s.wcprop_min_age_minutes <= age_min <= s.wcprop_lookback_minutes:
+                count += 1
         return count
 
     # -- winner ladder scan ---------------------------------------------------
-    def _winner_markets(self) -> list[dict]:
-        s = self.settings
-        out: list[dict] = []
-        cursor: str | None = None
-        for _ in range(6):
-            try:
-                page = self.client.get_markets(
-                    status="open", series_ticker=s.wcprop_winner_series, limit=200, cursor=cursor
-                )
-            except AuthError:
-                raise
-            except Exception as exc:  # noqa: BLE001
-                logger.warning(
-                    "wcprop: winner-ladder fetch failed",
-                    extra={"extra_fields": {"error": str(exc)[:200]}},
-                )
-                break
-            out.extend((page or {}).get("markets") or [])
-            cursor = (page or {}).get("cursor") or None
-            if not cursor:
-                break
-        return out
+    def _winner_markets(self) -> SeriesFetchResult:
+        """The winner ladder, through the shared series-addressed fetch.
+
+        Same pagination and failure handling as before; what is new is that a
+        winner series which returns HTTP 200 with an empty list is COUNTED and
+        reported rather than passing for a healthy scan (XOS-000004).
+        """
+        return fetch_markets_by_series(
+            self.client,
+            [self.settings.wcprop_winner_series],
+            book="wcprop",
+            max_pages=6,
+            log=logger,
+        )
 
     def run_once(self, session) -> WcPropCycleSummary:
         s = self.settings
@@ -147,7 +136,8 @@ class WcPropTracker:
         summ.recent_settled = self._recent_settled()
         summ.triggered = summ.recent_settled > 0
 
-        winners = self._winner_markets()
+        summ.fetch = self._winner_markets()
+        winners = summ.fetch.markets
         summ.winner_rungs = len(winners)
         open_count = repo.count_open_paper_positions(session, self.STRATEGY)
         open_tickers = repo.open_paper_position_tickers(session, self.STRATEGY)

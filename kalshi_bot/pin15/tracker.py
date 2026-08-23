@@ -37,7 +37,7 @@ from ..kalshi.errors import AuthError
 from ..obs.series_fetch import (
     SeriesFetchResult,
     fetch_markets_by_series,
-    warn_on_empty_series,
+    warn_on_fetch_outcome,
 )
 from ..paper.engine import kalshi_fee
 from ..scanner.metrics import compute_metrics, compute_time_to_close
@@ -233,5 +233,5 @@ class Pin15Tracker:
                 summ.per_series[series] = summ.per_series.get(series, 0) + 1
 
         summ.fetch = fetch
-        warn_on_empty_series("pin15", fetch, logger)
+        warn_on_fetch_outcome("pin15", fetch, logger)
         return summ
