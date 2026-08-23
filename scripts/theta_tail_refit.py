@@ -806,9 +806,11 @@ def selection(rows: list[dict], seed: int) -> str:
         verdicts.append(f"{label.lower()} {verdict.split(':')[0].lower()}")
     print()
     print("  Stage 3's question is what REMAINS after calibration is repaired. The two SELECTED")
-    print("  sets are DIFFERENT populations of different sizes — fattening the tails shrinks")
-    print("  `excess` — so their Rs are not comparable to each other, only to their own")
-    print("  complement, which is what the contrast above does.")
+    print("  sets are DIFFERENT populations of different sizes, so their Rs are not comparable")
+    print("  to each other, only to their own complement — which is what the contrast above")
+    print("  does. (The incumbent is bimodal: exactly zero on most markets and comparatively")
+    print("  large on the rest, so it rejects on its OWN large estimate where the spliced")
+    print("  model's smooth small probabilities leave `excess` above the threshold.)")
     return "; ".join(verdicts)
 
 

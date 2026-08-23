@@ -25,7 +25,7 @@ touched.**
 | 1. replace the degenerate 0/1 output | **done and verified** — 85.3% exactly-0 → **0.0%** |
 | 2. refit the tail shape, validate out of sample | **run, powered, label-gated — and it does not beat the incumbent** (§3.6) |
 | 3. re-measure calibration + residual selection bias | **done** — bias **established for the spliced model** by a direct contrast; suggestive only for the incumbent (§3.7) |
-| 4. selection-rule A/B that does not rank on model error | **redesigned**, floors recomputed on the event (§4); still unregistered |
+| 4. selection-rule A/B that does not rank on model error | **redesigned; floors re-derived by replaying BOTH rules over one candidate stream** (§4.2.3). Cadence is now measured, and it says the arm is **not ready to register**: the control rule fires 2.64 times/day, so the binding arm needs 288 days at best and ~3 years if the control regresses to calibration. Unregistered. |
 | 5. telemetry for momentum/regime | **implemented, benchmarked and tested** (§5) |
 
 **The headline, before the detail.** With a 30-day-or-wider fit window, non-overlapping blocks, a
@@ -542,43 +542,114 @@ SMALL requires bounding it from ABOVE.
 This is a `fail_any`-style clause, not a promotion clause: it can stop the arm on its own, and
 satisfying it does not by itself promote anything. Both conditions must hold to promote.
 
-### 4.2.3 Floors, recomputed with the event as the unit
+### 4.2.3 Floors, recomputed by REPLAYING BOTH RULES over one candidate stream
 
-The previous floors were derived from an **iid** count of settled markets. That was the same
-error as §1.1 in a different place, and it made the arm look about 2.6× cheaper than it is.
+Two revisions of this section were wrong in the same way, and the second was wrong after the
+first was fixed. The first sized the arm from an **iid** count of settled markets. The second
+fixed the unit but kept sizing both arms from the **spliced model's historical selected set** —
+148 markets, 79 events, λ ≈ 0.0334 — and that set is what an **excess-ranked** rule picked. The
+treatment ranks on `mid` ascending behind a model veto. It draws from a different pool, at a
+different rate, with a different loss rate. **Floors derived from one rule cannot size an
+experiment that runs another**, and the 2,725/4,100 figures are withdrawn rather than adjusted.
 
-From §3.7, the spliced rule's selected set is 148 markets across **79 events**, carrying 4.95
-expected tail events — λ ≈ **0.0334** expected events per selected market. (Those three figures
-are identical in `refit-10`, `-11` and `-12`; the selected set is small and stable.) Its design effect is
-**not** the population's 4.6: selection spreads thinly across ladders, 1.87 markets per event, so
-the worst-case inflation (ρ = 1, every selected market on a ladder sharing its outcome) is 1.87.
+What replaces them is a replay: both rules **as specified in §4.2**, over **one common eligible
+candidate stream**, on Kalshi's own settled results. `scripts/theta_ab_replay.py`, run `ab-3`.
 
-To resolve `log(R_T / R_C)` at the minimum useful effect — a halving, `|log 0.5| = 0.693` — with
-80% power at a two-sided 99% interval:
+**The common stream.** Eligibility is identical in both arms and is not the treatment: mid ∈
+[3, 20]¢, volume ≥ 100, minutes-to-close ∈ [10, 35], two-sided book.
 
 | quantity | value |
 |---|---|
-| expected tail events per selected market (λ) | 0.0334 |
-| iid requirement per arm | ≈ 1,450 settled markets |
-| design effect inside the selected set | 1.87 |
-| **promotion evidence floor** | **≈ 2,725 settled markets per arm** |
-| **maximum evidence horizon** (inclusive, #247) | **4,100 settled markets per arm** |
+| eligible candidates | **1,187** |
+| distinct events | **532** |
+| markets per event | 2.23 (max 13, Kish 296.6) |
+| span | 2026-07-11 → 2026-08-23, 44 days, all with data |
+| candidate cadence | **27.0 eligible candidates/day** |
+
+Both arms are scored under the **same** probability model — the frozen spliced fit. The A/B
+isolates the selection *rule*; letting the arms differ in their model too would confound the two
+changes and answer neither.
+
+**The two arms, replayed.**
+
+| arm | n | events | mkt/ev | expected | observed | R | exp/market | exp/event | candidates/day | deff |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **control** (excess ≥ 6¢, ranked by excess) | 116 | 68 | 1.71 | 5.85 | 23 | **3.93** | 0.0504 | 0.0860 | **2.64** | 1.65 |
+| **treatment** (veto P ≤ 0.10, ranked by mid ↑) | 510 | 288 | 1.77 | 23.26 | 39 | **1.68** | 0.0456 | 0.0808 | **11.59** | 1.93 |
+
+**Overlap: 32 markets are taken by both arms** — 5.4% of the union, 27.6% of the control, 6.3% of
+the treatment. Overlap is not contamination; a market both rules pick is a market the treatment
+does not change. It is, though, why the arms are **not independent samples**, and why the contrast
+has to be bootstrapped over both arms together rather than as two intervals
+(`cluster_stats.arm_contrast_ci`, which resamples the union of events and lets a market
+contribute to both arms).
+
+For the record, the same control rule under the model theta4 runs **today** (incumbent,
+`mult=2.0`) selects only 23 markets across 18 events at 0.52/day, R = 2.51. The substitution to
+the spliced model is visible rather than hidden.
+
+**The replay's own contrast — descriptive, and NOT a result.** This is the sizing sample. The
+rules were chosen after seeing this window, so its effect estimate is contaminated by exactly the
+selection the A/B exists to remove, and nothing here promotes, rejects or registers anything. It
+is reported because a sizing exercise that hides its own effect estimate invites someone to
+rediscover it later and call it news.
+
+> `log(R_treatment / R_control)` = **−0.861** (uncorrected −0.853), 99% CI **[−1.442, −0.170]**,
+> 2,000/2,000 valid replicates over 288 events in the union.
+
+The interval excludes zero, and the point estimate is past the −0.693 a halving would need. On a
+sample the rules were chosen against, **that is a reason to run the experiment, not a substitute
+for running it.**
+
+**The requirement, derived from that replay.** To resolve `log(R_T / R_C)` at a halving
+(`|log 0.5| = 0.693`) with 80% power at a two-sided 99% interval, required SE = 0.2028, so
+`1/obs_T + 1/obs_C = 0.0411`. Each arm carries **its own** expected-loss rate — the error the
+previous revision made was using one:
+
+| quantity | value |
+|---|---|
+| observed losses needed | control 78, treatment 35 |
+| iid requirement per arm | **394** settled markets |
+| design effect (larger of the two arms) | **1.93** |
+| **promotion evidence floor** | **760 settled markets per arm** |
+| **maximum evidence horizon** (inclusive, #247) | **1,141 settled markets per arm** |
 | **early-failure floor** (`fail_any`) | **300 settled markets per arm**, unchanged |
 
-The early-failure floor is deliberately **not** inflated. It is a stopping clause: requiring less
-evidence to stop errs toward stopping a good arm, which is the safe direction, and inflating it
-would slow the detection of a bad one. Its power is correspondingly lower under clustering and
-that is accepted.
+The early-failure floor stays uninflated for the reason it always did: it is a stopping clause,
+and requiring less evidence to stop errs toward stopping a good arm, which is the safe direction.
 
-**The calendar cost is not yet measurable, and is stated as unmeasured.** The previous revision
-put it at ~105 days per arm from a live-order cadence of ~10 markets/day. That number came from
-theta4's live order count, not from this candidate stream, and the two are not the same
-population. On the snapshot universe the *spliced* rule selects 3.5 markets/day and the incumbent
-rule 0.5/day — but the treatment rule (cheapest eligible tail, model veto) selects from a broader
-set than either and its cadence has not been measured. **Measuring the treatment rule's candidate
-cadence is a prerequisite to registering this arm**, because a 2,725-market floor at 3.5
-markets/day is over two years and at 10 markets/day is nine months, and the difference decides
-whether the experiment is worth running at all.
+**THE FLOOR IS CONDITIONAL ON THE CONTROL'S MISS, and one number would hide that.** It is sized
+from the control's replayed R = 3.93. A control that regresses toward calibration produces fewer
+losses per market and therefore needs more markets:
+
+| if the control's R settles at | floor/arm | horizon/arm | slower arm |
+|---|---|---|---|
+| **3.93** (replayed) | 760 | 1,141 | 288 days |
+| 2.00 | 1,496 | 2,244 | 567 days |
+| **1.00** (calibrated) | **2,992** | **4,487** | **1,135 days** |
+
+That bottom row is worth pausing on: **2,992 / 4,487 is within about 10% of the withdrawn
+2,725 / 4,100.** The old figures were not arbitrary — they implicitly assumed a *calibrated*
+control. They were wrong about the population, not about the arithmetic, and the corrected
+derivation reproduces them almost exactly under the assumption they were silently making. Both
+are recorded rather than one, and **the registered floor should be the conservative row.**
+
+**Calendar time, now measured rather than deferred.** At the replayed cadence the treatment arm
+reaches 760 markets in **66 days**; the control arm needs **288 days** for the same count, because
+its rule fires 2.64 times a day against the treatment's 11.59. Both arms must reach the floor for
+the comparison to be powered, so **the control arm is the binding constraint** — the slow arm is
+the incumbent rule, not the new one.
+
+> **VERDICT: the A/B is PROPOSED and NOT READY TO REGISTER.** Cadence is no longer unmeasured —
+> it is measured, and it is the answer. Even on the flattering assumption that the control keeps
+> missing by 3.93×, the binding arm needs **288 days**; on the conservative assumption it needs
+> **over three years**. Neither is an experiment worth starting as specified.
+>
+> What would change that is a design change, not a footnote: widen the control arm's candidate
+> stream (its 6¢ edge threshold is what starves it), or raise the minimum useful effect above a
+> halving, or accept a lower confidence level. **Each is a change to a pre-registered design and
+> belongs in a new pre-registration**, evaluated before results are seen — not chosen now, from
+> this page, with the replay's own numbers in view.
 
 ### 4.2.4 Coverage — candidate stream, not twins
 
@@ -698,17 +769,19 @@ refit anchor** rather than reloaded every cycle; the horizon grid caps fits at 6
 anchor, so a 240-strike ladder costs the same as a 6-strike one; and `theta_spliced_budget_ms` is
 the backstop.
 
-**The budget covers the whole shadow, and only what is left of it.** Three defects, in the order
-they were found:
+**The budget is a SOFT cycle budget.** That phrasing is deliberate and it is a correction: two
+earlier revisions of this section claimed a strict bound on elapsed time, and the mechanism does
+not provide one. Three defects, in the order they were found:
 
 1. It gated **fit time** — the cheap half — while the expensive half, the close-set load, was
-   reported after the fact and could not be stopped. It bounds total elapsed time now: load, row
-   decode, model construction and fits.
+   reported after the fact and could not be stopped. Elapsed accounting now spans the whole
+   shadow: statement, row transfer, decode, model construction and fits.
 2. It then handed the **full configured budget to every load**, so two products could authorise
-   two full budgets and the advertised total-cycle bound was not a bound. Each load now receives
-   the **remainder** — `budget − already_spent`, computed immediately before it — and a load does
-   not start with less than `MIN_LOAD_BUDGET_MS` (50 ms) left. The invariant is
-   `spent + authorised ≤ budget` at every load, so no load can push the cycle past its bound.
+   two full budgets. Each load now receives the **remainder** — `budget − already_spent`,
+   computed immediately before it — and a load does not start with less than
+   `MIN_LOAD_BUDGET_MS` (50 ms) left. The invariant is `spent + authorised ≤ budget` at every
+   load. That bounds **authorised statement time**, which is not the same thing as elapsed time —
+   see the honest statement below.
 3. The remainder is enforced by Postgres, because a Python-side deadline cannot interrupt a query
    already issued — and enforcing it there brings two hazards a bare `SET LOCAL` plus `try/except`
    does not handle. **A statement timeout aborts the transaction**, so catching the exception left
@@ -719,6 +792,38 @@ they were found:
    enclosing transaction, and an explicit reset before release.
 
 Over budget, or a timed-out load, means metadata without a probability and the scan continues.
+
+#### What the budget guarantees, and what it does not
+
+Stated plainly, because two earlier revisions overclaimed it and a safety property that is
+believed but false is worse than one that is absent:
+
+| | |
+|---|---|
+| **hard** | PostgreSQL **statement execution** is cut off at the authorised remainder. The database enforces it; a Python-side deadline cannot interrupt a query already issued. |
+| **hard** | Cumulative **authorised** timeout across a cycle cannot exceed `theta_spliced_budget_ms`. |
+| **hard** | The trading loop's transaction survives a timeout — savepoint-confined, proved on real PostgreSQL. |
+| **measured** | Elapsed accounting spans the **whole** shadow — statement, row transfer, decode, `SpotModel` construction, fits — not just the fit. |
+| **enforced** | No **further** load or fit starts once the measured budget is spent. |
+| **NOT guaranteed** | A strict ceiling on elapsed wall-clock time. |
+
+The gap is specific and worth naming exactly. The statement timeout ends the *statement*. Once
+PostgreSQL returns, client-side row transfer, materialisation into dicts and `SpotModel`
+construction are ordinary Python on the trading loop's thread, and nothing interrupts them. A load
+that clears its statement deadline with 10 ms left can still spend far longer than that
+materialising ~43,000 rows. So the budget stops the *next* unit of work; it cannot shorten one
+already running, and a cycle can overrun.
+
+How large that overrun can be is **unmeasured in production**, which is the honest reason the
+`theta: shadow cost` telemetry below is an obligation rather than a nicety.
+
+**If a strict wall-clock ceiling is ever required**, the mechanism is not a tighter timeout — it is
+moving the close-set load and model construction **off the trading-loop thread**, so the scan can
+abandon a slow shadow instead of waiting for it. That is a real change to a live path (the shadow
+shares the loop's SQLAlchemy session, which is not thread-safe, so it would need its own
+connection), and it is deliberately **not** in this PR: every book is stood down, no book prices
+off the shadow, and the failure mode it would prevent is a late quote in a paper book. Until then
+this is a soft cycle budget and is described as one.
 
 **Proved against real PostgreSQL**, not a mock — `tests/test_theta_shadow_postgres.py`. A fake
 loader that raises can never exhibit transaction abort, which is the behaviour that matters. The
@@ -779,11 +884,14 @@ Kept because the corrections are the useful part of the record, not because the 
 | `refit-8` is the defensible current freeze | **superseded** | ran before the event was the evidence unit, before the label gate, and on a one-month window. Every interval it reported was ~2.5× too narrow. Replaced by §3. |
 | Configuration selection by deviance per deep quote | **superseded** | three defects, each found by running it: `\|log(o/e)\|` is undefined at zero observed and silently discarded every 90-day candidate; raw Poisson deviance rewarded configurations that powered almost nothing (an earlier run froze a window covering 5.7% of quotes); and both were aggregate counts on a set each configuration defined for itself. Replaced by mean Bernoulli log loss on a market-price-defined common population, gated at ≥90% coverage. |
 | "TEST is read once" | **false as written** | the August window had already been reported on before the scoring rule was fixed. It is labelled **historical validation** throughout, and a forward one-look holdout is reserved. |
-| Selection bias "grew from 4.6× to 6.1×" | **retracted** | fattening the tails shrinks `excess`, so the two models select different populations of different sizes. A ratio between them is not a comparison. |
+| Selection bias "grew from 4.6× to 6.1×" | **retracted** | the two models select different populations of different sizes (135 markets against 25), so a ratio between them is not a comparison. The *reason* first given here — that fattening the tail shrinks `excess` and so selects less — is itself withdrawn: it predicts the spliced model selecting FEWER, and it selects more. What §3.1 measures is that the incumbent is bimodal, exactly zero on 84.9% of markets and comparatively large on the rest, so it rejects on its own large estimate (§3.7). |
 | Calibration validated while the settlement-label bar was failing at 96.9% | **retracted** | a calibration computed against labels that fail their own quality bar is not validated. The bar is now a gate that runs before anything is scored (§1.2, §3.1), and it passes on the retained population — but it passes *because* the audit was repaired, not because the bar moved. |
 | Selection bias "established" because the SELECTED and REJECTED intervals were disjoint | **withdrawn as a TEST** | two marginal intervals are not a test of `log(R_sel/R_rej)`: the groups partition the same ladders, so their errors covary, and non-overlap is neither necessary for the ratio to exclude 1 nor reliably sufficient once the estimates are dependent. Replaced by a direct event-clustered contrast (§3.7). The spliced model's finding survives it; the incumbent's does not. |
-| `theta_spliced_budget_ms` handed in full to every load | **fixed** | N loads authorised N budgets, so the advertised total-cycle bound held for one product and failed for two. Each load now receives `budget − already_spent` (§5.4). |
+| `theta_spliced_budget_ms` handed in full to every load | **fixed** | N loads authorised N budgets, so authorisation was unbounded in the number of products. Each load now receives `budget − already_spent` (§5.4). |
+| The shadow budget "bounds total elapsed time" / "no load can push the cycle past its bound" | **withdrawn** | the PostgreSQL statement timeout bounds statement EXECUTION. Client-side row transfer, materialisation and `SpotModel` construction run afterwards, on the trading loop's thread, and nothing interrupts them — so a load already in flight can overrun. It is a **soft** cycle budget: hard on statement time and on cumulative authorisation, enforced on the *next* unit of work, not a wall-clock ceiling (§5.4). A strict ceiling needs the load moved off-thread. |
 | A bare `SET LOCAL statement_timeout` around the shadow read | **fixed** | a statement timeout ABORTS the transaction, so catching the exception left the shared session unusable for the trading loop's own writes; and `SET LOCAL` outlives a savepoint release, so on the success path the research budget silently became a timeout on those writes. Both now confined by `repo.bounded_statement` and proved against real Postgres. |
+| Stage-4 floors of 2,725 / 4,100 markets per arm | **withdrawn** | sized from the spliced model's *historical excess-ranked selected set*, which is not the treatment arm — the treatment ranks on `mid` behind a veto and draws a different pool at a different rate. Replaced by a replay of both rules over one common candidate stream (§4.2.3): **760 / 1,141** at the control's replayed R = 3.93, **2,989 / 4,483** if the control regresses to calibration. The old pair turns out to be almost exactly the calibrated-control row — right arithmetic, wrong population. |
+| Stage-4 calendar cost "not yet measurable" | **resolved, and the answer is bad** | the candidate cadence is now measured on the replayed stream: control 2.64/day, treatment 11.59/day. The CONTROL is the binding arm at 288 days to the floor, not the treatment. The arm is not registrable as specified (§4.2.3). |
 | `refit-12`'s freeze at `fit_days=30` | **superseded** | frozen under the DERIVED labels, which do not clear their own agreement bar. Under Kalshi's real settled results the selector picks 90 — by a fifth-decimal margin (§3.4). The runtime tracks the current freeze. |
 | Settlement-label agreement reported as `[1.0000, 1.0000]`, 99% | **withdrawn** | a percentile bootstrap on an all-agreeing sample cannot produce a disagreement, so the interval is a boundary artefact of the method. The exact clustered bound on the same evidence is 92.6%. |
 | The derived outcome labels PASS their quality bar | **withdrawn** | they do not, under a bound valid at zero failures. They are replaced rather than argued with: Kalshi's own results cover 100% of the universe (§1.2). |
@@ -818,6 +926,14 @@ Concretely, and without hedging in either direction:
   contrast**: `log(R_sel/R_rej) = +1.486`, 99% CI [+0.660, +1.982] — a 4.42× miss that survives
   the calibration repair, which is what stage 4 exists to act on. **For the incumbent it is
   suggestive only**: 25 markets, 18 events, interval spanning zero.
+- **Stage 4 is designed, sized, and NOT worth registering as specified.** Replaying both proposed
+  rules over one common candidate stream (§4.2.3) measures the thing every earlier revision
+  assumed: the control rule produces only **2.64 candidates/day** against the treatment's 11.59,
+  so the *incumbent* arm is the binding constraint. Even sized on the control's flattering
+  replayed R = 3.93 the slower arm needs **288 days**; sized on a control that regresses to
+  calibration it needs **over three years**. The floors are **760 / 1,141** and **2,992 / 4,487**
+  respectively — and the second pair almost reproduces the withdrawn 2,725 / 4,100, which is what
+  those numbers were silently assuming.
 - **The outcome labels are Kalshi's own settled results, at 100% coverage.** The derivation they
   replace agrees 99.90% but cannot clear its own 97% bar under a bound valid at zero failures
   (92.70%, 54 of 1,000 events) — and two bugs in my own audit of it were found and disclosed

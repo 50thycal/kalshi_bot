@@ -333,3 +333,76 @@ class TestDirectRatioContrast:
         rows = self._pop(events=4, per=10, sel_rate=0.5)
         st = cs.ratio_contrast_ci(rows, "ev", "p", "y", lambda r: r["sel"])
         assert st["lo"] is None and st["excludes_zero"] is False
+
+
+class TestOverlappingArmContrast:
+    """`arm_contrast_ci` — two SELECTION RULES over a shared stream, where a market both rules
+    pick belongs to both arms. `ratio_contrast_ci` cannot express that: it partitions."""
+
+    def _rows(self, n_events, per_event, p, hit_every=None, tag="e"):
+        out = []
+        for e in range(n_events):
+            for m in range(per_event):
+                i = e * per_event + m
+                out.append({"event": f"{tag}{e}", "ticker": f"{tag}{i}", "p": p,
+                            "yes": bool(hit_every and i % hit_every == 0)})
+        return out
+
+    def test_a_real_difference_between_arms_is_detected(self):
+        a = self._rows(60, 2, 0.05, hit_every=2)      # misses a lot
+        b = self._rows(60, 2, 0.05, hit_every=40)     # misses little
+        st = cs.arm_contrast_ci(a, b, "event", "p", "yes")
+        assert st["point"] > 0
+        assert st["excludes_zero"] is True
+
+    def test_identical_arms_report_no_difference(self):
+        a = self._rows(60, 2, 0.05, hit_every=8)
+        st = cs.arm_contrast_ci(a, list(a), "event", "p", "yes")
+        assert st["point"] == pytest.approx(0.0, abs=1e-12)
+        assert st["excludes_zero"] is False
+
+    def test_overlapping_membership_is_preserved_not_deduplicated(self):
+        """The whole reason this function exists. A row in both arms counts in both."""
+        shared = self._rows(20, 1, 0.05, hit_every=1)
+        st = cs.arm_contrast_ci(shared, shared, "event", "p", "yes")
+        assert st["a"]["n"] == st["b"]["n"] == len(shared)
+        assert st["a"]["observed"] == st["b"]["observed"] == len(shared)
+
+    def test_clusters_are_the_UNION_of_both_arms_events(self):
+        a = self._rows(10, 1, 0.05, tag="a")
+        b = self._rows(7, 1, 0.05, tag="b")
+        st = cs.arm_contrast_ci(a, b, "event", "p", "yes")
+        assert st["clusters"] == 17
+
+    def test_zero_expected_in_an_arm_yields_no_interval(self):
+        a = self._rows(30, 1, 0.0)
+        b = self._rows(30, 1, 0.05, hit_every=3)
+        st = cs.arm_contrast_ci(a, b, "event", "p", "yes")
+        assert st["lo"] is None and st["valid_replicates"] == 0
+
+    def test_zero_observed_does_not_invalidate_a_replicate(self):
+        a = self._rows(40, 1, 0.05)                    # nothing hits
+        b = self._rows(40, 1, 0.05, hit_every=4)
+        st = cs.arm_contrast_ci(a, b, "event", "p", "yes")
+        assert st["valid_replicates"] > 0
+        assert math.isfinite(st["point"])
+
+    def test_the_haldane_correction_is_visible_and_uniform(self):
+        a = self._rows(40, 1, 0.05)
+        b = self._rows(40, 1, 0.05, hit_every=4)
+        st = cs.arm_contrast_ci(a, b, "event", "p", "yes")
+        assert st["haldane_c"] == cs.HALDANE_C
+        assert st["point"] != st["point_uncorrected"]
+
+    def test_too_few_events_declines_to_report_an_interval(self):
+        a = self._rows(3, 1, 0.05, hit_every=1)
+        b = self._rows(3, 1, 0.05)
+        st = cs.arm_contrast_ci(a, b, "event", "p", "yes")
+        assert st["lo"] is None
+
+    def test_it_is_deterministic_in_the_seed(self):
+        a = self._rows(40, 2, 0.05, hit_every=3)
+        b = self._rows(40, 2, 0.05, hit_every=9)
+        one = cs.arm_contrast_ci(a, b, "event", "p", "yes", seed=7)
+        two = cs.arm_contrast_ci(a, b, "event", "p", "yes", seed=7)
+        assert (one["lo"], one["hi"]) == (two["lo"], two["hi"])

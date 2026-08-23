@@ -203,19 +203,36 @@ class ThetaTracker:
         database work on the trading loop's thread rather than arithmetic. Reusing the object
         inside its own refit anchor changes no probability: the fit ends at the anchor either way.
 
-        THE BUDGET COVERS THIS, AND ONLY WHAT IS LEFT OF IT. `theta_spliced_budget_ms` gated the
-        fits alone at first, which bounded the cheap half and left the expensive half unbounded.
-        Then it handed the FULL configured budget to every load — so two products could authorise
-        two full budgets and the stated total-cycle bound was not a bound at all. Each load now
-        receives the REMAINDER: `budget - already_spent`, computed immediately before it, and a
-        load does not start when less than `MIN_LOAD_BUDGET_MS` is left. Cumulative authorised
-        timeout therefore cannot exceed the configured total.
+        THE BUDGET IS A SOFT CYCLE BUDGET, AND IT IS WORTH SAYING EXACTLY WHAT THAT MEANS.
+        `theta_spliced_budget_ms` gated the fits alone at first, which bounded the cheap half and
+        left the expensive half unbounded. Then it handed the FULL configured budget to every
+        load, so two products could authorise two full budgets. Each load now receives the
+        REMAINDER — `budget - already_spent`, computed immediately before it — and a load does not
+        start when less than `MIN_LOAD_BUDGET_MS` is left.
 
-        A Python-side deadline cannot interrupt a query already issued, so the remainder is
-        enforced by Postgres as a statement timeout — inside a savepoint, because a statement
-        timeout aborts the transaction and an aborted transaction would take the trading loop's
-        own writes down with it (`repo.bounded_statement`). Over budget, or a timed-out load,
-        means no shadow model this cycle: metadata without a probability, and the scan continues.
+        What that buys, precisely:
+
+        * a HARD timeout on PostgreSQL statement execution, enforced by the database, since a
+          Python-side deadline cannot interrupt a query already issued;
+        * elapsed accounting across the WHOLE shadow — statement, row transfer, decode, SpotModel
+          construction and fits all land in `_shadow_ms`, not just the fraction inside the fit;
+        * no further load or fit once the measured budget is spent;
+        * cumulative AUTHORISED timeout that cannot exceed the configured total.
+
+        What it does NOT buy, and must not be described as buying: a strict ceiling on elapsed
+        wall-clock time. The timeout ends the statement, not the work after it. Once PostgreSQL
+        returns, client-side row transfer, materialisation and `SpotModel` construction are
+        ordinary Python on this thread and nothing interrupts them, so a single slow load can
+        still overrun the budget it started inside. The overrun is bounded by how long that
+        client-side work takes, which is unmeasured in production — hence one `theta: shadow cost`
+        line per cycle. A strict ceiling would require moving the load and model construction off
+        the trading-loop thread entirely; that is a real option, not something this mechanism
+        quietly already does.
+
+        The timeout runs inside a savepoint, because a statement timeout aborts the transaction
+        and an aborted transaction would take the trading loop's own writes down with it
+        (`repo.bounded_statement`). Over budget, or a timed-out load, means no shadow model this
+        cycle: metadata without a probability, and the scan continues.
 
         Reads only; the incumbent's object is untouched and still prices every live decision.
         """
@@ -258,10 +275,11 @@ class ThetaTracker:
     def _shadow_remaining_ms(self) -> float:
         """Milliseconds of this cycle's shadow budget not yet spent, or `inf` when unbudgeted.
 
-        This is what a load may authorise the database to spend, and it is recomputed
+        This is what a load may authorise the DATABASE to spend, and it is recomputed
         immediately before each one. Handing every load the CONFIGURED total instead — which an
-        earlier version did — lets N loads authorise N budgets, so the advertised total-cycle
-        bound holds for one product and fails for two.
+        earlier version did — lets N loads authorise N budgets, which made the authorisation
+        unbounded in the number of products. It bounds authorised statement time, not elapsed
+        wall-clock time: see `_refresh_shadow_spot` for what the budget does and does not buy.
         """
         budget = float(getattr(self.settings, "theta_spliced_budget_ms", 0.0) or 0.0)
         if budget <= 0:
@@ -269,11 +287,11 @@ class ThetaTracker:
         return max(0.0, budget - self._shadow_ms)
 
     def _over_budget(self) -> bool:
-        """True once this cycle's shadow work has spent its whole wall-clock budget.
+        """True once this cycle's shadow work has spent its measured budget.
 
         Checked before each fit; the load uses `_shadow_remaining_ms` directly because it needs
-        the remainder, not just the boolean. A gap in a research series is recoverable; a late
-        quote is not.
+        the remainder, not just the boolean. This stops the NEXT unit of work — it cannot shorten
+        one already running. A gap in a research series is recoverable; a late quote is not.
         """
         budget = float(getattr(self.settings, "theta_spliced_budget_ms", 0.0) or 0.0)
         if budget > 0 and self._shadow_ms >= budget:

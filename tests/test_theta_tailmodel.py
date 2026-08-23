@@ -965,11 +965,18 @@ class TestRuntimeOfflineParity:
                                                                   monkeypatch):
         """The dominant cost is the close-set load, and a budget that gates only fit time bounds
         the cheap half. Worse, an earlier version handed every load the CONFIGURED total, so two
-        products could authorise two full budgets and the advertised total-cycle bound held for
-        one product and failed for two.
+        products could authorise two full budgets and authorisation was unbounded in the number
+        of products.
 
         The invariant that matters is not the sum of authorisations — it is that at every load,
-        `already_spent + authorised <= budget`, so no load can push the cycle past its bound.
+        `already_spent + authorised <= budget`.
+
+        Note what this does and does not prove. It bounds what the DATABASE is authorised to
+        spend; it is not a wall-clock ceiling on the cycle. The statement timeout ends the
+        statement, and client-side row transfer plus `SpotModel` construction run afterwards on
+        this thread with nothing to interrupt them, so a load already in flight can still overrun.
+        The budget stops the NEXT unit of work. See `_refresh_shadow_spot` and
+        `docs/RESEARCH_THETA_REMEDIATION.md` §5.4.
         """
         from kalshi_bot.theta import tracker as trk
 
@@ -1020,6 +1027,37 @@ class TestRuntimeOfflineParity:
         assert tracker._refresh_shadow_spot(None, "BTC") is None
         assert calls["n"] == 0
         assert tracker._shadow_budget_hit is True
+
+    def test_the_budget_is_SOFT_work_in_flight_can_overrun_it(self, tracker, candles,
+                                                              monkeypatch):
+        """The correction, pinned as a property rather than left as a comment.
+
+        Two earlier revisions described this budget as bounding total elapsed time. It does not.
+        The PostgreSQL statement timeout ends the STATEMENT; client-side row transfer and
+        `SpotModel` construction run afterwards on this thread and nothing interrupts them. A
+        load that starts inside its budget can therefore finish outside it.
+
+        The loader here spends real wall-clock AFTER the notional statement returns, which is
+        exactly the uninterruptible client-side work production does. If someone later makes the
+        budget a genuine hard ceiling — by moving the load off-thread — this test SHOULD fail,
+        and its failure is the signal to update §5.4 rather than to weaken the assertion.
+        """
+        from kalshi_bot.theta import tracker as trk
+
+        def overrunning_load(_session, _product, _since, *, statement_timeout_ms=None):
+            time.sleep(0.15)          # 150 ms of client-side work inside a 50 ms budget
+            return candles
+
+        monkeypatch.setattr(trk.repo, "load_spot_closes", overrunning_load, raising=False)
+        tracker.settings.theta_spliced_budget_ms = 50.0
+        tracker._refresh_shadow_spot(None, "BTC")
+
+        assert tracker._shadow_ms > 50.0, (
+            "the shadow somehow stayed inside its budget; if the load is now interruptible, "
+            "§5.4's soft-budget language needs updating"
+        )
+        # And the guarantee that DOES hold: no further work is started once it is spent.
+        assert tracker._over_budget() is True
 
     def test_an_unbudgeted_tracker_authorises_no_timeout(self, tracker, candles, monkeypatch):
         from kalshi_bot.theta import tracker as trk

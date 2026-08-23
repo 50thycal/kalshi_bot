@@ -373,6 +373,24 @@ To run a request:
      ~5-minute sampling, which is too sparse to build blocks from.
      Findings: `docs/RESEARCH_THETA_REMEDIATION.md`.
 
+   - **"theta A/B replay"** / **"Stage-4 floors"** -> `{"type":"script","name":"theta_ab_replay"}`
+     — replays the PROPOSED control and treatment selection rules over ONE common eligible
+     candidate stream, on Kalshi's settled results, and derives the A/B's evidence floors from
+     what it measures. Exists because floors sized from a rule's *historical* selected set cannot
+     size an experiment that runs a different rule.
+     Reports per arm: eligible candidates and events, overlap between arms, markets/event,
+     expected and observed losses, expected-loss rate per market and per event, candidate cadence
+     per day, event-clustered design effect, sample requirement, calendar time and horizon.
+     **The floor is conditional on the control's R** and the run prints a sensitivity across
+     R_C ∈ {replayed, 2.0, 1.0} — register the CONSERVATIVE row, not the flattering one.
+     **Section 4 is descriptive, not a result.** The rules were chosen after seeing this window,
+     so the replay's own `log(R_T/R_C)` cannot promote or reject anything; it is printed so the
+     effect is not rediscovered later and mistaken for news. The arms OVERLAP, so it uses
+     `cluster_stats.arm_contrast_ci` (resamples the union of events, a market can be in both) —
+     `ratio_contrast_ci` would be wrong here because it partitions.
+     It runs the frozen spliced configuration only; it does not sweep or choose a model.
+     Findings: `docs/RESEARCH_THETA_REMEDIATION.md` §4.2.3.
+
    The individual probes can still be run alone:
    `weather_model_check` grades the ensemble forecast distribution against the
    market's bucket prices on settled events (Brier/log-loss + hypothetical EV)
