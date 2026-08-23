@@ -1,1 +1,1 @@
-{"type":"env","set":{"EXPERIMENT_OS_ISSUE_COMMAND":""},"id":"lo-t12-clear"}
+{"type":"xos","command":"issue-show","args":["XOS-000003"],"id":"lo-x3-untouched"}
