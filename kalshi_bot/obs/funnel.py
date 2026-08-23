@@ -37,10 +37,28 @@ and have opposite remedies, so the state must never assert the first when only
 the second was observed. `NO_MARKETS` is a claim about the VENUE and is reserved
 for a cycle in which every configured series was successfully asked.
 
-`first_zero_stage` names the earliest stage that is zero, which is the single
-number a diagnosis starts from. It is deliberately NOT a judgement about whether
-zero is correct: a book with no qualifying opportunities is a scientific finding
-and belongs to Research Lab, not here.
+## A stage that did not run is not a stage that found nothing
+
+Not every tracker runs every stage on every cycle. xgame throttles discovery, so
+on most cycles it never asks the venue at all; wcprop only scans for signals
+while a match-settled trigger is open. Reporting those as `0` would invent a
+finding out of a code path that was skipped — a zero the operator would then try
+to explain.
+
+So a stage may be `NOT_RUN`, and the rules are:
+
+* a `NOT_RUN` stage is NEVER reported as a zero, so a cycle that skipped
+  discovery cannot come out as `NO_MARKETS`;
+* if some stage that DID run is zero, that zero is the diagnosis — a skipped
+  earlier stage does not mask a real downstream failure;
+* otherwise the first `NOT_RUN` stage is the diagnosis (`<STAGE>_NOT_RUN`),
+  because nothing was actioned and the operator needs to know why not;
+* `ACTIONS` requires that the action stage actually ran and produced something.
+
+`first_zero_stage` names the earliest stage that RAN and is zero, which is the
+single number a diagnosis starts from. It is deliberately NOT a judgement about
+whether zero is correct: a book with no qualifying opportunities is a scientific
+finding and belongs to Research Lab, not here.
 """
 
 from __future__ import annotations
@@ -87,6 +105,23 @@ MAX_COUNTER_VALUE = 1_000_000_000
 #: withheld — a reader must never mistake a bounded list for a complete one.
 TRUNCATION_MARKER = "+"
 
+class _NotRun:
+    """Sentinel: this stage did not execute on this cycle.
+
+    A distinct type rather than None, so that "did not run" can never be
+    confused with "not supplied" and coerced into a zero by `_counter`.
+    """
+
+    __slots__ = ()
+
+    def __repr__(self) -> str:  # pragma: no cover - debugging aid
+        return "NOT_RUN"
+
+
+#: Pass this as a stage value when the cycle skipped that stage entirely.
+NOT_RUN = _NotRun()
+NOT_RUN_TOKEN = "NOT_RUN"
+
 _SERIES_SAFE = re.compile(r"[^A-Z0-9_-]")
 
 
@@ -114,12 +149,15 @@ def _counter(value: object) -> int:
 
 @dataclass(frozen=True)
 class FunnelState:
-    """One cycle's funnel for one book. Counters only — no tickers, no prices."""
+    """One cycle's funnel for one book. Counters only — no tickers, no prices.
 
-    fetched: int = 0
-    eligible: int = 0
-    candidates: int = 0
-    actions: int = 0
+    A field is either a non-negative int or `NOT_RUN`.
+    """
+
+    fetched: int | _NotRun = 0
+    eligible: int | _NotRun = 0
+    candidates: int | _NotRun = 0
+    actions: int | _NotRun = 0
 
     @classmethod
     def of(cls, **counts: object) -> FunnelState:
@@ -132,28 +170,49 @@ class FunnelState:
         unknown = sorted(set(counts) - FUNNEL_COUNTERS)
         if unknown:
             raise ValueError(f"not funnel counters: {unknown}")
-        return cls(**{k: _counter(v) for k, v in counts.items()})
+        return cls(**{
+            k: (v if isinstance(v, _NotRun) else _counter(v)) for k, v in counts.items()
+        })
 
-    def as_dict(self) -> dict[str, int]:
+    def as_dict(self) -> dict[str, int | _NotRun]:
         return {stage: getattr(self, stage) for stage in FUNNEL_STAGES}
+
+    def ran(self, stage: str) -> bool:
+        return not isinstance(getattr(self, stage), _NotRun)
 
 
 def first_zero_stage(state: FunnelState) -> str | None:
-    """The earliest stage that is zero, or None when the book acted."""
+    """The earliest stage that RAN and is zero, or None.
+
+    Stages that did not run are skipped, never reported as a zero — that is what
+    stops a skipped-discovery cycle from being read as an empty venue.
+    """
     for stage in FUNNEL_STAGES:
-        if getattr(state, stage) == 0:
+        if state.ran(stage) and getattr(state, stage) == 0:
             return stage
     return None
+
+
+def not_run_stages(state: FunnelState) -> list[str]:
+    """The stages this cycle skipped, in funnel order."""
+    return [stage for stage in FUNNEL_STAGES if not state.ran(stage)]
 
 
 def diagnose(state: FunnelState, *, fetch: str | None = None) -> str:
     """The operator-facing name of what happened this cycle.
 
-    `fetch` is the cycle's fetch diagnosis. It only ever overrides the FIRST
+    Order of precedence, and each clause is load-bearing:
+
+    1. a stage that RAN and came back zero is the diagnosis — a skipped earlier
+       stage must never mask a real downstream failure;
+    2. otherwise, if the action stage ran and produced something, `ACTIONS`;
+    3. otherwise the first skipped stage, because nothing was actioned and the
+       reason is that the stage never executed.
+
+    `fetch` is the cycle's fetch diagnosis. It only ever overrides the `fetched`
     stage, because that is the only stage a fetch problem can explain: once
-    markets came back, a later zero is the book's own filtering and the fetch has
-    nothing to say about it. Passing no `fetch` keeps the pure-counter reading,
-    which is what a caller that does not fetch by series wants.
+    markets came back, a later zero is the book's own filtering. It is ignored
+    entirely when `fetched` did not run — there was no fetch to diagnose.
     """
     stage = first_zero_stage(state)
     if stage == "fetched":
@@ -164,13 +223,19 @@ def diagnose(state: FunnelState, *, fetch: str | None = None) -> str:
         if fetch == FETCH_PARTIAL_FAILURE:
             # We asked, but not completely: the universe is unknown, not empty.
             return "NO_MARKETS_INCOMPLETE"
-    return {
-        "fetched": "NO_MARKETS",
-        "eligible": "NO_ELIGIBLE",
-        "candidates": "NO_CANDIDATES",
-        "actions": "NO_ACTIONS",
-        None: "ACTIONS",
-    }[stage]
+    if stage is not None:
+        return {
+            "fetched": "NO_MARKETS",
+            "eligible": "NO_ELIGIBLE",
+            "candidates": "NO_CANDIDATES",
+            "actions": "NO_ACTIONS",
+        }[stage]
+    if state.ran("actions") and state.actions > 0:
+        return "ACTIONS"
+    skipped = not_run_stages(state)
+    if skipped:
+        return f"{skipped[0].upper()}_{NOT_RUN_TOKEN}"
+    return "ACTIONS"
 
 
 def _series_field(label: str, names: list[str], total: int) -> list[str]:
@@ -219,11 +284,17 @@ def funnel_summary(
         f"state={diagnose(state, fetch=fetch)}",
         f"first_zero={stage or '-'}",
     ]
-    parts += [f"{name}={value}" for name, value in state.as_dict().items()]
+    parts += [
+        f"{name}={NOT_RUN_TOKEN if isinstance(value, _NotRun) else value}"
+        for name, value in state.as_dict().items()
+    ]
+    skipped = not_run_stages(state)
+    if skipped:
+        parts.append(f"not_run={','.join(skipped)}")
 
     # An unrecognised diagnosis is dropped rather than echoed: this field is a
     # closed vocabulary, and echoing an unknown value would make it an open one.
-    if fetch in FETCH_DIAGNOSES:
+    if fetch in FETCH_DIAGNOSES and state.ran("fetched"):
         parts.append(f"fetch={fetch}")
 
     total = _counter(configured_series)

@@ -20,7 +20,7 @@ import pytest
 
 from kalshi_bot.config import Settings
 from kalshi_bot.freeze.tracker import FreezeTracker
-from kalshi_bot.main import _funnel_line
+from kalshi_bot.main import _freeze_funnel, _funnel_line
 from kalshi_bot.obs.funnel import MAX_SUMMARY_CHARS, SUMMARY_MARKER
 
 
@@ -74,7 +74,7 @@ def test_state_1_no_markets_returned_is_visible_in_the_cycle_message(caplog):
     with caplog.at_level(logging.WARNING):
         summ = tracker.run_once(_Session())
 
-    line = _funnel_line(summ)
+    line = _freeze_funnel(summ)
     assert SUMMARY_MARKER in line
     assert "state=NO_MARKETS" in line and "first_zero=fetched" in line
     assert "fetched=0" in line
@@ -91,7 +91,7 @@ def test_state_2_markets_returned_but_rejected_by_eligibility():
     tracker = FreezeTracker(_Client({"KXCORN": [not_a_commodity]}), _settings())
     summ = tracker.run_once(_Session())
 
-    line = _funnel_line(summ)
+    line = _freeze_funnel(summ)
     assert "state=NO_ELIGIBLE" in line and "first_zero=eligible" in line
     assert "fetched=1" in line and "eligible=0" in line
 
@@ -101,7 +101,7 @@ def test_state_3_eligible_markets_that_never_become_candidates():
     tracker = FreezeTracker(_Client({"KXCORN": [_corn()]}, book=None), _settings())
     summ = tracker.run_once(_Session())
 
-    line = _funnel_line(summ)
+    line = _freeze_funnel(summ)
     assert "eligible=1" in line
     assert "candidates=0" in line
     assert "state=NO_CANDIDATES" in line
@@ -119,7 +119,7 @@ def test_the_three_states_produce_three_different_lines():
         _Client({"KXCORN": [_corn()]}, book=None), _settings(freeze_series="KXCORN")
     )
     lines = {
-        _funnel_line(t.run_once(_Session()))
+        _freeze_funnel(t.run_once(_Session()))
         for t in (empty, ineligible, no_candidate)
     }
     assert len(lines) == 3
@@ -129,7 +129,7 @@ def test_the_funnel_line_is_bounded_and_carries_no_ticker():
     tracker = FreezeTracker(
         _Client({"KXCORN": [_corn(f"KXCORN-26DEC-T{i}") for i in range(50)]}), _settings()
     )
-    line = _funnel_line(tracker.run_once(_Session()))
+    line = _freeze_funnel(tracker.run_once(_Session()))
     assert len(line) <= MAX_SUMMARY_CHARS
     assert "26DEC" not in line
 
@@ -137,10 +137,19 @@ def test_the_funnel_line_is_bounded_and_carries_no_ticker():
 def test_the_funnel_line_never_breaks_a_cycle():
     """Observability is not allowed to be the thing that stops trading."""
 
-    class Broken:
-        markets_seen = property(lambda self: (_ for _ in ()).throw(RuntimeError("boom")))
+    class Boom:
+        @property
+        def diagnosis(self):
+            raise RuntimeError("boom")
 
-    assert _funnel_line(Broken()) == ""
+    assert _funnel_line(Boom(), fetched=1, eligible=1, candidates=1, actions=1) == ""
+
+    class NoFields:
+        pass
+
+    # A mapper handed a summary missing its counters degrades to an empty string
+    # rather than taking the cycle down with it.
+    assert _freeze_funnel(NoFields()) == ""
 
 
 #: Every tracker that addresses its universe with `get_markets(series_ticker=...)`.
@@ -201,6 +210,41 @@ def test_no_tracker_anywhere_fetches_by_series_outside_the_shared_helper():
     assert not offenders, f"series-addressed fetches bypassing the shared helper: {offenders}"
 
 
+def test_every_series_addressed_tracker_publishes_its_diagnosis_in_message_text():
+    """The second half of coverage, derived from the source on every run.
+
+    Using the shared fetch buys INTAKE observability: a book can say its series
+    came back empty or failed. It does not buy the first-zero capability — a
+    successful fetch whose first zero lands at eligibility, candidate generation
+    or action generation is still unlocalisable unless the cycle MESSAGE carries
+    the funnel. This asserts both properties for every tracker that has the
+    series-addressed shape, so the two can never drift apart again.
+    """
+    from kalshi_bot.main import FUNNEL_MAPPERS
+
+    repo = pathlib.Path(__file__).resolve().parents[1]
+    main_source = (repo / "kalshi_bot/main.py").read_text()
+
+    discovered = set()
+    for path in sorted((repo / "kalshi_bot").rglob("tracker.py")):
+        if "fetch_markets_by_series" in path.read_text():
+            discovered.add(path.parent.name)
+
+    assert discovered == set(EVERY_SERIES_ADDRESSED_BOOK), (
+        f"the series-addressed set moved: {sorted(discovered)}"
+    )
+    for tracker in sorted(discovered):
+        assert tracker in FUNNEL_MAPPERS, (
+            f"{tracker} fetches through the shared helper but has no funnel mapper — "
+            "that is intake observability without first-zero capability"
+        )
+        call = f"_{tracker}_funnel(summ)"
+        assert re.search(r'f"[^"]*\{' + re.escape(call) + r'\}[^"]*"', main_source), (
+            f"{tracker}'s funnel is not interpolated into its cycle log MESSAGE, so the "
+            "ops logs channel (which returns message text only) would never show it"
+        )
+
+
 def test_the_two_remaining_uncovered_shapes_are_recorded_not_omitted():
     """Two known gaps, asserted rather than left as a silence.
 
@@ -254,7 +298,7 @@ def test_a_failed_fetch_is_not_reported_as_an_empty_venue(caplog):
     with caplog.at_level(logging.WARNING):
         summ = tracker.run_once(_Session())
 
-    line = _funnel_line(summ)
+    line = _freeze_funnel(summ)
     assert "state=FETCH_FAILED" in line
     assert "NO_MARKETS" not in line
     assert "fetch=FETCH_FAILED" in line
@@ -276,7 +320,7 @@ def test_a_partial_fetch_failure_is_visible_in_the_cycle_line(caplog):
     with caplog.at_level(logging.WARNING):
         summ = tracker.run_once(_Session())
 
-    line = _funnel_line(summ)
+    line = _freeze_funnel(summ)
     assert "state=NO_MARKETS_INCOMPLETE" in line
     assert "empty_series=1/2" in line and "failed_series=1/2" in line
     assert any("INCOMPLETE fetch" in r.message for r in caplog.records)

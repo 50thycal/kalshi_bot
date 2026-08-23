@@ -163,6 +163,20 @@ To run a request:
    | `NO_CANDIDATES` | eligible markets, none survived to become a priced candidate |
    | `NO_ACTIONS` | candidates were produced and rejected downstream (caps, bands, discount bar) |
    | `ACTIONS` | the book acted |
+   | `<STAGE>_NOT_RUN` | that stage was SKIPPED this cycle — see below |
+
+   **A stage that did not run is not a stage that found nothing.** xgame throttles
+   discovery and wcprop only scans for signals while a settled-match trigger is
+   open, so on most cycles those stages never execute. They report `NOT_RUN`
+   rather than `0`, are listed in `not_run=`, and can never produce `NO_MARKETS` —
+   a zero from a code path that was skipped is a finding nobody should try to
+   explain. A skipped stage never masks a real one either: if a stage that DID
+   run came back zero, that zero is still the diagnosis.
+
+   All six series-addressed trackers publish this line: `freeze`, `pin15`,
+   `theta`, `tfav`, `wcprop`, `xgame`. Each one's stage mapping is a statement
+   about its own processing semantics (`FUNNEL_MAPPERS` in `kalshi_bot/main.py`),
+   not a generic counter forced to fit.
 
    The `fetch=` field carries that second axis on its own (`OK`, `EMPTY_UNIVERSE`,
    `PARTIAL_FETCH_FAILURE`, `FETCH_FAILED`, `NO_SERIES_CONFIGURED`), and `empty=`

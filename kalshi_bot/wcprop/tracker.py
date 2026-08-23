@@ -60,6 +60,7 @@ class WcPropCycleSummary:
     recent_settled: int = 0      # match markets settled in the trigger window this cycle
     triggered: bool = False
     winner_rungs: int = 0        # winner-ladder rungs scanned
+    quoted: int = 0              # ... with a usable two-sided quote (observation only)
     moved: int = 0               # rungs whose cycle-over-cycle move cleared min_move
     opened: int = 0
     already_open: int = 0
@@ -152,6 +153,7 @@ class WcPropTracker:
             if yb is None or ya is None or not (0 <= yb <= 100) or not (0 < ya <= 100):
                 continue
             mid = (yb + ya) / 2.0
+            summ.quoted += 1
             new_prev[ticker] = mid
 
             # No trading unless a match just settled (fresh decisive news opened the window).

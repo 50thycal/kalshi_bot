@@ -92,6 +92,10 @@ def _size(trade: dict) -> float:
 
 @dataclass
 class XGameCycleSummary:
+    # Discovery is THROTTLED (xgame_discovery_minutes), so on most cycles it does
+    # not run at all. Without this flag its zeros are indistinguishable from a
+    # venue that returned nothing (XOS-000004).
+    discovered: bool = False
     kalshi_games: int = 0        # (day, team) keys found on Kalshi at discovery
     pm_games: int = 0            # (day, team) keys found on Polymarket at discovery
     ambiguous_dropped: int = 0
@@ -365,6 +369,7 @@ class XGameTracker:
             or now_mono - self._last_discovery >= s.xgame_discovery_minutes * 60.0
         ):
             self._last_discovery = now_mono
+            summ.discovered = True
             try:
                 self._discover(session, summ)
             except AuthError:

@@ -14,6 +14,7 @@ trade-like happens. (No orders are placed in the Scanner MVP regardless.)
 
 from __future__ import annotations
 
+import functools
 import logging
 import signal as signal_module
 import sys
@@ -30,7 +31,7 @@ from .live.executor import LiveExecutor
 from .logging_config import configure_logging, log_event
 from .mmsell.history import RegimeHistoryCapture
 from .mmsell.tracker import MmSellTracker
-from .obs.funnel import FunnelState, funnel_summary
+from .obs.funnel import NOT_RUN, FunnelState, funnel_summary
 from .paper.engine import PaperCycleSummary, PaperTradingEngine
 from .pin15.tracker import Pin15Tracker
 from .risk.manager import RiskManager
@@ -806,7 +807,8 @@ def _run_theta_book(settings, tracker) -> None:
         with session_scope() as session:
             summ = tracker.run_once(session)
         log_event(
-            logger, logging.INFO, "theta book",
+            logger, logging.INFO,
+            f"theta book {_theta_funnel(summ)}",
             products_ok=summ.products_ok, markets=summ.markets_seen,
             snapshots=summ.snapshot_rows, in_window=summ.in_window, in_band=summ.in_band,
             model_priced=summ.model_priced, edged=summ.edged, opened=summ.opened,
@@ -838,7 +840,8 @@ def _run_tfav_book(settings, tracker) -> None:
         with session_scope() as session:
             summ = tracker.run_once(session)
         log_event(
-            logger, logging.INFO, "tfav book",
+            logger, logging.INFO,
+            f"tfav book {_tfav_funnel(summ)}",
             products_ok=summ.products_ok, markets=summ.markets_seen,
             in_window=summ.in_window, in_band=summ.in_band, model_priced=summ.model_priced,
             edged=summ.edged, opened=summ.opened, already_open=summ.already_open,
@@ -852,31 +855,27 @@ def _run_tfav_book(settings, tracker) -> None:
 
 
 
-def _funnel_line(summ, *, eligible: str = "freeze_eligible",
-                 candidates: str = "candidates", actions: str = "opened") -> str:
+def _funnel_line(fetch=None, **stages) -> str:
     """The bounded, publishable funnel summary for one book's cycle (XOS-000004).
 
     It goes in the log MESSAGE, not in structured fields: the ops logs channel
     returns `message` and drops attributes, so a diagnosis carried in attributes
-    is a diagnosis no operator can read. Only the four stage counters and the
-    (sanitized, count-capped) empty-series names ever reach it — see
-    `kalshi_bot/obs/funnel.py` for why this is an allowlist rather than a dump of
-    whatever a book happened to log.
+    is a diagnosis no operator can read. Only the four stage counters, the fetch
+    diagnosis name and (sanitized, count-capped) empty/failed series names ever
+    reach it — see `kalshi_bot/obs/funnel.py` for why this is an allowlist rather
+    than a dump of whatever a book happened to log.
+
+    Each caller passes its OWN stage values, because the mapping is a statement
+    about that tracker's processing semantics and cannot be guessed from field
+    names. Pass `NOT_RUN` for a stage the cycle skipped: it is never counted as a
+    zero, so a throttled-discovery cycle can never read as an empty venue.
 
     Never raises: an unreadable cycle line is worth less than a trading cycle.
     """
     try:
-        fetch = getattr(summ, "fetch", None)
-        state = FunnelState.of(
-            fetched=getattr(summ, "markets_seen", 0),
-            eligible=getattr(summ, eligible, 0),
-            candidates=getattr(summ, candidates, 0),
-            actions=getattr(summ, actions, 0),
-        )
+        state = FunnelState.of(**stages)
         return funnel_summary(
             state,
-            # The fetch diagnosis is what stops a zero being reported as a venue
-            # answer when the fetch never completed (XOS-000004 review).
             fetch=getattr(fetch, "diagnosis", None),
             empty_series=getattr(fetch, "empty_series", ()) or (),
             failed_series=getattr(fetch, "failed_series", ()) or (),
@@ -885,6 +884,143 @@ def _funnel_line(summ, *, eligible: str = "freeze_eligible",
     except Exception:  # noqa: BLE001 — observability must never break a cycle
         logger.debug("funnel summary failed", exc_info=False)
         return ""
+
+
+
+def _safe_funnel(fn):
+    """Extend the never-breaks-a-cycle guarantee to the MAPPER layer.
+
+    `_funnel_line` guards its own rendering, but a mapper reads attributes off a
+    cycle summary before it ever gets there, so an unexpected summary shape used
+    to raise straight into the trading cycle. Observability is never allowed to
+    be the thing that stops trading; a missing line is the correct degradation.
+    """
+
+    @functools.wraps(fn)
+    def wrapper(summ) -> str:
+        try:
+            return fn(summ)
+        except Exception:  # noqa: BLE001 — see the docstring
+            logger.debug("funnel mapping failed", exc_info=False)
+            return ""
+
+    return wrapper
+
+
+# --- per-tracker funnel mappings (XOS-000004) --------------------------------
+#
+# One function per series-addressed tracker, each a STATEMENT ABOUT THAT
+# TRACKER'S SEMANTICS rather than a guess from field names. They are named and
+# separate so the cycle log lines stay readable, and so a test can assert against
+# exactly the string production emits instead of re-deriving the mapping.
+#
+# The four slots are: what came back, what survived the universe/eligibility
+# gate, what became a real candidate/signal, and what the book actually did.
+
+
+@_safe_funnel
+def _freeze_funnel(summ) -> str:
+    """markets fetched -> tracked grain/soft commodity -> priced with depth -> opened."""
+    return _funnel_line(
+        summ.fetch,
+        fetched=summ.markets_seen,
+        eligible=summ.freeze_eligible,
+        candidates=summ.candidates,
+        actions=summ.opened,
+    )
+
+
+@_safe_funnel
+def _pin15_funnel(summ) -> str:
+    """markets fetched -> in the final-minutes entry window -> had target+spot -> opened."""
+    return _funnel_line(
+        summ.fetch,
+        fetched=summ.markets_seen,
+        eligible=summ.in_window,
+        candidates=summ.priced,
+        actions=summ.opened,
+    )
+
+
+@_safe_funnel
+def _theta_funnel(summ) -> str:
+    """markets fetched -> in the entry window -> also in the price band -> opened.
+
+    `in_band` is the candidate stage because the window and band gates are the
+    ordered selection chain (tracker lines 451-453); `model_priced` is counted
+    earlier and independently of them, and `edged` is a downstream bar. Both stay
+    in the structured fields rather than being forced into a funnel slot.
+    """
+    return _funnel_line(
+        summ.fetch,
+        fetched=summ.markets_seen,
+        eligible=summ.in_window,
+        candidates=summ.in_band,
+        actions=summ.opened,
+    )
+
+
+@_safe_funnel
+def _tfav_funnel(summ) -> str:
+    """Same chain as theta — tfav is its mirror and shares the gate ordering."""
+    return _funnel_line(
+        summ.fetch,
+        fetched=summ.markets_seen,
+        eligible=summ.in_window,
+        candidates=summ.in_band,
+        actions=summ.opened,
+    )
+
+
+@_safe_funnel
+def _wcprop_funnel(summ) -> str:
+    """winner rungs fetched -> with a usable two-sided quote -> moved -> opened.
+
+    The SIGNAL stage is gated on a match having just settled. While that trigger
+    is closed no rung can be counted as moved, so reporting `moved=0` would be a
+    fabricated finding about a code path that never ran — both downstream stages
+    are NOT_RUN instead.
+    """
+    triggered = bool(getattr(summ, "triggered", False))
+    return _funnel_line(
+        summ.fetch,
+        fetched=summ.winner_rungs,
+        eligible=summ.quoted,
+        candidates=summ.moved if triggered else NOT_RUN,
+        actions=summ.opened if triggered else NOT_RUN,
+    )
+
+
+@_safe_funnel
+def _xgame_funnel(summ) -> str:
+    """discovery markets -> classified game keys -> active matches -> matches polled.
+
+    Discovery is throttled, so on most cycles the two intake stages do not run at
+    all. Marking them NOT_RUN is what stops a routine poll-only cycle from being
+    reported as an empty venue — and, because a NOT_RUN stage is skipped rather
+    than treated as a blocker, a genuinely broken polling cycle still surfaces as
+    NO_CANDIDATES or NO_ACTIONS.
+    """
+    discovered = bool(getattr(summ, "discovered", False))
+    return _funnel_line(
+        summ.fetch,
+        fetched=summ.fetch.total_markets if discovered else NOT_RUN,
+        eligible=summ.kalshi_games if discovered else NOT_RUN,
+        candidates=summ.matches_active,
+        actions=summ.polled,
+    )
+
+
+#: Every series-addressed tracker and the mapper its cycle message must use.
+#: A structural test walks this so a new tracker cannot ship without one.
+FUNNEL_MAPPERS = {
+    "freeze": _freeze_funnel,
+    "pin15": _pin15_funnel,
+    "theta": _theta_funnel,
+    "tfav": _tfav_funnel,
+    "wcprop": _wcprop_funnel,
+    "xgame": _xgame_funnel,
+}
 
 
 _pin15_last_run = {"ts": 0.0}
@@ -905,7 +1041,8 @@ def _run_pin15_book(settings, tracker) -> None:
         with session_scope() as session:
             summ = tracker.run_once(session)
         log_event(
-            logger, logging.INFO, f"pin15 book {_funnel_line(summ, eligible='in_window', candidates='priced')}",
+            logger, logging.INFO,
+            f"pin15 book {_pin15_funnel(summ)}",
             products_ok=summ.products_ok, markets=summ.markets_seen, in_window=summ.in_window,
             priced=summ.priced, pinned=summ.pinned, opened=summ.opened,
             already_open=summ.already_open, capped=summ.capped,
@@ -936,7 +1073,8 @@ def _run_freeze_book(settings, tracker) -> None:
         with session_scope() as session:
             summ = tracker.run_once(session)
         log_event(
-            logger, logging.INFO, f"freeze book {_funnel_line(summ)}",
+            logger, logging.INFO,
+            f"freeze book {_freeze_funnel(summ)}",
             markets=summ.markets_seen, commodity=summ.commodity,
             eligible=summ.freeze_eligible, pinned=summ.pinned, opened=summ.opened,
             candidates=summ.candidates,
@@ -968,7 +1106,8 @@ def _run_wcprop_book(settings, tracker) -> None:
         with session_scope() as session:
             summ = tracker.run_once(session)
         log_event(
-            logger, logging.INFO, "wcprop book",
+            logger, logging.INFO,
+            f"wcprop book {_wcprop_funnel(summ)}",
             recent_settled=summ.recent_settled, triggered=summ.triggered,
             winner_rungs=summ.winner_rungs, moved=summ.moved, opened=summ.opened,
             already_open=summ.already_open, capped=summ.capped,
@@ -1018,7 +1157,8 @@ def _run_xgame_collector(settings, tracker) -> None:
         # counts, they must be visible to confirm discovery is seeing both venues.
         log_event(
             logger, logging.INFO,
-            f"xgame collector: kal_games={summ.kalshi_games} pm_games={summ.pm_games} "
+            f"xgame collector: {_xgame_funnel(summ)} "
+            f"kal_games={summ.kalshi_games} pm_games={summ.pm_games} "
             f"matched_new={summ.matched_new} active={summ.matches_active} "
             f"polled={summ.polled} skipped_window={summ.skipped_window} "
             f"kal_rows={summ.kalshi_rows} pm_rows={summ.pm_rows} "
