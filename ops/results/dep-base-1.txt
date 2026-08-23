@@ -1,6 +1,0 @@
-# ops request: type='db'
-migration_head  receipts  issues  open_issues
---------------  --------  ------  -----------
-f2b3c4d5e6a7    0         2       0          
-
-(1 row)
