@@ -17,6 +17,8 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 
+from . import tailmodel
+
 logger = logging.getLogger(__name__)
 
 COINBASE_BASE = "https://api.exchange.coinbase.com"
@@ -66,7 +68,8 @@ class CoinbaseSpotClient:
         return out
 
 
-def refresh_spot_model(session, spot_client, product: str, *, trail_days: float) -> SpotModel | None:
+def refresh_spot_model(session, spot_client, product: str, *, trail_days: float,
+                       retention_days: float | None = None) -> SpotModel | None:
     """Gap-fetch + persist 1-min closes for `product` and build a SpotModel over the trailing
     window, or None if the persisted window is too thin. Shared by the theta and tfav books so
     both price off ONE persisted spot window (crypto_spot_candles) — whichever book runs first
@@ -85,7 +88,12 @@ def refresh_spot_model(session, spot_client, product: str, *, trail_days: float)
         closes = spot_client.candles(product, start_unix, end_unix)
         if closes:
             repo.insert_spot_candles(session, product, closes)
-    repo.prune_spot_candles(session, product, trail_start - timedelta(days=1))
+    # Prune on RETENTION, not on the model window. The two were the same number until it
+    # emerged that 6 days of closes cannot support a tail fit at all
+    # (Settings.theta_spot_retention_days). Keeping more history changes nothing the model
+    # reads — `load_spot_closes` below is still bounded by `trail_start`.
+    keep = trail_days + 1.0 if retention_days is None else max(retention_days, trail_days + 1.0)
+    repo.prune_spot_candles(session, product, now - timedelta(days=keep))
     stored = repo.load_spot_closes(session, product, trail_start)
     if len(stored) < SpotModel.MIN_SAMPLES:
         return None
@@ -123,8 +131,34 @@ class SpotModel:
 
     def returns(self, ts_unix: int, h_min: int) -> list[float]:
         """Public accessor so a caller can compute several variant probabilities from one
-        pass over the trailing window (the per-cycle hot path)."""
+        pass over the trailing window (the per-cycle hot path).
+
+        OVERLAPPING by construction — one h-minute return per minute. Correct for the incumbent
+        empirical model, which only counts them, and WRONG for anything that fits a distribution
+        to them: see `block_returns`."""
         return self._returns(ts_unix, h_min)
+
+    def block_returns(self, ts_unix: int, h_min: int, *, window_days: float | None = None
+                      ) -> list[float]:
+        """NON-OVERLAPPING h-minute log returns ending at or before `ts_unix`, in TIME ORDER.
+
+        Thin delegate to `tailmodel.block_sample`, which owns the frozen block construction.
+        Both the live shadow and the offline validation harness call that one definition, so
+        the sample that gets validated and the sample that runs cannot drift apart. `returns`
+        above steps by one minute and is for counting, not fitting.
+
+        `window_days` overrides the model's own trailing window. It exists so a PAPER research
+        model can be fitted over a longer history than the incumbent prices off, without
+        changing what the incumbent sees.
+        """
+        return self.block_sample(ts_unix, h_min, window_days=window_days)[0]
+
+    def block_sample(self, ts_unix: int, h_min: int, *, window_days: float | None = None
+                     ) -> tuple[list[float], dict]:
+        """`block_returns` plus the window-completeness metadata the caller needs to decide
+        whether the fit may be recorded at all."""
+        span_days = float(window_days) if window_days else (self.trail / 86400.0)
+        return tailmodel.block_sample(self.closes, int(ts_unix), int(h_min), span_days)
 
     @staticmethod
     def prob_from_returns(
@@ -156,6 +190,38 @@ class SpotModel:
         except (TypeError, ValueError):
             return None
         return None
+
+    def realized_vol_bps(self, ts_unix: int, lookback_min: int) -> float | None:
+        """Sample sd of 1-minute log returns over the trailing lookback, in basis points/minute.
+
+        Per-minute rather than per-window so the number means the same thing whatever horizon
+        it is read against, and it is the natural unit for comparing a 15-minute regime to a
+        4-hour one. Needs at least 10 returns; returns None rather than a number built from
+        three points."""
+        rets: list[float] = []
+        for k in range(lookback_min):
+            a = self.closes.get((ts_unix - (k + 1) * 60) // 60 * 60)
+            b = self.closes.get((ts_unix - k * 60) // 60 * 60)
+            if a and b and a > 0 and b > 0:
+                rets.append(math.log(b / a))
+        n = len(rets)
+        if n < 10:
+            return None
+        mean = sum(rets) / n
+        var = sum((r - mean) ** 2 for r in rets) / (n - 1)
+        return math.sqrt(var) * 1e4
+
+    def trailing_move_bps(self, ts_unix: int, lookback_min: int) -> float | None:
+        """SIGNED log move over the trailing lookback, in basis points.
+
+        Signed on purpose: a tail sold into a rally and one sold into a selloff are different
+        trades, and the tail diagnosis could only bucket on |move| because nothing recorded the
+        direction (`docs/RESEARCH_THETA_TAIL_MODEL_DIAGNOSIS.md` §2.5)."""
+        now = self.spot_at(ts_unix)
+        then = self.spot_at(ts_unix - lookback_min * 60, max_stale_min=lookback_min)
+        if not now or not then or now <= 0 or then <= 0:
+            return None
+        return math.log(now / then) * 1e4
 
     def p_yes(
         self,

@@ -154,6 +154,7 @@ ALLOWED_SCRIPTS = (
     "mmsell_taxonomy_audit",
     "theta_tail_diagnosis",
     "theta_tail_refit",
+    "theta_ab_replay",
     "theta_candle_backfill_probe",
     "theta_forward_path",
     "theta_settlement_labels",
