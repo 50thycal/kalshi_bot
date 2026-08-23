@@ -1,7 +1,0 @@
-# ops request: type='db'
-event_type      actor        actor_role                occurred_at                     
---------------  -----------  ------------------------  --------------------------------
-CREATED         claude-code  EXPERIMENT_CONTROL_TOWER  2026-08-22 15:42:44.622993+00:00
-EVIDENCE_ADDED  claude-code  EXPERIMENT_CONTROL_TOWER  2026-08-22 15:42:44.683177+00:00
-
-(2 rows)
