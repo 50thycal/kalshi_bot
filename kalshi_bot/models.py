@@ -842,6 +842,62 @@ class CryptoLadderSnapshot(Base):
     spot: Mapped[float | None] = mapped_column(Float)  # underlying at capture
     model_p: Mapped[float | None] = mapped_column(Float)  # theta model P(YES), 0..1
     model_excess_cents: Mapped[float | None] = mapped_column(Float)  # mid - 100*model_p
+    # --- decision-time regime telemetry (docs/RESEARCH_THETA_TAIL_MODEL_DIAGNOSIS.md §2.5) ---
+    # The momentum/regime hypothesis is the one mechanism the tail diagnosis could NOT test:
+    # only 11,435 of 63,758 tail quotes had a usable trailing move, because nothing recorded the
+    # spot path at decision time and `crypto_spot_candles` is pruned at ~6 days. These are
+    # computed from the closes the model already holds in memory, so they cost one pass over a
+    # window that has been loaded regardless.
+    #
+    # Realized vol is the sample sd of 1-minute log returns over the trailing window, in
+    # BASIS POINTS PER MINUTE — a unit that does not change meaning when the horizon does.
+    trailing_vol_15m: Mapped[float | None] = mapped_column(Float)
+    trailing_vol_60m: Mapped[float | None] = mapped_column(Float)
+    trailing_vol_240m: Mapped[float | None] = mapped_column(Float)
+    # Signed trailing move over the same lookbacks, in basis points. Signed, not absolute: a
+    # tail sold into a rally is a different trade from one sold into a selloff, and the
+    # diagnosis's |move| bucketing could not tell them apart.
+    trailing_move_15m: Mapped[float | None] = mapped_column(Float)
+    trailing_move_60m: Mapped[float | None] = mapped_column(Float)
+    # --- replacement-model shadow (kalshi_bot/theta/tailmodel.py) ---
+    # The spliced EVT model's answer for the SAME strike at the SAME instant. Recorded beside
+    # the incumbent rather than replacing it, so its calibration accrues on live data while no
+    # book prices off it.
+    #
+    # Everything needed to interpret one of these probabilities travels WITH it. An earlier
+    # draft stored only the upper tail's shape, which describes the wrong distribution beside a
+    # `less` strike, and no fit settings at all — so a stored probability could not be told
+    # apart from one produced under a different window or threshold.
+    spliced_model_p: Mapped[float | None] = mapped_column(Float)
+    # The shape of the tail THIS strike prices off: upper for `greater`, lower for `less`,
+    # NULL for `between` (which uses both). Both sides are kept beside it.
+    spliced_active_xi: Mapped[float | None] = mapped_column(Float)
+    spliced_upper_xi: Mapped[float | None] = mapped_column(Float)
+    spliced_lower_xi: Mapped[float | None] = mapped_column(Float)
+    # Declustered exceedances backing the ACTIVE tail — the evidence count that decides whether
+    # this probability is an estimate or a resolution floor.
+    spliced_active_clusters: Mapped[int | None] = mapped_column(Integer)
+    spliced_blocks: Mapped[int | None] = mapped_column(Integer)   # non-overlapping blocks fitted
+    # Window COMPLETENESS, which the span below cannot express: a window can reach ninety days
+    # back and still be a third holes. `spliced_expected_blocks` is how many block slots the
+    # requested window contains, so coverage = blocks / expected. `spliced_max_gap_min` is the
+    # longest contiguous hole. A row below the frozen coverage bar carries no probability.
+    spliced_expected_blocks: Mapped[int | None] = mapped_column(Integer)
+    spliced_block_coverage: Mapped[float | None] = mapped_column(Float)
+    spliced_max_gap_min: Mapped[float | None] = mapped_column(Float)
+    # The BUCKETED horizon the fit was actually built at, which is not the market's raw
+    # minutes_to_close. Recorded because the offline harness and the runtime must agree on it,
+    # and a stored probability is uninterpretable without knowing which horizon produced it.
+    spliced_horizon_min: Mapped[int | None] = mapped_column(Integer)
+    # ACTUAL span of history the fit saw, and what was ASKED for. They differ on a cold start
+    # or a partial backfill, and an earlier version recorded only the request — so a fit over
+    # five days of closes was stored as though it had ninety.
+    spliced_fit_days: Mapped[float | None] = mapped_column(Float)
+    spliced_requested_fit_days: Mapped[float | None] = mapped_column(Float)
+    spliced_tail_q: Mapped[float | None] = mapped_column(Float)
+    # True when the active tail is below the power bar; such a row must never be pooled with a
+    # powered one, and must never be read as evidence.
+    spliced_underpowered: Mapped[bool | None] = mapped_column(Boolean)
 
 
 class GameMarketMatch(Base):
