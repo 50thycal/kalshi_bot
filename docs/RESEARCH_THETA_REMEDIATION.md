@@ -677,9 +677,26 @@ simply move from "the model is most wrong here" to "the market prices this lowes
 knows something". That is a **different**, measurable mechanism rather than a self-inflicted one,
 and the arms are constructed so the two can be told apart.
 
-**Still unregistered.** Three things are missing, and none of them is the operator's patience:
-the treatment rule's candidate cadence (§4.2.3), a forward holdout the scoring rule has not seen
-(§6), and the operator's decision to spend the horizon.
+**Still unregistered — and now for a reason that is measured rather than missing.** An earlier
+revision of this paragraph listed the treatment rule's candidate cadence as one of the things
+still unknown. It is no longer unknown: §4.2.3 measures it by replaying both rules over one common
+candidate stream, and the measurement is what settles the question. The control rule produces
+**2.64 candidates/day** against the treatment's 11.59, so the *incumbent* arm is the binding
+constraint, and it needs **288 days** to reach the promotion floor under the replay's favourable
+assumption that the control keeps missing by 3.93× — **more than three years** under the
+conservative assumption that it regresses to calibration. **The design is impractical as
+specified.** That is a finding, not a gap.
+
+What remains genuinely open is narrower: a forward holdout the scoring rule has not seen (§6), and
+the operator's decision about whether any version of this experiment is worth its horizon.
+
+**Anything that would make it practical is a SUCCESSOR DESIGN, not an amendment.** Widening the
+candidate stream (the control's 6¢ edge threshold is what starves it), raising the minimum useful
+effect above a halving, or lowering the confidence level would each change what the experiment can
+conclude and how likely it is to conclude it wrongly. Each therefore requires a **fresh
+pre-registration** — written, and its gates fixed, *before* results are seen. None of them may be
+chosen from this page, with this replay's numbers already in view: that is precisely the
+after-the-fact re-interpretation the pre-registration discipline exists to prevent.
 
 ---
 
