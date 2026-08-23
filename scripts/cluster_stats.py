@@ -235,8 +235,10 @@ def ratio_contrast_ci(rows: Sequence[dict], cluster_key: str, p_key: str, outcom
     WHY THIS AND NOT TWO INTERVALS. Computing a 99% interval for each group separately and
     calling the effect established because they do not overlap is not a test of the contrast. The
     two groups come from the same events; their errors covary, and marginal intervals throw that
-    covariance away. Disjointness is sufficient for significance but not necessary — and it is
-    not the question. The question is whether `log(R_A / R_B)` differs from zero, so that is what
+    covariance away. Non-overlap is not NECESSARY for the ratio to exclude 1, and it is only
+    reliably sufficient when the two estimates are independent — which they are not when the
+    split partitions the same clusters. The question is whether `log(R_A / R_B)` differs from
+    zero, so that is what
     is resampled: whole clusters drawn from the COMBINED population, with both groups recomputed
     inside each replicate from the rows that replicate happens to contain.
 
@@ -298,6 +300,88 @@ def ratio_contrast_ci(rows: Sequence[dict], cluster_key: str, p_key: str, outcom
         oa = ea = ob = eb = 0.0
         for _ in range(k):
             c0, c1, c2, c3 = cells[rand(k)]
+            oa += c0
+            ea += c1
+            ob += c2
+            eb += c3
+        v = contrast(oa, ea, ob, eb, HALDANE_C)
+        if math.isfinite(v):
+            reps.append(v)
+    out["valid_replicates"] = len(reps)
+    if reps:
+        out["lo"], out["hi"] = _ci(reps, alpha)
+        out["excludes_zero"] = bool(out["lo"] is not None and out["hi"] is not None
+                                    and (out["lo"] > 0.0 or out["hi"] < 0.0))
+    return out
+
+
+def arm_contrast_ci(a_rows: Sequence[dict], b_rows: Sequence[dict], cluster_key: str,
+                    p_key: str, outcome_key: str, *, alpha: float = 0.01,
+                    b: int = DEFAULT_B, seed: int = DEFAULT_SEED) -> dict:
+    """`log(R_A / R_B)` for two ARMS that may OVERLAP, resampled over the union of clusters.
+
+    `ratio_contrast_ci` splits one population by a predicate, so every row lands in exactly one
+    group. Two selection rules replayed over a shared candidate stream do not partition anything:
+    a market both rules pick belongs to BOTH arms. Forcing it into one would either delete the
+    overlap or double-count it, and the overlap is precisely where the arms agree — the part of
+    the stream the treatment does not change.
+
+    So the arms are passed as two lists, membership is whatever the caller's rules produced, and
+    the bootstrap resamples the UNION of clusters. An event drawn into a replicate contributes
+    its rows to whichever arms contain them, which keeps the arms' shared exposure to the same
+    ladder attached — the covariance that makes this a comparison rather than two measurements.
+
+    Degenerate replicates follow `ratio_contrast_ci` exactly: zero EXPECTED in either arm is
+    undefined and the replicate is invalid, dropped and counted; zero OBSERVED is handled by
+    `HALDANE_C`, applied uniformly to every replicate and to the point estimate.
+    """
+    def summary(rs: Sequence[dict]) -> dict:
+        exp = sum(r[p_key] for r in rs)
+        obs = sum(1 for r in rs if r[outcome_key])
+        return {"n": len(rs), "expected": exp, "observed": obs,
+                "r": (obs / exp) if exp > 0 else float("nan"),
+                "clusters": cluster_profile(rs, cluster_key)["clusters"] if rs else 0}
+
+    a_by = group_by_cluster(a_rows, cluster_key)
+    b_by = group_by_cluster(b_rows, cluster_key)
+    keys = sorted(set(a_by) | set(b_by), key=repr)
+
+    out = {"a": summary(a_rows), "b": summary(b_rows), "clusters": len(keys),
+           "haldane_c": HALDANE_C, "point": float("nan"),
+           "point_uncorrected": float("nan"), "lo": None, "hi": None,
+           "valid_replicates": 0, "replicates": b, "excludes_zero": False}
+
+    def contrast(oa: float, ea: float, ob: float, eb: float, c: float) -> float:
+        if ea <= 0 or eb <= 0:
+            return float("nan")
+        ra, rb = (oa + c) / ea, (ob + c) / eb
+        if ra <= 0 or rb <= 0:
+            return float("nan")
+        return math.log(ra / rb)
+
+    out["point"] = contrast(out["a"]["observed"], out["a"]["expected"],
+                            out["b"]["observed"], out["b"]["expected"], HALDANE_C)
+    out["point_uncorrected"] = contrast(out["a"]["observed"], out["a"]["expected"],
+                                        out["b"]["observed"], out["b"]["expected"], 0.0)
+    if len(keys) < MIN_CLUSTERS_FOR_CI:
+        return out
+
+    cells: list[tuple[float, float, float, float]] = []
+    for k in keys:
+        av, bv = a_by.get(k, []), b_by.get(k, [])
+        cells.append((
+            sum(1 for r in av if r[outcome_key]), sum(r[p_key] for r in av),
+            sum(1 for r in bv if r[outcome_key]), sum(r[p_key] for r in bv),
+        ))
+
+    rng = random.Random(seed)
+    n = len(cells)
+    rand = rng.randrange
+    reps: list[float] = []
+    for _ in range(b):
+        oa = ea = ob = eb = 0.0
+        for _ in range(n):
+            c0, c1, c2, c3 = cells[rand(n)]
             oa += c0
             ea += c1
             ob += c2

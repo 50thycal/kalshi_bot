@@ -129,18 +129,27 @@ def requirement(ctrl: dict, trt: dict) -> dict:
     se = MIN_USEFUL_EFFECT / (Z_ALPHA + Z_POWER)
     lam_c, lam_t = ctrl["lam_market"], trt["lam_market"]
     r_c = ctrl["r"] if ctrl["r"] == ctrl["r"] and ctrl["r"] > 0 else float("nan")
-    r_t = 0.5 * r_c
     if not (lam_c > 0 and lam_t > 0 and r_c > 0):
         return {"ok": False}
-    iid = (1.0 / (lam_t * r_t) + 1.0 / (lam_c * r_c)) / (se * se)
     deff = max(d for d in (ctrl["deff"], trt["deff"]) if d == d)
-    floor = iid * deff
+
+    def sized_at(rc: float) -> dict:
+        """Sample per arm if the control's tail miss settles at `rc` going forward."""
+        rt = 0.5 * rc
+        n_iid = (1.0 / (lam_t * rt) + 1.0 / (lam_c * rc)) / (se * se)
+        fl = n_iid * deff
+        return {"r_c": rc, "iid": n_iid, "floor": fl, "horizon": fl * HORIZON_MULTIPLE,
+                "obs_c": n_iid * lam_c * rc, "obs_t": n_iid * lam_t * rt,
+                "days_c": fl / ctrl["per_day"] if ctrl["per_day"] > 0 else float("nan"),
+                "days_t": fl / trt["per_day"] if trt["per_day"] > 0 else float("nan")}
+
+    at = sized_at(r_c)
     return {
-        "ok": True, "se": se, "iid": iid, "deff": deff, "floor": floor,
-        "horizon": floor * HORIZON_MULTIPLE,
-        "obs_c": iid * lam_c * r_c, "obs_t": iid * lam_t * r_t,
-        "days_c": floor / ctrl["per_day"] if ctrl["per_day"] > 0 else float("nan"),
-        "days_t": floor / trt["per_day"] if trt["per_day"] > 0 else float("nan"),
+        "ok": True, "se": se, "deff": deff, **at,
+        # The floor is CONDITIONAL on the control continuing to miss at the replayed rate. A
+        # control that regresses toward calibration produces fewer losses per market and needs
+        # more of them, so the honest package carries the sensitivity, not one number.
+        "sensitivity": [sized_at(rc) for rc in (r_c, 2.0, 1.0)],
     }
 
 
@@ -247,7 +256,30 @@ def main(argv: list[str] | None = None) -> int:
                     lambda r: (r["mid"] - 100.0 * r["p_old"]) >= CONTROL_EDGE)
     print_arm_table([arm_stats("CONTROL-inc", ctrl_old, "p_old", days, args.seed)])
 
-    ref.head("4. EVIDENCE REQUIREMENT, DERIVED FROM THE REPLAY")
+    ref.head("4. THE REPLAY'S OWN CONTRAST — DESCRIPTIVE, NOT A RESULT")
+    print("  This is the sizing sample. It is NOT the experiment, and nothing here promotes,")
+    print("  rejects or registers anything: the rules were chosen after seeing this window, so")
+    print("  the estimate below is contaminated by exactly the selection the A/B exists to")
+    print("  remove. It is reported because a sizing exercise that hides its own effect estimate")
+    print("  invites someone to rediscover it later and call it news.")
+    print()
+    print("  The arms OVERLAP, so this is not a partition of one population. Whole events are")
+    print("  resampled from the UNION and a market taken by both arms contributes to both.")
+    st = cs.arm_contrast_ci(trt, ctrl, "event", "p_new", "yes_resolved", seed=args.seed)
+    ci = cs.fmt_ci(st["lo"], st["hi"], 3)
+    print()
+    print(f"    log(R_treatment / R_control) = {st['point']:+.3f} "
+          f"(uncorrected {st['point_uncorrected']:+.3f})   99% CI {ci}")
+    print(f"    valid replicates {st['valid_replicates']:,}/{st['replicates']:,}   "
+          f"events in the union {st['clusters']:,}")
+    print(f"    minimum useful effect for the A/B is {-MIN_USEFUL_EFFECT:+.3f} (a halving)")
+    if st["lo"] is not None and st["hi"] is not None and st["hi"] < 0:
+        print("    The interval excludes zero. On a sample the rules were chosen against, that is")
+        print("    a reason to RUN the experiment, not a substitute for running it.")
+    else:
+        print("    The interval contains zero: not even suggestive on this window.")
+
+    ref.head("5. EVIDENCE REQUIREMENT, DERIVED FROM THE REPLAY")
     req = requirement(a_ctrl, a_trt)
     if not req["ok"]:
         print("  An arm carries no expected loss on this stream. No requirement can be derived,")
@@ -265,6 +297,18 @@ def main(argv: list[str] | None = None) -> int:
           f"({HORIZON_MULTIPLE:.1f}x the floor)")
     print(f"  early-failure floor            {EARLY_FAILURE_FLOOR} settled markets per arm "
           "(unchanged; a stopping clause is deliberately not inflated)")
+    print()
+    print("  THE FLOOR IS CONDITIONAL ON THE CONTROL'S MISS. It is sized from the control's")
+    print("  replayed R, and a control that regresses toward calibration produces fewer losses")
+    print("  per market and therefore needs more markets. One number would hide that:")
+    print()
+    print(f"    {'if control R settles at':<26} {'floor/arm':>10} {'horizon/arm':>12} "
+          f"{'slower arm':>12}")
+    for sv in req["sensitivity"]:
+        slow_d = max(sv["days_c"], sv["days_t"])
+        print(f"    {sv['r_c']:<26.2f} {sv['floor']:>10,.0f} {sv['horizon']:>12,.0f} "
+              f"{slow_d:>9,.0f} d")
+    print("  The registered floor should be the CONSERVATIVE row, not the flattering one.")
     print()
     print(f"  CALENDAR TIME at the measured cadence: control {req['days_c']:,.0f} days "
           f"({req['days_c'] / 365.25:.1f} years), treatment {req['days_t']:,.0f} days "
