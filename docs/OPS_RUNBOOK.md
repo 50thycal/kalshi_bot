@@ -133,9 +133,45 @@ To run a request:
    {"type": "env",  "service": "evo", "id": "evo-env-1"}                    // read evo vars
    {"type": "env",  "service": "evo", "set": {"EVO_MAX_ACTIVE_AGENTS": "5"}, "id": "evo-cad"}
    ```
+
    Each service's ID lives in a secret (`RAILWAY_SERVICE_ID` for main,
    `RAILWAY_EVO_SERVICE_ID` for evo — never in this public repo). `db` requests are
    **service-agnostic** (both workers share one Postgres via `DATABASE_URL_RO`).
+
+   **Reading a book's evidence funnel (XOS-000004).** Every series-addressed book
+   ends its cycle line with a bounded, publishable funnel summary, so the ops logs
+   channel — which returns `message` text and drops structured attributes — can
+   answer "where did this book's count first become zero?":
+
+   ```jsonc
+   {"type":"logs","filter":"funnel/v1","limit":100,"id":"funnel-1"}
+   ```
+
+   ```
+   freeze book funnel/v1 state=NO_MARKETS first_zero=fetched fetched=0 eligible=0
+     candidates=0 actions=0 empty_series=7/7 [KXCOCOA KXCOFFEE KXCORN KXCOTTON KXSOYBEAN +2]
+   ```
+
+   `state` is the diagnosis and `first_zero` is the stage to start from:
+
+   | state | means |
+   |---|---|
+   | `NO_MARKETS` | the fetch returned nothing — check `empty_series` for which configured series are dead |
+   | `NO_ELIGIBLE` | markets came back; the book's eligibility filter rejected all of them |
+   | `NO_CANDIDATES` | eligible markets, none survived to become a priced candidate |
+   | `NO_ACTIONS` | candidates were produced and rejected downstream (caps, bands, discount bar) |
+   | `ACTIONS` | the book acted |
+
+   A series that returns HTTP 200 with an empty list also logs a WARNING naming it,
+   and an entirely empty configured universe logs a louder ERROR — that condition
+   makes the book inert, and it is the one that went unnoticed for nine days.
+
+   The summary is an **allowlist**, not a log dump: only the four stage counters
+   and sanitized, count-capped series tickers are rendered, and the whole line is
+   length-bounded. Ops results are public, and the workers emit ~260 distinct
+   structured field names including raw payloads, order identifiers and account
+   values — widening the log READ path to return attributes generically would
+   publish all of it. See `kalshi_bot/obs/funnel.py`.
 
    **Always set a unique `"id"`** (any short slug — sanitized to `[A-Za-z0-9._-]`).
    The runner writes your output to a durable per-run file `ops/results/<id>.txt`

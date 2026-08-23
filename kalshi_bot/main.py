@@ -30,6 +30,7 @@ from .live.executor import LiveExecutor
 from .logging_config import configure_logging, log_event
 from .mmsell.history import RegimeHistoryCapture
 from .mmsell.tracker import MmSellTracker
+from .obs.funnel import FunnelState, funnel_summary
 from .paper.engine import PaperCycleSummary, PaperTradingEngine
 from .pin15.tracker import Pin15Tracker
 from .risk.manager import RiskManager
@@ -850,6 +851,38 @@ def _run_tfav_book(settings, tracker) -> None:
         logger.exception("tfav ride-along book failed (weather/live unaffected)")
 
 
+
+def _funnel_line(summ, *, eligible: str = "freeze_eligible",
+                 candidates: str = "candidates", actions: str = "opened") -> str:
+    """The bounded, publishable funnel summary for one book's cycle (XOS-000004).
+
+    It goes in the log MESSAGE, not in structured fields: the ops logs channel
+    returns `message` and drops attributes, so a diagnosis carried in attributes
+    is a diagnosis no operator can read. Only the four stage counters and the
+    (sanitized, count-capped) empty-series names ever reach it — see
+    `kalshi_bot/obs/funnel.py` for why this is an allowlist rather than a dump of
+    whatever a book happened to log.
+
+    Never raises: an unreadable cycle line is worth less than a trading cycle.
+    """
+    try:
+        fetch = getattr(summ, "fetch", None)
+        state = FunnelState.of(
+            fetched=getattr(summ, "markets_seen", 0),
+            eligible=getattr(summ, eligible, 0),
+            candidates=getattr(summ, candidates, 0),
+            actions=getattr(summ, actions, 0),
+        )
+        return funnel_summary(
+            state,
+            empty_series=getattr(fetch, "empty_series", ()) or (),
+            configured_series=getattr(fetch, "configured", 0) or 0,
+        )
+    except Exception:  # noqa: BLE001 — observability must never break a cycle
+        logger.debug("funnel summary failed", exc_info=False)
+        return ""
+
+
 _pin15_last_run = {"ts": 0.0}
 
 
@@ -868,7 +901,7 @@ def _run_pin15_book(settings, tracker) -> None:
         with session_scope() as session:
             summ = tracker.run_once(session)
         log_event(
-            logger, logging.INFO, "pin15 book",
+            logger, logging.INFO, f"pin15 book {_funnel_line(summ, eligible='in_window', candidates='priced')}",
             products_ok=summ.products_ok, markets=summ.markets_seen, in_window=summ.in_window,
             priced=summ.priced, pinned=summ.pinned, opened=summ.opened,
             already_open=summ.already_open, capped=summ.capped,
@@ -899,9 +932,10 @@ def _run_freeze_book(settings, tracker) -> None:
         with session_scope() as session:
             summ = tracker.run_once(session)
         log_event(
-            logger, logging.INFO, "freeze book",
+            logger, logging.INFO, f"freeze book {_funnel_line(summ)}",
             markets=summ.markets_seen, commodity=summ.commodity,
             eligible=summ.freeze_eligible, pinned=summ.pinned, opened=summ.opened,
+            candidates=summ.candidates,
             already_open=summ.already_open, capped=summ.capped,
             illiquid=summ.skipped_illiquid, no_discount=summ.skipped_discount,
             out_of_band=summ.skipped_price,
