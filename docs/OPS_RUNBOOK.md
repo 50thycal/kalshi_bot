@@ -340,6 +340,118 @@ To run a request:
      live money. Findings: `docs/RESEARCH_THETA_TAIL_MODEL_DIAGNOSIS.md`. Check the
      derived-vs-recorded settlement agreement line before quoting sections B onward.
 
+   - **"forward path"** / **"toxic flow"** -> `{"type":"script","name":"theta_forward_path"}`
+     — what the underlying did AFTER each theta decision, joined from retained 1-minute closes:
+     forward return at +5m/+15m/+30m/close, plus maximum favourable and adverse excursion
+     oriented by the side the book SOLD. **Read section 1 (COVERAGE) first and treat anything
+     below ~95% as unusable**: missing rows cluster around feed outages, so dropping them
+     silently selects on the regime being studied. Retention makes this join possible; this
+     script is what proves it complete.
+
+   - **"candle depth"** -> `{"type":"script","name":"theta_candle_backfill_probe"}` — how far
+     back Coinbase serves 1-minute candles, i.e. whether a fit window can be backfilled from
+     history or has to accumulate forward. Touches no database. Measured 2026-08-21: at least
+     365 days for BTC-USD and ETH-USD.
+
+   - **"settlement labels"** / **"are the outcomes trustworthy"** ->
+     `{"type":"script","name":"theta_settlement_labels","args":["--spot-source","coinbase","--kalshi-results"]}`
+     — audits the DERIVED outcome label every theta calibration rests on. The label is the last
+     ladder snapshot's spot against the strike, which is not Kalshi's settlement print: Kalshi
+     settles off its own index at the close, up to three minutes later. Measures the residual
+     move scale from the spot series, applies a fixed near-strike exclusion, and reports
+     agreement against recorded settlement with **event-clustered** intervals.
+     `--kalshi-results` fetches Kalshi's OWN settled results per event from the public endpoint
+     and reports how much of the population they cover — measured at **100%**, which is why the
+     refit no longer scores against the derivation at all.
+     **Read the VERDICT line.** The bar applies to the one-sided LOWER bound, not the point
+     estimate: a percentile bootstrap on an all-agreeing sample returns `[1, 1]` because no
+     resample of successes can contain a failure, so the interval is an exact clustered
+     Clopper-Pearson one. `BLOCKED_DATA` means no calibration computed against those labels is
+     validated — including one that already reports a verdict. Use `--spot-source coinbase`
+     (default); the ladder reconstruction is ~5-minute sampled and cannot measure a 1-3 minute
+     move scale (it reported a 4-minute RMS ETH move of $0.20).
+
+   - **"taxonomy audit"** / **"what are the unknown series"** ->
+     `{"type":"script","name":"mmsell_taxonomy_audit","args":["--top","200","--dump-text"]}`
+     — the candidate census by settlement mode AND the Platform Change Review package for every
+     unclassified series prefix. `markets` holds no row for these tickers, so the evidence is
+     fetched from Kalshi's public market-data endpoint (no key). Proposes a mode only on a
+     STRONG signal — Kalshi's settlement source or rules text — and returns
+     `INSUFFICIENT_EVIDENCE` otherwise; `--dump-text` prints Kalshi's own words verbatim so a
+     human can decide the rest. **It edits no `SERIES_TYPES` entry.** The census it runs is the
+     same function that must be re-run after a repair, so "rerun the exact same census" is one
+     command. Note `can_close_early` is reported and votes on nothing: Kalshi sets it on 100% of
+     these markets, index-close ones included.
+
+   - **shadow cost, synthetic** -> `PYTHONPATH=. python3 scripts/theta_shadow_bench.py` —
+     **local, not an ops script, and it does NOT measure PostgreSQL.** Fits, cache behaviour and
+     memory only; the "load" line is in-process object construction, so the total is a LOWER
+     BOUND on production. Run it after any change to the model or its cadence.
+
+   - **shadow cost, production** -> `{"type":"logs","service":"main","filter":"theta: shadow cost"}`
+     — one line per cycle carrying `theta_shadow_ms` (TOTAL: load + decode + construction +
+     fits), `theta_shadow_load_ms`, `theta_shadow_loads`, `theta_shadow_fits`. **This is the only
+     number that may be called production-derived.** Report p50/p90/p99/max over several hourly
+     reloads before treating `theta_spliced_budget_ms` as anything but a synthetic figure, and
+     remember a budget below the measured maximum is not a backstop — it is an hourly gap in the
+     research series.
+
+   - **"theta refit"** / **"tail model validation"** -> `{"type":"script","name":"theta_tail_refit"}`
+     — scores the replacement probability model (`kalshi_bot/theta/tailmodel.py`) against the
+     incumbent, strictly out of sample. Reports degeneracy (what fraction of each model's output
+     is exactly 0 or 1), calibration by probability bucket with the sub-2% region broken out,
+     a `tail_q` sweep chosen on TRAIN and scored on TEST, the **paired** proper-score comparison
+     between the two models, a **direct** event-clustered test of the SELECTED-vs-REJECTED
+     contrast under each model's own excess, and fit health.
+     **Section 0 is a gate.** `--labels kalshi` (the default) scores against Kalshi's own settled
+     results, fetched per event, which cover 100% of this universe; `--labels derived` reproduces
+     the old last-snapshot-spot proxy and its near-strike exclusion, kept because the record has
+     to be able to reproduce what earlier runs scored. `BLOCKED_DATA` there means nothing below it
+     is a validated calibration result.
+     **Section 6 is the comparison.** The per-model R columns in sections 3 and 5 describe two
+     different partitions and are not a test of a difference — aggregate R also rewards
+     predicting exactly zero, which is the incumbent's shape. Every interval is an
+     **event-clustered** bootstrap: a crypto ladder settles all its strikes against one spot
+     print, so a Poisson interval over markets is ~2.3x too narrow (measured design effect ~5).
+     `--seed` is fixed so a recorded run reproduces its own intervals exactly.
+     **Section 7 is the selection test.** The estimand is `log(R_selected / R_rejected)`, and it
+     is bootstrapped as one quantity — whole events resampled from the combined eligible
+     population, both groups recomputed inside every replicate, so the covariance between them is
+     retained. The two groups' separate intervals in the table above it are descriptive; they are
+     NOT the test, and non-overlap of them proves nothing. A Haldane–Anscombe `c = 0.5` is added
+     to both observed counts uniformly (the uncorrected point estimate is printed beside the
+     corrected one); a replicate drawing zero *expected* events in either group is invalid and
+     dropped, and the run declines to report an interval if too few survive. Read
+     `valid_replicates` and the per-group event coverage before the verdict.
+     **Read the `powered` counts before anything else.** A fit below
+     `MIN_TAIL_EXCEEDANCES_FOR_POWER` declustered exceedances ON THE TAIL THE STRIKE USES is a
+     resolution floor, not an estimate, and the calibration/selection sections exclude those
+     rows. Configuration (`--fit-days` x `--tail-qs`) is chosen on TRAIN and scored **once** on
+     TEST; the split is enforced by control flow, so a TEST number cannot be reported for a
+     configuration that was not frozen first. `--spot-source coinbase` (default) fetches true
+     1-minute closes from the public endpoint — deep enough for a 90-day fit window and writing
+     nothing; `candles` uses only the retained window; `ladder` reaches further back at
+     ~5-minute sampling, which is too sparse to build blocks from.
+     Findings: `docs/RESEARCH_THETA_REMEDIATION.md`.
+
+   - **"theta A/B replay"** / **"Stage-4 floors"** -> `{"type":"script","name":"theta_ab_replay"}`
+     — replays the PROPOSED control and treatment selection rules over ONE common eligible
+     candidate stream, on Kalshi's settled results, and derives the A/B's evidence floors from
+     what it measures. Exists because floors sized from a rule's *historical* selected set cannot
+     size an experiment that runs a different rule.
+     Reports per arm: eligible candidates and events, overlap between arms, markets/event,
+     expected and observed losses, expected-loss rate per market and per event, candidate cadence
+     per day, event-clustered design effect, sample requirement, calendar time and horizon.
+     **The floor is conditional on the control's R** and the run prints a sensitivity across
+     R_C ∈ {replayed, 2.0, 1.0} — register the CONSERVATIVE row, not the flattering one.
+     **Section 4 is descriptive, not a result.** The rules were chosen after seeing this window,
+     so the replay's own `log(R_T/R_C)` cannot promote or reject anything; it is printed so the
+     effect is not rediscovered later and mistaken for news. The arms OVERLAP, so it uses
+     `cluster_stats.arm_contrast_ci` (resamples the union of events, a market can be in both) —
+     `ratio_contrast_ci` would be wrong here because it partitions.
+     It runs the frozen spliced configuration only; it does not sweep or choose a model.
+     Findings: `docs/RESEARCH_THETA_REMEDIATION.md` §4.2.3.
+
    The individual probes can still be run alone:
    `weather_model_check` grades the ensemble forecast distribution against the
    market's bucket prices on settled events (Brier/log-loss + hypothetical EV)

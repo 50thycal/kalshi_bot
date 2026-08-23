@@ -638,6 +638,72 @@ class Settings(BaseSettings):
     # SERIES:COINBASE_PRODUCT pairs; wrong series fail soft (logged, skipped).
     theta_series: str = "KXBTCD:BTC-USD,KXBTC:BTC-USD,KXETHD:ETH-USD,KXETH:ETH-USD"
     theta_trail_days: float = 5.0             # spot window behind the return distribution
+    # How long 1-minute closes are KEPT. Distinct from BOTH the incumbent's model window
+    # (`theta_trail_days`) and the paper research model's fit window
+    # (`theta_spliced_fit_days`); conflating retention with a fit window was the defect in the
+    # first draft of this work, which retained 90 days and then still fitted on 5.
+    #
+    # Retention does NOT change what any book sees: `_refresh_spot` still loads only
+    # `trail_days` of closes for the incumbent, so widening this alters no probability, no
+    # entry and no fill. Storage is ~1,440 rows/day/product (~260k rows for two products at 90
+    # days).
+    # Must EXCEED `theta_spliced_fit_days` (90), or the pruner deletes closes the paper fit
+    # needs and its block coverage falls below the emission gate.
+    theta_spot_retention_days: float = 100.0
+
+    # FIT WINDOW for the PAPER replacement model (`kalshi_bot/theta/tailmodel.py`) only. Never
+    # read by the incumbent, and no book prices off it.
+    #
+    # NOT the same thing as `theta_spot_retention_days` (100), which governs how long 1-minute
+    # closes are KEPT and must EXCEED this, or the pruner deletes the history the fit needs.
+    # Conflating the two was the defect in the first draft of this work, which retained 90 days
+    # and then still fitted on 5.
+    #
+    # 90 is the configuration frozen on TRAIN in run `refit-13` and equals
+    # `tailmodel.FROZEN_FIT_DAYS`. A shadow fitted outside the frozen specification produces
+    # probabilities no verdict covers, which is why this tracks the freeze rather than a
+    # preference — including when the freeze moves, as it did when the labels were corrected
+    # from the derived proxy to Kalshi's own settled results.
+    #
+    # The 30-vs-90 margin is in the fifth decimal (0.006674 against 0.006670) and Brier
+    # marginally prefers 30. What the sweep actually establishes is that the window matters
+    # enormously from 5 to 30 — 3% of quotes powered against 100% — and not at all beyond it.
+    #
+    # Why it must exceed `theta_trail_days`: a fitted tail consumes NON-OVERLAPPING h-minute
+    # blocks, so a 5-day window at a 35-minute horizon yields 7200/35 ~= 205 blocks and ~10
+    # declustered exceedances at the 95th percentile — far below the ~20 a Generalized Pareto
+    # needs on a side.
+    theta_spliced_fit_days: float = 90.0
+
+    # Peaks-over-threshold quantile for the PAPER replacement model. Explicit rather than left
+    # to the module default so the runtime cannot silently price off a different tail than the
+    # one the offline harness froze; equals `tailmodel.FROZEN_TAIL_Q`, and
+    # `tests/test_theta_tailmodel.py::TestRuntimeOfflineParity` asserts that it does. Changing it
+    # changes what the shadow measures and is a Platform Change Review event, not a knob.
+    theta_spliced_tail_q: float = 0.90
+
+    # Per-cycle wall-clock budget for the shadow FITS, in milliseconds. The shadow is research
+    # riding along inside a trading cycle; it must never be the reason a quote is late. When a
+    # cycle's fits exceed this the remaining markets record metadata with no probability and
+    # the next cycle starts fresh — a gap in a research series is recoverable, a delayed scan
+    # is not. 0 disables the budget (tests).
+    #
+    # 3,000 comes from `scripts/theta_shadow_bench.py` at 480 markets/cycle over a full 90-day
+    # window: the fits cost ~700 ms on the one cycle per hour where the anchor turns and 0 ms on
+    # the other eleven. The first draft of this said 750, which is BELOW that measured maximum —
+    # a backstop that fires during normal operation is not a backstop, it would have gapped the
+    # research series every hour. Set above the measurement, and still 1% of the 5-minute scan
+    # interval. What actually bounds the work is the horizon grid and the hourly refit anchor
+    # (`tailmodel.H_BUCKETS`, `REFIT_ANCHOR_SECONDS`); this is only the guard for a pathological
+    # window that those two do not anticipate.
+    theta_spliced_budget_ms: float = 3000.0
+
+    # Per-cycle budget for backfilling 1-minute closes BACKWARD toward the retention horizon.
+    # Coinbase serves 1-minute candles at least 365 days back (probe `cb-probe-5`, 2026-08-21),
+    # so the fit window can be filled from history rather than waited for; 300 candles/request
+    # means 90 days is ~432 requests per product. Spread over cycles so a cold start never
+    # hammers the public endpoint or stalls a trading loop. 0 disables backfill.
+    theta_spot_backfill_requests_per_cycle: int = 12
     theta_entry_min_minutes: float = 10.0     # don't sell inside the last 10min (stale loop)
     theta_entry_max_minutes: float = 55.0     # the tape edge lives <60min to expiry
     theta_snapshot_max_minutes: float = 90.0  # snapshot ladders this close to settlement

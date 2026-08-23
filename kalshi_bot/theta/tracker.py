@@ -44,9 +44,15 @@ from ..obs.series_fetch import (
 from ..paper.engine import kalshi_fee
 from ..scanner.metrics import compute_metrics, compute_time_to_close
 from ..twin import harness as twin_codes
+from . import tailmodel
 from .spot import CoinbaseSpotClient, SpotModel
 
 logger = logging.getLogger(__name__)
+
+# Below this much remaining cycle budget a shadow close-set load is not started: authorising the
+# database for a few milliseconds cannot finish a ~43,000-row read, so it would spend the
+# remainder to produce nothing and still risk an abort the savepoint then has to unwind.
+MIN_LOAD_BUDGET_MS = 50.0
 
 
 @dataclass
@@ -73,6 +79,12 @@ class ThetaCycleSummary:
     # The series-addressed fetch's own report (XOS-000004).
     fetch: SeriesFetchResult = field(default_factory=SeriesFetchResult)
     per_book: dict[str, int] = field(default_factory=dict)
+    # Shadow-model cost, so the research rider's budget is observable rather than assumed.
+    shadow_fits: int = 0
+    shadow_loads: int = 0        # 90-day close-set loads — the shadow's dominant cost
+    shadow_load_ms: float = 0.0
+    shadow_ms: float = 0.0       # loads + fits, i.e. everything the shadow adds to a cycle
+    shadow_budget_hit: bool = False
 
 
 def _price_c(market: dict, key: str) -> float | None:
@@ -132,6 +144,19 @@ class ThetaTracker:
         self.twin_harness = twin_harness
         # Set by the live cycle before run_once so the live mirror can pass it to the balance gate.
         self._account_state: dict | None = None
+        # Replacement-model fits, keyed by (model, minute, horizon) — telemetry only, cleared
+        # once per cycle. See `_spliced`.
+        self._spliced_cache: dict[tuple, object] = {}
+        # Per-cycle shadow cost, reset at the top of every run_once. The horizon grid already
+        # bounds the work to at most len(H_BUCKETS) fits per product per cycle; this is the
+        # belt-and-braces guard that keeps a pathological window from delaying a scan.
+        self._shadow_ms = 0.0
+        self._shadow_fits = 0
+        self._shadow_budget_hit = False
+        # The shadow's own close set, held for its refit anchor rather than reloaded per cycle.
+        self._shadow_spot_cache: dict[str, tuple[int, SpotModel | None]] = {}
+        self._shadow_load_ms = 0.0
+        self._shadow_loads = 0
 
     # -- spot maintenance ---------------------------------------------------
     def _refresh_spot(self, session, product: str) -> SpotModel | None:
@@ -150,7 +175,17 @@ class ThetaTracker:
             closes = self.spot.candles(product, start_unix, end_unix)
             if closes:
                 repo.insert_spot_candles(session, product, closes)
-        repo.prune_spot_candles(session, product, trail_start - timedelta(days=1))
+        # Backfill BACKWARD toward the retention horizon, a bounded number of requests per
+        # cycle. Coinbase serves 1-minute candles at least 365 days back, so the paper model's
+        # fit window can be filled from history instead of waited for; without this the
+        # retention knob only takes effect at the speed of wall-clock time.
+        self._backfill_spot(session, product, now)
+
+        # Prune on RETENTION, not on the model window (Settings.theta_spot_retention_days).
+        # `load_spot_closes` below is still bounded by `trail_start`, so the INCUMBENT sees
+        # exactly the 5 days it always saw and no probability, entry or fill changes.
+        keep = max(float(s.theta_spot_retention_days), s.theta_trail_days + 1.0)
+        repo.prune_spot_candles(session, product, now - timedelta(days=keep))
         stored = repo.load_spot_closes(session, product, trail_start)
         if len(stored) < SpotModel.MIN_SAMPLES:
             logger.warning(
@@ -159,6 +194,222 @@ class ThetaTracker:
             )
             return None
         return SpotModel(stored, trail_days=s.theta_trail_days)
+
+    def _refresh_shadow_spot(self, session, product: str) -> SpotModel | None:
+        """A SEPARATE close set for the PAPER replacement model, over its own fit window.
+
+        The incumbent's `SpotModel` holds `theta_trail_days` (5) of closes. Asking it for
+        `block_returns(window_days=30)` cannot conjure candles the object does not contain — an
+        earlier version did exactly that and then tagged the result `fit_days=90`, so the stored
+        metadata described a window the fit never saw. The fix is a second load, not a second
+        argument.
+
+        Held for the hour, not the cycle. Thirty days of 1-minute closes is ~43,000 rows per
+        product, and reloading that every five minutes to feed a fit that is itself anchored to
+        the hour is the shadow's real cost — an order of magnitude above the fits, and it is
+        database work on the trading loop's thread rather than arithmetic. Reusing the object
+        inside its own refit anchor changes no probability: the fit ends at the anchor either way.
+
+        THE BUDGET IS A SOFT CYCLE BUDGET, AND IT IS WORTH SAYING EXACTLY WHAT THAT MEANS.
+        `theta_spliced_budget_ms` gated the fits alone at first, which bounded the cheap half and
+        left the expensive half unbounded. Then it handed the FULL configured budget to every
+        load, so two products could authorise two full budgets. Each load now receives the
+        REMAINDER — `budget - already_spent`, computed immediately before it — and a load does not
+        start when less than `MIN_LOAD_BUDGET_MS` is left.
+
+        What that buys, precisely:
+
+        * a HARD timeout on PostgreSQL statement execution, enforced by the database, since a
+          Python-side deadline cannot interrupt a query already issued;
+        * elapsed accounting across the WHOLE shadow — statement, row transfer, decode, SpotModel
+          construction and fits all land in `_shadow_ms`, not just the fraction inside the fit;
+        * no further load or fit once the measured budget is spent;
+        * cumulative AUTHORISED timeout that cannot exceed the configured total.
+
+        What it does NOT buy, and must not be described as buying: a strict ceiling on elapsed
+        wall-clock time. The timeout ends the statement, not the work after it. Once PostgreSQL
+        returns, client-side row transfer, materialisation and `SpotModel` construction are
+        ordinary Python on this thread and nothing interrupts them, so a single slow load can
+        still overrun the budget it started inside. The overrun is bounded by how long that
+        client-side work takes, which is unmeasured in production — hence one `theta: shadow cost`
+        line per cycle. A strict ceiling would require moving the load and model construction off
+        the trading-loop thread entirely; that is a real option, not something this mechanism
+        quietly already does.
+
+        The timeout runs inside a savepoint, because a statement timeout aborts the transaction
+        and an aborted transaction would take the trading loop's own writes down with it
+        (`repo.bounded_statement`). Over budget, or a timed-out load, means no shadow model this
+        cycle: metadata without a probability, and the scan continues.
+
+        Reads only; the incumbent's object is untouched and still prices every live decision.
+        """
+        s = self.settings
+        anchor = tailmodel.refit_anchor(int(time.time()))
+        cached = self._shadow_spot_cache.get(product)
+        if cached is not None and cached[0] == anchor:
+            return cached[1]
+        budget = float(getattr(s, "theta_spliced_budget_ms", 0.0) or 0.0)
+        remaining = self._shadow_remaining_ms()
+        if budget > 0 and remaining < MIN_LOAD_BUDGET_MS:
+            # Not enough left to be worth starting. Nothing is cached, so the next cycle — which
+            # resets the budget — loads normally.
+            self._shadow_budget_hit = True
+            return None
+        want = max(float(s.theta_spliced_fit_days), s.theta_trail_days)
+        since = datetime.now(timezone.utc) - timedelta(days=want)
+        t0 = time.perf_counter()
+        try:
+            stored = repo.load_spot_closes(
+                session, product, since,
+                statement_timeout_ms=int(remaining) if budget > 0 else None)
+            model = (SpotModel(stored, trail_days=want)
+                     if len(stored) >= SpotModel.MIN_SAMPLES else None)
+        except Exception as exc:  # noqa: BLE001 — research must never break a trading cycle
+            logger.warning("theta: shadow close load failed; no shadow model this cycle",
+                           extra={"extra_fields": {"product": product,
+                                                   "error": str(exc)[:200]}})
+            model = None
+        finally:
+            # Load, row decode and SpotModel construction all land here: the elapsed time the
+            # scan actually paid, not the fraction of it spent inside the fit.
+            spent = (time.perf_counter() - t0) * 1000.0
+            self._shadow_ms += spent
+            self._shadow_load_ms += spent
+            self._shadow_loads += 1
+        self._shadow_spot_cache[product] = (anchor, model)
+        return model
+
+    def _shadow_remaining_ms(self) -> float:
+        """Milliseconds of this cycle's shadow budget not yet spent, or `inf` when unbudgeted.
+
+        This is what a load may authorise the DATABASE to spend, and it is recomputed
+        immediately before each one. Handing every load the CONFIGURED total instead — which an
+        earlier version did — lets N loads authorise N budgets, which made the authorisation
+        unbounded in the number of products. It bounds authorised statement time, not elapsed
+        wall-clock time: see `_refresh_shadow_spot` for what the budget does and does not buy.
+        """
+        budget = float(getattr(self.settings, "theta_spliced_budget_ms", 0.0) or 0.0)
+        if budget <= 0:
+            return float("inf")
+        return max(0.0, budget - self._shadow_ms)
+
+    def _over_budget(self) -> bool:
+        """True once this cycle's shadow work has spent its measured budget.
+
+        Checked before each fit; the load uses `_shadow_remaining_ms` directly because it needs
+        the remainder, not just the boolean. This stops the NEXT unit of work — it cannot shorten
+        one already running. A gap in a research series is recoverable; a late quote is not.
+        """
+        budget = float(getattr(self.settings, "theta_spliced_budget_ms", 0.0) or 0.0)
+        if budget > 0 and self._shadow_ms >= budget:
+            self._shadow_budget_hit = True
+            return True
+        return False
+
+    def _backfill_spot(self, session, product: str, now: datetime) -> int:
+        """Extend stored 1-minute closes BACKWARD toward the retention horizon.
+
+        Bounded to `theta_spot_backfill_requests_per_cycle` requests, so a cold start fills in
+        over a few hours rather than issuing ~432 requests per product in one cycle. Returns the
+        number of closes written, and never raises into the trading loop: a failed backfill
+        leaves the incumbent's own 5-day window untouched, because that window is gap-filled by
+        the caller before this runs."""
+        s = self.settings
+        budget = int(s.theta_spot_backfill_requests_per_cycle or 0)
+        if budget <= 0:
+            return 0
+        target = now - timedelta(days=max(float(s.theta_spot_retention_days),
+                                          s.theta_trail_days + 1.0))
+        try:
+            oldest = repo.oldest_spot_minute(session, product)
+        except Exception:  # noqa: BLE001
+            return 0
+        if oldest is None:
+            return 0
+        if oldest.tzinfo is None:
+            oldest = oldest.replace(tzinfo=timezone.utc)
+        if oldest <= target:
+            return 0
+        written = 0
+        cursor = int(oldest.timestamp())
+        stop = int(target.timestamp())
+        for _ in range(budget):
+            if cursor <= stop:
+                break
+            start = max(stop, cursor - 300 * 60)
+            try:
+                closes = self.spot.candles(product, start, cursor)
+            except Exception:  # noqa: BLE001 — backfill is best-effort, never fatal
+                break
+            if not closes:
+                break
+            try:
+                written += repo.insert_spot_candles(session, product, closes)
+            except Exception:  # noqa: BLE001
+                break
+            cursor = start
+        if written:
+            logger.info("theta: spot backfill", extra={"extra_fields": {
+                "product": product, "closes": written,
+                "reached": datetime.fromtimestamp(cursor, tz=timezone.utc).isoformat()}})
+        return written
+
+    def _spliced(self, model: SpotModel, product: str, now_unix: int, tte_min: float):
+        """The PAPER replacement model for this horizon, fitted once per (cycle, horizon).
+
+        Every choice here is imported from `tailmodel`, which owns the frozen specification;
+        none of it is re-decided locally. That is the point: the offline harness that produces
+        a verdict and this shadow that would produce the traded number call the same
+        definitions of horizon bucketing, block construction, tail quantile and power, so the
+        probability that gets validated is the probability that would run.
+
+        Three things an earlier version got wrong, all of them silent:
+
+        * it fitted OVERLAPPING returns, so one shock entered the sample ~h times;
+        * it fitted over the incumbent's 5-day window while labelling the result 90;
+        * it fitted at whatever integer minutes-to-close the market showed, while the harness
+          fitted on a 10..35 grid — so the two were never scoring the same model.
+
+        A ladder cycle prices hundreds of strikes across a handful of distinct horizons, and
+        the fit depends only on the bucketed horizon, so it is cached per (cycle, bucket).
+        """
+        s = self.settings
+        if model is None:
+            return None
+        h_min = tailmodel.h_bucket(max(1.0, float(tte_min)))
+        anchor = tailmodel.refit_anchor(now_unix)
+        key = (product, anchor, h_min)
+        if key in self._spliced_cache:
+            return self._spliced_cache[key]
+        if self._over_budget():
+            # Out of research budget for this cycle. Nothing is cached, so the next cycle
+            # starts clean.
+            return None
+        started = time.perf_counter()
+        try:
+            requested = float(s.theta_spliced_fit_days)
+            blocks, meta = model.block_sample(anchor, h_min, window_days=requested)
+            # ACTUAL span of the closes this object holds, recorded beside the requested window
+            # so a shadow probability can never claim a history it did not have. `expected_blocks`
+            # is the other half of that: a window can SPAN ninety days and still be half holes,
+            # and only the block count can tell you which.
+            actual = ((max(model.closes) - min(model.closes)) / 86400.0) if model.closes else 0.0
+            built = tailmodel.build(
+                blocks, h_min, tail_q=float(s.theta_spliced_tail_q),
+                fit_days=min(requested, actual), requested_fit_days=requested,
+                expected_blocks=meta["expected_blocks"], max_gap_min=meta["max_gap_min"])
+        except Exception:  # noqa: BLE001 — telemetry must never break a trading cycle
+            built = None
+        self._shadow_ms += (time.perf_counter() - started) * 1000.0
+        self._shadow_fits += 1
+        # Keyed by (product, hour anchor, horizon), so it survives ACROSS cycles inside one
+        # hour — which is the whole saving. Bounded by dropping every entry from an older
+        # anchor once the hour turns.
+        if len(self._spliced_cache) > 4 * len(tailmodel.H_BUCKETS) * 4:
+            self._spliced_cache = {k: v for k, v in self._spliced_cache.items()
+                                   if k[1] == anchor}
+        self._spliced_cache[key] = built
+        return built
 
     def _books(self) -> list[dict]:
         """The control book (base knobs, tag 'theta' — NEVER reparameterized), then the
@@ -341,15 +592,28 @@ class ThetaTracker:
         s = self.settings
         summ = ThetaCycleSummary()
         now_unix = int(time.time())
+        self._shadow_ms = 0.0
+        self._shadow_fits = 0
+        self._shadow_budget_hit = False
+        self._shadow_load_ms = 0.0
+        self._shadow_loads = 0
         # In collect-only (shelved) mode, only these variant tags may still trade; the rest of
         # the family snapshots only. Empty set => fully shelved.
         live_tags = s.theta_live_variant_set if s.theta_collect_only else None
 
         models: dict[str, SpotModel | None] = {}
+
+        # Separate close sets for the PAPER replacement model — see _refresh_shadow_spot.
+
+        shadow_models: dict[str, SpotModel | None] = {}
         for product in sorted(set(s.theta_series_map.values())):
             models[product] = self._refresh_spot(session, product)
             if models[product] is not None:
                 summ.products_ok += 1
+            # The paper replacement model gets its OWN closes over its own fit window. Loading
+            # it here rather than reusing the incumbent's object is the whole of the fix: a
+            # 5-day object cannot yield a 90-day fit however it is asked.
+            shadow_models[product] = self._refresh_shadow_spot(session, product)
 
         books = self._books()
         open_count: dict[str, int] = {}
@@ -384,6 +648,10 @@ class ThetaTracker:
         fetch = SeriesFetchResult()
         for series, product in s.theta_series_map.items():
             model = models.get(product)
+            # Both sides of this merge touched this loop: PR #252 added the shadow
+            # model, XOS-000004 replaced the hand-rolled fetch with the shared
+            # helper. Both are kept.
+            shadow_model = shadow_models.get(product)
             one = fetch_markets_by_series(
                 self.client, [series], book="theta", max_pages=4, log=logger, warn=False,
             )
@@ -419,6 +687,41 @@ class ThetaTracker:
                     summ.model_priced += 1
                 excess = (mid - p * 100.0) if p is not None else None
 
+                # Shadow the replacement model beside the incumbent. It decides NOTHING — no
+                # gate reads `spliced_*` — but its calibration accrues on live data from the day
+                # this ships, which is the only way stage 2 of the theta remediation ever gets
+                # an out-of-sample window to be validated on.
+                sp: dict = {}
+                if shadow_model is not None:
+                    sm = self._spliced(shadow_model, product, now_unix, tte_min)
+                    if sm is not None:
+                        # A probability is only WRITTEN when the tail it prices off is
+                        # genuinely backed AND its window is complete enough to have found the
+                        # evidence. The metadata is written either way, so a refusing cycle is
+                        # visible as such rather than absent — but the number itself stays
+                        # NULL, because a value that looks like an estimate and is not is worse
+                        # than no value at all.
+                        powered = sm.powered_for(strike_type)
+                        emit = sm.emittable_for(strike_type)
+                        sp = {
+                            "spliced_model_p": (tailmodel.p_yes(
+                                sm, shadow_model.spot_at(now_unix), strike_type,
+                                floor_k, cap_k) if emit else None),
+                            "spliced_active_xi": sm.active_xi(strike_type),
+                            "spliced_upper_xi": sm.upper.xi,
+                            "spliced_lower_xi": sm.lower.xi,
+                            "spliced_active_clusters": sm.active_clusters(strike_type),
+                            "spliced_blocks": sm.n,
+                            "spliced_expected_blocks": sm.expected_blocks,
+                            "spliced_block_coverage": sm.block_coverage,
+                            "spliced_max_gap_min": sm.max_gap_min,
+                            "spliced_horizon_min": sm.horizon_min,
+                            "spliced_fit_days": sm.fit_days,
+                            "spliced_requested_fit_days": sm.requested_fit_days,
+                            "spliced_tail_q": sm.tail_q,
+                            "spliced_underpowered": not powered,
+                        }
+
                 snapshot_rows.append({
                     "series": series,
                     "event_ticker": ticker.rsplit("-", 1)[0],
@@ -434,6 +737,17 @@ class ThetaTracker:
                     "spot": model.spot_at(now_unix) if model is not None else None,
                     "model_p": p,
                     "model_excess_cents": excess,
+                    "trailing_vol_15m": (model.realized_vol_bps(now_unix, 15)
+                                         if model is not None else None),
+                    "trailing_vol_60m": (model.realized_vol_bps(now_unix, 60)
+                                         if model is not None else None),
+                    "trailing_vol_240m": (model.realized_vol_bps(now_unix, 240)
+                                          if model is not None else None),
+                    "trailing_move_15m": (model.trailing_move_bps(now_unix, 15)
+                                          if model is not None else None),
+                    "trailing_move_60m": (model.trailing_move_bps(now_unix, 60)
+                                          if model is not None else None),
+                    **sp,
                 })
 
                 # SHELVED (theta_collect_only): keep snapshotting the model-priced ladder
@@ -665,6 +979,26 @@ class ThetaTracker:
             summ.snapshot_rows = repo.insert_crypto_ladder_snapshots(
                 session, snapshot_rows[: s.theta_snapshot_rows_cap]
             )
+        # Merge of PR #252 and XOS-000004: the fetch report and the shadow-cost
+        # telemetry are independent end-of-cycle records; both are kept.
         summ.fetch = fetch
         warn_on_fetch_outcome("theta", fetch, logger)
+        summ.shadow_fits = self._shadow_fits
+        summ.shadow_loads = self._shadow_loads
+        summ.shadow_load_ms = round(self._shadow_load_ms, 1)
+        summ.shadow_ms = round(self._shadow_ms, 1)
+        summ.shadow_budget_hit = self._shadow_budget_hit
+        # One line per cycle, always: the telemetry that turns the synthetic benchmark's number
+        # into a production-derived one. `theta_shadow_ms` is TOTAL — load, decode, construction
+        # and fits — which is what the scan actually paid.
+        logger.info("theta: shadow cost", extra={"extra_fields": {
+            "theta_shadow_ms": summ.shadow_ms, "theta_shadow_load_ms": summ.shadow_load_ms,
+            "theta_shadow_loads": summ.shadow_loads, "theta_shadow_fits": summ.shadow_fits,
+            "theta_shadow_budget_hit": summ.shadow_budget_hit,
+            "budget_ms": float(self.settings.theta_spliced_budget_ms)}})
+        if self._shadow_budget_hit:
+            logger.warning("theta: shadow budget exhausted; probabilities withheld for the "
+                           "rest of the cycle", extra={"extra_fields": {
+                               "fits": self._shadow_fits, "ms": round(self._shadow_ms, 1),
+                               "budget_ms": float(self.settings.theta_spliced_budget_ms)}})
         return summ

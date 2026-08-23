@@ -134,7 +134,8 @@ def _load(name: str):
     return mod
 
 
-@pytest.mark.parametrize("script", ["mmsell_deconfound_study", "theta_tail_diagnosis"])
+@pytest.mark.parametrize("script", ["mmsell_deconfound_study", "theta_tail_diagnosis",
+                                   "theta_tail_refit"])
 def test_ops_runner_allowlists_the_new_studies(script, tmp_path, monkeypatch):
     """A study nobody can run is a study nobody will re-run. Both are read-only and stdlib +
     psycopg only, which is the bar for the ops channel."""
