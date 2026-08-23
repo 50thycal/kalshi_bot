@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-list","args":["--all"],"id":"lo-t2-key"}
+{"type":"xos","command":"issue-show","args":["XOS-000004"],"id":"lo-t1-verify"}
