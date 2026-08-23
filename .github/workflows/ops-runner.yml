@@ -37,7 +37,25 @@ jobs:
   run:
     runs-on: ubuntu-latest
     steps:
+      # The TRANSPORT checkout: the `ops` branch, at the workspace root. This is
+      # the request/result channel and NOTHING ELSE — the publish and archive
+      # steps below operate on it, and no code is ever executed from it.
       - uses: actions/checkout@v4
+
+      # The CODE checkout: ALWAYS the default branch, never `ops`.
+      #
+      # This is the durable fix for XOS-000005. The ops branch is a long-lived
+      # transport that is only ever refreshed by hand, so the runner and the
+      # `kalshi_bot` package it imports used to drift silently behind the default
+      # branch — which is exactly how two documented `xos` commands came to be
+      # refused in production while the allowlist on the default branch had
+      # carried them for weeks. Sourcing the code here means "refresh ops" is no
+      # longer a thing anyone has to remember: a merge to the default branch is
+      # live on the next request.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: .ops-runner-code
 
       - uses: actions/setup-python@v5
         with:
@@ -54,13 +72,22 @@ jobs:
         run: |
           if [ "$(jq -r '.type // empty' ops/request.json)" = "xos" ]; then
             echo "xos request — installing requirements.txt"
-            pip install -r requirements.txt
+            pip install -r .ops-runner-code/requirements.txt
           else
             echo "not an xos request — skipping"
           fi
 
       - name: Run ops request
         env:
+          # Read by the runner's fail-closed freshness guard: it refuses to serve a
+          # request unless the code it is executing came from the default-branch
+          # checkout above. A workflow that regressed to running code out of the
+          # transport branch therefore fails LOUDLY instead of quietly serving a
+          # stale allowlist.
+          OPS_RUNNER_CODE_SOURCE: default-branch
+          # The transport's request file. The runner never reads anything else
+          # from the ops checkout.
+          OPS_REQUEST_PATH: ${{ github.workspace }}/ops/request.json
           DATABASE_URL_RO: ${{ secrets.DATABASE_URL_RO }}
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
@@ -74,7 +101,7 @@ jobs:
           # below checks out the latest ops tree, under which ops/request.json can change
           # if a concurrent producer (e.g. a parallel /loop session) pushed meanwhile.
           cp ops/request.json "$RUNNER_TEMP/ops_request.json"
-          python scripts/ops_runner.py 2>&1 | tee ops/result.txt || true
+          python .ops-runner-code/scripts/ops_runner.py 2>&1 | tee ops/result.txt || true
           cp ops/result.txt "$RUNNER_TEMP/ops_result.txt"
           # Per-run result key: the request's optional "id" lets the requester read
           # exactly its own output at ops/results/<id>.txt even when another producer
