@@ -15,6 +15,7 @@ of any one strategy, and neither module may make a trading decision.
 """
 
 from .funnel import (
+    FETCH_DIAGNOSES,
     FUNNEL_COUNTERS,
     FUNNEL_STAGES,
     SUMMARY_MARKER,
@@ -23,9 +24,10 @@ from .funnel import (
     first_zero_stage,
     funnel_summary,
 )
-from .series_fetch import SeriesFetchResult, fetch_markets_by_series, warn_on_empty_series
+from .series_fetch import SeriesFetchResult, fetch_markets_by_series, warn_on_fetch_outcome
 
 __all__ = [
+    "FETCH_DIAGNOSES",
     "FUNNEL_COUNTERS",
     "FUNNEL_STAGES",
     "SUMMARY_MARKER",
@@ -35,5 +37,5 @@ __all__ = [
     "fetch_markets_by_series",
     "first_zero_stage",
     "funnel_summary",
-    "warn_on_empty_series",
+    "warn_on_fetch_outcome",
 ]

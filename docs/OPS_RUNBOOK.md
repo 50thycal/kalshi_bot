@@ -156,15 +156,26 @@ To run a request:
 
    | state | means |
    |---|---|
-   | `NO_MARKETS` | the fetch returned nothing — check `empty_series` for which configured series are dead |
+   | `NO_MARKETS` | every series was asked successfully and the venue returned nothing — check `empty_series` |
+   | `FETCH_FAILED` | every series FAILED: the universe is **unknown**, not empty. An incident, not a venue answer |
+   | `NO_MARKETS_INCOMPLETE` | nothing came back, but some series failed — the cycle saw less than the universe |
    | `NO_ELIGIBLE` | markets came back; the book's eligibility filter rejected all of them |
    | `NO_CANDIDATES` | eligible markets, none survived to become a priced candidate |
    | `NO_ACTIONS` | candidates were produced and rejected downstream (caps, bands, discount bar) |
    | `ACTIONS` | the book acted |
 
-   A series that returns HTTP 200 with an empty list also logs a WARNING naming it,
-   and an entirely empty configured universe logs a louder ERROR — that condition
-   makes the book inert, and it is the one that went unnoticed for nine days.
+   The `fetch=` field carries that second axis on its own (`OK`, `EMPTY_UNIVERSE`,
+   `PARTIAL_FETCH_FAILURE`, `FETCH_FAILED`, `NO_SERIES_CONFIGURED`), and `empty=`
+   and `failed=` are separate bounded lists. **`NO_MARKETS` is a claim about the
+   VENUE** and is only ever made when every configured series was successfully
+   asked — a zero from a fetch that never completed reads as `FETCH_FAILED` or
+   `NO_MARKETS_INCOMPLETE` instead, because those have the opposite remedy.
+
+   A series that returns HTTP 200 with an empty list also logs a WARNING naming it;
+   an entirely empty configured universe logs a louder ERROR saying the book cannot
+   trade (the condition that went unnoticed for nine days); and a cycle where every
+   series failed logs its own ERROR saying the universe is UNKNOWN. No exception
+   text appears in any of them.
 
    The summary is an **allowlist**, not a log dump: only the four stage counters
    and sanitized, count-capped series tickers are rendered, and the whole line is

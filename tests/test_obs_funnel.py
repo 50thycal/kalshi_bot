@@ -14,6 +14,11 @@ import pytest
 
 from kalshi_bot.kalshi.errors import AuthError
 from kalshi_bot.obs.funnel import (
+    FETCH_EMPTY_UNIVERSE,
+    FETCH_FAILED,
+    FETCH_NO_SERIES,
+    FETCH_OK,
+    FETCH_PARTIAL_FAILURE,
     FUNNEL_COUNTERS,
     FUNNEL_STAGES,
     MAX_SERIES_LISTED,
@@ -26,7 +31,7 @@ from kalshi_bot.obs.funnel import (
     funnel_summary,
     sanitize_series,
 )
-from kalshi_bot.obs.series_fetch import fetch_markets_by_series, warn_on_empty_series
+from kalshi_bot.obs.series_fetch import fetch_markets_by_series, warn_on_fetch_outcome
 
 
 class FakeClient:
@@ -207,11 +212,15 @@ def test_the_summary_renders_only_allowlisted_field_names():
     """Nothing but the four counters and the two bounded series fields."""
     line = funnel_summary(
         FunnelState.of(fetched=5, eligible=2, candidates=1, actions=1),
+        fetch=FETCH_PARTIAL_FAILURE,
         empty_series=["KXCORN"],
+        failed_series=["KXWHEAT"],
         configured_series=3,
     )
     keys = {token.split("=", 1)[0] for token in line.split() if "=" in token}
-    assert keys <= FUNNEL_COUNTERS | {"state", "first_zero", "empty_series"}
+    assert keys <= FUNNEL_COUNTERS | {
+        "state", "first_zero", "fetch", "empty_series", "empty", "failed_series", "failed",
+    }
     assert FUNNEL_COUNTERS == set(FUNNEL_STAGES)
 
 
@@ -256,10 +265,200 @@ def test_the_summary_never_contains_a_market_ticker_or_a_price():
         assert forbidden not in line
 
 
-def test_warn_on_empty_series_is_a_no_op_without_empties(caplog):
+def test_warn_on_fetch_outcome_is_a_no_op_on_a_healthy_fetch(caplog):
     from kalshi_bot.obs.series_fetch import SeriesFetchResult
 
     result = SeriesFetchResult(per_series={"KXCORN": 4})
     with caplog.at_level(logging.WARNING):
-        warn_on_empty_series("freeze", result)
+        warn_on_fetch_outcome("freeze", result)
     assert caplog.records == []
+
+
+# ---------------------------------------------------------------------------
+# EMPTY vs FAILED: the cycle-level fetch diagnosis
+#
+# A zero is produced both by a venue with nothing for this book and by a fetch
+# that never completed. Those have opposite remedies, so the cycle must never
+# report the first when only the second was observed.
+# ---------------------------------------------------------------------------
+
+
+def test_all_series_empty_is_an_empty_universe(caplog):
+    client = FakeClient({"KXCORN": [], "KXWHEAT": []})
+    with caplog.at_level(logging.WARNING):
+        result = fetch_markets_by_series(client, ["KXCORN", "KXWHEAT"], book="freeze")
+
+    assert result.diagnosis == FETCH_EMPTY_UNIVERSE
+    assert result.universe_empty is True
+    assert result.incomplete is False
+    record = next(r for r in caplog.records if "ENTIRE" in r.message)
+    assert record.levelno == logging.ERROR
+    assert "none failed" in record.message
+
+
+def test_all_series_failed_is_NOT_an_empty_universe(caplog):
+    """The regression this review found: every request raised, total_markets is
+    zero, and the old rule called that an empty venue."""
+    series = ["KXCORN", "KXWHEAT"]
+    client = FakeClient({s: [] for s in series}, raise_for=set(series))
+    with caplog.at_level(logging.WARNING):
+        result = fetch_markets_by_series(client, series, book="freeze")
+
+    assert result.diagnosis == FETCH_FAILED
+    assert result.universe_empty is False
+    assert result.incomplete is True
+    assert result.empty_series == []            # nothing was successfully asked
+    record = next(r for r in caplog.records if "EVERY configured series FAILED" in r.message)
+    assert record.levelno == logging.ERROR
+    assert "UNKNOWN" in record.message
+    assert "not a venue answer" in record.message
+    # ...and it must NOT claim the universe is empty.
+    assert not any("ENTIRE configured universe" in r.message for r in caplog.records)
+
+
+def test_one_failed_plus_one_empty_is_a_partial_failure(caplog):
+    client = FakeClient({"KXCORN": [], "KXWHEAT": []}, raise_for={"KXWHEAT"})
+    with caplog.at_level(logging.WARNING):
+        result = fetch_markets_by_series(client, ["KXCORN", "KXWHEAT"], book="freeze")
+
+    assert result.diagnosis == FETCH_PARTIAL_FAILURE
+    assert result.universe_empty is False       # the empty one is only half the story
+    assert result.empty_series == ["KXCORN"]
+    assert result.failed_series == ["KXWHEAT"]
+    record = next(r for r in caplog.records if "INCOMPLETE fetch" in r.message)
+    assert record.levelno == logging.WARNING
+    assert "KXWHEAT" in record.message and "KXCORN" in record.message
+
+
+def test_one_failed_plus_one_nonempty_is_a_partial_failure(caplog):
+    client = FakeClient({"KXCORN": [_mkt("KXCORN-1")], "KXWHEAT": []}, raise_for={"KXWHEAT"})
+    with caplog.at_level(logging.WARNING):
+        result = fetch_markets_by_series(client, ["KXCORN", "KXWHEAT"], book="freeze")
+
+    assert result.diagnosis == FETCH_PARTIAL_FAILURE
+    assert result.incomplete is True
+    assert result.empty_series == []
+    assert result.failed_series == ["KXWHEAT"]
+    assert len(result.markets) == 1
+    # A partial failure warns even when the successful series had markets: the
+    # cycle still saw less than the universe.
+    assert any("INCOMPLETE fetch" in r.message for r in caplog.records)
+
+
+def test_a_failure_after_an_earlier_page_returned_markets_is_partial_not_total():
+    """One series, page 1 succeeds with markets, page 2 raises.
+
+    Every configured series is in `failed`, so a naive rule would call this a
+    total failure — but the markets page 1 returned are real and must be kept.
+    """
+
+    class FlakyPaging:
+        def __init__(self):
+            self.n = 0
+
+        def get_markets(self, **kw):
+            self.n += 1
+            if self.n == 1:
+                return {"markets": [_mkt("A"), _mkt("B")], "cursor": "c1"}
+            raise RuntimeError("boom on page 2")
+
+    result = fetch_markets_by_series(FlakyPaging(), ["KXCORN"], book="freeze", max_pages=4)
+    assert result.per_series == {"KXCORN": 2}
+    assert result.failed_series == ["KXCORN"]
+    assert result.diagnosis == FETCH_PARTIAL_FAILURE     # not FETCH_FAILED
+    assert result.universe_empty is False
+    assert len(result.markets) == 2                      # page 1's markets survive
+
+
+def test_auth_error_propagates_from_a_later_page_too():
+    """AuthError is a cycle-level problem wherever in pagination it appears."""
+
+    class AuthOnPageTwo:
+        def __init__(self):
+            self.n = 0
+
+        def get_markets(self, **kw):
+            self.n += 1
+            if self.n == 1:
+                return {"markets": [_mkt("A")], "cursor": "c1"}
+            raise AuthError("credentials")
+
+    with pytest.raises(AuthError):
+        fetch_markets_by_series(AuthOnPageTwo(), ["KXCORN"], book="freeze", max_pages=4)
+
+
+def test_nothing_configured_is_its_own_diagnosis(caplog):
+    with caplog.at_level(logging.WARNING):
+        result = fetch_markets_by_series(FakeClient(), [], book="freeze")
+    assert result.diagnosis == FETCH_NO_SERIES
+    assert result.universe_empty is False
+    assert caplog.records == []
+
+
+def test_a_healthy_fetch_is_OK():
+    client = FakeClient({"KXCORN": [_mkt("A")]})
+    result = fetch_markets_by_series(client, ["KXCORN"], book="freeze")
+    assert result.diagnosis == FETCH_OK
+    assert result.incomplete is False
+
+
+# --- the funnel must not call an incomplete fetch a venue answer --------------
+
+
+def test_the_funnel_does_not_report_no_markets_when_the_fetch_failed():
+    state = FunnelState.of(fetched=0)
+    assert diagnose(state, fetch=FETCH_FAILED) == "FETCH_FAILED"
+    line = funnel_summary(state, fetch=FETCH_FAILED, failed_series=["KXCORN"], configured_series=1)
+    assert "state=FETCH_FAILED" in line
+    assert "state=NO_MARKETS" not in line
+    assert f"fetch={FETCH_FAILED}" in line
+    assert "failed_series=1/1" in line
+
+
+def test_the_funnel_marks_a_partial_fetch_as_incomplete_rather_than_empty():
+    state = FunnelState.of(fetched=0)
+    assert diagnose(state, fetch=FETCH_PARTIAL_FAILURE) == "NO_MARKETS_INCOMPLETE"
+    line = funnel_summary(state, fetch=FETCH_PARTIAL_FAILURE, failed_series=["KXWHEAT"],
+                          configured_series=2)
+    assert "state=NO_MARKETS_INCOMPLETE" in line
+
+
+def test_no_markets_is_reserved_for_a_complete_fetch():
+    """The venue claim is only made when every series was successfully asked."""
+    state = FunnelState.of(fetched=0)
+    assert diagnose(state, fetch=FETCH_EMPTY_UNIVERSE) == "NO_MARKETS"
+    assert diagnose(state, fetch=FETCH_OK) == "NO_MARKETS"
+    assert diagnose(state) == "NO_MARKETS"
+
+
+def test_a_fetch_problem_never_overrides_a_later_stage():
+    """Once markets came back, a downstream zero is the book's own filtering."""
+    state = FunnelState.of(fetched=9, eligible=0)
+    assert diagnose(state, fetch=FETCH_PARTIAL_FAILURE) == "NO_ELIGIBLE"
+    assert diagnose(state, fetch=FETCH_FAILED) == "NO_ELIGIBLE"
+
+
+def test_an_unrecognised_fetch_diagnosis_is_never_echoed():
+    """The field is a closed vocabulary; echoing an unknown value would open it."""
+    line = funnel_summary(FunnelState.of(fetched=0), fetch="'; DROP TABLE markets--")
+    assert "DROP TABLE" not in line
+    assert "fetch=" not in line
+
+
+def test_the_summary_never_carries_exception_text():
+    line = funnel_summary(
+        FunnelState.of(fetched=0), fetch=FETCH_FAILED,
+        failed_series=["KXCORN"], configured_series=1,
+    )
+    for forbidden in ("Traceback", "RuntimeError", "boom", "Connection refused"):
+        assert forbidden not in line
+
+
+def test_the_summary_stays_bounded_with_both_lists_populated():
+    many = [f"KXSERIES{i:03d}" for i in range(200)]
+    line = funnel_summary(
+        FunnelState.of(fetched=0), fetch=FETCH_PARTIAL_FAILURE,
+        empty_series=many, failed_series=many, configured_series=400,
+    )
+    assert len(line) <= MAX_SUMMARY_CHARS
+    assert TRUNCATION_MARKER in line

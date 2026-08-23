@@ -875,7 +875,11 @@ def _funnel_line(summ, *, eligible: str = "freeze_eligible",
         )
         return funnel_summary(
             state,
+            # The fetch diagnosis is what stops a zero being reported as a venue
+            # answer when the fetch never completed (XOS-000004 review).
+            fetch=getattr(fetch, "diagnosis", None),
             empty_series=getattr(fetch, "empty_series", ()) or (),
+            failed_series=getattr(fetch, "failed_series", ()) or (),
             configured_series=getattr(fetch, "configured", 0) or 0,
         )
     except Exception:  # noqa: BLE001 — observability must never break a cycle
