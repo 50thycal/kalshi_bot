@@ -1,14 +1,2 @@
-# ops request: type='db'
-metric                   val        
------------------------  -----------
-cohort:4:finalized       08-09 00:10
-cohort:5:finalized       08-16 00:15
-cohort:6:open            08-23 00:14
-agents:active            6          
-agents:control           3          
-agents:retired           15         
-agents:suspended         27         
-agents_born_last_24h     2          
-agents_retired_last_24h  2          
-
-(9 rows)
+# ops request: type='noop'
+(noop — nothing to do)
