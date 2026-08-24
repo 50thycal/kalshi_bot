@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-list","args":["--all"],"id":"lo7-issall-1"}
+{"type":"xos","command":"issue-candidates","id":"lo7-cand-1"}
