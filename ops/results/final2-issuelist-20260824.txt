@@ -1,6 +1,0 @@
-# ops request: type='xos'
-issue       sev     pri  classification  owner                   status           scope                           title                                                       
-----------  ------  ---  --------------  ----------------------  ---------------  ------------------------------  ------------------------------------------------------------
-XOS-000006  MEDIUM  P2   PLATFORM        PLATFORM_CHANGE_REVIEW  OPEN             system-wide                     MMSELL settle-mode taxonomy: 198 unclassified series prefixe
-XOS-000007  MEDIUM  P2   OPS             LIVE_OPS                OPEN             system-wide                     Concurrent force-refreshes of the ops branch can overwrite a
-XOS-000003  LOW     P2   STRATEGY        RESEARCH_LAB            ACTION_REQUIRED  freeze-dark-window-pin · v1/e1  freeze-dark-window-pin is deployed but has produced zero evi
