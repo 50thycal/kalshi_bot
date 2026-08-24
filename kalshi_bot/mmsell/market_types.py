@@ -228,6 +228,221 @@ SERIES_TYPES: tuple[tuple[str, str, str], ...] = (
     ("KXAPRPOTUS", "politics", SCHEDULED),  # Below 38.8 (approval rating)
     ("KXRAIN", "event_stat", SCHEDULED),  # per-city rainfall
     ("KXHMONTH", "event_stat", SCHEDULED),  # Hottest ever
+    # ===== 2026-08-24 SETTLEMENT-TAXONOMY REPAIR (Platform Change Review) ===============
+    # 861 markets across 198 series prefixes -- 14.31% of the eligible non-crypto 5-7c
+    # population -- classified as `unknown`, against a 5% bar. Every one of the 198 was
+    # reviewed against Kalshi's OWN published title and rules text (1,561 documents,
+    # 8 markets per prefix from settled+open). 194 are classified below; 4 stay unknown
+    # and are listed in docs/mmsell_taxonomy_repair/REVIEW_20260824.md with their reason.
+    #
+    # The discriminator applied, stated before the case-by-case rather than after it:
+    #   scheduled  settles to a figure PUBLISHED by a named external source; resolution
+    #              cannot happen before that publication instant
+    #   discrete   resolves on an OCCURRENCE inside a window, whenever it occurs; no
+    #              publication instant is waited on
+    #   in_play    resolves through a live contest, progressively revealed by play
+    #
+    # A bare clock time ('at 8:10 PM EDT') decided NOTHING: Kalshi writes it as a game
+    # START time on in-play markets. `can_close_early` decided nothing either -- it is
+    # set on 100% of these markets, index-close ones included. Expiration-to-close
+    # distance and price-path shape corroborate only; neither can name a mode alone.
+    # --- in_play ------------------------------------------------------------------------
+    ("KXENGCSSCORE", "exact_score", IN_PLAY),  # final score, after 90 min + stoppage
+    ("KXLALIGASCORE", "exact_score", IN_PLAY),  # final score, after 90 min + stoppage
+    ("KXLEAGUESCUPSCORE", "exact_score", IN_PLAY),  # final score, after 90 min + stoppage
+    ("KXLIGAMXSCORE", "exact_score", IN_PLAY),  # final score, after 90 min + stoppage
+    ("KXMLSSCORE", "exact_score", IN_PLAY),  # final score, after 90 min + stoppage
+    ("KXCLUBFBTTS", "game_prop", IN_PLAY),  # both teams to score in the game
+    ("KXLEAGUESCUPBTTS", "game_prop", IN_PLAY),  # both teams to score in the game
+    ("KXPGAHOLEINONE", "game_prop", IN_PLAY),  # count produced by tournament play
+    ("KXUCLBTTS", "game_prop", IN_PLAY),  # both teams to score in the game
+    ("KXAFLGAME", "h2h", IN_PLAY),  # game winner; tie resolves 50/50
+    ("KXAPFDDHGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXARGNACBGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXASEANGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXBELGIANPLGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXBOLPDIVGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXBRASILEIROCGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXBUNDESLIGA2GAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXCHLLDPGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXCHNSLGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXCOPPAITALIAGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXCPLMATCH", "h2h", IN_PLAY),  # match winner; tie/draw handled in rules
+    ("KXCZEFLGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXDENSUPERLIGAGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXDOTA2GAME", "h2h", IN_PLAY),  # full-match winner
+    ("KXEFLCHAMPIONSHIPGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXEFLL1GAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXELITESERIENGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXENGCSGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXEPLGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXEREDIVISIEGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXHNLGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXITFDOUBLES", "h2h", IN_PLAY),  # match winner, after a ball has been played
+    ("KXITFWDOUBLES", "h2h", IN_PLAY),  # match winner, after a ball has been played
+    ("KXJ2LEAGUEGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXJLEAGUEGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXKBOGAME", "h2h", IN_PLAY),  # game winner; postponed -> reschedule
+    ("KXKLEAGUEGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXLALIGA2GAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXLALIGAGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXLIGAEXPGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXLIGAPORTUGALGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXLNBPGAME", "h2h", IN_PLAY),  # game winner; official final result
+    ("KXR6GAME", "h2h", IN_PLAY),  # full-match winner
+    ("KXSAUDIPLGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXSUPERLIGGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXSVK2LGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXUAEPLGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXURYPDGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXUSLGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXVALORANTGAME", "h2h", IN_PLAY),  # full-match winner
+    ("KXVENFUTVEGAME", "h2h", IN_PLAY),  # game winner, after 90 min + stoppage
+    ("KXCS2MAP", "h2h_period", IN_PLAY),  # winner of one map inside the match
+    ("KXDOTA2MAP", "h2h_period", IN_PLAY),  # winner of one map inside the match
+    ("KXLEAGUESCUP1H", "h2h_period", IN_PLAY),  # first-half winner, after 45 min + stoppage
+    ("KXLOLMAP", "h2h_period", IN_PLAY),  # winner of one map inside the match
+    ("KXMLBF3", "h2h_period", IN_PLAY),  # first-3-innings winner
+    ("KXMLS1H", "h2h_period", IN_PLAY),  # first-half winner, after 45 min + stoppage
+    ("KXWNBA1HWINNER", "h2h_period", IN_PLAY),  # winner of the stated period
+    ("KXWNBA2QWINNER", "h2h_period", IN_PLAY),  # winner of the stated period
+    ("KXCHAMPTOUR", "outright", IN_PLAY),  # tournament winner
+    ("KXCHESSTOURNAMENT", "outright", IN_PLAY),  # tournament winner over its playing dates
+    ("KXCOD", "outright", IN_PLAY),  # tournament champion
+    ("KXKFTOUR", "outright", IN_PLAY),  # tournament winner
+    ("KXNASCARRACE", "outright", IN_PLAY),  # finishing position in the main race
+    ("KXNASCARTOP10", "outright", IN_PLAY),  # finishing position in the main race
+    ("KXNASCARTOP3", "outright", IN_PLAY),  # finishing position in the main race
+    ("KXMLBRBI", "player_prop", IN_PLAY),  # named player's in-game stat line
+    ("KXMLBSB", "player_prop", IN_PLAY),  # named player's in-game stat line
+    ("KXMLBTB", "player_prop", IN_PLAY),  # named player's in-game stat line
+    ("KXNFLPASSYDS", "player_prop", IN_PLAY),  # named player's in-game stat line
+    ("KXNFLRSHYDS", "player_prop", IN_PLAY),  # named player's in-game stat line
+    ("KXNFLTD", "player_prop", IN_PLAY),  # named player's in-game stat line
+    ("KXALLSVENSKANSPREAD", "spread", IN_PLAY),  # margin in the game, after 90 min + stoppage
+    ("KXAPFDDHSPREAD", "spread", IN_PLAY),  # margin in the game, after 90 min + stoppage
+    ("KXARGPREMDIVSPREAD", "spread", IN_PLAY),  # margin in the game, after 90 min + stoppage
+    ("KXASEANSPREAD", "spread", IN_PLAY),  # margin in the game, after 90 min + stoppage
+    ("KXATPGSPREAD", "spread", IN_PLAY),  # game differential across the full match
+    ("KXBELGIANPLSPREAD", "spread", IN_PLAY),  # margin in the game, after 90 min + stoppage
+    ("KXCHNSLSPREAD", "spread", IN_PLAY),  # margin in the game, after 90 min + stoppage
+    ("KXCLUBFSPREAD", "spread", IN_PLAY),  # margin in the game, after 90 min + stoppage
+    ("KXCONMEBOLSUDSPREAD", "spread", IN_PLAY),  # margin in the game, after 90 min + stoppage
+    ("KXECULPSPREAD", "spread", IN_PLAY),  # margin in the game, after 90 min + stoppage
+    ("KXEFLCHAMPIONSHIPSPREAD", "spread", IN_PLAY),  # margin in the game, after 90 min + stoppage
+    ("KXELITESERIENSPREAD", "spread", IN_PLAY),  # margin in the game, after 90 min + stoppage
+    ("KXENGCSSPREAD", "spread", IN_PLAY),  # margin in the game, after 90 min + stoppage
+    ("KXEREDIVISIESPREAD", "spread", IN_PLAY),  # margin in the game, after 90 min + stoppage
+    ("KXKBOSPREAD", "spread", IN_PLAY),  # run margin in the game
+    ("KXLALIGASPREAD", "spread", IN_PLAY),  # margin in the game, after 90 min + stoppage
+    ("KXLIGAMXSPREAD", "spread", IN_PLAY),  # margin in the game, after 90 min + stoppage
+    ("KXLIGAPORTUGALSPREAD", "spread", IN_PLAY),  # margin in the game, after 90 min + stoppage
+    ("KXMLSSPREAD", "spread", IN_PLAY),  # margin in the game, after 90 min + stoppage
+    ("KXNPBSPREAD", "spread", IN_PLAY),  # run margin in the game
+    ("KXSUPERLIGSPREAD", "spread", IN_PLAY),  # margin in the game, after 90 min + stoppage
+    ("KXURYPDSPREAD", "spread", IN_PLAY),  # margin in the game, after 90 min + stoppage
+    ("KXWNBA1HSPREAD", "spread", IN_PLAY),  # margin in the stated period
+    ("KXWNBA2QSPREAD", "spread", IN_PLAY),  # margin in the stated period
+    ("KXALLSVENSKANTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXAPFDDHTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXARGPREMDIVTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXASEANTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXBELGIANPLTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXBRASILEIROBTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXBRASILEIROCTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXBRASILEIROTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXBUNDESLIGA2TOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXCHLLDPTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXCHNSLTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXCONMEBOLLIBTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXCONMEBOLSUDTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXCOPPAITALIATOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXCZEFNLTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXDENSUPERLIGATOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXDIMAYORTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXECULPTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXEFLCHAMPIONSHIPTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXEFLCUPTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXEFLL1TOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXEKSTRAKLASATOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXELITESERIENTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXENGCSTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXEREDIVISIETOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXFINYLTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXJLEAGUETOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXLALIGATOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXLEAGUESCUP1HTOTAL", "total", IN_PLAY),  # first-half goals
+    ("KXLEAGUESCUPTEAMTOTAL", "total", IN_PLAY),  # one team's goals in the game
+    ("KXLIGAEXPTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXLIGAMX1HTOTAL", "total", IN_PLAY),  # first-half goals
+    ("KXLIGAMXTEAMTOTAL", "total", IN_PLAY),  # one team's goals in the game
+    ("KXLIGAPORTUGALTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXNFL1HTOTAL", "total", IN_PLAY),  # first-half points in the game
+    ("KXNPBTOTAL", "total", IN_PLAY),  # runs collectively scored in the game
+    ("KXNWSLTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXPERLIGA1TOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXSAUDIPLTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXSCOTTISHPREMTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXSUPERLIGTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXUAEPLTOTAL", "total", IN_PLAY),  # goals in the game, after 90 min + stoppage
+    ("KXUCL1HTOTAL", "total", IN_PLAY),  # first-half goals
+    ("KXWNBA1HTOTAL", "total", IN_PLAY),  # points in the stated period
+    ("KXWNBA1QTOTAL", "total", IN_PLAY),  # points in the stated period
+    ("KXWNBA2QTOTAL", "total", IN_PLAY),  # points in the stated period
+    ("KXWNBA4QTOTAL", "total", IN_PLAY),  # points in the stated period
+    ("KXWNBATEAMTOTAL", "total", IN_PLAY),  # one team's points in the game
+    # --- scheduled ------------------------------------------------------------------------
+    ("KXBKNUGGETS", "econ_release", SCHEDULED),  # figure published by a NAMED source on a stated release
+    ("KXECONSTATCORECPIYOY", "econ_release", SCHEDULED),  # the economic print itself
+    ("KXDEEPSHARE", "event_stat", SCHEDULED),  # figure published by a NAMED source on a stated release
+    ("KXGOOGSHARE", "event_stat", SCHEDULED),  # figure published by a NAMED source on a stated release
+    ("KXHORMUZWEEKLY", "event_stat", SCHEDULED),  # figure published by a NAMED source on a stated release
+    ("KXTRUMPACT", "event_stat", SCHEDULED),  # value published by a NAMED source, read at a stated instant
+    ("KXA100WS", "price_strike", SCHEDULED),  # value published by a NAMED source, read at a stated instant
+    ("KXB200WS", "price_strike", SCHEDULED),  # value published by a NAMED source, read at a stated instant
+    ("KXBRENTMON", "price_strike", SCHEDULED),  # close price of a 1-minute candlestick at a stated instant
+    ("KXCOPPERD", "price_strike", SCHEDULED),  # close price of a 1-minute candlestick at a stated instant
+    ("KXEURUSD", "price_strike", SCHEDULED),  # open price of the pair at a stated instant
+    ("KXEURUSDAW", "price_strike", SCHEDULED),  # value published by a NAMED source, read at a stated instant
+    ("KXGOLDMON", "price_strike", SCHEDULED),  # close price of a 1-minute candlestick at a stated instant
+    ("KXGOLDW", "price_strike", SCHEDULED),  # close price of a 1-minute candlestick at a stated instant
+    ("KXH100WS", "price_strike", SCHEDULED),  # value published by a NAMED source, read at a stated instant
+    ("KXH200MS", "price_strike", SCHEDULED),  # figure published by a NAMED source on a stated release
+    ("KXINX", "price_strike", SCHEDULED),  # end-of-day index value on a stated date
+    ("KXNASDAQ100", "price_strike", SCHEDULED),  # end-of-day index value on a stated date
+    ("KXSILVERD", "price_strike", SCHEDULED),  # close price of a 1-minute candlestick at a stated instant
+    ("KXUSDJPY", "price_strike", SCHEDULED),  # open price of the pair at a stated instant
+    ("KXBILLBOARDRUNNERUPSONG", "rank_culture", SCHEDULED),  # position on a chart PUBLISHED on a stated date
+    ("KXCHINAAI", "rank_culture", SCHEDULED),  # value published by a NAMED source, read at a stated instant
+    ("KXNETFLIXRANKMOVIE", "rank_culture", SCHEDULED),  # position on a chart PUBLISHED on a stated date
+    ("KXNETFLIXRANKMOVIERUNNERUP", "rank_culture", SCHEDULED),  # position on a chart PUBLISHED on a stated date
+    ("KXNETFLIXTOPVIEWSMOVIE", "rank_culture", SCHEDULED),  # position on a chart PUBLISHED on a stated date
+    ("KXNETFLIXTOPVIEWSTV", "rank_culture", SCHEDULED),  # position on a chart PUBLISHED on a stated date
+    ("KXPUREALBUMS", "rank_culture", SCHEDULED),  # figure published by a NAMED source on a stated release
+    ("KXYTDAILYTOPVIDEOG", "rank_culture", SCHEDULED),  # position on a chart PUBLISHED on a stated date
+    ("KXYTTOPSONGW", "rank_culture", SCHEDULED),  # position on a chart PUBLISHED on a stated date
+    ("KXYTTOPVIDEO2D", "rank_culture", SCHEDULED),  # position on a chart PUBLISHED on a stated date
+    ("KXYTTOPVIDEOG2D", "rank_culture", SCHEDULED),  # position on a chart PUBLISHED on a stated date
+    # --- discrete ------------------------------------------------------------------------
+    ("KXFDAANNOUNCE", "announcement", DISCRETE),  # the departure/announcement, whenever it is made
+    ("KXGROK", "announcement", DISCRETE),  # public release, whenever it happens in the window
+    ("KXPRESSSECANNOUNCE", "announcement", DISCRETE),  # the departure/announcement, whenever it is made
+    ("KXEARTHQUAKEM", "event_stat", DISCRETE),  # the event occurs, or does not, inside a window
+    ("KXSPACEXSTARSHIP", "event_stat", DISCRETE),  # the event occurs, or does not, inside a window
+    ("KXYTVIEWSHIGH", "event_stat", DISCRETE),  # the event occurs, or does not, inside a window
+    ("KXYTVIEWSW", "event_stat", DISCRETE),  # the event occurs, or does not, inside a window
+    ("KXBIGBROTHERELIMINATION", "outright", DISCRETE),  # elimination declared via official broadcast/press
+    ("KXCLARITYVOTE", "politics", DISCRETE),  # the event occurs, or does not, inside a window
+    ("KXDIAZOUT", "politics", DISCRETE),  # the departure/announcement, whenever it is made
+    ("KXDROPOUTPRIMARY", "politics", DISCRETE),  # the departure/announcement, whenever it is made
+    ("KXHEGSETHANNOUNCEOUT", "politics", DISCRETE),  # the departure/announcement, whenever it is made
+    ("KXKASHANNOUNCEOUT", "politics", DISCRETE),  # the departure/announcement, whenever it is made
+    ("KXMEXCUBOIL", "politics", DISCRETE),  # the event occurs, or does not, inside a window
+    ("KXPIRROOUT", "politics", DISCRETE),  # the departure/announcement, whenever it is made
+    ("KXTRUMPMEET", "politics", DISCRETE),  # the event occurs, or does not, inside a window
+    ("KXTRUMPUFC", "politics", DISCRETE),  # the event occurs, or does not, inside a window
+    ("KXUAPFILES", "politics", DISCRETE),  # the event occurs, or does not, inside a window
+    ("KXBNBMINMON", "price_strike", DISCRETE),  # resolves the instant a minute-by-minute barrier is EVER touched
 )
 
 # Every type/mode name a book may legally name. A variant spec referencing anything outside
