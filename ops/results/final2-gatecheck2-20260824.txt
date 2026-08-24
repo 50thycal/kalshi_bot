@@ -1,8 +1,0 @@
-# ops request: type='db'
-gate_key              verdict  computed_by  computed_at                    experiment             
---------------------  -------  -----------  -----------------------------  -----------------------
-paper_to_live_canary  HOLD     system       2026-08-24 02:43:49.245103+00  mmsell-variants-2026-07
-paper_keep            HOLD     system       2026-08-23 14:57:43.158625+00  mmsell-type-tight      
-paper_to_live_canary  PASS     system       2026-08-23 14:57:42.907872+00  mmsell-price-ceiling   
-
-(3 rows)
