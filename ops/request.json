@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"xos","command":"issue-list","args":["--all"],"id":"lo7-issall-1"}
