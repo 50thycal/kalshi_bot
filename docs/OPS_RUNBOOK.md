@@ -528,6 +528,14 @@ commits are unauthenticated-by-review fast-forwards and must keep landing
 directly. If a change to this ruleset ever blocks a normal request or a result
 commit, **narrow the ruleset**; do not remove it.
 
+**Applying it needs an admin token.** Repository rulesets are
+administration-scoped and Actions' built-in `GITHUB_TOKEN` cannot hold that
+permission, so the workflow reads a fine-grained PAT from the `OPS_ADMIN_TOKEN`
+repository secret (this repository only, *Administration: read and write*).
+Without the secret the job still reports the current protections and then **fails
+loudly** — it never reports success over an unprotected branch. Nothing else in
+the repo uses that secret.
+
 Ordinary work is unaffected: pushing a request, pushing a result, and the
 runner's `ls -1t ops/results/*.txt | tail -n +81 | xargs rm` pruning (a file
 deletion inside a normal commit, not a branch deletion) all remain fast-forward

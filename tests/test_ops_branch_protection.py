@@ -95,8 +95,12 @@ def test_ruleset_never_blocks_the_transport_itself():
 def test_protection_workflow_applies_the_checked_in_ruleset():
     wf = yaml.safe_load(PROTECT_WF.read_text())
     job = wf["jobs"]["protect"]
-    assert wf["permissions"]["administration"] == "write"
+    # `administration` is not a permission the built-in GITHUB_TOKEN can hold, so
+    # the workflow must reach for an explicit admin PAT and keep its own default
+    # permissions minimal.
+    assert wf["permissions"] == {"contents": "read"}
     body = PROTECT_WF.read_text()
+    assert "OPS_ADMIN_TOKEN" in body
     assert ".github/rulesets/ops-transport-guard.json" in body, (
         "the workflow must apply the checked-in desired state, not an inline literal"
     )
