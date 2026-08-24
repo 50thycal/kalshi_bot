@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "sql": "SELECT c.key AS component, r.version, r.status, coalesce(r.fingerprint,'-') AS fingerprint, coalesce(r.activated_at::text,'-') AS activated_at, coalesce(r.retired_at::text,'-') AS retired_at, coalesce(r.pr_ref,'-') AS pr_ref FROM platform_revisions r JOIN platform_components c ON c.id=r.component_id ORDER BY c.key, r.id", "max_rows": 30, "id": "pcr-plat-state-20260824"}
