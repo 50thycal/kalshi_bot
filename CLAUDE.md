@@ -30,6 +30,11 @@ Historical Markdown, old status branches and prior chat are **not authoritative*
 once Experiment OS can answer the same question. `docs/BOOK_REGISTRY.md` is
 historical research documentation, **not** a lifecycle database.
 
+**Two ledgers, one boundary (`DEC-001`).** The list above is *experiment truth*. Build
+OS (below) is canonical for the **development workflow** — architecture, decisions,
+active design/build work, PR handoffs, reviews. A workstream **links** to XOS objects
+and never copies a standing, a gate read or a P&L number. Chat is neither.
+
 ## Experiment OS is live
 
 Enforcement is **`NEW_ONLY`** in production since **2026-08-16T14:34:42.892897Z**
@@ -76,6 +81,31 @@ AS OF: …`) so a user with many windows open knows what each one owns. A
 read-only role that finds a needed write **recommends the owning role**; it does
 not quietly become a write session. Menu and handoff format:
 `.claude/sessions/README.md`.
+
+## Build OS
+
+- Canonical framework: 50thycal/build-os
+- Adopted version: v0.4
+- Last compatibility check: v0.4 on 2026-08-24
+
+Before substantial design or architectural work, compare the adopted version against
+`VERSION.md` in the canonical repository and act on the delta (`framework/FRAMEWORK_SYNC.md`).
+Project memory lives in `docs/`: `PROJECT_MODEL.md` (how it works today), `DECISIONS.md`
+(why), `workstreams/ACTIVE.md` (what is in flight). The PR body is the handoff, never chat.
+**Full development protocol: `docs/BUILD_OS.md`** — kept there, not here, because this file
+is a router (see the length invariant in `tests/test_session_system.py`).
+
+### Project-specific: additions to Build OS
+
+- **Ordering.** Establish the session role **first** (above), then run the compatibility
+  check before substantive design/build work. The role decides what a session may write at
+  all; the check only decides which protocol it writes under, and grants no write.
+- **The authority boundary is a hard rule.** Experiment OS stays canonical for experiments,
+  Versions, epochs, deployments, arms, gates, platform revisions, impact actions,
+  enforcement and XOS issues. A workstream restating any of those is malformed — link.
+- **A workstream authorizes nothing.** Phase and status are development state; only
+  Experiment OS's services register, arm, promote, pause or retire.
+- **No transcripts.** Persist conclusions, models, decisions, open questions — never logs.
 
 ## Universal safety invariants
 
@@ -125,6 +155,10 @@ Full mechanism, standing analysis commands and gotchas: **`docs/OPS_RUNBOOK.md`*
 ## Pointers
 
 - Session roles → `.claude/sessions/README.md`
+- Active design/build board → `docs/workstreams/ACTIVE.md`
+- How the system works today → `docs/PROJECT_MODEL.md`
+- Why it works this way → `docs/DECISIONS.md`
+- Development protocol + templates → `docs/BUILD_OS.md`, `docs/templates/`
 - Ops + standing analyses → `docs/OPS_RUNBOOK.md`
 - Platform change protocol → `docs/EXPERIMENT_OS_PLATFORM_IMPACT.md`
 - Investigation / issue workflow → `docs/EXPERIMENT_OS_ISSUES.md`
