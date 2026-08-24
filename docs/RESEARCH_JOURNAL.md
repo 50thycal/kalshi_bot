@@ -475,7 +475,7 @@ Killed at the screen (blunt): pre-release CPI nowcast-pin (dead inattention fami
 election vig-harvest (adverse selection + lumpy), Kalshi↔PM politics lead-lag (below cost, prior
 xvenue finding), equity-index EOD range (no capacity), tech ship-by-date buy-hope
 (directional/small-n), econ ladder mis-centering (17¢ spread cost). Verdicts land here when the
-probes run (after the scripts merge to default + `ops` is refreshed). Scorecard rows added.
+probes run (after the scripts merge to default). Scorecard rows added.
 
 ---
 
@@ -1217,8 +1217,9 @@ data pipelines + ops-runnable probes in place (run order = cost-to-verdict):
   same-bar<40 / median net follow-through ≥4¢ / PM→K exceeds K→PM by ≥10pts / median
   exploitable window ≥20s.
 
-Ops note: the three probes are allowlisted in `scripts/ops_runner.py`; refresh the
-`ops` branch from the default branch after merge so the channel picks them up. The
+Ops note: the three probes are allowlisted in `scripts/ops_runner.py`; after merge the
+channel picks them up automatically. (Superseded 2026-08-24, XOS-000005/XOS-000007: this
+entry originally said to refresh the `ops` branch. Never force-refresh `ops`.) The
 XGAME collector starts filling tables on the next Railway deploy — watch the
 `xgame collector` log line (kalshi_games/pm_games/matched tell you immediately if the
 PM question-format match is off).

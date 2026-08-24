@@ -1,0 +1,95 @@
+name: Ops Branch Protection
+
+# Applies (or just reports) the repository ruleset that protects `refs/heads/ops`
+# against force pushes and deletion — the durable fix for XOS-000007.
+#
+# Why a workflow and not a one-off API call: the Claude sandbox cannot reach
+# api.github.com, so the ruleset can only be inspected and applied from a runner.
+# Keeping it here also makes the protection reviewable and reproducible — the
+# desired state lives in .github/rulesets/ops-transport-guard.json, and this job
+# is an idempotent apply of that file.
+#
+# The ruleset deliberately contains ONLY `deletion` and `non_fast_forward`. It
+# must never gain pull_request, required_status_checks, required_linear_history
+# or a push restriction: `ops` is a transport whose ordinary traffic is direct
+# fast-forward commits (a session's request, the runner's result), and any of
+# those rules would disable the channel.
+
+on:
+  # Declarative: merging a change to the desired state re-applies it. The job is
+  # idempotent (PUT over the existing ruleset), so a no-op merge is a no-op run.
+  push:
+    paths:
+      - ".github/rulesets/ops-transport-guard.json"
+      - ".github/workflows/ops-branch-protection.yml"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "report (read only) or apply (create/update the ruleset)"
+        type: choice
+        options: [report, apply]
+        default: apply
+
+permissions:
+  contents: read
+  # Repository rulesets are administration-scoped. Nothing else in this repo
+  # requests this permission, and this workflow does nothing else with it.
+  administration: write
+
+jobs:
+  protect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Report current protections
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          echo "=== repository rulesets ==="
+          gh api "repos/$REPO/rulesets" --jq '.[] | {id, name, target, enforcement}' || echo "(none / not readable)"
+          echo "=== classic branch protection on ops ==="
+          gh api "repos/$REPO/branches/ops/protection" 2>&1 | head -40 || true
+
+      - name: Apply ops-transport-guard
+        if: >-
+          (github.event_name == 'push'
+           && github.ref_name == github.event.repository.default_branch)
+          || inputs.mode == 'apply'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          desired=.github/rulesets/ops-transport-guard.json
+          name=$(jq -r .name "$desired")
+          existing=$(gh api "repos/$REPO/rulesets" --jq \
+            ".[] | select(.name==\"$name\") | .id" | head -1)
+          if [ -n "$existing" ]; then
+            echo "updating ruleset $existing"
+            gh api -X PUT "repos/$REPO/rulesets/$existing" --input "$desired"
+          else
+            echo "creating ruleset"
+            gh api -X POST "repos/$REPO/rulesets" --input "$desired"
+          fi
+
+      - name: Verify
+        if: >-
+          (github.event_name == 'push'
+           && github.ref_name == github.event.repository.default_branch)
+          || inputs.mode == 'apply'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          echo "=== rules now in force for refs/heads/ops ==="
+          gh api "repos/$REPO/rules/branches/ops" --jq '[.[].type] | sort'
+          gh api "repos/$REPO/rules/branches/ops" --jq '[.[].type]' \
+            | jq -e 'index("deletion") and index("non_fast_forward")' >/dev/null
+          # Fail closed if a transport-breaking rule was ever added.
+          gh api "repos/$REPO/rules/branches/ops" --jq '[.[].type]' \
+            | jq -e 'index("pull_request") or index("required_status_checks")
+                     or index("required_linear_history") | not' >/dev/null
+          echo "ops transport guard verified"

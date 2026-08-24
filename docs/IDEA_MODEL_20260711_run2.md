@@ -147,6 +147,6 @@ One probe to write: `scripts/kalshi_freeze_study.py` (read-only, public REST + f
 calendars; no DB; allowlist in `ops_runner.py`). It delivers four things in one run: the FREEZE
 verdict (P1–P4), the SETTLEPIN control cell, the TOUCHPIN secondary, and the **structure
 enumeration** (price types × cadence × depth per commodity) that unblocks or kills the COMPIN
-and OPTRV holds. Run via the ops channel after refreshing the `ops` branch. Verdict lands in
+and OPTRV holds. Run via the ops channel once the scripts are merged to default. Verdict lands in
 `RESEARCH_JOURNAL.md`; if promoted, paper book `freeze` rides the live cycle
 (hold-to-settlement — the proven path), and a `BOOK_REGISTRY.md` row is mandatory at first trade.
