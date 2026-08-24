@@ -68,6 +68,15 @@ ALLOWED_VARS = frozenset({
     # the envelope is committed in plaintext to ops/request.json on this public
     # branch, so payloads must be safe to disclose.
     "EXPERIMENT_OS_ISSUE_COMMAND",
+    # One bounded PLATFORM CHANGE REVIEW command, executed once at worker boot
+    # (docs/EXPERIMENT_OS_PLATFORM_IMPACT.md). A separate transport from the issue
+    # command with a disjoint vocabulary and its own receipt ledger, because a
+    # ticket must never be able to mutate a Platform Revision. Registering a
+    # revision, accepting impact dispositions and the activation cutover are
+    # writes with no other production path. Its VALUE is redacted from this tool's
+    # output for the same output-hygiene reason, and with the same caveat: the
+    # envelope is public.
+    "EXPERIMENT_OS_PLATFORM_COMMAND",
     "EXPERIMENT_OS_IMPORT_ON_BOOT", "EXPERIMENT_OS_ENFORCEMENT_MODE",
     "EXPERIMENT_OS_CUTOVER_ID", "EXPERIMENT_OS_CUTOVER_ACTOR",
     "EXPERIMENT_OS_CUTOVER_REASON",
@@ -163,7 +172,9 @@ ALLOWED_VARS = frozenset({
 # secrets, credentials, personal data, private logs, account/order identifiers or
 # sensitive raw evidence. If private content is genuinely required, stop and
 # propose an encrypted transport; redaction cannot make this channel private.
-REDACTED_VARS = frozenset({"EXPERIMENT_OS_ISSUE_COMMAND"})
+REDACTED_VARS = frozenset(
+    {"EXPERIMENT_OS_ISSUE_COMMAND", "EXPERIMENT_OS_PLATFORM_COMMAND"}
+)
 
 # Upper bound on a settable value, checked BEFORE the Railway API call so an
 # oversized body is refused locally rather than uploaded and then rejected (or
