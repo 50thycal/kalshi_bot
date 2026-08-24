@@ -18,7 +18,8 @@ universe.
 `("unclassified", "unknown")` for those, and an unknown series is admitted by **no**
 allowlist filter — so every `mode=`/`mtype=` book was silently excluding them. In the
 canonical census population that was a seventh of the eligible universe, against a
-pre-registered 5% bar, which held WS-003 at `BLOCKED_DATA`.
+pre-registered 5% unclassified bar — a bar WS-003's comparison cannot clear while the
+classification debt stands.
 
 The first scoping named six crypto series. The audit put the real scope two orders of
 magnitude higher.
@@ -96,8 +97,8 @@ without registering anything.
 
 ## Implementation State
 
-PR open and CI green. Both copies of `SERIES_TYPES` updated byte-identically; new test file
-covering copy identity, per-prefix classification, prefix shadowing, the three known traps,
+PR open — see *Related PRs*. Both copies of `SERIES_TYPES` updated byte-identically; new
+test file covering copy identity, per-prefix classification, prefix shadowing, the three known traps,
 and the `mode=`-not-`only=` guarantee. Census, frozen manifest, per-prefix review, evidence
 corpus, platform-impact analysis and post-repair measurement committed under
 `docs/mmsell_taxonomy_repair/`.
@@ -119,14 +120,16 @@ proposed `MARKET_TAXONOMY` revision and its impact dispositions, plus `XOS-00000
 
 Linked, not restated — query Experiment OS for their current state.
 
-- `XOS-000006` — durable ticket, classification `PLATFORM`, owner `PLATFORM_CHANGE_REVIEW`.
-- `MARKET_TAXONOMY` — active revision `coverage_2026_08_13`; proposed successor
-  `settlement_repair_2026_08_24`, **not registered**.
+- `XOS-000006` — the durable ticket raised for this repair.
+- `MARKET_TAXONOMY` — the shared semantic the repair changes. The repair proposes the
+  successor revision `settlement_repair_2026_08_24`; which revision is active and whether
+  the successor is registered are Experiment OS's to answer.
 - `mmsell-type-tight` — the experiment whose arms read this taxonomy.
 
 ## Next Step
 
-Register the `MARKET_TAXONOMY:settlement_repair_2026_08_24` revision and accept its impact
-dispositions **before** merging PR #257 — merging first would change shared semantics under
-active arms with no accounted impact record. Registration needs a writable `DATABASE_URL`,
-which no agent session has.
+**Merge guard.** Before merging PR #257, query Experiment OS and verify that
+`MARKET_TAXONOMY:settlement_repair_2026_08_24` is registered and that every required
+pre-merge impact disposition is accepted. Merging ahead of that would change shared
+semantics under active arms with no accounted impact record. Registration needs a writable
+`DATABASE_URL`, which no agent session has — so it is an operator act, not a merge step.

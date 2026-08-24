@@ -18,8 +18,10 @@ home: how the system fits together, why it was built that way, which design thre
 live, and what each is waiting on all lived in chat sessions that end.
 
 The cost was visible at the moment of adoption: three efforts were in flight simultaneously
-(a taxonomy repair in review, a paper design blocked behind it, two live-canary gates with
-no path to a verdict) and their relationship existed only in one person's memory.
+(a taxonomy repair in review, a paper design blocked behind it, and unresolved
+gate-addressing and detector-reconciliation work on two historical live canaries whose
+successor plans had been withdrawn) and their relationship existed only in one person's
+memory.
 
 ## Current Mental Model
 
@@ -64,14 +66,23 @@ Three durable memory layers, per Build OS v0.4:
 
 ## Open Decisions
 
-- **D1.** Should `docs/BOOK_REGISTRY.md` and the thesis documents be indexed from
+None. Nothing is outstanding that adoption depends on: the framework is adopted by the
+contents of this PR, and the two questions below are usage questions that can only be
+answered by using it.
+
+## Deferred questions — none of these block completion
+
+Recorded so they are not re-derived. Neither changes what adoption delivers, and neither is
+a precondition for moving this workstream to `COMPLETE`.
+
+- **Q1.** Should `docs/BOOK_REGISTRY.md` and the thesis documents be indexed from
   `PROJECT_MODEL.md`, or left discoverable only through `CLAUDE.md`? Leaving them out keeps
-  the model architectural; pulling them in risks the model becoming a catalogue. Deferred
-  until the board has been used for a few weeks and the actual friction is known.
-- **D2.** What is the checkpoint cadence in practice for a project whose sessions are
+  the model architectural; pulling them in risks the model becoming a catalogue. Answerable
+  once the board has been used for a few weeks and the actual friction is known.
+- **Q2.** What is the checkpoint cadence in practice for a project whose sessions are
   role-bounded and often read-only? Build OS assumes a design agent that can write. A
   read-only role here must hand its checkpoint to a writing role as a repository-update
-  block. No cadence has been exercised yet.
+  block. No cadence has been exercised yet, and exercising it is how it gets answered.
 
 ## Assumptions
 
@@ -103,9 +114,11 @@ and wires the PR handoff into `.github/pull_request_template.md`.
 
 ## Review State
 
-Awaiting independent review. Worth scrutinising: whether the authority boundary in
-`DEC-001` is stated tightly enough to survive contact with a session that wants to paste a
-gate read into a workstream, and whether `PROJECT_MODEL.md` has stayed architectural.
+Awaiting independent review. **Independent approval and merge complete this workstream** —
+the adoption is entirely contained in this PR. Worth scrutinising: whether the authority
+boundary in `DEC-001` is stated tightly enough to survive contact with a session that wants
+to paste a gate read into a workstream, and whether `PROJECT_MODEL.md` has stayed
+architectural.
 
 ## Related Decisions
 
@@ -117,18 +130,21 @@ gate read into a workstream, and whether `PROJECT_MODEL.md` has stayed architect
 
 ## Next Step
 
-Operator review of the adoption PR.
+Independent review of the adoption PR. On approval and merge this workstream is finished:
+the next checkpoint sets it `COMPLETE` and removes it from `ACTIVE.md`.
 
 ---
 
 ## Appendix — efforts considered and deliberately not made workstreams
 
 Recorded so the next session does not re-derive the judgment, and so the omissions are
-visible rather than silent. Inventory source: read-only `xos control-tower`, 2026-08-24.
+visible rather than silent. Inventory source: a read-only `xos control-tower` read on
+2026-08-24. The reasons below are deliberately written without lifecycle states, verdicts or
+evidence counts — those move, and a copy of one here would be believed after it stopped
+being true (`DEC-001`). Query Experiment OS for any object's current state.
 
 | effort | why not a workstream |
 |---|---|
-| **XOS-000004** — series-addressed books can see zero markets silently | Its fix has shipped and it is in `VALIDATING` with LIVE_OPS. Operational validation inside XOS's own loop; a workstream would duplicate the ticket, not add a design thread. |
-| **`theta-tail-sell` successor A/B** | The experiment is `PAUSED` and the successor is documented as *not ready to register*. No active design work; a workstream would be a bookmark. |
+| **`theta-tail-sell` successor A/B** | The successor is documented as *not ready to register*, and no design work is in flight on it. A workstream would be a bookmark. |
 | **Retired experiments** (`mmsell-first-cohort`, `mmsell-scan-depth`, `pin15`, `wcprop`, `xgame`, weather families, …) | Concluded. History lives in Experiment OS and thesis docs. |
-| **Grandfathered paper books currently accruing evidence** (`mmsell-price-ceiling`, `mmsell-variants-2026-07`, `mmsell-anchor-*`, `mmsell-wide-control`, `mmsell-type-tight`) | Running experiments, not design threads. Their state is Experiment OS's to report and would be exactly the mirrored standing `DEC-001` forbids. |
+| **Grandfathered paper books** (`mmsell-price-ceiling`, `mmsell-variants-2026-07`, `mmsell-anchor-*`, `mmsell-wide-control`, `mmsell-type-tight`) | Experiments, not design threads. Their state is Experiment OS's to report, and a row here would be exactly the mirrored standing `DEC-001` forbids. |

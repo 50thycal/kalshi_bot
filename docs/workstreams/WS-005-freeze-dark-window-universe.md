@@ -12,15 +12,16 @@ dark-window hypothesis — or record that none does, so the idea stops being re-
 
 ## Context
 
-`freeze-dark-window-pin` is deployed and has produced **zero** evidence. The investigation
-concluded that the cause is not a wiring bug: no currently available universe satisfies the
-hypothesis, and none has been proposed. The recorded remedy is a stand-down back to the hold
-this family was already in, not a corrected Version — a successor Version needs a valid
-universe to point at, and freezing one now would register a second contract that can never
-trade.
+`freeze-dark-window-pin` was investigated after producing no evidence at all. The
+investigation concluded that the cause is not a wiring bug: no available universe satisfies
+the hypothesis, and none has been proposed. The remedy recorded on the ticket is a
+stand-down back to the hold this family was already in, **not** a corrected Version — a
+successor Version needs a valid universe to point at, and freezing one now would register a
+second contract that can never trade.
 
-The ticket is `ACTION_REQUIRED` and the anomaly is still being detected, so this is open
-rather than concluded.
+That is why this is a design thread and not a defect: the open question is whether a
+qualifying universe exists at all, and nobody has answered it. Query Experiment OS for the
+ticket's current status.
 
 ## Current Mental Model
 
@@ -98,8 +99,8 @@ None yet.
 
 Linked, not restated — query Experiment OS for current state.
 
-- `XOS-000003` — `ACTION_REQUIRED`, classification `STRATEGY`, owner `RESEARCH_LAB`,
-  disposition `PAUSE_OR_STAND_DOWN`. Carries the full resume condition.
+- `XOS-000003` — the durable ticket for the zero-evidence finding. It carries the full
+  resume condition; query Experiment OS for its current status, owner and disposition.
 - `freeze-dark-window-pin` — the experiment.
 
 ## Next Step

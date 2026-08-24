@@ -33,9 +33,10 @@ reconstructs the picture by reading code and thesis documents and asking the ope
 was decided, which is expensive and lossy, and occasionally wrong in ways nobody notices.
 
 Concretely, at the time of this decision three efforts were in flight at once — a
-settlement-taxonomy repair in review, a paper design blocked behind it, and two live-canary
-gates blocked on missing metric providers — and the only thing holding their relationship
-together was one person's memory of which conversation said what.
+settlement-taxonomy repair in review, a paper design blocked behind it, and unresolved
+gate-addressing and detector-reconciliation work on two historical live canaries whose
+proposed successor Versions had been withdrawn — and the only thing holding their
+relationship together was one person's memory of which conversation said what.
 
 Build OS (`50thycal/build-os`) is a small, code-free protocol for exactly this: three
 durable memory layers, a workstream lifecycle, and a PR-as-handoff rule.

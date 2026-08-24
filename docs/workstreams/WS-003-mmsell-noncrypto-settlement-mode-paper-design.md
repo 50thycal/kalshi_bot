@@ -19,8 +19,9 @@ the measured difference could not be attributed. The correction is a disjoint pa
 one universe by settlement mode, at one entry band, on paper.
 
 The design has been pre-registered and returned for approval three times, each time coming
-back with a precondition unmet rather than an answer. It has never been registered: **no
-Version, epoch, deployment or arm exists for it.**
+back with a precondition unmet rather than an answer. It has never been taken into
+Experiment OS, and this workstream registers nothing: whether any Version exists for it is
+Experiment OS's to answer (`DEC-001`).
 
 ## Current Mental Model
 
@@ -69,9 +70,9 @@ Two properties do the work, and both have bitten this design before:
   unrelated non-crypto market whose ticker happens to contain a coin abbreviation. Tiny
   today, open-ended in principle. Changing it is a change to the scientific contract, so it
   belongs to Research Lab, not to the platform review that found it.
-- **D3.** What measures the event-correlation parameter, and on what data, given no arm
-  exists to measure it on? Until this is answered the sample floor is a range rather than a
-  number.
+- **D3.** What measures the event-correlation parameter, and on what data? It has to be
+  known *before* registration, so the comparison's own arms cannot supply it. Until this is
+  answered the sample floor is a range rather than a number.
 
 ## Assumptions
 
@@ -97,8 +98,8 @@ provisional.
 
 ## Implementation State
 
-None. **No Version, epoch, deployment or arm exists.** Nothing has been registered, armed,
-promoted or started.
+None, and this workstream authorizes none. Registering, arming, promoting or starting
+happens only through Experiment OS's own services (`DEC-001`).
 
 ## Review State
 
@@ -123,7 +124,7 @@ Linked, not restated.
 
 ## Next Step
 
-Blocked on three things, in order: (1) WS-002's platform revision registered and PR #257
-merged, so the eligible universe is settled; (2) the crypto-exclusion substring defect
-decided (D2); (3) the event-correlation parameter measured (D3). Nothing should be
-registered until all three land.
+Blocked on three things, in order: (1) WS-002's merge guard satisfied and PR #257 merged, so
+the eligible universe is settled; (2) the crypto-exclusion substring defect decided (D2);
+(3) the event-correlation parameter measured (D3). Nothing should be registered until all
+three land.
