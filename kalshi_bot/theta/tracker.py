@@ -36,6 +36,11 @@ from .. import repository as repo
 from ..config import Settings
 from ..kalshi.errors import AuthError
 from ..live.sizing import is_hot_entry, maker_no_price, order_quantity
+from ..obs.series_fetch import (
+    SeriesFetchResult,
+    fetch_markets_by_series,
+    warn_on_fetch_outcome,
+)
 from ..paper.engine import kalshi_fee
 from ..scanner.metrics import compute_metrics, compute_time_to_close
 from ..twin import harness as twin_codes
@@ -71,6 +76,8 @@ class ThetaCycleSummary:
     live_retry_capped: int = 0   # retry declined: theta_live_max_attempts_per_ticker reached
     live_retry_drifted: int = 0  # retry declined: market moved off the first attempt's price
     per_series: dict[str, int] = field(default_factory=dict)
+    # The series-addressed fetch's own report (XOS-000004).
+    fetch: SeriesFetchResult = field(default_factory=SeriesFetchResult)
     per_book: dict[str, int] = field(default_factory=dict)
     # Shadow-model cost, so the research rider's budget is observable rather than assumed.
     shadow_fits: int = 0
@@ -635,28 +642,23 @@ class ThetaTracker:
                     self.twin_harness.ensure_epoch(session, spec, self._twin_params(book))
 
         snapshot_rows: list[dict] = []
+        # One combined fetch report across every configured series, so an
+        # HTTP 200 carrying an empty list is counted rather than mistaken for a
+        # healthy fetch, and the empty/failed distinction survives (XOS-000004).
+        fetch = SeriesFetchResult()
         for series, product in s.theta_series_map.items():
             model = models.get(product)
+            # Both sides of this merge touched this loop: PR #252 added the shadow
+            # model, XOS-000004 replaced the hand-rolled fetch with the shared
+            # helper. Both are kept.
             shadow_model = shadow_models.get(product)
-            markets: list[dict] = []
-            cursor: str | None = None
-            for _ in range(4):
-                try:
-                    page = self.client.get_markets(
-                        status="open", series_ticker=series, limit=200, cursor=cursor
-                    )
-                except AuthError:
-                    raise
-                except Exception as exc:  # noqa: BLE001 — a series fetch must not kill the cycle
-                    logger.warning(
-                        "theta: markets fetch failed",
-                        extra={"extra_fields": {"series": series, "error": str(exc)[:200]}},
-                    )
-                    break
-                markets.extend((page or {}).get("markets") or [])
-                cursor = (page or {}).get("cursor") or None
-                if not cursor:
-                    break
+            one = fetch_markets_by_series(
+                self.client, [series], book="theta", max_pages=4, log=logger, warn=False,
+            )
+            markets = one.markets
+            fetch.markets.extend(one.markets)
+            fetch.per_series.update(one.per_series)
+            fetch.failed.extend(f for f in one.failed if f not in fetch.failed)
 
             for mkt in markets:
                 summ.markets_seen += 1
@@ -977,6 +979,10 @@ class ThetaTracker:
             summ.snapshot_rows = repo.insert_crypto_ladder_snapshots(
                 session, snapshot_rows[: s.theta_snapshot_rows_cap]
             )
+        # Merge of PR #252 and XOS-000004: the fetch report and the shadow-cost
+        # telemetry are independent end-of-cycle records; both are kept.
+        summ.fetch = fetch
+        warn_on_fetch_outcome("theta", fetch, logger)
         summ.shadow_fits = self._shadow_fits
         summ.shadow_loads = self._shadow_loads
         summ.shadow_load_ms = round(self._shadow_load_ms, 1)

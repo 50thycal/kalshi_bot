@@ -37,6 +37,11 @@ from datetime import datetime, timedelta, timezone
 from .. import repository as repo
 from ..config import Settings
 from ..kalshi.errors import AuthError
+from ..obs.series_fetch import (
+    SeriesFetchResult,
+    fetch_markets_by_series,
+    warn_on_fetch_outcome,
+)
 from ..paper.engine import kalshi_fee
 from ..scanner.metrics import compute_metrics, parse_dt
 from .pm import PmGamesClient, norm_team
@@ -87,6 +92,10 @@ def _size(trade: dict) -> float:
 
 @dataclass
 class XGameCycleSummary:
+    # Discovery is THROTTLED (xgame_discovery_minutes), so on most cycles it does
+    # not run at all. Without this flag its zeros are indistinguishable from a
+    # venue that returned nothing (XOS-000004).
+    discovered: bool = False
     kalshi_games: int = 0        # (day, team) keys found on Kalshi at discovery
     pm_games: int = 0            # (day, team) keys found on Polymarket at discovery
     ambiguous_dropped: int = 0
@@ -100,6 +109,9 @@ class XGameCycleSummary:
     errors: int = 0
     # paper BOOK counters (rides on top of the collector; see _maybe_enter / manage_open_positions)
     signals: int = 0             # matches with a live PM-shock + Kalshi-lag gap this cycle
+    # The series-addressed fetch's own report (XOS-000004). Set on the summary
+    # rather than logged inline so the cycle line can carry the funnel.
+    fetch: SeriesFetchResult = field(default_factory=SeriesFetchResult)
     opened: int = 0
     already_open: int = 0
     capped: int = 0
@@ -117,49 +129,46 @@ class XGameTracker:
         self._last_discovery = 0.0  # monotonic; 0 -> discover on first cycle
 
     # -- discovery ----------------------------------------------------------
-    def _kalshi_games(self) -> dict[tuple[str, str], dict]:
-        """(day, team) -> market info for open per-team game markets; ambiguous keys
-        dropped (value None sentinels are removed at the end)."""
+    def _kalshi_games(self) -> tuple[dict[tuple[str, str], dict], SeriesFetchResult]:
+        """(day, team) -> market info for open per-team game markets, plus the fetch report.
+
+        Ambiguous keys are dropped (value None sentinels are removed at the end).
+
+        Fetched per series through the shared helper so this collector gains the
+        same empty/failed accounting as the books (XOS-000004): a discovery series
+        that returns HTTP 200 with an empty list is counted and reported, instead
+        of looking identical to a series that simply had no games today.
+        """
         s = self.settings
         out: dict[tuple[str, str], dict | None] = {}
+        report = SeriesFetchResult()
         for series in s.xgame_series_list:
-            cursor: str | None = None
-            for _ in range(8):
-                try:
-                    page = self.client.get_markets(
-                        status="open", series_ticker=series, limit=200, cursor=cursor
-                    )
-                except AuthError:
-                    raise
-                except Exception as exc:  # noqa: BLE001 — one series must not kill discovery
-                    logger.warning(
-                        "xgame: kalshi discovery fetch failed",
-                        extra={"extra_fields": {"series": series, "error": str(exc)[:200]}},
-                    )
-                    break
-                mkts = (page or {}).get("markets") or []
-                for mkt in mkts:
-                    ticker = mkt.get("ticker") or ""
-                    sub = (mkt.get("yes_sub_title") or "").split(":")[-1]
-                    team = norm_team(sub)
-                    day = ticker_day(ticker)
-                    if not ticker or not team or team == "tie" or not day:
-                        continue
-                    key = (day, team)
-                    if key in out:
-                        out[key] = None  # ambiguous on Kalshi -> drop
-                        continue
-                    out[key] = {
-                        "series": series,
-                        "ticker": ticker,
-                        "event_ticker": ticker.rsplit("-", 1)[0],
-                        "title": mkt.get("title") or "",
-                        "close_time": parse_dt(mkt.get("close_time")),
-                    }
-                cursor = (page or {}).get("cursor") or None
-                if not cursor or not mkts:
-                    break
-        return {k: v for k, v in out.items() if v is not None}
+            one = fetch_markets_by_series(
+                self.client, [series], book="xgame", max_pages=8, log=logger, warn=False,
+            )
+            report.markets.extend(one.markets)
+            report.per_series.update(one.per_series)
+            report.failed.extend(f for f in one.failed if f not in report.failed)
+            for mkt in one.markets:
+                ticker = mkt.get("ticker") or ""
+                sub = (mkt.get("yes_sub_title") or "").split(":")[-1]
+                team = norm_team(sub)
+                day = ticker_day(ticker)
+                if not ticker or not team or team == "tie" or not day:
+                    continue
+                key = (day, team)
+                if key in out:
+                    out[key] = None  # ambiguous on Kalshi -> drop
+                    continue
+                out[key] = {
+                    "series": series,
+                    "ticker": ticker,
+                    "event_ticker": ticker.rsplit("-", 1)[0],
+                    "title": mkt.get("title") or "",
+                    "close_time": parse_dt(mkt.get("close_time")),
+                }
+        warn_on_fetch_outcome("xgame", report, logger)
+        return {k: v for k, v in out.items() if v is not None}, report
 
     def _pm_games(self) -> dict[tuple[str, str], dict]:
         s = self.settings
@@ -182,7 +191,7 @@ class XGameTracker:
 
     def _discover(self, session, summ: XGameCycleSummary) -> None:
         s = self.settings
-        kal = self._kalshi_games()
+        kal, summ.fetch = self._kalshi_games()
         pm = self._pm_games()
         summ.kalshi_games = len(kal)
         summ.pm_games = len(pm)
@@ -360,6 +369,7 @@ class XGameTracker:
             or now_mono - self._last_discovery >= s.xgame_discovery_minutes * 60.0
         ):
             self._last_discovery = now_mono
+            summ.discovered = True
             try:
                 self._discover(session, summ)
             except AuthError:

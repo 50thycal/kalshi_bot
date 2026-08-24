@@ -59,6 +59,7 @@ from dataclasses import dataclass, field
 from .. import repository as repo
 from ..config import Settings
 from ..kalshi.errors import AuthError
+from ..obs.series_fetch import SeriesFetchResult, fetch_markets_by_series
 from ..paper.engine import kalshi_fee
 from ..scanner.metrics import compute_metrics
 from .calendar import FREEZE_GROUPS, dark_window_start, is_pinned
@@ -103,6 +104,7 @@ class FreezeCycleSummary:
     commodity: int = 0          # classified as a tracked commodity
     freeze_eligible: int = 0    # ... and in a grain/soft (freezable) group
     pinned: int = 0             # ... and mechanically decided right now
+    candidates: int = 0         # ... priced, with a usable book: a real decision was made
     opened: int = 0
     already_open: int = 0
     capped: int = 0
@@ -111,6 +113,9 @@ class FreezeCycleSummary:
     skipped_price: int = 0      # outside a book's own price band
     per_book: dict[str, int] = field(default_factory=dict)
     per_commodity: dict[str, int] = field(default_factory=dict)
+    # The series-addressed fetch's own report (XOS-000004): which configured
+    # series returned nothing, so the cycle line can say so out loud.
+    fetch: SeriesFetchResult = field(default_factory=SeriesFetchResult)
 
 
 class FreezeTracker:
@@ -124,30 +129,21 @@ class FreezeTracker:
     def _books(self) -> list[dict]:
         return self.settings.freeze_book_list
 
-    def _fetch_open_markets(self) -> list[dict]:
-        """Open markets across the configured commodity series. Paginates defensively; a failed
-        page ends that series rather than the cycle."""
-        out: list[dict] = []
-        for series in self.settings.freeze_series_list:
-            cursor: str | None = None
-            for _ in range(self.settings.freeze_max_pages):
-                try:
-                    page = self.client.get_markets(
-                        status="open", series_ticker=series, limit=200, cursor=cursor
-                    )
-                except AuthError:
-                    raise
-                except Exception as exc:  # noqa: BLE001 — one series must not kill the cycle
-                    logger.warning(
-                        "freeze: markets fetch failed",
-                        extra={"extra_fields": {"series": series, "error": str(exc)[:200]}},
-                    )
-                    break
-                out.extend((page or {}).get("markets") or [])
-                cursor = (page or {}).get("cursor") or None
-                if not cursor:
-                    break
-        return out
+    def _fetch_open_markets(self) -> SeriesFetchResult:
+        """Open markets across the configured commodity series.
+
+        Delegates to the shared series-addressed fetch, which paginates defensively (a failed
+        page ends that series rather than the cycle) and — the part this book was missing —
+        COUNTS what each configured series returned, so an HTTP 200 carrying an empty list is
+        reported to the operator instead of passing for a healthy fetch (XOS-000004).
+        """
+        return fetch_markets_by_series(
+            self.client,
+            self.settings.freeze_series_list,
+            book="freeze",
+            max_pages=self.settings.freeze_max_pages,
+            log=logger,
+        )
 
     def run_once(self, session) -> FreezeCycleSummary:
         s = self.settings
@@ -162,7 +158,8 @@ class FreezeTracker:
         open_tickers = {b["tag"]: repo.open_paper_position_tickers(session, b["tag"])
                         for b in books}
 
-        for mkt in self._fetch_open_markets():
+        summ.fetch = self._fetch_open_markets()
+        for mkt in summ.fetch.markets:
             summ.markets_seen += 1
             ticker = mkt.get("ticker") or ""
             if not ticker:
@@ -217,6 +214,12 @@ class FreezeTracker:
             if price is None or not (0 < price < 100):
                 summ.skipped_illiquid += 1
                 continue
+
+            # A real candidate: priced, with usable depth, and about to be offered to each
+            # book's own rules. Counting it is what separates "found nothing to look at" from
+            # "looked at things and rejected them" in the cycle line (XOS-000004). This is an
+            # observation only — no entry rule reads it.
+            summ.candidates += 1
 
             # Discount to certainty: what the pin is theoretically worth if the outcome is locked.
             discount = 100 - price

@@ -133,9 +133,70 @@ To run a request:
    {"type": "env",  "service": "evo", "id": "evo-env-1"}                    // read evo vars
    {"type": "env",  "service": "evo", "set": {"EVO_MAX_ACTIVE_AGENTS": "5"}, "id": "evo-cad"}
    ```
+
    Each service's ID lives in a secret (`RAILWAY_SERVICE_ID` for main,
    `RAILWAY_EVO_SERVICE_ID` for evo — never in this public repo). `db` requests are
    **service-agnostic** (both workers share one Postgres via `DATABASE_URL_RO`).
+
+   **Reading a book's evidence funnel (XOS-000004).** Every series-addressed book
+   ends its cycle line with a bounded, publishable funnel summary, so the ops logs
+   channel — which returns `message` text and drops structured attributes — can
+   answer "where did this book's count first become zero?":
+
+   ```jsonc
+   {"type":"logs","filter":"funnel/v1","limit":100,"id":"funnel-1"}
+   ```
+
+   ```
+   freeze book funnel/v1 state=NO_MARKETS first_zero=fetched fetched=0 eligible=0
+     candidates=0 actions=0 empty_series=7/7 [KXCOCOA KXCOFFEE KXCORN KXCOTTON KXSOYBEAN +2]
+   ```
+
+   `state` is the diagnosis and `first_zero` is the stage to start from:
+
+   | state | means |
+   |---|---|
+   | `NO_MARKETS` | every series was asked successfully and the venue returned nothing — check `empty_series` |
+   | `FETCH_FAILED` | every series FAILED: the universe is **unknown**, not empty. An incident, not a venue answer |
+   | `NO_MARKETS_INCOMPLETE` | nothing came back, but some series failed — the cycle saw less than the universe |
+   | `NO_ELIGIBLE` | markets came back; the book's eligibility filter rejected all of them |
+   | `NO_CANDIDATES` | eligible markets, none survived to become a priced candidate |
+   | `NO_ACTIONS` | candidates were produced and rejected downstream (caps, bands, discount bar) |
+   | `ACTIONS` | the book acted |
+   | `<STAGE>_NOT_RUN` | that stage was SKIPPED this cycle — see below |
+
+   **A stage that did not run is not a stage that found nothing.** xgame throttles
+   discovery and wcprop only scans for signals while a settled-match trigger is
+   open, so on most cycles those stages never execute. They report `NOT_RUN`
+   rather than `0`, are listed in `not_run=`, and can never produce `NO_MARKETS` —
+   a zero from a code path that was skipped is a finding nobody should try to
+   explain. A skipped stage never masks a real one either: if a stage that DID
+   run came back zero, that zero is still the diagnosis.
+
+   All six series-addressed trackers publish this line: `freeze`, `pin15`,
+   `theta`, `tfav`, `wcprop`, `xgame`. Each one's stage mapping is a statement
+   about its own processing semantics (`FUNNEL_MAPPERS` in `kalshi_bot/main.py`),
+   not a generic counter forced to fit.
+
+   The `fetch=` field carries that second axis on its own (`OK`, `EMPTY_UNIVERSE`,
+   `PARTIAL_FETCH_FAILURE`, `FETCH_FAILED`, `NO_SERIES_CONFIGURED`), and `empty=`
+   and `failed=` are separate bounded lists. **`NO_MARKETS` is a claim about the
+   VENUE** and is only ever made when every configured series was successfully
+   asked — a zero from a fetch that never completed reads as `FETCH_FAILED` or
+   `NO_MARKETS_INCOMPLETE` instead, because those have the opposite remedy.
+
+   A series that returns HTTP 200 with an empty list also logs a WARNING naming it;
+   an entirely empty configured universe logs a louder ERROR saying the book cannot
+   trade (the condition that went unnoticed for nine days); and a cycle where every
+   series failed logs its own ERROR saying the universe is UNKNOWN. No exception
+   text appears in any of them.
+
+   The summary is an **allowlist**, not a log dump: only the four stage counters
+   and sanitized, count-capped series tickers are rendered, and the whole line is
+   length-bounded. Ops results are public, and the workers emit ~260 distinct
+   structured field names including raw payloads, order identifiers and account
+   values — widening the log READ path to return attributes generically would
+   publish all of it. See `kalshi_bot/obs/funnel.py`.
 
    **Always set a unique `"id"`** (any short slug — sanitized to `[A-Za-z0-9._-]`).
    The runner writes your output to a durable per-run file `ops/results/<id>.txt`

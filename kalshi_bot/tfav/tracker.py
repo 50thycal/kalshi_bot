@@ -28,6 +28,11 @@ from dataclasses import dataclass, field
 from .. import repository as repo
 from ..config import Settings
 from ..kalshi.errors import AuthError
+from ..obs.series_fetch import (
+    SeriesFetchResult,
+    fetch_markets_by_series,
+    warn_on_fetch_outcome,
+)
 from ..paper.engine import kalshi_fee
 from ..scanner.metrics import compute_metrics, compute_time_to_close
 from ..theta.spot import CoinbaseSpotClient, SpotModel, refresh_spot_model
@@ -88,6 +93,8 @@ class TfavCycleSummary:
     skipped_no_model: int = 0
     skipped_illiquid: int = 0
     per_series: dict[str, int] = field(default_factory=dict)
+    # The series-addressed fetch's own report (XOS-000004).
+    fetch: SeriesFetchResult = field(default_factory=SeriesFetchResult)
     per_book: dict[str, int] = field(default_factory=dict)
 
 
@@ -138,27 +145,19 @@ class TfavTracker:
                 ev = tk.rsplit("-", 1)[0]
                 per_event_open[tag][ev] = per_event_open[tag].get(ev, 0) + 1
 
+        # One combined fetch report across every configured series, so an
+        # HTTP 200 carrying an empty list is counted rather than mistaken for a
+        # healthy fetch, and the empty/failed distinction survives (XOS-000004).
+        fetch = SeriesFetchResult()
         for series, product in s.theta_series_map.items():
             model = models.get(product)
-            markets: list[dict] = []
-            cursor: str | None = None
-            for _ in range(4):
-                try:
-                    page = self.client.get_markets(
-                        status="open", series_ticker=series, limit=200, cursor=cursor
-                    )
-                except AuthError:
-                    raise
-                except Exception as exc:  # noqa: BLE001 — a series fetch must not kill the cycle
-                    logger.warning(
-                        "tfav: markets fetch failed",
-                        extra={"extra_fields": {"series": series, "error": str(exc)[:200]}},
-                    )
-                    break
-                markets.extend((page or {}).get("markets") or [])
-                cursor = (page or {}).get("cursor") or None
-                if not cursor:
-                    break
+            one = fetch_markets_by_series(
+                self.client, [series], book="tfav", max_pages=4, log=logger, warn=False,
+            )
+            markets = one.markets
+            fetch.markets.extend(one.markets)
+            fetch.per_series.update(one.per_series)
+            fetch.failed.extend(f for f in one.failed if f not in fetch.failed)
 
             for mkt in markets:
                 summ.markets_seen += 1
@@ -277,4 +276,6 @@ class TfavTracker:
                     summ.per_book[tag] = summ.per_book.get(tag, 0) + 1
                     summ.per_series[series] = summ.per_series.get(series, 0) + 1
 
+        summ.fetch = fetch
+        warn_on_fetch_outcome("tfav", fetch, logger)
         return summ
