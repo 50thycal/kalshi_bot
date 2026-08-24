@@ -1,1 +1,1 @@
-{"type":"logs","filter":"Traceback","limit":300,"id":"pcr-final-health-20260824"}
+{"type":"env","set":{"EXPERIMENT_OS_PLATFORM_COMMAND":""},"redeploy":true,"id":"pcr-clear-transport-20260824"}
