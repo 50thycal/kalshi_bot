@@ -131,6 +131,61 @@ Old gate results are **never mutated** — staleness is structural:
   over. Not every code diff is a PlatformRevision: the registry covers declared
   shared semantics (the standard components), not incidental refactors.
 
+## Executing the workflow in production
+
+Every step above is a **write**. The ops channel is read-only against Postgres by
+design, and the `EXPERIMENT_OS_ISSUE_COMMAND` vocabulary covers issues only —
+deliberately, because **a ticket must never be able to mutate a Platform
+Revision**. Before the transport below existed there was no authorized production
+path at all, which is how a platform change ends up merged with no accounted
+impact record: the reviewer does the work correctly and then cannot record it.
+
+`EXPERIMENT_OS_PLATFORM_COMMAND` is a **separate** transport with a disjoint
+action vocabulary and its own receipt ledger
+(`experiment_os_platform_commands`). Setting it runs one bounded command at the
+next worker boot, exactly once, and logs a metadata-only receipt. Implementation
+and the full rationale: `kalshi_bot/experiment_os/platform_commands.py`.
+
+| action | does |
+|---|---|
+| `REGISTER_REVISION` | register an immutable **pending** revision; never activates |
+| `RECORD_IMPACTS` | propose **and** accept a bounded batch of per-experiment dispositions, in one transaction |
+| `CUTOVER` | activate at the measured boot instant and re-epoch the accepted `NEW_EPOCH` experiments at exactly that instant |
+| `ESTABLISH_BOUNDARY` | record a measured boundary on a revision activated without one (the recovery path) |
+
+What it cannot do, structurally rather than by convention: change exposure, place
+an order, promote an experiment, record a gate verdict, transition a lifecycle
+state, fabricate a Version (`apply_new_version` is not in the vocabulary), or
+force past the activation gate (`force=` is never passed and
+`record_forced_activation` is unreachable). A test parses the module and fails if
+any of those names appears in its code.
+
+### Why the cutover runs on the worker, before the first cycle
+
+The boot hook is positioned ahead of the trading loop, so a `CUTOVER` activates
+the revision and opens the new epoch **before the changed platform serves a single
+cycle**. There is no window in which evidence accumulates under the old epoch on
+the new platform — which is the failure a "merge now, register later" ordering
+produces, and the reason the merge order in §7 of a review document is not
+advisory.
+
+The boundary it records is that worker's own boot instant, never the merge commit.
+What makes that an actual measurement rather than an assumption is a
+**precondition** checked *before* the command is claimed: the fingerprint of the
+taxonomy this process loaded must equal the one the envelope names. If it does
+not — an unrelated redeploy landed first — the command **defers**: nothing is
+claimed, nothing is consumed, and it stays armed for the boot that really does
+serve the change. A terminal receipt there would burn the cutover and strand the
+revision as pending forever.
+
+### Reading what happened
+
+The receipt view is logged at boot (`"experiment OS platform command"`), so
+`{"type":"logs","filter":"experiment OS platform command"}` shows the outcome.
+The ledger itself is readable through the ops channel's read-only `db` request.
+Receipts are metadata only: no submitted value and no unrecognised key name is
+ever printed, and the `payload_hash` is what proves what was submitted.
+
 ## The review surface
 
 One canonical read for the future Platform Change Review session:

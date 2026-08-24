@@ -171,6 +171,67 @@ def run() -> int:
                 )},
             )
 
+    # 2b-iv) One Experiment OS PLATFORM CHANGE REVIEW command
+    # (docs/EXPERIMENT_OS_PLATFORM_IMPACT.md). A separate transport from 2b-iii
+    # with a disjoint vocabulary, because a ticket must never be able to mutate a
+    # Platform Revision. Four bounded actions that call the canonical
+    # platform_impact/service helpers: register a PENDING revision, record and
+    # accept impact dispositions, establish a measured boundary, and perform the
+    # activation cutover. It can never change exposure, place an order, promote an
+    # experiment, record a gate verdict or fabricate a Version, and it never
+    # forces past the activation gate.
+    #
+    # POSITION IS LOAD-BEARING. This runs BEFORE the trading loop, so a CUTOVER
+    # activates the revision and opens the new epoch before the repaired platform
+    # serves a single cycle — there is no unrecorded gap in which evidence could
+    # accumulate under the old epoch. A precondition deferral (the taxonomy this
+    # worker loaded is not the one the revision describes) consumes nothing and
+    # leaves the command armed for the boot that really does serve the change.
+    # Guarded exactly like 2b-iii: a refused or broken command must never stop the
+    # worker, and the receipt is how the operator finds out what happened.
+    if settings.experiment_os_platform_command:
+        # The module is imported FIRST and separately, so the error handler below
+        # can always reach its own sanitizer. Importing it inside the same `try`
+        # that uses it in `except` is the shape that turns an ImportError into a
+        # NameError and loses the real cause.
+        try:
+            from .experiment_os import platform_commands as _platform_commands
+        except Exception as exc:  # noqa: BLE001
+            _platform_commands = None
+            logger.error(
+                "experiment OS platform command module unavailable; continuing to "
+                "trade",
+                extra={"extra_fields": {"error_class": type(exc).__name__}},
+            )
+        if _platform_commands is not None:
+            try:
+                with session_scope() as session:
+                    receipt = _platform_commands.run_boot_command(
+                        session, settings.experiment_os_platform_command
+                    )
+                # Metadata only. The envelope itself is never logged: it rides a
+                # public branch, and keeping copies out of the log stream is free
+                # hygiene. A DEFERRED view is INFO — it is the transport working.
+                if receipt is not None:
+                    log_event(
+                        logger,
+                        logging.INFO
+                        if receipt.get("status") in ("SUCCEEDED", "DEFERRED")
+                        else logging.ERROR,
+                        "experiment OS platform command",
+                        **receipt,
+                    )
+            except Exception as exc:  # noqa: BLE001
+                # NOT str(exc), and no traceback — same reasoning as 2b-iii: the
+                # message can carry the failing statement and its bound parameters,
+                # `payload_json` among them.
+                logger.error(
+                    "experiment OS platform command hook failed; continuing to trade",
+                    extra={"extra_fields": _platform_commands.safe_error_fields(
+                        settings.experiment_os_platform_command, exc
+                    )},
+                )
+
     # 2c) Experiment OS enforcement: record an operator-declared cutover (no-op
     # unless EXPERIMENT_OS_ENFORCEMENT_MODE names a mode we are not already in,
     # and only after readiness passes), then load the recorded mode (OFF when

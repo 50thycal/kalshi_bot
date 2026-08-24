@@ -125,6 +125,17 @@ class Settings(BaseSettings):
     # redacted_summary() so a boot line can never echo it.
     experiment_os_issue_command: str = ""
 
+    # One bounded PLATFORM CHANGE REVIEW command, executed once at worker boot
+    # (kalshi_bot/experiment_os/platform_commands.py). A SEPARATE transport from
+    # the issue command above, with a disjoint action vocabulary and its own
+    # receipt ledger, because a ticket must never be able to mutate a Platform
+    # Revision. Registering a revision, accepting its impact dispositions and
+    # performing the activation cutover are writes, and the ops channel is
+    # read-only against Postgres by design — so this hook is the only production
+    # path for them. Same publicity as the issue command: THIS VALUE IS PUBLIC and
+    # is deliberately absent from redacted_summary().
+    experiment_os_platform_command: str = ""
+
     # The operator-declared enforcement cutover (docs/EXPERIMENT_OS_ENFORCEMENT.md).
     # Empty = no-op. Set to OFF/WARN/NEW_ONLY/STRICT to have the worker RECORD that
     # mode once, gated on a readiness report computed at that instant; it is a no-op

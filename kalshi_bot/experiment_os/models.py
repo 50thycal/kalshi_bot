@@ -937,3 +937,47 @@ class ExperimentOsIssueCommand(Base):
     #: a traceback and never the envelope.
     error: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+
+
+class ExperimentOsPlatformCommand(Base):
+    """Receipt for one Platform Change Review command executed at worker boot.
+
+    A SEPARATE ledger from `experiment_os_issue_commands`, and deliberately so: an
+    issue command must never be able to mutate a Platform Revision, and keeping the
+    two vocabularies and the two tables disjoint is how that prohibition is
+    structural rather than a convention someone could widen later.
+
+    Like the issue-command receipt, `payload_json` is stored so a replay can be
+    proven identical. It is NOT secret — the same bytes are committed in plaintext
+    to a public branch — so payloads must be safe to disclose. See the module
+    docstring of `platform_commands.py`.
+    """
+
+    __tablename__ = "experiment_os_platform_commands"
+    __table_args__ = (
+        Index("ix_experiment_os_platform_commands_status", "status", "requested_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    #: Caller-supplied, globally unique, and the whole basis of exactly-once.
+    command_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    action: Mapped[str] = mapped_column(String(32), nullable=False)
+    #: Attribution, NOT authorization — the authority is who can set the variable.
+    actor: Mapped[str] = mapped_column(String(64), nullable=False)
+    actor_role: Mapped[str] = mapped_column(String(32), nullable=False)
+    #: sha256 over the canonical envelope. A second submission of the same
+    #: command_id with a DIFFERENT hash is a collision and executes nothing.
+    payload_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload_json: Mapped[dict | None] = mapped_column(JSONType)
+    schema_version: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default="1"
+    )
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    requested_at: Mapped[datetime | None] = mapped_column(TS)
+    started_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(TS)
+    result_json: Mapped[dict | None] = mapped_column(JSONType)
+    #: Bounded and sanitized: an exception class and a truncated message, never a
+    #: traceback and never the envelope.
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
