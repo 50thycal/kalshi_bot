@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT key, state, coalesce(current_stage,'-') AS stage FROM experiments ORDER BY state, key", "max_rows": 40, "id": "pcr-expstates-20260824"}
+{"type": "db", "sql": "SELECT key, state FROM experiments ORDER BY state, key", "max_rows": 40, "id": "pcr-expstates2-20260824"}
