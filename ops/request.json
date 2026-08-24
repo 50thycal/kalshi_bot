@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT command_id, action, status, coalesce(error,'-') AS error, result_json::text AS result, completed_at::text FROM experiment_os_platform_commands ORDER BY id DESC LIMIT 5", "max_rows": 10, "id": "pcr-receipt-read-20260824"}
+{"type":"xos","command":"platform","args":["review","MARKET_TAXONOMY:settlement_repair_2026_08_24"],"id":"pcr-affected-20260824"}
