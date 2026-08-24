@@ -1,1 +1,1 @@
-{"type": "xos", "command": "issue-command-show", "args": ["lo-opsbr-valplan-20260824"], "id": "verify-lo-opsbr-valplan-20260824-1"}
+{"type":"xos","command":"issue-list","id":"final2-issuelist-20260824"}
