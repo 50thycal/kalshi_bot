@@ -125,6 +125,17 @@ it still says stop after the largest repair the evidence supports.
 
 ### 2A.0 STATUS — read this before anything else
 
+**Updated 2026-08-24.** The taxonomy repair described below as a prerequisite has been
+performed and is in review (PR #257). The `BLOCKED_DATA` condition in §3.2 **no longer holds**:
+`unclassified_excluded_pct` is **0.18%** on the canonical window and **1.31%** on a fresh
+sensitivity window, against the unchanged 5% bar. Everything from §2A.0b to §2A.3 below is
+preserved as the record of the state that made the repair necessary — it is history now, not
+current status. **§2A.4 is the current status**, and the design is still **not ready to
+register**: the calendar at +2¢ is ~17 months under a transferred design effect, and no
+Version, epoch, deployment or arm exists.
+
+The original status block, unedited:
+
 - The experiment is **`BLOCKED_DATA`**.
 - It is **not ready to register.** No Version, no epoch, no deployment, no arm exists.
 - The **taxonomy repair must happen first.** It is a prerequisite, not a parallel task.
@@ -292,6 +303,106 @@ None is repairable by a Research Lab session: (1) is a Platform Change Review de
 series, (2) is an operator decision about whether the horizon is worth spending, and (3) waits on
 (1) because the eligible population changes when the taxonomy does. Until they are settled,
 **nothing is created**.
+
+
+### 2A.4 THE TAXONOMY REPAIR — done, measured, and what it changed (2026-08-24)
+
+Run as a Platform Change Review workstream. Full record in `docs/mmsell_taxonomy_repair/`:
+`CENSUS_AND_MANIFEST_20260824.md` (the frozen batch), `REVIEW_20260824.md` (the prefix-by-prefix
+review), `EVIDENCE_20260824.txt` (Kalshi's own words, verbatim, for all 198),
+`PLATFORM_IMPACT_20260824.md`, `POST_REPAIR_MEASUREMENT_20260824.md`.
+
+**The batch was frozen before anything was classified.** §2A.1's worry — that reviewing prefixes
+one at a time and stopping when the census crosses 5% would make the taxonomy target-driven — was
+answered by making the batch the **whole** unresolved population: all 198 prefixes, 861 markets,
+committed with its selection rule before the first decision. With no cutoff there is no cutoff to
+move. Review continued past the point where the running census crossed the bar.
+
+**Accepted, rejected, deferred.**
+
+| | prefixes | candidate markets |
+|---|---|---|
+| **ACCEPTED** — added to `SERIES_TYPES` | **194** | **850** |
+| → `in_play` | 144 | 654 |
+| → `scheduled` | 31 | 136 |
+| → `discrete` | 19 | 60 |
+| **DEFERRED** — stay `unknown`, in neither arm | **4** | **11** |
+| **REJECTED** | **0** | **0** |
+
+The four deferrals: `KXTRUEV`, `KXDIESELD`, `KXDIESELW` (rules name a referent and a date and
+nothing else — no publisher, no publication instant) and `KXMC` (evidence unambiguous, refused on
+prefix generality: four characters mapping to a treatment-eligible mode would sweep every future
+`KXMC*` series in unseen). §2A.1's estimate that the long tail "takes seconds to read" was
+optimistic about three of them; they are not unclassifiable, they are *undocumented*.
+
+**Post-repair census, both constructions, against the unchanged 5% bar.**
+
+| | canonical 07-19 → 08-21 | current/fresh 07-22 → 08-24 |
+|---|---|---|
+| eligible candidates | 6,018 | 7,319 |
+| `in_play` | 5,028 · 83.55% | 6,137 · 83.85% |
+| `scheduled` | 807 · 13.41% | 875 · 11.96% |
+| `discrete` | 172 · 2.86% | 211 · 2.88% |
+| **`unknown`** | **11 · 0.18%** | **96 · 1.31%** |
+| verdict | **PASS** | **PASS** |
+
+The fresh window is a **sensitivity read and does not replace the canonical one.** Its extra 85
+unknown markets come from 32 series absent from the canonical window entirely — the European
+football seasons and the NFL starting. **The repair is a snapshot, not a steady state**, and
+because §3.2 is evaluated at *every* read, an unmaintained taxonomy would re-block a long run
+months in. That is the single most important thing this measurement found and it needs an
+operator decision about cadence, not more code.
+
+**Supply and floors, recomputed from scratch. The 2,711/4,000 iid floors and the 6.7/day estimate
+in §2A.2 and §3.6 are withdrawn and are not reused.**
+
+| | T — `mode=scheduled` | C — `mode=in_play+discrete` |
+|---|---|---|
+| candidates | 807 markets · 207 events | 5,199 markets · 3,970 events |
+| supply | **24.5 markets/day** (was 6.7) | 157.5 markets/day |
+| markets/event | 3.90 | 1.31 |
+| Kish `m_A` | **8.54** | 2.21 |
+| arm overlap | **zero** — the modes partition by construction | |
+
+At the minimum useful effect of **+2¢** (unchanged), sd 23.2¢, one-sided 99%, 80% power, the iid
+requirement is **2,701 per arm**; event-clustered it is `2,701 × DEFF`, and ρ for MMSELL is
+**unmeasured**. At the planning value ρ = 0.50 — which puts the treatment arm at DEFF 4.77,
+inside the 4–8 band `RESEARCH_THETA_REMEDIATION.md` measured on structurally identical strike
+ladders — the floors are:
+
+| | value |
+|---|---|
+| promotion evidence floor | **12,883 settled markets in T** (≈3,305 events) |
+| maximum evidence horizon (#247, inclusive) | **19,325 settled markets in T** |
+| early-failure floor (`fail_any`) | **800 settled markets in T**, deliberately uninflated |
+| **calendar, governed by the slower arm (T)** | **~527 days (~17 months) to the floor; ~790 days (~26 months) to the horizon** |
+
+**That is worse than the ~13 months §2A.2 retracted, and the reason matters.** The repair made
+the treatment arm's supply 3.7× larger and event clustering makes each of its markets worth 4.77×
+less than an iid count assumed. The second effect is bigger. **More markets did not buy a shorter
+experiment, because the markets the repair added are ladders on shared events.** Across the full
+ρ grid the calendar spans 0.4–2.6 years, so the choice between +2¢, +3¢ and +5¢ still should not
+be put to the operator: it would be picking a horizon from a range four times as wide as the
+choice. The effect size was **not** moved after seeing the supply.
+
+**A defect in this document's own arm spec, found by applying it exactly.** `skip=` is a
+substring blocklist, and `KXHEGSETHANNOUNCEOUT` contains `ETH`. Both arms drop the Pete Hegseth
+departure market as though it were an Ethereum market. One market today; an open-ended collision
+class for any future series containing `ETH`, `SOL` or `XRP`. Platform Change Review does not
+edit an experiment's contract on the researcher's behalf, so it is **flagged, not fixed**.
+
+**What §2A.3 said had to be settled, and where each stands:**
+
+1. *the universe cannot be partitioned while 14.31% is unclassifiable* — **settled.** 0.18%
+   canonical, 1.31% fresh, with a maintenance question attached.
+2. *the horizon* — **measured, and it is ~17 months at +2¢ under a transferred ρ.** Operator
+   decision, unchanged in nature.
+3. *the floors must be recomputed on the event* — **done**, and they are conditional on a ρ that
+   is still MMSELL's to measure.
+
+**Nothing is created.** No Version, no epoch, no deployment, no arm, and the taxonomy repair
+itself is not merged: the `MARKET_TAXONOMY` platform revision must be registered and its I2
+dispositions accepted first (`PLATFORM_IMPACT_20260824.md` §7).
 
 
 ---
