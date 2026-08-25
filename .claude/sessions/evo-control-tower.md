@@ -4,23 +4,24 @@
 Read-only health of the evolutionary research organism: is the fleet learning,
 using its capabilities, and staying inside its constraints?
 
-**Two systems share the word "evo". Establish which one the question is about.**
-- the **LLM agent fleet** (`kalshi_bot/evo/`) — agents, heartbeats, cognition, budgets,
-  prospective paper. `evo_digest`, `evo_tree`, `evo_*` tables.
-- the **population layer** (`kalshi_bot/evo/population/`) — a program-scoped evolutionary
-  search over strategy genomes, scored by historical replay. `evo_pop_tower`,
-  `evo_pop_*` tables. See `docs/EVO_POPULATION_FOUNDATION.md` and `DEC-002`.
-They are separate by decision; a number from one never explains the other.
+**One organism, one lifecycle.** The fleet in `kalshi_bot/evo/` — agents, heartbeats,
+cognition, budgets, cohort fitness, prospective paper — is the whole of it
+(`evo_digest`, `evo_tree`, `evo_*` tables).
+
+`kalshi_bot/evo/search/` is a **capability the agents invoke**, not a second population:
+a bounded historical search around an agent's own strategy that returns evidence and
+decides nothing (`evo_search_*` tables, `DEC-003`). A search score is not fitness and
+never explains a rank — see `docs/EVO_SEARCH_CAPABILITY.md` §5.
 
 ## DEFAULT MODE / PERMISSIONS
 **READ ONLY.**
 
 ## LOAD FIRST
 - `docs/EVOLUTIONARY_AGENT_SYSTEM.md`, `docs/EVO_RUNBOOK.md`
-- `docs/EVO_POPULATION_FOUNDATION.md` (the population layer)
+- `docs/EVO_SEARCH_CAPABILITY.md` (the search capability)
 - ops channel: `evo_digest`, `evo_tree`, `{"type":"logs","service":"evo"}`
-- ops channel: `{"type":"script","name":"evo_pop_tower","args":["--list"]}` — programs;
-  then `["--program","<key>"]`, `["--program","<key>","--explain","agent-017"]`
+- ops channel: a `db` read over `evo_search_runs` when you need to see which agents are
+  using the search, on what, and how often
 
 ## STARTUP ROUTINE
 Current cohort/age/boundary; active vs suspended vs retired agents; heartbeat
@@ -38,9 +39,10 @@ Identity header → FLEET HEALTH → COHORT → AGENTS → BUDGETS → RESEARCH/
 → FITNESS/CONTROLS → EXPERIMENTS ORIGINATED BY EVO → TICKETS → INTEGRITY WARNINGS
 → NEXT ACTIONS.
 
-For the population layer, `evo_pop_tower` renders its own report (program, generation,
-top/continue/retire, new children with their exact mutations, diversity, warnings). Do not
-merge the two into one leaderboard — they rank different things on different evidence.
+Report search *use* — which agents ask, about what, how often, and whether they act on
+the answers — under RESEARCH/DATASET USE. Never merge a search score into the fitness
+picture: one ranks strategy documents over a replay window, the other ranks organisms
+over a cohort, and they are not comparable.
 
 ## HANDOFF / ROLE-CHANGE RULES
 Actionable capability tickets → **Evo Ticket Workshop**. Agent-created experiment

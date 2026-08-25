@@ -1,9 +1,9 @@
 """Deterministic synthetic corpora for the historical proving run.
 
-The proving run has to answer mechanical questions — do genomes stay immutable, do runs
-reproduce, is a rank explainable, does retirement work, do ledgers reconcile, is there
-look-ahead — and every one of them is a question about the *machinery*, not about
-whether some strategy makes money. Synthetic history answers them better than real
+The proving run has to answer mechanical questions — are documents content-addressed, do
+replays reproduce, is a score explainable, do ledgers reconcile, is there look-ahead —
+and every one of them is a question about the *machinery*, not about whether some
+strategy makes money. Synthetic history answers them better than real
 history does, because the right answer is known in advance and the adversarial cases can
 be constructed rather than hoped for.
 
@@ -18,8 +18,8 @@ Four adversarial profiles exist because the evaluator is supposed to tell them a
 * `lucky`     — a huge per-trade number off a handful of trades. Must be held on thin
                 evidence, not crowned.
 * `steady`    — a moderate, consistent edge across the whole window. Should win.
-* `broken`    — data that fails integrity. Must be classified invalid and escalated,
-                not ranked badly and quietly retired.
+* `broken`    — data that fails integrity. Must be classified invalid and reported as a
+                data defect, not ranked badly and quietly dismissed as a bad strategy.
 
 Every series is generated from a hash of its key, so the corpus is identical on every
 machine and every run without shipping a fixture file.
@@ -42,7 +42,7 @@ CORPUS_START = datetime(2026, 1, 1, tzinfo=timezone.utc)
 CORPUS_DAYS = 180
 
 #: Series prefixes stand in for market families, so concentration and breadth are
-#: measurable in the proving cohort.
+#: measurable over the proving corpus.
 SERIES = ("KXSYNTHA", "KXSYNTHB", "KXSYNTHC", "KXSYNTHD")
 
 MARKETS_PER_DAY = 8
@@ -59,8 +59,8 @@ def _unit(*parts: object) -> float:
 
 def _profile_for(series: str) -> str:
     """Which behaviour a series exhibits. Fixed by series so a genome's universe
-    selects its profile — which is how the proving cohort gets candidates that
-    genuinely differ rather than differing by luck."""
+    selects its profile — which is how the adversarial cases are constructed rather
+    than hoped for."""
     return {
         "KXSYNTHA": "steady",
         "KXSYNTHB": "reckless",
@@ -75,22 +75,33 @@ def _edge_for(profile: str, day: int, index: int) -> float:
     Positive means the YES side is cheap relative to how the market settles."""
     u = _unit(profile, day, index)
     if profile == "steady":
-        # A solid, consistent edge. Deliberately well clear of binomial noise at this
-        # corpus size: a "steady" profile whose realized sign depends on the sample is
-        # not steady, and the proving run's expected ordering would be a coin flip.
-        return 8.0 + 4.0 * u
+        # A solid, consistent edge — and it has to be genuinely solid, not merely
+        # positive. Binary contracts pay 0 or 100, so a single trade's dispersion is
+        # ~50c whatever the edge; at this corpus size an edge of ~10c sits only about
+        # 1.4 standard errors above zero, and a lower-confidence-bound scorer is right
+        # to be unimpressed by it. A profile named "steady" that scores as weak evidence
+        # is misnamed, so the edge is set where the evidence is actually strong.
+        return 20.0 + 6.0 * u
     if profile == "reckless":
         # Genuinely profitable overall — it must be able to top a raw-P&L ranking — but
         # it buys that with a long block of losses at the end of every 40-day period, so
         # the chronological drawdown is severe. This is the candidate the evaluator has
         # to rank BELOW `steady` despite the bigger headline number.
         #
-        # The 40-day period matches the proving run's generation window, so *every*
-        # generation contains the drawdown. Tuned the other way the pathology would fall
-        # outside some windows, and whether the adversarial case held would depend on
-        # which window a generation happened to draw — which is not a property worth
-        # asserting.
-        return -(48.0 + 10.0 * u) if (day % 40) >= 25 else (46.0 + 10.0 * u)
+        # The proving window is a whole number of 40-day periods, so it always contains
+        # the drawdown. Tuned the other way the pathology could fall outside the window,
+        # and whether the adversarial case held would depend on which dates the run
+        # happened to draw — which would be measuring the window, not the evaluator.
+        if (day % 40) >= 30:
+            return -(48.0 + 10.0 * u)
+        # The win phase is deliberately BIMODAL rather than uniformly strong. That is
+        # what separates reckless from good: dispersion. A strategy whose wins are
+        # uniform earns a tight confidence bound and deserves its high score; one that
+        # earns the same mean through occasional large wins between mediocre trades has
+        # the same P&L and far weaker evidence, and the bound should say so. Without
+        # this, "reckless" is just a profitable strategy with a drawdown, and the
+        # adversarial case tests nothing the edge component would not already reward.
+        return (56.0 + 8.0 * u) if _unit("reckless-spike", day, index) < 0.90 else (4.0 * u)
     if profile == "lucky":
         # Very large edge, but the universe is so narrow that only a handful of
         # markets qualify (see `_qualifies`), so the sample stays tiny.
@@ -113,7 +124,7 @@ def _markets(session, spec, date_from: str | None, date_to: str | None):
     The date filter is applied to each market's **close** time, and a market is only
     yielded when its whole tape lies at or before `date_to`. That is the no-look-ahead
     guarantee the proving run asserts: a genome cannot see a market that had not settled
-    by its generation's cutoff."""
+    by the declared cutoff."""
     start = _parse(date_from) or CORPUS_START
     end = _parse(date_to)
     prefixes = tuple(spec.universe.series_prefixes or ())

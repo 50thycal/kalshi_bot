@@ -1,20 +1,23 @@
-"""Deterministic historical replay + the per-run virtual ledger.
+"""Deterministic historical replay + the per-replay virtual ledger.
 
-One genome, one window, one independent virtual account. The replay itself is not
-reimplemented here: it delegates to `evo.sandbox.run_backtest`, which is the same loop
-the LLM organism's backtests and the ops probes use. A second replay implementation
-would mean two answers to "what would this strategy have done", and the proving run
-would only prove things about the copy.
+One strategy document, one window, one independent virtual account. The replay itself is
+not reimplemented here: it delegates to `evo.sandbox.run_backtest`, the same loop the
+agents' own backtests and the ops probes use. A second replay implementation would mean
+two answers to "what would this strategy have done".
+
+The ledger is a *measurement instrument*, not an account. An agent's real paper portfolio
+lives in `evo_portfolios` and is the only thing that tracks what it actually has; this
+one exists so two variants can be compared on the same yardstick.
 
 What this module owns is everything around that call:
 
-* **No look-ahead.** A run's window is clamped to its generation's `data_cutoff`, and a
+* **No look-ahead.** A replay's window is bounded by the declared `data_cutoff`, and a
   request that reaches past it is refused rather than silently trimmed.
 * **Determinism.** The engine has no wall-clock or RNG dependence — the maker-fill gate
   is a hash of the market key, not a random draw — so the same genome over the same
   window returns the same tape. `fingerprint()` makes that checkable.
-* **Isolation.** Every run gets its own ledger built from its own tape. Nothing is
-  shared between candidates, so no candidate's trades can contaminate another's.
+* **Isolation.** Every replay gets its own ledger built from its own tape. Nothing is
+  shared between variants, so no variant's trades can contaminate another's.
 * **The three quantities kept apart.** Theoretical opportunity (gross, before costs),
   paper execution (net of fees, what the replay banked), and the realizable estimate
   (net projected through the measured maker-fill calibration) are reported separately.
@@ -32,7 +35,6 @@ from datetime import datetime
 from .. import sandbox
 from ..config import EvoSettings
 from . import genome as genome_mod
-from .models import EvoCandidateLedger, EvoGeneration, EvoProgram, EvoRun, EvoRunTrade
 
 # Bumped whenever a change alters a replayed number. Recorded on every run so two runs
 # produced under different engines are never compared as if they were comparable.
@@ -64,9 +66,9 @@ def _as_date(value: str | None) -> str | None:
 def check_window(
     window_start: str | None, window_end: str | None, data_cutoff: str | None
 ) -> tuple[str | None, str | None]:
-    """Validate a replay window against the generation's no-look-ahead boundary.
+    """Validate a replay window against the declared no-look-ahead boundary.
 
-    Refuses rather than clamps. Silently trimming a window would mean two candidates
+    Refuses rather than clamps. Silently trimming a window would mean two searches
     asking for different windows quietly get the same one, and the run rows would claim
     a window the evidence does not cover."""
     start, end = _as_date(window_start), _as_date(window_end)
@@ -76,12 +78,12 @@ def check_window(
     if cutoff:
         if end is None:
             raise ReplayRefused(
-                f"window has no end but the generation cutoff is {cutoff} — an open-ended "
+                f"window has no end but the data cutoff is {cutoff} — an open-ended "
                 "window would replay data past the boundary"
             )
         if end > cutoff:
             raise ReplayRefused(
-                f"window end {end} is past the generation data cutoff {cutoff} "
+                f"window end {end} is past the data cutoff {cutoff} "
                 "(look-ahead refused)"
             )
         if start and start > cutoff:
@@ -96,7 +98,7 @@ def check_window(
 
 def _event_root(ticker: str) -> str:
     """Cluster key: the event portion of a market ticker. Same convention as
-    `evo/fitness.py`, so concentration means the same thing in both layers."""
+    `evo/fitness.py`, so concentration means the same thing in both."""
     return ticker.rsplit("-", 1)[0] if "-" in ticker else ticker
 
 
@@ -106,7 +108,7 @@ def _ts(value) -> datetime | None:
 
 @dataclass
 class Ledger:
-    """One candidate's virtual account for one run, derived from its own trade tape."""
+    """One replay's virtual account, derived from that replay's own trade tape."""
 
     starting_capital_usd: float
     realized_pnl_usd: float = 0.0
@@ -296,10 +298,11 @@ def replay(
     result, run_err = sandbox.run_backtest(
         session,
         settings,
-        # The population layer is not an evo agent and has no agent budget: these
+        # A search replay is not an agent heartbeat and has no agent budget: these
         # identify the caller in the sandbox's signature but nothing is charged or
-        # persisted against them (charge_budget=False, persist=False).
-        agent_uuid="evo-population",
+        # persisted against them (charge_budget=False, persist=False). The invoking
+        # agent is charged once, by the cognition action, for the whole search.
+        agent_uuid="evo-search",
         cohort_id=0,
         spec_doc=norm,
         dataset=dataset,
@@ -404,112 +407,6 @@ def replay(
     )
 
 
-def persist_run(
-    session,
-    *,
-    program: EvoProgram,
-    generation: EvoGeneration,
-    candidate_uuid: str,
-    genome_id: int,
-    genome_hash: str,
-    replayed: ReplayResult | None,
-    error: str | None = None,
-    persist_trades: bool = True,
-) -> EvoRun:
-    """Write the run, its tape and its ledger. A refused or failed run is recorded too —
-    a candidate that could not be evaluated is evidence, not an absence."""
-    run = EvoRun(
-        program_id=program.id,
-        generation_id=generation.id,
-        generation_number=generation.number,
-        candidate_uuid=candidate_uuid,
-        genome_id=genome_id,
-        genome_hash=genome_hash,
-        mode=generation.mode,
-        dataset=generation.dataset,
-        window_start=generation.window_start,
-        window_end=generation.window_end,
-        starting_capital_usd=float(program.starting_capital_usd),
-        rng_seed=generation.rng_seed,
-        status="completed" if replayed is not None else "refused",
-        error=error,
-    )
-    if replayed is not None:
-        run.provenance = replayed.reproducibility.get("provenance")
-        run.outcome_json = replayed.outcome
-        run.reproducibility_json = replayed.reproducibility
-        run.integrity_json = replayed.integrity
-        run.rows_processed = int(replayed.result.get("rows_processed") or 0)
-        run.elapsed_ms = int(replayed.result.get("elapsed_ms") or 0)
-    session.add(run)
-    session.flush()
-
-    if replayed is None:
-        return run
-
-    if persist_trades:
-        for t in replayed.trades:
-            session.add(
-                EvoRunTrade(
-                    run_id=run.id,
-                    market_ticker=str(t.get("ticker") or "")[:128],
-                    event_root=_event_root(str(t.get("ticker") or ""))[:64],
-                    month=str(t.get("month") or "")[:7] or None,
-                    side=str(t.get("side") or "")[:4] or None,
-                    style=str(t.get("style") or "")[:8] or None,
-                    quantity=int(t.get("quantity") or 0),
-                    entry_price_cents=t.get("entry_price_cents"),
-                    exit_price_cents=t.get("exit_price_cents"),
-                    entered_at=_ts(t.get("entered_at")),
-                    exited_at=_ts(t.get("exited_at")),
-                    fees_usd=float(t.get("fees") or 0.0),
-                    pnl_usd=float(t.get("pnl") or 0.0),
-                    cents_per_contract=t.get("cents_per_contract"),
-                    maker_yes_c=t.get("maker_yes_c"),
-                    exit_reason=str(t.get("exit") or "")[:32] or None,
-                    settled=bool(t.get("settled")),
-                    exit_time_exact=bool(t.get("exit_time_exact", True)),
-                    win=bool(t.get("win")),
-                )
-            )
-
-    led = replayed.ledger
-    session.add(
-        EvoCandidateLedger(
-            program_id=program.id,
-            generation_number=generation.number,
-            candidate_uuid=candidate_uuid,
-            run_id=run.id,
-            starting_capital_usd=led.starting_capital_usd,
-            realized_pnl_usd=led.realized_pnl_usd,
-            unrealized_pnl_usd=led.unrealized_pnl_usd,
-            fees_usd=led.fees_usd,
-            ending_capital_usd=led.ending_capital_usd,
-            peak_exposure_usd=led.peak_exposure_usd,
-            turnover_usd=led.turnover_usd,
-            max_drawdown_usd=led.max_drawdown_usd,
-            max_concurrent_positions=led.max_concurrent_positions,
-            contracts=led.contracts,
-            markets=led.markets,
-            trades_settled=led.trades_settled,
-            trades_open=led.trades_open,
-            concentration_top_family=led.concentration_top_family,
-            concentration_hhi=led.concentration_hhi,
-            capital_breached=led.capital_breached,
-            concurrency_coverage=led.concurrency_coverage,
-            detail_json={
-                "by_family": led.by_family,
-                "equity_curve": led.equity_curve[:500],
-                "gross_pnl_usd": led.gross_pnl_usd,
-                "return_on_capital": led.return_on_capital,
-                "concurrency_coverage": led.concurrency_coverage,
-            },
-        )
-    )
-    session.flush()
-    return run
-
-
 __all__ = [
     "ENGINE_REVISION",
     "Ledger",
@@ -518,6 +415,5 @@ __all__ = [
     "build_ledger",
     "check_window",
     "fingerprint",
-    "persist_run",
     "replay",
 ]

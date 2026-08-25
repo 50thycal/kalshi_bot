@@ -83,7 +83,6 @@ ALLOWED_SCRIPTS = (
     "kalshi_quote_probe",
     "kalshi_market_survey",
     "evo_order_probe",
-    "evo_pop_tower",
     "xvenue_probe",
     "xvenue_leadlag",
     "xvenue_crypto",

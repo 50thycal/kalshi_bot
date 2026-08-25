@@ -6,8 +6,8 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from kalshi_bot.evo.population import genome as g
-from kalshi_bot.evo.population import proving, replay
+from kalshi_bot.evo.search import genome as g
+from kalshi_bot.evo.search import proving, replay
 
 
 @pytest.fixture
@@ -308,7 +308,7 @@ def test_crossed_book_skipping_is_opt_in(evo_session, evo_settings, corpus):
     assert strict["n_trades"] <= default["n_trades"]
 
 
-def test_the_population_layer_opts_into_strict_handling(evo_session, evo_settings, corpus):
+def test_the_search_replay_opts_into_strict_handling(evo_session, evo_settings, corpus):
     start, end = proving.window(0, 40)
     result = replay.replay(
         evo_session, evo_settings, document=_doc("KXSYNTHD"), dataset=corpus,

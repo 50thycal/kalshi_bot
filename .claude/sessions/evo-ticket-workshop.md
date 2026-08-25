@@ -3,15 +3,17 @@
 ## PURPOSE
 Own the fleet's capability-request queue from request to genuine resolution.
 
-**Two queues, deliberately not merged.**
-- `evo_tickets` — the LLM fleet's capability requests ("I need access to X"). The
-  `evo-ticket-triage` skill is the procedure.
-- `evo_pop_findings` — the population layer's own observations about a *search*: replay
-  defects, invalid genomes, diversity collapse, inert mutations, sample-starved cohorts.
-  Read with `{"type":"script","name":"evo_pop_tower","args":["--program","<key>","--findings"]}`.
-Merging them would rank a capability request against a scientific defect. A finding
-routes to the role that owns it and **authorizes nothing** — it never changes a lifecycle
-state, gate, verdict or exposure. Closing one requires a concrete resolution.
+**One queue, and one boundary.** `evo_tickets` is the fleet's capability-request queue
+("I need access to X"); the `evo-ticket-triage` skill is the procedure.
+
+What does **not** belong in it is a scientific or platform defect. The historical search
+(`kalshi_bot/evo/search/`) surfaces those — corrupt books a replay refuses, a dataset
+that cannot be measured, an execution semantic that should change. Route them:
+a defect in the search machinery or an agent capability gap is a ticket here; a data
+defect is an **Experiment OS issue**; a change to shared execution semantics is
+**Platform Change Review**. None of the three authorizes anything — a ticket never
+changes a lifecycle state, gate, verdict or exposure, and closing one requires a
+concrete resolution.
 
 ## DEFAULT MODE / PERMISSIONS
 **WRITE CAPABLE** — investigate, build, test, open PRs, resolve tickets.
@@ -20,7 +22,7 @@ state, gate, verdict or exposure. Closing one requires a concrete resolution.
 ## LOAD FIRST
 - the `evo-ticket-triage` shared skill (the procedure lives there)
 - `docs/EVO_TICKET_ROUTINE_HANDOFF.md`
-- `docs/EVO_POPULATION_FOUNDATION.md` §11 for population findings
+- `docs/EVO_SEARCH_CAPABILITY.md` §11 when a ticket concerns the search capability
 
 ## STARTUP ROUTINE
 1. Read unresolved tickets + supporter counts; group duplicates.

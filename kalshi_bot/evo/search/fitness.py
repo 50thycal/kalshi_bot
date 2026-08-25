@@ -1,22 +1,37 @@
-"""Fitness: component metrics first, a derived score second.
+"""Search scoring: component metrics first, a derived score second.
+
+**This is not agent fitness and must never become it.** It scores one strategy document
+over one replay window, so that variants inside a single search can be ordered. An Evo
+agent's authoritative fitness lives in `evo/fitness.py`, scores an *organism* over a
+cohort, and includes dimensions no replay can see — adaptive intelligence, opportunity
+capture, decayed historical reliability. Nothing here writes `evo_fitness`, and a high
+score here entitles a strategy to nothing except the agent's attention.
+
+One consequence worth stating, because it is the difference that matters. Here,
+`insufficient` evidence leaves a variant *unranked*: a three-trade sample genuinely
+cannot order two strategies, and pretending otherwise would rank noise. In the organism
+that rule would be wrong and is deliberately absent — `evo/fitness.py` scores a
+low-evidence agent DOWN (component 4: "no incubation") rather than exempting it, because
+an exemption is an immunity from selection, and letting an agent avoid the cohort-end
+gate by producing too little evidence inverts the north star.
 
 The rule this module exists to enforce is that **raw P&L never decides anything on its
 own**. Three failure modes make that necessary, and each has a component that catches it:
 
-* the *lucky* candidate — a big number off a handful of trades. Caught by the lower
+* the *lucky* variant — a big number off a handful of trades. Caught by the lower
   confidence bound on per-contract edge, which shrinks hard at small `n`, and by the
   evidence class, which holds a thin sample out of the ranking entirely rather than
   letting it win or lose on noise.
-* the *reckless* candidate — a big number bought with a drawdown that would have ended
+* the *reckless* variant — a big number bought with a drawdown that would have ended
   the account. Caught by the drawdown and tail components.
-* the *broken* candidate — a big number produced by a replay that did not finish or by
+* the *broken* variant — a big number produced by a replay that did not finish or by
   data that is not what it claims. Caught by the evidence class and the integrity
   component; it is classified `invalid`, not ranked badly.
 
 Every component is persisted with both its raw measurement and its normalized score, so
-the Control Tower can explain a rank instead of asserting one. The weights are program
-configuration, not a constant in this file — a single opaque number is exactly what the
-handoff asks us not to build.
+a rank can be explained to the agent rather than asserted at it. The weights are a
+parameter of the call, not a constant in this file — a single opaque number is exactly
+what we were asked not to build.
 """
 
 from __future__ import annotations
@@ -25,11 +40,11 @@ import math
 from dataclasses import dataclass
 
 # Bumped when a component definition or a normalization changes. Persisted on every
-# fitness row and every decision, so a rank produced under one evaluator is never
-# silently compared with a rank produced under another.
+# scored candidate, so a score produced under one evaluator is never silently compared
+# with a score produced under another.
 EVALUATOR_REVISION = "fit-1"
 
-#: Default weights. Sum to 1.0; a program may override any subset.
+#: Default weights. Sum to 1.0; a caller may override any subset.
 DEFAULT_WEIGHTS: dict[str, float] = {
     "edge_lcb": 0.30,
     "return_on_capital": 0.10,
@@ -42,7 +57,7 @@ DEFAULT_WEIGHTS: dict[str, float] = {
     "integrity": 0.03,
 }
 
-#: Scales that turn a raw measurement into a 0..1 score. Program-overridable.
+#: Scales that turn a raw measurement into a 0..1 score. Caller-overridable.
 DEFAULT_SCALES: dict[str, float] = {
     # cents/contract of edge that counts as a strong result
     "edge_scale_cents": 2.0,
@@ -129,11 +144,11 @@ class Component:
 
 
 def resolve_weights(overrides: dict | None) -> dict[str, float]:
-    """Program weights over the defaults, renormalized to sum to 1.
+    """Caller overrides over the defaults, renormalized to sum to 1.
 
-    Renormalizing matters: a program that overrides three weights without touching the
-    rest would otherwise silently change the scale of the whole score, and its ranks
-    would not be comparable with any other program's."""
+    Renormalizing matters: overriding three weights without touching the rest would
+    otherwise silently change the scale of the whole score, and the resulting ranks
+    would not be comparable with any produced under the defaults."""
     weights = dict(DEFAULT_WEIGHTS)
     for key, value in (overrides or {}).items():
         if key in weights:
@@ -180,7 +195,7 @@ def classify_evidence(
     if n_trades < min_trades:
         return (
             EVIDENCE_INSUFFICIENT,
-            f"n={n_trades} below the program minimum of {min_trades}",
+            f"n={n_trades} below the search minimum of {min_trades}",
         )
     return EVIDENCE_ADEQUATE, f"n={n_trades}"
 
@@ -365,33 +380,6 @@ def explain(components: dict | None, *, limit: int = 4) -> str:
     return " · ".join(f"{key}: {detail}" for key, _, _, detail in rows[:limit])
 
 
-def group_by_fractions(
-    ranked: list, *, reproduce: float, retire: float
-) -> dict[str, list]:
-    """Split a ranked list into top / middle / bottom by fraction.
-
-    Rounding is deliberate: with 30 candidates and 0.30/0.30 the split is 9/12/9. The
-    middle absorbs the remainder so the two acting groups stay the size the policy asked
-    for, and neither reproduction nor retirement can overrun the other when the counts do
-    not divide evenly."""
-    n = len(ranked)
-    if n == 0:
-        return {"top": [], "middle": [], "bottom": []}
-    n_top = int(round(n * max(0.0, reproduce)))
-    n_bottom = int(round(n * max(0.0, retire)))
-    # Never let the two ends overlap or consume the entire population.
-    while n_top + n_bottom > n:
-        if n_bottom >= n_top:
-            n_bottom -= 1
-        else:
-            n_top -= 1
-    return {
-        "top": ranked[:n_top],
-        "middle": ranked[n_top : n - n_bottom],
-        "bottom": ranked[n - n_bottom :] if n_bottom else [],
-    }
-
-
 __all__ = [
     "DEFAULT_SCALES",
     "DEFAULT_WEIGHTS",
@@ -405,7 +393,6 @@ __all__ = [
     "compute",
     "edge_lower_bound",
     "explain",
-    "group_by_fractions",
     "resolve_scales",
     "resolve_weights",
 ]

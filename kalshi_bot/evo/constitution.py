@@ -70,6 +70,7 @@ PERMITTED_ACTIONS = frozenset({
     "update_listener",
     "remove_listener",
     "run_backtest",
+    "search_strategy_space",
     "inspect_data",
     "explore_markets",
     "read_doc",

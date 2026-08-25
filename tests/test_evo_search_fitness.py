@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from kalshi_bot.evo.population import fitness as f
+from kalshi_bot.evo.search import fitness as f
 
 WEIGHTS = f.resolve_weights(None)
 SCALES = f.resolve_scales(None)
@@ -49,7 +49,7 @@ def test_thin_sample_is_insufficient_not_bad():
     cls, why = f.classify_evidence(
         run_status="completed", integrity={}, n_trades=5, min_trades=30
     )
-    assert cls == f.EVIDENCE_INSUFFICIENT and "below the program minimum" in why
+    assert cls == f.EVIDENCE_INSUFFICIENT and "below the search minimum" in why
 
 
 def test_broken_data_is_invalid_and_checked_before_sample_size():
@@ -191,28 +191,6 @@ def test_unknown_or_invalid_weight_overrides_are_ignored():
 def test_all_zero_weights_fall_back_to_defaults():
     weights = f.resolve_weights({k: 0.0 for k in f.DEFAULT_WEIGHTS})
     assert weights == f.DEFAULT_WEIGHTS
-
-
-# ---------------------------------------------------------------------------
-# Grouping
-# ---------------------------------------------------------------------------
-
-
-def test_grouping_splits_thirty_into_nine_twelve_nine():
-    groups = f.group_by_fractions(list(range(30)), reproduce=0.30, retire=0.30)
-    assert [len(groups[k]) for k in ("top", "middle", "bottom")] == [9, 12, 9]
-
-
-def test_grouping_never_lets_the_ends_overlap():
-    groups = f.group_by_fractions(list(range(3)), reproduce=0.9, retire=0.9)
-    total = sum(len(v) for v in groups.values())
-    assert total == 3
-    assert not (set(groups["top"]) & set(groups["bottom"]))
-
-
-def test_grouping_handles_an_empty_population():
-    groups = f.group_by_fractions([], reproduce=0.3, retire=0.3)
-    assert groups == {"top": [], "middle": [], "bottom": []}
 
 
 def test_explain_names_the_components_that_moved_the_rank():

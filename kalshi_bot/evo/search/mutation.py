@@ -1,21 +1,24 @@
-"""Mutation: proposing a change, and separately, admitting one.
+"""Mutation proposals for the search capability: bounded, gated, and powerless.
 
-The split is the point of this module. `propose_*` functions produce a
-`MutationProposal` — a description of a change, with a hypothesis and a provenance, and
-no power whatsoever. `admit_proposal` is the only thing that can turn a proposal into a
-genome, and it **runs the five gates itself** rather than accepting a verdict from its
-caller. An LLM proposer plugs in at the `propose` end and inherits every gate for free;
-it cannot reach the writer with a pre-approved result, and it cannot express a change
-outside the gene surface because a proposal is `(path, value)` pairs against
-`genome.MUTATION_SURFACE`.
+`propose_*` produces a `MutationProposal` — a description of a change, with a hypothesis
+and a provenance, and no authority. `evaluate_proposal_document` runs the five gates and
+decides whether that change is even coherent enough to be worth replaying.
 
-`evaluate_proposal` remains public because callers legitimately need to *ask* whether a
-proposal would be admitted — to record a rejection, or to try another. Its answer is
-advisory. The writer's answer is the one that decides.
+**Nothing in this module writes a genome.** That is the whole point of where this now
+sits: the search capability measures variants and hands the evidence back; the *agent*
+adopts one through the organism's own `save_strategy` / `activate_strategy`, under the
+organism's own budgets and audit. A search cannot change an agent, so there is no writer
+here to bypass.
 
-Proposals are persisted whether or not they are admitted. A rejection is evidence: it
-records that this branch of the search space was tried and why it was refused, which is
-what stops the same invalid mutation being reproposed every generation.
+An LLM proposer plugs in at the `propose` end and inherits every gate for free. It cannot
+express a change outside the gene surface, because a proposal is `(path, value)` pairs
+against `genome.MUTATION_SURFACE` — which is the structural reason it can never rewrite
+production code as a mutation. Deterministic perturbation is one bounded operator the
+agent can point at a dimension; the hypothesis is the agent's.
+
+Refused proposals are surfaced alongside admitted ones. "We tried that and the gate said
+no, for this reason" is evidence about the search space, and hiding it means the same
+invalid mutation is reproposed forever.
 """
 
 from __future__ import annotations
@@ -25,7 +28,6 @@ from dataclasses import dataclass, field
 
 from . import diversity
 from . import genome as genome_mod
-from .models import EvoGenomeVersion, EvoMutationProposal, EvoProgram
 
 MUTATION_ENGINE_REVISION = "mut-1"
 
@@ -48,7 +50,7 @@ def _draw(*parts: object) -> float:
     """A stable pseudo-uniform in [0, 1) from a key.
 
     Same pattern as `evo/fill_model.py`: hashing the key rather than drawing from a
-    generator means a proposal depends only on its inputs, so a generation replays
+    generator means a proposal depends only on its inputs, so a search replays
     identically without threading RNG state through the whole call chain."""
     key = "|".join(str(p) for p in parts)
     digest = hashlib.sha256(key.encode("utf-8")).digest()
@@ -68,10 +70,13 @@ def _pick(seq, *parts: object):
 
 @dataclass
 class MutationProposal:
-    """A proposed change. Carries no authority — `admit_proposal` decides."""
+    """A proposed change. Carries no authority — the gates decide, and even they
+    only decide whether it is worth replaying."""
 
-    parent_candidate_uuid: str
-    parent_genome_id: int
+    #: Who asked, and from which revision of their strategy. Attribution only — a
+    #: proposal carries no authority regardless of who made it.
+    agent_uuid: str
+    base_revision: int
     source: str
     kind: str
     changes: list[dict] = field(default_factory=list)  # {path, from, to}
@@ -157,8 +162,8 @@ def _companions_for(path: str, new_value, document: dict) -> list[dict]:
 
 def propose_perturbation(
     *,
-    parent_candidate_uuid: str,
-    parent_genome_id: int,
+    agent_uuid: str,
+    base_revision: int,
     document: dict,
     allowed_paths: list[str],
     kind: str = KIND_EXPLOIT,
@@ -203,8 +208,8 @@ def propose_perturbation(
         return None
 
     return MutationProposal(
-        parent_candidate_uuid=parent_candidate_uuid,
-        parent_genome_id=parent_genome_id,
+        agent_uuid=agent_uuid,
+        base_revision=base_revision,
         source=SOURCE_PERTURBATION,
         kind=kind,
         changes=changes,
@@ -218,8 +223,8 @@ def propose_perturbation(
 
 def propose_sweep(
     *,
-    parent_candidate_uuid: str,
-    parent_genome_id: int,
+    agent_uuid: str,
+    base_revision: int,
     document: dict,
     path: str,
     value,
@@ -238,8 +243,8 @@ def propose_sweep(
         return None
     changes = [{"path": path, "label": gene.label, "from": current, "to": value}]
     return MutationProposal(
-        parent_candidate_uuid=parent_candidate_uuid,
-        parent_genome_id=parent_genome_id,
+        agent_uuid=agent_uuid,
+        base_revision=base_revision,
         source=SOURCE_SWEEP,
         kind=KIND_EXPLOIT,
         changes=changes,
@@ -273,13 +278,15 @@ class Admission:
     nearest_distance: float | None = None
 
 
-def evaluate_proposal(
+def evaluate_proposal_document(
     proposal: MutationProposal,
     *,
     parent_document: dict,
-    program: EvoProgram,
     existing_documents: list[dict],
     allowed_paths: list[str],
+    min_distance: float = 0.02,
+    capital_usd: float = 500.0,
+    max_size_contracts: int | None = None,
 ) -> Admission:
     """Run every gate. Pure: decides, writes nothing.
 
@@ -293,7 +300,7 @@ def evaluate_proposal(
     if illegal:
         return Admission(
             False, "schema",
-            f"proposal touches genes outside the program's allowed surface: {illegal}",
+            f"proposal touches genes outside the allowed surface: {illegal}",
         )
     unknown = [c["path"] for c in proposal.changes if c["path"] not in genome_mod.GENES_BY_PATH]
     if unknown:
@@ -321,13 +328,19 @@ def evaluate_proposal(
         )
 
     # 4. risk envelope
-    risk_err = _risk_errors(norm, program)
+    risk_err = _risk_errors(norm, capital_usd=capital_usd, max_size_contracts=max_size_contracts)
     if risk_err:
         return Admission(False, "risk", risk_err)
 
-    # 5. novelty / duplicate
+    # 5. novelty / duplicate — scoped to the axes this search is varying. The recorded
+    #    `distance_from_base` stays whole-surface, because that number has to stay
+    #    comparable between runs; the gate is about whether THIS run can attribute a
+    #    difference in results to THIS change.
     ok, nearest_d, reason = diversity.novelty_check(
-        norm, existing_documents, min_distance=float(program.min_genome_distance)
+        norm,
+        existing_documents,
+        min_distance=float(min_distance),
+        paths=list(allowed_paths),
     )
     if not ok:
         return Admission(False, "novelty", reason, nearest_distance=nearest_d)
@@ -340,15 +353,18 @@ def evaluate_proposal(
     )
 
 
-def _risk_errors(document: dict, program: EvoProgram) -> str | None:
-    """The program's risk envelope, applied to a candidate genome.
+def _risk_errors(
+    document: dict, *, capital_usd: float, max_size_contracts: int | None = None
+) -> str | None:
+    """The risk envelope, applied to a candidate document.
 
-    A genome whose worst-case deployment cannot fit the virtual account is refused here
-    rather than left to breach capital during the run and be caught by the integrity
-    component afterwards — a refused proposal costs nothing, a wasted run costs a slot."""
+    A variant whose worst-case deployment cannot fit the virtual account the search
+    scores against is refused here rather than left to breach capital during the replay
+    and be caught by the integrity component afterwards — a refused proposal costs
+    nothing, a wasted replay costs the agent budget."""
     entry = document.get("entry") or {}
     risk = document.get("risk") or {}
-    capital = float(program.starting_capital_usd)
+    capital = float(capital_usd)
 
     size = int(entry.get("size_contracts") or 0)
     max_price = int(entry.get("max_price_cents") or 0)
@@ -358,116 +374,13 @@ def _risk_errors(document: dict, program: EvoProgram) -> str | None:
     if worst_case > capital:
         return (
             f"worst-case exposure ${worst_case:,.2f} ({size} contracts @ {max_price}c × "
-            f"{concurrent} concurrent) exceeds the program's ${capital:,.2f} virtual capital"
+            f"{concurrent} concurrent) exceeds the ${capital:,.2f} the search scores against"
         )
 
-    policy = program.policy_json or {}
-    max_size = policy.get("max_size_contracts")
-    if max_size is not None and size > int(max_size):
-        return f"size {size} exceeds the program cap of {max_size}"
+    if max_size_contracts is not None and size > int(max_size_contracts):
+        return f"size {size} exceeds the search cap of {max_size_contracts}"
     return None
 
-
-def record_proposal(
-    session,
-    *,
-    program: EvoProgram,
-    generation_number: int,
-    proposal: MutationProposal,
-    admission: Admission,
-) -> EvoMutationProposal:
-    """Persist the proposal and its verdict — accepted or not."""
-    row = EvoMutationProposal(
-        program_id=program.id,
-        generation_number=generation_number,
-        parent_candidate_uuid=proposal.parent_candidate_uuid,
-        parent_genome_id=proposal.parent_genome_id,
-        source=proposal.source,
-        kind=proposal.kind,
-        changes_json=proposal.as_changes_json(),
-        hypothesis=proposal.hypothesis,
-        rationale=proposal.rationale,
-        status="accepted" if admission.ok else "rejected",
-        reject_stage=admission.stage,
-        reject_reason=admission.reason,
-        proposed_hash=admission.genome_hash,
-        nearest_distance=admission.nearest_distance,
-    )
-    session.add(row)
-    session.flush()
-    return row
-
-
-class MutationRefused(Exception):
-    """`admit_proposal` re-ran the gates and one of them refused."""
-
-
-def admit_proposal(
-    session,
-    *,
-    program: EvoProgram,
-    generation_number: int,
-    child_candidate_uuid: str,
-    parent_genome: EvoGenomeVersion,
-    proposal: MutationProposal,
-    proposal_row: EvoMutationProposal,
-    existing_documents: list[dict],
-    allowed_paths: list[str],
-    evidence_cutoff: str | None,
-    version: int = 1,
-) -> EvoGenomeVersion:
-    """Turn a proposal into an immutable genome version — after gating it here.
-
-    The only function in this package that creates a genome from a mutation, and it
-    **re-runs every gate itself** rather than trusting a verdict it was handed.
-
-    An earlier version took an `Admission` and checked its `ok` flag. That was not a
-    closed gate: `Admission` is a plain dataclass, so any caller could construct
-    `Admission(ok=True, document=…)` and walk straight past `evaluate_proposal`. The
-    check verified that someone *claimed* the gates passed, which is not the same thing.
-    Recomputing here costs one validation and one distance sweep, and it means the
-    writer's guarantee does not depend on the honesty of its callers — which is the
-    property that has to hold before an LLM proposer is wired to this path."""
-    admission = evaluate_proposal(
-        proposal,
-        parent_document=parent_genome.document_json or {},
-        program=program,
-        existing_documents=existing_documents,
-        allowed_paths=allowed_paths,
-    )
-    if not admission.ok or admission.document is None:
-        raise MutationRefused(
-            f"{admission.stage or 'gate'}: {admission.reason or 'proposal refused'}"
-        )
-
-    changes = genome_mod.diff(parent_genome.document_json or {}, admission.document)
-    child = EvoGenomeVersion(
-        program_id=program.id,
-        candidate_uuid=child_candidate_uuid,
-        version=version,
-        genome_hash=admission.genome_hash or genome_mod.genome_hash(admission.document),
-        document_json=admission.document,
-        family=str(admission.document.get("family") or parent_genome.family),
-        parent_genome_id=parent_genome.id,
-        mutation_source=proposal.source,
-        mutation_kind=proposal.kind,
-        mutation_diff_json=[c.as_dict() for c in changes],
-        proposal_id=proposal_row.id,
-        hypothesis=proposal.hypothesis,
-        rationale=proposal.rationale,
-        universe_json=admission.document.get("universe"),
-        risk_json=admission.document.get("risk"),
-        born_generation=generation_number,
-        evidence_cutoff=evidence_cutoff,
-        platform_snapshot=program.platform_snapshot,
-        model_revision=parent_genome.model_revision,
-        evaluated=False,
-    )
-    session.add(child)
-    session.flush()
-    proposal_row.resulting_genome_id = child.id
-    session.flush()
-    return child
 
 
 __all__ = [
@@ -476,15 +389,12 @@ __all__ = [
     "KIND_EXPLORE",
     "MUTATION_ENGINE_REVISION",
     "MutationProposal",
-    "MutationRefused",
     "SOURCE_CROSSOVER",
     "SOURCE_LLM",
     "SOURCE_PERTURBATION",
     "SOURCE_RESEARCH",
     "SOURCE_SWEEP",
-    "admit_proposal",
-    "evaluate_proposal",
+    "evaluate_proposal_document",
     "propose_perturbation",
     "propose_sweep",
-    "record_proposal",
 ]

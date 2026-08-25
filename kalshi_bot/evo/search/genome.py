@@ -25,8 +25,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field
+from collections.abc import Callable, Collection, Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from ..strategy_spec import EXIT_MODES, StrategySpec, validate_spec
@@ -135,12 +135,12 @@ MUTATION_SURFACE: tuple[Gene, ...] = (
     # engine rather than a preference: `sandbox.run_backtest` visits markets one at a
     # time and holds at most one position per market, so it never enforces a concurrency,
     # per-event or per-position cost cap. A blind perturbation of one of these therefore
-    # produces a child whose trade tape is provably identical to its parent's — a new
-    # genome, a new run and a cohort slot spent on a hypothesis the engine cannot test.
+    # produces a variant whose trade tape is provably identical to the base's — a
+    # replay spent on a hypothesis the engine cannot test.
     #
     # They stay in the surface because they are still part of the genome's identity, are
-    # still counted in distance, and are still checked against the program's risk
-    # envelope in `mutation._risk_errors`. A research or LLM proposer may set them
+    # still counted in distance, and are still checked against the risk envelope in
+    # `mutation._risk_errors`. A research or LLM proposer may set them
     # deliberately through `propose_sweep`; what is refused is picking them at random and
     # calling the result an experiment.
     Gene("risk.max_concurrent_positions", "int", "max concurrent", span=20.0, step=2.0,
@@ -282,9 +282,9 @@ def genome_hash(doc: dict) -> str:
 def validate(doc: dict) -> tuple[dict | None, str | None]:
     """Schema then cross-field compatibility. Returns (normalized, None) or (None, why).
 
-    Surface legality — "was this program allowed to change that gene?" — is checked in
-    `mutation.admit_proposal`, where the parent genome is known and a change can be
-    attributed. A genome on its own carries no evidence of what changed."""
+    Surface legality — "was this search allowed to change that gene?" — is checked in
+    `mutation.evaluate_proposal_document`, where the base genome is known and a change
+    can be attributed. A genome on its own carries no evidence of what changed."""
     norm, err = normalize(doc)
     if err or norm is None:
         return None, err or "invalid genome"
@@ -367,15 +367,28 @@ def _gene_distance(gene: Gene, a: dict, b: dict) -> float | None:
     return min(1.0, delta / span)
 
 
-def distance(a: dict, b: dict) -> float:
+def distance(a: dict, b: dict, *, paths: Collection[str] | None = None) -> float:
     """Weighted mean per-gene distance in [0, 1].
 
-    0.0 means identical across the whole surface. The program's `min_genome_distance`
-    is applied against this, which is why the normalization matters: without it, two
-    genomes differing only in whitespace would read as novel."""
+    0.0 means identical. Normalization is what makes that meaningful: without it, two
+    genomes differing only in whitespace would read as novel.
+
+    `paths` restricts the measurement to a subset of the surface, and the two readings
+    answer different questions. Over the whole surface, "how different are these two
+    strategies?" — that is what a run records as `distance_from_base`, and it stays
+    comparable across runs because the denominator is fixed. Over the axes a search is
+    actually varying, "is this variant far enough from one we already measured for the
+    difference in their results to be attributable to the change?" A targeted search
+    down one gene needs the second reading: against the full 23-gene denominator, every
+    single-gene step reads as a near-duplicate and the whole neighbourhood is refused."""
+    surface = (
+        MUTATION_SURFACE
+        if paths is None
+        else tuple(g for g in MUTATION_SURFACE if g.path in set(paths))
+    )
     total = 0.0
     weight = 0.0
-    for gene in MUTATION_SURFACE:
+    for gene in surface:
         d = _gene_distance(gene, a, b)
         if d is None:
             continue
@@ -384,29 +397,21 @@ def distance(a: dict, b: dict) -> float:
     return round(total / weight, 6) if weight else 0.0
 
 
-def nearest(doc: dict, others: Sequence[dict]) -> tuple[float, int | None]:
+def nearest(
+    doc: dict, others: Sequence[dict], *, paths: Collection[str] | None = None
+) -> tuple[float, int | None]:
     """Smallest distance from `doc` to any of `others`, with its index."""
     best, idx = 1.0, None
     for i, other in enumerate(others):
-        d = distance(doc, other)
+        d = distance(doc, other, paths=paths)
         if d < best:
             best, idx = d, i
     return best, idx
 
 
 # ---------------------------------------------------------------------------
-# Seed families
+# Building and describing a genome
 # ---------------------------------------------------------------------------
-
-
-@dataclass
-class Family:
-    """A named starting point in the search space. Founders are drawn across families
-    so generation 0 is diverse by construction rather than by luck."""
-
-    key: str
-    thesis: str
-    base: dict = field(default_factory=dict)
 
 
 def spec_document(
@@ -432,7 +437,7 @@ def spec_document(
 
 
 def describe(doc: dict) -> str:
-    """One-line human summary of a genome, for the Control Tower and decision reasons."""
+    """One-line human summary of a genome, for a refusal reason or a candidate view."""
     entry = doc.get("entry") or {}
     exit_ = doc.get("exit") or {}
     band = f"{entry.get('min_price_cents')}-{entry.get('max_price_cents')}c"

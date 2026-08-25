@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from kalshi_bot.evo.population import genome as g
+from kalshi_bot.evo.search import genome as g
 
 
 def _doc(**kw):
@@ -86,7 +86,7 @@ def test_distance_is_zero_for_identical_and_scales_with_change():
 
 def test_universe_is_part_of_identity():
     """Two genomes with identical rules over disjoint universes are not the same
-    strategy. Without this the population fills with 'duplicates' sharing no markets."""
+    strategy. Without this a neighbourhood fills with 'duplicates' sharing no markets."""
     a, _ = g.normalize(_doc(universe={"series_prefixes": ["KXAAA"]}))
     b, _ = g.normalize(_doc(universe={"series_prefixes": ["KXBBB"]}))
     both, _ = g.normalize(_doc(universe={"series_prefixes": ["KXAAA", "KXBBB"]}))

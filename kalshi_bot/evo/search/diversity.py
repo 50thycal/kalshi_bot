@@ -1,15 +1,21 @@
-"""Diversity measurement and duplicate refusal.
+"""Diversity measurement and duplicate refusal, over a set of measured genomes.
 
-A population that converges to thirty near-identical genomes has stopped searching, but
-it still produces a leaderboard, a top decile and a stream of children — so it looks
-healthy right up until it explains nothing. These measures make homogeneity observable
-before that happens.
+A neighbourhood that collapses to eight near-identical variants has stopped searching,
+but it still produces a ranking, a winner and a confident-looking finding — so it looks
+informative right up until it explains nothing. These measures make homogeneity
+observable before an agent acts on it.
 
-Nothing here is novelty *search*: no bonus steers selection toward strangeness. The
-controls are a floor (a proposal too close to something already in the population is
-refused) and a report (the Control Tower warns when concentration climbs). That is
-deliberately the minimum — a novelty pressure tuned before we can measure whether the
-loop works at all would be untestable.
+Nothing here is novelty *search*: no bonus steers a ranking toward strangeness, and
+nothing here selects. The controls are a floor (a proposal too close to something the
+run has already measured is refused, because the difference in its results would not be
+attributable to the mutation) and a report (an agent comparing its own searches over
+time can see the neighbourhood narrowing). Deliberately the minimum — a novelty pressure
+tuned before we can measure whether the search answers questions at all would be
+untestable.
+
+`measure` takes any set of genomes with a label and a lineage tag. That is a search
+run's neighbourhood; it is emphatically not a cohort, and nothing here reads or writes
+one.
 """
 
 from __future__ import annotations
@@ -61,7 +67,7 @@ def measure(
     family_share_limit: float = CONCENTRATION_FAMILY_SHARE,
     parent_share_limit: float = CONCENTRATION_PARENT_SHARE,
 ) -> DiversityReport:
-    """Measure a population. Each member is `{document, family, parent_uuid, hash}`."""
+    """Measure a set of genomes. Each member is `{document, family, parent_uuid, hash}`."""
     n = len(members)
     if n == 0:
         return DiversityReport(0, 0.0, 0.0, 0, {}, {}, None, 0.0, 0.0, [])
@@ -103,17 +109,17 @@ def measure(
     if len(hashes) < n:
         warnings.append(
             f"only {len(hashes)} distinct genomes across {n} members — duplicates are in "
-            "the population"
+            "the measured set"
         )
     if top_family and top_family_share >= family_share_limit:
         warnings.append(
-            f"strategy-family concentration: {top_family_share:.0%} of the cohort is "
-            f"{top_family!r}"
+            f"strategy-family concentration: {top_family_share:.0%} of the measured set "
+            f"is {top_family!r}"
         )
     if top_parent_share >= parent_share_limit:
         warnings.append(
             f"parent concentration: one parent accounts for {top_parent_share:.0%} of the "
-            "cohort"
+            "measured set"
         )
 
     return DiversityReport(
@@ -135,6 +141,7 @@ def novelty_check(
     existing: list[dict],
     *,
     min_distance: float,
+    paths: list[str] | None = None,
 ) -> tuple[bool, float, str | None]:
     """Is this genome new enough to admit? Returns (ok, nearest_distance, reason).
 
@@ -142,20 +149,27 @@ def novelty_check(
     exists and a second copy adds no information. A distance below the floor is a
     near-duplicate: distinct on paper, but not different enough for the difference in
     its results to be attributable to the change rather than to noise — which would make
-    the mutation unfalsifiable."""
+    the mutation unfalsifiable.
+
+    `paths` scopes the distance to the axes the search is varying. A targeted search
+    down one gene must be judged on that gene: measured against the full surface, every
+    single-gene step is a near-duplicate by construction, and a search asking one narrow
+    question would refuse its entire neighbourhood. The duplicate check is unscoped and
+    stays that way — two documents with the same hash are the same strategy no matter
+    which axis was under test."""
     if not existing:
         return True, 1.0, None
     target_hash = genome_mod.genome_hash(document)
     for other in existing:
         if genome_mod.genome_hash(other) == target_hash:
-            return False, 0.0, "identical to a genome already in the population"
-    nearest_d, _ = genome_mod.nearest(document, existing)
+            return False, 0.0, "identical to a genome already measured"
+    nearest_d, _ = genome_mod.nearest(document, existing, paths=paths)
     if nearest_d < min_distance:
         return (
             False,
             nearest_d,
             f"distance {nearest_d:.4f} to the nearest existing genome is below the "
-            f"program floor of {min_distance:.4f}",
+            f"novelty floor of {min_distance:.4f}",
         )
     return True, nearest_d, None
 

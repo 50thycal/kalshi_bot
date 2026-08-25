@@ -604,7 +604,7 @@ def register_dataset(
 ) -> None:
     """Register an extra replay corpus under the `synthetic:` namespace.
 
-    This exists so the population layer's deterministic proving fixtures run through
+    This exists so the search capability's deterministic proving fixtures run through
     THIS replay loop rather than a second copy of it — a proving run that exercised
     different code from the real datasets would prove nothing about them.
 
@@ -645,7 +645,7 @@ def _trade(
     which cross the spread and have no fill to miss).
 
     The entry/exit timestamps, prices and fees are what a per-run virtual ledger needs
-    to reconstruct concurrency and exposure (`evo/population/replay.py`). They are
+    to reconstruct concurrency and exposure (`evo/search/replay.py`). They are
     additive: the aggregate result fields are computed from `pnl`/`month`/`exit` exactly
     as before.
 
@@ -735,7 +735,7 @@ def run_backtest(
 
     return_trades=True adds the per-trade tape under `trades`. It is off by default
     because the tape is large and the agent-facing path only ever reads the aggregates;
-    the population layer turns it on to build a per-run virtual ledger. The tape is
+    the historical search turns it on to build a per-replay virtual ledger. The tape is
     never persisted into `EvoSandboxRun.result_json`.
 
     skip_crossed_quotes=True refuses to trade a step whose recorded book is crossed
@@ -798,7 +798,7 @@ def run_backtest(
             # every existing caller's replay returns, and that is a shared
             # replay/execution semantics change. It needs Platform Change Review before
             # it can become the default; until then existing callers keep their exact
-            # current behavior and only the population layer opts in.
+            # current behavior and only the historical search opts in.
             if (
                 quote.yes_bid is not None
                 and quote.yes_ask is not None
