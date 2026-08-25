@@ -760,8 +760,11 @@ def reproduce(
             child_candidate_uuid=child_uuid_placeholder,
             parent_genome=parent_genome,
             proposal=proposal,
-            admission=admission,
             proposal_row=proposal_row,
+            # The writer re-runs the gates against these, rather than trusting the
+            # advisory `admission` computed above.
+            existing_documents=existing_documents,
+            allowed_paths=allowed,
             # A child born from this generation carries its parent's evidence boundary:
             # it may never be evaluated on data earlier than what set the parent's rank.
             evidence_cutoff=generation.data_cutoff,

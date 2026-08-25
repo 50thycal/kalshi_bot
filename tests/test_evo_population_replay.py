@@ -276,3 +276,95 @@ def test_empty_tape_is_a_valid_empty_ledger():
     assert led.realized_pnl_usd == 0.0
     assert led.ending_capital_usd == 100.0
     assert led.capital_breached is False
+
+
+# ---------------------------------------------------------------------------
+# Shared-engine isolation and settlement-time accounting
+# ---------------------------------------------------------------------------
+
+
+def test_crossed_book_skipping_is_opt_in(evo_session, evo_settings, corpus):
+    """Refusing to trade a step changes what every existing caller's replay returns,
+    which is a shared execution-semantics change. It stays off by default until
+    Platform Change Review rules on it; only the search tool opts in."""
+    from kalshi_bot.evo import sandbox
+
+    doc = _doc("KXSYNTHD")  # the corpus whose tape carries crossed quotes
+    start, end = proving.window(0, 40)
+    common = dict(
+        agent_uuid="test", cohort_id=0, spec_doc=doc, dataset=corpus,
+        date_from=start, date_to=end, charge_budget=False, persist=False,
+    )
+    default, err1 = sandbox.run_backtest(evo_session, evo_settings, **common)
+    strict, err2 = sandbox.run_backtest(
+        evo_session, evo_settings, **common, skip_crossed_quotes=True
+    )
+    assert err1 is None and err2 is None
+
+    # Counting is unconditional — the defect is visible to every caller...
+    assert default["crossed_quotes"] > 0
+    assert strict["crossed_quotes"] == default["crossed_quotes"]
+    # ...but only the opt-in run changes what it trades.
+    assert strict["n_trades"] <= default["n_trades"]
+
+
+def test_the_population_layer_opts_into_strict_handling(evo_session, evo_settings, corpus):
+    start, end = proving.window(0, 40)
+    result = replay.replay(
+        evo_session, evo_settings, document=_doc("KXSYNTHD"), dataset=corpus,
+        window_start=start, window_end=end, data_cutoff=end,
+        starting_capital_usd=500.0,
+    )
+    assert result.integrity["data_broken"] is True
+
+
+def test_settlement_exits_are_marked_inexact(evo_session, evo_settings, corpus):
+    """A settlement trade's exit timestamp is the last candle observed, which is a lower
+    bound — settlement happens at or after it, not at it."""
+    start, end = proving.window(0, 40)
+    result = replay.replay(
+        evo_session, evo_settings, document=_doc("KXSYNTHA"), dataset=corpus,
+        window_start=start, window_end=end, data_cutoff=end,
+        starting_capital_usd=500.0,
+    )
+    settled = [t for t in result.trades if t["exit"] == "settlement"]
+    assert settled, "the steady corpus holds to settlement"
+    assert all(t["exit_time_exact"] is False for t in settled)
+
+
+def test_concurrency_excludes_inexact_exits_and_reports_coverage():
+    """Using a lower bound as the close would end positions early and understate
+    overlap, so those trades are left out and the shortfall is reported."""
+    exact = [
+        _trade("KXA-1", 1.0, qty=4, price=50.0, start_h=0, end_h=10),
+        _trade("KXB-1", 1.0, qty=4, price=50.0, start_h=5, end_h=15),
+    ]
+    for t in exact:
+        t["exit_time_exact"] = True
+    led = replay.build_ledger(exact, starting_capital_usd=100.0)
+    assert led.max_concurrent_positions == 2
+    assert led.concurrency_coverage == 1.0
+
+    mixed = list(exact) + [
+        dict(_trade("KXC-1", 1.0, qty=4, price=50.0, start_h=0, end_h=20),
+             exit_time_exact=False)
+    ]
+    led2 = replay.build_ledger(mixed, starting_capital_usd=100.0)
+    assert led2.concurrency_coverage < 1.0
+    # The inexact trade overlapped both others but must not inflate the figure.
+    assert led2.max_concurrent_positions == 2
+
+
+def test_drawdown_still_uses_every_trade():
+    """Ordering tolerates a lower bound — settlement is at or after the last
+    observation, so the sequence holds — and dropping those trades would silently
+    remove most of the equity curve."""
+    trades = [
+        dict(_trade("KXA-1", +10.0, start_h=0, end_h=1), exit_time_exact=False),
+        dict(_trade("KXB-1", -10.0, start_h=20, end_h=21), exit_time_exact=False),
+        dict(_trade("KXA-2", -10.0, start_h=10, end_h=11), exit_time_exact=False),
+    ]
+    led = replay.build_ledger(trades, starting_capital_usd=100.0)
+    assert led.max_drawdown_usd == pytest.approx(20.0)
+    assert led.realized_pnl_usd == pytest.approx(-10.0)
+    assert led.concurrency_coverage == 0.0

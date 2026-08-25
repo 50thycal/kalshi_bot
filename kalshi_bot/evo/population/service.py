@@ -372,7 +372,8 @@ def propose_and_admit(
 
     Identical gating to the automatic path. That is the whole point: an external
     proposer supplies a `(gene, value)` pair and a hypothesis, and inherits every check.
-    It cannot reach `admit_proposal` on its own, and it cannot express a change outside
+    `admit_proposal` re-runs every gate itself, so an external proposer cannot reach
+    the writer with a pre-approved verdict, and it cannot express a change outside
     the gene surface."""
     parent_genome = evolution.current_genome(session, parent)
     if parent_genome is None:
@@ -413,8 +414,11 @@ def propose_and_admit(
         child_candidate_uuid="pending",
         parent_genome=parent_genome,
         proposal=proposal,
-        admission=admission,
         proposal_row=proposal_row,
+        # The writer re-gates against these itself; the `admission` above is advisory,
+        # used only to record the rejection and return a reason.
+        existing_documents=evolution.population_documents(session, program.id),
+        allowed_paths=allowed,
         evidence_cutoff=None,
     )
     child, _ = evolution.create_candidate(

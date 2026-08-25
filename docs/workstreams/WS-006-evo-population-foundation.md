@@ -1,7 +1,7 @@
 # WS-006 — Evo population foundation (evolutionary search over strategy genomes)
 
 **Phase:** REVIEW
-**Status:** Active
+**Status:** Active (redirected by review)
 **Created:** 2026-08-25
 **Updated:** 2026-08-25
 
@@ -69,6 +69,77 @@ Three properties everything else rests on:
 3. **Raw P&L decides nothing.** Fitness is nine persisted components; evidence class
    (`adequate` / `insufficient` / `invalid`) gates whether a candidate is ranked at all.
 
+---
+
+## Review redirect (2026-08-25) — the machinery is right, its placement is wrong
+
+The owner reviewed [#261](https://github.com/50thycal/kalshi_bot/pull/261) and rejected the
+architecture while keeping the implementation. The correction, in one line: **this should be
+a capability the existing Evo agents invoke, not a second evolutionary organism.**
+
+The original Evo design evolves *adaptive agents* — cognitive genome, memory/beliefs,
+heartbeats, research behaviour, peer learning, intra-cohort adaptation. `kalshi_bot/evo/`
+already implements that. A `StrategySpec` is the **trading-policy portion** of an organism,
+not the organism.
+
+### Target shape
+
+```text
+Evo Agent  (kalshi_bot/evo/ — unchanged, authoritative)
+  cognitive genome · memory/beliefs · heartbeats · research · peer learning
+  trading genome
+      │  invokes
+      ▼
+  historical search capability  (what this workstream becomes)
+      deterministic replay · parameter-neighbourhood search · mutation proposals
+      counterfactual testing · explainable components · novelty/duplicate detection
+      │  returns EVIDENCE
+      ▼
+  the AGENT reasons about it and decides whether to revise itself
+```
+
+Parameter perturbation is one exploration tool. It is not the evolutionary intelligence.
+
+### Concept mapping (owner's step 1)
+
+| `evo_pop_*` (this PR) | Existing owner of the concept | Verdict |
+|---|---|---|
+| `evo_pop_programs` | fleet config (`evo_config_versions`) | **Drop** — the fleet is the program |
+| `evo_pop_generations` | `evo_cohorts` | **Drop** — duplicative lifecycle |
+| `evo_pop_candidates` | `evo_agents` | **Drop** — duplicative identity |
+| `evo_pop_genomes` | `evo_genomes` (`kind=trading`) | **Merge** — fold content-addressed hash + mutation diff into the existing genome revision |
+| `evo_pop_runs` | `evo_sandbox_runs` | **Rescope** to a search run owned by an agent |
+| `evo_pop_run_trades` | — | **Keep** (new: the per-trade tape) |
+| `evo_pop_ledgers` | `evo_portfolios` is *prospective*; no replay ledger exists | **Keep**, scoped to a search run |
+| `evo_pop_fitness` | `evo_fitness` | **Demote** — search-run scoring only, never agent selection |
+| `evo_pop_decisions` | `evo_births`/`evo_retirements`/`evo_transitions` | **Drop** — duplicative |
+| `evo_pop_journal` | `evo_memories` | **Drop** — agents already have memory |
+| `evo_pop_findings` | `evo_tickets` + XOS issues | **Mostly drop**; keep only search-engine defects |
+
+Twelve tables become roughly four. Migration `b1d4f6a80c93` has **not merged**, so it is
+rewritten rather than followed by a drop migration.
+
+### Attach point
+
+The organism already has the seam. `evo/cognition.py`'s action protocol exposes
+`run_backtest`, and agents already act on it via `save_strategy` / `activate_strategy` /
+`revise_trading_genome`. The search capability lands as new actions beside `run_backtest`,
+returning evidence into the same loop — no new lifecycle, no new orchestrator.
+
+### The intent mismatch worth naming
+
+Intent mismatch #1 is not a preference; it is a regression against a decision this codebase
+already made and documented. `evo/fitness.py` component 4 reads *"evidence & opportunity use
+— no incubation: a no-trade agent scores near 0"*, and the profit/risk components carry a
+comment explaining that scoring no-exposure agents generously once made *opting out of
+trading rank above trading and losing, which inverts the north star*.
+
+Low evidence there is a **scoring penalty**. This PR's `insufficient → unranked` is an
+**exemption from selection** — precisely the incubation immunity that was removed. It may
+stay as a search-tool convention (a thin sample genuinely cannot rank a *strategy*); it must
+never become agent selection.
+
+
 ## Decisions Made
 
 - **New parallel layer, not an extension or a replacement.** The organism keeps
@@ -101,6 +172,13 @@ Three properties everything else rests on:
   shared engine, so it is Platform Change Review work, not a workstream decision.
 - **D3.** What universe vocabulary should a research/LLM proposer draw from when moving
   `universe.series_prefixes`? Currently only explicit sweeps can move it.
+- **D4.** Does the search capability get its own small table set (`evo_search_runs`,
+  `evo_search_trades`, `evo_mutation_proposals`), or extend `evo_sandbox_runs`?
+  Recommendation: its own, because `evo_sandbox_runs.result_json` is the agent-facing
+  aggregate and should not carry a per-trade tape.
+- **D5.** Does the whole refactor land on this branch? Recommendation: yes — migration
+  `b1d4f6a80c93` has not merged, so rewriting it is cleaner than shipping twelve tables
+  and dropping eight in a follow-up.
 
 ## Assumptions
 
@@ -138,8 +216,17 @@ Three additive changes to shared code, all default-off:
 
 ## Review State
 
-Historical proving run: **14/14 checks CLEAN** — 30 candidates, 3 generations,
-non-overlapping windows, reproduction and retirement enabled.
+**Owner review 2026-08-25: architectural correction required; not merged.** See the
+redirect section above. Three concrete code blockers were raised and are fixed:
+
+| Blocker | Fix |
+|---|---|
+| `Admission` was forgeable — a caller could construct `Admission(ok=True)` and skip every gate, contradicting this PR's own claim | `admit_proposal` now re-runs all five gates itself and raises `MutationRefused`; the passed verdict is gone. Two tests prove a forged admission is refused |
+| Crossed-book skip changed shared replay semantics for every caller | Skipping is now opt-in (`skip_crossed_quotes`, default off). Counting stays unconditional and inert, so the defect is visible without changing anyone's numbers. Making it the default is Platform Change Review work |
+| Settlement `exited_at` was a synthesized last-candle timestamp, then used for exact concurrency/exposure | Settlement exits are flagged `exit_time_exact=False`; the sweep line uses exact exits only and reports `concurrency_coverage`. Drawdown still uses every trade, since ordering tolerates a lower bound |
+
+Historical proving run still **14/14 CLEAN** after those fixes — 30 candidates, 3
+generations, non-overlapping windows, reproduction and retirement enabled.
 
 Two defects the proving run surfaced and that were fixed rather than documented around:
 - Mutating a `risk.*` gene produced children with byte-identical trade tapes to their
@@ -158,7 +245,6 @@ Two defects the proving run surfaced and that were fixed rather than documented 
 
 ## Next Step
 
-Operator approval for the first prospective paper cohort, or for a real-dataset
-historical cohort (D1). The exact configuration and commands are in
-`docs/EVO_POPULATION_FOUNDATION.md` § "The first prospective paper cohort"; nothing
-starts without it.
+Owner confirmation of the two refactor choices in D4/D5, then execute the refactor on
+this branch: rewrite migration `b1d4f6a80c93` down to the surviving tables, move the
+search machinery behind agent actions, and delete the parallel lifecycle.

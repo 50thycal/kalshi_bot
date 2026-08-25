@@ -260,24 +260,71 @@ def test_a_good_proposal_is_admitted(program):
 # ---------------------------------------------------------------------------
 
 
-def test_admit_refuses_an_admission_that_did_not_pass(evo_session, program):
-    """A caller cannot fabricate an Admission and skip the gates: the document comes
-    from the admission, which only evaluate_proposal produces."""
+class _FakeGenome:
+    """Stands in for a parent EvoGenomeVersion without touching the database."""
+
+    def __init__(self, document):
+        self.id = 1
+        self.document_json = document
+        self.family = "test"
+        self.model_revision = None
+
+
+def test_a_forged_admission_cannot_reach_the_writer(evo_session, program):
+    """The gate must be closed structurally, not by trusting a passed-in verdict.
+
+    `admit_proposal` used to take an `Admission` and check its `ok` flag. `Admission` is
+    a plain dataclass, so any caller could construct `Admission(ok=True, document=...)`
+    and walk past every gate. The writer now re-runs the gates itself, so a fabricated
+    verdict buys nothing — this test is the proof of that, and it fails against the old
+    signature."""
     parent = _doc()
+    # A proposal that a real gate refuses: the price band inverts.
+    proposal = mutation.propose_sweep(
+        parent_candidate_uuid="p", parent_genome_id=1, document=parent,
+        path="entry.min_price_cents", value=95,
+    )
+    forged = mutation.Admission(
+        ok=True,
+        document=proposal.apply_to(parent),
+        genome_hash="0" * 64,
+    )
+    row = mutation.record_proposal(
+        evo_session, program=program, generation_number=0,
+        proposal=proposal, admission=forged,
+    )
+    with pytest.raises(mutation.MutationRefused, match="inverted"):
+        mutation.admit_proposal(
+            evo_session, program=program, generation_number=0,
+            child_candidate_uuid="child", parent_genome=_FakeGenome(parent),
+            proposal=proposal, proposal_row=row,
+            existing_documents=[parent], allowed_paths=list(g.MUTABLE_PATHS),
+            evidence_cutoff=None,
+        )
+
+
+def test_the_writer_re_runs_the_novelty_gate_too(evo_session, program):
+    """Not just schema: every gate is recomputed, including the ones that depend on
+    state the caller could have sampled at a different moment."""
+    parent = _doc()
+    twin = g.set_path(parent, "entry.max_price_cents", 85)
     proposal = mutation.propose_sweep(
         parent_candidate_uuid="p", parent_genome_id=1, document=parent,
         path="entry.max_price_cents", value=85,
     )
-    bad = mutation.Admission(ok=False, stage="risk", reason="nope")
+    forged = mutation.Admission(ok=True, document=twin, genome_hash=g.genome_hash(twin))
     row = mutation.record_proposal(
         evo_session, program=program, generation_number=0,
-        proposal=proposal, admission=bad,
+        proposal=proposal, admission=forged,
     )
-    with pytest.raises(ValueError, match="did not pass"):
+    with pytest.raises(mutation.MutationRefused, match="identical"):
         mutation.admit_proposal(
             evo_session, program=program, generation_number=0,
-            child_candidate_uuid="child", parent_genome=None, proposal=proposal,
-            admission=bad, proposal_row=row, evidence_cutoff=None,
+            child_candidate_uuid="child", parent_genome=_FakeGenome(parent),
+            proposal=proposal, proposal_row=row,
+            # The twin already exists, so the duplicate gate must refuse.
+            existing_documents=[parent, twin], allowed_paths=list(g.MUTABLE_PATHS),
+            evidence_cutoff=None,
         )
 
 

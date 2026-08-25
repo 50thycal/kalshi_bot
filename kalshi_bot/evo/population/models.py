@@ -389,6 +389,10 @@ class EvoRunTrade(Base):
     maker_yes_c: Mapped[float | None] = mapped_column(Float)
     exit_reason: Mapped[str | None] = mapped_column(String(32))
     settled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # False when `exited_at` is a lower bound rather than the real exit time — a
+    # settlement trade, where the replay only knows the last candle it observed.
+    # Concurrency and exposure accounting excludes these; see `replay.build_ledger`.
+    exit_time_exact: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     win: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
@@ -433,6 +437,8 @@ class EvoCandidateLedger(Base):
     concentration_top_family: Mapped[float | None] = mapped_column(Float)
     concentration_hhi: Mapped[float | None] = mapped_column(Float)
     capital_breached: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    #: What fraction of the tape the concurrency/exposure figures actually cover.
+    concurrency_coverage: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
 
     detail_json: Mapped[dict | None] = mapped_column(JSONType)
     created_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)

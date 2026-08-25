@@ -3,10 +3,15 @@
 The split is the point of this module. `propose_*` functions produce a
 `MutationProposal` — a description of a change, with a hypothesis and a provenance, and
 no power whatsoever. `admit_proposal` is the only thing that can turn a proposal into a
-genome, and it does so only after five gates pass. An LLM proposer, when one is added,
-plugs in at the `propose` end and inherits every gate for free; it can never reach the
-admission path directly, and it can never express a change outside the gene surface
-because a proposal is `(path, value)` pairs against `genome.MUTATION_SURFACE`.
+genome, and it **runs the five gates itself** rather than accepting a verdict from its
+caller. An LLM proposer plugs in at the `propose` end and inherits every gate for free;
+it cannot reach the writer with a pre-approved result, and it cannot express a change
+outside the gene surface because a proposal is `(path, value)` pairs against
+`genome.MUTATION_SURFACE`.
+
+`evaluate_proposal` remains public because callers legitimately need to *ask* whether a
+proposal would be admitted — to record a rejection, or to try another. Its answer is
+advisory. The writer's answer is the one that decides.
 
 Proposals are persisted whether or not they are admitted. A rejection is evidence: it
 records that this branch of the search space was tried and why it was refused, which is
@@ -393,6 +398,10 @@ def record_proposal(
     return row
 
 
+class MutationRefused(Exception):
+    """`admit_proposal` re-ran the gates and one of them refused."""
+
+
 def admit_proposal(
     session,
     *,
@@ -401,19 +410,35 @@ def admit_proposal(
     child_candidate_uuid: str,
     parent_genome: EvoGenomeVersion,
     proposal: MutationProposal,
-    admission: Admission,
     proposal_row: EvoMutationProposal,
+    existing_documents: list[dict],
+    allowed_paths: list[str],
     evidence_cutoff: str | None,
     version: int = 1,
 ) -> EvoGenomeVersion:
-    """Turn an accepted proposal into an immutable genome version.
+    """Turn a proposal into an immutable genome version — after gating it here.
 
-    The only function in this package that creates a genome from a mutation. It refuses
-    an admission that did not pass, so a caller cannot skip the gates by constructing an
-    `Admission(ok=True)` from somewhere else and hoping — the document is taken from the
-    admission, which only `evaluate_proposal` produces."""
+    The only function in this package that creates a genome from a mutation, and it
+    **re-runs every gate itself** rather than trusting a verdict it was handed.
+
+    An earlier version took an `Admission` and checked its `ok` flag. That was not a
+    closed gate: `Admission` is a plain dataclass, so any caller could construct
+    `Admission(ok=True, document=…)` and walk straight past `evaluate_proposal`. The
+    check verified that someone *claimed* the gates passed, which is not the same thing.
+    Recomputing here costs one validation and one distance sweep, and it means the
+    writer's guarantee does not depend on the honesty of its callers — which is the
+    property that has to hold before an LLM proposer is wired to this path."""
+    admission = evaluate_proposal(
+        proposal,
+        parent_document=parent_genome.document_json or {},
+        program=program,
+        existing_documents=existing_documents,
+        allowed_paths=allowed_paths,
+    )
     if not admission.ok or admission.document is None:
-        raise ValueError("cannot admit a proposal that did not pass evaluate_proposal")
+        raise MutationRefused(
+            f"{admission.stage or 'gate'}: {admission.reason or 'proposal refused'}"
+        )
 
     changes = genome_mod.diff(parent_genome.document_json or {}, admission.document)
     child = EvoGenomeVersion(
@@ -451,6 +476,7 @@ __all__ = [
     "KIND_EXPLORE",
     "MUTATION_ENGINE_REVISION",
     "MutationProposal",
+    "MutationRefused",
     "SOURCE_CROSSOVER",
     "SOURCE_LLM",
     "SOURCE_PERTURBATION",

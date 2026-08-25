@@ -124,6 +124,9 @@ class Ledger:
     concentration_top_family: float | None = None
     concentration_hhi: float | None = None
     capital_breached: bool = False
+    #: Fraction of trades whose exit time is exact. Concurrency and exposure are
+    #: computed from those only, so this says how much of the tape they actually cover.
+    concurrency_coverage: float = 1.0
     equity_curve: list[float] = field(default_factory=list)
     by_family: dict[str, dict] = field(default_factory=dict)
 
@@ -140,11 +143,20 @@ class Ledger:
 def build_ledger(trades: list[dict], *, starting_capital_usd: float) -> Ledger:
     """Reconstruct the account from the tape.
 
-    Drawdown is computed on the equity curve ordered by **exit time**, not by the order
-    the replay happened to visit markets in. The replay iterates market by market, so
-    its own trade order is not chronological; a drawdown read off that order would be an
-    artifact of iteration and would badly misrank a candidate whose losses clustered in
-    time. That clustering is exactly what the drawdown component is supposed to catch."""
+    Two different uses of the exit timestamp, held to different standards:
+
+    * **Drawdown** orders the equity curve by exit time rather than by the order the
+      replay happened to visit markets in. The replay iterates market by market, so its
+      own trade order is not chronological, and a drawdown read off that order would be
+      an artifact of iteration — it would miss exactly the clustering the component
+      exists to catch. Ordering tolerates a lower bound: a settlement exit is known to
+      fall at or after its last observation, and that preserves the sequence.
+
+    * **Concurrency and exposure** cannot tolerate a lower bound. Using the last
+      observed candle as a settlement time closes the position early and understates
+      overlap. So the sweep line uses only trades whose exit time is EXACT, and reports
+      `concurrency_coverage` — what fraction of the tape that was. At low coverage the
+      numbers describe a slice, not the run, and the integrity block says so."""
     led = Ledger(starting_capital_usd=float(starting_capital_usd))
     if not trades:
         return led
@@ -178,8 +190,13 @@ def build_ledger(trades: list[dict], *, starting_capital_usd: float) -> Ledger:
     led.markets = len(tickers)
 
     # --- concurrency and exposure: a sweep line over the open intervals -------
+    # Only exact exits. A settlement trade's timestamp is a lower bound, and treating it
+    # as the close would end the position early and understate the overlap this is
+    # measuring.
+    exact = [t for t in trades if t.get("exit_time_exact", True)]
+    led.concurrency_coverage = round(len(exact) / len(trades), 4) if trades else 1.0
     events: list[tuple[datetime, int, float]] = []
-    for t in trades:
+    for t in exact:
         start, end = _ts(t.get("entered_at")), _ts(t.get("exited_at"))
         if start is None or end is None:
             continue
@@ -291,6 +308,10 @@ def replay(
         charge_budget=False,
         persist=False,
         return_trades=True,
+        # The search tool opts into the strict reading: a corrupt book is not tradable
+        # evidence. The default stays off for every other caller until Platform Change
+        # Review rules on it, so this PR ships no shared execution-semantics change.
+        skip_crossed_quotes=True,
     )
     if run_err or result is None:
         raise ReplayRefused(run_err or "replay produced no result")
@@ -358,6 +379,10 @@ def replay(
         "capital_breached": led.capital_breached,
         "peak_exposure_usd": led.peak_exposure_usd,
         "max_concurrent_positions": led.max_concurrent_positions,
+        # Exposure and concurrency describe only the exact-exit slice of the tape. Below
+        # 1.0 they are a lower bound on the run's true overlap, not a measurement of it.
+        "concurrency_coverage": led.concurrency_coverage,
+        "concurrency_partial": led.concurrency_coverage < 1.0,
         "fill_model_applied": fill.get("applied"),
         "markets_blocked": fill.get("markets_blocked"),
         "zero_trades": n == 0,
@@ -443,6 +468,7 @@ def persist_run(
                     maker_yes_c=t.get("maker_yes_c"),
                     exit_reason=str(t.get("exit") or "")[:32] or None,
                     settled=bool(t.get("settled")),
+                    exit_time_exact=bool(t.get("exit_time_exact", True)),
                     win=bool(t.get("win")),
                 )
             )
@@ -470,11 +496,13 @@ def persist_run(
             concentration_top_family=led.concentration_top_family,
             concentration_hhi=led.concentration_hhi,
             capital_breached=led.capital_breached,
+            concurrency_coverage=led.concurrency_coverage,
             detail_json={
                 "by_family": led.by_family,
                 "equity_curve": led.equity_curve[:500],
                 "gross_pnl_usd": led.gross_pnl_usd,
                 "return_on_capital": led.return_on_capital,
+                "concurrency_coverage": led.concurrency_coverage,
             },
         )
     )
