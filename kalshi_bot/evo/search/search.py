@@ -262,6 +262,7 @@ def run_search(
     window_start: str | None = None,
     window_end: str | None = None,
     data_cutoff: str | None = None,
+    proposals: list[dict] | None = None,
     dimensions: list[str] | None = None,
     neighbourhood: int = DEFAULT_NEIGHBOURHOOD,
     explore_fraction: float = 0.5,
@@ -275,9 +276,19 @@ def run_search(
 ) -> Evidence:
     """Replay the base genome and a bounded neighbourhood, and return the evidence.
 
-    `base_spec` defaults to the agent's own active strategy. `dimensions` narrows
-    the search to particular genes, which is how an agent points the tool at the question
-    it actually has ("does my entry band matter?") rather than at the whole surface."""
+    `base_spec` defaults to the agent's own active strategy.
+
+    There are two ways to say what to test, and they are ordered on purpose.
+    `proposals` is a list of `{path, value, hypothesis}` the agent names itself — *"I
+    think my ceiling should be 70c, and here is why"*. Those are measured first, and
+    their hypotheses are recorded with them, so what comes back answers the agent's
+    question rather than a question the tool chose. `dimensions` narrows the *automatic*
+    perturbation to particular genes, for when the agent knows the axis but not the
+    value. Whatever the neighbourhood budget has left after the named proposals is spent
+    on perturbation; naming enough proposals to fill it means no perturbation runs at
+    all, which is the intended end of the spectrum, not a degenerate case.
+
+    Deterministic perturbation is the fallback, not the intelligence."""
     started = time.monotonic()
 
     base_strategy_name = None
@@ -305,6 +316,19 @@ def run_search(
     if dimensions and not allowed:
         raise SearchRefused(f"none of {dimensions} are genes on the mutation surface")
     n = max(1, min(int(neighbourhood), MAX_NEIGHBOURHOOD))
+
+    # The agent's own named proposals, validated BEFORE anything is written: a proposal
+    # naming something that is not a gene is a refusal of the whole call, not a run row
+    # with a hole in it. A named path is allowed by definition — the agent asked for it
+    # explicitly, so `dimensions` bounds the automatic perturbation, not the agent.
+    named = _named_proposals(
+        proposals, agent_uuid=agent_uuid, base_doc=base_doc,
+        genome_revision=genome_revision, limit=n,
+    )
+    for proposal in named:
+        for change in proposal.changes:
+            if str(change["path"]) not in allowed:
+                allowed.append(str(change["path"]))
 
     weights = fitness_mod.resolve_weights(None)
     scales = fitness_mod.resolve_scales(None)
@@ -336,6 +360,7 @@ def run_search(
             "dimensions": allowed,
             "neighbourhood": n,
             "explore_fraction": explore_fraction,
+            "named_proposals": len(proposals or []),
             "min_trades": min_trades,
             "min_distance": min_distance,
             "seed": seed,
@@ -359,27 +384,33 @@ def run_search(
     )
 
     # --- the neighbourhood ---------------------------------------------------
+    # The agent's own named proposals first, then deterministic perturbation for
+    # whatever budget is left. An agent that knows what it wants to test spends the
+    # whole neighbourhood on its own hypotheses.
     seen: list[dict] = [base_doc]
     admitted_rows: list[EvoSearchCandidate] = []
     refused: list[dict] = []
     proposals_made = 0
 
     for index in range(n):
-        kind = (
-            mutation.KIND_EXPLORE
-            if (index / max(1, n)) >= (1.0 - explore_fraction)
-            else mutation.KIND_EXPLOIT
-        )
-        proposal = mutation.propose_perturbation(
-            agent_uuid=agent_uuid,
-            base_revision=int(genome_revision or 0),
-            document=base_doc,
-            allowed_paths=allowed,
-            kind=kind,
-            seed=seed,
-            index=index,
-            max_genes=2,
-        )
+        if index < len(named):
+            proposal = named[index]
+        else:
+            kind = (
+                mutation.KIND_EXPLORE
+                if (index / max(1, n)) >= (1.0 - explore_fraction)
+                else mutation.KIND_EXPLOIT
+            )
+            proposal = mutation.propose_perturbation(
+                agent_uuid=agent_uuid,
+                base_revision=int(genome_revision or 0),
+                document=base_doc,
+                allowed_paths=allowed,
+                kind=kind,
+                seed=seed,
+                index=index,
+                max_genes=2,
+            )
         if proposal is None:
             continue
         proposals_made += 1
@@ -466,6 +497,51 @@ def run_search(
         refused=refused,
         summary=_summarize(base_row, admitted_rows, rankable, run),
     )
+
+
+def _named_proposals(
+    proposals: list[dict] | None,
+    *,
+    agent_uuid: str,
+    base_doc: dict,
+    genome_revision: int | None,
+    limit: int,
+) -> list[mutation.MutationProposal]:
+    """Turn the agent's `{path, value, hypothesis}` entries into gated proposals.
+
+    A proposal naming a gene that does not exist is dropped here rather than refused
+    downstream: there is no document to measure and no gate that would fire, so the
+    honest answer is that the agent named something that is not a gene. `SearchRefused`
+    says so, because silently ignoring it would look like the search ran the test."""
+    if not proposals:
+        return []
+    out: list[mutation.MutationProposal] = []
+    for entry in proposals[:limit]:
+        if not isinstance(entry, dict):
+            raise SearchRefused(f"proposal {entry!r} is not an object")
+        path = str(entry.get("path") or "")
+        if path not in genome_mod.GENES_BY_PATH:
+            raise SearchRefused(
+                f"{path!r} is not a gene on the mutation surface — see "
+                f"genome.surface_summary() for the {len(genome_mod.MUTATION_SURFACE)} "
+                "you can name"
+            )
+        proposal = mutation.propose_sweep(
+            agent_uuid=agent_uuid,
+            base_revision=int(genome_revision or 0),
+            document=base_doc,
+            path=path,
+            value=entry.get("value"),
+            hypothesis=str(entry.get("hypothesis") or ""),
+            rationale="named by the agent",
+        )
+        if proposal is None:
+            raise SearchRefused(
+                f"{path} is already {genome_mod.get_path(base_doc, path)!r} — proposing "
+                "the value it already has tests nothing"
+            )
+        out.append(proposal)
+    return out
 
 
 def _candidate_view(row: EvoSearchCandidate) -> dict:

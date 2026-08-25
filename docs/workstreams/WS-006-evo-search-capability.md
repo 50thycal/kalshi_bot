@@ -123,6 +123,11 @@ someone would be tempted to reuse it.
 - **The attach point is the action protocol.** `search_strategy_space` sits beside
   `run_backtest` in `evo/cognition.py`, charges `neighbourhood + 1` against the same
   sandbox-run budget, and returns evidence into the same loop. No new orchestrator.
+- **The agent names what it wants tested.** `proposals` (`{path, value, hypothesis}`) are
+  measured first and carry the agent's hypothesis into the result; `dimensions` steers the
+  *automatic* perturbation for when the agent knows the axis but not the value. Both go
+  through the same five gates. Deterministic perturbation is the fallback, not the
+  intelligence — the dependency the first review said was reversed.
 - **A search defaults to the agent's active `evo_strategies` spec.** A `TradingGenome` is
   policy prose and its schema forbids extra keys, so there are no replayable parameters
   inside it to search around. The trading-genome revision is still recorded, as attribution.

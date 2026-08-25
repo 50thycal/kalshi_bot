@@ -205,16 +205,27 @@ The action, beside `run_backtest` in `evo/cognition.py`'s protocol:
 {"type": "search_strategy_space",
  "dataset": "backfill_weather",
  "date_from": "2026-01-01", "date_to": "2026-03-01",
- "dimensions": ["entry.max_price_cents", "entry.min_price_cents"],
+ "proposals": [{"path": "entry.max_price_cents", "value": 65,
+                "hypothesis": "above ~65c this book is systematically overpriced"}],
+ "dimensions": ["entry.min_price_cents"],
  "neighbourhood": 8}
 ```
 
 - `spec` is optional. Omitted, the search runs around the agent's **active
   `evo_strategies` spec** — a `TradingGenome` is policy prose whose schema forbids extra
   keys, so there are no replayable parameters inside it to search.
-- `dimensions` narrows the search to particular genes. This is how an agent points the tool
-  at the question it actually has ("does my entry ceiling matter?"); the whole surface is
-  noisier and no wiser.
+- **`proposals` is the agent's own hypotheses**, `{path, value, hypothesis}`, measured
+  first and recorded with their hypothesis against the result. This is the primary way to
+  use the tool: the agent has the thesis, the tool has the tape. An agent that fills the
+  whole neighbourhood with its own proposals gets no automatic stepping at all, which is
+  the intended end of the spectrum.
+- `dimensions` narrows the **automatic** perturbation to particular genes — for when the
+  agent knows the axis but not the value. Perturbation is the fallback, not the
+  intelligence.
+- A named proposal is gated exactly like a stepped one: same five gates, same refusals. A
+  path that is not a gene, or a value the gene already holds, refuses the *whole call*
+  before anything is written — dropping it silently would look like the search ran the
+  test and found nothing.
 - The call costs `neighbourhood + 1` sandbox runs against the agent's ordinary weekly
   budget, so a search cannot buy unlimited compute by being phrased as a search.
 
@@ -231,7 +242,7 @@ an agent that reads the same evidence and declines.
 ## 7. Mutation: PROPOSE is not ACCEPT
 
 ```text
-propose_perturbation / propose_sweep / (later) an LLM
+propose_sweep (the agent names it) / propose_perturbation (the tool steps it)
         │  a MutationProposal — a description, with no authority
         ▼
 evaluate_proposal_document:  surface legality → schema → compatibility →
@@ -241,11 +252,11 @@ evaluate_proposal_document:  surface legality → schema → compatibility →
 an admitted document is REPLAYED — never written anywhere as a genome
 ```
 
-An LLM proposer plugs in at the `propose` end and inherits every gate. It cannot express a
+Both ends are already wired: an agent's `proposals` reach `propose_sweep`, and the action's
+`dimensions` reach `propose_perturbation`. Both inherit every gate. Neither can express a
 change outside the gene surface, because a proposal is `(path, value)` pairs against
-`MUTATION_SURFACE` — the structural reason it can never rewrite production code as a
-mutation. Deterministic perturbation is one bounded operator the agent can point at a
-dimension; the hypothesis is the agent's.
+`MUTATION_SURFACE` — the structural reason an LLM proposer can never rewrite production
+code as a mutation. The hypothesis is the agent's; the search only measures.
 
 Mode switches carry **companion genes**: changing `exit.mode` to `tp_sl` without thresholds
 produces a rule that never fires, so the perturbation path seeds them. Without this the

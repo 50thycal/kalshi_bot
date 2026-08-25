@@ -286,11 +286,18 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
 - create_listener {name, condition, purpose, effect: event|trigger_heartbeat|opportunity,
   cooldown_seconds?, expires_in_hours?, expected_value_note?}
 - remove_listener {listener_id}
-- search_strategy_space {spec?, dataset?, date_from?, date_to?, dimensions?, neighbourhood?}
+- search_strategy_space {spec?, proposals?, dimensions?, dataset?, date_from?, date_to?,
+  neighbourhood?}
   Replays a strategy AND a bounded neighbourhood of variants around it, then hands you the
-  comparison. Omit `spec` to search around YOUR OWN active strategy. `dimensions` narrows
-  the search to particular genes (e.g. ["entry.max_price_cents","exit.mode"]) — use it when
-  you have a specific question; the whole surface is noisier and no wiser.
+  comparison. Omit `spec` to search around YOUR OWN active strategy.
+  SAY WHAT YOU WANT TESTED. `proposals` is a list of your own hypotheses —
+  [{"path":"entry.max_price_cents","value":70,"hypothesis":"above 70c this book is
+  systematically overpriced"}] — measured FIRST, with your hypothesis recorded against the
+  result. That is the point of the tool: you have the thesis, it has the tape. Use
+  `dimensions` (e.g. ["entry.max_price_cents","exit.mode"]) when you know the axis but not
+  the value, and the tool will step it for you. Fill the whole neighbourhood with your own
+  proposals and no automatic stepping happens at all — that is the best use of it, not a
+  misuse. Give neither and it steps the whole surface, which is noisier and no wiser.
   You get back: the base's result, each admissible variant ranked with the COMPONENT
   breakdown behind its score, the variants that were refused and why, and a one-line
   finding. Costs neighbourhood+1 sandbox runs, from the same budget run_backtest spends.
@@ -1029,6 +1036,15 @@ def _execute_one(
         dimensions = a.get("dimensions")
         if dimensions is not None and not isinstance(dimensions, list):
             return {"rejected": "dimensions must be a list of gene paths, or omitted"}
+        proposals = a.get("proposals")
+        if proposals is not None and (
+            not isinstance(proposals, list)
+            or not all(isinstance(p, dict) for p in proposals)
+        ):
+            return {
+                "rejected": "proposals must be a list of "
+                            "{path, value, hypothesis} objects, or omitted"
+            }
         # One search replays the base plus its neighbourhood, so it costs several sandbox
         # runs. Charge them against the same budget a hand-written backtest spends.
         neighbourhood = a.get("neighbourhood", strategy_search.DEFAULT_NEIGHBOURHOOD)
@@ -1042,8 +1058,9 @@ def _execute_one(
             evidence = strategy_search.run_search(
                 session, settings, agent_uuid=au, base_spec=spec, dataset=dataset,
                 window_start=a.get("date_from"), window_end=a.get("date_to"),
-                data_cutoff=a.get("date_to"), dimensions=dimensions,
-                neighbourhood=neighbourhood, cohort_id=cohort.id, heartbeat_id=hb.id,
+                data_cutoff=a.get("date_to"), proposals=proposals,
+                dimensions=dimensions, neighbourhood=neighbourhood,
+                cohort_id=cohort.id, heartbeat_id=hb.id,
             )
         except strategy_search.SearchRefused as exc:
             return {"rejected": str(exc)}

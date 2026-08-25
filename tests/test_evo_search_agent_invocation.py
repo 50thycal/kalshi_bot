@@ -443,3 +443,96 @@ def test_the_action_is_permitted_and_documented():
     # The agent is told, in the protocol it reads every heartbeat, that this measures
     # rather than decides. If that sentence goes, the framing goes with it.
     assert "MEASURING TOOL, not a decision" in ACTION_PROTOCOL
+
+
+# ---------------------------------------------------------------------------
+# The agent's own hypothesis, not the tool's
+# ---------------------------------------------------------------------------
+
+
+def test_an_agent_names_the_variant_it_wants_tested():
+    """Deterministic perturbation is the fallback, not the intelligence.
+
+    An agent with a thesis — "above 70c this book is systematically overpriced" — says so
+    in `proposals`, and gets that exact variant measured with its hypothesis recorded
+    against the result. Nothing steps a gene on its behalf."""
+    session = _session()
+    settings = EvoSettings(_env_file=None, fill_latency_ms=0)
+    agent, cohort = _agent(session, settings)
+    _seed_weather(session)
+
+    thesis = "above ~65c this book is systematically overpriced"
+    hb = _beat(
+        session, settings, agent, cohort, "s1",
+        [_search_action(
+            neighbourhood=2,
+            dimensions=None,
+            proposals=[
+                {"path": "entry.max_price_cents", "value": 65, "hypothesis": thesis},
+                {"path": "entry.max_price_cents", "value": 45, "hypothesis": thesis},
+            ],
+        )],
+    )
+    evidence = hb.actions_json[0]["result"]
+    assert hb.actions_json[0].get("ok"), hb.actions_json[0]
+
+    tested = {
+        c["document"]["entry"]["max_price_cents"]: c for c in evidence["candidates"]
+    }
+    assert set(tested) == {65, 45}, "the tool tested something other than what was asked"
+    for candidate in tested.values():
+        assert candidate["hypothesis"] == thesis  # recorded against the result
+
+    # The agent's thesis is the correct one on this corpus, and both named variants beat
+    # the base — but the search still only says so as a finding.
+    assert all(c["search_score"] > evidence["base"]["search_score"] for c in tested.values())
+    assert "decide whether that is a reason to revise" in evidence["summary"]["finding"]
+
+
+def test_a_named_proposal_outside_the_gene_surface_is_refused_not_ignored():
+    """Silently dropping it would look like the search ran the test and found nothing."""
+    session = _session()
+    settings = EvoSettings(_env_file=None, fill_latency_ms=0)
+    agent, cohort = _agent(session, settings)
+    _seed_weather(session)
+
+    hb = _beat(
+        session, settings, agent, cohort, "s1",
+        [_search_action(proposals=[{"path": "entry.vibes", "value": 3}])],
+    )
+    assert "not a gene on the mutation surface" in hb.actions_json[0]["rejected"]
+    # Refused before anything was written: no half-finished run.
+    assert session.scalar(select(func.count()).select_from(EvoSearchRun)) == 0
+
+
+def test_naming_the_value_a_gene_already_has_is_refused():
+    session = _session()
+    settings = EvoSettings(_env_file=None, fill_latency_ms=0)
+    agent, cohort = _agent(session, settings)
+    _seed_weather(session)
+
+    hb = _beat(
+        session, settings, agent, cohort, "s1",
+        [_search_action(proposals=[{"path": "entry.max_price_cents", "value": 90}])],
+    )
+    assert "tests nothing" in hb.actions_json[0]["rejected"]
+
+
+def test_a_named_proposal_is_gated_like_any_other():
+    """Naming a mutation is not a way past the gates: the same five run on it."""
+    session = _session()
+    settings = EvoSettings(_env_file=None, fill_latency_ms=0)
+    agent, cohort = _agent(session, settings)
+    _seed_weather(session)
+
+    hb = _beat(
+        session, settings, agent, cohort, "s1",
+        # 95c floor against a 90c ceiling: a legal value for the gene, incoherent with
+        # the rest of the genome.
+        [_search_action(neighbourhood=1,
+                        proposals=[{"path": "entry.min_price_cents", "value": 95}])],
+    )
+    evidence = hb.actions_json[0]["result"]
+    assert evidence["summary"]["proposals_admitted"] == 0
+    assert evidence["refused"][0]["stage"] == "compatibility"
+    assert "inverted" in evidence["refused"][0]["reason"]
