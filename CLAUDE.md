@@ -165,5 +165,6 @@ Full mechanism, standing analysis commands and gotchas: **`docs/OPS_RUNBOOK.md`*
 - Shared skills → `.claude/skills/` (research: `kalshi-idea-model`,
   `kalshi-probe-builder`, `kalshi-strategy`; evo: `evo-ticket-triage`;
   live canary: `live-paper-parallel`; evo readability: `bot-readable-strategy`)
-- Evo system → `docs/EVOLUTIONARY_AGENT_SYSTEM.md`, `docs/EVO_RUNBOOK.md`
+- Evo agent fleet → `docs/EVOLUTIONARY_AGENT_SYSTEM.md`, `docs/EVO_RUNBOOK.md`
+- Evo population layer (genome search, replay-proven) → `docs/EVO_POPULATION_FOUNDATION.md`
 - Research history → `docs/RESEARCH_JOURNAL.md`, thesis docs in `docs/`

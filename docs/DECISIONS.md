@@ -124,5 +124,72 @@ paid, and an unmaintained board should be deleted rather than left to mislead).
 
 ---
 
+### DEC-002 — Build Evo as a parallel population layer, bound to Experiment OS by reference
+
+**Date:** 2026-08-25
+**Status:** Accepted
+
+**Context**
+
+The operator's handoff described building "Evo": a population of strategy agents whose
+genomes mutate, reproduce and retire, proven on historical replay. The repository already
+contains a system called Evo — `kalshi_bot/evo/`, an implemented LLM-agent organism with
+38 tables and 31 test files, in which `EvoAgent` is an autonomous agent with a cognitive
+genome and heartbeats, and `EvoCohort` is a wall-clock calendar window.
+
+The two designs share vocabulary and almost nothing else. The handoff describes a
+program-scoped, deterministic search over structured *strategy parameters* scored by
+replay; the organism is a set of agents that live in real time and author their own
+strategies. Both are legitimate. Neither subsumes the other, and three of the names the
+new design needs are already taken with different meanings.
+
+A second question came with it. The handoff asked that Evo treat Experiment OS as the
+authoritative substrate, but XOS spec §22.7 deliberately excludes evo lineage
+(`experiment_os/importer.py`: "evo strategies are out of scope by design"). Honouring both
+statements literally is impossible.
+
+**Decision**
+
+Build the new system as a **parallel layer** in `kalshi_bot/evo/population/`, with its own
+`evo_pop_*` namespace and its own object names (`EvoProgram`, `EvoGeneration`,
+`EvoCandidate`, `EvoGenomeVersion`, `EvoRun`, `EvoDecision`). The LLM organism is not
+migrated, renamed or modified.
+
+Bind to Experiment OS **by reference only**: record the platform-snapshot fingerprint on
+program, genome and run; reuse XOS metric definitions and the shared fill calibration;
+import nothing into XOS. §22.7 stands. A candidate that earns advancement enters the
+normal XOS path through a session with the authority to register it — there is no
+`EVO_LIVE` and no promotion call in the layer.
+
+Reuse rather than reimplement wherever the concept already exists: `StrategySpec` is the
+genome, `sandbox.run_backtest` is the replay engine, `kalshi_fee` and the maker-fill
+calibration are unchanged. The three additive changes to `sandbox.py` are default-off.
+
+**Consequences**
+
+*Easier:* the organism keeps running untouched, and the new layer is independently
+testable and independently deletable. One replay engine means the proving run exercises
+the code the real datasets use, so a clean proving run says something about production.
+Reference-only binding needs no Platform Change Review and no reversal of §22.7.
+
+*Harder / more expensive:* two systems now share the word "Evo", and a session has to know
+which one it is in. `docs/EVO_POPULATION_FOUNDATION.md` opens with a table of the
+differences for exactly that reason, and the session-role files name both. There is also
+duplication of *shape* — both have cohorts, fitness and lineage — that a future
+consolidation might want to collapse.
+
+*Expensive to reverse:* moderate. The layer is additive (12 new tables, one migration, no
+existing table touched), so removing it is a migration and a package deletion. What would
+be expensive is the opposite direction: merging the two namespaces later, which is why the
+names were kept distinct now rather than overloaded.
+
+*Revisit if:* the population layer proves out on real datasets and the organism's agents
+would benefit from proposing into it — at that point one mutation-proposal interface
+serving both is worth the consolidation. Or if XOS decides evo evidence should be
+first-class, which is a Platform Change Review decision and would supersede the
+reference-only half of this entry.
+
+---
+
 <!-- Copy the block above for each new decision. IDs are stable: never reused, never
      renumbered. -->

@@ -3,6 +3,16 @@
 ## PURPOSE
 Own the fleet's capability-request queue from request to genuine resolution.
 
+**Two queues, deliberately not merged.**
+- `evo_tickets` — the LLM fleet's capability requests ("I need access to X"). The
+  `evo-ticket-triage` skill is the procedure.
+- `evo_pop_findings` — the population layer's own observations about a *search*: replay
+  defects, invalid genomes, diversity collapse, inert mutations, sample-starved cohorts.
+  Read with `{"type":"script","name":"evo_pop_tower","args":["--program","<key>","--findings"]}`.
+Merging them would rank a capability request against a scientific defect. A finding
+routes to the role that owns it and **authorizes nothing** — it never changes a lifecycle
+state, gate, verdict or exposure. Closing one requires a concrete resolution.
+
 ## DEFAULT MODE / PERMISSIONS
 **WRITE CAPABLE** — investigate, build, test, open PRs, resolve tickets.
 **Never grant evo agents real-money capability.**
@@ -10,6 +20,7 @@ Own the fleet's capability-request queue from request to genuine resolution.
 ## LOAD FIRST
 - the `evo-ticket-triage` shared skill (the procedure lives there)
 - `docs/EVO_TICKET_ROUTINE_HANDOFF.md`
+- `docs/EVO_POPULATION_FOUNDATION.md` §11 for population findings
 
 ## STARTUP ROUTINE
 1. Read unresolved tickets + supporter counts; group duplicates.

@@ -37,6 +37,7 @@ much of it is machinery for deciding whether an edge is real.
 | `kalshi_bot/mmsell/market_types.py` | The settlement-mode / market-type taxonomy `mode=`/`mtype=` books select on |
 | `kalshi_bot/experiment_os/` | Experiment OS: lifecycle, versions, epochs, deployments, gates, evaluator, enforcement, platform impact, issues |
 | `kalshi_bot/evo/` | The evolutionary agent fleet — LLM agents that propose and run their own books under budget |
+| `kalshi_bot/evo/population/` | Evo population layer — a program-scoped evolutionary *search* over strategy genomes, scored by deterministic historical replay. Separate namespace (`evo_pop_*`) and separate concepts from the LLM fleet above (`DEC-002`); replay only, no live path |
 | `kalshi_bot/obs/` | Observability: the per-cycle evidence funnel every series-addressed book emits |
 | `kalshi_bot/livedash/`, `dashboard/` | Read-only operator dashboards |
 | `scripts/` | Self-contained read-only analyses, run through the ops channel |
