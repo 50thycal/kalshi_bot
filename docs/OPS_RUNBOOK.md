@@ -528,13 +528,21 @@ commits are unauthenticated-by-review fast-forwards and must keep landing
 directly. If a change to this ruleset ever blocks a normal request or a result
 commit, **narrow the ruleset**; do not remove it.
 
-**Applying it needs an admin token.** Repository rulesets are
+**Applying it needs a temporary admin token.** Repository rulesets are
 administration-scoped and Actions' built-in `GITHUB_TOKEN` cannot hold that
 permission, so the workflow reads a fine-grained PAT from the `OPS_ADMIN_TOKEN`
-repository secret (this repository only, *Administration: read and write*).
-Without the secret the job still reports the current protections and then **fails
-loudly** — it never reports success over an unprotected branch. Nothing else in
-the repo uses that secret.
+repository secret. Scope it to this repository only, grant only
+*Administration: read and write* (plus GitHub's unavoidable implicit metadata
+access), and use the **shortest practical expiration**.
+
+The token is an application credential, not standing infrastructure. After the
+ruleset is applied, an ordinary request/result round trip succeeds, and a
+controlled non-fast-forward update is refused, **delete the secret and revoke the
+PAT**. The branch protection remains active after the token is removed. If the
+checked-in desired state changes later, deliberately install a new temporary
+token, apply and validate, then remove it again. Without the secret an apply run
+still reports the current protections and then **fails loudly** — it never reports
+success over an unprotected branch. Nothing else in the repo uses that secret.
 
 Ordinary work is unaffected: pushing a request, pushing a result, and the
 runner's `ls -1t ops/results/*.txt | tail -n +81 | xargs rm` pruning (a file
@@ -569,8 +577,10 @@ procedure exactly.
    ```
    The `non_fast_forward` rule refuses this too, so a maintainer must lift the
    ruleset for the window (disable `ops-transport-guard`, or add themselves as a
-   bypass actor) and **re-enable it in the same session**. Re-running the
-   `Ops Branch Protection` workflow re-applies it idempotently.
+   bypass actor) and **re-enable it in the same session**. Install a temporary
+   `OPS_ADMIN_TOKEN` using the scope and expiration rules above, then re-run the
+   `Ops Branch Protection` workflow to re-apply the ruleset idempotently. After
+   the post-change validation succeeds, delete the secret and revoke the PAT.
 4. **Post-change validation.** A rewrite is not finished until a real request has
    round-tripped. Note that a force-push onto a commit that already exists in the
    repository does **not** trigger the workflow — the push event carries no
