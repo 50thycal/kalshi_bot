@@ -1,2 +1,0 @@
-no issue command 'lo-open-receiptvis-20260824'
-# ops request: type='xos'
