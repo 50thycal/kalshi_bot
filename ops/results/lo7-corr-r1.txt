@@ -1,2 +1,0 @@
-no issue command 'lo-ev7-deletest-correction-20260827'
-# ops request: type='xos'
