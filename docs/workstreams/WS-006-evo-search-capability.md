@@ -1,9 +1,9 @@
 # WS-006 — Evo historical search capability
 
-**Phase:** REVIEW
-**Status:** Active (re-submitted after the 2026-08-25 architectural correction)
+**Phase:** BUILDING
+**Status:** Active (implementation merged; D1 proving harness correction in progress)
 **Created:** 2026-08-25
-**Updated:** 2026-08-25
+**Updated:** 2026-08-27
 
 ## Goal
 
@@ -154,10 +154,11 @@ someone would be tempted to reuse it.
 
 ## Open Decisions
 
-- **D1.** Which real dataset should the first non-synthetic proving run use —
-  `backfill_weather` (largest settled corpus) or `mmsell` (live tick tape, calibrated maker
-  fills)? Recommendation: `backfill_weather` for breadth first, then `mmsell` to exercise
-  the fill-model correction.
+- **D1.** Use `backfill_weather` first, on the fixed target-date window
+  `2026-08-01..2026-08-03`; then use `mmsell` separately to exercise the fill-model
+  correction. The dataset choice is made. D1 remains open only until the fixed window
+  produces two identical, non-empty, untruncated fingerprints for both the taker and maker
+  specs. The unwindowed 2026-08-27 attempts are diagnostic evidence, not the proving run.
 - **D2.** Should the replay engine enforce `risk.max_concurrent_positions` and per-position
   cost, so risk genes become mutable and the ledger's capital constraint becomes binding
   rather than measured after the fact? A change to a shared engine, so Platform Change
@@ -171,13 +172,47 @@ someone would be tempted to reuse it.
 *(D4 and D5 are closed: the search got its own three tables, and the whole refactor landed
 on this branch.)*
 
+## D1 real-dataset proving — diagnostic and pre-registration
+
+The first production-DB attempts on 2026-08-27 used the existing read-only
+`evo_backtest_probe` with `persist=False` and `charge_budget=False`. They proved that
+the `backfill_weather` adapter reaches real settled markets with
+`provenance=kalshi_rest_backfill`, but they did **not** prove reproducibility:
+
+| evidence | taker | maker | disposition |
+|---|---|---|---|
+| `ops/results/ws6-d1-weather-20260827-1.txt` | 21,350 rows / 583 trades | 22,430 rows / 580 trades | diagnostic only; both truncated |
+| `ops/results/ws6-d1-weather-20260827-2.txt` | 200,013 rows / 5,354 trades | 200,013 rows / 5,047 trades | diagnostic only; both truncated |
+
+The difference is explained by the shared sandbox bounds: a replay stops at the earlier of
+`sandbox_max_seconds=60` and `sandbox_max_rows=200000`. The first run hit the
+machine-time boundary; the second hit the row boundary. The resulting market sets and P&L
+cannot be compared as identical evidence. This is a proving-harness defect, not evidence for
+or against either strategy.
+
+The fixed-window run is pre-registered before seeing its result:
+
+- dataset `backfill_weather`, target dates `2026-08-01..2026-08-03`;
+- the existing broad taker and maker specs, unchanged;
+- two repetitions per spec, over the same read-only database snapshot available to the job;
+- PASS only when both specs are non-empty, neither repetition is truncated, and the stable
+  result fingerprint matches between repetitions;
+- expected provenance `kalshi_rest_backfill`;
+- no strategy or edge verdict. P&L is output for reconciliation only and authorizes nothing.
+
+`scripts/evo_backtest_probe.py` now exposes `--date-from`, `--date-to`, `--repeat`
+and `--require-complete`, strips `elapsed_ms` before hashing, and exits non-zero when the
+pre-registered conditions fail. The ops runner executes default-branch code, so the final
+run happens only after this follow-up PR merges.
+
 ## Assumptions
 
 - The synthetic proving corpus answers *mechanical* questions only. It says nothing about
   whether any strategy family has an edge, and the report says so.
-- Deterministic replay holds because the engine has no wall-clock or RNG dependence: the
-  maker-fill gate is a hash of the market key. Verified by re-running and comparing
-  fingerprints, not assumed.
+- Replay outcomes are deterministic only over an explicit corpus that finishes before the
+  sandbox guards. The maker-fill gate is a hash of the market key, but an unwindowed run can
+  stop at the 60-second wall-clock guard and therefore select a machine-speed-dependent
+  prefix. D1 requires a fixed window, no truncation and matching fingerprints.
 - Agents will not be *worse* off for having the tool: it costs the same budget a
   hand-written backtest costs, and the protocol tells them a higher score over one window
   is one window of evidence.
@@ -214,6 +249,13 @@ Tests: `test_evo_search_{genome,replay,fitness,mutation,proving,agent_invocation
 
 ## Review State
 
+**PR #261 merged 2026-08-27** at reviewed head
+`0330a855744400acaa8621fc17deac508178b56d`. The historical-search capability and its
+13/13 synthetic proving run are on the default branch. The post-merge D1 attempt exposed
+that the existing real-data smoke probe did not distinguish a valid fixed-corpus proof from
+a wall-clock-truncated prefix; this follow-up returns the workstream to BUILDING for the
+bounded proving harness only.
+
 **Owner review 2026-08-25 (round 1): architectural correction required.** Addressed by the
 refactor above and recorded as `DEC-003`. Three concrete code blockers were raised in the
 same review and remain fixed:
@@ -248,9 +290,18 @@ Defect found by writing the agent-invocation test:
 
 ## Related PRs
 
-[#261](https://github.com/50thycal/kalshi_bot/pull/261) on `claude/evo-foundation-build-d7bp2b`.
+[#261](https://github.com/50thycal/kalshi_bot/pull/261) (merged) and this D1 proving-harness
+follow-up PR.
 
 ## Next Step
 
-Owner review of the corrected shape. Then **D1**: a proving run on a real settled dataset,
-which is the prerequisite before any prospective (paper) extension is proposed.
+Merge the fixed-window proving-harness follow-up, then run:
+
+```json
+{"type":"script","name":"evo_backtest_probe","args":["--dataset","backfill_weather","--date-from","2026-08-01","--date-to","2026-08-03","--repeat","2","--require-complete"],"id":"ws6-d1-weather-fixed-20260827"}
+```
+
+If both stable fingerprints match and both specs are non-empty and untruncated, record D1
+clean and complete WS-006. Otherwise keep the workstream active and investigate the exact
+failed condition. Do not start a prospective cohort; D2 and explicit operator approval
+remain separate prerequisites.
