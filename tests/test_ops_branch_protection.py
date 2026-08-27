@@ -38,6 +38,7 @@ INSTRUCTION_FILES = sorted(
         *(REPO / ".claude/sessions").glob("*"),
         *(REPO / ".claude/skills").rglob("*.md"),
     }
+    - {RUNBOOK}  # Covered separately: it alone documents the leased exception.
 )
 
 # A force-refresh of ops, in the forms the retired instructions actually used.
@@ -117,8 +118,6 @@ def test_protection_workflow_applies_the_checked_in_ruleset():
 
 @pytest.mark.parametrize("path", INSTRUCTION_FILES, ids=lambda p: str(p.relative_to(REPO)))
 def test_no_standing_instruction_to_force_refresh_ops(path: pathlib.Path):
-    if path == RUNBOOK:
-        pytest.skip("the runbook documents the deliberate exception; asserted below")
     text = path.read_text(errors="ignore")
     for line in text.splitlines():
         match = FORCE_REFRESH.search(line)
