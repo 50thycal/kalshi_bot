@@ -1,1 +1,1 @@
-{"type":"xos","command":"control-tower","id":"mm10can-ct-1"}
+{"type":"xos","command":"show","args":["mmsell-price-ceiling"],"id":"mm10can-show-1"}
