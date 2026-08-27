@@ -1,5 +1,0 @@
-usage: experiment_os [-h]
-                     {list,show,transitions,platform,tag,metric,control-tower,evaluate-gates,enforcement,readiness,scoreboard,issue}
-                     ...
-experiment_os: error: unrecognized arguments: mmsell-price-ceiling
-# ops request: type='xos'
