@@ -170,18 +170,7 @@ someone would be tempted to reuse it.
 - **D6.** Should agents be nudged toward the search in the heartbeat prompt, or left to
   discover it? Currently documented in the action protocol and otherwise unprompted, so its
   first use is the agents' own choice — which also makes early usage a signal.
-- **D7.** Should `_weather_markets` (and the sibling adapters) get a total ORDER BY?
-  Today the weather adapter orders by `close_time` alone, and every bucket market inside one
-  weather event shares a `close_time`, so Postgres may return tied markets in a different
-  sequence between two reads of the *same* snapshot. That cannot change which markets are
-  replayed or which trades are produced — but the replay appends trades in market-iteration
-  order and walks that sequence for the peak-to-trough drop, so `max_drawdown_usd` can move
-  while every other aggregate holds. Adding a tiebreaker (`close_time, market_ticker`) would
-  change what every existing caller's replay reports for that field, which makes it a shared
-  replay-semantics change — **Platform Change Review**, exactly like `skip_crossed_quotes`,
-  not a workstream decision and not something the read-only probe may do. Until it is
-  decided, the probe distinguishes this case by name rather than reporting an unexplained
-  fingerprint mismatch (see the pre-registration below).
+*(D7 is closed — see below. The dataset adapters now order totally.)*
 
 *(D4 and D5 are closed: the search got its own three tables, and the whole refactor landed
 on this branch.)*
@@ -211,10 +200,13 @@ The fixed-window run is pre-registered before seeing its result:
 
 - dataset `backfill_weather`, target dates `2026-08-01..2026-08-03`;
 - the existing broad taker and maker specs, unchanged;
-- two repetitions per spec, over the same read-only database snapshot available to the job,
-  with the ORM identity map dropped between them so each repetition genuinely re-reads;
-- PASS only when both specs are non-empty, neither repetition is truncated, and the stable
-  result fingerprint matches between repetitions;
+- two repetitions per spec inside **one read-only `REPEATABLE READ` transaction**, with the
+  ORM identity map dropped between them so each repetition genuinely re-reads the same
+  snapshot. The probe asks the server to confirm the isolation level and refuses to start a
+  proving run without it;
+- PASS only when both specs are non-empty, neither repetition is truncated, and **all three**
+  identity legs match between repetitions: the market manifest, the canonicalized trade tape,
+  and the aggregate result fingerprint;
 - expected provenance `kalshi_rest_backfill`;
 - no strategy or edge verdict. P&L is output for reconciliation only and authorizes nothing.
 
@@ -227,17 +219,29 @@ fixed here so it cannot be chosen after the fact:
 | empty window | `markets_considered=0` on every repetition | corpus coverage, not strategy evidence — check the dataset holds settled markets in the range |
 | no entries | markets replayed, `n_trades=0` | the entry bands, not the harness |
 | truncated | `truncated=True` on any repetition | still a machine-speed-dependent prefix — narrow the window |
-| ordering-only divergence | the `corpus_fingerprint` matches, the strict `fingerprint` does not, and every differing field is order-dependent | **D7**: same markets, same trade set, different tie order. Not a corpus defect; routes to Platform Change Review |
-| corpus divergence | the `corpus_fingerprint` itself differs | a real reproducibility defect; the differing fields are named |
+| manifest divergence | the market manifest differs between repetitions | the same window returned different rows; nothing downstream is evidence |
+| manifest uncovered | no manifest query exists for the dataset | market identity was not independently verified — consistent-with, not proven |
+| trade-tape divergence | manifest matches, canonicalized trade tape does not | a genuine replay defect, not an ordering artifact |
+| ordering-only divergence | manifest AND trade tape match; only order-dependent aggregates differ | same markets, same trades, different sequence. Post-**D7** this should be impossible, so it now indicates a total ORDER BY is not holding |
 
 Only the *first* row of the VERDICT — every spec non-empty, fingerprint-identical and
 untruncated — records D1 clean. An ordering-only divergence is still a FAIL: it does not
 authorize D1, it just says the next move is D7 rather than another proving run.
 
+**Why three legs, not one aggregate hash.** `markets_considered` is a COUNT: two different
+market sets of the same size produce the same count, and two different trade sets can sum to
+the same P&L. Matching aggregates therefore cannot establish "the same markets and the same
+trades" — only that the summaries agree. So the probe reads the selected market tickers
+directly (independently of the replay, isolating *did the database return the same rows?*)
+and hashes the actual per-trade tape (`return_trades=True`), canonicalized and sorted so the
+set is compared without its order. Only with both pinned does an aggregate difference in
+`max_drawdown_usd` *demonstrate* an ordering artifact instead of merely being consistent with
+one. A tape that was never requested hashes to `None` and can never count as agreement.
+
 `scripts/evo_backtest_probe.py` exposes `--date-from`, `--date-to`, `--repeat` and
 `--require-complete`; strips `elapsed_ms` (the only runtime-varying field in the result)
-before hashing; publishes a second `corpus_fingerprint` over the order-independent subset;
-and exits non-zero when the pre-registered conditions fail. The ops runner tees the script's
+before hashing; publishes the manifest, trade and aggregate fingerprints; and exits non-zero
+when the pre-registered conditions fail. The ops runner tees the script's
 output and publishes it regardless of exit status, so a non-zero exit loses no evidence.
 Because the runner executes default-branch code, the final run happens only after this
 follow-up PR merges.
@@ -247,6 +251,25 @@ spec's stable fingerprint in a trailing summary block so a **second, independent
 the identical request can be compared against the first by eye; cross-process agreement is
 what makes the determinism claim worth anything.
 
+## D7 — resolved: the adapters order totally
+
+**Decision (operator, 2026-08-27): approved.** Every dataset adapter now yields in a total
+order — `close_time, market_ticker` for the weather and regime market queries, and a
+primary-key tiebreaker for the mmsell tick tape, the crypto ladder snapshots and the settled
+paper-trade scan. The candle tables already carried `UNIQUE(market_ticker, end_period_ts)`,
+so their ordering was total and is unchanged.
+
+This is a **shared replay-semantics change**: it cannot alter which markets replay or which
+trades are produced, but it can change `max_drawdown_usd` for any existing caller whose
+result was computed over a tied ordering, because that aggregate walks the trade sequence.
+Every other reported field is built from order-independent sums. The operator's judgement is
+that deterministic replay is worth that small reporting change rather than carrying ambiguous
+ordering indefinitely.
+
+> Registering the corresponding **Platform Revision / impact action** in Experiment OS is an
+> owner action under `docs/EXPERIMENT_OS_PLATFORM_IMPACT.md`. This workstream records the
+> decision and the code; it does not and cannot register platform state.
+
 ## Assumptions
 
 - The synthetic proving corpus answers *mechanical* questions only. It says nothing about
@@ -255,11 +278,12 @@ what makes the determinism claim worth anything.
   sandbox guards. The maker-fill gate is a hash of the market key, but an unwindowed run can
   stop at the 60-second wall-clock guard and therefore select a machine-speed-dependent
   prefix. D1 requires a fixed window, no truncation and matching fingerprints.
-- Determinism of the *engine* is not determinism of the *read*. The adapters' ORDER BY is not
-  total, so equal keys may come back in a different sequence on the same snapshot. This is
-  assumed to move only order-dependent aggregates (today: `max_drawdown_usd`) and never the
-  market or trade set — an assumption the probe now tests rather than states, by comparing an
-  order-independent `corpus_fingerprint` alongside the strict one. See D7.
+- Determinism of the *engine* is not determinism of the *read*, and neither is determinism of
+  the *snapshot*. All three are now pinned rather than assumed: a total ORDER BY on every
+  adapter (D7), a read-only `REPEATABLE READ` transaction the probe verifies with the server,
+  and identity fingerprints over the market manifest and the trade tape. Postgres's default
+  `READ COMMITTED` takes a fresh snapshot per statement, so under it "identical fingerprints"
+  would have been a claim about a quiet database, not about deterministic replay.
 - Agents will not be *worse* off for having the tool: it costs the same budget a
   hand-written backtest costs, and the protocol tells them a higher score over one window
   is one window of evidence.
@@ -318,6 +342,23 @@ exit, so the new failing exit status loses no evidence; `elapsed_ms` is the only
 runtime-varying field in `run_backtest`'s result, so stripping it is sufficient; and
 `fill_model` is built from order-independent histogram sums.
 
+**Operator review, 2026-08-27 — two proof blockers, both upheld and fixed.**
+
+1. *The "same snapshot" was not guaranteed.* The session ran at Postgres's default
+   `READ COMMITTED`, which takes a new snapshot per statement; `expunge_all()` clears the ORM
+   identity map but creates no snapshot. Two repetitions were therefore reading whatever the
+   database held at each moment. The whole run now executes inside one read-only
+   `REPEATABLE READ` transaction, and the probe asks the server to confirm it before proving
+   anything rather than trusting the engine options.
+2. *`corpus_fingerprint` hashed aggregates, not identities.* Matching aggregates cannot
+   establish "the same markets and the same trade set" — a count is not a set and a sum is not
+   a tape. It is replaced by two identity legs: a market-manifest fingerprint read directly
+   from the database, and a canonicalized, order-independent fingerprint over the actual trade
+   tape (`return_trades=True`). The ordering-only verdict is only claimed once both are pinned;
+   otherwise the run says *consistent with*, or reports the manifest leg as UNCOVERED.
+
+The operator also resolved **D7** in the same review, approving the deterministic ORDER BY.
+
 **PR #261 merged 2026-08-27** at reviewed head
 `0330a855744400acaa8621fc17deac508178b56d`. The historical-search capability and its
 13/13 synthetic proving run are on the default branch. The post-merge D1 attempt exposed
@@ -371,7 +412,8 @@ Merge the fixed-window proving-harness follow-up, then run:
 {"type":"script","name":"evo_backtest_probe","args":["--dataset","backfill_weather","--date-from","2026-08-01","--date-to","2026-08-03","--repeat","2","--require-complete"],"id":"ws6-d1-weather-fixed-20260827"}
 ```
 
-If both stable fingerprints match and both specs are non-empty and untruncated, record D1
-clean and complete WS-006. Otherwise keep the workstream active and investigate the exact
-failed condition. Do not start a prospective cohort; D2 and explicit operator approval
-remain separate prerequisites.
+Then run it a **second** time under a separate id (`…-b`). D1 is clean only if both runs are
+non-empty, untruncated, and identical to each other in all three legs — market manifest,
+trade tape and aggregates — across the two independent processes. Otherwise keep the
+workstream active and investigate the exact failed condition, which the run names. Do not
+start a prospective cohort; D2 and explicit operator approval remain separate prerequisites.
