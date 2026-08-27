@@ -1,21 +1,5 @@
-# ops request: type='xos'
-{
-  "command_id": "lo-resolve-xos7-20260827",
-  "action": "RESOLVE",
-  "actor": "cal",
-  "actor_role": "LIVE_OPS",
-  "status": "REJECTED",
-  "issue_key": null,
-  "schema_version": 1,
-  "payload_hash": "21134a9ce0f4203b8dae20297f1eb325699f601be1fa6251c05a42af8d4e31a5",
-  "payload_fields": [
-    "issue",
-    "resolution_summary"
-  ],
-  "payload_unrecognised_fields": 0,
-  "requested_at": "2026-08-27 12:58:24.768482+00:00",
-  "started_at": "2026-08-27 12:58:24.768482+00:00",
-  "completed_at": "2026-08-27 12:58:24.825969+00:00",
-  "result": null,
-  "error": "IllegalIssueTransition: illegal issue transition OPEN \u2192 RESOLVED; legal <redacted> OPEN: CLOSED_NO_ACTION, DUPLICATE, TRIAGE"
-}
+# ops request: type='env'
+# target service: main
+  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 437 bytes, sha256:a4a61d9e67fd9ddb>
+# 1/1 variables set
+# redeploy triggered — the worker will restart with the new config
