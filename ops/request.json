@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["mmsell-price-ceiling"],"id":"mm10can-show-1"}
+{"type":"xos","command":"platform","id":"mm10can-plat-1"}
