@@ -42,6 +42,7 @@ from .genomes import current_genome, rollback_genome, write_genome_revision
 from .llm import LlmClient
 from .marketdata import MarketData
 from .models import EvoAgent, EvoCohort, EvoHeartbeat, EvoOpportunity
+from .search import search as strategy_search
 from .strategy_spec import METRICS, OPS
 
 logger = logging.getLogger(__name__)
@@ -285,6 +286,30 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
 - create_listener {name, condition, purpose, effect: event|trigger_heartbeat|opportunity,
   cooldown_seconds?, expires_in_hours?, expected_value_note?}
 - remove_listener {listener_id}
+- search_strategy_space {spec?, proposals?, dimensions?, dataset?, date_from?, date_to?,
+  neighbourhood?}
+  Replays a strategy AND a bounded neighbourhood of variants around it, then hands you the
+  comparison. Omit `spec` to search around YOUR OWN active strategy.
+  SAY WHAT YOU WANT TESTED. `proposals` is a list of your own hypotheses —
+  [{"path":"entry.max_price_cents","value":70,"hypothesis":"above 70c this book is
+  systematically overpriced"}] — measured FIRST, with your hypothesis recorded against the
+  result. That is the point of the tool: you have the thesis, it has the tape. Use
+  `dimensions` (e.g. ["entry.max_price_cents","exit.mode"]) when you know the axis but not
+  the value, and the tool will step it for you. Fill the whole neighbourhood with your own
+  proposals and no automatic stepping happens at all — that is the best use of it, not a
+  misuse. Give neither and it steps the whole surface, which is noisier and no wiser.
+  You get back: the base's result, each admissible variant ranked with the COMPONENT
+  breakdown behind its score, the variants that were refused and why, and a one-line
+  finding. You are charged for the replays that actually RUN — the base plus each variant
+  the gates admitted — from the same budget run_backtest spends; the outcome tells you as
+  `sandbox_runs_charged`. A refused call costs you nothing, so naming a proposal you are
+  unsure about is cheap: the worst case is a reason why it could not be tested.
+  This is a MEASURING TOOL, not a decision. It never changes you. A variant scoring higher
+  over one window is one window of evidence — YOU decide whether it justifies adopting the
+  variant (save_strategy with the returned `document`, then activate_strategy), and you own
+  that reasoning. Do not treat the top-ranked variant as an instruction: ask whether the
+  change makes sense for the thesis you hold, and whether the sample is large enough to
+  mean anything. Declining is a legitimate answer, and saying why is worth a belief.
 - run_backtest {spec, dataset?, date_from?, date_to?} | walkforward: add kind: "walkforward",
   split_date instead of date_from/date_to. `dataset` selects the settled corpus to replay:
   "backfill_weather" (default; Kalshi weather archive), "mmsell" (the mmsell strategy's OWN
@@ -999,6 +1024,60 @@ def _execute_one(
                 heartbeat_id=hb.id,
             )
         return {"ok": True, "result": result} if result is not None else {"rejected": err}
+
+    if t == "search_strategy_space":
+        # A bounded historical search around a strategy the agent already has. It returns
+        # EVIDENCE and changes nothing: if the agent wants a variant, it must still decide
+        # and then call save_strategy / activate_strategy itself, under the usual budgets
+        # and audit. The search cannot revise an agent.
+        spec = a.get("spec")
+        if spec is not None and not isinstance(spec, dict):
+            return {"rejected": "spec must be an object, or omitted to search your own active strategy"}
+        dataset = str(a.get("dataset", "backfill_weather"))
+        if dataset not in sandbox.DATASETS:
+            return {"rejected": f"unknown dataset {dataset!r} (available: {sandbox.DATASETS})"}
+        dimensions = a.get("dimensions")
+        if dimensions is not None and not isinstance(dimensions, list):
+            return {"rejected": "dimensions must be a list of gene paths, or omitted"}
+        proposals = a.get("proposals")
+        if proposals is not None and (
+            not isinstance(proposals, list)
+            or not all(isinstance(p, dict) for p in proposals)
+        ):
+            return {
+                "rejected": "proposals must be a list of "
+                            "{path, value, hypothesis} objects, or omitted"
+            }
+        # One search replays the base plus its neighbourhood, so it costs several sandbox
+        # runs, charged against the same budget a hand-written backtest spends.
+        neighbourhood = a.get("neighbourhood", strategy_search.DEFAULT_NEIGHBOURHOOD)
+        try:
+            neighbourhood = max(1, min(int(neighbourhood), strategy_search.MAX_NEIGHBOURHOOD))
+        except (TypeError, ValueError):
+            return {"rejected": f"invalid neighbourhood {a.get('neighbourhood')!r}"}
+        # Check affordability against the worst case, but CHARGE only for the replays
+        # that actually ran. `run_search` validates the whole call — no saved strategy,
+        # an unknown gene, a no-op proposal, an over-reaching window — and refuses before
+        # replaying anything; a refusal that had moved the budget ledger would be a
+        # search that "wrote nothing" while still costing the agent up to 25 credits.
+        if not budgets.can_spend(session, au, cohort.id, "sandbox_runs", neighbourhood + 1):
+            return {"rejected": "sandbox-run budget exhausted"}
+        try:
+            evidence = strategy_search.run_search(
+                session, settings, agent_uuid=au, base_spec=spec, dataset=dataset,
+                window_start=a.get("date_from"), window_end=a.get("date_to"),
+                data_cutoff=a.get("date_to"), proposals=proposals,
+                dimensions=dimensions, neighbourhood=neighbourhood,
+                cohort_id=cohort.id, heartbeat_id=hb.id,
+            )
+        except strategy_search.SearchRefused as exc:
+            return {"rejected": str(exc)}
+        # force=True books work that has already happened, the same way an LLM call's
+        # actual token count is booked. It cannot overrun by more than the refused
+        # proposals' share, because affordability was checked against the worst case.
+        charged = int(evidence.summary.get("candidates_replayed") or 1)
+        budgets.spend(session, au, cohort.id, "sandbox_runs", charged, force=True)
+        return {"ok": True, "result": evidence.as_dict(), "sandbox_runs_charged": charged}
 
     if t == "inspect_data":
         source = str(a.get("source", ""))

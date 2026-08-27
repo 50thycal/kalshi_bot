@@ -3,6 +3,18 @@
 ## PURPOSE
 Own the fleet's capability-request queue from request to genuine resolution.
 
+**One queue, and one boundary.** `evo_tickets` is the fleet's capability-request queue
+("I need access to X"); the `evo-ticket-triage` skill is the procedure.
+
+What does **not** belong in it is a scientific or platform defect. The historical search
+(`kalshi_bot/evo/search/`) surfaces those — corrupt books a replay refuses, a dataset
+that cannot be measured, an execution semantic that should change. Route them:
+a defect in the search machinery or an agent capability gap is a ticket here; a data
+defect is an **Experiment OS issue**; a change to shared execution semantics is
+**Platform Change Review**. None of the three authorizes anything — a ticket never
+changes a lifecycle state, gate, verdict or exposure, and closing one requires a
+concrete resolution.
+
 ## DEFAULT MODE / PERMISSIONS
 **WRITE CAPABLE** — investigate, build, test, open PRs, resolve tickets.
 **Never grant evo agents real-money capability.**
@@ -10,6 +22,7 @@ Own the fleet's capability-request queue from request to genuine resolution.
 ## LOAD FIRST
 - the `evo-ticket-triage` shared skill (the procedure lives there)
 - `docs/EVO_TICKET_ROUTINE_HANDOFF.md`
+- `docs/EVO_SEARCH_CAPABILITY.md` §11 when a ticket concerns the search capability
 
 ## STARTUP ROUTINE
 1. Read unresolved tickets + supporter counts; group duplicates.

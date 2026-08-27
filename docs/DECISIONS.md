@@ -124,5 +124,156 @@ paid, and an unmaintained board should be deleted rather than left to mislead).
 
 ---
 
+### DEC-002 — Build Evo as a parallel population layer, bound to Experiment OS by reference
+
+**Date:** 2026-08-25
+**Status:** Superseded by DEC-003 (2026-08-25, in review, before merge). The
+`evo/population/` package and `docs/EVO_POPULATION_FOUNDATION.md` referred to below never
+merged; they became `evo/search/` and `docs/EVO_SEARCH_CAPABILITY.md`.
+
+**Context**
+
+The operator's handoff described building "Evo": a population of strategy agents whose
+genomes mutate, reproduce and retire, proven on historical replay. The repository already
+contains a system called Evo — `kalshi_bot/evo/`, an implemented LLM-agent organism with
+38 tables and 31 test files, in which `EvoAgent` is an autonomous agent with a cognitive
+genome and heartbeats, and `EvoCohort` is a wall-clock calendar window.
+
+The two designs share vocabulary and almost nothing else. The handoff describes a
+program-scoped, deterministic search over structured *strategy parameters* scored by
+replay; the organism is a set of agents that live in real time and author their own
+strategies. Both are legitimate. Neither subsumes the other, and three of the names the
+new design needs are already taken with different meanings.
+
+A second question came with it. The handoff asked that Evo treat Experiment OS as the
+authoritative substrate, but XOS spec §22.7 deliberately excludes evo lineage
+(`experiment_os/importer.py`: "evo strategies are out of scope by design"). Honouring both
+statements literally is impossible.
+
+**Decision**
+
+Build the new system as a **parallel layer** in `kalshi_bot/evo/population/`, with its own
+`evo_pop_*` namespace and its own object names (`EvoProgram`, `EvoGeneration`,
+`EvoCandidate`, `EvoGenomeVersion`, `EvoRun`, `EvoDecision`). The LLM organism is not
+migrated, renamed or modified.
+
+Bind to Experiment OS **by reference only**: record the platform-snapshot fingerprint on
+program, genome and run; reuse XOS metric definitions and the shared fill calibration;
+import nothing into XOS. §22.7 stands. A candidate that earns advancement enters the
+normal XOS path through a session with the authority to register it — there is no
+`EVO_LIVE` and no promotion call in the layer.
+
+Reuse rather than reimplement wherever the concept already exists: `StrategySpec` is the
+genome, `sandbox.run_backtest` is the replay engine, `kalshi_fee` and the maker-fill
+calibration are unchanged. The three additive changes to `sandbox.py` are default-off.
+
+**Consequences**
+
+*Easier:* the organism keeps running untouched, and the new layer is independently
+testable and independently deletable. One replay engine means the proving run exercises
+the code the real datasets use, so a clean proving run says something about production.
+Reference-only binding needs no Platform Change Review and no reversal of §22.7.
+
+*Harder / more expensive:* two systems now share the word "Evo", and a session has to know
+which one it is in. `docs/EVO_POPULATION_FOUNDATION.md` opens with a table of the
+differences for exactly that reason, and the session-role files name both. There is also
+duplication of *shape* — both have cohorts, fitness and lineage — that a future
+consolidation might want to collapse.
+
+*Expensive to reverse:* moderate. The layer is additive (12 new tables, one migration, no
+existing table touched), so removing it is a migration and a package deletion. What would
+be expensive is the opposite direction: merging the two namespaces later, which is why the
+names were kept distinct now rather than overloaded.
+
+*Revisit if:* the population layer proves out on real datasets and the organism's agents
+would benefit from proposing into it — at that point one mutation-proposal interface
+serving both is worth the consolidation. Or if XOS decides evo evidence should be
+first-class, which is a Platform Change Review decision and would supersede the
+reference-only half of this entry.
+
+---
+
+### DEC-003 — Evo historical search is a capability the agents invoke, not a second organism
+
+**Date:** 2026-08-25
+**Status:** Accepted
+**Supersedes:** DEC-002
+
+**Context**
+
+DEC-002 proposed a parallel population layer: `evo_pop_*` tables with their own
+`EvoProgram`, `EvoGeneration`, `EvoCandidate`, `EvoGenomeVersion`, `EvoRun` and
+`EvoDecision`, its own generations, its own reproduction and retirement, its own Control
+Tower and CLI. It was built and put up for review. Review rejected the shape.
+
+The objection was not about the machinery, which works; it was that the machinery had
+been wrapped in a **second lifecycle**. The repository already has one: `evo_agents`,
+`evo_cohorts`, `evo_genomes`, `evo_fitness`, `evo_births` and `evo_retirements`, with
+selection, reproduction and retirement that have been running against live agents. A
+second one meant two answers to "who is alive", two definitions of fitness, two places a
+strategy could be born, and a standing invitation to conflate a backtest ranking with an
+organism's survival.
+
+Three specific consequences made that concrete. Twelve new tables restated concepts the
+organism already owned. `evo_pop_fitness` was a fitness table that was not the fitness
+table. And the population layer's `insufficient → unranked` rule — correct when
+*measuring a strategy*, since a six-trade sample cannot order two strategies — would have
+become, inside a lifecycle, an **immunity from selection**: an agent that never trades is
+never ranked and therefore never retired. The organism's own evaluator deliberately says
+the opposite ("no incubation: a no-trade agent scores near 0").
+
+**Decision**
+
+Keep the deterministic replay, the constrained genome, the gated mutation proposals, the
+per-run virtual ledger, the component-wise scoring and the proving run. **Delete the
+lifecycle around them.** What remains is a *capability* an existing `EvoAgent` invokes
+from its own heartbeat, through a new `search_strategy_space` action:
+
+    agent asks → search replays base + bounded neighbourhood → returns EVIDENCE
+              → the AGENT reasons → the agent may revise its own strategy
+
+Concretely:
+
+* `kalshi_bot/evo/search/` replaces `kalshi_bot/evo/population/`. Three tables replace
+  twelve: `evo_search_runs`, `evo_search_candidates`, `evo_search_trades`. Each is an
+  artifact of one question, attributable to an existing agent, its cohort, its heartbeat
+  and its trading-genome revision.
+* `EvoProgram`, `EvoGeneration`, `EvoCandidate`, `EvoDecision`, `EvoGenomeVersion`,
+  reproduction, retirement, the population Control Tower and the population CLI are gone.
+  `evo_agents`/`evo_cohorts`/`evo_genomes`/`evo_fitness` are the only lifecycle.
+* Search scoring is structurally separated from agent fitness: it lives on the candidate
+  row, is never written to `evo_fitness`, and its module docstring states that
+  `insufficient → unranked` is a property of measuring strategies and must never become
+  an agent-selection rule.
+* Nothing in the package writes a genome. The mutation module is pure — no `session`
+  parameter on any public entry point — so there is no writer to bypass and no forgeable
+  admission. An agent adopts a variant by putting the returned document through
+  `save_strategy` / `activate_strategy`, under its own budgets and audit.
+* A search defaults to the agent's own active `evo_strategies` spec. Its `TradingGenome`
+  is policy prose whose schema forbids extra keys, so there are no replayable parameters
+  inside it to search.
+
+**Consequences**
+
+*Easier:* one lifecycle, one fitness, one place an agent can change. The search is now
+something an agent can use whenever it has a question rather than something that runs on
+a generation boundary. The three sandbox changes stay default-off and the reference-only
+Experiment OS binding from DEC-002 is unchanged and still stands.
+
+*Harder:* the search cannot explore a region no agent is interested in — there is no
+autonomous population sweeping the space on its own. That is the intended trade: an
+unattended sweep with its own reproduction is exactly what was rejected. Broad exploration
+now costs an agent's sandbox budget, which is the same currency every other question
+costs.
+
+*Expensive to reverse:* low, and deliberately so. The package is additive, the migration
+creates only the three artifact tables, and no existing table was touched.
+
+*Revisit if:* real-dataset searches show agents converging on the same narrow
+neighbourhood, which would be evidence that a broader, un-agent-directed exploration is
+worth its own design — as a proposal into the existing organism, not as a second one.
+
+---
+
 <!-- Copy the block above for each new decision. IDs are stable: never reused, never
      renumbered. -->

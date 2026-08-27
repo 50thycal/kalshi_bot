@@ -595,11 +595,66 @@ _ADAPTERS = {
 }
 
 
-def _trade(market: _Market, pos: dict, pnl: float, exit_reason: str, *, win: bool) -> dict:
+def register_dataset(
+    name: str,
+    adapter,
+    *,
+    provenance: str,
+    signals_available: frozenset[str] = frozenset(),
+) -> None:
+    """Register an extra replay corpus under the `synthetic:` namespace.
+
+    This exists so the search capability's deterministic proving fixtures run through
+    THIS replay loop rather than a second copy of it — a proving run that exercised
+    different code from the real datasets would prove nothing about them.
+
+    Two guards keep it honest. The name must be namespaced, so a fixture can never be
+    mistaken for measured history; and `DATASETS` (the built-in tuple the agent-facing
+    path in `cognition.py` validates against) is deliberately not extended, so no evo
+    agent can backtest against a synthetic corpus and read the result as evidence."""
+    if not name.startswith("synthetic:"):
+        raise ValueError(f"registered dataset {name!r} must be namespaced 'synthetic:*'")
+    if name in DATASETS:
+        raise ValueError(f"cannot shadow built-in dataset {name!r}")
+    _ADAPTERS[name] = adapter
+    _PROVENANCE[name] = provenance
+    DATASET_SIGNALS[name] = signals_available
+
+
+def available_datasets() -> tuple[str, ...]:
+    """Every replayable corpus, built-in and registered."""
+    return tuple(sorted(_ADAPTERS))
+
+
+def _trade(
+    market: _Market,
+    pos: dict,
+    pnl: float,
+    exit_reason: str,
+    *,
+    win: bool,
+    exited_at: datetime | None = None,
+    exit_price_cents: float | None = None,
+    exit_fee: float = 0.0,
+    settled: bool = True,
+    exit_time_exact: bool = True,
+) -> dict:
     """One closed replay trade. `cents_per_contract` and `maker_yes_c` are what the
     realizable projection needs: the optimistic per-contract result, tagged with the
     calibration cell of the resting order that produced it (None for taker entries,
-    which cross the spread and have no fill to miss)."""
+    which cross the spread and have no fill to miss).
+
+    The entry/exit timestamps, prices and fees are what a per-run virtual ledger needs
+    to reconstruct concurrency and exposure (`evo/search/replay.py`). They are
+    additive: the aggregate result fields are computed from `pnl`/`month`/`exit` exactly
+    as before.
+
+    `exit_time_exact` distinguishes the two kinds of exit time. A rule-based exit happened
+    AT the quote that triggered it, so its timestamp is exact. A settlement exit did not:
+    the replay only knows the last candle it observed, and settlement occurs at or after
+    that. Treating the last observation as the settlement time would close the position
+    early and understate overlap, so it is published as a LOWER BOUND and flagged, and the
+    ledger excludes inexact exits from exact concurrency accounting."""
     qty = pos["qty"] or 1
     return {
         "ticker": market.ticker,
@@ -609,6 +664,17 @@ def _trade(market: _Market, pos: dict, pnl: float, exit_reason: str, *, win: boo
         "win": win,
         "maker_yes_c": pos["maker_yes_c"],
         "cents_per_contract": 100.0 * pnl / qty,
+        # --- ledger detail ---
+        "side": pos["side"],
+        "style": pos.get("style"),
+        "quantity": pos["qty"],
+        "entry_price_cents": pos["price"],
+        "exit_price_cents": exit_price_cents,
+        "entered_at": pos["entered_at"],
+        "exited_at": exited_at,
+        "exit_time_exact": exit_time_exact,
+        "fees": round(float(pos["fee"]) + float(exit_fee), 6),
+        "settled": settled,
     }
 
 
@@ -658,14 +724,27 @@ def run_backtest(
     kind: str = "backtest",
     charge_budget: bool = True,
     persist: bool = True,
+    return_trades: bool = False,
+    skip_crossed_quotes: bool = False,
 ) -> tuple[dict | None, str | None]:
     """Replay the spec over settled history. Returns (result, None) or (None, err).
     Result: n, wins, gross/net P&L, per-trade, max drawdown, by-month split.
 
     persist=False skips writing the EvoSandboxRun row (and returns before any write), so
-    the whole call is pure SELECT — used by the read-only ops probe against a read-only DB."""
-    if dataset not in DATASETS:
-        return None, f"unknown dataset {dataset!r} (available: {DATASETS})"
+    the whole call is pure SELECT — used by the read-only ops probe against a read-only DB.
+
+    return_trades=True adds the per-trade tape under `trades`. It is off by default
+    because the tape is large and the agent-facing path only ever reads the aggregates;
+    the historical search turns it on to build a per-replay virtual ledger. The tape is
+    never persisted into `EvoSandboxRun.result_json`.
+
+    skip_crossed_quotes=True refuses to trade a step whose recorded book is crossed
+    (bid >= ask). Off by default: skipping changes the replay result for every caller,
+    which is a shared execution-semantics change and belongs to Platform Change Review.
+    Crossed quotes are always COUNTED (`crossed_quotes` in the result) regardless, so
+    the defect is visible to everyone without changing anyone's numbers."""
+    if dataset not in _ADAPTERS:
+        return None, f"unknown dataset {dataset!r} (available: {available_datasets()})"
     spec, err = validate_spec(spec_doc, max_bytes=settings.strategy_spec_max_bytes)
     if err:
         return None, err
@@ -697,6 +776,7 @@ def run_backtest(
     truncated = False
     markets_considered = 0
     markets_blocked = 0  # resting orders the measured fill curve says would never be hit
+    crossed_quotes = 0  # corrupt (bid >= ask) steps skipped; see the candle loop
     gate_applied = False
     for market in _ADAPTERS[dataset](session, spec, date_from, date_to):
         if time.monotonic() > deadline or rows_processed >= max_rows:
@@ -709,6 +789,24 @@ def run_backtest(
         maker_gate_decided = False
         for candle in market.candles:
             quote = candle.quote
+            # A crossed book (bid at or above ask) is impossible in a real order book:
+            # it means the recorded quote is corrupt, and trading against it would mint
+            # risk-free P&L out of a data defect.
+            #
+            # Counting is unconditional and inert — it only adds a diagnostic to the
+            # result. SKIPPING is opt-in, because refusing to trade a step changes what
+            # every existing caller's replay returns, and that is a shared
+            # replay/execution semantics change. It needs Platform Change Review before
+            # it can become the default; until then existing callers keep their exact
+            # current behavior and only the historical search opts in.
+            if (
+                quote.yes_bid is not None
+                and quote.yes_ask is not None
+                and quote.yes_bid >= quote.yes_ask
+            ):
+                crossed_quotes += 1
+                if skip_crossed_quotes:
+                    continue
             if open_pos is None:
                 intent = entry_signal(spec, quote)
                 if intent is None:
@@ -739,6 +837,7 @@ def run_backtest(
                 fee = kalshi_fee(price, qty)
                 open_pos = {
                     "side": intent["side"],
+                    "style": intent["style"],
                     "price": price,
                     "qty": qty,
                     "fee": fee,
@@ -769,7 +868,8 @@ def run_backtest(
                 gross = open_pos["qty"] * (bid - open_pos["price"]) / 100.0
                 trades.append(_trade(
                     market, open_pos, gross - open_pos["fee"] - exit_fee, reason,
-                    win=gross > 0,
+                    win=gross > 0, exited_at=candle.ts, exit_price_cents=bid,
+                    exit_fee=exit_fee, settled=False, exit_time_exact=True,
                 ))
                 open_pos = None
                 # One entry per market, matching the live runner's per-strategy/ticker
@@ -783,6 +883,11 @@ def run_backtest(
             gross = open_pos["qty"] * (value - open_pos["price"]) / 100.0
             trades.append(_trade(
                 market, open_pos, gross - open_pos["fee"], "settlement", win=won,
+                # A LOWER BOUND, not the settlement time: the tape ends at the last
+                # observed candle and settlement happens at or after it. Flagged inexact
+                # so the ledger does not use it for exact concurrency or exposure.
+                exited_at=market.candles[-1].ts if market.candles else None,
+                exit_price_cents=float(value), settled=True, exit_time_exact=False,
             ))
 
     n = len(trades)
@@ -805,6 +910,7 @@ def run_backtest(
         "provenance": provenance,
         "markets_considered": markets_considered,
         "rows_processed": rows_processed,
+        "crossed_quotes": crossed_quotes,
         "truncated": truncated,
         "n_trades": n,
         "wins": wins,
@@ -826,6 +932,8 @@ def run_backtest(
         "elapsed_ms": int((time.monotonic() - started) * 1000),
     }
     if not persist:
+        if return_trades:
+            result["trades"] = trades
         return result, None
     run = EvoSandboxRun(
         agent_uuid=agent_uuid,
@@ -842,6 +950,9 @@ def run_backtest(
     )
     session.add(run)
     session.flush()
+    if return_trades:
+        # After the row is built, so the persisted result_json stays the aggregate view.
+        result["trades"] = trades
     return result, None
 
 

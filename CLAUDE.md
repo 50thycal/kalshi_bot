@@ -86,7 +86,11 @@ not quietly become a write session. Menu and handoff format:
 
 - Canonical framework: 50thycal/build-os
 - Adopted version: v0.4
-- Last compatibility check: v0.4 on 2026-08-24
+- Last compatibility check: 2026-08-25 — canonical is **v0.5**; the project is still
+  pinned to v0.4. v0.5 ("Closed-loop delivery") adds Capture Only, the Design Handoff PR,
+  a reviewed-head merge gate and merge finalization. Adopting it is a protocol migration
+  and an owner decision, tracked on WS-001 — not something an unrelated build session
+  performs. A v0.4 pin covers current work; v0.5 does not reach back.
 
 Before substantial design or architectural work, compare the adopted version against
 `VERSION.md` in the canonical repository and act on the delta (`framework/FRAMEWORK_SYNC.md`).
@@ -165,5 +169,6 @@ Full mechanism, standing analysis commands and gotchas: **`docs/OPS_RUNBOOK.md`*
 - Shared skills → `.claude/skills/` (research: `kalshi-idea-model`,
   `kalshi-probe-builder`, `kalshi-strategy`; evo: `evo-ticket-triage`;
   live canary: `live-paper-parallel`; evo readability: `bot-readable-strategy`)
-- Evo system → `docs/EVOLUTIONARY_AGENT_SYSTEM.md`, `docs/EVO_RUNBOOK.md`
+- Evo agent fleet → `docs/EVOLUTIONARY_AGENT_SYSTEM.md`, `docs/EVO_RUNBOOK.md`
+- Evo historical search (agent capability, replay-proven) → `docs/EVO_SEARCH_CAPABILITY.md`
 - Research history → `docs/RESEARCH_JOURNAL.md`, thesis docs in `docs/`
