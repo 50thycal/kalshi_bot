@@ -107,19 +107,127 @@ def _session(url: str):
     return sessionmaker(bind=engine)()
 
 
+#: Fields whose value depends only on how long the machine took, never on the corpus.
+_RUNTIME_ONLY_FIELDS = ("elapsed_ms",)
+
+#: Aggregates whose value depends on the ORDER the adapter yielded markets in, not on
+#: WHICH markets it yielded. The replay appends trades in market-iteration order and
+#: walks that sequence to find the peak-to-trough drop, so a different tie order over the
+#: same trade set moves this number and nothing else.
+#:
+#: This matters because `_weather_markets` orders by `close_time` alone, and every bucket
+#: market in one weather event shares a close_time. That is not a total order, so Postgres
+#: may return tied markets in a different order between two reads of the same snapshot.
+#: Making the adapter's ORDER BY total would change what every existing caller's replay
+#: reports and is therefore a shared replay-semantics change (WS-006 D7, Platform Change
+#: Review) — not something this read-only probe may do. What the probe CAN do is name the
+#: divergence precisely instead of reporting an unexplained fingerprint mismatch.
+_ORDER_DEPENDENT_FIELDS = ("max_drawdown_usd",)
+
+
 def _stable_result(result: dict) -> dict:
-    """Remove runtime-only fields before comparing two identical historical replays."""
-    return {key: value for key, value in result.items() if key != "elapsed_ms"}
+    """Drop runtime-only fields before comparing two identical historical replays."""
+    return {k: v for k, v in result.items() if k not in _RUNTIME_ONLY_FIELDS}
+
+
+def _corpus_result(result: dict) -> dict:
+    """The stable payload minus the order-dependent aggregates.
+
+    Two replays agreeing here selected the same markets and produced the same trade set;
+    they may still disagree on the equity-curve ordering.
+    """
+    return {k: v for k, v in _stable_result(result).items() if k not in _ORDER_DEPENDENT_FIELDS}
+
+
+def _hash(payload: dict) -> str:
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+    ).hexdigest()
 
 
 def _fingerprint(result: dict) -> str:
-    payload = json.dumps(
-        _stable_result(result),
-        sort_keys=True,
-        separators=(",", ":"),
-        default=str,
-    )
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    return _hash(_stable_result(result))
+
+
+def _corpus_fingerprint(result: dict) -> str:
+    return _hash(_corpus_result(result))
+
+
+def _differing_fields(results: list[dict]) -> list[str]:
+    """Which stable evidence fields are not identical across every repetition."""
+    if len(results) < 2:
+        return []
+    first = _stable_result(results[0])
+    keys = set(first)
+    for other in results[1:]:
+        keys |= set(_stable_result(other))
+    differing = []
+    for key in sorted(keys):
+        values = {_hash({key: _stable_result(r).get(key)}) for r in results}
+        if len(values) > 1:
+            differing.append(key)
+    return differing
+
+
+def _assess(results: list[dict], repeat: int) -> dict:
+    """Turn a spec's repetitions into the pre-registered PASS conditions.
+
+    Every condition is False unless every requested repetition actually returned a
+    result: a spec that errored out has not been proven reproducible, it has been
+    proven nothing.
+    """
+    ran = len(results) == repeat and repeat >= 1
+    differing = _differing_fields(results) if ran else []
+    return {
+        "ran": ran,
+        "non_empty": ran and all(r["n_trades"] for r in results),
+        "reproducible": ran and len({_fingerprint(r) for r in results}) == 1,
+        "corpus_reproducible": ran and len({_corpus_fingerprint(r) for r in results}) == 1,
+        "untruncated": ran and not any(r["truncated"] for r in results),
+        "empty_window": ran and all(not r["markets_considered"] for r in results),
+        "differing_fields": differing,
+    }
+
+
+def _diagnose(a: dict) -> str | None:
+    """One line naming WHY a spec failed, so a red run is actionable on its own.
+
+    A bare `reproducible=False` tells the operator that D1 is not clean but not what to
+    do next; these are the three distinguishable causes.
+    """
+    if not a["ran"]:
+        return "the replay did not complete every repetition — see the errors above"
+    if a["empty_window"]:
+        return (
+            "empty window — the adapter selected 0 markets. This is a corpus-coverage "
+            "finding, not evidence about the strategy: check the dataset actually has "
+            "settled markets in the requested date range before rerunning."
+        )
+    if not a["non_empty"]:
+        return (
+            "markets were replayed but no spec entered — check the entry bands against "
+            "the recorded price paths, not the harness."
+        )
+    if not a["untruncated"]:
+        return (
+            "truncated — the replay hit sandbox_max_seconds or sandbox_max_rows and "
+            "therefore selected a machine-speed-dependent prefix. Narrow the window."
+        )
+    if not a["reproducible"]:
+        if a["corpus_reproducible"] and set(a["differing_fields"]) <= set(_ORDER_DEPENDENT_FIELDS):
+            return (
+                "ordering-only divergence in "
+                f"{', '.join(a['differing_fields'])}: the same markets and the same trade "
+                "set reproduced, but the adapter's ORDER BY is not total so tied markets "
+                "replayed in a different sequence. Root cause and remedy: WS-006 D7 "
+                "(a deterministic tiebreaker is a shared replay-semantics change and "
+                "belongs to Platform Change Review)."
+            )
+        return (
+            "the corpus itself did not reproduce; fields that differ: "
+            f"{', '.join(a['differing_fields']) or 'unknown'}"
+        )
+    return None
 
 
 def _line(result: dict) -> str:
@@ -131,7 +239,8 @@ def _line(result: dict) -> str:
         f"  per_trade_usd={result['per_trade_usd']} "
         f"total_pnl_usd={result['total_pnl_usd']} "
         f"provenance={result['provenance']}\n"
-        f"  fingerprint={_fingerprint(result)}"
+        f"  fingerprint={_fingerprint(result)}\n"
+        f"  corpus_fingerprint={_corpus_fingerprint(result)}"
     )
 
 
@@ -198,9 +307,8 @@ def main(argv: list[str] | None = None) -> int:
         f"require_complete={args.require_complete}"
     )
 
-    produced = 0
-    reproducible = 0
-    complete = 0
+    passes: list[bool] = []
+    summary: list[str] = []
     for spec in _SPECS:
         results: list[dict] = []
         errors: list[str] = []
@@ -210,6 +318,13 @@ def main(argv: list[str] | None = None) -> int:
             f"exit {spec['exit']['mode']}) ==="
         )
         for repetition in range(1, args.repeat + 1):
+            # Drop the ORM identity map between repetitions so repetition N re-executes
+            # its SELECTs instead of replaying cached objects — otherwise "identical
+            # fingerprints" could just mean "we never read the database twice".
+            # Deliberately NOT a rollback: staying inside one read transaction keeps
+            # every repetition on the same snapshot, which is what determinism means
+            # here. A changing database is a different question.
+            session.expunge_all()
             result, err = sandbox.run_backtest(
                 session,
                 settings,
@@ -230,42 +345,56 @@ def main(argv: list[str] | None = None) -> int:
             results.append(result)
             print(_line(result))
 
-        if len(results) == args.repeat and all(result["n_trades"] for result in results):
-            produced += 1
-        fingerprints = {_fingerprint(result) for result in results}
-        if len(results) == args.repeat and len(fingerprints) == 1:
-            reproducible += 1
-        if len(results) == args.repeat and not any(
-            result["truncated"] for result in results
-        ):
-            complete += 1
+        a = _assess(results, args.repeat)
+        spec_passed = (
+            a["non_empty"]
+            and a["reproducible"]
+            and (not args.require_complete or a["untruncated"])
+        )
+        passes.append(spec_passed)
         if errors:
-            print(f"  errors={len(errors)}")
+            print(f"\n  errors={len(errors)}")
         print(
-            f"  reproducible={len(results) == args.repeat and len(fingerprints) == 1} "
-            f"complete={len(results) == args.repeat and not any(result['truncated'] for result in results)}"
+            f"\n  non_empty={a['non_empty']} reproducible={a['reproducible']} "
+            f"corpus_reproducible={a['corpus_reproducible']} "
+            f"untruncated={a['untruncated']}"
+        )
+        why = _diagnose(a)
+        if why:
+            print(f"  WHY: {why}")
+        summary.append(
+            f"  {spec['name']}: {'PASS' if spec_passed else 'FAIL'} "
+            f"fingerprint={_fingerprint(results[0]) if results else 'none'}"
         )
 
     total = len(_SPECS)
-    passed = (
-        produced == total
-        and reproducible == total
-        and (not args.require_complete or complete == total)
-    )
+    passed = all(passes) and len(passes) == total
     print(
         f"\n=== VERDICT: {'PASS' if passed else 'FAIL'} — "
-        f"trades {produced}/{total}, reproducible {reproducible}/{total}, "
-        f"complete {complete}/{total} ==="
+        f"{sum(passes)}/{total} specs met every pre-registered condition "
+        f"(non-empty, fingerprint-identical across {args.repeat} repetition(s)"
+        + (", untruncated" if args.require_complete else "")
+        + ") ==="
     )
+    # Printed unconditionally so a LATER, independent ops run of the same request can be
+    # compared against this one by eye: cross-process agreement is stronger evidence than
+    # two repetitions inside a single process.
+    print("\n# stable fingerprints (compare across independent runs of this request)")
+    for row in summary:
+        print(row)
     if passed:
         print(
-            f"  PASS — dataset={args.dataset!r}, window={window!r} executes end-to-end "
-            "on real settled markets and identical replays return identical evidence."
+            f"\n  PASS — dataset={args.dataset!r}, window={window!r} executes end-to-end "
+            "on real settled markets and identical replays return identical evidence.\n"
+            "  P&L above is reconciliation output only. It is not an edge claim, an "
+            "experiment result, or authority to create a prospective cohort."
         )
         return 0
     print(
-        "  FAIL — the real-dataset result is not yet a proving artifact. Require a "
-        "non-empty, identical, untruncated result for every spec."
+        "\n  FAIL — the real-dataset result is not a proving artifact. Every spec must be "
+        "non-empty and fingerprint-identical across repetitions"
+        + (", and untruncated" if args.require_complete else "")
+        + ". See the WHY line under each failing spec."
     )
     return 1
 

@@ -158,7 +158,9 @@ someone would be tempted to reuse it.
   `2026-08-01..2026-08-03`; then use `mmsell` separately to exercise the fill-model
   correction. The dataset choice is made. D1 remains open only until the fixed window
   produces two identical, non-empty, untruncated fingerprints for both the taker and maker
-  specs. The unwindowed 2026-08-27 attempts are diagnostic evidence, not the proving run.
+  specs. The unwindowed 2026-08-27 attempts are diagnostic evidence, not the proving run.  A run that
+  fails names *which* condition failed, so a red D1 is actionable without a second
+  investigation.
 - **D2.** Should the replay engine enforce `risk.max_concurrent_positions` and per-position
   cost, so risk genes become mutable and the ledger's capital constraint becomes binding
   rather than measured after the fact? A change to a shared engine, so Platform Change
@@ -168,6 +170,18 @@ someone would be tempted to reuse it.
 - **D6.** Should agents be nudged toward the search in the heartbeat prompt, or left to
   discover it? Currently documented in the action protocol and otherwise unprompted, so its
   first use is the agents' own choice — which also makes early usage a signal.
+- **D7.** Should `_weather_markets` (and the sibling adapters) get a total ORDER BY?
+  Today the weather adapter orders by `close_time` alone, and every bucket market inside one
+  weather event shares a `close_time`, so Postgres may return tied markets in a different
+  sequence between two reads of the *same* snapshot. That cannot change which markets are
+  replayed or which trades are produced — but the replay appends trades in market-iteration
+  order and walks that sequence for the peak-to-trough drop, so `max_drawdown_usd` can move
+  while every other aggregate holds. Adding a tiebreaker (`close_time, market_ticker`) would
+  change what every existing caller's replay reports for that field, which makes it a shared
+  replay-semantics change — **Platform Change Review**, exactly like `skip_crossed_quotes`,
+  not a workstream decision and not something the read-only probe may do. Until it is
+  decided, the probe distinguishes this case by name rather than reporting an unexplained
+  fingerprint mismatch (see the pre-registration below).
 
 *(D4 and D5 are closed: the search got its own three tables, and the whole refactor landed
 on this branch.)*
@@ -197,16 +211,41 @@ The fixed-window run is pre-registered before seeing its result:
 
 - dataset `backfill_weather`, target dates `2026-08-01..2026-08-03`;
 - the existing broad taker and maker specs, unchanged;
-- two repetitions per spec, over the same read-only database snapshot available to the job;
+- two repetitions per spec, over the same read-only database snapshot available to the job,
+  with the ORM identity map dropped between them so each repetition genuinely re-reads;
 - PASS only when both specs are non-empty, neither repetition is truncated, and the stable
   result fingerprint matches between repetitions;
 - expected provenance `kalshi_rest_backfill`;
 - no strategy or edge verdict. P&L is output for reconciliation only and authorizes nothing.
 
-`scripts/evo_backtest_probe.py` now exposes `--date-from`, `--date-to`, `--repeat`
-and `--require-complete`, strips `elapsed_ms` before hashing, and exits non-zero when the
-pre-registered conditions fail. The ops runner executes default-branch code, so the final
-run happens only after this follow-up PR merges.
+**Failure is pre-classified, before any result is seen.** A FAIL is not a single
+undifferentiated outcome; the probe reports which of these it is, and the classification is
+fixed here so it cannot be chosen after the fact:
+
+| cause | what the run shows | what it means |
+|---|---|---|
+| empty window | `markets_considered=0` on every repetition | corpus coverage, not strategy evidence — check the dataset holds settled markets in the range |
+| no entries | markets replayed, `n_trades=0` | the entry bands, not the harness |
+| truncated | `truncated=True` on any repetition | still a machine-speed-dependent prefix — narrow the window |
+| ordering-only divergence | the `corpus_fingerprint` matches, the strict `fingerprint` does not, and every differing field is order-dependent | **D7**: same markets, same trade set, different tie order. Not a corpus defect; routes to Platform Change Review |
+| corpus divergence | the `corpus_fingerprint` itself differs | a real reproducibility defect; the differing fields are named |
+
+Only the *first* row of the VERDICT — every spec non-empty, fingerprint-identical and
+untruncated — records D1 clean. An ordering-only divergence is still a FAIL: it does not
+authorize D1, it just says the next move is D7 rather than another proving run.
+
+`scripts/evo_backtest_probe.py` exposes `--date-from`, `--date-to`, `--repeat` and
+`--require-complete`; strips `elapsed_ms` (the only runtime-varying field in the result)
+before hashing; publishes a second `corpus_fingerprint` over the order-independent subset;
+and exits non-zero when the pre-registered conditions fail. The ops runner tees the script's
+output and publishes it regardless of exit status, so a non-zero exit loses no evidence.
+Because the runner executes default-branch code, the final run happens only after this
+follow-up PR merges.
+
+Two repetitions inside one process are the weaker half of the claim. The run prints each
+spec's stable fingerprint in a trailing summary block so a **second, independent** ops run of
+the identical request can be compared against the first by eye; cross-process agreement is
+what makes the determinism claim worth anything.
 
 ## Assumptions
 
@@ -216,6 +255,11 @@ run happens only after this follow-up PR merges.
   sandbox guards. The maker-fill gate is a hash of the market key, but an unwindowed run can
   stop at the 60-second wall-clock guard and therefore select a machine-speed-dependent
   prefix. D1 requires a fixed window, no truncation and matching fingerprints.
+- Determinism of the *engine* is not determinism of the *read*. The adapters' ORDER BY is not
+  total, so equal keys may come back in a different sequence on the same snapshot. This is
+  assumed to move only order-dependent aggregates (today: `max_drawdown_usd`) and never the
+  market or trade set — an assumption the probe now tests rather than states, by comparing an
+  order-independent `corpus_fingerprint` alongside the strict one. See D7.
 - Agents will not be *worse* off for having the tool: it costs the same budget a
   hand-written backtest costs, and the protocol tells them a higher score over one window
   is one window of evidence.
@@ -251,6 +295,28 @@ Three additive changes to shared code, all default-off:
 Tests: `test_evo_search_{genome,replay,fitness,mutation,proving,agent_invocation}.py`.
 
 ## Review State
+
+**Independent review of the D1 proving-harness PR, 2026-08-27.** The bounded-window,
+repeat-and-fingerprint shape was accepted. Three findings were raised and are fixed in the
+reviewed head:
+
+1. *The determinism claim rested on a non-total ORDER BY.* `_weather_markets` sorts by
+   `close_time`, which ties across every bucket market in a weather event, so the strict
+   fingerprint could differ between repetitions for a reason that is not a corpus defect —
+   and D1 would have failed with no way to tell the two apart. Recorded as **D7**; the probe
+   now separates them.
+2. *Repetitions shared the ORM identity map.* Both replays reused one SQLAlchemy `Session`,
+   so matching fingerprints could have meant "we never read the database twice". The probe
+   now expunges between repetitions, deliberately without a rollback so all repetitions stay
+   on one snapshot.
+3. *A red run said nothing actionable.* `reproducible=False` alone does not distinguish an
+   empty window, an entry-band miss, truncation, an ordering tie and a genuine corpus
+   defect. Each is now pre-classified (before any result is seen) and named in the output.
+
+Verified and unchanged: the ops runner tees output and publishes results even on a non-zero
+exit, so the new failing exit status loses no evidence; `elapsed_ms` is the only
+runtime-varying field in `run_backtest`'s result, so stripping it is sufficient; and
+`fill_model` is built from order-independent histogram sums.
 
 **PR #261 merged 2026-08-27** at reviewed head
 `0330a855744400acaa8621fc17deac508178b56d`. The historical-search capability and its
@@ -293,8 +359,9 @@ Defect found by writing the agent-invocation test:
 
 ## Related PRs
 
-[#261](https://github.com/50thycal/kalshi_bot/pull/261) (merged) and this D1 proving-harness
-follow-up PR.
+[#261](https://github.com/50thycal/kalshi_bot/pull/261) (merged),
+[#262](https://github.com/50thycal/kalshi_bot/pull/262) (the D1 proving-harness follow-up)
+and this review build, which carries #262 plus the three review fixes above.
 
 ## Next Step
 
