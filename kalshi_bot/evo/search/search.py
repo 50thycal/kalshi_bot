@@ -40,6 +40,11 @@ from .models import EvoSearchCandidate, EvoSearchRun, EvoSearchTrade
 
 SEARCH_REVISION = "search-1"
 
+#: Strategy statuses a search may be run around. `draft` has not been validated,
+#: `rejected` failed validation, and `inactive` was deliberately taken out of service —
+#: none of them is what the agent is running, so none is a base worth searching.
+RUNNABLE_STATUSES = ("active", "validated")
+
 #: Default neighbourhood size. Small on purpose: a search is a heartbeat action competing
 #: with the agent's other budget, and thirty variants of one genome is not thirty times
 #: more informative than eight.
@@ -114,11 +119,24 @@ def current_strategy(session, agent_uuid: str) -> OwnStrategy:
             .limit(1)
         ).scalars().first()
 
-    # The strategy the trading genome names, then whatever is deployed, then the most
-    # recent one that at least validates. Anything drafted, rejected or deactivated is
-    # not what this agent is running, so it is not what it should be searching around.
+    # Precedence, most specific first: the strategy the trading genome names — but only
+    # a RUNNABLE revision of it — then whatever is deployed, then the most recent one
+    # that at least validates.
+    #
+    # The status condition on the named branch is the point. A name is not an identity:
+    # `evo_strategies` versions by (agent, name, revision), so the newest row under a
+    # named strategy can perfectly well be deactivated or rejected while an older
+    # revision of that same name is the one actually deployed. Matching on name alone
+    # would hand back a spec the agent is explicitly not running, and the search would
+    # then measure variants of the wrong base.
+    by_name = None
+    if named:
+        is_named = EvoStrategy.name == str(named)
+        by_name = _latest(is_named, EvoStrategy.status == "active") or _latest(
+            is_named, EvoStrategy.status.in_(RUNNABLE_STATUSES)
+        )
     row = (
-        (_latest(EvoStrategy.name == str(named)) if named else None)
+        by_name
         or _latest(EvoStrategy.status == "active")
         or _latest(EvoStrategy.status == "validated")
     )
@@ -586,6 +604,9 @@ def _summarize(base_row, admitted_rows, rankable, run) -> dict:
         "window": [run.window_start, run.window_end],
         "proposals_made": run.proposals_made,
         "proposals_admitted": run.proposals_admitted,
+        #: Replays that actually ran — the base plus every admitted variant. This is
+        #: what the invoking agent is charged for; refused proposals never replayed.
+        "candidates_replayed": run.candidates_replayed,
         "ranked": len(rankable),
         "held_thin_evidence": sum(
             1 for r in admitted_rows if r.evidence_class == fitness_mod.EVIDENCE_INSUFFICIENT

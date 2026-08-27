@@ -33,6 +33,7 @@ from kalshi_bot.evo.cohorts import ensure_current_cohort
 from kalshi_bot.evo.config import EvoSettings
 from kalshi_bot.evo.constitution import PERMITTED_ACTIONS
 from kalshi_bot.evo.evolution import create_agent
+from kalshi_bot.evo.genomes import default_trading, write_genome_revision
 from kalshi_bot.evo.heartbeats import run_heartbeat
 from kalshi_bot.evo.marketdata import StaticMarketData
 from kalshi_bot.evo.search import genome as g
@@ -310,18 +311,24 @@ def test_running_a_search_changes_nothing_about_the_agent():
 
 
 def test_the_agent_adopts_the_better_variant_itself():
-    """CHOOSE. The evidence hands back a document; the agent puts it through the
-    organism's own save/activate path, in its own heartbeat, against its own budget."""
+    """CHOOSE, end to end through the agent's own action protocol.
+
+    Three heartbeats, no test-side shortcuts: the agent searches, then saves the winner,
+    then activates it by the integer id the save handed back. Every step is an ordinary
+    permitted action executed by `execute_actions` against the agent's own budgets and
+    audit — nothing on the search side has the authority to do any of it."""
     session = _session()
     settings = EvoSettings(_env_file=None, fill_latency_ms=0)
     agent, cohort = _agent(session, settings)
     _seed_weather(session)
 
-    hb = _beat(session, settings, agent, cohort, "s1", [_search_action()])
-    winner = hb.actions_json[0]["result"]["candidates"][0]["document"]
+    first = _beat(session, settings, agent, cohort, "s1", [_search_action()])
+    evidence = first.actions_json[0]["result"]
+    winner = evidence["candidates"][0]["document"]
     assert winner["entry"]["max_price_cents"] < 90  # the ceiling the base got wrong
 
-    # Next heartbeat: the agent decides, and says why.
+    # Heartbeat 2: the agent decides, saves, and says why. Saving is NOT deploying, and
+    # the outcome says so — it hands back the id the next action needs.
     second = _beat(
         session, settings, agent, cohort, "s2",
         [
@@ -330,15 +337,25 @@ def test_the_agent_adopts_the_better_variant_itself():
                 "type": "revise_belief",
                 "title": "my entry ceiling was too high",
                 "new_belief": "Above ~65c this book is systematically overpriced.",
-                "evidence_for": f"search run {hb.actions_json[0]['result']['run_id']}",
+                "evidence_for": f"search run {evidence['run_id']}",
                 "confidence": 0.6,
             },
         ],
     )
     saved = second.actions_json[0]
     assert saved.get("ok"), saved
-    activated = sandbox.activate_strategy(session, agent.agent_uuid, saved["strategy_id"])
-    assert activated[0] is not None
+    assert saved["status"] == "validated"  # saved, not yet trading
+    assert "NOT trading yet" in saved["next"]
+    strategy_id = saved["strategy_id"]
+
+    # Heartbeat 3: the agent deploys it, through the action protocol.
+    third = _beat(
+        session, settings, agent, cohort, "s3",
+        [{"type": "activate_strategy", "strategy_id": strategy_id}],
+    )
+    activated = third.actions_json[0]
+    assert activated.get("ok"), activated
+    assert activated["status"] == "active"
 
     rows = session.scalars(
         select(em.EvoStrategy)
@@ -348,9 +365,11 @@ def test_the_agent_adopts_the_better_variant_itself():
     assert [r.revision for r in rows] == [1, 2]
     assert rows[0].spec_json["entry"]["max_price_cents"] == 90
     assert rows[1].spec_json["entry"]["max_price_cents"] == winner["entry"]["max_price_cents"]
-    assert rows[1].status == "active"
-    # It is the AGENT's heartbeat that carries the change, not the search run.
+    assert (rows[0].status, rows[1].status) == ("inactive", "active")
+    # It is the AGENT's heartbeats that carry the change, not the search run.
     assert rows[1].heartbeat_id == second.id
+    # And the search the agent acted on is still attributable to the heartbeat it ran in.
+    assert session.get(EvoSearchRun, evidence["run_id"]).heartbeat_id == first.id
 
 
 def test_the_agent_may_decline_the_better_variant():
@@ -536,3 +555,184 @@ def test_a_named_proposal_is_gated_like_any_other():
     assert evidence["summary"]["proposals_admitted"] == 0
     assert evidence["refused"][0]["stage"] == "compatibility"
     assert "inverted" in evidence["refused"][0]["reason"]
+
+
+# ---------------------------------------------------------------------------
+# A refused search costs nothing
+# ---------------------------------------------------------------------------
+
+
+def _sandbox_runs(session, agent, cohort) -> float:
+    return budgets.remaining(session, agent.agent_uuid, cohort.id, "sandbox_runs")
+
+
+def test_a_refused_search_leaves_the_budget_untouched():
+    """`run_search` validates the whole call before replaying anything, so a refusal
+    must not move the organism's budget ledger either. Charging for a search that
+    wrote nothing and replayed nothing would make 'refused before anything is written'
+    false in the one ledger the agent actually feels."""
+    session = _session()
+    settings = EvoSettings(_env_file=None, fill_latency_ms=0)
+    agent, cohort = _agent(session, settings)
+    _seed_weather(session)
+    before = _sandbox_runs(session, agent, cohort)
+
+    refusals = [
+        # not a gene at all
+        _search_action(proposals=[{"path": "entry.vibes", "value": 3}]),
+        # a value the gene already holds — tests nothing
+        _search_action(proposals=[{"path": "entry.max_price_cents", "value": 90}]),
+        # an explicit base spec that does not cohere (min above max)
+        _search_action(spec={
+            "name": "broken-band", "family": "x",
+            "entry": {"min_price_cents": 95, "max_price_cents": 20},
+        }),
+        # a fixture corpus, which is never readable as evidence
+        _search_action(dataset="synthetic:proving"),
+    ]
+    for i, action in enumerate(refusals):
+        hb = _beat(session, settings, agent, cohort, f"r{i}", [action])
+        assert hb.actions_json[0].get("rejected"), hb.actions_json[0]
+        assert _sandbox_runs(session, agent, cohort) == before, action
+
+    # ...and nothing was written either.
+    assert session.scalar(select(func.count()).select_from(EvoSearchRun)) == 0
+
+
+def test_an_agent_with_no_saved_strategy_is_not_charged():
+    session = _session()
+    settings = EvoSettings(_env_file=None, fill_latency_ms=0)
+    agent, cohort = _agent(session, settings, with_strategy=False)
+    _seed_weather(session)
+    before = _sandbox_runs(session, agent, cohort)
+
+    hb = _beat(session, settings, agent, cohort, "s1", [_search_action()])
+    assert "save_strategy first" in hb.actions_json[0]["rejected"]
+    assert _sandbox_runs(session, agent, cohort) == before
+
+
+def test_a_search_is_charged_for_the_replays_that_actually_ran():
+    """Not for the neighbourhood that was requested. Proposals refused at the gates
+    never reach the replay engine, so charging for them would bill an agent for work
+    the tool declined to do."""
+    session = _session()
+    settings = EvoSettings(_env_file=None, fill_latency_ms=0)
+    agent, cohort = _agent(session, settings)
+    _seed_weather(session)
+    before = _sandbox_runs(session, agent, cohort)
+
+    hb = _beat(session, settings, agent, cohort, "s1", [_search_action(neighbourhood=8)])
+    outcome = hb.actions_json[0]
+    assert outcome.get("ok"), outcome
+    summary = outcome["result"]["summary"]
+
+    replayed = summary["candidates_replayed"]
+    assert replayed == summary["proposals_admitted"] + 1  # the base plus what survived
+    assert outcome["sandbox_runs_charged"] == replayed
+    assert before - _sandbox_runs(session, agent, cohort) == replayed
+    # This run refuses some proposals, so the charge is strictly below the request.
+    assert summary["proposals_made"] > summary["proposals_admitted"]
+    assert replayed < 8 + 1
+
+
+def test_a_search_it_cannot_afford_is_refused_before_it_runs():
+    """Affordability is checked against the worst case, so an agent cannot start a
+    search it could not pay for and discover that halfway through."""
+    session = _session()
+    settings = EvoSettings(_env_file=None, fill_latency_ms=0)
+    agent, cohort = _agent(session, settings)
+    _seed_weather(session)
+
+    # Spend the budget down to less than the requested neighbourhood + 1.
+    remaining = _sandbox_runs(session, agent, cohort)
+    budgets.spend(session, agent.agent_uuid, cohort.id, "sandbox_runs", remaining - 3)
+    assert _sandbox_runs(session, agent, cohort) == 3
+
+    hb = _beat(session, settings, agent, cohort, "s1", [_search_action(neighbourhood=8)])
+    assert hb.actions_json[0]["rejected"] == "sandbox-run budget exhausted"
+    assert _sandbox_runs(session, agent, cohort) == 3  # nothing spent
+    assert session.scalar(select(func.count()).select_from(EvoSearchRun)) == 0
+
+
+# ---------------------------------------------------------------------------
+# Which strategy a search resolves to
+# ---------------------------------------------------------------------------
+
+
+def _save(session, settings, agent, max_price: int, *, name: str = STRATEGY_NAME):
+    doc = _spec(max_price)
+    doc["name"] = name
+    row, err = sandbox.save_strategy(
+        session, settings, agent_uuid=agent.agent_uuid, spec_doc=doc
+    )
+    assert row is not None, err
+    return row
+
+
+def test_a_named_strategy_resolves_to_the_revision_actually_running():
+    """`evo_strategies` versions by (agent, name, revision), so the NEWEST row under a
+    named strategy can be one the agent saved and never deployed — or deployed and then
+    replaced. Matching on name alone would hand the search a spec the agent is not
+    running, and every variant would then be measured against the wrong base."""
+    session = _session()
+    settings = EvoSettings(_env_file=None, fill_latency_ms=0)
+    agent, cohort = _agent(session, settings, with_strategy=False)
+
+    running = _save(session, settings, agent, 70)
+    sandbox.activate_strategy(session, agent.agent_uuid, running.id)
+    # A later revision of the SAME name, saved but never activated.
+    drafted = _save(session, settings, agent, 40)
+    assert drafted.revision > running.revision and drafted.status == "validated"
+
+    # Point the trading genome at the name, the way an adopting agent does.
+    genome, err = write_genome_revision(
+        session, agent, "trading",
+        dict(default_trading(), active_strategy_name=STRATEGY_NAME),
+    )
+    assert genome is not None, err
+
+    own = search.current_strategy(session, agent.agent_uuid)
+    assert own.strategy_name == STRATEGY_NAME
+    assert own.document["entry"]["max_price_cents"] == 70  # the running one, not the newer
+    assert own.genome_revision == genome.revision
+
+
+def test_a_named_strategy_that_is_no_longer_runnable_falls_through():
+    """If every revision of the named strategy has been taken out of service, the name
+    is stale. Fall back to what is actually deployed rather than searching around a
+    strategy the agent explicitly stopped running."""
+    session = _session()
+    settings = EvoSettings(_env_file=None, fill_latency_ms=0)
+    agent, cohort = _agent(session, settings, with_strategy=False)
+
+    stale = _save(session, settings, agent, 70, name="retired-band")
+    sandbox.activate_strategy(session, agent.agent_uuid, stale.id)
+    sandbox.deactivate_strategy(session, agent.agent_uuid, stale.id, reason="retired")
+    assert session.get(em.EvoStrategy, stale.id).status == "inactive"
+
+    live = _save(session, settings, agent, 55, name="live-band")
+    sandbox.activate_strategy(session, agent.agent_uuid, live.id)
+
+    genome, err = write_genome_revision(
+        session, agent, "trading",
+        dict(default_trading(), active_strategy_name="retired-band"),
+    )
+    assert genome is not None, err
+
+    own = search.current_strategy(session, agent.agent_uuid)
+    assert own.strategy_name == "live-band"
+    assert own.document["entry"]["max_price_cents"] == 55
+
+
+def test_with_no_named_strategy_the_active_one_wins_over_a_merely_validated_one():
+    session = _session()
+    settings = EvoSettings(_env_file=None, fill_latency_ms=0)
+    agent, cohort = _agent(session, settings, with_strategy=False)
+
+    live = _save(session, settings, agent, 60, name="deployed")
+    sandbox.activate_strategy(session, agent.agent_uuid, live.id)
+    _save(session, settings, agent, 30, name="never-deployed")  # validated only
+
+    own = search.current_strategy(session, agent.agent_uuid)
+    assert own.strategy_name == "deployed"
+    assert own.document["entry"]["max_price_cents"] == 60

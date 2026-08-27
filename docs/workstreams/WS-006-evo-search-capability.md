@@ -123,6 +123,14 @@ someone would be tempted to reuse it.
 - **The attach point is the action protocol.** `search_strategy_space` sits beside
   `run_backtest` in `evo/cognition.py`, charges `neighbourhood + 1` against the same
   sandbox-run budget, and returns evidence into the same loop. No new orchestrator.
+- **A refused search costs nothing.** Affordability is checked against the worst case,
+  but the charge is the replays that actually ran. `run_search` validates the whole call
+  — no saved strategy, an unknown gene, a no-op proposal, an incoherent base — before
+  replaying anything, so "refused before anything is written" holds in the budget ledger
+  too, not only in `evo_search_*`.
+- **A search resolves to the revision the agent is running.** The named-strategy lookup
+  is constrained to a runnable status, because `evo_strategies` versions by (agent, name,
+  revision) and the newest row under a name can be one the agent never deployed.
 - **The agent names what it wants tested.** `proposals` (`{path, value, hypothesis}`) are
   measured first and carry the agent's hypothesis into the result; `dimensions` steers the
   *automatic* perturbation for when the agent knows the axis but not the value. Both go

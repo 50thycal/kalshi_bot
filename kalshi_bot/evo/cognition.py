@@ -300,7 +300,10 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
   misuse. Give neither and it steps the whole surface, which is noisier and no wiser.
   You get back: the base's result, each admissible variant ranked with the COMPONENT
   breakdown behind its score, the variants that were refused and why, and a one-line
-  finding. Costs neighbourhood+1 sandbox runs, from the same budget run_backtest spends.
+  finding. You are charged for the replays that actually RUN — the base plus each variant
+  the gates admitted — from the same budget run_backtest spends; the outcome tells you as
+  `sandbox_runs_charged`. A refused call costs you nothing, so naming a proposal you are
+  unsure about is cheap: the worst case is a reason why it could not be tested.
   This is a MEASURING TOOL, not a decision. It never changes you. A variant scoring higher
   over one window is one window of evidence — YOU decide whether it justifies adopting the
   variant (save_strategy with the returned `document`, then activate_strategy), and you own
@@ -1046,13 +1049,18 @@ def _execute_one(
                             "{path, value, hypothesis} objects, or omitted"
             }
         # One search replays the base plus its neighbourhood, so it costs several sandbox
-        # runs. Charge them against the same budget a hand-written backtest spends.
+        # runs, charged against the same budget a hand-written backtest spends.
         neighbourhood = a.get("neighbourhood", strategy_search.DEFAULT_NEIGHBOURHOOD)
         try:
             neighbourhood = max(1, min(int(neighbourhood), strategy_search.MAX_NEIGHBOURHOOD))
         except (TypeError, ValueError):
             return {"rejected": f"invalid neighbourhood {a.get('neighbourhood')!r}"}
-        if not budgets.spend(session, au, cohort.id, "sandbox_runs", neighbourhood + 1):
+        # Check affordability against the worst case, but CHARGE only for the replays
+        # that actually ran. `run_search` validates the whole call — no saved strategy,
+        # an unknown gene, a no-op proposal, an over-reaching window — and refuses before
+        # replaying anything; a refusal that had moved the budget ledger would be a
+        # search that "wrote nothing" while still costing the agent up to 25 credits.
+        if not budgets.can_spend(session, au, cohort.id, "sandbox_runs", neighbourhood + 1):
             return {"rejected": "sandbox-run budget exhausted"}
         try:
             evidence = strategy_search.run_search(
@@ -1064,7 +1072,12 @@ def _execute_one(
             )
         except strategy_search.SearchRefused as exc:
             return {"rejected": str(exc)}
-        return {"ok": True, "result": evidence.as_dict()}
+        # force=True books work that has already happened, the same way an LLM call's
+        # actual token count is booked. It cannot overrun by more than the refused
+        # proposals' share, because affordability was checked against the worst case.
+        charged = int(evidence.summary.get("candidates_replayed") or 1)
+        budgets.spend(session, au, cohort.id, "sandbox_runs", charged, force=True)
+        return {"ok": True, "result": evidence.as_dict(), "sandbox_runs_charged": charged}
 
     if t == "inspect_data":
         source = str(a.get("source", ""))

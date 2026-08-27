@@ -213,7 +213,12 @@ The action, beside `run_backtest` in `evo/cognition.py`'s protocol:
 
 - `spec` is optional. Omitted, the search runs around the agent's **active
   `evo_strategies` spec** — a `TradingGenome` is policy prose whose schema forbids extra
-  keys, so there are no replayable parameters inside it to search.
+  keys, so there are no replayable parameters inside it to search. Resolution order is
+  the named strategy's *running* revision, then whatever else is deployed, then the most
+  recent validated spec. The status condition on the named branch matters: a name is not
+  an identity, so the newest revision under a named strategy can be one the agent saved
+  and never deployed, or deployed and then replaced. Matching on name alone would search
+  around a spec the agent is not running.
 - **`proposals` is the agent's own hypotheses**, `{path, value, hypothesis}`, measured
   first and recorded with their hypothesis against the result. This is the primary way to
   use the tool: the agent has the thesis, the tool has the tape. An agent that fills the
@@ -226,8 +231,12 @@ The action, beside `run_backtest` in `evo/cognition.py`'s protocol:
   path that is not a gene, or a value the gene already holds, refuses the *whole call*
   before anything is written — dropping it silently would look like the search ran the
   test and found nothing.
-- The call costs `neighbourhood + 1` sandbox runs against the agent's ordinary weekly
-  budget, so a search cannot buy unlimited compute by being phrased as a search.
+- The call is checked for affordability against the worst case (`neighbourhood + 1`) but
+  **charged for the replays that actually ran** — the base plus every admitted variant —
+  against the agent's ordinary weekly sandbox budget. A search cannot buy unlimited
+  compute by being phrased as a search, and a *refused* search costs nothing: the whole
+  call is validated before anything replays, so a refusal leaves both the `evo_search_*`
+  tables and the budget ledger untouched. The outcome reports `sandbox_runs_charged`.
 
 What comes back: the base's result and score, each admissible variant ranked with the
 component breakdown behind its score, the variants that were refused and why, and a
