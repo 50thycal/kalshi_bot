@@ -99,6 +99,10 @@ def test_protection_workflow_applies_the_checked_in_ruleset():
     # the workflow must reach for an explicit admin PAT and keep its own default
     # permissions minimal.
     assert wf["permissions"] == {"contents": "read"}
+    assert wf["concurrency"] == {
+        "group": "ops-branch-protection",
+        "cancel-in-progress": False,
+    }, "ruleset apply is list-then-create/update and must be serialized"
     body = PROTECT_WF.read_text()
     assert "OPS_ADMIN_TOKEN" in body
     assert ".github/rulesets/ops-transport-guard.json" in body, (
@@ -138,6 +142,18 @@ def test_runbook_documents_the_deliberate_maintenance_procedure():
     }
     missing = [k for k, needle in required.items() if needle not in text]
     assert not missing, f"maintenance procedure is missing: {missing}"
+
+
+def test_admin_token_is_temporary_and_removed_after_validation():
+    """The high-privilege PAT must not become a standing repository credential."""
+    workflow = PROTECT_WF.read_text()
+    runbook = RUNBOOK.read_text()
+    for text in (workflow, runbook):
+        assert "shortest practical expiration" in text
+        assert "delete the secret" in text
+        assert "revoke the PAT" in text
+    assert "ruleset remains active" in workflow
+    assert "protection remains active" in runbook
 
 
 def test_runbook_only_uses_a_lease_never_a_bare_force():
