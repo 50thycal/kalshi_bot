@@ -1,1 +1,1 @@
-{"type": "env", "set": {"EXPERIMENT_OS_ISSUE_COMMAND": "{\"command_id\":\"lo-status-xos7-validating-20260827\",\"action\":\"STATUS\",\"actor\":\"cal\",\"actor_role\":\"LIVE_OPS\",\"schema_version\":1,\"payload\":{\"issue\":\"XOS-000007\",\"reason\":\"PR 260 merged 2026-08-27 and the ruleset applied on the default-branch push; the four pre-registered checks were then run against the live protection.\",\"status\":\"VALIDATING\"}}"}, "id": "lo7-st-valida-set"}
+{"type":"script","name":"evo_backtest_probe","args":["--dataset","mmsell"],"id":"ws6-d1-mmsell-20260827-1"}
