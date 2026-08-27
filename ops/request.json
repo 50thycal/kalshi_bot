@@ -1,1 +1,1 @@
-{"type":"script","name":"evo_backtest_probe","args":["--dataset","mmsell"],"id":"ws6-d1-mmsell-20260827-1"}
+{"type": "xos", "command": "issue-command-show", "args": ["lo-status-xos7-validating-20260827"], "id": "lo7-st-valida-r1"}
