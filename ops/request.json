@@ -1,1 +1,1 @@
-{"type":"script","name":"evo_backtest_probe","args":["--dataset","backfill_weather"],"id":"ws6-d1-weather-20260827-2"}
+{"type": "xos", "command": "issue-command-show", "args": ["lo-status-xos7-investigating-20260827"], "id": "lo7-st-invest-r1"}
