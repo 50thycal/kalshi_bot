@@ -488,14 +488,129 @@ To run a request:
 
 Notes:
 - **Never open a PR merging `ops` into the default branch.** GitHub auto-deletes
-  the branch on merge, which removes the trigger. If `ops` is ever missing,
-  recreate it: `git checkout -B ops origin/<default-branch> && git push -u origin ops`.
-- If `scripts/db_query.py`, `scripts/railway_logs.py`, `scripts/ops_runner.py`,
-  `.github/workflows/ops-runner.yml`, or an allowlisted analysis script change on
-  the default branch, refresh `ops` from the default branch (recreate as above) so
-  it picks up the fix (e.g. the digest auto-archive step).
+  the branch on merge, which removes the trigger.
+- **Never force-refresh `ops`, and never delete it.** Changes to `scripts/` —
+  `db_query.py`, `railway_logs.py`, `ops_runner.py`, any allowlisted analysis
+  script — are picked up automatically: the runner checks the **default branch**
+  out into `.ops-runner-code/` and executes only that copy (XOS-000005), so a
+  merge to the default branch is live on the next request. `ops` carries the
+  request/result history and the workflow *file*, nothing else. See
+  **Protecting the `ops` branch** below for the protection now enforcing this and
+  for the rare, deliberate procedure that changes the workflow file.
 - Latency is ~30–60s per run. Request commits live only on `ops`; they never
   touch the default branch and never redeploy the Railway worker.
+
+### Protecting the `ops` branch
+
+`ops` is not an ordinary branch. It is a shared transport: it carries every
+session's `ops/request.json`, the durable per-run `ops/results/*.txt` files that
+let concurrent producers each read their own output, and the Ops Runner
+**workflow file** GitHub Actions loads for a push to this branch. A force-push
+rewrites all three at once — discarding results, clobbering another session's
+in-flight request, and potentially reinstating an older workflow file. That is
+XOS-000007.
+
+**`refs/heads/ops` is protected by a repository ruleset** (`ops-transport-guard`,
+`.github/rulesets/ops-transport-guard.json`, applied by the
+`Ops Branch Protection` workflow — which re-applies the checked-in desired state
+when it merges to the default branch, and can be re-run from the Actions tab at
+any time; a push on any other branch only *reports* the current protections):
+
+| rule | effect |
+|---|---|
+| `deletion` | the branch cannot be deleted |
+| `non_fast_forward` | force pushes (any non-fast-forward update) are rejected |
+
+Deliberately **not** included: pull-request review, required status checks,
+linear history, signed commits, or a push restriction on actors. Any of those
+would break the transport — ordinary request commits and the runner's own result
+commits are unauthenticated-by-review fast-forwards and must keep landing
+directly. If a change to this ruleset ever blocks a normal request or a result
+commit, **narrow the ruleset**; do not remove it.
+
+**Applying it needs a temporary admin token.** Repository rulesets are
+administration-scoped and Actions' built-in `GITHUB_TOKEN` cannot hold that
+permission, so the workflow reads a fine-grained PAT from the `OPS_ADMIN_TOKEN`
+repository secret. Scope it to this repository only, grant only
+*Administration: read and write* (plus GitHub's unavoidable implicit metadata
+access), and use the **shortest practical expiration**.
+
+The token is an application credential, not standing infrastructure. After the
+ruleset is applied, an ordinary request/result round trip succeeds, and a
+controlled non-fast-forward update is refused, **delete the secret and revoke the
+PAT**. The branch protection remains active after the token is removed. If the
+checked-in desired state changes later, deliberately install a new temporary
+token, apply and validate, then remove it again. Without the secret an apply run
+still reports the current protections and then **fails loudly** — it never reports
+success over an unprotected branch. Nothing else in the repo uses that secret.
+
+Ordinary work is unaffected: pushing a request, pushing a result, and the
+runner's `ls -1t ops/results/*.txt | tail -n +81 | xargs rm` pruning (a file
+deletion inside a normal commit, not a branch deletion) all remain fast-forward
+updates.
+
+#### The rare exception: changing the workflow file
+
+The only remaining reason to rewrite `ops` is a change to
+`.github/workflows/ops-runner.yml` itself, which Actions loads from the
+triggering branch. That is maintenance, not routine, and it follows this
+procedure exactly.
+
+1. **Idle channel.** Confirm the transport is quiet before touching it:
+   ```bash
+   git fetch origin ops -q
+   git show origin/ops:ops/request.json     # must be exactly {"type":"noop"}
+   ```
+   Also confirm no run is in flight (`actions_list` on `ops-runner.yml` shows no
+   queued/in-progress run). A rewrite over a live request silently drops it.
+2. **Backup branch at the current SHA.** A branch ref, not a tag — tag pushes are
+   rejected by the sandbox's git transport:
+   ```bash
+   OPS_SHA=$(git rev-parse origin/ops)
+   git push origin "$OPS_SHA:refs/heads/ops-backup-$(date -u +%Y%m%dT%H%M%SZ)"
+   ```
+   Record `$OPS_SHA` in the change's Experiment OS issue before proceeding.
+3. **Explicit expected-SHA lease.** Never plain `-f`. Lease against the exact SHA
+   recorded in step 2, so a concurrent push aborts the rewrite instead of losing it:
+   ```bash
+   git push --force-with-lease=refs/heads/ops:"$OPS_SHA" origin <new-tip>:ops
+   ```
+   The `non_fast_forward` rule refuses this too, so a maintainer must lift the
+   ruleset for the window (disable `ops-transport-guard`, or add themselves as a
+   bypass actor) and **re-enable it in the same session**. Install a temporary
+   `OPS_ADMIN_TOKEN` using the scope and expiration rules above, then re-run the
+   `Ops Branch Protection` workflow to re-apply the ruleset idempotently. After
+   the post-change validation succeeds, delete the secret and revoke the PAT.
+4. **Post-change validation.** A rewrite is not finished until a real request has
+   round-tripped. Note that a force-push onto a commit that already exists in the
+   repository does **not** trigger the workflow — the push event carries no
+   changed files for the `ops/request.json` path filter — so the validation must
+   be a genuine new commit:
+   ```bash
+   # a harmless request that exercises the full path
+   echo '{"type":"noop","id":"ops-maint-<date>"}' > ops/request.json
+   git add -A && git commit -q -m "ops: post-maintenance validation" && git push origin ops
+   # ~30-90s later
+   git fetch origin ops -q && git show FETCH_HEAD:ops/results/ops-maint-<date>.txt
+   ```
+   Then confirm the runner still sourced its code from the default branch: the
+   job log must show the `.ops-runner-code` checkout and the
+   `OPS_RUNNER_CODE_SOURCE=default-branch` attestation the runner fails closed
+   without. Finally reset `ops/request.json` to `{"type":"noop"}`.
+5. **Recovery.** If validation fails, or the rewrite landed the wrong tree:
+   ```bash
+   # restore the exact pre-change tip from the backup branch
+   git push --force-with-lease origin "ops-backup-<stamp>:ops"
+   ```
+   with the ruleset still lifted, then re-run the `Ops Branch Protection`
+   workflow, then repeat step 4. If `ops` is missing entirely, recreate it from
+   the backup branch — **not** from a feature branch, which is how a stale
+   workflow file gets reinstalled:
+   ```bash
+   git push origin "ops-backup-<stamp>:refs/heads/ops"
+   ```
+   Keep the backup branch until the next successful maintenance; delete stale
+   ones only after a validated round trip.
 
 ### Fallback channel: one-click workflows (need the human)
 

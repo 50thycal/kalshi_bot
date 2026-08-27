@@ -1,0 +1,122 @@
+name: Ops Branch Protection
+
+# Applies (or just reports) the repository ruleset that protects `refs/heads/ops`
+# against force pushes and deletion — the durable fix for XOS-000007.
+#
+# Why a workflow and not a one-off API call: the Claude sandbox cannot reach
+# api.github.com, so the ruleset can only be inspected and applied from a runner.
+# Keeping it here also makes the protection reviewable and reproducible — the
+# desired state lives in .github/rulesets/ops-transport-guard.json and this job
+# is an idempotent apply of that file, not a hand-clicked setting nobody can diff.
+#
+# TOKEN. Repository rulesets are administration-scoped, and `administration` is
+# not a permission the built-in GITHUB_TOKEN can be granted — so applying needs a
+# repo-admin PAT in the `OPS_ADMIN_TOKEN` secret (fine-grained, this repository
+# only, Administration: read and write). Treat that PAT as temporary: use the
+# shortest practical expiration, then delete the secret and revoke the PAT after
+# apply + validation. The repository ruleset remains active without the token;
+# reinstall a temporary token only when the desired state must be re-applied.
+# Without it the job still REPORTS the current protections and then fails loudly
+# rather than leaving the branch silently unprotected.
+#
+# The ruleset deliberately contains ONLY `deletion` and `non_fast_forward`. It
+# must never gain pull_request, required_status_checks, required_linear_history
+# or a push restriction: `ops` is a transport whose ordinary traffic is direct
+# fast-forward commits (a session's request, the runner's result), and any of
+# those rules would disable the channel.
+
+on:
+  # Declarative: merging a change to the desired state re-applies it. The job is
+  # idempotent (PUT over the existing ruleset), so a no-op merge is a no-op run.
+  # A push on any OTHER branch only reports — see the `apply` step's condition.
+  push:
+    paths:
+      - ".github/rulesets/ops-transport-guard.json"
+      - ".github/workflows/ops-branch-protection.yml"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "report (read only) or apply (create/update the ruleset)"
+        type: choice
+        options: [report, apply]
+        default: apply
+
+permissions:
+  contents: read
+
+# The apply path is list-then-create/update. Serialize all report/apply/verify
+# runs so two overlapping dispatches cannot both observe a missing ruleset and
+# create duplicates. Never cancel a run between apply and verify.
+concurrency:
+  group: ops-branch-protection
+  cancel-in-progress: false
+
+jobs:
+  protect:
+    runs-on: ubuntu-latest
+    env:
+      REPO: ${{ github.repository }}
+      # Falls back to the built-in token so the REPORT step always works; the
+      # apply step below states plainly when the admin token is missing.
+      ADMIN_TOKEN: ${{ secrets.OPS_ADMIN_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Report current protections
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "=== repository rulesets ==="
+          gh api "repos/$REPO/rulesets" --jq '.[] | {id, name, target, enforcement}' \
+            || echo "(no rulesets, or not readable with the built-in token)"
+          echo "=== rules currently in force for refs/heads/ops ==="
+          gh api "repos/$REPO/rules/branches/ops" --jq '[.[].type] | sort' \
+            || echo "(none)"
+          echo "=== classic branch protection on ops ==="
+          gh api "repos/$REPO/branches/ops/protection" 2>&1 | head -40 || true
+
+      - name: Apply ops-transport-guard
+        id: apply
+        if: >-
+          (github.event_name == 'push'
+           && github.ref_name == github.event.repository.default_branch)
+          || inputs.mode == 'apply'
+        env:
+          GH_TOKEN: ${{ env.ADMIN_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::error::OPS_ADMIN_TOKEN is not configured. refs/heads/ops is NOT protected."
+            echo "Add a temporary fine-grained PAT (this repo, Administration: read+write) as the"
+            echo "OPS_ADMIN_TOKEN repository secret, then re-run with mode=apply."
+            echo "After apply + validation, delete the secret and revoke the PAT."
+            exit 1
+          fi
+          desired=.github/rulesets/ops-transport-guard.json
+          name=$(jq -r .name "$desired")
+          existing=$(gh api "repos/$REPO/rulesets" --jq \
+            ".[] | select(.name==\"$name\") | .id" | head -1)
+          if [ -n "$existing" ]; then
+            echo "updating ruleset $existing"
+            gh api -X PUT "repos/$REPO/rulesets/$existing" --input "$desired" >/dev/null
+          else
+            echo "creating ruleset"
+            gh api -X POST "repos/$REPO/rulesets" --input "$desired" >/dev/null
+          fi
+
+      - name: Verify
+        if: steps.apply.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          echo "=== rules now in force for refs/heads/ops ==="
+          gh api "repos/$REPO/rules/branches/ops" --jq '[.[].type] | sort'
+          types=$(gh api "repos/$REPO/rules/branches/ops" --jq '[.[].type]')
+          echo "$types" | jq -e 'index("deletion") and index("non_fast_forward")' >/dev/null \
+            || { echo "::error::ops is not protected against force push + deletion"; exit 1; }
+          # Fail closed if a transport-breaking rule was ever added.
+          echo "$types" | jq -e '(index("pull_request") or index("required_status_checks")
+                                  or index("required_linear_history")) | not' >/dev/null \
+            || { echo "::error::a rule was added that would block ordinary ops traffic"; exit 1; }
+          echo "ops transport guard verified"

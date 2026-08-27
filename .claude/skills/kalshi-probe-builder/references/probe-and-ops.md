@@ -128,15 +128,14 @@ pays it again. Settlement itself is free.
 
 ## 3. The ops run/log recipe (Phase 4)
 
-A new allowlisted probe is only runnable **after it is merged to the default branch and `ops` is
-refreshed from it** — the `ops` runner executes the copy of the script on the default branch, not
-your feature branch.
+A new allowlisted probe is only runnable **after it is merged to the default branch** — the `ops`
+runner executes the copy of the script on the default branch, not your feature branch. There is
+nothing to refresh: the runner checks the default branch out on every request, so the merge alone
+makes the script live. **Never force-refresh `ops`**; it is protected against force pushes and
+deletion (XOS-000007, see "Protecting the `ops` branch" in `docs/OPS_RUNBOOK.md`).
 
 ```bash
-# 0. (after the PR merges) refresh ops from the updated default so it has the new script+allowlist
-DFLT=<default-branch>            # confirm via: git ls-remote origin refs/heads/<default>
-git fetch origin "$DFLT" -q
-git checkout -B ops "origin/$DFLT" && git push -f origin ops    # or the recreate recipe in CLAUDE.md
+# 0. (after the PR merges) nothing to do — the runner picks the new script + allowlist up itself
 
 # 1. request a run on a clean worktree (don't disturb your branch); ALWAYS set a unique id.
 #    HARD GUARD (do not omit): abort if the worktree `cd` fails. Without it, the `git reset
@@ -170,10 +169,10 @@ run `git reset --hard origin/ops` from your main checkout. Never open a PR mergi
 default branch (GitHub auto-deletes the branch on merge and kills the trigger).
 
 **Test-before-merge variant.** To re-run a *fixed* probe without waiting for a merge (e.g. after
-a first run exposed a bug), the `ops` runner executes scripts from the **ops branch**, so you can
-overlay the fixed script directly: inside the guarded worktree above, `cp` your corrected
-`scripts/<name>.py` over the ops copy, commit it alongside `request.json`, and push. A later
-merge + `ops` refresh (step 0) makes the fix durable.
+a first run exposed a bug), you **cannot** overlay a corrected script onto `ops`: since
+XOS-000005 the runner checks the default branch out into `.ops-runner-code/` and executes only
+that copy, and it fails closed if it did not. `ops` is transport, never code. Push the fix to your
+feature branch, merge it, and re-run — the merge alone makes it live.
 
 ---
 

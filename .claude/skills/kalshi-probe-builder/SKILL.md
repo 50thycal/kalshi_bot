@@ -15,8 +15,8 @@ the repo's validation machinery and runs it**, so the pipeline is idea → *prob
 **Why it exists.** Doing this by hand is error-prone and easy to do inconsistently: the thesis
 must be pre-registered *before* the probe runs, the probe must be self-contained and read-only to
 run through the `ops` channel, the allowlist and scorecard must be updated, and — the part people
-forget — a new probe script only becomes runnable after it's **merged to the default branch and
-`ops` is refreshed from it**. This skill encodes that whole path.
+forget — a new probe script only becomes runnable after it's **merged to the default branch**
+(the runner checks that branch out on every request). This skill encodes that whole path.
 
 **North star (from `CLAUDE.md`):** $100/month realized. A probe that cleanly *rules an idea out*
 is a win — it tells us what to stop considering. Never soften a kill criterion to save an idea.
@@ -143,14 +143,15 @@ draft). Keep the diff clean — verify the PR base is the *live* default branch 
 be ahead of a stale local ref; `git ls-remote origin refs/heads/<default>` is the source of
 truth). Do not include unrelated commits.
 
-**The ops wrinkle (do not skip).** Per `CLAUDE.md`, the `ops` branch runs the copy of a script
+**The ops wrinkle (do not skip).** Per `CLAUDE.md`, the `ops` runner executes the copy of a script
 that exists **on the default branch**. A brand-new allowlisted script on your feature branch is
-**not runnable yet** — the `ops` runner won't have it. So the run sequence is:
+**not runnable yet** — the runner won't have it. So the run sequence is:
 1. **Merge** the PR to the default branch (needs the human's review/merge — say so explicitly and
    stop here if you don't have merge rights).
-2. **Refresh `ops`** from the updated default (`git checkout -B ops origin/<default> && git push
-   -f origin ops`, or the recreate recipe in `CLAUDE.md`) so it picks up the new script +
-   allowlist.
+2. **Nothing to refresh.** The runner checks the default branch out on every request, so the merge
+   alone makes the new script + allowlist live. **Never force-refresh `ops`** — it is protected
+   against force pushes and deletion (XOS-000007); see "Protecting the `ops` branch" in
+   `docs/OPS_RUNBOOK.md`.
 3. **Run the probe**: push `{"type":"script","name":"<name>","args":[...],"id":"<slug>"}` to
    `ops/request.json`; read your result from `ops/results/<slug>.txt` (see `references/probe-and-ops.md`
    for the worktree recipe). Reset to `{"type":"noop"}` when done.
@@ -189,4 +190,4 @@ theirs.
 ## Reference files
 - `references/probe-and-ops.md` — the annotated self-contained probe skeleton, the Kalshi public
   API + candlestick field cheatsheet (exact JSON paths), the fee formula, and the
-  merge→refresh-`ops`→run→read→log recipe with the worktree commands. **Read for Phases 2 and 4.**
+  merge→run→read→log recipe with the worktree commands. **Read for Phases 2 and 4.**

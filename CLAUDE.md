@@ -150,8 +150,12 @@ CLI — `control-tower`, `list`, `show`, `scoreboard`, `enforcement`, `readiness
 (allowlisted analyses), `env` (allowlisted vars; setting redeploys the worker),
 `noop`. Reset to `{"type":"noop"}` when finished.
 
-If `scripts/` or the runner change on the default branch, refresh `ops` from it:
-`git checkout -B ops origin/<default> && git push -f origin ops`. Never merge
+**Never force-refresh `ops`.** The runner already checks the default branch out
+separately and executes only that code, so a merge to the default branch is live
+on the next request — there is nothing to refresh. `refs/heads/ops` is protected
+against force pushes and deletion; ordinary request and result commits are
+unaffected. A genuine workflow-file change follows the deliberate maintenance
+procedure in `docs/OPS_RUNBOOK.md` ("Protecting the `ops` branch"). Never merge
 `ops` into the default branch.
 
 Full mechanism, standing analysis commands and gotchas: **`docs/OPS_RUNBOOK.md`**.
