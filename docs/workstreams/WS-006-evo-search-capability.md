@@ -183,8 +183,11 @@ the `backfill_weather` adapter reaches real settled markets with
 |---|---|---|---|
 | `ops/results/ws6-d1-weather-20260827-1.txt` | 21,350 rows / 583 trades | 22,430 rows / 580 trades | diagnostic only; both truncated |
 | `ops/results/ws6-d1-weather-20260827-2.txt` | 200,013 rows / 5,354 trades | 200,013 rows / 5,047 trades | diagnostic only; both truncated |
+| `ops/results/ws6-d1-mmsell-20260827-1.txt` | 0 rows / 0 trades | 0 rows / 0 trades | diagnostic only; both truncated before the adapter yielded a market |
 
-The difference is explained by the shared sandbox bounds: a replay stops at the earlier of
+The MMSELL diagnostic confirms it is not a clean fallback: its per-market tick loading did
+not yield the first market before the wall-clock guard. The difference between the two
+weather attempts is explained by the shared sandbox bounds: a replay stops at the earlier of
 `sandbox_max_seconds=60` and `sandbox_max_rows=200000`. The first run hit the
 machine-time boundary; the second hit the row boundary. The resulting market sets and P&L
 cannot be compared as identical evidence. This is a proving-harness defect, not evidence for
