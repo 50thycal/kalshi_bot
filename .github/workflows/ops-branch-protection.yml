@@ -12,9 +12,12 @@ name: Ops Branch Protection
 # TOKEN. Repository rulesets are administration-scoped, and `administration` is
 # not a permission the built-in GITHUB_TOKEN can be granted — so applying needs a
 # repo-admin PAT in the `OPS_ADMIN_TOKEN` secret (fine-grained, this repository
-# only, Administration: read and write). Without it the job still REPORTS the
-# current protections with the built-in token and then fails loudly rather than
-# leaving the branch silently unprotected.
+# only, Administration: read and write). Treat that PAT as temporary: use the
+# shortest practical expiration, then delete the secret and revoke the PAT after
+# apply + validation. The repository ruleset remains active without the token;
+# reinstall a temporary token only when the desired state must be re-applied.
+# Without it the job still REPORTS the current protections and then fails loudly
+# rather than leaving the branch silently unprotected.
 #
 # The ruleset deliberately contains ONLY `deletion` and `non_fast_forward`. It
 # must never gain pull_request, required_status_checks, required_linear_history
@@ -40,6 +43,13 @@ on:
 
 permissions:
   contents: read
+
+# The apply path is list-then-create/update. Serialize all report/apply/verify
+# runs so two overlapping dispatches cannot both observe a missing ruleset and
+# create duplicates. Never cancel a run between apply and verify.
+concurrency:
+  group: ops-branch-protection
+  cancel-in-progress: false
 
 jobs:
   protect:
@@ -77,8 +87,9 @@ jobs:
           set -euo pipefail
           if [ -z "${GH_TOKEN:-}" ]; then
             echo "::error::OPS_ADMIN_TOKEN is not configured. refs/heads/ops is NOT protected."
-            echo "Add a fine-grained PAT (this repo, Administration: read+write) as the"
-            echo "OPS_ADMIN_TOKEN repository secret, then re-run this workflow with mode=apply."
+            echo "Add a temporary fine-grained PAT (this repo, Administration: read+write) as the"
+            echo "OPS_ADMIN_TOKEN repository secret, then re-run with mode=apply."
+            echo "After apply + validation, delete the secret and revoke the PAT."
             exit 1
           fi
           desired=.github/rulesets/ops-transport-guard.json
