@@ -1,1 +1,1 @@
-{"type":"env","set":{"EXPERIMENT_OS_ISSUE_COMMAND":""},"id":"lo7-clear-2"}
+{"type":"xos","command":"issue-list","args":["--all"],"id":"lo7-final-1"}
