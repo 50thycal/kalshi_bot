@@ -1,1 +1,1 @@
-{"type":"db","sql":"SELECT date_trunc('month', close_time)::date AS month, count(*) AS markets, sum(candle_count) AS candles FROM backfill_weather_markets WHERE result IN ('yes','no') AND candles_fetched = true GROUP BY 1 ORDER BY 1 DESC","max_rows":100,"id":"ws6-d1-weather-months-20260827"}
+{"type":"noop"}
