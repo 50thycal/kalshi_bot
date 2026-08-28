@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","sql":"select v.version, ep.epoch_number, ep.started_at, ep.ended_at, ep.impact_class, left(ep.reason, 300) as reason from experiment_epochs ep join experiment_versions v on v.id = ep.version_id join experiments e on e.id = v.experiment_id where e.key = 'mmsell-type-tight' order by v.version, ep.epoch_number","max_rows":20,"id":"db-tt-ep"}
