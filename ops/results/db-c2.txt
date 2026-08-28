@@ -1,7 +1,0 @@
-# ops request: type='db'
-strategy       entries  settled  still_open  pnl_usd  avg_entry
--------------  -------  -------  ----------  -------  ---------
-Cmmsell10      83       17       66          0.0822   93.41    
-Cmmsell10_pt3  25       5        20          -0.6852  93.28    
-
-(2 rows)
