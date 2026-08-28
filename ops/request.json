@@ -1,1 +1,1 @@
-{"type":"db","sql":"select strategy, count(*) as rows, max(created_at) as last_row from paper_trades where created_at > now() - interval '30 minutes' group by 1 order by 2 desc","max_rows":40,"id":"db-rows-back"}
+{"type":"logs","limit":80,"filter":"mmsell","deployment_id":"","id":"logs-books-1"}
