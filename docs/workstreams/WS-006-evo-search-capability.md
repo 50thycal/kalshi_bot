@@ -1,9 +1,9 @@
 # WS-006 — Evo historical search capability
 
-**Phase:** REVIEW
-**Status:** Active (re-submitted after the 2026-08-25 architectural correction)
+**Phase:** BUILDING
+**Status:** Active (implementation merged; D1 proving harness correction in progress)
 **Created:** 2026-08-25
-**Updated:** 2026-08-25
+**Updated:** 2026-08-27
 
 ## Goal
 
@@ -154,10 +154,13 @@ someone would be tempted to reuse it.
 
 ## Open Decisions
 
-- **D1.** Which real dataset should the first non-synthetic proving run use —
-  `backfill_weather` (largest settled corpus) or `mmsell` (live tick tape, calibrated maker
-  fills)? Recommendation: `backfill_weather` for breadth first, then `mmsell` to exercise
-  the fill-model correction.
+- **D1.** Use `backfill_weather` first, on the fixed target-date window
+  `2026-08-01..2026-08-03`; then use `mmsell` separately to exercise the fill-model
+  correction. The dataset choice is made. D1 remains open only until the fixed window
+  produces two identical, non-empty, untruncated fingerprints for both the taker and maker
+  specs. The unwindowed 2026-08-27 attempts are diagnostic evidence, not the proving run.  A run that
+  fails names *which* condition failed, so a red D1 is actionable without a second
+  investigation.
 - **D2.** Should the replay engine enforce `risk.max_concurrent_positions` and per-position
   cost, so risk genes become mutable and the ledger's capital constraint becomes binding
   rather than measured after the fact? A change to a shared engine, so Platform Change
@@ -167,17 +170,151 @@ someone would be tempted to reuse it.
 - **D6.** Should agents be nudged toward the search in the heartbeat prompt, or left to
   discover it? Currently documented in the action protocol and otherwise unprompted, so its
   first use is the agents' own choice — which also makes early usage a signal.
+*(D7 is closed — see below. The dataset adapters now order totally.)*
 
 *(D4 and D5 are closed: the search got its own three tables, and the whole refactor landed
 on this branch.)*
+
+## D1 real-dataset proving — diagnostic and pre-registration
+
+The first production-DB attempts on 2026-08-27 used the existing read-only
+`evo_backtest_probe` with `persist=False` and `charge_budget=False`. They proved that
+the `backfill_weather` adapter reaches real settled markets with
+`provenance=kalshi_rest_backfill`, but they did **not** prove reproducibility:
+
+| evidence | taker | maker | disposition |
+|---|---|---|---|
+| `ops/results/ws6-d1-weather-20260827-1.txt` | 21,350 rows / 583 trades | 22,430 rows / 580 trades | diagnostic only; both truncated |
+| `ops/results/ws6-d1-weather-20260827-2.txt` | 200,013 rows / 5,354 trades | 200,013 rows / 5,047 trades | diagnostic only; both truncated |
+| `ops/results/ws6-d1-mmsell-20260827-1.txt` | 0 rows / 0 trades | 0 rows / 0 trades | diagnostic only; both truncated before the adapter yielded a market |
+
+The MMSELL diagnostic confirms it is not a clean fallback: its per-market tick loading did
+not yield the first market before the wall-clock guard. The difference between the two
+weather attempts is explained by the shared sandbox bounds: a replay stops at the earlier of
+`sandbox_max_seconds=60` and `sandbox_max_rows=200000`. The first run hit the
+machine-time boundary; the second hit the row boundary. The resulting market sets and P&L
+cannot be compared as identical evidence. This is a proving-harness defect, not evidence for
+or against either strategy.
+
+The fixed-window run is pre-registered before seeing its result:
+
+- dataset `backfill_weather`, target dates `2026-08-01..2026-08-03`;
+- the existing broad taker and maker specs, unchanged;
+- two repetitions per spec inside **one read-only `REPEATABLE READ` transaction**, with the
+  ORM identity map dropped between them so each repetition genuinely re-reads the same
+  snapshot. The probe asks the server to confirm the isolation level and refuses to start a
+  proving run without it;
+- PASS only when both specs are non-empty, neither repetition is truncated, and **all three**
+  identity legs match between repetitions: the market manifest, the canonicalized trade tape,
+  and the aggregate result fingerprint;
+- expected provenance `kalshi_rest_backfill`;
+- no strategy or edge verdict. P&L is output for reconciliation only and authorizes nothing.
+
+**Failure is pre-classified, before any result is seen.** A FAIL is not a single
+undifferentiated outcome; the probe reports which of these it is, and the classification is
+fixed here so it cannot be chosen after the fact:
+
+| cause | what the run shows | what it means |
+|---|---|---|
+| empty window | `markets_considered=0` on every repetition | corpus coverage, not strategy evidence — check the dataset holds settled markets in the range |
+| no entries | markets replayed, `n_trades=0` | the entry bands, not the harness |
+| truncated | `truncated=True` on any repetition | still a machine-speed-dependent prefix — narrow the window |
+| manifest divergence | the market manifest differs between repetitions | the same window returned different rows; nothing downstream is evidence |
+| manifest uncovered | no manifest query exists for the dataset | market identity was not independently verified — consistent-with, not proven |
+| trade-tape divergence | manifest matches, canonicalized trade tape does not | a genuine replay defect, not an ordering artifact |
+| ordering-only divergence | manifest AND trade tape match; only order-dependent aggregates differ | same markets, same trades, different sequence. Post-**D7** this should be impossible, so it now indicates a total ORDER BY is not holding |
+
+Only the *first* row of the VERDICT — every spec non-empty, fingerprint-identical and
+untruncated — records D1 clean. An ordering-only divergence is still a FAIL: it does not
+authorize D1, it just says the next move is D7 rather than another proving run.
+
+**Why three legs, not one aggregate hash.** `markets_considered` is a COUNT: two different
+market sets of the same size produce the same count, and two different trade sets can sum to
+the same P&L. Matching aggregates therefore cannot establish "the same markets and the same
+trades" — only that the summaries agree. So the probe reads the selected market tickers
+directly (independently of the replay, isolating *did the database return the same rows?*)
+and hashes the actual per-trade tape (`return_trades=True`), canonicalized and sorted so the
+set is compared without its order. Only with both pinned does an aggregate difference in
+`max_drawdown_usd` *demonstrate* an ordering artifact instead of merely being consistent with
+one. A tape that was never requested hashes to `None` and can never count as agreement.
+
+`scripts/evo_backtest_probe.py` exposes `--date-from`, `--date-to`, `--repeat` and
+`--require-complete`; strips `elapsed_ms` (the only runtime-varying field in the result)
+before hashing; publishes the manifest, trade and aggregate fingerprints; and exits non-zero
+when the pre-registered conditions fail. The ops runner tees the script's
+output and publishes it regardless of exit status, so a non-zero exit loses no evidence.
+Because the runner executes default-branch code, the final run happens only after this
+follow-up PR merges.
+
+Two repetitions inside one process are the weaker half of the claim. The run prints each
+spec's stable fingerprint in a trailing summary block so a **second, independent** ops run of
+the identical request can be compared against the first by eye; cross-process agreement is
+what makes the determinism claim worth anything.
+
+## D7 — resolved: the adapters order totally
+
+**Decision (operator, 2026-08-27): approved.** Every dataset adapter now yields in a total
+order — `close_time, market_ticker` for the weather and regime market queries, and a
+primary-key tiebreaker for the mmsell tick tape, the crypto ladder snapshots and the settled
+paper-trade scan. The candle tables already carried `UNIQUE(market_ticker, end_period_ts)`,
+so their ordering was total and is unchanged.
+
+This is a **shared replay-semantics change**: it cannot alter which markets replay or which
+trades are produced, but it can change `max_drawdown_usd` for any existing caller whose
+result was computed over a tied ordering, because that aggregate walks the trade sequence.
+Every other reported field is built from order-independent sums. The operator's judgement is
+that deterministic replay is worth that small reporting change rather than carrying ambiguous
+ordering indefinitely.
+
+### Is D7 a Platform Revision? Investigated 2026-08-28 — **no.**
+
+An earlier draft of this workstream said D7 needed a Platform Revision registered before
+merge. That was **wrong**, and the correction matters more than the original claim: a
+revision the evidence does not call for is not a harmless formality. `affected_experiments`
+resolves from pinned snapshots, and a component registered *after* an epoch's snapshot is
+treated as affected (`platform_impact.py`, `pinned is None` branch). Registering a new
+component for the Evo replay engine would therefore mark **every active experiment**
+affected — mmsell10-canary included — and each would need an accepted disposition before the
+revision could activate, with `evidence_block_reasons()` adding `BLOCKED_PLATFORM` to any
+left dangling. That is real gate-blocking on live work, bought for a change that provably
+cannot move any of their evidence.
+
+What the investigation established, read-only against production and the repository:
+
+| check | finding |
+|---|---|
+| Declared components in production (`xos platform`) | `DATA_PROVENANCE`, `EXECUTION_ENGINE`, `EXPERIMENT_ENGINE`, `FEE_MODEL`, `FILL_MODEL`, `KALSHI_API_SCHEMA`, `MARKET_TAXONOMY`, `METRICS_ENGINE`, `RISK_ENGINE`, `SETTLEMENT_ENGINE`. **None covers `kalshi_bot/evo/sandbox.py`.** |
+| `EXPERIMENT_ENGINE` scope (read from the production revision row) | `foundation_pr1` — "Experiment OS foundation: lifecycle state machine, structured gates, platform registry, append-only audit". That is the **Experiment OS** engine, not the Evo replay engine. |
+| Who calls `run_backtest` | Only `kalshi_bot/evo/*` — the agent sandbox and `evo/search/replay.py`. Nothing in `experiment_os/`, nothing in the paper or live execution path. |
+| Does Experiment OS read the Evo sandbox | No. `experiment_os/` contains **zero** references to `EvoSandboxRun`, `evo_sandbox_runs` or `evo_search_*`. Gate metrics come from `paper_trades`. |
+| `EXPERIMENT_OS_PLATFORM_IMPACT.md`, Scope boundary | "**No Evo integration.**" |
+| Same doc, on what the registry covers | "Not every code diff is a PlatformRevision: the registry covers declared shared semantics (the standard components), not incidental refactors." |
+| `issue_policy.PLATFORM_SEMANTICS` comment | routing a non-platform problem to Platform Change Review "invites a Platform Revision that no evidence calls for". |
+
+**Conclusion.** D7 is shared *within the Evo subsystem* — every caller of `run_backtest`
+sees it — but it is not a change to a declared **platform** component, and it cannot reach
+any experiment's evidence, metric, gate or exposure. The blast radius is the agents' backtest
+tool and the historical search: `max_drawdown_usd` may read differently for an Evo replay
+computed over tied rows. No Platform Revision, no impact records, no cutover.
+
+**Decision (operator, 2026-08-28): recorded as non-platform.** If the Evo replay engine is
+ever to become a declared component, that is its own deliberate registration — with every
+active experiment's disposition accounted — and not a side effect of this PR.
 
 ## Assumptions
 
 - The synthetic proving corpus answers *mechanical* questions only. It says nothing about
   whether any strategy family has an edge, and the report says so.
-- Deterministic replay holds because the engine has no wall-clock or RNG dependence: the
-  maker-fill gate is a hash of the market key. Verified by re-running and comparing
-  fingerprints, not assumed.
+- Replay outcomes are deterministic only over an explicit corpus that finishes before the
+  sandbox guards. The maker-fill gate is a hash of the market key, but an unwindowed run can
+  stop at the 60-second wall-clock guard and therefore select a machine-speed-dependent
+  prefix. D1 requires a fixed window, no truncation and matching fingerprints.
+- Determinism of the *engine* is not determinism of the *read*, and neither is determinism of
+  the *snapshot*. All three are now pinned rather than assumed: a total ORDER BY on every
+  adapter (D7), a read-only `REPEATABLE READ` transaction the probe verifies with the server,
+  and identity fingerprints over the market manifest and the trade tape. Postgres's default
+  `READ COMMITTED` takes a fresh snapshot per statement, so under it "identical fingerprints"
+  would have been a claim about a quiet database, not about deterministic replay.
 - Agents will not be *worse* off for having the tool: it costs the same budget a
   hand-written backtest costs, and the protocol tells them a higher score over one window
   is one window of evidence.
@@ -214,6 +351,60 @@ Tests: `test_evo_search_{genome,replay,fitness,mutation,proving,agent_invocation
 
 ## Review State
 
+**Independent review of the D1 proving-harness PR, 2026-08-27.** The bounded-window,
+repeat-and-fingerprint shape was accepted. Three findings were raised and are fixed in the
+reviewed head:
+
+1. *The determinism claim rested on a non-total ORDER BY.* `_weather_markets` sorts by
+   `close_time`, which ties across every bucket market in a weather event, so the strict
+   fingerprint could differ between repetitions for a reason that is not a corpus defect —
+   and D1 would have failed with no way to tell the two apart. Recorded as **D7**; the probe
+   now separates them.
+2. *Repetitions shared the ORM identity map.* Both replays reused one SQLAlchemy `Session`,
+   so matching fingerprints could have meant "we never read the database twice". The probe
+   now expunges between repetitions, deliberately without a rollback so all repetitions stay
+   on one snapshot.
+3. *A red run said nothing actionable.* `reproducible=False` alone does not distinguish an
+   empty window, an entry-band miss, truncation, an ordering tie and a genuine corpus
+   defect. Each is now pre-classified (before any result is seen) and named in the output.
+
+Verified and unchanged: the ops runner tees output and publishes results even on a non-zero
+exit, so the new failing exit status loses no evidence; `elapsed_ms` is the only
+runtime-varying field in `run_backtest`'s result, so stripping it is sufficient; and
+`fill_model` is built from order-independent histogram sums.
+
+**Operator review, 2026-08-27 — two proof blockers, both upheld and fixed.**
+
+1. *The "same snapshot" was not guaranteed.* The session ran at Postgres's default
+   `READ COMMITTED`, which takes a new snapshot per statement; `expunge_all()` clears the ORM
+   identity map but creates no snapshot. Two repetitions were therefore reading whatever the
+   database held at each moment. The whole run now executes inside one read-only
+   `REPEATABLE READ` transaction, and the probe asks the server to confirm it before proving
+   anything rather than trusting the engine options.
+2. *`corpus_fingerprint` hashed aggregates, not identities.* Matching aggregates cannot
+   establish "the same markets and the same trade set" — a count is not a set and a sum is not
+   a tape. It is replaced by two identity legs: a market-manifest fingerprint read directly
+   from the database, and a canonicalized, order-independent fingerprint over the actual trade
+   tape (`return_trades=True`). The ordering-only verdict is only claimed once both are pinned;
+   otherwise the run says *consistent with*, or reports the manifest leg as UNCOVERED.
+
+The operator also resolved **D7** in the same review, approving the deterministic ORDER BY.
+
+**Operator review, 2026-08-28.** The updated code passed. Two operational items were raised
+before merge: the base branch had moved (resolved — the branch carries every base commit,
+validated on the merged tree), and the D7 Platform Change Review workflow. The second was
+investigated rather than executed: the evidence says the Evo replay engine is not a declared
+platform component, so registering a revision would gate-block every active experiment for a
+change that cannot reach their evidence. Recorded as non-platform by operator decision; the
+full evidence table is under **D7** above.
+
+**PR #261 merged 2026-08-27** at reviewed head
+`0330a855744400acaa8621fc17deac508178b56d`. The historical-search capability and its
+13/13 synthetic proving run are on the default branch. The post-merge D1 attempt exposed
+that the existing real-data smoke probe did not distinguish a valid fixed-corpus proof from
+a wall-clock-truncated prefix; this follow-up returns the workstream to BUILDING for the
+bounded proving harness only.
+
 **Owner review 2026-08-25 (round 1): architectural correction required.** Addressed by the
 refactor above and recorded as `DEC-003`. Three concrete code blockers were raised in the
 same review and remain fixed:
@@ -248,9 +439,20 @@ Defect found by writing the agent-invocation test:
 
 ## Related PRs
 
-[#261](https://github.com/50thycal/kalshi_bot/pull/261) on `claude/evo-foundation-build-d7bp2b`.
+[#261](https://github.com/50thycal/kalshi_bot/pull/261) (merged),
+[#262](https://github.com/50thycal/kalshi_bot/pull/262) (the D1 proving-harness follow-up)
+and this review build, which carries #262 plus the three review fixes above.
 
 ## Next Step
 
-Owner review of the corrected shape. Then **D1**: a proving run on a real settled dataset,
-which is the prerequisite before any prospective (paper) extension is proposed.
+Merge the fixed-window proving-harness follow-up, then run:
+
+```json
+{"type":"script","name":"evo_backtest_probe","args":["--dataset","backfill_weather","--date-from","2026-08-01","--date-to","2026-08-03","--repeat","2","--require-complete"],"id":"ws6-d1-weather-fixed-20260827"}
+```
+
+Then run it a **second** time under a separate id (`…-b`). D1 is clean only if both runs are
+non-empty, untruncated, and identical to each other in all three legs — market manifest,
+trade tape and aggregates — across the two independent processes. Otherwise keep the
+workstream active and investigate the exact failed condition, which the run names. Do not
+start a prospective cohort; D2 and explicit operator approval remain separate prerequisites.

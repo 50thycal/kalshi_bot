@@ -238,7 +238,9 @@ def _weather_markets(
         q = q.where(BackfillWeatherMarket.target_date >= date_from)
     if date_to:
         q = q.where(BackfillWeatherMarket.target_date <= date_to)
-    for market in session.scalars(q.order_by(BackfillWeatherMarket.close_time)):
+    for market in session.scalars(
+        q.order_by(BackfillWeatherMarket.close_time, BackfillWeatherMarket.market_ticker)
+    ):
         if not spec.universe.admits_ticker(market.market_ticker):
             continue
         candles = session.scalars(
@@ -333,7 +335,7 @@ def _mmsell_markets(
     if dt:
         q = q.where(PaperTrade.created_at <= dt)
     seen: set[str] = set()
-    for tr in session.scalars(q.order_by(PaperTrade.closed_at)):
+    for tr in session.scalars(q.order_by(PaperTrade.closed_at, PaperTrade.id)):
         if tr.market_ticker in seen or not spec.universe.admits_ticker(tr.market_ticker):
             continue
         result = _market_result_from_trade(tr.side, tr.resolved_value)
@@ -347,7 +349,7 @@ def _mmsell_markets(
                     MmSellPositionTick.market_ticker == tr.market_ticker,
                     MmSellPositionTick.mid.isnot(None),
                 )
-                .order_by(MmSellPositionTick.captured_at)
+                .order_by(MmSellPositionTick.captured_at, MmSellPositionTick.id)
             )
         )
         if not ticks:
@@ -485,7 +487,9 @@ def _econ_markets(
         q = q.where(BackfillRegimeMarket.close_time >= df)
     if dt:
         q = q.where(BackfillRegimeMarket.close_time <= dt)
-    for market in session.scalars(q.order_by(BackfillRegimeMarket.close_time)):
+    for market in session.scalars(
+        q.order_by(BackfillRegimeMarket.close_time, BackfillRegimeMarket.market_ticker)
+    ):
         if not spec.universe.admits_ticker(market.market_ticker):
             continue
         candles = list(
@@ -540,7 +544,10 @@ def _crypto_markets(
         .where(CryptoLadderSnapshot.market_ticker.isnot(None))
         .group_by(CryptoLadderSnapshot.market_ticker)
         .having(func.max(CryptoLadderSnapshot.captured_at) >= cov_min)
-        .order_by(func.max(CryptoLadderSnapshot.captured_at).desc())
+        .order_by(
+            func.max(CryptoLadderSnapshot.captured_at).desc(),
+            CryptoLadderSnapshot.market_ticker,
+        )
     )
     for ticker, series, st, floor, cap, last_cap, min_mtc in session.execute(candidates):
         if not spec.universe.admits_ticker(ticker):
@@ -564,7 +571,7 @@ def _crypto_markets(
                     CryptoLadderSnapshot.market_ticker == ticker,
                     CryptoLadderSnapshot.mid_cents.isnot(None),
                 )
-                .order_by(CryptoLadderSnapshot.captured_at)
+                .order_by(CryptoLadderSnapshot.captured_at, CryptoLadderSnapshot.id)
             )
         )
         if not snaps:
