@@ -1,8 +1,0 @@
-# ops request: type='db'
-src           oid                                 
-------------  ------------------------------------
-canary_order  01a048d6-2588-7b4d-94f5-b896b0374b3a
-canary_order  01a048d6-19d0-7d6e-89d1-ee3ea739b24d
-canary_order  01a048d6-6408-717c-a56d-518f3eeed480
-
-(3 rows)
