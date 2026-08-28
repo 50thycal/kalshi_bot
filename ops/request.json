@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["mm10-register-2"],"id":"xc-show-2"}
+{"type":"xos","command":"show","args":["mmsell-price-ceiling"],"id":"xc-showexp-1"}
