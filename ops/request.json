@@ -1,1 +1,1 @@
-{"type":"xos","command":"metric","args":["settled_trades","--experiment","mmsell-price-ceiling","--arm","mmsell10","--kind","paper"],"id":"m-arm-settled_trades"}
+{"type":"xos","command":"metric","args":["realizable_cents_per_trade","--experiment","mmsell-price-ceiling","--arm","mmsell10","--kind","paper"],"id":"m-arm-realiz2"}
