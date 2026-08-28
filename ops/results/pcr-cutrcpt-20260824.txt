@@ -1,7 +1,0 @@
-# ops request: type='db'
-command_id                     status     error  result                                                                                                                                                                                                  
------------------------------  ---------  -----  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-pcr-cutover-taxonomy-20260824  SUCCEEDED  -      {"kind": "cutover", "status": "active", "new_epochs": [{"epoch_id": 10, "started_at": "2026-08-24 14:21:17.571842+00:00"}], "revision_id": 11, "activated_at": "2026-08-24 14:21:17.571842+00:00", "mea…
-pcr-impacts-taxonomy-20260824  SUCCEEDED  -      {"kind": "impact_records", "count": 9, "records": [{"action": "NEW_EPOCH", "status": "accepted", "record_id": 1, "impact_class": "I2", "experiment_id": 9}, {"action": "NO_ACTION", "status": "applied"…
-
-(2 rows)
