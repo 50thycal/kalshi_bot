@@ -1,7 +1,0 @@
-# ops request: type='db'
-epoch_number  epoch_ended                       deployment_key             started_at                        dep_ended                         tags                               
-------------  --------------------------------  -------------------------  --------------------------------  --------------------------------  -----------------------------------
-1             2026-08-24 14:21:17.571842+00:00  tmmsell-paper-legacy-1     2026-08-03 00:00:00+00:00         2026-08-24 14:21:17.571842+00:00  Tmmsell1,Tmmsell2,Tmmsell5,Tmmsell6
-2                                               tmmsell-paper-legacy-1-e2  2026-08-24 14:21:17.571842+00:00                                    Tmmsell1,Tmmsell2,Tmmsell5,Tmmsell6
-
-(2 rows)
