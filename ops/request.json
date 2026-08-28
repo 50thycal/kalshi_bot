@@ -1,1 +1,1 @@
-{"type":"db","sql":"select strategy, count(*) as entries, count(*) filter (where status = 'settled') as settled, count(*) filter (where status = 'open') as still_open, round(sum(coalesce(pnl,0))::numeric,4) as pnl_usd, round(avg(assumed_price)::numeric,2) as avg_entry from paper_trades where strategy in ('Cmmsell10','Cmmsell10_pt3') group by 1 order by 1","max_rows":10,"id":"db-c2"}
+{"type":"xos","command":"metric","args":["live_realized_pnl_usd","--experiment","mmsell-price-ceiling","--arm","mmsell10","--kind","live"],"id":"mk-live_realized_pnl_usd"}
