@@ -1,1 +1,1 @@
-{"type":"db","sql":"select strategy, count(*) as n, count(*) filter (where status = 'settled') as settled, round(sum(coalesce(pnl,0))::numeric, 4) as pnl_usd from paper_trades where strategy in ('Cmmsell10','Cmmsell10_pt3') group by 1 order by 1","max_rows":10,"id":"db-canary-3"}
+{"type":"noop"}
