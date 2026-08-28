@@ -1,1 +1,1 @@
-{"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"tmmsell-repair-1\",\"action\":\"REPAIR_LINEAGE\",\"actor\":\"claude-code\",\"actor_role\":\"TASK_SPECIFIC\",\"payload\":{\"package\":\"tmmsell-epoch-repair\",\"reason\":\"XOS-000011\"},\"schema_version\":1}"},"id":"repair-set-1"}
+{"type":"xos","command":"experiment-command-show","args":["tmmsell-repair-1"],"id":"repair-rcpt-1"}
