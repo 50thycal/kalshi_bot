@@ -1,1 +1,1 @@
-{"type":"xos","command":"metric","args":["live_settled_contracts","--experiment","mmsell-price-ceiling","--arm","mmsell10","--kind","live"],"id":"mk-live_settled_contracts"}
+{"type":"xos","command":"metric","args":["live_max_realized_loss_usd","--experiment","mmsell-price-ceiling","--arm","mmsell10","--kind","live"],"id":"mk-live_max_realized_loss_usd"}
