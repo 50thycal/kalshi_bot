@@ -33,6 +33,9 @@ it. Adding a package is a code change; running one is this transport.
 
     REGISTER_PACKAGE   register the package's successor contract: version, arms,
                        gates, epoch, deployments. Arms nothing, places nothing.
+    REPAIR_LINEAGE     run a reviewed one-shot repair of deployment ROWS an engine
+                       defect left inconsistent. Authors no contract, moves no
+                       lifecycle state, touches no gate, creates no live lineage.
     ARM_CANARY         arm the package's live canary and its twin through
                        `service.arm_live_canary`. **This expands real-money
                        capability** and requires `approved_by` naming a person.
@@ -85,6 +88,7 @@ ENVELOPE_KEYS = frozenset(
 #: and arming real money is Live Ops' call rather than a build session's.
 ACTION_ROLES: dict[str, frozenset[str]] = {
     "REGISTER_PACKAGE": frozenset({"RESEARCH_LAB", "TASK_SPECIFIC", "LIVE_OPS"}),
+    "REPAIR_LINEAGE": frozenset({"LIVE_OPS", "TASK_SPECIFIC"}),
     "ARM_CANARY": frozenset({"LIVE_OPS"}),
 }
 
@@ -148,14 +152,40 @@ class ExperimentPackage:
     #: #266 defect class, and it should fail in CI rather than in front of an
     #: operator with a write already submitted.
     activation_vars: frozenset[str] = frozenset()
+    #: A one-shot lineage REPAIR: reviewed code that fixes deployment rows an
+    #: engine defect left inconsistent. Deliberately its own slot rather than a
+    #: mode of `register` — a repair authors no contract, moves no lifecycle
+    #: state and touches no gate, and a package that could do both would blur
+    #: the one boundary this transport exists to keep.
+    repair: Callable[..., dict] | None = None
+
+
+def _no_contract(session, **kw):
+    """A repair package has no contract to register, and says so rather than
+    quietly doing nothing if REGISTER_PACKAGE is aimed at it."""
+    raise ExperimentCommandRejected(
+        "this is a lineage repair, not a contract — use REPAIR_LINEAGE",
+        "NOT_A_CONTRACT",
+    )
 
 
 def _packages() -> dict[str, ExperimentPackage]:
     """Imported lazily so this module stays importable when a package's own
     dependencies are not (and so the boot hook's error handler can still run)."""
-    from . import canary_mmsell10
+    from . import canary_mmsell10, repair_tmmsell_epoch
 
     return {
+        "tmmsell-epoch-repair": ExperimentPackage(
+            name="tmmsell-epoch-repair",
+            experiment_key=repair_tmmsell_epoch.EXPERIMENT_KEY,
+            description=(
+                "XOS-000011: end the deployment the 2026-08-24 taxonomy boundary "
+                "stranded on mmsell-type-tight v1/e1 and re-register its four "
+                "Tmmsell books on the open epoch"
+            ),
+            register=_no_contract,
+            repair=repair_tmmsell_epoch.repair,
+        ),
         "mmsell10-canary": ExperimentPackage(
             name="mmsell10-canary",
             experiment_key=canary_mmsell10.EXPERIMENT_KEY,
@@ -354,6 +384,30 @@ def _register_package(session, env: _Envelope, now: datetime):
     return {"kind": "register", "package": package.name, "produced": produced}
 
 
+def _repair_lineage(session, env: _Envelope, now: datetime):
+    """Run a reviewed package's one-shot lineage repair.
+
+    A repair fixes deployment ROWS an engine defect left inconsistent — a
+    deployment stranded on a closed epoch, a successor epoch left empty. It is
+    bounded by construction: the package checks every precondition it was reviewed
+    against and refuses if production does not match, it is idempotent, and it can
+    reach no gate, verdict, transition, Version or epoch. What it CAN do is make a
+    book admissible again, which is why it leaves a receipt naming who asked.
+
+    It creates no real-money capability: `arm_live_canary` remains the only path
+    that may register live lineage, and `carry_deployments_forward` refuses a live
+    or twin deployment by name.
+    """
+    del now
+    package = _package_or_refuse(env.payload.get("package"))
+    if package.repair is None:
+        raise ExperimentCommandRejected(
+            f"package {package.name!r} declares no repair", "NO_REPAIR"
+        )
+    produced = package.repair(session, actor=env.actor)
+    return {"kind": "repair", "package": package.name, "produced": produced}
+
+
 def _arm_canary(session, env: _Envelope, now: datetime):
     """Arm the package's live canary and its twin. EXPANDS REAL-MONEY CAPABILITY.
 
@@ -395,6 +449,13 @@ ACTIONS: dict[str, _Action] = {
         optional=frozenset({"promotion_sample_floor"}),
         run=_register_package,
         doc="Register a reviewed package's successor contract. Arms nothing.",
+    ),
+    "REPAIR_LINEAGE": _Action(
+        required=frozenset({"package", "reason"}),
+        optional=frozenset(),
+        run=_repair_lineage,
+        doc="Run a reviewed package's one-shot lineage repair. Registers no "
+            "contract, moves no lifecycle state, touches no gate.",
     ),
     "ARM_CANARY": _Action(
         required=frozenset({"package", "approved_by"}),

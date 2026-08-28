@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Sequence
 from datetime import datetime, timezone
 
 from sqlalchemy import event, func, select
@@ -982,9 +983,35 @@ def open_epoch(
 def close_epoch(
     session, epoch: ExperimentEpoch, *, ended_at: datetime | None = None
 ) -> ExperimentEpoch:
+    """End an operating interval, and with it every deployment still running in it.
+
+    The cascade is not a convenience. The admission resolver requires BOTH the
+    deployment and its epoch to be open, so a deployment left open on a closed epoch
+    is not "still running" in any sense the system honours — its tags simply stop
+    resolving, and under NEW_ONLY every trade they attempt is refused. The row said
+    the book was live; the resolver said it did not exist; nothing reconciled them.
+
+    That state is what XOS-000011 was: an I2 platform boundary closed
+    mmsell-type-tight v1/e1 on 2026-08-24 and left tmmsell-paper-legacy-1 open with
+    four tags on it. Every Tmmsell book went dark, silently, for four days.
+
+    Ending them at the same instant makes the record say what the resolver already
+    believed. It removes no evidence: metric scopes resolve tags across every
+    deployment in an epoch, ended or not — only the enforcement resolver reads
+    `ended_at`. Callers that intend the books to CONTINUE must register their
+    successor deployments on the new epoch; `platform_impact.apply_new_epoch` and
+    `arm_live_canary` both do."""
     if epoch.ended_at is not None:
         raise ExperimentOsError(f"epoch {epoch.epoch_number} is already closed")
-    epoch.ended_at = ended_at or _now()
+    at = ended_at or _now()
+    epoch.ended_at = at
+    for dep in session.scalars(
+        select(ExperimentDeployment).where(
+            ExperimentDeployment.epoch_id == epoch.id,
+            ExperimentDeployment.ended_at.is_(None),
+        )
+    ):
+        dep.ended_at = at
     session.flush()
     return epoch
 
@@ -1126,6 +1153,93 @@ def register_deployment(
         )
     session.flush()
     return dep
+
+
+def open_deployments(session, epoch: ExperimentEpoch) -> list[ExperimentDeployment]:
+    """The deployments still running in an epoch, oldest first."""
+    return list(
+        session.scalars(
+            select(ExperimentDeployment)
+            .where(
+                ExperimentDeployment.epoch_id == epoch.id,
+                ExperimentDeployment.ended_at.is_(None),
+            )
+            .order_by(ExperimentDeployment.id)
+        )
+    )
+
+
+#: Kinds a carry-forward may re-register on its own authority. `live` and
+#: `paper_twin` are deliberately absent: a live deployment row is real-money
+#: capability, and the only path that may create one is `arm_live_canary`, which
+#: proves fresh tags, a twin at the same instant and a re-evaluated gate. A
+#: carry-forward can prove none of that, so it refuses and names the deployments
+#: rather than quietly minting live lineage on a platform boundary.
+_CARRYABLE_KINDS: frozenset[str] = frozenset({DeploymentKind.PAPER.value})
+
+
+def carry_deployments_forward(
+    session,
+    deployments: Sequence[ExperimentDeployment],
+    new_epoch: ExperimentEpoch,
+    *,
+    started_at: datetime,
+    reason: str,
+) -> list[ExperimentDeployment]:
+    """Re-register `deployments` on `new_epoch`, same arms and tags, at one instant.
+
+    A new epoch is a fresh evidence window for the SAME contract, so the books that
+    were running are meant to keep running — but a deployment belongs to exactly one
+    epoch, and an epoch cut that opens an empty successor leaves every one of those
+    tags unregistered. Under NEW_ONLY that is not a gap in the record, it is a
+    trading outage: the books go dark and nothing says so (XOS-000011).
+
+    Evidence is NOT pooled across the boundary. Each side keeps its own deployment
+    rows, and the epoch is what metric scopes window on — which is the entire reason
+    the boundary was cut."""
+    if any(d.kind not in _CARRYABLE_KINDS for d in deployments):
+        refused = sorted(
+            f"{d.deployment_key} ({d.kind})"
+            for d in deployments
+            if d.kind not in _CARRYABLE_KINDS
+        )
+        raise ExperimentOsError(
+            f"cannot carry {refused} across an epoch boundary: only "
+            f"{sorted(_CARRYABLE_KINDS)} deployments may be re-registered "
+            "automatically. Stand the live book down and re-arm it through "
+            "arm_live_canary(), which is the only path that may create live lineage."
+        )
+    carried: list[ExperimentDeployment] = []
+    for dep in deployments:
+        arms = {
+            session.get(ExperimentArm, link.arm_id).arm_key: link.strategy_tag
+            for link in session.scalars(
+                select(ExperimentDeploymentArm).where(
+                    ExperimentDeploymentArm.deployment_id == dep.id
+                )
+            )
+        }
+        key = f"{dep.deployment_key}-e{new_epoch.epoch_number}"
+        if len(key) > 64:
+            raise ExperimentOsError(
+                f"carried deployment key {key!r} exceeds 64 chars — rename "
+                f"{dep.deployment_key!r} before cutting another epoch"
+            )
+        carried.append(
+            register_deployment(
+                session, new_epoch,
+                deployment_key=key,
+                stage=dep.stage,
+                kind=dep.kind,
+                arms=arms,
+                config=dep.config_json,
+                code_fingerprint=dep.code_fingerprint,
+                started_at=started_at,
+                notes=f"carried forward from {dep.deployment_key}: {reason}",
+                grandfathered=dep.grandfathered,
+            )
+        )
+    return carried
 
 
 def end_deployment(
@@ -1273,7 +1387,15 @@ def arm_live_canary(
             ExperimentEpoch.ended_at.is_(None),
         )
     )
+    # The paper parent keeps running beside the canary, so its deployment has to
+    # exist on the LIVE epoch too. Arming closes the paper epoch, which ends the
+    # deployments in it; without carrying them forward the parent tag would stop
+    # resolving the instant the canary armed, and under NEW_ONLY its book would be
+    # refused at the write path — the canary would take out the very book it was
+    # promoted from. Captured before the close (XOS-000011).
+    continuing_paper: list[ExperimentDeployment] = []
     if paper_epoch is not None:
+        continuing_paper = open_deployments(session, paper_epoch)
         close_epoch(session, paper_epoch, ended_at=at)
     live_epoch = open_epoch(
         session,
@@ -1296,6 +1418,11 @@ def arm_live_canary(
         arms=twin_tags, twin_of=live_dep,
         config={"parameterized_to": "live knobs (twin harness)"},
         started_at=at, _sanctioned_canary=True,
+    )
+    carry_deployments_forward(
+        session, continuing_paper, live_epoch,
+        started_at=at,
+        reason=f"paper parent continues beside live canary {live_key}",
     )
     session.flush()
     return live_dep, twin_dep, live_epoch

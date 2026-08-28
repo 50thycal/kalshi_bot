@@ -117,11 +117,14 @@ To run a request:
    specs, thresholds and tags are literals in the repository that someone read in
    a pull request — otherwise a scientific contract could be written in an
    environment variable the afternoon the results arrived, and pre-registration
-   would mean nothing. Two actions:
+   would mean nothing. Three actions:
 
    ```jsonc
    // register the contract — arms nothing, places nothing
    {"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"mm10-register-1\",\"action\":\"REGISTER_PACKAGE\",\"actor\":\"claude-code\",\"actor_role\":\"TASK_SPECIFIC\",\"payload\":{\"package\":\"mmsell10-canary\"},\"schema_version\":1}"}}
+   // repair deployment rows an engine defect left inconsistent — no contract,
+   // no lifecycle state, no gate, no live lineage
+   {"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"tmmsell-repair-1\",\"action\":\"REPAIR_LINEAGE\",\"actor\":\"claude-code\",\"actor_role\":\"TASK_SPECIFIC\",\"payload\":{\"package\":\"tmmsell-epoch-repair\",\"reason\":\"XOS-000011\"},\"schema_version\":1}"}}
    // arm the canary — EXPANDS REAL-MONEY CAPABILITY; Live Ops only
    {"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"mm10-arm-1\",\"action\":\"ARM_CANARY\",\"actor\":\"claude-code\",\"actor_role\":\"LIVE_OPS\",\"payload\":{\"package\":\"mmsell10-canary\",\"approved_by\":\"<operator>\"},\"schema_version\":1}"}}
    ```
