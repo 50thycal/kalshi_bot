@@ -1,0 +1,31 @@
+# ops request: type='xos'
+{
+  "command_id": "x11-vld-2",
+  "action": "STATUS",
+  "actor": "claude-code",
+  "actor_role": "TASK_SPECIFIC",
+  "status": "SUCCEEDED",
+  "issue_key": "XOS-000011",
+  "schema_version": 1,
+  "payload_hash": "f5948d30b4fb806fb3ff38ae1e91c35e9752895844b1015c73991d65fb1c96e0",
+  "payload_fields": [
+    "issue",
+    "reason",
+    "status"
+  ],
+  "payload_unrecognised_fields": 0,
+  "requested_at": "2026-08-28 14:10:44.369552+00:00",
+  "started_at": "2026-08-28 14:10:44.369552+00:00",
+  "completed_at": "2026-08-28 14:10:44.464776+00:00",
+  "result": {
+    "kind": "issue",
+    "status": "VALIDATING",
+    "priority": "P1",
+    "severity": "HIGH",
+    "issue_key": "XOS-000011",
+    "owner_role": "LIVE_OPS",
+    "disposition": "OPS_REPAIR",
+    "classification": "OPS"
+  },
+  "error": null
+}
