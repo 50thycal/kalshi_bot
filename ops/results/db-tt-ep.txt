@@ -1,7 +1,0 @@
-# ops request: type='db'
-version  epoch_number  started_at                        ended_at                          impact_class  reason                                                                                                                                                                                                  
--------  ------------  --------------------------------  --------------------------------  ------------  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-1        1             2026-08-16 14:14:43.720928+00:00  2026-08-24 14:21:17.571842+00:00                migration epoch — clean evidence floor at legacy import (manifest 2026-08-16.1); pre-migration windows ride along as legacy evidence                                                                    
-1        2             2026-08-24 14:21:17.571842+00:00                                    I2            platform boundary: MARKET_TAXONOMY settlement_repair_2026_08_24 activated at 2026-08-24 14:21:17.571842+00:00 (impact record #1: I2 per section 4.1: this experiment's independent variable IS the cont…
-
-(2 rows)
