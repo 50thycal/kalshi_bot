@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"mm10-register-2\",\"action\":\"REGISTER_PACKAGE\",\"actor\":\"claude-code\",\"actor_role\":\"TASK_SPECIFIC\",\"payload\":{\"package\":\"mmsell10-canary\"},\"schema_version\":1}"},"id":"xc-reg-2"}
