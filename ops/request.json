@@ -1,1 +1,1 @@
-{"type":"db","sql":"select 'canary_order' as src, kalshi_order_id as oid from live_orders where strategy = 'Cmmsell10' and status = 'filled' limit 3","max_rows":6,"id":"db-f-cmp"}
+{"type":"db","sql":"select 'recent_fill' as src, kalshi_order_id as oid, market_ticker from fills order by filled_at desc limit 3","max_rows":6,"id":"db-f-cmp2"}
