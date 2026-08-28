@@ -828,3 +828,113 @@ def test_enforcement_state_is_unchanged_by_this_package(price_ceiling, xos_sessi
     after = s.scalar(select(ExperimentOsEnforcement.id)
                      .order_by(ExperimentOsEnforcement.id.desc()).limit(1))
     assert before == after
+
+
+# ---------------------------------------------------------------------------
+# Step 4: the runtime allowlist, and the book it has to create first
+# ---------------------------------------------------------------------------
+
+
+class _Variants:
+    """The one attribute `activation_env` reads."""
+
+    def __init__(self, value: str):
+        self.mmsell_variants = value
+
+
+#: Production's shape, trimmed: several paper books, then the two live ones.
+_RUNNING = ("mmsell9:lo=5,hi=12,maxyes=7;mmsell10:lo=5,hi=10,maxyes=7;"
+            "Lmmsell8:lo=5,hi=12;Lmmsell10:lo=5,hi=10,maxyes=7")
+
+
+def test_the_live_book_must_be_created_or_the_tag_names_nothing():
+    """The defect this whole step exists for.
+
+    A live mmsell book is an ordinary `mmsell_variants` entry — `Lmmsell8` and
+    `Lmmsell10` both are. Production's running value has no `Cmmsell10`, so
+    `LIVE_STRATEGIES=Cmmsell10` on its own names a book that does not exist.
+    """
+    assert "Cmmsell10" not in _RUNNING
+    out = pkg.variants_with_live_book(_RUNNING)
+    assert f"{pkg.LIVE_TAG}:{pkg.BOOK_PARAMS}" in out
+
+
+def test_appending_the_book_preserves_every_book_already_running():
+    """The reason this is derived and not typed: the value is one string holding
+    every book, and dropping one by retyping it stops that book silently."""
+    before = [t.split(":")[0] for t in _RUNNING.split(";")]
+    after = [t.split(":")[0] for t in pkg.variants_with_live_book(_RUNNING).split(";")]
+    assert after == [*before, pkg.LIVE_TAG]
+    # and every spec body is byte-identical, not merely present by tag
+    assert pkg.variants_with_live_book(_RUNNING).startswith(_RUNNING + ";")
+
+
+def test_appending_is_idempotent():
+    """A re-run against a value that already carries the book returns it
+    unchanged rather than adding a second, shadowed entry."""
+    once = pkg.variants_with_live_book(_RUNNING)
+    assert pkg.variants_with_live_book(once) == once
+
+
+def test_a_conflicting_definition_of_the_live_book_is_refused():
+    """Silently overwriting it would be an undetected parameter change to a
+    registered book — exactly what the drift material exists to catch."""
+    conflicting = _RUNNING + f";{pkg.LIVE_TAG}:lo=5,hi=12,maxyes=9,size=4"
+    with pytest.raises(svc.ExperimentOsError) as exc:
+        pkg.variants_with_live_book(conflicting)
+    assert "lo=5,hi=12,maxyes=9,size=4" in str(exc.value)
+
+
+def test_the_appended_spec_parses_to_the_registered_book_params():
+    """The string has to survive `mmsell_variant_list`'s own parser as the
+    parameters the deployment's drift material declares — a spec that parsed to
+    something else would drift the moment the worker booted."""
+    parsed = dict(kv.split("=") for kv in pkg.BOOK_PARAMS.split(","))
+    assert parsed == {"lo": "5", "hi": "10", "maxyes": "7", "size": "1"}
+    assert pkg.LIVE_BOOK_SPEC == f"{pkg.LIVE_TAG}:{pkg.BOOK_PARAMS}"
+    assert len(pkg.LIVE_TAG) <= 24 and "mmsell" in pkg.LIVE_TAG
+
+
+def test_the_twin_needs_no_book_of_its_own():
+    """`MmSellTracker._twin_books` builds it as `dict(parent)` with the tag
+    replaced, which is why `material_config` records its `book_params` as None.
+    An entry here would give it an independent spec that could drift alone."""
+    out = pkg.variants_with_live_book(_RUNNING)
+    assert pkg.TWIN_TAG not in out
+    assert pkg.material_config()["material"]["book_params"][pkg.TWIN_TAG] is None
+
+
+def test_activation_sets_the_book_and_its_caps_before_the_switch():
+    """Ordering is not cosmetic: `LIVE_STRATEGIES` is the only entry that lets an
+    order be placed, and it comes last so the book and its caps are already in the
+    same mapping — one `env` call, so all of it lands in ONE redeploy."""
+    env = pkg.activation_env(_Variants(_RUNNING))
+    names = list(env)
+    assert names[-1] == "LIVE_STRATEGIES"
+    assert names[0] == "MMSELL_VARIANTS"
+    assert env["LIVE_STRATEGIES"] == pkg.LIVE_TAG
+
+
+def test_activation_pins_every_setting_the_registered_envelope_declares():
+    """The envelope is the version's frozen contract. If activation set a subset,
+    the process would be running something the contract does not describe."""
+    env = pkg.activation_env(_Variants(_RUNNING))
+    for name, value in pkg.RISK_ENVELOPE["settings"].items():
+        assert env[name] == value
+
+
+def test_activation_touches_nothing_the_envelope_deliberately_leaves_alone():
+    """`MAX_TOTAL_EXPOSURE`, `MAX_ORDER_SIZE` and `LIVE_EXIT_MODE` are shared
+    across books and were removed from the envelope on purpose. Activation must
+    not reintroduce them by the back door."""
+    env = pkg.activation_env(_Variants(_RUNNING))
+    for name in pkg.RISK_ENVELOPE["left_alone"]:
+        assert name not in env
+
+
+def test_activation_cannot_reach_the_kill_switch_or_the_mode():
+    """Composing the allowlist step is not permission to flip the portfolio's own
+    safeguards. `KILL_SWITCH` and `BOT_MODE` are the operator's, in their own
+    request, so a stand-down is never undone as a side effect of activating."""
+    env = pkg.activation_env(_Variants(_RUNNING))
+    assert "KILL_SWITCH" not in env and "BOT_MODE" not in env

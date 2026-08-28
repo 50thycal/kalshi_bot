@@ -132,6 +132,24 @@ To run a request:
    fresh synchronous re-evaluation of the promotion gate) fires unchanged. Clear
    the variable once the receipt is terminal. Same publicity warning as above.
 
+   The **runtime allowlist** step that follows arming is not this transport's and
+   never will be. It is an `env` call, and for an mmsell book it must first CREATE
+   the book: a live mmsell book is an ordinary `MMSELL_VARIANTS` entry
+   (`Lmmsell8` and `Lmmsell10` both are), so `LIVE_STRATEGIES=<tag>` on its own
+   names a book that does not exist — no orders, and `book_params` absent against
+   the deployment's declared value, which is recorded as
+   `EXPERIMENT_CONFIG_DRIFT`. **Never hand-compose `MMSELL_VARIANTS`:** it is one
+   ~800-character string holding every book, and retyping it to add one entry is
+   how a running book gets dropped. Read the current value, then compose:
+
+   ```bash
+   {"type":"env","id":"env-1"}                        # what is the service running?
+   python scripts/mmsell10_canary.py activate         # prints the exact env request
+   ```
+
+   That command applies nothing — no database connection, no Railway credentials,
+   and it ignores `--execute`.
+
    `metric` computes ONE canonical metric at an explicit scope and prints its
    value with full provenance — the only way to exercise a provider against
    production before any gate depends on it:

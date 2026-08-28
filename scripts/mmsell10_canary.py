@@ -12,12 +12,21 @@ TWO SEPARATE ACTS, TWO SEPARATE APPROVALS, AND NEITHER OF THEM STARTS TRADING.
                fresh tags. This is the act that EXPANDS REAL-MONEY CAPABILITY and
                it requires `--approved-by`.
 
+    activate   PRINT the step-4 ops request and stop. A composer, not an
+               actuator: it holds no database connection and no Railway
+               credentials, and ignores `--execute`.
+
 Even after `arm`, no order can reach Kalshi until the runtime allowlist is set
 separately (`BOT_MODE=live`, `KILL_SWITCH=false`, `LIVE_ENABLED=true`, and the
 live tag in `LIVE_STRATEGIES`). That switch is a Live Ops act through the `env`
 channel, deliberately not automated here: a script that could both arm the
 canary and open the allowlist would be one command away from unreviewed
 exposure.
+
+`activate` exists because that step also has to CREATE the book. A live mmsell
+book is an ordinary `MMSELL_VARIANTS` entry, and that variable is one ~800-char
+string holding every book — so the step-4 request is composed from the running
+value rather than typed, and re-typing it is how a running book gets dropped.
 
     # inspect, writing nothing (the default):
     DATABASE_URL=postgresql://... python scripts/mmsell10_canary.py register
@@ -153,6 +162,53 @@ def cmd_status(args) -> int:
     return 0
 
 
+def cmd_activate(args) -> int:
+    """PRINT the step-4 ops request. Never applies it, `--execute` or not.
+
+    Step 4 is the only step at which an order can reach Kalshi, so this command
+    is a composer, not an actuator — it has no database connection and no Railway
+    credentials, and the operator pastes what it prints."""
+    if args.current_variants is not None:
+        current, source = args.current_variants, "--current-variants (read from the service)"
+        caveat = ""
+    else:
+        from kalshi_bot.config import Settings
+
+        current = Settings.model_fields["mmsell_variants"].default
+        source = "config.py default"
+        caveat = (
+            "\n!! This is the CODE default, which is the running value only while\n"
+            "!! MMSELL_VARIANTS is UNSET on the service. Confirm with a\n"
+            '!! {"type":"env"} read first; if it IS set, re-run with\n'
+            "!! --current-variants '<the value that read printed>'.\n"
+        )
+
+    env = pkg.activation_env(_Variants(current))
+    print("=== step 4: the runtime allowlist — THE STEP THAT LETS AN ORDER REACH KALSHI ===")
+    print(f"mmsell_variants source: {source}")
+    print(caveat)
+    for name, value in env.items():
+        shown = value if len(value) <= 96 else value[:60] + f"... ({len(value)} chars)"
+        print(f"  {name} = {shown}")
+    print(f"\n  (MMSELL_VARIANTS adds exactly one entry: {pkg.LIVE_BOOK_SPEC})")
+    print(f"  (the twin {pkg.TWIN_TAG} needs no entry — it is derived from the parent book)")
+    print("\n=== the exact ops request — one env call, so every variable lands in ONE "
+          "redeploy ===")
+    print(json.dumps({"type": "env", "set": env, "id": "mm10-activate-1"}))
+    print("\n=== stand-down (stops NEW entries; held positions keep exiting) ===")
+    print(json.dumps({"type": "env", "set": {"LIVE_STRATEGIES": ""}, "id": "mm10-standdown-1"}))
+    print("\nNOTHING WAS APPLIED. This command only composes the request.")
+    return 0
+
+
+class _Variants:
+    """The one attribute `activation_env` reads, so composing the request needs
+    no credentials and no database — a Settings instance requires both."""
+
+    def __init__(self, mmsell_variants: str):
+        self.mmsell_variants = mmsell_variants
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -175,6 +231,14 @@ def main(argv=None) -> int:
 
     sub.add_parser("status", help="what is registered right now").set_defaults(
         fn=cmd_status)
+
+    p_act = sub.add_parser(
+        "activate", help="PRINT the step-4 ops request (never applies it)")
+    p_act.add_argument("--current-variants", default=None,
+                       help="the running MMSELL_VARIANTS, from a {\"type\":\"env\"} "
+                            "read. Omitted, the config.py default is used, which is "
+                            "the running value only while the variable is unset.")
+    p_act.set_defaults(fn=cmd_activate)
 
     args = ap.parse_args(argv)
     return args.fn(args)
