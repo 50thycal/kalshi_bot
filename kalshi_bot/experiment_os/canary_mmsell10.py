@@ -101,6 +101,20 @@ LEGACY_PAPER_DEPLOYMENT_KEY = "mmsell-ceiling-paper-legacy-1"
 #: It also scopes the cap to this book instead of every book sharing the process.
 BOOK_PARAMS = "lo=5,hi=10,maxyes=7,size=1"
 
+#: The `mmsell_variants` entry that CREATES the live book. A live mmsell book is
+#: an ordinary variant entry — `Lmmsell8` and `Lmmsell10` both are — so without
+#: this the canary's `LIVE_STRATEGIES=Cmmsell10` would name a book that does not
+#: exist: no orders, and `book_params[Cmmsell10]` absent against a declared
+#: value, which `enforcement.runtime_config_check` records as
+#: EXPERIMENT_CONFIG_DRIFT and which takes the keep gate to BLOCKED_INTEGRITY.
+#:
+#: The TWIN needs no entry of its own. `MmSellTracker._twin_books` builds it as
+#: `dict(parent)` with the tag replaced, and `live_paper_twin_pairs` derives the
+#: pairing from `LIVE_STRATEGIES` + `LIVE_PAPER_TWIN_SUFFIX` while
+#: `live_paper_twin_auto` is on — which is exactly why `material_config` records
+#: the twin's `book_params` as None rather than as a spec.
+LIVE_BOOK_SPEC = f"{LIVE_TAG}:{BOOK_PARAMS}"
+
 PROMOTION_GATE_KEY = "paper_to_live_canary"
 KEEP_GATE_KEY = "live_canary_keep"
 
@@ -451,6 +465,66 @@ def material_config(*, live_tag: str = LIVE_TAG, twin_tag: str = TWIN_TAG) -> di
     }
 
 
+def variants_with_live_book(current: str) -> str:
+    """`current` (the running `mmsell_variants`) with this canary's book appended.
+
+    DERIVED rather than written down, because the value is one ~800-character
+    string holding EVERY mmsell book: hand-composing it to add one entry is how a
+    running book gets dropped by a typo, and dropping a book stops it silently.
+    Appending is also order-safe — `mmsell_variant_list` parses on `;` and keeps
+    the first spec for a repeated tag, so a re-run cannot shadow an existing book.
+
+    Idempotent: re-appending an already-present `Cmmsell10:` entry is a no-op, so
+    running this against a value that already carries the book returns it
+    unchanged rather than growing it. A DIFFERENT `Cmmsell10:` spec is refused
+    outright — silently overwriting it would be an undetected parameter change to
+    a registered book."""
+    tokens = [t.strip() for t in current.split(";") if t.strip()]
+    for token in tokens:
+        tag, _, body = token.partition(":")
+        if tag.strip() != LIVE_TAG:
+            continue
+        if body.strip() != BOOK_PARAMS:
+            raise service.ExperimentOsError(
+                f"{LIVE_TAG} is already defined as {body.strip()!r}, which is not "
+                f"this canary's registered {BOOK_PARAMS!r}. Reconcile the running "
+                "config against the deployment's book_params before activating; "
+                "overwriting it here would be an undetected parameter change."
+            )
+        return ";".join(tokens)
+    return ";".join([*tokens, LIVE_BOOK_SPEC])
+
+
+def activation_env(settings) -> dict[str, str]:
+    """The EXACT Railway variables step 4 of the plan sets, and nothing else.
+
+    Step 4 — the runtime allowlist — is the only step at which an order can reach
+    Kalshi, and it is deliberately not something `arm()` can do. This function
+    exists so the operator performing it pastes a *derived* value rather than
+    composing one: `MMSELL_VARIANTS` depends on what production is running, and
+    the six mmsell safeguards are pinned explicitly so the envelope is true of the
+    process rather than merely equal to today's code defaults.
+
+    It only builds the mapping. `scripts/mmsell10_canary.py activate` prints it;
+    nothing in this package applies it."""
+    env: dict[str, str] = {
+        "MMSELL_VARIANTS": variants_with_live_book(settings.mmsell_variants),
+    }
+    env.update(RISK_ENVELOPE["settings"])
+    # Last, so the mapping reads in the order it takes effect: the book exists and
+    # its caps are pinned before the switch that lets it spend anything.
+    env["LIVE_STRATEGIES"] = LIVE_TAG
+    return env
+
+
+#: Every variable `activation_env` can name. `tests/test_ops_channel_receipt_reads.py`
+#: asserts each is settable through the ops channel — the #266 defect class, caught
+#: in CI instead of halfway through an activation.
+ACTIVATION_VARS: frozenset[str] = frozenset(
+    {"MMSELL_VARIANTS", "LIVE_STRATEGIES", *RISK_ENVELOPE["settings"]}
+)
+
+
 def register_successor_version(
     session,
     *,
@@ -677,8 +751,9 @@ def _gate(session, version: ExperimentVersion, gate_key: str) -> ExperimentGate:
 
 
 __all__ = [
-    "ARM_KEY", "EXPERIMENT_KEY", "KEEP_GATE_KEY", "KEEP_GATE_SPEC", "LIVE_TAG",
-    "LIVE_DEPLOYMENT_KEY", "OPERATOR_DECISIONS", "PROMOTION_GATE_KEY",
-    "PROMOTION_GATE_SPEC", "RISK_ENVELOPE", "TWIN_TAG", "TWIN_DEPLOYMENT_KEY",
-    "arm", "material_config", "register_successor_version",
+    "ACTIVATION_VARS", "ARM_KEY", "BOOK_PARAMS", "EXPERIMENT_KEY", "KEEP_GATE_KEY",
+    "KEEP_GATE_SPEC", "LIVE_BOOK_SPEC", "LIVE_TAG", "LIVE_DEPLOYMENT_KEY",
+    "OPERATOR_DECISIONS", "PROMOTION_GATE_KEY", "PROMOTION_GATE_SPEC",
+    "RISK_ENVELOPE", "TWIN_TAG", "TWIN_DEPLOYMENT_KEY", "activation_env", "arm",
+    "material_config", "register_successor_version", "variants_with_live_book",
 ]

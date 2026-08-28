@@ -140,6 +140,14 @@ class ExperimentPackage:
     register: Callable[..., dict]
     #: None for a package that registers a contract but arms nothing.
     arm: Callable[..., dict] | None = None
+    #: Every Railway variable the package's runtime-allowlist step sets. NOT
+    #: something this transport can apply — that step is a separate Live Ops act
+    #: through the `env` channel, deliberately unreachable from here. It is
+    #: declared so CI can assert each name clears `railway_env.ALLOWED_VARS`: a
+    #: package whose activation step the channel refuses halfway through is the
+    #: #266 defect class, and it should fail in CI rather than in front of an
+    #: operator with a write already submitted.
+    activation_vars: frozenset[str] = frozenset()
 
 
 def _packages() -> dict[str, ExperimentPackage]:
@@ -158,6 +166,7 @@ def _packages() -> dict[str, ExperimentPackage]:
             ),
             register=canary_mmsell10.register_successor_version,
             arm=canary_mmsell10.arm,
+            activation_vars=canary_mmsell10.ACTIVATION_VARS,
         ),
     }
 

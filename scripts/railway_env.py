@@ -105,6 +105,32 @@ ALLOWED_VARS = frozenset({
     # armed, capped and re-tuned from the ops channel without a code deploy.
     "MMSELL_LIVE_MAX_OPEN_POSITIONS", "MMSELL_LIVE_PRICE_OFFSET_CENTS",
     "MMSELL_LIVE_MAX_SPREAD_CENTS",
+    # The book DEFINITIONS themselves. A live mmsell book is an ordinary entry in this
+    # string (Lmmsell8 and Lmmsell10 both are), so registering an Experiment OS canary and
+    # then being unable to CREATE its book is the same defect class as #266: an approved
+    # procedure the sanctioned channel refuses halfway through. `LIVE_STRATEGIES` — the
+    # switch deciding which of these books spends real money — has always been settable
+    # from here, so this crosses no authority line it did not already cross; what it adds
+    # is the ability to define the book that switch then names.
+    #
+    # It is also the safer direction for a REGISTERED book: Experiment OS recomputes
+    # `book_params` for every registered live tag at boot, so editing one here is detected
+    # as EXPERIMENT_CONFIG_DRIFT and takes that experiment's gate to BLOCKED_INTEGRITY.
+    # Never hand-compose the value: it is one ~800-char string holding EVERY book, and
+    # dropping a book by retyping it would silently stop it. Derive it instead —
+    # `scripts/mmsell10_canary.py activate` prints the exact request.
+    "MMSELL_VARIANTS",
+    # mmsell's own concentration safeguards, and the quote pre-filter. These are here so a
+    # pre-registered risk envelope can ASSERT them rather than inherit them: production
+    # leaves all six unset, so they hold whatever config.py currently defaults to, and a
+    # later change to a default would silently move a value an approved envelope declared.
+    # Pinning them explicitly is what makes the envelope true of the running process.
+    "MMSELL_EVENT_RUNG_CAP_ENABLED", "MMSELL_EVENT_RUNG_CAP",
+    "MMSELL_SETTLEMENT_CAP_ENABLED", "MMSELL_SETTLEMENT_CAP_PCT",
+    "MMSELL_SETTLEMENT_EVENT_CAP",
+    # The pre-filter stays DISARMED for the price-ceiling books: the full order book is
+    # authoritative for the maxyes decision (tests/test_mmsell_orderbook_authoritative.py).
+    "MMSELL_PREFILTER_ENABLED",
     # Queue-position A/B (docs/MMSELL_OFFSET_AB.md) — arming/disarming the mmsell10a/mmsell10b
     # experiment is exactly the kind of mid-test tuning this allowlist exists for. Salt is
     # included for completeness but should almost never be touched: changing it mid-experiment

@@ -241,9 +241,31 @@ operator on **2026-08-28**:
 3. **`arm --execute --approved-by <operator>`** — `service.arm_live_canary`: synchronous
    re-evaluation of the promotion gate, transition to LIVE_CANARY, fresh I2 epoch, live
    deployment and twin at one instant. *Expands real-money capability. Still places nothing.*
-4. **the runtime allowlist** — `BOT_MODE=live`, `KILL_SWITCH=false`, `LIVE_ENABLED=true`,
-   `LIVE_STRATEGIES=Cmmsell10`, plus the envelope's settings, through the `env` channel. This
-   is the step at which an order can reach Kalshi, and it is a Live Ops act.
+4. **the runtime allowlist** — `MMSELL_VARIANTS` (which CREATES the book), the envelope's
+   settings, and `LIVE_STRATEGIES=Cmmsell10`, in one `env` call so all of it lands in one
+   redeploy; plus `BOT_MODE=live`, `KILL_SWITCH=false`, `LIVE_ENABLED=true` if production is
+   not already carrying them. This is the step at which an order can reach Kalshi, and it is
+   a Live Ops act.
+
+   **The book has to be created first, and this step is composed, never typed.** A live
+   mmsell book is an ordinary `MMSELL_VARIANTS` entry — `Lmmsell8` and `Lmmsell10` both are —
+   so `LIVE_STRATEGIES=Cmmsell10` on its own names a book that does not exist: no orders, and
+   `book_params[Cmmsell10]` absent against a declared value, which enforcement records as
+   `EXPERIMENT_CONFIG_DRIFT` and which takes the keep gate to BLOCKED_INTEGRITY. That
+   variable is one ~800-character string holding *every* mmsell book, and retyping it to add
+   one entry is how a running book gets dropped silently, so:
+
+   ```bash
+   # confirm what the service is running, then compose against it
+   {"type":"env","id":"mm10-env-1"}
+   python scripts/mmsell10_canary.py activate            # MMSELL_VARIANTS unset (today's case)
+   python scripts/mmsell10_canary.py activate --current-variants '<the value that read printed>'
+   ```
+
+   `activate` prints the exact `{"type":"env","set":{…}}` request and applies nothing — it
+   holds no database connection and no Railway credentials, and ignores `--execute`. The twin
+   `Cmmsell10_pt3` needs no entry: it is built as `dict(parent)` with the tag replaced, which
+   is why the deployment records its `book_params` as `None`.
 
 Steps 3 and 4 are deliberately separate switches. A script that could do both would be one
 command away from unreviewed exposure.
@@ -253,7 +275,11 @@ command away from unreviewed exposure.
 - **Stop new entries:** `{"type":"env","set":{"LIVE_STRATEGIES":""}}` — or `KILL_SWITCH=true`
   for the portfolio. Held positions continue to exit and settle; they are still real money.
 - **Undo the runtime config:** the envelope's settings are ordinary Railway variables and
-  revert the same way.
+  revert the same way. `MMSELL_VARIANTS` is the exception worth stating: reverting it means
+  removing the one `Cmmsell10:` entry, not clearing the variable — clearing it would drop the
+  service back to the code default and silently undo any other book set through the channel.
+  Leaving the entry in place with `LIVE_STRATEGIES` empty is the ordinary stood-down state,
+  and is what `Lmmsell10` sits in today.
 - **The registration does not roll back, and should not.** A frozen version, a registered
   gate and a recorded transition are append-only by design. Retiring the canary is a recorded
   lifecycle move (`end_deployment` + a transition), never a deletion.

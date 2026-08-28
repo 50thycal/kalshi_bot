@@ -24,6 +24,7 @@ import pytest
 from sqlalchemy import event
 
 from kalshi_bot.experiment_os import cli, read
+from kalshi_bot.experiment_os import experiment_commands as ec
 from kalshi_bot.experiment_os import issue_commands as ic
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
@@ -144,6 +145,49 @@ def test_the_runbook_advertises_no_variable_the_channel_refuses():
     assert {"EXPERIMENT_OS_EXPERIMENT_COMMAND"} <= advertised, advertised
     missing = sorted(advertised - set(railway_env.ALLOWED_VARS))
     assert not missing, f"the runbook advertises un-settable variables: {missing}"
+
+
+@pytest.mark.parametrize("name", sorted(ec._packages()))
+def test_every_variable_a_package_activates_is_settable_through_the_channel(name):
+    """The third door, and the one that was actually shut.
+
+    #266 fixed a transport VARIABLE the allowlist refused. The same list also
+    decides whether a registered package's activation step can run at all, and
+    seven of its variables were refused — `MMSELL_VARIANTS` among them, which is
+    what CREATES the live book. `LIVE_STRATEGIES=Cmmsell10` without it names a
+    book that does not exist: no orders, and `book_params` absent against a
+    declared value, which enforcement records as EXPERIMENT_CONFIG_DRIFT and
+    which takes the keep gate to BLOCKED_INTEGRITY.
+
+    Parametrised over the package registry, so the next package is covered on the
+    day it is added rather than the day its activation is attempted.
+    """
+    import railway_env
+
+    pkg = ec._packages()[name]
+    assert pkg.activation_vars, (
+        f"package {name!r} declares no activation_vars — if its activation really "
+        "sets nothing, say so explicitly rather than leaving this test vacuous"
+    )
+    missing = sorted(pkg.activation_vars - set(railway_env.ALLOWED_VARS))
+    assert not missing, (
+        f"package {name!r} activates variables the env channel refuses: {missing}"
+    )
+
+
+def test_a_packages_declared_activation_vars_match_what_it_actually_sets():
+    """`activation_vars` is a declaration, and a declaration can go stale.
+
+    The test above is only as good as the set it reads, so pin it to the mapping
+    the package really composes — otherwise a variable added to `activation_env`
+    and forgotten here would be un-settable with every allowlist test green.
+    """
+    from kalshi_bot.experiment_os import canary_mmsell10 as pkg
+
+    class _V:
+        mmsell_variants = "mmsell10:lo=5,hi=10,maxyes=7"
+
+    assert set(pkg.activation_env(_V())) == set(pkg.ACTIVATION_VARS)
 
 
 def test_the_two_receipt_reads_are_reachable_and_route_to_the_cli():

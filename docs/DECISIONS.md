@@ -399,5 +399,66 @@ for a real need, and the answer would be a new action, reviewed, not a generic e
 
 ---
 
+### DEC-006 — Book definitions are settable through the ops channel, and an activation request is composed rather than typed
+
+**Date:** 2026-08-28
+**Status:** Accepted
+
+**Context**
+
+`DEC-005`'s transport shipped and the `mmsell10-canary` package registered cleanly. Auditing
+the *next* step against production turned up a defect of the same class as the one that broke
+`EXPERIMENT_OS_EXPERIMENT_COMMAND`: seven of the variables the approved activation sets were
+not in `railway_env.ALLOWED_VARS`, so the sanctioned channel would have refused the procedure
+partway through — after the settable half had already been applied and a redeploy triggered.
+
+The blocking one is `MMSELL_VARIANTS`. A live mmsell book is an ordinary entry in that string
+(`Lmmsell8` and `Lmmsell10` both are), so `LIVE_STRATEGIES=Cmmsell10` without it names a book
+that does not exist: no orders, and `book_params[Cmmsell10]` absent against the deployment's
+declared value, recorded as `EXPERIMENT_CONFIG_DRIFT` and taking the keep gate to
+BLOCKED_INTEGRITY. The other six are mmsell's concentration safeguards and the quote
+pre-filter, which production leaves unset — so they hold whatever `config.py` currently
+defaults to, and today those defaults happen to equal what the envelope declares.
+
+**Decision**
+
+All seven go on the allowlist, and the activation request is **derived, never written down.**
+
+On the widening: `LIVE_STRATEGIES`, `MAX_TOTAL_EXPOSURE`, `MAX_DAILY_LOSS`, `MAX_ORDER_SIZE`,
+`LIVE_ENABLED` and `KILL_SWITCH` have always been settable here. The channel is already
+trusted with the switches that decide whether real money moves; `MMSELL_VARIANTS` defines the
+book one of those switches then names, which is the same authority rather than a new one. It
+is also the *safer* direction for a registered book: enforcement recomputes `book_params` for
+every registered live tag at boot, so an edit through this door is detected as drift, while a
+`config.py` default silently moving underneath an unset variable is not detected at all.
+Pinning the six explicitly is what makes a pre-registered envelope true of the running process
+rather than merely equal to today's defaults.
+
+On composing: `MMSELL_VARIANTS` is one ~800-character string holding every book, and retyping
+it to add one entry is how a running book gets dropped — silently, because a missing book
+simply stops appearing. `canary_mmsell10.variants_with_live_book` appends to the running
+value, is idempotent, and **refuses** a conflicting definition of the live tag rather than
+overwriting it. `scripts/mmsell10_canary.py activate` prints the exact request and applies
+nothing: no database connection, no Railway credentials, `--execute` ignored.
+
+**Consequences**
+
+*Easier:* the arming procedure is executable end to end through the sanctioned channel, and
+the operator pastes a value derived from what the service is actually running.
+
+*Harder:* a package must now declare `activation_vars`, and CI asserts every name clears the
+allowlist. A package whose activation the channel would refuse fails in CI instead of in front
+of an operator with a write already submitted.
+
+*Expensive to reverse:* low. Seven allowlist entries and one composer; nothing depends on them
+until an activation is attempted.
+
+*Revisit if:* the allowlist starts being widened to make a *specific* activation convenient
+rather than to let a pre-registered envelope assert itself. The test to apply is the one used
+here — does the channel already hold this authority through another variable? If not, the
+answer is a narrower envelope, not a wider list.
+
+---
+
 <!-- Copy the block above for each new decision. IDs are stable: never reused, never
      renumbered. -->
