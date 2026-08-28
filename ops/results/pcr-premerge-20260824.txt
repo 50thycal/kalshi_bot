@@ -1,6 +1,0 @@
-# ops request: type='db'
-new_rev_status  new_rev_activated  predecessor                          impact_rows  applied  accepted_awaiting  non_i0                                   latest_epoch_start             versions  epochs
---------------  -----------------  -----------------------------------  -----------  -------  -----------------  ---------------------------------------  -----------------------------  --------  ------
-pending         NULL               active since 2026-08-13 18:09:40+00  9            8        1                  mmsell-type-tight=I2/NEW_EPOCH/accepted  2026-08-16 14:14:43.720928+00  9         9     
-
-(1 row)
