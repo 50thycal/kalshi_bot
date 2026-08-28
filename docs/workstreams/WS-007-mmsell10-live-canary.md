@@ -46,7 +46,7 @@ is the only unit a loss *budget* can be denominated in.
         paper_to_live_canary: PASS recorded 2026-08-23  (n=1588 on mmsell10)
                              ^ cannot authorize: wrong arm set, no envelope
 
-  ── the package registers ───────────────────────────────────────────────
+  ── the package registered, T = 2026-08-28T04:11:45.750998Z (DONE) ──────
 
     v1/e1  mmsell-ceiling-paper-legacy-1 ENDED at T
            mmsell-ceiling-paper-mmsell9-1 -> mmsell9        (keeps that book alive)
@@ -64,7 +64,12 @@ is the only unit a loss *budget* can be denominated in.
 
   ── and only then, separately again ─────────────────────────────────────
 
+      MMSELL_VARIANTS  += Cmmsell10:lo=5,hi=10,maxyes=7,size=1
+                                  <- CREATES the book. Without it the tag below
+                                     names nothing and book_params drifts.
+      <the 13 envelope settings>  <- pinned, so the contract is true of the process
       LIVE_STRATEGIES=Cmmsell10   <- the switch that lets an order reach Kalshi
+                                     (one env call: all of it, one redeploy)
 ```
 
 The `mmsell10` tag hand-over is the part most easily got wrong: a tag resolving to two
@@ -107,8 +112,20 @@ All six are answered; nothing on this workstream is blocked on the owner any mor
 
 ## Open Decisions
 
-None. Two findings surfaced while applying the decisions and were fixed under the naming and
+None. Three findings surfaced while applying the decisions and were fixed under the naming and
 scoping latitude rather than referred back:
+
+- **The activation step could not run, and did not name the book.** Seven of the variables it
+  sets were absent from `railway_env.ALLOWED_VARS` — the same defect class as #266, found by
+  audit this time rather than by an operator mid-procedure. The blocking one is
+  `MMSELL_VARIANTS`: a live mmsell book is an ordinary entry in that string, so
+  `LIVE_STRATEGIES=Cmmsell10` alone names a book that does not exist, and the plan's step 4
+  did not mention it at all. The other six are mmsell's concentration safeguards and the
+  pre-filter, which production leaves unset — so they hold `config.py` defaults that today
+  happen to equal what the envelope declares, which is luck, not a contract. Fixed in
+  `DEC-006`: all seven allowlisted, the request composed from the running value by
+  `scripts/mmsell10_canary.py activate` rather than typed, and `activation_vars` asserted
+  against the allowlist in CI for every registered package.
 
 - **The twin tag was wrong.** Production carries `LIVE_PAPER_TWIN_SUFFIX=_pt3`, and the
   runtime DERIVES the twin tag from it. The registered `Cmmsell10_pt` would have meant the
@@ -159,9 +176,31 @@ arming), six new providers in `metrics.py`, `scripts/mmsell10_canary.py` (operat
 point, dry-run by default), `scripts/mmsell_canary_slices.py` (crypto monitoring, allowlisted
 read-only). Deployed and verified healthy; inert until a package is registered.
 
-**In review:** `kalshi_bot/experiment_os/experiment_commands.py` — the
+**Merged ([#265](https://github.com/50thycal/kalshi_bot/pull/265),
+[#266](https://github.com/50thycal/kalshi_bot/pull/266)):**
+`kalshi_bot/experiment_os/experiment_commands.py` — the
 `EXPERIMENT_OS_EXPERIMENT_COMMAND` transport, so registration and arming can reach production
-without an operator's own writable connection. See the decision below.
+without an operator's own writable connection; #266 fixed the allowlist entry that made it
+unreachable through its own channel.
+
+**REGISTERED IN PRODUCTION, 2026-08-28T04:11:45.750998Z** (receipt `mm10-register-2`,
+SUCCEEDED, `executed: true`). What that instant did, read back rather than asserted:
+
+- v2 frozen, single arm `mmsell10` with `lo=5, hi=10, maxyes=7` identical to v1's, and the
+  Stage-1 `risk_json` present (v1's is a JSON `null`).
+- v2/e1 open on snapshot `4f9adf15daa6…`, the ACTIVE one, carrying
+  `MARKET_TAXONOMY:settlement_repair_2026_08_24`.
+- `paper_to_live_canary` (spec `f15ea2a7bfb93f24`) and `live_canary_keep` (`4a15a90fba5e1365`)
+  registered, evidence started at the epoch instant.
+- The tag hand-over completed with no ambiguity: `mmsell-ceiling-paper-legacy-1` ended at the
+  same instant, `mmsell-ceiling-paper-mmsell9-1` opened on v1/e1 for `mmsell9`, and
+  `mmsell-ceiling-paper-2` opened on v2/e1 for `mmsell10`. `readiness` reports 2 native
+  deployments, 0 resolver-degraded alarms, 0 unresolved integrity events.
+- Gate state on zero fresh evidence is exactly as designed: `paper_to_live_canary` HOLD,
+  `live_canary_keep` BLOCKED_DATA (live-only clauses with no live deployment — missing, not
+  zero). **Arming would be refused today**, and correctly so.
+
+**In review:** the activation defect below.
 
 ## Review State
 
@@ -178,13 +217,20 @@ intact rather than widening the ops channel.
 ## Related Decisions
 
 `DEC-001` (the authority boundary), `DEC-004` (a narrowed arm set or envelope is a successor
-Version), `DEC-005` (the lifecycle transport names a reviewed package and cannot author one).
+Version), `DEC-005` (the lifecycle transport names a reviewed package and cannot author one),
+`DEC-006` (book definitions are settable through the ops channel, and an activation request is
+composed rather than typed).
 
 ## Related PRs
 
-[#264](https://github.com/50thycal/kalshi_bot/pull/264) (merged) and this PR.
+[#264](https://github.com/50thycal/kalshi_bot/pull/264),
+[#265](https://github.com/50thycal/kalshi_bot/pull/265),
+[#266](https://github.com/50thycal/kalshi_bot/pull/266) (all merged) and this PR.
 
 ## Next Step
 
-Merge the transport, then set `EXPERIMENT_OS_EXPERIMENT_COMMAND` to a `REGISTER_PACKAGE`
-envelope for `mmsell10-canary`; read the receipt and the promotion gate before arming.
+Let `mmsell-ceiling-paper-2` accumulate fresh evidence. The promotion gate is registered
+UNFLOORED (the operator's `D2`), so it can clear as soon as `realizable_cents_per_trade` is
+positive on any evidence at all — which makes reading `fill_model_coverage_pct` and the sample
+behind the projection an *operator* step, because the gate will not do it. Arming remains a
+separate approval, and the runtime allowlist a separate one after that.

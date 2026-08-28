@@ -24,6 +24,7 @@ import pytest
 from sqlalchemy import event
 
 from kalshi_bot.experiment_os import cli, read
+from kalshi_bot.experiment_os import experiment_commands as ec
 from kalshi_bot.experiment_os import issue_commands as ic
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
@@ -32,6 +33,15 @@ sys.path.insert(0, str(REPO / "scripts"))
 #: Every `{"type":"xos","command":"…"}` example the operator-facing docs show.
 _DOC_XOS = re.compile(r'"type"\s*:\s*"xos"\s*,\s*"command"\s*:\s*"([a-z-]+)"')
 _DOCS = ("docs/OPS_RUNBOOK.md", "docs/EXPERIMENT_OS_ISSUES.md")
+
+#: Every worker-side write transport. Each is a variable an operator is told to
+#: SET through the ops channel, so each has to clear the `env` allowlist as well
+#: as exist in the config — two separate lists that have to agree.
+_TRANSPORT_VARS = (
+    "EXPERIMENT_OS_ISSUE_COMMAND",
+    "EXPERIMENT_OS_PLATFORM_COMMAND",
+    "EXPERIMENT_OS_EXPERIMENT_COMMAND",
+)
 
 
 def _runner():
@@ -83,6 +93,101 @@ def test_every_xos_command_the_docs_advertise_is_allowlisted():
     for rel, commands in documented.items():
         missing = sorted(commands - allowed)
         assert not missing, f"{rel} advertises xos commands the runner refuses: {missing}"
+
+
+@pytest.mark.parametrize("var", _TRANSPORT_VARS)
+def test_every_write_transport_variable_is_settable_through_the_channel(var):
+    """The same defect class as the test above, on the OTHER half of the channel.
+
+    A transport is reachable only if its variable clears `railway_env`'s `env`
+    allowlist. That list and the worker's config are separate, so a transport can
+    exist, be documented, be tested end to end — and still be unreachable,
+    because the one list nobody thought about refuses the variable by name.
+
+    That is exactly what happened to `EXPERIMENT_OS_EXPERIMENT_COMMAND`: the
+    module, the boot hook, the config field, the receipt reads, the runbook
+    section and 28 tests all shipped, and the first real attempt to use it came
+    back `refusing to set non-allowlisted vars`. The runbook advertised a
+    variable the runner refused — a documented-into-existence defect, on the env
+    side rather than the xos side.
+    """
+    import railway_env
+
+    assert var in railway_env.ALLOWED_VARS, (
+        f"{var} is a write transport the docs tell an operator to set, but the "
+        "env allowlist refuses it — the transport is unreachable"
+    )
+
+
+@pytest.mark.parametrize("var", _TRANSPORT_VARS)
+def test_every_write_transport_variable_has_its_value_redacted(var):
+    """Ops results are committed to a public repository. A variable carrying a
+    structured command body is echoed as a hash and a length, never its contents
+    — output hygiene, not confidentiality (the same bytes ride the public ops
+    branch), but a transport added without it would start printing payloads into
+    a channel that publishes them."""
+    import railway_env
+
+    assert var in railway_env.REDACTED_VARS
+
+
+def test_the_runbook_advertises_no_variable_the_channel_refuses():
+    """Anything the runbook shows inside an `env` set block has to be settable.
+
+    Derived from the docs rather than from a list, so a future transport
+    documented without an allowlist entry fails here instead of at the moment an
+    operator tries to use it mid-procedure."""
+    import railway_env
+
+    text = (REPO / "docs/OPS_RUNBOOK.md").read_text()
+    advertised = set(re.findall(r'"(EXPERIMENT_OS_[A-Z_]+)"\s*:', text))
+    # Not vacuous: the extractor must see the transports this test is about.
+    assert {"EXPERIMENT_OS_EXPERIMENT_COMMAND"} <= advertised, advertised
+    missing = sorted(advertised - set(railway_env.ALLOWED_VARS))
+    assert not missing, f"the runbook advertises un-settable variables: {missing}"
+
+
+@pytest.mark.parametrize("name", sorted(ec._packages()))
+def test_every_variable_a_package_activates_is_settable_through_the_channel(name):
+    """The third door, and the one that was actually shut.
+
+    #266 fixed a transport VARIABLE the allowlist refused. The same list also
+    decides whether a registered package's activation step can run at all, and
+    seven of its variables were refused — `MMSELL_VARIANTS` among them, which is
+    what CREATES the live book. `LIVE_STRATEGIES=Cmmsell10` without it names a
+    book that does not exist: no orders, and `book_params` absent against a
+    declared value, which enforcement records as EXPERIMENT_CONFIG_DRIFT and
+    which takes the keep gate to BLOCKED_INTEGRITY.
+
+    Parametrised over the package registry, so the next package is covered on the
+    day it is added rather than the day its activation is attempted.
+    """
+    import railway_env
+
+    pkg = ec._packages()[name]
+    assert pkg.activation_vars, (
+        f"package {name!r} declares no activation_vars — if its activation really "
+        "sets nothing, say so explicitly rather than leaving this test vacuous"
+    )
+    missing = sorted(pkg.activation_vars - set(railway_env.ALLOWED_VARS))
+    assert not missing, (
+        f"package {name!r} activates variables the env channel refuses: {missing}"
+    )
+
+
+def test_a_packages_declared_activation_vars_match_what_it_actually_sets():
+    """`activation_vars` is a declaration, and a declaration can go stale.
+
+    The test above is only as good as the set it reads, so pin it to the mapping
+    the package really composes — otherwise a variable added to `activation_env`
+    and forgotten here would be un-settable with every allowlist test green.
+    """
+    from kalshi_bot.experiment_os import canary_mmsell10 as pkg
+
+    class _V:
+        mmsell_variants = "mmsell10:lo=5,hi=10,maxyes=7"
+
+    assert set(pkg.activation_env(_V())) == set(pkg.ACTIVATION_VARS)
 
 
 def test_the_two_receipt_reads_are_reachable_and_route_to_the_cli():
