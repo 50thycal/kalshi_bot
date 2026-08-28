@@ -1,9 +1,0 @@
-# ops request: type='db'
-version  epoch_number  epoch_ended                       deployment_key             kind        stage        dep_ended                         tags         
--------  ------------  --------------------------------  -------------------------  ----------  -----------  --------------------------------  -------------
-2        1             2026-08-28 14:20:35.572574+00:00  mmsell-ceiling-paper-2     paper       PAPER        2026-08-28 14:20:35.572574+00:00  mmsell10     
-2        2                                               mmsell-ceiling-live-1      live        LIVE_CANARY                                    Cmmsell10    
-2        2                                               mmsell-ceiling-paper-2-e2  paper       PAPER                                          mmsell10     
-2        2                                               mmsell-ceiling-twin-1      paper_twin  LIVE_CANARY                                    Cmmsell10_pt3
-
-(4 rows)
