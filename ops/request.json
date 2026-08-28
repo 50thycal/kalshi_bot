@@ -1,1 +1,1 @@
-{"type":"xos","command":"enforcement","id":"xc-enf-1"}
+{"type":"db","sql":"select strategy, count(*) as rows, min(created_at) as first, max(created_at) as last from paper_trades where created_at >= timestamptz '2026-08-28 04:11:45+00' group by strategy order by 2 desc","max_rows":40,"id":"db-mm10-rows"}
