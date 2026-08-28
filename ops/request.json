@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-show","args":["x11-res-1"],"id":"x11-res-1-r"}
+{"type":"xos","command":"issue-show","args":["XOS-000011"],"id":"x11-show"}
