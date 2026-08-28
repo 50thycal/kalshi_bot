@@ -1,1 +1,1 @@
-{"type":"db","sql":"select e.key as experiment, d.deployment_key, ep.ended_at as epoch_ended from experiment_deployments d join experiment_epochs ep on ep.id = d.epoch_id join experiment_versions v on v.id = ep.version_id join experiments e on e.id = v.experiment_id where d.ended_at is null and ep.ended_at is not null","max_rows":20,"id":"db-dangle-2"}
+{"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":""},"id":"env-clear-3"}
