@@ -164,7 +164,11 @@ state.
 ## Important invariants
 
 - **The worker is the only writer to production data.** The ops channel is read-only
-  against Postgres by design, and no writable path may be added to it.
+  against Postgres by design (a SELECT-only role, enforced server-side), and no writable
+  path may be added to it. A production write reaches the worker as a strictly validated
+  envelope in an allowlisted environment variable, executed once at boot against a durable
+  receipt: three disjoint transports — issues, platform revisions, and experiment lifecycle
+  (`DEC-005`) — never one shared vocabulary.
 - **Fail closed.** Bad config, bad auth, or a bad database means the worker does nothing
   trade-like rather than proceeding on defaults.
 - **An unclassified series is admitted by no allowlist filter.** Classification debt shows

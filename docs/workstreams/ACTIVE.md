@@ -13,7 +13,7 @@ where each effort is. Read it first on a continuation.
 | [WS-004](WS-004-live-canary-gate-addressing.md) | Reconciling the recurring blocked-gate anomaly (historical canaries) | DECIDE | Active | Put the reporting-layer options to the operator (explain / accept-condition / live with it) | — |
 | [WS-005](WS-005-freeze-dark-window-universe.md) | A testable universe for the freeze dark-window hypothesis | EXPLORE | Blocked | Commit to a source-based universe search, or abandon explicitly | — |
 | [WS-006](WS-006-evo-search-capability.md) | Evo historical search capability (agents search their own strategy space) | REVIEW | Active | Owner review of the corrected shape, then a real-dataset proving run (D1) | [#261](https://github.com/50thycal/kalshi_bot/pull/261) |
-| [WS-007](WS-007-mmsell10-live-canary.md) | mmsell10 Stage-1 live canary + exact paper twin | REVIEW | Active | Operator decisions applied; run `scripts/mmsell10_canary.py register --execute` on a writable connection, then read the promotion gate before arming | [#264](https://github.com/50thycal/kalshi_bot/pull/264) |
+| [WS-007](WS-007-mmsell10-live-canary.md) | mmsell10 Stage-1 live canary + exact paper twin | REVIEW | Active | Package merged (#264); review the lifecycle transport, then register `mmsell10-canary` and read the promotion gate before arming | [#264](https://github.com/50thycal/kalshi_bot/pull/264) + this PR |
 
 *Phase:* IDEA · EXPLORE · MODEL · DECIDE · BUILD_CARD · READY_TO_BUILD · BUILDING · REVIEW
 *Status:* Active · Paused · Blocked · Abandoned

@@ -68,6 +68,38 @@ XOS_ISSUE_READS: dict[str, list[str]] = {
     "issue-command-list": ["issue", "command-list"],
 }
 
+#: Receipts for the worker-side experiment-LIFECYCLE transport. A SEPARATE map
+#: from XOS_ISSUE_READS, which is asserted to hold only `issue …` subcommands —
+#: these are top-level ones. Same prohibition either way: they report what a
+#: command DID and can neither execute nor retry one. Registering a contract or
+#: arming a canary reaches production only by setting
+#: EXPERIMENT_OS_EXPERIMENT_COMMAND on the worker, which is an `env` request and
+#: not an `xos` one, so this channel stays read-only against Postgres.
+XOS_EXPERIMENT_COMMAND_READS: dict[str, list[str]] = {
+    "experiment-command-show": ["experiment-command", "show"],
+    "experiment-command-list": ["experiment-command", "list"],
+}
+
+#: Top-level xos subcommands that take no alias — every one a read.
+XOS_DIRECT_READS: frozenset[str] = frozenset({
+    "control-tower", "list", "show", "transitions", "platform", "tag",
+    "scoreboard", "enforcement", "readiness", "evaluate-gates", "metric",
+})
+
+
+def xos_allowlist() -> set[str]:
+    """The effective `xos` allowlist: one function, one source of truth.
+
+    A function rather than a set literal inside `run()` because the docs/runner
+    parity test (XOS-000005 — a command the runbook advertised and the runner
+    refused) has to read this from the runner itself. It used to do that with a
+    regex over the source, which silently missed a second alias map the day one
+    was added; now both the runner and the test call this, so a new map cannot be
+    half-registered."""
+    return set(XOS_DIRECT_READS) | set(XOS_ISSUE_READS) | set(
+        XOS_EXPERIMENT_COMMAND_READS
+    )
+
 ALLOWED_SCRIPTS = (
     "weather_pnl",
     "weather_experiments",
@@ -308,10 +340,7 @@ def main() -> int:
         # the other session roles read production through the same code the worker
         # runs — not a SQL re-implementation that could drift from it. It needs the
         # full dependency set, which the workflow installs when it sees this type.
-        allowed = {
-            "control-tower", "list", "show", "transitions", "platform", "tag",
-            "scoreboard", "enforcement", "readiness", "evaluate-gates", "metric",
-        } | set(XOS_ISSUE_READS)
+        allowed = xos_allowlist()
         command = (req.get("command") or "control-tower").strip()
         if command not in allowed:
             print(f"xos command {command!r} is not allowlisted (allowed: "
@@ -321,7 +350,11 @@ def main() -> int:
         # a flat set of exact strings. The writing `issue` subcommands are
         # deliberately absent and cannot be reached from here: they refuse to run
         # against DATABASE_URL_RO, which is the only URL this channel ever has.
-        argv = list(XOS_ISSUE_READS.get(command, [command]))
+        argv = list(
+            XOS_ISSUE_READS.get(command)
+            or XOS_EXPERIMENT_COMMAND_READS.get(command)
+            or [command]
+        )
         argv += [str(a) for a in (req.get("args") or [])]
         ro = os.environ.get("DATABASE_URL_RO")
         if ro:

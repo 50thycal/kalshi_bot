@@ -153,28 +153,38 @@ stop before arming.
 
 ## Implementation State
 
-PR open. `kalshi_bot/experiment_os/canary_mmsell10.py` (contract, envelope, gates, registration
-and arming), six new providers in `metrics.py`, `scripts/mmsell10_canary.py` (operator entry
+**Merged ([#264](https://github.com/50thycal/kalshi_bot/pull/264)):**
+`kalshi_bot/experiment_os/canary_mmsell10.py` (contract, envelope, gates, registration and
+arming), six new providers in `metrics.py`, `scripts/mmsell10_canary.py` (operator entry
 point, dry-run by default), `scripts/mmsell_canary_slices.py` (crypto monitoring, allowlisted
-read-only).
+read-only). Deployed and verified healthy; inert until a package is registered.
+
+**In review:** `kalshi_bot/experiment_os/experiment_commands.py` — the
+`EXPERIMENT_OS_EXPERIMENT_COMMAND` transport, so registration and arming can reach production
+without an operator's own writable connection. See the decision below.
 
 ## Review State
 
 Operator decisions applied 2026-08-28. Nothing is registered and nothing is armed; the
-runtime live allowlist is empty and the ops channel is `noop`. Registration and arming are
-operator runs on a writable connection — this session has only the read-only ops channel and
-cannot perform either.
+runtime live allowlist is empty and the ops channel is `noop`.
+
+The gap the second PR closes: registration and arming are **writes**, and the ops channel is
+read-only against Postgres by design — a SELECT-only role, enforced server-side. So the merged
+package could only be run by an operator on their own connection. The two sibling transports
+(`EXPERIMENT_OS_ISSUE_COMMAND`, `EXPERIMENT_OS_PLATFORM_COMMAND`) already solve exactly this
+shape for their own domains, and this is the third, keeping "the worker is the only writer"
+intact rather than widening the ops channel.
 
 ## Related Decisions
 
-`DEC-001` (the authority boundary). New entry proposed in this PR for the successor-Version
-finding.
+`DEC-001` (the authority boundary), `DEC-004` (a narrowed arm set or envelope is a successor
+Version), `DEC-005` (the lifecycle transport names a reviewed package and cannot author one).
 
 ## Related PRs
 
-This PR.
+[#264](https://github.com/50thycal/kalshi_bot/pull/264) (merged) and this PR.
 
 ## Next Step
 
-Run `scripts/mmsell10_canary.py register --execute` on a writable connection, then read the
-promotion gate before arming.
+Merge the transport, then set `EXPERIMENT_OS_EXPERIMENT_COMMAND` to a `REGISTER_PACKAGE`
+envelope for `mmsell10-canary`; read the receipt and the promotion gate before arming.
