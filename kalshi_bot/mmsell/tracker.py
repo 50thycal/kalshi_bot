@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 
 from .. import repository as repo
 from ..config import Settings
+from ..experiment_os.enforcement import LineageBlocked
 from ..kalshi.errors import AuthError
 from ..live.sizing import (
     arm_book_offset,
@@ -91,6 +92,10 @@ class MmSellCycleSummary:
     skipped_settlement_cap: int = 0  # too many open positions already settle this candidate's date
     skipped_event_cap: int = 0       # too many distinct events open on a CORRELATED-regime date
     skipped_event_rung_cap: int = 0  # too many rungs open on ONE non-mutually-exclusive event
+    #: Books dropped this cycle because their tag resolves to no active Experiment OS
+    #: deployment arm. Counted rather than raised: one book's lineage problem must not
+    #: cost every other book its cycle (XOS-000011).
+    blocked_books: list[str] = field(default_factory=list)
     live_retried: int = 0        # live entry re-posted on a ticker paper already holds
     live_retry_capped: int = 0   # retry declined: mmsell_live_max_attempts_per_ticker reached
     live_retry_drifted: int = 0  # retry declined: market moved off the first attempt's price
@@ -387,6 +392,34 @@ class MmSellTracker:
         except Exception:  # noqa: BLE001 — a gate read must never break the entry scan
             logger.exception("mmsell strangle pairing: leg-dedup read failed (entering anyway)")
             return False
+
+    def _book_admissible(self, session, tag: str, summ: MmSellCycleSummary) -> bool:
+        """Can this book's tag record a trade at all this cycle?
+
+        `enforcement.tag_admissible` is the sanctioned pre-check and already swallows
+        the refusal, so this neither weakens the block nor hides it: the tag is still
+        refused, still counted, and still logged once per outage by the enforcement
+        layer. What changes is the blast radius — the book is skipped instead of the
+        cycle being aborted.
+
+        A failure to ASK is not a licence to trade: an unexpected error here drops the
+        book too, because a book whose admissibility is unknown is exactly the case
+        NEW_ONLY exists to refuse."""
+        from ..experiment_os import enforcement as xos_enforcement
+
+        try:
+            if xos_enforcement.tag_admissible(session, tag):
+                return True
+        except Exception:  # noqa: BLE001 — fail closed for this book, not for the cycle
+            logger.exception(
+                "mmsell: admissibility check failed; skipping book",
+                extra={"extra_fields": {"tag": tag}})
+        else:
+            logger.warning(
+                "mmsell: book skipped — tag has no active Experiment OS deployment arm",
+                extra={"extra_fields": {"tag": tag}})
+        summ.blocked_books.append(tag)
+        return False
 
     def _books(self) -> list[dict]:
         """Control book (base knobs, tag 'mmsell' — NEVER reparameterized), then the configured
@@ -697,6 +730,20 @@ class MmSellTracker:
         # which is a capacity signal rather than a fault — but it must be visible either way.
         summ.events_dropped_by_cap = max(0, summ.events_eligible - summ.events_seen)
 
+        # Drop books whose tag has no active Experiment OS deployment arm, ONCE per cycle,
+        # before any entry. Under NEW_ONLY such a tag is fail-closed at the write path, and
+        # that refusal used to propagate out of this method — where main._run_mmsell_book's
+        # single session_scope rolled the whole transaction back, discarding every OTHER
+        # book's entries too. That is how one retired experiment's dangling deployment took
+        # the entire mmsell family dark for four days (XOS-000011). A blocked book is that
+        # book's problem; the rest of the scan is entitled to its cycle.
+        books = [b for b in books if self._book_admissible(session, b["tag"], summ)]
+        if not books:
+            logger.error(
+                "mmsell: every book is lineage-blocked; nothing can trade this cycle",
+                extra={"extra_fields": {"blocked": summ.blocked_books}})
+            return summ
+
         open_count = {b["tag"]: repo.count_open_paper_positions(session, b["tag"]) for b in books}
         captured = 0  # per-cycle candidate-tick writes (bounded by mmsell_candidate_capture_max)
 
@@ -989,20 +1036,33 @@ class MmSellTracker:
                         f"[{tag}] sell {sold} '{sub[:24]}' @ {at}c "
                         f"({side}@{price}c mid{metrics.midpoint:.0f}c)"
                     )[:64]
-                    repo.create_paper_trade(
-                        session,
-                        signal_id=None,
-                        ticker=ticker,
-                        strategy=tag,
-                        side=side,
-                        action="buy",
-                        assumed_price=price,
-                        quantity=qty,
-                        fill_assumption=assumption,
-                        entry_fee=fee,
-                        model_probability=None,
-                        edge=0.0,
-                    )
+                    try:
+                        repo.create_paper_trade(
+                            session,
+                            signal_id=None,
+                            ticker=ticker,
+                            strategy=tag,
+                            side=side,
+                            action="buy",
+                            assumed_price=price,
+                            quantity=qty,
+                            fill_assumption=assumption,
+                            entry_fee=fee,
+                            model_probability=None,
+                            edge=0.0,
+                        )
+                    except LineageBlocked:
+                        # Belt to the per-cycle pre-check's braces. The refusal fires
+                        # before any row is added, so the session is still clean and the
+                        # books that already entered this cycle keep their entries — the
+                        # whole point of XOS-000011. Drop the book for the rest of the
+                        # cycle rather than re-asking on every remaining market.
+                        logger.warning(
+                            "mmsell: entry refused — tag lost its deployment arm mid-cycle",
+                            extra={"extra_fields": {"tag": tag, "ticker": ticker}})
+                        summ.blocked_books.append(tag)
+                        books = [b for b in books if b["tag"] != tag]
+                        continue
                     repo.open_paper_position_for_trade(
                         session, ticker=ticker, strategy=tag, side=side,
                         quantity=qty, avg_price=price,

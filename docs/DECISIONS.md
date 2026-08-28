@@ -460,5 +460,70 @@ answer is a narrower envelope, not a wider list.
 
 ---
 
+### DEC-007 — An epoch boundary carries its books forward or ends them, never both
+
+**Date:** 2026-08-28
+**Status:** Accepted
+
+**Context**
+
+Every mmsell paper book recorded nothing for four days, and nothing in the system said so.
+An I2 platform boundary closed `mmsell-type-tight` v1/e1 and opened v1/e2; the cut left
+`tmmsell-paper-legacy-1` open on the CLOSED epoch and registered nothing on the new one.
+The admission resolver requires the deployment AND its epoch to be open, so four tags
+stopped resolving while their deployment row still claimed the books were running.
+
+Two views of the same fact disagreed and nothing reconciled them. That is what made it
+silent: an unregistered tag produces no integrity event, no config-drift record and no gate
+verdict, because as far as the system is concerned it was simply never registered. The
+Control Tower saw only `experiment.zero_evidence`, rated LOW/P2 — a symptom four days
+downstream of the cause.
+
+**Decision**
+
+An epoch boundary is a fork with exactly two branches, and both are now taken explicitly.
+
+`close_epoch` ends every deployment still running in the epoch. An epoch is the operating
+interval; a deployment that outlives it is not "still running" in any sense the resolver
+honours. The cascade makes the record say what the resolver already believed, and it hides
+no evidence — metric scopes resolve tags across every deployment in an epoch, ended or not.
+
+`apply_new_epoch` and `arm_live_canary` capture the open deployments BEFORE the close and
+re-register them on the successor at the boundary instant, same arms, same tags, derived
+key. An I2 cut means *same contract, fresh evidence*; it has never meant "stop trading".
+Evidence still does not pool, because the epoch is what metric scopes window on.
+
+A carry-forward refuses `live` and `paper_twin` deployments **by name**. It can prove none
+of what `arm_live_canary` proves — fresh tags, a twin at the same instant, a re-evaluated
+promotion gate — so a platform boundary stops and asks rather than minting live lineage.
+
+Separately, a lineage refusal is scoped to the book that earned it. `LineageBlocked`
+escaping `MmSellTracker.run_once` let the caller's single `session_scope` roll back every
+other book's entries; the tracker now uses the pre-check that already existed
+(`enforcement.tag_admissible`) once per cycle. The block itself is unchanged — the tag is
+still refused, still counted, still logged. Only the blast radius changed.
+
+**Consequences**
+
+*Easier:* a platform boundary no longer takes an experiment off the board as a side effect,
+and one misconfigured book cannot cost a whole family its cycle.
+
+*Harder:* an I2 cut on a LIVE experiment now raises instead of proceeding. That is the
+point — it was previously "succeeding" while breaking the live book's lineage silently.
+
+*Expensive to reverse:* moderate. These are shared engine semantics; the deployment rows a
+carry-forward creates are real lineage that later evidence binds to.
+
+*Open:* whether this warrants a Platform Revision. `EXPERIMENT_ENGINE` is a registered
+component. The argument against: no measured quantity changes, no recorded evidence is
+reinterpreted, no gate reads differently — what changes is which books may keep trading.
+Registering a revision is Platform Change Review's write, so it is raised, not performed.
+
+*Revisit if:* a carry-forward is ever wanted for a live deployment. The answer is not to
+relax the refusal but to stand the book down and re-arm it through the canary path, which
+is the only place the structural proofs live.
+
+---
+
 <!-- Copy the block above for each new decision. IDs are stable: never reused, never
      renumbered. -->

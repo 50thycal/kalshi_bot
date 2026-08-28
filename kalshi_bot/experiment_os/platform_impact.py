@@ -57,7 +57,9 @@ from .models import (
 )
 from .service import (
     ExperimentOsError,
+    carry_deployments_forward,
     close_epoch,
+    open_deployments,
     open_epoch,
     resolve_active_platform_snapshot,
     transition_experiment,
@@ -588,6 +590,10 @@ def apply_new_epoch(
             ExperimentEpoch.ended_at.is_(None),
         )
     )
+    # Captured BEFORE the close, because closing an epoch ends the deployments in it.
+    # These are the books that must keep running on the far side of the boundary: an
+    # I2 cut means "same contract, fresh evidence", not "stop trading".
+    continuing: list = []
     if open_prev is not None:
         if _utc(at) < _utc(open_prev.started_at):
             raise ExperimentOsError(
@@ -595,6 +601,7 @@ def apply_new_epoch(
                 f"({open_prev.started_at}) — that would create a negative interval; "
                 "check which revision actually governed this epoch"
             )
+        continuing = open_deployments(session, open_prev)
         close_epoch(session, open_prev, ended_at=at)
     comp = component_of(session, revision)
     snapshot = resolve_active_platform_snapshot(session)
@@ -615,6 +622,15 @@ def apply_new_epoch(
             f"the resolved active snapshot does not pin {comp.key}:{revision.version} "
             "— the platform registry is inconsistent; refusing to open a stale epoch"
         )
+    # The books continue under the new interval. Without this the successor epoch
+    # opens EMPTY, every tag on the old deployments stops resolving, and the whole
+    # experiment goes dark at the moment a platform revision is applied — which is
+    # exactly what happened to mmsell-type-tight on 2026-08-24 (XOS-000011).
+    carry_deployments_forward(
+        session, continuing, new_epoch,
+        started_at=at,
+        reason=f"{comp.key} {revision.version} boundary (impact record #{record.id})",
+    )
     record.resulting_epoch_id = new_epoch.id
     _mark_applied(session, record, actor)
     return new_epoch

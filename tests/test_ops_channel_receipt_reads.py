@@ -165,9 +165,18 @@ def test_every_variable_a_package_activates_is_settable_through_the_channel(name
     import railway_env
 
     pkg = ec._packages()[name]
+    if pkg.arm is None:
+        # A package that cannot arm anything has no runtime-allowlist step to get
+        # wrong — a lineage repair fixes rows and never reaches a Railway variable.
+        # Tied to `arm` rather than to a flag, so "activates nothing" has to be true
+        # of what the package can DO rather than merely asserted about it.
+        assert not pkg.activation_vars, (
+            f"package {name!r} arms nothing yet declares activation_vars {sorted(pkg.activation_vars)}"
+        )
+        return
     assert pkg.activation_vars, (
-        f"package {name!r} declares no activation_vars — if its activation really "
-        "sets nothing, say so explicitly rather than leaving this test vacuous"
+        f"package {name!r} arms a live canary but declares no activation_vars — the "
+        "allowlist step is exactly where the #266 defect class lives"
     )
     missing = sorted(pkg.activation_vars - set(railway_env.ALLOWED_VARS))
     assert not missing, (
