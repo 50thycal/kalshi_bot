@@ -232,6 +232,24 @@ operator on **2026-08-28**:
 `scripts/mmsell10_canary.py register` prints them with their reasoning;
 `canary_mmsell10.OPERATOR_DECISIONS` is the machine-readable record.
 
+## STATUS — LIVE since 2026-08-28
+
+All four steps are done. This plan is now a record of how it was built, not a proposal.
+
+| step | when | what it did |
+|---|---|---|
+| 1. register | `2026-08-28T04:11:45.750998Z` | v2 frozen, single arm, envelope + both gates, v2/e1 opened, `mmsell10` handed over |
+| 2. wait | 13:30Z | blocked four days by XOS-000011 (WS-008); the family came back at 13:30Z |
+| 3. arm | `2026-08-28T14:20:35.572574Z` | LIVE_CANARY. `Cmmsell10` + `Cmmsell10_pt3` at one instant; `mmsell10` carried onto the live epoch |
+| 4. allowlist | `2026-08-28T14:48Z` | 16 variables in one call. First live order 14:46:26Z |
+
+Armed on a promotion-gate PASS of **+1.345c/trade at n=2, 100% fill coverage** — the entry
+price mix of two settled trades projected through the fill calibration, not two P&L outcomes.
+The unfloored bar was the operator's `D2`; the promotion rests on v1's n=1588, not on v2's
+fresh sample. Stated here because §8 said to read exactly this before approving the arm.
+
+Stand-down remains one call: `{"type":"env","set":{"LIVE_STRATEGIES":""}}`.
+
 ## 9. The sequence, and what each step does not do
 
 1. **`register --execute`** — creates v2, registers both gates, freezes, opens v2/e1 on the

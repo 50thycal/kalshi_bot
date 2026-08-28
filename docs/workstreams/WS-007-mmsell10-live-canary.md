@@ -1,7 +1,7 @@
 # WS-007 — A fresh mmsell10 live canary with an exact paper twin
 
 **Phase:** REVIEW
-**Status:** Active
+**Status:** Active — LIVE
 **Created:** 2026-08-28
 **Updated:** 2026-08-28
 
@@ -39,7 +39,7 @@ is the only unit a loss *budget* can be denominated in.
 ## Current Mental Model
 
 ```text
-  mmsell-price-ceiling                        (state: PAPER)
+  mmsell-price-ceiling                  (state: LIVE_CANARY as of 14:20Z)
     v1 [FROZEN 2026-08-16]  arms {mmsell9, mmsell10}   risk_json: NONE
       e1  snapshot 5c3720fca2fe36f0 (MARKET_TAXONOMY coverage_2026_08_13)
         mmsell-ceiling-paper-legacy-1  -> mmsell9, mmsell10
@@ -56,21 +56,32 @@ is the only unit a loss *budget* can be denominated in.
         paper_to_live_canary  (v1's bar VERBATIM — no evidence floor)
         live_canary_keep      (pre-registered, every clause kind='live')
 
-  ── then, on a separate approval ────────────────────────────────────────
+  ── ARMED 2026-08-28T14:20:35.572574Z (operator-approved) ───────────────
 
       e2 [I2]  arm_live_canary at ONE instant:
-        mmsell-ceiling-live-1  kind=live        -> Cmmsell10
-        mmsell-ceiling-twin-1  kind=paper_twin  -> Cmmsell10_pt3  twin_of -> live
+        mmsell-ceiling-live-1      kind=live        -> Cmmsell10
+        mmsell-ceiling-twin-1      kind=paper_twin  -> Cmmsell10_pt3  twin_of -> live
+        mmsell-ceiling-paper-2-e2  kind=paper       -> mmsell10
+                                  ^ the paper parent, CARRIED onto the live
+                                    epoch. Without it (WS-008) arming would have
+                                    ended its deployment and blocked the very
+                                    book the canary was promoted from.
 
   ── and only then, separately again ─────────────────────────────────────
 
       MMSELL_VARIANTS  += Cmmsell10:lo=5,hi=10,maxyes=7,size=1
-                                  <- CREATES the book. Without it the tag below
-                                     names nothing and book_params drifts.
-      <the 13 envelope settings>  <- pinned, so the contract is true of the process
-      LIVE_STRATEGIES=Cmmsell10   <- the switch that lets an order reach Kalshi
-                                     (one env call: all of it, one redeploy)
+      <the 13 envelope settings>
+      LIVE_STRATEGIES=Cmmsell10
 ```
+
+**ACTIVATED 2026-08-28T14:48Z.** All 16 variables set in one call; the first
+redeploy was refused by a Railway deployment rate limit and retried, so the caps
+and the switch landed together on the boot at 14:49:31Z. First live order
+14:46:26Z on the preceding cycle's config load; by 14:56Z the book held 20 live
+orders (2 filled, 18 resting), 38 `Cmmsell10` paper rows and 20 on the twin.
+First settlement was +$0.0689 on BOTH sides — a paired gap of 0.0c against a
+0.5c stand-down bar, which says the comparison is wired to the same market, and
+nothing yet about the edge.
 
 The `mmsell10` tag hand-over is the part most easily got wrong: a tag resolving to two
 ACTIVE deployment arms is refused as ambiguous, so leaving the v1 two-arm deployment active
@@ -227,10 +238,29 @@ composed rather than typed).
 [#265](https://github.com/50thycal/kalshi_bot/pull/265),
 [#266](https://github.com/50thycal/kalshi_bot/pull/266) (all merged) and this PR.
 
+## What it armed on, stated plainly
+
+The promotion gate PASSED at 14:08Z on **n = 2 settled trades**:
+`realizable_cents_per_trade` **+1.345c**, `fill_model_coverage_pct` **100%**, bar `> 0`.
+
+That number is not a measurement of what those two trades earned — it is their ENTRY-PRICE
+MIX projected through the live fill calibration. Both entered at 6c and 7c yes-equivalent,
+cells measured from real mmsell3 fills at **+1.77c** and **+0.92c**; their mean is exactly
+1.345c. So the gate said *the prices this book is buying at have historically filled
+profitably*, not *this book made money twice*. Sturdier than two P&L outcomes, and still only
+two markets' worth of price selection.
+
+n was 2 rather than 1,588 for two compounding reasons: evidence never pools across epochs, so
+v2/e1 started empty at 04:11Z; and the mmsell family was dark until 13:30Z (XOS-000011), so
+only ~40 minutes of entries existed and only two had resolved. The operator's `D2` chose the
+unfloored bar knowingly, precisely so v2 would not have to re-earn v1's n=1588. The honest
+reading: **the promotion rests on v1's history, not on v2's fresh sample.**
+
 ## Next Step
 
-Let `mmsell-ceiling-paper-2` accumulate fresh evidence. The promotion gate is registered
-UNFLOORED (the operator's `D2`), so it can clear as soon as `realizable_cents_per_trade` is
-positive on any evidence at all — which makes reading `fill_model_coverage_pct` and the sample
-behind the projection an *operator* step, because the gate will not do it. Arming remains a
+Watch the pre-registered keep/stop clauses accumulate. `live_canary_keep` reads BLOCKED_DATA
+until `live_settled_contracts` reaches 150 — correct, not a fault; these markets settle over
+days. Nothing here needs a new threshold: the stand-downs (loss budget $15, daily $5, paired
+gap 0.5c both signs, per-market loss $1, win-rate 5.0pp) were all registered before any
+result was seen, and re-interpreting them now would void the pre-registration. Arming remains a
 separate approval, and the runtime allowlist a separate one after that.
