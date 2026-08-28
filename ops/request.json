@@ -1,1 +1,1 @@
-{"type":"db","sql":"select count(*) as fill_rows, count(distinct kalshi_order_id) as distinct_orders, min(filled_at) as first, max(filled_at) as last from fills","max_rows":5,"id":"db-fills2"}
+{"type":"db","sql":"select count(*) as matched_fills, coalesce(sum(f.quantity),0) as filled_qty from fills f join live_orders o on o.kalshi_order_id = f.kalshi_order_id where o.strategy = 'Cmmsell10' and f.action = 'buy'","max_rows":5,"id":"db-fills3"}
