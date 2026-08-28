@@ -1,1 +1,1 @@
-{"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"mm10-arm-1\",\"action\":\"ARM_CANARY\",\"actor\":\"claude-code\",\"actor_role\":\"LIVE_OPS\",\"payload\":{\"package\":\"mmsell10-canary\",\"approved_by\":\"50thycal\"},\"schema_version\":1}"},"id":"arm-set-1"}
+{"type":"xos","command":"experiment-command-show","args":["mm10-arm-1"],"id":"arm-rcpt-1"}
