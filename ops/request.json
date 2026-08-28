@@ -1,1 +1,1 @@
-{"type":"logs","limit":60,"filter":"","deployment_id":"","id":"logs-267-1"}
+{"type":"xos","command":"evaluate-gates","args":["--dry-run","--experiment","mmsell-price-ceiling"],"id":"ev-mm10-2"}
