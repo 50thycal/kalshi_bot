@@ -131,6 +131,22 @@ def _settings(**kw):
                     database_url="sqlite://", **kw)
 
 
+#: The two arm books, as the experiment configured them. They were removed from the
+#: `mmsell_variants` DEFAULT on 2026-08-28 (retired: the 1c offset was KILLed on
+#: 2026-08-14, and they lingered as paper books registered to no Experiment OS
+#: deployment arm). The `abarm` MECHANISM they exercised is still live code — any
+#: future arm book inherits it — so these tests keep proving it, on books they
+#: declare themselves rather than on a default that no longer carries them.
+_AB_BOOKS = ("mmsell10a:lo=5,hi=10,maxyes=7,abarm=0,size=1;"
+             "mmsell10b:lo=5,hi=10,maxyes=7,abarm=1,size=1")
+
+
+def _ab_settings(**kw):
+    """`_settings`, with the retired arm books declared explicitly."""
+    s = _settings(**kw)
+    return _settings(mmsell_variants=f"{s.mmsell_variants};{_AB_BOOKS}", **kw)
+
+
 def test_arm_books_partition_every_ticker_exactly_once():
     """The two live books must never contest a ticker. `live_open_order_exists` is strategy-
     AGNOSTIC, so a contested ticker would be decided by book evaluation order, not at random —
@@ -165,7 +181,7 @@ def test_arm_book_claims_nothing_when_experiment_is_off():
 
 
 def test_configured_arm_books_are_mmsell10_plus_a_treatment():
-    s = _settings(mmsell_live_offset_ab_arms="0,1")
+    s = _ab_settings(mmsell_live_offset_ab_arms="0,1")
     books = {b["tag"]: b for b in s.mmsell_variant_list}
     base = books["mmsell10"]
     for tag, arm in (("mmsell10a", 0), ("mmsell10b", 1)):
@@ -193,7 +209,7 @@ def test_each_arm_book_gets_its_own_paper_twin():
 
 def test_tracker_admits_only_its_own_arm():
     from kalshi_bot.mmsell.tracker import MmSellTracker
-    s = _settings(mmsell_live_offset_ab_arms="0,1")
+    s = _ab_settings(mmsell_live_offset_ab_arms="0,1")
     t = MmSellTracker(client=None, settings=s)
     books = {b["tag"]: b for b in s.mmsell_variant_list}
     claimed = {"mmsell10a": 0, "mmsell10b": 0}

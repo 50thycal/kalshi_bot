@@ -1,10 +1,10 @@
 # WS-008 — An epoch boundary must not silently stop the books
 
 **Phase:** REVIEW
-**Status:** Active
+**Status:** Complete
 **Created:** 2026-08-28
 **Updated:** 2026-08-28
-**Issue:** XOS-000011 (OPS · LIVE_OPS · HIGH/P1)
+**Issue:** XOS-000011 (OPS · LIVE_OPS · HIGH/P1) — **RESOLVED 2026-08-28T14:14:59Z**
 
 ## Goal
 
@@ -129,8 +129,32 @@ Nothing here is registered or armed, and the repair has not been run in producti
 
 `DEC-007` (an epoch boundary carries its books or ends them, never both).
 
+## Outcome
+
+Merged as [#268](https://github.com/50thycal/kalshi_bot/pull/268) and repaired in production
+via `REPAIR_LINEAGE` (receipt `tmmsell-repair-1`, SUCCEEDED, 2026-08-28T13:28:40Z). All five
+pre-registered validation checks passed and are recorded on XOS-000011:
+
+- `tmmsell-paper-legacy-1` ended at exactly `2026-08-24 14:21:17.571842+00`, the measured
+  boundary;
+- `tmmsell-paper-legacy-1-e2` open on v1/e2 from the same instant with all four Tmmsell tags;
+- **zero dangling deployments system-wide**;
+- 14 strategies recording within one scan cycle after four days of nothing — `mmsell` 73,
+  `mmsell6` 33, `mmsell10` 27, `Lmmsell10` 27, `mmsellA4` 26, `Tmmsell6` 13, `mmsell5` 12,
+  `mmsellA5` 12, `Tmmsell5` 9, `mmsell7` 8, `Tmmsell2` 4, `mmsell9` 4, `Tmmsell1` 3;
+- no `BLOCKED (precheck)` for any Tmmsell tag after the repair committed.
+
+The engine fix then earned itself a second time within the hour: arming the WS-007 canary at
+14:20Z closed v2/e1, and the carry-forward put `mmsell-ceiling-paper-2-e2` on the live epoch.
+Without it the canary would have blocked `mmsell10` and — through the amplifier this
+workstream removed — taken the whole family dark again.
+
+**Two books removed rather than left refused.** The pre-check made visible that `mmsell10a`
+and `mmsell10b` were configured in `MMSELL_VARIANTS` but registered to no deployment arm, so
+NEW_ONLY refused them every cycle. Their queue-position A/B answered on 2026-08-14 with a KILL
+verdict; they were dropped from the runtime and from the `config.py` default on 2026-08-28.
+
 ## Next Step
 
-Merge, then run `REPAIR_LINEAGE` for `tmmsell-epoch-repair` through the lifecycle
-transport and confirm the four Tmmsell books and the whole mmsell family are recording
-again. Only then does WS-007's promotion gate have evidence to accumulate.
+None — the workstream is complete. The remaining open question (whether these engine changes
+warrant a Platform Revision) is recorded above and belongs to Platform Change Review.

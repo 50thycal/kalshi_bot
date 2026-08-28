@@ -394,18 +394,26 @@ class Settings(BaseSettings):
         #     both — that pairing IS the low-vol selection the backtest's +3.30c/pair came from.
         "mmsellA4:lo=5,hi=10,maxyes=7,volw=6,volv=6;"
         "mmsellA5:lo=5,hi=10,maxyes=7,strangle=1;"
-        # Queue-position A/B as TWO live books (docs/MMSELL_OFFSET_AB.md). Same mmsell10 entry;
-        # the only difference between them is where they rest. `abarm` splits the candidate flow
-        # by a hash of the ticker, so neither book ever contests a ticker with the other and the
-        # split is random rather than decided by book order. 1-contract clips (`size=1`) keep the
-        # experiment's added live footprint small next to the incumbent mmsell10, which is
-        # untouched and still takes its candidates first.
-        #   mmsell10a = arm 0 -> rests AT the no-bid (the incumbent's behaviour = control)
-        #   mmsell10b = arm 1 -> rests 1c BETTER, buying queue priority for 1c of premium
-        # Both are INERT until MMSELL_LIVE_OFFSET_AB_ARMS is set AND the tag is in
-        # LIVE_STRATEGIES: with no arms configured an arm book admits no tickers at all.
-        "mmsell10a:lo=5,hi=10,maxyes=7,abarm=0,size=1;"
-        "mmsell10b:lo=5,hi=10,maxyes=7,abarm=1,size=1;"
+        # --- RETIRED 2026-08-28: the queue-position A/B (docs/MMSELL_OFFSET_AB.md) ------------
+        #   mmsell10a:lo=5,hi=10,maxyes=7,abarm=0,size=1   (rested AT the no-bid — the control)
+        #   mmsell10b:lo=5,hi=10,maxyes=7,abarm=1,size=1   (rested 1c better — the treatment)
+        #
+        # The experiment ANSWERED on 2026-08-14 and the verdict was KILL the 1c offset: the cent
+        # bought real queue priority (front-of-queue 77.0% vs 35.9%) and that is exactly what
+        # sank it — a higher fill rate with worse realized P&L is bought adverse selection.
+        # `mmsell10a` was profitable when retired (+0.84c/ct live, n=420) and was ended by
+        # operator decision, not by failure.
+        #
+        # They stayed in this string as PAPER books after being pulled from live, and were never
+        # registered in Experiment OS. Under NEW_ONLY that made them permanently inadmissible:
+        # every cycle re-derived them, asked the resolver, and skipped them — visible only after
+        # XOS-000011 gave the tracker a per-book pre-check, before which they were silently
+        # inert. A configured book with no lineage is now removed rather than left to be
+        # refused forever. History is untouched and any still-open position settles normally.
+        #
+        # Do NOT revive without also re-arming MMSELL_LIVE_OFFSET_AB_ARMS deliberately: while
+        # that is non-empty, `maker_offset` splits ANY live mmsell book across the arms by
+        # ticker hash, so a future book would silently inherit the losing treatment.
         # --- RETIRED 2026-08-12 --------------------------------------------------------------
         # Removed from the default so they stop OPENING positions. History is untouched and any
         # position still open settles normally (manage_open_positions iterates every open trade,
