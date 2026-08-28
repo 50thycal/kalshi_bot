@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["mmsell-price-ceiling"],"id":"xc-showexp-1"}
+{"type":"xos","command":"tag","args":["mmsell10"],"id":"xc-tag10-1"}
