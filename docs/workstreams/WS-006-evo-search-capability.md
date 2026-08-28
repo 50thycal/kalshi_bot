@@ -1,9 +1,9 @@
 # WS-006 — Evo historical search capability
 
-**Phase:** BUILDING
-**Status:** Active (implementation merged; D1 proving harness correction in progress)
+**Phase:** REVIEW
+**Status:** Active (implementation and D1 both clean; D2 is the remaining prerequisite)
 **Created:** 2026-08-25
-**Updated:** 2026-08-27
+**Updated:** 2026-08-28
 
 ## Goal
 
@@ -154,13 +154,8 @@ someone would be tempted to reuse it.
 
 ## Open Decisions
 
-- **D1.** Use `backfill_weather` first, on the fixed target-date window
-  `2026-08-01..2026-08-03`; then use `mmsell` separately to exercise the fill-model
-  correction. The dataset choice is made. D1 remains open only until the fixed window
-  produces two identical, non-empty, untruncated fingerprints for both the taker and maker
-  specs. The unwindowed 2026-08-27 attempts are diagnostic evidence, not the proving run.  A run that
-  fails names *which* condition failed, so a red D1 is actionable without a second
-  investigation.
+- **D1. CLOSED 2026-08-28 — clean.** Both pre-registered runs passed on
+  `backfill_weather` / `2026-08-01..2026-08-03`. See "D1 — result" below.
 - **D2.** Should the replay engine enforce `risk.max_concurrent_positions` and per-position
   cost, so risk genes become mutable and the ledger's capital constraint becomes binding
   rather than measured after the fact? A change to a shared engine, so Platform Change
@@ -443,16 +438,45 @@ Defect found by writing the agent-invocation test:
 [#262](https://github.com/50thycal/kalshi_bot/pull/262) (the D1 proving-harness follow-up)
 and this review build, which carries #262 plus the three review fixes above.
 
+## D1 — result (2026-08-28): **CLEAN**
+
+Both pre-registered runs executed on default-branch code through the read-only ops channel,
+in two independent worker processes, after [#263](https://github.com/50thycal/kalshi_bot/pull/263)
+merged. Evidence: `ops/results/ws6-d1-weather-fixed-20260828.txt` and `…-20260828-b.txt`.
+
+Every leg matched, within each run and **across** the two:
+
+| | taker | maker |
+|---|---|---|
+| markets considered | 252 | 252 |
+| rows | 8,959 | 8,959 |
+| truncated | False | False |
+| trades | 243 (201 wins, 0.827) | 233 (196 wins, 0.841) |
+| result fingerprint | `acfc7063…` | `06200899…` |
+| trade fingerprint | `5618dfa4…` | `7b6d08b4…` |
+| market manifest | `966f0bbd…` (n=252) | `966f0bbd…` (n=252) |
+| snapshot | `repeatable read` / `read_only=on` | same |
+| provenance | `kalshi_rest_backfill` | `kalshi_rest_backfill` |
+
+Six fingerprints, two processes, zero divergence — including the manifest, which was read
+independently of the replay, and the canonicalized trade tape. Both runs held a
+server-confirmed read-only `REPEATABLE READ` snapshot; neither truncated; the manifest leg
+was COVERED, so the claim is proven rather than consistent-with. Notably **no ordering-only
+divergence appeared**, which is the observable D7's total ORDER BY predicted.
+
+What this establishes: the historical replay is deterministic over a fixed real corpus, and
+the harness can tell a clean proof from a truncated prefix, an empty window, an ordering
+artifact and a genuine corpus defect. That is a *mechanical* result.
+
+What it does **not** establish: anything about edge. The P&L (taker −$23.10 over 243 trades;
+maker +$10.87 over 233) is reconciliation output on one 3-day window with no
+out-of-sample split, no fill-model correction applied to the maker figure, and no
+pre-registered hypothesis about either. It is not an experiment result, not a standing, and
+not authority to create a prospective cohort.
+
 ## Next Step
 
-Merge the fixed-window proving-harness follow-up, then run:
-
-```json
-{"type":"script","name":"evo_backtest_probe","args":["--dataset","backfill_weather","--date-from","2026-08-01","--date-to","2026-08-03","--repeat","2","--require-complete"],"id":"ws6-d1-weather-fixed-20260827"}
-```
-
-Then run it a **second** time under a separate id (`…-b`). D1 is clean only if both runs are
-non-empty, untruncated, and identical to each other in all three legs — market manifest,
-trade tape and aggregates — across the two independent processes. Otherwise keep the
-workstream active and investigate the exact failed condition, which the run names. Do not
-start a prospective cohort; D2 and explicit operator approval remain separate prerequisites.
+D1 is closed. **D2** — whether the replay engine should enforce `risk.max_concurrent_positions`
+and per-position cost — remains open and is Platform Change Review work, not a workstream
+decision. A prospective (paper) cohort stays prohibited until D2 is resolved **and** the
+operator explicitly approves it; a clean D1 authorizes neither.
