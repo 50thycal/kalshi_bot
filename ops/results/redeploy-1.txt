@@ -1,5 +1,0 @@
-# ops request: type='env'
-# target service: main
-  set LIVE_STRATEGIES=Cmmsell10
-# 1/1 variables set
-# redeploy triggered — the worker will restart with the new config
