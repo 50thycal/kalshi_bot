@@ -1,7 +1,0 @@
-# ops request: type='db'
-status   n 
--------  --
-resting  18
-filled   2 
-
-(2 rows)
