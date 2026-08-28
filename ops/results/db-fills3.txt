@@ -1,6 +1,0 @@
-# ops request: type='db'
-matched_fills  filled_qty
--------------  ----------
-0              0         
-
-(1 row)
