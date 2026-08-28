@@ -1,1 +1,1 @@
-{"type":"xos","command":"platform","id":"ws6-d7-platform-state-20260828"}
+{"type":"db","sql":"select c.key, r.version, left(r.description,700) as descr, r.activated_at, r.boundary_unknown from platform_revisions r join platform_components c on c.id=r.component_id where c.key in ('EXPERIMENT_ENGINE','METRICS_ENGINE') order by c.key","id":"ws6-d7-expengine-descr-20260828"}
