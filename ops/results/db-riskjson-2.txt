@@ -1,7 +1,0 @@
-# ops request: type='db'
-version  has_risk  risk                                                                                                                                                                                                    
--------  --------  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-1        True      null                                                                                                                                                                                                    
-2        True      {"stage": "canary_stage_1", "settings": {"MAX_DAILY_LOSS": "5.0", "MAX_MARKET_EXPOSURE": "1.0", "MMSELL_EVENT_RUNG_CAP": "3", "LIVE_MAX_ORDER_DOLLARS": "1.0", "LIVE_PAPER_TWIN_SUFFIX": "_pt3", "LIVE_…
-
-(2 rows)
