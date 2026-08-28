@@ -1,1 +1,1 @@
-{"type":"logs","limit":120,"id":"mm10can-deploy-1"}
+{"type":"xos","command":"control-tower","args":["--no-evaluate"],"id":"mm10can-ct-post-1"}
