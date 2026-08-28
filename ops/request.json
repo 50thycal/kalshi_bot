@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","sql":"select c.key, r.version, left(r.description,600) as descr from platform_revisions r join platform_components c on c.id=r.component_id where c.key='EXPERIMENT_ENGINE'","id":"ws6-d7-expengine-descr-b"}
