@@ -1,7 +1,0 @@
-# ops request: type='db'
-strategy       n   settled  pnl_usd
--------------  --  -------  -------
-Cmmsell10      38  1        0.0689 
-Cmmsell10_pt3  20  1        0.0689 
-
-(2 rows)
