@@ -1,4 +1,0 @@
-# latest deployment 2528563a-8df0-499e-aab2-fda608ab27cd (status=SUCCESS, created=2026-08-24T13:43:47.477Z)
-# ops request: type='logs'
-# target service: main
-2026-08-24T13:44:26.185061236Z INFO  experiment OS platform command
