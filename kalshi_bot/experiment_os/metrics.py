@@ -235,6 +235,61 @@ _UNIVERSAL: tuple[MetricDefinition, ...] = (
         "filled, which is the channel adverse selection operates through",
     ),
     MetricDefinition(
+        key="live_realized_pnl_usd", unit="USD", kind="count",
+        source="positions (settled live markets this arm entered)",
+        revision="live_exec_v1",
+        description="total realized live P&L over settled live markets, in dollars "
+        "— the quantity a total canary loss BUDGET is denominated in (the "
+        "per-contract rate cannot express one); MISSING unless kind='live'",
+    ),
+    MetricDefinition(
+        key="live_fill_rate_pct", unit="%", kind="rate",
+        source="live_orders (entry buys that reached the venue) x fills",
+        reference="scripts/live_paper_parity.py (docs/LIVE_PAPER_TWIN.md)",
+        revision="live_exec_v1",
+        description="filled contracts over contracts ORDERED on entry buys that "
+        "actually reached the venue — the maker's realized fill rate; MISSING "
+        "unless addressed at deployment_kind='live'",
+    ),
+    MetricDefinition(
+        key="live_open_exposure_usd", direction="neutral", unit="USD", kind="count",
+        source="live_orders (resting notional) + positions (held exposure)",
+        reference="kalshi_bot/experiment_os/control_tower._live_exposure",
+        revision="live_exec_v1",
+        description="real money committed right now: resting-order notional plus "
+        "held-position exposure. A stood-down book drains its resting orders "
+        "within a cycle; its HELD positions are still real money",
+    ),
+    MetricDefinition(
+        key="live_max_realized_loss_usd", direction="lower_better", unit="USD",
+        kind="count",
+        source="positions (settled live markets this arm entered)",
+        revision="live_exec_v1",
+        description="magnitude of the WORST single settled live market's realized "
+        "loss (0.0 when no settled market lost) — the severity half of the tail "
+        "read; MISSING unless addressed at deployment_kind='live'",
+    ),
+    MetricDefinition(
+        key="live_tail_loss_markets", direction="lower_better", unit="markets",
+        kind="count",
+        source="positions (settled live markets this arm entered)",
+        revision="live_exec_v1",
+        description="settled live MARKETS that realized a loss. For a "
+        "hold-to-settlement cheap-longshot maker book the losing market IS the "
+        "tail event, so no cents threshold is invented; severity is "
+        "live_max_realized_loss_usd",
+    ),
+    MetricDefinition(
+        key="live_blocked_entries", direction="neutral", unit="candidates",
+        kind="count",
+        source="live_paper_parity_events (per-candidate live outcome) + live_orders",
+        reference="kalshi_bot/twin/harness.py (docs/LIVE_PAPER_TWIN.md)",
+        revision="live_exec_v1",
+        description="candidates the twin took that live did NOT, because a risk "
+        "gate stopped them — provenance carries the per-gate breakdown and "
+        "venue rejections separately",
+    ),
+    MetricDefinition(
         key="settled_trades", direction="neutral", unit="trades", kind="count", source="paper_trades",
         description="terminal-with-P&L trades entered in the window "
         f"(status in {SETTLED_STATUSES})",
@@ -635,7 +690,9 @@ def _fill_model_metric(session, key: str, scope: MetricScope, prov: dict) -> Met
 #: returns MISSING — see `_live_metric`.
 LIVE_ONLY_METRICS: frozenset[str] = frozenset({
     "live_settled_contracts", "live_cents_per_contract", "twin_live_winrate_gap_pp",
-    "live_settled_markets",
+    "live_settled_markets", "live_fill_rate_pct", "live_open_exposure_usd",
+    "live_max_realized_loss_usd", "live_tail_loss_markets", "live_blocked_entries",
+    "live_realized_pnl_usd",
 })
 
 #: Metrics that compare a live book against its REGISTERED twin. Same live-only
@@ -853,6 +910,195 @@ def _twin_tags(session, scope: MetricScope) -> tuple[tuple[str, ...], str | None
     return tuple(sorted(set(tags))), None
 
 
+def live_open_exposure(session, tags: list[str]) -> dict:
+    """Real money these tags have committed RIGHT NOW — resting orders AND held
+    positions. Deliberately window-free: "what is still exposed?" is a question
+    about the present, and an entry made before the window is exactly the money an
+    operator most needs to see during a stand-down.
+
+    Both halves are counted because only one of them used to be. A RESTING order is
+    money that could be committed; a FILLED position is money that already is. When
+    live entry stands down, every resting order drains within a cycle and the
+    resting number goes to $0.00 while the positions those orders produced sit open
+    — measured 2026-08-20 mid-pause: 25 open positions holding $43.04, reported as
+    "$0.00 at risk".
+
+    Shared with the Control Tower's `at risk` column, which delegates here, so the
+    operator-facing number and the gate-facing number cannot drift apart."""
+    from ..models import LiveOrder, Position
+
+    empty = {"open_orders": 0, "contracts": 0, "notional_usd": 0.0,
+             "open_positions": 0, "position_usd": 0.0, "total_usd": 0.0}
+    if not tags:
+        return empty
+    rows = session.execute(
+        select(LiveOrder.status, func.count(), func.sum(LiveOrder.quantity),
+               func.sum(LiveOrder.quantity * LiveOrder.limit_price))
+        .where(LiveOrder.strategy.in_(tags))
+        .group_by(LiveOrder.status)
+    ).all()
+    resting = {"pending", "resting", "open", "partially_filled"}
+    open_orders = contracts = 0
+    notional = 0.0
+    for status, n, qty, cents in rows:
+        if (status or "").lower() in resting:
+            open_orders += int(n or 0)
+            contracts += int(qty or 0)
+            notional += float(cents or 0) / 100.0
+
+    # Held positions: the NEWEST snapshot per market these tags entered, since
+    # `positions` is append-only and an older row may predate a later exit.
+    tickers = session.execute(
+        select(LiveOrder.market_ticker)
+        .where(LiveOrder.strategy.in_(tags), LiveOrder.action == "buy")
+        .distinct()
+    ).scalars().all()
+    n_pos, pos_usd = 0, 0.0
+    for ticker in tickers:
+        row = session.execute(
+            select(Position.quantity, Position.quantity_fp, Position.market_exposure)
+            .where(Position.market_ticker == ticker)
+            .order_by(Position.captured_at.desc())
+            .limit(1)
+        ).first()
+        if row is None:
+            continue
+        qty, qty_fp, exposure = row
+        held = float(qty_fp) if qty_fp is not None else float(qty or 0)
+        if abs(held) > 0.01:          # sub-0.01 dust cannot be traded out
+            n_pos += 1
+            pos_usd += float(exposure or 0)
+    return {"open_orders": open_orders, "contracts": contracts,
+            "notional_usd": round(notional, 2),
+            "open_positions": n_pos, "position_usd": round(pos_usd, 2),
+            "total_usd": round(notional + pos_usd, 2)}
+
+
+#: `live_orders.status` values meaning the order reached Kalshi and was therefore
+#: GIVEN a chance to fill. The fill-rate denominator is exactly this set: an order
+#: that never reached the venue did not fail to fill, and counting it would
+#: understate the maker's realized fill rate by however many sends errored.
+_SENT_ORDER_STATUSES = frozenset({
+    "resting", "open", "partially_filled", "filled", "canceled", "cancelled",
+    "expired", "settled", "submitted",
+})
+#: Sent-or-not is genuinely unknown for these — reconcile resolves them later. They
+#: are excluded from BOTH sides and counted, rather than guessed into either.
+_INDETERMINATE_ORDER_STATUSES = frozenset({"unknown", "pending"})
+
+
+def _live_fill_rows(session, tags: tuple[str, ...], scope: MetricScope) -> dict:
+    """Ordered-vs-filled contracts on this arm's ENTRY buys inside the window.
+
+    Entry buys only. A position is entered by buys and closed by sells, and both
+    produce orders and fills; counting closes would measure a taker's exit, not the
+    resting maker's entry fill rate, which is the whole quantity the twin exists to
+    price."""
+    from ..models import Fill, LiveOrder
+
+    rows = session.execute(
+        select(LiveOrder.kalshi_order_id, LiveOrder.status, LiveOrder.quantity)
+        .where(
+            LiveOrder.strategy.in_(tags),
+            LiveOrder.action == "buy",
+            LiveOrder.created_at >= scope.window_start,
+            LiveOrder.created_at <= scope.window_end,
+        )
+    ).all()
+    ordered = 0
+    sent_ids: list[str] = []
+    never_sent = indeterminate = 0
+    for koid, status, qty in rows:
+        st = (status or "").lower()
+        if st in _INDETERMINATE_ORDER_STATUSES:
+            indeterminate += 1
+            continue
+        if st not in _SENT_ORDER_STATUSES:
+            never_sent += 1          # rejected / error — never given a chance
+            continue
+        ordered += int(qty or 0)
+        if koid:
+            sent_ids.append(koid)
+    filled = 0
+    if sent_ids:
+        filled = int(session.scalar(
+            select(func.coalesce(func.sum(Fill.quantity), 0))
+            .where(Fill.kalshi_order_id.in_(sent_ids), Fill.action == "buy")
+        ) or 0)
+    return {
+        "ordered_contracts": ordered,
+        "filled_contracts": filled,
+        "sent_orders": len(sent_ids),
+        "excluded_never_sent": never_sent,
+        "excluded_indeterminate": indeterminate,
+    }
+
+
+#: Live outcome codes on the parity tape that are NOT a risk-gate block: the entry
+#: succeeded, or no live attempt was made for this candidate at all.
+_NON_BLOCK_LIVE_OUTCOMES = frozenset({"placed", "not_attempted", "unknown"})
+
+
+def _live_blocked_entries(session, key: str, scope: MetricScope, prov: dict):
+    """Candidates the TWIN took that live did not, broken down by the gate that
+    stopped each one.
+
+    Read off the parity tape rather than off `live_orders`, because a gate block
+    places no order — there is nothing in `live_orders` to count. The tape is the
+    only record that the candidate existed and what stopped it.
+
+    The denominator condition is `twin_outcome == 'opened'`: a candidate the twin
+    also declined is not a live-side block, and counting it would attribute the
+    twin's own cap to the live risk engine."""
+    from ..models import LivePaperParityEvent
+
+    rows = session.execute(
+        select(LivePaperParityEvent.live_outcome, func.count())
+        .where(
+            LivePaperParityEvent.live_tag.in_(scope.strategy_tags),
+            LivePaperParityEvent.twin_outcome == "opened",
+            LivePaperParityEvent.recorded_at >= scope.window_start,
+            LivePaperParityEvent.recorded_at <= scope.window_end,
+        )
+        .group_by(LivePaperParityEvent.live_outcome)
+    ).all()
+    by_gate: dict[str, int] = {}
+    placed = other = 0
+    for outcome, n in rows:
+        code = (outcome or "").strip()
+        if code in _NON_BLOCK_LIVE_OUTCOMES:
+            if code == "placed":
+                placed += int(n)
+            else:
+                other += int(n)
+            continue
+        by_gate[code] = by_gate.get(code, 0) + int(n)
+    blocked = sum(by_gate.values())
+    # Venue-side refusals are a DIFFERENT failure from our own risk gates (their
+    # remedy is an order-shape fix, not a cap change), so they are reported beside
+    # the breakdown rather than inside it.
+    from ..models import LiveOrder
+
+    rejected = int(session.scalar(
+        select(func.count()).select_from(LiveOrder).where(
+            LiveOrder.strategy.in_(scope.strategy_tags),
+            LiveOrder.action == "buy",
+            func.lower(LiveOrder.status).in_(("rejected", "error")),
+            LiveOrder.created_at >= scope.window_start,
+            LiveOrder.created_at <= scope.window_end,
+        )
+    ) or 0)
+    return MetricValue(
+        key, float(blocked), placed + blocked, "candidates",
+        provenance=prov | {
+            "by_gate": dict(sorted(by_gate.items())),
+            "twin_opened_and_live_placed": placed,
+            "twin_opened_live_no_attempt": other,
+            "venue_rejected_orders": rejected,
+        },
+    )
+
+
 def _live_metric(session, key: str, scope: MetricScope) -> MetricValue:
     """The three live-execution providers.
 
@@ -928,6 +1174,69 @@ def _live_metric(session, key: str, scope: MetricScope) -> MetricValue:
             },
             stderr=se,
         )
+
+    if key == "live_realized_pnl_usd":
+        # A count, so an empty book answers 0.0: no settled market means nothing
+        # realized, which is the right reading for a LOSS BUDGET (a budget is not
+        # breached by a book that has not traded). The companion floor on
+        # live_settled_contracts is what distinguishes that from a healthy zero.
+        return MetricValue(key, round(agg["pnl_usd"], 4), agg["settled_markets"],
+                           "USD", provenance=prov)
+
+    if key == "live_max_realized_loss_usd":
+        # A magnitude, not a signed P&L: "the worst market lost $1.20" reads the
+        # same way whichever sign convention the caller expects, and `lower_better`
+        # then means what it says. 0.0 with settled markets present is a real
+        # answer (nothing lost); 0.0 with NO settled markets is not, so that case
+        # reports undefined rather than a reassuring zero.
+        losses = [-c / 100.0 for _t, c, _q in agg["per_market_by_ticker"] if c < 0]
+        if not agg["settled_tickers"]:
+            return MetricValue(
+                key, None, 0, "USD",
+                reason="no settled live markets in window", provenance=prov,
+            )
+        return MetricValue(key, round(max(losses, default=0.0), 4),
+                           agg["settled_markets"], "USD",
+                           provenance=prov | {"losing_markets": len(losses)})
+
+    if key == "live_tail_loss_markets":
+        # Counting MARKETS, not contracts: contracts on one market share one
+        # settlement, so a 5-lot that lost is one tail event, not five.
+        losses = [(t, c) for t, c, _q in agg["per_market_by_ticker"] if c < 0]
+        return MetricValue(
+            key, float(len(losses)), agg["settled_markets"], "markets",
+            provenance=prov | {
+                "loss_usd_total": round(sum(c for _t, c in losses) / 100.0, 4),
+                "worst_market_loss_usd": round(
+                    max((-c / 100.0 for _t, c in losses), default=0.0), 4),
+            },
+        )
+
+    if key == "live_open_exposure_usd":
+        exp = live_open_exposure(session, list(scope.strategy_tags))
+        return MetricValue(
+            key, exp["total_usd"], exp["open_orders"] + exp["open_positions"], "USD",
+            provenance=prov | {"exposure": exp},
+        )
+
+    if key == "live_fill_rate_pct":
+        fills = _live_fill_rows(session, scope.strategy_tags, scope)
+        if fills["ordered_contracts"] == 0:
+            return MetricValue(
+                key, None, 0, "%",
+                reason=(
+                    "no entry-buy contracts reached the venue in this window "
+                    f"({fills['excluded_never_sent']} order(s) never sent, "
+                    f"{fills['excluded_indeterminate']} indeterminate)"
+                ),
+                provenance=prov | fills,
+            )
+        pct = 100.0 * fills["filled_contracts"] / fills["ordered_contracts"]
+        return MetricValue(key, round(pct, 4), fills["ordered_contracts"], "%",
+                           provenance=prov | fills)
+
+    if key == "live_blocked_entries":
+        return _live_blocked_entries(session, key, scope, prov)
 
     # twin_live_winrate_gap_pp
     twin_tags, why = _twin_tags(session, scope)

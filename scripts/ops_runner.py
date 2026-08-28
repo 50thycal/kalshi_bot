@@ -139,6 +139,7 @@ ALLOWED_SCRIPTS = (
     "mmsell_h2h_study",
     "mmsell_offset_ab",
     "live_paper_parity",
+    "mmsell_canary_slices",
     "mmsell_crypto_study",
     "mmsell_supply_forecast",
     "mmsell_regime_backtest",

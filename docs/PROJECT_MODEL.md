@@ -170,7 +170,9 @@ state.
 - **An unclassified series is admitted by no allowlist filter.** Classification debt shows
   up as exclusion, never as a silent default into an eligible bucket.
 - **A live canary arms only through `service.arm_live_canary`** — fresh tags with no
-  inherited paper state, a twin at the same instant, a pre-registered risk envelope.
+  inherited paper state, a twin at the same instant, a pre-registered risk envelope, and
+  live/twin tag maps equal to the Version's declared arm set. The last two live on a frozen
+  Version, so narrowing either is a **successor Version**, never an edit (`DEC-004`).
 - **Only a recorded evaluator PASS authorizes a transition.** A hand-written or stale PASS
   never does, and a dry run authorizes nothing.
 - **Evidence never pools across an epoch boundary Experiment OS declares non-poolable**,
