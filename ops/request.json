@@ -1,1 +1,1 @@
-{"type":"db","sql":"select v.version_number, (v.risk_json is not null) as has_risk, v.risk_json::text as risk from experiment_os_versions v join experiment_os_experiments e on e.id=v.experiment_id where e.key='mmsell-price-ceiling' order by v.version_number","max_rows":10,"id":"db-riskjson-1"}
+{"type":"db","sql":"select v.version, (v.risk_json is not null) as has_risk, left(v.risk_json::text, 1200) as risk from experiment_versions v join experiments e on e.id=v.experiment_id where e.key = 'mmsell-price-ceiling' order by v.version","max_rows":10,"id":"db-riskjson-2"}
