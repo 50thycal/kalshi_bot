@@ -1,9 +1,0 @@
-# ops request: type='db'
-status    n 
---------  --
-canceled  12
-filled    12
-resting   8 
-rejected  4 
-
-(4 rows)
