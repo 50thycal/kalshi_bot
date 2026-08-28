@@ -1,1 +1,1 @@
-{"type":"db","sql":"select date_trunc('hour', filled_at) as hr, count(*) as n, count(kalshi_order_id) as with_oid from fills where filled_at > now() - interval '10 hours' group by 1 order by 1","max_rows":20,"id":"db-f-today"}
+{"type":"db","sql":"select 'canary_order' as src, kalshi_order_id as oid from live_orders where strategy = 'Cmmsell10' and status = 'filled' limit 3","max_rows":6,"id":"db-f-cmp"}
