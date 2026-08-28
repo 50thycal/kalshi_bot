@@ -1,6 +1,0 @@
-# ops request: type='db'
-command_id                      action             status     error  result                                                                                                                                  completed_at                 
-------------------------------  -----------------  ---------  -----  --------------------------------------------------------------------------------------------------------------------------------------  -----------------------------
-pcr-register-taxonomy-20260824  REGISTER_REVISION  SUCCEEDED  -      {"kind": "platform_revision", "status": "pending", "version": "settlement_repair_2026_08_24", "revision_id": 11, "activated_at": null}  2026-08-24 13:44:24.704729+00
-
-(1 row)
