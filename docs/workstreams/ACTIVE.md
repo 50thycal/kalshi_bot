@@ -3,7 +3,7 @@
 The project's active-work control board — what is being designed and built right now, and
 where each effort is. Read it first on a continuation.
 
-**Updated:** 2026-08-27 · **Build OS v0.4**
+**Updated:** 2026-08-28 · **Build OS v0.4**
 
 | ID | Workstream | Phase | Status | Current Next Step | Related PR |
 |---|---|---|---|---|---|
@@ -12,7 +12,8 @@ where each effort is. Read it first on a continuation.
 | [WS-003](WS-003-mmsell-noncrypto-settlement-mode-paper-design.md) | MMSELL non-crypto settlement-mode paper design | DECIDE | Blocked | Waiting on WS-002, the crypto-exclusion defect, and the event-correlation measurement | — |
 | [WS-004](WS-004-live-canary-gate-addressing.md) | Reconciling the recurring blocked-gate anomaly (historical canaries) | DECIDE | Active | Put the reporting-layer options to the operator (explain / accept-condition / live with it) | — |
 | [WS-005](WS-005-freeze-dark-window-universe.md) | A testable universe for the freeze dark-window hypothesis | EXPLORE | Blocked | Commit to a source-based universe search, or abandon explicitly | — |
-| [WS-006](WS-006-evo-search-capability.md) | Evo historical search capability (agents search their own strategy space) | BUILDING | Active | Merge the snapshot-pinned, identity-proving probe (D7 resolved); run the pre-registered D1 weather window twice under separate ops IDs | [#261](https://github.com/50thycal/kalshi_bot/pull/261) → [#262](https://github.com/50thycal/kalshi_bot/pull/262) → this review build |
+| [WS-006](WS-006-evo-search-capability.md) | Evo historical search capability (agents search their own strategy space) | BUILDING | Active | Merge the snapshot-pinned, identity-proving probe (D7 resolved); run the pre-registered D1 weather window twice under separate ops IDs | [#261](https://github.com/50thycal/kalshi_bot/pull/261) → [#262](https://github.com/50thycal/kalshi_bot/pull/262) → [#263](https://github.com/50thycal/kalshi_bot/pull/263) |
+| [WS-007](WS-007-mmsell10-live-canary.md) | mmsell10 Stage-1 live canary + exact paper twin | REVIEW | Active | Operator decisions applied; run `scripts/mmsell10_canary.py register --execute` on a writable connection, then read the promotion gate before arming | [#264](https://github.com/50thycal/kalshi_bot/pull/264) |
 
 *Phase:* IDEA · EXPLORE · MODEL · DECIDE · BUILD_CARD · READY_TO_BUILD · BUILDING · REVIEW
 *Status:* Active · Paused · Blocked · Abandoned
