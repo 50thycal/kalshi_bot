@@ -1,1 +1,1 @@
-{"type":"db","sql":"select status, count(*) as n, count(kalshi_order_id) as with_koid, sum(quantity) as qty from live_orders where strategy = 'Cmmsell10' and action = 'buy' group by 1 order by 1","max_rows":10,"id":"db-koid"}
+{"type":"db","sql":"select count(*) as fill_rows, count(distinct kalshi_order_id) as distinct_orders, min(created_at) as first, max(created_at) as last from fills","max_rows":5,"id":"db-fills"}
