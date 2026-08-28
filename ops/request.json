@@ -1,1 +1,1 @@
-{"type":"env","set":{"EXPERIMENT_OS_ISSUE_COMMAND":"{\"command_id\":\"x11-vld-2\",\"action\":\"STATUS\",\"actor\":\"claude-code\",\"actor_role\":\"TASK_SPECIFIC\",\"payload\":{\"issue\":\"XOS-000011\",\"status\":\"VALIDATING\",\"reason\":\"Remedy deployed and the repair executed; running the pre-registered checks.\"},\"schema_version\":1}"},"id":"x11-vld-2-set"}
+{"type":"xos","command":"issue-command-show","args":["x11-vld-2"],"id":"x11-vld-2-r"}
