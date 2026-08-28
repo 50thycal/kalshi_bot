@@ -1,1 +1,1 @@
-{"type":"logs","limit":80,"filter":"mmsell","deployment_id":"","id":"logs-books-1"}
+{"type":"db","sql":"select se.message, count(*) as n, max(se.created_at) as last from system_events se where se.component = 'experiment_os_enforcement' and se.created_at > now() - interval '40 minutes' group by 1 order by 3 desc","max_rows":20,"id":"db-unreg"}
