@@ -92,8 +92,15 @@ class LineageBlocked(Exception):
 
     Raised only under NEW_ONLY/STRICT for tags that cannot be resolved to a
     registered deployment arm — i.e. exactly the work that must not begin outside
-    Experiment OS. Cycle code already isolates books, so this never propagates
-    beyond the unregistered book's own entry path."""
+    Experiment OS.
+
+    Cycle code MUST isolate the refusal to the unregistered book's own entry path.
+    That was asserted here rather than tested, and it was false: the mmsell tracker
+    let this propagate out of `run_once`, where the caller's single `session_scope`
+    rolled the whole transaction back and discarded every other book's entries. One
+    retired experiment's dangling deployment took the entire mmsell family dark for
+    four days before anyone noticed (XOS-000011). Use `tag_admissible` for the
+    per-book pre-check, and never let this cross a book boundary."""
 
     def __init__(self, tag: str, reason: str):
         self.tag = tag

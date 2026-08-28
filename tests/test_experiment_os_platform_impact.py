@@ -309,12 +309,15 @@ def test_taxonomy_expansion_i2_shape(xos_session, xos_platform):
     assert changed == {("MARKET_TAXONOMY", "tax-2026-08-13")}
     assert (set(old_snap) - set(new_snap)) == {("MARKET_TAXONOMY", "v1")}
 
-    # Pre-boundary evidence stays OUT of the new epoch.
-    svc.register_deployment(
-        s, new_epoch, deployment_key="tmmsell-like-paper-2", stage="PAPER",
-        kind="paper", arms={"treatment": "mm_tag", "control": "mm_tag_c"},
-        started_at=TAX_BOUNDARY,
-    )
+    # The books CONTINUE across the boundary: the deployment is carried onto the new
+    # epoch by the cut itself, at the boundary instant, with the same tags. It used to
+    # be registered by hand here — and in production nobody did, which is how every
+    # Tmmsell book went dark on 2026-08-24 (XOS-000011). Registering a second one now
+    # would put mm_tag on two active arms, which the resolver refuses as ambiguous.
+    carried = svc.open_deployments(s, new_epoch)
+    assert [d.deployment_key for d in carried] == ["tmmsell-like-paper-1-e2"]
+    assert carried[0].started_at.replace(tzinfo=UTC) == TAX_BOUNDARY
+    assert enf.tag_admissible(s, "mm_tag")
     for _ in range(4):
         _trade(s, "mm_tag", pnl=0.07, at=TAX_BOUNDARY + timedelta(hours=3))
     s.commit()

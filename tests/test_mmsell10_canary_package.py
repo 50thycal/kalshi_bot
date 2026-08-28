@@ -938,3 +938,61 @@ def test_activation_cannot_reach_the_kill_switch_or_the_mode():
     request, so a stand-down is never undone as a side effect of activating."""
     env = pkg.activation_env(_Variants(_RUNNING))
     assert "KILL_SWITCH" not in env and "BOT_MODE" not in env
+
+
+# ---------------------------------------------------------------------------
+# The paper parent survives its own canary (XOS-000011)
+# ---------------------------------------------------------------------------
+
+
+def test_arming_leaves_the_paper_parent_able_to_trade(price_ceiling, xos_session):
+    """Arming must not take out the book the canary was promoted from.
+
+    `arm_live_canary` closes the paper epoch to open the live one. Closing an epoch
+    ends the deployments in it, so without carrying the paper deployment onto the
+    live epoch the parent tag `mmsell10` would resolve to no active deployment arm
+    the instant the canary armed — and under NEW_ONLY its every entry would be
+    refused at the write path. The canary would have killed its own control.
+
+    That is not hypothetical: it is the shape that took the whole mmsell family
+    dark on 2026-08-24 (XOS-000011), arriving by a different door.
+    """
+    s = xos_session
+    _set_mode(s, "NEW_ONLY", cutover_id="prod-new-only-test")
+    _register(s)
+    _paper_trades(s, "mmsell10", 40)
+    s.commit()
+    assert enf.tag_admissible(s, pkg.PAPER_TAG)
+
+    pkg.arm(s, approved_by="operator", started_at=ARMED_AT + timedelta(hours=1))
+    s.commit()
+    enf.reset_for_tests()
+    enf.refresh(s)
+
+    assert enf.tag_admissible(s, pkg.PAPER_TAG), (
+        "the paper parent lost its lineage when the canary armed"
+    )
+    assert enf.stamp_or_block(s, pkg.PAPER_TAG, channel="paper") is not None
+
+
+def test_the_canary_the_twin_and_the_parent_are_three_unambiguous_tags(
+    price_ceiling, xos_session
+):
+    """One arm, three tags, three deployments, no ambiguity.
+
+    The live book, its twin and the paper parent all carry arm `mmsell10` on the same
+    live epoch. Each must still resolve to exactly ONE active deployment arm — a tag
+    on two is refused as ambiguous, which is a second way to stop a book.
+    """
+    s = xos_session
+    _set_mode(s, "NEW_ONLY", cutover_id="prod-new-only-test")
+    _register(s)
+    _paper_trades(s, "mmsell10", 40)
+    s.commit()
+    pkg.arm(s, approved_by="operator", started_at=ARMED_AT + timedelta(hours=1))
+    s.commit()
+    enf.reset_for_tests()
+    enf.refresh(s)
+
+    for tag in (pkg.LIVE_TAG, pkg.TWIN_TAG, pkg.PAPER_TAG):
+        assert enf.tag_admissible(s, tag), f"{tag} does not resolve to one active arm"
