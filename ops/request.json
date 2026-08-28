@@ -1,1 +1,1 @@
-{"type":"xos","command":"metric","args":["live_fill_rate_pct","--experiment","mmsell-price-ceiling","--arm","mmsell10","--kind","live"],"id":"mk-live_fill_rate_pct"}
+{"type":"db","sql":"select status, count(*) as n, count(kalshi_order_id) as with_koid, sum(quantity) as qty from live_orders where strategy = 'Cmmsell10' and action = 'buy' group by 1 order by 1","max_rows":10,"id":"db-koid"}
