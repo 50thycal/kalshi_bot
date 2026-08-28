@@ -1,8 +1,0 @@
-# ops request: type='db'
-src          oid                                   market_ticker                       
------------  ------------------------------------  ------------------------------------
-recent_fill  01a049bd-1a88-7dcd-b277-90f0d70b2188  KXBRENTMON-26AUG3117-T92.99         
-recent_fill  01a049da-0cb0-7893-8910-fff745c5b039  KXEPLTOTAL-26AUG28CRYMCI-6          
-recent_fill  01a049bc-dc08-7ec6-87c4-2e6511fee3e6  KXLALIGASCORE-26AUG28ALAVIL-ALA0VIL2
-
-(3 rows)
