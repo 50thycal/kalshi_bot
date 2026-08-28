@@ -1,1 +1,1 @@
-{"type":"xos","command":"evaluate-gates","args":["--dry-run","--experiment","mmsell-price-ceiling"],"id":"ev-arm-1"}
+{"type":"xos","command":"issue-command-show","args":["x11-fix-2"],"id":"x11-fix-2-r"}
