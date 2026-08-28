@@ -1,1 +1,1 @@
-{"type":"xos","command":"metric","args":["fill_model_coverage_pct","--experiment","mmsell-price-ceiling","--arm","mmsell10","--kind","paper"],"id":"m-arm-fill_model_coverage_pct"}
+{"type":"xos","command":"metric","args":["settled_trades","--experiment","mmsell-price-ceiling","--arm","mmsell10","--kind","paper"],"id":"m-arm-settled_trades"}
