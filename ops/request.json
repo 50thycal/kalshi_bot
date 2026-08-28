@@ -1,1 +1,1 @@
-{"type":"db","sql":"select strategy, status, count(*) as n, min(created_at) as first, max(created_at) as last from live_orders where created_at > now() - interval '2 hours' group by 1,2 order by 1,2","max_rows":20,"id":"db-live-ord"}
+{"type":"db","sql":"select strategy, count(*) as n, max(created_at) as last from paper_trades where strategy in ('Cmmsell10','Cmmsell10_pt3','mmsell10') group by 1 order by 1","max_rows":10,"id":"db-canary-rows"}
