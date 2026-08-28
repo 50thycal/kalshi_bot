@@ -1,1 +1,1 @@
-{"type":"env","set":{"EXPERIMENT_OS_ISSUE_COMMAND":""},"id":"env-clear-5"}
+{"type":"db","sql":"select status, count(*) as n from live_orders where strategy = 'Cmmsell10' group by 1 order by 2 desc","max_rows":10,"id":"db-canary-2"}
