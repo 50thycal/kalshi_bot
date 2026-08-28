@@ -266,9 +266,40 @@ Every other reported field is built from order-independent sums. The operator's 
 that deterministic replay is worth that small reporting change rather than carrying ambiguous
 ordering indefinitely.
 
-> Registering the corresponding **Platform Revision / impact action** in Experiment OS is an
-> owner action under `docs/EXPERIMENT_OS_PLATFORM_IMPACT.md`. This workstream records the
-> decision and the code; it does not and cannot register platform state.
+### Is D7 a Platform Revision? Investigated 2026-08-28 — **no.**
+
+An earlier draft of this workstream said D7 needed a Platform Revision registered before
+merge. That was **wrong**, and the correction matters more than the original claim: a
+revision the evidence does not call for is not a harmless formality. `affected_experiments`
+resolves from pinned snapshots, and a component registered *after* an epoch's snapshot is
+treated as affected (`platform_impact.py`, `pinned is None` branch). Registering a new
+component for the Evo replay engine would therefore mark **every active experiment**
+affected — mmsell10-canary included — and each would need an accepted disposition before the
+revision could activate, with `evidence_block_reasons()` adding `BLOCKED_PLATFORM` to any
+left dangling. That is real gate-blocking on live work, bought for a change that provably
+cannot move any of their evidence.
+
+What the investigation established, read-only against production and the repository:
+
+| check | finding |
+|---|---|
+| Declared components in production (`xos platform`) | `DATA_PROVENANCE`, `EXECUTION_ENGINE`, `EXPERIMENT_ENGINE`, `FEE_MODEL`, `FILL_MODEL`, `KALSHI_API_SCHEMA`, `MARKET_TAXONOMY`, `METRICS_ENGINE`, `RISK_ENGINE`, `SETTLEMENT_ENGINE`. **None covers `kalshi_bot/evo/sandbox.py`.** |
+| `EXPERIMENT_ENGINE` scope (read from the production revision row) | `foundation_pr1` — "Experiment OS foundation: lifecycle state machine, structured gates, platform registry, append-only audit". That is the **Experiment OS** engine, not the Evo replay engine. |
+| Who calls `run_backtest` | Only `kalshi_bot/evo/*` — the agent sandbox and `evo/search/replay.py`. Nothing in `experiment_os/`, nothing in the paper or live execution path. |
+| Does Experiment OS read the Evo sandbox | No. `experiment_os/` contains **zero** references to `EvoSandboxRun`, `evo_sandbox_runs` or `evo_search_*`. Gate metrics come from `paper_trades`. |
+| `EXPERIMENT_OS_PLATFORM_IMPACT.md`, Scope boundary | "**No Evo integration.**" |
+| Same doc, on what the registry covers | "Not every code diff is a PlatformRevision: the registry covers declared shared semantics (the standard components), not incidental refactors." |
+| `issue_policy.PLATFORM_SEMANTICS` comment | routing a non-platform problem to Platform Change Review "invites a Platform Revision that no evidence calls for". |
+
+**Conclusion.** D7 is shared *within the Evo subsystem* — every caller of `run_backtest`
+sees it — but it is not a change to a declared **platform** component, and it cannot reach
+any experiment's evidence, metric, gate or exposure. The blast radius is the agents' backtest
+tool and the historical search: `max_drawdown_usd` may read differently for an Evo replay
+computed over tied rows. No Platform Revision, no impact records, no cutover.
+
+**Decision (operator, 2026-08-28): recorded as non-platform.** If the Evo replay engine is
+ever to become a declared component, that is its own deliberate registration — with every
+active experiment's disposition accounted — and not a side effect of this PR.
 
 ## Assumptions
 
@@ -358,6 +389,14 @@ runtime-varying field in `run_backtest`'s result, so stripping it is sufficient;
    otherwise the run says *consistent with*, or reports the manifest leg as UNCOVERED.
 
 The operator also resolved **D7** in the same review, approving the deterministic ORDER BY.
+
+**Operator review, 2026-08-28.** The updated code passed. Two operational items were raised
+before merge: the base branch had moved (resolved — the branch carries every base commit,
+validated on the merged tree), and the D7 Platform Change Review workflow. The second was
+investigated rather than executed: the evidence says the Evo replay engine is not a declared
+platform component, so registering a revision would gate-block every active experiment for a
+change that cannot reach their evidence. Recorded as non-platform by operator decision; the
+full evidence table is under **D7** above.
 
 **PR #261 merged 2026-08-27** at reviewed head
 `0330a855744400acaa8621fc17deac508178b56d`. The historical-search capability and its
