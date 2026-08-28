@@ -343,5 +343,61 @@ no explicit `n`. Two consequences worth carrying forward, because both are gener
 
 ---
 
+### DEC-005 — Experiment lifecycle gets its own boot transport, and its envelopes name reviewed packages rather than authoring contracts
+
+**Date:** 2026-08-28
+**Status:** Accepted
+
+**Context**
+
+Registering a successor Version and arming a live canary are writes. The ops channel is
+read-only against Postgres by design — a SELECT-only role, enforced server-side — and the
+sandbox cannot reach Railway, so `DEC-004`'s package could only ever be run by an operator on
+their own writable connection. That is a real gap rather than a policy: the same shape was
+already solved twice, by `EXPERIMENT_OS_ISSUE_COMMAND` and `EXPERIMENT_OS_PLATFORM_COMMAND`,
+both of which keep the worker as the only writer and carry a request rather than a connection.
+
+The tempting design is a *generic* transport: an envelope that says "create a version with
+these arms and this gate spec". It is wrong, and not marginally. A gate is supposed to have
+committed to its thresholds **before** the evidence arrived; an envelope that can author one
+lets the contract be written the same afternoon the results came in, in an environment
+variable, unreviewed, on a public branch. Pre-registration would survive in name only.
+
+**Decision**
+
+A third transport, `EXPERIMENT_OS_EXPERIMENT_COMMAND`, with a disjoint vocabulary and its own
+receipt ledger — three tables, so a ticket cannot arm a canary and a platform revision cannot
+freeze a Version, structurally rather than by convention.
+
+Its envelopes **name a reviewed package and cannot author one.** A package is code in the
+repository — arms, risk envelope, gate specs and tags as literals someone read in a pull
+request. The envelope's whole content is *which* package to run, who is acting, and (for
+`ARM_CANARY`) who approved real money. Adding a package is a code change; running one is the
+transport. The one payload knob is a promotion-gate evidence floor, and it moves in one
+direction only: adding a floor makes a gate stricter and can never make it pass on less.
+
+Two further separations hold: `ARM_CANARY` requires the `LIVE_OPS` role and a named
+`approved_by`, and it still places no order, because `LIVE_STRATEGIES` is a switch this
+transport cannot reach. A transport that could both arm a canary and open the allowlist would
+be one environment variable away from unreviewed exposure.
+
+**Consequences**
+
+*Easier:* the lifecycle work `DEC-004` describes can be driven the same way the enforcement
+cutover and the platform revisions already were, with a durable receipt naming the actor, the
+role and the approver — instead of a private connection and a shell history.
+
+*Harder:* every new package is a PR. That is the cost being bought deliberately: the review
+step is what keeps a scientific contract out of an environment variable.
+
+*Expensive to reverse:* low. The transport is additive and inert while its variable is empty;
+the migration creates one table with no foreign keys.
+
+*Revisit if:* packages start being written to satisfy the transport rather than the science —
+a package that exists only to make an envelope possible is a sign the vocabulary is too narrow
+for a real need, and the answer would be a new action, reviewed, not a generic escape hatch.
+
+---
+
 <!-- Copy the block above for each new decision. IDs are stable: never reused, never
      renumbered. -->

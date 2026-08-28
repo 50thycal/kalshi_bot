@@ -100,6 +100,38 @@ To run a request:
    evidence in a payload — bounded summaries and public references only. Full
    contract, vocabulary and worked sequence: `docs/EXPERIMENT_OS_ISSUES.md`.
 
+   An **experiment LIFECYCLE write** — registering a successor contract, arming a
+   live canary — reaches production the same way, through a THIRD transport with
+   its own vocabulary and its own receipt ledger:
+   `EXPERIMENT_OS_EXPERIMENT_COMMAND` via `env`, executed once by boot hook 2b-v.
+   `experiment-command-show`/`experiment-command-list` read the receipts, with the
+   same prohibition: metadata only, and they can neither execute nor retry
+   anything.
+
+   ```jsonc
+   {"type":"xos","command":"experiment-command-list","id":"xc-1"}
+   {"type":"xos","command":"experiment-command-show","args":["mm10-register-1"],"id":"xc-2"}
+   ```
+
+   An envelope **names a reviewed package; it cannot author one.** Arms, gate
+   specs, thresholds and tags are literals in the repository that someone read in
+   a pull request — otherwise a scientific contract could be written in an
+   environment variable the afternoon the results arrived, and pre-registration
+   would mean nothing. Two actions:
+
+   ```jsonc
+   // register the contract — arms nothing, places nothing
+   {"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"mm10-register-1\",\"action\":\"REGISTER_PACKAGE\",\"actor\":\"claude-code\",\"actor_role\":\"TASK_SPECIFIC\",\"payload\":{\"package\":\"mmsell10-canary\"},\"schema_version\":1}"}}
+   // arm the canary — EXPANDS REAL-MONEY CAPABILITY; Live Ops only
+   {"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"mm10-arm-1\",\"action\":\"ARM_CANARY\",\"actor\":\"claude-code\",\"actor_role\":\"LIVE_OPS\",\"payload\":{\"package\":\"mmsell10-canary\",\"approved_by\":\"<operator>\"},\"schema_version\":1}"}}
+   ```
+
+   `ARM_CANARY` still **places no order**: `LIVE_STRATEGIES` is a separate switch
+   this transport cannot reach, and every structural refusal in `arm_live_canary`
+   (fresh tags, a twin at the same instant, a pre-registered risk envelope, a
+   fresh synchronous re-evaluation of the promotion gate) fires unchanged. Clear
+   the variable once the receipt is terminal. Same publicity warning as above.
+
    `metric` computes ONE canonical metric at an explicit scope and prints its
    value with full provenance — the only way to exercise a provider against
    production before any gate depends on it:

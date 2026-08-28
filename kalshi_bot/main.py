@@ -232,6 +232,69 @@ def run() -> int:
                     )},
                 )
 
+    # 2b-v) One Experiment OS LIFECYCLE command
+    # (kalshi_bot/experiment_os/experiment_commands.py). A third transport with a
+    # vocabulary disjoint from both 2b-iii and 2b-iv, because a ticket must not be
+    # able to arm a canary and a platform revision must not be able to freeze a
+    # Version. Two bounded actions that call a REVIEWED package's own functions:
+    # register its successor contract, and arm its live canary through
+    # `service.arm_live_canary`. An envelope names a package; it cannot author
+    # one, so a scientific contract is never written in an environment variable.
+    #
+    # POSITION IS LOAD-BEARING, for the opposite reason to 2b-iv. This runs AFTER
+    # the platform hook, so a lifecycle command always sees the platform state the
+    # same boot may have just cut over to — a successor epoch pins the snapshot
+    # that is actually active rather than the one being replaced. It runs BEFORE
+    # the trading loop so a registered contract governs the first cycle.
+    #
+    # ARM_CANARY expands real-money CAPABILITY. It still places no order: the
+    # runtime allowlist is untouched by this hook, and a book with no tag in
+    # LIVE_STRATEGIES trades nothing. Guarded exactly like 2b-iii and 2b-iv: a
+    # refused or broken command must never stop the worker, and the receipt is how
+    # the operator finds out what happened.
+    if settings.experiment_os_experiment_command:
+        # Imported FIRST and separately, so the error handler below can always
+        # reach its own sanitizer — importing it inside the same `try` that uses
+        # it in `except` turns an ImportError into a NameError and loses the cause.
+        try:
+            from .experiment_os import experiment_commands as _experiment_commands
+        except Exception as exc:  # noqa: BLE001
+            _experiment_commands = None
+            logger.error(
+                "experiment OS experiment command module unavailable; continuing "
+                "to trade",
+                extra={"extra_fields": {"error_class": type(exc).__name__}},
+            )
+        if _experiment_commands is not None:
+            try:
+                with session_scope() as session:
+                    receipt = _experiment_commands.run_boot_command(
+                        session, settings.experiment_os_experiment_command
+                    )
+                # Metadata only. The envelope itself is never logged: it rides a
+                # public branch, and keeping copies out of the log stream is free
+                # hygiene.
+                if receipt is not None:
+                    log_event(
+                        logger,
+                        logging.INFO
+                        if receipt.get("status") == "SUCCEEDED"
+                        else logging.ERROR,
+                        "experiment OS experiment command",
+                        **receipt,
+                    )
+            except Exception as exc:  # noqa: BLE001
+                # NOT str(exc), and no traceback — same reasoning as 2b-iii: the
+                # message can carry the failing statement and its bound parameters,
+                # `payload_json` among them.
+                logger.error(
+                    "experiment OS experiment command hook failed; continuing to "
+                    "trade",
+                    extra={"extra_fields": _experiment_commands.safe_error_fields(
+                        settings.experiment_os_experiment_command, exc
+                    )},
+                )
+
     # 2c) Experiment OS enforcement: record an operator-declared cutover (no-op
     # unless EXPERIMENT_OS_ENFORCEMENT_MODE names a mode we are not already in,
     # and only after readiness passes), then load the recorded mode (OFF when

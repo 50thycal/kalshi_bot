@@ -119,6 +119,33 @@ def cmd_transitions(session: Session, args) -> int:
     return 0
 
 
+def cmd_experiment_command(session: Session, args) -> int:
+    """Receipts for the worker-side experiment-lifecycle transport.
+
+    A READ, and only a read. It reports what a command DID; it cannot execute,
+    retry or clear one. The executor runs on the worker and nowhere else, a
+    terminal receipt is final, and a retry is a NEW `command_id` submitted through
+    the ops branch. Output is metadata — the submitted payload is never printed,
+    because this channel's own results are public.
+    """
+    from . import experiment_commands
+
+    if args.action == "show":
+        row = experiment_commands.receipt(session, args.command_id)
+        if row is None:
+            print(f"no experiment command {args.command_id!r}", file=sys.stderr)
+            return 1
+        print(json.dumps(row, indent=2, default=str))
+        return 0
+    rows = experiment_commands.receipts(session, limit=args.limit)
+    if not rows:
+        print("no experiment-command receipts")
+        print(f"registered packages: {experiment_commands.package_names()}")
+        return 0
+    print(json.dumps(rows, indent=2, default=str))
+    return 0
+
+
 def cmd_platform(session: Session, args) -> int:
     # `platform review <COMPONENT:version|id>` (or just `platform <ref>`) prints
     # the one canonical change-impact review for a revision.
@@ -705,6 +732,13 @@ _ISSUE_READ_ACTIONS: frozenset[str] = frozenset(
      "command-show", "command-list"}
 )
 
+#: The `experiment-command` surface, which is reads and ONLY reads — the
+#: lifecycle executor runs on the worker and nowhere else. Named here, rather
+#: than left implicit in the subparser's `choices`, so the ops channel can assert
+#: its allowlist against the CLI's own classification instead of a frozen list
+#: that would pass the day a write is added under a read-looking name.
+_EXPERIMENT_COMMAND_READ_ACTIONS: frozenset[str] = frozenset({"show", "list"})
+
 
 def build_parser() -> argparse.ArgumentParser:
     """The CLI's argument parser, separate from `main` so the WIRING is testable.
@@ -740,6 +774,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_plat.add_argument("args", nargs="*", metavar="[review] [revision]")
     p_plat.set_defaults(fn=cmd_platform)
+
+    # Receipts for the worker-side experiment-lifecycle transport. READS: they
+    # report what a command did and can neither execute nor retry one. The
+    # transport's only trigger is EXPERIMENT_OS_EXPERIMENT_COMMAND on the worker.
+    p_xcmd = sub.add_parser(
+        "experiment-command",
+        help="experiment-lifecycle command receipts (metadata only)",
+    )
+    p_xcmd.add_argument("action", choices=("show", "list"))
+    p_xcmd.add_argument("command_id", nargs="?", default=None)
+    p_xcmd.add_argument("--limit", type=int, default=20)
+    p_xcmd.set_defaults(fn=cmd_experiment_command)
 
     p_tag = sub.add_parser("tag", help="strategy tag → experiment lineage")
     p_tag.add_argument("tag")

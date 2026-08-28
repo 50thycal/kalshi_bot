@@ -136,6 +136,22 @@ class Settings(BaseSettings):
     # is deliberately absent from redacted_summary().
     experiment_os_platform_command: str = ""
 
+    # One bounded EXPERIMENT LIFECYCLE command, executed once at worker boot
+    # (kalshi_bot/experiment_os/experiment_commands.py). A THIRD transport with a
+    # disjoint vocabulary and its own receipt ledger, because a ticket must not be
+    # able to arm a canary and a platform revision must not be able to freeze a
+    # Version. Registering a successor contract and arming a live canary are
+    # writes, and the ops channel is read-only against Postgres by design — so
+    # this hook is the only production path for them.
+    #
+    # An envelope cannot AUTHOR a contract. It names a reviewed package that
+    # already exists in the repository, so pre-registration still means what it
+    # says. ARM_CANARY expands real-money capability and requires `approved_by`;
+    # it still cannot place an order, because LIVE_STRATEGIES is a separate
+    # switch this transport cannot reach. Same publicity as the two above: THIS
+    # VALUE IS PUBLIC and is deliberately absent from redacted_summary().
+    experiment_os_experiment_command: str = ""
+
     # The operator-declared enforcement cutover (docs/EXPERIMENT_OS_ENFORCEMENT.md).
     # Empty = no-op. Set to OFF/WARN/NEW_ONLY/STRICT to have the worker RECORD that
     # mode once, gated on a readiness report computed at that instant; it is a no-op

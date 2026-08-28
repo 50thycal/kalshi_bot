@@ -13,7 +13,7 @@ where each effort is. Read it first on a continuation.
 | [WS-004](WS-004-live-canary-gate-addressing.md) | Reconciling the recurring blocked-gate anomaly (historical canaries) | DECIDE | Active | Put the reporting-layer options to the operator (explain / accept-condition / live with it) | — |
 | [WS-005](WS-005-freeze-dark-window-universe.md) | A testable universe for the freeze dark-window hypothesis | EXPLORE | Blocked | Commit to a source-based universe search, or abandon explicitly | — |
 | [WS-006](WS-006-evo-search-capability.md) | Evo historical search capability (agents search their own strategy space) | BUILDING | Active | Merge the snapshot-pinned, identity-proving probe (D7 resolved); run the pre-registered D1 weather window twice under separate ops IDs | [#261](https://github.com/50thycal/kalshi_bot/pull/261) → [#262](https://github.com/50thycal/kalshi_bot/pull/262) → [#263](https://github.com/50thycal/kalshi_bot/pull/263) |
-| [WS-007](WS-007-mmsell10-live-canary.md) | mmsell10 Stage-1 live canary + exact paper twin | REVIEW | Active | Operator decisions applied; run `scripts/mmsell10_canary.py register --execute` on a writable connection, then read the promotion gate before arming | [#264](https://github.com/50thycal/kalshi_bot/pull/264) |
+| [WS-007](WS-007-mmsell10-live-canary.md) | mmsell10 Stage-1 live canary + exact paper twin | REVIEW | Active | Lifecycle transport merged (#265); register `mmsell10-canary` through it, then read the promotion gate before arming | [#264](https://github.com/50thycal/kalshi_bot/pull/264) + [#265](https://github.com/50thycal/kalshi_bot/pull/265) |
 
 *Phase:* IDEA · EXPLORE · MODEL · DECIDE · BUILD_CARD · READY_TO_BUILD · BUILDING · REVIEW
 *Status:* Active · Paused · Blocked · Abandoned
