@@ -1,7 +1,0 @@
-# ops request: type='db'
-command_id                      status     error  n
-------------------------------  ---------  -----  -
-pcr-impacts-taxonomy-20260824   SUCCEEDED  -      9
-pcr-register-taxonomy-20260824  SUCCEEDED  -      -
-
-(2 rows)
