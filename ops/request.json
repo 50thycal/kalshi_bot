@@ -1,1 +1,1 @@
-{"type":"xos","command":"readiness","id":"rd-mm10-2"}
+{"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":""},"id":"env-clear-1"}
