@@ -42,7 +42,7 @@ Read-only, self-contained (stdlib + psycopg):
 
     DATABASE_URL_RO=postgresql://... python scripts/mmsell_canary_slices.py
     # or:  {"type": "script", "name": "mmsell_canary_slices"}
-    # args: --live Cmmsell10 --twin Cmmsell10_pt   (defaults to the canary pair)
+    # args: --live Cmmsell10 --twin Cmmsell10_pt3  (defaults to the canary pair)
 """
 
 from __future__ import annotations
@@ -73,7 +73,7 @@ CRYPTO_SERIES: frozenset[str] = frozenset({
 SLICES = ("crypto", "non_crypto", "unclassified")
 
 DEFAULT_LIVE = "Cmmsell10"
-DEFAULT_TWIN = "Cmmsell10_pt"
+DEFAULT_TWIN = "Cmmsell10_pt3"
 
 
 def _to_libpq_url(url: str) -> str:

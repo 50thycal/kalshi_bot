@@ -225,14 +225,49 @@ def test_the_arm_is_carried_across_verbatim(price_ceiling, xos_session):
         or "No crypto exclusion" in (out["version"].universe_selector or "")
 
 
-def test_the_promotion_bar_is_v1s_bar(price_ceiling, xos_session):
-    """The metric and threshold are v1's own pre-registration. Only the evidence
-    floor is added, and adding a floor makes the gate STRICTER — it can never
-    turn a v1 FAIL into a v2 PASS."""
+def test_the_promotion_bar_is_v1s_bar_unfloored(price_ceiling, xos_session):
+    """v1's decision content, carried across verbatim and UNFLOORED (n = 0).
+
+    A 300-trade floor was proposed and declined on 2026-08-28. Registering one
+    would have been this session's pre-registration choice rather than a
+    restatement of the operator's, and v1's registered contract carries no
+    explicit n — the legacy manifest says so and deliberately invented none."""
     s = xos_session
-    _exp, v1, _epoch, g1 = price_ceiling
+    _exp, _v1, _epoch, g1 = price_ceiling
     out = _register(s)
-    assert out["promotion_gate"].spec_json["pass_all"] == g1.spec_json["pass_all"]
+    spec = out["promotion_gate"].spec_json
+    assert spec["pass_all"] == g1.spec_json["pass_all"]
+    assert "sample" not in spec
+
+
+def test_an_unfloored_gate_still_refuses_to_pass_on_no_evidence(
+    price_ceiling, xos_session
+):
+    """The load-bearing property of n = 0: no floor is not the same as no bar.
+
+    With zero settled rows the fill-model projection is MISSING, and missing is
+    BLOCKED_DATA — never a zero that a `> 0` clause could be argued past. So an
+    unfloored gate cannot promote a book that has not traded; what it CAN do is
+    promote one that has traded thinly, which is the risk the operator accepted
+    and which `PROMOTION_GATE_SPEC` says to read coverage against at arming."""
+    s = xos_session
+    out = _register(s)
+    s.commit()
+    outcome = evaluator.evaluate_gate(s, out["promotion_gate"])
+    assert outcome.verdict != "PASS"
+    with pytest.raises(svc.ExperimentOsError, match="not PASS"):
+        pkg.arm(s, approved_by="operator", started_at=ARMED_AT + timedelta(hours=1))
+    s.rollback()
+    assert read.get_experiment(s, pkg.EXPERIMENT_KEY).state == "PAPER"
+
+
+def test_a_floor_can_still_be_registered_if_that_judgement_changes(
+    price_ceiling, xos_session
+):
+    """The floor is a parameter, not a deletion — but adding one later is a new
+    Version, because a registered gate's spec is immutable."""
+    s = xos_session
+    out = _register(s, promotion_sample_floor=300)
     assert out["promotion_gate"].spec_json["sample"]["mmsell10"]["value"] == 300
 
 
@@ -310,15 +345,92 @@ def test_registration_is_refused_twice(price_ceiling, xos_session):
 
 @pytest.fixture
 def armed(price_ceiling, xos_session):
-    """Registered, given enough fresh v2 paper evidence to clear the promotion
-    floor, then armed through the sanctioned path."""
+    """Registered, given fresh v2 paper evidence, then armed through the
+    sanctioned path.
+
+    The rows exist so the fill-model projection RESOLVES, not to clear a floor —
+    the gate has none. Their count is deliberately modest, because that is what
+    an unfloored gate actually looks like at arming time."""
     s = xos_session
     out = _register(s)
-    _paper_trades(s, "mmsell10", 300)
+    _paper_trades(s, "mmsell10", 40)
     s.commit()
     res = pkg.arm(s, approved_by="operator", started_at=ARMED_AT + timedelta(hours=1))
     s.commit()
     return out, res
+
+
+#: `LIVE_PAPER_TWIN_SUFFIX` as production carries it, read 2026-08-28. The twin
+#: tag is DERIVED from it, so this value is part of the canary's contract.
+PRODUCTION_TWIN_SUFFIX = "_pt3"
+
+
+def test_the_twin_tag_matches_what_the_runtime_derives(settings):
+    """The registered twin tag must be the tag the twin book actually trades on.
+
+    They are produced by different mechanisms: Experiment OS records whatever
+    `arm_live_canary` was handed, while the runtime derives
+    `<live_tag><LIVE_PAPER_TWIN_SUFFIX>`. Production carries `_pt3`, so a
+    registered `Cmmsell10_pt` would have meant the twin wrote rows under
+    `Cmmsell10_pt3` — a tag resolving to no active deployment arm, refused at the
+    write path under NEW_ONLY. The canary would have armed with a twin that could
+    not record anything, and the parity comparison it exists for would be empty.
+
+    Pinned here rather than trusted, because the two sides are only equal by
+    agreement and nothing else would notice them diverging."""
+    settings.live_strategies = pkg.LIVE_TAG
+    settings.live_paper_twin_suffix = PRODUCTION_TWIN_SUFFIX
+    settings.live_paper_twins = ""          # derived, not explicitly configured
+    assert settings.live_paper_twin_pairs == [(pkg.LIVE_TAG, pkg.TWIN_TAG)]
+    # ...and the envelope pins the suffix it was derived under, so a change to
+    # that variable shows up as config drift rather than as a silent rename.
+    assert pkg.RISK_ENVELOPE["settings"]["LIVE_PAPER_TWIN_SUFFIX"] == \
+        PRODUCTION_TWIN_SUFFIX
+
+
+def test_the_twin_tag_is_not_allowed_to_place_real_orders(settings):
+    """Belt and braces on a prefix-matched allowlist: `Cmmsell10_pt3` starts with
+    `Cmmsell10`, so an allowlist entry naming the live tag matches it too. The
+    executor rejects every configured twin tag outright rather than relying on
+    the prefix."""
+    from kalshi_bot.live.executor import LiveExecutor
+
+    settings.live_strategies = pkg.LIVE_TAG
+    settings.live_paper_twin_suffix = PRODUCTION_TWIN_SUFFIX
+    ex = LiveExecutor(client=None, settings=settings, risk=None)
+    assert ex._allowed(pkg.LIVE_TAG) is True
+    assert ex._allowed(pkg.TWIN_TAG) is False
+
+
+def test_the_live_clip_is_a_book_param_not_a_process_wide_setting(settings):
+    """`size=1` caps this book's live clip, and because it lives in
+    `mmsell_variants` it is inside the config-drift material — so raising the
+    clip later is DETECTED. `MAX_ORDER_SIZE` would not be: the drift detector
+    does not watch it, and it would cap every book sharing the process."""
+    assert "size=1" in pkg.BOOK_PARAMS
+    assert "MAX_ORDER_SIZE" not in pkg.RISK_ENVELOPE["settings"]
+    assert "MAX_ORDER_SIZE" in pkg.RISK_ENVELOPE["left_alone"]
+
+    settings.mmsell_variants = f"{pkg.LIVE_TAG}:{pkg.BOOK_PARAMS}"
+    book = {b["tag"]: b for b in settings.mmsell_variant_list}[pkg.LIVE_TAG]
+    assert book["size"] == 1
+    assert (book["lo"], book["hi"], book["maxyes"]) == (5.0, 10.0, 7.0)
+
+
+def test_the_envelope_does_not_reach_outside_this_book(settings):
+    """Two settings were removed after reading production, both because their
+    blast radius is wider than this canary.
+
+    `LIVE_EXIT_MODE` is `tp_sl` in production and is correct for the YES/weather
+    books; mmsell holds to settlement structurally, so forcing `settlement` would
+    change another family's exits and buy this canary nothing.
+    `MAX_TOTAL_EXPOSURE` is portfolio-wide and is left where production has it."""
+    for key in ("LIVE_EXIT_MODE", "MAX_TOTAL_EXPOSURE"):
+        assert key not in pkg.RISK_ENVELOPE["settings"]
+        assert key in pkg.RISK_ENVELOPE["left_alone"]
+    assert "max_total_live_exposure_usd" not in pkg.RISK_ENVELOPE
+    # The canary's own exposure ceiling is its book cap, and it is stated.
+    assert pkg.RISK_ENVELOPE["max_book_exposure_usd"] == 19.80
 
 
 def test_arming_produces_one_boundary_and_a_first_class_twin_link(armed, xos_session):
@@ -356,7 +468,7 @@ def test_arming_refuses_a_tag_that_carries_inherited_paper_state(
     live on a tag holding 87 open paper positions and never placed one order."""
     s = xos_session
     _register(s)
-    _paper_trades(s, "mmsell10", 300)
+    _paper_trades(s, "mmsell10", 40)
     s.add(PaperTrade(market_ticker="OLD", strategy=pkg.LIVE_TAG, status="open",
                      created_at=ARMED_AT))
     s.commit()
@@ -366,13 +478,19 @@ def test_arming_refuses_a_tag_that_carries_inherited_paper_state(
 
 
 def test_arming_is_atomic_when_the_gate_does_not_pass(price_ceiling, xos_session):
-    """Under-evidenced is HOLD, and HOLD does not promote. Nothing is left
-    half-armed: no live deployment, no state change."""
+    """A book whose projection has gone negative does not promote, and nothing is
+    left half-armed: no live deployment, no state change, no transition.
+
+    The entry price is what moves this metric, not the observed P&L: the
+    projection is a property of the book's price MIX read through the live
+    calibration. Entries at a 91c NO (a 9c yes-equivalent) sit in a trusted cell
+    the live decomposition measured at -5.79c/trade — the "8-11c is net negative"
+    finding the whole `maxyes=7` ceiling exists to avoid."""
     s = xos_session
     _register(s)
-    _paper_trades(s, "mmsell10", 10)         # far below the 300 floor
+    _paper_trades(s, "mmsell10", 60, price=91, pnl=0.05)
     s.commit()
-    with pytest.raises(svc.ExperimentOsError, match="not\n?\\s*PASS|HOLD"):
+    with pytest.raises(svc.ExperimentOsError, match="not PASS"):
         pkg.arm(s, approved_by="operator", started_at=ARMED_AT + timedelta(hours=1))
     s.rollback()
     assert read.get_experiment(s, pkg.EXPERIMENT_KEY).state == "PAPER"
@@ -536,9 +654,8 @@ def test_a_parameter_change_on_the_live_book_is_detected(armed, xos_session, set
     canary cannot quietly keep accumulating evidence against its own contract."""
     s = xos_session
     out, res = armed
-    settings.bot_mode = "live"
-    settings.live_strategies = pkg.LIVE_TAG
-    settings.mmsell_variants = f"{pkg.LIVE_TAG}:lo=5,hi=10,maxyes=9"   # 7 -> 9
+    _armed_runtime(settings)
+    settings.mmsell_variants = f"{pkg.LIVE_TAG}:lo=5,hi=10,maxyes=9,size=1"  # 7 -> 9
     findings = enf.runtime_config_check(s, settings)
     s.commit()
 
@@ -550,14 +667,49 @@ def test_a_parameter_change_on_the_live_book_is_detected(armed, xos_session, set
     assert evaluator.evaluate_gate(s, out["keep_gate"]).verdict == "BLOCKED_INTEGRITY"
 
 
+def _armed_runtime(settings):
+    """The runtime configuration this canary is registered against."""
+    settings.bot_mode = "live"
+    settings.live_strategies = pkg.LIVE_TAG
+    settings.live_paper_twin_suffix = PRODUCTION_TWIN_SUFFIX
+    settings.mmsell_variants = f"{pkg.LIVE_TAG}:{pkg.BOOK_PARAMS}"
+    return settings
+
+
 def test_the_matching_configuration_produces_no_drift(armed, xos_session, settings):
     """The other half — a detector that always fires is not a detector."""
     s = xos_session
     _out, _res = armed
-    settings.bot_mode = "live"
-    settings.live_strategies = pkg.LIVE_TAG
-    settings.mmsell_variants = f"{pkg.LIVE_TAG}:{pkg.BOOK_PARAMS}"
-    assert enf.runtime_config_check(s, settings) == []
+    assert enf.runtime_config_check(s, _armed_runtime(settings)) == []
+
+
+def test_a_changed_twin_suffix_is_detected_as_drift(armed, xos_session, settings):
+    """The suffix is not cosmetic: it DERIVES the twin's tag, so changing it
+    silently re-points the twin at a tag with no registered deployment arm. The
+    material records the pairing rather than the suffix, which is why moving the
+    suffix shows up here at all."""
+    s = xos_session
+    out, _res = armed
+    _armed_runtime(settings)
+    settings.live_paper_twin_suffix = "_pt4"
+    findings = enf.runtime_config_check(s, settings)
+    s.commit()
+    assert any(f["deployment"] == pkg.LIVE_DEPLOYMENT_KEY for f in findings), findings
+    assert evaluator.evaluate_gate(s, out["keep_gate"]).verdict == "BLOCKED_INTEGRITY"
+
+
+def test_a_raised_live_clip_is_detected_as_drift(armed, xos_session, settings):
+    """The reason the clip is a book param. `size=1` rides in `mmsell_variants`,
+    so raising it lands in `book_params` and the gate stops rendering verdicts —
+    where `MAX_ORDER_SIZE` would have been changed with nothing noticing."""
+    s = xos_session
+    out, _res = armed
+    _armed_runtime(settings)
+    settings.mmsell_variants = f"{pkg.LIVE_TAG}:lo=5,hi=10,maxyes=7,size=5"
+    findings = enf.runtime_config_check(s, settings)
+    s.commit()
+    assert any(f["deployment"] == pkg.LIVE_DEPLOYMENT_KEY for f in findings), findings
+    assert evaluator.evaluate_gate(s, out["keep_gate"]).verdict == "BLOCKED_INTEGRITY"
 
 
 def test_the_twin_cannot_drift_independently_of_its_live_parent(armed, xos_session,
@@ -572,11 +724,10 @@ def test_the_twin_cannot_drift_independently_of_its_live_parent(armed, xos_sessi
     assert set(material["book_params"]) == {pkg.LIVE_TAG, pkg.TWIN_TAG}
     assert material["twin_pairs"] == {pkg.LIVE_TAG: pkg.TWIN_TAG}
 
-    settings.bot_mode = "live"
-    settings.live_strategies = pkg.LIVE_TAG
+    _armed_runtime(settings)
     # A spec appearing for the twin tag is itself the drift.
     settings.mmsell_variants = (f"{pkg.LIVE_TAG}:{pkg.BOOK_PARAMS};"
-                                f"{pkg.TWIN_TAG}:lo=5,hi=10,maxyes=7")
+                                f"{pkg.TWIN_TAG}:{pkg.BOOK_PARAMS}")
     findings = enf.runtime_config_check(s, settings)
     assert findings, "an independently-specified twin must not pass unnoticed"
 
@@ -594,9 +745,8 @@ def test_emptying_the_allowlist_stands_down_without_looking_like_drift(
     evidence gathered before the pause is unaffected."""
     s = xos_session
     out, res = armed
-    settings.bot_mode = "live"
+    _armed_runtime(settings)
     settings.live_strategies = ""
-    settings.mmsell_variants = f"{pkg.LIVE_TAG}:{pkg.BOOK_PARAMS}"
     enf.runtime_config_check(s, settings)
     s.commit()
 
@@ -671,7 +821,7 @@ def test_enforcement_state_is_unchanged_by_this_package(price_ceiling, xos_sessi
     before = s.scalar(select(ExperimentOsEnforcement.id)
                       .order_by(ExperimentOsEnforcement.id.desc()).limit(1))
     _register(s)
-    _paper_trades(s, "mmsell10", 300)
+    _paper_trades(s, "mmsell10", 40)
     s.commit()
     pkg.arm(s, approved_by="operator", started_at=ARMED_AT + timedelta(hours=1))
     s.commit()

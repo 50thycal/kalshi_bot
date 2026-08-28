@@ -1,7 +1,7 @@
 # WS-007 — A fresh mmsell10 live canary with an exact paper twin
 
 **Phase:** REVIEW
-**Status:** Blocked
+**Status:** Active
 **Created:** 2026-08-28
 **Updated:** 2026-08-28
 
@@ -27,8 +27,9 @@ rather than asserted:
 
 A changed arm set is a new Version by the system's own rule, and a risk envelope can only be
 pre-registered on one. So the successor Version is not a workaround — it is what registering
-this canary means here. Its cost is real and is the blocking decision below: evidence windows
-floor at the epoch start, so v2's promotion gate restarts at n=0.
+this canary means here. Its cost is real: evidence windows floor at the epoch start, so v2's
+evidence restarts at zero and the recorded PASS cannot be inherited. The operator accepted
+that on 2026-08-28 and chose to register v1's bar with no floor.
 
 Separately, this workstream builds the measurement contract the canary is judged on. Five
 keep/stop quantities the brief requires had no canonical provider (fill rate, open exposure,
@@ -52,14 +53,14 @@ is the only unit a loss *budget* can be denominated in.
     v2 [FROZEN at T]  arms {mmsell10}     risk_json: Stage-1 envelope
       e1  snapshot 4f9adf15daa64035 (the ACTIVE one)
         mmsell-ceiling-paper-2      -> mmsell10             (evidence restarts here)
-        paper_to_live_canary  (v1's bar + a sample floor)
+        paper_to_live_canary  (v1's bar VERBATIM — no evidence floor)
         live_canary_keep      (pre-registered, every clause kind='live')
 
   ── then, on a separate approval ────────────────────────────────────────
 
       e2 [I2]  arm_live_canary at ONE instant:
         mmsell-ceiling-live-1  kind=live        -> Cmmsell10
-        mmsell-ceiling-twin-1  kind=paper_twin  -> Cmmsell10_pt   twin_of -> live
+        mmsell-ceiling-twin-1  kind=paper_twin  -> Cmmsell10_pt3  twin_of -> live
 
   ── and only then, separately again ─────────────────────────────────────
 
@@ -88,36 +89,50 @@ the epoch, ended or not; only the enforcement resolver reads `ended_at`.
   cumulative tail cost is bounded by the loss budget. No tail-count threshold is registered,
   because there is no evidence from which to choose one.
 
+## Decisions Taken (operator, 2026-08-28)
+
+All six are answered; nothing on this workstream is blocked on the owner any more.
+
+- **D1. Successor Version — ACCEPTED**, and with it the evidence restart.
+- **D2. Promotion sample floor = 0.** v1's literal contract; the proposed 300 was declined.
+  The gate can therefore clear on a thin fresh sample — read `fill_model_coverage_pct` and
+  the sample behind the projection at arming time, because the gate will not.
+- **D3. Win-rate stand-down 5.0pp** (the registered 1.0pp stays a promotion bar).
+- **D4. Decision-overlap hold 50%, fill-rate hold 25%.**
+- **D5. Loss budget $15, daily stop $5.** Exposure limits apply to the positions this canary
+  opens; existing holdings are ignored, so `MAX_TOTAL_EXPOSURE` is left where production has
+  it (100) rather than tightened around ~$17 of legacy stood-down holdings.
+- **D6. `mmsell-type-tight`'s control reference** moves to v2/e1 as declared. Accepted.
+- **Naming latitude granted** — used, twice (below).
+
 ## Open Decisions
 
-- **D1. Accept the successor Version, and with it the n=0 restart?** v2's promotion gate
-  cannot inherit the 2026-08-23 PASS. At mmsell10's observed rate (~144 settled/day) a
-  300-trade floor is roughly two days. The alternatives are: arm both arms on v1 (puts the
-  negative-paper arm on real money — not recommended), or do not arm at all.
-  **Recommendation: accept.**
-- **D2. Promotion sample floor.** Proposed **300** settled trades. v1 registered no explicit
-  n and its PASS rested on n=1316. Alternatives: 0 (v1's literal contract, but then v2 could
-  pass on a handful of trades) or 1316 (reproduce v1's evidence base, ~9 days).
-- **D3. Win-rate stand-down at 5.0pp.** The registered 1.0pp is a *promotion* bar and is used
-  as one; no precedent exists for a stand-down trigger.
-- **D4. Decision-overlap hold at 50% and fill-rate hold at 25%.** No precedent. Lmmsell10
-  observed a 61.2% fill rate.
-- **D5. The dollar caps** — $15 total budget, $5 daily stop, $40 portfolio exposure. The last
-  is portfolio-wide and shared with ~$17 of held positions on the two stood-down canaries.
-- **D6. mmsell-type-tight's control.** Its `paper_keep` gate names
-  `mmsell-price-ceiling/v1/e1/mmsell10` as an external control and resolves it through
-  *latest version*. Registering v2 moves that reference to v2/e1, changing its block from
-  BLOCKED_PLATFORM to BLOCKED_DATA until v2 accumulates evidence. Declared, not hidden;
-  it authorizes nothing either way.
+None. Two findings surfaced while applying the decisions and were fixed under the naming and
+scoping latitude rather than referred back:
+
+- **The twin tag was wrong.** Production carries `LIVE_PAPER_TWIN_SUFFIX=_pt3`, and the
+  runtime DERIVES the twin tag from it. The registered `Cmmsell10_pt` would have meant the
+  twin wrote rows under `Cmmsell10_pt3` — a tag with no active deployment arm, refused at the
+  write path under `NEW_ONLY`. The canary would have armed with a twin that could record
+  nothing. Renamed to `Cmmsell10_pt3`, suffix pinned in the envelope, derivation pinned by
+  test, and a changed suffix is now detected as drift.
+- **The clip was a process-wide setting.** `MAX_ORDER_SIZE` is not watched by the
+  config-drift detector and would have capped every book sharing the process. Moved to the
+  book's own `size=1` inside `mmsell_variants`, where it rides in the drift-checked
+  `book_params` — so raising the clip later is detected. `LIVE_EXIT_MODE` was dropped for the
+  same class of reason: production carries `tp_sl` for the YES/weather books, and mmsell holds
+  to settlement structurally.
 
 ## Assumptions
 
 - The applied I0/NO_ACTION disposition for `mmsell-price-ceiling` on
   `MARKET_TAXONOMY:settlement_repair_2026_08_24` still stands at arming time, so the
   synchronous re-evaluation is not refused for snapshot staleness.
-- mmsell10's paper book keeps trading at roughly its observed rate, so the v2 floor is a
-  matter of days.
-- Legacy held exposure on the stood-down canaries continues to drain.
+- Production still carries `LIVE_PAPER_TWIN_SUFFIX=_pt3` and `MAX_TOTAL_EXPOSURE=100` when
+  the canary is armed (both read 2026-08-28). A changed suffix is drift-detected; a changed
+  exposure cap is not, and would only ever refuse new entries.
+- `LIVE_STRATEGIES` names this canary alone while it runs, so the envelope's process-wide
+  settings have no other consumer.
 
 ## Non-Goals
 
@@ -145,8 +160,10 @@ read-only).
 
 ## Review State
 
-Awaiting operator review. Nothing is registered and nothing is armed; the runtime live
-allowlist is empty and the ops channel is `noop`.
+Operator decisions applied 2026-08-28. Nothing is registered and nothing is armed; the
+runtime live allowlist is empty and the ops channel is `noop`. Registration and arming are
+operator runs on a writable connection — this session has only the read-only ops channel and
+cannot perform either.
 
 ## Related Decisions
 
@@ -159,4 +176,5 @@ This PR.
 
 ## Next Step
 
-Operator answers D1–D5; on D1 accept, run `scripts/mmsell10_canary.py register --execute`.
+Run `scripts/mmsell10_canary.py register --execute` on a writable connection, then read the
+promotion gate before arming.

@@ -329,6 +329,18 @@ it. The code is additive and default-inert, so not *registering* one costs nothi
 would be evidence that arms are being over-declared at freeze time — the fix would be
 declaring fewer arms per Version, not making the arm set mutable.
 
+**Addendum (2026-08-28, operator decisions applied).** The successor was accepted, and its
+promotion gate registered with **no evidence floor** — v1's literal contract, which records
+no explicit `n`. Two consequences worth carrying forward, because both are general:
+
+* A canary's registered tags must equal what the RUNTIME derives, not what reads well. The
+  twin tag is built as `<live_tag><LIVE_PAPER_TWIN_SUFFIX>`, so registering a tag the runtime
+  would never produce yields a twin whose rows resolve to no deployment arm and are refused
+  at the write path — a canary armed with a silent twin. Derivation is now pinned by test.
+* Prefer a per-book knob over a process-wide setting when both can express a cap. The
+  config-drift detector watches the book spec (`book_params`) and does not watch process-wide
+  settings, so the same limit is *auditable* in one place and invisible in the other.
+
 ---
 
 <!-- Copy the block above for each new decision. IDs are stable: never reused, never

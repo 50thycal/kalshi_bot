@@ -31,11 +31,14 @@ is not a workaround: it is what "register this canary" means here.
 WHAT v2 COSTS, STATED PLAINLY
 -----------------------------
 Evidence windows floor at `max(epoch start, gate evidence start)`. v2/e1 opens
-now, so **v2's promotion gate starts at n=0** and the 2026-08-23 PASS on v1/e1
-cannot be inherited. At mmsell10's observed paper rate (1,588 settled trades
-since 2026-08-16, ~144/day) the fresh sample rebuilds in days, not weeks — but it
-is a wait, and it is the honest price of a contract that can carry a risk
+now, so **v2's evidence starts at zero** and the 2026-08-23 PASS on v1/e1 cannot
+be inherited. That is the honest price of a contract that can carry a risk
 envelope and a single arm.
+
+The operator's decision of 2026-08-28 is to register v1's bar with **no evidence
+floor** (n = 0), so the promotion gate can clear on a thin fresh sample rather
+than waiting out a rebuilt one. `PROMOTION_GATE_SPEC` states what that means and
+what to read at arming time before approving the arm.
 
 WHAT IS **NOT** CHANGING
 ------------------------
@@ -73,7 +76,15 @@ PAPER_TAG = "mmsell10"
 #:     orders by `LiveExecutor._allowed`, which rejects every configured twin tag
 #:     outright rather than relying on the prefix match.
 LIVE_TAG = "Cmmsell10"
-TWIN_TAG = "Cmmsell10_pt"
+#: NOT `_pt`. The twin tag is DERIVED at runtime as `<live_tag><suffix>` from
+#: `LIVE_PAPER_TWIN_SUFFIX`, which production carries as `_pt3` (the generation
+#: cut at the 2026-08-11 fee re-baseline). Registering `Cmmsell10_pt` would have
+#: put a tag in Experiment OS that the twin book never trades under: the twin's
+#: paper rows would carry `Cmmsell10_pt3`, which resolves to no active deployment
+#: arm, and under NEW_ONLY the write path refuses an unregistered tag — a canary
+#: armed with a twin that cannot record anything. Read off production
+#: 2026-08-28; `test_the_twin_tag_matches_what_the_runtime_derives` pins it.
+TWIN_TAG = "Cmmsell10_pt3"
 
 LIVE_DEPLOYMENT_KEY = "mmsell-ceiling-live-1"
 TWIN_DEPLOYMENT_KEY = "mmsell-ceiling-twin-1"
@@ -83,7 +94,12 @@ V2_PAPER_DEPLOYMENT_KEY = "mmsell-ceiling-paper-2"
 V1_MMSELL9_DEPLOYMENT_KEY = "mmsell-ceiling-paper-mmsell9-1"
 LEGACY_PAPER_DEPLOYMENT_KEY = "mmsell-ceiling-paper-legacy-1"
 
-BOOK_PARAMS = "lo=5,hi=10,maxyes=7"
+#: The book's runtime spec. `size=1` is the per-book live contract cap and is
+#: deliberately here rather than in `MAX_ORDER_SIZE`: a book param is covered by
+#: the config-drift material (`book_params`), so a later change to the clip is
+#: DETECTED, while the process-wide setting is not watched by the detector at all.
+#: It also scopes the cap to this book instead of every book sharing the process.
+BOOK_PARAMS = "lo=5,hi=10,maxyes=7,size=1"
 
 PROMOTION_GATE_KEY = "paper_to_live_canary"
 KEEP_GATE_KEY = "live_canary_keep"
@@ -112,19 +128,17 @@ RISK_ENVELOPE: dict = {
     "max_event_exposure_usd": 3.00,
     "max_open_positions": 20,
     "max_book_exposure_usd": 19.80,
-    "max_total_live_exposure_usd": 40.00,
     "max_events_per_settlement_date": 5,
     "settlement_date_concentration_pct": 25,
     "daily_realized_loss_stop_usd": 5.00,
     "total_canary_loss_budget_usd": 15.00,
     "order_timeout_seconds": 14_400,
     "entry_price_offset_cents": 0,
-    "exit_policy": "hold to settlement; no TP/SL (docs/MMSELL_EXIT_STUDY.md)",
+    "exit_policy": "hold to settlement; no TP/SL — structural for mmsell, not a "
+                   "setting (docs/MMSELL_EXIT_STUDY.md)",
     "settings": {
-        "MAX_ORDER_SIZE": "1",
         "LIVE_MAX_ORDER_DOLLARS": "1.0",
         "MAX_MARKET_EXPOSURE": "1.0",
-        "MAX_TOTAL_EXPOSURE": "40.0",
         "MAX_DAILY_LOSS": "5.0",
         "LIVE_KILL_ON_DAILY_LOSS": "true",
         "MMSELL_LIVE_MAX_OPEN_POSITIONS": "20",
@@ -135,17 +149,36 @@ RISK_ENVELOPE: dict = {
         "MMSELL_SETTLEMENT_CAP_PCT": "0.25",
         "MMSELL_SETTLEMENT_EVENT_CAP": "5",
         "LIVE_ORDER_TIMEOUT_SECONDS": "14400",
-        "LIVE_EXIT_MODE": "settlement",
+        "LIVE_PAPER_TWIN_SUFFIX": "_pt3",
         "MMSELL_PREFILTER_ENABLED": "false",
     },
+    #: Settings this envelope deliberately does NOT touch, and why. Each was in an
+    #: earlier draft and was removed after reading production on 2026-08-28.
+    "left_alone": {
+        "MAX_TOTAL_EXPOSURE": "portfolio-wide; see portfolio_breaker below. "
+                              "Production carries 100, so the canary's own ~$19.80 "
+                              "ceiling binds first with ample headroom over the "
+                              "~$17 of legacy stood-down holdings.",
+        "MAX_ORDER_SIZE": "process-wide, and NOT watched by the config-drift "
+                          "detector. The clip is set per book as `size=1` in "
+                          "BOOK_PARAMS instead, where a later change is detected.",
+        "LIVE_EXIT_MODE": "production carries tp_sl, which is correct for the "
+                          "YES/weather books and is what their held positions "
+                          "exit under. mmsell holds to settlement structurally — "
+                          "the TP/SL knobs are documented as YES-side only — so "
+                          "forcing it to `settlement` would change another "
+                          "family's exits and buy this canary nothing.",
+    },
     "enforced_by": {
-        "contracts_per_order": "live/sizing.order_quantity via MAX_ORDER_SIZE + "
-                               "LIVE_MAX_ORDER_DOLLARS",
+        "contracts_per_order": "the book's own `size=1` (drift-checked) through "
+                               "live/sizing.order_quantity, under the "
+                               "LIVE_MAX_ORDER_DOLLARS belt",
         "max_market_exposure_usd": "LiveExecutor._market_exposure (gate:exposure)",
         "max_event_rungs": "MmSellTracker event-rung cap (skip_event_rung_cap)",
         "max_open_positions": "repo.count_live_book_open (gate:open_cap)",
-        "max_total_live_exposure_usd": "LiveExecutor._total_exposure_hit "
-                                       "(gate:total_exposure) — PORTFOLIO-wide",
+        "max_book_exposure_usd": "the open-position cap times one clip — this "
+                                 "book's own ceiling, and the only exposure "
+                                 "limit this envelope sets",
         "max_events_per_settlement_date": "MmSellTracker settlement caps "
                                           "(skip_event_cap / skip_settlement_cap)",
         "daily_realized_loss_stop_usd": "LiveExecutor._daily_loss_hit "
@@ -165,12 +198,20 @@ RISK_ENVELOPE: dict = {
         "are derived from LIVE_STRATEGIES — which preserves the one-to-one "
         "property the comparison depends on."
     ),
-    "notes": (
-        "max_total_live_exposure_usd is PORTFOLIO-wide and is shared with the "
-        "held positions of the two stood-down canaries (~$17 at 2026-08-27, "
-        "draining as they settle). Re-read live_total_exposure immediately "
-        "before arming: if legacy holdings exceed $20 the canary would be gated "
-        "out by gate:total_exposure on its first cycle."
+    "portfolio_breaker": (
+        "MAX_TOTAL_EXPOSURE is deliberately NOT part of this envelope, by "
+        "operator decision 2026-08-28: the canary limits the positions it opens, "
+        "not the money other books already hold. It is left at whatever value "
+        "production carries and is neither tightened nor loosened here — "
+        "tightening it around ~$17 of legacy stood-down holdings would size a "
+        "SHARED breaker to one book's needs, and loosening it would weaken a "
+        "live safeguard to make this canary easier to arm.\n\n"
+        "It still applies as a shared backstop: LiveExecutor._total_exposure_hit "
+        "is portfolio-wide, so if total open exposure ever reaches the cap this "
+        "canary is refused NEW entries (gate:total_exposure) alongside every "
+        "other book. That is a fail-safe, not a defect — it blocks entries only, "
+        "and exits, closeouts and reconciliation always run. The canary's own "
+        "ceiling is max_book_exposure_usd, which binds first at these caps."
     ),
 }
 
@@ -179,25 +220,32 @@ RISK_ENVELOPE: dict = {
 # Gates
 # ---------------------------------------------------------------------------
 
-#: v1's promotion gate, carried across UNCHANGED apart from an evidence floor.
-#: The bar (`realizable_cents_per_trade > 0`) and the metric are v1's own
-#: pre-registration, restated rather than re-derived. `arm: "*"` resolves to the
+#: v1's promotion gate, carried across VERBATIM — same metric, same bar, and (by
+#: operator decision 2026-08-28) **no evidence floor**. `arm: "*"` resolves to the
 #: single declared arm on v2.
 #:
-#: The `sample` floor is the one addition, and it is a genuine operator choice
-#: rather than a restatement: v1 recorded no explicit n (the legacy manifest says
-#: so, and deliberately invented none), and v1's PASS in fact rested on n=1316
-#: settled trades. Registering no floor at all would let v2 PASS on a handful of
-#: fresh trades, which is strictly weaker than the evidence the operator actually
-#: relied on. 300 is proposed as a BLOCKING DECISION in the PR — roughly two days
-#: at mmsell10's observed rate, well-powered without waiting out the full 1,316.
+#: A 300-trade floor was proposed and DECLINED in favour of n = 0, which is v1's
+#: literal registered contract: the legacy manifest records no explicit n and
+#: deliberately invented none. Registering a floor now would have been a new
+#: pre-registration choice made by this session rather than a restatement of the
+#: operator's, and the operator chose the restatement.
+#:
+#: The consequence, stated plainly because it is the whole risk of n = 0: v2/e1's
+#: evidence starts at zero and this gate can PASS on a thin fresh sample. It is
+#: not literally satisfiable on one trade — `realizable_cents_per_trade` is
+#: MISSING until a trusted fill-calibration cell covers the book's price mix, and
+#: MISSING is BLOCKED_DATA rather than a pass — but it can clear in hours rather
+#: than days. Read the arming-time value against `fill_model_coverage_pct` and
+#: the sample it rests on before approving the arm; the gate will not do that for
+#: you. `register_successor_version(promotion_sample_floor=N)` adds a floor if
+#: that judgement later changes, and doing so is a new Version, not an edit.
 PROMOTION_GATE_SPEC: dict = {
     "description": (
-        "v1's registered bar, unchanged: the calibrated live-fill projection must "
-        "be positive. This is NOT a claim that observed paper P&L is positive — "
-        "on v1 it was +0.232c/trade against a +1.286c/trade projection."
+        "v1's registered bar, unchanged and unfloored: the calibrated live-fill "
+        "projection must be positive. This is NOT a claim that observed paper "
+        "P&L is positive — on v1 it was +0.232c/trade against a +1.286c/trade "
+        "projection."
     ),
-    "sample": {ARM_KEY: {"metric": "settled_trades", "op": ">=", "value": 300}},
     "pass_all": [
         {"metric": "realizable_cents_per_trade", "arm": "*", "op": ">", "value": 0},
     ],
@@ -342,24 +390,36 @@ KEEP_GATE_SPEC: dict = {
     ],
 }
 
-#: Thresholds with no repository precedent, surfaced so the PR can name them as
-#: blocking operator decisions instead of burying them in a spec.
+#: The thresholds that had no repository precedent, and what the operator decided
+#: on 2026-08-28. Recorded here rather than only in a PR body because the reason a
+#: number is what it is outlives the pull request, and because a reader is owed the
+#: difference between "this is the registered precedent" and "a person chose this
+#: once, on this date, with nothing to appeal to".
 OPERATOR_DECISIONS: dict[str, str] = {
-    "promotion sample floor (300 settled trades)":
-        "v1 registered no explicit n; its PASS rested on n=1316. 0 (v1's literal "
-        "contract) and 1316 (reproduce v1's evidence base) are the alternatives.",
-    "win-rate stand-down (5.0pp)":
-        "The registered 1.0pp is a promotion bar and is used as one above. No "
-        "precedent exists for a stand-down trigger.",
-    "decision-overlap hold (50%)":
-        "No precedent. Lmmsell10's fill rate was 61.2%; overlap was not recorded "
-        "as a separate figure.",
-    "fill-rate hold (25%)":
-        "No precedent as a threshold. Lmmsell10 observed 61.2%.",
-    "total canary loss budget ($15) and daily stop ($5)":
-        "Chosen from the envelope, not from evidence: 15 clips of ~$1.",
-    "MAX_TOTAL_EXPOSURE ($40)":
-        "Portfolio-wide and shared with ~$17 of stood-down legacy holdings.",
+    "successor Version (accepted)":
+        "v2 is registered and the v1/e1 PASS is not inherited. The alternative — "
+        "arming both arms on v1 — would have put the negative-paper arm on real "
+        "money to satisfy a structural check.",
+    "promotion sample floor = 0 (no floor)":
+        "v1's literal contract. A 300-trade floor was proposed and declined. See "
+        "PROMOTION_GATE_SPEC for what n = 0 means at arming time.",
+    "win-rate stand-down 5.0pp":
+        "No precedent existed for a stand-down trigger; the registered 1.0pp is a "
+        "promotion bar and is used as one.",
+    "decision-overlap hold 50%, fill-rate hold 25%":
+        "No precedent. Lmmsell10 observed a 61.2% fill rate; overlap was never "
+        "recorded separately.",
+    "total canary loss budget $15, daily stop $5":
+        "Chosen from the envelope rather than from evidence: 15 clips of ~$1.",
+    "portfolio exposure: not set by this envelope":
+        "The canary limits the positions it opens, not money other books already "
+        "hold. MAX_TOTAL_EXPOSURE is left at its production value — see "
+        "RISK_ENVELOPE['portfolio_breaker'].",
+    "naming latitude":
+        "The operator granted latitude to rename as needed. The tags and keys "
+        "above are unchanged because none collides; if `register` ever refuses a "
+        "deployment key or tag as taken, bump the trailing generation number "
+        "(`-2`, `_pt2`) rather than reusing a historical name.",
 }
 
 

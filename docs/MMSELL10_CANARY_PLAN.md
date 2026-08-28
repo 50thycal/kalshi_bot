@@ -30,10 +30,17 @@ A changed arm set is a new Version by the system's own rule (`add_arm` says so o
 version), and an envelope can only be pre-registered on one.
 
 **What that costs.** Evidence windows floor at `max(epoch start, gate evidence start)`, so
-v2's promotion gate starts at n=0 and the recorded PASS on v1/e1 cannot be inherited. At
-mmsell10's observed paper rate the fresh sample rebuilds in days. That wait is the price of a
-contract that can carry an envelope and a single arm; there is no shape that keeps both the
-old PASS and a one-arm canary.
+v2's evidence starts at zero and the recorded PASS on v1/e1 cannot be inherited. There is no
+shape that keeps both the old PASS and a one-arm canary.
+
+The operator's decision of 2026-08-28 is to register v1's bar with **no evidence floor**
+(n = 0) — v1's literal contract, which records no explicit `n`. A 300-trade floor was
+proposed and declined. What n = 0 means in practice: the gate can clear on a thin fresh
+sample rather than a rebuilt one. It is not satisfiable on nothing —
+`realizable_cents_per_trade` is MISSING until a trusted fill-calibration cell covers the
+book's price mix, and MISSING is `BLOCKED_DATA`, not a pass — but **read the arming-time
+value against `fill_model_coverage_pct` and the sample behind it before approving the arm.
+The gate will not do that for you.**
 
 ## 2. What is carried across unchanged
 
@@ -53,24 +60,40 @@ buys NO at `100 − yes_ask` and `maxyes=7` caps the yes side at 7c, so one cont
 
 | limit | value | enforced by |
 |---|---|---|
-| contracts per order | 1 | `order_quantity` via `MAX_ORDER_SIZE` + `LIVE_MAX_ORDER_DOLLARS` |
+| contracts per order | 1 | the book's own `size=1` (in `mmsell_variants`, so drift-checked) through `order_quantity`, under the `LIVE_MAX_ORDER_DOLLARS` belt |
 | exposure per market | $1.00 | `LiveExecutor._market_exposure` → `gate:exposure` |
 | correlated rungs per event | 3 | mmsell event-rung cap → `skip_event_rung_cap` |
 | exposure per event | $3.00 | the rung cap × the clip |
 | open positions | 20 | `repo.count_live_book_open` → `gate:open_cap` |
 | book exposure (implied) | ~$19.80 | 20 × one clip |
-| **total live exposure** | **$40.00** | `LiveExecutor._total_exposure_hit` → `gate:total_exposure` — **portfolio-wide** |
 | events per correlated settlement date | 5 | `skip_event_cap` |
 | positions per settlement date | 25% of the book cap | `skip_settlement_cap` |
 | daily realized-loss stop | $5.00 | `LiveExecutor._daily_loss_hit` → `gate:daily_loss` |
 | **total canary loss budget** | **$15.00** | *not* a runtime breaker — the keep gate's `live_realized_pnl_usd` clause, actioned by an operator stand-down |
 | order timeout | 4h, then cancel | `LIVE_ORDER_TIMEOUT_SECONDS` |
 | entry price | no-bid + 0c (join the queue) | `MMSELL_LIVE_PRICE_OFFSET_CENTS` |
-| exit | hold to settlement | `LIVE_EXIT_MODE=settlement` |
+| exit | hold to settlement | structural for mmsell — not a setting (the TP/SL knobs are YES-side only) |
 
-`MAX_TOTAL_EXPOSURE` is **portfolio-wide** and is shared with the held positions of the two
-stood-down canaries. Re-read `live_total_exposure` immediately before arming: if legacy
-holdings exceed ~$20 the canary is gated out by `gate:total_exposure` on its first cycle.
+### What this envelope deliberately does not touch
+
+Three settings were in an earlier draft and were removed after reading production on
+2026-08-28, because their blast radius is wider than this canary:
+
+- **`MAX_TOTAL_EXPOSURE`** — portfolio-wide, and by operator decision the canary limits the
+  positions it opens, not money other books already hold. Production carries **100**, so the
+  canary's own ~$19.80 ceiling binds first with ample room over the ~$17 of legacy
+  stood-down holdings. Tightening it around those holdings would size a *shared* breaker to
+  one book's needs; loosening it would weaken a live safeguard to make this canary easier to
+  arm. It still applies as a shared backstop: if total open exposure ever reaches the cap,
+  this canary is refused **new entries** alongside every other book — a fail-safe, and exits,
+  closeouts and reconciliation always run regardless.
+- **`MAX_ORDER_SIZE`** — process-wide, and *not watched by the config-drift detector*. The
+  clip is set per book as `size=1` inside `mmsell_variants`, where it rides in the
+  drift-checked `book_params`, so raising it later is detected.
+- **`LIVE_EXIT_MODE`** — production carries `tp_sl`, which is correct for the YES/weather
+  books and is what their held positions exit under. mmsell holds to settlement
+  structurally, so forcing `settlement` would change another family's exits and buy this
+  canary nothing.
 
 **Stand-down semantics.** Emptying `LIVE_STRATEGIES` stops new entries on the next cycle;
 resting orders drain within a cycle; **held positions keep exiting and settling and remain
@@ -79,7 +102,8 @@ non-blocking) rather than config drift, so evidence gathered before the pause st
 interpretable. The twin stands down with live, because twin pairs derive from
 `LIVE_STRATEGIES` — which is what preserves the one-to-one property.
 
-No existing safeguard is weakened. Every cap above is either the current default or tighter.
+No existing safeguard is weakened. Every cap above is either production's current value or
+tighter, and the three settings this envelope declines to touch are listed above.
 
 ## 4. The pre-registered keep/stop contract
 
@@ -92,7 +116,7 @@ on a live-only epoch. That is exactly the defect that leaves
 
 | outcome | mechanism |
 |---|---|
-| **1. insufficient evidence** → keep running inside the envelope | `sample`: `live_settled_contracts >= 150`, and `max_evidence_horizon` at 600 → `HORIZON_EXHAUSTED`, never an auto-verdict |
+| **1. insufficient evidence** → keep running inside the envelope | the KEEP gate's own `sample`: `live_settled_contracts >= 150`, and `max_evidence_horizon` at 600 → `HORIZON_EXHAUSTED`, never an auto-verdict. (This floor is the keep gate's; the *promotion* gate has none — §1.) |
 | **2. execution / accounting failure** → stand down and investigate | early-safety `fail_any` clauses carrying their own `min_evidence`, so a failure at a fraction of the promotion sample stops the book instead of sitting at HOLD |
 | **3. strategy loss** → stop | `live_realized_pnl_usd <= -15.0` from 20 settled contracts |
 | **4. successful evidence** → eligible for HUMAN review | `pass_all`; a PASS authorizes nothing |
@@ -132,7 +156,7 @@ budget. A separate tail-count threshold would be a number chosen with no evidenc
 | | |
 |---|---|
 | live tag | `Cmmsell10` |
-| twin tag | `Cmmsell10_pt` |
+| twin tag | `Cmmsell10_pt3` (DERIVED — see below) |
 | live deployment | `mmsell-ceiling-live-1` (kind `live`) |
 | twin deployment | `mmsell-ceiling-twin-1` (kind `paper_twin`, `twin_of` → live) |
 | boundary | one instant, the new I2 epoch's `started_at`, identical on both |
@@ -192,11 +216,21 @@ unless it is pre-registered as one before arming, and it is not.
 
 ## 8. Thresholds that are operator choices
 
-Repository precedent was used wherever it exists. These have none, and are proposed rather
-than asserted: the promotion sample floor (300 settled trades), the win-rate stand-down
-(5.0pp), the decision-overlap hold (50%), the fill-rate hold (25%), the $15 total budget and
-$5 daily stop, and `MAX_TOTAL_EXPOSURE` at $40. `scripts/mmsell10_canary.py register` prints
-them with their reasoning; `canary_mmsell10.OPERATOR_DECISIONS` is the machine-readable list.
+Repository precedent was used wherever it exists. These had none and were decided by the
+operator on **2026-08-28**:
+
+| choice | decided |
+|---|---|
+| successor Version, and the evidence restart it implies | accepted |
+| promotion sample floor | **0** — v1's literal contract; the proposed 300 was declined |
+| win-rate stand-down | 5.0pp (the registered 1.0pp stays a promotion bar) |
+| decision-overlap hold / fill-rate hold | 50% / 25% |
+| total canary loss budget / daily stop | $15 / $5 |
+| portfolio exposure | not set by this envelope — see §3 |
+| naming | latitude granted; the tags stand, and a future collision bumps the generation number rather than reusing a historical name |
+
+`scripts/mmsell10_canary.py register` prints them with their reasoning;
+`canary_mmsell10.OPERATOR_DECISIONS` is the machine-readable record.
 
 ## 9. The sequence, and what each step does not do
 

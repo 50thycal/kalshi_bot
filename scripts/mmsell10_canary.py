@@ -62,18 +62,22 @@ def _session():
     return sessionmaker(bind=create_engine(url))()
 
 
+#: Prose fields printed under their own headings rather than in the value table.
+_PROSE_KEYS = ("settings", "enforced_by", "stand_down", "portfolio_breaker")
+
+
 def _describe_envelope() -> None:
-    print("=== proposed Stage-1 risk envelope (pre-registered on the version) ===")
+    print("=== Stage-1 risk envelope (pre-registered on the version) ===")
     for key, value in pkg.RISK_ENVELOPE.items():
-        if key in ("settings", "enforced_by", "stand_down", "notes"):
+        if key in _PROSE_KEYS:
             continue
         print(f"  {key:38s} {value}")
-    print("\n  runtime settings this envelope corresponds to:")
+    print("\n  runtime settings this envelope sets:")
     for key, value in pkg.RISK_ENVELOPE["settings"].items():
         print(f"    {key:38s} {value}")
     print(f"\n  stand-down: {pkg.RISK_ENVELOPE['stand_down']}")
-    print(f"\n  NOTE: {pkg.RISK_ENVELOPE['notes']}")
-    print("\n=== thresholds that are OPERATOR CHOICES, not repository precedent ===")
+    print(f"\n  portfolio breaker: {pkg.RISK_ENVELOPE['portfolio_breaker']}")
+    print("\n=== thresholds with no repository precedent, and what was decided ===")
     for name, why in pkg.OPERATOR_DECISIONS.items():
         print(f"  - {name}\n      {why}")
 
@@ -159,7 +163,10 @@ def main(argv=None) -> int:
 
     p_reg = sub.add_parser("register", help="create v2 + gates + epoch (no arming)")
     p_reg.add_argument("--promotion-sample-floor", type=int, default=None,
-                       help="override the proposed 300-settled-trade floor")
+                       help="add a settled-trade floor to the promotion gate; "
+                            "omitted, the gate is registered UNFLOORED (n=0), "
+                            "which is v1's literal contract and the operator's "
+                            "2026-08-28 decision")
     p_reg.set_defaults(fn=cmd_register)
 
     p_arm = sub.add_parser("arm", help="arm the live canary and its twin")
