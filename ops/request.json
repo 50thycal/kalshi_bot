@@ -1,1 +1,1 @@
-{"type":"xos","command":"evaluate-gates","args":["--dry-run","--experiment","mmsell-price-ceiling"],"id":"ev-mm10-1"}
+{"type":"xos","command":"readiness","args":["mmsell-price-ceiling"],"id":"rd-mm10-1"}
