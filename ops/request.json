@@ -1,1 +1,1 @@
-{"type":"db","sql":"select count(*) as fill_rows, count(distinct kalshi_order_id) as distinct_orders, min(created_at) as first, max(created_at) as last from fills","max_rows":5,"id":"db-fills"}
+{"type":"db","sql":"select count(*) as fill_rows, count(distinct kalshi_order_id) as distinct_orders, min(filled_at) as first, max(filled_at) as last from fills","max_rows":5,"id":"db-fills2"}
