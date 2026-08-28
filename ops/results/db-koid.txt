@@ -1,9 +1,0 @@
-# ops request: type='db'
-status    n   with_koid  qty
---------  --  ---------  ---
-canceled  12  12         12 
-filled    12  12         12 
-rejected  4   0          4  
-resting   8   8          8  
-
-(4 rows)
