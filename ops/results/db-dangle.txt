@@ -1,6 +1,0 @@
-# ops request: type='db'
-experiment         state  version  epoch_number  epoch_ended                       deployment_key          kind   tags                               
------------------  -----  -------  ------------  --------------------------------  ----------------------  -----  -----------------------------------
-mmsell-type-tight  PAPER  1        1             2026-08-24 14:21:17.571842+00:00  tmmsell-paper-legacy-1  paper  Tmmsell1,Tmmsell2,Tmmsell5,Tmmsell6
-
-(1 row)
