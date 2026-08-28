@@ -1,1 +1,1 @@
-{"type":"db","sql":"select count(*) as matched_fills, coalesce(sum(f.quantity),0) as filled_qty from fills f join live_orders o on o.kalshi_order_id = f.kalshi_order_id where o.strategy = 'Cmmsell10' and f.action = 'buy'","max_rows":5,"id":"db-fills3"}
+{"type":"db","sql":"select date_trunc('hour', filled_at) as hr, count(*) as n, count(kalshi_order_id) as with_oid from fills where filled_at > now() - interval '10 hours' group by 1 order by 1","max_rows":20,"id":"db-f-today"}
