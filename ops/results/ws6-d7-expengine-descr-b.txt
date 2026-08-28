@@ -1,6 +1,0 @@
-# ops request: type='db'
-key                version         descr                                                                                                                            
------------------  --------------  ---------------------------------------------------------------------------------------------------------------------------------
-EXPERIMENT_ENGINE  foundation_pr1  Experiment OS foundation: lifecycle state machine, structured gates, platform registry, append-only audit (enforcement mode OFF).
-
-(1 row)
