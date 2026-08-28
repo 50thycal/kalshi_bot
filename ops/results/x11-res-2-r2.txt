@@ -1,0 +1,30 @@
+# ops request: type='xos'
+{
+  "command_id": "x11-res-2",
+  "action": "RESOLVE",
+  "actor": "claude-code",
+  "actor_role": "TASK_SPECIFIC",
+  "status": "SUCCEEDED",
+  "issue_key": "XOS-000011",
+  "schema_version": 1,
+  "payload_hash": "f2d401be6409e820399ed17a238fd6d06a34266c29f3c9ee1ce58be66126117e",
+  "payload_fields": [
+    "issue",
+    "resolution_summary"
+  ],
+  "payload_unrecognised_fields": 0,
+  "requested_at": "2026-08-28 14:14:59.579020+00:00",
+  "started_at": "2026-08-28 14:14:59.579020+00:00",
+  "completed_at": "2026-08-28 14:14:59.680654+00:00",
+  "result": {
+    "kind": "issue",
+    "status": "RESOLVED",
+    "priority": "P1",
+    "severity": "HIGH",
+    "issue_key": "XOS-000011",
+    "owner_role": "LIVE_OPS",
+    "disposition": "OPS_REPAIR",
+    "classification": "OPS"
+  },
+  "error": null
+}
