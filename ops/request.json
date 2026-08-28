@@ -1,1 +1,1 @@
-{"type":"db","sql":"select market_ticker, side, action, quantity, limit_price_cents, status, created_at from live_orders where strategy = 'Cmmsell10' order by created_at","max_rows":30,"id":"db-ord-detail"}
+{"type":"db","sql":"select market_ticker, side, action, quantity, limit_price, status, to_char(created_at, 'HH24:MI:SS') as at from live_orders where strategy = 'Cmmsell10' order by created_at","max_rows":30,"id":"db-ord-detail2"}
