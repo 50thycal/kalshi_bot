@@ -1,1 +1,1 @@
-{"type":"xos","command":"metric","args":["realizable_cents_per_trade","--experiment","mmsell-price-ceiling","--arm","mmsell10","--kind","paper"],"id":"m-arm-realiz2"}
+{"type":"xos","command":"issue-command-show","args":["x11-res-2"],"id":"x11-res-2-r"}
