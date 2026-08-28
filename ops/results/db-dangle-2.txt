@@ -1,5 +1,0 @@
-# ops request: type='db'
-experiment  deployment_key  epoch_ended
-----------  --------------  -----------
-
-(0 rows)
