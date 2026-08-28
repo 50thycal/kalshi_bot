@@ -1,1 +1,1 @@
-{"type":"db","sql":"select strategy, count(*) as rows, min(created_at) as first, max(created_at) as last from paper_trades where created_at >= timestamptz '2026-08-28 04:11:45+00' group by strategy order by 2 desc","max_rows":40,"id":"db-mm10-rows"}
+{"type":"db","sql":"select date_trunc('hour', created_at) as hr, count(*) filter (where strategy = 'mmsell10') as mmsell10, count(*) filter (where strategy like '%mmsell%') as all_mmsell from paper_trades where created_at > now() - interval '8 hours' group by 1 order by 1","max_rows":40,"id":"db-mm10-hourly"}
