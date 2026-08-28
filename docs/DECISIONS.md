@@ -275,5 +275,61 @@ worth its own design — as a proposal into the existing organism, not as a seco
 
 ---
 
+### DEC-004 — A live canary's arm set and risk envelope live on the Version, so narrowing either is a successor Version
+
+**Date:** 2026-08-28
+**Status:** Accepted
+
+**Context**
+
+Putting `mmsell-price-ceiling`'s `mmsell10` arm on real money looked like a stage change:
+same hypothesis, same universe, same `lo=5,hi=10,maxyes=7`, and a recorded promotion PASS
+already standing. It is not one. `service.arm_live_canary` refuses it twice over — the
+version carries no pre-registered `risk_json`, and its declared arm set is
+`{mmsell9, mmsell10}` while the canary is one arm. Both facts live on a **frozen** Version,
+and the flush guard refuses every edit to one.
+
+The tempting readings were all wrong in the same direction. Adding `risk_json` to v1 is an
+edit to a frozen contract. Arming both arms puts the arm with negative observed paper
+economics on real money to satisfy a structural check. Relaxing the arm-set equality in
+`arm_live_canary` weakens the rule that a deployment matches its pre-registration, on a
+real-money path, to make one task easier.
+
+**Decision**
+
+Treat the arm set and the risk envelope as what Experiment OS already says they are:
+parts of the scientific contract, carried on the Version. Narrowing either is a **successor
+Version**, registered through the ordinary path with a `change_reason`, and its epoch
+restarts evidence. `kalshi_bot/experiment_os/canary_mmsell10.py` is the worked instance;
+the two refusals are reproduced as tests against the real service rather than described.
+
+The same registration performs the tag hand-over that a successor implies. A strategy tag
+resolving to two ACTIVE deployment arms is refused as ambiguous, so the predecessor's
+deployment is ended and replaced — in one call — by one carrying the arms that stay behind.
+Ending a deployment does not orphan its evidence: metric scopes resolve tags over every
+deployment in the epoch, ended or not, and only the enforcement resolver reads `ended_at`.
+
+**Consequences**
+
+*Easier:* a canary's envelope is pre-registered, immutable and auditable rather than a
+Railway variable someone remembers setting; a single-arm live test cannot silently drag a
+second arm onto real money; and the "why can't we just arm it" question has a mechanical
+answer that fails loudly if it ever stops being true.
+
+*Harder:* the successor's promotion gate restarts at n=0, because evidence windows floor at
+the epoch start. The recorded PASS on the predecessor cannot be inherited, and the canary
+waits for a fresh sample. There is no shape that keeps both the old evidence and a narrowed
+arm set — that is the trade, not an implementation gap.
+
+*Expensive to reverse:* moderate. A frozen version, a registered gate and a recorded
+transition are append-only by design; unwinding a successor means retiring it, not deleting
+it. The code is additive and default-inert, so not *registering* one costs nothing.
+
+*Revisit if:* narrowing an arm set becomes routine rather than exceptional. A recurring need
+would be evidence that arms are being over-declared at freeze time — the fix would be
+declaring fewer arms per Version, not making the arm set mutable.
+
+---
+
 <!-- Copy the block above for each new decision. IDs are stable: never reused, never
      renumbered. -->

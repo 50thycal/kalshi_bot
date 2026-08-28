@@ -35,8 +35,8 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, select, text
 
-from ..models import LiveOrder, PaperTrade, Position
-from . import issue_policy, read
+from ..models import PaperTrade
+from . import issue_policy, metrics, read
 from .lifecycle import LifecycleState
 from .models import Experiment
 
@@ -211,64 +211,12 @@ def _system_section(session) -> tuple[dict, dict, list[str]]:
 
 
 def _live_exposure(session, tags: list[str]) -> dict:
-    """Real money currently committed by these tags — orders AND held positions.
+    """The `at risk` column: resting-order notional plus held-position exposure.
 
-    These are two different kinds of exposure and only one of them used to be
-    counted. A RESTING order is money that could be committed; a FILLED position
-    is money that already is. Counting only resting orders was survivable while
-    books traded continuously, because there were always resting orders to see.
-
-    It fails exactly when it matters most. When live entry is stood down, every
-    resting order is drained within a cycle and this column goes to $0.00 — while
-    the filled positions those orders produced sit open, unhedged, worth real
-    money. Measured on 2026-08-20, mid-pause: 25 open positions holding $43.04,
-    reported as "$0.00 at risk". An operator asking "what is still exposed?"
-    during a stand-down is asking about precisely the number that was missing."""
-    empty = {"open_orders": 0, "contracts": 0, "notional_usd": 0.0,
-             "open_positions": 0, "position_usd": 0.0, "total_usd": 0.0}
-    if not tags:
-        return empty
-    rows = session.execute(
-        select(LiveOrder.status, func.count(), func.sum(LiveOrder.quantity),
-               func.sum(LiveOrder.quantity * LiveOrder.limit_price))
-        .where(LiveOrder.strategy.in_(tags))
-        .group_by(LiveOrder.status)
-    ).all()
-    resting = {"pending", "resting", "open", "partially_filled"}
-    open_orders = contracts = 0
-    notional = 0.0
-    for status, n, qty, cents in rows:
-        if (status or "").lower() in resting:
-            open_orders += int(n or 0)
-            contracts += int(qty or 0)
-            notional += float(cents or 0) / 100.0
-
-    # Held positions: the NEWEST snapshot per market these tags entered, since
-    # `positions` is append-only and an older row may predate a later exit.
-    tickers = session.execute(
-        select(LiveOrder.market_ticker)
-        .where(LiveOrder.strategy.in_(tags), LiveOrder.action == "buy")
-        .distinct()
-    ).scalars().all()
-    n_pos, pos_usd = 0, 0.0
-    for ticker in tickers:
-        row = session.execute(
-            select(Position.quantity, Position.quantity_fp, Position.market_exposure)
-            .where(Position.market_ticker == ticker)
-            .order_by(Position.captured_at.desc())
-            .limit(1)
-        ).first()
-        if row is None:
-            continue
-        qty, qty_fp, exposure = row
-        held = float(qty_fp) if qty_fp is not None else float(qty or 0)
-        if abs(held) > 0.01:          # sub-0.01 dust cannot be traded out
-            n_pos += 1
-            pos_usd += float(exposure or 0)
-    return {"open_orders": open_orders, "contracts": contracts,
-            "notional_usd": round(notional, 2),
-            "open_positions": n_pos, "position_usd": round(pos_usd, 2),
-            "total_usd": round(notional + pos_usd, 2)}
+    Delegates to the canonical metrics provider (`live_open_exposure_usd` reads the
+    same function), so the number an operator sees here and the number a keep/stop
+    gate decides on cannot drift apart."""
+    return metrics.live_open_exposure(session, tags)
 
 
 def _gate_view(session, board_gate: dict, gate_obj, evaluate: bool) -> dict:
