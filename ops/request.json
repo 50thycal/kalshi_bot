@@ -1,1 +1,1 @@
-{"type":"logs","limit":120,"filter":"","deployment_id":"","id":"logs-live-1"}
+{"type":"db","sql":"select ie.kind, ie.severity, ie.detected_at, e.key as experiment, d.deployment_key, left(ie.description, 420) as detail from experiment_integrity_events ie left join experiments e on e.id = ie.experiment_id left join experiment_deployments d on d.id = ie.deployment_id where ie.resolved_at is null order by ie.detected_at desc","max_rows":10,"id":"db-drift-1"}
