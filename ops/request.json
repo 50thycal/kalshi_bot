@@ -1,1 +1,1 @@
-{"type":"db","sql":"select strategy, count(*) as n, max(created_at) as last from paper_trades where strategy in ('Cmmsell10','Cmmsell10_pt3','mmsell10') group by 1 order by 1","max_rows":10,"id":"db-canary-rows"}
+{"type":"db","sql":"select market_ticker, side, action, quantity, limit_price_cents, status, created_at from live_orders where strategy = 'Cmmsell10' order by created_at","max_rows":30,"id":"db-ord-detail"}
