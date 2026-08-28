@@ -46,12 +46,14 @@ def _allowlist() -> set[str]:
     Taken from the module rather than restated here: a copy in the test would
     pass on the day the runner's own set regressed, which is precisely the
     failure this file exists to prevent.
+
+    Read through the runner's own `xos_allowlist()` rather than by parsing its
+    source. The regex version missed an alias map the day a second one was added
+    — it saw only the literal inside `run()` — and reported the commands routed
+    through that map as unallowlisted. One function, called by both sides, cannot
+    drift that way.
     """
-    runner = _runner()
-    source = pathlib.Path(runner.__file__).read_text()
-    block = source.split("allowed = {", 1)[1].split("}", 1)[0]
-    base = set(re.findall(r'"([a-z-]+)"', block))
-    return base | set(runner.XOS_ISSUE_READS)
+    return _runner().xos_allowlist()
 
 
 # ---------------------------------------------------------------------------
