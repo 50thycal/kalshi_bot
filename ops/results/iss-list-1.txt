@@ -1,7 +1,0 @@
-# ops request: type='xos'
-issue       sev     pri  classification  owner                   status           scope                                  title                                                       
-----------  ------  ---  --------------  ----------------------  ---------------  -------------------------------------  ------------------------------------------------------------
-XOS-000008  MEDIUM  P2   PLATFORM        PLATFORM_CHANGE_REVIEW  OPEN             revision:settlement_repair_2026_08_24  Settlement-taxonomy coverage decays over a long-running expe
-XOS-000003  LOW     P2   STRATEGY        RESEARCH_LAB            ACTION_REQUIRED  freeze-dark-window-pin · v1/e1         freeze-dark-window-pin is deployed but has produced zero evi
-XOS-000009  LOW     P3   STRATEGY        RESEARCH_LAB            OPEN             system-wide                            MMSELL skip=BTC+ETH+SOL+DOGE+XRP+CRYPTO is a substring block
-XOS-000010  LOW     P3   OPS             LIVE_OPS                OPEN             system-wide                            Platform-command receipt metadata is invisible through the p
