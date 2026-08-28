@@ -1,9 +1,9 @@
 # ops request: type='xos'
-live_settled_contracts  @  mmsell-price-ceiling/v2/e2/mmsell10  kind=live
+live_max_realized_loss_usd  @  mmsell-price-ceiling/v2/e2/mmsell10  kind=live
   tags:        Cmmsell10
   deployments: mmsell-ceiling-live-1
-  window:      2026-08-28 14:20:35.572574+00:00 -> 2026-08-28 21:05:07.385300+00:00
-  value:       2.0  (contracts)   n=2
+  window:      2026-08-28 14:20:35.572574+00:00 -> 2026-08-28 21:05:29.684682+00:00
+  value:       0.0  (USD)   n=2
     deployment_kind: live
     deployments: ['mmsell-ceiling-live-1']
     excluded_contested_markets: 0
@@ -12,6 +12,7 @@ live_settled_contracts  @  mmsell-price-ceiling/v2/e2/mmsell10  kind=live
     fee_basis: realized_pnl as reported by Kalshi (fees already netted)
     filled_contracts_on_settled_markets: 2
     live_markets_entered: 26
+    losing_markets: 0
     orders_that_never_held_a_position: 14
     per_contract_basis: total realized P&L / filled BUY contracts on settled markets — deliberately NOT scripts/mmsell_live.py's per-position average
     platform_snapshot: 4f9adf15daa64035
@@ -23,6 +24,6 @@ live_settled_contracts  @  mmsell-price-ceiling/v2/e2/mmsell10  kind=live
     settled_statuses: ['settled', 'closed_sl', 'closed_tp', 'closed_timeout']
     source: live_orders x fills x positions
     strategy_tags: ['Cmmsell10']
-    window: ['2026-08-28 14:20:35.572574+00:00', '2026-08-28 21:05:07.385300+00:00']
+    window: ['2026-08-28 14:20:35.572574+00:00', '2026-08-28 21:05:29.684682+00:00']
     window_basis: live_orders.created_at (entry time)
     winning_settled_markets: 2
