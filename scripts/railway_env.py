@@ -77,6 +77,15 @@ ALLOWED_VARS = frozenset({
     # output for the same output-hygiene reason, and with the same caveat: the
     # envelope is public.
     "EXPERIMENT_OS_PLATFORM_COMMAND",
+    # One bounded EXPERIMENT LIFECYCLE command, executed once at worker boot
+    # (kalshi_bot/experiment_os/experiment_commands.py). A third transport with a
+    # vocabulary disjoint from both of the above, because a ticket must not be
+    # able to arm a canary and a platform revision must not be able to freeze a
+    # Version. Registering a successor contract and arming a live canary are
+    # writes with no other production path. Its VALUE is redacted from this
+    # tool's output for the same output-hygiene reason, and with the same caveat:
+    # the envelope is public.
+    "EXPERIMENT_OS_EXPERIMENT_COMMAND",
     "EXPERIMENT_OS_IMPORT_ON_BOOT", "EXPERIMENT_OS_ENFORCEMENT_MODE",
     "EXPERIMENT_OS_CUTOVER_ID", "EXPERIMENT_OS_CUTOVER_ACTOR",
     "EXPERIMENT_OS_CUTOVER_REASON",
@@ -173,7 +182,8 @@ ALLOWED_VARS = frozenset({
 # sensitive raw evidence. If private content is genuinely required, stop and
 # propose an encrypted transport; redaction cannot make this channel private.
 REDACTED_VARS = frozenset(
-    {"EXPERIMENT_OS_ISSUE_COMMAND", "EXPERIMENT_OS_PLATFORM_COMMAND"}
+    {"EXPERIMENT_OS_ISSUE_COMMAND", "EXPERIMENT_OS_PLATFORM_COMMAND",
+     "EXPERIMENT_OS_EXPERIMENT_COMMAND"}
 )
 
 # Upper bound on a settable value, checked BEFORE the Railway API call so an

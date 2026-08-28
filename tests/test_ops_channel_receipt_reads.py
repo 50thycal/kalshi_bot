@@ -33,6 +33,15 @@ sys.path.insert(0, str(REPO / "scripts"))
 _DOC_XOS = re.compile(r'"type"\s*:\s*"xos"\s*,\s*"command"\s*:\s*"([a-z-]+)"')
 _DOCS = ("docs/OPS_RUNBOOK.md", "docs/EXPERIMENT_OS_ISSUES.md")
 
+#: Every worker-side write transport. Each is a variable an operator is told to
+#: SET through the ops channel, so each has to clear the `env` allowlist as well
+#: as exist in the config — two separate lists that have to agree.
+_TRANSPORT_VARS = (
+    "EXPERIMENT_OS_ISSUE_COMMAND",
+    "EXPERIMENT_OS_PLATFORM_COMMAND",
+    "EXPERIMENT_OS_EXPERIMENT_COMMAND",
+)
+
 
 def _runner():
     import ops_runner
@@ -83,6 +92,58 @@ def test_every_xos_command_the_docs_advertise_is_allowlisted():
     for rel, commands in documented.items():
         missing = sorted(commands - allowed)
         assert not missing, f"{rel} advertises xos commands the runner refuses: {missing}"
+
+
+@pytest.mark.parametrize("var", _TRANSPORT_VARS)
+def test_every_write_transport_variable_is_settable_through_the_channel(var):
+    """The same defect class as the test above, on the OTHER half of the channel.
+
+    A transport is reachable only if its variable clears `railway_env`'s `env`
+    allowlist. That list and the worker's config are separate, so a transport can
+    exist, be documented, be tested end to end — and still be unreachable,
+    because the one list nobody thought about refuses the variable by name.
+
+    That is exactly what happened to `EXPERIMENT_OS_EXPERIMENT_COMMAND`: the
+    module, the boot hook, the config field, the receipt reads, the runbook
+    section and 28 tests all shipped, and the first real attempt to use it came
+    back `refusing to set non-allowlisted vars`. The runbook advertised a
+    variable the runner refused — a documented-into-existence defect, on the env
+    side rather than the xos side.
+    """
+    import railway_env
+
+    assert var in railway_env.ALLOWED_VARS, (
+        f"{var} is a write transport the docs tell an operator to set, but the "
+        "env allowlist refuses it — the transport is unreachable"
+    )
+
+
+@pytest.mark.parametrize("var", _TRANSPORT_VARS)
+def test_every_write_transport_variable_has_its_value_redacted(var):
+    """Ops results are committed to a public repository. A variable carrying a
+    structured command body is echoed as a hash and a length, never its contents
+    — output hygiene, not confidentiality (the same bytes ride the public ops
+    branch), but a transport added without it would start printing payloads into
+    a channel that publishes them."""
+    import railway_env
+
+    assert var in railway_env.REDACTED_VARS
+
+
+def test_the_runbook_advertises_no_variable_the_channel_refuses():
+    """Anything the runbook shows inside an `env` set block has to be settable.
+
+    Derived from the docs rather than from a list, so a future transport
+    documented without an allowlist entry fails here instead of at the moment an
+    operator tries to use it mid-procedure."""
+    import railway_env
+
+    text = (REPO / "docs/OPS_RUNBOOK.md").read_text()
+    advertised = set(re.findall(r'"(EXPERIMENT_OS_[A-Z_]+)"\s*:', text))
+    # Not vacuous: the extractor must see the transports this test is about.
+    assert {"EXPERIMENT_OS_EXPERIMENT_COMMAND"} <= advertised, advertised
+    missing = sorted(advertised - set(railway_env.ALLOWED_VARS))
+    assert not missing, f"the runbook advertises un-settable variables: {missing}"
 
 
 def test_the_two_receipt_reads_are_reachable_and_route_to_the_cli():
