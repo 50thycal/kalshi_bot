@@ -1,1 +1,1 @@
-{"type":"xos","command":"metric","args":["live_realized_pnl_usd","--experiment","mmsell-price-ceiling","--arm","mmsell10","--kind","live"],"id":"mk-live_realized_pnl_usd"}
+{"type":"xos","command":"metric","args":["live_settled_contracts","--experiment","mmsell-price-ceiling","--arm","mmsell10","--kind","live"],"id":"mk-live_settled_contracts"}
