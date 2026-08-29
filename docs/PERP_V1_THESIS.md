@@ -1,0 +1,250 @@
+# PERP-V1 — Kalshi crypto perpetual futures: three mechanisms, one horse race
+
+**Status:** pre-registration (PROBE). Nothing here has traded. No perp order path
+exists in this repository and none is added by the slice that carries this document.
+
+**Experiment OS key:** `perp-v1` · **Version:** 1 · **Origin:** operator
+**Family:** `perp` · **Registered by package:** `perp-v1` (`kalshi_bot/experiment_os/perp_v1.py`)
+
+Experiment OS is canonical for this experiment's lifecycle state, arms, gates and
+verdicts. This document is the **scientific contract** the gates were written
+against — the "why", not the standing. Ask `xos show perp-v1` for the standing.
+
+---
+
+## 1. What is new about the surface
+
+Every book this repository has run so far asks one question: *is this Kalshi event
+contract mispriced against our own forecast?* The edge is always an estimate of an
+unobservable probability, and the graveyard is mostly full of estimates that were
+real in-sample and gone after spread and fees.
+
+Kalshi's crypto **perpetual futures** are a different kind of instrument. A perp is
+tied to an underlying reference price by an explicit, published mechanism — a
+funding payment every 8 hours that pays the cheap side and charges the expensive
+one. That gives us two exchange-published anchors we have never had before:
+
+* a **reference/index price** (CF Benchmarks, reachable with the same Kalshi
+  credentials), and
+* a **funding rate**, including an estimate for the window still forming.
+
+So the question changes shape, from *"what is the true probability"* to *"where is
+risk priced differently across two instruments tied to the same underlying"*.
+Relative pricing gives far stronger controls than outright forecasting, which is
+the strategic reason this experiment exists at all.
+
+## 2. Why this is not a duplicate and not a revival
+
+Checked against the repository's own history before proposing (Research Lab
+startup routine):
+
+* **`docs/RESEARCH_JOURNAL.md`, PERPS SURVEY 2026-07-09** surveyed exactly this
+  product and recorded a **discovery gap, not a kill**: no perp series was
+  reachable through the public `/trade-api/v2` event/market endpoints, 76 open
+  Crypto events scanned, every candidate series ticker resolving to zero markets.
+  Its recorded next step was, verbatim: *"find Kalshi's perp-specific
+  endpoint/feed, then a funding/basis staleness probe gated on normal fees — not a
+  series-name guess against the event API."* That condition is what this
+  experiment claims has now been met, and **Probe 0 exists to verify the claim
+  rather than assume it** (§6).
+* **No open experiment covers perps.** No `perp*` strategy tag, package, book
+  registry row or thesis existed before this one; the perp family is new to
+  Experiment OS.
+* **The one adjacent book, THETA, is not this.** Theta prices Kalshi's hourly
+  crypto ladders from Coinbase spot candles. Arm C below is deliberately scoped as
+  an **overlay measured against Theta**, not a replacement for it, and its gate is
+  *incremental* cents over Theta rather than standalone accuracy.
+
+## 3. The shape of the experiment, and why it is one experiment
+
+The operator's instruction was one experiment with three arms, one per candidate
+mechanism, run as a horse race: *see which does best, whether several do, or
+whether none is sufficient.* That is the registered shape.
+
+It is defensible as one experiment because the three arms share the thing that
+actually decides them: **one universe (the Kalshi perp book), one cost model, one
+measurement instrument (the tape collector), and one headline metric** — net edge
+in basis points of notional after fees, slippage and funding. Three separate
+experiments would have made those three separately-chosen quantities, and the
+comparison the operator asked for would then rest on an assumption of
+comparability rather than on a shared contract.
+
+What it costs, stated plainly: **arms in one version freeze together**. Changing
+one arm's rule is a new Version for all three. That is the price of the horse
+race and it is accepted deliberately.
+
+### 3.1 Arms
+
+| arm | role | mechanism |
+|---|---|---|
+| `perprevert` | TREATMENT | premium reversion — trade extreme mark-vs-index divergence back toward the index, funding-confirmed |
+| `perpcarry` | TREATMENT | funding dispersion — cross-sectional long/short carry across the perp universe, beta-neutralised |
+| `perplead` | TREATMENT | perp→prediction lead/lag — perp microstructure as an information overlay on Kalshi's crypto event contracts |
+| `perpctl` | CONTROL | matched random entry: same assets, same timestamps, same notional and same holding period as whichever treatment fired, direction drawn at random |
+
+The control is not decoration and is not the operator's fourth strategy. Every one
+of these arms can be made to look profitable by an accidental long-crypto tilt in
+a rising sample. `perpctl` is what separates "the mechanism worked" from "crypto
+went up during the window": it takes the treatments' own entry times, assets,
+sizes and holds, and randomises only the thing under test — the direction the
+signal chose.
+
+## 4. The three mechanisms
+
+### Arm A — `perprevert` (premium reversion)
+
+**Hypothesis.** When a Kalshi perp's mark price diverges far from its reference
+index relative to its own recent behaviour, the funding mechanism pulls it back,
+and the convergence is large enough to pay for fees, spread and any funding paid
+while holding.
+
+**Signal.** For each asset, `premium = (mark − index) / index`, and
+`premium_z = zscore(premium)` over a trailing 7-day window taken **at the same
+distance from the funding settlement**, because premium is mechanically
+time-of-cycle dependent and a naive z-score would mostly measure the clock.
+Entry requires the live estimated funding rate to agree in sign with the premium.
+
+**Exit.** Premium decays below a pre-registered residual band, OR the z-score
+returns inside ±0.5, OR a maximum hold expires, OR the risk stop is hit —
+whichever comes first. All four are pre-registered; none is chosen after seeing
+a path.
+
+**What would falsify it.** Convergence that is real but smaller than the round
+trip costs. This is the single most likely outcome and the probe is built to
+measure the *net* number first and the raw one only as a diagnostic.
+
+### Arm B — `perpcarry` (funding dispersion)
+
+**Hypothesis.** Ranking the whole perp universe by funding and going long the
+cheapest / short the most expensive earns a carry premium that survives the
+relative price moves of the two legs, fees and slippage.
+
+**Construction.** Dollar-neutral at entry, rebalanced on the 8-hour funding
+cycle. Then, the part that matters: **beta-neutral, not merely dollar-neutral.**
+Each asset's rolling beta to BTC is estimated and the legs are sized so
+`Σ(position × β_BTC) ≈ 0`. Without this the book is a hidden long or short on
+crypto as a whole wearing a market-neutral label, and that is exactly the class
+of hidden exposure a paper sample flatters.
+
+**Headline metric.** Net P&L **minus** the P&L attributable to common crypto
+beta. If funding income is +$20 while relative price movement is −$35, "collect
+funding" is not an edge and this arm is expected to say so.
+
+### Arm C — `perplead` (perp → prediction lead/lag)
+
+**Hypothesis.** Kalshi's own leveraged perp traders move on information before
+Kalshi's short-duration crypto event-contract book reprices, so perp
+microstructure carries information about where the ladder is about to go that
+Coinbase spot candles alone do not.
+
+**Candidate features**, tested independently before anything is combined:
+perp return over a short lookback; buyer/seller trade imbalance; book depth
+imbalance; premium impulse `Δ(mark − index)`; open-interest impulse; funding
+impulse.
+
+**Metric.** Not accuracy. **Incremental realizable cents per trade over the
+registered Theta model** — the repository has learned repeatedly (mmsell6,
+mmsell11) that a statistically interesting signal need not survive spread, maker
+fills and fees, and an accuracy gate would hide that.
+
+**Deliberate constraint.** Arm C starts as a *collector*, not a trader. The probe
+records the joint tape — index → mark → BBO/depth → trades → funding estimate →
+OI → event-contract quotes — and measures forward moves at 5s/10s/30s/60s/5m.
+
+## 5. Pre-registered gates
+
+Registered on version 1 before any evidence, and frozen with it. Every quantity
+below is a **probe-instrument metric** (`provided=False` in
+`kalshi_bot/experiment_os/metrics.py`): probes are validation instruments, not
+deployments, so the probe script computes them and the result is recorded against
+the gate — the same shape the FREEZE probe used.
+
+**One promotion gate per arm** (`probe_to_paper_perprevert`, `…_perpcarry`,
+`…_perplead`), each PROBE → PAPER. This is the horse race made structural: an arm
+that clears its own bar can carry into paper without waiting for, or being
+rescued by, the other two. The binding rule that goes with it, stated here
+because Experiment OS cannot enforce it for us: **the paper deployment registered
+after promotion carries only the arms whose own gate PASSed**, plus `perpctl`.
+
+Each promotion gate requires, all of them:
+
+| clause | why |
+|---|---|
+| `perp_net_edge_bps_per_trade > 0` on the arm | after fees, slippage and funding — the only number that pays for anything |
+| `delta.perp_net_edge_bps_per_trade > 0` vs `perpctl` | the mechanism, not the market direction |
+| `perp_data_coverage_pct >= 80` (experiment scope) | an estimate speaking for a fifth of the intended tape is not the same claim as one speaking for all of it — the `fill_model_coverage_pct` lesson |
+| sample floor: `perp_probe_observations >= 200` per arm | thin-sample HOLD is a correct verdict, not a delay |
+
+Arm B carries one clause the others do not: `perp_beta_adjusted_net_edge_bps > 0`.
+Arm B's entire claim is that the edge is not crypto beta, so its gate says so.
+
+Arm C carries one the others do not:
+`perp_incremental_cents_per_trade_vs_theta > 0`. Standalone perp signal quality
+is not what arm C is for.
+
+A **kill gate**, `perp_probe_stop`, is registered alongside: an arm whose net edge
+is materially negative on a sample past the floor is stopped rather than iterated
+on, and a data-coverage collapse blocks rather than passes.
+
+**None of this authorizes anything.** A PASS on a probe gate moves the experiment
+to PAPER. Real money would be a separate, operator-approved `arm_live_canary`
+act, on a successor version, with a pre-registered risk envelope that does not
+exist yet — and perps carry leverage and liquidation, which no risk envelope in
+this repository has ever had to model.
+
+## 6. The probe, and the cheapest thing that could falsify all of it
+
+**Probe 0 — surface survey (`scripts/perp_surface_survey.py`, ops-runnable).**
+Before any strategy question: does the perp surface actually exist where this
+document says it does, and is it readable without credentials the ops channel does
+not have? The survey walks candidate `/trade-api/v2` perp endpoints, reports
+verbatim which resolve and which do not, and — for whatever does resolve — records
+the field names actually present rather than the ones assumed here.
+
+This is deliberately the first thing that runs, because §1 and §4 rest on an API
+surface **this session could not reach**: outbound HTTPS to Kalshi and to
+`docs.kalshi.com` is blocked from the development sandbox, so every endpoint and
+field name in this document is stated from the operator's brief and is unverified.
+The 2026-07-09 survey is precedent for the failure mode: the product existed and
+the API surface assumed for it did not.
+
+If Probe 0 finds no readable perp surface, this experiment stops at PROBE with a
+recorded BLOCKED_DATA verdict and no strategy work is done — the same outcome the
+2026-07-09 survey reached, reached again cheaply.
+
+**Probe 1 — the tape collector.** Only if Probe 0 resolves a surface. A read-only
+collector (`markets / mark / index / BBO / book / trades / OI / funding_estimate /
+funding_history`) that places **no orders**, storing the joint tape all three arms
+score against. One collector serves all three arms; that is the other reason this
+is one experiment.
+
+**Probe 2 — the three scorers.** Per-arm backtests over the collected tape,
+computing exactly the metrics §5 gates on, against `perpctl` on the same tape.
+
+Cost: Probe 0 is one ops request. Probe 1 is a collector and a table. Probe 2 is
+three analysis scripts. No exposure at any point.
+
+## 7. Known ways this could be wrong
+
+* **The surface may not be reachable** the way §1 assumes. Probe 0 first, for
+  exactly this reason.
+* **Fees.** Kalshi's crypto products have carried promotional zero-fee periods.
+  An edge measured under a promotion dies when fees normalize; the 2026-07-09
+  survey flagged this and the gates here are on **net** numbers under the fee
+  model the active platform snapshot declares, never a promotional one.
+* **Leverage and liquidation** are semantics no book in this repository has ever
+  had. They are a platform question, not a strategy one — if perps ever approach
+  real money the fee/fill/risk components almost certainly need a Platform
+  Revision, which is **Platform Change Review**'s call and not this experiment's.
+* **Arm B's beta estimate is itself a model**, and a wrong beta manufactures
+  exactly the neutrality it claims to prove. This is why the raw and
+  beta-adjusted numbers are both recorded and why only the adjusted one gates.
+* **Arm C can leak look-ahead** trivially — the MLBWX probe manufactured a fake
+  +5.5¢ edge from settled-price direction. Arm C's forward windows are measured
+  strictly from features timestamped before the window opens.
+
+## 8. Where the standing lives
+
+Not here. `xos show perp-v1`, `xos scoreboard`, `xos control-tower`. This document
+is not updated with results; a changed question is a new Version and a changed
+world is a new epoch.

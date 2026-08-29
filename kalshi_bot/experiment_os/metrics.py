@@ -375,6 +375,95 @@ _DECLARED_UNPROVIDED: tuple[MetricDefinition, ...] = (
         reference="scripts/kalshi_freeze_study.py (docs/FREEZE_THESIS.md)",
         description="FREEZE probe: markets wrongly called dark/decided",
     ),
+    # PERP-V1 probe-instrument metrics (docs/PERP_V1_THESIS.md). Same shape as the
+    # FREEZE probe above: computed by the probe scripts over the collected perp
+    # tape and recorded manually against the probe gates. They are declared here
+    # rather than invented at gate-registration time so the three arms' gates all
+    # resolve against ONE namespace and a typo cannot become a new quantity.
+    #
+    # Perp P&L is denominated in BASIS POINTS OF NOTIONAL, not cents per contract:
+    # a perp position has no contract face value to divide by, and reusing the
+    # event-contract unit would make the two families' numbers look poolable when
+    # they are not.
+    MetricDefinition(
+        key="perp_net_edge_bps_per_trade", unit="bps of notional", kind="mean",
+        source="probe instrument (backtest over the collected perp tape)",
+        provided=False,
+        reference="NOT YET WRITTEN — the provider is PERP-V1 Probe 2 "
+        "(scripts/perp_arm_scores.py), blocked on Probe 0; the resolving "
+        "citation today is docs/PERP_V1_THESIS.md §5",
+        description="PERP-V1 headline: net edge per round trip after fees, "
+        "slippage AND funding paid or received while holding",
+    ),
+    MetricDefinition(
+        key="perp_beta_adjusted_net_edge_bps", unit="bps of notional", kind="mean",
+        source="probe instrument (backtest over the collected perp tape)",
+        provided=False,
+        reference="NOT YET WRITTEN — the provider is PERP-V1 Probe 2 "
+        "(scripts/perp_arm_scores.py), blocked on Probe 0; the resolving "
+        "citation today is docs/PERP_V1_THESIS.md §4 arm B",
+        description="PERP-V1 arm B: net edge with the P&L attributable to common "
+        "crypto (BTC) beta removed — the arm's whole claim is that the edge is "
+        "not beta, so this is what its gate reads",
+    ),
+    MetricDefinition(
+        key="perp_incremental_cents_per_trade_vs_theta", unit="cents/trade",
+        kind="mean",
+        source="probe instrument (backtest over the collected perp tape joined to "
+        "the Kalshi crypto ladder tape)",
+        provided=False,
+        reference="NOT YET WRITTEN — the provider is PERP-V1 Probe 2 "
+        "(scripts/perp_arm_scores.py), blocked on Probe 0; the resolving "
+        "citation today is docs/PERP_V1_THESIS.md §4 arm C",
+        description="PERP-V1 arm C: realizable cents per trade the perp overlay "
+        "adds OVER the registered Theta spot model — not standalone accuracy, "
+        "which would hide the spread/fee/fill cost the repository keeps relearning",
+    ),
+    MetricDefinition(
+        key="perp_funding_capture_bps", direction="neutral", unit="bps of notional",
+        kind="mean",
+        source="probe instrument (funding history joined to held positions)",
+        provided=False,
+        reference="NOT YET WRITTEN — the provider is PERP-V1 Probe 2 "
+        "(scripts/perp_arm_scores.py), blocked on Probe 0; the resolving "
+        "citation today is docs/PERP_V1_THESIS.md §4",
+        description="PERP-V1 diagnostic: gross funding received (positive) or paid "
+        "(negative) while holding. Deliberately NOT a gate: funding income with a "
+        "larger relative-price loss is the failure mode, not the edge",
+    ),
+    MetricDefinition(
+        key="perp_signal_ic", direction="neutral", unit="correlation", kind="mean",
+        source="probe instrument (perp features vs forward event-contract moves)",
+        provided=False,
+        reference="NOT YET WRITTEN — the provider is PERP-V1 Probe 2 "
+        "(scripts/perp_arm_scores.py), blocked on Probe 0; the resolving "
+        "citation today is docs/PERP_V1_THESIS.md §4 arm C",
+        description="PERP-V1 arm C diagnostic: information coefficient of one perp "
+        "feature against the forward prediction-market move at a fixed horizon",
+    ),
+    MetricDefinition(
+        key="perp_probe_observations", unit="observations", kind="count",
+        source="probe instrument (backtest over the collected perp tape)",
+        provided=False,
+        reference="NOT YET WRITTEN — the provider is PERP-V1 Probe 2 "
+        "(scripts/perp_arm_scores.py), blocked on Probe 0; the resolving "
+        "citation today is docs/PERP_V1_THESIS.md §5",
+        description="PERP-V1 unit of evidence: one scored round trip for arms A/B, "
+        "one scored event-contract decision for arm C. The sample floor counts these",
+    ),
+    MetricDefinition(
+        key="perp_data_coverage_pct", unit="%", kind="rate",
+        source="probe instrument (tape completeness against the intended "
+        "universe x window)",
+        provided=False,
+        reference="NOT YET WRITTEN — the provider is PERP-V1 Probe 2 "
+        "(scripts/perp_arm_scores.py), blocked on Probe 0; the resolving "
+        "citation today is docs/PERP_V1_THESIS.md §5",
+        description="PERP-V1 honesty guard: share of the intended asset x time tape "
+        "the collector actually captured. Read every perp number against it — an "
+        "estimate speaking for a fifth of the tape is not the same claim as one "
+        "speaking for all of it (the fill_model_coverage_pct lesson)",
+    ),
 )
 
 REGISTRY: dict[str, MetricDefinition] = {
