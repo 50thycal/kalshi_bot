@@ -1,6 +1,6 @@
 # WS-009 — The live-vs-paper dashboard: load cost, run selection, and reading a dead book as current
 
-**Phase:** BUILDING
+**Phase:** REVIEW
 **Status:** Active
 **Created:** 2026-08-29
 **Updated:** 2026-08-29
@@ -152,7 +152,7 @@ Inline; the change is bounded and its shape is the mental model above.
 
 ## Implementation State
 
-Building — see the PR below.
+PR open ([#271](https://github.com/50thycal/kalshi_bot/pull/271)); the handoff is its body.
 
 ## Review State
 
@@ -168,7 +168,7 @@ Experiment OS; the dashboard merely stopped saying otherwise.
 
 ## Related PRs
 
-To follow.
+- [#271](https://github.com/50thycal/kalshi_bot/pull/271)
 
 ## Next Step
 
