@@ -1,5 +1,0 @@
-# latest deployment 10a915dc-80e7-4b3b-9509-a2dda824d513 (status=SUCCESS, created=2026-08-29T11:45:06.976Z)
-# ops request: type='logs'
-# target service: livedash
-2026-08-29T11:46:05.786057036Z INFO  Starting Container
-2026-08-29T11:46:06.596037018Z INFO  livedash listening on http://0.0.0.0:8080
