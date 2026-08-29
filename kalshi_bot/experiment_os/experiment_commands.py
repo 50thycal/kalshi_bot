@@ -172,9 +172,20 @@ def _no_contract(session, **kw):
 def _packages() -> dict[str, ExperimentPackage]:
     """Imported lazily so this module stays importable when a package's own
     dependencies are not (and so the boot hook's error handler can still run)."""
-    from . import canary_mmsell10, repair_tmmsell_epoch
+    from . import canary_mmsell10, marktangle, repair_tmmsell_epoch
 
     return {
+        "marktangle-reversion": ExperimentPackage(
+            name="marktangle-reversion",
+            experiment_key=marktangle.EXPERIMENT_KEY,
+            description=(
+                "MARKTANGLE conditional-reversion contract: five arms (three "
+                "treatments, the continuation mirror as control, the un-gated "
+                "fallacy benchmark), both paper gates pre-registered, and a "
+                "TAGLESS probe deployment. Arms nothing, trades nothing."
+            ),
+            register=marktangle.register,
+        ),
         "tmmsell-epoch-repair": ExperimentPackage(
             name="tmmsell-epoch-repair",
             experiment_key=repair_tmmsell_epoch.EXPERIMENT_KEY,
