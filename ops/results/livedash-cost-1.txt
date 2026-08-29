@@ -1,6 +1,0 @@
-# ops request: type='db'
-twins  open_twins  ticks_all  ticks_30d  tickers_30d  paper_trades_live  live_orders  fills  position_snapshots
------  ----------  ---------  ---------  -----------  -----------------  -----------  -----  ------------------
-15     1           3053103    2799206    13888        71799              5166         1876   419242            
-
-(1 row)
