@@ -1,1 +1,1 @@
-{"type":"script","name":"marktangle_probe","args":["--pages","12"],"id":"mkt-probe-1"}
+{"type":"script","name":"marktangle_probe","args":["--series","KXHIGHNY,KXHIGHCHI,KXBTCD","--pages","20","--min-vol","0"],"id":"mkt-diag-1"}
