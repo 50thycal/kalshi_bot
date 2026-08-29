@@ -198,6 +198,7 @@ ALLOWED_SCRIPTS = (
     "evo_explore_probe",
     "evo_backtest_probe",
     "experiment_os_status",
+    "marktangle_probe",
 )
 
 

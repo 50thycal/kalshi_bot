@@ -68,6 +68,48 @@ No gate result is recorded from this. A survey prints; a verdict is a recorded e
 
 ---
 
+## MARKTANGLE 2026-08-29 — REGISTERED at PROBE. Conditional reversion, not Martingale.
+
+New hypothesis family, registered as `marktangle-conditional-reversion` (v1 frozen, stage
+PROBE, five arms, both paper gates pre-registered, tagless probe deployment). Thesis:
+`docs/MARKTANGLE_THESIS.md`. Probe: `scripts/marktangle_probe.py`. **No verdict yet — the
+Phase-A scan has not been run.** This entry records the registration and the reasoning that
+shaped it, not a result.
+
+The idea arrived fused with a Martingale. The two were separated before anything was built:
+
+- **Martingale sizing: excluded, pre-registered.** Doubling after a loss changes no
+  per-trade expectation; it swaps a high probability of a small win for a small
+  probability of ruin (ten doublings off $10 commit $10,230 to chase $10). Recorded on
+  v1's `held_constant`, so adding it later is a new Version rather than a retune.
+- **"Ten YESes mean a NO is due": not the hypothesis.** Under independence
+  P(N | Y^10) = P(N), exactly. A 50% marginal frequency implies nothing about the
+  conditional structure.
+- **What IS the hypothesis:** the probability that the next event in a recurring family
+  resolves opposite to the current run rises with run length, by more than the quote
+  prices, net of taker fees. Size tracks the *estimated edge*, never accumulated losses.
+
+Why this is not a revival of `scanner-ta-books` or the nine backfill structural probes
+(both refuted, both "price-history only"): the unit of observation here is the **resolution
+of consecutive events in a recurring family**, not an intraday price path, and the entry
+condition is a modelled conditional probability tested against the quote — the "mean
+reversion as a MODEL FEATURE, never a standalone trade" shape those graveyard entries
+name as the revival condition.
+
+The control is what makes it falsifiable: `mktcont` is the same book pointed the other way
+(continuation side, same universe, cadence and sizing). If the treatment cannot beat its
+own mirror, the streak carries no direction — and that is a `fail_any` clause on the
+promotion gate, not a judgement call. `mktnaive` (reversal entry with no price test)
+measures whether the edge gate does any work at all.
+
+Pre-registered probe verdict rule, frozen in v1's contract and not re-read after results:
+PASS needs one family with ≥100 holdout entries at run ≥ k*, a Wilson 95% lower bound on
+holdout reversal above 50%, and ≥ +3.0c/contract mean net edge vs the T−60m taker price on
+≥100 priced entries. FAIL if every survivor is priced through. HOLD on thin sample — thin
+sample is not a negative result, it is no result.
+
+---
+
 ## PERP-V1 PRE-REGISTRATION 2026-08-29 — perpetual futures opened as a research surface; NO verdict
 
 Not a result. A **pre-registration**, recorded here so the 2026-07-09 perps entry below has a
