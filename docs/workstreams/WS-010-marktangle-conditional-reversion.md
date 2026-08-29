@@ -68,13 +68,18 @@ clause, not a judgement call.
   that promotes whichever arm looks best is a multi-way search.
 - **The fill model is not read here.** It is calibrated for resting maker orders in the
   mmsell cheap band; every MARKTANGLE arm is a taker.
+- **D1 answered (operator, 2026-08-29): the first probe run is exchange-wide and
+  un-restricted.** Restricting to families with a physical regime story would pre-select
+  the answer — it would find the families we already believe in and tell us nothing about
+  the ones we do not. The sweep is the script's default, so the request carries no
+  `--series`. The cost of the honest version is a longer run and a wider table, not a
+  weaker verdict: the holdout floor and the edge bar are unchanged, and a family that
+  clears them without a story is a more interesting result, not a less trustworthy one.
 
 ## Open Decisions
 
-- **D1.** Probe breadth on the first run: sweep the exchange, or restrict to families
-  with a physical regime story (weather, scheduled-settle)? The exchange-wide sweep is
-  the honest first pass and is what the script defaults to; a restricted run is cheaper
-  but pre-selects the answer. Recommendation: run the sweep first, un-restricted.
+- ~~**D1.** Probe breadth on the first run.~~ **Answered: exchange-wide, un-restricted.**
+  See Decisions Made.
 - **D2.** If the probe PASSes on exactly one family, is one family a strategy? The
   promotion gate does not ask this, and it should be answered before PAPER rather than
   after — a single-family book is a single-regime bet whatever its per-trade edge.
@@ -136,6 +141,18 @@ Linked, not restated — query Experiment OS for current state.
 
 ## Next Step
 
-Merge, then run `REGISTER_PACKAGE marktangle-reversion`; then run the probe
-(`{"type":"script","name":"marktangle_probe","args":["--pages","12"]}`), then again with
-`--price` on the survivors, and record the verdict in the thesis and the journal.
+**Blocked on merge.** The ops runner executes code from the DEFAULT BRANCH only — a
+fail-closed guard (`OPS_RUNNER_CODE_SOURCE=default-branch`, the durable fix for
+XOS-000005) — so `marktangle_probe` is not runnable until this PR merges. The Claude
+sandbox cannot substitute: its egress policy refuses `api.elections.kalshi.com` outright
+(403 on CONNECT), which is why probes run on the ops channel in the first place.
+
+Once merged, in order:
+
+1. `REGISTER_PACKAGE marktangle-reversion` on the experiment-command transport.
+2. The exchange-wide sweep (D1), SEQUENCE + HOLDOUT only — cheap, no candle fetches:
+   `{"type":"script","name":"marktangle_probe","args":["--pages","12"],"id":"mkt-probe-1"}`
+3. The PRICE stage on whatever survives:
+   `{"type":"script","name":"marktangle_probe","args":["--pages","12","--price"],"id":"mkt-probe-2"}`
+4. Record the verdict in `docs/MARKTANGLE_THESIS.md` and `docs/RESEARCH_JOURNAL.md`.
+   A HOLD is a real outcome and is recorded as one.
