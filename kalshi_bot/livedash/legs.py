@@ -43,7 +43,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import and_, func, select
 
 from .. import models as m
 
@@ -338,13 +338,30 @@ def live_leg(session, live_tag: str, since: datetime, marks) -> Leg:
 
 def _latest_position_snapshots(session, tickers: list[str]) -> dict[str, m.Position]:
     """Newest `positions` row per ticker. Snapshots accumulate every reconcile cycle,
-    so only the last one describes the position now."""
+    so only the last one describes the position now.
+
+    The newest-per-ticker cut is made in SQL rather than by reading every snapshot and
+    dropping all but the first. `positions` grows by one row per held ticker per
+    reconcile cycle, so a book that has run for weeks has thousands of rows per ticker,
+    and reading them all to keep one was a large share of what made this page slow.
+    Ties on `captured_at` are still broken by the highest id, as before.
+    """
     if not tickers:
         return {}
+    newest = (
+        select(m.Position.market_ticker.label("ticker"),
+               func.max(m.Position.captured_at).label("captured_at"))
+        .where(m.Position.market_ticker.in_(tickers))
+        .group_by(m.Position.market_ticker)
+        .subquery()
+    )
     out: dict[str, m.Position] = {}
     for row in session.scalars(
-        select(m.Position).where(m.Position.market_ticker.in_(tickers))
-        .order_by(m.Position.captured_at.desc(), m.Position.id.desc())
+        select(m.Position).join(
+            newest,
+            and_(m.Position.market_ticker == newest.c.ticker,
+                 m.Position.captured_at == newest.c.captured_at),
+        ).order_by(m.Position.id.desc())
     ):
         out.setdefault(row.market_ticker, row)
     return out

@@ -126,7 +126,13 @@ def list_pairs(session, *, live_tag: str | None = None, limit: int = 50) -> list
 def default_pair(session) -> Pair | None:
     """The pair to show when none was requested: the newest still-open run, else the
     newest run overall. Never a hardcoded tag or row id."""
-    pairs = list_pairs(session, limit=50)
+    return default_from(list_pairs(session, limit=50))
+
+
+def default_from(pairs: list[Pair]) -> Pair | None:
+    """The same rule, applied to a list already in hand — so a caller that has just
+    listed the pairs does not query for them again to ask which one is the default,
+    and cannot answer it by a different rule."""
     if not pairs:
         return None
     return next((p for p in pairs if p.is_open), pairs[0])
