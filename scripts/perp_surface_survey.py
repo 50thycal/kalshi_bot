@@ -51,6 +51,7 @@ import ssl
 import time
 import urllib.error
 import urllib.request
+from datetime import datetime, timedelta, timezone
 
 BASE = "https://api.elections.kalshi.com/trade-api/v2"
 _UA = "kalshi-bot-perp-surface-survey/1 (research; read-only)"
@@ -59,18 +60,35 @@ _UA = "kalshi-bot-perp-surface-survey/1 (research; read-only)"
 #: Every one is a GUESS until this script prints its status — that is the point.
 #: `{asset}` is substituted per asset; a path without it is probed once.
 CANDIDATE_PATHS: tuple[tuple[str, str], ...] = (
-    ("/margin/markets", "perp market list (brief: the /margin surface)"),
-    ("/margin/markets?limit=5", "perp market list, paged"),
-    ("/margin/positions", "perp positions (expected to need auth)"),
-    ("/margin/balance", "perp balance (expected to need auth)"),
-    ("/margin/fills", "perp fills (expected to need auth)"),
-    ("/margin/funding_rates", "historical funding rates"),
-    ("/margin/funding_rate_estimate", "live funding estimate for the open window"),
-    ("/margin/fee_tiers", "fee tiers"),
-    ("/perpetuals/markets", "alternative spelling"),
-    ("/perps/markets", "alternative spelling"),
-    ("/index_prices", "CF Benchmarks reference feed"),
-    ("/reference_prices", "CF Benchmarks reference feed, alternative spelling"),
+    ("/margin/markets", "perp market list (CONFIRMED readable 2026-08-29)"),
+    ("/margin/markets?limit=5", "perp market list, paged (CONFIRMED)"),
+    ("/margin/positions", "perp positions (CONFIRMED, needs auth)"),
+    ("/margin/balance", "perp balance (CONFIRMED, needs auth)"),
+    ("/margin/fills", "perp fills (CONFIRMED, needs auth)"),
+    ("/margin/fee_tiers", "fee tiers (CONFIRMED, needs auth)"),
+    # --- funding: the open question after the 2026-08-29 run -----------------
+    # `/margin/funding_rates` and `/margin/funding_rate_estimate` both answered
+    # 404, and funding is not optional here: it is arm B's entire ranking and
+    # arm A's entry confirmation, and it is a COST netted into every arm's
+    # headline metric. So this block hunts it rather than assuming the two names
+    # the brief happened to use are the only ones.
+    ("/margin/funding", "funding, singular"),
+    ("/margin/funding_history", "funding history"),
+    ("/margin/funding_payments", "funding payments (likely auth)"),
+    ("/margin/funding_rates/history", "funding history, nested"),
+    ("/margin/rates", "rates"),
+    ("/margin/settlements", "settlements — funding may settle through here"),
+    ("/margin/exchange/schedule", "exchange schedule: when funding settles"),
+    ("/margin/exchange/status", "exchange status"),
+    ("/margin/series", "series listing"),
+    ("/margin/events", "event listing"),
+    # --- reference/index price ---------------------------------------------
+    # `reference_price` is already embedded in every market row, which may be
+    # enough for the premium. These probe whether a standalone series exists,
+    # because a premium z-score needs the index's HISTORY, not just its level.
+    ("/margin/index_prices", "reference index, under /margin"),
+    ("/margin/reference_prices", "reference index, alternative spelling"),
+    ("/margin/exchange_index", "the exchange_index field's own endpoint"),
 )
 
 #: Probed per asset once a market-list path resolves, to learn the per-market
@@ -78,9 +96,19 @@ CANDIDATE_PATHS: tuple[tuple[str, str], ...] = (
 PER_MARKET_PATHS: tuple[tuple[str, str], ...] = (
     ("/margin/markets/{ticker}", "market detail (mark price, OI, leverage)"),
     ("/margin/markets/{ticker}/orderbook", "order book"),
-    ("/margin/markets/{ticker}/candlesticks", "candles"),
+    # Candlesticks answered 400 asking for start_ts on 2026-08-29 — the endpoint
+    # is there. Supply the arguments it named so this run learns the CANDLE
+    # SHAPE, which is what a premium z-score over a trailing window needs.
+    ("/margin/markets/{ticker}/candlesticks?start_ts={start_ts}&end_ts={end_ts}"
+     "&period_interval=1", "candles, 1-minute, last hour"),
+    ("/margin/markets/{ticker}/candlesticks?start_ts={start_ts}&end_ts={end_ts}"
+     "&period_interval=60", "candles, hourly"),
     ("/margin/markets/{ticker}/trades", "public trade tape"),
+    ("/margin/markets/{ticker}/funding", "per-market funding"),
+    ("/margin/markets/{ticker}/funding_rate", "per-market funding rate"),
     ("/margin/markets/{ticker}/funding_rates", "per-market funding history"),
+    ("/margin/markets/{ticker}/candlesticks", "candles with NO args — kept so "
+     "the 400-vs-404 distinction stays visible in every run"),
 )
 
 ASSETS = ("BTC", "ETH", "SOL", "XRP", "DOGE")
@@ -124,11 +152,21 @@ def fetch(path: str, timeout: float = 30.0) -> tuple[int, object | None, str]:
 
 
 def _classify(status: int) -> str:
+    """The 2026-08-29 run proved why 400 is not 404.
+
+    `/margin/markets/{t}/candlesticks` answered 400 "Query argument start_ts is
+    required, but not found" and this function reported it ABSENT — which is the
+    exact conflation the probe exists to prevent. A 400 is the endpoint TALKING:
+    it parsed the route, reached its own argument validation and told us what it
+    wants. Only 404 means the path is not there.
+    """
     if status == 200:
         return "READABLE"
     if status in (401, 403):
         return "EXISTS/AUTH"
-    if status in (404, 400):
+    if status == 400:
+        return "EXISTS/ARGS"
+    if status == 404:
         return "ABSENT"
     if status == 0:
         return "NO-ANSWER"
@@ -208,15 +246,36 @@ def main(argv: list[str] | None = None) -> int:
                 break
 
     if ticker:
+        now = datetime.now(timezone.utc)
+        subs = {
+            "ticker": ticker,
+            "end_ts": int(now.timestamp()),
+            "start_ts": int((now - timedelta(hours=1)).timestamp()),
+        }
         print("\n--- per-market surface ---")
         for tmpl, why in PER_MARKET_PATHS:
-            path = tmpl.format(ticker=ticker)
+            path = tmpl.format(**subs)
             status, payload, note = fetch(path)
             print(f"  {_classify(status):<12} {path}  ({why})")
             if status == 200 and payload is not None:
                 print(f"               fields: {_shape(payload)}")
             elif note:
                 print(f"               note: {note[:180]}")
+
+        # The market DETAIL row, in full. The list row already showed
+        # `reference_price` and `settlement_mark_price`; what is not yet known is
+        # whether the detail carries a funding field the list omits — which would
+        # answer the funding question without a separate endpoint at all.
+        status, payload, _ = fetch(f"/margin/markets/{ticker}")
+        if status == 200 and isinstance(payload, dict):
+            detail = payload.get("market") if isinstance(payload.get("market"), dict) else payload
+            print(f"\n  full field set of {ticker}:")
+            for key in sorted(detail):
+                value = detail[key]
+                kind = type(value).__name__
+                print(f"    {key:<42} ({kind})")
+            hits = sorted(k for k in detail if "fund" in k.lower() or "rate" in k.lower())
+            print(f"  funding-ish fields on the market row: {hits or '(none)'}")
     else:
         print("\n--- per-market surface ---")
         print("  skipped: no market-list path returned a readable ticker.")
@@ -231,14 +290,19 @@ def main(argv: list[str] | None = None) -> int:
         print("  A readable perp surface EXISTS. Record the field names above against the")
         print("  thesis's assumed names before writing the collector: a collector built on")
         print("  assumed fields is the same error as a probe built on guessed tickers.")
-        print("  Next: PERP-V1 Probe 1 (read-only tape collector), then Probe 2 (scorers).")
+        print("  The question this run is FOR is funding: it is arm B's entire ranking,")
+        print("  arm A's entry confirmation, and a cost netted into every arm's headline")
+        print("  metric. If every funding line above reads ABSENT and no funding-ish field")
+        print("  sits on the market row, then arm B is unscoreable as written and that is")
+        print("  a contract question for the operator, not something to work around here.")
     else:
         print("  NO perp path was readable from this runner. This is NOT yet a kill: an")
         print("  EXISTS/AUTH line above means the surface is real and needs the worker's")
-        print("  Kalshi credentials, which the ops channel deliberately does not hold.")
-        print("  Read the classifications: if every line is ABSENT, the thesis names the")
-        print("  wrong surface and PERP-V1 stops at PROBE with BLOCKED_DATA — the same")
-        print("  outcome as 2026-07-09, reached again for the cost of one ops request.")
+        print("  Kalshi credentials, which the ops channel deliberately does not hold, and")
+        print("  EXISTS/ARGS means the path is there and wants different query arguments.")
+        print("  Only ABSENT on every line means the thesis names the wrong surface, and")
+        print("  PERP-V1 then stops at PROBE with BLOCKED_DATA — the 2026-07-09 outcome,")
+        print("  reached again for the cost of one ops request.")
     print("\n  Survey only. NOTHING is promoted by this script, and no gate result is")
     print("  recorded by it: a gate verdict is a recorded evaluator act, never a print.")
     return 0
