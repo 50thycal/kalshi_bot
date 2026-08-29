@@ -1,1 +1,1 @@
-{"type": "db", "id": "twins-now-1", "max_rows": 40, "sql": "select twin_tag, live_tag, started_at, ended_at, (ended_at is null) as is_open from live_paper_twins order by started_at desc"}
+{"type":"noop"}
