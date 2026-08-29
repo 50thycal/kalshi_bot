@@ -527,3 +527,67 @@ is the only place the structural proofs live.
 
 <!-- Copy the block above for each new decision. IDs are stable: never reused, never
      renumbered. -->
+
+---
+
+### DEC-008 — Three perp mechanisms race as arms of one experiment, not as three experiments
+
+**Date:** 2026-08-29
+**Status:** Accepted
+
+**Context**
+
+Kalshi's crypto perpetual futures open a research surface unlike anything this repository
+has traded: the instrument is tethered to a published reference index by an explicit
+8-hourly funding payment, so the tradeable question becomes *where is risk priced
+differently across two instruments on the same underlying* rather than *what is the true
+probability*. Three candidate mechanisms presented themselves at once — premium reversion,
+cross-sectional funding carry, and perp microstructure leading the crypto event-contract
+ladder — and the operator asked for them to be raced against each other.
+
+The obvious shape is three experiments, one per mechanism, each with its own arms. It is
+also the shape that quietly makes the race meaningless.
+
+**Decision**
+
+One experiment, `perp-v1`, with three treatment arms and a matched random-direction control
+(`perpctl`), registered together and frozen together on version 1. Each treatment arm gets
+its **own** PROBE→PAPER gate rather than the version carrying one gate over `arm: "*"`.
+
+Three separate experiments would each have chosen their own universe, cost model, sample
+unit, measurement instrument and headline metric. Comparing their outputs afterwards would
+then rest on an *assumption* of comparability rather than on a shared frozen contract — the
+same class of mistake that makes `mmsell-anchor-vol-entry`'s cross-experiment delta
+`BLOCKED_PLATFORM` today when the two epochs pin different snapshots. Registering the three
+under one contract makes the shared quantities load-bearing and pre-registered instead of
+coincidental.
+
+Per-arm gates are the other half. A single `arm: "*"` promotion gate makes all three arms
+promote together or none of them, which is not a horse race; it is a portfolio bet on the
+weakest arm. The rule that goes with per-arm gates — the paper deployment carries only the
+arms whose own gate PASSed — is written into the thesis because Experiment OS cannot
+enforce it.
+
+**Consequences**
+
+*Easier:* the comparison the operator asked for is a property of the contract rather than
+an argument made after the fact. One collector, one cost model and one metric serve all
+three arms, so a defect in the measurement layer is one defect and not three.
+
+*Harder:* **arms freeze together.** Changing one arm's entry rule is a new Version for all
+three, and evidence restarts for all three. This is the real cost and it was accepted
+deliberately rather than discovered later.
+
+*Expensive to reverse:* moderate. Splitting the experiment later means new experiments with
+their own versions; the probe evidence gathered under `perp-v1` would be `context_only` to
+them, not poolable.
+
+*Open:* whether a perp book could ever be live without a Platform Revision. Leverage,
+liquidation and a recurring funding cash flow are semantics no `FEE_MODEL`, `FILL_MODEL` or
+risk component in this repository describes. That is Platform Change Review's question, and
+it is raised here rather than answered — `perp-v1` stays at PROBE, registers no strategy tag
+and no deployment, and its package has no `arm` function at all.
+
+*Revisit if:* one arm clears its bar and the other two are still accumulating. The answer is
+not to unfreeze the version but to register the paper deployment for the arms that passed
+and let the rest keep gathering evidence under the same contract.

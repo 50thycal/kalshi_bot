@@ -152,8 +152,9 @@ Not started.
 
 ## Related Decisions
 
-`DEC-001` (the authority boundary — this file links to `perp-v1`, and never
-restates its standing or its gate reads).
+`DEC-001` (the authority boundary — this file links to `perp-v1`, and never restates
+its standing or its gate reads). `DEC-008` (why the three mechanisms are arms of one
+experiment rather than three experiments, and why each arm carries its own gate).
 
 ## Related PRs
 
