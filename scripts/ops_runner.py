@@ -200,14 +200,22 @@ ALLOWED_SCRIPTS = (
 )
 
 
-# env/logs requests can target either Railway service in the project. Each name maps
-# to the secret holding that service's Railway service ID — never committed, since this
-# repo is public. "main"/"live" is the trading worker (BOT_MODE=live); "evo" is the
-# evolutionary-agent worker (BOT_MODE=evo). Absent -> "main" (backward compatible).
+# env/logs requests can target any Railway service in the project. Each name maps to the
+# secret holding that service's Railway service ID — never committed, since this repo is
+# public. "main"/"live" is the trading worker (BOT_MODE=live); "evo" is the
+# evolutionary-agent worker (BOT_MODE=evo); "livedash" is the read-only live-vs-paper
+# dashboard. Absent -> "main" (backward compatible).
+#
+# The dashboard was added because it was the one deployed service no session could see:
+# a failed deploy, a crash loop or a startup error on it produced no signal anywhere, so
+# the only way anyone learned it was broken was by opening it and finding it broken
+# (WS-009 D3). A service whose ID secret is unset still answers with the actionable
+# message below rather than a lookup failure.
 _SERVICE_ID_SECRET = {
     "main": "RAILWAY_SERVICE_ID",
     "live": "RAILWAY_SERVICE_ID",
     "evo": "RAILWAY_EVO_SERVICE_ID",
+    "livedash": "RAILWAY_LIVEDASH_SERVICE_ID",
 }
 
 

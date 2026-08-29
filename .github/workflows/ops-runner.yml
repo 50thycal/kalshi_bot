@@ -95,6 +95,10 @@ jobs:
           RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
           # evo worker (BOT_MODE=evo); selected by `{"service":"evo"}` on env/logs requests.
           RAILWAY_EVO_SERVICE_ID: ${{ secrets.RAILWAY_EVO_SERVICE_ID }}
+          # live-vs-paper dashboard; selected by `{"service":"livedash"}`. Unset until the
+          # operator adds the secret, and an unset service reports that rather than failing
+          # obscurely — so shipping this ahead of the secret is safe.
+          RAILWAY_LIVEDASH_SERVICE_ID: ${{ secrets.RAILWAY_LIVEDASH_SERVICE_ID }}
         run: |
           set -o pipefail
           # Snapshot the triggering request BEFORE running: the robust publish step
