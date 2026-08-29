@@ -113,8 +113,19 @@ phase 4  /api/runs                 the all-runs table         -> nothing waits o
   this is no longer urgent — but a retired pair's numbers cannot change, and rebuilding
   fourteen frozen runs on every page load is work that will never produce a different
   answer. Recommendation: revisit only if the table is still visibly slow after this.
-- ~~**D3.**~~ **RESOLVED.** The operator is adding `RAILWAY_LIVEDASH_SERVICE_ID`, and
-  `"livedash"` is now a targetable service on the ops channel. Original statement:
+- ~~**D3.**~~ **RESOLVED AND VALIDATED 2026-08-29.** The secret is set, `"livedash"` is a
+  targetable service, and a real request round-tripped (`dash-logs-1`), returning the
+  deployment status and the service's startup lines:
+
+  ```text
+  # latest deployment 10a915dc… (status=SUCCESS, created=2026-08-29T11:45:06.976Z)
+  # target service: livedash
+  11:46:05  INFO  Starting Container
+  11:46:06  INFO  livedash listening on http://0.0.0.0:8080
+  ```
+
+  That deployment is #273's own merge, so the receipt doubles as the first deploy check
+  the dashboard has ever had. Original statement:
 - **D3.** The **livedash service is not reachable from the ops channel.** `env` and `logs`
   requests resolve a service id from a secret, and only two exist — `RAILWAY_SERVICE_ID`
   (main/live) and `RAILWAY_EVO_SERVICE_ID` (evo). So no Claude session can check whether a
@@ -180,6 +191,26 @@ lifecycle state, gate, verdict, epoch, Version or exposure changes as a result. 
 retired pair this workstream stops the dashboard from opening on was retired in
 Experiment OS; the dashboard merely stopped saying otherwise.
 
+## A commit on `ops` that is not in the default branch's history
+
+Actions loads the runner workflow from the branch that triggered it, so the
+`RAILWAY_LIVEDASH_SERVICE_ID` passthrough had to land on **`ops`** as well as on the
+default branch. That is commit `c35ad24` on `ops`, pushed 2026-08-29 under the runbook's
+pre-flight (channel idle at `{"type":"noop"}`, no run in flight, backup ref
+`ops-backup-20260829T114525Z` at `6e57552`).
+
+It is recorded here because a transport commit with no counterpart in the default
+branch's history is exactly the shape of drift XOS-000005 was: the two copies of that
+workflow are meant to stay identical, and nothing in `git log` on the default branch
+says this one moved. It was **additive** — an ordinary fast-forward commit, not a
+rewrite — so `ops-transport-guard` was never lifted and no request or result was
+disturbed. The force-with-lease procedure in the runbook remains for rewrites only.
+
+`tests/test_ops_runner_freshness.py` now asserts that every service in
+`_SERVICE_ID_SECRET` has a matching workflow `env:` passthrough, so the halves cannot
+silently drift apart again — though that test reads the default branch's copy, and a
+future divergence between the two copies is still only caught by the channel failing.
+
 ## Related PRs
 
 - [#271](https://github.com/50thycal/kalshi_bot/pull/271)
@@ -211,7 +242,8 @@ fixture shaped like production (one open pair, fourteen ended).
 
 ## Next Step
 
-Confirm on the deployed livedash that first paint is seconds rather than half a minute.
-That is the last open item; the selection and layout faults are verified. Once
-`RAILWAY_LIVEDASH_SERVICE_ID` is set, `{"type":"logs","service":"livedash"}` also makes a
-failed dashboard deploy visible to a session for the first time.
+One item left: confirm on the deployed livedash that first paint is seconds rather than
+half a minute. It needs an operator or a browser pointed at the public URL — the ops
+channel can now report the service's health and startup, but not how long a page takes
+to paint. Everything else in this workstream is verified: the selection and layout
+faults in a real browser, the read-cost reductions by measurement, and D3 by receipt.
