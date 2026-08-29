@@ -3,7 +3,7 @@
 **Phase:** REVIEW
 **Status:** Active
 **Created:** 2026-08-29
-**Updated:** 2026-08-29
+**Updated:** 2026-08-29 (merged)
 
 ## Goal
 
@@ -113,6 +113,15 @@ phase 4  /api/runs                 the all-runs table         -> nothing waits o
   this is no longer urgent — but a retired pair's numbers cannot change, and rebuilding
   fourteen frozen runs on every page load is work that will never produce a different
   answer. Recommendation: revisit only if the table is still visibly slow after this.
+- **D3.** The **livedash service is not reachable from the ops channel.** `env` and `logs`
+  requests resolve a service id from a secret, and only two exist — `RAILWAY_SERVICE_ID`
+  (main/live) and `RAILWAY_EVO_SERVICE_ID` (evo). So no Claude session can check whether a
+  livedash deploy succeeded, read its startup logs, or see it crash-looping; the only
+  signal is an operator opening the page. Wiring a `RAILWAY_LIVEDASH_SERVICE_ID` secret
+  and adding `"livedash"` to `_SERVICE_ID_SECRET` in `scripts/ops_runner.py` would close
+  it. It is small, but it is an ops-surface change and an operator decision, not something
+  this workstream makes on its own. Recommendation: do it — this workstream's own closing
+  check is blocked on its absence.
 - **D2.** Should ended pairs be pruned from the picker entirely after some age, rather
   than only hidden behind the checkbox? 14 retired and growing by one per parameter
   change. Recommendation: no — the history table is where they belong and it lists all
@@ -152,11 +161,14 @@ Inline; the change is bounded and its shape is the mental model above.
 
 ## Implementation State
 
-PR open ([#271](https://github.com/50thycal/kalshi_bot/pull/271)); the handoff is its body.
+Merged — [#271](https://github.com/50thycal/kalshi_bot/pull/271); the handoff is its body.
+What remains is verification on the deployed service, not code.
 
 ## Review State
 
-Not started.
+CI green on `ccc383e` — lint, migrations applied on real Postgres, the full suite, and the
+exactly-once Postgres claim race (which CI fails on a skip, so it genuinely ran). No review
+threads were raised. Merged 2026-08-29.
 
 ## Related Decisions
 
@@ -172,5 +184,6 @@ Experiment OS; the dashboard merely stopped saying otherwise.
 
 ## Next Step
 
-Land the PR, then confirm on the deployed service that first paint is seconds rather
-than half a minute and that switching pairs mid-load no longer reverts.
+Confirm on the deployed livedash that first paint is seconds rather than half a minute,
+and that switching pairs mid-load no longer reverts. That check closes this workstream —
+see D3 for why it cannot currently be made from a Claude session.
