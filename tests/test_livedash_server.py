@@ -136,6 +136,34 @@ def test_the_page_loads_in_phases_and_never_pins_itself_to_a_retired_run():
     assert "ended(tag) ? location.pathname" in page
 
 
+def test_the_page_opens_on_a_running_pair_and_does_not_pin_the_header():
+    """Both faults an operator hit on the deployed page after the first pass.
+
+    It opened listing all fourteen retired pairs, by two independent routes: a `?run=`
+    an older build had written into the URL (retired pairs included), and the browser
+    restoring the "retired" checkbox across a reload. And its sticky header carried the
+    tags, the run state and the whole provenance line, which on a phone pinned about
+    half the viewport in place for the entire length of the page."""
+    import pathlib as _pathlib
+
+    page = (_pathlib.Path(srv.__file__).parent / "static" / "index.html").read_text()
+
+    # the checkbox is a per-visit choice, never one restored into the visit
+    assert '$("#showretired").checked = false;' in page
+    # a running pair wins; a finished one opens only when asked for unambiguously
+    assert 'params.get("retired") === "1"' in page
+
+    # the sticky bar carries navigation only — the read-once rows moved out of it
+    header = page.split("<header>", 1)[1].split("</header>", 1)[0]
+    for read_once in ('id="tags"', 'id="states"', 'id="meta"'):
+        assert read_once not in header, f"{read_once} is pinned in the sticky header"
+    assert 'id="runsel"' in header and 'id="refresh"' in header
+
+    # and on a phone it does not stick at all
+    mobile = page.split("@media(max-width:700px)", 1)[1]
+    assert "header{position:static}" in mobile.replace(" ", "").replace("\n", "")
+
+
 def test_selector_view_is_the_cheap_half_of_the_run_list(live_server):
     """Phase 1 of the page load: which pairs exist, so the picker is on screen before the
     per-run P&L columns have been rebuilt."""

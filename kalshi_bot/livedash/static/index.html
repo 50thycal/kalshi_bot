@@ -27,6 +27,11 @@
 
   header{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);
     padding:12px 0 10px}
+  header .hrow{flex-wrap:nowrap}
+  /* The selector is the only element here that may be squeezed: everything else is a
+     fixed control, and a wrapped "14 retired" was silently doubling the bar's height. */
+  header .hrow > :not(#runsel){flex:none;white-space:nowrap}
+  #runsel{min-width:0;flex:1 1 auto;text-overflow:ellipsis}
   .hrow{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center}
   .tag{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
     padding:2px 7px;border-radius:6px;background:var(--panel2);border:1px solid var(--line)}
@@ -156,26 +161,39 @@
   @media(max-width:700px){
     .bar{grid-template-columns:110px 1fr 78px}
     .feed li{grid-template-columns:60px 46px 1fr;padding:7px 10px}
+    /* A phone has no room to give a permanent bar. Even one line of it is a tenth of
+       the viewport on every screenful you scroll past, so here the header scrolls away
+       like everything else and the run picker is where you left it, at the top. */
+    header{position:static}
+    header h1{display:none}
+    #clock{display:none}
   }
 </style>
 </head>
 <body>
 <div class="loadbar" id="loadbar" hidden></div>
 <div class="wrap">
+  <!-- The sticky bar carries only what you navigate WITH: which pair, and reload. The
+       tags, run state and the provenance line are what you navigate TO -- they are read
+       once and then scrolled past, so keeping them pinned cost half a phone screen for
+       the whole length of the page. -->
   <header>
     <div class="hrow">
       <h1>Live vs Paper</h1>
       <select id="runsel" aria-label="Paired run"></select>
       <label class="dim" style="font-size:11px" title="Retired pairs are kept for history but hidden by default">
         <input type="checkbox" id="showretired"> retired</label>
-      <span id="tags"></span>
-      <span id="states"></span>
       <span style="margin-left:auto"></span>
       <span class="dim" id="clock"></span>
       <button id="refresh" title="Reload">↻</button>
     </div>
-    <div class="hrow dim" id="meta" style="font-size:12px;margin-top:6px"></div>
   </header>
+
+  <div class="hrow" style="margin-top:10px">
+    <span id="tags"></span>
+    <span id="states"></span>
+  </div>
+  <div class="hrow dim" id="meta" style="font-size:12px;margin-top:6px"></div>
 
   <div id="fatal" hidden class="banner bad"></div>
   <div id="pairnote"></div>
@@ -1056,15 +1074,27 @@ async function boot(){
     // Phase 1 -- which pairs exist. The cheap half of /api/runs, so the picker is usable in
     // about a second instead of after every run ever recorded has been rebuilt.
     S.runs = await getJSON("/api/runs?view=selector");
-    const wanted = new URLSearchParams(location.search).get("run");
+    const params = new URLSearchParams(location.search);
+    const wanted = params.get("run");
     const known = S.runs.runs.map(r => r.twin_tag);
     S.byTag = Object.fromEntries(S.runs.runs.map(r => [r.twin_tag, r]));
-    // A still-running pair wins over the API default, which is itself retired once every book
-    // has been superseded. An explicit ?run= beats both -- a link to a finished run is a
-    // deliberate request to read it.
+
+    // Showing retired pairs is a choice made DURING a visit, never one inherited into it.
+    // Browsers restore checkbox state across a reload, so without this the box came back
+    // ticked from a previous visit and the picker opened on fourteen dead books.
+    $("#showretired").checked = false;
+
+    // A running pair wins outright. The ?run= in an operator's URL is usually not a
+    // deliberate link at all -- an older build wrote one on every selection, retired pairs
+    // included -- so honouring it reopened a book that stopped trading weeks ago, and
+    // dragged the retired list open with it because the picker must not misdescribe what it
+    // is showing. A finished run therefore opens only when it is asked for unambiguously
+    // (?retired=1, which nothing writes automatically), or when nothing is running at all.
     const firstRunning = known.find(t => !S.byTag[t].ended_at);
-    S.tag = (wanted && known.includes(wanted)) ? wanted
-      : (firstRunning || S.runs.default_run || known[0]);
+    const linked = (wanted && known.includes(wanted)) ? wanted : null;
+    const linkedIsRunning = linked && !S.byTag[linked].ended_at;
+    S.tag = (linkedIsRunning || (linked && params.get("retired") === "1")) ? linked
+      : (firstRunning || linked || S.runs.default_run || known[0]);
     renderRunOptions();
     if(!S.tag){
       $("#fatal").hidden = false;

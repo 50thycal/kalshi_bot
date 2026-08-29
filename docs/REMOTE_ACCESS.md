@@ -62,6 +62,7 @@ Repo → **Settings → Secrets and variables → Actions → New repository sec
 | `RAILWAY_ENVIRONMENT_ID` | Railway environment ID (e.g. production) |
 | `RAILWAY_SERVICE_ID` | The **main/live** worker service ID (`BOT_MODE=live`) |
 | `RAILWAY_EVO_SERVICE_ID` | The **evo** worker service ID (`BOT_MODE=evo`), if you run the evolutionary-agent bot as a second Railway service. Enables `{"service":"evo"}` on `env`/`logs` ops requests so its logs + config are reachable exactly like the main service's. |
+| `RAILWAY_LIVEDASH_SERVICE_ID` | The **live-vs-paper dashboard** service ID (`python -m kalshi_bot.livedash`), if you run it as its own Railway service. Enables `{"service":"livedash"}` on `env`/`logs` ops requests. Without it, a failed dashboard deploy or a crash loop is invisible to every session — the only signal is opening the page and finding it broken. |
 
 Find a service's ID in its Railway URL:
 `…/project/<projectId>/service/<serviceId>?environmentId=<environmentId>`. The

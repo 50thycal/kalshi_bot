@@ -3,7 +3,7 @@
 **Phase:** REVIEW
 **Status:** Active
 **Created:** 2026-08-29
-**Updated:** 2026-08-29 (merged)
+**Updated:** 2026-08-29 (merged; two follow-up defects found on the deployed page)
 
 ## Goal
 
@@ -113,6 +113,8 @@ phase 4  /api/runs                 the all-runs table         -> nothing waits o
   this is no longer urgent — but a retired pair's numbers cannot change, and rebuilding
   fourteen frozen runs on every page load is work that will never produce a different
   answer. Recommendation: revisit only if the table is still visibly slow after this.
+- ~~**D3.**~~ **RESOLVED.** The operator is adding `RAILWAY_LIVEDASH_SERVICE_ID`, and
+  `"livedash"` is now a targetable service on the ops channel. Original statement:
 - **D3.** The **livedash service is not reachable from the ops channel.** `env` and `logs`
   requests resolve a service id from a secret, and only two exist — `RAILWAY_SERVICE_ID`
   (main/live) and `RAILWAY_EVO_SERVICE_ID` (evo). So no Claude session can check whether a
@@ -182,8 +184,34 @@ Experiment OS; the dashboard merely stopped saying otherwise.
 
 - [#271](https://github.com/50thycal/kalshi_bot/pull/271)
 
+## Observed on the deployed page (2026-08-29)
+
+The operator opened the dashboard. Two defects, both introduced or left standing by the
+first pass, and both since fixed and verified against a real browser at 390x844:
+
+1. **It opened listing all fourteen retired pairs.** Two independent causes, either
+   sufficient on its own. The operator's URL still carried a `?run=` naming a retired
+   pair — written by the *older* build, which recorded every selection — and the first
+   pass honoured an explicit `?run=` above a running pair, treating it as a deliberate
+   link when it was inherited state. Landing on a retired pair then ticked the "retired"
+   box, because the picker must not misdescribe what it is showing. Separately, browsers
+   restore checkbox state across a reload, so the box came back ticked from a previous
+   visit regardless. Now: a running pair wins outright, the box is forced off at boot,
+   and a finished run opens only via `?run=<tag>&retired=1`, which nothing writes
+   automatically.
+2. **The sticky header pinned about half a phone screen.** It carried the tags, the run
+   state and the whole provenance line, all of which wrap heavily at phone width and are
+   read once rather than navigated with. Those moved below the header; the sticky bar now
+   holds the run picker and reload only, and does not stick at all below 700px. Measured
+   after: 57px of an 844px viewport, `position: static`, and it scrolls away.
+
+The first pass was never checked in a browser — the tests asserted on source strings —
+which is exactly why both survived it. Verification now drives a real Chromium against a
+fixture shaped like production (one open pair, fourteen ended).
+
 ## Next Step
 
-Confirm on the deployed livedash that first paint is seconds rather than half a minute,
-and that switching pairs mid-load no longer reverts. That check closes this workstream —
-see D3 for why it cannot currently be made from a Claude session.
+Confirm on the deployed livedash that first paint is seconds rather than half a minute.
+That is the last open item; the selection and layout faults are verified. Once
+`RAILWAY_LIVEDASH_SERVICE_ID` is set, `{"type":"logs","service":"livedash"}` also makes a
+failed dashboard deploy visible to a session for the first time.

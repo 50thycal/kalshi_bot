@@ -177,19 +177,33 @@ To run a request:
    {"type": "xos", "command": "evaluate-gates", "args": ["--dry-run"], "id": "ev-1"}
    ```
 
-   **Two Railway services, one channel.** `env` and `logs` requests accept a
-   `"service"` field selecting which worker to act on — `"main"`/`"live"` (default,
-   the `BOT_MODE=live` trading worker) or `"evo"` (the `BOT_MODE=evo` evolutionary-agent
-   worker). So the evo bot's logs/config are reachable the same way as the main bot's:
+   **Three Railway services, one channel.** `env` and `logs` requests accept a
+   `"service"` field selecting which service to act on — `"main"`/`"live"` (default,
+   the `BOT_MODE=live` trading worker), `"evo"` (the `BOT_MODE=evo` evolutionary-agent
+   worker), or `"livedash"` (the read-only live-vs-paper dashboard). So the evo bot's
+   logs/config are reachable the same way as the main bot's:
    ```jsonc
    {"type": "logs", "service": "evo", "limit": 120, "id": "evo-logs-1"}
    {"type": "env",  "service": "evo", "id": "evo-env-1"}                    // read evo vars
    {"type": "env",  "service": "evo", "set": {"EVO_MAX_ACTIVE_AGENTS": "5"}, "id": "evo-cad"}
+   {"type": "logs", "service": "livedash", "limit": 80, "id": "dash-logs-1"}
    ```
 
+   `livedash` exists because the dashboard was the one deployed service no session
+   could see: a failed deploy, a crash loop or a startup error produced no signal
+   anywhere, so the only way anyone learned it was broken was by opening it and
+   finding it broken (WS-009 D3).
+
    Each service's ID lives in a secret (`RAILWAY_SERVICE_ID` for main,
-   `RAILWAY_EVO_SERVICE_ID` for evo — never in this public repo). `db` requests are
-   **service-agnostic** (both workers share one Postgres via `DATABASE_URL_RO`).
+   `RAILWAY_EVO_SERVICE_ID` for evo, `RAILWAY_LIVEDASH_SERVICE_ID` for the dashboard
+   — never in this public repo). A service whose secret is unset answers with a
+   message naming the secret to add, not an obscure lookup failure. `db` requests are
+   **service-agnostic** (all services share one Postgres via `DATABASE_URL_RO`).
+
+   **The workflow file is loaded from the `ops` branch.** Adding a service means
+   adding its `env:` passthrough to `.github/workflows/ops-runner.yml` on `ops` as
+   well as on the default branch — a plain fast-forward commit is enough for an
+   additive change like this; the force-push procedure below is only for a rewrite.
 
    **Reading a book's evidence funnel (XOS-000004).** Every series-addressed book
    ends its cycle line with a bounded, publishable funnel summary, so the ops logs
@@ -693,9 +707,15 @@ unavailable.
 
 Live in **GitHub Actions secrets**, not the repo: `DATABASE_URL_RO`,
 `RAILWAY_TOKEN`, `RAILWAY_PROJECT_ID`, `RAILWAY_ENVIRONMENT_ID`,
-`RAILWAY_SERVICE_ID` (main/live worker), and `RAILWAY_EVO_SERVICE_ID` (the evo
-worker — enables `{"service":"evo"}` env/logs requests). Human setup instructions
-are in `docs/REMOTE_ACCESS.md`.
+`RAILWAY_SERVICE_ID` (main/live worker), `RAILWAY_EVO_SERVICE_ID` (the evo
+worker — enables `{"service":"evo"}` env/logs requests), and
+`RAILWAY_LIVEDASH_SERVICE_ID` (the live-vs-paper dashboard — enables
+`{"service":"livedash"}`). Human setup instructions are in `docs/REMOTE_ACCESS.md`.
+
+To add a service ID: Railway → the service → Settings, copy its service ID; then
+GitHub → the repo → Settings → Secrets and variables → Actions → New repository
+secret. It goes in **GitHub**, not Railway: the ops runner is a GitHub Actions
+workflow, and the ID names which Railway service that workflow should query.
 
 ### Gotchas
 

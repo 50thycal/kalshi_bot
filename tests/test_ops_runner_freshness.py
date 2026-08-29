@@ -14,6 +14,7 @@ for the case where someone regresses the workflow later.
 
 from __future__ import annotations
 
+import os
 import pathlib
 import sys
 
@@ -204,3 +205,62 @@ def test_the_refusal_names_the_defect_it_prevents(monkeypatch, capsys):
     monkeypatch.delenv(ops_runner.CODE_SOURCE_ENV, raising=False)
     ops_runner.refuse_if_stale()
     assert "XOS-000005" in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------------------
+# Service targeting — WS-009 D3
+#
+# A service is only reachable if BOTH halves line up: the runner knows the name, and
+# the workflow passes that name's secret through. Wiring one without the other is a
+# silent no-op, which is how the dashboard came to be the one deployed service no
+# session could see.
+# ---------------------------------------------------------------------------
+
+
+def test_every_targetable_service_has_its_secret_passed_through(steps):
+    import ops_runner
+
+    passed = _run_step(steps).get("env", {})
+    for name, secret in ops_runner._SERVICE_ID_SECRET.items():
+        assert secret in passed, (
+            f"service {name!r} resolves {secret}, which the workflow never passes to the "
+            f"runner — every request for it would report the secret as unset"
+        )
+        assert passed[secret] == "${{ secrets." + secret + " }}"
+
+
+def test_the_dashboard_is_reachable_by_name():
+    """It is a deployed service like any other; before this it was the only one whose
+    failed deploy or crash loop produced no signal a session could read."""
+    import ops_runner
+
+    assert ops_runner._SERVICE_ID_SECRET["livedash"] == "RAILWAY_LIVEDASH_SERVICE_ID"
+
+
+def test_an_unconfigured_service_names_the_secret_to_add(monkeypatch):
+    """Shipping the name ahead of the secret has to be safe: the answer is the remedy,
+    not a lookup failure."""
+    import ops_runner
+
+    monkeypatch.delenv("RAILWAY_LIVEDASH_SERVICE_ID", raising=False)
+    error = ops_runner._select_service({"service": "livedash"})
+    assert error is not None
+    assert "RAILWAY_LIVEDASH_SERVICE_ID" in error and "Actions secrets" in error
+
+
+def test_a_configured_service_points_the_railway_client_at_it(monkeypatch):
+    import ops_runner
+
+    monkeypatch.setenv("RAILWAY_LIVEDASH_SERVICE_ID", "svc-dash-123")
+    monkeypatch.setenv("RAILWAY_SERVICE_ID", "svc-main-000")
+    assert ops_runner._select_service({"service": "livedash"}) is None
+    # railway_logs.py / railway_env.py both read RAILWAY_SERVICE_ID
+    assert os.environ["RAILWAY_SERVICE_ID"] == "svc-dash-123"
+
+
+def test_an_unknown_service_is_refused_by_name(monkeypatch):
+    import ops_runner
+
+    error = ops_runner._select_service({"service": "nope"})
+    assert error is not None and "unknown service" in error
+    assert "livedash" in error   # the message lists what IS known
