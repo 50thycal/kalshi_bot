@@ -3,7 +3,7 @@
 **Phase:** BUILDING
 **Status:** Active
 **Created:** 2026-08-29
-**Updated:** 2026-08-29
+**Updated:** 2026-08-29 (run 1)
 
 ## Goal
 
@@ -139,6 +139,21 @@ Linked, not restated — query Experiment OS for current state.
 - gates `paper_to_live_canary`, `paper_keep` on v1.
 - deployment `marktangle-probe-1` (kind PROBE, tagless).
 
+## Run log
+
+**Run 1 (2026-08-29, ops `mkt-probe-1` + `mkt-diag-1`) — no verdict, instrument fixed.**
+The exchange-wide sweep returned 0 usable families; a per-series diagnostic returned 198
+through the same code, proving the limit was the endpoint rather than the exchange. Two
+instrument fixes shipped (two-stage discovery-then-history fetch; the balanced-base-rate
+screen the thesis already pre-registered but the script never had). Contract untouched.
+Detail in `docs/MARKTANGLE_THESIS.md` §8b.
+
+**D3 (new).** How deep is deep enough? KXBTCD alone returns 20,000 settled markets and
+would dominate any exchange-wide ranking purely by having the most strikes. The current
+`--max-series` cap is a rate-limit guard, not a scientific choice, and a ranking dominated
+by one series is a finding about that series. Decide whether the unit of the sweep should
+be the family (as now) or the series, with a per-series family budget.
+
 ## Next Step
 
 **Blocked on merge.** The ops runner executes code from the DEFAULT BRANCH only — a
@@ -150,8 +165,9 @@ sandbox cannot substitute: its egress policy refuses `api.elections.kalshi.com` 
 Once merged, in order:
 
 1. `REGISTER_PACKAGE marktangle-reversion` on the experiment-command transport.
-2. The exchange-wide sweep (D1), SEQUENCE + HOLDOUT only — cheap, no candle fetches:
-   `{"type":"script","name":"marktangle_probe","args":["--pages","12"],"id":"mkt-probe-1"}`
+2. ~~The exchange-wide sweep (D1)~~ — **run, no verdict; see the run log.** The re-run on
+   the fixed instrument:
+   `{"type":"script","name":"marktangle_probe","args":["--max-series","40"],"id":"mkt-probe-3"}`
 3. The PRICE stage on whatever survives:
    `{"type":"script","name":"marktangle_probe","args":["--pages","12","--price"],"id":"mkt-probe-2"}`
 4. Record the verdict in `docs/MARKTANGLE_THESIS.md` and `docs/RESEARCH_JOURNAL.md`.

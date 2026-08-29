@@ -68,6 +68,20 @@ DECISION_MIN = 60
 #: reported as anything but context.
 MIN_FAMILY_N = 40
 
+#: The unconditional-balance band. The thesis admits "recurring binary families
+#: whose unconditional outcome is roughly balanced", and the first exchange-wide
+#: run showed why that clause has to be CODE and not prose: a KXBTCD strike
+#: ladder contributes ~90 families that resolve NO 100% of the time (strikes
+#: permanently out of the money). They are not memoryless — they are constant.
+#: A constant sequence has no conditional structure to find, its transition
+#: matrix is undefined on one side, and leaving it in buries the handful of
+#: families that could carry a signal under a hundred rows of noise.
+#:
+#: Excluded families are COUNTED, never silently dropped: the funnel is part of
+#: the result, and "we looked at 198 families" is a different claim from "we
+#: looked at 198 and 190 of them could not have shown anything".
+BASE_RATE_BAND = (25.0, 75.0)
+
 
 def _iso_to_unix(iso: str) -> int:
     try:
@@ -99,6 +113,27 @@ def wilson_lower(successes: int, n: int, z: float = 1.645) -> float:
 
 
 # ------------------------------------------------------------------ data source
+def discover_series(pages: int, min_vol: float) -> list[str]:
+    """Series tickers seen in the exchange-wide settled listing, most-seen first.
+
+    WHY THIS EXISTS. The first exchange-wide run (2026-08-29, ops mkt-probe-1)
+    returned 6,270 settled markets and ZERO families reaching the 40-resolution
+    floor. That was not a fact about Kalshi; it was a fact about the endpoint.
+    `status=settled` with no `series_ticker` returns a shallow RECENT window
+    spread across hundreds of series x strikes, so every family gets a handful
+    of rows. The same probe restricted to `KXBTCD` returned 20,000 markets and
+    198 families from the identical code path.
+
+    So discovery and history are two different queries: sweep once to learn WHICH
+    families exist, then pull each one's own history deeply. The sweep is still
+    un-restricted — the universe is not being pre-selected, only enumerated."""
+    seen: dict[str, int] = {}
+    for m in fetch_settled(pages, min_vol):
+        series = m["event"].split("-", 1)[0]
+        seen[series] = seen.get(series, 0) + 1
+    return [s for s, _ in sorted(seen.items(), key=lambda kv: -kv[1])]
+
+
 def fetch_settled(pages: int, min_vol: float, series: str | None = None) -> list[dict]:
     """Settled binaries, newest first. `series` restricts to one series ticker."""
     out: list[dict] = []
@@ -160,6 +195,25 @@ def build_families(markets: list[dict]) -> dict[str, list[dict]]:
         if len(deduped) >= MIN_FAMILY_N:
             out[key] = deduped
     return out
+
+
+def screen_balance(families: dict[str, list[dict]]) -> tuple[dict[str, list[dict]], dict]:
+    """Keep only families whose unconditional yes-rate is inside BASE_RATE_BAND.
+
+    Returns (kept, funnel). The funnel is reported, because a screen nobody can
+    see is indistinguishable from a bug."""
+    kept: dict[str, list[dict]] = {}
+    degenerate = lopsided = 0
+    for key, rows in families.items():
+        yes = 100.0 * sum(1 for r in rows if r["result"] == "yes") / len(rows)
+        if yes in (0.0, 100.0):
+            degenerate += 1
+        elif not (BASE_RATE_BAND[0] <= yes <= BASE_RATE_BAND[1]):
+            lopsided += 1
+        else:
+            kept[key] = rows
+    return kept, {"considered": len(families), "constant": degenerate,
+                  "outside_band": lopsided, "kept": len(kept)}
 
 
 # ------------------------------------------------------------------ the tables
@@ -411,7 +465,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--pages", type=int, default=12,
                     help="settled-market pages to sweep (1000 markets per page)")
     ap.add_argument("--series", default="",
-                    help="comma-separated series tickers; default sweeps the exchange")
+                    help="comma-separated series tickers; default DISCOVERS them "
+                         "from the exchange-wide settled listing")
+    ap.add_argument("--discover-pages", type=int, default=6,
+                    help="pages of the un-restricted settled listing to enumerate "
+                         "series from (discovery only — history is per-series)")
+    ap.add_argument("--max-series", type=int, default=40,
+                    help="how many discovered series to pull history for")
     ap.add_argument("--min-vol", type=float, default=50.0)
     ap.add_argument("--min-k-n", type=int, default=30,
                     help="TRAIN observations required at k before k* may be fitted")
@@ -428,20 +488,32 @@ def main(argv: list[str] | None = None) -> int:
 
     markets: list[dict] = []
     series_list = [s.strip().upper() for s in args.series.split(",") if s.strip()]
-    if series_list:
-        for s in series_list:
-            got = fetch_settled(args.pages, args.min_vol, series=s)
-            print(f"  {s}: {len(got)} settled markets")
-            markets.extend(got)
-    else:
-        markets = fetch_settled(args.pages, args.min_vol)
+    if not series_list:
+        series_list = discover_series(args.discover_pages, args.min_vol)
+        print(f"discovered {len(series_list)} series in the settled listing; "
+              f"pulling history for the top {args.max_series}")
+        series_list = series_list[:args.max_series]
+    for s in series_list:
+        got = fetch_settled(args.pages, args.min_vol, series=s)
+        print(f"  {s}: {len(got)} settled markets")
+        markets.extend(got)
     print(f"{len(markets)} settled binaries with volume >= {args.min_vol:.0f}")
     if not markets:
         print("no data — nothing to say. This is not a negative result.")
         return 0
 
     families = build_families(markets)
-    print(f"{len(families)} recurring families with >= {MIN_FAMILY_N} resolutions\n")
+    families, funnel = screen_balance(families)
+    print(f"{funnel['considered']} recurring families with >= {MIN_FAMILY_N} "
+          f"resolutions; {funnel['constant']} constant (0% or 100% YES) and "
+          f"{funnel['outside_band']} outside the {BASE_RATE_BAND[0]:.0f}-"
+          f"{BASE_RATE_BAND[1]:.0f}% balance band were screened out, leaving "
+          f"{funnel['kept']}\n")
+    if not families:
+        print("no family is unconditionally balanced enough to carry the "
+              "hypothesis. That is a universe finding, not a verdict on the "
+              "mechanism.")
+        return 0
     records = analyse(families, args.min_k_n)
 
     priced: dict[str, dict] = {}
