@@ -16,6 +16,43 @@ Conventions:
 
 ---
 
+## PERP-V1 PRE-REGISTRATION 2026-08-29 — perpetual futures opened as a research surface; NO verdict
+
+Not a result. A **pre-registration**, recorded here so the 2026-07-09 perps entry below has a
+successor rather than a second first attempt.
+
+Kalshi's crypto perpetual futures are pre-registered as Experiment OS experiment **`perp-v1`**
+(PROBE, v1 frozen, e1 open): one experiment, three treatment arms raced against a matched
+control — `perprevert` (mark-vs-index premium reversion, funding-confirmed), `perpcarry`
+(cross-sectional funding dispersion, beta-neutral not merely dollar-neutral), `perplead` (perp
+microstructure as an overlay on the existing Theta crypto ladders, gated on INCREMENTAL
+realizable cents over Theta), and `perpctl` (the treatments' own entries with the direction
+randomised). One PROBE→PAPER bar per arm, so an arm can clear its own bar without waiting for
+the other two; every bar reads the NET number after fees, slippage **and** funding, beside a
+tape-coverage floor. Contract: `docs/PERP_V1_THESIS.md`. Standing: `xos show perp-v1` — not here.
+
+**Why this is not the 2026-07-09 entry again.** That survey recorded a *discovery gap, not a
+kill*, and named its own resumption condition: find a perp-specific endpoint, then probe
+funding/basis gated on normal fees. PERP-V1 claims that condition is met — and does not assume
+it. **Probe 0** (`scripts/perp_surface_survey.py`, ops-runnable, no credentials) walks the
+candidate perp paths and reports each status verbatim, because for discovery the status IS the
+finding: `404` means the thesis names the wrong surface, `401/403` means the surface is real and
+the collector must run on the worker where the Kalshi key lives, `200` means it can be built from
+the ops channel. The whole line stops at PROBE with BLOCKED_DATA if every path is absent — the
+2026-07-09 outcome reached again for the cost of one ops request.
+
+Stated plainly because it bounds everything above: the API surface behind this contract is
+**unverified**. Outbound HTTPS to Kalshi and to its docs is blocked from the development
+sandbox, so every endpoint path and field name comes from an operator brief. Probe 0 exists to
+test that assumption, not to confirm it.
+
+Registers no strategy tag and no deployment; opens no exposure; adds no perp order path. Real
+money would need a successor version with a risk envelope this repository cannot yet write —
+leverage, liquidation and an 8-hourly funding cash flow are semantics no platform revision here
+describes, which is a Platform Change Review question long before it is a promotion question.
+
+---
+
 ## PMDIV VERDICT 2026-08-13 — KILL. When Polymarket disagrees with Kalshi, Polymarket is wrong.
 
 Probe: `pm_divergence_study`, 39,740 cycles / **198 settled events** / AUS+LAX+MIA / Jun–Aug 2026.
