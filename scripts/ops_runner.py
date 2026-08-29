@@ -150,6 +150,7 @@ ALLOWED_SCRIPTS = (
     "xgame_match_debug",
     "kalshi_mlbwx",
     "kalshi_perps_survey",
+    "perp_surface_survey",
     "kalshi_pinned_study",
     "kalshi_decay_study",
     "kalshi_pin15_study",

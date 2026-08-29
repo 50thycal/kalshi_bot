@@ -6,7 +6,7 @@ standing, arms, gates and verdicts. Nothing in this document is a status.
 
 **Package:** `kalshi_bot/experiment_os/marktangle.py`
 **Probe:** `scripts/marktangle_probe.py` (ops channel: `{"type":"script","name":"marktangle_probe"}`)
-**Workstream:** `docs/workstreams/WS-010-marktangle-conditional-reversion.md`
+**Workstream:** `docs/workstreams/WS-011-marktangle-conditional-reversion.md`
 
 ---
 

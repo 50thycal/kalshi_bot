@@ -172,7 +172,7 @@ def _no_contract(session, **kw):
 def _packages() -> dict[str, ExperimentPackage]:
     """Imported lazily so this module stays importable when a package's own
     dependencies are not (and so the boot hook's error handler can still run)."""
-    from . import canary_mmsell10, marktangle, repair_tmmsell_epoch
+    from . import canary_mmsell10, marktangle, perp_v1, repair_tmmsell_epoch
 
     return {
         "marktangle-reversion": ExperimentPackage(
@@ -196,6 +196,20 @@ def _packages() -> dict[str, ExperimentPackage]:
             ),
             register=_no_contract,
             repair=repair_tmmsell_epoch.repair,
+        ),
+        "perp-v1": ExperimentPackage(
+            name="perp-v1",
+            experiment_key=perp_v1.EXPERIMENT_KEY,
+            description=(
+                "PERP-V1: Kalshi crypto perpetual futures — one experiment, three "
+                "treatment arms (premium reversion, funding dispersion, perp->"
+                "prediction lead/lag) and a matched random-direction control, "
+                "frozen at PROBE with a per-arm pre-registered bar. Registers no "
+                "strategy tag and no deployment, so nothing becomes admissible to "
+                "the trading write path; it has no `arm` function, so ARM_CANARY "
+                "aimed at it has nothing to call."
+            ),
+            register=perp_v1.register,
         ),
         "mmsell10-canary": ExperimentPackage(
             name="mmsell10-canary",

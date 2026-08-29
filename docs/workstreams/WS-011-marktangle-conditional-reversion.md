@@ -1,4 +1,4 @@
-# WS-010 — MARKTANGLE: conditional reversion in recurring binary families
+# WS-011 — MARKTANGLE: conditional reversion in recurring binary families
 
 **Phase:** BUILDING
 **Status:** Active

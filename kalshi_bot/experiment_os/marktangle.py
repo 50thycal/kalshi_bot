@@ -284,7 +284,7 @@ def register(session, *, actor: str, now: datetime | None = None) -> dict:
         ),
         docs={"thesis": "docs/MARKTANGLE_THESIS.md",
               "probe": "scripts/marktangle_probe.py",
-              "workstream": "docs/workstreams/WS-010-marktangle-conditional-reversion.md"},
+              "workstream": "docs/workstreams/WS-011-marktangle-conditional-reversion.md"},
         notes=(
             "Martingale sizing is a pre-registered EXCLUSION, not an untested "
             "option — see held_constant on v1."
