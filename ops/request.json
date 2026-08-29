@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"logs","service":"livedash","limit":60,"id":"dash-logs-1"}
