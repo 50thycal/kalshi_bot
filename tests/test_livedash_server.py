@@ -109,6 +109,58 @@ def test_all_routes_answer(live_server):
     assert code == 200 and events["twin_tag"] == "mm10_pt"
 
 
+def test_the_page_loads_in_phases_and_never_pins_itself_to_a_retired_run():
+    """Source-level guards, in the spirit of the no-write-path test: these are the two
+    properties a later edit could silently undo, and both were operator-visible faults.
+
+    The page used to show nothing until every request returned, and its 60s timer re-ran
+    the whole selection — which is how a stale response ended up overwriting a newer one
+    and the board reverted to the pair you had just navigated away from."""
+    import pathlib as _pathlib
+
+    page = (_pathlib.Path(srv.__file__).parent / "static" / "index.html").read_text()
+
+    # boot asks for the cheap selector view; the summary list is fetched separately
+    assert "/api/runs?view=selector" in page
+    assert "async function loadHistory()" in page
+
+    # a load carries the generation it began under, and a stale one is dropped
+    assert "const stale = g => g !== GEN;" in page
+    assert "AbortController" in page
+
+    # the timer refreshes in place instead of re-running the selection
+    assert "setInterval(refreshInPlace, 60000);" in page
+    assert "setInterval(() => { if(S.tag) selectRun(S.tag)" not in page
+
+    # and a retired pair is never written back into the URL
+    assert "ended(tag) ? location.pathname" in page
+
+
+def test_selector_view_is_the_cheap_half_of_the_run_list(live_server):
+    """Phase 1 of the page load: which pairs exist, so the picker is on screen before the
+    per-run P&L columns have been rebuilt."""
+    base, _ = live_server
+    code, sel = _get(base, "/api/runs?view=selector")
+    assert code == 200 and sel["summaries"] is False
+    assert [r["twin_tag"] for r in sel["runs"]] == ["mm10_pt"]
+    assert "live_realized_usd" not in sel["runs"][0]
+    assert "unpaired_live_strategies" not in sel
+
+    _, full = _get(base, "/api/runs")
+    assert full["summaries"] is True and "live_realized_usd" in full["runs"][0]
+    # an unrecognised view is the full list, not an error
+    _, junk = _get(base, "/api/runs?view=nonsense")
+    assert junk["summaries"] is True
+
+
+def test_the_incumbent_leg_is_carried_only_when_asked_for(live_server):
+    base, _ = live_server
+    _, default = _get(base, "/api/runs/mm10_pt")
+    assert default["incumbent_paper"] is None
+    _, asked = _get(base, "/api/runs/mm10_pt?incumbent=1")
+    assert asked["incumbent_paper"]["tag"] == "mmsell10"
+
+
 def test_query_parameters_are_honoured_and_clamped(live_server):
     base, _ = live_server
     _, live_only = _get(base, "/api/runs/mm10_pt/orders?env=live")

@@ -137,6 +137,22 @@
     background:#2a2213;border:1px solid #4a3c1c;color:var(--warn)}
   .banner.bad{background:#2a1618;border-color:#4a1f24;color:var(--neg)}
   .banner.ok{background:#12281f;border-color:#1d4433;color:var(--pos)}
+  /* A section that is still loading says so in place, at roughly the size of what is
+     coming, so the page does not reflow under the reader as each group arrives. */
+  .skel{display:grid;gap:8px;padding:2px 0}
+  .skel i{display:block;height:11px;border-radius:5px;background:var(--panel3);
+    animation:pulse 1.2s ease-in-out infinite}
+  .skel i:nth-child(2){width:78%;animation-delay:.15s}
+  .skel i:nth-child(3){width:88%;animation-delay:.3s}
+  .skel i:nth-child(4){width:64%;animation-delay:.45s}
+  .skel.tall i{height:150px}
+  @keyframes pulse{0%,100%{opacity:.35}50%{opacity:.75}}
+  @media(prefers-reduced-motion:reduce){ .skel i{animation:none;opacity:.45} }
+  .secerr{color:var(--neg);font-size:12px;padding:6px 0}
+  .loadbar{position:fixed;top:0;left:0;height:2px;width:100%;transform-origin:0 50%;
+    background:var(--live);z-index:60;transition:transform .25s ease,opacity .25s ease}
+  .loadbar[hidden]{display:block;opacity:0}
+
   @media(max-width:700px){
     .bar{grid-template-columns:110px 1fr 78px}
     .feed li{grid-template-columns:60px 46px 1fr;padding:7px 10px}
@@ -144,6 +160,7 @@
 </style>
 </head>
 <body>
+<div class="loadbar" id="loadbar" hidden></div>
 <div class="wrap">
   <header>
     <div class="hrow">
@@ -275,10 +292,11 @@
     <caption class="sr">All paired live/paper runs</caption>
     <thead><tr><th>Pair</th><th>Live tag</th><th>Started</th><th>Ended</th><th class="r">Markets</th>
       <th class="r">Live</th><th class="r">Paper</th><th class="r">Difference</th><th>Status</th></tr></thead>
-    <tbody id="histbody"></tbody></table></div></div>
+    <tbody id="histbody"><tr><td colspan="9"><div class="skel"><i></i><i></i><i></i></div></td></tr>
+    </tbody></table></div></div>
   <div id="unpaired"></div>
 
-  <details class="panel pad" style="margin-top:16px">
+  <details class="panel pad" style="margin-top:16px" id="provenance">
     <summary>How every number on this page was calculated</summary>
     <div id="diag" style="margin-top:8px"></div>
   </details>
@@ -343,17 +361,79 @@ function dur(sec){
 }
 
 const S = {
-  runs:null, run:null, series:null, orders:null, events:null,
+  runs:null, history:null, run:null, series:null, orders:null, events:null,
   tag:null, serMode:"gross", serWin:"72", ticker:"",
   ordEnv:"", ordOffset:0, evCat:"all", evEnv:"", evCursor:null, evItems:[],
-  divGroup:true, divExpanded:new Set(),
+  divGroup:true, divExpanded:new Set(), incumbent:null,
 };
 
-async function getJSON(url){
-  const r = await fetch(url,{cache:"no-store"});
+/* ============ one selection at a time ============
+   Every section of this page is a separate request, and the slowest of them used to
+   outlive the selection that asked for it: pick a different pair while one is still in
+   flight -- or let the 60s auto-refresh start one -- and whichever response landed last
+   won, so the board silently reverted to the run you had just navigated away from.
+
+   So a selection is a GENERATION. Every load carries the generation it was started
+   under, and a response from an older one is dropped without touching state or the DOM.
+   In-flight requests are also aborted outright, which is what stops a stale load from
+   holding the connection while the one you asked for waits behind it. */
+let GEN = 0;
+let ABORT = null;
+let INFLIGHT = 0;
+const stale = g => g !== GEN;
+
+function newGeneration(){
+  if(ABORT) ABORT.abort();
+  ABORT = new AbortController();
+  return ++GEN;
+}
+
+class Stale extends Error{}
+const isStale = e => e instanceof Stale || e.name === "AbortError";
+
+async function getJSON(url, gen){
+  // A `gen` makes the request part of that selection: it is aborted when the selection
+  // changes, and its response is dropped if it lands late. Requests with no `gen` (the
+  // run history, the incumbent's book) belong to no selection and outlive one.
+  const opts = {cache:"no-store"};
+  if(gen !== undefined && ABORT) opts.signal = ABORT.signal;
+  const r = await fetch(url, opts);
   const d = await r.json().catch(()=>({error:"bad response"}));
   if(!r.ok || d.error) throw new Error(d.error || ("HTTP "+r.status));
+  if(gen !== undefined && stale(gen)) throw new Stale();
   return d;
+}
+
+/* A section renders its own progress and its own failure: one slow or broken group must
+   not blank the six that loaded fine. Placeholders and errors are wrapped for where they
+   land — a table body takes a row, the event feed takes a list item. */
+const inHost = (el, html) => {
+  if(el.tagName === "TBODY") return `<tr><td colspan="12">${html}</td></tr>`;
+  if(el.tagName === "UL") return `<li style="display:block">${html}</li>`;
+  return html;
+};
+function skeleton(sel, lines=4, tall=false){
+  const el = $(sel); if(!el) return;
+  el.innerHTML = inHost(el,
+    `<div class="skel${tall?" tall":""}">${"<i></i>".repeat(tall?1:lines)}</div>`);
+}
+async function section(gen, sel, fn){
+  if(!S.tag) return;                 // every section here is scoped to a run
+  INFLIGHT++;
+  try{ await fn(gen); }
+  catch(e){
+    if(isStale(e)) return;
+    const el = $(sel);
+    if(el) el.innerHTML = inHost(el,
+      `<div class="secerr">Could not load this section — ${esc(e.message)}</div>`);
+  }
+  finally{ INFLIGHT--; progress(); }
+}
+function progress(on){
+  const bar = $("#loadbar");
+  const busy = on === undefined ? INFLIGHT > 0 : on;
+  bar.hidden = !busy;
+  bar.style.transform = busy ? "scaleX(.7)" : "scaleX(1)";
 }
 const qs = o => {
   const p = new URLSearchParams();
@@ -765,7 +845,7 @@ function renderTabs(){
   $("#evtabs").innerHTML = EV_TABS.map(([k,l]) =>
     `<button class="tab" role="tab" data-cat="${k}" aria-selected="${S.evCat===k}">${esc(l)}</button>`).join("");
   $("#evtabs").querySelectorAll("[data-cat]").forEach(b => b.onclick = () => {
-    S.evCat = b.dataset.cat; renderTabs(); loadEvents(true).catch(e=>fatal(e.message));
+    S.evCat = b.dataset.cat; renderTabs(); section(GEN, "#feed", g => loadEvents(true, g));
   });
 }
 function renderFeed(){
@@ -780,7 +860,10 @@ function renderFeed(){
 }
 
 function renderHistory(){
-  const d = S.runs;
+  // Fed by the summary view, which arrives after the run itself; until it does the
+  // table holds its skeleton rather than a misleading empty state.
+  const d = S.history;
+  if(!d) return;
   $("#histbody").innerHTML = d.runs.length ? d.runs.map(r => `<tr class="${r.twin_tag===S.tag?'sel':''}">
     <td><button class="ghost" data-run="${esc(r.twin_tag)}"><span class="tag paper">${esc(r.twin_tag)}</span></button></td>
     <td><span class="tag live">${esc(r.live_tag)}</span></td>
@@ -805,6 +888,7 @@ function renderHistory(){
 }
 
 function renderDiagnostics(){
+  if(!S.run) return;
   const g = S.run.diagnostics;
   const block = (title, obj) => `<div style="margin-bottom:12px"><b>${esc(title)}</b>
     <dl class="kv" style="margin-top:4px">${Object.entries(obj).map(([k,v]) =>
@@ -812,12 +896,20 @@ function renderDiagnostics(){
         typeof v === "object" && v !== null ? esc(JSON.stringify(v)) : esc(v)}</dd>`).join("")}</dl></div>`;
   $("#diag").innerHTML = Object.entries(g).map(([k,v]) =>
     typeof v === "object" && v !== null ? block(k.replace(/_/g," "), v)
-      : `<div><b>${esc(k)}</b>: ${esc(v)}</div>`).join("");
+      : `<div><b>${esc(k)}</b>: ${esc(v)}</div>`).join("")
+    // What comparing against the incumbent's WHOLE history would have claimed -- kept
+    // here, next to the provenance, so it can never be read as the twin comparison.
+    + (typeof S.incumbent === "object" && S.incumbent !== null
+        ? block("incumbent paper (all-time, NOT the twin comparison)", S.incumbent)
+        : `<div class="dim">Incumbent all-time paper comparison — ${
+            S.incumbent === "loading" ? "loading…" : "not loaded"}</div>`);
 }
 
 /* ============ loading ============ */
-async function loadRun(){
-  S.run = await getJSON("/api/runs/"+encodeURIComponent(S.tag));
+const runUrl = (sub, q) => "/api/runs/"+encodeURIComponent(S.tag)+(sub||"")+(q||"");
+
+async function loadRun(gen){
+  S.run = await getJSON(runUrl(), gen);
   renderHeader();
   positionCard("#livecard","live", S.run.live, S.run.live.positions, S.run.market_tags);
   positionCard("#papercard","paper", S.run.paper, S.run.paper.positions, S.run.market_tags);
@@ -825,10 +917,9 @@ async function loadRun(){
   renderDivergence();
   renderDiagnostics();
 }
-async function loadSeries(){
+async function loadSeries(gen){
   const since = S.serWin ? new Date(Date.now()-Number(S.serWin)*3600e3).toISOString() : "";
-  S.series = await getJSON("/api/runs/"+encodeURIComponent(S.tag)+"/series"
-    + qs({since, ticker:S.ticker}));
+  S.series = await getJSON(runUrl("/series", qs({since, ticker:S.ticker})), gen);
   const sel = $("#tickersel");
   const cur = S.ticker || (S.series.price ? S.series.price.ticker : "");
   sel.innerHTML = (S.series.available_tickers||[]).map(t =>
@@ -836,27 +927,90 @@ async function loadSeries(){
     || `<option value="">(no markets yet)</option>`;
   renderPnlChart(); renderPriceChart();
 }
-async function loadOrders(append){
-  S.orders = await getJSON("/api/runs/"+encodeURIComponent(S.tag)+"/orders"
-    + qs({env:S.ordEnv, offset:S.ordOffset, limit:100}));
+async function loadOrders(append, gen){
+  S.orders = await getJSON(
+    runUrl("/orders", qs({env:S.ordEnv, offset:S.ordOffset, limit:100})), gen);
   renderOrders(append);
 }
-async function loadEvents(reset){
+async function loadEvents(reset, gen){
   if(reset){ S.evCursor = null; S.evItems = []; }
-  const d = await getJSON("/api/runs/"+encodeURIComponent(S.tag)+"/events"
-    + qs({category:S.evCat, env:S.evEnv, cursor:S.evCursor, limit:50}));
+  const d = await getJSON(
+    runUrl("/events", qs({category:S.evCat, env:S.evEnv, cursor:S.evCursor, limit:50})), gen);
   S.evItems = S.evItems.concat(d.events);
   S.evCursor = d.next_cursor;
   renderFeed();
 }
-async function selectRun(tag){
-  S.tag = tag; S.ticker = ""; S.ordOffset = 0;
-  history.replaceState(null,"", "?run="+encodeURIComponent(tag));
-  $("#runsel").value = tag;
-  await loadRun(); await loadSeries(); await loadOrders(false); await loadEvents(true);
-  renderHistory();
+/* The history table's P&L columns mean rebuilding both legs of EVERY recorded run,
+   retired ones included. It is the last thing on the page, so it is the last thing
+   fetched -- and it belongs to no single run, so it survives a change of selection. */
+async function loadHistory(){
+  INFLIGHT++;
+  try{
+    S.history = await getJSON("/api/runs");
+    renderHistory();
+  }catch(e){
+    $("#histbody").innerHTML =
+      `<tr><td colspan="9" class="secerr">Could not load run history — ${esc(e.message)}</td></tr>`;
+  }
+  finally{ INFLIGHT--; progress(); }
 }
-// Two readability rules live here, both from operators misreading the header:
+/* The incumbent's all-time paper book is bigger than everything else on this page put
+   together and is only ever read in the provenance section, so it is fetched the first
+   time that section is opened. */
+async function loadIncumbent(){
+  const tag = S.tag;
+  S.incumbent = "loading";
+  renderDiagnostics();
+  try{
+    const d = await getJSON(runUrl("", "?incumbent=1"));
+    if(S.tag !== tag) return;
+    S.incumbent = d.incumbent_paper;
+    renderDiagnostics();
+  }catch(e){
+    if(S.tag === tag){ S.incumbent = null; renderDiagnostics(); }
+  }
+}
+
+/* Sections load in the order an operator reads them: the pair's own numbers first,
+   then the charts, orders and timeline together, then the all-runs table. */
+async function selectRun(tag){
+  const gen = newGeneration();
+  // Clear the previous run's payloads outright: a control that re-renders without
+  // re-fetching (the series mode toggle) must not be able to draw the old pair.
+  S.tag = tag; S.ticker = ""; S.ordOffset = 0;
+  S.run = S.series = S.orders = null; S.incumbent = null; S.evItems = [];
+  rememberRun(tag);
+  renderRunOptions();
+  ["#livecard","#papercard","#cmpcard","#divpanel","#gatepanel"].forEach(x => skeleton(x));
+  skeleton("#pnlchart",1,true); skeleton("#pricechart",1,true);
+  skeleton("#ordbody",2); skeleton("#feed",2);
+  progress(true);
+
+  await section(gen, "#livecard", loadRun);
+  if(stale(gen)) return;
+  await Promise.all([
+    section(gen, "#pnlchart", loadSeries),
+    section(gen, "#ordbody", g => loadOrders(false, g)),
+    section(gen, "#feed", g => loadEvents(true, g)),
+  ]);
+  if(S.history) renderHistory();   // re-mark the selected row
+}
+
+/* Refresh in place. The old timer re-ran the whole selection every 60 seconds, which
+   silently reset the market you were looking at, the order page you had scrolled to and
+   the timeline you had expanded. This updates the figures and the charts and leaves the
+   things you chose alone -- and never runs on top of a load already in flight, which is
+   the other half of the reverting-board problem. */
+async function refreshInPlace(){
+  if(INFLIGHT || document.hidden || !S.tag) return;
+  const gen = GEN;
+  await section(gen, "#livecard", loadRun);
+  if(stale(gen)) return;
+  await section(gen, "#pnlchart", loadSeries);
+}
+const ended = t => !!(S.byTag[t] && S.byTag[t].ended_at);
+
+// Three readability rules live here, all three from operators misreading the header:
 //
 //  1. Label each option with BOTH tags. The value is keyed by the twin tag (it is the unique
 //     one), but showing only that read as "this whole page is about the paper book" -- and since
@@ -865,60 +1019,82 @@ async function selectRun(tag){
 //  2. Hide ENDED pairs unless asked for. Every parameter change to a live book supersedes its
 //     twin epoch and mints a new tag (twin_tag is UNIQUE, so an epoch can never be reopened), so
 //     retired pairs accumulate forever and drown the two or three that are actually trading.
-//     They stay reachable -- the checkbox, or ?run=<tag>, which also force-shows the selection.
+//     They stay reachable through the checkbox, or a ?run=<tag> link.
+//  3. A retired pair on show ticks the checkbox rather than being slipped into the running
+//     list. The old exception for "whatever is currently selected" put a dead book in a list
+//     labelled as the live ones, next to a "14 retired" box that was not ticked -- so the page
+//     said the run was current in exactly the place an operator looks to check.
 //
 // No literal tag may appear in this file: the run is chosen at runtime from /api/runs.
 function renderRunOptions(){
   const all = S.runs.runs.map(r => r.twin_tag);
-  const live = all.filter(t => !S.byTag[t].ended_at);
-  const show = ($("#showretired").checked || !live.length)
-    ? all
-    : all.filter(t => live.includes(t) || t === S.tag);
-  const retired = all.length - live.length;
+  const running = all.filter(t => !ended(t));
+  const retired = all.length - running.length;
+  if(S.tag && ended(S.tag)) $("#showretired").checked = true;
+  const show = ($("#showretired").checked || !running.length) ? all : running;
   $("#runsel").innerHTML = show.map(t =>
     `<option value="${esc(t)}" ${t===S.tag?"selected":""}>${
       esc(S.byTag[t].live_tag ? `${S.byTag[t].live_tag} vs ${t}` : t)
-    }${S.byTag[t].ended_at?" (ended)":""}</option>`).join("")
+    }${ended(t)?" (ended)":""}</option>`).join("")
     || `<option value="">(no paired runs)</option>`;
   $("#showretired").parentElement.hidden = !retired;
-  $("#showretired").parentElement.lastChild.textContent =
-    ` ${retired} retired`;
+  $("#showretired").parentElement.lastChild.textContent = ` ${retired} retired`;
+}
+
+// The URL is a link to share, not a bookmark of the last thing you clicked. Writing a RETIRED
+// pair into it is what used to pin this dashboard to a dead book: you looked at a finished run
+// once, ?run= kept it, and every visit afterwards opened on a book that stopped trading weeks
+// ago -- with its final P&L in the position card, where the running one belongs. So only a
+// running pair is written back. A retired one still opens from the dropdown, and a pasted
+// ?run=<retired tag> still works, for exactly the visit that asked for it.
+function rememberRun(tag){
+  history.replaceState(null, "", ended(tag) ? location.pathname : "?run="+encodeURIComponent(tag));
 }
 
 async function boot(){
   try{
-    S.runs = await getJSON("/api/runs");
+    // Phase 1 -- which pairs exist. The cheap half of /api/runs, so the picker is usable in
+    // about a second instead of after every run ever recorded has been rebuilt.
+    S.runs = await getJSON("/api/runs?view=selector");
     const wanted = new URLSearchParams(location.search).get("run");
     const known = S.runs.runs.map(r => r.twin_tag);
     S.byTag = Object.fromEntries(S.runs.runs.map(r => [r.twin_tag, r]));
-    // Landing on a retired pair is how you end up reading a dead book's numbers as current, so
-    // an explicit ?run= wins, then a still-running pair, and only then whatever the API defaults
-    // to (which may itself be retired once every book has been superseded).
-    const firstLive = known.find(t => !S.byTag[t].ended_at);
+    // A still-running pair wins over the API default, which is itself retired once every book
+    // has been superseded. An explicit ?run= beats both -- a link to a finished run is a
+    // deliberate request to read it.
+    const firstRunning = known.find(t => !S.byTag[t].ended_at);
     S.tag = (wanted && known.includes(wanted)) ? wanted
-      : (firstLive || S.runs.default_run || known[0]);
+      : (firstRunning || S.runs.default_run || known[0]);
     renderRunOptions();
-    renderHistory();
     if(!S.tag){
       $("#fatal").hidden = false;
       $("#fatal").className = "banner";
       $("#fatal").textContent = "No paired live/paper runs recorded yet.";
       return;
     }
+    // Phase 2 + 3 -- this pair, top of the page first. Phase 4, the all-runs table, is the
+    // expensive one and nothing above it waits on it.
     await selectRun(S.tag);
+    loadHistory();
   }catch(e){ fatal(e.message); }
 }
 
-$("#runsel").onchange = e => selectRun(e.target.value).catch(x=>fatal(x.message));
+// Every control reloads only its own section, under the CURRENT generation, so a
+// filter change can no longer be answered with a different run's data.
+const reload = (sel, fn) => section(GEN, sel, fn);
+
+$("#runsel").onchange = e => selectRun(e.target.value);
 $("#showretired").onchange = () => renderRunOptions();
-$("#refresh").onclick = () => selectRun(S.tag).catch(e=>fatal(e.message));
+$("#refresh").onclick = () => selectRun(S.tag);
 $("#sermode").onchange = e => { S.serMode = e.target.value; renderPnlChart(); };
-$("#serwin").onchange = e => { S.serWin = e.target.value; loadSeries().catch(x=>fatal(x.message)); };
-$("#tickersel").onchange = e => { S.ticker = e.target.value; loadSeries().catch(x=>fatal(x.message)); };
-$("#ordenv").onchange = e => { S.ordEnv = e.target.value; S.ordOffset = 0; loadOrders(false).catch(x=>fatal(x.message)); };
-$("#ordmore").onclick = () => { S.ordOffset += 100; loadOrders(true).catch(e=>fatal(e.message)); };
-$("#evenv").onchange = e => { S.evEnv = e.target.value; loadEvents(true).catch(x=>fatal(x.message)); };
-$("#evmore").onclick = () => loadEvents(false).catch(e=>fatal(e.message));
+$("#serwin").onchange = e => { S.serWin = e.target.value; reload("#pnlchart", loadSeries); };
+$("#tickersel").onchange = e => { S.ticker = e.target.value; reload("#pricechart", loadSeries); };
+$("#ordenv").onchange = e => { S.ordEnv = e.target.value; S.ordOffset = 0;
+  reload("#ordbody", g => loadOrders(false, g)); };
+$("#ordmore").onclick = () => { S.ordOffset += 100; reload("#ordbody", g => loadOrders(true, g)); };
+$("#evenv").onchange = e => { S.evEnv = e.target.value; reload("#feed", g => loadEvents(true, g)); };
+$("#evmore").onclick = () => reload("#feed", g => loadEvents(false, g));
+$("#provenance").ontoggle = e => { if(e.target.open && S.incumbent === null) loadIncumbent(); };
 $("#divgroup").onchange = e => { S.divGroup = e.target.checked; renderDivergence(); };
 $("#divbody").addEventListener("click", e => {
   const el = e.target.closest(".grp-toggle, .grp-row");
@@ -935,7 +1111,10 @@ function tickClock(){
 }
 renderTabs(); tickClock(); boot();
 setInterval(tickClock, 1000);
-setInterval(() => { if(S.tag) selectRun(S.tag).catch(()=>{}); }, 60000);
+setInterval(refreshInPlace, 60000);
+// A tab left in the background skips its refreshes; catch up on the way back in rather
+// than showing figures that stopped updating an hour ago.
+document.addEventListener("visibilitychange", () => { if(!document.hidden) refreshInPlace(); });
 </script>
 </body>
 </html>

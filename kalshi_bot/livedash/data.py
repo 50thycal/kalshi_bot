@@ -27,6 +27,20 @@ from . import marks as marks_mod
 # always wins if the run is younger than this.
 DEFAULT_WINDOW_HOURS = 72
 
+# How much of the tick tape a route needs. Reading more than it needs is what made this
+# page take half a minute to open, so each route now says.
+#
+#   FULL    every tick in the epoch. Only the P&L series needs it, because only it asks
+#           what a position was worth at a past instant.
+#   LATEST  one mark per ticker — enough to value what is open right now, which is all
+#           the run page does with marks.
+#   NONE    no marks at all. Realized P&L, position counts and the closed/open split are
+#           read from settlements and snapshots and never touch a tick, so the run LIST,
+#           which shows nothing else, loads none.
+MARKS_FULL = "full"
+MARKS_LATEST = "latest"
+MARKS_NONE = "none"
+
 
 def _now(now: datetime | None = None) -> datetime:
     return now or datetime.now(timezone.utc)
@@ -69,15 +83,34 @@ def _market_tags(session, *ticker_groups) -> dict[str, dict]:
     return {t: tag.to_dict() for t, tag in market_meta.classify_many(session, tickers).items()}
 
 
-def load_run(session, pair, *, now: datetime | None = None):
-    """Both legs plus the shared mark index — the common prelude to every route."""
+def load_run(session, pair, *, now: datetime | None = None, marks: str = MARKS_LATEST):
+    """Both legs plus the shared mark index — the common prelude to every route.
+
+    `marks` is how much of the tape to read (see MARKS_*). It never changes what a
+    number means, only whether the route paid to load evidence it does not use: an
+    unrealized figure is still derived for both legs off the SAME mark, and a leg with
+    an open position and no usable mark still reports its unrealized P&L as
+    unmeasurable rather than as zero.
+    """
     now = _now(now)
     since, until = pair.window(now)
+    index = _marks(session, pair, since, until, marks)
+    live = legs.live_leg(session, pair.live_tag, since, index)
+    paper = legs.paper_leg(session, pair.twin_tag, since, index)
+    return live, paper, index
+
+
+def _marks(session, pair, since, until, scope: str):
+    if scope == MARKS_NONE:
+        # Not "no marks were found" — nothing on this route is marked at all. The empty
+        # index reports 0 requested, so coverage stays honest about what was asked for.
+        return marks_mod.MarkIndex(side="no", scope=marks_mod.SCOPE_NONE)
     live_tickers, paper_tickers = _pair_tickers(session, pair, since)
-    marks = _load_marks(session, live_tickers, paper_tickers, since, until)
-    live = legs.live_leg(session, pair.live_tag, since, marks)
-    paper = legs.paper_leg(session, pair.twin_tag, since, marks)
-    return live, paper, marks
+    if scope == MARKS_FULL:
+        return _load_marks(session, live_tickers, paper_tickers, since, until)
+    return marks_mod.MarkIndex.load_latest(
+        session, set(live_tickers) | set(paper_tickers), since, until, side="no"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -85,32 +118,61 @@ def load_run(session, pair, *, now: datetime | None = None):
 # ---------------------------------------------------------------------------
 
 
-def build_runs(session, *, now: datetime | None = None, limit: int = 50) -> dict:
-    """The run selector: every paired run, plus live strategies that have no pair."""
+def build_runs(
+    session, *, now: datetime | None = None, limit: int = 50, summaries: bool = True,
+) -> dict:
+    """Every paired run, plus live strategies that have no pair.
+
+    This answers two questions with very different costs, so it takes a parameter
+    rather than always paying the higher one. `summaries=False` returns the pairs
+    alone — which tags, when they started, whether they ended — and that is the whole
+    of what the run PICKER needs. `summaries=True` adds the per-run P&L columns the
+    history table shows, and reconstructing both legs of every recorded run to get
+    them is the most expensive read on this dashboard.
+
+    Splitting them is what lets the page put a working selector in front of an
+    operator immediately and fill the table in behind it, instead of showing nothing
+    at all until the last retired run from months ago has been rebuilt.
+    """
     now = _now(now)
-    rows = []
-    for pair in pairs.list_pairs(session, limit=limit):
-        live, paper, _marks = load_run(session, pair, now=now)
-        live_s, paper_s = live.summary(), paper.summary()
-        gap = None
-        if live_s["realized_pnl_usd"] is not None and paper_s["realized_pnl_usd"] is not None:
-            gap = round(paper_s["realized_pnl_usd"] - live_s["realized_pnl_usd"], 4)
-        rows.append({
-            **pair.to_dict(),
-            "markets": max(live_s["positions_total"], paper_s["positions_total"]),
-            "live_realized_usd": live_s["realized_pnl_usd"],
-            "paper_realized_usd": paper_s["realized_pnl_usd"],
-            "difference_usd": gap,
-            "live_closed": live_s["positions_closed"],
-            "paper_closed": paper_s["positions_closed"],
-            "status": pairs.pair_status(session, pair, now=now),
-        })
-    return {
+    all_pairs = pairs.list_pairs(session, limit=limit)
+    rows = [_run_row(session, pair, now) if summaries else pair.to_dict()
+            for pair in all_pairs]
+    default = pairs.default_from(all_pairs)
+    payload = {
         "generated_at": now.isoformat(),
         "runs": rows,
-        "unpaired_live_strategies": pairs.unpaired_live_strategies(session),
-        "default_run": (pairs.default_pair(session).twin_tag
-                        if pairs.default_pair(session) else None),
+        "summaries": summaries,
+        "default_run": default.twin_tag if default else None,
+    }
+    if summaries:
+        # An unpaired live strategy is a real-money book running with nothing to compare
+        # it against, so it is never hidden — but finding them scans every live order,
+        # which belongs with the rest of the heavy read rather than in front of the
+        # selector.
+        payload["unpaired_live_strategies"] = pairs.unpaired_live_strategies(session)
+    return payload
+
+
+def _run_row(session, pair, now: datetime) -> dict:
+    """One history-table row. Realized P&L, the open/closed split and the market count
+    all come from settlements and snapshots, so this loads no marks at all — the run
+    list never displayed an unrealized figure, and reading the tape to compute one it
+    would throw away was pure cost."""
+    live, paper, _marks = load_run(session, pair, now=now, marks=MARKS_NONE)
+    live_s, paper_s = live.summary(), paper.summary()
+    gap = None
+    if live_s["realized_pnl_usd"] is not None and paper_s["realized_pnl_usd"] is not None:
+        gap = round(paper_s["realized_pnl_usd"] - live_s["realized_pnl_usd"], 4)
+    return {
+        **pair.to_dict(),
+        "markets": max(live_s["positions_total"], paper_s["positions_total"]),
+        "live_realized_usd": live_s["realized_pnl_usd"],
+        "paper_realized_usd": paper_s["realized_pnl_usd"],
+        "difference_usd": gap,
+        "live_closed": live_s["positions_closed"],
+        "paper_closed": paper_s["positions_closed"],
+        "status": pairs.pair_status(session, pair, now=now),
     }
 
 
@@ -119,7 +181,9 @@ def build_runs(session, *, now: datetime | None = None, limit: int = 50) -> dict
 # ---------------------------------------------------------------------------
 
 
-def build_run(session, twin_tag: str, *, now: datetime | None = None) -> dict | None:
+def build_run(
+    session, twin_tag: str, *, now: datetime | None = None, incumbent: bool = False,
+) -> dict | None:
     now = _now(now)
     pair = pairs.get_pair(session, twin_tag)
     if pair is None:
@@ -139,8 +203,15 @@ def build_run(session, twin_tag: str, *, now: datetime | None = None) -> dict | 
         "live": {**live.summary(), "positions": [p.to_dict() for p in live.positions]},
         "paper": {**paper.summary(), "positions": [p.to_dict() for p in paper.positions]},
         # What a naive comparison against the long-running incumbent book would have
-        # claimed — shown precisely so it is never mistaken for the twin comparison.
-        "incumbent_paper": legs.paper_leg(session, pair.live_tag, None, marks).summary(),
+        # claimed — carried precisely so it is never mistaken for the twin comparison.
+        # It is the one figure here with no window: the incumbent's WHOLE history, which
+        # on a book that has run for months is more paper trades than everything else on
+        # this page put together. So it is computed when asked for, and the page asks
+        # when the provenance section is opened rather than on every load.
+        "incumbent_paper": (
+            legs.paper_leg(session, pair.live_tag, None, marks).summary()
+            if incumbent else None
+        ),
         "comparison": compare.compare_legs(live, paper, thresholds, now=now),
         "divergence": divergence,
         "discrepancies": discrepancies,
@@ -213,7 +284,7 @@ def build_series(
     pair = pairs.get_pair(session, twin_tag)
     if pair is None:
         return None
-    live, paper, marks = load_run(session, pair, now=now)
+    live, paper, marks = load_run(session, pair, now=now, marks=MARKS_FULL)
     epoch_start, epoch_end = pair.window(now)
     window_start = max(epoch_start, since) if since else max(
         epoch_start, epoch_end - timedelta(hours=DEFAULT_WINDOW_HOURS)

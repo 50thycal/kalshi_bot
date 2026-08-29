@@ -3,7 +3,8 @@
 Routes:
   GET /                              the single-page dashboard
   GET /healthz                       "ok"
-  GET /api/runs                      paired runs + unpaired live strategies
+  GET /api/runs[?view=selector]      paired runs + unpaired live strategies
+                                     (view=selector: the picker's pairs only, no P&L)
   GET /api/runs/<twin_tag>           header, positions, comparison, divergence
   GET /api/runs/<twin_tag>/series     P&L overlay + price/execution series
   GET /api/runs/<twin_tag>/orders     live + paper orders, paired
@@ -120,8 +121,13 @@ class LiveDashHandler(BaseHTTPRequestHandler):
 
     def _route(self, path: str, params: dict) -> bool:
         if path == "/api/runs":
+            # `view=selector` is the cheap half: which pairs exist, so the picker can be
+            # rendered before the per-run P&L columns have been reconstructed.
             with session_scope() as session:
-                self._json(data.build_runs(session, limit=_int(params, "limit", 50)))
+                self._json(data.build_runs(
+                    session, limit=_int(params, "limit", 50),
+                    summaries=_one(params, "view") != "selector",
+                ))
             return True
 
         match = _RUN_PATH_RE.match(path)
@@ -154,7 +160,8 @@ class LiveDashHandler(BaseHTTPRequestHandler):
                     limit=_int(params, "limit", 50), cursor=_one(params, "cursor"),
                 )
             else:
-                payload = data.build_run(session, tag)
+                payload = data.build_run(
+                    session, tag, incumbent=_one(params, "incumbent") == "1")
             self._json(payload if payload is not None else {"error": "run not found"},
                        200 if payload is not None else 404)
         return True

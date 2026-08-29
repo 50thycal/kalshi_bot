@@ -27,12 +27,23 @@ import bisect
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import and_, func, select
 
 from .. import models as m
 
 # Marks older than this are shown as stale rather than presented as current.
 STALE_AFTER_MINUTES = 30
+
+# How much of the tape an index holds. `WINDOW` is every tick in the epoch — the only
+# scope that can answer "what was this worth at 14:00", so the P&L series needs it.
+# `LATEST` is one mark per ticker, which is all it takes to value a position as it
+# stands now, and is the difference between reading a hundred rows and a hundred
+# thousand on a multi-week run.
+SCOPE_WINDOW = "window"
+SCOPE_LATEST = "latest_per_ticker"
+# No tape read at all — for a route whose figures are none of them marked. Distinct from
+# an empty WINDOW index, which means "we looked and the tape was silent".
+SCOPE_NONE = "not_loaded"
 
 
 def _aware(dt: datetime | None) -> datetime | None:
@@ -73,8 +84,9 @@ class Mark:
 class MarkIndex:
     """Time-indexed executable marks for a set of tickers over one window."""
 
-    def __init__(self, side: str = "no"):
+    def __init__(self, side: str = "no", scope: str = SCOPE_WINDOW):
         self.side = side
+        self.scope = scope
         self._by_ticker: dict[str, list[Mark]] = {}
         self._times: dict[str, list[datetime]] = {}
         self._requested: set[str] = set()
@@ -112,6 +124,71 @@ class MarkIndex:
             index._times[ticker] = [mk.at for mk in marks]
         return index
 
+    @classmethod
+    def load_latest(
+        cls, session, tickers, since: datetime, until: datetime | None = None,
+        *, side: str = "no",
+    ) -> MarkIndex:
+        """One mark per ticker: the newest usable tick in the window.
+
+        The run page values open positions with `mark_for`, which reads the last mark
+        and ignores every other one — but `load` materializes the whole tape to get
+        there. On an eight-day epoch across a hundred-odd markets that is the single
+        most expensive read the dashboard makes, and all but one row per ticker is
+        discarded. This asks the database for that row instead.
+
+        "Usable" means the priced side is not NULL, matching `load`: the newest tick
+        with a one-sided book is skipped in favour of the newest tick that can
+        actually be marked, rather than leaving the ticker uncovered.
+
+        The result cannot answer `mark_as_of`, and says so by raising rather than
+        returning today's price for a past instant.
+        """
+        index = cls(side=side, scope=SCOPE_LATEST)
+        index._requested = set(tickers)
+        if not index._requested:
+            return index
+        price_col = cls._price_column(side)
+        tick = m.MmSellPositionTick
+
+        def _scoped(query):
+            query = query.where(
+                tick.market_ticker.in_(sorted(index._requested)),
+                tick.captured_at >= since,
+                price_col.is_not(None),
+            )
+            return query if until is None else query.where(tick.captured_at <= until)
+
+        newest = _scoped(
+            select(tick.market_ticker.label("ticker"),
+                   func.max(tick.captured_at).label("captured_at"))
+            .group_by(tick.market_ticker)
+        ).subquery()
+        rows = session.scalars(_scoped(select(tick)).join(
+            newest,
+            and_(tick.market_ticker == newest.c.ticker,
+                 tick.captured_at == newest.c.captured_at),
+        ))
+        for row in rows:
+            at = _aware(row.captured_at)
+            if at is None:
+                continue
+            # Two captures can share an instant; the last one read wins, exactly as it
+            # would in `load`, which appends in captured_at order.
+            index._by_ticker[row.market_ticker] = [Mark(
+                ticker=row.market_ticker, at=at,
+                price_cents=float(row.no_bid if side == "no" else row.yes_bid),
+                yes_bid=row.yes_bid, yes_ask=row.yes_ask,
+                no_bid=row.no_bid, no_ask=row.no_ask,
+            )]
+        for ticker, marks in index._by_ticker.items():
+            index._times[ticker] = [mk.at for mk in marks]
+        return index
+
+    @staticmethod
+    def _price_column(side: str):
+        return m.MmSellPositionTick.no_bid if side == "no" else m.MmSellPositionTick.yes_bid
+
     # --- lookup ---
 
     def mark_for(self, ticker: str) -> Mark | None:
@@ -123,6 +200,14 @@ class MarkIndex:
         """The newest mark at or before `when` — never a later one. This is what keeps
         a historical P&L series honest: a point at 14:00 is priced with the book as it
         stood at 14:00, not with today's price applied backwards."""
+        if self.scope != SCOPE_WINDOW:
+            # A latest-only index holds one mark per ticker, so every `when` at or after
+            # it would return the CURRENT price — which is precisely the backwards-applied
+            # mark this method exists to prevent. Refuse instead of answering wrongly.
+            raise RuntimeError(
+                "mark_as_of needs a full-window mark index; this one holds "
+                f"{self.scope}. Load with MarkIndex.load for a historical series."
+            )
         times = self._times.get(ticker)
         if not times:
             return None
@@ -151,4 +236,7 @@ class MarkIndex:
             "ticks": sum(len(v) for v in self._by_ticker.values()),
             "source": "mmsell_position_ticks",
             "side": self.side,
+            # Says how much of the tape was read, so "ticks: 108" is never misread as
+            # "this run only ever had 108 captures".
+            "scope": self.scope,
         }

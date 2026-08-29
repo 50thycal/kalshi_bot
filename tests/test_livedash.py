@@ -19,7 +19,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from kalshi_bot import models as m
-from kalshi_bot.livedash import compare, data, events, legs, pairs, series
+from kalshi_bot.livedash import compare, data, events, legs, marks, pairs, series
 from kalshi_bot.models import Base
 
 T0 = datetime(2026, 7, 26, 21, 0, tzinfo=timezone.utc)
@@ -91,9 +91,11 @@ def _paper_trade(session, ticker, *, tag="mm10_pt", at=None, price=93, qty=2, fe
     return row
 
 
-def _load(session, pair=None, *, now=NOW):
+def _load(session, pair=None, *, now=NOW, marks=data.MARKS_FULL):
+    """The whole tape by default: most tests here read a historical series, which is the
+    one thing a latest-only index deliberately refuses to answer."""
     pair = pair or pairs.get_pair(session, "mm10_pt")
-    return data.load_run(session, pair, now=now)
+    return data.load_run(session, pair, now=now, marks=marks)
 
 
 # ---------------------------------------------------------------------------
@@ -752,3 +754,185 @@ def test_module_contains_no_write_path():
         for forbidden in ("session.add(", "session.commit(", "session.delete(",
                           "session.merge(", "session.execute(insert", "session.bulk_"):
             assert forbidden not in source, f"{path.name} contains a write: {forbidden}"
+
+
+# ---------------------------------------------------------------------------
+# Load scope — WS-009
+#
+# The dashboard took ~30s to open because three separate reads loaded a whole history
+# to keep one row per ticker, or loaded evidence for a figure the route never showed.
+# These tests pin the reductions AND the accounting they must not change.
+# ---------------------------------------------------------------------------
+
+
+def _counting_session():
+    """A session that records every SELECT, so a test can assert what was NOT read."""
+    from sqlalchemy import event
+
+    session = _session()
+    statements: list[str] = []
+    event.listen(session.bind, "before_cursor_execute",
+                 lambda conn, cur, stmt, *a: statements.append(stmt))
+    return session, statements
+
+
+def test_latest_marks_reads_one_row_per_ticker_and_agrees_with_the_full_tape():
+    session = _session()
+    _epoch(session)
+    for hour in range(1, 5):
+        _tick(session, "AAA", T0 + timedelta(hours=hour), no_bid=90 + hour)
+        _tick(session, "BBB", T0 + timedelta(hours=hour), no_bid=70 + hour)
+    session.flush()
+
+    full = marks.MarkIndex.load(session, {"AAA", "BBB"}, T0, NOW)
+    latest = marks.MarkIndex.load_latest(session, {"AAA", "BBB"}, T0, NOW)
+
+    # Same answer to the only question the run page asks of a mark.
+    for ticker in ("AAA", "BBB"):
+        assert latest.mark_for(ticker).price_cents == full.mark_for(ticker).price_cents
+        assert latest.mark_for(ticker).at == full.mark_for(ticker).at
+    # ...off 2 rows instead of 8, and it says which it holds.
+    assert latest.coverage()["ticks"] == 2 and full.coverage()["ticks"] == 8
+    assert latest.coverage()["scope"] == marks.SCOPE_LATEST
+    assert full.coverage()["scope"] == marks.SCOPE_WINDOW
+
+
+def test_latest_marks_skip_an_unpriceable_newest_tick_exactly_as_the_full_load_does():
+    """`load` skips a one-sided book rather than guessing. Taking "the newest row" instead
+    of "the newest row that can be marked" would leave the ticker uncovered."""
+    session = _session()
+    _epoch(session)
+    _tick(session, "AAA", T0 + timedelta(hours=1), no_bid=93)
+    session.add(m.MmSellPositionTick(          # newest, but nothing to mark it at
+        market_ticker="AAA", captured_at=T0 + timedelta(hours=2), no_bid=None, no_ask=95))
+    session.flush()
+
+    latest = marks.MarkIndex.load_latest(session, {"AAA"}, T0, NOW)
+    assert latest.mark_for("AAA").price_cents == 93
+    assert latest.coverage()["covered"] == 1 and latest.coverage()["missing_count"] == 0
+
+
+def test_latest_marks_refuse_a_historical_question_instead_of_answering_it_wrong():
+    """A latest-only index holds one mark per ticker, so every `when` at or after it would
+    return the CURRENT price — the backwards-applied mark `mark_as_of` exists to prevent."""
+    session = _session()
+    _epoch(session)
+    _tick(session, "AAA", T0 + timedelta(hours=1), no_bid=93)
+    _tick(session, "AAA", T0 + timedelta(hours=4), no_bid=20)
+    session.flush()
+
+    latest = marks.MarkIndex.load_latest(session, {"AAA"}, T0, NOW)
+    with pytest.raises(RuntimeError, match="full-window mark index"):
+        latest.mark_as_of("AAA", T0 + timedelta(hours=2))
+    # the full index still answers it, and answers it with the price of the moment
+    full = marks.MarkIndex.load(session, {"AAA"}, T0, NOW)
+    assert full.mark_as_of("AAA", T0 + timedelta(hours=2)).price_cents == 93
+
+
+def test_the_run_page_marks_open_positions_off_a_latest_only_index():
+    session = _session()
+    _epoch(session)
+    _live_entry(session, "AAA", price=93, qty=2)
+    _live_open(session, "AAA", qty=2, price=93)
+    _paper_trade(session, "AAA", price=93, qty=2)
+    for hour in range(1, 5):
+        _tick(session, "AAA", T0 + timedelta(hours=hour), no_bid=90 + hour)
+    session.flush()
+
+    d = data.build_run(session, "mm10_pt", now=NOW)
+    assert d["marks"]["scope"] == marks.SCOPE_LATEST
+    assert d["marks"]["ticks"] == 1                    # not the four captures
+    # and the unrealized figure is still derived, off the newest mark, for BOTH legs
+    assert d["live"]["unrealized_pnl_usd"] == pytest.approx(0.02)
+    assert d["paper"]["unrealized_pnl_usd"] == pytest.approx(0.02)
+
+
+def test_the_run_list_loads_no_marks_and_still_reports_realized_pnl():
+    """The list shows realized P&L, a market count and an open/closed split. None of them
+    is marked, so reading the tick tape to build them was pure cost."""
+    session, statements = _counting_session()
+    _epoch(session)
+    _live_entry(session, "AAA")
+    _live_settle(session, "AAA", pnl=0.14)
+    _paper_trade(session, "AAA", status="settled", pnl=0.20, resolved=100)
+    for hour in range(1, 5):
+        _tick(session, "AAA", T0 + timedelta(hours=hour))
+    session.flush()
+    statements.clear()
+
+    payload = data.build_runs(session, now=NOW)
+    row = payload["runs"][0]
+    assert row["live_realized_usd"] == pytest.approx(0.14)
+    assert row["paper_realized_usd"] == pytest.approx(0.20)
+    assert row["difference_usd"] == pytest.approx(0.06)
+    assert row["markets"] == 1 and row["live_closed"] == 1
+    assert not any("mmsell_position_ticks" in s for s in statements)
+
+
+def test_the_selector_view_asks_only_which_pairs_exist():
+    """Phase 1 of the page load. It must be answerable without rebuilding a single leg —
+    that is the whole reason the picker can be on screen before the numbers are."""
+    session, statements = _counting_session()
+    _epoch(session, twin="old_pt", started=T0 - timedelta(days=7), ended=T0 - timedelta(days=6))
+    _epoch(session)
+    _live_entry(session, "AAA")
+    _paper_trade(session, "AAA")
+    session.flush()
+    statements.clear()
+
+    payload = data.build_runs(session, now=NOW, summaries=False)
+    assert payload["summaries"] is False
+    assert [r["twin_tag"] for r in payload["runs"]] == ["mm10_pt", "old_pt"]
+    # everything the dropdown renders from, and nothing else
+    assert payload["runs"][1]["live_tag"] == "mmsell10"
+    assert payload["runs"][1]["ended_at"] is not None
+    assert payload["default_run"] == "mm10_pt"
+    assert "live_realized_usd" not in payload["runs"][0]
+    for table in ("live_orders", "paper_trades", "fills", "positions", "mmsell_position_ticks"):
+        assert not any(table in s for s in statements), f"selector view read {table}"
+
+
+def test_the_full_run_list_still_carries_status_and_unpaired_strategies():
+    session = _session()
+    _epoch(session)
+    _live_entry(session, "AAA")
+    _live_entry(session, "ZZZ", strategy="orphan_live", order_id="ord-orphan")
+    session.flush()
+    payload = data.build_runs(session, now=NOW)
+    assert payload["summaries"] is True
+    assert payload["runs"][0]["status"]["pairing"] == "explicit_epoch"
+    assert [u["live_tag"] for u in payload["unpaired_live_strategies"]] == ["orphan_live"]
+
+
+def test_the_incumbents_all_time_book_is_computed_only_when_asked_for():
+    """It is the incumbent's WHOLE history — no epoch window — so on a book that has run
+    for months it is more paper trades than everything else on the page put together."""
+    session = _session()
+    _epoch(session)
+    _paper_trade(session, "AAA")                                    # the twin
+    _paper_trade(session, "OLD", tag="mmsell10", at=T0 - timedelta(days=30),
+                 status="settled", pnl=1.50, resolved=100)          # the incumbent
+    session.flush()
+
+    assert data.build_run(session, "mm10_pt", now=NOW)["incumbent_paper"] is None
+    asked = data.build_run(session, "mm10_pt", now=NOW, incumbent=True)["incumbent_paper"]
+    assert asked["tag"] == "mmsell10"
+    assert asked["realized_pnl_usd"] == pytest.approx(1.50)
+
+
+def test_newest_position_snapshot_wins_without_reading_every_snapshot():
+    """`positions` grows by a row per held ticker per reconcile cycle, so keeping the
+    newest must be a SQL cut, not a full read filtered in Python."""
+    session, statements = _counting_session()
+    _epoch(session)
+    _live_entry(session, "AAA", price=93, qty=2)
+    for hour in range(1, 4):                       # three reconcile cycles, still open
+        _live_open(session, "AAA", at=T0 + timedelta(hours=hour), qty=2, price=90 + hour)
+    _live_settle(session, "AAA", at=T0 + timedelta(hours=4), pnl=0.14)   # then it settles
+    session.flush()
+    statements.clear()
+
+    live, _paper, _marks = _load(session)
+    assert live.realized_pnl_usd == pytest.approx(0.14)   # the settlement, not a mid-run row
+    assert [p.status for p in live.positions] == ["settled"]
+    assert any("max(" in s.lower() and "positions" in s.lower() for s in statements)
