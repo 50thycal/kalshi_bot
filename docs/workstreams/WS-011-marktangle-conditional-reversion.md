@@ -1,7 +1,7 @@
 # WS-011 — MARKTANGLE: conditional reversion in recurring binary families
 
 **Phase:** DECIDE
-**Status:** Blocked
+**Status:** Paused
 **Created:** 2026-08-29
 **Updated:** 2026-08-29 (run 1)
 
@@ -166,7 +166,22 @@ would dominate any exchange-wide ranking purely by having the most strikes. The 
 by one series is a finding about that series. Decide whether the unit of the sweep should
 be the family (as now) or the series, with a per-series family budget.
 
-## D4 (new, and the only thing that matters now)
+## D4 — ANSWERED 2026-08-30: close for now
+
+Operator decision: pause on the run-8 results, with the intent of possibly resuming.
+Recorded in Experiment OS as PAUSED (from PROBE) via `scripts/marktangle_pause.py`, which
+an operator runs on a writable connection. Nothing about the evidence changes.
+
+**Resume condition, so it is checkable rather than remembered:** a candidate family
+(currently `KXUSLTOTAL|2,3,4` or a weather bucket such as `KXHIGHMIA|B92.5`) accumulates
+enough settled history that its 30% holdout reaches 100 entries. At a daily cadence that is
+months of forward collection. Then re-run `scripts/marktangle_probe.py` unchanged — the
+contract, arms, gates and verdict rule are frozen and need no revision.
+
+**Do not resume by** widening the universe, lowering a floor, or re-reading the bar. Those
+are the moves this experiment's five run logs exist to prevent.
+
+### Original framing (kept — the reasoning is the useful part)
 
 **Is MARKTANGLE worth further investment?** Five runs have each produced a diagnosed
 data-access finding and zero evidence about the hypothesis. The instrument is well tested

@@ -403,6 +403,42 @@ The binding constraint has moved from our tooling to Kalshi's history depth.
 spread across 11 ladder rungs, ~37 per rung. No amount of engineering creates
 more past.
 
+## 8c. CLOSED FOR NOW — operator decision, 2026-08-30
+
+MARKTANGLE is **PAUSED at PROBE**, not retired. Paused rather than retired because
+the decision was explicitly "for now": PAUSED records `paused_from`, so the
+experiment can only resume to PROBE or be deliberately retired later, and that
+provenance is worth more than the one command it costs to keep.
+
+**Nothing about the evidence changes.** The recorded verdict stays the
+pre-registered HOLD. The contract, the five arms, both gates and the run logs
+stand exactly as written. Pausing is a statement about our attention, not about
+the data.
+
+**What we know, and it is not nothing:**
+
+* Daily crypto threshold families are refuted **as a market type** — near-total
+  persistence (up to 97.5%) on a coin-flip marginal frequency. Whatever they are,
+  they are not fresh draws, and MARKTANGLE should never look at them again.
+* Roughly 86% of "recurring binary families" (702 of 816) are constant — a
+  permanently in- or out-of-the-money ladder rung. The real candidate pool on
+  Kalshi is far smaller than the raw family count suggests.
+* The families with the right shape — sports totals, weather buckets — sit at
+  n=42-88 with holdouts of 13-27 against a floor of 100. **Untested, not
+  refuted.** That distinction is the whole reason this is paused rather than
+  killed.
+
+**What resuming would take.** Not a rebuild — forward collection. Kalshi exposes
+about 408 settled markets per weather series (~13 months across 11 ladder rungs,
+~37 per rung), and no amount of engineering creates more past. A family needs
+roughly 100 more holdout observations to be gradeable, which is months of waiting
+at a daily cadence. Resume by collecting, then re-running
+`scripts/marktangle_probe.py` unchanged.
+
+The lifecycle move itself is `scripts/marktangle_pause.py`, run by an operator on
+a writable connection — the ops channel is read-only by design and the
+experiment-command vocabulary has no "move a lifecycle state" verb, deliberately.
+
 ## 9. What would make us abandon this
 
 Any one of the three, stated before the data:
