@@ -295,7 +295,7 @@ class PerpsCollector:
         if self._funding_is_due(at):
             try:
                 cycle.funding_rows += self._collect_funding(
-                    session, at, notes, probe_ticker=tickers[0] if tickers else None
+                    session, at, notes, probe_ticker=_busiest(markets),
                 )
                 self._funding_due_at = at + timedelta(
                     minutes=self._settings.perps_funding_interval_minutes
@@ -491,6 +491,31 @@ def _funding_rows(payload: Any) -> list[dict]:
             if isinstance(value, list) and any(isinstance(r, dict) for r in value):
                 return [r for r in value if isinstance(r, dict)]
     return []
+
+
+def _busiest(markets: list[dict]) -> str | None:
+    """The ticker with the most open interest, for the funding diagnostic.
+
+    Which market the ticker-scoped funding probe asks about decides how much its
+    answer is worth. The first ticker in the listing is alphabetical — the first
+    run drew `KXAAVEPERP` — and "we found no funding on an illiquid market" is a
+    much weaker statement than "we found none on the busiest one". Falls back to
+    the first ticker when no market carries a readable open interest.
+    """
+    best: str | None = None
+    best_oi = float("-inf")
+    for market in markets:
+        ticker = str(market.get("ticker") or "").strip()
+        if not ticker:
+            continue
+        if best is None:
+            best = ticker
+        oi = _num(market.get("open_interest_notional_value_dollars"))
+        if oi is None:
+            oi = _num(market.get("open_interest"))
+        if oi is not None and oi > best_oi:
+            best_oi, best = oi, ticker
+    return best
 
 
 def _payload_shape(payload: Any, *, max_keys: int = 40) -> dict[str, Any]:
