@@ -1,4 +1,0 @@
-# latest deployment 204e8d7b-e111-4c3e-8e3c-c3f503aa2eaf (status=SUCCESS, created=2026-08-30T12:34:47.900Z)
-# ops request: type='logs'
-# target service: main
-2026-08-30T12:35:42.478533295Z INFO  perps tape cycle
