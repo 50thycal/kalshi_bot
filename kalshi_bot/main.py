@@ -1417,6 +1417,169 @@ def _probe_api_shapes(client) -> None:
             raise
         except Exception as exc:  # noqa: BLE001
             logger.warning("api shape probe failed [%s]: %s", name, exc)
+    _probe_exchange_shard(client)
+
+
+#: Series whose every live order is rejected `user_not_found` (XOS-000014), paired
+#: with series that place normally. Both sides are needed: a field present only on
+#: the refused markets proves nothing unless the accepted ones lack it.
+_SHARD_PROBE_SERIES: tuple[tuple[str, str], ...] = (
+    ("REFUSED", "KXMLBHR"), ("REFUSED", "KXMLBTOTAL"), ("REFUSED", "KXITFMATCH"),
+    ("ACCEPTED", "KXNCAAFSPREAD"), ("ACCEPTED", "KXLALIGASCORE"),
+)
+
+
+def _probe_exchange_shard(client) -> None:
+    """Confirm WHICH shard our refused markets live on, and whether we are funded there.
+
+    31% of the Cmmsell10 canary's entry orders come back 404 `user_not_found`,
+    "Exchange user not found. For Predictions: reference documentation Exchange
+    Sharding documentation" — and the refusals are ~100% per series (all MLB, ITF
+    and BTCD; 0% everywhere else). Kalshi has sharded its exchange; this codebase
+    has no concept of a shard and posts every order to one `kalshi_base_url`.
+
+    Kalshi's Exchange Sharding doc names the mechanism, so this no longer has to
+    guess a field name. Two things it says decide our fix, and they need different
+    remedies:
+
+      1. ROUTING. `exchange_index` is carried on GET /markets and GET /events and is
+         "the authoritative source of truth"; as an order parameter, >= 0 routes to
+         that exchange and -1 auto-routes from the market ticker. We send neither.
+      2. COLLATERAL. "Programmatic traders must preallocate collateral on a given
+         exchange shard before order placement." Routing correctly to a shard we
+         hold no balance on still fails.
+
+    So the probe answers both: which `exchange_index` the refused series carry
+    versus the accepted ones, and which indexes our balance is actually spread
+    across. If we are unfunded on the refused shard, no amount of routing code
+    fixes this and it becomes an operator funding decision, not a code change.
+
+    Read-only throughout: `get_markets` and `get_balance` place nothing and move no
+    money. This log is read back through the ops channel into a PUBLIC repo, so the
+    balance breakdown is reduced to indexes and a funded/unfunded flag — never an
+    amount. Market metadata is public already.
+    """
+    import json
+
+    from .obs.series_fetch import fetch_markets_by_series
+
+    seen: dict[str, set[str]] = {}
+    for verdict, series in _SHARD_PROBE_SERIES:
+        try:
+            # Through the shared helper, not a raw get_markets: every
+            # series-addressed fetch in this codebase reports its own funnel, so a
+            # series that returns nothing is counted rather than read as "no
+            # difference found" (tests/test_obs_funnel_wiring.py enforces this).
+            result = fetch_markets_by_series(
+                client, [series], book=f"shard_probe_{verdict.lower()}",
+                limit=1, max_pages=1, warn=False,
+            )
+            if not result.markets:
+                logger.info("shard probe [%s %s]: no open market to sample "
+                            "(failed=%s)", verdict, series, result.failed or "no")
+                continue
+            sample = result.markets[0]
+            keys = sorted(sample)
+            seen.setdefault(verdict, set()).update(keys)
+            # Values, not just keys: a shard is far more likely to be a differing
+            # VALUE on a field both sides carry than a field only one side has.
+            interesting = {
+                k: sample[k] for k in keys
+                if not isinstance(sample.get(k), (dict, list))
+                and any(t in k.lower() for t in
+                        ("exchange", "shard", "venue", "product", "market_type",
+                         "category", "tier", "region", "cluster"))
+            }
+            logger.info("shard probe [%s %s]: keys=%s candidates=%s",
+                        verdict, series, json.dumps(keys)[:400],
+                        json.dumps(interesting, default=str)[:300])
+        except AuthError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("shard probe failed [%s %s]: %s", verdict, series, exc)
+    if len(seen) == 2:
+        only_refused = sorted(seen["REFUSED"] - seen["ACCEPTED"])
+        only_accepted = sorted(seen["ACCEPTED"] - seen["REFUSED"])
+        logger.info("shard probe DIFF: only-on-refused=%s only-on-accepted=%s",
+                    only_refused or "(none)", only_accepted or "(none)")
+    _probe_shard_funding(client)
+
+
+def _probe_shard_funding(client) -> None:
+    """Which exchange indexes our balance is spread across — indexes only, never amounts.
+
+    Kalshi requires collateral preallocated on a shard before it will take an order
+    there, so an empty index is a funding problem and a missing index is a
+    provisioning one. Neither is fixable by routing code, which is why this runs
+    beside the market-side probe rather than after we have already written some.
+
+    Amounts are deliberately NOT logged: these lines are read back through the ops
+    channel, which commits results to a public branch. `funded` is a bool.
+    """
+    import json
+
+    try:
+        balance = client.get_balance()
+    except AuthError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("shard probe: balance read failed: %s", exc)
+        return
+    if not isinstance(balance, dict):
+        logger.info("shard probe funding: unexpected balance shape %s", type(balance).__name__)
+        return
+    # Find the breakdown by SHAPE, not by key name. The first version of this
+    # guessed at four plausible names and missed the real one (`balance_breakdown`),
+    # reporting "no per-index breakdown" for an account that plainly had one — the
+    # exact false negative this function warns about two lines down. Anything that
+    # carries `exchange_index` per entry IS the breakdown, whatever it is called.
+    entries = _entries_with_exchange_index(balance)
+    if entries is None:
+        logger.info("shard probe funding: no per-index breakdown in balance payload "
+                    "(keys=%s) — this account may predate sharding",
+                    json.dumps(sorted(balance))[:300])
+        return
+    shape = []
+    for entry in entries:
+        # Kalshi sends money as a DECIMAL STRING in these payloads ("balance": "str"
+        # in the shape probe), so a numeric-only test would read every funded shard
+        # as unfunded — the wrong answer in the safe-looking direction.
+        shape.append({"exchange_index": entry.get("exchange_index"),
+                      "funded": _is_positive_amount(
+                          entry.get("balance", entry.get("available_balance",
+                                                         entry.get("amount"))))})
+    logger.info("shard probe funding: %s", json.dumps(shape, default=str)[:400])
+
+
+def _entries_with_exchange_index(payload: dict) -> list[dict] | None:
+    """The first list of dicts in `payload` whose entries carry `exchange_index`.
+
+    Shape-based on purpose: the key name is Kalshi's to change, but an entry that
+    names an exchange index is unambiguously a per-shard row.
+    """
+    for value in payload.values():
+        if isinstance(value, dict):
+            value = list(value.values())
+        if not isinstance(value, list):
+            continue
+        rows = [v for v in value if isinstance(v, dict) and "exchange_index" in v]
+        if rows:
+            return rows
+    return None
+
+
+def _is_positive_amount(amount) -> bool:
+    """True when `amount` is a positive number, including one sent as a string."""
+    if isinstance(amount, bool):
+        return False
+    if isinstance(amount, (int, float)):
+        return amount > 0
+    if isinstance(amount, str):
+        try:
+            return float(amount) > 0
+        except ValueError:
+            return False
+    return False
 
 
 def _tier_of(limits) -> str:
