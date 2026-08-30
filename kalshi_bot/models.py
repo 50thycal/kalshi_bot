@@ -980,3 +980,133 @@ class SystemEvent(Base):
     component: Mapped[str] = mapped_column(String(48), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
     raw_json: Mapped[dict | None] = mapped_column(JSONType)
+
+
+# ---------------------------------------------------------------------------
+# PERP-V1 tape (docs/PERP_V1_THESIS.md §6, Probe 1)
+#
+# Read-only instrument tables for Kalshi's crypto perpetuals. Nothing here is a
+# book: no strategy tag, no position, no order. They exist so arms A, B and C
+# can be SCORED later over one shared tape, which is the reason PERP-V1 is one
+# experiment rather than three (DEC-008).
+#
+# EVERY table keeps `raw_json`. That is not laziness — the survey established
+# that `reference_price`, `settlement_mark_price` and `liquidation_mark_price`
+# arrive as nested OBJECTS whose inner shape this project has never read, and
+# that the funding payload's shape is unknown entirely. Extracted columns hold
+# what was actually measured; the raw payload holds everything else so a later
+# analysis is never blocked on a field the collector silently dropped.
+# ---------------------------------------------------------------------------
+
+
+class PerpMarketSnapshot(Base):
+    """One poll of one perp market's top-level state."""
+
+    __tablename__ = "perp_market_snapshots"
+    __table_args__ = (
+        Index("ix_perp_market_snapshots_ticker_time", "ticker", "captured_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(64), nullable=False)
+    captured_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    status: Mapped[str | None] = mapped_column(String(32))
+    # Kalshi returns these as decimal STRINGS. They are parsed to float here for
+    # arithmetic and kept verbatim in raw_json, so a parse that loses precision
+    # can always be redone from the original.
+    bid: Mapped[float | None] = mapped_column(Float)
+    ask: Mapped[float | None] = mapped_column(Float)
+    price: Mapped[float | None] = mapped_column(Float)
+    open_interest: Mapped[float | None] = mapped_column(Float)
+    open_interest_notional_usd: Mapped[float | None] = mapped_column(Float)
+    volume: Mapped[float | None] = mapped_column(Float)
+    volume_24h: Mapped[float | None] = mapped_column(Float)
+    #: Arm A's index anchor. The API nests it in an object; this is whatever
+    #: numeric the extractor could resolve, and NULL when it could not — never a
+    #: guess. `reference_price_json` keeps the object either way.
+    reference_price: Mapped[float | None] = mapped_column(Float)
+    settlement_mark_price: Mapped[float | None] = mapped_column(Float)
+    #: (mark - index) / index, in basis points. Computed here rather than at
+    #: analysis time so the number is pinned to the two prices observed in the
+    #: SAME poll — recomputing later from separately-stored series would silently
+    #: pair prices from different instants, which is the whole quantity arm A
+    #: trades on.
+    premium_bps: Mapped[float | None] = mapped_column(Float)
+    reference_price_json: Mapped[dict | None] = mapped_column(JSONType)
+    settlement_mark_price_json: Mapped[dict | None] = mapped_column(JSONType)
+    raw_json: Mapped[dict | None] = mapped_column(JSONType)
+
+
+class PerpOrderbookSnapshot(Base):
+    """One poll of one perp order book. Arm C's depth-imbalance feature."""
+
+    __tablename__ = "perp_orderbook_snapshots"
+    __table_args__ = (
+        Index("ix_perp_orderbook_snapshots_ticker_time", "ticker", "captured_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(64), nullable=False)
+    captured_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    best_bid: Mapped[float | None] = mapped_column(Float)
+    best_ask: Mapped[float | None] = mapped_column(Float)
+    bid_depth: Mapped[float | None] = mapped_column(Float)
+    ask_depth: Mapped[float | None] = mapped_column(Float)
+    #: bid_depth / (bid_depth + ask_depth), NULL when both sides are empty —
+    #: an empty book is not a balanced one.
+    depth_imbalance: Mapped[float | None] = mapped_column(Float)
+    raw_json: Mapped[dict | None] = mapped_column(JSONType)
+
+
+class PerpFundingObservation(Base):
+    """One funding record as the API returned it.
+
+    `/margin/funding_history` has never returned a 200 to this project — the
+    survey only ever saw its 400 asking for `start_date`. So the extracted
+    columns here are BEST EFFORT and `raw_json` is the authoritative record
+    until a real payload has been read and this model corrected against it.
+    """
+
+    __tablename__ = "perp_funding_observations"
+    __table_args__ = (
+        Index("ix_perp_funding_obs_ticker_time", "ticker", "observed_at"),
+        UniqueConstraint("ticker", "observed_at", "source_key",
+                         name="uq_perp_funding_obs"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    ticker: Mapped[str | None] = mapped_column(String(64))
+    #: The funding window this record describes, as the API dated it. NULL when
+    #: no recognisable timestamp was found — recorded rather than dropped.
+    observed_at: Mapped[datetime | None] = mapped_column(TS)
+    captured_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    funding_rate: Mapped[float | None] = mapped_column(Float)
+    #: Dedupe key derived from the payload itself, so re-fetching an overlapping
+    #: window cannot double-count a funding period into arm B's carry.
+    source_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    raw_json: Mapped[dict | None] = mapped_column(JSONType)
+
+
+class PerpCollectorCycle(Base):
+    """Per-cycle collector telemetry — the coverage denominator.
+
+    `perp_data_coverage_pct` is a pre-registered gate clause on every PERP-V1
+    arm, and coverage cannot be computed from the tape alone: rows that were
+    never written look identical to a market that did not exist. This table is
+    what makes a gap visible as a gap.
+    """
+
+    __tablename__ = "perp_collector_cycles"
+    __table_args__ = (Index("ix_perp_collector_cycles_time", "started_at"),)
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    started_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    finished_at: Mapped[datetime | None] = mapped_column(TS)
+    markets_seen: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    market_snapshots: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    orderbook_snapshots: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    funding_rows: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    errors: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    #: What went wrong, per stage, without ever failing the cycle. A collector
+    #: that dies on one bad market stops being a coverage denominator.
+    notes_json: Mapped[dict | None] = mapped_column(JSONType)

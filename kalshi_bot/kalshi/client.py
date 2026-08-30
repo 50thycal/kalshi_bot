@@ -301,6 +301,65 @@ class KalshiClient:
             params={"start_ts": start_ts, "end_ts": end_ts, "period_interval": period_interval},
         )
 
+    # -- perpetual futures (READ ONLY) -------------------------------------
+    #
+    # Kalshi's crypto perpetuals live under `/margin/*` on the same host, prefix
+    # and auth as everything above, so they belong on this client rather than in
+    # a second one. Every method here is a GET; there is deliberately NO perp
+    # order path in this repository (docs/PERP_V1_THESIS.md).
+    #
+    # The paths and their argument requirements were MEASURED, not assumed —
+    # `scripts/perp_surface_survey.py` run through the ops channel on 2026-08-29
+    # and 2026-08-30, recorded in docs/RESEARCH_JOURNAL.md. Two of them
+    # (candlesticks, funding history) refuse to answer without a range, which is
+    # why those arguments are required parameters here instead of optional ones:
+    # a caller that forgets gets a TypeError locally rather than a 400 in
+    # production.
+
+    def get_perp_markets(self, *, limit: int | None = None, cursor: str | None = None) -> dict:
+        """The perp market list. Readable unauthenticated; signed anyway, like
+        every other call on this client."""
+        params: dict[str, Any] = {}
+        if limit is not None:
+            params["limit"] = limit
+        if cursor:
+            params["cursor"] = cursor
+        return self._request("GET", "/margin/markets", params=params or None)
+
+    def get_perp_market(self, ticker: str) -> dict:
+        return self._request("GET", f"/margin/markets/{ticker}")
+
+    def get_perp_orderbook(self, ticker: str) -> dict:
+        return self._request("GET", f"/margin/markets/{ticker}/orderbook")
+
+    def get_perp_candlesticks(
+        self, ticker: str, *, start_ts: int, end_ts: int, period_interval: int
+    ) -> dict:
+        """Perp candles. `start_ts`/`end_ts` are REQUIRED by the endpoint — it
+        answers 400 naming `start_ts` without them, which is how the survey
+        discovered the path exists at all."""
+        return self._request(
+            "GET",
+            f"/margin/markets/{ticker}/candlesticks",
+            params={"start_ts": start_ts, "end_ts": end_ts,
+                    "period_interval": period_interval},
+        )
+
+    def get_perp_funding_history(self, *, start_date: str, end_date: str,
+                                 ticker: str | None = None) -> dict:
+        """Funding history. `start_date` is REQUIRED (the endpoint says so in its
+        400), and dates are ISO `YYYY-MM-DD`.
+
+        The RESPONSE SHAPE is not yet known — no run has read a 200 from this
+        path. Callers must treat the payload as unverified and must not assume a
+        key exists; `perps.collector` stores it whole for exactly that reason.
+        Funding is arm B's entire ranking and arm A's entry confirmation, so
+        guessing its shape here would be the expensive kind of wrong."""
+        params: dict[str, Any] = {"start_date": start_date, "end_date": end_date}
+        if ticker:
+            params["ticker"] = ticker
+        return self._request("GET", "/margin/funding_history", params=params)
+
     def get_events(
         self,
         *,

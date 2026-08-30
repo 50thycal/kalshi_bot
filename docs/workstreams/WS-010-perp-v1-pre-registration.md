@@ -84,11 +84,14 @@ assumption of comparability rather than a frozen contract.
 
 ## Open Decisions
 
-- **D1. Where does the tape collector run?** Probe 0 decides it. If the perp
-  surface is unauthenticated, the collector can live in the ops channel; if it is
-  `EXISTS/AUTH`, it must run on the worker, which is the only process holding
-  Kalshi credentials — a bigger change (a new collector loop, a new table, a
-  migration) and a separate build slice.
+- ~~**D1. Where does the tape collector run?**~~ **CLOSED 2026-08-30 — on the
+  worker.** Not because the surface needs credentials (the market, book and
+  candle reads are public), but because the ops channel runs one script per
+  request against a read-only database connection: it can survey, it cannot
+  accumulate. A tape needs a writer on a schedule, and the worker is the only
+  process that is one. It runs in the every-mode cycle hook, beside the Experiment
+  OS hook, for the reason recorded there — a hook inside `_run_cycle` silently
+  never runs under live/weather/mmsell/evo.
 - **D2. Does a perp book need a Platform Revision before it could ever be
   live?** Almost certainly yes — leverage, liquidation and an 8-hourly funding
   cash flow are semantics no FEE_MODEL/FILL_MODEL revision in this repository
@@ -163,15 +166,19 @@ tickers.
 
 ## Implementation State
 
-Slices 1 and 2 merged (#275, #277). Probe 0 has run twice; the second run resolved A4 and
-closed D4. The perp surface is real, its history endpoints are readable, and funding is
+Slices 1–3 built (#275, #277, #280, and the collector PR). Probe 0 has run twice; the
+second run resolved A4 and closed D4. **Probe 1 (the tape collector) is built** —
+`kalshi_bot/perps/`, four tables, wired into the worker's every-mode cycle hook and OFF
+by default behind `PERPS_COLLECTOR_ENABLED`. The perp surface is real, its history endpoints are readable, and funding is
 reachable at `/margin/funding_history` with a date range. Registration in production has
 **not** been submitted — that is a `REGISTER_PACKAGE` envelope through the `env` channel,
 which redeploys the worker while the mmsell10 canary holds real money, so it stays an
 operator act.
 
-**Probe 1 (tape collector) is now unblocked in shape**: the field names it must be written
-against are recorded in the journal, measured rather than assumed.
+Registration and the collector are **independent**: the collector writes its own
+instrument tables and creates no strategy tag, so it can run before `perp-v1` is
+registered. What it cannot do is produce a PAPER book — that needs Probe 2's scorers, a
+recorded gate PASS, and a registered deployment, in that order.
 
 ## Review State
 
@@ -189,6 +196,6 @@ This PR.
 
 ## Next Step
 
-Operator decision: submit `REGISTER_PACKAGE` for `perp-v1` (it redeploys the worker, so it
-is not a session act). The blocking research question is answered — nothing in the contract
-needs changing before it is frozen.
+Merge the collector, then set `PERPS_COLLECTOR_ENABLED=true` through the ops `env` channel
+to start accumulating tape. Probe 2's scorers are the next build, and they need tape to
+score — so the collector has to run for a while before there is anything for them to read.

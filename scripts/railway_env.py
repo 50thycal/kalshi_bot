@@ -49,6 +49,19 @@ ALLOWED_VARS = frozenset({
     # again; retuning it against a measured 429 rate should not need a code deploy. Raise it in
     # steps and watch the RATE LIMITED line in `mmsell quote parity`.
     "MMSELL_TOP_EVENTS", "MMSELL_EVENT_PAGES",
+    # PERP-V1's tape collector (docs/PERP_V1_THESIS.md, Probe 1). Settable from
+    # here because it is a read-only INSTRUMENT — it places no orders, holds no
+    # position and registers no strategy tag — and because whether we are
+    # collecting, and over which assets, is exactly the kind of thing that should
+    # be adjustable against a measured request budget rather than a code deploy.
+    #
+    # PERPS_COLLECTOR_ENABLED is the on switch and it defaults OFF. Setting it
+    # REDEPLOYS THE WORKER, which is also where the live books run, so it is an
+    # operator act even though the collector itself risks nothing.
+    "PERPS_COLLECTOR_ENABLED", "PERPS_ASSETS", "PERPS_INTERVAL_SECONDS",
+    "PERPS_MARKET_LIMIT", "PERPS_ORDERBOOK_ENABLED", "PERPS_ORDERBOOK_MAX_MARKETS",
+    "PERPS_FUNDING_ENABLED", "PERPS_FUNDING_INTERVAL_MINUTES",
+    "PERPS_FUNDING_LOOKBACK_DAYS",
     # Experiment OS operational migration (docs/EXPERIMENT_OS_ENFORCEMENT.md). These are
     # here because the ops channel is deliberately READ-ONLY against Postgres: the worker
     # is the only process holding a writable DATABASE_URL, so the legacy import and the

@@ -992,6 +992,37 @@ class Settings(BaseSettings):
     xgame_order_size: int = 5
     xgame_book_max_open_positions: int = 30   # one live position per matched game (deduped)
 
+    # --- PERP-V1 tape collector (docs/PERP_V1_THESIS.md, Probe 1) ---
+    # A read-only INSTRUMENT, not a book: it writes the perp tape all three
+    # PERP-V1 arms are scored over and places nothing. It runs in the every-mode
+    # cycle hook rather than inside one BOT_MODE branch, because a collector that
+    # only records under one mode produces a coverage gap nobody notices.
+    #
+    # OFF BY DEFAULT. Enabling it is a deliberate operator act through the `env`
+    # channel, which redeploys the worker — and the worker also runs live books.
+    perps_collector_enabled: bool = False
+    # Poll cadence. Independent of SCAN_INTERVAL_SECONDS: the premium and book
+    # imbalance arm C wants move on seconds, but the worker cycle is shared with
+    # books that must not be slowed down, so the collector rides the existing
+    # cycle and this is a floor between polls rather than a timer of its own.
+    perps_interval_seconds: float = 60.0
+    # Empty = every readable perp. A comma list (e.g. "BTC,ETH,SOL") restricts by
+    # ticker SUBSTRING; tickers look like KXAAVEPERP. The resolved universe is
+    # recorded per cycle so an over-match shows up in the telemetry.
+    perps_assets: str = ""
+    perps_market_limit: int = 200
+    # The order book is one extra request PER MARKET, so it is capped separately
+    # from the market list. Arm C is the only arm that needs it.
+    perps_orderbook_enabled: bool = True
+    perps_orderbook_max_markets: int = 12
+    # Funding settles every 8 hours, so polling it per cycle would be thousands
+    # of requests returning the same rows. The lookback overlaps deliberately —
+    # re-fetching is cheap and the dedupe key makes double-counting impossible,
+    # while a gap in funding is unrecoverable.
+    perps_funding_enabled: bool = True
+    perps_funding_interval_minutes: float = 60.0
+    perps_funding_lookback_days: int = 7
+
     # --- WCPROP book (ride-along paper, weather/live cycle) ---
     # World Cup cross-market coherence forward-test (scripts/xmarket_wc.py): does the
     # tournament-WINNER ladder (KXMENWORLDCUP) lag a decisive MATCH result? When a
@@ -1994,6 +2025,8 @@ class Settings(BaseSettings):
             "theta_closeout_strategies": self.theta_closeout_strategy_list,
             "theta_closeout_max_attempts_per_ticker":
                 self.theta_closeout_max_attempts_per_ticker,
+            "perps_collector_enabled": self.perps_collector_enabled,
+            "perps_assets": self.perps_assets,
             "xgame_enabled": self.xgame_enabled,
             "xgame_series": self.xgame_series_list,
             "xgame_pm_tags": self.xgame_pm_tag_list,
