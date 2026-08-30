@@ -1,1 +1,1 @@
-{"type":"db","sql":"select length(cancel_reason) as len, substr(cancel_reason, 150, 130) as part2, substr(cancel_reason, 280, 130) as part3 from live_orders where strategy = 'Cmmsell10' and status = 'rejected' limit 1","max_rows":3,"id":"db-errtail"}
+{"type":"db","sql":"select market_ticker, left(raw_order_json::text, 400) as raw from live_orders where strategy = 'Cmmsell10' and status = 'rejected' and raw_order_json is not null limit 2","max_rows":4,"id":"db-shard-hunt"}
