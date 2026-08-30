@@ -1,1 +1,1 @@
-{"type":"db","id":"perp-funding-ticker-2","sql":"select started_at, notes_json::jsonb -> 'funding_shape_by_ticker' as scoped from perp_collector_cycles where notes_json::text like '%funding_shape_by_ticker%' order by started_at desc limit 3"}
+{"type":"noop"}
