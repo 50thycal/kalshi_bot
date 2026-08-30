@@ -348,6 +348,61 @@ instrument, four diagnosed data-access facts about Kalshi's API, and zero
 evidence about the hypothesis. Whether that is worth more investment is the
 operator's call, not another quiet iteration.
 
+**2026-08-30 · run 8 (ops `mkt-probe-8`) · option B, hand-picked shortlist ·
+FIRST REAL VERDICT: HOLD — and a directional finding against the thesis.**
+
+Operator decision: test the families where the mechanism should be strongest
+rather than keep fighting enumeration. Eleven series, 102,786 settled markets,
+816 families at the floor. The instrument finally reached the pre-registered
+verdict rule.
+
+**The balance screen earned its place.** 702 of 816 families were constant (0% or
+100% YES) and 76 more were outside the band. 38 survived. Without that screen the
+38 would have been invisible.
+
+**Crypto daily thresholds are momentum machines, not coin flips.**
+
+```
+KXBTCD|T78499.99   n=135  yes 58.5%   P(Y|Y) 94.9%   P(N|N) 92.9%
+KXETHD|T2464.99    n= 83  yes 49.4%   P(Y|Y) 97.5%   P(N|N) 97.6%
+KXSOLD|T105.9999   n= 84  yes 27.4%   P(Y|Y) 86.4%   P(N|N) 93.4%
+```
+
+Read that carefully, because it is the sharpest evidence the experiment has
+produced. `KXETHD|T2464.99` resolves YES 49.4% of the time — a near-perfect coin
+on the marginal frequency — and repeats its previous outcome **97%** of the time.
+This is exactly the Series A / Series B distinction the thesis is built on, and
+it lands on the wrong side: a 50/50 marginal frequency with near-total
+persistence. Reversal probability is 3-15% and does not rise with run length; it
+cannot, because these are level crossings on a slow-moving price, not fresh draws.
+
+That is a real answer for this market class: **daily crypto threshold families
+are the opposite of what MARKTANGLE looks for.** If anything they would favour
+`mktcont`, the continuation mirror — momentum on a level crossing, which is
+almost certainly priced. They should be excluded from the universe as a
+mis-specified market TYPE, not screened on a statistic.
+
+**The genuinely coin-like families are untested, not refuted.**
+
+```
+KXUSLTOTAL|3     n=88  yes 42.0%   P(Y|Y) 41.7%   P(N|N) 58.8%   holdout 27
+KXUSLTOTAL|2     n=86  yes 61.6%   P(Y|Y) 65.4%   P(N|N) 45.5%   holdout 26
+KXHIGHMIA|B92.5  n=42  yes 47.6%   P(Y|Y) 55.0%   P(N|N) 61.9%   holdout 13
+```
+
+Sports totals and weather buckets sit near 50/50 with mild asymmetric
+persistence — the shape worth testing. Their holdouts are 13-27 against a
+pre-registered floor of 100, so nothing was fitted and nothing was graded.
+
+**VERDICT: HOLD**, by the frozen rule, and for the first time it is the actual
+pre-registered HOLD rather than "instrument not capable": *no family reaches the
+100-entry holdout floor — thin sample is not a negative result, it is no result.*
+
+The binding constraint has moved from our tooling to Kalshi's history depth.
+`KXHIGHNY` and its siblings expose 408 settled markets each — about 13 months
+spread across 11 ladder rungs, ~37 per rung. No amount of engineering creates
+more past.
+
 ## 9. What would make us abandon this
 
 Any one of the three, stated before the data:
