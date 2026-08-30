@@ -1,1 +1,1 @@
-{"type":"xos","command":"metric","args":["twin_mirror_coverage_pct","--experiment","mmsell-price-ceiling","--arm","mmsell10","--kind","live"],"id":"g-twin_mirror_coverage_pct"}
+{"type":"xos","command":"metric","args":["live_fill_rate_pct","--experiment","mmsell-price-ceiling","--arm","mmsell10","--kind","live"],"id":"g-live_fill_rate_pct"}
