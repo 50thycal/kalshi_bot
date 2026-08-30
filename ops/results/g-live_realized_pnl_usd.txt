@@ -1,9 +1,9 @@
 # ops request: type='xos'
-live_settled_contracts  @  mmsell-price-ceiling/v2/e2/mmsell10  kind=live
+live_realized_pnl_usd  @  mmsell-price-ceiling/v2/e2/mmsell10  kind=live
   tags:        Cmmsell10
   deployments: mmsell-ceiling-live-1
-  window:      2026-08-28 14:20:35.572574+00:00 -> 2026-08-30 13:58:36.975734+00:00
-  value:       66.0  (contracts)   n=66
+  window:      2026-08-28 14:20:35.572574+00:00 -> 2026-08-30 13:59:24.949493+00:00
+  value:       0.9982  (USD)   n=66
     deployment_kind: live
     deployments: ['mmsell-ceiling-live-1']
     excluded_contested_markets: 0
@@ -23,6 +23,6 @@ live_settled_contracts  @  mmsell-price-ceiling/v2/e2/mmsell10  kind=live
     settled_statuses: ['settled', 'closed_sl', 'closed_tp', 'closed_timeout']
     source: live_orders x fills x positions
     strategy_tags: ['Cmmsell10']
-    window: ['2026-08-28 14:20:35.572574+00:00', '2026-08-30 13:58:36.975734+00:00']
+    window: ['2026-08-28 14:20:35.572574+00:00', '2026-08-30 13:59:24.949493+00:00']
     window_basis: live_orders.created_at (entry time)
     winning_settled_markets: 62
