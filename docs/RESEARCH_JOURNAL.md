@@ -288,6 +288,25 @@ No gate result is recorded from this. A survey prints; a verdict is a recorded e
 
 ---
 
+## MARKTANGLE 2026-08-30 — CLOSED FOR NOW (PAUSED at PROBE)
+
+Operator decision on the run-8 results. Paused, not retired: the decision was "for now",
+and PAUSED records `paused_from` so it can only resume to PROBE or be retired deliberately.
+The HOLD verdict, the frozen contract, the five arms, both gates and every run log stand
+unchanged — pausing is about our attention, not the evidence.
+
+Banked findings: daily crypto thresholds are refuted as a market TYPE (97.5% persistence on
+a 49.4% coin); ~86% of Kalshi "recurring families" (702/816) are constant ladder rungs, so
+the real candidate pool is far smaller than it looks; sports totals and weather buckets have
+the right shape but sit at n=42-88 with holdouts of 13-27 against a floor of 100 — untested,
+not refuted.
+
+Resuming means forward collection, not a rebuild: Kalshi exposes ~408 settled markets per
+weather series (~37 per ladder rung), so the missing holdout observations can only be waited
+for. Lifecycle move: `scripts/marktangle_pause.py --execute` on a writable connection.
+
+---
+
 ## MARKTANGLE 2026-08-30 — Phase-A run 8: FIRST REAL VERDICT (HOLD) + crypto thresholds are momentum
 
 Operator chose option B — test where the mechanism should be strongest instead of fighting
