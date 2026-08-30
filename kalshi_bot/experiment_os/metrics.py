@@ -244,12 +244,19 @@ _UNIVERSAL: tuple[MetricDefinition, ...] = (
     ),
     MetricDefinition(
         key="live_fill_rate_pct", unit="%", kind="rate",
-        source="live_orders (entry buys that reached the venue) x fills",
+        source="live_orders (entry buys the venue RESOLVED: filled or cancelled)",
         reference="scripts/live_paper_parity.py (docs/LIVE_PAPER_TWIN.md)",
-        revision="live_exec_v1",
-        description="filled contracts over contracts ORDERED on entry buys that "
-        "actually reached the venue — the maker's realized fill rate; MISSING "
-        "unless addressed at deployment_kind='live'",
+        #: v2 (XOS-000013): v1 joined `fills` on kalshi_order_id and that join
+        #: returns nothing against production, so it read 0.0% for a book filling
+        #: at ~49%. v2 counts the order's own status. The revision is bumped
+        #: because the computed VALUE changes: a verdict recorded under v1 must
+        #: never share an identity with one computed by the corrected provider.
+        revision="live_exec_v2",
+        description="filled contracts over RESOLVED entry-buy contracts (filled + "
+        "cancelled/expired). Still-resting orders are excluded — they have not "
+        "failed to fill, and counting them would make the rate depend on scan "
+        "timing rather than queue position; MISSING unless addressed at "
+        "deployment_kind='live'",
     ),
     MetricDefinition(
         key="live_open_exposure_usd", direction="neutral", unit="USD", kind="count",
@@ -1076,17 +1083,38 @@ _SENT_ORDER_STATUSES = frozenset({
 _INDETERMINATE_ORDER_STATUSES = frozenset({"unknown", "pending"})
 
 
+#: An order the venue RESOLVED: it either filled or it was taken off the book.
+#: These, and only these, are the fill-rate denominator.
+_FILLED_ORDER_STATUSES = frozenset({"filled", "partially_filled", "settled"})
+_UNFILLED_RESOLVED_STATUSES = frozenset({"canceled", "cancelled", "expired"})
+
+
 def _live_fill_rows(session, tags: tuple[str, ...], scope: MetricScope) -> dict:
-    """Ordered-vs-filled contracts on this arm's ENTRY buys inside the window.
+    """Filled-vs-resolved contracts on this arm's ENTRY buys inside the window.
 
     Entry buys only. A position is entered by buys and closed by sells, and both
     produce orders and fills; counting closes would measure a taker's exit, not the
     resting maker's entry fill rate, which is the whole quantity the twin exists to
-    price."""
-    from ..models import Fill, LiveOrder
+    price.
+
+    READ FROM THE ORDER'S OWN STATUS, not from a join to `fills`. The first version
+    of this summed `Fill.quantity` for the orders' `kalshi_order_id` values, and
+    against production that join returned NOTHING: it reported 0.0% for a book
+    filling at ~49% (XOS-000013). The two feeds do not agree on order identity —
+    an order is marked filled from the v2 orders feed's own status, which creates
+    no `Fill` row, while the separate fills feed reports the fill under a different
+    `order_id`. `scripts/live_paper_parity.py` never had the bug because it counted
+    statuses, which is what this now does too.
+
+    STILL-RESTING ORDERS ARE EXCLUDED, not counted as failures. A resting order has
+    not failed to fill, it is still working; putting it in the denominator would
+    make the rate a function of how recently the scan ran rather than of queue
+    position. So the denominator is filled + cancelled/expired — orders the venue
+    actually resolved."""
+    from ..models import LiveOrder
 
     rows = session.execute(
-        select(LiveOrder.kalshi_order_id, LiveOrder.status, LiveOrder.quantity)
+        select(LiveOrder.status, LiveOrder.quantity)
         .where(
             LiveOrder.strategy.in_(tags),
             LiveOrder.action == "buy",
@@ -1094,30 +1122,26 @@ def _live_fill_rows(session, tags: tuple[str, ...], scope: MetricScope) -> dict:
             LiveOrder.created_at <= scope.window_end,
         )
     ).all()
-    ordered = 0
-    sent_ids: list[str] = []
+    filled = unfilled = still_working = 0
     never_sent = indeterminate = 0
-    for koid, status, qty in rows:
+    for status, qty in rows:
         st = (status or "").lower()
+        n = int(qty or 0)
         if st in _INDETERMINATE_ORDER_STATUSES:
             indeterminate += 1
-            continue
-        if st not in _SENT_ORDER_STATUSES:
+        elif st not in _SENT_ORDER_STATUSES:
             never_sent += 1          # rejected / error — never given a chance
-            continue
-        ordered += int(qty or 0)
-        if koid:
-            sent_ids.append(koid)
-    filled = 0
-    if sent_ids:
-        filled = int(session.scalar(
-            select(func.coalesce(func.sum(Fill.quantity), 0))
-            .where(Fill.kalshi_order_id.in_(sent_ids), Fill.action == "buy")
-        ) or 0)
+        elif st in _FILLED_ORDER_STATUSES:
+            filled += n
+        elif st in _UNFILLED_RESOLVED_STATUSES:
+            unfilled += n
+        else:
+            still_working += n       # resting / open / submitted — not yet resolved
     return {
-        "ordered_contracts": ordered,
+        "ordered_contracts": filled + unfilled,   # RESOLVED contracts (the denominator)
         "filled_contracts": filled,
-        "sent_orders": len(sent_ids),
+        "unfilled_resolved_contracts": unfilled,
+        "excluded_still_working": still_working,
         "excluded_never_sent": never_sent,
         "excluded_indeterminate": indeterminate,
     }
@@ -1314,8 +1338,9 @@ def _live_metric(session, key: str, scope: MetricScope) -> MetricValue:
             return MetricValue(
                 key, None, 0, "%",
                 reason=(
-                    "no entry-buy contracts reached the venue in this window "
-                    f"({fills['excluded_never_sent']} order(s) never sent, "
+                    "no entry-buy contract was RESOLVED in this window "
+                    f"({fills['excluded_still_working']} contract(s) still resting, "
+                    f"{fills['excluded_never_sent']} order(s) never sent, "
                     f"{fills['excluded_indeterminate']} indeterminate)"
                 ),
                 provenance=prov | fills,

@@ -116,20 +116,71 @@ def test_canary_metric_refuses_a_non_live_scope(xos_session, key, kind):
 # ---------------------------------------------------------------------------
 
 
-def test_fill_rate_counts_contracts_not_orders(xos_session):
-    """Two orders for 5 contracts each; one fills fully, one fills 1 of 5.
+def test_fill_rate_reads_the_orders_status_not_a_join_to_fills(xos_session):
+    """XOS-000013, the production shape: orders that FILLED, with no `fills` row.
 
-    Per ORDER that reads 50%. Per CONTRACT it is 6/10 = 60%, and the contract is
-    the unit the P&L is denominated in."""
+    The first implementation summed `Fill.quantity` for the orders' order ids. In
+    production that join returns nothing — the orders feed marks a row filled from
+    its own status without creating a `Fill`, and the separate fills feed reports
+    the fill under a different order id — so this metric read 0.0% for a book
+    filling at ~49%, and it is a registered HOLD clause at `< 25`.
+
+    Note there is deliberately NO `filled=` argument here: not one `Fill` row
+    exists. The old implementation cannot pass this test; the value it computes is
+    0.0.
+    """
     s = xos_session
-    _order(s, qty=5, filled=5, status="filled")
-    _order(s, qty=5, filled=1, status="canceled")
+    for _ in range(3):
+        _order(s, qty=1, status="filled")       # filled, and NO Fill row
+    _order(s, qty=1, status="canceled")
     s.commit()
 
     mv = compute_metric(s, "live_fill_rate_pct", _scope())
-    assert mv.value == pytest.approx(60.0)
+    assert mv.value == pytest.approx(75.0)
+    assert mv.provenance["filled_contracts"] == 3
+    assert mv.provenance["ordered_contracts"] == 4
+
+
+def test_fill_rate_counts_contracts_not_orders(xos_session):
+    """Contracts, not orders — the contract is the unit P&L is denominated in.
+
+    One 5-contract order fills, one 5-contract order is cancelled unfilled: 5/10.
+
+    LIMITATION, stated rather than hidden: a PARTIAL fill on an order that was
+    then cancelled counts as unfilled, because the order's status is all this
+    reads. That is exact for every current live book (`size=1`, so an order is
+    one contract and cannot partially fill) and conservative otherwise — it
+    understates the fill rate, which for a `< 25` HOLD clause errs toward holding
+    rather than toward passing.
+    """
+    s = xos_session
+    _order(s, qty=5, status="filled")
+    _order(s, qty=5, status="canceled")
+    s.commit()
+
+    mv = compute_metric(s, "live_fill_rate_pct", _scope())
+    assert mv.value == pytest.approx(50.0)
     assert mv.provenance["ordered_contracts"] == 10
-    assert mv.provenance["filled_contracts"] == 6
+    assert mv.provenance["filled_contracts"] == 5
+
+
+def test_fill_rate_excludes_orders_still_working(xos_session):
+    """A resting order has not FAILED to fill — it is still on the book.
+
+    Counting it as a miss would make the rate a function of how recently the scan
+    ran rather than of queue position: place ten orders, read the metric a second
+    later, and it reports 0%."""
+    s = xos_session
+    _order(s, qty=1, status="filled")
+    _order(s, qty=1, status="canceled")
+    _order(s, qty=1, status="resting")
+    _order(s, qty=1, status="submitted")
+    s.commit()
+
+    mv = compute_metric(s, "live_fill_rate_pct", _scope())
+    assert mv.value == pytest.approx(50.0)          # 1 of 2 RESOLVED, not 1 of 4
+    assert mv.provenance["ordered_contracts"] == 2
+    assert mv.provenance["excluded_still_working"] == 2
 
 
 def test_fill_rate_excludes_orders_that_never_reached_the_venue(xos_session):
@@ -139,7 +190,7 @@ def test_fill_rate_excludes_orders_that_never_reached_the_venue(xos_session):
     shape, and would move the fill rate every time the venue changed a validation
     rule."""
     s = xos_session
-    _order(s, qty=2, filled=2, status="filled")
+    _order(s, qty=2, status="filled")
     _order(s, qty=8, status="rejected")
     _order(s, qty=8, status="error")
     s.commit()
@@ -156,13 +207,14 @@ def test_fill_rate_excludes_indeterminate_orders_from_both_sides(xos_session):
     Reconcile resolves them later. Guessing either way here would make the number
     move on bookkeeping rather than on execution."""
     s = xos_session
-    _order(s, qty=4, filled=2, status="filled")
+    _order(s, qty=4, status="filled")
+    _order(s, qty=4, status="canceled")
     _order(s, qty=6, status="unknown")
     _order(s, qty=6, status="pending")
     s.commit()
 
     mv = compute_metric(s, "live_fill_rate_pct", _scope())
-    assert mv.provenance["ordered_contracts"] == 4
+    assert mv.provenance["ordered_contracts"] == 8
     assert mv.provenance["excluded_indeterminate"] == 2
     assert mv.value == pytest.approx(50.0)
 
@@ -181,23 +233,27 @@ def test_fill_rate_with_nothing_sent_is_undefined_not_zero(xos_session):
 
 
 def test_fill_rate_ignores_exit_sells(xos_session):
-    """A position is entered by buys and closed by sells, and both produce fills.
-    The quantity under test is the RESTING MAKER'S ENTRY fill rate."""
+    """A position is entered by buys and closed by sells, and both produce orders.
+    The quantity under test is the RESTING MAKER'S ENTRY fill rate.
+
+    An exit sell always fills — mmsell holds to settlement, and a close that
+    happens at all happened — so letting sells in would drag the rate toward 100%
+    and hide exactly the execution problem this metric exists to expose.
+    """
     s = xos_session
-    ticker = _order(s, qty=4, filled=1)
-    s.add(LiveOrder(kalshi_order_id="sell-1", market_ticker=ticker,
-                    strategy="Lmm10c", action="sell", side="no", quantity=4,
-                    limit_price=97, status="filled",
-                    created_at=T0 + timedelta(days=1)))
-    s.add(Fill(kalshi_fill_id="sf-1", kalshi_order_id="sell-1",
-               market_ticker=ticker, action="sell", quantity=4, price=97,
-               filled_at=T0 + timedelta(days=1)))
+    ticker = _order(s, qty=4, status="filled")
+    _order(s, qty=4, status="canceled")                 # entry that missed: 4/8 = 50%
+    for i, action in enumerate(("sell", "sell")):       # two exit sells, both filled
+        s.add(LiveOrder(kalshi_order_id=f"sell-{i}", market_ticker=ticker,
+                        strategy="Lmm10c", action=action, side="no", quantity=4,
+                        limit_price=97, status="filled",
+                        created_at=T0 + timedelta(days=1)))
     s.commit()
 
     mv = compute_metric(s, "live_fill_rate_pct", _scope())
-    assert mv.provenance["ordered_contracts"] == 4
-    assert mv.provenance["filled_contracts"] == 1
-    assert mv.value == pytest.approx(25.0)
+    assert mv.provenance["ordered_contracts"] == 8      # the sells are not here
+    assert mv.provenance["filled_contracts"] == 4
+    assert mv.value == pytest.approx(50.0)
 
 
 # ---------------------------------------------------------------------------
