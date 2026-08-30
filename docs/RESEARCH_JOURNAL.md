@@ -68,6 +68,31 @@ No gate result is recorded from this. A survey prints; a verdict is a recorded e
 
 ---
 
+## MARKTANGLE 2026-08-29 — Phase-A run 1: NO VERDICT. The instrument, not the world.
+
+First exchange-wide sweep (ops `mkt-probe-1`): 6,270 settled binaries, **0 families**
+reaching the 40-resolution floor. A per-series diagnostic (`mkt-diag-1`) on
+KXBTCD/KXHIGHNY/KXHIGHCHI returned 20,816 markets and 198 families through the identical
+code path — so the shallow result was the endpoint, not the exchange: `status=settled`
+without a `series_ticker` returns a recent window spread thin across hundreds of
+series x strikes.
+
+The diagnostic also caught a thesis clause the script never implemented: "families whose
+unconditional outcome is roughly balanced". Most of those 198 are KXBTCD strikes resolving
+0% or 100% YES — permanently out of or in the money. Constant, not memoryless: nothing
+conditional to find, and they bury everything else.
+
+Both fixed as INSTRUMENT changes (two-stage discovery-then-history fetch; a 25-75%
+base-rate band with constant vs lopsided counted separately and reported). The
+hypothesis, arms, gates and frozen verdict rule are untouched.
+
+**No verdict was recorded, and none was available.** Not PASS, not FAIL, and not even the
+pre-registered HOLD — HOLD is about a thin holdout at a fitted k*, and no k* was ever
+reached. The honest label is *instrument not yet capable*. Logged rather than retried
+until it said something.
+
+---
+
 ## MARKTANGLE 2026-08-29 — REGISTERED at PROBE. Conditional reversion, not Martingale.
 
 New hypothesis family, registered as `marktangle-conditional-reversion` (v1 frozen, stage

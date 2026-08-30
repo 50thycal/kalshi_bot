@@ -187,3 +187,62 @@ def test_the_ops_channel_can_run_the_probe():
     import ops_runner
 
     assert "marktangle_probe" in ops_runner.ALLOWED_SCRIPTS
+
+
+# ===========================================================================
+# The balance screen and the two-stage fetch (added after the first
+# exchange-wide run, ops mkt-probe-1 / mkt-diag-1 on 2026-08-29)
+# ===========================================================================
+
+
+def _family(result_pattern: str, n_repeat: int = 5):
+    rows = []
+    seq = _seq(result_pattern) * n_repeat
+    for i, r in enumerate(seq):
+        rows.append(_m(f"S-{i}", f"S-{i}-A", i, r))
+    return rows
+
+
+def test_a_constant_family_is_screened_out_not_analysed():
+    """The first real run returned ~90 KXBTCD strike families that resolve NO
+    100% of the time. They are not memoryless, they are CONSTANT: there is no
+    conditional structure to find, and leaving them in buries everything else."""
+    fams = mp.build_families(_family("YYYYYYYY", 6))
+    kept, funnel = mp.screen_balance(fams)
+    assert kept == {}
+    assert funnel["constant"] == 1 and funnel["kept"] == 0
+
+
+def test_a_lopsided_family_is_screened_out_with_its_own_count():
+    """90/10 is not 'roughly balanced'. It is counted separately from constant,
+    because the two say different things about the universe."""
+    rows = _family("Y" * 9 + "N", 6)
+    kept, funnel = mp.screen_balance(mp.build_families(rows))
+    assert kept == {}
+    assert funnel["outside_band"] == 1 and funnel["constant"] == 0
+
+
+def test_a_balanced_family_survives_the_screen():
+    kept, funnel = mp.screen_balance(mp.build_families(_family("YNYNYYNN", 6)))
+    assert len(kept) == 1 and funnel["kept"] == 1
+
+
+def test_the_screen_reports_a_funnel_that_adds_up():
+    """A screen nobody can see is indistinguishable from a bug."""
+    rows = _family("YYYYYYYY", 6) + [
+        _m(f"B-{i}", f"B-{i}-A", 1000 + i, r)
+        for i, r in enumerate(_seq("YNYNYYNN") * 6)
+    ]
+    _kept, funnel = mp.screen_balance(mp.build_families(rows))
+    assert funnel["considered"] == funnel["constant"] + funnel["outside_band"] + funnel["kept"]
+
+
+def test_discovery_enumerates_series_by_how_often_they_appear(monkeypatch):
+    """Discovery and history are different queries: the un-restricted settled
+    listing is shallow, so it is used only to learn WHICH families exist."""
+    monkeypatch.setattr(mp, "fetch_settled", lambda *a, **k: [
+        _m("KXBTCD-1", "KXBTCD-1-A", 1, "yes"),
+        _m("KXBTCD-2", "KXBTCD-2-A", 2, "no"),
+        _m("KXHIGHNY-1", "KXHIGHNY-1-A", 3, "yes"),
+    ])
+    assert mp.discover_series(1, 0.0) == ["KXBTCD", "KXHIGHNY"]
