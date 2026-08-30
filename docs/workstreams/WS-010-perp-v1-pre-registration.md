@@ -94,6 +94,15 @@ assumption of comparability rather than a frozen contract.
   cash flow are semantics no FEE_MODEL/FILL_MODEL revision in this repository
   describes. That is **Platform Change Review**'s call, not this workstream's, and
   it is not on the critical path while PERP-V1 stays at PROBE.
+- **D4. If funding is unreadable, what happens to `perpcarry`?** Nothing is
+  frozen yet — the contract is written but not registered — so this is the last
+  cheap moment to decide. Options: (a) register as-is and let arm B evaluate
+  BLOCKED_DATA, which is honest and costs an arm; (b) re-scope arm B to a
+  premium-dispersion ranking, which is a different hypothesis and should be
+  admitted as one rather than smuggled in under the same arm key; (c) hold
+  registration until the extended Probe 0 run answers. Recommendation: (c), then
+  (a) if funding really is absent — an arm that cannot be scored should say so
+  through the evaluator rather than be quietly replaced by a different question.
 - **D3. Arm C's control.** `perpctl` is a perp-side control and does not by itself
   answer "better than Theta". The gate uses an incremental-over-Theta metric
   instead. Whether a first-class `external_control` reference to the Theta
@@ -103,12 +112,21 @@ assumption of comparability rather than a frozen contract.
 
 ## Assumptions
 
-- **A1 (unverified, and known to be).** Kalshi exposes a perpetual API under
-  `/trade-api/v2` with market, mark, index, book, trade, open-interest and funding
-  reads. This session could not reach Kalshi or its docs — outbound HTTPS to both
-  is blocked by the sandbox egress proxy — so every path and field name behind the
-  contract comes from the operator brief. **Probe 0 exists to test A1**, and a
-  falsified A1 stops the workstream at PROBE for the cost of one ops request.
+- **A1 — TESTED 2026-08-29, largely CONFIRMED.** Probe 0 ran through the ops
+  channel. `/margin/markets`, `/margin/markets/{ticker}` and its `/orderbook` are
+  readable **unauthenticated**; positions, balance, fills and fee tiers exist and
+  need credentials; tickers look like `KXAAVEPERP`. Critically, `reference_price`
+  rides on the market row, so arm A's index anchor exists. Findings recorded in
+  `docs/RESEARCH_JOURNAL.md` (PERP-V1 PROBE 0 RESULT 2026-08-29). What A1 got
+  wrong is funding — see A4.
+- **A4 — OPEN, and it is the one that bites.** Funding was assumed readable at
+  `/margin/funding_rates` and `/margin/funding_rate_estimate`; both 404, as does
+  the per-market variant. Funding is arm B's entire ranking, arm A's entry
+  confirmation, and a cost netted into every arm's headline metric. Two 404s
+  against two names from a brief is not proof of absence, so Probe 0 was extended
+  to hunt alternatives and to dump the market row's full field set. If funding
+  proves genuinely unreadable, **arm B is unscoreable as written** and that is an
+  operator decision on the contract (D4), not something to work around.
 - **A2.** Funding is published for the forming window, not only historically. Arm
   A's funding confirmation and arm B's ranking both depend on it.
 - **A3.** Fees at the level the active platform snapshot declares, not a
@@ -143,8 +161,10 @@ tickers.
 
 ## Implementation State
 
-Slice 1 built; registration in production has **not** been submitted (that is a
-`REGISTER_PACKAGE` envelope, an operator act, after merge).
+Slice 1 merged (#275). Probe 0 has RUN once and returned (journal, 2026-08-29): the perp
+surface is real and readable, funding is not where the brief said. Probe 0 is being
+re-run with a corrected classifier and a wider funding hunt. Registration in production
+has **not** been submitted and should now wait on **D4**.
 
 ## Review State
 
@@ -162,5 +182,6 @@ This PR.
 
 ## Next Step
 
-After merge: submit `REGISTER_PACKAGE` for `perp-v1`, then run
-`{"type":"script","name":"perp_surface_survey"}` and read A1's verdict.
+After this PR merges: re-run `{"type":"script","name":"perp_surface_survey"}` and read
+whether funding is reachable anywhere (A4). That answer decides **D4**, and D4 should be
+settled before `REGISTER_PACKAGE` freezes the contract.

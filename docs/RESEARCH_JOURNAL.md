@@ -16,6 +16,58 @@ Conventions:
 
 ---
 
+## PERP-V1 PROBE 0 RESULT 2026-08-29 — the perp surface is REAL and readable; funding is the open hole
+
+Assumption **A1** of the pre-registration below tested and **largely confirmed**. Run through
+the ops channel (`perp_surface_survey`, read-only, unauthenticated), so this is an observation
+of the live API, not a restatement of the brief.
+
+**Confirmed present and readable without credentials:**
+
+| path | result |
+|---|---|
+| `/margin/markets` (and `?limit=`) | READABLE |
+| `/margin/markets/{ticker}` | READABLE |
+| `/margin/markets/{ticker}/orderbook` | READABLE |
+| `/margin/positions`, `/balance`, `/fills`, `/fee_tiers` | EXISTS, needs auth |
+
+Ticker convention resolved live: **`KXAAVEPERP`** — so the 2026-07-09 survey's candidate
+`KXBTCPERP` was the right *name* probed against the wrong *surface*, which is precisely the
+mistake that entry recorded.
+
+Market rows carry, verbatim: `ask, bid, contract_size, exchange_index,
+fractional_trading_enabled, leverage_estimate, leverage_estimates, liquidation_mark_price,
+long_leverage_estimates, open_interest, open_interest_notional_value_dollars, price,
+reference_price, schedule, settlement_mark_price, short_leverage_estimates, status, tick_size,
+ticker, title`. **`reference_price` on the market row is the index anchor arm A's premium
+needs** — it is present, which was the single most load-bearing unknown.
+
+**Not found where the brief said, and this is the finding that matters:**
+
+- `/margin/funding_rates` → 404. `/margin/funding_rate_estimate` → 404.
+  `/margin/markets/{t}/funding_rates` → 404.
+- No standalone index-price series (`/index_prices`, `/reference_prices` → 404), though the
+  embedded `reference_price` may make a separate series unnecessary for the level. A premium
+  *z-score* needs the index's HISTORY, so this is not yet settled.
+
+Funding is not a nice-to-have in this contract: it is **arm B's entire ranking**, **arm A's
+entry confirmation**, and a **cost netted into every arm's headline metric**. Two 404s against
+two names taken from a brief is not enough to conclude it is unavailable, so Probe 0 was
+extended to hunt rather than to assume — alternative funding paths, the exchange schedule, and
+a full dump of the market-detail field set to see whether funding rides on the market row.
+
+**A defect in Probe 0 itself, found by running it.** `/margin/markets/{t}/candlesticks`
+answered `400 "Query argument start_ts is required, but not found"` — the endpoint parsing the
+route, reaching its own argument validation and saying what it wants — and the classifier
+reported it **ABSENT**, folding 400 in with 404. That is exactly the conflation the probe was
+written to prevent, and it would have written off the candle feed as missing while it was
+answering. Fixed: 400 is now `EXISTS/ARGS`, and the follow-up run supplies the arguments the
+endpoint named. `tests/test_perp_surface_survey.py` pins the distinction.
+
+No gate result is recorded from this. A survey prints; a verdict is a recorded evaluator act.
+
+---
+
 ## MARKTANGLE 2026-08-30 — Phase-A run 3: STILL NO VERDICT. Discovery is the new constraint.
 
 Re-ran the exchange-wide sweep on the fixed instrument (ops `mkt-probe-3`). Both earlier
@@ -100,6 +152,9 @@ PASS needs one family with ≥100 holdout entries at run ≥ k*, a Wilson 95% lo
 holdout reversal above 50%, and ≥ +3.0c/contract mean net edge vs the T−60m taker price on
 ≥100 priced entries. FAIL if every survivor is priced through. HOLD on thin sample — thin
 sample is not a negative result, it is no result.
+
+---
+
 ## PERP-V1 PRE-REGISTRATION 2026-08-29 — perpetual futures opened as a research surface; NO verdict
 
 Not a result. A **pre-registration**, recorded here so the 2026-07-09 perps entry below has a
