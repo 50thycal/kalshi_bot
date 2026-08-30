@@ -1,7 +1,0 @@
-# ops request: type='db'
-market_ticker                              raw                                                                                                                                                                                                     
------------------------------------------  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-KXBTCD-26AUG2917-T78499.99                 {"side": "ask", "count": "1.00", "price": "0.1000", "ticker": "KXBTCD-26AUG2917-T78499.99", "post_only": true, "time_in_force": "good_till_canceled", "client_order_id": "f079844c-2cce-4661-aa14-33fce…
-KXMLBHR-26AUG291310LADDET-DETBMALGERI53-1  {"side": "ask", "count": "1.00", "price": "0.0600", "ticker": "KXMLBHR-26AUG291310LADDET-DETBMALGERI53-1", "post_only": true, "time_in_force": "good_till_canceled", "client_order_id": "0a1dc05a-d00e-…
-
-(2 rows)
