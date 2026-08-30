@@ -1,1 +1,1 @@
-{"type":"db","sql":"select distinct cancel_reason from live_orders where strategy = 'Cmmsell10' and status = 'rejected' limit 2","max_rows":3,"id":"db-fullerr"}
+{"type":"db","sql":"select length(cancel_reason) as len, substr(cancel_reason, 150, 130) as part2, substr(cancel_reason, 280, 130) as part3 from live_orders where strategy = 'Cmmsell10' and status = 'rejected' limit 1","max_rows":3,"id":"db-errtail"}
