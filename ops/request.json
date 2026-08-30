@@ -1,1 +1,1 @@
-{"type":"script","name":"live_paper_parity","args":["--twin","Cmmsell10_pt3"],"id":"parity-c1"}
+{"type":"xos","command":"metric","args":["live_settled_contracts","--experiment","mmsell-price-ceiling","--arm","mmsell10","--kind","live"],"id":"g-live_settled_contracts"}
