@@ -68,6 +68,26 @@ No gate result is recorded from this. A survey prints; a verdict is a recorded e
 
 ---
 
+## MARKTANGLE 2026-08-30 — Phase-A run 3: STILL NO VERDICT. Discovery is the new constraint.
+
+Re-ran the exchange-wide sweep on the fixed instrument (ops `mkt-probe-3`). Both earlier
+fixes worked: the balance screen kept 3 of 6 families (0 constant, 3 lopsided screened),
+and the per-series fetch pulled 9,790 markets. But **discovery found only 3 series** —
+enumerating from pages of the un-restricted settled listing is dominated by whichever
+series has the most closed markets, so the universe was sampled rather than enumerated.
+
+Diagnosed fix (not yet built): enumerate from `/events?status=open` with nested markets,
+which spans the live board across all series. Three acquisition-layer fixes in a row is a
+scope question for the operator, so it is being raised rather than patched quietly.
+
+**Lead, not a result:** `KXUSLTOTAL|3` shows P(Y|Y) 45.5% vs P(N|N) 60.0% — asymmetric
+persistence, the shape the thesis wants. n=79, under every floor, no k* fitted. Recorded
+as a place to look.
+
+Still no verdict, and still none available.
+
+---
+
 ## MARKTANGLE 2026-08-29 — Phase-A run 1: NO VERDICT. The instrument, not the world.
 
 First exchange-wide sweep (ops `mkt-probe-1`): 6,270 settled binaries, **0 families**
