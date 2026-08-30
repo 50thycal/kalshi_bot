@@ -60,12 +60,18 @@ class _Client:
         raise AssertionError(f"the shard probe must not call {name!r}")
 
 
-#: Real balances, so a regression that logs the amount is caught by value.
+#: The REAL payload shape, copied from what the probe measured in production on
+#: 2026-08-30: the key is `balance_breakdown` and the amount is a decimal STRING.
+#: The first version of this file invented `exchange_balances` with an int amount,
+#: and the probe duly reported "no per-index breakdown" against an account that had
+#: one. A fixture that agrees with the code instead of with the venue proves nothing.
 _FUNDED_SHARDS = {
-    "exchange_balances": [
-        {"exchange_index": 0, "balance": 4213},
-        {"exchange_index": 1, "balance": 0},
-    ]
+    "balance": 4213,
+    "balance_breakdown": [
+        {"exchange_index": 0, "balance": "42.13"},
+        {"exchange_index": 3, "balance": "0"},
+    ],
+    "balance_dollars": "42.13",
 }
 
 
@@ -132,8 +138,9 @@ def test_probe_reports_which_shards_are_funded(caplog):
 
     text = caplog.text
     assert "shard probe funding" in text
-    assert '"exchange_index": 0' in text and '"funded": true' in text
-    assert '"exchange_index": 1' in text and '"funded": false' in text
+    assert "no per-index breakdown" not in text
+    assert '{"exchange_index": 0, "funded": true}' in text
+    assert '{"exchange_index": 3, "funded": false}' in text
 
 
 def test_probe_never_logs_a_balance_amount(caplog):
@@ -143,6 +150,39 @@ def test_probe_never_logs_a_balance_amount(caplog):
         _probe_exchange_shard(_Client({}, balance=_FUNDED_SHARDS))
 
     assert "4213" not in caplog.text
+    assert "42.13" not in caplog.text
+
+
+def test_the_breakdown_is_found_by_shape_not_by_key_name(caplog):
+    """Kalshi renamed a payload key on us before (`_tier_of` carries three fallbacks
+    for it), and guessing this one wrong is what broke the first version of the
+    probe. Any list whose entries carry `exchange_index` is the breakdown."""
+    renamed = {"balance": 1, "per_exchange": [{"exchange_index": 7, "balance": "9.99"}]}
+    with caplog.at_level(logging.INFO):
+        _probe_exchange_shard(_Client({}, balance=renamed))
+
+    assert '{"exchange_index": 7, "funded": true}' in caplog.text
+
+
+def test_a_string_amount_counts_as_funded(caplog):
+    """Kalshi sends money as a decimal string here. Treating only numbers as money
+    would report every funded shard as unfunded — wrong in the direction that looks
+    safe, and it would have sent us to ask for funds we already have."""
+    with caplog.at_level(logging.INFO):
+        _probe_exchange_shard(_Client({}, balance={
+            "balance_breakdown": [{"exchange_index": 0, "balance": "0.01"}]}))
+
+    assert '"funded": true' in caplog.text
+
+
+def test_an_unparseable_amount_is_not_funded(caplog):
+    """An amount we cannot read must not be optimistically called funded — that
+    would close the funding question on a value nobody understood."""
+    with caplog.at_level(logging.INFO):
+        _probe_exchange_shard(_Client({}, balance={
+            "balance_breakdown": [{"exchange_index": 0, "balance": "n/a"}]}))
+
+    assert '"funded": false' in caplog.text
 
 
 def test_an_account_with_no_shard_breakdown_says_so(caplog):
@@ -150,7 +190,8 @@ def test_an_account_with_no_shard_breakdown_says_so(caplog):
     "none present", not as an empty list of shards — the two point at opposite
     conclusions."""
     with caplog.at_level(logging.INFO):
-        _probe_exchange_shard(_Client({}, balance={"balance": 4213}))
+        _probe_exchange_shard(_Client({}, balance={"balance": 4213,
+                                                   "balance_dollars": "42.13"}))
 
     assert "no per-index breakdown" in caplog.text
     assert "4213" not in caplog.text

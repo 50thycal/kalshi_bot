@@ -1528,30 +1528,58 @@ def _probe_shard_funding(client) -> None:
     if not isinstance(balance, dict):
         logger.info("shard probe funding: unexpected balance shape %s", type(balance).__name__)
         return
-    # The doc says Get Balance "provides a breakdown of account balances across
-    # exchange indexes" without fixing the key, so accept either a list of
-    # per-index entries or a flat mapping, and say so plainly when neither is
-    # present rather than reporting an empty breakdown as "no shards".
-    breakdown = None
-    for key in ("exchange_balances", "balances", "exchange_index_balances", "shards"):
-        if isinstance(balance.get(key), (list, dict)):
-            breakdown = balance[key]
-            break
-    if breakdown is None:
+    # Find the breakdown by SHAPE, not by key name. The first version of this
+    # guessed at four plausible names and missed the real one (`balance_breakdown`),
+    # reporting "no per-index breakdown" for an account that plainly had one — the
+    # exact false negative this function warns about two lines down. Anything that
+    # carries `exchange_index` per entry IS the breakdown, whatever it is called.
+    entries = _entries_with_exchange_index(balance)
+    if entries is None:
         logger.info("shard probe funding: no per-index breakdown in balance payload "
                     "(keys=%s) — this account may predate sharding",
                     json.dumps(sorted(balance))[:300])
         return
-    entries = breakdown.values() if isinstance(breakdown, dict) else breakdown
     shape = []
     for entry in entries:
-        if not isinstance(entry, dict):
-            continue
-        index = entry.get("exchange_index", entry.get("index"))
-        amount = entry.get("balance", entry.get("available_balance", entry.get("amount")))
-        shape.append({"exchange_index": index,
-                      "funded": bool(isinstance(amount, (int, float)) and amount > 0)})
+        # Kalshi sends money as a DECIMAL STRING in these payloads ("balance": "str"
+        # in the shape probe), so a numeric-only test would read every funded shard
+        # as unfunded — the wrong answer in the safe-looking direction.
+        shape.append({"exchange_index": entry.get("exchange_index"),
+                      "funded": _is_positive_amount(
+                          entry.get("balance", entry.get("available_balance",
+                                                         entry.get("amount"))))})
     logger.info("shard probe funding: %s", json.dumps(shape, default=str)[:400])
+
+
+def _entries_with_exchange_index(payload: dict) -> list[dict] | None:
+    """The first list of dicts in `payload` whose entries carry `exchange_index`.
+
+    Shape-based on purpose: the key name is Kalshi's to change, but an entry that
+    names an exchange index is unambiguously a per-shard row.
+    """
+    for value in payload.values():
+        if isinstance(value, dict):
+            value = list(value.values())
+        if not isinstance(value, list):
+            continue
+        rows = [v for v in value if isinstance(v, dict) and "exchange_index" in v]
+        if rows:
+            return rows
+    return None
+
+
+def _is_positive_amount(amount) -> bool:
+    """True when `amount` is a positive number, including one sent as a string."""
+    if isinstance(amount, bool):
+        return False
+    if isinstance(amount, (int, float)):
+        return amount > 0
+    if isinstance(amount, str):
+        try:
+            return float(amount) > 0
+        except ValueError:
+            return False
+    return False
 
 
 def _tier_of(limits) -> str:
