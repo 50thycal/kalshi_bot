@@ -1,1 +1,1 @@
-{"type":"env","id":"perp-cadence-env-1"}
+{"type":"db","id":"perp-cadence-db-1","sql":"select count(*) cycles, min(started_at) first_c, max(started_at) last_c, round(extract(epoch from (max(started_at)-min(started_at)))/greatest(count(*)-1,1))::int avg_gap_s, sum(market_snapshots) snaps, sum(orderbook_snapshots) books, sum(funding_rows) funding, sum(errors) errors from perp_collector_cycles"}
