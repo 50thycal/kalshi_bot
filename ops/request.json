@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"script","name":"live_paper_parity","args":["--twin","Cmmsell10_pt3"],"id":"parity-c1"}
