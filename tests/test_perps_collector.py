@@ -22,6 +22,7 @@ from kalshi_bot.models import (
 from kalshi_bot.perps.collector import (
     PerpsCollector,
     _as_datetime,
+    _busiest,
     _depth,
     _funding_key,
     _funding_rows,
@@ -265,6 +266,23 @@ def test_a_zero_row_funding_parse_records_the_envelope_shape(session, settings):
     assert cycle.notes_json["funding_shape"] == {
         "type": "object", "keys": ["cursor", "settlements"], "list_lengths": {"settlements": 0},
     }
+
+
+def test_the_funding_probe_asks_about_the_busiest_market_not_the_first_one():
+    """"No funding on an illiquid market" is a far weaker statement than "none on
+    the busiest one", and the listing is alphabetical — the first live run drew
+    KXAAVEPERP."""
+    markets = [
+        {"ticker": "KXAAVEPERP", "open_interest_notional_value_dollars": "1200"},
+        {"ticker": "KXBTCPERP", "open_interest_notional_value_dollars": "119946000"},
+        {"ticker": "KXETHPERP", "open_interest_notional_value_dollars": "50000"},
+    ]
+    assert _busiest(markets) == "KXBTCPERP"
+    # Falls back to open_interest, then to the first ticker, rather than to None.
+    assert _busiest([{"ticker": "A", "open_interest": "5"}, {"ticker": "B"}]) == "A"
+    assert _busiest([{"ticker": "A"}, {"ticker": "B"}]) == "A"
+    assert _busiest([]) is None
+    assert _busiest([{"ticker": ""}]) is None
 
 
 def test_an_empty_unscoped_funding_call_is_retried_scoped_to_a_ticker(session, settings):

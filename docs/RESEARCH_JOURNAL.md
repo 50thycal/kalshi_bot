@@ -16,6 +16,37 @@ Conventions:
 
 ---
 
+## PERP-V1 FUNDING 2026-08-30 (2) — asked both ways, both empty. Now asking the busiest market.
+
+The ticker-scoped retry answered on the first cycle after the redeploy:
+
+```
+funding_shape            {'type': 'object', 'keys': ['funding_history'],
+                          'list_lengths': {'funding_history': 0}}
+funding_shape_by_ticker  {'type': 'object', 'keys': ['funding_history'],
+                          'ticker': 'KXAAVEPERP',
+                          'list_lengths': {'funding_history': 0}}
+```
+
+Unscoped: empty. Scoped: empty. So the filter was not the problem, and the
+account-ledger reading is now the one the evidence supports.
+
+**But it asked about `KXAAVEPERP`** — the *first* ticker in an alphabetical listing, not a
+chosen one. "We found no funding on an illiquid market" is a much weaker statement than "we
+found none on the busiest one", and D4 decides whether a whole arm is BLOCKED_DATA. That is
+not a claim to make on AAVE.
+
+So the probe now asks about the market with the largest open interest, falling back to raw
+open interest and then to the first ticker. Same one call per funding interval, same
+keys-only shape recording, no other behaviour changed. If the busiest perp on the exchange
+also returns `{"funding_history": []}` over a 7-day window, the question is settled and D4
+resolves to arm B = **BLOCKED_DATA** — a real outcome of PERP-V1, not a failure of it.
+
+This is the last round. If it comes back empty there is nothing cheaper left to ask, and
+arm B's verdict does not wait on a source that does not exist.
+
+---
+
 ## PERP-V1 FUNDING 2026-08-30 — the envelope is `{"funding_history": []}`. No rate rides on the market row.
 
 The shape diagnostic returned on the first cycle after the redeploy:

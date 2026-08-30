@@ -123,8 +123,15 @@ assumption of comparability rather than a frozen contract.
   **no ticker**, and empty is equally what an account ledger returns and what a
   market feed returns unfiltered. The collector now retries once, scoped to a real
   ticker, shape recorded the same keys-only way, only when the unscoped call found
-  nothing. That is the last cheap question; if it is empty too, D4 resolves to arm B
-  = **BLOCKED_DATA**.
+  nothing.
+
+  **Scoped read, 2026-08-30:** also `{"funding_history": []}` — so the filter was
+  not the problem. One weakness in that answer: it asked about `KXAAVEPERP`, the
+  first ticker in an alphabetical listing rather than a chosen market, and "no
+  funding on an illiquid market" is not a claim strong enough to block an arm on.
+  The probe now asks about the market with the largest open interest. If **that**
+  is empty over a 7-day window, D4 resolves to arm B = **BLOCKED_DATA** and there
+  is nothing cheaper left to ask.
 - **D3. Arm C's control.** `perpctl` is a perp-side control and does not by itself
   answer "better than Theta". The gate uses an incremental-over-Theta metric
   instead. Whether a first-class `external_control` reference to the Theta
