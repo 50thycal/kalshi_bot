@@ -1,6 +1,0 @@
-# ops request: type='db'
-cancel_reason                                                                                                                                                                                           
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Kalshi API error 404 on /trade-api/v2/portfolio/events/orders: {"error":{"code":"user_not_found","message":"user not found","details":"Exchange user not found. For Predictions: reference documentatio…
-
-(1 row)
