@@ -243,6 +243,26 @@ three analysis scripts. No exposure at any point.
   +5.5¢ edge from settled-price direction. Arm C's forward windows are measured
   strictly from features timestamped before the window opens.
 
+## 7.1 Measured instrument limits (added 2026-08-30, no gate changed)
+
+Two properties of the tape were measured **after** this document was frozen. They
+bound what a null result can mean; they change no arm, no metric, no gate clause
+and no threshold, and nothing here is to be read as re-interpreting a
+pre-registered bar.
+
+* **Sampling cadence is ~145 s**, set by the worker's scan loop rather than by the
+  collector's own 60 s floor. Ample for arm A, whose premium reverts around
+  8-hourly funding. It **bounds arm C**: a perp → ladder lead shorter than ~2.5
+  minutes cannot be seen at all, so an arm C null is ambiguous between "no lead"
+  and "a lead faster than the tape", and must be reported as such rather than as a
+  kill on the mechanism. Arm A's and arm B's nulls are unaffected.
+* **No funding source is established.** `/margin/funding_history` requires auth and
+  returns 200 with no records to an account holding no perp positions; the leading
+  hypothesis is that it is an account payment ledger, not a market rates feed
+  (WS-010 D4). Arm B is not re-scoped and its gate stands. If no market-wide rates
+  source is found, arm B ends **BLOCKED_DATA** — which is a real outcome of this
+  experiment, not a failure of it.
+
 ## 8. Where the standing lives
 
 Not here. `xos show perp-v1`, `xos scoreboard`, `xos control-tower`. This document

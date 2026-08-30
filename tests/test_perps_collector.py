@@ -27,6 +27,7 @@ from kalshi_bot.perps.collector import (
     _funding_rows,
     _nested_price,
     _num,
+    _payload_shape,
     _premium_bps,
 )
 
@@ -242,6 +243,45 @@ def test_funding_is_stored_whole_even_though_its_shape_is_unverified(
     assert row.funding_rate == pytest.approx(0.00012)
     assert row.observed_at is not None
     assert row.raw_json == payload["funding_rates"][0]
+
+
+def test_a_zero_row_funding_parse_records_the_envelope_shape(session, settings):
+    """Production returns 200 here and the parser finds nothing in it.
+
+    An empty market-wide RATES feed and an empty account PAYMENTS ledger look
+    identical from the row count and lead to opposite conclusions about arm B, so
+    the cycle keeps the envelope's shape when it stores nothing.
+    """
+    settings.perps_funding_enabled = True
+    payload = {"settlements": [], "cursor": ""}
+    PerpsCollector(_Client(markets=[MARKET], funding=payload), settings).run_once(session)
+    cycle = session.scalars(select(PerpCollectorCycle)).one()
+    assert cycle.funding_rows == 0
+    assert cycle.errors == 0
+    assert cycle.notes_json["funding_shape"] == {
+        "type": "object", "keys": ["cursor", "settlements"], "list_lengths": {"settlements": 0},
+    }
+
+
+def test_a_successful_funding_parse_records_no_shape(session, settings):
+    settings.perps_funding_enabled = True
+    payload = {"funding_rates": [{"ticker": "KXBTCPERP", "rate": "0.0001"}]}
+    PerpsCollector(_Client(markets=[MARKET], funding=payload), settings).run_once(session)
+    cycle = session.scalars(select(PerpCollectorCycle)).one()
+    assert (cycle.notes_json or {}).get("funding_shape") is None
+
+
+def test_payload_shape_never_carries_a_value():
+    """This endpoint is authenticated and may be returning our own account
+    history; `notes_json` is read through the PUBLIC ops channel."""
+    shape = _payload_shape({"balance": "1234.56", "rows": [{"secret": "x"}]})
+    blob = repr(shape)
+    assert "1234.56" not in blob and "secret" not in blob and "x" not in blob
+    assert shape["keys"] == ["balance", "rows"]
+    assert shape["list_lengths"] == {"rows": 1}
+    assert _payload_shape([1, 2, 3]) == {"type": "array", "length": 3}
+    assert _payload_shape(None) == {"type": "NoneType"}
+
 
 
 # --- the coverage denominator --------------------------------------------
