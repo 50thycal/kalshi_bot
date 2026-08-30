@@ -1,1 +1,1 @@
-{"type":"xos","command":"metric","args":["live_max_realized_loss_usd","--experiment","mmsell-price-ceiling","--arm","mmsell10","--kind","live"],"id":"g-live_max_realized_loss_usd"}
+{"type":"xos","command":"metric","args":["live_cents_per_contract","--experiment","mmsell-price-ceiling","--arm","mmsell10","--kind","live"],"id":"g-live_cents_per_contract"}
