@@ -1,1 +1,1 @@
-{"type":"db","id":"perp-tape-3","sql":"SELECT count(*) AS cycles, sum(market_snapshots) AS snaps, sum(orderbook_snapshots) AS books, sum(funding_rows) AS funding, sum(errors) AS errors, min(started_at)::text AS first, max(started_at)::text AS last, max(notes_json::text) AS notes FROM perp_collector_cycles"}
+{"type":"script","name":"perp_surface_survey","id":"perp-fund-shape-1"}
