@@ -1,1 +1,1 @@
-{"type":"script","name":"marktangle_probe","args":["--series","KXBTCD,KXETHD,KXSOLD,KXHIGHNY,KXHIGHCHI,KXHIGHLAX,KXHIGHMIA,KXHIGHAUS,KXUSLTOTAL,KXLIGAMXSPREAD,KXMVECROSSCATEGORY","--pages","25","--min-vol","0"],"id":"mkt-probe-8"}
+{"type":"db","id":"perp-funding-ticker-1","sql":"select started_at, funding_rows, errors, notes_json from perp_collector_cycles where notes_json is not null order by started_at desc limit 4"}
