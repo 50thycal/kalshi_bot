@@ -209,6 +209,42 @@ entry; settlement is free. At 50c that is 2c per contract — which is why the e
 bar is 3c and not 1c, and why a family whose conditional reversal beats 50% by a
 point or two is not a strategy.
 
+## 8b. Phase-A run log
+
+**2026-08-29 · run 1 (ops `mkt-probe-1`) · exchange-wide sweep · NO VERDICT.**
+6,270 settled binaries, **0 families** reaching the 40-resolution floor. This is
+not a result about Kalshi. The un-restricted `status=settled` listing returns a
+shallow RECENT window spread across hundreds of series x strikes, so every family
+gets a handful of rows.
+
+**2026-08-29 · run 2 (ops `mkt-diag-1`) · per-series diagnostic.** The identical
+code path restricted to `KXBTCD,KXHIGHNY,KXHIGHCHI` returned 20,816 markets and
+**198 families**. So the family-keying was never the problem — discovery and
+history are two different queries, and the probe was making one of them.
+
+The run also exposed a clause this document had as prose and the script did not
+have at all: **"whose unconditional outcome is roughly balanced."** Of those 198
+families, the overwhelming majority are KXBTCD strikes resolving 0% or 100% YES —
+strikes permanently out of or in the money. They are not memoryless, they are
+*constant*: no conditional structure exists to find, `P(Y|Y)` is undefined on one
+side, and they bury the handful of families that could carry a signal.
+
+Both are now instrument fixes, not contract changes — the hypothesis, the arms,
+the gates and the verdict rule are untouched:
+
+* **two-stage fetch** — sweep the exchange to enumerate series (the universe is
+  still not pre-selected, only *enumerated*), then pull each series' own history
+  deeply;
+* **`BASE_RATE_BAND` = 25-75% yes-rate**, with constant and merely-lopsided
+  families counted separately and reported. A screen nobody can see is
+  indistinguishable from a bug.
+
+Neither run produced a `k*`, so neither is a PASS, a FAIL or even the
+pre-registered HOLD: the HOLD verdict is about a thin *holdout* at a fitted
+threshold, and no threshold was ever reached. The honest label is **instrument
+not yet capable**, and it is recorded here rather than being quietly retried
+until it said something.
+
 ## 9. What would make us abandon this
 
 Any one of the three, stated before the data:
