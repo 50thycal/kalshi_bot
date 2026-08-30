@@ -257,6 +257,31 @@ No gate result is recorded from this. A survey prints; a verdict is a recorded e
 
 ---
 
+## MARKTANGLE 2026-08-30 — Phase-A run 8: FIRST REAL VERDICT (HOLD) + crypto thresholds are momentum
+
+Operator chose option B — test where the mechanism should be strongest instead of fighting
+enumeration. 11 series, 102,786 settled markets, 816 families, 38 surviving the balance
+screen (702 constant, 76 lopsided — the screen earned its place).
+
+**Crypto daily thresholds refute the thesis for that market class.** `KXETHD|T2464.99`
+resolves YES 49.4% of the time and repeats its previous outcome **97.5%** of the time.
+That is the Series A/B distinction landing on the wrong side: a coin-flip marginal
+frequency with near-total persistence. Reversal is 3-15% and cannot rise with run length,
+because these are level crossings on a slow price, not fresh draws. Daily crypto
+thresholds should be excluded as a mis-specified market TYPE (if anything they favour the
+continuation mirror, and momentum on a level crossing is surely priced).
+
+**The coin-like families are untested, not refuted.** KXUSLTOTAL|3 (n=88, P(Y|Y) 41.7% vs
+P(N|N) 58.8%) and KXHIGHMIA|B92.5 (n=42) show the right shape; their holdouts are 13-27
+against a floor of 100.
+
+**VERDICT: HOLD** — the genuine pre-registered one this time, not "instrument not
+capable". The binding constraint moved from our tooling to Kalshi's history depth:
+weather series expose ~408 settled markets each, ~37 per ladder rung. No engineering
+creates more past.
+
+---
+
 ## MARKTANGLE 2026-08-30 — Phase-A run 6: ranking had no effect. STOPPING at the guard.
 
 Output **byte-identical to run 4**. The settled-frequency ranking did nothing, and the
