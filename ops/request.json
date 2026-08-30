@@ -1,1 +1,1 @@
-{"type":"xos","command":"metric","args":["twin_live_paired_gap_cents","--experiment","mmsell-price-ceiling","--arm","mmsell10","--kind","live"],"id":"g-twin_live_paired_gap_cents"}
+{"type":"xos","command":"metric","args":["twin_live_winrate_gap_pp","--experiment","mmsell-price-ceiling","--arm","mmsell10","--kind","live"],"id":"g-twin_live_winrate_gap_pp"}
