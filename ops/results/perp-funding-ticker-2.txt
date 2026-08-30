@@ -1,6 +1,0 @@
-# ops request: type='db'
-started_at                        scoped                                                                                                         
---------------------------------  ---------------------------------------------------------------------------------------------------------------
-2026-08-30 14:18:38.595799+00:00  {'keys': ['funding_history'], 'type': 'object', 'ticker': 'KXAAVEPERP', 'list_lengths': {'funding_history': 0}}
-
-(1 row)
