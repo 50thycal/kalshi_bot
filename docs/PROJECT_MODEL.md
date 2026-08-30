@@ -34,6 +34,7 @@ much of it is machinery for deciding whether an edge is real.
 | `kalshi_bot/live/` | Real-money executor, exit rules, sizing, queue-position modelling |
 | `kalshi_bot/twin/` | Paper twin harness — a live book's shadow, started at the same instant |
 | Strategy trackers | `mmsell/`, `theta/`, `freeze/`, `pin15/`, `tfav/`, `wcprop/`, `xgame/`, `weather/` — one package per book family |
+| Instruments (not books) | `perps/` — the PERP-V1 read-only perpetual-futures tape. Writes its own tables, carries no strategy tag, places nothing. Runs in the every-mode cycle hook so its coverage does not depend on `BOT_MODE` |
 | `kalshi_bot/mmsell/market_types.py` | The settlement-mode / market-type taxonomy `mode=`/`mtype=` books select on |
 | `kalshi_bot/experiment_os/` | Experiment OS: lifecycle, versions, epochs, deployments, gates, evaluator, enforcement, platform impact, issues |
 | `kalshi_bot/evo/` | The evolutionary agent fleet — LLM agents that propose and run their own books under budget |

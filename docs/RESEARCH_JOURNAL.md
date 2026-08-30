@@ -16,6 +16,50 @@ Conventions:
 
 ---
 
+## PERP-V1 PROBE 1 BUILT 2026-08-30 — the tape collector. No verdict, no trade, no tag.
+
+Probe 1 of `docs/PERP_V1_THESIS.md` §6. `kalshi_bot/perps/` polls the perp surface and
+writes four tables: market snapshots (with the premium computed **in the poll**, so mark
+and index are always the pair observed at one instant), order-book snapshots, funding
+observations, and a per-cycle telemetry row.
+
+**It is an instrument, not a book.** No order path, no position, no strategy tag, no
+registered deployment — so it runs happily before `perp-v1` is registered, and under
+NEW_ONLY it cannot reach the trading write path at all. It sits in the worker's every-mode
+cycle hook rather than inside a `BOT_MODE` branch, for the reason
+`docs/EXPERIMENT_OS_FOUNDATION.md` records about the gate evaluator: a hook placed in
+`_run_cycle` silently never runs under live/weather/mmsell/evo, and for a collector that
+failure mode is a coverage hole that looks exactly like an absent market.
+
+**Three design choices are load-bearing, and all three are about not fabricating data:**
+
+- **Every table keeps `raw_json`.** `reference_price`, `settlement_mark_price` and
+  `liquidation_mark_price` arrive as nested objects whose inner shape this project has
+  never read, and the funding payload's shape is unknown entirely. The extractors look for
+  a number under an ordered key list and record **NULL** when they cannot find one — they
+  do not take "the first number in the object", because on an object holding several that
+  picks one by luck, and being wrong about the index price is worse than not having it.
+- **A missing premium is NULL, never 0.** Likewise an empty order book has NULL imbalance,
+  not 0.5. "We do not know" and "the perp is exactly at its index" are opposite claims, and
+  arm A and arm C respectively trade the difference.
+- **`perp_collector_cycles` exists because coverage is not inferable from the tape.**
+  `perp_data_coverage_pct` is a pre-registered clause on all three arms; a poll that never
+  happened is indistinguishable from a market that was not there unless the attempt itself
+  is recorded. Failures are counted into that row rather than raised — an instrument that
+  can kill a trading cycle beside live books is a liability — with `AuthError` the single
+  deliberate exception, because fail-closed on a bad credential outranks data collection.
+
+**A bug the tests caught before deployment did.** The cycle counters take their `0` from a
+SQLAlchemy column default, which is applied at INSERT — so on the in-memory object they are
+`None`, and `cycle.errors += 1` raised `TypeError` inside the very handler written to stop
+this collector raising. The first error of any kind would have taken down the cycle it was
+built not to touch. Initialised explicitly in Python now.
+
+OFF by default (`PERPS_COLLECTOR_ENABLED`). Turning it on redeploys the worker, which also
+runs the live books, so it is an operator act.
+
+---
+
 ## PERP-V1 A4 RESOLVED 2026-08-30 — funding IS reachable. Arm B stands; arm C loses a feature.
 
 Probe 0 re-run on the corrected instrument (ops `perp-probe0-2`), after #277 merged. This

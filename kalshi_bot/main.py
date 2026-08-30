@@ -20,6 +20,7 @@ import signal as signal_module
 import sys
 import time
 import traceback
+from datetime import datetime, timezone
 
 from . import repository as repo
 from .config import Settings, get_settings
@@ -33,6 +34,7 @@ from .mmsell.history import RegimeHistoryCapture
 from .mmsell.tracker import MmSellTracker
 from .obs.funnel import NOT_RUN, FunnelState, funnel_summary
 from .paper.engine import PaperCycleSummary, PaperTradingEngine
+from .perps import PerpsCollector
 from .pin15.tracker import Pin15Tracker
 from .risk.manager import RiskManager
 from .scanner.scanner import MarketScanner, ScanSummary
@@ -453,6 +455,14 @@ def run() -> int:
     xgame_tracker = (
         XGameTracker(client, settings) if weather_like and settings.xgame_enabled else None
     )
+    # PERP-V1's tape collector (docs/PERP_V1_THESIS.md, Probe 1). Built for EVERY
+    # BOT_MODE, not just the weather-like ones: it is an instrument, and a
+    # collector that records under one mode only produces a coverage gap that
+    # looks exactly like a market that was not there.
+    perps_collector = (
+        PerpsCollector(client, settings) if settings.perps_collector_enabled else None
+    )
+
     forecast_client = NwsForecastClient(settings.nws_user_agent) if weather_like else None
     ensemble_client = (
         OpenMeteoEnsembleClient() if weather_like and settings.weather_ensemble_enabled else None
@@ -548,6 +558,7 @@ def run() -> int:
             # BOT_MODE=live/weather/mmsell/evo, which is exactly how the first
             # deploy of the gate evaluator recorded nothing in production.
             _experiment_os_cycle(settings)
+            _perps_cycle(settings, client, perps_collector)
             try:
                 if live:
                     _run_live_cycle(
@@ -634,6 +645,43 @@ def _experiment_os_cycle(settings: Settings) -> None:
             xos_gates.run_scheduled_evaluation(session, settings)
     except Exception:  # noqa: BLE001 — evaluation must never stop the cycle
         logger.exception("experiment OS gate evaluation failed")
+
+
+_perps_last_poll: datetime | None = None
+
+
+def _perps_cycle(
+    settings: Settings, client: KalshiClient, collector: PerpsCollector | None
+) -> None:
+    """Poll the PERP-V1 tape, at most once per `PERPS_INTERVAL_SECONDS`.
+
+    Runs in EVERY BOT_MODE, beside books holding real money, so it is guarded the
+    same way the Experiment OS hook above is: it may never stop a trading cycle.
+    AuthError is the one exception left to propagate — the worker treats it as
+    fail-closed, and a collector that swallowed it would mask a credential
+    failure affecting every book in the process.
+
+    The interval is enforced HERE rather than inside the collector so the
+    collector stays a pure "poll once" object that a test or a script can call
+    directly without waiting on a clock.
+    """
+    global _perps_last_poll
+    if collector is None:
+        return
+    now = datetime.now(timezone.utc)
+    if (
+        _perps_last_poll is not None
+        and (now - _perps_last_poll).total_seconds() < settings.perps_interval_seconds
+    ):
+        return
+    _perps_last_poll = now
+    try:
+        with session_scope() as session:
+            collector.run_once(session, now=now)
+    except AuthError:
+        raise
+    except Exception:  # noqa: BLE001 — an instrument never stops the cycle
+        logger.exception("perps tape collection failed")
 
 
 def _interruptible_sleep(seconds: int) -> bool:
