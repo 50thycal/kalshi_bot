@@ -239,8 +239,31 @@ the gates and the verdict rule are untouched:
   families counted separately and reported. A screen nobody can see is
   indistinguishable from a bug.
 
-Neither run produced a `k*`, so neither is a PASS, a FAIL or even the
-pre-registered HOLD: the HOLD verdict is about a thin *holdout* at a fitted
+**2026-08-30 · run 3 (ops `mkt-probe-3`) · re-run on the fixed instrument · STILL NO
+VERDICT.** The two fixes worked and the next layer became the constraint.
+
+What worked: the balance screen did its job — 6 families, 0 constant, 3 lopsided
+screened out, 3 kept. The per-series fetch pulled real depth (9,066 markets from
+one series alone).
+
+What did not: **discovery found only 3 series.** Enumerating from pages of the
+un-restricted settled listing is dominated by whichever series has the most
+*closed* markets — 6,000 markets of listing surfaced three tickers. So the
+universe was never enumerated; it was sampled, badly.
+
+The diagnosed fix is to enumerate from `/events` (`status=open`, nested markets)
+rather than from settled-market pages: open events span the live board across all
+series, which is what "the exchange" means here. Not yet built — three
+acquisition-layer fixes in a row is a scope question for the operator, not a
+thing to keep patching quietly.
+
+**One lead, explicitly not a result.** `KXUSLTOTAL|3` (a soccer total-goals rung)
+shows `P(Y|Y)` 45.5% against `P(N|N)` 60.0% — asymmetric persistence, the shape
+the thesis is looking for. At n=79 it is far under every floor, no `k*` was
+fitted, and it is recorded as a place to look, not as evidence.
+
+Neither of the first two runs produced a `k*`, and neither did the third, so none
+is a PASS, a FAIL or even the pre-registered HOLD: the HOLD verdict is about a thin *holdout* at a fitted
 threshold, and no threshold was ever reached. The honest label is **instrument
 not yet capable**, and it is recorded here rather than being quietly retried
 until it said something.
