@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"xos","command":"metric","args":["live_fill_rate_pct","--experiment","mmsell-price-ceiling","--arm","mmsell10","--kind","live"],"id":"fr-verify"}
