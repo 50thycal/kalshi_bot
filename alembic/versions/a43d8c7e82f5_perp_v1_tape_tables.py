@@ -14,7 +14,7 @@ denominator: `perp_data_coverage_pct` is a pre-registered gate clause on every
 arm, and rows that were never written are indistinguishable from a market that
 did not exist unless the attempt is recorded.
 
-Revision ID: d5e6f7a8b9c0
+Revision ID: a43d8c7e82f5
 Revises: c8e1a2b3d4f5
 Create Date: 2026-08-30
 """
@@ -26,7 +26,7 @@ from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
-revision: str = "d5e6f7a8b9c0"
+revision: str = "a43d8c7e82f5"
 down_revision: str | None = "c8e1a2b3d4f5"
 branch_labels = None
 depends_on = None
