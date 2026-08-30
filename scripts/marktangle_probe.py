@@ -114,24 +114,46 @@ def wilson_lower(successes: int, n: int, z: float = 1.645) -> float:
 
 # ------------------------------------------------------------------ data source
 def discover_series(pages: int, min_vol: float) -> list[str]:
-    """Series tickers seen in the exchange-wide settled listing, most-seen first.
+    """Every series ticker on the live board, from `/events`.
 
-    WHY THIS EXISTS. The first exchange-wide run (2026-08-29, ops mkt-probe-1)
-    returned 6,270 settled markets and ZERO families reaching the 40-resolution
-    floor. That was not a fact about Kalshi; it was a fact about the endpoint.
-    `status=settled` with no `series_ticker` returns a shallow RECENT window
-    spread across hundreds of series x strikes, so every family gets a handful
-    of rows. The same probe restricted to `KXBTCD` returned 20,000 markets and
-    198 families from the identical code path.
+    WHY NOT THE SETTLED LISTING. Two runs died here, one layer apart, and both
+    for the same underlying reason: the un-restricted `status=settled` listing is
+    not an enumeration of the exchange, it is a sample of recently-closed
+    markets.
 
-    So discovery and history are two different queries: sweep once to learn WHICH
-    families exist, then pull each one's own history deeply. The sweep is still
-    un-restricted — the universe is not being pre-selected, only enumerated."""
+      * run 1 (`mkt-probe-1`) read family history straight from it -- 6,270
+        markets, 0 families reaching the floor, because one page of it spans
+        hundreds of series x strikes and gives each a handful of rows;
+      * run 3 (`mkt-probe-3`) used it only to enumerate, and still found
+        THREE series -- 6,000 markets of listing surfaced KXMVECROSSCATEGORY,
+        KXLIGAMXSPREAD and KXUSLTOTAL, one of which supplied 9,066 of the
+        9,790 markets. Whichever series has the most CLOSED markets crowds
+        out everything else.
+
+    `/events?status=open` is an enumeration rather than a sample: every series
+    currently listing anything appears exactly once regardless of how many
+    markets it has closed. Volume is not filtered here on purpose -- `min_vol`
+    belongs to the HISTORY query, and applying it to discovery would drop a
+    thin-but-live series before its history was ever looked at.
+
+    Ordered by how many open events each series carries: a series with more
+    concurrent events is a family that recurs more often, which is what the
+    hypothesis needs. `--max-series` then takes a prefix of a real ranking
+    instead of a prefix of an accident."""
     seen: dict[str, int] = {}
-    for m in fetch_settled(pages, min_vol):
-        series = m["event"].split("-", 1)[0]
-        seen[series] = seen.get(series, 0) + 1
-    return [s for s, _ in sorted(seen.items(), key=lambda kv: -kv[1])]
+    cursor = ""
+    for _ in range(max(1, pages)):
+        page = xl._get(f"{KALSHI}/events?status=open&limit=200"
+                       f"&with_nested_markets=false&cursor={cursor}")
+        events = (page or {}).get("events") or []
+        for e in events:
+            series = e.get("series_ticker") or (e.get("event_ticker") or "").split("-", 1)[0]
+            if series:
+                seen[series] = seen.get(series, 0) + 1
+        cursor = (page or {}).get("cursor") or ""
+        if not cursor or not events:
+            break
+    return [s for s, _ in sorted(seen.items(), key=lambda kv: (-kv[1], kv[0]))]
 
 
 def fetch_settled(pages: int, min_vol: float, series: str | None = None) -> list[dict]:
@@ -467,9 +489,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--series", default="",
                     help="comma-separated series tickers; default DISCOVERS them "
                          "from the exchange-wide settled listing")
-    ap.add_argument("--discover-pages", type=int, default=6,
-                    help="pages of the un-restricted settled listing to enumerate "
-                         "series from (discovery only — history is per-series)")
+    ap.add_argument("--discover-pages", type=int, default=25,
+                    help="pages of /events?status=open to enumerate series from "
+                         "(discovery only — history is fetched per-series)")
     ap.add_argument("--max-series", type=int, default=40,
                     help="how many discovered series to pull history for")
     ap.add_argument("--min-vol", type=float, default=50.0)

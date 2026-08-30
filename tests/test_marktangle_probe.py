@@ -237,12 +237,43 @@ def test_the_screen_reports_a_funnel_that_adds_up():
     assert funnel["considered"] == funnel["constant"] + funnel["outside_band"] + funnel["kept"]
 
 
-def test_discovery_enumerates_series_by_how_often_they_appear(monkeypatch):
-    """Discovery and history are different queries: the un-restricted settled
-    listing is shallow, so it is used only to learn WHICH families exist."""
-    monkeypatch.setattr(mp, "fetch_settled", lambda *a, **k: [
-        _m("KXBTCD-1", "KXBTCD-1-A", 1, "yes"),
-        _m("KXBTCD-2", "KXBTCD-2-A", 2, "no"),
-        _m("KXHIGHNY-1", "KXHIGHNY-1-A", 3, "yes"),
-    ])
+def _events_page(*series, cursor=""):
+    return {"events": [{"series_ticker": s, "event_ticker": f"{s}-1"} for s in series],
+            "cursor": cursor}
+
+
+def test_discovery_enumerates_the_live_board_not_the_settled_listing(monkeypatch):
+    """Run 3 found THREE series enumerating from settled markets, because
+    whichever series has the most CLOSED markets crowds out the rest. Open
+    events are an enumeration: every listing series appears once."""
+    calls = []
+
+    def fake_get(url):
+        calls.append(url)
+        return _events_page("KXBTCD", "KXBTCD", "KXHIGHNY")
+
+    monkeypatch.setattr(mp.xl, "_get", fake_get)
     assert mp.discover_series(1, 0.0) == ["KXBTCD", "KXHIGHNY"]
+    assert "/events?status=open" in calls[0], calls
+    assert "settled" not in calls[0]
+
+
+def test_discovery_falls_back_to_the_event_ticker_prefix(monkeypatch):
+    """`series_ticker` is what we want; the prefix is what we accept when the
+    payload omits it, rather than dropping the series silently."""
+    monkeypatch.setattr(mp.xl, "_get",
+                        lambda url: {"events": [{"event_ticker": "KXHIGHNY-25AUG29"}]})
+    assert mp.discover_series(1, 0.0) == ["KXHIGHNY"]
+
+
+def test_discovery_does_not_apply_the_volume_filter(monkeypatch):
+    """min_vol belongs to the HISTORY query. Applying it to discovery would drop
+    a thin-but-live series before its history was ever looked at."""
+    monkeypatch.setattr(mp.xl, "_get", lambda url: _events_page("KXTHIN"))
+    assert mp.discover_series(1, min_vol=1e9) == ["KXTHIN"]
+
+
+def test_discovery_stops_when_the_cursor_runs_out(monkeypatch):
+    pages = [_events_page("A", cursor="c1"), _events_page("B", cursor="")]
+    monkeypatch.setattr(mp.xl, "_get", lambda url: pages.pop(0) if pages else None)
+    assert sorted(mp.discover_series(10, 0.0)) == ["A", "B"]
