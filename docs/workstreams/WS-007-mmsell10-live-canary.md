@@ -354,8 +354,44 @@ The first version looked up four guessed key names and none was the real one. Tw
 lessons, both now enforced by tests: find the breakdown **by shape** (any list whose
 entries carry `exchange_index`), and treat a **decimal string** as money, since a
 numeric-only test would report every funded shard as unfunded — wrong in the
-direction that looks safe. So the funded/unfunded question is **still open** and is
-answered by the next probe run, not by this one.
+direction that looks safe.
+
+### Answered, 2026-08-30T18:20:49Z — unfunded, not misrouted
+
+The fixed probe read our own balance breakdown:
+
+```
+shard probe funding: [{"exchange_index": 0, "funded": true},
+                      {"exchange_index": 1, "funded": false},
+                      {"exchange_index": 2, "funded": false},
+                      {"exchange_index": 3, "funded": false}]
+```
+
+The account carries a row for every shard 0-3, so we are **provisioned** on shard 3
+and hold **no collateral** there. `user_not_found` is what Kalshi returns for an
+unfunded shard — the message names a user, the condition is a balance.
+
+**This is not fixable in code.** Routing `exchange_index` correctly to shard 3 would
+still be refused; the order would simply be rejected after being addressed properly.
+Had routing shipped on the first pass it would have compiled, passed, deployed and
+changed nothing. Only an intra-account transfer of collateral onto shard 3 — an
+operator action on real money — unlocks those series.
+
+**It also explains part of the headline live-vs-twin gap.** The twin trades MLB and
+ITF markets that live is structurally locked out of, so the +2.22c twin against
++1.51c live is not all edge decay. The matched-markets comparison already controlled
+for it and read **-0.07c**; that number now has a mechanism behind it.
+
+**Recorded:** XOS-000014 evidence row 30 (`ADD_EVIDENCE`, receipt
+`xos14-shard-evidence-20260830`, SUCCEEDED).
+
+**D9 (next run, NOT mid-epoch).** Either fund shard 3 in the pre-registered envelope
+before arming, or drop the shard-3 series from the universe so the book stops
+spending ~31% of its attempts on markets it cannot reach. Narrowing the universe now
+would void the twin comparison for the same reason as D8: the universe is inside the
+twin's parameter set. Whichever is chosen belongs in the envelope before arming, and
+the twin must be given the same universe live can actually trade — otherwise the
+mirror keeps measuring a book live is not allowed to run.
 
 ## Next Step
 
