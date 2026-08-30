@@ -1,24 +1,33 @@
 # ops request: type='xos'
-twin_mirror_coverage_pct  @  mmsell-price-ceiling/v2/e2/mmsell10  kind=live
+live_fill_rate_pct  @  mmsell-price-ceiling/v2/e2/mmsell10  kind=live
   tags:        Cmmsell10
   deployments: mmsell-ceiling-live-1
-  window:      2026-08-28 14:20:35.572574+00:00 -> 2026-08-30 14:01:53.242915+00:00
-  value:       14.71  (%)   n=204
+  window:      2026-08-28 14:20:35.572574+00:00 -> 2026-08-30 14:02:19.506124+00:00
+  value:       0.0  (%)   n=167
     deployment_kind: live
     deployments: ['mmsell-ceiling-live-1']
+    excluded_contested_markets: 0
+    excluded_indeterminate: 0
+    excluded_never_sent: 76
+    excluded_still_open_markets: 13
+    excluded_unpriced_markets: 0
     fee_basis: realized_pnl as reported by Kalshi (fees already netted)
+    filled_contracts: 0
+    filled_contracts_on_settled_markets: 66
     live_markets_entered: 204
-    mirrored: 30
+    ordered_contracts: 167
+    orders_that_never_held_a_position: 125
     per_contract_basis: total realized P&L / filled BUY contracts on settled markets — deliberately NOT scripts/mmsell_live.py's per-position average
     platform_snapshot: 4f9adf15daa64035
-    provider_revision: twin_coverage_v1
+    provider_revision: live_exec_v1
+    realized_pnl_usd: 0.9982
     scope: mmsell-price-ceiling/v2/e2/mmsell10
+    sent_orders: 167
     settled_basis: newest positions snapshot with quantity=0 and realized_pnl
-    settled_live_markets: 66
+    settled_markets: 66
     settled_statuses: ['settled', 'closed_sl', 'closed_tp', 'closed_timeout']
     source: live_orders x fills x positions
     strategy_tags: ['Cmmsell10']
-    twin_markets_seen: 58
-    twin_tags: ['Cmmsell10_pt3']
-    window: ['2026-08-28 14:20:35.572574+00:00', '2026-08-30 14:01:53.242915+00:00']
+    window: ['2026-08-28 14:20:35.572574+00:00', '2026-08-30 14:02:19.506124+00:00']
     window_basis: live_orders.created_at (entry time)
+    winning_settled_markets: 62
