@@ -148,7 +148,14 @@ instrument fixes shipped (two-stage discovery-then-history fetch; the balanced-b
 screen the thesis already pre-registered but the script never had). Contract untouched.
 Detail in `docs/MARKTANGLE_THESIS.md` §8b.
 
-**D3 (sharpened by the fix).** With `/events` enumerating properly, `--max-series` is now
+**D3 — ANSWERED 2026-08-30: rank by settled frequency.** `/events` enumerates (which
+series exist and are still tradeable); the settled listing ranks (how often each settles).
+The bias that made the listing a poor enumerator is what makes it a good recurrence
+ranker. Superseded reasoning below, kept because the error is the useful part: run 4
+ranked by concurrent open events on the claim that "a series carrying more of them recurs
+more often", which the data falsified — many concurrent events means a one-shot ladder.
+
+**D3 (sharpened by the fix, now closed).** With `/events` enumerating properly, `--max-series` is now
 a prefix of a *real* ranking (series by concurrent open events) rather than a prefix of an
 accident — so the question narrows to how large that budget should be, and whether a
 single series may contribute unboundedly many families. Still open.

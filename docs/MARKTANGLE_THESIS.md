@@ -288,10 +288,23 @@ KXSCOTUSCASE:      0 settled     KXGDPYEAR:  0 settled
 
 **Recurrence is not concurrency.** What the hypothesis needs is a series with many
 events SETTLED THROUGH TIME. The quantity that measures it is the one the settled
-listing is biased toward — which is why that listing is a poor enumerator and may
-be a good *recurrence ranker*. Enumerate from `/events`, rank by settled
-frequency: not yet built, and not built unilaterally, because the ranking rule is
-D3 and I have now been wrong about it once.
+listing is biased toward — which is why that listing is a poor enumerator and a
+good *recurrence ranker*.
+
+**D3 answered (operator, 2026-08-30): rank by settled frequency.** Each query is
+now used for what it is actually good at:
+
+| query | answers |
+|---|---|
+| `/events?status=open` | WHICH series exist, and are still tradeable |
+| settled listing | HOW OFTEN each of them settles |
+
+A series absent from the settled sample keeps its enumerated position at the back
+rather than being dropped: absence means "did not appear in this sample", not
+"never settles", and discarding it would quietly narrow the universe on weak
+evidence. It has no history to pull, so a `--max-series` prefix never reaches it.
+Conversely the listing never *adds* a series: a retired family with deep history
+but nothing currently listed is not tradeable, and the enumerator is the gate.
 
 Neither of the first two runs produced a `k*`, nor the third, nor the fourth, so
 none is a PASS, a FAIL or even the pre-registered HOLD: the HOLD verdict is about a thin *holdout* at a fitted

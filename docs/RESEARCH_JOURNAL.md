@@ -126,9 +126,9 @@ returned KXNFLWINS 0 settled, KXNBAWINS 0 settled, KXSCOTUSCASE 0 settled: 1,000
 
 **Recurrence is not concurrency.** The hypothesis needs series with many events settled
 THROUGH TIME — and the quantity that measures that is exactly what the settled listing is
-biased toward. The listing that made a bad enumerator may make a good recurrence ranker:
-enumerate from `/events`, rank by settled frequency. Not built unilaterally — the ranking
-rule is D3, the operator's, and I have been wrong about it once already.
+biased toward. The listing that made a bad enumerator makes a good recurrence ranker. **D3 answered by the
+operator: rank by settled frequency** — `/events` says which series exist and are still
+tradeable, the settled listing says how often each settles. Shipped.
 
 Still no verdict, still none available.
 
