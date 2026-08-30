@@ -256,6 +256,38 @@ only ~40 minutes of entries existed and only two had resolved. The operator's `D
 unfloored bar knowingly, precisely so v2 would not have to re-earn v1's n=1588. The honest
 reading: **the promotion rests on v1's history, not on v2's fresh sample.**
 
+## Operator decisions, 2026-08-30 (carry these into the NEXT run)
+
+Two things this canary cannot fix about itself, decided and recorded so the
+successor Version does not inherit them by accident.
+
+**D7. The `twin_mirror_coverage_pct < 50` HOLD stands unfixed for this run.**
+It reads 14.7% and cannot clear. The cause is structural: the twin assumes 100%
+fill, so it saturates its 20-position open cap while live fills ~49% and keeps
+placing (twin open 20, live open 13; the parity report reads *"live placed 147
+orders its twin did NOT open"*). A registered gate clause is immutable from
+registration, so the only fixes were a successor Version (restarting evidence at
+zero) or retuning the twin's cap mid-epoch (voiding the comparison). Neither is
+worth it while the book is profitable and every stop clause works. **For the next
+run:** either set the threshold against what a fill-limited twin can actually
+achieve, or give the twin a larger open cap than live so it is never the binding
+constraint. The clause as written measures the twin's cap, not the mirror.
+
+**D8. Raise `MMSELL_LIVE_MAX_OPEN_POSITIONS` (currently 20) — but NOT mid-run.**
+The 34.5% decision overlap is gate-dominated, mostly `gate:open_cap`, which is
+capacity rather than edge: live is declining candidates it was never allowed to
+attempt. Raising the cap buys more of the SAME distribution, which is the safe
+way to scale — unlike pricing up, which `mmsell10a`/`mmsell10b` measured at
+−4.1c/contract for +3pp of fill rate. It is deliberately not done now: the cap is
+a live knob inside the twin's parameter set, and retuning it mid-epoch voids the
+twin comparison — the fix would be a new twin tag, not a re-read of this one
+(`docs/LIVE_PAPER_TWIN.md`). **For the next run:** raise it in the pre-registered
+envelope, before arming, so the whole epoch runs at one cap.
+
+**Both are capacity levers and neither touches entry pricing.** The 0c offset and
+the 4h timeout stay: the 56 timed-out orders are trades the market declined at our
+price, and buying them is the one thing already measured to destroy this edge.
+
 ## Next Step
 
 Watch the pre-registered keep/stop clauses accumulate. `live_canary_keep` reads BLOCKED_DATA

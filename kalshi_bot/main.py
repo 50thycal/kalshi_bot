@@ -1417,6 +1417,77 @@ def _probe_api_shapes(client) -> None:
             raise
         except Exception as exc:  # noqa: BLE001
             logger.warning("api shape probe failed [%s]: %s", name, exc)
+    _probe_exchange_shard(client)
+
+
+#: Series whose every live order is rejected `user_not_found` (XOS-000014), paired
+#: with series that place normally. Both sides are needed: a field present only on
+#: the refused markets proves nothing unless the accepted ones lack it.
+_SHARD_PROBE_SERIES: tuple[tuple[str, str], ...] = (
+    ("REFUSED", "KXMLBHR"), ("REFUSED", "KXMLBTOTAL"), ("REFUSED", "KXITFMATCH"),
+    ("ACCEPTED", "KXNCAAFSPREAD"), ("ACCEPTED", "KXLALIGASCORE"),
+)
+
+
+def _probe_exchange_shard(client) -> None:
+    """Find what distinguishes the markets Kalshi refuses our orders on (XOS-000014).
+
+    31% of the Cmmsell10 canary's entry orders come back 404 `user_not_found`,
+    "Exchange user not found. For Predictions: reference documentation Exchange
+    Sharding documentation" — and the refusals are ~100% per series (all MLB, ITF
+    and BTCD; 0% everywhere else). Kalshi has sharded its exchange; this codebase
+    has no concept of a shard and posts every order to one `kalshi_base_url`.
+
+    Rather than guess at Kalshi's field name, log the market payload's KEYS for a
+    refused series beside an accepted one and let the diff name it. Read-only:
+    `get_markets` places nothing and moves no money.
+
+    Market metadata is public, which matters because this log is read back through
+    the ops channel and lands in a public repo. Nothing account-scoped is touched.
+    """
+    import json
+
+    from .obs.series_fetch import fetch_markets_by_series
+
+    seen: dict[str, set[str]] = {}
+    for verdict, series in _SHARD_PROBE_SERIES:
+        try:
+            # Through the shared helper, not a raw get_markets: every
+            # series-addressed fetch in this codebase reports its own funnel, so a
+            # series that returns nothing is counted rather than read as "no
+            # difference found" (tests/test_obs_funnel_wiring.py enforces this).
+            result = fetch_markets_by_series(
+                client, [series], book=f"shard_probe_{verdict.lower()}",
+                limit=1, max_pages=1, warn=False,
+            )
+            if not result.markets:
+                logger.info("shard probe [%s %s]: no open market to sample "
+                            "(failed=%s)", verdict, series, result.failed or "no")
+                continue
+            sample = result.markets[0]
+            keys = sorted(sample)
+            seen.setdefault(verdict, set()).update(keys)
+            # Values, not just keys: a shard is far more likely to be a differing
+            # VALUE on a field both sides carry than a field only one side has.
+            interesting = {
+                k: sample[k] for k in keys
+                if not isinstance(sample.get(k), (dict, list))
+                and any(t in k.lower() for t in
+                        ("exchange", "shard", "venue", "product", "market_type",
+                         "category", "tier", "region", "cluster"))
+            }
+            logger.info("shard probe [%s %s]: keys=%s candidates=%s",
+                        verdict, series, json.dumps(keys)[:400],
+                        json.dumps(interesting, default=str)[:300])
+        except AuthError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("shard probe failed [%s %s]: %s", verdict, series, exc)
+    if len(seen) == 2:
+        only_refused = sorted(seen["REFUSED"] - seen["ACCEPTED"])
+        only_accepted = sorted(seen["ACCEPTED"] - seen["REFUSED"])
+        logger.info("shard probe DIFF: only-on-refused=%s only-on-accepted=%s",
+                    only_refused or "(none)", only_accepted or "(none)")
 
 
 def _tier_of(limits) -> str:
