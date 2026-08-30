@@ -114,6 +114,27 @@ No gate result is recorded from this. A survey prints; a verdict is a recorded e
 
 ---
 
+## MARKTANGLE 2026-08-30 — Phase-A run 6: ranking had no effect. STOPPING at the guard.
+
+Output **byte-identical to run 4**. The settled-frequency ranking did nothing, and the
+list proves it: KXARTISTSTREAMSY (288 settled) stayed 5th and KXVOTEPRIMARY (598 settled)
+stayed 17th — their enumerated positions. A working ranking puts them 1st and 2nd. So
+`freq` was zero for every series and the tie-break preserved the enumerated order.
+
+**The settled listing and the open-events board barely intersect.** The listing sample is
+dominated by three series (run 3 saw only KXMVECROSSCATEGORY / KXLIGAMXSPREAD /
+KXUSLTOTAL in 6,000 markets); essentially none of the 2,441 enumerated series appear in
+it. Recurrence cannot be ranked from a *sample* of the listing — it needs a per-series
+count, the option costed at one query per candidate and not taken. The per-series query
+finds 288 and 598 for those families fine; the sample sweep never sees them.
+
+**Stopping at the pre-committed guard.** Five runs, five acquisition/selection findings,
+no k* ever fitted. MARKTANGLE has produced a well-tested instrument, four diagnosed facts
+about Kalshi's API, and zero evidence about the hypothesis. Further investment is an
+operator decision, not another quiet iteration.
+
+---
+
 ## MARKTANGLE 2026-08-30 — Phase-A run 4: enumeration fixed, ranking wrong. Still no verdict.
 
 The `/events` enumerator works: **2,441 series** discovered against 3 from the settled

@@ -312,6 +312,42 @@ threshold, and no threshold was ever reached. The honest label is **instrument
 not yet capable**, and it is recorded here rather than being quietly retried
 until it said something.
 
+**2026-08-30 · run 6 (ops `mkt-probe-6`) · the recurrence ranking had NO EFFECT ·
+STILL NO VERDICT · STOPPING.**
+
+The output is **byte-identical to run 4's**. The ranking silently did nothing,
+and the proof is in the list it produced:
+
+```
+ 5. KXARTISTSTREAMSY: 288 settled markets
+17. KXVOTEPRIMARY:    598 settled markets
+```
+
+Those two have by far the most settled history of the forty, and a working
+settled-frequency ranking would have put them at #1 and #2. They stayed at 5 and
+17 — their enumerated positions — which means `freq` was **zero for every series
+in the list** and the tie-break preserved the enumerated order untouched.
+
+**Why: the settled listing and the open-events board barely intersect.** The
+listing sample is dominated by KXMVECROSSCATEGORY / KXLIGAMXSPREAD / KXUSLTOTAL
+(run 3 saw only those three in 6,000 markets); essentially none of the 2,441
+enumerated series appear in it at all. So a settled-frequency ranking computed
+from a *sample* assigns zero to nearly everything and cannot order the set. The
+per-series query finds 288 and 598 for those two families perfectly well — the
+sample sweep simply never sees them.
+
+That is a real property of the data, not a coding slip: **recurrence cannot be
+ranked from a sample of the listing.** It needs a per-series count, which is the
+option costed at one query per candidate and not taken.
+
+**Stopping here, deliberately.** Five runs, five acquisition- or selection-layer
+findings, and no `k*` ever fitted. A fifth patch at this layer is the pattern
+this log exists to prevent, and the pre-committed guard was explicit: report
+rather than patch. What MARKTANGLE has produced so far is a well-tested
+instrument, four diagnosed data-access facts about Kalshi's API, and zero
+evidence about the hypothesis. Whether that is worth more investment is the
+operator's call, not another quiet iteration.
+
 ## 9. What would make us abandon this
 
 Any one of the three, stated before the data:
