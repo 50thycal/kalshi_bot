@@ -49,6 +49,18 @@ def test_candlestick_probes_supply_the_arguments_the_endpoint_asked_for():
     assert any(p.endswith("/candlesticks") for p in paths)
 
 
+def test_the_confirmed_funding_endpoint_is_probed_with_its_date_range():
+    """The 2026-08-30 run answered 400 "Query argument start_date is required"
+    on `/margin/funding_history` — the endpoint is real, and the classifier fix
+    is the only reason we know it. Supplying the range is what turns "the route
+    parses" into "here is the response shape", which is what arm B's ranking and
+    arm A's entry confirmation actually need. The bare path stays as the
+    regression canary for the 400-vs-404 distinction."""
+    paths = [p for p, _ in survey.CANDIDATE_PATHS if "funding_history" in p]
+    assert any("start_date=" in p and "end_date=" in p for p in paths)
+    assert "/margin/funding_history" in paths
+
+
 def test_funding_is_hunted_rather_than_assumed():
     """Funding is arm B's entire ranking, arm A's entry confirmation and a cost
     in every arm's headline metric. The two names the brief used both 404'd, so
