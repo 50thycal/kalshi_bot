@@ -1,5 +1,0 @@
-# ops request: type='db'
-series  snaps  has_idx  idx_values
-------  -----  -------  ----------
-
-(0 rows)
