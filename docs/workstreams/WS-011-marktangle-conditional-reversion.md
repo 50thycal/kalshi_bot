@@ -1,7 +1,7 @@
 # WS-011 — MARKTANGLE: conditional reversion in recurring binary families
 
-**Phase:** BUILDING
-**Status:** Active
+**Phase:** DECIDE
+**Status:** Blocked
 **Created:** 2026-08-29
 **Updated:** 2026-08-29 (run 1)
 
@@ -166,9 +166,21 @@ would dominate any exchange-wide ranking purely by having the most strikes. The 
 by one series is a finding about that series. Decide whether the unit of the sweep should
 be the family (as now) or the series, with a per-series family budget.
 
+## D4 (new, and the only thing that matters now)
+
+**Is MARKTANGLE worth further investment?** Five runs have each produced a diagnosed
+data-access finding and zero evidence about the hypothesis. The instrument is well tested
+and the contract is frozen and sound; what is missing is a way to reach a universe with
+enough settled history per family to fit a `k*`. The known remaining route is a per-series
+settled count over a pre-filtered candidate set — a real build, and the option already
+costed and declined once. Alternatives are to shortlist a hand-picked universe (accepting
+that it pre-selects), or to stop and leave the record as durable negative-space evidence.
+Operator's call; this workstream does not proceed without it.
+
 ## Next Step
 
-**Blocked on merge.** The ops runner executes code from the DEFAULT BRANCH only — a
+**Blocked on D4** — see above. Historical note on the original blocker: the ops runner
+executes code from the DEFAULT BRANCH only — a
 fail-closed guard (`OPS_RUNNER_CODE_SOURCE=default-branch`, the durable fix for
 XOS-000005) — so `marktangle_probe` is not runnable until this PR merges. The Claude
 sandbox cannot substitute: its egress policy refuses `api.elections.kalshi.com` outright
