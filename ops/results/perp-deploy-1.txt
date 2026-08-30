@@ -1,4 +1,0 @@
-# latest deployment d7c8a4d3-ae6f-44c0-9287-a64da7fc517a (status=DEPLOYING, created=2026-08-30T12:32:55.538Z)
-# ops request: type='logs'
-# target service: main
-(no log lines returned)
