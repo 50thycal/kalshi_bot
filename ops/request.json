@@ -1,1 +1,1 @@
-{"type":"env","set":{"LIVE_SHAPE_PROBE":"true"},"id":"probe-on-1"}
+{"type":"logs","grep":"shard probe","lines":600,"id":"probe-read-1"}
