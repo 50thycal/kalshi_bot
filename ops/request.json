@@ -1,1 +1,1 @@
-{"type":"db","sql":"select status, coalesce(cancel_reason, '(none)') as reason, count(*) as n from live_orders where strategy = 'Cmmsell10' and action = 'buy' group by 1,2 order by 3 desc","max_rows":25,"id":"db-cxl"}
+{"type":"db","sql":"select date_trunc('hour', created_at) as hr, count(*) filter (where status = 'rejected') as rejected, count(*) filter (where status = 'filled') as filled, count(*) as total from live_orders where strategy = 'Cmmsell10' and action = 'buy' group by 1 order by 1","max_rows":50,"id":"db-rej-time"}
