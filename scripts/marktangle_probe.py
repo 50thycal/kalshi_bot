@@ -156,6 +156,38 @@ def discover_series(pages: int, min_vol: float) -> list[str]:
     return [s for s, _ in sorted(seen.items(), key=lambda kv: (-kv[1], kv[0]))]
 
 
+def rank_by_recurrence(series: list[str], pages: int, min_vol: float) -> list[str]:
+    """Order an ENUMERATED series list by how often each one actually settles.
+
+    WHY THIS SPLIT. Run 4 enumerated 2,441 series correctly and then picked the
+    wrong 40, because it ranked by CONCURRENT OPEN EVENTS on the reasoning that a
+    series carrying more of them recurs more often. That is false: many
+    concurrent open events means a broad ONE-SHOT ladder -- 50 states, 32 teams,
+    every SCOTUS case -- and the top 40 by that measure came back with
+    KXNFLWINS 0 settled, KXNBAWINS 0 settled, KXSCOTUSCASE 0 settled.
+
+    **Recurrence is not concurrency.** What the hypothesis needs is a series with
+    many events settled THROUGH TIME, and the quantity that measures it is
+    exactly the one the settled listing over-represents. The bias that made that
+    listing a poor ENUMERATOR is what makes it a good RECURRENCE RANKER, so each
+    query is now used for what it is actually good at:
+
+        /events?status=open   -> WHICH series exist, and are still tradeable
+        settled listing       -> HOW OFTEN each of them settles
+
+    Series absent from the settled sample keep their enumerated order at the
+    back rather than being dropped: absence here means "did not appear in this
+    sample", not "never settles", and discarding them would quietly narrow the
+    universe on weak evidence. They simply have no history to pull, so a
+    `--max-series` prefix never reaches them."""
+    freq: dict[str, int] = {}
+    for m in fetch_settled(pages, min_vol):
+        key = m["event"].split("-", 1)[0]
+        freq[key] = freq.get(key, 0) + 1
+    enumerated_order = {s: i for i, s in enumerate(series)}
+    return sorted(series, key=lambda s: (-freq.get(s, 0), enumerated_order[s]))
+
+
 def fetch_settled(pages: int, min_vol: float, series: str | None = None) -> list[dict]:
     """Settled binaries, newest first. `series` restricts to one series ticker."""
     out: list[dict] = []
@@ -492,8 +524,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--discover-pages", type=int, default=25,
                     help="pages of /events?status=open to enumerate series from "
                          "(discovery only — history is fetched per-series)")
+    ap.add_argument("--rank-pages", type=int, default=12,
+                    help="pages of the settled listing used to RANK the enumerated "
+                         "series by recurrence (never to enumerate them)")
     ap.add_argument("--max-series", type=int, default=40,
-                    help="how many discovered series to pull history for")
+                    help="how many of the ranked series to pull history for")
     ap.add_argument("--min-vol", type=float, default=50.0)
     ap.add_argument("--min-k-n", type=int, default=30,
                     help="TRAIN observations required at k before k* may be fitted")
@@ -512,9 +547,10 @@ def main(argv: list[str] | None = None) -> int:
     series_list = [s.strip().upper() for s in args.series.split(",") if s.strip()]
     if not series_list:
         series_list = discover_series(args.discover_pages, args.min_vol)
-        print(f"discovered {len(series_list)} series in the settled listing; "
-              f"pulling history for the top {args.max_series}")
-        series_list = series_list[:args.max_series]
+        ranked = rank_by_recurrence(series_list, args.rank_pages, args.min_vol)
+        print(f"discovered {len(series_list)} series on the live board; ranked by "
+              f"settled frequency; pulling history for the top {args.max_series}")
+        series_list = ranked[:args.max_series]
     for s in series_list:
         got = fetch_settled(args.pages, args.min_vol, series=s)
         print(f"  {s}: {len(got)} settled markets")

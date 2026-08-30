@@ -277,3 +277,36 @@ def test_discovery_stops_when_the_cursor_runs_out(monkeypatch):
     pages = [_events_page("A", cursor="c1"), _events_page("B", cursor="")]
     monkeypatch.setattr(mp.xl, "_get", lambda url: pages.pop(0) if pages else None)
     assert sorted(mp.discover_series(10, 0.0)) == ["A", "B"]
+
+
+# ===========================================================================
+# Recurrence ranking (D3, operator decision 2026-08-30) — added after run 4
+# ranked 2,441 correctly-enumerated series by the wrong quantity
+# ===========================================================================
+
+
+def test_ranking_prefers_the_series_that_actually_settles_often(monkeypatch):
+    """Run 4's top 40 by concurrent open events came back KXNFLWINS 0 settled,
+    KXNBAWINS 0 settled. Recurrence is not concurrency."""
+    monkeypatch.setattr(mp, "fetch_settled", lambda *a, **k: [
+        _m(f"KXBTCD-{i}", f"KXBTCD-{i}-A", i, "yes") for i in range(9)
+    ] + [_m("KXHIGHNY-1", "KXHIGHNY-1-A", 99, "no")])
+    assert mp.rank_by_recurrence(["KXNFLWINS", "KXHIGHNY", "KXBTCD"], 1, 0.0) == [
+        "KXBTCD", "KXHIGHNY", "KXNFLWINS"
+    ]
+
+
+def test_a_series_absent_from_the_settled_sample_is_kept_at_the_back(monkeypatch):
+    """Absence means 'did not appear in this sample', not 'never settles'.
+    Dropping it would quietly narrow the universe on weak evidence."""
+    monkeypatch.setattr(mp, "fetch_settled", lambda *a, **k: [])
+    assert mp.rank_by_recurrence(["A", "B"], 1, 0.0) == ["A", "B"]
+
+
+def test_ranking_never_invents_a_series_the_enumerator_did_not_list(monkeypatch):
+    """The settled listing RANKS; it does not enumerate. A retired series with
+    deep history but nothing currently listed is not tradeable."""
+    monkeypatch.setattr(mp, "fetch_settled", lambda *a, **k: [
+        _m("KXRETIRED-1", "KXRETIRED-1-A", 1, "yes"),
+    ])
+    assert mp.rank_by_recurrence(["KXLIVE"], 1, 0.0) == ["KXLIVE"]
