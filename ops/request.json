@@ -1,1 +1,1 @@
-{"type":"db","id":"perp-tape-1","sql":"SELECT (SELECT count(*) FROM perp_collector_cycles) AS cycles, (SELECT count(*) FROM perp_market_snapshots) AS snapshots, (SELECT count(*) FROM perp_orderbook_snapshots) AS books, (SELECT count(*) FROM perp_funding_observations) AS funding"}
+{"type":"logs","id":"perp-logs-1","lines":60,"filter":"perps"}
