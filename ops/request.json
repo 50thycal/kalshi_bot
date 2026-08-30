@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-show","args":["xos14-shard-evidence-20260830"],"id":"xos14-receipt"}
+{"type":"env","set":{"LIVE_SHAPE_PROBE":"","EXPERIMENT_OS_ISSUE_COMMAND":""},"id":"probe-off-1"}
