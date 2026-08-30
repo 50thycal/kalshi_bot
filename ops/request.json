@@ -1,1 +1,1 @@
-{"type":"xos","command":"metric","args":["live_cents_per_contract","--experiment","mmsell-price-ceiling","--arm","mmsell10","--kind","live"],"id":"g-live_cents_per_contract"}
+{"type":"xos","command":"metric","args":["twin_live_paired_gap_cents","--experiment","mmsell-price-ceiling","--arm","mmsell10","--kind","live"],"id":"g-twin_live_paired_gap_cents"}
