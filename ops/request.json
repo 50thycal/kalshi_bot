@@ -1,1 +1,1 @@
-{"type":"logs","id":"perp-logs-1","lines":60,"filter":"perps"}
+{"type":"db","id":"perp-tape-2","sql":"SELECT (SELECT count(*) FROM perp_collector_cycles) AS cycles, (SELECT count(*) FROM perp_market_snapshots) AS snaps, (SELECT count(*) FROM perp_orderbook_snapshots) AS books, (SELECT count(*) FROM perp_funding_observations) AS funding, (SELECT coalesce(sum(markets_seen),0) FROM perp_collector_cycles) AS markets_seen, (SELECT coalesce(sum(errors),0) FROM perp_collector_cycles) AS errors, (SELECT max(started_at)::text FROM perp_collector_cycles) AS last_cycle"}
