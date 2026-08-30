@@ -323,6 +323,40 @@ reports them as `excluded_never_sent`, correctly declining to blame the strategy
 orders the venue never took. Fixing it is worth more than any pricing change, and
 costs no edge.
 
+### Measured, 2026-08-30T18:05:05Z — `exchange_index` is the whole split
+
+The probe ran against our own live account and the answer is binary and complete:
+
+| series | verdict | `exchange_index` |
+|---|---|---|
+| `KXMLBHR`, `KXMLBTOTAL`, `KXITFMATCH` | REFUSED | **3** |
+| `KXNCAAFSPREAD`, `KXLALIGASCORE` | ACCEPTED | **0** |
+
+No other candidate field varied (`market_type` is `binary` on both sides; the only
+key-set difference, `primary_participant_key`, is a tennis-vs-football artifact and
+appears on the refused side only because ITF markets name a player). **We trade on
+shard 0. MLB and ITF live on shard 3.**
+
+The same boot showed `exchange_index` on `orders`, `fills`, `positions` and
+`settlements` too — so a fix has to reach the reconciler, not just order placement,
+or we would file shard-3 fills against shard-0 assumptions.
+
+Also measured: `api limits probe` reports our grant as
+`{"exchange_instance": "event_contract", "level": "advanced"}` — the grant itself is
+**scoped to an exchange instance**, which is consistent with `user_not_found` rather
+than an insufficient-funds error on shard 3.
+
+**A defect in the probe's own funding half.** It reported *"no per-index breakdown in
+balance payload"* — a **false negative**. The breakdown is right there under
+`balance_breakdown`, as the neighbouring `api shape probe [balance]` line printed in
+the same boot: `{"balance_breakdown": [{"balance": "str", "exchange_index": "int"}]}`.
+The first version looked up four guessed key names and none was the real one. Two
+lessons, both now enforced by tests: find the breakdown **by shape** (any list whose
+entries carry `exchange_index`), and treat a **decimal string** as money, since a
+numeric-only test would report every funded shard as unfunded — wrong in the
+direction that looks safe. So the funded/unfunded question is **still open** and is
+answered by the next probe run, not by this one.
+
 ## Next Step
 
 Watch the pre-registered keep/stop clauses accumulate. `live_canary_keep` reads BLOCKED_DATA
