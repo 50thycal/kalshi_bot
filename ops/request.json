@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","sql":"select distinct cancel_reason from live_orders where strategy = 'Cmmsell10' and status = 'rejected' limit 2","max_rows":3,"id":"db-fullerr"}
