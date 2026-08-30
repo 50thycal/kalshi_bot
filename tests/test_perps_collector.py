@@ -37,10 +37,12 @@ UTC = timezone.utc
 class _Client:
     """A stand-in for KalshiClient with only the perp reads the collector uses."""
 
-    def __init__(self, markets=None, book=None, funding=None, fail=None):
+    def __init__(self, markets=None, book=None, funding=None, fail=None,
+                 funding_by_ticker=None):
         self._markets = markets if markets is not None else []
         self._book = book if book is not None else {"orderbook": {"bids": [], "asks": []}}
         self._funding = funding if funding is not None else {}
+        self._funding_by_ticker = funding_by_ticker
         self._fail = fail or {}
         self.calls: list[str] = []
 
@@ -60,8 +62,10 @@ class _Client:
         return self._book
 
     def get_perp_funding_history(self, *, start_date, end_date, ticker=None):
-        self.calls.append("funding")
+        self.calls.append("funding" if ticker is None else f"funding:{ticker}")
         self._maybe_fail("funding")
+        if ticker is not None and self._funding_by_ticker is not None:
+            return self._funding_by_ticker
         return self._funding
 
 
@@ -261,6 +265,54 @@ def test_a_zero_row_funding_parse_records_the_envelope_shape(session, settings):
     assert cycle.notes_json["funding_shape"] == {
         "type": "object", "keys": ["cursor", "settlements"], "list_lengths": {"settlements": 0},
     }
+
+
+def test_an_empty_unscoped_funding_call_is_retried_scoped_to_a_ticker(session, settings):
+    """`{"funding_history": []}` on a call passing NO ticker is what an account
+    ledger returns AND what a market feed would return unfiltered. Ask both ways
+    before calling arm B blocked."""
+    settings.perps_funding_enabled = True
+    client = _Client(
+        markets=[MARKET],
+        funding={"funding_history": []},
+        funding_by_ticker={"funding_history": [
+            {"ticker": MARKET["ticker"], "funding_rate": "0.0003", "settled_at": 1788000000},
+        ]},
+    )
+    PerpsCollector(client, settings).run_once(session)
+    assert client.calls.count("funding") == 1
+    assert f"funding:{MARKET['ticker']}" in client.calls
+    # Rows found by the scoped call are stored, not merely counted.
+    row = session.scalars(select(PerpFundingObservation)).one()
+    assert row.funding_rate == pytest.approx(0.0003)
+    cycle = session.scalars(select(PerpCollectorCycle)).one()
+    assert cycle.funding_rows == 1
+    assert cycle.notes_json["funding_shape_by_ticker"]["ticker"] == MARKET["ticker"]
+
+
+def test_the_scoped_retry_failing_does_not_discard_the_unscoped_finding(session, settings):
+    """The retry is a diagnostic. Letting it fail the funding stage would throw
+    away the shape it exists to refine."""
+    settings.perps_funding_enabled = True
+
+    class _Blowup(_Client):
+        def get_perp_funding_history(self, *, start_date, end_date, ticker=None):
+            if ticker is not None:
+                raise RuntimeError("scoped boom")
+            return {"funding_history": []}
+
+    PerpsCollector(_Blowup(markets=[MARKET]), settings).run_once(session)
+    cycle = session.scalars(select(PerpCollectorCycle)).one()
+    assert cycle.notes_json["funding_shape"]["keys"] == ["funding_history"]
+    assert "scoped boom" in cycle.notes_json["funding_shape_by_ticker"]["error"]
+    assert cycle.errors == 0
+
+
+def test_a_non_empty_unscoped_funding_call_is_not_retried(session, settings):
+    settings.perps_funding_enabled = True
+    client = _Client(markets=[MARKET], funding={"funding_history": [{"rate": "0.0001"}]})
+    PerpsCollector(client, settings).run_once(session)
+    assert not [c for c in client.calls if c.startswith("funding:")]
 
 
 def test_a_successful_funding_parse_records_no_shape(session, settings):

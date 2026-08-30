@@ -16,6 +16,55 @@ Conventions:
 
 ---
 
+## PERP-V1 FUNDING 2026-08-30 — the envelope is `{"funding_history": []}`. No rate rides on the market row.
+
+The shape diagnostic returned on the first cycle after the redeploy:
+
+```
+{'funding_shape': {'type': 'object', 'keys': ['funding_history'],
+                   'list_lengths': {'funding_history': 0}}}
+```
+
+One key, an empty list. That settles the thing it was built to settle: the parser was **not**
+missing a differently-shaped envelope. `_funding_rows` found the list correctly and there are
+genuinely zero records.
+
+**And no funding rate rides on the market row.** Every field on 252 stored market snapshots
+from the last 30 minutes, straight out of `raw_json`:
+
+```
+ask, bid, contract_size, exchange_index, fractional_trading_enabled, leverage_estimate,
+leverage_estimates, liquidation_mark_price, long_leverage_estimates, open_interest,
+open_interest_notional_value_dollars, price, reference_price, schedule,
+settlement_mark_price, short_leverage_estimates, status, ticker, tick_size, title,
+volume, volume_24h, volume_24h_notional_value_dollars, volume_notional_value_dollars
+```
+
+Nothing funding-shaped among the 24. So the brief's premise — that Kalshi publishes a funding
+rate, including an estimate for the forming window (assumption **A2**) — has no confirmed
+source on this surface.
+
+**Also measured, and it matters for arm A:** `settlement_mark_price` is present on only
+**228 of 252** rows. On the other 24 the collector falls back to last-traded `price` for the
+mark, which is a stated fallback rather than a hidden one — but it means `premium_bps` does
+not mean quite the same thing on ~10% of rows, and Probe 2 must either condition on
+`settlement_mark_price` being non-null or report the split.
+
+**What is still not asked.** Every call to `/margin/funding_history` so far passed **no
+ticker**. Empty is what an account ledger returns for an account holding no perp positions;
+it is also what a market-wide feed returns if the filter it actually wants was never
+supplied. Those are still two readings, so before arm B is called BLOCKED_DATA the endpoint
+gets asked one more way — scoped to a real ticker from the universe just listed, shape
+recorded the same keys-only way, one extra call per funding interval and only when the
+unscoped call found nothing. If that carries rows we were asking wrong. If it is empty too,
+we asked both ways and D4 is decided on evidence.
+
+WS-010 **D4** stays open one more round, deliberately. Arm B is not re-scoped: running its
+cross-sectional ranking on *premium* instead of funding is a **different hypothesis** under
+the same arm key, which is a new Version and an operator decision, not a quiet substitution.
+
+---
+
 ## PERP-V1 TAPE LIVE 2026-08-30 — first hour measured. Cadence 145 s; funding returns nothing.
 
 `PERPS_COLLECTOR_ENABLED=true` on the main worker. First hour of the tape, straight off

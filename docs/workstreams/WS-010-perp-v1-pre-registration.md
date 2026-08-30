@@ -114,6 +114,17 @@ assumption of comparability rather than a frozen contract.
   as registered and no re-scope is made: re-scoping arm B to a premium-dispersion
   ranking would be a different hypothesis under the same arm key, and its gate was
   pre-registered before any of this.
+
+  **First shape read, 2026-08-30:** `{"funding_history": []}` — one key, an empty
+  list. The parser was not missing a differently-shaped envelope; there are
+  genuinely zero records. Separately, **no funding field rides on the market row**
+  (all 24 keys listed in the journal), so assumption **A2** has no confirmed source
+  on this surface. One question remains genuinely unasked: every call so far passed
+  **no ticker**, and empty is equally what an account ledger returns and what a
+  market feed returns unfiltered. The collector now retries once, scoped to a real
+  ticker, shape recorded the same keys-only way, only when the unscoped call found
+  nothing. That is the last cheap question; if it is empty too, D4 resolves to arm B
+  = **BLOCKED_DATA**.
 - **D3. Arm C's control.** `perpctl` is a perp-side control and does not by itself
   answer "better than Theta". The gate uses an incremental-over-Theta metric
   instead. Whether a first-class `external_control` reference to the Theta

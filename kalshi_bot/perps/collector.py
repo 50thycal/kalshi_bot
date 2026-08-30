@@ -294,7 +294,9 @@ class PerpsCollector:
 
         if self._funding_is_due(at):
             try:
-                cycle.funding_rows += self._collect_funding(session, at, notes)
+                cycle.funding_rows += self._collect_funding(
+                    session, at, notes, probe_ticker=tickers[0] if tickers else None
+                )
                 self._funding_due_at = at + timedelta(
                     minutes=self._settings.perps_funding_interval_minutes
                 )
@@ -384,7 +386,10 @@ class PerpsCollector:
             return False
         return self._funding_due_at is None or at >= self._funding_due_at
 
-    def _collect_funding(self, session, at: datetime, notes: dict[str, Any]) -> int:
+    def _collect_funding(
+        self, session, at: datetime, notes: dict[str, Any], *,
+        probe_ticker: str | None = None,
+    ) -> int:
         """Fetch the recent funding window and store whatever comes back.
 
         The response shape is UNKNOWN — the worker's 200s have carried no records
@@ -406,6 +411,20 @@ class PerpsCollector:
         hypothesis is that it returns our own account history, so its contents are
         private evidence and `perp_collector_cycles.notes_json` is read through
         the public ops channel.
+
+        THE TICKER-SCOPED RETRY
+        -----------------------
+        The first shape read came back `{"funding_history": []}` — one key, an
+        empty list, on a call that passed NO ticker. Empty is what an account
+        ledger returns for an account with no perp positions; it is also what a
+        market-wide feed would return if the filter it actually wants was never
+        supplied. Those are still the two readings, so before arm B is called
+        BLOCKED_DATA the endpoint is asked ONE more way: scoped to a real ticker
+        from the universe we just listed. If that carries rows it is a rates feed
+        and we were asking wrong; if it is empty too, we asked both ways.
+
+        One extra call per funding interval, only when the unscoped call found
+        nothing, and it stops entirely the moment either call returns rows.
         """
         lookback = timedelta(days=self._settings.perps_funding_lookback_days)
         payload = self._client.get_perp_funding_history(
@@ -415,6 +434,28 @@ class PerpsCollector:
         rows = _funding_rows(payload)
         if not rows:
             notes["funding_shape"] = _payload_shape(payload)
+            if probe_ticker:
+                # Guarded separately: this retry is a diagnostic, and letting it
+                # fail the whole funding stage would discard the unscoped shape
+                # above — the finding it exists to refine.
+                try:
+                    scoped = self._client.get_perp_funding_history(
+                        start_date=(at - lookback).strftime("%Y-%m-%d"),
+                        end_date=at.strftime("%Y-%m-%d"),
+                        ticker=probe_ticker,
+                    )
+                except AuthError:
+                    raise
+                except Exception as exc:  # noqa: BLE001
+                    notes["funding_shape_by_ticker"] = {
+                        "ticker": probe_ticker,
+                        "error": f"{type(exc).__name__}: {exc}"[:200],
+                    }
+                else:
+                    rows = _funding_rows(scoped)
+                    notes["funding_shape_by_ticker"] = {
+                        "ticker": probe_ticker, **_payload_shape(scoped),
+                    }
         written = 0
         seen: set[str] = set()
         for row in rows:
