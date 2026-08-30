@@ -1,1 +1,1 @@
-{"type":"db","id":"perp-market-keys-1","sql":"select k, count(*) n from (select jsonb_object_keys(raw_json::jsonb) k from perp_market_snapshots where captured_at > now() - interval '30 minutes') s group by k order by k"}
+{"type":"noop"}
