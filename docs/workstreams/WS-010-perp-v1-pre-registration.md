@@ -94,15 +94,12 @@ assumption of comparability rather than a frozen contract.
   cash flow are semantics no FEE_MODEL/FILL_MODEL revision in this repository
   describes. That is **Platform Change Review**'s call, not this workstream's, and
   it is not on the critical path while PERP-V1 stays at PROBE.
-- **D4. If funding is unreadable, what happens to `perpcarry`?** Nothing is
-  frozen yet — the contract is written but not registered — so this is the last
-  cheap moment to decide. Options: (a) register as-is and let arm B evaluate
-  BLOCKED_DATA, which is honest and costs an arm; (b) re-scope arm B to a
-  premium-dispersion ranking, which is a different hypothesis and should be
-  admitted as one rather than smuggled in under the same arm key; (c) hold
-  registration until the extended Probe 0 run answers. Recommendation: (c), then
-  (a) if funding really is absent — an arm that cannot be scored should say so
-  through the evaluator rather than be quietly replaced by a different question.
+- ~~**D4. If funding is unreadable, what happens to `perpcarry`?**~~ **CLOSED
+  2026-08-30 by A4** — funding is reachable, so the question does not arise.
+  `perpcarry` stands exactly as registered; no re-scope was made, and none was
+  needed. Recorded rather than deleted because the option that was *not* taken
+  matters: re-scoping arm B to a premium-dispersion ranking would have been a
+  different hypothesis under the same arm key.
 - **D3. Arm C's control.** `perpctl` is a perp-side control and does not by itself
   answer "better than Theta". The gate uses an incremental-over-Theta metric
   instead. Whether a first-class `external_control` reference to the Theta
@@ -119,14 +116,19 @@ assumption of comparability rather than a frozen contract.
   rides on the market row, so arm A's index anchor exists. Findings recorded in
   `docs/RESEARCH_JOURNAL.md` (PERP-V1 PROBE 0 RESULT 2026-08-29). What A1 got
   wrong is funding — see A4.
-- **A4 — OPEN, and it is the one that bites.** Funding was assumed readable at
-  `/margin/funding_rates` and `/margin/funding_rate_estimate`; both 404, as does
-  the per-market variant. Funding is arm B's entire ranking, arm A's entry
-  confirmation, and a cost netted into every arm's headline metric. Two 404s
-  against two names from a brief is not proof of absence, so Probe 0 was extended
-  to hunt alternatives and to dump the market row's full field set. If funding
-  proves genuinely unreadable, **arm B is unscoreable as written** and that is an
-  operator decision on the contract (D4), not something to work around.
+- **A4 — RESOLVED 2026-08-30. Funding IS reachable.** `/margin/funding_history`
+  answered `400 "Query argument start_date is required"` — the endpoint exists and
+  wants a date range. The names in the brief (`/margin/funding_rates`,
+  `/margin/funding_rate_estimate`) were simply wrong. The 400-vs-404 classifier fix
+  is the only reason this is not recorded as a kill: the earlier run received the
+  same response and called it ABSENT. Journal:
+  `docs/RESEARCH_JOURNAL.md` (PERP-V1 A4 RESOLVED 2026-08-30).
+- **A5 — NEW, and smaller than A4 was.** Arm C's *trade imbalance* feature has no
+  public source: `/margin/markets/{t}/trades` 404s and no trade-ish field rides on
+  the market row. The other five arm-C features survive. The version declares the
+  features as candidates tested independently, so this removes a candidate rather
+  than invalidating the arm — but arm C's eventual result must state which features
+  it could actually see.
 - **A2.** Funding is published for the forming window, not only historically. Arm
   A's funding confirmation and arm B's ranking both depend on it.
 - **A3.** Fees at the level the active platform snapshot declares, not a
@@ -161,10 +163,15 @@ tickers.
 
 ## Implementation State
 
-Slice 1 merged (#275). Probe 0 has RUN once and returned (journal, 2026-08-29): the perp
-surface is real and readable, funding is not where the brief said. Probe 0 is being
-re-run with a corrected classifier and a wider funding hunt. Registration in production
-has **not** been submitted and should now wait on **D4**.
+Slices 1 and 2 merged (#275, #277). Probe 0 has run twice; the second run resolved A4 and
+closed D4. The perp surface is real, its history endpoints are readable, and funding is
+reachable at `/margin/funding_history` with a date range. Registration in production has
+**not** been submitted — that is a `REGISTER_PACKAGE` envelope through the `env` channel,
+which redeploys the worker while the mmsell10 canary holds real money, so it stays an
+operator act.
+
+**Probe 1 (tape collector) is now unblocked in shape**: the field names it must be written
+against are recorded in the journal, measured rather than assumed.
 
 ## Review State
 
@@ -182,6 +189,6 @@ This PR.
 
 ## Next Step
 
-After this PR merges: re-run `{"type":"script","name":"perp_surface_survey"}` and read
-whether funding is reachable anywhere (A4). That answer decides **D4**, and D4 should be
-settled before `REGISTER_PACKAGE` freezes the contract.
+Operator decision: submit `REGISTER_PACKAGE` for `perp-v1` (it redeploys the worker, so it
+is not a session act). The blocking research question is answered — nothing in the contract
+needs changing before it is frozen.

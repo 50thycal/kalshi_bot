@@ -73,7 +73,17 @@ CANDIDATE_PATHS: tuple[tuple[str, str], ...] = (
     # headline metric. So this block hunts it rather than assuming the two names
     # the brief happened to use are the only ones.
     ("/margin/funding", "funding, singular"),
-    ("/margin/funding_history", "funding history"),
+    # CONFIRMED 2026-08-30: this answered 400 "Query argument start_date is
+    # required" — the endpoint IS there, and the classifier fix is the only
+    # reason we know it (the previous run reported the same response ABSENT).
+    # Funding is arm B's entire ranking and arm A's entry confirmation, so the
+    # date range is supplied here to learn the RESPONSE SHAPE, not just that the
+    # route parses. The unparameterised probe is kept below it as the regression
+    # canary, exactly as for candlesticks.
+    ("/margin/funding_history?start_date={start_date}&end_date={end_date}",
+     "funding history, last 7 days (CONFIRMED to exist, needs a date range)"),
+    ("/margin/funding_history", "funding history with NO args — keeps the "
+     "400-vs-404 distinction visible in every run"),
     ("/margin/funding_payments", "funding payments (likely auth)"),
     ("/margin/funding_rates/history", "funding history, nested"),
     ("/margin/rates", "rates"),
@@ -225,16 +235,22 @@ def main(argv: list[str] | None = None) -> int:
     print("  is real and tells us the collector must run where the key lives.\n")
 
     print("--- candidate surface ---")
+    now = datetime.now(timezone.utc)
+    date_subs = {
+        "start_date": (now - timedelta(days=7)).strftime("%Y-%m-%d"),
+        "end_date": now.strftime("%Y-%m-%d"),
+    }
     resolved: dict[str, object] = {}
     for path, why in CANDIDATE_PATHS:
-        status, payload, note = fetch(path)
+        # Only the funding paths carry placeholders; format() is a no-op elsewhere.
+        status, payload, note = fetch(path.format(**date_subs))
         verdict = _classify(status)
-        print(f"  {verdict:<12} {path}")
+        print(f"  {verdict:<12} {path.format(**date_subs)}")
         print(f"               {why}")
         if note:
             print(f"               note: {note[:180]}")
         if status == 200 and payload is not None:
-            resolved[path] = payload
+            resolved[path.format(**date_subs)] = payload
             print(f"               fields: {_shape(payload)}")
 
     ticker = None
@@ -246,7 +262,6 @@ def main(argv: list[str] | None = None) -> int:
                 break
 
     if ticker:
-        now = datetime.now(timezone.utc)
         subs = {
             "ticker": ticker,
             "end_ts": int(now.timestamp()),

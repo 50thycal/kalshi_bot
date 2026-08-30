@@ -16,6 +16,52 @@ Conventions:
 
 ---
 
+## PERP-V1 A4 RESOLVED 2026-08-30 — funding IS reachable. Arm B stands; arm C loses a feature.
+
+Probe 0 re-run on the corrected instrument (ops `perp-probe0-2`), after #277 merged. This
+answers **assumption A4** and closes **WS-010 decision D4**, both opened by the 2026-08-29
+run below.
+
+**`/margin/funding_history` answered `400 "Query argument start_date is required"`.** The
+endpoint exists; it wants a date range. That is the whole finding, and the 400-vs-404
+classifier fix is the only reason we have it — the previous run received the same response
+and reported it **ABSENT**. Had that stood, the honest conclusion would have been "funding
+is unavailable, arm B is unscoreable", which is false. A probe that cannot tell an endpoint
+talking from an endpoint absent manufactures kills.
+
+**D4 is therefore closed with no change to the contract.** `perpcarry` stays exactly as
+registered: funding ranking, beta-neutral, gated on `perp_beta_adjusted_net_edge_bps`. No
+re-scope, no arm dropped, nothing rewritten after seeing a result.
+
+What the perp surface actually provides, measured rather than assumed:
+
+| PERP-V1 needs | endpoint | status |
+|---|---|---|
+| index anchor (arm A premium) | `reference_price` on every market row | READABLE |
+| price/OI history (arms A, B) | `/margin/markets/{t}/candlesticks?start_ts&end_ts&period_interval` | READABLE — bid, ask, price, open_interest, volume per period |
+| funding history (arms A, B) | `/margin/funding_history?start_date&end_date` | EXISTS/ARGS — shape not yet read |
+| order book (arm C) | `/margin/markets/{t}/orderbook` | READABLE |
+| exchange state | `/margin/exchange/status` | READABLE |
+| positions / balance / fills / fee tiers | `/margin/*` | EXISTS, needs credentials |
+| **public trade tape (arm C)** | `/margin/markets/{t}/trades` | **ABSENT (404)** |
+
+**A new gap, recorded rather than worked around.** Arm C declared six independent features;
+one of them, **trade imbalance (buyer- vs seller-initiated volume), has no public source** —
+`/trades` 404s and no funding-ish or trade-ish field rides on the market row (the full
+field set was dumped and scanned). Book-depth imbalance, premium impulse, OI impulse,
+funding impulse and perp return all survive. This is not a contract problem: the version
+declares the features as *candidates tested independently*, so one being unavailable
+removes a candidate rather than invalidating the arm. It becomes a contract problem only if
+someone later reports arm C's result without saying which features it could actually see.
+
+Two things remain unknown and are named as unknown: the **shape** `funding_history` returns
+(the probe now supplies the range, so the next run reads it), and whether the authenticated
+surface carries a trade tape the public one does not.
+
+Still no gate result recorded. A survey prints; a verdict is a recorded evaluator act.
+
+---
+
 ## PERP-V1 PROBE 0 RESULT 2026-08-29 — the perp surface is REAL and readable; funding is the open hole
 
 Assumption **A1** of the pre-registration below tested and **largely confirmed**. Run through
