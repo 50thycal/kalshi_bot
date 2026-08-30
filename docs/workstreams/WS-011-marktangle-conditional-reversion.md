@@ -148,7 +148,12 @@ instrument fixes shipped (two-stage discovery-then-history fetch; the balanced-b
 screen the thesis already pre-registered but the script never had). Contract untouched.
 Detail in `docs/MARKTANGLE_THESIS.md` §8b.
 
-**D3 (new).** How deep is deep enough? KXBTCD alone returns 20,000 settled markets and
+**D3 (sharpened by the fix).** With `/events` enumerating properly, `--max-series` is now
+a prefix of a *real* ranking (series by concurrent open events) rather than a prefix of an
+accident — so the question narrows to how large that budget should be, and whether a
+single series may contribute unboundedly many families. Still open.
+
+**Original D3.** How deep is deep enough? KXBTCD alone returns 20,000 settled markets and
 would dominate any exchange-wide ranking purely by having the most strikes. The current
 `--max-series` cap is a rate-limit guard, not a scientific choice, and a ranking dominated
 by one series is a finding about that series. Decide whether the unit of the sweep should

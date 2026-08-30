@@ -251,11 +251,14 @@ un-restricted settled listing is dominated by whichever series has the most
 *closed* markets — 6,000 markets of listing surfaced three tickers. So the
 universe was never enumerated; it was sampled, badly.
 
-The diagnosed fix is to enumerate from `/events` (`status=open`, nested markets)
-rather than from settled-market pages: open events span the live board across all
-series, which is what "the exchange" means here. Not yet built — three
-acquisition-layer fixes in a row is a scope question for the operator, not a
-thing to keep patching quietly.
+The diagnosed fix is to enumerate from `/events` (`status=open`) rather than from
+settled-market pages. **Operator decision 2026-08-30: build it.** Shipped —
+`discover_series` now reads the live board, where every listing series appears
+exactly once regardless of how many markets it has closed, ordered by concurrent
+open events (a series with more of them recurs more often, which is what the
+hypothesis needs). Volume is deliberately not filtered at discovery: `min_vol`
+belongs to the history query, and applying it here would drop a thin-but-live
+series before its history was ever looked at.
 
 **One lead, explicitly not a result.** `KXUSLTOTAL|3` (a soccer total-goals rung)
 shows `P(Y|Y)` 45.5% against `P(N|N)` 60.0% — asymmetric persistence, the shape

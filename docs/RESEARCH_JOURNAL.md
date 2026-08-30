@@ -122,9 +122,10 @@ and the per-series fetch pulled 9,790 markets. But **discovery found only 3 seri
 enumerating from pages of the un-restricted settled listing is dominated by whichever
 series has the most closed markets, so the universe was sampled rather than enumerated.
 
-Diagnosed fix (not yet built): enumerate from `/events?status=open` with nested markets,
-which spans the live board across all series. Three acquisition-layer fixes in a row is a
-scope question for the operator, so it is being raised rather than patched quietly.
+Diagnosed fix, and the operator's call on 2026-08-30 was to build it: enumerate from
+`/events?status=open`, which is an enumeration of the live board rather than a sample of
+recently-closed markets. Shipped. The next sweep is the first one whose universe is
+actually the exchange.
 
 **Lead, not a result:** `KXUSLTOTAL|3` shows P(Y|Y) 45.5% vs P(N|N) 60.0% — asymmetric
 persistence, the shape the thesis wants. n=79, under every floor, no k* fitted. Recorded
