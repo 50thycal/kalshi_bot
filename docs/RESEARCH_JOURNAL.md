@@ -16,6 +16,61 @@ Conventions:
 
 ---
 
+## PERP-V1 D4 CLOSED 2026-08-30 — no funding source exists. Arm B `perpcarry` is BLOCKED_DATA.
+
+The probe asked the busiest perp on the exchange, twice:
+
+```
+2026-08-30 14:38:20  {'ticker': 'KXBTCPERP', 'keys': ['funding_history'],
+                      'list_lengths': {'funding_history': 0}}
+2026-08-30 14:35:01  {'ticker': 'KXBTCPERP', 'keys': ['funding_history'],
+                      'list_lengths': {'funding_history': 0}}
+```
+
+Empty over a 7-day window on `KXBTCPERP`. **The question is settled.** Four independent
+readings agree:
+
+1. `/margin/funding_history` unscoped → `{"funding_history": []}`.
+2. Scoped to `KXAAVEPERP` → empty.
+3. Scoped to `KXBTCPERP`, the largest open interest on the exchange → empty, twice.
+4. **No funding field on the market row** — all 24 keys read off 252 live snapshots.
+
+Plus the two structural facts: the endpoint sits under `/margin/`, the account namespace
+beside positions, balance, fills and fee tiers, and it **requires auth** (401 unauthenticated).
+A market-wide rates feed has no reason to be empty for BTC over seven days. An account
+funding-**payment** ledger has exactly one reason: we hold no perp positions.
+
+**Verdict: no market-wide funding rate source is reachable on this surface.**
+
+### What that decides
+
+- **WS-010 D4 — CLOSED.** Arm B `perpcarry` is **BLOCKED_DATA**. Its headline metric
+  (`perp_funding_capture_bps`) has no input and never will on the current surface.
+- **A2 — FALSIFIED.** The brief's premise that Kalshi publishes a funding rate, including an
+  estimate for the forming window, is not true of anything we can read.
+- **A4 — CLOSED as originally feared.** The 400 that I read as "funding is reachable" was
+  never evidence of that. Recorded in full, twice over, because the error is the useful part.
+
+### What it does NOT decide
+
+Arm B is **not deleted and not re-scoped**. The package registers it as pre-registered and it
+reaches its gate and fails to produce evidence — which is the correct behaviour of a
+pre-registration, not a bug in it. Rewriting a frozen arm after seeing the evidence is the
+exact move the whole apparatus exists to prevent. Running the cross-sectional ranking on
+**premium** instead of funding is a different hypothesis: a new Version, an operator decision.
+
+**Arms A and C are untouched.** `perprevert` needs mark, index and premium — all three land on
+the market row and are in the tape now. `perplead` needs book depth and returns — also
+landing. The horse race is a two-horse race until someone finds a funding source.
+
+### The one residual thread
+
+`exchange_index` rides on the market row and was never followed. If a future session wants one
+more shot at arm B, that is where to look — but D4 is closed on the evidence in hand, and arm
+B's verdict does not wait on a source nobody has found.
+
+---
+
 ## PERP-V1 FUNDING 2026-08-30 (2) — asked both ways, both empty. Now asking the busiest market.
 
 The ticker-scoped retry answered on the first cycle after the redeploy:
