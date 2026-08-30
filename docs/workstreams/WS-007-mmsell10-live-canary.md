@@ -256,6 +256,73 @@ only ~40 minutes of entries existed and only two had resolved. The operator's `D
 unfloored bar knowingly, precisely so v2 would not have to re-earn v1's n=1588. The honest
 reading: **the promotion rests on v1's history, not on v2's fresh sample.**
 
+## Operator decisions, 2026-08-30 (carry these into the NEXT run)
+
+Two things this canary cannot fix about itself, decided and recorded so the
+successor Version does not inherit them by accident.
+
+**D7. The `twin_mirror_coverage_pct < 50` HOLD stands unfixed for this run.**
+It reads 14.7% and cannot clear. The cause is structural: the twin assumes 100%
+fill, so it saturates its 20-position open cap while live fills ~49% and keeps
+placing (twin open 20, live open 13; the parity report reads *"live placed 147
+orders its twin did NOT open"*). A registered gate clause is immutable from
+registration, so the only fixes were a successor Version (restarting evidence at
+zero) or retuning the twin's cap mid-epoch (voiding the comparison). Neither is
+worth it while the book is profitable and every stop clause works. **For the next
+run:** either set the threshold against what a fill-limited twin can actually
+achieve, or give the twin a larger open cap than live so it is never the binding
+constraint. The clause as written measures the twin's cap, not the mirror.
+
+**D8. Raise `MMSELL_LIVE_MAX_OPEN_POSITIONS` (currently 20) — but NOT mid-run.**
+The 34.5% decision overlap is gate-dominated, mostly `gate:open_cap`, which is
+capacity rather than edge: live is declining candidates it was never allowed to
+attempt. Raising the cap buys more of the SAME distribution, which is the safe
+way to scale — unlike pricing up, which `mmsell10a`/`mmsell10b` measured at
+−4.1c/contract for +3pp of fill rate. It is deliberately not done now: the cap is
+a live knob inside the twin's parameter set, and retuning it mid-epoch voids the
+twin comparison — the fix would be a new twin tag, not a re-read of this one
+(`docs/LIVE_PAPER_TWIN.md`). **For the next run:** raise it in the pre-registered
+envelope, before arming, so the whole epoch runs at one cap.
+
+**Both are capacity levers and neither touches entry pricing.** The 0c offset and
+the 4h timeout stay: the 56 timed-out orders are trades the market declined at our
+price, and buying them is the one thing already measured to destroy this edge.
+
+## XOS-000014 — the 31% of entry orders Kalshi never accepted
+
+The `cancel_reason` was truncated in every view I had read it through. In full it is
+a 404 on `/portfolio/events/orders`: `user_not_found`, *"Exchange user not found. For
+Predictions: reference documentation Exchange Sharding documentation."* The refusals
+are per-series and binary, not load-shaped — `KXMLBHR` 22/22, `KXMLBTOTAL` 20/20,
+`KXMLBSPREAD` 12/12, `KXITFWMATCH` 4/4, `KXITFMATCH` 3/3, `KXBTCD` 5/6, and **0/130
+across the other seventeen series**.
+
+Kalshi has sharded its exchange. This codebase has no concept of a shard: one
+`kalshi_base_url`, every order posted to it. Their doc names two requirements, and
+they are *different problems with different owners*:
+
+1. **Routing.** `exchange_index` rides on `GET /markets` and `GET /events` and is
+   "the authoritative source of truth". As an order parameter, `>= 0` routes to that
+   exchange and `-1` auto-routes from the market ticker. We send neither.
+2. **Collateral.** *"Programmatic traders must preallocate collateral on a given
+   exchange shard before order placement."* Balance is held per shard; `Get Balance`
+   breaks it down by index, and Kalshi can auto-rebalance to a target allocation.
+
+**Why no routing code ships yet.** If we are unfunded on the shard MLB/ITF/BTCD live
+on, correct routing still fails — that is an operator funding decision about real
+money, not a code change. And adding an unrecognised field to the order body risks
+the one path that currently works (130 attempts, 0 rejections) on a live real-money
+book. So a read-only probe (behind `LIVE_SHAPE_PROBE`) reports both halves against
+our own account first: which index the refused series carry versus the accepted
+ones, and which indexes our balance reaches. Balance **amounts are never logged** —
+these lines come back through the ops channel onto a public branch.
+
+**Scale of the prize.** 76 of 246 entry attempts were refused before reaching the
+book. This is not maker queue position — the corrected fill-rate provider already
+reports them as `excluded_never_sent`, correctly declining to blame the strategy for
+orders the venue never took. Fixing it is worth more than any pricing change, and
+costs no edge.
+
 ## Next Step
 
 Watch the pre-registered keep/stop clauses accumulate. `live_canary_keep` reads BLOCKED_DATA
