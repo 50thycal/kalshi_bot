@@ -1,1 +1,1 @@
-{"type":"logs","grep":"shard probe","lines":800,"id":"probe-read-3"}
+{"type":"logs","grep":"shard probe|issue command","lines":800,"id":"probe-read-4"}
