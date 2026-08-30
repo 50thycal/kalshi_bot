@@ -1,6 +1,0 @@
-# ops request: type='db'
-cycles  snaps  books  funding  markets_seen  errors  last_cycle                   
-------  -----  -----  -------  ------------  ------  -----------------------------
-1       21     12     0        21            0       2026-08-30 12:35:42.100167+00
-
-(1 row)
