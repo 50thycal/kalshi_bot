@@ -1,1 +1,1 @@
-{"type":"logs","grep":"shard probe|issue command","lines":800,"id":"probe-read-4"}
+{"type":"xos","command":"issue-command-show","args":["xos14-shard-evidence-20260830"],"id":"xos14-receipt"}
