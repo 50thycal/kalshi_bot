@@ -114,6 +114,26 @@ No gate result is recorded from this. A survey prints; a verdict is a recorded e
 
 ---
 
+## MARKTANGLE 2026-08-30 — Phase-A run 4: enumeration fixed, ranking wrong. Still no verdict.
+
+The `/events` enumerator works: **2,441 series** discovered against 3 from the settled
+listing. The ranking I shipped alongside it does not, and the claim was mine: I ranked by
+concurrent open events on the reasoning that "a series carrying more of them recurs more
+often". False. Many concurrent open events means a broad ONE-SHOT ladder — 50 states, 32
+teams, every SCOTUS case — not a fast-recurring family. The top 40 by that measure
+returned KXNFLWINS 0 settled, KXNBAWINS 0 settled, KXSCOTUSCASE 0 settled: 1,000 markets,
+0 families at the floor, nothing reaching the balance screen.
+
+**Recurrence is not concurrency.** The hypothesis needs series with many events settled
+THROUGH TIME — and the quantity that measures that is exactly what the settled listing is
+biased toward. The listing that made a bad enumerator may make a good recurrence ranker:
+enumerate from `/events`, rank by settled frequency. Not built unilaterally — the ranking
+rule is D3, the operator's, and I have been wrong about it once already.
+
+Still no verdict, still none available.
+
+---
+
 ## MARKTANGLE 2026-08-30 — Phase-A run 3: STILL NO VERDICT. Discovery is the new constraint.
 
 Re-ran the exchange-wide sweep on the fixed instrument (ops `mkt-probe-3`). Both earlier

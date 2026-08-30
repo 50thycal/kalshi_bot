@@ -512,7 +512,7 @@ def main(argv: list[str] | None = None) -> int:
     series_list = [s.strip().upper() for s in args.series.split(",") if s.strip()]
     if not series_list:
         series_list = discover_series(args.discover_pages, args.min_vol)
-        print(f"discovered {len(series_list)} series in the settled listing; "
+        print(f"discovered {len(series_list)} series on the live board; "
               f"pulling history for the top {args.max_series}")
         series_list = series_list[:args.max_series]
     for s in series_list:

@@ -265,8 +265,36 @@ shows `P(Y|Y)` 45.5% against `P(N|N)` 60.0% — asymmetric persistence, the shap
 the thesis is looking for. At n=79 it is far under every floor, no `k*` was
 fitted, and it is recorded as a place to look, not as evidence.
 
-Neither of the first two runs produced a `k*`, and neither did the third, so none
-is a PASS, a FAIL or even the pre-registered HOLD: the HOLD verdict is about a thin *holdout* at a fitted
+**2026-08-30 · run 4 (ops `mkt-probe-4`) · the enumerator works; the RANKING was
+wrong · STILL NO VERDICT.**
+
+Enumeration is fixed, decisively: **2,441 series** discovered, against 3 from the
+settled listing. That part of the diagnosis was right.
+
+The ranking was not, and it was my claim that the data falsified. The fix ranked
+series by **concurrent open events**, on the stated reasoning that "a series
+carrying more of them recurs more often". That is false, and obviously so in
+hindsight: many concurrent open events means a broad ONE-SHOT ladder — 50 states,
+32 teams, every SCOTUS case — not a fast-recurring family. The top 40 by that
+measure returned almost no settled history at all:
+
+```
+KXMIDTERMVOTETURN: 0 settled     KXNFLWINS:  0 settled
+KXNCAAFWINS:       0 settled     KXNBAWINS:  0 settled
+KXSCOTUSCASE:      0 settled     KXGDPYEAR:  0 settled
+```
+
+1,000 markets, 0 families at the floor, nothing even reaching the balance screen.
+
+**Recurrence is not concurrency.** What the hypothesis needs is a series with many
+events SETTLED THROUGH TIME. The quantity that measures it is the one the settled
+listing is biased toward — which is why that listing is a poor enumerator and may
+be a good *recurrence ranker*. Enumerate from `/events`, rank by settled
+frequency: not yet built, and not built unilaterally, because the ranking rule is
+D3 and I have now been wrong about it once.
+
+Neither of the first two runs produced a `k*`, nor the third, nor the fourth, so
+none is a PASS, a FAIL or even the pre-registered HOLD: the HOLD verdict is about a thin *holdout* at a fitted
 threshold, and no threshold was ever reached. The honest label is **instrument
 not yet capable**, and it is recorded here rather than being quietly retried
 until it said something.
