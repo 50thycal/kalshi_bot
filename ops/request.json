@@ -1,1 +1,1 @@
-{"type":"env","set":{"PERPS_COLLECTOR_ENABLED":"true"},"id":"perps-on-1"}
+{"type":"db","id":"perp-tape-1","sql":"SELECT (SELECT count(*) FROM perp_collector_cycles) AS cycles, (SELECT count(*) FROM perp_market_snapshots) AS snapshots, (SELECT count(*) FROM perp_orderbook_snapshots) AS books, (SELECT count(*) FROM perp_funding_observations) AS funding"}
