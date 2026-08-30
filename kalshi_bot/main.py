@@ -1430,7 +1430,7 @@ _SHARD_PROBE_SERIES: tuple[tuple[str, str], ...] = (
 
 
 def _probe_exchange_shard(client) -> None:
-    """Find what distinguishes the markets Kalshi refuses our orders on (XOS-000014).
+    """Confirm WHICH shard our refused markets live on, and whether we are funded there.
 
     31% of the Cmmsell10 canary's entry orders come back 404 `user_not_found`,
     "Exchange user not found. For Predictions: reference documentation Exchange
@@ -1438,12 +1438,26 @@ def _probe_exchange_shard(client) -> None:
     and BTCD; 0% everywhere else). Kalshi has sharded its exchange; this codebase
     has no concept of a shard and posts every order to one `kalshi_base_url`.
 
-    Rather than guess at Kalshi's field name, log the market payload's KEYS for a
-    refused series beside an accepted one and let the diff name it. Read-only:
-    `get_markets` places nothing and moves no money.
+    Kalshi's Exchange Sharding doc names the mechanism, so this no longer has to
+    guess a field name. Two things it says decide our fix, and they need different
+    remedies:
 
-    Market metadata is public, which matters because this log is read back through
-    the ops channel and lands in a public repo. Nothing account-scoped is touched.
+      1. ROUTING. `exchange_index` is carried on GET /markets and GET /events and is
+         "the authoritative source of truth"; as an order parameter, >= 0 routes to
+         that exchange and -1 auto-routes from the market ticker. We send neither.
+      2. COLLATERAL. "Programmatic traders must preallocate collateral on a given
+         exchange shard before order placement." Routing correctly to a shard we
+         hold no balance on still fails.
+
+    So the probe answers both: which `exchange_index` the refused series carry
+    versus the accepted ones, and which indexes our balance is actually spread
+    across. If we are unfunded on the refused shard, no amount of routing code
+    fixes this and it becomes an operator funding decision, not a code change.
+
+    Read-only throughout: `get_markets` and `get_balance` place nothing and move no
+    money. This log is read back through the ops channel into a PUBLIC repo, so the
+    balance breakdown is reduced to indexes and a funded/unfunded flag — never an
+    amount. Market metadata is public already.
     """
     import json
 
@@ -1488,6 +1502,56 @@ def _probe_exchange_shard(client) -> None:
         only_accepted = sorted(seen["ACCEPTED"] - seen["REFUSED"])
         logger.info("shard probe DIFF: only-on-refused=%s only-on-accepted=%s",
                     only_refused or "(none)", only_accepted or "(none)")
+    _probe_shard_funding(client)
+
+
+def _probe_shard_funding(client) -> None:
+    """Which exchange indexes our balance is spread across — indexes only, never amounts.
+
+    Kalshi requires collateral preallocated on a shard before it will take an order
+    there, so an empty index is a funding problem and a missing index is a
+    provisioning one. Neither is fixable by routing code, which is why this runs
+    beside the market-side probe rather than after we have already written some.
+
+    Amounts are deliberately NOT logged: these lines are read back through the ops
+    channel, which commits results to a public branch. `funded` is a bool.
+    """
+    import json
+
+    try:
+        balance = client.get_balance()
+    except AuthError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("shard probe: balance read failed: %s", exc)
+        return
+    if not isinstance(balance, dict):
+        logger.info("shard probe funding: unexpected balance shape %s", type(balance).__name__)
+        return
+    # The doc says Get Balance "provides a breakdown of account balances across
+    # exchange indexes" without fixing the key, so accept either a list of
+    # per-index entries or a flat mapping, and say so plainly when neither is
+    # present rather than reporting an empty breakdown as "no shards".
+    breakdown = None
+    for key in ("exchange_balances", "balances", "exchange_index_balances", "shards"):
+        if isinstance(balance.get(key), (list, dict)):
+            breakdown = balance[key]
+            break
+    if breakdown is None:
+        logger.info("shard probe funding: no per-index breakdown in balance payload "
+                    "(keys=%s) — this account may predate sharding",
+                    json.dumps(sorted(balance))[:300])
+        return
+    entries = breakdown.values() if isinstance(breakdown, dict) else breakdown
+    shape = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        index = entry.get("exchange_index", entry.get("index"))
+        amount = entry.get("balance", entry.get("available_balance", entry.get("amount")))
+        shape.append({"exchange_index": index,
+                      "funded": bool(isinstance(amount, (int, float)) and amount > 0)})
+    logger.info("shard probe funding: %s", json.dumps(shape, default=str)[:400])
 
 
 def _tier_of(limits) -> str:

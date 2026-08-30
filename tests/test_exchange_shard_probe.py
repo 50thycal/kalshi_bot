@@ -7,11 +7,19 @@ and BTCD attempt; 0% across the other seventeen series). Kalshi has sharded its
 exchange and this codebase has no concept of a shard: one `kalshi_base_url`, every
 order posted to it.
 
-The fix is unknown until we can see what differs between a market Kalshi accepts
-our orders on and one it does not, and GUESSING Kalshi's field name is exactly how
-this repo has been burned before (`_tier_of` carries three fallback names for the
-same reason). So the probe measures instead. What this file pins is that the probe
-stays a probe: read-only, both sides sampled, and loud when it cannot sample.
+Kalshi's Exchange Sharding doc names the mechanism: `exchange_index` rides on GET
+/markets and GET /events, and — the part that decides our fix — "programmatic
+traders must preallocate collateral on a given exchange shard before order
+placement". Those are two different failures with two different remedies. Routing
+to a shard we hold no balance on fails just the same, and no routing code fixes
+that; it is an operator funding decision.
+
+So the probe answers both halves against our OWN account rather than against the
+doc: which index the refused series carry versus the accepted ones, and which
+indexes our balance actually reaches. What this file pins is that the probe stays
+a probe — read-only, both sides sampled, loud when it cannot sample, and never
+logging a balance amount, because these lines are read back through the ops
+channel onto a public branch.
 """
 
 from __future__ import annotations
@@ -22,13 +30,21 @@ from kalshi_bot.main import _probe_exchange_shard
 
 
 class _Client:
-    """Records every call. Any method beyond `get_markets` is an order path and
-    must never be reached — the whole point is that this probe risks nothing."""
+    """Records every call. Any method beyond the two read endpoints is an order
+    path and must never be reached — the whole point is that this probe risks
+    nothing."""
 
-    def __init__(self, payloads: dict, fail: set[str] | None = None):
+    def __init__(self, payloads: dict, fail: set[str] | None = None,
+                 balance: dict | None = None):
         self._payloads = payloads
         self._fail = fail or set()
+        self._balance = balance if balance is not None else {"balance": 12345}
         self.series_asked: list[str] = []
+
+    def get_balance(self):
+        if self._balance == "boom":
+            raise RuntimeError("balance unavailable")
+        return self._balance
 
     def get_markets(self, *, series_ticker=None, limit=1, status="open",
                     cursor=None, min_close_ts=None):
@@ -42,6 +58,15 @@ class _Client:
 
     def __getattr__(self, name):  # pragma: no cover - the assertion IS the point
         raise AssertionError(f"the shard probe must not call {name!r}")
+
+
+#: Real balances, so a regression that logs the amount is caught by value.
+_FUNDED_SHARDS = {
+    "exchange_balances": [
+        {"exchange_index": 0, "balance": 4213},
+        {"exchange_index": 1, "balance": 0},
+    ]
+}
 
 
 def _market(**extra):
@@ -90,11 +115,56 @@ def test_probe_surfaces_a_differing_value_not_only_a_missing_key(caplog):
 
 
 def test_probe_is_read_only(caplog):
-    """`_Client.__getattr__` raises on anything but `get_markets`. If this passes,
-    the probe touched no order path, no balance and no position."""
+    """`_Client.__getattr__` raises on anything but the two read endpoints. If this
+    passes, the probe touched no order path and no position."""
     with caplog.at_level(logging.INFO):
         _probe_exchange_shard(_Client({"KXMLBHR": _market()}))
     assert "shard probe" in caplog.text
+
+
+def test_probe_reports_which_shards_are_funded(caplog):
+    """Kalshi requires collateral preallocated on a shard before it takes an order
+    there, so an unfunded index is a funding problem no routing code can fix.
+    Reporting it beside the market-side diff is what stops us writing routing for
+    a shard we were never provisioned on."""
+    with caplog.at_level(logging.INFO):
+        _probe_exchange_shard(_Client({}, balance=_FUNDED_SHARDS))
+
+    text = caplog.text
+    assert "shard probe funding" in text
+    assert '"exchange_index": 0' in text and '"funded": true' in text
+    assert '"exchange_index": 1' in text and '"funded": false' in text
+
+
+def test_probe_never_logs_a_balance_amount(caplog):
+    """These lines are read back through the ops channel, which commits results to
+    a PUBLIC branch. The breakdown must carry indexes and a bool, never money."""
+    with caplog.at_level(logging.INFO):
+        _probe_exchange_shard(_Client({}, balance=_FUNDED_SHARDS))
+
+    assert "4213" not in caplog.text
+
+
+def test_an_account_with_no_shard_breakdown_says_so(caplog):
+    """A pre-sharding balance payload has no per-index breakdown. That must read as
+    "none present", not as an empty list of shards — the two point at opposite
+    conclusions."""
+    with caplog.at_level(logging.INFO):
+        _probe_exchange_shard(_Client({}, balance={"balance": 4213}))
+
+    assert "no per-index breakdown" in caplog.text
+    assert "4213" not in caplog.text
+
+
+def test_a_failing_balance_read_does_not_stop_the_probe(caplog):
+    """The market-side diff is the more important half; losing the balance read
+    must not cost us both."""
+    client = _Client({"KXMLBHR": _market()}, balance="boom")
+    with caplog.at_level(logging.INFO):
+        _probe_exchange_shard(client)
+
+    assert "balance read failed" in caplog.text
+    assert "KXMLBHR" in client.series_asked
 
 
 def test_a_series_with_no_open_market_is_reported_not_skipped_silently(caplog):

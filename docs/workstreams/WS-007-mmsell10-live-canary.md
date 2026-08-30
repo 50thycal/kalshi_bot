@@ -288,6 +288,41 @@ envelope, before arming, so the whole epoch runs at one cap.
 the 4h timeout stay: the 56 timed-out orders are trades the market declined at our
 price, and buying them is the one thing already measured to destroy this edge.
 
+## XOS-000014 — the 31% of entry orders Kalshi never accepted
+
+The `cancel_reason` was truncated in every view I had read it through. In full it is
+a 404 on `/portfolio/events/orders`: `user_not_found`, *"Exchange user not found. For
+Predictions: reference documentation Exchange Sharding documentation."* The refusals
+are per-series and binary, not load-shaped — `KXMLBHR` 22/22, `KXMLBTOTAL` 20/20,
+`KXMLBSPREAD` 12/12, `KXITFWMATCH` 4/4, `KXITFMATCH` 3/3, `KXBTCD` 5/6, and **0/130
+across the other seventeen series**.
+
+Kalshi has sharded its exchange. This codebase has no concept of a shard: one
+`kalshi_base_url`, every order posted to it. Their doc names two requirements, and
+they are *different problems with different owners*:
+
+1. **Routing.** `exchange_index` rides on `GET /markets` and `GET /events` and is
+   "the authoritative source of truth". As an order parameter, `>= 0` routes to that
+   exchange and `-1` auto-routes from the market ticker. We send neither.
+2. **Collateral.** *"Programmatic traders must preallocate collateral on a given
+   exchange shard before order placement."* Balance is held per shard; `Get Balance`
+   breaks it down by index, and Kalshi can auto-rebalance to a target allocation.
+
+**Why no routing code ships yet.** If we are unfunded on the shard MLB/ITF/BTCD live
+on, correct routing still fails — that is an operator funding decision about real
+money, not a code change. And adding an unrecognised field to the order body risks
+the one path that currently works (130 attempts, 0 rejections) on a live real-money
+book. So a read-only probe (behind `LIVE_SHAPE_PROBE`) reports both halves against
+our own account first: which index the refused series carry versus the accepted
+ones, and which indexes our balance reaches. Balance **amounts are never logged** —
+these lines come back through the ops channel onto a public branch.
+
+**Scale of the prize.** 76 of 246 entry attempts were refused before reaching the
+book. This is not maker queue position — the corrected fill-rate provider already
+reports them as `excluded_never_sent`, correctly declining to blame the strategy for
+orders the venue never took. Fixing it is worth more than any pricing change, and
+costs no edge.
+
 ## Next Step
 
 Watch the pre-registered keep/stop clauses accumulate. `live_canary_keep` reads BLOCKED_DATA
