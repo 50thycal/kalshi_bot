@@ -14,8 +14,18 @@ ops/request.json shapes:
   {"type": "xos", "command": "issue-show", "args": ["XOS-000123"]}
   {"type": "xos", "command": "issue-candidates"}        # anomalies with no open issue
   {"type": "env"}                                       # read allowlisted Railway env vars
-  {"type": "env", "set": {"KILL_SWITCH": "false"}}      # set allowlisted vars + redeploy
+  {"type": "env", "action": "set", "values": {"KILL_SWITCH": "false"}}   # MUTATING
+  {"type": "env", "set": {"KILL_SWITCH": "false"}}      # the same mutation, legacy spelling
+  {"type": "capabilities"}                              # what this channel can do, generated
+  {"type": "doctor"}                                    # one-request operating snapshot
+  {"type": "incident", "service": "main", "window_minutes": 30}
   {"type": "noop"}   # placeholder; do nothing
+
+Any request may carry public-safe provenance — "actor", "purpose", "workstream",
+"issue" — which is echoed in the result header and the receipt and is never
+interpreted as authority. Every run writes a machine-readable receipt (see
+scripts/ops_meta.py) recording what was asked, by whom, against which code, and
+what happened; the workflow publishes it beside the result.
 
 `env` and `logs` requests may add "service" to pick which Railway service to act on:
   {"type": "logs", "service": "evo"}                    # logs from the evo worker
@@ -289,6 +299,43 @@ def refuse_if_stale() -> int | None:
     return 1
 
 
+#: Where this run's machine-readable receipt is written. The workflow points it
+#: at a temp file, completes it with facts only the workflow knows (publication
+#: outcome), and publishes it beside the result. Unset — a developer running the
+#: runner locally — means no receipt, not a failure.
+RECEIPT_PATH_ENV = "OPS_RECEIPT_PATH"
+
+
+def _utcnow() -> str:
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _write_receipt(receipt: dict) -> None:
+    """Persist the receipt as it currently stands.
+
+    Written BEFORE the request runs as well as after it, so a request that
+    crashes the interpreter still leaves a record of what was attempted — which
+    is precisely the case where "what did that session do?" is hardest to answer
+    afterwards.
+    """
+    path = os.environ.get(RECEIPT_PATH_ENV, "").strip()
+    if not path:
+        return
+    try:
+        with open(path, "w") as fh:
+            json.dump(receipt, fh, indent=2, sort_keys=True, default=str)
+    except OSError as exc:                      # a receipt must never fail a request
+        print(f"# receipt not written: {exc}", file=sys.stderr)
+
+
+def _finish_receipt(receipt: dict, status: int) -> None:
+    receipt["finished_at"] = _utcnow()
+    receipt["exit_status"] = status
+    _write_receipt(receipt)
+
+
 def main() -> int:
     try:
         with open(REQUEST_PATH) as f:
@@ -300,8 +347,49 @@ def main() -> int:
         print(f"Invalid JSON in {REQUEST_PATH}: {e}", file=sys.stderr)
         return 1
 
-    rtype = (req.get("type") or "").strip().lower()
-    print(f"# ops request: type={rtype!r}")
+    import ops_meta
+
+    rtype = ops_meta.request_type(req)
+    receipt = ops_meta.build_receipt(req, started_at=_utcnow())
+    _write_receipt(receipt)
+    # The classification is the FIRST thing in the result, above any output: a
+    # reader must never have to infer that they are looking at a production
+    # change from the presence of a JSON key.
+    print(ops_meta.header(req, receipt))
+    if receipt["class"] == "UNCLASSIFIED":
+        # build_receipt could not tell a read from a mutation. Refuse rather
+        # than dispatch: the ambiguity is in the REQUEST, and the runner is not
+        # entitled to resolve it in the permissive direction.
+        try:
+            ops_meta.classify(req)
+        except ops_meta.OpsRequestError as exc:
+            print(f"refusing an ambiguous request: {exc}", file=sys.stderr)
+        _finish_receipt(receipt, 1)
+        return 1
+
+    # Several of the reused helpers report a bad request by RAISING SystemExit
+    # rather than returning (db_query's SQL validation, railway_logs' deployment
+    # lookup). That produced the right exit status but skipped the receipt, so
+    # the requests most worth having a record of — the refused ones — were the
+    # ones without one. Catch it here, keep the message and the status, and
+    # finish the receipt either way.
+    status = 1
+    try:
+        status = _dispatch(rtype, req, receipt)
+    except SystemExit as exc:
+        code = exc.code
+        if isinstance(code, str):
+            print(code, file=sys.stderr)
+            status = 1
+        else:
+            status = int(code or 0)
+    finally:
+        _finish_receipt(receipt, status)
+    return status
+
+
+def _dispatch(rtype: str, req: dict, receipt: dict) -> int:
+    import ops_meta
 
     if rtype in ("", "noop"):
         print("(noop — nothing to do)")
@@ -340,9 +428,38 @@ def main() -> int:
             return 1
         import railway_env
 
-        if req.get("set"):
-            return railway_env.run_set(dict(req["set"]), redeploy=req.get("redeploy", True))
-        return railway_env.run_get()
+        mutation = ops_meta.env_mutation(req)
+        if not mutation:
+            return railway_env.run_get()
+        status, env_receipt = railway_env.apply_set(
+            mutation, redeploy=req.get("redeploy", True), verify=req.get("verify", True)
+        )
+        receipt["mutation"] = env_receipt
+        # Post-change canonical checks. The runner does not own an opinion about
+        # whether the system is healthy after a change — it asks the canonical
+        # readers and prints what they said, exactly as an `xos` request would.
+        # Which checks are owed is decided by the variable names, in ops_meta,
+        # never by strategy-specific logic here.
+        # Only when something actually changed: a refused or credential-less
+        # mutation has nothing to verify, and running the canonical readers
+        # anyway would print a health report next to a change that never landed.
+        hooks = ops_meta.verification_hooks(mutation) if env_receipt.get("set_ok") else ()
+        results = {}
+        if hooks:
+            import ops_doctor
+
+            print(f"\n# post-change canonical checks: {', '.join(hooks)}")
+            for command in hooks:
+                ok, text = ops_doctor.xos_read([command])
+                print(f"# $ xos {command}")
+                for line in text.splitlines()[:ops_doctor.MAX_XOS_LINES]:
+                    print(f"#   {line}")
+                results[command] = "ok" if ok else "non-zero"
+                if not ok:
+                    print(f"# {command} reported a problem — read the block above",
+                          file=sys.stderr)
+        receipt["post_change_checks"] = results
+        return status
 
     if rtype == "xos":
         # Run the CANONICAL Experiment OS read CLI (read-only subcommands only)
@@ -378,6 +495,24 @@ def main() -> int:
 
         return xos_main(argv)
 
+    if rtype == "capabilities":
+        snapshot = ops_meta.capability_snapshot()
+        if (req.get("format") or "").strip().lower() == "json":
+            print(json.dumps(snapshot, indent=2, sort_keys=True))
+        else:
+            print(ops_meta.render_capabilities(snapshot))
+        return 0
+
+    if rtype == "doctor":
+        import ops_doctor
+
+        return ops_doctor.doctor(req)
+
+    if rtype == "incident":
+        import ops_doctor
+
+        return ops_doctor.incident(req)
+
     if rtype == "script":
         name = (req.get("name") or "").strip()
         if name not in ALLOWED_SCRIPTS:
@@ -402,6 +537,13 @@ def serve() -> int:
     """
     stale = refuse_if_stale()
     if stale is not None:
+        # Even a refusal leaves a receipt: "the runner refused to serve" is a
+        # fact about a production request, and the receipt is where facts about
+        # production requests live.
+        now = _utcnow()
+        _write_receipt({"type": "(refused)", "class": "UNCLASSIFIED", "id": "",
+                        "started_at": now, "finished_at": now, "exit_status": stale,
+                        "error": "the runner could not attest default-branch code"})
         return stale
     return main()
 

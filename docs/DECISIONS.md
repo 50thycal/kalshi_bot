@@ -591,3 +591,85 @@ and no deployment, and its package has no `arm` function at all.
 *Revisit if:* one arm clears its bar and the other two are still accumulating. The answer is
 not to unfreeze the version but to register the paper deployment for the arms that passed
 and let the rest keep gathering evidence under the same contract.
+
+---
+
+### DEC-009 — An ops request declares its intent, and a production change is verified rather than assumed
+
+**Date:** 2026-08-30
+**Status:** Accepted
+
+**Context**
+
+The ops channel is the only path by which a session reads production and, within a tight
+allowlist, changes the running configuration of a live trading worker. Four properties of
+the pre-existing contract were failures waiting to be found rather than defects yet to be
+fixed.
+
+A **failed request left the run green**: the runner's exit status was discarded by
+`| tee … || true` so the error could still be published, and the Actions run then reported
+success. Anything reading run status — a person scanning the list, a future automation —
+learned nothing.
+
+**Authority was invisible in the request.** `{"type":"env"}` reads configuration;
+`{"type":"env","set":{…}}` changes a live trading worker and redeploys it. One JSON key
+apart, identical in the result, and the result said neither.
+
+**A mutation reported an intention, not an outcome.** `set + redeploy requested` is a
+statement about what this process asked Railway for. It cannot distinguish a landed change
+from an upsert that lost a race, or from a redeploy Railway declined.
+
+**The channel's real surface existed only in prose.** That is XOS-000005 exactly: two
+commands the runbook advertised and the runner refused, for weeks, indistinguishable from
+commands that never existed.
+
+**Decision**
+
+Four rules, each held by code and by a test rather than by convention.
+
+1. **A request's classification is the first thing in its result.** `ops_meta.classify`
+   decides READ or MUTATING, and a MUTATING result opens with a banner naming the variables
+   before any output. New callers say `{"action":"set","values":{…}}`; the legacy `set`
+   spelling keeps working; an AMBIGUOUS request — `action:"get"` carrying values,
+   `action:"set"` carrying none — is refused. The only safe reading of "I cannot tell
+   whether you meant to change production" is to stop.
+2. **A mutation ends in a verdict about the system, not about the request.** Record the
+   before state, apply, report the redeploy outcome, read the state back:
+   `VERIFIED` / `APPLIED_BUT_UNVERIFIED` / `FAILED`. Where the change touched Experiment OS
+   or live-strategy state, the canonical `enforcement` and `readiness` reads run afterwards
+   and are printed with it — the runner asks the canonical readers and shows what they said;
+   it never forms a health opinion of its own.
+3. **A failed request turns the run red, after its output is published.** Both requirements
+   at once: the status is captured, the result and receipt are published, and the workflow
+   re-raises the failure as its last step. Publication failure is a separate loud failure.
+4. **The channel describes itself from its own allowlists.** `capabilities` is generated
+   from `ops_runner`'s and `railway_env`'s data structures; `doctor` and `incident` compose
+   canonical readers; the docs-parity tests assert against the same generator. A capability
+   cannot be documented into existence, and a request type cannot be added invisibly.
+
+Receipts make all of this legible after the fact: every run writes
+`ops/results/<id>.receipt.json` — type, classification, provenance, timestamps, serving code
+SHA, target service, exit status, and for a mutation the before/after and the verdict.
+Receipts for changes to real-money capability, the risk envelope around it, or the three
+Experiment OS write transports are additionally appended to the long-lived `ops-audit`
+branch, because `ops/results` is 80-file scratch and a live arm can fall off the end of it
+in an afternoon.
+
+**Consequences**
+
+Optional provenance (`actor`, `purpose`, `workstream`, `issue`) is carried into the header
+and the receipt. It is a **label and never a credential**: the allowlists decide what is
+permitted, not who claims to be asking. Nothing here widens authority — no arbitrary shell,
+no arbitrary Railway access, no writable database credential, no settable secret, no
+Experiment OS write path against Postgres. `doctor` and `incident` are reads that compose
+existing readers, and the fact that the runner can now say more about a mutation does not
+mean it may perform more of them.
+
+The executing workflow file lives on the `ops` transport branch, so the exit-status fix, the
+receipt publication and the audit archive reach production by a fast-forward commit onto
+`ops` in an idle window — not by merging this decision. The runner's own code continues to
+come from the default branch on every run.
+
+*Revisit if:* a fifth request family needs authority that is neither "read production" nor
+"set an allowlisted variable". That is not a new request type; it is a question about
+whether this channel should hold that authority at all.

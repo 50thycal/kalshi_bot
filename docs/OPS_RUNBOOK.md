@@ -45,10 +45,19 @@ To run a request:
    {"type": "logs", "limit": 200, "filter": "", "deployment_id": "", "id": "logs-1"}
    {"type": "script", "name": "weather_model_check", "args": ["--sigma", "1.5"]}
    {"type": "xos",  "command": "control-tower", "id": "ct-1"}   # canonical Experiment OS read
+   {"type": "capabilities", "id": "cap-1"}                  # what this channel can do, generated
+   {"type": "doctor", "id": "doc-1"}                        # one-request operating snapshot
+   {"type": "incident", "service": "main", "window_minutes": 30, "id": "inc-1"}
    {"type": "env"}                                          # read allowlisted Railway vars
-   {"type": "env", "set": {"KILL_SWITCH": "false"}}         # set allowlisted vars + redeploy
+   {"type": "env", "action": "set", "values": {"KILL_SWITCH": "false"}}  # MUTATING + redeploy
    {"type": "noop"}
    ```
+
+   Start with `capabilities` and `doctor` on a new session: the first says what
+   the channel can currently do (generated from the allowlists, so it cannot go
+   stale the way this document can), the second says what production is currently
+   doing. Everything below is detail.
+
    `script` runs an allowlisted self-contained read-only analysis script from
    `scripts/` (see `ALLOWED_SCRIPTS` in `scripts/ops_runner.py`).
 
@@ -204,6 +213,110 @@ To run a request:
    adding its `env:` passthrough to `.github/workflows/ops-runner.yml` on `ops` as
    well as on the default branch — a plain fast-forward commit is enough for an
    additive change like this; the force-push procedure below is only for a rewrite.
+
+   **Ask the channel what it can do, rather than trusting this document.** Prose
+   drifts from allowlists — that is XOS-000005, where two commands the runbook
+   advertised were refused in production for weeks. `capabilities` is generated
+   from the live allowlists themselves, and the docs/runner parity tests read the
+   same generator:
+
+   ```jsonc
+   {"type":"capabilities","id":"cap-1"}                 // human-readable
+   {"type":"capabilities","format":"json","id":"cap-2"} // machine-readable
+   ```
+
+   It reports the SHA of the code serving the request, every request type with
+   its READ/MUTATING classification, which services are configured (never their
+   IDs — those are secrets), the `xos` and script allowlists, every settable
+   variable with the redacted and durably-audited ones marked, and the limits.
+
+   **`doctor` — one request instead of six.** Establishing operating context used
+   to take a handful of round trips at ~60s each, re-derived from prose every
+   session, which is how two sessions ended up with different pictures of the same
+   production system:
+
+   ```jsonc
+   {"type":"doctor","id":"doc-1"}
+   ```
+
+   Runner freshness and code SHA · read-only DB connectivity, the last `bot_runs`
+   cycles and the recent ERROR count · Railway reachability and latest deployment
+   per configured service · the non-secret critical runtime config (`KILL_SWITCH`,
+   `LIVE_ENABLED`, `LIVE_STRATEGIES`, exposure caps, enforcement mode) · and
+   Experiment OS `enforcement`, `readiness` and open issues read through the
+   **canonical CLI**, not a re-implementation. A subsystem that cannot answer is a
+   WARNING in the report; the request still succeeds, because a snapshot with one
+   dead subsystem is exactly the snapshot you need.
+
+   **`incident` — the bundle you would have assembled by hand.**
+
+   ```jsonc
+   {"type":"incident","service":"main","window_minutes":30,"id":"inc-1"}
+   ```
+
+   Runner and deployment identity · service reachability · bounded recent logs ·
+   `system_events` at WARNING+ over the window · live orders, paper trades and
+   risk refusals over the window · `control-tower` and `issue-candidates` from the
+   canonical CLI. Every section is capped: summaries and identifiers, never a raw
+   dump. A finding here is **not durable state** — anything real belongs in an
+   Experiment OS issue.
+
+   **Provenance and receipts.** Any request may carry `actor`, `purpose`,
+   `workstream` and `issue`. They are echoed in the result header and recorded in
+   `ops/results/<id>.receipt.json` beside the output: request type and
+   classification, provenance, start/end, the serving code SHA, target service,
+   the command's exit status and where the result landed. They are **labels, not
+   authority** — the allowlists decide what is permitted, never who claims to be
+   asking. Receipts are pruned with the results they belong to; the ones that
+   matter are archived (below).
+
+   **A mutation must be unmistakable.** `{"type":"env"}` and
+   `{"type":"env","set":{…}}` used to differ by one key despite differing entirely
+   in authority. Say which one you mean:
+
+   ```jsonc
+   {"type":"env","action":"get","id":"env-1"}
+   {"type":"env","action":"set","values":{"KILL_SWITCH":"true"},"id":"kill-1"}
+   ```
+
+   The legacy `"set"` spelling still works and means the same thing. An ambiguous
+   request — `action:"get"` carrying values, `action:"set"` carrying none — is
+   **refused**, because the only safe reading of "I cannot tell whether you meant
+   to change production" is to stop.
+
+   **Change, then verify.** A mutation shouts in the first line of the result,
+   records the BEFORE state, applies, reports the redeploy outcome, reads the
+   state BACK, and ends in one verdict:
+
+   | verdict | means |
+   |---|---|
+   | `VERIFIED` | every target reads back as requested |
+   | `APPLIED_BUT_UNVERIFIED` | the writes were accepted but the readback could not confirm them — **do not act on it as done** |
+   | `FAILED` | at least one write was refused |
+
+   When the mutation touched Experiment OS or live-strategy state, the canonical
+   `enforcement` and `readiness` reads run afterwards and print with it. The
+   runner holds no opinion of its own about health: it asks the canonical readers
+   and shows what they said. `"verify": false` skips the readback; `"redeploy":
+   false` applies without restarting the service.
+
+   **Durable audit of production changes.** `ops/results` is bounded scratch — 80
+   files deep, and a busy afternoon can push a live arm off the end of it within
+   hours. Receipts for changes to real-money capability, the risk envelope around
+   it, or the Experiment OS write transports (`ops_meta.AUDIT_WORTHY_VARS`, decided
+   in code and asserted by tests) are therefore appended to the long-lived
+   **`ops-audit`** branch under `receipts/<timestamp>-<id>.json`, in the same
+   spirit as `digest-archive`: never merged, never deployed, only ever grows.
+   Receipts only — request payloads are not copied there. An ATTEMPTED change that
+   failed is archived too; "someone tried to arm this and it was refused" is
+   history.
+
+   **A failed request turns the run red.** The runner's exit status is captured,
+   the result is published either way, and the workflow then re-raises the
+   failure. Green means the request succeeded; a publication failure fails
+   separately and loudly. (Before this, a failed request published its error and
+   left the run green — indistinguishable from success to anything reading run
+   status.)
 
    **Reading a book's evidence funnel (XOS-000004).** Every series-addressed book
    ends its cycle line with a bounded, publishable funnel summary, so the ops logs
@@ -617,6 +730,22 @@ deletion inside a normal commit, not a branch deletion) all remain fast-forward
 updates.
 
 #### The rare exception: changing the workflow file
+
+An ORDINARY change to the workflow file — adding a step, adding a secret
+passthrough, fixing the failure-status handling — is a **plain fast-forward
+commit on `ops`**, not a rewrite. The `ops-transport-guard` ruleset blocks
+deletion and non-fast-forward updates only, so committing a new
+`.github/workflows/ops-runner.yml` onto the tip of `ops` is allowed and preserves
+every in-flight request and result. Do it while the channel is idle (step 1
+below), then validate with a real round trip (step 4 below). The rewrite
+procedure that follows is only for the case where the branch's history itself
+has to be replaced.
+
+Note that the workflow, `ops/README.md` and the request/result files are the ONLY
+things on `ops` that matter; the runner's code always comes from the default
+branch, so merging a change to `scripts/ops_runner.py` needs nothing done to this
+branch at all.
+
 
 The only remaining reason to rewrite `ops` is a change to
 `.github/workflows/ops-runner.yml` itself, which Actions loads from the

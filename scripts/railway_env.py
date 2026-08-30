@@ -302,17 +302,29 @@ def _ctx():
     return token, project, env_id, svc
 
 
-def run_get() -> int:
+def read_vars() -> dict:
+    """Every variable Railway holds for the selected service, as a dict.
+
+    Split out of `run_get` because three callers now need the VALUES rather than
+    the printout: the read itself, the before/after readback around a mutation,
+    and `ops_doctor`'s runtime-config section. Filtering to the allowlist is the
+    caller's job — a mutation has to be able to see that a variable it is about
+    to write is currently unset, and `_echo` is what decides what may be printed.
+    """
     ctx = _ctx()
     if not ctx:
-        return 1
+        raise RailwayError("RAILWAY_TOKEN/PROJECT_ID/ENVIRONMENT_ID/SERVICE_ID must all be set")
     token, project, env_id, svc = ctx
+    data = _graphql(_QUERY, {"p": project, "e": env_id, "s": svc}, token)
+    return dict(data.get("variables") or {})
+
+
+def run_get() -> int:
     try:
-        data = _graphql(_QUERY, {"p": project, "e": env_id, "s": svc}, token)
+        allvars = read_vars()
     except RailwayError as exc:
         print(f"env read failed: {exc}", file=sys.stderr)
         return 1
-    allvars = data.get("variables") or {}
     print("# current allowlisted env vars (secrets hidden):")
     for k in sorted(ALLOWED_VARS):
         if k in allvars:
@@ -320,17 +332,47 @@ def run_get() -> int:
     return 0
 
 
-def run_set(mapping: dict, redeploy: bool = True) -> int:
+def run_set(mapping: dict, redeploy: bool = True, verify: bool = True) -> int:
+    """Apply a bounded mutation. The thin wrapper: status only, for the CLI."""
+    status, _receipt = apply_set(mapping, redeploy=redeploy, verify=verify)
+    return status
+
+
+def apply_set(mapping: dict, *, redeploy: bool = True,
+              verify: bool = True) -> tuple[int, dict]:
+    """Change allowlisted variables, then go and check what actually happened.
+
+    The old contract ended at "set + redeploy requested", which is a statement
+    about what this process ASKED FOR, not about the system. An operator reading
+    it could not tell a landed change from an upsert that silently lost a race
+    with a concurrent edit, or from a redeploy Railway declined. So the mutation
+    now records pre-state, applies, records the redeploy outcome, reads the
+    effective state back, and ends in one of three verdicts:
+
+      VERIFIED               every target reads back as requested
+      APPLIED_BUT_UNVERIFIED the writes were accepted but the readback could not
+                             confirm them (Railway unreachable, or a value came
+                             back different — say so rather than assume)
+      FAILED                 at least one write was refused or failed
+
+    Redacted variables stay redacted on both sides of the comparison: the
+    receipt reports that a redacted value CHANGED, and its length and digest,
+    never its contents.
+    """
+    receipt = {"verdict": "FAILED", "targets": sorted(mapping), "redeploy": None,
+               "set_ok": 0, "set_failed": [], "changes": {}}
     # Validate names FIRST (pure check, no network/creds needed) — fail closed on any
     # variable outside the allowlist; never partially apply a request with a bad name.
     bad = [k for k in mapping if k not in ALLOWED_VARS]
     if bad:
         print(f"refusing to set non-allowlisted vars: {sorted(bad)}", file=sys.stderr)
         print(f"allowed: {sorted(ALLOWED_VARS)}", file=sys.stderr)
-        return 1
+        receipt["error"] = "non-allowlisted variables"
+        return 1, receipt
     if not mapping:
         print("env set request has no variables", file=sys.stderr)
-        return 1
+        receipt["error"] = "no variables"
+        return 1, receipt
     # Bound every value BEFORE touching the network — a body too large to be a
     # legitimate command should never leave this process, and fail-closed here
     # keeps the batch all-or-nothing the same way a bad name does.
@@ -341,11 +383,31 @@ def run_set(mapping: dict, redeploy: bool = True) -> int:
     if oversized:
         print(f"refusing to set oversized vars (limit {MAX_VALUE_BYTES} bytes): "
               f"{sorted(oversized)}", file=sys.stderr)
-        return 1
+        receipt["error"] = "oversized values"
+        return 1, receipt
     ctx = _ctx()
     if not ctx:
-        return 1
+        receipt["error"] = "railway context incomplete"
+        return 1, receipt
     token, project, env_id, svc = ctx
+
+    # --- before -----------------------------------------------------------
+    before: dict | None
+    try:
+        before = {k: v for k, v in read_vars().items() if k in mapping}
+    except RailwayError as exc:
+        before = None
+        print(f"# pre-state unreadable ({exc}) — the change will be applied but "
+              "cannot be compared", file=sys.stderr)
+    if before is not None:
+        print("# BEFORE:")
+        for name in sorted(mapping):
+            if name in before:
+                print(_echo(name, before[name], "  "))
+            else:
+                print(f"  {name}=(unset)")
+
+    # --- apply ------------------------------------------------------------
     # Each upsert retries internally; a persistent failure on one var does NOT abort the
     # batch (upserts are idempotent, so a re-run safely re-applies any that didn't land).
     ok, failed = 0, []
@@ -362,13 +424,72 @@ def run_set(mapping: dict, redeploy: bool = True) -> int:
     print(f"# {ok}/{len(mapping)} variables set")
     if failed:
         print(f"# NOT set (re-run to retry; idempotent): {failed}", file=sys.stderr)
+    receipt["set_ok"] = ok
+    receipt["set_failed"] = failed
+
+    # --- redeploy ---------------------------------------------------------
     if ok and redeploy:
         try:
             _graphql(_REDEPLOY, {"e": env_id, "s": svc}, token)
             print("# redeploy triggered — the worker will restart with the new config")
+            receipt["redeploy"] = "TRIGGERED"
         except RailwayError as exc:
             print(f"# redeploy failed (vars apply on the next deploy): {exc}", file=sys.stderr)
-    return 0 if not failed else 1
+            receipt["redeploy"] = f"FAILED: {exc}"
+    elif redeploy:
+        receipt["redeploy"] = "SKIPPED (nothing was set)"
+    else:
+        receipt["redeploy"] = "NOT REQUESTED (vars apply on the next deploy)"
+
+    # --- after ------------------------------------------------------------
+    if not verify:
+        receipt["verdict"] = "FAILED" if failed else "APPLIED_BUT_UNVERIFIED"
+        print(f"# VERDICT: {receipt['verdict']} (verification not requested)")
+        return (1 if failed else 0), receipt
+    mismatched: list[str] = []
+    try:
+        after = {k: v for k, v in read_vars().items() if k in mapping}
+    except RailwayError as exc:
+        after = None
+        print(f"# post-state unreadable: {exc}", file=sys.stderr)
+    if after is not None:
+        print("# AFTER:")
+        for name in sorted(mapping):
+            if name in after:
+                print(_echo(name, after[name], "  "))
+            else:
+                print(f"  {name}=(unset)")
+            if str(after.get(name)) != str(mapping[name]):
+                mismatched.append(name)
+            receipt["changes"][name] = {
+                "before": _describe(name, before.get(name)) if before is not None else "(unread)",
+                "after": _describe(name, after.get(name)),
+                "requested": _describe(name, mapping[name]),
+            }
+    if failed:
+        receipt["verdict"] = "FAILED"
+    elif after is None or mismatched:
+        receipt["verdict"] = "APPLIED_BUT_UNVERIFIED"
+        if mismatched:
+            print(f"# read back DIFFERENT from requested: {sorted(mismatched)}",
+                  file=sys.stderr)
+    else:
+        receipt["verdict"] = "VERIFIED"
+    print(f"# VERDICT: {receipt['verdict']}")
+    if receipt["verdict"] != "VERIFIED":
+        print("# the change is NOT confirmed — re-read with {\"type\":\"env\"} before "
+              "acting on it", file=sys.stderr)
+    return (1 if failed else 0), receipt
+
+
+def _describe(name: str, value) -> str:
+    """A value as it may appear in a RECEIPT — same redaction rule as output."""
+    if value is None:
+        return "(unset)"
+    text = str(value)
+    if name in REDACTED_VARS:
+        return f"<redacted {len(text.encode('utf-8'))} bytes, sha256:{_digest(text)[:16]}>"
+    return text
 
 
 def main(argv: list[str] | None = None) -> int:

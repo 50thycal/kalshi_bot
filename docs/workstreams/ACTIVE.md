@@ -3,7 +3,7 @@
 The project's active-work control board — what is being designed and built right now, and
 where each effort is. Read it first on a continuation.
 
-**Updated:** 2026-08-29 · **Build OS v0.4**
+**Updated:** 2026-08-30 · **Build OS v0.4**
 
 | ID | Workstream | Phase | Status | Current Next Step | Related PR |
 |---|---|---|---|---|---|
@@ -18,6 +18,7 @@ where each effort is. Read it first on a continuation.
 | [WS-009](WS-009-livedash-load-and-selection.md) | Live-vs-paper dashboard: load cost, run selection, retired-pair landing | REVIEW | Active | Merged (#271, #272, #273). Selection, layout and D3 all verified; one item left — confirm on the deployed livedash that first paint is seconds not half a minute, which needs an operator or a browser on the public URL | [#271](https://github.com/50thycal/kalshi_bot/pull/271) |
 | [WS-010](WS-010-perp-v1-pre-registration.md) | PERP-V1: a research surface for Kalshi perpetual futures | BUILDING | Active | Merge the collector, then set `PERPS_COLLECTOR_ENABLED=true` via the ops `env` channel to start accumulating tape. Probe 2's scorers need tape to score, so collection has to run before they can be built | [#275](https://github.com/50thycal/kalshi_bot/pull/275), [#277](https://github.com/50thycal/kalshi_bot/pull/277), [#280](https://github.com/50thycal/kalshi_bot/pull/280), this PR |
 | [WS-011](WS-011-marktangle-conditional-reversion.md) | MARKTANGLE: conditional reversion in recurring binary families | DECIDE | Paused | Closed for now (D4). Verdict HOLD recorded; XOS PAUSED from PROBE. Resume only when a candidate family's holdout reaches 100 entries — months of forward collection, not a rebuild | [#287](https://github.com/50thycal/kalshi_bot/pull/287) |
+| [WS-012](WS-012-ops-channel-vnext.md) | Ops channel vNext: reliability, introspection, verified operations | REVIEW | Active | Review + merge, then deploy the workflow file to `ops` in an idle window and validate with a round trip (green on success, RED on a deliberately bad request) | this PR |
 
 *Phase:* IDEA · EXPLORE · MODEL · DECIDE · BUILD_CARD · READY_TO_BUILD · BUILDING · REVIEW
 *Status:* Active · Paused · Blocked · Abandoned
