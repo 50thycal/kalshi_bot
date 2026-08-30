@@ -1,5 +1,0 @@
-# ops request: type='env'
-# target service: main
-  set PERPS_COLLECTOR_ENABLED=true
-# 1/1 variables set
-# redeploy triggered — the worker will restart with the new config
