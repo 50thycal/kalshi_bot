@@ -1,1 +1,1 @@
-{"type":"logs","id":"perp-deploy-2","lines":30}
+{"type":"env","set":{"PERPS_COLLECTOR_ENABLED":"true"},"id":"perps-on-1"}
