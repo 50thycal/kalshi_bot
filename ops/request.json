@@ -1,1 +1,1 @@
-{"type":"xos","command":"metric","args":["live_fill_rate_pct","--experiment","mmsell-price-ceiling","--arm","mmsell10","--kind","live"],"id":"g-live_fill_rate_pct"}
+{"type":"db","id":"perp-funding-shape-1","sql":"select started_at, funding_rows, errors, notes_json from perp_collector_cycles where notes_json is not null order by started_at desc limit 5"}
