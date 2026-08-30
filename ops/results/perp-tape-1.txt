@@ -1,6 +1,0 @@
-# ops request: type='db'
-cycles  snapshots  books  funding
-------  ---------  -----  -------
-0       0          0      0      
-
-(1 row)
