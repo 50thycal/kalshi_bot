@@ -16,6 +16,56 @@ Conventions:
 
 ---
 
+## PERP-V1 TAPE LIVE 2026-08-30 — first hour measured. Cadence 145 s; funding returns nothing.
+
+`PERPS_COLLECTOR_ENABLED=true` on the main worker. First hour of the tape, straight off
+`perp_collector_cycles`:
+
+```
+cycles  first                 last                  avg_gap_s  snaps  books  funding  errors
+26      2026-08-30 12:35:42   2026-08-30 13:35:59   145        546    312    0        0
+```
+
+**Cadence: 145 s, and `SCAN_INTERVAL_SECONDS=60` is not what sets it.** The 60 s
+`PERPS_INTERVAL_SECONDS` floor only stops the collector polling *too often*; the real
+cadence is how long the worker's whole scan loop takes, and that is ~145 s. (An earlier
+read of a single post-boot cycle suggested ~12 minutes. That was one cycle, not a rate —
+26 cycles say 145 s.)
+
+What that costs, stated now rather than after the results: arm A trades a premium that
+mean-reverts around 8-hourly funding, so 145 s is ample. Arm C is the one this bounds —
+a perp→Kalshi lead/lag shorter than ~2.5 minutes is invisible to this tape. So a null
+result on arm C is **ambiguous** between "no lead" and "a lead faster than we sampled",
+and its gate must not be read as a kill on the mechanism. Arm A's and arm B's nulls stay
+clean. Not fixed by re-architecting the loop: threading a collector beside books holding
+real money buys resolution we do not yet know we need, and Probe 2 can say whether any
+lead is visible at 145 s before we pay for that.
+
+**Funding: 200, zero rows, no error — and the endpoint needs auth.** `_collect_funding`
+ran, raised nothing, and parsed no records; `notes_json` was null, so this is not a
+failure being swallowed. Re-running `scripts/perp_surface_survey.py` on
+`/margin/funding_history?start_date=…&end_date=…` returns
+`401 token_authentication_failure`.
+
+This **corrects** the 2026-08-30 entry below. A `400 "start_date is required"` proved the
+path exists; it did **not** prove the path carries market-wide funding rates, and I read
+it as though it had. The leading hypothesis is now that `/margin/funding_history` is our
+own funding-**payment** ledger — account history — not a market rates feed. We hold no
+perp positions, so an empty ledger is exactly what that would produce, and every
+market-wide rates path probed so far 404s. That is a hypothesis, not a finding.
+
+**The diagnostic that decides it:** on a zero-row parse the cycle now records the response
+envelope's **shape** — top-level keys and list lengths, *keys only, never values* — into
+`perp_collector_cycles.notes_json`. An empty rates feed and an empty payments ledger are
+indistinguishable from a row count and lead to opposite conclusions about arm B. Values
+are excluded deliberately: the endpoint is authenticated, the hypothesis is that it
+returns account data, and `notes_json` is read through the **public** ops channel.
+
+WS-010 D4 (arm B's funding source) stays open and is now decidable on evidence. Arm B's
+gate is unaffected — it was pre-registered before any of this and is not being re-read.
+
+---
+
 ## PERP-V1 PROBE 1 BUILT 2026-08-30 — the tape collector. No verdict, no trade, no tag.
 
 Probe 1 of `docs/PERP_V1_THESIS.md` §6. `kalshi_bot/perps/` polls the perp surface and

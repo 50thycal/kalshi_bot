@@ -14,8 +14,8 @@ The field names here were measured, not assumed (`scripts/perp_surface_survey.py
 recorded in `docs/RESEARCH_JOURNAL.md` 2026-08-29 and 2026-08-30) — but three of
 them arrive as nested OBJECTS whose inner shape has never been read
 (`reference_price`, `settlement_mark_price`, `liquidation_mark_price`), and the
-funding payload's shape is unknown entirely because no run has yet seen a 200
-from it. So the extractors below are deliberately defensive: they look for a
+funding payload's shape is still unknown after a live 200 — production returns
+one carrying no records at all. So the extractors below are deliberately defensive: they look for a
 number, and record NULL when they cannot find one. A NULL that keeps its raw
 payload is recoverable. A guessed number is not, and it would land in the exact
 quantity arm A trades on.
@@ -294,7 +294,7 @@ class PerpsCollector:
 
         if self._funding_is_due(at):
             try:
-                cycle.funding_rows += self._collect_funding(session, at)
+                cycle.funding_rows += self._collect_funding(session, at, notes)
                 self._funding_due_at = at + timedelta(
                     minutes=self._settings.perps_funding_interval_minutes
                 )
@@ -384,13 +384,28 @@ class PerpsCollector:
             return False
         return self._funding_due_at is None or at >= self._funding_due_at
 
-    def _collect_funding(self, session, at: datetime) -> int:
+    def _collect_funding(self, session, at: datetime, notes: dict[str, Any]) -> int:
         """Fetch the recent funding window and store whatever comes back.
 
-        The response shape is UNKNOWN — no run has read a 200 from this endpoint
+        The response shape is UNKNOWN — the worker's 200s have carried no records
         — so this walks the payload for a list of objects rather than indexing a
         key it cannot know exists, and every row keeps its raw payload. When the
-        first real payload lands, this is the function to correct against it.
+        first non-empty payload lands, this is the function to correct against it.
+
+        WHY A ZERO-ROW PARSE IS RECORDED
+        --------------------------------
+        Production returns 200 here and this function finds nothing in it, which
+        has two very different causes: an empty MARKET-WIDE rates feed (arm B is
+        blocked on Kalshi, and we should stop) or an empty ACCOUNT funding-payment
+        ledger (we hold no perp positions, so empty is exactly right, and arm B is
+        blocked on us having no other source). Discarding the payload — the one
+        case where its unknown shape matters most — leaves that undecidable, so
+        the envelope's SHAPE is recorded against the cycle.
+
+        Keys only, never values: this endpoint is authenticated and the leading
+        hypothesis is that it returns our own account history, so its contents are
+        private evidence and `perp_collector_cycles.notes_json` is read through
+        the public ops channel.
         """
         lookback = timedelta(days=self._settings.perps_funding_lookback_days)
         payload = self._client.get_perp_funding_history(
@@ -398,6 +413,8 @@ class PerpsCollector:
             end_date=at.strftime("%Y-%m-%d"),
         )
         rows = _funding_rows(payload)
+        if not rows:
+            notes["funding_shape"] = _payload_shape(payload)
         written = 0
         seen: set[str] = set()
         for row in rows:
@@ -433,6 +450,29 @@ def _funding_rows(payload: Any) -> list[dict]:
             if isinstance(value, list) and any(isinstance(r, dict) for r in value):
                 return [r for r in value if isinstance(r, dict)]
     return []
+
+
+def _payload_shape(payload: Any, *, max_keys: int = 40) -> dict[str, Any]:
+    """A keys-only description of an unknown payload.
+
+    Deliberately carries NO values. Sizes are recorded because "the key exists
+    and its list is empty" and "the key is absent" are the two answers that
+    separate an empty rates feed from an empty payments ledger.
+    """
+    if isinstance(payload, dict):
+        keys = sorted(str(k) for k in payload)[:max_keys]
+        lists = {
+            str(k): len(v)
+            for k, v in payload.items()
+            if isinstance(v, list)
+        }
+        shape: dict[str, Any] = {"type": "object", "keys": keys}
+        if lists:
+            shape["list_lengths"] = dict(sorted(lists.items())[:max_keys])
+        return shape
+    if isinstance(payload, list):
+        return {"type": "array", "length": len(payload)}
+    return {"type": type(payload).__name__}
 
 
 def _funding_key(row: dict) -> str:

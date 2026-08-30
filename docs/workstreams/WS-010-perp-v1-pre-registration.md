@@ -3,7 +3,7 @@
 **Phase:** BUILDING
 **Status:** Active
 **Created:** 2026-08-29
-**Updated:** 2026-08-29
+**Updated:** 2026-08-30
 
 ## Goal
 
@@ -97,12 +97,23 @@ assumption of comparability rather than a frozen contract.
   cash flow are semantics no FEE_MODEL/FILL_MODEL revision in this repository
   describes. That is **Platform Change Review**'s call, not this workstream's, and
   it is not on the critical path while PERP-V1 stays at PROBE.
-- ~~**D4. If funding is unreadable, what happens to `perpcarry`?**~~ **CLOSED
-  2026-08-30 by A4** — funding is reachable, so the question does not arise.
-  `perpcarry` stands exactly as registered; no re-scope was made, and none was
-  needed. Recorded rather than deleted because the option that was *not* taken
-  matters: re-scoping arm B to a premium-dispersion ranking would have been a
-  different hypothesis under the same arm key.
+- **D4. If funding is unreadable, what happens to `perpcarry`?** **RE-OPENED
+  2026-08-30** — it was closed earlier the same day on a misreading, and the
+  misreading is kept here because it is the instructive part. A
+  `400 "start_date is required"` from `/margin/funding_history` was taken as
+  "funding is reachable". It proved only that the **path exists**. Supplied with a
+  date range the same endpoint returns `401 token_authentication_failure`, and the
+  authenticated worker gets a 200 carrying **no records at all**. Leading
+  hypothesis: it is our own funding-**payment** ledger, not a market rates feed —
+  we hold no perp positions, so empty is exactly what that would produce, and every
+  market-wide rates path probed so far 404s. Hypothesis, not finding. The tape now
+  records the response envelope's **shape** (top-level keys and list lengths, keys
+  only, no values — the endpoint is authenticated and `notes_json` is read through
+  the public ops channel) on any zero-row parse, which makes the question decidable
+  on evidence rather than inference. Until it is decided, `perpcarry` stands exactly
+  as registered and no re-scope is made: re-scoping arm B to a premium-dispersion
+  ranking would be a different hypothesis under the same arm key, and its gate was
+  pre-registered before any of this.
 - **D3. Arm C's control.** `perpctl` is a perp-side control and does not by itself
   answer "better than Theta". The gate uses an incremental-over-Theta metric
   instead. Whether a first-class `external_control` reference to the Theta
@@ -119,13 +130,19 @@ assumption of comparability rather than a frozen contract.
   rides on the market row, so arm A's index anchor exists. Findings recorded in
   `docs/RESEARCH_JOURNAL.md` (PERP-V1 PROBE 0 RESULT 2026-08-29). What A1 got
   wrong is funding — see A4.
-- **A4 — RESOLVED 2026-08-30. Funding IS reachable.** `/margin/funding_history`
-  answered `400 "Query argument start_date is required"` — the endpoint exists and
-  wants a date range. The names in the brief (`/margin/funding_rates`,
-  `/margin/funding_rate_estimate`) were simply wrong. The 400-vs-404 classifier fix
-  is the only reason this is not recorded as a kill: the earlier run received the
-  same response and called it ABSENT. Journal:
-  `docs/RESEARCH_JOURNAL.md` (PERP-V1 A4 RESOLVED 2026-08-30).
+- **A4 — OPEN AGAIN 2026-08-30. Funding is not established.** It was recorded
+  RESOLVED earlier the same day and that was an over-read of one status code.
+  `/margin/funding_history` answered `400 "Query argument start_date is required"`,
+  which proves the **path exists** and wants a date range — it says nothing about
+  what the path returns. Given the range it returns `401
+  token_authentication_failure`, and the authenticated worker gets a 200 with **no
+  records**. The names in the brief (`/margin/funding_rates`,
+  `/margin/funding_rate_estimate`) are still simply wrong, and the 400-vs-404
+  classifier fix is still what stopped this being recorded as a kill — both of
+  those hold. What does not hold is "funding is reachable". See D4 for the
+  hypothesis and the diagnostic that decides it. Journal:
+  `docs/RESEARCH_JOURNAL.md` (PERP-V1 A4 RESOLVED 2026-08-30, corrected by
+  PERP-V1 TAPE LIVE 2026-08-30).
 - **A5 — NEW, and smaller than A4 was.** Arm C's *trade imbalance* feature has no
   public source: `/margin/markets/{t}/trades` 404s and no trade-ish field rides on
   the market row. The other five arm-C features survive. The version declares the
@@ -166,11 +183,21 @@ tickers.
 
 ## Implementation State
 
-Slices 1–3 built (#275, #277, #280, and the collector PR). Probe 0 has run twice; the
-second run resolved A4 and closed D4. **Probe 1 (the tape collector) is built** —
-`kalshi_bot/perps/`, four tables, wired into the worker's every-mode cycle hook and OFF
-by default behind `PERPS_COLLECTOR_ENABLED`. The perp surface is real, its history endpoints are readable, and funding is
-reachable at `/margin/funding_history` with a date range. Registration in production has
+Slices 1–3 built (#275, #277, #280, #284). **The tape is live.** `PERPS_COLLECTOR_ENABLED=true`
+on the main worker since 2026-08-30 12:35Z. First measured hour: 26 cycles, 546 market
+snapshots, 312 order books, **0 funding rows**, 0 errors.
+
+Two measurements from that hour change what the tape can answer:
+
+- **Cadence is 145 s**, set by the worker's whole scan loop, not by the 60 s
+  `PERPS_INTERVAL_SECONDS` floor (which only prevents polling *too often*). Ample for arm
+  A's 8-hourly premium reversion. It bounds **arm C**: a perp→Kalshi lead shorter than
+  ~2.5 minutes is invisible, so an arm C null is ambiguous between "no lead" and "faster
+  than we sampled" and must not be read as a kill on the mechanism. Not fixed by threading
+  the collector — that buys resolution beside real money before Probe 2 has shown we need it.
+- **Funding returns 200 and zero rows** — see D4, re-opened.
+
+The perp surface is real and its history endpoints are readable. Registration in production has
 **not** been submitted — that is a `REGISTER_PACKAGE` envelope through the `env` channel,
 which redeploys the worker while the mmsell10 canary holds real money, so it stays an
 operator act.
