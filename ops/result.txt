@@ -1,24 +1,34 @@
 # ops request: type='xos'
-twin_live_paired_gap_cents  @  mmsell-price-ceiling/v2/e2/mmsell10  kind=live
+twin_live_winrate_gap_pp  @  mmsell-price-ceiling/v2/e2/mmsell10  kind=live
   tags:        Cmmsell10
   deployments: mmsell-ceiling-live-1
-  window:      2026-08-28 14:20:35.572574+00:00 -> 2026-08-30 14:00:56.355314+00:00
-  value:       -0.0664  (cents/contract)   n=11
-    basis: per-market paired difference; conditions on live having FILLED, so it measures execution fidelity and NOT adverse selection — adverse selection operates through which orders fill
+  window:      2026-08-28 14:20:35.572574+00:00 -> 2026-08-30 14:01:27.788444+00:00
+  value:       0.7974  (pp)   n=38
     deployment_kind: live
     deployments: ['mmsell-ceiling-live-1']
+    excluded_contested_markets: 0
+    excluded_still_open_markets: 13
+    excluded_unpriced_markets: 0
     fee_basis: realized_pnl as reported by Kalshi (fees already netted)
-    paired_markets: 11
+    filled_contracts_on_settled_markets: 66
+    live_markets_entered: 204
+    live_settled_markets: 66
+    live_win_pct: 93.9394
+    orders_that_never_held_a_position: 125
     per_contract_basis: total realized P&L / filled BUY contracts on settled markets — deliberately NOT scripts/mmsell_live.py's per-position average
     platform_snapshot: 4f9adf15daa64035
-    provider_revision: twin_gap_v1
+    provider_revision: live_exec_v1
+    realized_pnl_usd: 0.9982
     scope: mmsell-price-ceiling/v2/e2/mmsell10
     settled_basis: newest positions snapshot with quantity=0 and realized_pnl
-    settled_live_markets: 66
+    settled_markets: 66
     settled_statuses: ['settled', 'closed_sl', 'closed_tp', 'closed_timeout']
     source: live_orders x fills x positions
     strategy_tags: ['Cmmsell10']
-    twin_markets_seen: 58
+    twin_settled_trades: 38
     twin_tags: ['Cmmsell10_pt3']
-    window: ['2026-08-28 14:20:35.572574+00:00', '2026-08-30 14:00:56.355314+00:00']
+    twin_win_pct: 94.7368
+    twin_wins: 36
+    window: ['2026-08-28 14:20:35.572574+00:00', '2026-08-30 14:01:27.788444+00:00']
     window_basis: live_orders.created_at (entry time)
+    winning_settled_markets: 62
