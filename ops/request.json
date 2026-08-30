@@ -1,1 +1,1 @@
-{"type":"db","sql":"select captured_at::text as at, (select jsonb_agg(k order by k) from jsonb_object_keys(raw_json) k)::text as keys from account_snapshots order by captured_at desc limit 2","max_rows":3,"id":"shard-bal-1"}
+{"type":"env","set":{"LIVE_SHAPE_PROBE":"true"},"id":"probe-on-1"}
