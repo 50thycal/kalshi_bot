@@ -1,8 +1,0 @@
-# ops request: type='db'
-started_at                        scoped                                                                                                         
---------------------------------  ---------------------------------------------------------------------------------------------------------------
-2026-08-30 14:38:20.094464+00:00  {'keys': ['funding_history'], 'type': 'object', 'ticker': 'KXBTCPERP', 'list_lengths': {'funding_history': 0}} 
-2026-08-30 14:35:01.600102+00:00  {'keys': ['funding_history'], 'type': 'object', 'ticker': 'KXBTCPERP', 'list_lengths': {'funding_history': 0}} 
-2026-08-30 14:18:38.595799+00:00  {'keys': ['funding_history'], 'type': 'object', 'ticker': 'KXAAVEPERP', 'list_lengths': {'funding_history': 0}}
-
-(3 rows)
