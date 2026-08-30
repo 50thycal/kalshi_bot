@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","sql":"select status, coalesce(cancel_reason, '(none)') as reason, count(*) as n from live_orders where strategy = 'Cmmsell10' and action = 'buy' group by 1,2 order by 3 desc","max_rows":25,"id":"db-cxl"}
