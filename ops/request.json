@@ -1,1 +1,1 @@
-{"type":"env","set":{"LIVE_STRATEGIES":""},"id":"standdown-cmm10"}
+{"type":"db","sql":"select (select count(*) from mmsell_candidate_ticks where captured_at > now() - interval '10 minutes') as cands_10m, (select count(*) from paper_trades where created_at > now() - interval '10 minutes') as paper_10m, (select count(*) from live_orders where created_at > now() - interval '10 minutes') as live_10m, (select max(created_at)::text from live_orders) as last_live_order, now()::text as now_utc","max_rows":3,"id":"standdown-verify"}
