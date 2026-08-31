@@ -1,1 +1,1 @@
-{"type":"logs","lines":40,"id":"verify-boot-1"}
+{"type":"db","sql":"select (select count(*) from mmsell_candidate_ticks where captured_at > now() - interval '20 minutes') as cands_20m, (select count(*) from paper_trades where created_at > now() - interval '20 minutes') as paper_20m, (select count(*) from live_orders where created_at > now() - interval '20 minutes') as live_20m, (select max(created_at)::text from live_orders) as last_order, now()::text as now_utc","max_rows":3,"id":"recovery-1"}
