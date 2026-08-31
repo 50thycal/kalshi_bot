@@ -122,43 +122,81 @@ def test_the_activation_settings_all_clear_the_ops_allowlist():
 # --- the precondition that protects the predecessor's evidence -------------
 
 
-def test_register_refuses_while_the_predecessor_still_holds_live_positions(
-    monkeypatch,
-):
-    """Ending a live deployment with positions still open would leave the tag
-    without an arm, so the settlements could not be RECORDED — the predecessor's
-    final evidence would be wrong, and the positions settle on Kalshi either way.
-    Drain first is not tidiness; it is evidence integrity.
+def test_a_draining_live_book_does_NOT_block_the_successor(monkeypatch):
+    """The old book winds down BESIDE the new one, on separate tags, deployments
+    and epochs. An earlier draft of this package ended the predecessor's live
+    deployment too and therefore had to refuse until it fully drained — idling
+    the new book for days for no safety gain. Only the PAPER handover is
+    blocking, and a paper deployment has nothing to drain.
     """
-    import kalshi_bot.repository as repo
+    seen = {}
 
     class _Pred:
         id = 7
 
-    class _Dep:
+    class _Live:
         id, kind, ended_at = 1, "live", None
         deployment_key = "mmsell-ceiling-live-1"
 
     class _Session:
         def scalars(self, *a, **k):
-            return type("R", (), {"all": staticmethod(lambda: [_Dep()])})()
+            return type("R", (), {"all": staticmethod(lambda: [_Live()])})()
 
     monkeypatch.setattr(cap, "get_experiment",
                         lambda s, key: _Pred() if key == cap.PREDECESSOR_KEY else None)
     monkeypatch.setattr(cap, "_epoch_experiment_id", lambda s, d: _Pred.id)
     monkeypatch.setattr(cap, "_tags_of", lambda s, d: ["Cmmsell10"])
+
+    import kalshi_bot.repository as repo
     monkeypatch.setattr(repo, "count_live_book_open", lambda s, tag: 20)
+    monkeypatch.setattr(svc, "end_deployment",
+                        lambda *a, **k: seen.setdefault("ended", []).append(a))
+    # Stop after the guard: everything past it needs a real database.
+    monkeypatch.setattr(svc, "create_experiment",
+                        lambda *a, **k: (_ for _ in ()).throw(RuntimeError("reached")))
+
+    with pytest.raises(RuntimeError, match="reached"):
+        cap.register(_Session(), actor="cal", now=T0)
+
+    assert "ended" not in seen, (
+        "a live deployment holding positions must be LEFT OPEN so its "
+        "settlements keep recording, not ended"
+    )
+
+
+def test_ending_a_paper_deployment_whose_tag_holds_live_positions_is_refused(
+    monkeypatch,
+):
+    """The guard scopes to what is actually being ended. Ending any deployment
+    leaves its tag without an arm, so settlements could not be RECORDED (the
+    XOS-000011 shape) and the evidence would be wrong."""
+    class _Pred:
+        id = 7
+
+    class _Paper:
+        id, kind, ended_at = 2, "paper", None
+        deployment_key = "mmsell-ceiling-paper-2-e2"
+
+    class _Session:
+        def scalars(self, *a, **k):
+            return type("R", (), {"all": staticmethod(lambda: [_Paper()])})()
+
+    monkeypatch.setattr(cap, "get_experiment",
+                        lambda s, key: _Pred() if key == cap.PREDECESSOR_KEY else None)
+    monkeypatch.setattr(cap, "_epoch_experiment_id", lambda s, d: _Pred.id)
+    monkeypatch.setattr(cap, "_tags_of", lambda s, d: ["mmsell10"])
+
+    import kalshi_bot.repository as repo
+    monkeypatch.setattr(repo, "count_live_book_open", lambda s, tag: 3)
 
     ended = []
-    monkeypatch.setattr(svc, "end_deployment",
-                        lambda *a, **k: ended.append(a))
+    monkeypatch.setattr(svc, "end_deployment", lambda *a, **k: ended.append(a))
 
     with pytest.raises(svc.ExperimentOsError) as exc:
         cap.register(_Session(), actor="cal", now=T0)
 
-    assert "20 open live position" in str(exc.value)
-    assert "Cmmsell10" in str(exc.value)
-    assert not ended, "must refuse BEFORE ending anything — no half-applied retire"
+    assert "3 open live position" in str(exc.value)
+    assert not ended, "must refuse BEFORE ending anything"
 
 
 def test_register_refuses_to_run_twice(monkeypatch):
