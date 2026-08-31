@@ -64,14 +64,47 @@ def _handle_signal(signum, _frame) -> None:
     )
 
 
+
+def _config_error_summary(exc: Exception) -> str:
+    """Which settings fields were rejected and why — names and reasons, NO values.
+
+    A pydantic ValidationError carries `input_value`, so formatting one straight
+    into a log would publish whatever was rejected; for a malformed credential
+    that is the credential. This keeps the half that identifies the problem and
+    drops the half that leaks.
+    """
+    errors = getattr(exc, "errors", None)
+    if not callable(errors):
+        return f"{type(exc).__name__}"
+    try:
+        rows = errors()
+    except Exception:  # noqa: BLE001
+        return f"{type(exc).__name__}"
+    parts = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        field = ".".join(str(p) for p in row.get("loc") or ()) or "?"
+        parts.append(f"{field}: {row.get('msg', 'invalid')}")
+    return "; ".join(parts) or f"{type(exc).__name__}"
+
+
 def run() -> int:
     # 1) Settings (fail-closed).
     try:
         settings = get_settings()
     except Exception as exc:  # noqa: BLE001
         configure_logging("INFO")
+        # The reason goes in the MESSAGE, not only in extra_fields. This is the one
+        # error the process cannot survive, so nothing downstream can surface it
+        # later — and the ops log view renders only the base message string. On
+        # 2026-08-30 that cost 17 hours: the worker crash-looped on a bool set to
+        # "" and the log said only that configuration was invalid, never which
+        # field. Field NAMES and reasons only, never the offending values: these
+        # lines are read back through the ops channel onto a public branch and a
+        # rejected value can be a credential.
         logger.error(
-            "invalid configuration; refusing to start",
+            "invalid configuration; refusing to start: %s", _config_error_summary(exc),
             extra={"extra_fields": {"error": str(exc)}},
         )
         return 1

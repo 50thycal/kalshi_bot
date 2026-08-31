@@ -320,6 +320,42 @@ def run_get() -> int:
     return 0
 
 
+
+def _unparseable(mapping: dict) -> list[tuple[str, str]]:
+    """[(VAR, reason)] for values the Settings model would reject.
+
+    Validates each field ALONE rather than building a whole Settings: this runs in
+    the ops runner, which holds no Kalshi credentials or DATABASE_URL, so a full
+    construction would fail on required fields that have nothing to do with the
+    request. A var with no matching field is left to the allowlist to judge.
+
+    Never let a validator failure block a legitimate set: if the model cannot be
+    imported or introspected at all, say so and allow the write. This guard exists
+    to catch an obvious type error, not to become a new way for ops to be down.
+    """
+    try:
+        from pydantic import TypeAdapter, ValidationError
+
+        from kalshi_bot.config import Settings
+        fields = Settings.model_fields
+    except Exception as exc:  # noqa: BLE001
+        print(f"# note: value type-check skipped ({type(exc).__name__}: {exc})",
+              file=sys.stderr)
+        return []
+    bad: list[tuple[str, str]] = []
+    for name, value in mapping.items():
+        field = fields.get(name.lower())          # case_sensitive=False
+        if field is None:
+            continue
+        try:
+            TypeAdapter(field.annotation).validate_python(value)
+        except ValidationError as exc:
+            reason = exc.errors()[0].get("msg", "invalid value")
+            bad.append((name, f"{reason} (got {value!r})"))
+        except Exception:  # noqa: BLE001
+            continue                              # unintrospectable type: allow
+    return bad
+
 def run_set(mapping: dict, redeploy: bool = True) -> int:
     # Validate names FIRST (pure check, no network/creds needed) — fail closed on any
     # variable outside the allowlist; never partially apply a request with a bad name.
@@ -341,6 +377,20 @@ def run_set(mapping: dict, redeploy: bool = True) -> int:
     if oversized:
         print(f"refusing to set oversized vars (limit {MAX_VALUE_BYTES} bytes): "
               f"{sorted(oversized)}", file=sys.stderr)
+        return 1
+    # Then the VALUE's type, against the field that will actually parse it. The
+    # worker's config is fail-closed: a value pydantic cannot read makes it refuse
+    # to start, and because setting a var redeploys, an unparseable value here is a
+    # full outage that nothing downstream can catch. On 2026-08-30 clearing a bool
+    # with "" (the documented way to clear a STRING transport var) crash-looped the
+    # worker for 17 hours. Same shape as the name and size checks: pure, local,
+    # all-or-nothing, before the network.
+    unparseable = _unparseable(mapping)
+    if unparseable:
+        print("refusing to set values the worker's config cannot parse — setting "
+              "these would redeploy into a crash loop:", file=sys.stderr)
+        for name, why in unparseable:
+            print(f"  {name}: {why}", file=sys.stderr)
         return 1
     ctx = _ctx()
     if not ctx:

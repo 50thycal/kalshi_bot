@@ -134,3 +134,158 @@ def test_ops_runner_dispatches_env(tmp_path, monkeypatch):
     # a set with a bad var -> dispatched to railway_env -> rejected (rc 1)
     req.write_text(json.dumps({"type": "env", "set": {"NOT_ALLOWED": "x"}}))
     assert runner.main() == 1
+
+
+# --- value type-checking (the 2026-08-30 worker outage) ---------------------
+#
+# `LIVE_SHAPE_PROBE=""` was set through this path to "clear" the flag — the
+# documented way to clear the STRING command-transport vars. But the field is a
+# BOOL, pydantic refused it, and because the worker's config is fail-closed and
+# setting a var redeploys, the worker crash-looped "invalid configuration;
+# refusing to start" for 17 hours: no scanning, no paper trades, no live orders,
+# across every strategy. The name and size checks were already fail-closed here;
+# the value's TYPE was not.
+
+
+def test_run_set_refuses_a_bool_cleared_with_an_empty_string(monkeypatch, capsys):
+    """The exact outage. An empty string is not a bool, and setting it redeploys."""
+    _creds(monkeypatch)
+
+    def _boom(*a, **k):
+        raise AssertionError("must fail before any network call")
+
+    monkeypatch.setattr(renv, "_graphql", _boom)
+    rc = renv.run_set({"LIVE_SHAPE_PROBE": ""})
+
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "LIVE_SHAPE_PROBE" in err
+    assert "crash loop" in err            # says WHY it is refused, not just that
+
+
+def test_run_set_still_allows_valid_bool_spellings(monkeypatch, capsys):
+    """The guard must not block the correct way to turn a flag off."""
+    _creds(monkeypatch)
+    sent = []
+
+    def _fake(query, variables, token):
+        sent.append(variables)
+        return {}
+
+    monkeypatch.setattr(renv, "_graphql", _fake)
+    assert renv.run_set({"LIVE_SHAPE_PROBE": "false"}, redeploy=False) == 0
+    assert sent, "a valid value must reach the network"
+
+
+def test_run_set_refuses_a_non_numeric_int(monkeypatch):
+    """Same class of error on the caps we are about to change."""
+    _creds(monkeypatch)
+
+    def _boom(*a, **k):
+        raise AssertionError("must fail before any network call")
+
+    monkeypatch.setattr(renv, "_graphql", _boom)
+    assert renv.run_set({"MMSELL_LIVE_MAX_OPEN_POSITIONS": "forty"}) == 1
+
+
+def test_a_var_with_no_settings_field_is_left_to_the_allowlist(monkeypatch):
+    """`EXPERIMENT_OS_ISSUE_COMMAND` and friends are transports, not Settings
+    fields. The type-check must not invent an opinion about them — clearing one
+    with "" is correct and must keep working."""
+    _creds(monkeypatch)
+    sent = []
+
+    def _fake(query, variables, token):
+        sent.append(variables)
+        return {}
+
+    monkeypatch.setattr(renv, "_graphql", _fake)
+    assert renv.run_set({"EXPERIMENT_OS_ISSUE_COMMAND": ""}, redeploy=False) == 0
+    assert sent, "clearing a string transport var must still reach the network"
+
+
+def test_the_checker_allows_the_write_when_it_cannot_introspect(monkeypatch):
+    """This guard must never become a new way for ops to be down. If the Settings
+    model cannot be imported, the write proceeds rather than failing closed."""
+    import builtins
+
+    real_import = builtins.__import__
+
+    def _no_config(name, *a, **k):
+        if name == "kalshi_bot.config":
+            raise ImportError("simulated")
+        return real_import(name, *a, **k)
+
+    monkeypatch.setattr(builtins, "__import__", _no_config)
+    assert renv._unparseable({"LIVE_SHAPE_PROBE": ""}) == []
+
+
+# --- the log that hid the reason for 17 hours ------------------------------
+
+
+def test_config_error_summary_names_the_field_but_not_the_value():
+    """`invalid configuration; refusing to start` said nothing about WHICH field,
+    because the reason lived in extra_fields and the ops log view renders only the
+    message. It must name the field — and must NOT echo the rejected value, since
+    these lines are read back onto a public branch and a bad value can be a secret.
+    """
+    from pydantic import BaseModel, ValidationError
+
+    from kalshi_bot.main import _config_error_summary
+
+    class M(BaseModel):
+        live_shape_probe: bool
+        kalshi_private_key: str
+
+    try:
+        M(live_shape_probe="", kalshi_private_key=12345)
+    except ValidationError as exc:
+        summary = _config_error_summary(exc)
+
+    assert "live_shape_probe" in summary          # names the field...
+    assert "valid boolean" in summary             # ...and why it was rejected
+    assert "12345" not in summary                 # but never the value
+    assert "''" not in summary
+
+
+def test_config_error_summary_survives_a_non_pydantic_error():
+    """A plain exception must still produce something, not raise inside the
+    handler that exists to report a failure."""
+    from kalshi_bot.main import _config_error_summary
+
+    assert "RuntimeError" in _config_error_summary(RuntimeError("boom"))
+
+
+# --- the guard has to actually run where it matters ------------------------
+
+
+def test_the_ops_runner_installs_what_the_env_guard_needs():
+    """The type-check imports kalshi_bot.config, which needs pydantic. The ops
+    runner installs only psycopg on the non-`xos` fast path, so on 2026-08-31 the
+    guard degraded to a printed note and allowed the write — inert in the exact
+    place it exists to protect. Observed live as "value type-check skipped
+    (ModuleNotFoundError: No module named 'pydantic')".
+
+    It fails OPEN rather than closed on purpose: the ops channel is how a human
+    stops live trading, and a guard that blocked every env write when a dependency
+    was missing would be a far worse failure than the one it prevents. That makes
+    the dependency's presence a property worth pinning, since nothing at runtime
+    will complain loudly enough.
+    """
+    import yaml
+
+    wf = yaml.safe_load(
+        (Path(__file__).resolve().parents[1]
+         / ".github" / "workflows" / "ops-runner.yml").read_text()
+    )
+    steps = wf["jobs"][next(iter(wf["jobs"]))]["steps"]
+    installs = " ".join(s.get("run", "") for s in steps if "run" in s)
+
+    assert "pydantic" in installs, (
+        "the ops runner must install pydantic for env requests, or the value "
+        "type-check in run_set silently skips and the guard does nothing"
+    )
+    assert "pydantic-settings" in installs, (
+        "kalshi_bot.config imports pydantic_settings too; without it the import "
+        "still fails and the guard still skips"
+    )
