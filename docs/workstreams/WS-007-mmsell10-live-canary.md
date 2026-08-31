@@ -401,3 +401,48 @@ days. Nothing here needs a new threshold: the stand-downs (loss budget $15, dail
 gap 0.5c both signs, per-market loss $1, win-rate 5.0pp) were all registered before any
 result was seen, and re-interpreting them now would void the pre-registration. Arming remains a
 separate approval, and the runtime allowlist a separate one after that.
+
+
+## Epoch-2 close-out and the capacity successor (2026-08-31)
+
+**The 17-hour outage is inside this epoch's window and stays in the record.**
+2026-08-30T18:37:11Z → 2026-08-31T11:28:35Z the worker crash-looped on an invalid
+config (XOS-000015): no scanning, no paper trades, no live orders, on any book. The
+epoch-2 evidence is kept as-is with the gap recorded rather than discarded — nothing
+bad was traded, the bot simply was not running, so this is a hole in COVERAGE, not
+contamination. Anyone reading later sees exactly what was and was not observed.
+
+**D10. The coverage gate is bound by TURNOVER, not by slot count.** Measured over
+v2/e2 on 2026-08-31:
+
+| book | entries | per day |
+|---|---|---|
+| `Cmmsell10` (live) | 552 | **188.6** |
+| `Cmmsell10_pt3` (twin) | 61 | **21.3** |
+
+11.3%, which is what the gate's 14.7% reading actually reflects. Live's unfilled
+orders recycle a slot every 4h; the twin assumes fill and holds to settlement for
+days. **D7's "give the twin a larger cap" was right in direction and badly wrong in
+size** — my own first proposal of twin 80 against live 40 projects to ~23% and would
+have re-broken the same gate one Version later. The successor uses **twin 250**
+(~70% projected). The `< 50` clause itself is carried over UNCHANGED: the honest fix
+removes the constraint that made it unreachable, rather than lowering the bar until
+the book can step over it.
+
+**Why a successor experiment and not a v3.** `arm_live_canary` refuses unless the
+experiment is in PAPER, and `LIVE_CANARY → PAPER` is an illegal rollback. An
+experiment already in LIVE_CANARY therefore has **no sanctioned path to re-arm** at a
+new risk envelope. Both rules are load-bearing — the PAPER guard is what stopped the
+2026-08-15 inherited-state failure — so neither is worked around. The lifecycle names
+its own remedy: *"a revived concept creates a successor experiment or version
+referencing the retired predecessor."* That is
+`kalshi_bot/experiment_os/successor_mmsell10_capacity.py`.
+
+**Sequencing, and why it is drain-then-retire.** The successor's `register()` REFUSES
+while the predecessor's live book still holds open positions. Ending a live
+deployment with positions open would leave the tag without an arm, so the settlements
+could not be *recorded* — the XOS-000011 shape — and epoch 2's final numbers would be
+wrong. The order is therefore: stand `Cmmsell10` down from the runtime allowlist →
+let its ~20 positions settle (days; mmsell is hold-to-settlement, so no forced exits,
+which would realize spread and fees on trades whose whole edge is holding) → register
+the successor → arm it under a separate operator approval.
