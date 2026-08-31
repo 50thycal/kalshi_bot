@@ -1,6 +1,0 @@
-# note: value type-check skipped (ModuleNotFoundError: No module named 'pydantic')
-# ops request: type='env'
-# target service: main
-  set LIVE_STRATEGIES=
-# 1/1 variables set
-# redeploy triggered — the worker will restart with the new config
