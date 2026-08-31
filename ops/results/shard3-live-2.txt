@@ -1,9 +1,0 @@
-# ops request: type='db'
-series         status   orders  mkts  first_seen                   
--------------  -------  ------  ----  -----------------------------
-KXEPLTOTAL     resting  1       1     2026-08-31 11:31:15.963414+00
-KXLALIGASCORE  resting  4       4     2026-08-31 11:31:29.029617+00
-KXNCAAFGAME    resting  1       1     2026-08-31 11:31:48.886143+00
-KXWTAMATCH     resting  1       1     2026-08-31 11:31:46.987812+00
-
-(4 rows)
