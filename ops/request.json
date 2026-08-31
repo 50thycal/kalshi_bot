@@ -1,1 +1,1 @@
-{"type":"db","sql":"select now()::text as now_utc, (select max(created_at)::text from live_orders) as last_order, (select count(*) from paper_trades where strategy='mmsell10' and created_at > now() - interval '6 hours') as paper_mmsell10_6h, (select count(*) from paper_trades where created_at > now() - interval '6 hours') as paper_all_6h, (select count(*) from mmsell_candidate_ticks where captured_at > now() - interval '6 hours') as candidates_6h","max_rows":5,"id":"why-quiet-1"}
+{"type":"logs","lines":120,"id":"worker-down-1"}
