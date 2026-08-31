@@ -1,5 +1,0 @@
-# ops request: type='env'
-# target service: main
-  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 2302 bytes, sha256:b541eaaabcd0b59b>
-# 1/1 variables set
-# redeploy triggered — the worker will restart with the new config
