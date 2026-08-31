@@ -1,6 +1,0 @@
-# ops request: type='db'
-cap_candidates  no_snapshot  flat_settled  really_open  cap_counts  newest_snapshot              
---------------  -----------  ------------  -----------  ----------  -----------------------------
-97              8            77            12           20          2026-08-31 12:18:28.382412+00
-
-(1 row)
