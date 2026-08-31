@@ -1,1 +1,1 @@
-{"type":"db","sql":"select strategy, count(distinct market_ticker) as markets_entered, count(*) as entries, round(count(*)::numeric / greatest(extract(epoch from (max(created_at)-min(created_at)))/86400.0,0.01),1) as entries_per_day from paper_trades where strategy in ('Cmmsell10','Cmmsell10_pt3') and created_at > '2026-08-28 14:20:35' group by 1","max_rows":10,"id":"twin-turnover"}
+{"type":"env","id":"read-live-allowlist"}
