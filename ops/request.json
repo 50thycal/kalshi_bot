@@ -1,1 +1,1 @@
-{"type":"db","sql":"select split_part(market_ticker,'-',1) as series, status, count(*) as n, min(created_at)::text as first_seen, max(created_at)::text as last_seen from live_orders where strategy='Cmmsell10' and created_at > now() - interval '6 hours' group by 1,2 order by 1,2","max_rows":40,"id":"shard3-live-1"}
+{"type":"db","sql":"select strategy, count(*) as n, max(created_at)::text as last_order, min(created_at)::text as first_order from live_orders where created_at > now() - interval '4 days' group by 1 order by 4 desc","max_rows":30,"id":"live-activity-1"}
