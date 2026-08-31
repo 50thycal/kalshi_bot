@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-show","args":["xos-worker-outage-20260830"],"id":"outage-receipt"}
+{"type":"db","sql":"select split_part(o.market_ticker,'-',1) as series, o.status, count(*) as orders, count(distinct o.market_ticker) as mkts, min(o.created_at)::text as first_seen from live_orders o where o.strategy='Cmmsell10' and o.created_at > now() - interval '3 hours' group by 1,2 order by 1,2","max_rows":40,"id":"shard3-live-2"}
