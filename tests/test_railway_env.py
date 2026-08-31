@@ -254,3 +254,38 @@ def test_config_error_summary_survives_a_non_pydantic_error():
     from kalshi_bot.main import _config_error_summary
 
     assert "RuntimeError" in _config_error_summary(RuntimeError("boom"))
+
+
+# --- the guard has to actually run where it matters ------------------------
+
+
+def test_the_ops_runner_installs_what_the_env_guard_needs():
+    """The type-check imports kalshi_bot.config, which needs pydantic. The ops
+    runner installs only psycopg on the non-`xos` fast path, so on 2026-08-31 the
+    guard degraded to a printed note and allowed the write — inert in the exact
+    place it exists to protect. Observed live as "value type-check skipped
+    (ModuleNotFoundError: No module named 'pydantic')".
+
+    It fails OPEN rather than closed on purpose: the ops channel is how a human
+    stops live trading, and a guard that blocked every env write when a dependency
+    was missing would be a far worse failure than the one it prevents. That makes
+    the dependency's presence a property worth pinning, since nothing at runtime
+    will complain loudly enough.
+    """
+    import yaml
+
+    wf = yaml.safe_load(
+        (Path(__file__).resolve().parents[1]
+         / ".github" / "workflows" / "ops-runner.yml").read_text()
+    )
+    steps = wf["jobs"][next(iter(wf["jobs"]))]["steps"]
+    installs = " ".join(s.get("run", "") for s in steps if "run" in s)
+
+    assert "pydantic" in installs, (
+        "the ops runner must install pydantic for env requests, or the value "
+        "type-check in run_set silently skips and the guard does nothing"
+    )
+    assert "pydantic-settings" in installs, (
+        "kalshi_bot.config imports pydantic_settings too; without it the import "
+        "still fails and the guard still skips"
+    )
