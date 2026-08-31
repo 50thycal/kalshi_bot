@@ -201,7 +201,24 @@ def register(
             "re-running, so a repeated command cannot fork the lineage"
         )
 
-    # --- precondition: the predecessor's live book must be drained ------------
+    # --- hand the paper control over; leave the live book RUNNING -------------
+    #
+    # Only the PAPER deployment has to end here, and it has nothing to drain: the
+    # successor's paper book needs the `mmsell10` tag, and two active deployment
+    # arms on one tag is AMBIGUOUS and refused outright by the resolver. So that
+    # one ends and is immediately replaced, at this same instant, exactly as the
+    # v1→v2 handover did.
+    #
+    # The predecessor's LIVE and TWIN deployments are deliberately LEFT OPEN. An
+    # earlier draft of this package ended them too and therefore had to refuse
+    # until the live book was fully drained -- which would have idled the new
+    # book for days for no safety gain. What actually needs the drain is ENDING a
+    # live deployment: that leaves its tag without an arm, so the settlements
+    # could not be RECORDED (the XOS-000011 shape) and the predecessor's final
+    # evidence would be wrong. Keeping them open costs nothing, keeps every
+    # settlement recording, and lets the old book wind down beside the new one on
+    # entirely separate tags, deployments and epochs. Retiring the predecessor is
+    # a later, separate act, once it is genuinely finished.
     from ..repository import count_live_book_open
 
     open_deps = [
@@ -210,33 +227,25 @@ def register(
         ).all()
         if _epoch_experiment_id(session, d) == predecessor.id
     ]
-    for dep in open_deps:
-        if dep.kind != "live":
-            continue
+    ending = [d for d in open_deps if d.kind == "paper"]
+    draining = [d for d in open_deps if d.kind != "paper"]
+
+    # The guard now scopes to what is actually being ended, which is the honest
+    # version of it: a paper deployment holds no live positions, and if one ever
+    # did, ending it would strand them just the same.
+    for dep in ending:
         for tag in _tags_of(session, dep):
             held = count_live_book_open(session, tag)
             if held:
                 raise service.ExperimentOsError(
-                    f"{tag} still holds {held} open live position(s). Stand the "
-                    "book down and let it drain first: ending its deployment now "
-                    "would leave the tag without an arm, so the settlements could "
-                    "not be RECORDED (the XOS-000011 shape) and the predecessor's "
-                    "final evidence would be wrong."
+                    f"{tag} still holds {held} open live position(s) and its "
+                    "deployment is about to end — that would leave the tag "
+                    "without an arm, so the settlements could not be RECORDED "
+                    "and the evidence would be wrong. Stand it down and let it "
+                    "drain first."
                 )
-
-    # --- close the predecessor out -------------------------------------------
-    for dep in open_deps:
+    for dep in ending:
         service.end_deployment(session, dep, ended_at=at)
-    service.transition_experiment(
-        session, predecessor, LifecycleState.RETIRED, actor=actor, occurred_at=at,
-        reason=(
-            "Superseded by " + SUCCESSOR_KEY + ". Retired rather than re-armed "
-            "because arm_live_canary requires PAPER and LIVE_CANARY→PAPER is an "
-            "illegal rollback — the lifecycle's own remedy for a continuing "
-            "concept is a successor referencing the retired predecessor. Its "
-            "evidence stands; nothing here reinterprets it."
-        ),
-    )
 
     # --- open the successor ---------------------------------------------------
     successor = service.create_experiment(
@@ -335,7 +344,8 @@ def register(
         "keep_gate": keep_gate,
         "epoch": epoch,
         "paper_deployment": paper,
-        "ended_deployments": [d.deployment_key for d in open_deps],
+        "ended_deployments": [d.deployment_key for d in ending],
+        "still_draining": [d.deployment_key for d in draining],
         "registered_at": at,
         "evidence_started_at": evidence_at,
     }
