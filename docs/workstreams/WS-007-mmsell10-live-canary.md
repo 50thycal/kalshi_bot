@@ -438,11 +438,36 @@ its own remedy: *"a revived concept creates a successor experiment or version
 referencing the retired predecessor."* That is
 `kalshi_bot/experiment_os/successor_mmsell10_capacity.py`.
 
-**Sequencing, and why it is drain-then-retire.** The successor's `register()` REFUSES
-while the predecessor's live book still holds open positions. Ending a live
-deployment with positions open would leave the tag without an arm, so the settlements
-could not be *recorded* — the XOS-000011 shape — and epoch 2's final numbers would be
-wrong. The order is therefore: stand `Cmmsell10` down from the runtime allowlist →
-let its ~20 positions settle (days; mmsell is hold-to-settlement, so no forced exits,
-which would realize spread and fees on trades whose whole edge is holding) → register
-the successor → arm it under a separate operator approval.
+**Sequencing: the old book drains BESIDE the new one, not before it.** An earlier
+draft of `register()` ended the predecessor's live and twin deployments too, and so
+had to refuse until the live book was fully drained — idling the new book for days
+for no safety gain. What actually needs the drain is *ending* a live deployment: that
+leaves its tag without an arm, so the settlements could not be **recorded** (the
+XOS-000011 shape) and epoch 2's final numbers would be wrong. Keeping those
+deployments open costs nothing and keeps every settlement recording. So `register()`
+ends **only the PAPER deployment** — which holds no live positions and must hand the
+`mmsell10` control tag over, because two active deployment arms on one tag is
+ambiguous and refused by the resolver — and leaves live and twin open to wind down on
+entirely separate tags, deployments and epochs. Retiring the predecessor is a later,
+separate act, once it is genuinely finished.
+
+The order is therefore: stand `Cmmsell10` down from the runtime allowlist → register
+the successor → arm it under a separate operator approval → retire the predecessor
+whenever its book has settled out. No forced exits at any point; mmsell is
+hold-to-settlement and closing early would realize spread and fees on trades whose
+whole edge is holding.
+
+**D11. A package that nothing can invoke is indistinguishable from one that does not
+exist.** The successor module was contract-correct, envelope-correct and fully tested
+on 2026-08-31 and was still **unrunnable**: it had no `arm()` function and was never
+registered in `experiment_commands._packages()`, so neither `REGISTER_PACKAGE` nor
+`ARM_CANARY` could reach it. Reading the module could not reveal this — the defect
+was in what the module was *absent from*. Four reachability tests now assert it from
+the transport's side (the package resolves by name, exposes both `register` and
+`arm`, every declared activation var clears the ops allowlist, and `arm` refuses
+loudly on an unregistered contract). Any future package should be assumed unreachable
+until a test calls it through `_packages()`.
+
+**Drain reading, 2026-09-01.** `Cmmsell10` down to **4** open positions from ~20
+after the stand-down; `mmsell10` (the paper control tag) holds **0** live positions,
+so the paper handover in `register()` is clear to run.

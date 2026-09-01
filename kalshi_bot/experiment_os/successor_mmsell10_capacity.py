@@ -51,6 +51,7 @@ from .models import (
     ExperimentDeployment,
     ExperimentDeploymentArm,
     ExperimentEpoch,
+    ExperimentGate,
     ExperimentVersion,
 )
 from .read import get_experiment
@@ -183,13 +184,29 @@ def register(
     XOS-000011 blackout shape and would corrupt the predecessor's final
     evidence. Stand the book down, let it drain, then run this.
 
-    `evidence_started_at` decides what the successor's promotion gate may see.
-    It defaults to the predecessor's v2 boundary ON PURPOSE: the paper arm is
-    literally the same continuing book on the same tag with the same parameters
-    and the same platform snapshot, and the promotion gate measures the PAPER
-    edge, which this successor does not change. What changed is the live risk
-    envelope, which that gate does not read. Pass an explicit value to restart
-    the window at zero instead -- that is the conservative choice and costs days.
+    `evidence_started_at` DEFAULTS TO NOW, and cannot usefully be set earlier.
+    An earlier draft of this docstring claimed the opposite -- that it defaults
+    to the predecessor's v2 boundary, so the successor could inherit the paper
+    edge and arm immediately. That was wrong twice over. The code passes
+    `evidence_started_at or at`, so the default is registration time; and even an
+    explicit earlier value would be ignored, because the evaluator floors every
+    window at `max(epoch.started_at, gate.evidence_started_at)` and the
+    successor's epoch opens here. Evidence cannot precede the epoch it is
+    attributed to.
+
+    That floor is correct and is not to be routed around. This successor's epoch
+    pins a new platform snapshot over a materially changed world -- shards 1-3
+    were funded 2026-08-31, so series that were refused `user_not_found` for the
+    predecessor's whole life are now reachable. Reaching back across that
+    boundary would pool evidence the platform declares non-poolable, and
+    back-dating the epoch to make it fit would falsify when the interval began.
+
+    THE CONSEQUENCE, PLANNED FOR RATHER THAN DISCOVERED: registering does not
+    make the canary armable. `arm_live_canary` re-evaluates the promotion gate
+    synchronously, and immediately after registration the metric is undefined
+    ("no settled trades in window"), so arming is REFUSED. The successor earns
+    its own paper evidence first. Register, wait for the paper book to settle
+    trades inside the new window, then arm.
     """
     at = now or _now()
     predecessor = get_experiment(session, PREDECESSOR_KEY)
@@ -277,13 +294,49 @@ def register(
 
     version = service.create_experiment_version(
         session, successor,
-        independent_variable="concurrent open-position capacity (20 → 40)",
-        held_constant=(
-            "arm parameters (lo=5,hi=10,maxyes=7), universe, entry timing, 0c "
-            "offset, 4h timeout, hold-to-settlement, fee model, and every "
-            "keep/stop threshold"
+        # The scientific rules are carried across from the predecessor's v2
+        # VERBATIM. They are restated rather than omitted because a version that
+        # leaves them blank is not a contract anyone can check the running book
+        # against — and holding them constant is the entire claim this
+        # experiment makes about itself.
+        hypothesis=(
+            "The cheap-cell price-ceiling edge (lo=5, hi=10, maxyes=7) survives "
+            "at twice the concurrent-position cap. Unchanged from the "
+            "predecessor's v2 — this successor moves CAPACITY, not the question "
+            "about the edge itself."
         ),
-        risk_json=RISK_ENVELOPE,
+        universe_selector=(
+            "cheap band lo=5,hi=10 with an entry-price ceiling maxyes=7 — "
+            "mmsell10's universe verbatim. No crypto exclusion: excluding a "
+            "market class would be a different universe and could not inherit "
+            "this arm's evidence."
+        ),
+        entry_rule="rest a buy-NO maker order at the no-bid (offset 0)",
+        exit_rule="hold to settlement",
+        sizing_rule="one contract per order under a $1.00 per-order dollar cap",
+        execution_style="maker",
+        # The successor runs ONE live arm, exactly as v2 did, and for the same
+        # reason: the execution control is the registered paper TWIN, armed at
+        # the same instant. A second live arm would be a second real-money book.
+        control_required=False,
+        control_exemption_reason=(
+            "gated on absolute realizable per-trade via the live-calibrated fill "
+            "model, as v1 and v2 were; the execution control is the registered "
+            "paper TWIN, which is armed at the same instant, not a second live arm"
+        ),
+        independent_variable="concurrent open-position capacity (20 → 40)",
+        held_constant=[
+            "arm parameters (lo=5, hi=10, maxyes=7)",
+            "market universe — no crypto exclusion is added",
+            "entry timing and the 0c price offset",
+            "the 4h order timeout",
+            "hold-to-settlement exits (no TP/SL)",
+            "the fee model",
+            "every keep/stop threshold",
+        ],
+        # `risk`, which the service stores to `risk_json`. `arm_live_canary`
+        # REFUSES a version without it, so this is what makes the canary armable.
+        risk=RISK_ENVELOPE,
         docs={"workstream": "docs/workstreams/WS-007-mmsell10-live-canary.md"},
         change_reason=(
             "Capacity is the independent variable. The twin cap moves to 250 "
@@ -291,7 +344,7 @@ def register(
             "by TURNOVER, not slot count: live entered 188.6 markets/day to the "
             "twin's 21.3. The coverage clause itself is carried over unchanged."
         ),
-        actor=actor, now=at,
+        now=at,
     )
     service.add_arm(
         session, version, arm_key=ARM_KEY, role=ArmRole.TREATMENT,
@@ -351,6 +404,78 @@ def register(
     }
 
 
+def material_config() -> dict:
+    """The parameters a drift check compares the running book against."""
+    return {
+        "book_spec": LIVE_BOOK_SPEC,
+        "twin_tag": TWIN_TAG,
+        "risk": RISK_ENVELOPE,
+    }
+
+
+def arm(
+    session,
+    *,
+    approved_by: str,
+    actor: str = "operator",
+    started_at: datetime | None = None,
+    reason: str | None = None,
+) -> dict:
+    """Arm the successor's canary through the ONE sanctioned path.
+
+    `service.arm_live_canary` enforces every structural rule: the promotion gate
+    is re-evaluated SYNCHRONOUSLY (a recorded PASS is not a capability token),
+    the paper epoch closes, a fresh live epoch opens, and the live deployment and
+    its twin are registered at the identical instant on fresh, unused tags with a
+    first-class `twin_of` link.
+
+    THIS EXPANDS REAL-MONEY EXPOSURE — $19.80 to $39.60 of book ceiling. It still
+    places no order by itself; the runtime allowlist (`LIVE_STRATEGIES`) is a
+    separate switch and a separate act. `approved_by` records the operator who
+    authorized it, and the service refuses without it.
+    """
+    from .read import latest_version
+
+    experiment = get_experiment(session, SUCCESSOR_KEY)
+    if experiment is None:
+        raise service.ExperimentOsError(
+            f"{SUCCESSOR_KEY} does not exist — REGISTER_PACKAGE first"
+        )
+    version = latest_version(session, experiment)
+    if version is None:
+        raise service.ExperimentOsError(
+            f"{SUCCESSOR_KEY} has no version — REGISTER_PACKAGE first"
+        )
+    gate = session.scalar(
+        select(ExperimentGate).where(
+            ExperimentGate.version_id == version.id,
+            ExperimentGate.gate_key == PROMOTION_GATE_KEY,
+        )
+    )
+    if gate is None:
+        raise service.ExperimentOsError(
+            f"{SUCCESSOR_KEY} v{version.version} has no {PROMOTION_GATE_KEY} gate"
+        )
+    live, twin, epoch = service.arm_live_canary(
+        session, experiment,
+        gate=gate,
+        approved_by=approved_by,
+        live_key=LIVE_DEPLOYMENT_KEY,
+        twin_key=TWIN_DEPLOYMENT_KEY,
+        live_tags={ARM_KEY: LIVE_TAG},
+        twin_tags={ARM_KEY: TWIN_TAG},
+        config=material_config(),
+        started_at=started_at,
+        actor=actor,
+        reason=reason or (
+            f"mmsell10 capacity canary armed on {LIVE_TAG} with twin {TWIN_TAG} "
+            f"at one boundary; cap 40 / twin 250 envelope pre-registered on v"
+            f"{version.version}"
+        ),
+    )
+    return {"live": live, "twin": twin, "epoch": epoch}
+
+
 def _tags_of(session, deployment: ExperimentDeployment) -> list[str]:
     """The concrete strategy tags a deployment currently carries."""
     return [
@@ -373,5 +498,5 @@ def _epoch_experiment_id(session, deployment: ExperimentDeployment) -> int | Non
 __all__ = [
     "ARM_KEY", "KEEP_GATE_SPEC", "LIVE_BOOK_SPEC", "LIVE_TAG", "PAPER_TAG",
     "PREDECESSOR_KEY", "RISK_ENVELOPE", "SUCCESSOR_KEY", "TWIN_TAG",
-    "promotion_gate_spec", "register",
+    "arm", "material_config", "promotion_gate_spec", "register",
 ]

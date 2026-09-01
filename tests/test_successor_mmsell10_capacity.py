@@ -17,9 +17,14 @@ import pytest
 from kalshi_bot.experiment_os import canary_mmsell10 as v2
 from kalshi_bot.experiment_os import service as svc
 from kalshi_bot.experiment_os import successor_mmsell10_capacity as cap
+from kalshi_bot.experiment_os.enforcement import EnforcementMode
+from kalshi_bot.experiment_os.lifecycle import ArmRole, LifecycleState
 
 UTC = timezone.utc
 T0 = datetime(2026, 8, 31, 12, 0, tzinfo=UTC)
+#: A later instant, so "the successor's epoch starts at registration" is a
+#: distinguishable claim rather than one that happens to coincide with T0.
+T1 = datetime(2026, 9, 1, 18, 0, tzinfo=UTC)
 
 
 # --- the contract, checkable without a database ----------------------------
@@ -207,3 +212,168 @@ def test_register_refuses_to_run_twice(monkeypatch):
         cap.register(object(), actor="cal", now=T0)
 
     assert "already exists" in str(exc.value)
+
+
+# --- the package must be REACHABLE, not just correct ------------------------
+#
+# The contract, the envelope and the gates were all right and the package was
+# still unrunnable: it had no `arm` and was never registered with the command
+# transport, so neither REGISTER_PACKAGE nor ARM_CANARY could reach it. A
+# package nothing can invoke is indistinguishable from one that does not exist,
+# and "correct but unreachable" is not a state a review catches by reading the
+# module.
+
+
+def test_the_package_is_registered_with_the_command_transport():
+    from kalshi_bot.experiment_os.experiment_commands import _packages
+
+    pkg = _packages().get("mmsell10-capacity-successor")
+
+    assert pkg is not None, "REGISTER_PACKAGE cannot reach an unregistered package"
+    assert pkg.experiment_key == cap.SUCCESSOR_KEY
+
+
+def test_the_package_exposes_both_register_and_arm():
+    """Registering the contract and putting money behind it are two acts. Both
+    have to be callable, and ARM_CANARY aimed at a package with no `arm` has
+    nothing to call."""
+    from kalshi_bot.experiment_os.experiment_commands import _packages
+
+    pkg = _packages()["mmsell10-capacity-successor"]
+
+    assert pkg.register is cap.register
+    assert pkg.arm is cap.arm
+
+
+def test_every_declared_activation_var_clears_the_ops_allowlist():
+    """A package whose activation the env channel refuses halfway through leaves
+    an operator with a write already submitted — the #266 defect class."""
+    from kalshi_bot.experiment_os.experiment_commands import _packages
+    from scripts import railway_env
+
+    pkg = _packages()["mmsell10-capacity-successor"]
+
+    assert pkg.activation_vars, "the activation step must declare what it sets"
+    for name in pkg.activation_vars:
+        assert name in railway_env.ALLOWED_VARS, name
+
+
+def test_arm_refuses_before_the_successor_is_registered(monkeypatch):
+    """ARM_CANARY on an unregistered contract must fail loudly, not create one."""
+    monkeypatch.setattr(cap, "get_experiment", lambda s, key: None)
+
+    with pytest.raises(svc.ExperimentOsError) as exc:
+        cap.arm(object(), approved_by="cal")
+
+    assert "REGISTER_PACKAGE first" in str(exc.value)
+
+
+# --- register() against an actual database ----------------------------------
+#
+# Every test above this line checks `register` by reading its inputs or by
+# monkeypatching its collaborators away, and all sixteen of them passed while
+# `register` could not run AT ALL: it called `create_experiment_version` with
+# `risk_json=` (the parameter is `risk`) and `actor=` (there is no such
+# parameter), and it froze a single-arm version without declaring a control
+# exemption. Three hard failures, none reachable from a test that never opens a
+# session. A package whose write path is only ever exercised through mocks has
+# not been tested; it has been described.
+
+
+def _predecessor_in_paper(session):
+    """The bare shape `register` needs to find: mmsell-price-ceiling with an
+    open paper deployment carrying the mmsell10 control tag."""
+    exp = svc.create_experiment(
+        session, key=cap.PREDECESSOR_KEY, origin="operator",
+        title="predecessor", family="maker",
+        hypothesis="h", mechanism="m", falsification="f", actor="t", now=T0,
+    )
+    version = svc.create_experiment_version(
+        session, exp, independent_variable="entry-price ceiling",
+        risk={"max_open_positions": 20}, control_required=False,
+        control_exemption_reason="the execution control is the paper twin",
+        now=T0,
+    )
+    svc.add_arm(
+        session, version, arm_key=cap.ARM_KEY, role=ArmRole.TREATMENT,
+        description="d", params={"lo": 5, "hi": 10, "maxyes": 7},
+        strategy_tag=cap.PAPER_TAG,
+    )
+    svc.freeze_version(session, version, now=T0)
+    for state in (LifecycleState.PROBE, LifecycleState.PAPER):
+        svc.transition_experiment(session, exp, state, actor="t",
+                                  reason="r", occurred_at=T0)
+    epoch = svc.open_epoch(session, version, reason="e", started_at=T0)
+    svc.register_deployment(
+        session, epoch, deployment_key="pred-paper-1",
+        stage=LifecycleState.PAPER, kind="paper",
+        arms={cap.ARM_KEY: cap.PAPER_TAG}, started_at=T0,
+    )
+    return exp
+
+
+def test_register_runs_end_to_end_against_a_database(xos_session, xos_platform):
+    """The test the other sixteen could not be: open a session, call `register`,
+    and read back what it actually wrote."""
+    _predecessor_in_paper(xos_session)
+
+    out = cap.register(xos_session, actor="claude-code", now=T1)
+
+    successor = out["successor"]
+    version = out["version"]
+    assert successor.key == cap.SUCCESSOR_KEY
+    assert successor.state == LifecycleState.PAPER.value
+    assert version.frozen_at is not None
+    # `arm_live_canary` REFUSES a version without a risk envelope, so this
+    # single assertion is the difference between an armable contract and a dead
+    # one — and it is what `risk_json=` silently failed to produce.
+    assert version.risk_json == cap.RISK_ENVELOPE
+    assert out["paper_deployment"].deployment_key == cap.PAPER_DEPLOYMENT_KEY
+    assert out["ended_deployments"] == ["pred-paper-1"]
+
+
+def test_arming_straight_after_registration_is_refused_for_want_of_EVIDENCE(
+    xos_session, xos_platform, monkeypatch
+):
+    """Registering and arming are not one act, and not only by convention.
+
+    The successor's epoch opens at registration, and the evaluator floors every
+    evidence window at `max(epoch.started_at, gate.evidence_started_at)`. So a
+    freshly registered successor has a zero-width window, its promotion metric is
+    undefined, and `arm_live_canary` — which re-evaluates the gate SYNCHRONOUSLY
+    under enforcement — refuses. The successor must earn its own paper evidence.
+    That is the pre-registration working, not an obstacle to route around: the
+    floor is what stops a successor from inheriting a predecessor's numbers
+    across an epoch boundary the platform declared non-poolable.
+    """
+    monkeypatch.setattr(
+        "kalshi_bot.experiment_os.enforcement.current_mode",
+        lambda s: EnforcementMode.NEW_ONLY,
+    )
+    _predecessor_in_paper(xos_session)
+    cap.register(xos_session, actor="claude-code", now=T1)
+
+    with pytest.raises(svc.ExperimentOsError) as exc:
+        cap.arm(xos_session, approved_by="50thycal", actor="claude-code")
+
+    message = str(exc.value)
+    assert "paper_to_live_canary" in message
+    assert "not PASS" in message
+    assert "no settled trades in window" in message
+
+
+def test_the_evidence_window_starts_at_registration_not_earlier(
+    xos_session, xos_platform
+):
+    """Pinned because the docstring once claimed the opposite. `register` passes
+    `evidence_started_at or at`, so the DEFAULT is registration time — and even
+    an explicit earlier value could not take effect, because the evaluator floors
+    the window at the successor's own epoch start. Anyone reading "it defaults to
+    the predecessor's boundary" would plan an arming that cannot happen."""
+    _predecessor_in_paper(xos_session)
+
+    out = cap.register(xos_session, actor="claude-code", now=T1)
+
+    assert out["evidence_started_at"] == T1
+    assert out["promotion_gate"].evidence_started_at == T1
+    assert out["epoch"].started_at == T1
