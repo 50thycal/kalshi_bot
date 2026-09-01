@@ -13,6 +13,7 @@ Traceback (most recent call last):
     cur.execute(sql)
   File "/opt/hostedtoolcache/Python/3.11.16/x64/lib/python3.11/site-packages/psycopg/cursor.py", line 117, in execute
     raise ex.with_traceback(None)
-psycopg.errors.UndefinedColumn: column lo.ticker does not exist
-LINE 1: select tag, count(*) as open_now from (select lo.ticker, spl...
-                                                      ^
+psycopg.errors.UndefinedColumn: column "updated_at" does not exist
+LINE 1: ...tus, count(*) as n, round(avg(extract(epoch from (updated_at...
+                                                             ^
+HINT:  Perhaps you meant to reference the column "paper_trades.created_at".
