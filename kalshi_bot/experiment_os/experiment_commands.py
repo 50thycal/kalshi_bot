@@ -172,7 +172,13 @@ def _no_contract(session, **kw):
 def _packages() -> dict[str, ExperimentPackage]:
     """Imported lazily so this module stays importable when a package's own
     dependencies are not (and so the boot hook's error handler can still run)."""
-    from . import canary_mmsell10, marktangle, perp_v1, repair_tmmsell_epoch
+    from . import (
+        canary_mmsell10,
+        marktangle,
+        perp_v1,
+        repair_tmmsell_epoch,
+        successor_mmsell10_capacity,
+    )
 
     return {
         "marktangle-reversion": ExperimentPackage(
@@ -196,6 +202,28 @@ def _packages() -> dict[str, ExperimentPackage]:
             ),
             register=_no_contract,
             repair=repair_tmmsell_epoch.repair,
+        ),
+        "mmsell10-capacity-successor": ExperimentPackage(
+            name="mmsell10-capacity-successor",
+            experiment_key=successor_mmsell10_capacity.SUCCESSOR_KEY,
+            description=(
+                "The mmsell10 price-ceiling book re-armed at 2x open capacity "
+                "(cap 20->40, book ceiling $19.80->$39.60, twin cap 20->250). A "
+                "SUCCESSOR experiment rather than a new version because "
+                "arm_live_canary requires PAPER and LIVE_CANARY->PAPER is an "
+                "illegal rollback, so an already-live experiment has no "
+                "sanctioned way to re-arm. Registering ends only the predecessor's "
+                "PAPER deployment, to hand the mmsell10 control tag over; its "
+                "live book is left running so it drains with every settlement "
+                "still recording. The arm parameters, entry pricing, exits, fee "
+                "model and every keep/stop threshold are carried over unchanged, "
+                "and the keep gate is the predecessor's own object."
+            ),
+            register=successor_mmsell10_capacity.register,
+            arm=successor_mmsell10_capacity.arm,
+            activation_vars=frozenset(
+                successor_mmsell10_capacity.RISK_ENVELOPE["settings"]
+            ) | {"LIVE_STRATEGIES"},
         ),
         "perp-v1": ExperimentPackage(
             name="perp-v1",

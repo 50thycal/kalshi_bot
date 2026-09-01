@@ -207,3 +207,57 @@ def test_register_refuses_to_run_twice(monkeypatch):
         cap.register(object(), actor="cal", now=T0)
 
     assert "already exists" in str(exc.value)
+
+
+# --- the package must be REACHABLE, not just correct ------------------------
+#
+# The contract, the envelope and the gates were all right and the package was
+# still unrunnable: it had no `arm` and was never registered with the command
+# transport, so neither REGISTER_PACKAGE nor ARM_CANARY could reach it. A
+# package nothing can invoke is indistinguishable from one that does not exist,
+# and "correct but unreachable" is not a state a review catches by reading the
+# module.
+
+
+def test_the_package_is_registered_with_the_command_transport():
+    from kalshi_bot.experiment_os.experiment_commands import _packages
+
+    pkg = _packages().get("mmsell10-capacity-successor")
+
+    assert pkg is not None, "REGISTER_PACKAGE cannot reach an unregistered package"
+    assert pkg.experiment_key == cap.SUCCESSOR_KEY
+
+
+def test_the_package_exposes_both_register_and_arm():
+    """Registering the contract and putting money behind it are two acts. Both
+    have to be callable, and ARM_CANARY aimed at a package with no `arm` has
+    nothing to call."""
+    from kalshi_bot.experiment_os.experiment_commands import _packages
+
+    pkg = _packages()["mmsell10-capacity-successor"]
+
+    assert pkg.register is cap.register
+    assert pkg.arm is cap.arm
+
+
+def test_every_declared_activation_var_clears_the_ops_allowlist():
+    """A package whose activation the env channel refuses halfway through leaves
+    an operator with a write already submitted — the #266 defect class."""
+    from kalshi_bot.experiment_os.experiment_commands import _packages
+    from scripts import railway_env
+
+    pkg = _packages()["mmsell10-capacity-successor"]
+
+    assert pkg.activation_vars, "the activation step must declare what it sets"
+    for name in pkg.activation_vars:
+        assert name in railway_env.ALLOWED_VARS, name
+
+
+def test_arm_refuses_before_the_successor_is_registered(monkeypatch):
+    """ARM_CANARY on an unregistered contract must fail loudly, not create one."""
+    monkeypatch.setattr(cap, "get_experiment", lambda s, key: None)
+
+    with pytest.raises(svc.ExperimentOsError) as exc:
+        cap.arm(object(), approved_by="cal")
+
+    assert "REGISTER_PACKAGE first" in str(exc.value)

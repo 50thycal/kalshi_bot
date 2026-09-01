@@ -51,6 +51,7 @@ from .models import (
     ExperimentDeployment,
     ExperimentDeploymentArm,
     ExperimentEpoch,
+    ExperimentGate,
     ExperimentVersion,
 )
 from .read import get_experiment
@@ -351,6 +352,78 @@ def register(
     }
 
 
+def material_config() -> dict:
+    """The parameters a drift check compares the running book against."""
+    return {
+        "book_spec": LIVE_BOOK_SPEC,
+        "twin_tag": TWIN_TAG,
+        "risk": RISK_ENVELOPE,
+    }
+
+
+def arm(
+    session,
+    *,
+    approved_by: str,
+    actor: str = "operator",
+    started_at: datetime | None = None,
+    reason: str | None = None,
+) -> dict:
+    """Arm the successor's canary through the ONE sanctioned path.
+
+    `service.arm_live_canary` enforces every structural rule: the promotion gate
+    is re-evaluated SYNCHRONOUSLY (a recorded PASS is not a capability token),
+    the paper epoch closes, a fresh live epoch opens, and the live deployment and
+    its twin are registered at the identical instant on fresh, unused tags with a
+    first-class `twin_of` link.
+
+    THIS EXPANDS REAL-MONEY EXPOSURE — $19.80 to $39.60 of book ceiling. It still
+    places no order by itself; the runtime allowlist (`LIVE_STRATEGIES`) is a
+    separate switch and a separate act. `approved_by` records the operator who
+    authorized it, and the service refuses without it.
+    """
+    from .read import latest_version
+
+    experiment = get_experiment(session, SUCCESSOR_KEY)
+    if experiment is None:
+        raise service.ExperimentOsError(
+            f"{SUCCESSOR_KEY} does not exist — REGISTER_PACKAGE first"
+        )
+    version = latest_version(session, experiment)
+    if version is None:
+        raise service.ExperimentOsError(
+            f"{SUCCESSOR_KEY} has no version — REGISTER_PACKAGE first"
+        )
+    gate = session.scalar(
+        select(ExperimentGate).where(
+            ExperimentGate.version_id == version.id,
+            ExperimentGate.gate_key == PROMOTION_GATE_KEY,
+        )
+    )
+    if gate is None:
+        raise service.ExperimentOsError(
+            f"{SUCCESSOR_KEY} v{version.version} has no {PROMOTION_GATE_KEY} gate"
+        )
+    live, twin, epoch = service.arm_live_canary(
+        session, experiment,
+        gate=gate,
+        approved_by=approved_by,
+        live_key=LIVE_DEPLOYMENT_KEY,
+        twin_key=TWIN_DEPLOYMENT_KEY,
+        live_tags={ARM_KEY: LIVE_TAG},
+        twin_tags={ARM_KEY: TWIN_TAG},
+        config=material_config(),
+        started_at=started_at,
+        actor=actor,
+        reason=reason or (
+            f"mmsell10 capacity canary armed on {LIVE_TAG} with twin {TWIN_TAG} "
+            f"at one boundary; cap 40 / twin 250 envelope pre-registered on v"
+            f"{version.version}"
+        ),
+    )
+    return {"live": live, "twin": twin, "epoch": epoch}
+
+
 def _tags_of(session, deployment: ExperimentDeployment) -> list[str]:
     """The concrete strategy tags a deployment currently carries."""
     return [
@@ -373,5 +446,5 @@ def _epoch_experiment_id(session, deployment: ExperimentDeployment) -> int | Non
 __all__ = [
     "ARM_KEY", "KEEP_GATE_SPEC", "LIVE_BOOK_SPEC", "LIVE_TAG", "PAPER_TAG",
     "PREDECESSOR_KEY", "RISK_ENVELOPE", "SUCCESSOR_KEY", "TWIN_TAG",
-    "promotion_gate_spec", "register",
+    "arm", "material_config", "promotion_gate_spec", "register",
 ]
