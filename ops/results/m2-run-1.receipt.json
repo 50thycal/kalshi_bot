@@ -1,0 +1,23 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "78788a256e75abc13de7eee5641b40fd7be1184f",
+  "code_source": "default-branch",
+  "exit_status": 1,
+  "finished_at": "2026-09-02T15:28:46Z",
+  "id": "m2-run-1",
+  "outcome": "FAILED",
+  "provenance": {
+    "actor": "research-lab",
+    "purpose": "MARKTANGLE-2 run 1: full instrument, default budget",
+    "workstream": "WS-013"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/m2-run-1.receipt.json",
+  "result_file": "ops/results/m2-run-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33645003050",
+  "service": null,
+  "started_at": "2026-09-02T14:53:43Z",
+  "targets": [],
+  "type": "script"
+}
