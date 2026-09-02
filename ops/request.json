@@ -1,1 +1,1 @@
-{"type":"script","name":"marktangle2_probe","id":"m2-run-2","actor":"research-lab","workstream":"WS-013","purpose":"MARKTANGLE-2 run 2: candle dollars fix, 60-page history"}
+{"type":"xos","command":"experiment-command-show","args":["m2-register-3"],"id":"m2-xc-show-3","actor":"research-lab","workstream":"WS-013"}
