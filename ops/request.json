@@ -1,1 +1,1 @@
-{"type":"noop","id":"idle-perpv1-retired"}
+{"type": "env", "id": "m2-register-env-4", "actor": "research-lab", "workstream": "WS-013", "purpose": "REGISTER_PACKAGE marktangle-2 after PR #318 merged (operator-authorized)", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\":\"m2-register-4\",\"action\":\"REGISTER_PACKAGE\",\"actor\":\"claude-code\",\"actor_role\":\"RESEARCH_LAB\",\"payload\":{\"package\":\"marktangle-2\"},\"schema_version\":1}"}}
