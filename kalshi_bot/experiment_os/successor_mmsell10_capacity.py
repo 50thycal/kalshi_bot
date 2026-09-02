@@ -157,8 +157,24 @@ def promotion_gate_spec(sample_floor: int | None = None) -> dict:
     """The predecessor's promotion bar, optionally with a sample floor."""
     spec = {k: v for k, v in _V2_PROMOTION_SPEC.items()}
     if sample_floor is not None:
+        # The predecessor's description ends "unchanged and unfloored". Carrying
+        # it verbatim onto a FLOORED gate would leave a frozen, immutable record
+        # contradicting its own sample clause.
+        spec["description"] = (
+            f"{spec['description']} Floored for this successor at "
+            f"{int(sample_floor)} settled paper contracts, which the predecessor "
+            "did not require: capacity doubles here, so the paper baseline the "
+            "promotion rests on should not be thinner than the keep gate's own "
+            "sample scale."
+        )
+        # `settled_contracts`, NOT `paper_settled_contracts`. The registry has
+        # no `paper_` prefix on paper-scope metrics — the scope comes from
+        # `deployment_kind` — and a name it does not know evaluates
+        # BLOCKED_INTEGRITY, which never passes. Gates freeze on registration,
+        # so that typo costs a Version to undo; `test_every_metric_the_
+        # promotion_gate_names_is_registered` now checks this branch.
         spec["sample"] = {
-            ARM_KEY: {"metric": "paper_settled_contracts", "op": ">=",
+            ARM_KEY: {"metric": "settled_contracts", "op": ">=",
                       "value": int(sample_floor), "deployment_kind": "paper"},
         }
     return spec
@@ -476,6 +492,193 @@ def arm(
     return {"live": live, "twin": twin, "epoch": epoch}
 
 
+def revise_promotion_gate(
+    session,
+    *,
+    actor: str,
+    promotion_sample_floor: int | None = 150,
+    now: datetime | None = None,
+) -> dict:
+    """Open v2 of the successor because v1's promotion gate can never PASS.
+
+    WHAT WENT WRONG. v1 was registered with `promotion_sample_floor=150`, and the
+    floor clause named `paper_settled_contracts`. The canonical registry has no
+    such metric -- paper-scope metrics carry no `paper_` prefix, the scope comes
+    from `deployment_kind` -- so the evaluator returns BLOCKED_INTEGRITY, not
+    HOLD. BLOCKED_INTEGRITY never becomes PASS however long the book runs, and
+    `arm_live_canary` re-evaluates the promotion gate synchronously, so v1 is
+    permanently unarmable.
+
+    WHY A NEW VERSION IS THE ONLY REMEDY. A gate is frozen with its version and
+    is immutable by construction -- that immutability is what makes
+    pre-registration mean anything, so editing v1's gate in place is not an
+    option that exists. The lifecycle names the alternative itself: a revised
+    decision rule is a new gate on a new Version. The experiment is in PAPER,
+    which is exactly where a contract may still be revised, so this is an
+    ordinary revision and not a rollback: v1 stays in the record, unedited,
+    carrying the mistake.
+
+    WHAT IS IDENTICAL: the hypothesis, the arm, the risk envelope, the keep gate
+    and the promotion bar. The ONLY difference is the floor clause naming
+    `settled_contracts`. This buys no leniency -- the corrected gate is strictly
+    stricter than an unfloored one.
+
+    WHAT IT COSTS: v2 opens its own epoch, so the evidence window restarts. v1
+    ran for minutes, so the cost is minutes.
+
+    Refuses unless it finds exactly the defect it repairs, so it cannot be
+    re-run and cannot be pointed at a healthy contract.
+    """
+    from ..repository import count_live_book_open
+    from .metrics import REGISTRY
+    from .read import latest_version
+
+    at = now or _now()
+    successor = get_experiment(session, SUCCESSOR_KEY)
+    if successor is None:
+        raise service.ExperimentOsError(
+            f"{SUCCESSOR_KEY} does not exist — REGISTER_PACKAGE it first"
+        )
+    if successor.state != LifecycleState.PAPER.value:
+        raise service.ExperimentOsError(
+            f"a contract may only be revised in PAPER; {SUCCESSOR_KEY} is "
+            f"{successor.state}. Once live, a changed decision rule is a "
+            "successor experiment, not a new version of this one."
+        )
+    current = latest_version(session, successor)
+    if current is None:
+        raise service.ExperimentOsError(f"{SUCCESSOR_KEY} has no version")
+
+    # The precondition IS the defect: refuse anything else outright, so this can
+    # never be used to quietly re-register a healthy gate on a new Version.
+    gate = session.scalar(
+        select(ExperimentGate).where(
+            ExperimentGate.version_id == current.id,
+            ExperimentGate.gate_key == PROMOTION_GATE_KEY,
+        )
+    )
+    if gate is None:
+        raise service.ExperimentOsError(
+            f"v{current.version} has no {PROMOTION_GATE_KEY} gate to revise"
+        )
+    unknown = sorted(
+        {
+            clause["metric"].split(".")[-1]
+            for clause in (gate.spec_json.get("sample") or {}).values()
+            if isinstance(clause, dict) and clause.get("metric")
+        }
+        - set(REGISTRY)
+    )
+    if not unknown:
+        raise service.ExperimentOsError(
+            f"v{current.version}'s {PROMOTION_GATE_KEY} names only registered "
+            "metrics — there is nothing here to repair, and opening a Version "
+            "to restate a working gate would discard evidence for nothing"
+        )
+
+    # The transport passes `promotion_sample_floor` as None whenever the envelope
+    # omits it, and this revision must not be a way to quietly DROP the floor an
+    # operator already chose. So an absent floor means "whatever the superseded
+    # gate required", never "no floor".
+    if promotion_sample_floor is None:
+        promotion_sample_floor = next(
+            (
+                clause["value"]
+                for clause in (gate.spec_json.get("sample") or {}).values()
+                if isinstance(clause, dict) and clause.get("value") is not None
+            ),
+            None,
+        )
+
+    epoch = session.scalar(
+        select(ExperimentEpoch).where(
+            ExperimentEpoch.version_id == current.id,
+            ExperimentEpoch.ended_at.is_(None),
+        )
+    )
+    # Same guard as `register`: a deployment about to be re-registered on a new
+    # epoch must not hold live positions, or the settlements lose their arm.
+    carrying = service.open_deployments(session, epoch) if epoch is not None else []
+    for dep in carrying:
+        for tag in _tags_of(session, dep):
+            held = count_live_book_open(session, tag)
+            if held:
+                raise service.ExperimentOsError(
+                    f"{tag} holds {held} open live position(s); cutting an epoch "
+                    "under it would strand the settlements"
+                )
+
+    version = service.create_experiment_version(
+        session, successor,
+        hypothesis=current.hypothesis,
+        universe_selector=current.universe_selector,
+        entry_rule=current.entry_rule,
+        exit_rule=current.exit_rule,
+        sizing_rule=current.sizing_rule,
+        execution_style=current.execution_style,
+        independent_variable=current.independent_variable,
+        held_constant=current.held_constant_json,
+        control_required=False,
+        control_exemption_reason=current.control_exemption_reason,
+        risk=RISK_ENVELOPE,
+        docs={"workstream": "docs/workstreams/WS-007-mmsell10-live-canary.md"},
+        change_reason=(
+            f"v{current.version}'s promotion gate named {unknown} — absent from "
+            "the canonical metric registry, so it evaluated BLOCKED_INTEGRITY "
+            "and could never PASS, leaving the contract permanently unarmable. "
+            "Gates are immutable with their version, so the correction is a new "
+            "Version. NOTHING about the science changes: same hypothesis, same "
+            "arm, same risk envelope, same keep gate, same promotion bar. Only "
+            "the floor clause's metric name is corrected, to `settled_contracts`."
+        ),
+        now=at,
+    )
+    service.add_arm(
+        session, version, arm_key=ARM_KEY, role=ArmRole.TREATMENT,
+        description="entry-price ceiling only (lo=5,hi=10,maxyes=7) — unchanged",
+        params={"lo": 5, "hi": 10, "maxyes": 7}, strategy_tag=PAPER_TAG,
+    )
+    promotion_gate = service.register_gate(
+        session, version, gate_key=PROMOTION_GATE_KEY, kind="promotion",
+        spec=promotion_gate_spec(promotion_sample_floor),
+        from_state=LifecycleState.PAPER, to_state=LifecycleState.LIVE_CANARY,
+        registered_at=at,
+        notes=f"v{current.version}'s bar with the floor clause's metric corrected",
+    )
+    keep_gate = service.register_gate(
+        session, version, gate_key=KEEP_GATE_KEY, kind="kill",
+        spec=KEEP_GATE_SPEC, registered_at=at,
+        notes=f"carried verbatim from {_KEEP_GATE_CARRIED_FROM}",
+    )
+    service.freeze_version(session, version, now=at)
+    service.mark_gate_evidence_started(session, promotion_gate, at=at)
+    service.mark_gate_evidence_started(session, keep_gate, at=at)
+
+    new_epoch = service.open_epoch(
+        session, version,
+        reason=("v2's first operating interval; v1's promotion gate was "
+                "unarmable and its evidence window does not carry"),
+        started_at=at,
+    )
+    if epoch is not None:
+        service.close_epoch(session, epoch, ended_at=at)
+    carried = service.carry_deployments_forward(
+        session, carrying, new_epoch, started_at=at,
+        reason="the paper control keeps running across the version revision",
+    )
+    return {
+        "successor": successor,
+        "superseded_version": current.version,
+        "version": version,
+        "promotion_gate": promotion_gate,
+        "keep_gate": keep_gate,
+        "epoch": new_epoch,
+        "carried_deployments": [d.deployment_key for d in carried],
+        "unregistered_metrics": unknown,
+        "revised_at": at,
+    }
+
+
 def _tags_of(session, deployment: ExperimentDeployment) -> list[str]:
     """The concrete strategy tags a deployment currently carries."""
     return [
@@ -499,4 +702,5 @@ __all__ = [
     "ARM_KEY", "KEEP_GATE_SPEC", "LIVE_BOOK_SPEC", "LIVE_TAG", "PAPER_TAG",
     "PREDECESSOR_KEY", "RISK_ENVELOPE", "SUCCESSOR_KEY", "TWIN_TAG",
     "arm", "material_config", "promotion_gate_spec", "register",
+    "revise_promotion_gate",
 ]

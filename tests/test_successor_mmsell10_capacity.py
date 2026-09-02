@@ -377,3 +377,188 @@ def test_the_evidence_window_starts_at_registration_not_earlier(
     assert out["evidence_started_at"] == T1
     assert out["promotion_gate"].evidence_started_at == T1
     assert out["epoch"].started_at == T1
+
+
+# --- every gate metric must exist in the canonical registry -----------------
+#
+# Registering v1 with `promotion_sample_floor=150` produced a gate the evaluator
+# could never pass: the floor clause named `paper_settled_contracts`, which is
+# not a registered metric (the paper-scope name is `settled_contracts`), so the
+# promotion gate came back BLOCKED_INTEGRITY rather than HOLD. Gates are frozen
+# and immutable, so that mistake cost a whole Version to correct.
+#
+# `promotion_gate_spec(None)` was exercised by every other test and is fine. The
+# floor is a BRANCH nothing had ever taken, and a metric name is exactly the kind
+# of typo that reads correctly. So assert against the registry, not against a
+# remembered spelling — and assert it for every clause of both gates.
+
+
+def _metric_names(spec: dict):
+    """Every metric a gate spec names, wherever it appears in the structure."""
+    found = []
+    for key, clauses in spec.items():
+        if key in ("description", "notes"):
+            continue
+        if isinstance(clauses, dict):
+            clauses = list(clauses.values())
+        if not isinstance(clauses, list):
+            continue
+        for clause in clauses:
+            if not isinstance(clause, dict):
+                continue
+            metric = clause.get("metric")
+            if metric:
+                # `delta.x` addresses metric `x` against a control.
+                found.append(metric.split(".")[-1])
+            floor = clause.get("min_evidence") or {}
+            if floor.get("metric"):
+                found.append(floor["metric"].split(".")[-1])
+    return found
+
+
+@pytest.mark.parametrize("floor", [None, 150])
+def test_every_metric_the_promotion_gate_names_is_registered(floor):
+    from kalshi_bot.experiment_os.metrics import REGISTRY
+
+    names = _metric_names(cap.promotion_gate_spec(floor))
+
+    assert names, "a gate that names no metric decides nothing"
+    unknown = sorted({n for n in names if n not in REGISTRY})
+    assert not unknown, (
+        f"gate names metric(s) absent from the canonical registry: {unknown}. "
+        "The evaluator returns BLOCKED_INTEGRITY, which never passes, and the "
+        "gate is frozen the moment it is registered."
+    )
+
+
+def test_every_metric_the_keep_gate_names_is_registered():
+    from kalshi_bot.experiment_os.metrics import REGISTRY
+
+    names = _metric_names(cap.KEEP_GATE_SPEC)
+
+    assert names
+    unknown = sorted({n for n in names if n not in REGISTRY})
+    assert not unknown, f"keep gate names unregistered metric(s): {unknown}"
+
+
+# --- the version revision ---------------------------------------------------
+#
+# v1 was registered in production with a promotion gate that can never PASS, and
+# a gate is frozen with its version. The remedy the lifecycle allows is a new
+# Version, in PAPER, where a contract may still be revised. What these tests pin
+# is that the revision cannot become anything else: not a way to relax a floor,
+# not a way to restate a healthy gate, and not a rollback.
+
+
+def _registered_successor(session, floor=150):
+    _predecessor_in_paper(session)
+    return cap.register(
+        session, actor="claude-code", now=T1, promotion_sample_floor=floor
+    )
+
+
+def _registered_with_the_shipped_defect(session, monkeypatch, floor=150):
+    """Register v1 with its promotion gate EXACTLY as it went to production on
+    2026-09-02: the floor clause naming `paper_settled_contracts`, which is not
+    a registered metric. Reproduced rather than described, so the revision is
+    tested against the real defect and not a tidied-up memory of it."""
+    unfixed = cap.promotion_gate_spec  # bound before the patch, or this recurses
+
+    def shipped(sample_floor):
+        spec = unfixed(None)
+        spec["sample"] = {
+            cap.ARM_KEY: {"metric": "paper_settled_contracts", "op": ">=",
+                          "value": int(sample_floor), "deployment_kind": "paper"},
+        }
+        return spec
+
+    monkeypatch.setattr(cap, "promotion_gate_spec", shipped)
+    out = _registered_successor(session, floor=floor)
+    monkeypatch.undo()
+    return out
+
+
+def test_v1s_floored_gate_reproduces_the_production_defect(xos_session, xos_platform):
+    """The bug as it actually shipped, so the fix is anchored to it."""
+    from kalshi_bot.experiment_os.metrics import REGISTRY
+
+    out = _registered_successor(xos_session)
+    spec = out["promotion_gate"].spec_json
+
+    # After the fix the floor names a REGISTERED metric. Before it, this clause
+    # said `paper_settled_contracts` and the evaluator returned BLOCKED_INTEGRITY.
+    clause = spec["sample"][cap.ARM_KEY]
+    assert clause["metric"] == "settled_contracts"
+    assert clause["metric"] in REGISTRY
+    assert clause["value"] == 150
+    assert clause["deployment_kind"] == "paper"
+
+
+def test_the_revision_opens_v2_and_carries_the_paper_book(
+    xos_session, xos_platform, monkeypatch
+):
+    _registered_with_the_shipped_defect(xos_session, monkeypatch)
+
+    out = cap.revise_promotion_gate(xos_session, actor="claude-code", now=T1)
+
+    assert out["superseded_version"] == 1
+    assert out["version"].version == 2
+    assert out["version"].frozen_at is not None
+    # The science is untouched. Only the gate's metric name moves.
+    assert out["version"].risk_json == cap.RISK_ENVELOPE
+    assert out["keep_gate"].spec_json == cap.KEEP_GATE_SPEC
+    # The control book keeps running: an epoch cut that stranded it would be the
+    # XOS-000011 blackout shape.
+    assert out["carried_deployments"], "the paper control must survive the cut"
+
+
+def test_the_revision_refuses_a_contract_with_nothing_wrong_with_it(
+    xos_session, xos_platform, monkeypatch
+):
+    """Otherwise it is a general-purpose way to discard an evidence window."""
+    _registered_with_the_shipped_defect(xos_session, monkeypatch)
+    cap.revise_promotion_gate(xos_session, actor="claude-code", now=T1)
+
+    with pytest.raises(svc.ExperimentOsError) as exc:
+        cap.revise_promotion_gate(xos_session, actor="claude-code", now=T1)
+
+    assert "nothing here to repair" in str(exc.value)
+
+
+def test_the_revision_cannot_quietly_drop_the_operators_floor(
+    xos_session, xos_platform, monkeypatch
+):
+    """The transport passes `promotion_sample_floor=None` whenever the envelope
+    omits it. If that meant "no floor", a revision billed as a metric-name typo
+    fix would silently halve the evidence real money waits on."""
+    _registered_with_the_shipped_defect(xos_session, monkeypatch, floor=150)
+
+    out = cap.revise_promotion_gate(
+        xos_session, actor="claude-code", promotion_sample_floor=None, now=T1
+    )
+
+    assert out["promotion_gate"].spec_json["sample"][cap.ARM_KEY]["value"] == 150
+
+
+def test_the_revision_refuses_outside_PAPER(xos_session, xos_platform, monkeypatch):
+    """In LIVE_CANARY a changed decision rule is a successor experiment, not a
+    new version — the same rule that made this whole successor necessary."""
+    _registered_with_the_shipped_defect(xos_session, monkeypatch)
+    successor = cap.get_experiment(xos_session, cap.SUCCESSOR_KEY)
+    successor.state = LifecycleState.LIVE_CANARY.value
+
+    with pytest.raises(svc.ExperimentOsError) as exc:
+        cap.revise_promotion_gate(xos_session, actor="claude-code", now=T1)
+
+    assert "only be revised in PAPER" in str(exc.value)
+
+
+def test_the_gatefix_package_is_reachable_through_the_transport():
+    from kalshi_bot.experiment_os.experiment_commands import _packages
+
+    pkg = _packages().get("mmsell10-capacity-gatefix")
+
+    assert pkg is not None
+    assert pkg.register is cap.revise_promotion_gate
+    # It registers a contract; it must never be able to arm one.
+    assert pkg.arm is None
