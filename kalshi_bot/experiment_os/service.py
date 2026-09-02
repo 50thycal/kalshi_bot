@@ -1974,3 +1974,140 @@ def attach_legacy_evidence(
     session.add(ev)
     session.flush()
     return ev
+
+
+# ---------------------------------------------------------------------------
+# Retrospective close-out (an experiment that ran and finished OUTSIDE the system)
+# ---------------------------------------------------------------------------
+
+
+def close_out_retrospective(
+    session,
+    experiment: Experiment,
+    *,
+    verdicts: Sequence[tuple[ExperimentGate, GateVerdict | str, str]],
+    actor: str,
+    approved_by: str,
+    reason: str,
+    evidence_ref: str,
+    epoch: ExperimentEpoch | None = None,
+    now: datetime | None = None,
+) -> dict:
+    """Record, late, an experiment that ran to a conclusion outside Experiment OS,
+    and retire it in the same act.
+
+    WHY THIS EXISTS AT ALL
+    ----------------------
+    PERP-V1 ran a full probe lifecycle — pre-registration, collector, scorer, three
+    arm verdicts — without ever being registered, because registering redeploys the
+    worker and a probe that cannot trade had no reason to force that. Correct at the
+    time, and it left the system unable to say the one thing that was true: this
+    experiment happened and it is over. The documents were the only record.
+
+    That is a general gap, not a perp one. Any experiment that runs outside the
+    system and finishes hits it. `import_legacy_experiment` does not fit — it is for
+    PRE-cutover history and would mark post-cutover work grandfathered, which is
+    exactly what the Legacy Migration role is told never to do.
+
+    WHAT IT MAY NEVER DO, ENFORCED HERE RATHER THAN TRUSTED TO CALLERS
+    ------------------------------------------------------------------
+    A hand-written verdict is precisely what "only a recorded evaluator PASS
+    authorizes a transition" exists to refuse. So this function is built so that the
+    thing it writes CANNOT authorize anything:
+
+      * **No verdict may be PASS.** Not "should not" — refused. A retrospective
+        record is history, never permission, and the cheapest way to guarantee that
+        is to make the authorizing value unrepresentable through this path.
+      * **The only transition is to RETIRED**, which the state machine already
+        allows from anywhere and which needs no PASS (`_NEEDS_PASS_RESULT` covers
+        only LIVE_CANARY and PRODUCTION). Nothing here can enter or expand real
+        money.
+      * **Refused if the experiment holds any deployment.** A deployment means
+        strategy tags existed and something may have traded; that is not an
+        outside-the-system record, it is a migration, and it belongs to a role that
+        reconstructs evidence rather than to one that writes a conclusion down.
+
+    `computed_by` is stamped `retrospective:<actor>` on every result, so a reader
+    can always tell these apart from the evaluator's rows — a gate result that
+    cannot say who computed it is worse than no gate result.
+    """
+    at = now or _now()
+
+    if not approved_by or not approved_by.strip():
+        raise ExperimentOsError(
+            "close_out_retrospective requires approved_by: recording someone else's "
+            "conclusion is an operator act and the audit row must name a person"
+        )
+    if not evidence_ref or not evidence_ref.strip():
+        raise ExperimentOsError(
+            "close_out_retrospective requires evidence_ref — a retrospective verdict "
+            "whose evidence lives outside the system is worthless without a pointer "
+            "to where it does live"
+        )
+    if not verdicts:
+        raise ExperimentOsError(
+            "close_out_retrospective requires at least one gate verdict: an "
+            "experiment with no recorded conclusion is not closed out, it is deleted"
+        )
+
+    # Deployments hang off epochs, not off the experiment, so this walks
+    # deployment -> epoch -> version. Counting only the experiment's own rows would
+    # have found none and let the guard pass vacuously.
+    deployments = session.scalars(
+        select(ExperimentDeployment)
+        .join(ExperimentEpoch, ExperimentEpoch.id == ExperimentDeployment.epoch_id)
+        .join(ExperimentVersion, ExperimentVersion.id == ExperimentEpoch.version_id)
+        .where(ExperimentVersion.experiment_id == experiment.id)
+    ).all()
+    if deployments:
+        raise ExperimentOsError(
+            f"experiment {experiment.key} holds {len(deployments)} deployment(s) — it "
+            "was admissible to the write path, so its history is a MIGRATION with "
+            "evidence to reconstruct, not an outside-the-system close-out"
+        )
+
+    recorded = []
+    for gate, verdict, explanation in verdicts:
+        v = GateVerdict(verdict)
+        if v is GateVerdict.PASS:
+            raise ExperimentOsError(
+                f"gate {gate.gate_key}: a retrospective close-out may not record PASS. "
+                "A verdict computed outside the system, by hand, after the fact, is "
+                "history — it can never be the thing that authorizes a promotion"
+            )
+        if not explanation or not explanation.strip():
+            raise ExperimentOsError(
+                f"gate {gate.gate_key}: every retrospective verdict needs an "
+                "explanation — the number that produced it is not in this system"
+            )
+        recorded.append(
+            record_gate_result(
+                session,
+                gate,
+                verdict=v,
+                computed_at=at,
+                computed_by=f"retrospective:{actor}",
+                epoch=epoch,
+                evidence_ref=evidence_ref,
+                explanation=explanation,
+            )
+        )
+
+    transition = transition_experiment(
+        session,
+        experiment,
+        LifecycleState.RETIRED,
+        actor=actor,
+        reason=reason,
+        approved_by=approved_by,
+        occurred_at=at,
+    )
+
+    return {
+        "experiment": experiment.key,
+        "state": experiment.state,
+        "verdicts": {r.gate_id: r.verdict for r in recorded},
+        "results": len(recorded),
+        "transition_id": transition.id,
+        "evidence_ref": evidence_ref,
+    }
