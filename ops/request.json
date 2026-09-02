@@ -1,1 +1,1 @@
-{"type": "env", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\":\"mm10cap-gatefix-1\",\"action\":\"REGISTER_PACKAGE\",\"actor\":\"claude-code\",\"actor_role\":\"TASK_SPECIFIC\",\"payload\":{\"package\":\"mmsell10-capacity-gatefix\",\"promotion_sample_floor\":150},\"schema_version\":1}"}, "id": "mm10cap-gatefix-set-1"}
+{"type":"db","sql":"select command_id, action, status, left(coalesce(error,''),400) as error, completed_at::text as completed from experiment_os_experiment_commands order by id desc limit 2","max_rows":3,"id":"mm10cap-gatefix-receipt-1"}
