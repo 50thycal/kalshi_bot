@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "cd1dce0847d66a5ae70388b203435ddb0eeddbae",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-02T13:25:50Z",
+  "id": "evo-ct-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/evo-ct-1.receipt.json",
+  "result_file": "ops/results/evo-ct-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33635626199",
+  "service": null,
+  "started_at": "2026-09-02T13:25:46Z",
+  "targets": [],
+  "type": "script"
+}
