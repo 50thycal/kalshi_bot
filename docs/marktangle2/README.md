@@ -9,5 +9,9 @@ The run outputs land here, split from the ops result by
 - `MARKTANGLE_2_SUMMARY.md` — track verdicts, surviving arms, statistical-only arms, next gate, fingerprints
 - `MARKTANGLE_2_TRADES.csv` — one row per simulated trade (treatment and mirror), enough to reproduce every number
 
-The preregistration is `docs/MARKTANGLE_2_SPEC.md`. **No run has been recorded yet.** The
-splitter refuses a package whose trades CSV does not match the fingerprint the run printed.
+The preregistration is `docs/MARKTANGLE_2_SPEC.md`. The splitter refuses a package whose
+trades CSV does not match the fingerprint the run printed.
+
+**Recorded run: `m2-run-2`, 2026-09-02, code `6933763`.** Track A **HOLD**, Track B **HOLD**,
+no arm surviving. Fingerprint verified on split. Detail: `MARKTANGLE_2_SUMMARY.md`; reading:
+`docs/RESEARCH_JOURNAL.md` and WS-013's run log.
