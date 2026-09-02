@@ -225,6 +225,24 @@ def _packages() -> dict[str, ExperimentPackage]:
                 successor_mmsell10_capacity.RISK_ENVELOPE["settings"]
             ) | {"LIVE_STRATEGIES"},
         ),
+        "mmsell10-capacity-gatefix": ExperimentPackage(
+            name="mmsell10-capacity-gatefix",
+            experiment_key=successor_mmsell10_capacity.SUCCESSOR_KEY,
+            description=(
+                "Opens v2 of the capacity successor because v1's promotion gate "
+                "can never PASS: its sample floor named `paper_settled_contracts`, "
+                "which is not in the canonical metric registry, so the evaluator "
+                "returns BLOCKED_INTEGRITY and arm_live_canary — which re-runs "
+                "the gate synchronously — refuses forever. A gate is immutable "
+                "with its version, so the only remedy the lifecycle allows is a "
+                "new Version, and PAPER is where a contract may still be revised. "
+                "Nothing about the science changes: same hypothesis, arm, risk "
+                "envelope, keep gate and promotion bar; only the floor clause's "
+                "metric name is corrected. It refuses unless it finds exactly "
+                "that defect, so it cannot re-run or touch a healthy contract."
+            ),
+            register=successor_mmsell10_capacity.revise_promotion_gate,
+        ),
         "perp-v1": ExperimentPackage(
             name="perp-v1",
             experiment_key=perp_v1.EXPERIMENT_KEY,

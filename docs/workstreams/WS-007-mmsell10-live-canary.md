@@ -471,3 +471,53 @@ until a test calls it through `_packages()`.
 **Drain reading, 2026-09-01.** `Cmmsell10` down to **4** open positions from ~20
 after the stand-down; `mmsell10` (the paper control tag) holds **0** live positions,
 so the paper handover in `register()` is clear to run.
+
+
+## Successor registered — and its first gate was unarmable (2026-09-02)
+
+`mmsell-price-ceiling-capacity` was registered at **2026-09-02T00:57:38Z**
+(`REGISTER_PACKAGE`, receipt `mm10cap-register-1`, SUCCEEDED). v1 frozen, PAPER,
+predecessor linked, epoch 1 open, paper deployment `mmsell-capacity-paper-1`
+carrying the `mmsell10` control tag. Verified after the redeploy: worker booted
+00:58:14Z, 400 candidates and 56 paper trades in the following 15 minutes, and
+**exactly one** active deployment arm for `mmsell10` — the handover left no
+ambiguity.
+
+**D12. Registering does not make a canary armable, and the reason is structural.**
+The successor's epoch opens at registration and the evaluator floors every
+evidence window at `max(epoch.started_at, gate.evidence_started_at)`. So the
+promotion gate reads a zero-width window and `arm_live_canary` — which
+re-evaluates it synchronously — refuses. The successor earns its own paper
+evidence; it cannot inherit the predecessor's. That floor is correct: this epoch
+pins a new platform snapshot over a changed world (shards 1–3 funded 2026-08-31),
+so reaching back would pool evidence across a boundary the platform declares
+non-poolable. Measured settle latency on `mmsell10` paper: **p50 1.9h, p90 19h,
+~72 settled/day**, so the wait is days, not weeks.
+
+**Sample floor 150, operator-chosen.** The predecessor armed with no floor at
+all. Capacity doubles here, so the paper baseline the promotion rests on should
+not be thinner than the keep gate's own sample scale, which is also 150. Strictly
+stricter than v2; it can never make the gate pass on less.
+
+**D13. Three defects in one package, all of the same class: a branch no test ever
+took.** In order of discovery, each found only by actually running the thing:
+
+| # | defect | why tests missed it |
+|---|---|---|
+| 1 | no `arm()`, not in `_packages()` | the module was tested, its *absence from the transport* was not |
+| 2 | `create_experiment_version(risk_json=, actor=)`; single arm frozen with no control exemption | 16 tests passed while `register` could not open a session at all |
+| 3 | sample floor named `paper_settled_contracts`, absent from the metric registry | the floor was a branch nothing had ever taken; `promotion_gate_spec(None)` was fine |
+
+Defect 3 is the expensive one. It shipped: v1's promotion gate evaluated
+**BLOCKED_INTEGRITY**, which never becomes PASS however long the book runs, so
+the registered contract was permanently unarmable. Gates are frozen and immutable
+with their version — that immutability is what makes pre-registration mean
+anything — so the correction is a new **Version**, which the lifecycle allows
+because the experiment is in PAPER. v1 stays in the record, unedited, carrying
+the mistake.
+
+The general fix is the test, not the typo: every metric named in every clause of
+both gate specs is now asserted against the canonical registry, for the floored
+and unfloored spec alike. The lesson generalizes past this package — a package's
+write path must be exercised through a session and through the transport, or it
+has been described rather than tested.
