@@ -1,1 +1,1 @@
-{"type":"env","get":["EXPERIMENT_OS_EXPERIMENT_COMMAND","LIVE_STRATEGIES","MMSELL_LIVE_MAX_OPEN_POSITIONS","LIVE_PAPER_TWIN_SUFFIX","LIVE_PAPER_TWIN_MAX_OPEN_POSITIONS"],"id":"preregister-env-20260901"}
+{"type": "env", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\":\"mm10cap-register-1\",\"action\":\"REGISTER_PACKAGE\",\"actor\":\"claude-code\",\"actor_role\":\"TASK_SPECIFIC\",\"payload\":{\"package\":\"mmsell10-capacity-successor\",\"promotion_sample_floor\":150},\"schema_version\":1}"}, "id": "mm10cap-reg-set-1"}
