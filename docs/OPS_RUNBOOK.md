@@ -209,6 +209,13 @@ To run a request:
    message naming the secret to add, not an obscure lookup failure. `db` requests are
    **service-agnostic** (all services share one Postgres via `DATABASE_URL_RO`).
 
+   Note that main's secret, `RAILWAY_SERVICE_ID`, is *also* the variable the runner
+   writes to aim the Railway helpers at a service. A request that visits several
+   services in one process (`doctor`) therefore cannot read main's ID back out of it
+   after selecting something else; `ops_runner._main_service_id` remembers the
+   pristine value instead. Anything that adds a multi-service reader must go through
+   `_select_service` rather than setting `RAILWAY_SERVICE_ID` itself.
+
    **The workflow file is loaded from the `ops` branch.** Adding a service means
    adding its `env:` passthrough to `.github/workflows/ops-runner.yml` on `ops` as
    well as on the default branch — a plain fast-forward commit is enough for an

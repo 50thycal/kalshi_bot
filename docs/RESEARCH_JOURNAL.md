@@ -55,6 +55,121 @@ verdicts here. A PASS authorizes a prospective paper/twin design and nothing liv
 
 ---
 
+## PERP-V1 CLOSED 2026-09-02 — the fee schedule ends it. Arm A FAIL, arm C NO-GO, arm B BLOCKED_DATA.
+
+Two facts arrived after the Probe 2 run and between them they close the experiment.
+
+### 1. The fee schedule (WS-010 D7, closed)
+
+Operator read Kalshi's **Launch Fee Schedule** for Crypto Perpetuals. Tier is 30-day
+trailing **perps + prediction** notional, maker + taker:
+
+```
+tier  30D volume        taker     maker
+0     < $100k           0.120%    0.020%
+1     >= $100k          0.100%    0.015%
+2     >= $1M            0.060%    0.012%
+3     >= $10M           0.020%    0.000%
+4     >= $100M          0.015%    0.000%
+5     >= $1B            0.010%    0.000%
+```
+
+We are tier 0. **Taker is 12 bps a side, 24 bps a round trip.** Arm A's measured gross
+convergence is 14.52 bps and it paid 8.88 bps of spread. The four execution combinations:
+
+| entry / exit | spread | fees | net |
+|---|---|---|---|
+| taker / taker | 8.88 | 24 | **−18.4 bps** |
+| maker / taker | 4.44 | 14 | **−3.9 bps** |
+| taker / maker | 4.44 | 14 | **−3.9 bps** |
+| maker / maker | 0 | 4 | **+10.5 bps** |
+
+**Only both-legs-passive is positive**, and it is the combination least likely to fill:
+
+* **The entry is adversely selected by construction.** A resting order at an extreme
+  premium fills only when someone crosses to you — i.e. when the premium widens
+  *further*. The taker version guaranteed entry at the extreme; the maker version
+  selectively fills on the moves that went against it. Fill selection correlated with
+  outcome is exactly what makes an optimistic fill model manufacture an edge, and this
+  repository has been burned by that twice (mmsell6, mmsell11).
+* **A passive exit breaks the mechanism.** The 14.52 gross came from exiting *when the
+  premium reverted*. Rest the exit and you do not reliably get out. Mean hold was 5.0
+  minutes, so both fills must land within minutes.
+
+The general finding is larger than arm A: **at tier 0 the round-trip fee is 24 bps against
+a measured 8.88 bps spread — 2.7x the entire bid-ask.** Any mechanism whose edge is
+single-digit bps is structurally dead here. Tier 3 changes it (maker 0.000%, taker 2 bps)
+but needs $10M/30d, which is unreachable without first trading profitably.
+
+### 2. The book is deep, and arm A was not trading in it (WS-010 D8)
+
+`{"type":"db","id":"perp-depth-1"}` over the 72h tape, per ticker:
+
+```
+ticker       avg_vol24h   avg_oi_usd   avg_spread_bps
+KXETHPERP    172,297,640   3,182,328        0.7
+KXBTCPERP     42,660,536  11,657,880        0.4
+KXXRPPERP     11,029,743   1,674,804        3.3
+KXADAPERP      4,051,902      16,881       33.2
+KXBNBPERP         45,601       7,243       21.4
+KXAAVEPERP       294,511      41,727       16.2
+KXDOTPERP              0           0        (no quote)
+```
+
+This was run expecting thin books, which would have made the maker question moot on
+capacity grounds. **It found the opposite.** ETH turns over $172M/24h at a 0.7 bps spread;
+BTC $42.7M at 0.4 bps. That is a real market.
+
+The load-bearing observation is the mismatch: **arm A paid 4.44 bps per side, and BTC/ETH
+quote 0.4-0.7 bps *total*.** Arm A's entries therefore came overwhelmingly from the
+wide-spread illiquid names, not the liquid ones — which is what you would expect, since an
+extreme premium z-score is largely a symptom of illiquidity. Any maker variant pointed at
+BTC/ETH may find very few entries, and that is now a known unknown rather than an
+assumption.
+
+It does not rescue the taker verdict, which holds either way: on BTC/ETH the arithmetic is
+14.52 − 0.5 − 24 = **−10 bps**; on the illiquid names the spread alone is 15-33 bps.
+
+### Verdicts
+
+* **Arm A `perprevert` — FAIL on execution economics.** The mechanism is real: 913 scored
+  round trips, +5.63 bps/trade before fees, against a matched random-direction control at
+  −10.13 (delta +15.76). It is killed by the fee, not by the absence of an effect. This is
+  the honest outcome the thesis anticipated in §7 ("convergence that is real but smaller
+  than the round trip") and it is a **cost** finding, not a signal finding.
+* **Arm B `perpcarry` — BLOCKED_DATA**, unchanged. No funding source exists on this
+  surface (D4).
+* **Arm C `perplead` — NO-GO (operator decision, 2026-09-02).** Clean null at 300 s
+  (IC ~= 0.005 on ~97k pairs; overlay −0.02 c/trade vs the Theta baseline). Its fast
+  horizons (5/10/30/60 s) remain **untested, not falsified** — and testing them is a
+  bigger build than it appears: the binding constraint is not the perp collector but
+  `theta_interval_minutes = 5.0`, the Kalshi ladder snapshot cadence. Arm C measures the
+  forward move of the *event contract*, so both sides must be at seconds. Kalshi does
+  expose a perps WebSocket (`ticker` / `orderbook_delta` / `trade`, auth required on the
+  handshake even for public channels), and this repository has no WebSocket code at all.
+  The operator declined the build. Recorded as untested-at-speed.
+
+### What is NOT recorded, and why
+
+**`perp-v1` was never registered in production.** The whole probe lifecycle ran, produced
+results and reached a verdict without an Experiment OS record, because a `REGISTER_PACKAGE`
+envelope goes through the `env` channel and redeploys the worker while the mmsell10 canary
+holds real money. Under NEW_ONLY that was the *correct* state for a probe — an unregistered
+tag cannot trade — but it means there is no XOS gate result, no recorded verdict and no
+lifecycle transition for any of this. **The durable record is these documents.** Whether
+that is acceptable, or whether a retrospective registration is wanted so the graveyard has
+a structured entry, is an operator/Control Tower question and is deliberately left open.
+
+### What would reopen it
+
+Not more tape and not a faster collector. Either the fee tier changes (tier 3 makes maker
+free and taker 2 bps), or a maker variant is registered as a **new Version** with a
+pre-registered, trade-tape-backed fill model — which needs a trade-print tape the collector
+does not gather (it stores cumulative `volume`/`volume_24h` and aggregate side depth only,
+at 191.6 s; no prints, no queue position). Both are decisions, not experiments.
+
+---
+
 ## PERP-V1 PROBE 2 FIRST RUN 2026-09-02 — arm A is the only live horse, and no gate can be read
 
 `scripts/perp_arm_scores.py --hours 72`, ops channel, id `perp2-d6-3`, over the tape the

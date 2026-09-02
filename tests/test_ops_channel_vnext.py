@@ -19,6 +19,7 @@ or is one refactor away from doing so:
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 import re
 import sys
@@ -170,6 +171,53 @@ def test_no_secret_bearing_variable_is_advertised_as_settable():
     forbidden = ("KALSHI_API_KEY", "KALSHI_PRIVATE_KEY", "DATABASE_URL",
                  "RAILWAY_TOKEN", "RAILWAY_PROJECT_ID", "RAILWAY_SERVICE_ID")
     assert not [v for v in railway_env.ALLOWED_VARS if v in forbidden]
+
+
+@pytest.fixture
+def service_env(monkeypatch):
+    """A configured three-service project, with the pointer state reset."""
+    monkeypatch.setattr(ops_runner, "_last_written_service_id", None, raising=False)
+    monkeypatch.setattr(ops_runner, "_main_service_id_seen", None, raising=False)
+    monkeypatch.setenv("RAILWAY_SERVICE_ID", "svc-main-000")
+    monkeypatch.setenv("RAILWAY_EVO_SERVICE_ID", "svc-evo-111")
+    monkeypatch.setenv("RAILWAY_LIVEDASH_SERVICE_ID", "svc-dash-222")
+
+
+def test_main_survives_another_service_being_selected_first(service_env, capsys):
+    """`main` must not inherit whichever service was pointed at before it.
+
+    The production failure this pins: `doctor` walks services in sorted order —
+    evo, livedash, main — and every selection writes RAILWAY_SERVICE_ID, the same
+    variable main's own ID arrives in. Reading it back gave main livedash's ID, so
+    the report showed livedash's deployment and livedash's empty variables as
+    main's: a live-armed trading worker rendered as disarmed.
+    """
+    for name in ("evo", "livedash", "main"):
+        assert ops_runner._select_service({"service": name}) is None
+    capsys.readouterr()
+    assert os.environ["RAILWAY_SERVICE_ID"] == "svc-main-000"
+
+
+def test_every_service_resolves_to_its_own_id_in_any_order(service_env, capsys):
+    expected = {"main": "svc-main-000", "live": "svc-main-000",
+                "evo": "svc-evo-111", "livedash": "svc-dash-222"}
+    for name in ("main", "evo", "main", "livedash", "live", "evo", "livedash", "main"):
+        assert ops_runner._select_service({"service": name}) is None
+        assert os.environ["RAILWAY_SERVICE_ID"] == expected[name], (
+            f"{name} resolved to the wrong service after an earlier selection"
+        )
+    capsys.readouterr()
+
+
+def test_an_unconfigured_main_still_reports_itself_unconfigured(monkeypatch):
+    """The remembered ID must never paper over a genuinely missing secret."""
+    monkeypatch.setattr(ops_runner, "_last_written_service_id", None, raising=False)
+    monkeypatch.setattr(ops_runner, "_main_service_id_seen", None, raising=False)
+    monkeypatch.delenv("RAILWAY_SERVICE_ID", raising=False)
+    monkeypatch.setenv("RAILWAY_EVO_SERVICE_ID", "svc-evo-111")
+    assert ops_runner._select_service({"service": "evo"}) is None
+    err = ops_runner._select_service({"service": "main"})
+    assert err and "not configured" in err and "RAILWAY_SERVICE_ID" in err
 
 
 # ---------------------------------------------------------------------------
