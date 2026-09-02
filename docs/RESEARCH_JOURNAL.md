@@ -16,6 +16,84 @@ Conventions:
 
 ---
 
+## PERP-V1 PROBE 2 WRITTEN 2026-09-02 — the scorers, and the four things they refuse to compute
+
+`scripts/perp_arm_scores.py`. Ops-runnable, read-only, no credentials. It reads the tape
+the collector has been writing since 2026-08-30 12:35Z and computes the pre-registered
+arm metrics. **It has not been run against the live tape yet** — this entry records what
+was built and why it is shaped the way it is, not a result.
+
+One script rather than the three §6 of the thesis anticipated. The arms share a tape, a
+cost model and a control; three scripts would have been three chances for those to drift,
+and a drifted cost model between two arms of one horse race is the comparison failing
+without anyone noticing.
+
+**The rule the whole script is built around.** Three inputs the pre-registration assumed
+turn out not to exist on this surface. In each case there is an adjacent number that could
+be computed instead, and computing it under the registered name is the failure mode:
+
+> A quantity that omits an input its registered definition names is a **different
+> quantity**, and never gets the registered name.
+
+Applied:
+
+- `perp_net_edge_bps_per_trade` is defined as net of "fees, slippage AND funding paid or
+  received while holding". Funding is unreadable (D4, settled 2026-08-30). So the script
+  prints **NOT PRODUCIBLE** for that key and an explicitly-named `..._ex_funding` figure
+  beside it, and reports the gate clauses reading the key as unreadable. The alternative —
+  printing the ex-funding number under the registered name — would let a gate that asked
+  for a cost-inclusive number be satisfied by one that silently drops a cost.
+- **Arm A's deviations travel with arm A's result**, on its own lines: the funding-agreement
+  entry condition was NOT EVALUATED, the "one funding window" exit clock does not exist
+  (a wall-clock `--max-hold-min` substitutes), and the "matched time-to-funding bucket"
+  z-conditioning was NOT APPLIED. Premium is mechanically tied to where the funding cycle
+  sits, which is precisely why that conditioning was registered — so the z used here is
+  noisier than the registered one in an unknown direction.
+- **No fee is guessed.** `/margin/fee_tiers` answers 401 to the ops runner, which holds no
+  Kalshi key by design. Every gate here is on a net number, so a guessed fee decides a
+  promotion. Each arm reports its **breakeven round-trip fee** — the cost at which the
+  measured edge is exactly zero — which an operator can check against a real schedule. A
+  guess is a number nobody can check.
+- **Arm C's 5/10/30/60 s horizons are refused, not nulled.** They sit under the ~145 s
+  sampling interval. A forward move over a horizon shorter than one sample is unobserved,
+  not small, and a null there would read as a kill on the mechanism at that horizon. Only
+  300 s is measurable on this tape.
+
+**Arm B is scored by not being scored.** `perpcarry` ranks its universe on funding; it is
+BLOCKED_DATA, and the script neither deletes it nor re-scopes it to a premium proxy.
+Ranking on premium is a different hypothesis, and it would be wearing arm B's
+pre-registered gate.
+
+**Coverage divides by the intended cadence, not the achieved one.** Against what the
+collector actually managed, coverage is 100% by construction and tells nobody anything.
+Against the configured `PERPS_INTERVAL_SECONDS=60`, with a ~145 s achieved interval, it
+lands near 40% — under the registered 80% floor, which is a clause on all three promotion
+gates and the stop gate's `hold_if`. Stated *before* the run so it cannot be read as a
+result: **no arm can PASS on the current tape whatever its edge.** The fix is a platform
+change (the collector's own cadence, WS-010 D5), not a scorer change. Lowering the floor
+now would be re-tuning a pre-registered gate against results.
+
+Two guards carried forward from earlier failures in this repository. Arm C features are
+timestamped at the **later** of the two observations that built them — the MLBWX probe
+manufactured a +5.5c edge by taking direction from a price that had not happened yet. And
+a one-sided book returns no half-spread rather than zero, because defaulting an absent
+quote to a tight one hands arm A a free round trip on exactly the illiquid names it is
+most likely to pick.
+
+`tests/test_perp_arm_scores.py` (27 tests) pins the refusals as hard as the arithmetic:
+that the registered metric key is never printed as a number, that arm B is not re-scoped,
+that sub-cadence horizons are refused *and* that the refusal lifts if the cadence ever
+does, that the floors are imported from the registered package rather than copied.
+
+The script records nothing, transitions nothing and authorizes nothing. A gate result is
+entered by the designated evaluator; a number printed here is an input to that.
+
+Next: run it (WS-010 D6). The interesting output is not an edge — sample will be far under
+the 200 floor after three days — it is which clauses come back unreadable, and whether arm
+A's entry logic finds any entries at all at |z| >= 2.5.
+
+---
+
 ## PERP-V1 D4 CLOSED 2026-08-30 — no funding source exists. Arm B `perpcarry` is BLOCKED_DATA.
 
 The probe asked the busiest perp on the exchange, twice:
