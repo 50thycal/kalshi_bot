@@ -1,1 +1,1 @@
-{"type":"db","sql":"select issue_key, left(title,70) as title, classification, current_owner_role, severity, priority, status from experiment_issues order by id desc limit 3","max_rows":5,"id":"xos-issue-key-1"}
+{"type": "env", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\":\"mm10cap-unfloor-1\",\"action\":\"REGISTER_PACKAGE\",\"actor\":\"claude-code\",\"actor_role\":\"TASK_SPECIFIC\",\"payload\":{\"package\":\"mmsell10-capacity-unfloor\"},\"schema_version\":1}"}, "id": "mm10cap-unfloor-set-1"}
