@@ -1,4 +1,0 @@
-# ops request [READ]
-# type=noop  id=idle-20260902
-# code (unknown) · started 2026-09-02T01:19:01Z
-(noop — nothing to do)
