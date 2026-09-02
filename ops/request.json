@@ -1,1 +1,1 @@
-{"type":"noop","id":"idle-evoct"}
+{"type":"db","id":"perp-stopped-2","max_rows":4,"purpose":"second confirmation that the perps collector is stopped","workstream":"WS-010","sql":"select max(started_at) as last_cycle, round(extract(epoch from (now() - max(started_at)))::numeric,0) as seconds_since, count(*) filter (where started_at > now() - interval '15 minutes') as cycles_last_15m from perp_collector_cycles"}
