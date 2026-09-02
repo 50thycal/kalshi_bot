@@ -1,1 +1,1 @@
-{"type":"db","sql":"select command_id, action, status, left(coalesce(error,''),400) as error, completed_at::text as completed from experiment_os_experiment_commands order by id desc limit 2","max_rows":3,"id":"mm10cap-gatefix-receipt-1"}
+{"type":"xos","command":"control-tower","id":"mm10cap-ct-2"}
