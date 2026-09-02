@@ -421,13 +421,22 @@ def register(
     # `paper_trades` through deployment-arm tags, and no arm has a tag yet;
     # starting the clock now would floor every future window at a boundary that
     # predates the book by however long the probe takes.
+    # Objects, not identifiers, on the keys the transport's receipt builder reads
+    # (`experiment_commands.RESULT_OBJECT_KEYS`) — see marktangle2 for the
+    # production failure this shape prevents.
     return {
+        "version": version,
+        "epoch": epoch,
+        "probe": deployment,
+        "promotion_gate": promotion_gate,
+        "keep_gate": keep_gate,
+        # Identifiers, for a caller reading this dict rather than the receipt.
         "experiment": experiment.key,
         "state": experiment.state,
-        "version": version.version,
+        "version_number": version.version,
+        "epoch_number": epoch.epoch_number,
         "arms": [a for a, _, _, _ in ARMS],
-        "gates": [promotion_gate.gate_key, keep_gate.gate_key],
-        "epoch": epoch.epoch_number,
+        "gate_keys": [promotion_gate.gate_key, keep_gate.gate_key],
         "deployment": deployment.deployment_key,
         "tags": [],
     }

@@ -181,10 +181,28 @@ raised from 25 to 60 pages because every crypto series hit the old cap (25,000 m
 only back to 2026-06-27). No holdout economics were ever produced, so nothing was read and
 nothing frozen has moved. Re-run unchanged as `m2-run-2`.
 
-**Registration.** `m2-register-1` FAILED at the worker: the transport passes
-`promotion_sample_floor` and neither MARKTANGLE package accepted it (PR #316 fixes both,
-raise-only). `m2-register-2` was submitted before #316 was on the default branch and is
-expected to fail the same way; the retry after merge is `m2-register-3`.
+**Registration: three FAILED envelopes, two defects, no partial rows.** Every attempt was
+verified rolled back (`xos show` reported no such experiment after the third), so nothing
+was half-registered and the key stayed free.
+
+| envelope | error | cause |
+|---|---|---|
+| `m2-register-1` | `TypeError: register() got an unexpected keyword argument 'promotion_sample_floor'` | the transport always passes that keyword; neither MARKTANGLE package accepted it |
+| `m2-register-2` | same | submitted before the fix reached the default branch — the worker runs default-branch code |
+| `m2-register-3` | `AttributeError: 'int' object has no attribute 'version'` | the receipt builder reads identifiers off ORM OBJECTS the package returns; both packages returned the identifiers |
+
+Both are the same class of defect and neither was reachable from any test: the packages and
+the transport were each tested alone, and what broke was the **undocumented contract between
+them**. `tests/test_xos_package_result_shape.py` now runs the real envelope through the real
+executor for every package that registers standalone, which is the seam itself.
+
+The second defect also exposed something worse than a bad receipt: `_result_of` runs inside
+the command's transaction, after the package has written everything, so an exception while
+FORMATTING the receipt discarded a registration that had already succeeded. It is now
+best-effort per field (`fields_unreadable` names what it could not read) — an incomplete
+receipt is a small loss, a destroyed write is not.
+
+The retry after the fix merges is `m2-register-4`.
 
 ## Next Step
 
