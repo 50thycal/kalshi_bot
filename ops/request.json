@@ -1,1 +1,1 @@
-{"type":"xos","command":"control-tower","id":"evo-ct-2"}
+{"type":"db","sql":"select cohort_id, count(*) filter (where status='active') as active, count(*) filter (where status='retired') as retired, count(*) as total, min(created_at) as first_created from evo_agents group by cohort_id order by cohort_id","max_rows":50,"id":"evo-ct-3"}
