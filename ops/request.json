@@ -1,1 +1,1 @@
-{"type":"nonsense","id":"opsvnext-validate-2","actor":"claude-task","purpose":"post-deploy validation: a failing request must turn the workflow RED"}
+{"type":"noop","id":"idle-20260902c"}
