@@ -74,9 +74,40 @@ def test_run_set_upserts_allowlisted_and_redeploys(monkeypatch, capsys):
 
     monkeypatch.setattr(renv, "_graphql", _fake)
     rc = renv.run_set({"KILL_SWITCH": "false", "LIVE_ENABLED": "true"}, redeploy=True)
+    out = capsys.readouterr().out
     assert rc == 0
-    assert len(calls) == 3  # two upserts + one redeploy
-    assert "redeploy triggered" in capsys.readouterr().out
+    # DEC-009: a mutation reads the state BEFORE it applies and BACK afterwards,
+    # so the sequence is read + two upserts + redeploy + readback. The fake
+    # returns no variables, so the readback cannot confirm anything — and the
+    # verdict says exactly that rather than claiming success.
+    kinds = [("read" if "query" in q else "upsert" if "variableUpsert" in q else "redeploy")
+             for q, _ in calls]
+    assert kinds == ["read", "upsert", "upsert", "redeploy", "read"]
+    assert "redeploy triggered" in out
+    assert "VERDICT: APPLIED_BUT_UNVERIFIED" in out
+
+
+def test_a_verified_mutation_reports_before_and_after(monkeypatch, capsys):
+    """The happy path DEC-009 exists for: the change is read back and confirmed."""
+    _creds(monkeypatch)
+    state = {"KILL_SWITCH": "false"}
+
+    def _fake(query, variables, token):
+        if "variableUpsert" in query:
+            state[variables["input"]["name"]] = variables["input"]["value"]
+            return {}
+        if "serviceInstanceRedeploy" in query:
+            return {}
+        return {"variables": dict(state)}
+
+    monkeypatch.setattr(renv, "_graphql", _fake)
+    rc, receipt = renv.apply_set({"KILL_SWITCH": "true"})
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert receipt["verdict"] == "VERIFIED"
+    assert receipt["changes"]["KILL_SWITCH"]["before"] == "false"
+    assert receipt["changes"]["KILL_SWITCH"]["after"] == "true"
+    assert "# BEFORE:" in out and "# AFTER:" in out
 
 
 def test_graphql_retries_transient_timeout(monkeypatch):
