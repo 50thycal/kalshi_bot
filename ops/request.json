@@ -1,1 +1,1 @@
-{"type":"noop","id":"idle-perpv1-closed"}
+{"type":"script","name":"marktangle2_probe","id":"m2-run-1","actor":"research-lab","workstream":"WS-013","purpose":"MARKTANGLE-2 run 1: full instrument, default budget"}
