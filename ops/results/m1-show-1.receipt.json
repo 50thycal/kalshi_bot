@@ -1,0 +1,22 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "285d1a249d89475169eb516c7fde85fb70f2929d",
+  "code_source": "default-branch",
+  "exit_status": 1,
+  "finished_at": "2026-09-02T16:27:11Z",
+  "id": "m1-show-1",
+  "outcome": "FAILED",
+  "provenance": {
+    "actor": "research-lab",
+    "workstream": "WS-013"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/m1-show-1.receipt.json",
+  "result_file": "ops/results/m1-show-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33654972311",
+  "service": null,
+  "started_at": "2026-09-02T16:27:10Z",
+  "targets": [],
+  "type": "xos"
+}
