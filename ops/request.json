@@ -1,1 +1,1 @@
-{"type":"db","sql":"select command_id, action, status, actor_role, left(coalesce(error,''),300) as error, created_at::text as created, finished_at::text as finished from experiment_os_experiment_commands order by id desc limit 3","max_rows":5,"id":"mm10cap-receipt-1"}
+{"type":"db","sql":"select command_id, action, status, left(coalesce(error,''),400) as error, started_at::text as started, completed_at::text as completed from experiment_os_experiment_commands order by id desc limit 3","max_rows":5,"id":"mm10cap-receipt-2"}
