@@ -430,10 +430,17 @@ def register(
             "score a fixed notional per entry; arm B scores dollar-neutral legs "
             "rescaled to beta-neutral. No capital is committed at this stage and no "
             "leverage is modelled — leverage and liquidation are platform semantics "
-            "this repository does not yet have"
+            "this repository does not yet have. Execution style is recorded as "
+            "`taker` because the cost model applies crossing costs; the probe "
+            "places no orders at all, and a resting fill is never assumed"
         ),
-        execution_style="probe instrument (no orders); cost model applies taker "
-                        "crossing costs unless a resting fill is demonstrable",
+        # `taker`, not prose: the column is String(16) and its vocabulary is
+        # maker|taker|mixed. The qualification this used to carry inline — that the
+        # probe places no orders and only MODELS taker crossing costs — belongs in
+        # `sizing_rule` above, which has room for it. Postgres refused the sentence
+        # (DataError, varchar(16)) on the first production run; SQLite had accepted
+        # it in every test, because SQLite does not enforce VARCHAR lengths.
+        execution_style="taker",
         independent_variable=(
             "which perp-native mechanism generates the entry: premium reversion, "
             "cross-sectional funding carry, or perp microstructure. Everything else "
