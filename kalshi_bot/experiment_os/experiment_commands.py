@@ -243,6 +243,26 @@ def _packages() -> dict[str, ExperimentPackage]:
             ),
             register=successor_mmsell10_capacity.revise_promotion_gate,
         ),
+        "mmsell10-capacity-unfloor": ExperimentPackage(
+            name="mmsell10-capacity-unfloor",
+            experiment_key=successor_mmsell10_capacity.SUCCESSOR_KEY,
+            description=(
+                "Opens the next Version with the OPERATOR SAMPLE FLOOR removed, "
+                "restoring the predecessor's own unfloored promotion bar. A "
+                "revert, not a relaxation: mmsell-price-ceiling v2 — the version "
+                "Cmmsell10 armed under — carried no sample clause, and the floor "
+                "was added to this successor by mistake. The successor's "
+                "independent variable is the LIVE cap; the paper book has no cap "
+                "and assumes fill, so paper cannot move across the change and a "
+                "floor on it buys sample in a measurement that cannot inform. It "
+                "produces exactly one spec, the inherited object, verified equal "
+                "before writing; it refuses outside PAPER, refuses when there is "
+                "no floor to drop, and REFUSES once the deciding metric has been "
+                "observed — removing a floor before seeing the number reverts a "
+                "design mistake, removing it after fits a threshold to a result."
+            ),
+            register=successor_mmsell10_capacity.drop_operator_sample_floor,
+        ),
         "perp-v1": ExperimentPackage(
             name="perp-v1",
             experiment_key=perp_v1.EXPERIMENT_KEY,
