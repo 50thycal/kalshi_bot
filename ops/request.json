@@ -1,1 +1,1 @@
-{"type":"noop","id":"idle-20260902b"}
+{"type":"capabilities","id":"opsvnext-validate-1","actor":"claude-task","purpose":"post-deploy validation: green path + receipt"}
