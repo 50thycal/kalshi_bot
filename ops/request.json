@@ -1,1 +1,1 @@
-{"type":"db","sql":"select c.number as cohort, a.status, a.generation, count(*) as n, min(a.retired_at) as first_ret, max(a.retired_at) as last_ret, string_agg(distinct coalesce(left(a.status_reason,60),'-'), ' | ') as reasons from evo_agents a join evo_cohorts c on c.id=a.birth_cohort_id group by 1,2,3 order by 1,2,3","max_rows":100,"id":"evo-ct-4"}
+{"type":"env","id":"evo-ct-5"}
