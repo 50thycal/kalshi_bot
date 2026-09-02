@@ -679,6 +679,205 @@ def revise_promotion_gate(
     }
 
 
+#: The one metric the promotion gate decides on. Named here because the
+#: floor-removal guard below has to know whether it has been OBSERVED yet.
+PROMOTION_DECIDING_METRIC = "realizable_cents_per_trade"
+
+
+def drop_operator_sample_floor(
+    session,
+    *,
+    actor: str,
+    promotion_sample_floor: int | None = None,
+    now: datetime | None = None,
+) -> dict:
+    """Open the next Version with MY sample floor removed, restoring the
+    predecessor's own unfloored promotion bar.
+
+    WHY THIS IS A REVERT AND NOT A RELAXATION. The floor was not part of the
+    inherited contract. `mmsell-price-ceiling` v2 -- the version `Cmmsell10`
+    actually armed under -- registered `realizable_cents_per_trade > 0` with no
+    sample clause at all. The floor was added to THIS successor on 2026-09-02 on
+    my recommendation, and the recommendation was wrong: the successor's
+    independent variable is the LIVE open-position cap, and the paper book has no
+    cap and assumes fill, so the paper book is byte-identical across the change.
+    A floor on it buys sample size in a measurement that cannot move. This
+    restores the bar the book was already promoted under; it does not invent a
+    softer one (XOS issue: the capacity-successor paper-gate tax).
+
+    WHAT STOPS THIS BEING A WAY TO MOVE GOALPOSTS. Four things, and the last is
+    the one that matters:
+
+      * PAPER only. Once live, a changed decision rule is a successor experiment.
+      * there must actually BE an operator floor to drop, so it cannot re-cut a
+        contract that never carried one;
+      * the result is not a dial. It is `promotion_gate_spec(None)` -- the
+        inherited object, verified equal to it before anything is written -- so
+        this can produce exactly one outcome and it is the predecessor's bar;
+      * THE DECIDING METRIC MUST STILL BE UNOBSERVED. If any recorded result for
+        this gate carries a defined `realizable_cents_per_trade`, this refuses.
+        Removing a floor before seeing the number is reverting a design mistake;
+        removing it after is choosing a threshold that fits the result, and no
+        argument about intent distinguishes them from the outside.
+    """
+    from ..repository import count_live_book_open
+    from .models import ExperimentGateResult
+    from .read import latest_version
+
+    # REGISTER_PACKAGE always passes this field, so the signature has to accept
+    # it. Accepting a VALUE would make an "unfloor" command that quietly sets a
+    # floor, which is the opposite of what its name promises.
+    if promotion_sample_floor is not None:
+        raise service.ExperimentOsError(
+            "this package removes the operator sample floor and can set none; "
+            f"drop promotion_sample_floor={promotion_sample_floor!r} from the "
+            "envelope"
+        )
+    at = now or _now()
+    successor = get_experiment(session, SUCCESSOR_KEY)
+    if successor is None:
+        raise service.ExperimentOsError(f"{SUCCESSOR_KEY} does not exist")
+    if successor.state != LifecycleState.PAPER.value:
+        raise service.ExperimentOsError(
+            f"a contract may only be revised in PAPER; {SUCCESSOR_KEY} is "
+            f"{successor.state}"
+        )
+    current = latest_version(session, successor)
+    if current is None:
+        raise service.ExperimentOsError(f"{SUCCESSOR_KEY} has no version")
+    gate = session.scalar(
+        select(ExperimentGate).where(
+            ExperimentGate.version_id == current.id,
+            ExperimentGate.gate_key == PROMOTION_GATE_KEY,
+        )
+    )
+    if gate is None:
+        raise service.ExperimentOsError(
+            f"v{current.version} has no {PROMOTION_GATE_KEY} gate"
+        )
+    if not (gate.spec_json.get("sample") or {}):
+        raise service.ExperimentOsError(
+            f"v{current.version}'s {PROMOTION_GATE_KEY} carries no sample floor — "
+            "there is nothing to revert, and opening a Version to restate the "
+            "same bar would discard an evidence window for nothing"
+        )
+
+    # The goalpost guard. A recorded result whose metrics carry a DEFINED value
+    # for the deciding metric means the outcome has been seen.
+    for result in session.scalars(
+        select(ExperimentGateResult).where(ExperimentGateResult.gate_id == gate.id)
+    ):
+        for key, value in (result.metrics_json or {}).items():
+            if key.split(".")[-1].split("[")[0] != PROMOTION_DECIDING_METRIC:
+                continue
+            observed = value.get("value") if isinstance(value, dict) else value
+            if observed is not None:
+                raise service.ExperimentOsError(
+                    f"{PROMOTION_DECIDING_METRIC} has already been OBSERVED on "
+                    f"v{current.version} ({observed}); removing the sample floor "
+                    "now would be choosing a threshold that fits a result already "
+                    "seen. The floor stands."
+                )
+
+    spec = promotion_gate_spec(None)
+    if spec != _V2_PROMOTION_SPEC:
+        raise service.ExperimentOsError(
+            "the unfloored spec no longer equals the predecessor's inherited "
+            "bar — this function may only RESTORE that object, never author a "
+            "different one"
+        )
+
+    epoch = session.scalar(
+        select(ExperimentEpoch).where(
+            ExperimentEpoch.version_id == current.id,
+            ExperimentEpoch.ended_at.is_(None),
+        )
+    )
+    carrying = service.open_deployments(session, epoch) if epoch is not None else []
+    for dep in carrying:
+        for tag in _tags_of(session, dep):
+            held = count_live_book_open(session, tag)
+            if held:
+                raise service.ExperimentOsError(
+                    f"{tag} holds {held} open live position(s); cutting an epoch "
+                    "under it would strand the settlements"
+                )
+
+    version = service.create_experiment_version(
+        session, successor,
+        hypothesis=current.hypothesis,
+        universe_selector=current.universe_selector,
+        entry_rule=current.entry_rule,
+        exit_rule=current.exit_rule,
+        sizing_rule=current.sizing_rule,
+        execution_style=current.execution_style,
+        independent_variable=current.independent_variable,
+        held_constant=current.held_constant_json,
+        control_required=False,
+        control_exemption_reason=current.control_exemption_reason,
+        risk=RISK_ENVELOPE,
+        docs={"workstream": "docs/workstreams/WS-007-mmsell10-live-canary.md"},
+        change_reason=(
+            f"Reverts the operator sample floor added to v{current.version}. The "
+            "floor was not inherited: mmsell-price-ceiling v2, which Cmmsell10 "
+            "armed under, registered this bar with no sample clause. It was added "
+            "here on my recommendation and the recommendation was wrong — this "
+            "successor's independent variable is the LIVE open-position cap, and "
+            "the paper book has no cap and assumes fill, so paper is identical "
+            "across the change and a floor on it buys sample in a measurement "
+            "that cannot move. The capacity hypothesis is testable only live, by "
+            "the keep gate, which is unchanged and carries every stop verbatim. "
+            "Reverted while realizable_cents_per_trade was still unobserved."
+        ),
+        now=at,
+    )
+    service.add_arm(
+        session, version, arm_key=ARM_KEY, role=ArmRole.TREATMENT,
+        description="entry-price ceiling only (lo=5,hi=10,maxyes=7) — unchanged",
+        params={"lo": 5, "hi": 10, "maxyes": 7}, strategy_tag=PAPER_TAG,
+    )
+    promotion_gate = service.register_gate(
+        session, version, gate_key=PROMOTION_GATE_KEY, kind="promotion",
+        spec=spec, from_state=LifecycleState.PAPER,
+        to_state=LifecycleState.LIVE_CANARY, registered_at=at,
+        notes="the predecessor's inherited bar, restored unfloored",
+    )
+    keep_gate = service.register_gate(
+        session, version, gate_key=KEEP_GATE_KEY, kind="kill",
+        spec=KEEP_GATE_SPEC, registered_at=at,
+        notes=f"carried verbatim from {_KEEP_GATE_CARRIED_FROM}",
+    )
+    service.freeze_version(session, version, now=at)
+    service.mark_gate_evidence_started(session, promotion_gate, at=at)
+    service.mark_gate_evidence_started(session, keep_gate, at=at)
+
+    new_epoch = service.open_epoch(
+        session, version,
+        reason="first operating interval on the restored unfloored bar",
+        started_at=at,
+    )
+    if epoch is not None:
+        service.close_epoch(session, epoch, ended_at=at)
+    carried = service.carry_deployments_forward(
+        session, carrying, new_epoch, started_at=at,
+        reason="the paper control keeps running across the version revision",
+    )
+    return {
+        "successor": successor,
+        "superseded_version": current.version,
+        "dropped_floor": next(
+            (c.get("value") for c in gate.spec_json["sample"].values()
+             if isinstance(c, dict)), None
+        ),
+        "version": version,
+        "promotion_gate": promotion_gate,
+        "keep_gate": keep_gate,
+        "epoch": new_epoch,
+        "carried_deployments": [d.deployment_key for d in carried],
+        "revised_at": at,
+    }
+
+
 def _tags_of(session, deployment: ExperimentDeployment) -> list[str]:
     """The concrete strategy tags a deployment currently carries."""
     return [
@@ -701,6 +900,6 @@ def _epoch_experiment_id(session, deployment: ExperimentDeployment) -> int | Non
 __all__ = [
     "ARM_KEY", "KEEP_GATE_SPEC", "LIVE_BOOK_SPEC", "LIVE_TAG", "PAPER_TAG",
     "PREDECESSOR_KEY", "RISK_ENVELOPE", "SUCCESSOR_KEY", "TWIN_TAG",
-    "arm", "material_config", "promotion_gate_spec", "register",
-    "revise_promotion_gate",
+    "arm", "drop_operator_sample_floor", "material_config",
+    "promotion_gate_spec", "register", "revise_promotion_gate",
 ]

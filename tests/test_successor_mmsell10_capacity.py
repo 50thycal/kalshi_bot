@@ -562,3 +562,135 @@ def test_the_gatefix_package_is_reachable_through_the_transport():
     assert pkg.register is cap.revise_promotion_gate
     # It registers a contract; it must never be able to arm one.
     assert pkg.arm is None
+
+
+# --- reverting the operator sample floor ------------------------------------
+#
+# The floor was not inherited. mmsell-price-ceiling v2 — the version Cmmsell10
+# actually armed under — registered this promotion bar with NO sample clause. The
+# floor was added to this successor on 2026-09-02 on my recommendation, and the
+# recommendation was wrong: the independent variable is the LIVE open-position
+# cap, and the paper book has no cap and assumes fill, so paper is identical
+# across the change. A floor on it buys sample size in a measurement that cannot
+# move. Removing it restores the inherited bar rather than inventing a softer one.
+#
+# The danger is obvious and these tests are aimed squarely at it: a function that
+# removes a pre-registered threshold is one bad call away from being a way to
+# move goalposts. What makes it safe is that it can produce exactly ONE spec, and
+# only while the deciding metric is still unobserved.
+
+
+def test_dropping_the_floor_restores_the_predecessors_exact_object(
+    xos_session, xos_platform
+):
+    """Not "a lower floor" — the inherited spec itself. If this ever produces
+    something other than the predecessor's object, it has become a dial."""
+    _registered_successor(xos_session, floor=150)
+
+    out = cap.drop_operator_sample_floor(xos_session, actor="claude-code", now=T1)
+
+    assert out["dropped_floor"] == 150
+    assert out["promotion_gate"].spec_json == v2.PROMOTION_GATE_SPEC
+    assert "sample" not in out["promotion_gate"].spec_json
+    # Everything that is not the floor survives untouched.
+    assert out["keep_gate"].spec_json == cap.KEEP_GATE_SPEC
+    assert out["version"].risk_json == cap.RISK_ENVELOPE
+    assert out["carried_deployments"], "the paper control must survive the cut"
+
+
+def test_dropping_the_floor_is_REFUSED_once_the_metric_has_been_observed(
+    xos_session, xos_platform
+):
+    """The guard that matters. Removing a floor BEFORE seeing the number reverts
+    a design mistake; removing it AFTER is choosing a threshold that fits a
+    result. Nothing about intent distinguishes those from the outside, so the
+    code refuses rather than relying on whoever is holding it being honest."""
+    out = _registered_successor(xos_session, floor=150)
+    svc.record_gate_result(
+        xos_session, out["promotion_gate"], verdict="HOLD",
+        metrics={"realizable_cents_per_trade": {"value": 1.42}},
+        computed_by="test", epoch=out["epoch"],
+    )
+
+    with pytest.raises(svc.ExperimentOsError) as exc:
+        cap.drop_operator_sample_floor(xos_session, actor="claude-code", now=T1)
+
+    assert "already been OBSERVED" in str(exc.value)
+    assert "The floor stands." in str(exc.value)
+
+
+def test_an_undefined_metric_reading_does_NOT_count_as_observed(
+    xos_session, xos_platform
+):
+    """A recorded HOLD on an empty window carries the metric key with a null
+    value. Treating that as "observed" would make the revert impossible from the
+    moment the gate first evaluated, which is roughly instantly."""
+    out = _registered_successor(xos_session, floor=150)
+    svc.record_gate_result(
+        xos_session, out["promotion_gate"], verdict="HOLD",
+        metrics={"realizable_cents_per_trade": {"value": None}},
+        computed_by="test", epoch=out["epoch"],
+    )
+
+    revised = cap.drop_operator_sample_floor(
+        xos_session, actor="claude-code", now=T1
+    )
+
+    assert revised["dropped_floor"] == 150
+
+
+def test_dropping_the_floor_is_refused_when_there_is_no_floor(
+    xos_session, xos_platform, monkeypatch
+):
+    """Otherwise it is a general-purpose way to discard an evidence window."""
+    _predecessor_in_paper(xos_session)
+    cap.register(xos_session, actor="claude-code", now=T1, promotion_sample_floor=None)
+
+    with pytest.raises(svc.ExperimentOsError) as exc:
+        cap.drop_operator_sample_floor(xos_session, actor="claude-code", now=T1)
+
+    assert "carries no sample floor" in str(exc.value)
+
+
+def test_the_unfloor_package_refuses_to_SET_a_floor(xos_session, xos_platform):
+    """REGISTER_PACKAGE always passes `promotion_sample_floor`. A package named
+    "unfloor" that accepted a value would be able to set one."""
+    _registered_successor(xos_session, floor=150)
+
+    with pytest.raises(svc.ExperimentOsError) as exc:
+        cap.drop_operator_sample_floor(
+            xos_session, actor="claude-code", promotion_sample_floor=25, now=T1
+        )
+
+    assert "removes the operator sample floor and can set none" in str(exc.value)
+
+
+def test_dropping_the_floor_is_refused_outside_PAPER(xos_session, xos_platform):
+    _registered_successor(xos_session, floor=150)
+    cap.get_experiment(xos_session, cap.SUCCESSOR_KEY).state = (
+        LifecycleState.LIVE_CANARY.value
+    )
+
+    with pytest.raises(svc.ExperimentOsError) as exc:
+        cap.drop_operator_sample_floor(xos_session, actor="claude-code", now=T1)
+
+    assert "only be revised in PAPER" in str(exc.value)
+
+
+def test_the_unfloor_package_is_reachable_and_callable_as_the_transport_calls_it():
+    """The transport invokes `register(session, actor=..., promotion_sample_floor
+    =...)`. A package whose callable does not accept that signature raises
+    TypeError at the boot hook — twice now the defect in this package has been
+    exactly that, so assert the call shape, not just the wiring."""
+    import inspect
+
+    from kalshi_bot.experiment_os.experiment_commands import _packages
+
+    pkg = _packages().get("mmsell10-capacity-unfloor")
+
+    assert pkg is not None
+    assert pkg.register is cap.drop_operator_sample_floor
+    assert pkg.arm is None, "a contract revision must never be able to arm"
+    params = inspect.signature(pkg.register).parameters
+    for name in ("session", "actor", "promotion_sample_floor"):
+        assert name in params, f"the transport passes {name}"
