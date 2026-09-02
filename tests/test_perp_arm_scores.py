@@ -11,7 +11,9 @@ These tests pin the refusals as hard as they pin the arithmetic.
 
 from __future__ import annotations
 
+import os
 import sys
+import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -353,6 +355,30 @@ def test_a_ladder_quote_with_no_book_is_not_traded_for_free():
 def test_the_script_is_reachable_through_the_ops_channel():
     from ops_runner import ALLOWED_SCRIPTS
     assert "perp_arm_scores" in ALLOWED_SCRIPTS
+
+
+def test_the_script_imports_under_the_ops_runners_path_not_pytests():
+    """The first live run died on `ModuleNotFoundError: kalshi_bot` under a green suite.
+
+    `ops_runner` serves a `script` request with only `scripts/` on `sys.path` — the
+    repo-root insertion in `_dispatch` belongs to a different request type. Pytest puts
+    the repo root on the path for free, so every in-process test here exercised an
+    environment more generous than production and the import error could not surface.
+
+    This runs the real file the way the runner runs it: a fresh interpreter, `PYTHONPATH`
+    cleared, and a working directory that is not the repo. Importing the module under
+    pytest would not reproduce that and so would not protect against it.
+    """
+    import subprocess
+
+    script = Path(__file__).resolve().parents[1] / "scripts" / "perp_arm_scores.py"
+    env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+    proc = subprocess.run(
+        [sys.executable, str(script), "--help"],
+        cwd=tempfile.gettempdir(), env=env, capture_output=True, text=True, timeout=120,
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert "ModuleNotFoundError" not in proc.stderr
 
 
 def test_the_report_states_that_no_gate_is_readable_on_this_tape(capsys):
