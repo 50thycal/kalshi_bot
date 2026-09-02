@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import os
 import sys
-import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -357,28 +356,133 @@ def test_the_script_is_reachable_through_the_ops_channel():
     assert "perp_arm_scores" in ALLOWED_SCRIPTS
 
 
-def test_the_script_imports_under_the_ops_runners_path_not_pytests():
-    """The first live run died on `ModuleNotFoundError: kalshi_bot` under a green suite.
+#: What the ops runner does NOT have when it serves a `script` request. The workflow
+#: installs `psycopg` and nothing else; the project's full requirements are installed
+#: only for an `xos` request. Anything the scorer reaches for outside stdlib + psycopg
+#: is a production import error that no in-process test can see.
+_ABSENT_ON_THE_OPS_RUNNER = (
+    "sqlalchemy", "pydantic", "pydantic_settings", "alembic", "requests",
+    "numpy", "pandas", "scipy", "httpx",
+)
 
-    `ops_runner` serves a `script` request with only `scripts/` on `sys.path` — the
-    repo-root insertion in `_dispatch` belongs to a different request type. Pytest puts
-    the repo root on the path for free, so every in-process test here exercised an
-    environment more generous than production and the import error could not surface.
+#: Run the real file the way the runner runs it: fresh interpreter, PYTHONPATH cleared,
+#: cwd outside the repo, and every dependency the runner lacks made unimportable. The
+#: blocker is a meta_path finder rather than a doctored environment because it fails at
+#: exactly the point production fails — the import statement — and names the module.
+_RUNNER_HARNESS = """
+import runpy, sys
 
-    This runs the real file the way the runner runs it: a fresh interpreter, `PYTHONPATH`
-    cleared, and a working directory that is not the repo. Importing the module under
-    pytest would not reproduce that and so would not protect against it.
+BLOCKED = {blocked!r}
+
+
+class _Blocker:
+    def find_module(self, name, path=None):
+        if name.split(".")[0] in BLOCKED:
+            raise ModuleNotFoundError("No module named %r" % name)
+        return None
+
+
+sys.meta_path.insert(0, _Blocker())
+sys.path.insert(0, {scripts!r})
+sys.argv = ["perp_arm_scores.py", "--help"]
+runpy.run_path({script!r}, run_name="__main__")
+"""
+
+
+#: The same blocked-import environment, used to read the floors module alone. It prints
+#: `sqlalchemy` into stdout if the heavy package somehow loaded, so a pass cannot be a
+#: false one.
+_FLOORS_HARNESS = """
+import sys
+
+BLOCKED = {blocked!r}
+
+
+class _Blocker:
+    def find_module(self, name, path=None):
+        if name.split(".")[0] in BLOCKED:
+            raise ModuleNotFoundError("No module named %r" % name)
+        return None
+
+
+sys.meta_path.insert(0, _Blocker())
+sys.path.insert(0, {root!r})
+from kalshi_bot.experiment_os.perp_v1_floors import (
+    COVERAGE_FLOOR_PCT, REGISTERED_HORIZONS_SEC, SAMPLE_FLOOR,
+)
+if "kalshi_bot.experiment_os.perp_v1" in sys.modules:
+    print("sqlalchemy-bearing perp_v1 was loaded after all")
+print(SAMPLE_FLOOR, COVERAGE_FLOOR_PCT, tuple(REGISTERED_HORIZONS_SEC))
+"""
+
+
+def _run_as_the_ops_runner_would(tmpdir: str):
+    import subprocess
+
+    root = Path(__file__).resolve().parents[1]
+    harness = _RUNNER_HARNESS.format(
+        blocked=set(_ABSENT_ON_THE_OPS_RUNNER),
+        scripts=str(root / "scripts"),
+        script=str(root / "scripts" / "perp_arm_scores.py"),
+    )
+    runner = Path(tmpdir) / "runner.py"
+    runner.write_text(harness)
+    env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+    return subprocess.run(
+        [sys.executable, str(runner)],
+        cwd=tmpdir, env=env, capture_output=True, text=True, timeout=180,
+    )
+
+
+def test_the_script_imports_under_the_ops_runners_path_not_pytests(tmp_path):
+    """Two live runs died at import under a fully green suite, one layer apart.
+
+    The first: `ModuleNotFoundError: kalshi_bot`. `ops_runner` serves a `script` request
+    with only `scripts/` on `sys.path`; the repo-root insertion in `_dispatch` belongs to
+    a different request type. The second, after fixing that: `ModuleNotFoundError:
+    sqlalchemy`, because the scorer imported `perp_v1`, which imports `.service`.
+
+    Both survived testing for the same reason — pytest's environment is strictly more
+    generous than the runner's. It has the repo root on the path AND the project's whole
+    dependency set. A test that imports the module in-process cannot fail either way and
+    therefore protects against neither.
+
+    So this test builds the runner's environment instead of trusting pytest's. Getting
+    that reproduction right the first time would have caught both failures at once; the
+    path-only version caught one of the two and shipped the other.
+    """
+    proc = _run_as_the_ops_runner_would(str(tmp_path))
+    assert proc.returncode == 0, proc.stderr
+    assert "ModuleNotFoundError" not in proc.stderr
+
+
+def test_the_floors_are_still_the_registered_ones_without_the_heavy_package(tmp_path):
+    """The dependency-free floors module is only worth having if it is the SAME numbers.
+
+    Splitting the constants out to dodge the SQLAlchemy import would be a silent
+    regression if the two copies could disagree — that is exactly the drift the shared
+    import exists to prevent, reintroduced by the fix for it. So: read the floors the way
+    the runner does (heavy deps blocked, so it genuinely cannot have loaded `perp_v1`)
+    and compare against the registration package read the way everything else reads it.
     """
     import subprocess
 
-    script = Path(__file__).resolve().parents[1] / "scripts" / "perp_arm_scores.py"
+    root = Path(__file__).resolve().parents[1]
+    prog = _FLOORS_HARNESS.format(
+        blocked=set(_ABSENT_ON_THE_OPS_RUNNER), root=str(root))
+    path = Path(tmp_path) / "floors_probe.py"
+    path.write_text(prog)
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
-    proc = subprocess.run(
-        [sys.executable, str(script), "--help"],
-        cwd=tempfile.gettempdir(), env=env, capture_output=True, text=True, timeout=120,
-    )
+    proc = subprocess.run([sys.executable, str(path)], cwd=str(tmp_path), env=env,
+                          capture_output=True, text=True, timeout=120)
     assert proc.returncode == 0, proc.stderr
-    assert "ModuleNotFoundError" not in proc.stderr
+    assert "sqlalchemy" not in proc.stdout
+
+    from kalshi_bot.experiment_os import perp_v1
+    lead = next(a for a in perp_v1.ARMS if a["arm_key"] == perp_v1.ARM_LEAD)
+    expected = (f"{perp_v1.SAMPLE_FLOOR} {perp_v1.COVERAGE_FLOOR_PCT} "
+                f"{tuple(lead['params']['forward_horizons_sec'])}")
+    assert proc.stdout.strip() == expected
 
 
 def test_the_report_states_that_no_gate_is_readable_on_this_tape(capsys):

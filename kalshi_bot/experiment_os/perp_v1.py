@@ -61,6 +61,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from . import perp_v1_floors as _floors
 from . import service
 from .lifecycle import ArmRole, LifecycleState
 from .read import get_experiment
@@ -78,16 +79,15 @@ TREATMENT_ARMS = (ARM_REVERT, ARM_CARRY, ARM_LEAD)
 
 THESIS_DOC = "docs/PERP_V1_THESIS.md"
 
-#: The evidence floor, in scored round trips (arms A/B) or scored event-contract
-#: decisions (arm C). Below it the correct verdict is HOLD, not a thin PASS.
-SAMPLE_FLOOR = 200
-
-#: The tape-completeness floor. Read every perp number against its coverage: an
-#: estimate speaking for a fifth of the intended tape is not the same claim as one
-#: speaking for all of it. This is the `fill_model_coverage_pct` lesson applied
-#: before the first number exists rather than after a promotion turns out to have
-#: rested on one.
-COVERAGE_FLOOR_PCT = 80
+#: The frozen numbers live in `perp_v1_floors`, a module that imports nothing, and
+#: are re-exported here so this package stays the name callers reach for. Probe 2
+#: (`scripts/perp_arm_scores.py`) runs on the ops runner, which installs psycopg and
+#: nothing else — it cannot import this module, because `service` above brings
+#: SQLAlchemy. It imports the floors module directly instead of carrying its own
+#: copy of a registered bar. See that module's docstring.
+SAMPLE_FLOOR = _floors.SAMPLE_FLOOR
+COVERAGE_FLOOR_PCT = _floors.COVERAGE_FLOOR_PCT
+REGISTERED_HORIZONS_SEC = _floors.REGISTERED_HORIZONS_SEC
 
 
 def _now() -> datetime:
@@ -285,7 +285,7 @@ ARMS: tuple[dict, ...] = (
                 "open_interest_impulse",
                 "funding_impulse",
             ],
-            "forward_horizons_sec": [5, 10, 30, 60, 300],
+            "forward_horizons_sec": list(REGISTERED_HORIZONS_SEC),
             "baseline": "registered Theta spot-vol probability model",
             # The MLBWX probe manufactured a +5.5c edge by taking direction from the
             # settled price. Every feature here is timestamped strictly before the
