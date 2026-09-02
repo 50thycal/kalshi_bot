@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=islive-20260902
-# code 90c49f9c5c177d7975987fbd34595a898b8a525b · started 2026-09-02T11:30:38Z
-successor_state  live_deployments  dmmsell10_orders  settled_v3  created_v3  cands_10m  now_utc                      
----------------  ----------------  ----------------  ----------  ----------  ---------  -----------------------------
-PAPER            0                 0                 3           9           0          2026-09-02 11:30:39.714291+00
-
-(1 row)
