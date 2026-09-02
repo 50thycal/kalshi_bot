@@ -1,0 +1,22 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "cd1dce0847d66a5ae70388b203435ddb0eeddbae",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-02T12:34:07Z",
+  "id": "perp-depth-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {
+    "purpose": "PERP-V1 arm A maker capacity check: is there resting depth to rest against",
+    "workstream": "WS-010"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/perp-depth-1.receipt.json",
+  "result_file": "ops/results/perp-depth-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33630619192",
+  "service": null,
+  "started_at": "2026-09-02T12:34:03Z",
+  "targets": [],
+  "type": "db"
+}
