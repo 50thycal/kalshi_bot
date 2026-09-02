@@ -155,6 +155,22 @@ assumption of comparability rather than a frozen contract.
   experiment is worth registering at PAPER is deferred until arm C has evidence —
   a cross-experiment delta is BLOCKED_PLATFORM whenever the two epochs pin
   different snapshots, which `mmsell-anchor-vol-entry` is currently demonstrating.
+- **D5. Does the collector need its own cadence?** Probe 2 measures coverage against
+  the intended 60 s interval, and the worker's shared loop achieves ~145 s — so the
+  registered 80% coverage floor cannot be met as the collector runs today. Two
+  responses are legitimate and one is not. Legitimate: give the collector its own
+  cadence (a platform change, and it buys resolution beside real money, which is why
+  #284 declined to do it before Probe 2 showed the need); or accept HOLD and say so.
+  Not legitimate: lowering `COVERAGE_FLOOR_PCT` after seeing the number, which is
+  re-tuning a pre-registered gate against results. Decide **after** the first Probe 2
+  run, on the measured number rather than this estimate.
+- **D6. What does Probe 2 actually report on the live tape?** Written but not yet run.
+  The interesting output is not an edge — sample will be far under the 200 floor after
+  three days — it is which pre-registered clauses the scorer declares unreadable, and
+  whether the arm A entry logic finds any entries at all at |z| ≥ 2.5 on a 145 s tape.
+  A scorer that finds zero entries over three days is telling us the entry threshold,
+  the z-window or the premium series is wrong, and that is worth knowing long before
+  there is enough sample to score.
 
 ## Assumptions
 
@@ -220,10 +236,22 @@ Slice 1 (this PR): pre-registration + Probe 0.
 - `scripts/perp_surface_survey.py` + ops allowlist — Probe 0
 - `tests/test_perp_v1_package.py`
 
-Slices 2 and 3 (Probe 1 collector, Probe 2 scorers) are **blocked on Probe 0's
-result** and are deliberately not designed yet: a collector written against
+Slices 2 and 3 (Probe 1 collector, Probe 2 scorers) were **blocked on Probe 0's
+result** and deliberately not designed until it landed: a collector written against
 assumed field names is the same error as a probe written against guessed series
 tickers.
+
+Slice 3 (this PR): Probe 2.
+
+- `scripts/perp_arm_scores.py` + ops allowlist — the arm scorers
+- `tests/test_perp_arm_scores.py` — the refusals pinned as hard as the arithmetic
+- `docs/PERP_V1_THESIS.md` §6, §7.1 — Probe 2 named; the fee and coverage limits recorded
+- `kalshi_bot/experiment_os/metrics.py` — the seven references now name a written provider
+
+One script, not the three §6 anticipated. The arms share a tape, a cost model and a
+control; three scripts would have been three chances for those to drift apart, and a
+drifted cost model between two arms of one horse race is the comparison failing
+silently.
 
 ## Implementation State
 
@@ -246,6 +274,34 @@ The perp surface is real and its history endpoints are readable. Registration in
 which redeploys the worker while the mmsell10 canary holds real money, so it stays an
 operator act.
 
+**Probe 2 is written (2026-09-02), and has not yet been run against the live tape.**
+`scripts/perp_arm_scores.py`, ops-runnable and read-only. Its design is governed by one
+rule, because three pre-registered inputs turned out not to exist: *a quantity that omits
+an input its registered definition names is a different quantity, and never gets the
+registered name.* Concretely —
+
+- `perp_net_edge_bps_per_trade` is defined net of funding, so the scorer reports it NOT
+  PRODUCIBLE and prints an explicitly-named ex-funding figure beside it. Every gate clause
+  reading that key is reported unreadable rather than read against the substitute.
+- Arm A's un-evaluated funding-agreement entry condition, its missing funding-window exit
+  clock and its missing z-score conditioning are each printed as deviations on the arm's
+  own result — a pre-registered condition that could not be evaluated is not the same
+  experiment as one that was evaluated and passed.
+- The fee schedule needs credentials the ops runner does not hold, so no fee is guessed;
+  each arm reports its **breakeven round-trip fee** instead, which an operator can check
+  against a real schedule.
+- Arm C's registered 5/10/30/60 s horizons are **refused**, not reported as nulls, because
+  they sit under the ~145 s sampling interval. Only 300 s is measurable.
+- `perp_data_coverage_pct` divides by the *intended* cadence. Against the achieved one it
+  is 100% by construction and says nothing.
+
+The expected consequence, stated before the run so it cannot be read as a result: with a
+60 s intended interval and a ~145 s achieved one, coverage lands near 40%, under the
+registered 80% floor — so **no arm can PASS on the current tape whatever its edge**, and
+HOLD is the correct verdict. Closing that gap is a platform change (the collector's own
+cadence), not a scorer change. Lowering the floor after seeing the number would be
+re-tuning a pre-registered gate against results.
+
 Registration and the collector are **independent**: the collector writes its own
 instrument tables and creates no strategy tag, so it can run before `perp-v1` is
 registered. What it cannot do is produce a PAPER book — that needs Probe 2's scorers, a
@@ -267,6 +323,13 @@ This PR.
 
 ## Next Step
 
-Merge the collector, then set `PERPS_COLLECTOR_ENABLED=true` through the ops `env` channel
-to start accumulating tape. Probe 2's scorers are the next build, and they need tape to
-score — so the collector has to run for a while before there is anything for them to read.
+Run Probe 2 against the live tape through the ops channel
+(`{"type":"script","name":"perp_arm_scores","id":"...","args":["--hours","72"]}`) and record
+what it reports — including, and especially, which pre-registered clauses it declares
+unreadable. That is D6, below, and it is a read: the scorer records nothing, transitions
+nothing and authorizes nothing, so a number it prints is an input to an evaluator's gate
+result and never a verdict.
+
+Still an operator act, unchanged: `perp-v1` is **not registered in production**. That is a
+`REGISTER_PACKAGE` envelope through the `env` channel, which redeploys the worker while the
+mmsell10 canary holds real money.

@@ -396,9 +396,14 @@ _DECLARED_UNPROVIDED: tuple[MetricDefinition, ...] = (
         key="perp_net_edge_bps_per_trade", unit="bps of notional", kind="mean",
         source="probe instrument (backtest over the collected perp tape)",
         provided=False,
-        reference="NOT YET WRITTEN — the provider is PERP-V1 Probe 2 "
-        "(scripts/perp_arm_scores.py), blocked on Probe 0; the resolving "
-        "citation today is docs/PERP_V1_THESIS.md §5",
+        reference="provider WRITTEN 2026-09-02: PERP-V1 Probe 2 "
+        "(scripts/perp_arm_scores.py). Still provided=False — a probe is an "
+        "instrument, not a deployment, so values are computed by that script and "
+        "recorded by hand against the gate. Contract: docs/PERP_V1_THESIS.md §5. "
+        "NOT PRODUCIBLE on the surface as measured: the definition nets funding "
+        "and no funding source is reachable (thesis §7.1), so Probe 2 reports an "
+        "explicitly-named ex-funding figure instead and the gate clauses reading "
+        "this key are unreadable rather than read against the substitute",
         description="PERP-V1 headline: net edge per round trip after fees, "
         "slippage AND funding paid or received while holding",
     ),
@@ -406,9 +411,12 @@ _DECLARED_UNPROVIDED: tuple[MetricDefinition, ...] = (
         key="perp_beta_adjusted_net_edge_bps", unit="bps of notional", kind="mean",
         source="probe instrument (backtest over the collected perp tape)",
         provided=False,
-        reference="NOT YET WRITTEN — the provider is PERP-V1 Probe 2 "
-        "(scripts/perp_arm_scores.py), blocked on Probe 0; the resolving "
-        "citation today is docs/PERP_V1_THESIS.md §4 arm B",
+        reference="provider WRITTEN 2026-09-02: PERP-V1 Probe 2 "
+        "(scripts/perp_arm_scores.py). Still provided=False — a probe is an "
+        "instrument, not a deployment, so values are computed by that script and "
+        "recorded by hand against the gate. Contract: docs/PERP_V1_THESIS.md §4 arm B. "
+        "NO INPUT: arm B is BLOCKED_DATA (thesis §7.1) and is not re-scoped to a "
+        "proxy — it reaches its gate and fails to produce evidence",
         description="PERP-V1 arm B: net edge with the P&L attributable to common "
         "crypto (BTC) beta removed — the arm's whole claim is that the edge is "
         "not beta, so this is what its gate reads",
@@ -419,9 +427,10 @@ _DECLARED_UNPROVIDED: tuple[MetricDefinition, ...] = (
         source="probe instrument (backtest over the collected perp tape joined to "
         "the Kalshi crypto ladder tape)",
         provided=False,
-        reference="NOT YET WRITTEN — the provider is PERP-V1 Probe 2 "
-        "(scripts/perp_arm_scores.py), blocked on Probe 0; the resolving "
-        "citation today is docs/PERP_V1_THESIS.md §4 arm C",
+        reference="provider WRITTEN 2026-09-02: PERP-V1 Probe 2 "
+        "(scripts/perp_arm_scores.py). Still provided=False — a probe is an "
+        "instrument, not a deployment, so values are computed by that script and "
+        "recorded by hand against the gate. Contract: docs/PERP_V1_THESIS.md §4 arm C",
         description="PERP-V1 arm C: realizable cents per trade the perp overlay "
         "adds OVER the registered Theta spot model — not standalone accuracy, "
         "which would hide the spread/fee/fill cost the repository keeps relearning",
@@ -431,9 +440,11 @@ _DECLARED_UNPROVIDED: tuple[MetricDefinition, ...] = (
         kind="mean",
         source="probe instrument (funding history joined to held positions)",
         provided=False,
-        reference="NOT YET WRITTEN — the provider is PERP-V1 Probe 2 "
-        "(scripts/perp_arm_scores.py), blocked on Probe 0; the resolving "
-        "citation today is docs/PERP_V1_THESIS.md §4",
+        reference="provider WRITTEN 2026-09-02: PERP-V1 Probe 2 "
+        "(scripts/perp_arm_scores.py). Still provided=False — a probe is an "
+        "instrument, not a deployment, so values are computed by that script and "
+        "recorded by hand against the gate. Contract: docs/PERP_V1_THESIS.md §4. "
+        "NO INPUT: funding is unreachable on this surface (thesis §7.1)",
         description="PERP-V1 diagnostic: gross funding received (positive) or paid "
         "(negative) while holding. Deliberately NOT a gate: funding income with a "
         "larger relative-price loss is the failure mode, not the edge",
@@ -442,9 +453,10 @@ _DECLARED_UNPROVIDED: tuple[MetricDefinition, ...] = (
         key="perp_signal_ic", direction="neutral", unit="correlation", kind="mean",
         source="probe instrument (perp features vs forward event-contract moves)",
         provided=False,
-        reference="NOT YET WRITTEN — the provider is PERP-V1 Probe 2 "
-        "(scripts/perp_arm_scores.py), blocked on Probe 0; the resolving "
-        "citation today is docs/PERP_V1_THESIS.md §4 arm C",
+        reference="provider WRITTEN 2026-09-02: PERP-V1 Probe 2 "
+        "(scripts/perp_arm_scores.py). Still provided=False — a probe is an "
+        "instrument, not a deployment, so values are computed by that script and "
+        "recorded by hand against the gate. Contract: docs/PERP_V1_THESIS.md §4 arm C",
         description="PERP-V1 arm C diagnostic: information coefficient of one perp "
         "feature against the forward prediction-market move at a fixed horizon",
     ),
@@ -452,9 +464,10 @@ _DECLARED_UNPROVIDED: tuple[MetricDefinition, ...] = (
         key="perp_probe_observations", unit="observations", kind="count",
         source="probe instrument (backtest over the collected perp tape)",
         provided=False,
-        reference="NOT YET WRITTEN — the provider is PERP-V1 Probe 2 "
-        "(scripts/perp_arm_scores.py), blocked on Probe 0; the resolving "
-        "citation today is docs/PERP_V1_THESIS.md §5",
+        reference="provider WRITTEN 2026-09-02: PERP-V1 Probe 2 "
+        "(scripts/perp_arm_scores.py). Still provided=False — a probe is an "
+        "instrument, not a deployment, so values are computed by that script and "
+        "recorded by hand against the gate. Contract: docs/PERP_V1_THESIS.md §5",
         description="PERP-V1 unit of evidence: one scored round trip for arms A/B, "
         "one scored event-contract decision for arm C. The sample floor counts these",
     ),
@@ -463,9 +476,10 @@ _DECLARED_UNPROVIDED: tuple[MetricDefinition, ...] = (
         source="probe instrument (tape completeness against the intended "
         "universe x window)",
         provided=False,
-        reference="NOT YET WRITTEN — the provider is PERP-V1 Probe 2 "
-        "(scripts/perp_arm_scores.py), blocked on Probe 0; the resolving "
-        "citation today is docs/PERP_V1_THESIS.md §5",
+        reference="provider WRITTEN 2026-09-02: PERP-V1 Probe 2 "
+        "(scripts/perp_arm_scores.py). Still provided=False — a probe is an "
+        "instrument, not a deployment, so values are computed by that script and "
+        "recorded by hand against the gate. Contract: docs/PERP_V1_THESIS.md §5",
         description="PERP-V1 honesty guard: share of the intended asset x time tape "
         "the collector actually captured. Read every perp number against it — an "
         "estimate speaking for a fifth of the tape is not the same claim as one "

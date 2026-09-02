@@ -218,11 +218,22 @@ funding_history`) that places **no orders**, storing the joint tape all three ar
 score against. One collector serves all three arms; that is the other reason this
 is one experiment.
 
-**Probe 2 — the three scorers.** Per-arm backtests over the collected tape,
-computing exactly the metrics §5 gates on, against `perpctl` on the same tape.
+**Probe 2 — the scorers (`scripts/perp_arm_scores.py`, ops-runnable, written
+2026-09-02).** Per-arm backtests over the collected tape, computing exactly the
+metrics §5 gates on, against `perpctl` on the same tape. One script rather than the
+three this section originally anticipated, because the arms share a tape, a cost
+model and a control, and three scripts would have been three chances for those to
+drift apart.
 
-Cost: Probe 0 is one ops request. Probe 1 is a collector and a table. Probe 2 is
-three analysis scripts. No exposure at any point.
+It also reports what it **cannot** compute, which on the surface as measured (§7.1)
+is most of it. The rule it follows: a quantity that omits an input its registered
+definition names is a different quantity and never gets the registered name. So
+`perp_net_edge_bps_per_trade` — defined net of funding — is reported NOT PRODUCIBLE,
+with an explicitly-named ex-funding figure beside it, and the gate clauses reading
+it are reported unreadable rather than read against the substitute.
+
+Cost: Probe 0 is one ops request. Probe 1 is a collector and a table. Probe 2 is one
+analysis script. No exposure at any point.
 
 ## 7. Known ways this could be wrong
 
@@ -280,6 +291,24 @@ pre-registered bar.
     confirmation, and Probe 2 must say so in its result: a pre-registered condition
     that could not be evaluated is not the same experiment as one that was evaluated
     and passed, and the difference belongs in the record rather than in a footnote.
+
+* **The fee schedule is unreadable without credentials.** `/margin/fee_tiers` answers
+  401 to the ops runner, which holds no Kalshi key by design. Every gate here is on a
+  **net** number, so a guessed fee would decide a promotion. Probe 2 therefore reports
+  each arm's **breakeven round-trip fee** — the cost at which its measured edge is
+  exactly zero — rather than picking one. That is a number an operator can check
+  against a real schedule; a guess is a number nobody can check.
+
+* **Coverage is measured against the intended cadence, not the achieved one.**
+  `perp_data_coverage_pct` is a clause on all three promotion gates and the stop
+  gate's `hold_if`. Measured against what the collector actually managed it is 100%
+  by construction and says nothing, so Probe 2 divides by the configured
+  `PERPS_INTERVAL_SECONDS`. With a 60 s intended interval and a ~145 s achieved one
+  this floors well under the registered 80% bar — which means no arm can PASS on the
+  current tape whatever its edge. Closing that gap is a **platform** change (giving
+  the collector its own cadence instead of the shared worker loop), not a scorer
+  change; lowering the floor after seeing the number would be re-tuning a
+  pre-registered gate against results.
 
 ## 8. Where the standing lives
 
