@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-list","id":"m2-xc-list-1","actor":"research-lab","workstream":"WS-013"}
+{"type": "env", "id": "m2-register-env-1", "actor": "research-lab", "workstream": "WS-013", "purpose": "REGISTER_PACKAGE marktangle-2 (operator-authorized 2026-09-02); arms nothing, trades nothing", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\":\"m2-register-1\",\"action\":\"REGISTER_PACKAGE\",\"actor\":\"claude-code\",\"actor_role\":\"RESEARCH_LAB\",\"payload\":{\"package\":\"marktangle-2\"},\"schema_version\":1}"}}
