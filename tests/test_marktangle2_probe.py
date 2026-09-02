@@ -469,3 +469,41 @@ def test_holdout_is_graded_on_train_fitted_models_only():
     pred = r["arms"]["A3"]["model"]
     flipped = [dict(p, result="no" if p["result"] == "yes" else "yes") for p in r["hold"]]
     assert [pred(p) for p in flipped] == [pred(p) for p in r["hold"]]
+
+
+# ===========================================================================
+# Run-1 defects (m2-run-1, 2026-09-02)
+# ===========================================================================
+
+
+def test_candle_legs_are_read_in_dollars_with_a_cent_fallback():
+    assert m2._candle_cents({"open_dollars": "0.40", "close_dollars": "0.4400"}) == pytest.approx(44.0)
+    assert m2._candle_cents({"close": 44}) == 44.0
+    assert m2._candle_cents({}) is None and m2._candle_cents(None) is None
+
+
+def test_decision_quote_parses_a_real_shaped_candle(monkeypatch):
+    at = T0 + 86400 - 3600
+    payload = {"candlesticks": [
+        {"end_period_ts": at - 120, "yes_bid": {"close_dollars": "0.4000"}, "yes_ask": {"close_dollars": "0.4400"}},
+        {"end_period_ts": at, "yes_bid": {"close_dollars": "0.4100"}, "yes_ask": {"close_dollars": "0.4500"}},
+        {"end_period_ts": at + 60, "yes_bid": {"close_dollars": "0.9000"}, "yes_ask": {"close_dollars": "0.9900"}},
+    ]}
+    monkeypatch.setattr(m2.xl, "_get", lambda url: payload)
+    q = m2.decision_quote("KXBTCD", "KXBTCD-X-T1", T0 + 86400)
+    assert q == {"bid": 41.0, "ask": 45.0, "ts": at}, "the last candle ending at or before T-60m, in cents"
+
+
+def test_a_run_with_no_quotes_still_renders_the_whole_package():
+    markets, spot, _quotes = _synthetic_universe()
+    out = m2.run(markets, lambda a, s, e: spot, lambda s, t, c: None, 10_000, "x", {"max_fetch": 10_000})
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        m2.emit_package(out)
+    text = buf.getvalue()
+    assert "### END MARKTANGLE_2_SUMMARY.md" in text
+    assert "price coverage 0% < 50%" in text
+    for r in out["results"].values():
+        for arm, rec in r["arms"].items():
+            if arm not in ("A0", "B0"):
+                assert rec["verdict"][0] == "HOLD"

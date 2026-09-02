@@ -352,12 +352,26 @@ def decision_quote(series: str, ticker: str, close_ts: int) -> dict | None:
                    if int(xl._num(c.get("end_period_ts"))) <= at]
         if candles:
             c = candles[-1]
-            bid = (c.get("yes_bid") or {}).get("close")
-            ask = (c.get("yes_ask") or {}).get("close")
+            bid = _candle_cents(c.get("yes_bid"))
+            ask = _candle_cents(c.get("yes_ask"))
             if bid is None or ask is None:
                 return None
-            return {"bid": xl._num(bid), "ask": xl._num(ask),
-                    "ts": int(xl._num(c.get("end_period_ts")))}
+            return {"bid": bid, "ask": ask, "ts": int(xl._num(c.get("end_period_ts")))}
+    return None
+
+
+def _candle_cents(leg: dict | None) -> float | None:
+    """A candle leg's close in CENTS. Kalshi's candlesticks carry `close_dollars`
+    (a dollar string, e.g. "0.4400"); the older integer-cent `close` is read as a
+    fallback. Run 1 (m2-run-1, 2026-09-02) read only `close`, got None on all
+    6,000 candles and priced nothing — every other candle reader in this
+    repository multiplies `close_dollars` by 100."""
+    if not leg:
+        return None
+    if leg.get("close_dollars") is not None:
+        return xl._num(leg["close_dollars"]) * 100.0
+    if leg.get("close") is not None:
+        return xl._num(leg["close"])
     return None
 
 
@@ -866,7 +880,8 @@ def by_family(trades: list[dict]) -> dict[str, dict]:
 def robustness(trades: list[dict]) -> dict:
     """§17.6-7: drop the top family; drop the top 1% of trades."""
     if not trades:
-        return {"net_ex_top_family": None, "top_family": None, "net_ex_top_trades": None}
+        return {"net_ex_top_family": None, "top_family": None, "net_ex_top_trades": None,
+                "top_trades_removed": 0}
     fam = by_family(trades)
     top_fam = max(fam.items(), key=lambda kv: kv[1]["net"])[0]
     ex_fam = sum(t["net_pnl"] for t in trades if t["family"] != top_fam)
@@ -1427,7 +1442,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--discover-pages", type=int, default=25,
                     help="pages of /events?status=open to enumerate extra series from; "
                          "only structurally classifiable series are pulled. 0 disables")
-    ap.add_argument("--pages", type=int, default=25, help="settled pages per series (1000 each)")
+    ap.add_argument("--pages", type=int, default=60,
+                    help="settled pages per series (1000 each). Run 1 hit the old cap of 25 on "
+                         "every crypto series; the budget is acquisition depth, not a threshold")
     ap.add_argument("--min-vol", type=float, default=0.0)
     ap.add_argument("--max-fetch", type=int, default=6000,
                     help="cap on Kalshi candle fetches (holdout first, then train)")

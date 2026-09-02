@@ -3,7 +3,7 @@
 **Phase:** REVIEW
 **Status:** Active
 **Created:** 2026-09-02
-**Updated:** 2026-09-02
+**Updated:** 2026-09-02 (run 1)
 
 ## Goal
 
@@ -165,6 +165,26 @@ Linked, not restated — query Experiment OS for current state.
 - gates `paper_to_live_canary_a`, `paper_keep_a`, `paper_to_live_canary_b`, `paper_keep_b` on v1.
 - deployment `marktangle2-probe-1` (kind PROBE, tagless).
 - predecessor `marktangle-conditional-reversion` (MARKTANGLE-1, PAUSED at PROBE).
+
+## Run log
+
+**Run 1 (2026-09-02, ops `m2-run-1`, code `78788a2`) — NO VERDICT, instrument defect.**
+The pull worked: 2,458 series enumerated, 29 pulled, 1,756 families seen, 1,015 at the
+40-resolution floor, 167 analysed across 9 classes (4 crypto assets, baseball / basketball /
+football / soccer totals, weather high buckets). Coinbase spot loaded for all four assets.
+Then the price stage priced **nothing**: 6,000 candles fetched, 0 two-sided quotes, because
+`decision_quote` read the legacy integer-cent `close` field while Kalshi's candlesticks carry
+`close_dollars` — every other candle reader in the repo multiplies `close_dollars` by 100. A
+second, smaller defect: the empty-trades robustness record lacked a key the Track A renderer
+reads, so the run died before the summary. Both fixed with tests; the settled-history budget
+raised from 25 to 60 pages because every crypto series hit the old cap (25,000 markets, data
+only back to 2026-06-27). No holdout economics were ever produced, so nothing was read and
+nothing frozen has moved. Re-run unchanged as `m2-run-2`.
+
+**Registration.** `m2-register-1` FAILED at the worker: the transport passes
+`promotion_sample_floor` and neither MARKTANGLE package accepted it (PR #316 fixes both,
+raise-only). `m2-register-2` was submitted before #316 was on the default branch and is
+expected to fail the same way; the retry after merge is `m2-register-3`.
 
 ## Next Step
 
