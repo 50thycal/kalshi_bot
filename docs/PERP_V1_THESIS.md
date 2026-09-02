@@ -1,7 +1,15 @@
 # PERP-V1 — Kalshi crypto perpetual futures: three mechanisms, one horse race
 
-**Status:** pre-registration (PROBE). Nothing here has traded. No perp order path
-exists in this repository and none is added by the slice that carries this document.
+**Status:** **CLOSED 2026-09-02.** Nothing here ever traded; no perp order path exists in
+this repository. All three arms are done — arm A FAIL on execution economics, arm B
+BLOCKED_DATA, arm C NO-GO. The document below is preserved as the frozen pre-registration
+it was, unedited except for the measured limits in §7.1 and this header: what it predicted
+is only meaningful if it is still readable as what was predicted.
+
+Outcome and reasoning: `docs/workstreams/WS-010-perp-v1-pre-registration.md` (Outcome) and
+`docs/RESEARCH_JOURNAL.md` (PERP-V1 CLOSED 2026-09-02). **§7's second bullet called it** —
+the arm that worked was killed by the fee, which is the outcome this section named as most
+likely before any data existed.
 
 **Experiment OS key:** `perp-v1` · **Version:** 1 · **Origin:** operator
 **Family:** `perp` · **Registered by package:** `perp-v1` (`kalshi_bot/experiment_os/perp_v1.py`)
@@ -243,6 +251,13 @@ analysis script. No exposure at any point.
   An edge measured under a promotion dies when fees normalize; the 2026-07-09
   survey flagged this and the gates here are on **net** numbers under the fee
   model the active platform snapshot declares, never a promotional one.
+
+  **This is what closed the experiment (2026-09-02).** Not a promotion expiring — the
+  Launch Fee Schedule read at tier 0 is taker 0.120%/side, a **24 bps round trip against a
+  measured 8.88 bps spread**. Arm A's real +14.52 bps of gross convergence does not survive
+  it. Recorded here rather than only in the workstream because this section is where the
+  risk was named in advance, and the pre-registration is worth more if the place it was
+  right is visible.
 * **Leverage and liquidation** are semantics no book in this repository has ever
   had. They are a platform question, not a strategy one — if perps ever approach
   real money the fee/fill/risk components almost certainly need a Platform
