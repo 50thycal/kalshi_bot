@@ -1,1 +1,1 @@
-{"type":"noop","id":"idle-20260902d"}
+{"type":"script","name":"perp_arm_scores","id":"perp2-d6-1","args":["--hours","72"]}
