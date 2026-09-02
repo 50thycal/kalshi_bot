@@ -521,3 +521,35 @@ both gate specs is now asserted against the canonical registry, for the floored
 and unfloored spec alike. The lesson generalizes past this package — a package's
 write path must be exercised through a session and through the transport, or it
 has been described rather than tested.
+
+
+### v2 opened, gate healthy, waiting on evidence (2026-09-02T01:28:57Z)
+
+`REGISTER_PACKAGE mmsell10-capacity-gatefix`, receipt `mm10cap-gatefix-1`,
+SUCCEEDED. v1's epoch closed, v2 frozen with the corrected floor clause
+(`settled_contracts >= 150`, paper scope), v2/e1 opened, and the `mmsell10`
+paper control carried forward — still exactly **one** active deployment arm, so
+the tag never lost its arm across the cut.
+
+The control tower's read after the fix:
+
+```
+mmsell-price-ceiling-capacity · paper_to_live_canary  [promotion PAPER→LIVE_CANARY]
+    verdict: HOLD (recorded)
+    mmsell-price-ceiling-capacity/v2/e1/mmsell10: realizable projection n/a · observed paper n/a
+```
+
+**HOLD, not BLOCKED_INTEGRITY.** The gate is well-formed and simply waiting for
+evidence, which is the correct state for a window minutes old. `live_canary_keep`
+reads BLOCKED_DATA, which is also correct and not a fault: no live deployment
+exists for this experiment yet, so the live metrics have no scope to resolve
+against. The predecessor read the same way before it armed.
+
+**What arming now waits on.** 150 settled paper contracts on `mmsell10` inside
+the v2/e1 window. At the measured ~72 settled/day that is roughly **2 days**,
+i.e. around 2026-09-04. Status at 01:40Z: 11 trades created, 0 settled yet
+(p50 close is 1.9h), worker healthy at 400 candidates/10min.
+
+Arming remains a separate operator approval, and the runtime allowlist
+(`LIVE_STRATEGIES`, plus a `Dmmsell10` entry in `MMSELL_VARIANTS`) a separate one
+after that. `Cmmsell10` continues draining beside it on its own tags and epoch.
