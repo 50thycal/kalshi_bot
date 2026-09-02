@@ -1,0 +1,22 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "cd1dce0847d66a5ae70388b203435ddb0eeddbae",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-02T13:07:56Z",
+  "id": "incident-main-20260902a",
+  "outcome": "SUCCEEDED",
+  "provenance": {
+    "actor": "claude-task",
+    "purpose": "operator-requested investigation bundle for main"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/incident-main-20260902a.receipt.json",
+  "result_file": "ops/results/incident-main-20260902a.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33633044418",
+  "service": "main",
+  "started_at": "2026-09-02T12:59:36Z",
+  "targets": [],
+  "type": "incident"
+}
