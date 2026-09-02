@@ -1,1 +1,1 @@
-{"type":"noop","id":"idle-20260902"}
+{"type": "env", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\":\"mm10cap-gatefix-1\",\"action\":\"REGISTER_PACKAGE\",\"actor\":\"claude-code\",\"actor_role\":\"TASK_SPECIFIC\",\"payload\":{\"package\":\"mmsell10-capacity-gatefix\",\"promotion_sample_floor\":150},\"schema_version\":1}"}, "id": "mm10cap-gatefix-set-1"}
