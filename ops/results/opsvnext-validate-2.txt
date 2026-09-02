@@ -1,5 +1,0 @@
-Unknown request type: 'nonsense'
-# ops request [READ]
-# type=nonsense  id=opsvnext-validate-2
-# actor=claude-task  purpose=post-deploy validation: a failing request must turn the workflow RED
-# code 7925c7bc9aa1d237ef92e7c324791be252d8f990 · started 2026-09-02T02:02:03Z

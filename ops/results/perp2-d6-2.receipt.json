@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "f704d9989bcb848faee0db28913c9c3f704f63e4",
+  "code_source": "default-branch",
+  "exit_status": 1,
+  "finished_at": "2026-09-02T07:59:23Z",
+  "id": "perp2-d6-2",
+  "outcome": "FAILED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/perp2-d6-2.receipt.json",
+  "result_file": "ops/results/perp2-d6-2.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33606327418",
+  "service": null,
+  "started_at": "2026-09-02T07:59:23Z",
+  "targets": [],
+  "type": "script"
+}
