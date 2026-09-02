@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "90c49f9c5c177d7975987fbd34595a898b8a525b",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-02T11:32:11Z",
+  "id": "crashloop-20260902",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/crashloop-20260902.receipt.json",
+  "result_file": "ops/results/crashloop-20260902.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33625091407",
+  "service": "main",
+  "started_at": "2026-09-02T11:32:10Z",
+  "targets": [],
+  "type": "logs"
+}
