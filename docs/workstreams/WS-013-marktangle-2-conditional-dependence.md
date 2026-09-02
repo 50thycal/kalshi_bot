@@ -3,7 +3,7 @@
 **Phase:** REVIEW
 **Status:** Active
 **Created:** 2026-09-02
-**Updated:** 2026-09-02 (run 1)
+**Updated:** 2026-09-02 (run 2 — both tracks HOLD)
 
 ## Goal
 
@@ -233,6 +233,61 @@ call. Recommended next write: an Experiment OS issue against the MARKTANGLE-1 li
 register-and-pause if the operator still wants that history in the system. Caveat for whoever
 does it: `EXPERIMENT_OS_ISSUE_COMMAND` currently holds another session's envelope, so check
 its receipt is terminal before overwriting.
+
+**Run 2 (2026-09-02, ops `m2-run-2`, code `6933763`) — BOTH TRACKS HOLD, and the two HOLDs
+mean completely different things.** Package split into `docs/marktangle2/`, trades
+fingerprint verified (`51bbdc53…`). The candle fix worked: Track A holdout priced at
+95-99% against run 1's 0%.
+
+```
+A  HOLD  A3 fails in 3 classes and is under-powered in 2; the track is not adequately answered
+B  HOLD  B3 under-powered in every class (4)
+```
+
+**Track A's HOLD contains three adequately-powered FAILs**, and they are the substance:
+
+| class | holdout trades | EV/trade | mirror EV | A3 verdict |
+|---|---|---|---|---|
+| BASEBALL_TOTAL | 2040 | −3.17c | −3.98c | FAIL |
+| BASKETBALL_TOTAL | 243 | −5.83c | −1.07c | FAIL |
+| SOCCER_TOTAL | 153 | −9.59c | +1.82c | FAIL |
+| FOOTBALL_TOTAL | 54 | −9.80c | +2.44c | HOLD (train 237 < 500; trades 54 < 100) |
+| WEATHER_HIGH_BUCKET | 0 | — | — | HOLD (train 54 < 500; trades 0 < 100) |
+
+Every FAIL fails the same way and it is not marginal: negative net P&L, negative EV, no
+mirror separation, and negative after removing the top family AND the top 1% of trades.
+Both the treatment and its mirror lose roughly the cost of trading (fee + 1c slippage ≈
+3-4c), which is what "the modelled edge is not there" looks like. In SOCCER the mirror is
+**positive** while the treatment loses 9.59c — the model is not merely uninformative there,
+it is wrong-signed.
+
+**The hypothesis's own coefficient says the same.** `prev_dir × ln(k)` is the term that
+carries "reversal probability rises with streak length" (it must be NEGATIVE):
+
+| class | prev_dir | ln(k) | prev_dir × ln(k) |
+|---|---|---|---|
+| BASEBALL_TOTAL | −0.078 (z −2.14) | −0.004 (z −0.12) | −0.019 (z **−0.49**) |
+| BASKETBALL_TOTAL | −0.382 (z −3.59) | −0.274 (z −1.88) | **+0.466 (z +3.23)** |
+| SOCCER_TOTAL | −0.006 (z −0.05) | −0.009 (z −0.08) | +0.193 (z +1.62) |
+
+Mild one-step reversion is real in baseball and basketball totals (`prev_dir` significant),
+but streak LENGTH adds nothing: the interaction is indistinguishable from zero in two
+classes and, where it is significant, it has the **wrong sign** — persistence strengthens
+with k, the opposite of A1. Meanwhile A2/A3 beat the base rate on Brier in several classes
+while losing money, which is §22's Outcome 3 exactly: forecastability is not alpha.
+
+**Track B's HOLD is a data fact, not a thin result: the crypto ladder has no executable
+price.** Of 9,980 BTC holdout points, the fetch budget reached ~2,000 and **16** returned a
+two-sided quote at T−60m (<1%); ETH, SOL and XRP were never reached. Coverage 0% against a
+50% floor. This is D1 answered with evidence rather than assumption: pooling all 113 BTC
+rungs puts mostly permanently-in/out-of-the-money strikes in the class, and a rung nobody
+trades has an empty book an hour before close. A larger `--max-fetch` does not fix a <1%
+hit rate — 50% coverage would need ~5,000 priced points.
+
+**What must NOT happen next**, and is why this is recorded before any re-run is designed:
+narrowing the crypto class to near-the-money rungs, or re-reading Track A's bar, would both
+be post-hoc re-scoping after the holdout was opened (§11, §19 general kill). If the class
+definition is wrong it is a new Version, not an edit.
 
 ## Next Step
 

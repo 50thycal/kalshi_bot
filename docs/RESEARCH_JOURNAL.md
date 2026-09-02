@@ -16,6 +16,77 @@ Conventions:
 
 ---
 
+## MARKTANGLE-2 2026-09-02 — RUN 2: both tracks HOLD. Streak length carries nothing, and the crypto ladder has no price.
+
+First graded run of the MARKTANGLE-2 instrument (ops `m2-run-2`, code `6933763`, 34 min,
+package split into `docs/marktangle2/`, trades fingerprint `51bbdc53…` verified). Verdicts
+**as printed**, not re-read:
+
+```
+A  HOLD  A3 fails in 3 classes and is under-powered in 2; the track is not adequately answered
+B  HOLD  B3 under-powered in every class (4)
+```
+
+Arms surviving on untouched holdout: **none**.
+
+### Track A: a HOLD wrapped around three decisive FAILs
+
+| class | holdout trades | EV/trade | mirror EV | verdict |
+|---|---|---|---|---|
+| BASEBALL_TOTAL | 2040 | −3.17c | −3.98c | FAIL |
+| BASKETBALL_TOTAL | 243 | −5.83c | −1.07c | FAIL |
+| SOCCER_TOTAL | 153 | −9.59c | +1.82c | FAIL |
+| FOOTBALL_TOTAL | 54 | −9.80c | +2.44c | HOLD (under floors) |
+| WEATHER_HIGH_BUCKET | 0 | — | — | HOLD (under floors) |
+
+Nothing marginal about the three FAILs: each fails net P&L, EV/trade, the 3c mirror
+separation, and stays negative after removing both its most profitable family and its top
+1% of trades. Treatment and mirror both lose roughly what it costs to trade (fee + 1c
+slippage), which is what an absent edge looks like when you pay to act on it. In SOCCER the
+mirror is **positive** (+1.82c) while the treatment loses 9.59c — wrong-signed, not merely
+uninformative.
+
+**The coefficient the whole thesis rides on is dead.** `prev_dir × ln(k)` must be negative
+for "reversal rises with run length":
+
+```
+BASEBALL_TOTAL     prev_dir −0.078 (z −2.14)   prev_dir x ln(k)  −0.019 (z −0.49)
+BASKETBALL_TOTAL   prev_dir −0.382 (z −3.59)   prev_dir x ln(k)  +0.466 (z +3.23)
+SOCCER_TOTAL       prev_dir −0.006 (z −0.05)   prev_dir x ln(k)  +0.193 (z +1.62)
+```
+
+Mild ONE-STEP reversion is real in baseball and basketball totals. Streak LENGTH adds
+nothing: the interaction is zero within noise in two classes and significantly the WRONG
+SIGN in the third — persistence strengthening with k. MARKTANGLE-1 asked whether reversal
+probability rises with streak length; on pooled fresh-event classes with family effects,
+the answer where we can measure it is no.
+
+And several arms beat the base rate on Brier while losing money (A2/A3 in BASKETBALL,
+A3 in SOCCER, A2 in FOOTBALL). That is §22's Outcome 3 stated in our own numbers:
+**forecastability is not alpha** — the price already carries what little the model knows.
+
+### Track B: not a thin sample, an absent market
+
+Of 9,980 BTC holdout prediction points, the budget reached ~2,000 and **16** returned a
+two-sided quote at T−60m — under 1%. ETH, SOL and XRP were never reached. Coverage 0%
+against the preregistered 50% floor, so B3 cannot be graded at all.
+
+This answers D1 with evidence: the class pools all 113 BTC rungs, most of them permanently
+in or out of the money, and a rung nobody trades has an empty book an hour before close.
+The 97% persistence MARKTANGLE-1 found is still there in the resolutions (B1/B2 reach 98.3%
+holdout accuracy, Brier 0.015 against the base rate's 0.045) — it simply cannot be
+transacted at the strikes where it exists. Predictable, unpriceable.
+
+A bigger fetch budget does not rescue this: a <1% quote rate cannot reach 50% coverage.
+
+### What this does NOT authorize
+
+Narrowing the crypto class to near-the-money rungs, or re-reading Track A's bar, would be
+post-hoc re-scoping after the holdout was opened (§11, and §19's general kill). If a class
+definition is wrong, the remedy is a new Version — not an edit to a frozen one.
+
+---
+
 ## MARKTANGLE-2 2026-09-02 — REGISTRATION LANDED (4th attempt), and MARKTANGLE-1 was never registered at all
 
 `marktangle-2-conditional-dependence` is now in production Experiment OS: **PROBE**, v1 frozen
