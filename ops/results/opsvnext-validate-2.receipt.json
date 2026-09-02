@@ -1,0 +1,22 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "7925c7bc9aa1d237ef92e7c324791be252d8f990",
+  "code_source": "default-branch",
+  "exit_status": 1,
+  "finished_at": "2026-09-02T02:02:03Z",
+  "id": "opsvnext-validate-2",
+  "outcome": "FAILED",
+  "provenance": {
+    "actor": "claude-task",
+    "purpose": "post-deploy validation: a failing request must turn the workflow RED"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/opsvnext-validate-2.receipt.json",
+  "result_file": "ops/results/opsvnext-validate-2.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33581667899",
+  "service": null,
+  "started_at": "2026-09-02T02:02:03Z",
+  "targets": [],
+  "type": "nonsense"
+}
