@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=mm10cap-arm-receipt-1
-# code 90c49f9c5c177d7975987fbd34595a898b8a525b · started 2026-09-02T11:38:13Z
-command_id         action            status     error  completed                    
------------------  ----------------  ---------  -----  -----------------------------
-mm10cap-arm-1      ARM_CANARY        SUCCEEDED         2026-09-02 11:36:01.91743+00 
-mm10cap-unfloor-1  REGISTER_PACKAGE  SUCCEEDED         2026-09-02 08:25:39.088553+00
-
-(2 rows)
