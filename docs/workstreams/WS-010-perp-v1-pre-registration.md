@@ -155,52 +155,47 @@ assumption of comparability rather than a frozen contract.
   experiment is worth registering at PAPER is deferred until arm C has evidence —
   a cross-experiment delta is BLOCKED_PLATFORM whenever the two epochs pin
   different snapshots, which `mmsell-anchor-vol-entry` is currently demonstrating.
-- **D5. Does the collector need its own cadence? — now on measured numbers, and it is
-  the live decision.** The 2026-09-02 run measured **29.61%** coverage: 1279 cycles
-  against 4320 intended, an achieved interval of **191.6 s** against a configured 60 s.
-  Not a collector fault — per-cycle coverage is 100% (26859/26859) with zero errors. It
-  shares the worker's scan loop.
+- ~~**D5. Does the collector need its own cadence?**~~ **CLOSED 2026-09-02 — MOOT.** The
+  measured numbers stand (29.61% coverage, 191.6 s achieved against 60 s intended, 100%
+  per-cycle, zero errors), but the decision they fed no longer has anything to decide:
+  arm A failed on fees, arm C is a NO-GO, arm B has no data. Recorded rather than dropped
+  because the finding survives the experiment — **the collector cannot meet an 80% coverage
+  floor while it shares the worker's scan loop**, and any future perp or high-cadence
+  research inherits that.
 
-  This blocks BOTH remaining arms, for different reasons, which is what makes it the
-  decision rather than a caveat:
-    * every promotion gate carries the coverage clause and the stop gate holds on it, so
-      **no arm can PASS at 29.61% whatever its edge**; and
-    * arm C's registered fast horizons (5/10/30/60 s) are unobservable at 191.6 s, so the
-      brief's actual claim — a *fast* perp → Kalshi lead — remains **untested**, not
-      falsified. The 300 s null is real and does not speak to it.
+  One correction worth keeping: the constraint on arm C was never the perp collector. It
+  was `theta_interval_minutes = 5.0` — the Kalshi ladder snapshot cadence. Arm C scores the
+  forward move of the *event contract*, so speeding up the perp side alone would have
+  changed nothing. A fast arm C test needs BOTH sides at seconds, in one process off one
+  clock. Kalshi does expose a perps WebSocket (`ticker` / `orderbook_delta` / `trade`; auth
+  required on the handshake even for public channels) and this repository has no WebSocket
+  code; account tier is `basic`, 20 reads/sec, which the mmsell scan already bursts against.
 
-  Legitimate responses: give the collector its own cadence (a platform change; #284
-  declined to do it before Probe 2 showed the need, and Probe 2 has now shown it), or
-  accept HOLD and say so. Not legitimate: lowering `COVERAGE_FLOOR_PCT` after seeing
-  29.61%, which is re-tuning a pre-registered gate against results.
+- ~~**D7. What is the Kalshi perp round-trip fee?**~~ **CLOSED 2026-09-02 — it ends the
+  experiment.** Operator read the Launch Fee Schedule: tier 0 taker **0.120%/side = 24 bps
+  round trip**, maker 0.020%/side = 4 bps round trip; tier is 30-day trailing perps +
+  prediction notional. Arm A's gross convergence is 14.52 bps against 8.88 bps of paid
+  spread. Taker/taker is **−18.4 bps**; maker on one leg only is **−3.9 bps**; only
+  maker/maker is positive (**+10.5 bps**) and it is the combination least likely to fill.
+  Full arithmetic and reasoning: `docs/RESEARCH_JOURNAL.md`, PERP-V1 CLOSED 2026-09-02.
 
-- **D7. What is the Kalshi perp round-trip fee?** New, and the cheapest open question in
-  the whole experiment. Arm A's measured edge is **5.63 bps ex funding**; a round-trip
-  taker fee above that erases it entirely. `/margin/fee_tiers` answers 401 to the ops
-  runner, which holds no Kalshi key — but the **worker** does. One authenticated read
-  decides whether arm A is interesting or dead, and it needs no tape, no gate and no
-  promotion. Owner: Live Ops or an operator; it is a credentialed read, not a Research
-  Lab write.
-- ~~**D6. What does Probe 2 actually report on the live tape?**~~ **CLOSED 2026-09-02 —
-  it ran** (`perp2-d6-3`, `--hours 72`). Full result in `docs/RESEARCH_JOURNAL.md`,
-  PERP-V1 PROBE 2 FIRST RUN 2026-09-02. Headline: all three gates **NOT READABLE**, HOLD
-  on all three arms, coverage 29.61%.
+  The finding generalises past arm A: **the tier-0 round trip costs 2.7x the entire
+  measured bid-ask.** Any single-digit-bps mechanism is structurally dead on this surface
+  at this tier.
 
-  Two of my three predictions were wrong, and in the more interesting direction:
-    * I expected sample far under the 200 floor. Arm A produced **913** scored round
-      trips and cleared it comfortably.
-    * I expected the live question to be whether arm A found any entries at all. It found
-      plenty, and they carry a **+5.63 bps/trade net-ex-funding** edge against a matched
-      control at **−10.13** (delta **+15.76**), win rate 76.2%, mean hold 5.0 min.
-    * I expected coverage near 40%. It is 29.61% — my 145 s cadence figure was a
-      first-hour optimism; three days say 191.6 s.
+- ~~**D8. Is there resting depth for a maker variant to rest against?**~~ **CLOSED
+  2026-09-02 — yes, and that is not the good news it sounds like.** Run to test whether
+  thin books made the maker question moot on capacity grounds. They do not: ETH turns over
+  **$172M/24h at a 0.7 bps spread**, BTC **$42.7M at 0.4 bps**. The prediction was wrong
+  and the opposite is recorded.
 
-  What did hold: the gates are unreadable, and for exactly the pre-registered reason.
-  Arm A's number is **not** `perp_net_edge_bps_per_trade` — it omits funding, and it was
-  produced by a materially **weaker** rule than the registered one (no funding-agreement
-  entry condition, no time-to-funding z-conditioning, a substituted hold clock). A
-  5-minute hold makes the omitted funding cost small in principle, but a cost I reasoned
-  to a bound for is not a cost the pre-registration's metric was measured with.
+  The load-bearing finding is the mismatch. **Arm A paid 4.44 bps per side; BTC/ETH quote
+  0.4-0.7 bps total.** Arm A's entries therefore came from the wide-spread illiquid names
+  (ADA 33.2, BNB 21.4, AAVE 16.2 bps), not the liquid ones — consistent with an extreme
+  premium z-score being largely a symptom of illiquidity. So a maker variant pointed at
+  BTC/ETH may find very few entries: capacity exists where the signal probably does not.
+  That is a known unknown now rather than an assumption, and it is the first thing such a
+  variant would have to establish.
 
 ## Assumptions
 
@@ -283,6 +278,36 @@ control; three scripts would have been three chances for those to drift apart, a
 drifted cost model between two arms of one horse race is the comparison failing
 silently.
 
+## Outcome — CLOSED 2026-09-02
+
+**All three arms are done. None promotes. The experiment is closed on a COST finding, not
+a signal finding, and that distinction is the result.**
+
+| arm | verdict | why |
+|---|---|---|
+| `perprevert` (A) | **FAIL — execution economics** | mechanism real (+5.63 bps/trade pre-fee, 913 obs, vs a −10.13 control); tier-0 taker round trip is 24 bps |
+| `perpcarry` (B) | **BLOCKED_DATA** | no funding source exists on this surface (D4) |
+| `perplead` (C) | **NO-GO** (operator, 2026-09-02) | null at 300 s on ~97k pairs; fast horizons untested, not falsified |
+
+Arm A is the one worth stating carefully. **The premium-reversion effect is real** — 913
+scored round trips, +14.52 bps of gross convergence, beating a matched random-direction
+control by +15.76 bps on the same entries. It dies on the fee, at a surface where the
+round trip costs 2.7x the entire bid-ask. §7 of the thesis pre-registered this as the most
+likely honest outcome ("convergence that is real but smaller than the round trip"), and
+that is what happened.
+
+**What would reopen it** — neither is an experiment, both are decisions:
+1. A fee-tier change. Tier 3 ($10M/30d) makes maker 0.000% and taker 2 bps.
+2. A maker variant registered as a **new Version**, with a pre-registered fill model built
+   on a trade-print tape the collector does not gather. D8 says capacity exists on BTC/ETH
+   and warns the signal probably does not live there.
+
+**Not registered in production, and therefore not in Experiment OS.** The probe ran its
+whole lifecycle unregistered — correct under NEW_ONLY, since an unregistered tag cannot
+trade — which means there is no XOS gate result, verdict or transition for any of it. These
+documents are the record. Whether a retrospective registration is wanted so the graveyard
+carries a structured entry is an operator/Control Tower call, deliberately left open.
+
 ## Implementation State
 
 Slices 1–3 built (#275, #277, #280, #284). **The tape is live.** `PERPS_COLLECTOR_ENABLED=true`
@@ -361,19 +386,13 @@ This PR.
 
 ## Next Step
 
-Two, and they are independent — neither is a promotion and neither needs the other:
+**None inside this workstream.** It is closed. Three things leave it, each owned elsewhere:
 
-1. **D7, the fee.** One authenticated read of `/margin/fee_tiers` from the worker. Arm A's
-   entire measured edge is 5.63 bps ex funding; a round-trip fee above that ends the arm.
-   Cheapest decisive fact available, and it needs no tape and no gate.
-2. **D5, the cadence.** Give the collector its own loop, or accept that PERP-V1 cannot
-   clear its own coverage floor and that arm C's fast-lead claim stays untested. A
-   platform change, so a Platform Change Review question rather than this workstream's.
-
-Re-running Probe 2 on more tape is **not** a next step while coverage is 29.61%: more
-days at the same cadence raise the sample and leave the binding clause exactly where it
-is.
-
-Still an operator act, unchanged: `perp-v1` is **not registered in production**. That is a
-`REGISTER_PACKAGE` envelope through the `env` channel, which redeploys the worker while the
-mmsell10 canary holds real money.
+1. **Turn the collector off, or decide to keep paying for it.** `PERPS_COLLECTOR_ENABLED`
+   is still `true` on the main worker and the tape is still accumulating at ~26k rows/day
+   against three closed arms. Turning it off is an `env` write (Live Ops). Keeping it is
+   defensible only if a maker variant is actually intended.
+2. **The coverage finding outlives the experiment** (D5): nothing sharing the worker's scan
+   loop can meet an 80% coverage floor. Any future high-cadence research inherits it.
+3. **Retrospective XOS registration**, if wanted — Control Tower's call, not this
+   workstream's.
