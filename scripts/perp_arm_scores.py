@@ -78,11 +78,22 @@ import sys
 from collections import defaultdict
 from datetime import datetime
 
+# The ops runner serves a `script` request with only `scripts/` on `sys.path` — the
+# repo-root insertion in `ops_runner._dispatch` belongs to a different request type. So
+# the repo root goes on the path here, before the import below, rather than being
+# assumed. Under pytest the root is already on the path and this is a no-op, which is
+# exactly why the first live run failed on an import a green test suite had exercised:
+# the test environment was more generous than production. `tests/test_perp_arm_scores.py`
+# now reproduces the runner's path instead of trusting pytest's.
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
 # The floors are IMPORTED, never restated. A scorer that carried its own copy of the
 # sample or coverage floor could drift from the registered gate and report a number
 # against a bar nobody registered — which is the failure this whole apparatus exists to
 # prevent. If this import fails the script must not run.
-from kalshi_bot.experiment_os.perp_v1 import COVERAGE_FLOOR_PCT, SAMPLE_FLOOR
+from kalshi_bot.experiment_os.perp_v1 import COVERAGE_FLOOR_PCT, SAMPLE_FLOOR  # noqa: E402
 
 RO_OPTIONS = (
     "-c default_transaction_read_only=on "
