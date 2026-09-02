@@ -16,6 +16,45 @@ Conventions:
 
 ---
 
+## MARKTANGLE-2 2026-09-02 — REGISTRATION LANDED (4th attempt), and MARKTANGLE-1 was never registered at all
+
+`marktangle-2-conditional-dependence` is now in production Experiment OS: **PROBE**, v1 frozen
+16:21:23Z, epoch 1 open, deployment `marktangle2-probe-1` started and TAGLESS, four gates
+recorded with pre-registration spec hashes. Receipt `m2-register-4` SUCCEEDED. No verdict —
+nothing has been graded; the probe re-run is still in flight.
+
+**It took four envelopes and exposed two defects in the sanctioned write path**, neither
+reachable from any test, both now fixed with guards:
+
+1. `TypeError: register() got an unexpected keyword argument 'promotion_sample_floor'`
+   (`m2-register-1`, `-2`). The transport always passes that keyword; only `perp_v1` accepted
+   it.
+2. `AttributeError: 'int' object has no attribute 'version'` (`m2-register-3`). The receipt
+   builder reads identifiers off ORM objects the package returns; the MARKTANGLE packages
+   returned identifiers. It runs inside the command's transaction *after* the writes, so a
+   **receipt-formatting error rolled back a registration that had succeeded**. It is now
+   best-effort per field.
+
+Each failure rolled back cleanly — verified empty before each retry.
+
+**THE FINDING THAT MATTERS MORE.** MARKTANGLE-1 (`marktangle-conditional-reversion`) **does
+not exist in this database.** A direct read: *no experiment 'marktangle-conditional-reversion'*.
+Its thesis document calls it "v1 frozen at registration · stage PROBE", this journal recorded
+"REGISTERED at PROBE" on 2026-08-29 and "PAUSED at PROBE" on 2026-08-30, and WS-011 says the
+same. All of it describes an intention. The same `promotion_sample_floor` defect would have
+killed its envelope, and an experiment that was never created cannot have been paused.
+
+The science is untouched: the eight probe runs happened, the crypto-persistence finding
+(97.5% repeat on a 49.4% coin) is real, and the HOLD is the honest reading. What is missing is
+its record in the system that is supposed to be canonical — so the Control Tower has never
+seen MARKTANGLE-1, and every statement of its "standing" has come from Markdown. Corrections
+are now in `docs/MARKTANGLE_THESIS.md` and WS-011.
+
+**Not repaired here, deliberately.** Registering it now would create it at PROBE while the
+operator's recorded decision is PAUSED; that is a lifecycle move and an operator's call.
+
+---
+
 ## MARKTANGLE-2 2026-09-02 — REGISTERED at PROBE. Conditional dependence, both directions, against the price.
 
 New experiment `marktangle-2-conditional-dependence` (v1 frozen, stage PROBE, ten arms, four

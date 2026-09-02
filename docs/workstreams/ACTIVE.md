@@ -3,7 +3,7 @@
 The project's active-work control board — what is being designed and built right now, and
 where each effort is. Read it first on a continuation.
 
-**Updated:** 2026-09-02 · **Build OS v0.4**
+**Updated:** 2026-09-02 (MARKTANGLE-2 registered) · **Build OS v0.4**
 
 | ID | Workstream | Phase | Status | Current Next Step | Related PR |
 |---|---|---|---|---|---|
@@ -19,7 +19,7 @@ where each effort is. Read it first on a continuation.
 | [WS-010](WS-010-perp-v1-pre-registration.md) | PERP-V1: a research surface for Kalshi perpetual futures | **CLOSED** | Done | Closed 2026-09-02 on a COST finding. Arm A FAIL (premium reversion is real — +5.63 bps/trade pre-fee, 913 obs, vs a −10.13 control — but tier-0 taker is 24 bps round trip, 2.7x the whole bid-ask). Arm B BLOCKED_DATA (no funding source). Arm C NO-GO (null at 300 s; fast horizons untested, and the binding constraint was theta's 5-min ladder cadence, not the perp collector). Never registered in production, so there is no XOS record — docs are the record. Open: turn the collector off (Live Ops), and whether to register retrospectively (Control Tower) | [#275](https://github.com/50thycal/kalshi_bot/pull/275), [#277](https://github.com/50thycal/kalshi_bot/pull/277), [#280](https://github.com/50thycal/kalshi_bot/pull/280), [#291](https://github.com/50thycal/kalshi_bot/pull/291), [#305](https://github.com/50thycal/kalshi_bot/pull/305), [#307](https://github.com/50thycal/kalshi_bot/pull/307), [#308](https://github.com/50thycal/kalshi_bot/pull/308), [#310](https://github.com/50thycal/kalshi_bot/pull/310), this PR |
 | [WS-011](WS-011-marktangle-conditional-reversion.md) | MARKTANGLE: conditional reversion in recurring binary families | DECIDE | Paused | Closed for now (D4). Verdict HOLD recorded; XOS PAUSED from PROBE. Resume only when a candidate family's holdout reaches 100 entries — months of forward collection, not a rebuild | [#287](https://github.com/50thycal/kalshi_bot/pull/287) |
 | [WS-012](WS-012-ops-channel-vnext.md) | Ops channel vNext: reliability, introspection, verified operations | REVIEW | Active | Review + merge, then deploy the workflow file to `ops` in an idle window and validate with a round trip (green on success, RED on a deliberately bad request) | this PR |
-| [WS-013](WS-013-marktangle-2-conditional-dependence.md) | MARKTANGLE-2: conditional dependence alpha (two tracks, pre-registered) | REVIEW | Active | Review + merge; then `REGISTER_PACKAGE marktangle-2` and run `marktangle2_probe` (id `m2-run-1`) on the ops channel; split the package into `docs/marktangle2/` and record the printed verdicts. Never a live step from a historical PASS | this PR |
+| [WS-013](WS-013-marktangle-2-conditional-dependence.md) | MARKTANGLE-2: conditional dependence alpha (two tracks, pre-registered) | REVIEW | Active | REGISTERED in production 2026-09-02 (`m2-register-4`, PROBE, tagless). Probe run 2 in flight after run 1's candle-parsing defect. Next: read `m2-run-2`, split the package into `docs/marktangle2/`, record the printed verdicts. Open for an operator: MARKTANGLE-1 is NOT in Experiment OS despite its docs — see this workstream's run log | [#315](https://github.com/50thycal/kalshi_bot/pull/315), [#316](https://github.com/50thycal/kalshi_bot/pull/316), [#318](https://github.com/50thycal/kalshi_bot/pull/318), this PR |
 
 *Phase:* IDEA · EXPLORE · MODEL · DECIDE · BUILD_CARD · READY_TO_BUILD · BUILDING · REVIEW
 *Status:* Active · Paused · Blocked · Abandoned

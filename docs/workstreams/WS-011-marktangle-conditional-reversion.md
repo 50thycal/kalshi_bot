@@ -131,6 +131,16 @@ experiment's standing, gates and verdicts are Experiment OS's.
 
 This PR.
 
+## Correction (2026-09-02): the Experiment OS objects below do not exist
+
+A direct read during WS-013's work returned *no experiment
+'marktangle-conditional-reversion'*. This file's Implementation State, its D4 entry and the
+objects listed below describe a registration that never landed — the envelope would have hit
+the `TypeError: register() got an unexpected keyword argument 'promotion_sample_floor'` that
+WS-013 diagnosed and fixed, and nothing that was never created could then be PAUSED. The
+research record (runs, findings, the HOLD) is unaffected; only its XOS representation is
+missing. Detail and the recommended remedy: WS-013's run log.
+
 ## Related Experiment OS objects
 
 Linked, not restated — query Experiment OS for current state.
