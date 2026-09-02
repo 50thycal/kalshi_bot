@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["m2-register-1"],"id":"m2-xc-show-1","actor":"research-lab","workstream":"WS-013"}
+{"type":"doctor","id":"doctor-20260902b","actor":"claude-task","purpose":"confirm PR #313: main must report its own deployment and runtime config"}
