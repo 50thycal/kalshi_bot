@@ -1,1 +1,1 @@
-{"type":"capabilities","id":"opsvnext-validate-1","actor":"claude-task","purpose":"post-deploy validation: green path + receipt"}
+{"type":"nonsense","id":"opsvnext-validate-2","actor":"claude-task","purpose":"post-deploy validation: a failing request must turn the workflow RED"}
