@@ -89,11 +89,20 @@ _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
-# The floors are IMPORTED, never restated. A scorer that carried its own copy of the
-# sample or coverage floor could drift from the registered gate and report a number
-# against a bar nobody registered — which is the failure this whole apparatus exists to
-# prevent. If this import fails the script must not run.
-from kalshi_bot.experiment_os.perp_v1 import COVERAGE_FLOOR_PCT, SAMPLE_FLOOR  # noqa: E402
+# The frozen numbers are IMPORTED, never restated. A scorer carrying its own copy of a
+# sample floor, a coverage floor or the registered horizon list could drift from the
+# gate and report against a bar nobody registered — the failure this whole apparatus
+# exists to prevent. If this import fails the script must not run.
+#
+# It reads `perp_v1_floors`, NOT `perp_v1`. The ops runner installs psycopg and nothing
+# else for a `script` request, and `perp_v1` imports `.service`, which imports
+# SQLAlchemy. Importing the registration package here worked under pytest and died in
+# production — twice, one layer deeper each time.
+from kalshi_bot.experiment_os.perp_v1_floors import (  # noqa: E402
+    COVERAGE_FLOOR_PCT,
+    REGISTERED_HORIZONS_SEC,
+    SAMPLE_FLOOR,
+)
 
 RO_OPTIONS = (
     "-c default_transaction_read_only=on "
@@ -108,9 +117,6 @@ INTENDED_INTERVAL_SEC = 60.0
 #: Measured cadence, 26 cycles over an hour on 2026-08-30. Arm C horizons below this are
 #: not measurable and are refused rather than reported as nulls.
 MEASURED_CADENCE_SEC = 145.0
-
-#: Registered arm C horizons (`perp_v1.ARMS`, arm `perplead`, `forward_horizons_sec`).
-REGISTERED_HORIZONS_SEC = (5, 10, 30, 60, 300)
 
 BLOCKED_ARM_B = (
     "arm B (perpcarry) is BLOCKED_DATA: its ranking input (estimated 8h funding rate) "
