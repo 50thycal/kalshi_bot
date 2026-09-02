@@ -1,1 +1,1 @@
-{"type":"logs","lines":120,"id":"crashloop-20260902"}
+{"type":"db","sql":"select v.version, r.verdict, left(r.metrics_json::text,700) as metrics, r.computed_at::text as computed from experiment_versions v join experiment_gates g on g.version_id=v.id join experiment_gate_results r on r.gate_id=g.id where v.experiment_id=(select id from experiments where key='mmsell-price-ceiling-capacity') and g.gate_key='paper_to_live_canary' and v.version=3 order by r.id desc limit 2","max_rows":3,"id":"v3-gate-now-1"}
