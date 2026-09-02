@@ -1,1 +1,1 @@
-{"type": "env", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\":\"mm10cap-arm-1\",\"action\":\"ARM_CANARY\",\"actor\":\"claude-code\",\"actor_role\":\"LIVE_OPS\",\"payload\":{\"package\":\"mmsell10-capacity-successor\",\"approved_by\":\"50thycal\"},\"schema_version\":1}"}, "id": "mm10cap-arm-set-1"}
+{"type":"db","sql":"select command_id, action, status, left(coalesce(error,''),500) as error, completed_at::text as completed from experiment_os_experiment_commands order by id desc limit 2","max_rows":3,"id":"mm10cap-arm-receipt-1"}
