@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["m2-register-4"],"id":"m2-xc-show-4","actor":"research-lab","workstream":"WS-013"}
+{"type":"xos","command":"show","args":["marktangle-2-conditional-dependence"],"id":"m2-show-2","actor":"research-lab","workstream":"WS-013"}
