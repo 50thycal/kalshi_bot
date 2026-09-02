@@ -256,12 +256,30 @@ pre-registered bar.
   minutes cannot be seen at all, so an arm C null is ambiguous between "no lead"
   and "a lead faster than the tape", and must be reported as such rather than as a
   kill on the mechanism. Arm A's and arm B's nulls are unaffected.
-* **No funding source is established.** `/margin/funding_history` requires auth and
-  returns 200 with no records to an account holding no perp positions; the leading
-  hypothesis is that it is an account payment ledger, not a market rates feed
-  (WS-010 D4). Arm B is not re-scoped and its gate stands. If no market-wide rates
-  source is found, arm B ends **BLOCKED_DATA** — which is a real outcome of this
-  experiment, not a failure of it.
+* **No funding source exists on this surface — settled 2026-08-30.** Four readings
+  agree: `/margin/funding_history` returns `{"funding_history": []}` unscoped, scoped
+  to `KXAAVEPERP`, and scoped to `KXBTCPERP` (the largest open interest on the
+  exchange) over a 7-day window; and no funding field rides on the market row at all,
+  across 24 keys read off 252 live snapshots. The endpoint sits under `/margin/`
+  beside positions and balance and requires auth — a market-wide feed has no reason to
+  be empty for BTC over seven days; an account payment ledger has exactly one, which
+  is that we hold no perp positions. WS-010 D4 is closed on this.
+
+  Two consequences, and both are results rather than repairs:
+
+  - **Arm B `perpcarry` is BLOCKED_DATA.** `perp_funding_capture_bps` has no input.
+    The arm is **not** deleted and **not** re-scoped: it registers as frozen, reaches
+    its gate, and fails to produce evidence — a pre-registration working, not
+    breaking. Ranking on *premium* instead is a different hypothesis, so a new Version
+    and an operator decision.
+  - **Arm A loses its entry confirmation, not its signal.** §4 pre-registers "entry
+    requires the live estimated funding rate to agree in sign with the premium". That
+    condition cannot be evaluated. The signal itself is unaffected —
+    `premium = (mark − index) / index` comes from two fields that both ride on the
+    market row and are in the tape now. Arm A therefore proceeds **without** the
+    confirmation, and Probe 2 must say so in its result: a pre-registered condition
+    that could not be evaluated is not the same experiment as one that was evaluated
+    and passed, and the difference belongs in the record rather than in a footnote.
 
 ## 8. Where the standing lives
 

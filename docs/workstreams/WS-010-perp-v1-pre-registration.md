@@ -97,7 +97,24 @@ assumption of comparability rather than a frozen contract.
   cash flow are semantics no FEE_MODEL/FILL_MODEL revision in this repository
   describes. That is **Platform Change Review**'s call, not this workstream's, and
   it is not on the critical path while PERP-V1 stays at PROBE.
-- **D4. If funding is unreadable, what happens to `perpcarry`?** **RE-OPENED
+- ~~**D4. If funding is unreadable, what happens to `perpcarry`?**~~ **CLOSED
+  2026-08-30 — no funding source exists; arm B is BLOCKED_DATA.** The probe asked
+  the busiest perp on the exchange (`KXBTCPERP`) over a 7-day window, twice, and got
+  `{"funding_history": []}` both times — after the same answer unscoped and scoped to
+  `KXAAVEPERP`, and after reading all 24 market-row keys and finding nothing
+  funding-shaped. The endpoint sits under `/margin/` beside positions and balance and
+  requires auth: a market-wide feed has no reason to be empty for BTC over seven days,
+  an account payment ledger has exactly one. Arm B is **not deleted and not
+  re-scoped** — the package registers it as pre-registered, it reaches its gate, and it
+  fails to produce evidence, which is a pre-registration working rather than breaking.
+  Running the ranking on *premium* instead is a different hypothesis: new Version,
+  operator decision. Arms A and C are untouched and their inputs are in the tape.
+  Residual thread, deliberately not chased: `exchange_index` on the market row.
+  Full record: `docs/RESEARCH_JOURNAL.md` (PERP-V1 D4 CLOSED 2026-08-30).
+
+  The history below is kept because the error in it is the instructive part.
+
+- ~~**D4 (history). RE-OPENED
   2026-08-30** — it was closed earlier the same day on a misreading, and the
   misreading is kept here because it is the instructive part. A
   `400 "start_date is required"` from `/margin/funding_history` was taken as
@@ -148,7 +165,9 @@ assumption of comparability rather than a frozen contract.
   rides on the market row, so arm A's index anchor exists. Findings recorded in
   `docs/RESEARCH_JOURNAL.md` (PERP-V1 PROBE 0 RESULT 2026-08-29). What A1 got
   wrong is funding — see A4.
-- **A4 — OPEN AGAIN 2026-08-30. Funding is not established.** It was recorded
+- **A4 — CLOSED 2026-08-30 as originally feared. There is no funding source.**
+  See D4. What follows is the reasoning as it stood when A4 was reopened.
+- **A4 (history) — OPEN AGAIN 2026-08-30. Funding is not established.** It was recorded
   RESOLVED earlier the same day and that was an over-read of one status code.
   `/margin/funding_history` answered `400 "Query argument start_date is required"`,
   which proves the **path exists** and wants a date range — it says nothing about
@@ -167,8 +186,15 @@ assumption of comparability rather than a frozen contract.
   features as candidates tested independently, so this removes a candidate rather
   than invalidating the arm — but arm C's eventual result must state which features
   it could actually see.
-- **A2.** Funding is published for the forming window, not only historically. Arm
-  A's funding confirmation and arm B's ranking both depend on it.
+- ~~**A2.** Funding is published for the forming window, not only historically.~~
+  **FALSIFIED 2026-08-30** — see D4. Nothing readable on this surface publishes a
+  funding rate at all, forming-window or historical. Arm B's ranking depended on it
+  entirely and is BLOCKED_DATA. **Arm A depended on it only for entry confirmation**,
+  not for its signal: `premium = (mark − index) / index` is computed from two fields
+  that both ride on the market row and are in the tape now. Arm A therefore proceeds
+  with its funding-agreement condition unavailable — which Probe 2 must state, since a
+  pre-registered entry condition that cannot be evaluated is not the same experiment as
+  one that was evaluated and passed.
 - **A3.** Fees at the level the active platform snapshot declares, not a
   promotional zero-fee level. The 2026-07-09 survey flagged that a promo makes
   every cost gate misleadingly easy.
