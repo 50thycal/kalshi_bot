@@ -360,10 +360,8 @@ def main() -> int:
         # build_receipt could not tell a read from a mutation. Refuse rather
         # than dispatch: the ambiguity is in the REQUEST, and the runner is not
         # entitled to resolve it in the permissive direction.
-        try:
-            ops_meta.classify(req)
-        except ops_meta.OpsRequestError as exc:
-            print(f"refusing an ambiguous request: {exc}", file=sys.stderr)
+        print(f"refusing an unserveable request: {ops_meta.unserveable_reason(req)}",
+              file=sys.stderr)
         _finish_receipt(receipt, 1)
         return 1
 

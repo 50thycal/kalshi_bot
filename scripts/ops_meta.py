@@ -166,10 +166,32 @@ def env_mutation(req: dict) -> dict | None:
 
 
 def classify(req: dict) -> str:
-    """READ or MUTATING for THIS request — the label the result header carries."""
-    if request_type(req) != "env":
+    """READ or MUTATING for THIS request — the label the result header carries.
+
+    Raises `OpsRequestError` when the request cannot honestly be given either
+    label. An unrecognised type is one such case: the channel will refuse it,
+    and calling it a READ in the meantime states something about a production
+    request that nobody checked.
+    """
+    rtype = request_type(req)
+    spec = REQUEST_TYPES_BY_NAME.get(rtype)
+    if spec is None:
+        raise OpsRequestError(
+            f"unknown request type {rtype!r} — send {{\"type\":\"capabilities\"}}"
+            " to see what this channel serves"
+        )
+    if rtype != "env":
         return READ
     return MUTATING if env_mutation(req) else READ
+
+
+def unserveable_reason(req: dict) -> str:
+    """Why this request cannot be classified — the sentence the refusal prints."""
+    try:
+        classify(req)
+    except OpsRequestError as exc:
+        return str(exc)
+    return "the request could not be classified"
 
 
 def needs_full_deps(req: dict) -> bool:
@@ -425,9 +447,9 @@ def build_receipt(req: dict, *, started_at: str) -> dict:
         if rtype == "env":
             targets = sorted(env_mutation(req) or {})
     except OpsRequestError:
-        # A malformed request is not classifiable. Say so rather than guessing —
-        # and never guess READ, which is the answer that would let an ambiguous
-        # production change print a quiet header.
+        # An unrecognised or malformed request is not classifiable. Say so rather
+        # than guessing — and never guess READ, which is the answer that would
+        # let an ambiguous production change print a quiet header.
         kind = "UNCLASSIFIED"
     if rtype in ("env", "logs", "incident"):
         service = (req.get("service") or "main").strip().lower()

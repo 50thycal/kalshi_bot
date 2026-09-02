@@ -381,6 +381,29 @@ def test_a_malformed_request_never_triggers_an_install():
     assert ops_meta.needs_full_deps({"type": "nonsense"}) is False
 
 
+def test_an_unrecognised_type_is_never_labelled_a_read():
+    """A type the channel does not serve was classified by nobody.
+
+    Live validation of the deployed runner caught this: an unknown type was
+    refused correctly but its header and receipt still said READ. "READ" is a
+    statement about a production request, and the only requests entitled to it
+    are the ones an allowlist actually recognises.
+    """
+    req = {"type": "nonsense", "id": "x"}
+    with pytest.raises(ops_meta.OpsRequestError):
+        ops_meta.classify(req)
+    receipt = ops_meta.build_receipt(req, started_at="2026-01-01T00:00:00Z")
+    assert receipt["class"] == "UNCLASSIFIED"
+    assert "UNCLASSIFIED" in ops_meta.header(req, receipt)
+    assert "nonsense" in ops_meta.unserveable_reason(req)
+    assert "capabilities" in ops_meta.unserveable_reason(req)
+
+
+def test_every_advertised_type_is_still_classifiable():
+    for spec in ops_meta.REQUEST_TYPES:
+        assert ops_meta.classify({"type": spec.name}) in (ops_meta.READ, ops_meta.MUTATING)
+
+
 # ---------------------------------------------------------------------------
 # Verification: what a mutation says afterwards
 # ---------------------------------------------------------------------------
