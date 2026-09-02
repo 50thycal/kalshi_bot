@@ -48,12 +48,13 @@ to quietly compute something adjacent and print it under the registered metric k
      BREAKEVEN round-trip fee: the cost at which the measured edge is exactly zero. That
      is the number an operator can check against a real fee schedule.
 
-  3. THE TAPE IS SLOWER THAN THE SIGNAL. Measured cadence is ~145 s (26 cycles/hour),
-     against a configured `PERPS_INTERVAL_SECONDS=60`, because the collector shares the
-     worker's loop. Arm C's registered forward horizons are 5/10/30/60/300 s; everything
-     under one sampling interval is INVISIBLE, and this script refuses those horizons
-     instead of interpolating them. An arm C null at 300 s is therefore a null about
-     ~5-minute lead, not about the mechanism.
+  3. THE TAPE IS SLOWER THAN THE SIGNAL. Measured cadence is 191.6 s over the first
+     72 h (2026-09-02), against a configured `PERPS_INTERVAL_SECONDS=60`, because the
+     collector shares the worker's loop. Arm C's registered forward horizons are
+     5/10/30/60/300 s; everything under one sampling interval is INVISIBLE, and this
+     script refuses those horizons instead of interpolating them. An arm C null at 300 s
+     is therefore a null about ~5-minute lead, not about the mechanism. The cadence is
+     re-measured from the tape on every run and the report prints what it measured.
 
 READ EVERY NUMBER AGAINST COVERAGE
 ----------------------------------
@@ -114,9 +115,13 @@ RO_OPTIONS = (
 #: measured against THIS, not against the cadence the worker actually achieves.
 INTENDED_INTERVAL_SEC = 60.0
 
-#: Measured cadence, 26 cycles over an hour on 2026-08-30. Arm C horizons below this are
-#: not measurable and are refused rather than reported as nulls.
-MEASURED_CADENCE_SEC = 145.0
+#: FALLBACK cadence only, used when the window holds too few cycles to measure one
+#: (2026-08-30's first hour: 26 cycles, 145 s). The real number comes from the tape —
+#: the 2026-09-02 run measured 191.6 s over 72 h — and it is the measured one that
+#: decides which arm C horizons are observable. This constant is printed nowhere: a
+#: report that quotes a stale 145 s beside a coverage block computing 191.6 s invites
+#: exactly the misreading the refusal exists to prevent.
+FALLBACK_CADENCE_SEC = 145.0
 
 BLOCKED_ARM_B = (
     "arm B (perpcarry) is BLOCKED_DATA: its ranking input (estimated 8h funding rate) "
@@ -611,7 +616,8 @@ def breakeven_fee_bps(net_ex_funding: float | None) -> float | None:
     return net_ex_funding
 
 
-def report(cov: dict, a: dict, c: dict, args, refused: list[int]) -> None:
+def report(cov: dict, a: dict, c: dict, args, refused: list[int],
+           cadence_sec: float) -> None:
     print("=== PERP-V1 Probe 2 — arm scores ===")
     print(f"  window: last {args.hours:g}h   |   instrument only: records nothing, "
           "authorizes nothing")
@@ -633,7 +639,8 @@ def report(cov: dict, a: dict, c: dict, args, refused: list[int]) -> None:
         print("  [BELOW FLOOR] every promotion gate carries this clause and the stop gate"
               "\n    holds on it, so no arm can PASS on this tape whatever its edge. The"
               "\n    shortfall is CADENCE, not the collector failing: it shares the worker"
-              "\n    loop, which takes ~145s per pass against a 60s interval. Closing it is"
+              f"\n    loop, which takes {fmt(cov['achieved_interval_sec'], 1)}s per pass"
+              f" against a {args.interval_sec:g}s interval. Closing it is"
               "\n    a platform change (its own collector cadence), not a scorer change —"
               "\n    and lowering the floor after seeing this number would be re-tuning a"
               "\n    pre-registered gate against results.")
@@ -678,7 +685,7 @@ def report(cov: dict, a: dict, c: dict, args, refused: list[int]) -> None:
     print("\n--- arm C: perplead (perp -> prediction lead/lag) ---")
     if refused:
         print(f"  horizons NOT MEASURABLE on this tape: {refused}s"
-              f"  (sampling interval ~{MEASURED_CADENCE_SEC:g}s)")
+              f"  (sampling interval {cadence_sec:.1f}s, measured over this window)")
         print("    A null at these horizons would be an artefact of the instrument, so"
               "\n    none is reported. A short lead is untested here, not absent.")
     print(f"  ladder rows matched to a perp feature: {c['matched']}"
@@ -723,7 +730,7 @@ def main(argv: list[str] | None = None) -> int:
                     help="stands in for the registered 'one funding window' exit")
     ap.add_argument("--theta-entry-cents", type=float, default=3.0,
                     help="|model_excess_cents| at which the theta baseline trades")
-    ap.add_argument("--max-feature-age-sec", type=float, default=MEASURED_CADENCE_SEC * 2,
+    ap.add_argument("--max-feature-age-sec", type=float, default=FALLBACK_CADENCE_SEC * 2,
                     help="oldest perp feature arm C will attach to a ladder quote")
     ap.add_argument("--seed", type=int, default=20260830,
                     help="control randomisation seed; fixed so re-runs reproduce")
@@ -750,14 +757,14 @@ def main(argv: list[str] | None = None) -> int:
         exit_residual_bps=args.exit_residual_bps, max_hold_min=args.max_hold_min,
         seed=args.seed,
     )
-    cadence = cov["achieved_interval_sec"] or MEASURED_CADENCE_SEC
+    cadence = cov["achieved_interval_sec"] or FALLBACK_CADENCE_SEC
     horizons, refused = measurable_horizons(cadence)
     c = score_arm_c(
         snaps, ladder, horizons=horizons,
         max_feature_age_sec=args.max_feature_age_sec,
         theta_entry_cents=args.theta_entry_cents,
     )
-    report(cov, a, c, args, refused)
+    report(cov, a, c, args, refused, cadence)
     return 0
 
 

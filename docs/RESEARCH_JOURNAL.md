@@ -16,6 +16,106 @@ Conventions:
 
 ---
 
+## PERP-V1 PROBE 2 FIRST RUN 2026-09-02 — arm A is the only live horse, and no gate can be read
+
+`scripts/perp_arm_scores.py --hours 72`, ops channel, id `perp2-d6-3`, over the tape the
+collector has written since 2026-08-30 12:35Z. WS-010 D6 closed. **Nothing was recorded
+against a gate; the scorer records nothing.** Read every number below against coverage.
+
+### Coverage — the binding constraint, and it is not close
+
+```
+cycles observed     1279          cadence coverage    29.61%
+cycles intended     4320          per-cycle coverage  100.00%  (26859/26859)
+achieved interval   191.6 s       collector errors    0
+=> perp_data_coverage_pct = 29.61%   (registered floor 80%)
+```
+
+The collector is not failing — it wrote a row for **every** market it saw, on every cycle,
+with zero errors. It simply runs at 191.6 s against a configured 60 s, because it shares
+the worker's scan loop. `perp_data_coverage_pct` is a clause on all three promotion gates
+and the stop gate's `hold_if`, so **no arm can PASS on this tape whatever its edge.**
+
+That was stated in the PR before the run, at an estimated ~40%. The measured number is
+29.61%, worse than estimated: the 145 s cadence from the first hour was optimistic, and
+the honest figure over three days is 191.6 s. Correcting my own estimate downward here
+rather than quietly letting the prediction stand.
+
+### Arm A `perprevert` — a real-looking convergence edge, on a weaker rule than registered
+
+```
+perp_probe_observations   913        (floor 200 — CLEARED)
+gross convergence       14.52 bps/trade
+spread paid              8.88 bps/trade   (measured, not modelled)
+net EX FUNDING           5.63 bps/trade   sd 8.44, win 76.2%, mean hold 5.0 min
+control perpctl        -10.13 bps/trade   (n=913, same entries, direction randomised)
+delta vs control        15.76 bps/trade
+breakeven round fee      5.63 bps
+```
+
+This is the first perp number in the project that is not zero, and it needs its caveats
+attached to it, not filed underneath it:
+
+* **`perp_net_edge_bps_per_trade` is still NOT PRODUCIBLE.** The registered metric nets
+  funding; funding is unreachable. The figure above omits that cost and carries a
+  different name. **But** the mean hold is 5.0 minutes — about 1/96 of an 8-hour funding
+  period — so the omitted cost is bounded small at this holding period, on the order of
+  tenths of a basis point for any plausible rate. That is a reason to think the true
+  number is close, and it is **not** a reason to read the gate: a bound I reasoned to is
+  not the measurement the pre-registration named.
+* **The rule that produced this is not the registered rule.** The funding-agreement entry
+  condition was NOT EVALUATED, the z-conditioning on time-to-funding was NOT APPLIED, and
+  the "one funding window" exit clock was substituted with 60 minutes. Arm A ran on a
+  **weaker** filter than registered. A condition that could not be evaluated is not the
+  same experiment as one that was evaluated and passed.
+* **The whole edge is 5.63 bps and the fee is unknown.** `/margin/fee_tiers` needs
+  credentials the ops runner does not hold. A round-trip taker fee above ~5.6 bps — 2.8
+  per side — erases this completely. That is the single cheapest thing an operator could
+  check next, and it decides whether arm A is interesting or dead.
+* The control at −10.13 bps is roughly "pay the 8.88 bps spread and take a coin flip",
+  which is what it should be, and is the reason the +15.76 delta is about the mechanism
+  rather than about crypto having gone up.
+
+### Arm C `perplead` — null at the only horizon this tape can see
+
+```
+horizons refused (below the 191.6 s sampling interval): 5, 10, 30, 60 s
+ladder rows matched to a perp feature: 110180  (unmatched 9120)
+perp_signal_ic  perp_return_bps      h=300s  IC = +0.0065   n=97316
+perp_signal_ic  premium_impulse_bps  h=300s  IC = +0.0025   n=97316
+perp_signal_ic  oi_impulse_pct       h=300s  IC = -0.0047   n=97316
+theta baseline 2.01 c/trade (n=1902) -> overlay 2.00 c/trade (n=1000)
+perp_incremental_cents_per_trade_vs_theta = -0.02 c/trade
+```
+
+ICs of 0.005 on ~97k pairs are indistinguishable from nothing, and requiring the perp
+move to agree with theta's direction removed half the trades and improved nothing. **At
+five minutes there is no perp → Kalshi lead worth trading.** That is a genuine null and
+the sample is not thin.
+
+What it is **not** is a kill on the mechanism. The brief's whole claim was a *fast* lead,
+and 5/10/30/60 s are unobservable on a 191.6 s tape — refused rather than reported as
+nulls, precisely so this does not get read as "tested and absent". Testing that claim
+needs a faster collector, which is the same platform change coverage needs (D5).
+
+### Arm B `perpcarry` — BLOCKED_DATA, unchanged
+
+No funding source, no ranking input, no numbers. Not re-scoped to a premium proxy.
+
+### What this settles
+
+`probe_to_paper_perprevert`, `..._perpcarry` and `..._perplead` are all **NOT READABLE**:
+each names `perp_net_edge_bps_per_trade` in its first clause. The stop gate's `hold_if`
+on coverage is readable and is failing. **HOLD on all three arms** is the verdict this
+tape supports, and it is the correct one rather than a disappointing one.
+
+The decision it forces is D5, now on measured numbers instead of an estimate: give the
+collector its own cadence, or accept that PERP-V1 cannot clear its own coverage floor.
+Lowering `COVERAGE_FLOOR_PCT` after seeing 29.61% would be re-tuning a pre-registered gate
+against results, and is not on the table.
+
+---
+
 ## PERP-V1 PROBE 2 WRITTEN 2026-09-02 — the scorers, and the four things they refuse to compute
 
 `scripts/perp_arm_scores.py`. Ops-runnable, read-only, no credentials. It reads the tape

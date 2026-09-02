@@ -47,7 +47,7 @@ def test_the_registered_net_edge_metric_is_never_printed_as_a_number(capsys):
     cov = scorer.coverage([], 24.0, 60.0)
     a = {"trades": [], "control": [], "rows_with_premium": 0, "rows_dropped_no_mark": 0}
     c = {"ic": {}, "incremental": {}, "matched": 0, "unmatched": 0}
-    scorer.report(cov, a, c, _args(), refused=[5, 10, 30, 60])
+    scorer.report(cov, a, c, _args(), refused=[5, 10, 30, 60], cadence_sec=191.6)
     out = capsys.readouterr().out
     assert "perp_net_edge_bps_per_trade  NOT PRODUCIBLE" in out
     # The ex-funding number exists, but only under a name that says what it omits.
@@ -58,7 +58,7 @@ def test_arm_b_is_blocked_not_rescoped(capsys):
     cov = scorer.coverage([], 24.0, 60.0)
     a = {"trades": [], "control": [], "rows_with_premium": 0, "rows_dropped_no_mark": 0}
     c = {"ic": {}, "incremental": {}, "matched": 0, "unmatched": 0}
-    scorer.report(cov, a, c, _args(), refused=[])
+    scorer.report(cov, a, c, _args(), refused=[], cadence_sec=191.6)
     out = capsys.readouterr().out
     assert "BLOCKED_DATA" in out
     assert "perp_funding_capture_bps  NO INPUT" in out
@@ -74,10 +74,24 @@ def test_arm_a_reports_the_unevaluated_entry_condition(capsys):
     cov = scorer.coverage([], 24.0, 60.0)
     a = {"trades": [], "control": [], "rows_with_premium": 0, "rows_dropped_no_mark": 0}
     c = {"ic": {}, "incremental": {}, "matched": 0, "unmatched": 0}
-    scorer.report(cov, a, c, _args(), refused=[])
+    scorer.report(cov, a, c, _args(), refused=[], cadence_sec=191.6)
     out = capsys.readouterr().out
     assert "NOT EVALUATED" in out
     assert "DEVIATIONS FROM PRE-REGISTRATION" in out
+
+
+def test_the_report_prints_the_measured_cadence_not_a_baked_in_one(capsys):
+    """The first live run printed "~145s" beside a coverage block that had just measured
+    191.6s. Two cadences in one report is an invitation to read the refusal against the
+    wrong one — and the constant is a stale first-hour estimate, not a measurement of
+    the window being reported."""
+    cov = scorer.coverage([], 24.0, 60.0)
+    a = {"trades": [], "control": [], "rows_with_premium": 0, "rows_dropped_no_mark": 0}
+    c = {"ic": {}, "incremental": {}, "matched": 0, "unmatched": 0}
+    scorer.report(cov, a, c, _args(), refused=[5, 10, 30, 60], cadence_sec=191.6)
+    out = capsys.readouterr().out
+    assert "191.6s" in out
+    assert "145" not in out
 
 
 def test_horizons_below_the_sampling_interval_are_refused_not_nulled():
@@ -491,7 +505,7 @@ def test_the_report_states_that_no_gate_is_readable_on_this_tape(capsys):
     cov = scorer.coverage([], 24.0, 60.0)
     a = {"trades": [], "control": [], "rows_with_premium": 0, "rows_dropped_no_mark": 0}
     c = {"ic": {}, "incremental": {}, "matched": 0, "unmatched": 0}
-    scorer.report(cov, a, c, _args(), refused=[5])
+    scorer.report(cov, a, c, _args(), refused=[5], cadence_sec=191.6)
     out = capsys.readouterr().out
     assert "GATE READABILITY" in out
     assert "records nothing" in out
