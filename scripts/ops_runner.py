@@ -210,6 +210,7 @@ ALLOWED_SCRIPTS = (
     "evo_backtest_probe",
     "experiment_os_status",
     "marktangle_probe",
+    "marktangle2_probe",
 )
 
 

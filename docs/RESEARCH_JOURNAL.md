@@ -16,6 +16,45 @@ Conventions:
 
 ---
 
+## MARKTANGLE-2 2026-09-02 — REGISTERED at PROBE. Conditional dependence, both directions, against the price.
+
+New experiment `marktangle-2-conditional-dependence` (v1 frozen, stage PROBE, ten arms, four
+paper gates pre-registered, tagless probe deployment), predecessor MARKTANGLE-1 which stays
+PAUSED at HOLD and untouched. Spec: `docs/MARKTANGLE_2_SPEC.md` (Part I = the operator's
+preregistration as received; Part II = every implementation choice frozen before data).
+Instrument: `scripts/marktangle2_probe.py`. **No verdict yet — nothing has been run.** This
+entry records the registration and the reasoning, not a result.
+
+What changed from MARKTANGLE-1, and why it is a new experiment rather than a revision:
+
+- **The question.** Not "is a reversal due after a streak" but "when a recurring market has
+  measurable serial dependence in EITHER direction, does the executable price already carry
+  it?" Outcome 3 — predictable but efficiently priced — is a first-class FAIL, not a
+  disappointment to optimize past.
+- **Two tracks that cannot rescue each other.** Track A pools thin fresh-event families
+  (sports totals within a sport, weather buckets) with ridge family effects in a hierarchical
+  logistic; crypto is excluded by construction. Track B treats daily crypto thresholds as a
+  state-duration process on a slow underlying and adds the one structural variable that
+  matters — signed distance to the strike in trailing-vol units, from the last COMPLETED
+  Coinbase hourly candle before T-60m.
+- **The comparators are the science.** Every treatment must beat an independence baseline on
+  both calibration (Brier) and money, and separate from its mirror (same entries, opposite
+  side, same book) by ≥ 3c/trade. The primary arm per track (A3, B3) is fixed before data;
+  the others are read.
+- **Floors are bigger because pooling is allowed:** 500 train points, 100 holdout trades,
+  50% price coverage, or HOLD.
+
+Instrument facts that shaped it: the sandbox cannot reach Kalshi or Coinbase and the ops
+channel keeps stdout only, so the probe prints the entire package (five documents + trades
+CSV + fingerprints) and `scripts/marktangle2_package.py` splits a result file into
+`docs/marktangle2/`. Stdlib only; the logistic fits are a deterministic Newton solver, and
+two identical runs give identical fingerprints (tested).
+
+Next: merge, `REGISTER_PACKAGE marktangle-2`, run `m2-run-1`, split, record the printed
+verdicts here. A PASS authorizes a prospective paper/twin design and nothing live.
+
+---
+
 ## PERP-V1 PROBE 2 FIRST RUN 2026-09-02 — arm A is the only live horse, and no gate can be read
 
 `scripts/perp_arm_scores.py --hours 72`, ops channel, id `perp2-d6-3`, over the tape the

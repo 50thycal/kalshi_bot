@@ -175,6 +175,7 @@ def _packages() -> dict[str, ExperimentPackage]:
     from . import (
         canary_mmsell10,
         marktangle,
+        marktangle2,
         perp_v1,
         repair_tmmsell_epoch,
         successor_mmsell10_capacity,
@@ -191,6 +192,19 @@ def _packages() -> dict[str, ExperimentPackage]:
                 "TAGLESS probe deployment. Arms nothing, trades nothing."
             ),
             register=marktangle.register,
+        ),
+        "marktangle-2": ExperimentPackage(
+            name="marktangle-2",
+            experiment_key=marktangle2.EXPERIMENT_KEY,
+            description=(
+                "MARKTANGLE-2 conditional-dependence contract: two independent tracks "
+                "(cross-family conditional reversion; crypto threshold persistence), "
+                "each with an independence baseline, three treatments and a mirror "
+                "control, four paper gates pre-registered, and a TAGLESS probe "
+                "deployment. MARKTANGLE-1 is its recorded predecessor and is "
+                "untouched. Arms nothing, trades nothing."
+            ),
+            register=marktangle2.register,
         ),
         "tmmsell-epoch-repair": ExperimentPackage(
             name="tmmsell-epoch-repair",
