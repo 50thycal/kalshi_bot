@@ -12,6 +12,43 @@ compatibility check.
 
 ---
 
+## Canonical is ahead — v0.4 adopted, v0.11 released
+
+**Checked 2026-09-02. The project remains pinned to v0.4, deliberately.** `CLAUDE.md` states
+that adopting a newer version is a protocol migration and an owner decision tracked on
+`WS-001`, not something an unrelated build session performs. That rule holds; this section
+records what a migration would be taking on, so the decision is made with the delta in front
+of it rather than in the dark.
+
+Seven releases, and only three of them would change how sessions here actually behave.
+
+| Version | What it added | Bearing on this repository |
+|---|---|---|
+| **v0.5** | Capture Only, the Design Handoff PR, the reviewed-head merge gate, merge finalization | **Material.** The merge gate is the big one — a significant PR would need a verdict naming its current head as a full SHA, and no self-approval |
+| **v0.6** | The owner layer: Intent Intake, entry-point neutrality, the Owner Plan, `SHIP`/`DECISION`/`BLOCKED` results, proportionality, the closed reviewer→implementer loop | **Material, and interacts with the session-role system.** Worth thinking about before adopting, not after |
+| **v0.7** | `SHIP` narrowed: only the owner's merge may remain | Refines v0.6 |
+| **v0.8** | Operating modes — `reviewed` vs `solo` — and the `Owner-accepted` verdict | **Material.** This repository is worked by one account, which is the case `solo` exists for |
+| **v0.9** | `skills/`, an agent-invokable surface, and the rule that a framework document stays canonical where both apply | Relevant — this repo already has `.claude/skills/` |
+| **v0.10** | A finalization commit never writes a verdict it does not yet have; `Owner-accepted` comment form | Small, and correct regardless of the pin |
+| **v0.11** | An agent may relay an acceptance the owner gave elsewhere, naming the channel | Small |
+
+**What a migration would cost, honestly.** v0.5's merge gate and v0.6's owner layer are the
+two that change daily behaviour, and v0.6 needs a real decision rather than a mechanical
+upgrade: it defines an owner-facing result surface that has to be reconciled with this
+repository's session-role identity headers and with Experiment OS remaining canonical for
+experiment truth. That reconciliation is design work, and it belongs on `WS-001` with an
+owner deciding it.
+
+**What the pin already protects.** A v0.4 pin covers current work. Later versions do not
+reach back: completed workstreams are not re-judged, and pull requests opened and merged
+under v0.4 are not retroactively reported as ungated.
+
+**The authority boundary is unaffected by any of this.** `DEC-001` stands whatever version
+is adopted — Experiment OS is canonical for experiment truth, Build OS for the development
+workflow, and a workstream links rather than copies.
+
+---
+
 ## The authority boundary
 
 `DEC-001`. This is the rule most worth getting right, because violating it is cheap and the
