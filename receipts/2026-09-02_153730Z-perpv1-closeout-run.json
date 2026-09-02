@@ -1,0 +1,44 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "6e7962c31d78f587c71883cfb67e110b71aaab3f",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-02T15:37:27Z",
+  "id": "perpv1-closeout-run",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "after": "<redacted 422 bytes, sha256:3942e805aea07263>",
+        "before": "<redacted 164 bytes, sha256:27a47e828ccef83b>",
+        "requested": "<redacted 422 bytes, sha256:3942e805aea07263>"
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {
+    "purpose": "record PERP-V1 retrospectively and retire it (operator-directed)",
+    "workstream": "WS-010"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/perpv1-closeout-run.receipt.json",
+  "result_file": "ops/results/perpv1-closeout-run.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33649693321",
+  "service": "main",
+  "started_at": "2026-09-02T15:37:14Z",
+  "targets": [
+    "EXPERIMENT_OS_EXPERIMENT_COMMAND"
+  ],
+  "type": "env"
+}
