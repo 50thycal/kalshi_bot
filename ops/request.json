@@ -1,1 +1,1 @@
-{"type":"incident","service":"main","window_minutes":120,"id":"incident-main-20260902a","actor":"claude-task","purpose":"operator-requested investigation bundle for main"}
+{"type":"noop","id":"idle-20260902e"}
