@@ -1,5 +1,0 @@
-# ops request: type='env'
-# target service: main
-  set LIVE_SHAPE_PROBE=false
-# 1/1 variables set
-# redeploy triggered — the worker will restart with the new config
