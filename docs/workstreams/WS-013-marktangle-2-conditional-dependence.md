@@ -202,7 +202,37 @@ FORMATTING the receipt discarded a registration that had already succeeded. It i
 best-effort per field (`fields_unreadable` names what it could not read) — an incomplete
 receipt is a small loss, a destroyed write is not.
 
-The retry after the fix merges is `m2-register-4`.
+**`m2-register-4` SUCCEEDED (2026-09-02T16:21:24Z).** The experiment reads back at
+**PROBE**, v1 frozen, epoch 1 open, deployment `marktangle2-probe-1` started and tagless, and
+the four gates recorded with their pre-registration spec hashes:
+
+| gate | spec hash (16) |
+|---|---|
+| `paper_to_live_canary_a` | `96da296a97574f2b` |
+| `paper_keep_a` | `b6c11a8551c8f141` |
+| `paper_to_live_canary_b` | `59d807a6ad39860c` |
+| `paper_keep_b` | `b2c6228a4e0ce9ec` |
+
+**MARKTANGLE-1 IS NOT IN PRODUCTION, and MARKTANGLE-2 therefore has no predecessor link.**
+`predecessor_experiment_id` is null because `get_experiment('marktangle-conditional-reversion')`
+found nothing; a direct read confirms it: *no experiment 'marktangle-conditional-reversion'*.
+Its own documents say otherwise — `docs/MARKTANGLE_THESIS.md` calls it "v1 frozen at
+registration · stage PROBE", the journal says REGISTERED at PROBE (2026-08-29) and PAUSED
+(2026-08-30), and WS-011 says the same. None of that is true of the database.
+
+The cause is almost certainly the defect this workstream just found: MARKTANGLE-1's
+`REGISTER_PACKAGE` envelope would have raised the same `TypeError` on
+`promotion_sample_floor` that killed `m2-register-1`, because its package had the same gap.
+An experiment that was never created also could not be paused, so `marktangle_pause.py`
+either never ran or failed. What is durable and unaffected: the probe runs, the data findings
+and the HOLD reasoning, all of which live in the research document rather than in XOS.
+
+**This is not MARKTANGLE-2's to repair.** Registering MARKTANGLE-1 now would create it at
+PROBE, when the operator's recorded decision is PAUSED — a lifecycle move, and an operator's
+call. Recommended next write: an Experiment OS issue against the MARKTANGLE-1 lineage, then
+register-and-pause if the operator still wants that history in the system. Caveat for whoever
+does it: `EXPERIMENT_OS_ISSUE_COMMAND` currently holds another session's envelope, so check
+its receipt is terminal before overwriting.
 
 ## Next Step
 
