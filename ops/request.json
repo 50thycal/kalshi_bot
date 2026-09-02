@@ -1,1 +1,1 @@
-{"type":"env","service":"evo","id":"evo-ct-6"}
+{"type":"xos","command":"issue-command-show","args":["perpv1-closeout-gap-1"],"id":"perp-ics-1"}
