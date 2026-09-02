@@ -75,6 +75,7 @@ constraint on how long this experiment takes to say anything.
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 
 from . import service
@@ -234,13 +235,32 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def register(session, *, actor: str, now: datetime | None = None) -> dict:
+def register(
+    session,
+    *,
+    actor: str,
+    promotion_sample_floor: int | None = None,
+    now: datetime | None = None,
+) -> dict:
     """Create the experiment, freeze v1 with its five arms and both gates, open
     e1 on the ACTIVE platform snapshot, register a tagless PROBE deployment and
     move IDEA -> PROBE.
 
+    `promotion_sample_floor` is the knob the experiment-command transport always
+    passes (None when the envelope omits it). It may only RAISE the 200-trade
+    paper promotion floor, never lower it. Before this parameter existed the
+    transport's call raised TypeError, so the package could not be registered
+    through the sanctioned write path at all (found on MARKTANGLE-2's first
+    envelope, 2026-09-02).
+
     Idempotence is refusal, not a no-op: a second run raises rather than
     quietly creating a parallel contract under a suffixed key."""
+    floor = 200 if promotion_sample_floor is None else int(promotion_sample_floor)
+    if floor < 200:
+        raise service.ExperimentOsError(
+            f"promotion_sample_floor={floor} is below the reviewed floor 200 — an "
+            "envelope may make a pre-registered bar stricter, never weaker"
+        )
     at = now or _now()
     if get_experiment(session, EXPERIMENT_KEY) is not None:
         raise service.ExperimentOsError(
@@ -334,8 +354,8 @@ def register(session, *, actor: str, now: datetime | None = None) -> dict:
                     "band, and every arm here is a taker",
         },
         sample={"probe": PROBE_RULE,
-                "paper_floor_settled_trades": {TREATMENT_ARM: 200,
-                                               MIRROR_CONTROL_ARM: 200}},
+                "paper_floor_settled_trades": {TREATMENT_ARM: floor,
+                                               MIRROR_CONTROL_ARM: floor}},
         costs={"model": "worst-case Kalshi taker fee, ceil(7 * p * (1-p)) cents "
                         "per contract, charged on entry; settlement is free",
                "edge_bar_cents": EDGE_BAR_CENTS},
@@ -351,9 +371,12 @@ def register(session, *, actor: str, now: datetime | None = None) -> dict:
         service.add_arm(session, version, arm_key=arm_key, role=role,
                         description=description, params=params)
 
+    promotion_spec = json.loads(json.dumps(PROMOTION_GATE_SPEC))
+    for arm_key in (TREATMENT_ARM, MIRROR_CONTROL_ARM):
+        promotion_spec["sample"][arm_key]["value"] = floor
     promotion_gate = service.register_gate(
         session, version, gate_key=PROMOTION_GATE_KEY, kind="promotion",
-        spec=PROMOTION_GATE_SPEC, from_state=LifecycleState.PAPER,
+        spec=promotion_spec, from_state=LifecycleState.PAPER,
         to_state=LifecycleState.LIVE_CANARY, registered_at=at,
         notes=("registered at IDEA, before any evidence of any kind exists — "
                "the strongest form of pre-registration available here"),
