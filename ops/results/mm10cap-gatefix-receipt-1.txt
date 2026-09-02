@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=mm10cap-gatefix-receipt-1
-# code (unknown) · started 2026-09-02T01:30:54Z
-command_id          action            status     error  completed                    
-------------------  ----------------  ---------  -----  -----------------------------
-mm10cap-gatefix-1   REGISTER_PACKAGE  SUCCEEDED         2026-09-02 01:28:57.960886+00
-mm10cap-register-1  REGISTER_PACKAGE  SUCCEEDED         2026-09-02 00:57:41.629331+00
-
-(2 rows)
