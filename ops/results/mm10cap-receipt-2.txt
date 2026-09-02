@@ -1,8 +1,0 @@
-# ops request: type='db'
-command_id          action            status     error  started                        completed                    
-------------------  ----------------  ---------  -----  -----------------------------  -----------------------------
-mm10cap-register-1  REGISTER_PACKAGE  SUCCEEDED         2026-09-02 00:57:38.254052+00  2026-09-02 00:57:41.629331+00
-mm10-arm-1          ARM_CANARY        SUCCEEDED         2026-08-28 14:20:35.523711+00  2026-08-28 14:20:36.010871+00
-tmmsell-repair-1    REPAIR_LINEAGE    SUCCEEDED         2026-08-28 13:28:40.353134+00  2026-08-28 13:28:40.528092+00
-
-(3 rows)
