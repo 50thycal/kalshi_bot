@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "90c49f9c5c177d7975987fbd34595a898b8a525b",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-02T09:09:58Z",
+  "id": "idle-20260902f",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/idle-20260902f.receipt.json",
+  "result_file": "ops/results/idle-20260902f.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33612594435",
+  "service": null,
+  "started_at": "2026-09-02T09:09:58Z",
+  "targets": [],
+  "type": "noop"
+}
