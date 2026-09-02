@@ -1,1 +1,1 @@
-{"type":"script","name":"marktangle2_probe","id":"m2-run-1","actor":"research-lab","workstream":"WS-013","purpose":"MARKTANGLE-2 run 1: full instrument, default budget"}
+{"type":"env","id":"m2-env-read-1","actor":"research-lab","workstream":"WS-013","purpose":"read EXPERIMENT_OS_EXPERIMENT_COMMAND before REGISTER_PACKAGE marktangle-2"}
