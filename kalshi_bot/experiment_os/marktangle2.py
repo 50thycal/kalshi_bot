@@ -426,14 +426,24 @@ def register(
 
     # Evidence is deliberately NOT started on any gate: they read `paper_trades`
     # through deployment-arm tags, and no arm has a tag yet.
+    #
+    # The keys in `experiment_commands.RESULT_OBJECT_KEYS` carry ORM OBJECTS, not
+    # identifiers: the transport builds its receipt by reading `version.version`,
+    # `epoch.epoch_number` and the rest off this dict. Returning the identifiers
+    # directly is what failed m2-register-1..3 in production.
     return {
+        "version": version,
+        "epoch": epoch,
+        "probe": deployment,
+        "gates": gates,
+        # Identifiers, for a caller reading this dict rather than the receipt.
         "experiment": experiment.key,
         "predecessor": predecessor.key if predecessor is not None else None,
         "state": experiment.state,
-        "version": version.version,
+        "version_number": version.version,
+        "epoch_number": epoch.epoch_number,
         "arms": [a for a, _, _, _ in ARMS],
-        "gates": [g.gate_key for g in gates],
-        "epoch": epoch.epoch_number,
+        "gate_keys": [g.gate_key for g in gates],
         "deployment": deployment.deployment_key,
         "tags": [],
     }

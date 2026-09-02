@@ -756,35 +756,77 @@ def _claim(session, env: _Envelope, now: datetime) -> int | None:
     return session.execute(stmt).scalar_one_or_none()
 
 
+#: What a package's `register()` may put on its returned dict for the receipt.
+#: Every one of these is an ORM OBJECT, never an identifier: `_result_of` reads
+#: the identifiers off it. A package returning `version=1` instead of the version
+#: is the defect that failed `marktangle-2` three times in production.
+RESULT_OBJECT_KEYS = (
+    "version", "epoch", "gates",
+    "live", "twin", "paper_deployment", "probe",
+    "promotion_gate", "keep_gate",
+)
+
+
 def _result_of(produced: Any) -> dict | None:
     """Bounded, machine-generated metadata about what the command produced.
 
     Identifiers and states only — never the prose that was submitted, and never
     the package's own literals, which are already in the repository.
+
+    **Every field is best-effort, and that is the point.** This runs AFTER the
+    package has done its writes, inside the same transaction, so an exception
+    here does not spoil a receipt — it rolls the whole registration back. That is
+    exactly what happened to `marktangle-2` (`m2-register-3`, 2026-09-02):
+    `register()` returned `version` as an int, this function did `version.version`,
+    and `AttributeError: 'int' object has no attribute 'version'` discarded a
+    registration that had otherwise succeeded. A field that cannot be read is now
+    named in `fields_unreadable` and the command still succeeds: an incomplete
+    receipt is a small loss, a destroyed write is not.
     """
     if not isinstance(produced, dict):
         return None
     inner = produced.get("produced") or {}
     out: dict = {"kind": produced.get("kind"), "package": produced.get("package")}
+    unreadable: list[str] = []
+
+    def field(name: str, getter) -> None:
+        try:
+            value = getter()
+        except Exception:  # noqa: BLE001 — any shape error, and never fatal
+            unreadable.append(name)
+            return
+        if value is not None:
+            out[name] = value
+
     version = inner.get("version")
     if version is not None:
-        out["version"] = version.version
-        out["version_frozen_at"] = str(version.frozen_at)
+        field("version", lambda: version.version)
+        field("version_frozen_at", lambda: str(version.frozen_at))
     epoch = inner.get("epoch")
     if epoch is not None:
-        out["epoch_number"] = epoch.epoch_number
-        out["epoch_started_at"] = str(epoch.started_at)
-        out["impact_class"] = epoch.impact_class
-    for key in ("live", "twin", "paper_deployment"):
+        field("epoch_number", lambda: epoch.epoch_number)
+        field("epoch_started_at", lambda: str(epoch.started_at))
+        field("impact_class", lambda: epoch.impact_class)
+    for key in ("live", "twin", "paper_deployment", "probe"):
         dep = inner.get(key)
         if dep is not None:
-            out[f"{key}_deployment"] = dep.deployment_key
-            out[f"{key}_started_at"] = str(dep.started_at)
+            field(f"{key}_deployment", lambda dep=dep: dep.deployment_key)
+            field(f"{key}_started_at", lambda dep=dep: str(dep.started_at))
     for key in ("promotion_gate", "keep_gate"):
         gate = inner.get(key)
         if gate is not None:
-            out[key] = gate.gate_key
-            out[f"{key}_spec_hash"] = gate.spec_hash[:16] if gate.spec_hash else None
+            field(key, lambda gate=gate: gate.gate_key)
+            field(f"{key}_spec_hash",
+                  lambda gate=gate: gate.spec_hash[:16] if gate.spec_hash else None)
+    # A package with more than the two conventional gates (MARKTANGLE-2 registers
+    # four, two per track) lists them here, so the pre-registration hashes are on
+    # the receipt rather than only in the repository.
+    gates = inner.get("gates")
+    if gates:
+        field("gates", lambda: {g.gate_key: (g.spec_hash[:16] if g.spec_hash else None)
+                                for g in gates})
+    if unreadable:
+        out["fields_unreadable"] = sorted(unreadable)
     return out
 
 
