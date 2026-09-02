@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=mm10cap-v2-status-1
-# code (unknown) · started 2026-09-02T01:40:00Z
-active_arms  settled_since_v2  created_since_v2  cands_10m  last_boot                      now_utc                     
------------  ----------------  ----------------  ---------  -----------------------------  ----------------------------
-1            0                 11                400        2026-09-02 01:36:59.512619+00  2026-09-02 01:40:00.42861+00
-
-(1 row)
