@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-show","args":["perpv1-closeout-gap-2"],"id":"perp-ics-2"}
+{"type":"db","id":"perp-stopped-1","max_rows":6,"purpose":"confirm the perps collector stopped after PERPS_COLLECTOR_ENABLED=false","workstream":"WS-010","sql":"select date_trunc('minute', started_at) as minute, count(*) as cycles, max(started_at) as latest, round(extract(epoch from (now() - max(started_at)))::numeric,0) as seconds_since from perp_collector_cycles where started_at > now() - interval '30 minutes' group by 1 order by 1 desc limit 6"}
