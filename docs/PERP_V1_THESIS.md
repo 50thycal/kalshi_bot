@@ -261,12 +261,16 @@ bound what a null result can mean; they change no arm, no metric, no gate clause
 and no threshold, and nothing here is to be read as re-interpreting a
 pre-registered bar.
 
-* **Sampling cadence is ~145 s**, set by the worker's scan loop rather than by the
-  collector's own 60 s floor. Ample for arm A, whose premium reverts around
-  8-hourly funding. It **bounds arm C**: a perp → ladder lead shorter than ~2.5
-  minutes cannot be seen at all, so an arm C null is ambiguous between "no lead"
-  and "a lead faster than the tape", and must be reported as such rather than as a
-  kill on the mechanism. Arm A's and arm B's nulls are unaffected.
+* **Sampling cadence is 191.6 s** (measured over 72 h on 2026-09-02; the first hour's
+  145 s was optimistic), set by the worker's scan loop rather than by the collector's own
+  60 s floor. Ample for arm A, whose premium reverts around 8-hourly funding — arm A
+  produced 913 scored round trips over three days. It **bounds arm C**: a perp → ladder
+  lead shorter than ~3 minutes cannot be seen at all, so an arm C null is ambiguous
+  between "no lead" and "a lead faster than the tape", and must be reported as such
+  rather than as a kill on the mechanism. This is not hypothetical any more: the
+  2026-09-02 run returned a clean null at 300 s (IC ≈ 0.005 on ~97k pairs) and **refused**
+  5/10/30/60 s. The brief's actual claim was a *fast* lead; it remains untested. Arm A's
+  and arm B's nulls are unaffected.
 * **No funding source exists on this surface — settled 2026-08-30.** Four readings
   agree: `/margin/funding_history` returns `{"funding_history": []}` unscoped, scoped
   to `KXAAVEPERP`, and scoped to `KXBTCPERP` (the largest open interest on the
@@ -297,17 +301,22 @@ pre-registered bar.
   **net** number, so a guessed fee would decide a promotion. Probe 2 therefore reports
   each arm's **breakeven round-trip fee** — the cost at which its measured edge is
   exactly zero — rather than picking one. That is a number an operator can check
-  against a real schedule; a guess is a number nobody can check.
+  against a real schedule; a guess is a number nobody can check. As of 2026-09-02 that
+  number is **5.63 bps for arm A**, which turns the fee from a caveat into this
+  experiment's cheapest decisive question: the ops runner holds no key, but the worker
+  does, and one authenticated read settles whether arm A is interesting or dead
+  (WS-010 D7).
 
 * **Coverage is measured against the intended cadence, not the achieved one.**
   `perp_data_coverage_pct` is a clause on all three promotion gates and the stop
   gate's `hold_if`. Measured against what the collector actually managed it is 100%
   by construction and says nothing, so Probe 2 divides by the configured
-  `PERPS_INTERVAL_SECONDS`. With a 60 s intended interval and a ~145 s achieved one
-  this floors well under the registered 80% bar — which means no arm can PASS on the
-  current tape whatever its edge. Closing that gap is a **platform** change (giving
-  the collector its own cadence instead of the shared worker loop), not a scorer
-  change; lowering the floor after seeing the number would be re-tuning a
+  `PERPS_INTERVAL_SECONDS`. Measured 2026-09-02: **29.61%** — 1279 cycles against 4320
+  intended, at an achieved 191.6 s. Per-cycle coverage is 100% with zero errors, so this
+  is cadence and not a collector fault. It is well under the registered 80% bar, which
+  means **no arm can PASS on the current tape whatever its edge**. Closing that gap is a
+  **platform** change (giving the collector its own cadence instead of the shared worker
+  loop), not a scorer change; lowering the floor after seeing 29.61% would be re-tuning a
   pre-registered gate against results.
 
 ## 8. Where the standing lives

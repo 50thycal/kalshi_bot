@@ -155,22 +155,52 @@ assumption of comparability rather than a frozen contract.
   experiment is worth registering at PAPER is deferred until arm C has evidence —
   a cross-experiment delta is BLOCKED_PLATFORM whenever the two epochs pin
   different snapshots, which `mmsell-anchor-vol-entry` is currently demonstrating.
-- **D5. Does the collector need its own cadence?** Probe 2 measures coverage against
-  the intended 60 s interval, and the worker's shared loop achieves ~145 s — so the
-  registered 80% coverage floor cannot be met as the collector runs today. Two
-  responses are legitimate and one is not. Legitimate: give the collector its own
-  cadence (a platform change, and it buys resolution beside real money, which is why
-  #284 declined to do it before Probe 2 showed the need); or accept HOLD and say so.
-  Not legitimate: lowering `COVERAGE_FLOOR_PCT` after seeing the number, which is
-  re-tuning a pre-registered gate against results. Decide **after** the first Probe 2
-  run, on the measured number rather than this estimate.
-- **D6. What does Probe 2 actually report on the live tape?** Written but not yet run.
-  The interesting output is not an edge — sample will be far under the 200 floor after
-  three days — it is which pre-registered clauses the scorer declares unreadable, and
-  whether the arm A entry logic finds any entries at all at |z| ≥ 2.5 on a 145 s tape.
-  A scorer that finds zero entries over three days is telling us the entry threshold,
-  the z-window or the premium series is wrong, and that is worth knowing long before
-  there is enough sample to score.
+- **D5. Does the collector need its own cadence? — now on measured numbers, and it is
+  the live decision.** The 2026-09-02 run measured **29.61%** coverage: 1279 cycles
+  against 4320 intended, an achieved interval of **191.6 s** against a configured 60 s.
+  Not a collector fault — per-cycle coverage is 100% (26859/26859) with zero errors. It
+  shares the worker's scan loop.
+
+  This blocks BOTH remaining arms, for different reasons, which is what makes it the
+  decision rather than a caveat:
+    * every promotion gate carries the coverage clause and the stop gate holds on it, so
+      **no arm can PASS at 29.61% whatever its edge**; and
+    * arm C's registered fast horizons (5/10/30/60 s) are unobservable at 191.6 s, so the
+      brief's actual claim — a *fast* perp → Kalshi lead — remains **untested**, not
+      falsified. The 300 s null is real and does not speak to it.
+
+  Legitimate responses: give the collector its own cadence (a platform change; #284
+  declined to do it before Probe 2 showed the need, and Probe 2 has now shown it), or
+  accept HOLD and say so. Not legitimate: lowering `COVERAGE_FLOOR_PCT` after seeing
+  29.61%, which is re-tuning a pre-registered gate against results.
+
+- **D7. What is the Kalshi perp round-trip fee?** New, and the cheapest open question in
+  the whole experiment. Arm A's measured edge is **5.63 bps ex funding**; a round-trip
+  taker fee above that erases it entirely. `/margin/fee_tiers` answers 401 to the ops
+  runner, which holds no Kalshi key — but the **worker** does. One authenticated read
+  decides whether arm A is interesting or dead, and it needs no tape, no gate and no
+  promotion. Owner: Live Ops or an operator; it is a credentialed read, not a Research
+  Lab write.
+- ~~**D6. What does Probe 2 actually report on the live tape?**~~ **CLOSED 2026-09-02 —
+  it ran** (`perp2-d6-3`, `--hours 72`). Full result in `docs/RESEARCH_JOURNAL.md`,
+  PERP-V1 PROBE 2 FIRST RUN 2026-09-02. Headline: all three gates **NOT READABLE**, HOLD
+  on all three arms, coverage 29.61%.
+
+  Two of my three predictions were wrong, and in the more interesting direction:
+    * I expected sample far under the 200 floor. Arm A produced **913** scored round
+      trips and cleared it comfortably.
+    * I expected the live question to be whether arm A found any entries at all. It found
+      plenty, and they carry a **+5.63 bps/trade net-ex-funding** edge against a matched
+      control at **−10.13** (delta **+15.76**), win rate 76.2%, mean hold 5.0 min.
+    * I expected coverage near 40%. It is 29.61% — my 145 s cadence figure was a
+      first-hour optimism; three days say 191.6 s.
+
+  What did hold: the gates are unreadable, and for exactly the pre-registered reason.
+  Arm A's number is **not** `perp_net_edge_bps_per_trade` — it omits funding, and it was
+  produced by a materially **weaker** rule than the registered one (no funding-agreement
+  entry condition, no time-to-funding z-conditioning, a substituted hold clock). A
+  5-minute hold makes the omitted funding cost small in principle, but a cost I reasoned
+  to a bound for is not a cost the pre-registration's metric was measured with.
 
 ## Assumptions
 
@@ -274,7 +304,15 @@ The perp surface is real and its history endpoints are readable. Registration in
 which redeploys the worker while the mmsell10 canary holds real money, so it stays an
 operator act.
 
-**Probe 2 is written (2026-09-02), and has not yet been run against the live tape.**
+**Probe 2 ran on 2026-09-02** (`perp2-d6-3`), after two import failures under the ops
+runner (#307 path, #308 dependencies — both recorded there; both were environments I
+asserted rather than reproduced). Result: coverage **29.61%**, arm A **913** observations
+at **+5.63 bps/trade ex funding** vs a **−10.13** control, arm C **null at 300 s** with
+its fast horizons unobservable, arm B **BLOCKED_DATA**, and **every gate NOT READABLE**.
+D6 closed; D5 is now the live decision and D7 (the fee) is the cheapest open question.
+Full numbers: `docs/RESEARCH_JOURNAL.md`, PERP-V1 PROBE 2 FIRST RUN 2026-09-02.
+
+**Probe 2's design, unchanged by the run:**
 `scripts/perp_arm_scores.py`, ops-runnable and read-only. Its design is governed by one
 rule, because three pre-registered inputs turned out not to exist: *a quantity that omits
 an input its registered definition names is a different quantity, and never gets the
@@ -323,12 +361,18 @@ This PR.
 
 ## Next Step
 
-Run Probe 2 against the live tape through the ops channel
-(`{"type":"script","name":"perp_arm_scores","id":"...","args":["--hours","72"]}`) and record
-what it reports — including, and especially, which pre-registered clauses it declares
-unreadable. That is D6, below, and it is a read: the scorer records nothing, transitions
-nothing and authorizes nothing, so a number it prints is an input to an evaluator's gate
-result and never a verdict.
+Two, and they are independent — neither is a promotion and neither needs the other:
+
+1. **D7, the fee.** One authenticated read of `/margin/fee_tiers` from the worker. Arm A's
+   entire measured edge is 5.63 bps ex funding; a round-trip fee above that ends the arm.
+   Cheapest decisive fact available, and it needs no tape and no gate.
+2. **D5, the cadence.** Give the collector its own loop, or accept that PERP-V1 cannot
+   clear its own coverage floor and that arm C's fast-lead claim stays untested. A
+   platform change, so a Platform Change Review question rather than this workstream's.
+
+Re-running Probe 2 on more tape is **not** a next step while coverage is 29.61%: more
+days at the same cadence raise the sample and leave the binding clause exactly where it
+is.
 
 Still an operator act, unchanged: `perp-v1` is **not registered in production**. That is a
 `REGISTER_PACKAGE` envelope through the `env` channel, which redeploys the worker while the
