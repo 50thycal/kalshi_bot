@@ -195,3 +195,43 @@ def test_cited_documents_and_instrument_exist():
     root = pathlib.Path(__file__).resolve().parents[1]
     for rel in (pkg.SPEC_DOC, pkg.INSTRUMENT, pkg.WORKSTREAM, "scripts/marktangle2_package.py"):
         assert (root / rel).exists(), rel
+
+
+# ===========================================================================
+# 6. The transport's one knob: promotion_sample_floor, raise-only
+# ===========================================================================
+
+
+def test_every_package_register_accepts_the_transport_floor_keyword():
+    """`_register_package` always passes `promotion_sample_floor=`; a package whose
+    register() cannot take it fails at the worker with a TypeError, which is exactly
+    how MARKTANGLE-2's first envelope (m2-register-1, 2026-09-02) died."""
+    import inspect
+    for name, package in cmds._packages().items():
+        if package.register is cmds._no_contract:
+            continue
+        params = inspect.signature(package.register).parameters
+        assert "promotion_sample_floor" in params or any(
+            p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()
+        ), f"package {name!r}: register() cannot take promotion_sample_floor"
+
+
+def test_the_floor_may_only_be_raised(xos_session, xos_platform):
+    with pytest.raises(svc.ExperimentOsError, match="never weaker"):
+        pkg.register(xos_session, actor="research-lab", promotion_sample_floor=100)
+    pkg.register(xos_session, actor="research-lab", promotion_sample_floor=300)
+    _exp, ver = _version(xos_session)
+    gates = {g.gate_key: g for g in read.gates_for(xos_session, ver)}
+    for key in ("paper_to_live_canary_a", "paper_to_live_canary_b"):
+        assert all(c["value"] == 300 for c in gates[key].spec_json["sample"].values())
+    assert set(ver.sample_json["paper_floor_settled_trades"].values()) == {300}
+
+
+def test_marktangle_1_register_honours_the_same_contract(xos_session, xos_platform):
+    with pytest.raises(svc.ExperimentOsError, match="never weaker"):
+        m1.register(xos_session, actor="research-lab", promotion_sample_floor=50)
+    m1.register(xos_session, actor="research-lab", promotion_sample_floor=250)
+    exp = read.get_experiment(xos_session, m1.EXPERIMENT_KEY)
+    ver = read.latest_version(xos_session, exp)
+    gate = {g.gate_key: g for g in read.gates_for(xos_session, ver)}["paper_to_live_canary"]
+    assert {c["value"] for c in gate.spec_json["sample"].values()} == {250}

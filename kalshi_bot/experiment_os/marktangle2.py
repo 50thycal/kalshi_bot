@@ -124,7 +124,11 @@ HELD_CONSTANT: list[str] = [
 ]
 
 
-def _promotion_gate(track: str) -> dict:
+#: Paper promotion evidence floor, settled trades on the primary and its mirror.
+PAPER_SAMPLE_FLOOR = 200
+
+
+def _promotion_gate(track: str, floor: int = PAPER_SAMPLE_FLOOR) -> dict:
     t, m = PRIMARY[track], MIRROR[track]
     return {
         "description": (
@@ -133,8 +137,8 @@ def _promotion_gate(track: str) -> dict:
             "read against it and cannot."
         ),
         "sample": {
-            t: {"metric": "settled_trades", "op": ">=", "value": 200},
-            m: {"metric": "settled_trades", "op": ">=", "value": 200},
+            t: {"metric": "settled_trades", "op": ">=", "value": floor},
+            m: {"metric": "settled_trades", "op": ">=", "value": floor},
         },
         "max_evidence_horizon": {"metric": "settled_trades", "value": 1500},
         "pass_all": [
@@ -229,13 +233,31 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def register(session, *, actor: str, now: datetime | None = None) -> dict:
+def register(
+    session,
+    *,
+    actor: str,
+    promotion_sample_floor: int | None = None,
+    now: datetime | None = None,
+) -> dict:
     """Create the experiment (predecessor: MARKTANGLE-1 when it exists), freeze v1
     with its ten arms and four gates, open e1 on the ACTIVE platform snapshot,
     register a tagless PROBE deployment and move IDEA -> PROBE.
 
+    `promotion_sample_floor` is the one knob the experiment-command transport
+    passes (always, as None when the envelope omits it). It may only RAISE the
+    paper promotion floor: a lower one would let the primary promote on a thinner
+    sample than the reviewed contract asks for.
+
     Idempotence is refusal: a second run raises rather than creating a parallel
     contract under a suffixed key."""
+    floor = PAPER_SAMPLE_FLOOR if promotion_sample_floor is None else int(promotion_sample_floor)
+    if floor < PAPER_SAMPLE_FLOOR:
+        raise service.ExperimentOsError(
+            f"promotion_sample_floor={floor} is below the reviewed floor "
+            f"{PAPER_SAMPLE_FLOOR} — an envelope may make a pre-registered bar "
+            "stricter, never weaker"
+        )
     at = now or _now()
     if get_experiment(session, EXPERIMENT_KEY) is not None:
         raise service.ExperimentOsError(
@@ -340,8 +362,8 @@ def register(session, *, actor: str, now: datetime | None = None) -> dict:
             "note": "the fill model is NOT read on this experiment: every arm is a taker",
         },
         sample={"probe": PROBE_RULE,
-                "paper_floor_settled_trades": {ARM_A3: 200, ARM_A_MIRROR: 200,
-                                               ARM_B3: 200, ARM_B_MIRROR: 200}},
+                "paper_floor_settled_trades": {ARM_A3: floor, ARM_A_MIRROR: floor,
+                                               ARM_B3: floor, ARM_B_MIRROR: floor}},
         costs={"model": "worst-case Kalshi taker fee, ceil(7 * p * (1-p)) cents per "
                         "contract, charged on entry; settlement is free",
                "slippage_cents": 1.0, "max_spread_cents": 10.0,
@@ -363,7 +385,7 @@ def register(session, *, actor: str, now: datetime | None = None) -> dict:
 
     gates = []
     for gate_key, kind, track in GATES:
-        spec = _promotion_gate(track) if kind == "promotion" else _keep_gate(track)
+        spec = _promotion_gate(track, floor) if kind == "promotion" else _keep_gate(track)
         gates.append(service.register_gate(
             session, version, gate_key=gate_key, kind=kind, spec=spec,
             from_state=LifecycleState.PAPER if kind == "promotion" else None,
