@@ -57,6 +57,12 @@ jobs:
           ref: ${{ github.event.repository.default_branch }}
           path: .ops-runner-code
 
+      # The exact commit that will serve this request. It goes into the result
+      # header, the receipt and `capabilities`, so any output can be traced back
+      # to the code that produced it without guessing which merge was live.
+      - name: Record the code identity
+        run: echo "OPS_CODE_SHA=$(git -C .ops-runner-code rev-parse HEAD)" >> "$GITHUB_ENV"
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -64,17 +70,40 @@ jobs:
       - name: Install psycopg
         run: pip install "psycopg[binary]>=3.1,<4.0"
 
-      # `xos` requests run the canonical Experiment OS read CLI (SQLAlchemy + the
-      # kalshi_bot package) rather than a SQL re-implementation, so they need the
-      # full dependency set. Installed only for that request type — every other
-      # request keeps the fast psycopg-only path.
+      # `env` requests go through scripts/railway_env.py, which validates each
+      # value against the real Settings field before writing (added after the
+      # 2026-08-30 outage, where a bool set to "" crash-looped the worker for 17
+      # hours). That guard imports kalshi_bot.config, which needs pydantic — and
+      # WITHOUT this step it degrades to a printed note and silently allows the
+      # write, i.e. the guard is inert exactly where it is needed. Observed live on
+      # 2026-08-31: "value type-check skipped (ModuleNotFoundError: No module named
+      # 'pydantic')". config.py's only non-stdlib imports are these two.
+      - name: Install config deps so the env guard can type-check
+        run: |
+          if [ "$(jq -r '.type // empty' ops/request.json)" = "env" ]; then
+            echo "env request — installing pydantic for the value type-check"
+            pip install "pydantic>=2,<3" "pydantic-settings>=2,<3"
+          else
+            echo "not an env request — skipping"
+          fi
+
+      # Requests that reach the canonical Experiment OS CLI (SQLAlchemy + the
+      # kalshi_bot package) need the full dependency set; everything else keeps
+      # the fast psycopg-only path. WHICH requests those are is asked of the
+      # runner's own code (stdlib-only, so it runs before any install) rather
+      # than matched on `type == "xos"` in shell: that shell test was correct
+      # while `xos` was the only caller and would have become a latent bug the
+      # moment `doctor` started reading Experiment OS through the same CLI —
+      # failing on an import, inside the workflow, where the runner's own error
+      # handling cannot explain it.
       - name: Install full deps for Experiment OS reads
         run: |
-          if [ "$(jq -r '.type // empty' ops/request.json)" = "xos" ]; then
-            echo "xos request — installing requirements.txt"
+          need=$(python .ops-runner-code/scripts/ops_meta.py needs-full-deps ops/request.json)
+          if [ "$need" = "yes" ]; then
+            echo "request needs the canonical Experiment OS CLI — installing requirements.txt"
             pip install -r .ops-runner-code/requirements.txt
           else
-            echo "not an xos request — skipping"
+            echo "psycopg-only request — skipping"
           fi
 
       - name: Run ops request
@@ -88,6 +117,14 @@ jobs:
           # The transport's request file. The runner never reads anything else
           # from the ops checkout.
           OPS_REQUEST_PATH: ${{ github.workspace }}/ops/request.json
+          # This run's machine-readable receipt, completed by the publish step.
+          OPS_RECEIPT_PATH: ${{ runner.temp }}/ops_receipt.json
+          # Identity of the CODE that served the request (the default-branch
+          # checkout above), and of the run itself — both go into the receipt and
+          # into `capabilities`, so a result can always be traced to the exact
+          # code that produced it.
+          OPS_CODE_SHA: ${{ env.OPS_CODE_SHA }}
+          OPS_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           DATABASE_URL_RO: ${{ secrets.DATABASE_URL_RO }}
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
@@ -105,7 +142,18 @@ jobs:
           # below checks out the latest ops tree, under which ops/request.json can change
           # if a concurrent producer (e.g. a parallel /loop session) pushed meanwhile.
           cp ops/request.json "$RUNNER_TEMP/ops_request.json"
-          python .ops-runner-code/scripts/ops_runner.py 2>&1 | tee ops/result.txt || true
+          # A failed request must still reach its requester, so the failure cannot
+          # abort this step — but it must ALSO turn the run red, which the old
+          # `|| true` silently gave up: it published the error and left the
+          # workflow green, so a failed ops request was indistinguishable from a
+          # successful one to anyone reading the Actions list. Capture the real
+          # status here; the LAST step re-raises it, after publication.
+          set +e
+          python .ops-runner-code/scripts/ops_runner.py 2>&1 | tee ops/result.txt
+          status=${PIPESTATUS[0]}
+          set -e
+          printf '%s' "$status" > "$RUNNER_TEMP/ops_status"
+          echo "# runner exit status: $status"
           cp ops/result.txt "$RUNNER_TEMP/ops_result.txt"
           # Per-run result key: the request's optional "id" lets the requester read
           # exactly its own output at ops/results/<id>.txt even when another producer
@@ -114,6 +162,18 @@ jobs:
           rid="$(printf '%s' "$rid" | tr -c 'A-Za-z0-9._-' '_' | cut -c1-64)"
           [ -z "$rid" ] && rid="$(date -u +%Y%m%dT%H%M%SZ)-run${{ github.run_number }}"
           printf '%s' "$rid" > "$RUNNER_TEMP/ops_rid"
+          # Complete the receipt with the facts only the workflow knows — the
+          # request's real exit status and where its output will land — using the
+          # same module the runner used to start it. It happens HERE, in the step
+          # that already executes default-branch code, because the publish step's
+          # own invariant is that it touches the transport and nothing else.
+          # A receipt is produced even when the runner crashed before writing one.
+          python .ops-runner-code/scripts/ops_meta.py finalize \
+            --receipt "$RUNNER_TEMP/ops_receipt.json" \
+            --request "$RUNNER_TEMP/ops_request.json" \
+            --status "$status" --rid "$rid" \
+            --out "$RUNNER_TEMP/ops_receipt_final.json" > "$RUNNER_TEMP/ops_audit_verdict"
+          cat "$RUNNER_TEMP/ops_audit_verdict"
 
       - name: Publish result to ops branch
         if: always()
@@ -122,6 +182,14 @@ jobs:
           git config user.email "ops-runner@users.noreply.github.com"
           rid="$(cat "$RUNNER_TEMP/ops_rid" 2>/dev/null || true)"
           [ -z "$rid" ] && rid="run${{ github.run_number }}"
+          # The run step left a completed receipt in RUNNER_TEMP. If it did not —
+          # the step died before finalizing — publish a minimal one rather than
+          # nothing: "this run produced no receipt of its own" is itself what an
+          # auditor needs to see, and a missing file must not abort publication.
+          if [ ! -s "$RUNNER_TEMP/ops_receipt_final.json" ]; then
+            printf '{"receipt":"MISSING — the run step did not finalize","outcome":"FAILED"}\n' \
+              > "$RUNNER_TEMP/ops_receipt_final.json"
+          fi
           # Race-proof publish (see header comment). Each attempt starts from the LATEST
           # ops tree — preserving any concurrent commit and its per-run file — then
           # re-applies THIS run's files and retries the push. Unique per-run filenames
@@ -136,8 +204,12 @@ jobs:
             mkdir -p ops/results
             cp "$RUNNER_TEMP/ops_result.txt" ops/result.txt
             cp "$RUNNER_TEMP/ops_result.txt" "ops/results/${rid}.txt"
-            # Bound growth: keep only the newest 80 per-run results.
+            cp "$RUNNER_TEMP/ops_receipt_final.json" "ops/results/${rid}.receipt.json"
+            # Bound growth: keep only the newest 80 per-run results, and the same
+            # number of receipts — they are published together and are pruned
+            # together, so the transport can never accumulate one without the other.
             ls -1t ops/results/*.txt 2>/dev/null | tail -n +81 | xargs -r rm -f
+            ls -1t ops/results/*.receipt.json 2>/dev/null | tail -n +81 | xargs -r rm -f
             git add -A ops
             if git diff --cached --quiet; then
               echo "nothing to publish"; published="yes"; break
@@ -153,6 +225,75 @@ jobs:
             echo "::error::failed to publish ops result ${rid} after 6 attempts"
             exit 1
           fi
+
+      # Durable audit history of PRODUCTION-CHANGING requests.
+      #
+      # ops/results is deliberately bounded scratch: 80 files deep, pruned on every
+      # run, and a busy afternoon can push a live arm off the end of it within
+      # hours. Most of what it holds should expire that way — a log fetch and a
+      # SELECT are not history. A change to real-money capability, to the risk
+      # envelope around it, or to one of the Experiment OS write transports is,
+      # and reconstructing one months later ("who armed this, against which code,
+      # and what did the readback say") must not depend on a scratch file.
+      #
+      # So exactly those receipts — `ops_meta.AUDIT_WORTHY_VARS`, decided in code
+      # and asserted by tests, not by whoever writes the request — are appended to
+      # a long-lived branch, in the same spirit as the digest archive and for the
+      # same reason it is a separate branch: it is never merged, never deployed,
+      # and only ever grows. Receipts only: the request PAYLOAD is not copied
+      # here, so a public envelope is not duplicated into a second public place.
+      - name: Archive a production-changing receipt
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          verdict="$(cat "$RUNNER_TEMP/ops_audit_verdict" 2>/dev/null || echo no)"
+          if [ "$verdict" != "audit" ]; then
+            echo "Not an audit-worthy mutation; nothing to archive."
+            exit 0
+          fi
+          if [ ! -s "$RUNNER_TEMP/ops_receipt_final.json" ]; then
+            echo "::warning::audit-worthy request left no receipt to archive"
+            exit 0
+          fi
+          ts=$(date -u +"%Y-%m-%d_%H%M%SZ")
+          rid="$(cat "$RUNNER_TEMP/ops_rid" 2>/dev/null || echo run${{ github.run_number }})"
+          repo_url="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          work=$(mktemp -d)
+          if git ls-remote --exit-code --heads "$repo_url" ops-audit >/dev/null 2>&1; then
+            git clone --depth 1 --branch ops-audit "$repo_url" "$work"
+          else
+            # First run: an orphan branch, so the audit history carries no app code.
+            git clone --depth 1 "$repo_url" "$work"
+            git -C "$work" checkout --orphan ops-audit
+            git -C "$work" rm -rf . >/dev/null 2>&1 || true
+            printf '%s\n' \
+              "# Ops mutation audit" \
+              "" \
+              "Append-only receipts for ops requests that CHANGED production —" \
+              "real-money capability, the risk envelope around it, and the Experiment OS" \
+              "write transports (\`ops_meta.AUDIT_WORTHY_VARS\`)." \
+              "" \
+              "Each \`receipts/<UTC-timestamp>-<request-id>.json\` file is one receipt," \
+              "committed automatically by the Ops Runner workflow: what was asked, by whom," \
+              "against which code, what the readback said, and how it ended." \
+              "" \
+              "Receipts only — request payloads are not copied here. This branch is never" \
+              "merged into the default branch and never deployed." \
+              > "$work/README.md"
+          fi
+          mkdir -p "$work/receipts"
+          cp "$RUNNER_TEMP/ops_receipt_final.json" "$work/receipts/${ts}-${rid}.json"
+          git -C "$work" config user.name "ops-runner"
+          git -C "$work" config user.email "ops-runner@users.noreply.github.com"
+          git -C "$work" add -A
+          if git -C "$work" diff --cached --quiet; then
+            echo "Nothing new to archive."
+            exit 0
+          fi
+          git -C "$work" commit -m "ops audit ${ts} ${rid}"
+          git -C "$work" push origin ops-audit
 
       # Durable running history of daily digests. When the request was a
       # `weather_digest` run, snapshot its full output to a dated file on the
@@ -222,3 +363,23 @@ jobs:
           fi
           git -C "$work" commit -m "digest archive ${ts}"
           git -C "$work" push origin digest-archive
+
+      # The last word on the run. The request's own failure is re-raised HERE,
+      # after publication and archiving, so that a failed request is both
+      # readable by its requester AND red in the Actions list — the two
+      # requirements the old `|| true` could not hold at once.
+      #
+      # Publication failure is a separate failure with its own step and its own
+      # error, so the two are never confused: a green publish over a failed
+      # request fails here, and a failed publish over a successful request has
+      # already failed above.
+      - name: Fail the run if the ops request failed
+        if: always()
+        run: |
+          status="$(cat "$RUNNER_TEMP/ops_status" 2>/dev/null || echo 1)"
+          if [ "$status" = "0" ]; then
+            echo "ops request succeeded"
+            exit 0
+          fi
+          echo "::error::the ops request FAILED (runner exit status ${status}); its output was published to ops/results — read it there"
+          exit "$status"
