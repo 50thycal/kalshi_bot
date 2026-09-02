@@ -256,6 +256,143 @@ only ~40 minutes of entries existed and only two had resolved. The operator's `D
 unfloored bar knowingly, precisely so v2 would not have to re-earn v1's n=1588. The honest
 reading: **the promotion rests on v1's history, not on v2's fresh sample.**
 
+## Operator decisions, 2026-08-30 (carry these into the NEXT run)
+
+Two things this canary cannot fix about itself, decided and recorded so the
+successor Version does not inherit them by accident.
+
+**D7. The `twin_mirror_coverage_pct < 50` HOLD stands unfixed for this run.**
+It reads 14.7% and cannot clear. The cause is structural: the twin assumes 100%
+fill, so it saturates its 20-position open cap while live fills ~49% and keeps
+placing (twin open 20, live open 13; the parity report reads *"live placed 147
+orders its twin did NOT open"*). A registered gate clause is immutable from
+registration, so the only fixes were a successor Version (restarting evidence at
+zero) or retuning the twin's cap mid-epoch (voiding the comparison). Neither is
+worth it while the book is profitable and every stop clause works. **For the next
+run:** either set the threshold against what a fill-limited twin can actually
+achieve, or give the twin a larger open cap than live so it is never the binding
+constraint. The clause as written measures the twin's cap, not the mirror.
+
+**D8. Raise `MMSELL_LIVE_MAX_OPEN_POSITIONS` (currently 20) — but NOT mid-run.**
+The 34.5% decision overlap is gate-dominated, mostly `gate:open_cap`, which is
+capacity rather than edge: live is declining candidates it was never allowed to
+attempt. Raising the cap buys more of the SAME distribution, which is the safe
+way to scale — unlike pricing up, which `mmsell10a`/`mmsell10b` measured at
+−4.1c/contract for +3pp of fill rate. It is deliberately not done now: the cap is
+a live knob inside the twin's parameter set, and retuning it mid-epoch voids the
+twin comparison — the fix would be a new twin tag, not a re-read of this one
+(`docs/LIVE_PAPER_TWIN.md`). **For the next run:** raise it in the pre-registered
+envelope, before arming, so the whole epoch runs at one cap.
+
+**Both are capacity levers and neither touches entry pricing.** The 0c offset and
+the 4h timeout stay: the 56 timed-out orders are trades the market declined at our
+price, and buying them is the one thing already measured to destroy this edge.
+
+## XOS-000014 — the 31% of entry orders Kalshi never accepted
+
+The `cancel_reason` was truncated in every view I had read it through. In full it is
+a 404 on `/portfolio/events/orders`: `user_not_found`, *"Exchange user not found. For
+Predictions: reference documentation Exchange Sharding documentation."* The refusals
+are per-series and binary, not load-shaped — `KXMLBHR` 22/22, `KXMLBTOTAL` 20/20,
+`KXMLBSPREAD` 12/12, `KXITFWMATCH` 4/4, `KXITFMATCH` 3/3, `KXBTCD` 5/6, and **0/130
+across the other seventeen series**.
+
+Kalshi has sharded its exchange. This codebase has no concept of a shard: one
+`kalshi_base_url`, every order posted to it. Their doc names two requirements, and
+they are *different problems with different owners*:
+
+1. **Routing.** `exchange_index` rides on `GET /markets` and `GET /events` and is
+   "the authoritative source of truth". As an order parameter, `>= 0` routes to that
+   exchange and `-1` auto-routes from the market ticker. We send neither.
+2. **Collateral.** *"Programmatic traders must preallocate collateral on a given
+   exchange shard before order placement."* Balance is held per shard; `Get Balance`
+   breaks it down by index, and Kalshi can auto-rebalance to a target allocation.
+
+**Why no routing code ships yet.** If we are unfunded on the shard MLB/ITF/BTCD live
+on, correct routing still fails — that is an operator funding decision about real
+money, not a code change. And adding an unrecognised field to the order body risks
+the one path that currently works (130 attempts, 0 rejections) on a live real-money
+book. So a read-only probe (behind `LIVE_SHAPE_PROBE`) reports both halves against
+our own account first: which index the refused series carry versus the accepted
+ones, and which indexes our balance reaches. Balance **amounts are never logged** —
+these lines come back through the ops channel onto a public branch.
+
+**Scale of the prize.** 76 of 246 entry attempts were refused before reaching the
+book. This is not maker queue position — the corrected fill-rate provider already
+reports them as `excluded_never_sent`, correctly declining to blame the strategy for
+orders the venue never took. Fixing it is worth more than any pricing change, and
+costs no edge.
+
+### Measured, 2026-08-30T18:05:05Z — `exchange_index` is the whole split
+
+The probe ran against our own live account and the answer is binary and complete:
+
+| series | verdict | `exchange_index` |
+|---|---|---|
+| `KXMLBHR`, `KXMLBTOTAL`, `KXITFMATCH` | REFUSED | **3** |
+| `KXNCAAFSPREAD`, `KXLALIGASCORE` | ACCEPTED | **0** |
+
+No other candidate field varied (`market_type` is `binary` on both sides; the only
+key-set difference, `primary_participant_key`, is a tennis-vs-football artifact and
+appears on the refused side only because ITF markets name a player). **We trade on
+shard 0. MLB and ITF live on shard 3.**
+
+The same boot showed `exchange_index` on `orders`, `fills`, `positions` and
+`settlements` too — so a fix has to reach the reconciler, not just order placement,
+or we would file shard-3 fills against shard-0 assumptions.
+
+Also measured: `api limits probe` reports our grant as
+`{"exchange_instance": "event_contract", "level": "advanced"}` — the grant itself is
+**scoped to an exchange instance**, which is consistent with `user_not_found` rather
+than an insufficient-funds error on shard 3.
+
+**A defect in the probe's own funding half.** It reported *"no per-index breakdown in
+balance payload"* — a **false negative**. The breakdown is right there under
+`balance_breakdown`, as the neighbouring `api shape probe [balance]` line printed in
+the same boot: `{"balance_breakdown": [{"balance": "str", "exchange_index": "int"}]}`.
+The first version looked up four guessed key names and none was the real one. Two
+lessons, both now enforced by tests: find the breakdown **by shape** (any list whose
+entries carry `exchange_index`), and treat a **decimal string** as money, since a
+numeric-only test would report every funded shard as unfunded — wrong in the
+direction that looks safe.
+
+### Answered, 2026-08-30T18:20:49Z — unfunded, not misrouted
+
+The fixed probe read our own balance breakdown:
+
+```
+shard probe funding: [{"exchange_index": 0, "funded": true},
+                      {"exchange_index": 1, "funded": false},
+                      {"exchange_index": 2, "funded": false},
+                      {"exchange_index": 3, "funded": false}]
+```
+
+The account carries a row for every shard 0-3, so we are **provisioned** on shard 3
+and hold **no collateral** there. `user_not_found` is what Kalshi returns for an
+unfunded shard — the message names a user, the condition is a balance.
+
+**This is not fixable in code.** Routing `exchange_index` correctly to shard 3 would
+still be refused; the order would simply be rejected after being addressed properly.
+Had routing shipped on the first pass it would have compiled, passed, deployed and
+changed nothing. Only an intra-account transfer of collateral onto shard 3 — an
+operator action on real money — unlocks those series.
+
+**It also explains part of the headline live-vs-twin gap.** The twin trades MLB and
+ITF markets that live is structurally locked out of, so the +2.22c twin against
++1.51c live is not all edge decay. The matched-markets comparison already controlled
+for it and read **-0.07c**; that number now has a mechanism behind it.
+
+**Recorded:** XOS-000014 evidence row 30 (`ADD_EVIDENCE`, receipt
+`xos14-shard-evidence-20260830`, SUCCEEDED).
+
+**D9 (next run, NOT mid-epoch).** Either fund shard 3 in the pre-registered envelope
+before arming, or drop the shard-3 series from the universe so the book stops
+spending ~31% of its attempts on markets it cannot reach. Narrowing the universe now
+would void the twin comparison for the same reason as D8: the universe is inside the
+twin's parameter set. Whichever is chosen belongs in the envelope before arming, and
+the twin must be given the same universe live can actually trade — otherwise the
+mirror keeps measuring a book live is not allowed to run.
+
 ## Next Step
 
 Watch the pre-registered keep/stop clauses accumulate. `live_canary_keep` reads BLOCKED_DATA
@@ -264,3 +401,73 @@ days. Nothing here needs a new threshold: the stand-downs (loss budget $15, dail
 gap 0.5c both signs, per-market loss $1, win-rate 5.0pp) were all registered before any
 result was seen, and re-interpreting them now would void the pre-registration. Arming remains a
 separate approval, and the runtime allowlist a separate one after that.
+
+
+## Epoch-2 close-out and the capacity successor (2026-08-31)
+
+**The 17-hour outage is inside this epoch's window and stays in the record.**
+2026-08-30T18:37:11Z → 2026-08-31T11:28:35Z the worker crash-looped on an invalid
+config (XOS-000015): no scanning, no paper trades, no live orders, on any book. The
+epoch-2 evidence is kept as-is with the gap recorded rather than discarded — nothing
+bad was traded, the bot simply was not running, so this is a hole in COVERAGE, not
+contamination. Anyone reading later sees exactly what was and was not observed.
+
+**D10. The coverage gate is bound by TURNOVER, not by slot count.** Measured over
+v2/e2 on 2026-08-31:
+
+| book | entries | per day |
+|---|---|---|
+| `Cmmsell10` (live) | 552 | **188.6** |
+| `Cmmsell10_pt3` (twin) | 61 | **21.3** |
+
+11.3%, which is what the gate's 14.7% reading actually reflects. Live's unfilled
+orders recycle a slot every 4h; the twin assumes fill and holds to settlement for
+days. **D7's "give the twin a larger cap" was right in direction and badly wrong in
+size** — my own first proposal of twin 80 against live 40 projects to ~23% and would
+have re-broken the same gate one Version later. The successor uses **twin 250**
+(~70% projected). The `< 50` clause itself is carried over UNCHANGED: the honest fix
+removes the constraint that made it unreachable, rather than lowering the bar until
+the book can step over it.
+
+**Why a successor experiment and not a v3.** `arm_live_canary` refuses unless the
+experiment is in PAPER, and `LIVE_CANARY → PAPER` is an illegal rollback. An
+experiment already in LIVE_CANARY therefore has **no sanctioned path to re-arm** at a
+new risk envelope. Both rules are load-bearing — the PAPER guard is what stopped the
+2026-08-15 inherited-state failure — so neither is worked around. The lifecycle names
+its own remedy: *"a revived concept creates a successor experiment or version
+referencing the retired predecessor."* That is
+`kalshi_bot/experiment_os/successor_mmsell10_capacity.py`.
+
+**Sequencing: the old book drains BESIDE the new one, not before it.** An earlier
+draft of `register()` ended the predecessor's live and twin deployments too, and so
+had to refuse until the live book was fully drained — idling the new book for days
+for no safety gain. What actually needs the drain is *ending* a live deployment: that
+leaves its tag without an arm, so the settlements could not be **recorded** (the
+XOS-000011 shape) and epoch 2's final numbers would be wrong. Keeping those
+deployments open costs nothing and keeps every settlement recording. So `register()`
+ends **only the PAPER deployment** — which holds no live positions and must hand the
+`mmsell10` control tag over, because two active deployment arms on one tag is
+ambiguous and refused by the resolver — and leaves live and twin open to wind down on
+entirely separate tags, deployments and epochs. Retiring the predecessor is a later,
+separate act, once it is genuinely finished.
+
+The order is therefore: stand `Cmmsell10` down from the runtime allowlist → register
+the successor → arm it under a separate operator approval → retire the predecessor
+whenever its book has settled out. No forced exits at any point; mmsell is
+hold-to-settlement and closing early would realize spread and fees on trades whose
+whole edge is holding.
+
+**D11. A package that nothing can invoke is indistinguishable from one that does not
+exist.** The successor module was contract-correct, envelope-correct and fully tested
+on 2026-08-31 and was still **unrunnable**: it had no `arm()` function and was never
+registered in `experiment_commands._packages()`, so neither `REGISTER_PACKAGE` nor
+`ARM_CANARY` could reach it. Reading the module could not reveal this — the defect
+was in what the module was *absent from*. Four reachability tests now assert it from
+the transport's side (the package resolves by name, exposes both `register` and
+`arm`, every declared activation var clears the ops allowlist, and `arm` refuses
+loudly on an unregistered contract). Any future package should be assumed unreachable
+until a test calls it through `_packages()`.
+
+**Drain reading, 2026-09-01.** `Cmmsell10` down to **4** open positions from ~20
+after the stand-down; `mmsell10` (the paper control tag) holds **0** live positions,
+so the paper handover in `register()` is clear to run.

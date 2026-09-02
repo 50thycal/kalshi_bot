@@ -1,0 +1,51 @@
+name: Worker heartbeat
+
+# Is the trading worker alive? On 2026-08-30 it crash-looped on an invalid config
+# for 16h51m and nothing noticed — no scanning, no paper trades, no live orders —
+# until a human happened to ask an unrelated question. This watches.
+#
+# Deliberately OUTSIDE the worker: a scheduled Action reading a SELECT-only
+# Postgres URL. A heartbeat emitted by the worker itself would go silent exactly
+# when it mattered, and a dead worker must not be able to suppress its own alarm.
+#
+# The alert channel is the workflow failing: GitHub emails the repository owner
+# when a scheduled run fails. No extra service to run — and to also go unwatched.
+
+on:
+  schedule:
+    # Every 15 minutes. Scheduled runs can be delayed under load, so real
+    # detection is inside the hour rather than exactly 15 minutes — still two
+    # orders of magnitude better than the outage this was written for.
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+# Never queue heartbeats behind each other: a late run checking stale liveness
+# tells us nothing, and the next one is only minutes away.
+concurrency:
+  group: worker-heartbeat
+  cancel-in-progress: true
+
+jobs:
+  heartbeat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install psycopg
+        run: pip install "psycopg[binary]>=3.1,<4.0"
+
+      - name: Check worker liveness
+        env:
+          DATABASE_URL_RO: ${{ secrets.DATABASE_URL_RO }}
+        # `set -o pipefail` is load-bearing, not style. Actions runs `run:` under
+        # `bash -e` WITHOUT pipefail, so the exit status of `script | tee` is tee's
+        # — always 0. Without this line the check would print "WORKER APPEARS DOWN"
+        # into the summary and pass the job, and the alarm would never once fire.
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/worker_heartbeat.py | tee -a "$GITHUB_STEP_SUMMARY"

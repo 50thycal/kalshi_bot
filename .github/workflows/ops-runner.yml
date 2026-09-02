@@ -70,6 +70,23 @@ jobs:
       - name: Install psycopg
         run: pip install "psycopg[binary]>=3.1,<4.0"
 
+      # `env` requests go through scripts/railway_env.py, which validates each
+      # value against the real Settings field before writing (added after the
+      # 2026-08-30 outage, where a bool set to "" crash-looped the worker for 17
+      # hours). That guard imports kalshi_bot.config, which needs pydantic — and
+      # WITHOUT this step it degrades to a printed note and silently allows the
+      # write, i.e. the guard is inert exactly where it is needed. Observed live on
+      # 2026-08-31: "value type-check skipped (ModuleNotFoundError: No module named
+      # 'pydantic')". config.py's only non-stdlib imports are these two.
+      - name: Install config deps so the env guard can type-check
+        run: |
+          if [ "$(jq -r '.type // empty' ops/request.json)" = "env" ]; then
+            echo "env request — installing pydantic for the value type-check"
+            pip install "pydantic>=2,<3" "pydantic-settings>=2,<3"
+          else
+            echo "not an env request — skipping"
+          fi
+
       # Requests that reach the canonical Experiment OS CLI (SQLAlchemy + the
       # kalshi_bot package) need the full dependency set; everything else keeps
       # the fast psycopg-only path. WHICH requests those are is asked of the
