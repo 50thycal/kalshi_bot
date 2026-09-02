@@ -1,1 +1,1 @@
-{"type":"noop","id":"idle-m2-run2-recorded"}
+{"type":"db","id":"perp-still-off-1","max_rows":4,"purpose":"re-confirm the perps collector is still off after two worker redeploys","workstream":"WS-010","sql":"select max(started_at) as last_cycle, round(extract(epoch from (now() - max(started_at)))/60::numeric,1) as minutes_since, count(*) filter (where started_at > now() - interval '60 minutes') as cycles_last_60m, count(*) filter (where started_at > now() - interval '180 minutes') as cycles_last_180m from perp_collector_cycles"}
