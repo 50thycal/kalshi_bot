@@ -1,0 +1,41 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "cedeb1be81193e83a325623b480d6737a5147797",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-03T16:07:45Z",
+  "id": "dash-issue-open-1",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 2063 bytes, sha256:d7b97eb5f912ba02>",
+        "before": "<redacted 2430 bytes, sha256:6518b40598540003>",
+        "requested": "<redacted 2063 bytes, sha256:d7b97eb5f912ba02>"
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/dash-issue-open-1.receipt.json",
+  "result_file": "ops/results/dash-issue-open-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33776719868",
+  "service": "main",
+  "started_at": "2026-09-03T16:07:38Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
