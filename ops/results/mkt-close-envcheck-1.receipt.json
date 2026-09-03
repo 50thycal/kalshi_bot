@@ -1,0 +1,23 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "a2934e532c9bd5de0a1f451bd4f209e47eb86b06",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-03T17:05:29Z",
+  "id": "mkt-close-envcheck-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {
+    "actor": "claude-code",
+    "purpose": "read the standing EXPERIMENT_OS_EXPERIMENT_COMMAND before overwriting it",
+    "workstream": "WS-013"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/mkt-close-envcheck-1.receipt.json",
+  "result_file": "ops/results/mkt-close-envcheck-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33782473042",
+  "service": "main",
+  "started_at": "2026-09-03T17:05:29Z",
+  "targets": [],
+  "type": "env"
+}
