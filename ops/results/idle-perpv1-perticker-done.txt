@@ -1,4 +1,0 @@
-# ops request [READ]
-# type=noop  id=idle-perpv1-perticker-done
-# code a115ad91f4cdaa7742701661f096e76aa2283e60 · started 2026-09-03T12:45:34Z
-(noop — nothing to do)
