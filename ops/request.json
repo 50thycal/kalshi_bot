@@ -1,1 +1,1 @@
-{"type":"logs","service":"main","limit":400,"id":"dash-main-restarts-2"}
+{"type":"db","sql":"select command_id, action, actor_role, status, completed_at, error from experiment_os_experiment_commands order by id desc limit 3","id":"mkt1-closeout-receipt-1","actor":"claude-code","purpose":"read the mkt1-closeout-1 receipt","workstream":"WS-013"}
