@@ -455,6 +455,63 @@ def summarize_trades(trades: list[dict]) -> dict:
     }
 
 
+#: Per-ticker rows below this many round trips are printed with a THIN marker. It is a
+#: legibility threshold, not a gate clause: no per-ticker quantity is registered, and
+#: SAMPLE_FLOOR (200) is an ARM-level floor that no single ticker on this tape reaches.
+PER_TICKER_THIN_N = 30
+
+
+def per_ticker(trades: list[dict], control: list[dict]) -> list[dict]:
+    """Arm A's round trips split by ticker, each beside its own matched control.
+
+    WHY THIS SPLIT EXISTS. The universe-wide mean answers "does premium reversion
+    exist"; it cannot answer "does it exist where the book is tight", because a mean
+    over a universe whose measured half-spreads run from 0.4 bps (KXBTCPERP) to 33 bps
+    (KXADAPERP) is dominated by whichever names happened to trade most — and arm A's
+    entry condition selects wide-spread names by construction, since a 2.5-sigma premium
+    excursion is easiest to find where the quote is loose. The universe mean and the
+    depth finding therefore describe DIFFERENT TICKERS and must not be combined.
+
+    WHAT IT IS NOT. It is descriptive, and it is downstream of a result that is already
+    recorded: perp-v1 is RETIRED and arm A's gate result is FAIL. Nothing here reopens
+    that. Per-ticker n is far below SAMPLE_FLOOR, no gate is scoped to a ticker, and
+    reading the best row off a 30-row table after seeing it would be choosing a
+    hypothesis from results — which is why every row is printed, ranked by sample and
+    never by edge, and why thin rows are marked rather than dropped.
+    """
+    ctl_by: dict[str, list[dict]] = defaultdict(list)
+    for t in control:
+        ctl_by[t["ticker"]].append(t)
+
+    rows: list[dict] = []
+    for ticker, ts in sorted(_group(trades).items()):
+        s = summarize_trades(ts)
+        cs = summarize_trades(ctl_by.get(ticker, []))
+        delta = None
+        if s["net_ex_funding_bps"] is not None and cs["net_ex_funding_bps"] is not None:
+            delta = s["net_ex_funding_bps"] - cs["net_ex_funding_bps"]
+        rows.append({
+            "ticker": ticker,
+            "n": s["n"],
+            "gross_bps": s["gross_bps"],
+            "spread_bps": s["spread_bps"],
+            "net_ex_funding_bps": s["net_ex_funding_bps"],
+            "control_net_bps": cs["net_ex_funding_bps"],
+            "delta_vs_control_bps": delta,
+            "hold_min": s["hold_min"],
+            "thin": s["n"] < PER_TICKER_THIN_N,
+        })
+    rows.sort(key=lambda r: (-r["n"], r["ticker"]))
+    return rows
+
+
+def _group(trades: list[dict]) -> dict[str, list[dict]]:
+    out: dict[str, list[dict]] = defaultdict(list)
+    for t in trades:
+        out[t["ticker"]].append(t)
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Arm C — perp -> prediction lead/lag
 # ---------------------------------------------------------------------------
@@ -675,6 +732,31 @@ def report(cov: dict, a: dict, c: dict, args, refused: list[int],
           "\n      in for it.")
     print(f"    * exit 'max_hold_funding_windows: 1' has no clock; --max-hold-min="
           f"{args.max_hold_min:g} substitutes.")
+
+    # -- arm A, split by ticker ---------------------------------------------
+    print("\n  --- arm A by ticker (descriptive; no gate is scoped to a ticker) ---")
+    print("  The universe means above and the 2026-09-02 depth read describe different"
+          "\n  names: arm A's 2.5-sigma entry finds excursions where the quote is loose,"
+          "\n  so a mean spread of ~8.9 bps sits beside a BTC/ETH book quoting 0.4-0.7."
+          "\n  Read a row for WHERE the convergence is, never for which ticker to trade.")
+    rows = per_ticker(a["trades"], a["control"])
+    if not rows:
+        print("  no round trips in this window.")
+    else:
+        print(f"  {'ticker':<16}{'n':>5}{'gross':>9}{'spread':>9}{'net-exF':>9}"
+              f"{'ctl-net':>9}{'delta':>9}{'hold':>7}")
+        for r in rows:
+            mark = "  THIN" if r["thin"] else ""
+            print(f"  {r['ticker']:<16}{r['n']:>5}{fmt(r['gross_bps']):>9}"
+                  f"{fmt(r['spread_bps']):>9}{fmt(r['net_ex_funding_bps']):>9}"
+                  f"{fmt(r['control_net_bps']):>9}{fmt(r['delta_vs_control_bps']):>9}"
+                  f"{fmt(r['hold_min'], 1):>7}{mark}")
+        print(f"  bps/trade; delta = arm minus its own matched control. THIN = fewer than"
+              f"\n  {PER_TICKER_THIN_N} round trips: a mean of a handful of trades, shown"
+              " so the split is\n  complete, not because it supports a read.")
+        print("  'gross' is also the per-ticker breakeven fee for a BOTH-LEGS-PASSIVE"
+              "\n  variant, which pays no spread; 'net-exF' is the breakeven for the"
+              "\n  taker/taker round trip that was actually scored. Neither nets funding.")
 
     # -- arm B --------------------------------------------------------------
     print("\n--- arm B: perpcarry (funding dispersion) ---")
