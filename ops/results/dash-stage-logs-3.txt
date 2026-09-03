@@ -1,7 +1,0 @@
-# latest deployment 512f8a0a-15f9-4f44-ad2b-2ab464b06487 (status=SUCCESS, created=2026-09-03T17:04:30.534Z)
-# ops request [READ]
-# type=logs  service=livedash  id=dash-stage-logs-3
-# code a2934e532c9bd5de0a1f451bd4f209e47eb86b06 · started 2026-09-03T17:05:50Z
-# target service: livedash
-2026-09-03T17:05:16.238353721Z INFO  Starting Container
-2026-09-03T17:05:16.575035407Z INFO  livedash listening on http://0.0.0.0:8080
