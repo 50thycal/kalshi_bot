@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "a115ad91f4cdaa7742701661f096e76aa2283e60",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-03T12:43:50Z",
+  "id": "perp2-perticker-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/perp2-perticker-1.receipt.json",
+  "result_file": "ops/results/perp2-perticker-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33756829463",
+  "service": null,
+  "started_at": "2026-09-03T12:43:31Z",
+  "targets": [],
+  "type": "script"
+}

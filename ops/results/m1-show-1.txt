@@ -1,5 +1,0 @@
-no experiment 'marktangle-conditional-reversion'
-# ops request [READ]
-# type=xos  id=m1-show-1
-# actor=research-lab  workstream=WS-013
-# code 285d1a249d89475169eb516c7fde85fb70f2929d · started 2026-09-02T16:27:10Z
