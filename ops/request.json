@@ -1,1 +1,1 @@
-{"type":"noop","id":"idle-perpv1-done"}
+{"type":"script","name":"perp_arm_scores","id":"perp2-perticker-1","args":["--hours","96"]}
