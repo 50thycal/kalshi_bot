@@ -326,6 +326,17 @@ re-reading Track A's bar, would both be post-hoc re-scoping after the holdout wa
 opened. If the class definition is wrong the remedy is a new Version or forward quote
 collection — neither was done here, and neither is proposed.
 
+**Why the receipts read `TASK_SPECIFIC`.** `CLOSE_OUT_RETROSPECTIVE` is closed to
+`RESEARCH_LAB` on purpose — the session that ran an experiment should not also be the
+one that writes down its own verdict — and the session that built and ran this
+instrument is a Research Lab session, so the guard is aimed squarely at it. Put to the
+operator on 2026-09-03, who directed that this session submit both envelopes as
+`TASK_SPECIFIC` rather than open a separate Live Ops window. The receipts therefore
+name the role the act was performed under, not the role the session was following, and
+`approved_by` names the operator who made that call. Recorded here because an
+unexplained `TASK_SPECIFIC` on a retrospective verdict is exactly the kind of audit row
+a later reader should be able to account for.
+
 ## Next Step
 
 None. Both experiments in the MARKTANGLE line are RETIRED in Experiment OS with every

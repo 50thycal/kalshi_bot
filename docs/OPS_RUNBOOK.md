@@ -151,6 +151,15 @@ To run a request:
    {"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"mkt2-closeout-1\",\"action\":\"CLOSE_OUT_RETROSPECTIVE\",\"actor\":\"claude-code\",\"actor_role\":\"LIVE_OPS\",\"payload\":{\"package\":\"marktangle-2\",\"approved_by\":\"<operator>\",\"reason\":\"<why it is over>\"},\"schema_version\":1}"}}
    ```
 
+   `actor_role` on those two reads `LIVE_OPS` above because that is the role the verb
+   was built for. `TASK_SPECIFIC` is equally admissible and is what the MARKTANGLE
+   close-outs actually used, on an explicit operator direction recorded in WS-013:
+   `RESEARCH_LAB` is refused here by design — the session that ran an experiment should
+   not also write down its own verdict — so a Research Lab session that has been told to
+   close its own work submits under `TASK_SPECIFIC` and says so in the workstream. Do
+   not put `RESEARCH_LAB` in the envelope to make it fit; the transport refuses it, and
+   a receipt naming the wrong role is worse than a second session.
+
    Those two are **not** the same shape, and the difference matters if either is ever
    re-run: `marktangle-reversion`'s close-out registers its contract first, like
    PERP-V1's; `marktangle-2`'s refuses outright unless the experiment is already
