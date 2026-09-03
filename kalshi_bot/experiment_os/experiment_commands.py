@@ -72,7 +72,9 @@ from typing import Any
 from sqlalchemy import select
 
 from . import service
-from .models import ExperimentOsExperimentCommand
+from .lifecycle import GateVerdict, LifecycleState
+from .models import ExperimentGateResult, ExperimentOsExperimentCommand
+from .read import get_experiment
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +91,10 @@ ENVELOPE_KEYS = frozenset(
 ACTION_ROLES: dict[str, frozenset[str]] = {
     "REGISTER_PACKAGE": frozenset({"RESEARCH_LAB", "TASK_SPECIFIC", "LIVE_OPS"}),
     "REPAIR_LINEAGE": frozenset({"LIVE_OPS", "TASK_SPECIFIC"}),
+    # A retrospective record is bookkeeping an operator attests to, not research and
+    # not a real-money act. Research Lab is deliberately absent: the session that RAN
+    # the experiment should not also be the one that writes down its own verdict.
+    "CLOSE_OUT_RETROSPECTIVE": frozenset({"LIVE_OPS", "TASK_SPECIFIC"}),
     "ARM_CANARY": frozenset({"LIVE_OPS"}),
 }
 
@@ -158,6 +164,18 @@ class ExperimentPackage:
     #: state and touches no gate, and a package that could do both would blur
     #: the one boundary this transport exists to keep.
     repair: Callable[..., dict] | None = None
+    #: A one-shot RETROSPECTIVE CLOSE-OUT: record an experiment that ran to a
+    #: conclusion outside this system, and retire it, in one act. Its own slot for
+    #: the same reason `repair` is — it authors a contract AND records verdicts AND
+    #: moves lifecycle state, which is more than `register` may ever do, so it must
+    #: be a verb an operator names deliberately rather than a mode hiding inside
+    #: one that is documented as arming nothing.
+    #:
+    #: It is bounded where it counts: `service.close_out_retrospective` refuses a
+    #: PASS verdict, refuses any target but RETIRED, and refuses an experiment
+    #: holding deployments. `_close_out_retrospective` below re-checks the outcome
+    #: rather than trusting the package to have used it.
+    close_out: Callable[..., dict] | None = None
 
 
 def _no_contract(session, **kw):
@@ -175,6 +193,7 @@ def _packages() -> dict[str, ExperimentPackage]:
     from . import (
         canary_mmsell10,
         marktangle,
+        marktangle2,
         perp_v1,
         repair_tmmsell_epoch,
         successor_mmsell10_capacity,
@@ -191,6 +210,19 @@ def _packages() -> dict[str, ExperimentPackage]:
                 "TAGLESS probe deployment. Arms nothing, trades nothing."
             ),
             register=marktangle.register,
+        ),
+        "marktangle-2": ExperimentPackage(
+            name="marktangle-2",
+            experiment_key=marktangle2.EXPERIMENT_KEY,
+            description=(
+                "MARKTANGLE-2 conditional-dependence contract: two independent tracks "
+                "(cross-family conditional reversion; crypto threshold persistence), "
+                "each with an independence baseline, three treatments and a mirror "
+                "control, four paper gates pre-registered, and a TAGLESS probe "
+                "deployment. MARKTANGLE-1 is its recorded predecessor and is "
+                "untouched. Arms nothing, trades nothing."
+            ),
+            register=marktangle2.register,
         ),
         "tmmsell-epoch-repair": ExperimentPackage(
             name="tmmsell-epoch-repair",
@@ -273,9 +305,14 @@ def _packages() -> dict[str, ExperimentPackage]:
                 "frozen at PROBE with a per-arm pre-registered bar. Registers no "
                 "strategy tag and no deployment, so nothing becomes admissible to "
                 "the trading write path; it has no `arm` function, so ARM_CANARY "
-                "aimed at it has nothing to call."
+                "aimed at it has nothing to call. CLOSED 2026-09-02 — its "
+                "`close_out` records the experiment as it actually ended (arm A "
+                "FAIL on execution economics, arm B BLOCKED_DATA, arm C HOLD on an "
+                "operator NO-GO with the mechanism untested) and retires it, having "
+                "never been registered while it ran."
             ),
             register=perp_v1.register,
+            close_out=perp_v1.close_out_retrospective,
         ),
         "mmsell10-canary": ExperimentPackage(
             name="mmsell10-canary",
@@ -499,6 +536,83 @@ def _repair_lineage(session, env: _Envelope, now: datetime):
     return {"kind": "repair", "package": package.name, "produced": produced}
 
 
+def _close_out_retrospective(session, env: _Envelope, now: datetime):
+    """Record an experiment that ran and finished OUTSIDE Experiment OS, and retire
+    it in the same act. Creates no deployment, no tag and no real-money capability.
+
+    This exists because the system could not previously say the one thing that was
+    true about PERP-V1: it happened, and it is over. It ran a full probe lifecycle
+    unregistered — correct at the time, since registering redeploys the worker and a
+    probe that cannot trade had no reason to force that — and the documents ended up
+    as the only durable record. That is the fragmentation Experiment OS exists to
+    prevent, and it is general: any experiment that runs outside and finishes hits it.
+
+    Why it is not REGISTER_PACKAGE. That action registers a contract and stops. Used
+    alone here it would leave a closed, failed experiment sitting in production as an
+    ACTIVE PROBE with open, never-evaluated gates — the Control Tower would show a
+    dead experiment as live research, which is worse than the documents-only state it
+    was meant to fix. The close-out is therefore ATOMIC: either the whole retired
+    record exists or nothing does. There is no intermediate state to get stuck in.
+
+    Why it is not a legacy import. `import_legacy_experiment` is for PRE-cutover
+    history and would mark post-cutover work grandfathered — precisely what the
+    Legacy Migration role must never do, by its own rules.
+
+    `approved_by` is required and recorded on the transition: writing down someone
+    else's conclusion, by hand, after the fact, is an operator act and the audit row
+    should name a person rather than a process.
+    """
+    del now
+    package = _package_or_refuse(env.payload.get("package"))
+    if package.close_out is None:
+        raise ExperimentCommandRejected(
+            f"package {package.name!r} declares no retrospective close-out",
+            "NO_CLOSE_OUT",
+        )
+    approved_by = env.payload.get("approved_by")
+    if not isinstance(approved_by, str) or not _ACTOR_RE.match(approved_by or ""):
+        raise ExperimentCommandRejected(
+            "approved_by must name the person attesting this retrospective record",
+            "BAD_APPROVED_BY",
+        )
+    reason = env.payload.get("reason")
+    if not isinstance(reason, str) or not reason.strip():
+        raise ExperimentCommandRejected(
+            "reason is required: it becomes the retirement audit row",
+            "BAD_REASON",
+        )
+
+    produced = package.close_out(
+        session, actor=env.actor, approved_by=approved_by, reason=reason
+    )
+
+    # The transport verifies the OUTCOME rather than trusting the package to have
+    # gone through the guarded service helper. A package is reviewed code, but a
+    # reviewed function can still be edited later, and the two properties that make
+    # this verb safe to exist are cheap to re-check here: nothing it wrote may
+    # authorize anything, and it must have actually closed the experiment.
+    experiment = get_experiment(session, package.experiment_key)
+    if experiment is None or experiment.state != LifecycleState.RETIRED.value:
+        raise ExperimentCommandRejected(
+            f"close-out left {package.experiment_key!r} in state "
+            f"{getattr(experiment, 'state', None)!r} rather than RETIRED",
+            "CLOSE_OUT_NOT_RETIRED",
+        )
+    passes = session.scalars(
+        select(ExperimentGateResult).where(
+            ExperimentGateResult.experiment_id == experiment.id,
+            ExperimentGateResult.verdict == GateVerdict.PASS.value,
+        )
+    ).all()
+    if passes:
+        raise ExperimentCommandRejected(
+            f"close-out recorded {len(passes)} PASS verdict(s) — a retrospective "
+            "record is history and may never authorize a promotion",
+            "CLOSE_OUT_RECORDED_PASS",
+        )
+    return {"kind": "close_out", "package": package.name, "produced": produced}
+
+
 def _arm_canary(session, env: _Envelope, now: datetime):
     """Arm the package's live canary and its twin. EXPANDS REAL-MONEY CAPABILITY.
 
@@ -547,6 +661,14 @@ ACTIONS: dict[str, _Action] = {
         run=_repair_lineage,
         doc="Run a reviewed package's one-shot lineage repair. Registers no "
             "contract, moves no lifecycle state, touches no gate.",
+    ),
+    "CLOSE_OUT_RETROSPECTIVE": _Action(
+        required=frozenset({"package", "approved_by", "reason"}),
+        optional=frozenset(),
+        run=_close_out_retrospective,
+        doc="Record an experiment that ran and finished OUTSIDE this system, and "
+            "retire it, atomically. Records only non-PASS verdicts, creates no "
+            "deployment or tag, and authorizes nothing.",
     ),
     "ARM_CANARY": _Action(
         required=frozenset({"package", "approved_by"}),
@@ -634,35 +756,77 @@ def _claim(session, env: _Envelope, now: datetime) -> int | None:
     return session.execute(stmt).scalar_one_or_none()
 
 
+#: What a package's `register()` may put on its returned dict for the receipt.
+#: Every one of these is an ORM OBJECT, never an identifier: `_result_of` reads
+#: the identifiers off it. A package returning `version=1` instead of the version
+#: is the defect that failed `marktangle-2` three times in production.
+RESULT_OBJECT_KEYS = (
+    "version", "epoch", "gates",
+    "live", "twin", "paper_deployment", "probe",
+    "promotion_gate", "keep_gate",
+)
+
+
 def _result_of(produced: Any) -> dict | None:
     """Bounded, machine-generated metadata about what the command produced.
 
     Identifiers and states only — never the prose that was submitted, and never
     the package's own literals, which are already in the repository.
+
+    **Every field is best-effort, and that is the point.** This runs AFTER the
+    package has done its writes, inside the same transaction, so an exception
+    here does not spoil a receipt — it rolls the whole registration back. That is
+    exactly what happened to `marktangle-2` (`m2-register-3`, 2026-09-02):
+    `register()` returned `version` as an int, this function did `version.version`,
+    and `AttributeError: 'int' object has no attribute 'version'` discarded a
+    registration that had otherwise succeeded. A field that cannot be read is now
+    named in `fields_unreadable` and the command still succeeds: an incomplete
+    receipt is a small loss, a destroyed write is not.
     """
     if not isinstance(produced, dict):
         return None
     inner = produced.get("produced") or {}
     out: dict = {"kind": produced.get("kind"), "package": produced.get("package")}
+    unreadable: list[str] = []
+
+    def field(name: str, getter) -> None:
+        try:
+            value = getter()
+        except Exception:  # noqa: BLE001 — any shape error, and never fatal
+            unreadable.append(name)
+            return
+        if value is not None:
+            out[name] = value
+
     version = inner.get("version")
     if version is not None:
-        out["version"] = version.version
-        out["version_frozen_at"] = str(version.frozen_at)
+        field("version", lambda: version.version)
+        field("version_frozen_at", lambda: str(version.frozen_at))
     epoch = inner.get("epoch")
     if epoch is not None:
-        out["epoch_number"] = epoch.epoch_number
-        out["epoch_started_at"] = str(epoch.started_at)
-        out["impact_class"] = epoch.impact_class
-    for key in ("live", "twin", "paper_deployment"):
+        field("epoch_number", lambda: epoch.epoch_number)
+        field("epoch_started_at", lambda: str(epoch.started_at))
+        field("impact_class", lambda: epoch.impact_class)
+    for key in ("live", "twin", "paper_deployment", "probe"):
         dep = inner.get(key)
         if dep is not None:
-            out[f"{key}_deployment"] = dep.deployment_key
-            out[f"{key}_started_at"] = str(dep.started_at)
+            field(f"{key}_deployment", lambda dep=dep: dep.deployment_key)
+            field(f"{key}_started_at", lambda dep=dep: str(dep.started_at))
     for key in ("promotion_gate", "keep_gate"):
         gate = inner.get(key)
         if gate is not None:
-            out[key] = gate.gate_key
-            out[f"{key}_spec_hash"] = gate.spec_hash[:16] if gate.spec_hash else None
+            field(key, lambda gate=gate: gate.gate_key)
+            field(f"{key}_spec_hash",
+                  lambda gate=gate: gate.spec_hash[:16] if gate.spec_hash else None)
+    # A package with more than the two conventional gates (MARKTANGLE-2 registers
+    # four, two per track) lists them here, so the pre-registration hashes are on
+    # the receipt rather than only in the repository.
+    gates = inner.get("gates")
+    if gates:
+        field("gates", lambda: {g.gate_key: (g.spec_hash[:16] if g.spec_hash else None)
+                                for g in gates})
+    if unreadable:
+        out["fields_unreadable"] = sorted(unreadable)
     return out
 
 

@@ -210,6 +210,7 @@ ALLOWED_SCRIPTS = (
     "evo_backtest_probe",
     "experiment_os_status",
     "marktangle_probe",
+    "marktangle2_probe",
 )
 
 
@@ -232,19 +233,63 @@ _SERVICE_ID_SECRET = {
 }
 
 
+#: The variable `_select_service` WRITES to aim the Railway helpers at a service.
+#: It is also the variable main/live's own service ID ARRIVES in, which makes
+#: reading it back unsafe once anything has been selected.
+_TARGET_VAR = "RAILWAY_SERVICE_ID"
+
+#: The last value we wrote to `_TARGET_VAR`, and the pristine main/live ID as it
+#: was before we ever wrote. See `_main_service_id`.
+_last_written_service_id: str | None = None
+_main_service_id_seen: str | None = None
+
+
+def _main_service_id() -> str:
+    """main/live's service ID, immune to our own writes to the variable it arrives in.
+
+    `main` and `live` map to RAILWAY_SERVICE_ID — the same variable this module
+    overwrites to point the Railway helpers at a service. A single-service request
+    never noticed, because nothing had been selected yet. `doctor` walks several
+    services in one process and did: by the time it reached `main`, the variable
+    held `livedash`'s ID, so `main` silently inherited it and the report showed
+    livedash's deployment and livedash's (empty) variables as main's — a live-armed
+    trading worker rendered as disarmed, with no warning. Observed in production on
+    2026-09-02, run 33630702928.
+
+    So: remember what WE wrote, and treat any other value found in the variable as
+    the real one. That re-reads the environment whenever something outside this
+    module sets it (a fresh process, a test's monkeypatch) instead of trusting a
+    snapshot taken at import.
+    """
+    global _main_service_id_seen
+
+    current = os.environ.get(_TARGET_VAR, "").strip()
+    if current != _last_written_service_id:
+        _main_service_id_seen = current
+    return _main_service_id_seen or ""
+
+
 def _select_service(req: dict) -> str | None:
     """Point RAILWAY_SERVICE_ID at the requested service for this env/logs request
     (railway_env.py and railway_logs.py both read RAILWAY_SERVICE_ID). Returns None on
     success, or an error message if the name is unknown or its ID secret is missing."""
+    global _last_written_service_id
+
+    # Observe the target variable BEFORE this call can overwrite it, on every call
+    # and not only when main is the one asked for: otherwise selecting another
+    # service first destroys main's ID before anything has looked at it.
+    main_id = _main_service_id()
+
     name = (req.get("service") or "main").strip().lower()
     secret = _SERVICE_ID_SECRET.get(name)
     if secret is None:
         return f"unknown service {name!r} (known: {sorted(set(_SERVICE_ID_SECRET))})"
-    svc_id = os.environ.get(secret, "").strip()
+    svc_id = main_id if secret == _TARGET_VAR else os.environ.get(secret, "").strip()
     if not svc_id:
         return (f"service {name!r} is not configured — add the {secret} secret "
                 "(that service's Railway service ID) to the repo's Actions secrets")
-    os.environ["RAILWAY_SERVICE_ID"] = svc_id
+    os.environ[_TARGET_VAR] = svc_id
+    _last_written_service_id = svc_id
     print(f"# target service: {name}")
     return None
 

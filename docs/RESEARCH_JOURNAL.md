@@ -16,6 +16,367 @@ Conventions:
 
 ---
 
+## PERP-V1 2026-09-03 — arm A's convergence is NOT confined to the wide-spread names. BTC and ETH carry it.
+
+Ops `perp2-perticker-1`, code `a115ad91`, 96 h window, 29,421 rows. The close-out
+(2026-09-02) rested on a universe mean: +14.40 bps gross convergence against 8.85 bps of
+spread, dead under a 24 bps tier-0 taker round trip. That mean could not say **where** the
+convergence lived, and the guess in the close-out — that arm A's 2.5-sigma entry selects
+loose books, so the edge and the depth were on different tickers — was **half wrong**.
+
+The entry does select loose books; that part held. But the convergence is present on the
+tight ones too, at roughly half the universe magnitude:
+
+| ticker | n | gross | spread (r/t) | net-exF | ctl-net | delta |
+|---|---|---|---|---|---|---|
+| KXBTCPERP | 50 | 6.75 | **0.52** | 6.23 | -0.97 | 7.20 |
+| KXETHPERP | 45 | 8.57 | **0.77** | 7.80 | +0.43 | 7.37 |
+| KXSOLPERP | 57 | 11.91 | 3.04 | 8.88 | -2.80 | 11.67 |
+| KXXRPPERP | 63 | 12.13 | 3.54 | 8.58 | -2.76 | 11.34 |
+| KXHYPEPERP | 70 | 12.57 | 4.32 | 8.25 | -2.31 | 10.56 |
+| KXZECPERP | 57 | 19.56 | 8.72 | 10.84 | -8.16 | 19.00 |
+| KXAAVEPERP | 58 | 20.70 | 16.45 | 4.25 | -21.40 | 25.65 |
+| KXBNBPERP | 63 | 13.97 | 21.54 | **-7.57** | -22.90 | 15.33 |
+| KXADAPERP | 44 | 16.91 | 15.58 | 1.33 | -16.85 | 18.18 |
+
+bps/trade; 18 tickers, none below the 30-trip THIN mark. Full table in the ops result.
+
+**The control validates the instrument.** Every control net sits within ~1 bps of
+`-spread` (BTC -0.97 vs 0.52; BNB -22.90 vs 21.54; ADA -16.85 vs 15.58), which is exactly
+what a random-direction trade on a symmetric move should earn. The control's mean *gross*
+is therefore near zero, which is why `delta` tracks `gross` down the whole column. Nothing
+about the scoring is manufacturing the signal.
+
+**Gross rises with spread, but does not vanish without it.** The gradient is real —
+AAVE/ZEC/VVV at 19-21 against BTC at 6.75 — so a loose quote does inflate the measured
+convergence. It does not explain it: BTC's 6.75 bps is earned on a book quoting 0.52 bps
+round trip, where there is essentially no spread to mistake for an edge.
+
+### What this changes, and what it does not
+
+**It does not change the recorded result.** perp-v1 is RETIRED, arm A's gate result is
+FAIL, and that FAIL is *correct*: arm A as pre-registered is taker/taker, and 5.54 bps of
+net-ex-funding against a 24 bps round trip is not close. Nothing here re-reads a closed
+gate, and no per-ticker quantity is registered anywhere.
+
+**It moves one hypothetical from "probably dead" to "the only open question".** A
+both-legs-passive variant pays no spread and 4 bps of tier-0 maker fee (2 x 0.020%), so
+its breakeven is the gross column:
+
+| | gross | t0 maker r/t | net ex funding |
+|---|---|---|---|
+| KXBTCPERP | 6.75 | 4.0 | **+2.75** |
+| KXETHPERP | 8.57 | 4.0 | **+4.57** |
+| KXSOLPERP | 11.91 | 4.0 | +7.91 |
+| KXXRPPERP | 12.13 | 4.0 | +8.13 |
+
+Before the split this looked like `14.52 - 4 = +10.5` on names nobody can trade at size.
+It is now +2.75 to +8 on names with $42M-$172M of daily volume. Thinner than the universe
+mean implied, and on real books.
+
+**It also downgrades the funding blocker for this variant specifically.** Mean hold is
+**3.4 minutes** — 0.7% of an 8-hour funding window. Even a 50 bps/window funding rate
+costs ~0.36 bps over that hold. `perp_net_edge_bps_per_trade` is still not producible (its
+definition names a cost with no source, and that has not changed), but the *magnitude* of
+what is missing is an order of magnitude below the edge at these holds. That is an
+argument about scale, not a measurement, and it does not apply to arm B, which holds
+across funding windows by construction.
+
+### Why this is still not a green light
+
+- **Sample.** 44-70 round trips per ticker against a registered `SAMPLE_FLOOR` of 200.
+  Universe sd is 8.38 bps; a 2.75 bps mean on n=50 is not distinguishable from noise at
+  any standard anyone would pre-register.
+- **Coverage.** 24.32% against an 80% floor, at a 187.0 s achieved cadence. **No arm can
+  PASS on this tape whatever its edge**, and lowering the floor after seeing the number
+  would be re-tuning a gate against results.
+- **Fills are entirely unmodelled, and they are the whole question.** Every number above
+  was measured on entries taken *immediately* at a 2.5-sigma excursion. A resting order
+  fills only when someone crosses to it, which is adverse selection by construction — you
+  are filled by the flow pushing the premium further, not by the reversion you are betting
+  on. A passive exit has the mirror problem: the 3.4 min hold was produced by taker exits
+  triggered on a z-crossing, and a resting exit only fills if price trades through it.
+  Nothing in this tape — which carries no trade prints and no depth beyond top-of-book —
+  can answer either.
+
+### Verdict
+
+The premium-reversion mechanism is **real and present on liquid perp books**. Arm A as
+registered is correctly dead. A passive variant is the only surviving thread, it is worth
+roughly +3 to +8 bps/trade before fills, and it cannot be evaluated on this instrument:
+the next thing it needs is a trade-print tape and a fill model, which is a build, not a
+query.
+
+Under `NEW_ONLY` that variant is a **new Version or a new experiment** with a fill model in
+its pre-registration — an operator decision, not something this measurement authorizes.
+Recorded here as evidence for that decision.
+
+---
+
+## MARKTANGLE-2 2026-09-02 — RUN 2: both tracks HOLD. Streak length carries nothing, and the crypto ladder has no price.
+
+First graded run of the MARKTANGLE-2 instrument (ops `m2-run-2`, code `6933763`, 34 min,
+package split into `docs/marktangle2/`, trades fingerprint `51bbdc53…` verified). Verdicts
+**as printed**, not re-read:
+
+```
+A  HOLD  A3 fails in 3 classes and is under-powered in 2; the track is not adequately answered
+B  HOLD  B3 under-powered in every class (4)
+```
+
+Arms surviving on untouched holdout: **none**.
+
+### Track A: a HOLD wrapped around three decisive FAILs
+
+| class | holdout trades | EV/trade | mirror EV | verdict |
+|---|---|---|---|---|
+| BASEBALL_TOTAL | 2040 | −3.17c | −3.98c | FAIL |
+| BASKETBALL_TOTAL | 243 | −5.83c | −1.07c | FAIL |
+| SOCCER_TOTAL | 153 | −9.59c | +1.82c | FAIL |
+| FOOTBALL_TOTAL | 54 | −9.80c | +2.44c | HOLD (under floors) |
+| WEATHER_HIGH_BUCKET | 0 | — | — | HOLD (under floors) |
+
+Nothing marginal about the three FAILs: each fails net P&L, EV/trade, the 3c mirror
+separation, and stays negative after removing both its most profitable family and its top
+1% of trades. Treatment and mirror both lose roughly what it costs to trade (fee + 1c
+slippage), which is what an absent edge looks like when you pay to act on it. In SOCCER the
+mirror is **positive** (+1.82c) while the treatment loses 9.59c — wrong-signed, not merely
+uninformative.
+
+**The coefficient the whole thesis rides on is dead.** `prev_dir × ln(k)` must be negative
+for "reversal rises with run length":
+
+```
+BASEBALL_TOTAL     prev_dir −0.078 (z −2.14)   prev_dir x ln(k)  −0.019 (z −0.49)
+BASKETBALL_TOTAL   prev_dir −0.382 (z −3.59)   prev_dir x ln(k)  +0.466 (z +3.23)
+SOCCER_TOTAL       prev_dir −0.006 (z −0.05)   prev_dir x ln(k)  +0.193 (z +1.62)
+```
+
+Mild ONE-STEP reversion is real in baseball and basketball totals. Streak LENGTH adds
+nothing: the interaction is zero within noise in two classes and significantly the WRONG
+SIGN in the third — persistence strengthening with k. MARKTANGLE-1 asked whether reversal
+probability rises with streak length; on pooled fresh-event classes with family effects,
+the answer where we can measure it is no.
+
+And several arms beat the base rate on Brier while losing money (A2/A3 in BASKETBALL,
+A3 in SOCCER, A2 in FOOTBALL). That is §22's Outcome 3 stated in our own numbers:
+**forecastability is not alpha** — the price already carries what little the model knows.
+
+### Track B: not a thin sample, an absent market
+
+Of 9,980 BTC holdout prediction points, the budget reached ~2,000 and **16** returned a
+two-sided quote at T−60m — under 1%. ETH, SOL and XRP were never reached. Coverage 0%
+against the preregistered 50% floor, so B3 cannot be graded at all.
+
+This answers D1 with evidence: the class pools all 113 BTC rungs, most of them permanently
+in or out of the money, and a rung nobody trades has an empty book an hour before close.
+The 97% persistence MARKTANGLE-1 found is still there in the resolutions (B1/B2 reach 98.3%
+holdout accuracy, Brier 0.015 against the base rate's 0.045) — it simply cannot be
+transacted at the strikes where it exists. Predictable, unpriceable.
+
+A bigger fetch budget does not rescue this: a <1% quote rate cannot reach 50% coverage.
+
+### What this does NOT authorize
+
+Narrowing the crypto class to near-the-money rungs, or re-reading Track A's bar, would be
+post-hoc re-scoping after the holdout was opened (§11, and §19's general kill). If a class
+definition is wrong, the remedy is a new Version — not an edit to a frozen one.
+
+---
+
+## MARKTANGLE-2 2026-09-02 — REGISTRATION LANDED (4th attempt), and MARKTANGLE-1 was never registered at all
+
+`marktangle-2-conditional-dependence` is now in production Experiment OS: **PROBE**, v1 frozen
+16:21:23Z, epoch 1 open, deployment `marktangle2-probe-1` started and TAGLESS, four gates
+recorded with pre-registration spec hashes. Receipt `m2-register-4` SUCCEEDED. No verdict —
+nothing has been graded; the probe re-run is still in flight.
+
+**It took four envelopes and exposed two defects in the sanctioned write path**, neither
+reachable from any test, both now fixed with guards:
+
+1. `TypeError: register() got an unexpected keyword argument 'promotion_sample_floor'`
+   (`m2-register-1`, `-2`). The transport always passes that keyword; only `perp_v1` accepted
+   it.
+2. `AttributeError: 'int' object has no attribute 'version'` (`m2-register-3`). The receipt
+   builder reads identifiers off ORM objects the package returns; the MARKTANGLE packages
+   returned identifiers. It runs inside the command's transaction *after* the writes, so a
+   **receipt-formatting error rolled back a registration that had succeeded**. It is now
+   best-effort per field.
+
+Each failure rolled back cleanly — verified empty before each retry.
+
+**THE FINDING THAT MATTERS MORE.** MARKTANGLE-1 (`marktangle-conditional-reversion`) **does
+not exist in this database.** A direct read: *no experiment 'marktangle-conditional-reversion'*.
+Its thesis document calls it "v1 frozen at registration · stage PROBE", this journal recorded
+"REGISTERED at PROBE" on 2026-08-29 and "PAUSED at PROBE" on 2026-08-30, and WS-011 says the
+same. All of it describes an intention. The same `promotion_sample_floor` defect would have
+killed its envelope, and an experiment that was never created cannot have been paused.
+
+The science is untouched: the eight probe runs happened, the crypto-persistence finding
+(97.5% repeat on a 49.4% coin) is real, and the HOLD is the honest reading. What is missing is
+its record in the system that is supposed to be canonical — so the Control Tower has never
+seen MARKTANGLE-1, and every statement of its "standing" has come from Markdown. Corrections
+are now in `docs/MARKTANGLE_THESIS.md` and WS-011.
+
+**Not repaired here, deliberately.** Registering it now would create it at PROBE while the
+operator's recorded decision is PAUSED; that is a lifecycle move and an operator's call.
+
+---
+
+## MARKTANGLE-2 2026-09-02 — REGISTERED at PROBE. Conditional dependence, both directions, against the price.
+
+New experiment `marktangle-2-conditional-dependence` (v1 frozen, stage PROBE, ten arms, four
+paper gates pre-registered, tagless probe deployment), predecessor MARKTANGLE-1 which stays
+PAUSED at HOLD and untouched. Spec: `docs/MARKTANGLE_2_SPEC.md` (Part I = the operator's
+preregistration as received; Part II = every implementation choice frozen before data).
+Instrument: `scripts/marktangle2_probe.py`. **No verdict yet — nothing has been run.** This
+entry records the registration and the reasoning, not a result.
+
+What changed from MARKTANGLE-1, and why it is a new experiment rather than a revision:
+
+- **The question.** Not "is a reversal due after a streak" but "when a recurring market has
+  measurable serial dependence in EITHER direction, does the executable price already carry
+  it?" Outcome 3 — predictable but efficiently priced — is a first-class FAIL, not a
+  disappointment to optimize past.
+- **Two tracks that cannot rescue each other.** Track A pools thin fresh-event families
+  (sports totals within a sport, weather buckets) with ridge family effects in a hierarchical
+  logistic; crypto is excluded by construction. Track B treats daily crypto thresholds as a
+  state-duration process on a slow underlying and adds the one structural variable that
+  matters — signed distance to the strike in trailing-vol units, from the last COMPLETED
+  Coinbase hourly candle before T-60m.
+- **The comparators are the science.** Every treatment must beat an independence baseline on
+  both calibration (Brier) and money, and separate from its mirror (same entries, opposite
+  side, same book) by ≥ 3c/trade. The primary arm per track (A3, B3) is fixed before data;
+  the others are read.
+- **Floors are bigger because pooling is allowed:** 500 train points, 100 holdout trades,
+  50% price coverage, or HOLD.
+
+Instrument facts that shaped it: the sandbox cannot reach Kalshi or Coinbase and the ops
+channel keeps stdout only, so the probe prints the entire package (five documents + trades
+CSV + fingerprints) and `scripts/marktangle2_package.py` splits a result file into
+`docs/marktangle2/`. Stdlib only; the logistic fits are a deterministic Newton solver, and
+two identical runs give identical fingerprints (tested).
+
+Next: merge, `REGISTER_PACKAGE marktangle-2`, run `m2-run-1`, split, record the printed
+verdicts here. A PASS authorizes a prospective paper/twin design and nothing live.
+
+---
+
+## PERP-V1 CLOSED 2026-09-02 — the fee schedule ends it. Arm A FAIL, arm C NO-GO, arm B BLOCKED_DATA.
+
+Two facts arrived after the Probe 2 run and between them they close the experiment.
+
+### 1. The fee schedule (WS-010 D7, closed)
+
+Operator read Kalshi's **Launch Fee Schedule** for Crypto Perpetuals. Tier is 30-day
+trailing **perps + prediction** notional, maker + taker:
+
+```
+tier  30D volume        taker     maker
+0     < $100k           0.120%    0.020%
+1     >= $100k          0.100%    0.015%
+2     >= $1M            0.060%    0.012%
+3     >= $10M           0.020%    0.000%
+4     >= $100M          0.015%    0.000%
+5     >= $1B            0.010%    0.000%
+```
+
+We are tier 0. **Taker is 12 bps a side, 24 bps a round trip.** Arm A's measured gross
+convergence is 14.52 bps and it paid 8.88 bps of spread. The four execution combinations:
+
+| entry / exit | spread | fees | net |
+|---|---|---|---|
+| taker / taker | 8.88 | 24 | **−18.4 bps** |
+| maker / taker | 4.44 | 14 | **−3.9 bps** |
+| taker / maker | 4.44 | 14 | **−3.9 bps** |
+| maker / maker | 0 | 4 | **+10.5 bps** |
+
+**Only both-legs-passive is positive**, and it is the combination least likely to fill:
+
+* **The entry is adversely selected by construction.** A resting order at an extreme
+  premium fills only when someone crosses to you — i.e. when the premium widens
+  *further*. The taker version guaranteed entry at the extreme; the maker version
+  selectively fills on the moves that went against it. Fill selection correlated with
+  outcome is exactly what makes an optimistic fill model manufacture an edge, and this
+  repository has been burned by that twice (mmsell6, mmsell11).
+* **A passive exit breaks the mechanism.** The 14.52 gross came from exiting *when the
+  premium reverted*. Rest the exit and you do not reliably get out. Mean hold was 5.0
+  minutes, so both fills must land within minutes.
+
+The general finding is larger than arm A: **at tier 0 the round-trip fee is 24 bps against
+a measured 8.88 bps spread — 2.7x the entire bid-ask.** Any mechanism whose edge is
+single-digit bps is structurally dead here. Tier 3 changes it (maker 0.000%, taker 2 bps)
+but needs $10M/30d, which is unreachable without first trading profitably.
+
+### 2. The book is deep, and arm A was not trading in it (WS-010 D8)
+
+`{"type":"db","id":"perp-depth-1"}` over the 72h tape, per ticker:
+
+```
+ticker       avg_vol24h   avg_oi_usd   avg_spread_bps
+KXETHPERP    172,297,640   3,182,328        0.7
+KXBTCPERP     42,660,536  11,657,880        0.4
+KXXRPPERP     11,029,743   1,674,804        3.3
+KXADAPERP      4,051,902      16,881       33.2
+KXBNBPERP         45,601       7,243       21.4
+KXAAVEPERP       294,511      41,727       16.2
+KXDOTPERP              0           0        (no quote)
+```
+
+This was run expecting thin books, which would have made the maker question moot on
+capacity grounds. **It found the opposite.** ETH turns over $172M/24h at a 0.7 bps spread;
+BTC $42.7M at 0.4 bps. That is a real market.
+
+The load-bearing observation is the mismatch: **arm A paid 4.44 bps per side, and BTC/ETH
+quote 0.4-0.7 bps *total*.** Arm A's entries therefore came overwhelmingly from the
+wide-spread illiquid names, not the liquid ones — which is what you would expect, since an
+extreme premium z-score is largely a symptom of illiquidity. Any maker variant pointed at
+BTC/ETH may find very few entries, and that is now a known unknown rather than an
+assumption.
+
+It does not rescue the taker verdict, which holds either way: on BTC/ETH the arithmetic is
+14.52 − 0.5 − 24 = **−10 bps**; on the illiquid names the spread alone is 15-33 bps.
+
+### Verdicts
+
+* **Arm A `perprevert` — FAIL on execution economics.** The mechanism is real: 913 scored
+  round trips, +5.63 bps/trade before fees, against a matched random-direction control at
+  −10.13 (delta +15.76). It is killed by the fee, not by the absence of an effect. This is
+  the honest outcome the thesis anticipated in §7 ("convergence that is real but smaller
+  than the round trip") and it is a **cost** finding, not a signal finding.
+* **Arm B `perpcarry` — BLOCKED_DATA**, unchanged. No funding source exists on this
+  surface (D4).
+* **Arm C `perplead` — NO-GO (operator decision, 2026-09-02).** Clean null at 300 s
+  (IC ~= 0.005 on ~97k pairs; overlay −0.02 c/trade vs the Theta baseline). Its fast
+  horizons (5/10/30/60 s) remain **untested, not falsified** — and testing them is a
+  bigger build than it appears: the binding constraint is not the perp collector but
+  `theta_interval_minutes = 5.0`, the Kalshi ladder snapshot cadence. Arm C measures the
+  forward move of the *event contract*, so both sides must be at seconds. Kalshi does
+  expose a perps WebSocket (`ticker` / `orderbook_delta` / `trade`, auth required on the
+  handshake even for public channels), and this repository has no WebSocket code at all.
+  The operator declined the build. Recorded as untested-at-speed.
+
+### What is NOT recorded, and why
+
+**`perp-v1` was never registered in production.** The whole probe lifecycle ran, produced
+results and reached a verdict without an Experiment OS record, because a `REGISTER_PACKAGE`
+envelope goes through the `env` channel and redeploys the worker while the mmsell10 canary
+holds real money. Under NEW_ONLY that was the *correct* state for a probe — an unregistered
+tag cannot trade — but it means there is no XOS gate result, no recorded verdict and no
+lifecycle transition for any of this. **The durable record is these documents.** Whether
+that is acceptable, or whether a retrospective registration is wanted so the graveyard has
+a structured entry, is an operator/Control Tower question and is deliberately left open.
+
+### What would reopen it
+
+Not more tape and not a faster collector. Either the fee tier changes (tier 3 makes maker
+free and taker 2 bps), or a maker variant is registered as a **new Version** with a
+pre-registered, trade-tape-backed fill model — which needs a trade-print tape the collector
+does not gather (it stores cumulative `volume`/`volume_24h` and aggregate side depth only,
+at 191.6 s; no prints, no queue position). Both are decisions, not experiments.
+
+---
+
 ## PERP-V1 PROBE 2 FIRST RUN 2026-09-02 — arm A is the only live horse, and no gate can be read
 
 `scripts/perp_arm_scores.py --hours 72`, ops channel, id `perp2-d6-3`, over the tape the

@@ -126,7 +126,7 @@ To run a request:
    specs, thresholds and tags are literals in the repository that someone read in
    a pull request — otherwise a scientific contract could be written in an
    environment variable the afternoon the results arrived, and pre-registration
-   would mean nothing. Three actions:
+   would mean nothing. Four actions:
 
    ```jsonc
    // register the contract — arms nothing, places nothing
@@ -136,7 +136,36 @@ To run a request:
    {"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"tmmsell-repair-1\",\"action\":\"REPAIR_LINEAGE\",\"actor\":\"claude-code\",\"actor_role\":\"TASK_SPECIFIC\",\"payload\":{\"package\":\"tmmsell-epoch-repair\",\"reason\":\"XOS-000011\"},\"schema_version\":1}"}}
    // arm the canary — EXPANDS REAL-MONEY CAPABILITY; Live Ops only
    {"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"mm10-arm-1\",\"action\":\"ARM_CANARY\",\"actor\":\"claude-code\",\"actor_role\":\"LIVE_OPS\",\"payload\":{\"package\":\"mmsell10-canary\",\"approved_by\":\"<operator>\"},\"schema_version\":1}"}}
+   // record an experiment that ran and finished OUTSIDE the system, and retire it
+   {"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"perpv1-closeout-1\",\"action\":\"CLOSE_OUT_RETROSPECTIVE\",\"actor\":\"claude-code\",\"actor_role\":\"LIVE_OPS\",\"payload\":{\"package\":\"perp-v1\",\"approved_by\":\"<operator>\",\"reason\":\"<why it is over>\"},\"schema_version\":1}"}}
    ```
+
+   `CLOSE_OUT_RETROSPECTIVE` exists because PERP-V1 ran a full probe lifecycle
+   **unregistered** — correct at the time, since registering redeploys the worker
+   and a probe that cannot trade had no reason to force that — and the system was
+   then unable to record the one true thing: it happened, and it is over. Its
+   documents were the only durable record, which is the fragmentation Experiment OS
+   exists to prevent. The gap is general: any experiment that runs outside and
+   finishes hits it.
+
+   It is **atomic on purpose.** `REGISTER_PACKAGE` alone would leave a closed,
+   failed experiment sitting in production as an ACTIVE PROBE with open,
+   never-evaluated gates — the Control Tower would show a dead experiment as live
+   research, which is worse than the documents-only state. Either the whole retired
+   record exists or nothing does.
+
+   It **authorizes nothing, structurally**: `service.close_out_retrospective`
+   refuses a PASS verdict outright (a verdict computed by hand, outside the system,
+   after the fact, may never be what permits a promotion), refuses any target but
+   RETIRED, and refuses an experiment holding deployments — that is a MIGRATION with
+   evidence to reconstruct, not an outside-the-system record. The transport re-checks
+   both properties after the package returns rather than trusting it. Results are
+   stamped `computed_by=retrospective:<actor>` so they never read as the evaluator's.
+
+   It is **not** `import_legacy_experiment`: that is for PRE-cutover history and
+   would mark post-cutover work grandfathered, which the Legacy Migration role is
+   told never to do. And Research Lab may not author it — the session that RAN an
+   experiment should not be the one that writes down its own verdict.
 
    `ARM_CANARY` still **places no order**: `LIVE_STRATEGIES` is a separate switch
    this transport cannot reach, and every structural refusal in `arm_live_canary`
@@ -208,6 +237,13 @@ To run a request:
    — never in this public repo). A service whose secret is unset answers with a
    message naming the secret to add, not an obscure lookup failure. `db` requests are
    **service-agnostic** (all services share one Postgres via `DATABASE_URL_RO`).
+
+   Note that main's secret, `RAILWAY_SERVICE_ID`, is *also* the variable the runner
+   writes to aim the Railway helpers at a service. A request that visits several
+   services in one process (`doctor`) therefore cannot read main's ID back out of it
+   after selecting something else; `ops_runner._main_service_id` remembers the
+   pristine value instead. Anything that adds a multi-service reader must go through
+   `_select_service` rather than setting `RAILWAY_SERVICE_ID` itself.
 
    **The workflow file is loaded from the `ops` branch.** Adding a service means
    adding its `env:` passthrough to `.github/workflows/ops-runner.yml` on `ops` as

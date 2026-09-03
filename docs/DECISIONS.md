@@ -734,7 +734,7 @@ read when the operator chooses to read it.
 
 Fleet size is held at 6 (`EVO_MAX_ACTIVE_AGENTS=6`) while the system is still under test.
 That is an operator ruling of the same date and is recorded in
-[WS-013](workstreams/WS-013-evo-fleet-health-and-xos-bridge.md), not here — it is a
+[WS-014](workstreams/WS-014-evo-fleet-health-and-xos-bridge.md), not here — it is a
 parameter, not an architecture.
 
 *Revisit if:* the operator finds themselves reading the evo ledger regularly enough that

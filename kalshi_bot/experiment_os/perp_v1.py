@@ -430,10 +430,17 @@ def register(
             "score a fixed notional per entry; arm B scores dollar-neutral legs "
             "rescaled to beta-neutral. No capital is committed at this stage and no "
             "leverage is modelled — leverage and liquidation are platform semantics "
-            "this repository does not yet have"
+            "this repository does not yet have. Execution style is recorded as "
+            "`taker` because the cost model applies crossing costs; the probe "
+            "places no orders at all, and a resting fill is never assumed"
         ),
-        execution_style="probe instrument (no orders); cost model applies taker "
-                        "crossing costs unless a resting fill is demonstrable",
+        # `taker`, not prose: the column is String(16) and its vocabulary is
+        # maker|taker|mixed. The qualification this used to carry inline — that the
+        # probe places no orders and only MODELS taker crossing costs — belongs in
+        # `sizing_rule` above, which has room for it. Postgres refused the sentence
+        # (DataError, varchar(16)) on the first production run; SQLite had accepted
+        # it in every test, because SQLite does not enforce VARCHAR lengths.
+        execution_style="taker",
         independent_variable=(
             "which perp-native mechanism generates the entry: premium reversion, "
             "cross-sectional funding carry, or perp microstructure. Everything else "
@@ -571,3 +578,119 @@ def register(
         "transition": transition,
         "arms": [a["arm_key"] for a in ARMS],
     }
+
+
+# ---------------------------------------------------------------------------
+# Retrospective close-out
+# ---------------------------------------------------------------------------
+
+#: The three arm verdicts and the reasoning behind each, frozen here as reviewed
+#: code rather than passed in an envelope. An envelope that could choose verdicts
+#: would make the transport, not the evidence, the thing that decides what happened.
+#:
+#: `FAIL` rather than a bespoke "FAIL_EXECUTION_ECONOMICS": `GateVerdict` has no such
+#: value, and adding one to a shared enum to describe one experiment's cause of death
+#: is a platform change that no evidence calls for. The cause lives in the
+#: explanation, where prose belongs, and the enum keeps meaning what it meant.
+CLOSE_OUT_VERDICTS: tuple[tuple[str, str, str], ...] = (
+    (
+        f"probe_to_paper_{ARM_REVERT}",
+        "FAIL",
+        "FAIL on execution economics, not on signal. 913 scored round trips over 72h: "
+        "+14.52 bps gross convergence, 8.88 bps measured spread, beating a matched "
+        "random-direction control by +15.76 bps — the mechanism is real. It dies on "
+        "fee: Kalshi's tier-0 perp taker fee is 0.120%/side, a 24 bps round trip "
+        "against an 8.88 bps bid-ask, so the toll is 2.7x the entire spread. Every "
+        "execution combination is negative except both-legs-passive, which is the one "
+        "least likely to fill (a resting order at an extreme premium fills only when "
+        "the premium widens further). Thesis §7 pre-registered this outcome.",
+    ),
+    (
+        f"probe_to_paper_{ARM_CARRY}",
+        "BLOCKED_DATA",
+        "No funding source exists on this surface. /margin/funding_history returns an "
+        "empty list unscoped, scoped to KXAAVEPERP, and scoped twice to KXBTCPERP "
+        "(largest open interest) over a 7-day window; no funding field rides on the "
+        "market row across 24 keys on 252 live snapshots. This arm ranks its whole "
+        "universe on funding, so it has no input. Not re-scoped to a premium proxy — "
+        "that would be a different hypothesis wearing this arm's registered gate.",
+    ),
+    (
+        f"probe_to_paper_{ARM_LEAD}",
+        "HOLD",
+        "HOLD, not FAIL: operator NO-GO on 2026-09-02 with the mechanism UNTESTED at "
+        "the horizon it claimed. Clean null at 300s (IC ~0.005 on ~97k pairs; overlay "
+        "-0.02 c/trade vs the Theta baseline), but the registered 5/10/30/60s horizons "
+        "are unobservable and were refused rather than reported as nulls. The binding "
+        "constraint was theta_interval_minutes=5.0 — the event-contract ladder cadence, "
+        "not the perp collector — since this arm scores the ladder's forward move. A "
+        "FAIL would claim a falsification the evidence does not support.",
+    ),
+    (
+        "perp_probe_stop",
+        "HOLD",
+        "The stop gate's fail clauses read perp_net_edge_bps_per_trade, which was NOT "
+        "PRODUCIBLE (it is defined net of funding, and funding is unreachable). Its "
+        "hold_if on perp_data_coverage_pct is readable and was failing: 29.61% against "
+        "a registered 80% floor, at an achieved 191.6s cadence versus 60s intended. "
+        "The collector never erred — it shares the trading worker's scan loop.",
+    ),
+)
+
+
+def close_out_retrospective(
+    session, *, actor: str, approved_by: str, reason: str,
+    now: datetime | None = None,
+) -> dict:
+    """Record PERP-V1 as the closed, failed experiment it is, and retire it — in one
+    act, having never been registered while it ran.
+
+    Registering it while it ran would have meant redeploying the trading worker for a
+    probe that could not trade, so it never was, and the documents became its only
+    durable record. This writes that record down where it belongs, late and visibly
+    late: every row is stamped at close-out time, so the lateness is legible in the
+    timestamps rather than disguised.
+
+    It reuses `register()` for the contract, so the arms and gates are the ones that
+    were actually pre-registered rather than a retyped copy that could drift from
+    `docs/PERP_V1_THESIS.md`. Then it records the three arm verdicts plus the stop
+    gate's, and retires.
+
+    Authorizes nothing, and cannot: `service.close_out_retrospective` refuses a PASS
+    verdict outright, refuses any target but RETIRED, and refuses an experiment
+    holding deployments. This one holds none — no `perp*` strategy tag was ever
+    created, which is why the experiment could sit unregistered under NEW_ONLY
+    without any risk of it trading.
+    """
+    at = now or _now()
+    produced = register(session, actor=actor, now=at)
+    gates_by_key = {g.gate_key: g for g in produced["gates"]}
+
+    missing = [k for k, _, _ in CLOSE_OUT_VERDICTS if k not in gates_by_key]
+    if missing:
+        raise service.ExperimentOsError(
+            f"close-out names gates the registered contract does not have: {missing} "
+            "— the verdict table and the gate specs have drifted apart"
+        )
+    unjudged = sorted(set(gates_by_key) - {k for k, _, _ in CLOSE_OUT_VERDICTS})
+    if unjudged:
+        raise service.ExperimentOsError(
+            f"close-out leaves gates without a verdict: {unjudged} — a retired "
+            "experiment with a silent gate is the fragmentation this is meant to end"
+        )
+
+    closed = service.close_out_retrospective(
+        session,
+        produced["experiment"],
+        verdicts=[
+            (gates_by_key[key], verdict, explanation)
+            for key, verdict, explanation in CLOSE_OUT_VERDICTS
+        ],
+        actor=actor,
+        approved_by=approved_by,
+        reason=reason,
+        evidence_ref=THESIS_DOC,
+        epoch=produced["epoch"],
+        now=at,
+    )
+    return {**closed, "arms": produced["arms"]}

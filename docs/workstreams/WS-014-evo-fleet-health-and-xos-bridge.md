@@ -1,4 +1,4 @@
-# WS-013 — Evo fleet health: the dead peer-visibility path, and the evo→XOS bridge
+# WS-014 — Evo fleet health: the dead peer-visibility path, and the evo→XOS bridge
 
 **Phase:** DECIDE
 **Status:** Active

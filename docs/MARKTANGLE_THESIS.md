@@ -4,6 +4,17 @@
 registration · stage **PROBE** · Experiment OS is the source of truth for its
 standing, arms, gates and verdicts. Nothing in this document is a status.
 
+> ⚠ **CORRECTION 2026-09-02: this experiment is NOT in production Experiment OS.**
+> A direct read returns *no experiment 'marktangle-conditional-reversion'*. The line
+> above, the journal's "REGISTERED at PROBE" (2026-08-29) and "PAUSED at PROBE"
+> (2026-08-30), and WS-011 all record an intended registration that never landed:
+> the `REGISTER_PACKAGE` envelope would have failed with the `TypeError` on
+> `promotion_sample_floor` that WS-013 diagnosed and fixed on 2026-09-02, and an
+> experiment that was never created cannot have been paused. **Everything else in
+> this document stands** — the runs happened, the findings are real, and the HOLD is
+> the honest reading of them. What is missing is the Experiment OS record of it.
+> Re-registering (and then pausing) is an operator decision, not a documentation fix.
+
 **Package:** `kalshi_bot/experiment_os/marktangle.py`
 **Probe:** `scripts/marktangle_probe.py` (ops channel: `{"type":"script","name":"marktangle_probe"}`)
 **Workstream:** `docs/workstreams/WS-011-marktangle-conditional-reversion.md`
