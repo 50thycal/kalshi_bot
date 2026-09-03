@@ -1,4 +1,0 @@
-# ops request [READ]
-# type=noop  id=idle-livedash-investigation
-# code cedeb1be81193e83a325623b480d6737a5147797 · started 2026-09-03T16:13:38Z
-(noop — nothing to do)
