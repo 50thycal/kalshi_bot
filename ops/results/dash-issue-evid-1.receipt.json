@@ -4,14 +4,14 @@
   "code_sha": "cedeb1be81193e83a325623b480d6737a5147797",
   "code_source": "default-branch",
   "exit_status": 0,
-  "finished_at": "2026-09-03T16:07:45Z",
-  "id": "dash-issue-open-1",
+  "finished_at": "2026-09-03T16:11:10Z",
+  "id": "dash-issue-evid-1",
   "mutation": {
     "changes": {
       "EXPERIMENT_OS_ISSUE_COMMAND": {
-        "after": "<redacted 2063 bytes, sha256:d7b97eb5f912ba02>",
-        "before": "<redacted 2430 bytes, sha256:6518b40598540003>",
-        "requested": "<redacted 2063 bytes, sha256:d7b97eb5f912ba02>"
+        "after": "<redacted 1584 bytes, sha256:0a1ef2d94bf89979>",
+        "before": "<redacted 2063 bytes, sha256:d7b97eb5f912ba02>",
+        "requested": "<redacted 1584 bytes, sha256:0a1ef2d94bf89979>"
       }
     },
     "redeploy": "TRIGGERED",
@@ -29,11 +29,11 @@
   },
   "provenance": {},
   "publication": "COMMITTED",
-  "receipt_file": "ops/results/dash-issue-open-1.receipt.json",
-  "result_file": "ops/results/dash-issue-open-1.txt",
-  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33776719868",
+  "receipt_file": "ops/results/dash-issue-evid-1.receipt.json",
+  "result_file": "ops/results/dash-issue-evid-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33777050159",
   "service": "main",
-  "started_at": "2026-09-03T16:07:38Z",
+  "started_at": "2026-09-03T16:10:59Z",
   "targets": [
     "EXPERIMENT_OS_ISSUE_COMMAND"
   ],

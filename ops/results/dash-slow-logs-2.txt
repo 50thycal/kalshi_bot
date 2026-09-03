@@ -1,7 +1,0 @@
-# latest deployment 22e24d9c-1652-4705-a25a-a8116e2e2e27 (status=SUCCESS, created=2026-09-03T15:53:11.237Z)
-# ops request [READ]
-# type=logs  service=livedash  id=dash-slow-logs-2
-# code cedeb1be81193e83a325623b480d6737a5147797 · started 2026-09-03T15:56:33Z
-# target service: livedash
-2026-09-03T15:54:33.168438239Z INFO  Starting Container
-2026-09-03T15:54:33.506298623Z INFO  livedash listening on http://0.0.0.0:8080
