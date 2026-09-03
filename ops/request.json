@@ -1,1 +1,1 @@
-{"type":"script","name":"livedash_probe","args":["--base","https://kalshibot-production-cb6b.up.railway.app"],"id":"livedash-probe-1"}
+{"type":"env","action":"get","id":"mkt-close-envcheck-1","actor":"claude-code","purpose":"read the standing EXPERIMENT_OS_EXPERIMENT_COMMAND before overwriting it","workstream":"WS-013"}
