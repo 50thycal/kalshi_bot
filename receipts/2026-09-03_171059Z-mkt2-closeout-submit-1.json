@@ -1,0 +1,45 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "a2934e532c9bd5de0a1f451bd4f209e47eb86b06",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-03T17:10:57Z",
+  "id": "mkt2-closeout-submit-1",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "after": "<redacted 451 bytes, sha256:5493b0cd527a8cf4>",
+        "before": "<redacted 457 bytes, sha256:21d9683e82f98554>",
+        "requested": "<redacted 451 bytes, sha256:5493b0cd527a8cf4>"
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {
+    "actor": "claude-code",
+    "purpose": "close out MARKTANGLE-2, both tracks (operator-directed, see WS-013)",
+    "workstream": "WS-013"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/mkt2-closeout-submit-1.receipt.json",
+  "result_file": "ops/results/mkt2-closeout-submit-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33783000907",
+  "service": "main",
+  "started_at": "2026-09-03T17:10:54Z",
+  "targets": [
+    "EXPERIMENT_OS_EXPERIMENT_COMMAND"
+  ],
+  "type": "env"
+}
