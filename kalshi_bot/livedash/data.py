@@ -17,6 +17,9 @@ produced it, so a displayed number can be traced back to its records.
 
 from __future__ import annotations
 
+import logging
+import time
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 
 from . import compare, legs, market_meta, pairs, series
@@ -40,6 +43,45 @@ DEFAULT_WINDOW_HOURS = 72
 MARKS_FULL = "full"
 MARKS_LATEST = "latest"
 MARKS_NONE = "none"
+
+logger = logging.getLogger("kalshi_bot.livedash")
+
+
+class Stages:
+    """Wall clock per stage of one payload build, logged as a single line.
+
+    The server can say a route took thirty seconds; it cannot say which of the
+    eight things that route does spent them. Reading the code does not settle it
+    either — the run page and the P&L series share almost all of their loading,
+    and the expensive half is not the half either one looks like it should be.
+
+    Cost is `perf_counter` around work that is already doing database round trips,
+    so it is free at this resolution, and it is emitted at INFO on every build
+    rather than behind a flag: a slow page that has to be reproduced under a debug
+    setting before it can be measured is a slow page nobody measures."""
+
+    def __init__(self, label: str) -> None:
+        self.label = label
+        self.timings: dict[str, float] = {}
+        self._started = time.perf_counter()
+
+    @contextmanager
+    def stage(self, name: str):
+        began = time.perf_counter()
+        try:
+            yield
+        finally:
+            self.timings[name] = self.timings.get(name, 0.0) + (
+                time.perf_counter() - began) * 1000
+
+    def total_ms(self) -> float:
+        return (time.perf_counter() - self._started) * 1000
+
+    def log(self) -> None:
+        parts = " ".join(f"{name}={ms:.0f}ms" for name, ms in
+                         sorted(self.timings.items(), key=lambda kv: -kv[1]))
+        logger.info("livedash stages %s total=%.0fms %s",
+                    self.label, self.total_ms(), parts)
 
 
 def _now(now: datetime | None = None) -> datetime:
@@ -83,7 +125,8 @@ def _market_tags(session, *ticker_groups) -> dict[str, dict]:
     return {t: tag.to_dict() for t, tag in market_meta.classify_many(session, tickers).items()}
 
 
-def load_run(session, pair, *, now: datetime | None = None, marks: str = MARKS_LATEST):
+def load_run(session, pair, *, now: datetime | None = None, marks: str = MARKS_LATEST,
+             stages: Stages | None = None):
     """Both legs plus the shared mark index — the common prelude to every route.
 
     `marks` is how much of the tape to read (see MARKS_*). It never changes what a
@@ -94,9 +137,13 @@ def load_run(session, pair, *, now: datetime | None = None, marks: str = MARKS_L
     """
     now = _now(now)
     since, until = pair.window(now)
-    index = _marks(session, pair, since, until, marks)
-    live = legs.live_leg(session, pair.live_tag, since, index)
-    paper = legs.paper_leg(session, pair.twin_tag, since, index)
+    stages = stages or Stages("load_run")
+    with stages.stage(f"marks[{marks}]"):
+        index = _marks(session, pair, since, until, marks)
+    with stages.stage("live_leg"):
+        live = legs.live_leg(session, pair.live_tag, since, index)
+    with stages.stage("paper_leg"):
+        paper = legs.paper_leg(session, pair.twin_tag, since, index)
     return live, paper, index
 
 
@@ -135,9 +182,12 @@ def build_runs(
     at all until the last retired run from months ago has been rebuilt.
     """
     now = _now(now)
-    all_pairs = pairs.list_pairs(session, limit=limit)
-    rows = [_run_row(session, pair, now) if summaries else pair.to_dict()
-            for pair in all_pairs]
+    stages = Stages(f"build_runs summaries={summaries}")
+    with stages.stage("list_pairs"):
+        all_pairs = pairs.list_pairs(session, limit=limit)
+    with stages.stage(f"rows[{len(all_pairs)}]"):
+        rows = [_run_row(session, pair, now) if summaries else pair.to_dict()
+                for pair in all_pairs]
     default = pairs.default_from(all_pairs)
     payload = {
         "generated_at": now.isoformat(),
@@ -150,7 +200,9 @@ def build_runs(
         # it against, so it is never hidden — but finding them scans every live order,
         # which belongs with the rest of the heavy read rather than in front of the
         # selector.
-        payload["unpaired_live_strategies"] = pairs.unpaired_live_strategies(session)
+        with stages.stage("unpaired"):
+            payload["unpaired_live_strategies"] = pairs.unpaired_live_strategies(session)
+    stages.log()
     return payload
 
 
@@ -185,19 +237,42 @@ def build_run(
     session, twin_tag: str, *, now: datetime | None = None, incumbent: bool = False,
 ) -> dict | None:
     now = _now(now)
-    pair = pairs.get_pair(session, twin_tag)
+    stages = Stages(f"build_run {twin_tag}")
+    with stages.stage("get_pair"):
+        pair = pairs.get_pair(session, twin_tag)
     if pair is None:
         return None
-    live, paper, marks = load_run(session, pair, now=now)
+    live, paper, marks = load_run(session, pair, now=now, stages=stages)
     thresholds = compare.Thresholds.from_env()
     since, until = pair.window(now)
-    divergence = compare.decompose(live, paper, thresholds)
-    discrepancies = compare.discrepancies(live, paper, thresholds)
+    with stages.stage("decompose"):
+        divergence = compare.decompose(live, paper, thresholds)
+    with stages.stage("discrepancies"):
+        discrepancies = compare.discrepancies(live, paper, thresholds)
+    with stages.stage("status"):
+        status = pairs.pair_status(session, pair, now=now)
+    with stages.stage("incumbent"):
+        incumbent_paper = (
+            legs.paper_leg(session, pair.live_tag, None, marks).summary()
+            if incumbent else None
+        )
+    with stages.stage("compare_legs"):
+        comparison = compare.compare_legs(live, paper, thresholds, now=now)
+    with stages.stage("gates"):
+        gates = events_mod.gate_breakdown(session, pair, now=now)
+    with stages.stage("market_tags"):
+        market_tags = _market_tags(
+            session,
+            (p.ticker for p in live.positions), (p.ticker for p in paper.positions),
+            (r["ticker"] for r in divergence["per_ticker"]),
+            (d["ticker"] for d in discrepancies),
+        )
+    stages.log()
 
     return {
         "generated_at": now.isoformat(),
         "pair": pair.to_dict(),
-        "status": pairs.pair_status(session, pair, now=now),
+        "status": status,
         "window": {"since": since.isoformat(), "until": until.isoformat(),
                    "hours": round((until - since).total_seconds() / 3600, 2)},
         "live": {**live.summary(), "positions": [p.to_dict() for p in live.positions]},
@@ -208,22 +283,14 @@ def build_run(
         # on a book that has run for months is more paper trades than everything else on
         # this page put together. So it is computed when asked for, and the page asks
         # when the provenance section is opened rather than on every load.
-        "incumbent_paper": (
-            legs.paper_leg(session, pair.live_tag, None, marks).summary()
-            if incumbent else None
-        ),
-        "comparison": compare.compare_legs(live, paper, thresholds, now=now),
+        "incumbent_paper": incumbent_paper,
+        "comparison": comparison,
         "divergence": divergence,
         "discrepancies": discrepancies,
-        "gates": events_mod.gate_breakdown(session, pair, now=now),
+        "gates": gates,
         "marks": marks.coverage(),
         "diagnostics": _diagnostics(pair, live, paper, marks, now),
-        "market_tags": _market_tags(
-            session,
-            (p.ticker for p in live.positions), (p.ticker for p in paper.positions),
-            (r["ticker"] for r in divergence["per_ticker"]),
-            (d["ticker"] for d in discrepancies),
-        ),
+        "market_tags": market_tags,
     }
 
 
@@ -284,21 +351,25 @@ def build_series(
     pair = pairs.get_pair(session, twin_tag)
     if pair is None:
         return None
-    live, paper, marks = load_run(session, pair, now=now, marks=MARKS_FULL)
+    stages = Stages(f"build_series {twin_tag}")
+    live, paper, marks = load_run(session, pair, now=now, marks=MARKS_FULL, stages=stages)
     epoch_start, epoch_end = pair.window(now)
     window_start = max(epoch_start, since) if since else max(
         epoch_start, epoch_end - timedelta(hours=DEFAULT_WINDOW_HOURS)
     )
     window_end = min(epoch_end, until) if until else epoch_end
 
-    pnl = series.build_pnl_series(
-        live, paper, marks, since=window_start, until=window_end, max_points=max_points
-    )
+    with stages.stage("pnl_series"):
+        pnl = series.build_pnl_series(
+            live, paper, marks, since=window_start, until=window_end, max_points=max_points
+        )
     focus = ticker or series.pick_focus_ticker(live, paper)
-    price = (series.build_price_series(
-        session, focus, live, paper, since=window_start, until=window_end,
-        max_points=max_points) if focus else None)
+    with stages.stage("price_series"):
+        price = (series.build_price_series(
+            session, focus, live, paper, since=window_start, until=window_end,
+            max_points=max_points) if focus else None)
     available = sorted({p.ticker for p in live.positions} | {p.ticker for p in paper.positions})
+    stages.log()
     return {
         "generated_at": now.isoformat(),
         "twin_tag": pair.twin_tag,

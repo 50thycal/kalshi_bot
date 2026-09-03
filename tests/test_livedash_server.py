@@ -238,3 +238,97 @@ def test_backend_failure_returns_a_generic_envelope(live_server, monkeypatch):
         body = exc.read().decode()
     assert "SECRET-DETAIL" not in body and "postgresql://" not in body
     assert json.loads(body)["error"] == "dashboard temporarily unavailable"
+
+
+def test_a_client_that_disconnects_is_not_a_request_failure(live_server, monkeypatch, caplog):
+    """The defect this covers cost a real investigation.
+
+    A browser that navigates away mid-response leaves the origin writing a body into
+    a dead socket, which raises BrokenPipeError from `_send`. The old handler caught
+    that alongside genuine errors, logged "request failed", and tried to send a 503
+    on the SAME dead socket -- which threw again and escaped into socketserver's
+    traceback dump. The production log then showed a successful response followed by
+    a 503 and a stack trace, for what is an ordinary disconnect.
+    """
+    base, _ = live_server
+
+    def gone(*a, **k):
+        raise BrokenPipeError(32, "Broken pipe")
+
+    monkeypatch.setattr(srv.data, "build_runs", gone)
+    with caplog.at_level("INFO", logger="kalshi_bot.livedash"):
+        try:
+            urllib.request.urlopen(base + "/api/runs", timeout=10)
+        except Exception:  # noqa: BLE001 — the server closes on us, which is the point
+            pass
+    messages = [r.getMessage() for r in caplog.records]
+    assert any("client disconnected" in msg for msg in messages), messages
+    # No fake failure, and above all no second response written on top of the first.
+    assert not any("request failed" in msg for msg in messages), messages
+    assert not any(r.exc_info for r in caplog.records), "a disconnect logged a traceback"
+
+
+def test_a_failure_after_the_response_started_does_not_write_a_second_one(
+    live_server, monkeypatch, caplog,
+):
+    """Once headers are out the status the client sees is settled, so a later error
+    must not append a 503 envelope to the body it is already reading."""
+    base, _ = live_server
+    handler = srv.LiveDashHandler
+    sent = []
+    real_send = handler._send
+
+    def once_then_fail(self, code, body, content_type):
+        real_send(self, code, body, content_type)
+        sent.append(code)
+        raise RuntimeError("failed after the response started")
+
+    monkeypatch.setattr(handler, "_send", once_then_fail)
+    with caplog.at_level("INFO", logger="kalshi_bot.livedash"):
+        try:
+            with urllib.request.urlopen(base + "/api/runs", timeout=10) as resp:
+                body = resp.read()
+            assert json.loads(body)["summaries"] is True
+        except Exception:  # noqa: BLE001 — a truncated read is acceptable here
+            pass
+    assert sent == [200], f"a second response was written: {sent}"
+
+
+def test_every_request_logs_how_long_it_took(live_server, caplog):
+    """The service could say a route failed and never how long it spent first, which
+    is the whole of what an operator waiting at a blank card needs to know."""
+    base, _ = live_server
+    with caplog.at_level("INFO", logger="kalshi_bot.livedash"):
+        _get(base, "/api/runs/mm10_pt")
+    timings = [r.getMessage() for r in caplog.records if "livedash timing" in r.getMessage()]
+    assert len(timings) == 1, timings
+    assert "/api/runs/mm10_pt" in timings[0]
+    assert "ms" in timings[0] and "sent" in timings[0]
+
+
+def test_a_slow_route_announces_itself_at_warning(live_server, monkeypatch, caplog):
+    """A regression should be visible in the ordinary log stream rather than waiting
+    for somebody to notice a page is slow."""
+    base, _ = live_server
+    monkeypatch.setattr(srv, "SLOW_REQUEST_MS", 0)
+    with caplog.at_level("INFO", logger="kalshi_bot.livedash"):
+        with urllib.request.urlopen(base + "/healthz", timeout=10) as resp:
+            resp.read()
+    slow = [r for r in caplog.records if "livedash timing" in r.getMessage()]
+    assert slow and all(r.levelname == "WARNING" for r in slow), [r.levelname for r in slow]
+
+
+def test_build_run_reports_where_its_time_went(live_server, caplog):
+    """One line per build naming each stage, so the expensive part of a slow route is
+    read off the log rather than guessed at from the code."""
+    from kalshi_bot.livedash import data as livedash_data
+
+    base, session = live_server
+    with caplog.at_level("INFO", logger="kalshi_bot.livedash"):
+        livedash_data.build_run(session, "mm10_pt")
+    lines = [r.getMessage() for r in caplog.records if "livedash stages" in r.getMessage()]
+    assert len(lines) == 1, lines
+    line = lines[0]
+    assert "build_run mm10_pt" in line and "total=" in line
+    for stage in ("marks[latest]", "live_leg", "paper_leg", "gates", "market_tags"):
+        assert stage in line, f"{stage} missing from {line}"
