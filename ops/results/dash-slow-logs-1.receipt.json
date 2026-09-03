@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "166400a9aa16621bec3459a405a9ef0c541a4568",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-03T15:30:08Z",
+  "id": "dash-slow-logs-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/dash-slow-logs-1.receipt.json",
+  "result_file": "ops/results/dash-slow-logs-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33772959368",
+  "service": "livedash",
+  "started_at": "2026-09-03T15:30:08Z",
+  "targets": [],
+  "type": "logs"
+}
