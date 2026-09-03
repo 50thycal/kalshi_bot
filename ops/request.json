@@ -1,1 +1,1 @@
-{"type":"logs","service":"livedash","limit":120,"id":"dash-stage-logs-3"}
+{"type":"db","sql":"select command_id, action, status, requested_at, finished_at from experiment_os_experiment_commands order by id desc limit 5","id":"mkt-close-receipts-1","actor":"claude-code","purpose":"confirm the standing experiment-command receipt is terminal before overwriting the envelope","workstream":"WS-013"}
