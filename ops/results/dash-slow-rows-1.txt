@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=dash-slow-rows-1
-# code cedeb1be81193e83a325623b480d6737a5147797 · started 2026-09-03T15:54:32Z
-epoch_start                       parity_all  parity_in_window  paper_trades  live_orders  parity_total
---------------------------------  ----------  ----------------  ------------  -----------  ------------
-2026-09-02 11:45:23.126985+00:00  2158        2158              286           136          21792       
-
-(1 row)
