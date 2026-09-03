@@ -1,1 +1,1 @@
-{"type": "db", "sql": "select id, actions_json::text as full_json from evo_heartbeats where actions_json::text ilike '%create_listener%' order by id desc limit 3", "max_rows": 5, "id": "evo-listener-check-3"}
+{"type": "db", "sql": "select category, status, count(*) as n, min(created_at)::date::text as first_asked, max(created_at)::date::text as last_asked, left(string_agg(distinct capability, ' | '), 700) as capabilities from evo_tickets group by category, status order by n desc", "max_rows": 80, "id": "tickets-rollup-1"}
