@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "a115ad91f4cdaa7742701661f096e76aa2283e60",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-03T12:45:34Z",
+  "id": "idle-perpv1-perticker-done",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/idle-perpv1-perticker-done.receipt.json",
+  "result_file": "ops/results/idle-perpv1-perticker-done.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33757034493",
+  "service": null,
+  "started_at": "2026-09-03T12:45:34Z",
+  "targets": [],
+  "type": "noop"
+}
