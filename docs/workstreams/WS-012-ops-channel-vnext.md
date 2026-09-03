@@ -1,9 +1,9 @@
 # WS-012 — Ops channel vNext: reliability, introspection, verified operations
 
-**Phase:** REVIEW
-**Status:** Active
+**Phase:** CLOSED
+**Status:** Done
 **Created:** 2026-08-30
-**Updated:** 2026-08-30
+**Updated:** 2026-09-02
 
 ## Goal
 
@@ -75,29 +75,54 @@ lifecycle, gates, evidence and enforcement, and `doctor`/`incident` read it
 through the canonical CLI rather than forming a second opinion. The channel stays
 read-only against Postgres; the worker remains the only writer.
 
-## Open questions
+## Outcome
 
-1. **Deploying the workflow change.** The executing copy of
-   `.github/workflows/ops-runner.yml` lives on `ops` (Actions loads a workflow
-   from the triggering branch). Merging this PR does **not** deploy the
-   exit-status fix, the receipt publication or the audit archive — a
-   fast-forward commit of the new workflow onto `ops` does, while the channel is
-   idle, followed by a real round trip. That is an operator/Live Ops act, not a
-   merge side effect. Everything else here (`ops_runner`, `ops_meta`,
-   `ops_doctor`, `railway_env`) is live on merge, because runner code always
-   comes from the default branch.
-2. **`ops-audit` branch creation.** The first audit-worthy mutation creates it as
-   an orphan branch, exactly as `digest-archive` was created. Until then the
-   branch does not exist, which is correct and not a fault.
-3. **Ruleset verification.** The spec asks for the `ops` branch protection to be
-   confirmed and written down. The intended policy is already recorded in
-   `docs/OPS_RUNBOOK.md` and checked by `tests/test_ops_branch_protection.py`
-   against `.github/rulesets/ops-transport-guard.json`; retrieving the LIVE
-   configuration still needs an admin-scoped token this session does not hold.
+Three PRs, all merged:
+
+- **[#294](https://github.com/50thycal/kalshi_bot/pull/294)** — the full build:
+  exit-status fix, `ops/README.md` rewrite, `capabilities`, `doctor`,
+  `incident`, structured receipts + provenance, explicit mutation vocabulary
+  with post-change verification verdicts, the `ops-audit` archive.
+- **[#306](https://github.com/50thycal/kalshi_bot/pull/306)** — an unrecognised
+  request type is `UNCLASSIFIED`, never `READ`. Found by the production round
+  trip below, not by the 69 unit tests written for #294.
+- **[#313](https://github.com/50thycal/kalshi_bot/pull/313)** — `doctor` was
+  reading `main`'s Railway id back out of the same variable
+  `_select_service` had just overwritten while walking `evo`/`livedash`/`main`
+  in one process, so `main` inherited `livedash`'s deployment and empty
+  variables. A live-armed trading worker was rendered as disarmed, with its own
+  `REAL MONEY IS ARMED` banner suppressed — found by the same round trip.
+  Re-confirmed against production after merge: `main` now reports its own
+  deployment and full runtime config.
+
+The workflow file was deployed to `ops` as a fast-forward commit in an idle
+window and validated with a real round trip: `{"type":"capabilities"}` came
+back green with a published receipt
+([run #3448](https://github.com/50thycal/kalshi_bot/actions/runs/33581506036)),
+and a deliberately unrecognised request turned the run **red**
+([run #3449](https://github.com/50thycal/kalshi_bot/actions/runs/33581667899))
+— the P1 bug, proven fixed in production rather than only in tests.
+
+## Open questions carried past close
+
+1. **Ruleset verification — still NOT done.** The intended policy is recorded
+   in `docs/OPS_RUNBOOK.md` and checked locally by
+   `tests/test_ops_branch_protection.py` against
+   `.github/rulesets/ops-transport-guard.json`. Retrieving the LIVE
+   configuration from GitHub needs an admin-scoped token no session has held.
+   Pushes to `ops` this workstream made *behaved* consistently with the
+   intended policy (ordinary fast-forwards succeeded; nothing attempted a
+   force-push or deletion to test the block side) — that is corroborating
+   behavior, not verification, and should not be read as one. Pick up when a
+   session next holds admin-scoped GitHub access.
+2. **XOS issue for the #313 defect — prepared, not sent.** Owner: LIVE_OPS.
+   Sending it sets `EXPERIMENT_OS_ISSUE_COMMAND`, which redeploys the worker;
+   held because the worker was live-armed on `Dmmsell10` with resting
+   real-money orders at the time. The ready-to-send `OPEN_MANUAL` envelope is
+   in #313's Follow-up Work section. This does not block closing this
+   workstream — it is an Experiment OS follow-up, not an ops-channel one.
 
 ## Next step
 
-Review and merge, then deploy the workflow file to `ops` in an idle window and
-validate with a round trip: a `capabilities` request (green, receipt published),
-then a deliberately bad request (red run, error readable in
-`ops/results/<id>.txt`).
+None for this workstream — it is closed. The two items above are follow-ups
+tracked by their owning role, not blockers on WS-012.
