@@ -1,1 +1,1 @@
-{"type":"env","id":"dash-clear-3","set":{"EXPERIMENT_OS_ISSUE_COMMAND":""}}
+{"type":"db","sql":"select c.command_id, c.status, c.error from experiment_os_experiment_commands c order by c.id desc limit 2","id":"mkt2-closeout-receipt-1","actor":"claude-code","purpose":"read the mkt2-closeout-1 receipt","workstream":"WS-013"}
