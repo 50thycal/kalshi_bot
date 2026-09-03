@@ -1,1 +1,1 @@
-{"type": "db", "sql": "select id, status, left(actions_json::text, 400) as sample from evo_heartbeats where actions_json::text ilike '%create_listener%' order by id desc limit 8", "max_rows": 20, "id": "evo-listener-check-2"}
+{"type": "db", "sql": "select id, actions_json::text as full_json from evo_heartbeats where actions_json::text ilike '%create_listener%' order by id desc limit 3", "max_rows": 5, "id": "evo-listener-check-3"}
