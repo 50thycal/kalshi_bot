@@ -75,18 +75,22 @@ It is now +2.75 to +8 on names with $42M-$172M of daily volume. Thinner than the
 mean implied, and on real books.
 
 **It also downgrades the funding blocker for this variant specifically.** Mean hold is
-**3.4 minutes** — 0.7% of an 8-hour funding window. Even a 50 bps/window funding rate
-costs ~0.36 bps over that hold. `perp_net_edge_bps_per_trade` is still not producible (its
-definition names a cost with no source, and that has not changed), but the *magnitude* of
-what is missing is an order of magnitude below the edge at these holds. That is an
-argument about scale, not a measurement, and it does not apply to arm B, which holds
-across funding windows by construction.
+**4.9 minutes** universe-wide (3.1 min on BTC, 3.4 on ETH) — about 1% of an 8-hour funding
+window. Even a 50 bps/window funding rate costs ~0.5 bps over that hold.
+`perp_net_edge_bps_per_trade` is still not producible — its definition names a cost with
+no source, and that has not changed — but the *magnitude* of what is missing is an order
+of magnitude below the edge at these holds. That is an argument about scale, not a
+measurement, and it does not apply to arm B, which holds across funding windows by
+construction.
 
 ### Why this is still not a green light
 
-- **Sample.** 44-70 round trips per ticker against a registered `SAMPLE_FLOOR` of 200.
-  Universe sd is 8.38 bps; a 2.75 bps mean on n=50 is not distinguishable from noise at
-  any standard anyone would pre-register.
+- **Sample, and the floor it is not measured against.** `SAMPLE_FLOOR` (200) is
+  **arm-scoped**, and the arm clears it comfortably: `perp_probe_observations` is 1011.
+  Per ticker it is 44-70, and there is no registered per-ticker bar because nobody
+  pre-registered a per-ticker claim — so these rows neither fail a floor nor clear one.
+  What bounds them is dispersion: universe sd is 8.38 bps, so a 2.75 bps mean on n=50 is
+  not distinguishable from noise at any standard anyone would pre-register.
 - **Coverage.** 24.32% against an 80% floor, at a 187.0 s achieved cadence. **No arm can
   PASS on this tape whatever its edge**, and lowering the floor after seeing the number
   would be re-tuning a gate against results.
@@ -94,8 +98,8 @@ across funding windows by construction.
   was measured on entries taken *immediately* at a 2.5-sigma excursion. A resting order
   fills only when someone crosses to it, which is adverse selection by construction — you
   are filled by the flow pushing the premium further, not by the reversion you are betting
-  on. A passive exit has the mirror problem: the 3.4 min hold was produced by taker exits
-  triggered on a z-crossing, and a resting exit only fills if price trades through it.
+  on. A passive exit has the mirror problem: the 3-5 minute holds were produced by taker
+  exits triggered on a z-crossing, and a resting exit only fills if price trades through it.
   Nothing in this tape — which carries no trade prints and no depth beyond top-of-book —
   can answer either.
 
