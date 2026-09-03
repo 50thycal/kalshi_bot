@@ -510,3 +510,102 @@ def test_the_report_states_that_no_gate_is_readable_on_this_tape(capsys):
     assert "GATE READABILITY" in out
     assert "records nothing" in out
     assert "HOLD" in out
+
+
+# ---------------------------------------------------------------------------
+# Arm A, split by ticker
+# ---------------------------------------------------------------------------
+
+def _trade(ticker: str, *, gross: float, spread: float, held: float = 5.0) -> dict:
+    return {"ticker": ticker, "entry_at": T0, "z": 3.0, "direction": -1,
+            "gross_bps": gross, "spread_bps": spread,
+            "net_ex_funding_bps": gross - spread, "held_min": held}
+
+
+def test_a_ticker_split_does_not_average_a_tight_book_with_a_loose_one():
+    """The whole point of the split. A universe mean over half-spreads running 0.4 to 33
+    bps is dominated by whichever names traded most, so it cannot say whether the
+    convergence lives where the book is tight — which is the only question a passive
+    variant turns on."""
+    trades = [_trade("KXBTCPERP", gross=1.0, spread=0.8) for _ in range(2)]
+    trades += [_trade("KXADAPERP", gross=40.0, spread=33.0) for _ in range(2)]
+    rows = {r["ticker"]: r for r in scorer.per_ticker(trades, [])}
+    assert rows["KXBTCPERP"]["gross_bps"] == 1.0
+    assert rows["KXADAPERP"]["gross_bps"] == 40.0
+    # The universe mean sits between them and equals neither.
+    assert scorer.summarize_trades(trades)["gross_bps"] == 20.5
+
+
+def test_every_ticker_is_printed_and_the_ranking_is_by_sample_not_by_edge():
+    """Ranking by edge, or dropping the losers, would let a reader pick the best of ~30
+    rows after seeing them — choosing a hypothesis from results. Sample order is
+    indifferent to the number under test."""
+    trades = [_trade("KXAAA", gross=1.0, spread=0.5) for _ in range(3)]
+    trades += [_trade("KXBBB", gross=99.0, spread=0.5) for _ in range(5)]
+    trades += [_trade("KXCCC", gross=-50.0, spread=0.5)]
+    rows = scorer.per_ticker(trades, [])
+    assert [r["ticker"] for r in rows] == ["KXBBB", "KXAAA", "KXCCC"]
+    assert [r["n"] for r in rows] == [5, 3, 1]
+
+
+def test_a_thin_ticker_is_marked_rather_than_dropped(capsys):
+    """Dropping it would make the split look complete when it is not; printing it
+    unmarked would let a three-trade mean read like the 913-trade one."""
+    trades = [_trade("KXTHIN", gross=10.0, spread=1.0) for _ in range(3)]
+    trades += [_trade("KXFAT", gross=10.0, spread=1.0)
+               for _ in range(scorer.PER_TICKER_THIN_N)]
+    rows = {r["ticker"]: r for r in scorer.per_ticker(trades, [])}
+    assert rows["KXTHIN"]["thin"] is True
+    assert rows["KXFAT"]["thin"] is False
+
+    cov = scorer.coverage([], 24.0, 60.0)
+    a = {"trades": trades, "control": [], "rows_with_premium": 0,
+         "rows_dropped_no_mark": 0}
+    c = {"ic": {}, "incremental": {}, "matched": 0, "unmatched": 0}
+    scorer.report(cov, a, c, _args(), refused=[], cadence_sec=191.6)
+    out = capsys.readouterr().out
+    assert "KXTHIN" in out and "KXFAT" in out
+    assert "THIN" in out
+
+
+def test_each_ticker_is_compared_against_its_own_control_not_the_universes():
+    """A control mean pooled across the universe would net a tight name's edge against a
+    loose name's noise, which is the same error the split exists to undo."""
+    trades = [_trade("KXBTCPERP", gross=2.0, spread=0.5),
+              _trade("KXADAPERP", gross=40.0, spread=33.0)]
+    control = [_trade("KXBTCPERP", gross=-2.0, spread=0.5),
+               _trade("KXADAPERP", gross=-40.0, spread=33.0)]
+    rows = {r["ticker"]: r for r in scorer.per_ticker(trades, control)}
+    assert rows["KXBTCPERP"]["control_net_bps"] == -2.5
+    assert rows["KXBTCPERP"]["delta_vs_control_bps"] == 4.0
+    assert rows["KXADAPERP"]["delta_vs_control_bps"] == 80.0
+
+
+def test_a_ticker_with_no_control_rows_reports_no_delta_rather_than_zero():
+    """None says "not comparable"; 0.0 would say "indistinguishable from random", which
+    is a finding nobody measured."""
+    rows = scorer.per_ticker([_trade("KXBTCPERP", gross=2.0, spread=0.5)], [])
+    assert rows[0]["control_net_bps"] is None
+    assert rows[0]["delta_vs_control_bps"] is None
+
+
+def test_the_split_carries_the_warning_that_no_gate_is_scoped_to_a_ticker(capsys):
+    """perp-v1 is RETIRED with arm A recorded FAIL. A per-ticker table printed without
+    that context is the shape of evidence a reopened gate would want, and no per-ticker
+    quantity is registered anywhere."""
+    cov = scorer.coverage([], 24.0, 60.0)
+    a = {"trades": [_trade("KXBTCPERP", gross=2.0, spread=0.5)], "control": [],
+         "rows_with_premium": 0, "rows_dropped_no_mark": 0}
+    c = {"ic": {}, "incremental": {}, "matched": 0, "unmatched": 0}
+    scorer.report(cov, a, c, _args(), refused=[], cadence_sec=191.6)
+    out = capsys.readouterr().out
+    assert "no gate is scoped to a ticker" in out
+    assert "BOTH-LEGS-PASSIVE" in out
+
+
+def test_an_empty_tape_prints_the_split_as_empty_rather_than_failing(capsys):
+    cov = scorer.coverage([], 24.0, 60.0)
+    a = {"trades": [], "control": [], "rows_with_premium": 0, "rows_dropped_no_mark": 0}
+    c = {"ic": {}, "incremental": {}, "matched": 0, "unmatched": 0}
+    scorer.report(cov, a, c, _args(), refused=[], cadence_sec=191.6)
+    assert "no round trips in this window" in capsys.readouterr().out
