@@ -1,1 +1,1 @@
-{"type": "env", "id": "dash-issue-link-1", "set": {"EXPERIMENT_OS_ISSUE_COMMAND": "{\"command_id\": \"lo-livedash-link-20260903\", \"action\": \"ADD_LINK\", \"actor\": \"claude-code\", \"actor_role\": \"LIVE_OPS\", \"schema_version\": 1, \"payload\": {\"issue\": \"XOS-000018\", \"link_type\": \"PR\", \"reference\": \"https://github.com/50thycal/kalshi_bot/pull/327\", \"label\": \"Per-request and per-stage timing, correct disconnect handling, ops livedash probe\"}}"}}
+{"type":"env","id":"dash-issue-clear-1","set":{"EXPERIMENT_OS_ISSUE_COMMAND":""}}
