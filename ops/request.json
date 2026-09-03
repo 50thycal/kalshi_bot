@@ -1,1 +1,1 @@
-{"type":"noop","id":"idle-livedash-investigation"}
+{"type":"xos","command":"issue-show","args":["XOS-000018"],"id":"dash-issue-verify-1"}
