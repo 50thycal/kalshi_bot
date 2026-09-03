@@ -289,18 +289,58 @@ narrowing the crypto class to near-the-money rungs, or re-reading Track A's bar,
 be post-hoc re-scoping after the holdout was opened (§11, §19 general kill). If the class
 definition is wrong it is a new Version, not an edit.
 
+## CLOSED 2026-09-03 — both tracks, on operator decision
+
+The two decisions this workstream left open on 2026-09-02 were answered together:
+**close Track A and Track B, and record the results.** Retired through
+`CLOSE_OUT_RETROSPECTIVE` (package `marktangle-2`), which *adopts* the contract
+already registered in production — it refuses to author a second one, because the
+verdicts belong to the objects `m2-register-4` created.
+
+| gate | verdict | what it records |
+|---|---|---|
+| `paper_to_live_canary_a` | **FAIL** | the primary lost money in all three adequately-powered classes on untouched holdout, failing net P&L, EV/trade, the 3c mirror separation, and staying negative after dropping both the top family and the top 1% of trades |
+| `paper_keep_a` | **FAIL** | the mechanism: `prev_dir × ln(k)` measured −0.019 (z −0.49), **+0.466 (z +3.23)**, +0.193 (z +1.62). Streak length carries nothing |
+| `paper_to_live_canary_b` | **BLOCKED_DATA** | 16 two-sided quotes at T−60m in ~2,000 reached BTC holdout points; coverage 0% against a 50% floor. D1 answered with evidence |
+| `paper_keep_b` | **BLOCKED_DATA** | the prediction was never the problem — 98.3% holdout accuracy, Brier 0.015 vs 0.045. Predictable and unpriceable |
+
+**Where this departs from the instrument, stated rather than smoothed over.** The
+frozen track rule printed `A HOLD` / `B HOLD`. These rows say FAIL and BLOCKED_DATA,
+and that gap is an operator conclusion:
+
+- Track A printed HOLD *only* because two of five classes were under-powered. §19's
+  Track A kill rule and the track-verdict rule pointed in opposite directions — a
+  defect in the frozen rule, not an open question about the evidence. Recording HOLD
+  would have filed the line's one real falsification as "no result".
+- Track B printed HOLD on the coverage floor. HOLD invites "wait for more evidence";
+  more evidence will never come, because the class has no book rather than a thin one.
+  BLOCKED_DATA is the same call, on the same reasoning, as PERP-V1's funding arm.
+
+The departure is written into `marktangle2.CLOSE_OUT_VERDICTS` above the table itself,
+and a test asserts it stays there: a silent relabel of a frozen rule's output is
+precisely the post-hoc repricing §11 forbids, and saying so out loud is what makes an
+operator conclusion legible as one.
+
+**Nothing was re-scoped.** Narrowing the crypto class to near-the-money rungs, or
+re-reading Track A's bar, would both be post-hoc re-scoping after the holdout was
+opened. If the class definition is wrong the remedy is a new Version or forward quote
+collection — neither was done here, and neither is proposed.
+
+**Why the receipts read `TASK_SPECIFIC`.** `CLOSE_OUT_RETROSPECTIVE` is closed to
+`RESEARCH_LAB` on purpose — the session that ran an experiment should not also be the
+one that writes down its own verdict — and the session that built and ran this
+instrument is a Research Lab session, so the guard is aimed squarely at it. Put to the
+operator on 2026-09-03, who directed that this session submit both envelopes as
+`TASK_SPECIFIC` rather than open a separate Live Ops window. The receipts therefore
+name the role the act was performed under, not the role the session was following, and
+`approved_by` names the operator who made that call. Recorded here because an
+unexplained `TASK_SPECIFIC` on a retrospective verdict is exactly the kind of audit row
+a later reader should be able to account for.
+
 ## Next Step
 
-Blocked on merge: the ops runner executes default-branch code only. Then, in order:
-
-1. `REGISTER_PACKAGE marktangle-2` on the experiment-command transport (operator).
-2. Run 1, the full instrument:
-   `{"type":"script","name":"marktangle2_probe","id":"m2-run-1"}`
-   (~history pull for ~30 series + up to 6,000 candle fetches + Coinbase; expect tens
-   of minutes). Read `ops/results/m2-run-1.txt`.
-3. Split the package into the repo:
-   `python scripts/marktangle2_package.py <result> docs/marktangle2` — the splitter
-   re-derives the trades fingerprint and refuses a mismatch.
-4. Record the per-track verdicts in `docs/RESEARCH_JOURNAL.md` exactly as printed.
-   A HOLD is a real outcome. If either track PASSes, open the successor workstream
-   for a prospective paper/twin design; never a live canary from a historical PASS.
+None. Both experiments in the MARKTANGLE line are RETIRED in Experiment OS with every
+gate carrying a verdict. Any successor is a new question and a new workstream, and
+starts from what this line established: mild one-step reversion in sports totals is
+real and does not survive its own trading cost; streak length adds nothing; crypto
+threshold persistence is real, strongly forecastable, and unpriceable where it exists.

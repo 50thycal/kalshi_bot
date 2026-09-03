@@ -30,7 +30,9 @@ from kalshi_bot.experiment_os.experiment_commands import (
 )
 from kalshi_bot.experiment_os.lifecycle import GateVerdict, LifecycleState
 from kalshi_bot.experiment_os.models import (
+    ExperimentArm,
     ExperimentDeployment,
+    ExperimentDeploymentArm,
     ExperimentEpoch,
     ExperimentGateResult,
     ExperimentStateTransition,
@@ -68,27 +70,73 @@ def test_a_pass_verdict_is_refused_outright(xos_session, xos_platform):
         )
 
 
-def test_an_experiment_holding_a_deployment_is_refused(xos_session, xos_platform):
-    """A deployment means strategy tags existed and something may have traded. That
-    is a MIGRATION with evidence to reconstruct, owned by a role that reconstructs
-    evidence — not an outside-the-system record written by one that does not."""
-    produced = perp_v1.register(xos_session, actor="t")
-    xos_session.add(
-        ExperimentDeployment(
-            epoch_id=produced["epoch"].id,
-            deployment_key="perp-fake",
-            stage=LifecycleState.PAPER.value,
-            kind="paper",
-            started_at=datetime(2026, 8, 30, tzinfo=timezone.utc),
+def _fake_deployment(session, produced, *, key: str, strategy_tag: str | None):
+    """A deployment on the experiment's epoch, optionally carrying a strategy tag on
+    its first arm. The tag is the whole question the guard asks."""
+    deployment = ExperimentDeployment(
+        epoch_id=produced["epoch"].id,
+        deployment_key=key,
+        stage=LifecycleState.PAPER.value,
+        kind="paper",
+        started_at=datetime(2026, 8, 30, tzinfo=timezone.utc),
+    )
+    session.add(deployment)
+    session.flush()
+    arm = session.scalars(
+        select(ExperimentArm).where(
+            ExperimentArm.version_id == produced["version"].id
+        )
+    ).first()
+    session.add(
+        ExperimentDeploymentArm(
+            deployment_id=deployment.id, arm_id=arm.id, strategy_tag=strategy_tag
         )
     )
-    xos_session.flush()
+    session.flush()
+    return deployment
+
+
+def test_an_experiment_holding_a_TAGGED_deployment_is_refused(xos_session, xos_platform):
+    """A STRATEGY TAG means something may have traded — `strategy_tag` is the join key
+    into paper_trades.strategy and live_orders.strategy. That is a MIGRATION with
+    evidence to reconstruct, owned by a role that reconstructs evidence, not an
+    outside-the-system record written by one that does not."""
+    produced = perp_v1.register(xos_session, actor="t")
+    _fake_deployment(xos_session, produced, key="perp-fake", strategy_tag="perpfake")
     with pytest.raises(svc.ExperimentOsError, match="MIGRATION"):
         svc.close_out_retrospective(
             xos_session, produced["experiment"],
             verdicts=[(produced["gates"][0], GateVerdict.FAIL, "x")],
             actor="t", approved_by="cal", reason="r", evidence_ref="docs/x.md",
         )
+
+
+def test_a_TAGLESS_deployment_is_closed_rather_than_refused(xos_session, xos_platform):
+    """The guard asks about tags, not about rows. A deployment whose arms are all
+    untagged has no join key anything could have traded under — under NEW_ONLY an
+    unregistered tag is refused at the write path, and a tag that does not exist
+    cannot be registered — so it is not evidence of trading.
+
+    This is not a hypothetical: BOTH MARKTANGLE experiments register a deliberately
+    tagless probe deployment as part of their pre-registered contract, because their
+    probes are offline scans of public settlement history. Refusing on the row alone
+    made this verb unreachable for exactly the case it was built for.
+
+    And a retired experiment may not be left holding an OPEN deployment: the Control
+    Tower reads one as running research, so the close-out ends it in the same act."""
+    produced = perp_v1.register(xos_session, actor="t")
+    deployment = _fake_deployment(
+        xos_session, produced, key="perp-tagless", strategy_tag=None
+    )
+    svc.close_out_retrospective(
+        xos_session, produced["experiment"],
+        verdicts=[(g, GateVerdict.HOLD, "x") for g in produced["gates"]],
+        actor="t", approved_by="cal", reason="r", evidence_ref="docs/x.md",
+    )
+    assert produced["experiment"].state == LifecycleState.RETIRED.value
+    assert deployment.ended_at is not None, (
+        "a RETIRED experiment must not still hold an open deployment"
+    )
 
 
 def test_it_requires_a_person_to_attest(xos_session, xos_platform):
@@ -284,8 +332,11 @@ def test_perp_v1_declares_a_close_out_and_still_arms_nothing():
 def test_a_package_without_a_close_out_is_refused_by_name():
     """Aimed at a package that declares none, the verb must say so rather than
     quietly doing nothing."""
-    assert all(
-        p.close_out is None or p.name == "perp-v1" for p in _packages().values()
+    declared = {p.name for p in _packages().values() if p.close_out is not None}
+    assert declared == {"perp-v1", "marktangle-reversion", "marktangle-2"}, (
+        "a package gaining a close-out is a deliberate act — it lets a hand-written "
+        "verdict be recorded against that contract — so the roster is asserted here "
+        "rather than left to drift"
     )
 
 

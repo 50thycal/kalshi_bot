@@ -207,9 +207,14 @@ def _packages() -> dict[str, ExperimentPackage]:
                 "MARKTANGLE conditional-reversion contract: five arms (three "
                 "treatments, the continuation mirror as control, the un-gated "
                 "fallacy benchmark), both paper gates pre-registered, and a "
-                "TAGLESS probe deployment. Arms nothing, trades nothing."
+                "TAGLESS probe deployment. Arms nothing, trades nothing. CLOSED "
+                "2026-09-03 — its `close_out` records the experiment as it actually "
+                "ended (both paper gates HOLD: the probe returned the contract's own "
+                "pre-registered thin-holdout HOLD and it never reached paper) and "
+                "retires it, having never been registered while it ran."
             ),
             register=marktangle.register,
+            close_out=marktangle.close_out_retrospective,
         ),
         "marktangle-2": ExperimentPackage(
             name="marktangle-2",
@@ -220,9 +225,14 @@ def _packages() -> dict[str, ExperimentPackage]:
                 "each with an independence baseline, three treatments and a mirror "
                 "control, four paper gates pre-registered, and a TAGLESS probe "
                 "deployment. MARKTANGLE-1 is its recorded predecessor and is "
-                "untouched. Arms nothing, trades nothing."
+                "untouched. Arms nothing, trades nothing. CLOSED 2026-09-03 — its "
+                "`close_out` ADOPTS the contract already registered in production "
+                "(it does not re-register), records both tracks as they ended (Track "
+                "A FAIL on the premise in every adequately-powered class; Track B "
+                "BLOCKED_DATA on an absent book) and retires it."
             ),
             register=marktangle2.register,
+            close_out=marktangle2.close_out_retrospective,
         ),
         "tmmsell-epoch-repair": ExperimentPackage(
             name="tmmsell-epoch-repair",

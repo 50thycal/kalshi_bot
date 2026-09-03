@@ -117,6 +117,66 @@ Recorded here as evidence for that decision.
 
 ---
 
+## MARKTANGLE 2026-09-03 — THE LINE IS CLOSED. Both experiments retired, verdicts recorded.
+
+Operator decision, 2026-09-03: close Track A and Track B, and register MARKTANGLE-1 so
+the record reflects what actually happened. Both were done through
+`CLOSE_OUT_RETROSPECTIVE` on the experiment-command transport — the same verb that
+closed PERP-V1 the day before — predecessor first.
+
+| experiment | gate | verdict |
+|---|---|---|
+| MARKTANGLE-1 | `paper_to_live_canary` | HOLD |
+| MARKTANGLE-1 | `paper_keep` | HOLD |
+| MARKTANGLE-2 | `paper_to_live_canary_a` | **FAIL** |
+| MARKTANGLE-2 | `paper_keep_a` | **FAIL** |
+| MARKTANGLE-2 | `paper_to_live_canary_b` | **BLOCKED_DATA** |
+| MARKTANGLE-2 | `paper_keep_b` | **BLOCKED_DATA** |
+
+**MARKTANGLE-1 was never in Experiment OS.** Three documents said "PAUSED at PROBE";
+the 2026-08-29 registration was blocked by the `promotion_sample_floor` transport
+defect WS-013 fixed on 2026-09-02, and nobody re-checked. Its close-out registers the
+contract and retires it in one act. Both verdicts are HOLD because the contract's own
+frozen rule says so — its best families reached holdouts of 13–27 against a
+pre-registered floor of 100, and thin sample is not a negative result. The directional
+finding survives as recorded history and is the premise MARKTANGLE-2 was built on:
+daily crypto threshold families are momentum machines, not coin flips.
+
+**Where MARKTANGLE-2's verdicts depart from the instrument, and why.** The frozen
+track rule printed `A HOLD` / `B HOLD` on run 2. The recorded rows say FAIL and
+BLOCKED_DATA. That gap is an operator conclusion, written down rather than smoothed
+over:
+
+- **Track A → FAIL.** It printed HOLD only because two of five classes were
+  under-powered. The three that *were* adequately powered failed every economic
+  clause, and the coefficient the track rides on — `prev_dir × ln(k)`, which must be
+  negative for reversal to rise with run length — measured −0.019 (z −0.49), **+0.466
+  (z +3.23)** and +0.193 (z +1.62). Zero within noise twice, significantly the wrong
+  sign once. Spec §19's kill rule and the track-verdict rule pointed in opposite
+  directions; that is a defect in the frozen rule, not an open question about the
+  evidence. Recording HOLD would file the line's one real falsification as "no result".
+- **Track B → BLOCKED_DATA, not HOLD.** HOLD invites "wait for more evidence"; more
+  evidence will never come. 16 of ~2,000 reached BTC holdout points had a two-sided
+  quote at T−60m (<1%), coverage 0% against a 50% floor. Same call, same reasoning, as
+  PERP-V1's funding arm.
+
+**What the line establishes, and what it does not.** Mild one-step reversion in sports
+totals is real; **streak length carries nothing**, and neither survives its own trading
+cost. Crypto threshold persistence is real and strongly forecastable (98.3% holdout
+accuracy, Brier 0.015 vs 0.045) and **unpriceable** where it exists. Nothing was
+re-scoped to rescue either track: narrowing the crypto class to near-the-money rungs
+after opening the holdout is what §11 and §19 forbid, and the remedy — if anyone wants
+one — is a new Version or forward quote collection, not a relabel.
+
+Engine change this required: `service.close_out_retrospective`'s deployment guard now
+asks about **strategy tags** rather than deployment rows. Every MARKTANGLE probe
+deployment is deliberately tagless, so the old guard made the verb unreachable for
+exactly the experiments it was built for. A tagless deployment has no join key into
+`paper_trades`/`live_orders` and is ended as part of the retirement; a tagged one is
+still refused as a migration.
+
+---
+
 ## MARKTANGLE-2 2026-09-02 — RUN 2: both tracks HOLD. Streak length carries nothing, and the crypto ladder has no price.
 
 First graded run of the MARKTANGLE-2 instrument (ops `m2-run-2`, code `6933763`, 34 min,

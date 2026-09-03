@@ -131,15 +131,35 @@ experiment's standing, gates and verdicts are Experiment OS's.
 
 This PR.
 
-## Correction (2026-09-02): the Experiment OS objects below do not exist
+## Correction (2026-09-02), RESOLVED (2026-09-03): the objects did not exist, and now do
 
 A direct read during WS-013's work returned *no experiment
 'marktangle-conditional-reversion'*. This file's Implementation State, its D4 entry and the
-objects listed below describe a registration that never landed — the envelope would have hit
+objects listed below described a registration that never landed — the envelope would have hit
 the `TypeError: register() got an unexpected keyword argument 'promotion_sample_floor'` that
 WS-013 diagnosed and fixed, and nothing that was never created could then be PAUSED. The
-research record (runs, findings, the HOLD) is unaffected; only its XOS representation is
-missing. Detail and the recommended remedy: WS-013's run log.
+research record (runs, findings, the HOLD) was unaffected; only its XOS representation was
+missing.
+
+**Resolved 2026-09-03 by operator decision: registered and RETIRED in one act**
+(`CLOSE_OUT_RETROSPECTIVE`, package `marktangle-reversion`), not registered and then
+paused. D4 closed this line "for now" pending a holdout that would take months of
+forward collection to reach; its successor MARKTANGLE-2 has since been closed on its
+own evidence, so there is nothing left waiting to resume, and a PAUSED record would
+have shown the Control Tower live research that had already stopped.
+
+Both gates carry **HOLD**, by the contract's own frozen rule — `paper_to_live_canary`
+and `paper_keep` are paper gates on an experiment that never opened a paper book, and
+the probe's one graded run reached holdouts of 13–27 against a pre-registered floor of
+100. Thin sample is not a negative result. Recording FAIL would have claimed a
+falsification the evidence never supported.
+
+What survives as recorded history is the finding that pointed *against* the thesis and
+became MARKTANGLE-2's premise: **daily crypto threshold families are momentum machines,
+not coin flips** — P(Y|Y) and P(N|N) near-total across the ladder families. It refuted
+conditional reversion for that market class rather than leaving it open. No `mkt*`
+strategy tag was ever created; the probe deployment was tagless throughout, which is
+why an unregistered MARKTANGLE-1 could sit under NEW_ONLY with no risk of it trading.
 
 ## Related Experiment OS objects
 
@@ -204,7 +224,12 @@ Operator's call; this workstream does not proceed without it.
 
 ## Next Step
 
-**Blocked on D4** — see above. Historical note on the original blocker: the ops runner
+**None — CLOSED 2026-09-03.** D4's "for now" became final: the experiment is RETIRED in
+Experiment OS with both gates carrying HOLD (see the Correction section above), and its
+successor MARKTANGLE-2 was closed on the same day on its own evidence. Everything below
+is the historical record of how it got here.
+
+Historical note on the original blocker: the ops runner
 executes code from the DEFAULT BRANCH only — a
 fail-closed guard (`OPS_RUNNER_CODE_SOURCE=default-branch`, the durable fix for
 XOS-000005) — so `marktangle_probe` is not runnable until this PR merges. The Claude

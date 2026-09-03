@@ -1,19 +1,25 @@
 # MARKTANGLE — conditional reversion in recurring binary families
 
 **Experiment (canonical):** `marktangle-conditional-reversion` · v1 frozen at
-registration · stage **PROBE** · Experiment OS is the source of truth for its
+registration · stage **RETIRED** · Experiment OS is the source of truth for its
 standing, arms, gates and verdicts. Nothing in this document is a status.
 
-> ⚠ **CORRECTION 2026-09-02: this experiment is NOT in production Experiment OS.**
-> A direct read returns *no experiment 'marktangle-conditional-reversion'*. The line
-> above, the journal's "REGISTERED at PROBE" (2026-08-29) and "PAUSED at PROBE"
-> (2026-08-30), and WS-011 all record an intended registration that never landed:
+> **RESOLVED 2026-09-03 — registered and closed in one act.** From 2026-08-29 to
+> 2026-09-03 this experiment did not exist in production Experiment OS: a direct read
+> returned *no experiment 'marktangle-conditional-reversion'*, while this document's
+> header, the journal's "REGISTERED at PROBE" (2026-08-29) and "PAUSED at PROBE"
+> (2026-08-30), and WS-011 all recorded an intended registration that never landed —
 > the `REGISTER_PACKAGE` envelope would have failed with the `TypeError` on
 > `promotion_sample_floor` that WS-013 diagnosed and fixed on 2026-09-02, and an
-> experiment that was never created cannot have been paused. **Everything else in
-> this document stands** — the runs happened, the findings are real, and the HOLD is
-> the honest reading of them. What is missing is the Experiment OS record of it.
-> Re-registering (and then pausing) is an operator decision, not a documentation fix.
+> experiment that was never created cannot have been paused.
+>
+> On operator decision 2026-09-03 it was registered **and retired** in one atomic act
+> (`CLOSE_OUT_RETROSPECTIVE`, package `marktangle-reversion`), rather than registered
+> and then paused: the line is over, and a PAUSED record would have shown the Control
+> Tower live research that had already stopped. Both gates carry **HOLD** — the
+> contract's own frozen rule, on a holdout that never reached its 100-entry floor.
+> Everything else in this document always stood: the runs happened, the findings are
+> real, and the HOLD is the honest reading of them.
 
 **Package:** `kalshi_bot/experiment_os/marktangle.py`
 **Probe:** `scripts/marktangle_probe.py` (ops channel: `{"type":"script","name":"marktangle_probe"}`)
