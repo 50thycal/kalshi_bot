@@ -3,16 +3,16 @@
 ========================================================================
 !! MUTATING OPS REQUEST — this changes the running system !!
 ========================================================================
-# type=env  service=main  vars=EXPERIMENT_OS_ISSUE_COMMAND  id=dash-issue-probe-evid
-# code a2934e532c9bd5de0a1f451bd4f209e47eb86b06 · started 2026-09-03T17:10:15Z
+# type=env  service=main  vars=EXPERIMENT_OS_ISSUE_COMMAND  id=dash-clear-3
+# code a2934e532c9bd5de0a1f451bd4f209e47eb86b06 · started 2026-09-03T17:11:36Z
 # target service: main
 # BEFORE:
-  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
-  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 1731 bytes, sha256:9ea3d801599b5f75>
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 1731 bytes, sha256:9ea3d801599b5f75>
+  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
 # 1/1 variables set
 # redeploy triggered — the worker will restart with the new config
 # AFTER:
-  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 1731 bytes, sha256:9ea3d801599b5f75>
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
 # VERDICT: VERIFIED
 
 # post-change canonical checks: enforcement, readiness
@@ -71,7 +71,7 @@
 # $ xos readiness
 #   {
 #     "ok": false,
-#     "checked_at": "2026-09-03 17:10:26.270720+00:00",
+#     "checked_at": "2026-09-03 17:11:40.797820+00:00",
 #     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
 #     "checks": {
 #       "import_ran": {
