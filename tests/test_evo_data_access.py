@@ -185,6 +185,58 @@ def test_missing_data_reads_budget_is_backfilled_on_heartbeat():
     )
 
 
+def test_strategies_and_sandbox_runs_sources_read_back_the_real_spec():
+    """Tickets #39 (backtest_spec_inspection) and #7 (view_strategy_spec): an agent could
+    not read back its own strategy's config or a past backtest's params, so it could not
+    diagnose a book that silently traded nothing or reconstruct the exact config behind a
+    favorable run_id. Pins the fix end to end: filter by id, get the real spec/params back
+    as a usable object — not a stringified blob — and filter by agent_uuid to scope to
+    peers vs self, per the prompt text that documents both."""
+    s = _session()
+    strat = em.EvoStrategy(
+        agent_uuid="agent-a", name="gas_no_sell_v3", revision=2, status="active",
+        spec_json={"universe": {"series": "KXGAS"}, "entry": {"max_price_cents": 40}},
+        validation_json={"backtest_id": 10715},
+    )
+    s.add(strat)
+    s.flush()
+    run = em.EvoSandboxRun(
+        agent_uuid="agent-a", strategy_id=strat.id, kind="backtest",
+        dataset="backfill_weather", status="completed",
+        params_json={"entry": {"max_price_cents": 40}},
+        result_json={"n_trades": 4339, "per_trade_usd": -0.0476},
+    )
+    s.add(run)
+    s.flush()
+
+    res, err = data_access.inspect(s, "strategies", filters={"id": strat.id})
+    assert err is None
+    assert res["rows"][0]["spec_json"] == {"universe": {"series": "KXGAS"},
+                                            "entry": {"max_price_cents": 40}}
+    assert res["rows"][0]["status"] == "active"
+
+    res, err = data_access.inspect(s, "sandbox_runs", filters={"id": run.id})
+    assert err is None
+    assert res["rows"][0]["params_json"]["entry"]["max_price_cents"] == 40
+    assert res["rows"][0]["result_json"]["n_trades"] == 4339
+
+    # agent_uuid scoping (the prompt tells agents to use this to see only their own)
+    res, _ = data_access.inspect(s, "strategies", filters={"agent_uuid": "someone-else"})
+    assert res["count"] == 0
+
+
+def test_json_cell_cap_bounds_a_runaway_spec_without_corrupting_a_normal_one():
+    from kalshi_bot.evo.data_access import _JSON_CELL_CAP, _cap_cell
+
+    small = {"a": 1, "b": "normal spec"}
+    assert _cap_cell(small) == small  # under the cap: passed through as a real object
+
+    huge = {"padding": "x" * (_JSON_CELL_CAP * 2)}
+    capped = _cap_cell(huge)
+    assert isinstance(capped, str) and capped.endswith("…")
+    assert len(capped) <= _JSON_CELL_CAP
+
+
 def test_data_reads_do_not_pollute_recent_backtests_view():
     from kalshi_bot.evo import sandbox
     s = _session()

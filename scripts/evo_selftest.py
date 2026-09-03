@@ -329,15 +329,31 @@ def c_fitness(cur):
 
 
 def c_leaderboard_delay(cur):
-    # agents must never be shown a fitness row whose visible_after is in the future
-    bad = _one(cur, "select count(*) from evo_fitness "
-                    "where visible_after < computed_at + interval '5 hours'") or 0
+    # Two ways this can be wrong, checked separately so each failure names itself:
+    #  - too SHORT: a row visible less than ~5h after it was first computed.
+    #  - never REACHABLE: visible_after re-armed on every recompute (relative to
+    #    computed_at, which advances every interim pass) instead of being fixed
+    #    relative to created_at (set once, at insert). A row whose visible_after
+    #    keeps chasing computed_at can drift arbitrarily far into the future and
+    #    peers.delayed_leaderboard() then never returns it — this is exactly what
+    #    happened in production for the system's entire life (WS-014): interim
+    #    fitness recomputed hourly, the 6h delay re-armed on every recompute, so
+    #    visible_after was always ~6h ahead of "now" and no row was ever visible.
+    too_short = _one(cur, "select count(*) from evo_fitness "
+                          "where visible_after < computed_at + interval '5 hours'") or 0
+    never_reachable = _one(cur, "select count(*) from evo_fitness "
+                                "where visible_after > created_at + interval '7 hours'") or 0
     n = _one(cur, "select count(*) from evo_fitness") or 0
     if n == 0:
         return ("FIT-3", 5, "Leaderboard is 6h-delayed", NOT_YET, "no fitness rows yet")
-    if bad:
+    if too_short:
         return ("FIT-3", 5, "Leaderboard is 6h-delayed", BROKEN,
-                f"{bad} fitness rows visible sooner than the 6h delay")
+                f"{too_short} fitness rows visible sooner than the 6h delay")
+    if never_reachable:
+        return ("FIT-3", 5, "Leaderboard is 6h-delayed", BROKEN,
+                f"{never_reachable} fitness rows have visible_after re-armed past "
+                "created_at + 7h — the delay is chasing recomputation and may never "
+                "become reachable")
     return ("FIT-3", 5, "Leaderboard is 6h-delayed", PASS, f"all {n} rows honor the 6h delay")
 
 

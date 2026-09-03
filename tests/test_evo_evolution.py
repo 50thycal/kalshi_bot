@@ -459,6 +459,65 @@ def test_evaluate_cohort_integrity_penalty_and_ranks(evo_session, evo_settings):
     assert all(r.visible_after > r.computed_at for r in rows)
 
 
+def test_interim_recompute_does_not_rearm_visible_after(evo_session, evo_settings):
+    """WS-014: peers.delayed_leaderboard() filters on visible_after <= now(), and
+    the orchestrator recomputes interim fitness far more often (hourly) than the
+    6h delay it is supposed to gate. Re-arming visible_after on every recompute
+    (the old behavior) meant it was always ~6h ahead of "now" and no row was ever
+    reachable — the fleet's peer-visibility and influence mechanisms were dead for
+    the system's entire life. The fix: visible_after is set once, at the row's
+    first insert, and holds even as the row is recomputed."""
+    cohort = ensure_current_cohort(evo_session, evo_settings)
+    rng = random.Random(7)
+    agents = [
+        create_agent(evo_session, evo_settings, cohort, rng, origin="founder",
+                     slot_key=f"founder:{i}")
+        for i in range(2)
+    ]
+    uuids = [a.agent_uuid for a in agents]
+
+    # t0 is captured fresh here (not the module-level NOW, which is fixed at
+    # import time and can be arbitrarily far behind real wall-clock `created_at`
+    # once other tests in a full run have executed first)
+    t0 = datetime.now(timezone.utc)
+    evaluate_cohort(evo_session, evo_settings, cohort.id, uuids, kind="interim", now=t0)
+    first_visible_after = {
+        r.agent_uuid: r.visible_after
+        for r in evo_session.scalars(
+            select(em.EvoFitness).where(
+                em.EvoFitness.cohort_id == cohort.id, em.EvoFitness.kind == "interim"
+            )
+        )
+    }
+
+    # three more recomputes, an hour apart each — the real orchestrator cadence
+    for hours_later in (1, 2, 3):
+        evaluate_cohort(
+            evo_session, evo_settings, cohort.id, uuids, kind="interim",
+            now=t0 + timedelta(hours=hours_later),
+        )
+
+    rows = list(evo_session.scalars(
+        select(em.EvoFitness).where(
+            em.EvoFitness.cohort_id == cohort.id, em.EvoFitness.kind == "interim"
+        )
+    ))
+    assert len(rows) == len(uuids), "recompute must update rows in place, not insert new ones"
+    for row in rows:
+        assert row.visible_after == first_visible_after[row.agent_uuid], (
+            "visible_after moved on a recompute — it must be fixed at first insert"
+        )
+        assert row.computed_at.replace(tzinfo=timezone.utc) == t0 + timedelta(hours=3), (
+            "computed_at still tracks the latest pass"
+        )
+
+    # the standing invariant this fix must not break: the delay is still honored,
+    # measured against each row's own created_at (set once, at insert, by the
+    # real wall clock — not against t0, which only bounds `now`/computed_at above)
+    delay = timedelta(hours=evo_settings.leaderboard_delay_hours)
+    assert all(abs((r.visible_after - r.created_at) - delay) < timedelta(seconds=5) for r in rows)
+
+
 def test_historical_reliability_neutral_then_weighted(evo_session, evo_settings):
     assert historical_reliability(evo_session, evo_settings, "x" * 36, 99) == 50.0
     for cid, score in ((1, 80.0), (2, 60.0)):

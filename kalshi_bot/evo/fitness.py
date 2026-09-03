@@ -543,7 +543,14 @@ def evaluate_cohort(
         )
         if existing is not None and kind == "interim":
             existing.computed_at = now
-            existing.visible_after = now + timedelta(hours=settings.leaderboard_delay_hours)
+            # visible_after is set once, at the row's first insert (below), and never
+            # re-armed here: a peer's standing becomes visible a flat
+            # leaderboard_delay_hours after its FIRST interim score this cohort, not
+            # leaderboard_delay_hours after its most recent recompute. Re-arming it on
+            # every update made it unreachable in practice — this function runs far more
+            # often (orchestrator.py, hourly) than the delay it was supposed to gate
+            # (6h), so visible_after was always in the future and
+            # peers.delayed_leaderboard() never returned a row (WS-014).
             existing.components_json = components
             existing.penalties_json = penalties or None
             existing.cohort_score = round(score, 3)
