@@ -1,1 +1,1 @@
-{"type":"noop","id":"idle-livedash-xos18"}
+{"type":"logs","service":"livedash","limit":200,"id":"dash-stage-logs-1"}
