@@ -48,7 +48,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from . import service
+from . import read, service
 from .lifecycle import ArmRole, DeploymentKind, LifecycleState
 from .read import get_experiment
 
@@ -447,3 +447,156 @@ def register(
         "deployment": deployment.deployment_key,
         "tags": [],
     }
+
+
+# ---------------------------------------------------------------------------
+# Retrospective close-out
+# ---------------------------------------------------------------------------
+
+RESULTS_DOC = "docs/marktangle2/MARKTANGLE_2_SUMMARY.md"
+
+#: All four gate verdicts, frozen here as reviewed code rather than passed in an
+#: envelope, so the transport can never be the thing that chooses what happened.
+#:
+#: READ THE DISCREPANCY BEFORE THE VERDICTS. The instrument's frozen TRACK rule
+#: printed `A HOLD` and `B HOLD` on run 2 (ops `m2-run-2`, 2026-09-02). These rows
+#: record FAIL and BLOCKED_DATA. That is deliberate, it is an OPERATOR conclusion
+#: rather than a re-run of the rule, and it is written down here rather than
+#: smoothed over:
+#:
+#:   * Track A printed HOLD only because two of five classes were under-powered.
+#:     The three that WERE adequately powered failed every economic clause. Spec
+#:     §19's Track A kill rule and the track-verdict rule pointed in opposite
+#:     directions, which is a defect in the frozen rule, not an open question about
+#:     the evidence; the operator closed the track on 2026-09-03. Recording HOLD
+#:     would file the line's one real falsification as "no result".
+#:   * Track B printed HOLD on the price-coverage floor. BLOCKED_DATA rather than
+#:     HOLD because HOLD invites "wait for more evidence" and more evidence will
+#:     never come: the class has no book to trade, not a thin one. Same call, and
+#:     the same reasoning, as PERP-V1's funding arm.
+#:
+#: Every row is still a non-authorizing verdict — `service.close_out_retrospective`
+#: refuses PASS outright — so nothing here can promote anything.
+CLOSE_OUT_VERDICTS: tuple[tuple[str, str, str], ...] = (
+    (
+        "paper_to_live_canary_a",
+        "FAIL",
+        "FAIL on the premise, recorded against a gate that never opened: MARKTANGLE-2 "
+        "never reached PAPER, so this paper->live gate has no settled_trades of its "
+        "own. What failed is the thing it exists to promote. On untouched holdout, "
+        f"{PRIMARY['A']} lost money in all three adequately-powered classes — "
+        "BASEBALL_TOTAL -3.17c/trade over 2040 trades, BASKETBALL_TOTAL -5.83c over "
+        "243, SOCCER_TOTAL -9.59c over 153 — failing net P&L, EV/trade, the 3c mirror "
+        "separation, and staying negative after removing both the most profitable "
+        "family and the top 1% of trades. In soccer the mirror was POSITIVE (+1.82c) "
+        "while the treatment lost: wrong-signed, not merely uninformative.",
+    ),
+    (
+        "paper_keep_a",
+        "FAIL",
+        "FAIL for the same evidence, and this gate is where the mechanism is recorded: "
+        "the coefficient the track rides on is dead. `prev_dir x ln(k)` must be "
+        "NEGATIVE for reversal to rise with run length; it measured -0.019 (z -0.49) "
+        "in baseball, +0.466 (z +3.23) in basketball and +0.193 (z +1.62) in soccer — "
+        "zero within noise twice and significantly the WRONG SIGN once. Mild one-step "
+        "reversion is real; streak LENGTH adds nothing. Several arms beat the "
+        "independence baseline on Brier while losing money, which is spec §22's "
+        "Outcome 3 in this experiment's own numbers: forecastability is not alpha.",
+    ),
+    (
+        "paper_to_live_canary_b",
+        "BLOCKED_DATA",
+        "No executable price exists for this class, so the track has no input. Of 9,980 "
+        "BTC holdout prediction points the run's fetch budget reached ~2,000, and 16 "
+        "returned a two-sided quote at the T-60m decision instant (<1%); ETH, SOL and "
+        "XRP were never reached. Holdout price coverage 0% against a pre-registered 50% "
+        "floor. This answers open question D1 with evidence rather than leaving it "
+        "open: the class pools all 113 BTC rungs, most permanently deep in or out of "
+        "the money, and a rung nobody trades has an empty book an hour before close. A "
+        "larger fetch budget cannot lift a sub-1% quote rate to a 50% floor.",
+    ),
+    (
+        "paper_keep_b",
+        "BLOCKED_DATA",
+        "BLOCKED_DATA on the same missing input, and the finding worth keeping is that "
+        "the PREDICTION was never the problem. B1/B2 reach 98.3% holdout accuracy with "
+        "a Brier of 0.015 against the independence baseline's 0.045 — crypto threshold "
+        f"persistence is real and strongly forecastable — while {PRIMARY['B']} cannot be "
+        "graded at all because no price was obtainable. Predictable and unpriceable. "
+        "Not re-scoped to near-the-money rungs to manufacture coverage: that is a "
+        "different universe wearing this track's registered gate, which §11 and §19 "
+        "forbid once the holdout is open. The remedy, if the operator wants one, is a "
+        "new Version or forward quote collection.",
+    ),
+)
+
+
+def close_out_retrospective(
+    session, *, actor: str, approved_by: str, reason: str,
+    now: datetime | None = None,
+) -> dict:
+    """Retire MARKTANGLE-2 with its four gate verdicts recorded, closing both tracks.
+
+    Unlike PERP-V1's and MARKTANGLE-1's, this close-out does NOT register: the
+    contract is already in production (registered 2026-09-02, `m2-register-4`), so
+    it ADOPTS the registered objects and refuses if they are absent. Registering
+    here would either raise on the duplicate or, worse, author a second contract
+    beside the one the verdicts belong to.
+
+    "Retrospective" is still the honest word for what it writes. The probe ran as an
+    ops-channel script over public settlement history, not through the evaluator, so
+    every verdict was computed outside the system and is being recorded by hand,
+    late; `computed_by` is stamped `retrospective:<actor>` on all four rows so a
+    reader can never mistake them for the evaluator's.
+
+    Both tracks close together because the operator closed them together on
+    2026-09-03, each on its own evidence and neither rescuing the other — the track
+    independence §11 requires holds through the close-out. See CLOSE_OUT_VERDICTS
+    for where these verdicts depart from the instrument's printed track rule, and
+    why.
+
+    Authorizes nothing, and cannot: PASS is unrepresentable through this path and
+    the only target is RETIRED. The probe deployment is TAGLESS — no `m2*` strategy
+    tag was ever created — so nothing here ever reached the trading write path; it
+    is ended as part of the retirement rather than left open.
+    """
+    at = now or _now()
+    experiment = get_experiment(session, EXPERIMENT_KEY)
+    if experiment is None:
+        raise service.ExperimentOsError(
+            f"experiment {EXPERIMENT_KEY!r} is not registered — this close-out records "
+            "verdicts against the contract that is already in production and will not "
+            "author one; run REGISTER_PACKAGE marktangle-2 first"
+        )
+    version = read.latest_version(session, experiment)
+    gates_by_key = {g.gate_key: g for g in read.gates_for(session, version)}
+
+    missing = [k for k, _, _ in CLOSE_OUT_VERDICTS if k not in gates_by_key]
+    if missing:
+        raise service.ExperimentOsError(
+            f"close-out names gates the registered contract does not have: {missing} "
+            "— the verdict table and the gate specs have drifted apart"
+        )
+    unjudged = sorted(set(gates_by_key) - {k for k, _, _ in CLOSE_OUT_VERDICTS})
+    if unjudged:
+        raise service.ExperimentOsError(
+            f"close-out leaves gates without a verdict: {unjudged} — a retired "
+            "experiment with a silent gate is the fragmentation this is meant to end"
+        )
+
+    closed = service.close_out_retrospective(
+        session,
+        experiment,
+        verdicts=[
+            (gates_by_key[key], verdict, explanation)
+            for key, verdict, explanation in CLOSE_OUT_VERDICTS
+        ],
+        actor=actor,
+        approved_by=approved_by,
+        reason=reason,
+        evidence_ref=RESULTS_DOC,
+        epoch=read.open_epoch_for(session, version)
+        or read.epochs_for(session, version)[-1],
+        now=at,
+    )
+    return {**closed, "arms": [a for a, _, _, _ in ARMS]}

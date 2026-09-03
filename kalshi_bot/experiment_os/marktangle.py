@@ -440,3 +440,108 @@ def register(
         "deployment": deployment.deployment_key,
         "tags": [],
     }
+
+
+# ---------------------------------------------------------------------------
+# Retrospective close-out
+# ---------------------------------------------------------------------------
+
+THESIS_DOC = "docs/MARKTANGLE_THESIS.md"
+
+#: Both gate verdicts, frozen here as reviewed code rather than passed in an
+#: envelope — a transport that could choose verdicts would make the channel, not
+#: the evidence, the thing that decides what happened.
+#:
+#: Both are HOLD, and neither is a FAIL, because MARKTANGLE-1's own frozen verdict
+#: rule says so: `PROBE_RULE["hold"]` reserves HOLD for "no family reaches the
+#: 100-entry holdout floor — thin sample is not a negative result, it is no
+#: result", and that is exactly what run 8 returned. Recording FAIL here would
+#: claim a falsification the evidence never supported, and re-reading the rule
+#: after results is the one thing the contract forbids.
+CLOSE_OUT_VERDICTS: tuple[tuple[str, str, str], ...] = (
+    (
+        PROMOTION_GATE_KEY,
+        "HOLD",
+        "HOLD on sample, by the contract's own frozen rule. The experiment never "
+        "reached PAPER, so this gate never had evidence to read: it is a paper->live "
+        "gate on settled_trades, and no arm was ever deployed under a strategy tag. "
+        "Eight probe runs (2026-08-29..30) produced one graded result — run 8, the "
+        "hand-picked shortlist — and its best families reached holdouts of 13-27 "
+        "against a pre-registered floor of 100. Thin sample is not a negative result.",
+    ),
+    (
+        KEEP_GATE_KEY,
+        "HOLD",
+        "HOLD for the same reason and with the same standing: a paper keep/kill gate "
+        "on an experiment that never opened a paper book has nothing to stop. Its "
+        "sample floor is 400 settled trades against zero. Closed at PROBE by operator "
+        "decision on 2026-08-30 with the directional finding intact and against the "
+        "thesis: daily crypto threshold families are momentum machines, not coin "
+        "flips (P(Y|Y) and P(N|N) near-total in the ladder families), which refutes "
+        "conditional REVERSION for that market class rather than leaving it open. "
+        "That finding is the premise MARKTANGLE-2 was built on, and it survives this "
+        "close-out as recorded history.",
+    ),
+)
+
+
+def close_out_retrospective(
+    session, *, actor: str, approved_by: str, reason: str,
+    now: datetime | None = None,
+) -> dict:
+    """Record MARKTANGLE-1 as the closed, un-answered experiment it is, and retire
+    it — in one act, having never been registered while it ran.
+
+    Three documents said it was PAUSED at PROBE in Experiment OS. It was not in
+    Experiment OS at all: the 2026-08-29 registration was blocked by the
+    `promotion_sample_floor` transport defect WS-013 diagnosed and fixed on
+    2026-09-02, and nobody re-checked afterwards. So the system could not say the
+    one thing that was true — this ran, and it is over — while its successor
+    MARKTANGLE-2 sat registered above a predecessor that formally did not exist.
+
+    Like PERP-V1's, this reuses `register()` for the contract, so the five arms and
+    both gates are the ones actually pre-registered rather than a retyped copy that
+    could drift from `docs/MARKTANGLE_THESIS.md`. Every row is stamped at close-out
+    time, so the lateness is legible in the timestamps rather than disguised.
+
+    Authorizes nothing, and cannot: `service.close_out_retrospective` refuses a PASS
+    verdict outright and refuses any target but RETIRED. Its probe deployment is
+    TAGLESS — no `mkt*` strategy tag was ever created — so nothing here ever
+    reached the trading write path, and the close-out ends that deployment rather
+    than leaving a retired experiment holding open research.
+    """
+    at = now or _now()
+    produced = register(session, actor=actor, now=at)
+    gates_by_key = {
+        produced["promotion_gate"].gate_key: produced["promotion_gate"],
+        produced["keep_gate"].gate_key: produced["keep_gate"],
+    }
+
+    missing = [k for k, _, _ in CLOSE_OUT_VERDICTS if k not in gates_by_key]
+    if missing:
+        raise service.ExperimentOsError(
+            f"close-out names gates the registered contract does not have: {missing} "
+            "— the verdict table and the gate specs have drifted apart"
+        )
+    unjudged = sorted(set(gates_by_key) - {k for k, _, _ in CLOSE_OUT_VERDICTS})
+    if unjudged:
+        raise service.ExperimentOsError(
+            f"close-out leaves gates without a verdict: {unjudged} — a retired "
+            "experiment with a silent gate is the fragmentation this is meant to end"
+        )
+
+    closed = service.close_out_retrospective(
+        session,
+        get_experiment(session, EXPERIMENT_KEY),
+        verdicts=[
+            (gates_by_key[key], verdict, explanation)
+            for key, verdict, explanation in CLOSE_OUT_VERDICTS
+        ],
+        actor=actor,
+        approved_by=approved_by,
+        reason=reason,
+        evidence_ref=THESIS_DOC,
+        epoch=produced["epoch"],
+        now=at,
+    )
+    return {**closed, "arms": produced["arms"]}

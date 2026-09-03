@@ -2022,10 +2022,13 @@ def close_out_retrospective(
         allows from anywhere and which needs no PASS (`_NEEDS_PASS_RESULT` covers
         only LIVE_CANARY and PRODUCTION). Nothing here can enter or expand real
         money.
-      * **Refused if the experiment holds any deployment.** A deployment means
-        strategy tags existed and something may have traded; that is not an
-        outside-the-system record, it is a migration, and it belongs to a role that
-        reconstructs evidence rather than to one that writes a conclusion down.
+      * **Refused if the experiment holds a TAGGED deployment.** A strategy tag means
+        something may have traded; that is not an outside-the-system record, it is a
+        migration, and it belongs to a role that reconstructs evidence rather than to
+        one that writes a conclusion down. A deployment whose arms are all untagged
+        has no join key into `paper_trades` or `live_orders` and therefore no such
+        history — the MARKTANGLE probes are exactly that, offline scans registered
+        with a tagless deployment — so it is ended here instead of refused.
 
     `computed_by` is stamped `retrospective:<actor>` on every result, so a reader
     can always tell these apart from the evaluator's rows — a gate result that
@@ -2059,12 +2062,43 @@ def close_out_retrospective(
         .join(ExperimentVersion, ExperimentVersion.id == ExperimentEpoch.version_id)
         .where(ExperimentVersion.experiment_id == experiment.id)
     ).all()
-    if deployments:
+    # The guard is about TAGS, not about deployment rows. `strategy_tag` is the join
+    # key into paper_trades.strategy and live_orders.strategy, so a deployment whose
+    # every arm carries a NULL tag has no key anything could have traded under: under
+    # NEW_ONLY an unregistered tag is refused at the write path, and a tag that does
+    # not exist cannot be registered. That is the entire content of "was admissible to
+    # the write path", and it is checkable here rather than asserted from the row.
+    #
+    # Widened for the MARKTANGLE line, whose probes are offline scans of public
+    # settlement history: both experiments register a deliberately TAGLESS probe
+    # deployment as part of the pre-registered contract. Refusing on the row alone made
+    # this verb unreachable for exactly the case it was built for — an experiment that
+    # ran, finished, and never touched the write path.
+    tagged = [
+        d
+        for d in deployments
+        if session.scalars(
+            select(ExperimentDeploymentArm).where(
+                ExperimentDeploymentArm.deployment_id == d.id,
+                ExperimentDeploymentArm.strategy_tag.is_not(None),
+            )
+        ).first()
+        is not None
+    ]
+    if tagged:
         raise ExperimentOsError(
-            f"experiment {experiment.key} holds {len(deployments)} deployment(s) — it "
+            f"experiment {experiment.key} holds {len(tagged)} TAGGED deployment(s) "
+            f"({', '.join(sorted(d.deployment_key for d in tagged))}) — a strategy tag "
             "was admissible to the write path, so its history is a MIGRATION with "
             "evidence to reconstruct, not an outside-the-system close-out"
         )
+
+    # A RETIRED experiment may not hold an OPEN deployment, tagless or not: the
+    # Control Tower reads an open deployment as running research. Ending them belongs
+    # to this same atomic act rather than to a follow-up someone has to remember.
+    for deployment in deployments:
+        if deployment.ended_at is None:
+            end_deployment(session, deployment, ended_at=at)
 
     recorded = []
     for gate, verdict, explanation in verdicts:

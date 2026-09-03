@@ -140,6 +140,23 @@ To run a request:
    {"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"perpv1-closeout-1\",\"action\":\"CLOSE_OUT_RETROSPECTIVE\",\"actor\":\"claude-code\",\"actor_role\":\"LIVE_OPS\",\"payload\":{\"package\":\"perp-v1\",\"approved_by\":\"<operator>\",\"reason\":\"<why it is over>\"},\"schema_version\":1}"}}
    ```
 
+   The MARKTANGLE line closed the same way on 2026-09-03, in this order — the
+   predecessor first, so the lineage is never a retired successor sitting above an
+   experiment that formally does not exist:
+
+   ```jsonc
+   // MARKTANGLE-1: registers the contract and closes it in one act (never registered while it ran)
+   {"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"mkt1-closeout-1\",\"action\":\"CLOSE_OUT_RETROSPECTIVE\",\"actor\":\"claude-code\",\"actor_role\":\"LIVE_OPS\",\"payload\":{\"package\":\"marktangle-reversion\",\"approved_by\":\"<operator>\",\"reason\":\"<why it is over>\"},\"schema_version\":1}"}}
+   // MARKTANGLE-2: ADOPTS the contract already in production and closes both tracks
+   {"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"mkt2-closeout-1\",\"action\":\"CLOSE_OUT_RETROSPECTIVE\",\"actor\":\"claude-code\",\"actor_role\":\"LIVE_OPS\",\"payload\":{\"package\":\"marktangle-2\",\"approved_by\":\"<operator>\",\"reason\":\"<why it is over>\"},\"schema_version\":1}"}}
+   ```
+
+   Those two are **not** the same shape, and the difference matters if either is ever
+   re-run: `marktangle-reversion`'s close-out registers its contract first, like
+   PERP-V1's; `marktangle-2`'s refuses outright unless the experiment is already
+   registered, because its contract is in production and authoring a second one
+   beside it would carry the verdicts away from the objects they belong to.
+
    `CLOSE_OUT_RETROSPECTIVE` exists because PERP-V1 ran a full probe lifecycle
    **unregistered** — correct at the time, since registering redeploys the worker
    and a probe that cannot trade had no reason to force that — and the system was
@@ -157,8 +174,14 @@ To run a request:
    It **authorizes nothing, structurally**: `service.close_out_retrospective`
    refuses a PASS verdict outright (a verdict computed by hand, outside the system,
    after the fact, may never be what permits a promotion), refuses any target but
-   RETIRED, and refuses an experiment holding deployments — that is a MIGRATION with
-   evidence to reconstruct, not an outside-the-system record. The transport re-checks
+   RETIRED, and refuses an experiment holding a **tagged** deployment — that is a
+   MIGRATION with evidence to reconstruct, not an outside-the-system record. It asks
+   about `strategy_tag`, the join key into `paper_trades.strategy` and
+   `live_orders.strategy`, rather than about deployment rows: a deployment whose arms
+   are all untagged has no key anything could have traded under, so it is ended as
+   part of the retirement instead of refused. Both MARKTANGLE experiments register a
+   deliberately tagless probe deployment, and refusing on the row alone made the verb
+   unreachable for exactly the case it exists for. The transport re-checks
    both properties after the package returns rather than trusting it. Results are
    stamped `computed_by=retrospective:<actor>` so they never read as the evaluator's.
 
