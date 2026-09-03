@@ -3,7 +3,7 @@
 The project's active-work control board — what is being designed and built right now, and
 where each effort is. Read it first on a continuation.
 
-**Updated:** 2026-09-02 (MARKTANGLE-2 run 2 graded) · **Build OS v0.4**
+**Updated:** 2026-09-03 · **Build OS v0.4**
 
 | ID | Workstream | Phase | Status | Current Next Step | Related PR |
 |---|---|---|---|---|---|
@@ -20,6 +20,7 @@ where each effort is. Read it first on a continuation.
 | [WS-011](WS-011-marktangle-conditional-reversion.md) | MARKTANGLE: conditional reversion in recurring binary families | DECIDE | Paused | Closed for now (D4). Verdict HOLD recorded; XOS PAUSED from PROBE. Resume only when a candidate family's holdout reaches 100 entries — months of forward collection, not a rebuild | [#287](https://github.com/50thycal/kalshi_bot/pull/287) |
 | [WS-012](WS-012-ops-channel-vnext.md) | Ops channel vNext: reliability, introspection, verified operations | REVIEW | Active | Review + merge, then deploy the workflow file to `ops` in an idle window and validate with a round trip (green on success, RED on a deliberately bad request) | this PR |
 | [WS-013](WS-013-marktangle-2-conditional-dependence.md) | MARKTANGLE-2: conditional dependence alpha (two tracks, pre-registered) | DECIDE | Active | REGISTERED at PROBE (`m2-register-4`). Run 2 graded: **Track A HOLD** (3 powered classes FAIL — streak length carries nothing, interaction wrong-signed where significant), **Track B HOLD** (crypto ladder has no executable price: 16 two-sided quotes in ~2,000 fetches). Operator decisions: whether Track A's three FAILs trigger §19's kill, and whether Track B needs a new Version to narrow the class. Also open: MARKTANGLE-1 is NOT in Experiment OS despite its docs | [#315](https://github.com/50thycal/kalshi_bot/pull/315), [#316](https://github.com/50thycal/kalshi_bot/pull/316), [#318](https://github.com/50thycal/kalshi_bot/pull/318), [#319](https://github.com/50thycal/kalshi_bot/pull/319), this PR |
+| [WS-014](WS-014-evo-fleet-health-and-xos-bridge.md) | Evo fleet health: dead peer-visibility path + the evo→XOS bridge | DECIDE | Active | Evo Ticket Workshop ships the `fitness.py:544-546` visibility fix (D2), correcting the one-sided assertion in `scripts/evo_selftest.py:332` in the same change | this PR |
 
 *Phase:* IDEA · EXPLORE · MODEL · DECIDE · BUILD_CARD · READY_TO_BUILD · BUILDING · REVIEW
 *Status:* Active · Paused · Blocked · Abandoned
