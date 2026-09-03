@@ -16,6 +16,103 @@ Conventions:
 
 ---
 
+## PERP-V1 2026-09-03 — arm A's convergence is NOT confined to the wide-spread names. BTC and ETH carry it.
+
+Ops `perp2-perticker-1`, code `a115ad91`, 96 h window, 29,421 rows. The close-out
+(2026-09-02) rested on a universe mean: +14.40 bps gross convergence against 8.85 bps of
+spread, dead under a 24 bps tier-0 taker round trip. That mean could not say **where** the
+convergence lived, and the guess in the close-out — that arm A's 2.5-sigma entry selects
+loose books, so the edge and the depth were on different tickers — was **half wrong**.
+
+The entry does select loose books; that part held. But the convergence is present on the
+tight ones too, at roughly half the universe magnitude:
+
+| ticker | n | gross | spread (r/t) | net-exF | ctl-net | delta |
+|---|---|---|---|---|---|---|
+| KXBTCPERP | 50 | 6.75 | **0.52** | 6.23 | -0.97 | 7.20 |
+| KXETHPERP | 45 | 8.57 | **0.77** | 7.80 | +0.43 | 7.37 |
+| KXSOLPERP | 57 | 11.91 | 3.04 | 8.88 | -2.80 | 11.67 |
+| KXXRPPERP | 63 | 12.13 | 3.54 | 8.58 | -2.76 | 11.34 |
+| KXHYPEPERP | 70 | 12.57 | 4.32 | 8.25 | -2.31 | 10.56 |
+| KXZECPERP | 57 | 19.56 | 8.72 | 10.84 | -8.16 | 19.00 |
+| KXAAVEPERP | 58 | 20.70 | 16.45 | 4.25 | -21.40 | 25.65 |
+| KXBNBPERP | 63 | 13.97 | 21.54 | **-7.57** | -22.90 | 15.33 |
+| KXADAPERP | 44 | 16.91 | 15.58 | 1.33 | -16.85 | 18.18 |
+
+bps/trade; 18 tickers, none below the 30-trip THIN mark. Full table in the ops result.
+
+**The control validates the instrument.** Every control net sits within ~1 bps of
+`-spread` (BTC -0.97 vs 0.52; BNB -22.90 vs 21.54; ADA -16.85 vs 15.58), which is exactly
+what a random-direction trade on a symmetric move should earn. The control's mean *gross*
+is therefore near zero, which is why `delta` tracks `gross` down the whole column. Nothing
+about the scoring is manufacturing the signal.
+
+**Gross rises with spread, but does not vanish without it.** The gradient is real —
+AAVE/ZEC/VVV at 19-21 against BTC at 6.75 — so a loose quote does inflate the measured
+convergence. It does not explain it: BTC's 6.75 bps is earned on a book quoting 0.52 bps
+round trip, where there is essentially no spread to mistake for an edge.
+
+### What this changes, and what it does not
+
+**It does not change the recorded result.** perp-v1 is RETIRED, arm A's gate result is
+FAIL, and that FAIL is *correct*: arm A as pre-registered is taker/taker, and 5.54 bps of
+net-ex-funding against a 24 bps round trip is not close. Nothing here re-reads a closed
+gate, and no per-ticker quantity is registered anywhere.
+
+**It moves one hypothetical from "probably dead" to "the only open question".** A
+both-legs-passive variant pays no spread and 4 bps of tier-0 maker fee (2 x 0.020%), so
+its breakeven is the gross column:
+
+| | gross | t0 maker r/t | net ex funding |
+|---|---|---|---|
+| KXBTCPERP | 6.75 | 4.0 | **+2.75** |
+| KXETHPERP | 8.57 | 4.0 | **+4.57** |
+| KXSOLPERP | 11.91 | 4.0 | +7.91 |
+| KXXRPPERP | 12.13 | 4.0 | +8.13 |
+
+Before the split this looked like `14.52 - 4 = +10.5` on names nobody can trade at size.
+It is now +2.75 to +8 on names with $42M-$172M of daily volume. Thinner than the universe
+mean implied, and on real books.
+
+**It also downgrades the funding blocker for this variant specifically.** Mean hold is
+**3.4 minutes** — 0.7% of an 8-hour funding window. Even a 50 bps/window funding rate
+costs ~0.36 bps over that hold. `perp_net_edge_bps_per_trade` is still not producible (its
+definition names a cost with no source, and that has not changed), but the *magnitude* of
+what is missing is an order of magnitude below the edge at these holds. That is an
+argument about scale, not a measurement, and it does not apply to arm B, which holds
+across funding windows by construction.
+
+### Why this is still not a green light
+
+- **Sample.** 44-70 round trips per ticker against a registered `SAMPLE_FLOOR` of 200.
+  Universe sd is 8.38 bps; a 2.75 bps mean on n=50 is not distinguishable from noise at
+  any standard anyone would pre-register.
+- **Coverage.** 24.32% against an 80% floor, at a 187.0 s achieved cadence. **No arm can
+  PASS on this tape whatever its edge**, and lowering the floor after seeing the number
+  would be re-tuning a gate against results.
+- **Fills are entirely unmodelled, and they are the whole question.** Every number above
+  was measured on entries taken *immediately* at a 2.5-sigma excursion. A resting order
+  fills only when someone crosses to it, which is adverse selection by construction — you
+  are filled by the flow pushing the premium further, not by the reversion you are betting
+  on. A passive exit has the mirror problem: the 3.4 min hold was produced by taker exits
+  triggered on a z-crossing, and a resting exit only fills if price trades through it.
+  Nothing in this tape — which carries no trade prints and no depth beyond top-of-book —
+  can answer either.
+
+### Verdict
+
+The premium-reversion mechanism is **real and present on liquid perp books**. Arm A as
+registered is correctly dead. A passive variant is the only surviving thread, it is worth
+roughly +3 to +8 bps/trade before fills, and it cannot be evaluated on this instrument:
+the next thing it needs is a trade-print tape and a fill model, which is a build, not a
+query.
+
+Under `NEW_ONLY` that variant is a **new Version or a new experiment** with a fill model in
+its pre-registration — an operator decision, not something this measurement authorizes.
+Recorded here as evidence for that decision.
+
+---
+
 ## MARKTANGLE-2 2026-09-02 — RUN 2: both tracks HOLD. Streak length carries nothing, and the crypto ladder has no price.
 
 First graded run of the MARKTANGLE-2 instrument (ops `m2-run-2`, code `6933763`, 34 min,
