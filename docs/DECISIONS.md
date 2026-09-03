@@ -673,3 +673,71 @@ come from the default branch on every run.
 *Revisit if:* a fifth request family needs authority that is neither "read production" nor
 "set an allowlisted variable". That is not a new request type; it is a question about
 whether this channel should hold that authority at all.
+
+---
+
+### DEC-010 — The evo fleet's research reaches Experiment OS by a manual Research Lab act, not an automatic proposal
+
+**Date:** 2026-09-03
+**Status:** Accepted
+
+**Context**
+
+Spec §22.7 says evo trades stay in `evo_*` tables under evo lineage, and that future evo
+proposals should be mapped into Experiment OS "immediately after evo integration". The
+first half is built and correct: `importer.py:371` holds it, and NEW_ONLY does not refuse
+evo trades because they never touch the `paper_trades` write path. The second half has
+never been built. A read-only check-in on 2026-09-02 established the gap concretely — a
+`grep` for any Experiment OS symbol across `kalshi_bot/evo/` returns zero hits, the
+coupling runs one way only, and no experiment has ever carried `origin='evo'` even though
+the column has accepted the value since `service.py:615`.
+
+Meanwhile the fleet has accumulated a substantial parallel research ledger in
+`evo_experiments` — hypotheses, falsifiable predictions, conclusions — none of it visible
+to the Control Tower and none of it gated. The consequence is a structural ceiling: an
+agent can conclude any number of experiments and none can become a registered Experiment
+with a pre-registered gate, so no evo finding can be promoted and the fleet cannot
+contribute to the $100/month north star however good it gets.
+
+The design question was where the bridge should sit. An automatic path would propose each
+concluded `evo_experiment` into Experiment OS at `IDEA` stage for a human to register.
+That ends the dead end and preserves the invariant that only a recorded evaluator PASS
+authorizes a transition, since a proposal authorizes nothing. It also produces volume: 448
+concluded experiments already exist, most of them not worth an operator's attention, and a
+queue nobody reads is indistinguishable from no bridge at all.
+
+**Decision**
+
+The bridge is a **manual Research Lab act**. The operator reads the fleet's strategies,
+judges which are worth pursuing further, and Research Lab registers the survivor by hand
+as an ordinary Experiment OS experiment. No automatic proposal, not even into `IDEA`.
+
+The shape of the mismatch is why this is the right cut rather than merely the cautious one.
+An `evo_experiment` carries `promotion_criteria` and `kill_criteria` as free text. A
+registered Experiment needs a gate spec, an arm, a control and an epoch. Nothing
+mechanical turns the first into the second — the translation *is* the scientific judgment,
+and a pipeline that appeared to perform it would be manufacturing a contract out of prose.
+Pre-registration would survive in form and not in substance.
+
+**Consequences**
+
+`origin='evo'` stays a valid value and is what a hand-registered experiment gets stamped
+with, so the lineage back to the originating agent stays legible in Experiment OS.
+
+The fleet's value is now explicitly *hypothesis generation for a human reader*, not
+autonomous contribution to the portfolio. That makes the readability of what agents produce
+the thing that matters, and makes an unreadable strategy a real defect rather than a
+cosmetic one.
+
+Nothing here obliges the operator to review on a cadence. The ledger accumulates; it is
+read when the operator chooses to read it.
+
+Fleet size is held at 6 (`EVO_MAX_ACTIVE_AGENTS=6`) while the system is still under test.
+That is an operator ruling of the same date and is recorded in
+[WS-013](workstreams/WS-013-evo-fleet-health-and-xos-bridge.md), not here — it is a
+parameter, not an architecture.
+
+*Revisit if:* the operator finds themselves reading the evo ledger regularly enough that
+the absence of a triage surface is the bottleneck. That is an argument for a *reading* tool
+— a ranked, filtered view over `evo_experiments` — before it is an argument for an
+automatic write path into Experiment OS.
