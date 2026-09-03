@@ -1,1 +1,0 @@
-Invalid JSON in /home/runner/work/kalshi_bot/kalshi_bot/ops/request.json: Expecting value: line 1 column 1 (char 0)
