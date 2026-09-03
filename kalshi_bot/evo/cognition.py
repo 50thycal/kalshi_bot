@@ -225,8 +225,9 @@ WHAT YOU CAN DO (capability map; exact call syntax is in the action protocol)
 RESEARCH — you are NOT limited to weather. explore_markets discovers live Kalshi
 markets in any series. inspect_data reads anything we hold: paper_trades,
 paper_positions, signals, market_snapshots, orderbook, mmsell_ticks,
-crypto_ladders, crypto_spot, game_tape, game_matches, polymarket, and
-book_performance — the operator's per-book P&L scoreboard. read_doc reads the
+crypto_ladders, crypto_spot, game_tape, game_matches, polymarket,
+book_performance (operator P&L), strategies, and sandbox_runs.
+read_doc reads the
 operator's own research docs (start: BOOK_REGISTRY). run_backtest replays a
 spec over a settled dataset: backfill_weather (default), mmsell, crypto, econ.
 Results arrive in your NEXT heartbeat, not this one.
@@ -285,6 +286,18 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
 - rollback_genome {kind: cognitive|trading, to_revision, reason}
 - create_listener {name, condition, purpose, effect: event|trigger_heartbeat|opportunity,
   cooldown_seconds?, expires_in_hours?, expected_value_note?}
+  `condition` is an object with ONE of "all" (AND) or "any" (OR), a list of up to 8 clauses:
+  {"all": [{"metric": "yes_ask", "op": "<=", "value": 30, "ticker": "KXHIGHCHI-26SEP03-T85"}]}
+  op is one of < <= > >= == !=. Market-scoped metrics need "ticker" (on the clause or once at
+  the top of `condition`): yes_bid yes_ask no_bid no_ask spread mid last_price volume
+  open_interest hours_to_close depth — all take op + numeric value. Others taking op + value:
+  position_pnl_cents position_qty (your own position on `ticker`), drawdown_pct cash_usd
+  nav_usd (portfolio, no ticker needed), data_health_errors (system, no ticker),
+  delta:<market_metric>:<seconds> (change vs a stored baseline, e.g. metric
+  "delta:mid:900" with op/value as usual). Three metrics carry their comparison IN the
+  string instead — no op, no value: {"metric": "status_is:active", "ticker": "..."} (or
+  "result_is:yes"), and {"metric": "new_market:KXHIGHCHI"} (no ticker). A malformed condition
+  is REJECTED, not corrected — get the shape right the first time.
 - remove_listener {listener_id}
 - search_strategy_space {spec?, proposals?, dimensions?, dataset?, date_from?, date_to?,
   neighbourhood?}
@@ -379,6 +392,13 @@ actions: at most MAXN, each {"type": <one of the permitted types>, ...fields}:
   {"strategy_prefix": "mmsell"}. Read it WITH the thesis (read_doc BOOK_REGISTRY maps
   each tag to its thesis doc + pre-registered gate): numbers without the mechanism
   invite copying noise; a thesis without its live numbers invites copying a loser.
+  "strategies" and "sandbox_runs" read back the ACTUAL config behind a strategy_id or a
+  run_id you already have (yours or a peer's): {"source":"strategies","filters":{"id":
+  17}} returns that spec_json (universe filters, entry/exit rules) — how to diagnose a
+  book that traded nothing, or find the exact config a favorable backtest used before
+  save_strategy/activate_strategy. {"source":"sandbox_runs","filters":{"id":10715}}
+  returns that run's params_json + result_json. Filter either by "agent_uuid" to see
+  only your own.
 - read_doc {name, chunk?}. READ the operator's research library — the human running
   this system does their own strategy research in the same repo, and these are their
   actual writeups: theses, study results, postmortems, and the master index

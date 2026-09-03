@@ -88,6 +88,25 @@ SHIPPED_CAPABILITIES: tuple[ShippedCapability, ...] = (
             frozenset({"backtest", "backtests", "backtesting", "corpus", "dataset", "pipeline"}),
         ),
     ),
+    # #39 (backtest_spec_inspection) / #7 (view_strategy_spec): an agent could not
+    # read back its own strategy's config or a past backtest's params. "spec"/
+    # "specification" is a token no other queued ticket's capability field carries
+    # (checked against the live queue 2026-09-03), so it is a safe, distinctive
+    # anchor — nothing shares it with the near-miss bug reports strategy_execution /
+    # strategy_management, which must NOT match (see the test).
+    ShippedCapability(
+        action="inspect_data",
+        shipped_on="2026-09-03",
+        note="shipped as two new inspect_data sources: {\"source\":\"strategies\","
+             "\"filters\":{\"id\":<strategy_id>}} returns that strategy's spec_json "
+             "(universe filters, entry/exit rules); {\"source\":\"sandbox_runs\","
+             "\"filters\":{\"id\":<run_id>}} returns that backtest's params_json + "
+             "result_json. Filter by agent_uuid to see only your own",
+        all_of=(
+            frozenset({"spec", "specification"}),
+            frozenset({"strategy", "strategies", "backtest", "backtests"}),
+        ),
+    ),
 )
 
 

@@ -12,6 +12,7 @@ bound parameters; output is row- and cell-capped. Read-only — nothing here wri
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from decimal import Decimal
 
@@ -30,11 +31,17 @@ from ..models import (
     PolymarketSnapshot,
     Signal,
 )
-from .models import EvoSandboxRun
+from .models import EvoSandboxRun, EvoStrategy
 
 DEFAULT_LIMIT = 20
 MAX_LIMIT = 50
 _CELL_CAP = 200
+# strategies.spec_json / sandbox_runs.params_json|result_json are the actual payload
+# of those two sources, not incidental metadata — capped separately and looser than
+# _CELL_CAP so a real spec (universe filters, entry/exit rules) isn't chopped
+# mid-structure for the common case, while a runaway result blob still can't blow
+# the token budget of one row.
+_JSON_CELL_CAP = 1200
 
 
 # source -> (model, output columns, filterable columns, order-by column [desc]).
@@ -136,6 +143,27 @@ SOURCES: dict[str, dict] = {
         virtual=True,
         filters=("strategy", "strategy_prefix"),
     ),
+    # tickets #39 (backtest_spec_inspection) / #7 (view_strategy_spec): an agent
+    # could not read back its own strategy's spec, or a past backtest's params, so
+    # it could not diagnose a book that silently traded nothing or reconstruct the
+    # exact config behind a favorable run_id to save/activate it. Fleet-readable
+    # (constitution §7: observing peers is allowed), filterable to your own via
+    # agent_uuid. `id` is filterable so an agent can pull the ONE strategy/run it
+    # named in its own journal/ticket rather than guessing from the most-recent page.
+    "strategies": dict(
+        model=EvoStrategy,
+        columns=("id", "created_at", "agent_uuid", "name", "revision", "status",
+                 "spec_json", "validation_json"),
+        filters=("id", "agent_uuid", "status", "name"),
+        order="created_at",
+    ),
+    "sandbox_runs": dict(
+        model=EvoSandboxRun,
+        columns=("id", "created_at", "agent_uuid", "strategy_id", "kind", "dataset",
+                 "status", "params_json", "result_json"),
+        filters=("id", "agent_uuid", "strategy_id", "kind", "dataset"),
+        order="created_at",
+    ),
 }
 
 
@@ -231,6 +259,9 @@ def _cap_cell(v: object) -> object:
         return float(v)
     if isinstance(v, str):
         return v if len(v) <= _CELL_CAP else v[: _CELL_CAP - 1] + "…"
+    if isinstance(v, (dict, list)):
+        text = json.dumps(v, separators=(",", ":"), default=str)
+        return v if len(text) <= _JSON_CELL_CAP else text[: _JSON_CELL_CAP - 1] + "…"
     return v
 
 

@@ -137,12 +137,14 @@ def test_auto_close_names_the_capability_and_when_it_shipped(evo_session):
 
 def test_a_live_request_is_left_alone(evo_session):
     """THE property that makes auto-close safe: a request for something that has NOT shipped
-    must survive every pass. (This test used to guard the CPI corpus, which was the live ask
-    at the time. The corpus shipped 2026-08-13, so it is now covered by the econ registry
-    entry below and this is re-pointed at requests that are still genuinely open — keeping
+    must survive every pass. (This test used to guard the CPI corpus, then view_strategy_spec,
+    each the live ask at the time — both since shipped and covered by their own registry
+    entries above. Re-pointed again at requests that are still genuinely open as of 2026-09-03
+    — #41 (event-gated sandbox backtesting) and #40 (a commodities-hub data corpus) — keeping
     the assertion honest instead of deleting it.)"""
-    for cap, cat in (("view_strategy_spec so I can read back what I deployed", "research_tooling"),
-                     ("data_pipeline_diagnostics for the collectors", "infrastructure"),
+    for cap, cat in (("event_timestamp_gated_backtesting", "sandbox_operator"),
+                     ("settled commodities-hub market snapshot corpus with exchange-status "
+                      "timestamps (CME/ICE open/closed)", "data_collection"),
                      ("live_quote_ticker_schema", "api_credentials")):
         t = _ticket(evo_session, cap, category=cat, agent=f"a-{cap[:9]}")
         assert evo_session.get(EvoTicket, t.id).status == "open"
@@ -224,4 +226,43 @@ def test_neighbouring_data_requests_are_not_closed_by_the_econ_entry(evo_session
     for cap, cat in (("data_pipeline_diagnostics for the collectors", "infrastructure"),
                      ("weather_market_ticker_registry", "data_collection")):
         _ticket(evo_session, cap, category=cat, agent=f"a-{cap[:8]}")
+    assert tickets.auto_resolve_shipped(evo_session) == 0
+
+
+# --- spec inspection: WS-014's D1 root cause, tickets #39 and #7 -------------
+
+SPEC_INSPECTION_ASKS = (
+    ("backtest_spec_inspection", "research_tooling"),   # #39, 2026-08-26
+    ("view_strategy_spec", "research_tooling"),          # #7, 2026-07-29
+)
+
+
+def test_spec_inspection_requests_close_against_the_registry(evo_session):
+    """Both phrasings the fleet actually used, verbatim from the live queue."""
+    made = [_ticket(evo_session, cap, category=cat, agent=f"s{i}")
+            for i, (cap, cat) in enumerate(SPEC_INSPECTION_ASKS)]
+    assert tickets.auto_resolve_shipped(evo_session) == len(made)
+    for t in made:
+        row = evo_session.get(EvoTicket, t.id)
+        assert row.status == "implemented"
+        assert "strategies" in row.implementation_result
+        assert "sandbox_runs" in row.implementation_result
+
+
+def test_spec_inspection_entry_does_not_sweep_up_the_bug_report_near_misses(evo_session):
+    """`strategy_execution` (#11/#9) and `strategy_management` (#22) are queued bug reports
+    about a since-fixed fill-engine issue on strategies whose owning agents are long
+    retired — real, but a different capability entirely, and NOT closed by shipping spec
+    readback. `shared_code_capability` (#30) and `deactivation` (#21) are the deactivation
+    wave's stray phrasings, already covered (in substance, if not by the matcher) by the
+    deactivate_strategy entry above — never by this one."""
+    near_misses = (
+        ("strategy_execution", "bug_report"),
+        ("Automated strategy execution / live order placement", "bug_report"),
+        ("strategy_management", "bug_report"),
+        ("shared_code_capability", "bug_report"),
+        ("deactivation", "other"),
+    )
+    for i, (cap, cat) in enumerate(near_misses):
+        _ticket(evo_session, cap, category=cat, agent=f"n{i}")
     assert tickets.auto_resolve_shipped(evo_session) == 0
