@@ -1,4 +1,0 @@
-# ops request [READ]
-# type=noop  id=idle-m2-run2-recorded
-# code 98c5400bb89e0985390f882c230796375673fef9 · started 2026-09-02T19:36:30Z
-(noop — nothing to do)
