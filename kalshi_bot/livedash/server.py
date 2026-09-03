@@ -16,6 +16,20 @@ deliberately no endpoint that can place, cancel, close, pause or reconfigure
 anything — this page cannot touch the live book it observes.
 
 Errors return a generic JSON envelope, never a stack trace or a connection string.
+
+Every request is timed and the duration is logged, because the one question this
+service could not answer about itself was "which route is slow". A route above
+`SLOW_REQUEST_MS` logs at WARNING so a regression announces itself in the ordinary
+log stream instead of waiting for an operator to notice a blank card.
+
+A client that goes away mid-response is NOT a request failure. Writing the body of
+an already-successful response raises `BrokenPipeError`, and the old handler caught
+that alongside real errors, logged "request failed", and then tried to send a 503
+into the same dead socket -- which threw again and escaped into socketserver's
+traceback dump. The result was a log that reported a successful response as a 503
+server error, with a stack trace attached, for what is a normal browser navigation.
+Disconnects are now recognised and logged as such, and nothing is ever written to a
+response that has already started.
 """
 
 from __future__ import annotations
@@ -23,6 +37,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -39,6 +54,16 @@ _INDEX = (Path(__file__).parent / "static" / "index.html").read_text(encoding="u
 # Twin tags are String(24) strategy tags: word characters, dash and dot only.
 _TAG_RE = re.compile(r"^[A-Za-z0-9._-]{1,24}$")
 _RUN_PATH_RE = re.compile(r"^/api/runs/(?P<tag>[^/]+)(?P<sub>/series|/orders|/events)?$")
+
+# Above this, a route is slow enough that an operator notices, so it is logged at
+# WARNING rather than INFO. The page makes six requests on a cold load; anything
+# here is a second of somebody waiting at a skeleton.
+SLOW_REQUEST_MS = 2000
+
+# The socket errors that mean "the client left", as opposed to "this request is
+# broken". They are the normal outcome of a reload, a navigation, a closed tab or
+# an upstream proxy giving up, and none of them is this service's fault.
+DISCONNECTED = (BrokenPipeError, ConnectionResetError)
 
 
 def _one(params: dict, key: str) -> str | None:
@@ -77,10 +102,19 @@ def _dt(params: dict, key: str) -> datetime | None:
 class LiveDashHandler(BaseHTTPRequestHandler):
     server_version = "kalshi-livedash/1.0"
 
+    #: Set as soon as a response begins. A second response on the same request is
+    #: not a fallback, it is a protocol violation: the status line and headers have
+    #: already gone out, so a 503 written after them is appended to the body the
+    #: client is reading. This is the flag the old error path did not have.
+    _responded = False
+    _bytes_sent = 0
+
     def log_message(self, fmt, *args):
         logger.info("livedash %s", fmt % args)
 
     def _send(self, code: int, body: bytes, content_type: str) -> None:
+        self._responded = True
+        self._bytes_sent = len(body)
         self.send_response(code)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
@@ -99,7 +133,13 @@ class LiveDashHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
         params = parse_qs(parsed.query)
+        started = time.perf_counter()
+        try:
+            self._dispatch(path, params)
+        finally:
+            self._log_timing(path, started)
 
+    def _dispatch(self, path: str, params: dict) -> None:
         if path == "/":
             self._send(200, _INDEX.encode("utf-8"), "text/html; charset=utf-8")
             return
@@ -112,12 +152,38 @@ class LiveDashHandler(BaseHTTPRequestHandler):
         try:
             if not self._route(path, params):
                 self._json({"error": "not found"}, 404)
+        except DISCONNECTED:
+            # The client is gone. There is nobody to send a 503 to, and trying is
+            # what turned a routine disconnect into a stack trace in the log.
+            self.close_connection = True
+            logger.info("livedash client disconnected: %s", path)
         except Exception:  # noqa: BLE001 — never leak internals to a public URL
             logger.exception("livedash request failed: %s", path)
-            self._json({
-                "error": "dashboard temporarily unavailable",
-                "generated_at": datetime.now(timezone.utc).isoformat(),
-            }, 503)
+            if self._responded:
+                # The failure happened while writing a response that had already
+                # started, so the status the client saw is settled. Say so instead
+                # of writing a second one on top of it.
+                self.close_connection = True
+                return
+            try:
+                self._json({
+                    "error": "dashboard temporarily unavailable",
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                }, 503)
+            except DISCONNECTED:
+                self.close_connection = True
+
+    def _log_timing(self, path: str, started: float) -> None:
+        """One line per request saying how long it took.
+
+        Without this the service could report *that* a route failed and never how
+        long it spent before doing so, which is the whole of what an operator
+        waiting at a blank card needs to know."""
+        elapsed_ms = (time.perf_counter() - started) * 1000
+        level = logging.WARNING if elapsed_ms >= SLOW_REQUEST_MS else logging.INFO
+        logger.log(level, "livedash timing %s %s %.0fms %dB",
+                   path, "sent" if self._responded else "no-response",
+                   elapsed_ms, self._bytes_sent)
 
     def _route(self, path: str, params: dict) -> bool:
         if path == "/api/runs":
