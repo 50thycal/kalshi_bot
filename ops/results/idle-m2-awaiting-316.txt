@@ -1,4 +1,0 @@
-# ops request [READ]
-# type=noop  id=idle-m2-awaiting-316
-# code 6e7962c31d78f587c71883cfb67e110b71aaab3f · started 2026-09-02T15:46:24Z
-(noop — nothing to do)
