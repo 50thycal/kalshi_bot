@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=dm10-corr-1
-# code c99e8a033ea76a5eb2efe5bca4626e3b5a526efd · started 2026-09-04T23:02:25Z
-settle_date  games  markets  losing_markets  losing_games  realized_usd
------------  -----  -------  --------------  ------------  ------------
-26SEP02      11     31       9               5             -6.44       
-26SEP03      6      10       1               1             -0.25       
-
-(2 rows)
