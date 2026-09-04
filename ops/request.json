@@ -1,1 +1,1 @@
-{"type":"env","id":"exposure-check-1"}
+{"type":"db","id":"exposure-2","sql":"WITH latest AS (SELECT DISTINCT ON (market_ticker) market_ticker, quantity, market_exposure, realized_pnl, captured_at FROM positions ORDER BY market_ticker, captured_at DESC) SELECT count(*) FILTER (WHERE quantity IS NOT NULL AND quantity <> 0) AS open_positions, COALESCE(round(sum(abs(market_exposure)) FILTER (WHERE quantity IS NOT NULL AND quantity <> 0),2),0) AS capital_at_risk_usd, max(captured_at) AS newest_snapshot, now() - max(captured_at) AS snapshot_age FROM latest"}
