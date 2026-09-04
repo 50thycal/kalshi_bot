@@ -1,1 +1,1 @@
-{"type":"noop","id":"idle-20260904"}
+{"type":"script","name":"livedash_probe","args":["--base","https://kalshibot-production-cb6b.up.railway.app"],"id":"livedash-probe-3"}
