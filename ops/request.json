@@ -1,1 +1,1 @@
-{"type":"db","sql":"select r.verdict, r.computed_at::text as computed, r.computed_by, left(r.sample_json::text,200) as sample, left(r.metrics_json::text,900) as metrics from experiment_gate_results r join experiment_gates g on g.id=r.gate_id join experiment_versions v on v.id=g.version_id where v.experiment_id=(select id from experiments where key='mmsell-price-ceiling-capacity') and g.gate_key='live_canary_keep' order by r.id desc limit 4","max_rows":6,"id":"dm10-keepgate-1"}
+{"type":"logs","service":"livedash","limit":200,"id":"stage-read-1"}
