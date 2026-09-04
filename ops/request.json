@@ -1,1 +1,1 @@
-{"type":"logs","service":"main","limit":300,"id":"worker-diskfull"}
+{"type":"env","id":"exposure-check-1"}
