@@ -1,1 +1,1 @@
-{"type":"logs","service":"livedash","limit":80,"id":"wp-verify-C"}
+{"type":"script","name":"livedash_probe","args":["--base","https://kalshibot-production-cb6b.up.railway.app"],"id":"livedash-probe-2"}
