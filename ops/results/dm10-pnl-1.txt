@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=dm10-pnl-1
-# code 46d3a25f60fa422f4ac88529bff3379945923a95 · started 2026-09-04T16:06:39Z
-filled_markets  still_open  settled_flat  realized_pnl_usd  open_exposure_usd  win_rate_pct
---------------  ----------  ------------  ----------------  -----------------  ------------
-97              24          73            -4.19             22.41              86.3        
-
-(1 row)
