@@ -156,8 +156,13 @@ class LiveDashHandler(BaseHTTPRequestHandler):
             # The client is gone. There is nobody to send a 503 to, and trying is
             # what turned a routine disconnect into a stack trace in the log.
             self.close_connection = True
+            data.log_pending_stages()
             logger.info("livedash client disconnected: %s", path)
         except Exception:  # noqa: BLE001 — never leak internals to a public URL
+            # How far the build got before it threw, first: on a failing route the
+            # stage line is the most useful thing there is, and it is the one route
+            # that never reached its own `log()`.
+            data.log_pending_stages()
             logger.exception("livedash request failed: %s", path)
             if self._responded:
                 # The failure happened while writing a response that had already

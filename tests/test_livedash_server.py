@@ -332,3 +332,39 @@ def test_build_run_reports_where_its_time_went(live_server, caplog):
     assert "build_run mm10_pt" in line and "total=" in line
     for stage in ("marks[latest]", "live_leg", "paper_leg", "gates", "market_tags"):
         assert stage in line, f"{stage} missing from {line}"
+
+
+def test_a_build_that_raises_still_reports_where_its_time_went(live_server, monkeypatch, caplog):
+    """The route that FAILS is the one whose timings matter most, and it was the one
+    route that lost them: `stages.log()` sits at the end of a builder, so anything
+    that threw first reported nothing at all about how far it got."""
+    from kalshi_bot.livedash import data as livedash_data
+
+    base, _ = live_server
+    real_paper_leg = livedash_data.legs.paper_leg
+
+    def boom(*a, **k):
+        raise RuntimeError("failed partway through the build")
+
+    monkeypatch.setattr(livedash_data.legs, "paper_leg", boom)
+    with caplog.at_level("INFO", logger="kalshi_bot.livedash"):
+        try:
+            urllib.request.urlopen(base + "/api/runs/mm10_pt", timeout=10)
+        except urllib.error.HTTPError as exc:
+            assert exc.code == 503
+    lines = [r.getMessage() for r in caplog.records if "livedash stages" in r.getMessage()]
+    assert len(lines) == 1, lines
+    # It got as far as the marks and the live leg, and no further — which is the
+    # finding. The paper leg never completed, so it never recorded a timing.
+    assert "marks[latest]=" in lines[0] and "live_leg=" in lines[0], lines[0]
+    assert "gates=" not in lines[0], lines[0]
+    monkeypatch.setattr(livedash_data.legs, "paper_leg", real_paper_leg)
+
+
+def test_a_successful_build_reports_its_stages_exactly_once(live_server, caplog):
+    """The failure path must not double-log a build that logged itself."""
+    base, _ = live_server
+    with caplog.at_level("INFO", logger="kalshi_bot.livedash"):
+        _get(base, "/api/runs/mm10_pt")
+    lines = [r.getMessage() for r in caplog.records if "livedash stages" in r.getMessage()]
+    assert len(lines) == 1, lines

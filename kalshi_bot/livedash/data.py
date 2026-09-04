@@ -18,6 +18,7 @@ produced it, so a displayed number can be traced back to its records.
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
@@ -64,6 +65,7 @@ class Stages:
         self.label = label
         self.timings: dict[str, float] = {}
         self._started = time.perf_counter()
+        _in_flight.stages = self
 
     @contextmanager
     def stage(self, name: str):
@@ -78,10 +80,29 @@ class Stages:
         return (time.perf_counter() - self._started) * 1000
 
     def log(self) -> None:
+        _in_flight.stages = None
         parts = " ".join(f"{name}={ms:.0f}ms" for name, ms in
                          sorted(self.timings.items(), key=lambda kv: -kv[1]))
         logger.info("livedash stages %s total=%.0fms %s",
                     self.label, self.total_ms(), parts)
+
+
+#: The build running on this thread, until it logs itself. One handler thread runs
+#: one build, so a plain thread-local is the whole of the bookkeeping needed.
+_in_flight = threading.local()
+
+
+def log_pending_stages() -> None:
+    """Emit the stage line for a build that raised before reaching its own `log()`.
+
+    Without this the one route that FAILS is the one route whose timings are lost,
+    which is exactly backwards: a build that got most of the way and then threw has
+    already said where it spent its time, and that is what says how far it got. The
+    server calls this from its error path.
+    """
+    stages = getattr(_in_flight, "stages", None)
+    if stages is not None:
+        stages.log()
 
 
 def _now(now: datetime | None = None) -> datetime:
