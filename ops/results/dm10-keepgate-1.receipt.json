@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "c99e8a033ea76a5eb2efe5bca4626e3b5a526efd",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-04T16:18:08Z",
+  "id": "dm10-keepgate-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/dm10-keepgate-1.receipt.json",
+  "result_file": "ops/results/dm10-keepgate-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33894347992",
+  "service": null,
+  "started_at": "2026-09-04T16:18:08Z",
+  "targets": [],
+  "type": "db"
+}
