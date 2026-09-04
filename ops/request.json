@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","sql":"select status, count(*) as n, count(distinct market_ticker) as tickers, min(limit_price) as min_px, max(limit_price) as max_px, sum(quantity) as contracts, left(string_agg(distinct coalesce(cancel_reason,''),' | '),200) as reasons from live_orders where strategy='Dmmsell10' group by status order by n desc","max_rows":15,"id":"dm10-status-1"}
