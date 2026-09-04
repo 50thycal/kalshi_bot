@@ -1,1 +1,1 @@
-{"type":"logs","service":"livedash","limit":250,"id":"series-exc-1"}
+{"type":"db","id":"disk-1","sql":"SELECT pg_size_pretty(pg_database_size(current_database())) AS db_size, (SELECT string_agg(t, ', ') FROM (SELECT relname || '=' || pg_size_pretty(pg_total_relation_size(c.oid)) AS t FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='r' ORDER BY pg_total_relation_size(c.oid) DESC LIMIT 12) s) AS top_tables"}
