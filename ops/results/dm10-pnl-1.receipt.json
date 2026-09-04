@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "46d3a25f60fa422f4ac88529bff3379945923a95",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-04T16:06:39Z",
+  "id": "dm10-pnl-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/dm10-pnl-1.receipt.json",
+  "result_file": "ops/results/dm10-pnl-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33893272536",
+  "service": null,
+  "started_at": "2026-09-04T16:06:39Z",
+  "targets": [],
+  "type": "db"
+}
