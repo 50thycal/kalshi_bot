@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=dm10-status-1
-# code 46d3a25f60fa422f4ac88529bff3379945923a95 · started 2026-09-04T16:05:45Z
-status    n   tickers  min_px  max_px  contracts  reasons   
---------  --  -------  ------  ------  ---------  ----------
-canceled  99  68       90      94      99          | timeout
-filled    97  97       90      94      97                   
-
-(2 rows)
