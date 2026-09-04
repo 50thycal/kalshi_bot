@@ -59,6 +59,26 @@ query DeploymentLogs($deploymentId: String!, $limit: Int!, $filter: String) {
 }
 """
 
+# The same query plus the structured fields Railway parsed out of our JSON log line.
+# `logging_config.JsonFormatter` puts a formatted traceback in `exc`, and asking only
+# for `message` threw it away -- so the service logged "request failed" and nothing
+# about WHY, and an investigation had to reverse-engineer the cause from a traceback
+# socketserver happened to dump on its own. Tried first, and fallen back on, because
+# a wrong field name here would break every log read rather than one of them.
+DEPLOYMENT_LOGS_QUERY_WITH_ATTRIBUTES = """
+query DeploymentLogs($deploymentId: String!, $limit: Int!, $filter: String) {
+  deploymentLogs(deploymentId: $deploymentId, limit: $limit, filter: $filter) {
+    timestamp
+    message
+    severity
+    attributes { key value }
+  }
+}
+"""
+
+#: Structured fields worth printing under their log line. `exc` is the traceback.
+DETAIL_KEYS = ("exc",)
+
 
 def _gql(query: str, variables: dict, token: str) -> dict:
     payload = json.dumps({"query": query, "variables": variables}).encode("utf-8")
@@ -140,7 +160,10 @@ def main() -> int:
         "limit": limit,
         "filter": os.environ.get("LOG_FILTER", "").strip() or None,
     }
-    data = _gql(DEPLOYMENT_LOGS_QUERY, variables, token)
+    try:
+        data = _gql(DEPLOYMENT_LOGS_QUERY_WITH_ATTRIBUTES, variables, token)
+    except Exception:  # noqa: BLE001 — an unsupported field must not lose the logs
+        data = _gql(DEPLOYMENT_LOGS_QUERY, variables, token)
     logs = data.get("deploymentLogs") or []
     if not logs:
         print("(no log lines returned)")
@@ -151,7 +174,22 @@ def main() -> int:
         msg = entry.get("message", "")
         prefix = f"{ts} {sev}".strip()
         print(f"{prefix}  {msg}" if prefix else msg)
+        for key, value in _details(entry):
+            for line in str(value).splitlines():
+                print(f"    {key}| {line}")
     return 0
+
+
+def _details(entry: dict):
+    """The structured fields worth printing under a log line, in DETAIL_KEYS order.
+
+    Railway returns attributes as a list of {key, value}; an older API, or the
+    fallback query, returns none at all, and both are fine — the line still prints."""
+    attributes = entry.get("attributes") or []
+    if not isinstance(attributes, list):
+        return []
+    found = {a.get("key"): a.get("value") for a in attributes if isinstance(a, dict)}
+    return [(k, found[k]) for k in DETAIL_KEYS if found.get(k)]
 
 
 if __name__ == "__main__":
