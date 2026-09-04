@@ -1,7 +1,16 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS"
+    "builder": "NIXPACKS",
+    "watchPatterns": [
+      "kalshi_bot/**",
+      "requirements.txt",
+      "pyproject.toml",
+      "railway.livedash.json",
+      "nixpacks.toml",
+      "runtime.txt",
+      ".python-version"
+    ]
   },
   "deploy": {
     "startCommand": "python -m kalshi_bot.livedash",
