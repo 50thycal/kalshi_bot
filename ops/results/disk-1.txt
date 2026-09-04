@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=disk-1
-# code 7becc96c3688fb963ba650c731c46c6294e6351f · started 2026-09-04T23:06:26Z
-db_size  top_tables                                                                                                                                                                                              
--------  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-4493 MB  crypto_ladder_snapshots=1021 MB, mmsell_position_ticks=835 MB, game_tape_snapshots=386 MB, backfill_regime_candles=324 MB, weather_bucket_snapshots=296 MB, weather_forecasts=242 MB, positions=236 MB,…
-
-(1 row)
