@@ -1,1 +1,1 @@
-{"type":"db","id":"series-tags-1","sql":"SELECT t.twin_tag, t.live_tag, t.started_at, t.ended_at, (SELECT count(*) FROM paper_trades p WHERE p.strategy=t.twin_tag AND p.legacy IS NOT TRUE) AS paper_n FROM live_paper_twins t ORDER BY t.started_at DESC LIMIT 8"}
+{"type":"script","name":"livedash_probe","args":["--base","https://kalshibot-production-cb6b.up.railway.app","--tag","Cmmsell10_pt3"],"id":"livedash-probe-retired"}
