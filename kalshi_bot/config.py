@@ -480,6 +480,23 @@ class Settings(BaseSettings):
         "xmtype=event_stat+politics+announcement;"
         "Tmmsell6:lo=5,hi=10,maxyes=7,"
         "mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;"
+        # --- CONTEST-CAP books, added 2026-09-05 (docs/MMSELL_CORRELATION_CAP.md) -----------
+        # The forward test of the contest cap merged as `576bcfa`, which ships the mechanism
+        # DEFAULT OFF because `mmsell_contest_cap_enabled` is global — switching it on would
+        # change selection for every mmsell book at once, and no A/B is possible while one flag
+        # governs all of them. `contestcap=` is the per-book override that makes the experiment
+        # runnable: the global default stays off and untouched, and only these two books differ.
+        #
+        # `Gmmsell0` is the CONTROL, byte-identical to `mmsell10` on every knob and carrying no
+        # contest cap. It is its own tag rather than `mmsell10` because that tag already carries
+        # the control arm of `mmsell-price-ceiling-capacity`, and a tag carries ONE active
+        # deployment arm. Naming `mmsell10` as an EXTERNAL control instead is what has
+        # `mmsell-anchor-vol-entry` sitting in BLOCKED_PLATFORM — a cross-snapshot delta pools
+        # incomparable evidence. An in-experiment control shares this epoch and snapshot by
+        # construction. Its n restarts at 0, which is correct anyway: both arms must be read
+        # over the same window.
+        "Gmmsell0:lo=5,hi=10,maxyes=7;"
+        "Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;"
         # --- LIVE-COHORT books, added 2026-08-15 (docs/LIVE_PAPER_TWIN.md "Arming") ----------
         # `Lmmsell8` / `Lmmsell10` are byte-identical replicas of `mmsell8` / `mmsell10`. They
         # exist for ONE reason: a live book must be armed on a tag with NO open paper positions.
@@ -1735,6 +1752,19 @@ class Settings(BaseSettings):
                 # per-book cap the scan can reach further while the incumbents keep seeing
                 # exactly the top-N they always saw, and only the book under test sees more.
                 "scanmax": None,
+                # Per-book CONTEST cap, overriding the GLOBAL mmsell_contest_cap_enabled /
+                # mmsell_contest_cap (docs/MMSELL_CORRELATION_CAP.md, XOS-000020). None = follow
+                # the global setting, which is every existing book, so this is inert for the
+                # whole running cohort.
+                #
+                # It exists because the global flag cannot express an experiment. `tracker.py` is
+                # shared by every mmsell book, so the global switch turns the cap on for all of
+                # them simultaneously — there is no window in which a capped book and an uncapped
+                # control run side by side, and without that there is no measurement, only a
+                # before-and-after across two different market regimes. The merged mechanism's
+                # own commit anticipates this ("a book opts in through its own registered risk
+                # envelope"); this is the knob that lets it.
+                "contestcap": None,
             }
             ok = True
             for kv in body.split(","):
@@ -1746,7 +1776,8 @@ class Settings(BaseSettings):
                 try:
                     if key in ("lo", "hi", "htcmin", "htcmax", "maxyes", "stopl", "volv"):
                         v[key] = float(val)
-                    elif key in ("stopk", "volw", "abarm", "size", "scanmax"):
+                    elif key in ("stopk", "volw", "abarm", "size", "scanmax",
+                                 "contestcap"):
                         v[key] = int(val)
                     elif key == "strangle":
                         v[key] = str(val).strip() not in ("", "0", "false", "False")
@@ -1769,6 +1800,11 @@ class Settings(BaseSettings):
                                ("mode", KNOWN_MODES)):
                 if any(t not in known for t in v[key]):
                     ok = False
+            # A cap below 1 would admit nothing at all rather than capping — a book that
+            # reads as capped and trades zero, which is the same class of invisible no-op the
+            # type validation above exists to prevent.
+            if v["contestcap"] is not None and v["contestcap"] < 1:
+                ok = False
             if ok and v["lo"] < v["hi"] and v["htcmin"] < v["htcmax"]:
                 out.append(v)
         return out

@@ -201,7 +201,8 @@ class MmSellTracker:
     def _settlement_cap_blocks(self, session, s: Settings, *, book_cap: int, tag: str,
                                ticker: str, close_dt, series: str, event_ticker: str,
                                mutually_exclusive: bool | None,
-                               summ: MmSellCycleSummary, recorder) -> bool:
+                               summ: MmSellCycleSummary, recorder,
+                               contest_cap: int | None = None) -> bool:
         """True when a concentration cap should SKIP this entry: too many of `tag`'s own open
         positions already settle on this candidate's date (docs/MMSELL_SEASONAL_FORECAST.md
         "Reading 3"), or (on a CORRELATED regime's date) too many distinct EVENTS already do, or
@@ -209,7 +210,13 @@ class MmSellTracker:
 
         `book_cap` is the SAME cap `open_count[tag]` was just checked against (paper's 200 or a
         twin's live-sized 60) — the date cap is a percentage OF that, so a twin gets the tighter
-        live-shaped number automatically, the same asymmetry the position cap already applies."""
+        live-shaped number automatically, the same asymmetry the position cap already applies.
+
+        `contest_cap` is THIS BOOK's own contest cap, overriding the global setting. None means
+        follow the global, which is every existing book. It exists because the global flag cannot
+        express an experiment: `tracker.py` is shared, so the global switch caps every mmsell book
+        at once and leaves no window in which a capped book and an uncapped control run side by
+        side (docs/MMSELL_CORRELATION_CAP.md)."""
         if not s.mmsell_settlement_cap_enabled or close_dt is None:
             return False
         try:
@@ -251,9 +258,13 @@ class MmSellTracker:
         # fifteen positions riding nine innings with nothing above noticing (XOS-000020).
         # Exempts mutually-exclusive events for the same reason the rung cap does: there at
         # most one leg can lose, so stacking is a genuine hedge rather than concentration.
-        if s.mmsell_contest_cap_enabled and not mutually_exclusive:
+        # A book's own `contestcap` wins over the global pair; None follows the global, so the
+        # default path is byte-identical to the merged mechanism's.
+        cap_n = (contest_cap if contest_cap is not None
+                 else (s.mmsell_contest_cap if s.mmsell_contest_cap_enabled else None))
+        if cap_n is not None and not mutually_exclusive:
             contest = contest_key_of(ticker)
-            if contest and contests_on_date.get(contest, 0) >= s.mmsell_contest_cap:
+            if contest and contests_on_date.get(contest, 0) >= cap_n:
                 summ.skipped_contest_cap += 1
                 self._note(recorder, ticker, tag, twin_codes.SKIP_CONTEST_CAP)
                 return True
@@ -983,7 +994,8 @@ class MmSellTracker:
                                                    ticker=ticker, close_dt=close_dt,
                                                    series=series, event_ticker=event_ticker,
                                                    mutually_exclusive=event_exclusive,
-                                                   summ=summ, recorder=recorder):
+                                                   summ=summ, recorder=recorder,
+                                                   contest_cap=book.get("contestcap")):
                         continue
 
                     if is_twin:

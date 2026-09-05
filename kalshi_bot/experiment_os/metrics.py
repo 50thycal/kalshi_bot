@@ -32,6 +32,7 @@ not an outcome, and is surfaced as its own metric instead of polluting n.
 from __future__ import annotations
 
 import math
+import statistics
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 
@@ -334,6 +335,30 @@ _UNIVERSAL: tuple[MetricDefinition, ...] = (
         key="win_rate_pct", unit="%", kind="rate", source="paper_trades",
         description="share of settled trades with positive P&L",
     ),
+    # --- daily shape (docs/MMSELL_CORRELATION_CAP.md) ----------------------------------
+    # A concentration cap is a DRAWDOWN control: it trades total return for smoothness by
+    # construction, so a mean-per-trade gate cannot decide one. On the mmsell cheap band the
+    # measured per-trade sd is $0.2343, which puts an 80%-power test of a +0.30c difference at
+    # ~95,700 settled trades per arm — years at current flow. The daily series is enormously
+    # better powered on the same evidence, so these two exist to let such a book be gated at all.
+    #
+    # ADDITIVE, so METRICS_ENGINE_REVISION is deliberately NOT bumped: no existing metric's
+    # meaning or implementation changes here. The revision is a platform-snapshot component, so
+    # bumping it would re-pin every running experiment and make evidence collected either side
+    # of this commit incomparable — the exact block mmsell-anchor-vol-entry is already sitting
+    # in. Changing a shared semantic is Platform Change Review's call; adding a provider that
+    # never existed is not one.
+    MetricDefinition(
+        key="settled_days", direction="neutral", unit="days", kind="count",
+        source="paper_trades",
+        description="distinct UTC days on which the scope's settled trades closed",
+    ),
+    MetricDefinition(
+        key="daily_pnl_stability", direction="higher_better", unit="ratio", kind="mean",
+        source="paper_trades",
+        description="mean daily realized P&L over its standard deviation, bucketed by "
+        "closed_at UTC date — a scale-free read of return per unit of daily volatility",
+    ),
 )
 
 # Declared metrics whose canonical provider does not exist yet. Their reference
@@ -558,6 +583,64 @@ def _paper_aggregates(session, scope: MetricScope) -> dict:
         "n_open": int(row.n_open or 0),
         "n_void": int(row.n_void or 0),
     }
+
+
+def _daily_series(session, scope: MetricScope) -> list[float]:
+    """The scope's realized P&L in USD, one entry per UTC day on which trades closed.
+
+    Buckets on `closed_at`, not on any book-specific settlement table: the daily series has to
+    mean the same thing for every experiment that reads it, and only the paper engine's own
+    close timestamp is available for all of them. Days with no settled trade are absent rather
+    than zero — a day the book did not settle anything is not a flat day, it is not a day."""
+    rows = session.execute(
+        select(
+            func.date(PaperTrade.closed_at).label("d"),
+            func.coalesce(func.sum(PaperTrade.pnl), 0).label("pnl"),
+        )
+        .where(
+            PaperTrade.strategy.in_(scope.strategy_tags),
+            PaperTrade.created_at >= scope.window_start,
+            PaperTrade.created_at < scope.window_end,
+            PaperTrade.status.in_(SETTLED_STATUSES),
+            PaperTrade.closed_at.is_not(None),
+        )
+        .group_by(func.date(PaperTrade.closed_at))
+    ).all()
+    return [float(r.pnl or 0.0) for r in rows]
+
+
+def _daily_shape_metric(session, key: str, scope: MetricScope, prov: dict) -> MetricValue:
+    """`settled_days` and `daily_pnl_stability` — see their MetricDefinitions.
+
+    `daily_pnl_stability` is mean/sd over the daily series. Deliberately NOT the raw standard
+    deviation: a book that caps its own concentration takes materially fewer trades, and ANY
+    book that trades less has a lower daily sd, so a gate on sd alone would pay a cap for doing
+    nothing but trading less. Dividing by the mean it earns makes the statistic scale-free in
+    exactly that direction.
+
+    Undefined rather than zero on fewer than two days (no dispersion to speak of) or on a zero
+    standard deviation (a single repeated value). A gate clause reading an undefined metric is
+    reported as such; it is never coerced into a number that would let the clause pass."""
+    series = _daily_series(session, scope)
+    days = len(series)
+    prov = prov | {"settled_days": days}
+    if key == "settled_days":
+        return MetricValue(key, float(days), days, "days", provenance=prov)
+    if days < 2:
+        return MetricValue(
+            key, None, days, "ratio",
+            reason=f"daily stability is undefined over {days} settled day(s); needs >= 2",
+            provenance=prov,
+        )
+    mean = statistics.fmean(series)
+    sd = statistics.stdev(series)
+    if sd == 0:
+        return MetricValue(
+            key, None, days, "ratio",
+            reason="daily P&L has zero variance in this window; the ratio is undefined",
+            provenance=prov,
+        )
+    return MetricValue(key, round(mean / sd, 4), days, "ratio", provenance=prov)
 
 
 def _price_histogram(session, scope: MetricScope) -> dict[int, tuple[int, float]]:
@@ -1806,6 +1889,8 @@ def _compute_metric(session, key: str, scope: MetricScope) -> MetricValue:
         return _fill_model_metric(session, key, scope, prov)
     if key in ("clean_pairs", "pair_win_rate_95lb_pct"):
         return _pair_metric(session, key, scope, prov)
+    if key in ("settled_days", "daily_pnl_stability"):
+        return _daily_shape_metric(session, key, scope, prov)
 
     return MetricValue(
         metric=key, value=None, n=0, unit=definition.unit, missing=True,
