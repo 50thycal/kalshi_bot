@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=pcr-superseded-1
-# code cbbf710825f6de72e365f3977c4a86c8a2684fc3 · started 2026-09-05T14:38:01Z
-id  exp_key                  revision_id  superseded_revision_id  prior_snapshot_id  impact_class  action     status   epoch_id  version_id
---  -----------------------  -----------  ----------------------  -----------------  ------------  ---------  -------  --------  ----------
-6   mmsell-anchor-vol-entry  11           3                       1                  I0            NO_ACTION  applied  7         7         
-3   mmsell-price-ceiling     11           3                       1                  I0            NO_ACTION  applied  6         6         
-
-(2 rows)
