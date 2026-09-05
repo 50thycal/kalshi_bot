@@ -1,0 +1,41 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "c4b2ce1d3e8793a8ec72e4e92287554febae7e24",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-05T14:48:28Z",
+  "id": "cc-xos-evidence-1",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 1735 bytes, sha256:82231e6fbb60a8e2>",
+        "before": "<redacted 1539 bytes, sha256:47b8fec906c90abb>",
+        "requested": "<redacted 1735 bytes, sha256:82231e6fbb60a8e2>"
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "ok"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/cc-xos-evidence-1.receipt.json",
+  "result_file": "ops/results/cc-xos-evidence-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33972889191",
+  "service": "main",
+  "started_at": "2026-09-05T14:48:25Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
