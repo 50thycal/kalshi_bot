@@ -1,6 +1,0 @@
-# ops request [READ]
-# type=xos  id=cc-tag-0
-# code c4b2ce1d3e8793a8ec72e4e92287554febae7e24 · started 2026-09-05T15:01:00Z
-experiment              state  ver  arm       role     epoch  deployment              stage  kind 
-----------------------  -----  ---  --------  -------  -----  ----------------------  -----  -----
-mmsell-correlation-cap  PAPER  1    uncapped  control  1      mmsell-corrcap-paper-1  PAPER  paper
