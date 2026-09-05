@@ -1,1 +1,1 @@
-{"type":"db","sql":"select command_id, action, status, left(coalesce(error,''),200) as error from experiment_os_issue_commands order by id desc limit 1","max_rows":2,"id":"xos20-fix-receipt-1"}
+{"type":"noop","id":"idle-20260905b"}
