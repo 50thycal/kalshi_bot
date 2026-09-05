@@ -1,1 +1,1 @@
-{"type":"db","sql":"select date_trunc('hour', created_at)::text as hr, count(*) as paper_trades, count(distinct strategy) as books, count(*) filter (where strategy='mmsell10') as mmsell10, count(*) filter (where strategy='Dmmsell10_pt4') as twin from paper_trades where created_at > timestamptz '2026-09-04 04:00:00+00' group by 1 order by 1 limit 40","max_rows":45,"id":"dm10-papercheck-1"}
+{"type":"logs","lines":150,"id":"outage-20260905"}
