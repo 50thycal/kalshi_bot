@@ -39,6 +39,7 @@ from ..scanner.metrics import (
     parse_dt,
 )
 from ..twin import harness as twin_codes
+from .correlation import correlation_key, in_scope
 from .market_types import DISCRETE, IN_PLAY, SCHEDULED, classify
 from .quote_parity import BandProbe, QuoteParityAccumulator
 from .regimes import regime_of
@@ -92,6 +93,7 @@ class MmSellCycleSummary:
     skipped_settlement_cap: int = 0  # too many open positions already settle this candidate's date
     skipped_event_cap: int = 0       # too many distinct events open on a CORRELATED-regime date
     skipped_event_rung_cap: int = 0  # too many rungs open on ONE non-mutually-exclusive event
+    skipped_correlation_cap: int = 0  # the candidate's unit of correlation is already held
     #: Books dropped this cycle because their tag resolves to no active Experiment OS
     #: deployment arm. Counted rather than raised: one book's lineage problem must not
     #: cost every other book its cycle (XOS-000011).
@@ -244,6 +246,44 @@ class MmSellTracker:
             self._note(recorder, ticker, tag, twin_codes.SKIP_EVENT_RUNG_CAP)
             return True
         return False
+
+    def _correlation_cap_blocks(self, session, book: dict, *, tag: str, ticker: str,
+                                series: str, event_ticker: str,
+                                summ: MmSellCycleSummary, recorder) -> bool:
+        """True when this book already holds `corrcap` open positions in the candidate's own unit
+        of CORRELATION, so the entry would add size to a bet it is already carrying rather than a
+        new one (docs/MMSELL_CORRELATION_CAP.md, XOS-000020).
+
+        Inert for every book that does not declare `corrcap` — which is the whole existing
+        cohort, so no running book's candidate stream changes by a single market.
+
+        The cap it applies is NOT the rung cap with a different number. The rung cap counts
+        `event_ticker`, which is series x occasion; this counts the occasion itself, so an MLB
+        game's TOTAL, TEAMTOTAL, SPREAD and HR markets count against ONE budget instead of four.
+        `corrscope` decides which kinds of key are subject to it, so the contest axis can be
+        tested without also tightening every ladder — see `correlation.in_scope`.
+
+        Fail-soft in the same direction as the settlement cap: a read that raises lets the entry
+        through rather than stopping the scan. A cap is a risk refinement, not a safety
+        interlock — the position cap and the risk envelope are what bound real exposure — so its
+        unavailability must not cost the book its cycle."""
+        cap = book.get("corrcap")
+        if not cap:
+            return False
+        kind, key = correlation_key(series, event_ticker)
+        if not key or not in_scope(kind, book.get("corrscope") or "all"):
+            return False
+        try:
+            rows = repo.open_positions_correlation_rows(session, tag, ticker)
+        except Exception:  # noqa: BLE001 — a gate read must never break the entry scan
+            logger.exception("mmsell correlation cap: read failed (entering anyway)")
+            return False
+        held = sum(1 for s, e in rows if e and correlation_key(s or "", e) == (kind, key))
+        if held < cap:
+            return False
+        summ.skipped_correlation_cap += 1
+        self._note(recorder, ticker, tag, twin_codes.SKIP_CORRELATION_CAP)
+        return True
 
     def _live_price_and_size(self, session, ticker: str, no_price: int | None, metrics,
                              book: dict | None = None):
@@ -548,6 +588,7 @@ class MmSellTracker:
                     "skipped_settlement_cap": summ.skipped_settlement_cap,
                     "skipped_event_cap": summ.skipped_event_cap,
                     "skipped_event_rung_cap": summ.skipped_event_rung_cap,
+                    "skipped_correlation_cap": summ.skipped_correlation_cap,
                     "per_series": dict(sorted(summ.per_series.items(),
                                               key=lambda kv: -kv[1])[:12]),
                     "per_book": summ.per_book,
@@ -969,6 +1010,11 @@ class MmSellTracker:
                                                    series=series, event_ticker=event_ticker,
                                                    mutually_exclusive=event_exclusive,
                                                    summ=summ, recorder=recorder):
+                        continue
+
+                    if self._correlation_cap_blocks(session, book, tag=tag, ticker=ticker,
+                                                    series=series, event_ticker=event_ticker,
+                                                    summ=summ, recorder=recorder):
                         continue
 
                     if is_twin:

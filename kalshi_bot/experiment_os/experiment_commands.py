@@ -192,6 +192,7 @@ def _packages() -> dict[str, ExperimentPackage]:
     dependencies are not (and so the boot hook's error handler can still run)."""
     from . import (
         canary_mmsell10,
+        correlation_cap,
         marktangle,
         marktangle2,
         perp_v1,
@@ -200,6 +201,21 @@ def _packages() -> dict[str, ExperimentPackage]:
     )
 
     return {
+        "mmsell-correlation-cap": ExperimentPackage(
+            name="mmsell-correlation-cap",
+            experiment_key=correlation_cap.EXPERIMENT_KEY,
+            description=(
+                "XOS-000020: cap open positions per UNIT OF CORRELATION rather than per "
+                "event_ticker, which is series x occasion. Three PAPER arms in one epoch — an "
+                "uncapped control, contests-only, and every-key — plus one pre-registered keep "
+                "gate read on the DAILY series, because at this book's per-trade variance a "
+                "c/trade test of the effect size needs ~95,700 trades per arm. The ticket's own "
+                "headline axis (contests) is recorded as already falsified by the "
+                "counterfactual that fixed the bars. Arms nothing, trades nothing, no real "
+                "money: it registers the contract that lets three paper books start."
+            ),
+            register=correlation_cap.register,
+        ),
         "marktangle-reversion": ExperimentPackage(
             name="marktangle-reversion",
             experiment_key=marktangle.EXPERIMENT_KEY,

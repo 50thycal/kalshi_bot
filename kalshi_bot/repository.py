@@ -960,6 +960,37 @@ def open_positions_settlement_summary(
     return len(rows), Counter(r[1] for r in rows if r[1])
 
 
+def open_positions_correlation_rows(
+    session, strategy: str, ticker: str
+) -> list[tuple[str | None, str | None]]:
+    """`(series_ticker, event_ticker)` for every one of `strategy`'s OTHER currently-open
+    positions — the correlation cap's read (docs/MMSELL_CORRELATION_CAP.md, XOS-000020).
+
+    Returns raw rows rather than a Counter of keys, deliberately: the mapping from a market to
+    its unit of correlation is strategy semantics that belongs in `mmsell.correlation`, and
+    keeping it out of here is what stops the repository from growing a second, drifting copy of
+    the taxonomy.
+
+    NOT scoped to a settlement date, unlike `open_positions_settlement_summary`. A game's
+    markets do not all share a UTC calendar date — an F5 total closes hours before the full-game
+    total, and a late start crosses midnight — so a date-scoped read would let exactly the
+    clustering this cap exists to prevent slip through whenever a slate straddles the boundary.
+    The open book is bounded by `mmsell_max_open_positions`, so reading all of it is cheap.
+
+    `ticker` is EXCLUDED so a position already open on the candidate's own market cannot count
+    against its own cap; the `already_open` path handles that case."""
+    return list(session.execute(
+        select(m.MmSellSettlementMeta.series_ticker, m.MmSellSettlementMeta.event_ticker)
+        .join(m.PaperPosition,
+              m.PaperPosition.market_ticker == m.MmSellSettlementMeta.market_ticker)
+        .where(
+            m.PaperPosition.strategy == strategy,
+            m.PaperPosition.status == "open",
+            m.PaperPosition.market_ticker != ticker,
+        )
+    ).all())
+
+
 def event_has_strangle_leg(session, strategy: str, event_ticker: str, side: str) -> bool:
     """True when `strategy` has ALREADY entered a `side` ('no' or 'yes') leg on this event —
     any status, not just open, since this dedups against the event's own outcome rather than
