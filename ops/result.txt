@@ -1,30 +1,130 @@
-# ops request [READ]
-# type=xos  id=rc-lo-x18-valresult-1-1
-# code 7becc96c3688fb963ba650c731c46c6294e6351f · started 2026-09-05T12:30:25Z
-{
-  "command_id": "lo-x18-valresult-1",
-  "action": "RECORD_VALIDATION_RESULT",
-  "actor": "claude-code",
-  "actor_role": "LIVE_OPS",
-  "status": "SUCCEEDED",
-  "issue_key": "XOS-000018",
-  "schema_version": 1,
-  "payload_hash": "040a75fb1b5ebbb8bd84243d456ea8ddb26d184d77a5bb787645796598b259fb",
-  "payload_fields": [
-    "evidence_type",
-    "issue",
-    "passed",
-    "source_ref",
-    "summary"
-  ],
-  "payload_unrecognised_fields": 0,
-  "requested_at": "2026-09-05 12:30:14.764340+00:00",
-  "started_at": "2026-09-05 12:30:14.764340+00:00",
-  "completed_at": "2026-09-05 12:30:14.849632+00:00",
-  "result": {
-    "kind": "ExperimentIssueEvent",
-    "row_id": 138,
-    "issue_key": "XOS-000018"
-  },
-  "error": null
-}
+# note: value type-check skipped (ModuleNotFoundError: No module named 'kalshi_bot')
+========================================================================
+!! MUTATING OPS REQUEST — this changes the running system !!
+========================================================================
+# type=env  service=main  vars=EXPERIMENT_OS_ISSUE_COMMAND  id=req-lo-x18-resolve-1
+# code 7becc96c3688fb963ba650c731c46c6294e6351f · started 2026-09-05T12:31:08Z
+# target service: main
+# BEFORE:
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 1511 bytes, sha256:be841ef1e5c971e4>
+  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 1525 bytes, sha256:67d56c156a029dd1>
+# 1/1 variables set
+# redeploy triggered — the worker will restart with the new config
+# AFTER:
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 1525 bytes, sha256:67d56c156a029dd1>
+# VERDICT: VERIFIED
+
+# post-change canonical checks: enforcement, readiness
+# $ xos enforcement
+#   {
+#     "mode": "NEW_ONLY",
+#     "cutover_id": "prod-new-only-20260816",
+#     "effective_at": "2026-08-16 14:34:42.892897+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr3_v1",
+#     "resolver_degraded_alarms_24h": 0,
+#     "deployments": {
+#       "total": 25,
+#       "grandfathered": 12,
+#       "native": 13
+#     },
+#     "post_cutover_unstamped": {
+#       "paper_trades": [],
+#       "live_orders": []
+#     },
+#     "live_canaries": [
+#       {
+#         "deployment": "theta4-live-1",
+#         "grandfathered": true,
+#         "twin": "theta4-twin-pt3",
+#         "boundary_match": false
+#       },
+#       {
+#         "deployment": "lmmsell-live-1",
+#         "grandfathered": true,
+#         "twin": "lmmsell-twin-pt3",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-ceiling-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-ceiling-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-capacity-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-capacity-twin-1",
+#         "boundary_match": true
+#       }
+#     ],
+#     "unresolved_integrity_events": 0,
+#     "recorded_state_events": 3,
+#     "unresolved_config_drift": 0,
+#     "session_counters": {
+#       "blocked": 0,
+#       "warned": 0,
+#       "resolver_degraded": false,
+#       "resolver_loaded_at": null
+#     }
+#   }
+# $ xos readiness
+#   {
+#     "ok": true,
+#     "checked_at": "2026-09-05 12:31:18.642658+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
+#     "checks": {
+#       "import_ran": {
+#         "ok": true,
+#         "detail": "31 experiments recorded"
+#       },
+#       "coverage_complete": {
+#         "ok": true,
+#         "detail": {
+#           "unmapped_tags": []
+#         }
+#       },
+#       "live_books_represented": {
+#         "ok": true,
+#         "detail": {
+#           "registered_live_tags": [
+#             "Cmmsell10",
+#             "Dmmsell10",
+#             "Lmmsell10",
+#             "Lmmsell8",
+#             "theta4"
+#           ],
+#           "note": "no Settings supplied \u2014 presence-only check"
+#         }
+#       },
+#       "platform_snapshot_complete": {
+#         "ok": true,
+#         "detail": {
+#           "snapshot": "4f9adf15daa64035",
+#           "missing_components": []
+#         }
+#       },
+#       "grandfathered_identity": {
+#         "ok": true,
+#         "detail": {
+#           "deployments": 25,
+#           "grandfathered": 12,
+#           "native": 13
+#         }
+#       },
+#       "live_twin_links": {
+#         "ok": true,
+#         "detail": {
+#           "problems": [],
+#           "grandfathered_notes": [
+#             "theta4-live-1: twin start 2026-08-12 00:15:08.786610+00:00 != live start 2026-07-30 00:00:00+00:00 (grandfathered \u2014 recorded, not invented)"
+#           ]
+#         }
+#       },
+#       "no_unresolved_integrity": {
+#         "ok": true,
+#         "detail": "0 unresolved integrity events"
+#       },
+#       "no_unresolved_platform_impact": {
+#         "ok": true,
+#         "detail": "0 platform-impact dispositions awaiting acceptance/application"
+#       },
