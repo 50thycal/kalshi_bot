@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=rl-paired-power-1
-# code cbbf710825f6de72e365f3977c4a86c8a2684fc3 · started 2026-09-05T14:15:05Z
-days  mean_daily_diff  sd_daily_diff  mean_ctl  sd_ctl  corr_arms  diff_t_per_sqrt_day
-----  ---------------  -------------  --------  ------  ---------  -------------------
-23    -0.3917          2.7146         0.8842    3.7469  0.7863     -0.1443            
-
-(1 row)
