@@ -1,1 +1,1 @@
-{"type":"db","id":"cc-funnel-4","sql":"select created_at, raw_json->>'skipped_contest_cap' as contest_cap, raw_json->>'opened' as opened, raw_json->'per_book' as per_book from system_events where component='mmsell_scan' and created_at > now() - interval '25 minutes' order by created_at desc limit 8"}
+{"type":"xos","command":"tag","args":["Gmmsell1"],"id":"cc-tag-1"}
