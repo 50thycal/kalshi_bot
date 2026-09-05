@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "0bd808a97eea19712b97c1aaaff3f80b7baf5906",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-05T12:47:04Z",
+  "id": "xgame-matches-3",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/xgame-matches-3.receipt.json",
+  "result_file": "ops/results/xgame-matches-3.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33967015286",
+  "service": null,
+  "started_at": "2026-09-05T12:47:04Z",
+  "targets": [],
+  "type": "db"
+}
