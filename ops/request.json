@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-candidates","id":"pcr-cand-2"}
+{"type":"db","id":"cc-funnel-3","sql":"select created_at, raw_json->>'skipped_contest_cap' as contest_cap, raw_json->>'opened' as opened, raw_json->'per_book' as per_book from system_events where component='mmsell_scan' and created_at > now() - interval '30 minutes' order by created_at desc limit 8"}
