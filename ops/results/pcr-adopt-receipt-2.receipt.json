@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "c4b2ce1d3e8793a8ec72e4e92287554febae7e24",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-05T15:06:02Z",
+  "id": "pcr-adopt-receipt-2",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/pcr-adopt-receipt-2.receipt.json",
+  "result_file": "ops/results/pcr-adopt-receipt-2.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33973752735",
+  "service": null,
+  "started_at": "2026-09-05T15:06:01Z",
+  "targets": [],
+  "type": "xos"
+}
