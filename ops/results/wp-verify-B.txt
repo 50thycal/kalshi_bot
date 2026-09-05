@@ -1,7 +1,0 @@
-# latest deployment 6ef8cd6c-6373-404f-a09a-120a9ddc6510 (status=SUCCESS, created=2026-09-04T16:15:17.131Z)
-# ops request [READ]
-# type=logs  service=livedash  id=wp-verify-B
-# code c99e8a033ea76a5eb2efe5bca4626e3b5a526efd · started 2026-09-04T16:16:18Z
-# target service: livedash
-2026-09-04T16:16:06.861992999Z INFO  Starting Container
-2026-09-04T16:16:07.046655715Z INFO  livedash listening on http://0.0.0.0:8080
