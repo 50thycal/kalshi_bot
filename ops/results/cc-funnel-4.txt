@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=cc-funnel-4
-# code c4b2ce1d3e8793a8ec72e4e92287554febae7e24 · started 2026-09-05T14:58:50Z
-created_at                        contest_cap  opened  per_book                                                                                                 
---------------------------------  -----------  ------  ---------------------------------------------------------------------------------------------------------
-2026-09-05 14:51:53.739729+00:00  0            13      {'mmsell': 3, 'mmsell10': 2, 'mmsellA5': 2, 'Cmmsell10': 2, 'Dmmsell10': 2, 'Lmmsell10': 2}              
-2026-09-05 14:37:34.067358+00:00  0            22      {'mmsell': 4, 'mmsell6': 4, 'mmsell10': 3, 'mmsellA4': 2, 'Cmmsell10': 3, 'Dmmsell10': 3, 'Lmmsell10': 3}
-
-(2 rows)
