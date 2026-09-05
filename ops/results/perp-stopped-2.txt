@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=perp-stopped-2
-# purpose=second confirmation that the perps collector is stopped  workstream=WS-010
-# code 19de3d27e1b27e0a126c6bd0fc2bd8acbcb563b6 · started 2026-09-02T13:41:35Z
-last_cycle                        seconds_since  cycles_last_15m
---------------------------------  -------------  ---------------
-2026-09-02 13:28:16.882212+00:00  800            1              
-
-(1 row)
