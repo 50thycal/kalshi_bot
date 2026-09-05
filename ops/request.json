@@ -1,1 +1,1 @@
-{"type":"logs","service":"main","limit":400,"id":"xg-poll-4"}
+{"type":"db","sql":"select command_id, action, status, left(coalesce(error,''),300) as error from experiment_os_issue_commands order by id desc limit 2","max_rows":3,"id":"xos20-ev-receipt-1"}
