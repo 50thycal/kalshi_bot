@@ -138,17 +138,31 @@ through GitHub Actions by pushing a request to the **`ops` branch**:
 git fetch origin ops && git worktree add /tmp/ops ops   # once
 cd /tmp/ops && git fetch origin ops -q && git reset --hard -q origin/ops
 echo '{"type":"xos","command":"control-tower","id":"ct-1"}' > ops/request.json
-git add -A && git commit -q -m "ops: control tower" && git push -q origin ops
-# ~30-90s, then read YOUR OWN result (a concurrent session may overwrite the
-# shared pointer, never your per-id file):
-git fetch origin ops && git show FETCH_HEAD:ops/results/ct-1.txt
+git add -A && git commit -q -m "ops: control tower"
+# `ops` is SHARED — several sessions push to it, so a bare push loses races.
+# Always retry; a rebase is safe (your request commit touches one file):
+for i in 1 2 3 4 5 6; do git fetch origin ops -q
+  git rebase origin/ops -q 2>/dev/null || git rebase --abort 2>/dev/null
+  git push -q origin ops 2>/dev/null && break; sleep $((i * 3)); done
+# Then poll for YOUR OWN per-id result (never the shared pointer). Budget
+# MINUTES, not seconds: Actions queues runs behind other sessions', and a
+# missing file means "not yet", not "lost" — check `git log origin/ops` first.
+for i in $(seq 1 20); do sleep 15; git fetch origin ops -q
+  git show FETCH_HEAD:ops/results/ct-1.txt 2>/dev/null && break; done
 ```
 
 **Always set a unique `id`.** Request types: `xos` (canonical Experiment OS read
 CLI — `control-tower`, `list`, `show`, `scoreboard`, `enforcement`, `readiness`,
 `platform`, `tag`), `db` (one read-only statement), `logs`, `script`
 (allowlisted analyses), `env` (allowlisted vars; setting redeploys the worker),
-`noop`. Reset to `{"type":"noop"}` when finished.
+`noop`. Reset to `{"type":"noop"}` when finished. `ops/results/` keeps only the
+newest 80 files — read yours promptly and persist what matters elsewhere.
+
+**The `EXPERIMENT_OS_*_COMMAND` transports are single-slot**, consumed at the
+worker's next boot. Send a whole ticket workflow as ONE array of envelopes (one
+boot, not one per command), and expect a `REFUSED` verdict if another session's
+envelope is still unconsumed — that guard is protecting their work, not
+malfunctioning. Details: `docs/OPS_RUNBOOK.md`, `docs/EXPERIMENT_OS_ISSUES.md`.
 
 **Never force-refresh `ops`.** The runner already checks the default branch out
 separately and executes only that code, so a merge to the default branch is live

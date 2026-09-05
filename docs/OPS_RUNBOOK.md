@@ -713,20 +713,45 @@ To run a request:
    coverage/growth, forecast-vs-market skill, the ensemble-vs-market probabilistic edge
    on the winning bucket, and market-vs-forecast divergence vs who was right — the
    accumulating data that makes cal/dist/pm validatable.
-3. Commit and push:
+3. Commit and push — **with a retry loop, always**. `ops` is a shared transport and
+   several sessions push to it concurrently, so a bare `git push` loses the race
+   often enough to matter. The runner's own publish step retries six times with
+   backoff; the requester side needs the same courtesy, and a rebase is always safe
+   because your request commit touches one file nobody else is editing:
    ```bash
-   cd /tmp/ops && git add ops/request.json && git commit -m "ops: <what>" && git push origin ops
+   cd /tmp/ops && git add ops/request.json && git commit -q -m "ops: <what>"
+   for i in 1 2 3 4 5 6; do
+     git fetch origin ops -q
+     git rebase origin/ops -q 2>/dev/null || git rebase --abort 2>/dev/null
+     git push -q origin ops 2>/dev/null && { echo "submitted"; break; }
+     sleep $((i * 3))
+   done
    ```
 4. Read the result. The runner commits your output back to the `ops` branch as the
    durable per-run file `ops/results/<id>.txt` (and updates the shared `ops/result.txt`
    pointer). Plain git is the simplest path (works even when the GitHub MCP tools are
    down) — read **your own `id`** so a concurrent producer's run can't shadow yours:
    ```bash
-   # poll until YOUR result lands (~30-90s), then:
-   git fetch origin ops && git show FETCH_HEAD:ops/results/<id>.txt
+   # poll until YOUR result lands, then:
+   for i in $(seq 1 20); do
+     sleep 15; git fetch origin ops -q
+     git show FETCH_HEAD:ops/results/<id>.txt 2>/dev/null && break
+   done
    # (git show FETCH_HEAD:ops/result.txt is the latest-run pointer — fine when you're
    #  the only producer, but it can be overwritten by a concurrent /loop run.)
    ```
+   **Budget several minutes, not seconds.** A single run is ~30–90s, but GitHub
+   queues Actions runs: with several sessions active your request waits behind
+   theirs, and a poll window sized for the idle case reports a false "not ready"
+   for a request that is merely in line. Two things follow from that, and both
+   have bitten:
+   - a missing `ops/results/<id>.txt` does **not** mean your request was lost.
+     Check `git log origin/ops` for a `ops: result <id>` commit before resubmitting;
+   - `ops/results/` is **bounded scratch — the newest 80 files, pruned on every
+     run**. A busy afternoon can age your result out from under a slow poller. If
+     you need output to survive, read it promptly and copy what matters into the
+     durable place it belongs (a ticket, a doc, a PR body), not into a link to a
+     scratch file.
    Alternatively via the GitHub MCP tools:
    - `actions_list` `method=list_workflow_runs`, `resource_id=ops-runner.yml` → newest run id
    - `actions_list` `method=list_workflow_jobs`, `resource_id=<run id>` → job id
@@ -745,8 +770,56 @@ Notes:
   request/result history and the workflow *file*, nothing else. See
   **Protecting the `ops` branch** below for the protection now enforcing this and
   for the rare, deliberate procedure that changes the workflow file.
-- Latency is ~30–60s per run. Request commits live only on `ops`; they never
-  touch the default branch and never redeploy the Railway worker.
+- Latency is ~30–60s per run when the channel is idle, and considerably more when
+  it is not — see step 4. Request commits live only on `ops`; they never touch the
+  default branch and never redeploy the Railway worker. (An `env` **mutation** does
+  redeploy it — that is the mutation, not the transport.)
+
+### Sharing the channel with other sessions
+
+Everything below is a consequence of one fact: `ops` is a shared transport and you
+are usually not its only producer. What is already handled for you, and what is not:
+
+| surface | concurrent-safe? | what you do |
+|---|---|---|
+| `ops/results/<id>.txt` | yes — per-run files, publish retries 6× | always set a unique `id`; read your own file |
+| `ops/result.txt` | **no** — latest-run pointer, freely overwritten | do not rely on it |
+| pushing `ops/request.json` | **no** — one ref, one file | use the retry loop in step 3 |
+| result retention | bounded — newest 80, pruned every run | read promptly; persist what matters elsewhere |
+| `EXPERIMENT_OS_*_COMMAND` | guarded — see below | batch your commands; heed a `REFUSED` verdict |
+
+**The command transports are single-slot.** `EXPERIMENT_OS_ISSUE_COMMAND`,
+`EXPERIMENT_OS_PLATFORM_COMMAND` and `EXPERIMENT_OS_EXPERIMENT_COMMAND` are each
+one variable, consumed at the worker's next boot. If you set one while another
+session's envelope is still waiting for its boot, that envelope is discarded —
+never claimed, never executed, no receipt. The ledger cannot catch this: it
+answers "did this `command_id` run", and it is only ever asked afterwards.
+
+So `apply_set` now checks before it writes (`scripts/ops_command_guard.py`). It
+reads the slot's current value, takes every `command_id` in it, and asks that
+transport's receipt ledger whether each has reached a terminal state
+(`SUCCEEDED`, `REJECTED`, `FAILED`). Anything with no row, or still `RUNNING`, is
+unconsumed and the whole request is **REFUSED** before any write or redeploy:
+
+```
+# UNCONSUMED COMMAND: EXPERIMENT_OS_ISSUE_COMMAND still holds 1 command(s) with
+#   no terminal receipt: lo-adopt-20260821. ...
+# VERDICT: REFUSED
+```
+
+That is a real signal, not a glitch — wait for the other session's receipt
+(`{"type":"xos","command":"issue-command-show","args":["<command_id>"]}`) and
+resubmit. Override only when you know the envelope will never be consumed (an
+abandoned session; nobody is going to redeploy for it) by adding
+`"force_replace": true` to the request. The override is recorded in the receipt,
+along with what it discarded.
+
+The guard **fails open**: no database, an unreachable ledger, an unparseable
+current value — all of these allow the write, because this sits in front of the
+only authorized production write path and a closed failure would be a worse
+outage than the race. It never fails open *silently*, though: an inconclusive
+check prints `# guard INCONCLUSIVE:` and says so in the receipt, so "checked and
+clear" can never be mistaken for "could not check".
 
 ### Protecting the `ops` branch
 

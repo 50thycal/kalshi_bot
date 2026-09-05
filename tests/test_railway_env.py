@@ -320,3 +320,101 @@ def test_the_ops_runner_installs_what_the_env_guard_needs():
         "kalshi_bot.config imports pydantic_settings too; without it the import "
         "still fails and the guard still skips"
     )
+
+
+# ---------------------------------------------------------------------------
+# The unconsumed-command guard, wired into apply_set
+# ---------------------------------------------------------------------------
+
+ISSUE_VAR = "EXPERIMENT_OS_ISSUE_COMMAND"
+
+
+def _pending(command_id="other-session-1"):
+    return json.dumps({"command_id": command_id, "action": "TRIAGE", "actor": "cal",
+                       "actor_role": "LIVE_OPS", "schema_version": 1, "payload": {}})
+
+
+def _guarded_env(monkeypatch, *, terminal):
+    """Wire apply_set to a Railway whose transport slot already holds `_pending()`,
+    with the ledger answering `terminal` for it."""
+    _creds(monkeypatch)
+    guard = _load("ops_command_guard")
+    monkeypatch.setattr(guard, "_terminal_ids",
+                        lambda table, ids: set(ids) if terminal else set())
+    calls = []
+
+    def _fake(query, variables, token):
+        calls.append("upsert" if "variableUpsert" in query
+                     else "redeploy" if "serviceInstanceRedeploy" in query else "read")
+        return {"variables": {ISSUE_VAR: _pending()}}
+
+    monkeypatch.setattr(renv, "_graphql", _fake)
+    return calls
+
+
+def test_overwriting_an_UNCONSUMED_command_is_refused_before_any_write(
+    monkeypatch, capsys
+):
+    """The multi-session collision: another session's envelope is still waiting for
+    the boot that would run it. Overwriting the slot would discard it silently and
+    the ledger could not catch it, because the ledger is only asked afterwards."""
+    calls = _guarded_env(monkeypatch, terminal=False)
+    rc, receipt = renv.apply_set({ISSUE_VAR: _pending("my-command-1")})
+    err = capsys.readouterr().err
+    assert rc == 1
+    assert receipt["verdict"] == "REFUSED"
+    assert receipt["error"] == "unconsumed command transport"
+    assert receipt["command_guard"][ISSUE_VAR]["unconsumed_command_ids"] \
+        == ["other-session-1"]
+    assert "other-session-1" in err
+    # Read the pre-state, then stop. No upsert, and above all no redeploy.
+    assert "upsert" not in calls and "redeploy" not in calls
+
+
+def test_a_SPENT_command_slot_is_replaced_normally(monkeypatch, capsys):
+    """The common case — a finished session leaves its last command in the
+    variable. A terminal receipt means the slot is spent, not pending."""
+    calls = _guarded_env(monkeypatch, terminal=True)
+    rc, receipt = renv.apply_set({ISSUE_VAR: _pending("my-command-1")})
+    capsys.readouterr()
+    assert rc == 0
+    assert "upsert" in calls
+    assert receipt["command_guard"][ISSUE_VAR]["blocked"] is False
+    assert receipt["command_guard"][ISSUE_VAR]["conclusive"] is True
+
+
+def test_force_replace_overrides_the_guard_and_is_RECORDED(monkeypatch, capsys):
+    """There are real reasons to need it — an abandoned session's envelope will
+    never be consumed because nobody is going to redeploy for it — so the override
+    exists, is explicit, and leaves a receipt saying it was used."""
+    calls = _guarded_env(monkeypatch, terminal=False)
+    rc, receipt = renv.apply_set({ISSUE_VAR: _pending("my-command-1")},
+                                 force_replace=True)
+    capsys.readouterr()
+    assert rc == 0
+    assert "upsert" in calls
+    assert receipt["force_replace"] is True
+    # The override does not rewrite what was found: the collision is still on the
+    # record, so an operator can see what was discarded and by whose decision.
+    assert receipt["command_guard"][ISSUE_VAR]["blocked"] is True
+
+
+def test_an_unguarded_variable_is_unaffected(monkeypatch, capsys):
+    """The guard must be invisible to every other var — it only knows about the
+    three Experiment OS write transports."""
+    _creds(monkeypatch)
+    state = {"KILL_SWITCH": "false"}
+
+    def _fake(query, variables, token):
+        if "variableUpsert" in query:
+            state[variables["input"]["name"]] = variables["input"]["value"]
+            return {}
+        if "serviceInstanceRedeploy" in query:
+            return {}
+        return {"variables": dict(state)}
+
+    monkeypatch.setattr(renv, "_graphql", _fake)
+    rc, receipt = renv.apply_set({"KILL_SWITCH": "true"})
+    capsys.readouterr()
+    assert rc == 0 and receipt["verdict"] == "VERIFIED"
+    assert "command_guard" not in receipt

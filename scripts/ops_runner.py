@@ -477,7 +477,11 @@ def _dispatch(rtype: str, req: dict, receipt: dict) -> int:
         if not mutation:
             return railway_env.run_get()
         status, env_receipt = railway_env.apply_set(
-            mutation, redeploy=req.get("redeploy", True), verify=req.get("verify", True)
+            mutation, redeploy=req.get("redeploy", True), verify=req.get("verify", True),
+            # Deliberate, recorded override of the unconsumed-command guard. Only
+            # meaningful for the Experiment OS command transports; see
+            # scripts/ops_command_guard.py.
+            force_replace=bool(req.get("force_replace", False)),
         )
         receipt["mutation"] = env_receipt
         # Post-change canonical checks. The runner does not own an opinion about
