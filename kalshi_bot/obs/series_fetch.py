@@ -28,6 +28,7 @@ the build otherwise, which is the durable form of "remember to add observability
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass, field
 
 from ..kalshi.errors import AuthError
@@ -43,6 +44,41 @@ from .funnel import (
 )
 
 logger = logging.getLogger(__name__)
+
+#: While a book's fetch outcome is UNCHANGED, repeat its line at most this often.
+#:
+#: Not "log it once and go quiet": the ops log window is bounded, so a condition
+#: that announced itself two days ago and has said nothing since is invisible to
+#: an operator pulling logs today — which is XOS-000004 wearing a different hat.
+#: Hourly keeps a standing problem present in any window somebody actually reads,
+#: without paying one line per cycle. Observed 2026-09-05: the freeze book logged
+#: `ENTIRE configured universe returned zero open markets` at ERROR on every
+#: cycle across a weekend, because agricultural series are closed then — an
+#: expected state, reported in the same voice and at the same volume as an
+#: outage, which is how ERROR stops meaning anything.
+REPEAT_AFTER_SECONDS = 3600.0
+
+#: book -> (outcome signature, monotonic time it was last logged).
+_LAST_OUTCOME: dict[str, tuple[tuple, float]] = {}
+
+
+def reset_fetch_outcome_state() -> None:
+    """Forget every book's last outcome.
+
+    Process-global state is what makes the de-duplication work across cycles, and
+    what would otherwise leak between tests: a suite that logs `freeze` twice
+    would see the second call suppressed for reasons that have nothing to do with
+    the case under test. `tests/conftest.py` calls this before every test."""
+    _LAST_OUTCOME.clear()
+
+
+def _outcome_signature(diagnosis: str, empty: list[str], failed: list[str]) -> tuple:
+    """What has to change before the same book is worth another line.
+
+    The series NAMES are part of it, not just the diagnosis: a universe that is
+    empty for a different set of series is a different fact, and collapsing them
+    would hide a book losing series one at a time behind an unchanged headline."""
+    return (diagnosis, tuple(sorted(empty)), tuple(sorted(failed)))
 
 
 @dataclass
@@ -124,7 +160,8 @@ def _bounded_series_list(names: list[str]) -> str:
 
 
 def warn_on_fetch_outcome(
-    book: str, result: SeriesFetchResult, log: logging.Logger | None = None
+    book: str, result: SeriesFetchResult, log: logging.Logger | None = None,
+    *, now: float | None = None,
 ) -> None:
     """Say, in the log MESSAGE, how this cycle's fetch actually went.
 
@@ -152,12 +189,30 @@ def warn_on_fetch_outcome(
     empty, failed = result.empty_series, result.failed_series
     n = result.configured
 
+    signature = _outcome_signature(diagnosis, empty, failed)
+    stamp = time.monotonic() if now is None else now
+    previous = _LAST_OUTCOME.get(book)
+
     if diagnosis in (FETCH_OK, FETCH_NO_SERIES) and not empty:
+        # Recovery is worth exactly one line. Without it a book that went quiet
+        # is indistinguishable from a book still broken and merely between
+        # heartbeats, and the operator has to go and check.
+        if previous is not None:
+            _LAST_OUTCOME.pop(book, None)
+            log.info(f"{book}: fetch RECOVERED — every configured series answered")
         return
+
+    if previous is not None and previous[0] == signature:
+        if stamp - previous[1] < REPEAT_AFTER_SECONDS:
+            return                      # unchanged and recently said; stay quiet
+        prefix = "STILL "               # unchanged but the window may have rolled
+    else:
+        prefix = ""
+    _LAST_OUTCOME[book] = (signature, stamp)
 
     if diagnosis == FETCH_FAILED:
         log.error(
-            f"{book}: EVERY configured series FAILED to fetch ({len(failed)}/{n}) — "
+            f"{book}: {prefix}EVERY configured series FAILED to fetch ({len(failed)}/{n}) — "
             f"the universe is UNKNOWN this cycle, not empty; this is a transport "
             f"problem, not a venue answer: [{_bounded_series_list(failed)}]"
         )
@@ -165,7 +220,7 @@ def warn_on_fetch_outcome(
 
     if diagnosis == FETCH_EMPTY_UNIVERSE:
         log.error(
-            f"{book}: ENTIRE configured universe returned zero open markets "
+            f"{book}: {prefix}ENTIRE configured universe returned zero open markets "
             f"({len(empty)}/{n} series empty, none failed) — this book cannot trade: "
             f"[{_bounded_series_list(empty)}]"
         )
@@ -176,13 +231,13 @@ def warn_on_fetch_outcome(
         if empty:
             detail += f"; returned zero ({len(empty)}/{n}): [{_bounded_series_list(empty)}]"
         log.warning(
-            f"{book}: INCOMPLETE fetch — some configured series did not answer, so a "
+            f"{book}: {prefix}INCOMPLETE fetch — some configured series did not answer, so a "
             f"zero downstream is not a venue answer; {detail}"
         )
         return
 
     log.warning(
-        f"{book}: configured series returned zero open markets "
+        f"{book}: {prefix}configured series returned zero open markets "
         f"({len(empty)}/{n} empty): [{_bounded_series_list(empty)}]"
     )
 

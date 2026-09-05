@@ -4,6 +4,20 @@ import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
+from kalshi_bot.obs.series_fetch import reset_fetch_outcome_state
+
+
+@pytest.fixture(autouse=True)
+def _clean_fetch_outcome_state():
+    """`warn_on_fetch_outcome` de-duplicates per book in process-global state.
+
+    That is deliberate in production and poison in a suite: the second test to
+    log the same book would be silently suppressed for a reason unrelated to what
+    it is asserting. Cleared around every test so each one starts from silence."""
+    reset_fetch_outcome_state()
+    yield
+    reset_fetch_outcome_state()
+
 
 @pytest.fixture(scope="session")
 def rsa_keypair():
