@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=dm10-whyquiet-1
-# code 7becc96c3688fb963ba650c731c46c6294e6351f · started 2026-09-05T11:40:44Z
-hr                      candidates
-----------------------  ----------
-2026-09-04 06:00:00+00  400       
-
-(1 row)
