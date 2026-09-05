@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=v3-gate-now-1
-# code 90c49f9c5c177d7975987fbd34595a898b8a525b · started 2026-09-02T11:33:38Z
-version  verdict  metrics                                                                                                                                                                                                   computed                     
--------  -------  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------  -----------------------------
-3        PASS     {"clauses": [{"n": 1, "list": "pass_all", "scope": "mmsell-price-ceiling-capacity/v3/e1/mmsell10", "value": 1.77, "clause": {"op": ">", "arm": "*", "value": 0, "metric": "realizable_cents_per_trade"}…  2026-09-02 10:34:51.203313+00
-3        HOLD     {"clauses": [{"n": 0, "list": "pass_all", "scope": "mmsell-price-ceiling-capacity/v3/e1/mmsell10", "value": null, "clause": {"op": ">", "arm": "*", "value": 0, "metric": "realizable_cents_per_trade"}…  2026-09-02 08:25:54.284428+00
-
-(2 rows)
