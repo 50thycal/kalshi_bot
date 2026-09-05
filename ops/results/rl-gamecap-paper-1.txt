@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=rl-gamecap-paper-1
-# code 7becc96c3688fb963ba650c731c46c6294e6351f · started 2026-09-05T12:23:06Z
-n_all  contests  pnl_all  c_all  n1    pnl1   c1     n2    pnl2   c2     n3    pnl3   c3   
------  --------  -------  -----  ----  -----  -----  ----  -----  -----  ----  -----  -----
-3296   1169      21.39    0.649  1169  12.52  1.071  1680  11.55  0.687  2070  14.93  0.721
-
-(1 row)
