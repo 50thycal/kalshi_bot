@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "9780be8479ff5f88dedc646acc64e8cd245a5f31",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-05T15:35:29Z",
+  "id": "rcpt-pcr-resolve-20260905-2",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rcpt-pcr-resolve-20260905-2.receipt.json",
+  "result_file": "ops/results/rcpt-pcr-resolve-20260905-2.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33975255989",
+  "service": null,
+  "started_at": "2026-09-05T15:35:27Z",
+  "targets": [],
+  "type": "xos"
+}
