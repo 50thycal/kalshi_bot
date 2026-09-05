@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["mmsell-anchor-vol-entry"],"id":"pcr-verify-1"}
+{"type":"xos","command":"issue-candidates","id":"pcr-verify-2"}
