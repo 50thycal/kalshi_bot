@@ -1,29 +1,8 @@
 # ops request [READ]
-# type=xos  id=cc-xos-receipt-2
-# code c4b2ce1d3e8793a8ec72e4e92287554febae7e24 · started 2026-09-05T14:49:37Z
-{
-  "command_id": "ts-xos20-straddle-20260905",
-  "action": "ADD_EVIDENCE",
-  "actor": "cal",
-  "actor_role": "TASK_SPECIFIC",
-  "status": "SUCCEEDED",
-  "issue_key": "XOS-000020",
-  "schema_version": 1,
-  "payload_hash": "7e4e591929cb62dbc703a9bc1e28e95ce80a595ebe33bbd03c5e2e5376d5d329",
-  "payload_fields": [
-    "evidence_type",
-    "issue",
-    "source_ref",
-    "summary"
-  ],
-  "payload_unrecognised_fields": 0,
-  "requested_at": "2026-09-05 14:49:02.514470+00:00",
-  "started_at": "2026-09-05 14:49:02.514470+00:00",
-  "completed_at": "2026-09-05 14:49:02.585744+00:00",
-  "result": {
-    "kind": "ExperimentIssueEvidence",
-    "row_id": 38,
-    "issue_key": "XOS-000020"
-  },
-  "error": null
-}
+# type=db  id=cc-funnel-3
+# code c4b2ce1d3e8793a8ec72e4e92287554febae7e24 · started 2026-09-05T14:50:08Z
+created_at                        contest_cap  opened  per_book                                                                                                 
+--------------------------------  -----------  ------  ---------------------------------------------------------------------------------------------------------
+2026-09-05 14:37:34.067358+00:00  0            22      {'mmsell': 4, 'mmsell6': 4, 'mmsell10': 3, 'mmsellA4': 2, 'Cmmsell10': 3, 'Dmmsell10': 3, 'Lmmsell10': 3}
+
+(1 row)
