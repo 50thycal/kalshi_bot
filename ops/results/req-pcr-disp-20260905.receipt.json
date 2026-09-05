@@ -1,0 +1,41 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "9780be8479ff5f88dedc646acc64e8cd245a5f31",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-05T15:16:18Z",
+  "id": "req-pcr-disp-20260905",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 1210 bytes, sha256:ca7e6bab2360ccac>",
+        "before": "<redacted 1607 bytes, sha256:d09353c49d2bab4d>",
+        "requested": "<redacted 1210 bytes, sha256:ca7e6bab2360ccac>"
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "ok"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/req-pcr-disp-20260905.receipt.json",
+  "result_file": "ops/results/req-pcr-disp-20260905.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33974260024",
+  "service": "main",
+  "started_at": "2026-09-05T15:16:04Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
