@@ -1267,3 +1267,164 @@ def test_the_receipt_list_limit_is_clamped(xos_session, xos_platform):
 
     args = cli.build_parser().parse_args(["issue", "command-list", "--limit", "-3"])
     assert cli.cmd_issue(s, args) == 0
+
+
+# ---------------------------------------------------------------------------
+# Batching — one boot, several commands (the redeploy-per-command problem)
+# ---------------------------------------------------------------------------
+
+
+def _workflow_batch(issue_key, *, prefix="btch"):
+    """The head of a real ticket workflow: triage, then INVESTIGATING."""
+    return [
+        _envelope("TRIAGE", {
+            "issue": issue_key, "reason": "first look before anything else",
+        }, command_id=f"{prefix}-0000001"),
+        _envelope("STATUS", {
+            "issue": issue_key, "status": "INVESTIGATING",
+            "reason": "diagnosing before proposing anything",
+        }, command_id=f"{prefix}-0000002"),
+    ]
+
+
+def test_a_batch_runs_every_command_in_order_with_its_own_receipt(
+    xos_session, xos_platform
+):
+    """The point of batching: a ticket's workflow lands in ONE boot instead of one
+    redeploy per step — and every command still gets its own durable receipt, so
+    nothing about exactly-once is traded away for the convenience."""
+    s = xos_session
+    issue, _ = _open_ticket(s)
+    view = ic.run_boot_command(s, json.dumps(_workflow_batch(issue.issue_key)))
+    assert view["batch"] is True
+    assert view["status"] == "SUCCEEDED"
+    assert (view["count"], view["executed"], view["skipped"]) == (2, 2, 0)
+    assert view["stopped_at"] is None
+    assert view["commands"] == ["btch-0000001:SUCCEEDED", "btch-0000002:SUCCEEDED"]
+    # One receipt per command, and the ORDER actually took effect: a STATUS to
+    # INVESTIGATING is only legal from TRIAGE, so this state proves sequencing.
+    assert _receipts(s, "btch-0000001") == 1
+    assert _receipts(s, "btch-0000002") == 1
+    s.refresh(issue)
+    assert issue.status == "INVESTIGATING"
+
+
+def test_a_batch_is_replayed_not_re_executed_on_the_next_boot(
+    xos_session, xos_platform
+):
+    """Restarts re-read the same variable. A batch must be as inert on the second
+    boot as a single command is — per element, via the same ledger."""
+    s = xos_session
+    issue, _ = _open_ticket(s)
+    raw = json.dumps(_workflow_batch(issue.issue_key))
+    first = ic.run_boot_command(s, raw)
+    again = ic.run_boot_command(s, raw)
+    assert first["executed"] == again["executed"] == 2
+    assert all(r["executed"] is False for r in again["receipts"])
+    assert all(r["replayed"] is True for r in again["receipts"])
+    assert _receipts(s, "btch-0000001") == 1
+    assert _receipts(s, "btch-0000002") == 1
+
+
+def test_a_batch_stops_at_the_first_refusal_and_leaves_the_tail_RETRYABLE(
+    xos_session, xos_platform
+):
+    """The stop rule and the property that makes it safe.
+
+    Ticket workflows are sequential, so continuing past a refusal would apply
+    later steps to a state their author never saw. The tail is therefore left
+    entirely unclaimed — no row, no receipt — which is precisely the state the
+    module says permits another attempt. The same ids can be resubmitted verbatim
+    once the cause is fixed; a batch that had marked them FAILED would have burned
+    them.
+    """
+    s = xos_session
+    issue, _ = _open_ticket(s)
+    batch = [
+        _envelope("TRIAGE", {"issue": issue.issue_key, "reason": "first look"},
+                  command_id="stop-0000001"),
+        # Illegal: RESOLVED is not reachable from TRIAGE. A refusal, not a crash.
+        _envelope("STATUS", {
+            "issue": issue.issue_key, "status": "RESOLVED",
+            "reason": "skipping the whole investigation",
+        }, command_id="stop-0000002"),
+        _envelope("ADD_LINK", {
+            "issue": issue.issue_key, "link_type": "PR", "reference": "#1",
+        }, command_id="stop-0000003"),
+    ]
+    view = ic.run_boot_command(s, json.dumps(batch))
+    assert view["status"] == "REJECTED"
+    assert (view["count"], view["executed"], view["skipped"]) == (3, 2, 1)
+    assert view["stopped_at"] == "stop-0000002"
+    # The refusal is durable; the untouched tail is genuinely untouched.
+    assert _receipts(s, "stop-0000001") == 1
+    assert _receipts(s, "stop-0000002") == 1
+    assert _receipts(s, "stop-0000003") == 0
+    # ...and therefore still runnable under its ORIGINAL id.
+    retry = ic.run_boot_command(s, json.dumps([batch[2]]))
+    assert retry["status"] == "SUCCEEDED"
+    assert _receipts(s, "stop-0000003") == 1
+
+
+def test_a_malformed_element_refuses_the_WHOLE_batch_before_anything_applies(
+    xos_session, xos_platform
+):
+    """Validation is all-or-nothing even though execution is not: a typo in the
+    last element must not leave the first one applied."""
+    s = xos_session
+    issue, _ = _open_ticket(s)
+    batch = _workflow_batch(issue.issue_key)
+    batch.append({"command_id": "bad-00000001", "action": "NOT_AN_ACTION",
+                  "actor": "cal", "actor_role": "LIVE_OPS",
+                  "schema_version": ic.SCHEMA_VERSION, "payload": {}})
+    with pytest.raises(ic.IssueCommandRejected) as exc:
+        ic.run_boot_command(s, json.dumps(batch))
+    assert exc.value.code == "UNKNOWN_ACTION"
+    assert _receipts(s, "btch-0000001") == 0
+    assert _receipts(s, "btch-0000002") == 0
+
+
+def test_a_duplicate_command_id_inside_one_batch_is_refused(
+    xos_session, xos_platform
+):
+    """The second would replay the first and silently do nothing — a command that
+    looks executed and did nothing is the exact failure receipts exist to prevent."""
+    s = xos_session
+    issue, _ = _open_ticket(s)
+    dup = _envelope("TRIAGE", {"issue": issue.issue_key, "reason": "first look"},
+                    command_id="dupe-0000001")
+    with pytest.raises(ic.IssueCommandRejected) as exc:
+        ic.run_boot_command(s, json.dumps([dup, dict(dup)]))
+    assert exc.value.code == "BATCH_DUPLICATE_COMMAND_ID"
+    assert _receipts(s, "dupe-0000001") == 0
+
+
+def test_batch_bounds_are_enforced(xos_session, xos_platform):
+    s = xos_session
+    issue, _ = _open_ticket(s)
+    one = _envelope("TRIAGE", {"issue": issue.issue_key, "reason": "r"},
+                    command_id="many-0000001")
+    too_long = [dict(one, command_id=f"many-{i:07d}")
+                for i in range(ic.MAX_BATCH_COMMANDS + 1)]
+    with pytest.raises(ic.IssueCommandRejected) as exc:
+        ic.run_boot_command(s, json.dumps(too_long))
+    assert exc.value.code == "BATCH_TOO_LONG"
+    with pytest.raises(ic.IssueCommandRejected) as empty:
+        ic.run_boot_command(s, json.dumps([]))
+    assert empty.value.code == "BATCH_EMPTY"
+    # Refused before any database work: not one of the batch's ids was claimed.
+    assert all(_receipts(s, e["command_id"]) == 0 for e in too_long)
+
+
+def test_a_single_envelope_is_untouched_by_batching(xos_session, xos_platform):
+    """The regression that matters most: batching added an array shape and changed
+    nothing about the object shape — same receipt view, no batch keys."""
+    s = xos_session
+    issue, _ = _open_ticket(s)
+    view = ic.run_boot_command(s, json.dumps(_envelope(
+        "TRIAGE", {"issue": issue.issue_key, "reason": "first look"},
+        command_id="solo-0000001",
+    )))
+    assert view["status"] == "SUCCEEDED"
+    assert "batch" not in view and "receipts" not in view
+    assert _receipts(s, "solo-0000001") == 1

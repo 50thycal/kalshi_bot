@@ -11,7 +11,9 @@ ops/request.json shapes (handled by ops_runner.py):
   {"type": "env", "set": {"KILL_SWITCH": "false", "LIVE_ENABLED": "true"}}
   {"type": "env", "set": {...}, "redeploy": false}         # set without redeploying
 
-Stdlib only. Resilient client: Railway's GraphQL API (backboard, behind Cloudflare) has
+Stdlib only at import time — the one exception is the unconsumed-command guard
+(`ops_command_guard`), which imports psycopg lazily inside its query and treats a
+missing driver as "cannot check" like every other uncertainty. Resilient client: Railway's GraphQL API (backboard, behind Cloudflare) has
 transient latency spikes, so every call retries with backoff on timeouts / 429 / 5xx, uses a
 generous read timeout, and a batch set continues past a slow var (variableUpsert is idempotent,
 so a retried — even a read-timed-out — upsert is safe). A browser UA clears Cloudflare's 1010.
@@ -375,7 +377,7 @@ def run_set(mapping: dict, redeploy: bool = True, verify: bool = True) -> int:
 
 
 def apply_set(mapping: dict, *, redeploy: bool = True,
-              verify: bool = True) -> tuple[int, dict]:
+              verify: bool = True, force_replace: bool = False) -> tuple[int, dict]:
     """Change allowlisted variables, then go and check what actually happened.
 
     The old contract ended at "set + redeploy requested", which is a statement
@@ -459,6 +461,42 @@ def apply_set(mapping: dict, *, redeploy: bool = True,
                 print(_echo(name, before[name], "  "))
             else:
                 print(f"  {name}=(unset)")
+
+    # --- unconsumed-command guard -----------------------------------------
+    # The three Experiment OS command transports are single-slot variables
+    # consumed at the worker's next boot. Overwriting one that still holds an
+    # envelope nobody has executed discards another session's work silently —
+    # the ledger cannot catch it, because it is only ever asked after the fact.
+    # This is the only check that needs the BEFORE value, so it sits here rather
+    # than up with the pure ones. It fails OPEN and says so: see
+    # ops_command_guard's docstring for why a closed failure would be worse.
+    import ops_command_guard
+
+    guard_notes = {}
+    blocked = []
+    for name in sorted(set(mapping) & set(ops_command_guard.TRANSPORT_LEDGERS)):
+        result = ops_command_guard.check(
+            name, None if before is None else before.get(name, "")
+        )
+        guard_notes[name] = result.as_receipt()
+        if result.blocked and not force_replace:
+            blocked.append(name)
+        if result.blocked:
+            print(f"# UNCONSUMED COMMAND: {result.reason}", file=sys.stderr)
+        elif not result.conclusive:
+            print(f"# guard INCONCLUSIVE: {result.reason}", file=sys.stderr)
+    if guard_notes:
+        receipt["command_guard"] = guard_notes
+        if force_replace:
+            receipt["force_replace"] = True
+    if blocked:
+        # Fail closed on a CONFIRMED collision only, and all-or-nothing like the
+        # other refusals above: nothing in this request is applied.
+        print(f"refusing to overwrite unconsumed command transport(s): {blocked}",
+              file=sys.stderr)
+        receipt["error"] = "unconsumed command transport"
+        receipt["verdict"] = "REFUSED"
+        return 1, receipt
 
     # --- apply ------------------------------------------------------------
     # Each upsert retries internally; a persistent failure on one var does NOT abort the

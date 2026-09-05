@@ -508,6 +508,57 @@ or Epoch, register a Platform Revision, or arm, configure or expose live trading
 Not by declining to — no code path exists, and a test asserts the module never
 imports one.
 
+### One boot, several commands
+
+A ticket's workflow is a dozen commands — triage, status, proposed fix,
+disposition, validation plan, links, validation result, resolve. One command per
+boot made that a dozen redeploys of the live trading worker for one ticket's
+paperwork (XOS-000021 cost fourteen), and a dozen chances for a second session to
+overwrite the slot mid-sequence.
+
+So the variable may carry a **JSON array of ordinary envelopes** instead of one:
+
+```jsonc
+[
+  {"command_id":"pcr-triage-1","action":"TRIAGE",...},
+  {"command_id":"pcr-status-1","action":"STATUS",...},
+  {"command_id":"pcr-fix-1","action":"PROPOSE_FIX",...}
+]
+```
+
+It is deliberately **not a new envelope shape**. Each element is a normal
+envelope with its own `command_id`, validated by the same validator, claimed and
+executed by the same code, and given its own durable receipt. Exactly-once,
+canonical hashing, collision detection, payload flatness, sanitized errors and
+the action vocabulary are all untouched — none of them ever knew about the array.
+There is no batch-level receipt and no batch-level transaction: **a batch is an
+ordering, not an atom.**
+
+Bounds: at most `MAX_BATCH_COMMANDS` (25) elements and `MAX_BATCH_BYTES` (64 KiB)
+total; each element still capped at `MAX_ENVELOPE_BYTES` individually.
+
+**Ordering and the stop rule.** Elements run in array order, and the batch stops
+at the first element that does not SUCCEED. Ticket workflows are sequential — a
+disposition presumes the triage before it — so continuing past a refusal would
+apply later steps to a state their author never saw.
+
+The tail after a stop is left **entirely unclaimed**: no row, no receipt. That is
+what makes a stopped batch recoverable, and it follows the rule already stated
+above — the absence of a receipt is the only state that permits another attempt.
+Fix the cause, resubmit the unrun tail **verbatim under the same `command_id`s**.
+A batch that had marked them FAILED would have burned those ids for nothing.
+
+**Validation is all-or-nothing even though execution is not.** Every element is
+structurally validated before any of them executes, and a `command_id` repeated
+inside one array is refused up front (the second would replay the first and
+silently do nothing). A typo in the last element therefore costs nothing rather
+than leaving the first eight applied.
+
+The receipt view for a batch is scalar-first, so every existing reader keeps
+working: `status` (SUCCEEDED, or the status that stopped it), `count`,
+`executed`, `skipped`, `stopped_at`, a compact `commands` list of
+`<command_id>:<status>`, and the full per-command `receipts`.
+
 ### Exactly once
 
 `railway.json` restarts the worker on failure up to ten times and every restart
@@ -564,6 +615,12 @@ whatever really ran under that name.
 Step 5 is hygiene, not safety: leaving the variable set is inert, because the
 receipt is terminal. Clear it anyway so the next reader is not left wondering
 whether something is pending.
+
+Steps 2-4 take one worker boot **per submission, not per command** — send the
+whole workflow as an array (above) and it is one boot for the lot. And if another
+session's envelope is still sitting unconsumed in the variable, step 2 is
+**REFUSED** rather than silently discarding it; see *Sharing the channel with
+other sessions* in `docs/OPS_RUNBOOK.md`.
 
 Receipts are **metadata only** on the read surface: identity, action, actor,
 timing, outcome, its hash, and the payload's *recognised* field names plus a

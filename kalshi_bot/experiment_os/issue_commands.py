@@ -111,6 +111,7 @@ __all__ = [
     "SCHEMA_VERSION",
     "canonical_envelope",
     "envelope_hash",
+    "execute_batch",
     "execute_envelope",
     "safe_error_fields",
     "run_boot_command",
@@ -132,6 +133,11 @@ ENVELOPE_KEYS = frozenset(
 # supplies one. They are generous for a ticket update and small enough that a
 # malformed or hostile value cannot become a memory or storage problem.
 MAX_ENVELOPE_BYTES = 8192
+#: A BATCH is a JSON array of ordinary envelopes (see `execute_batch`). Each
+#: element is still bounded by MAX_ENVELOPE_BYTES individually; these two bound
+#: the array itself, so one transport value cannot become a storage problem.
+MAX_BATCH_COMMANDS = 25
+MAX_BATCH_BYTES = 65536
 MAX_STRING_CHARS = 4000
 MAX_ERROR_CHARS = 400
 #: Ceiling on any ONE action's field vocabulary, asserted at import time rather
@@ -1212,8 +1218,123 @@ def execute_envelope(session, envelope: Any, *, now: datetime | None = None) -> 
     return _receipt_view(row, replayed=False, collision=False, executed=True)
 
 
+def execute_batch(session, envelopes: list, *, now: datetime | None = None) -> dict:
+    """Execute an ORDERED batch of issue commands in one boot, and return a
+    batch view over their individual receipts.
+
+    ## Why batching exists
+
+    One command per boot made the transport correct and unusable at the same
+    time. Recording a single ticket end to end — triage, status, proposed fix,
+    disposition, validation plan, links, validation result, resolve — is a dozen
+    commands, and because setting the transport variable redeploys the worker,
+    that is a dozen restarts of a live trading process for one ticket's paperwork.
+    Worse, the variable is a single slot: while one session's envelope waits for
+    its boot, a second session that sets the variable overwrites it, and the
+    first command is silently never executed. Nothing is corrupted (the ledger
+    still makes each `command_id` exactly-once) but the author only finds out by
+    noticing a missing receipt. Batching shrinks both the restart count and that
+    collision window by the length of the batch.
+
+    ## What batching deliberately does NOT change
+
+    A batch is a JSON *array of ordinary envelopes* — not a new envelope shape.
+    Every element carries its own `command_id`, is validated by the same
+    `_validate_envelope`, is claimed and executed by the same `execute_envelope`,
+    and gets its own durable receipt row. Exactly-once, canonical hashing,
+    collision detection, payload flatness, sanitized errors and the action
+    vocabulary are all untouched, because none of them ever knew about the array.
+    There is no batch-level receipt and no batch-level transaction: a batch is an
+    ordering, not an atom.
+
+    ## Ordering and the stop rule
+
+    Elements run in array order and the batch STOPS at the first element that
+    does not SUCCEED. Ticket workflows are sequential — a disposition presumes
+    the triage that preceded it — so continuing past a refusal would apply later
+    steps to a state their author never saw.
+
+    The elements after the stop are left entirely unclaimed: no row, no receipt.
+    That is deliberate and it is what makes a stopped batch recoverable. The
+    module's own rule is that "the absence of a receipt is the only state that
+    permits another attempt", so the unrun tail may be resubmitted VERBATIM,
+    under the same `command_id`s, once the cause of the stop is fixed. A batch
+    that had marked them FAILED would have burned those ids for nothing.
+
+    ## Validation is all-or-nothing, execution is not
+
+    Every element is structurally validated BEFORE any of them executes, and a
+    duplicate `command_id` within one array is refused here rather than being
+    discovered halfway through as a silent replay. A typo in the last element
+    therefore costs nothing instead of leaving the first eight applied.
+    """
+    now = now or _now()
+    if not isinstance(envelopes, list):
+        raise IssueCommandRejected(
+            f"a batch must be a JSON array, got {type(envelopes).__name__}",
+            "BATCH_NOT_AN_ARRAY",
+        )
+    if not envelopes:
+        raise IssueCommandRejected("a batch must contain at least one command",
+                                   "BATCH_EMPTY")
+    if len(envelopes) > MAX_BATCH_COMMANDS:
+        raise IssueCommandRejected(
+            f"a batch carries {len(envelopes)} commands; the limit is "
+            f"{MAX_BATCH_COMMANDS}. Split it across boots",
+            "BATCH_TOO_LONG",
+        )
+
+    # Validate everything first — see the docstring. This is pure and touches no
+    # database, so a malformed tail cannot leave a partially applied head.
+    validated = [_validate_envelope(e) for e in envelopes]
+    seen: dict[str, int] = {}
+    for i, env in enumerate(validated):
+        if env.command_id in seen:
+            raise IssueCommandRejected(
+                f"command_id {env.command_id!r} appears twice in one batch "
+                f"(positions {seen[env.command_id]} and {i}) — the second would "
+                "replay the first and silently do nothing; give each its own id",
+                "BATCH_DUPLICATE_COMMAND_ID",
+            )
+        seen[env.command_id] = i
+
+    receipts: list[dict] = []
+    stopped_at: str | None = None
+    for env_dict in envelopes:
+        view = execute_envelope(session, env_dict, now=now)
+        receipts.append(view)
+        if view.get("status") != CommandStatus.SUCCEEDED:
+            stopped_at = view.get("command_id")
+            break
+
+    executed = len(receipts)
+    return {
+        # `status` is scalar and first so the boot hook's log-level branch and
+        # every receipt reader keep working on a batch without special-casing it.
+        "status": (CommandStatus.SUCCEEDED if stopped_at is None
+                   else receipts[-1].get("status")),
+        "batch": True,
+        "count": len(envelopes),
+        "executed": executed,
+        "skipped": len(envelopes) - executed,
+        "stopped_at": stopped_at,
+        # Metadata only, exactly like a single receipt view: the compact per
+        # command line is what an operator reads in the log, and the full views
+        # are there for the ops surfaces.
+        "commands": [
+            f"{v.get('command_id')}:{v.get('status')}" for v in receipts
+        ],
+        "receipts": receipts,
+    }
+
+
 def run_boot_command(session, raw: str, *, now: datetime | None = None) -> dict | None:
     """Boot entry point: parse the transport variable and execute it.
+
+    The value is either ONE envelope (a JSON object) or an ordered BATCH of them
+    (a JSON array) — see `execute_batch`. The two are distinguished by the parsed
+    type alone, so a single command's shape, size bound and receipt are exactly
+    what they were before batching existed.
 
     Returns a log-safe receipt view, or None when nothing was set. The raw value
     is never returned, logged or embedded in an error — see the module docstring
@@ -1222,16 +1343,23 @@ def run_boot_command(session, raw: str, *, now: datetime | None = None) -> dict 
     text = (raw or "").strip()
     if not text:
         return None
+    # The outer bound is the batch ceiling because the shape is not known until
+    # the value is parsed. A single envelope is still held to MAX_ENVELOPE_BYTES
+    # by `_validate_envelope`, which measures the CANONICAL form — the size that
+    # actually gets stored — rather than however much whitespace it arrived in.
     size = len(text.encode("utf-8"))
-    if size > MAX_ENVELOPE_BYTES:
+    if size > MAX_BATCH_BYTES:
         raise IssueCommandRejected(
-            f"issue command is {size} bytes; the limit is {MAX_ENVELOPE_BYTES}"
+            f"issue command is {size} bytes; the limit is {MAX_BATCH_BYTES}",
+            "ENVELOPE_TOO_LARGE",
         )
     try:
-        envelope = json.loads(text)
+        parsed = json.loads(text)
     except json.JSONDecodeError as exc:
         # exc carries the offending document position, not the document.
         raise IssueCommandRejected(
             f"issue command is not valid JSON (line {exc.lineno}, col {exc.colno})"
         ) from None
-    return execute_envelope(session, envelope, now=now)
+    if isinstance(parsed, list):
+        return execute_batch(session, parsed, now=now)
+    return execute_envelope(session, parsed, now=now)
