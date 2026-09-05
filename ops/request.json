@@ -1,1 +1,1 @@
-{"type":"db","id":"cc-funnel-2","sql":"select created_at, raw_json->>'skipped_contest_cap' as contest_cap, raw_json->>'opened' as opened, raw_json->'per_book' as per_book from system_events where component='mmsell_scan' and created_at > now() - interval '40 minutes' order by created_at desc limit 10"}
+{"type":"noop"}
