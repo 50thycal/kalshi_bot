@@ -1,0 +1,41 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "7becc96c3688fb963ba650c731c46c6294e6351f",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-05T12:36:18Z",
+  "id": "x18-clear-1",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>",
+        "before": "<redacted 1493 bytes, sha256:447155cfc9870f0d>",
+        "requested": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>"
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "ok"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/x18-clear-1.receipt.json",
+  "result_file": "ops/results/x18-clear-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33966503081",
+  "service": "main",
+  "started_at": "2026-09-05T12:36:15Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
