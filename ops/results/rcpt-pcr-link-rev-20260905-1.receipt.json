@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "9780be8479ff5f88dedc646acc64e8cd245a5f31",
+  "code_source": "default-branch",
+  "exit_status": 1,
+  "finished_at": "2026-09-05T15:28:56Z",
+  "id": "rcpt-pcr-link-rev-20260905-1",
+  "outcome": "FAILED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rcpt-pcr-link-rev-20260905-1.receipt.json",
+  "result_file": "ops/results/rcpt-pcr-link-rev-20260905-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33974909012",
+  "service": null,
+  "started_at": "2026-09-05T15:28:55Z",
+  "targets": [],
+  "type": "xos"
+}
