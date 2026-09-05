@@ -1,1 +1,1 @@
-{"type":"db","id":"pcr-impacts-1","max_rows":100,"sql":"select a.id, x.key exp_key, a.revision_id, a.impact_class, a.action, a.status, a.blocks_activation, a.normalization_ref, a.applied_at, left(coalesce(a.rationale,''),160) rationale from platform_impact_actions a join experiments x on x.id=a.experiment_id where a.revision_id=11 order by x.key"}
+{"type":"xos","command":"show","args":["mmsell-anchor-vol-entry"],"id":"pcr-show-1"}
