@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "c4b2ce1d3e8793a8ec72e4e92287554febae7e24",
+  "code_source": "default-branch",
+  "exit_status": 1,
+  "finished_at": "2026-09-05T15:07:31Z",
+  "id": "rcpt-pcr-ev-impact-20260905-1",
+  "outcome": "FAILED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rcpt-pcr-ev-impact-20260905-1.receipt.json",
+  "result_file": "ops/results/rcpt-pcr-ev-impact-20260905-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33973825223",
+  "service": null,
+  "started_at": "2026-09-05T15:07:30Z",
+  "targets": [],
+  "type": "xos"
+}
