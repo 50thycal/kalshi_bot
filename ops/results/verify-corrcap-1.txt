@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=verify-corrcap-1
-# code cbbf710825f6de72e365f3977c4a86c8a2684fc3 · started 2026-09-05T13:58:51Z
-key                     state  version  frozen  arms  gates
-----------------------  -----  -------  ------  ----  -----
-mmsell-correlation-cap  PAPER  1        True    2     1    
-
-(1 row)
