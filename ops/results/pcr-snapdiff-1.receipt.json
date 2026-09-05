@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "cbbf710825f6de72e365f3977c4a86c8a2684fc3",
+  "code_source": "default-branch",
+  "exit_status": 1,
+  "finished_at": "2026-09-05T14:34:56Z",
+  "id": "pcr-snapdiff-1",
+  "outcome": "FAILED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/pcr-snapdiff-1.receipt.json",
+  "result_file": "ops/results/pcr-snapdiff-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33972229887",
+  "service": null,
+  "started_at": "2026-09-05T14:34:55Z",
+  "targets": [],
+  "type": "db"
+}
