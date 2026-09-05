@@ -1,1 +1,1 @@
-{"type":"db","id":"cc-funnel-1","sql":"select created_at, raw_json->>'skipped_contest_cap' as contest_cap, raw_json->>'skipped_event_rung_cap' as rung_cap, raw_json->>'skipped_settlement_cap' as date_cap, raw_json->>'opened' as opened, raw_json->>'in_band' as in_band, raw_json->'per_book' as per_book from system_events where component='mmsell_scan' order by created_at desc limit 12"}
+{"type":"env","id":"cc-variants-1","get":["MMSELL_VARIANTS","MMSELL_CONTEST_CAP_ENABLED","MMSELL_CONTEST_CAP"]}
