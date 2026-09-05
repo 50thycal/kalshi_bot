@@ -1,9 +1,23 @@
 # ops request [READ]
-# type=db  id=xos20-ev-receipt-1
-# code 0bd808a97eea19712b97c1aaaff3f80b7baf5906 · started 2026-09-05T12:45:01Z
-command_id        action        status     error                                                                                                                                                                                                   
-----------------  ------------  ---------  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-xos20-evidence-1  ADD_EVIDENCE  REJECTED   IssuePolicyError: evidence type '<redacted>' is not valid; legal values: COMMIT, CONTROL_TOWER, DATABASE_QUERY, GATE_RESULT, INTEGRITY_EVENT, LOG, MANUAL_OBSERVATION, OPS_RESULT, OTHER, PLATFORM_REVI…
-lo-x18-resolve-2  RESOLVE       SUCCEEDED                                                                                                                                                                                                          
-
-(2 rows)
+# type=db  id=xgame-matches-1
+# code 0bd808a97eea19712b97c1aaaff3f80b7baf5906 · started 2026-09-05T12:45:51Z
+Traceback (most recent call last):
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 597, in <module>
+    raise SystemExit(serve())
+                     ^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 593, in serve
+    return main()
+           ^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 423, in main
+    status = _dispatch(rtype, req, receipt)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 467, in _dispatch
+    return db_query.main()
+           ^^^^^^^^^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/db_query.py", line 122, in main
+    cur.execute(sql)
+  File "/opt/hostedtoolcache/Python/3.11.16/x64/lib/python3.11/site-packages/psycopg/cursor.py", line 117, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.UndefinedColumn: column "game_day" does not exist
+LINE 1: SELECT count(*) AS matches_total, max(game_day) AS last_game...
+                                              ^
