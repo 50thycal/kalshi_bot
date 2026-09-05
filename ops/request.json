@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-show","args":["lo-x18-triage-1"],"id":"rc-lo-x18-triage-1-1"}
+{"type": "env", "id": "req-lo-x18-investigating-1", "set": {"EXPERIMENT_OS_ISSUE_COMMAND": "{\"command_id\": \"lo-x18-investigating-1\", \"action\": \"STATUS\", \"actor\": \"claude-code\", \"actor_role\": \"LIVE_OPS\", \"schema_version\": 1, \"payload\": {\"issue\": \"XOS-000018\", \"status\": \"INVESTIGATING\", \"reason\": \"Diagnosis complete; recording the root cause and the remedy.\", \"event_type\": \"STATUS_CHANGED\"}}"}}
