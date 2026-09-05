@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=contest-cap-counterfactual-1
-# code 7becc96c3688fb963ba650c731c46c6294e6351f · started 2026-09-05T12:16:20Z
-kept_all  actual_pnl  kept_cap1  pnl_cap1  kept_cap2  pnl_cap2  kept_cap3  pnl_cap3  kept_cap4  pnl_cap4
---------  ----------  ---------  --------  ---------  --------  ---------  --------  ---------  --------
-97        -3.87       58         0.43      81         -0.09     89         -0.49     93         -3.22   
-
-(1 row)
