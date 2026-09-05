@@ -929,8 +929,8 @@ def ensure_mmsell_settlement_meta(session, *, market_ticker: str, event_ticker: 
 
 def open_positions_settlement_summary(
     session, strategy: str, close_date, ticker: str
-) -> tuple[int, Counter[str], Counter[str]]:
-    """(count, event ticker -> open rungs, CONTEST -> open rungs) of `strategy`'s OTHER
+) -> tuple[int, Counter[str]]:
+    """(count, event ticker -> open rungs) of `strategy`'s OTHER
     currently-open positions settling on `close_date` (a UTC calendar date) — the settlement-date
     concentration cap's read. `ticker` is EXCLUDED so a position already open on the candidate's
     own market (the `already_open` path handles that case separately) can never count against its
@@ -941,16 +941,13 @@ def open_positions_settlement_summary(
     behave identically to the set this used to return, so the distinct-EVENT cap that reads it
     is unaffected.
 
-    The THIRD counter keys on `contest_key_of` rather than the event ticker, because an event
-    ticker is series x contest: KXMLBTOTAL and KXMLBSPREAD on one baseball game are two events
-    and one result (XOS-000020). Both counters come from the same rows, so the contest cap costs
-    no extra query.
+    The CONTEST cap deliberately does NOT read from here — see
+    `open_positions_contest_summary`, which is not settlement-date scoped because a contest is
+    one result rather than one date.
 
     Filters with an explicit UTC datetime RANGE rather than a DB-side date() function: SQLite
     (used by the test suite) and Postgres (production) parse timestamp strings differently
     enough that a portable comparison is worth the extra two lines."""
-    from .mmsell.regimes import contest_key_of
-
     day_start = datetime(close_date.year, close_date.month, close_date.day, tzinfo=timezone.utc)
     day_end = day_start + timedelta(days=1)
     rows = session.execute(
@@ -965,10 +962,44 @@ def open_positions_settlement_summary(
             m.MmSellSettlementMeta.close_time < day_end,
         )
     ).all()
-    contests = Counter(
-        key for key in (contest_key_of(r[0]) for r in rows) if key
-    )
-    return len(rows), Counter(r[1] for r in rows if r[1]), contests
+    return len(rows), Counter(r[1] for r in rows if r[1])
+
+
+def open_positions_contest_summary(
+    session, strategy: str, ticker: str
+) -> Counter[str]:
+    """CONTEST -> open rungs across `strategy`'s WHOLE open book. `ticker` is excluded for the
+    same reason the settlement summary excludes it: a position already open on the candidate's
+    own market must never count against its own cap.
+
+    Deliberately NOT settlement-date scoped, unlike every other concentration cap. Those model
+    "too much of this book settles on one day", which is a property of a date. The contest cap
+    models "too many tickers on ONE result", which is a property of a contest — and a contest's
+    markets do not share a UTC calendar date. An MLB F5 total closes about an hour into a game
+    and the full-game total about three, so a 21:38 ET first pitch puts the early legs before
+    UTC midnight and the late ones after. Read per date, those legs landed in two different
+    counters and the cap never fired — invisibly, since `skipped_contest_cap` simply stayed at
+    zero, which reads as "nothing to refuse" rather than "broken". It failed on exactly the
+    late-evening games XOS-000020's drawdown came from.
+
+    Reading the whole open book is cheap: it is bounded by mmsell_max_open_positions (paper 200,
+    a live twin 60), the same bound the position cap already enforces every cycle. The caller
+    only issues this query for a book that actually has a contest cap, so the entire uncapped
+    cohort pays nothing.
+
+    Keys on `contest_key_of` rather than the event ticker because an event ticker is series x
+    contest: KXMLBTOTAL and KXMLBSPREAD on one baseball game are two events and one result
+    (XOS-000020)."""
+    from .mmsell.regimes import contest_key_of
+
+    tickers = session.scalars(
+        select(m.PaperPosition.market_ticker).where(
+            m.PaperPosition.strategy == strategy,
+            m.PaperPosition.status == "open",
+            m.PaperPosition.market_ticker != ticker,
+        )
+    ).all()
+    return Counter(key for key in (contest_key_of(t) for t in tickers) if key)
 
 
 def event_has_strangle_leg(session, strategy: str, event_ticker: str, side: str) -> bool:

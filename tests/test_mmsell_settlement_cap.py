@@ -116,7 +116,7 @@ def test_settlement_summary_excludes_the_candidates_own_ticker(session):
                                     quantity=1, avg_price=80, status="open"))
     session.flush()
 
-    n, events, _contests = repo.open_positions_settlement_summary(
+    n, events = repo.open_positions_settlement_summary(
         session, "mmsell", close_dt.date(), "KXTEAM-A")
     assert n == 1                      # KXTEAM-B only; KXTEAM-A excludes itself
     assert dict(events) == {"KXTEAM-B-EV": 1}
@@ -143,7 +143,7 @@ def test_settlement_summary_is_isolated_by_strategy_and_status(session):
     ])
     session.flush()
 
-    n, events, _contests = repo.open_positions_settlement_summary(
+    n, events = repo.open_positions_settlement_summary(
         session, "mmsell", close_dt.date(), "KXTEAM-ZZZ")
     assert n == 1 and dict(events) == {"EV-A": 1}
 
@@ -164,7 +164,7 @@ def test_settlement_summary_respects_the_calendar_date_boundary(session):
     ])
     session.flush()
 
-    n, _events, _contests = repo.open_positions_settlement_summary(
+    n, _events = repo.open_positions_settlement_summary(
         session, "mmsell", close_dt.date(), "KXTEAM-ZZZ")
     assert n == 1                     # NEXTDAY must not bleed into TODAY's count
 
@@ -403,8 +403,10 @@ def test_the_contest_counter_collapses_five_series_into_one_game(session):
                             ("KXMLBTOTAL", "8")):
         _open_contest_position(session, f"{series}-{_NYYLAA}-{outcome}", close_dt)
 
-    n, events, contests = repo.open_positions_settlement_summary(
+    n, events = repo.open_positions_settlement_summary(
         session, "mmsell", close_dt.date(), "KXMLBTOTAL-26SEP022210STLLAD-13")
+    contests = repo.open_positions_contest_summary(
+        session, "mmsell", "KXMLBTOTAL-26SEP022210STLLAD-13")
 
     assert n == 5
     assert len(events) == 5, "five series look like five events — the gap being fixed"
@@ -417,8 +419,7 @@ def test_the_contest_counter_keeps_distinct_games_distinct(session):
     _open_contest_position(session, f"KXMLBTOTAL-{_NYYLAA}-8", close_dt)
     _open_contest_position(session, "KXMLBTOTAL-26SEP022210STLLAD-13", close_dt)
 
-    _n, _events, contests = repo.open_positions_settlement_summary(
-        session, "mmsell", close_dt.date(), "KXOTHER-X-Y")
+    contests = repo.open_positions_contest_summary(session, "mmsell", "KXOTHER-X-Y")
 
     assert len(contests) == 2
 
@@ -432,8 +433,7 @@ def test_the_contest_counter_is_isolated_by_book(session):
     _open_contest_position(session, f"KXMLBHR-{_NYYLAA}-JUDGE1", close_dt,
                            strategy="mmsell10")
 
-    _n, _events, contests = repo.open_positions_settlement_summary(
-        session, "mmsell", close_dt.date(), "KXOTHER-X-Y")
+    contests = repo.open_positions_contest_summary(session, "mmsell", "KXOTHER-X-Y")
 
     assert contests == {f"MLB:{_NYYLAA}": 1}
 
