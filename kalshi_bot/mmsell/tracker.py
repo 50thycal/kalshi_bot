@@ -206,7 +206,9 @@ class MmSellTracker:
         """True when a concentration cap should SKIP this entry: too many of `tag`'s own open
         positions already settle on this candidate's date (docs/MMSELL_SEASONAL_FORECAST.md
         "Reading 3"), or (on a CORRELATED regime's date) too many distinct EVENTS already do, or
-        too many rungs are already open on THIS event and the event is not mutually exclusive.
+        too many rungs are already open on THIS event and the event is not mutually exclusive, or
+        too many positions are already open on this candidate's CONTEST (the one cap that is not
+        settlement-date scoped — see repo.open_positions_contest_summary).
 
         `book_cap` is the SAME cap `open_count[tag]` was just checked against (paper's 200 or a
         twin's live-sized 60) — the date cap is a percentage OF that, so a twin gets the tighter
@@ -220,9 +222,8 @@ class MmSellTracker:
         if not s.mmsell_settlement_cap_enabled or close_dt is None:
             return False
         try:
-            n_on_date, events_on_date, contests_on_date = (
-                repo.open_positions_settlement_summary(
-                    session, tag, close_dt.date(), ticker))
+            n_on_date, events_on_date = repo.open_positions_settlement_summary(
+                session, tag, close_dt.date(), ticker)
         except Exception:  # noqa: BLE001 — a gate read must never break the entry scan
             logger.exception("mmsell settlement cap: read failed (entering anyway)")
             return False
@@ -259,15 +260,29 @@ class MmSellTracker:
         # Exempts mutually-exclusive events for the same reason the rung cap does: there at
         # most one leg can lose, so stacking is a genuine hedge rather than concentration.
         # A book's own `contestcap` wins over the global pair; None follows the global, so the
-        # default path is byte-identical to the merged mechanism's.
+        # default path is byte-identical to the merged mechanism's — including the query count,
+        # since an uncapped book never reaches the contest read below.
+        #
+        # That read is its OWN query and is NOT settlement-date scoped, unlike every cap above.
+        # A contest is one result, not one date: an MLB F5 total closes ~1h into a game and the
+        # full-game total ~3h, so a 21:38 ET start puts the early legs before UTC midnight and
+        # the late ones after. Counting per date split one game across two budgets and the cap
+        # never fired — silently, since skipped_contest_cap just stayed 0. The date, event and
+        # rung caps above stay date-scoped, which is what they actually model.
         cap_n = (contest_cap if contest_cap is not None
                  else (s.mmsell_contest_cap if s.mmsell_contest_cap_enabled else None))
         if cap_n is not None and not mutually_exclusive:
             contest = contest_key_of(ticker)
-            if contest and contests_on_date.get(contest, 0) >= cap_n:
-                summ.skipped_contest_cap += 1
-                self._note(recorder, ticker, tag, twin_codes.SKIP_CONTEST_CAP)
-                return True
+            if contest:
+                try:
+                    open_contests = repo.open_positions_contest_summary(session, tag, ticker)
+                except Exception:  # noqa: BLE001 — a gate read must never break the entry scan
+                    logger.exception("mmsell contest cap: read failed (entering anyway)")
+                    return False
+                if open_contests.get(contest, 0) >= cap_n:
+                    summ.skipped_contest_cap += 1
+                    self._note(recorder, ticker, tag, twin_codes.SKIP_CONTEST_CAP)
+                    return True
         return False
 
     def _live_price_and_size(self, session, ticker: str, no_price: int | None, metrics,

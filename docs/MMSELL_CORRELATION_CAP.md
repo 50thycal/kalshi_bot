@@ -196,6 +196,35 @@ the grouping half reads **worse than its control**, which the raw sd column hide
 5. **This does not license re-arming anything live.** `Dmmsell10` is stood down; re-arming is an
    operator act through `service.arm_live_canary`.
 
+## Correction, 2026-09-05 — the contest read is not settlement-date scoped
+
+As merged (`576bcfa`), the contest counter came from the settlement-date query the date and
+event caps share: a book's open positions filtered to the CANDIDATE's own UTC calendar date. A
+contest is one result, not one date. An MLB F5 total closes ~1h into a game and the full-game
+total ~3h, so a first pitch around 18:30 ET or later puts the early legs before UTC midnight and
+the late ones after. Those legs then counted against two different days' budgets and the cap did
+not fire — on exactly the late-evening games XOS-000020's own drawdown came from (`26SEP02
+NYYLAA` was a 21:38 start).
+
+The failure was silent: `skipped_contest_cap` simply did not increment, which reads as "the cap
+had nothing to refuse" rather than "the cap is broken" — and `skipped_contest_cap == 0` is the
+gate's own HOLD condition, so a broken cap and a cap with nothing to do were indistinguishable.
+
+Fixed by giving the contest cap its own read (`repo.open_positions_contest_summary`) over the
+book's WHOLE open book, keyed by `contest_key_of`. The date, correlated-event and rung caps are
+untouched and stay date-scoped, which is what they actually model. The read is bounded by
+`mmsell_max_open_positions` and only issued for a book that names a `contestcap`, so the
+uncapped cohort is unchanged down to the query count.
+
+Landed while both arms had **0 settled trades** (verified against `paper_trades` before the
+change), so no epoch is broken and no evidence is discarded.
+
+**Open question for the operator.** The counterfactual above was computed per settlement date on
+the same tape. If its grouping carried the same date scoping, it *understated* the cross-series
+contest arm — the straddling games it could not group are the late-evening ones. The pre-
+registered gate stands as written; whether the prior in the "READ THIS FIRST" box should be
+re-derived is a separate call.
+
 ## Not built here
 
 The second half of XOS-000020 — `mmsell_settlement_correlated_regimes` defaulting to
