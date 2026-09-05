@@ -1,1 +1,1 @@
-{"type":"db","sql":"select command_id, action, status, left(coalesce(error,''),300) as error from experiment_os_issue_commands order by id desc limit 2","max_rows":3,"id":"xos20-ev-receipt-1"}
+{"type":"db","id":"xgame-matches-1","sql":"SELECT count(*) AS matches_total, max(game_day) AS last_game_day, (SELECT count(*) FROM game_market_matches WHERE ended_at IS NULL) AS still_active FROM game_market_matches"}
