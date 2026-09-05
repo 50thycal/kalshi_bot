@@ -1,1 +1,1 @@
-{"type":"db","id":"pcr-ids-1","max_rows":20,"sql":"select x.id experiment_id, v.id version_id, g.id gate_id, g.gate_key from experiments x join experiment_versions v on v.experiment_id=x.id join experiment_gates g on g.version_id=v.id where x.key='mmsell-anchor-vol-entry'"}
+{"type":"xos","command":"issue-command-show","args":["ts-xos20-straddle-20260905"],"id":"pcr-receipt-check"}
