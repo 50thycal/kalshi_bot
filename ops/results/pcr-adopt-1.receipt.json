@@ -1,0 +1,41 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "c4b2ce1d3e8793a8ec72e4e92287554febae7e24",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-05T15:03:26Z",
+  "id": "pcr-adopt-1",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 260 bytes, sha256:c200f933f4e24a2a>",
+        "before": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>",
+        "requested": "<redacted 260 bytes, sha256:c200f933f4e24a2a>"
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "ok"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/pcr-adopt-1.receipt.json",
+  "result_file": "ops/results/pcr-adopt-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33973619524",
+  "service": "main",
+  "started_at": "2026-09-05T15:03:23Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
