@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["mmsell-anchor-vol-entry"],"id":"pcr-show-1"}
+{"type":"db","id":"pcr-superseded-1","max_rows":50,"sql":"select a.id, x.key exp_key, a.revision_id, a.superseded_revision_id, a.prior_snapshot_id, a.impact_class, a.action, a.status, a.epoch_id, a.version_id from platform_impact_actions a join experiments x on x.id=a.experiment_id where x.key in ('mmsell-anchor-vol-entry','mmsell-price-ceiling') order by x.key, a.id"}
