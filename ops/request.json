@@ -1,1 +1,1 @@
-{"type":"db","sql":"select issue_key, left(title,66) as title, classification, current_owner_role, severity, priority, status from experiment_issues order by id desc limit 2","max_rows":4,"id":"xos-corr-key-1"}
+{"type":"noop","id":"idle-20260905"}
