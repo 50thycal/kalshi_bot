@@ -1,0 +1,41 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "7becc96c3688fb963ba650c731c46c6294e6351f",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-05T12:33:07Z",
+  "id": "req-lo-x18-resolve-2",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 1493 bytes, sha256:447155cfc9870f0d>",
+        "before": "<redacted 1525 bytes, sha256:67d56c156a029dd1>",
+        "requested": "<redacted 1493 bytes, sha256:447155cfc9870f0d>"
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "ok"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/req-lo-x18-resolve-2.receipt.json",
+  "result_file": "ops/results/req-lo-x18-resolve-2.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33966346468",
+  "service": "main",
+  "started_at": "2026-09-05T12:33:03Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
