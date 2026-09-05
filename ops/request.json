@@ -1,1 +1,1 @@
-{"type":"xos","command":"tag","args":["Gmmsell1"],"id":"cc-tag-1"}
+{"type":"logs","id":"cc-logs-1","filter":"mmsell","limit":60}
