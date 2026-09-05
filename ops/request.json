@@ -1,1 +1,1 @@
-{"type": "env", "id": "req-pcr-link-pr-20260905", "set": {"EXPERIMENT_OS_ISSUE_COMMAND": "{\"command_id\":\"pcr-link-pr-20260905\",\"action\":\"ADD_LINK\",\"actor\":\"claude-platform-change-review\",\"actor_role\":\"PLATFORM_CHANGE_REVIEW\",\"schema_version\":1,\"payload\":{\"issue\":\"XOS-000021\",\"link_type\":\"PR\",\"reference\":\"https://github.com/50thycal/kalshi_bot/pull/336\",\"label\":\"the fix, merged as 9780be8\"}}"}}
+{"type":"xos","command":"issue-command-show","args":["pcr-link-pr-20260905"],"id":"rcpt-pcr-link-pr-20260905-1"}
