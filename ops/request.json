@@ -1,1 +1,1 @@
-{"type":"logs","service":"main","limit":150,"id":"worker-health-1"}
+{"type":"script","name":"livedash_probe","args":["--base","https://kalshibot-production-cb6b.up.railway.app"],"id":"livedash-probe-final"}
