@@ -98,7 +98,6 @@ from .models import (
     ExperimentIntegrityEvent,
     ExperimentVersion,
     PlatformComponent,
-    PlatformImpactAction,
     PlatformRevision,
     PlatformSnapshot,
 )
@@ -227,13 +226,14 @@ def _external_scope(
     ref: dict,
     kind: str,
     window: tuple[datetime, datetime],
-) -> tuple[MetricScope | None, str | None, str | None]:
+) -> tuple[MetricScope | None, str | None, ExperimentEpoch | None]:
     """Resolve an explicit external-control reference.
 
-    Returns (scope, structural_problem, platform_problem). The external side is
-    read over the SAME evidence window (the matched-window rule the registry's
-    cross-book reads use); its own epoch's snapshot must match the evaluating
-    epoch's, else the delta would pool evidence across incompatible snapshots."""
+    Returns (scope, structural_problem, epoch). The external side is read over the
+    SAME evidence window (the matched-window rule the registry's cross-book reads
+    use). Its own epoch is returned so the caller can ask the impact ledger whether
+    a snapshot difference between the two epochs is LICENSED, rather than deciding
+    comparability on a bare fingerprint equality."""
     exp_key = ref.get("experiment_key")
     arm_key = ref.get("arm_key")
     exp = read.get_experiment(session, exp_key) if exp_key else None
@@ -258,7 +258,7 @@ def _external_scope(
         return None, f"external_control {exp_key!r} has no operating epoch", None
     snap = session.get(PlatformSnapshot, epoch.platform_snapshot_id)
     scope = _arm_scope(session, exp, ver, epoch, arm_key, kind, window, snap.fingerprint)
-    return scope, None, None
+    return scope, None, epoch
 
 
 def _resolve_clause_scopes(
@@ -368,17 +368,31 @@ def _resolve_clause_scopes(
                     "{'experiment_key': ..., 'arm_key': ...}"
                 )
                 return []
-            control_scope, problem, plat = _external_scope(session, external, kind, window)
+            control_scope, problem, control_epoch = _external_scope(
+                session, external, kind, window
+            )
             if problem:
                 problems.append(f"{where}: {problem}")
                 return []
             if control_scope.platform_snapshot_fingerprint != snapshot_fp:
-                platform_problems.append(
-                    f"{where}: external control {control_scope.label()} is pinned to a "
-                    "different platform snapshot — a cross-snapshot delta would pool "
-                    "incomparable evidence"
+                # Differing fingerprints are the QUESTION, not the answer. The
+                # impact ledger may already have licensed the exact difference
+                # for both sides (spec §18) — the same license
+                # `platform_block_reasons` honours for pinned-vs-active
+                # staleness, asked of a pair. Only an unlicensed difference
+                # blocks, and the reason names the component that blocked.
+                from .platform_impact import (  # lazy: imports service
+                    cross_snapshot_block_reason,
                 )
-                return []
+
+                reason = cross_snapshot_block_reason(session, epoch, control_epoch)
+                if reason is not None:
+                    platform_problems.append(
+                        f"{where}: external control {control_scope.label()} is pinned "
+                        "to a different platform snapshot and a cross-snapshot delta "
+                        f"would pool incomparable evidence — {reason}"
+                    )
+                    return []
         else:
             if control_key not in arm_keys:
                 problems.append(
@@ -536,15 +550,9 @@ def platform_block_reasons(
                                                               epoch.platform_snapshot_id)))
     version_row = session.get(ExperimentVersion, epoch.version_id)
     experiment_id = version_row.experiment_id if version_row is not None else None
-    licensed_revision_ids = set(
-        session.scalars(
-            select(PlatformImpactAction.revision_id).where(
-                PlatformImpactAction.experiment_id == experiment_id,
-                PlatformImpactAction.status == "applied",
-                PlatformImpactAction.action.in_(("NO_ACTION", "RECOMPUTE")),
-            )
-        )
-    ) if experiment_id is not None else set()
+    from .platform_impact import licensed_revision_ids  # lazy: imports service
+
+    licensed = licensed_revision_ids(session, experiment_id)
     reasons: list[str] = []
     active = session.execute(
         select(PlatformComponent.key, PlatformRevision.version,
@@ -556,7 +564,7 @@ def platform_block_reasons(
         pinned_version = pinned.get(key)
         if pinned_version is None or pinned_version == version:
             continue
-        if revision_id in licensed_revision_ids:
+        if revision_id in licensed:
             continue  # dispositioned: NO_ACTION judged it immaterial, or the
             #           applied RECOMPUTE's named normalizer restores comparability
         if activated_at is None:

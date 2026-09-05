@@ -509,6 +509,139 @@ def test_cross_snapshot_external_control_blocks(xos_session, xos_platform):
     assert any("different platform snapshot" in r for r in out.blocking_reasons)
 
 
+# --- cross-snapshot external control: the composed-license rule (§17.4) -------
+
+
+def _licensed_cross_snapshot_fixture(s, *, license_control=True, exempt_control=False):
+    """The mmsellA4-vs-mmsell10 shape: the evaluating experiment stays pinned to
+    the OLD snapshot while its external control has moved to the new one, and the
+    two snapshots differ in EXACTLY ONE component.
+
+    Returns (gate, epoch, boundary). `license_control` / `exempt_control` decide
+    what disposition the control side holds for the differing revision — the
+    treatment side always holds an applied I0/NO_ACTION.
+    """
+    from sqlalchemy import select
+
+    from kalshi_bot.experiment_os import platform_impact as pi
+    from kalshi_bot.experiment_os.models import ExperimentIntegrityEvent
+
+    ctl_exp, ctl_ver, ctl_epoch = _experiment(
+        s, key="ext-control", arms=(("armx", "control", "x_tag"),)
+    )
+    exp, ver, epoch = _experiment(s, key="exp-licensed")
+    gate = _gate(s, ver, {
+        "pass_all": [{
+            "metric": "delta.pnl_cents_per_trade", "arm": "treatment",
+            "external_control": {"experiment_key": "ext-control", "arm_key": "armx"},
+            "op": ">", "value": 0,
+        }],
+    })
+    boundary = T0 + timedelta(days=1)
+    # One component moves. Both experiments pin its superseded revision, so both
+    # are "affected" and both get an explicit disposition before activation.
+    rev = svc.register_platform_revision(
+        s, "MARKET_TAXONOMY", version="v2",
+        reason="test: purely additive taxonomy expansion",
+    )
+    for target, licensed in ((exp, True), (ctl_exp, license_control or exempt_control)):
+        if not licensed:
+            continue
+        rec = pi.propose_impact(
+            s, rev, target, impact_class="I0", action="NO_ACTION",
+            rationale="test: the spec reaches no classify() call on its entry path",
+            decided_by="tester",
+        )
+        if exempt_control and target is ctl_exp:
+            pi.exempt_impact(s, rec, actor="tester", reason="test: declined to act")
+        else:
+            pi.accept_impact(s, rec, accepted_by="tester")  # NO_ACTION settles applied
+    s.commit()
+    svc.activate_platform_revision(
+        s, rev, activated_at=boundary, actor="tester",
+        force=True,
+        force_reason="test: exercise the evaluator, not the activation gate",
+    )
+    # The forced-activation integrity events are the activation gate's business,
+    # not this test's — resolve them so they cannot shadow the platform verdict.
+    for ev in s.scalars(select(ExperimentIntegrityEvent).where(
+        ExperimentIntegrityEvent.kind == "PLATFORM_ACTIVATION_FORCED"
+    )):
+        ev.resolved_at = boundary
+        ev.resolution = "test fixture: classified out-of-band"
+    # The CONTROL moves to the new snapshot (a new epoch of its own); the
+    # evaluating experiment stays on the old one, licensed by its applied I0.
+    svc.close_epoch(s, ctl_epoch, ended_at=boundary)
+    ctl_epoch2 = svc.open_epoch(
+        s, ctl_ver, reason="test: control re-epoched under the new snapshot",
+        started_at=boundary,
+    )
+    svc.register_deployment(
+        s, ctl_epoch2, deployment_key="ext-control-paper-2", stage="PAPER",
+        kind="paper", arms={"armx": "x_tag"}, started_at=boundary,
+    )
+    for _ in range(3):
+        _trade(s, "t_tag", pnl=0.05, at=boundary + timedelta(hours=1))
+        _trade(s, "x_tag", pnl=0.01, at=boundary + timedelta(hours=1))
+    s.commit()
+    return gate, epoch, boundary
+
+
+def test_cross_snapshot_external_control_licensed_by_both_sides_evaluates(
+    xos_session, xos_platform
+):
+    """The mmsellA4/mmsell10 defect: the two epochs differ in exactly ONE platform
+    component, and BOTH experiments hold an APPLIED I0/NO_ACTION for that exact
+    revision transition. The impact engine has already licensed that difference
+    (`platform_block_reasons` honours the same license for pinned-vs-active
+    staleness) — so the delta is comparable and the gate must render a verdict
+    instead of refusing on a bare fingerprint inequality."""
+    s = xos_session
+    gate, epoch, boundary = _licensed_cross_snapshot_fixture(s)
+    out = evaluator.evaluate_gate(
+        s, gate, epoch=epoch, window_end=boundary + timedelta(days=1), persist=False
+    )
+    assert out.verdict != "BLOCKED_PLATFORM", out.blocking_reasons
+    assert not any("different platform snapshot" in r for r in out.blocking_reasons)
+    # 5c vs 1c → the delta clause is real and positive.
+    assert out.verdict == "PASS"
+    assert out.clauses[0].value == 4.0
+
+
+def test_cross_snapshot_external_control_blocks_when_control_unlicensed(
+    xos_session, xos_platform
+):
+    """The negative twin: same shape, but the control side holds NO disposition for
+    the differing revision. One experiment's 'this does not affect me' is not a
+    claim about the pair — the delta still blocks, and the refusal now names the
+    component that actually blocked."""
+    s = xos_session
+    gate, epoch, boundary = _licensed_cross_snapshot_fixture(s, license_control=False)
+    out = evaluator.evaluate_gate(
+        s, gate, epoch=epoch, window_end=boundary + timedelta(days=1), persist=False
+    )
+    assert out.verdict == "BLOCKED_PLATFORM"
+    assert any("MARKET_TAXONOMY" in r for r in out.blocking_reasons), out.blocking_reasons
+
+
+def test_cross_snapshot_external_control_blocks_on_exempted_disposition(
+    xos_session, xos_platform
+):
+    """An EXEMPTED record licenses nothing — declining to act is not a comparability
+    claim (the rule `platform_block_reasons` already states). Same shape, control
+    side exempted rather than applied: still blocked."""
+    s = xos_session
+    gate, epoch, boundary = _licensed_cross_snapshot_fixture(
+        s, license_control=False, exempt_control=True
+    )
+    out = evaluator.evaluate_gate(
+        s, gate, epoch=epoch, window_end=boundary + timedelta(days=1), persist=False
+    )
+    assert out.verdict == "BLOCKED_PLATFORM"
+    assert any("MARKET_TAXONOMY" in r for r in out.blocking_reasons), out.blocking_reasons
+
+
+
 def test_unresolved_integrity_event_blocks(xos_session, xos_platform):
     s = xos_session
     exp, ver, epoch = _experiment(s, key="exp-integ")
