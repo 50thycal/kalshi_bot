@@ -1,0 +1,41 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "0bd808a97eea19712b97c1aaaff3f80b7baf5906",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-05T12:46:06Z",
+  "id": "xos20-ev-set-2",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 918 bytes, sha256:50b55d5759f06e22>",
+        "before": "<redacted 915 bytes, sha256:5d327be7ce4cb0fd>",
+        "requested": "<redacted 918 bytes, sha256:50b55d5759f06e22>"
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "ok"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/xos20-ev-set-2.receipt.json",
+  "result_file": "ops/results/xos20-ev-set-2.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33966960438",
+  "service": "main",
+  "started_at": "2026-09-05T12:46:02Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
