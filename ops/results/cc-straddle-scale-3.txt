@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=cc-straddle-scale-3
-# code cbbf710825f6de72e365f3977c4a86c8a2684fc3 · started 2026-09-05T14:41:27Z
-bucket           contests  markets  multi_series_contests
----------------  --------  -------  ---------------------
-STRADDLES        85        5840     74                   
-single UTC date  6414      64376    1961                 
-
-(2 rows)
