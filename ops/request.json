@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-show","args":["pcr-resolve-20260905"],"id":"rcpt-pcr-resolve-20260905-2"}
+{"type":"xos","command":"issue-show","args":["XOS-000021"],"id":"pcr-final-1"}
