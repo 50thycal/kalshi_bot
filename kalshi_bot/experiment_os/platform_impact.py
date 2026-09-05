@@ -719,6 +719,162 @@ def apply_retire(
 # ---------------------------------------------------------------------------
 
 
+def licensed_revision_ids(session, experiment_id: int | None) -> set[int]:
+    """Revisions whose introduction this experiment has APPLIED an I0/NO_ACTION or
+    I1/RECOMPUTE disposition for — the comparability license of §18.
+
+    NO_ACTION says the change was judged immaterial to this experiment; an applied
+    RECOMPUTE says a named, registered normalizer restores exactness. Either way
+    the pinned-vs-active snapshot difference for that revision is accounted for.
+    Nothing else licenses anything: a PROPOSED record is an open question, an
+    ACCEPTED-but-unapplied material action is unfinished work, and an EXEMPTED
+    record is an audited refusal to act — declining to act is not a comparability
+    claim."""
+    if experiment_id is None:
+        return set()
+    return set(
+        session.scalars(
+            select(PlatformImpactAction.revision_id).where(
+                PlatformImpactAction.experiment_id == experiment_id,
+                PlatformImpactAction.status == "applied",
+                PlatformImpactAction.action.in_(
+                    (ImpactAction.NO_ACTION.value, ImpactAction.RECOMPUTE.value)
+                ),
+            )
+        )
+    )
+
+
+def _licensed_transitions(session, experiment_id: int | None) -> set[frozenset[int]]:
+    """The component TRANSITIONS this experiment has licensed, as unordered
+    {new revision, superseded revision} pairs.
+
+    `licensed_revision_ids` answers "is arriving at R accounted for?", which is the
+    pinned-vs-active question. Comparing two epochs asks a different one: is the
+    difference BETWEEN two pins accounted for? An applied disposition records both
+    ends (`revision_id` + `superseded_revision_id`), so it answers that exactly —
+    and only for the single step it names. A record with no recorded predecessor
+    licenses no transition: a multi-step drift (r1 → r2 → r3) is not covered by a
+    disposition about one of its steps, and is refused rather than assumed."""
+    if experiment_id is None:
+        return set()
+    rows = session.execute(
+        select(
+            PlatformImpactAction.revision_id,
+            PlatformImpactAction.superseded_revision_id,
+        ).where(
+            PlatformImpactAction.experiment_id == experiment_id,
+            PlatformImpactAction.status == "applied",
+            PlatformImpactAction.action.in_(
+                (ImpactAction.NO_ACTION.value, ImpactAction.RECOMPUTE.value)
+            ),
+        )
+    ).all()
+    return {
+        frozenset((rev_id, prior_id))
+        for rev_id, prior_id in rows
+        if prior_id is not None and rev_id is not None
+    }
+
+
+def _snapshot_pins(session, snapshot_id: int | None) -> dict[str, tuple[int, str]]:
+    """{component key: (revision id, revision version)} pinned by one snapshot."""
+    if snapshot_id is None:
+        return {}
+    rows = session.execute(
+        select(PlatformComponent.key, PlatformRevision.id, PlatformRevision.version)
+        .join(
+            PlatformSnapshotItem,
+            PlatformSnapshotItem.component_id == PlatformComponent.id,
+        )
+        .join(PlatformRevision, PlatformRevision.id == PlatformSnapshotItem.revision_id)
+        .where(PlatformSnapshotItem.snapshot_id == snapshot_id)
+    ).all()
+    return {key: (rev_id, version) for key, rev_id, version in rows}
+
+
+def _experiment_id_of_epoch(session, epoch: ExperimentEpoch | None) -> int | None:
+    if epoch is None:
+        return None
+    version = session.get(ExperimentVersion, epoch.version_id)
+    return version.experiment_id if version is not None else None
+
+
+def cross_snapshot_block_reason(
+    session, epoch: ExperimentEpoch | None, other: ExperimentEpoch | None
+) -> str | None:
+    """Why a delta between two differently-pinned epochs cannot be interpreted —
+    `None` when it can.
+
+    ## The composition rule (DEC: cross-scope comparability)
+
+    > A cross-scope delta is comparable when, for EVERY component whose pinned
+    > revision differs between the two epochs' snapshots, BOTH experiments hold an
+    > APPLIED NO_ACTION or RECOMPUTE disposition for that exact transition.
+
+    Two independent I0s do not compose automatically, and this function does not
+    assume they do — it is the explicit design decision that they compose *for the
+    difference each of them names*. An applied I0 on `r_new` (superseding `r_old`)
+    is the claim "the r_old → r_new change does not materially affect my evidence".
+    When both sides of a comparison make that claim about the same single step, the
+    difference between their two worlds is immaterial to both, and pooling is not
+    pooling across an unaccounted boundary. That is a strictly weaker statement
+    than "the platform did not change", which is what a bare fingerprint equality
+    demands and what strands otherwise-readable evidence.
+
+    Its limits, deliberately:
+
+      * an EXEMPTED, PROPOSED or ACCEPTED-but-unapplied record licenses nothing;
+      * a component that differs with no disposition on EITHER side blocks, and
+        the reason names it — one side's license is not a claim about the pair;
+      * only the single transition a disposition names is licensed, so a
+        multi-step difference blocks even when each step was separately
+        dispositioned by one experiment (see `_licensed_transitions`);
+      * a component pinned by only one of the two snapshots blocks: the snapshots
+        are not comparable component-for-component, and no record spans it.
+
+    This is the same license `platform_block_reasons` honours for pinned-vs-active
+    staleness, asked of a pair instead of a single scope. Nothing here changes what
+    a disposition means, or authorizes anything: it only decides whether a delta may
+    be COMPUTED."""
+    if epoch is None or other is None:
+        return "one side of the comparison has no operating epoch to pin a snapshot"
+    pins = _snapshot_pins(session, epoch.platform_snapshot_id)
+    other_pins = _snapshot_pins(session, other.platform_snapshot_id)
+    licensed = _licensed_transitions(session, _experiment_id_of_epoch(session, epoch))
+    other_licensed = _licensed_transitions(
+        session, _experiment_id_of_epoch(session, other)
+    )
+    blockers: list[str] = []
+    for key in sorted(set(pins) | set(other_pins)):
+        mine = pins.get(key)
+        theirs = other_pins.get(key)
+        if mine is None or theirs is None:
+            blockers.append(
+                f"{key} is pinned by only one of the two snapshots "
+                f"({'this epoch' if mine is not None else 'the control'} only)"
+            )
+            continue
+        if mine[0] == theirs[0]:
+            continue
+        transition = frozenset((mine[0], theirs[0]))
+        if transition in licensed and transition in other_licensed:
+            continue
+        missing = [
+            side
+            for side, held in (("this epoch", licensed), ("the control", other_licensed))
+            if transition not in held
+        ]
+        blockers.append(
+            f"{key} differs (this epoch pins {mine[1]!r}, the control pins "
+            f"{theirs[1]!r}) and no APPLIED NO_ACTION/RECOMPUTE disposition "
+            f"licenses that transition for {' or '.join(missing)}"
+        )
+    if not blockers:
+        return None
+    return "; ".join(blockers)
+
+
 def evidence_block_reasons(session, experiment: Experiment) -> list[str]:
     """Why this experiment's evidence cannot currently be interpreted, from the
     impact ledger: a PROPOSED record means the comparability question is open; an

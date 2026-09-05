@@ -97,6 +97,62 @@ explicit boundary passed to `apply_new_epoch` must equal the measured one. A
 revision with an unestablished boundary can never license an I0/I1 promotion
 (there is no instant to re-evaluate after).
 
+## Cross-scope comparability — when two differently-pinned epochs may be compared
+
+A gate clause may name an **external control** in another experiment (the
+mmsellA4-vs-mmsell10 shape). The two epochs then pin their own snapshots, and the
+evaluator has to decide whether a delta across them is evidence or noise.
+
+Until 2026-09-05 it decided that on a bare fingerprint equality: any difference at
+all refused the clause. That is stricter than what the impact engine already
+knows, and it silently stranded readable evidence — `mmsell-anchor-vol-entry`'s
+`paper_keep` sat at `BLOCKED_PLATFORM` from 2026-08-24 over 1,930 paper trades
+while **both** sides of its comparison held an APPLIED I0/`NO_ACTION` for the one
+component that differed between them (`MARKET_TAXONOMY`
+`coverage_2026_08_13` → `settlement_repair_2026_08_24`, impacts #6 and #3).
+The same license was honoured for pinned-vs-active staleness one function away.
+
+### The rule (adopted, Platform Change Review, 2026-09-05)
+
+> A cross-scope delta is comparable when, for **EVERY** component whose pinned
+> revision differs between the two epochs' snapshots, **BOTH** experiments hold an
+> **APPLIED** `NO_ACTION` or `RECOMPUTE` disposition for **that exact transition**
+> (the disposition's `revision_id` + `superseded_revision_id` pair). Otherwise the
+> delta is refused, and the refusal names the component that blocked.
+
+Two independent I0s do not compose into a comparability claim *by default* — that
+is a real design decision, taken here rather than assumed. What makes it sound is
+that a disposition is not merely "I am fine": an applied I0 on `r_new`
+superseding `r_old` is the claim *"the `r_old` → `r_new` change does not
+materially affect my evidence"*. When both sides make that claim about the same
+single step, the difference between their two worlds is immaterial to both, and
+pooling is not pooling across an unaccounted boundary. This is strictly weaker
+than "the platform did not change", which is what fingerprint equality demands.
+
+**What the rule deliberately refuses:**
+
+| situation | verdict |
+|---|---|
+| an `EXEMPTED` record on either side | **blocks** — declining to act is not a comparability claim |
+| a `PROPOSED`, or `ACCEPTED`-but-unapplied, record | **blocks** — the question is still open |
+| a component differing with a disposition on only one side | **blocks**, naming the component and the side that lacks it |
+| a multi-step difference (`r1 → r2 → r3`) where each side dispositioned one step | **blocks** — only the single transition a record names is licensed |
+| a disposition with no recorded `superseded_revision_id` | **licenses nothing** — there is no transition to match |
+| a component pinned by only one of the two snapshots | **blocks** — not comparable component-for-component |
+
+**What it does not touch:** the pinned-vs-active staleness rule
+(`platform_block_reasons`) is unchanged; what `EXEMPTED` licenses is unchanged
+(nothing); no gate contract, clause, threshold, Version, epoch or snapshot pin
+changes. The rule decides only whether a delta may be **computed** — it authorizes
+no promotion, and a PASS it makes readable is still subject to every §17.4 and PR 4
+rule about which results may authorize a transition.
+
+Implementation: `platform_impact.cross_snapshot_block_reason()`, with the license
+lookup shared with `platform_block_reasons` through
+`platform_impact.licensed_revision_ids()` so the two sites cannot drift apart
+again. Proven by `test_cross_snapshot_external_control_licensed_by_both_sides_evaluates`
+and its two negative twins in `tests/test_experiment_os_evaluator.py`.
+
 ## Gate results across a platform change (integration with PR 3)
 
 Old gate results are **never mutated** — staleness is structural:
