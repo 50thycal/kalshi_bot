@@ -1,7 +1,0 @@
-# ops request [READ]
-# type=db  id=cc-straddle-baseline-1
-# code cbbf710825f6de72e365f3977c4a86c8a2684fc3 · started 2026-09-05T14:39:03Z
-contest  utc_dates  markets  first_close  last_close
--------  ---------  -------  -----------  ----------
-
-(0 rows)
