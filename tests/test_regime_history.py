@@ -305,3 +305,95 @@ def session():
     m.Base.metadata.create_all(engine)
     with Session(engine) as s:
         yield s
+
+
+# --- contest keys (XOS-000020) ----------------------------------------------
+#
+# `event_ticker_of` returns SERIES x contest, so one baseball game is up to five
+# distinct "events". Every concentration cap keys on that, which is how Dmmsell10
+# came to hold 6 markets across 5 series on one NYYLAA game. `contest_key_of` is
+# the identifier those five share, and the whole cap rests on it grouping the way
+# the money does.
+
+
+def test_one_game_has_one_contest_key_across_every_series():
+    """The exact tickers Dmmsell10 held on 2026-09-02, verbatim from live_orders."""
+    from kalshi_bot.mmsell.regimes import contest_key_of
+
+    nyylaa = [
+        "KXMLBF5TOTAL-26SEP022138NYYLAA-5",
+        "KXMLBHR-26SEP022138NYYLAA-AARONJUDGE1",
+        "KXMLBSPREAD-26SEP022138NYYLAA-NYY3",
+        "KXMLBTEAMTOTAL-26SEP022138NYYLAA-NYY6",
+        "KXMLBTOTAL-26SEP022138NYYLAA-8",
+    ]
+
+    keys = {contest_key_of(t) for t in nyylaa}
+
+    assert keys == {"MLB:26SEP022138NYYLAA"}, (
+        "five series on one game must collapse to ONE contest — this grouping is "
+        "the entire cap"
+    )
+
+
+def test_different_games_never_share_a_contest_key():
+    """The cap must not refuse an unrelated game. Same series, same date, two
+    matchups; and the same matchup at two start times is two contests."""
+    from kalshi_bot.mmsell.regimes import contest_key_of
+
+    assert contest_key_of("KXMLBTOTAL-26SEP022138NYYLAA-8") != contest_key_of(
+        "KXMLBTOTAL-26SEP022210STLLAD-13"
+    )
+    assert contest_key_of("KXMLBTOTAL-26SEP022138NYYLAA-8") != contest_key_of(
+        "KXMLBTOTAL-26SEP031915NYYLAA-8"
+    )
+
+
+def test_two_UNRELATED_releases_sharing_a_date_are_NOT_one_contest():
+    """The failure this design is shaped around, and the reason grouping is
+    restricted to sports. `KXPAYROLLS-26SEP` and `KXCPI-26SEP` share the token
+    "26SEP" and share no result whatever. Grouping them would silently refuse
+    independent entries — a cap that rejects good trades invisibly is worse than
+    the gap it closes."""
+    from kalshi_bot.mmsell.regimes import contest_key_of
+
+    payrolls = contest_key_of("KXPAYROLLS-26SEP")
+    cpi = contest_key_of("KXCPI-26SEP")
+
+    assert payrolls != cpi
+    # And outside the grouped regimes the key IS the event ticker, so switching
+    # the cap on cannot change behaviour there at all.
+    assert payrolls == "KXPAYROLLS-26SEP"
+    assert cpi == "KXCPI-26SEP"
+
+
+def test_ungrouped_regimes_keep_exactly_todays_event_identity():
+    """Every existing cap keys on `event_ticker_of`. Outside the grouped regimes
+    the contest key must equal it, or enabling the cap would quietly re-scope the
+    caps that already exist."""
+    from kalshi_bot.mmsell.regimes import contest_key_of, event_ticker_of
+
+    for ticker in ("KXBTC-26SEP0217-B120", "KXPAYROLLS-26SEP", "KXRT-26SEP-X",
+                   "KXTRUMPSAY-26SEP02-HELLO"):
+        assert contest_key_of(ticker) == event_ticker_of(ticker), ticker
+
+
+def test_an_unrecognised_shape_groups_to_ITSELF_not_to_everything():
+    """The dangerous failure is collapsing unrelated markets into one bucket. A
+    ticker with no contest token must fall back to its own event, never to a
+    shared empty key."""
+    from kalshi_bot.mmsell.regimes import contest_key_of
+
+    assert contest_key_of(None) is None
+    assert contest_key_of("") is None
+    assert contest_key_of("KXWEIRD") == "KXWEIRD"
+
+
+def test_every_grouped_regime_is_a_REAL_regime_name():
+    """A typo in the allowlist would silently disable grouping for that sport —
+    the cap would look enabled and do nothing."""
+    from kalshi_bot.mmsell.regimes import CONTEST_GROUPED_REGIMES, REGIMES
+
+    known = {name for name, _ in REGIMES}
+
+    assert CONTEST_GROUPED_REGIMES <= known, CONTEST_GROUPED_REGIMES - known

@@ -929,20 +929,28 @@ def ensure_mmsell_settlement_meta(session, *, market_ticker: str, event_ticker: 
 
 def open_positions_settlement_summary(
     session, strategy: str, close_date, ticker: str
-) -> tuple[int, Counter[str]]:
-    """(count, event ticker -> open rungs) of `strategy`'s OTHER currently-open positions settling
-    on `close_date` (a UTC calendar date) — the settlement-date concentration cap's read.
-    `ticker` is EXCLUDED so a position already open on the candidate's own market (the
-    `already_open` path handles that case separately) can never count against its own cap.
+) -> tuple[int, Counter[str], Counter[str]]:
+    """(count, event ticker -> open rungs, CONTEST -> open rungs) of `strategy`'s OTHER
+    currently-open positions settling on `close_date` (a UTC calendar date) — the settlement-date
+    concentration cap's read. `ticker` is EXCLUDED so a position already open on the candidate's
+    own market (the `already_open` path handles that case separately) can never count against its
+    own cap.
 
     A Counter rather than a set so the caller can also cap rungs WITHIN one event (the
     non-mutually-exclusive ladder case, see Settings.mmsell_event_rung_cap). `len()` and `in`
     behave identically to the set this used to return, so the distinct-EVENT cap that reads it
     is unaffected.
 
+    The THIRD counter keys on `contest_key_of` rather than the event ticker, because an event
+    ticker is series x contest: KXMLBTOTAL and KXMLBSPREAD on one baseball game are two events
+    and one result (XOS-000020). Both counters come from the same rows, so the contest cap costs
+    no extra query.
+
     Filters with an explicit UTC datetime RANGE rather than a DB-side date() function: SQLite
     (used by the test suite) and Postgres (production) parse timestamp strings differently
     enough that a portable comparison is worth the extra two lines."""
+    from .mmsell.regimes import contest_key_of
+
     day_start = datetime(close_date.year, close_date.month, close_date.day, tzinfo=timezone.utc)
     day_end = day_start + timedelta(days=1)
     rows = session.execute(
@@ -957,7 +965,10 @@ def open_positions_settlement_summary(
             m.MmSellSettlementMeta.close_time < day_end,
         )
     ).all()
-    return len(rows), Counter(r[1] for r in rows if r[1])
+    contests = Counter(
+        key for key in (contest_key_of(r[0]) for r in rows) if key
+    )
+    return len(rows), Counter(r[1] for r in rows if r[1]), contests
 
 
 def event_has_strangle_leg(session, strategy: str, event_ticker: str, side: str) -> bool:

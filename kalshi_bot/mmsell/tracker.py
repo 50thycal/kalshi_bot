@@ -41,7 +41,7 @@ from ..scanner.metrics import (
 from ..twin import harness as twin_codes
 from .market_types import DISCRETE, IN_PLAY, SCHEDULED, classify
 from .quote_parity import BandProbe, QuoteParityAccumulator
-from .regimes import regime_of
+from .regimes import contest_key_of, regime_of
 
 # Bands the inline-quote pre-filter experiment scores its decision table for
 # (docs/MMSELL_QUOTE_PARITY.md). FIXED constants, deliberately not reads of live book config:
@@ -92,6 +92,7 @@ class MmSellCycleSummary:
     skipped_settlement_cap: int = 0  # too many open positions already settle this candidate's date
     skipped_event_cap: int = 0       # too many distinct events open on a CORRELATED-regime date
     skipped_event_rung_cap: int = 0  # too many rungs open on ONE non-mutually-exclusive event
+    skipped_contest_cap: int = 0     # too many positions on ONE contest, ACROSS series
     #: Books dropped this cycle because their tag resolves to no active Experiment OS
     #: deployment arm. Counted rather than raised: one book's lineage problem must not
     #: cost every other book its cycle (XOS-000011).
@@ -212,8 +213,9 @@ class MmSellTracker:
         if not s.mmsell_settlement_cap_enabled or close_dt is None:
             return False
         try:
-            n_on_date, events_on_date = repo.open_positions_settlement_summary(
-                session, tag, close_dt.date(), ticker)
+            n_on_date, events_on_date, contests_on_date = (
+                repo.open_positions_settlement_summary(
+                    session, tag, close_dt.date(), ticker))
         except Exception:  # noqa: BLE001 — a gate read must never break the entry scan
             logger.exception("mmsell settlement cap: read failed (entering anyway)")
             return False
@@ -243,6 +245,18 @@ class MmSellTracker:
             summ.skipped_event_rung_cap += 1
             self._note(recorder, ticker, tag, twin_codes.SKIP_EVENT_RUNG_CAP)
             return True
+        # Fourth cap: the CONTEST, across series. Every check above keys on the event
+        # ticker, which is series x contest — so KXMLBTOTAL and KXMLBSPREAD on one game
+        # are two events and one result, and three rungs under each of five MLB series is
+        # fifteen positions riding nine innings with nothing above noticing (XOS-000020).
+        # Exempts mutually-exclusive events for the same reason the rung cap does: there at
+        # most one leg can lose, so stacking is a genuine hedge rather than concentration.
+        if s.mmsell_contest_cap_enabled and not mutually_exclusive:
+            contest = contest_key_of(ticker)
+            if contest and contests_on_date.get(contest, 0) >= s.mmsell_contest_cap:
+                summ.skipped_contest_cap += 1
+                self._note(recorder, ticker, tag, twin_codes.SKIP_CONTEST_CAP)
+                return True
         return False
 
     def _live_price_and_size(self, session, ticker: str, no_price: int | None, metrics,
@@ -548,6 +562,7 @@ class MmSellTracker:
                     "skipped_settlement_cap": summ.skipped_settlement_cap,
                     "skipped_event_cap": summ.skipped_event_cap,
                     "skipped_event_rung_cap": summ.skipped_event_rung_cap,
+                    "skipped_contest_cap": summ.skipped_contest_cap,
                     "per_series": dict(sorted(summ.per_series.items(),
                                               key=lambda kv: -kv[1])[:12]),
                     "per_book": summ.per_book,
