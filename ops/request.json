@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-show","args":["lo-x18-resolve-2"],"id":"rc-lo-x18-resolve-2-1"}
+{"type":"logs","service":"main","limit":200,"id":"xgame-diag-1"}
