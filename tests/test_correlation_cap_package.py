@@ -1,18 +1,22 @@
 """Acceptance evidence for `kalshi_bot/experiment_os/correlation_cap.py`.
 
 Every claim the contract makes about itself is proved here against the real service under
-NEW_ONLY enforcement, rather than described in a docstring. The three that matter most:
+NEW_ONLY enforcement, rather than described in a docstring. The four that matter most:
 
   * **it arms nothing.** The probe deployment is tagless and the only tagged deployment is
     PAPER, so nothing registered here can reach real money.
   * **the control is INSIDE the experiment.** `mmsell10` is already the control arm of
     `mmsell-price-ceiling-capacity`, and naming it as an external control is what has
-    `mmsell-anchor-vol-entry` in BLOCKED_PLATFORM. All three arms share one epoch and one
-    platform snapshot by construction.
+    `mmsell-anchor-vol-entry` in BLOCKED_PLATFORM. Both arms share one epoch and one platform
+    snapshot by construction.
   * **the gate reads the DAILY series, not cents per trade.** At this book's measured per-trade
     sd ($0.2343) a c/trade test of the effect size needs ~95,700 trades per arm, so a c/trade
     promotion criterion would be satisfiable only by noise. It appears as a floor and nowhere
     else.
+  * **the contract records where it DISAGREES with the merged sizing.** The mechanism was sized
+    on 97 live fills from one MLB slate; replayed over 3,296 paper trades the cross-series
+    contest grouping it was built for is the half that does nothing. Whoever tunes this cap next
+    needs that in the contract, not in a chat log.
 """
 
 from __future__ import annotations
@@ -60,10 +64,10 @@ def test_registration_lands_at_paper_with_a_frozen_v1(registered, xos_session):
     assert ver.frozen_at is not None, "the contract must be frozen to pre-register"
 
 
-def test_three_arms_with_exactly_one_control(registered, xos_session):
+def test_two_arms_with_exactly_one_control(registered, xos_session):
     _exp, ver = _version(xos_session)
     arms = {a.arm_key: a for a in read.arms_for(xos_session, ver)}
-    assert set(arms) == {pkg.CONTROL_ARM, pkg.GAME_ARM, pkg.ALL_ARM}
+    assert set(arms) == {pkg.CONTROL_ARM, pkg.CAPPED_ARM}
     controls = [k for k, a in arms.items() if a.role == ArmRole.CONTROL.value]
     assert controls == [pkg.CONTROL_ARM]
 
@@ -75,17 +79,24 @@ def test_every_arm_shares_the_same_entry_parameters(registered, xos_session):
     _exp, ver = _version(xos_session)
     books = {a.arm_key: (a.params_json or {}).get("book")
              for a in read.arms_for(xos_session, ver)}
-    assert set(books.values()) == {pkg.BASE_BOOK_PARAMS}
+    # Every arm's band and ceiling are the base spec; the treatment appends ONLY its cap.
+    assert books[pkg.CONTROL_ARM] == pkg.BASE_BOOK_PARAMS
+    assert books[pkg.CAPPED_ARM] == f"{pkg.BASE_BOOK_PARAMS},contestcap=1"
 
 
-def test_the_control_carries_no_cap_and_the_treatments_do(registered, xos_session):
+def test_the_control_carries_no_cap_and_the_treatment_does(registered, xos_session):
     _exp, ver = _version(xos_session)
     params = {a.arm_key: (a.params_json or {}) for a in read.arms_for(xos_session, ver)}
-    assert params[pkg.CONTROL_ARM]["corrcap"] is None
-    assert params[pkg.GAME_ARM]["corrcap"] == 1
-    assert params[pkg.GAME_ARM]["corrscope"] == "game"
-    assert params[pkg.ALL_ARM]["corrcap"] == 1
-    assert params[pkg.ALL_ARM]["corrscope"] == "all"
+    assert params[pkg.CONTROL_ARM]["contestcap"] is None
+    assert params[pkg.CAPPED_ARM]["contestcap"] == 1
+
+
+def test_the_global_flag_is_held_constant_for_the_life_of_the_version(registered, xos_session):
+    """The treatment opts in per BOOK. If the global switch were flipped instead, every other
+    mmsell book's selection would move at the same instant and the control would stop being one."""
+    _exp, ver = _version(xos_session)
+    held = " ".join(ver.held_constant_json or [])
+    assert "mmsell_contest_cap_enabled" in held
 
 
 # ---------------------------------------------------------------- it arms nothing
@@ -107,16 +118,15 @@ def test_the_probe_deployment_is_tagless(registered, xos_session):
     assert tags and all(t is None for t in tags)
 
 
-def test_the_paper_deployment_names_three_fresh_tags(registered, xos_session):
+def test_the_paper_deployment_names_two_fresh_tags(registered, xos_session):
     paper = registered["paper"]
     tags = {arm.arm_key: tag for arm, tag in read.deployment_arms(xos_session, paper)}
-    assert tags == {pkg.CONTROL_ARM: "Gmmsell0", pkg.GAME_ARM: "Gmmsell1",
-                    pkg.ALL_ARM: "Gmmsell2"}
+    assert tags == {pkg.CONTROL_ARM: "Gmmsell0", pkg.CAPPED_ARM: "Gmmsell1"}
     # `mmsell10` is deliberately NOT reused: it already carries another experiment's arm.
     assert "mmsell10" not in set(tags.values())
 
 
-def test_all_three_arms_live_in_one_epoch(registered, xos_session):
+def test_both_arms_live_in_one_epoch(registered, xos_session):
     """What makes the control poolable with the treatments without an external reference — the
     failure mode that has mmsell-anchor-vol-entry blocked."""
     _exp, ver = _version(xos_session)
@@ -186,12 +196,14 @@ def test_registering_twice_is_refused_not_a_silent_no_op(registered, xos_session
 
 def test_the_contract_records_that_the_tickets_headline_axis_was_FALSIFIED(registered,
                                                                           xos_session):
-    """The single most important thing in this contract. The next reader of XOS-000020 will
-    otherwise build the contest cap, measure nothing, and conclude the correlation thesis is
-    dead — when what actually failed was the axis the ticket named, not the thesis."""
+    """The single most important thing in this contract. The next person to tune this cap will
+    otherwise tune the cross-series grouping, measure nothing, and conclude the correlation
+    thesis is dead — when what failed is the axis the ticket named, not the thesis."""
     _exp, ver = _version(xos_session)
     probe = ver.sample_json["probe"]
     assert "falsified" in probe
-    assert probe["recorded_result"]["corr_cap_game"]["worst_day_usd"] \
+    # Contest grouping alone leaves the worst day no better than the control's — the finding
+    # that the merged sizing, drawn from one MLB slate, could not have seen.
+    assert probe["recorded_result"]["contest_grouping_only"]["worst_day_usd"] \
         <= probe["recorded_result"]["control"]["worst_day_usd"]
     assert probe["authority"].startswith("NONE")

@@ -394,3 +394,69 @@ coverage moves with the calendar.
   `--list-series` before adding a seed.
 * **`KXNCAABB*` is NCAA *baseball*,** not basketball — the prefix would put a spring sport in a
   winter regime.
+
+
+## Reading 4 — an event ticker is not a contest (XOS-000020, measured live 2026-09-05)
+
+Reading 3 concluded *"any settlement-date cap must count EVENTS, not markets."* That was right
+and it was not enough. **An event ticker is `SERIES × contest`**, so one baseball game is up to
+five separate events:
+
+```
+KXMLBF5TOTAL-26SEP022138NYYLAA-5        \
+KXMLBHR-26SEP022138NYYLAA-AARONJUDGE1    |  five "events"
+KXMLBSPREAD-26SEP022138NYYLAA-NYY3       |  one game
+KXMLBTEAMTOTAL-26SEP022138NYYLAA-NYY6    |  one result
+KXMLBTOTAL-26SEP022138NYYLAA-8          /
+```
+
+A high-scoring game resolves TOTAL, TEAMTOTAL, SPREAD and HR against a seller at the same
+instant. The rung cap allows 3 per event ticker, so **one game could legally carry ~15
+positions** and no cap above would see concentration at all.
+
+**What it cost.** `Dmmsell10`'s live canary, 97 fills over two days. Every one of the ten losing
+markets was MLB; nine landed on the 26SEP02 slate. The three most concentrated contests:
+
+| contest | markets | series spanned | realized |
+|---|---|---|---|
+| 26SEP022138NYYLAA | 6 | 5 | −$1.48 |
+| 26SEP022210STLLAD | 5 | 3 | −$2.60 |
+| 26SEP021840NYMTB | 5 | 2 | −$1.58 |
+
+−$5.66 of a −$6.78 MLB drawdown, from three games. **Every contest holding 5+ markets lost
+money.** Meanwhile 33 settled non-MLB markets lost nothing at all.
+
+**Sizing, by replay rather than by taste.** The book's own 97 fills, ranked by entry time within
+each contest, keeping the first N:
+
+| contest cap | positions kept | P&L |
+|---|---|---|
+| none (actual) | 97 | −$3.87 |
+| 4 | 93 | −$3.22 |
+| 3 | 89 | −$0.49 |
+| 2 | 81 | −$0.09 |
+| **1** | 58 | **+$0.43** |
+
+The 4th position on a contest averages **−$0.68**. The marginal same-contest position is
+reliably negative, which is exactly what *"it is the same bet"* predicts. This is a first-order
+counterfactual — a blocked entry frees a slot that might have been spent elsewhere — and n is
+small, so read the ORDERING as the finding, not the cents.
+
+**Two design constraints, both learned the hard way here.**
+
+*Over-grouping is the worse failure.* Under-grouping is the bug above and it announces itself in
+P&L. A cap that refuses entries sharing no risk starves the book **silently** — no error, no log
+line anyone reads. `KXPAYROLLS-26SEP` and `KXCPI-26SEP` share the token `26SEP` and share no
+result whatever. So grouping is restricted to `CONTEST_GROUPED_REGIMES` (the sports, whose
+`SERIES-<date><time><matchup>-<outcome>` convention was actually verified against live tickers)
+and the key is regime-namespaced. Everywhere else `contest_key_of` returns the event ticker
+unchanged, so enabling the cap cannot re-scope the three caps that already exist.
+
+*It ships OFF.* `tracker.py` is shared by every mmsell book, so switching this on changes
+selection for all of them at once — a shared-semantic change belonging to Platform Change
+Review, not to whichever session merges the mechanism. `MMSELL_CONTEST_CAP_ENABLED=false` is the
+default and a test pins it; a book opts in through its own registered risk envelope.
+
+**Not a stopping criterion for the running contract.** The MLB concentration is a POST-HOC
+slice, the same status crypto has always had on these books. It is a pre-registered hypothesis
+for the NEXT contract, never a threshold applied to a result already seen.

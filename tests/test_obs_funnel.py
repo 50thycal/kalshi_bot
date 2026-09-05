@@ -462,3 +462,78 @@ def test_the_summary_stays_bounded_with_both_lists_populated():
     )
     assert len(line) <= MAX_SUMMARY_CHARS
     assert TRUNCATION_MARKER in line
+
+
+# ---------------------------------------------------------------------------
+# Repetition. XOS-000004 made this module loud on purpose; being loud EVERY
+# CYCLE is how that signal stopped being read.
+#
+# Observed in production 2026-09-05: the freeze book logged "ENTIRE configured
+# universe returned zero open markets" at ERROR on every cycle across a weekend,
+# because agricultural series are closed at weekends. An expected state, in the
+# same voice and at the same volume as an outage.
+#
+# So: log on CHANGE, heartbeat hourly while it persists, and say when it clears.
+# ---------------------------------------------------------------------------
+
+
+def _empty_universe(*series):
+    from kalshi_bot.obs.series_fetch import SeriesFetchResult
+
+    return SeriesFetchResult(per_series={s: 0 for s in series})
+
+
+def test_an_unchanged_outcome_is_logged_once_not_every_cycle(caplog):
+    with caplog.at_level(logging.INFO):
+        for _ in range(20):
+            warn_on_fetch_outcome("freeze", _empty_universe("KXCORN", "KXSOYB"), now=0.0)
+    assert len(caplog.records) == 1
+    assert "ENTIRE configured universe" in caplog.records[0].getMessage()
+    assert "STILL" not in caplog.records[0].getMessage()
+
+
+def test_a_persisting_outcome_still_heartbeats_so_it_survives_a_log_window(caplog):
+    """Silence is not the goal — a bounded log window that has rolled past the
+    single announcement would show a broken book as perfectly quiet."""
+    from kalshi_bot.obs.series_fetch import REPEAT_AFTER_SECONDS
+
+    with caplog.at_level(logging.INFO):
+        warn_on_fetch_outcome("freeze", _empty_universe("KXCORN"), now=0.0)
+        warn_on_fetch_outcome("freeze", _empty_universe("KXCORN"), now=REPEAT_AFTER_SECONDS - 1)
+        warn_on_fetch_outcome("freeze", _empty_universe("KXCORN"), now=REPEAT_AFTER_SECONDS + 1)
+    msgs = [r.getMessage() for r in caplog.records]
+    assert len(msgs) == 2, msgs
+    assert "STILL" not in msgs[0] and "STILL" in msgs[1]
+
+
+def test_a_different_series_set_is_a_different_fact_and_logs_immediately(caplog):
+    """A book losing series one at a time must not hide behind an unchanged
+    headline — the names are part of the signature, not just the diagnosis."""
+    with caplog.at_level(logging.INFO):
+        warn_on_fetch_outcome("freeze", _empty_universe("KXCORN"), now=0.0)
+        warn_on_fetch_outcome("freeze", _empty_universe("KXCORN", "KXSOYB"), now=1.0)
+    msgs = [r.getMessage() for r in caplog.records]
+    assert len(msgs) == 2, msgs
+    assert all("STILL" not in m for m in msgs)
+
+
+def test_recovery_is_reported_exactly_once(caplog):
+    """Without this, a book that went quiet is indistinguishable from one still
+    broken and merely between heartbeats."""
+    from kalshi_bot.obs.series_fetch import SeriesFetchResult
+
+    healthy = SeriesFetchResult(per_series={"KXCORN": 4})
+    with caplog.at_level(logging.INFO):
+        warn_on_fetch_outcome("freeze", _empty_universe("KXCORN"), now=0.0)
+        warn_on_fetch_outcome("freeze", healthy, now=1.0)
+        warn_on_fetch_outcome("freeze", healthy, now=2.0)
+    msgs = [r.getMessage() for r in caplog.records]
+    assert len(msgs) == 2, msgs
+    assert "RECOVERED" in msgs[1]
+
+
+def test_two_books_do_not_suppress_each_other(caplog):
+    with caplog.at_level(logging.INFO):
+        warn_on_fetch_outcome("freeze", _empty_universe("KXCORN"), now=0.0)
+        warn_on_fetch_outcome("theta", _empty_universe("KXCORN"), now=0.0)
+    assert len(caplog.records) == 2

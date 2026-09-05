@@ -15,7 +15,6 @@ from typing import Literal
 from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from kalshi_bot.mmsell.correlation import KNOWN_CORR_SCOPES
 from kalshi_bot.mmsell.market_types import KNOWN_MODES, KNOWN_TYPES
 
 BotMode = Literal["scanner", "paper", "approval", "live", "weather"]
@@ -257,6 +256,27 @@ class Settings(BaseSettings):
     # An event with no `mutually_exclusive` field is treated as NOT exclusive (fail safe: cap it).
     mmsell_event_rung_cap_enabled: bool = True
     mmsell_event_rung_cap: int = 3               # max open rungs on ONE non-exclusive event
+    # FOURTH cap, and the one the three above cannot express: an event ticker is SERIES x
+    # contest, so ONE baseball game is up to five separate "events" — KXMLBTOTAL, KXMLBTEAMTOTAL,
+    # KXMLBSPREAD, KXMLBHR, KXMLBF5TOTAL all price the same nine innings. Three rungs under each
+    # is fifteen positions on one result and no cap above sees it, because each series looks like
+    # a different event. Measured on Dmmsell10's live canary (XOS-000020): the 2026-09-02 NYYLAA
+    # game held 6 markets across 5 series, STLLAD 5 across 3, NYMTB 5 across 2, and those three
+    # contests alone carried -5.66 USD of a -6.78 USD drawdown; every contest with 5+ markets
+    # lost. Replaying the book's 97 fills against this cap: cap 4 -> -3.22, cap 3 -> -0.49,
+    # cap 2 -> -0.09, cap 1 -> +0.43 against an actual -3.87. The marginal same-contest position
+    # is reliably negative, which is what "it is the same bet" predicts.
+    #
+    # DEFAULT OFF. `tracker.py` is shared by every mmsell book, so switching this on changes
+    # selection for all of them at once — a shared-semantic change that belongs to Platform
+    # Change Review, not to whichever session merges the mechanism. Off, this ships inert and
+    # provably so; a book opts in through its own registered risk envelope.
+    mmsell_contest_cap_enabled: bool = False
+    #: Max open positions across ALL series on one contest. 1 is the honest default when on:
+    #: two positions on one game is twice the same bet, not diversification. Mutually-exclusive
+    #: events stay exempt, exactly as the rung cap exempts them, because there at most one leg
+    #: can lose and the stacking really is a hedge.
+    mmsell_contest_cap: int = 1
     # Ride-along: run the mmsell PAPER book inside the weather/live cycle (throttled), so it
     # collects alongside the weather books without a disruptive mode switch or any real money.
     # On by default now that we're forward-testing the maker edge; set false to disable.
@@ -460,34 +480,23 @@ class Settings(BaseSettings):
         "xmtype=event_stat+politics+announcement;"
         "Tmmsell6:lo=5,hi=10,maxyes=7,"
         "mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;"
-        # --- CORRELATION-CAP books, added 2026-09-05 (docs/MMSELL_CORRELATION_CAP.md) --------
-        # Both use the mmsell10 base (lo=5,hi=10,maxyes=7), so ENTRY is held constant against
-        # the control `mmsell10` and each book varies exactly one thing: which unit of
-        # correlation it will hold more than one position in.
+        # --- CONTEST-CAP books, added 2026-09-05 (docs/MMSELL_CORRELATION_CAP.md) -----------
+        # The forward test of the contest cap merged as `576bcfa`, which ships the mechanism
+        # DEFAULT OFF because `mmsell_contest_cap_enabled` is global — switching it on would
+        # change selection for every mmsell book at once, and no A/B is possible while one flag
+        # governs all of them. `contestcap=` is the per-book override that makes the experiment
+        # runnable: the global default stays off and untouched, and only these two books differ.
         #
-        # `Gmmsell1` caps the CONTEST only. It is the hypothesis XOS-000020 recorded off the
-        #   live tape — one MLB game carrying positions under five separate series — and it
-        #   leaves every existing ladder cap untouched, so its difference from the control is
-        #   the game axis alone.
-        # `Gmmsell2` caps EVERY unit of correlation at 1, which additionally tightens
-        #   scheduled/discrete ladders from the rung cap's 3 rungs to 1.
-        #
-        # Running both is not redundancy: the pre-registered counterfactual on the paper tape
-        # (n=3,296 settled, 35 settlement dates) says the two axes are worth wildly different
-        # amounts, and only the pair can say which. `Gmmsell2 - Gmmsell1` IS the ladder axis.
-        # `Gmmsell0` is the CONTROL, and it is byte-identical to `mmsell10` on every knob.
-        # It exists as its own tag rather than reusing `mmsell10` because that tag is already
-        # the control arm of `mmsell-price-ceiling-capacity` v3/e2, and a tag carries ONE
-        # active deployment arm — claiming it would have meant ending a running experiment's
-        # deployment to start this one. The alternative, naming `mmsell10` as an EXTERNAL
-        # control in the gate, is what has `mmsell-anchor-vol-entry` sitting in
-        # BLOCKED_PLATFORM: a cross-snapshot delta pools incomparable evidence. An in-
-        # experiment control shares this experiment's epoch and snapshot by construction and
-        # cannot acquire that failure mode. Its n restarts at 0, which is correct anyway:
-        # all three arms have to be read over the same window.
+        # `Gmmsell0` is the CONTROL, byte-identical to `mmsell10` on every knob and carrying no
+        # contest cap. It is its own tag rather than `mmsell10` because that tag already carries
+        # the control arm of `mmsell-price-ceiling-capacity`, and a tag carries ONE active
+        # deployment arm. Naming `mmsell10` as an EXTERNAL control instead is what has
+        # `mmsell-anchor-vol-entry` sitting in BLOCKED_PLATFORM — a cross-snapshot delta pools
+        # incomparable evidence. An in-experiment control shares this epoch and snapshot by
+        # construction. Its n restarts at 0, which is correct anyway: both arms must be read
+        # over the same window.
         "Gmmsell0:lo=5,hi=10,maxyes=7;"
-        "Gmmsell1:lo=5,hi=10,maxyes=7,corrcap=1,corrscope=game;"
-        "Gmmsell2:lo=5,hi=10,maxyes=7,corrcap=1,corrscope=all;"
+        "Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;"
         # --- LIVE-COHORT books, added 2026-08-15 (docs/LIVE_PAPER_TWIN.md "Arming") ----------
         # `Lmmsell8` / `Lmmsell10` are byte-identical replicas of `mmsell8` / `mmsell10`. They
         # exist for ONE reason: a live book must be armed on a tag with NO open paper positions.
@@ -1743,20 +1752,19 @@ class Settings(BaseSettings):
                 # per-book cap the scan can reach further while the incumbents keep seeing
                 # exactly the top-N they always saw, and only the book under test sees more.
                 "scanmax": None,
-                # --- correlation cap (docs/MMSELL_CORRELATION_CAP.md, XOS-000020) -----------
-                # `corrcap` = max open positions this book may hold in ONE unit of correlation;
-                # None = no cap, which is every existing book, so this is inert for the whole
-                # running cohort. The unit is NOT `event_ticker`: for an in-play contest it is
-                # the GAME, which spans series, so one MLB game's TOTAL/TEAMTOTAL/SPREAD/HR
-                # markets share a single budget instead of four (kalshi_bot/mmsell/correlation.py).
+                # Per-book CONTEST cap, overriding the GLOBAL mmsell_contest_cap_enabled /
+                # mmsell_contest_cap (docs/MMSELL_CORRELATION_CAP.md, XOS-000020). None = follow
+                # the global setting, which is every existing book, so this is inert for the
+                # whole running cohort.
                 #
-                # `corrscope` picks which kinds of key the cap applies to, and it exists so the
-                # two mechanics can be told apart rather than shipped as one treatment:
-                #   "game" caps ONLY contests, leaving every ladder cap exactly as it is;
-                #   "all"  caps every key, which additionally tightens scheduled/discrete
-                #          ladders from the rung cap's 3 to `corrcap`.
-                "corrcap": None,
-                "corrscope": "all",
+                # It exists because the global flag cannot express an experiment. `tracker.py` is
+                # shared by every mmsell book, so the global switch turns the cap on for all of
+                # them simultaneously — there is no window in which a capped book and an uncapped
+                # control run side by side, and without that there is no measurement, only a
+                # before-and-after across two different market regimes. The merged mechanism's
+                # own commit anticipates this ("a book opts in through its own registered risk
+                # envelope"); this is the knob that lets it.
+                "contestcap": None,
             }
             ok = True
             for kv in body.split(","):
@@ -1768,9 +1776,8 @@ class Settings(BaseSettings):
                 try:
                     if key in ("lo", "hi", "htcmin", "htcmax", "maxyes", "stopl", "volv"):
                         v[key] = float(val)
-                    elif key == "corrscope":
-                        v[key] = str(val).strip().lower()
-                    elif key in ("stopk", "volw", "abarm", "size", "scanmax", "corrcap"):
+                    elif key in ("stopk", "volw", "abarm", "size", "scanmax",
+                                 "contestcap"):
                         v[key] = int(val)
                     elif key == "strangle":
                         v[key] = str(val).strip() not in ("", "0", "false", "False")
@@ -1793,12 +1800,10 @@ class Settings(BaseSettings):
                                ("mode", KNOWN_MODES)):
                 if any(t not in known for t in v[key]):
                     ok = False
-            # An unrecognised corrscope would silently cap NOTHING (in_scope returns False for
-            # every kind), i.e. a book that reads as capped and is not — the same class of
-            # invisible no-op the type validation above exists to prevent.
-            if v["corrscope"] not in KNOWN_CORR_SCOPES:
-                ok = False
-            if v["corrcap"] is not None and v["corrcap"] < 1:
+            # A cap below 1 would admit nothing at all rather than capping — a book that
+            # reads as capped and trades zero, which is the same class of invisible no-op the
+            # type validation above exists to prevent.
+            if v["contestcap"] is not None and v["contestcap"] < 1:
                 ok = False
             if ok and v["lo"] < v["hi"] and v["htcmin"] < v["htcmax"]:
                 out.append(v)

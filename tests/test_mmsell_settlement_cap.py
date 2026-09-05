@@ -116,7 +116,7 @@ def test_settlement_summary_excludes_the_candidates_own_ticker(session):
                                     quantity=1, avg_price=80, status="open"))
     session.flush()
 
-    n, events = repo.open_positions_settlement_summary(
+    n, events, _contests = repo.open_positions_settlement_summary(
         session, "mmsell", close_dt.date(), "KXTEAM-A")
     assert n == 1                      # KXTEAM-B only; KXTEAM-A excludes itself
     assert dict(events) == {"KXTEAM-B-EV": 1}
@@ -143,7 +143,7 @@ def test_settlement_summary_is_isolated_by_strategy_and_status(session):
     ])
     session.flush()
 
-    n, events = repo.open_positions_settlement_summary(
+    n, events, _contests = repo.open_positions_settlement_summary(
         session, "mmsell", close_dt.date(), "KXTEAM-ZZZ")
     assert n == 1 and dict(events) == {"EV-A": 1}
 
@@ -164,7 +164,7 @@ def test_settlement_summary_respects_the_calendar_date_boundary(session):
     ])
     session.flush()
 
-    n, _events = repo.open_positions_settlement_summary(
+    n, _events, _contests = repo.open_positions_settlement_summary(
         session, "mmsell", close_dt.date(), "KXTEAM-ZZZ")
     assert n == 1                     # NEXTDAY must not bleed into TODAY's count
 
@@ -363,3 +363,174 @@ def session():
     m.Base.metadata.create_all(engine)
     with Session(engine) as s:
         yield s
+
+
+# --- the CONTEST cap (XOS-000020) -------------------------------------------
+#
+# Every cap above keys on the event ticker, which is SERIES x contest. One baseball
+# game is therefore up to five separate "events" — KXMLBTOTAL, KXMLBTEAMTOTAL,
+# KXMLBSPREAD, KXMLBHR and KXMLBF5TOTAL all price the same nine innings — so three
+# rungs under each is fifteen positions on one result and nothing above notices.
+#
+# Measured on Dmmsell10's live canary: the 2026-09-02 NYYLAA game carried 6 markets
+# across 5 series, STLLAD 5 across 3, NYMTB 5 across 2, and those three contests
+# alone held -5.66 USD of a -6.78 USD drawdown. Every contest with 5+ markets lost.
+#
+# Two failure directions matter and both are pinned below. Under-grouping is the
+# bug being fixed. OVER-grouping is worse in a quieter way: a cap that refuses
+# entries sharing no risk starves the book invisibly, with no error and no log line
+# anyone reads. Hence the ungrouped-regime tests.
+
+_NYYLAA = "26SEP022138NYYLAA"
+
+
+def _open_contest_position(session, ticker, close_dt, *, strategy="mmsell"):
+    repo.ensure_mmsell_settlement_meta(
+        session, market_ticker=ticker,
+        event_ticker=ticker.rsplit("-", 1)[0],
+        series_ticker=ticker.split("-", 1)[0], close_time=close_dt)
+    session.add(m.PaperPosition(market_ticker=ticker, strategy=strategy, side="no",
+                                quantity=1, avg_price=80, status="open"))
+    session.flush()
+
+
+def test_the_contest_counter_collapses_five_series_into_one_game(session):
+    """The repo read the cap depends on. Five open positions, five different event
+    tickers, ONE contest — which is exactly what the event counter cannot see."""
+    close_dt = _anchor()
+    for series, outcome in (("KXMLBF5TOTAL", "5"), ("KXMLBHR", "JUDGE1"),
+                            ("KXMLBSPREAD", "NYY3"), ("KXMLBTEAMTOTAL", "NYY6"),
+                            ("KXMLBTOTAL", "8")):
+        _open_contest_position(session, f"{series}-{_NYYLAA}-{outcome}", close_dt)
+
+    n, events, contests = repo.open_positions_settlement_summary(
+        session, "mmsell", close_dt.date(), "KXMLBTOTAL-26SEP022210STLLAD-13")
+
+    assert n == 5
+    assert len(events) == 5, "five series look like five events — the gap being fixed"
+    assert contests == {f"MLB:{_NYYLAA}": 5}, "and they are ONE contest"
+
+
+def test_the_contest_counter_keeps_distinct_games_distinct(session):
+    """A cap built on this must never refuse an unrelated game."""
+    close_dt = _anchor()
+    _open_contest_position(session, f"KXMLBTOTAL-{_NYYLAA}-8", close_dt)
+    _open_contest_position(session, "KXMLBTOTAL-26SEP022210STLLAD-13", close_dt)
+
+    _n, _events, contests = repo.open_positions_settlement_summary(
+        session, "mmsell", close_dt.date(), "KXOTHER-X-Y")
+
+    assert len(contests) == 2
+
+
+def test_the_contest_counter_is_isolated_by_book(session):
+    """Same rule the date cap already follows: one book's fills must not starve
+    another book's entries."""
+    close_dt = _anchor()
+    _open_contest_position(session, f"KXMLBTOTAL-{_NYYLAA}-8", close_dt,
+                           strategy="mmsell")
+    _open_contest_position(session, f"KXMLBHR-{_NYYLAA}-JUDGE1", close_dt,
+                           strategy="mmsell10")
+
+    _n, _events, contests = repo.open_positions_settlement_summary(
+        session, "mmsell", close_dt.date(), "KXOTHER-X-Y")
+
+    assert contests == {f"MLB:{_NYYLAA}": 1}
+
+
+def _blocks(session, settings, ticker, close_dt, *, mutually_exclusive=None, **over):
+    """Run the real gate the entry scan runs, with nothing stubbed."""
+    from kalshi_bot.mmsell.tracker import MmSellCycleSummary
+
+    for k, v in over.items():
+        setattr(settings, k, v)
+    tracker = MmSellTracker(FakeClient([], {}), settings)
+    return tracker._settlement_cap_blocks(
+        session, settings, book_cap=200, tag="mmsell", ticker=ticker,
+        close_dt=close_dt, series=ticker.split("-", 1)[0],
+        event_ticker=ticker.rsplit("-", 1)[0],
+        mutually_exclusive=mutually_exclusive,
+        summ=MmSellCycleSummary(), recorder=None)
+
+
+def test_a_second_series_on_the_same_game_is_REFUSED(session, settings):
+    """The whole point. One position on the NYYLAA game under KXMLBTOTAL must block
+    a second under KXMLBSPREAD — a different event ticker, the same nine innings."""
+    _setup(settings)
+    close_dt = _anchor()
+    _open_contest_position(session, f"KXMLBTOTAL-{_NYYLAA}-8", close_dt)
+
+    blocked = _blocks(session, settings, f"KXMLBSPREAD-{_NYYLAA}-NYY3", close_dt,
+                      mmsell_contest_cap_enabled=True, mmsell_contest_cap=1)
+
+    assert blocked is True
+
+
+def test_a_DIFFERENT_game_is_still_allowed(session, settings):
+    """Over-grouping would starve the book silently. A different matchup on the same
+    night shares no result and must pass."""
+    _setup(settings)
+    close_dt = _anchor()
+    _open_contest_position(session, f"KXMLBTOTAL-{_NYYLAA}-8", close_dt)
+
+    blocked = _blocks(session, settings, "KXMLBSPREAD-26SEP022210STLLAD-STL3", close_dt,
+                      mmsell_contest_cap_enabled=True, mmsell_contest_cap=1)
+
+    assert blocked is False
+
+
+def test_the_contest_cap_is_OFF_by_default(session, settings):
+    """tracker.py is shared by every mmsell book, so switching this on changes
+    selection for all of them at once — a shared-semantic change that is Platform
+    Change Review's call, not a merge's. It must ship inert and provably so."""
+    _setup(settings)
+    close_dt = _anchor()
+    _open_contest_position(session, f"KXMLBTOTAL-{_NYYLAA}-8", close_dt)
+
+    assert settings.mmsell_contest_cap_enabled is False
+    assert _blocks(session, settings, f"KXMLBSPREAD-{_NYYLAA}-NYY3", close_dt) is False
+
+
+def test_a_mutually_exclusive_event_stays_exempt(session, settings):
+    """Same carve-out the rung cap makes, for the same reason: when at most one leg
+    can lose, stacking is a genuine hedge rather than concentration. Removing this
+    would cap real hedges as if they were correlated bets."""
+    _setup(settings)
+    close_dt = _anchor()
+    _open_contest_position(session, f"KXMLBTOTAL-{_NYYLAA}-8", close_dt)
+
+    blocked = _blocks(session, settings, f"KXMLBSPREAD-{_NYYLAA}-NYY3", close_dt,
+                      mutually_exclusive=True,
+                      mmsell_contest_cap_enabled=True, mmsell_contest_cap=1)
+
+    assert blocked is False
+
+
+def test_an_UNGROUPED_regime_behaves_exactly_as_before(session, settings):
+    """Outside the sports regimes the contest key IS the event ticker, so enabling
+    the cap cannot re-scope the caps that already exist. Two economic releases
+    sharing the token "26SEP" share no result."""
+    _setup(settings)
+    close_dt = _anchor()
+    _open_contest_position(session, "KXPAYROLLS-26SEP-A", close_dt)
+
+    blocked = _blocks(session, settings, "KXCPI-26SEP-B", close_dt,
+                      mmsell_contest_cap_enabled=True, mmsell_contest_cap=1)
+
+    assert blocked is False
+
+
+def test_the_cap_counts_ACROSS_series_up_to_its_limit(session, settings):
+    """At cap 2 the third series on one game is refused, not the second — so the
+    threshold is a real dial rather than a hard-coded one-per-contest."""
+    _setup(settings)
+    close_dt = _anchor()
+    _open_contest_position(session, f"KXMLBTOTAL-{_NYYLAA}-8", close_dt)
+
+    assert _blocks(session, settings, f"KXMLBSPREAD-{_NYYLAA}-NYY3", close_dt,
+                   mmsell_contest_cap_enabled=True, mmsell_contest_cap=2) is False
+
+    _open_contest_position(session, f"KXMLBSPREAD-{_NYYLAA}-NYY3", close_dt)
+
+    assert _blocks(session, settings, f"KXMLBHR-{_NYYLAA}-JUDGE1", close_dt,
+                   mmsell_contest_cap_enabled=True, mmsell_contest_cap=2) is True

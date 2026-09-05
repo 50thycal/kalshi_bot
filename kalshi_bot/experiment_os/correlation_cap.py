@@ -1,24 +1,34 @@
-"""mmsell correlation cap — the contract for `Gmmsell0` / `Gmmsell1` / `Gmmsell2`.
+"""mmsell contest cap — the contract for `Gmmsell0` / `Gmmsell1`.
 
-Registers one PAPER experiment with three arms and one pre-registered keep gate. Arms nothing,
+Registers one PAPER experiment with two arms and one pre-registered keep gate. Arms nothing,
 trades nothing, touches no real money: under NEW_ONLY a tag that no active deployment arm
-carries cannot trade at all, so registering the contract is what lets these books start.
+carries cannot trade, so registering the contract is what lets these books start.
 
-WHY THIS EXPERIMENT EXISTS. XOS-000020, opened 2026-09-05 against the `Dmmsell10` live failure:
-every concentration cap mmsell has ever run keys on `event_ticker`, which is series x occasion.
-On 26SEP02 the live book held 31 markets across 23 event_tickers spanning eleven real games —
-NYYLAA alone under five separate series — and that slate was the entire live drawdown. The book
-believed it held N independent 7c lottery tickets; it held one bet on a high-scoring night.
+WHY THIS EXPERIMENT EXISTS. The MECHANISM is already merged (`576bcfa`, `contest_key_of` +
+`mmsell_contest_cap`), and it ships DEFAULT OFF for a good reason: `tracker.py` is shared by
+every mmsell book, so the global flag caps all of them at once. That is precisely why it cannot
+be measured as it stands — turning it on leaves no window in which a capped book and an uncapped
+control run side by side, so the only available comparison is before-versus-after across two
+different market regimes. This contract supplies the missing half: a per-book `contestcap`
+override (the merged commit's own "a book opts in through its own registered risk envelope"),
+two fresh tags, and a gate that can actually be evaluated. The global default stays off.
 
-WHY THREE ARMS AND NOT ONE. The counterfactual on the paper tape decomposes the effect and it
-does NOT sit where the ticket said. Capping the CONTEST buys +0.09c/trade and does not improve
-the worst day at all (-$9.49 -> -$9.56); capping every unit of correlation buys +0.61c and cuts
-the worst day 76% (-> -$2.31). The effect is the LADDER axis. Shipping only the tradeable rule
-would have left the two inseparable, so `corr_cap_game` is kept as the decomposition arm and
-`corr_cap_all - corr_cap_game` IS the ladder axis. Full pre-registration, with the falsification
-recorded before either book existed: docs/MMSELL_CORRELATION_CAP.md.
+WHAT THE COUNTERFACTUAL SAYS, AND WHERE IT DISAGREES WITH THE MERGED SIZING. The mechanism was
+sized on `Dmmsell10`'s 97 live fills, all from one MLB slate: cap 4 -> -3.22, cap 1 -> +0.43
+against an actual -3.87. Replayed instead over `mmsell10`'s 3,296 settled paper trades across 35
+settlement days, the ORDERING holds but the attribution does not. Capping only the CONTEST — the
+cross-series sports grouping the merged commit was built for — is worth +0.09c/trade and does
+not improve the worst day at all (-$9.49 -> -$9.56); on a risk-adjusted basis it is WORSE than
+its own control (0.218 -> 0.153). Capping every unit of correlation, which `contest_key_of`
+delivers as a side effect of falling back to the event ticker outside sports, is worth +0.61c
+and cuts the worst day 76% (-> -$2.31) with daily volatility down 48%.
 
-WHY THE CONTROL IS `Gmmsell0` AND NOT `mmsell10`. `mmsell10` is already the control arm of
+So the merged knob is right and the axis it was named for is the half that does nothing: the
+value is in the event-level tightening (ladders from 3 rungs to 1), not in the sports grouping.
+That is recorded here, and as evidence on XOS-000020, because the next person to tune this cap
+will otherwise tune the wrong half.
+
+WHY THE CONTROL IS `Gmmsell0` AND NOT `mmsell10`. `mmsell10` already carries the control arm of
 `mmsell-price-ceiling-capacity` v3/e2, and a tag carries one active deployment arm — claiming it
 would mean ending a running experiment's deployment to start this one. Naming it as an EXTERNAL
 control instead is what has `mmsell-anchor-vol-entry` in BLOCKED_PLATFORM: a cross-snapshot delta
@@ -30,6 +40,8 @@ so an 80%-power test of a +0.30c difference needs ~95,700 settled trades per arm
 years at the observed flow. That is docs/MMSELL_ROADMAP.md S1's power limit binding exactly where
 it predicted. A cap is a drawdown control; it is gated on the daily series, which is far better
 powered on the same evidence, and c/trade is demoted to a floor that can only ever kill.
+
+Full pre-registration: docs/MMSELL_CORRELATION_CAP.md.
 """
 
 from __future__ import annotations
@@ -44,20 +56,18 @@ from .read import get_experiment
 EXPERIMENT_KEY = "mmsell-correlation-cap"
 
 CONTROL_ARM = "uncapped"
-GAME_ARM = "corr_cap_game"
-ALL_ARM = "corr_cap_all"
+CAPPED_ARM = "contest_capped"
 
 CONTROL_TAG = "Gmmsell0"
-GAME_TAG = "Gmmsell1"
-ALL_TAG = "Gmmsell2"
+CAPPED_TAG = "Gmmsell1"
 
 PROBE_DEPLOYMENT_KEY = "mmsell-corrcap-probe-1"
 PAPER_DEPLOYMENT_KEY = "mmsell-corrcap-paper-1"
 
 KEEP_GATE_KEY = "paper_keep"
 
-#: Shared entry parameters. Identical on all three arms, so the ONLY difference between any two
-#: books is which unit of correlation each will hold more than one position in.
+#: Shared entry parameters. Identical on both arms, so the ONLY difference between them is
+#: whether the book may hold more than one position on a single contest.
 BASE_BOOK_PARAMS = "lo=5,hi=10,maxyes=7"
 
 #: The pre-registered sample floor, in SETTLEMENT DAYS rather than trades. Sixty, not the 35 the
@@ -77,19 +87,15 @@ EDGE_FLOOR_CENTS = -0.5
 
 ARMS: tuple[tuple[str, ArmRole, str, dict], ...] = (
     (CONTROL_ARM, ArmRole.CONTROL,
-     "Uncapped. Byte-identical to mmsell10 on every knob; carries no correlation cap, so "
-     "every existing cap (position, settlement-date, event rung) applies exactly as today.",
-     {"tag": CONTROL_TAG, "book": BASE_BOOK_PARAMS, "corrcap": None}),
-    (GAME_ARM, ArmRole.TREATMENT,
-     "Caps CONTESTS only (corrscope=game, corrcap=1): one position per in-play game, spanning "
-     "series. Every ladder cap is left exactly as the control's, so this arm differs from the "
-     "control by the contest axis alone — the axis XOS-000020 named.",
-     {"tag": GAME_TAG, "book": BASE_BOOK_PARAMS, "corrcap": 1, "corrscope": "game"}),
-    (ALL_ARM, ArmRole.TREATMENT,
-     "Caps EVERY unit of correlation (corrscope=all, corrcap=1), which additionally tightens "
-     "scheduled/discrete ladders from the rung cap's 3 rungs to 1. This arm minus the game arm "
-     "IS the ladder axis.",
-     {"tag": ALL_TAG, "book": BASE_BOOK_PARAMS, "corrcap": 1, "corrscope": "all"}),
+     "Uncapped. Byte-identical to mmsell10 on every knob and carrying no contest cap, so every "
+     "existing cap (position, settlement-date, event rung) applies exactly as today.",
+     {"tag": CONTROL_TAG, "book": BASE_BOOK_PARAMS, "contestcap": None}),
+    (CAPPED_ARM, ArmRole.TREATMENT,
+     "One open position per CONTEST (contestcap=1), using the merged `contest_key_of`: sports "
+     "group across series, so an MLB game's TOTAL/TEAMTOTAL/SPREAD/HR share one budget; "
+     "everywhere else the key falls back to the event ticker, which tightens ladders from the "
+     "rung cap's 3 to 1. Those are the only two differences from the control.",
+     {"tag": CAPPED_TAG, "book": f"{BASE_BOOK_PARAMS},contestcap=1", "contestcap": 1}),
 )
 
 #: What makes this a concentration experiment rather than a re-parameterisation of the book.
@@ -105,27 +111,31 @@ HELD_CONSTANT: list[str] = [
     "the cap and the selection inseparable",
     "the cap counts OPEN positions and never closed ones, so it bounds carried risk rather "
     "than acting as an entry-timing rule",
-    "which contract is kept within a capped unit is FIRST ARRIVAL, never a ranking. A ranking "
-    "would be a second, unvalidated hypothesis riding on this one",
+    "which contract is kept within a capped contest is FIRST ARRIVAL, never a ranking. A "
+    "ranking would be a second, unvalidated hypothesis riding on this one",
+    "the GLOBAL mmsell_contest_cap_enabled stays off for the life of this version. The "
+    "treatment opts in per book, so no other book's selection moves while this runs",
 ]
 
 #: The counterfactual that stands in for a probe. Recorded as the instrument it is: a replay of
 #: the control book's own settled tape under each candidate rule. It authorizes nothing.
 PROBE_RULE: dict = {
     "instrument": "SQL replay of mmsell10's settled paper tape under each candidate cap, "
-                  "keying by kalshi_bot/mmsell/correlation.correlation_key",
+                  "keying the contest as kalshi_bot/mmsell/regimes.contest_key_of does",
     "unit_of_observation": "one settled paper trade, and its settlement DAY",
     "window": "post-cohort-boundary only (>= 2026-08-13T18:09:40Z), n=3,296 settled trades "
               "over 35 settlement days",
     "recorded_result": {
         "control": {"cents_per_trade": 0.649, "worst_day_usd": -9.49, "daily_stability": 0.218},
-        "corr_cap_game": {"cents_per_trade": 0.739, "worst_day_usd": -9.56,
-                          "daily_stability": 0.153},
-        "corr_cap_all": {"cents_per_trade": 1.259, "worst_day_usd": -2.31,
-                         "daily_stability": 0.326},
+        "contest_grouping_only": {"cents_per_trade": 0.739, "worst_day_usd": -9.56,
+                                  "daily_stability": 0.153},
+        "contest_capped": {"cents_per_trade": 1.259, "worst_day_usd": -2.31,
+                           "daily_stability": 0.326},
     },
-    "falsified": "the headline hypothesis. The CONTEST axis XOS-000020 named moves neither the "
-                 "mean materially nor the worst day at all; the effect is the ladder axis.",
+    "falsified": "the axis XOS-000020 named. Cross-series CONTEST grouping alone moves neither "
+                 "the mean materially nor the worst day at all, and is worse than its own "
+                 "control risk-adjusted; the effect is the event-level tightening that "
+                 "contest_key_of delivers by falling back to the event ticker outside sports.",
     "authority": "NONE. This is a post-hoc replay of the same tape that generated the "
                  "hypothesis, on paper fills, and it cannot model the slot a real capped book "
                  "frees. It sets the prior and fixes the bars BEFORE any arm trades.",
@@ -144,22 +154,22 @@ KEEP_GATE_SPEC: dict = {
     ),
     "sample": {
         CONTROL_ARM: {"metric": "settled_days", "op": ">=", "value": SAMPLE_FLOOR_DAYS},
-        ALL_ARM: {"metric": "settled_days", "op": ">=", "value": SAMPLE_FLOOR_DAYS},
+        CAPPED_ARM: {"metric": "settled_days", "op": ">=", "value": SAMPLE_FLOOR_DAYS},
     },
     "pass_all": [
-        {"metric": "delta.daily_pnl_stability", "treatment": ALL_ARM,
+        {"metric": "delta.daily_pnl_stability", "treatment": CAPPED_ARM,
          "control": CONTROL_ARM, "op": ">=", "value": STABILITY_BAR},
-        {"metric": "delta.pnl_cents_per_trade", "treatment": ALL_ARM,
+        {"metric": "delta.pnl_cents_per_trade", "treatment": CAPPED_ARM,
          "control": CONTROL_ARM, "op": ">=", "value": EDGE_FLOOR_CENTS},
     ],
     "fail_any": [
         # The cap bought no smoothness. On this evidence that kills the mechanic, not the arm:
-        # if capping every unit of correlation does not steady the daily series, the clustering
-        # the whole thesis rests on was luck.
-        {"metric": "delta.daily_pnl_stability", "treatment": ALL_ARM,
+        # if capping the contest does not steady the daily series, the clustering the whole
+        # thesis rests on was luck.
+        {"metric": "delta.daily_pnl_stability", "treatment": CAPPED_ARM,
          "control": CONTROL_ARM, "op": "<", "value": 0},
         # Smoothness bought at too high a price in edge.
-        {"metric": "delta.pnl_cents_per_trade", "treatment": ALL_ARM,
+        {"metric": "delta.pnl_cents_per_trade", "treatment": CAPPED_ARM,
          "control": CONTROL_ARM, "op": "<", "value": EDGE_FLOOR_CENTS},
     ],
 }
@@ -208,8 +218,8 @@ def register(
         family="risk_concentration",
         hypothesis=(
             "mmsell's diversification premise fails because its caps count `event_ticker`, "
-            "which is series x occasion. Capping open positions per UNIT OF CORRELATION "
-            "instead materially steadies the daily P&L series without destroying the edge."
+            "which is series x contest. Capping open positions per CONTEST instead materially "
+            "steadies the daily P&L series without destroying the edge."
         ),
         mechanism=(
             "One occasion resolves every contract written on it at once. An MLB game settles "
@@ -223,10 +233,9 @@ def register(
             "prices diversification it does not have."
         ),
         falsification=(
-            "Capping every unit of correlation does not improve daily stability over the "
-            "uncapped control at 60 settlement days, OR it improves it only by giving up more "
-            "than 0.5c/trade of edge. Either kills the mechanic. The CONTEST-only half is "
-            "already falsified on the counterfactual and its arm exists to measure how much."
+            "The contest cap does not improve daily stability over the uncapped control at 60 "
+            "settlement days, OR it improves it only by giving up more than 0.5c/trade of edge. "
+            "Either kills the mechanic."
         ),
         universe=(
             "identical to mmsell10's: cheap-band tails (lo=5, hi=10, maxyes=7) in the shared "
@@ -258,40 +267,35 @@ def register(
         ),
         entry_rule=(
             "the control's entry, unchanged: sell the cheap tail (buy NO at the no-bid) on any "
-            "in-band candidate. A treatment arm additionally declines the candidate when it "
-            "already holds `corrcap` open positions in that candidate's unit of correlation."
+            "in-band candidate. The treatment additionally declines the candidate when it "
+            "already holds `contestcap` open positions on that candidate's contest."
         ),
-        exit_rule="hold to settlement; no stop, no take-profit. Identical on all three arms.",
-        sizing_rule="flat 1-contract clip on every arm; size is not an arm here.",
+        exit_rule="hold to settlement; no stop, no take-profit. Identical on both arms.",
+        sizing_rule="flat 1-contract clip on both arms; size is not an arm here.",
         execution_style="maker",
-        independent_variable=(
-            "which units of correlation are capped: none (control), contests only, or all"
-        ),
+        independent_variable="whether the book may hold more than one position on one contest",
         held_constant=HELD_CONSTANT,
         control_required=True,
         metrics={
-            "primary": "delta.daily_pnl_stability (corr_cap_all minus uncapped)",
+            "primary": "delta.daily_pnl_stability (contest_capped minus uncapped)",
             "secondary": ["daily_pnl_stability", "settled_days", "pnl_cents_per_trade",
                           "realized_pnl_usd", "settled_trades"],
-            "decomposition_arm": GAME_ARM,
-            "note": "c/trade is a FLOOR on this contract, never a promotion criterion. "
+                "note": "c/trade is a FLOOR on this contract, never a promotion criterion. "
                     "Measured per-trade sd is $0.2343, so an 80%-power test of a 0.30c "
                     "difference needs ~95,700 settled trades per arm. The fill model is not "
                     "read: all three arms are maker books in one band, where it cannot "
                     "discriminate (docs/MMSELL_TYPE_BOOKS.md).",
         },
         sample={"probe": PROBE_RULE,
-                "paper_floor_settled_days": {CONTROL_ARM: floor, ALL_ARM: floor}},
+                "paper_floor_settled_days": {CONTROL_ARM: floor, CAPPED_ARM: floor}},
         costs={"model": "post-2026-08-11 maker fee model, identical on every arm, so it "
                         "cancels in every delta this gate reads"},
         provenance={"positions": "paper_trades joined to mmsell_settlement_meta for the "
                                  "series/event of each held market",
-                    "correlation_key": "kalshi_bot/mmsell/correlation.py, derived from "
-                                       "market_types.classify — the same taxonomy the type "
-                                       "books select on"},
-        monitoring={"telemetry": "MmSellCycleSummary.skipped_correlation_cap, persisted per "
-                                 "cycle to system_events — an arm that declined nothing "
-                                 "measured nothing"},
+                    "contest_key": "kalshi_bot/mmsell/regimes.contest_key_of (merged 576bcfa)"},
+        monitoring={"telemetry": "MmSellCycleSummary.skipped_contest_cap, persisted per cycle "
+                                 "to system_events — an arm that declined nothing measured "
+                                 "nothing"},
         docs={"thesis": "docs/MMSELL_CORRELATION_CAP.md"},
         now=at,
     )
@@ -301,7 +305,7 @@ def register(
                         description=description, params=params)
 
     keep_spec = json.loads(json.dumps(KEEP_GATE_SPEC))
-    for arm_key in (CONTROL_ARM, ALL_ARM):
+    for arm_key in (CONTROL_ARM, CAPPED_ARM):
         keep_spec["sample"][arm_key]["value"] = floor
     keep_gate = service.register_gate(
         session, version, gate_key=KEEP_GATE_KEY, kind="kill",
@@ -345,16 +349,15 @@ def register(
         deployment_key=PAPER_DEPLOYMENT_KEY,
         stage=LifecycleState.PAPER,
         kind=DeploymentKind.PAPER,
-        arms={CONTROL_ARM: CONTROL_TAG, GAME_ARM: GAME_TAG, ALL_ARM: ALL_TAG},
-        config={"books": {tag: spec for tag, spec in (
-            (CONTROL_TAG, BASE_BOOK_PARAMS),
-            (GAME_TAG, f"{BASE_BOOK_PARAMS},corrcap=1,corrscope=game"),
-            (ALL_TAG, f"{BASE_BOOK_PARAMS},corrcap=1,corrscope=all"),
-        )}},
+        arms={CONTROL_ARM: CONTROL_TAG, CAPPED_ARM: CAPPED_TAG},
+        config={"books": {CONTROL_TAG: BASE_BOOK_PARAMS,
+                          CAPPED_TAG: f"{BASE_BOOK_PARAMS},contestcap=1"}},
         started_at=at,
-        notes=("Three PAPER books, no real money. All three tags are fresh, so none inherits "
-               "open positions or history from another experiment and the three series start "
-               "at the same instant — which is what the gate's same-window reads assume."),
+        notes=("Two PAPER books, no real money. Both tags are fresh, so neither inherits open "
+               "positions or history from another experiment and both series start at the same "
+               "instant — which is what the gate's same-window reads assume. The treatment opts "
+               "in through its own `contestcap`, leaving the GLOBAL mmsell_contest_cap_enabled "
+               "off and every other book's selection untouched."),
     )
     service.transition_experiment(
         session, experiment, LifecycleState.PAPER, actor=actor,

@@ -24,7 +24,12 @@ from .funnel import (
     first_zero_stage,
     funnel_summary,
 )
-from .series_fetch import SeriesFetchResult, fetch_markets_by_series, warn_on_fetch_outcome
+from .series_fetch import (
+    SeriesFetchResult,
+    fetch_markets_by_series,
+    reset_fetch_outcome_state,
+    warn_on_fetch_outcome,
+)
 
 __all__ = [
     "FETCH_DIAGNOSES",
@@ -37,5 +42,6 @@ __all__ = [
     "fetch_markets_by_series",
     "first_zero_stage",
     "funnel_summary",
+    "reset_fetch_outcome_state",
     "warn_on_fetch_outcome",
 ]
