@@ -256,6 +256,27 @@ class Settings(BaseSettings):
     # An event with no `mutually_exclusive` field is treated as NOT exclusive (fail safe: cap it).
     mmsell_event_rung_cap_enabled: bool = True
     mmsell_event_rung_cap: int = 3               # max open rungs on ONE non-exclusive event
+    # FOURTH cap, and the one the three above cannot express: an event ticker is SERIES x
+    # contest, so ONE baseball game is up to five separate "events" — KXMLBTOTAL, KXMLBTEAMTOTAL,
+    # KXMLBSPREAD, KXMLBHR, KXMLBF5TOTAL all price the same nine innings. Three rungs under each
+    # is fifteen positions on one result and no cap above sees it, because each series looks like
+    # a different event. Measured on Dmmsell10's live canary (XOS-000020): the 2026-09-02 NYYLAA
+    # game held 6 markets across 5 series, STLLAD 5 across 3, NYMTB 5 across 2, and those three
+    # contests alone carried -5.66 USD of a -6.78 USD drawdown; every contest with 5+ markets
+    # lost. Replaying the book's 97 fills against this cap: cap 4 -> -3.22, cap 3 -> -0.49,
+    # cap 2 -> -0.09, cap 1 -> +0.43 against an actual -3.87. The marginal same-contest position
+    # is reliably negative, which is what "it is the same bet" predicts.
+    #
+    # DEFAULT OFF. `tracker.py` is shared by every mmsell book, so switching this on changes
+    # selection for all of them at once — a shared-semantic change that belongs to Platform
+    # Change Review, not to whichever session merges the mechanism. Off, this ships inert and
+    # provably so; a book opts in through its own registered risk envelope.
+    mmsell_contest_cap_enabled: bool = False
+    #: Max open positions across ALL series on one contest. 1 is the honest default when on:
+    #: two positions on one game is twice the same bet, not diversification. Mutually-exclusive
+    #: events stay exempt, exactly as the rung cap exempts them, because there at most one leg
+    #: can lose and the stacking really is a hedge.
+    mmsell_contest_cap: int = 1
     # Ride-along: run the mmsell PAPER book inside the weather/live cycle (throttled), so it
     # collects alongside the weather books without a disruptive mode switch or any real money.
     # On by default now that we're forward-testing the maker edge; set false to disable.
