@@ -1,1 +1,1 @@
-{"type":"env","id":"x18-clear-1","set":{"EXPERIMENT_OS_ISSUE_COMMAND":""}}
+{"type":"logs","service":"main","limit":250,"id":"xgame-diag-2"}
