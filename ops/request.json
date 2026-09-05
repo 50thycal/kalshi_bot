@@ -1,1 +1,1 @@
-{"type":"logs","id":"cc-logs-2","filter":"deployment arm","limit":40}
+{"type":"env","id":"cc-clear-transport-1","set":{"EXPERIMENT_OS_ISSUE_COMMAND":""}}
