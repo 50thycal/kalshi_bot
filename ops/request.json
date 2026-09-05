@@ -1,1 +1,1 @@
-{"type":"db","id":"xgame-matches-2","sql":"SELECT count(*) AS matches_total, min(day) AS first_game_day, max(day) AS last_game_day, max(created_at) AS last_discovered, count(*) FILTER (WHERE ended_at IS NULL) AS still_open FROM game_market_matches"}
+{"type":"db","id":"xgame-matches-3","sql":"SELECT count(*) AS matches_total, min(day) AS first_game_day, max(day) AS last_game_day, max(created_at) AS last_discovered, max(close_time) AS last_close FROM game_market_matches"}
