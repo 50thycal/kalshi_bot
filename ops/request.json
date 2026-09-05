@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "env", "id": "pcr-adopt-1", "set": {"EXPERIMENT_OS_ISSUE_COMMAND": "{\"command_id\":\"pcr-adopt-volentry-20260905\",\"action\":\"OPEN_CANDIDATE\",\"actor\":\"claude-platform-change-review\",\"actor_role\":\"PLATFORM_CHANGE_REVIEW\",\"schema_version\":1,\"payload\":{\"fingerprint\":\"916fce20f59679e3ee1f1ee612b82f6e289ca3d24231570c0570cb3b73a89980\"}}"}}
