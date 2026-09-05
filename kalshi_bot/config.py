@@ -16,6 +16,7 @@ from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from kalshi_bot.mmsell.market_types import KNOWN_MODES, KNOWN_TYPES
+from kalshi_bot.mmsell.universe import TIER_ORDER
 
 BotMode = Literal["scanner", "paper", "approval", "live", "weather"]
 KalshiEnv = Literal["demo", "production"]
@@ -271,6 +272,20 @@ class Settings(BaseSettings):
     # selection for all of them at once — a shared-semantic change that belongs to Platform
     # Change Review, not to whichever session merges the mechanism. Off, this ships inert and
     # provably so; a book opts in through its own registered risk envelope.
+    # Minimum REVIEW TIER a LIVE mmsell entry may trade (docs/MMSELL_UNIVERSE_REVIEW.md).
+    # Gates the live mirror ONLY — paper is untouched, deliberately, because paper is how an
+    # unreviewed series accumulates the history that graduates it. Barring paper too would make
+    # the quarantine permanent by construction.
+    #
+    # Measured 2026-09-05, which is why the default is `graduated`: 20.2% of the live canary
+    # `Dmmsell10`'s trades over 30 days were in series no taxonomy covers, and 68% of that flow
+    # was the new season (NCAAF 388 settled markets, EPL 179, Serie A, Bundesliga, Ligue 1)
+    # arriving faster than anyone classified it. Across the whole family, 81 of 400 traded
+    # series are unclassified.
+    #
+    # This can only REFUSE a live entry, never add one, so it moves real-money exposure in the
+    # safe direction only. Set to "unclassified" to restore the pre-2026-09-05 behaviour.
+    mmsell_live_min_tier: str = "graduated"
     mmsell_contest_cap_enabled: bool = False
     #: Max open positions across ALL series on one contest. 1 is the honest default when on:
     #: two positions on one game is twice the same bet, not diversification. Mutually-exclusive
@@ -1752,6 +1767,12 @@ class Settings(BaseSettings):
                 # per-book cap the scan can reach further while the incumbents keep seeing
                 # exactly the top-N they always saw, and only the book under test sees more.
                 "scanmax": None,
+                # Minimum REVIEW TIER this book will trade (docs/MMSELL_UNIVERSE_REVIEW.md):
+                # "graduated" (reviewed + own history), "in_review" (classified but thin) or
+                # "unclassified" (anything). None = admit everything, which is every existing
+                # book, so tiering is inert for the running cohort rather than silently
+                # narrowing it.
+                "universe": None,
                 # Per-book CONTEST cap, overriding the GLOBAL mmsell_contest_cap_enabled /
                 # mmsell_contest_cap (docs/MMSELL_CORRELATION_CAP.md, XOS-000020). None = follow
                 # the global setting, which is every existing book, so this is inert for the
@@ -1776,6 +1797,8 @@ class Settings(BaseSettings):
                 try:
                     if key in ("lo", "hi", "htcmin", "htcmax", "maxyes", "stopl", "volv"):
                         v[key] = float(val)
+                    elif key == "universe":
+                        v[key] = str(val).strip().lower()
                     elif key in ("stopk", "volw", "abarm", "size", "scanmax",
                                  "contestcap"):
                         v[key] = int(val)
@@ -1800,6 +1823,11 @@ class Settings(BaseSettings):
                                ("mode", KNOWN_MODES)):
                 if any(t not in known for t in v[key]):
                     ok = False
+            # An unrecognised tier name would admit EVERYTHING (universe.admits fails open on
+            # an unknown tier), i.e. a book that reads as gated and is not — the same invisible
+            # no-op the type validation above exists to prevent.
+            if v["universe"] is not None and v["universe"] not in TIER_ORDER:
+                ok = False
             # A cap below 1 would admit nothing at all rather than capping — a book that
             # reads as capped and trades zero, which is the same class of invisible no-op the
             # type validation above exists to prevent.
