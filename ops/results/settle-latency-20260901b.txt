@@ -1,6 +1,0 @@
-# ops request: type='db'
-created_7d  settled_7d  p50_hours_to_close  p90_hours_to_close  closed_last_24h
-----------  ----------  ------------------  ------------------  ---------------
-591         501         1.9                 19.0                150            
-
-(1 row)
