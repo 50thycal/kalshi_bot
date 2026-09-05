@@ -1,0 +1,41 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "7becc96c3688fb963ba650c731c46c6294e6351f",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-05T12:20:21Z",
+  "id": "req-lo-x18-triage-1",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 789 bytes, sha256:317852d9f36f5b87>",
+        "before": "<redacted 1790 bytes, sha256:77ebaa8158efbd3f>",
+        "requested": "<redacted 789 bytes, sha256:317852d9f36f5b87>"
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "ok"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/req-lo-x18-triage-1.receipt.json",
+  "result_file": "ops/results/req-lo-x18-triage-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/33965735839",
+  "service": "main",
+  "started_at": "2026-09-05T12:20:15Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
