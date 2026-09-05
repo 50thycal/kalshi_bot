@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"cc-arm-count-1","sql":"select strategy, count(*) as n, min(created_at) as first, max(created_at) as last from paper_trades where strategy in ('Gmmsell0','Gmmsell1') group by strategy"}
