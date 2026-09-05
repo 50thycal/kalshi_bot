@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=perp-still-off-1
-# purpose=re-confirm the perps collector is still off after two worker redeploys  workstream=WS-010
-# code af72b71d456edf75975f998dfc8155916a0a0019 · started 2026-09-02T23:57:38Z
-last_cycle                        minutes_since  cycles_last_60m  cycles_last_180m
---------------------------------  -------------  ---------------  ----------------
-2026-09-02 13:28:16.882212+00:00  629.4          0                0               
-
-(1 row)
