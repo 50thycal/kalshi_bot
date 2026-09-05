@@ -50,6 +50,18 @@ accounting being wrong — a mirage.
    ```
    Ask the operator to confirm before sending the arming request. Never widen `LIVE_STRATEGIES`
    beyond the one book being tested.
+3b. **Name the GLOBAL knobs before you set any of them.** Several mmsell risk settings are
+   process-wide, not per-book — they read off `Settings` in the shared
+   `kalshi_bot/mmsell/tracker.py`, so setting one "for this book" re-scopes every other book in
+   the worker, including grandfathered ones mid-experiment. `MMSELL_CONTEST_CAP_ENABLED`
+   (XOS-000020) is the newest and least obvious; `MMSELL_SETTLEMENT_CAP_ENABLED`,
+   `MMSELL_SETTLEMENT_CORRELATED_REGIMES` and `MMSELL_EVENT_RUNG_CAP*` are the same shape.
+   `LIVE_PAPER_TWIN_SUFFIX` is worse than the rest: it is a single global suffix, so changing it
+   orphans every OTHER live book's twin tag, which then resolves to no deployment arm and goes
+   dark under `NEW_ONLY` (the XOS-000011 shape). Tell the operator which of the vars you are
+   about to set are global and which books they will touch. Wanting one globally for one book is
+   a shared-semantic change → Platform Change Review, or a request for a per-book variant key.
+
 4. **Verify the twin exists within one cycle.** Two checks — logs and DB:
    ```jsonc
    {"type": "logs", "limit": 120, "filter": "twin", "id": "twin-logs-1"}
