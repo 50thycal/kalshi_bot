@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=dm10-standdown-verify-1
-# code 7becc96c3688fb963ba650c731c46c6294e6351f · started 2026-09-05T11:39:53Z
-last_cycle                     cands_10m  new_orders_since_standdown  last_dm10_order               still_resting  now_utc                      
------------------------------  ---------  --------------------------  ----------------------------  -------------  -----------------------------
-2026-09-05 11:38:12.582172+00  0          0                           2026-09-04 06:20:58.23753+00  0              2026-09-05 11:39:54.601084+00
-
-(1 row)
