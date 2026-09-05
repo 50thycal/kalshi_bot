@@ -72,6 +72,35 @@ an OPS disposition, validate, resolve, transfer. Also the gate evaluator: `EXPER
 `_INTERVAL_MINUTES`, and running `evaluate-gates`. That records verdicts only —
 it can never promote, and a recorded PASS still buys nothing here.
 
+## BEFORE ARMING A LIVE BOOK — the global-switch check
+
+Several mmsell risk knobs are **process-wide, not per-book**. They read off
+`Settings` inside `kalshi_bot/mmsell/tracker.py`, which every mmsell book shares,
+so flipping one for the book you are arming silently re-scopes every other book in
+the same worker — including grandfathered ones mid-experiment, which under
+`NEW_ONLY` is a contract change nobody registered.
+
+The one to raise first, because it is newest and the trap is not obvious:
+
+- **`MMSELL_CONTEST_CAP_ENABLED`** (XOS-000020, default `false`). Caps open
+  positions per *contest* — the underlying game — rather than per event ticker,
+  because one MLB game is up to five "events" (`KXMLBTOTAL`, `KXMLBSPREAD`,
+  `KXMLBHR`, …) pricing the same nine innings. Correct and wanted; but there is
+  **no per-book override**, so `true` applies it to `mmsell`, `mmsell5`–`10`, the
+  `Tmmsell` family and `Lmmsell` at once.
+
+Same shape, same caution: `MMSELL_SETTLEMENT_CAP_ENABLED`,
+`MMSELL_SETTLEMENT_CORRELATED_REGIMES`, `MMSELL_EVENT_RUNG_CAP*`,
+`LIVE_PAPER_TWIN_SUFFIX` (a global suffix — changing it orphans every OTHER live
+book's twin tag, which then resolves to no deployment arm and goes dark under
+`NEW_ONLY`; that is the XOS-000011 shape).
+
+**So, before arming:** list the risk vars you intend to set, say out loud which of
+them are global, and name which other books are in `LIVE_STRATEGIES` or could be
+re-armed while yours runs. If a global switch is genuinely needed for one book
+only, that is a shared-semantic change → **Platform Change Review**, or a request
+to add a per-book variant key — not a flip made in passing during an arming.
+
 ## MUST NOT MODIFY
 Experiment lifecycle state, gates, or pre-registered contracts. Never expand
 real-money exposure without explicit operator confirmation.
