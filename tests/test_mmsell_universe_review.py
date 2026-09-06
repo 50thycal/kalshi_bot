@@ -138,10 +138,22 @@ class FakeClient:
 
 
 class RecordingExecutor:
-    """Stands in for the live executor and records which tickers reached it."""
+    """Stands in for the live executor and records which tickers reached it.
 
-    def __init__(self):
+    Carries `_switches_on`/`_allowed` because the tier bar asks the executor whether this book
+    would have placed a real order at all before COUNTING a refusal. A stub without them makes
+    the bar's fail-open path fire and the counter tick regardless — the test would then pass
+    without exercising the thing it claims to."""
+
+    def __init__(self, allowed=True):
         self.mirrored = []
+        self._is_allowed = allowed
+
+    def _switches_on(self):
+        return True
+
+    def _allowed(self, strategy):
+        return self._is_allowed
 
     def mirror_mmsell_entry(self, session, *, strategy, event_ticker, ticker, **kw):
         self.mirrored.append(ticker)
@@ -201,6 +213,26 @@ def test_the_live_bar_refuses_live_but_paper_still_trades(settings):
     assert summ.per_book.get("mmsell") == 2                  # paper took BOTH
     assert ex.mirrored == [f"{GRAD_EV}-8"]                   # live took only the graduated one
     assert summ.skipped_live_tier == 1
+
+
+def test_a_book_that_is_not_live_is_refused_but_NOT_counted(settings):
+    """`skipped_live_tier` must read as "real-money entries this bar refused". The tier check
+    sits ahead of the executor's own gates, so a book absent from LIVE_STRATEGIES would
+    otherwise inflate the counter with refusals of calls that were already no-ops — making the
+    bar look far more load-bearing than it is. The entry is still refused; it is just not
+    counted as a save."""
+    _setup(settings, "", mmsell_live_min_tier=GRADUATED)
+    events, books = _both_events(_anchor())
+    ex = RecordingExecutor(allowed=False)
+    with db.session_scope() as session:
+        summ = MmSellTracker(FakeClient(events, books), settings,
+                             live_executor=ex).run_once(session)
+
+    assert summ.per_book.get("mmsell") == 2      # paper unaffected either way
+    # The GRADUATED series still reaches the executor, which refuses it by its own allowlist —
+    # this bar is a tier gate, not a second allowlist, and must not quietly become one.
+    assert ex.mirrored == [f"{GRAD_EV}-8"]
+    assert summ.skipped_live_tier == 0           # the unclassified refusal is NOT a live save
 
 
 def test_the_live_bar_can_be_switched_off(settings):
