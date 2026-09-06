@@ -1,1 +1,1 @@
-{"type":"xos","command":"list","id":"xos-list-nfl-1","actor":"claude-research-lab","purpose":"scope the KXNFLSPREAD issue to the right mmsell experiment"}
+{"type":"xos","command":"tag","args":["Cmmsell10"],"id":"xos-tag-c10-1","actor":"claude-research-lab","purpose":"which experiment/arm owns the live mmsell10 lineage"}
