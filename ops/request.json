@@ -1,1 +1,1 @@
-{"type": "env", "service": "evo", "set": {"EVO_ENABLED": "false"}, "id": "evo-pause-set-1"}
+{"type": "env", "service": "evo", "set": {"EVO_WEEKLY_LLM_CEILING_USD": "0"}, "id": "evo-pause-set-2"}
