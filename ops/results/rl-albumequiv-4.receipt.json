@@ -1,0 +1,22 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "3346bf8dc3e8d3c7e17f08c2376aea6795cda746",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T13:32:42Z",
+  "id": "rl-albumequiv-4",
+  "outcome": "SUCCEEDED",
+  "provenance": {
+    "actor": "claude-research-lab",
+    "purpose": "KXALBUMEQUIV: is rung-count confounded with entry price? cheap-band-only cut"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl-albumequiv-4.receipt.json",
+  "result_file": "ops/results/rl-albumequiv-4.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34036404247",
+  "service": null,
+  "started_at": "2026-09-06T13:32:42Z",
+  "targets": [],
+  "type": "db"
+}
