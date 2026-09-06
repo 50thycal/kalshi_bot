@@ -286,6 +286,33 @@ class Settings(BaseSettings):
     # This can only REFUSE a live entry, never add one, so it moves real-money exposure in the
     # safe direction only. Set to "unclassified" to restore the pre-2026-09-05 behaviour.
     mmsell_live_min_tier: str = "graduated"
+    # Series on which REAL MONEY is PAUSED, live mirror only, comma-separated prefixes.
+    # A second bar beside the tier above, and deliberately a different kind of claim.
+    #
+    # KXNFLSPREAD (XOS-000022, docs/MMSELL_NFLSPREAD_LOSS_CELL.md, operator-approved
+    # 2026-09-06). Measured at the honest independence unit — 44 contests, not 382 markets,
+    # because one NFL game carries a nested two-sided spread ladder a blowout resolves against
+    # a seller at a single instant — the cell runs -10.0c/trade, bootstrap 95% CI [-18.1, -2.7].
+    # 78% of the loss sits at a tail price <= 7c, which IS the live band. The series is
+    # GRADUATED, so `mmsell_live_min_tier` above does not stop it.
+    #
+    # WHAT THIS IS NOT. Not a validated selection rule. Every one of those 382 markets is NFL
+    # PRESEASON (settled 2026-08-14..08-30); the regular season began 09-03 and there is zero
+    # regular-season evidence. KXNFLTOTAL earned +$50.32 on the SAME 43 games in the same books,
+    # so this is one contract in one league, not spreads and not NFL. It is an interim pause on
+    # real-money exposure while the pre-registered out-of-sample test runs, nothing more.
+    #
+    # WHY PAPER IS NOT BARRED, and this is the load-bearing half: paper is what supplies the
+    # test that decides whether this pause becomes a rule or gets lifted. Barring paper too
+    # would make the exclusion permanent by construction and there would be nothing left to
+    # measure — the same one-way-ratchet argument the review tiers make. Use
+    # `mmsell_skip_series` above if you ever genuinely want a series gone from paper as well;
+    # it is a different instrument and it bars everything.
+    #
+    # Like the tier bar it can only ever REFUSE a live entry, never add one, so it moves
+    # real-money exposure in the safe direction only. Set to "" to restore the
+    # pre-2026-09-06 behaviour; that is also the intended lift path if the gate REFUTES.
+    mmsell_live_skip_series: str = "KXNFLSPREAD"
     mmsell_contest_cap_enabled: bool = False
     #: Max open positions across ALL series on one contest. 1 is the honest default when on:
     #: two positions on one game is twice the same bet, not diversification. Mutually-exclusive
@@ -1672,6 +1699,11 @@ class Settings(BaseSettings):
     @property
     def mmsell_skip_series_list(self) -> list[str]:
         return [s.strip().upper() for s in self.mmsell_skip_series.split(",") if s.strip()]
+
+    @property
+    def mmsell_live_skip_series_list(self) -> list[str]:
+        """Series prefixes with real money paused (live mirror only). Empty disables the bar."""
+        return [s.strip().upper() for s in self.mmsell_live_skip_series.split(",") if s.strip()]
 
     @property
     def mmsell_settlement_correlated_regimes_list(self) -> set[str]:

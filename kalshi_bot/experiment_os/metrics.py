@@ -179,6 +179,24 @@ _UNIVERSAL: tuple[MetricDefinition, ...] = (
         description="filled contracts on live markets whose position has closed; "
         "MISSING unless addressed at deployment_kind='live'",
     ),
+    # ADDITIVE, like `settled_days`/`daily_pnl_stability` above, so
+    # METRICS_ENGINE_REVISION is deliberately NOT bumped: no existing metric's
+    # meaning or implementation changes here. Writing a provider that never
+    # existed is not a shared-semantic change.
+    MetricDefinition(
+        key="live_entry_orders", direction="neutral", unit="orders", kind="count",
+        source="live_orders (entry buys PLACED in the window)",
+        reference="scripts/live_paper_parity.py (docs/LIVE_PAPER_TWIN.md)",
+        revision="live_exec_v1",
+        description="entry BUY orders this arm PLACED in the window, whatever "
+        "became of them. The live analogue of `entries`, and deliberately not a "
+        "settlement or fill count: a book whose orders never reach the front of "
+        "the queue is still RUNNING, and a book that places none is not — which "
+        "is the only distinction `experiment.armed_but_silent` needs. A "
+        "settlement-based count lags entry by hours to days and would report a "
+        "healthy book as silent for a whole window after it started. MISSING "
+        "unless addressed at deployment_kind='live'",
+    ),
     MetricDefinition(
         key="live_cents_per_contract", unit="cents/contract", kind="mean",
         source="live_orders x fills x positions (settled live markets)",
@@ -885,7 +903,7 @@ LIVE_ONLY_METRICS: frozenset[str] = frozenset({
     "live_settled_contracts", "live_cents_per_contract", "twin_live_winrate_gap_pp",
     "live_settled_markets", "live_fill_rate_pct", "live_open_exposure_usd",
     "live_max_realized_loss_usd", "live_tail_loss_markets", "live_blocked_entries",
-    "live_realized_pnl_usd",
+    "live_realized_pnl_usd", "live_entry_orders",
 })
 
 #: Metrics that compare a live book against its REGISTERED twin. Same live-only
@@ -1338,6 +1356,23 @@ def _live_metric(session, key: str, scope: MetricScope) -> MetricValue:
             reason="no live deployment tags for this scope in this epoch",
             provenance=_live_provenance(scope),
         )
+
+    if key == "live_entry_orders":
+        # Answered BEFORE the settled-market aggregate below, because it asks a
+        # different question and must not inherit that aggregate's settlement
+        # filter: this counts orders PLACED, whatever became of them.
+        from ..models import LiveOrder
+
+        placed = int(session.scalar(
+            select(func.count()).select_from(LiveOrder).where(
+                LiveOrder.strategy.in_(scope.strategy_tags),
+                LiveOrder.action == "buy",
+                LiveOrder.created_at >= scope.window_start,
+                LiveOrder.created_at <= scope.window_end,
+            )
+        ) or 0)
+        return MetricValue(key, float(placed), placed, "orders",
+                           provenance=_live_provenance(scope))
 
     agg = _live_market_rows(session, scope.strategy_tags, scope)
     prov = _live_provenance(scope) | {

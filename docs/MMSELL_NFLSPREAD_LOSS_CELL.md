@@ -222,6 +222,16 @@ anything is out of sample, and the regular season supplies it starting now.
 
 ### Proposal 1 — refuse KXNFLSPREAD on the **live mirror only**; leave paper untouched
 
+> **BUILT and SHIPPED — operator-approved 2026-09-06.** `mmsell_live_skip_series`
+> (`kalshi_bot/config.py`), enforced by `MmSellTracker._live_paused_blocks` at the same
+> call site as the tier bar, on the rule `universe.exposure_paused`. Tests:
+> `tests/test_mmsell_live_exposure_pause.py`. Default: `KXNFLSPREAD`. **Paper is
+> untouched**, which is what keeps Proposal 2 scoreable. Set the value to `""` to lift.
+>
+> It is an *interim exposure pause*, not a verdict and not a validated selection rule.
+> The permanent answer is Proposal 2's gate, and this pause is what buys the time to
+> score it without paying for the wait in real money.
+
 The narrowest intervention that matches both the evidence and the risk. It is exactly the shape
 `mmsell_live_min_tier` already implements (`docs/MMSELL_UNIVERSE_REVIEW.md`): it can only ever
 *refuse* an entry, so it moves real-money exposure in the safe direction only, and paper keeps
@@ -230,6 +240,21 @@ collecting the regular-season evidence at full power. Real money waits; the expe
 *Rationale for the asymmetry:* live downside is unbounded in the season ahead (18 weeks × ~16
 games against 44 games of total preseason supply) and the measured live upside on this cell over
 its whole history is −$3.71. Paper downside is zero and its information value is the entire test.
+
+*Deliberately NOT a review tier.* It sits beside `mmsell_live_min_tier` rather than inside
+it, because the two make different claims and merging them would corrupt both. The tier is
+a **governance** rule that makes no claim about returns — `docs/MMSELL_UNIVERSE_REVIEW.md`
+is emphatic that conflating the two is how a governance rule quietly becomes an unvalidated
+strategy. This bar *is* motivated by returns, so it carries the opposite risk: that a pause
+taken on evidence which explicitly could not clear the power bar hardens into a permanent
+"we know this loses" nobody re-tests. Leaving paper untouched is the structural answer to
+that — the evidence that would lift it keeps accruing whether or not anyone remembers.
+
+*Known limitation, inherited from the tier bar and not introduced here:* a live/paper twin
+still opens its paper position on a refused series, so the twin's population is a superset
+of live's on these tickers. `_live_tier_blocks` has had this property since PR #338; the
+parity read should exclude paused series rather than have this bar silently reach into a
+twin, which would be a change to paper.
 
 *Not proposed:* barring paper too. That would make the out-of-sample test impossible and turn a
 research finding into a permanent exclusion by construction — the one-way ratchet the universe

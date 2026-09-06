@@ -341,7 +341,7 @@ def report(rows, days: int) -> None:
          "In no taxonomy. Not tradeable live. Classify via mmsell_taxonomy_audit -> "
          "Platform Change Review."),
         (IN_REVIEW, "IN_REVIEW — classified, too thin to graduate",
-         "Paper only. Graduates by PR to GRADUATED_SERIES once its history is reviewed."),
+         "Paper only. Graduates by PR against registry/series_manifest.json once reviewed."),
     ):
         cells = [(s, c) for (s, t), c in by_series.items() if t == tier]
         cells.sort(key=lambda kv: -kv[1][0])

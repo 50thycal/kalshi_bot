@@ -102,6 +102,50 @@ def test_summary_carries_the_whole_funnel():
     assert summ.pagination_exhausted is False
 
 
+def test_every_skip_counter_is_actually_EMITTED_not_just_counted():
+    """A counter that is incremented but never written to `system_events` is worse than no
+    counter: from the ops channel "the bar fired 40 times" and "the bar is broken and fired
+    zero times" are indistinguishable, and the second reads as the reassuring one.
+
+    That is not hypothetical on this book. `skipped_contest_cap` stayed at 0 through the
+    UTC-midnight straddle defect (c4b2ce1) and was read as "the cap had nothing to refuse";
+    `skipped_live_paused` shipped incremented-but-unemitted with the KXNFLSPREAD real-money
+    pause (PR #345), so the one query that could show the pause working returned nothing.
+
+    `test_summary_carries_the_whole_funnel` above checks the FIELDS EXIST. It cannot catch
+    this, because existing on the dataclass and reaching a queryable row are different
+    claims — which is exactly how both counters got through. So this asserts the second one,
+    generically, for every skip counter there will ever be.
+    """
+    from dataclasses import fields
+
+    from kalshi_bot.mmsell.tracker import MmSellCycleSummary
+
+    written: list[dict] = []
+
+    class _Session:
+        def add(self, row):
+            written.append(getattr(row, "raw_json", None) or {})
+
+        def flush(self):
+            pass
+
+    class _Self:
+        client = None
+
+    MmSellTracker._record_scan_telemetry(_Self(), _Session(), MmSellCycleSummary())
+
+    assert written, "the funnel row must be written"
+    row = written[0]
+    counters = [f.name for f in fields(MmSellCycleSummary) if f.name.startswith("skipped_")]
+    assert counters, "the summary must carry skip counters at all"
+    missing = [c for c in counters if c not in row]
+    assert not missing, (
+        f"{missing} are counted but never persisted — unqueryable, so a broken bar and a bar "
+        "with nothing to refuse look identical from the ops channel"
+    )
+
+
 def test_telemetry_write_never_breaks_the_cycle():
     """A diagnostic must not be able to stop trading.
 
