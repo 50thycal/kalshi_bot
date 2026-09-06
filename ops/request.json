@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"xos","command":"show","args":["theta4-fat-tail"],"id":"rl-verify-addr-1"}
