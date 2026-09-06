@@ -312,7 +312,90 @@ Candidates cover only anomalies the Tower already understands: resolver-degraded
 alarm, post-cutover rows without lineage, unresolved integrity event, unresolved
 platform impact, unsafe pending revision, collector `STALE`/`EMPTY`/
 `UNAVAILABLE`, live deployment without a twin, zero-evidence experiment,
-evaluator `BLOCKED_*`.
+**armed-but-silent arm**, evaluator `BLOCKED_*`.
+
+### `experiment.armed_but_silent` — registration is not configuration
+
+`experiment.zero_evidence` says *this book has produced nothing*, which is also
+true of every experiment on the day it is registered. It is therefore LOW/P2 and
+cannot, on its own, tell an **early** silence from a **broken** one.
+
+`experiment.armed_but_silent` is the escalation, and a different claim: an
+**active deployment arm**, **armed longer than 24h**, with **zero evidence**, and
+**no blocked gate** already explaining the zero — plus a **reference** proving the
+silence is specific to the arm rather than to the day.
+
+Why it exists. On 2026-09-05 `mmsell-correlation-cap` was registered correctly —
+PAPER, v1 frozen, two arms with tags, deployments 25 → 27 both armed, keep gate
+registered — and then traded nothing for twelve hours. `MMSELL_VARIANTS` is a
+Railway environment variable that **overrides** the code default the two books had
+been added to, so the worker never saw them. Every Experiment OS object was
+correct and the runtime ran a different book list. **Registration is not
+configuration**, and nothing in the system knew the difference; the Tower reported
+the experiment as PAPER and healthy at n=0 until a human asked "is it working
+yet". XOS-000011 is the mirror image — configured but with no lineage, refused at
+the write path forever, equally invisible.
+
+The reference is the whole design. An arm at zero is ambiguous; an arm at zero
+*while its sibling in the same epoch, on the same platform snapshot, driven by the
+same worker, is trading* is not — the only thing that differs between them is the
+experiment's one variable. That comparison is preferred wherever it exists. Where
+every arm is silent (which is what the incident actually looked like), the rest of
+the platform stands in: `Gmmsell1` at zero would have been ambiguous; `Gmmsell1`
+at zero while `Gmmsell0` was also at zero and `mmsell10` booked 166 was not.
+
+Thresholds are constants, not settings — a detector that needs tuning does not get
+used. 24h is one settlement day: below it "early days" is a real explanation, and
+above it "slow" no longer reaches (the thinnest flow-constrained book here,
+`Tmmsell2`, runs ~1 entry/hour). The reference floor is 20 trades: one stray fill
+proves nothing, twenty proves the worker cycled and booked repeatedly.
+
+It deliberately does **not** fire when the arm is early, when a gate is
+`BLOCKED_*`, on a tagless PROBE deployment, on a recorded stand-down, on a book
+that trades slowly but does trade, when the arming instant is unknown, or when
+nothing traded anywhere in the window. It routes to Live Ops at
+`UNCLASSIFIED`/MEDIUM/P1 and records **no** disposition: "the worker never saw
+this arm" and "the filters ate every candidate" both fit the evidence and need
+opposite remedies.
+
+It does **not** suppress `experiment.zero_evidence`. That one may already have an
+open ticket against its own fingerprint, and dropping it the day the escalation
+appears would flip that ticket's `currently_recurring` to false — it would read as
+fixed on precisely the day the problem got worse.
+
+The suppression runs the **other** way. Where an OPEN issue already investigates
+this experiment's zero evidence, the finding is recorded with `covered_by` and
+stated in the recommendations, but emits **no candidate**: the escalation exists
+to make an UNDETECTED silence visible, and a silence with an owned investigation
+is by definition detected — a second ticket under a different fingerprint would
+only split the history. `freeze-dark-window-pin` is the live case (four arms,
+580h armed, zero rows in `paper_trades` ever, while the platform booked tens of
+thousands) and XOS-000003 has already diagnosed and owns it. The suppression is
+recomputed from state every run and nothing about it is remembered, so closing
+that ticket over a continuing silence brings the candidate straight back.
+
+Measured against production on 2026-09-06, across all 30 active deployment arms
+(27 active deployments), it produces **zero uncovered candidates**: everything
+else in the portfolio is either trading, tagless by construction, stood down,
+live/twin-only, or — for `freeze-dark-window-pin` — already ticketed.
+
+Its blind spots, stated:
+
+- **Paper only.** Evidence comes from `read.experiment_scoreboard`, whose arm
+  metrics are scoped to `deployment_kind = "paper"`. An experiment whose only
+  deployments are `live` and `paper_twin` — today `mmsell-price-ceiling`,
+  `mmsell-scheduled-settle-live`, `theta4-fat-tail` — has no paper tags on its
+  arms and can therefore never fire, however silent it goes. Extending the
+  detector to those kinds means going through `metrics.compute_metric` with a
+  twin/live scope (never a second count of its own); it is deliberately left as
+  follow-up rather than smuggled in beside a detector.
+- It can only see silence Experiment OS knows should not be silent. A book that
+  is *configured but registered wrong* is `enforcement.unstamped_lineage`; a book
+  trading the wrong markets, or producing rows under a tag other than the
+  registered one, is invisible to both.
+- On a platform-wide outage — nothing trading anywhere — it stays deliberately
+  quiet, because it has no reference and therefore no claim. A total outage is
+  Live Ops' collector-health and worker surface, not this one's.
 
 Two deliberate silences:
 

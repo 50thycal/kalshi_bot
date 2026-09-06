@@ -81,6 +81,32 @@ COLLECTOR_WARNING_STATUSES: frozenset[str] = frozenset({"STALE", "EMPTY", "UNAVA
 
 NORTH_STAR_USD_PER_MONTH = 100.0
 
+# How long an ARMED arm may sit at zero evidence before the silence is itself the
+# finding. Deliberately a constant and not configurable: a detector that needs
+# tuning does not get used, and the two directions of error are not symmetric —
+# too short and it fires on every registration until it is ignored, too long and
+# it is another day of an experiment collecting nothing.
+#
+# 24h is one settlement day, which is the unit this platform's flow is organised
+# around. Below it, "early days" is a real explanation: a book registered this
+# hour has not had a chance to find a candidate. Above it, "slow" no longer
+# reaches: the thinnest flow-constrained book here (Tmmsell2, ~1 entry/hour)
+# clears sixty entries inside the window, so an arm at EXACTLY zero across it is
+# not slow, it is stopped. The 2026-09-05 `mmsell-correlation-cap` incident ran
+# 12h before a human happened to ask, and would have run indefinitely.
+SILENT_ARM_HOURS = 24
+
+# The reference floor: how much OTHER trading must have happened in the same
+# window before this arm's zero counts as evidence about the ARM rather than
+# about the day. Without a reference, "booked nothing" is equally consistent with
+# a dead worker, a closed market and a broken arm, and asserting the third is how
+# a detector gets a reputation for being wrong.
+#
+# One stray fill proves nothing; twenty proves the worker cycled, found
+# candidates and booked them repeatedly. In the incident, `mmsell10` booked 166
+# on the same worker in the window `Gmmsell0`/`Gmmsell1` booked 0.
+SILENT_ARM_REFERENCE_TRADES = 20
+
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
@@ -127,6 +153,11 @@ class TowerReport:
     # created here. An issue's status is workflow, not a verdict and not
     # lifecycle state, so nothing in this list can change what a gate says.
     open_issues: list[dict] = field(default_factory=list)
+    # Armed arms that are collecting NOTHING, with the silence localized to the
+    # arm by a reference that traded in the same window. See `_silent_arms`:
+    # this is the condition "registered, armed, and collecting nothing", which
+    # is otherwise indistinguishable from a healthy experiment at n=0.
+    silent_arms: list[dict] = field(default_factory=list)
     # Deterministic ticket CANDIDATES: anomalies this report already understands
     # that no open issue currently covers. A candidate is a recommendation to
     # open an issue — rendering one writes nothing (spec §2.7).
@@ -382,6 +413,11 @@ def _experiment_view(session, exp: Experiment, *, evaluate: bool) -> dict:
                 "grandfathered": bool(dep.grandfathered),
                 "tags": tags,
                 "started_at": str(dep.started_at) if dep.started_at else None,
+                # The ARMING INSTANT, kept as a datetime beside its display
+                # string so `_silent_arms` can measure a silence without parsing
+                # a rendered value back into a time. NULL stays NULL: an unknown
+                # arming instant must never be turned into a guessed one.
+                "started_at_dt": _utc(dep.started_at),
                 "twin": twin.deployment_key if twin is not None else None,
                 "twin_boundary_matches": bool(
                     twin is not None
@@ -544,6 +580,28 @@ def build_report(session, *, evaluate: bool = True,
     rep.data_health = _data_health(session)
     rep.portfolio = _portfolio(session)
     _derive_actions(rep)
+    # After `_derive_actions`, which is what populates `rep.blocked` — a blocked
+    # gate already explains a zero, and suppressing on it is one of the four
+    # clauses.
+    rep.silent_arms = _silent_arms(session, rep)
+    for f in rep.silent_arms:
+        head = (
+            f"{f['experiment']}: arm {f['arm']!r} ({', '.join(f['tags'])}) has "
+            f"been ARMED {f['hours_silent']}h and has collected NOTHING, while "
+            f"{f['reference']}"
+        )
+        if f["covered_by"]:
+            # Stated rather than dropped: the reader still needs to know the
+            # silence is ongoing, and which ticket already owns it.
+            rep.recommendations.append(
+                f"{head} — already under investigation as {f['covered_by']}; "
+                "no separate ticket candidate"
+            )
+        else:
+            rep.recommendations.append(
+                f"{head} — registration is not configuration; Live Ops checks "
+                "the runtime first"
+            )
     # Last: ticket candidates are derived from the anomalies above, so they
     # can never introduce a finding the rest of the report does not already
     # make. Still a pure read — see `_issue_sections`.
@@ -726,6 +784,196 @@ def _derive_actions(rep: TowerReport) -> None:
         rep.recommendations.append(
             "unresolved platform-impact dispositions — Platform Change Review"
         )
+
+
+# ---------------------------------------------------------------------------
+# Armed but silent — "registered, armed, and collecting NOTHING"
+# ---------------------------------------------------------------------------
+
+
+def _reference_trades_since(session, since: datetime, exclude: set[str]) -> int:
+    """Paper trades booked by strategies OUTSIDE this experiment since `since`.
+
+    The generalization of "`mmsell10` booked 166 while `Gmmsell0`/`Gmmsell1`
+    booked 0": proof that the worker was up, cycling, finding candidates and
+    writing rows during the window in which this arm wrote none."""
+    return int(session.scalar(
+        select(func.count()).select_from(PaperTrade).where(
+            PaperTrade.created_at >= since,
+            PaperTrade.strategy.not_in(sorted(exclude)),
+        )
+    ) or 0)
+
+
+def _silent_arms(session, rep: TowerReport) -> list[dict]:
+    """Arms that are ARMED, past the silence threshold, and collecting nothing.
+
+    ## The condition this makes detectable
+
+    On 2026-09-05 `mmsell-correlation-cap` was registered correctly — PAPER, v1
+    frozen, two arms with tags, an active paper deployment, a registered gate —
+    and then traded nothing for twelve hours, because `MMSELL_VARIANTS` is a
+    Railway environment variable that overrides the code default the books were
+    added to. The worker never saw them. **Registration is not configuration**,
+    and nothing in Experiment OS knows the difference: every object it owns was
+    correct. The Tower reported the experiment as PAPER and healthy at n=0, which
+    is exactly what a legitimately new experiment also looks like.
+
+    XOS-000011 is the mirror image — configured but with no lineage, refused at
+    the write path forever, likewise invisible. This is lineage but no
+    configuration.
+
+    ## All four clauses matter
+
+    A finding requires an ACTIVE deployment arm, ARMED longer than
+    `SILENT_ARM_HOURS`, with ZERO evidence, and NO blocked gate already
+    explaining the zero. Each of the deliberate non-fires is a false positive
+    this detector would otherwise generate, and false positives are how a
+    detector stops being read:
+
+      * **early** — under the threshold, "it has not started yet" is the ordinary
+        state of a new experiment, not an anomaly;
+      * **blocked gate** — a `BLOCKED_*` verdict already reports the zero, with a
+        cause and an owner; a second ticket aimed at a different role is worse
+        than none;
+      * **tagless probe** — a PROBE deployment is tagless BY CONSTRUCTION (see
+        `correlation_cap.py`), so it has nothing to book;
+      * **recorded stand-down** — `EXPERIMENT_EXECUTION_STOOD_DOWN` records a
+        state rather than reporting a failure; the absence is already explained;
+      * **slow but trading** — the condition is ZERO, never a rate. A book that
+        finds one entry an hour is flow-constrained, not broken, and an absolute
+        volume threshold would need tuning per book;
+      * **no reference** — with nothing trading anywhere, the silence is not
+        localized to this arm and the detector has no claim to make.
+
+    ## Why the reference is the whole design
+
+    An arm at zero is ambiguous. An arm at zero *while its sibling in the same
+    epoch, on the same platform snapshot, driven by the same worker, is trading*
+    is not — the only thing that differs between them is the one variable the
+    experiment holds. That comparison is preferred whenever it exists. Where
+    every arm is silent (which is what the incident actually looked like), the
+    rest of the platform stands in as the reference: `Gmmsell1` at zero would
+    have been ambiguous; `Gmmsell1` at zero while `Gmmsell0` was also at zero and
+    `mmsell10` booked 166 was not.
+
+    ## Why the weaker detector is NOT suppressed, and why this one sometimes is
+
+    `experiment.zero_evidence` keeps firing alongside this one. It may already
+    have an open issue against its own fingerprint, and dropping it the day this
+    escalation appears would flip that issue's `currently_recurring` to false —
+    it would read as fixed on precisely the day the problem got worse.
+
+    The suppression runs the other way. Where an OPEN issue already investigates
+    this experiment's zero evidence, the finding is recorded with `covered_by`
+    and emits no candidate. The escalation exists to make an UNDETECTED silence
+    visible; a silence that already has an owned investigation is, by definition,
+    detected, and a second ticket under a different fingerprint would only split
+    the history. `freeze-dark-window-pin` is the live case: four arms, 580h, zero
+    rows ever — and XOS-000003 has already diagnosed it (no available universe
+    satisfies the hypothesis) and is working it. It re-arms on its own if that
+    ticket closes while the silence continues, because the finding is recomputed
+    from state every run and nothing about it is remembered.
+
+    Pure read: selects only, and it asserts no cause. Routing the diagnosis is
+    the point; guessing it produces a ticket the owning role cannot act on."""
+    from . import enforcement as enf_mod
+
+    now = _now()
+    blocked_experiments = {b["experiment"] for b in rep.blocked}
+    try:
+        investigated = {
+            i.experiment_id: i.issue_key
+            for i in read.list_issues(session, open_only=True)
+            if i.experiment_id is not None
+            and i.detector in (issue_policy.DETECTOR_ZERO_EVIDENCE,
+                               issue_policy.DETECTOR_ARMED_BUT_SILENT)
+        }
+    except Exception:  # noqa: BLE001 — a read must degrade, not abort
+        # Failing OPEN is the safe direction here: a missed suppression costs a
+        # duplicate candidate, a missed detection costs another silent day.
+        investigated = {}
+    out: list[dict] = []
+    for state, views in rep.by_state.items():
+        if state not in _EVIDENCE_EXPECTED_STATES:
+            continue
+        for v in views:
+            if v["key"] in blocked_experiments:
+                continue
+            if any(ev.get("kind") in enf_mod.NON_BLOCKING_INTEGRITY_KINDS
+                   for ev in v["integrity_events"]):
+                continue
+            # Only arms that actually carry a tag are armed. A tagless arm — the
+            # probe shape — has nothing to book, so its zero is not a finding.
+            # The arming-instant check below is a second, independent guard on
+            # the same case; both are kept because they fail closed for different
+            # reasons (no tag at all vs. a tag whose deployment has no start).
+            arms = [a for a in v["arms"] if a.get("tags")]
+            silent = [a for a in arms if not int(a.get("entries") or 0)]
+            if not silent:
+                continue
+            own_tags = {t for d in v["deployments"] for t in d["tags"]}
+
+            armed_at: dict[str, datetime] = {}
+            for d in v["deployments"]:
+                started = d.get("started_at_dt")
+                if started is None:
+                    continue
+                for tag in d["tags"]:
+                    prior = armed_at.get(tag)
+                    # The MOST RECENT arming: an arm re-registered at an epoch
+                    # boundary restarts its clock, and treating the older instant
+                    # as current would indict a book on its first day.
+                    armed_at[tag] = started if prior is None else max(prior, started)
+
+            trading_siblings = [
+                a for a in arms
+                if int(a.get("entries") or 0) >= SILENT_ARM_REFERENCE_TRADES
+            ]
+            for arm in silent:
+                stamps = [armed_at[t] for t in arm["tags"] if t in armed_at]
+                if not stamps:
+                    # The arming instant is unknown, so the silence cannot be
+                    # measured. Never fire on a guessed timestamp.
+                    continue
+                since = max(stamps)
+                hours = (now - since).total_seconds() / 3600.0
+                if hours < SILENT_ARM_HOURS:
+                    continue
+                if trading_siblings:
+                    sib = trading_siblings[0]
+                    reference = (
+                        f"sibling arm {sib['arm']!r} ({', '.join(sib['tags'])}) "
+                        f"booked {int(sib['entries'])} entries in the same epoch, "
+                        "on the same platform snapshot, from the same worker"
+                    )
+                    basis = "SIBLING_TRADING"
+                else:
+                    n = _reference_trades_since(session, since, own_tags)
+                    if n < SILENT_ARM_REFERENCE_TRADES:
+                        # Nothing traded anywhere: the silence is not localized
+                        # to this arm, so there is no finding to report.
+                        continue
+                    reference = (
+                        f"{n} paper trades were booked by OTHER strategies in the "
+                        "same window"
+                    )
+                    basis = "PLATFORM_ACTIVE"
+                out.append({
+                    "experiment": v["key"],
+                    "experiment_id": v.get("experiment_id"),
+                    "version_id": v.get("version_id"),
+                    "epoch_id": v.get("epoch_id"),
+                    "arm": arm["arm"],
+                    "role": arm.get("role"),
+                    "tags": list(arm["tags"]),
+                    "armed_at": str(since),
+                    "hours_silent": round(hours, 1),
+                    "basis": basis,
+                    "reference": reference,
+                    "covered_by": investigated.get(v.get("experiment_id")),
+                })
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -917,6 +1165,34 @@ def _detect_candidates(session, rep: TowerReport) -> list[dict]:
                            "enforcement rejection, filters eliminating every "
                            "candidate, or genuinely no qualifying opportunities",
                 ))
+
+    # Armed but silent. Scoped to the ARM (`anomaly_kind`), because that is the
+    # unit the finding is about and the unit a fix lands on: in the incident both
+    # arms were silent and each needed adding to the runtime's book list
+    # separately. Nothing volatile enters the fingerprint — the age of the
+    # silence and the reference count are carried in `detail`, which is not
+    # hashed, so a lengthening silence stays the same problem.
+    for f in rep.silent_arms:
+        if f["covered_by"]:
+            continue
+        out.append(_candidate(
+            detector=issue_policy.DETECTOR_ARMED_BUT_SILENT,
+            anomaly_kind=f["arm"],
+            title=(f"{f['experiment']} arm {f['arm']!r} has been armed "
+                   f"{f['hours_silent']}h with zero evidence"),
+            scope=f"{f['experiment']} · arm {f['arm']}",
+            experiment=f["experiment"], experiment_id=f.get("experiment_id"),
+            version_id=f.get("version_id"), epoch_id=f.get("epoch_id"),
+            detail=(
+                f"tags {', '.join(f['tags'])} are registered and armed (since "
+                f"{f['armed_at']}) and have booked NOTHING for "
+                f"{f['hours_silent']}h, while {f['reference']} [{f['basis']}]. "
+                "No gate is BLOCKED, so nothing else in this report explains the "
+                "zero. REGISTRATION IS NOT CONFIGURATION: an arm can be a "
+                "correct Experiment OS object and still be absent from what the "
+                "worker actually runs (2026-09-05, mmsell-correlation-cap)"
+            ),
+        ))
 
     for b in rep.blocked:
         out.append(_candidate(
