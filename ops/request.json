@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"xos","command":"show","args":["mmsell-anchor-vol-entry"],"id":"rl-volentry-1"}
