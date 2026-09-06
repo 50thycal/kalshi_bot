@@ -1,9 +1,13 @@
 # WS-011 — MARKTANGLE: conditional reversion in recurring binary families
 
-**Phase:** DECIDE
-**Status:** Paused
+**Phase:** CLOSED
+**Status:** Done
 **Created:** 2026-08-29
-**Updated:** 2026-08-29 (run 1)
+**Updated:** 2026-09-06
+
+
+Finalized 2026-09-06 (Build OS v0.12 migration): the file still read `DECIDE · Paused`
+after the 2026-09-03 close and RETIREMENT. Off the board, into *Recently completed*.
 
 ## Goal
 

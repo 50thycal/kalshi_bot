@@ -4,7 +4,7 @@ Why does the system work this way? Lightweight ADRs, appended in order. Conseque
 decisions only. An accepted entry is never rewritten because architecture later changed —
 supersede it with a new one and update only the old status line.
 
-**Build OS v0.4**
+**Build OS v0.12**
 
 **Scope note.** This log records *development and architecture* decisions. It is **not** a
 place for experiment verdicts, gate outcomes, promotions, epochs or platform revisions —
@@ -741,3 +741,147 @@ parameter, not an architecture.
 the absence of a triage surface is the bottleneck. That is an argument for a *reading* tool
 — a ranked, filtered view over `evo_experiments` — before it is an argument for an
 automatic write path into Experiment OS.
+
+
+---
+
+### DEC-011 — Migrate to Build OS v0.12: `solo` mode, a stated owner-layer split, an active-work limit of 4, and `SHIP` as a development-gate report
+
+**Date:** 2026-09-06
+**Status:** Accepted
+**Extends:** `DEC-001` (unchanged — see *What is deliberately unchanged*)
+
+**Context**
+
+`DEC-001` adopted Build OS v0.4 and pinned it deliberately, so an in-flight design could not
+change shape because the framework moved underneath it. That pin held for eight releases.
+Canonical reached v0.12 on 2026-09-06, and the compatibility check on 2026-09-02 had already
+recorded that three of the intervening releases would change how sessions here behave.
+
+The pin had also started to cost something concrete. Build OS defaults to `reviewed` when no
+operating mode is declared, and `reviewed` requires an independent verdict naming a full SHA
+from an actor who is not the implementer. This repository is one account, one GitHub identity,
+one agent: no such actor exists. `WS-001` sat in `REVIEW` from 2026-08-24 to 2026-09-06 waiting
+for a verdict that could not be given, while every artifact it was waiting to deliver was
+already merged on the default branch (PR #258, merged 2026-08-24T14:26:24Z). A gate that cannot
+be satisfied is not strict — it is inert, and it trains everyone to merge past it.
+
+Alongside that, the board had accumulated five rows that Build OS has said since v0.2 should
+have left it: one complete, three closed, and `WS-001` itself. Thirteen rows is the exact shape
+v0.12's finite-work rules were written against.
+
+**Decision**
+
+Adopt **v0.12**, with four decisions the migration turned on. Each was put to the operator
+explicitly rather than settled by an agent, because each is a genuine judgement about how this
+project works rather than a mechanical upgrade.
+
+**1. Operating mode is `solo`.** Significant work is accepted by the owner at merge, recorded
+as `Owner-accepted` with a separate `Accepted head` field naming a full 40-character SHA, and
+**never described as reviewed**. Every `SHIP` result must state plainly that no independent
+party examined the change — that sentence is the whole point of the mode.
+
+Three limits come with it and are easy to get wrong. `Owner-accepted` is **reserved to the
+owner**; an agent may transcribe an acceptance the owner actually gave, naming the channel it
+came through, but **inferring one from a merge is issuing a verdict, not relaying one**, and an
+agent may not do that. A finalization commit never writes a verdict it does not yet have. And
+no history is upgraded: acceptances are not retrofitted onto merged work, so PR #258 is
+**not** retro-accepted by this decision — its merge stands as the historical record it is.
+
+`solo` is a fallback, not a preference. The moment a second actor exists — a colleague, a
+second GitHub identity, a review agent under a separate account — the project moves to
+`reviewed`.
+
+**2. The owner layer and the session identity header coexist, with the split written down.**
+v0.6 gives each piece of work one terminal owner-facing result, and Build OS treats two
+owner-facing surfaces on one change as an anti-pattern because they drift within a week. This
+repository already has an owner-facing surface: the identity header
+(`SESSION: … / MODE: … / ENFORCEMENT: … / AS OF: …`) that standing roles open their first
+substantive report with, so an operator holding many windows knows what each one owns.
+
+They do genuinely different jobs — one is *who is speaking*, the other is *where the work
+landed* — so both stay, with the boundary stated rather than discovered: the header opens a
+**session** and lives in chat; the Owner Result closes a **piece of work** and lives on the PR.
+They never appear in the same block, the header never carries a result, and a result never
+carries a session state. The session-role system is therefore unchanged by adopting the owner
+layer, which is why the third option considered — subsuming the header into the result format —
+was rejected: it would have disrupted the role system to solve a problem Build OS does not
+have.
+
+**3. The active-work limit is 4, counting `Active` rows only.** v0.12 defaults to three
+owner-attention workstreams and explicitly permits a project to declare a different limit with
+a reason. The reason here is that `Blocked` in this repository means something specific — Build
+OS requires a *named* unblocker, not "waiting" — and a blocked research thread is waiting on
+external evidence, not on the operator's attention. `Paused` likewise. Counting only `Active`
+rows, the board holds exactly four after the cleanup (`WS-004`, `WS-006`, `WS-007`, `WS-009`),
+so it sits **at** the declared limit rather than pretending to be under an unenforced one. A
+fifth `Active` row requires completing, pausing or blocking one of the four, and that
+transaction is the point: the cost of starting is paid visibly, by the owner, at the moment
+they start.
+
+**4. `SHIP` reports the development gate only.** v0.7 narrowed `SHIP` to mean every agent step
+is finished and only the owner's merge remains. In this repository a merge is frequently not
+the end — an XOS registration, an arm, a promotion or an impact acceptance often follows — and
+`DEC-001` is emphatic that a workstream authorizes nothing. A naive `SHIP` here would therefore
+be either premature or would imply Build OS authorized an Experiment OS action, which it
+cannot. The rule that resolves it: **`SHIP`'s `Next action` is the merge; an Experiment OS
+action that follows is named as a guard for the operator, never as a Build OS next step and
+never as something the PR authorized.** This formalizes what the repository already does —
+`WS-002`'s "Merge guard: verify in XOS that the revision is registered + impacts accepted" is
+exactly this shape.
+
+**One further project-specific addition,** not an owner call but a floor that has to exist
+alongside the others: v0.6's proportionality lets *simple* work skip the workstream, the Build
+Card and independent review. **No change touching real-money exposure, the arming path, a live
+safeguard, a gate or the ops channel is ever classified simple**, regardless of diff size.
+Build OS already says classification only ratchets up and that unclear work is significant;
+this names the repository's tripwires explicitly rather than relying on judgment at the moment
+judgment is worst.
+
+**What is deliberately unchanged**
+
+- **`DEC-001`'s authority boundary.** Experiment OS stays canonical for experiments, Versions,
+  epochs, deployments, arms, gates, platform revisions, impact actions, enforcement and XOS
+  issues; Build OS stays canonical for the development workflow; a workstream links and never
+  copies. Nothing in v0.5 through v0.12 touches it, and it was not renegotiated here.
+- **No runtime, schema, environment or live-configuration change.** This migration is
+  documentation. `WS-007` is live with real money inside its Stage-1 envelope, and the arming
+  path, the ops channel and every safeguard were untouched.
+- **Completed workstreams and thesis documents are not rewritten** to look as though they ran
+  under v0.12. A v0.4 pin covers work done under it; later versions do not reach back. Existing
+  workstream files gain no retroactive `## Acceptance Checks` section — v0.12 is explicit that
+  they need none, and new workstreams write one at the start.
+- **The vendored templates are copies, not a fork.** They were re-copied from canonical v0.12
+  verbatim. If the protocol is wrong, it is fixed in `50thycal/build-os`.
+
+**What was deliberately not taken**
+
+- **`OWNER_PLAN.template.md` and the owner-approval flow.** Intent in this project arrives
+  through the session-role router, which already establishes what a session may write before it
+  writes anything. Adding a second approval surface would duplicate that, and the owner did not
+  ask for it. Revisit if design work starts arriving without a role.
+- **CI or tooling over framework artifacts.** Build OS ships none deliberately, and the
+  authority boundary is enforced by discipline. `DEC-001` already records that a board going a
+  month without an update should be deleted rather than left to mislead; that remains the
+  revisit condition, not a linter.
+- **A retroactive `Owner-accepted` on PR #258**, per the `solo` limits above.
+
+**Consequences**
+
+*Better:* the review gate now describes something that can actually happen, so a row in
+`REVIEW` means work is genuinely outstanding rather than that nobody could ever satisfy it.
+The board carries eight rows instead of thirteen, and the limit gives the ninth a visible
+price. A finding outside a mission has four dispositions and none of them is "open a
+workstream", which is the mechanism that let the board grow monotonically from the agent's
+side.
+
+*Worse, honestly:* `solo` removes an independent check rather than passing it. Every `SHIP`
+from here carries a sentence saying so, and that sentence is load-bearing — under-reporting a
+deviation in `Spec Deviations` now has nothing downstream to catch it.
+
+*Unchanged:* everything Experiment OS owns.
+
+*Revisit if:* a second actor becomes available, in which case the project moves to `reviewed`
+and past acceptances are **not** converted into approvals; or if the four-row limit turns out
+to be describing the board rather than constraining it, which would be an argument for the
+canonical three and a decision about what pauses.

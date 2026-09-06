@@ -1,9 +1,13 @@
 # WS-013 — MARKTANGLE-2: conditional dependence alpha
 
-**Phase:** REVIEW
-**Status:** Active
+**Phase:** CLOSED
+**Status:** Done
 **Created:** 2026-09-02
-**Updated:** 2026-09-02 (run 2 — both tracks HOLD)
+**Updated:** 2026-09-06
+
+
+Finalized 2026-09-06 (Build OS v0.12 migration): the file still read `REVIEW · Active`
+after both tracks closed 2026-09-03. Off the board, into *Recently completed*.
 
 ## Goal
 

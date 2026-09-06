@@ -7,7 +7,7 @@ strategies are running this week. Those live in Experiment OS and change daily; 
 here would be wrong within a day and believed anyway. Ask Experiment OS
 (`docs/OPS_RUNBOOK.md` → `xos control-tower`) for state.
 
-**Last updated:** 2026-08-24 · **Build OS v0.4**
+**Last updated:** 2026-09-06 · **Build OS v0.12**
 
 ---
 
@@ -151,6 +151,15 @@ than quietly becoming a write session.
 This is a real architectural constraint, not documentation: it is why a session that finds
 a platform defect produces a reviewed PR and an issue rather than an edit to production
 state.
+
+**Two owner-facing surfaces, and they do different jobs** (`DEC-011`). A standing role opens
+its first substantive report with the **session identity header**
+(`SESSION: … / MODE: … / ENFORCEMENT: … / AS OF: …`), which says *who is speaking* so an
+operator holding several windows knows what each one owns. Build OS's **Owner Result**
+(`SHIP` / `DECISION` / `BLOCKED`) says *where a piece of work landed* and lives on the PR.
+Adopting the owner layer at v0.12 did not fold one into the other: the header stays a
+session-level, chat-level thing; the result is terminal and per-PR. They never appear in the
+same block, the header never carries a result, and a result never carries a session state.
 
 ## External integrations
 
