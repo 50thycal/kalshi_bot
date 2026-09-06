@@ -1,1 +1,1 @@
-{"type":"db","id":"cc-paused-1","sql":"select created_at, raw_json ? 'skipped_live_paused' as key_present, raw_json->>'skipped_live_paused' as skip_paused, raw_json->>'skipped_live_tier' as skip_tier, raw_json->>'skipped_contest_cap' as skip_contest, raw_json->>'opened' as opened from system_events where component='mmsell_scan' order by created_at desc limit 6","max_rows":10}
+{"type":"xos","command":"show","args":["mmsell-price-ceiling-contest-cap"],"id":"cc-gate-1"}
