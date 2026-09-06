@@ -1,1 +1,1 @@
-{"type":"xos","command":"control-tower","id":"ct-volentry-decision"}
+{"type":"xos","command":"show","args":["mmsell-price-ceiling"],"id":"rl-ceiling-1"}
