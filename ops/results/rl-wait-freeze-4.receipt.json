@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "3346bf8dc3e8d3c7e17f08c2376aea6795cda746",
+  "code_source": "default-branch",
+  "exit_status": 1,
+  "finished_at": "2026-09-06T13:19:19Z",
+  "id": "rl-wait-freeze-4",
+  "outcome": "FAILED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl-wait-freeze-4.receipt.json",
+  "result_file": "ops/results/rl-wait-freeze-4.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34035727060",
+  "service": null,
+  "started_at": "2026-09-06T13:19:18Z",
+  "targets": [],
+  "type": "xos"
+}
