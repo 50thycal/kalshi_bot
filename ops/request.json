@@ -1,1 +1,1 @@
-{"type":"logs","limit":120,"filter":"mmsell: live entry refused","id":"rl-nflpause-deploy-1","actor":"claude-research-lab","purpose":"confirm the KXNFLSPREAD live pause is live after the PR #345 deploy"}
+{"type":"noop"}
