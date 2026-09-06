@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["mmsell-price-ceiling-contest-cap"],"id":"cc-ci-4"}
+{"type":"xos","command":"scoreboard","args":["--evaluate"],"id":"cc-ci-5"}
