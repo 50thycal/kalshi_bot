@@ -1,1 +1,1 @@
-{"type":"db","sql":"SELECT count(*) AS markets, count(*) FILTER (WHERE coalesce(rules_summary,'') <> '') AS with_rules, count(*) FILTER (WHERE coalesce(settlement_source,'') <> '') AS with_source, min(created_at)::date AS oldest, max(created_at)::date AS newest FROM markets","max_rows":10,"id":"audit-rules-cov-1"}
+{"type":"env","id":"audit-mode-1"}
