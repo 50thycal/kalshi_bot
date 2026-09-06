@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-show","args":["XOS-000020"],"id":"rl-xos20-confirm-2","actor":"claude-research-lab","purpose":"confirm the KXALBUMEQUIV evidence landed on XOS-000020"}
+{"type":"env","set":{"EXPERIMENT_OS_ISSUE_COMMAND":""},"id":"rl-xos20-clear-1","actor":"claude-research-lab","purpose":"clear the issue-command transport after the XOS-000020 evidence batch"}
