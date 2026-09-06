@@ -1981,6 +1981,157 @@ def attach_legacy_evidence(
 # ---------------------------------------------------------------------------
 
 
+def retire_on_gate_fail(
+    session,
+    experiment: Experiment,
+    *,
+    gate: ExperimentGate,
+    actor: str,
+    approved_by: str,
+    reason: str,
+    now: datetime | None = None,
+) -> dict:
+    """Retire an IN-SYSTEM experiment whose own pre-registered gate has FAILED,
+    ending its open deployments in the same atomic act.
+
+    ## Why this exists
+
+    A clean failure is useful research — the state machine says so, and allows
+    RETIRED from every state without a PASS. But until now nothing could perform
+    it in production. The ops channel is read-only against Postgres; the issue
+    transport cannot transition an experiment by construction; the platform
+    transport's vocabulary has no retirement; and `close_out_retrospective`
+    refuses a TAGGED deployment because a tag means the book really traded and
+    its history is a migration, not an outside-the-system record. So a book could
+    fail its own kill clause and go on trading indefinitely, with the Control
+    Tower reporting "kill/retire candidate" forever and the decision living only
+    in chat. This is the same gap `close_out_retrospective` closed for
+    experiments that ran OUTSIDE the system, now closed for one that ran inside
+    it and lost.
+
+    ## What makes it safe to reach from a transport
+
+    The authorizing evidence is not the caller's opinion. It is the gate's own
+    LATEST RECORDED result, which must be FAIL:
+
+      * a hand-written verdict cannot authorize this, because nothing here writes
+        a verdict — the result must already exist, computed by the evaluator;
+      * a STALE fail cannot authorize it either. A book that failed in August and
+        has since recovered to HOLD or PASS is not retirable through this path,
+        which is why the check is "the most recent result", not "any result";
+      * `HORIZON_EXHAUSTED`, `HOLD` and every `BLOCKED_*` are refused. A blocked
+        gate is an *unreadable* book, not a failed one, and retiring on a block
+        would destroy exactly the evidence someone needs to unblock it — which is
+        the failure this session spent its first half undoing.
+
+    ## What it will not do
+
+    Refuses outright for a LIVE_CANARY or PRODUCTION experiment. Standing real
+    money down is Live Ops' act under kill-switch semantics, with its own operator
+    confirmation; routing it through a research-verdict path would let a gate
+    verdict move money, and no verdict may ever do that. It writes no gate result,
+    creates no Version or epoch, touches no risk config and expands no exposure.
+
+    `approved_by` is required and lands on the audit row: retiring a book is an
+    operator decision, and the record must name a person rather than a process.
+
+    ## Ending the deployments is part of the act
+
+    A RETIRED experiment may not hold an OPEN deployment — the Control Tower reads
+    one as running research, and a retired experiment with a dangling deployment
+    is the shape behind XOS-000011. So the deployments end here, atomically, not
+    in a follow-up someone has to remember.
+
+    NOTE for the caller, and deliberately NOT done here: retiring removes the
+    tag from the enforcement resolver's admissible map, so the book's entries
+    become `LineageBlocked` on the next cycle. That stops the trading, which is
+    the point, but it stops it via a refusal rather than via configuration.
+    Removing the tag from the running strategy config is a separate Live Ops
+    `env` act, deliberately unreachable from here.
+    """
+    at = now or _now()
+
+    if experiment.state == LifecycleState.RETIRED.value:
+        raise ExperimentOsError(
+            f"experiment {experiment.key} is already RETIRED (terminal)"
+        )
+    if experiment.state in (
+        LifecycleState.LIVE_CANARY.value, LifecycleState.PRODUCTION.value
+    ):
+        raise ExperimentOsError(
+            f"experiment {experiment.key} is {experiment.state} — standing REAL MONEY "
+            "down is a Live Ops act under kill-switch semantics with its own operator "
+            "confirmation, never a research-verdict path. Stand the live deployment "
+            "down first; a gate verdict may not move money"
+        )
+
+    version = session.get(ExperimentVersion, gate.version_id)
+    if version is None or version.experiment_id != experiment.id:
+        raise ExperimentOsError(
+            f"gate {gate.gate_key} does not belong to experiment {experiment.key} — "
+            "a retirement must be authorized by that book's OWN pre-registered gate"
+        )
+
+    results = list(
+        session.scalars(
+            select(ExperimentGateResult)
+            .where(ExperimentGateResult.gate_id == gate.id)
+            .order_by(ExperimentGateResult.computed_at, ExperimentGateResult.id)
+        )
+    )
+    if not results:
+        raise ExperimentOsError(
+            f"gate {gate.gate_key} has no recorded result — a retirement needs the "
+            "evaluator's own verdict, not an assertion that the book failed"
+        )
+    latest = results[-1]
+    if latest.verdict != GateVerdict.FAIL.value:
+        raise ExperimentOsError(
+            f"gate {gate.gate_key}'s latest recorded result is {latest.verdict} "
+            f"(computed {latest.computed_at}), not FAIL. Only a CURRENT failure "
+            "retires a book: a stale FAIL that has since recovered authorizes "
+            "nothing, and a BLOCKED_* gate is unreadable rather than failed — "
+            "retiring on a block would destroy the evidence needed to unblock it"
+        )
+
+    # Deployments hang off epochs, not off the experiment, so this walks every
+    # epoch of the version rather than assuming the open one is the only one
+    # holding a live row.
+    ended = []
+    for deployment in session.scalars(
+        select(ExperimentDeployment)
+        .join(ExperimentEpoch, ExperimentEpoch.id == ExperimentDeployment.epoch_id)
+        .where(
+            ExperimentEpoch.version_id == version.id,
+            ExperimentDeployment.ended_at.is_(None),
+        )
+        .order_by(ExperimentDeployment.id)
+    ):
+        end_deployment(session, deployment, ended_at=at)
+        ended.append(deployment.deployment_key)
+
+    transition = transition_experiment(
+        session,
+        experiment,
+        LifecycleState.RETIRED,
+        actor=actor,
+        reason=reason,
+        approved_by=approved_by,
+        gate_result=latest,
+        occurred_at=at,
+        version=version,
+    )
+    return {
+        "experiment": experiment.key,
+        "state": experiment.state,
+        "gate": gate.gate_key,
+        "authorizing_result_id": latest.id,
+        "authorizing_verdict": latest.verdict,
+        "deployments_ended": sorted(ended),
+        "transition_id": transition.id,
+    }
+
+
 def close_out_retrospective(
     session,
     experiment: Experiment,
