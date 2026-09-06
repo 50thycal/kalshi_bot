@@ -266,8 +266,23 @@ class MmSellTracker:
         # ticker, which is series x contest — so KXMLBTOTAL and KXMLBSPREAD on one game
         # are two events and one result, and three rungs under each of five MLB series is
         # fifteen positions riding nine innings with nothing above noticing (XOS-000020).
-        # Exempts mutually-exclusive events for the same reason the rung cap does: there at
-        # most one leg can lose, so stacking is a genuine hedge rather than concentration.
+        #
+        # IT DOES NOT EXEMPT MUTUALLY-EXCLUSIVE EVENTS, and that is the whole difference
+        # between this cap and the rung cap above. `mutually_exclusive` is an assertion
+        # about ONE event: at most one of ITS rungs resolves YES, so stacking rungs inside
+        # it really is a hedge. This cap groups ACROSS events, where the property says
+        # nothing at all. A moneyline on the Braves does not hedge a bet on the same game's
+        # total runs — they are one result wearing two tickers, which is exactly what this
+        # cap exists to refuse.
+        #
+        # Carrying the exemption here was inverted in the worst possible way: the
+        # game-winner market is both the most game-correlated contract listed AND always
+        # mutually exclusive, so the exemption waved through precisely the entry that
+        # should never have been allowed. Measured live on 2026-09-06 — all three breaches
+        # on `Emmsell10` were second positions in the SAME scan cycle (19:16Z) on
+        # KXMLBGAME / KXATPMATCH, each 26-58 minutes after an already-FILLED first leg on
+        # the same contest. Not a race: the cap read an open position and admitted another.
+        #
         # A book's own `contestcap` wins over the global pair; None follows the global, so the
         # default path is byte-identical to the merged mechanism's — including the query count,
         # since an uncapped book never reaches the contest read below.
@@ -280,7 +295,7 @@ class MmSellTracker:
         # rung caps above stay date-scoped, which is what they actually model.
         cap_n = (contest_cap if contest_cap is not None
                  else (s.mmsell_contest_cap if s.mmsell_contest_cap_enabled else None))
-        if cap_n is not None and not mutually_exclusive:
+        if cap_n is not None:
             contest = contest_key_of(ticker)
             if contest:
                 try:
