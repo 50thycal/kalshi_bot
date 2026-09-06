@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["theta4-fat-tail"],"id":"ts-verify-repair"}
+{"type": "db", "id": "cc-papval-1", "sql": "select p.strategy as strategy, p.market_ticker as market_ticker, p.opened_at::text as opened_at   from paper_positions p  where p.strategy in ('Gmmsell1','Gmmsell0')    and p.status='open'    and p.opened_at > timestamptz '2026-09-06 20:28:00+00'  order by p.strategy, p.market_ticker", "max_rows": 400}
