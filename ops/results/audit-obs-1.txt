@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=audit-obs-1
-# code 5b49a66d9e354722f45d65d69becccee267820bc · started 2026-09-06T18:34:18Z
-series_rows  earliest                          latest                            markets  identified  graduated
------------  --------------------------------  --------------------------------  -------  ----------  ---------
-4004         2026-09-06 18:01:58.513664+00:00  2026-09-06 18:18:23.622096+00:00  103979   3638        159      
-
-(1 row)
