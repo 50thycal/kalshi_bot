@@ -1,1 +1,1 @@
-{"type":"script","name":"mmsell_contest_cap_audit","id":"cc-live-audit-2","args":["--live","Emmsell10","--uncapped","Gmmsell0","--hours","4"]}
+{"type":"env","id":"cc-standdown-1","set":{"LIVE_STRATEGIES":""}}
