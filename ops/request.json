@@ -1,1 +1,1 @@
-{"type": "env", "service": "evo", "id": "evo-pause-check-1"}
+{"type": "env", "service": "evo", "set": {"EVO_ENABLED": "false"}, "id": "evo-pause-set-1"}
