@@ -1,375 +1,130 @@
-# ops request [READ]
-# type=xos  id=ts-adopt-0b
-# code 74f4d7bff09a1020c8d62da167b97e39761b33ee · started 2026-09-06T12:00:58Z
-{
-  "open_issues": [
-    {
-      "issue_key": "XOS-000020",
-      "title": "Concentration caps key on event_ticker, but the unit of correlation is the GAME",
-      "status": "OPEN",
-      "classification": "STRATEGY",
-      "severity": "HIGH",
-      "priority": "P1",
-      "owner_role": "RESEARCH_LAB",
-      "opened_by_role": "TASK_SPECIFIC",
-      "opened_at": "2026-09-05 11:44:52.712444+00:00",
-      "scope": "mmsell-price-ceiling-capacity",
-      "experiment_id": 28,
-      "version_id": null,
-      "detector": "manual.reported",
-      "detector_fingerprint": null,
-      "occurrence_count": 1,
-      "disposition": null,
-      "latest_evidence": "PR: Contest cap did not fire on a contest whose markets close on two UTC dates. As m",
-      "currently_recurring": false,
-      "age_days": 1.0
-    },
-    {
-      "issue_key": "XOS-000022",
-      "title": "KXNFLSPREAD is a negative selection cell at the contest level, and it is graduated",
-      "status": "ACTION_REQUIRED",
-      "classification": "STRATEGY",
-      "severity": "MEDIUM",
-      "priority": "P1",
-      "owner_role": "RESEARCH_LAB",
-      "opened_by_role": "RESEARCH_LAB",
-      "opened_at": "2026-09-06 04:13:34.989750+00:00",
-      "scope": "mmsell-price-ceiling \u00b7 v2",
-      "experiment_id": 6,
-      "version_id": 10,
-      "detector": "manual.reported",
-      "detector_fingerprint": null,
-      "occurrence_count": 1,
-      "disposition": null,
-      "latest_evidence": "OPS_RESULT: First production run of the detector (post-merge of PR #341), 72,344 trades acro",
-      "currently_recurring": false,
-      "age_days": 0.3
-    },
-    {
-      "issue_key": "XOS-000014",
-      "title": "31% of live entry orders rejected 'user_not_found' \u2014 100% concentrated in MLB, ITF and BTCD series",
-      "status": "OPEN",
-      "classification": "OPS",
-      "severity": "HIGH",
-      "priority": "P2",
-      "owner_role": "LIVE_OPS",
-      "opened_by_role": "TASK_SPECIFIC",
-      "opened_at": "2026-08-30 14:41:15.412643+00:00",
-      "scope": "mmsell-price-ceiling \u00b7 v2/e2 \u00b7 mmsell-ceiling-live-1",
-      "experiment_id": 6,
-      "version_id": 10,
-      "detector": "manual.reported",
-      "detector_fingerprint": null,
-      "occurrence_count": 1,
-      "disposition": null,
-      "latest_evidence": "LOG: Root cause measured: Kalshi exchange sharding. Refused series (KXMLBHR, KXMLBTOT",
-      "currently_recurring": false,
-      "age_days": 6.9
-    },
-    {
-      "issue_key": "XOS-000015",
-      "title": "Worker crash-looped 16h51m on an invalid config set through the ops env transport",
-      "status": "OPEN",
-      "classification": "OPS",
-      "severity": "HIGH",
-      "priority": "P2",
-      "owner_role": "LIVE_OPS",
-      "opened_by_role": "LIVE_OPS",
-      "opened_at": "2026-08-31 12:07:06.681276+00:00",
-      "scope": "system-wide",
-      "experiment_id": null,
-      "version_id": null,
-      "detector": "manual.reported",
-      "detector_fingerprint": null,
-      "occurrence_count": 1,
-      "disposition": null,
-      "latest_evidence": null,
-      "currently_recurring": false,
-      "age_days": 6.0
-    },
-    {
-      "issue_key": "XOS-000008",
-      "title": "Settlement-taxonomy coverage decays over a long-running experiment; there is no maintenance cadence",
-      "status": "OPEN",
-      "classification": "PLATFORM",
-      "severity": "MEDIUM",
-      "priority": "P2",
-      "owner_role": "PLATFORM_CHANGE_REVIEW",
-      "opened_by_role": "PLATFORM_CHANGE_REVIEW",
-      "opened_at": "2026-08-24 14:52:51.635955+00:00",
-      "scope": "revision:settlement_repair_2026_08_24",
-      "experiment_id": null,
-      "version_id": null,
-      "detector": "manual.reported",
-      "detector_fingerprint": null,
-      "occurrence_count": 1,
-      "disposition": null,
-      "latest_evidence": null,
-      "currently_recurring": false,
-      "age_days": 12.9
-    },
-    {
-      "issue_key": "XOS-000012",
-      "title": "Standing a live book down by naming a different one in LIVE_STRATEGIES is recorded as config drift, not stand-down",
-      "status": "OPEN",
-      "classification": "PLATFORM",
-      "severity": "MEDIUM",
-      "priority": "P2",
-      "owner_role": "PLATFORM_CHANGE_REVIEW",
-      "opened_by_role": "TASK_SPECIFIC",
-      "opened_at": "2026-08-28 15:42:48.858200+00:00",
-      "scope": "system-wide",
-      "experiment_id": null,
-      "version_id": null,
-      "detector": "manual.reported",
-      "detector_fingerprint": null,
-      "occurrence_count": 1,
-      "disposition": null,
-      "latest_evidence": null,
-      "currently_recurring": false,
-      "age_days": 8.8
-    },
-    {
-      "issue_key": "XOS-000013",
-      "title": "live_fill_rate_pct reads 0% on a filling book: fills do not join to their live_orders row by kalshi_order_id",
-      "status": "OPEN",
-      "classification": "DATA",
-      "severity": "MEDIUM",
-      "priority": "P2",
-      "owner_role": "LIVE_OPS",
-      "opened_by_role": "TASK_SPECIFIC",
-      "opened_at": "2026-08-28 21:12:56.593484+00:00",
-      "scope": "mmsell-price-ceiling \u00b7 v2/e2 \u00b7 mmsell-ceiling-live-1",
-      "experiment_id": 6,
-      "version_id": 10,
-      "detector": "manual.reported",
-      "detector_fingerprint": null,
-      "occurrence_count": 1,
-      "disposition": null,
-      "latest_evidence": null,
-      "currently_recurring": false,
-      "age_days": 8.6
-    },
-    {
-      "issue_key": "XOS-000016",
-      "title": "A capacity-only successor is forced to re-prove a paper edge it does not change",
-      "status": "OPEN",
-      "classification": "STRATEGY",
-      "severity": "MEDIUM",
-      "priority": "P2",
-      "owner_role": "RESEARCH_LAB",
-      "opened_by_role": "TASK_SPECIFIC",
-      "opened_at": "2026-09-02 08:00:59.930239+00:00",
-      "scope": "mmsell-price-ceiling-capacity",
-      "experiment_id": 28,
-      "version_id": null,
-      "detector": "manual.reported",
-      "detector_fingerprint": null,
-      "occurrence_count": 1,
-      "disposition": null,
-      "latest_evidence": null,
-      "currently_recurring": false,
-      "age_days": 4.2
-    },
-    {
-      "issue_key": "XOS-000019",
-      "title": "Evo service: LLM-provider payment failures (402) went unalerted for ~3 days",
-      "status": "OPEN",
-      "classification": "OPS",
-      "severity": "MEDIUM",
-      "priority": "P2",
-      "owner_role": "LIVE_OPS",
-      "opened_by_role": "LIVE_OPS",
-      "opened_at": "2026-09-03 18:01:15.486426+00:00",
-      "scope": "system-wide",
-      "experiment_id": null,
-      "version_id": null,
-      "detector": "manual.reported",
-      "detector_fingerprint": null,
-      "occurrence_count": 1,
-      "disposition": null,
-      "latest_evidence": null,
-      "currently_recurring": false,
-      "age_days": 2.8
-    },
-    {
-      "issue_key": "XOS-000023",
-      "title": "An armed experiment collecting NOTHING was not a detectable condition",
-      "status": "OPEN",
-      "classification": "STRATEGY",
-      "severity": "MEDIUM",
-      "priority": "P2",
-      "owner_role": "RESEARCH_LAB",
-      "opened_by_role": "RESEARCH_LAB",
-      "opened_at": "2026-09-06 04:20:28.221218+00:00",
-      "scope": "mmsell-correlation-cap",
-      "experiment_id": 34,
-      "version_id": null,
-      "detector": "manual.reported",
-      "detector_fingerprint": null,
-      "occurrence_count": 1,
-      "disposition": null,
-      "latest_evidence": "OPS_RESULT: False-positive check across all 30 active deployment arms (27 active deployments",
-      "currently_recurring": false,
-      "age_days": 0.3
-    },
-    {
-      "issue_key": "XOS-000003",
-      "title": "freeze-dark-window-pin is deployed but has produced zero evidence",
-      "status": "ACTION_REQUIRED",
-      "classification": "STRATEGY",
-      "severity": "LOW",
-      "priority": "P2",
-      "owner_role": "RESEARCH_LAB",
-      "opened_by_role": "EXPERIMENT_CONTROL_TOWER",
-      "opened_at": "2026-08-22 15:42:44.622993+00:00",
-      "scope": "freeze-dark-window-pin \u00b7 v1/e1",
-      "experiment_id": 3,
-      "version_id": 3,
-      "detector": "experiment.zero_evidence",
-      "detector_fingerprint": "bd04d0eee32588f64bfe81121befa7d03ab3f5dd31d6787aa9051366badcf060",
-      "occurrence_count": 1,
-      "disposition": "PAUSE_OR_STAND_DOWN",
-      "latest_evidence": "OPS_RESULT: NO CURRENTLY AVAILABLE UNIVERSE SATISFIES THE HYPOTHESIS, AND NONE IS PROPOSED. ",
-      "currently_recurring": true,
-      "age_days": 14.8
-    },
-    {
-      "issue_key": "XOS-000009",
-      "title": "MMSELL skip=BTC+ETH+SOL+DOGE+XRP+CRYPTO is a substring blocklist and drops non-crypto markets",
-      "status": "OPEN",
-      "classification": "STRATEGY",
-      "severity": "LOW",
-      "priority": "P3",
-      "owner_role": "RESEARCH_LAB",
-      "opened_by_role": "PLATFORM_CHANGE_REVIEW",
-      "opened_at": "2026-08-24 14:55:25.628166+00:00",
-      "scope": "system-wide",
-      "experiment_id": null,
-      "version_id": null,
-      "detector": "manual.reported",
-      "detector_fingerprint": null,
-      "occurrence_count": 1,
-      "disposition": null,
-      "latest_evidence": null,
-      "currently_recurring": false,
-      "age_days": 12.9
-    },
-    {
-      "issue_key": "XOS-000010",
-      "title": "Platform-command receipt metadata is invisible through the production ops logs channel",
-      "status": "OPEN",
-      "classification": "OPS",
-      "severity": "LOW",
-      "priority": "P3",
-      "owner_role": "LIVE_OPS",
-      "opened_by_role": "LIVE_OPS",
-      "opened_at": "2026-08-24 23:04:31.395774+00:00",
-      "scope": "system-wide",
-      "experiment_id": null,
-      "version_id": null,
-      "detector": "manual.reported",
-      "detector_fingerprint": null,
-      "occurrence_count": 1,
-      "disposition": null,
-      "latest_evidence": null,
-      "currently_recurring": false,
-      "age_days": 12.5
-    },
-    {
-      "issue_key": "XOS-000017",
-      "title": "Experiment OS cannot record an experiment that ran and finished outside it",
-      "status": "OPEN",
-      "classification": "UNCLASSIFIED",
-      "severity": "LOW",
-      "priority": "P3",
-      "owner_role": "OPERATOR",
-      "opened_by_role": "RESEARCH_LAB",
-      "opened_at": "2026-09-02 13:33:15.186079+00:00",
-      "scope": "system-wide",
-      "experiment_id": null,
-      "version_id": null,
-      "detector": "manual.reported",
-      "detector_fingerprint": null,
-      "occurrence_count": 1,
-      "disposition": null,
-      "latest_evidence": null,
-      "currently_recurring": false,
-      "age_days": 3.9
-    }
-  ],
-  "issue_candidates": [
-    {
-      "detector": "gate.blocked",
-      "anomaly_kind": "BLOCKED_DATA",
-      "gate_verdict": "BLOCKED_DATA",
-      "fingerprint": "1181c17a19d027a49e602f1716133f4066ddfcd1c6209b152414631590d2a44e",
-      "title": "live_canary_keep is BLOCKED_DATA",
-      "scope": "mmsell-price-ceiling-contest-cap \u00b7 live_canary_keep",
-      "detail": "live_cents_per_contract, live_fill_rate_pct, live_max_realized_loss_usd, live_realized_pnl_usd, live_settled_contracts, twin_live_paired_gap_cents, twin_live_winrate_gap_pp, twin_mirror_coverage_pct",
-      "experiment": "mmsell-price-ceiling-contest-cap",
-      "experiment_id": 35,
-      "version_id": 19,
-      "epoch_id": null,
-      "deployment_id": null,
-      "gate_id": 33,
-      "recommended_owner": "RESEARCH_LAB",
-      "recommended_classification": "DATA",
-      "severity": "MEDIUM",
-      "priority": "P2",
-      "rationale": "BLOCKED_DATA \u2014 a canonical metric provider or experiment-specific evidence transform has to be implemented (Research Lab, or task-specific Experiment OS metrics work). NOT a Platform Revision: writing a provider that never existed changes no shared semantic",
-      "requires_operator_triage": false,
-      "covered_by": null,
-      "covering_status": null,
-      "covering_owner": null
-    },
-    {
-      "detector": "gate.blocked",
-      "anomaly_kind": "BLOCKED_DATA",
-      "gate_verdict": "BLOCKED_DATA",
-      "fingerprint": "03a2cc9a194c397f6a50ed23101cf407b57e089874777c95ec9e064601a2c313",
-      "title": "live_canary_keep is BLOCKED_DATA",
-      "scope": "mmsell-scheduled-settle-live \u00b7 live_canary_keep",
-      "detail": "delta.live_cents_per_contract, live_settled_contracts, twin_live_winrate_gap_pp",
-      "experiment": "mmsell-scheduled-settle-live",
-      "experiment_id": 2,
-      "version_id": 2,
-      "epoch_id": null,
-      "deployment_id": null,
-      "gate_id": 2,
-      "recommended_owner": "RESEARCH_LAB",
-      "recommended_classification": "DATA",
-      "severity": "MEDIUM",
-      "priority": "P2",
-      "rationale": "BLOCKED_DATA \u2014 a canonical metric provider or experiment-specific evidence transform has to be implemented (Research Lab, or task-specific Experiment OS metrics work). NOT a Platform Revision: writing a provider that never existed changes no shared semantic",
-      "requires_operator_triage": false,
-      "covered_by": null,
-      "covering_status": null,
-      "covering_owner": null
-    },
-    {
-      "detector": "gate.blocked",
-      "anomaly_kind": "BLOCKED_DATA",
-      "gate_verdict": "BLOCKED_DATA",
-      "fingerprint": "54a753326b1c9ed0876118abec603f25424a1b979241e9de11ed857ea83164ea",
-      "title": "live_canary_keep is BLOCKED_DATA",
-      "scope": "theta4-fat-tail \u00b7 live_canary_keep",
-      "detail": "realized_tail_hit_ratio_vs_modeled",
-      "experiment": "theta4-fat-tail",
-      "experiment_id": 1,
-      "version_id": 1,
-      "epoch_id": null,
-      "deployment_id": null,
-      "gate_id": 1,
-      "recommended_owner": "RESEARCH_LAB",
-      "recommended_classification": "DATA",
-      "severity": "MEDIUM",
-      "priority": "P2",
-      "rationale": "BLOCKED_DATA \u2014 a canonical metric provider or experiment-specific evidence transform has to be implemented (Research Lab, or task-specific Experiment OS metrics work). NOT a Platform Revision: writing a provider that never existed changes no shared semantic",
-      "requires_operator_triage": false,
-      "covered_by": null,
-      "covering_status": null,
-      "covering_owner": null
-    }
-  ]
-}
+# note: value type-check skipped (ModuleNotFoundError: No module named 'kalshi_bot')
+========================================================================
+!! MUTATING OPS REQUEST — this changes the running system !!
+========================================================================
+# type=env  service=main  vars=EXPERIMENT_OS_ISSUE_COMMAND  id=ts-adopt-1a
+# code 74f4d7bff09a1020c8d62da167b97e39761b33ee · started 2026-09-06T12:06:07Z
+# target service: main
+# BEFORE:
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 678 bytes, sha256:d5e8cdd5013bcbb3>
+# 1/1 variables set
+# redeploy triggered — the worker will restart with the new config
+# AFTER:
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 678 bytes, sha256:d5e8cdd5013bcbb3>
+# VERDICT: VERIFIED
+
+# post-change canonical checks: enforcement, readiness
+# $ xos enforcement
+#   {
+#     "mode": "NEW_ONLY",
+#     "cutover_id": "prod-new-only-20260816",
+#     "effective_at": "2026-08-16 14:34:42.892897+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr3_v1",
+#     "resolver_degraded_alarms_24h": 0,
+#     "deployments": {
+#       "total": 28,
+#       "grandfathered": 12,
+#       "native": 16
+#     },
+#     "post_cutover_unstamped": {
+#       "paper_trades": [],
+#       "live_orders": []
+#     },
+#     "live_canaries": [
+#       {
+#         "deployment": "theta4-live-1",
+#         "grandfathered": true,
+#         "twin": "theta4-twin-pt3",
+#         "boundary_match": false
+#       },
+#       {
+#         "deployment": "lmmsell-live-1",
+#         "grandfathered": true,
+#         "twin": "lmmsell-twin-pt3",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-ceiling-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-ceiling-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-capacity-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-capacity-twin-1",
+#         "boundary_match": true
+#       }
+#     ],
+#     "unresolved_integrity_events": 0,
+#     "recorded_state_events": 3,
+#     "unresolved_config_drift": 0,
+#     "session_counters": {
+#       "blocked": 0,
+#       "warned": 0,
+#       "resolver_degraded": false,
+#       "resolver_loaded_at": null
+#     }
+#   }
+# $ xos readiness
+#   {
+#     "ok": true,
+#     "checked_at": "2026-09-06 12:06:17.586380+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
+#     "checks": {
+#       "import_ran": {
+#         "ok": true,
+#         "detail": "33 experiments recorded"
+#       },
+#       "coverage_complete": {
+#         "ok": true,
+#         "detail": {
+#           "unmapped_tags": []
+#         }
+#       },
+#       "live_books_represented": {
+#         "ok": true,
+#         "detail": {
+#           "registered_live_tags": [
+#             "Cmmsell10",
+#             "Dmmsell10",
+#             "Lmmsell10",
+#             "Lmmsell8",
+#             "theta4"
+#           ],
+#           "note": "no Settings supplied \u2014 presence-only check"
+#         }
+#       },
+#       "platform_snapshot_complete": {
+#         "ok": true,
+#         "detail": {
+#           "snapshot": "4f9adf15daa64035",
+#           "missing_components": []
+#         }
+#       },
+#       "grandfathered_identity": {
+#         "ok": true,
+#         "detail": {
+#           "deployments": 28,
+#           "grandfathered": 12,
+#           "native": 16
+#         }
+#       },
+#       "live_twin_links": {
+#         "ok": true,
+#         "detail": {
+#           "problems": [],
+#           "grandfathered_notes": [
+#             "theta4-live-1: twin start 2026-08-12 00:15:08.786610+00:00 != live start 2026-07-30 00:00:00+00:00 (grandfathered \u2014 recorded, not invented)"
+#           ]
+#         }
+#       },
+#       "no_unresolved_integrity": {
+#         "ok": true,
+#         "detail": "0 unresolved integrity events"
+#       },
+#       "no_unresolved_platform_impact": {
+#         "ok": true,
+#         "detail": "0 platform-impact dispositions awaiting acceptance/application"
+#       },
