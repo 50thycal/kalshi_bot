@@ -307,6 +307,22 @@ class MmSellTracker:
         faster than anyone classified it."""
         if universe_admits(series, s.mmsell_live_min_tier):
             return False
+        # Only count (and only report) a refusal the live path would OTHERWISE HAVE ACTED ON.
+        # This check sits ahead of the executor's own gates, so without this the counter would
+        # tick for every book on every unreviewed series — including books absent from
+        # LIVE_STRATEGIES, whose mirror call was already a no-op. Behaviour is identical either
+        # way; the counter is not. `skipped_live_tier` is meant to read as "real-money entries
+        # this bar refused", and a number inflated by books that were never live would quietly
+        # make the bar look far more load-bearing than it is.
+        #
+        # Asked of the executor rather than re-derived here: `_allowed` also rejects paper-twin
+        # tags, and a second copy of that rule in the tracker is exactly how the two drift.
+        ex = self.live_executor
+        try:
+            if not (ex._switches_on() and ex._allowed(tag)):
+                return True          # refuse the mirror, but do not count it as a live save
+        except Exception:  # noqa: BLE001 — a telemetry decision must never break the scan
+            logger.exception("mmsell live tier: allowlist probe failed (counting the refusal)")
         summ.skipped_live_tier += 1
         self._note(recorder, ticker, tag, twin_codes.SKIP_LIVE_TIER)
         logger.info(
