@@ -1,6 +1,6 @@
 # ops request [READ]
-# type=env  service=main  id=cc-ci-2
-# code c5170e9bafdd598069cd6a4baf444d292a6dc7b1 · started 2026-09-06T14:15:22Z
+# type=env  service=main  id=rl-issueslot-check
+# code 97ab2de5ced944dd7e78fd6fd920840d1c68a3f7 · started 2026-09-06T14:26:15Z
 # target service: main
 # current allowlisted env vars (secrets hidden):
   BOT_MODE=live
