@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "b625f4ddddaa7d8e0b5f114f8da6b5aa7c20771d",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T16:24:04Z",
+  "id": "audit-mode-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/audit-mode-1.receipt.json",
+  "result_file": "ops/results/audit-mode-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34045301993",
+  "service": "main",
+  "started_at": "2026-09-06T16:24:04Z",
+  "targets": [],
+  "type": "env"
+}
