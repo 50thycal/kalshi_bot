@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["mmsell-scheduled-settle-live"],"id":"rl-verify-addr-2"}
+{"type":"xos","command":"show","args":["mmsell-price-ceiling-contest-cap"],"id":"rl-verify-addr-3"}
