@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=verify-corrcap-2
-# code cbbf710825f6de72e365f3977c4a86c8a2684fc3 · started 2026-09-05T14:04:56Z
-strategy_tag  arm_key         deployment_key          kind   stage  trades
-------------  --------------  ----------------------  -----  -----  ------
-Gmmsell0      uncapped        mmsell-corrcap-paper-1  paper  PAPER  0     
-Gmmsell1      contest_capped  mmsell-corrcap-paper-1  paper  PAPER  0     
-
-(2 rows)
