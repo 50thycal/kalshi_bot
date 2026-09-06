@@ -225,6 +225,77 @@ contest arm — the straddling games it could not group are the late-evening one
 registered gate stands as written; whether the prior in the "READ THIS FIRST" box should be
 re-derived is a separate call.
 
+## Independent corroboration, 2026-09-06 — `KXALBUMEQUIV`, and why cap 3 is not enough
+
+The "READ THIS FIRST" box above rests on a counterfactual over `mmsell10`'s own paper tape, and
+caveat 1 concedes the weakness plainly: *post-hoc, on the same tape that generated the
+hypothesis*. This is a second reading of the same claim from a different tape, a different asset
+class, and a ladder whose shape makes the mechanism unusually legible. It reaches the same place.
+
+**The cell.** `KXALBUMEQUIV` (weekly album-equivalent units) surfaced on the first production run
+of `mmsell_series_pnl` as the family's worst `edge` at **−25.5pp**: −$55.06 over 257 book-trades.
+**As a series cell it is not established and should not be acted on** — 38 distinct markets across
+just **9 album-weeks**, a contest-level bootstrap CI of **[−26.5, +5.0]** (P(mean ≥ 0) = 0.136), a
+**median contest of +7.17¢**, five of nine contests positive at a healthy +7 to +10¢, and three
+contests carrying 108% of the net loss. 71% of the dollars sit above 7¢, in the wide band the live
+regime does not trade. Real money's entire history here is **4 fills, 5 contracts, −$0.62**, on
+one day. There is nothing to pause and nothing to conclude about the series.
+
+**What is worth keeping is the ladder.** `mmsell_candidate_ticks` records every rung as
+`strike_type = greater` — "Above 90K", "Above 100K", "Above 110K"… A strictly nested, one-sided,
+monotone threshold ladder: one realized number resolves **every rung beneath it** against a
+tail-seller at the same instant. It is the purest available instance of the unit this cap exists
+to bound, and the settlements read exactly that way:
+
+| album-week | landed between | rungs sold, low → high |
+|---|---|---|
+| `THI26AUG13` | 375K–400K | 300K ✗ · 325K ✗ · 350K ✗ · 375K ✗ · **400K ✓** |
+| `LOS26AUG20` | 120K–130K | 90K ✗ · 100K ✗ · 110K ✗ · 120K ✗ · **130K ✓** |
+
+**The dose-response, with entry price held flat.** Restricted to the cheap band so price cannot
+explain the ordering — average entry varies by 0.2¢ across the whole table:
+
+| rungs held on one album-week | trades | avg entry | ¢/trade | loss rate | `edge` vs its 6.7% break-even |
+|---|---|---|---|---|---|
+| **1** | 31 | 6.6¢ | **+6.28** | **0.0%** | **+6.7pp** |
+| 2 | 43 | 6.7¢ | −12.11 | 18.6% | −11.9pp |
+| 3 | 45 | 6.7¢ | −6.47 | 24.4% | −17.7pp |
+| 4 | 36 | 6.7¢ | −19.53 | 38.9% | −32.2pp |
+| 5–6 | 7 | 6.7¢ | −34.5 | ~43% | — |
+
+Across all prices the single-rung cell is **42 book-events, +$3.15, and not one losing trade**.
+
+**Two things follow, and only the second is new.** The first is the box above, confirmed from
+outside its own tape: the value is in tightening the ladder, not in the cross-series grouping the
+mechanism was named for. The second is a number that box does not carry — **`cap = 3` does not
+reach it**. At three rungs the cheap band is still −6.47¢/trade at a 24.4% loss rate against a
+6.7% break-even. `mmsell_event_rung_cap` defaults to exactly 3, and on a monotone one-sided ladder
+three rungs are still three-quarters of one bet. Only `cap = 1` is clean here.
+
+**The rung cap was not in force for any of this.** Every losing entry above is dated 2026-08-09 to
+08-15; `mmsell_event_rung_cap` shipped 2026-08-28. So this is not evidence that the cap failed —
+it is a measurement of the world the cap was built for, taken just before it arrived.
+
+**Caveats, and the first one is decisive.**
+
+1. **Rung count is an outcome, not an assignment.** A book ends up holding four rungs when four
+   were simultaneously in-band — and four rungs go cheap together precisely when the outcome
+   distribution is wide. So the ordering is equally consistent with "one bet at 4× size" and with
+   "wide-uncertainty album-weeks are simply worse trades". **Nothing here separates them**, and
+   only the randomized arms `Gmmsell0`/`Gmmsell1` can. This is corroboration of a prior, not a
+   result, exactly as caveat 1 above says of its own counterfactual.
+2. **Tiny n.** Nine album-weeks in total; the 3- and 4-rung buckets span two to three of them.
+3. **Paper, fill-everything.** Some declined rungs would never have filled live.
+4. **This licenses no change to `mmsell_event_rung_cap`.** It is shared semantics in `tracker.py`
+   and a parameter of a running experiment — Platform Change Review, and an epoch, not a config
+   edit made because a table looked convincing.
+
+*Side observation, not pursued:* 179 of the 257 trades were held 72h+, and
+`docs/mmsell_taxonomy_repair/REVIEW_20260824.md` (row 116) already flags that `KXALBUMEQUIV` is
+recorded `DISCRETE` while the near-identical `KXPUREALBUMS` is `SCHEDULED`. A weekly Luminate
+print is a scheduled settle, and `settle_mode` is the axis a timing study needs. Re-deciding a
+grandfathered entry is Platform Change Review's, and it does not change anything above.
+
 ## Not built here
 
 The second half of XOS-000020 — `mmsell_settlement_correlated_regimes` defaulting to
