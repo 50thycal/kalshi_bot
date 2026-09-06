@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"cc-pf13","sql":"select strategy, count(*) as n, count(*) filter (where created_at > now() - interval '3 hours') as last3h, max(created_at) as last_at from paper_trades where strategy in ('Gmmsell0','Gmmsell1','mmsell10') group by strategy order by strategy","max_rows":10}
