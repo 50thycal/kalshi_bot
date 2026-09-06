@@ -191,3 +191,37 @@ def test_one_unreachable_series_among_many_is_not_a_network_failure():
     results = [{"series": "KXA", "verdict": audit.CONFIRMS, "markets": 8},
                {"series": "KXB", "verdict": audit.INSUFFICIENT, "markets": 0}]
     assert not audit.looks_like_a_network_failure(results)
+
+
+# --- the pattern fix -------------------------------------------------------------------------
+
+@pytest.mark.parametrize("text", [
+    "Will this video record 50000000+ views? Resolves Yes if it records 50,000,000+ views.",
+    "Resolves Yes if the video records 50,000,000+ views.",
+    "Will the channel record 10000+ subscribers?",
+])
+def test_a_bare_count_is_not_evidence_of_a_live_contest(text):
+    """`records? \\d+\\+` was written for player props ("records 3+ goals") and matched
+    "record 50000000+ views" on the YouTube view-count series, proposing in_play for a market
+    with no contest in it. It produced two of the four CONTRADICTS in the first full audit
+    (2026-09-06), which is how it was found.
+
+    Same failure class as the bare clock time the pattern table already documents: a number is
+    not evidence of a live contest — the thing being counted is."""
+    from mmsell_taxonomy_audit import _RULES_PATTERNS, _match_mode
+    assert _match_mode(text, _RULES_PATTERNS) != "in_play"
+
+
+@pytest.mark.parametrize("text", [
+    "Will the player record 3+ goals in the match?",
+    "Resolves Yes if the player records 20+ points.",
+    "Will the pitcher record 8+ strikeouts?",
+    "Will he record 100+ yards?",
+    "Will the player record 1,000+ yards this season?",
+    "Will the keeper record 5+ saves?",
+])
+def test_the_player_prop_forms_the_pattern_exists_for_still_match(text):
+    """Tightening must not cost the cases the pattern was written for — including the comma
+    grouping Kalshi uses on large numbers."""
+    from mmsell_taxonomy_audit import _RULES_PATTERNS, _match_mode
+    assert _match_mode(text, _RULES_PATTERNS) == "in_play"

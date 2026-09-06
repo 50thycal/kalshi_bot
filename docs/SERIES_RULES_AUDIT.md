@@ -101,3 +101,67 @@ a contract, exposure wants what is at risk now.**
   first, because the ops runner executes only the default branch.
 - First run: `--section backlog` on the registry review, then `series_rules_audit` in exposure
   order, contradictions read first.
+
+## First full run — 2026-09-06
+
+138 series audited: **118 CONFIRMS, 4 CONTRADICTS, 16 INSUFFICIENT.** Header did not read
+`NOT A RESULT`; 8 markets were fetched per series, so Kalshi was genuinely reachable.
+
+**No reviews were recorded from it**, for two reasons found in the output itself:
+
+1. **Kalshi's `settlement_source` field fired zero times across all 138 series.** Every verdict
+   rests on the rules-text regex alone, so the declared rule's cross-check — *at least one
+   strong signal and no strong signal pointing elsewhere* — is vacuous. Our own database agrees:
+   0 of 77 stored markets carry a settlement source. **The audit runs on one signal, not two.**
+2. **`docs = 8` for every series**: dedup never collapsed anything, because rules text embeds
+   per-market specifics (players, strikes, dates). "Counted over distinct documents" is really
+   "counted over 8 near-identical markets" — the `tax-6` accounting error in milder form, in a
+   script whose docstring claims to avoid it.
+
+Confirming 118 series off a single regex would be exactly the *launder a machine's guess into a
+human's signature* failure the design exists to prevent. The backlog stays at 138.
+
+### The four contradictions, triaged
+
+| series | recorded | implied | verdict |
+|---|---|---|---|
+| `KXUECLTOTAL` | `scheduled` | `in_play` | **real — and larger than one series** (below) |
+| `KXWCMENTION` | `discrete` | `in_play` | ambiguous; matched "at any point during". Needs a human |
+| `KXYTVIEWSHIGH` | `discrete` | `in_play` | **false positive** — pattern fix below |
+| `KXYTVIEWSW` | `discrete` | `in_play` | **false positive** — same pattern |
+
+### `KXUECLTOTAL` was a prefix collision, not a wrong entry
+
+`KXUECLTOTAL` has no `SERIES_TYPES` entry. It was matching **`KXUE`** — the *unemployment*
+econ-release prefix — by longest-prefix fallback. Six traded series were affected, all live
+European football classified as scheduled economic releases:
+
+| series | trades | was | now |
+|---|---|---|---|
+| `KXUECLTOTAL` | 133 | `econ_release`/`scheduled` | `total`/`in_play` |
+| `KXUECLGAME` | 51 | " | `h2h`/`in_play` |
+| `KXUELTOTAL` | 39 | " | `total`/`in_play` |
+| `KXUELGAME` | 32 | " | `h2h`/`in_play` |
+| `KXUEFASCSPREAD` | 14 | " | `spread`/`in_play` |
+| `KXUECL1HTOTAL` | 1 | " | `total`/`in_play` |
+
+**270 settled paper trades.** `KXUEFASC*` is the same collision, worked around once already for
+the Super Cup — which is why the fix is explicit longer prefixes rather than narrowing `KXUE`,
+which is a real traded series (13 trades) in its own right.
+
+Only `KXUECLTOTAL` surfaced in the audit because **the worklist is graduated-only**. The other
+five classify as `econ_release` — wrongly, but not *unclassified* — so they sit at `in_review`
+and were never audited. A misclassification below the graduated tier is invisible to this tool.
+
+### The pattern fix
+
+`records? \d+\+` was written for player props ("records 3+ goals"). It matched
+`"record 50000000+ views"` on the YouTube view-count series. It now requires the stat **noun**
+(goals, points, strikeouts, yards, saves, …), which is the thing that actually implies a live
+contest. Same failure as the bare clock time the table already documents.
+
+### Still open
+
+- `KXWCMENTION` — a human call, not a tool call.
+- The single-signal weakness. The honest reframing: this is a **triage that ranks series for
+  human reading**, not a verdict machine, until a second independent signal exists.

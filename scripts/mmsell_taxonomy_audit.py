@@ -103,7 +103,16 @@ _RULES_PATTERNS = (
     (IN_PLAY, re.compile(
         r"after 90 minutes plus stoppage time|originally scheduled for|"
         r"final score|wins? the .{0,60}(game|match|contest|series|championship|tournament)|"
-        r"records? \d+\+|at the end of (the )?(game|match|regulation|contest)|"
+        # The stat NOUN is required. Bare `records? \d+\+` was written for player props
+        # ("records 3+ goals") and matched "record 50000000+ views" on the YouTube view-count
+        # series, proposing in_play for a market with no contest in it at all — measured
+        # 2026-09-06, it produced two of the four CONTRADICTS in the first full series-rules
+        # audit. Same failure as the bare clock time this table already documents: a number is
+        # not evidence of a live contest, the thing being counted is.
+        r"records? \d[\d,]*\+ ?(goals?|points?|pts|assists?|rebounds?|yards?|yds|"
+        r"strikeouts?|ks|hits?|runs?|rbis?|saves?|touchdowns?|tds?|shots?|corners?|"
+        r"cards?|aces|sets?|birdies?|kills?)|"
+        r"at the end of (the )?(game|match|regulation|contest)|"
         r"full ?time|end of the \d+(st|nd|rd|th)|at any point during|"
         r"if (this|the) (game|match) is postponed", re.I)),
     (DISCRETE, re.compile(
