@@ -1,1 +1,1 @@
-{"type": "db", "id": "cc-papval-2", "sql": "select created_at::text as at, raw_json->>'skipped_contest_cap' as contestcap, raw_json->>'opened' as opened, raw_json->'per_book'->>'Gmmsell1' as g1, raw_json->'per_book'->>'Gmmsell0' as g0 from system_events where component='mmsell_scan' and created_at > timestamptz '2026-09-06 19:00:00+00' order by created_at desc limit 8", "max_rows": 20}
+{"type":"noop"}
