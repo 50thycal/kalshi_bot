@@ -1,1 +1,1 @@
-{"type":"logs","limit":250,"filter":"mmsell","id":"rl-nflpause-verify-2","actor":"claude-research-lab","purpose":"is the live mmsell path even placing orders? zero live orders on ANY series since the deploy"}
+{"type":"env","id":"rl-nflpause-verify-3","actor":"claude-research-lab","purpose":"is live mmsell armed? LIVE_STRATEGIES / kill switch state"}
