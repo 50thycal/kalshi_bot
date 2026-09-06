@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["mmsell-correlation-cap"],"id":"rl-capcanary-show-1","actor":"claude-research-lab","purpose":"state of the correlation-cap experiment before advising on a live canary"}
+{"type":"xos","command":"show","args":["mmsell-anchor-strangle"],"id":"rl-strangle-1"}
