@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=rl-fails-1
-# code 83d3500f319f0073522dcc4b8dc48e2c553455db · started 2026-09-06T02:51:23Z
-exp_key                  gate_key    verdict  computed_at                       computed_by  explanation                                                                                                                                  
------------------------  ----------  -------  --------------------------------  -----------  ---------------------------------------------------------------------------------------------------------------------------------------------
-mmsell-anchor-strangle   paper_keep  FAIL     2026-09-03 07:41:01.751453+00:00  system       fail condition met: mmsell-anchor-strangle/v1/e1/strangle pair_win_rate_95lb_pct=92.3665 <= 93.9                                             
-mmsell-anchor-vol-entry  paper_keep  FAIL     2026-09-05 15:10:31.543937+00:00  system       fail condition met: mmsell-anchor-vol-entry/v1/e1/vol_entry_gate vs mmsell-price-ceiling/v2/e2/mmsell10 delta.pnl_cents_per_trade=-0.211 <= 0
-
-(2 rows)
