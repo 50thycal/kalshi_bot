@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=audit-rules-db-1
-# code b625f4ddddaa7d8e0b5f114f8da6b5aa7c20771d · started 2026-09-06T16:22:29Z
-series  src  rules                                                                                                                                                sample_title                                                           n
-------  ---  ---------------------------------------------------------------------------------------------------------------------------------------------------  ---------------------------------------------------------------------  -
-KXWTI        If the front-month settle price for a barrel of West Texas Intermediate oil on November 03, 2026 is above $116.99, then the market resolves to Yes.  Will the WTI front-month settle oil price  be >116.99 on Nov 3, 2026?  1
-
-(1 row)
