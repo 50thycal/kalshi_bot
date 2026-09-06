@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-candidates","id":"ts-adopt-0"}
+{"type":"xos","command":"issue-candidates","args":["--json"],"id":"ts-adopt-0b"}
