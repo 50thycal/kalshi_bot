@@ -1,1 +1,1 @@
-{"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"ts-repair-darkcanary-20260906\",\"action\":\"REPAIR_LINEAGE\",\"actor\":\"claude-code\",\"actor_role\":\"TASK_SPECIFIC\",\"schema_version\":1,\"payload\":{\"package\":\"dark-live-canary-repair\",\"reason\":\"XOS-000012\"}}"},"id":"ts-repair-1a"}
+{"type":"xos","command":"experiment-command-show","args":["ts-repair-darkcanary-20260906"],"id":"ts-repair-1b"}
