@@ -675,6 +675,7 @@ class MmSellTracker:
                     "skipped_event_rung_cap": summ.skipped_event_rung_cap,
                     "skipped_contest_cap": summ.skipped_contest_cap,
                     "skipped_live_tier": summ.skipped_live_tier,
+                    "skipped_live_paused": summ.skipped_live_paused,
                     "per_series": dict(sorted(summ.per_series.items(),
                                               key=lambda kv: -kv[1])[:12]),
                     "per_book": summ.per_book,
