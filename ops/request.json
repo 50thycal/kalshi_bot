@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["rl-freeze-retire-20260906"],"id":"rl-wait-freeze-4"}
+{"type":"db","id":"cc-eviq-1","sql":"select status, count(*) as n, count(*) filter (where created_at >= timestamptz '2026-09-06 11:41:44.307194+00') as since_epoch, count(*) filter (where closed_at is not null and created_at >= timestamptz '2026-09-06 11:41:44.307194+00') as settled_since_epoch from paper_trades where strategy='mmsell10' group by status order by n desc","max_rows":20}
