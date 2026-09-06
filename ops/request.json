@@ -1,1 +1,1 @@
-{"type":"db","id":"cc-recheck-20260906-2","sql":"select count(*) cycles, sum((raw_json->>'skipped_contest_cap')::int) total_contest_cap_skips, sum((raw_json->>'opened')::int) total_opened, count(*) filter (where raw_json->'per_book' ? 'Gmmsell0') cycles_with_Gmmsell0, count(*) filter (where raw_json->'per_book' ? 'Gmmsell1') cycles_with_Gmmsell1, count(*) filter (where raw_json->'per_book' ? 'mmsell10') cycles_with_mmsell10 from system_events where component='mmsell_scan' and created_at > '2026-09-05 14:48:00+00'"}
+{"type":"noop"}
