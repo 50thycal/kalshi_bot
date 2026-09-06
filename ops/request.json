@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-show","args":["XOS-000023"],"id":"rl-silentarm-verify-2","actor":"claude-research-lab","purpose":"re-confirm XOS-000023 links/evidence after the worker boot"}
+{"type":"env","set":{"EXPERIMENT_OS_ISSUE_COMMAND":""},"id":"rl-silentarm-clear-1","actor":"claude-research-lab","purpose":"clear the issue transport now that both batches have terminal receipts"}
