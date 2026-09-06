@@ -93,9 +93,13 @@ def _assert_runtime_is_stopped(session) -> None:
     what already traded, and history is measured but says nothing about what is
     armed right now."""
     try:
-        from ..config import Settings
+        # `get_settings()` is the cached accessor the worker itself uses. Building a
+        # fresh `Settings()` here would re-validate every required field (API keys,
+        # database URL) and refuse on any environment that does not supply them —
+        # failing safe, but for a reason that has nothing to do with the allowlist.
+        from ..config import get_settings
 
-        allowlist = [p.lower() for p in Settings().live_strategy_list]
+        allowlist = [p.lower() for p in get_settings().live_strategy_list]
     except Exception as exc:  # configuration must be READABLE, or we know nothing
         _refuse(
             "could not read the runtime allowlist to verify the books are stopped: "
