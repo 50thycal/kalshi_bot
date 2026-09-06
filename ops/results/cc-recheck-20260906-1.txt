@@ -1,7 +1,0 @@
-# ops request [READ]
-# type=db  id=cc-recheck-20260906-1
-# code 46661a984dc183c0df68f5291df2026ad00e570a · started 2026-09-06T00:52:37Z
-strategy  trades  open_now  first_trade  last_trade
---------  ------  --------  -----------  ----------
-
-(0 rows)
