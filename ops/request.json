@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-show","args":["XOS-000022"],"id":"rl-nflspread-show-1","actor":"claude-research-lab","purpose":"confirm the XOS-000022 workflow batch through the canonical read"}
+{"type":"env","set":{"EXPERIMENT_OS_ISSUE_COMMAND":""},"id":"rl-nflspread-clear-1","actor":"claude-research-lab","purpose":"clear the issue-command transport after XOS-000022"}
