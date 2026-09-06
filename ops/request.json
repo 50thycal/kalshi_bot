@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-show","args":["XOS-000023"],"id":"rl-silentarm-verify-1","actor":"claude-research-lab","purpose":"confirm XOS-000023 carries the PR link and the FP evidence"}
+{"type":"xos","command":"issue-show","args":["XOS-000023"],"id":"rl-silentarm-verify-2","actor":"claude-research-lab","purpose":"re-confirm XOS-000023 links/evidence after the worker boot"}
