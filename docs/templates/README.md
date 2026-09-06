@@ -1,8 +1,9 @@
 # Build OS templates
 
-Copies of the **Build OS v0.4** templates, from the canonical framework repository
+Copies of the **Build OS v0.12** templates, from the canonical framework repository
 `50thycal/build-os` (`templates/`). They live here so the shape of a Build Card, a Build
-Spec, a workstream file and a PR handoff is discoverable without leaving this repository.
+Spec, a workstream file, a PR handoff and an Owner Result is discoverable without leaving
+this repository.
 
 | File | Used when | Read the protocol in |
 |---|---|---|
@@ -10,6 +11,8 @@ Spec, a workstream file and a PR handoff is discoverable without leaving this re
 | `BUILD_SPEC.template.md` | An approved Build Card is being turned into an implementation packet. Exhaustive; the owner is not expected to read it line by line. | `framework/BUILD_SPEC.md` |
 | `WORKSTREAM.template.md` | A new design/build thread earns a `WS-###`. | `framework/WORKSTREAMS.md` |
 | `PR_HANDOFF.template.md` | Every implementation PR. Mirrored as `.github/pull_request_template.md`, so it is the default. | `framework/CLAUDE_HANDOFF.md` |
+| `OWNER_RESULT.template.md` | The one terminal owner-facing result on a PR — `SHIP`, `DECISION` or `BLOCKED`. | `framework/OWNER_INTERFACE.md` |
+| `ACTIVE_WORK.template.md` | The shape of the board in `docs/workstreams/ACTIVE.md`, including the `## Parked` list. | `framework/FINITE_WORK.md` |
 
 **These are copies, not the source.** If the protocol itself is wrong, incomplete or
 awkward, fix it in `50thycal/build-os` and pick the change up at the next compatibility
@@ -28,3 +31,12 @@ check — do not fork the protocol by editing these files. See `CLAUDE.md` → *
 - **A spec that touches shared semantics** — fees, fills, the market taxonomy, execution,
   risk, data provenance, metric definitions — is a Platform Change Review event. Say so in
   the spec, and expect the impact review before the merge, not after.
+- **This project runs `solo` mode** (`DEC-011`). `Owner-accepted` is the owner's to give, at
+  merge, and an agent may neither write one nor infer one from a merge. A `SHIP` result must
+  say plainly that no independent party reviewed the change.
+- **`SHIP` reports the development gate only.** An Experiment OS action that follows a merge
+  is a guard for the operator, never a Build OS next step (`DEC-011`, `DEC-001`).
+- **`Follow-up Work` is `PARK` / `DISCARD` lines only.** A finding outside the current
+  mission never becomes a new workstream. Parked lines are never rendered as work.
+- **`OWNER_PLAN.template.md` is deliberately not vendored.** This project has not adopted the
+  owner-approval flow; intent arrives through the session-role router instead (`DEC-011`).

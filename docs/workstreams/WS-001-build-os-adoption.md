@@ -1,13 +1,24 @@
-# WS-001 — Build OS adoption
+# WS-001 — Build OS adoption, and the v0.4 → v0.12 migration
 
-**Phase:** REVIEW
-**Status:** Active
+**Phase:** COMPLETE
+**Status:** Done
 **Created:** 2026-08-24
-**Updated:** 2026-08-24
+**Updated:** 2026-09-06
+
+One thread, two acts. **Act 1** adopted Build OS v0.4 (PR
+[#258](https://github.com/50thycal/kalshi_bot/pull/258), merged 2026-08-24T14:26:24Z) and was
+never finalized — the artifacts reached the default branch while this file went on saying the
+adoption was awaiting an independent review. **Act 2**, below, migrates the project to v0.12
+and finalizes the workstream once. It is deliberately not a new `WS-###`: the workstream
+already existed and is exactly this thread.
 
 ## Goal
 
-Make architecture, consequential decisions, active design/build work, implementation
+**Act 2 (2026-09-06).** kalshi_bot runs under Build OS v0.12, with its project-specific
+additions and the Experiment OS authority boundary intact, and its board honestly reflects
+what is in flight.
+
+**Act 1 (2026-08-24).** Make architecture, consequential decisions, active design/build work, implementation
 handoffs and independent reviews persist in GitHub rather than in chat history — without
 disturbing Experiment OS, which stays canonical for experiment truth.
 
@@ -84,6 +95,48 @@ a precondition for moving this workstream to `COMPLETE`.
   read-only role here must hand its checkpoint to a writing role as a repository-update
   block. No cadence has been exercised yet, and exercising it is how it gets answered.
 
+## Acceptance Checks
+
+Written at the start of Act 2, per v0.12. All six hold.
+
+1. `CLAUDE.md` → *Build OS* reads `Adopted version: v0.12`, `Last compatibility check: v0.12 on
+   2026-09-06`, and declares an operating mode. ✅
+2. `docs/BUILD_OS.md` no longer carries a *Canonical is ahead* section, because the project is
+   not behind; what it said about the delta is the adoption record below. ✅
+3. The board carries only workstreams actually in flight, and states the limit this project
+   chose and why. ✅ — eight rows, four `Active`, at a declared limit of 4.
+4. Vendored templates in `docs/templates/` match canonical v0.12, and its `README.md` says
+   v0.12. ✅ — plus `OWNER_RESULT` and `ACTIVE_WORK`, newly vendored.
+5. Every rule this migration adds that conflicts with an existing project-specific rule is
+   resolved explicitly in `CLAUDE.md`, not left for a session to discover. ✅ — the owner-layer
+   split, the `SHIP` boundary, and the proportionality floor.
+6. A decision record captures the migration: what was adopted, what was decided, what was
+   deliberately not taken. ✅ — `DEC-011`. (The handoff brief said `DEC-002`; the log already
+   ran to `DEC-010`, so the next free number is 11.)
+
+## Adoption record — what v0.4 → v0.12 meant here
+
+Moved from `docs/BUILD_OS.md` → *Canonical is ahead*, which is deleted: a project that is
+current does not carry a section explaining why it is behind. Eight releases; four changed how
+sessions here behave.
+
+| Version | What it added | Bearing on this repository |
+|---|---|---|
+| **v0.5** | Capture Only, the Design Handoff PR, the reviewed-head merge gate, merge finalization | **Material.** The merge gate is the big one — a significant PR needs a verdict naming its current head as a full SHA, and no self-approval. Superseded in practice by the `solo` mode below |
+| **v0.6** | The owner layer: Intent Intake, entry-point neutrality, the Owner Plan, `SHIP`/`DECISION`/`BLOCKED`, proportionality, the closed reviewer→implementer loop | **Material, and it interacts with the session-role system.** Resolved by decision 2 in `DEC-011`; the Owner Plan was deliberately not taken |
+| **v0.7** | `SHIP` narrowed: only the owner's merge may remain | Refines v0.6. Resolved by decision 4 in `DEC-011` — `SHIP` reports the development gate, and an XOS action that follows is a guard |
+| **v0.8** | Operating modes — `reviewed` vs `solo` — and the `Owner-accepted` verdict | **Material, and the most useful of the eight.** This repository is one account, which is the case `solo` exists for. Decision 1 in `DEC-011` |
+| **v0.9** | `skills/`, an agent-invokable surface, and the rule that a framework document stays canonical where both apply | Relevant — this repo already has `.claude/skills/`. No skill copied; the boundary rule is adopted |
+| **v0.10** | A finalization commit never writes a verdict it does not yet have; `Owner-accepted` comment form | Small, correct regardless of the pin, and directly relevant under `solo` |
+| **v0.11** | An agent may relay an acceptance the owner gave elsewhere, naming the channel | Small, and the limit that matters: relaying is not inferring |
+| **v0.12** | Finite work (`FIX NOW`/`PARK`/`DISCARD`/`OWNER DECISION`); a mission contract; continuation as the session-start default; a parking lot; a default limit of three; `Next Step: None.` on completion; owner results 100 words, outcome-first | **Material.** A 13-row board was the exact shape these rules were written against. This repo had already invented the parking lot under another name — see the appendix and `ACTIVE.md` → *What is deliberately not on this board* — so v0.12 mostly renamed a mechanism rather than introducing one |
+
+**What the pin protected, and still does.** A v0.4 pin covered work done under it. Later
+versions do not reach back: completed workstreams are not re-judged, PRs merged under v0.4 are
+not retroactively reported as ungated, and PR #258 is not retro-accepted.
+
+**The authority boundary was unaffected by all eight.** `DEC-001` stands unchanged.
+
 ## Assumptions
 
 - The operator wants a board, not a process. If maintaining `ACTIVE.md` costs more than it
@@ -108,30 +161,56 @@ for experiment truth; seed the board from a read-only inventory; touch no runtim
 
 ## Implementation State
 
-PR open — see *Related PRs*. Adds the framework block and development protocol to
-`CLAUDE.md`, the three memory layers under `docs/`, four templates under `docs/templates/`,
-and wires the PR handoff into `.github/pull_request_template.md`.
+**Act 1 — merged.** PR [#258](https://github.com/50thycal/kalshi_bot/pull/258), merged
+2026-08-24T14:26:24Z: the framework block and development protocol in `CLAUDE.md` and
+`docs/BUILD_OS.md`, the three memory layers under `docs/`, four templates under
+`docs/templates/`, and the PR handoff wired into `.github/pull_request_template.md`.
+
+**Act 2 — this PR.** Framework block to v0.12 with `Operating mode: solo` and a declared
+active-work limit; three project-specific rules added to `CLAUDE.md` (the owner-layer split,
+the `SHIP` boundary, the proportionality floor); `docs/BUILD_OS.md` gains finite work, the
+mission contract and the `solo` mechanics and loses *Canonical is ahead*; six templates
+re-vendored from canonical v0.12 and the PR template rebuilt on the v0.12 handoff; the board
+cleaned to eight rows with a `## Parked` list and the limit stated; `DEC-011`.
 
 ## Review State
 
-Awaiting independent review. **Independent approval and merge complete this workstream** —
-the adoption is entirely contained in this PR. Worth scrutinising: whether the authority
-boundary in `DEC-001` is stated tightly enough to survive contact with a session that wants
-to paste a gate read into a workstream, and whether `PROJECT_MODEL.md` has stayed
-architectural.
+**Act 1 was never finalized, and that is the failure worth recording.** This file and the board
+both said `REVIEW · Active · "Independent review; approval + merge completes it"` from
+2026-08-24 to 2026-09-06 while every artifact it described was already on the default branch.
+Two causes, both now fixed: the post-merge bookkeeping was never done, and — the deeper one —
+the awaited verdict could not exist, because no mode was declared and Build OS therefore
+defaulted to `reviewed` on a project with one account and one agent. `DEC-011` decision 1
+replaces the unsatisfiable gate with a stated condition.
+
+Act 2 runs under `solo`. **No independent party reviewed this migration.** Acceptance is the
+owner's at merge; this file does not, and may not, record one on their behalf, and none is
+retrofitted onto #258.
+
+**Finalization:** pushed.
 
 ## Related Decisions
 
 - `DEC-001` — Adopt Build OS v0.4, and fix the Build OS / Experiment OS authority boundary.
+  Unchanged by this migration.
+- `DEC-011` — Migrate to Build OS v0.12: `solo` mode, the owner-layer split, an active-work
+  limit of 4, and `SHIP` as a development-gate report.
 
 ## Related PRs
 
-- Build OS v0.4 adoption (this workstream's PR).
+- [#258](https://github.com/50thycal/kalshi_bot/pull/258) — Build OS v0.4 adoption (Act 1,
+  merged 2026-08-24).
+- This PR — the v0.4 → v0.12 migration (Act 2).
+
+## Parked
+
+The two orphans from closing `WS-010`, and one carried past `WS-012`, are registered in
+`ACTIVE.md` → *Parked* rather than here, because that is the list the owner reads. Nothing
+schedules them and no agent may start them.
 
 ## Next Step
 
-Independent review of the adoption PR. On approval and merge this workstream is finished:
-the next checkpoint sets it `COMPLETE` and removes it from `ACTIVE.md`.
+None.
 
 ---
 

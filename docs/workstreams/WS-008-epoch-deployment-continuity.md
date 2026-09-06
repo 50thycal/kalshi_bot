@@ -1,10 +1,14 @@
 # WS-008 — An epoch boundary must not silently stop the books
 
-**Phase:** REVIEW
-**Status:** Complete
+**Phase:** COMPLETE
+**Status:** Done
 **Created:** 2026-08-28
-**Updated:** 2026-08-28
+**Updated:** 2026-09-06
 **Issue:** XOS-000011 (OPS · LIVE_OPS · HIGH/P1) — **RESOLVED 2026-08-28T14:14:59Z**
+
+
+Finalized 2026-09-06 (Build OS v0.12 migration): the row was carrying `REVIEW · Complete`
+after #268 merged and XOS-000011 resolved. Off the board, into *Recently completed*.
 
 ## Goal
 

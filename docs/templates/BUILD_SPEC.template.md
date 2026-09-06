@@ -13,8 +13,8 @@
 
 ### Owner decisions — may not be silently changed
 
-- **OD-1.** 
-- **OD-2.** 
+- **OD-1.**
+- **OD-2.**
 
 ### Implementation discretion — yours to decide
 
@@ -54,7 +54,7 @@ technical uncertainty.
 ## 5. Implementation requirements
 
 - **R-1.** <testable requirement> <!-- tag with (OD-n) where it implements a decision -->
-- **R-2.** 
+- **R-2.**
 
 ## 6. State transitions
 
@@ -99,8 +99,8 @@ Illegal transitions: <what happens.>
 
 ## 17. Acceptance criteria
 
-- [ ] **AC-1.** 
-- [ ] **AC-2.** 
+- [ ] **AC-1.**
+- [ ] **AC-2.**
 
 ## 18. Non-goals
 

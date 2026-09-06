@@ -35,29 +35,29 @@
 
 <!-- The handful of rules that must hold. Behavioral, not technical. -->
 
-- 
-- 
+-
+-
 
 ## Decisions made
 
 <!-- The owner's answers from the Decide stage, with one line of reasoning each. -->
 
 - **<Question?>** → <Answer>. <Why.>
-- 
+-
 
 ## Non-goals
 
 <!-- What this deliberately does not do. -->
 
-- 
-- 
+-
+-
 
 ## Definition of done
 
 <!-- Observable conditions, checkable without reading code. -->
 
-- [ ] 
-- [ ] 
+- [ ]
+- [ ]
 
 ---
 

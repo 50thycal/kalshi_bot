@@ -85,30 +85,37 @@ not quietly become a write session. Menu and handoff format:
 ## Build OS
 
 - Canonical framework: 50thycal/build-os
-- Adopted version: v0.4
-- Last compatibility check: 2026-09-02 — canonical is **v0.11**; the project is still
-  pinned to v0.4, seven versions behind. Adopting is a protocol migration and an owner
-  decision, tracked on WS-001 — not something an unrelated build session performs. A v0.4
-  pin covers current work; later versions do not reach back. The delta, and what a
-  migration would actually cost: `docs/BUILD_OS.md` → *Canonical is ahead*.
+- Adopted version: v0.12
+- Last compatibility check: v0.12 on 2026-09-06
+- Operating mode: `solo` — no independent actor exists, so significant work is **owner-accepted
+  at merge**, never called reviewed. An agent never writes or infers one (`DEC-011`).
+- Active-work limit: **4**, counting `Active` rows only — `Blocked` (which requires a named
+  external unblocker) and `Paused` do not consume it (`DEC-011`).
 
-Before substantial design or architectural work, compare the adopted version against
-`VERSION.md` in the canonical repository and act on the delta (`framework/FRAMEWORK_SYNC.md`).
-Project memory lives in `docs/`: `PROJECT_MODEL.md` (how it works today), `DECISIONS.md`
-(why), `workstreams/ACTIVE.md` (what is in flight). The PR body is the handoff, never chat.
-**Full development protocol: `docs/BUILD_OS.md`** — kept there, not here, because this file
-is a router (see the length invariant in `tests/test_session_system.py`).
+Before substantial design work, compare the adopted version against `VERSION.md` in the
+canonical repository and act on the delta (`framework/FRAMEWORK_SYNC.md`). Project memory lives
+in `docs/`: `PROJECT_MODEL.md` (how it works today), `DECISIONS.md` (why), `workstreams/ACTIVE.md`
+(in flight, plus a `## Parked` list nothing schedules and no agent may start from). The PR body is the
+handoff, never chat. **Discovery does not create work** — a finding outside the mission is `FIX
+NOW`, `PARK`, `DISCARD` or an `OWNER DECISION`, never a new workstream. **Full protocol:
+`docs/BUILD_OS.md`** — this file is a router, not the protocol.
 
 ### Project-specific: additions to Build OS
 
-- **Ordering.** Establish the session role **first** (above), then run the compatibility
-  check before substantive design/build work. The role decides what a session may write at
-  all; the check only decides which protocol it writes under, and grants no write.
+- **Ordering.** Session role **first** (above), then the compatibility check. The role decides
+  what a session may write at all; the check only decides which protocol, and grants no write.
 - **The authority boundary is a hard rule.** Experiment OS stays canonical for experiments,
-  Versions, epochs, deployments, arms, gates, platform revisions, impact actions,
-  enforcement and XOS issues. A workstream restating any of those is malformed — link.
-- **A workstream authorizes nothing.** Phase and status are development state; only
-  Experiment OS's services register, arm, promote, pause or retire.
+  Versions, epochs, deployments, arms, gates, platform revisions, impact actions, enforcement
+  and XOS issues. A workstream restating any of those is malformed — link.
+- **A workstream authorizes nothing, and `SHIP` reports only the development gate.** Phase and
+  status are development state; only Experiment OS's services register, arm, promote, pause or
+  retire. `SHIP`'s `Next action` is the merge — an Experiment OS action that follows is a
+  **guard for the operator**, never a Build OS next step and never something the PR authorized.
+- **Two owner-facing surfaces, one boundary.** The identity header opens a *session* (who is
+  speaking); the Owner Result closes a *piece of work* on the PR (where it landed). Never in
+  the same block; the header never carries a result, the result never a session state.
+- **A safety floor on proportionality.** Nothing touching real-money exposure, the arming path,
+  a live safeguard, a gate or the ops channel is ever **simple**, whatever its diff size.
 - **No transcripts.** Persist conclusions, models, decisions, open questions — never logs.
 
 ## Universal safety invariants

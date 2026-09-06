@@ -1,9 +1,15 @@
 # WS-010 — PERP-V1: a research surface for Kalshi perpetual futures
 
-**Phase:** BUILDING
-**Status:** Active
+**Phase:** CLOSED
+**Status:** Done
 **Created:** 2026-08-29
-**Updated:** 2026-08-30
+**Updated:** 2026-09-06
+
+
+Finalized 2026-09-06 (Build OS v0.12 migration): the file still read `BUILDING · Active`
+after the 2026-09-02 COST close. Off the board, into *Recently completed*. The two items
+this workstream sent elsewhere are registered in `ACTIVE.md` → *Parked* so closing it did
+not delete them.
 
 ## Goal
 
@@ -386,7 +392,8 @@ This PR.
 
 ## Next Step
 
-**None inside this workstream.** It is closed. Three things leave it, each owned elsewhere:
+**None inside this workstream.** It is closed. Three things leave it, each owned elsewhere;
+the first and third are registered in `ACTIVE.md` → *Parked* so they survive this closure:
 
 1. **Turn the collector off, or decide to keep paying for it.** `PERPS_COLLECTOR_ENABLED`
    is still `true` on the main worker and the tape is still accumulating at ~26k rows/day
