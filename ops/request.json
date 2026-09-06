@@ -1,1 +1,1 @@
-{"type":"script","name":"mmsell_series_pnl","args":["--all-time","--min-n","50"],"id":"rl-seriespnl-first-1","actor":"claude-research-lab","purpose":"first production run of the per-series loss detector, post-merge of PR #341"}
+{"type":"xos","command":"control-tower","id":"silentarm-live-2","actor":"claude-research-lab","purpose":"post-merge: exercise experiment.armed_but_silent on the real portfolio through the live code path"}
