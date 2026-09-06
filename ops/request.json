@@ -1,1 +1,1 @@
-{"type":"xos","command":"metric","args":["realizable_cents_per_trade","--experiment","mmsell-price-ceiling-contest-cap","--arm","mmsell10","--kind","paper"],"id":"cc-ci-6"}
+{"type":"noop"}
