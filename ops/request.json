@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-show","args":["ts-adopt-contestcap-20260906"],"id":"ts-adopt-1b"}
+{"type":"xos","command":"issue-command-list","args":["--limit","5"],"id":"ts-adopt-1b2"}
