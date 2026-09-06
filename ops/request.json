@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-show","args":["rl-silentarm-open-20260906"],"id":"rl-silentarm-receipt-1","actor":"claude-research-lab","purpose":"receipt for the detection-gap issue"}
+{"type":"xos","command":"issue-command-show","args":["rl-silentarm-open-20260906"],"id":"rl-silentarm-receipt-2","actor":"claude-research-lab","purpose":"receipt for the detection-gap issue (retry after worker boot)"}
