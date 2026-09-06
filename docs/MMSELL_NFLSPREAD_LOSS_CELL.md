@@ -3,6 +3,10 @@
 **Investigated 2026-09-06, Research Lab.** Evidence: `ops` channel read-only queries
 `nflspread-shape-1`, `nflspread-contest-2`, `nflspread-live-3b`, `nflspread-contest-pnl-4b`
 against production Postgres. Detector shipped alongside: `scripts/mmsell_series_pnl.py`.
+**Recorded as `XOS-000022`** — STRATEGY, owner `RESEARCH_LAB`, P1/MEDIUM, scoped to
+`mmsell-price-ceiling` v2 (the experiment `Cmmsell10` resolves to). Status `INVESTIGATING`; the
+proposals below are recorded as a *proposed fix* and the §7 gate as its *validation plan*. **No
+disposition is recorded** — `NEW_VERSION` before the out-of-sample read would prejudge the gate.
 
 > ## Verdict: **A — real, and narrower than it looks.**
 >
