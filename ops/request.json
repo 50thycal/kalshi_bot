@@ -1,1 +1,1 @@
-{"type":"env","id":"cc-pf12"}
+{"type":"script","name":"mmsell_series_pnl","args":["--all-time","--min-n","50"],"id":"rl-seriespnl-first-1","actor":"claude-research-lab","purpose":"first production run of the per-series loss detector, post-merge of PR #341"}
