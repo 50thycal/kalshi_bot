@@ -1,0 +1,22 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "83d3500f319f0073522dcc4b8dc48e2c553455db",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T03:53:20Z",
+  "id": "nflspread-contest-2",
+  "outcome": "SUCCEEDED",
+  "provenance": {
+    "actor": "claude-research-lab",
+    "purpose": "KXNFLSPREAD: band, side, contest clustering, sibling series"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/nflspread-contest-2.receipt.json",
+  "result_file": "ops/results/nflspread-contest-2.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34010109820",
+  "service": null,
+  "started_at": "2026-09-06T03:53:19Z",
+  "targets": [],
+  "type": "db"
+}
