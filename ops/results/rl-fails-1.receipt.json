@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "83d3500f319f0073522dcc4b8dc48e2c553455db",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T02:51:24Z",
+  "id": "rl-fails-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl-fails-1.receipt.json",
+  "result_file": "ops/results/rl-fails-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34007533914",
+  "service": null,
+  "started_at": "2026-09-06T02:51:23Z",
+  "targets": [],
+  "type": "db"
+}
