@@ -478,6 +478,17 @@ DETECTOR_REVISION_UNSAFE = "platform.revision_unsafe_to_activate"
 DETECTOR_COLLECTOR_HEALTH = "ops.collector_health"
 DETECTOR_MISSING_TWIN = "ops.live_deployment_without_twin"
 DETECTOR_ZERO_EVIDENCE = "experiment.zero_evidence"
+#: The ESCALATION of zero evidence, and a different claim. `zero_evidence` says
+#: "this book has produced nothing", which is also true of every experiment on
+#: the day it is registered. This one says "an ARMED arm has produced nothing for
+#: longer than a settlement day, no gate is blocked to explain it, and something
+#: else was demonstrably trading in the same window" — i.e. the silence is
+#: specific to this arm rather than to the day. Registration is not
+#: configuration: an arm can be a perfectly formed Experiment OS object and still
+#: be absent from what the worker actually runs (2026-09-05,
+#: `mmsell-correlation-cap`). Both detectors fire; see the Control Tower's
+#: `_silent_arms` for why the weaker one is deliberately not suppressed.
+DETECTOR_ARMED_BUT_SILENT = "experiment.armed_but_silent"
 DETECTOR_GATE_BLOCKED = "gate.blocked"
 DETECTOR_CONTRACT_DEFECT = "contract.defect"
 #: Not a detector at all: the fixed source value for a problem a PERSON found —
@@ -719,6 +730,32 @@ def recommend_owner(
             "a proven defect in a registered contract — only a corrected native "
             "successor Version clears it",
             disposition=IssueDisposition.NEW_VERSION.value,
+        )
+
+    # 5b. Armed but silent. Same classification logic as zero evidence — the
+    #     cause is genuinely unknown and Live Ops looks first — but a materially
+    #     stronger signal, so it is not left at LOW/P2 beside a day-one book.
+    #     It carries no disposition: "the worker never saw this arm" and "the
+    #     filters ate every candidate" both fit, and they need opposite remedies.
+    if detector == DETECTOR_ARMED_BUT_SILENT:
+        if runtime_verified_healthy:
+            return OwnerRecommendation(
+                _RESEARCH, IssueClassification.STRATEGY.value,
+                IssueSeverity.MEDIUM.value, IssuePriority.P2.value,
+                "the runtime is verified healthy and the arm is still producing "
+                "nothing while its reference trades — the question is now whether "
+                "the selection rule can ever fire",
+            )
+        return OwnerRecommendation(
+            _LIVE_OPS, IssueClassification.UNCLASSIFIED.value,
+            IssueSeverity.MEDIUM.value, IssuePriority.P1.value,
+            "an ARMED arm has collected nothing past the silence threshold while "
+            "a sibling arm or the rest of the platform traded, and no gate is "
+            "blocked to explain it. Registration is not configuration: check "
+            "first that the runtime actually carries this tag (env overrides, "
+            "book allowlists, admission), then filters and opportunity. "
+            "Classification stays UNCLASSIFIED until that answer exists",
+            requires_operator_triage=False,
         )
 
     # 6. Zero evidence: the worked example of diagnosis before classification.

@@ -312,7 +312,63 @@ Candidates cover only anomalies the Tower already understands: resolver-degraded
 alarm, post-cutover rows without lineage, unresolved integrity event, unresolved
 platform impact, unsafe pending revision, collector `STALE`/`EMPTY`/
 `UNAVAILABLE`, live deployment without a twin, zero-evidence experiment,
-evaluator `BLOCKED_*`.
+**armed-but-silent arm**, evaluator `BLOCKED_*`.
+
+### `experiment.armed_but_silent` — registration is not configuration
+
+`experiment.zero_evidence` says *this book has produced nothing*, which is also
+true of every experiment on the day it is registered. It is therefore LOW/P2 and
+cannot, on its own, tell an **early** silence from a **broken** one.
+
+`experiment.armed_but_silent` is the escalation, and a different claim: an
+**active deployment arm**, **armed longer than 24h**, with **zero evidence**, and
+**no blocked gate** already explaining the zero — plus a **reference** proving the
+silence is specific to the arm rather than to the day.
+
+Why it exists. On 2026-09-05 `mmsell-correlation-cap` was registered correctly —
+PAPER, v1 frozen, two arms with tags, deployments 25 → 27 both armed, keep gate
+registered — and then traded nothing for twelve hours. `MMSELL_VARIANTS` is a
+Railway environment variable that **overrides** the code default the two books had
+been added to, so the worker never saw them. Every Experiment OS object was
+correct and the runtime ran a different book list. **Registration is not
+configuration**, and nothing in the system knew the difference; the Tower reported
+the experiment as PAPER and healthy at n=0 until a human asked "is it working
+yet". XOS-000011 is the mirror image — configured but with no lineage, refused at
+the write path forever, equally invisible.
+
+The reference is the whole design. An arm at zero is ambiguous; an arm at zero
+*while its sibling in the same epoch, on the same platform snapshot, driven by the
+same worker, is trading* is not — the only thing that differs between them is the
+experiment's one variable. That comparison is preferred wherever it exists. Where
+every arm is silent (which is what the incident actually looked like), the rest of
+the platform stands in: `Gmmsell1` at zero would have been ambiguous; `Gmmsell1`
+at zero while `Gmmsell0` was also at zero and `mmsell10` booked 166 was not.
+
+Thresholds are constants, not settings — a detector that needs tuning does not get
+used. 24h is one settlement day: below it "early days" is a real explanation, and
+above it "slow" no longer reaches (the thinnest flow-constrained book here,
+`Tmmsell2`, runs ~1 entry/hour). The reference floor is 20 trades: one stray fill
+proves nothing, twenty proves the worker cycled and booked repeatedly.
+
+It deliberately does **not** fire when the arm is early, when a gate is
+`BLOCKED_*`, on a tagless PROBE deployment, on a recorded stand-down, on a book
+that trades slowly but does trade, when the arming instant is unknown, or when
+nothing traded anywhere in the window. It routes to Live Ops at
+`UNCLASSIFIED`/MEDIUM/P1 and records **no** disposition: "the worker never saw
+this arm" and "the filters ate every candidate" both fit the evidence and need
+opposite remedies.
+
+It does **not** suppress `experiment.zero_evidence`. That one may already have an
+open ticket against its own fingerprint, and dropping it the day the escalation
+appears would flip that ticket's `currently_recurring` to false — it would read as
+fixed on precisely the day the problem got worse.
+
+Its blind spot, stated: it can only see silence that Experiment OS knows should
+not be silent. It cannot detect a book that is *configured but registered wrong*
+(that is `enforcement.unstamped_lineage`), a book trading the wrong markets, or an
+arm whose runtime is producing rows under a different tag than the one registered.
+And on a platform-wide outage — nothing trading anywhere — it stays deliberately
+quiet, because it has no reference and therefore no claim.
 
 Two deliberate silences:
 
