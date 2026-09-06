@@ -1,1 +1,1 @@
-{"type": "db", "sql": "select strategy, count(*) as trades, min(created_at) as first_trade, max(created_at) as last_trade from paper_trades where strategy like 'Gmmsell%' group by strategy order by strategy", "max_rows": 10, "id": "rl-gbooks-alive-1"}
+{"type":"xos","command":"control-tower","id":"ct-volentry-decision"}
