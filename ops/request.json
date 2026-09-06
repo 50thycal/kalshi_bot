@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-list","args":["--limit","5"],"id":"rl-volentry-xclist"}
+{"type":"xos","command":"experiment-command-show","args":["rl-freeze-retire-20260906"],"id":"rl-freeze-receipt-3","actor":"claude-research-lab","purpose":"receipt for the freeze retirement, allowing full redeploy time"}
