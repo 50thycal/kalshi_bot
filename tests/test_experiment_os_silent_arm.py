@@ -165,7 +165,9 @@ def test_it_catches_the_2026_09_05_correlation_cap_incident(xos_session,
         "the diagnosis, not an assumption the detector may make"
     )
     arms = {c["anomaly_kind"] for c in fired}
-    assert arms == {"uncapped", "contest_capped"}
+    assert arms == {"uncapped:paper", "contest_capped:paper"}, (
+        "one finding per (arm x deployment kind) — the kind is part of the scope"
+    )
     detail = fired[0]["detail"] or ""
     assert "166" in detail, "the reference that localizes the silence is stated"
     assert book["control_tag"] in " ".join(c["detail"] or "" for c in fired)
@@ -188,7 +190,7 @@ def test_giving_one_arm_trades_stops_that_arm_firing(xos_session, xos_platform):
     s.commit()
 
     fired = _fired(ct.build_report(s, evaluate=True), "mmsell-correlation-cap")
-    assert {c["anomaly_kind"] for c in fired} == {"contest_capped"}, (
+    assert {c["anomaly_kind"] for c in fired} == {"contest_capped:paper"}, (
         "the arm that started trading is no longer silent; its sibling still is"
     )
     assert "uncapped" in (fired[0]["detail"] or ""), (
@@ -484,3 +486,205 @@ def test_closing_the_investigation_re_arms_the_escalation(xos_session,
                        reason="closed while the book is still silent")
     s.commit()
     assert len(_fired(ct.build_report(s, evaluate=False), "reopening-book")) == 2
+
+
+# ---------------------------------------------------------------------------
+# 4. live and paper_twin deployments
+#
+# The blind spot the first version of this detector shipped with, stated in its
+# own PR: arm evidence came from `read.experiment_scoreboard`, whose metrics are
+# scoped to `deployment_kind = "paper"`, so an experiment deployed only live
+# and/or as a twin had no tags on its arms and could never fire however silent it
+# went. Today that is `mmsell-price-ceiling`, `mmsell-scheduled-settle-live` and
+# `theta4-fat-tail` — every live book in the portfolio.
+# ---------------------------------------------------------------------------
+
+
+def _live_canary_book(s, key, *, armed_hours_ago: float, arms=("mmsell10",)):
+    """A LIVE_CANARY experiment with a live deployment and its registered paper
+    twin, and NO paper deployment — the shape of every live book in production."""
+    armed = _now() - timedelta(hours=armed_hours_ago)
+    exp = svc.create_experiment(s, key=key, origin="operator")
+    ver = svc.create_experiment_version(
+        s, exp, hypothesis="the live book reproduces its paper edge",
+        independent_variable="execution", now=armed,
+        control_exemption_reason="test shape: absolute threshold",
+    )
+    for i, arm_key in enumerate(arms):
+        svc.add_arm(s, ver, arm_key=arm_key,
+                    role="treatment" if i == 0 else "control",
+                    strategy_tag=f"L{arm_key}")
+    svc.freeze_version(s, ver, now=armed)
+    epoch = svc.open_epoch(s, ver, reason="initial", started_at=armed)
+    live = svc.register_deployment(
+        s, epoch, deployment_key=f"{key}-live-1", stage="LIVE_CANARY", kind="live",
+        arms={a: f"L{a}" for a in arms}, started_at=armed,
+        _sanctioned_canary=True,
+    )
+    twin = svc.register_deployment(
+        s, epoch, deployment_key=f"{key}-twin-1", stage="LIVE_CANARY",
+        kind="paper_twin", arms={a: f"L{a}_pt" for a in arms},
+        twin_of=live, started_at=armed, _sanctioned_canary=True,
+    )
+    svc.transition_experiment(s, exp, "PROBE", actor="operator")
+    svc.transition_experiment(s, exp, "PAPER", actor="operator")
+    # A promotion needs the PASS that justified it — the guard is real, so the
+    # fixture satisfies it rather than routing around it.
+    promo = svc.register_gate(
+        s, ver, gate_key="paper_to_live_canary", kind="promotion",
+        spec={"pass_all": [{"metric": "pnl_cents_per_trade", "arm": arms[0],
+                            "op": ">", "value": 0}]},
+        from_state="PAPER", to_state="LIVE_CANARY", registered_at=armed,
+    )
+    passed = svc.record_gate_result(
+        s, promo, verdict="PASS", epoch=epoch, computed_at=armed,
+        evidence_ref="test fixture", explanation="fixture promotion",
+    )
+    svc.transition_experiment(
+        s, exp, "LIVE_CANARY", actor="operator", approved_by="operator",
+        gate_result=passed, reason="fixture: arm the canary",
+    )
+    s.commit()
+    return {"exp": exp, "ver": ver, "epoch": epoch, "live": live, "twin": twin,
+            "armed": armed, "live_tags": [f"L{a}" for a in arms],
+            "twin_tags": [f"L{a}_pt" for a in arms]}
+
+
+def _live_order(s, tag, at, *, n=1, action="buy"):
+    from kalshi_bot.models import LiveOrder
+
+    for i in range(n):
+        s.add(LiveOrder(
+            market_ticker=f"KX-{tag}-{i}-{at.timestamp()}", strategy=tag,
+            action=action, side="yes", status="resting", quantity=1, limit_price=50,
+            created_at=at + timedelta(seconds=i),
+        ))
+
+
+def test_a_silent_paper_twin_now_fires(xos_session, xos_platform):
+    """THE BLIND SPOT, CLOSED. A live canary's registered twin is a paper book: it
+    writes `paper_trades` under its own tags, and if it stops the live/paper
+    comparison that detects adverse selection quietly stops with it. Before this,
+    the arm carried no `paper` tags at all so nothing was ever measured."""
+    s = xos_session
+    book = _live_canary_book(s, "twin-went-dark", armed_hours_ago=48)
+    # Live is placing orders, so the book itself is demonstrably running...
+    _live_order(s, book["live_tags"][0], _now() - timedelta(hours=40), n=200)
+    # ...and the paper engine is busy, but the TWIN has booked nothing.
+    _trade(s, "mmsell10", _now() - timedelta(hours=40), n=4818)
+    s.commit()
+
+    fired = _fired(ct.build_report(s, evaluate=True), "twin-went-dark")
+    assert {c["anomaly_kind"] for c in fired} == {"mmsell10:paper_twin"}, (
+        "the twin is silent; the live deployment beside it is not"
+    )
+    assert "paper_twin" in (fired[0]["detail"] or "")
+
+
+def test_a_silent_live_deployment_now_fires(xos_session, xos_platform):
+    """The other half: live placed no entry order for 48h while other strategies
+    placed 200. Measured on `live_entry_orders` (orders PLACED), never on
+    settlement — settlement lags entry by hours to days, so a settled-contract
+    count would call a healthy book silent for a whole window after it started."""
+    s = xos_session
+    book = _live_canary_book(s, "live-went-dark", armed_hours_ago=48)
+    _trade(s, book["twin_tags"][0], _now() - timedelta(hours=40), n=300)
+    _live_order(s, "Dmmsell10", _now() - timedelta(hours=40), n=200)
+    s.commit()
+
+    fired = _fired(ct.build_report(s, evaluate=True), "live-went-dark")
+    assert {c["anomaly_kind"] for c in fired} == {"mmsell10:live"}
+    assert "live entry orders" in (fired[0]["detail"] or ""), (
+        "and the reference is live orders, not paper trades"
+    )
+
+
+def test_a_busy_paper_engine_never_indicts_a_silent_live_arm(xos_session,
+                                                             xos_platform):
+    """MUST NOT FIRE: this is the false positive that would hit EVERY live book at
+    once. `paper_trades` being busy proves the paper engine is up; it is perfectly
+    consistent with live trading being switched off platform-wide. The reference
+    has to be read on the same substrate the silent arm is measured on."""
+    s = xos_session
+    book = _live_canary_book(s, "live-quiet-everywhere", armed_hours_ago=48)
+    _trade(s, book["twin_tags"][0], _now() - timedelta(hours=40), n=300)
+    _trade(s, "mmsell10", _now() - timedelta(hours=40), n=40000)
+    # No live orders anywhere — not this book's, not anyone's.
+    s.commit()
+    assert not _fired(ct.build_report(s, evaluate=True), "live-quiet-everywhere")
+
+
+def test_a_healthy_live_canary_and_twin_fire_nothing(xos_session, xos_platform):
+    s = xos_session
+    book = _live_canary_book(s, "healthy-canary", armed_hours_ago=48)
+    _live_order(s, book["live_tags"][0], _now() - timedelta(hours=40), n=50)
+    _trade(s, book["twin_tags"][0], _now() - timedelta(hours=40), n=50)
+    _trade(s, "mmsell10", _now() - timedelta(hours=40), n=4818)
+    _live_order(s, "Dmmsell10", _now() - timedelta(hours=40), n=200)
+    s.commit()
+    assert not _fired(ct.build_report(s, evaluate=True), "healthy-canary")
+
+
+def test_the_two_kinds_of_one_arm_are_separate_findings(xos_session, xos_platform):
+    """A live canary and its twin are the SAME arm on two deployments and they
+    fail independently — an emptied live allowlist stops one, a mis-registered
+    twin stops the other. So the unit of a finding is (arm x kind), and each
+    carries its own fingerprint so one can be ticketed without hiding the other."""
+    s = xos_session
+    _live_canary_book(s, "both-dark", armed_hours_ago=48)
+    _trade(s, "mmsell10", _now() - timedelta(hours=40), n=4818)
+    _live_order(s, "Dmmsell10", _now() - timedelta(hours=40), n=200)
+    s.commit()
+
+    fired = _fired(ct.build_report(s, evaluate=True), "both-dark")
+    assert {c["anomaly_kind"] for c in fired} == {"mmsell10:live",
+                                                  "mmsell10:paper_twin"}
+    assert len({c["fingerprint"] for c in fired}) == 2, (
+        "distinct fingerprints, so adopting one does not silence the other"
+    )
+
+
+def test_a_sibling_reference_must_be_the_same_deployment_kind(xos_session,
+                                                              xos_platform):
+    """A busy PAPER-TWIN sibling arm says nothing about whether a LIVE arm could
+    have traded. Only a sibling on the same kind is a controlled comparison."""
+    s = xos_session
+    _live_canary_book(s, "kind-crossed-sibling", armed_hours_ago=48,
+                      arms=("treatment", "control"))
+    # The control arm is busy on its TWIN only; both live arms are silent, and
+    # nothing else on the platform placed a live order.
+    _trade(s, "Lcontrol_pt", _now() - timedelta(hours=40), n=300)
+    _trade(s, "Ltreatment_pt", _now() - timedelta(hours=40), n=300)
+    s.commit()
+    assert not _fired(ct.build_report(s, evaluate=True), "kind-crossed-sibling"), (
+        "a twin sibling is not a reference for a live arm"
+    )
+
+
+def test_an_unanswerable_metric_is_not_a_zero(xos_session, xos_platform):
+    """MUST NOT FIRE: `collected is None` means the provider could not answer, and
+    "we could not compute this" is not "this collected nothing". Firing on it
+    would indict a book for a gap in the metrics layer."""
+    s = xos_session
+    _live_canary_book(s, "unanswerable", armed_hours_ago=48)
+    _live_order(s, "Dmmsell10", _now() - timedelta(hours=40), n=200)
+    _trade(s, "mmsell10", _now() - timedelta(hours=40), n=4818)
+    s.commit()
+
+    import kalshi_bot.experiment_os.metrics as mx
+    from kalshi_bot.experiment_os.metrics import MetricValue
+
+    real = mx.compute_metric
+
+    def _blind(session, key, scope):
+        if scope.deployment_kind in ("live", "paper_twin"):
+            return MetricValue(metric=key, value=None, n=0, unit="?",
+                               missing=True, reason="no provider in this test")
+        return real(session, key, scope)
+
+    mx.compute_metric = _blind
+    try:
+        rep = ct.build_report(s, evaluate=True)
+    finally:
+        mx.compute_metric = real
+    assert not _fired(rep, "unanswerable")

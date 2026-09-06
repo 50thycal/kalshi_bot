@@ -83,7 +83,7 @@ from typing import Any
 from sqlalchemy import select
 
 from . import read, service
-from .lifecycle import GateVerdict, LifecycleState
+from .lifecycle import DeploymentKind, GateVerdict, LifecycleState
 from .models import ExperimentGateResult, ExperimentOsExperimentCommand
 from .read import get_experiment
 
@@ -113,6 +113,12 @@ ACTION_ROLES: dict[str, frozenset[str]] = {
     # no verdict of its own. The evaluator already did, and the action refuses
     # unless that recorded verdict is a CURRENT FAIL.
     "RETIRE_ON_GATE_FAIL": frozenset({"RESEARCH_LAB", "LIVE_OPS", "TASK_SPECIFIC"}),
+    # Same roles as RETIRE_ON_GATE_FAIL, and deliberately its weaker sibling: see
+    # `_stand_down` for why it refuses RETIRED wherever that stronger verb
+    # applies. What keeps it out of real-money territory is structural rather
+    # than role-based — an experiment holding an OPEN LIVE deployment is refused
+    # whoever asks.
+    "STAND_DOWN": frozenset({"RESEARCH_LAB", "LIVE_OPS", "TASK_SPECIFIC"}),
 }
 
 MAX_ENVELOPE_BYTES = 4096
@@ -193,6 +199,27 @@ class ExperimentPackage:
     #: holding deployments. `_close_out_retrospective` below re-checks the outcome
     #: rather than trusting the package to have used it.
     close_out: Callable[..., dict] | None = None
+
+
+def _approver_or_refuse(payload: dict, what: str) -> str:
+    """The person attesting an act, validated so the audit row actually names one.
+
+    `_ACTOR_RE` permits spaces — legitimately, since a person's name may contain
+    one — which meant `approved_by="   "` satisfied every caller of it and wrote a
+    BLANK approver onto the transition. On ARM_CANARY that is a real-money arming
+    whose audit row names nobody, which is that column's only job. So the value is
+    stripped first, and the stripped value is what gets recorded."""
+    approved_by = payload.get("approved_by")
+    if not isinstance(approved_by, str):
+        raise ExperimentCommandRejected(
+            f"approved_by must name the person {what}", "BAD_APPROVED_BY",
+        )
+    approved_by = approved_by.strip()
+    if not approved_by or not _ACTOR_RE.match(approved_by):
+        raise ExperimentCommandRejected(
+            f"approved_by must name the person {what}", "BAD_APPROVED_BY",
+        )
+    return approved_by
 
 
 def _no_contract(session, **kw):
@@ -642,12 +669,7 @@ def _retire_on_gate_fail(session, env: _Envelope, now: datetime):
             "gate must name the pre-registered gate whose FAIL authorizes this",
             "BAD_GATE",
         )
-    approved_by = env.payload.get("approved_by")
-    if not isinstance(approved_by, str) or not _ACTOR_RE.match(approved_by or ""):
-        raise ExperimentCommandRejected(
-            "approved_by must name the operator deciding to retire this book",
-            "BAD_APPROVED_BY",
-        )
+    approved_by = _approver_or_refuse(env.payload, "deciding to retire this book")
     reason = env.payload.get("reason")
     if not isinstance(reason, str) or not reason.strip():
         raise ExperimentCommandRejected(
@@ -680,6 +702,171 @@ def _retire_on_gate_fail(session, env: _Envelope, now: datetime):
         reason=reason,
     )
     return {"kind": "retire_on_gate_fail", **produced}
+
+
+#: The only lifecycle targets this verb can reach. Both REDUCE activity, and
+#: neither can enter or expand real money — which is what makes a lifecycle write
+#: addressed by KEY, with no reviewed package in between, safe to exist at all.
+#: Anything that advances a stage stays where it is: behind a reviewed package
+#: and a recorded evaluator PASS.
+STAND_DOWN_TARGETS: frozenset[str] = frozenset({
+    LifecycleState.PAUSED.value,
+    LifecycleState.RETIRED.value,
+})
+
+
+def _stand_down(session, env: _Envelope, now: datetime):
+    """Hold or end a line of research the EVALUATOR cannot rule on: → PAUSED or
+    → RETIRED, on an operator's recorded judgement.
+
+    ## Its relationship to RETIRE_ON_GATE_FAIL, which is the important part
+
+    `RETIRE_ON_GATE_FAIL` is the stronger verb and takes precedence wherever it
+    applies: its authorization is not in the envelope at all but in a FAIL the
+    evaluator already computed, so a caller can only point at a failure rather
+    than assert one. **This verb refuses RETIRED whenever that one would work.**
+    Two paths to the same terminal state, one of which quietly discards the
+    evaluator's authority, is exactly the parallel mechanism Experiment OS exists
+    to remove.
+
+    What is left is the case no gate can express: an experiment that is over for a
+    reason its own contract cannot produce a verdict about. `freeze-dark-window-pin`
+    is the worked example and it is not a corner case — its gate reads HOLD
+    ("sample floor not met: settled_trades=0 vs >= 150") and it can never read
+    anything else, because the book has written zero `paper_trades` rows in 24 days
+    and XOS-000003 established why: Kalshi lists no series the hypothesis can be
+    tested on, and none is proposed. A gate cannot fail on evidence that cannot
+    exist, so waiting for a FAIL means waiting forever while four tagged books stay
+    recorded as an active PAPER deployment.
+
+    Fabricating that FAIL by hand to unlock the stronger verb is the one thing that
+    must never happen here — a verdict written by hand, after the fact, is exactly
+    what "only a recorded evaluator result authorizes" exists to refuse. So this
+    verb writes NO verdict at all. It records a decision, attributed to a person,
+    with its reason, and that is all it claims to be.
+
+    ## What it may never do, enforced here rather than trusted to callers
+
+      * **Only PAUSED or RETIRED.** Every other target is unrepresentable, so a
+        promotion cannot be reached through it even by a typo.
+      * **Refused if the experiment holds an OPEN LIVE deployment.** Real money
+        already has audited paths for stopping — the kill switch, the runtime
+        allowlist, the recorded stand-down integrity event — and a second one
+        reachable by naming a key in a PUBLIC envelope is not acceptable. Stand a
+        live book down through Live Ops first.
+      * **`approved_by` and `reason` required**; no-ops refused, because a
+        transition row recording no change reads later as a decision that was made.
+
+    ## RETIRED closes the open epoch, PAUSED does not
+
+    RETIRED is terminal, so leaving deployments open would leave rows claiming to
+    run under an experiment that is over — the XOS-000011 shape, where the record
+    and the admission resolver disagreed and four books went dark for four days.
+    `close_epoch` ends them at the same instant and removes no evidence: metric
+    scopes read every deployment in an epoch, ended or not.
+
+    PAUSED deliberately leaves the epoch open, because a pause is meant to be
+    resumable into the same operating interval. What stops a paused book trading is
+    the runtime allowlist and its recorded stand-down, not a closed epoch.
+    """
+    key = env.payload.get("experiment")
+    if not isinstance(key, str) or not key.strip():
+        raise ExperimentCommandRejected(
+            "experiment must name the line of research to stand down, by key",
+            "BAD_EXPERIMENT",
+        )
+    experiment = get_experiment(session, key.strip())
+    if experiment is None:
+        raise ExperimentCommandRejected(
+            f"experiment {key.strip()!r} does not exist", "NO_SUCH_EXPERIMENT",
+        )
+
+    target = env.payload.get("target")
+    if not isinstance(target, str) or target not in STAND_DOWN_TARGETS:
+        raise ExperimentCommandRejected(
+            f"target must be one of {sorted(STAND_DOWN_TARGETS)}; this verb holds "
+            "or ends a line of research and can never advance one",
+            "BAD_TARGET",
+        )
+    if experiment.state == target:
+        raise ExperimentCommandRejected(
+            f"{experiment.key} is already {target} — a transition row that records "
+            "no change reads later as a decision that was taken",
+            "ALREADY_IN_TARGET_STATE",
+        )
+
+    approved_by = _approver_or_refuse(env.payload, "deciding to stand this down")
+    reason = env.payload.get("reason")
+    if not isinstance(reason, str) or not reason.strip():
+        raise ExperimentCommandRejected(
+            "reason is required: it becomes the lifecycle audit row", "BAD_REASON",
+        )
+
+    version = read.latest_version(session, experiment)
+    epoch = read.open_epoch_for(session, version) if version is not None else None
+
+    if target == LifecycleState.RETIRED.value and version is not None:
+        # Defer to the evaluator wherever it has already spoken.
+        failed = [
+            g.gate_key for g in read.gates_for(session, version)
+            if _latest_verdict(session, g) == GateVerdict.FAIL.value
+        ]
+        if failed:
+            raise ExperimentCommandRejected(
+                f"{experiment.key} has a gate whose latest RECORDED result is FAIL "
+                f"({', '.join(sorted(failed))}). Retire it with RETIRE_ON_GATE_FAIL, "
+                "which carries the evaluator's authority instead of an operator's "
+                "assertion",
+                "USE_RETIRE_ON_GATE_FAIL",
+            )
+
+    live = [
+        d for d in (read.deployments_for(session, epoch) if epoch is not None else [])
+        if d.kind == DeploymentKind.LIVE.value and d.ended_at is None
+    ]
+    if live:
+        raise ExperimentCommandRejected(
+            f"{experiment.key} holds {len(live)} open LIVE deployment(s) "
+            f"({', '.join(d.deployment_key for d in live)}). Real-money exposure has "
+            "its own audited paths for stopping; stand the book down through Live "
+            "Ops first, then stand the experiment down here",
+            "OPEN_LIVE_DEPLOYMENT",
+        )
+
+    closed_epoch = None
+    if target == LifecycleState.RETIRED.value and epoch is not None:
+        service.close_epoch(session, epoch, ended_at=now)
+        closed_epoch = epoch.epoch_number
+
+    transition = service.transition_experiment(
+        session, experiment, target, actor=env.actor, reason=reason.strip(),
+        approved_by=approved_by, occurred_at=now, version=version, epoch=epoch,
+    )
+    return {
+        "kind": "stand_down",
+        "experiment": experiment.key,
+        "from_state": transition.from_state,
+        "to_state": transition.to_state,
+        "closed_epoch": closed_epoch,
+        "ended_deployments": sorted(
+            d.deployment_key
+            for d in (read.deployments_for(session, epoch) if epoch is not None else [])
+            if d.ended_at is not None
+        ) if closed_epoch is not None else [],
+    }
+
+
+def _latest_verdict(session, gate) -> str | None:
+    """The gate's latest RECORDED verdict, or None. Recorded only — a dry run
+    authorizes nothing and must not steer a lifecycle write either."""
+    row = session.scalar(
+        select(ExperimentGateResult)
+        .where(ExperimentGateResult.gate_id == gate.id)
+        .order_by(ExperimentGateResult.computed_at.desc(),
+                  ExperimentGateResult.id.desc())
+        .limit(1)
+    )
+    return row.verdict if row is not None else None
 
 
 def _close_out_retrospective(session, env: _Envelope, now: datetime):
@@ -715,12 +902,7 @@ def _close_out_retrospective(session, env: _Envelope, now: datetime):
             f"package {package.name!r} declares no retrospective close-out",
             "NO_CLOSE_OUT",
         )
-    approved_by = env.payload.get("approved_by")
-    if not isinstance(approved_by, str) or not _ACTOR_RE.match(approved_by or ""):
-        raise ExperimentCommandRejected(
-            "approved_by must name the person attesting this retrospective record",
-            "BAD_APPROVED_BY",
-        )
+    approved_by = _approver_or_refuse(env.payload, "attesting this retrospective record")
     reason = env.payload.get("reason")
     if not isinstance(reason, str) or not reason.strip():
         raise ExperimentCommandRejected(
@@ -776,12 +958,7 @@ def _arm_canary(session, env: _Envelope, now: datetime):
             f"package {package.name!r} registers a contract but arms nothing",
             "PACKAGE_NOT_ARMABLE",
         )
-    approved_by = env.payload.get("approved_by")
-    if not isinstance(approved_by, str) or not _ACTOR_RE.match(approved_by or ""):
-        raise ExperimentCommandRejected(
-            "approved_by must name the person approving real-money capability",
-            "BAD_APPROVED_BY",
-        )
+    approved_by = _approver_or_refuse(env.payload, "approving real-money capability")
     produced = package.arm(session, approved_by=approved_by, actor=env.actor)
     return {"kind": "arm", "package": package.name, "produced": produced}
 
@@ -823,6 +1000,15 @@ ACTIONS: dict[str, _Action] = {
         doc="Retire an in-system experiment whose named gate's LATEST RECORDED "
             "result is FAIL, ending its open deployments atomically. Writes no "
             "verdict, refuses a live experiment, and expands no exposure.",
+    ),
+    "STAND_DOWN": _Action(
+        required=frozenset({"experiment", "target", "approved_by", "reason"}),
+        optional=frozenset(),
+        run=_stand_down,
+        doc="Hold or end a line of research the evaluator cannot rule on: target "
+            "PAUSED or RETIRED, addressed by experiment KEY. Refuses any other "
+            "target, refuses an open LIVE deployment, and refuses RETIRED when "
+            "RETIRE_ON_GATE_FAIL applies. Writes no verdict and expands nothing.",
     ),
     "ARM_CANARY": _Action(
         required=frozenset({"package", "approved_by"}),
@@ -961,6 +1147,14 @@ def _result_of(produced: Any) -> dict | None:
     for name in ("experiment", "state", "gate", "authorizing_result_id",
                  "authorizing_verdict", "transition_id", "deployments_ended"):
         field(name, lambda name=name: produced.get(name))
+
+    # A stand-down produces no package objects — it moves lifecycle state and may
+    # close an epoch — so its receipt carries plain scalars the package walk below
+    # would never find. These are what confirms the outcome without a second read.
+    for k in ("experiment", "from_state", "to_state", "closed_epoch",
+              "ended_deployments"):
+        if produced.get(k) is not None:
+            out[k] = produced[k]
 
     version = inner.get("version")
     if version is not None:

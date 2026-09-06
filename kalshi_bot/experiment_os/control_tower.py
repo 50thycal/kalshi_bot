@@ -107,6 +107,26 @@ SILENT_ARM_HOURS = 24
 # on the same worker in the window `Gmmsell0`/`Gmmsell1` booked 0.
 SILENT_ARM_REFERENCE_TRADES = 20
 
+# Which deployment kinds an arm can be ARMED in, and the canonical metric that
+# says whether it collected anything there.
+#
+# `paper` and `paper_twin` both write `paper_trades`, so `entries` is the right
+# provider for both, addressed at its own kind. `live` writes `live_orders`
+# instead, and reading `entries` at a live scope would be exactly the quiet
+# substitution `metrics._live_metric` refuses in the other direction — a live
+# metric addressed at `paper` returns MISSING rather than reading the live
+# deployment. The live counterpart is `live_entry_orders`: orders PLACED, not
+# filled and not settled, because a book whose orders never reach the front of
+# the queue is still running and a book that places none is not.
+#
+# PROBE is deliberately absent. A probe deployment is tagless by construction
+# (`correlation_cap.py`), so it has nothing to book and its zero is not a finding.
+ARM_ACTIVITY_METRIC: dict[str, str] = {
+    "paper": "entries",
+    "paper_twin": "entries",
+    "live": "live_entry_orders",
+}
+
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
@@ -444,8 +464,17 @@ def _experiment_view(session, exp: Experiment, *, evaluate: bool) -> dict:
             "actor": last.actor, "reason": (last.reason or "")[:160],
         }
 
+    # Per (arm x deployment kind) evidence, which is what `_silent_arms` needs and
+    # what `board["arms"]` alone cannot give: the scoreboard reports each arm at
+    # `deployment_kind="paper"`, so an experiment deployed only live and/or as a
+    # twin shows no tags there and would be invisible however silent it went.
+    view["arm_activity"] = _arm_activity(session, exp, ver, epoch, view)
+
     # The Tower's own count of observed evidence, so "zero evidence" is derived
     # from the same numbers the report prints rather than from a second query.
+    # PAPER ONLY, deliberately unchanged: `experiment.zero_evidence` and the
+    # rendered scoreboard both read it, and widening it here would silently
+    # change what those two say.
     view["total_entries"] = sum(
         int(a.get("entries") or 0) for a in view["arms"]
     )
@@ -456,6 +485,55 @@ def _experiment_view(session, exp: Experiment, *, evaluate: bool) -> dict:
         )
         view["evidence_fresh_at"] = str(newest) if newest else None
     return view
+
+
+def _arm_activity(session, exp, ver, epoch, view: dict) -> list[dict]:
+    """Every (arm x deployment kind) this experiment is actually armed in, with
+    the canonical count of what it has collected there.
+
+    Computed through `metrics.compute_metric` on a `MetricScope` built exactly the
+    way `read.experiment_scoreboard` builds its own — same window, same snapshot,
+    same providers. This is NOT a second implementation of "how much has this arm
+    collected": it is the canonical provider asked the same question at a
+    deployment kind the scoreboard does not address.
+
+    Only kinds the epoch actually holds are scoped. A scope for a kind that is not
+    deployed would answer a confident zero for a deployment that does not exist,
+    which is the difference between "armed and silent" and "not armed"."""
+    if ver is None or epoch is None:
+        return []
+    from .metrics import MetricScope, compute_metric
+    from .models import PlatformSnapshot
+
+    snap = session.get(PlatformSnapshot, epoch.platform_snapshot_id)
+    now = _now()
+    end = min(now, _utc(epoch.ended_at)) if epoch.ended_at is not None else now
+    kinds = {d["kind"] for d in view["deployments"]} & set(ARM_ACTIVITY_METRIC)
+
+    rows: list[dict] = []
+    for arm in read.arms_for(session, ver):
+        for kind in sorted(kinds):
+            tags = read.arm_strategy_tags(session, epoch, arm.arm_key, kind)
+            if not tags:
+                continue  # this arm is not armed in this kind
+            metric = ARM_ACTIVITY_METRIC[kind]
+            mv = compute_metric(session, metric, MetricScope(
+                experiment_key=exp.key, version=ver.version,
+                epoch_number=epoch.epoch_number, arm_key=arm.arm_key,
+                deployment_kind=kind, strategy_tags=tags, deployment_keys=(),
+                window_start=_utc(epoch.started_at), window_end=end,
+                platform_snapshot_fingerprint=snap.fingerprint if snap else "",
+            ))
+            rows.append({
+                "arm": arm.arm_key, "role": arm.role, "kind": kind,
+                "tags": list(tags), "metric": metric,
+                # `missing` means the provider could not answer at all. Carried
+                # rather than coerced to zero: "we could not compute this" and
+                # "this collected nothing" must never be the same value here.
+                "collected": None if mv.missing else int(mv.value or 0),
+                "missing_reason": mv.reason if mv.missing else None,
+            })
+    return rows
 
 
 # ---------------------------------------------------------------------------
@@ -586,9 +664,9 @@ def build_report(session, *, evaluate: bool = True,
     rep.silent_arms = _silent_arms(session, rep)
     for f in rep.silent_arms:
         head = (
-            f"{f['experiment']}: arm {f['arm']!r} ({', '.join(f['tags'])}) has "
-            f"been ARMED {f['hours_silent']}h and has collected NOTHING, while "
-            f"{f['reference']}"
+            f"{f['experiment']}: arm {f['arm']!r} on its {f['kind']} deployment "
+            f"({', '.join(f['tags'])}) has been ARMED {f['hours_silent']}h and "
+            f"has collected NOTHING, while {f['reference']}"
         )
         if f["covered_by"]:
             # Stated rather than dropped: the reader still needs to know the
@@ -791,18 +869,38 @@ def _derive_actions(rep: TowerReport) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _reference_trades_since(session, since: datetime, exclude: set[str]) -> int:
-    """Paper trades booked by strategies OUTSIDE this experiment since `since`.
+def _kind_reference_since(
+    session, kind: str, since: datetime, exclude: set[str]
+) -> tuple[int, str]:
+    """Comparable activity by strategies OUTSIDE this experiment since `since`.
 
     The generalization of "`mmsell10` booked 166 while `Gmmsell0`/`Gmmsell1`
     booked 0": proof that the worker was up, cycling, finding candidates and
-    writing rows during the window in which this arm wrote none."""
-    return int(session.scalar(
+    writing rows during the window in which this arm wrote none.
+
+    Read on the SAME SUBSTRATE the silent arm is measured on. A live arm is
+    measured on `live_orders`, so its reference is other strategies' live orders —
+    busy `paper_trades` would only prove the paper engine is up, which is
+    perfectly consistent with live being switched off everywhere, and is exactly
+    the false positive that would make an operator stop reading this detector."""
+    if kind == "live":
+        from ..models import LiveOrder
+
+        n = session.scalar(
+            select(func.count()).select_from(LiveOrder).where(
+                LiveOrder.created_at >= since,
+                LiveOrder.action == "buy",
+                LiveOrder.strategy.not_in(sorted(exclude)),
+            )
+        )
+        return int(n or 0), "live entry orders"
+    n = session.scalar(
         select(func.count()).select_from(PaperTrade).where(
             PaperTrade.created_at >= since,
             PaperTrade.strategy.not_in(sorted(exclude)),
         )
-    ) or 0)
+    )
+    return int(n or 0), "paper trades"
 
 
 def _silent_arms(session, rep: TowerReport) -> list[dict]:
@@ -838,6 +936,8 @@ def _silent_arms(session, rep: TowerReport) -> list[dict]:
         than none;
       * **tagless probe** — a PROBE deployment is tagless BY CONSTRUCTION (see
         `correlation_cap.py`), so it has nothing to book;
+      * **an unanswerable metric** — a provider that returns MISSING has not said
+        the arm collected nothing, it has said it could not tell;
       * **recorded stand-down** — `EXPERIMENT_EXECUTION_STOOD_DOWN` records a
         state rather than reporting a failure; the absence is already explained;
       * **slow but trading** — the condition is ZERO, never a rate. A book that
@@ -856,6 +956,21 @@ def _silent_arms(session, rep: TowerReport) -> list[dict]:
     rest of the platform stands in as the reference: `Gmmsell1` at zero would
     have been ambiguous; `Gmmsell1` at zero while `Gmmsell0` was also at zero and
     `mmsell10` booked 166 was not.
+
+    ## One finding per (arm x deployment kind)
+
+    An arm can be armed in more than one kind at once — a live canary and its
+    paper twin are the same arm on two deployments — and they fail
+    independently: a live allowlist can empty while the twin keeps trading, and a
+    twin can be mis-registered while live trades fine. So the unit of a finding
+    is the pair, not the arm, and each is measured by the provider that addresses
+    its own kind (`ARM_ACTIVITY_METRIC`).
+
+    The reference is drawn from the SAME substrate for the same reason. A silent
+    live arm compared against busy `paper_trades` would only establish that the
+    paper engine is up, which is perfectly consistent with live being switched
+    off everywhere — a false positive on every live book at once, which is how a
+    detector stops being read.
 
     ## Why the weaker detector is NOT suppressed, and why this one sometimes is
 
@@ -903,13 +1018,17 @@ def _silent_arms(session, rep: TowerReport) -> list[dict]:
             if any(ev.get("kind") in enf_mod.NON_BLOCKING_INTEGRITY_KINDS
                    for ev in v["integrity_events"]):
                 continue
-            # Only arms that actually carry a tag are armed. A tagless arm — the
-            # probe shape — has nothing to book, so its zero is not a finding.
-            # The arming-instant check below is a second, independent guard on
-            # the same case; both are kept because they fail closed for different
-            # reasons (no tag at all vs. a tag whose deployment has no start).
-            arms = [a for a in v["arms"] if a.get("tags")]
-            silent = [a for a in arms if not int(a.get("entries") or 0)]
+            # Every (arm x kind) the experiment is armed in. A row exists only
+            # where that arm carries a tag of that kind, so a tagless arm — the
+            # probe shape — never appears. The arming-instant check below is a
+            # second, independent guard on the same case; both are kept because
+            # they fail closed for different reasons (no tag at all vs. a tag
+            # whose deployment records no start).
+            rows = v.get("arm_activity") or []
+            # `collected is None` means the provider could not answer. Never a
+            # finding: "we could not compute this" is not "this collected
+            # nothing", and firing on it would indict a book for a metrics gap.
+            silent = [r for r in rows if r["collected"] == 0]
             if not silent:
                 continue
             own_tags = {t for d in v["deployments"] for t in d["tags"]}
@@ -926,12 +1045,8 @@ def _silent_arms(session, rep: TowerReport) -> list[dict]:
                     # as current would indict a book on its first day.
                     armed_at[tag] = started if prior is None else max(prior, started)
 
-            trading_siblings = [
-                a for a in arms
-                if int(a.get("entries") or 0) >= SILENT_ARM_REFERENCE_TRADES
-            ]
-            for arm in silent:
-                stamps = [armed_at[t] for t in arm["tags"] if t in armed_at]
+            for row in silent:
+                stamps = [armed_at[t] for t in row["tags"] if t in armed_at]
                 if not stamps:
                     # The arming instant is unknown, so the silence cannot be
                     # measured. Never fire on a guessed timestamp.
@@ -940,33 +1055,48 @@ def _silent_arms(session, rep: TowerReport) -> list[dict]:
                 hours = (now - since).total_seconds() / 3600.0
                 if hours < SILENT_ARM_HOURS:
                     continue
-                if trading_siblings:
-                    sib = trading_siblings[0]
+
+                # The reference must be COMPARABLE to what this row measures. A
+                # sibling arm of the SAME kind is the strongest form: same epoch,
+                # same snapshot, same worker, same execution path, differing only
+                # in the experiment's one variable. Comparing a silent live arm
+                # against a busy paper arm would prove only that the paper engine
+                # is up, which says nothing about whether live could trade at all.
+                sibling = next(
+                    (r for r in rows
+                     if r["kind"] == row["kind"] and r["arm"] != row["arm"]
+                     and (r["collected"] or 0) >= SILENT_ARM_REFERENCE_TRADES),
+                    None,
+                )
+                if sibling is not None:
                     reference = (
-                        f"sibling arm {sib['arm']!r} ({', '.join(sib['tags'])}) "
-                        f"booked {int(sib['entries'])} entries in the same epoch, "
-                        "on the same platform snapshot, from the same worker"
+                        f"sibling arm {sibling['arm']!r} "
+                        f"({', '.join(sibling['tags'])}) recorded "
+                        f"{sibling['collected']} on the same {row['kind']} "
+                        "deployment kind, in the same epoch, on the same platform "
+                        "snapshot, from the same worker"
                     )
                     basis = "SIBLING_TRADING"
                 else:
-                    n = _reference_trades_since(session, since, own_tags)
+                    n, what = _kind_reference_since(session, row["kind"], since,
+                                                   own_tags)
                     if n < SILENT_ARM_REFERENCE_TRADES:
-                        # Nothing traded anywhere: the silence is not localized
-                        # to this arm, so there is no finding to report.
+                        # Nothing comparable happened anywhere: the silence is not
+                        # localized to this arm, so there is no finding to report.
                         continue
-                    reference = (
-                        f"{n} paper trades were booked by OTHER strategies in the "
-                        "same window"
-                    )
+                    reference = f"{n} {what} were recorded by OTHER strategies in "\
+                                "the same window"
                     basis = "PLATFORM_ACTIVE"
                 out.append({
                     "experiment": v["key"],
                     "experiment_id": v.get("experiment_id"),
                     "version_id": v.get("version_id"),
                     "epoch_id": v.get("epoch_id"),
-                    "arm": arm["arm"],
-                    "role": arm.get("role"),
-                    "tags": list(arm["tags"]),
+                    "arm": row["arm"],
+                    "role": row.get("role"),
+                    "kind": row["kind"],
+                    "metric": row["metric"],
+                    "tags": list(row["tags"]),
                     "armed_at": str(since),
                     "hours_silent": round(hours, 1),
                     "basis": basis,
@@ -1177,16 +1307,18 @@ def _detect_candidates(session, rep: TowerReport) -> list[dict]:
             continue
         out.append(_candidate(
             detector=issue_policy.DETECTOR_ARMED_BUT_SILENT,
-            anomaly_kind=f["arm"],
+            anomaly_kind=f"{f['arm']}:{f['kind']}",
             title=(f"{f['experiment']} arm {f['arm']!r} has been armed "
-                   f"{f['hours_silent']}h with zero evidence"),
-            scope=f"{f['experiment']} · arm {f['arm']}",
+                   f"{f['hours_silent']}h on its {f['kind']} deployment with "
+                   "zero evidence"),
+            scope=f"{f['experiment']} · arm {f['arm']} · {f['kind']}",
             experiment=f["experiment"], experiment_id=f.get("experiment_id"),
             version_id=f.get("version_id"), epoch_id=f.get("epoch_id"),
             detail=(
-                f"tags {', '.join(f['tags'])} are registered and armed (since "
-                f"{f['armed_at']}) and have booked NOTHING for "
-                f"{f['hours_silent']}h, while {f['reference']} [{f['basis']}]. "
+                f"{f['kind']} tags {', '.join(f['tags'])} are registered and "
+                f"armed (since {f['armed_at']}) and have recorded NOTHING "
+                f"({f['metric']}=0) for {f['hours_silent']}h, while "
+                f"{f['reference']} [{f['basis']}]. "
                 "No gate is BLOCKED, so nothing else in this report explains the "
                 "zero. REGISTRATION IS NOT CONFIGURATION: an arm can be a "
                 "correct Experiment OS object and still be absent from what the "

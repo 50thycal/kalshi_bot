@@ -379,20 +379,45 @@ Measured against production on 2026-09-06, across all 30 active deployment arms
 else in the portfolio is either trading, tagless by construction, stood down,
 live/twin-only, or — for `freeze-dark-window-pin` — already ticketed.
 
+#### One finding per (arm × deployment kind)
+
+An arm can be armed in more than one kind at once — a live canary and its
+registered paper twin are the same arm on two deployments — and they fail
+**independently**: a live allowlist can empty while the twin keeps trading, and a
+twin can be mis-registered while live trades fine. So the unit of a finding is
+the pair, not the arm, and each carries its own fingerprint so ticketing one
+never silences the other.
+
+Each pair is measured by the provider that addresses its own kind:
+
+| kind | metric | reads |
+|---|---|---|
+| `paper` | `entries` | `paper_trades` |
+| `paper_twin` | `entries` | `paper_trades` (the twin's own tags) |
+| `live` | `live_entry_orders` | `live_orders` — entry buys **placed** |
+| `probe` | — | never scoped: tagless by construction |
+
+Reading `entries` at a live scope would be the exact quiet substitution the
+metrics layer refuses in the other direction (a live metric addressed at `paper`
+returns MISSING rather than reading the live deployment), so it does not.
+
+**The reference is drawn from the same substrate.** A silent live arm compared
+against busy `paper_trades` would establish only that the paper engine is up —
+which is perfectly consistent with live being switched off platform-wide, and
+would fire on every live book at once. A live arm's reference is therefore other
+strategies' live orders, and a sibling arm only counts as a reference when it is
+on the **same** deployment kind.
+
 Its blind spots, stated:
 
-- **Paper only.** Evidence comes from `read.experiment_scoreboard`, whose arm
-  metrics are scoped to `deployment_kind = "paper"`. An experiment whose only
-  deployments are `live` and `paper_twin` — today `mmsell-price-ceiling`,
-  `mmsell-scheduled-settle-live`, `theta4-fat-tail` — has no paper tags on its
-  arms and can therefore never fire, however silent it goes. Extending the
-  detector to those kinds means going through `metrics.compute_metric` with a
-  twin/live scope (never a second count of its own); it is deliberately left as
-  follow-up rather than smuggled in beside a detector.
 - It can only see silence Experiment OS knows should not be silent. A book that
   is *configured but registered wrong* is `enforcement.unstamped_lineage`; a book
   trading the wrong markets, or producing rows under a tag other than the
   registered one, is invisible to both.
+- A provider that returns MISSING is never read as a zero. That is the right
+  failure direction — "we could not compute this" is not "this collected
+  nothing" — but it does mean a metrics gap makes the detector silent rather than
+  loud on the arms it covers.
 - On a platform-wide outage — nothing trading anywhere — it stays deliberately
   quiet, because it has no reference and therefore no claim. A total outage is
   Live Ops' collector-health and worker surface, not this one's.

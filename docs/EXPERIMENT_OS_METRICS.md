@@ -188,6 +188,22 @@ needing one of these is honestly BLOCKED_DATA until its canonical provider lands
 `live_settled_contracts`, `live_cents_per_contract` and `twin_live_winrate_gap_pp`
 read real-money execution: `live_orders` × `fills` × `positions`.
 
+**`live_entry_orders` is the exception, and deliberately so.** It counts entry BUY
+orders this arm **PLACED** in the window — whatever became of them — reading
+`live_orders` alone. It is the live analogue of `entries`, and it exists because
+"has this book collected anything" and "has this book earned anything" are
+different questions: a maker whose orders never reach the front of the queue is
+still *running*, and a book that places none is not. Every settlement-based count
+lags entry by hours to days, so using one to answer the first question reports a
+healthy book as silent for a whole window after it starts.
+
+Its consumer is `experiment.armed_but_silent` (`docs/EXPERIMENT_OS_ISSUES.md`),
+which needs exactly that distinction and nothing finer. It is **additive**:
+`METRICS_ENGINE_REVISION` is deliberately not bumped, because no existing
+metric's meaning or implementation changes — bumping it would re-pin every
+running experiment and make evidence either side of the change incomparable.
+Writing a provider that never existed is not a shared-semantic change.
+
 **Addressing is obeyed, never repaired.** All three are defined only at
 `deployment_kind="live"`. Requested at `paper` or `paper_twin` they return
 **MISSING**, with the mismatch named and `addressing_error` in provenance — they
