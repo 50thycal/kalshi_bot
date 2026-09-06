@@ -1,0 +1,38 @@
+{
+  "audit_worthy": false,
+  "class": "MUTATING",
+  "code_sha": "5b49a66d9e354722f45d65d69becccee267820bc",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T18:46:38Z",
+  "id": "evo-pause-set-2",
+  "mutation": {
+    "changes": {
+      "EVO_WEEKLY_LLM_CEILING_USD": {
+        "after": "0",
+        "before": "8",
+        "requested": "0"
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EVO_WEEKLY_LLM_CEILING_USD"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {},
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/evo-pause-set-2.receipt.json",
+  "result_file": "ops/results/evo-pause-set-2.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34052777301",
+  "service": "evo",
+  "started_at": "2026-09-06T18:46:36Z",
+  "targets": [
+    "EVO_WEEKLY_LLM_CEILING_USD"
+  ],
+  "type": "env"
+}
