@@ -1,5 +1,0 @@
-no experiment command 'rl-freeze-retire-20260906'
-# ops request [READ]
-# type=xos  id=rl-freeze-receipt-3
-# actor=claude-research-lab  purpose=receipt for the freeze retirement, allowing full redeploy time
-# code a2217488ad3b1429249c73380e5f6e3e3239af39 · started 2026-09-06T12:58:13Z
