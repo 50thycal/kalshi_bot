@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","sql":"SELECT count(*) AS series_rows, min(first_seen_at) AS earliest, max(last_seen_at) AS latest, sum(markets_seen) AS markets, count(*) FILTER (WHERE state_at_first_seen='identified') AS identified, count(*) FILTER (WHERE state_at_first_seen='graduated') AS graduated FROM series_observations","max_rows":10,"id":"audit-obs-1"}
