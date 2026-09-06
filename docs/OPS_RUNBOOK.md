@@ -539,6 +539,26 @@ To run a request:
      happens — the pattern `kalshi_bot/weather/backfill.py` already implements. Gate on the YIELD
      column, not the P&L: the retained window yields n≈10 trades/regime, which decides nothing.
 
+   - **"series pnl"** -> `{"type":"script","name":"mmsell_series_pnl"}` — the standing
+     per-series LOSS DETECTOR (`docs/MMSELL_NFLSPREAD_LOSS_CELL.md` §8). Every traded series
+     ranked by realized P&L. It exists because nothing read per-series P&L and `KXNFLSPREAD`
+     therefore gave back a third of the family's 30-day paper P&L, in one graduated series, and
+     was found by accident: `mmsell_market_types` aggregates 400 series into 15 contract types,
+     `mmsell_universe_review` ranks by coverage, and no gate scores a series at all. **Read
+     `edge` (`be% − loss%`), never the raw loss rate** — each series is entered at a different
+     premium, so only `edge` is comparable across them, and `edge <= 0` means the cell is not
+     paying for its tail. **Read `contests`, not `mkts`** — one game carries a nested ladder that
+     a blowout settles against a seller at one instant, so markets are not independent bets.
+     `worst3%` separates "two catastrophic afternoons" (a concentration problem, which the contest
+     cap addresses) from a broad negative drift (a selection problem, which it does not), and the
+     `live` column names the real-money books that touched the cell. Run it weekly with
+     `--days 7` and again with `--all-time --min-n 50`: the two disagree exactly when a cell is
+     NEW, which is the case this exists to catch. **It is a report, not a gate** — at this book's
+     variance a per-series P&L gate would fire constantly on noise (`docs/MMSELL_ROADMAP.md` §1),
+     and acting on a cell is a universe change to a running book, i.e. a new epoch or Version
+     under `NEW_ONLY`.
+     `{"type":"script","name":"mmsell_series_pnl","args":["--series","KXNFLSPREAD","--maxyes","7"]}`
+
    - **"mmsell history status"** -> `{"type":"script","name":"mmsell_history_status"}` — is the
      settled-history CAPTURE working? `kalshi_bot/mmsell/history.py` (`RegimeHistoryCapture`) rides
      along the weather/live cycles and stores settled regime markets + their candles into
