@@ -76,6 +76,13 @@ TICKER = "KXTEAM-26-A"
 
 def _armed(settings, *, variants="mmsell10:lo=5,hi=10,maxyes=7", **over):
     settings.bot_mode = "live"
+    # These tests exercise the live MIRROR, not the universe tiering, and their fixtures use
+    # synthetic series (KXTEAM...) that are in no taxonomy. The 2026-09-05 review-tier bar
+    # (docs/MMSELL_UNIVERSE_REVIEW.md) would refuse every one of them, so it is switched off
+    # here explicitly rather than by picking a real graduated series — which would couple these
+    # tests to the contents of GRADUATED_SERIES and break them whenever the manifest changes.
+    # The bar itself is proved in tests/test_mmsell_universe_review.py.
+    settings.mmsell_live_min_tier = "unclassified"
     settings.kill_switch = False
     settings.live_enabled = True
     settings.live_strategies = "mmsell10"

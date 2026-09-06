@@ -65,6 +65,7 @@ SKIP_SETTLEMENT_CAP = "skip_settlement_cap"  # too many open positions already s
 SKIP_EVENT_CAP = "skip_event_cap"            # too many distinct events on a CORRELATED date
 SKIP_EVENT_RUNG_CAP = "skip_event_rung_cap"  # too many rungs open on ONE non-exclusive event
 SKIP_CONTEST_CAP = "skip_contest_cap"        # too many positions on ONE contest, across series
+SKIP_LIVE_TIER = "skip_live_tier"            # LIVE only: series below the review-tier bar
 
 # Live-side outcome codes (String(32)); the executor returns these from its mirror entry.
 LIVE_PLACED = "placed"

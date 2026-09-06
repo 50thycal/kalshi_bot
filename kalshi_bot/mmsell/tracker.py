@@ -42,6 +42,8 @@ from ..twin import harness as twin_codes
 from .market_types import DISCRETE, IN_PLAY, SCHEDULED, classify
 from .quote_parity import BandProbe, QuoteParityAccumulator
 from .regimes import contest_key_of, regime_of
+from .universe import admits as universe_admits
+from .universe import tier_of
 
 # Bands the inline-quote pre-filter experiment scores its decision table for
 # (docs/MMSELL_QUOTE_PARITY.md). FIXED constants, deliberately not reads of live book config:
@@ -93,6 +95,7 @@ class MmSellCycleSummary:
     skipped_event_cap: int = 0       # too many distinct events open on a CORRELATED-regime date
     skipped_event_rung_cap: int = 0  # too many rungs open on ONE non-mutually-exclusive event
     skipped_contest_cap: int = 0     # too many positions on ONE contest, ACROSS series
+    skipped_live_tier: int = 0       # LIVE entry refused: series below the review-tier bar
     #: Books dropped this cycle because their tag resolves to no active Experiment OS
     #: deployment arm. Counted rather than raised: one book's lineage problem must not
     #: cost every other book its cycle (XOS-000011).
@@ -284,6 +287,34 @@ class MmSellTracker:
                     self._note(recorder, ticker, tag, twin_codes.SKIP_CONTEST_CAP)
                     return True
         return False
+
+    def _live_tier_blocks(self, s: Settings, series: str, tag: str,
+                          summ: MmSellCycleSummary, recorder, ticker: str) -> bool:
+        """True when this series is below the minimum REVIEW TIER a live book may trade
+        (docs/MMSELL_UNIVERSE_REVIEW.md).
+
+        Gates the LIVE mirror only. The paper position is already recorded by the time this runs
+        and is deliberately left alone: paper is how a series accumulates the history that
+        graduates it, so barring paper too would make the quarantine permanent by construction —
+        an unreviewed series could never earn its way out.
+
+        This can only ever REFUSE an entry, never add one, so it moves real-money exposure in the
+        safe direction only. Setting `mmsell_live_min_tier` to `unclassified` disables it, which
+        is the pre-2026-09-05 behaviour.
+
+        Measured before this existed: 20.2% of `Dmmsell10`'s trades over 30 days were in series
+        no taxonomy covers, 68% of that flow being the new season (NCAAF, EPL, Serie A) arriving
+        faster than anyone classified it."""
+        if universe_admits(series, s.mmsell_live_min_tier):
+            return False
+        summ.skipped_live_tier += 1
+        self._note(recorder, ticker, tag, twin_codes.SKIP_LIVE_TIER)
+        logger.info(
+            "mmsell: live entry refused — series below the minimum review tier",
+            extra={"extra_fields": {"tag": tag, "series": series, "ticker": ticker,
+                                    "tier": tier_of(series),
+                                    "min_tier": s.mmsell_live_min_tier}})
+        return True
 
     def _live_price_and_size(self, session, ticker: str, no_price: int | None, metrics,
                              book: dict | None = None):
@@ -589,6 +620,7 @@ class MmSellTracker:
                     "skipped_event_cap": summ.skipped_event_cap,
                     "skipped_event_rung_cap": summ.skipped_event_rung_cap,
                     "skipped_contest_cap": summ.skipped_contest_cap,
+                    "skipped_live_tier": summ.skipped_live_tier,
                     "per_series": dict(sorted(summ.per_series.items(),
                                               key=lambda kv: -kv[1])[:12]),
                     "per_book": summ.per_book,
@@ -688,6 +720,12 @@ class MmSellTracker:
         those books are defined as their control minus named types, and dropping unknowns too
         would make them differ from the control by more than the thing under test.
         Books with none of the three keys are unaffected."""
+        # Review tier first (docs/MMSELL_UNIVERSE_REVIEW.md): a book that names a minimum tier
+        # will not touch a series below it. Inert for every book that names none, which is the
+        # whole existing cohort.
+        if not universe_admits(series, book.get("universe")):
+            return False
+
         skip = book.get("skip") or []
         if any(tok in series for tok in skip):
             return False
@@ -1113,7 +1151,10 @@ class MmSellTracker:
                     # Mirror the entry into a real resting maker NO-buy for allowlisted books
                     # (inert unless LIVE_STRATEGIES lists this tag). Self-guarded; a live failure
                     # never rolls back the paper record above (the paper book is the shadow).
-                    if self.live_executor is not None:
+                    if self.live_executor is not None \
+                            and self._live_tier_blocks(s, series, tag, summ, recorder, ticker):
+                        pass          # refused live; the PAPER position above still stands
+                    elif self.live_executor is not None:
                         try:
                             outcome = self.live_executor.mirror_mmsell_entry(
                                 session, strategy=tag, event_ticker=event.get("event_ticker"),
