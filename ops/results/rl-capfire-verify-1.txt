@@ -1,7 +1,0 @@
-# ops request [READ]
-# type=db  id=rl-capfire-verify-1
-# code 46661a984dc183c0df68f5291df2026ad00e570a · started 2026-09-06T01:04:19Z
-strategy  trades  contests  max_per_contest  contests_over_1  mkts_in_multi
---------  ------  --------  ---------------  ---------------  -------------
-
-(0 rows)
