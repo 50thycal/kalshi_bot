@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=cc-recheck-20260906-2
-# code 46661a984dc183c0df68f5291df2026ad00e570a · started 2026-09-06T00:53:04Z
-cycles  total_contest_cap_skips  total_opened  cycles_with_gmmsell0  cycles_with_gmmsell1  cycles_with_mmsell10
-------  -----------------------  ------------  --------------------  --------------------  --------------------
-23      0                        1404          0                     0                     22                  
-
-(1 row)
