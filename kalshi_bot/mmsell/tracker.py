@@ -43,7 +43,7 @@ from .market_types import DISCRETE, IN_PLAY, SCHEDULED, classify
 from .quote_parity import BandProbe, QuoteParityAccumulator
 from .regimes import contest_key_of, regime_of
 from .universe import admits as universe_admits
-from .universe import tier_of
+from .universe import exposure_paused, tier_of
 
 # Bands the inline-quote pre-filter experiment scores its decision table for
 # (docs/MMSELL_QUOTE_PARITY.md). FIXED constants, deliberately not reads of live book config:
@@ -96,6 +96,7 @@ class MmSellCycleSummary:
     skipped_event_rung_cap: int = 0  # too many rungs open on ONE non-mutually-exclusive event
     skipped_contest_cap: int = 0     # too many positions on ONE contest, ACROSS series
     skipped_live_tier: int = 0       # LIVE entry refused: series below the review-tier bar
+    skipped_live_paused: int = 0     # LIVE entry refused: real money PAUSED on this series
     #: Books dropped this cycle because their tag resolves to no active Experiment OS
     #: deployment arm. Counted rather than raised: one book's lineage problem must not
     #: cost every other book its cycle (XOS-000011).
@@ -288,6 +289,55 @@ class MmSellTracker:
                     return True
         return False
 
+    def _live_would_act(self, tag: str) -> bool:
+        """Would the live path OTHERWISE have placed a real order for this tag right now?
+
+        Extracted so the two live-only bars below share ONE copy of it. Both need it for the
+        same reason (see `_live_tier_blocks`): they sit ahead of the executor's own gates, so
+        without this their counters would tick for every book on every candidate — including
+        books absent from LIVE_STRATEGIES, whose mirror call was already a no-op — and a counter
+        meant to read as "real-money entries this bar refused" would quietly make the bar look
+        far more load-bearing than it is. Behaviour is identical either way; the counter is not.
+
+        Asked of the executor rather than re-derived here: `_allowed` also rejects paper-twin
+        tags, and a second copy of that rule in the tracker is exactly how the two drift. A
+        probe failure answers False — refuse the mirror, but do not claim it as a live save.
+        """
+        ex = self.live_executor
+        try:
+            return bool(ex._switches_on() and ex._allowed(tag))
+        except Exception:  # noqa: BLE001 — a telemetry decision must never break the scan
+            logger.exception("mmsell live bar: allowlist probe failed (counting the refusal)")
+            return False
+
+    def _live_paused_blocks(self, s: Settings, series: str, tag: str,
+                            summ: MmSellCycleSummary, recorder, ticker: str) -> bool:
+        """True when REAL MONEY is paused on this series (`mmsell_live_skip_series`).
+
+        Gates the LIVE mirror only; the paper position is already recorded by the time this runs
+        and is deliberately left alone. That is not incidental — paper is what supplies the
+        pre-registered out-of-sample evidence that decides whether the pause is lifted or
+        becomes a real selection rule, so barring paper would destroy the thing the pause is
+        waiting on. Same shape and same guarantee as `_live_tier_blocks`: refuse-only, so it
+        moves real-money exposure in the safe direction only.
+
+        Distinct from the tier bar beside it because it is a distinct claim. The tier asks
+        whether we know what a contract IS; this says a specific contract is bleeding faster
+        than we can currently prove it should stop. `KXNFLSPREAD` is GRADUATED and therefore
+        clears the tier — which is precisely why it needed this (XOS-000022,
+        `docs/MMSELL_NFLSPREAD_LOSS_CELL.md`)."""
+        if not exposure_paused(series, s.mmsell_live_skip_series_list):
+            return False
+        if not self._live_would_act(tag):
+            return True          # refuse the mirror, but do not count it as a live save
+        summ.skipped_live_paused += 1
+        self._note(recorder, ticker, tag, twin_codes.SKIP_LIVE_PAUSED)
+        logger.info(
+            "mmsell: live entry refused — real money paused on this series",
+            extra={"extra_fields": {"tag": tag, "series": series, "ticker": ticker,
+                                    "paused": s.mmsell_live_skip_series}})
+        return True
+
     def _live_tier_blocks(self, s: Settings, series: str, tag: str,
                           summ: MmSellCycleSummary, recorder, ticker: str) -> bool:
         """True when this series is below the minimum REVIEW TIER a live book may trade
@@ -307,22 +357,10 @@ class MmSellTracker:
         faster than anyone classified it."""
         if universe_admits(series, s.mmsell_live_min_tier):
             return False
-        # Only count (and only report) a refusal the live path would OTHERWISE HAVE ACTED ON.
-        # This check sits ahead of the executor's own gates, so without this the counter would
-        # tick for every book on every unreviewed series — including books absent from
-        # LIVE_STRATEGIES, whose mirror call was already a no-op. Behaviour is identical either
-        # way; the counter is not. `skipped_live_tier` is meant to read as "real-money entries
-        # this bar refused", and a number inflated by books that were never live would quietly
-        # make the bar look far more load-bearing than it is.
-        #
-        # Asked of the executor rather than re-derived here: `_allowed` also rejects paper-twin
-        # tags, and a second copy of that rule in the tracker is exactly how the two drift.
-        ex = self.live_executor
-        try:
-            if not (ex._switches_on() and ex._allowed(tag)):
-                return True          # refuse the mirror, but do not count it as a live save
-        except Exception:  # noqa: BLE001 — a telemetry decision must never break the scan
-            logger.exception("mmsell live tier: allowlist probe failed (counting the refusal)")
+        # Only count (and only report) a refusal the live path would OTHERWISE HAVE ACTED ON —
+        # see `_live_would_act`, which both live-only bars share.
+        if not self._live_would_act(tag):
+            return True          # refuse the mirror, but do not count it as a live save
         summ.skipped_live_tier += 1
         self._note(recorder, ticker, tag, twin_codes.SKIP_LIVE_TIER)
         logger.info(
@@ -1168,7 +1206,9 @@ class MmSellTracker:
                     # (inert unless LIVE_STRATEGIES lists this tag). Self-guarded; a live failure
                     # never rolls back the paper record above (the paper book is the shadow).
                     if self.live_executor is not None \
-                            and self._live_tier_blocks(s, series, tag, summ, recorder, ticker):
+                            and (self._live_paused_blocks(s, series, tag, summ, recorder, ticker)
+                                 or self._live_tier_blocks(s, series, tag, summ, recorder,
+                                                           ticker)):
                         pass          # refused live; the PAPER position above still stands
                     elif self.live_executor is not None:
                         try:
