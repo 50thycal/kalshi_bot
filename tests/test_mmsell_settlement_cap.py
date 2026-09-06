@@ -491,10 +491,29 @@ def test_the_contest_cap_is_OFF_by_default(session, settings):
     assert _blocks(session, settings, f"KXMLBSPREAD-{_NYYLAA}-NYY3", close_dt) is False
 
 
-def test_a_mutually_exclusive_event_stays_exempt(session, settings):
-    """Same carve-out the rung cap makes, for the same reason: when at most one leg
-    can lose, stacking is a genuine hedge rather than concentration. Removing this
-    would cap real hedges as if they were correlated bets."""
+def test_a_mutually_exclusive_event_is_NOT_exempt_from_the_CONTEST_cap(session, settings):
+    """CORRECTED 2026-09-06 after a live breach. This test previously asserted the
+    opposite, on the reasoning that this is "the same carve-out the rung cap makes,
+    for the same reason: when at most one leg can lose, stacking is a genuine
+    hedge".
+
+    That reasoning does not survive contact with this test's own fixture.
+    `mutually_exclusive` is an assertion about ONE event — at most one of ITS rungs
+    resolves YES. The fixture holds a position on KXMLBTOTAL and offers KXMLBSPREAD:
+    two DIFFERENT events on one baseball game. Both can lose. Nothing about the
+    spread event being internally exclusive makes it a hedge against the total.
+
+    Carrying the exemption into a cap that groups ACROSS events inverted it exactly
+    where it mattered most: the game-winner market is the most game-correlated
+    contract Kalshi lists AND is always mutually exclusive, so the exemption waved
+    through precisely the entry the cap exists to refuse. Live on 2026-09-06,
+    `Emmsell10` breached a declared cap of 1 on three contests within 69 minutes,
+    and all three second legs were KXMLBGAME/KXATPMATCH — each 26-58 minutes after
+    an already-filled first leg on the same contest.
+
+    The rung cap keeps the exemption, where the premise is true — see
+    `test_a_mutually_exclusive_ladder_is_exempt_from_the_RUNG_cap` below.
+    """
     _setup(settings)
     close_dt = _anchor()
     _open_contest_position(session, f"KXMLBTOTAL-{_NYYLAA}-8", close_dt)
@@ -503,7 +522,26 @@ def test_a_mutually_exclusive_event_stays_exempt(session, settings):
                       mutually_exclusive=True,
                       mmsell_contest_cap_enabled=True, mmsell_contest_cap=1)
 
-    assert blocked is False
+    assert blocked is True, (
+        "one game, two events, both can lose — the contest cap must refuse this "
+        "regardless of the candidate event's own exclusivity"
+    )
+
+
+def test_a_mutually_exclusive_ladder_is_exempt_from_the_RUNG_cap(session, settings):
+    """The scope of the correction above. WITHIN one event the premise holds: on a
+    disjoint bucket ladder at most one rung resolves YES, so stacking really is a
+    hedge and the rung cap must keep letting it through. Removing that exemption
+    too would refuse trades that are genuinely fine."""
+    _setup(settings)
+    close_dt = _anchor()
+    for strike in ("8", "9", "10"):
+        _open_contest_position(session, f"KXMLBTOTAL-{_NYYLAA}-{strike}", close_dt)
+
+    blocked = _blocks(session, settings, f"KXMLBTOTAL-{_NYYLAA}-11", close_dt,
+                      mutually_exclusive=True)
+
+    assert blocked is False, "the rung cap must still exempt a mutually-exclusive ladder"
 
 
 def test_an_UNGROUPED_regime_behaves_exactly_as_before(session, settings):

@@ -111,4 +111,18 @@ def contest_key_of(market_ticker: str | None) -> str | None:
     regime = regime_of(series)
     if regime not in CONTEST_GROUPED_REGIMES:
         return event
+    # Keep ONLY the first token after the series. The convention this function
+    # documents is `SERIES-<contest>-<outcome>`, and `event_ticker_of` strips one
+    # trailing token — which is right for a 3-segment ticker and WRONG for the
+    # 4-segment player-prop shape Kalshi also lists:
+    #
+    #     KXMLBTOTAL-26SEP061310ATLPHI-13           -> contest "26SEP061310ATLPHI"
+    #     KXMLBHR-26SEP061310ATLPHI-ATLRACUNA13-1   -> contest "26SEP061310ATLPHI-ATLRACUNA13"
+    #
+    # so every batter became his OWN contest and a cap of 1 admitted one position
+    # per player on top of one per game. Measured live on 2026-09-06: `Emmsell10`
+    # held 5 positions on ATL/PHI under a declared cap of 1, and the audit built to
+    # catch that under-reported it as 2 because it calls this same function.
+    # Taking the first token collapses every listing on a game back onto one key.
+    contest = contest.partition("-")[0]
     return f"{regime}:{contest}"
