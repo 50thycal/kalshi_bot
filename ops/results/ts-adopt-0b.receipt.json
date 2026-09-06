@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "74f4d7bff09a1020c8d62da167b97e39761b33ee",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T12:05:08Z",
+  "id": "ts-adopt-0b",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/ts-adopt-0b.receipt.json",
+  "result_file": "ops/results/ts-adopt-0b.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34031850816",
+  "service": null,
+  "started_at": "2026-09-06T12:00:58Z",
+  "targets": [],
+  "type": "xos"
+}
