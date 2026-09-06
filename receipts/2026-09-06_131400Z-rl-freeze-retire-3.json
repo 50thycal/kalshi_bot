@@ -1,0 +1,52 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "a2217488ad3b1429249c73380e5f6e3e3239af39",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T13:13:59Z",
+  "id": "rl-freeze-retire-3",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "after": "<redacted 494 bytes, sha256:b3ba5539112e4887>",
+        "before": "<redacted 626 bytes, sha256:6fc90428ba8f7543>",
+        "requested": "<redacted 494 bytes, sha256:b3ba5539112e4887>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_EXPERIMENT_COMMAND: all 1 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "ok"
+  },
+  "provenance": {
+    "actor": "claude-research-lab",
+    "purpose": "retire freeze-dark-window-pin; reason shortened under the 256-char payload limit"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl-freeze-retire-3.receipt.json",
+  "result_file": "ops/results/rl-freeze-retire-3.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34035443293",
+  "service": "main",
+  "started_at": "2026-09-06T13:13:48Z",
+  "targets": [
+    "EXPERIMENT_OS_EXPERIMENT_COMMAND"
+  ],
+  "type": "env"
+}
