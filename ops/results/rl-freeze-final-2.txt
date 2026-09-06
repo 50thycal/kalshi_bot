@@ -1,11 +1,11 @@
 # ops request [READ]
-# type=xos  id=rl-freeze-final-1
-# actor=claude-research-lab  purpose=canonical confirmation that XOS-000003 is resolved
-# code 3346bf8dc3e8d3c7e17f08c2376aea6795cda746 · started 2026-09-06T13:24:20Z
+# type=xos  id=rl-freeze-final-2
+# actor=claude-research-lab  purpose=final canonical confirmation of XOS-000003
+# code 3346bf8dc3e8d3c7e17f08c2376aea6795cda746 · started 2026-09-06T13:30:44Z
 {
   "issue_key": "XOS-000003",
   "title": "freeze-dark-window-pin is deployed but has produced zero evidence",
-  "status": "ACTION_REQUIRED",
+  "status": "RESOLVED",
   "classification": "STRATEGY",
   "severity": "LOW",
   "priority": "P2",
@@ -19,13 +19,13 @@
   "detector_fingerprint": "bd04d0eee32588f64bfe81121befa7d03ab3f5dd31d6787aa9051366badcf060",
   "occurrence_count": 1,
   "disposition": "PAUSE_OR_STAND_DOWN",
-  "latest_evidence": "OPS_RESULT: STAND_DOWN receipt rl-freeze-retire-20260906c SUCCEEDED 2026-09-06T13:14:28Z: PA",
+  "latest_evidence": "OPS_RESULT: validation PASSED: PASSED. The remedy was the stand-down itself and it is verifi",
   "problem_statement": "cause unknown: broken runtime/config/wiring, enforcement rejection, filters eliminating every candidate, or genuinely no qualifying opportunities",
   "evidence_summary": "cause unknown: broken runtime/config/wiring, enforcement rejection, filters eliminating every candidate, or genuinely no qualifying opportunities",
   "proposed_fix": "Research Lab's remedy is a STAND-DOWN back to the hold this family was already in, not a corrected Version. A successor Version needs a valid universe to point at, and none exists; freezing one now would register a second contract that can never trade. Three things must change before FREEZE is testable again, and none of them is a code fix to the book. (1) The probe must stop presupposing its own conclusion: the post-pin cell must infer the side from point-in-time information - the market's own favorite, exactly as the live book does - and be graded against the realized result, so the cell can come out flat or negative. Until then no run of it can falsify anything and no run of it may be cited as evidence. (2) Admission must be by SETTLEMENT SOURCE, read from the market's own rules text, not by a crop-name regex over titles and tickers. (3) The revisit trigger must be depth-invariant: a raw settled count at an unstated scan depth moved 8 to 241 to 11 with no change in the underlying population. Separately, the legacy evidence attached to this experiment (the 2026-08-12 five-gate PASS) should be marked scientifically void rather than left standing, and docs/FREEZE_THESIS.md still presents +16.10c as a validated headline - both mislead every later reader, including the evo fleet that reads these documents.",
   "validation_plan": "RESUME CONDITION - all four must hold, and each is checkable by someone who does not trust this ticket. (1) SOURCE, not name: Kalshi lists a series whose settlement is an explicitly named continuously quoted exchange or benchmark price for a grain or soft, verified by reading rules_primary on an actual market. A crop name in a title or ticker never satisfies this, and USDA yield/production contracts are excluded by construction - a periodic report is not a continuously quoted reference. (2) DEPTH-INVARIANT CAPACITY: at least 100 settled markets of that series whose close falls inside a genuine source-dark stretch, counted at a STATED scan depth with a STATED as-of date, and the count must not move materially when the depth is doubled. The 2026-08-11 trigger failed exactly this test. (3) A FALSIFIABLE PROBE: the corrected probe (side inferred from point-in-time information, graded against the realized result) must be able to return a flat or negative post-pin cell, demonstrated by it doing so on a control population. (4) SEPARATION FROM THE DEAD FAMILIES: the corrected probe must show the dark-window cell beating a same-shape open-window favorite-buy control on the same markets, since tfav (favorite buy) and pin15 (observation pin) are both RETIRED and freeze1 without freeze3 is indistinguishable from them. If (1) or (2) cannot be met, the correct end state is a recorded RETIRE on the venue-absence ground, not an indefinite pause.",
-  "resolution_summary": null,
-  "resolved_at": null,
+  "resolution_summary": "Superseded by an operator decision to RETIRE. This ticket's recorded disposition was PAUSE_OR_STAND_DOWN; cal chose the terminal state instead, on this ticket's own evidence - the promotion case was a hindsight tautology (the probe scorer set side = result) and no available Kalshi universe satisfies the hypothesis, with the worker logging 7/7 configured series empty every cycle. RETIRED is terminal by intent: a future FREEZE test is a new experiment, not a resumption of this one. The retirement was only reachable once PR #346 added the STAND_DOWN verb, because this gate is stuck at HOLD n=0 and no evaluator verdict could ever have ended it.",
+  "resolved_at": "2026-09-06 13:26:28.625318+00:00",
   "requires_new_version": false,
   "requires_new_epoch": false,
   "requires_platform_revision": false,
@@ -419,6 +419,74 @@
         "link_type": "PR",
         "reference": "https://github.com/50thycal/kalshi_bot/pull/346"
       }
+    },
+    {
+      "event_type": "STATUS_CHANGED",
+      "occurred_at": "2026-09-06 13:26:28.505151+00:00",
+      "actor": "claude-research-lab",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": "ACTION_REQUIRED",
+      "to_status": "VALIDATING",
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "the stand-down has been applied; confirming it in canonical state",
+      "payload": null
+    },
+    {
+      "event_type": "EVIDENCE_ADDED",
+      "occurred_at": "2026-09-06 13:26:28.547215+00:00",
+      "actor": "claude-research-lab",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "validation PASSED: PASSED. The remedy was the stand-down itself and it is verifiable in canonical state: STAND_DOWN receipt rl-freeze-retire-20260906c SUCCEEDED at 2026-09-06T13:14:28Z with from_state=PAPER, to_state=RETIRED, closed_epoch=1, ended_deployments=[freeze-paper-legacy-1]. The four freeze tags no longer resolve to an active deployment arm, so the record and the admission resolver now agree.",
+      "payload": {
+        "source_ref": "ops/results/rl-freeze-receipt-6.txt",
+        "evidence_id": 52,
+        "content_hash": null,
+        "evidence_type": "OPS_RESULT"
+      }
+    },
+    {
+      "event_type": "VALIDATION_RECORDED",
+      "occurred_at": "2026-09-06 13:26:28.553007+00:00",
+      "actor": "claude-research-lab",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": null,
+      "to_status": null,
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "PASSED. The remedy was the stand-down itself and it is verifiable in canonical state: STAND_DOWN receipt rl-freeze-retire-20260906c SUCCEEDED at 2026-09-06T13:14:28Z with from_state=PAPER, to_state=RETIRED, closed_epoch=1, ended_deployments=[freeze-paper-legacy-1]. The four freeze tags no longer resolve to an active deployment arm, so the record and the admission resolver now agree.",
+      "payload": {
+        "passed": true,
+        "source_ref": "ops/results/rl-freeze-receipt-6.txt"
+      }
+    },
+    {
+      "event_type": "RESOLVED",
+      "occurred_at": "2026-09-06 13:26:28.625358+00:00",
+      "actor": "claude-research-lab",
+      "actor_role": "RESEARCH_LAB",
+      "from_status": "VALIDATING",
+      "to_status": "RESOLVED",
+      "from_owner_role": null,
+      "to_owner_role": null,
+      "from_classification": null,
+      "to_classification": null,
+      "reason": "Superseded by an operator decision to RETIRE. This ticket's recorded disposition was PAUSE_OR_STAND_DOWN; cal chose the terminal state instead, on this ticket's own evidence - the promotion case was a hindsight tautology (the probe scorer set side = result) and no available Kalshi universe satisfies the hypothesis, with the worker logging 7/7 configured series empty every cycle. RETIRED is terminal by intent: a future FREEZE test is a new experiment, not a resumption of this one. The retirement was only reachable once PR #346 added the STAND_DOWN verb, because this gate is stuck at HOLD n=0 and no evaluator verdict could ever have ended it.",
+      "payload": {
+        "resolved_at": "2026-09-06 13:26:28.625318+00:00",
+        "resolution_summary": "Superseded by an operator decision to RETIRE. This ticket's recorded disposition was PAUSE_OR_STAND_DOWN; cal chose the terminal state instead, on this ticket's own evidence - the promotion case was a hindsight tautology (the probe scorer set side = result) and no available Kalshi universe satisfies the hypothesis, with the worker logging 7/7 configured series empty every cycle. RETIRED is terminal by intent: a future FREEZE test is a new experiment, not a resumption of this one. The retirement was only reachable once PR #346 added the STAND_DOWN verb, because this gate is stuck at HOLD n=0 and no evaluator verdict could ever have ended it.",
+        "validation_waiver_reason": null
+      }
     }
   ],
   "evidence": [
@@ -499,6 +567,14 @@
       "summary": "STAND_DOWN receipt rl-freeze-retire-20260906c SUCCEEDED 2026-09-06T13:14:28Z: PAPER->RETIRED, closed_epoch=1, ended_deployments=[freeze-paper-legacy-1]. Worker logs the same day: 'freeze: ENTIRE configured universe returned zero open markets (7/7 series empty)'.",
       "source_ref": "ops/results/rl-freeze-receipt-6.txt",
       "captured_at": "2026-09-06 13:20:29.750008+00:00",
+      "captured_by": "claude-research-lab",
+      "content_hash": null
+    },
+    {
+      "evidence_type": "OPS_RESULT",
+      "summary": "validation PASSED: PASSED. The remedy was the stand-down itself and it is verifiable in canonical state: STAND_DOWN receipt rl-freeze-retire-20260906c SUCCEEDED at 2026-09-06T13:14:28Z with from_state=PAPER, to_state=RETIRED, closed_epoch=1, ended_deployments=[freeze-paper-legacy-1]. The four freeze tags no longer resolve to an active deployment arm, so the record and the admission resolver now agree.",
+      "source_ref": "ops/results/rl-freeze-receipt-6.txt",
+      "captured_at": "2026-09-06 13:26:28.539910+00:00",
       "captured_by": "claude-research-lab",
       "content_hash": null
     }
