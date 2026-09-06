@@ -185,6 +185,7 @@ ALLOWED_SCRIPTS = (
     "live_paper_parity",
     "livedash_probe",
     "mmsell_canary_slices",
+    "mmsell_contest_cap_audit",
     "mmsell_crypto_study",
     "mmsell_supply_forecast",
     "mmsell_regime_backtest",

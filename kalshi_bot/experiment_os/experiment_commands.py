@@ -198,6 +198,7 @@ def _packages() -> dict[str, ExperimentPackage]:
         perp_v1,
         repair_tmmsell_epoch,
         successor_mmsell10_capacity,
+        successor_mmsell10_contest_cap,
     )
 
     return {
@@ -282,6 +283,34 @@ def _packages() -> dict[str, ExperimentPackage]:
             activation_vars=frozenset(
                 successor_mmsell10_capacity.RISK_ENVELOPE["settings"]
             ) | {"LIVE_STRATEGIES"},
+        ),
+        "mmsell-contest-cap-canary": ExperimentPackage(
+            name="mmsell-contest-cap-canary",
+            experiment_key=successor_mmsell10_contest_cap.SUCCESSOR_KEY,
+            description=(
+                "The mmsell10 price-ceiling book with its CONCENTRATION BOUND "
+                "corrected: `max_contest_positions: 1` added to the capacity "
+                "successor's envelope, and `contestcap=1` to the live book spec. "
+                "NOT a promotion and NOT a treatment — the envelope already "
+                "carries `max_event_rungs: 3`, which counts event_ticker (series "
+                "x contest) and therefore caps 3 rungs per LISTING, not per game; "
+                "one MLB game can legally hold ~15 correlated positions. This "
+                "adds no promotion criterion and authors no gate: the promotion "
+                "bar and the keep/stop contract are the predecessor's own frozen "
+                "objects, imported rather than retyped. A SUCCESSOR because "
+                "arm_live_canary requires PAPER and LIVE_CANARY->PAPER is an "
+                "illegal rollback, so mmsell-price-ceiling-capacity has no "
+                "sanctioned path to re-arm. Registering ends only the "
+                "predecessor's PAPER deployment, to hand the mmsell10 control "
+                "tag over; its live book is left running so it drains with every "
+                "settlement still recording. The GLOBAL "
+                "MMSELL_CONTEST_CAP_ENABLED stays off — this book opts in "
+                "through its own registered envelope, so no other book's "
+                "selection moves."
+            ),
+            register=successor_mmsell10_contest_cap.register,
+            arm=successor_mmsell10_contest_cap.arm,
+            activation_vars=successor_mmsell10_contest_cap.ACTIVATION_VARS,
         ),
         "mmsell10-capacity-gatefix": ExperimentPackage(
             name="mmsell10-capacity-gatefix",
