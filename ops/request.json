@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"script","name":"series_registry_review","args":["--section","backlog","--top","60"],"id":"audit-backlog-1"}
