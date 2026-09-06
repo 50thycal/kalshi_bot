@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-show","args":["rl-freeze-resolve-20260906"],"id":"rl-freeze-rec-1","actor":"claude-research-lab","purpose":"why the resolve step did not take"}
+{"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":""},"id":"rl-retire-clear"}
