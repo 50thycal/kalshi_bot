@@ -1,0 +1,22 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "c2a24961819897aeeb7b70a48038dd82b79631fb",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T12:54:27Z",
+  "id": "rl-nflpause-deploy-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {
+    "actor": "claude-research-lab",
+    "purpose": "confirm the KXNFLSPREAD live pause is live after the PR #345 deploy"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl-nflpause-deploy-1.receipt.json",
+  "result_file": "ops/results/rl-nflpause-deploy-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34034484201",
+  "service": "main",
+  "started_at": "2026-09-06T12:54:27Z",
+  "targets": [],
+  "type": "logs"
+}
