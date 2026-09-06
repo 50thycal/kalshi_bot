@@ -1,0 +1,52 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "6d2e16edb5170ac8fe8a5d4a1848989c68644062",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T04:12:57Z",
+  "id": "rl-nflspread-open-1",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 2368 bytes, sha256:0ce508d4b44682e2>",
+        "before": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>",
+        "requested": "<redacted 2368 bytes, sha256:0ce508d4b44682e2>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_ISSUE_COMMAND is empty \u2014 nothing to overwrite",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "ok"
+  },
+  "provenance": {
+    "actor": "claude-research-lab",
+    "purpose": "open the KXNFLSPREAD loss-cell investigation (STRATEGY / RESEARCH_LAB)"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl-nflspread-open-1.receipt.json",
+  "result_file": "ops/results/rl-nflspread-open-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34010918035",
+  "service": "main",
+  "started_at": "2026-09-06T04:12:51Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
