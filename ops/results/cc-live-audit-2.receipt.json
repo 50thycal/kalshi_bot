@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "98597f4d1557e7a7dfc7aa6920a1e8da969eb128",
+  "code_source": "default-branch",
+  "exit_status": 1,
+  "finished_at": "2026-09-06T19:24:12Z",
+  "id": "cc-live-audit-2",
+  "outcome": "FAILED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/cc-live-audit-2.receipt.json",
+  "result_file": "ops/results/cc-live-audit-2.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34054776524",
+  "service": null,
+  "started_at": "2026-09-06T19:24:11Z",
+  "targets": [],
+  "type": "script"
+}
