@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=rl-volentry-sd
-# code 74f4d7bff09a1020c8d62da167b97e39761b33ee · started 2026-09-06T12:22:11Z
-strategy  n     mean_cents  sd_cents  min_c   max_c
---------  ----  ----------  --------  ------  -----
-mmsell10  2978  0.7759      23.2044   -94.10  6.89 
-mmsellA4  2146  0.5199      23.6927   -94.10  6.89 
-
-(2 rows)
