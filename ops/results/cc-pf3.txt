@@ -1,6 +1,6 @@
 # ops request [READ]
-# type=db  id=cc-pf1
-# code 83d3500f319f0073522dcc4b8dc48e2c553455db · started 2026-09-06T03:36:10Z
+# type=db  id=cc-pf3
+# code 83d3500f319f0073522dcc4b8dc48e2c553455db · started 2026-09-06T03:37:42Z
 Traceback (most recent call last):
   File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 602, in <module>
     raise SystemExit(serve())
@@ -18,6 +18,6 @@ Traceback (most recent call last):
     cur.execute(sql)
   File "/opt/hostedtoolcache/Python/3.11.16/x64/lib/python3.11/site-packages/psycopg/cursor.py", line 117, in execute
     raise ex.with_traceback(None)
-psycopg.errors.UndefinedColumn: column "settled_at" does not exist
-LINE 1: ...ax(created_at) as last_at, count(*) filter (where settled_at...
-                                                             ^
+psycopg.errors.UndefinedColumn: column "details" does not exist
+LINE 1: select created_at, (details->>'skipped_contest_cap') as skip...
+                            ^

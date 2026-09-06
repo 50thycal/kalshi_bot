@@ -1,22 +1,23 @@
 # ops request [READ]
-# type=db  id=cc-pf2
-# code 83d3500f319f0073522dcc4b8dc48e2c553455db · started 2026-09-06T03:36:53Z
-strategy       n     closed  first_at                          last_at                         
--------------  ----  ------  --------------------------------  --------------------------------
-Gmmsell0       47    0       2026-09-06 02:41:17.401219+00:00  2026-09-06 03:27:42.143661+00:00
-Gmmsell1       34    0       2026-09-06 02:41:17.410536+00:00  2026-09-06 03:27:20.677564+00:00
-mmsell10       5215  0       2026-07-19 13:28:22.283978+00:00  2026-09-06 03:27:42.055711+00:00
-mmsell10a      1004  0       2026-08-04 20:31:48.359493+00:00  2026-08-14 14:53:50.637714+00:00
-mmsell10a_pt   1     0       2026-08-04 20:31:48.515042+00:00  2026-08-04 20:31:48.515042+00:00
-mmsell10a_pt2  267   0       2026-08-06 21:11:28.182832+00:00  2026-08-11 23:55:45.774969+00:00
-mmsell10a_pt3  234   0       2026-08-12 00:12:58.404211+00:00  2026-08-14 14:53:28.005488+00:00
-mmsell10b      974   0       2026-08-04 15:59:41.909823+00:00  2026-08-14 14:54:03.354396+00:00
-mmsell10b_pt   4     0       2026-08-04 15:59:42.215467+00:00  2026-08-05 11:16:58.115668+00:00
-mmsell10b_pt2  243   0       2026-08-06 04:27:16.840288+00:00  2026-08-11 23:54:45.861380+00:00
-mmsell10b_pt3  225   0       2026-08-12 00:12:54.940376+00:00  2026-08-14 14:53:10.391574+00:00
-mmsell10d      430   0       2026-08-13 02:09:00.110238+00:00  2026-08-14 02:36:44.730605+00:00
-mmsell10e      283   0       2026-08-13 18:09:29.582768+00:00  2026-08-14 02:36:44.744748+00:00
-mmsell10_pt    108   0       2026-07-26 21:09:51.343163+00:00  2026-08-03 14:43:20.755984+00:00
-mmsell10_pt3   30    0       2026-08-15 04:19:04.542793+00:00  2026-08-15 08:01:04.270015+00:00
-
-(15 rows)
+# type=db  id=cc-pf3
+# code 83d3500f319f0073522dcc4b8dc48e2c553455db · started 2026-09-06T03:37:42Z
+Traceback (most recent call last):
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 602, in <module>
+    raise SystemExit(serve())
+                     ^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 598, in serve
+    return main()
+           ^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 424, in main
+    status = _dispatch(rtype, req, receipt)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/ops_runner.py", line 468, in _dispatch
+    return db_query.main()
+           ^^^^^^^^^^^^^^^
+  File "/home/runner/work/kalshi_bot/kalshi_bot/.ops-runner-code/scripts/db_query.py", line 122, in main
+    cur.execute(sql)
+  File "/opt/hostedtoolcache/Python/3.11.16/x64/lib/python3.11/site-packages/psycopg/cursor.py", line 117, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.UndefinedColumn: column "details" does not exist
+LINE 1: select created_at, (details->>'skipped_contest_cap') as skip...
+                            ^
