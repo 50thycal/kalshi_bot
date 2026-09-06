@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-show","args":["XOS-000003"],"id":"rl-freeze-final-1","actor":"claude-research-lab","purpose":"canonical confirmation that XOS-000003 is resolved"}
+{"type":"xos","command":"experiment-command-show","args":["rl-retire-volentry-20260906"],"id":"rl-retire-volentry-1b"}
