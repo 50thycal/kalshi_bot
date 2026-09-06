@@ -177,6 +177,15 @@ ALLOWED_VARS = frozenset({
     "WEATHER_STRATEGIES", "WEATHER_ENTRY_HOURS", "WEATHER_TOP_N", "WEATHER_TRACK_LOWS",
     "WEATHER_DIST_ENABLED", "WEATHER_DIST_SIGMA", "WEATHER_DIST_MIN_EDGE_CENTS",
     "WEATHER_CITY_WINDOW_ENABLED", "WEATHER_OBS_ENTRY_ENABLED", "WEATHER_POLYMARKET_ENABLED",
+    # The fleet-wide pause switch (docs/EVO_RUNBOOK.md "Pausing and emergencies",
+    # docs/EVO_CONFIG.md). run_evo_cycle checks settings.enabled and returns early
+    # with "infrastructure pause" when this is false — nothing is lost, the loop
+    # resumes idempotently. Settable from here for the same reason as every other
+    # EVO_* knob below: pausing for cost or infra reasons should not need a code
+    # deploy. Omitted from this allowlist until 2026-09-06, which forced a workaround
+    # (zeroing EVO_WEEKLY_LLM_CEILING_USD) that stops spend but not the service's
+    # compute — a real gap from the documented pause semantics.
+    "EVO_ENABLED",
     # Evo experiment tuning (live-adjustable so we can dial the population's iteration
     # speed + budget without a code deploy). Heartbeat cadence and per-agent weekly LLM
     # token / dollar budgets move together — raising cadence without budget just front-loads

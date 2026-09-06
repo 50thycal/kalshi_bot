@@ -64,6 +64,26 @@ def _creds(monkeypatch):
     monkeypatch.setenv("RAILWAY_SERVICE_ID", "s")
 
 
+def test_evo_enabled_is_allowlisted_and_settable(monkeypatch, capsys):
+    """The 2026-09-06 gap (docs/EVO_RUNBOOK.md "Pausing and emergencies"):
+    EVO_ENABLED=false is the documented fleet-wide infrastructure pause, but it
+    was missing from ALLOWED_VARS so the ops env path refused to set it, forcing
+    a workaround (zeroing EVO_WEEKLY_LLM_CEILING_USD) that stops LLM spend but
+    not the service's own compute."""
+    assert "EVO_ENABLED" in renv.ALLOWED_VARS
+
+    _creds(monkeypatch)
+    sent = []
+
+    def _fake(query, variables, token):
+        sent.append(variables)
+        return {}
+
+    monkeypatch.setattr(renv, "_graphql", _fake)
+    assert renv.run_set({"EVO_ENABLED": "false"}, redeploy=False) == 0
+    assert sent, "EVO_ENABLED must actually reach the network, not be rejected locally"
+
+
 def test_run_set_upserts_allowlisted_and_redeploys(monkeypatch, capsys):
     _creds(monkeypatch)
     calls = []
