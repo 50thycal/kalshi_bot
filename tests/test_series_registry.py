@@ -411,3 +411,63 @@ def test_a_series_with_live_orders_but_no_settled_history_still_appears():
     activity = report.load_series_activity(Cur(), None, 30)
     assert activity["KXFRESH"]["live_orders"] == 1
     assert activity["KXFRESH"]["settled"] == 0
+
+
+# --- the hook has to be on the path production actually runs -----------------------------------
+
+def test_arrival_detection_is_hooked_into_the_mmsell_tracker_sweep():
+    """The registry's observation ledger was DEAD IN PRODUCTION when it shipped.
+
+    `SeriesObserver` was hooked into `ScannerService.run_once`, which `main` reaches only
+    through `_run_cycle` — the `else` branch after live/weather/mmsell/evo. Production runs
+    `BOT_MODE=live`, so it could never fire. `main._run_cycle`'s own comment warns about exactly
+    this ("a hook placed there silently never runs under BOT_MODE=live/..., which is how the
+    first deploy of the gate evaluator recorded nothing"), and the symptom is silent: the
+    registry review printed `observed series: 0` and read like a table awaiting its migration.
+
+    So the hook must live on a sweep the live path actually performs. `MmSellTracker.run_once`
+    is one — it is called from `_run_live_cycle`, `_run_weather_cycle` and `_run_mmsell_cycle`.
+    """
+    import inspect
+
+    from kalshi_bot.mmsell import tracker as mmsell_tracker
+
+    src = inspect.getsource(mmsell_tracker.MmSellTracker.run_once)
+    assert "SeriesObserver()" in src, "the tracker no longer creates an observer"
+    assert "observer.observe(" in src, "the tracker no longer observes the listing sweep"
+    assert "observer.flush(session)" in src, "the tracker no longer persists what it observed"
+
+
+def test_every_bot_mode_cycle_reaches_a_sweep_that_observes():
+    """A structural guard on the class of bug above, not just on this instance.
+
+    `main` dispatches one cycle function per BOT_MODE. Each of the modes that scan Kalshi must
+    reach a sweep carrying the observer, or the registry goes blind again for that mode without
+    anything failing."""
+    import inspect
+
+    from kalshi_bot import main as bot_main
+    from kalshi_bot.mmsell.tracker import MmSellTracker
+
+    tracker_observes = "observer.flush(session)" in inspect.getsource(MmSellTracker.run_once)
+    assert tracker_observes
+
+    for fn_name in ("_run_live_cycle", "_run_weather_cycle", "_run_mmsell_cycle"):
+        src = inspect.getsource(getattr(bot_main, fn_name))
+        assert "tracker.run_once(" in src, (
+            f"{fn_name} no longer runs a tracker sweep — arrival detection may be dead for "
+            "this BOT_MODE, which fails silently")
+
+
+def test_the_observer_sees_a_series_the_tracker_would_skip(db_session):
+    """`_skip_series` is a trading-scope decision. Observing after it would hide precisely the
+    series a reviewer most needs to see: the ones we have decided not to trade and never
+    revisited."""
+    from kalshi_bot.models import SeriesObservation
+    from kalshi_bot.registry.observe import SeriesObserver
+
+    obs = SeriesObserver()
+    obs.observe({"ticker": "KXSKIPPED-1", "title": "a declined market"},
+                {"series_ticker": "KXSKIPPED"})
+    assert obs.flush(db_session) == (1, 1)
+    assert db_session.get(SeriesObservation, "KXSKIPPED") is not None

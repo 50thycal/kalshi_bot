@@ -93,7 +93,22 @@ of hiding it behind a bar that was never met.
 
 ## Arrival detection
 
-The scan reports every series it sees **before any category, volume or liquidity filter**: the
+**Where the hook lives, and why it moved.** It was first written into
+`ScannerService.run_once`, which `main` reaches only through `_run_cycle` — the `else` branch
+after live/weather/mmsell/evo. **Production runs `BOT_MODE=live`, so it could never fire.**
+`main`'s own comment warns about exactly this trap ("a hook placed there silently never runs
+under `BOT_MODE=live/...`, which is how the first deploy of the gate evaluator recorded nothing
+in production"), and the failure is silent from the outside: the registry review simply prints
+`observed series: 0`, which reads like a table waiting on its migration. The `markets` table,
+written on that same dead path, has been frozen at 77 rows since 2026-06-08 — that is what this
+looks like when nobody is checking.
+
+It now lives on `MmSellTracker.run_once`'s listing sweep, which `_run_live_cycle`,
+`_run_weather_cycle` and `_run_mmsell_cycle` all call. `tests/test_series_registry.py` asserts
+both the hook and, structurally, that every scanning BOT_MODE reaches a sweep that observes.
+
+The sweep reports every series it sees **before any category, volume, liquidity or
+`_skip_series` filter**: the
 registry's question is what Kalshi has offered us, not what some book was willing to take, and
 an arrivals queue filtered by the very scope decisions a review should revisit is not
 trustworthy. Observations accumulate in memory and are written once per cycle — one `SELECT`
