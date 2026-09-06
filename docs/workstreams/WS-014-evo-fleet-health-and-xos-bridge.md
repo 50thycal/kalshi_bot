@@ -1,9 +1,9 @@
 # WS-014 — Evo fleet health: the dead peer-visibility path, and the evo→XOS bridge
 
 **Phase:** REVIEW
-**Status:** Active
+**Status:** Paused
 **Created:** 2026-09-03
-**Updated:** 2026-09-03
+**Updated:** 2026-09-06
 
 ## Goal
 
@@ -85,6 +85,32 @@ findings and the operator's rulings become resumable.
 - **Selection is not implicated.** Verified against `evolution.py:427` — the `kind="final"`
   path is independent of the broken delayed view, so no past retirement or reproduction
   decision needs to be revisited.
+- **Fleet paused for cost, 2026-09-06** (operator). Reason given: no substantial results to
+  date and the LLM spend is not justified while that holds. Flagged, not argued against: the
+  D1/D2 fixes above merged only hours before this decision — the fleet has not run a single
+  cohort with peer visibility or listeners actually working, so "no substantial results" was
+  measured entirely under the broken mechanisms this same workstream just repaired. That
+  context is recorded, not a reason to reverse the operator's call.
+  - **Mechanism used: `EVO_WEEKLY_LLM_CEILING_USD` set to `0`** on the evo Railway service
+    (verified: was `8`, now `0`). This is **not** the documented pause switch —
+    `docs/EVO_RUNBOOK.md`'s "Pausing and emergencies" section and `docs/EVO_CONFIG.md` both
+    name `EVO_ENABLED=false` as the intended lever ("infrastructure pause... nothing is
+    lost; the loop resumes idempotently"), but the ops runner's env allowlist does not
+    include `EVO_ENABLED` — confirmed live: the set request was refused with "refusing to
+    set non-allowlisted vars: ['EVO_ENABLED']". That is a real gap in the self-service ops
+    tooling, independent of this decision, and is why the ceiling was used instead.
+  - **What this does and does not do.** `budgets.can_spend(..., "llm_cost_usd", ...)` gates
+    every LLM call before it fires (`llm.py:332` etc.), so at `$0` no agent can spend on a
+    heartbeat — LLM spend stops immediately and completely. The evo Railway service keeps
+    running: heartbeats still fire on schedule, listeners/settlement/fills still process
+    (spec: these are not LLM calls), and every LLM-dependent heartbeat degrades exactly as
+    observed during the 2026-08-27→29 OpenRouter outage (XOS-000019) — a recorded
+    `degraded` status, not a crash, not data loss. Compute cost (the Railway service itself
+    running) is not eliminated by this lever; only LLM API spend is.
+  - **To actually resume:** raise `EVO_WEEKLY_LLM_CEILING_USD` back (was `8`). To pause
+    compute too, `EVO_ENABLED=false` still needs either a direct Railway env change outside
+    this channel, or the ops runner's allowlist fixed to include it — flagged as a Live Ops
+    tooling gap, not built here.
 
 ## Open Decisions
 
@@ -198,9 +224,17 @@ This PR.
 
 ## Next Step
 
-Merge, then watch the next evo orchestrator cycle for `evo tickets: auto-closed N request(s)
-whose capability shipped` (expect N≥2 for #39/#7) and confirm `evo_listeners` gains its first
-row. D3 (material-revision budget) is worth a look once a few days of post-fix data exist.
-The 21/22/30 and 9/11 closure gap is a standing housekeeping item for whichever role next
-touches the ticket-resolution transport — not urgent, since the underlying capability is
-genuinely delivered either way.
+**Paused 2026-09-06 — no next step until the operator resumes.** Everything below this line
+was the plan before the pause and stays here for whenever that happens, not as active work.
+
+~~Merge, then watch the next evo orchestrator cycle for `evo tickets: auto-closed N
+request(s) whose capability shipped` (expect N≥2 for #39/#7) and confirm `evo_listeners`
+gains its first row. D3 (material-revision budget) is worth a look once a few days of
+post-fix data exist. The 21/22/30 and 9/11 closure gap is a standing housekeeping item for
+whichever role next touches the ticket-resolution transport — not urgent, since the
+underlying capability is genuinely delivered either way.~~ (#328 merged 2026-09-03; the
+D1/D2 fixes are live but were never observed running because of this pause.)
+
+If resumed: raise `EVO_WEEKLY_LLM_CEILING_USD` back to `8` on the evo service, then check
+the next cohort for whether `evo_listeners`/`evo_influences` actually start populating — the
+one measurement this pause forecloses for now.
