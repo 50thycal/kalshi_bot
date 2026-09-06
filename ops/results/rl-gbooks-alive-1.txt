@@ -1,7 +1,0 @@
-# ops request [READ]
-# type=db  id=rl-gbooks-alive-1
-# code 79bfb213b636edc621a9aa6d1d023abdde637562 · started 2026-09-06T02:40:08Z
-strategy  trades  first_trade  last_trade
---------  ------  -----------  ----------
-
-(0 rows)
