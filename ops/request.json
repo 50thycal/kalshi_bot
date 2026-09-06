@@ -1,1 +1,1 @@
-{"type":"env","id":"cc-register-1","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"cc-register-20260906-1\",\"action\":\"REGISTER_PACKAGE\",\"actor\":\"claude-code\",\"actor_role\":\"LIVE_OPS\",\"payload\":{\"package\":\"mmsell-contest-cap-canary\"},\"schema_version\":1}"}}
+{"type":"xos","command":"experiment-command-list","id":"cc-receipt-1"}
