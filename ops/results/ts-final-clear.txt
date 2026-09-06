@@ -2,16 +2,16 @@
 ========================================================================
 !! MUTATING OPS REQUEST — this changes the running system !!
 ========================================================================
-# type=env  service=main  vars=EXPERIMENT_OS_ISSUE_COMMAND  id=ts-adopt-1a
-# code 74f4d7bff09a1020c8d62da167b97e39761b33ee · started 2026-09-06T12:06:07Z
+# type=env  service=main  vars=EXPERIMENT_OS_EXPERIMENT_COMMAND  id=ts-final-clear
+# code 4a6254f3afba3a587d5c7e51d5c4440e32943051 · started 2026-09-06T20:53:16Z
 # target service: main
 # BEFORE:
-  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
-  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 678 bytes, sha256:d5e8cdd5013bcbb3>
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 466 bytes, sha256:ef3e71c6842ba48b>
+  set EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
 # 1/1 variables set
 # redeploy triggered — the worker will restart with the new config
 # AFTER:
-  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 678 bytes, sha256:d5e8cdd5013bcbb3>
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
 # VERDICT: VERIFIED
 
 # post-change canonical checks: enforcement, readiness
@@ -23,27 +23,15 @@
 #     "system_version": "experiment_os:pr4+metrics_engine:pr3_v1",
 #     "resolver_degraded_alarms_24h": 0,
 #     "deployments": {
-#       "total": 28,
+#       "total": 31,
 #       "grandfathered": 12,
-#       "native": 16
+#       "native": 19
 #     },
 #     "post_cutover_unstamped": {
 #       "paper_trades": [],
 #       "live_orders": []
 #     },
 #     "live_canaries": [
-#       {
-#         "deployment": "theta4-live-1",
-#         "grandfathered": true,
-#         "twin": "theta4-twin-pt3",
-#         "boundary_match": false
-#       },
-#       {
-#         "deployment": "lmmsell-live-1",
-#         "grandfathered": true,
-#         "twin": "lmmsell-twin-pt3",
-#         "boundary_match": true
-#       },
 #       {
 #         "deployment": "mmsell-ceiling-live-1",
 #         "grandfathered": false,
@@ -54,6 +42,12 @@
 #         "deployment": "mmsell-capacity-live-1",
 #         "grandfathered": false,
 #         "twin": "mmsell-capacity-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-contestcap-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-contestcap-twin-1",
 #         "boundary_match": true
 #       }
 #     ],
@@ -70,7 +64,7 @@
 # $ xos readiness
 #   {
 #     "ok": true,
-#     "checked_at": "2026-09-06 12:06:17.586380+00:00",
+#     "checked_at": "2026-09-06 20:53:29.000094+00:00",
 #     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
 #     "checks": {
 #       "import_ran": {
@@ -89,9 +83,7 @@
 #           "registered_live_tags": [
 #             "Cmmsell10",
 #             "Dmmsell10",
-#             "Lmmsell10",
-#             "Lmmsell8",
-#             "theta4"
+#             "Emmsell10"
 #           ],
 #           "note": "no Settings supplied \u2014 presence-only check"
 #         }
@@ -106,19 +98,14 @@
 #       "grandfathered_identity": {
 #         "ok": true,
 #         "detail": {
-#           "deployments": 28,
+#           "deployments": 31,
 #           "grandfathered": 12,
-#           "native": 16
+#           "native": 19
 #         }
 #       },
 #       "live_twin_links": {
 #         "ok": true,
-#         "detail": {
-#           "problems": [],
-#           "grandfathered_notes": [
-#             "theta4-live-1: twin start 2026-08-12 00:15:08.786610+00:00 != live start 2026-07-30 00:00:00+00:00 (grandfathered \u2014 recorded, not invented)"
-#           ]
-#         }
+#         "detail": "all linked"
 #       },
 #       "no_unresolved_integrity": {
 #         "ok": true,
@@ -127,4 +114,11 @@
 #       "no_unresolved_platform_impact": {
 #         "ok": true,
 #         "detail": "0 platform-impact dispositions awaiting acceptance/application"
+#       },
+#       "lineage_columns_present": {
+#         "ok": true,
+#         "detail": {
+#           "paper_trades": "experiment_deployment_arm_id present",
+#           "live_orders": "experiment_deployment_arm_id present"
+#         }
 #       },
