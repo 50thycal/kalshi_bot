@@ -1,1 +1,1 @@
-{"type":"db","id":"rl-fails-1","max_rows":40,"sql":"select x.key exp_key, g.gate_key, r.verdict, r.computed_at, r.computed_by, left(coalesce(r.explanation,''),220) explanation from experiment_gate_results r join experiment_gates g on g.id=r.gate_id join experiment_versions v on v.id=g.version_id join experiments x on x.id=v.experiment_id where x.key in ('mmsell-anchor-vol-entry','mmsell-anchor-strangle') and r.computed_at > now() - interval '3 days' order by x.key, r.computed_at desc limit 40"}
+{"type":"noop"}
