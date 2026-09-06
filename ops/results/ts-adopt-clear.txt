@@ -2,17 +2,16 @@
 ========================================================================
 !! MUTATING OPS REQUEST — this changes the running system !!
 ========================================================================
-# type=env  service=main  vars=EXPERIMENT_OS_ISSUE_COMMAND  id=rl-silentarm-link-1
-# actor=claude-research-lab  purpose=link PR #343 and the production false-positive check to XOS-000023
-# code 6d2e16edb5170ac8fe8a5d4a1848989c68644062 · started 2026-09-06T04:22:00Z
+# type=env  service=main  vars=EXPERIMENT_OS_ISSUE_COMMAND  id=ts-adopt-clear
+# code 74f4d7bff09a1020c8d62da167b97e39761b33ee · started 2026-09-06T12:08:58Z
 # target service: main
 # BEFORE:
-  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 2006 bytes, sha256:cdf62073e2233732>
-  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 1182 bytes, sha256:bcc47e40a3111a91>
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 678 bytes, sha256:d5e8cdd5013bcbb3>
+  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
 # 1/1 variables set
 # redeploy triggered — the worker will restart with the new config
 # AFTER:
-  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 1182 bytes, sha256:bcc47e40a3111a91>
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
 # VERDICT: VERIFIED
 
 # post-change canonical checks: enforcement, readiness
@@ -24,9 +23,9 @@
 #     "system_version": "experiment_os:pr4+metrics_engine:pr3_v1",
 #     "resolver_degraded_alarms_24h": 0,
 #     "deployments": {
-#       "total": 27,
+#       "total": 28,
 #       "grandfathered": 12,
-#       "native": 15
+#       "native": 16
 #     },
 #     "post_cutover_unstamped": {
 #       "paper_trades": [],
@@ -71,12 +70,12 @@
 # $ xos readiness
 #   {
 #     "ok": true,
-#     "checked_at": "2026-09-06 04:22:03.714891+00:00",
+#     "checked_at": "2026-09-06 12:09:11.245860+00:00",
 #     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
 #     "checks": {
 #       "import_ran": {
 #         "ok": true,
-#         "detail": "32 experiments recorded"
+#         "detail": "33 experiments recorded"
 #       },
 #       "coverage_complete": {
 #         "ok": true,
@@ -107,9 +106,9 @@
 #       "grandfathered_identity": {
 #         "ok": true,
 #         "detail": {
-#           "deployments": 27,
+#           "deployments": 28,
 #           "grandfathered": 12,
-#           "native": 15
+#           "native": 16
 #         }
 #       },
 #       "live_twin_links": {
