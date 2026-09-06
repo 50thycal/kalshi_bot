@@ -1,1 +1,1 @@
-{"type":"env","set":{"EXPERIMENT_OS_ISSUE_COMMAND":""},"id":"rl-silentarm-clear-1","actor":"claude-research-lab","purpose":"clear the issue transport now that both batches have terminal receipts"}
+{"type":"noop"}
