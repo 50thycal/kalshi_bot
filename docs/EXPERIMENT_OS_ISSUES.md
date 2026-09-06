@@ -363,12 +363,39 @@ open ticket against its own fingerprint, and dropping it the day the escalation
 appears would flip that ticket's `currently_recurring` to false — it would read as
 fixed on precisely the day the problem got worse.
 
-Its blind spot, stated: it can only see silence that Experiment OS knows should
-not be silent. It cannot detect a book that is *configured but registered wrong*
-(that is `enforcement.unstamped_lineage`), a book trading the wrong markets, or an
-arm whose runtime is producing rows under a different tag than the one registered.
-And on a platform-wide outage — nothing trading anywhere — it stays deliberately
-quiet, because it has no reference and therefore no claim.
+The suppression runs the **other** way. Where an OPEN issue already investigates
+this experiment's zero evidence, the finding is recorded with `covered_by` and
+stated in the recommendations, but emits **no candidate**: the escalation exists
+to make an UNDETECTED silence visible, and a silence with an owned investigation
+is by definition detected — a second ticket under a different fingerprint would
+only split the history. `freeze-dark-window-pin` is the live case (four arms,
+580h armed, zero rows in `paper_trades` ever, while the platform booked tens of
+thousands) and XOS-000003 has already diagnosed and owns it. The suppression is
+recomputed from state every run and nothing about it is remembered, so closing
+that ticket over a continuing silence brings the candidate straight back.
+
+Measured against production on 2026-09-06, across all 30 active deployment arms
+(27 active deployments), it produces **zero uncovered candidates**: everything
+else in the portfolio is either trading, tagless by construction, stood down,
+live/twin-only, or — for `freeze-dark-window-pin` — already ticketed.
+
+Its blind spots, stated:
+
+- **Paper only.** Evidence comes from `read.experiment_scoreboard`, whose arm
+  metrics are scoped to `deployment_kind = "paper"`. An experiment whose only
+  deployments are `live` and `paper_twin` — today `mmsell-price-ceiling`,
+  `mmsell-scheduled-settle-live`, `theta4-fat-tail` — has no paper tags on its
+  arms and can therefore never fire, however silent it goes. Extending the
+  detector to those kinds means going through `metrics.compute_metric` with a
+  twin/live scope (never a second count of its own); it is deliberately left as
+  follow-up rather than smuggled in beside a detector.
+- It can only see silence Experiment OS knows should not be silent. A book that
+  is *configured but registered wrong* is `enforcement.unstamped_lineage`; a book
+  trading the wrong markets, or producing rows under a tag other than the
+  registered one, is invisible to both.
+- On a platform-wide outage — nothing trading anywhere — it stays deliberately
+  quiet, because it has no reference and therefore no claim. A total outage is
+  Live Ops' collector-health and worker surface, not this one's.
 
 Two deliberate silences:
 

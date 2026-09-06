@@ -426,3 +426,61 @@ def test_the_weaker_zero_evidence_candidate_is_not_suppressed(xos_session,
     assert [c for c in rep.issue_candidates
             if c["detector"] == ipol.DETECTOR_ZERO_EVIDENCE
             and c["experiment"] == "double-reported"]
+
+
+def test_an_open_zero_evidence_investigation_suppresses_the_escalation(
+        xos_session, xos_platform):
+    """MUST NOT FIRE as a candidate: the live shape is `freeze-dark-window-pin` —
+    four arms, 580h armed, zero rows in `paper_trades` ever, while the platform
+    booked tens of thousands. It is a true instance of the condition, and
+    XOS-000003 has already diagnosed it (no available universe satisfies the
+    hypothesis) and is working it.
+
+    The escalation exists to make an UNDETECTED silence visible. A silence with
+    an owned investigation is detected, and a second ticket under a different
+    fingerprint would only split the history — so the finding is recorded with
+    `covered_by` and stated in the recommendations, but no candidate is emitted.
+    """
+    from kalshi_bot.experiment_os import issues as ix
+
+    s = xos_session
+    book = _two_arm_paper_book(s, "freeze-shaped-book", armed_hours_ago=580)
+    _trade(s, "mmsell10", _now() - timedelta(hours=40), n=4818)
+    ix.create_issue(
+        s, title="freeze-shaped-book is deployed but has produced zero evidence",
+        opened_by_role="EXPERIMENT_CONTROL_TOWER", experiment=book["exp"],
+        detector=ipol.DETECTOR_ZERO_EVIDENCE, detector_fingerprint="deadbeef",
+    )
+    s.commit()
+
+    rep = ct.build_report(s, evaluate=True)
+    assert not _fired(rep, "freeze-shaped-book"), "no duplicate candidate"
+    assert len(rep.silent_arms) == 2, "the silence is still DETECTED, not dropped"
+    assert all(f["covered_by"] for f in rep.silent_arms)
+    assert any("already under investigation" in r for r in rep.recommendations), (
+        "and the reader is told the silence is ongoing and who owns it"
+    )
+
+
+def test_closing_the_investigation_re_arms_the_escalation(xos_session,
+                                                          xos_platform):
+    """The suppression is recomputed from state every run and nothing about it is
+    remembered, so a closed ticket over a continuing silence brings the candidate
+    straight back — 'we ticketed that once' is not evidence that it is fixed."""
+    from kalshi_bot.experiment_os import issues as ix
+
+    s = xos_session
+    book = _two_arm_paper_book(s, "reopening-book", armed_hours_ago=580)
+    _trade(s, "mmsell10", _now() - timedelta(hours=40), n=4818)
+    issue = ix.create_issue(
+        s, title="reopening-book is deployed but has produced zero evidence",
+        opened_by_role="EXPERIMENT_CONTROL_TOWER", experiment=book["exp"],
+        detector=ipol.DETECTOR_ZERO_EVIDENCE, detector_fingerprint="deadbeef",
+    )
+    s.commit()
+    assert not _fired(ct.build_report(s, evaluate=False), "reopening-book")
+
+    ix.close_no_action(s, issue, actor="a", actor_role="LIVE_OPS",
+                       reason="closed while the book is still silent")
+    s.commit()
+    assert len(_fired(ct.build_report(s, evaluate=False), "reopening-book")) == 2

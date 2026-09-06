@@ -585,12 +585,23 @@ def build_report(session, *, evaluate: bool = True,
     # clauses.
     rep.silent_arms = _silent_arms(session, rep)
     for f in rep.silent_arms:
-        rep.recommendations.append(
+        head = (
             f"{f['experiment']}: arm {f['arm']!r} ({', '.join(f['tags'])}) has "
             f"been ARMED {f['hours_silent']}h and has collected NOTHING, while "
-            f"{f['reference']} — registration is not configuration; Live Ops "
-            "checks the runtime first"
+            f"{f['reference']}"
         )
+        if f["covered_by"]:
+            # Stated rather than dropped: the reader still needs to know the
+            # silence is ongoing, and which ticket already owns it.
+            rep.recommendations.append(
+                f"{head} — already under investigation as {f['covered_by']}; "
+                "no separate ticket candidate"
+            )
+        else:
+            rep.recommendations.append(
+                f"{head} — registration is not configuration; Live Ops checks "
+                "the runtime first"
+            )
     # Last: ticket candidates are derived from the anomalies above, so they
     # can never introduce a finding the rest of the report does not already
     # make. Still a pure read — see `_issue_sections`.
@@ -846,12 +857,23 @@ def _silent_arms(session, rep: TowerReport) -> list[dict]:
     have been ambiguous; `Gmmsell1` at zero while `Gmmsell0` was also at zero and
     `mmsell10` booked 166 was not.
 
-    ## Why the weaker detector is NOT suppressed
+    ## Why the weaker detector is NOT suppressed, and why this one sometimes is
 
     `experiment.zero_evidence` keeps firing alongside this one. It may already
     have an open issue against its own fingerprint, and dropping it the day this
     escalation appears would flip that issue's `currently_recurring` to false —
     it would read as fixed on precisely the day the problem got worse.
+
+    The suppression runs the other way. Where an OPEN issue already investigates
+    this experiment's zero evidence, the finding is recorded with `covered_by`
+    and emits no candidate. The escalation exists to make an UNDETECTED silence
+    visible; a silence that already has an owned investigation is, by definition,
+    detected, and a second ticket under a different fingerprint would only split
+    the history. `freeze-dark-window-pin` is the live case: four arms, 580h, zero
+    rows ever — and XOS-000003 has already diagnosed it (no available universe
+    satisfies the hypothesis) and is working it. It re-arms on its own if that
+    ticket closes while the silence continues, because the finding is recomputed
+    from state every run and nothing about it is remembered.
 
     Pure read: selects only, and it asserts no cause. Routing the diagnosis is
     the point; guessing it produces a ticket the owning role cannot act on."""
@@ -859,6 +881,18 @@ def _silent_arms(session, rep: TowerReport) -> list[dict]:
 
     now = _now()
     blocked_experiments = {b["experiment"] for b in rep.blocked}
+    try:
+        investigated = {
+            i.experiment_id: i.issue_key
+            for i in read.list_issues(session, open_only=True)
+            if i.experiment_id is not None
+            and i.detector in (issue_policy.DETECTOR_ZERO_EVIDENCE,
+                               issue_policy.DETECTOR_ARMED_BUT_SILENT)
+        }
+    except Exception:  # noqa: BLE001 — a read must degrade, not abort
+        # Failing OPEN is the safe direction here: a missed suppression costs a
+        # duplicate candidate, a missed detection costs another silent day.
+        investigated = {}
     out: list[dict] = []
     for state, views in rep.by_state.items():
         if state not in _EVIDENCE_EXPECTED_STATES:
@@ -937,6 +971,7 @@ def _silent_arms(session, rep: TowerReport) -> list[dict]:
                     "hours_silent": round(hours, 1),
                     "basis": basis,
                     "reference": reference,
+                    "covered_by": investigated.get(v.get("experiment_id")),
                 })
     return out
 
@@ -1138,6 +1173,8 @@ def _detect_candidates(session, rep: TowerReport) -> list[dict]:
     # silence and the reference count are carried in `detail`, which is not
     # hashed, so a lengthening silence stays the same problem.
     for f in rep.silent_arms:
+        if f["covered_by"]:
+            continue
         out.append(_candidate(
             detector=issue_policy.DETECTOR_ARMED_BUT_SILENT,
             anomaly_kind=f["arm"],
