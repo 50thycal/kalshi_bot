@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"cc-health-20260906-1","sql":"select strategy, count(*) trades_12h, count(*) filter (where status='open') still_open, round(sum(coalesce(realized_pnl,0))::numeric,2) realized_12h, max(created_at) last_trade from paper_trades where created_at > now() - interval '12 hours' group by 1 order by 2 desc limit 30"}
