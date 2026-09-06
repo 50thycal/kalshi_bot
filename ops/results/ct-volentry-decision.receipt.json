@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "79bfb213b636edc621a9aa6d1d023abdde637562",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T02:48:52Z",
+  "id": "ct-volentry-decision",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/ct-volentry-decision.receipt.json",
+  "result_file": "ops/results/ct-volentry-decision.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34007305248",
+  "service": null,
+  "started_at": "2026-09-06T02:45:56Z",
+  "targets": [],
+  "type": "xos"
+}
