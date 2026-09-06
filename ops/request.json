@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["freeze-dark-window-pin"],"id":"rl-freeze-verify-1","actor":"claude-research-lab","purpose":"canonical check: did freeze-dark-window-pin actually retire"}
+{"type":"xos","command":"experiment-command-show","args":["rl-freeze-retire-20260906b"],"id":"rl-freeze-receipt-5","actor":"claude-research-lab","purpose":"receipt for the freeze retirement after full boot"}
