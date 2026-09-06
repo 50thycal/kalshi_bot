@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-show","args":["ts-adopt-theta4-20260906"],"id":"ts-adopt-1c"}
+{"type":"env","set":{"EXPERIMENT_OS_ISSUE_COMMAND":""},"id":"ts-adopt-clear"}
