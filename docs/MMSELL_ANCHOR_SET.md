@@ -6,6 +6,76 @@ forward-tested n on the three mechanics that the backtests said were promising b
 so that a future "anchor" decision (a larger position size on one book) rests on measured
 out-of-sample evidence rather than on an 11–23 trade backtest slice.
 
+> ## VERDICT 2026-09-06 — `mmsellA4` and `mmsellA5` are RETIRED. The anchor set is closed.
+>
+> Both books met their own pre-registered kill clauses and were retired through Experiment OS
+> (`RETIRE_ON_GATE_FAIL`, authorized by the recorded evaluator verdict, not by this document).
+> They failed for **opposite reasons**, and the difference is the whole lesson.
+>
+> ### A4 — the volatility entry gate: no effect, and none reachable
+>
+> | | mmsellA4 | mmsell10 control |
+> |---|---|---|
+> | n settled | 1,944 | 2,703 |
+> | ¢/trade | 0.459 | 0.670 |
+> | delta | **−0.211¢** (kill clause: `≤ 0`) | |
+> | candidate rejection rate | 27.1% | — |
+>
+> Seven consecutive FAILs at 19× the n≥100 floor. The gate was **not inert** — it rejected 27% of
+> candidates, well clear of the 5% inertness floor — so the mechanism fired as designed and simply
+> did not help. With per-trade sd ≈ 23.7¢ the SE of the delta is 0.665¢, so −0.21¢ is
+> **statistically indistinguishable from zero** (95% CI −1.56 to +1.05). Read that as *no
+> detectable effect*, not *harmful*. It still kills the book: the promote bar was +1.0¢, which sits
+> 1.89 SE above a point estimate already on the wrong side of zero at 19× the required sample.
+> Accruing more n narrows the interval around a negative number.
+>
+> **Do not re-sweep `volw`/`volv`.** That is the same trap A1–A3 fell into: the motivating backtest
+> was n=13–17 measured on a different population. The level was never the problem there either.
+>
+> ### A5 — the short strangle: right sign, wrong gate
+>
+> | | value |
+> |---|---|
+> | clean pairs | 422 (5× the n≥82 floor) |
+> | pair win rate, point estimate | **94.55%** (399/422) |
+> | 95% lower bound | 92.37% |
+> | registered bar | 93.9% — point estimate is **above** it |
+> | corrected break-even (post fee re-baseline) | 93.1% — also **above** it |
+>
+> A5 was retired on a literal reading of its pre-registration, and that reading is correct: the
+> kill clause is `pair_win_rate_95lb_pct ≤ 93.9`, it fired eight consecutive times, and the bound
+> fails against the corrected 93.1% break-even too — so there is no "use the right bar" shortcut,
+> and none was taken. Measurement was clean: `multi_leg_events: 0`,
+> `trades_without_event_mapping: 0`, and the pairing boundary was enforced structurally by the
+> gate's `evidence_started_at`, not by hand.
+>
+> **But the book was never shown to be bad — only unproven.** Its central estimate is above
+> break-even on both bars, and the book as traded returned 1.44¢/trade against a ~0.67¢ control.
+> It failed a *confidence* test, and the two findings are not the same.
+>
+> ### What to do differently if A5 is revived
+>
+> The revival condition is **a properly powered pre-registration**, not a re-read of this one and
+> not a parameter sweep. Three concrete faults to fix:
+>
+> 1. **The sample floor was set for the wrong constraint.** The kill wording assumed reaching 82
+>    pairs would be the hard part ("or paired entry rate is so low the book can't reach 82 pairs in
+>    a quarter"). Actual supply ran ~24 clean pairs/day — the floor was ~3.5 days of accrual. A 95%
+>    lower-bound test at n=82, against a bar sitting ~0.65pp under the true rate, fails almost
+>    regardless of merit. It was underpowered by construction. Derive the floor from power analysis:
+>    at the observed 94.55%, clearing 93.1% needs **~663 pairs** (~10 days) and clearing 93.9% needs
+>    **~3,300 pairs** (~4 months).
+> 2. **The bar was stale on the day it was frozen.** The 2026-08-11 maker-fee correction moved
+>    break-even from 93.9% to **93.1%** (see the fee note above), but the gate table carried 93.9%
+>    forward and the gate was frozen 2026-08-16 — five days *after* the correction. Any successor
+>    must take its break-even from the current fee model, computed at freeze time rather than copied.
+> 3. **The headline overstates the mechanism.** Of 1,012 events seen, 568 were one-sided: the book
+>    as traded was only ~42% actual strangles. Quote pair economics off the pairs, never off the
+>    per-leg ¢/trade.
+>
+> A successor is a **new Version** (the question changes), registered through a reviewed package —
+> never an edit to this contract. Nothing here re-interprets the recorded FAIL, which stands.
+
 > ## VERDICT 2026-08-12 — `mmsellA1`/`A2`/`A3` (the bid-triggered stops) are RETIRED. A4 and A5 run on.
 >
 > **The pre-registered gate failed on the half that mattered.** The gate asked for a better
