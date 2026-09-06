@@ -1,0 +1,49 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "4a6254f3afba3a587d5c7e51d5c4440e32943051",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T20:35:42Z",
+  "id": "ts-repair-1a",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "after": "<redacted 212 bytes, sha256:5dca694632cd8d68>",
+        "before": "<redacted 193 bytes, sha256:b462fbfd41050ea9>",
+        "requested": "<redacted 212 bytes, sha256:5dca694632cd8d68>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_EXPERIMENT_COMMAND: all 1 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "ok"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/ts-repair-1a.receipt.json",
+  "result_file": "ops/results/ts-repair-1a.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34058465747",
+  "service": "main",
+  "started_at": "2026-09-06T20:35:38Z",
+  "targets": [
+    "EXPERIMENT_OS_EXPERIMENT_COMMAND"
+  ],
+  "type": "env"
+}
