@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-show","args":["XOS-000022"],"id":"rl-nflspread-confirm-2","actor":"claude-research-lab","purpose":"confirm the approval batch landed on XOS-000022"}
+{"type":"env","set":{"EXPERIMENT_OS_ISSUE_COMMAND":""},"id":"rl-nflspread-clear-2","actor":"claude-research-lab","purpose":"clear the issue-command transport after the XOS-000022 approval batch"}
