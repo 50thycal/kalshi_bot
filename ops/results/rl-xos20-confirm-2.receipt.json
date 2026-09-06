@@ -1,0 +1,22 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "3346bf8dc3e8d3c7e17f08c2376aea6795cda746",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T13:38:32Z",
+  "id": "rl-xos20-confirm-2",
+  "outcome": "SUCCEEDED",
+  "provenance": {
+    "actor": "claude-research-lab",
+    "purpose": "confirm the KXALBUMEQUIV evidence landed on XOS-000020"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl-xos20-confirm-2.receipt.json",
+  "result_file": "ops/results/rl-xos20-confirm-2.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34036699296",
+  "service": null,
+  "started_at": "2026-09-06T13:38:31Z",
+  "targets": [],
+  "type": "xos"
+}
