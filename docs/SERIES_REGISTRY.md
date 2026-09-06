@@ -135,7 +135,13 @@ seen offered at once. A cumulative count would drift upward forever as dated mar
 Three sections, each a queue:
 
 - **ARRIVALS** — observed, governed by no manifest row. Every row is a market that became
-  available and that nothing has reviewed.
+  available and that nothing has reviewed. **Ordered by our own activity, then recency.**
+  Recency alone does not work and the first populated run proved it: `first_seen_at` is not
+  backfilled, so on the first cycle after deploy all 3,845 rows shared one timestamp and the
+  sort carried no information — `KXUAEPLTOTAL`, with 22 settled trades across 8 books and no
+  manifest row, printed ninth, below `GOVPARTY*` rows nothing had ever touched. Recency is not
+  what makes an arrival urgent; exposure is. It still breaks ties, which is what keeps a
+  genuinely new listing visible above the thousands of untouched older ones.
 - **BACKLOG** — graduated with no recorded rules review, **live cells first**, then by |P&L|. A
   live cell that has barely traded outranks a large paper-only one: the review protects real
   money, and |P&L| sizes what a misunderstanding would already have cost.

@@ -51,6 +51,7 @@ import json
 import os
 import sys
 from collections import defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 
 RO_OPTIONS = "-c default_transaction_read_only=on"
@@ -173,14 +174,49 @@ def _fmt_date(v) -> str:
     return v.strftime("%Y-%m-%d") if hasattr(v, "strftime") else "-"
 
 
+#: Sentinel for a row with no arrival timestamp, so recency can be compared without a None.
+_NO_DATE = datetime.min.replace(tzinfo=timezone.utc)
+
+
+def _arrival_rank(obs: dict, activity: dict) -> tuple:
+    """Ordering for the arrivals queue: WHAT WE ARE TRADING first, recency second.
+
+    Recency alone does not work, and the first populated run proved it. `first_seen_at` is not
+    backfilled, so on the first cycle after deploy every one of 3,845 rows shares a timestamp
+    and the sort carries no information at all — `KXUAEPLTOTAL`, a series with 22 settled trades
+    across 8 books and no manifest row, printed NINTH, below a run of `GOVPARTY*` rows with zero
+    trades. The one row a reviewer needed was buried by rows nothing had ever touched.
+
+    Recency is not what makes an arrival urgent; exposure is. A series we are already trading
+    with nothing reviewed is the finding. So: traded-at-all, then how much, then how many books
+    took it, then how wide the series is, and only then how recently it appeared.
+
+    Recency still breaks ties, which is what keeps a genuinely new listing visible: a series
+    that appeared today with no trades sorts above the thousands of untouched older ones,
+    because they all tie at zero activity and the date decides."""
+    a = activity.get(obs["series"], {})
+    settled = a.get("settled", 0)
+    return (
+        1 if settled else 0,                 # traded at all — the whole point of the queue
+        settled,                             # how much
+        len(a.get("books", ())),             # how many books took it
+        obs.get("markets_seen") or 0,        # breadth of the series
+        obs.get("first_seen_at") or _NO_DATE,  # recency, last: it only breaks ties
+    )
+
+
 def report_arrivals(manifest, observations, activity, top: int) -> None:
     """Series the scan has seen that no manifest row governs — the review queue's front."""
     unknown = [o for s, o in observations.items() if manifest_entry(manifest, s) is None]
-    unknown.sort(key=lambda o: (o["first_seen_at"] is None, o["first_seen_at"]), reverse=True)
-    print(f"\n## ARRIVALS — observed, in no manifest row ({len(unknown)})")
+    unknown.sort(key=lambda o: _arrival_rank(o, activity), reverse=True)
+    traded = sum(1 for o in unknown if activity.get(o["series"], {}).get("settled"))
+    print(f"\n## ARRIVALS — observed, in no manifest row ({len(unknown)}; "
+          f"{traded} already traded)")
     if not unknown:
         print("  (none — every series the scan has seen is governed by a manifest row)")
         return
+    print("  Ordered by OUR OWN activity, then recency — a series we are already trading with")
+    print("  nothing reviewed outranks one that merely appeared today.")
     print(f"  {'series':<24} {'first seen':<12} {'mkts':>5} {'settled':>8} {'books':>6}  sample")
     for o in unknown[:top]:
         a = activity.get(o["series"], {})

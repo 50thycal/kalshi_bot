@@ -263,3 +263,25 @@ def test_config_validates_the_tier_name(settings):
     # An unknown tier admits EVERYTHING, so a book naming one would read as gated and trade
     # ungated. Drop it rather than run it.
     assert "Ummsell2" not in by_tag
+
+
+def test_european_football_is_not_an_economic_release():
+    """The `KXUE` prefix is unemployment data. By longest-prefix match it was also swallowing
+    every UEFA Europa League / Europa Conference League series, classifying live football as a
+    scheduled economic release.
+
+    Measured 2026-09-06: 270 settled paper trades across six KXUE* soccer series carried
+    `econ_release`/`scheduled`, so every `mode=scheduled` book took them as if they printed off
+    a statistical release and every `mode=in_play` book missed them. `KXUEFASC*` is the same
+    collision, worked around once already for the Super Cup — which is why these need explicit
+    entries rather than a narrowed `KXUE`."""
+    from kalshi_bot.mmsell.market_types import classify
+
+    for series in ("KXUECLGAME", "KXUECLTOTAL", "KXUECL1HTOTAL",
+                   "KXUELGAME", "KXUELTOTAL", "KXUEFASCSPREAD"):
+        mtype, mode = classify(series)
+        assert mode == "in_play", f"{series} classified {mode}, not in_play"
+        assert mtype != "econ_release", f"{series} still reads as an economic release"
+
+    # The real econ series must be untouched: it is a traded series in its own right.
+    assert classify("KXUE") == ("econ_release", "scheduled")

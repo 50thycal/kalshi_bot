@@ -194,6 +194,19 @@ SERIES_TYPES: tuple[tuple[str, str, str], ...] = (
     ("KXUEFASCSCORE", "exact_score", IN_PLAY),  # Reg Time: PSG wins 4-1
     ("KXUEFASCGAME", "h2h", IN_PLAY),  # Reg Time: Tie
     ("KXUEFASCTOTAL", "total", IN_PLAY),  # Reg Time: Over 6.5 goals scored
+    # UEFA Europa League and Europa Conference League. These need EXPLICIT entries because the
+    # bare "KXUE" econ prefix below (unemployment) would otherwise swallow them by prefix match
+    # and classify live European football as a scheduled economic release. It did: measured
+    # 2026-09-06, 270 settled paper trades across six KXUE* soccer series were carrying
+    # `econ_release`/`scheduled`, so every `mode=scheduled` book took them as if they printed
+    # off a statistical release and every `mode=in_play` book missed them. `KXUEFASC*` above is
+    # the same collision, worked around once already for the Super Cup.
+    ("KXUECLGAME", "h2h", IN_PLAY),          # Europa Conference League, match winner
+    ("KXUECLTOTAL", "total", IN_PLAY),       # UECL goals total
+    ("KXUECL1HTOTAL", "total", IN_PLAY),     # UECL first-half goals
+    ("KXUELGAME", "h2h", IN_PLAY),           # Europa League, match winner
+    ("KXUELTOTAL", "total", IN_PLAY),        # UEL goals total
+    ("KXUEFASCSPREAD", "spread", IN_PLAY),   # Super Cup handicap; sibling of the entries above
     ("KXUCLTOTAL", "total", IN_PLAY),  # Reg Time: Over 6.5 goals scored
     ("KXUCLSPREAD", "spread", IN_PLAY),  # Goal Diff Reg Time: wins by more than 1.5 goals
     ("KXCLUBFTOTAL", "total", IN_PLAY),  # Over 8.5 goals scored

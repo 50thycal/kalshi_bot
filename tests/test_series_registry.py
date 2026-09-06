@@ -298,8 +298,8 @@ def test_arrivals_lists_only_series_no_manifest_row_governs(capsys):
     report.report_arrivals(manifest, observations, {}, top=10)
     out = capsys.readouterr().out
     assert "KXKNOWN" not in out
-    assert "(2)" in out
-    # Newest arrival first: the queue is read top-down and recency is what makes a row urgent.
+    assert "no manifest row (2;" in out
+    # With no activity on either, recency breaks the tie and the newer one leads.
     assert out.index("KXBRANDNEW") < out.index("KXOLDER")
 
 
@@ -471,3 +471,74 @@ def test_the_observer_sees_a_series_the_tracker_would_skip(db_session):
                 {"series_ticker": "KXSKIPPED"})
     assert obs.flush(db_session) == (1, 1)
     assert db_session.get(SeriesObservation, "KXSKIPPED") is not None
+
+
+# --- arrivals ordering -------------------------------------------------------------------------
+
+def _obs(series, days_ago=0, mkts=1):
+    now = datetime.now(timezone.utc)
+    return {"series": series, "first_seen_at": now - timedelta(days=days_ago),
+            "last_seen_at": now, "markets_seen": mkts, "sample_ticker": f"{series}-1",
+            "sample_title": series.title(), "state_at_first_seen": "identified"}
+
+
+def _act(settled=0, books=0):
+    return {"settled": settled, "markets": set(), "books": {f"b{i}" for i in range(books)},
+            "live_books": set(), "live_orders": 0, "pnl": 0.0}
+
+
+def test_arrivals_put_what_we_are_trading_above_what_merely_appeared(capsys):
+    """The first populated production run (2026-09-06) is the regression here.
+
+    `first_seen_at` is not backfilled, so on the first cycle after deploy all 3,845 rows shared
+    a timestamp and a recency sort carried no information. `KXUAEPLTOTAL` — 22 settled trades
+    across 8 books, no manifest row — printed NINTH, below `GOVPARTY*` rows nothing had ever
+    touched. Recency is not what makes an arrival urgent; exposure is."""
+    manifest = {}
+    observations = {s: _obs(s) for s in ("GOVPARTYAL", "GOVPARTYAR", "KXUAEPLTOTAL")}
+    activity = {"KXUAEPLTOTAL": _act(settled=22, books=8)}
+    report.report_arrivals(manifest, observations, activity, top=10)
+    out = capsys.readouterr().out
+    assert out.index("KXUAEPLTOTAL") < out.index("GOVPARTYAL")
+    assert "1 already traded" in out
+
+
+def test_recency_still_breaks_ties_so_a_genuinely_new_listing_stays_visible(capsys):
+    """Activity-first must not bury a brand-new series under thousands of untouched old ones:
+    they all tie at zero activity, and the date decides."""
+    manifest = {}
+    observations = {"KXOLD": _obs("KXOLD", days_ago=90), "KXNEWTODAY": _obs("KXNEWTODAY")}
+    report.report_arrivals(manifest, observations, {}, top=10)
+    out = capsys.readouterr().out
+    assert out.index("KXNEWTODAY") < out.index("KXOLD")
+
+
+def test_a_traded_series_outranks_a_wider_untraded_one(capsys):
+    """Breadth is a weaker signal than our own money being in it."""
+    manifest = {}
+    observations = {"KXWIDE": _obs("KXWIDE", mkts=500), "KXTRADED": _obs("KXTRADED", mkts=2)}
+    report.report_arrivals(manifest, observations, {"KXTRADED": _act(settled=1, books=1)}, top=10)
+    out = capsys.readouterr().out
+    assert out.index("KXTRADED") < out.index("KXWIDE")
+
+
+def test_arrivals_ordering_survives_a_missing_arrival_date(capsys):
+    """A row written before the column existed, or a partial upsert, must not crash the sort —
+    the queue is read on every cycle and one bad row would take the whole section down."""
+    manifest = {}
+    observations = {"KXNULL": _obs("KXNULL"), "KXOK": _obs("KXOK")}
+    observations["KXNULL"]["first_seen_at"] = None
+    report.report_arrivals(manifest, observations, {}, top=10)
+    out = capsys.readouterr().out
+    assert "KXNULL" in out and "KXOK" in out
+    assert out.index("KXOK") < out.index("KXNULL")
+
+
+def test_a_series_the_manifest_governs_never_appears_in_arrivals(capsys):
+    """Unchanged by the reordering: arrivals is 'no manifest row governs it', not 'unreviewed'."""
+    manifest = {"KXKNOWN": {"series": "KXKNOWN", "state": "graduated"}}
+    observations = {"KXKNOWN": _obs("KXKNOWN"), "KXNEW": _obs("KXNEW")}
+    report.report_arrivals(manifest, observations, {"KXKNOWN": _act(settled=99, books=9)}, top=10)
+    out = capsys.readouterr().out
+    assert "KXKNOWN" not in out
+    assert "KXNEW" in out

@@ -133,7 +133,13 @@ SERIES_TYPES: tuple[tuple[str, str, str], ...] = (
     ("KXMLBTEAMTOTAL", "total", "in_play"), ("KXMLBF5TOTAL", "total", "in_play"),
     ("KXMLBF5", "h2h_period", "in_play"), ("KXWNBAPTS", "player_prop", "in_play"),
     ("KXUEFASCSCORE", "exact_score", "in_play"), ("KXUEFASCGAME", "h2h", "in_play"),
-    ("KXUEFASCTOTAL", "total", "in_play"), ("KXUCLTOTAL", "total", "in_play"),
+    ("KXUEFASCTOTAL", "total", "in_play"),
+    # Explicit UEL/UECL entries: the bare "KXUE" econ prefix (unemployment) was
+    # swallowing live European football as a scheduled economic release.
+    ("KXUECLGAME", "h2h", "in_play"), ("KXUECLTOTAL", "total", "in_play"),
+    ("KXUECL1HTOTAL", "total", "in_play"), ("KXUELGAME", "h2h", "in_play"),
+    ("KXUELTOTAL", "total", "in_play"), ("KXUEFASCSPREAD", "spread", "in_play"),
+    ("KXUCLTOTAL", "total", "in_play"),
     ("KXUCLSPREAD", "spread", "in_play"), ("KXCLUBFTOTAL", "total", "in_play"),
     ("KXDIMAYORGAME", "h2h", "in_play"), ("KXCONMEBOLLIBGAME", "h2h", "in_play"),
     ("KXCONMEBOLSUDGAME", "h2h", "in_play"), ("KXATPDOUBLES", "h2h", "in_play"),
