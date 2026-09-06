@@ -1,0 +1,38 @@
+{
+  "audit_worthy": false,
+  "class": "MUTATING",
+  "code_sha": "98597f4d1557e7a7dfc7aa6920a1e8da969eb128",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T19:31:19Z",
+  "id": "evo-enabled-standdown-1",
+  "mutation": {
+    "changes": {
+      "EVO_ENABLED": {
+        "after": "false",
+        "before": "(unset)",
+        "requested": "false"
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EVO_ENABLED"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {},
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/evo-enabled-standdown-1.receipt.json",
+  "result_file": "ops/results/evo-enabled-standdown-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34055136385",
+  "service": "evo",
+  "started_at": "2026-09-06T19:31:16Z",
+  "targets": [
+    "EVO_ENABLED"
+  ],
+  "type": "env"
+}
