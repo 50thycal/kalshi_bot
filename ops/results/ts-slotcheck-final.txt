@@ -1,7 +1,6 @@
 # ops request [READ]
-# type=env  service=main  id=rl-nflpause-verify-3
-# actor=claude-research-lab  purpose=is live mmsell armed? LIVE_STRATEGIES / kill switch state
-# code b625f4ddddaa7d8e0b5f114f8da6b5aa7c20771d · started 2026-09-06T17:48:40Z
+# type=env  service=main  id=ts-slotcheck-final
+# code 81c97a930f6e2e8ee86461a34b304e00c23b1f53 · started 2026-09-06T19:14:17Z
 # target service: main
 # current allowlisted env vars (secrets hidden):
   BOT_MODE=live
@@ -40,7 +39,7 @@
   LIVE_PROBE=
   LIVE_SHAPE_PROBE=false
   LIVE_STOP_LOSS_CENTS=
-  LIVE_STRATEGIES=
+  LIVE_STRATEGIES=Emmsell10
   LIVE_TAKE_PROFIT_BY_WINDOW=20:5,14:20
   LIVE_TAKE_PROFIT_CENTS=1
   LIVE_USER_ID=dee14919-e13e-42b2-8be7-260c4a7f6e81
@@ -63,7 +62,7 @@
   MMSELL_SETTLEMENT_CAP_ENABLED=true
   MMSELL_SETTLEMENT_CAP_PCT=0.25
   MMSELL_SETTLEMENT_EVENT_CAP=5
-  MMSELL_VARIANTS=mmsell5:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY;mmsell6:lo=5,hi=8;mmsell7:lo=5,hi=10,htcmax=24;mmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;mmsell10:lo=5,hi=10,maxyes=7;mmsellA4:lo=5,hi=10,maxyes=7,volw=6,volv=6;mmsellA5:lo=5,hi=10,maxyes=7,strangle=1;Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;Tmmsell6:lo=5,hi=10,maxyes=7,mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;Lmmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;Lmmsell10:lo=5,hi=10,maxyes=7;Cmmsell10:lo=5,hi=10,maxyes=7,size=1;Dmmsell10:lo=5,hi=10,maxyes=7,size=1;Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1
+  MMSELL_VARIANTS=mmsell5:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY;mmsell6:lo=5,hi=8;mmsell7:lo=5,hi=10,htcmax=24;mmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;mmsell10:lo=5,hi=10,maxyes=7;mmsellA4:lo=5,hi=10,maxyes=7,volw=6,volv=6;mmsellA5:lo=5,hi=10,maxyes=7,strangle=1;Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;Tmmsell6:lo=5,hi=10,maxyes=7,mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;Lmmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;Lmmsell10:lo=5,hi=10,maxyes=7;Cmmsell10:lo=5,hi=10,maxyes=7,size=1;Dmmsell10:lo=5,hi=10,maxyes=7,size=1;Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;Emmsell10:lo=5,hi=10,maxyes=7,size=1,contestcap=1
   PERPS_COLLECTOR_ENABLED=false
   RUN_ONCE=false
   SCAN_INTERVAL_SECONDS=60
