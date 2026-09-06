@@ -2,17 +2,16 @@
 ========================================================================
 !! MUTATING OPS REQUEST — this changes the running system !!
 ========================================================================
-# type=env  service=main  vars=EXPERIMENT_OS_ISSUE_COMMAND  id=rl-xos20-clear-1
-# actor=claude-research-lab  purpose=clear the issue-command transport after the XOS-000020 evidence batch
-# code 3346bf8dc3e8d3c7e17f08c2376aea6795cda746 · started 2026-09-06T13:39:07Z
+# type=env  service=main  vars=EXPERIMENT_OS_EXPERIMENT_COMMAND  id=rl-strangle-clear
+# code c5170e9bafdd598069cd6a4baf444d292a6dc7b1 · started 2026-09-06T14:15:20Z
 # target service: main
 # BEFORE:
-  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 2923 bytes, sha256:d3d763ebd23ef5ad>
-  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 505 bytes, sha256:8b7bd56444722b18>
+  set EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
 # 1/1 variables set
 # redeploy triggered — the worker will restart with the new config
 # AFTER:
-  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
 # VERDICT: VERIFIED
 
 # post-change canonical checks: enforcement, readiness
@@ -71,7 +70,7 @@
 # $ xos readiness
 #   {
 #     "ok": true,
-#     "checked_at": "2026-09-06 13:39:17.673691+00:00",
+#     "checked_at": "2026-09-06 14:15:24.231720+00:00",
 #     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
 #     "checks": {
 #       "import_ran": {
