@@ -31,7 +31,8 @@ WHAT TO READ, IN ORDER
    nested spread ladder, and a blowout resolves every deep rung against a seller at the same
    instant. KXNFLSPREAD's 382 markets are 44 preseason games; 2 of those games carried 48% of
    the loss. A series whose loss is spread over many contests is a different finding from one
-   that is two bad afternoons, and `worst3%` separates them without anyone running a query.
+   that is two bad afternoons, and `worst3%` — the share of a cell's contest-level losses
+   carried by its three worst contests — separates them without anyone running a query.
 3. **`live`** — whether the live lineage actually touched the series in the window. A negative
    cell no live book trades is research; a negative cell the live books are in is exposure.
 
@@ -111,7 +112,14 @@ def summarize(rows: list[dict]) -> dict:
     by_contest: dict[str, float] = defaultdict(float)
     for r in rows:
         by_contest[r["contest"]] += r["pnl_c"]
-    worst3 = sorted(by_contest.values())[:3]
+    contest_pnls = sorted(by_contest.values())
+    worst3 = sum(w for w in contest_pnls[:3] if w < 0)
+    # Denominator: the cell's GROSS contest-level losses, not its net total. Dividing by the
+    # net is unbounded above — a cell whose winners nearly offset its losers has a tiny
+    # denominator, so the share explodes. The first production run (2026-09-06) printed
+    # KXBTCD at 322% and KXWTI at 153%, which is not a share of anything. Against gross
+    # losses the column is a real proportion in [0, 1] and means what it says.
+    gross_loss = sum(w for w in contest_pnls if w < 0)
     total_c = sum(pnls)
     be, edge = breakeven(pnls)
     return {
@@ -126,11 +134,12 @@ def summarize(rows: list[dict]) -> dict:
         "be": be,
         "edge": edge,
         "entry": sum(r["entry_c"] for r in rows) / n,
-        # How much of a LOSING cell's damage came from its three worst contests. A broad drift
-        # and two catastrophic afternoons need different responses, and this is the cheapest
-        # column that tells them apart. None when the cell made money — there is no loss to
-        # attribute, and printing a share of a positive total invites reading it as one.
-        "worst3_share": (sum(w for w in worst3 if w < 0) / total_c) if total_c < 0 else None,
+        # How much of a LOSING cell's damage came from its three worst contests, as a share of
+        # ALL its losing contests. A broad drift and two catastrophic afternoons need different
+        # responses, and this is the cheapest column that tells them apart. None when the cell
+        # made money — there is no loss worth triaging, and printing the column there invites
+        # reading a concentration figure as a problem.
+        "worst3_share": (worst3 / gross_loss) if (total_c < 0 and gross_loss < 0) else None,
         "live": sorted({r["book"] for r in rows if r["live"]}),
     }
 
@@ -266,10 +275,10 @@ def report(trades: list[dict], min_n: int, top: int, window: str, maxyes: int | 
     print("  cnts     distinct CONTESTS — the honest independence denominator. One game carries")
     print("           a whole nested ladder and settles it against a seller at one instant, so")
     print("           `mkts` overstates n. Read c/trade against `cnts`, not against `n`.")
-    print("  worst3%  share of a LOSING cell's damage from its three worst contests. High means")
-    print("           a few catastrophic afternoons (a concentration problem, which the contest")
-    print("           cap addresses); low means a broad negative drift (a selection problem,")
-    print("           which it does not).")
+    print("  worst3%  of everything this cell lost at the contest level, the share that came from")
+    print("           its three worst contests. High means a few catastrophic afternoons (a")
+    print("           concentration problem, which the contest cap addresses); low means a broad")
+    print("           negative drift (a selection problem, which it does not).")
     print("\n  A negative cell here is a PLACE TO LOOK, not a verdict. At this book's measured")
     print("  variance a single series needs n ~ 800 distinct markets before its CI excludes")
     print("  break-even (docs/MMSELL_ROADMAP.md §1); almost nothing on this page has that.")
