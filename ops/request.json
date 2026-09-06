@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"xos","command":"issue-show","args":["XOS-000003"],"id":"rl-freeze-read-1","actor":"claude-research-lab","purpose":"read XOS-000003 in full before deciding freeze-dark-window-pin's lifecycle"}
