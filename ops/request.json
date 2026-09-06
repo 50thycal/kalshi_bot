@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["rl-freeze-retire-20260906"],"id":"rl-wait-freeze-3"}
+{"type":"env","set":{"LOG_LEVEL":"INFO"},"id":"rl-force-boot-1"}
