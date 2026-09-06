@@ -1,1 +1,1 @@
-{"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":""},"id":"ts-final-clear"}
+{"type":"xos","command":"control-tower","id":"ts-final-verify"}
