@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["mmsell-price-ceiling-contest-cap"],"id":"cc-gate-1"}
+{"type":"xos","command":"experiment-command-show","args":["rl-freeze-retire-20260906c"],"id":"rl-freeze-receipt-6","actor":"claude-research-lab","purpose":"receipt for the freeze retirement"}
