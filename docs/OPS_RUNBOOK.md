@@ -549,8 +549,10 @@ To run a request:
      premium, so only `edge` is comparable across them, and `edge <= 0` means the cell is not
      paying for its tail. **Read `contests`, not `mkts`** — one game carries a nested ladder that
      a blowout settles against a seller at one instant, so markets are not independent bets.
-     `worst3%` separates "two catastrophic afternoons" (a concentration problem, which the contest
-     cap addresses) from a broad negative drift (a selection problem, which it does not), and the
+     `worst3%` — of everything the cell lost at the contest level, the share its three worst
+     contests carried — separates "two catastrophic afternoons" (a concentration problem, which
+     the contest cap addresses) from a broad negative drift (a selection problem, which it does
+     not), and the
      `live` column names the real-money books that touched the cell. Run it weekly with
      `--days 7` and again with `--all-time --min-n 50`: the two disagree exactly when a cell is
      NEW, which is the case this exists to catch. **It is a report, not a gate** — at this book's

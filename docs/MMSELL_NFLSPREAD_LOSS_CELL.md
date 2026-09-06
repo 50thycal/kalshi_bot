@@ -277,9 +277,11 @@ would fire constantly on noise.
 
 **`scripts/mmsell_series_pnl.py`** (ops: `{"type":"script","name":"mmsell_series_pnl"}`) is that
 missing read: every traded series ranked by realized P&L, with `mkts`, **`contests`**, `edge`
-(`be% − loss%`, the only cross-series-comparable column), `worst3%` — the share of a losing
-cell's damage from its three worst contests, which separates §4's concentration story from a
-broad drift without anyone writing a query — and a `live` column naming the real-money books that
+(`be% − loss%`, the only cross-series-comparable column), `worst3%` — of everything a cell lost at
+the contest level, the share carried by its three worst contests, which separates §4's
+concentration story from a broad drift without anyone writing a query (it reads **47%** for
+KXNFLSPREAD; §4's 48%/87% figures are shares of the cell's *net* total, a different and
+unbounded denominator that the report deliberately does not use) — and a `live` column naming the real-money books that
 touched the cell.
 
 It is a **report, not a gate.** It ranks where to look; it decides nothing. Gates decide

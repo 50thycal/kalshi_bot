@@ -122,6 +122,22 @@ def test_worst3_share_finds_a_concentrated_loss():
     assert s["worst3_share"] > 0.9
 
 
+def test_worst3_share_can_never_exceed_one():
+    """The bug the first production run exposed (2026-09-06): dividing the three worst
+    contests by the cell's NET total is unbounded above, because winners shrink the
+    denominator. KXBTCD printed 322% and KXWTI 153% — not shares of anything. Against the
+    cell's GROSS contest-level losses it is a real proportion, and a cell that is barely
+    negative overall is exactly the case that used to blow up."""
+    rows = [_trade("KXBTCD-26AUG13A-X", -93.4), _trade("KXBTCD-26AUG14B-X", -93.4),
+            _trade("KXBTCD-26AUG15C-X", -93.4), _trade("KXBTCD-26AUG16D-X", -93.4)]
+    # ...almost, but not quite, offset by a long tail of small winners.
+    rows += [_trade(f"KXBTCD-26SEP{i:02d}W-X", 6.5) for i in range(56)]
+    s = mod.summarize(rows)
+    assert s["total"] < 0                      # barely: the old denominator was near zero
+    assert 0.0 < s["worst3_share"] <= 1.0
+    assert round(s["worst3_share"], 4) == 0.75  # three of four equal losing contests
+
+
 def test_worst3_share_is_absent_on_a_profitable_cell():
     """A share of a positive total would read as a loss attribution. There is nothing to attribute."""
     s = mod.summarize([_trade(f"KXA-{i}-X", 6.5) for i in range(5)])
