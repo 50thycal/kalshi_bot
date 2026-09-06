@@ -1,1 +1,1 @@
-{"type": "db", "sql": "select strategy, count(*) as trades, min(created_at) as first, max(created_at) as last from paper_trades where strategy like 'Gmmsell%' group by strategy union all select 'mmsell10 (reference)', count(*), min(created_at), max(created_at) from paper_trades where strategy='mmsell10' and created_at >= now() - interval '12 hours'", "max_rows": 10, "id": "rl-gbooks-trades-1"}
+{"type":"env","id":"rl-envread-1"}
