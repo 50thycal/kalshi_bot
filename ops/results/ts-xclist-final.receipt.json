@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "81c97a930f6e2e8ee86461a34b304e00c23b1f53",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T19:15:30Z",
+  "id": "ts-xclist-final",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/ts-xclist-final.receipt.json",
+  "result_file": "ops/results/ts-xclist-final.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34054299088",
+  "service": null,
+  "started_at": "2026-09-06T19:15:27Z",
+  "targets": [],
+  "type": "xos"
+}
