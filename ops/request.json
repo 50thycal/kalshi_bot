@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"xos","command":"control-tower","id":"silentarm-live-1","actor":"claude-research-lab","purpose":"post-merge: exercise experiment.armed_but_silent on the real portfolio through the live code path"}
