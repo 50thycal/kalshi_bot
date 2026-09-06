@@ -31,6 +31,7 @@ from ..live.sizing import (
     order_quantity,
 )
 from ..paper.engine import kalshi_fee
+from ..registry.observe import SeriesObserver
 from ..scanner.metrics import (
     compute_metrics,
     compute_time_to_close,
@@ -64,6 +65,10 @@ class MmSellCycleSummary:
     # These exist because Railway's log endpoint returns only the message text and drops the
     # structured fields, so a cycle's funnel was invisible in production. The 2026-08-08 scan
     # starvation could not be measured directly for exactly that reason and had to be inferred.
+    #: Series the listing sweep saw, and how many were seen for the FIRST time ever. The second
+    #: is the registry's alarm: markets became available that no review has ever looked at.
+    series_observed: int = 0
+    series_new: int = 0
     pages_fetched: int = 0          # /events pages actually requested
     pagination_exhausted: bool = False  # False => we stopped at the page cap, universe truncated
     events_fetched: int = 0         # events returned by the API, before any filter
@@ -823,6 +828,14 @@ class MmSellTracker:
         # which markets we trade.
         events: list[tuple[float, dict]] = []
         cursor = ""
+        # Arrival detection for the series registry (kalshi_bot/registry/__init__.py). It lives
+        # HERE, on the listing sweep this tracker does, and not in `ScannerService.run_once`
+        # where it was first written: `scanner.run_once` is reached only through `_run_cycle`,
+        # which `main` calls in the `else` branch after live/weather/mmsell/evo. Production runs
+        # BOT_MODE=live, so that hook could never fire — the same trap `main._run_cycle`'s own
+        # comment warns about ("a hook placed there silently never runs"), and the `markets`
+        # table frozen at 77 rows since 2026-06-08 is what it looks like from the outside.
+        observer = SeriesObserver()
         for _ in range(s.mmsell_event_pages):
             page = self.client.get_events(status="open", with_nested_markets=True,
                                           limit=200, cursor=cursor or None)
@@ -830,6 +843,11 @@ class MmSellTracker:
             evs = (page or {}).get("events") or []
             for e in evs:
                 summ.events_fetched += 1
+                # Observe BEFORE every filter, including `_skip_series`. The registry asks what
+                # Kalshi OFFERED us; a queue filtered by the scope decisions a review exists to
+                # revisit would never surface the series we are declining to look at.
+                for raw_market in e.get("markets") or []:
+                    observer.observe(raw_market, e)
                 if self._skip_series(e.get("series_ticker") or ""):
                     continue
                 vol = sum(market_volume(m) for m in e.get("markets") or [])
@@ -844,6 +862,10 @@ class MmSellTracker:
                 summ.pagination_exhausted = True
                 break
         summ.events_eligible = len(events)
+        # One SELECT plus a handful of upserts, after the sweep and before any entry work.
+        # `flush` swallows its own errors: a lost cycle of arrival data delays a review, an
+        # exception here would cost trading.
+        summ.series_observed, summ.series_new = observer.flush(session)
         events.sort(key=lambda ev: -ev[0])
         books = self._books()
         # The scan reaches as deep as the DEEPEST book asks for, but each book is then gated on
