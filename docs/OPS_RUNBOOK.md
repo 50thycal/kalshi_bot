@@ -126,7 +126,7 @@ To run a request:
    specs, thresholds and tags are literals in the repository that someone read in
    a pull request — otherwise a scientific contract could be written in an
    environment variable the afternoon the results arrived, and pre-registration
-   would mean nothing. Four actions:
+   would mean nothing. Five actions:
 
    ```jsonc
    // register the contract — arms nothing, places nothing
@@ -138,6 +138,9 @@ To run a request:
    {"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"mm10-arm-1\",\"action\":\"ARM_CANARY\",\"actor\":\"claude-code\",\"actor_role\":\"LIVE_OPS\",\"payload\":{\"package\":\"mmsell10-canary\",\"approved_by\":\"<operator>\"},\"schema_version\":1}"}}
    // record an experiment that ran and finished OUTSIDE the system, and retire it
    {"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"perpv1-closeout-1\",\"action\":\"CLOSE_OUT_RETROSPECTIVE\",\"actor\":\"claude-code\",\"actor_role\":\"LIVE_OPS\",\"payload\":{\"package\":\"perp-v1\",\"approved_by\":\"<operator>\",\"reason\":\"<why it is over>\"},\"schema_version\":1}"}}
+   // HOLD or END a line of research that ran HERE — addressed by experiment KEY,
+   // target PAUSED or RETIRED only, refused on an open LIVE deployment
+   {"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"freeze-retire-1\",\"action\":\"STAND_DOWN\",\"actor\":\"claude-code\",\"actor_role\":\"RESEARCH_LAB\",\"payload\":{\"experiment\":\"freeze-dark-window-pin\",\"target\":\"RETIRED\",\"approved_by\":\"<operator>\",\"reason\":\"<why it is over>\"},\"schema_version\":1}"}}
    ```
 
    The MARKTANGLE line closed the same way on 2026-09-03, in this order — the
@@ -198,6 +201,39 @@ To run a request:
    would mark post-cutover work grandfathered, which the Legacy Migration role is
    told never to do. And Research Lab may not author it — the session that RAN an
    experiment should not be the one that writes down its own verdict.
+
+   `STAND_DOWN` is the one that lets a line of research actually **end**. Until it
+   existed an experiment could be registered, armed and promoted through this
+   transport and then never stopped through it: the CLI is read-only for lifecycle,
+   the ops channel is read-only against Postgres, and `CLOSE_OUT_RETROSPECTIVE`
+   only fits an experiment that ran OUTSIDE the system — it refuses any experiment
+   holding a **tagged** deployment, i.e. exactly the ones that actually ran here.
+   So a finished experiment stayed recorded as active indefinitely.
+   `freeze-dark-window-pin` is the worked case: four tagged paper books, zero
+   `paper_trades` rows in 24 days, still reported as an active PAPER deployment.
+
+   It is the only verb addressed by **experiment key** rather than by a reviewed
+   package, which is why its bounds are structural rather than editorial:
+
+   - **only `PAUSED` or `RETIRED`.** Every other target is unrepresentable, so it
+     can hold or end a line of research and can never advance one — a promotion
+     still needs a reviewed package and a recorded evaluator PASS.
+   - **refused on an open LIVE deployment.** Real money already has audited paths
+     for stopping (the kill switch, the runtime allowlist, the recorded stand-down
+     integrity event); a second one reachable by naming a key in a **public**
+     envelope is the parallel mechanism this system exists to remove. Stand a live
+     book down through Live Ops first, then stand the experiment down here.
+   - **`approved_by` and `reason` required**, and no-ops refused: a transition row
+     that records no change reads, a year later, as a decision that was taken.
+   - **`RETIRED` closes the open epoch**, which cascades every deployment still
+     running in it. Leaving them open would leave rows claiming to run under an
+     experiment that is over — the XOS-000011 shape. `PAUSED` deliberately does
+     not, because a pause is meant to resume into the same interval.
+
+   Note also that `approved_by` is now **stripped before it is validated** on every
+   verb that takes one. `_ACTOR_RE` permits spaces, legitimately, so `"   "` used to
+   satisfy it and write a blank approver onto the transition — on `ARM_CANARY` that
+   was a real-money arming whose audit row named nobody.
 
    `ARM_CANARY` still **places no order**: `LIVE_STRATEGIES` is a separate switch
    this transport cannot reach, and every structural refusal in `arm_live_canary`
