@@ -1,1 +1,1 @@
-{"type":"xos","command":"enforcement","id":"rl-xos-probe-1"}
+{"type":"db","id":"cc-recheck-20260906-1","sql":"select strategy, count(*) trades, count(*) filter (where status='open') open_now, min(created_at) first_trade, max(created_at) last_trade from paper_trades where strategy in ('Gmmsell0','Gmmsell1') group by 1"}
