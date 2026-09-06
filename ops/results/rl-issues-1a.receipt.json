@@ -1,0 +1,49 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "97ab2de5ced944dd7e78fd6fd920840d1c68a3f7",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T14:27:28Z",
+  "id": "rl-issues-1a",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 5894 bytes, sha256:5a5b4791b0f63ce3>",
+        "before": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>",
+        "requested": "<redacted 5894 bytes, sha256:5a5b4791b0f63ce3>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_ISSUE_COMMAND is empty \u2014 nothing to overwrite",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "ok"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl-issues-1a.receipt.json",
+  "result_file": "ops/results/rl-issues-1a.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34039206886",
+  "service": "main",
+  "started_at": "2026-09-06T14:27:25Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
