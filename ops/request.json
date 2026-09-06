@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["ts-repair-darkcanary-20260906"],"id":"ts-repair-1b"}
+{"type":"xos","command":"show","args":["theta4-fat-tail"],"id":"ts-verify-repair"}
