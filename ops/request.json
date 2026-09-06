@@ -1,1 +1,1 @@
-{"type":"env","id":"cc-golive-read"}
+{"type":"db","sql":"SELECT split_part(market_ticker,'-',1) AS series, count(*) AS trades, count(DISTINCT strategy) AS books, min(created_at)::date AS first, max(created_at)::date AS last FROM paper_trades WHERE market_ticker LIKE 'KXUE%' GROUP BY 1 ORDER BY 2 DESC","max_rows":50,"id":"audit-kxue-1"}
