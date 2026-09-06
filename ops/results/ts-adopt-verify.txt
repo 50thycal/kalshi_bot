@@ -1,13 +1,12 @@
 # ops request [READ]
-# type=xos  id=silentarm-ct-1
-# actor=claude-research-lab  purpose=acceptance check: does the full Control Tower read still hang
-# code 6d2e16edb5170ac8fe8a5d4a1848989c68644062 · started 2026-09-06T04:06:06Z
+# type=xos  id=ts-adopt-verify
+# code 74f4d7bff09a1020c8d62da167b97e39761b33ee · started 2026-09-06T12:09:46Z
 SESSION: Experiment Control Tower
 MODE: READ ONLY
 EXPERIMENT OS: experiment_os:pr4+metrics_engine:pr3_v1
 ENFORCEMENT: NEW_ONLY since 2026-08-16 14:34:42.892897+00:00 (cutover prod-new-only-20260816)
 PLATFORM SNAPSHOT: 4f9adf15daa64035…
-AS OF: 2026-09-05 23:06 CDT
+AS OF: 2026-09-06 07:09 CDT
 
 GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator result can authorize a transition.
 
@@ -17,27 +16,33 @@ GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator resul
         mmsell-price-ceiling: EXPERIMENT_EXECUTION_STOOD_DOWN — mmsell-ceiling-live-1 is intentionally stood down — the runtime live allowlist is empty, so this book places no new entries. Open positions still exit and settle. Evidence accrual is paused; existing evidence is unaffected and gate evaluation is NOT blocked.
         mmsell-scheduled-settle-live: EXPERIMENT_EXECUTION_STOOD_DOWN — lmmsell-live-1 is intentionally stood down — the runtime live allowlist is empty, so this book places no new entries. Open positions still exit and settle. Evidence accrual is paused; existing evidence is unaffected and gate evaluation is NOT blocked.
         theta4-fat-tail: EXPERIMENT_EXECUTION_STOOD_DOWN — theta4-live-1 is intentionally stood down — the runtime live allowlist is empty, so this book places no new entries. Open positions still exit and settle. Evidence accrual is paused; existing evidence is unaffected and gate evaluation is NOT blocked.
-    active deployments: 27 (grandfathered 12, native 15)
+    active deployments: 28 (grandfathered 12, native 16)
 
 === OPEN INVESTIGATIONS ===
     Durable Experiment OS issues. Ticket status is WORKFLOW state: it never changes a gate verdict,
     a lifecycle state or a recorded result.
     `recurring` = the anomaly is still being detected right now, not merely under investigation.
-    issue       severity  pri  classification  owner                   status                       scope                                                 age    latest evidence                                             
-    ----------  --------  ---  --------------  ----------------------  ---------------------------  ----------------------------------------------------  -----  ------------------------------------------------------------
-    XOS-000020  HIGH      P1   STRATEGY        RESEARCH_LAB            OPEN                         mmsell-price-ceiling-capacity                         0.7d   PR: Contest cap did not fire on a contest whose markets clos
-    XOS-000014  HIGH      P2   OPS             LIVE_OPS                OPEN                         mmsell-price-ceiling · v2/e2 · mmsell-ceiling-live-1  6.6d   LOG: Root cause measured: Kalshi exchange sharding. Refused 
-    XOS-000015  HIGH      P2   OPS             LIVE_OPS                OPEN                         system-wide                                           5.7d   (no evidence recorded)                                      
-    XOS-000008  MEDIUM    P2   PLATFORM        PLATFORM_CHANGE_REVIEW  OPEN                         revision:settlement_repair_2026_08_24                 12.6d  (no evidence recorded)                                      
-    XOS-000012  MEDIUM    P2   PLATFORM        PLATFORM_CHANGE_REVIEW  OPEN                         system-wide                                           8.5d   (no evidence recorded)                                      
-    XOS-000013  MEDIUM    P2   DATA            LIVE_OPS                OPEN                         mmsell-price-ceiling · v2/e2 · mmsell-ceiling-live-1  8.3d   (no evidence recorded)                                      
-    XOS-000016  MEDIUM    P2   STRATEGY        RESEARCH_LAB            OPEN                         mmsell-price-ceiling-capacity                         3.8d   (no evidence recorded)                                      
-    XOS-000019  MEDIUM    P2   OPS             LIVE_OPS                OPEN                         system-wide                                           2.4d   (no evidence recorded)                                      
-    XOS-000003  LOW       P2   STRATEGY        RESEARCH_LAB            ACTION_REQUIRED · recurring  freeze-dark-window-pin · v1/e1                        14.5d  OPS_RESULT: NO CURRENTLY AVAILABLE UNIVERSE SATISFIES THE HY
-    XOS-000009  LOW       P3   STRATEGY        RESEARCH_LAB            OPEN                         system-wide                                           12.6d  (no evidence recorded)                                      
-    XOS-000010  LOW       P3   OPS             LIVE_OPS                OPEN                         system-wide                                           12.2d  (no evidence recorded)                                      
-    XOS-000017  LOW       P3   UNCLASSIFIED    OPERATOR                OPEN                         system-wide                                           3.6d   (no evidence recorded)                                      
+    issue       severity  pri  classification  owner                   status                       scope                                                     age    latest evidence                                             
+    ----------  --------  ---  --------------  ----------------------  ---------------------------  --------------------------------------------------------  -----  ------------------------------------------------------------
+    XOS-000020  HIGH      P1   STRATEGY        RESEARCH_LAB            OPEN                         mmsell-price-ceiling-capacity                             1.0d   PR: Contest cap did not fire on a contest whose markets clos
+    XOS-000022  MEDIUM    P1   STRATEGY        RESEARCH_LAB            ACTION_REQUIRED              mmsell-price-ceiling · v2                                 0.3d   OPS_RESULT: First production run of the detector (post-merge
+    XOS-000014  HIGH      P2   OPS             LIVE_OPS                OPEN                         mmsell-price-ceiling · v2/e2 · mmsell-ceiling-live-1      6.9d   LOG: Root cause measured: Kalshi exchange sharding. Refused 
+    XOS-000015  HIGH      P2   OPS             LIVE_OPS                OPEN                         system-wide                                               6.0d   (no evidence recorded)                                      
+    XOS-000008  MEDIUM    P2   PLATFORM        PLATFORM_CHANGE_REVIEW  OPEN                         revision:settlement_repair_2026_08_24                     12.9d  (no evidence recorded)                                      
+    XOS-000012  MEDIUM    P2   PLATFORM        PLATFORM_CHANGE_REVIEW  OPEN                         system-wide                                               8.9d   (no evidence recorded)                                      
+    XOS-000013  MEDIUM    P2   DATA            LIVE_OPS                OPEN                         mmsell-price-ceiling · v2/e2 · mmsell-ceiling-live-1      8.6d   (no evidence recorded)                                      
+    XOS-000016  MEDIUM    P2   STRATEGY        RESEARCH_LAB            OPEN                         mmsell-price-ceiling-capacity                             4.2d   (no evidence recorded)                                      
+    XOS-000019  MEDIUM    P2   OPS             LIVE_OPS                OPEN                         system-wide                                               2.8d   (no evidence recorded)                                      
+    XOS-000023  MEDIUM    P2   STRATEGY        RESEARCH_LAB            OPEN                         mmsell-correlation-cap                                    0.3d   OPS_RESULT: False-positive check across all 30 active deploy
+    XOS-000024  MEDIUM    P2   DATA            RESEARCH_LAB            OPEN · recurring             mmsell-price-ceiling-contest-cap · v1 · live_canary_keep  0.0d   CONTROL_TOWER: detected by gate.blocked at mmsell-price-ceil
+    XOS-000025  MEDIUM    P2   DATA            RESEARCH_LAB            OPEN · recurring             mmsell-scheduled-settle-live · v1 · live_canary_keep      0.0d   CONTROL_TOWER: detected by gate.blocked at mmsell-scheduled-
+    XOS-000026  MEDIUM    P2   DATA            RESEARCH_LAB            OPEN · recurring             theta4-fat-tail · v1 · live_canary_keep                   0.0d   CONTROL_TOWER: detected by gate.blocked at theta4-fat-tail ·
+    XOS-000003  LOW       P2   STRATEGY        RESEARCH_LAB            ACTION_REQUIRED · recurring  freeze-dark-window-pin · v1/e1                            14.9d  OPS_RESULT: NO CURRENTLY AVAILABLE UNIVERSE SATISFIES THE HY
+    XOS-000009  LOW       P3   STRATEGY        RESEARCH_LAB            OPEN                         system-wide                                               12.9d  (no evidence recorded)                                      
+    XOS-000010  LOW       P3   OPS             LIVE_OPS                OPEN                         system-wide                                               12.5d  (no evidence recorded)                                      
+    XOS-000017  LOW       P3   UNCLASSIFIED    OPERATOR                OPEN                         system-wide                                               3.9d   (no evidence recorded)                                      
     XOS-000020  Concentration caps key on event_ticker, but the unit of correlation is the GAME
+    XOS-000022  KXNFLSPREAD is a negative selection cell at the contest level, and it is graduated
     XOS-000014  31% of live entry orders rejected 'user_not_found' — 100% concentrated in MLB, ITF and BTCD series
     XOS-000015  Worker crash-looped 16h51m on an invalid config set through the ops env transport
     XOS-000008  Settlement-taxonomy coverage decays over a long-running experiment; there is no maintenance cadence
@@ -45,26 +50,17 @@ GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator resul
     XOS-000013  live_fill_rate_pct reads 0% on a filling book: fills do not join to their live_orders row by kalshi_order_id
     XOS-000016  A capacity-only successor is forced to re-prove a paper edge it does not change
     XOS-000019  Evo service: LLM-provider payment failures (402) went unalerted for ~3 days
+    XOS-000023  An armed experiment collecting NOTHING was not a detectable condition
+    XOS-000024  live_canary_keep is BLOCKED_DATA
+    XOS-000025  live_canary_keep is BLOCKED_DATA
+    XOS-000026  live_canary_keep is BLOCKED_DATA
     XOS-000003  freeze-dark-window-pin is deployed but has produced zero evidence
     XOS-000009  MMSELL skip=BTC+ETH+SOL+DOGE+XRP+CRYPTO is a substring blocklist and drops non-crypto markets
     XOS-000010  Platform-command receipt metadata is invisible through the production ops logs channel
     XOS-000017  Experiment OS cannot record an experiment that ran and finished outside it
 
 === UNTICKETED ANOMALIES ===
-    Anomalies above that NO open issue covers. Each is a ticket CANDIDATE — this report cannot open one
-    (it is read-only); hand off to the recommended owner, who ADOPTS it with `issue open-candidate <fingerprint>`.
-    Adoption, not `issue create`: only it carries the fingerprint printed under each anomaly, so the
-    ticket covers this anomaly instead of leaving it listed here forever.
-    The recommended owner is who looks FIRST. Where the classification reads UNCLASSIFIED, the cause is
-    genuinely not yet established — that is the honest state, not a gap to be filled in by guessing.
-    detector      severity  pri  would-classify  recommended owner  scope                                            anomaly                         
-    ------------  --------  ---  --------------  -----------------  -----------------------------------------------  --------------------------------
-    gate.blocked  MEDIUM    P2   DATA            RESEARCH_LAB       mmsell-scheduled-settle-live · live_canary_keep  live_canary_keep is BLOCKED_DATA
-    gate.blocked  MEDIUM    P2   DATA            RESEARCH_LAB       theta4-fat-tail · live_canary_keep               live_canary_keep is BLOCKED_DATA
-    mmsell-scheduled-settle-live · live_canary_keep · gate.blocked: delta.live_cents_per_contract, live_settled_contracts, twin_live_winrate_gap_pp
-        adopt: issue open-candidate 03a2cc9a194c397f6a50ed23101cf407b57e089874777c95ec9e064601a2c313
-    theta4-fat-tail · live_canary_keep · gate.blocked: realized_tail_hit_ratio_vs_modeled
-        adopt: issue open-candidate 54a753326b1c9ed0876118abec603f25424a1b979241e9de11ed857ea83164ea
+    (none — every anomaly this report detects is covered by an open issue, or there are none)
 
 === IDEA (0) ===
     (none)
@@ -72,16 +68,17 @@ GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator resul
 === PROBE (0) ===
     (none)
 
-=== PAPER (7) ===
-    experiment               ver/epoch  treatment       n     c/trade  control c/trade  gate              last evidence                   
-    -----------------------  ---------  --------------  ----  -------  ---------------  ----------------  --------------------------------
-    freeze-dark-window-pin   v1/e1      freeze1         0     -        -                HOLD              -                               
-    mmsell-anchor-strangle   v1/e1      strangle        1652  1.46     -                FAIL              2026-09-06 03:59:11.123247+00:00
-    mmsell-anchor-vol-entry  v1/e1      vol_entry_gate  2097  0.47     -                FAIL              2026-09-06 03:59:11.102270+00:00
-    mmsell-correlation-cap   v1/e1      contest_capped  7     6.32     -2.56            none/NOT_STARTED  2026-09-06 03:59:11.185741+00:00
-    mmsell-type-tight        v1/e2      Tmmsell6        592   0.13     -                HOLD              2026-09-06 03:59:07.002757+00:00
-    mmsell-variants-2026-07  v1/e1      mmsell6         3882  1.22     -                HOLD              2026-09-06 04:09:36.686549+00:00
-    mmsell-wide-control      v1/e1      -               -     -        1.56             no gate           2026-09-06 04:09:01.515418+00:00
+=== PAPER (8) ===
+    experiment                        ver/epoch  treatment       n     c/trade  control c/trade  gate              last evidence                   
+    --------------------------------  ---------  --------------  ----  -------  ---------------  ----------------  --------------------------------
+    freeze-dark-window-pin            v1/e1      freeze1         0     -        -                HOLD              -                               
+    mmsell-anchor-strangle            v1/e1      strangle        1685  1.44     -                FAIL              2026-09-06 11:59:32.135989+00:00
+    mmsell-anchor-vol-entry           v1/e1      vol_entry_gate  2145  0.52     -                FAIL              2026-09-06 11:59:32.119333+00:00
+    mmsell-correlation-cap            v1/e1      contest_capped  42    1.75     1.72             none/NOT_STARTED  2026-09-06 11:59:32.186645+00:00
+    mmsell-price-ceiling-contest-cap  v1/e1      mmsell10        0     -        -                BLOCKED_DATA      2026-09-06 11:59:32.103898+00:00
+    mmsell-type-tight                 v1/e2      Tmmsell6        614   0.20     -                HOLD              2026-09-06 10:48:13.121693+00:00
+    mmsell-variants-2026-07           v1/e1      mmsell6         3995  1.31     -                HOLD              2026-09-06 11:59:32.305779+00:00
+    mmsell-wide-control               v1/e1      -               -     -        1.48             no gate           2026-09-06 11:59:24.573691+00:00
 
 === LIVE_CANARY (4) ===
     experiment                     live                    twin                    boundary  resting  held  at risk  gate        
@@ -108,6 +105,22 @@ GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator resul
 
     EVALUATOR BLOCK — cause is the canonical evaluator's, not an inference. Do not attribute a block
     to anything not named here.
+    mmsell-price-ceiling-contest-cap · live_canary_keep
+        BLOCKED_DATA (recorded)
+            missing providers:
+              - live_cents_per_contract
+              - live_fill_rate_pct
+              - live_max_realized_loss_usd
+              - live_realized_pnl_usd
+              - live_settled_contracts
+              - twin_live_paired_gap_cents
+              - twin_live_winrate_gap_pp
+              - twin_mirror_coverage_pct
+        · sample 'live_settled_contracts' on mmsell-price-ceiling-contest-cap/v1/e1/mmsell10: no live deployment tags for this scope in this epoch
+        · horizon 'live_settled_contracts' on mmsell-price-ceiling-contest-cap/v1/e1/mmsell10: no live deployment tags for this scope in this epoch
+        · pass_all 'live_cents_per_contract' on mmsell-price-ceiling-contest-cap/v1/e1/mmsell10: no live deployment tags for this scope in this epoch
+        · pass_all 'twin_live_winrate_gap_pp' on mmsell-price-ceiling-contest-cap/v1/e1/mmsell10: no live deployment tags for this scope in this epoch
+        owner: Research Lab (or task-specific Experiment OS metrics work) — a metric provider or evidence transform has to be implemented. NOT a Platform Revision unless a shared semantic actually changed
     mmsell-scheduled-settle-live · live_canary_keep
         BLOCKED_DATA (recorded)
             missing providers:
@@ -129,6 +142,11 @@ GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator resul
 === REALIZABLE-PROJECTION CONTEXT ===
     These gates decide on the live-fill projection, NOT on paper profitability. Both numbers are shown so the
     verdict is read as the claim it is.
+    mmsell-price-ceiling-contest-cap · paper_to_live_canary  [promotion PAPER→LIVE_CANARY]
+        verdict: HOLD (recorded)
+        mmsell-price-ceiling-contest-cap/v1/e1/mmsell10:  realizable projection n/a  ·  observed paper n/a  ·  calibration coverage 0/0 (calib 2026-08-11)
+        Interpretation: the gate is satisfied on the calibrated live-fill projection.
+        This is NOT a claim that observed paper P&L was positive.
     mmsell-type-tight · paper_keep  [promotion PAPER→LIVE_CANARY]
         verdict: HOLD (recorded)
         mmsell-type-tight/v1/e2/Tmmsell1:  realizable projection +1.154c/trade  ·  observed paper -4.607c/trade  ·  calibration coverage 98/98 (calib 2026-08-11)
@@ -172,16 +190,16 @@ GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator resul
 === DATA COLLECTORS ===
     collector                 status  age_min  cadence
     ------------------------  ------  -------  -------
-    weather_forecasts         fresh   1.90     15     
-    weather_observations      fresh   1.90     15     
-    weather_ensembles         fresh   2        60     
-    weather_bucket_snapshots  fresh   1.90     5      
-    crypto_spot_candles       fresh   6.10     5      
-    crypto_ladder_snapshots   fresh   5.20     5      
-    mmsell_position_ticks     fresh   2        5      
+    weather_forecasts         fresh   1.10     15     
+    weather_observations      fresh   4.80     15     
+    weather_ensembles         fresh   1.10     60     
+    weather_bucket_snapshots  fresh   1.10     5      
+    crypto_spot_candles       fresh   10.30    5      
+    crypto_ladder_snapshots   fresh   9.70     5      
+    mmsell_position_ticks     fresh   1.20     5      
 
     NOT ACTIVE IN THIS DEPLOYMENT (no data for >7d) — informational, NOT an outage:
-        market_snapshots: INACTIVE, last write 89.6d ago — scanner-mode table; the live worker does not write it
+        market_snapshots: INACTIVE, last write 89.9d ago — scanner-mode table; the live worker does not write it
 
     COLLECTOR LEGEND: fresh = running normally · STALE = overdue, may be stalled · EMPTY = no rows · UNAVAILABLE = table absent ·
     INACTIVE = not expected to be active in the current deployment.
@@ -189,12 +207,13 @@ GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator resul
     own, the cause of a blocked gate — see BLOCKED EVIDENCE for the evaluator's actual reasons.
 
 === PORTFOLIO (north star: $100/month realized) ===
-    PAPER realized 30d: $501.99  (all-time $446.03)  → AHEAD by $401.99
+    PAPER realized 30d: $525.5  (all-time $470.09)  → AHEAD by $425.50
     Paper assumes fills it would not always get; the north star is REAL money. Live realized is per-canary — see `mmsell_live` / `live_paper_parity`.
 
 === READY / DUE ===
     - GATE FAIL (recorded) mmsell-anchor-strangle · paper_keep — kill/retire candidate; decision belongs to Research Lab
     - GATE FAIL (recorded) mmsell-anchor-vol-entry · paper_keep — kill/retire candidate; decision belongs to Research Lab
+    - BLOCKED_DATA mmsell-price-ceiling-contest-cap · live_canary_keep — missing provider: live_cents_per_contract, live_fill_rate_pct, live_max_realized_loss_usd, live_realized_pnl_usd, live_settled_contracts, twin_live_paired_gap_cents, twin_live_winrate_gap_pp, twin_mirror_coverage_pct — this experiment's numbers cannot be interpreted until it clears
     - GATE PASS (RECORDED, system @ 2026-09-06 03:53:42.708470+00:00) mmsell-price-ceiling · paper_to_live_canary PAPER→LIVE_CANARY — this result CAN authorize the transition. Promotion remains an operator act (re-evaluated at authorization); it is not automatic. The claim is exactly: this registered gate's clauses are satisfied — not that the book is broadly profitable, that other diagnostics are positive, or that historical cautions have lapsed.
     - GATE PASS (RECORDED, system @ 2026-09-06 02:37:29.424076+00:00) mmsell-price-ceiling-capacity · paper_to_live_canary PAPER→LIVE_CANARY — this result CAN authorize the transition. Promotion remains an operator act (re-evaluated at authorization); it is not automatic. The claim is exactly: this registered gate's clauses are satisfied — not that the book is broadly profitable, that other diagnostics are positive, or that historical cautions have lapsed. CAUTION: it passes on the calibrated live-fill projection while observed paper P&L is negative — see REALIZABLE-PROJECTION CONTEXT.
     - BLOCKED_DATA mmsell-scheduled-settle-live · live_canary_keep — missing provider: delta.live_cents_per_contract, live_settled_contracts, twin_live_winrate_gap_pp — this experiment's numbers cannot be interpreted until it clears
@@ -208,10 +227,15 @@ GATE COLUMN: recorded/dry-run (* = they differ). Only a RECORDED evaluator resul
     5 retired record(s) carry NO retired_at — undated legacy history, not recent: live-shape-probe, origin-scanner-books, wcprop, weather-legacy-cells, xgame
 
 === RECOMMENDED NEXT ACTIONS ===
-    - blocked evidence — mmsell-scheduled-settle-live·live_canary_keep (delta.live_cents_per_contract, live_settled_contracts, twin_live_winrate_gap_pp), theta4-fat-tail·live_canary_keep (realized_tail_hit_ratio_vs_modeled) → Research Lab (or task-specific Experiment OS metrics work) — a metric provider or evidence transform has to be implemented. NOT a Platform Revision unless a shared semantic actually changed
+    - blocked evidence — mmsell-price-ceiling-contest-cap·live_canary_keep (live_cents_per_contract, live_fill_rate_pct, live_max_realized_loss_usd, live_realized_pnl_usd, live_settled_contracts, twin_live_paired_gap_cents, twin_live_winrate_gap_pp, twin_mirror_coverage_pct), mmsell-scheduled-settle-live·live_canary_keep (delta.live_cents_per_contract, live_settled_contracts, twin_live_winrate_gap_pp), theta4-fat-tail·live_canary_keep (realized_tail_hit_ratio_vs_modeled) → Research Lab (or task-specific Experiment OS metrics work) — a metric provider or evidence transform has to be implemented. NOT a Platform Revision unless a shared semantic actually changed
+    - freeze-dark-window-pin: arm 'freeze1' (freeze1) has been ARMED 588.2h and has collected NOTHING, while 37938 paper trades were booked by OTHER strategies in the same window — already under investigation as XOS-000003; no separate ticket candidate
+    - freeze-dark-window-pin: arm 'freeze2' (freeze2) has been ARMED 588.2h and has collected NOTHING, while 37938 paper trades were booked by OTHER strategies in the same window — already under investigation as XOS-000003; no separate ticket candidate
+    - freeze-dark-window-pin: arm 'freeze3' (freeze3) has been ARMED 588.2h and has collected NOTHING, while 37938 paper trades were booked by OTHER strategies in the same window — already under investigation as XOS-000003; no separate ticket candidate
+    - freeze-dark-window-pin: arm 'freeze4' (freeze4) has been ARMED 588.2h and has collected NOTHING, while 37938 paper trades were booked by OTHER strategies in the same window — already under investigation as XOS-000003; no separate ticket candidate
     - freeze-dark-window-pin: freeze-dark-window-pin is deployed but has produced zero evidence — covered by XOS-000003 (ACTION_REQUIRED), owner RESEARCH_LAB
-    - mmsell-scheduled-settle-live · live_canary_keep: live_canary_keep is BLOCKED_DATA — NO open issue covers this; recommended owner RESEARCH_LAB [DATA/MEDIUM/P2]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
-    - theta4-fat-tail · live_canary_keep: live_canary_keep is BLOCKED_DATA — NO open issue covers this; recommended owner RESEARCH_LAB [DATA/MEDIUM/P2]. Opening it is a WRITE: hand off to that role (the Control Tower cannot open one)
+    - mmsell-price-ceiling-contest-cap · live_canary_keep: live_canary_keep is BLOCKED_DATA — covered by XOS-000024 (OPEN), owner RESEARCH_LAB
+    - mmsell-scheduled-settle-live · live_canary_keep: live_canary_keep is BLOCKED_DATA — covered by XOS-000025 (OPEN), owner RESEARCH_LAB
+    - theta4-fat-tail · live_canary_keep: live_canary_keep is BLOCKED_DATA — covered by XOS-000026 (OPEN), owner RESEARCH_LAB
 
 Control Tower is READ ONLY. Route the write by what is actually blocking:
     BLOCKED_DATA (missing metric provider / analysis / evidence transform) → Research Lab or task-specific Experiment OS metrics work.
