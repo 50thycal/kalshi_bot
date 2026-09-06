@@ -126,7 +126,7 @@ To run a request:
    specs, thresholds and tags are literals in the repository that someone read in
    a pull request — otherwise a scientific contract could be written in an
    environment variable the afternoon the results arrived, and pre-registration
-   would mean nothing. Five actions:
+   would mean nothing. Six actions:
 
    ```jsonc
    // register the contract — arms nothing, places nothing
@@ -202,15 +202,26 @@ To run a request:
    told never to do. And Research Lab may not author it — the session that RAN an
    experiment should not be the one that writes down its own verdict.
 
-   `STAND_DOWN` is the one that lets a line of research actually **end**. Until it
-   existed an experiment could be registered, armed and promoted through this
-   transport and then never stopped through it: the CLI is read-only for lifecycle,
-   the ops channel is read-only against Postgres, and `CLOSE_OUT_RETROSPECTIVE`
-   only fits an experiment that ran OUTSIDE the system — it refuses any experiment
-   holding a **tagged** deployment, i.e. exactly the ones that actually ran here.
-   So a finished experiment stayed recorded as active indefinitely.
-   `freeze-dark-window-pin` is the worked case: four tagged paper books, zero
-   `paper_trades` rows in 24 days, still reported as an active PAPER deployment.
+   `STAND_DOWN` is `RETIRE_ON_GATE_FAIL`'s **weaker sibling**, and the boundary
+   between them is the important part. `RETIRE_ON_GATE_FAIL` takes its
+   authorization from a FAIL the **evaluator** already computed — a caller can only
+   point at a failure, never assert one — so it takes precedence wherever it
+   applies, and `STAND_DOWN` **refuses RETIRED whenever it would work**. Two paths
+   to the same terminal state, one of which quietly discards the evaluator's
+   authority, is the parallel mechanism this system exists to remove.
+
+   What is left is the case no gate can express: an experiment that is over for a
+   reason its own contract cannot produce a verdict about. `freeze-dark-window-pin`
+   is the worked example. Its gate reads **HOLD** ("sample floor not met:
+   settled_trades=0 vs >= 150") and can never read anything else — the book has
+   written zero `paper_trades` rows in 24 days and XOS-000003 established why:
+   Kalshi lists no series the hypothesis can be tested on, and none is proposed. A
+   gate cannot FAIL on evidence that cannot exist, so waiting for the stronger verb
+   means waiting forever while four tagged books stay recorded as an active PAPER
+   deployment. **Never fabricate that FAIL by hand to unlock the stronger verb** —
+   a verdict written after the fact is precisely what "only a recorded evaluator
+   result authorizes" exists to refuse. `STAND_DOWN` writes no verdict at all; it
+   records a decision, attributed to a person, with its reason.
 
    It is the only verb addressed by **experiment key** rather than by a reviewed
    package, which is why its bounds are structural rather than editorial:
