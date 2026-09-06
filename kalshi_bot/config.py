@@ -16,7 +16,7 @@ from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from kalshi_bot.mmsell.market_types import KNOWN_MODES, KNOWN_TYPES
-from kalshi_bot.mmsell.universe import TIER_ORDER
+from kalshi_bot.registry import STATE_ORDER, canonical_state
 
 BotMode = Literal["scanner", "paper", "approval", "live", "weather"]
 KalshiEnv = Literal["demo", "production"]
@@ -1858,7 +1858,9 @@ class Settings(BaseSettings):
             # An unrecognised tier name would admit EVERYTHING (universe.admits fails open on
             # an unknown tier), i.e. a book that reads as gated and is not — the same invisible
             # no-op the type validation above exists to prevent.
-            if v["universe"] is not None and v["universe"] not in TIER_ORDER:
+            # `barred` parses as a state but is a veto, not a rung: naming it as a MINIMUM
+            # would admit everything, so it is rejected here alongside outright typos.
+            if v["universe"] is not None and canonical_state(v["universe"]) not in STATE_ORDER:
                 ok = False
             # A cap below 1 would admit nothing at all rather than capping — a book that
             # reads as capped and trades zero, which is the same class of invisible no-op the

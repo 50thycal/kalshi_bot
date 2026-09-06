@@ -17,23 +17,29 @@ PROFITABLE (+$45.18 all-time). A graduated series can be catastrophic: KXNFLSPRE
 classified, has 382 settled markets, and has lost $166.55. Graduation means "we know what this
 contract is and we have history on it", never "this contract makes money".
 
-THE TIERS (kalshi_bot/mmsell/universe.py is the worker-side source of truth)
+THE TIERS (kalshi_bot/registry/ is the worker-side source of truth)
 
     GRADUATED     classified AND reviewed AND carrying own history -> tradeable live
     IN_REVIEW     classified but too thin to have been reviewed    -> paper only
-    UNCLASSIFIED  in no taxonomy at all                            -> the review queue
+    IDENTIFIED    in no taxonomy at all                            -> the review queue
 
-WHAT TO DO WITH THE OUTPUT. The UNCLASSIFIED table is a work queue, ordered by supply: the top
+WHAT TO DO WITH THE OUTPUT. The IDENTIFIED table is a work queue, ordered by supply: the top
 rows are the series costing us the most coverage. Classifying one is a change to SERIES_TYPES,
 which is shared platform semantics — it goes through Platform Change Review, using
 `scripts/mmsell_taxonomy_audit.py` to gather the settlement evidence. Graduating one is a PR
-adding its prefix to GRADUATED_SERIES. Neither happens automatically, deliberately: a series
+against `kalshi_bot/registry/series_manifest.json`, which also records WHO reviewed it and
+WHEN — see `scripts/series_registry_review.py` for the full queue. Neither happens automatically, deliberately: a series
 that graduated itself by trading enough would defeat the review the tier exists to force.
 
-DELIBERATE DUPLICATE of the worker's SERIES_TYPES and GRADUATED_SERIES, for the same reason
-`mmsell_market_types` duplicates the first: ops-channel scripts must stay self-contained
-(stdlib + psycopg only — they run on a runner that never installs this package).
-`tests/test_mmsell_universe_review.py` asserts both copies match, so they cannot drift.
+DELIBERATE DUPLICATE of the worker's SERIES_TYPES, for the same reason `mmsell_market_types`
+duplicates it: ops-channel scripts must stay self-contained (stdlib + psycopg only — they run
+on a runner that never installs this package). `tests/test_mmsell_universe_review.py` asserts
+the copies match, so they cannot drift.
+
+The GRADUATED SET IS NOT DUPLICATED. It is read straight out of
+`kalshi_bot/registry/series_manifest.json`, which is JSON exactly so both sides can read the
+one file — a ledger that changes weekly is far more drift-prone than a taxonomy that rarely
+does, and the copy that was here is precisely what the registry removed.
 
 Read-only, self-contained; runs locally or via the ops channel:
 
@@ -45,7 +51,9 @@ Read-only, self-contained; runs locally or via the ops channel:
 from __future__ import annotations
 
 import argparse
+import json
 import os
+import pathlib
 import sys
 from collections import defaultdict
 
@@ -53,7 +61,10 @@ RO_OPTIONS = "-c default_transaction_read_only=on"
 
 GRADUATED = "graduated"
 IN_REVIEW = "in_review"
-UNCLASSIFIED = "unclassified"
+#: The registry's name for the bottom rung. Was `unclassified` before the registry existed;
+#: kept identical to `kalshi_bot.registry.IDENTIFIED` so the two reports a reviewer reads side
+#: by side use one vocabulary. `tests/test_mmsell_universe_review.py` pins them together.
+UNCLASSIFIED = "identified"
 
 SERIES_TYPES: tuple[tuple[str, str, str], ...] = (
     ("KXMLBGAME", "h2h", "in_play"), ("KXNPBGAME", "h2h", "in_play"),
@@ -237,54 +248,21 @@ SERIES_TYPES: tuple[tuple[str, str, str], ...] = (
     ("KXUAPFILES", "politics", "discrete"), ("KXBNBMINMON", "price_strike", "discrete"),
 )
 
-GRADUATED_SERIES: frozenset[str] = frozenset({
-    "KXAAAGASD", "KXAAAGASW", "KXALBUMEQUIV",
-    "KXALLSVENSKANGAME", "KXALLSVENSKANTOTAL", "KXAPFDDHTOTAL",
-    "KXARGPREMDIVGAME", "KXARGPREMDIVTOTAL", "KXATPCHALLENGERMATCH",
-    "KXATPEXACTMATCH", "KXATPGSPREAD", "KXATPMATCH",
-    "KXATPSETWINNER", "KXBRASILEIROGAME", "KXBRASILEIROTOTAL",
-    "KXBRENTD", "KXBRENTW", "KXBTC",
-    "KXBTCD", "KXCHAMPTOUR", "KXCHNSLGAME",
-    "KXCHNSLTOTAL", "KXCLUBFGAME", "KXCLUBFSPREAD",
-    "KXCLUBFTOTAL", "KXCONMEBOLSUDTOTAL", "KXCOPPERD",
-    "KXCPLMATCH", "KXCS2GAME", "KXCS2MAP",
-    "KXDIMAYORGAME", "KXDOTA2GAME", "KXDPWORLDTOUR",
-    "KXECULPGAME", "KXECULPTOTAL", "KXEFLCHAMPIONSHIPGAME",
-    "KXEFLCHAMPIONSHIPTOTAL", "KXEPLGAME", "KXETHD",
-    "KXFEDMENTION", "KXGOLDD", "KXGOLDW",
-    "KXINX", "KXINXU", "KXITFMATCH",
-    "KXITFWMATCH", "KXJLEAGUEGAME", "KXJLEAGUETOTAL",
-    "KXKBOGAME", "KXKFTOUR", "KXLALIGAGAME",
-    "KXLALIGASCORE", "KXLALIGASPREAD", "KXLALIGATOTAL",
-    "KXLEAGUESCUPGAME", "KXLEAGUESCUPSCORE", "KXLEAGUESCUPSPREAD",
-    "KXLEAGUESCUPTOTAL", "KXLIGAMXGAME", "KXLIGAMXSCORE",
-    "KXLIGAMXSPREAD", "KXLIGAMXTOTAL", "KXLOLGAME",
-    "KXLOLMAP", "KXLPGATOUR", "KXMLBASGHR",
-    "KXMLBF5", "KXMLBF5SPREAD", "KXMLBF5TOTAL",
-    "KXMLBGAME", "KXMLBHIT", "KXMLBHR",
-    "KXMLBHRR", "KXMLBKS", "KXMLBSPREAD",
-    "KXMLBTB", "KXMLBTEAMTOTAL", "KXMLBTOTAL",
-    "KXMLSGAME", "KXMLSSCORE", "KXMLSSPREAD",
-    "KXMLSTOTAL", "KXNASDAQ100U", "KXNATGASD",
-    "KXNBASUMMERGAME", "KXNFLGAME", "KXNFLPASSYDS",
-    "KXNFLSPREAD", "KXNFLTOTAL", "KXNPBGAME",
-    "KXNPBTOTAL", "KXNWSLGAME", "KXODIMATCH",
-    "KXPERLIGA1GAME", "KXPGATOUR", "KXRAIN",
-    "KXRT", "KXSAUDIPLGAME", "KXT20MATCH",
-    "KXTESTMATCH", "KXTRUMPSAY", "KXTRUTHSOCIAL",
-    "KXUCLGAME", "KXUCLTOTAL", "KXUECLTOTAL",
-    "KXUFCFIGHT", "KXUFCMOV", "KXUFCVICROUND",
-    "KXVALORANTGAME", "KXWC1H", "KXWC1HSCORE",
-    "KXWC1HTOTAL", "KXWC2H", "KXWCAST",
-    "KXWCCORNERS", "KXWCFIRSTGOAL", "KXWCGAME",
-    "KXWCGOAL", "KXWCMENTION", "KXWCMOV",
-    "KXWCSCORE", "KXWCSOA", "KXWCSPREAD",
-    "KXWCTCORNERS", "KXWCTEAMTOTAL", "KXWCTOTAL",
-    "KXWNBA1HTOTAL", "KXWNBAGAME", "KXWNBAPTS",
-    "KXWNBASPREAD", "KXWNBATOTAL", "KXWTACHALLENGERMATCH",
-    "KXWTAMATCH", "KXWTASETWINNER", "KXWTI",
-    "KXWTIW", "KXYTVIEWSHIGH", "KXYTVIEWSW",
-})
+#: The graduated set, READ FROM THE ONE LEDGER rather than duplicated into this file.
+#: `kalshi_bot/registry/series_manifest.json` is JSON precisely so the worker and the ops
+#: scripts can share it: a script on the runner has no package to import, but it does have the
+#: repository on disk. Nothing to keep in sync, so nothing that can drift.
+MANIFEST_PATH = (pathlib.Path(__file__).resolve().parents[1]
+                 / "kalshi_bot" / "registry" / "series_manifest.json")
+
+
+def _graduated_series() -> frozenset[str]:
+    doc = json.loads(MANIFEST_PATH.read_text())
+    return frozenset(str(r["series"]).upper() for r in doc.get("series", ())
+                     if r.get("state") == "graduated")
+
+
+GRADUATED_SERIES: frozenset[str] = _graduated_series()
 
 
 def classify(series: str) -> tuple[str, str]:
@@ -359,11 +337,11 @@ def report(rows, days: int) -> None:
               f"{100 * u[0] / total:>8.1f}% {len(u[2]):>15}")
 
     for tier, title, note in (
-        (UNCLASSIFIED, "UNCLASSIFIED — the review queue",
+        (UNCLASSIFIED, "IDENTIFIED — the review queue",
          "In no taxonomy. Not tradeable live. Classify via mmsell_taxonomy_audit -> "
          "Platform Change Review."),
         (IN_REVIEW, "IN_REVIEW — classified, too thin to graduate",
-         "Paper only. Graduates by PR to GRADUATED_SERIES once its history is reviewed."),
+         "Paper only. Graduates by PR against registry/series_manifest.json once reviewed."),
     ):
         cells = [(s, c) for (s, t), c in by_series.items() if t == tier]
         cells.sort(key=lambda kv: -kv[1][0])

@@ -14,11 +14,12 @@ What must never break, in the order in which breaking it would matter:
   * **the live bar gates LIVE ONLY.** Paper must keep trading unreviewed series, because paper
     is how a series accumulates the history that graduates it. Barring paper too would make the
     quarantine permanent by construction.
-  * **UNCLASSIFIED beats the manifest.** A series with no market-type entry can never read as
-    graduated, even if its prefix is in GRADUATED_SERIES by mistake — we would still not know
+  * **IDENTIFIED beats the manifest.** A series with no market-type entry can never read as
+    graduated, even if a manifest row graduates its prefix by mistake — we would still not know
     how it settles.
-  * **the two copies of the tables cannot drift.** The ops script duplicates SERIES_TYPES and
-    GRADUATED_SERIES because it must run without this package installed.
+  * **the ops script and the worker cannot drift.** The script duplicates SERIES_TYPES because
+    it must run without this package installed; it does NOT duplicate the graduated set, which
+    both sides read out of `kalshi_bot/registry/series_manifest.json`.
 """
 
 from __future__ import annotations
@@ -27,17 +28,19 @@ import importlib.util
 import pathlib
 from datetime import datetime, timedelta, timezone
 
-from kalshi_bot import db
+from kalshi_bot import db, registry
 from kalshi_bot.mmsell.market_types import SERIES_TYPES
 from kalshi_bot.mmsell.tracker import MmSellTracker
-from kalshi_bot.mmsell.universe import (
-    GRADUATED,
-    GRADUATED_SERIES,
-    IN_REVIEW,
-    UNCLASSIFIED,
-    admits,
-    tier_of,
-)
+from kalshi_bot.registry import GRADUATED, IDENTIFIED, IN_REVIEW, admits, rows
+from kalshi_bot.registry import state_of as tier_of
+
+# The bottom rung's legacy spelling. Book specs and `mmsell_live_min_tier` still use it, and
+# these tests exercise those config paths, so the string has to keep parsing.
+UNCLASSIFIED = "unclassified"
+
+#: The graduated set, read back out of the one ledger. There is no second copy to compare
+#: against any more — that duplication is what the registry removed.
+GRADUATED_SERIES = frozenset(r["series"] for r in rows() if r["state"] == GRADUATED)
 
 # A graduated series (MLB totals: classified, 1,881 settled markets of own history) and an
 # unclassified one (NCAA football spreads: 204 settled markets, in no taxonomy).
@@ -61,8 +64,8 @@ def test_a_graduated_series_is_graduated():
 
 
 def test_an_unknown_series_is_unclassified():
-    assert tier_of(UNCL_SERIES) == UNCLASSIFIED
-    assert tier_of("KXSOMETHINGKALSHILISTEDTODAY") == UNCLASSIFIED
+    assert tier_of(UNCL_SERIES) == IDENTIFIED
+    assert tier_of("KXSOMETHINGKALSHILISTEDTODAY") == IDENTIFIED
 
 
 def test_classified_but_not_in_the_manifest_is_in_review():
@@ -77,7 +80,7 @@ def test_classified_but_not_in_the_manifest_is_in_review():
 def test_unclassified_beats_the_manifest():
     """Belt and braces: a prefix wrongly added to GRADUATED_SERIES must not promote a series the
     taxonomy cannot classify. Knowing its history is not knowing how it settles."""
-    assert tier_of("KXNOTATAXONOMYENTRY") == UNCLASSIFIED
+    assert tier_of("KXNOTATAXONOMYENTRY") == IDENTIFIED
 
 
 def test_admits_is_ordered_and_fails_open_on_an_unknown_tier():
@@ -95,7 +98,11 @@ def test_admits_is_ordered_and_fails_open_on_an_unknown_tier():
 def test_the_ops_script_tables_match_the_workers():
     mod = _script()
     assert mod.SERIES_TYPES == SERIES_TYPES
+    # Not a copy comparison: the script READS the manifest, so this asserts it reads the same
+    # ledger the package does rather than that two hand-maintained tables happen to agree.
+    assert mod.MANIFEST_PATH.read_text() == registry.MANIFEST_PATH.read_text()
     assert mod.GRADUATED_SERIES == GRADUATED_SERIES
+    assert mod.UNCLASSIFIED == IDENTIFIED
 
 
 def test_the_ops_script_tiers_identically():

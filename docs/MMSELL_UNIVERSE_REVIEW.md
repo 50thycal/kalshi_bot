@@ -1,5 +1,13 @@
 # mmsell universe review — do we know what we are selling?
 
+> **Superseded 2026-09-06 by `docs/SERIES_REGISTRY.md`.** The static manifest described below
+> became a two-ledger registry: decisions (state, reviewer, review date) in
+> `kalshi_bot/registry/series_manifest.json`, arrival facts in `series_observations`. The tiers
+> and the live bar behave identically — proved series-by-series in
+> `tests/test_series_registry.py` — and `unclassified` is now spelled `identified`, with the old
+> name still parsed everywhere config reads one. **This document remains the record of the
+> measurement that motivated the bar**, which the registry does not restate.
+
 **Built 2026-09-05.** Code: `kalshi_bot/mmsell/universe.py` (tiers + manifest),
 `MmSellTracker._live_tier_blocks` (the live bar), `_book_admits_series` (the per-book filter).
 Report: `scripts/mmsell_universe_review.py` (ops-runnable). Tests:

@@ -1,0 +1,974 @@
+{
+ "manifest_version": 1,
+ "reasons": {
+  "grandfathered-pr338": "Admitted 2026-09-06 without a rules review. Seeded mechanically by PR #338 from every series the mmsell family had traded with >=20 settled markets of own history AND a market-type classification. That bar proves we have DATA, not that anyone has read how the contract settles, so every row carrying this reason has rules_reviewed_at=null and is on the audit backlog surfaced by scripts/series_registry_review.py."
+ },
+ "series": [
+  {
+   "series": "KXAAAGASD",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXAAAGASW",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXALBUMEQUIV",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXALLSVENSKANGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXALLSVENSKANTOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXAPFDDHTOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXARGPREMDIVGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXARGPREMDIVTOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXATPCHALLENGERMATCH",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXATPEXACTMATCH",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXATPGSPREAD",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXATPMATCH",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXATPSETWINNER",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXBRASILEIROGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXBRASILEIROTOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXBRENTD",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXBRENTW",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXBTC",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXBTCD",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXCHAMPTOUR",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXCHNSLGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXCHNSLTOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXCLUBFGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXCLUBFSPREAD",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXCLUBFTOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXCONMEBOLSUDTOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXCOPPERD",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXCPLMATCH",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXCS2GAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXCS2MAP",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXDIMAYORGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXDOTA2GAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXDPWORLDTOUR",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXECULPGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXECULPTOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXEFLCHAMPIONSHIPGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXEFLCHAMPIONSHIPTOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXEPLGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXETHD",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXFEDMENTION",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXGOLDD",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXGOLDW",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXINX",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXINXU",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXITFMATCH",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXITFWMATCH",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXJLEAGUEGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXJLEAGUETOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXKBOGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXKFTOUR",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXLALIGAGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXLALIGASCORE",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXLALIGASPREAD",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXLALIGATOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXLEAGUESCUPGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXLEAGUESCUPSCORE",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXLEAGUESCUPSPREAD",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXLEAGUESCUPTOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXLIGAMXGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXLIGAMXSCORE",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXLIGAMXSPREAD",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXLIGAMXTOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXLOLGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXLOLMAP",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXLPGATOUR",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXMLBASGHR",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXMLBF5",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXMLBF5SPREAD",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXMLBF5TOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXMLBGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXMLBHIT",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXMLBHR",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXMLBHRR",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXMLBKS",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXMLBSPREAD",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXMLBTB",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXMLBTEAMTOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXMLBTOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXMLSGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXMLSSCORE",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXMLSSPREAD",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXMLSTOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXNASDAQ100U",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXNATGASD",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXNBASUMMERGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXNFLGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXNFLPASSYDS",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXNFLSPREAD",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXNFLTOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXNPBGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXNPBTOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXNWSLGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXODIMATCH",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXPERLIGA1GAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXPGATOUR",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXRAIN",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXRT",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXSAUDIPLGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXT20MATCH",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXTESTMATCH",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXTRUMPSAY",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXTRUTHSOCIAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXUCLGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXUCLTOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXUECLTOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXUFCFIGHT",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXUFCMOV",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXUFCVICROUND",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXVALORANTGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWC1H",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWC1HSCORE",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWC1HTOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWC2H",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWCAST",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWCCORNERS",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWCFIRSTGOAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWCGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWCGOAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWCMENTION",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWCMOV",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWCSCORE",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWCSOA",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWCSPREAD",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWCTCORNERS",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWCTEAMTOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWCTOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWNBA1HTOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWNBAGAME",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWNBAPTS",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWNBASPREAD",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWNBATOTAL",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWTACHALLENGERMATCH",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWTAMATCH",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWTASETWINNER",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWTI",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXWTIW",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXYTVIEWSHIGH",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXYTVIEWSW",
+   "state": "graduated",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
+   "reason": "grandfathered-pr338"
+  }
+ ]
+}
