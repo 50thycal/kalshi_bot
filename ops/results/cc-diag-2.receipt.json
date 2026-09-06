@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "98597f4d1557e7a7dfc7aa6920a1e8da969eb128",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T19:30:44Z",
+  "id": "cc-diag-2",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/cc-diag-2.receipt.json",
+  "result_file": "ops/results/cc-diag-2.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34055109254",
+  "service": null,
+  "started_at": "2026-09-06T19:30:44Z",
+  "targets": [],
+  "type": "db"
+}
