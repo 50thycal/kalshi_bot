@@ -561,6 +561,24 @@ To run a request:
      under `NEW_ONLY`.
      `{"type":"script","name":"mmsell_series_pnl","args":["--series","KXNFLSPREAD","--maxyes","7"]}`
 
+   - **"registry review"** -> `{"type":"script","name":"series_registry_review"}` — the standing
+     REVIEW QUEUE for the series registry (`docs/SERIES_REGISTRY.md`). Joins the decision ledger
+     (`kalshi_bot/registry/series_manifest.json`, moves only by PR) to the observation ledger
+     (`series_observations`, written by the scan) and prints three queues: **ARRIVALS** (series
+     Kalshi has started offering that no manifest row governs — each is a market that became
+     available and that nothing has reviewed), **BACKLOG** (graduated series with no recorded
+     rules review, **live cells first**, then by |P&L|), and **CANDIDATES** (not graduated, but
+     now carrying enough own settled history to be worth a reviewer's time). Covers **all eight
+     strategy families**, not just mmsell.
+     Read the BACKLOG first: all 138 rows were grandfathered on 2026-09-06 from PR #338's
+     mechanical seed, which proved we have DATA about a contract and never that anyone read how
+     it SETTLES — so every row carries `rules_reviewed_at: null` and every one of them trades
+     live. **It is a report, not a gate**: nothing here graduates, bars or promotes anything. A
+     series graduates when someone reads its settlement rules
+     (`{"type":"script","name":"mmsell_taxonomy_audit"}` gathers the evidence) and opens a PR
+     against the manifest recording who reviewed it and when.
+     `{"type":"script","name":"series_registry_review","args":["--section","backlog"]}`
+
    - **"mmsell history status"** -> `{"type":"script","name":"mmsell_history_status"}` — is the
      settled-history CAPTURE working? `kalshi_bot/mmsell/history.py` (`RegimeHistoryCapture`) rides
      along the weather/live cycles and stores settled regime markets + their candles into

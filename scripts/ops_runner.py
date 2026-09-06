@@ -193,6 +193,7 @@ ALLOWED_SCRIPTS = (
     "mmsell_market_types",
     "mmsell_universe_review",
     "mmsell_series_pnl",
+    "series_registry_review",
     "mmsell_timing_study",
     "mmsell_fee_recon",
     "mmsell_scan_health",

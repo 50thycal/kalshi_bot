@@ -1110,3 +1110,40 @@ class PerpCollectorCycle(Base):
     #: What went wrong, per stage, without ever failing the cycle. A collector
     #: that dies on one bad market stops being a coverage denominator.
     notes_json: Mapped[dict | None] = mapped_column(JSONType)
+
+
+class SeriesObservation(Base):
+    """When we first saw a series listed, and when we last did — the arrival half of the
+    series registry (`kalshi_bot/registry/__init__.py`).
+
+    The registry is two ledgers on purpose. `series_manifest.json` holds DECISIONS (state,
+    reviewer, review date) and moves only by PR, because a decision should be reviewable. This
+    table holds OBSERVATIONS: facts the worker accumulates, which no human should have to
+    commit and which admit nothing to trade on their own.
+
+    One row per series, upserted by the scan. `first_seen_at` is the fact that cannot be
+    recovered later and is the whole point of the table: without it, a series Kalshi listed
+    this morning is indistinguishable from one that has been quietly traded for months, and
+    "this market is new" — the trigger for a review — cannot be asked at all. Everything else a
+    reviewer wants (settled count, P&L, per-book exposure) is derivable from `paper_trades` and
+    `markets` and is deliberately NOT duplicated here.
+
+    Counts are of markets SEEN, not markets traded: the registry's question is what Kalshi has
+    offered us, which is a superset of what any book took."""
+
+    __tablename__ = "series_observations"
+
+    series: Mapped[str] = mapped_column(String(64), primary_key=True)
+    first_seen_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    last_seen_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    #: Breadth: the most distinct markets of this series ever seen offered in one scan. Not a
+    #: running total — a cumulative count would drift upward forever as dated markets roll and
+    #: would say nothing a reviewer can act on.
+    markets_seen: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    #: One example ticker and title, so a reviewer reading the arrivals queue can tell what the
+    #: series IS without a second query. Overwritten by the most recent sighting.
+    sample_ticker: Mapped[str | None] = mapped_column(String(128))
+    sample_title: Mapped[str | None] = mapped_column(Text)
+    #: The registry state at the moment of first sighting, recorded so a later report can tell
+    #: "arrived unknown and still unknown" from "arrived unknown and has since been reviewed".
+    state_at_first_seen: Mapped[str | None] = mapped_column(String(32))

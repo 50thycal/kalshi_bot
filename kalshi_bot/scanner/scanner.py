@@ -26,6 +26,7 @@ from .. import repository as repo
 from ..config import Settings
 from ..kalshi.client import KalshiClient
 from ..paper.engine import CandidateInput
+from ..registry.observe import SeriesObserver
 from ..risk.manager import RiskDecision, RiskManager
 from .metrics import MarketMetrics, compute_metrics, market_open_interest, market_volume
 from .signals import KEYWORDS, SignalResult, score_market
@@ -63,6 +64,10 @@ class ScanSummary:
     filtered_no_orderbook: int = 0
     category_counts: dict[str, int] = field(default_factory=dict)
     candidates: list[CandidateRow] = field(default_factory=list)
+    #: Series the listing sweep saw, and how many of them we had never seen before. The second
+    #: is the registry's alarm: markets became available that no review has looked at.
+    series_observed: int = 0
+    series_new: int = 0
 
 
 def event_matches(event: dict, settings: Settings) -> bool:
@@ -127,6 +132,10 @@ class MarketScanner:
         summary = ScanSummary()
         now = datetime.now(timezone.utc)
         sample_logged = False
+        # Arrival detection for the series registry (kalshi_bot/registry/__init__.py). Fed from
+        # the RAW event stream below, ahead of every filter: the registry's question is what
+        # Kalshi has offered us, which is a superset of what any book is willing to take.
+        observer = SeriesObserver()
 
         # 1) Gather in-scope markets from open events.
         targets: list[dict] = []
@@ -136,6 +145,11 @@ class MarketScanner:
             summary.events_scanned += 1
             cat = (event.get("category") or "uncategorized").strip().lower()
             summary.category_counts[cat] = summary.category_counts.get(cat, 0) + 1
+            # Observe BEFORE `event_matches`. A series we decline to trade is still a series
+            # that exists, and the arrivals queue is only trustworthy if it is not filtered by
+            # the very scope decisions a review is supposed to revisit.
+            for raw_market in event.get("markets") or []:
+                observer.observe(raw_market, event)
             if not event_matches(event, s):
                 continue
 
@@ -179,6 +193,11 @@ class MarketScanner:
                     continue
                 targets.append(market)
         summary.targets_considered = len(targets)
+
+        # One SELECT plus a handful of UPSERTs, after the listing sweep and before the deep
+        # scan. `flush` swallows its own failures: a lost cycle of arrival data delays a
+        # review, while an exception here would cost trading.
+        summary.series_observed, summary.series_new = observer.flush(session)
 
         # 2) Select markets to deep-scan: stratify by category so thinner (less
         #    efficient) categories get represented, not just the highest-volume econ.
