@@ -2,17 +2,17 @@
 ========================================================================
 !! MUTATING OPS REQUEST — this changes the running system !!
 ========================================================================
-# type=env  service=main  vars=EXPERIMENT_OS_ISSUE_COMMAND  id=rl-nflspread-batch-1
-# actor=claude-research-lab  purpose=XOS-000022: triage, evidence, links, proposed fix and the pre-registered validation plan
-# code 6d2e16edb5170ac8fe8a5d4a1848989c68644062 · started 2026-09-06T04:15:11Z
+# type=env  service=main  vars=EXPERIMENT_OS_ISSUE_COMMAND  id=rl-silentarm-clear-1
+# actor=claude-research-lab  purpose=clear the issue transport now that both batches have terminal receipts
+# code 6d2e16edb5170ac8fe8a5d4a1848989c68644062 · started 2026-09-06T04:24:00Z
 # target service: main
 # BEFORE:
-  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 2368 bytes, sha256:0ce508d4b44682e2>
-  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 5572 bytes, sha256:97bbb6c0f0296967>
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 1182 bytes, sha256:bcc47e40a3111a91>
+  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
 # 1/1 variables set
 # redeploy triggered — the worker will restart with the new config
 # AFTER:
-  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 5572 bytes, sha256:97bbb6c0f0296967>
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
 # VERDICT: VERIFIED
 
 # post-change canonical checks: enforcement, readiness
@@ -71,7 +71,7 @@
 # $ xos readiness
 #   {
 #     "ok": true,
-#     "checked_at": "2026-09-06 04:15:23.106053+00:00",
+#     "checked_at": "2026-09-06 04:24:13.695818+00:00",
 #     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
 #     "checks": {
 #       "import_ran": {

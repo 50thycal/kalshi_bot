@@ -1,131 +1,131 @@
-# ops request [READ]
-# type=xos  id=rl-silentarm-verify-2
-# actor=claude-research-lab  purpose=re-confirm XOS-000023 links/evidence after the worker boot
-# code 6d2e16edb5170ac8fe8a5d4a1848989c68644062 · started 2026-09-06T04:23:17Z
-{
-  "issue_key": "XOS-000023",
-  "title": "An armed experiment collecting NOTHING was not a detectable condition",
-  "status": "OPEN",
-  "classification": "STRATEGY",
-  "severity": "MEDIUM",
-  "priority": "P2",
-  "owner_role": "RESEARCH_LAB",
-  "opened_by_role": "RESEARCH_LAB",
-  "opened_at": "2026-09-06 04:20:28.221218+00:00",
-  "scope": "mmsell-correlation-cap",
-  "experiment_id": 34,
-  "version_id": null,
-  "detector": "manual.reported",
-  "detector_fingerprint": null,
-  "occurrence_count": 1,
-  "disposition": null,
-  "latest_evidence": "OPS_RESULT: False-positive check across all 30 active deployment arms (27 active deployments",
-  "problem_statement": "On 2026-09-05 mmsell-correlation-cap was registered correctly (PAPER, v1 frozen, two arms with tags, deployments 25->27 both armed, keep gate registered) and then produced zero rows in paper_trades for 12+ hours while mmsell10 booked 166 trades on the same worker in the same window. Cause: MMSELL_VARIANTS is a Railway env var that overrides the code default the two books were added to, so the worker never saw them. REGISTRATION IS NOT CONFIGURATION. The detection gap: the Control Tower reported the experiment as PAPER and healthy throughout. experiment.zero_evidence fired but is LOW/P2 and also fires on day one of every new experiment, so it cannot tell an early silence from a broken one; the gate was un-evaluable at n=0, which is indistinguishable from collecting-early-days. It was found only because a human asked whether it was working. XOS-000011 is the mirror image (configured but no lineage). Remedy in PR #343: a new Control Tower detector experiment.armed_but_silent - an active deployment arm, armed >24h, zero evidence, no blocked gate, plus a reference (a trading sibling arm in the same epoch, else the rest of the platform) proving the silence is specific to the arm rather than to the day. Known blind spot recorded there: arm evidence is scoped to deployment_kind=paper, so a live-or-twin-only experiment can never fire.",
-  "evidence_summary": "evidence design - a missing detector on the Control Tower's own read surface. Not PLATFORM: adding a detector that never existed changes no shared semantic, and no metric meaning, gate semantic or platform snapshot component moves.",
-  "proposed_fix": null,
-  "validation_plan": null,
-  "resolution_summary": null,
-  "resolved_at": null,
-  "requires_new_version": null,
-  "requires_new_epoch": null,
-  "requires_platform_revision": null,
-  "requires_pause_or_stand_down": null,
-  "duplicate_of_issue_id": null,
-  "supersedes_issue_id": null,
-  "discovered_from_issue_id": null,
-  "first_observed_at": "2026-09-06 04:20:28.221218+00:00",
-  "last_observed_at": "2026-09-06 04:20:28.221218+00:00",
-  "details_json": {
-    "discovery": "evidence design - a missing detector on the Control Tower's own read surface. Not PLATFORM: adding a detector that never existed changes no shared semantic, and no metric meaning, gate semantic or platform snapshot component moves.",
-    "reported_via": "issue_command_transport",
-    "manual_report": true
-  },
-  "events": [
-    {
-      "event_type": "CREATED",
-      "occurred_at": "2026-09-06 04:20:28.221218+00:00",
-      "actor": "claude-research-lab",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": null,
-      "to_status": "OPEN",
-      "from_owner_role": null,
-      "to_owner_role": "RESEARCH_LAB",
-      "from_classification": null,
-      "to_classification": "STRATEGY",
-      "reason": "evidence design - a missing detector on the Control Tower's own read surface. Not PLATFORM: adding a detector that never existed changes no shared semantic, and no metric meaning, gate semantic or platform snapshot component moves.",
-      "payload": {
-        "scope": "mmsell-correlation-cap",
-        "anomaly_kind": null,
-        "owner_override": {
-          "chosen": "RESEARCH_LAB",
-          "rationale": "evidence design - a missing detector on the Control Tower's own read surface. Not PLATFORM: adding a detector that never existed changes no shared semantic, and no metric meaning, gate semantic or platform snapshot component moves.",
-          "recommended": "LIVE_OPS"
-        },
-        "recommended_owner": {
-          "priority": "P2",
-          "severity": "MEDIUM",
-          "rationale": "insufficient evidence to classify \u2014 route to Live Ops for operational diagnosis first, or leave with the operator to triage. The owner here is who looks first, NOT a claim that the cause is operational",
-          "owner_role": "LIVE_OPS",
-          "disposition": null,
-          "classification": "UNCLASSIFIED",
-          "requires_operator_triage": true
-        }
-      }
-    },
-    {
-      "event_type": "LINK_ADDED",
-      "occurred_at": "2026-09-06 04:22:40.103103+00:00",
-      "actor": "claude-research-lab",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "experiment.armed_but_silent detector + 19 tests + docs",
-      "payload": {
-        "link_id": 17,
-        "link_type": "PR",
-        "reference": "https://github.com/50thycal/kalshi_bot/pull/343"
-      }
-    },
-    {
-      "event_type": "EVIDENCE_ADDED",
-      "occurred_at": "2026-09-06 04:22:40.151245+00:00",
-      "actor": "claude-research-lab",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "False-positive check across all 30 active deployment arms (27 active deployments): the detector produces zero uncovered candidates. The only arms meeting the raw condition are freeze-dark-window-pin's four (580h armed, zero paper_trades rows ever), which XOS-000003 already owns, so they are recorded with covered_by and emit no candidate. Blind spot found by the same read: arm evidence is scoped to deployment_kind=paper, so mmsell-price-ceiling, mmsell-scheduled-settle-live and theta4-fat-tail (l",
-      "payload": {
-        "source_ref": "ops/results/silentarm-fp-1.txt",
-        "evidence_id": 45,
-        "content_hash": null,
-        "evidence_type": "OPS_RESULT"
-      }
-    }
-  ],
-  "evidence": [
-    {
-      "evidence_type": "OPS_RESULT",
-      "summary": "False-positive check across all 30 active deployment arms (27 active deployments): the detector produces zero uncovered candidates. The only arms meeting the raw condition are freeze-dark-window-pin's four (580h armed, zero paper_trades rows ever), which XOS-000003 already owns, so they are recorded with covered_by and emit no candidate. Blind spot found by the same read: arm evidence is scoped to deployment_kind=paper, so mmsell-price-ceiling, mmsell-scheduled-settle-live and theta4-fat-tail (live/twin only) can never fire. xos control-tower did NOT hang.",
-      "source_ref": "ops/results/silentarm-fp-1.txt",
-      "captured_at": "2026-09-06 04:22:40.148220+00:00",
-      "captured_by": "claude-research-lab",
-      "content_hash": null
-    }
-  ],
-  "links": [
-    {
-      "link_type": "PR",
-      "reference": "https://github.com/50thycal/kalshi_bot/pull/343",
-      "label": "experiment.armed_but_silent detector + 19 tests + docs",
-      "created_at": "2026-09-06 04:22:40.099877+00:00"
-    }
-  ]
-}
+# note: value type-check skipped (ModuleNotFoundError: No module named 'kalshi_bot')
+========================================================================
+!! MUTATING OPS REQUEST — this changes the running system !!
+========================================================================
+# type=env  service=main  vars=EXPERIMENT_OS_ISSUE_COMMAND  id=rl-silentarm-clear-1
+# actor=claude-research-lab  purpose=clear the issue transport now that both batches have terminal receipts
+# code 6d2e16edb5170ac8fe8a5d4a1848989c68644062 · started 2026-09-06T04:24:00Z
+# target service: main
+# BEFORE:
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 1182 bytes, sha256:bcc47e40a3111a91>
+  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+# 1/1 variables set
+# redeploy triggered — the worker will restart with the new config
+# AFTER:
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+# VERDICT: VERIFIED
+
+# post-change canonical checks: enforcement, readiness
+# $ xos enforcement
+#   {
+#     "mode": "NEW_ONLY",
+#     "cutover_id": "prod-new-only-20260816",
+#     "effective_at": "2026-08-16 14:34:42.892897+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr3_v1",
+#     "resolver_degraded_alarms_24h": 0,
+#     "deployments": {
+#       "total": 27,
+#       "grandfathered": 12,
+#       "native": 15
+#     },
+#     "post_cutover_unstamped": {
+#       "paper_trades": [],
+#       "live_orders": []
+#     },
+#     "live_canaries": [
+#       {
+#         "deployment": "theta4-live-1",
+#         "grandfathered": true,
+#         "twin": "theta4-twin-pt3",
+#         "boundary_match": false
+#       },
+#       {
+#         "deployment": "lmmsell-live-1",
+#         "grandfathered": true,
+#         "twin": "lmmsell-twin-pt3",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-ceiling-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-ceiling-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-capacity-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-capacity-twin-1",
+#         "boundary_match": true
+#       }
+#     ],
+#     "unresolved_integrity_events": 0,
+#     "recorded_state_events": 3,
+#     "unresolved_config_drift": 0,
+#     "session_counters": {
+#       "blocked": 0,
+#       "warned": 0,
+#       "resolver_degraded": false,
+#       "resolver_loaded_at": null
+#     }
+#   }
+# $ xos readiness
+#   {
+#     "ok": true,
+#     "checked_at": "2026-09-06 04:24:13.695818+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
+#     "checks": {
+#       "import_ran": {
+#         "ok": true,
+#         "detail": "32 experiments recorded"
+#       },
+#       "coverage_complete": {
+#         "ok": true,
+#         "detail": {
+#           "unmapped_tags": []
+#         }
+#       },
+#       "live_books_represented": {
+#         "ok": true,
+#         "detail": {
+#           "registered_live_tags": [
+#             "Cmmsell10",
+#             "Dmmsell10",
+#             "Lmmsell10",
+#             "Lmmsell8",
+#             "theta4"
+#           ],
+#           "note": "no Settings supplied \u2014 presence-only check"
+#         }
+#       },
+#       "platform_snapshot_complete": {
+#         "ok": true,
+#         "detail": {
+#           "snapshot": "4f9adf15daa64035",
+#           "missing_components": []
+#         }
+#       },
+#       "grandfathered_identity": {
+#         "ok": true,
+#         "detail": {
+#           "deployments": 27,
+#           "grandfathered": 12,
+#           "native": 15
+#         }
+#       },
+#       "live_twin_links": {
+#         "ok": true,
+#         "detail": {
+#           "problems": [],
+#           "grandfathered_notes": [
+#             "theta4-live-1: twin start 2026-08-12 00:15:08.786610+00:00 != live start 2026-07-30 00:00:00+00:00 (grandfathered \u2014 recorded, not invented)"
+#           ]
+#         }
+#       },
+#       "no_unresolved_integrity": {
+#         "ok": true,
+#         "detail": "0 unresolved integrity events"
+#       },
+#       "no_unresolved_platform_impact": {
+#         "ok": true,
+#         "detail": "0 platform-impact dispositions awaiting acceptance/application"
+#       },
