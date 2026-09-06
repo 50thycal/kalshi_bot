@@ -1,0 +1,22 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "6d2e16edb5170ac8fe8a5d4a1848989c68644062",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T04:22:33Z",
+  "id": "rl-silentarm-verify-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {
+    "actor": "claude-research-lab",
+    "purpose": "confirm XOS-000023 carries the PR link and the FP evidence"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl-silentarm-verify-1.receipt.json",
+  "result_file": "ops/results/rl-silentarm-verify-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34011328027",
+  "service": null,
+  "started_at": "2026-09-06T04:22:32Z",
+  "targets": [],
+  "type": "xos"
+}
