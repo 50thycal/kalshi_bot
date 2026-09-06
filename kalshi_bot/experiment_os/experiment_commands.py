@@ -39,8 +39,19 @@ it. Adding a package is a code change; running one is this transport.
     ARM_CANARY         arm the package's live canary and its twin through
                        `service.arm_live_canary`. **This expands real-money
                        capability** and requires `approved_by` naming a person.
+    RETIRE_ON_GATE_FAIL
+                       retire an in-system book whose own pre-registered gate's
+                       LATEST RECORDED result is FAIL, ending its open
+                       deployments atomically. The one action that names an
+                       experiment rather than a package, because there is nothing
+                       to author: it writes no verdict and points at one the
+                       evaluator already computed. Refuses a stale FAIL, a
+                       BLOCKED_* gate (unreadable is not failed), another book's
+                       gate, and a LIVE_CANARY/PRODUCTION experiment — standing
+                       real money down is Live Ops' act under kill-switch
+                       semantics, never a research verdict's.
 
-Neither action can place an order. Even a successful ARM_CANARY leaves the
+No action can place an order. Even a successful ARM_CANARY leaves the
 runtime allowlist exactly as it was: `LIVE_STRATEGIES` is a separate switch, and
 a transport that could both arm the canary and open the allowlist would be one
 environment variable away from unreviewed exposure.
@@ -71,7 +82,7 @@ from typing import Any
 
 from sqlalchemy import select
 
-from . import service
+from . import read, service
 from .lifecycle import GateVerdict, LifecycleState
 from .models import ExperimentGateResult, ExperimentOsExperimentCommand
 from .read import get_experiment
@@ -96,6 +107,12 @@ ACTION_ROLES: dict[str, frozenset[str]] = {
     # the experiment should not also be the one that writes down its own verdict.
     "CLOSE_OUT_RETROSPECTIVE": frozenset({"LIVE_OPS", "TASK_SPECIFIC"}),
     "ARM_CANARY": frozenset({"LIVE_OPS"}),
+    # The Control Tower's own report routes a recorded gate FAIL with
+    # "kill/retire candidate; decision belongs to Research Lab", so Research Lab
+    # is here — unlike CLOSE_OUT_RETROSPECTIVE, because this action writes down
+    # no verdict of its own. The evaluator already did, and the action refuses
+    # unless that recorded verdict is a CURRENT FAIL.
+    "RETIRE_ON_GATE_FAIL": frozenset({"RESEARCH_LAB", "LIVE_OPS", "TASK_SPECIFIC"}),
 }
 
 MAX_ENVELOPE_BYTES = 4096
@@ -562,6 +579,80 @@ def _repair_lineage(session, env: _Envelope, now: datetime):
     return {"kind": "repair", "package": package.name, "produced": produced}
 
 
+def _retire_on_gate_fail(session, env: _Envelope, now: datetime):
+    """Retire an in-system experiment whose own pre-registered gate has FAILED.
+
+    The gap this closes: a book could fail its own kill clause and keep trading
+    indefinitely, because no transport could retire it. The issue transport
+    cannot transition an experiment by construction, the platform transport has
+    no retirement in its vocabulary, and CLOSE_OUT_RETROSPECTIVE refuses a TAGGED
+    deployment — correctly, since a tag means the book really traded. So the
+    decision lived in chat while the Control Tower reported "kill/retire
+    candidate" on every read.
+
+    What keeps this narrow is that the authorization is not in the envelope. The
+    payload names an experiment and one of its gates; the SERVICE then requires
+    that gate's LATEST RECORDED result to be FAIL, refuses a live experiment
+    outright, and writes no verdict of its own. A caller cannot assert a failure
+    here — it can only point at one the evaluator already computed.
+    """
+    del now
+    key = env.payload.get("experiment")
+    if not isinstance(key, str) or not key.strip():
+        raise ExperimentCommandRejected(
+            "experiment must name the book to retire, by key", "BAD_EXPERIMENT"
+        )
+    experiment = get_experiment(session, key.strip())
+    if experiment is None:
+        raise ExperimentCommandRejected(
+            f"experiment {key.strip()!r} does not exist", "NO_SUCH_EXPERIMENT"
+        )
+    gate_key = env.payload.get("gate")
+    if not isinstance(gate_key, str) or not gate_key.strip():
+        raise ExperimentCommandRejected(
+            "gate must name the pre-registered gate whose FAIL authorizes this",
+            "BAD_GATE",
+        )
+    approved_by = env.payload.get("approved_by")
+    if not isinstance(approved_by, str) or not _ACTOR_RE.match(approved_by or ""):
+        raise ExperimentCommandRejected(
+            "approved_by must name the operator deciding to retire this book",
+            "BAD_APPROVED_BY",
+        )
+    reason = env.payload.get("reason")
+    if not isinstance(reason, str) or not reason.strip():
+        raise ExperimentCommandRejected(
+            "reason is required: it becomes the retirement audit row", "BAD_REASON"
+        )
+
+    # Resolve the gate by key against the experiment's own versions. A gate on
+    # some other book is refused by the service too; resolving it here keeps the
+    # envelope free of raw primary keys, which a public channel should never carry.
+    version = read.latest_version(session, experiment)
+    if version is None:
+        raise ExperimentCommandRejected(
+            f"experiment {experiment.key} has no version", "NO_VERSION"
+        )
+    gates = {g.gate_key: g for g in read.gates_for(session, version)}
+    gate = gates.get(gate_key.strip())
+    if gate is None:
+        raise ExperimentCommandRejected(
+            f"gate {gate_key.strip()!r} is not declared on {experiment.key} "
+            f"v{version.version} (declared: {sorted(gates)})",
+            "NO_SUCH_GATE",
+        )
+
+    produced = service.retire_on_gate_fail(
+        session,
+        experiment,
+        gate=gate,
+        actor=env.actor,
+        approved_by=approved_by,
+        reason=reason,
+    )
+    return {"kind": "retire_on_gate_fail", **produced}
+
+
 def _close_out_retrospective(session, env: _Envelope, now: datetime):
     """Record an experiment that ran and finished OUTSIDE Experiment OS, and retire
     it in the same act. Creates no deployment, no tag and no real-money capability.
@@ -696,6 +787,14 @@ ACTIONS: dict[str, _Action] = {
             "retire it, atomically. Records only non-PASS verdicts, creates no "
             "deployment or tag, and authorizes nothing.",
     ),
+    "RETIRE_ON_GATE_FAIL": _Action(
+        required=frozenset({"experiment", "gate", "approved_by", "reason"}),
+        optional=frozenset(),
+        run=_retire_on_gate_fail,
+        doc="Retire an in-system experiment whose named gate's LATEST RECORDED "
+            "result is FAIL, ending its open deployments atomically. Writes no "
+            "verdict, refuses a live experiment, and expands no exposure.",
+    ),
     "ARM_CANARY": _Action(
         required=frozenset({"package", "approved_by"}),
         optional=frozenset(),
@@ -823,6 +922,16 @@ def _result_of(produced: Any) -> dict | None:
             return
         if value is not None:
             out[name] = value
+
+    # RETIRE_ON_GATE_FAIL returns a flat result rather than a package's `produced`
+    # bundle: it registers nothing, so there is no Version, epoch or deployment
+    # object to read fields off. What belongs on the receipt is which book was
+    # retired, and which recorded verdict authorized it — identifiers and states,
+    # never the submitted `reason`, which is prose and already lands on the
+    # transition audit row.
+    for name in ("experiment", "state", "gate", "authorizing_result_id",
+                 "authorizing_verdict", "transition_id", "deployments_ended"):
+        field(name, lambda name=name: produced.get(name))
 
     version = inner.get("version")
     if version is not None:
