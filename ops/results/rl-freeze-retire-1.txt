@@ -2,17 +2,17 @@
 ========================================================================
 !! MUTATING OPS REQUEST — this changes the running system !!
 ========================================================================
-# type=env  service=main  vars=EXPERIMENT_OS_ISSUE_COMMAND  id=rl-nflspread-clear-2
-# actor=claude-research-lab  purpose=clear the issue-command transport after the XOS-000022 approval batch
-# code 74f4d7bff09a1020c8d62da167b97e39761b33ee · started 2026-09-06T11:56:32Z
+# type=env  service=main  vars=EXPERIMENT_OS_EXPERIMENT_COMMAND  id=rl-freeze-retire-1
+# actor=claude-research-lab  purpose=retire freeze-dark-window-pin (XOS-000003, operator decision)
+# code a2217488ad3b1429249c73380e5f6e3e3239af39 · started 2026-09-06T12:55:53Z
 # target service: main
 # BEFORE:
-  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 2723 bytes, sha256:d49148fd22b77a6a>
-  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 182 bytes, sha256:fa7ee23ec25d1e70>
+  set EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 807 bytes, sha256:0ab168cf7fdda5d0>
 # 1/1 variables set
 # redeploy triggered — the worker will restart with the new config
 # AFTER:
-  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 807 bytes, sha256:0ab168cf7fdda5d0>
 # VERDICT: VERIFIED
 
 # post-change canonical checks: enforcement, readiness
@@ -71,7 +71,7 @@
 # $ xos readiness
 #   {
 #     "ok": true,
-#     "checked_at": "2026-09-06 11:56:45.755094+00:00",
+#     "checked_at": "2026-09-06 12:55:56.770883+00:00",
 #     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
 #     "checks": {
 #       "import_ran": {
