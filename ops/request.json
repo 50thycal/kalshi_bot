@@ -1,1 +1,1 @@
-{"type":"db","sql":"select strategy, count(*) orders, min(created_at)::date first_day, max(created_at)::date last_day from live_orders where strategy in ('theta4','Lmmsell10','Lmmsell8') group by strategy order by strategy","max_rows":10,"id":"rl-liveevid"}
+{"type":"noop"}
