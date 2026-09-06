@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=rl-gbooks-trades-1
-# code 46661a984dc183c0df68f5291df2026ad00e570a · started 2026-09-06T01:05:12Z
-strategy              trades  first                             last                            
---------------------  ------  --------------------------------  --------------------------------
-mmsell10 (reference)  166     2026-09-05 13:22:32.073261+00:00  2026-09-06 00:43:42.213656+00:00
-
-(1 row)
