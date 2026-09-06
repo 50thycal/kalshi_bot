@@ -1,0 +1,22 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "83d3500f319f0073522dcc4b8dc48e2c553455db",
+  "code_source": "default-branch",
+  "exit_status": 1,
+  "finished_at": "2026-09-06T03:57:30Z",
+  "id": "nflspread-contest-pnl-4",
+  "outcome": "FAILED",
+  "provenance": {
+    "actor": "claude-research-lab",
+    "purpose": "KXNFLSPREAD: per-contest P&L for a contest-level test, hold buckets vs NFLTOTAL, live realized"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/nflspread-contest-pnl-4.receipt.json",
+  "result_file": "ops/results/nflspread-contest-pnl-4.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34010271760",
+  "service": null,
+  "started_at": "2026-09-06T03:57:29Z",
+  "targets": [],
+  "type": "db"
+}
