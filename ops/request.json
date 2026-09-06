@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["rl-retire-strangle-20260906"],"id":"rl-retire-strangle-1b"}
+{"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":""},"id":"rl-strangle-clear"}
