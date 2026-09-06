@@ -1,1 +1,1 @@
-{"type":"env","set":{"EXPERIMENT_OS_ISSUE_COMMAND":"","EXPERIMENT_OS_EXPERIMENT_COMMAND":""},"id":"rl-freeze-clear-1","actor":"claude-research-lab","purpose":"clear both command transports; all receipts terminal"}
+{"type":"noop"}
