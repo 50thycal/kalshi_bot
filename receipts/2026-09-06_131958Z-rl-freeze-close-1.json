@@ -1,0 +1,52 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "3346bf8dc3e8d3c7e17f08c2376aea6795cda746",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T13:19:56Z",
+  "id": "rl-freeze-close-1",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 1496 bytes, sha256:363d534408bd8cf9>",
+        "before": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>",
+        "requested": "<redacted 1496 bytes, sha256:363d534408bd8cf9>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_ISSUE_COMMAND is empty \u2014 nothing to overwrite",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "ok"
+  },
+  "provenance": {
+    "actor": "claude-research-lab",
+    "purpose": "close out XOS-000003 after retiring freeze-dark-window-pin"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl-freeze-close-1.receipt.json",
+  "result_file": "ops/results/rl-freeze-close-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34035752166",
+  "service": "main",
+  "started_at": "2026-09-06T13:19:50Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
