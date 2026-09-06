@@ -43,8 +43,7 @@ from .market_types import DISCRETE, IN_PLAY, SCHEDULED, classify
 from .quote_parity import BandProbe, QuoteParityAccumulator
 from .regimes import contest_key_of, regime_of
 from .universe import admits as universe_admits
-from .universe import exposure_paused
-from .universe import tier_of
+from .universe import exposure_paused, tier_of
 
 # Bands the inline-quote pre-filter experiment scores its decision table for
 # (docs/MMSELL_QUOTE_PARITY.md). FIXED constants, deliberately not reads of live book config:

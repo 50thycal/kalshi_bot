@@ -28,8 +28,6 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-import pytest
-
 from kalshi_bot import db
 from kalshi_bot.mmsell.tracker import MmSellTracker
 from kalshi_bot.mmsell.universe import GRADUATED, UNCLASSIFIED, exposure_paused, tier_of
