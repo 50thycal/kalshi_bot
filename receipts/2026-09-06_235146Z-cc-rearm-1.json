@@ -1,0 +1,41 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "11b6de4d088eb474f77e5288456b4286f8bd4e91",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T23:51:44Z",
+  "id": "cc-rearm-1",
+  "mutation": {
+    "changes": {
+      "LIVE_STRATEGIES": {
+        "after": "Emmsell10",
+        "before": "",
+        "requested": "Emmsell10"
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "LIVE_STRATEGIES"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "ok"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/cc-rearm-1.receipt.json",
+  "result_file": "ops/results/cc-rearm-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34068041963",
+  "service": "main",
+  "started_at": "2026-09-06T23:51:41Z",
+  "targets": [
+    "LIVE_STRATEGIES"
+  ],
+  "type": "env"
+}
