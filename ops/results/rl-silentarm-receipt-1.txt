@@ -1,5 +1,0 @@
-no issue command 'rl-silentarm-open-20260906'
-# ops request [READ]
-# type=xos  id=rl-silentarm-receipt-1
-# actor=claude-research-lab  purpose=receipt for the detection-gap issue
-# code 6d2e16edb5170ac8fe8a5d4a1848989c68644062 · started 2026-09-06T04:20:25Z

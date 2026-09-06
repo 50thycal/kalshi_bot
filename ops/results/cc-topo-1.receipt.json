@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "74f4d7bff09a1020c8d62da167b97e39761b33ee",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T11:43:04Z",
+  "id": "cc-topo-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/cc-topo-1.receipt.json",
+  "result_file": "ops/results/cc-topo-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34031031448",
+  "service": null,
+  "started_at": "2026-09-06T11:43:03Z",
+  "targets": [],
+  "type": "db"
+}
