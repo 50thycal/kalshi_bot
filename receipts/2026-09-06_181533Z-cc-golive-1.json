@@ -1,0 +1,48 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "5b49a66d9e354722f45d65d69becccee267820bc",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T18:15:32Z",
+  "id": "cc-golive-1",
+  "mutation": {
+    "changes": {
+      "LIVE_STRATEGIES": {
+        "after": "Emmsell10",
+        "before": "",
+        "requested": "Emmsell10"
+      },
+      "MMSELL_VARIANTS": {
+        "after": "mmsell5:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY;mmsell6:lo=5,hi=8;mmsell7:lo=5,hi=10,htcmax=24;mmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;mmsell10:lo=5,hi=10,maxyes=7;mmsellA4:lo=5,hi=10,maxyes=7,volw=6,volv=6;mmsellA5:lo=5,hi=10,maxyes=7,strangle=1;Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;Tmmsell6:lo=5,hi=10,maxyes=7,mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;Lmmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;Lmmsell10:lo=5,hi=10,maxyes=7;Cmmsell10:lo=5,hi=10,maxyes=7,size=1;Dmmsell10:lo=5,hi=10,maxyes=7,size=1;Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;Emmsell10:lo=5,hi=10,maxyes=7,size=1,contestcap=1",
+        "before": "mmsell5:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY;mmsell6:lo=5,hi=8;mmsell7:lo=5,hi=10,htcmax=24;mmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;mmsell10:lo=5,hi=10,maxyes=7;mmsellA4:lo=5,hi=10,maxyes=7,volw=6,volv=6;mmsellA5:lo=5,hi=10,maxyes=7,strangle=1;Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;Tmmsell6:lo=5,hi=10,maxyes=7,mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;Lmmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;Lmmsell10:lo=5,hi=10,maxyes=7;Cmmsell10:lo=5,hi=10,maxyes=7,size=1;Dmmsell10:lo=5,hi=10,maxyes=7,size=1;Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1",
+        "requested": "mmsell5:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY;mmsell6:lo=5,hi=8;mmsell7:lo=5,hi=10,htcmax=24;mmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;mmsell10:lo=5,hi=10,maxyes=7;mmsellA4:lo=5,hi=10,maxyes=7,volw=6,volv=6;mmsellA5:lo=5,hi=10,maxyes=7,strangle=1;Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;Tmmsell6:lo=5,hi=10,maxyes=7,mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;Lmmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;Lmmsell10:lo=5,hi=10,maxyes=7;Cmmsell10:lo=5,hi=10,maxyes=7,size=1;Dmmsell10:lo=5,hi=10,maxyes=7,size=1;Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;Emmsell10:lo=5,hi=10,maxyes=7,size=1,contestcap=1"
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 2,
+    "targets": [
+      "LIVE_STRATEGIES",
+      "MMSELL_VARIANTS"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "ok"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/cc-golive-1.receipt.json",
+  "result_file": "ops/results/cc-golive-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34051111166",
+  "service": "main",
+  "started_at": "2026-09-06T18:15:20Z",
+  "targets": [
+    "LIVE_STRATEGIES",
+    "MMSELL_VARIANTS"
+  ],
+  "type": "env"
+}
