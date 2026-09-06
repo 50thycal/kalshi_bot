@@ -1,1 +1,1 @@
-{"type":"xos","command":"control-tower","id":"silentarm-ct-1","actor":"claude-research-lab","purpose":"acceptance check: does the full Control Tower read still hang"}
+{"type":"xos","command":"issue-candidates","id":"xos-cand-nfl-1","actor":"claude-research-lab","purpose":"check for an existing candidate covering the KXNFLSPREAD loss cell"}
