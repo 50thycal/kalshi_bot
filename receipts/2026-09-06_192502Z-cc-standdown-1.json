@@ -1,0 +1,41 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "98597f4d1557e7a7dfc7aa6920a1e8da969eb128",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T19:25:00Z",
+  "id": "cc-standdown-1",
+  "mutation": {
+    "changes": {
+      "LIVE_STRATEGIES": {
+        "after": "",
+        "before": "Emmsell10",
+        "requested": ""
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "LIVE_STRATEGIES"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/cc-standdown-1.receipt.json",
+  "result_file": "ops/results/cc-standdown-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34054810799",
+  "service": "main",
+  "started_at": "2026-09-06T19:24:55Z",
+  "targets": [
+    "LIVE_STRATEGIES"
+  ],
+  "type": "env"
+}
