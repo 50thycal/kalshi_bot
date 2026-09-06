@@ -86,6 +86,15 @@ only, at the point the entry would become a real order. It can only ever *refuse
 never add one, so it moves real-money exposure in the safe direction only. Set it to
 `unclassified` to restore the pre-2026-09-05 behaviour exactly.
 
+**A second, separate live bar exists: `mmsell_live_skip_series`** (added 2026-09-06,
+XOS-000022, `docs/MMSELL_NFLSPREAD_LOSS_CELL.md`). It pauses REAL MONEY on named series —
+`KXNFLSPREAD` today — and it is **not** a tier. A series can be fully `GRADUATED` and still
+be paused; that is exactly the KXNFLSPREAD case, and it is why the tier bar above did not
+stop the loss this document opens with. Keep the two apart when reading the counters:
+`skipped_live_tier` is *we have never reviewed this contract*, `skipped_live_paused` is
+*we have reviewed it and it is currently bleeding*. Both refuse live only; both leave paper
+alone.
+
 **Paper is NOT gated, and that is load-bearing.** Paper is how an unreviewed series accumulates
 the history that graduates it. Barring paper too would make the quarantine permanent by
 construction: a series could never earn its way out, and the tier would be a one-way ratchet

@@ -118,6 +118,31 @@ def tier_of(series: str) -> str:
     return IN_REVIEW
 
 
+def exposure_paused(series: str, paused_prefixes) -> bool:
+    """Whether REAL MONEY is paused on this series (`mmsell_live_skip_series`).
+
+    A SECOND, INDEPENDENT bar beside the tier, and the distinction is the whole point of this
+    module's opening warning. The tier asks *do we know what this contract is*; this asks *is
+    this specific contract currently costing us money faster than we can prove it should stop*.
+    A series can be fully GRADUATED and still be paused here — `KXNFLSPREAD` is exactly that
+    case, which is why the tier bar shipped in PR #338 did not stop it.
+
+    THIS IS NOT AN EDGE FILTER EITHER, and the reason differs from the tier's. The tier makes no
+    claim about returns at all. This one *is* motivated by returns — so the danger is the
+    opposite direction: that a temporary exposure pause, taken on evidence that explicitly could
+    not clear the power bar, hardens into a permanent "we know this loses" that nobody re-tests.
+    It is scoped against that by construction: PAPER IS UNTOUCHED, so the series keeps
+    accumulating exactly the out-of-sample evidence that decides whether the pause becomes a
+    real selection rule or gets lifted. Every entry here must name the ticket carrying that test.
+
+    Longest-prefix match on an upper-cased ticker, same convention as `GRADUATED_SERIES` and
+    `SERIES_TYPES`, so `KXNFLSPREAD` covers `KXNFLSPREAD-26SEP07ATLDET-DET3` and does not
+    accidentally cover `KXNFLSPREADX` — prefixes are series names, not substrings.
+    """
+    s = (series or "").upper()
+    return any(s.startswith(p) for p in paused_prefixes if p)
+
+
 def admits(series: str, min_tier: str | None) -> bool:
     """Whether a book requiring `min_tier` may trade this series.
 
