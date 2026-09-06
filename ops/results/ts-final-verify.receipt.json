@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "4a6254f3afba3a587d5c7e51d5c4440e32943051",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T21:05:31Z",
+  "id": "ts-final-verify",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/ts-final-verify.receipt.json",
+  "result_file": "ops/results/ts-final-verify.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34059388909",
+  "service": null,
+  "started_at": "2026-09-06T20:53:59Z",
+  "targets": [],
+  "type": "xos"
+}
