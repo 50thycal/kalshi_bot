@@ -249,7 +249,9 @@ Two things to know about growth:
 - **Infrastructure pause** (corrupt data, broken sim, runaway costs, security):
   set `EVO_ENABLED=false` on the evo service (or scale it to zero). Nothing is
   lost; the loop resumes idempotently — missed heartbeat slots are swept as
-  abandoned, never double-run.
+  abandoned, never double-run. Settable via the ops `env` channel
+  (`docs/OPS_RUNBOOK.md`) — `EVO_ENABLED` is allowlisted in
+  `scripts/railway_env.py`, so this needs no direct Railway UI access.
 - **Shrink instead of pause** (keep testing at low scale): `EVO_MAX_ACTIVE_AGENTS=3`
   (see "Sizing the population" above). Takes effect on the next cycle.
 - Rollback of the whole feature: scale the service down; optionally
