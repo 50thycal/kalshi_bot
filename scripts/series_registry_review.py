@@ -114,7 +114,7 @@ def load_observations(cur) -> dict[str, dict]:
             for r in cur.fetchall()}
 
 
-def load_series_activity(cur, days: int | None) -> dict[str, dict]:
+def load_series_activity(cur, days: int | None, live_days: int) -> dict[str, dict]:
     """Per-series settled history and live exposure, across ALL strategy families.
 
     All eight families, not just mmsell: the registry is a platform-level ledger, and a series
@@ -133,19 +133,38 @@ def load_series_activity(cur, days: int | None) -> dict[str, dict]:
         "  FROM paper_trades WHERE " + " AND ".join(where), params)
     rows = cur.fetchall()
 
-    cur.execute("SELECT DISTINCT strategy FROM live_orders WHERE strategy IS NOT NULL")
-    live_books = {r[0] for r in cur.fetchall()}
+    # REAL-MONEY exposure, measured directly off the order tape rather than inferred.
+    #
+    # The first version of this asked which STRATEGIES had ever placed a live order, then
+    # flagged a series if any paper trade in it came from one of those books. Run against
+    # production on 2026-09-06 that marked 137 of 138 series LIVE, because over all time
+    # 23-37 books touch a typical series and nearly every one of them has some live lineage.
+    # It was answering "did a live-lineage book paper-trade this", which is not the question:
+    # a book's live arm and its paper arm trade different universes, and the flag has to mean
+    # money was actually in THIS series or it cannot order an audit.
+    #
+    # So: read `live_orders` by market, windowed. `live_days` is separate from the settled
+    # history window because they measure different things — history wants everything we know
+    # about a contract, exposure wants what is at risk NOW.
+    cur.execute(
+        "SELECT market_ticker, strategy, created_at"
+        "  FROM live_orders"
+        " WHERE strategy IS NOT NULL"
+        "   AND created_at >= now() - make_interval(days => %s)", [live_days])
+    live_rows = cur.fetchall()
 
     out: dict[str, dict] = defaultdict(
         lambda: {"settled": 0, "markets": set(), "books": set(),
-                 "live_books": set(), "pnl": 0.0})
+                 "live_books": set(), "live_orders": 0, "pnl": 0.0})
+    for ticker, book, _created in live_rows:
+        cell = out[series_of(ticker)]
+        cell["live_books"].add(book)
+        cell["live_orders"] += 1
     for ticker, book, pnl, qty in rows:
         cell = out[series_of(ticker)]
         cell["settled"] += 1
         cell["markets"].add(ticker)
         cell["books"].add(book)
-        if book in live_books:
-            cell["live_books"].add(book)
         cell["pnl"] += float(pnl) / int(qty)
     return dict(out)
 
@@ -184,6 +203,7 @@ def report_backlog(manifest, activity, top: int) -> None:
         # Live first, then by how much money the cell has moved. A live cell that has barely
         # traded still outranks a large paper-only one: the review exists to protect real
         # money, and |pnl| is the size of what a misunderstanding would already have cost.
+        # `live_books` is now real orders in the window, so this actually partitions the list.
         return (bool(a.get("live_books")), abs(a.get("pnl", 0.0)), a.get("settled", 0))
 
     debt.sort(key=rank, reverse=True)
@@ -193,12 +213,13 @@ def report_backlog(manifest, activity, top: int) -> None:
     if not debt:
         print("  (none — every graduated series has a recorded rules review)")
         return
-    print(f"  {'series':<24} {'live':<5} {'settled':>8} {'pnl($)':>10} {'books':>6}")
+    print(f"  {'series':<24} {'live':<5} {'orders':>7} {'settled':>8} {'pnl($)':>10} {'books':>6}")
     for r in debt[:top]:
         a = activity.get(r["series"], {})
         live = "LIVE" if a.get("live_books") else "-"
-        print(f"  {r['series']:<24} {live:<5} {a.get('settled', 0):>8} "
-              f"{a.get('pnl', 0.0):>10.2f} {len(a.get('books', ())):>6}")
+        print(f"  {r['series']:<24} {live:<5} {a.get('live_orders', 0):>7} "
+              f"{a.get('settled', 0):>8} {a.get('pnl', 0.0):>10.2f} "
+              f"{len(a.get('books', ())):>6}")
     if len(debt) > top:
         print(f"  ... {len(debt) - top} more (raise --top)")
     print("  -> These trade live TODAY. The row is the debt, not a bar: retire it by reading")
@@ -231,7 +252,7 @@ def report_candidates(manifest, activity, min_settled: int, top: int) -> None:
 
 
 def report(manifest, observations, activity, *, window: str, min_settled: int, top: int,
-           section: str) -> None:
+           section: str, live_days: int = 30) -> None:
     states = defaultdict(int)
     for r in manifest.values():
         states[r.get("state")] += 1
@@ -239,6 +260,7 @@ def report(manifest, observations, activity, *, window: str, min_settled: int, t
     print(f"# window: {window} | manifest rows: {len(manifest)} "
           f"({', '.join(f'{k}={v}' for k, v in sorted(states.items()))}) "
           f"| observed series: {len(observations)}")
+    print(f"# live exposure measured over the last {live_days} days of live_orders.")
     print("# A REPORT, NOT A GATE: nothing here graduates, bars or promotes anything.")
     if section in ("all", "arrivals"):
         report_arrivals(manifest, observations, activity, top)
@@ -252,6 +274,10 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Series registry review queue")
     ap.add_argument("--days", type=int, default=None,
                     help="lookback for settled history (default: all time)")
+    ap.add_argument("--live-days", type=int, default=30,
+                    help="window for REAL-MONEY exposure, read off live_orders (default 30). "
+                         "Separate from --days: history wants everything we know about a "
+                         "contract, exposure wants what is at risk now")
     ap.add_argument("--min-settled", type=int, default=20,
                     help="graduation-candidate history floor (default 20)")
     ap.add_argument("--top", type=int, default=25, help="rows per section (default 25)")
@@ -272,11 +298,12 @@ def main(argv: list[str] | None = None) -> int:
         conn.read_only = True
         with conn.cursor() as cur:
             observations = load_observations(cur)
-            activity = load_series_activity(cur, args.days)
+            activity = load_series_activity(cur, args.days, args.live_days)
 
     report(manifest, observations, activity,
            window="all time" if args.days is None else f"last {args.days} days",
-           min_settled=args.min_settled, top=args.top, section=args.section)
+           min_settled=args.min_settled, top=args.top, section=args.section,
+           live_days=args.live_days)
     return 0
 
 

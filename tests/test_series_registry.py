@@ -269,9 +269,9 @@ def test_backlog_ranks_live_exposure_first(capsys):
     }
     activity = {
         "KXLIVETINY": {"settled": 3, "markets": set(), "books": {"a"},
-                       "live_books": {"D"}, "pnl": -1.0},
+                       "live_books": {"D"}, "live_orders": 2, "pnl": -1.0},
         "KXPAPERHUGE": {"settled": 5000, "markets": set(), "books": {"a"},
-                        "live_books": set(), "pnl": -900.0},
+                        "live_books": set(), "live_orders": 0, "pnl": -900.0},
     }
     report.report_backlog(manifest, activity, top=10)
     out = capsys.readouterr().out
@@ -362,5 +362,52 @@ def test_assembled_sql_survives_psycopgs_placeholder_parser():
             return []
 
     report.load_observations(Cur())
-    report.load_series_activity(Cur(), 30)
-    report.load_series_activity(Cur(), None)
+    report.load_series_activity(Cur(), 30, 30)
+    report.load_series_activity(Cur(), None, 7)
+
+
+def test_live_exposure_comes_from_the_order_tape_not_from_book_lineage():
+    """Regression on the first production run (2026-09-06), which marked 137 of 138 series
+    LIVE and so ordered the audit by |P&L| alone.
+
+    The bug: ask which STRATEGIES ever placed a live order, then flag a series if any PAPER
+    trade in it came from such a book. Over all time 23-37 books touch a typical series and
+    nearly all carry some live lineage, so the flag was always true. A book's live arm and its
+    paper arm trade different universes; the flag has to mean money was in THIS series.
+
+    Here `Bpaper` placed a live order in a DIFFERENT series and paper-traded this one. Under the
+    old rule that made KXPAPERONLY live. It must not."""
+    class Cur:
+        def __init__(self):
+            self.calls = 0
+
+        def execute(self, sql, params=None):
+            self.calls += 1
+            self.sql = sql
+
+        def fetchall(self):
+            if "paper_trades" in self.sql:
+                return [("KXPAPERONLY-1", "Bpaper", 1.0, 1),
+                        ("KXREALMONEY-1", "Alive", 1.0, 1)]
+            return [("KXREALMONEY-9", "Alive", None)]
+
+    activity = report.load_series_activity(Cur(), None, 30)
+    assert activity["KXREALMONEY"]["live_books"] == {"Alive"}
+    assert activity["KXREALMONEY"]["live_orders"] == 1
+    assert activity["KXPAPERONLY"]["live_books"] == set()
+    assert activity["KXPAPERONLY"]["live_orders"] == 0
+
+
+def test_a_series_with_live_orders_but_no_settled_history_still_appears():
+    """Real money can be in a series we have no settled paper history for. It must not vanish
+    from the exposure read just because the paper join found nothing."""
+    class Cur:
+        def execute(self, sql, params=None):
+            self.sql = sql
+
+        def fetchall(self):
+            return [] if "paper_trades" in self.sql else [("KXFRESH-1", "Alive", None)]
+
+    activity = report.load_series_activity(Cur(), None, 30)
+    assert activity["KXFRESH"]["live_orders"] == 1
+    assert activity["KXFRESH"]["settled"] == 0
