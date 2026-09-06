@@ -19,3 +19,6 @@ htmlcov/
 # Local databases
 *.sqlite
 *.db
+
+# Claude Code local (personal) settings — never committed
+.claude/settings.local.json
