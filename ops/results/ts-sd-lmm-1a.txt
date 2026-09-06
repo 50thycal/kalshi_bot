@@ -1,18 +1,17 @@
 # note: value type-check skipped (ModuleNotFoundError: No module named 'kalshi_bot')
-# readiness reported a problem — read the block above
 ========================================================================
 !! MUTATING OPS REQUEST — this changes the running system !!
 ========================================================================
-# type=env  service=main  vars=LIVE_STRATEGIES  id=cc-standdown-1
-# code 98597f4d1557e7a7dfc7aa6920a1e8da969eb128 · started 2026-09-06T19:24:55Z
+# type=env  service=main  vars=EXPERIMENT_OS_EXPERIMENT_COMMAND  id=ts-sd-lmm-1a
+# code 4a6254f3afba3a587d5c7e51d5c4440e32943051 · started 2026-09-06T20:48:51Z
 # target service: main
 # BEFORE:
-  LIVE_STRATEGIES=Emmsell10
-  set LIVE_STRATEGIES=
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 469 bytes, sha256:19a07a9a2c1b5a0e>
+  set EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 466 bytes, sha256:ef3e71c6842ba48b>
 # 1/1 variables set
 # redeploy triggered — the worker will restart with the new config
 # AFTER:
-  LIVE_STRATEGIES=
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 466 bytes, sha256:ef3e71c6842ba48b>
 # VERDICT: VERIFIED
 
 # post-change canonical checks: enforcement, readiness
@@ -34,18 +33,6 @@
 #     },
 #     "live_canaries": [
 #       {
-#         "deployment": "theta4-live-1",
-#         "grandfathered": true,
-#         "twin": "theta4-twin-pt3",
-#         "boundary_match": false
-#       },
-#       {
-#         "deployment": "lmmsell-live-1",
-#         "grandfathered": true,
-#         "twin": "lmmsell-twin-pt3",
-#         "boundary_match": true
-#       },
-#       {
 #         "deployment": "mmsell-ceiling-live-1",
 #         "grandfathered": false,
 #         "twin": "mmsell-ceiling-twin-1",
@@ -64,9 +51,9 @@
 #         "boundary_match": true
 #       }
 #     ],
-#     "unresolved_integrity_events": 3,
+#     "unresolved_integrity_events": 0,
 #     "recorded_state_events": 3,
-#     "unresolved_config_drift": 3,
+#     "unresolved_config_drift": 0,
 #     "session_counters": {
 #       "blocked": 0,
 #       "warned": 0,
@@ -76,8 +63,8 @@
 #   }
 # $ xos readiness
 #   {
-#     "ok": false,
-#     "checked_at": "2026-09-06 19:25:00.732439+00:00",
+#     "ok": true,
+#     "checked_at": "2026-09-06 20:48:54.177135+00:00",
 #     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
 #     "checks": {
 #       "import_ran": {
@@ -96,10 +83,7 @@
 #           "registered_live_tags": [
 #             "Cmmsell10",
 #             "Dmmsell10",
-#             "Emmsell10",
-#             "Lmmsell10",
-#             "Lmmsell8",
-#             "theta4"
+#             "Emmsell10"
 #           ],
 #           "note": "no Settings supplied \u2014 presence-only check"
 #         }
@@ -121,17 +105,20 @@
 #       },
 #       "live_twin_links": {
 #         "ok": true,
-#         "detail": {
-#           "problems": [],
-#           "grandfathered_notes": [
-#             "theta4-live-1: twin start 2026-08-12 00:15:08.786610+00:00 != live start 2026-07-30 00:00:00+00:00 (grandfathered \u2014 recorded, not invented)"
-#           ]
-#         }
+#         "detail": "all linked"
 #       },
 #       "no_unresolved_integrity": {
-#         "ok": false,
-#         "detail": "3 unresolved integrity events"
+#         "ok": true,
+#         "detail": "0 unresolved integrity events"
 #       },
 #       "no_unresolved_platform_impact": {
 #         "ok": true,
 #         "detail": "0 platform-impact dispositions awaiting acceptance/application"
+#       },
+#       "lineage_columns_present": {
+#         "ok": true,
+#         "detail": {
+#           "paper_trades": "experiment_deployment_arm_id present",
+#           "live_orders": "experiment_deployment_arm_id present"
+#         }
+#       },
