@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "sql": "select strategy, count(*) as trades, min(created_at) as first_trade, max(created_at) as last_trade from paper_trades where strategy like 'Gmmsell%' group by strategy union all select 'mmsell10 (control ref)', count(*), min(created_at), max(created_at) from paper_trades where strategy='mmsell10' and created_at >= timestamptz '2026-09-06 02:38:00+00'", "max_rows": 10, "id": "rl-gbooks-alive-2"}
