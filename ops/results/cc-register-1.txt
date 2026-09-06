@@ -2,17 +2,16 @@
 ========================================================================
 !! MUTATING OPS REQUEST — this changes the running system !!
 ========================================================================
-# type=env  service=main  vars=EXPERIMENT_OS_ISSUE_COMMAND  id=rl-nflspread-open-1
-# actor=claude-research-lab  purpose=open the KXNFLSPREAD loss-cell investigation (STRATEGY / RESEARCH_LAB)
-# code 6d2e16edb5170ac8fe8a5d4a1848989c68644062 · started 2026-09-06T04:12:51Z
+# type=env  service=main  vars=EXPERIMENT_OS_EXPERIMENT_COMMAND  id=cc-register-1
+# code 74f4d7bff09a1020c8d62da167b97e39761b33ee · started 2026-09-06T11:41:07Z
 # target service: main
 # BEFORE:
-  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
-  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 2368 bytes, sha256:0ce508d4b44682e2>
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 195 bytes, sha256:8cea18f13a9681b4>
+  set EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 182 bytes, sha256:fa7ee23ec25d1e70>
 # 1/1 variables set
 # redeploy triggered — the worker will restart with the new config
 # AFTER:
-  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 2368 bytes, sha256:0ce508d4b44682e2>
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 182 bytes, sha256:fa7ee23ec25d1e70>
 # VERDICT: VERIFIED
 
 # post-change canonical checks: enforcement, readiness
@@ -71,7 +70,7 @@
 # $ xos readiness
 #   {
 #     "ok": true,
-#     "checked_at": "2026-09-06 04:12:57.107197+00:00",
+#     "checked_at": "2026-09-06 11:41:17.684643+00:00",
 #     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
 #     "checks": {
 #       "import_ran": {
