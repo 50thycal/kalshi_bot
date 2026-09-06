@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "81c97a930f6e2e8ee86461a34b304e00c23b1f53",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T19:13:35Z",
+  "id": "audit-uecl-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/audit-uecl-1.receipt.json",
+  "result_file": "ops/results/audit-uecl-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34054203710",
+  "service": null,
+  "started_at": "2026-09-06T19:13:35Z",
+  "targets": [],
+  "type": "script"
+}
