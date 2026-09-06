@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["rl-freeze-retire-20260906"],"id":"rl-wait-freeze-2"}
+{"type":"logs","limit":120,"filter":"experiment_command","id":"rl-boot-logs-1"}
