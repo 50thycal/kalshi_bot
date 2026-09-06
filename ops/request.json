@@ -1,1 +1,1 @@
-{"type":"db","id":"cc-pf7","sql":"select command_id, action, status, actor, requested_at, executed_at, left(coalesce(error,''),120) as err from experiment_os_experiment_commands order by requested_at desc limit 8","max_rows":10}
+{"type":"db","id":"cc-pf8","sql":"select command_id, action, status, actor, actor_role, payload_json::text as payload, completed_at, left(coalesce(error,''),100) as err from experiment_os_experiment_commands order by created_at desc limit 6","max_rows":10}
