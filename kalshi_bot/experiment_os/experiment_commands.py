@@ -240,6 +240,7 @@ def _packages() -> dict[str, ExperimentPackage]:
         marktangle,
         marktangle2,
         perp_v1,
+        repair_dark_live_canaries,
         repair_tmmsell_epoch,
         successor_mmsell10_capacity,
         successor_mmsell10_contest_cap,
@@ -294,6 +295,29 @@ def _packages() -> dict[str, ExperimentPackage]:
             ),
             register=marktangle2.register,
             close_out=marktangle2.close_out_retrospective,
+        ),
+        "dark-live-canary-repair": ExperimentPackage(
+            name="dark-live-canary-repair",
+            # Metadata only: `experiment_key` is read by the close-out path, which
+            # this package does not have. The repair covers BOTH theta4-fat-tail
+            # and mmsell-scheduled-settle-live, named as literals in TARGETS.
+            experiment_key=repair_dark_live_canaries.TARGETS[0][0],
+            description=(
+                "XOS-000012: end the two LIVE deployments (theta4-live-1, "
+                "lmmsell-live-1) that stopped trading on 2026-08-19 when "
+                "LIVE_STRATEGIES was emptied, and which the record still shows as "
+                "open. Authorises nothing and stops nothing — the books were "
+                "already stopped through the runtime allowlist, the audited path; "
+                "this only makes the record agree. Needed because `_stand_down` "
+                "refuses an experiment holding an open LIVE deployment, so neither "
+                "book can be retired until these rows are closed, and no other verb "
+                "closes them. Refuses if either tag is armed in LIVE_STRATEGIES or "
+                "any live order exists after the reviewed cutoff. Moves no "
+                "lifecycle state and touches no gate: retiring is a separate "
+                "STAND_DOWN an operator attests to."
+            ),
+            register=_no_contract,
+            repair=repair_dark_live_canaries.repair,
         ),
         "tmmsell-epoch-repair": ExperimentPackage(
             name="tmmsell-epoch-repair",
