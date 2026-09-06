@@ -1,0 +1,52 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "6d2e16edb5170ac8fe8a5d4a1848989c68644062",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-06T04:22:03Z",
+  "id": "rl-silentarm-link-1",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 1182 bytes, sha256:bcc47e40a3111a91>",
+        "before": "<redacted 2006 bytes, sha256:cdf62073e2233732>",
+        "requested": "<redacted 1182 bytes, sha256:bcc47e40a3111a91>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_ISSUE_COMMAND: all 1 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "ok"
+  },
+  "provenance": {
+    "actor": "claude-research-lab",
+    "purpose": "link PR #343 and the production false-positive check to XOS-000023"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/rl-silentarm-link-1.receipt.json",
+  "result_file": "ops/results/rl-silentarm-link-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34011304750",
+  "service": "main",
+  "started_at": "2026-09-06T04:22:00Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
