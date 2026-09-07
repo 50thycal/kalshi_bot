@@ -79,6 +79,28 @@ edge(series)     = be%(series, from its own realized prices) − loss_hat(series
 `k` is the pooling strength in units of contests; derive it from the between-series variance
 within a band, do not pick it. Report what each of the 138 scores at the chosen `k`.
 
+### The score, concretely
+
+```
+loss_hat  = (own_losing_contests + k · band_loss_rate) / (own_contests + k)
+edge      = be% − loss_hat                    be% = avg_win / (avg_win + |avg_loss|)
+score     = 50 + 50 · (edge − band_expected_edge) / spread
+```
+
+**50 means "behaves exactly like its band."** Below 50 is worse than its band, above is better.
+A series with 3 contests lands at ~50 whatever its record; a series with 300 is mostly its own.
+The hard floor applies on top: no recorded rules review caps the score below the threshold
+regardless of edge.
+
+`spread` is the between-series sd of edge within the band — the same quantity `k` is derived
+from, so the two are consistent by construction rather than tuned separately.
+
+**Present `k` as a decision the operator can actually make.** Do not ask them to approve a
+number in contest units; convert it and ask the real question: *"a series running at edge −10pp
+gets barred after N contests."* That N is what a person can judge, and it is the whole
+risk/latency trade-off in one figure — too small and the bar fires on noise, too large and a
+bleeding series keeps trading for months.
+
 This gives the operator exactly what they asked for: **a score for every series on day one, no
 800-observation gate**, without pretending a 3-contest series has evidence of its own.
 
