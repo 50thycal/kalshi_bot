@@ -1,1 +1,1 @@
-{"type":"db","sql":"SELECT strategy, book_open_count, book_open_cap, count(*) AS n, count(DISTINCT kalshi_order_id) AS orders, max(decided_at)::text AS last_seen FROM live_order_queue_decisions GROUP BY 1,2,3 ORDER BY 4 DESC","max_rows":60,"id":"qac-cap-1"}
+{"type":"db","sql":"SELECT date_trunc('day', created_at)::date::text AS day, strategy, count(*) AS refusals FROM skipped_trades WHERE reason LIKE '%open_cap%' AND created_at > now() - interval '10 days' GROUP BY 1,2 ORDER BY 1 DESC, 3 DESC","max_rows":60,"id":"qac-cap-hist-1"}
