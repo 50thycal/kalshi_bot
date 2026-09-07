@@ -1,7 +1,0 @@
-# ops request: type='db'
-strategy       markets_entered  entries  entries_per_day
--------------  ---------------  -------  ---------------
-Cmmsell10      552              552      188.6          
-Cmmsell10_pt3  61               61       21.3           
-
-(2 rows)
