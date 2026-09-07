@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","sql":"SELECT decision, count(*) AS n, count(DISTINCT kalshi_order_id) AS orders, count(*) FILTER (WHERE cap_bound) AS cap_bound_rows, count(*) FILTER (WHERE telemetry_status='observed') AS observed_rows, max(decided_at)::text AS last_seen, round(EXTRACT(EPOCH FROM (now()-max(decided_at)))/60) AS stale_min FROM live_order_queue_decisions GROUP BY 1 ORDER BY 2 DESC","max_rows":30,"id":"qac-accrual-3"}
