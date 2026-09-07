@@ -1,1 +1,1 @@
-{"type":"doctor","id":"qac-deploy-2"}
+{"type": "env", "action": "set", "values": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"schema_version\":1,\"command_id\":\"qac-register-20260907-2\",\"action\":\"REGISTER_PACKAGE\",\"actor\":\"claude-code\",\"actor_role\":\"TASK_SPECIFIC\",\"payload\":{\"package\":\"mmsell10-queue-aware-cancel\"}}"}, "id": "qac-register-set-2"}
