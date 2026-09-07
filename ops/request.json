@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "sql": "SELECT decision, telemetry_status, count(*) AS rows, count(DISTINCT kalshi_order_id) AS orders, count(*) FILTER (WHERE experiment_deployment_arm_id IS NOT NULL) AS stamped, count(*) FILTER (WHERE acted) AS acted, round(avg(order_age_seconds)/60.0) AS avg_age_min, round(avg(contracts_ahead)) AS avg_ahead, count(*) FILTER (WHERE cap_bound) AS cap_bound, min(decided_at)::text AS first_at, max(decided_at)::text AS last_at FROM live_order_queue_decisions GROUP BY 1,2 ORDER BY 3 DESC", "max_rows": 40, "id": "qac-data-1"}
