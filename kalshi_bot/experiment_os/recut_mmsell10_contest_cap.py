@@ -146,8 +146,12 @@ EPOCH_REASON = (
 )
 
 #: Everything the activation step sets, declared so CI asserts each name clears
-#: `railway_env.ALLOWED_VARS`. Identical in shape to the successor package's.
-ACTIVATION_VARS: frozenset[str] = frozenset({"MMSELL_VARIANTS", "LIVE_STRATEGIES"})
+#: `railway_env.ALLOWED_VARS`. Identical in shape to the successor package's: the
+#: six mmsell safeguards are pinned explicitly so the envelope is true of the
+#: running process rather than merely equal to today's code defaults.
+ACTIVATION_VARS: frozenset[str] = frozenset(
+    {"MMSELL_VARIANTS", "LIVE_STRATEGIES", *RISK_ENVELOPE["settings"]}
+)
 
 
 def _now() -> datetime:
@@ -171,6 +175,68 @@ def material_config() -> dict:
         "twin_tag": TWIN_TAG,
         "risk": RISK_ENVELOPE,
     }
+
+
+def variants_for_recut(current: str) -> str:
+    """`current` (the running `mmsell_variants`) with generation 1's book REPLACED.
+
+    Both halves matter and the removal is the half that is easy to forget.
+    `Emmsell10`'s deployment closes at the boundary, so a stale entry left in
+    `MMSELL_VARIANTS` defines a book with no active deployment arm — under
+    NEW_ONLY every entry it attempts is refused, on every scan cycle, which is
+    the XOS-000011 shape wearing a config file's clothes.
+
+    DERIVED rather than written down: the value is one ~800-character string
+    holding EVERY mmsell book, and hand-composing it to change one entry is how a
+    running book gets dropped by a typo. Dropping a book stops it silently.
+
+    Idempotent, and refuses rather than overwrites. A `Fmmsell10:` entry that is
+    already present with THIS spec is left alone; one carrying a different spec is
+    refused, because silently replacing it would be an undetected parameter change
+    to a registered book. An `Emmsell10:` entry whose spec is not the one
+    generation 1 registered is likewise refused — if the running config is not
+    what we believe we are retiring, the belief is what is wrong.
+    """
+    tokens = [t.strip() for t in (current or "").split(";") if t.strip()]
+    kept: list[str] = []
+    already = False
+    for token in tokens:
+        tag, _, body = token.partition(":")
+        tag, body = tag.strip(), body.strip()
+        if tag == PRIOR_LIVE_TAG:
+            if body != BOOK_PARAMS:
+                _refuse(
+                    f"{PRIOR_LIVE_TAG} is defined as {body!r}, not the registered "
+                    f"{BOOK_PARAMS!r} — reconcile the running config against the "
+                    "deployment's book_params before retiring it"
+                )
+            continue  # dropped: its deployment closes at the boundary
+        if tag == LIVE_TAG:
+            if body != BOOK_PARAMS:
+                _refuse(
+                    f"{LIVE_TAG} is already defined as {body!r}, which is not this "
+                    f"canary's registered {BOOK_PARAMS!r}; overwriting it here "
+                    "would be an undetected parameter change"
+                )
+            already = True
+        kept.append(token)
+    return ";".join(kept if already else [*kept, LIVE_BOOK_SPEC])
+
+
+def activation_env(settings) -> dict[str, str]:
+    """The EXACT variables the activation step sets, and nothing else.
+
+    Composed, never applied here. This is the only step at which an order can
+    reach Kalshi, and it is deliberately not something the re-cut itself can do.
+    """
+    env: dict[str, str] = {
+        "MMSELL_VARIANTS": variants_for_recut(settings.mmsell_variants),
+    }
+    env.update(RISK_ENVELOPE["settings"])
+    # Last, so the mapping reads in the order it takes effect: the book exists
+    # and its caps are pinned before the switch that lets it spend anything.
+    env["LIVE_STRATEGIES"] = LIVE_TAG
+    return env
 
 
 def _tags_of(session, deployment: ExperimentDeployment) -> list[str]:
@@ -385,5 +451,6 @@ __all__ = [
     "FIX_COMMIT", "LIVE_BOOK_SPEC", "LIVE_DEPLOYMENT_KEY", "LIVE_TAG", "PAPER_TAG",
     "PRIOR_LIVE_DEPLOYMENT_KEY", "PRIOR_LIVE_TAG", "PRIOR_TWIN_DEPLOYMENT_KEY",
     "PRIOR_TWIN_TAG", "RISK_ENVELOPE", "TWIN_DEPLOYMENT_KEY", "TWIN_TAG",
-    "material_config", "recut", "register",
+    "activation_env", "material_config", "recut", "register",
+    "variants_for_recut",
 ]

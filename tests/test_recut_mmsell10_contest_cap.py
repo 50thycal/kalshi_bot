@@ -419,3 +419,119 @@ def test_arming_this_package_is_restricted_to_live_ops():
     from kalshi_bot.experiment_os import experiment_commands as ec
 
     assert ec.ACTION_ROLES["ARM_CANARY"] == frozenset({"LIVE_OPS"})
+
+
+# --- the activation value, derived rather than hand-composed ----------------
+
+#: The running value read off the service at 2026-09-07T01:29Z, verbatim. Pinned
+#: here because the derivation's whole job is to survive a real ~900-char string
+#: holding nineteen books, not a two-entry fixture.
+PROD_VARIANTS = (
+    "mmsell5:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY;"
+    "mmsell6:lo=5,hi=8;"
+    "mmsell7:lo=5,hi=10,htcmax=24;"
+    "mmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;"
+    "mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;"
+    "mmsell10:lo=5,hi=10,maxyes=7;"
+    "mmsellA4:lo=5,hi=10,maxyes=7,volw=6,volv=6;"
+    "mmsellA5:lo=5,hi=10,maxyes=7,strangle=1;"
+    "Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;"
+    "Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;"
+    "Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,"
+    "xmtype=event_stat+politics+announcement;"
+    "Tmmsell6:lo=5,hi=10,maxyes=7,"
+    "mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;"
+    "Lmmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;"
+    "Lmmsell10:lo=5,hi=10,maxyes=7;"
+    "Cmmsell10:lo=5,hi=10,maxyes=7,size=1;"
+    "Dmmsell10:lo=5,hi=10,maxyes=7,size=1;"
+    "Gmmsell0:lo=5,hi=10,maxyes=7;"
+    "Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;"
+    "Emmsell10:lo=5,hi=10,maxyes=7,size=1,contestcap=1"
+)
+
+
+def _tags(variants: str) -> list[str]:
+    return [t.partition(":")[0] for t in variants.split(";") if t]
+
+
+def test_the_derivation_swaps_exactly_one_book_and_drops_no_other():
+    """The value is one ~900-char string holding every mmsell book. Dropping one
+    by a typo stops it silently, which is the whole reason this is derived."""
+    out = recut.variants_for_recut(PROD_VARIANTS)
+
+    before, after = _tags(PROD_VARIANTS), _tags(out)
+    assert set(before) - set(after) == {cc.LIVE_TAG}
+    assert set(after) - set(before) == {recut.LIVE_TAG}
+    assert len(after) == len(before)
+    # Every OTHER book keeps its spec byte for byte.
+    kept = [t for t in out.split(";") if not t.startswith(f"{recut.LIVE_TAG}:")]
+    assert kept == [
+        t for t in PROD_VARIANTS.split(";") if not t.startswith(f"{cc.LIVE_TAG}:")
+    ]
+
+
+def test_the_retired_book_is_removed_not_merely_shadowed():
+    """`Emmsell10`'s deployment closes at the boundary. A stale entry left behind
+    defines a book with no active arm — under NEW_ONLY every entry it attempts is
+    refused, every cycle. That is XOS-000011 in a config file."""
+    out = recut.variants_for_recut(PROD_VARIANTS)
+
+    assert f"{cc.LIVE_TAG}:" not in out
+    assert f"{recut.LIVE_TAG}:{cc.BOOK_PARAMS}" in out
+
+
+def test_the_new_book_carries_the_cap_and_the_size():
+    out = recut.variants_for_recut(PROD_VARIANTS)
+
+    spec = next(t for t in out.split(";") if t.startswith(f"{recut.LIVE_TAG}:"))
+    assert spec == recut.LIVE_BOOK_SPEC
+    assert "contestcap=1" in spec and "size=1" in spec
+
+
+def test_the_derivation_is_idempotent():
+    once = recut.variants_for_recut(PROD_VARIANTS)
+
+    assert recut.variants_for_recut(once) == once
+
+
+def test_it_refuses_when_the_running_predecessor_spec_is_not_what_we_registered():
+    """If production is not running the book we believe we are retiring, the
+    belief is what is wrong — not the config."""
+    drifted = PROD_VARIANTS.replace(
+        f"{cc.LIVE_TAG}:{cc.BOOK_PARAMS}", f"{cc.LIVE_TAG}:lo=5,hi=10,maxyes=7"
+    )
+
+    with pytest.raises(svc.ExperimentOsError) as exc:
+        recut.variants_for_recut(drifted)
+
+    assert "reconcile the running config" in str(exc.value)
+
+
+def test_it_refuses_to_overwrite_a_different_spec_on_the_new_tag():
+    """Silently replacing it would be an undetected parameter change to a
+    registered book."""
+    hostile = PROD_VARIANTS + f";{recut.LIVE_TAG}:lo=1,hi=99"
+
+    with pytest.raises(svc.ExperimentOsError) as exc:
+        recut.variants_for_recut(hostile)
+
+    assert "undetected parameter change" in str(exc.value)
+
+
+def test_activation_env_pins_the_safeguards_and_names_the_switch_last():
+    """The envelope must be true of the PROCESS, not merely equal to today's code
+    defaults — and the book has to exist before the switch that lets it spend."""
+    class _S:
+        mmsell_variants = PROD_VARIANTS
+
+    env = recut.activation_env(_S())
+
+    assert set(env) == set(recut.ACTIVATION_VARS)
+    assert env["LIVE_STRATEGIES"] == recut.LIVE_TAG
+    assert env["MMSELL_VARIANTS"] == recut.variants_for_recut(PROD_VARIANTS)
+    for name, value in cc.RISK_ENVELOPE["settings"].items():
+        assert env[name] == value, f"{name} must be pinned as the envelope declares"
+    # The global contest-cap switch stays out: this book opts in through its own
+    # `contestcap=1`, so no other mmsell book's selection moves.
+    assert "MMSELL_CONTEST_CAP_ENABLED" not in env
