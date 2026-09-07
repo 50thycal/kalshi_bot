@@ -214,6 +214,10 @@ takes a merged research document.
 - `mmsell-fill-model` / exit-study and other specialist diagnostics via the ops
   channel when a gate explicitly depends on them — they are *analyses*, never a
   second status system.
+- `finite-work-handoff` — the cross-session procedure (mission contract, the four
+  dispositions, the one terminal owner result). Read it for the **read-only checkpoint
+  rule**: hand the update to the owning role as an exact repository-update block, and say
+  the state is not yet persisted. It grants this role no write.
 
 ## CLEANUP / SESSION END
 - Reset the ops channel to `{"type": "noop"}` if you drove it.

@@ -88,6 +88,10 @@ An experiment's scientific contract on its behalf — an I3 requires the
 researcher to author and freeze the successor version.
 ## SHARED SKILLS
 - the PR 5 impact engine (`platform_impact.py`) — the whole procedure
+- `finite-work-handoff` — the cross-session procedure: the mission contract, the four
+  dispositions for an out-of-mission finding (`FIX NOW` / `PARK` / `DISCARD` /
+  `OWNER DECISION`), and the one terminal owner result. It never overrides this role's
+  write boundary.
 
 ## CLEANUP / SESSION END
 - Reset the ops channel to `{"type": "noop"}` if you drove it.

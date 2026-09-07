@@ -108,6 +108,10 @@ anything that puts real money at risk.
 - `kalshi-idea-model` (generate + screen), `kalshi-probe-builder` (pre-register +
   run a probe), `kalshi-strategy` (build the book). All three defer to Experiment
   OS for lifecycle — they do not define a second one.
+- `finite-work-handoff` — the cross-session procedure: the mission contract, the four
+  dispositions for an out-of-mission finding (`FIX NOW` / `PARK` / `DISCARD` /
+  `OWNER DECISION`), and the one terminal owner result. It never overrides this role's
+  write boundary.
 
 ## CLEANUP / SESSION END
 - Reset the ops channel to `{"type": "noop"}` if you drove it.
