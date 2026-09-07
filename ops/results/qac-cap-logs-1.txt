@@ -1,6 +1,0 @@
-# latest deployment 42ae1978-0bce-45b8-b4ae-75f6851fce3c (status=SUCCESS, created=2026-09-07T13:48:22.819Z)
-# ops request [READ]
-# type=logs  service=main  id=qac-cap-logs-1
-# code b6cdd9d4b1b0e4666485755e1f7b911bc142d4ab · started 2026-09-07T13:55:49Z
-# target service: main
-(no log lines returned)
