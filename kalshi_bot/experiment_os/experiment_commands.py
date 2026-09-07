@@ -240,6 +240,7 @@ def _packages() -> dict[str, ExperimentPackage]:
         marktangle,
         marktangle2,
         perp_v1,
+        recut_mmsell10_contest_cap,
         repair_dark_live_canaries,
         repair_tmmsell_epoch,
         successor_mmsell10_capacity,
@@ -379,6 +380,36 @@ def _packages() -> dict[str, ExperimentPackage]:
             register=successor_mmsell10_contest_cap.register,
             arm=successor_mmsell10_contest_cap.arm,
             activation_vars=successor_mmsell10_contest_cap.ACTIVATION_VARS,
+        ),
+        "mmsell-contestcap-epoch2": ExperimentPackage(
+            name="mmsell-contestcap-epoch2",
+            experiment_key=recut_mmsell10_contest_cap.EXPERIMENT_KEY,
+            description=(
+                "Re-cuts the contest-cap canary's live epoch onto FRESH tags "
+                "(Fmmsell10 / Fmmsell10_pt4) after the 2026-09-06 defect fix. NOT "
+                "a promotion: the experiment is already LIVE_CANARY and stays "
+                "there — no transition, no gate evaluation, no verdict. NOT a "
+                "widening: the risk envelope and book params are imported from "
+                "the successor package, so a loosened bound is impossible rather "
+                "than unlikely. It exists because the 23:51Z re-arm reused "
+                "Emmsell10 and so recorded NO boundary between pre-fix and "
+                "post-fix live evidence, and because sync_twin_epoch is "
+                "get-or-create on the twin tag — the stand-down closed "
+                "Emmsell10_pt4's live_paper_twins row and nothing reopens it, so "
+                "the running canary was invisible on the live dashboard. A new "
+                "twin tag is the system's own prescribed remedy for both. Closes "
+                "the open live epoch, opens its I2 successor, registers live and "
+                "twin there at one instant on tags with no history, and carries "
+                "the mmsell10 paper parent forward so it does not go dark. "
+                "Refuses unless production matches the shape it was reviewed "
+                "against; idempotent. Places no order — MMSELL_VARIANTS and "
+                "LIVE_STRATEGIES remain a separate act."
+            ),
+            # No contract to register — mmsell-contest-cap-canary already created
+            # it, and this package operates that same frozen version.
+            register=recut_mmsell10_contest_cap.register,
+            arm=recut_mmsell10_contest_cap.recut,
+            activation_vars=recut_mmsell10_contest_cap.ACTIVATION_VARS,
         ),
         "mmsell10-capacity-gatefix": ExperimentPackage(
             name="mmsell10-capacity-gatefix",

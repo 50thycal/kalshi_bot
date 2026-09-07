@@ -269,7 +269,61 @@ mechanism.
   and a recorded transition are append-only by design. Retiring the canary is a recorded
   lifecycle move, never a deletion.
 
-## 9. The five silent failures this line of work has already produced
+## 9. Generation 2 — the epoch re-cut onto `Fmmsell10`
+
+The first generation armed at 2026-09-06T18:18Z on `Emmsell10` / `Emmsell10_pt4`, was
+stood down at 19:25Z on a recorded BREACH, and was re-armed at 23:51Z **on the same
+tags** by setting `LIVE_STRATEGIES` again. Two defects had been fixed in code in
+between (`regimes.contest_key_of` kept a player-prop's fourth segment;
+`tracker._settlement_cap_blocks` exempted mutually-exclusive events from the CONTEST
+cap as well as the RUNG cap).
+
+Reusing the tags was wrong in two ways, and neither raised an error:
+
+- **No epoch boundary.** Pre-fix and post-fix live orders sit in one bucket under
+  `Emmsell10`, across a change to the very code under test. They were separated by
+  hand, once, by reading timestamps. Nothing in the record says they must not pool.
+- **A dead twin epoch.** `repository.sync_twin_epoch` is get-or-create keyed on the
+  twin tag. The stand-down closed `Emmsell10_pt4`'s `live_paper_twins` row at 19:25Z;
+  the re-arm found that row and returned it untouched. No path in that function
+  reopens a closed epoch or starts a new one, so **re-arming a tag pair after any
+  stand-down can never produce an open epoch** — and the live dashboard, which reads
+  that table, showed the running canary as retired.
+
+`mmsell-contestcap-epoch2` (`kalshi_bot/experiment_os/recut_mmsell10_contest_cap.py`)
+corrects both the way the system already prescribes: a new twin tag is a new epoch.
+It closes the open live epoch, opens its I2 successor, and registers
+`mmsell-contestcap-live-2` / `-twin-2` there at one instant on **`Fmmsell10`** and
+**`Fmmsell10_pt4`**, carrying the `mmsell10` paper parent forward. The envelope, book
+params and cap are imported from the generation-1 package, not retyped.
+
+It is **not a promotion**: the experiment is already LIVE_CANARY and stays there —
+no transition, no gate evaluation, no verdict. An epoch boundary is a statement about
+the world changing.
+
+The twin is `Fmmsell10_pt4`, not `_pt5`, because `LIVE_PAPER_TWIN_SUFFIX` is
+process-wide and production holds `_pt4`; the worker derives every twin tag as
+`<live_tag><suffix>`, so the live tag is what changes and the twin follows.
+
+### Activating generation 2
+
+One boot does the whole cutover — the experiment-command hook runs well before the
+tracker and twin harness are constructed, so set the command and the runtime vars in
+the SAME env request:
+
+1. `EXPERIMENT_OS_EXPERIMENT_COMMAND` — one `ARM_CANARY` envelope naming package
+   `mmsell-contestcap-epoch2`, `actor_role: LIVE_OPS`, `approved_by` a real person.
+2. `MMSELL_VARIANTS` — `Emmsell10`'s entry replaced by `Fmmsell10:lo=5,hi=10,maxyes=7,size=1,contestcap=1`.
+   **Never hand-compose this value** — it is one ~800-char string holding every book
+   and dropping one silently stops it. Derive it (`scripts/mmsell10_canary.py activate`).
+3. `LIVE_STRATEGIES=Fmmsell10`.
+
+Then verify, in order: the receipt says SUCCEEDED; `live_paper_twins` holds an **open**
+row for `Fmmsell10_pt4`; the dashboard shows the pair as running; `Emmsell10` and
+`Emmsell10_pt4` appear on no open deployment; and the audit is re-pointed at the new
+tag (`--live Fmmsell10`).
+
+## 10. The six silent failures this line of work has already produced
 
 Each looked green. Assume the next one does too.
 
@@ -278,7 +332,9 @@ Each looked green. Assume the next one does too.
 3. the paper books registered in Experiment OS but never present in the worker config — 12
    hours of "armed, configured, silent";
 4. a counter that overstated;
-5. a test suite that passed 81 green without exercising the fix at all.
+5. a test suite that passed 81 green without exercising the fix at all;
+6. a re-arm that reused its tags — no epoch boundary across a code fix, and a twin
+   epoch that could never reopen, so the canary ran correctly while reading as retired.
 
 An honest "armed but not yet provable" beats a confident overstatement. If a check was
 skipped, name it and say why.
