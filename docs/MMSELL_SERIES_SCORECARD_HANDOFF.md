@@ -1,148 +1,175 @@
-# Handoff — score every mmsell series, and gate trading on the score
+# Handoff — score every mmsell series, and bar trading below a threshold
 
-**Written 2026-09-06.** Session role: **Research Lab**. Scope: **mmsell family only** — do not
-touch perps, pin15, tfav, theta, wcprop, weather or xgame.
+**Written 2026-09-06, revised 2026-09-07 against measured data.** Session role: **Research Lab**.
+Scope: **mmsell family only** — do not touch perps, pin15, tfav, theta, wcprop, weather, xgame.
 
 ## What the operator asked for
 
-Replace the current binary `graduated` / not-graduated bar with a **numeric score per series**,
-where a higher score means a better expected outcome for us, and a series must clear a
-**threshold** to be tradable. Two things feed the score:
+Replace the binary `graduated`/not bar with a **numeric score per series**, where higher means a
+better expected outcome, and **bar mmsell from entering markets below a threshold**. Score on
+**edge**, not raw P&L, so every series is compared apples to apples. And explicitly: *"we don't
+need eight hundred data points just to give it a score."*
 
-1. **Do we understand the contract** — is there research/rules evidence behind it.
-2. **Does it actually make us money** — a series the mmsell books win on should score higher.
+**That is correct, and an earlier draft of this handoff was wrong to imply otherwise.** The
+n≈800 figure in `docs/MMSELL_ROADMAP.md` §1 powers a test on **mean per-trade P&L** — a heavy
+tailed money variable. That is not what we are scoring. The measurements below replace it.
 
-Then: work through the **138 grandfathered series** first, and produce a plan for grading
-everything else we will eventually collect data on.
+## The measured facts this design rests on
 
-## Read this before you design the score
+All from production, mmsell family, settled + closed_sl, twins excluded, 2026-09-07.
+**75,542 trades · 534 series · 8,866 contests.**
 
-The operator has asked, deliberately and more than once, for **profitability in the score**.
-Take that as decided. But the repo contains a specific, measured warning that you must design
-*around* rather than ignore:
+### 1. Break-even is nearly determined by the entry price, so `edge` has ONE noisy term
 
-- `kalshi_bot/registry/__init__.py`: *"Graduation says 'we know what this contract is and we
-  have history on it', never 'this contract makes money'. Conflating them is how a governance
-  rule turns into an unvalidated strategy."*
-- `scripts/mmsell_series_pnl.py` and `docs/MMSELL_ROADMAP.md` §1: measured per-trade
-  **sd = $0.2343 against a mean of $0.0065** — noise is 36× signal. **A single series needs
-  n ≈ 800 distinct markets before its confidence interval excludes break-even.** A gate scoring
-  series on raw P&L "would fire constantly on noise and would have killed profitable cells long
-  before it caught" `KXNFLSPREAD`.
+| entry band | be% | loss% | **edge** | contests | se(loss%) |
+|---|---:|---:|---:|---:|---:|
+| ≤7¢ | 6.69 | 6.05 | **+0.64pp** | 3,649 | 0.39pp |
+| 8–10¢ | 8.28 | 6.86 | **+1.42pp** | 3,460 | 0.43pp |
+| 11–15¢ | 11.89 | 10.56 | **+1.33pp** | 3,087 | 0.55pp |
+| 16–25¢ | 18.24 | 16.39 | **+1.85pp** | 3,015 | 0.67pp |
+| >25¢ | 28.52 | 26.80 | **+1.72pp** | 4,259 | 0.68pp |
 
-Both statements are still true. They do **not** mean "refuse to score on P&L". They mean the
-P&L component must be **shrunk toward zero by sample size**, so that a series with 30 trades and
-a great run cannot outrank one with 3,000 trades and a real edge. Build that in from the start;
-it is the difference between a scorecard and a noise amplifier.
+`be% = avg_win/(avg_win+|avg_loss|)` lands almost exactly on the entry band every time. It is
+structural, not estimated. So **`edge = be% − loss%` is a break-even constant minus a binomial
+proportion** — and a proportion is far better powered than a mean of money. This is why the
+n≈800 number does not apply.
 
-**Do not silently drop this requirement, and do not implement it naively.** If you conclude the
-shrinkage makes the P&L component near-useless at current sample sizes, say so with the numbers
-rather than quietly weighting it to nothing.
+**Every band is positive**, +0.64 to +1.85pp. The family edge is real but *thin*.
 
-## Proposed score — a starting point, not a decision
+### 2. Per-series data is far thinner than anyone assumed
 
-Total 0–100. Confirm the weights and the threshold with the operator before anything gates.
+| series with ≥N contests | count (of 534) |
+|---|---:|
+| ≥300 | 8 |
+| ≥100 | 12 |
+| ≥50 | 28 |
+| ≥20 | 69 |
+| **<20** | **465 (87%)** |
 
-| component | pts | source | notes |
-|---|---:|---|---|
-| **Mechanism understood** | 30 | `rules_reviewed_at` + `settle_mode` confirmed | See "the hard floor" below |
-| **Sample sufficiency** | 20 | distinct **contests**, not markets | `contests` is the independence unit |
-| **Realized edge, shrunk** | 40 | `edge = be% − loss%`, shrunk by n | The operator's ask; see shrinkage |
-| **Loss concentration** | 10 | `worst3%` | Broad drift vs two bad afternoons |
+**Median contests per series: 3.** Contests, not markets, is the independence unit — one blowout
+settles a whole nested ladder against a seller at one instant (`KXNFLSPREAD`'s 382 markets were
+44 games; 2 games carried 48% of the loss).
 
-**The hard floor:** a series with **no recorded rules review cannot clear the threshold**,
-however good its P&L. That preserves the existing two-part bar inside the new score — otherwise
-a series nobody has read its rulebook for can trade live purely on a lucky month, which is the
-exact failure `KXNFLSPREAD` demonstrated (classified, 1,486 settled markets, −$151.26).
+### 3. What a series' own record can and cannot resolve
 
-**Shrinkage.** Score the edge as `edge_shrunk = edge × n / (n + k)` where `n` is distinct
-contests and `k` is a prior strength to be chosen from the measured variance — with sd/mean at
-36×, `k` will be large (order hundreds). Pick `k` from the data, write down why, and show what
-each of the 138 series scores at that `k` before proposing a threshold.
+| own contests | se(loss%) | own edge resolvable only if |
+|---:|---:|---|
+| 3 | 17.3pp | \|edge\| > ~35pp |
+| 20 | 6.7pp | \|edge\| > ~13pp |
+| 50 | 4.2pp | \|edge\| > ~8.5pp |
+| 100 | 3.0pp | \|edge\| > ~6pp |
+| 300 | 1.7pp | \|edge\| > ~3.5pp |
+| 635 (the max) | 1.2pp | \|edge\| > ~2.4pp |
 
-**`edge`, not raw P&L.** `mmsell_series_pnl.py` already computes it: each series is entered at a
-different premium, so a raw loss rate is scored against a different break-even — 12% is a
-disaster at 6¢ and comfortable at 17¢. `edge = be% − loss%` is the one column comparable across
-series. Reuse that function; do not re-derive it.
+Against a family edge of ~1–2pp, **no series has enough of its own data to resolve a small
+difference.** What a series' own record *can* do is expose a disaster: a −8.5pp series is
+detectable at 50 contests, a −6pp one at 100.
 
-**`contests`, not `mkts`.** One NFL game carries a nested spread ladder that a blowout settles
-against a seller at one instant. `KXNFLSPREAD`'s 382 markets were 44 games, and 2 of those games
-carried 48% of the loss. Sample sufficiency and shrinkage must both count contests.
+## The design this implies
 
-## What already exists — reuse, do not rebuild
+**Partial pooling.** Every series is scored immediately — a thin series simply inherits its
+**entry band × market type** rate, which has thousands of contests behind it, and its own record
+pulls it away from that prior only as far as its sample justifies:
 
-| thing | where | gives you |
+```
+loss_hat(series) = (own_losses + k · prior_rate) / (own_contests + k)
+edge(series)     = be%(series, from its own realized prices) − loss_hat(series)
+```
+
+`k` is the pooling strength in units of contests; derive it from the between-series variance
+within a band, do not pick it. Report what each of the 138 scores at the chosen `k`.
+
+This gives the operator exactly what they asked for: **a score for every series on day one, no
+800-observation gate**, without pretending a 3-contest series has evidence of its own.
+
+**Score the deviation, not the level.** Because every band is positive and the spread is thin,
+a score built on absolute edge would rank noise. Score each series against **its own band's
+expected edge**, so the question is "does this series behave worse than its band?" — which is
+the only question the data can answer.
+
+**Bar on evidence of harm, never on absence of evidence.** A thin series sits at its band prior,
+which is positive, so it is not barred. A series is barred only when it has accumulated enough
+contests for its own bad record to pull it below the line. Get this backwards and the bar
+quarantines every new market permanently by construction, since a barred series stops
+accumulating the history that would clear it.
+
+### Proposed components — confirm weights and threshold with the operator
+
+| component | source | notes |
 |---|---|---|
-| per-series edge, break-even, contests, worst3%, live flag | `scripts/mmsell_series_pnl.py` | the whole P&L half of the score |
-| the decision ledger (state, reviewer, review date) | `kalshi_bot/registry/series_manifest.json` | where a score and threshold verdict should be recorded |
-| the entry gate | `registry.admits()` via `mmsell_live_min_tier`, per-book `universe=` | where a threshold would bind |
-| rules-vs-taxonomy verification | `scripts/series_rules_audit.py` | the mechanism-understood half |
-| the review queue | `scripts/series_registry_review.py` | backlog + arrivals, ranked by real exposure |
-| settlement evidence gathering | `scripts/mmsell_taxonomy_audit.py` | rule documents, hand-tuned patterns |
+| **pooled edge vs band** | above | the core; the operator's ask |
+| **own-sample weight** | contests | how much of the score is the series' own evidence |
+| **loss concentration** | `worst3%` | broad drift vs two bad afternoons — different findings |
+| **mechanism understood** | `rules_reviewed_at` | **hard floor**, see below |
 
-## Known problems you will hit — do not rediscover these
+**The hard floor:** a series with no recorded rules review **cannot clear the threshold**,
+however good its edge. Otherwise a contract nobody has read trades live on a lucky month — which
+is what `KXNFLSPREAD` did (classified, 1,486 settled markets, −$151.26). This is the surviving
+half of the old two-part bar.
+
+## Known problems — do not rediscover these
 
 1. **The rules audit rests on ONE signal.** Kalshi's `settlement_source` fired **zero** times
    across all 138 series, so every verdict is a single regex over rules text. That is why **no
-   `rules_reviewed_at` has been recorded yet** and the backlog is still 138 of 138. Scoring
-   "mechanism understood" at 30 points off that single signal would launder a regex into a
-   human's signature. **Either find a second signal, or make those 30 points require a human
-   sign-off recorded in the manifest.** This is the first real decision of the task.
-2. **Dedup does not collapse.** `docs = 8` for every series audited: rules text embeds
+   `rules_reviewed_at` has been recorded** and the backlog is still 138 of 138. Scoring
+   "mechanism understood" off that alone would launder a regex into a human's signature.
+   **Either find a second signal, or make that component require a human sign-off.** This is the
+   first real decision of the task.
+2. **Dedup does not collapse.** `docs = 8` for every series audited — rules text embeds
    per-market specifics, so "distinct documents" is really "8 near-identical markets".
-3. **The audit worklist is graduated-only.** Five of the six series in the KXUE prefix collision
-   were never audited because they classify as `econ_release` — wrong, but not *unclassified*.
-   Widen the worklist when you score.
-4. **The scan sees 4,005 series; the manifest holds 138.** 265 traded series have no manifest
-   row at all. For mmsell scope, filter that list to series mmsell books have actually traded
-   before treating it as the grading queue.
+3. **The audit worklist is graduated-only**, so it cannot see a misclassification below the top
+   tier. Five of the six series in the `KXUE` prefix collision were never audited.
+4. **The scan sees 4,005 series; the manifest holds 138**; 265 traded series have no manifest
+   row. Filter to series *mmsell* has traded before treating that as the queue.
 5. **`markets` has not been written since 2026-06-08.** Do not build on that table.
+
+## Reuse, do not rebuild
+
+| thing | where |
+|---|---|
+| per-series edge, break-even, contests, worst3%, live flag | `scripts/mmsell_series_pnl.py` |
+| the decision ledger (state, reviewer, review date) | `kalshi_bot/registry/series_manifest.json` |
+| the entry gate a threshold would bind | `registry.admits()`, `mmsell_live_min_tier`, per-book `universe=` |
+| rules-vs-taxonomy verification | `scripts/series_rules_audit.py` |
+| the review queue, ranked by real exposure | `scripts/series_registry_review.py` |
+| settlement evidence gathering | `scripts/mmsell_taxonomy_audit.py` |
 
 ## The work, in order
 
-**Phase 1 — score the 138 grandfathered series.**
-Build `scripts/mmsell_series_scorecard.py` (ops-allowlisted, stdlib + psycopg, read-only).
-Emit every series with its component breakdown and total, sorted by score. Run it via the ops
-channel. **Do not gate anything yet.** Bring the operator the distribution and a proposed
-threshold justified by where the scores actually fall — not a round number picked in advance.
+**Phase 1 — score the 138.** Build `scripts/mmsell_series_scorecard.py` (ops-allowlisted,
+stdlib + psycopg, read-only). Emit every series with its components, its own-sample weight, and
+its total. **Gate nothing.** Bring the operator the score distribution and a threshold justified
+by where scores actually fall — including how many series the threshold would bar today and
+which ones.
 
-**Phase 2 — settle the mechanism-understood half.**
-Resolve problem (1) above. Whatever you decide, a score that can gate live money must not treat
-an unreviewed series as reviewed.
+**Phase 2 — settle the mechanism-understood component.** Resolve problem (1).
 
-**Phase 3 — wire the threshold to the gate.**
-Add the score and its verdict to the manifest row schema, and make `registry.admits()` able to
-require a minimum score. **This is a Platform Change** — it changes which series live mmsell
-books admit. Platform Change Review, and expect an epoch decision for any book whose universe
-moves. `LIVE_STRATEGIES` was empty as of 2026-09-06; check it again before assuming no live
-exposure.
+**Phase 3 — wire the threshold to the gate.** Add score + verdict to the manifest row schema;
+let `registry.admits()` require a minimum score. **Platform Change Review**, and expect an epoch
+decision for any book whose universe moves. Re-check `LIVE_STRATEGIES` (empty as of 2026-09-06)
+before assuming no live exposure.
 
-**Phase 4 — the grading plan for everything else.**
-Series with too little history to score are not failures, they are **uncollected**. Produce a
-plan that says: which series mmsell is already trading with no score, how many contests each
-needs before its shrunk edge means anything at `k`, and roughly how long that takes at current
-volume. Paper trades everything regardless — that is how history accumulates — so this is a
-waiting list, not a backlog of work.
+**Phase 4 — the collection plan for the rest.** For each mmsell-traded series below scoring
+weight, state how many contests it needs to detect a −6pp deviation and how long that takes at
+its current rate. Paper trades everything regardless — that is how the history accrues — so this
+is a waiting list, not a work backlog.
 
 ## Rules that bind this task
 
-- **Gates decide promotions, not P&L** (`CLAUDE.md`). A score is a *report* until Phase 3, and
-  even then the threshold is a governance bar, not a strategy.
-- **Never weaken a live safeguard.** The score may narrow what trades live; it must not widen it
-  without explicit operator confirmation.
-- Anything that changes `SERIES_TYPES`, metric definitions, fees, fills or execution is shared
-  platform semantics → **Platform Change Review**.
-- Problems belong in an **Experiment OS issue** (`docs/EXPERIMENT_OS_ISSUES.md`), not in prose.
+- **Gates decide promotions, not P&L.** A score is a report until Phase 3; even then the
+  threshold is a governance bar, not a strategy.
+- **Never weaken a live safeguard.** The score may narrow what trades live; widening needs
+  explicit operator confirmation.
+- Changes to `SERIES_TYPES`, metric definitions, fees, fills or execution are shared platform
+  semantics → **Platform Change Review**.
+- Problems belong in an **Experiment OS issue**, not prose.
 - The manifest moves **only by PR**. No script may write a review or a passing score.
 
 ## Context docs
 
-`docs/SERIES_REGISTRY.md` (the two ledgers, states, the two-part bar) ·
-`docs/SERIES_RULES_AUDIT.md` (the first full run and its limitations) ·
-`docs/MMSELL_UNIVERSE_REVIEW.md` (the measurement that motivated the bar) ·
-`docs/MMSELL_ROADMAP.md` §1 (the variance numbers) ·
-`docs/OPS_RUNBOOK.md` (ops channel, standing analyses) ·
-`docs/IDEA_MODEL_SCORECARD.md` — **read this one for calibration.** It is this repo's existing
-scoring ledger, for ideas rather than series, and it records a base rate worth knowing before you
-pick a threshold: **18 idea-model promotions → 0 currently-live paper books.** A scoring system
-here that passes most of what it scores is probably mis-calibrated.
+`docs/SERIES_REGISTRY.md` · `docs/SERIES_RULES_AUDIT.md` · `docs/MMSELL_UNIVERSE_REVIEW.md` ·
+`docs/MMSELL_ROADMAP.md` §1 (the variance numbers — note the scope correction above) ·
+`docs/OPS_RUNBOOK.md` ·
+`docs/IDEA_MODEL_SCORECARD.md` — **read for calibration.** This repo's existing scoring ledger
+records **18 idea-model promotions → 0 currently-live paper books**. A scoring system here that
+passes most of what it scores is probably mis-calibrated.
