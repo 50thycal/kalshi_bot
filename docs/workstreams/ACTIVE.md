@@ -55,7 +55,8 @@ The *reasons* behind the 2026-08-24 omissions stay in the prose section above an
 this list is the bare register, not the argument.
 
 - Turn the PERP-V1 perpetuals collector off — it is still running against a closed research
-  surface. Owned by **Live Ops**; parked here so closing `WS-010` did not delete it.
+  surface. Owned by **Live Ops**; parked here so closing `WS-010` did not delete it. Brief:
+  [`docs/handoffs/HANDOFF-perpv1-collector-shutdown.md`](../handoffs/HANDOFF-perpv1-collector-shutdown.md).
 - Decide whether PERP-V1 is registered retrospectively in Experiment OS, or stays
   documentation-only history. Owned by **Experiment Control Tower**; a `CLOSE_OUT_RETROSPECTIVE`
   question, not a Build OS one.
