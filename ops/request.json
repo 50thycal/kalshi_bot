@@ -1,1 +1,1 @@
-{"type":"script","id":"cc-audit3","name":"mmsell_contest_cap_audit","args":["--live","Emmsell10","--uncapped","mmsell10","--hours","1"]}
+{"type":"xos","id":"cc-enf1","command":"enforcement"}
