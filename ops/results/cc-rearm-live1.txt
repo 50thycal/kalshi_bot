@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=cc-rearm-live1
-# code 11b6de4d088eb474f77e5288456b4286f8bd4e91 · started 2026-09-07T00:03:50Z
-what                 k                              v                          
--------------------  -----------------------------  ---------------------------
-new_orders_first_at  -                              none                       
-funnel               2026-09-06 23:55:25.641214+00  E=- opened=38 contestcap=50
-
-(2 rows)
