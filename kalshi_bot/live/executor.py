@@ -1186,9 +1186,23 @@ class LiveExecutor:
                 self.summary.timed_out_canceled += 1
             except AuthError:
                 raise
-            except Exception:  # noqa: BLE001 — likely already filled/gone; next cycle resolves
-                logger.warning("live cancel failed", extra={"extra_fields": {
-                    "kalshi_order_id": row.kalshi_order_id}})
+            except Exception as exc:  # noqa: BLE001
+                # The error TEXT goes in the MESSAGE, not in `extra`. Railway's log endpoint
+                # returns only a log line's message and drops structured fields, so an error in
+                # `extra` is unreadable in production — the same trap already fixed for the 429
+                # counters, for the queue sampler, and for the drain path above, and the reason
+                # one Fmmsell10 order sat resting 11.8 h past its 4h timeout on 2026-09-07 with
+                # nobody able to say why (see docs/handoffs/HANDOFF-timeout-cancel-not-clearing.md).
+                #
+                # The old comment here read "likely already filled/gone; next cycle resolves".
+                # For a PERMANENTLY failing cancel it demonstrably does not resolve: the cancel
+                # and the status write share this `try`, so a raising cancel leaves the row
+                # `resting` and the next cycle retries it forever. Bounding that retry is a
+                # BEHAVIOURAL change and is deliberately NOT made here; this line only makes the
+                # cause readable, which is what any bound would have to be chosen against.
+                logger.warning(
+                    f"live cancel failed for {row.strategy} {row.market_ticker} "
+                    f"{row.kalshi_order_id}: {type(exc).__name__}: {str(exc)[:300]}")
 
         # Sample queue position for whatever is still resting, then drain any book that has
         # stood down. Order matters: sample BEFORE draining, or the drain destroys the last

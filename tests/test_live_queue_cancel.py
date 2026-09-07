@@ -384,6 +384,47 @@ def test_the_four_hour_timeout_still_applies_in_reconcile_before_the_rule(settin
     assert client.canceled == ["K-1"] and ex.summary.timed_out_canceled == 1
 
 
+def test_a_failing_timeout_cancel_names_its_error_in_the_log_MESSAGE(settings, caplog):
+    """The property that was missing when a live order rested 11.8 h past its 4h timeout.
+
+    Railway's log endpoint returns only a log line's MESSAGE and drops structured fields, so an
+    error put in `extra` is invisible in production. On 2026-09-07 that made a permanently
+    failing cancel undiagnosable: `WARN live cancel failed` fired every cycle for eleven hours
+    and named neither the exception class nor Kalshi's error body, so nothing could tell a 404
+    from a 400 from a transport error without a code change and a redeploy
+    (docs/handoffs/HANDOFF-timeout-cancel-not-clearing.md).
+
+    The drain path in this same file already learned this lesson; the timeout path had not.
+    """
+    _live(settings, mode="shadow")
+    client = _Client(_deep_batch("K-1"),
+                     cancel_exc=RuntimeError('Kalshi API error 404: {"code":"order_not_found"}'))
+    client.get_orders = lambda: {"orders": []}
+    client.get_fills = lambda: {"fills": []}
+    client.get_positions = lambda: {"market_positions": []}
+    client.get_settlements = lambda: {"settlements": []}
+    ex = LiveExecutor(client, settings, RiskManager(settings))
+    with db.session_scope() as session:
+        row = _resting(session, age_min=5 * 60)
+        with caplog.at_level("WARNING"):
+            ex.reconcile(session)
+
+        msgs = [r.getMessage() for r in caplog.records if "live cancel failed" in r.getMessage()]
+        assert len(msgs) == 1, "the timeout cancel failure is logged exactly once per cycle"
+        (msg,) = msgs
+        # The three things a diagnosis needs, all in the MESSAGE and not in `extra`.
+        assert "RuntimeError" in msg, "the exception CLASS discriminates transport from API error"
+        assert "order_not_found" in msg, "Kalshi's own error body is what names the cause"
+        assert "K-1" in msg and row.market_ticker in msg, "which order, on which market"
+
+        # Documented, NOT endorsed: a raising cancel shares its `try` with the status write, so
+        # the row stays `resting` and the next cycle retries it forever. Bounding that retry is a
+        # behavioural change to a live safeguard and is deliberately not made alongside this
+        # logging fix. A future bound must change THIS assertion on purpose.
+        assert row.status == "resting" and row.cancel_reason is None
+        assert ex.summary.timed_out_canceled == 0, "a failed cancel is never counted a success"
+
+
 def test_the_queue_step_cannot_take_the_cycle_down(settings, monkeypatch):
     """A failure inside the step is logged and swallowed; the rest of reconcile proceeds."""
     _live(settings, mode="shadow")
