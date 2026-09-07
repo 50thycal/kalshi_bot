@@ -119,6 +119,84 @@ the query's row count before fitting anything.
 before ~40.** That is the latency the threshold buys, and it is the figure to put to the
 operator — not `k` itself.
 
+### RECOMPUTED 2026-09-07 under the corrected contest key: **`k` = 30**, and the fit is far steadier
+
+The `k = 38` above was fitted with a contest key that **merged unrelated outcomes** — every
+market of a mention or city series sharing a date counted as one contest
+(`docs/MMSELL_CONTEST_KEY_SUBJECT_SPLIT.md`). Refitted on the same data with the corrected key,
+same method, same likelihood:
+
+| | series | contests | pooled loss% | MLE `p₀` | **`k`** |
+|---|---:|---:|---:|---:|---:|
+| shipped key | 539 | 8,988 | 22.20% | 19.7% | **35.7** |
+| **subject-split key** | 539 | **9,659** | **21.51%** | 19.2% | **29.8** |
+
+The old fit reproduces (35.7 here against 38 recorded — the tape has grown by 5 series and 101
+contests since), so this is a like-for-like comparison and not a method change.
+
+**The robustness ladder is the real result.** The upward drift that the original fit explained
+away was largely an artifact of the key:
+
+| fit restricted to | `k`, shipped key | `k`, subject-split key |
+|---|---:|---:|
+| all | 35.7 | **29.8** |
+| ≥3 contests | 38 | 30 |
+| ≥5 | 40 | 31 |
+| ≥10 | 48 | 34 |
+| ≥20 | 64 | 38 |
+
+Under the shipped key `k` nearly doubles across the cuts (36 → 64); under the corrected key it
+moves by a quarter (30 → 38) and every cut lands inside the old fit's *starting* value. The
+series the floors were dropping were disproportionately the ones the key had collapsed to one or
+two contests — so the cuts were removing real evidence and calling it thin.
+
+**Use `k = 30` (28–34).** It supersedes 38 for any score computed with `--split-subjects`.
+
+**`k` does not change how fast a bad series is caught.** In `gap/noise` the own-sample weight
+appears in both terms and cancels, so the separation column is identical under either constant:
+a series truly 10pp worse than its band reaches 2σ at **~68 contests** under `k=30` and ~70
+under `k=38`. What `k` sets is the *level* a thin series scores at, not the latency. Do not
+present a change in `k` to the operator as a change in the bar's speed.
+
+### What the corrected key does to the eight affected series
+
+Own-sample weight is `cnts / (cnts + k)`. At the recorded `k = 38`, for comparability with the
+table above:
+
+| series | trades | mkts | contests | own weight | contest loss% |
+|---|---:|---:|---:|---:|---:|
+| `KXWCMENTION` | 758 | 331 | 19 → **331** | 33% → **90%** | 21.1% → 18.7% |
+| `KXRAIN` | 1,111 | 221 | 27 → **221** | 42% → **85%** | 3.7% → 8.1% |
+| `KXTRUMPSAY` | 916 | 107 | 9 → **107** | 19% → **74%** | 11.1% → 5.6% |
+| `KXFEDMENTION` | 159 | 27 | 1 → **27** | 3% → **42%** | 0.0% → 3.7% |
+| `KXTRUMPSAYMONTH` | 117 | 18 | 2 → **18** | 5% → **32%** | **100.0% → 16.7%** |
+| `KXTRUMPSAYCOMPANY` | 58 | 12 | 2 → **12** | 5% → **24%** | 0.0% → 0.0% |
+| `KXWCATTEND` | 83 | 12 | 1 → **12** | 3% → **24%** | **100.0% → 16.7%** |
+| `KXWCFIRSTSONG` | 27 | 5 | 1 → **5** | 3% → **12%** | 0.0% → 0.0% |
+| **total** | 3,229 | 733 | **62 → 733** | | |
+
+Three things to take from it:
+
+1. **Three of these were being scored as noise and are not.** `KXWCMENTION`, `KXRAIN` and
+   `KXTRUMPSAY` cross from mostly-prior to mostly-own-evidence, and all three are past the
+   ~68-contest detection point. Under the old key none of them was.
+2. **Two read as total disasters and are ordinary.** `KXTRUMPSAYMONTH` and `KXWCATTEND` showed a
+   **100% contest loss rate** on one or two "contests"; honestly keyed they are 16.7% on
+   eighteen and twelve. A hard floor keyed on the old number would have barred two series for a
+   grouping defect.
+3. **It is not uniformly flattering.** `KXRAIN`'s contest loss rate roughly doubles (3.7% →
+   8.1%) — collapsing 221 markets into 27 buckets was hiding losses inside winning days. The
+   correction makes the estimate honest in both directions, which is the point.
+
+**Reproduce it with:**
+
+```
+{"type":"script","name":"mmsell_series_pnl","args":["--all-time","--split-subjects"]}
+```
+
+`own%` is now a printed column on that report, beside the edge it qualifies. The default key is
+unchanged, so a reader who does not pass the flag sees exactly what they saw before.
+
 ### Per-band `k`: rejected, use one global value
 
 Fitting per band gave 22 / 33 / 91 / 36 across the 8–10¢, 11–15¢, 16–25¢ and >25¢ bands, but
@@ -140,6 +218,9 @@ score     = 50 + 50 · (edge − band_expected_edge) / spread
 A series with 3 contests lands at ~50 whatever its record; a series with 300 is mostly its own.
 The hard floor applies on top: no recorded rules review caps the score below the threshold
 regardless of edge.
+
+Use `k = 30` when the score is computed under the corrected contest key — see the recompute
+above; `k = 38` is the shipped-key value and is retained here only so the two are comparable.
 
 `spread` is the between-series sd of edge within the band — the same quantity `k` is derived
 from, so the two are consistent by construction rather than tuned separately.

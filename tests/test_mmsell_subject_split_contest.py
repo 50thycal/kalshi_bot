@@ -124,3 +124,68 @@ def test_an_unknown_contestkey_is_rejected_not_ignored(settings):
 
     bad = Settings(_env_file=None, mmsell_variants="Xmmsell:lo=5,hi=10,contestkey=bogus")
     assert [b["tag"] for b in bad.mmsell_variant_list] == []
+
+
+# --- the ops runner's copy ---------------------------------------------------------------------
+
+def _pnl_script():
+    """The ops-channel report duplicates the split set because the runner has no package to
+    import from — the same constraint that duplicates `SERIES_TYPES` in the universe review."""
+    import importlib.util
+    import pathlib
+
+    path = pathlib.Path(__file__).resolve().parents[1] / "scripts" / "mmsell_series_pnl.py"
+    spec = importlib.util.spec_from_file_location("mmsell_series_pnl", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_the_ops_script_split_set_matches_the_workers():
+    """A drifted copy would report a series' own-sample weight under one key while the book
+    trades it under another — and the whole point of the column is to say how much of a score
+    is that series' own evidence."""
+    assert _pnl_script().SUBJECT_SPLIT_SERIES == SUBJECT_SPLIT_SERIES
+
+
+def test_the_ops_script_splits_the_same_tickers_the_worker_does():
+    """Not a set comparison: the two implementations differ (the worker groups sports across
+    series, the script never claims to), so this asserts they agree on the DECISION that a
+    ticker's last token is a subject — which is the only part the report reads."""
+    mod = _pnl_script()
+    for ticker in ("KXTRUMPSAY-26AUG03-AMER", "KXRAIN-26SEP06-TTN",
+                   "KXWCMENTION-26JUL03ARGCPV-BICY"):
+        assert mod.contest_of(ticker, split_subjects=True) == ticker.upper()
+        assert contest_key_of(ticker, split_subjects=True) == ticker.upper()
+    for ticker in ("KXNFLSPREAD-25AUG14ATLDET-DET3", "KXWTI-26SEP0414-T93.99"):
+        assert mod.contest_of(ticker, split_subjects=True) != ticker.upper()
+        assert contest_key_of(ticker, split_subjects=True) != ticker.upper()
+
+
+def test_the_default_key_is_byte_identical_in_the_report_too():
+    """The report's shipped meaning must not move under a reader who did not pass the flag."""
+    mod = _pnl_script()
+    for ticker in ("KXTRUMPSAY-26AUG03-AMER", "KXRAIN-26SEP06-TTN",
+                   "KXNFLSPREAD-25AUG14ATLDET-DET3", "KXPAYROLLS-26SEP"):
+        assert mod.contest_of(ticker) == mod.contest_of(ticker, split_subjects=False)
+    # And the default really is the OLD key, not the new one wearing the old name.
+    assert mod.contest_of("KXTRUMPSAY-26AUG03-AMER") == "KXTRUMPSAY:26AUG03"
+    assert mod.contest_of("KXPAYROLLS-26SEP") == "KXPAYROLLS:26SEP"
+
+
+def test_own_weight_is_the_fitted_constant_and_rises_with_evidence():
+    """`own%` is the scorecard component, not a display nicety: at the family MEDIAN of 3
+    contests it must read as almost entirely prior, or a thin series' edge gets read as its
+    own record — the exact error the pooling exists to prevent."""
+    mod = _pnl_script()
+    assert mod.POOLING_K_CONTESTS == 38
+
+    def weight(n_contests):
+        rows = [{"pnl_c": -1.0, "ticker": f"KXX-{i}", "contest": f"c{i}", "book": "b",
+                 "entry_c": 6.0, "live": False} for i in range(n_contests)]
+        return mod.summarize(rows)["own_weight"]
+
+    assert round(100 * weight(3)) == 7
+    assert round(100 * weight(38)) == 50
+    assert round(100 * weight(100)) == 72
+    assert weight(3) < weight(38) < weight(100) < 1.0
