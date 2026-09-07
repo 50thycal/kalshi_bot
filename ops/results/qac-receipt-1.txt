@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=qac-receipt-1
-# code a70cdad78c621b3ff5c5d9493b6e4a21bafc1c3c · started 2026-09-07T08:13:25Z
-command_id               action            status  actor        started_at                     completed_at                   err                                                                                                                       result
------------------------  ----------------  ------  -----------  -----------------------------  -----------------------------  ------------------------------------------------------------------------------------------------------------------------  ------
-qac-register-20260907-1  REGISTER_PACKAGE  FAILED  claude-code  2026-09-07 08:13:15.272051+00  2026-09-07 08:13:15.470973+00  DataError: (psycopg.errors.StringDataRightTruncation) value too long for type character varying(16) [SQL: INSERT INTO ex        
-
-(1 row)
