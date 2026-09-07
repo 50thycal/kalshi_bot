@@ -1,1 +1,1 @@
-{"type":"db","sql":"SELECT date_trunc('day',created_at)::date::text AS day, count(*) FILTER (WHERE cancel_reason='timeout') AS timeout_ok, count(*) FILTER (WHERE cancel_reason='drain_unconfirmed') AS drain_unconf, count(*) FILTER (WHERE status='resting') AS still_resting, count(*) AS total_orders FROM live_orders WHERE created_at > now() - interval '30 days' GROUP BY 1 ORDER BY 1 DESC","max_rows":40,"id":"lo-tc-trend-1"}
+{"type":"xos","command":"control-tower","id":"lo-tc-ct-1"}
