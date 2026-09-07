@@ -69,4 +69,9 @@ tested to stay that way.
 
 `Gmmsell2` is a **config default**; under `NEW_ONLY` a tag cannot trade until it is registered
 to an active deployment arm in Experiment OS, and production's `MMSELL_VARIANTS` env var
-overrides the code default. Both remain to be done after merge.
+overrides the code default. Both remain to be done after merge, and neither is a promotion.
+
+The exact shape of that job — why the new arm needs a **v2** of `mmsell-correlation-cap` rather
+than an added arm (arms are final on a frozen version) or an epoch cut (which re-registers the
+same arms), the `REGISTER_PACKAGE` envelope, the `MMSELL_VARIANTS` set, and the four checks that
+say it landed — is **`docs/handoffs/HANDOFF-gmmsell2-registration.md`**.
