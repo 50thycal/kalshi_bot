@@ -1,9 +1,9 @@
 # WS-015 — mmsell10 queue-aware cancellation: shadow instrument + pre-registered contract
 
-**Phase:** REVIEW
-**Status:** Blocked
+**Phase:** COMPLETE
+**Status:** Active
 **Created:** 2026-09-07
-**Updated:** 2026-09-07
+**Updated:** 2026-09-07 (registered; shadow running)
 **Build OS:** v0.12
 
 ## Goal
@@ -67,8 +67,8 @@ Experiment OS: mmsell10-queue-aware-cancel  v1 (frozen)  PROBE
 
 ## Open Decisions
 
-- **D1.** Register and start the shadow? Both are operator acts (`REGISTER_PACKAGE`, then
-  `LIVE_QUEUE_CANCEL_MODE=shadow`). Recommendation: yes, in that order, on the running canary.
+- **D1. RESOLVED 2026-09-07.** The operator authorized both acts; the package registered
+  (`qac-register-20260907-2`) and the shadow is running. No decision outstanding.
 - **D2.** Should the horizon of the rule be `min(4h, time to market close)`? ~40% of cancels are
   exchange-side at ~1.5 h (market close). Deferred to a later Version once the shadow shows how
   often a would-cancel is pre-empted by close; the remaining-timeout figure is on every row.
@@ -101,7 +101,8 @@ Experiment OS: mmsell10-queue-aware-cancel  v1 (frozen)  PROBE
       untouched, auditable reason + telemetry snapshot, 4 h timeout still applies, queue step
       fail-soft, unregistered tag refused at the write path and at the cancel path.
 - [x] Baseline/shadow report script allowlisted on the ops channel.
-- [ ] Operator registers the package and starts the shadow (out of this workstream's hands).
+- [x] Operator registered the package (`qac-register-20260907-2`, SUCCEEDED) and started the shadow
+      (`LIVE_QUEUE_CANCEL_MODE=shadow`); first decision rows land stamped with the probe arm's lineage.
 
 ## Build Card
 
@@ -114,12 +115,13 @@ PR reference — see Related PRs. Migration `a0bd7f9c48de` (`live_order_queue_de
 
 ## Review State
 
-**Verdict:** Not started
-**Reviewed head:** —
-**Reviewed PR:** —
-**Finalization:** —
+| PR | Verdict | Accepted head | Finalization |
+|---|---|---|---|
+| #364 | Owner-accepted | 4292de8fb7d132b6db52b3c9248015269aca0e34 | merged 2026-09-07 07:56Z |
+| #365 | Owner-accepted | b1e98a83f3ccad65013c654a6d61ddcc474a625c | merged 2026-09-07 11:28Z |
 
-Solo mode: owner-accepted at merge, never called reviewed.
+Solo mode: the owner accepted both at merge. No independent party reviewed either; that is
+recorded as acceptance, never as an approval (`DEC-011`).
 
 ## Related Decisions
 
@@ -136,5 +138,7 @@ None.
 
 ## Next Step
 
-Operator: merge, then send `REGISTER_PACKAGE mmsell10-queue-aware-cancel`, then set
-`LIVE_QUEUE_CANCEL_MODE=shadow` — the named external unblocker for this row.
+None.
+
+<!-- The build is finished and the instrument is running. What remains — evidence accrual and a
+gate verdict — is Experiment OS's, not Build OS's (`DEC-001`); this workstream holds no tail. -->

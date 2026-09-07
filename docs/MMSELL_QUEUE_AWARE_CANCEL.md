@@ -1,6 +1,8 @@
 # MMSELL10 — Queue-aware cancellation (`mmsell10-queue-aware-cancel`)
 
-**Status:** built and tested 2026-09-07. First production registration attempt (`qac-register-20260907-1`, 08:13:15Z) **FAILED** — see the incident note in §8 — and was fixed in a follow-up; registration is retried under a new command id. **Not running** either way: the worker setting `LIVE_QUEUE_CANCEL_MODE` defaults to `off`. Nothing in this document, its package or its code path has touched a live order.
+**Status:** **REGISTERED and RUNNING IN SHADOW** as of 2026-09-07. The experiment is at **PROBE** in Experiment OS (`qac-register-20260907-2`, 11:30:57Z; v1 frozen, pre-registration hash `084214fc…`), and the worker runs `LIVE_QUEUE_CANCEL_MODE=shadow` on the live book — it **records** every decision to `live_order_queue_decisions` and **cancels nothing**. The first registration attempt (`qac-register-20260907-1`, 08:13:15Z) FAILED; see the incident note in §8. No order has been cancelled by this code path, and none can be until a separate Version, risk envelope and operator authorization put a tag on an active LIVE treatment arm.
+
+Experiment OS is canonical for this experiment's state and gate verdicts (`DEC-001`) — read it with `xos show mmsell10-queue-aware-cancel`, not this line.
 
 Package: `kalshi_bot/experiment_os/queue_aware_cancel.py` · rule: `kalshi_bot/live/queue_cancel.py`
 · executor step: `LiveExecutor.evaluate_queue_cancellations` · audit table:
