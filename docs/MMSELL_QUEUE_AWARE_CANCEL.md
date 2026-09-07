@@ -120,6 +120,21 @@ was placed. A freed slot has a queue of candidates waiting for it. (Whether thos
 are as good as the ones already in the book is exactly the composition question the gates
 carry — see §7.)
 
+> **Correction, 2026-09-07 14:00Z — this evidence does not apply to the book the shadow
+> observes, and clause (d) of §7 was written as though it did.**
+>
+> Every row above is `Cmmsell10` / `Dmmsell10` — **paper** capacity-stage books. The shadow
+> instrument reads `Fmmsell10`, the **live** contest-cap canary, because queue telemetry
+> exists only on live resting orders. Measured directly from the shadow's own rows over its
+> first 2¼ hours: `Fmmsell10` sat at **11–13 open positions against a cap of 40**, and
+> `cap_bound` was **false on 100% of decision rows** (519 rows, 12 distinct orders). No
+> `gate:open_cap` refusal appears in the live logs at all.
+>
+> This is a scope error in the pre-registration, not a change in the world: the cap binds on
+> books that have no queue, and the queue exists on a book where the cap does not bind. The
+> consequence is stated in §7.
+
+
 ### The finding that cuts against the hypothesis — realized P&L by fill timing
 
 Settled realized ¢/contract for filled orders, by age at fill × depth at the last sample before
@@ -229,6 +244,16 @@ observation, and the report shows telemetry coverage beside every number.
 | `qac_would_cancel_later_fill_pct` | ≤ 15 | selective: the orders it would cancel rarely fill anyway |
 | `qac_forgone_cents_per_would_cancel` | ≤ 1.0 | cheap: settled profit of those later fills, spread over every would-cancel, ≤ 1¢ |
 | `qac_would_cancel_cap_bound_pct` | ≥ 50 | it fires where a slot has value |
+
+**Clause (d) will read 0 and this gate will therefore FAIL, whatever the rule's quality.** The
+observed book is not capacity-constrained (see the correction in §3 Q5). The gate is frozen and
+is **not** being re-read after seeing results — that is precisely what a pre-registration
+forbids. The verdict stands as recorded: *on `Fmmsell10`, the rule is evaluable and selective,
+and the capital it frees has no demonstrated value.* Clauses (a)–(c) — coverage, selectivity and
+forgone profit — are being measured validly and are the expensive part of the evidence; they
+transfer intact to a later Version that scopes the question to a book where a freed slot is
+worth something, or that reframes the value as capital-hours rather than slots. Either is a new
+question, so: a new Version, not an edit to this one.
 
 `shadow_kill` — fail **any**: forgone ≥ 3¢ per would-cancel (min evidence 40 would-cancels; the
 baseline's late fills earn ~7¢ each, so catching many of them is net negative before any capacity
