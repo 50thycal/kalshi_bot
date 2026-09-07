@@ -1,0 +1,49 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "ca5e101ef04586abcdfcff023c6170617bf5bce5",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-07T15:23:41Z",
+  "id": "lo-tc-batch-2",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 3819 bytes, sha256:29aa165a4dc8d460>",
+        "before": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>",
+        "requested": "<redacted 3819 bytes, sha256:29aa165a4dc8d460>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_ISSUE_COMMAND is empty \u2014 nothing to overwrite",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/lo-tc-batch-2.receipt.json",
+  "result_file": "ops/results/lo-tc-batch-2.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34138027016",
+  "service": "main",
+  "started_at": "2026-09-07T15:23:25Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
