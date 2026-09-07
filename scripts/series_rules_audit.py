@@ -103,7 +103,7 @@ def audit_series(series: str, recorded_mode: str, *, timeout: float,
     """
     out = {"series": series, "recorded": recorded_mode, "verdict": INSUFFICIENT,
            "implied": None, "why": "", "docs": 0, "markets": 0,
-           "source_vote": None, "rules_vote": None}
+           "source_vote": None, "rules_vote": None, "texts": []}
     try:
         ev = fetch_series_text(series, want=sample, timeout=timeout)
     except Exception as exc:  # noqa: BLE001 — one unreachable series must not end the audit
@@ -113,6 +113,12 @@ def audit_series(series: str, recorded_mode: str, *, timeout: float,
     docs = list(ev.get("docs") or [])
     out["docs"] = len(docs)
     out["markets"] = ev.get("unique_markets", 0)
+    # Keep the settlement language itself. Under an operator sign-off the human is the
+    # evidence, not the regex — so they have to be shown what Kalshi actually says, or they
+    # are approving this script's opinion, which is the thing a sign-off exists to replace.
+    out["texts"] = [{"title": (d.get("title") or "").strip(),
+                     "rules": " ".join((d.get("rules") or "").split()),
+                     "source": (d.get("source") or "").strip()} for d in docs]
     if not docs:
         out["why"] = "no rules text retrieved for this series"
         return out
@@ -201,6 +207,36 @@ def report(results: list[dict]) -> None:
                   f"{(r['implied'] or '-'):<10} {r['docs']:>4} {r['markets']:>5}  {r['why']}")
 
 
+def report_evidence(results: list[dict], chars: int) -> None:
+    """The batch a human signs off on: Kalshi's own settlement language, per series.
+
+    Deduplicated documents are shown, not one per market, and the recorded/implied modes sit
+    beside the text so a reader can disagree with the machine. A reviewer who only ever sees a
+    verdict is rubber-stamping the regex; that is precisely what an operator sign-off is meant
+    to replace, so this view exists to make the sign-off real."""
+    print("\n# EVIDENCE — read the settlement language, then approve or reject per series.")
+    print("# Your approval is the review. The verdict below is this script's opinion and you")
+    print("# are free to overrule it in either direction.")
+    for r in results:
+        print(f"\n{'=' * 78}")
+        print(f"{r['series']}   recorded={r['recorded']}  implied={r['implied'] or '-'}  "
+              f"verdict={r['verdict']}")
+        print(f"  ({r['docs']} distinct rule doc(s) over {r['markets']} markets) {r['why']}")
+        if not r.get("texts"):
+            print("  (no rules text retrieved)")
+            continue
+        for i, d in enumerate(r["texts"][:4], 1):
+            print(f"  --- doc {i} ---")
+            if d["title"]:
+                print(f"  title:  {d['title'][:chars]}")
+            if d["source"]:
+                print(f"  source: {d['source'][:chars]}")
+            if d["rules"]:
+                print(f"  rules:  {d['rules'][:chars]}")
+        if len(r["texts"]) > 4:
+            print(f"  ... {len(r['texts']) - 4} more distinct doc(s) not shown")
+
+
 def emit_patch(results: list[dict], reviewed_by: str) -> None:
     """The manifest edit a human can apply for the CONFIRMS rows, printed as JSON.
 
@@ -224,6 +260,15 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Verify recorded settlement modes against Kalshi")
     ap.add_argument("--series", default=None,
                     help="audit one series only (default: every graduated series)")
+    ap.add_argument("--only", default=None,
+                    help="comma-separated series to audit, in the order given. Use this to feed "
+                         "a batch ranked by real exposure from series_registry_review, so the "
+                         "series risking money are signed off first")
+    ap.add_argument("--evidence", action="store_true",
+                    help="print Kalshi's settlement language per series — the view an operator "
+                         "sign-off is actually made against")
+    ap.add_argument("--chars", type=int, default=600,
+                    help="characters of each rules field to show under --evidence")
     ap.add_argument("--top", type=int, default=None,
                     help="audit at most this many series (manifest order)")
     ap.add_argument("--sample", type=int, default=SAMPLE_MARKETS,
@@ -236,7 +281,9 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     manifest = load_manifest()
-    if args.series:
+    if args.only:
+        wanted = [s.strip().upper() for s in args.only.split(",") if s.strip()]
+    elif args.series:
         wanted = [args.series.upper()]
     else:
         wanted = [s for s, r in sorted(manifest.items())
@@ -250,6 +297,8 @@ def main(argv: list[str] | None = None) -> int:
         results.append(audit_series(series, mode, timeout=args.timeout, sample=args.sample))
 
     report(results)
+    if args.evidence:
+        report_evidence(results, args.chars)
     if args.emit_patch:
         emit_patch(results, args.reviewed_by)
     return 0
