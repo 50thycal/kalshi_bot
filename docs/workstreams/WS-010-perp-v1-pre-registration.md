@@ -431,7 +431,9 @@ value it already held. The read-before-write step is what prevented that (`DEC-0
 **Why the paperwork said otherwise.** The `Next Step` list above was written on 2026-09-06,
 during the Build OS v0.12 migration, from the workstream's pre-close prose — four days after
 the act it was describing, and contradicting an ops receipt this same workstream had produced.
-`ACTIVE.md` → *Parked* then copied it, and PR #359 wrote a 123-line handoff on top of the copy.
+`ACTIVE.md` → *Parked* then copied it, and PR #359 wrote a 123-line handoff on top of the copy
+([`HANDOFF-perpv1-collector-shutdown.md`](../handoffs/HANDOFF-perpv1-collector-shutdown.md), kept
+and marked closed, because what it looks like when it happens is the reusable part).
 Three artifacts, one unverified claim, no second source: the failure mode `DEC-001` names.
 The tape's own numbers were also misread — ~29.5k rows **in total** over three days became
 "~26k rows/day", so the standing spend was overstated roughly threefold.

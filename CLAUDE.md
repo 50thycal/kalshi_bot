@@ -191,8 +191,8 @@ Full mechanism, standing analysis commands and gotchas: **`docs/OPS_RUNBOOK.md`*
 - Ops + standing analyses → `docs/OPS_RUNBOOK.md`
 - Platform change protocol → `docs/EXPERIMENT_OS_PLATFORM_IMPACT.md`
 - Investigation / issue workflow → `docs/EXPERIMENT_OS_ISSUES.md`
-- Shared skills → `.claude/skills/` (research: `kalshi-idea-model`,
-  `kalshi-probe-builder`, `kalshi-strategy`; evo: `evo-ticket-triage`;
+- Shared skills → `.claude/skills/` (process: `finite-work-handoff`; research:
+  `kalshi-idea-model`, `kalshi-probe-builder`, `kalshi-strategy`; evo: `evo-ticket-triage`;
   live canary: `live-paper-parallel`; evo readability: `bot-readable-strategy`)
 - Evo agent fleet → `docs/EVOLUTIONARY_AGENT_SYSTEM.md`, `docs/EVO_RUNBOOK.md`
 - Evo historical search (agent capability, replay-proven) → `docs/EVO_SEARCH_CAPABILITY.md`

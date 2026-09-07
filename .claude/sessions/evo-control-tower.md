@@ -56,6 +56,10 @@ Nothing.
 Evo config, budgets, agent state, tickets.
 ## SHARED SKILLS
 - `evo_digest`, `evo_tree`, evo log reads via the ops channel
+- `finite-work-handoff` — the cross-session procedure (mission contract, the four
+  dispositions, the one terminal owner result). Read it for the **read-only checkpoint
+  rule**: hand the update to the owning role as an exact repository-update block, and say
+  the state is not yet persisted. It grants this role no write.
 
 ## CLEANUP / SESSION END
 - Reset the ops channel to `{"type": "noop"}` if you drove it.
