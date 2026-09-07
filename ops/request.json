@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT count(*) AS rows, count(DISTINCT kalshi_order_id) AS orders, count(*) FILTER (WHERE experiment_deployment_arm_id IS NOT NULL) AS stamped, count(*) FILTER (WHERE acted) AS acted, count(*) FILTER (WHERE telemetry_status='observed') AS observed, string_agg(DISTINCT decision, ',') AS decisions, string_agg(DISTINCT mode, ',') AS modes, string_agg(DISTINCT strategy, ',') AS tags, min(decided_at)::text AS first_at, max(decided_at)::text AS last_at FROM live_order_queue_decisions", "max_rows": 10, "id": "qac-rows-1"}
+{"type":"noop"}
