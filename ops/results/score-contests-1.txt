@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=score-contests-1
-# code e7d324fb46929135bf83140fe3dbf9056619bc23 · started 2026-09-07T13:33:02Z
-series_total  ge300  ge100  ge50  ge20  lt20  median  max
-------------  -----  -----  ----  ----  ----  ------  ---
-534           8      12     28    69    465   3.0     635
-
-(1 row)
