@@ -1,1 +1,1 @@
-{"type":"xos","command":"control-tower","id":"lo-tc-ct-1"}
+{"type":"xos","command":"issue-show","args":["XOS-000014"],"id":"lo-tc-xos14"}
