@@ -316,9 +316,9 @@ carries a structured entry is an operator/Control Tower call, deliberately left 
 
 ## Implementation State
 
-Slices 1–3 built (#275, #277, #280, #284). **The tape is live.** `PERPS_COLLECTOR_ENABLED=true`
-on the main worker since 2026-08-30 12:35Z. First measured hour: 26 cycles, 546 market
-snapshots, 312 order books, **0 funding rows**, 0 errors.
+Slices 1–3 built (#275, #277, #280, #284). The tape ran from **2026-08-30 12:35Z to
+2026-09-02 13:28Z** and is **stopped** — see *The collector is off* below. First measured
+hour: 26 cycles, 546 market snapshots, 312 order books, **0 funding rows**, 0 errors.
 
 Two measurements from that hour change what the tape can answer:
 
@@ -395,11 +395,48 @@ This PR.
 **None inside this workstream.** It is closed. Three things leave it, each owned elsewhere;
 the first and third are registered in `ACTIVE.md` → *Parked* so they survive this closure:
 
-1. **Turn the collector off, or decide to keep paying for it.** `PERPS_COLLECTOR_ENABLED`
-   is still `true` on the main worker and the tape is still accumulating at ~26k rows/day
-   against three closed arms. Turning it off is an `env` write (Live Ops). Keeping it is
-   defensible only if a maker variant is actually intended.
+1. ~~**Turn the collector off, or decide to keep paying for it.**~~ **Done — it was already
+   done when this line was written.** See *The collector is off* below. Nothing leaves the
+   workstream here. Keeping it would have been defensible only if a maker variant were
+   actually intended; nobody has said so, and that decision stays with the operator.
 2. **The coverage finding outlives the experiment** (D5): nothing sharing the worker's scan
    loop can meet an 80% coverage floor. Any future high-cadence research inherits it.
 3. **Retrospective XOS registration**, if wanted — Control Tower's call, not this
-   workstream's.
+   workstream's. Still open, still Control Tower's; `XOS-000017` is the issue.
+
+## The collector is off
+
+**Closing act, recorded 2026-09-07 by a Live Ops session. This does not reopen the
+workstream and changes neither its phase nor its status.**
+
+`PERPS_COLLECTOR_ENABLED=false` on the main worker, and the tape has been stopped since
+**2026-09-02 13:28Z**. It was turned off by this workstream's own closing session, minutes
+after Probe 2's verdicts, and confirmed stopped five minutes later.
+
+Verified 2026-09-07 through the ops channel, not asserted:
+
+| What | Evidence |
+| --- | --- |
+| The variable | `env` read `lo359-env-read-1` — `PERPS_COLLECTOR_ENABLED=false`, explicitly set, not defaulted |
+| The tape | `db` read `lo359-tape-2` — last write **2026-09-02 13:28:16Z** across all four tables; **0 rows in the last 24 h**; 1,404 cycles, 29,484 market snapshots, 16,848 order books, 0 funding rows, total |
+| The act | `ops` commit `1c474821`, request `perps-off-issue-1`, 2026-09-02 13:28:26Z — the same envelope that filed `XOS-000017` |
+| The confirmation | `ops` commit `614c200c`, request `perp-stopped-1`, 2026-09-02 13:33:37Z |
+| The worker | `doctor` `lo359-doctor-1` — `main` deployment `130961a5` SUCCESS, `KILL_SWITCH=false`, `LIVE_ENABLED=true`, 0 ERROR+ events in 60 m |
+
+**No production write was made, and no redeploy was caused.** Setting `PERPS_COLLECTOR_ENABLED`
+redeploys the worker the live book runs on (`scripts/railway_env.py`), so a session that had
+trusted the paperwork would have interrupted a real-money process to set a variable to the
+value it already held. The read-before-write step is what prevented that (`DEC-009`).
+
+**Why the paperwork said otherwise.** The `Next Step` list above was written on 2026-09-06,
+during the Build OS v0.12 migration, from the workstream's pre-close prose — four days after
+the act it was describing, and contradicting an ops receipt this same workstream had produced.
+`ACTIVE.md` → *Parked* then copied it, and PR #359 wrote a 123-line handoff on top of the copy.
+Three artifacts, one unverified claim, no second source: the failure mode `DEC-001` names.
+The tape's own numbers were also misread — ~29.5k rows **in total** over three days became
+"~26k rows/day", so the standing spend was overstated roughly threefold.
+
+Nothing here is a runtime defect and no XOS issue is opened for it. The tape (29,484 market
+snapshots) is retained deliberately: `D5` — that nothing sharing the worker's scan loop can
+meet an 80% coverage floor — is inherited by any future high-cadence research, and deleting
+the evidence for it is irreversible and unasked-for.
