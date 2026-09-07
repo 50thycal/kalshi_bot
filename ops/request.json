@@ -1,1 +1,1 @@
-{"type":"logs","id":"cc-g2-logs","lines":80}
+{"type": "env", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\":\"recut-contestcap-epoch2-a\",\"action\":\"ARM_CANARY\",\"actor\":\"cal\",\"actor_role\":\"LIVE_OPS\",\"payload\":{\"package\":\"mmsell-contestcap-epoch2\",\"approved_by\":\"50cal\"},\"schema_version\":1}"}, "id": "cc-activate-g2b"}
