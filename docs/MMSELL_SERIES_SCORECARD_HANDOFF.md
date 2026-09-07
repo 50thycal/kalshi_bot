@@ -76,8 +76,57 @@ loss_hat(series) = (own_losses + k · prior_rate) / (own_contests + k)
 edge(series)     = be%(series, from its own realized prices) − loss_hat(series)
 ```
 
-`k` is the pooling strength in units of contests; derive it from the between-series variance
-within a band, do not pick it. Report what each of the 138 scores at the chosen `k`.
+### `k` is fitted: **38 contests** (Phase 1a, done 2026-09-07)
+
+Not picked. Maximum-likelihood beta-binomial over all **534 mmsell series / 8,887 contests**,
+where a contest counts as a loss if its net P&L is negative. Pooled contest loss rate
+**p₀ = 22.2%**. Note the unit: this is a **contest-level** rate, not the 9.87% per-trade rate —
+they are different denominators and must not be mixed.
+
+**Stable under the obvious robustness check:**
+
+| fit restricted to | series | contests | fitted `k` |
+|---|---:|---:|---:|
+| all | 534 | 8,887 | **38** |
+| ≥3 contests | 282 | 8,571 | 39 |
+| ≥5 | 218 | 8,356 | 42 |
+| ≥10 | 147 | 7,876 | 47 |
+| ≥20 | 69 | 6,765 | 61 |
+
+The upward drift is expected — dropping thin series removes exactly the rows that pull toward
+the prior. **Use `k = 38–45`.** Anything in that range behaves the same; do not tune it further
+without new data.
+
+**Trap that materially changed the answer.** A first pass parsed the query output on whitespace
+and silently dropped every series whose `avg_loss` was NULL — that is, **every series with zero
+losses, 281 of 534.** Those are precisely the good series, and dropping them fitted `k = 80`,
+more than double the truth. Parse by column position, and check that the series count matches
+the query's row count before fitting anything.
+
+### What `k = 38` means as a decision
+
+**A series truly 10pp worse than its band:**
+
+| its contests | own signal kept | apparent gap | noise (1σ) | separation |
+|---:|---:|---:|---:|---:|
+| 20 | 34% | 3.4pp | 3.2pp | 1.1σ |
+| 38 | 50% | 5.0pp | 3.4pp | 1.5σ |
+| **75** | 66% | 6.6pp | 3.2pp | **2.1σ** |
+| 100 | 72% | 7.2pp | 3.0pp | 2.4σ |
+| 200 | 84% | 8.4pp | 2.5pp | 3.4σ |
+
+**So a badly negative series is caught at roughly 75–100 contests, and is only suggestive
+before ~40.** That is the latency the threshold buys, and it is the figure to put to the
+operator — not `k` itself.
+
+### Per-band `k`: rejected, use one global value
+
+Fitting per band gave 22 / 33 / 91 / 36 across the 8–10¢, 11–15¢, 16–25¢ and >25¢ bands, but
+those fits are not trustworthy: a series is assigned to a band by its **average** entry price
+across all its trades, which is a poor proxy when a series is traded across bands by different
+books. Under that binning the ≤7¢ band holds only 51 contests — against 3,649 when the same
+data is binned per *trade* — so most per-band fits rest on too little. **One global `k`.**
+Revisit only if series are assigned to bands per-trade rather than per-series.
 
 ### The score, concretely
 
