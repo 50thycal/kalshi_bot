@@ -1,1 +1,1 @@
-{"type":"xos","id":"cc-g2-verify1","command":"enforcement"}
+{"type": "db", "id": "cc-g2-receipt", "sql": "SELECT 'receipt' AS what, command_id||' '||action||' '||status AS k, to_char(started_at,'HH24:MI:SS')||' :: '||COALESCE(left(error,160), left(result_json::text,300),'-') AS v FROM experiment_os_experiment_commands ORDER BY started_at DESC LIMIT 3"}
