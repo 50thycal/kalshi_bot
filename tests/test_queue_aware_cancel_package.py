@@ -310,3 +310,61 @@ def test_the_kill_gate_fails_when_forgone_profit_is_large(registered, xos_sessio
     # A promotion gate never FAILs on an unmet pass clause — it HOLDs; the kill is the FAIL.
     promo = evaluator.evaluate_gate(xos_session, gates[pkg.PROMOTION_GATE_KEY], window_end=end)
     assert promo.verdict == "HOLD" and "qac_forgone_cents_per_would_cancel" in promo.explanation
+
+
+# ===========================================================================
+# 4. The SQLite/Postgres divergence that refused the first real registration
+# ===========================================================================
+
+
+def test_every_written_string_fits_its_declared_column_length(registered, xos_session):
+    """SQLite ignores VARCHAR limits. Postgres does not.
+
+    Production refused this package's FIRST registration
+    (`qac-register-20260907-1`, 2026-09-07T08:13:15Z) with
+    `StringDataRightTruncation`: `execution_style` is a vocabulary column at
+    VARCHAR(16) and the package wrote a 54-character sentence into it. Every
+    SQLite test above passed while the real database rejected the write, so no
+    assertion about the package's own values could have caught it — only one
+    about the values against the SCHEMA can.
+
+    So this walks every row the registration actually created and checks each
+    String column against its declared length. It is deliberately generic: it
+    covers the fields this package does not name today and the ones a later
+    Version adds, not just the one that failed.
+    """
+    from sqlalchemy import String
+
+    from kalshi_bot.experiment_os import models as xm
+
+    checked, offenders = 0, []
+    for mapper in xm.Base.registry.mappers:
+        cls = mapper.class_
+        if not cls.__module__.endswith("experiment_os.models"):
+            continue
+        limits = {
+            c.key: c.type.length
+            for c in mapper.columns
+            if isinstance(c.type, String) and c.type.length
+        }
+        if not limits:
+            continue
+        for row in xos_session.scalars(select(cls)).all():
+            for field, limit in limits.items():
+                value = getattr(row, field, None)
+                if not isinstance(value, str):
+                    continue
+                checked += 1
+                if len(value) > limit:
+                    offenders.append(
+                        f"{cls.__name__}.{field}: {len(value)} chars > VARCHAR({limit}) "
+                        f"— {value[:40]!r}"
+                    )
+    assert checked, "no string values inspected — the walk found nothing to check"
+    assert not offenders, "values Postgres would refuse:\n  " + "\n  ".join(offenders)
+
+
+def test_execution_style_is_the_vocabulary_not_prose(registered, xos_session):
+    """The specific field that failed, pinned to the documented vocabulary."""
+    _exp, ver = _version(xos_session)
+    assert ver.execution_style == "maker"
