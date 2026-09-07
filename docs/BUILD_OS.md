@@ -230,6 +230,22 @@ Marked as such so a future upgrade can tell a deliberate local rule from stalene
   this names the repository's specific tripwires rather than relying on judgment at the moment
   judgment is worst.
 
+## What this project deliberately does not take
+
+Recorded so a later compatibility check can tell a considered omission from staleness. Each
+extends `DEC-011`'s *what was deliberately not taken* rather than reopening it.
+
+| Not taken | Why | Revisit if |
+|---|---|---|
+| **The Design Room** (canonical adoption step 3) — one ChatGPT Project per repository, seeded with `templates/CHATGPT_PROJECT_INSTRUCTIONS.template.md`, where design conversations happen | Design intent here arrives through the **session-role router**, which already establishes what a session may write before it writes anything. A second front door would duplicate that, and the roles carry constraints — Experiment OS authority, the real-money invariants — a generic Design Room does not know about | Design work starts arriving without a role behind it, or design conversations need a home that is not a coding session |
+| **`OWNER_PLAN.template.md`** and the owner-approval flow (v0.6) | Same reason: the plan is an approval surface the role router already provides | As above |
+| **`REVIEW_SUMMARY.template.md`** (canonical adoption step 4) | `solo` mode has no independent reviewer, so nothing would ever write one. Vendoring it would advertise a step this project cannot perform — the inert-gate failure `DEC-011` exists to stop | The project moves to `reviewed`, in which case take it with the mode change |
+| **CI or tooling over framework artifacts** | Build OS ships none deliberately; the authority boundary is enforced by discipline. `DEC-001` records the real revisit condition — a board a month without an update should be deleted rather than left to mislead | Never, on current reasoning |
+
+The pattern in the first three is one decision, not three: **this repository replaced the
+owner-approval surface with the session-role system**, and the artifacts that serve that
+surface are therefore surplus rather than skipped.
+
 ## Anti-patterns
 
 | Anti-pattern | Why it hurts here |
