@@ -53,6 +53,10 @@ When no unmapped legacy remains and STRICT is on, delete this playbook and drop
 it from the router. Git history keeps the procedure.
 ## SHARED SKILLS
 - the importer + `migration_report` coverage read
+- `finite-work-handoff` — the cross-session procedure: the mission contract, the four
+  dispositions for an out-of-mission finding (`FIX NOW` / `PARK` / `DISCARD` /
+  `OWNER DECISION`), and the one terminal owner result. It never overrides this role's
+  write boundary.
 
 ## CLEANUP / SESSION END
 - Reset the ops channel to `{"type": "noop"}` if you drove it.

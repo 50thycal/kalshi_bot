@@ -106,6 +106,10 @@ Experiment lifecycle state, gates, or pre-registered contracts. Never expand
 real-money exposure without explicit operator confirmation.
 ## SHARED SKILLS
 - ops channel `logs` / `env` / `weather_digest` / `mmsell_live` / `live_paper_parity`
+- `finite-work-handoff` — the cross-session procedure: the mission contract, the four
+  dispositions for an out-of-mission finding (`FIX NOW` / `PARK` / `DISCARD` /
+  `OWNER DECISION`), and the one terminal owner result. It never overrides this role's
+  write boundary.
 
 ## CLEANUP / SESSION END
 - Reset the ops channel to `{"type": "noop"}` if you drove it.
