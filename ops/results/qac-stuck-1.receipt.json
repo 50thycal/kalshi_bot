@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "303664b770e94c90a3bda34a26246a75c8189f14",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-07T13:22:42Z",
+  "id": "qac-stuck-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/qac-stuck-1.receipt.json",
+  "result_file": "ops/results/qac-stuck-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34127040349",
+  "service": null,
+  "started_at": "2026-09-07T13:22:41Z",
+  "targets": [],
+  "type": "db"
+}
