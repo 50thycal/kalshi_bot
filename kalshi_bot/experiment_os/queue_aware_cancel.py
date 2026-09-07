@@ -258,7 +258,12 @@ def register(
             "cancel is RECORDED, never sent."
         ),
         sizing_rule="unchanged — one contract per order; the rule never touches size or price",
-        execution_style="maker (unchanged); shadow instrument over the live book",
+        # `execution_style` is a VOCABULARY column (maker|taker|mixed) at
+        # VARCHAR(16), not prose. The first production registration was refused
+        # with StringDataRightTruncation because this field carried a sentence;
+        # the shadow-instrument nuance belongs in `exit_rule` and the module
+        # docstring, which already carry it.
+        execution_style="maker",
         independent_variable=(
             "whether the queue-aware cancellation rule is applied (shadow: would-apply) "
             "versus the plain 4h timeout"

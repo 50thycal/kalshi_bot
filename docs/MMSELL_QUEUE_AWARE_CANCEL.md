@@ -1,9 +1,6 @@
 # MMSELL10 — Queue-aware cancellation (`mmsell10-queue-aware-cancel`)
 
-**Status:** built and tested 2026-09-07; **not yet registered** in Experiment OS (an operator
-sends `REGISTER_PACKAGE mmsell10-queue-aware-cancel`), **not running** (the worker setting
-`LIVE_QUEUE_CANCEL_MODE` defaults to `off`). Nothing in this document, its package or its code
-path has touched a live order.
+**Status:** built and tested 2026-09-07. First production registration attempt (`qac-register-20260907-1`, 08:13:15Z) **FAILED** — see the incident note in §8 — and was fixed in a follow-up; registration is retried under a new command id. **Not running** either way: the worker setting `LIVE_QUEUE_CANCEL_MODE` defaults to `off`. Nothing in this document, its package or its code path has touched a live order.
 
 Package: `kalshi_bot/experiment_os/queue_aware_cancel.py` · rule: `kalshi_bot/live/queue_cancel.py`
 · executor step: `LiveExecutor.evaluate_queue_cancellations` · audit table:
@@ -262,6 +259,31 @@ Nothing here expands exposure; each step is still a deliberate act.
 
 Order of registration vs. shadow start matters only for stamping: rows written before
 registration carry no lineage and no gate can read them (the report flags them).
+
+### Incident — the first registration was refused by Postgres (2026-09-07)
+
+`qac-register-20260907-1` returned **FAILED**:
+
+```
+DataError: (psycopg.errors.StringDataRightTruncation)
+value too long for type character varying(16)
+```
+
+`ExperimentVersion.execution_style` is a **vocabulary** column (`maker|taker|mixed`) at
+`VARCHAR(16)`; the package wrote a 54-character sentence into it. Nothing was registered —
+the whole transaction rolled back, so there is no partial experiment to clean up, and the
+FAILED receipt is the durable record.
+
+**Why the tests missed it.** They run on SQLite, which ignores `VARCHAR` limits entirely;
+Postgres enforces them. Every assertion was about the package's own values, and none about
+those values *against the schema*. The fix is therefore two things, not one: the field now
+carries `maker`, and `test_every_written_string_fits_its_declared_column_length` walks every
+row the registration creates and checks each string against its declared column length —
+generic, so it also covers the fields this Version does not name and the ones a later Version
+adds. Reintroducing the old value makes that test fail with the production error.
+
+Retry uses a **new command id**: receipts are exactly-once by `command_id`, so re-sending the
+failed one executes nothing.
 
 ## 9. What could affect live orders
 
