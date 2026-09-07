@@ -1,9 +1,0 @@
-# latest deployment f7b5215e-8487-4737-a26e-bcafb6893b1c (status=SUCCESS, created=2026-09-07T15:26:52.574Z)
-# ops request [READ]
-# type=logs  service=main  id=lo-tc-blast-1
-# code ca5e101ef04586abcdfcff023c6170617bf5bce5 · started 2026-09-07T15:28:04Z
-# target service: main
-2026-09-07T15:27:58.284242313Z WARN  live cancel failed for Fmmsell10 KXBTCD-26SEP1117-T85999.99 01a0799b-8b40-7b41-b051-7363555c04aa: KalshiAPIError: Kalshi API error 404 on /trade-api/v2/portfolio/events/orders/01a0799b-8b40-7b41-b051-7363555c04aa: {"error":{"code":"not_found","message":"not found"}}
-2026-09-07T15:27:58.284245113Z WARN  live cancel failed for Fmmsell10 KXMLBKS-26SEP071710WSHSD-WSHJIRVIN27-8 01a07b9b-d3c8-7cbb-826b-639b83bc3ddc: KalshiAPIError: Kalshi API error 404 on /trade-api/v2/portfolio/events/orders/01a07b9b-d3c8-7cbb-826b-639b83bc3ddc: {"error":{"code":"not_found","message":"not found"}}
-2026-09-07T15:27:59.227051909Z WARN  live cancel failed for Fmmsell10 KXBTCD-26SEP1117-T85999.99 01a0799b-8b40-7b41-b051-7363555c04aa: KalshiAPIError: Kalshi API error 404 on /trade-api/v2/portfolio/events/orders/01a0799b-8b40-7b41-b051-7363555c04aa: {"error":{"code":"not_found","message":"not found"}}
-2026-09-07T15:27:59.258661648Z WARN  live cancel failed for Fmmsell10 KXMLBKS-26SEP071710WSHSD-WSHJIRVIN27-8 01a07b9b-d3c8-7cbb-826b-639b83bc3ddc: KalshiAPIError: Kalshi API error 404 on /trade-api/v2/portfolio/events/orders/01a07b9b-d3c8-7cbb-826b-639b83bc3ddc: {"error":{"code":"not_found","message":"not found"}}
