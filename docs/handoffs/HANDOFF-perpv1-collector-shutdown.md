@@ -1,13 +1,35 @@
 # Handoff — turn the PERP-V1 tape collector off
 
+> # ⛔ CLOSED — DO NOT ACT ON THIS BRIEF
+>
+> **The collector was already off when this was written.** `PERPS_COLLECTOR_ENABLED=false` on
+> the main worker since **2026-09-02 13:28:26Z**, turned off by `WS-010`'s own closing session
+> and confirmed stopped five minutes later. A Live Ops session ran the brief on 2026-09-07,
+> found that at step 1, and correctly made no write. The parked line is gone from
+> `ACTIVE.md`; there is no work here.
+>
+> **The record, with the evidence:**
+> [`WS-010` § *The collector is off*](../workstreams/WS-010-perp-v1-pre-registration.md#the-collector-is-off).
+>
+> This file is kept only because *how the mistake happened* is worth reading: everything below
+> the line was written from a workstream's `Next Step` prose that contradicted an ops receipt
+> the same workstream had produced four days earlier, and nothing between the two re-checked
+> production. `DEC-001` names that failure mode; this is what it looks like at 123 lines.
+> **Read what follows as a case study, never as instructions.** The runtime facts in it are
+> wrong — including "still `true`" and "~26k rows/day", which was really ~29.5k rows in total.
+
 **From:** kalshi_bot, task-specific session, 2026-09-06 (the Build OS v0.12 migration, PR #358)
-**To:** a **Live Ops** session
-**Status:** nothing done. This is the brief, not the work.
-**Board state:** parked, in `docs/workstreams/ACTIVE.md` → *Parked*. **Not scheduled.**
+**To:** a **Live Ops** session — *picked up and closed 2026-09-07, no action needed*
+**Status:** ~~nothing done. This is the brief, not the work.~~ **Closed. The work was already
+done before this was written.**
+**Board state:** ~~parked~~ **removed from the parking lot 2026-09-07.**
 
 ---
 
 ## Read this first
+
+*Superseded by the banner above — the item is closed and this section's instruction to seek
+the owner's promotion no longer applies to anything. Retained as written.*
 
 This handoff **authorizes nothing**. The item is in the parking lot, and Build OS v0.12 is
 explicit that nothing there is work until the **owner promotes it** — no agent starts it
