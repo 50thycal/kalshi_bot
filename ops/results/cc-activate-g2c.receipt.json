@@ -3,11 +3,17 @@
   "class": "MUTATING",
   "code_sha": "1bdfc2b5bd000431c4b4055c3f1b1d65ecb7714b",
   "code_source": "default-branch",
-  "exit_status": 1,
-  "finished_at": "2026-09-07T01:57:32Z",
-  "id": "cc-activate-g2b",
+  "exit_status": 0,
+  "finished_at": "2026-09-07T02:01:06Z",
+  "id": "cc-activate-g2c",
   "mutation": {
-    "changes": {},
+    "changes": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "after": "<redacted 192 bytes, sha256:f24cca761004f4fa>",
+        "before": "<redacted 194 bytes, sha256:fda5c2c42f6342f7>",
+        "requested": "<redacted 192 bytes, sha256:f24cca761004f4fa>"
+      }
+    },
     "command_guard": {
       "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
         "blocked": true,
@@ -18,24 +24,27 @@
         ]
       }
     },
-    "error": "unconsumed command transport",
-    "redeploy": null,
+    "force_replace": true,
+    "redeploy": "TRIGGERED",
     "set_failed": [],
-    "set_ok": 0,
+    "set_ok": 1,
     "targets": [
       "EXPERIMENT_OS_EXPERIMENT_COMMAND"
     ],
-    "verdict": "REFUSED"
+    "verdict": "VERIFIED"
   },
-  "outcome": "FAILED",
-  "post_change_checks": {},
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
   "provenance": {},
   "publication": "COMMITTED",
-  "receipt_file": "ops/results/cc-activate-g2b.receipt.json",
-  "result_file": "ops/results/cc-activate-g2b.txt",
-  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34074657611",
+  "receipt_file": "ops/results/cc-activate-g2c.receipt.json",
+  "result_file": "ops/results/cc-activate-g2c.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34074835307",
   "service": "main",
-  "started_at": "2026-09-07T01:57:30Z",
+  "started_at": "2026-09-07T02:00:48Z",
   "targets": [
     "EXPERIMENT_OS_EXPERIMENT_COMMAND"
   ],
