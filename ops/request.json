@@ -1,1 +1,1 @@
-{"type": "script", "id": "cc-g2-audit5", "name": "mmsell_contest_cap_audit", "args": ["--live", "Fmmsell10", "--uncapped", "mmsell10", "--hours", "10"]}
+{"type":"noop"}
