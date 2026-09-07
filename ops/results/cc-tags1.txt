@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=cc-tags1
-# code 11b6de4d088eb474f77e5288456b4286f8bd4e91 · started 2026-09-07T00:34:39Z
-what                    k                        v                                                                                                                                                                                                       
-----------------------  -----------------------  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-drift_detail            EXPERIMENT_CONFIG_DRIFT  runtime config for mmsell-ceiling-live-1 differs from the registered deployment — classify: harmless deployment revision, new epoch, new version, or platform impact. Gate evaluation is blocked while …
-live_orders_12h_by_tag  Emmsell10                39 last=00:26:29                                                                                                                                                                                        
-
-(2 rows)
