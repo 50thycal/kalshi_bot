@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["mmsell10-queue-aware-cancel"],"id":"qac-show-1"}
+{"type": "env", "action": "set", "values": {"LIVE_QUEUE_CANCEL_MODE": "shadow"}, "id": "qac-shadow-on-1"}
