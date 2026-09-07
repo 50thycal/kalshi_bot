@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "2225d7ada52307ea069e169af7c116951564478a",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-07T16:28:44Z",
+  "id": "batch1-evidence",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/batch1-evidence.receipt.json",
+  "result_file": "ops/results/batch1-evidence.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34143431685",
+  "service": null,
+  "started_at": "2026-09-07T16:28:43Z",
+  "targets": [],
+  "type": "script"
+}
