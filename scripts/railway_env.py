@@ -120,6 +120,12 @@ ALLOWED_VARS = frozenset({
     # armed, capped and re-tuned from the ops channel without a code deploy.
     "MMSELL_LIVE_MAX_OPEN_POSITIONS", "MMSELL_LIVE_PRICE_OFFSET_CENTS",
     "MMSELL_LIVE_MAX_SPREAD_CENTS",
+    # Queue-aware cancellation (docs/MMSELL_QUEUE_AWARE_CANCEL.md). MODE is off|shadow|live;
+    # shadow records decisions and cancels nothing. Setting `live` sends cancels ONLY for
+    # tags in LIVE_QUEUE_CANCEL_TAGS that are also registered to an active LIVE treatment
+    # arm of the queue experiment — a separate, later authorization. The rule thresholds
+    # are deliberately NOT settable here: they are the pre-registration.
+    "LIVE_QUEUE_CANCEL_MODE", "LIVE_QUEUE_CANCEL_TAGS",
     # The book DEFINITIONS themselves. A live mmsell book is an ordinary entry in this
     # string (Lmmsell8 and Lmmsell10 both are), so registering an Experiment OS canary and
     # then being unable to CREATE its book is the same defect class as #266: an approved

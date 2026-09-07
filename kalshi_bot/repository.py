@@ -1669,6 +1669,41 @@ def insert_queue_tick(
     return row
 
 
+def insert_queue_decision(session, **fields) -> m.LiveOrderQueueDecision:
+    """Append one queue-aware cancellation decision (docs/MMSELL_QUEUE_AWARE_CANCEL.md).
+
+    Every decision is written — keeps included — so coverage, would-cancel counts and the
+    counterfactual later-fill rate are all computable from one table without inferring what
+    the rule did on the cycles it stayed silent."""
+    if "rule_inputs_json" in fields:
+        fields["rule_inputs_json"] = _safe_json(fields["rule_inputs_json"])
+    row = m.LiveOrderQueueDecision(**fields)
+    session.add(row)
+    session.flush()
+    return row
+
+
+def filled_quantity_for_order(session, kalshi_order_id: str | None) -> int:
+    """Contracts already filled against this Kalshi order id — the partial-fill figure a
+    cancellation decision records before acting."""
+    if not kalshi_order_id:
+        return 0
+    total = session.scalar(
+        select(func.coalesce(func.sum(m.Fill.quantity), 0)).where(
+            m.Fill.kalshi_order_id == kalshi_order_id
+        )
+    )
+    return int(total or 0)
+
+
+def queue_decisions_for_order(session, kalshi_order_id: str) -> list[m.LiveOrderQueueDecision]:
+    return list(session.scalars(
+        select(m.LiveOrderQueueDecision)
+        .where(m.LiveOrderQueueDecision.kalshi_order_id == kalshi_order_id)
+        .order_by(m.LiveOrderQueueDecision.decided_at)
+    ).all())
+
+
 def fill_exists(session, kalshi_fill_id: str) -> bool:
     return session.scalar(
         select(func.count()).select_from(m.Fill).where(m.Fill.kalshi_fill_id == kalshi_fill_id)

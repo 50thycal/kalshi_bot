@@ -1288,6 +1288,25 @@ class Settings(BaseSettings):
     # of this was a real hole: turning a book off left its orders working on the exchange, and
     # the kill switch used to make that WORSE by blocking the cancel path too.
     live_drain_stood_down: bool = True
+    # --- Queue-aware cancellation (docs/MMSELL_QUEUE_AWARE_CANCEL.md) -----------------------
+    # DEFAULT OFF. "shadow" evaluates the frozen rule against every resting live order each
+    # reconcile and writes an audit row per order per cycle to live_order_queue_decisions —
+    # and cancels NOTHING. "live" additionally sends the cancel, but only for orders whose tag
+    # is in LIVE_QUEUE_CANCEL_TAGS AND whose tag is registered to an active LIVE treatment
+    # arm of the queue experiment in Experiment OS; anything else is recorded as
+    # `refused_unregistered`. The ordinary 4h timeout runs BEFORE this and is untouched in
+    # every mode. Missing/stale/malformed/errored telemetry can never produce a cancel.
+    live_queue_cancel_mode: str = "off"                 # off | shadow | live
+    live_queue_cancel_tags: str = ""                    # live-mode allowlist, comma-separated
+    live_queue_cancel_max_per_cycle: int = 10           # bound on cancels sent per reconcile
+    # The frozen rule (live/queue_cancel.FROZEN_RULE). These defaults ARE the pre-registered
+    # values; the Experiment OS package records them as material config so a changed knob is
+    # config drift, not a quiet re-tune. Change = new rule_version = new Version.
+    live_queue_cancel_rule_version: str = "qac-v1-2026-09-07"
+    live_queue_cancel_min_age_seconds: int = 5_400      # 90 min
+    live_queue_cancel_max_observation_age_seconds: int = 600
+    live_queue_cancel_max_fill_probability_pct: float = 10.0
+    live_queue_cancel_min_cell_n: int = 20
     live_cities: str = ""                   # restrict to these city codes (empty = all)
     live_windows: str = ""                  # restrict to these entry windows hN (empty = all)
     live_cells: str = ""                    # precise (book:CITY:window) allowlist; supersedes cities/windows

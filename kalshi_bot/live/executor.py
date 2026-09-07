@@ -28,6 +28,7 @@ from ..risk.manager import RiskDecision
 from ..scanner.metrics import _to_count, ask_depth_within, parse_dt, price_to_cents
 from ..weather.cities import CITIES
 from . import exit_rules
+from . import queue_cancel as qc
 from .queue_position import order_id_of, parse_batch, parse_one
 from .sizing import is_hot_entry, maker_no_price, maker_offset, order_quantity
 
@@ -86,6 +87,10 @@ class LiveCycleSummary:
     queue_unparsed: int = 0         # samples the API answered but we could not read
     drained_canceled: int = 0       # resting orders pulled by a stand-down drain
     drain_failed: int = 0           # ...and the ones the drain could NOT confirm gone
+    queue_decisions: int = 0        # queue-aware cancel: decision rows written this cycle
+    queue_would_cancel: int = 0     # ...of which the frozen rule said cancel
+    queue_canceled: int = 0         # ...and were actually sent to Kalshi (live mode only)
+    queue_cancel_refused: int = 0   # live-mode cancels refused for lineage / cycle cap
     exits_placed: int = 0
     exits_reattempted: int = 0
     exits_escalated: int = 0
@@ -112,6 +117,8 @@ class LiveExecutor:
         self._market_ids: dict[str, str] = {}  # ticker -> v1 market UUID (cached)
         self._cell_skips_noted: set = set()  # (book, event, reason, day) already logged this run
         self._drain_attempts: dict[str, int] = {}  # kalshi_order_id -> consecutive failed cancels
+        # kalshi_order_id -> this cycle's queue observation, for the queue-aware cancel step.
+        self._queue_observations: dict[str, qc.QueueObservation] = {}
 
     def reset_summary(self) -> None:
         self.summary = LiveCycleSummary()
@@ -723,6 +730,7 @@ class LiveExecutor:
         One batch call for all resting orders, with a per-order fallback ONLY for orders the
         batch omitted. The fallback is bounded — an unbounded one would turn a Kalshi change that
         empties the batch response into ~35 extra requests every cycle, forever, silently."""
+        self._queue_observations = {}
         if not self.settings.live_queue_position_sampling:
             return 0
         resting = repo.get_resting_live_orders(session)
@@ -777,15 +785,24 @@ class LiveExecutor:
             koid = str(row.kalshi_order_id)
             sample = samples.get(koid)
             raw: object = sample if sample is not None else failed_by_id.get(koid)
+            # What the queue-aware cancel step will be told about this order. Every failure
+            # mode is a NAMED status, never a silent None: the rule treats each as keep, and
+            # the audit row says which one held.
+            tel_status = qc.TELEMETRY_MALFORMED if koid in failed_by_id else qc.TELEMETRY_MISSING
+            tel_detail: str | None = "batch payload unreadable" if koid in failed_by_id else None
             if sample is None and len(resting) <= self._QUEUE_FALLBACK_MAX:
                 try:
                     single = self.client.get_order_queue_position(row.kalshi_order_id)
                     sample = parse_one(single)
                     raw = single
+                    if sample is None:
+                        tel_status, tel_detail = qc.TELEMETRY_MALFORMED, "per-order payload unreadable"
                 except AuthError:
                     raise
                 except Exception as exc:  # noqa: BLE001 — may have just filled or been cancelled
                     sample = None
+                    tel_status = qc.TELEMETRY_ERROR
+                    tel_detail = f"{type(exc).__name__}: {str(exc)[:160]}"
                     # First failure only. An order that filled a moment ago legitimately 404s
                     # here, so this is noisy by nature — but if the ENDPOINT is wrong we would
                     # otherwise have no record of why at all, and one line per cycle is the
@@ -806,6 +823,15 @@ class LiveExecutor:
             written += 1
             if sample is not None:
                 self.summary.queue_sampled += 1
+                self._queue_observations[koid] = qc.QueueObservation(
+                    status=qc.TELEMETRY_OBSERVED,
+                    contracts_ahead=sample.get("contracts_ahead"),
+                    queue_position=sample.get("queue_position"),
+                    observed_at=now,
+                )
+            else:
+                self._queue_observations[koid] = qc.QueueObservation(
+                    status=tel_status, observed_at=now, detail=tel_detail)
         if first_error and not self.summary.queue_sampled:
             # Nothing at all was readable this cycle by either path. That is a broken endpoint,
             # not an order that happened to fill — say so in the message, where Railway will
@@ -824,6 +850,137 @@ class LiveExecutor:
     # (~35) so it never binds in normal operation, and low enough that a shape change which
     # empties the batch response cannot silently multiply our request rate.
     _QUEUE_FALLBACK_MAX = 60
+
+    # --- queue-aware cancellation (docs/MMSELL_QUEUE_AWARE_CANCEL.md) ----------------
+
+    def _queue_cancel_lineage(self, session) -> dict:
+        """The queue experiment's ACTIVE deployment arms, from Experiment OS, keyed by
+        deployment kind. Empty when the experiment is not registered or has no open
+        deployment — in which case shadow rows are still written (unstamped, and visibly so)
+        and live cancellation is refused outright."""
+        try:
+            from ..experiment_os.queue_aware_cancel import active_lineage
+            return active_lineage(session)
+        except Exception:  # noqa: BLE001 — lineage lookup must never break a cycle
+            logger.exception("queue-cancel: lineage lookup failed (treating as unregistered)")
+            return {}
+
+    def evaluate_queue_cancellations(self, session) -> int:
+        """Apply the frozen queue-aware cancellation rule to every resting order and record one
+        audit row per order. Returns rows written.
+
+        FAIL-SOFT, like the sampler: every path out is a `return`. AuthError alone propagates.
+        Nothing here can change an order's price or size — the only exchange call is a cancel,
+        and only in `live` mode, only for a tag registered to an active live treatment arm,
+        only within the per-cycle bound. The frozen rule (`live/queue_cancel.decide`) resolves
+        every missing/stale/malformed/errored telemetry state to keep, so an API failure can
+        never produce a cancellation."""
+        s = self.settings
+        mode = (getattr(s, "live_queue_cancel_mode", "off") or "off").strip().lower()
+        if mode not in ("shadow", "live"):
+            return 0
+        try:
+            resting = [r for r in repo.get_resting_live_orders(session) if r.kalshi_order_id]
+        except Exception:  # noqa: BLE001
+            logger.exception("queue-cancel: could not list resting orders")
+            return 0
+        if not resting:
+            return 0
+        rule = qc.rule_from_settings(s)
+        lineage = self._queue_cancel_lineage(session)
+        live_arm = lineage.get("live") or {}
+        shadow_arm = lineage.get("probe") or lineage.get("paper") or {}
+        allowed_tags = {t.strip() for t in (s.live_queue_cancel_tags or "").split(",") if t.strip()}
+        now = datetime.now(timezone.utc)
+        timeout = int(s.live_order_timeout_seconds)
+        cap = int(s.mmsell_live_max_open_positions)
+        open_by_book: dict[str, int | None] = {}
+        written = 0
+        sent = 0
+        for row in resting:
+            koid = str(row.kalshi_order_id)
+            try:
+                obs = self._queue_observations.get(koid)
+                # Is the slot this order holds scarce right now? Read once per book per
+                # cycle; a read failure is a null, never a confident "not bound".
+                if row.strategy not in open_by_book:
+                    try:
+                        open_by_book[row.strategy] = repo.count_live_book_open(session, row.strategy)
+                    except Exception:  # noqa: BLE001
+                        open_by_book[row.strategy] = None
+                book_open = open_by_book.get(row.strategy)
+                cap_bound = None if book_open is None else bool(book_open >= cap)
+                created = _aware(row.created_at)
+                age = (now - created).total_seconds() if created else 0.0
+                decision = qc.decide(rule, order_age_seconds=age, timeout_seconds=timeout,
+                                     observation=obs, now=now)
+                code = decision.code
+                acted = False
+                cancel_result: str | None = None
+                arm_link_id = None
+                if mode == "live":
+                    # Lineage is per TAG: the order's own book must be the tag the live
+                    # treatment arm is registered to. Anything else is a lifecycle bypass.
+                    arm_link_id = (live_arm.get("by_tag") or {}).get(row.strategy)
+                else:
+                    arm_link_id = shadow_arm.get("arm_link_id")
+                if code == qc.QUEUE_CANCEL:
+                    self.summary.queue_would_cancel += 1
+                    if mode == "live":
+                        if row.strategy not in allowed_tags or arm_link_id is None:
+                            code = qc.REFUSED_UNREGISTERED
+                            self.summary.queue_cancel_refused += 1
+                        elif sent >= int(s.live_queue_cancel_max_per_cycle):
+                            code = qc.DEFERRED_CYCLE_CAP
+                            self.summary.queue_cancel_refused += 1
+                        else:
+                            try:
+                                self.client.cancel_events_order(row.kalshi_order_id)
+                                acted = True
+                                sent += 1
+                                cancel_result = "accepted"
+                                repo.update_live_order_status(
+                                    session, row, status="canceled",
+                                    cancel_reason=f"queue_cancel:{rule.rule_version}")
+                                self.summary.queue_canceled += 1
+                            except AuthError:
+                                raise
+                            except Exception as exc:  # noqa: BLE001 — likely filled/gone
+                                code = qc.EXCHANGE_ERROR
+                                cancel_result = f"error: {type(exc).__name__}: {str(exc)[:200]}"
+                                logger.warning(f"queue-cancel failed for {koid}: {cancel_result}")
+                repo.insert_queue_decision(
+                    session,
+                    decided_at=now, live_order_id=row.id, kalshi_order_id=koid,
+                    strategy=row.strategy, market_ticker=row.market_ticker,
+                    event_ticker=row.event_ticker,
+                    experiment_deployment_arm_id=arm_link_id, mode=mode,
+                    submitted_at=row.created_at, side=row.side,
+                    limit_price=row.limit_price, quantity=row.quantity,
+                    filled_quantity_before=repo.filled_quantity_for_order(session, koid),
+                    telemetry_status=decision.telemetry_status,
+                    queue_position=(obs.queue_position if obs else None),
+                    contracts_ahead=(obs.contracts_ahead if obs else None),
+                    queue_observed_at=(obs.observed_at if obs else None),
+                    order_age_seconds=decision.order_age_seconds,
+                    remaining_timeout_seconds=decision.remaining_timeout_seconds,
+                    cap_bound=cap_bound, book_open_count=book_open, book_open_cap=cap,
+                    decision=code, acted=acted, cancel_result=cancel_result,
+                    rule_version=rule.rule_version,
+                    estimated_fill_probability_pct=decision.estimated_fill_probability_pct,
+                    rule_inputs_json={**rule.inputs(), "cell_n": decision.cell_n,
+                                      "depth_bucket": decision.depth_bucket,
+                                      "age_checkpoint_min": decision.age_checkpoint_min,
+                                      "timeout_seconds": timeout},
+                    reason=decision.reason[:600],
+                )
+                written += 1
+                self.summary.queue_decisions += 1
+            except AuthError:
+                raise
+            except Exception:  # noqa: BLE001 — one bad row must not stop the others
+                logger.exception(f"queue-cancel: decision failed for {koid}")
+        return written
 
     # --- orderly drain ----------------------------------------------------------
 
@@ -1038,6 +1195,11 @@ class LiveExecutor:
         # observation of the orders it cancels — which are the most interesting ones, since a
         # stood-down book's rank is the record of what it never got filled at.
         self.sample_queue_positions(session)
+        # Queue-aware cancellation reads THIS cycle's samples and runs AFTER the timeout loop
+        # above, so the 4h timeout is applied before and independently of anything it decides.
+        # Before the drain for the same reason the sampler is: a drain destroys the last
+        # observation. Off by default; shadow mode writes audit rows and cancels nothing.
+        self.evaluate_queue_cancellations(session)
         self.drain_stood_down_books(session)
 
         # Settled positions vanish from get_positions, so capture realized P&L from
