@@ -40,7 +40,10 @@ more P&L"* — 47,106 contracts — into *"did the cent move us up the queue, an
 contracts"*, which is answerable on the ~35 orders resting at any moment and accrues whether or
 not an A/B is armed.
 
-Read it with **`{"type":"script","name":"mmsell_queue_position"}`**.
+Read it with **`{"type":"script","name":"mmsell_queue_position"}`**. The queue-aware
+cancellation experiment built on this telemetry — survival table, frozen rule, shadow audit
+table `live_order_queue_decisions` — is `docs/MMSELL_QUEUE_AWARE_CANCEL.md`, read with
+`mmsell_queue_cancel_baseline`.
 
 ### What Kalshi actually sends — confirmed live 2026-08-14
 

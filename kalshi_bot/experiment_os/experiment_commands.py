@@ -240,6 +240,7 @@ def _packages() -> dict[str, ExperimentPackage]:
         marktangle,
         marktangle2,
         perp_v1,
+        queue_aware_cancel,
         recut_mmsell10_contest_cap,
         repair_dark_live_canaries,
         repair_tmmsell_epoch,
@@ -330,6 +331,22 @@ def _packages() -> dict[str, ExperimentPackage]:
             ),
             register=_no_contract,
             repair=repair_tmmsell_epoch.repair,
+        ),
+        "mmsell10-queue-aware-cancel": ExperimentPackage(
+            name="mmsell10-queue-aware-cancel",
+            experiment_key=queue_aware_cancel.EXPERIMENT_KEY,
+            description=(
+                "Queue-aware early cancellation of deep-queue mmsell10 resting orders, "
+                "registered as a SHADOW PROBE: the frozen rule (age >= 90 min, observed "
+                "telemetry, P(fill before timeout) <= 10% from the baseline table with "
+                "cell n >= 20) is evaluated against the live book's real resting orders "
+                "and every decision is recorded to live_order_queue_decisions — nothing "
+                "is cancelled. Two arms (control = the existing 4h timeout, treatment = "
+                "the rule), two pre-registered gates (shadow_to_paper, shadow_kill). "
+                "Changes no price, size, cap or exit; has no arm function, so it cannot "
+                "reach real money."
+            ),
+            register=queue_aware_cancel.register,
         ),
         "mmsell10-capacity-successor": ExperimentPackage(
             name="mmsell10-capacity-successor",

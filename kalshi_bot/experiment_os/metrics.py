@@ -34,7 +34,7 @@ from __future__ import annotations
 import math
 import statistics
 from dataclasses import dataclass, field, replace
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import func, select
 
@@ -376,6 +376,57 @@ _UNIVERSAL: tuple[MetricDefinition, ...] = (
         source="paper_trades",
         description="mean daily realized P&L over its standard deviation, bucketed by "
         "closed_at UTC date — a scale-free read of return per unit of daily volatility",
+    ),
+    # --- Queue-aware cancellation SHADOW instrument (docs/MMSELL_QUEUE_AWARE_CANCEL.md).
+    # Read from live_order_queue_decisions, scoped by the probe deployment's arm lineage
+    # ids (NOT by a trading tag — the shadow tag is a scope handle). A would-cancel order
+    # is one whose first `queue_cancel` decision falls in the window; what it did next is
+    # read off live_orders by kalshi_order_id, and what it earned off positions.
+    MetricDefinition(
+        key="qac_decisions", direction="neutral", unit="rows", kind="count",
+        source="live_order_queue_decisions", revision="qac_v1",
+        description="queue-cancel decision rows in the window (every resting order, every "
+        "cycle) — the denominator of telemetry coverage",
+    ),
+    MetricDefinition(
+        key="qac_telemetry_coverage_pct", direction="higher_better", unit="%", kind="rate",
+        source="live_order_queue_decisions", revision="qac_v1",
+        description="share of decision rows whose queue telemetry was OBSERVED (not "
+        "missing/stale/malformed/errored). Read beside every other qac_* number",
+    ),
+    MetricDefinition(
+        key="qac_would_cancel_orders", direction="neutral", unit="orders", kind="count",
+        source="live_order_queue_decisions", revision="qac_v1",
+        description="distinct orders the frozen rule decided to cancel (first such "
+        "decision in the window); in shadow mode none was actually cancelled",
+    ),
+    MetricDefinition(
+        key="qac_would_cancel_later_fill_pct", direction="lower_better", unit="%", kind="rate",
+        source="live_order_queue_decisions x live_orders", revision="qac_v1",
+        description="of the would-cancel orders, the share whose final live_orders status "
+        "is filled — the fills the treatment would have forgone",
+    ),
+    MetricDefinition(
+        key="qac_forgone_cents_per_would_cancel", direction="lower_better",
+        unit="cents/order", kind="mean",
+        source="live_order_queue_decisions x live_orders x positions", revision="qac_v1",
+        description="settled realized P&L (cents) of the markets the would-cancel orders "
+        "went on to fill, divided by ALL would-cancel orders: the profit the rule gives up "
+        "per cancel. Unsettled later fills count 0 until they settle",
+    ),
+    MetricDefinition(
+        key="qac_would_cancel_cap_bound_pct", direction="higher_better", unit="%", kind="rate",
+        source="live_order_queue_decisions", revision="qac_v1",
+        description="share of would-cancel orders whose first cancel decision was made "
+        "while the observed book sat at its open-position cap — the only condition under "
+        "which the released slot has value",
+    ),
+    MetricDefinition(
+        key="qac_capital_hours_released", direction="neutral", unit="USD-hours", kind="count",
+        source="live_order_queue_decisions", revision="qac_v1",
+        description="sum over would-cancel orders of order capital (qty x price) x hours "
+        "from the first cancel decision to the order's last observed decision — the "
+        "resting time the treatment would have cut",
     ),
 )
 
@@ -1787,6 +1838,169 @@ def _live_provenance(scope: MetricScope) -> dict:
     }
 
 
+
+# ---------------------------------------------------------------------------
+# Queue-aware cancellation shadow instrument (docs/MMSELL_QUEUE_AWARE_CANCEL.md)
+# ---------------------------------------------------------------------------
+
+QAC_METRICS: frozenset[str] = frozenset({
+    "qac_decisions", "qac_telemetry_coverage_pct", "qac_would_cancel_orders",
+    "qac_would_cancel_later_fill_pct", "qac_forgone_cents_per_would_cancel",
+    "qac_would_cancel_cap_bound_pct", "qac_capital_hours_released",
+})
+
+
+def _qac_rows(session, scope: MetricScope) -> dict:
+    """Everything the qac_* providers need, computed once per scope.
+
+    Scope is the PROBE deployment's arm lineage, resolved from `scope.deployment_keys`;
+    decision rows are filtered by `experiment_deployment_arm_id`, never by a trading tag.
+    Window basis is `decided_at`. Contested markets (more than one strategy traded the
+    ticker) are excluded from the forgone-P&L numerator, as the live providers do."""
+    from ..models import LiveOrder, LiveOrderQueueDecision, Position
+    from .queue_aware_cancel import arm_link_ids_for_deployment_keys
+
+    arm_ids = arm_link_ids_for_deployment_keys(session, scope.deployment_keys)
+    out = {"arm_ids": arm_ids, "rows": 0, "observed": 0, "would": {},
+           "later_filled": 0, "settled_later": 0, "forgone_usd": 0.0,
+           "cap_bound": 0, "cap_known": 0, "capital_hours": 0.0, "contested": 0}
+    if not arm_ids:
+        return out
+    D = LiveOrderQueueDecision
+    in_window = (D.experiment_deployment_arm_id.in_(arm_ids),
+                 D.decided_at >= scope.window_start, D.decided_at <= scope.window_end)
+    out["rows"] = int(session.scalar(
+        select(func.count()).select_from(D).where(*in_window)) or 0)
+    out["observed"] = int(session.scalar(
+        select(func.count()).select_from(D).where(*in_window, D.telemetry_status == "observed")
+    ) or 0)
+    # First would-cancel decision per order, with the cap read at that instant.
+    firsts = session.execute(
+        select(D.kalshi_order_id, func.min(D.decided_at))
+        .where(*in_window, D.decision == "queue_cancel", D.kalshi_order_id.is_not(None))
+        .group_by(D.kalshi_order_id)
+    ).all()
+    would: dict[str, dict] = {}
+    for koid, first_at in firsts:
+        row = session.execute(
+            select(D.cap_bound, D.limit_price, D.quantity, D.market_ticker)
+            .where(D.kalshi_order_id == koid, D.decided_at == first_at,
+                   D.experiment_deployment_arm_id.in_(arm_ids))
+            .limit(1)
+        ).first()
+        last_at = session.scalar(
+            select(func.max(D.decided_at))
+            .where(D.kalshi_order_id == koid, D.experiment_deployment_arm_id.in_(arm_ids))
+        )
+        cap_bound, price, qty, ticker = row if row else (None, None, None, None)
+        would[koid] = {"first_at": first_at, "last_at": last_at, "cap_bound": cap_bound,
+                       "capital_usd": ((qty or 0) * (price or 0)) / 100.0, "ticker": ticker}
+    out["would"] = would
+    if not would:
+        return out
+    for koid, w in would.items():
+        if w["cap_bound"] is not None:
+            out["cap_known"] += 1
+            out["cap_bound"] += int(bool(w["cap_bound"]))
+        first, last = w["first_at"], w["last_at"]
+        if first is not None and last is not None:
+            first = first if first.tzinfo else first.replace(tzinfo=timezone.utc)
+            last = last if last.tzinfo else last.replace(tzinfo=timezone.utc)
+            out["capital_hours"] += w["capital_usd"] * max(
+                0.0, (last - first).total_seconds() / 3600.0)
+        order = session.execute(
+            select(LiveOrder.status, LiveOrder.market_ticker)
+            .where(LiveOrder.kalshi_order_id == koid).limit(1)
+        ).first()
+        if order is None or order[0] != "filled":
+            continue
+        out["later_filled"] += 1
+        ticker = order[1]
+        others = session.scalar(
+            select(func.count(func.distinct(LiveOrder.strategy)))
+            .where(LiveOrder.market_ticker == ticker)
+        ) or 0
+        if others > 1:
+            out["contested"] += 1
+            continue
+        pos = session.execute(
+            select(Position.quantity, Position.quantity_fp, Position.realized_pnl)
+            .where(Position.market_ticker == ticker)
+            .order_by(Position.captured_at.desc()).limit(1)
+        ).first()
+        if pos is None or pos[2] is None:
+            continue
+        qty = pos[1] if pos[1] is not None else pos[0]
+        if qty is not None and abs(float(qty)) <= 0.01:
+            out["settled_later"] += 1
+            out["forgone_usd"] += float(pos[2])
+    return out
+
+
+def _qac_metric(session, key: str, scope: MetricScope) -> MetricValue:
+    definition = REGISTRY[key]
+    prov = {
+        "source": "live_order_queue_decisions",
+        "deployment_kind": scope.deployment_kind,
+        "deployments": list(scope.deployment_keys),
+        "window": [str(scope.window_start), str(scope.window_end)],
+        "window_basis": "decided_at (decision time)",
+        "platform_snapshot": scope.platform_snapshot_fingerprint[:16],
+        "scope": scope.label(),
+        "positive_means": definition.positive_means,
+    }
+    if scope.deployment_kind != "probe":
+        return MetricValue(
+            metric=key, value=None, n=0, unit=definition.unit, missing=True,
+            reason=(f"{key!r} is a shadow-instrument metric defined only at "
+                    f"deployment_kind='probe'; this clause addresses "
+                    f"{scope.deployment_kind!r}"),
+            provenance=prov | {"addressing_error": True},
+        )
+    if not scope.deployment_keys:
+        return MetricValue(
+            metric=key, value=None, n=0, unit=definition.unit, missing=True,
+            reason="no probe deployment with a tagged arm in this epoch",
+            provenance=prov,
+        )
+    agg = _qac_rows(session, scope)
+    prov |= {"arm_link_ids": agg["arm_ids"], "contested_excluded": agg["contested"]}
+    rows, n_would = agg["rows"], len(agg["would"])
+    if key == "qac_decisions":
+        return MetricValue(key, float(rows), rows, "rows", provenance=prov)
+    if key == "qac_would_cancel_orders":
+        return MetricValue(key, float(n_would), n_would, "orders", provenance=prov)
+    if key == "qac_capital_hours_released":
+        return MetricValue(key, round(agg["capital_hours"], 4), n_would, "USD-hours",
+                           provenance=prov)
+    if key == "qac_telemetry_coverage_pct":
+        if rows == 0:
+            return MetricValue(key, None, 0, "%", reason="no decision rows in window",
+                               provenance=prov)
+        return MetricValue(key, round(100.0 * agg["observed"] / rows, 2), rows, "%",
+                           provenance=prov)
+    if n_would == 0:
+        return MetricValue(key, None, 0, definition.unit,
+                           reason="no would-cancel orders in window", provenance=prov)
+    if key == "qac_would_cancel_later_fill_pct":
+        return MetricValue(key, round(100.0 * agg["later_filled"] / n_would, 2), n_would, "%",
+                           provenance=prov | {"later_filled": agg["later_filled"]})
+    if key == "qac_forgone_cents_per_would_cancel":
+        return MetricValue(key, round(100.0 * agg["forgone_usd"] / n_would, 4), n_would,
+                           "cents/order",
+                           provenance=prov | {"later_filled": agg["later_filled"],
+                                              "settled_later_fills": agg["settled_later"]})
+    if key == "qac_would_cancel_cap_bound_pct":
+        if agg["cap_known"] == 0:
+            return MetricValue(key, None, 0, "%",
+                               reason="cap state unknown on every would-cancel decision",
+                               provenance=prov)
+        return MetricValue(key, round(100.0 * agg["cap_bound"] / agg["cap_known"], 2),
+                           agg["cap_known"], "%", provenance=prov)
+    return MetricValue(metric=key, value=None, n=0, unit=definition.unit, missing=True,
+                       reason=f"metric {key!r} registered but not routed — provider bug")
+
+
 def _provenance(scope: MetricScope) -> dict:
     return {
         "source": "paper_trades",
@@ -1859,6 +2073,8 @@ def _compute_metric(session, key: str, scope: MetricScope) -> MetricValue:
         )
     if key in TWIN_METRICS:
         return _twin_metric(session, key, scope)
+    if key in QAC_METRICS:
+        return _qac_metric(session, key, scope)
     if key in LIVE_ONLY_METRICS:
         # Routed BEFORE the empty-tags fallback below. That fallback answers 0 for
         # a count, which for `live_settled_contracts` under a paper scope would be

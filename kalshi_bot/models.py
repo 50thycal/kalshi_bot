@@ -365,6 +365,67 @@ class LiveOrderQueueTick(Base):
     raw_json: Mapped[dict | None] = mapped_column(JSONType)
 
 
+class LiveOrderQueueDecision(Base):
+    """One queue-aware cancellation decision for one resting live order, per cycle.
+
+    The audit trail for `docs/MMSELL_QUEUE_AWARE_CANCEL.md`: every row carries the telemetry
+    the frozen rule saw, the rule inputs it applied, what it decided, and whether anything was
+    actually sent to Kalshi. In SHADOW mode nothing ever is (`acted` stays false) and the rows
+    are the treatment's counterfactual: "would have cancelled" joined later, by
+    `kalshi_order_id`, to what the order really did. Missing telemetry is a named
+    `telemetry_status`, never a queue position of zero.
+
+    Append-only. The final order state is NOT copied here — `live_orders` is the durable
+    record and `kalshi_order_id` is the canonical join key, so a copy would only be a second
+    place for the truth to drift.
+    """
+
+    __tablename__ = "live_order_queue_decisions"
+    __table_args__ = (
+        Index("ix_lqd_order_time", "live_order_id", "decided_at"),
+        Index("ix_lqd_strategy_time", "strategy", "decided_at"),
+        Index("ix_lqd_arm_time", "experiment_deployment_arm_id", "decided_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    decided_at: Mapped[datetime] = mapped_column(TS, default=utcnow, nullable=False)
+    live_order_id: Mapped[int | None] = mapped_column(BigIntId, ForeignKey("live_orders.id"))
+    kalshi_order_id: Mapped[str | None] = mapped_column(String(128), index=True)
+    strategy: Mapped[str | None] = mapped_column(String(32))
+    market_ticker: Mapped[str | None] = mapped_column(String(128))
+    event_ticker: Mapped[str | None] = mapped_column(String(128))
+    # Experiment OS lineage of the QUEUE experiment's own deployment arm (the shadow probe or
+    # the live treatment), distinct from the observed order's own lineage on live_orders.
+    experiment_deployment_arm_id: Mapped[int | None] = mapped_column(BigIntId)
+    mode: Mapped[str | None] = mapped_column(String(16))            # shadow | live
+    # The order as submitted.
+    submitted_at: Mapped[datetime | None] = mapped_column(TS)
+    side: Mapped[str | None] = mapped_column(String(8))
+    limit_price: Mapped[int | None] = mapped_column(Integer)
+    quantity: Mapped[int | None] = mapped_column(Integer)
+    filled_quantity_before: Mapped[int | None] = mapped_column(Integer)
+    # Telemetry at decision time.
+    telemetry_status: Mapped[str | None] = mapped_column(String(24))
+    queue_position: Mapped[int | None] = mapped_column(Integer)
+    contracts_ahead: Mapped[int | None] = mapped_column(Integer)
+    queue_observed_at: Mapped[datetime | None] = mapped_column(TS)
+    order_age_seconds: Mapped[int | None] = mapped_column(Integer)
+    remaining_timeout_seconds: Mapped[int | None] = mapped_column(Integer)
+    # Was the observed book AT its open-position cap when this was decided? The slot a
+    # cancel frees is worth something only then; null when the cap could not be read.
+    cap_bound: Mapped[bool | None] = mapped_column(Boolean)
+    book_open_count: Mapped[int | None] = mapped_column(Integer)
+    book_open_cap: Mapped[int | None] = mapped_column(Integer)
+    # The decision.
+    decision: Mapped[str | None] = mapped_column(String(32))
+    acted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    cancel_result: Mapped[str | None] = mapped_column(Text)
+    rule_version: Mapped[str | None] = mapped_column(String(48))
+    estimated_fill_probability_pct: Mapped[float | None] = mapped_column(Float)
+    rule_inputs_json: Mapped[dict | None] = mapped_column(JSONType)
+    reason: Mapped[str | None] = mapped_column(Text)
+
+
 class Fill(Base):
     __tablename__ = "fills"
 

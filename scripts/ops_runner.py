@@ -200,6 +200,7 @@ ALLOWED_SCRIPTS = (
     "mmsell_scan_health",
     "mmsell_quote_parity",
     "mmsell_queue_position",
+    "mmsell_queue_cancel_baseline",
     "mmsell_depth_fill_model",
     "mmsell_deconfound_study",
     "mmsell_taxonomy_audit",
