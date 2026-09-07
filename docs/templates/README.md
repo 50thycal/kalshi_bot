@@ -38,5 +38,9 @@ check — do not fork the protocol by editing these files. See `CLAUDE.md` → *
   is a guard for the operator, never a Build OS next step (`DEC-011`, `DEC-001`).
 - **`Follow-up Work` is `PARK` / `DISCARD` lines only.** A finding outside the current
   mission never becomes a new workstream. Parked lines are never rendered as work.
-- **`OWNER_PLAN.template.md` is deliberately not vendored.** This project has not adopted the
-  owner-approval flow; intent arrives through the session-role router instead (`DEC-011`).
+- **Two canonical templates are deliberately not vendored.** `OWNER_PLAN.template.md`, because
+  this project has not adopted the owner-approval flow — intent arrives through the
+  session-role router instead. And `REVIEW_SUMMARY.template.md`, because `solo` mode has no
+  independent reviewer, so nothing here would ever write one; vendoring it would advertise a
+  step this project cannot perform. Both are recorded in `docs/BUILD_OS.md` → *What this
+  project deliberately does not take*, with their revisit conditions (`DEC-011`).
