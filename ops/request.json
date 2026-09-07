@@ -1,1 +1,1 @@
-{"type":"db","sql":"SELECT date_trunc('day', created_at)::date::text AS day, strategy, count(*) AS refusals FROM skipped_trades WHERE reason LIKE '%open_cap%' AND created_at > now() - interval '10 days' GROUP BY 1,2 ORDER BY 1 DESC, 3 DESC","max_rows":60,"id":"qac-cap-hist-1"}
+{"type":"logs","limit":400,"filter":"open_cap","id":"qac-cap-logs-1"}
