@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-show","args":["XOS-000028"],"id":"lo-tc-show-3"}
+{"type":"env","set":{"EXPERIMENT_OS_ISSUE_COMMAND":"{\"command_id\":\"lo-tc-link-x14b\",\"action\":\"ADD_LINK\",\"actor\":\"claude-code\",\"actor_role\":\"LIVE_OPS\",\"schema_version\":1,\"payload\":{\"issue\":\"XOS-000028\",\"link_type\":\"OTHER\",\"reference\":\"XOS-000014\",\"label\":\"Same suspected root cause (Kalshi exchange sharding), other symptom: placement user_not_found. Work them together.\"}}"},"id":"lo-tc-link-2"}
