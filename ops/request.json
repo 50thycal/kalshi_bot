@@ -1,1 +1,1 @@
-{"type":"xos","id":"cc-enf1","command":"enforcement"}
+{"type": "db", "id": "cc-int1", "sql": "SELECT 'integrity' AS what, e.kind||' ['||e.severity||'] '||COALESCE(x.experiment_key,'?') AS k, to_char(e.detected_at,'MM-DD HH24:MI')||' :: '||COALESCE(left(e.description,110),'-') AS v FROM experiment_integrity_events e LEFT JOIN experiments x ON x.id = e.experiment_id WHERE e.resolved_at IS NULL ORDER BY 1,2"}
