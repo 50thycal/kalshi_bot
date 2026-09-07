@@ -1,1 +1,1 @@
-{"type":"script","name":"series_rules_audit","args":["--only","KXNFLSPREAD,KXMLBSPREAD,KXRAIN,KXTRUMPSAY,KXWTI,KXALBUMEQUIV,KXMLBHR,KXNFLTOTAL,KXITFMATCH,KXBTCD","--evidence","--chars","320"],"id":"batch1-evidence"}
+{"type":"noop"}
