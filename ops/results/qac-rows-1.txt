@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=qac-rows-1
-# code 303664b770e94c90a3bda34a26246a75c8189f14 · started 2026-09-07T11:34:54Z
-rows  orders  stamped  acted  observed  decisions                 modes   tags       first_at                       last_at                      
-----  ------  -------  -----  --------  ------------------------  ------  ---------  -----------------------------  -----------------------------
-16    8       16       0      16        normal_timeout,too_young  shadow  Fmmsell10  2026-09-07 11:34:44.155659+00  2026-09-07 11:34:50.177231+00
-
-(1 row)
