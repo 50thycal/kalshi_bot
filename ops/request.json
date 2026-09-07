@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT command_id, action, status, actor, started_at::text, completed_at::text, left(coalesce(error,''),120) AS err, coalesce(result_json::text,'') AS result FROM experiment_os_experiment_commands WHERE command_id = 'qac-register-20260907-1'", "max_rows": 5, "id": "qac-receipt-1"}
+{"type":"noop"}
