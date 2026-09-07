@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT (SELECT version_num FROM alembic_version) AS alembic_head, (SELECT count(*) FROM information_schema.tables WHERE table_name='live_order_queue_decisions') AS qac_table, (SELECT count(*) FROM information_schema.columns WHERE table_name='live_order_queue_decisions') AS qac_columns, (SELECT count(*) FROM live_order_queue_decisions) AS qac_rows", "max_rows": 10, "id": "qac-deploy-1"}
+{"type":"env","id":"qac-env-read-1"}
