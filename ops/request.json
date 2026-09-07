@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","sql":"SELECT id, kalshi_order_id, strategy, market_ticker, side, action, price, quantity, status, cancel_reason, created_at::text, round(EXTRACT(EPOCH FROM (now()-created_at))/60) AS age_min FROM live_orders WHERE status='resting' ORDER BY created_at","max_rows":100,"id":"lo-tc-verify-1"}
