@@ -1,1 +1,1 @@
-{"type":"db","sql":"SELECT split_part(market_ticker,'-',1) AS family, count(*) FILTER (WHERE cancel_reason='timeout') AS cancelled_ok, count(*) FILTER (WHERE status='resting' AND created_at < now() - interval '4 hours') AS stuck_past_timeout, count(*) FILTER (WHERE status='resting') AS resting_now FROM live_orders WHERE created_at > now() - interval '24 hours' GROUP BY 1 HAVING count(*) FILTER (WHERE cancel_reason='timeout') > 0 OR count(*) FILTER (WHERE status='resting') > 0 ORDER BY 3 DESC, 2 DESC","max_rows":60,"id":"lo-tc-watch-1"}
+{"type":"noop"}
