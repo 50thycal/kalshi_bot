@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=qac-receipt-2
-# code 303664b770e94c90a3bda34a26246a75c8189f14 · started 2026-09-07T11:32:46Z
-command_id               status     actor        started_at                     completed_at                   err                                                                                                                                           result                                                                                                                                                                                                  
------------------------  ---------  -----------  -----------------------------  -----------------------------  --------------------------------------------------------------------------------------------------------------------------------------------  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-qac-register-20260907-1  FAILED     claude-code  2026-09-07 08:13:15.272051+00  2026-09-07 08:13:15.470973+00  DataError: (psycopg.errors.StringDataRightTruncation) value too long for type character varying(16) [SQL: INSERT INTO experiment_versions (e                                                                                                                                                                                                          
-qac-register-20260907-2  SUCCEEDED  claude-code  2026-09-07 11:30:56.83938+00   2026-09-07 11:30:57.179925+00                                                                                                                                                {"kind": "register", "gates": {"shadow_kill": "3123db84fbb1df61", "shadow_to_paper": "2a042fea5b6c289c"}, "package": "mmsell10-queue-aware-cancel", "version": 1, "keep_gate": "shadow_kill", "epoch_nu…
-
-(2 rows)
