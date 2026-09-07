@@ -1,0 +1,41 @@
+{
+  "audit_worthy": false,
+  "class": "MUTATING",
+  "code_sha": "303664b770e94c90a3bda34a26246a75c8189f14",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-07T11:34:17Z",
+  "id": "qac-shadow-on-1",
+  "mutation": {
+    "changes": {
+      "LIVE_QUEUE_CANCEL_MODE": {
+        "after": "shadow",
+        "before": "(unset)",
+        "requested": "shadow"
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "LIVE_QUEUE_CANCEL_MODE"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/qac-shadow-on-1.receipt.json",
+  "result_file": "ops/results/qac-shadow-on-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34117253359",
+  "service": "main",
+  "started_at": "2026-09-07T11:34:01Z",
+  "targets": [
+    "LIVE_QUEUE_CANCEL_MODE"
+  ],
+  "type": "env"
+}
