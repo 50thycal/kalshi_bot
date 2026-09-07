@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "sql": "SELECT command_id, status, actor, started_at::text, completed_at::text, left(coalesce(error,''),140) AS err, coalesce(result_json::text,'') AS result FROM experiment_os_experiment_commands WHERE command_id LIKE 'qac-register-2026%' ORDER BY id", "max_rows": 10, "id": "qac-receipt-2"}
