@@ -180,12 +180,33 @@ half of the old two-part bar.
 
 ## Known problems — do not rediscover these
 
-1. **The rules audit rests on ONE signal.** Kalshi's `settlement_source` fired **zero** times
-   across all 138 series, so every verdict is a single regex over rules text. That is why **no
-   `rules_reviewed_at` has been recorded** and the backlog is still 138 of 138. Scoring
-   "mechanism understood" off that alone would launder a regex into a human's signature.
-   **Either find a second signal, or make that component require a human sign-off.** This is the
-   first real decision of the task.
+1. **The rules audit rests on ONE signal — RESOLVED 2026-09-07: the operator signs.**
+   Kalshi's `settlement_source` fired **zero** times across all 138 series, so every verdict is
+   a single regex whose false-positive rate on this corpus is demonstrably non-zero (it read
+   "record 50000000+ views" as a live contest). Writing `rules_reviewed_at` off that would
+   launder a regex into a human's signature.
+
+   **The operator reviews in batches and signs.** The workflow:
+
+   ```
+   # 1. batch, ranked by real exposure
+   {"type":"script","name":"series_registry_review","args":["--section","backlog","--top","10"]}
+   # 2. the settlement language for that batch — what the operator actually reads
+   {"type":"script","name":"series_rules_audit",
+    "args":["--only","KXNFLSPREAD,KXMLBSPREAD,...","--evidence"]}
+   # 3. after the operator approves, locally, then PR:
+   python3 scripts/series_manifest_signoff.py --by "<operator>" KXNFLSPREAD KXMLBSPREAD
+   ```
+
+   `--evidence` prints Kalshi's own settlement text per series, deduplicated, with the recorded
+   and implied modes beside it — a reviewer shown only a verdict is rubber-stamping the regex,
+   which is the thing the sign-off replaces. The audit's verdict is an opinion the operator may
+   overrule in either direction.
+
+   `series_manifest_signoff.py` is the pen, not the decision. It refuses to sign a series that
+   is absent, `barred`, or already reviewed (`--resign` is explicit), and it writes **nothing**
+   if any series in the batch fails — a half-applied batch leaves the operator believing they
+   signed a list they did not sign. The manifest still moves only by PR.
 2. **Dedup does not collapse.** `docs = 8` for every series audited — rules text embeds
    per-market specifics, so "distinct documents" is really "8 near-identical markets".
 3. **The audit worklist is graduated-only**, so it cannot see a misclassification below the top
