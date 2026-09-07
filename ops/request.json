@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT o.kalshi_order_id, o.strategy, o.status, o.created_at::text, round(EXTRACT(EPOCH FROM (now()-o.created_at))/60.0) AS age_min, left(coalesce(o.cancel_reason,''),60) AS cancel_reason, o.market_ticker, (SELECT count(*) FROM live_order_queue_decisions d WHERE d.kalshi_order_id=o.kalshi_order_id) AS qac_rows FROM live_orders o WHERE o.status='resting' ORDER BY o.created_at", "max_rows": 40, "id": "qac-stuck-1"}
+{"type":"noop"}
