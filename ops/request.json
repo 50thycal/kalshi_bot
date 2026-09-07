@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT command_id, action, status, actor, actor_role, requested_at::text, executed_at::text, left(coalesce(error,''),60) AS err, envelope_sha256 FROM experiment_os_experiment_commands ORDER BY id DESC LIMIT 6", "max_rows": 20, "id": "qac-slot-1"}
+{"type": "db", "sql": "SELECT command_id, action, status, actor, actor_role, started_at::text, completed_at::text, payload_hash, left(coalesce(error,''),50) AS err FROM experiment_os_experiment_commands ORDER BY id DESC LIMIT 6", "max_rows": 20, "id": "qac-slot-2"}
