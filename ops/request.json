@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "db", "id": "cc-twin1", "sql": "SELECT 'twins' AS what, twin_tag||' <- '||live_tag AS k, 'start='||to_char(started_at,'MM-DD HH24:MI') ||' end='||COALESCE(to_char(ended_at,'MM-DD HH24:MI'),'OPEN') ||' :: '||COALESCE(left(notes,90),'-') AS v FROM live_paper_twins ORDER BY 1,2"}
