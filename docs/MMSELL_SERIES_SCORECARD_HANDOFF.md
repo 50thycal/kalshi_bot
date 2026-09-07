@@ -141,4 +141,8 @@ waiting list, not a backlog of work.
 `docs/SERIES_RULES_AUDIT.md` (the first full run and its limitations) ·
 `docs/MMSELL_UNIVERSE_REVIEW.md` (the measurement that motivated the bar) ·
 `docs/MMSELL_ROADMAP.md` §1 (the variance numbers) ·
-`docs/OPS_RUNBOOK.md` (ops channel, standing analyses)
+`docs/OPS_RUNBOOK.md` (ops channel, standing analyses) ·
+`docs/IDEA_MODEL_SCORECARD.md` — **read this one for calibration.** It is this repo's existing
+scoring ledger, for ideas rather than series, and it records a base rate worth knowing before you
+pick a threshold: **18 idea-model promotions → 0 currently-live paper books.** A scoring system
+here that passes most of what it scores is probably mis-calibrated.
