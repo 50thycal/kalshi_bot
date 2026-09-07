@@ -1,0 +1,168 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "1bdfc2b5bd000431c4b4055c3f1b1d65ecb7714b",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-07T01:44:46Z",
+  "id": "cc-activate-g2",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "after": "<redacted 194 bytes, sha256:fda5c2c42f6342f7>",
+        "before": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>",
+        "requested": "<redacted 194 bytes, sha256:fda5c2c42f6342f7>"
+      },
+      "LIVE_KILL_ON_DAILY_LOSS": {
+        "after": "true",
+        "before": "true",
+        "requested": "true"
+      },
+      "LIVE_MAX_ORDER_DOLLARS": {
+        "after": "1.0",
+        "before": "1.0",
+        "requested": "1.0"
+      },
+      "LIVE_ORDER_TIMEOUT_SECONDS": {
+        "after": "14400",
+        "before": "14400",
+        "requested": "14400"
+      },
+      "LIVE_PAPER_TWIN_MAX_OPEN_POSITIONS": {
+        "after": "250",
+        "before": "250",
+        "requested": "250"
+      },
+      "LIVE_PAPER_TWIN_SUFFIX": {
+        "after": "_pt4",
+        "before": "_pt4",
+        "requested": "_pt4"
+      },
+      "LIVE_STRATEGIES": {
+        "after": "Fmmsell10",
+        "before": "Emmsell10",
+        "requested": "Fmmsell10"
+      },
+      "MAX_DAILY_LOSS": {
+        "after": "5.0",
+        "before": "5.0",
+        "requested": "5.0"
+      },
+      "MAX_MARKET_EXPOSURE": {
+        "after": "1.0",
+        "before": "1.0",
+        "requested": "1.0"
+      },
+      "MMSELL_EVENT_RUNG_CAP": {
+        "after": "3",
+        "before": "3",
+        "requested": "3"
+      },
+      "MMSELL_EVENT_RUNG_CAP_ENABLED": {
+        "after": "true",
+        "before": "true",
+        "requested": "true"
+      },
+      "MMSELL_LIVE_MAX_OPEN_POSITIONS": {
+        "after": "40",
+        "before": "40",
+        "requested": "40"
+      },
+      "MMSELL_LIVE_PRICE_OFFSET_CENTS": {
+        "after": "0",
+        "before": "0",
+        "requested": "0"
+      },
+      "MMSELL_PREFILTER_ENABLED": {
+        "after": "false",
+        "before": "false",
+        "requested": "false"
+      },
+      "MMSELL_SETTLEMENT_CAP_ENABLED": {
+        "after": "true",
+        "before": "true",
+        "requested": "true"
+      },
+      "MMSELL_SETTLEMENT_CAP_PCT": {
+        "after": "0.25",
+        "before": "0.25",
+        "requested": "0.25"
+      },
+      "MMSELL_SETTLEMENT_EVENT_CAP": {
+        "after": "5",
+        "before": "5",
+        "requested": "5"
+      },
+      "MMSELL_VARIANTS": {
+        "after": "mmsell5:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY;mmsell6:lo=5,hi=8;mmsell7:lo=5,hi=10,htcmax=24;mmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;mmsell10:lo=5,hi=10,maxyes=7;mmsellA4:lo=5,hi=10,maxyes=7,volw=6,volv=6;mmsellA5:lo=5,hi=10,maxyes=7,strangle=1;Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;Tmmsell6:lo=5,hi=10,maxyes=7,mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;Lmmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;Lmmsell10:lo=5,hi=10,maxyes=7;Cmmsell10:lo=5,hi=10,maxyes=7,size=1;Dmmsell10:lo=5,hi=10,maxyes=7,size=1;Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;Fmmsell10:lo=5,hi=10,maxyes=7,size=1,contestcap=1",
+        "before": "mmsell5:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY;mmsell6:lo=5,hi=8;mmsell7:lo=5,hi=10,htcmax=24;mmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;mmsell10:lo=5,hi=10,maxyes=7;mmsellA4:lo=5,hi=10,maxyes=7,volw=6,volv=6;mmsellA5:lo=5,hi=10,maxyes=7,strangle=1;Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;Tmmsell6:lo=5,hi=10,maxyes=7,mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;Lmmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;Lmmsell10:lo=5,hi=10,maxyes=7;Cmmsell10:lo=5,hi=10,maxyes=7,size=1;Dmmsell10:lo=5,hi=10,maxyes=7,size=1;Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;Emmsell10:lo=5,hi=10,maxyes=7,size=1,contestcap=1",
+        "requested": "mmsell5:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY;mmsell6:lo=5,hi=8;mmsell7:lo=5,hi=10,htcmax=24;mmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;mmsell9:lo=5,hi=12,only=TOTAL+SPREAD+ASG+HRDERBY+BTCD+ETH,maxyes=7;mmsell10:lo=5,hi=10,maxyes=7;mmsellA4:lo=5,hi=10,maxyes=7,volw=6,volv=6;mmsellA5:lo=5,hi=10,maxyes=7,strangle=1;Tmmsell1:lo=5,hi=10,maxyes=7,mtype=price_strike;Tmmsell2:lo=5,hi=10,maxyes=7,mtype=mention;Tmmsell5:lo=5,hi=10,maxyes=7,mode=scheduled+discrete,xmtype=event_stat+politics+announcement;Tmmsell6:lo=5,hi=10,maxyes=7,mtype=player_prop+spread+exact_score+mention+price_strike+outright+rank_culture;Lmmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;Lmmsell10:lo=5,hi=10,maxyes=7;Cmmsell10:lo=5,hi=10,maxyes=7,size=1;Dmmsell10:lo=5,hi=10,maxyes=7,size=1;Gmmsell0:lo=5,hi=10,maxyes=7;Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;Fmmsell10:lo=5,hi=10,maxyes=7,size=1,contestcap=1"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_EXPERIMENT_COMMAND is empty \u2014 nothing to overwrite",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 18,
+    "targets": [
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND",
+      "LIVE_KILL_ON_DAILY_LOSS",
+      "LIVE_MAX_ORDER_DOLLARS",
+      "LIVE_ORDER_TIMEOUT_SECONDS",
+      "LIVE_PAPER_TWIN_MAX_OPEN_POSITIONS",
+      "LIVE_PAPER_TWIN_SUFFIX",
+      "LIVE_STRATEGIES",
+      "MAX_DAILY_LOSS",
+      "MAX_MARKET_EXPOSURE",
+      "MMSELL_EVENT_RUNG_CAP",
+      "MMSELL_EVENT_RUNG_CAP_ENABLED",
+      "MMSELL_LIVE_MAX_OPEN_POSITIONS",
+      "MMSELL_LIVE_PRICE_OFFSET_CENTS",
+      "MMSELL_PREFILTER_ENABLED",
+      "MMSELL_SETTLEMENT_CAP_ENABLED",
+      "MMSELL_SETTLEMENT_CAP_PCT",
+      "MMSELL_SETTLEMENT_EVENT_CAP",
+      "MMSELL_VARIANTS"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/cc-activate-g2.receipt.json",
+  "result_file": "ops/results/cc-activate-g2.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34073975042",
+  "service": "main",
+  "started_at": "2026-09-07T01:44:29Z",
+  "targets": [
+    "EXPERIMENT_OS_EXPERIMENT_COMMAND",
+    "LIVE_KILL_ON_DAILY_LOSS",
+    "LIVE_MAX_ORDER_DOLLARS",
+    "LIVE_ORDER_TIMEOUT_SECONDS",
+    "LIVE_PAPER_TWIN_MAX_OPEN_POSITIONS",
+    "LIVE_PAPER_TWIN_SUFFIX",
+    "LIVE_STRATEGIES",
+    "MAX_DAILY_LOSS",
+    "MAX_MARKET_EXPOSURE",
+    "MMSELL_EVENT_RUNG_CAP",
+    "MMSELL_EVENT_RUNG_CAP_ENABLED",
+    "MMSELL_LIVE_MAX_OPEN_POSITIONS",
+    "MMSELL_LIVE_PRICE_OFFSET_CENTS",
+    "MMSELL_PREFILTER_ENABLED",
+    "MMSELL_SETTLEMENT_CAP_ENABLED",
+    "MMSELL_SETTLEMENT_CAP_PCT",
+    "MMSELL_SETTLEMENT_EVENT_CAP",
+    "MMSELL_VARIANTS"
+  ],
+  "type": "env"
+}
