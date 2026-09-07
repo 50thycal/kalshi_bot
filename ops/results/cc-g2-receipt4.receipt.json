@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "1bdfc2b5bd000431c4b4055c3f1b1d65ecb7714b",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-07T01:55:07Z",
+  "id": "cc-g2-receipt4",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/cc-g2-receipt4.receipt.json",
+  "result_file": "ops/results/cc-g2-receipt4.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34074537918",
+  "service": null,
+  "started_at": "2026-09-07T01:55:06Z",
+  "targets": [],
+  "type": "db"
+}
