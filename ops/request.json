@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"script","name":"series_rules_audit","args":["--only","KXRAIN,KXTRUMPSAY","--evidence","--chars","2400"],"id":"b1-rules-full-1"}
