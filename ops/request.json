@@ -1,1 +1,1 @@
-{"type":"script","name":"series_registry_review","args":["--section","backlog","--top","10"],"id":"srr-batch1-0908a"}
+{"type":"script","name":"series_rules_audit","args":["--only","KXNFLSPREAD,KXMLBSPREAD,KXRAIN,KXTRUMPSAY,KXWTI,KXMLBHR,KXALBUMEQUIV,KXNFLTOTAL,KXITFMATCH,KXINXU","--evidence"],"id":"sra-batch1-0908a"}
