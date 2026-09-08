@@ -1,4 +1,0 @@
-db request missing 'sql'
-# ops request [READ]
-# type=db  id=scorecard-splitkey-1
-# code 2225d7ada52307ea069e169af7c116951564478a · started 2026-09-07T22:34:15Z
