@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -39,15 +39,36 @@ def test_manifest_rows_carry_a_defined_reason():
             assert registry.reason_text(code) != code, f"{r['series']}: undefined reason {code}"
 
 
-def test_grandfathered_rows_are_unreviewed_and_are_the_backlog():
+def test_the_backlog_is_exactly_the_unreviewed_graduated_rows():
     """PR #338's seed proved we have DATA about a contract, never that anyone read how it
     settles. Recording that honestly is the point of the two-part bar: the rows trade live and
-    they are simultaneously the audit debt."""
+    they are simultaneously the audit debt.
+
+    This test used to assert that every grandfathered row was STILL unreviewed. That was true
+    of the seed and false the moment an operator signs one — which is the workflow working, not
+    a regression, so the assertion was a snapshot rather than an invariant. What must stay true
+    is stronger: the backlog is COMPUTED from the ledger, so the two cannot drift apart."""
     debt = set(registry.unreviewed_graduated())
     for r in registry.rows():
-        if r.get("reason") == "grandfathered-pr338":
-            assert r["rules_reviewed_at"] is None
-            assert r["series"] in debt
+        owed = r.get("state") == registry.GRADUATED and not r.get("rules_reviewed_at")
+        assert (r["series"] in debt) is owed, r["series"]
+    assert debt, "backlog empty — every graduated row is signed; update this test deliberately"
+
+
+def test_a_recorded_review_carries_a_date_AND_a_named_reviewer():
+    """`rules_reviewed_at` stands in for a human having read the settlement rules, and a date
+    with nobody's name against it is an anonymous signature — unauditable, and precisely what
+    the operator-signs design exists to prevent (a regex must never be able to launder itself
+    into a review). A signed row also KEEPS its `reason`: that field records where the row came
+    from, never whether anyone has read it."""
+    for r in registry.rows():
+        at, by = r.get("rules_reviewed_at"), r.get("rules_reviewed_by")
+        assert (at is None) == (by is None), f"{r['series']}: half-signed ({at!r}, {by!r})"
+        if at is None:
+            continue
+        date.fromisoformat(at)                       # raises if it is not a real date
+        assert by.strip(), f"{r['series']}: reviewed by nobody"
+        assert r.get("reason"), f"{r['series']}: signing must not clear the row's reason"
 
 
 # --- states and admission ------------------------------------------------------------------
