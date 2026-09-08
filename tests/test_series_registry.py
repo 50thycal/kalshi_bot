@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -39,15 +39,26 @@ def test_manifest_rows_carry_a_defined_reason():
             assert registry.reason_text(code) != code, f"{r['series']}: undefined reason {code}"
 
 
-def test_grandfathered_rows_are_unreviewed_and_are_the_backlog():
+def test_grandfathering_never_discharges_a_review_and_the_backlog_is_exactly_the_unreviewed():
     """PR #338's seed proved we have DATA about a contract, never that anyone read how it
-    settles. Recording that honestly is the point of the two-part bar: the rows trade live and
-    they are simultaneously the audit debt."""
+    settles. So `reason` can never stand in for a review: a grandfathered row is audit debt
+    until a person signs it, and the backlog is exactly the rows nobody has signed.
+
+    This once asserted every grandfathered row was unreviewed, which was true only while the
+    audit had not started. Batch 1 (2026-09-08) signed eight of them; pinning the old state
+    would have made the first real review look like a regression. The invariant that actually
+    matters survives the batches: `reason` is not evidence, and the debt list does not drift
+    away from the rows themselves."""
     debt = set(registry.unreviewed_graduated())
-    for r in registry.rows():
-        if r.get("reason") == "grandfathered-pr338":
-            assert r["rules_reviewed_at"] is None
-            assert r["series"] in debt
+    seeded = [r for r in registry.rows() if r.get("reason") == "grandfathered-pr338"]
+    assert seeded, "the seed rows vanished — the manifest is not what this test thinks it is"
+    for r in seeded:
+        reviewed = r["rules_reviewed_at"] is not None
+        assert (r["series"] in debt) is not reviewed, (
+            f"{r['series']}: backlog membership disagrees with its review state")
+        if reviewed:
+            assert r["rules_reviewed_by"], f"{r['series']}: a date with no reviewer is not a signature"
+            date.fromisoformat(r["rules_reviewed_at"])
 
 
 # --- states and admission ------------------------------------------------------------------

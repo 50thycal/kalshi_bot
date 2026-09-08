@@ -21,9 +21,16 @@ what Kalshi says?** Three answers, and the third is not a failure of the tool:
 
 WHAT IT DOES NOT DO. It does not edit the manifest, `SERIES_TYPES`, or any lifecycle state. It
 emits evidence; a human opens the PR that records the verdicts; merging that PR is the review.
-A CONTRADICTS or INSUFFICIENT row must NEVER be written as `rules_reviewed_at` — that would
-launder a machine's uncertainty into a human's signature, which is the exact failure the
-two-part graduation bar exists to prevent.
+No automated path may write a CONTRADICTS or INSUFFICIENT row as `rules_reviewed_at` —
+that would launder a machine's uncertainty into a human's signature, which is the exact failure
+the two-part graduation bar exists to prevent. `--emit-patch` therefore emits CONFIRMS only.
+
+An OPERATOR may overrule either way, because the signature is theirs and not the script's. The
+regex is one signal with a demonstrably non-zero false-positive rate; INSUFFICIENT means only
+that the text carried no keyword it recognises, which is not the same as the mechanism being
+unclear to a person reading it. Batch 1 signed `KXWTI` and `KXTRUMPSAY` over INSUFFICIENT for
+exactly that reason. An overrule must be written down with the language it rests on —
+`docs/SERIES_RULES_REVIEW_LOG.md` — or it is indistinguishable from a rubber stamp.
 
 THE EVIDENCE RULE IS BORROWED, NOT REINVENTED. `scripts/mmsell_taxonomy_audit.py` already
 derives a settlement mode from Kalshi's settlement-source field and rules text, using patterns
