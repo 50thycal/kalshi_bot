@@ -238,3 +238,93 @@ contests under the corrected key). Signing it would say only "we understand how 
 Whether it should keep trading is the scoring threshold's decision, and that gate does not exist
 yet (Phase 3, a Platform Change). Nothing in this batch bars, promotes or changes any book's
 universe.
+
+---
+
+## Batch 2 signed — 2026-09-10, by `50cal`
+
+Four of ten. Full four-check review, verdicts and the reasoning:
+`docs/MMSELL_SERIES_APPROVAL_REVIEW.md`. Audit run: `CONFIRMS=4 CONTRADICTS=1 INSUFFICIENT=5`.
+
+| series | audit verdict | recorded mode | concentration | signed |
+|---|---|---|---|---|
+| `KXWTAMATCH` | CONFIRMS | `in_play` | 1.28 avg, 2 max — clean | ✅ |
+| `KXWNBASPREAD` | CONFIRMS | `in_play` | 5.70 avg, 10 max — **approved at cap** | ✅ |
+| `KXNASDAQ100U` | CONFIRMS | `scheduled` | 7.77 avg, 23 max — **approved at cap** | ✅ |
+| `KXNATGASD` | CONFIRMS | `scheduled` | 10.22 avg, 30 max — **approved at cap** | ✅ |
+
+**The three cap-approved rows are approvals of the SERIES, not of its concentration.** Nothing in
+the manifest records a cap, and nothing enforces one: `KXNATGASD` still averages 10.22 contracts
+per gas print and peaked at 30, the largest single-outcome exposure measured anywhere. The
+approval is conditional on the contest cap actually running, which today it does not — `Gmmsell2`
+is registered to no arm. Do not read these four signatures as "the concentration is handled".
+
+`KXNATGASD` also carries **no losing trade yet** across 350 trades / 9 contests, so its edge is
+undefined rather than excellent. Signed on category, rules and structure; its profitability is
+unproven, not proven.
+
+### Not signed, and why
+
+- `KXYTVIEWSW` — **blocked on a taxonomy fix, not rejected.** CONTRADICTS: recorded `discrete`,
+  the rules say a threshold live *at any point* across a week. It becomes signable once
+  `SERIES_TYPES` records `in_play`.
+- `KXTRUTHSOCIAL` — same block plus its own rejection: recorded `mention`/`discrete` against a
+  threshold on a `scheduled` weekly post count, and −$20.57 at edge −10.6 on 5 contests.
+- `KXBTC`, `KXBTCD` — profitable-to-flat but the deepest ladders in the batch (25 and 19 markets
+  on one print). Cap first.
+- `KXETHD`, `KXAAAGASD` — losing, and their settlement text is unread.
+
+Both taxonomy defects are filed as one Experiment OS issue against `MARKET_TAXONOMY`, owned by
+**Platform Change Review**. A review batch may not correct `SERIES_TYPES` as a side effect.
+
+---
+
+## Batch 3 signed — 2026-09-10, by `50cal`
+
+Five of ten. Backlog ranks 21–30 by live exposure. Audit: **`CONFIRMS=10 CONTRADICTS=0
+INSUFFICIENT=0`** — the first clean sweep, and unsurprising: batch 3 is entirely sports `in_play`,
+the easiest class for the rules check to read.
+
+| series | contracts / outcome | P&L | edge | contests | own% | signed |
+|---|---:|---:|---:|---:|---:|---|
+| `KXWNBAGAME` | 1.21 avg, 2 max | +$19.91 | +8.0 | 94 | 76% | ✅ |
+| `KXMLBGAME` | 1.29 avg, 2 max | +$18.79 | **+1.3** | 552 | 95% | ✅ |
+| `KXMLSTOTAL` | 2.30 avg, 6 max | +$19.83 | +5.6 | 57 | 66% | ✅ |
+| `KXATPEXACTMATCH` | 2.66 avg, 6 max | +$15.49 | +5.1 | 38 | 56% | ✅ |
+| `KXLEAGUESCUPTOTAL` | 2.59 avg, 6 max | +$15.88 | +4.7 | 34 | 53% | ✅ |
+
+These five are the first cohort signed with **low concentration as a positive finding** rather
+than a caveat: none exceeds 2.66 contracts per outcome, against 8–10 for the batch-2 ladders.
+
+`KXMLBGAME`'s edge is only **+1.3pp**, but on 552 contests at 95% own-weight that is a
+well-measured small number rather than noise — the opposite situation from `KXNATGASD`, signed in
+batch 2 on 9 contests with an undefined edge.
+
+### Dropped: `KXMLBTOTAL`
+
+Correctly classified, rules CONFIRMS, and **5,930 trades — the largest sample in any batch — to
+reach an edge of +0.3pp.** At 94% own-weight that is a well-measured *nothing*, carrying 4.66
+contracts per game and −$486.50 of gross losses in multi-contract games. Activity without edge.
+
+Also rejected: `KXLEAGUESCUPSPREAD` (−$15.18, edge −5.3), `KXCS2GAME` (−$15.91, edge −7.3),
+`KXMLBTB` (−$16.22, edge −13.8 but only 10 contests — suggestive, not established),
+`KXCLUBFGAME` (−$17.38, edge −5.8).
+
+### The first real evidence that concentration tracks losses
+
+Batches 1 and 2 were nearly all multi-contract, so "the losses came from multi-contract outcomes"
+was tautological. **Batch 3 has a genuine mix**, and every mixed series over-represents:
+
+| series | % of contests multi | % of losses from multi |
+|---|---:|---:|
+| `KXWNBAGAME` | 21% | 49% |
+| `KXCS2GAME` | 26% | 51% |
+| `KXMLBGAME` | **29%** | **68%** |
+| `KXCLUBFGAME` | 58% | 74% |
+
+`KXMLBGAME` is the best-powered case: 2.3× over-representation across 552 contests.
+
+**It is association, not proof.** The multi-contract games are plausibly also the
+more-heavily-traded ones, and nothing here controls for that. But it is the first version of this
+observation that is not true by construction, and it strengthens the cap case beyond what batches
+1 and 2 could support.

@@ -227,9 +227,12 @@ def main(argv: list[str] | None = None) -> int:
                          "default here because an honest independence unit is the measurement")
     args = ap.parse_args(argv)
 
-    url = _to_libpq_url(os.environ.get("DATABASE_URL", ""))
+    # The ops channel only ever holds the READ-ONLY url, under `DATABASE_URL_RO`. Reading
+    # `DATABASE_URL` alone is why the first production run of this script died on "not set";
+    # every other allowlisted script prefers the RO name, and this one now matches them.
+    url = _to_libpq_url(os.environ.get("DATABASE_URL_RO") or os.environ.get("DATABASE_URL") or "")
     if not url:
-        print("DATABASE_URL is not set", file=sys.stderr)
+        print("DATABASE_URL_RO (or DATABASE_URL) is not set.", file=sys.stderr)
         return 2
     import psycopg
 

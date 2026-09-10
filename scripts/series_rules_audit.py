@@ -21,9 +21,20 @@ what Kalshi says?** Three answers, and the third is not a failure of the tool:
 
 WHAT IT DOES NOT DO. It does not edit the manifest, `SERIES_TYPES`, or any lifecycle state. It
 emits evidence; a human opens the PR that records the verdicts; merging that PR is the review.
-A CONTRADICTS or INSUFFICIENT row must NEVER be written as `rules_reviewed_at` — that would
-launder a machine's uncertainty into a human's signature, which is the exact failure the
-two-part graduation bar exists to prevent.
+**A CONTRADICTS row must NEVER be signed** until the taxonomy is corrected: the recorded mode
+is wrong, so a signature would record that we understand a settlement we have written down
+incorrectly. `KXYTVIEWSW` (2026-09-10) is the worked example — recorded `discrete` against rules
+that trigger at any point across a week.
+
+**INSUFFICIENT is different, and the difference is load-bearing.** It means THIS SCRIPT found no
+settlement-mode keyword — not that the rules are ambiguous. Kalshi's `settlement_source` field is
+empty across all 138 series, so prose is the only signal and this script's vocabulary is narrower
+than Kalshi's. An operator who reads the text may therefore sign an INSUFFICIENT row, and has:
+`KXRAIN` and `KXTRUMPSAY` were signed that way on 2026-09-08, both correctly
+(`docs/SERIES_RULES_AUDIT.md`). What must never happen is a MACHINE writing one — which is why
+`emit_patch` refuses to emit anything but CONFIRMS, and why `series_manifest_signoff.py` requires
+a named human. The failure the two-part bar guards against is laundering a regex into a
+signature, not an operator overruling a regex after reading the same text it read.
 
 THE EVIDENCE RULE IS BORROWED, NOT REINVENTED. `scripts/mmsell_taxonomy_audit.py` already
 derives a settlement mode from Kalshi's settlement-source field and rules text, using patterns
@@ -183,7 +194,10 @@ def report(results: list[dict]) -> None:
     print(f"# audited {len(results)} graduated series | "
           + " ".join(f"{k}={v}" for k, v in counts.items()))
     print("# NOT A GATE. Emits evidence; a human's PR against the manifest records the review.")
-    print("# Only CONFIRMS may be written as rules_reviewed_at — see --emit-patch.")
+    print("# --emit-patch emits CONFIRMS only. A CONTRADICTS row must not be signed until")
+    print("# the taxonomy is fixed; an INSUFFICIENT row MAY be signed by an operator who")
+    print("# reads the evidence below — it means this script found no keyword, not that")
+    print("# the rules are unclear.")
     if looks_like_a_network_failure(results):
         print("#")
         print("# !! NOT A RESULT. Zero markets retrieved for EVERY series audited, which means")
