@@ -189,3 +189,60 @@ def test_own_weight_is_the_fitted_constant_and_rises_with_evidence():
     assert round(100 * weight(38)) == 50
     assert round(100 * weight(100)) == 72
     assert weight(3) < weight(38) < weight(100) < 1.0
+
+
+def _concentration_script():
+    import importlib.util
+    import pathlib
+
+    path = pathlib.Path(__file__).resolve().parents[1] / "scripts" / "series_concentration.py"
+    spec = importlib.util.spec_from_file_location("series_concentration", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_the_concentration_script_split_set_matches_the_workers():
+    """Third copy of the set, same drift risk as the P&L report's — check 3 keyed on a stale
+    list would report a series' independence unit under a rule the book no longer uses."""
+    assert _concentration_script().SUBJECT_SPLIT_SERIES == SUBJECT_SPLIT_SERIES
+
+
+def test_the_concentration_script_defaults_to_the_CORRECTED_key():
+    """Opposite default from the P&L report, deliberately: there the shipped meaning must not
+    move under an unsuspecting reader, here an honest independence unit IS the measurement."""
+    mod = _concentration_script()
+    assert mod.contest_of("KXRAIN-26SEP06-TTN") == "KXRAIN-26SEP06-TTN"
+    assert mod.contest_of("KXRAIN-26SEP06-TTN", split_subjects=False) == "KXRAIN:26SEP06"
+    assert mod.contest_of("KXNFLSPREAD-26AUG13ARILV-ARI10") == "KXNFLSPREAD:26AUG13ARILV"
+
+
+def test_a_bare_date_token_is_recognised_so_the_cross_series_column_can_disclaim_itself():
+    """KXRAIN read 5.93 series per event and KXTRUMPSAY 7.50 in the batch-1 ad-hoc query. Both
+    are artifacts: their event token is a bare date, so it collides with every date-keyed
+    series. The column must say `date?` rather than report a number that means nothing."""
+    mod = _concentration_script()
+    for token in ("26SEP06", "26AUG03", "26SEP0414", "26AUG1717"):
+        assert mod.looks_like_a_bare_date(token), token
+    for token in ("26AUG13ARILV", "26JUL03ARGCPV", "26SEP022138NYYLAA", "", "T93.99"):
+        assert not mod.looks_like_a_bare_date(token), token
+
+
+def test_concentration_separates_a_ladder_from_independent_positions():
+    """The whole point of check 3: one oil print carrying 18 strikes must not read the same as
+    18 markets that each ride their own outcome."""
+    mod = _concentration_script()
+
+    def rows(tickers):
+        return [{"ticker": t, "series": mod.series_of(t), "ev": mod.event_token(t),
+                 "contest": mod.contest_of(t), "c": -1.0} for t in tickers]
+
+    ladder = rows([f"KXWTI-26SEP0414-T{90 + i}.99" for i in range(18)])
+    s = mod.summarize(ladder, {})
+    assert s["contests"] == 1 and s["max_mkts"] == 18 and s["multi_share"] == 1.0
+    assert s["date_keyed"] is True          # one oil print, and the token is a bare date
+
+    spread = rows([f"KXRAIN-26SEP0{d}-TTN" for d in range(1, 9)])
+    s = mod.summarize(spread, {})
+    assert s["contests"] == 8 and s["max_mkts"] == 1 and s["avg_mkts"] == 1.0
+    assert s["multi_share"] == 0.0

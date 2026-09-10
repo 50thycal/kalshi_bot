@@ -116,6 +116,68 @@ person read how those six settle. It is not an approval to trade, it gates nothi
 series this document rejects or flags are unaffected by it. Reading the signature as a trading
 approval is the specific misunderstanding this document exists to prevent.
 
+## 8. Batch 2 — measured 2026-09-10, verdicts PROPOSED (not signed)
+
+Backlog ranks 11–20 by live exposure; ranks 1–10 were batch 1 and the four it did not sign
+(`KXNFLSPREAD`, `KXMLBHR`, `KXWTI`, `KXALBUMEQUIV`) still head the list with their §2 verdicts.
+Audit: `CONFIRMS=4 CONTRADICTS=1 INSUFFICIENT=5`.
+
+| series | category | rules | contracts / outcome | P&L | edge | contests | own% | proposed |
+|---|---|---|---:|---:|---:|---:|---:|---|
+| `KXWTAMATCH` | `h2h`/`in_play` ✅ | CONFIRMS ✅ | 1.28 avg, 2 max ✅ | +$22.66 | +3.1 | 307 | 91% | **Approve** |
+| `KXWNBASPREAD` | `spread`/`in_play` ✅ | CONFIRMS ✅ | 5.70 avg, 10 max ⚠ | +$33.16 | +2.6 | 56 | 65% | Approve at cap |
+| `KXNASDAQ100U` | `price_strike`/`scheduled` ✅ | CONFIRMS ✅ | **7.77 avg, 23 max** ❌ | +$25.38 | +10.6 | 13 | 30% | Approve at cap |
+| `KXNATGASD` | `price_strike`/`scheduled` ✅ | CONFIRMS ✅ | **10.22 avg, 30 max** ❌ | +$27.12 | *none yet* | 9 | 23% | Approve at cap, flagged |
+| `KXYTVIEWSW` | `event_stat`/`discrete` ❌ | **CONTRADICTS** | 2.76 avg, 7 max ⚠ | +$23.84 | *none yet* | 17 | 36% | Fix category first |
+| `KXBTC` | `price_strike`/`scheduled` ✅ | unread ⚠ | **9.85 avg, 25 max** ❌ | +$11.83 | +1.6 | 13 | 30% | Cap |
+| `KXBTCD` | `price_strike`/`scheduled` ✅ | unread ⚠ | **8.05 avg, 19 max** ❌ | −$19.84 | **−0.7** | 60 | 67% | Cap or drop |
+| `KXETHD` | `price_strike`/`scheduled` ✅ | unread ⚠ | 3.77 avg, 12 max ⚠ | −$18.00 | −4.3 | 22 | 42% | Reject |
+| `KXAAAGASD` | `price_strike`/`scheduled` ✅ | unread ⚠ | 2.96 avg, 6 max ⚠ | −$33.30 | −11.7 | 24 | 44% | Reject |
+| `KXTRUTHSOCIAL` | `mention`/`discrete` ❌ | unread ⚠ | 5.20 avg, 8 max ⚠ | −$20.57 | −10.6 | 5 | 14% | Reject + fix category |
+
+### Two taxonomy defects — OPEN, and neither is fixed here
+
+Changing `SERIES_TYPES` is shared platform semantics: a **Platform Change Review**, never a
+side effect of a review batch.
+
+**`KXYTVIEWSW` — recorded `discrete`, should be `in_play`.** The audit's first CONTRADICTS in
+either batch, and it is correct. *"If Future has above 5.5M Global daily views on YouTube **at any
+point during** September 7 – September 13, then the market resolves to Yes."* A one-way trigger
+live for a whole week is not a discrete event.
+
+**`KXTRUTHSOCIAL` — recorded `mention`/`discrete`, should be a threshold on `scheduled`.** The
+audit returned INSUFFICIENT; the regex missed it and the text does not. *"If the number of Truth
+Social posts by Donald Trump from Aug 30 to Sep 5 is below 80…"* / *"above 240…"*, from Roll Call,
+**recorded at 10:00 AM ET on Sep 6**. A threshold ladder on one weekly count from a named source
+at a named instant. Both halves of the recorded category are wrong. Predicted while building
+`SUBJECT_SPLIT_SERIES` (`docs/MMSELL_CONTEST_KEY_SUBJECT_SPLIT.md` calls `KXTRUTHSOCIAL` a
+threshold series typed `mention`); now confirmed from Kalshi's own settlement text.
+
+### Two corrections to these numbers, stated so nobody reads them wrong
+
+**`KXNATGASD` and `KXYTVIEWSW` have no edge figure, not a spectacular one.** The raw query
+returned "+100.0" for both. That is an artifact: break-even is `avg_win/(avg_win+|avg_loss|)`, and
+with **zero losing trades** the denominator collapses. The honest reading is *no losses yet* on
+350 and 193 trades. Unproven, not exceptional.
+
+**The cross-series column is meaningless for the six `price_strike` series.** Their event token is
+a date or date+hour, so it collides with everything date-keyed — and an hour token merges `KXBTCD`
+with `KXETHD`, different underlyings under one key. Reported as `date?`, never as a number.
+
+### What batch 2 changes about the thesis
+
+**Only one series of ten is clean on all four**, against three in batch 1.
+
+Batch 1 made the concentration look like a sports problem. It is not — it is every ladder-shaped
+market, and the commodity/crypto ladders are the deepest measured anywhere: `KXNATGASD` averages
+**10.22 contracts per gas print and peaked at 30**, `KXBTC` at 25, `KXNASDAQ100U` at 23, `KXBTCD`
+at 19. `KXBTCD` is the batch's volume monster — **2,921 trades to reach an edge of −0.7**, with
+−$200.47 of gross losses in multi-contract prints against −$0.82 in single-contract ones (98% of
+its contests are multi-contract, so read that pair per §3's warning).
+
+`KXNATGASD` is the one to watch: the largest single-outcome exposure in the registry, and it has
+never yet been tested by a loss.
+
 ## 7. Reproducing
 
 ```
@@ -124,7 +186,13 @@ approval is the specific misunderstanding this document exists to prevent.
 {"type":"script","name":"mmsell_series_pnl","args":["--all-time","--split-subjects"]}
 ```
 
-Check 3 has **no script yet** — the numbers in §2 and §3 came from an ad-hoc `db` query grouping
-settled trades by contest under the corrected key and counting distinct markets per contest.
-Worth a script before batch 2; it is the check that changed the answer and it is the one that
-cannot currently be re-run by name.
+```
+{"type":"script","name":"series_concentration"}
+{"type":"script","name":"series_concentration","args":["--only","KXBTC,KXETHD"]}
+```
+
+Check 3 now has a script (`scripts/series_concentration.py`, added 2026-09-10). Batch 1's and
+batch 2's concentration numbers predate it and came from an ad-hoc `db` query of the same shape;
+from batch 3 they are reproducible by name. The script defaults to the CORRECTED contest key —
+the opposite of `mmsell_series_pnl`, deliberately, because there the shipped meaning must not move
+under an unsuspecting reader while here an honest independence unit IS the measurement.
