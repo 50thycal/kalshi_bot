@@ -1,7 +1,0 @@
-# latest deployment df050a11-beac-4897-8d28-f7161a02828c (status=SUCCESS, created=2026-09-07T13:25:29.497Z)
-# ops request [READ]
-# type=logs  service=main  id=stuck-logs-1
-# code e7d324fb46929135bf83140fe3dbf9056619bc23 · started 2026-09-07T13:30:01Z
-# target service: main
-2026-09-07T13:26:16.570693868Z WARN  live cancel failed
-2026-09-07T13:26:25.151362756Z WARN  live cancel failed
