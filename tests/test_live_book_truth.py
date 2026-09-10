@@ -79,7 +79,11 @@ class _Cursor:
         elif "live_paper_twins" in sql:
             self._result = (SINCE, "Fmmsell10_pt4")
         elif "from live_orders" in sql and "distinct market_ticker" in sql:
-            self._result = [(t,) for t in self.ordered]
+            committed = "status = any" in sql
+            self._result = [
+                (t,) for t, st in self.ordered.items()
+                if not committed or st in lbt.COMMITTED_BUY_STATUSES
+            ]
         elif "from fills" in sql:
             self._result = [(t, q, fee) for t, (q, fee) in self.filled.items()]
         elif "from positions" in sql and "distinct on" in sql:
@@ -104,13 +108,19 @@ class _Cursor:
 def _production_shape():
     """The 2026-09-10 canary, reduced to the smallest shape with the same defect.
 
-    Two tickers filled and settled to a real LOSS; one ticker was ordered and
-    never filled, and the simulator recorded a WIN on it. Reading `paper_trades`
-    therefore reports a profitable book that lost money — which is exactly what
-    happened at full scale (+$2.56 reported, -$1.41 real).
+    Two tickers filled and settled to a real LOSS; one ticker rested, was
+    CANCELLED without ever filling, and the simulator recorded a WIN on it.
+    Reading `paper_trades` therefore reports a profitable book that lost money —
+    which is exactly what happened at full scale (+$2.56 reported, -$1.41 real).
+
+    The cancelled status is not incidental. It is how an mmsell order ordinarily
+    fails to fill, and the first shipped version filtered the never-filled set to
+    committed statuses, so it reported the phantom as n=0 on a book with 65
+    cancelled orders. `test_a_CANCELLED_never_filled_order_is_still_phantom`
+    pins that.
     """
     return _Cursor(
-        ordered=["A", "B", "NEVER"],
+        ordered={"A": "filled", "B": "filled", "NEVER": "canceled"},
         filled={"A": (1.0, 0.01), "B": (1.0, 0.01)},
         snaps={
             "A": (0.0, -1.00, 0.0),     # settled, real loss
@@ -150,14 +160,53 @@ def test_paper_trades_would_have_reported_a_PROFIT_on_a_losing_book(capsys):
     assert realized < 0 < 2.56
 
 
-def test_open_count_uses_the_cap_rule_and_counts_an_unfilled_order(capsys):
-    """`count_live_book_open` counts a committed order with no snapshot as OPEN.
+def test_a_CANCELLED_order_is_phantom_but_NOT_open(capsys):
+    """The two sets are different, and conflating them breaks one or the other.
 
-    A `paper_trades` row count would have said 3 here and a fills count 2; the
-    bound governs neither.
+    A cancelled rest holds nothing, so it must not occupy a slot under the open
+    cap — and it never filled, so its simulated row is phantom. The first shipped
+    version used the committed set for both and reported the phantom as n=0.
     """
     out = _run(_production_shape(), capsys)
+    assert "on NEVER-filled       :    3.7600   n=1   <- phantom" in out
+    assert "open by the cap rule  :         0   (count_live_book_open semantics)" in out
+
+
+def test_a_RESTING_unfilled_order_counts_as_OPEN_and_is_still_phantom(capsys):
+    """`count_live_book_open` counts a committed order with no snapshot as open.
+
+    A `paper_trades` row count would say 4 here and a fills count 2; the bound
+    governs neither.
+    """
+    cur = _production_shape()
+    cur.ordered["REST"] = "resting"
+    cur.snaps["REST"] = (None, None, None)
+    cur.paper.append(("REST", 0.50))
+    out = _run(cur, capsys)
     assert "open by the cap rule  :         1   (count_live_book_open semantics)" in out
+    assert "on NEVER-filled       :    4.2600   n=2   <- phantom" in out
+    assert "NEVER filled          :         2" in out
+
+
+def test_every_simulated_row_falls_in_one_half_or_the_other(capsys):
+    """The partition guard. If a row lands in neither half the phantom is a lie
+    by omission, so the report says so instead of printing a clean split."""
+    out = _run(_production_shape(), capsys)
+    assert "in NEITHER half" not in out
+
+
+def test_the_partition_guard_FIRES_when_a_row_lands_outside_both_halves(capsys):
+    """The invariant that would have caught the shipped defect in production.
+
+    Here a simulated row exists on a ticker the order query never returned, so
+    the two halves no longer sum to the whole. The report must say the phantom is
+    a floor rather than print a split that quietly omits it.
+    """
+    cur = _production_shape()
+    cur.paper.append(("GHOST", 9.99))
+    out = _run(cur, capsys)
+    assert "!! 1 simulated row(s) in NEITHER half" in out
+    assert "treat the phantom figure as a floor" in out
 
 
 def test_a_still_open_filled_position_is_open_and_not_realized(capsys):
@@ -166,7 +215,7 @@ def test_a_still_open_filled_position_is_open_and_not_realized(capsys):
     out = _run(cur, capsys)
     assert "realized              :   -1.0000   settled=1" in out
     assert "open cost basis       :    0.9300" in out
-    assert "open by the cap rule  :         2" in out
+    assert "open by the cap rule  :         1" in out
 
 
 def test_twin_gap_is_reported_with_the_selection_caveat(capsys):
@@ -192,7 +241,7 @@ def test_epoch_is_taken_from_live_paper_twins_when_no_since_given(capsys):
 
 
 def test_no_fills_at_all_reports_zero_rather_than_dividing_by_zero(capsys):
-    cur = _Cursor(ordered=[], filled={}, snaps={}, paper=[], twin_rows=[], day=(0.0, 0))
+    cur = _Cursor(ordered={}, filled={}, snaps={}, paper=[], twin_rows=[], day=(0.0, 0))
     out = _run(cur, capsys)
     assert "tickers ordered       :         0" in out
     assert "realized              :    0.0000   settled=0" in out

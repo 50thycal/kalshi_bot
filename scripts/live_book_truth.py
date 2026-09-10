@@ -41,6 +41,12 @@ The `paper_trades` figure IS printed -- split into the filled and never-filled
 halves -- because the point is to make the trap visible rather than to hide the
 number someone would otherwise reach for.
 
+The never-filled half is measured over EVERY buy the book placed, whatever became
+of the order. An mmsell order that fails to fill ordinarily rests and is then
+CANCELLED, so restricting that set to committed statuses would drop the very
+trades the phantom is counting. The open count is the one figure that uses the
+narrower committed set, because that is what `count_live_book_open` bounds.
+
 WHAT IT DOES NOT DO
 -------------------
 No unrealized P&L. `positions.unrealized_pnl` is never written by the live path,
@@ -111,8 +117,34 @@ def _epoch_start(cur, tag: str):
     return (row[0], row[1]) if row else (None, None)
 
 
-def _ordered_tickers(cur, tag: str, since):
-    """Distinct tickers with a COMMITTED live buy for this tag, since the epoch."""
+def _attempted_tickers(cur, tag: str, since):
+    """EVERY ticker this book placed a live buy on, whatever became of the order.
+
+    Deliberately unfiltered by status, and that is the whole point of the
+    never-filled half: the ordinary way an mmsell order fails to fill is that it
+    rests and is then CANCELLED, so filtering to `COMMITTED_BUY_STATUSES` here
+    would drop exactly the trades the phantom measures and report n=0 — which the
+    first production run did, on a book with 65 cancelled orders.
+    """
+    cur.execute(
+        """
+        select distinct market_ticker
+          from live_orders
+         where strategy = %s
+           and action = 'buy'
+           and (%s::timestamptz is null or created_at >= %s::timestamptz)
+        """,
+        (tag, since, since),
+    )
+    return {r[0] for r in cur.fetchall()}
+
+
+def _committed_tickers(cur, tag: str, since):
+    """The narrower set `count_live_book_open` counts: a committed live buy.
+
+    `COMMITTED_BUY_STATUSES` excludes `canceled` and `rejected` on purpose — a
+    cancelled order holds nothing, so it cannot occupy a slot under the open cap.
+    """
     cur.execute(
         """
         select distinct market_ticker
@@ -225,9 +257,10 @@ def report(cur, tag: str, twin: str | None, since) -> int:
         since = epoch_since
     twin = twin or epoch_twin
 
-    ordered = _ordered_tickers(cur, tag, since)
+    attempted = _attempted_tickers(cur, tag, since)
+    committed = _committed_tickers(cur, tag, since)
     filled = _filled(cur, tag, since)
-    snaps = _snapshots(cur, ordered)
+    snaps = _snapshots(cur, attempted)
 
     realized = 0.0
     settled = 0
@@ -242,14 +275,14 @@ def report(cur, tag: str, twin: str | None, since) -> int:
 
     # count_live_book_open: committed, minus those whose newest snapshot is flat.
     open_count = sum(
-        1 for t in ordered
+        1 for t in committed
         if not (snaps.get(t, (None, None, None))[0] is not None
                 and abs(snaps[t][0]) <= FLAT_EPSILON)
     )
 
     fees = sum(fee for _q, fee in filled.values())
     contracts = sum(q for q, _fee in filled.values())
-    unfilled = ordered - set(filled)
+    unfilled = attempted - set(filled)
 
     pt_all = _paper_pnl(cur, tag, since)
     pt_filled = _paper_pnl(cur, tag, since, set(filled))
@@ -269,9 +302,9 @@ def report(cur, tag: str, twin: str | None, since) -> int:
     print(f"  open by the cap rule  : {open_count:>9}   (count_live_book_open semantics)")
     print(f"  contracts filled      : {contracts:>9.0f}")
 
-    rate = (len(filled) / len(ordered) * 100) if ordered else 0.0
+    rate = (len(filled) / len(attempted) * 100) if attempted else 0.0
     print("\nEXECUTION")
-    print(f"  tickers ordered       : {len(ordered):>9}")
+    print(f"  tickers ordered       : {len(attempted):>9}   (any status — a cancelled rest counts)")
     print(f"  tickers filled        : {len(filled):>9}   ({rate:.1f}%)")
     print(f"  NEVER filled          : {len(unfilled):>9}")
 
@@ -281,6 +314,13 @@ def report(cur, tag: str, twin: str | None, since) -> int:
     print(f"  on NEVER-filled       : {_fmt(pt_unfilled[0])}   n={pt_unfilled[1]}   <- phantom")
     gap = pt_all[0] - realized
     print(f"  overstates real money by {gap:+.4f}")
+    stray = pt_all[1] - pt_filled[1] - pt_unfilled[1]
+    if stray:
+        # The two halves must partition every simulated row, or the phantom is
+        # understated and the split is lying by omission. That is exactly how the
+        # first production run reported n=0 while 76 rows sat outside both sets.
+        print(f"  !! {stray} simulated row(s) in NEITHER half — the split is incomplete;"
+              " treat the phantom figure as a floor and report this")
 
     if twin:
         tw_total, tw_n = _paper_pnl(cur, twin, since)
