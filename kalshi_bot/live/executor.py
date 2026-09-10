@@ -87,6 +87,7 @@ class LiveCycleSummary:
     queue_unparsed: int = 0         # samples the API answered but we could not read
     drained_canceled: int = 0       # resting orders pulled by a stand-down drain
     drain_failed: int = 0           # ...and the ones the drain could NOT confirm gone
+    timed_out_cancel_failed: int = 0  # timeout cancels the exchange REFUSED this cycle
     queue_decisions: int = 0        # queue-aware cancel: decision rows written this cycle
     queue_would_cancel: int = 0     # ...of which the frozen rule said cancel
     queue_canceled: int = 0         # ...and were actually sent to Kalshi (live mode only)
@@ -941,7 +942,9 @@ class LiveExecutor:
                             self.summary.queue_cancel_refused += 1
                         else:
                             try:
-                                self.client.cancel_events_order(row.kalshi_order_id)
+                                self.client.cancel_events_order(
+                                    row.kalshi_order_id,
+                                    exchange_index=self._exchange_index_for(row.market_ticker))
                                 acted = True
                                 sent += 1
                                 cancel_result = "accepted"
@@ -1035,7 +1038,13 @@ class LiveExecutor:
         for row in targets:
             koid = str(row.kalshi_order_id)
             try:
-                self.client.cancel_events_order(row.kalshi_order_id)
+                # Routed to the market's shard, for the same reason the timeout cancel is: an
+                # unrouted cancel for an order on a non-default shard is refused 404 not_found
+                # however long it lives. That matters MORE here than on the timeout path,
+                # because this path draws a conclusion from the failure — see the give-up branch.
+                self.client.cancel_events_order(
+                    row.kalshi_order_id,
+                    exchange_index=self._exchange_index_for(row.market_ticker))
             except AuthError:
                 raise
             except Exception as exc:  # noqa: BLE001
@@ -1070,6 +1079,13 @@ class LiveExecutor:
                     f"{self._DRAIN_MAX_ATTEMPTS} failed cancels — marked drain_unconfirmed. "
                     "Almost certainly already filled/expired (Kalshi refuses cancels on "
                     "non-open orders); verify against the exchange if it matters.")
+                # THAT INFERENCE DEPENDS ON THE CANCEL BEING ROUTED, and is why the call above
+                # passes `exchange_index`. An UNROUTED cancel is refused 404 for an order that is
+                # perfectly alive, so this branch would conclude "already filled" about an order
+                # still resting at queue rank 1 — and write a terminal reason describing
+                # something that did not happen. Three KXBTCD rows from 2026-09-06/07 carry
+                # `drain_unconfirmed` from exactly that mistake (XOS-000028). If the routing is
+                # ever removed, this give-up branch starts lying again.
                 continue
             repo.update_live_order_status(session, row, status="canceled", cancel_reason=reason)
             self._drain_attempts.pop(koid, None)
@@ -1223,6 +1239,11 @@ class LiveExecutor:
             except AuthError:
                 raise
             except Exception as exc:  # noqa: BLE001
+                # COUNT the failure. `timed_out_canceled` counts only successes, so before this
+                # a book whose every timeout cancel was refused looked identical, in the cycle
+                # summary an operator actually reads, to a book with nothing to cancel. That is
+                # how one order sat 3.5 days past its 4-hour timeout unnoticed (XOS-000028).
+                self.summary.timed_out_cancel_failed += 1
                 # The error TEXT goes in the MESSAGE, not in `extra`. Railway's log endpoint
                 # returns only a log line's message and drops structured fields, so an error in
                 # `extra` is unreadable in production — the same trap already fixed for the 429
