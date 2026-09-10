@@ -389,3 +389,56 @@ stays unsigned.
 **20 of 138 rows reviewed.** The signed set is now dominated by low-concentration sports and
 mention markets; every deep ladder reviewed so far is either rejected, held, or approved with an
 explicit cap caveat that nothing yet enforces.
+
+---
+
+## Batch 5 signed — 2026-09-10, by `50cal`
+
+Four of ten. Backlog ranks 41–50. Audit: `CONFIRMS=9 CONTRADICTS=1 INSUFFICIENT=0`.
+
+| series | audit | contracts / outcome | P&L | edge | contests | own% | signed |
+|---|---|---:|---:|---:|---:|---:|---|
+| `KXARGPREMDIVTOTAL` | CONFIRMS | 1.70 avg, 4 max | +$10.71 | +5.6 | 33 | 52% | ✅ |
+| `KXWTASETWINNER` | CONFIRMS | 1.26 avg, 3 max | +$7.52 | +4.1 | 66 | 69% | ✅ |
+| `KXMLSGAME` | CONFIRMS | 2.00 avg, 3 max | +$10.93 | +3.8 | 71 | 70% | ✅ |
+| `KXUCLGAME` | CONFIRMS | 2.07 avg, 3 max | +$8.11 | +7.4 | 27 | 47% | ✅ |
+
+All four are low-concentration (1.26–2.07 contracts per outcome) and CONFIRMS on rules. **24 of
+138 rows now reviewed.**
+
+### The YouTube defect is a family, not two rows — added as evidence to XOS-000030
+
+`KXYTVIEWSHIGH` returned CONTRADICTS on **exactly** the pattern `KXYTVIEWSW` did: recorded
+`event_stat`/`discrete` against *"above 8.25M Global daily views on YouTube **at any point during**
+September 2026… resolves Yes if **any** daily value is above"*. A threshold live across a whole
+month is `in_play`.
+
+Three rows are now known wrong in or beside this family (`KXYTVIEWSW`, `KXYTVIEWSHIGH`, and
+`KXTRUTHSOCIAL` on an adjacent error), and the two YouTube ones share an identical rules template
+— so the misclassification is **systematic, not incidental**. Recorded on XOS-000030 as
+`OPS_RESULT` evidence (`tax-ytviews-family-20260910`, SUCCEEDED) with the recommendation that
+whoever fixes it **enumerate every `KXYTVIEWS*` series** rather than correcting the two rows the
+issue was opened on. Transport cleared.
+
+### Held, too thin to judge
+
+- `KXCOPPERD` — **7 contests**, zero losses, so no edge figure exists; the raw "+100" is the same
+  collapsed denominator as `KXNATGASD` and `KXBRENTW`. 19% own-weight.
+- `KXLIGAMXSCORE` — **13 contests** carrying a 15-strike ladder. Positive, but 30% own-weight.
+
+### Marginal, not ruled on
+
+`KXWNBATOTAL` (+1.2 on 63 contests, 9 per outcome) and `KXMLBHIT` (+1.5 on 42 contests, **19 on
+one game**). Same shape as `KXMLBKS` from batch 4 — a real but tiny edge attached to a deep
+ladder. All three remain unsigned.
+
+### Rejected
+
+- `KXTESTMATCH` — −$10.92, edge −9.5 on 8 contests.
+- `KXYTVIEWSHIGH` — −$7.24, edge −11.9 on 4 contests, **and** the taxonomy defect above.
+
+### The concentration association, third batch running
+
+Every mixed-contest series over-represents losses in multi-contract outcomes: `KXWTASETWINNER`
+23% of contests → 62% of losses; `KXARGPREMDIVTOTAL` 48% → 100%; `KXMLSGAME` 72% → 92%.
+Consistent with batches 3 and 4, and still association rather than proof.

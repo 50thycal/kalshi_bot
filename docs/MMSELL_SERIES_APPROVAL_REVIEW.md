@@ -196,3 +196,19 @@ batch 2's concentration numbers predate it and came from an ad-hoc `db` query of
 from batch 3 they are reproducible by name. The script defaults to the CORRECTED contest key —
 the opposite of `mmsell_series_pnl`, deliberately, because there the shipped meaning must not move
 under an unsuspecting reader while here an honest independence unit IS the measurement.
+
+---
+
+## Where the signed set goes
+
+The reviewed series are not just a ledger entry. `docs/MMSELL_REVIEWED_TAPE.md` specifies
+**two** paper books whose universe is exactly the signed set (`onlyx=`, exact match) and whose
+band/ceiling is `mmsell10`'s: `Rmmsell1` uncapped, `Rmmsell2` under the contest cap on the
+corrected key. `Rmmsell1` against `mmsell10` asks whether a reviewed universe beats an unreviewed
+one; `Rmmsell2` against `Rmmsell1` asks whether the cap helps inside a universe we understand.
+Both are designed and **not registered**: arming them needs Experiment OS arms plus an
+`MMSELL_VARIANTS` change, both operator acts.
+
+The tape does not follow the manifest automatically. A sign-off lands here first; the tape widens
+only when the operator decides to reset its evidence and widen it.
+`python scripts/reviewed_tape_spec.py --check` reports the gap.

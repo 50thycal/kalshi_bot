@@ -204,3 +204,15 @@ def unreviewed_graduated() -> tuple[str, ...]:
     actually risking money are read first."""
     return tuple(r["series"] for r in rows()
                  if r.get("state") == GRADUATED and not r.get("rules_reviewed_at"))
+
+
+def reviewed_series() -> tuple[str, ...]:
+    """Series a human has signed off on — the complement of `unreviewed_graduated()` over the
+    graduated rows, and the universe the reviewed-tape book (`Rmmsell1`) is built from.
+
+    This is a REPORTING helper, not an admission rule. Nothing at runtime calls it: a book's
+    universe is pinned in its own `onlyx=` spec so that adding batch 6 to the manifest cannot
+    silently widen a book already collecting evidence. `scripts/reviewed_tape_spec.py` regenerates
+    the spec from this list when the operator decides to widen it deliberately."""
+    return tuple(r["series"] for r in rows()
+                 if r.get("state") == GRADUATED and r.get("rules_reviewed_at"))

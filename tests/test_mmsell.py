@@ -427,3 +427,125 @@ def test_candidate_capture_is_fail_soft(settings, monkeypatch):
     assert summ.opened == 1                              # trade opened despite the capture error
     with db.session_scope() as session:
         assert session.scalar(select(func.count()).select_from(m.MmSellCandidateTick)) == 0
+
+
+# ---------------------------------------------------------- `onlyx`: the EXACT series allowlist
+#
+# `only=` matches substrings, which is right for a family book and wrong for a book whose
+# universe is a named, individually reviewed set. These tests pin the difference and the one
+# real collision it was found on.
+
+
+def test_variant_spec_parses_onlyx(settings):
+    settings.mmsell_variants = "Rmmsell1:lo=5,hi=10,onlyx=KXRAIN+KXTRUMPSAY"
+    vl = {v["tag"]: v for v in settings.mmsell_variant_list}
+    assert vl["Rmmsell1"]["onlyx"] == ["KXRAIN", "KXTRUMPSAY"]
+    assert vl["Rmmsell1"]["only"] == [] and vl["Rmmsell1"]["skip"] == []
+
+
+def test_every_existing_book_defaults_to_an_empty_onlyx(settings):
+    """The key must be inert for the whole running cohort: an empty list admits everything."""
+    for v in settings.mmsell_variant_list:
+        assert v["onlyx"] == [], v["tag"]
+
+
+def test_onlyx_is_exact_where_only_is_substring():
+    adm = MmSellTracker._book_admits_series
+    # The collision this key exists for. KXTRUMPSAYCOMPANY and KXTRUMPSAYMONTH are separate,
+    # unreviewed series; a substring allowlist naming KXTRUMPSAY admits both of them.
+    assert adm({"only": ["KXTRUMPSAY"]}, "KXTRUMPSAYCOMPANY") is True
+    assert adm({"onlyx": ["KXTRUMPSAY"]}, "KXTRUMPSAYCOMPANY") is False
+    assert adm({"onlyx": ["KXTRUMPSAY"]}, "KXTRUMPSAYMONTH") is False
+    assert adm({"onlyx": ["KXTRUMPSAY"]}, "KXTRUMPSAY") is True
+    # ...and the same shape as the earlier KXUE prefix collision.
+    assert adm({"onlyx": ["KXUE"]}, "KXUEFACHAMP") is False
+
+
+def test_onlyx_empty_admits_everything_and_ands_with_the_other_keys():
+    adm = MmSellTracker._book_admits_series
+    assert adm({"onlyx": []}, "KXANYTHING") is True
+    # `skip` still wins, and `only` still applies — the keys AND, same as mtype/mode.
+    assert adm({"onlyx": ["KXRAIN"], "skip": ["RAIN"]}, "KXRAIN") is False
+    assert adm({"onlyx": ["KXRAIN"], "only": ["TOTAL"]}, "KXRAIN") is False
+
+
+def test_a_malformed_onlyx_entry_rejects_the_whole_book(settings):
+    """An exact allowlist cannot fail loudly on a typo the way `only=` does — a bad token just
+    matches nothing — so the book would run on a quietly smaller universe than its spec reads.
+    Reject the spec instead."""
+    for bad in ("KXRAIN+KX RAIN", "KXRAIN+KXMLBGAME-26SEP10", "KXRAIN+KX.RAIN"):
+        settings.mmsell_variants = f"Rmmsell1:lo=5,hi=10,onlyx={bad}"
+        assert settings.mmsell_variant_list == [], bad
+    settings.mmsell_variants = "Rmmsell1:lo=5,hi=10,onlyx=KXRAIN+KXNASDAQ100U"
+    assert [v["tag"] for v in settings.mmsell_variant_list] == ["Rmmsell1"]
+
+
+def test_variant_onlyx_series_filter(settings):
+    _setup(settings)
+    settings.mmsell_variants = ("Rmmsell1:lo=5,hi=40,onlyx=KXTEAM;"
+                                "Rmmsell2:lo=5,hi=40,onlyx=KXTEAMX")
+    ev = _event([_mkt("KXTEAM-26-A", "A", 18, 20)])
+    client = FakeClient([ev], {"KXTEAM-26-A": _ob(18, 20)})
+    with db.session_scope() as session:
+        summ = MmSellTracker(client, settings).run_once(session)
+    assert summ.per_book.get("mmsell") == 1        # control trades it
+    assert summ.per_book.get("Rmmsell1") == 1      # exact hit
+    assert "Rmmsell2" not in summ.per_book         # KXTEAM is not KXTEAMX
+
+
+# ------------------------------------------------- the reviewed-universe tape (`Rmmsell1`)
+
+
+def test_the_documented_reviewed_tape_specs_parse_into_the_books_they_claim(settings):
+    """`docs/MMSELL_REVIEWED_TAPE.md` carries two literal MMSELL_VARIANTS lines that an operator
+    pastes into Railway. If either does not parse, `mmsell_variant_list` drops it SILENTLY and
+    that tape runs as zero books — which looks like an inactive experiment, not a typo."""
+    import importlib.util
+    import pathlib
+    path = pathlib.Path(__file__).resolve().parents[1] / "scripts" / "reviewed_tape_spec.py"
+    sp = importlib.util.spec_from_file_location("reviewed_tape_spec", path)
+    spec_mod = importlib.util.module_from_spec(sp)
+    sp.loader.exec_module(spec_mod)
+    from kalshi_bot import registry
+
+    line = spec_mod.documented_spec()
+    assert line, "both Rmmsell spec lines must appear in docs/MMSELL_REVIEWED_TAPE.md"
+    settings.mmsell_variants = line
+    books = {b["tag"]: b for b in settings.mmsell_variant_list}
+    assert list(books) == ["Rmmsell1", "Rmmsell2"], "a documented spec does not parse"
+
+    universe = sorted(registry.reviewed_series())
+    for tag, b in books.items():
+        assert len(tag) <= 24                          # paper_trades.strategy is String(24)
+        # Same band and ceiling as mmsell10, so each tape reads against it directly.
+        assert (b["lo"], b["hi"], b["maxyes"]) == (5.0, 10.0, 7.0), tag
+        assert b["universe"] is None, tag              # the explicit list already says this
+        assert b["skip"] == [] and b["only"] == [], tag
+        assert b["mtype"] == [] and b["xmtype"] == [] and b["mode"] == [], tag
+        # Exact, not substring — see test_onlyx_is_exact_where_only_is_substring.
+        assert b["onlyx"] == universe, tag
+        assert MmSellTracker._book_admits_series(b, "KXTRUMPSAYCOMPANY") is False, tag
+
+    # The pair's whole point: they share a universe and differ ONLY in the cap.
+    assert books["Rmmsell1"]["contestcap"] is None
+    assert books["Rmmsell1"]["contestkey"] is None
+    assert books["Rmmsell2"]["contestcap"] == 1
+    assert books["Rmmsell2"]["contestkey"] == "split"
+    differ = {k for k in books["Rmmsell1"]
+              if books["Rmmsell1"][k] != books["Rmmsell2"][k]}
+    assert differ == {"tag", "contestcap", "contestkey"}, differ
+
+
+def test_the_reviewed_universe_excludes_the_barred_and_held_trumpsay_siblings():
+    """The universe is built from GRADUATED rows carrying a review. `KXTRUMPSAYMONTH` is barred
+    and `KXTRUMPSAYCOMPANY` is in_review, so neither may reach a tape even though both carry a
+    review date and a named reviewer."""
+    from kalshi_bot import registry
+
+    universe = set(registry.reviewed_series())
+    assert "KXTRUMPSAY" in universe
+    assert "KXTRUMPSAYMONTH" not in universe
+    assert "KXTRUMPSAYCOMPANY" not in universe
+    # ...and the bar is a veto, so it also leaves every book that names no tier at all.
+    assert registry.admits("KXTRUMPSAYMONTH", None) is False
+    assert registry.admits("KXTRUMPSAYCOMPANY", None) is True   # held, not barred
