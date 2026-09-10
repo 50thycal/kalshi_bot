@@ -1,1 +1,1 @@
-{"type": "script", "id": "cc-d5-lbt3", "name": "live_book_truth", "args": ["--tag", "Fmmsell10"]}
+{"type": "script", "id": "cc-d5-audit3", "name": "mmsell_contest_cap_audit", "args": ["--live", "Fmmsell10", "--uncapped", "mmsell10", "--hours", "12"]}
