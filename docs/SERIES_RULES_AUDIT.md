@@ -238,3 +238,41 @@ contests under the corrected key). Signing it would say only "we understand how 
 Whether it should keep trading is the scoring threshold's decision, and that gate does not exist
 yet (Phase 3, a Platform Change). Nothing in this batch bars, promotes or changes any book's
 universe.
+
+---
+
+## Batch 2 signed — 2026-09-10, by `50cal`
+
+Four of ten. Full four-check review, verdicts and the reasoning:
+`docs/MMSELL_SERIES_APPROVAL_REVIEW.md`. Audit run: `CONFIRMS=4 CONTRADICTS=1 INSUFFICIENT=5`.
+
+| series | audit verdict | recorded mode | concentration | signed |
+|---|---|---|---|---|
+| `KXWTAMATCH` | CONFIRMS | `in_play` | 1.28 avg, 2 max — clean | ✅ |
+| `KXWNBASPREAD` | CONFIRMS | `in_play` | 5.70 avg, 10 max — **approved at cap** | ✅ |
+| `KXNASDAQ100U` | CONFIRMS | `scheduled` | 7.77 avg, 23 max — **approved at cap** | ✅ |
+| `KXNATGASD` | CONFIRMS | `scheduled` | 10.22 avg, 30 max — **approved at cap** | ✅ |
+
+**The three cap-approved rows are approvals of the SERIES, not of its concentration.** Nothing in
+the manifest records a cap, and nothing enforces one: `KXNATGASD` still averages 10.22 contracts
+per gas print and peaked at 30, the largest single-outcome exposure measured anywhere. The
+approval is conditional on the contest cap actually running, which today it does not — `Gmmsell2`
+is registered to no arm. Do not read these four signatures as "the concentration is handled".
+
+`KXNATGASD` also carries **no losing trade yet** across 350 trades / 9 contests, so its edge is
+undefined rather than excellent. Signed on category, rules and structure; its profitability is
+unproven, not proven.
+
+### Not signed, and why
+
+- `KXYTVIEWSW` — **blocked on a taxonomy fix, not rejected.** CONTRADICTS: recorded `discrete`,
+  the rules say a threshold live *at any point* across a week. It becomes signable once
+  `SERIES_TYPES` records `in_play`.
+- `KXTRUTHSOCIAL` — same block plus its own rejection: recorded `mention`/`discrete` against a
+  threshold on a `scheduled` weekly post count, and −$20.57 at edge −10.6 on 5 contests.
+- `KXBTC`, `KXBTCD` — profitable-to-flat but the deepest ladders in the batch (25 and 19 markets
+  on one print). Cap first.
+- `KXETHD`, `KXAAAGASD` — losing, and their settlement text is unread.
+
+Both taxonomy defects are filed as one Experiment OS issue against `MARKET_TAXONOMY`, owned by
+**Platform Change Review**. A review batch may not correct `SERIES_TYPES` as a side effect.
