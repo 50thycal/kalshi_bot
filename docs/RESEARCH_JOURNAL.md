@@ -16,6 +16,61 @@ Conventions:
 
 ---
 
+## MMSELL10 QUEUE-AWARE CANCEL 2026-09-10 — THE LINE IS CLOSED. Thesis falsified, experiment RETIRED.
+
+**Question.** mmsell10 rests a $1 maker order for 4 h. Some sit thousands of contracts deep and
+look unlikely to fill. Does cancelling those early — same universe, same price offset, same size,
+same hold-to-settlement — raise net realized dollars at equal capital by freeing the open-position
+slot the cap is otherwise holding?
+
+**Answer: no, on all three legs.** The shadow ran three days on the live book (`Fmmsell10`),
+recorded every decision and cancelled nothing. At its pre-registered 40-order floor:
+
+| pre-registered clause | bar | measured | |
+|---|---|---|---|
+| `qac_telemetry_coverage_pct` | ≥ 90 | 100.0 (n≈7,800) | pass |
+| `qac_would_cancel_later_fill_pct` | ≤ 15 | **27.5** (n=40) | fail |
+| `qac_forgone_cents_per_would_cancel` | ≤ 1.0 | **1.65** (n=40) | fail |
+| `qac_would_cancel_cap_bound_pct` | ≥ 50 | **0.0** (n=40) | fail |
+
+**Deep-queue orders are slow, not dead.** The frozen rule fired at a modelled ≤10% fill
+probability; 27.5% of what it would have killed went on to fill, and those fills were worth
+1.65¢ each. The survival table derived from 18,143 historical queue samples over 408 orders did
+not hold out of sample — a ~3× miss on the one number the whole rule turned on.
+
+**And there was no capacity problem to solve.** The "cap binds daily" evidence (67–145
+`gate:open_cap` refusals/day) came from `Cmmsell10`/`Dmmsell10`, which are **paper** books. The
+instrument necessarily observed the **live** book, because Kalshi only reports queue position for
+real resting orders — and `Fmmsell10` sat at 11–13 open positions against a cap of 40, with zero
+`open_cap` refusals in the logs. The cap binds where there is no queue; the queue exists where the
+cap does not bind. That scope error was ours, caught by the instrument's own first rows.
+
+**Verdict recorded as an operator judgement, not an evaluator verdict.** `shadow_kill` never
+tripped (1.65¢ stayed under its 3¢ bar) and `shadow_to_paper` read HOLD rather than FAIL, because
+its 400-would-cancel horizon was ~2 months out at the observed rate. So retirement went through
+`STAND_DOWN → RETIRED` (`qac-retire-20260910-1`, 20:16:39Z, approved 50cal), which is the weaker
+verb; `RETIRE_ON_GATE_FAIL` correctly refuses where no FAIL is recorded. Epoch 1 closed and
+`mmsell10-qac-shadow-1` ended at the same instant.
+
+**Cost: zero.** No order was ever cancelled by this path, no tag ever reached a LIVE arm, no real
+money moved. Three days of a pure recorder.
+
+**What survives:**
+- Queue telemetry on Kalshi's official portfolio endpoint — 100% coverage, `live_order_queue_ticks`
+  plus the sampler — reusable by anything needing real queue depth.
+- The negative result itself: any future proposal to cancel resting orders early starts from
+  "late fills are the good ones", not from a survival table.
+- `Fmmsell10` is **not** capacity-constrained. Capacity arguments for the live book need live
+  evidence.
+- A live-safeguard defect found incidentally: the 4 h timeout cancel was failing silently and
+  retrying forever, leaving orders resting 11 h+ past their timeout (XOS-000028). Fixed by Live
+  Ops. Arguably worth more than the experiment's own question.
+
+Thesis, baseline and full verdict: `docs/MMSELL_QUEUE_AWARE_CANCEL.md` §7b. Rule engine, audit
+table and package remain in the tree unwired (`LIVE_QUEUE_CANCEL_MODE=off`).
+
+---
+
 ## PERP-V1 2026-09-03 — arm A's convergence is NOT confined to the wide-spread names. BTC and ETH carry it.
 
 Ops `perp2-perticker-1`, code `a115ad91`, 96 h window, 29,421 rows. The close-out
