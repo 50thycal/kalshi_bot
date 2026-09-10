@@ -245,15 +245,39 @@ observation, and the report shows telemetry coverage beside every number.
 | `qac_forgone_cents_per_would_cancel` | ≤ 1.0 | cheap: settled profit of those later fills, spread over every would-cancel, ≤ 1¢ |
 | `qac_would_cancel_cap_bound_pct` | ≥ 50 | it fires where a slot has value |
 
-**Clause (d) will read 0 and this gate will therefore FAIL, whatever the rule's quality.** The
-observed book is not capacity-constrained (see the correction in §3 Q5). The gate is frozen and
-is **not** being re-read after seeing results — that is precisely what a pre-registration
-forbids. The verdict stands as recorded: *on `Fmmsell10`, the rule is evaluable and selective,
-and the capital it frees has no demonstrated value.* Clauses (a)–(c) — coverage, selectivity and
-forgone profit — are being measured validly and are the expensive part of the evidence; they
-transfer intact to a later Version that scopes the question to a book where a freed slot is
-worth something, or that reframes the value as capital-hours rather than slots. Either is a new
-question, so: a new Version, not an edit to this one.
+**Clause (d) will read 0 whatever the rule's quality**, because the observed book is not
+capacity-constrained (see the correction in §3 Q5). The gate is frozen and is **not** being
+re-read after seeing results — that is precisely what a pre-registration forbids.
+
+### The shadow's first evaluable read — 2026-09-10 07:30Z
+
+The sample floor was met (40 would-cancel orders) and the evaluator's clause values are:
+
+| clause | threshold | observed | |
+|---|---|---|---|
+| `qac_telemetry_coverage_pct` | ≥ 90 | **100.0** (n=7,800) | pass |
+| `qac_would_cancel_later_fill_pct` | ≤ 15 | **27.5** (n=40) | **fail** |
+| `qac_forgone_cents_per_would_cancel` | ≤ 1.0 | **1.65** (n=40) | **fail** |
+| `qac_would_cancel_cap_bound_pct` | ≥ 50 | **0.0** (n=40) | **fail** |
+
+`shadow_kill` is not tripped: forgone 1.65¢ is below its 3¢ bar and coverage is 100%, so both
+kill clauses read false. Verdict on both gates: **HOLD** (the promotion gate's 400-would-cancel
+horizon is not yet reached).
+
+**This falsifies more of the thesis than the capacity error alone did, and it corrects an
+earlier claim in this document.** The prior revision predicted a failure on clause (d) only and
+asserted the rule was "evaluable and selective". It is evaluable — telemetry is flawless — but
+it is **not selective**: 27.5% of the orders the frozen rule would have cancelled went on to
+fill, against a modelled fill probability of ≤10%. Nor is it cheap: 1.65¢ of realized profit
+forgone per would-cancel, against a 1¢ bar. The survival table in §3 that produced the 10%
+threshold does not hold out of sample on this book.
+
+So three of the four promotion clauses fail, and only one of the three is explained by the
+capacity scope error. Clause (a) transfers to a later Version; clauses (b) and (c) are evidence
+*against* the rule as frozen, not merely against where it was measured. Any v2 must re-derive
+the threshold — a book with a freed slot worth something does not repair a rule that cancels
+orders which fill 27.5% of the time. That is a new question, so: a new Version, not an edit to
+this one.
 
 `shadow_kill` — fail **any**: forgone ≥ 3¢ per would-cancel (min evidence 40 would-cancels; the
 baseline's late fills earn ~7¢ each, so catching many of them is net negative before any capacity
