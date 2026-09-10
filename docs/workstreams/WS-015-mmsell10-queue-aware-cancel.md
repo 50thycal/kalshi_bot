@@ -3,7 +3,7 @@
 **Phase:** COMPLETE
 **Status:** Active
 **Created:** 2026-09-07
-**Updated:** 2026-09-07 (registered; shadow running)
+**Updated:** 2026-09-10 (experiment RETIRED; thesis falsified)
 **Build OS:** v0.12
 
 ## Goal
@@ -68,10 +68,16 @@ Experiment OS: mmsell10-queue-aware-cancel  v1 (frozen)  PROBE
 ## Open Decisions
 
 - **D1. RESOLVED 2026-09-07.** The operator authorized both acts; the package registered
-  (`qac-register-20260907-2`) and the shadow is running. No decision outstanding.
-- **D2.** Should the horizon of the rule be `min(4h, time to market close)`? ~40% of cancels are
-  exchange-side at ~1.5 h (market close). Deferred to a later Version once the shadow shows how
-  often a would-cancel is pre-empted by close; the remaining-timeout figure is on every row.
+  (`qac-register-20260907-2`) and the shadow ran. No decision outstanding.
+- **D3. RESOLVED 2026-09-10.** The operator decided to close the line rather than pursue a v2.
+  Experiment RETIRED (`qac-retire-20260910-1`); shadow off. See §7b of the thesis doc for the
+  verdict and what survives. The v2 shapes considered — re-scope to a capacity-constrained book,
+  or reframe the value as capital-hours — were both rejected: neither repairs a threshold that
+  missed by ~3x out of sample.
+- **D2. MOOT 2026-09-10.** Whether the rule's horizon should be `min(4h, time to close)` was
+  deferred to a later Version. No later Version will exist — the rule it would have refined is
+  falsified. The `remaining_timeout_seconds` column on every decision row preserves the data if
+  the question is ever asked again.
 
 ## Assumptions
 
@@ -138,7 +144,8 @@ None.
 
 ## Next Step
 
-None.
+None. The line is closed.
 
-<!-- The build is finished and the instrument is running. What remains — evidence accrual and a
-gate verdict — is Experiment OS's, not Build OS's (`DEC-001`); this workstream holds no tail. -->
+<!-- The build shipped, the instrument ran, the thesis was falsified and the experiment is RETIRED
+in Experiment OS (`qac-retire-20260910-1`, 2026-09-10 20:16:39Z). Experiment OS remains canonical
+for that state (`DEC-001`); this workstream links and holds no tail. -->

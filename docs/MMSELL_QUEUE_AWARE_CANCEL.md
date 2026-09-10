@@ -1,6 +1,8 @@
 # MMSELL10 — Queue-aware cancellation (`mmsell10-queue-aware-cancel`)
 
-**Status:** **REGISTERED and RUNNING IN SHADOW** as of 2026-09-07. The experiment is at **PROBE** in Experiment OS (`qac-register-20260907-2`, 11:30:57Z; v1 frozen, pre-registration hash `084214fc…`), and the worker runs `LIVE_QUEUE_CANCEL_MODE=shadow` on the live book — it **records** every decision to `live_order_queue_decisions` and **cancels nothing**. The first registration attempt (`qac-register-20260907-1`, 08:13:15Z) FAILED; see the incident note in §8. No order has been cancelled by this code path, and none can be until a separate Version, risk envelope and operator authorization put a tag on an active LIVE treatment arm.
+**Status:** **RETIRED 2026-09-10** (`qac-retire-20260910-1`, 20:16:39Z; STAND_DOWN → RETIRED, approved by 50cal). Epoch 1 closed and the probe deployment `mmsell10-qac-shadow-1` ended at the same instant; the worker runs `LIVE_QUEUE_CANCEL_MODE=off`. **The thesis was falsified.** The shadow met its pre-registered 40-order floor and three of four promotion clauses failed (§7). No order was ever cancelled by this code path, at any point, and the experiment never touched real money — it ran three days as a pure recorder and cost nothing but the build.
+
+Previously: registered and running in shadow from 2026-09-07 (`qac-register-20260907-2`, 11:30:57Z; v1 frozen, pre-registration hash `084214fc…`). The first registration attempt (`qac-register-20260907-1`, 08:13:15Z) FAILED; see the incident note in §8.
 
 Experiment OS is canonical for this experiment's state and gate verdicts (`DEC-001`) — read it with `xos show mmsell10-queue-aware-cancel`, not this line.
 
@@ -291,6 +293,47 @@ P&L, max daily loss/drawdown, cancellation and cancel-to-later-fill rates, compo
 markets entered), judged against the existing contest/event-rung/settlement-date/daily-loss
 controls at equal capital — pre-registered then, not now, because its bar depends on what the
 shadow measures.
+
+## 7b. Verdict — RETIRED 2026-09-10
+
+**The rule does not work, and the problem it was built to solve does not exist on this book.**
+
+| what the thesis claimed | what the shadow measured |
+|---|---|
+| deep-queue orders past 90 min have ≤10% chance of filling | **27.5%** of them filled |
+| cancelling them forgoes ≤1¢ per order | **1.65¢** per order |
+| a freed slot has value because the cap binds | cap never bound — **0%** of decisions, 11–13 open of 40 |
+
+Only the third failure is explained by the scope error in §3 Q5. The other two falsify the frozen
+rule itself: the survival table that produced the 10% threshold **did not hold out of sample**. A
+later Version pointed at a capacity-constrained book would not repair a rule that cancels orders
+which fill more than a quarter of the time — the threshold would have to be re-derived from
+scratch, and the first derivation missed by nearly 3×.
+
+`shadow_kill` never tripped (forgone 1.65¢ stayed under its 3¢ bar), and `shadow_to_paper` was
+recorded HOLD rather than FAIL only because the 400-would-cancel horizon sat ~2 months away at the
+observed rate. Retirement was therefore taken as an operator judgement through `STAND_DOWN`, not
+asserted as an evaluator verdict — `RETIRE_ON_GATE_FAIL` correctly refuses where no FAIL is
+recorded.
+
+**What survives, and is worth keeping:**
+
+- **Queue telemetry is sound.** 100% coverage across ~7,800 decisions on Kalshi's official
+  queue-position endpoint; `live_order_queue_ticks` and the sampler stay in place and are
+  reusable by anything that needs queue depth.
+- **A negative result on execution timing.** Deep-queue mmsell10 orders are *slow*, not *dead* —
+  and late fills remain the good ones. Any future proposal to cancel resting orders early starts
+  from this, not from the survival table.
+- **The live book is not capacity-constrained.** `Fmmsell10` runs at roughly a third of its cap.
+  Capacity arguments for this book need evidence, not the paper canaries' refusal counts.
+- **A live-safeguard defect, found incidentally.** The 4h timeout cancel was failing silently and
+  retrying forever (`docs/handoffs/HANDOFF-timeout-cancel-not-clearing.md`, XOS-000028). Owned and
+  fixed by Live Ops in a separate session — arguably the most valuable thing this experiment
+  produced.
+
+The rule engine, audit table, metric providers and package remain in the tree, unwired
+(`LIVE_QUEUE_CANCEL_MODE` defaults to `off`). They are the starting point if this question is ever
+reopened, which on this evidence it should not be without a materially different premise.
 
 ## 8. Operator runbook
 
