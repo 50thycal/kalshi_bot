@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-show","args":["XOS-000028"],"id":"lo-tc-show-4"}
+{"type":"env","set":{"EXPERIMENT_OS_ISSUE_COMMAND":""},"id":"lo-tc-clear-5"}
