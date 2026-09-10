@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-candidates","id":"cc-iss-cand-1"}
+{"type":"logs","limit":400,"filter":"live cancel failed","id":"lo-shard-v-r1"}
