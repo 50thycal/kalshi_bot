@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=qac-state-1
-# code 54a45fc27c5b90c23497c3fbe414d15bfbe6a45f · started 2026-09-10T20:17:56Z
-key                          state    retired_at                   
----------------------------  -------  -----------------------------
-mmsell10-queue-aware-cancel  RETIRED  2026-09-10 20:16:39.580986+00
-
-(1 row)
