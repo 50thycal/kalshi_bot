@@ -117,6 +117,12 @@ class LiveExecutor:
         self._market_ids: dict[str, str] = {}  # ticker -> v1 market UUID (cached)
         self._cell_skips_noted: set = set()  # (book, event, reason, day) already logged this run
         self._drain_attempts: dict[str, int] = {}  # kalshi_order_id -> consecutive failed cancels
+        # market_ticker -> matching-engine shard, cached for the life of the executor.
+        # A market does not change shard while it is open, and a resting order is retried
+        # every cycle, so without this a permanently-failing cancel would also spend a
+        # market read every ~2.5 minutes forever. Caches the unknown answer (None) too,
+        # for the same reason.
+        self._exchange_index: dict[str, int | None] = {}
         # kalshi_order_id -> this cycle's queue observation, for the queue-aware cancel step.
         self._queue_observations: dict[str, qc.QueueObservation] = {}
 
@@ -1077,6 +1083,30 @@ class LiveExecutor:
                                     "targets": len(targets)}})
         return drained
 
+    def _exchange_index_for(self, ticker: str | None) -> int | None:
+        """This market's matching-engine shard, cached and FAIL-SOFT.
+
+        Returns None when the ticker is missing, the lookup fails, or the API does not report an
+        index. None means the cancel goes out unrouted — exactly today's behaviour — so a broken
+        lookup can never make a cancel worse than it already is. It must never guess 0: a wrong
+        shard is what produces the permanent 404 this routing exists to fix."""
+        if not ticker:
+            return None
+        if ticker in self._exchange_index:
+            return self._exchange_index[ticker]
+        try:
+            index = self.client.get_market_exchange_index(ticker)
+        except AuthError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            # Not cached: a transient read failure should not pin this market as unroutable for
+            # the life of the process. The error text goes in the message, per this file's rule.
+            logger.warning(
+                f"exchange index lookup failed for {ticker}: {type(exc).__name__}: {str(exc)[:200]}")
+            return None
+        self._exchange_index[ticker] = index
+        return index
+
     # --- reconciliation ---------------------------------------------------------
 
     def reconcile(self, session, account_state=None) -> None:
@@ -1177,10 +1207,16 @@ class LiveExecutor:
             age = (now - _aware(row.created_at)).total_seconds()
             if age <= self.settings.live_order_timeout_seconds:
                 continue
+            shard = self._exchange_index_for(row.market_ticker)
             try:
                 if row.kalshi_order_id:
-                    # V2 events endpoint (mmsell is the only book that rests live orders).
-                    self.client.cancel_events_order(row.kalshi_order_id)
+                    # V2 events endpoint (mmsell is the only book that rests live orders),
+                    # ROUTED to the market's matching-engine shard. Kalshi's writes are
+                    # shard-scoped while its reads aggregate, so an unrouted cancel for an order
+                    # on a non-default shard is answered 404 not_found forever — the 4h timeout
+                    # then never enforces on that order (XOS-000028). `shard` is None when we
+                    # could not determine it, which sends the request exactly as before.
+                    self.client.cancel_events_order(row.kalshi_order_id, exchange_index=shard)
                 repo.update_live_order_status(session, row, status="canceled",
                                               cancel_reason="timeout")
                 self.summary.timed_out_canceled += 1
@@ -1202,7 +1238,8 @@ class LiveExecutor:
                 # cause readable, which is what any bound would have to be chosen against.
                 logger.warning(
                     f"live cancel failed for {row.strategy} {row.market_ticker} "
-                    f"{row.kalshi_order_id}: {type(exc).__name__}: {str(exc)[:300]}")
+                    f"{row.kalshi_order_id} (exchange_index={shard}): "
+                    f"{type(exc).__name__}: {str(exc)[:300]}")
 
         # Sample queue position for whatever is still resting, then drain any book that has
         # stood down. Order matters: sample BEFORE draining, or the drain destroys the last

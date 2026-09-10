@@ -489,12 +489,45 @@ class KalshiClient:
         self._ensure_live_enabled()
         return self._request("POST", "/portfolio/events/orders", json=order)
 
-    def cancel_events_order(self, order_id: str) -> dict:
+    def cancel_events_order(self, order_id: str, *, exchange_index: int | None = None) -> dict:
         """Cancel a V2 order (DELETE /portfolio/events/orders/{order_id}) — the partner of
         create_events_order. Guarded by `_ensure_can_cancel`, NOT `_ensure_live_enabled`: see
-        that method for why a kill switch must not block a cancel."""
+        that method for why a kill switch must not block a cancel.
+
+        `exchange_index` routes the cancel to a MATCHING-ENGINE SHARD. Kalshi split its exchange
+        into shards (0 = general, 1 = exotics/combos, 2 = crypto, 3 = tennis/baseball, and
+        growing — commodities and basketball were added 2026-09-10). A market's shard is carried
+        on the market object and is authoritative; see `get_market_exchange_index`.
+
+        WHY THIS PARAMETER EXISTS: without it every cancel goes to the default shard, and a
+        cancel for an order resting on another shard is answered `404 not_found` — permanently,
+        for as long as the order lives. Measured on 2026-09-07: one KXBTCD order rested 3.5 days
+        past its 4-hour timeout while the queue endpoint simultaneously reported it alive at
+        rank 1, because reads aggregate across shards and writes do not (XOS-000028).
+
+        Passing None preserves the previous unrouted behaviour, which is what every caller that
+        has not yet been taught about shards still gets."""
         self._ensure_can_cancel()
-        return self._request("DELETE", f"/portfolio/events/orders/{order_id}")
+        params = None if exchange_index is None else {"exchange_index": exchange_index}
+        return self._request("DELETE", f"/portfolio/events/orders/{order_id}", params=params)
+
+    def get_market_exchange_index(self, ticker: str) -> int | None:
+        """Which matching-engine shard `ticker` trades on, or None if the API does not say.
+
+        Kalshi's sharding documentation names `exchange_index` on the market object as the
+        authoritative source of truth, so this reads it rather than mapping series prefixes to
+        shards by hand — a hand-written map goes stale the next time Kalshi moves a category,
+        which it did as recently as 2026-09-10.
+
+        None means "unknown", never zero. A shard we could not determine must not be silently
+        reported as the default shard: that is precisely the assumption that made the cancel
+        fail invisibly in the first place."""
+        payload = self.get_market(ticker)
+        market = payload.get("market") if isinstance(payload.get("market"), dict) else payload
+        value = market.get("exchange_index") if isinstance(market, dict) else None
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return None
+        return int(value)
 
     def create_v1_order(self, user_id: str, order: dict[str, Any]) -> dict:
         """Place an order via the v1 user-scoped endpoint — the path the web app uses to CLOSE
