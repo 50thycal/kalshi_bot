@@ -222,7 +222,11 @@ def test_a_bare_date_token_is_recognised_so_the_cross_series_column_can_disclaim
     are artifacts: their event token is a bare date, so it collides with every date-keyed
     series. The column must say `date?` rather than report a number that means nothing."""
     mod = _concentration_script()
-    for token in ("26SEP06", "26AUG03", "26SEP0414", "26AUG1717"):
+    for token in ("26SEP06", "26AUG03", "26SEP0414", "26AUG1717",
+                  # A month ALONE is still only a date. KXFEDMENTION-26JUL-ADP keys on `26JUL`
+                  # and read 15.00 cross-series on the first production run, because requiring
+                  # digits after the month made an empty remainder fail.
+                  "26JUL", "26AUG", "26SEP"):
         assert mod.looks_like_a_bare_date(token), token
     for token in ("26AUG13ARILV", "26JUL03ARGCPV", "26SEP022138NYYLAA", "", "T93.99"):
         assert not mod.looks_like_a_bare_date(token), token
