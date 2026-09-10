@@ -246,3 +246,30 @@ def test_concentration_separates_a_ladder_from_independent_positions():
     s = mod.summarize(spread, {})
     assert s["contests"] == 8 and s["max_mkts"] == 1 and s["avg_mkts"] == 1.0
     assert s["multi_share"] == 0.0
+
+
+def test_every_allowlisted_ops_script_reads_the_READ_ONLY_database_url():
+    """The ops channel holds only `DATABASE_URL_RO`. A script reading `DATABASE_URL` alone dies
+    on "not set" the first time it runs in production — which is exactly what happened to
+    `series_concentration` on its first real run. Asserted across the whole allowlist, because
+    the next script added will make the same assumption for the same reason."""
+    import importlib.util
+    import pathlib
+    import re
+
+    root = pathlib.Path(__file__).resolve().parents[1]
+    spec = importlib.util.spec_from_file_location("ops_runner", root / "scripts" / "ops_runner.py")
+    runner = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(runner)
+
+    offenders = []
+    for name in runner.ALLOWED_SCRIPTS:
+        path = root / "scripts" / f"{name}.py"
+        if not path.exists():
+            continue
+        src = path.read_text()
+        if not re.search(r"DATABASE_URL\b", src):
+            continue                      # reads no database at all
+        if "DATABASE_URL_RO" not in src:
+            offenders.append(name)
+    assert not offenders, f"allowlisted scripts that never read DATABASE_URL_RO: {offenders}"
