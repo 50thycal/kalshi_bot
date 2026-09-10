@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type": "xos", "command": "issue-command-show", "args": ["tax-registry-prefix-inherit-20260910"], "id": "cc-xos-prefix-3"}
