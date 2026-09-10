@@ -1,0 +1,49 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "666a0ede84ec02304237f596ede622d019807ec9",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-10T21:43:35Z",
+  "id": "cc-xos-prefix-1",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 3087 bytes, sha256:62be3620ea1851ca>",
+        "before": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>",
+        "requested": "<redacted 3087 bytes, sha256:62be3620ea1851ca>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_ISSUE_COMMAND is empty \u2014 nothing to overwrite",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/cc-xos-prefix-1.receipt.json",
+  "result_file": "ops/results/cc-xos-prefix-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34533699198",
+  "service": "main",
+  "started_at": "2026-09-10T21:43:24Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
