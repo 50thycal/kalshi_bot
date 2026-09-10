@@ -1,1 +1,1 @@
-{"type":"logs","limit":400,"filter":"live cancel failed","id":"lo-shard-v-r1"}
+{"type":"db","sql":"SELECT id, market_ticker, status, cancel_reason, round(EXTRACT(EPOCH FROM (now()-created_at))/60) AS age_min FROM live_orders WHERE status='resting' OR (cancel_reason IS NOT NULL AND created_at > now() - interval '10 days' AND market_ticker LIKE 'KXBTCD%') ORDER BY created_at DESC LIMIT 20","max_rows":30,"id":"lo-shard-verdict-2"}
