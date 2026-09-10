@@ -1,1 +1,1 @@
-{"type":"logs","limit":800,"filter":"shard probe","id":"lo-shard-probe-1"}
+{"type":"env","set":{"LIVE_SHAPE_PROBE":"true"},"id":"lo-shard-on-1"}
