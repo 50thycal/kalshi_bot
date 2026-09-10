@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-show","args":["lo-tc-ev-persist-1"],"id":"lo-tc-pr-1"}
+{"type":"env","set":{"EXPERIMENT_OS_ISSUE_COMMAND":""},"id":"lo-tc-clear-4"}
