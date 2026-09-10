@@ -1,1 +1,1 @@
-{"type":"logs","limit":300,"filter":"cancel failed","id":"lo-drain-soak-r1"}
+{"type":"script","name":"series_rules_audit","args":["--only","KXMLSGAME,KXTESTMATCH,KXARGPREMDIVTOTAL,KXLIGAMXSCORE,KXCOPPERD,KXWNBATOTAL,KXUCLGAME,KXMLBHIT,KXWTASETWINNER,KXYTVIEWSHIGH","--evidence","--chars","900"],"id":"sra-batch5-0910a"}
