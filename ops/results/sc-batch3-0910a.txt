@@ -1,4 +1,0 @@
-DATABASE_URL is not set
-# ops request [READ]
-# type=script  id=sc-batch3-0910a
-# code 657e5021f0c7b6a78d2251e373e4926a2bd3d3a4 · started 2026-09-10T14:54:41Z
