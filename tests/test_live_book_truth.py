@@ -68,9 +68,10 @@ class _Cursor:
     shape and assert what it PRINTS, which is where the wrong number appeared.
     """
 
-    def __init__(self, *, ordered, filled, snaps, paper, twin_rows, day):
+    def __init__(self, *, ordered, filled, snaps, paper, twin_rows, day, ticks=None):
         self.ordered, self.filled, self.snaps = ordered, filled, snaps
         self.paper, self.twin_rows, self.day = paper, twin_rows, day
+        self.ticks = dict(ticks or {})
         self._result = None
 
     def execute(self, sql, params=()):
@@ -86,6 +87,8 @@ class _Cursor:
             ]
         elif "from fills" in sql:
             self._result = [(t, q, fee) for t, (q, fee) in self.filled.items()]
+        elif "from mmsell_position_ticks" in sql:
+            self._result = [(t, b, None) for t, b in self.ticks.items()]
         elif "from positions" in sql and "distinct on" in sql:
             self._result = [(t, *v) for t, v in self.snaps.items()]
         elif "from paper_trades" in sql:
@@ -126,9 +129,9 @@ def _production_shape():
         ordered={"A": "filled", "B": "filled", "NEVER": "canceled"},
         filled={"A": (1.0, 0.01), "B": (1.0, 0.01)},
         snaps={
-            "A": (0.0, -1.00, 0.0),     # settled, real loss
-            "B": (0.0, -0.41, 0.0),     # settled, real loss
-            "NEVER": (None, None, None),  # ordered, never filled, no snapshot
+            "A": (0.0, -1.00, 0.0, 93.0),      # settled, real loss
+            "B": (0.0, -0.41, 0.0, 93.0),      # settled, real loss
+            "NEVER": (None, None, None, None),  # ordered, never filled, no snapshot
         },
         paper=[("A", -0.90), ("B", -0.30), ("NEVER", 3.76)],
         twin_rows=[("A", -0.20), ("B", 0.10), ("NEVER", 3.70)],
@@ -152,7 +155,7 @@ def test_the_phantom_half_is_named_and_quantified(capsys):
     out = _run(_production_shape(), capsys)
     assert "ordered, NEVER filled :    3.7600   n=1   <- lost AT THE FILL" in out
     assert "live FILLED it        :   -1.2000   n=2" in out
-    assert "overstates real money by +3.9700" in out
+    assert "overstates real money by +3.9700   (vs TOTAL)" in out
 
 
 def test_paper_trades_would_have_reported_a_PROFIT_on_a_losing_book(capsys):
@@ -183,7 +186,7 @@ def test_a_RESTING_unfilled_order_counts_as_OPEN_and_is_still_phantom(capsys):
     """
     cur = _production_shape()
     cur.ordered["REST"] = "resting"
-    cur.snaps["REST"] = (None, None, None)
+    cur.snaps["REST"] = (None, None, None, None)
     cur.paper.append(("REST", 0.50))
     out = _run(cur, capsys)
     assert "open by the cap rule  :         1   (count_live_book_open semantics)" in out
@@ -235,19 +238,67 @@ def test_the_partition_guard_FIRES_when_a_bucket_under_reports(monkeypatch, caps
     assert "treat the phantom figure as a floor" in out
 
 
+def _held(cur, ticker="B", *, qty=-1.0, entry=93.0, mark=24.0, cost=0.93):
+    """Turn a settled ticker into one still HELD and marked. `qty` is negative
+    because that is how the exchange stores a NO position."""
+    cur.snaps[ticker] = (qty, None, cost, entry)
+    cur.ticks[ticker] = mark
+    return cur
+
+
 def test_a_still_open_filled_position_is_open_and_not_realized(capsys):
-    cur = _production_shape()
-    cur.snaps["B"] = (1.0, None, 0.93)   # filled, still held
-    out = _run(cur, capsys)
+    out = _run(_held(_production_shape()), capsys)
     assert "realized              :   -1.0000   settled=1" in out
     assert "open cost basis       :    0.9300" in out
     assert "open by the cap rule  :         1" in out
+
+
+def test_a_position_marked_BELOW_entry_is_a_LOSS(capsys):
+    """The sign, which is the whole reason this section exists.
+
+    `positions.quantity` is SIGNED and a NO position is negative, so multiplying
+    it raw by (mark - entry) flips every open position and turns a marked-down
+    book into a marked-up one. Held at 93c and marked at 24c is a 69c LOSS, and
+    an ad-hoc query that got this backwards is what reported the book as flat
+    while the dashboard showed it down.
+    """
+    out = _run(_held(_production_shape()), capsys)
+    assert "unrealized            :   -0.6900   marked=1" in out
+    assert "B                                            93c -> 24c" in out
+
+
+def test_TOTAL_is_realized_plus_unrealized_and_says_so(capsys):
+    """The headline, because it is the figure the dashboard shows. Reporting
+    realized alone is what made three days of reports disagree with the screen."""
+    out = _run(_held(_production_shape()), capsys)
+    assert "realized              :   -1.0000" in out
+    assert "unrealized            :   -0.6900" in out
+    assert "TOTAL                 :   -1.6900   <- the figure the dashboard shows" in out
+    assert "REAL MONEY for Fmmsell10 is -1.6900 TOTAL" in out
+
+
+def test_a_position_marked_ABOVE_entry_is_a_GAIN(capsys):
+    """The other direction, so the sign fix cannot be a constant negation."""
+    out = _run(_held(_production_shape(), mark=97.0), capsys)
+    assert "unrealized            :    0.0400   marked=1" in out
+
+
+def test_an_UNMARKED_open_position_makes_TOTAL_incomplete(capsys):
+    """A ticker is taped only while an mmsell book holds it, so a mark can be
+    missing. That must be said, not silently valued at zero or at cost."""
+    cur = _held(_production_shape())
+    del cur.ticks["B"]
+    out = _run(cur, capsys)
+    assert "UNMARKED=1" in out
+    assert "TOTAL is INCOMPLETE" in out
+    assert "unrealized            :    0.0000" in out
 
 
 def test_twin_gap_is_reported_with_the_selection_caveat(capsys):
     out = _run(_production_shape(), capsys, twin="Fmmsell10_pt4")
     assert "realized              :    3.6000   n=3" in out
     assert "twin - live           : +5.0100" in out
+    assert "realized vs realized" in out
     assert "what the caps and gates cost" in out
 
 
