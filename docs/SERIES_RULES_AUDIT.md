@@ -276,3 +276,55 @@ unproven, not proven.
 
 Both taxonomy defects are filed as one Experiment OS issue against `MARKET_TAXONOMY`, owned by
 **Platform Change Review**. A review batch may not correct `SERIES_TYPES` as a side effect.
+
+---
+
+## Batch 3 signed — 2026-09-10, by `50cal`
+
+Five of ten. Backlog ranks 21–30 by live exposure. Audit: **`CONFIRMS=10 CONTRADICTS=0
+INSUFFICIENT=0`** — the first clean sweep, and unsurprising: batch 3 is entirely sports `in_play`,
+the easiest class for the rules check to read.
+
+| series | contracts / outcome | P&L | edge | contests | own% | signed |
+|---|---:|---:|---:|---:|---:|---|
+| `KXWNBAGAME` | 1.21 avg, 2 max | +$19.91 | +8.0 | 94 | 76% | ✅ |
+| `KXMLBGAME` | 1.29 avg, 2 max | +$18.79 | **+1.3** | 552 | 95% | ✅ |
+| `KXMLSTOTAL` | 2.30 avg, 6 max | +$19.83 | +5.6 | 57 | 66% | ✅ |
+| `KXATPEXACTMATCH` | 2.66 avg, 6 max | +$15.49 | +5.1 | 38 | 56% | ✅ |
+| `KXLEAGUESCUPTOTAL` | 2.59 avg, 6 max | +$15.88 | +4.7 | 34 | 53% | ✅ |
+
+These five are the first cohort signed with **low concentration as a positive finding** rather
+than a caveat: none exceeds 2.66 contracts per outcome, against 8–10 for the batch-2 ladders.
+
+`KXMLBGAME`'s edge is only **+1.3pp**, but on 552 contests at 95% own-weight that is a
+well-measured small number rather than noise — the opposite situation from `KXNATGASD`, signed in
+batch 2 on 9 contests with an undefined edge.
+
+### Dropped: `KXMLBTOTAL`
+
+Correctly classified, rules CONFIRMS, and **5,930 trades — the largest sample in any batch — to
+reach an edge of +0.3pp.** At 94% own-weight that is a well-measured *nothing*, carrying 4.66
+contracts per game and −$486.50 of gross losses in multi-contract games. Activity without edge.
+
+Also rejected: `KXLEAGUESCUPSPREAD` (−$15.18, edge −5.3), `KXCS2GAME` (−$15.91, edge −7.3),
+`KXMLBTB` (−$16.22, edge −13.8 but only 10 contests — suggestive, not established),
+`KXCLUBFGAME` (−$17.38, edge −5.8).
+
+### The first real evidence that concentration tracks losses
+
+Batches 1 and 2 were nearly all multi-contract, so "the losses came from multi-contract outcomes"
+was tautological. **Batch 3 has a genuine mix**, and every mixed series over-represents:
+
+| series | % of contests multi | % of losses from multi |
+|---|---:|---:|
+| `KXWNBAGAME` | 21% | 49% |
+| `KXCS2GAME` | 26% | 51% |
+| `KXMLBGAME` | **29%** | **68%** |
+| `KXCLUBFGAME` | 58% | 74% |
+
+`KXMLBGAME` is the best-powered case: 2.3× over-representation across 552 contests.
+
+**It is association, not proof.** The multi-contract games are plausibly also the
+more-heavily-traded ones, and nothing here controls for that. But it is the first version of this
+observation that is not true by construction, and it strengthens the cap case beyond what batches
+1 and 2 could support.

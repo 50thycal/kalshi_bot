@@ -70,8 +70,8 @@
   {
    "series": "KXATPEXACTMATCH",
    "state": "graduated",
-   "rules_reviewed_at": null,
-   "rules_reviewed_by": null,
+   "rules_reviewed_at": "2026-09-10",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {
@@ -406,8 +406,8 @@
   {
    "series": "KXLEAGUESCUPTOTAL",
    "state": "graduated",
-   "rules_reviewed_at": null,
-   "rules_reviewed_by": null,
+   "rules_reviewed_at": "2026-09-10",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {
@@ -490,8 +490,8 @@
   {
    "series": "KXMLBGAME",
    "state": "graduated",
-   "rules_reviewed_at": null,
-   "rules_reviewed_by": null,
+   "rules_reviewed_at": "2026-09-10",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {
@@ -574,8 +574,8 @@
   {
    "series": "KXMLSTOTAL",
    "state": "graduated",
-   "rules_reviewed_at": null,
-   "rules_reviewed_by": null,
+   "rules_reviewed_at": "2026-09-10",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {
@@ -896,8 +896,8 @@
   {
    "series": "KXWNBAGAME",
    "state": "graduated",
-   "rules_reviewed_at": null,
-   "rules_reviewed_by": null,
+   "rules_reviewed_at": "2026-09-10",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {
