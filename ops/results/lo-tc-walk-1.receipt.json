@@ -1,24 +1,24 @@
 {
   "audit_worthy": true,
   "class": "MUTATING",
-  "code_sha": "55c071983a3d01bfa62b5df04e33f72eeba13b2c",
+  "code_sha": "e3c0d4875137b7c77c9f395d67805dfd41d33cca",
   "code_source": "default-branch",
   "exit_status": 0,
-  "finished_at": "2026-09-10T15:14:59Z",
-  "id": "lo-tc-clear-5",
+  "finished_at": "2026-09-10T18:01:12Z",
+  "id": "lo-tc-walk-1",
   "mutation": {
     "changes": {
       "EXPERIMENT_OS_ISSUE_COMMAND": {
-        "after": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>",
-        "before": "<redacted 2326 bytes, sha256:ec9a8b0a0c230329>",
-        "requested": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>"
+        "after": "<redacted 4125 bytes, sha256:924396e009349643>",
+        "before": "<redacted 4156 bytes, sha256:567d62f52bb5b000>",
+        "requested": "<redacted 4125 bytes, sha256:924396e009349643>"
       }
     },
     "command_guard": {
       "EXPERIMENT_OS_ISSUE_COMMAND": {
         "blocked": false,
         "conclusive": true,
-        "reason": "EXPERIMENT_OS_ISSUE_COMMAND: all 1 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "reason": "EXPERIMENT_OS_ISSUE_COMMAND: all 2 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
         "unconsumed_command_ids": []
       }
     },
@@ -37,11 +37,11 @@
   },
   "provenance": {},
   "publication": "COMMITTED",
-  "receipt_file": "ops/results/lo-tc-clear-5.receipt.json",
-  "result_file": "ops/results/lo-tc-clear-5.txt",
-  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34494227366",
+  "receipt_file": "ops/results/lo-tc-walk-1.receipt.json",
+  "result_file": "ops/results/lo-tc-walk-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34511685049",
   "service": "main",
-  "started_at": "2026-09-10T15:14:42Z",
+  "started_at": "2026-09-10T18:00:58Z",
   "targets": [
     "EXPERIMENT_OS_ISSUE_COMMAND"
   ],
