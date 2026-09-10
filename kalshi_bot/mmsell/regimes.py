@@ -77,7 +77,36 @@ CONTEST_GROUPED_REGIMES: frozenset[str] = frozenset({
 })
 
 
-def contest_key_of(market_ticker: str | None) -> str | None:
+#: Series whose LAST ticker token names a distinct SUBJECT, not a threshold on one underlying.
+#: For these, two markets under the same date resolve on unrelated outcomes and grouping them
+#: invents a correlation that is not there.
+#:
+#:     KXTRUMPSAY-26AUG03-AMER   vs  KXTRUMPSAY-26AUG03-ZOHR   -> different WORDS
+#:     KXRAIN-26SEP06-TTN        vs  KXRAIN-26SEP06-SEA        -> different CITIES
+#:
+#: contrast with the threshold shape, where grouping is correct:
+#:
+#:     KXWTI-26SEP0414-T93.99    vs  KXWTI-26SEP0414-T72.49    -> one oil print decides both
+#:     KXTRUTHSOCIAL-26AUG08-B230 vs KXTRUTHSOCIAL-26SEP05-T240 -> one post count decides both
+#:
+#: HAND-AUDITED, not derived from the market type, because the type does not decide it:
+#: `KXTRUTHSOCIAL` is typed `mention` and is a THRESHOLD series, so a rule keyed on `mention`
+#: would have split a ladder that must stay grouped. Every entry below was verified against
+#: real traded tickers on 2026-09-07; extend it the same way, by looking, in a PR.
+SUBJECT_SPLIT_SERIES: frozenset[str] = frozenset({
+    "KXFEDMENTION",        # -26JUL-ADP / -TRUM        28 distinct words
+    "KXRAIN",              # -26AUG08-ATL / -SEA       22 distinct cities
+    "KXTRUMPSAY",          # -26AUG03-AMER / -ZOHR     37 distinct words
+    "KXTRUMPSAYCOMPANY",   # -26AUG01-ANTH / -VERI     10 distinct companies
+    "KXTRUMPSAYMONTH",     # -26AUG01-AUTI / -UFO      14 distinct words
+    "KXWCATTEND",          # -26JUL20-BRA / -ZEN       12 distinct teams
+    "KXWCFIRSTSONG",       # -26JUL20-DAI / -VOG        5 distinct songs
+    "KXWCMENTION",         # -26JUL03ARGCPV-BICY       70 distinct words
+})
+
+
+def contest_key_of(market_ticker: str | None, *,
+                   split_subjects: bool = False) -> str | None:
     """The underlying CONTEST a market resolves on, shared across series.
 
         KXMLBTOTAL-26SEP022138NYYLAA-8        -> MLB:26SEP022138NYYLAA
@@ -102,6 +131,14 @@ def contest_key_of(market_ticker: str | None) -> str | None:
     already keys on -- so switching the cap on cannot change behaviour outside the
     regimes whose convention was actually verified.
     """
+    # A subject-split series is its own contest, per market. Off by default so every existing
+    # arm keeps byte-identical behaviour; the corrected key is opt-in and measured against the
+    # current one rather than swapped underneath it.
+    if split_subjects and market_ticker:
+        head = market_ticker.partition("-")[0].upper()
+        if head in SUBJECT_SPLIT_SERIES:
+            return market_ticker.upper()
+
     event = event_ticker_of(market_ticker)
     if not event:
         return None

@@ -47,6 +47,7 @@ never installs this package. Read-only; runs locally or through the ops channel:
     {"type": "script", "name": "mmsell_series_pnl", "args": ["--all-time", "--min-n", "50"]}
     {"type": "script", "name": "mmsell_series_pnl", "args": ["--maxyes", "7"]}   # live band only
     {"type": "script", "name": "mmsell_series_pnl", "args": ["--series", "KXNFLSPREAD"]}
+    {"type": "script", "name": "mmsell_series_pnl", "args": ["--all-time", "--split-subjects"]}
 """
 
 from __future__ import annotations
@@ -66,18 +67,49 @@ RO_OPTIONS = "-c default_transaction_read_only=on"
 #: but never claims to group across series. That under-counts correlation; it never invents it.
 CONTEST_TOKEN_INDEX = 1  # KXNFLSPREAD-25AUG14ATLDET-DET3 -> 25AUG14ATLDET
 
+#: Series whose LAST ticker token names a distinct SUBJECT rather than a rung of one ladder, so
+#: stripping it merges outcomes that share nothing but a date. `KXTRUMPSAY-26AUG03-AMER` and
+#: `-ZOHR` are two unrelated words; `KXNFLSPREAD-...-DET3` and `-DET7` are two lines on one
+#: game. Mirrors `kalshi_bot.mmsell.regimes.SUBJECT_SPLIT_SERIES`, which is CANONICAL — this is
+#: the ops runner's copy, kept honest by
+#: `tests/test_mmsell_subject_split_contest.py::test_the_ops_script_split_set_matches_the_workers`.
+#: Extend it there first, and only by looking at real traded tickers.
+SUBJECT_SPLIT_SERIES: frozenset[str] = frozenset({
+    "KXFEDMENTION",
+    "KXRAIN",
+    "KXTRUMPSAY",
+    "KXTRUMPSAYCOMPANY",
+    "KXTRUMPSAYMONTH",
+    "KXWCATTEND",
+    "KXWCFIRSTSONG",
+    "KXWCMENTION",
+})
+
+#: The fitted partial-pooling constant, in CONTESTS, from the beta-binomial MLE over all 534
+#: mmsell series / 8,887 contests (docs/MMSELL_SERIES_SCORECARD_HANDOFF.md). `own%` below is
+#: `cnts / (cnts + K)` — the share of a series' score that is its OWN evidence rather than its
+#: band prior. It is a property of the estimator, not of the window, so it is a constant here.
+POOLING_K_CONTESTS = 38
+
 
 def series_of(ticker: str) -> str:
     return (ticker or "").split("-", 1)[0].upper()
 
 
-def contest_of(ticker: str) -> str:
+def contest_of(ticker: str, *, split_subjects: bool = False) -> str:
     """The underlying contest, as far as a ticker alone can say.
 
     `KXNFLSPREAD-25AUG14ATLDET-DET3` -> `KXNFLSPREAD:25AUG14ATLDET`. A ticker with no event
     token (`KXPAYROLLS-26SEP`) is its own contest, which is the correct read: nothing else
     settles with it.
+
+    `split_subjects` applies the correction in `docs/MMSELL_CONTEST_KEY_SUBJECT_SPLIT.md`: for
+    a series in `SUBJECT_SPLIT_SERIES` the market IS the contest, because its last token names a
+    subject and not a rung. Default OFF so this report's shipped meaning does not move under
+    readers who did not ask for it -- the same opt-in discipline the worker's key uses.
     """
+    if split_subjects and series_of(ticker) in SUBJECT_SPLIT_SERIES:
+        return (ticker or "").upper()
     parts = (ticker or "").split("-")
     if len(parts) <= CONTEST_TOKEN_INDEX:
         return (ticker or "").upper()
@@ -126,6 +158,9 @@ def summarize(rows: list[dict]) -> dict:
         "n": n,
         "mkts": len({r["ticker"] for r in rows}),
         "contests": len(by_contest),
+        # The scorecard's own-sample weight, printed beside the edge it qualifies so nobody
+        # reads a 3-contest edge as if it were a 300-contest one.
+        "own_weight": len(by_contest) / (len(by_contest) + POOLING_K_CONTESTS),
         "books": len({r["book"] for r in rows}),
         "total": total_c / 100.0,          # dollars, at one contract per trade
         "mean": total_c / n,               # cents per trade
@@ -154,7 +189,7 @@ def _to_libpq_url(url: str) -> str:
 
 
 def load_trades(cur, days: int | None, statuses: tuple[str, ...], maxyes: int | None,
-                all_strategies: bool) -> list[dict]:
+                all_strategies: bool, split_subjects: bool = False) -> list[dict]:
     """Every mmsell trade with a realized P&L, normalized to one contract.
 
     `settled,closed_sl` rather than `settled` alone: filtering to settled drops every position
@@ -193,7 +228,7 @@ def load_trades(cur, days: int | None, statuses: tuple[str, ...], maxyes: int | 
         out.append({
             "ticker": ticker,
             "series": series_of(ticker),
-            "contest": contest_of(ticker),
+            "contest": contest_of(ticker, split_subjects=split_subjects),
             "book": book,
             "live": book in live_books,
             "entry_c": entry_c,
@@ -202,7 +237,7 @@ def load_trades(cur, days: int | None, statuses: tuple[str, ...], maxyes: int | 
     return out
 
 
-HDR = (f"  {'series':<24} {'n':>6} {'mkts':>6} {'cnts':>5} {'bks':>4} {'total$':>9}"
+HDR = (f"  {'series':<24} {'n':>6} {'mkts':>6} {'cnts':>5} {'own%':>5} {'bks':>4} {'total$':>9}"
        f" {'c/trade':>8} {'entry':>6} {'loss%':>6} {'be%':>6} {'edge':>7}"
        f" {'worst3%':>8}  live")
 
@@ -213,7 +248,8 @@ def _f(x, spec="{:+.1f}") -> str:
 
 def _row(series: str, s: dict) -> str:
     live = ",".join(s["live"][:3]) + ("..." if len(s["live"]) > 3 else "") or "-"
-    return (f"  {series:<24} {s['n']:>6} {s['mkts']:>6} {s['contests']:>5} {s['books']:>4}"
+    return (f"  {series:<24} {s['n']:>6} {s['mkts']:>6} {s['contests']:>5}"
+            f" {100.0 * s['own_weight']:>4.0f}% {s['books']:>4}"
             f" {s['total']:>+9.2f} {s['mean']:>+7.2f}c {s['entry']:>5.1f}"
             f" {100.0*s['loss_rate']:>5.1f}%"
             f" {_f(100.0*s['be'] if s['be'] is not None else None, '{:5.1f}'):>5}%"
@@ -272,6 +308,11 @@ def report(trades: list[dict], min_n: int, top: int, window: str, maxyes: int | 
     print("  edge     be% - loss%, in percentage points. The ONE column comparable across")
     print("           series, because each is entered at a different premium. edge <= 0 means")
     print("           the cell is not paying for its tail.")
+    print("  own%     how much of this series' SCORE would be its own evidence rather than its")
+    print(f"           band prior: cnts / (cnts + {POOLING_K_CONTESTS}), the fitted pooling constant")
+    print("           (docs/MMSELL_SERIES_SCORECARD_HANDOFF.md). At 3 contests -- the family")
+    print("           MEDIAN -- it is 7%: the edge beside it is almost entirely the prior, and")
+    print("           reading it as the series' own record is the mistake this column prevents.")
     print("  cnts     distinct CONTESTS — the honest independence denominator. One game carries")
     print("           a whole nested ladder and settles it against a seller at one instant, so")
     print("           `mkts` overstates n. Read c/trade against `cnts`, not against `n`.")
@@ -297,6 +338,10 @@ def main(argv: list[str] | None = None) -> int:
                     help="restrict to entries at or below this tail price in cents "
                          "(7 = the live mmsell10 band); default is every price")
     ap.add_argument("--series", default=None, help="print one series only")
+    ap.add_argument("--split-subjects", action="store_true",
+                    help="key SUBJECT_SPLIT_SERIES per MARKET rather than per event token "
+                         "(docs/MMSELL_CONTEST_KEY_SUBJECT_SPLIT.md). Raises cnts and own-weight for "
+                         "the mention/city series, whose markets share a date and no outcome.")
     ap.add_argument("--status", default="settled,closed_sl",
                     help="comma-separated paper_trades statuses (default settled,closed_sl)")
     ap.add_argument("--all-strategies", action="store_true",
@@ -315,8 +360,11 @@ def main(argv: list[str] | None = None) -> int:
     with psycopg.connect(url, options=RO_OPTIONS, connect_timeout=15) as conn:
         conn.read_only = True
         with conn.cursor() as cur:
-            trades = load_trades(cur, days, statuses, args.maxyes, args.all_strategies)
+            trades = load_trades(cur, days, statuses, args.maxyes, args.all_strategies,
+                                 split_subjects=args.split_subjects)
     window = "all time" if days is None else f"last {days} days"
+    if args.split_subjects:
+        window += ", contest key SUBJECT-SPLIT"
     report(trades, args.min_n, args.top, window, args.maxyes, args.series)
     return 0
 

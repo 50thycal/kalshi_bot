@@ -539,6 +539,11 @@ class Settings(BaseSettings):
         # over the same window.
         "Gmmsell0:lo=5,hi=10,maxyes=7;"
         "Gmmsell1:lo=5,hi=10,maxyes=7,contestcap=1;"
+        # Gmmsell2 is Gmmsell1 with the CORRECTED contest key: same band, same cap of 1,
+        # grouping subject-split series per market instead of per date. It is deliberately
+        # LESS STRICT than Gmmsell1 — it admits entries Gmmsell1 refuses on markets that
+        # share a date but no outcome — so the pair isolates the key, not the cap.
+        "Gmmsell2:lo=5,hi=10,maxyes=7,contestcap=1,contestkey=split;"
         # --- LIVE-COHORT books, added 2026-08-15 (docs/LIVE_PAPER_TWIN.md "Arming") ----------
         # `Lmmsell8` / `Lmmsell10` are byte-identical replicas of `mmsell8` / `mmsell10`. They
         # exist for ONE reason: a live book must be armed on a tag with NO open paper positions.
@@ -1837,6 +1842,15 @@ class Settings(BaseSettings):
                 # own commit anticipates this ("a book opts in through its own registered risk
                 # envelope"); this is the knob that lets it.
                 "contestcap": None,
+                # Which CONTEST KEY the cap counts against. Default keeps the shipped key;
+                # `contestkey=split` treats a subject-split series (distinct words, cities,
+                # songs) as one contest per MARKET rather than one per date. Measured
+                # 2026-09-07: the shipped key collapses KXTRUMPSAY's 37 distinct words into 10
+                # weekly contests and KXWCMENTION's 70 words into the SOCCER GAME they were
+                # spoken during, so a cap of 1 refuses entries that share no outcome at all.
+                # A separate key rather than a fix in place, because the arm under test has to
+                # be measurable against the one already running.
+                "contestkey": None,
             }
             ok = True
             for kv in body.split(","):
@@ -1848,7 +1862,7 @@ class Settings(BaseSettings):
                 try:
                     if key in ("lo", "hi", "htcmin", "htcmax", "maxyes", "stopl", "volv"):
                         v[key] = float(val)
-                    elif key == "universe":
+                    elif key in ("universe", "contestkey"):
                         v[key] = str(val).strip().lower()
                     elif key in ("stopk", "volw", "abarm", "size", "scanmax",
                                  "contestcap"):
@@ -1885,6 +1899,11 @@ class Settings(BaseSettings):
             # reads as capped and trades zero, which is the same class of invisible no-op the
             # type validation above exists to prevent.
             if v["contestcap"] is not None and v["contestcap"] < 1:
+                ok = False
+            # An unrecognised key name would silently fall back to the shipped grouping — a
+            # book that reads as testing the new key while running the old one, which is the
+            # invisible no-op the type validation above exists to prevent.
+            if v["contestkey"] is not None and v["contestkey"] not in ("event", "split"):
                 ok = False
             if ok and v["lo"] < v["hi"] and v["htcmin"] < v["htcmax"]:
                 out.append(v)
