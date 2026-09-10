@@ -211,7 +211,8 @@ class MmSellTracker:
                                ticker: str, close_dt, series: str, event_ticker: str,
                                mutually_exclusive: bool | None,
                                summ: MmSellCycleSummary, recorder,
-                               contest_cap: int | None = None) -> bool:
+                               contest_cap: int | None = None,
+                               contest_key: str | None = None) -> bool:
         """True when a concentration cap should SKIP this entry: too many of `tag`'s own open
         positions already settle on this candidate's date (docs/MMSELL_SEASONAL_FORECAST.md
         "Reading 3"), or (on a CORRELATED regime's date) too many distinct EVENTS already do, or
@@ -222,6 +223,11 @@ class MmSellTracker:
         `book_cap` is the SAME cap `open_count[tag]` was just checked against (paper's 200 or a
         twin's live-sized 60) — the date cap is a percentage OF that, so a twin gets the tighter
         live-shaped number automatically, the same asymmetry the position cap already applies.
+
+        `contest_key` selects which grouping the cap counts against: `split` treats a
+        subject-split series (distinct words, cities, songs — `regimes.SUBJECT_SPLIT_SERIES`)
+        as one contest per MARKET, anything else keeps the shipped date-based key. Default is
+        the shipped key, so an existing arm's behaviour is byte-identical.
 
         `contest_cap` is THIS BOOK's own contest cap, overriding the global setting. None means
         follow the global, which is every existing book. It exists because the global flag cannot
@@ -296,7 +302,7 @@ class MmSellTracker:
         cap_n = (contest_cap if contest_cap is not None
                  else (s.mmsell_contest_cap if s.mmsell_contest_cap_enabled else None))
         if cap_n is not None:
-            contest = contest_key_of(ticker)
+            contest = contest_key_of(ticker, split_subjects=(contest_key == "split"))
             if contest:
                 try:
                     open_contests = repo.open_positions_contest_summary(session, tag, ticker)
@@ -1140,7 +1146,8 @@ class MmSellTracker:
                                                    series=series, event_ticker=event_ticker,
                                                    mutually_exclusive=event_exclusive,
                                                    summ=summ, recorder=recorder,
-                                                   contest_cap=book.get("contestcap")):
+                                                   contest_cap=book.get("contestcap"),
+                                                   contest_key=book.get("contestkey")):
                         continue
 
                     if is_twin:

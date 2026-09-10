@@ -25,12 +25,13 @@ No automated path may write a CONTRADICTS or INSUFFICIENT row as `rules_reviewed
 that would launder a machine's uncertainty into a human's signature, which is the exact failure
 the two-part graduation bar exists to prevent. `--emit-patch` therefore emits CONFIRMS only.
 
-An OPERATOR may overrule either way, because the signature is theirs and not the script's. The
-regex is one signal with a demonstrably non-zero false-positive rate; INSUFFICIENT means only
-that the text carried no keyword it recognises, which is not the same as the mechanism being
-unclear to a person reading it. Batch 1 signed `KXWTI` and `KXTRUMPSAY` over INSUFFICIENT for
-exactly that reason. An overrule must be written down with the language it rests on —
-`docs/SERIES_RULES_REVIEW_LOG.md` — or it is indistinguishable from a rubber stamp.
+An OPERATOR may overrule either way, because the signature is theirs and not the script's, and
+`scripts/series_manifest_signoff.py` says so in as many words. The regex is one signal with a
+demonstrably non-zero false-positive rate; INSUFFICIENT means only that the text carried no
+keyword it recognises, which is not the same as the mechanism being unclear to a person reading
+it. Batch 1 (2026-09-08) signed `KXRAIN` and `KXTRUMPSAY` over INSUFFICIENT for exactly that
+reason. An overrule must be written down with the settlement language it rests on — see "The two
+overrules" in `docs/SERIES_RULES_AUDIT.md` — or it is indistinguishable from a rubber stamp.
 
 THE EVIDENCE RULE IS BORROWED, NOT REINVENTED. `scripts/mmsell_taxonomy_audit.py` already
 derives a settlement mode from Kalshi's settlement-source field and rules text, using patterns

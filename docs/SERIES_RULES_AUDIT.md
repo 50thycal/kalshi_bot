@@ -165,3 +165,76 @@ contest. Same failure as the bare clock time the table already documents.
 - `KXWCMENTION` — a human call, not a tool call.
 - The single-signal weakness. The honest reframing: this is a **triage that ranks series for
   human reading**, not a verdict machine, until a second independent signal exists.
+
+---
+
+## Batch 1 signed — 2026-09-08, by `50cal`
+
+> **These six signatures record the SETTLEMENT-RULES check only.** They are not a trading
+> approval and they gate nothing. The full four-part review of this batch — category, rules,
+> contracts-per-outcome and profitability, with its verdicts — is
+> `docs/MMSELL_SERIES_APPROVAL_REVIEW.md`, and it rejects or flags four of the ten series
+> reviewed here.
+
+
+The first operator sign-off under the workflow `docs/MMSELL_SERIES_SCORECARD_HANDOFF.md` §"the
+operator signs". Worklist: `series_registry_review --section backlog --top 10`, ranked by live
+exposure. Evidence: `series_rules_audit --only <batch> --evidence`. Audit run: `CONFIRMS=6
+CONTRADICTS=0 INSUFFICIENT=4`. **Zero contradictions — nothing in the batch is misclassified.**
+
+Signed (6):
+
+| series | audit verdict | recorded mode | basis for signing |
+|---|---|---|---|
+| `KXMLBSPREAD` | CONFIRMS | `in_play` | rules text agrees |
+| `KXNFLTOTAL` | CONFIRMS | `in_play` | rules text agrees |
+| `KXITFMATCH` | CONFIRMS | `in_play` | rules text agrees |
+| `KXINXU` | CONFIRMS | `scheduled` | rules text agrees |
+| **`KXRAIN`** | INSUFFICIENT | `scheduled` | **operator overrule — read below** |
+| **`KXTRUMPSAY`** | INSUFFICIENT | `discrete` | **operator overrule — read below** |
+
+### The two overrules, and why INSUFFICIENT was not a finding
+
+`INSUFFICIENT` here means the regex found no settlement-mode keyword — **not** that the rules are
+ambiguous. Kalshi's `settlement_source` field is empty across all 138 series, so the audit reads
+prose and its vocabulary is narrower than Kalshi's. Both series were read directly.
+
+**`KXRAIN` → `scheduled` holds.** *"If the total precipitation at CLITTN in Trenton in Sep 7, 2026
+is strictly greater than 0 inches… the official and final value used to determine this market as
+reported by the Weather Company… 'Trace' amounts (T) and missing daily precipitation values are
+counted as 0 inches."* A named source, a named station, a fixed calendar day, a published data
+location, and an explicit tie-break. No in-play component and no discretion. It settles on a
+full-day total, so it cannot resolve before the day ends — consistent with `scheduled`, and worth
+knowing because a position carries all day with no early resolution.
+
+**`KXTRUMPSAY` → `discrete` holds, with a caveat that is not about the mode.** *"If <word>, or a
+plural or possessive form… is stated by Donald Trump after August 31 2026 8:30am ET and before Sep
+7 2026 12:00am ET, then the market resolves to Yes… For phrases with slashes like 'Doge/Dogecoin,'
+either word satisfies the criterion. Doesn't count for payout: official acts like Executive Orders
+or bills signed."* A binary did-it-happen event, not a level or a threshold, so `discrete` is
+right. **But the behaviour is a one-way trigger over a week-long window:** it resolves Yes the
+instant the word is said and can only resolve No by expiry. mmsell sells the cheap tail — it is
+short "he won't say it" — so the position can be destroyed mid-week by one sentence with no chance
+to react. That is an economics property, not a misclassification.
+
+**Open question recorded, not resolved.** The "either word satisfies the criterion" clause makes
+`Zohran / Mamdani` and `UFO / UAP` single markets with two ways to resolve Yes, structurally more
+likely to settle Yes than a single-word market at the same price — against a seller. Whether the
+book prices that is unmeasured.
+
+### Deliberately not signed
+
+- `KXWTI` (INSUFFICIENT, `scheduled`) and `KXALBUMEQUIV` (INSUFFICIENT, `discrete`) — both losing
+  cells, both thin, both unread. `KXALBUMEQUIV` additionally carries the unresolved inconsistency
+  recorded at `docs/mmsell_taxonomy_repair/REVIEW_20260824.md` row 116: it is `discrete` while the
+  near-identical `KXPUREALBUMS` is `scheduled`. That is a real open question, not missing text.
+- `KXNFLSPREAD` and `KXMLBHR` — **both CONFIRMS and both signable**; the operator held them back.
+  Recorded because a reader will otherwise assume the batch signed every CONFIRMS.
+
+### A signature is about settlement, never about P&L
+
+`KXNFLSPREAD` is CONFIRMS and is the worst cell in the family (−$151.26, edge −10.3pp over 44
+contests under the corrected key). Signing it would say only "we understand how it settles."
+Whether it should keep trading is the scoring threshold's decision, and that gate does not exist
+yet (Phase 3, a Platform Change). Nothing in this batch bars, promotes or changes any book's
+universe.

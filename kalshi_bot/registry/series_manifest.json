@@ -309,14 +309,14 @@
    "series": "KXINXU",
    "state": "graduated",
    "rules_reviewed_at": "2026-09-08",
-   "rules_reviewed_by": "Calvin",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {
    "series": "KXITFMATCH",
    "state": "graduated",
    "rules_reviewed_at": "2026-09-08",
-   "rules_reviewed_by": "Calvin",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {
@@ -504,8 +504,8 @@
   {
    "series": "KXMLBHR",
    "state": "graduated",
-   "rules_reviewed_at": "2026-09-08",
-   "rules_reviewed_by": "Calvin",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
    "reason": "grandfathered-pr338"
   },
   {
@@ -526,7 +526,7 @@
    "series": "KXMLBSPREAD",
    "state": "graduated",
    "rules_reviewed_at": "2026-09-08",
-   "rules_reviewed_by": "Calvin",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {
@@ -616,15 +616,15 @@
   {
    "series": "KXNFLSPREAD",
    "state": "graduated",
-   "rules_reviewed_at": "2026-09-08",
-   "rules_reviewed_by": "Calvin",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
    "reason": "grandfathered-pr338"
   },
   {
    "series": "KXNFLTOTAL",
    "state": "graduated",
    "rules_reviewed_at": "2026-09-08",
-   "rules_reviewed_by": "Calvin",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {
@@ -672,8 +672,8 @@
   {
    "series": "KXRAIN",
    "state": "graduated",
-   "rules_reviewed_at": null,
-   "rules_reviewed_by": null,
+   "rules_reviewed_at": "2026-09-08",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {
@@ -708,7 +708,7 @@
    "series": "KXTRUMPSAY",
    "state": "graduated",
    "rules_reviewed_at": "2026-09-08",
-   "rules_reviewed_by": "Calvin",
+   "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
   },
   {
@@ -945,8 +945,8 @@
   {
    "series": "KXWTI",
    "state": "graduated",
-   "rules_reviewed_at": "2026-09-08",
-   "rules_reviewed_by": "Calvin",
+   "rules_reviewed_at": null,
+   "rules_reviewed_by": null,
    "reason": "grandfathered-pr338"
   },
   {

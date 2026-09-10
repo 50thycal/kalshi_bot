@@ -39,26 +39,36 @@ def test_manifest_rows_carry_a_defined_reason():
             assert registry.reason_text(code) != code, f"{r['series']}: undefined reason {code}"
 
 
-def test_grandfathering_never_discharges_a_review_and_the_backlog_is_exactly_the_unreviewed():
+def test_the_backlog_is_exactly_the_unreviewed_graduated_rows():
     """PR #338's seed proved we have DATA about a contract, never that anyone read how it
-    settles. So `reason` can never stand in for a review: a grandfathered row is audit debt
-    until a person signs it, and the backlog is exactly the rows nobody has signed.
+    settles. Recording that honestly is the point of the two-part bar: the rows trade live and
+    they are simultaneously the audit debt.
 
-    This once asserted every grandfathered row was unreviewed, which was true only while the
-    audit had not started. Batch 1 (2026-09-08) signed eight of them; pinning the old state
-    would have made the first real review look like a regression. The invariant that actually
-    matters survives the batches: `reason` is not evidence, and the debt list does not drift
-    away from the rows themselves."""
+    This test used to assert that every grandfathered row was STILL unreviewed. That was true
+    of the seed and false the moment an operator signs one — which is the workflow working, not
+    a regression, so the assertion was a snapshot rather than an invariant. What must stay true
+    is stronger: the backlog is COMPUTED from the ledger, so the two cannot drift apart."""
     debt = set(registry.unreviewed_graduated())
-    seeded = [r for r in registry.rows() if r.get("reason") == "grandfathered-pr338"]
-    assert seeded, "the seed rows vanished — the manifest is not what this test thinks it is"
-    for r in seeded:
-        reviewed = r["rules_reviewed_at"] is not None
-        assert (r["series"] in debt) is not reviewed, (
-            f"{r['series']}: backlog membership disagrees with its review state")
-        if reviewed:
-            assert r["rules_reviewed_by"], f"{r['series']}: a date with no reviewer is not a signature"
-            date.fromisoformat(r["rules_reviewed_at"])
+    for r in registry.rows():
+        owed = r.get("state") == registry.GRADUATED and not r.get("rules_reviewed_at")
+        assert (r["series"] in debt) is owed, r["series"]
+    assert debt, "backlog empty — every graduated row is signed; update this test deliberately"
+
+
+def test_a_recorded_review_carries_a_date_AND_a_named_reviewer():
+    """`rules_reviewed_at` stands in for a human having read the settlement rules, and a date
+    with nobody's name against it is an anonymous signature — unauditable, and precisely what
+    the operator-signs design exists to prevent (a regex must never be able to launder itself
+    into a review). A signed row also KEEPS its `reason`: that field records where the row came
+    from, never whether anyone has read it."""
+    for r in registry.rows():
+        at, by = r.get("rules_reviewed_at"), r.get("rules_reviewed_by")
+        assert (at is None) == (by is None), f"{r['series']}: half-signed ({at!r}, {by!r})"
+        if at is None:
+            continue
+        date.fromisoformat(at)                       # raises if it is not a real date
+        assert by.strip(), f"{r['series']}: reviewed by nobody"
+        assert r.get("reason"), f"{r['series']}: signing must not clear the row's reason"
 
 
 # --- states and admission ------------------------------------------------------------------

@@ -150,10 +150,6 @@ Three sections, each a queue:
 
 The report **authorizes nothing**. Ranking exists so a human reads the right rows first.
 
-What each completed batch actually read, and where the reviewer overruled the audit, is
-recorded in **`docs/SERIES_RULES_REVIEW_LOG.md`** — the manifest holds the signature, the log
-holds the reasoning.
-
 ## Scope today, and what is next
 
 The registry is a **platform-level ledger** — `kalshi_bot/registry/`, not under `mmsell/` —
