@@ -58,6 +58,8 @@ this list is the bare register, not the argument.
   documentation-only history. Owned by **Experiment Control Tower**; a `CLOSE_OUT_RETROSPECTIVE`
   question, not a Build OS one.
 - Verify the live `ops` branch ruleset (carried past `WS-012`; needs an admin-scoped token).
+- Pin `scripts/mmsell_contest_cap_audit.py`'s committed-status tuple against `repository.py`, the
+  way `scripts/live_book_truth.py` now is; its copy carries statuses the enforcing code does not.
 
 ## Recently completed
 

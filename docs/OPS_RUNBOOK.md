@@ -559,6 +559,19 @@ To run a request:
      ANOMALIES. Mechanism + traps: `docs/LIVE_PAPER_TWIN.md`; the arm-and-audit procedure is the
      `live-paper-parallel` skill. **Standing policy: no strategy goes live without a twin.**
 
+   - **"what is this live book actually doing"** / **"real money P&L for <tag>"** ->
+     `{"type":"script","name":"live_book_truth","args":["--tag","Fmmsell10"]}` — the real-money
+     read for ONE live tag, from the sources that enforce it: exchange realized
+     (`positions.realized_pnl` on the newest flat snapshot per ticker, attributed through
+     `live_orders.strategy` -> `fills`), open count by `count_live_book_open` semantics, fill
+     rate, open cost basis, and the portfolio `max_daily_loss` breaker input. It scopes itself to
+     the twin epoch from `live_paper_twins` unless given `--since`.
+     **Use it instead of querying `paper_trades` for a live tag.** The live path writes SIMULATED
+     `paper_trades` rows under the LIVE tag, including for orders that NEVER FILLED, so that query
+     can report a profit on a losing book — on 2026-09-10 it said +$2.56 where real money was
+     −$1.41. The script prints that split (filled vs never-filled) rather than hiding it, because
+     the phantom half is also the honest measure of selection at the fill. See **XOS-000031**.
+
    - **"mmsell crypto study"** -> `{"type":"script","name":"mmsell_crypto_study"}` — backtests the
      BTC/ETH cheap-tail sell over **Kalshi's own settled history** (our paper slice is n=38, which
      can't decide anything): a stop-loss grid, volatility entry+exit gates, and the two-sided
