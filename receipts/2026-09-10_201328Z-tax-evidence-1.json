@@ -1,0 +1,49 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "54a45fc27c5b90c23497c3fbe414d15bfbe6a45f",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-10T20:13:26Z",
+  "id": "tax-evidence-1",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 1379 bytes, sha256:3a0402e18b2672f1>",
+        "before": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>",
+        "requested": "<redacted 1379 bytes, sha256:3a0402e18b2672f1>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_ISSUE_COMMAND is empty \u2014 nothing to overwrite",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/tax-evidence-1.receipt.json",
+  "result_file": "ops/results/tax-evidence-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34525024109",
+  "service": "main",
+  "started_at": "2026-09-10T20:13:14Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
