@@ -566,9 +566,12 @@ To run a request:
      `live_orders.strategy` -> `fills`), open count by `count_live_book_open` semantics, fill
      rate, open cost basis, and the portfolio `max_daily_loss` breaker input. It scopes itself to
      the twin epoch from `live_paper_twins` unless given `--since`. Two ticker sets, deliberately:
-     the never-filled half counts EVERY buy the book placed (a rest that was cancelled is the
+     the execution lines count EVERY buy the book placed (a rest that was cancelled is the
      ordinary way an order fails to fill), while the open count uses only the committed set that
-     `count_live_book_open` bounds.
+     `count_live_book_open` bounds. The simulated rows are split into THREE buckets that
+     partition them — live FILLED it, live ORDERED and never filled (what execution costs), live
+     NEVER ORDERED it because a gate refused first (what the caps cost) — and the report says so
+     loudly if a row falls outside all three.
      **Use it instead of querying `paper_trades` for a live tag.** The live path writes SIMULATED
      `paper_trades` rows under the LIVE tag, including for orders that NEVER FILLED, so that query
      can report a profit on a losing book — on 2026-09-10 it said +$2.56 where real money was

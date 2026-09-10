@@ -60,6 +60,9 @@ this list is the bare register, not the argument.
 - Verify the live `ops` branch ruleset (carried past `WS-012`; needs an admin-scoped token).
 - Pin `scripts/mmsell_contest_cap_audit.py`'s committed-status tuple against `repository.py`, the
   way `scripts/live_book_truth.py` now is; its copy carries statuses the enforcing code does not.
+- Attribute `live_book_truth`'s never-ordered bucket to the specific gate that refused each
+  market, by joining the skip counters per ticker — turning "what the caps cost" into "what the
+  contest cap cost".
 
 ## Recently completed
 
