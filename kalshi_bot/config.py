@@ -1787,6 +1787,11 @@ class Settings(BaseSettings):
                 "htcmax": self.mmsell_max_hours_to_close,
                 "skip": [],   # series-substring blocklist (case-insensitive; '+'-joined)
                 "only": [],   # series-substring allowlist (empty = admit all)
+                # Series EXACT allowlist (empty = admit all). Separate key rather than a mode on
+                # `only` because the two answer different questions and a reviewed-universe book
+                # needs the exact one: `only=KXTRUMPSAY` also admits KXTRUMPSAYCOMPANY and
+                # KXTRUMPSAYMONTH. See tracker._book_admits_series.
+                "onlyx": [],
                 "maxyes": None,  # entry-price ceiling: cap the actual yes sell price (cents)
                 # --- market-TYPE filters (docs/MMSELL_TYPE_BOOKS.md); empty = admit all ---
                 # These select on the contract's STRUCTURE via kalshi_bot/mmsell/market_types.py
@@ -1869,7 +1874,7 @@ class Settings(BaseSettings):
                         v[key] = int(val)
                     elif key == "strangle":
                         v[key] = str(val).strip() not in ("", "0", "false", "False")
-                    elif key in ("skip", "only"):
+                    elif key in ("skip", "only", "onlyx"):
                         # Series filter: '+'-joined substrings (can't use , ; : which the
                         # variant/spec grammar already claims). Matched against the series prefix.
                         v[key] = [t.strip().upper() for t in val.split("+") if t.strip()]
@@ -1904,6 +1909,14 @@ class Settings(BaseSettings):
             # book that reads as testing the new key while running the old one, which is the
             # invisible no-op the type validation above exists to prevent.
             if v["contestkey"] is not None and v["contestkey"] not in ("event", "split"):
+                ok = False
+            # A series ticker that isn't a bare uppercase token can only be a typo (a stray
+            # space, a leading '+', a market ticker pasted in place of a series). `only=`
+            # tolerates that because a substring still matches SOMETHING; an exact allowlist
+            # would just silently drop the entry and run the book on a smaller universe than
+            # its spec reads — a quiet narrowing, which is the same invisible no-op the type
+            # validation above exists to prevent.
+            if any(not t.isalnum() for t in v["onlyx"]):
                 ok = False
             if ok and v["lo"] < v["hi"] and v["htcmin"] < v["htcmax"]:
                 out.append(v)

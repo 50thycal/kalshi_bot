@@ -586,6 +586,7 @@ class MmSellTracker:
             "htcmax": s.mmsell_max_hours_to_close,
             "skip": [],  # the control never filters by series (global mmsell_skip_series applies)
             "only": [],
+            "onlyx": [],
             "maxyes": None,  # the control has no entry-price ceiling
             # ...and no market-type filter: the control trades every structure it finds, which
             # is exactly what makes it the baseline the Wmmsell* type books are read against.
@@ -632,6 +633,7 @@ class MmSellTracker:
             "htc_hours": [book["htcmin"], book["htcmax"]],
             "skip": list(book.get("skip") or []),
             "only": list(book.get("only") or []),
+            "onlyx": list(book.get("onlyx") or []),
             "maxyes": book.get("maxyes"),
             "mtype": list(book.get("mtype") or []),
             "xmtype": list(book.get("xmtype") or []),
@@ -785,7 +787,8 @@ class MmSellTracker:
     def _book_admits_series(book: dict, series: str) -> bool:
         """Per-variant series filter: a book with a `skip` list drops any series containing one of
         its substrings; a book with an `only` list trades ONLY series containing one of its
-        substrings. Matched case-insensitively against the (already-uppercased) series prefix.
+        substrings; a book with an `onlyx` list trades ONLY series equal to one of its entries.
+        Matched case-insensitively against the (already-uppercased) series prefix.
         Empty lists (the control + band-only variants) admit everything.
 
         Then the market-TYPE filters (docs/MMSELL_TYPE_BOOKS.md), which select on the contract's
@@ -812,6 +815,19 @@ class MmSellTracker:
             return False
         only = book.get("only") or []
         if only and not any(tok in series for tok in only):
+            return False
+        # `onlyx` is the EXACT-match allowlist. `only` above matches substrings, which is right
+        # for a family book ("every KXMLB* market") and wrong for a book whose universe is a
+        # named, individually reviewed set: `only=KXTRUMPSAY` also admits KXTRUMPSAYCOMPANY and
+        # KXTRUMPSAYMONTH, and `only=KXUE` admits every series starting KXUE. A reviewed-universe
+        # book cannot express itself in substrings without auditing all 367 known series for
+        # prefix collisions every time a new one is listed — and a collision found LATE means the
+        # book silently traded a series nobody signed.
+        #
+        # Both keys may be set; they AND, same as mtype/mode. `series` reaches here already
+        # uppercased (run_once), and the parser uppercases the list, so this is a plain compare.
+        onlyx = book.get("onlyx") or []
+        if onlyx and series not in onlyx:
             return False
 
         mtype = book.get("mtype") or []
