@@ -564,7 +564,12 @@ To run a request:
      read for ONE live tag, from the sources that enforce it: exchange realized
      (`positions.realized_pnl` on the newest flat snapshot per ticker, attributed through
      `live_orders.strategy` -> `fills`), open count by `count_live_book_open` semantics, fill
-     rate, open cost basis, and the portfolio `max_daily_loss` breaker input. It scopes itself to
+     rate, open cost basis, and the portfolio `max_daily_loss` breaker input. Its headline is
+     **TOTAL = realized + unrealized**, the same figure the dashboard shows, with the two parts
+     beside it and the worst-marked open positions listed; unrealized is derived as
+     `abs(quantity) x (no_bid - avg_price) / 100` off `mmsell_position_ticks`, exactly as
+     `livedash/legs.py` does. Quoting realized alone is how three days of reports disagreed with
+     the screen while the book carried a $2.50 markdown. It scopes itself to
      the twin epoch from `live_paper_twins` unless given `--since`. Two ticker sets, deliberately:
      the execution lines count EVERY buy the book placed (a rest that was cancelled is the
      ordinary way an order fails to fill), while the open count uses only the committed set that

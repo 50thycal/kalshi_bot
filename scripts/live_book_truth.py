@@ -33,6 +33,11 @@ numbers that bind are the same numbers:
                 with a committed live BUY, minus those whose newest position
                 snapshot is flat. A resting order counts as open. This is the
                 quantity `MMSELL_LIVE_MAX_OPEN_POSITIONS` bounds.
+  unrealized    `abs(quantity) x (no_bid - avg_price) / 100`, marked off the
+                newest `mmsell_position_ticks` row -- the same tape and the same
+                arithmetic the dashboard uses, so the two agree. `positions.
+                unrealized_pnl` is never written by the live path, which is why
+                it is derived rather than read.
   attribution   there is no strategy column on `fills` or `positions`, so it
                 runs through `live_orders.strategy` -> `fills` on
                 `kalshi_order_id` -> newest `positions` snapshot per ticker.
@@ -56,12 +61,17 @@ CANCELLED, so restricting that set to committed statuses would drop the very
 trades the phantom is counting. The open count is the one figure that uses the
 narrower committed set, because that is what `count_live_book_open` bounds.
 
-WHAT IT DOES NOT DO
--------------------
-No unrealized P&L. `positions.unrealized_pnl` is never written by the live path,
-and deriving a mark here would be a THIRD implementation of something the
-dashboard already does off the shared tick. Open cost basis is printed instead:
-what the book PAID for what it still holds, which is exact.
+WHY TOTAL, NOT JUST REALIZED
+----------------------------
+The first three versions of this script printed realized P&L only, and every
+report built on it disagreed with the dashboard -- which shows realized PLUS
+unrealized, and is the number an operator actually reads. On 2026-09-10 that was
+the difference between "the book is flat at -$0.02" and the truth, "the book is
+down -$2.52 with a $2.50 markdown sitting in ten open positions that will mostly
+settle as losses". A figure that cannot be reconciled against the screen is worse
+than no figure, so TOTAL is the headline here and the two parts are shown beside
+it. Open cost basis is still printed -- what the book PAID is exact, where a mark
+is an estimate.
 
 A `--twin` figure is the twin's own `paper_trades`, which is correct for a paper
 tag. The gap between it and live realized is not "slippage": most of it is
@@ -101,9 +111,12 @@ COMMITTED_BUY_STATUSES = (
 #: `count_live_book_open` treats |qty| <= this as settled/flat.
 FLAT_EPSILON = 0.01
 
+#: A missing `positions` snapshot, shaped like one so unpacking never raises.
+_NO_SNAP = (None, None, None, None)
+
 
 def _fmt(value: float | None, width: int = 9) -> str:
-    return "     n/a" if value is None else f"{value:>{width}.4f}"
+    return "n/a".rjust(width) if value is None else f"{value:>{width}.4f}"
 
 
 def _epoch_start(cur, tag: str):
@@ -190,10 +203,13 @@ def _filled(cur, tag: str, since):
 
 
 def _snapshots(cur, tickers: set[str]):
-    """Newest `positions` row per ticker: (qty, realized_pnl, cost basis).
+    """Newest `positions` row per ticker: (qty, realized_pnl, cost basis, entry).
 
     Snapshots accumulate every reconcile cycle, so only the newest is the
-    current truth -- summing them would count one market many times.
+    current truth -- summing them would count one market many times. `avg_price`
+    is the cost basis IN CENTS on the held side, and is the entry the dashboard
+    marks against; the fill VWAP is a different number and mixing the two makes
+    the unrealized figure disagree with the dashboard for no good reason.
     """
     if not tickers:
         return {}
@@ -203,7 +219,8 @@ def _snapshots(cur, tickers: set[str]):
                market_ticker,
                coalesce(quantity_fp, quantity::numeric),
                realized_pnl,
-               market_exposure
+               market_exposure,
+               avg_price
           from positions
          where market_ticker = any(%s)
          order by market_ticker, captured_at desc
@@ -213,9 +230,32 @@ def _snapshots(cur, tickers: set[str]):
     return {
         t: (None if q is None else float(q),
             None if r is None else float(r),
-            None if e is None else abs(float(e)))
-        for t, q, r, e in cur.fetchall()
+            None if e is None else abs(float(e)),
+            None if a is None else float(a))
+        for t, q, r, e, a in cur.fetchall()
     }
+
+
+def _marks(cur, tickers: set[str]):
+    """ticker -> (no_bid cents, captured_at) from the newest position tick.
+
+    The same tape the dashboard marks off (`mmsell_position_ticks.no_bid`), so
+    the two agree by construction. A ticker is taped only while some mmsell book
+    holds it, so a mark can legitimately be missing -- which is reported, never
+    silently treated as zero or as cost.
+    """
+    if not tickers:
+        return {}
+    cur.execute(
+        """
+        select distinct on (market_ticker) market_ticker, no_bid, captured_at
+          from mmsell_position_ticks
+         where market_ticker = any(%s) and no_bid is not null
+         order by market_ticker, captured_at desc
+        """,
+        (list(tickers),),
+    )
+    return {t: (float(b), at) for t, b, at in cur.fetchall()}
 
 
 def _paper_pnl(cur, tag: str, since, tickers: set[str] | None = None, *, exclude=False):
@@ -279,21 +319,43 @@ def report(cur, tag: str, twin: str | None, since) -> int:
     filled = _filled(cur, tag, since)
     snaps = _snapshots(cur, attempted)
 
+    still_open = {
+        t for t in filled
+        if (snaps.get(t, _NO_SNAP)[0] is None
+            or abs(snaps[t][0]) > FLAT_EPSILON)
+    }
+    marks = _marks(cur, still_open)
+
     realized = 0.0
     settled = 0
     open_cost = 0.0
+    unrealized = 0.0
+    unmarked = 0
+    marked_positions: list[tuple[float, str, float, float]] = []
     for ticker in filled:
-        qty, pnl, exposure = snaps.get(ticker, (None, None, None))
+        qty, pnl, exposure, entry = snaps.get(ticker, _NO_SNAP)
         if qty is not None and abs(qty) <= FLAT_EPSILON and pnl is not None:
             realized += pnl
             settled += 1
-        elif exposure is not None:
+            continue
+        if exposure is not None:
             open_cost += exposure
+        mark = marks.get(ticker)
+        if mark is None or entry is None or qty is None:
+            unmarked += 1
+            continue
+        # abs(qty): `positions.quantity` is SIGNED and a NO position is negative,
+        # so using it raw flips the sign of every open position and turns a
+        # marked-down book into a marked-up one. The dashboard takes abs() here
+        # (livedash/legs.py) and so does this.
+        pnl_open = abs(qty) * (mark[0] - entry) / 100.0
+        unrealized += pnl_open
+        marked_positions.append((pnl_open, ticker, entry, mark[0]))
 
     # count_live_book_open: committed, minus those whose newest snapshot is flat.
     open_count = sum(
         1 for t in committed
-        if not (snaps.get(t, (None, None, None))[0] is not None
+        if not (snaps.get(t, _NO_SNAP)[0] is not None
                 and abs(snaps[t][0]) <= FLAT_EPSILON)
     )
 
@@ -313,12 +375,23 @@ def report(cur, tag: str, twin: str | None, since) -> int:
           f"{'  (live_paper_twins)' if epoch_since and since == epoch_since else ''}")
     print(f"twin        : {twin or '(none linked)'}")
 
+    total = realized + unrealized
     print("\nREAL MONEY (exchange truth, positions.realized_pnl)")
     print(f"  realized              : {_fmt(realized)}   settled={settled}")
+    print(f"  unrealized            : {_fmt(unrealized)}   marked={len(marked_positions)}"
+          + (f"  UNMARKED={unmarked}" if unmarked else ""))
+    print(f"  TOTAL                 : {_fmt(total)}   <- the figure the dashboard shows")
+    if unmarked:
+        print(f"  !! {unmarked} open position(s) have no mark, so TOTAL is INCOMPLETE —"
+              " a ticker is taped only while an mmsell book holds it")
     print(f"  entry fees paid       : {_fmt(fees)}")
     print(f"  open cost basis       : {_fmt(open_cost)}   (what it PAID for what it still holds)")
     print(f"  open by the cap rule  : {open_count:>9}   (count_live_book_open semantics)")
     print(f"  contracts filled      : {contracts:>9.0f}")
+    if marked_positions:
+        print("  open positions, worst first (entry -> no_bid):")
+        for pnl_open, ticker, entry, mark_c in sorted(marked_positions)[:8]:
+            print(f"    {_fmt(pnl_open, 8)}  {ticker[:44]:<44} {entry:.0f}c -> {mark_c:.0f}c")
 
     rate = (len(filled) / len(attempted) * 100) if attempted else 0.0
     print("\nEXECUTION")
@@ -335,8 +408,10 @@ def report(cur, tag: str, twin: str | None, since) -> int:
     print(f"  NEVER ordered         : {_fmt(pt_unordered[0])}   n={pt_unordered[1]}"
           "   <- a live GATE refused it")
     print(f"  phantom total         : {_fmt(phantom)}   (the two the book never had)")
-    gap = pt_all[0] - realized
-    print(f"  overstates real money by {gap:+.4f}")
+    # Against TOTAL, not realized: the headline above is TOTAL, and an
+    # overstatement measured against a different denominator is unreadable.
+    gap = pt_all[0] - total
+    print(f"  overstates real money by {gap:+.4f}   (vs TOTAL)")
     stray = pt_all[1] - pt_filled[1] - pt_unfilled[1] - pt_unordered[1]
     if stray:
         # The three buckets must partition every simulated row, or the phantom is
@@ -350,7 +425,8 @@ def report(cur, tag: str, twin: str | None, since) -> int:
         tw_total, tw_n = _paper_pnl(cur, twin, since)
         print(f"\nTWIN {twin} (paper_trades IS the right source for a paper tag)")
         print(f"  realized              : {_fmt(tw_total)}   n={tw_n}")
-        print(f"  twin - live           : {tw_total - realized:+.4f}")
+        print(f"  twin - live           : {tw_total - realized:+.4f}"
+              "   (realized vs realized — the twin's open book is not marked here)")
         print("  NOTE: a gap this shape is not slippage. Read the three buckets above:"
               " what live ORDERED and lost is execution; what it NEVER ORDERED is what"
               " the caps and gates cost. They are different questions.")
@@ -360,7 +436,9 @@ def report(cur, tag: str, twin: str | None, since) -> int:
     print("  (compare against MAX_DAILY_LOSS; this is every live book, not just this one)")
 
     print("\n--- read this before quoting a number ---")
-    print(f"REAL MONEY for {tag} is {realized:+.4f} (settled={settled}).")
+    print(f"REAL MONEY for {tag} is {total:+.4f} TOTAL "
+          f"({realized:+.4f} realized over {settled} settled, {unrealized:+.4f} unrealized "
+          f"on {len(marked_positions)} still open).")
     print(f"paper_trades under the same tag says {pt_all[0]:+.4f} (n={pt_all[1]}); "
           f"{pt_unfilled[1] + pt_unordered[1]} of those trades real money never had "
           f"({pt_unfilled[1]} never filled, {pt_unordered[1]} never ordered). "
