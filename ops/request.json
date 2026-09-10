@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-show","args":["XOS-000028"],"id":"lo-tc-final"}
+{"type":"xos","command":"issue-command-show","args":["lo-tc-resolve-1"],"id":"lo-tc-rrec"}
