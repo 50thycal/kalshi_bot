@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "54a45fc27c5b90c23497c3fbe414d15bfbe6a45f",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-10T20:26:09Z",
+  "id": "cc-lbt-prod-3b",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/cc-lbt-prod-3b.receipt.json",
+  "result_file": "ops/results/cc-lbt-prod-3b.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34526336944",
+  "service": null,
+  "started_at": "2026-09-10T20:26:08Z",
+  "targets": [],
+  "type": "script"
+}
