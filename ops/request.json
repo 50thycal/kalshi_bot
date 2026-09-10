@@ -1,1 +1,1 @@
-{"type": "noop"}
+{"type": "script", "id": "cc-lbt-total-1", "name": "live_book_truth", "args": ["--tag", "Fmmsell10"]}
