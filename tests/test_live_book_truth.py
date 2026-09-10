@@ -93,7 +93,10 @@ class _Cursor:
             rows = self.twin_rows if tag.endswith("_pt4") else self.paper
             subset = params[3] if len(params) > 3 else None
             if subset is not None:
-                rows = [r for r in rows if r[0] in set(subset)]
+                inside = set(subset)
+                keep = (lambda t: t not in inside) if "not (market_ticker" in sql \
+                    else (lambda t: t in inside)
+                rows = [r for r in rows if keep(r[0])]
             self._result = (sum(r[1] for r in rows), len(rows))
         else:  # pragma: no cover — a new query must be taught to the stub
             raise AssertionError(f"unstubbed query: {sql[:80]}")
@@ -147,8 +150,8 @@ def test_realized_is_the_exchange_figure_not_paper_trades(capsys):
 def test_the_phantom_half_is_named_and_quantified(capsys):
     """The never-filled rows are the entire reason the wrong number looked fine."""
     out = _run(_production_shape(), capsys)
-    assert "on NEVER-filled       :    3.7600   n=1   <- phantom" in out
-    assert "on tickers that filled:   -1.2000   n=2" in out
+    assert "ordered, NEVER filled :    3.7600   n=1   <- lost AT THE FILL" in out
+    assert "live FILLED it        :   -1.2000   n=2" in out
     assert "overstates real money by +3.9700" in out
 
 
@@ -168,7 +171,7 @@ def test_a_CANCELLED_order_is_phantom_but_NOT_open(capsys):
     version used the committed set for both and reported the phantom as n=0.
     """
     out = _run(_production_shape(), capsys)
-    assert "on NEVER-filled       :    3.7600   n=1   <- phantom" in out
+    assert "ordered, NEVER filled :    3.7600   n=1   <- lost AT THE FILL" in out
     assert "open by the cap rule  :         0   (count_live_book_open semantics)" in out
 
 
@@ -184,7 +187,7 @@ def test_a_RESTING_unfilled_order_counts_as_OPEN_and_is_still_phantom(capsys):
     cur.paper.append(("REST", 0.50))
     out = _run(cur, capsys)
     assert "open by the cap rule  :         1   (count_live_book_open semantics)" in out
-    assert "on NEVER-filled       :    4.2600   n=2   <- phantom" in out
+    assert "ordered, NEVER filled :    4.2600   n=2   <- lost AT THE FILL" in out
     assert "NEVER filled          :         2" in out
 
 
@@ -192,20 +195,43 @@ def test_every_simulated_row_falls_in_one_half_or_the_other(capsys):
     """The partition guard. If a row lands in neither half the phantom is a lie
     by omission, so the report says so instead of printing a clean split."""
     out = _run(_production_shape(), capsys)
-    assert "in NEITHER half" not in out
+    assert "in NO bucket" not in out
 
 
-def test_the_partition_guard_FIRES_when_a_row_lands_outside_both_halves(capsys):
-    """The invariant that would have caught the shipped defect in production.
+def test_a_market_live_NEVER_ORDERED_is_its_own_bucket(capsys):
+    """The third bucket, and the one the second production run surfaced.
 
-    Here a simulated row exists on a ticker the order query never returned, so
-    the two halves no longer sum to the whole. The report must say the phantom is
-    a floor rather than print a split that quietly omits it.
+    48 simulated rows sat on markets `Fmmsell10` never placed a single order on —
+    a live gate (the contest cap, the open cap, the price ceiling) refused them
+    before an order existed. They are phantom too, but for a different reason than
+    a failed fill, so conflating the two answers the wrong question: one measures
+    what execution costs, the other what the caps cost.
     """
     cur = _production_shape()
-    cur.paper.append(("GHOST", 9.99))
+    cur.paper.append(("GATED", 9.99))          # never ordered at all
     out = _run(cur, capsys)
-    assert "!! 1 simulated row(s) in NEITHER half" in out
+    assert "NEVER ordered         :    9.9900   n=1   <- a live GATE refused it" in out
+    assert "ordered, NEVER filled :    3.7600   n=1   <- lost AT THE FILL" in out
+    assert "phantom total         :   13.7500" in out
+    assert "in NO bucket" not in out
+
+
+def test_the_partition_guard_FIRES_when_a_bucket_under_reports(monkeypatch, capsys):
+    """The invariant, exercised by breaking a bucket rather than the data.
+
+    With three buckets the data cannot fall outside them, so the guard now guards
+    the queries: if one of them silently returns fewer rows than it should, the
+    report must call the phantom a floor instead of printing a clean split.
+    """
+    real = lbt._paper_pnl
+
+    def short(cur, tag, since, tickers=None, *, exclude=False):
+        total, n = real(cur, tag, since, tickers, exclude=exclude)
+        return (total, n - 1) if exclude else (total, n)
+
+    monkeypatch.setattr(lbt, "_paper_pnl", short)
+    out = _run(_production_shape(), capsys)
+    assert "!! 1 simulated row(s) in NO bucket" in out
     assert "treat the phantom figure as a floor" in out
 
 
@@ -222,7 +248,7 @@ def test_twin_gap_is_reported_with_the_selection_caveat(capsys):
     out = _run(_production_shape(), capsys, twin="Fmmsell10_pt4")
     assert "realized              :    3.6000   n=3" in out
     assert "twin - live           : +5.0100" in out
-    assert "SELECTION at the fill" in out
+    assert "what the caps and gates cost" in out
 
 
 def test_breaker_line_says_it_is_portfolio_wide(capsys):

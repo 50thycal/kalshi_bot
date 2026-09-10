@@ -41,8 +41,17 @@ The `paper_trades` figure IS printed -- split into the filled and never-filled
 halves -- because the point is to make the trap visible rather than to hide the
 number someone would otherwise reach for.
 
-The never-filled half is measured over EVERY buy the book placed, whatever became
-of the order. An mmsell order that fails to fill ordinarily rests and is then
+THREE buckets, not two. A simulated row under the live tag falls in exactly one:
+the live book FILLED that market, it ORDERED and never filled (lost at the fill,
+which is adverse selection -- a resting no-side offer is hit mainly when the
+market moves against it), or it NEVER ORDERED the market at all, because a live
+gate refused it first: the contest cap, the open-position cap, the price ceiling,
+an exposure bound. The last two together are the phantom, and separating them is
+the point -- one is what execution costs, the other is what the caps cost, and
+they are different questions with different answers.
+
+The ordered/never-filled split is measured over EVERY buy the book placed, whatever
+became of the order. An mmsell order that fails to fill ordinarily rests and is then
 CANCELLED, so restricting that set to committed statuses would drop the very
 trades the phantom is counting. The open count is the one figure that uses the
 narrower committed set, because that is what `count_live_book_open` bounds.
@@ -209,8 +218,13 @@ def _snapshots(cur, tickers: set[str]):
     }
 
 
-def _paper_pnl(cur, tag: str, since, tickers: set[str] | None = None):
-    """(sum(pnl), n) over a PAPER tag's closed trades, optionally on a ticker set."""
+def _paper_pnl(cur, tag: str, since, tickers: set[str] | None = None, *, exclude=False):
+    """(sum(pnl), n) over a PAPER tag's closed trades, optionally on a ticker set.
+
+    `exclude=True` inverts the set: rows on tickers OUTSIDE it. That is how the
+    third bucket -- trades the live executor never ordered at all -- is measured,
+    since there is no positive list of "markets a gate refused".
+    """
     sql = """
         select coalesce(sum(pnl), 0), count(*)
           from paper_trades
@@ -221,9 +235,12 @@ def _paper_pnl(cur, tag: str, since, tickers: set[str] | None = None):
     params: list = [tag, since, since]
     if tickers is not None:
         if not tickers:
-            return 0.0, 0
-        sql += " and market_ticker = any(%s)"
-        params.append(list(tickers))
+            if not exclude:
+                return 0.0, 0
+        else:
+            sql += (" and not (market_ticker = any(%s))" if exclude
+                    else " and market_ticker = any(%s)")
+            params.append(list(tickers))
     cur.execute(sql, params)
     total, n = cur.fetchone()
     return float(total or 0), int(n or 0)
@@ -287,6 +304,7 @@ def report(cur, tag: str, twin: str | None, since) -> int:
     pt_all = _paper_pnl(cur, tag, since)
     pt_filled = _paper_pnl(cur, tag, since, set(filled))
     pt_unfilled = _paper_pnl(cur, tag, since, unfilled)
+    pt_unordered = _paper_pnl(cur, tag, since, attempted, exclude=True)
     day_total, day_n = _breaker_today(cur)
 
     since_s = since.isoformat() if isinstance(since, dt.datetime) else str(since)
@@ -308,18 +326,24 @@ def report(cur, tag: str, twin: str | None, since) -> int:
     print(f"  tickers filled        : {len(filled):>9}   ({rate:.1f}%)")
     print(f"  NEVER filled          : {len(unfilled):>9}")
 
+    phantom = pt_unfilled[0] + pt_unordered[0]
     print("\npaper_trades UNDER THE LIVE TAG — simulated, NOT real money")
     print(f"  all rows              : {_fmt(pt_all[0])}   n={pt_all[1]}")
-    print(f"  on tickers that filled: {_fmt(pt_filled[0])}   n={pt_filled[1]}")
-    print(f"  on NEVER-filled       : {_fmt(pt_unfilled[0])}   n={pt_unfilled[1]}   <- phantom")
+    print(f"  live FILLED it        : {_fmt(pt_filled[0])}   n={pt_filled[1]}")
+    print(f"  ordered, NEVER filled : {_fmt(pt_unfilled[0])}   n={pt_unfilled[1]}"
+          "   <- lost AT THE FILL")
+    print(f"  NEVER ordered         : {_fmt(pt_unordered[0])}   n={pt_unordered[1]}"
+          "   <- a live GATE refused it")
+    print(f"  phantom total         : {_fmt(phantom)}   (the two the book never had)")
     gap = pt_all[0] - realized
     print(f"  overstates real money by {gap:+.4f}")
-    stray = pt_all[1] - pt_filled[1] - pt_unfilled[1]
+    stray = pt_all[1] - pt_filled[1] - pt_unfilled[1] - pt_unordered[1]
     if stray:
-        # The two halves must partition every simulated row, or the phantom is
-        # understated and the split is lying by omission. That is exactly how the
-        # first production run reported n=0 while 76 rows sat outside both sets.
-        print(f"  !! {stray} simulated row(s) in NEITHER half — the split is incomplete;"
+        # The three buckets must partition every simulated row, or the phantom is
+        # understated and the split is lying by omission. That is how the first
+        # production run reported n=0 while 76 rows sat outside every set, and how
+        # the second surfaced the never-ordered bucket this line now measures.
+        print(f"  !! {stray} simulated row(s) in NO bucket — the split is incomplete;"
               " treat the phantom figure as a floor and report this")
 
     if twin:
@@ -327,8 +351,9 @@ def report(cur, tag: str, twin: str | None, since) -> int:
         print(f"\nTWIN {twin} (paper_trades IS the right source for a paper tag)")
         print(f"  realized              : {_fmt(tw_total)}   n={tw_n}")
         print(f"  twin - live           : {tw_total - realized:+.4f}")
-        print("  NOTE: most of a gap this shape is SELECTION at the fill, not slippage —"
-              " compare the two halves of the split above before calling it execution cost.")
+        print("  NOTE: a gap this shape is not slippage. Read the three buckets above:"
+              " what live ORDERED and lost is execution; what it NEVER ORDERED is what"
+              " the caps and gates cost. They are different questions.")
 
     print("\nmax_daily_loss BREAKER INPUT (live_realized_pnl_today, PORTFOLIO-wide)")
     print(f"  realized today        : {_fmt(day_total)}   markets={day_n}")
@@ -337,7 +362,9 @@ def report(cur, tag: str, twin: str | None, since) -> int:
     print("\n--- read this before quoting a number ---")
     print(f"REAL MONEY for {tag} is {realized:+.4f} (settled={settled}).")
     print(f"paper_trades under the same tag says {pt_all[0]:+.4f} (n={pt_all[1]}); "
-          f"{pt_unfilled[1]} of those trades never filled live. See XOS-000031.")
+          f"{pt_unfilled[1] + pt_unordered[1]} of those trades real money never had "
+          f"({pt_unfilled[1]} never filled, {pt_unordered[1]} never ordered). "
+          "See XOS-000031.")
     return 0
 
 
