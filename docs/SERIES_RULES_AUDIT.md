@@ -170,6 +170,13 @@ contest. Same failure as the bare clock time the table already documents.
 
 ## Batch 1 signed — 2026-09-08, by `50cal`
 
+> **These six signatures record the SETTLEMENT-RULES check only.** They are not a trading
+> approval and they gate nothing. The full four-part review of this batch — category, rules,
+> contracts-per-outcome and profitability, with its verdicts — is
+> `docs/MMSELL_SERIES_APPROVAL_REVIEW.md`, and it rejects or flags four of the ten series
+> reviewed here.
+
+
 The first operator sign-off under the workflow `docs/MMSELL_SERIES_SCORECARD_HANDOFF.md` §"the
 operator signs". Worklist: `series_registry_review --section backlog --top 10`, ranked by live
 exposure. Evidence: `series_rules_audit --only <batch> --evidence`. Audit run: `CONFIRMS=6
