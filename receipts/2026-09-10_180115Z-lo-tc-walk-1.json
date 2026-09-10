@@ -1,0 +1,49 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "e3c0d4875137b7c77c9f395d67805dfd41d33cca",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-10T18:01:12Z",
+  "id": "lo-tc-walk-1",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 4125 bytes, sha256:924396e009349643>",
+        "before": "<redacted 4156 bytes, sha256:567d62f52bb5b000>",
+        "requested": "<redacted 4125 bytes, sha256:924396e009349643>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_ISSUE_COMMAND: all 2 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/lo-tc-walk-1.receipt.json",
+  "result_file": "ops/results/lo-tc-walk-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34511685049",
+  "service": "main",
+  "started_at": "2026-09-10T18:00:58Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
