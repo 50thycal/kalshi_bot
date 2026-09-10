@@ -117,6 +117,61 @@ def test_cancel_events_order_deletes_v2_events_path(settings):
 
 
 @respx.mock
+def test_cancel_events_order_routes_to_the_shard_and_still_signs_the_bare_path(settings, rsa_keypair):
+    """XOS-000028. Kalshi's writes are shard-scoped while its reads aggregate, so an unrouted
+    cancel for an order on a non-default shard returns 404 not_found for as long as the order
+    lives. `exchange_index` goes on the QUERY STRING, and Kalshi signs the path WITHOUT it — if
+    the query ever leaked into the signed string every routed cancel would fail auth instead,
+    which is a far worse failure than the one being fixed. Both halves are pinned here."""
+    key, _ = rsa_keypair
+    settings.bot_mode = "live"
+    settings.kill_switch = False
+    base = settings.kalshi_base_url
+    route = respx.delete(f"{base}/portfolio/events/orders/K-1").mock(return_value=Response(200))
+    with KalshiClient(settings) as client:
+        client.cancel_events_order("K-1", exchange_index=3)
+    req = route.calls.last.request
+    assert req.url.params["exchange_index"] == "3"
+    ts = req.headers["KALSHI-ACCESS-TIMESTAMP"]
+    key.public_key().verify(
+        base64.b64decode(req.headers["KALSHI-ACCESS-SIGNATURE"]),
+        f"{ts}DELETE/trade-api/v2/portfolio/events/orders/K-1".encode(),
+        padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.DIGEST_LENGTH),
+        hashes.SHA256(),
+    )
+
+
+@respx.mock
+def test_cancel_events_order_omits_the_parameter_entirely_when_unrouted(settings):
+    """None must send NO parameter, not `exchange_index=None` or a defaulted 0 — an unrouted
+    cancel has to stay byte-identical to the call this codebase has always made."""
+    settings.bot_mode = "live"
+    settings.kill_switch = False
+    base = settings.kalshi_base_url
+    route = respx.delete(f"{base}/portfolio/events/orders/K-1").mock(return_value=Response(200))
+    with KalshiClient(settings) as client:
+        client.cancel_events_order("K-1")
+    assert "exchange_index" not in route.calls.last.request.url.params
+
+
+@respx.mock
+@pytest.mark.parametrize("payload,expected", [
+    ({"market": {"ticker": "KXT", "exchange_index": 3}}, 3),
+    ({"ticker": "KXT", "exchange_index": 0}, 0),            # unwrapped, and 0 is a REAL shard
+    ({"market": {"ticker": "KXT"}}, None),                  # absent -> unknown, never 0
+    ({"market": {"ticker": "KXT", "exchange_index": None}}, None),
+    ({"market": {"ticker": "KXT", "exchange_index": True}}, None),  # bool is not a shard
+])
+def test_get_market_exchange_index_reads_the_authoritative_field(settings, payload, expected):
+    """Absent must read as UNKNOWN, never as the default shard: silently assuming 0 is exactly
+    the assumption that made the cancel fail invisibly for 3.5 days."""
+    base = settings.kalshi_base_url
+    respx.get(f"{base}/markets/KXT").mock(return_value=Response(200, json=payload))
+    with KalshiClient(settings) as client:
+        assert client.get_market_exchange_index("KXT") == expected
+
+
+@respx.mock
 def test_tier_upgrade_sends_a_json_content_type(settings):
     """Kalshi rejects the ADVANCED upgrade with `400 invalid_content_type` unless the POST
     carries a JSON content type — observed live 2026-08-12.

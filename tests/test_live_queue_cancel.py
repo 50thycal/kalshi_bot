@@ -133,6 +133,10 @@ class _Client:
         self.cancel_exc = cancel_exc
         self.canceled: list[str] = []
         self.single_calls = 0
+        self.cancel_shards: list[int | None] = []
+        self.index_calls: list[str] = []
+        self.index = 3
+        self.index_exc = None
 
     def get_queue_positions(self, **kw):
         if self._batch_exc is not None:
@@ -145,11 +149,18 @@ class _Client:
             raise self._single_exc
         return {"order_id": order_id, "queue_position_fp": "9000.00"}
 
-    def cancel_events_order(self, order_id):
+    def cancel_events_order(self, order_id, *, exchange_index=None):
+        self.cancel_shards.append(exchange_index)
         if self.cancel_exc is not None:
             raise self.cancel_exc
         self.canceled.append(order_id)
         return {}
+
+    def get_market_exchange_index(self, ticker):
+        self.index_calls.append(ticker)
+        if self.index_exc is not None:
+            raise self.index_exc
+        return self.index
 
 
 def _live(settings, mode="shadow", **over):
@@ -382,6 +393,92 @@ def test_the_four_hour_timeout_still_applies_in_reconcile_before_the_rule(settin
         assert row.status == "canceled" and row.cancel_reason == "timeout"
         assert _decisions(session) == [], "nothing was resting when the rule ran"
     assert client.canceled == ["K-1"] and ex.summary.timed_out_canceled == 1
+
+
+def test_the_timeout_cancel_is_routed_to_the_markets_exchange_shard(settings):
+    """The fix for XOS-000028. Kalshi's writes are shard-scoped while its reads aggregate, so an
+    unrouted cancel for an order resting on a non-default shard is answered 404 not_found for as
+    long as the order lives — measured in production as one order sitting 3.5 days past a 4-hour
+    timeout while the queue endpoint reported it alive at rank 1.
+
+    The shard must come from the market object, which Kalshi documents as the authoritative
+    source, and NOT from a hand-written series-prefix map: Kalshi moved whole categories between
+    shards as recently as 2026-09-10, which would silently rot such a map."""
+    _live(settings, mode="shadow")
+    client = _Client(_deep_batch("K-1"))
+    client.index = 3
+    client.get_orders = lambda: {"orders": []}
+    client.get_fills = lambda: {"fills": []}
+    client.get_positions = lambda: {"market_positions": []}
+    client.get_settlements = lambda: {"settlements": []}
+    ex = LiveExecutor(client, settings, RiskManager(settings))
+    with db.session_scope() as session:
+        row = _resting(session, age_min=5 * 60)
+        ex.reconcile(session)
+        assert row.status == "canceled" and row.cancel_reason == "timeout"
+    assert client.canceled == ["K-1"]
+    assert client.cancel_shards == [3], "the cancel carried the market's shard, not the default"
+    assert client.index_calls == [row.market_ticker]
+
+
+def test_shard_zero_is_sent_and_is_not_confused_with_unknown(settings):
+    """0 is a real shard, and `if shard:` would drop it. Falsy-vs-None is the whole bug class."""
+    _live(settings, mode="shadow")
+    client = _Client(_deep_batch("K-1"))
+    client.index = 0
+    client.get_orders = lambda: {"orders": []}
+    client.get_fills = lambda: {"fills": []}
+    client.get_positions = lambda: {"market_positions": []}
+    client.get_settlements = lambda: {"settlements": []}
+    ex = LiveExecutor(client, settings, RiskManager(settings))
+    with db.session_scope() as session:
+        _resting(session, age_min=5 * 60)
+        ex.reconcile(session)
+    assert client.cancel_shards == [0], "an explicit shard 0 is sent, never silently dropped"
+
+
+def test_a_failing_shard_lookup_cannot_make_the_cancel_worse(settings, caplog):
+    """FAIL-SOFT is the safety property. If the lookup raises, the cancel still goes out — just
+    unrouted, exactly as it did before this routing existed. A live safeguard must never end up
+    weaker because a helper read failed, and the lookup must not be cached as 'unknown' on a
+    transient failure or one bad read would pin the market unroutable for the whole process."""
+    _live(settings, mode="shadow")
+    client = _Client(_deep_batch("K-1"))
+    client.index_exc = RuntimeError("markets read blew up")
+    client.get_orders = lambda: {"orders": []}
+    client.get_fills = lambda: {"fills": []}
+    client.get_positions = lambda: {"market_positions": []}
+    client.get_settlements = lambda: {"settlements": []}
+    ex = LiveExecutor(client, settings, RiskManager(settings))
+    with db.session_scope() as session:
+        row = _resting(session, age_min=5 * 60)
+        with caplog.at_level("WARNING"):
+            ex.reconcile(session)
+        assert row.status == "canceled" and row.cancel_reason == "timeout"
+    assert client.canceled == ["K-1"] and client.cancel_shards == [None]
+    assert ex._exchange_index == {}, "a transient lookup failure is not cached"
+    assert any("exchange index lookup failed" in r.getMessage() and "RuntimeError" in r.getMessage()
+               for r in caplog.records), "and it says why, in the message"
+
+
+def test_the_shard_is_looked_up_once_per_market_not_once_per_cycle(settings):
+    """A permanently-failing cancel is retried every cycle forever. Without caching that is also
+    a market read every ~2.5 minutes forever, against an account with a rate-limit budget."""
+    _live(settings, mode="shadow")
+    client = _Client(_deep_batch("K-1"),
+                     cancel_exc=RuntimeError('404 {"code":"not_found"}'))
+    client.get_orders = lambda: {"orders": []}
+    client.get_fills = lambda: {"fills": []}
+    client.get_positions = lambda: {"market_positions": []}
+    client.get_settlements = lambda: {"settlements": []}
+    ex = LiveExecutor(client, settings, RiskManager(settings))
+    with db.session_scope() as session:
+        _resting(session, age_min=5 * 60)
+        ex.reconcile(session)
+        ex.reconcile(session)
+        ex.reconcile(session)
+    assert len(client.cancel_shards) == 3, "still attempted every cycle"
+    assert len(client.index_calls) == 1, "but the shard was resolved once"
 
 
 def test_a_failing_timeout_cancel_names_its_error_in_the_log_MESSAGE(settings, caplog):
