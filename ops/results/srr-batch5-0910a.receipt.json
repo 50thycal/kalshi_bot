@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "783bf87e663e23d12495063f3fa74a2b91211c49",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-10T17:51:56Z",
+  "id": "srr-batch5-0910a",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/srr-batch5-0910a.receipt.json",
+  "result_file": "ops/results/srr-batch5-0910a.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34510788280",
+  "service": null,
+  "started_at": "2026-09-10T17:51:53Z",
+  "targets": [],
+  "type": "script"
+}
