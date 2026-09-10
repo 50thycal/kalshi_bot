@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "657e5021f0c7b6a78d2251e373e4926a2bd3d3a4",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-10T14:37:35Z",
+  "id": "cc-recon-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/cc-recon-1.receipt.json",
+  "result_file": "ops/results/cc-recon-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34490259750",
+  "service": null,
+  "started_at": "2026-09-10T14:37:35Z",
+  "targets": [],
+  "type": "db"
+}
