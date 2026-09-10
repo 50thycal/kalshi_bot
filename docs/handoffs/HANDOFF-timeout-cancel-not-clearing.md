@@ -1,5 +1,33 @@
 # Handoff — a live order rested 11+ hours past its 4h timeout because the cancel keeps failing silently
 
+> # ✅ RESOLVED — DO NOT ACT ON THE HYPOTHESES BELOW
+>
+> **Cause found, fixed, and validated in production on 2026-09-10.** Kalshi has sharded its
+> matching engine: its READ endpoints aggregate across shards, its WRITE endpoints do not. Every
+> cancel went out unrouted, so a cancel for an order resting on a non-default shard was answered
+> `404 not_found` permanently. Fixed by routing every cancel with the market's own
+> `exchange_index`. The order this brief was written about — by then **3.5 days** past its 4-hour
+> timeout — cancelled on the first reconcile cycle after the fix deployed.
+>
+> **Two hypotheses in this brief were FALSIFIED. Do not build for either:**
+> 1. *"The v2 events cancel does not work for this market family"* — ranked first below. KXBTCD
+>    carries **42 successful `canceled/timeout` rows**; the endpoint works fine on bucket markets.
+>    Their last success is 2026-08-19, *before* sharding — which is the real signal.
+> 2. *A permission or collateral refusal* — the account is funded on **all four shards** (0, 1, 2,
+>    3), measured by the shard probe. Collateral was never the problem.
+>
+> **Both defects this brief named separately from the cause were real and are both fixed:** the
+> error went to a structured field the log service drops (PR #370 — that fix is what made the
+> cause readable at all), and the timeout path had no failure counter (PR #380).
+>
+> **The record, with the evidence:** Experiment OS issue **`XOS-000028`** (RESOLVED, 8 evidence
+> records) · PRs #368 (this brief), #370, #377, #380.
+>
+> One thing here remains open and is an **operator decision, not work**: three `KXBTCD` rows from
+> 2026-09-06/07 carry `cancel_reason=drain_unconfirmed`, a terminal reason meaning "almost
+> certainly already filled". Given what is now proven they were alive and merely unroutable, so
+> those records describe something that did not happen. They were deliberately not rewritten.
+
 **From:** kalshi_bot, task-specific session, 2026-09-07 (WS-015, queue-aware cancellation shadow)
 **To:** a **Live Ops** session — this is the live-order execution path, not an experiment question
 **Status:** nothing done. Read-only diagnosis only. No write, no cancel, no config change.

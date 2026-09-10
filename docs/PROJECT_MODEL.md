@@ -171,6 +171,37 @@ same block, the header never carries a result, and a result never carries a sess
 | LLM APIs | The evo fleet's cognition | Fleet pauses under its own budget/ceiling rules |
 | GitHub Actions | The ops channel and CI | Analyses are unavailable; production is unaffected |
 
+### Kalshi is sharded, and reads and writes disagree about it
+
+Kalshi split its matching engine into **exchange shards**, identified by `exchange_index` on the
+market object — which its documentation names as the authoritative source, and which is the only
+thing this codebase should ever key on. The mapping moves: commodities and basketball were
+reassigned as recently as 2026-09-10.
+
+The asymmetry is the part that bites:
+
+- **Reads aggregate across shards.** The orders feed and the queue-position endpoints answer for
+  an order wherever it lives, so a shard problem is invisible to every read we make.
+- **Writes are shard-scoped.** A write aimed at the wrong shard is refused — and refused in a way
+  that reads as something else entirely.
+
+Both halves of that have already cost us:
+
+| Symptom | Endpoint | What it looked like |
+|---|---|---|
+| `404 user_not_found` on placement | create order | 31% of a live canary's entries refused (`XOS-000014`) |
+| `404 not_found` on cancel | cancel order | the 4h timeout silently not enforcing for 3.5 days (`XOS-000028`) |
+
+Placement no longer needs our help — Kalshi began auto-routing orders that carry a market ticker
+on 2026-08-27, and those rejections stopped dead. **Cancels are ours to route**, and every cancel
+path does: `LiveExecutor._exchange_index_for` resolves the shard from the market, cached and
+fail-soft, and an unknown shard is `None` (send unrouted) and **never** coerced to `0`. Assuming
+the default shard is exactly what made the failure invisible.
+
+Collateral is a separate, real constraint — Kalshi requires it preallocated per shard — but it is
+not currently a problem: the account is funded on shards 0-3. Do not confuse the two; a routing
+bug and a funding gap present almost identically.
+
 ## Important invariants
 
 - **The worker is the only writer to production data.** The ops channel is read-only
@@ -233,6 +264,12 @@ Schema changes go through Alembic and must leave a single head.
 - **Real money is in play.** The safety machinery — kill switch, exposure caps, fail-closed
   risk manager, arming ritual — is load-bearing and is never weakened to make a task
   easier.
+- **A safeguard that cannot be seen failing is not a safeguard.** Railway's log endpoint returns
+  a line's message and drops structured fields, so an error placed in `extra_fields` is
+  unreadable in production. That trap has now cost us three times in one file (the 429 counters,
+  the queue sampler, and the timeout cancel — the last for 3.5 days). Error class and text go in
+  the MESSAGE. Equally: a counter that counts only successes cannot distinguish a totally-failing
+  book from an idle one, so failure counters ship alongside success counters.
 
 ---
 
