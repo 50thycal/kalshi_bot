@@ -1,0 +1,49 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "e3c0d4875137b7c77c9f395d67805dfd41d33cca",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-10T18:04:47Z",
+  "id": "lo-tc-clear-6",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>",
+        "before": "<redacted 4125 bytes, sha256:924396e009349643>",
+        "requested": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_ISSUE_COMMAND: all 6 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/lo-tc-clear-6.receipt.json",
+  "result_file": "ops/results/lo-tc-clear-6.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34512071165",
+  "service": "main",
+  "started_at": "2026-09-10T18:04:39Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
