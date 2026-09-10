@@ -1,1 +1,1 @@
-{"type":"db","sql":"SELECT date_trunc('day',created_at)::date::text AS day, count(*) FILTER (WHERE status='rejected' AND cancel_reason LIKE '%user_not_found%') AS user_not_found, count(*) FILTER (WHERE status='rejected') AS rejected_any, count(*) AS orders FROM live_orders WHERE created_at > now() - interval '20 days' GROUP BY 1 ORDER BY 1 DESC","max_rows":30,"id":"lo-shard-rej-1"}
+{"type":"env","set":{"LIVE_SHAPE_PROBE":"false"},"id":"lo-shard-off-1"}
