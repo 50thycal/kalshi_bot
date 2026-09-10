@@ -1,1 +1,1 @@
-{"type":"db","sql":"SELECT count(*) FILTER (WHERE status='resting' AND created_at < now() - interval '4 hours') AS stuck_past_timeout, count(*) FILTER (WHERE status='resting') AS resting_now, count(*) FILTER (WHERE cancel_reason='timeout' AND created_at > now() - interval '24 hours') AS timeout_cancels_24h, count(*) FILTER (WHERE cancel_reason='drain_unconfirmed' AND created_at > now() - interval '24 hours') AS drain_unconfirmed_24h FROM live_orders","max_rows":5,"id":"lo-soak-2"}
+{"type":"noop"}
