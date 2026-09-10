@@ -1,1 +1,1 @@
-{"type":"db","sql":"SELECT key, state, retired_at::text FROM experiments WHERE key='mmsell10-queue-aware-cancel'","max_rows":5,"id":"qac-state-1"}
+{"type":"db","sql":"SELECT d.deployment_key, d.kind, d.stage, d.started_at::text, d.ended_at::text, e.epoch_number, e.ended_at::text AS epoch_ended FROM experiment_deployments d JOIN experiment_epochs e ON e.id=d.epoch_id JOIN experiment_versions v ON v.id=e.version_id JOIN experiments x ON x.id=v.experiment_id WHERE x.key='mmsell10-queue-aware-cancel'","max_rows":10,"id":"qac-close-1"}
