@@ -1,24 +1,24 @@
 {
   "audit_worthy": true,
   "class": "MUTATING",
-  "code_sha": "e3c0d4875137b7c77c9f395d67805dfd41d33cca",
+  "code_sha": "54a45fc27c5b90c23497c3fbe414d15bfbe6a45f",
   "code_source": "default-branch",
   "exit_status": 0,
-  "finished_at": "2026-09-10T18:01:12Z",
-  "id": "lo-tc-walk-1",
+  "finished_at": "2026-09-10T20:16:48Z",
+  "id": "lo-final-log",
   "mutation": {
     "changes": {
       "EXPERIMENT_OS_ISSUE_COMMAND": {
-        "after": "<redacted 4125 bytes, sha256:924396e009349643>",
-        "before": "<redacted 4156 bytes, sha256:567d62f52bb5b000>",
-        "requested": "<redacted 4125 bytes, sha256:924396e009349643>"
+        "after": "<redacted 3075 bytes, sha256:a2ae0bde8cc1c999>",
+        "before": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>",
+        "requested": "<redacted 3075 bytes, sha256:a2ae0bde8cc1c999>"
       }
     },
     "command_guard": {
       "EXPERIMENT_OS_ISSUE_COMMAND": {
         "blocked": false,
         "conclusive": true,
-        "reason": "EXPERIMENT_OS_ISSUE_COMMAND: all 2 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "reason": "EXPERIMENT_OS_ISSUE_COMMAND is empty \u2014 nothing to overwrite",
         "unconsumed_command_ids": []
       }
     },
@@ -37,11 +37,11 @@
   },
   "provenance": {},
   "publication": "COMMITTED",
-  "receipt_file": "ops/results/lo-tc-walk-1.receipt.json",
-  "result_file": "ops/results/lo-tc-walk-1.txt",
-  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34511685049",
+  "receipt_file": "ops/results/lo-final-log.receipt.json",
+  "result_file": "ops/results/lo-final-log.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34525362015",
   "service": "main",
-  "started_at": "2026-09-10T18:00:58Z",
+  "started_at": "2026-09-10T20:16:34Z",
   "targets": [
     "EXPERIMENT_OS_ISSUE_COMMAND"
   ],
