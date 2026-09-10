@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=lo-final-soak
-# code e3c0d4875137b7c77c9f395d67805dfd41d33cca · started 2026-09-10T19:21:21Z
-stuck_past_timeout  resting_now  timeout_ok_24h  drain_unconf_24h  rejected_24h  orders_2h
-------------------  -----------  --------------  ----------------  ------------  ---------
-0                   1            11              0                 0             9        
-
-(1 row)
