@@ -202,10 +202,12 @@ under an unsuspecting reader while here an honest independence unit IS the measu
 ## Where the signed set goes
 
 The reviewed series are not just a ledger entry. `docs/MMSELL_REVIEWED_TAPE.md` specifies
-`Rmmsell1`, a paper book whose universe is exactly the signed set (`onlyx=`, exact match) and
-whose band/ceiling is `mmsell10`'s, so the two differ in universe and nothing else. It is
-designed and **not registered**: arming it needs an Experiment OS arm plus an `MMSELL_VARIANTS`
-change, both operator acts.
+**two** paper books whose universe is exactly the signed set (`onlyx=`, exact match) and whose
+band/ceiling is `mmsell10`'s: `Rmmsell1` uncapped, `Rmmsell2` under the contest cap on the
+corrected key. `Rmmsell1` against `mmsell10` asks whether a reviewed universe beats an unreviewed
+one; `Rmmsell2` against `Rmmsell1` asks whether the cap helps inside a universe we understand.
+Both are designed and **not registered**: arming them needs Experiment OS arms plus an
+`MMSELL_VARIANTS` change, both operator acts.
 
 The tape does not follow the manifest automatically. A sign-off lands here first; the tape widens
 only when the operator decides to reset its evidence and widen it.

@@ -496,10 +496,10 @@ def test_variant_onlyx_series_filter(settings):
 # ------------------------------------------------- the reviewed-universe tape (`Rmmsell1`)
 
 
-def test_the_documented_reviewed_tape_spec_parses_into_the_book_it_claims(settings):
-    """`docs/MMSELL_REVIEWED_TAPE.md` carries a literal MMSELL_VARIANTS line that an operator
-    pastes into Railway. If it does not parse, `mmsell_variant_list` drops it SILENTLY and the
-    tape runs as zero books — which looks like an inactive experiment, not a typo."""
+def test_the_documented_reviewed_tape_specs_parse_into_the_books_they_claim(settings):
+    """`docs/MMSELL_REVIEWED_TAPE.md` carries two literal MMSELL_VARIANTS lines that an operator
+    pastes into Railway. If either does not parse, `mmsell_variant_list` drops it SILENTLY and
+    that tape runs as zero books — which looks like an inactive experiment, not a typo."""
     import importlib.util
     import pathlib
     path = pathlib.Path(__file__).resolve().parents[1] / "scripts" / "reviewed_tape_spec.py"
@@ -509,19 +509,43 @@ def test_the_documented_reviewed_tape_spec_parses_into_the_book_it_claims(settin
     from kalshi_bot import registry
 
     line = spec_mod.documented_spec()
-    assert line, "no Rmmsell1 spec line found in docs/MMSELL_REVIEWED_TAPE.md"
+    assert line, "both Rmmsell spec lines must appear in docs/MMSELL_REVIEWED_TAPE.md"
     settings.mmsell_variants = line
-    books = settings.mmsell_variant_list
-    assert [b["tag"] for b in books] == ["Rmmsell1"], "the documented spec does not parse"
-    b = books[0]
-    assert len(b["tag"]) <= 24                       # paper_trades.strategy is String(24)
-    # Universe only: same band/ceiling as mmsell10, so the tape reads against it directly.
-    assert (b["lo"], b["hi"], b["maxyes"]) == (5.0, 10.0, 7.0)
-    # ...and NO other mechanic. A cap or a tier here would confound the one thing under test.
-    assert b["contestcap"] is None and b["universe"] is None and b["contestkey"] is None
-    assert b["skip"] == [] and b["only"] == [] and b["mtype"] == [] and b["xmtype"] == []
-    # Exact, not substring — see test_onlyx_is_exact_where_only_is_substring.
-    assert b["onlyx"] == sorted(registry.reviewed_series())
-    # The collision the exact key exists for is real in this very list.
-    assert "KXTRUMPSAY" in b["onlyx"]
-    assert MmSellTracker._book_admits_series(b, "KXTRUMPSAYCOMPANY") is False
+    books = {b["tag"]: b for b in settings.mmsell_variant_list}
+    assert list(books) == ["Rmmsell1", "Rmmsell2"], "a documented spec does not parse"
+
+    universe = sorted(registry.reviewed_series())
+    for tag, b in books.items():
+        assert len(tag) <= 24                          # paper_trades.strategy is String(24)
+        # Same band and ceiling as mmsell10, so each tape reads against it directly.
+        assert (b["lo"], b["hi"], b["maxyes"]) == (5.0, 10.0, 7.0), tag
+        assert b["universe"] is None, tag              # the explicit list already says this
+        assert b["skip"] == [] and b["only"] == [], tag
+        assert b["mtype"] == [] and b["xmtype"] == [] and b["mode"] == [], tag
+        # Exact, not substring — see test_onlyx_is_exact_where_only_is_substring.
+        assert b["onlyx"] == universe, tag
+        assert MmSellTracker._book_admits_series(b, "KXTRUMPSAYCOMPANY") is False, tag
+
+    # The pair's whole point: they share a universe and differ ONLY in the cap.
+    assert books["Rmmsell1"]["contestcap"] is None
+    assert books["Rmmsell1"]["contestkey"] is None
+    assert books["Rmmsell2"]["contestcap"] == 1
+    assert books["Rmmsell2"]["contestkey"] == "split"
+    differ = {k for k in books["Rmmsell1"]
+              if books["Rmmsell1"][k] != books["Rmmsell2"][k]}
+    assert differ == {"tag", "contestcap", "contestkey"}, differ
+
+
+def test_the_reviewed_universe_excludes_the_barred_and_held_trumpsay_siblings():
+    """The universe is built from GRADUATED rows carrying a review. `KXTRUMPSAYMONTH` is barred
+    and `KXTRUMPSAYCOMPANY` is in_review, so neither may reach a tape even though both carry a
+    review date and a named reviewer."""
+    from kalshi_bot import registry
+
+    universe = set(registry.reviewed_series())
+    assert "KXTRUMPSAY" in universe
+    assert "KXTRUMPSAYMONTH" not in universe
+    assert "KXTRUMPSAYCOMPANY" not in universe
+    # ...and the bar is a veto, so it also leaves every book that names no tier at all.
+    assert registry.admits("KXTRUMPSAYMONTH", None) is False
+    assert registry.admits("KXTRUMPSAYCOMPANY", None) is True   # held, not barred

@@ -157,18 +157,39 @@ def _pre_registry_tier(series: str) -> str:
     return registry.IN_REVIEW
 
 
-def test_matches_pre_registry_behaviour():
-    """No series changed side when the frozenset became a manifest.
+def test_matches_pre_registry_behaviour_except_where_a_human_deliberately_moved_a_row():
+    """No series changes side by ACCIDENT.
 
     The registry gates which series a LIVE book may enter. A silent widening here puts real
     money into contracts nobody reviewed; a silent narrowing stops the canary collecting. So
     every taxonomy prefix, every graduated series, and a batch of near-misses are checked
-    against the pre-registry implementation at every minimum a book can name."""
+    against the pre-registry implementation at every minimum a book can name.
+
+    The original form of this test asserted that NOTHING had moved since the frozenset became
+    a manifest. That was true at seeding time and false the moment anyone reviews a series and
+    decides against it — the manifest exists precisely so a human can move a row. So the
+    invariant is narrowed to what it was actually protecting: every divergence from the
+    pre-registry behaviour must be an EXPLICIT row someone signed, with a recorded reason.
+    A row that appears without a reviewer or a reason is the silent change this guards against.
+    """
+    moved = {r["series"]: r for r in registry.rows() if r.get("state") != registry.GRADUATED}
+    for series, row in moved.items():
+        assert row["state"] in registry.MANIFEST_STATES, (series, row["state"])
+        assert row.get("rules_reviewed_by"), f"{series}: moved off graduated by nobody"
+        assert row.get("reason"), f"{series}: moved off graduated for no recorded reason"
+        assert registry.reason_text(row["reason"]) != row["reason"], (
+            f"{series}: reason code {row['reason']!r} has no prose in the manifest's `reasons`")
+
     samples = {p for p, _, _ in SERIES_TYPES} | set(_pr338_graduated())
     samples |= {p + "X" for p in sorted(samples)[:80]}
     samples |= {"KXNCAAFSPREAD", "KXEPLTOTAL", "KXWEIRD", "", "kxmlbgame"}
     for s in sorted(samples):
-        assert registry.state_of(s) == _pre_registry_tier(s), s
+        if any(s.startswith(m) for m in moved):
+            # Covered by the deliberate-move checks above; `state_of` is asserted directly
+            # rather than against a reimplementation that predates the decision.
+            assert registry.state_of(s) in registry.MANIFEST_STATES, s
+        else:
+            assert registry.state_of(s) == _pre_registry_tier(s), s
         for floor in (None, "unclassified", "identified", "in_review", "graduated"):
             assert registry.admits(s, floor) is universe.admits(s, floor), (s, floor)
 
@@ -563,3 +584,30 @@ def test_a_series_the_manifest_governs_never_appears_in_arrivals(capsys):
     out = capsys.readouterr().out
     assert "KXKNOWN" not in out
     assert "KXNEW" in out
+
+
+def test_a_signed_row_never_lends_its_signature_to_a_longer_series_ticker():
+    """`entry_for` matches by LONGEST PREFIX, which is deliberate — it is what lets a specific
+    series be barred underneath a graduated family (`KXNFL` graduated, `KXNFLSPREAD` barred).
+    The cost is that a series with no row of its own INHERITS the nearest prefix row, including
+    its `rules_reviewed_at`. The ledger then claims a human read settlement rules nobody read.
+
+    Found 2026-09-10: `KXTRUMPSAYMONTH` and `KXTRUMPSAYCOMPANY` were inheriting `KXTRUMPSAY`'s
+    2026-09-08 sign-off. They are not the same contract — identical rules text, four times the
+    resolution window — and `KXTRUMPSAYMONTH` measured an edge of -7.5 against the signed one's
+    +6.0. Exactly the collision class `onlyx=` exists for, one layer down in the registry.
+
+    This asserts the invariant for SIGNED rows only. Unsigned graduated rows leak `graduated`
+    the same way (12 known cases, mostly the `KXMLBHRDERBY*` family under `KXMLBHR`); that is a
+    wider fix, tracked separately, and pinning it here would fail on work this test does not own.
+    """
+    from kalshi_bot.mmsell.market_types import SERIES_TYPES
+
+    known = {s for s, *_ in SERIES_TYPES}
+    have = {r["series"] for r in registry.rows()}
+    signed = {r["series"] for r in registry.rows() if r.get("rules_reviewed_at")}
+    leaks = sorted((p, s) for p in signed for s in known
+                   if s != p and s.startswith(p) and s not in have)
+    assert not leaks, (
+        "these series inherit a sign-off nobody gave them — give each its own manifest row "
+        f"(graduated, in_review or barred) before signing the prefix: {leaks}")

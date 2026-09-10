@@ -1,7 +1,9 @@
 {
  "manifest_version": 1,
  "reasons": {
-  "grandfathered-pr338": "Admitted 2026-09-06 without a rules review. Seeded mechanically by PR #338 from every series the mmsell family had traded with >=20 settled markets of own history AND a market-type classification. That bar proves we have DATA, not that anyone has read how the contract settles, so every row carrying this reason has rules_reviewed_at=null and is on the audit backlog surfaced by scripts/series_registry_review.py."
+  "grandfathered-pr338": "Admitted 2026-09-06 without a rules review. Seeded mechanically by PR #338 from every series the mmsell family had traded with >=20 settled markets of own history AND a market-type classification. That bar proves we have DATA, not that anyone has read how the contract settles, so every row carrying this reason has rules_reviewed_at=null and is on the audit backlog surfaced by scripts/series_registry_review.py.",
+  "trumpsay-duration-mispricing": "Reviewed 2026-09-10 (operator 50cal) as part of the reviewed-tape universe work. KXTRUMPSAY, KXTRUMPSAYMONTH and KXTRUMPSAYCOMPANY carry VERBATIM IDENTICAL settlement rules and differ only in the resolution window: KXTRUMPSAY is one week, the other two run to the end of the calendar month. mmsell sells the cheap tail, so a monthly is the same question over roughly four times the window \u2014 and Kalshi prices it at essentially the same premium (10.44c vs 9.99c average entry). Measured all-time paper, mmsell family, twins excluded: KXTRUMPSAY +$61.85 over 955 trades / 119 markets, 4.0% loss rate against a ~10c break-even (edge +6.0); KXTRUMPSAYMONTH -$7.34 over 117 trades / 18 markets, 18.0% loss rate against the same break-even (edge -7.5). The mechanism is duration mispricing and the book is on the wrong side of it. The three are also NOT independent of each other: seven words have been traded in more than one of them (UFO, PEAC, NEWS, TIKT, MAKE, EPST, ANTI), and one utterance resolves the weekly AND the monthly together. Evidence: PR #383, ops results cc-trumpsay-1/2/3 (2026-09-10).",
+  "trumpsay-company-thin": "Reviewed 2026-09-10 (operator 50cal). Held, not admitted and not barred. KXTRUMPSAYCOMPANY carries the same monthly-window structure as KXTRUMPSAYMONTH (barred above) but has not yet been caught by it: +$3.85 over 58 trades / 12 markets with 2 losses, a nominal +4.5 edge that is mostly prior rather than own evidence (24% own weight at k=38). It is one bad month from reading like its sibling. Revisit when it has its own history."
  },
  "series": [
   {
@@ -710,6 +712,20 @@
    "rules_reviewed_at": "2026-09-08",
    "rules_reviewed_by": "50cal",
    "reason": "grandfathered-pr338"
+  },
+  {
+   "series": "KXTRUMPSAYCOMPANY",
+   "state": "in_review",
+   "rules_reviewed_at": "2026-09-10",
+   "rules_reviewed_by": "50cal",
+   "reason": "trumpsay-company-thin"
+  },
+  {
+   "series": "KXTRUMPSAYMONTH",
+   "state": "barred",
+   "rules_reviewed_at": "2026-09-10",
+   "rules_reviewed_by": "50cal",
+   "reason": "trumpsay-duration-mispricing"
   },
   {
    "series": "KXTRUTHSOCIAL",
