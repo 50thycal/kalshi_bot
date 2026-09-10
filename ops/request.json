@@ -1,1 +1,1 @@
-{"type": "script", "id": "cc-d5-audit1", "name": "mmsell_contest_cap_audit", "args": ["--live", "Fmmsell10", "--uncapped", "mmsell10", "--hours", "12"]}
+{"type":"logs","limit":400,"filter":"live cancel failed","id":"lo-shard-verdict-1"}
