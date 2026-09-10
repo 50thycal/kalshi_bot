@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"xos","command":"issue-command-show","args":["lo-tc-ev-proven-1"],"id":"cc-iss-other-1"}
