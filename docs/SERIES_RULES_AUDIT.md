@@ -328,3 +328,64 @@ was tautological. **Batch 3 has a genuine mix**, and every mixed series over-rep
 more-heavily-traded ones, and nothing here controls for that. But it is the first version of this
 observation that is not true by construction, and it strengthens the cap case beyond what batches
 1 and 2 could support.
+
+---
+
+## Batch 4 signed — 2026-09-10, by `50cal`
+
+Five of ten. Backlog ranks 31–40. Audit: `CONFIRMS=8 CONTRADICTS=0 INSUFFICIENT=2`.
+
+| series | audit | contracts / outcome | P&L | edge | contests | own% | signed |
+|---|---|---:|---:|---:|---:|---:|---|
+| `KXNPBGAME` | CONFIRMS | 1.29 avg, 2 max | +$14.84 | +11.1 | 52 | 63% | ✅ |
+| `KXFEDMENTION` | **INSUFFICIENT** | **1.00 — none** | +$13.11 | +10.0 | 27 | 47% | ✅ **overrule** |
+| `KXUCLTOTAL` | CONFIRMS | 2.66 avg, 4 max | +$12.26 | +5.2 | 29 | 49% | ✅ |
+| `KXLIGAMXTOTAL` | CONFIRMS | 2.70 avg, 5 max | +$11.68 | +7.1 | 27 | 47% | ✅ |
+| `KXUFCMOV` | CONFIRMS | 3.48 avg, 7 max | +$14.50 | +3.3 | 42 | 58% | ✅ at cap |
+
+### The `KXFEDMENTION` overrule
+
+*"If the Chair of the Federal Reserve says Volatility at his Jul 2026 post-FOMC meeting
+introductory remarks and Q+A, then the market resolves to Yes."* A did-it-happen event bounded to
+one press conference — `discrete` is right. INSUFFICIENT means the regex found no settlement-mode
+keyword, which is the same situation as `KXTRUMPSAY` in batch 1 and the same resolution.
+
+It is also the only series in the batch with **no concentration at all**: 1.00 contracts per
+outcome under the corrected key, because it is a `SUBJECT_SPLIT_SERIES` — each Fed word is its own
+market and its own outcome.
+
+> **A number in the batch-4 run was wrong and is corrected here.** The concentration report gave
+> `KXFEDMENTION` a cross-series figure of **15.00**; the honest value is **`date?`**. Its event
+> token is the bare month `26JUL`, and the detector required digits after the month, so an
+> unreadable column printed a number instead. Fixed in the same PR. 15.00 would have read as the
+> most cross-correlated series in any batch; nothing shares its occasion.
+
+### Held, not rejected: `KXBRENTW`
+
++$13.07 and zero losing trades — and **4 contests**. No edge figure exists; the raw "+100" is the
+break-even denominator collapsing, the same artifact as `KXNATGASD` in batch 2. At 12% own-weight
+it is almost entirely prior, and it carries 5.00 contracts per print. There is no evidence here
+yet in either direction, which is why it is held rather than approved or rejected.
+
+### Not ruled on: `KXMLBKS`
+
++$13.06 at edge **+1.2** on 146 contests, 83% own-weight — real but tiny, with 9 contracts on one
+game at the top end. Put to the operator as a genuine coin-flip; they did not rule, so the row
+stays unsigned.
+
+### Rejected
+
+- `KXATPMATCH` — **the best-measured negative found so far.** 367 contests at 92% own-weight
+  landing at −1.6. Low concentration (1.27/outcome) does not save it; this is an established small
+  negative, not noise.
+- `KXWTACHALLENGERMATCH` — −$10.96, edge −5.4, 87 contests.
+- `KXRT` — INSUFFICIENT but readable: *"a Tomatometer score of above 62 on Sep 7, 2026 at 10:00 AM
+  ET… determined the Monday after wide release"*, a named source at a named instant, so
+  `scheduled` is correct. Rejected on the numbers: −$11.04, 17 contests, a 13-strike ladder on one
+  score.
+
+### Running total
+
+**20 of 138 rows reviewed.** The signed set is now dominated by low-concentration sports and
+mention markets; every deep ladder reviewed so far is either rejected, held, or approved with an
+explicit cap caveat that nothing yet enforces.

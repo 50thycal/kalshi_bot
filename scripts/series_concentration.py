@@ -75,9 +75,14 @@ def event_token(ticker: str) -> str:
 
 
 def looks_like_a_bare_date(token: str) -> bool:
-    """True when the token is only a date (optionally with an hour), so it names no occasion.
+    """True when the token is only a date, so it names no occasion.
 
-    `26SEP06` and `26SEP0414` are dates. `26AUG13ARILV` carries a matchup and is not.
+    `26SEP06` (day), `26SEP0414` (day+hour) and `26JUL` (month ALONE) are all dates.
+    `26AUG13ARILV` carries a matchup and is not.
+
+    The month-alone case was missed on the first production run: `KXFEDMENTION-26JUL-ADP` keys on
+    `26JUL`, and requiring digits AFTER the month made an empty remainder fail the test. It read
+    15.00 cross-series — every series using a bare month, which is not a shared occasion.
     """
     if not token:
         return False
@@ -86,7 +91,7 @@ def looks_like_a_bare_date(token: str) -> bool:
         if i <= 0:
             continue
         rest = token[i + len(m):]
-        return token[:i].isdigit() and rest.isdigit()
+        return token[:i].isdigit() and (rest == "" or rest.isdigit())
     return False
 
 
