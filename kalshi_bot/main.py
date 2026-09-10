@@ -1777,7 +1777,11 @@ def _run_live_cycle(
             log_event(logger, logging.INFO, "live cycle",
                       placed=s.placed, risk_blocked=s.risk_blocked, rejected=s.rejected,
                       new_fills=s.new_fills, positions=s.positions_snapshot,
-                      timed_out=s.timed_out_canceled, exits_placed=s.exits_placed,
+                      timed_out=s.timed_out_canceled,
+                      # Surfaced beside the successes on purpose: counting only successes made a
+                      # book whose every timeout cancel was refused read identically to an idle
+                      # one (XOS-000028).
+                      timed_out_failed=s.timed_out_cancel_failed, exits_placed=s.exits_placed,
                       realized_today=s.realized_today)
         except Exception as exc:
             repo.finish_bot_run(

@@ -144,6 +144,9 @@ class _QueueClient:
         self.canceled: list[str] = []
         self.batch_calls = 0
         self.single_calls = 0
+        self.cancel_shards: list[int | None] = []
+        self.index_calls: list[str] = []
+        self.index = 3
 
     def get_queue_positions(self, **kw):
         self.batch_calls += 1
@@ -157,11 +160,16 @@ class _QueueClient:
             raise self._single
         return self._single
 
-    def cancel_events_order(self, order_id):
+    def cancel_events_order(self, order_id, *, exchange_index=None):
+        self.cancel_shards.append(exchange_index)
         if self.cancel_exc is not None:
             raise self.cancel_exc
         self.canceled.append(order_id)
         return {}
+
+    def get_market_exchange_index(self, ticker):
+        self.index_calls.append(ticker)
+        return self.index
 
 
 def _live(settings, **over):
@@ -376,6 +384,48 @@ def test_a_failed_cancel_leaves_the_order_resting_for_retry(settings):
         assert session.scalar(select(m.LiveOrder)).status == "resting"
     assert ex.summary.drain_failed == 1
     assert ex.summary.drained_canceled == 0
+
+
+def test_the_drain_cancel_is_routed_to_the_markets_exchange_shard(settings):
+    """The drain shares the timeout path's defect, and it matters MORE here.
+
+    An unrouted cancel for an order on a non-default Kalshi shard is refused 404 not_found while
+    the order is perfectly alive. The timeout path merely retried forever; this path draws a
+    CONCLUSION from repeated failure — it marks the row terminal as `drain_unconfirmed` on the
+    reasoning that Kalshi only refuses cancels for orders no longer open. Unrouted, that
+    reasoning is false and the record describes something that never happened."""
+    _live(settings, live_strategies="")
+    _db(settings)
+    client = _QueueClient()
+    client.index = 3
+    ex = LiveExecutor(client, settings, RiskManager(settings))
+    with db.session_scope() as session:
+        row = _resting(session, strategy="mmsell10a", koid="A")
+        assert ex.drain_stood_down_books(session) == 1
+    assert client.canceled == ["A"]
+    assert client.cancel_shards == [3], "the drain cancel carried the market's shard"
+    assert client.index_calls == [row.market_ticker]
+
+
+def test_the_timeout_failure_counter_makes_a_totally_failing_book_visible(settings):
+    """`timed_out_canceled` counts only SUCCESSES, so a book whose every timeout cancel was
+    refused read identically — in the cycle summary an operator actually reads — to a book with
+    nothing to cancel. That is how one order sat 3.5 days past its 4-hour timeout unnoticed."""
+    _live(settings, live_strategies="mmsell10a")
+    _db(settings)
+    client = _QueueClient(cancel_exc=RuntimeError('404 {"code":"not_found"}'))
+    client.get_orders = lambda: {"orders": []}
+    client.get_fills = lambda: {"fills": []}
+    client.get_positions = lambda: {"market_positions": []}
+    client.get_settlements = lambda: {"settlements": []}
+    ex = LiveExecutor(client, settings, RiskManager(settings))
+    with db.session_scope() as session:
+        row = _resting(session, strategy="mmsell10a", koid="STUCK",
+                       age_s=settings.live_order_timeout_seconds + 600)
+        ex.reconcile(session)
+        assert row.status == "resting", "a refused cancel still never claims success"
+    assert ex.summary.timed_out_cancel_failed == 1
+    assert ex.summary.timed_out_canceled == 0, "and the success counter stays honest"
 
 
 def test_the_drain_stops_retrying_an_order_it_can_never_cancel(settings):

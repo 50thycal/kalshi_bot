@@ -38,6 +38,8 @@ class FakeLiveClient:
     def __init__(self):
         self.placed: list[dict] = []
         self.canceled: list[str] = []
+        self.cancel_shards: list[int | None] = []
+        self.exchange_index = 0
         self.orders: list[dict] = []
         self.fills: list[dict] = []
         self.positions: list[dict] = []
@@ -77,10 +79,16 @@ class FakeLiveClient:
         self.canceled.append(order_id)
         return {}
 
-    def cancel_events_order(self, order_id):
-        # V2 events cancel (reconcile uses this for timed-out resting orders).
+    def cancel_events_order(self, order_id, *, exchange_index=None):
+        # V2 events cancel (reconcile uses this for timed-out resting orders), routed to the
+        # market's Kalshi matching-engine shard. `exchange_index` is recorded so a caller that
+        # stops routing is visible here rather than only in production.
+        self.cancel_shards.append(exchange_index)
         self.canceled.append(order_id)
         return {}
+
+    def get_market_exchange_index(self, ticker):
+        return self.exchange_index
 
     def get_orders(self, **kw):
         return {"orders": self.orders}
