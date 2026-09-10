@@ -195,6 +195,7 @@ ALLOWED_SCRIPTS = (
     "mmsell_series_pnl",
     "series_registry_review",
     "series_rules_audit",
+    "series_concentration",
     "mmsell_timing_study",
     "mmsell_fee_recon",
     "mmsell_scan_health",
