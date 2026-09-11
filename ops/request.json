@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT market_ticker, string_agg(DISTINCT strategy, '+' ORDER BY strategy) AS books, max(100-assumed_price) AS entry_c, max(created_at) AS taken FROM paper_trades WHERE strategy IN ('Rmmsell1','Rmmsell2') GROUP BY market_ticker ORDER BY market_ticker", "id": "cc-rmm-tape2"}
+{"type": "noop"}
