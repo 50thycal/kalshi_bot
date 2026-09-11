@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT event_type, created_at, (payload->>'per_book') AS per_book, (payload->>'blocked_books') AS blocked FROM system_events WHERE event_type LIKE '%mmsell%scan%' ORDER BY created_at DESC LIMIT 3", "id": "cc-rmm-verify1"}
+{"type": "db", "sql": "SELECT created_at, component, (raw_json->>'per_book') AS per_book, (raw_json->>'blocked_books') AS blocked FROM system_events WHERE component LIKE '%mmsell%' ORDER BY created_at DESC LIMIT 3", "id": "cc-rmm-verify2"}
