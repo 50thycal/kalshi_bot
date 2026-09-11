@@ -17,9 +17,16 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from sqlalchemy import func, select
 
 from kalshi_bot.experiment_os import restore_mmsell9_epoch as restore
 from kalshi_bot.experiment_os import service as svc
+from kalshi_bot.experiment_os.models import (
+    ExperimentDeployment,
+    ExperimentDeploymentArm,
+    ExperimentEpoch,
+    ExperimentStateTransition,
+)
 
 UTC = timezone.utc
 T0 = datetime(2026, 8, 16, 14, 14, 43, 720928, tzinfo=UTC)
@@ -73,9 +80,6 @@ def _aware(value):
 def test_closes_e1_at_the_measured_instant_and_opens_e2_now(
     xos_session, xos_platform
 ):
-    from kalshi_bot.experiment_os.models import ExperimentEpoch
-    from sqlalchemy import select
-
     s = xos_session
     _exp, ver, e1, _prior = _ceiling(s)
 
@@ -99,12 +103,6 @@ def test_closes_e1_at_the_measured_instant_and_opens_e2_now(
 
 
 def test_registers_mmsell9_alone_on_the_new_epoch(xos_session, xos_platform):
-    from kalshi_bot.experiment_os.models import (
-        ExperimentDeployment,
-        ExperimentDeploymentArm,
-    )
-    from sqlalchemy import select
-
     s = xos_session
     _ceiling(s)
 
@@ -129,9 +127,6 @@ def test_registers_mmsell9_alone_on_the_new_epoch(xos_session, xos_platform):
 
 
 def test_touches_no_gate_and_records_no_transition(xos_session, xos_platform):
-    from kalshi_bot.experiment_os.models import ExperimentStateTransition
-    from sqlalchemy import func, select
-
     s = xos_session
     exp, _ver, _e1, _prior = _ceiling(s)
     before = s.scalar(
@@ -152,9 +147,6 @@ def test_touches_no_gate_and_records_no_transition(xos_session, xos_platform):
 
 
 def test_is_idempotent_and_does_not_open_a_third_epoch(xos_session, xos_platform):
-    from kalshi_bot.experiment_os.models import ExperimentEpoch
-    from sqlalchemy import func, select
-
     s = xos_session
     _exp, ver, _e1, _prior = _ceiling(s)
 
