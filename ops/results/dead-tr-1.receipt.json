@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "ce1215a40dc8d607316bd35d83d39e6b5f52e6b5",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-11T15:21:38Z",
+  "id": "dead-tr-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/dead-tr-1.receipt.json",
+  "result_file": "ops/results/dead-tr-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34615635648",
+  "service": null,
+  "started_at": "2026-09-11T15:21:37Z",
+  "targets": [],
+  "type": "db"
+}
