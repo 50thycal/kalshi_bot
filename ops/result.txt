@@ -1,300 +1,126 @@
-# ops request [READ]
-# type=xos  id=m9-show-33b
-# code 1767695f3f45ab760374d50723d3a099e4b4c4e5 · started 2026-09-11T22:52:45Z
-{
-  "issue_key": "XOS-000033",
-  "title": "mmsell9 went dark 2026-09-02: carrier deployment ended with no recorded transition",
-  "status": "RESOLVED",
-  "classification": "INTEGRITY",
-  "severity": "HIGH",
-  "priority": "P1",
-  "owner_role": "LIVE_OPS",
-  "opened_by_role": "LIVE_OPS",
-  "opened_at": "2026-09-11 15:34:11.244859+00:00",
-  "scope": "mmsell-price-ceiling \u00b7 v1/e1 \u00b7 mmsell-ceiling-paper-mmsell9-1",
-  "experiment_id": 6,
-  "version_id": 6,
-  "detector": "manual.reported",
-  "detector_fingerprint": null,
-  "occurrence_count": 1,
-  "disposition": null,
-  "latest_evidence": "DATABASE_QUERY: validation PASSED: PASSED. The validation was not 'the receipt says SUCCEEDED' b",
-  "problem_statement": "mmsell-ceiling-paper-mmsell9-1 (the native carrier opened 2026-08-28 to keep mmsell9 admissible when the Stage-1 canary armed off v1) ended 2026-09-02 00:57:38.273309Z. mmsell9's last paper_trades row is 2026-09-02 00:56:31.979599Z, 67s earlier. The experiment mmsell-price-ceiling is still LIVE_CANARY with retired_at NULL and epoch v1/e1 still open; it has exactly two lifecycle transitions ever (import 2026-08-16, PAPER->LIVE_CANARY 2026-08-28) and neither is on 2026-09-02. mmsell9 remains in production MMSELL_VARIANTS, so under NEW_ONLY it is constructed and refused at the write path every scan cycle: 9.6 days of silent inadmissibility for an arm declared in the frozen v1 contract. First step: establish what ended that deployment. The transitions read was complete for this experiment; the receipt ledger read reached back only to 2026-09-02 16:09:33Z, so receipts around 00:57Z are still unread. Do NOT register an arm to unblock the tag, and do NOT remove its MMSELL_VARIANTS entry - its experiment is alive and that is a separate ticket.",
-  "evidence_summary": "Detected by an Experiment Control Tower session 2026-09-11 while classifying five configured-but-unarmed MMSELL_VARIANTS tags. Four proved to be recorded retirements; this one is not. No Tower candidate fingerprint exists because experiment.silent_arm requires an ACTIVE arm to measure and this tag has none. Cause of the deployment closure is not established, so classification stays UNCLASSIFIED and Live Ops owns first operational diagnosis. Evidence and reads: PR #389, docs/handoffs/HANDOFF-dead-mmsell-books-liveops.md",
-  "proposed_fix": "TWO PARTS, and only the first is unambiguous. (1) CODE, prevents recurrence: the same blanket end is still live at successor_mmsell10_contest_cap.py:310, so the next such registration repeats this. Narrow the selection to the deployments actually carrying a tag the successor is about to reuse, and add a refusal when ending a paper deployment would leave any tag with no active arm - the paper-side twin of the guard the file already reasons about for live. (2) LINEAGE, restores mmsell9: needs a reviewed REPAIR_LINEAGE package, since an envelope names a package and cannot author one, and Live Ops may not write lifecycle state. It also needs a scientific answer first, which is NOT Live Ops's: mmsell9 has a 9.6-day hole in an OPEN v1/e1 epoch, and its line has since moved through v2/e2 and two successors. Resuming the arm mid-epoch pools evidence across a gap nobody pre-registered; the alternative is to accept mmsell9 as finished and close it properly. Do NOT register an arm to unblock the tag, and do NOT remove its MMSELL_VARIANTS entry until that question is answered.",
-  "validation_plan": null,
-  "resolution_summary": "mmsell9 is admissible and trading again on a fresh epoch. v1/e1 closed at the measured instant it stopped (2026-09-02T00:57:38.273309Z); v1/e2 opened 2026-09-11T22:42:05Z on the current platform snapshot; mmsell-ceiling-paper-mmsell9-2 carries the arm. The 9.6-day outage is now a recorded boundary rather than a hole inside one sample, on the operator's explicit call, so e2 evidence starts at n=0 and is not pooled with e1's. Remedy: PR #390, package mmsell9-restore-v1-e2. NOT closed by this ticket: the defect that caused it. successor_mmsell10_capacity.py and successor_mmsell10_contest_cap.py still end EVERY open paper deployment of a predecessor while replacing only the tag they reuse. Both are spent and refuse to re-run, so nothing is presently at risk, but the next package copying that pattern would repeat this. A shared guard is parked, not done.",
-  "resolved_at": "2026-09-11 22:51:52.369964+00:00",
-  "requires_new_version": null,
-  "requires_new_epoch": null,
-  "requires_platform_revision": null,
-  "requires_pause_or_stand_down": null,
-  "duplicate_of_issue_id": null,
-  "supersedes_issue_id": null,
-  "discovered_from_issue_id": null,
-  "first_observed_at": "2026-09-11 15:34:11.244859+00:00",
-  "last_observed_at": "2026-09-11 15:34:11.244859+00:00",
-  "details_json": {
-    "discovery": "Detected by an Experiment Control Tower session 2026-09-11 while classifying five configured-but-unarmed MMSELL_VARIANTS tags. Four proved to be recorded retirements; this one is not. No Tower candidate fingerprint exists because experiment.silent_arm requires an ACTIVE arm to measure and this tag has none. Cause of the deployment closure is not established, so classification stays UNCLASSIFIED and Live Ops owns first operational diagnosis. Evidence and reads: PR #389, docs/handoffs/HANDOFF-dead-mmsell-books-liveops.md",
-    "reported_via": "issue_command_transport",
-    "manual_report": true
-  },
-  "events": [
-    {
-      "event_type": "CREATED",
-      "occurred_at": "2026-09-11 15:34:11.244859+00:00",
-      "actor": "cal",
-      "actor_role": "LIVE_OPS",
-      "from_status": null,
-      "to_status": "OPEN",
-      "from_owner_role": null,
-      "to_owner_role": "LIVE_OPS",
-      "from_classification": null,
-      "to_classification": "UNCLASSIFIED",
-      "reason": "Detected by an Experiment Control Tower session 2026-09-11 while classifying five configured-but-unarmed MMSELL_VARIANTS tags. Four proved to be recorded retirements; this one is not. No Tower candidate fingerprint exists because experiment.silent_arm requires an ACTIVE arm to measure and this tag has none. Cause of the deployment closure is not established, so classification stays UNCLASSIFIED and Live Ops owns first operational diagnosis. Evidence and reads: PR #389, docs/handoffs/HANDOFF-dead-mmsell-books-liveops.md",
-      "payload": {
-        "scope": "mmsell-price-ceiling \u00b7 v1/e1 \u00b7 mmsell-ceiling-paper-mmsell9-1",
-        "anomaly_kind": null,
-        "recommended_owner": {
-          "priority": "P2",
-          "severity": "MEDIUM",
-          "rationale": "insufficient evidence to classify \u2014 route to Live Ops for operational diagnosis first, or leave with the operator to triage. The owner here is who looks first, NOT a claim that the cause is operational",
-          "owner_role": "LIVE_OPS",
-          "disposition": null,
-          "classification": "UNCLASSIFIED",
-          "requires_operator_triage": true
-        }
-      }
-    },
-    {
-      "event_type": "EVIDENCE_ADDED",
-      "occurred_at": "2026-09-11 18:01:36.371204+00:00",
-      "actor": "cal",
-      "actor_role": "LIVE_OPS",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "ROOT CAUSE ESTABLISHED. Registering the capacity successor ended mmsell9's carrier as a side effect. Receipt mm10cap-register-1 (REGISTER_PACKAGE, package mmsell10-capacity-successor, SUCCEEDED) reports epoch_started_at and paper_deployment_started_at of 2026-09-02 00:57:38.273309Z - byte-identical to mmsell-ceiling-paper-mmsell9-1.ended_at. Same transaction. successor_mmsell10_capacity.py:263 selects EVERY open deployment of the predecessor with kind=='paper' and ends all of them, reasoning onl",
-      "payload": {
-        "source_ref": "ops results m9-rcpt-1, m9-det-1, dead-lin-2; kalshi_bot/experiment_os/successor_mmsell10_capacity.py:256-281",
-        "evidence_id": 69,
-        "content_hash": null,
-        "evidence_type": "DATABASE_QUERY"
-      }
-    },
-    {
-      "event_type": "CLASSIFIED",
-      "occurred_at": "2026-09-11 18:01:36.411377+00:00",
-      "actor": "cal",
-      "actor_role": "LIVE_OPS",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": "UNCLASSIFIED",
-      "to_classification": "INTEGRITY",
-      "reason": "Cause is now established, so UNCLASSIFIED is no longer the honest state. A registration package ended a deployment that was carrying a live experiment's declared v1 arm and did not replace it, leaving the tag with lineage but no active arm on an OPEN epoch - broken lineage / a contract-deployment mismatch, not a runtime or collector fault.",
-      "payload": null
-    },
-    {
-      "event_type": "FIX_PROPOSED",
-      "occurred_at": "2026-09-11 18:01:36.437981+00:00",
-      "actor": "cal",
-      "actor_role": "LIVE_OPS",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "Diagnosis is complete and is Live Ops's to record; the remedy splits into a build fix and a question that belongs to Research Lab and the operator.",
-      "payload": {
-        "proposed_fix": "TWO PARTS, and only the first is unambiguous. (1) CODE, prevents recurrence: the same blanket end is still live at successor_mmsell10_contest_cap.py:310, so the next such registration repeats this. Narrow the selection to the deployments actually carrying a tag the successor is about to reuse, and add a refusal when ending a paper deployment would leave any tag with no active arm - the paper-side twin of the guard the file already reasons about for live. (2) LINEAGE, restores mmsell9: needs a reviewed REPAIR_LINEAGE package, since an envelope names a package and cannot author one, and Live Ops may not write lifecycle state. It also needs a scientific answer first, which is NOT Live Ops's: mmsell9 has a 9.6-day hole in an OPEN v1/e1 epoch, and its line has since moved through v2/e2 and two successors. Resuming the arm mid-epoch pools evidence across a gap nobody pre-registered; the alternative is to accept mmsell9 as finished and close it properly. Do NOT register an arm to unblock the tag, and do NOT remove its MMSELL_VARIANTS entry until that question is answered."
-      }
-    },
-    {
-      "event_type": "EVIDENCE_ADDED",
-      "occurred_at": "2026-09-11 22:51:51.932122+00:00",
-      "actor": "cal",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "RESTORED AND VERIFIED TRADING. Package mmsell9-restore-v1-e2 ran 2026-09-11T22:42:05.820929Z (receipt rl-m9-restore-20260911, REGISTER_PACKAGE, SUCCEEDED). Effect confirmed against the canonical read, not the receipt alone: v1/e1 is CLOSED at 2026-09-02T00:57:38.273309Z - the measured instant the carrier ended, so the epoch and its deployment now agree - and v1/e2 is OPEN from 2026-09-11T22:42:05.755435Z on platform snapshot 2 (e1 was snapshot 1, which is why the two are not poolable). mmsell-ce",
-      "payload": {
-        "source_ref": "ops results m9-run-1, m9-rcpt-2, m9-tag-1, m9-ver-1, m9-trade-1; PR #390",
-        "evidence_id": 70,
-        "content_hash": null,
-        "evidence_type": "DATABASE_QUERY"
-      }
-    },
-    {
-      "event_type": "LINK_ADDED",
-      "occurred_at": "2026-09-11 22:51:51.993372+00:00",
-      "actor": "cal",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "mmsell9-restore-v1-e2 package",
-      "payload": {
-        "link_id": 27,
-        "link_type": "PR",
-        "reference": "https://github.com/50thycal/kalshi_bot/pull/390"
-      }
-    },
-    {
-      "event_type": "STATUS_CHANGED",
-      "occurred_at": "2026-09-11 22:51:52.035341+00:00",
-      "actor": "cal",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": "OPEN",
-      "to_status": "TRIAGE",
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "cause established; moving the ticket through its own machine to record the remedy",
-      "payload": null
-    },
-    {
-      "event_type": "STATUS_CHANGED",
-      "occurred_at": "2026-09-11 22:51:52.106797+00:00",
-      "actor": "cal",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": "TRIAGE",
-      "to_status": "INVESTIGATING",
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "root cause traced to the capacity successor's blanket end of predecessor paper deployments",
-      "payload": null
-    },
-    {
-      "event_type": "STATUS_CHANGED",
-      "occurred_at": "2026-09-11 22:51:52.150108+00:00",
-      "actor": "cal",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": "INVESTIGATING",
-      "to_status": "ACTION_REQUIRED",
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "remedy identified: a reviewed package cutting v1/e2 and re-registering the mmsell9 arm",
-      "payload": null
-    },
-    {
-      "event_type": "STATUS_CHANGED",
-      "occurred_at": "2026-09-11 22:51:52.194755+00:00",
-      "actor": "cal",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": "ACTION_REQUIRED",
-      "to_status": "VALIDATING",
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "package merged (PR #390) and executed; verifying the tag resolves and the book actually trades",
-      "payload": null
-    },
-    {
-      "event_type": "EVIDENCE_ADDED",
-      "occurred_at": "2026-09-11 22:51:52.238203+00:00",
-      "actor": "cal",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "validation PASSED: PASSED. The validation was not 'the receipt says SUCCEEDED' but 'the book trades again'. xos tag mmsell9 resolves to mmsell-ceiling-paper-mmsell9-2 on the OPEN v1/e2, and 18 paper_trades rows landed in the first two scan cycles after the run, every one carrying experiment_deployment_arm_id. Under NEW_ONLY an unlinked or unresolved tag cannot write at all, so lineage on every row is the proof that admission is working rather than being bypassed.",
-      "payload": {
-        "source_ref": "ops results m9-tag-1, m9-ver-1, m9-trade-1",
-        "evidence_id": 71,
-        "content_hash": null,
-        "evidence_type": "DATABASE_QUERY"
-      }
-    },
-    {
-      "event_type": "VALIDATION_RECORDED",
-      "occurred_at": "2026-09-11 22:51:52.244514+00:00",
-      "actor": "cal",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "PASSED. The validation was not 'the receipt says SUCCEEDED' but 'the book trades again'. xos tag mmsell9 resolves to mmsell-ceiling-paper-mmsell9-2 on the OPEN v1/e2, and 18 paper_trades rows landed in the first two scan cycles after the run, every one carrying experiment_deployment_arm_id. Under NEW_ONLY an unlinked or unresolved tag cannot write at all, so lineage on every row is the proof that admission is working rather than being bypassed.",
-      "payload": {
-        "passed": true,
-        "source_ref": "ops results m9-tag-1, m9-ver-1, m9-trade-1"
-      }
-    },
-    {
-      "event_type": "RESOLVED",
-      "occurred_at": "2026-09-11 22:51:52.370061+00:00",
-      "actor": "cal",
-      "actor_role": "RESEARCH_LAB",
-      "from_status": "VALIDATING",
-      "to_status": "RESOLVED",
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "mmsell9 is admissible and trading again on a fresh epoch. v1/e1 closed at the measured instant it stopped (2026-09-02T00:57:38.273309Z); v1/e2 opened 2026-09-11T22:42:05Z on the current platform snapshot; mmsell-ceiling-paper-mmsell9-2 carries the arm. The 9.6-day outage is now a recorded boundary rather than a hole inside one sample, on the operator's explicit call, so e2 evidence starts at n=0 and is not pooled with e1's. Remedy: PR #390, package mmsell9-restore-v1-e2. NOT closed by this ticket: the defect that caused it. successor_mmsell10_capacity.py and successor_mmsell10_contest_cap.py still end EVERY open paper deployment of a predecessor while replacing only the tag they reuse. Both are spent and refuse to re-run, so nothing is presently at risk, but the next package copying that pattern would repeat this. A shared guard is parked, not done.",
-      "payload": {
-        "resolved_at": "2026-09-11 22:51:52.369964+00:00",
-        "resolution_summary": "mmsell9 is admissible and trading again on a fresh epoch. v1/e1 closed at the measured instant it stopped (2026-09-02T00:57:38.273309Z); v1/e2 opened 2026-09-11T22:42:05Z on the current platform snapshot; mmsell-ceiling-paper-mmsell9-2 carries the arm. The 9.6-day outage is now a recorded boundary rather than a hole inside one sample, on the operator's explicit call, so e2 evidence starts at n=0 and is not pooled with e1's. Remedy: PR #390, package mmsell9-restore-v1-e2. NOT closed by this ticket: the defect that caused it. successor_mmsell10_capacity.py and successor_mmsell10_contest_cap.py still end EVERY open paper deployment of a predecessor while replacing only the tag they reuse. Both are spent and refuse to re-run, so nothing is presently at risk, but the next package copying that pattern would repeat this. A shared guard is parked, not done.",
-        "validation_waiver_reason": null
-      }
-    }
-  ],
-  "evidence": [
-    {
-      "evidence_type": "DATABASE_QUERY",
-      "summary": "ROOT CAUSE ESTABLISHED. Registering the capacity successor ended mmsell9's carrier as a side effect. Receipt mm10cap-register-1 (REGISTER_PACKAGE, package mmsell10-capacity-successor, SUCCEEDED) reports epoch_started_at and paper_deployment_started_at of 2026-09-02 00:57:38.273309Z - byte-identical to mmsell-ceiling-paper-mmsell9-1.ended_at. Same transaction. successor_mmsell10_capacity.py:263 selects EVERY open deployment of the predecessor with kind=='paper' and ends all of them, reasoning only about the mmsell10 tag (two active arms on one tag is ambiguous and refused). The predecessor held TWO open paper deployments: the mmsell10 carrier, correctly ended and replaced by mmsell-capacity-paper-1, and mmsell-ceiling-paper-mmsell9-1, which the canary package had created five days earlier to keep mmsell9 admissible. The successor opens a book on mmsell10 only, so nothing replaced mmsell9's arm. The package's count_live_book_open guard checks open LIVE positions, not whether ending a deployment leaves a tag with no arm at all - the XOS-000011 shape the same file's comments warn about for live deployments but never check for paper. Not a runtime fault: the worker is healthy and 11 books traded in the last hour.",
-      "source_ref": "ops results m9-rcpt-1, m9-det-1, dead-lin-2; kalshi_bot/experiment_os/successor_mmsell10_capacity.py:256-281",
-      "captured_at": "2026-09-11 18:01:36.307086+00:00",
-      "captured_by": "cal",
-      "content_hash": null
-    },
-    {
-      "evidence_type": "DATABASE_QUERY",
-      "summary": "RESTORED AND VERIFIED TRADING. Package mmsell9-restore-v1-e2 ran 2026-09-11T22:42:05.820929Z (receipt rl-m9-restore-20260911, REGISTER_PACKAGE, SUCCEEDED). Effect confirmed against the canonical read, not the receipt alone: v1/e1 is CLOSED at 2026-09-02T00:57:38.273309Z - the measured instant the carrier ended, so the epoch and its deployment now agree - and v1/e2 is OPEN from 2026-09-11T22:42:05.755435Z on platform snapshot 2 (e1 was snapshot 1, which is why the two are not poolable). mmsell-ceiling-paper-mmsell9-2 is open on e2 carrying mmsell9 alone. xos tag mmsell9 resolves to it. The book is TRADING: 18 paper_trades rows between 22:44:33Z and 22:45:40Z, all 18 with experiment_deployment_arm_id set, so entries are being admitted under the new arm rather than written unlinked. No config change was needed - mmsell9 never left MMSELL_VARIANTS. Paper only; no live deployment, twin or allowlist change.",
-      "source_ref": "ops results m9-run-1, m9-rcpt-2, m9-tag-1, m9-ver-1, m9-trade-1; PR #390",
-      "captured_at": "2026-09-11 22:51:51.861833+00:00",
-      "captured_by": "cal",
-      "content_hash": null
-    },
-    {
-      "evidence_type": "DATABASE_QUERY",
-      "summary": "validation PASSED: PASSED. The validation was not 'the receipt says SUCCEEDED' but 'the book trades again'. xos tag mmsell9 resolves to mmsell-ceiling-paper-mmsell9-2 on the OPEN v1/e2, and 18 paper_trades rows landed in the first two scan cycles after the run, every one carrying experiment_deployment_arm_id. Under NEW_ONLY an unlinked or unresolved tag cannot write at all, so lineage on every row is the proof that admission is working rather than being bypassed.",
-      "source_ref": "ops results m9-tag-1, m9-ver-1, m9-trade-1",
-      "captured_at": "2026-09-11 22:51:52.233802+00:00",
-      "captured_by": "cal",
-      "content_hash": null
-    }
-  ],
-  "links": [
-    {
-      "link_type": "PR",
-      "reference": "https://github.com/50thycal/kalshi_bot/pull/390",
-      "label": "mmsell9-restore-v1-e2 package",
-      "created_at": "2026-09-11 22:51:51.987024+00:00"
-    }
-  ]
-}
+# note: value type-check skipped (ModuleNotFoundError: No module named 'kalshi_bot')
+# readiness reported a problem — read the block above
+========================================================================
+!! MUTATING OPS REQUEST — this changes the running system !!
+========================================================================
+# type=env  service=main  vars=EXPERIMENT_OS_ISSUE_COMMAND  id=m9-clear-2
+# actor=cal  purpose=clear the issue transport after XOS-000033 close-out
+# code 1767695f3f45ab760374d50723d3a099e4b4c4e5 · started 2026-09-11T22:53:29Z
+# target service: main
+# BEFORE:
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 4284 bytes, sha256:024708730a0160ec>
+  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+# 1/1 variables set
+# redeploy triggered — the worker will restart with the new config
+# AFTER:
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+# VERDICT: VERIFIED
+
+# post-change canonical checks: enforcement, readiness
+# $ xos enforcement
+#   {
+#     "mode": "NEW_ONLY",
+#     "cutover_id": "prod-new-only-20260816",
+#     "effective_at": "2026-08-16 14:34:42.892897+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr3_v1",
+#     "resolver_degraded_alarms_24h": 0,
+#     "deployments": {
+#       "total": 38,
+#       "grandfathered": 12,
+#       "native": 26
+#     },
+#     "post_cutover_unstamped": {
+#       "paper_trades": [],
+#       "live_orders": []
+#     },
+#     "live_canaries": [
+#       {
+#         "deployment": "mmsell-ceiling-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-ceiling-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-capacity-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-capacity-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-contestcap-live-2",
+#         "grandfathered": false,
+#         "twin": "mmsell-contestcap-twin-2",
+#         "boundary_match": true
+#       }
+#     ],
+#     "unresolved_integrity_events": 1,
+#     "recorded_state_events": 3,
+#     "unresolved_config_drift": 1,
+#     "session_counters": {
+#       "blocked": 0,
+#       "warned": 0,
+#       "resolver_degraded": false,
+#       "resolver_loaded_at": null
+#     }
+#   }
+# $ xos readiness
+#   {
+#     "ok": false,
+#     "checked_at": "2026-09-11 22:53:40.498421+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
+#     "checks": {
+#       "import_ran": {
+#         "ok": true,
+#         "detail": "35 experiments recorded"
+#       },
+#       "coverage_complete": {
+#         "ok": true,
+#         "detail": {
+#           "unmapped_tags": []
+#         }
+#       },
+#       "live_books_represented": {
+#         "ok": true,
+#         "detail": {
+#           "registered_live_tags": [
+#             "Cmmsell10",
+#             "Dmmsell10",
+#             "Fmmsell10"
+#           ],
+#           "note": "no Settings supplied \u2014 presence-only check"
+#         }
+#       },
+#       "platform_snapshot_complete": {
+#         "ok": true,
+#         "detail": {
+#           "snapshot": "4f9adf15daa64035",
+#           "missing_components": []
+#         }
+#       },
+#       "grandfathered_identity": {
+#         "ok": true,
+#         "detail": {
+#           "deployments": 38,
+#           "grandfathered": 12,
+#           "native": 26
+#         }
+#       },
+#       "live_twin_links": {
+#         "ok": true,
+#         "detail": "all linked"
+#       },
+#       "no_unresolved_integrity": {
+#         "ok": false,
+#         "detail": "1 unresolved integrity events"
+#       },
+#       "no_unresolved_platform_impact": {
+#         "ok": true,
+#         "detail": "0 platform-impact dispositions awaiting acceptance/application"
+#       },
+#       "lineage_columns_present": {
+#         "ok": true,
+#         "detail": {
+#           "paper_trades": "experiment_deployment_arm_id present",
+#           "live_orders": "experiment_deployment_arm_id present"
+#         }
+#       },
