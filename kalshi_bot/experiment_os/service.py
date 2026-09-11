@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Sequence
+from collections.abc import Callable, Collection, Sequence
 from datetime import datetime, timezone
 
 from sqlalchemy import event, func, select
@@ -1176,6 +1176,89 @@ def open_deployments(session, epoch: ExperimentEpoch) -> list[ExperimentDeployme
 #: carry-forward can prove none of that, so it refuses and names the deployments
 #: rather than quietly minting live lineage on a platform boundary.
 _CARRYABLE_KINDS: frozenset[str] = frozenset({DeploymentKind.PAPER.value})
+
+
+def select_handover_deployments(
+    deployments: Sequence[ExperimentDeployment],
+    *,
+    taking_over: Collection[str],
+    tags_of: Callable[[ExperimentDeployment], Sequence[str]],
+    kind: DeploymentKind | str = DeploymentKind.PAPER,
+) -> tuple[list[ExperimentDeployment], list[ExperimentDeployment]]:
+    """Which of a predecessor's open deployments a successor may END to reuse its tags.
+
+    Returns `(ending, left_open)`, both drawn from the deployments of `kind` only;
+    other kinds (live, twin, probe) are the caller's to handle and appear in neither.
+
+    ## The defect this replaces
+
+    A successor that needs tag T from its predecessor must end the deployment
+    carrying T — two active arms on one tag is ambiguous and the resolver refuses
+    it — and re-register T on its own epoch at the same instant. Two packages wrote
+    that as "end every open paper deployment of the predecessor", reasoning only
+    about T. On 2026-09-02 `mmsell10-capacity-successor` did exactly that to
+    `mmsell-price-ceiling`, whose open paper deployments were the `mmsell10`
+    carrier AND `mmsell-ceiling-paper-mmsell9-1` — a deployment the canary package
+    had opened five days earlier so `mmsell9` stayed admissible. Both ended. Only
+    `mmsell10` was re-registered. `mmsell9` kept being constructed from
+    `MMSELL_VARIANTS` and refused at the write path for 9.6 days, with its
+    experiment still LIVE_CANARY and its epoch still open (XOS-000033).
+
+    ## Two rules, and why the second exists
+
+    1. **Narrow.** Only deployments carrying a tag in `taking_over` are ended.
+       Anything else of this kind is returned in `left_open` and must be left
+       exactly as it is — it is running for a reason the successor knows nothing
+       about.
+    2. **Refuse a partial handover.** A deployment that carries a taken-over tag
+       AND a tag that is not being taken over cannot simply end: the successor
+       re-registers only what it takes, so the other tag would be left with
+       lineage and no active arm — the XOS-000011 shape, silent by construction.
+       This is not hypothetical; the predecessor's v1 legacy deployment carried
+       `mmsell9` beside `mmsell10` in precisely this way, and had it still been
+       open the same registration would have stranded it the same way. The caller
+       must split that deployment first, as `canary_mmsell10` does.
+
+    Pure over already-fetched rows: `tags_of` is supplied by the caller so the
+    packages keep their own query surface (and their tests keep their stubs), and
+    nothing here can be defeated by a session that lies about ended_at.
+
+    Ending is left to the caller, deliberately. The order that makes a handover
+    safe — end, then re-register at the same instant, inside one transaction — is
+    the package's to own, and a helper that ended rows on its own authority would
+    have to be trusted about the second half it cannot see.
+    """
+    kind_v = DeploymentKind(kind).value
+    wanted = frozenset(taking_over)
+    if not wanted:
+        raise ExperimentOsError(
+            "a handover must name at least one tag it is taking over — with none, "
+            "nothing may end, and the question of which deployments to end does "
+            "not arise"
+        )
+    ending: list[ExperimentDeployment] = []
+    left_open: list[ExperimentDeployment] = []
+    for dep in deployments:
+        if dep.kind != kind_v:
+            continue
+        carried = frozenset(t for t in tags_of(dep) if t)
+        if not carried & wanted:
+            left_open.append(dep)
+            continue
+        stranded = sorted(carried - wanted)
+        if stranded:
+            raise ExperimentOsError(
+                f"{dep.deployment_key} carries {stranded} beside "
+                f"{sorted(carried & wanted)}; ending it would leave "
+                f"{'those tags' if len(stranded) > 1 else 'that tag'} with lineage "
+                "and no active deployment arm, so every entry attempted under "
+                f"{'them' if len(stranded) > 1 else 'it'} would be refused and "
+                "nothing would say why (XOS-000033). Move the tag(s) not being taken "
+                "over onto their own deployment first, as canary_mmsell10 did for "
+                "mmsell9, then run this again."
+            )
+        ending.append(dep)
+    return ending, left_open
 
 
 def carry_deployments_forward(

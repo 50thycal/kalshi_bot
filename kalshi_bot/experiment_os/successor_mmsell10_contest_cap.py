@@ -307,7 +307,13 @@ def register(
         ).all()
         if _epoch_experiment_id(session, d) == predecessor.id
     ]
-    ending = [d for d in open_deps if d.kind == "paper"]
+    # Only the deployments carrying the tag this successor REUSES may end — see
+    # `service.select_handover_deployments` for the outage the blanket
+    # `kind == "paper"` caused (XOS-000033). It also refuses if a deployment it
+    # would end carries a tag we are NOT taking over, which would be stranded.
+    ending, left_open = service.select_handover_deployments(
+        open_deps, taking_over={PAPER_TAG}, tags_of=lambda d: _tags_of(session, d),
+    )
     draining = [d for d in open_deps if d.kind != "paper"]
 
     for dep in ending:
@@ -474,6 +480,10 @@ def register(
         "epoch": epoch,
         "paper_deployment": paper,
         "ended_deployments": [d.deployment_key for d in ending],
+        # Paper deployments of the predecessor that carry none of the tags this
+        # successor takes over. Left running on purpose, and named in the receipt
+        # so an operator can see the handover did NOT touch them.
+        "left_open_deployments": [d.deployment_key for d in left_open],
         "still_draining": [d.deployment_key for d in draining],
         "registered_at": at,
         "evidence_started_at": evidence_at,
