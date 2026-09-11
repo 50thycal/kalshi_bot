@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=cc-rmm-tape4
-# code ce1215a40dc8d607316bd35d83d39e6b5f52e6b5 · started 2026-09-11T14:09:18Z
-strategy  status  n   series  pnl   losses
---------  ------  --  ------  ----  ------
-Rmmsell1  open    12  6       0.00  0     
-Rmmsell2  open    12  6       0.00  0     
-
-(2 rows)
