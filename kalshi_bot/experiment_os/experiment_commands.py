@@ -244,6 +244,7 @@ def _packages() -> dict[str, ExperimentPackage]:
         recut_mmsell10_contest_cap,
         repair_dark_live_canaries,
         repair_tmmsell_epoch,
+        restore_mmsell9_epoch,
         reviewed_universe,
         successor_mmsell10_capacity,
         successor_mmsell10_contest_cap,
@@ -350,6 +351,30 @@ def _packages() -> dict[str, ExperimentPackage]:
             ),
             register=_no_contract,
             repair=repair_tmmsell_epoch.repair,
+        ),
+        "mmsell9-restore-v1-e2": ExperimentPackage(
+            name="mmsell9-restore-v1-e2",
+            experiment_key=restore_mmsell9_epoch.EXPERIMENT_KEY,
+            description=(
+                "XOS-000033: mmsell9 lost its deployment arm on 2026-09-02 when "
+                "mmsell10-capacity-successor ended every open paper deployment of "
+                "the predecessor, including the carrier that existed to keep "
+                "mmsell9 admissible, and replaced only the mmsell10 one. The tag "
+                "kept being constructed from MMSELL_VARIANTS and refused at the "
+                "write path for 9.6 days. Closes v1/e1 at the MEASURED instant it "
+                "actually stopped, opens v1/e2 now, and registers "
+                "mmsell-ceiling-paper-mmsell9-2 there carrying mmsell9 alone. A "
+                "FRESH epoch rather than a re-registration on the still-open e1, "
+                "on the operator's call: e1's sample ends at the outage and e2 "
+                "pins today's platform snapshot, so the two are not poolable and "
+                "the gap is recorded as a boundary instead of hidden inside one "
+                "sample. Registers no contract and touches no gate — v1's gate "
+                "has accrued evidence since 2026-07-18 and is immutable. No "
+                "transition, no verdict, no live lineage, no order. Refuses "
+                "unless production matches the shape it was reviewed against; "
+                "idempotent."
+            ),
+            register=restore_mmsell9_epoch.register,
         ),
         "mmsell10-queue-aware-cancel": ExperimentPackage(
             name="mmsell10-queue-aware-cancel",
