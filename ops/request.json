@@ -1,1 +1,1 @@
-{"type":"db","sql":"select o.strategy, p.market_ticker, p.quantity, p.market_exposure, p.captured_at from (select distinct strategy, market_ticker from live_orders where strategy in ('Lmmsell8','Lmmsell10') and status = 'filled') o join lateral (select p2.* from positions p2 where p2.market_ticker = o.market_ticker order by p2.captured_at desc limit 1) p on true where coalesce(p.quantity,0) <> 0 order by 1,2","max_rows":100,"id":"dead-pos-1"}
+{"type":"noop"}
