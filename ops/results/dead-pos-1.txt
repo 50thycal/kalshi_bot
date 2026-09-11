@@ -1,7 +1,0 @@
-# ops request [READ]
-# type=db  id=dead-pos-1
-# code ce1215a40dc8d607316bd35d83d39e6b5f52e6b5 · started 2026-09-11T15:25:27Z
-strategy  market_ticker  quantity  market_exposure  captured_at
---------  -------------  --------  ---------------  -----------
-
-(0 rows)
