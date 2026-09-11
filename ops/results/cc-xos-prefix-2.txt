@@ -1,4 +1,0 @@
-no issue command 'tax-registry-prefix-inherit-20260910'
-# ops request [READ]
-# type=xos  id=cc-xos-prefix-2
-# code 666a0ede84ec02304237f596ede622d019807ec9 · started 2026-09-10T21:44:02Z
