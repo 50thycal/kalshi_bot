@@ -1,6 +1,6 @@
 # ops request [READ]
-# type=env  service=main  id=dead-env-1
-# code ce1215a40dc8d607316bd35d83d39e6b5f52e6b5 · started 2026-09-11T15:19:59Z
+# type=env  service=main  id=lo-precheck-1
+# code ce1215a40dc8d607316bd35d83d39e6b5f52e6b5 · started 2026-09-11T15:32:23Z
 # target service: main
 # current allowlisted env vars (secrets hidden):
   BOT_MODE=live
