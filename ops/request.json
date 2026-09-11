@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT created_at, component, left(message, 180) AS message FROM system_events WHERE level IN ('error','critical') AND created_at > TIMESTAMPTZ '2026-09-11 07:40:00+00' ORDER BY created_at DESC LIMIT 25", "id": "cc-rmm-err1"}
+{"type": "noop"}
