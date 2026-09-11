@@ -1,1 +1,1 @@
-{"type":"env","action":"set","values":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"rl-m9-restore-20260911\",\"action\":\"REGISTER_PACKAGE\",\"actor\":\"cal\",\"actor_role\":\"RESEARCH_LAB\",\"schema_version\":1,\"payload\":{\"package\":\"mmsell9-restore-v1-e2\"}}"},"actor":"cal","actor_role":"RESEARCH_LAB","purpose":"XOS-000033: run mmsell9-restore-v1-e2 (cut v1/e2, restore the mmsell9 arm)","id":"m9-run-1"}
+{"type":"xos","command":"experiment-command-show","args":["rl-m9-restore-20260911"],"id":"m9-rcpt-2"}
