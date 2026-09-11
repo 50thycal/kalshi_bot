@@ -1,1 +1,1 @@
-{"type": "env", "set": {"EXPERIMENT_OS_EXPERIMENT_COMMAND": "{\"command_id\": \"rmm-register-20260911-1\", \"action\": \"REGISTER_PACKAGE\", \"actor\": \"50cal\", \"actor_role\": \"TASK_SPECIFIC\", \"schema_version\": 1, \"payload\": {\"package\": \"mmsell-reviewed-universe\"}}"}, "id": "cc-rmm-reg1"}
+{"type": "xos", "command": "experiment-command-show", "args": ["rmm-register-20260911-1"], "id": "cc-rmm-reg2"}
