@@ -1,1 +1,1 @@
-{"type":"env","id":"dead-env-1"}
+{"type":"db","sql":"select a.strategy_tag, e.key as experiment, e.state, d.deployment_key, d.kind, d.ended_at as dep_ended, ep.ended_at as epoch_ended from experiment_deployment_arms a join experiment_deployments d on d.id = a.deployment_id join experiment_epochs ep on ep.id = d.epoch_id join experiment_versions v on v.id = ep.version_id join experiments e on e.id = v.experiment_id where d.ended_at is null and ep.ended_at is null order by a.strategy_tag","max_rows":200,"id":"dead-all-1"}
