@@ -1,0 +1,65 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "1767695f3f45ab760374d50723d3a099e4b4c4e5",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-11T22:51:02Z",
+  "id": "m9-close-1",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "after": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>",
+        "before": "<redacted 174 bytes, sha256:ac68ee58e4b9db79>",
+        "requested": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>"
+      },
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 4284 bytes, sha256:024708730a0160ec>",
+        "before": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>",
+        "requested": "<redacted 4284 bytes, sha256:024708730a0160ec>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_EXPERIMENT_COMMAND: all 1 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "unconsumed_command_ids": []
+      },
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_ISSUE_COMMAND is empty \u2014 nothing to overwrite",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 2,
+    "targets": [
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND",
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {
+    "actor": "cal",
+    "purpose": "XOS-000033: record the verified restore and resolve; clear the spent experiment transport"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/m9-close-1.receipt.json",
+  "result_file": "ops/results/m9-close-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34655714328",
+  "service": "main",
+  "started_at": "2026-09-11T22:50:50Z",
+  "targets": [
+    "EXPERIMENT_OS_EXPERIMENT_COMMAND",
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
