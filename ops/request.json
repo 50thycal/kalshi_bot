@@ -1,1 +1,1 @@
-{"type": "xos", "command": "experiment-command-show", "args": ["rmm-register-20260911-1"], "id": "cc-rmm-reg2"}
+{"type": "xos", "command": "show", "args": ["mmsell-reviewed-universe"], "id": "cc-rmm-show1"}
