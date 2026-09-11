@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT created_at, component, (raw_json->>'per_book') AS per_book, (raw_json->>'blocked_books') AS blocked FROM system_events WHERE component LIKE '%mmsell%' ORDER BY created_at DESC LIMIT 3", "id": "cc-rmm-verify2"}
+{"type": "db", "sql": "SELECT created_at, (raw_json->>'blocked_books') AS blocked_books, (raw_json->>'books') AS books, (raw_json->>'per_book') AS per_book FROM system_events WHERE component = 'mmsell_scan' AND created_at > TIMESTAMPTZ '2026-09-11 07:44:33+00' ORDER BY created_at DESC LIMIT 3", "id": "cc-rmm-verify3"}
