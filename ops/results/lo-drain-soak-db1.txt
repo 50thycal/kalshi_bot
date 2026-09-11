@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=lo-drain-soak-db1
-# code e3c0d4875137b7c77c9f395d67805dfd41d33cca · started 2026-09-10T17:54:50Z
-stuck_past_timeout  resting_now  timeout_cancels_24h  drain_unconf_24h  rejected_24h
-------------------  -----------  -------------------  ----------------  ------------
-0                   3            8                    0                 0           
-
-(1 row)
