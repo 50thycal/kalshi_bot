@@ -1,9 +1,21 @@
 # HANDOFF → Live Ops: the five dead `MMSELL_VARIANTS` tags, classified
 
-**From:** Experiment Control Tower (READ ONLY), 2026-09-11
-**Status of this document:** classification complete. **Nothing here is persisted in
-Experiment OS yet** — the two tickets below are drafted, not filed. Filing is a write
-and the Control Tower cannot do it.
+**From:** Experiment Control Tower (READ ONLY), 2026-09-11 — classification.
+**Filed by:** Live Ops, 2026-09-11, on the operator's explicit authorization.
+
+**Status: FILED.** Both tickets are durable Experiment OS state:
+
+| issue | scope | classification | sev/pri |
+|---|---|---|---|
+| **XOS-000033** | `mmsell-price-ceiling · v1/e1 · mmsell-ceiling-paper-mmsell9-1` | UNCLASSIFIED | HIGH / P1 |
+| **XOS-000034** | system-wide (config residue) | OPS | LOW / P3 |
+
+Receipts `lo-open-mmsell9-dark-20260911` and `lo-open-variants-residue-20260911`, both
+SUCCEEDED at 2026-09-11 15:34:11Z, actor `cal`, role `LIVE_OPS`. Transport cleared and
+the ops channel reset afterwards.
+
+The `MMSELL_VARIANTS` edit is **NOT** authorized by that same authorization and has not
+been made. It is a separate operator decision, and XOS-000034 is where it belongs.
 
 ## The finding, restated
 
@@ -126,13 +138,21 @@ differently. Do not guess it into one.
 - `mmsell9`'s entry must NOT be removed alongside the four. Its experiment is alive; the
   question is why its arm closed, not whether to finish killing it.
 
-## Drafted tickets — NOT FILED
+## The envelopes as submitted
 
 No Control Tower candidate fingerprint exists for either (the detectors do not cover
-this class), so both are `OPEN_MANUAL`, not `OPEN_CANDIDATE`. A Live Ops session submits
-them through `EXPERIMENT_OS_ISSUE_COMMAND` as one array, then reads the receipts and
-confirms through `issue-show`. Check `issue-command-list` for an unconsumed envelope
-from another session first; a `REFUSED` verdict there is the guard working.
+this class), so both are `OPEN_MANUAL`, not `OPEN_CANDIDATE`. They went through
+`EXPERIMENT_OS_ISSUE_COMMAND` as one array; all three command transports were verified
+empty first, so no other session's envelope was displaced.
+
+**One correction worth recording.** The first draft of these envelopes carried
+`"version": 1` as a JSON number. `_check_payload` accepts only strings outside the fixed
+`_BOOL_KEYS` set — payload flatness is deliberate, "no nested objects, no arrays, no
+numbers" — so that envelope would have been REJECTED at the boot hook, burning the
+`command_id` and costing a redeploy to discover. It was caught by running
+`_validate_envelope` locally before submitting, which is pure and touches no database.
+**Validate offline first; the transport is a redeploy, not a REPL.** The value below is
+what actually executed.
 
 ```jsonc
 [
@@ -146,7 +166,7 @@ from another session first; a `REFUSED` verdict there is the guard working.
     "severity":"HIGH",
     "priority":"P1",
     "experiment":"mmsell-price-ceiling",
-    "version":1,
+    "version":"1",
     "deployment":"mmsell-ceiling-paper-mmsell9-1",
     "reason":"Detected by Experiment Control Tower 2026-09-11 while classifying five configured-but-unarmed MMSELL_VARIANTS tags. Four were recorded retirements; this one is not. Cause of the deployment closure is not established, so classification stays UNCLASSIFIED and Live Ops looks first."}},
 
@@ -176,4 +196,19 @@ from another session first; a `REFUSED` verdict there is the guard working.
 | 7 | `experiment_state_transitions` for `mmsell-price-ceiling` | `dead-tr-1` |
 | 8 | `xos experiment-command-list` — authorizing receipts | `dead-xc-1` |
 
+Filing (Live Ops):
+
+| # | act | request id |
+|---|---|---|
+| 9 | `env` — verified all three command transports empty before writing | `lo-precheck-1` |
+| 10 | `env set EXPERIMENT_OS_ISSUE_COMMAND` — the two-envelope batch, VERIFIED | `lo-file-1` |
+| 11 | `xos issue-command-list` — both receipts SUCCEEDED | `lo-rcpt-1` |
+| 12 | `xos issue-show XOS-000033` — canonical confirmation, scope resolved | `lo-show-33` |
+| 13 | `env set EXPERIMENT_OS_ISSUE_COMMAND=""` — transport cleared, VERIFIED | `lo-clear-1` |
+
 Ops channel was reset to `{"type":"noop"}` afterwards.
+
+`xos readiness` reported `ok: false` across the filing, on `no_unresolved_integrity`
+(1 event). That is integrity event #16, the pre-existing `EXPERIMENT_CONFIG_DRIFT` on
+`mmsell-ceiling-live-1` already reported in the Control Tower run above. It predates this
+work and nothing here caused or changed it.
