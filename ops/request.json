@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-show","args":["XOS-000033"],"id":"m9-show-33b"}
+{"type":"env","action":"set","values":{"EXPERIMENT_OS_ISSUE_COMMAND":""},"actor":"cal","actor_role":"RESEARCH_LAB","purpose":"clear the issue transport after XOS-000033 close-out","id":"m9-clear-2"}
