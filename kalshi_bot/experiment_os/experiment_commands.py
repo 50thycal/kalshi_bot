@@ -244,6 +244,7 @@ def _packages() -> dict[str, ExperimentPackage]:
         recut_mmsell10_contest_cap,
         repair_dark_live_canaries,
         repair_tmmsell_epoch,
+        reviewed_universe,
         successor_mmsell10_capacity,
         successor_mmsell10_contest_cap,
     )
@@ -263,6 +264,24 @@ def _packages() -> dict[str, ExperimentPackage]:
                 "money: it registers the contract that lets three paper books start."
             ),
             register=correlation_cap.register,
+        ),
+        "mmsell-reviewed-universe": ExperimentPackage(
+            name="mmsell-reviewed-universe",
+            experiment_key=reviewed_universe.EXPERIMENT_KEY,
+            description=(
+                "The contract for `Rmmsell1`/`Rmmsell2`. Two PAPER arms in one epoch trading "
+                "EXACTLY the series carrying an operator review in the series manifest, pinned "
+                "literally into each book's `onlyx=` (exact-match) spec: an uncapped control and "
+                "one capped at a single position per contest on the corrected subject-split key. "
+                "The GATED question is whether the cap buys daily stability inside a universe we "
+                "understand — which is the harder place for a cap to show value, since the "
+                "reviewed set was chosen partly for low concentration. The universe question "
+                "that motivated the review is deliberately NOT gated: its only control already "
+                "carries another experiment's arm, so it is recorded as an observational read "
+                "that authorizes nothing. Arms nothing, trades nothing, no real money: it "
+                "registers the contract that lets two paper books start."
+            ),
+            register=reviewed_universe.register,
         ),
         "marktangle-reversion": ExperimentPackage(
             name="marktangle-reversion",
