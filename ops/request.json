@@ -1,1 +1,1 @@
-{"type":"db","sql":"select strategy, count(*) as n, min(created_at) as first_at, max(created_at) as last_at, count(*) filter (where experiment_deployment_arm_id is not null) as with_lineage, count(*) filter (where created_at >= timestamp '2026-09-06 21:00:00+00') as since_retire_sweep from paper_trades where strategy in ('mmsell9','mmsellA4','mmsellA5','Lmmsell8','Lmmsell10','mmsell10','Gmmsell0') group by 1 order by 1","max_rows":50,"id":"dead-ev-1"}
+{"type":"env","id":"dead-env-1"}
