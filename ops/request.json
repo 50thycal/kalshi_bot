@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-list","id":"lo-rcpt-1"}
+{"type":"xos","command":"issue-show","args":["XOS-000033"],"id":"lo-show-33"}
