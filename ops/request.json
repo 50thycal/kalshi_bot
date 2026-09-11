@@ -1,1 +1,1 @@
-{"type":"db","sql":"select strategy, status, action, count(*) as n, sum(coalesce(quantity,0)) as qty, min(created_at) as first_at, max(created_at) as last_at, count(*) filter (where experiment_deployment_arm_id is not null) as with_lineage from live_orders where strategy is not null group by 1,2,3 order by 1,2,3","max_rows":200,"id":"dead-live-1"}
+{"type":"xos","command":"control-tower","id":"dead-ct-1"}
