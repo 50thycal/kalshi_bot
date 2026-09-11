@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "ce1215a40dc8d607316bd35d83d39e6b5f52e6b5",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-11T14:09:19Z",
+  "id": "cc-rmm-tape4",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/cc-rmm-tape4.receipt.json",
+  "result_file": "ops/results/cc-rmm-tape4.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34608429192",
+  "service": null,
+  "started_at": "2026-09-11T14:09:18Z",
+  "targets": [],
+  "type": "db"
+}
