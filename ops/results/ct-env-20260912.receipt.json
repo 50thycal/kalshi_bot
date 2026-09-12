@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "1a541e15ca80c71a1e0241950251843bd18fba41",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-12T16:42:07Z",
+  "id": "ct-env-20260912",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/ct-env-20260912.receipt.json",
+  "result_file": "ops/results/ct-env-20260912.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34706025512",
+  "service": "main",
+  "started_at": "2026-09-12T16:42:07Z",
+  "targets": [],
+  "type": "env"
+}
