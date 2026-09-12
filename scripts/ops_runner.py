@@ -221,6 +221,9 @@ ALLOWED_SCRIPTS = (
     "experiment_os_status",
     "marktangle_probe",
     "marktangle2_probe",
+    "kalshi_metalhalt_census",
+    "perp_candle_census",
+    "kalshi_kpi_census",
 )
 
 
