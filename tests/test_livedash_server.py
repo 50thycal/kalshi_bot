@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import threading
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -294,13 +295,37 @@ def test_a_failure_after_the_response_started_does_not_write_a_second_one(
     assert sent == [200], f"a second response was written: {sent}"
 
 
+def _timing_records(caplog):
+    return [r for r in caplog.records if "livedash timing" in r.getMessage()]
+
+
+def _await_timing(caplog, *, timeout=5.0):
+    """Wait for the server thread to write its timing line.
+
+    `do_GET` logs the timing in a `finally`, AFTER the response bytes are on the
+    wire. So the client's read can return — and a test can look at `caplog` —
+    before the handler thread has got there. Nothing synchronises the two, and
+    on a loaded machine the gap is wide enough to lose: reproduced 2 failures in
+    15 runs under CPU load on a box where the same test passes 10/10 idle, and
+    observed once on CI.
+
+    This weakens no assertion. The caller still requires exactly the line it
+    always required, with the same content and level — it just stops reading the
+    log out of a race with the thread that writes it."""
+    deadline = time.monotonic() + timeout
+    while not _timing_records(caplog) and time.monotonic() < deadline:
+        time.sleep(0.01)
+    return _timing_records(caplog)
+
+
 def test_every_request_logs_how_long_it_took(live_server, caplog):
     """The service could say a route failed and never how long it spent first, which
     is the whole of what an operator waiting at a blank card needs to know."""
     base, _ = live_server
     with caplog.at_level("INFO", logger="kalshi_bot.livedash"):
         _get(base, "/api/runs/mm10_pt")
-    timings = [r.getMessage() for r in caplog.records if "livedash timing" in r.getMessage()]
+        _await_timing(caplog)
+    timings = [r.getMessage() for r in _timing_records(caplog)]
     assert len(timings) == 1, timings
     assert "/api/runs/mm10_pt" in timings[0]
     assert "ms" in timings[0] and "sent" in timings[0]
@@ -314,7 +339,7 @@ def test_a_slow_route_announces_itself_at_warning(live_server, monkeypatch, capl
     with caplog.at_level("INFO", logger="kalshi_bot.livedash"):
         with urllib.request.urlopen(base + "/healthz", timeout=10) as resp:
             resp.read()
-    slow = [r for r in caplog.records if "livedash timing" in r.getMessage()]
+        slow = _await_timing(caplog)
     assert slow and all(r.levelname == "WARNING" for r in slow), [r.levelname for r in slow]
 
 
