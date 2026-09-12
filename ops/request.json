@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"script","name":"kalshi_metalhalt_census","args":["--max-event-pages","80"],"id":"metalhalt-census-1"}
