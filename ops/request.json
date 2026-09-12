@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-show","args":["XOS-000035"],"id":"pcr-xos35-show"}
+{"type":"env","action":"set","id":"pcr-slot-clear","values":{"EXPERIMENT_OS_ISSUE_COMMAND":""}}
