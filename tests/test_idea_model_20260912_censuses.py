@@ -82,6 +82,29 @@ def test_metal_series_prefix_is_precise():
     assert not mh.METAL_SERIES.search("KXCORN")
 
 
+def test_frozen_reference_test_flags_a_moving_feed_only_within_a_stretch():
+    h = 3600.0
+    # one halt stretch, three consecutive windows, same settlement value -> frozen
+    same = [(0.0, 900.0, 3400.5), (900.0, 1800.0, 3400.5), (1800.0, 2700.0, 3400.5)]
+    r = mh.frozen_reference_test(same)
+    assert r["stretches"] == 1 and r["multi"] == 1 and r["moved"] == 0
+    # same stretch, values differ -> the feed printed during the "halt"
+    moved = [(0.0, 900.0, 3400.5), (900.0, 1800.0, 3402.1)]
+    assert mh.frozen_reference_test(moved)["moved"] == 1
+    # two different days' halts with different values are NOT evidence of movement
+    two = [(0.0, 900.0, 3400.5), (48 * h, 48 * h + 900, 3450.0)]
+    r = mh.frozen_reference_test(two)
+    assert r["stretches"] == 2 and r["multi"] == 0 and r["moved"] == 0
+    assert mh.frozen_reference_test([(0.0, 900.0, None)])["windows"] == 0
+
+
+def test_candle_volume_and_settle_value_tolerate_fp_keys():
+    assert mh._cvol({"volume_fp": "12.0"}) == 12.0 and mh._cvol({"volume": 3}) == 3.0
+    assert mh.settle_value({"settlement_value": "3401.2"}) == pytest.approx(3401.2)
+    assert mh.settle_value({"expiration_value_dollars": "3401.2"}) == pytest.approx(3401.2)
+    assert mh.settle_value({}) is None
+
+
 # --- EARNBEAT: classifier, bands, no-lookahead quote --------------------------------------
 
 

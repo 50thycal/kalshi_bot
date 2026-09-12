@@ -137,7 +137,7 @@ dated triggers (SEASONPIN ~2026-10-01, the overdue ECON-REACT re-run), listed be
 |---|---|---|---|---|
 | ~~PERPMM~~ | `docs/PERPMM_THESIS.md` (withdrawn) | none shipped | — superseded by `docs/PASSIVE_PERP_CENSUS.md` (HOLD, 2026-09-12) | already closed: passive premium-fade price return ≤ control |
 | **METALHALT** | `docs/METALHALT_THESIS.md` | `scripts/kalshi_metalhalt_census.py` | PROMOTE-TO-PROBE iff ≥ 40 settled `inside`/`tail` windows with volume AND post-halt trading at ≥ 3¢ observed; HOLD (universe absent) if Kalshi lists no halt windows — trigger = the 24/7 metals schedule | the FREEZE family on Kalshi → WS-005 to ABANDONED with reasoning |
-| **EARNBEAT** | `docs/EARNBEAT_THESIS.md` | `scripts/kalshi_kpi_census.py` | TESTABLE-NOW iff ≥ 100 settled KPI threshold markets with volume AND ≥ 60 readable pre-report quotes; else HOLD, re-run week of 2026-11-09 | the consensus-anchoring premise |
+| **EARNBEAT** | `docs/EARNBEAT_THESIS.md` | `scripts/kalshi_kpi_census.py` | TESTABLE-NOW iff ≥ 100 settled KPI threshold markets with volume AND ≥ 60 readable pre-report quotes; else HOLD, re-run week of 2026-11-09 — **ran 2026-09-12 (`kpi-census-1`): HOLD (ACCRUAL), 43 / 36 against floors 100 / 60; 396 open** | the consensus-anchoring premise |
 
 Ops requests (run from default-branch code after merge; one at a time on the shared channel):
 
