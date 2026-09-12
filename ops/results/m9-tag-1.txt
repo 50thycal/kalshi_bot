@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=xos  id=m9-tag-1
-# code 1767695f3f45ab760374d50723d3a099e4b4c4e5 · started 2026-09-11T22:43:33Z
-experiment            state        ver  arm      role       epoch  deployment                      stage  kind 
---------------------  -----------  ---  -------  ---------  -----  ------------------------------  -----  -----
-mmsell-price-ceiling  LIVE_CANARY  1    mmsell9  secondary  1      mmsell-ceiling-paper-legacy-1   PAPER  paper
-mmsell-price-ceiling  LIVE_CANARY  1    mmsell9  secondary  1      mmsell-ceiling-paper-mmsell9-1  PAPER  paper
-mmsell-price-ceiling  LIVE_CANARY  1    mmsell9  secondary  2      mmsell-ceiling-paper-mmsell9-2  PAPER  paper

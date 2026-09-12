@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "19b532bc6f98403384d7578bc87a9dd49694a5bb",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-12T14:16:35Z",
+  "id": "pcr-xos35-show",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/pcr-xos35-show.receipt.json",
+  "result_file": "ops/results/pcr-xos35-show.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34698797510",
+  "service": null,
+  "started_at": "2026-09-12T14:16:31Z",
+  "targets": [],
+  "type": "xos"
+}
