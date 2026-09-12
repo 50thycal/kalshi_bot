@@ -163,6 +163,7 @@ ALLOWED_SCRIPTS = (
     "kalshi_perps_survey",
     "perp_surface_survey",
     "perp_arm_scores",
+    "passive_perp_probe",
     "kalshi_pinned_study",
     "kalshi_decay_study",
     "kalshi_pin15_study",

@@ -16,6 +16,18 @@ Conventions:
 
 ---
 
+## PASSIVE-PERP 2026-09-12 — approved, frozen census before execution
+
+Calvin selected passive BTC/ETH perp reversion and approved the read-only ops allowlist
+addition and merge after testing. [Census](PASSIVE_PERP_CENSUS.md),
+[WS-017](workstreams/WS-017-passive-perp-probe.md). First measure outright price returns:
+PERP-V1's arm-A premium change is not the P&L of an unhedged perp. A narrowing premium
+can accompany a losing short. New code leaves that historical scorer and its gates alone.
+The fixed Aug 30–Sep 2 collector window is a retrospective screen; maker quote scenarios
+assume instantaneous fills, funding is missing, and no outcome can promote to paper.
+Pending first ops run. Purchased-tail MMSELL hedge and same-asset spot/perp carry are
+PARKed on the board, with no new workstreams or tickets.
+
 ## MMSELL10 QUEUE-AWARE CANCEL 2026-09-10 — THE LINE IS CLOSED. Thesis falsified, experiment RETIRED.
 
 **Question.** mmsell10 rests a $1 maker order for 4 h. Some sit thousands of contracts deep and
