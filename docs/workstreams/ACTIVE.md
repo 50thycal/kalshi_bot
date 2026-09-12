@@ -7,7 +7,7 @@ where each effort is. Read it first on a continuation.
 
 | ID | Workstream | Phase | Status | Current Next Step | Related PR |
 |---|---|---|---|---|---|
-| [WS-017](WS-017-passive-perp-probe.md) | Passive BTC/ETH perp probe | BUILDING | Active | Run the frozen read-only census and record its verdict; explicitly requested 2026-09-12 | — |
+| [WS-017](WS-017-passive-perp-probe.md) | Passive BTC/ETH perp probe | REVIEW | Active | After green CI and approved merge, run the frozen census and record its verdict | [#397](https://github.com/50thycal/kalshi_bot/pull/397) |
 | [WS-002](WS-002-mmsell-settlement-taxonomy-repair.md) | MMSELL settlement-taxonomy repair | REVIEW | Blocked | Merge guard: verify in XOS that the revision is registered + impacts accepted | [#257](https://github.com/50thycal/kalshi_bot/pull/257) |
 | [WS-003](WS-003-mmsell-noncrypto-settlement-mode-paper-design.md) | MMSELL non-crypto settlement-mode paper design | DECIDE | Blocked | Waiting on WS-002, the crypto-exclusion defect, and the event-correlation measurement | — |
 | [WS-004](WS-004-live-canary-gate-addressing.md) | Reconciling the recurring blocked-gate anomaly (historical canaries) | DECIDE | Active | Put the reporting-layer options to the operator (explain / accept-condition / live with it) | — |

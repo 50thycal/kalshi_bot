@@ -954,3 +954,15 @@ ops channel's read-only boundary; `DEC-001`.
 *Revisit if:* a request-authorized chain ever touches a hard-stop item without stopping
 (that is a defect in the tier list, fixed by widening it), or the brief starts hiding
 material deviations (the 120-word cap is a ceiling on narrative, not on truth).
+
+## DEC-013 — Price-return census before passive perp infrastructure (2026-09-12)
+
+Calvin selected passive BTC/ETH perp reversion and explicitly approved read-only probing,
+the new probe's ops allowlist entry and merge after testing in the 2026-09-12 ChatGPT
+session. [WS-017](workstreams/WS-017-passive-perp-probe.md), [census](PASSIVE_PERP_CENSUS.md).
+First test outright quote-price returns on the retained tape: a change in mark/index
+premium does not equal the return of an unhedged position. Keep this new diagnostic
+separate from PERP-V1's historical scorer and frozen semantics. Funding and passive fills
+remain unknown; no census outcome authorizes paper or live trading. Purchased-tail MMSELL
+hedges and same-asset spot/perp carry are PARKed. Revisit infrastructure only if the frozen
+price screen survives and a prospective measurement is testable.

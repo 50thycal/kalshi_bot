@@ -1,6 +1,7 @@
 # WS-017 — Passive BTC/ETH perp reversion: probe first
 
-**Build OS:** v0.12 · **Phase:** BUILDING · **Status:** Active
+**Build OS:** v0.12 · **Phase:** REVIEW · **Status:** Active
+**Related PR:** [#397](https://github.com/50thycal/kalshi_bot/pull/397)
 
 ## Goal
 
@@ -50,10 +51,14 @@ Implementation actor: Codex / passive-perp-20260912. Solo mode; no independent r
 Merge authorization: Calvin's explicit 2026-09-12 approval in this session of the named
 read-only allowlist addition, testing and merge. Accepted head will be recorded on the PR.
 Framework compatibility checked against canonical Build OS v0.12 on 2026-09-12.
+11 targeted tests pass; changed Python files compile/import and pass ruff.
+Finalization: pushed. This PR ships the instrument; the mission remains open for its run
+and result logging. No architecture or shared metric behavior changes.
 
 ## Next Step
 
-Test, ship and run the frozen census; log its result and close this bounded workstream.
+After green CI and the approved merge of #397, run the frozen census, log its result
+and close this bounded workstream.
 
 ## Parked
 
