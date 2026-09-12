@@ -45,7 +45,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import select
 
-from . import service
+from . import enforcement, service
 from .lifecycle import ArmRole, LifecycleState
 from .models import (
     ExperimentDeployment,
@@ -435,8 +435,26 @@ def register(
 
 
 def material_config() -> dict:
-    """The parameters a drift check compares the running book against."""
+    """The deployment's `config_json`, including the `material` block the drift
+    check actually reads.
+
+    It did not include one until XOS-000036. The three keys below described the
+    same facts under this package's own names, `runtime_config_check` looks only
+    for `material`, and the mismatch made `mmsell-capacity-live-1` invisible to
+    the check from the instant it armed on 2026-09-02 — no drift comparison, and
+    no per-book stand-down record when `Dmmsell10` later left `LIVE_STRATEGIES`.
+    The baseline is now built by the engine's own `live_material_block`, so a
+    package cannot invent a shape the check does not read; `arm_live_canary`
+    refuses a live deployment without one.
+
+    `book_spec`, `twin_tag` and `risk` are kept beside it: they are what the
+    already-armed record carries, and the repair that backfills `material` on
+    that record derives it from exactly these.
+    """
     return {
+        **{"material": enforcement.live_material_block(
+            books={LIVE_TAG: (TWIN_TAG, BOOK_PARAMS)},
+        )},
         "book_spec": LIVE_BOOK_SPEC,
         "twin_tag": TWIN_TAG,
         "risk": RISK_ENVELOPE,

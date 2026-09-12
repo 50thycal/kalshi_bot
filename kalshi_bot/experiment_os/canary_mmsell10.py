@@ -454,13 +454,19 @@ def material_config(*, live_tag: str = LIVE_TAG, twin_tag: str = TWIN_TAG) -> di
     `dict(parent)` with only the tag replaced, so it has no independent
     parameters and cannot drift on its own — but recording both means a future
     refactor that gave the twin its own spec would be caught rather than
-    silently permitted."""
+    silently permitted.
+
+    Built by the engine's `live_material_block` since XOS-000036 — this package
+    happened to write the shape the check reads, three others wrote their own,
+    and the difference was invisible until two live canaries had been running
+    outside the check for days. One builder, so there is nothing to get right.
+    """
+    from . import enforcement
+
     return {
-        "material": {
-            "live_strategies_contains": [live_tag],
-            "twin_pairs": {live_tag: twin_tag},
-            "book_params": {live_tag: BOOK_PARAMS, twin_tag: None},
-        },
+        "material": enforcement.live_material_block(
+            books={live_tag: (twin_tag, BOOK_PARAMS)},
+        ),
         "risk_envelope": RISK_ENVELOPE,
     }
 

@@ -361,6 +361,82 @@ Implementation: `enforcement._explained_by_stand_down` /
 `tests/test_experiment_os_enforcement.py`. Event #16 is resolved by the audited
 runtime path — the live worker reclassifies it on its next boot — not by hand.
 
+## A live book the drift check never looked at
+
+### The verdict (Platform Change Review, 2026-09-12) — XOS-000036
+
+Routed here by the Experiment Control Tower: `mmsell-capacity-live-1` was open,
+LIVE_CANARY, holding 7 positions and $6.53 of real money, with its arm tag
+`Dmmsell10` absent from `LIVE_STRATEGIES` — and **no integrity event and no
+stand-down record**, where the comparable case one section above produced both.
+The Tower asked the recording question first, which was the right question.
+
+**The answer is that the check never examined this deployment, and never could.**
+`runtime_config_check` compares `config_json['material']`; four canary packages
+each wrote a `material_config()` of their own, and only `canary_mmsell10` nested
+under `material`. The other three returned a flat `book_spec` / `twin_tag` /
+`risk`, so `if not material: continue` walked past those books in silence.
+Measured in production (ops `pcr-depcfg-20260912`), across the three OPEN live
+deployments:
+
+| deployment | tag | armed | `material` |
+|---|---|---|---|
+| `mmsell-ceiling-live-1` | `Cmmsell10` | 2026-08-28 | ✓ — which is why integrity event #16 exists at all |
+| `mmsell-capacity-live-1` | `Dmmsell10` | 2026-09-02 | ✗ |
+| `mmsell-contestcap-live-2` | `Fmmsell10` | 2026-09-07 | ✗ — and the only book in the runtime allowlist |
+
+So the missing stand-down is a symptom: there was nothing to reclassify, because
+nothing was ever compared. Two of the three live books have run real money
+outside the config-drift safeguard since the day they armed, and two of the three
+packages' docstrings asserted the opposite — `recut_mmsell10_contest_cap` states
+that editing `contestcap=1` out of `MMSELL_VARIANTS` would be recorded as
+EXPERIMENT_CONFIG_DRIFT and take the keep gate to BLOCKED_INTEGRITY. It would
+not have been. **A safeguard everyone believes is running is worse than one
+nobody claims**, which is why this is `HIGH` rather than a tidy-up.
+
+**No Platform Revision was registered**, and for the same reason as event #16: no
+fee model, fill model, taxonomy, execution or settlement semantic, risk
+semantic, provenance, API interpretation or shared metric definition changed.
+What changed is the Experiment Engine's own contract with whoever registers a
+deployment — this role's to fix, and not a revision.
+
+### The remedy, in three parts
+
+1. **One builder.** `enforcement.live_material_block(books=...)` is the only
+   sanctioned way to construct a baseline, and every live-arming package uses it.
+   `tests/test_live_material_baseline_contract.py` asserts the agreement for
+   every registered package that can arm real money, including ones written
+   later — the seam that four separate green test files each missed, because each
+   tested one side of an undocumented shape agreement.
+2. **Arming refuses without one.** `arm_live_canary` rejects a live deployment
+   whose config carries no `material` block naming its live tags. A baseline that
+   names no live tag is refused too: `live_strategies_contains` is what both the
+   comparison and the stand-down branch are keyed on, so a block without it
+   compares nothing and reports agreement — indistinguishable from coverage.
+3. **A skip is no longer silent.** An open live deployment the check cannot
+   compare records `EXPERIMENT_CONFIG_UNVERIFIABLE`.
+
+### Why the new event is non-blocking AND still ticketed
+
+`NON_BLOCKING_INTEGRITY_KINDS` was answering two different questions with one
+frozenset, and this kind separates them. It is **non-blocking**: "we never
+compared this book" is a statement about the check's coverage, not an accusation
+against the evidence — and blocking would hold the book's KILL gate, the
+dangerous direction, which event #16 demonstrated by holding `live_canary_keep`
+for six days. It is **not** a recorded state: a stand-down's cause is recorded, so
+the Tower rightly emits no candidate for it, while this one's cause is an open
+defect nobody has diagnosed. `RECORDED_STATE_INTEGRITY_KINDS` is now the set the
+Control Tower suppresses on, and it is a strict subset.
+
+The event resolves by registering the baseline, after which the comparison simply
+runs. For the two books already armed that is
+`REPAIR_LINEAGE` / `live-material-baseline-repair`, which writes each package's
+own reviewed literals — never anything read back from the runtime, which would
+match by construction and check nothing — and only after every literal agrees
+with what the row already stores. Expect the live worker's next boot to then
+record `Dmmsell10`'s stand-down, and either drift or nothing on `Fmmsell10`,
+through the audited path.
+
 ## Scope boundary
 
 No Evo integration, no Claude session roles, no automatic promotions, no

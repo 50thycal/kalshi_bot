@@ -1396,7 +1396,11 @@ def arm_live_canary(
         arming instant, and no reuse of any active deployment's tag;
       * live and twin arm sets must each map the version's declared arms exactly;
       * the version must carry a pre-registered risk envelope (risk_json);
-      * live and twin start at the identical effective boundary in the same epoch.
+      * live and twin start at the identical effective boundary in the same epoch;
+      * `config` carries a comparable `material` baseline naming the live tags —
+        without one the drift check has nothing to compare and the book runs
+        real money outside it (XOS-000036, measured on two of three open
+        canaries). Build it with `enforcement.live_material_block`.
     """
     if experiment.state != LifecycleState.PAPER.value:
         raise ExperimentOsError(
@@ -1465,6 +1469,22 @@ def arm_live_canary(
                 "instant — a live canary must start on FRESH tags with no "
                 "inherited paper state (the 2026-08-15 Lmmsell lesson)"
             )
+
+    # A live book the drift check cannot compare is a book running real money
+    # outside a safeguard everyone believes is on (XOS-000036). Checked after the
+    # structural rules above — those describe the contract, this describes the
+    # record of it — and before anything is written.
+    from .enforcement import live_material_or_none
+
+    if live_material_or_none(config) is None:
+        raise ExperimentOsError(
+            "a live canary must register a material config baseline naming its "
+            "live tags (config['material']['live_strategies_contains']) — "
+            "`enforcement.live_material_block` builds it. Without it "
+            "`runtime_config_check` cannot compare this book against the running "
+            "configuration, and a real drift on real money goes undetected "
+            "(XOS-000036)"
+        )
 
     # The authorizing PASS: with enforcement on, only a fresh synchronous run of the
     # canonical evaluator counts (transition_experiment enforces this); under OFF the

@@ -90,7 +90,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import select
 
-from . import service
+from . import enforcement, service
 from .lifecycle import ArmRole, LifecycleState
 from .models import (
     ExperimentDeployment,
@@ -497,8 +497,18 @@ def material_config() -> dict:
     `book_params`: editing it out of `MMSELL_VARIANTS` while the canary runs is
     recorded as EXPERIMENT_CONFIG_DRIFT and takes the keep gate to
     BLOCKED_INTEGRITY, rather than silently removing a real-money bound.
+
+    That was only true once the `material` block existed. Until XOS-000036 this
+    returned the three keys below alone, `runtime_config_check` reads
+    `config['material']`, and the claim above was false of every deployment this
+    package armed. The block is now built by the engine's own
+    `live_material_block`, and `arm_live_canary` refuses a live deployment
+    without one.
     """
     return {
+        "material": enforcement.live_material_block(
+            books={LIVE_TAG: (TWIN_TAG, BOOK_PARAMS)},
+        ),
         "book_spec": LIVE_BOOK_SPEC,
         "twin_tag": TWIN_TAG,
         "risk": RISK_ENVELOPE,

@@ -921,3 +921,36 @@ def test_a_real_integrity_event_is_still_routed(xos_session, xos_platform):
     rep = ct.build_report(s, evaluate=False)
     assert [r for r in rep.recommendations if "exp-real-drift" in r]
     assert not [n for n in rep.recorded_state if "exp-real-drift" in n]
+
+
+def test_an_unverifiable_live_config_is_routed_like_any_undiagnosed_event(
+    xos_session, xos_platform
+):
+    """XOS-000036: non-blocking is not the same as explained.
+
+    `EXPERIMENT_CONFIG_UNVERIFIABLE` blocks no verdict, so it is in
+    NON_BLOCKING_INTEGRITY_KINDS — and for a while the Tower used that one set to
+    answer a different question, "does this need a reader". A stand-down does not
+    (its cause is recorded); a book nobody has ever compared against its baseline
+    does, because the missing diagnosis IS the finding."""
+    s = xos_session
+    exp, _, _, _, _ = _experiment(s, "exp-unverifiable", spec=COMPUTABLE_SPEC)
+    svc.record_integrity_event(
+        s, exp, kind="EXPERIMENT_CONFIG_UNVERIFIABLE",
+        description="no comparable registered config baseline",
+    )
+    s.commit()
+    rep = ct.build_report(s, evaluate=False)
+
+    assert [r for r in rep.recommendations if "exp-unverifiable" in r], (
+        "an undiagnosed event must still reach a reader"
+    )
+    assert not [n for n in rep.recorded_state if "exp-unverifiable" in n]
+    kinds = [
+        c["anomaly_kind"] for c in ct._detect_candidates(s, rep)
+        if c.get("experiment") == "exp-unverifiable"
+    ]
+    assert "EXPERIMENT_CONFIG_UNVERIFIABLE" in kinds, (
+        "a silent live book with no ticket candidate is how this went unnoticed "
+        "for ten days in the first place"
+    )
