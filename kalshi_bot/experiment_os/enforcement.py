@@ -498,17 +498,117 @@ NON_BLOCKING_INTEGRITY_KINDS: frozenset[str] = frozenset({
 })
 
 
-def _record_stand_down(session, dep) -> None:
+def _registered_live_tags(material: dict) -> list[str]:
+    """The live tags this deployment's registered material config says it trades."""
+    return [t for t in (material.get("live_strategies_contains") or [])]
+
+
+def _authorized_live_tags(settings, material: dict) -> list[str]:
+    """Which of this deployment's registered live tags the runtime allowlist
+    currently authorizes. `LIVE_STRATEGIES` is the only thing that permits a live
+    order, so a book with none of its tags in it cannot place one."""
+    live = {t.strip() for t in (settings.live_strategies or "").split(",") if t.strip()}
+    return [t for t in _registered_live_tags(material) if t in live]
+
+
+def _explained_by_stand_down(
+    expected: dict, observed: dict, *, unauthorized_tags: list[str]
+) -> bool:
+    """Is the ONLY difference the fact that this book was switched off?
+
+    Switching one book off necessarily changes two registered facts: its tags
+    leave `LIVE_STRATEGIES`, and the twin pairing that rode on those tags goes
+    with them. Those two are the stand-down itself, not evidence of anything
+    else. Every other material fact — `book_params` above all, which is where a
+    book's economics live — is compared in FULL, so "you switched it off AND
+    edited its rules" is still recorded as drift for a reviewer to see.
+
+    This is what keeps the per-book path from becoming a hole in the check: a
+    deployment can be excused only for the difference its stand-down explains.
+    (The whole-runtime case above does not ask this question. With nothing
+    trading there is no other book to compare against and no live worker acting
+    on any config at all; with three canaries still trading, a rules edit on the
+    fourth is a real signal and is kept.)"""
+
+    def _stripped(side: dict) -> dict:
+        out = {k: v for k, v in side.items() if k != "live_strategies_contains"}
+        pairs = out.get("twin_pairs")
+        if isinstance(pairs, dict):
+            out["twin_pairs"] = {
+                tag: twin
+                for tag, twin in pairs.items()
+                if not (tag in unauthorized_tags and observed.get(
+                    "twin_pairs", {}).get(tag) is None)
+            }
+        return out
+
+    return _stripped(expected) == _stripped(observed)
+
+
+def _stand_down_scope(*, allowlist_empty: bool, tags: list[str]) -> tuple[str, str, str]:
+    """(scope, description-clause, resolution-clause) for a stand-down record.
+
+    The two scopes are different facts and must not share wording. "The allowlist
+    is empty" is a statement about the whole runtime; telling an operator that
+    while three other books are trading is how the per-book case got read as an
+    unexplained failure in the first place (XOS-000012)."""
+    if allowlist_empty:
+        return (
+            "allowlist_empty",
+            "the runtime live allowlist is empty, so this book places no new entries",
+            "the runtime live allowlist is empty, so no book is configured to trade",
+        )
+    named = ", ".join(tags) if tags else "(none registered)"
+    return (
+        "book_not_allowlisted",
+        f"none of its registered live tags ({named}) appear in the runtime live "
+        "allowlist, so this book places no new entries while other books do",
+        f"none of this deployment's registered live tags ({named}) appear in the "
+        "runtime live allowlist, so it is not authorized to place a live order",
+    )
+
+
+def _clear_stand_down(session, dep, *, reason: str) -> None:
+    """Close any open stand-down record for `dep`.
+
+    A recorded STATE has to be able to end. Without this the first stand-down
+    stays open forever: a re-armed book still reads as stopped, and a book whose
+    stand-down changed SCOPE (the allowlist was repopulated with other books)
+    keeps advertising the stale scope as current."""
+    for prior in session.scalars(
+        select(ExperimentIntegrityEvent).where(
+            ExperimentIntegrityEvent.deployment_id == dep.id,
+            ExperimentIntegrityEvent.kind == "EXPERIMENT_EXECUTION_STOOD_DOWN",
+            ExperimentIntegrityEvent.resolved_at.is_(None),
+        )
+    ):
+        prior.resolved_at = _now()
+        prior.resolution = reason
+    session.flush()
+
+
+def _record_stand_down(session, dep, *, allowlist_empty: bool, tags: list[str]) -> None:
     """Mark one live deployment as intentionally stood down, and clear its drift.
 
-    The canonical classification for "the operator emptied the live allowlist".
-    Without it a deliberate pause masquerades as an unexplained integrity failure:
-    the drift detector fires per book, the gates go BLOCKED_INTEGRITY, and the
-    event text asks the reader to classify the cause as a deployment revision, a
-    new epoch, a new version or platform impact — none of which is "someone turned
-    it off on purpose"."""
+    The canonical classification for "this book is not authorized to trade". Two
+    ways that happens, and BOTH are the operator doing it on purpose: the whole
+    allowlist is empty, or the allowlist carries other books and not this one.
+    Without this a deliberate pause masquerades as an unexplained integrity
+    failure: the drift detector fires per book, the gates go BLOCKED_INTEGRITY,
+    and the event text asks the reader to classify the cause as a deployment
+    revision, a new epoch, a new version or platform impact — none of which is
+    "someone turned it off on purpose".
+
+    This NARROWS the drift check only for a book that cannot place an order, so
+    it weakens no safeguard: an unauthorized book accrues no evidence to
+    contaminate, and the moment its tags return to the allowlist the comparison
+    runs again in full and any residual difference is recorded as real drift.
+    """
     epoch = session.get(ExperimentEpoch, dep.epoch_id)
     version = session.get(ExperimentVersion, epoch.version_id)
+    scope, described, resolved_because = _stand_down_scope(
+        allowlist_empty=allowlist_empty, tags=tags
+    )
     for drift in session.scalars(
         select(ExperimentIntegrityEvent).where(
             ExperimentIntegrityEvent.deployment_id == dep.id,
@@ -518,39 +618,54 @@ def _record_stand_down(session, dep) -> None:
     ):
         drift.resolved_at = _now()
         drift.resolution = (
-            "reclassified as an intentional operator stand-down: the runtime live "
-            "allowlist is empty, so no book is configured to trade. This is a "
-            "recorded state, not a contamination — the evidence gathered before "
-            "the stand-down is unaffected."
+            "reclassified as an intentional operator stand-down: "
+            f"{resolved_because}. This is a recorded state, not a contamination — "
+            "the evidence gathered before the stand-down is unaffected."
         )
-    already = session.scalar(
-        select(func.count()).select_from(ExperimentIntegrityEvent).where(
+    # Dedup on the SCOPE, not just the kind. A book that was stood down by an
+    # empty allowlist and is now the only book left out of a repopulated one is
+    # still stood down, but for a different reason, and the open record would
+    # otherwise keep reporting the reason that stopped being true.
+    already = session.scalars(
+        select(ExperimentIntegrityEvent).where(
             ExperimentIntegrityEvent.deployment_id == dep.id,
             ExperimentIntegrityEvent.kind == "EXPERIMENT_EXECUTION_STOOD_DOWN",
             ExperimentIntegrityEvent.resolved_at.is_(None),
         )
+    ).all()
+    if any((e.details_json or {}).get("scope", "allowlist_empty") == scope
+           for e in already):
+        session.flush()
+        return
+    _clear_stand_down(
+        session, dep,
+        reason=(
+            "superseded: the book is still stood down, but the reason changed — "
+            f"{resolved_because}"
+        ),
     )
-    if not already:
-        session.add(
-            ExperimentIntegrityEvent(
-                experiment_id=version.experiment_id,
-                version_id=version.id,
-                epoch_id=epoch.id,
-                deployment_id=dep.id,
-                kind="EXPERIMENT_EXECUTION_STOOD_DOWN",
-                severity="info",
-                detected_at=_now(),
-                description=(
-                    f"{dep.deployment_key} is intentionally stood down — the "
-                    "runtime live allowlist is empty, so this book places no new "
-                    "entries. Open positions still exit and settle. Evidence "
-                    "accrual is paused; existing evidence is unaffected and gate "
-                    "evaluation is NOT blocked."
-                ),
-                details_json={"live_strategies": "", "stood_down": True},
-                created_at=_now(),
-            )
+    session.add(
+        ExperimentIntegrityEvent(
+            experiment_id=version.experiment_id,
+            version_id=version.id,
+            epoch_id=epoch.id,
+            deployment_id=dep.id,
+            kind="EXPERIMENT_EXECUTION_STOOD_DOWN",
+            severity="info",
+            detected_at=_now(),
+            description=(
+                f"{dep.deployment_key} is intentionally stood down — {described}. "
+                "Open positions still exit and settle. Evidence accrual is paused; "
+                "existing evidence is unaffected and gate evaluation is NOT blocked."
+            ),
+            details_json={
+                "stood_down": True,
+                "scope": scope,
+                "registered_live_tags": list(tags),
+            },
+            created_at=_now(),
         )
+    )
     session.flush()
 
 
@@ -578,6 +693,8 @@ def runtime_config_check(session, settings) -> list[dict]:
     try:
         # An EMPTY live allowlist is an operator stand-down, not per-book drift.
         # `config.live_strategy_list` is explicit that empty means nothing trades.
+        # A NON-empty allowlist that omits one book is the same act at book scope;
+        # that half is decided per deployment inside the loop below.
         stood_down = not [
             t for t in (settings.live_strategies or "").split(",") if t.strip()
         ]
@@ -594,22 +711,54 @@ def runtime_config_check(session, settings) -> list[dict]:
             observed = _canonical_material(
                 _material_runtime_config(settings, material)
             )
-            if stood_down:
+            registered_tags = _registered_live_tags(material)
+            unauthorized = bool(registered_tags) and not _authorized_live_tags(
+                settings, material
+            )
+            expected = _canonical_material({k: material[k] for k in observed})
+            if stood_down or (
+                unauthorized
+                and _explained_by_stand_down(
+                    expected, observed, unauthorized_tags=registered_tags
+                )
+            ):
                 # An OPERATOR STAND-DOWN, not drift. Every registered live book
-                # "differs" from its registered config the moment the allowlist is
-                # emptied, so the drift detector would report one unexplained
-                # integrity failure per book — telling the operator N times that
-                # they did the thing they did, in the vocabulary of a malfunction.
+                # "differs" from its registered config the moment its tags leave
+                # the allowlist, so the drift detector would report an unexplained
+                # integrity failure per book — telling the operator that they did
+                # the thing they did, in the vocabulary of a malfunction.
+                #
+                # `unauthorized` is the per-book half (XOS-000012): standing ONE
+                # book down means naming the others in LIVE_STRATEGIES, which
+                # leaves the allowlist non-empty. Measured in production on
+                # mmsell-ceiling-live-1 — integrity event #16, whose only observed
+                # differences were live_strategies_contains ["Cmmsell10"] -> [] and
+                # the twin pairing that went with it, with book_params byte
+                # identical: nothing about the book's rules changed, it was simply
+                # switched off while three other canaries kept trading.
                 #
                 # Recorded as its own kind instead, and NON-BLOCKING: a stand-down
                 # means no NEW evidence accrues, not that existing evidence is
                 # contaminated. Blocking gate evaluation would conflate "nothing is
                 # running" with "what ran cannot be trusted", which are different
                 # claims about different things.
-                _record_stand_down(session, dep)
+                _record_stand_down(
+                    session, dep, allowlist_empty=stood_down, tags=registered_tags
+                )
                 continue
-            expected = _canonical_material({k: material[k] for k in observed})
             if observed == expected:
+                # Authorized AND matching: the book is running as registered, so
+                # any open stand-down record is over. A state nothing can end is
+                # not a state record — a re-armed book would otherwise read as
+                # stopped forever.
+                _clear_stand_down(
+                    session, dep,
+                    reason=(
+                        f"stand-down ended: the LIVE trading worker observed "
+                        f"{dep.deployment_key}'s tags back in the runtime "
+                        "allowlist with its registered material config intact"
+                    ),
+                )
                 # The authority on this book's config says it matches. Any open
                 # drift event about it is therefore stale — clear it, with the
                 # observation recorded. Without this, a false drift written by a

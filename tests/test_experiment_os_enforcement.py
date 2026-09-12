@@ -935,3 +935,186 @@ def test_readiness_is_not_failed_by_an_intentional_stand_down(xos_session,
     assert checks["no_unresolved_integrity"]["ok"], (
         "a pause the operator chose is not a reason the system is unready"
     )
+
+
+# ---------------------------------------------------------------------------
+# XOS-000012, the per-book half: standing ONE book down leaves the allowlist
+# NON-empty, so the whole-runtime branch above never fires and the book reads as
+# an unexplained integrity failure instead.
+#
+# Measured in production on mmsell-ceiling-live-1 (integrity event #16, open
+# 2026-09-06 → 2026-09-12, blocking live_canary_keep and paper_to_live_canary).
+# Its only observed differences were `live_strategies_contains ["Cmmsell10"] →
+# []` and the twin pairing that rode on that tag; `book_params` was byte
+# identical. Nothing about the book's rules changed — it was switched off while
+# three other canaries kept trading.
+# ---------------------------------------------------------------------------
+
+
+def _one_book_stood_down_settings():
+    """theta4 still trades; the two Lmmsell books are switched off. Their
+    registered params are UNCHANGED — the stand-down is the whole difference."""
+    from kalshi_bot.config import Settings
+
+    return Settings(
+        _env_file=None, bot_mode="live",
+        live_strategies="theta4",
+        live_paper_twins="", live_paper_twin_suffix="_pt3",
+        mmsell_variants=(
+            "Lmmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;Lmmsell10:lo=5,hi=10,maxyes=7"
+        ),
+    )
+
+
+def _open(s, kind, dep_key=None):
+    q = select(ExperimentIntegrityEvent).where(
+        ExperimentIntegrityEvent.kind == kind,
+        ExperimentIntegrityEvent.resolved_at.is_(None),
+    )
+    if dep_key is not None:
+        dep = s.scalar(select(ExperimentDeployment).where(
+            ExperimentDeployment.deployment_key == dep_key))
+        q = q.where(ExperimentIntegrityEvent.deployment_id == dep.id)
+    return s.scalars(q).all()
+
+
+def test_standing_one_book_down_is_a_stand_down_not_drift(xos_session, base_env):
+    s = xos_session
+    _seed_live_books(s)
+
+    findings = enf.runtime_config_check(s, _one_book_stood_down_settings())
+    s.commit()
+
+    assert findings == [], "switching one book off is not an unexplained failure"
+    assert _open(s, "EXPERIMENT_CONFIG_DRIFT", "lmmsell-live-1") == []
+    stood = _open(s, "EXPERIMENT_EXECUTION_STOOD_DOWN", "lmmsell-live-1")
+    assert len(stood) == 1
+    assert stood[0].severity == "info"
+    assert stood[0].details_json["scope"] == "book_not_allowlisted"
+    assert "Lmmsell8" in stood[0].description
+    # theta4 is still trading and must not be marked stopped.
+    assert _open(s, "EXPERIMENT_EXECUTION_STOOD_DOWN", "theta4-live-1") == []
+
+
+def test_an_open_drift_event_is_reclassified_when_one_book_is_stood_down(
+        xos_session, base_env):
+    """Event #16's exact shape: the drift was already open and blocking."""
+    s = xos_session
+    _seed_live_books(s)
+    dep = s.scalar(select(ExperimentDeployment).where(
+        ExperimentDeployment.deployment_key == "lmmsell-live-1"))
+    exp = read.get_experiment(s, "mmsell-scheduled-settle-live")
+    svc.record_integrity_event(
+        s, exp, kind="EXPERIMENT_CONFIG_DRIFT", deployment=dep,
+        description="runtime config differs from the registered deployment")
+    s.commit()
+
+    enf.runtime_config_check(s, _one_book_stood_down_settings())
+    s.commit()
+
+    drift = s.scalar(select(ExperimentIntegrityEvent).where(
+        ExperimentIntegrityEvent.kind == "EXPERIMENT_CONFIG_DRIFT"))
+    assert drift.resolved_at is not None
+    assert "intentional operator stand-down" in drift.resolution
+    assert "not a contamination" in drift.resolution
+    assert "not authorized to place a live order" in drift.resolution
+
+
+def test_a_stood_down_book_that_also_changed_its_rules_is_still_drift(
+        xos_session, base_env):
+    """The excuse covers the stand-down, and nothing else.
+
+    `book_params` is where a book's economics live. Editing them while the book
+    is off is a real change a reviewer must see when it is re-armed."""
+    s = xos_session
+    _seed_live_books(s)
+    from kalshi_bot.config import Settings
+
+    edited = Settings(
+        _env_file=None, bot_mode="live",
+        live_strategies="theta4",
+        live_paper_twins="", live_paper_twin_suffix="_pt3",
+        mmsell_variants="Lmmsell8:lo=9,hi=99;Lmmsell10:lo=1,hi=2",
+    )
+    findings = enf.runtime_config_check(s, edited)
+    s.commit()
+
+    assert [f["deployment"] for f in findings] == ["lmmsell-live-1"]
+    assert _open(s, "EXPERIMENT_CONFIG_DRIFT", "lmmsell-live-1")
+    assert _open(s, "EXPERIMENT_EXECUTION_STOOD_DOWN", "lmmsell-live-1") == []
+
+
+def test_the_per_book_stand_down_does_not_block_gate_evaluation(xos_session, base_env):
+    s = xos_session
+    _seed_live_books(s)
+    enf.runtime_config_check(s, _one_book_stood_down_settings())
+    s.commit()
+
+    from kalshi_bot.experiment_os.evaluator import _unresolved_integrity
+
+    exp = read.get_experiment(s, "mmsell-scheduled-settle-live")
+    ver = read.latest_version(s, exp)
+    assert _unresolved_integrity(s, exp, ver, read.open_epoch_for(s, ver)) == []
+
+
+def test_the_per_book_stand_down_is_not_duplicated_every_cycle(xos_session, base_env):
+    s = xos_session
+    _seed_live_books(s)
+    for _ in range(3):
+        enf.runtime_config_check(s, _one_book_stood_down_settings())
+        s.commit()
+    assert len(_open(s, "EXPERIMENT_EXECUTION_STOOD_DOWN", "lmmsell-live-1")) == 1
+
+
+def test_a_stand_down_that_changes_scope_supersedes_the_stale_record(
+        xos_session, base_env):
+    """The whole runtime stops, then other books are re-armed and this one is
+    not. It is still stood down — but "the allowlist is empty" has stopped being
+    true, and a record that keeps saying so is what sent this to the wrong
+    reader."""
+    s = xos_session
+    _seed_live_books(s)
+    enf.runtime_config_check(s, _stood_down_settings())
+    s.commit()
+    first = _open(s, "EXPERIMENT_EXECUTION_STOOD_DOWN", "lmmsell-live-1")
+    assert len(first) == 1
+    assert first[0].details_json["scope"] == "allowlist_empty"
+
+    enf.runtime_config_check(s, _one_book_stood_down_settings())
+    s.commit()
+
+    now_open = _open(s, "EXPERIMENT_EXECUTION_STOOD_DOWN", "lmmsell-live-1")
+    assert len(now_open) == 1, "still exactly one open record"
+    assert now_open[0].details_json["scope"] == "book_not_allowlisted"
+    superseded = s.get(ExperimentIntegrityEvent, first[0].id)
+    assert superseded.resolved_at is not None
+    assert "the reason changed" in superseded.resolution
+
+
+def test_re_arming_a_book_ends_its_stand_down(xos_session, base_env):
+    """A recorded STATE has to be able to end, or a re-armed book reads as
+    stopped forever and the live dashboard never shows it come back."""
+    s = xos_session
+    _seed_live_books(s)
+    enf.runtime_config_check(s, _one_book_stood_down_settings())
+    s.commit()
+    assert _open(s, "EXPERIMENT_EXECUTION_STOOD_DOWN", "lmmsell-live-1")
+
+    from kalshi_bot.config import Settings
+
+    rearmed = Settings(
+        _env_file=None, bot_mode="live",
+        live_strategies="theta4,Lmmsell8,Lmmsell10",
+        live_paper_twins="Lmmsell8:Lmmsell8_pt3,Lmmsell10:Lmmsell10_pt3,theta4:theta4_pt3",
+        live_paper_twin_suffix="_pt3",
+        mmsell_variants=(
+            "Lmmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;Lmmsell10:lo=5,hi=10,maxyes=7"
+        ),
+    )
+    assert enf.runtime_config_check(s, rearmed) == []
+    s.commit()
+
+    assert _open(s, "EXPERIMENT_EXECUTION_STOOD_DOWN", "lmmsell-live-1") == []
+    ended = s.scalar(select(ExperimentIntegrityEvent).where(
+        ExperimentIntegrityEvent.kind == "EXPERIMENT_EXECUTION_STOOD_DOWN"))
+    assert "stand-down ended" in ended.resolution
