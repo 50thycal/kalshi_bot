@@ -31,9 +31,8 @@ once Experiment OS can answer the same question. `docs/BOOK_REGISTRY.md` is
 historical research documentation, **not** a lifecycle database.
 
 **Two ledgers, one boundary (`DEC-001`).** The list above is *experiment truth*. Build
-OS (below) is canonical for the **development workflow** — architecture, decisions,
-active design/build work, PR handoffs, reviews. A workstream **links** to XOS objects
-and never copies a standing, a gate read or a P&L number. Chat is neither.
+OS (below) is canonical for the **development workflow**. A workstream **links** to XOS
+objects and never copies a standing, a gate read or a P&L number. Chat is neither.
 
 ## Experiment OS is live
 
@@ -51,20 +50,21 @@ Enforcement is **`NEW_ONLY`** in production since **2026-08-16T14:34:42.892897Z*
 - Gate verdicts are **recorded**, by the designated evaluator, on a bounded
   cadence. Automatic evaluation is allowed; automatic promotion never is. A dry
   run (including the Control Tower's) authorizes nothing.
-- Problems are durable state too. An anomaly, suspected defect, incident,
-  scientific question or shared-platform problem belongs in an **Experiment OS
-  issue** (`docs/EXPERIMENT_OS_ISSUES.md`), not in prose. A ticket routes work to
-  the existing role that owns the problem — there is no fixer role — and it never
-  changes a lifecycle state, gate, verdict, epoch, Version, Platform Revision or
-  exposure as a side effect.
+- Problems are durable state too: an anomaly, defect, incident or open question
+  belongs in an **Experiment OS issue** (`docs/EXPERIMENT_OS_ISSUES.md`), routed
+  to the role that owns it (there is no fixer role). A ticket never changes a
+  lifecycle state, gate, verdict, epoch, Version, Revision or exposure.
 - Read it: `docs/EXPERIMENT_OS_FOUNDATION.md`, `_METRICS`, `_ENFORCEMENT`,
   `_PLATFORM_IMPACT`, `_GATE_RESULTS`, `_ISSUES`, `_MIGRATION`; spec in
   `docs/EXPERIMENT_OPERATING_SYSTEM_SPEC.md`.
 
 ## Session role — establish this first
 
-If the opening message has not named a role (or said the work is
-task-specific), **ask before substantive repo work**:
+**Infer the role from the request when it is unambiguous** (a paper tape, probe
+or thesis → Research Lab; an incident, collector or real money → Live Ops; a
+fee/fill/taxonomy/metric semantic → Platform Change Review; "what is running" →
+Experiment Control Tower), state it in the identity header, and proceed. Only
+when the request is genuinely ambiguous **ask before substantive repo work**:
 
 ```
 Which session role should I follow?
@@ -77,10 +77,25 @@ Which session role should I follow?
 Then read `.claude/sessions/<role>.md` and follow it. **The role is sticky** —
 never ask twice in one session. Standing roles open their first substantive
 report with the identity header (`SESSION: … / MODE: … / ENFORCEMENT: … /
-AS OF: …`) so a user with many windows open knows what each one owns. A
-read-only role that finds a needed write **recommends the owning role**; it does
-not quietly become a write session. Menu and handoff format:
+AS OF: …`). A read-only role that finds a needed write **recommends the owning
+role**; it does not quietly become a write session. Menu and handoff format:
 `.claude/sessions/README.md`.
+
+## Standing authorizations and the closing brief (`DEC-012`)
+
+**The request is the approval for every step inside its scope.** A paper-scope
+request (a new paper tape, a probe, a paper-only env append, the session's own
+paper PR merge) runs **end to end off one message** when the criteria hold —
+`xos package-preflight` computes them — and reports once. A session asks only at
+a **hard stop** (`ARM_CANARY`, `LIVE_STRATEGIES`/`LIVE_ENABLED`/`KILL_SWITCH`,
+anything expanding real-money exposure or weakening a safeguard, a Platform
+Revision activation, the `ops` workflow file) or when a criterion fails, which
+is a `DECISION`, never a workaround. Tiers, chain and rules:
+`docs/STANDING_AUTHORIZATIONS.md`.
+
+**Close long sessions with the brief, not a narrative**: WHAT HAPPENED / GOAL /
+BLOCKERS / DECISIONS / NEXT STEPS, plain words, under 120 words, links after
+(`/session-brief`). Detail lives in the PR, the workstream and Experiment OS.
 
 ## Build OS
 
@@ -102,21 +117,14 @@ NOW`, `PARK`, `DISCARD` or an `OWNER DECISION`, never a new workstream. **Full p
 
 ### Project-specific: additions to Build OS
 
-- **Ordering.** Session role **first** (above), then the compatibility check. The role decides
-  what a session may write at all; the check only decides which protocol, and grants no write.
-- **The authority boundary is a hard rule.** Experiment OS stays canonical for experiments,
-  Versions, epochs, deployments, arms, gates, platform revisions, impact actions, enforcement
-  and XOS issues. A workstream restating any of those is malformed — link.
-- **A workstream authorizes nothing, and `SHIP` reports only the development gate.** Phase and
-  status are development state; only Experiment OS's services register, arm, promote, pause or
-  retire. `SHIP`'s `Next action` is the merge — an Experiment OS action that follows is a
-  **guard for the operator**, never a Build OS next step and never something the PR authorized.
-- **Two owner-facing surfaces, one boundary.** The identity header opens a *session* (who is
-  speaking); the Owner Result closes a *piece of work* on the PR (where it landed). Never in
-  the same block; the header never carries a result, the result never a session state.
-- **A safety floor on proportionality.** Nothing touching real-money exposure, the arming path,
-  a live safeguard, a gate or the ops channel is ever **simple**, whatever its diff size.
-- **No transcripts.** Persist conclusions, models, decisions, open questions — never logs.
+Session role **first**, then the compatibility check (the check grants no write). The
+authority boundary is a hard rule: Experiment OS stays canonical for every XOS object — a
+workstream **links**, never restates. A workstream authorizes nothing and `SHIP` reports only
+the development gate; an XOS action that follows a merge is a **guard for the operator**.
+The identity header (who is speaking) and the Owner Result on the PR (where work landed)
+never share a block. Nothing touching real-money exposure, the arming path, a live
+safeguard, a gate or the ops channel is ever **simple**. No transcripts — persist
+conclusions, decisions and open questions, never logs. Full text: `docs/BUILD_OS.md`.
 
 ## Universal safety invariants
 
@@ -166,20 +174,12 @@ CLI — `control-tower`, `list`, `show`, `scoreboard`, `enforcement`, `readiness
 newest 80 files — read yours promptly and persist what matters elsewhere.
 
 **The `EXPERIMENT_OS_*_COMMAND` transports are single-slot**, consumed at the
-worker's next boot. Send a whole ticket workflow as ONE array of envelopes (one
-boot, not one per command), and expect a `REFUSED` verdict if another session's
-envelope is still unconsumed — that guard is protecting their work, not
-malfunctioning. Details: `docs/OPS_RUNBOOK.md`, `docs/EXPERIMENT_OS_ISSUES.md`.
-
-**Never force-refresh `ops`.** The runner already checks the default branch out
-separately and executes only that code, so a merge to the default branch is live
-on the next request — there is nothing to refresh. `refs/heads/ops` is protected
-against force pushes and deletion; ordinary request and result commits are
-unaffected. A genuine workflow-file change follows the deliberate maintenance
-procedure in `docs/OPS_RUNBOOK.md` ("Protecting the `ops` branch"). Never merge
-`ops` into the default branch.
-
-Full mechanism, standing analysis commands and gotchas: **`docs/OPS_RUNBOOK.md`**.
+worker's next boot. Send a whole workflow as ONE array of envelopes, and expect a
+`REFUSED` verdict if another session's envelope is still unconsumed — that guard
+is protecting their work. **Never force-refresh `ops`**: the runner executes
+default-branch code, so a merge is live on the next request; `refs/heads/ops` is
+protected, a workflow-file change follows the maintenance procedure, and `ops` is
+never merged into the default branch. Full mechanism: **`docs/OPS_RUNBOOK.md`**.
 
 ## Pointers
 
@@ -189,11 +189,11 @@ Full mechanism, standing analysis commands and gotchas: **`docs/OPS_RUNBOOK.md`*
 - Why it works this way → `docs/DECISIONS.md`
 - Development protocol + templates → `docs/BUILD_OS.md`, `docs/templates/`
 - Ops + standing analyses → `docs/OPS_RUNBOOK.md`
+- Standing authorizations + closing brief → `docs/STANDING_AUTHORIZATIONS.md`
 - Platform change protocol → `docs/EXPERIMENT_OS_PLATFORM_IMPACT.md`
 - Investigation / issue workflow → `docs/EXPERIMENT_OS_ISSUES.md`
-- Shared skills → `.claude/skills/` (process: `finite-work-handoff`; research:
+- Shared skills → `.claude/skills/` (process: `finite-work-handoff`, `session-brief`; research:
   `kalshi-idea-model`, `kalshi-probe-builder`, `kalshi-strategy`; evo: `evo-ticket-triage`;
   live canary: `live-paper-parallel`; evo readability: `bot-readable-strategy`)
-- Evo agent fleet → `docs/EVOLUTIONARY_AGENT_SYSTEM.md`, `docs/EVO_RUNBOOK.md`
-- Evo historical search (agent capability, replay-proven) → `docs/EVO_SEARCH_CAPABILITY.md`
+- Evo fleet → `docs/EVOLUTIONARY_AGENT_SYSTEM.md`, `docs/EVO_RUNBOOK.md`, `docs/EVO_SEARCH_CAPABILITY.md`
 - Research history → `docs/RESEARCH_JOURNAL.md`, thesis docs in `docs/`

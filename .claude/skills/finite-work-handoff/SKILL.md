@@ -126,6 +126,13 @@ status. A PR awaiting review says so and carries no marker.
 - A completed workstream's `Next Step` is **`None.`** Not "open a ticket", not "follow up
   later". Deferred ideas live in the parking lot and nowhere else.
 
+## The chat message that closes the session
+
+Durable state first, then the **brief** (`session-brief`): WHAT HAPPENED / GOAL /
+BLOCKERS / DECISIONS / NEXT STEPS, plain words, under 120 words, links after. The owner
+result lives on the PR; the brief is chat and links to it. A long technical narrative in
+chat is the anti-pattern this replaces (`DEC-012`).
+
 ## The final check
 
 Before ending, ask:

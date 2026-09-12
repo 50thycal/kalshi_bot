@@ -404,6 +404,19 @@ def cmd_evaluate_gates(session: Session, args) -> int:
     return 0
 
 
+def cmd_package_preflight(session: Session, args) -> int:
+    """READ: the mechanical criteria for REGISTER_PACKAGE, plus the envelope."""
+    from . import preflight
+
+    if not args.package:
+        print(json.dumps(preflight.list_packages(), indent=2))
+        return 0
+    report = preflight.package_preflight(session, args.package)
+    print(json.dumps(report, indent=2, default=str) if args.json
+          else preflight.render(report))
+    return 0 if report["verdict"] == "GO" else 1
+
+
 def cmd_enforcement(session: Session, args) -> int:
     from .enforcement import enforcement_report
 
@@ -830,6 +843,15 @@ def build_parser() -> argparse.ArgumentParser:
         "enforcement", help="current mode, cutover, lineage coverage, canary links"
     )
     p_enf.set_defaults(fn=cmd_enforcement)
+
+    p_pp = sub.add_parser(
+        "package-preflight",
+        help="mechanical criteria for REGISTER_PACKAGE on one reviewed package "
+        "(exit 1 on NO-GO); no package = list the packages",
+    )
+    p_pp.add_argument("package", nargs="?", default=None)
+    p_pp.add_argument("--json", action="store_true")
+    p_pp.set_defaults(fn=cmd_package_preflight)
 
     p_rdy = sub.add_parser(
         "readiness", help="the mechanical pre-cutover checklist (exit 1 when not ready)"

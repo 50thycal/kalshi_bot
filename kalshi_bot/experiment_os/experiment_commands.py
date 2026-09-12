@@ -181,6 +181,12 @@ class ExperimentPackage:
     #: #266 defect class, and it should fail in CI rather than in front of an
     #: operator with a write already submitted.
     activation_vars: frozenset[str] = frozenset()
+    #: The concrete strategy tags `register` maps onto arms, declared so
+    #: `package-preflight` can check them for collisions BEFORE the envelope is
+    #: sent. Optional: a package that leaves it empty skips that one check (the
+    #: resolver still refuses two active arms on one tag at run time). Must be
+    #: the module's own tag constants, never retyped literals.
+    strategy_tags: tuple[str, ...] = ()
     #: A one-shot lineage REPAIR: reviewed code that fixes deployment rows an
     #: engine defect left inconsistent. Deliberately its own slot rather than a
     #: mode of `register` — a repair authors no contract, moves no lifecycle
@@ -265,6 +271,7 @@ def _packages() -> dict[str, ExperimentPackage]:
                 "money: it registers the contract that lets three paper books start."
             ),
             register=correlation_cap.register,
+            strategy_tags=(correlation_cap.CONTROL_TAG, correlation_cap.CAPPED_TAG),
         ),
         "mmsell-reviewed-universe": ExperimentPackage(
             name="mmsell-reviewed-universe",
@@ -283,6 +290,7 @@ def _packages() -> dict[str, ExperimentPackage]:
                 "registers the contract that lets two paper books start."
             ),
             register=reviewed_universe.register,
+            strategy_tags=(reviewed_universe.CONTROL_TAG, reviewed_universe.CAPPED_TAG),
         ),
         "marktangle-reversion": ExperimentPackage(
             name="marktangle-reversion",

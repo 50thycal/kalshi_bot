@@ -18,7 +18,10 @@ match, so a session asking about tickets could silently *become* the Evo Ticket
 Workshop — which §16.8 of the spec explicitly warns against. Role selection must
 be an explicit act, so it lives in instructions and a menu, not in a matcher.
 
-Sticky by construction: the rule says "ask once, then follow"; nothing re-asks.
+Sticky by construction: the rule says "infer or ask once, then follow"; nothing
+re-asks. Since `DEC-012` the menu is the fallback, not the default: an unambiguous
+request (a paper tape, an incident, a shared semantic, a status question) selects
+its role directly and the session states it in the identity header.
 
 ## 2. What Experiment OS made obsolete
 

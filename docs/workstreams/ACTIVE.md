@@ -3,7 +3,7 @@
 The project's active-work control board — what is being designed and built right now, and
 where each effort is. Read it first on a continuation.
 
-**Updated:** 2026-09-10 (WS-015 experiment retired) · **Build OS v0.12**
+**Updated:** 2026-09-12 (WS-016 opened) · **Build OS v0.12**
 
 | ID | Workstream | Phase | Status | Current Next Step | Related PR |
 |---|---|---|---|---|---|
@@ -14,6 +14,7 @@ where each effort is. Read it first on a continuation.
 | [WS-006](WS-006-evo-search-capability.md) | Evo historical search capability (agents search their own strategy space) | REVIEW | Active | D1 CLEAN 2026-08-28 (both runs identical across processes, all three legs). D2 is the remaining prerequisite and is Platform Change Review work; no prospective cohort without it plus explicit operator approval | [#261](https://github.com/50thycal/kalshi_bot/pull/261), [#262](https://github.com/50thycal/kalshi_bot/pull/262), [#263](https://github.com/50thycal/kalshi_bot/pull/263) |
 | [WS-007](WS-007-mmsell10-live-canary.md) | mmsell10 Stage-1 live canary + exact paper twin | REVIEW | Active — **LIVE** | ARMED 2026-08-28T14:20:35Z, activated 14:48Z. Real money at risk inside the Stage-1 envelope ($1/order, 1 contract, $5 daily stop, $15 budget). Watch the pre-registered keep/stop clauses; `live_canary_keep` stays BLOCKED_DATA until 150 settled contracts | [#264](https://github.com/50thycal/kalshi_bot/pull/264), [#265](https://github.com/50thycal/kalshi_bot/pull/265), [#266](https://github.com/50thycal/kalshi_bot/pull/266), [#267](https://github.com/50thycal/kalshi_bot/pull/267) |
 | [WS-009](WS-009-livedash-load-and-selection.md) | Live-vs-paper dashboard: load cost, run selection, retired-pair landing | REVIEW | Active | Merged (#271, #272, #273). Selection, layout and D3 all verified; one item left — confirm on the deployed livedash that first paint is seconds not half a minute, which needs an operator or a browser on the public URL | [#271](https://github.com/50thycal/kalshi_bot/pull/271) |
+| [WS-016](WS-016-standing-authorizations.md) | Standing authorizations: one-request paper tapes, hard stops, the closing brief | REVIEW | Active | Owner merges; then decide which of WS-004/006/009 pauses (board is at five Active, limit four — recommendation WS-009) | this PR |
 | [WS-014](WS-014-evo-fleet-health-and-xos-bridge.md) | Evo fleet health: dead peer-visibility path + the evo→XOS bridge | REVIEW | Paused | Fleet paused 2026-09-06 (operator, cost) — `EVO_WEEKLY_LLM_CEILING_USD=0` on the evo service. D1/D2 merged (#328) but never observed running before the pause. Resume: raise the ceiling back to 8, then check whether `evo_listeners`/`evo_influences` populate | [#328](https://github.com/50thycal/kalshi_bot/pull/328) |
 
 *Phase:* IDEA · EXPLORE · MODEL · DECIDE · BUILD_CARD · READY_TO_BUILD · BUILDING · REVIEW
@@ -24,8 +25,8 @@ Completed and abandoned workstreams leave this table; their files remain.
 counts only `Active` rows. `Blocked` — which requires a *named* external unblocker, not
 "waiting" — and `Paused` are not consuming operator attention, and a research repository
 runs several pre-registered threads that wait on evidence rather than on the operator. The
-board sits **at** the limit today (`WS-004`, `WS-006`, `WS-007`, `WS-009`); a fifth `Active`
-row requires completing, pausing or blocking one of them. Reason recorded in `DEC-011`.
+board is **one over** the limit today (`WS-004`, `WS-006`, `WS-007`, `WS-009`, `WS-016`) —
+`WS-016` was opened on an explicit operator request, and its D1 asks which row pauses. Reason recorded in `DEC-011`.
 
 ---
 

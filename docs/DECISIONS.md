@@ -885,3 +885,72 @@ deviation in `Spec Deviations` now has nothing downstream to catch it.
 and past acceptances are **not** converted into approvals; or if the four-row limit turns out
 to be describing the board rather than constraining it, which would be an argument for the
 canonical three and a decision about what pauses.
+
+### DEC-012 — Standing authorizations: the request is the approval inside its scope; hard stops stay explicit; long sessions close with a brief
+
+**Date:** 2026-09-12
+**Status:** Accepted
+**Extends:** `DEC-011` (`solo` acceptance at merge), `DEC-009` (verified ops changes). `DEC-001` unchanged.
+
+**Context**
+
+The operating system was correct and slow. A new paper tape — a package module, a PR, a
+merge, a `REGISTER_PACKAGE` envelope, an `MMSELL_VARIANTS` append, a verification read —
+took five or six operator replies even when every criterion was met, because each step was
+written as a separate confirmation and no surface said which steps a request had already
+authorized. The same shape recurred in every role: the confirmations were real safeguards
+in one place (arming, `LIVE_STRATEGIES`) and pure ceremony everywhere else (a paper book
+that cannot place an order), and the playbooks did not distinguish them.
+
+Separately, every long session ended with the operator asking the same five questions —
+what happened, is the goal done, what blocks, what must I decide, what is next — because
+the default closing message was a technical narrative that answered none of them first.
+
+**Decision**
+
+1. **Three tiers, written down** (`docs/STANDING_AUTHORIZATIONS.md`). *Free* actions are
+   never asked about. *Request-authorized* actions take their approval from the operator's
+   request itself, provided the criteria hold: a paper-scope chain — package PR, merge,
+   `REGISTER_PACKAGE`, paper env append — runs end to end off one message and reports once.
+   *Hard stops* — `ARM_CANARY`, `LIVE_STRATEGIES`/`LIVE_ENABLED`/`BOT_MODE`/`KILL_SWITCH`,
+   anything expanding real-money exposure or weakening a safeguard, a Platform Revision
+   activation, the `ops` workflow file — are answered by the operator in that session, in
+   words that name the action, and are never inferred from a request that implies them.
+2. **The criteria are computed, not asked.** `xos package-preflight <package>` is a
+   read-only CLI command, allowlisted on the ops channel, that checks the mechanical
+   criteria (package known and registers, experiment not RETIRED, no declared tag carried by
+   another experiment, complete active snapshot, no command mid-execution) and prints the
+   exact envelope on `GO`. Packages declare `strategy_tags` from their own constants for the
+   collision check. A `NO-GO`, a duplicate or a revival is a `DECISION`, never a workaround.
+3. **The merge of a paper-scope PR transcribes the request as the owner's acceptance.** In
+   `solo` mode an agent still never issues `Owner-accepted` on its own authority; here it
+   transcribes one the owner gave, naming the channel (the request in a named session), and
+   still states that no independent party reviewed the change. This never extends to the
+   hard-stop tier, where the merge stays the owner's.
+4. **Role inference.** An unambiguous request selects its role; the session states it in
+   the identity header and proceeds. The menu is the fallback for ambiguity, and the role is
+   sticky either way.
+5. **The closing brief is the default.** WHAT HAPPENED / GOAL / BLOCKERS / DECISIONS / NEXT
+   STEPS, plain words, under 120 words, links after. `/session-brief` renders it on demand.
+   The Owner Result on the PR and the identity header are unchanged and never merge into it.
+
+**Consequences**
+
+*Better:* a paper tape is one request and one report. Ceremony no longer dilutes the
+confirmations that matter, so a hard stop reads as one. "Meets the criteria" is a program
+output with a receipt-ready envelope attached, which also removes the retyping that produced
+the Gmmsell2-era failure modes.
+
+*Worse, honestly:* the agent now merges its own paper-scope PRs and sends registration
+envelopes without a pause. The mitigations are structural — the transport arms nothing, a
+paper book cannot place a real order, `STAND_DOWN` reverses a registration, and the hard-stop
+list is short and literal — but a mis-scoped request will be executed faithfully rather than
+questioned. The preflight is mechanical; the duplicate and revival criteria are still
+judgment, stated in one line each with the Control Tower read they came from.
+
+*Unchanged:* every real-money invariant in `CLAUDE.md`; `arm_live_canary`'s refusals; the
+ops channel's read-only boundary; `DEC-001`.
+
+*Revisit if:* a request-authorized chain ever touches a hard-stop item without stopping
+(that is a defect in the tier list, fixed by widening it), or the brief starts hiding
+material deviations (the 120-word cap is a ceiling on narrative, not on truth).

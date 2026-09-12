@@ -27,6 +27,32 @@ Before generating anything, prevent duplication and revival:
 idea → screen against history/testability → PRE-REGISTER the gate → probe
      → verdict → only PASS creates/advances the Experiment OS path → paper
 ```
+
+### The one-request paper tape (`DEC-012`)
+
+"I want a new paper tape for X" is **one request, one chain, one report**. The
+request authorizes every paper-scope step; ask at none of them
+(`docs/STANDING_AUTHORIZATIONS.md`):
+
+```
+1 Control Tower read → not a duplicate, not a revival (state both, one line each)
+2 thesis doc + package module (arms/gate/tags as literals, `strategy_tags`
+  declared from the module's own constants) + tests + `_packages()` entry
+3 PR (body = handoff, owner result transcribes the request as the acceptance),
+  CI green, MERGE — request-authorized because the scope is paper
+4 xos package-preflight <package> → GO  (default-branch code: after the merge)
+5 send the printed envelope: actor_role RESEARCH_LAB, approved_by = the
+  operator's name, reason = the request in one line
+6 receipt SUCCEEDED → xos show <key>: every tag on an ACTIVE arm
+7 activation_vars declared? read the LIVE value, append, set — never retype
+8 readback + control-tower after SILENT_ARM_HOURS: no silent arm
+9 closing brief
+```
+
+A preflight `NO-GO`, a duplicate, a revival, or a red CI is a **`DECISION`** with
+the failing criterion and a recommendation — never a criterion argued into
+passing. The chain stops at any step that would touch a hard-stop item (real
+money, `LIVE_*`, a safeguard); paper never does.
 Experiment OS owns the lifecycle. Create real objects — experiment, version,
 arms (with a control), frozen contract, gate with its floors, epoch, deployment —
 rather than describing them in Markdown. Under NEW_ONLY an unregistered tag
@@ -38,7 +64,8 @@ pre-registered gate with its sample floor, the cheapest probe that could falsify
 it, and the cost.
 
 ## HANDOFF / ROLE-CHANGE RULES
-Live promotion → operator-approved `arm_live_canary` (never autonomous).
+Live promotion → operator-approved `arm_live_canary` (never autonomous — a
+**hard stop**, never inferred from a request that merely implies it).
 Shared semantics → **Platform Change Review**. Portfolio questions →
 **Experiment Control Tower**.
 
@@ -108,6 +135,7 @@ anything that puts real money at risk.
 - `kalshi-idea-model` (generate + screen), `kalshi-probe-builder` (pre-register +
   run a probe), `kalshi-strategy` (build the book). All three defer to Experiment
   OS for lifecycle — they do not define a second one.
+- `session-brief` — the default closing message after a long session.
 - `finite-work-handoff` — the cross-session procedure: the mission contract, the four
   dispositions for an out-of-mission finding (`FIX NOW` / `PARK` / `DISCARD` /
   `OWNER DECISION`), and the one terminal owner result. It never overrides this role's
