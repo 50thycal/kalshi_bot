@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "84497b8ced82ecaf2420b64dba42157f45f15129",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-12T02:36:10Z",
+  "id": "var-post-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/var-post-1.receipt.json",
+  "result_file": "ops/results/var-post-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34668106955",
+  "service": "main",
+  "started_at": "2026-09-12T02:36:10Z",
+  "targets": [],
+  "type": "env"
+}
