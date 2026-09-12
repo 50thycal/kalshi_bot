@@ -608,6 +608,12 @@ def _arm(s, exp, gate, **overrides):
         live_key="canary-live-1", twin_key="canary-twin-1",
         live_tags={"a": "Lcx", "c": "Lcx_c"},
         twin_tags={"a": "Lcx_pt", "c": "Lcx_c_pt"},
+        # Every live deployment must register a baseline the drift check can
+        # compare (XOS-000036) — both books, not just the first.
+        config={"material": enf.live_material_block(books={
+            "Lcx": ("Lcx_pt", "lo=5,hi=10"),
+            "Lcx_c": ("Lcx_c_pt", "lo=5,hi=10"),
+        })},
         started_at=_dt(2026, 8, 10),
     )
     kw.update(overrides)
@@ -1118,3 +1124,135 @@ def test_re_arming_a_book_ends_its_stand_down(xos_session, base_env):
     ended = s.scalar(select(ExperimentIntegrityEvent).where(
         ExperimentIntegrityEvent.kind == "EXPERIMENT_EXECUTION_STOOD_DOWN"))
     assert "stand-down ended" in ended.resolution
+
+
+# ---------------------------------------------------------------------------
+# XOS-000036: a live deployment the drift check CANNOT compare.
+#
+# `runtime_config_check` read `config_json['material']` and skipped any live
+# deployment without one — silently. Three canary packages wrote their own flat
+# shape (`book_spec` / `twin_tag` / `risk`), so two of the three OPEN live
+# deployments in production had never been compared against anything since the
+# day they armed (ops `pcr-depcfg-20260912`): mmsell-capacity-live-1 (Dmmsell10)
+# and mmsell-contestcap-live-2 (Fmmsell10), the latter the only book in the
+# runtime allowlist. Real money, a safeguard believed to be running, and no
+# record either way — which is why Dmmsell10 leaving LIVE_STRATEGIES produced
+# neither an integrity event nor a stand-down.
+# ---------------------------------------------------------------------------
+
+
+def test_live_material_block_names_every_book_it_is_given():
+    block = enf.live_material_block(books={
+        "Xm10": ("Xm10_pt4", "lo=5,hi=10"),
+        "Xm8": ("Xm8_pt4", "lo=5,hi=12"),
+    })
+    assert block["live_strategies_contains"] == ["Xm10", "Xm8"]
+    assert block["twin_pairs"] == {"Xm10": "Xm10_pt4", "Xm8": "Xm8_pt4"}
+    # The twin carries a None spec: it is built from the parent with only the
+    # tag replaced, so a twin that GREW its own params is drift.
+    assert block["book_params"] == {
+        "Xm10": "lo=5,hi=10", "Xm10_pt4": None,
+        "Xm8": "lo=5,hi=12", "Xm8_pt4": None,
+    }
+    with pytest.raises(ValueError):
+        enf.live_material_block(books={})
+
+
+def test_a_material_block_naming_no_live_tag_is_not_comparable():
+    """The check and the stand-down branch are BOTH keyed on
+    `live_strategies_contains`. A block without it compares nothing and reports
+    agreement, which is indistinguishable from coverage and worse than none."""
+    assert enf.live_material_or_none(None) is None
+    assert enf.live_material_or_none({"risk": {"stage": "x"}}) is None
+    assert enf.live_material_or_none({"material": {"book_params": {}}}) is None
+    assert enf.live_material_or_none(
+        {"material": {"live_strategies_contains": []}}
+    ) is None
+    ok = {"material": enf.live_material_block(books={"Xm10": ("Xm10_pt", "lo=5")})}
+    assert enf.live_material_or_none(ok) == ok["material"]
+
+
+def _strip_material(s, dep_key: str) -> ExperimentDeployment:
+    """Reproduce the production shape: a live deployment carrying `risk` and no
+    `material`, exactly as the three packages registered it."""
+    dep = s.scalar(select(ExperimentDeployment).where(
+        ExperimentDeployment.deployment_key == dep_key))
+    dep.config_json = {"book_spec": "x:lo=5", "twin_tag": "x_pt", "risk": {}}
+    s.commit()
+    return dep
+
+
+def test_a_live_deployment_with_no_baseline_is_recorded_not_skipped(
+    xos_session, base_env
+):
+    s = xos_session
+    _seed_live_books(s)
+    _strip_material(s, "lmmsell-live-1")
+
+    assert enf.runtime_config_check(s, _one_book_stood_down_settings()) == []
+    s.commit()
+
+    unverifiable = _open(s, "EXPERIMENT_CONFIG_UNVERIFIABLE", "lmmsell-live-1")
+    assert len(unverifiable) == 1, "a skip is the one outcome nobody can review"
+    assert unverifiable[0].severity == "error"
+    assert unverifiable[0].details_json["unverifiable"] is True
+    assert "book_spec" in unverifiable[0].details_json["config_keys"]
+    # It is NOT drift and NOT a stand-down: nothing is known about this book's
+    # config either way, which is the entire finding.
+    assert _open(s, "EXPERIMENT_CONFIG_DRIFT", "lmmsell-live-1") == []
+    assert _open(s, "EXPERIMENT_EXECUTION_STOOD_DOWN", "lmmsell-live-1") == []
+
+    # Recorded once, however often the worker boots.
+    enf.runtime_config_check(s, _one_book_stood_down_settings())
+    s.commit()
+    assert len(_open(s, "EXPERIMENT_CONFIG_UNVERIFIABLE", "lmmsell-live-1")) == 1
+
+
+def test_an_unverifiable_baseline_blocks_no_verdict_but_is_no_recorded_state():
+    """Two different questions, and one frozenset used to answer both.
+
+    Non-blocking: "we never compared this book" is a statement about the CHECK,
+    not an accusation against the evidence — and blocking would hold the book's
+    KILL gate, which is the dangerous direction (event #16 did exactly that for
+    six days). Not a recorded state: nobody has diagnosed it, so the Control
+    Tower must still raise it."""
+    assert "EXPERIMENT_CONFIG_UNVERIFIABLE" in enf.NON_BLOCKING_INTEGRITY_KINDS
+    assert "EXPERIMENT_CONFIG_UNVERIFIABLE" not in enf.RECORDED_STATE_INTEGRITY_KINDS
+    assert enf.RECORDED_STATE_INTEGRITY_KINDS <= enf.NON_BLOCKING_INTEGRITY_KINDS
+
+
+def test_registering_a_baseline_resolves_the_unverifiable_record(
+    xos_session, base_env
+):
+    """It resolves through the audited runtime path — the live worker observing
+    a comparable book — not by hand."""
+    s = xos_session
+    _seed_live_books(s)
+    dep = _strip_material(s, "lmmsell-live-1")
+    enf.runtime_config_check(s, _one_book_stood_down_settings())
+    s.commit()
+    assert _open(s, "EXPERIMENT_CONFIG_UNVERIFIABLE", "lmmsell-live-1")
+
+    dep.config_json = {
+        **dep.config_json,
+        "material": enf.live_material_block(books={
+            "Lmmsell8": ("Lmmsell8_pt3", "lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY"),
+            "Lmmsell10": ("Lmmsell10_pt3", "lo=5,hi=10,maxyes=7"),
+        }),
+    }
+    s.commit()
+
+    assert enf.runtime_config_check(s, _one_book_stood_down_settings()) == []
+    s.commit()
+    assert _open(s, "EXPERIMENT_CONFIG_UNVERIFIABLE", "lmmsell-live-1") == []
+    # ...and now that it CAN be compared, the stand-down it was hiding appears.
+    assert len(_open(s, "EXPERIMENT_EXECUTION_STOOD_DOWN", "lmmsell-live-1")) == 1
+
+
+def test_arming_a_live_canary_without_a_baseline_is_refused(
+    xos_session, xos_platform
+):
+    s = xos_session
+    exp, ver, epoch, gate = _canary_ready(s)
+    with pytest.raises(svc.ExperimentOsError, match="material config baseline"):
+        _arm(s, exp, gate, config={"risk": {"stage": "canary_stage_1"}})

@@ -339,6 +339,11 @@ INTEGRITY_OWNER: dict[str, str] = {
     "HELD_CONSTANT_CHANGED": (
         "Platform Change Review — something the experiment held constant moved"
     ),
+    "EXPERIMENT_CONFIG_UNVERIFIABLE": (
+        "Platform Change Review (the deployment carries no comparable registered "
+        "baseline, so drift on it cannot be detected) — nothing is known to have "
+        "drifted; register the baseline and the comparison runs"
+    ),
 }
 
 
@@ -811,10 +816,12 @@ def _derive_actions(rep: TowerReport) -> None:
                     rep.realizable_context.append(ctx)
             for ev in v["integrity_events"]:
                 kind = ev.get("kind") or ""
-                if kind in enf.NON_BLOCKING_INTEGRITY_KINDS:
+                if kind in enf.RECORDED_STATE_INTEGRITY_KINDS:
                     # Its cause is already recorded, so "route by cause" is not a
                     # question anyone needs to answer. Asking it is exactly how a
                     # deliberate pause starts reading as an unexplained failure.
+                    # An UNVERIFIABLE live config is deliberately not in this set:
+                    # nobody has diagnosed it, so it still needs a reader.
                     rep.recorded_state.append(
                         f"{v['key']}: {kind} — {ev.get('description') or 'recorded state'}"
                     )
@@ -1015,7 +1022,9 @@ def _silent_arms(session, rep: TowerReport) -> list[dict]:
         for v in views:
             if v["key"] in blocked_experiments:
                 continue
-            if any(ev.get("kind") in enf_mod.NON_BLOCKING_INTEGRITY_KINDS
+            # A recorded stand-down explains silence; an unverifiable config
+            # does not, so only the first suppresses this detector.
+            if any(ev.get("kind") in enf_mod.RECORDED_STATE_INTEGRITY_KINDS
                    for ev in v["integrity_events"]):
                 continue
             # Every (arm x kind) the experiment is armed in. A row exists only
@@ -1244,10 +1253,14 @@ def _detect_candidates(session, rep: TowerReport) -> list[dict]:
             # deliberate pause starts reading as an unexplained failure.
             recorded_state = {
                 ev.get("kind") for ev in v["integrity_events"]
-                if ev.get("kind") in enf_mod.NON_BLOCKING_INTEGRITY_KINDS
+                if ev.get("kind") in enf_mod.RECORDED_STATE_INTEGRITY_KINDS
             }
             for ev in v["integrity_events"]:
-                if ev.get("kind") in enf_mod.NON_BLOCKING_INTEGRITY_KINDS:
+                # RECORDED_STATE, not NON_BLOCKING: the two sets differ by
+                # EXPERIMENT_CONFIG_UNVERIFIABLE, which blocks no verdict but has
+                # no recorded cause either — it IS the undiagnosed problem, so it
+                # emits a candidate like any other unresolved event (XOS-000036).
+                if ev.get("kind") in enf_mod.RECORDED_STATE_INTEGRITY_KINDS:
                     continue
                 out.append(_candidate(
                     detector=issue_policy.DETECTOR_INTEGRITY_EVENT,

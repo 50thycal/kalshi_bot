@@ -148,6 +148,10 @@ To run a request:
    // repair deployment rows an engine defect left inconsistent — no contract,
    // no lifecycle state, no gate, no live lineage
    {"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"tmmsell-repair-1\",\"action\":\"REPAIR_LINEAGE\",\"actor\":\"claude-code\",\"actor_role\":\"TASK_SPECIFIC\",\"payload\":{\"package\":\"tmmsell-epoch-repair\",\"reason\":\"XOS-000011\"},\"schema_version\":1}"}}
+   // XOS-000036: backfill the drift-check baseline on the two live deployments
+   // that never carried one. RESTORES a safeguard, so expect the live worker's
+   // next boot to record Dmmsell10's stand-down and to start comparing Fmmsell10
+   {"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"pcr-material-repair-1\",\"action\":\"REPAIR_LINEAGE\",\"actor\":\"claude-code\",\"actor_role\":\"TASK_SPECIFIC\",\"payload\":{\"package\":\"live-material-baseline-repair\",\"reason\":\"XOS-000036\"},\"schema_version\":1}"}}
    // arm the canary — EXPANDS REAL-MONEY CAPABILITY; Live Ops only
    {"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"mm10-arm-1\",\"action\":\"ARM_CANARY\",\"actor\":\"claude-code\",\"actor_role\":\"LIVE_OPS\",\"payload\":{\"package\":\"mmsell10-canary\",\"approved_by\":\"<operator>\"},\"schema_version\":1}"}}
    // record an experiment that ran and finished OUTSIDE the system, and retire it

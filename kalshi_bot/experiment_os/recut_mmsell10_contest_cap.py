@@ -89,7 +89,7 @@ from datetime import datetime, timezone
 from sqlalchemy import func, select
 
 from ..models import PaperTrade as PaperTradeRef
-from . import service
+from . import enforcement, service
 from .lifecycle import DeploymentKind, ImpactClass, LifecycleState
 from .models import (
     ExperimentDeployment,
@@ -169,8 +169,18 @@ def material_config() -> dict:
     `book_spec` still carries `contestcap=1`, so editing the cap out of
     `MMSELL_VARIANTS` while this canary runs is still recorded as
     EXPERIMENT_CONFIG_DRIFT and still takes the keep gate to BLOCKED_INTEGRITY.
+
+    Which it did not do until XOS-000036: the drift check reads
+    `config['material']` and this returned three keys of its own naming, so
+    `mmsell-contestcap-live-2` — the ONE book in the runtime allowlist — was
+    outside the check from the instant it armed, with this docstring asserting
+    the opposite. The block is now built by the engine's `live_material_block`;
+    `arm_live_canary` refuses a live deployment without one.
     """
     return {
+        "material": enforcement.live_material_block(
+            books={LIVE_TAG: (TWIN_TAG, BOOK_PARAMS)},
+        ),
         "book_spec": LIVE_BOOK_SPEC,
         "twin_tag": TWIN_TAG,
         "risk": RISK_ENVELOPE,

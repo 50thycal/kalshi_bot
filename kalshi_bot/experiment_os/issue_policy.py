@@ -825,6 +825,11 @@ def recommend_owner(
 _INTEGRITY_KIND_CAUSE: dict[str, str] = {
     "EXPERIMENT_CONFIG_DRIFT": "shared_semantics",
     "HELD_CONSTANT_CHANGED": "shared_semantics",
+    # The registered baseline a live deployment must carry for the drift check to
+    # compare it at all is part of the Experiment Engine's own contract with
+    # whoever registers a deployment, not an operational fault of the running
+    # book — so it routes where the semantic lives (XOS-000036).
+    "EXPERIMENT_CONFIG_UNVERIFIABLE": "shared_semantics",
 }
 
 #: The three causes §6 recognises for an integrity problem, and who owns each.

@@ -444,6 +444,78 @@ def tag_admissible(session, tag: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
+#: The key inside a live deployment's `config_json` that `runtime_config_check`
+#: compares against the running Settings. It is a CONTRACT between whoever
+#: registers a live deployment and this module, and it was an unwritten one until
+#: XOS-000036: three canary packages each wrote their own flat shape
+#: (`book_spec` / `twin_tag` / `risk`), the check found no `material` key, and
+#: skipped those books in silence. `live_material_block` below is now the only
+#: sanctioned way to build one, and `arm_live_canary` refuses a live deployment
+#: without it.
+MATERIAL_KEY = "material"
+
+
+def live_material_block(*, books: dict[str, tuple[str | None, str | None]]) -> dict:
+    """The `material` block for a live canary deployment — the ONE builder.
+
+    `books` maps each LIVE tag the deployment runs to `(twin_tag, book_params)`.
+    A mapping rather than one pair of keywords because a live deployment may
+    carry an arm per book, and a baseline naming only the first would quietly
+    leave the others uncompared — the same shape of hole this builder exists to
+    close.
+
+    Three facts, and each is compared by `_material_runtime_config`:
+
+      * `live_strategies_contains` — the tags this deployment claims the runtime
+        allowlist authorizes. Load-bearing twice over: it is what a drift
+        comparison is about, and it is what tells a per-book stand-down
+        (`_authorized_live_tags`) from an unexplained difference.
+      * `twin_pairs` — the live → twin pairing that rides on that tag.
+      * `book_params` — the book's economics, which is what its scientific
+        contract is actually about. The twin tag is named with a `None` spec on
+        purpose: the twin is built from the parent with only the tag replaced, so
+        a future refactor that gave it independent parameters is caught rather
+        than silently permitted.
+
+    A package passes its own literal constants; nothing here is derived from the
+    running configuration, which is the whole point — a baseline recomputed from
+    the runtime would match it by construction and check nothing.
+    """
+    if not books or not all(books):
+        raise ValueError("a live deployment's material block needs its live tags")
+    params: dict[str, str | None] = {}
+    pairs: dict[str, str | None] = {}
+    for live_tag, (twin_tag, book_params) in books.items():
+        params[live_tag] = book_params
+        pairs[live_tag] = twin_tag
+        if twin_tag:
+            params[twin_tag] = None
+    return {
+        "live_strategies_contains": sorted(books),
+        "twin_pairs": pairs,
+        "book_params": params,
+    }
+
+
+def live_material_or_none(config: dict | None) -> dict | None:
+    """The comparable `material` block of a live deployment's config, or None.
+
+    None means THIS DEPLOYMENT CANNOT BE DRIFT-CHECKED — either no block at all,
+    or one that names no live tag. The second case matters as much as the first:
+    `live_strategies_contains` is what the comparison and the stand-down branch
+    are both keyed on, so a block without it is compared against nothing and
+    silently reports agreement. Both are answered with a recorded
+    `EXPERIMENT_CONFIG_UNVERIFIABLE` event rather than a skip.
+    """
+    material = (config or {}).get(MATERIAL_KEY)
+    if not isinstance(material, dict) or not material:
+        return None
+    tags = material.get("live_strategies_contains")
+    if not isinstance(tags, list) or not [t for t in tags if t]:
+        return None
+    return material
+
+
 def _canonical_material(value):
     """Order-insensitive canonical form of a material-config fact.
 
@@ -490,12 +562,26 @@ def _material_runtime_config(settings, material: dict) -> dict:
     return out
 
 
-#: Integrity kinds that record a STATE rather than a contamination. They stay open
-#: for as long as the state holds and deliberately do not block gate evaluation —
-#: see `_record_stand_down` for why the distinction is load-bearing.
-NON_BLOCKING_INTEGRITY_KINDS: frozenset[str] = frozenset({
+#: Integrity kinds that record a STATE whose cause is already known. They stay
+#: open for as long as the state holds, do not block gate evaluation, and — this
+#: is the part that is only true of THIS set — need no investigation: the Control
+#: Tower deliberately emits no ticket candidate for them, because manufacturing
+#: one is how a deliberate pause starts reading as an unexplained failure.
+RECORDED_STATE_INTEGRITY_KINDS: frozenset[str] = frozenset({
     "EXPERIMENT_EXECUTION_STOOD_DOWN",
 })
+
+#: Integrity kinds that do not block gate evaluation. A SUPERSET of the recorded
+#: states, and the difference is the point (XOS-000036): "this book's running
+#: config was never compared against its registered baseline" is a statement
+#: about the CHECK's coverage, not a claim that the evidence is contaminated — so
+#: it must not block a verdict, and it must still be diagnosed. Blocking on it
+#: would also hold the book's KILL gate, which is the dangerous direction: event
+#: #16 held `live_canary_keep` for six days on a live book for exactly that
+#: reason. Non-blocking and loud; never quiet.
+NON_BLOCKING_INTEGRITY_KINDS: frozenset[str] = RECORDED_STATE_INTEGRITY_KINDS | {
+    "EXPERIMENT_CONFIG_UNVERIFIABLE",
+}
 
 
 def _registered_live_tags(material: dict) -> list[str]:
@@ -669,6 +755,81 @@ def _record_stand_down(session, dep, *, allowlist_empty: bool, tags: list[str]) 
     session.flush()
 
 
+def _clear_unverifiable(session, dep, *, reason: str) -> None:
+    """Close any open unverifiable record for `dep` — it is comparable again."""
+    for prior in session.scalars(
+        select(ExperimentIntegrityEvent).where(
+            ExperimentIntegrityEvent.deployment_id == dep.id,
+            ExperimentIntegrityEvent.kind == "EXPERIMENT_CONFIG_UNVERIFIABLE",
+            ExperimentIntegrityEvent.resolved_at.is_(None),
+        )
+    ):
+        prior.resolved_at = _now()
+        prior.resolution = reason
+    session.flush()
+
+
+def _record_unverifiable(session, dep, *, config_keys: list[str]) -> None:
+    """Record that an open LIVE deployment has no comparable registered baseline.
+
+    The defect this replaces (XOS-000036) was one line — `if not material:
+    continue`. Two of the three open live canaries carried a `risk` block and no
+    `material` block, so the drift check walked straight past them from the
+    moment they armed: `mmsell-capacity-live-1` (`Dmmsell10`, armed 2026-09-02)
+    and `mmsell-contestcap-live-2` (`Fmmsell10`, armed 2026-09-07, and the only
+    book in the runtime allowlist). Each package's own docstring asserted the
+    opposite — that editing its book out of `MMSELL_VARIANTS` would be recorded
+    as drift and take the keep gate to BLOCKED_INTEGRITY. Real money, a safeguard
+    believed to be running, and nothing recorded either way.
+
+    A skip is the one outcome that cannot be reviewed, so there is no longer one.
+    The event is NON-BLOCKING (the evidence is not accused of anything) and is
+    NOT a recorded state (its cause is an open defect, so the Control Tower
+    raises it as a ticket candidate like any other unresolved event). It resolves
+    by registering the baseline — `repair_live_material_baseline` for a book
+    already armed — after which the comparison simply runs.
+    """
+    already = session.scalars(
+        select(ExperimentIntegrityEvent).where(
+            ExperimentIntegrityEvent.deployment_id == dep.id,
+            ExperimentIntegrityEvent.kind == "EXPERIMENT_CONFIG_UNVERIFIABLE",
+            ExperimentIntegrityEvent.resolved_at.is_(None),
+        )
+    ).all()
+    if already:
+        return
+    epoch = session.get(ExperimentEpoch, dep.epoch_id)
+    version = session.get(ExperimentVersion, epoch.version_id)
+    session.add(
+        ExperimentIntegrityEvent(
+            experiment_id=version.experiment_id,
+            version_id=version.id,
+            epoch_id=epoch.id,
+            deployment_id=dep.id,
+            kind="EXPERIMENT_CONFIG_UNVERIFIABLE",
+            severity="error",
+            detected_at=_now(),
+            description=(
+                f"{dep.deployment_key} is an OPEN LIVE deployment with no "
+                "comparable registered config baseline, so the drift check has "
+                "never compared it against the running configuration and cannot: "
+                f"its config_json carries {sorted(config_keys) or 'nothing'} and "
+                "no usable 'material' block naming its live tags. Nothing is "
+                "known to have drifted — what is known is that drift on this book "
+                "would not be detected. Gate evaluation is NOT blocked; register "
+                "the baseline to make the comparison run."
+            ),
+            details_json={
+                "unverifiable": True,
+                "config_keys": sorted(config_keys),
+                "remedy": "register a material block via enforcement.live_material_block",
+            },
+            created_at=_now(),
+        )
+    )
+    session.flush()
+
+
 def runtime_config_check(session, settings) -> list[dict]:
     """Compare each ACTIVE live deployment's registered material config against the
     running Settings. A mismatch records an unresolved EXPERIMENT_CONFIG_DRIFT
@@ -705,9 +866,22 @@ def runtime_config_check(session, settings) -> list[dict]:
             )
         ).all()
         for dep in deployments:
-            material = (dep.config_json or {}).get("material")
-            if not material:
+            material = live_material_or_none(dep.config_json)
+            if material is None:
+                # NOT a skip. See `_record_unverifiable`: a live book the check
+                # cannot compare is the one case a silent `continue` made
+                # permanently invisible, on real money.
+                _record_unverifiable(
+                    session, dep, config_keys=list((dep.config_json or {}).keys())
+                )
                 continue
+            _clear_unverifiable(
+                session, dep,
+                reason=(
+                    f"{dep.deployment_key} now carries a comparable registered "
+                    "material baseline; the drift comparison runs again"
+                ),
+            )
             observed = _canonical_material(
                 _material_runtime_config(settings, material)
             )
@@ -1103,7 +1277,17 @@ def enforcement_report(session) -> dict:
     open_recorded_state = session.scalar(
         select(func.count()).select_from(ExperimentIntegrityEvent).where(
             ExperimentIntegrityEvent.resolved_at.is_(None),
-            ExperimentIntegrityEvent.kind.in_(NON_BLOCKING_INTEGRITY_KINDS),
+            ExperimentIntegrityEvent.kind.in_(RECORDED_STATE_INTEGRITY_KINDS),
+        )
+    ) or 0
+    # Counted on its own line, in NEITHER bucket above. It blocks nothing, so it
+    # is not an integrity failure; its cause is an open defect, so it is not a
+    # recorded state either. Folding it into one of them is how it would go quiet
+    # again (XOS-000036).
+    open_unverifiable = session.scalar(
+        select(func.count()).select_from(ExperimentIntegrityEvent).where(
+            ExperimentIntegrityEvent.resolved_at.is_(None),
+            ExperimentIntegrityEvent.kind == "EXPERIMENT_CONFIG_UNVERIFIABLE",
         )
     ) or 0
 
@@ -1131,6 +1315,7 @@ def enforcement_report(session) -> dict:
         "live_canaries": live_canaries,
         "unresolved_integrity_events": open_integrity,
         "recorded_state_events": open_recorded_state,
+        "unverifiable_live_config": open_unverifiable,
         "unresolved_config_drift": open_drift,
         "session_counters": {
             "blocked": state.blocked_count if state else 0,

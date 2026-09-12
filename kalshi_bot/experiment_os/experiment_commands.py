@@ -249,6 +249,7 @@ def _packages() -> dict[str, ExperimentPackage]:
         queue_aware_cancel,
         recut_mmsell10_contest_cap,
         repair_dark_live_canaries,
+        repair_live_material_baseline,
         repair_tmmsell_epoch,
         restore_mmsell9_epoch,
         reviewed_universe,
@@ -348,6 +349,31 @@ def _packages() -> dict[str, ExperimentPackage]:
             ),
             register=_no_contract,
             repair=repair_dark_live_canaries.repair,
+        ),
+        "live-material-baseline-repair": ExperimentPackage(
+            name="live-material-baseline-repair",
+            # Metadata only, as above: the repair names both deployments as
+            # literals in TARGETS and reaches nothing else.
+            experiment_key=successor_mmsell10_capacity.SUCCESSOR_KEY,
+            description=(
+                "XOS-000036: backfill the drift-check baseline "
+                "(config_json['material']) on the two OPEN live deployments that "
+                "never carried one — mmsell-capacity-live-1 (Dmmsell10) and "
+                "mmsell-contestcap-live-2 (Fmmsell10). Their packages wrote a flat "
+                "shape of their own naming, so runtime_config_check found no "
+                "'material' key and skipped both books in silence from the instant "
+                "they armed: no drift comparison ever ran on either, and no "
+                "per-book stand-down was recorded when Dmmsell10 left "
+                "LIVE_STRATEGIES. Writes the package's OWN reviewed literals, "
+                "never anything read back from the runtime, and only after every "
+                "one agrees with what the row already stores. Authorises nothing, "
+                "moves no lifecycle state, touches no gate and cannot reach "
+                "LIVE_STRATEGIES — it RESTORES a safeguard, so expect the live "
+                "worker's next boot to record the stand-down, the drift, or "
+                "nothing, through the audited path."
+            ),
+            register=_no_contract,
+            repair=repair_live_material_baseline.repair,
         ),
         "tmmsell-epoch-repair": ExperimentPackage(
             name="tmmsell-epoch-repair",
