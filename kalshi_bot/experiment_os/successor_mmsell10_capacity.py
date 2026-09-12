@@ -260,7 +260,17 @@ def register(
         ).all()
         if _epoch_experiment_id(session, d) == predecessor.id
     ]
-    ending = [d for d in open_deps if d.kind == "paper"]
+    # Only the deployments carrying the tag this successor REUSES may end. The
+    # earlier `kind == "paper"` selected every open paper deployment of the
+    # predecessor, and on 2026-09-02 that ended `mmsell-ceiling-paper-mmsell9-1`
+    # too — the carrier the canary package had opened so `mmsell9` stayed
+    # admissible. Nothing re-registered it; `mmsell9` was refused at the write
+    # path for 9.6 days (XOS-000033). The shared selector narrows to PAPER_TAG and
+    # refuses outright if a deployment it would end also carries a tag we are NOT
+    # taking over, because that tag would be stranded the same way.
+    ending, left_open = service.select_handover_deployments(
+        open_deps, taking_over={PAPER_TAG}, tags_of=lambda d: _tags_of(session, d),
+    )
     draining = [d for d in open_deps if d.kind != "paper"]
 
     # The guard now scopes to what is actually being ended, which is the honest
@@ -414,6 +424,10 @@ def register(
         "epoch": epoch,
         "paper_deployment": paper,
         "ended_deployments": [d.deployment_key for d in ending],
+        # Paper deployments of the predecessor that carry none of the tags this
+        # successor takes over. Left running on purpose, and named in the receipt
+        # so an operator can see the handover did NOT touch them.
+        "left_open_deployments": [d.deployment_key for d in left_open],
         "still_draining": [d.deployment_key for d in draining],
         "registered_at": at,
         "evidence_started_at": evidence_at,
