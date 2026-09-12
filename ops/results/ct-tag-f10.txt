@@ -1,6 +1,0 @@
-# ops request [READ]
-# type=xos  id=ct-tag-f10
-# code 1a541e15ca80c71a1e0241950251843bd18fba41 · started 2026-09-12T16:42:53Z
-experiment                        state        ver  arm       role       epoch  deployment                stage        kind
---------------------------------  -----------  ---  --------  ---------  -----  ------------------------  -----------  ----
-mmsell-price-ceiling-contest-cap  LIVE_CANARY  1    mmsell10  treatment  3      mmsell-contestcap-live-2  LIVE_CANARY  live
