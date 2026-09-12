@@ -1,6 +1,6 @@
 # WS-017 — Passive BTC/ETH perp reversion: probe first
 
-**Build OS:** v0.12 · **Phase:** REVIEW · **Status:** Active
+**Build OS:** v0.12 · **Phase:** COMPLETE · **Status:** Complete
 **Related PR:** [#397](https://github.com/50thycal/kalshi_bot/pull/397)
 
 ## Goal
@@ -52,13 +52,22 @@ Merge authorization: Calvin's explicit 2026-09-12 approval in this session of th
 read-only allowlist addition, testing and merge. Accepted head will be recorded on the PR.
 Framework compatibility checked against canonical Build OS v0.12 on 2026-09-12.
 11 targeted tests pass; changed Python files compile/import and pass ruff.
-Finalization: pushed. This PR ships the instrument; the mission remains open for its run
-and result logging. No architecture or shared metric behavior changes.
+Finalization: pushed. #397 shipped the instrument; the results closeout records its run
+and closes the mission. No architecture or shared metric behavior changes.
 
 ## Next Step
 
-After green CI and the approved merge of #397, run the frozen census, log its result
-and close this bounded workstream.
+None.
+
+## Completion
+
+#397 merged after both full CI runs passed. The default-branch read-only probe executed
+successfully as `passive-perp-20260912-1`; the result is linked and interpreted in the
+[census Results](../PASSIVE_PERP_CENSUS.md#results--2026-09-12), journal and scorecard.
+This standalone census is not an XOS experiment or lifecycle transition. Its frozen
+spending rule does not advance to a collector or paper contract. Both alternatives remain
+parked. The ops channel was reset to noop after the completed request. No outstanding
+in-scope implementation task or live exposure change.
 
 ## Parked
 
