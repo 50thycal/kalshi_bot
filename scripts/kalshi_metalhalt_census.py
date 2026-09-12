@@ -163,10 +163,45 @@ def discount_cents(c: dict, result: str) -> float | None:
     return None
 
 
+def _cvol(c: dict) -> float:
+    """Candle volume, tolerant of the `_fp` spelling Kalshi's newer payloads use."""
+    return xl._num(c.get("volume_fp")) or xl._num(c.get("volume")) or 0.0
+
+
+def settle_value(m: dict):
+    """The market's recorded settlement reference, whichever key the payload carries."""
+    for k in ("settlement_value", "expiration_value", "settlement_value_dollars",
+              "expiration_value_dollars"):
+        v = m.get(k)
+        if v not in (None, ""):
+            return xl._num(v)
+    return None
+
+
+def frozen_reference_test(rows: list[tuple[float, float, float]]) -> dict:
+    """rows = [(decided_from_ts, close_ts, settle_value)] for inside/tail windows.
+
+    If the reference feed were truly halted, every window decided inside the SAME halt
+    stretch would settle on the SAME last pre-halt print. Group by halt stretch (windows
+    whose decided_from instants are within 49 h of each other and contiguous) and count
+    distinct settlement values per stretch. Any stretch with > 1 distinct value means the
+    feed printed during the "halt" — the premise, not the tape, is what fails."""
+    rows = sorted(r for r in rows if r[2] is not None)
+    stretches: list[list[tuple[float, float, float]]] = []
+    for r in rows:
+        if stretches and r[0] - stretches[-1][-1][1] <= 3600:
+            stretches[-1].append(r)
+        else:
+            stretches.append([r])
+    moved = [s for s in stretches if len(s) >= 2 and len({round(x[2], 4) for x in s}) > 1]
+    return {"stretches": len(stretches), "multi": sum(1 for s in stretches if len(s) >= 2),
+            "moved": len(moved), "windows": len(rows)}
+
+
 def tape_read(series: str, ticker: str, decided_from: float, close_ts: float,
               result: str) -> dict:
     cs = candles(series, ticker, int(decided_from) - 60, int(close_ts) + 60)
-    active = [c for c in cs if xl._num(c.get("volume")) > 0
+    active = [c for c in cs if _cvol(c) > 0
               and xl._num(c.get("end_period_ts")) > decided_from]
     discs = [d for d in (discount_cents(c, result) for c in active) if d is not None]
     at_bar = sum(1 for d in discs if d >= DISCOUNT_BAR_CENTS)
@@ -195,6 +230,7 @@ def main(argv: list[str] | None = None) -> int:
     tally: dict[tuple[str, str], dict] = defaultdict(lambda: {"n": 0, "vol": 0.0})
     open_tally: dict[tuple[str, str], int] = defaultdict(int)
     samples: list[tuple[str, str, float, float, str, float]] = []
+    frozen_rows: list[tuple[float, float, float]] = []
     metal_series: dict[str, int] = defaultdict(int)
 
     for ev in settled_evs:
@@ -208,6 +244,8 @@ def main(argv: list[str] | None = None) -> int:
             rec["n"] += 1
             rec["vol"] += _vol(m)
             result = (m.get("result") or "").lower()
+            if cls in ("inside", "tail"):
+                frozen_rows.append((decided_from, _ts(m.get("close_time")), settle_value(m)))
             if cls in ("inside", "tail") and result in ("yes", "no") and _vol(m) > 0:
                 samples.append((series, m.get("ticker") or "", decided_from,
                                 _ts(m.get("close_time")), result, _vol(m)))
@@ -236,6 +274,16 @@ def main(argv: list[str] | None = None) -> int:
     print(f"\n  settled pinned (inside+tail): n={pinned} vol={pinned_vol:.0f} | boundary "
           f"(excluded) n={boundary} | with-volume samples={len(samples)} | floor={N_FLOOR}")
 
+    print("\n== C0 frozen-reference test (do windows decided in the SAME halt settle on the "
+          "SAME value?) ==")
+    fr = frozen_reference_test(frozen_rows)
+    print(f"  pinned windows with a recorded settlement value: {fr['windows']} | halt stretches: "
+          f"{fr['stretches']} (with >= 2 windows: {fr['multi']}) | stretches whose settlement "
+          f"value MOVED: {fr['moved']}")
+    if fr["windows"] == 0:
+        print("  (no settlement value on the market rows — the test cannot run; fall back to C3)")
+    feed_moves = fr["multi"] > 0 and fr["moved"] > 0
+
     print("\n== C3 post-pin tape (1-min candles from decided_from → close; quote = candle close) ==")
     samples.sort(key=lambda s: -s[5])
     probed = with_tape = 0
@@ -257,7 +305,14 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  pinned universe exists (n >= {N_FLOOR} settled w/ volume): "
           f"{len(samples) >= N_FLOOR} ({len(samples)})")
     print(f"  post-pin tape at a discount observed: {with_tape}/{probed} probed")
-    if len(samples) >= N_FLOOR and with_tape:
+    print(f"  settlement reference moves inside the halt (C0): {feed_moves}")
+    if feed_moves:
+        print("  VERDICT: KILL (PREMISE) — windows decided inside the same nominal Pyth halt settle "
+              "on DIFFERENT values, so the settlement feed Kalshi uses keeps printing (Pyth's "
+              "24/7 metals indices, launched 2026-06). There is no frozen window to pin; the "
+              "July exclusion of metals was right for this venue. Closes the metals axis of "
+              "WS-005 D1.")
+    elif len(samples) >= N_FLOOR and with_tape:
         print("  VERDICT: PROMOTE-TO-PROBE — point scripts/kalshi_freeze_study.py at the metals "
               "series with the Pyth halt calendar as the dark-window rule (WS-005 D1: a "
               "qualifying universe exists on the settlement-source axis).")
