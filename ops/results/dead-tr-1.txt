@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=dead-tr-1
-# code ce1215a40dc8d607316bd35d83d39e6b5f52e6b5 · started 2026-09-11T15:21:37Z
-occurred_at                       from_state  to_state     actor        approved_by  version  epoch_number  reason                                                                                                                
---------------------------------  ----------  -----------  -----------  -----------  -------  ------------  ----------------------------------------------------------------------------------------------------------------------
-2026-08-16 14:14:43.720928+00:00              PAPER        import                                           legacy import (ACTIVE_PAPER, integrity B)                                                                             
-2026-08-28 14:20:35.572574+00:00  PAPER       LIVE_CANARY  claude-code  50thycal     2                      mmsell10 Stage-1 live canary armed on Cmmsell10 with twin Cmmsell10_pt3 at one boundary; envelope pre-registered on v2
-
-(2 rows)
