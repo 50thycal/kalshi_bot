@@ -1,6 +1,6 @@
 # PASSIVE-PERP — BTC/ETH price-return and testability census
 
-**Status:** pre-registered 2026-09-12; pending first production probe.
+**Status:** pre-registered and probed 2026-09-12; **HOLD — mixed / fee-and-control-negative price screen.** No paper promotion.
 **Owner request:** Calvin selected passive BTC/ETH perp reversion and explicitly approved
 the read-only probe allowlist change, testing and merge in this ChatGPT session on 2026-09-12.
 **Build:** [WS-017](workstreams/WS-017-passive-perp-probe.md).
@@ -100,3 +100,42 @@ Run only after the approved PR merges to default:
 
 Read `ops/results/passive-perp-20260912-1.txt`. Record code SHA, dataset hash and census
 verdict here and in the journal/scorecard. Reset only this session's own request to noop.
+
+## Results — 2026-09-12
+
+Executed at 19:12:28 UTC on merged code `f19e6d2620c32e911f1fba422fe8b10304b46ce0`
+([implementation PR #397](https://github.com/50thycal/kalshi_bot/pull/397)).
+[Immutable request-ID output](https://github.com/50thycal/kalshi_bot/blob/ops/ops/results/passive-perp-20260912-1.txt).
+Dataset SHA-256: `59b6bc01f5c417b7985d967bf064f5634ece43e36cf7def4efdb85e69e824f3d`.
+
+| Measurement (bps per entry notional unless noted) | BTC | ETH |
+|---|---:|---:|
+| Complete hypothetical positions | 49 | 44 |
+| Censored positions | 0 | 0 |
+| UTC entry dates | 4 | 4 |
+| Retained snapshots | 1,404 | 1,404 |
+| Nominal 60-second coverage over frozen four-day window | 24.375% | 24.375% |
+| Premium convergence (not outright P&L) | +6.7618 | +8.6218 |
+| Mid-price return | -1.3649 | +3.2972 |
+| Instant-maker quote return, zero fees/funding | -0.8360 | +4.0482 |
+| Same maker scenario, historical 2 bps/leg fee, **before funding** | **-4.8359** | **+0.0482** |
+| Random-direction maker control, zero fees/funding | +0.9253 | +4.7067 |
+| Taker quote return, historical 12 bps/leg fee, before funding | -25.8931 | -21.4536 |
+
+C1 meets its descriptive path floor; 40 candidate windows were excluded for gaps.
+C2 does not fire because ETH's zero-fee maker mean is positive. C3 fails: BTC loses
+after the fee sensitivity and **both assets trail their matched control**. The frozen
+verdict is therefore **HOLD**, not a family-wide KILL and not a surviving price screen.
+No net P&L was reported: funding is unmeasured and maker fills remain unproven.
+
+The premium/price distinction is material, not cosmetic: the positive premium changes
+coexist with negative BTC outright returns. ETH's +0.0482 bps before funding is effectively
+flat under an already optimistic fill scenario; it does not justify picking ETH alone.
+Daily results in the raw output also show sensitivity to the first partial date. This is
+context only, not a new exclusion or decision rule.
+
+**Disposition:** bounded census complete. Do not build a collector/paper book, select a
+winning subset or sweep parameters on this tape. Revisit only with a mechanically distinct
+premise and a new pre-registration, or independently sourced prospective evidence with
+funding and credible execution measurement. Historical PERP-V1 state is unchanged.
+The session reset its own ops request to noop after reading the result.
