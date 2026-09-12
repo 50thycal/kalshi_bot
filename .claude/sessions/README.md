@@ -20,8 +20,22 @@ own copy of experiment state.
 
 `.claude/settings.json` runs a `SessionStart` hook that prints `ROUTER.txt` into
 every new session, and `CLAUDE.md` carries the same rule (it is auto-loaded).
-If the opening message names a role, start immediately. Otherwise ask once. The
-role is sticky for the session.
+If the opening message names a role, start immediately. If it makes the role
+unambiguous — a paper tape, probe or thesis is Research Lab; an incident,
+collector or real money is Live Ops; a shared semantic is Platform Change Review;
+"what is running" is the Control Tower — **infer it**, state it in the identity
+header, and proceed; the operator corrects it in a word. Ask once only when the
+request is genuinely ambiguous. The role is sticky for the session either way.
+
+## Standing authorizations and the brief
+
+`docs/STANDING_AUTHORIZATIONS.md` (`DEC-012`) sets the three tiers every role works
+under: **free** (reads, PRs, dispositions), **request-authorized** (the operator's
+request is the approval for the whole chain when the criteria hold — a paper tape
+runs end to end off one message), and **hard stop** (real money, safeguards,
+Platform Revision activation, the ops workflow). Each playbook names its own
+request-authorized and hard-stop actions. Long sessions close with the five-line
+brief (`/session-brief`), never a narrative.
 
 Roles are deliberately **not** implemented as skills: skills auto-trigger on
 description match, and a session must never *become* the Ticket Workshop by

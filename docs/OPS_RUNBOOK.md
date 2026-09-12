@@ -65,8 +65,22 @@ To run a request:
    so the operating layer can never drift from Experiment OS the way the retired
    status checkers drifted from each other. Allowlisted commands: `control-tower`,
    `list`, `show`, `transitions`, `platform`, `tag`, `scoreboard`, `enforcement`,
-   `readiness`, `evaluate-gates`, `metric`, `issue-list`, `issue-show`,
-   `issue-candidates`. Extra CLI flags go in `"args"`.
+   `readiness`, `evaluate-gates`, `metric`, `package-preflight`, `issue-list`,
+   `issue-show`, `issue-candidates`. Extra CLI flags go in `"args"`.
+
+   `package-preflight` is the mechanical half of "meets the criteria" for a
+   paper-tape registration (`docs/STANDING_AUTHORIZATIONS.md`): package known and
+   registers, experiment not RETIRED, no declared tag carried by another
+   experiment, a complete active snapshot, no command mid-execution. `GO` prints
+   the exact `REGISTER_PACKAGE` envelope to send (fill `approved_by` with the
+   operator's name); `NO-GO` exits 1 and names the failing criterion. With no
+   package it lists every reviewed package and its verbs. It runs default-branch
+   code, so a package on a feature branch is unknown to it until the merge.
+
+   ```jsonc
+   {"type":"xos","command":"package-preflight","id":"pp-list-1"}
+   {"type":"xos","command":"package-preflight","args":["mmsell-reviewed-universe"],"id":"pp-rmm-1"}
+   ```
 
    `issue-*` reads the durable investigation queue
    (`docs/EXPERIMENT_OS_ISSUES.md`): open issues, one investigation with its full

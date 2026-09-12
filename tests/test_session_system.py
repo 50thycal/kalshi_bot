@@ -115,6 +115,45 @@ def test_no_active_instruction_advertises_a_retired_workflow():
             )
 
 
+# ---------------------------------------------------------------------------
+# DEC-012 — standing authorizations, role inference, the closing brief
+# ---------------------------------------------------------------------------
+
+HARD_STOPS = ("ARM_CANARY", "LIVE_STRATEGIES", "LIVE_ENABLED", "KILL_SWITCH")
+
+
+def test_standing_authorizations_name_every_hard_stop():
+    """The tier list is what lets a paper chain run unasked; the hard stops are
+    the part that must never quietly shrink."""
+    body = (ROOT / "docs" / "STANDING_AUTHORIZATIONS.md").read_text()
+    for stop in HARD_STOPS:
+        assert stop in body, f"STANDING_AUTHORIZATIONS.md no longer names {stop}"
+    assert "package-preflight" in body
+    assert "REGISTER_PACKAGE" in body
+
+
+def test_router_surfaces_point_at_standing_authorizations_and_the_brief():
+    for path in (ROOT / "CLAUDE.md", SESSIONS / "ROUTER.txt", SESSIONS / "README.md"):
+        body = path.read_text()
+        assert "STANDING_AUTHORIZATIONS" in body, path.name
+        assert "brief" in body.lower(), path.name
+    # the menu stays as the fallback, and inference is stated ahead of it
+    router = (SESSIONS / "ROUTER.txt").read_text()
+    assert router.index("INFER") < router.index("Which session role should I follow?")
+
+
+def test_session_brief_skill_exists_with_the_five_headings():
+    body = (SKILLS / "session-brief" / "SKILL.md").read_text()
+    for heading in ("WHAT HAPPENED", "GOAL", "BLOCKERS", "DECISIONS", "NEXT STEPS"):
+        assert heading in body
+
+
+def test_research_lab_carries_the_one_request_chain():
+    body = (SESSIONS / "research-lab.md").read_text()
+    assert "package-preflight" in body
+    assert "hard stop" in body.lower()
+
+
 def test_control_tower_is_read_only_by_construction():
     """The Tower must not be able to write, whatever a future edit intends."""
     src = (ROOT / "kalshi_bot" / "experiment_os" / "control_tower.py").read_text()

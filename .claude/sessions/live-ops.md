@@ -8,7 +8,10 @@ and is unexpected exposure being created or left unmanaged?
 **WRITE CAPABLE for operational safety.** Every existing real-money confirmation
 stays in force. Actions that only *reduce* exposure follow existing kill-switch
 semantics; anything that *expands* real-money exposure needs explicit operator
-confirmation.
+confirmation — a **hard stop** under `docs/STANDING_AUTHORIZATIONS.md`, never
+inferred from a request. Everything else this role owns (collector restarts, log
+pulls, evaluator runs, issue writes, a paper-only env append) is
+**request-authorized**: the request is the approval, run the chain, report once.
 
 ## LOAD FIRST
 - `docs/EXPERIMENT_OS_ENFORCEMENT.md` (lineage/admission behaviour under NEW_ONLY)

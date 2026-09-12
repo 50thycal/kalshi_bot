@@ -94,6 +94,7 @@ XOS_EXPERIMENT_COMMAND_READS: dict[str, list[str]] = {
 XOS_DIRECT_READS: frozenset[str] = frozenset({
     "control-tower", "list", "show", "transitions", "platform", "tag",
     "scoreboard", "enforcement", "readiness", "evaluate-gates", "metric",
+    "package-preflight",
 })
 
 

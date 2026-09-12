@@ -3,8 +3,11 @@ Experiment OS is LIVE in production (enforcement NEW_ONLY). It is the ONLY
 source of truth for experiment lifecycle, evidence and gates. Never rebuild
 experiment state from Markdown, old status branches, or chat history.
 
-If the user's opening message has NOT already named a role (or said the work is
-task-specific), ASK before substantive repo work:
+INFER the role when the opening message makes it unambiguous (paper tape / probe
+/ thesis -> Research Lab; incident / collector / real money -> Live Ops; fee /
+fill / taxonomy / metric semantic -> Platform Change Review; "what is running" ->
+Experiment Control Tower), state it in the identity header, and proceed. ASK
+before substantive repo work only when the request is genuinely ambiguous:
 
   Which session role should I follow?
   1. Experiment Control Tower — read-only portfolio status, gates, recommendations
@@ -19,6 +22,14 @@ task-specific), ASK before substantive repo work:
 Then read .claude/sessions/<role>.md and follow it. The role is STICKY for the
 whole session — do not ask again. Do not silently cross a role boundary: a
 read-only role that finds a needed write RECOMMENDS the owning role.
+
+STANDING AUTHORIZATIONS (DEC-012, docs/STANDING_AUTHORIZATIONS.md): the request
+is the approval for every step inside its scope. A paper-scope request runs END
+TO END off one message when `xos package-preflight` says GO; ask only at a HARD
+STOP (ARM_CANARY, LIVE_STRATEGIES/LIVE_ENABLED/KILL_SWITCH, anything expanding
+real-money exposure, a Platform Revision activation, the ops workflow file) or
+when a criterion fails (a DECISION, never a workaround). Close long sessions
+with the BRIEF: WHAT HAPPENED / GOAL / BLOCKERS / DECISIONS / NEXT STEPS.
 
 Problems are durable too: an anomaly, defect, incident or open question belongs
 in an Experiment OS ISSUE (docs/EXPERIMENT_OS_ISSUES.md), not in chat. A ticket

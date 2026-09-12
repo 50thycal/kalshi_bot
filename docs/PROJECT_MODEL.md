@@ -144,9 +144,17 @@ books are grandfathered but may not silently evolve outside the system.
 
 Agent sessions adopt one **role** (`.claude/sessions/`) that bounds what they may write —
 Experiment Control Tower, Evo Control Tower, Evo Ticket Workshop, Platform Change Review,
-Research Lab, Legacy Migration, Live Ops, or task-specific. The role is chosen once and is
-sticky. A read-only role that discovers a needed write recommends the owning role rather
-than quietly becoming a write session.
+Research Lab, Legacy Migration, Live Ops, or task-specific. The role is inferred from the
+request when unambiguous, asked once otherwise, and is sticky. A read-only role that
+discovers a needed write recommends the owning role rather than quietly becoming a write
+session.
+
+**Standing authorizations** (`DEC-012`, `docs/STANDING_AUTHORIZATIONS.md`) set how far a
+request carries: reads and PRs are free; a paper-scope chain (package PR, merge,
+`REGISTER_PACKAGE`, paper env append) is authorized by the request itself and runs end to
+end once `xos package-preflight` says GO; real money, live safeguards, a Platform Revision
+activation and the ops workflow are hard stops answered by the operator in that session.
+Long sessions close with a five-line brief rather than a narrative.
 
 This is a real architectural constraint, not documentation: it is why a session that finds
 a platform defect produces a reviewed PR and an issue rather than an edit to production

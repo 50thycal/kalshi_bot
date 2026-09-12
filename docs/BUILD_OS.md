@@ -119,7 +119,8 @@ PR and next step.
 into an invisible one. If unsure whether something counts, it counts. Write `None`
 explicitly when there are none.
 
-Keep the final chat response to a line or two and the PR reference. That does not override a
+Close the session in chat with the **brief** — WHAT HAPPENED / GOAL / BLOCKERS / DECISIONS /
+NEXT STEPS, under 120 words, then the PR reference (`DEC-012`, `session-brief`). That does not override a
 standing role's identity header, a direct question, or an escalation that needs an answer.
 
 ## Finite work — discovery does not create work
@@ -205,6 +206,13 @@ Marked as such so a future upgrade can tell a deliberate local rule from stalene
   revision being registered.
 - **Real money.** Anything that expands live exposure needs explicit operator confirmation.
   A PR is not that confirmation. Say so in the handoff.
+- **Standing authorizations** (`DEC-012`, `docs/STANDING_AUTHORIZATIONS.md`). The operator's
+  request is the approval for every step inside its scope: a paper-scope chain — package PR,
+  merge, `REGISTER_PACKAGE`, paper env append — runs end to end off one message when
+  `xos package-preflight` says GO. In `solo` mode the merge of such a PR transcribes the
+  request as the owner's acceptance, naming the session; it is still never described as
+  reviewed, and it never extends to the hard-stop tier (real money, safeguards, a Platform
+  Revision activation, the ops workflow), where the operator answers in that session.
 - **The ops channel runs default-branch code** against a read-only connection. A change on a
   feature branch cannot be exercised against production until it merges — plan measurement
   around that, or recompute from a read-only query and validate the method against a known
