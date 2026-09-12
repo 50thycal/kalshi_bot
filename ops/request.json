@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","sql":"select d.deployment_key, d.kind, d.stage, d.started_at, (d.config_json::jsonb ? 'material') as has_material, left(d.config_json::text, 400) as config_head from experiment_deployments d where d.kind in ('live','paper_twin') and d.ended_at is null order by d.started_at","max_rows":50,"id":"pcr-depcfg-20260912"}
