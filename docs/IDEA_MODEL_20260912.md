@@ -18,9 +18,14 @@ changes a lifecycle state, a gate, or a verdict; Experiment OS remains canonical
 maker-sell lineage (`Fmmsell10` live canary, `Cmmsell10` parent). Everything else that ever
 traded is paper, shelved, retired or killed: weather (all books retired 2026-08-12), theta
 (collect-only; theta4's live deployment closed 2026-08-19), PIN15 (retired 2026-07-16),
-`freeze1–4` (built 2026-08-13, stood down — no qualifying universe, WS-005 Blocked). Standing:
-`xos control-tower` (this session's read was queued on the ops channel at 17:00Z and had not
-returned when this document was written; nothing below depends on a standing).
+`freeze1–4` (built 2026-08-13, stood down — no qualifying universe, WS-005 Blocked). Standing
+(`xos control-tower`, ops `rl-ct-20260912a`, as of 2026-09-12 12:00 CDT): **no experiment at
+IDEA or PROBE** — so nothing below duplicates an open line; five PAPER mmsell experiments; three
+mmsell10 LIVE_CANARY lines whose `paper_to_live_canary` gates read PASS (recorded); theta-tail-sell
+PAUSED; `freeze-dark-window-pin` RETIRED 2026-09-06 (XOS-000003: 7/7 configured series empty
+every cycle, zero paper trades in 24 days) — which is why METALHALT is a **new** experiment on a
+new universe, not a reopening. Portfolio: paper realized 30 d $430.22 (paper assumes fills it
+would not always get; the north star is real money).
 
 **Closed since the last idea-model run (2026-07-25).** These are the entries a July-era run
 would not know:
