@@ -1261,6 +1261,36 @@ def select_handover_deployments(
     return ending, left_open
 
 
+def active_strategy_tags(session) -> frozenset[str]:
+    """Every strategy tag that currently resolves to an ACTIVE deployment arm.
+
+    "Active" is the admission resolver's own definition: the arm's deployment is
+    open AND its epoch is open. A deployment left open on a closed epoch does not
+    make a tag admissible (XOS-000011), and an ended deployment on an open epoch
+    does not either (XOS-000033) — so both conditions are required, exactly as
+    the resolver requires them, and this set is what a book can actually write
+    under.
+
+    Cheap and whole-system on purpose: it is the before/after snapshot the command
+    transport takes around every constructive action, so the check that "no tag
+    lost its arm" does not depend on which selector a package happened to use.
+    """
+    rows = session.execute(
+        select(ExperimentDeploymentArm.strategy_tag)
+        .join(
+            ExperimentDeployment,
+            ExperimentDeployment.id == ExperimentDeploymentArm.deployment_id,
+        )
+        .join(ExperimentEpoch, ExperimentEpoch.id == ExperimentDeployment.epoch_id)
+        .where(
+            ExperimentDeploymentArm.strategy_tag.is_not(None),
+            ExperimentDeployment.ended_at.is_(None),
+            ExperimentEpoch.ended_at.is_(None),
+        )
+    ).all()
+    return frozenset(t for (t,) in rows if t)
+
+
 def carry_deployments_forward(
     session,
     deployments: Sequence[ExperimentDeployment],

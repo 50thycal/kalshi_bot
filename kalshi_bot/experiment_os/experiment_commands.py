@@ -1172,6 +1172,54 @@ def _sanitize(exc: BaseException, env: _Envelope | None) -> str:
 #: an unexpected exception means the executor no longer knows what it did.
 _REFUSALS = (service.ExperimentOsError, ExperimentCommandRejected, ValueError)
 
+#: Actions that CONSTRUCT lineage and therefore may never leave a tag with less
+#: than it had. A successor registration ends a predecessor's deployment and
+#: re-registers the tag it reuses; a repair puts a stranded tag back on an arm; an
+#: arming registers live and twin and carries the paper parent forward. In every
+#: case the set of tags that resolve to an active arm must be a superset afterwards
+#: of what it was before. The retiring actions are deliberately absent — a
+#: STAND_DOWN or RETIRE_ON_GATE_FAIL exists to take tags OUT of that set, and a
+#: CLOSE_OUT_RETROSPECTIVE records a book that already finished.
+_TAG_PRESERVING_ACTIONS: frozenset[str] = frozenset(
+    {"REGISTER_PACKAGE", "REPAIR_LINEAGE", "ARM_CANARY"}
+)
+
+
+def _assert_no_tag_stranded(session, before: frozenset[str], env: _Envelope) -> None:
+    """The structural backstop for XOS-000033, checked by the transport itself.
+
+    `service.select_handover_deployments` fixes the two packages that ended more
+    of a predecessor than they reused — but it protects only callers that use it.
+    A future package that hand-rolls `kind == "paper"` again is stopped here
+    instead, and stopped in the only place every production lifecycle write
+    passes through: after the package has done its work, inside the same
+    savepoint, before anything is committed.
+
+    The rule is the one the resolver enforces at the write path, read backwards:
+    a tag that could write under an active arm before this action ran must still
+    be able to afterwards. If it cannot, the receipt is REJECTED and the savepoint
+    rolls the package's every write back, so the record never carries the state
+    that took `mmsell9` dark for 9.6 days — a tag with lineage, no arm, and
+    nothing that says why.
+
+    A tag GAINING an arm is fine (that is what registering does). A tag that had
+    no arm before and has none after is not this check's concern — it was not
+    stranded by this action, and the Control Tower's own detectors own it.
+    """
+    after = service.active_strategy_tags(session)
+    stranded = sorted(before - after)
+    if stranded:
+        raise ExperimentCommandRejected(
+            f"{env.action} would leave {stranded} with lineage and no active "
+            "deployment arm: each had an open deployment on an open epoch before "
+            "this command and has none after it. Under NEW_ONLY every entry they "
+            "attempt would be refused at the write path and nothing would say why "
+            "(XOS-000033). Rolled back; the package must re-register or carry "
+            "forward every tag it ends, or split the deployment first — see "
+            "service.select_handover_deployments.",
+            "TAG_STRANDED",
+        )
+
 
 def _claim(session, env: _Envelope, now: datetime) -> int | None:
     """Claim `command_id` for this worker, or return None if another already has it.
@@ -1357,7 +1405,14 @@ def execute_envelope(session, envelope: Any, *, now: datetime | None = None) -> 
     savepoint = session.begin_nested()
     try:
         _check_payload(env.action, env.payload)
+        # Snapshot BEFORE the action so the check after it is against what the
+        # action found, not what it left. Taken inside the savepoint, so a
+        # refusal here rolls the package's writes back with everything else.
+        preserving = env.action in _TAG_PRESERVING_ACTIONS
+        before = service.active_strategy_tags(session) if preserving else frozenset()
         produced = ACTIONS[env.action].run(session, env, now)
+        if preserving:
+            _assert_no_tag_stranded(session, before, env)
         row.result_json = _result_of(produced)
         row.status = CommandStatus.SUCCEEDED
         row.error = None

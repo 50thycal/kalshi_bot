@@ -8,15 +8,20 @@ book full of tickers it can never trade. Measured 2026-08-15: 87 of `mmsell10`'s
 predated arming and got zero live orders ever, against 3 for `mmsell8` — an asymmetry that
 throttled the CONTROL harder than the treatment.
 
-What these tests pin, in order of what would silently break the arrangement:
-  * each live-cohort book is a byte-identical replica of its parent apart from the tag. If
-    someone retunes a parent and not its replica, the live book stops being the book the paper
-    history describes and every read across the pair is confounded.
-  * the replica tags are PREFIX-SAFE against the parents. LIVE_STRATEGIES matches with
+RETIRED 2026-09-06. The experiment they carried (`mmsell-scheduled-settle-live`) was stood
+down by operator decision — last live order 2026-08-19, neither tag armed in LIVE_STRATEGIES
+since, keep gate unable to rule (BLOCKED_DATA, XOS-000025) — and the two entries were removed
+from the default 2026-09-12 (XOS-000034). Under NEW_ONLY a configured book with no active
+deployment arm is constructed every scan cycle and refused at the write path, so the entries
+were not harmless residue. The PARENTS (`mmsell8`, `mmsell10`) keep running as paper.
+
+What these tests pin now:
+  * the replicas stay retired — asserted as absence, so a re-add has to argue with a test — and
+    the parents are still configured.
+  * the naming convention that made the replicas safe stays load-bearing for the next live
+    cohort: `L*` tags are PREFIX-SAFE against their parents. LIVE_STRATEGIES matches with
     `startswith`, so a tag like `mmsell10L` would be silently captured by an allowlist entry
     naming `mmsell10` — arming a book nobody asked for.
-  * both parse at all (a tag without the substring `mmsell` is dropped on the floor by
-    `mmsell_variant_list`, which would leave the live allowlist naming a book that cannot exist).
 """
 
 from __future__ import annotations
@@ -34,21 +39,12 @@ def _by_tag(settings, tag):
 
 
 @pytest.mark.parametrize(("replica", "parent"), PAIRS)
-def test_live_cohort_book_parses(settings, replica, parent):
-    """A tag lacking the substring 'mmsell' is silently skipped by the parser, so a typo here
-    would arm a book that does not exist — the allowlist would name it and nothing would trade."""
-    assert _by_tag(settings, replica) is not None, f"{replica} did not parse"
+def test_live_cohort_book_is_retired_and_its_parent_still_runs(settings, replica, parent):
+    """The replica existed for one reason — fresh position state at arming — and that arming is
+    over. Its parent is the registry's long-run control series and must still be configured."""
+    assert _by_tag(settings, replica) is None, (
+        f"{replica} was retired 2026-09-06 (XOS-000034) and is configured again")
     assert _by_tag(settings, parent) is not None, f"{parent} did not parse"
-
-
-@pytest.mark.parametrize(("replica", "parent"), PAIRS)
-def test_live_cohort_book_is_an_exact_replica_of_its_parent(settings, replica, parent):
-    """Same book, different tag. The ONLY reason the replica exists is fresh position state; any
-    other difference makes the parent's history stop describing what live is actually running."""
-    r, p = _by_tag(settings, replica), _by_tag(settings, parent)
-    assert r.keys() == p.keys()
-    differing = {k for k in r if r[k] != p[k]}
-    assert differing == {"tag"}, f"{replica} diverges from {parent} on {differing - {'tag'}}"
 
 
 @pytest.mark.parametrize(("replica", "parent"), PAIRS)
