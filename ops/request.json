@@ -1,1 +1,1 @@
-{"type":"db","id":"pcr-post-merge-3","max_rows":30,"sql":"select id, deployment_key, stage, ended_at, (config_json->'material'->>'live_strategies_contains') as registered_live_tags, (config_json->'material'->>'book_params') as book_params from experiment_deployments where kind = 'live' order by id"}
+{"type":"db","id":"pcr-post-merge-4","max_rows":20,"sql":"select id, deployment_key, grandfathered, config_fingerprint, left(coalesce(config_json::text,'<NULL>'),400) as config_json_text from experiment_deployments where id in (15,21,33) order by id"}
