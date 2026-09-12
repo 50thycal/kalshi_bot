@@ -3,17 +3,17 @@
 ========================================================================
 !! MUTATING OPS REQUEST — this changes the running system !!
 ========================================================================
-# type=env  service=main  vars=EXPERIMENT_OS_EXPERIMENT_COMMAND  id=m9-run-1
-# actor=cal  purpose=XOS-000033: run mmsell9-restore-v1-e2 (cut v1/e2, restore the mmsell9 arm)
-# code 1767695f3f45ab760374d50723d3a099e4b4c4e5 · started 2026-09-11T22:41:10Z
+# type=env  service=main  vars=EXPERIMENT_OS_ISSUE_COMMAND  id=link-clear-1
+# actor=cal  purpose=clear the issue transport after linking PR #392
+# code 84497b8ced82ecaf2420b64dba42157f45f15129 · started 2026-09-12T03:13:14Z
 # target service: main
 # BEFORE:
-  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
-  set EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 174 bytes, sha256:ac68ee58e4b9db79>
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 765 bytes, sha256:13788d0dccca2e96>
+  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
 # 1/1 variables set
 # redeploy triggered — the worker will restart with the new config
 # AFTER:
-  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 174 bytes, sha256:ac68ee58e4b9db79>
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
 # VERDICT: VERIFIED
 
 # post-change canonical checks: enforcement, readiness
@@ -25,9 +25,9 @@
 #     "system_version": "experiment_os:pr4+metrics_engine:pr3_v1",
 #     "resolver_degraded_alarms_24h": 0,
 #     "deployments": {
-#       "total": 37,
+#       "total": 38,
 #       "grandfathered": 12,
-#       "native": 25
+#       "native": 26
 #     },
 #     "post_cutover_unstamped": {
 #       "paper_trades": [],
@@ -66,7 +66,7 @@
 # $ xos readiness
 #   {
 #     "ok": false,
-#     "checked_at": "2026-09-11 22:41:22.020773+00:00",
+#     "checked_at": "2026-09-12 03:13:20.007764+00:00",
 #     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
 #     "checks": {
 #       "import_ran": {
@@ -100,9 +100,9 @@
 #       "grandfathered_identity": {
 #         "ok": true,
 #         "detail": {
-#           "deployments": 37,
+#           "deployments": 38,
 #           "grandfathered": 12,
-#           "native": 25
+#           "native": 26
 #         }
 #       },
 #       "live_twin_links": {

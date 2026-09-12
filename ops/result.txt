@@ -1,25 +1,126 @@
-# ops request [READ]
-# type=xos  id=link-rcpt-1
-# code 84497b8ced82ecaf2420b64dba42157f45f15129 · started 2026-09-12T03:12:24Z
-command               action                    status     issue       actor  role          completed                       
---------------------  ------------------------  ---------  ----------  -----  ------------  --------------------------------
-lo-x33-link-392       ADD_LINK                  SUCCEEDED  XOS-000033  cal    LIVE_OPS      2026-09-12 03:11:16.854099+00:00
-lo-x34-link-392       ADD_LINK                  SUCCEEDED  XOS-000034  cal    LIVE_OPS      2026-09-12 03:11:16.797250+00:00
-lo-x34-resolve-1      RESOLVE                   SUCCEEDED  XOS-000034  cal    LIVE_OPS      2026-09-12 02:42:52.767780+00:00
-lo-x34-val-1          RECORD_VALIDATION_RESULT  SUCCEEDED  XOS-000034  cal    LIVE_OPS      2026-09-12 02:42:52.735733+00:00
-lo-x34-st-val         STATUS                    SUCCEEDED  XOS-000034  cal    LIVE_OPS      2026-09-12 02:42:52.693473+00:00
-lo-x34-st-act         STATUS                    SUCCEEDED  XOS-000034  cal    LIVE_OPS      2026-09-12 02:42:52.666356+00:00
-lo-x34-st-inv         STATUS                    SUCCEEDED  XOS-000034  cal    LIVE_OPS      2026-09-12 02:42:52.643287+00:00
-lo-x34-st-tri         STATUS                    SUCCEEDED  XOS-000034  cal    LIVE_OPS      2026-09-12 02:42:52.617244+00:00
-lo-x34-ev-removed-1   ADD_EVIDENCE              SUCCEEDED  XOS-000034  cal    LIVE_OPS      2026-09-12 02:42:52.593743+00:00
-rl-m9-resolve-1       RESOLVE                   SUCCEEDED  XOS-000033  cal    RESEARCH_LAB  2026-09-11 22:51:52.386359+00:00
-rl-m9-val-1           RECORD_VALIDATION_RESULT  SUCCEEDED  XOS-000033  cal    RESEARCH_LAB  2026-09-11 22:51:52.276738+00:00
-rl-m9-st-val          STATUS                    SUCCEEDED  XOS-000033  cal    RESEARCH_LAB  2026-09-11 22:51:52.209288+00:00
-rl-m9-st-act          STATUS                    SUCCEEDED  XOS-000033  cal    RESEARCH_LAB  2026-09-11 22:51:52.164286+00:00
-rl-m9-st-inv          STATUS                    SUCCEEDED  XOS-000033  cal    RESEARCH_LAB  2026-09-11 22:51:52.124317+00:00
-rl-m9-st-tri          STATUS                    SUCCEEDED  XOS-000033  cal    RESEARCH_LAB  2026-09-11 22:51:52.047855+00:00
-rl-m9-link-390        ADD_LINK                  SUCCEEDED  XOS-000033  cal    RESEARCH_LAB  2026-09-11 22:51:52.014693+00:00
-rl-m9-ev-restored-1   ADD_EVIDENCE              SUCCEEDED  XOS-000033  cal    RESEARCH_LAB  2026-09-11 22:51:51.963067+00:00
-lo-m9-fix-1           PROPOSE_FIX               SUCCEEDED  XOS-000033  cal    LIVE_OPS      2026-09-11 18:01:36.447163+00:00
-lo-m9-classify-1      CLASSIFY                  SUCCEEDED  XOS-000033  cal    LIVE_OPS      2026-09-11 18:01:36.422683+00:00
-lo-m9-ev-rootcause-1  ADD_EVIDENCE              SUCCEEDED  XOS-000033  cal    LIVE_OPS      2026-09-11 18:01:36.392996+00:00
+# note: value type-check skipped (ModuleNotFoundError: No module named 'kalshi_bot')
+# readiness reported a problem — read the block above
+========================================================================
+!! MUTATING OPS REQUEST — this changes the running system !!
+========================================================================
+# type=env  service=main  vars=EXPERIMENT_OS_ISSUE_COMMAND  id=link-clear-1
+# actor=cal  purpose=clear the issue transport after linking PR #392
+# code 84497b8ced82ecaf2420b64dba42157f45f15129 · started 2026-09-12T03:13:14Z
+# target service: main
+# BEFORE:
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 765 bytes, sha256:13788d0dccca2e96>
+  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+# 1/1 variables set
+# redeploy triggered — the worker will restart with the new config
+# AFTER:
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+# VERDICT: VERIFIED
+
+# post-change canonical checks: enforcement, readiness
+# $ xos enforcement
+#   {
+#     "mode": "NEW_ONLY",
+#     "cutover_id": "prod-new-only-20260816",
+#     "effective_at": "2026-08-16 14:34:42.892897+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr3_v1",
+#     "resolver_degraded_alarms_24h": 0,
+#     "deployments": {
+#       "total": 38,
+#       "grandfathered": 12,
+#       "native": 26
+#     },
+#     "post_cutover_unstamped": {
+#       "paper_trades": [],
+#       "live_orders": []
+#     },
+#     "live_canaries": [
+#       {
+#         "deployment": "mmsell-ceiling-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-ceiling-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-capacity-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-capacity-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-contestcap-live-2",
+#         "grandfathered": false,
+#         "twin": "mmsell-contestcap-twin-2",
+#         "boundary_match": true
+#       }
+#     ],
+#     "unresolved_integrity_events": 1,
+#     "recorded_state_events": 3,
+#     "unresolved_config_drift": 1,
+#     "session_counters": {
+#       "blocked": 0,
+#       "warned": 0,
+#       "resolver_degraded": false,
+#       "resolver_loaded_at": null
+#     }
+#   }
+# $ xos readiness
+#   {
+#     "ok": false,
+#     "checked_at": "2026-09-12 03:13:20.007764+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
+#     "checks": {
+#       "import_ran": {
+#         "ok": true,
+#         "detail": "35 experiments recorded"
+#       },
+#       "coverage_complete": {
+#         "ok": true,
+#         "detail": {
+#           "unmapped_tags": []
+#         }
+#       },
+#       "live_books_represented": {
+#         "ok": true,
+#         "detail": {
+#           "registered_live_tags": [
+#             "Cmmsell10",
+#             "Dmmsell10",
+#             "Fmmsell10"
+#           ],
+#           "note": "no Settings supplied \u2014 presence-only check"
+#         }
+#       },
+#       "platform_snapshot_complete": {
+#         "ok": true,
+#         "detail": {
+#           "snapshot": "4f9adf15daa64035",
+#           "missing_components": []
+#         }
+#       },
+#       "grandfathered_identity": {
+#         "ok": true,
+#         "detail": {
+#           "deployments": 38,
+#           "grandfathered": 12,
+#           "native": 26
+#         }
+#       },
+#       "live_twin_links": {
+#         "ok": true,
+#         "detail": "all linked"
+#       },
+#       "no_unresolved_integrity": {
+#         "ok": false,
+#         "detail": "1 unresolved integrity events"
+#       },
+#       "no_unresolved_platform_impact": {
+#         "ok": true,
+#         "detail": "0 platform-impact dispositions awaiting acceptance/application"
+#       },
+#       "lineage_columns_present": {
+#         "ok": true,
+#         "detail": {
+#           "paper_trades": "experiment_deployment_arm_id present",
+#           "live_orders": "experiment_deployment_arm_id present"
+#         }
+#       },
