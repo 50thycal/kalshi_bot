@@ -1,0 +1,52 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "84497b8ced82ecaf2420b64dba42157f45f15129",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-12T02:42:22Z",
+  "id": "x34-close-1",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 3573 bytes, sha256:d8e8e9b480da3e92>",
+        "before": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>",
+        "requested": "<redacted 3573 bytes, sha256:d8e8e9b480da3e92>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_ISSUE_COMMAND is empty \u2014 nothing to overwrite",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {
+    "actor": "cal",
+    "purpose": "XOS-000034 close-out: variants residue removed and validated"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/x34-close-1.receipt.json",
+  "result_file": "ops/results/x34-close-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34668377635",
+  "service": "main",
+  "started_at": "2026-09-12T02:42:10Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
