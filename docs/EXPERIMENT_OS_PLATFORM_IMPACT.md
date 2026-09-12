@@ -280,6 +280,83 @@ Plus: forced-activation durability, unknown-boundary refusal, boundary
 contradiction, STRICT tag blocking, record immutability, duplicate/retired
 proposal refusal, drift classification, and the review surface.
 
+## Config drift is not, by itself, a platform change
+
+### The verdict (Platform Change Review, 2026-09-12) — integrity event #16
+
+Routed here by the Experiment Control Tower (ops `ct-active-20260912`) with four
+options on the table: harmless deployment revision, new epoch, new version, or
+platform impact. **The answer is the first one, and no Platform Revision was
+registered.** A ticket arriving at this role does not become a revision by
+arriving; the evidence has to call for one, and here it does not.
+
+What `mmsell-ceiling-live-1`'s drift record actually contained:
+
+| material fact | registered | observed |
+|---|---|---|
+| `live_strategies_contains` | `["Cmmsell10"]` | `[]` |
+| `twin_pairs` | `{"Cmmsell10": "Cmmsell10_pt3"}` | `{"Cmmsell10": null}` |
+| `book_params` | `{"Cmmsell10": "lo=5,hi=10,maxyes=7,size=1", …}` | **identical** |
+
+The book's economics — the only thing its scientific contract is about — did not
+move a character. The two facts that did move are the same act seen twice: the
+tag left `LIVE_STRATEGIES`, and the twin pairing that rode on that tag left with
+it. The book was switched off while three other canaries kept trading.
+
+So, against each option the event text offered:
+
+- **new version** — no. The question the experiment asks is unchanged.
+- **new epoch** — no. An epoch cuts at a *measured* boundary where the world
+  changed for evidence that continues across it. Nothing accrued after this
+  boundary; a stand-down pauses evidence, it does not split it.
+- **platform impact** — no. No fee model, fill model, taxonomy, execution or
+  settlement semantic, risk semantic, provenance, API interpretation or shared
+  metric definition changed. Minting a revision to describe an operator turning
+  one book off would put a fabricated semantic boundary in every affected
+  experiment's lineage, permanently.
+- **harmless deployment revision** — yes: an intentional per-book operator
+  stand-down, which Experiment OS already has a canonical, non-blocking kind for
+  (`EXPERIMENT_EXECUTION_STOOD_DOWN`).
+
+### Why the engine asked the wrong question
+
+This is XOS-000012 measured on a second book. `runtime_config_check` recognised a
+stand-down only when `LIVE_STRATEGIES` was **entirely empty** — but standing one
+book down means naming the others, which leaves the allowlist non-empty, so the
+whole-runtime branch never fired and the per-book difference was recorded as an
+unexplained contamination. Event #16 then held `live_canary_keep` and
+`paper_to_live_canary` at `BLOCKED_INTEGRITY` from 2026-09-06 to 2026-09-12.
+
+The remedy is a change to **Experiment Engine semantics**, which is this role's
+to make, and not a revision:
+
+> A live deployment with **none** of its registered live tags in the runtime
+> allowlist is stood down, whether the allowlist is empty or carries other books.
+
+Three properties keep that from becoming a hole in the integrity check:
+
+1. **It excuses only what the stand-down explains.** `live_strategies_contains`
+   and the twin pairings for the now-unauthorized tags are dropped from the
+   comparison; every other material fact, `book_params` above all, is compared in
+   full. Switching a book off *and* editing its rules is still drift.
+2. **An unauthorized book cannot contaminate anything.** `LIVE_STRATEGIES` is the
+   only thing that permits a live order, so a book absent from it accrues no
+   evidence. The check is narrowed exactly where there is nothing left to protect.
+3. **The comparison returns in full on re-arm**, so a residual difference is
+   recorded as real drift the moment it can matter again.
+
+A stand-down record can now also **end** and **change scope**: re-arming a book
+resolves it, and a book that was stopped by an empty allowlist and is now the
+only one left out gets a record that says so, instead of continuing to report
+"the runtime live allowlist is empty" while three books trade. That stale text is
+what sent this finding to the wrong reader in the first place.
+
+Implementation: `enforcement._explained_by_stand_down` /
+`_record_stand_down` / `_clear_stand_down`, proven by the seven
+`test_standing_one_book_down_*` / `_stand_down_*` / `_re_arming_*` cases in
+`tests/test_experiment_os_enforcement.py`. Event #16 is resolved by the audited
+runtime path — the live worker reclassifies it on its next boot — not by hand.
+
 ## Scope boundary
 
 No Evo integration, no Claude session roles, no automatic promotions, no
