@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_metalhalt_census","args":["--max-event-pages","80"],"id":"metalhalt-census-1"}
+{"type":"db","sql":"select e.kind, e.severity, d.deployment_key, e.detected_at, e.resolved_at, left(e.description,160) as description from experiment_integrity_events e left join experiment_deployments d on d.id = e.deployment_id where e.detected_at > now() - interval '6 hours' or e.resolved_at > now() - interval '6 hours' order by e.detected_at desc","max_rows":40,"id":"pcr-postmerge-20260912"}
