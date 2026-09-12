@@ -1,1 +1,1 @@
-{"type":"xos","command":"tag","args":["Fmmsell10"],"id":"ct-tag-f10"}
+{"type":"xos","command":"show","args":["mmsell-price-ceiling-capacity"],"id":"ct-show-cap"}
