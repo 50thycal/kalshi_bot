@@ -2,7 +2,12 @@
 
 *Thesis written 2026-09-12, before any validation ran; the falsifiable predictions below are
 pre-registered and must not be re-scoped post-hoc. Promoted from `docs/IDEA_MODEL_20260912.md`
-(candidate P1). Status: **pending recon census** (`scripts/perp_candle_census.py`).*
+(candidate P1). Status: **WITHDRAWN 2026-09-12, before any probe ran.** The same-day, operator-approved
+PASSIVE-PERP census (WS-017, `docs/PASSIVE_PERP_CENSUS.md`) measured this exact premise's outright
+price return under *instant* maker fills on the retained tape: BTC −4.84 bps / ETH +0.05 bps after
+2 bps/leg, both trailing a random-direction control → HOLD, revisit only with a mechanically
+distinct premise. P1–P4 below use a stricter (through-price) fill rule, so they can only score lower;
+the thesis is dominated and its census was not shipped. Kept unedited as the pre-registration it was.*
 
 **This is a riff, and it says so.** PERP-V1 (`docs/PERP_V1_THESIS.md`, RETIRED 2026-09-02) is
 the parent. Its arm A measured the premium-reversion mechanism and was killed by execution

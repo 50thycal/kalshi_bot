@@ -3,7 +3,7 @@
 The project's active-work control board — what is being designed and built right now, and
 where each effort is. Read it first on a continuation.
 
-**Updated:** 2026-09-12 (WS-016 opened) · **Build OS v0.12**
+**Updated:** 2026-09-12 (WS-017 bounded probe completed) · **Build OS v0.12**
 
 | ID | Workstream | Phase | Status | Current Next Step | Related PR |
 |---|---|---|---|---|---|
@@ -27,6 +27,8 @@ counts only `Active` rows. `Blocked` — which requires a *named* external unblo
 runs several pre-registered threads that wait on evidence rather than on the operator. The
 board is **one over** the limit today (`WS-004`, `WS-006`, `WS-007`, `WS-009`, `WS-016`) —
 `WS-016` was opened on an explicit operator request, and its D1 asks which row pauses. Reason recorded in `DEC-011`.
+WS-017 temporarily added one explicitly requested bounded probe; it completed the same
+day and left this board. The pre-existing five Active rows are unchanged.
 
 ---
 
@@ -43,6 +45,9 @@ The specific omissions from the 2026-08-24 seeding inventory, with reasons, are 
 [WS-001](WS-001-build-os-adoption.md#appendix--efforts-considered-and-deliberately-not-made-workstreams).
 
 ## Parked
+
+- Purchased-tail MMSELL hedge: explore buying a farther-tail YES against a NO threshold position on the same contest with matching settlement rules; evaluate interval loss and hedge cost (Calvin, 2026-09-12).
+- Same-asset spot/perp funding carry: explore long spot plus equal-unit short perp, including funding, fees, basis and capital costs; distinct from cross-asset PERP-V1 carry (Calvin, 2026-09-12).
 
 Deferred candidates. One line each — no ID, no phase, no owner, no PR, no estimate. Nothing
 here is scheduled and **no agent may start anything in it**; it becomes work only when the
@@ -69,6 +74,7 @@ this list is the bare register, not the argument.
 
 | ID | Workstream | Completed | Outcome |
 |---|---|---|---|
+| [WS-017](WS-017-passive-perp-probe.md) | Passive BTC/ETH perp price-return census | 2026-09-12 | Instrument shipped and run through read-only ops; frozen result recorded in census/journal/scorecard. No collector or paper deployment. Two unselected strategies parked. [#397](https://github.com/50thycal/kalshi_bot/pull/397) |
 | [WS-015](WS-015-mmsell10-queue-aware-cancel.md) | mmsell10 queue-aware cancellation: shadow instrument + pre-registered contract | 2026-09-07 | Shipped, ran three days in shadow, **thesis falsified, experiment RETIRED 2026-09-10** (`qac-retire-20260910-1`). The frozen rule's 10% fill-probability threshold did not hold out of sample: 27.5% of would-cancel orders filled (bar 15%) at 1.65c forgone each (bar 1.0c), and the open-position cap never bound on the live book (0%, bar 50%) — the capacity premise came from paper canaries, not the book the instrument observed. Three of four promotion clauses failed; `shadow_kill` never tripped. Nothing was ever cancelled and no real money was touched. Queue telemetry (100% coverage, ~7,800 decisions) survives and is reusable; so does a live-safeguard defect found incidentally and fixed by Live Ops (XOS-000028). PRs [#364](https://github.com/50thycal/kalshi_bot/pull/364), [#365](https://github.com/50thycal/kalshi_bot/pull/365), [#373](https://github.com/50thycal/kalshi_bot/pull/373). Verdict and what survives: §7b of the thesis doc |
 | [WS-001](WS-001-build-os-adoption.md) | Build OS adoption, and the v0.4 → v0.12 migration | 2026-09-06 | Two acts on one thread. **v0.4 adopted** in [#258](https://github.com/50thycal/kalshi_bot/pull/258) (merged 2026-08-24) — the framework block, three memory layers, the board, templates, the wired PR handoff, `DEC-001`'s authority boundary; the row then sat in a false `REVIEW` for eleven days awaiting an independent verdict that could not exist. **v0.12 adopted** here, with the four decisions in `DEC-011`: operating mode `solo`, a stated split between the session identity header and the Owner Result, an active-work limit of 4 counting `Active` only, and `SHIP` as a development-gate report whose sequel is a guard rather than an authorization |
 | [WS-008](WS-008-epoch-deployment-continuity.md) | An epoch boundary must not silently stop the books (XOS-000011) | 2026-09-03 | Merged [#268](https://github.com/50thycal/kalshi_bot/pull/268) and repaired in production; XOS-000011 RESOLVED with all five validation checks passed. Whether the engine change warrants a Platform Revision is Platform Change Review's question, not this workstream's |

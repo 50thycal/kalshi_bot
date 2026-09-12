@@ -16,6 +16,27 @@ Conventions:
 
 ---
 
+## PASSIVE-PERP 2026-09-12 — probe ran: HOLD, price screen did not survive
+
+Calvin selected passive BTC/ETH perp reversion and approved the read-only ops allowlist
+addition and merge after testing. [Census](PASSIVE_PERP_CENSUS.md),
+[WS-017](workstreams/WS-017-passive-perp-probe.md). First measure outright price returns:
+PERP-V1's arm-A premium change is not the P&L of an unhedged perp. A narrowing premium
+can accompany a losing short. New code leaves that historical scorer and its gates alone.
+The fixed Aug 30–Sep 2 collector window is a retrospective screen; maker quote scenarios
+assume instantaneous fills, funding is missing, and no outcome can promote to paper.
+Ran after #397 merged: ops `passive-perp-20260912-1`, code
+`f19e6d2620c32e911f1fba422fe8b10304b46ce0`, dataset hash
+`59b6bc01f5c417b7985d967bf064f5634ece43e36cf7def4efdb85e69e824f3d`.
+BTC 49 / ETH 44 complete paths, zero censored, four entry dates each. Premium convergence
+was +6.7618 / +8.6218 bps, but instant-maker **price returns** were -0.8360 / +4.0482 bps
+before fees/funding, or -4.8359 / +0.0482 bps after historical maker fee sensitivity and
+still **before funding**. Both trail the matched maker control (+0.9253 / +4.7067 bps gross).
+C1 meets its descriptive floor, C2 does not kill both, C3 fails: frozen **HOLD**.
+No new collector or paper book; no ETH-only rescue or parameter sweep. Probe stage closed,
+not a claim that every passive perp policy is disproven. Purchased-tail MMSELL hedge and
+same-asset spot/perp carry remain PARKed on the board, with no new workstreams or tickets.
+
 ## MMSELL10 QUEUE-AWARE CANCEL 2026-09-10 — THE LINE IS CLOSED. Thesis falsified, experiment RETIRED.
 
 **Question.** mmsell10 rests a $1 maker order for 4 h. Some sit thousands of contracts deep and

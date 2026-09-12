@@ -1,5 +1,6 @@
 """Tests for the three recon censuses promoted by the 2026-09-12 idea-model run
-(docs/IDEA_MODEL_20260912.md): METALHALT, PERPMM, EARNBEAT. Pure-function coverage of the
+(docs/IDEA_MODEL_20260912.md): METALHALT and EARNBEAT (PERPMM was withdrawn
+before its census shipped — see docs/PERPMM_THESIS.md). Pure-function coverage of the
 classifiers and the no-lookahead reads; the network paths are exercised only via the ops
 channel. Each script is also asserted onto the ops-runner allowlist so a docs/runner drift
 cannot advertise a census the runner refuses (XOS-000005's lesson).
@@ -27,7 +28,6 @@ def _load(name: str):
 
 
 mh = _load("kalshi_metalhalt_census")
-pc = _load("perp_candle_census")
 kc = _load("kalshi_kpi_census")
 
 ZoneInfo = pytest.importorskip("zoneinfo").ZoneInfo
@@ -82,36 +82,6 @@ def test_metal_series_prefix_is_precise():
     assert not mh.METAL_SERIES.search("KXCORN")
 
 
-# --- PERPMM: candle fields + summary ---------------------------------------------------------
-
-
-def test_flatten_keys_and_high_low_detection():
-    keys = pc.flatten_keys({"price": {"open": 1, "high": 2, "low": 0, "close": 1}, "volume": 3})
-    assert "price.high" in keys and "price.low" in keys and "volume" in keys
-    assert pc.has_high_low(keys)
-    assert not pc.has_high_low(pc.flatten_keys({"price": {"close": 1}, "bid": {"close": 1}}))
-
-
-def test_summarize_reports_activity_spread_and_range():
-    cs = [
-        {"price": {"close": 100.0, "high": 100.2, "low": 99.9}, "bid": {"close": 99.95},
-         "ask": {"close": 100.05}, "volume": 5, "volume_notional": 500},
-        {"price": {"close": 100.0, "high": 100.0, "low": 100.0}, "bid": {"close": 99.95},
-         "ask": {"close": 100.05}, "volume": 0},
-    ]
-    s = pc.summarize(cs)
-    assert s["n"] == 2 and s["active"] == 1 and s["active_share"] == pytest.approx(0.5)
-    assert s["spread_bps"] == pytest.approx(10.0)
-    assert s["range_bps"] == pytest.approx((30.0 + 0.0) / 2, rel=1e-3)
-    assert s["vol_per_active_min"] == pytest.approx(5.0)
-    assert pc.summarize([])["active_share"] == 0.0
-
-
-def test_field_reader_tolerates_flat_dollar_keys():
-    assert pc._field({"price_close_dollars": "2.5"}, "price", "close") == pytest.approx(2.5)
-    assert pc._field({"price": {"close_dollars": "2.5"}}, "price", "close") == pytest.approx(2.5)
-
-
 # --- EARNBEAT: classifier, bands, no-lookahead quote --------------------------------------
 
 
@@ -151,5 +121,5 @@ def test_quote_at_or_before_never_reads_a_later_candle():
 
 def test_censuses_are_allowlisted():
     from ops_runner import ALLOWED_SCRIPTS
-    for name in ("kalshi_metalhalt_census", "perp_candle_census", "kalshi_kpi_census"):
+    for name in ("kalshi_metalhalt_census", "kalshi_kpi_census"):
         assert name in ALLOWED_SCRIPTS

@@ -6,8 +6,10 @@ of an existing experiment or something completely new; any prediction market or 
 market."* The request names the scope, so the Phase 0.5 menu was skipped. Session role:
 Research Lab (read + research-write; no live promotion).
 
-Output: **three promotions** — PERPMM (riff), METALHALT (riff), EARNBEAT (new) — each a
-pre-registered thesis with a *built* recon census, and a reconciled holds queue. Nothing here
+Output: **two promotions** — METALHALT (riff), EARNBEAT (new) — each a pre-registered thesis with a
+*built* recon census; a **third, PERPMM (riff), was withdrawn the same day** when an independent
+operator-approved census (WS-017, `docs/PASSIVE_PERP_CENSUS.md`) closed its premise before this run's
+PR merged; and a reconciled holds queue. Nothing here
 changes a lifecycle state, a gate, or a verdict; Experiment OS remains canonical.
 
 ---
@@ -97,7 +99,7 @@ meta-lessons), **cost** (net of both-leg fees / spread / adverse selection), **t
 
 | # | candidate (mechanic × market; the fresh signal) | corr | edge | cost | test-now | cap/age | infra | call |
 |---|---|---|---|---|---|---|---|---|
-| P1 | **PERPMM** — both-legs-passive premium reversion on KXBTC/ETHPERP; signal = perp price vs `reference_price` z-score (maker × perps) | ++ | + | + | o | ++ | ++ | **PROMOTE** — the one thread the record names as open; fee arithmetic positive only in this configuration; census answers whether a candle fill model is even possible |
+| P1 | **PERPMM** — both-legs-passive premium reversion on KXBTC/ETHPERP; signal = perp price vs `reference_price` z-score (maker × perps) | ++ | − | − | + | ++ | ++ | **PROMOTED, then WITHDRAWN same day** — the independent PASSIVE-PERP census (WS-017) measured the premise's *outright price return* under instant maker fills: BTC −4.84 / ETH +0.05 bps after fees, both below a random-direction control → HOLD, no re-run without a mechanically distinct premise. A stricter fill model cannot rescue it. `docs/PERPMM_THESIS.md` kept as the withdrawn pre-registration |
 | M2 | MMKPI — mmsell cheap tails on KPI/mention ladders (maker × companies) | −− | + | o | + | o | ++ | **HOLD → mmsell universe review**, not a book: same FLB driver (PORT clusters it); route via `mmsell_universe_review`'s series tiering |
 | M3 | UP15-METALS — maker-sell the retail "Up" side of 15-min metals windows (maker × metals) | + | − | −− | + | + | + | **KILL** — a resting offer at a coin flip is MMFLIP (killed 07-11): pure adverse selection with no model gate |
 | S1 | **METALHALT** — exchange-closure pin on metals windows inside the Pyth halt (obs-pin × metals; signal = the halt calendar) | ++ | ++ | + | o | − | ++ | **PROMOTE** — FREEZE's mechanism on the settlement-source axis WS-005 asked for; census decides universe size; either outcome closes WS-005 D1 |
@@ -116,26 +118,30 @@ meta-lessons), **cost** (net of both-leg fees / spread / adverse selection), **t
 | E1 | EQUITY-HUB / single-stock perps (any × equities) | ++ | ? | ? | −− | −− | o | **HOLD (pre-listing)** — CFTC filings only; trigger: first settled month |
 | X1 | XPERP-FUND — funding-rate arbitrage across Hyperliquid/Binance/Kalshi (RV × perps) | ++ | o | − | −− | −− | −− | **KILL for this repo** — no execution path, US access constraints, Kalshi funding unreadable (PERP-V1 arm B); scope, not edge |
 
-**Why exactly these three.** The record's only realizable +EV is a maker book and its only
-passing family is the mechanics pin; PERPMM and METALHALT are one of each, both on threads the
-record itself left open with a named next step, both with censuses that can *close* them
-cheaply. EARNBEAT is the forced anti-anchor: a category with zero portfolio exposure and an
-external base rate rather than a model, held honestly behind the venue-age gate. All three are
-uncorrelated with `Fmmsell10` and with each other; PORT's "second independent +EV stream" is
-the binding constraint, and each of these is a candidate for it.
+**Why these, and why only two survive.** The record's only passing family is the mechanics pin
+and its only realizable +EV is a maker book. METALHALT is the pin on a universe the record itself
+asked for (WS-005 D1). EARNBEAT is the forced anti-anchor: a category with zero portfolio
+exposure and an external base rate rather than a model, held honestly behind the venue-age gate.
+PERPMM was the maker slot and the one thread PERP-V1's close-out named as open — and the same day
+this run promoted it, an independent census (WS-017) measured that the premise's outright price
+return does not survive even optimistic fills, which is the honest end of that thread: the
+record's own rule is no revival without a mechanically distinct premise, and none is offered
+here. Both survivors are uncorrelated with `Fmmsell10` and with each other; PORT's "second
+independent +EV stream" is the binding constraint, and each is a candidate for it. **No third
+candidate on the slate clears the screen today** — the best advanceable items are holds with
+dated triggers (SEASONPIN ~2026-10-01, the overdue ECON-REACT re-run), listed below.
 
 ## Phase 4 — promotions (pre-registered theses + built censuses)
 
 | idea | thesis | census script (allowlisted) | census verdict rule | what a kill closes |
 |---|---|---|---|---|
-| **PERPMM** | `docs/PERPMM_THESIS.md` | `scripts/perp_candle_census.py` | PROMOTE-TO-PROBE iff perp candles carry high/low AND BTC+ETH active-minute share ≥ 50%; BLOCKED_DATA if closes only | premium reversion on Kalshi perps at tier 0, entirely |
+| ~~PERPMM~~ | `docs/PERPMM_THESIS.md` (withdrawn) | none shipped | — superseded by `docs/PASSIVE_PERP_CENSUS.md` (HOLD, 2026-09-12) | already closed: passive premium-fade price return ≤ control |
 | **METALHALT** | `docs/METALHALT_THESIS.md` | `scripts/kalshi_metalhalt_census.py` | PROMOTE-TO-PROBE iff ≥ 40 settled `inside`/`tail` windows with volume AND post-halt trading at ≥ 3¢ observed; HOLD (universe absent) if Kalshi lists no halt windows — trigger = the 24/7 metals schedule | the FREEZE family on Kalshi → WS-005 to ABANDONED with reasoning |
 | **EARNBEAT** | `docs/EARNBEAT_THESIS.md` | `scripts/kalshi_kpi_census.py` | TESTABLE-NOW iff ≥ 100 settled KPI threshold markets with volume AND ≥ 60 readable pre-report quotes; else HOLD, re-run week of 2026-11-09 | the consensus-anchoring premise |
 
 Ops requests (run from default-branch code after merge; one at a time on the shared channel):
 
 ```
-{"type":"script","name":"perp_candle_census","args":["--hours","48"],"id":"perpmm-census-1"}
 {"type":"script","name":"kalshi_metalhalt_census","args":["--max-event-pages","80"],"id":"metalhalt-census-1"}
 {"type":"script","name":"kalshi_kpi_census","args":["--max-event-pages","80"],"id":"kpi-census-1"}
 ```
@@ -148,7 +154,7 @@ decides whether the probe is worth writing.
 
 | hold | trigger | state |
 |---|---|---|
-| **PERP passive variant** | a fill model in a pre-registration | **FIRED → PERPMM (this run)** |
+| **PERP passive variant** | a fill model in a pre-registration | **CLOSED 2026-09-12** — PASSIVE-PERP census (WS-017) HOLD on the price screen; PERPMM withdrawn. Revisit only with a mechanically distinct premise |
 | **FREEZE** (universe question, WS-005 D1) | a qualifying universe on the settlement-source axis | **FIRED → METALHALT (this run)**; grain/soft axis stays Blocked |
 | **ECON-REACT re-run** | more genuine econ prints settled | **FIRED, overdue** — run `econ_react_study` v2 via ops; no build |
 | **SEASONPIN** (MLB primary; WNBA borderline) | MLB rungs settle | **FIRES ~2026-10-01** — re-run the census then |
@@ -171,8 +177,8 @@ decides whether the probe is worth writing.
 ## What this run does NOT do
 
 - It does not register anything in Experiment OS, change any book, or touch `MMSELL_VARIANTS`.
-- It does not run the censuses: they run default-branch code via the ops channel after this PR
-  merges, and the merge itself is an operator decision because the diff touches
+- It does not run the two censuses: they run default-branch code via the ops channel after this
+  PR merges, and the merge itself is an operator decision because the diff touches
   `scripts/ops_runner.py`'s allowlist (a hard-stop item under `DEC-012`).
 - It does not read a standing into any of the above; the Control Tower read was queued and is
   reported separately when it lands.
