@@ -455,8 +455,19 @@ class Settings(BaseSettings):
         #   A5 = short strangle: sell BOTH mutually-exclusive tails of one event (cheap YES on a
         #     high strike + cheap NO on a low strike), entered only when the event actually has
         #     both — that pairing IS the low-vol selection the backtest's +3.30c/pair came from.
-        "mmsellA4:lo=5,hi=10,maxyes=7,volw=6,volv=6;"
-        "mmsellA5:lo=5,hi=10,maxyes=7,strangle=1;"
+        # --- RETIRED 2026-09-06 (Experiment OS RETIRE_ON_GATE_FAIL, receipts -----------------
+        #     rl-retire-volentry-20260906 / rl-retire-strangle-20260906) -----------------------
+        # Both anchor books hit their pre-registered kill:
+        #   A4  delta.pnl_cents_per_trade -0.211 <= 0 at n=1944 (19x the floor), 7 consecutive
+        #       FAILs. Gate NOT inert (27.1% reject); 95% CI -1.56..+1.05c. Do not re-sweep volw/volv.
+        #   A5  pair_win_rate_95lb_pct 92.37 <= 93.9 at 422 clean pairs (5x the floor), 8
+        #       consecutive FAILs. Point estimate 94.55% sits above break-even but is unprovable
+        #       at this n. Revival path: docs/MMSELL_ANCHOR_SET.md VERDICT 2026-09-06.
+        # Removed from production MMSELL_VARIANTS 2026-09-12 (XOS-000034): under NEW_ONLY a
+        # configured book with no active deployment arm is constructed every scan cycle and
+        # refused at the write path — four `BLOCKED (precheck)` errors per scan, for nothing.
+        #   mmsellA4:lo=5,hi=10,maxyes=7,volw=6,volv=6
+        #   mmsellA5:lo=5,hi=10,maxyes=7,strangle=1
         # --- RETIRED 2026-08-28: the queue-position A/B (docs/MMSELL_OFFSET_AB.md) ------------
         #   mmsell10a:lo=5,hi=10,maxyes=7,abarm=0,size=1   (rested AT the no-bid — the control)
         #   mmsell10b:lo=5,hi=10,maxyes=7,abarm=1,size=1   (rested 1c better — the treatment)
@@ -572,8 +583,18 @@ class Settings(BaseSettings):
         # Naming: `L` for live-cohort, following the `Wmmsell*`/`Tmmsell*` family-prefix
         # convention, and deliberately NOT `mmsell10L` — LIVE_STRATEGIES matches by PREFIX, so a
         # tag starting with `mmsell10` would be captured by an allowlist entry naming the parent.
-        "Lmmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY;"
-        "Lmmsell10:lo=5,hi=10,maxyes=7"
+        #
+        # --- RETIRED 2026-09-06 (Experiment OS STAND_DOWN, receipt ---------------------------
+        #     ts-standdown-settlelive-20260906; experiment mmsell-scheduled-settle-live) -------
+        # Operator decision: book is done. Last live order 2026-08-19; neither tag armed in
+        # LIVE_STRATEGIES since. Its keep gate could never rule (BLOCKED_DATA: clauses address
+        # paper, metrics are live-only, XOS-000025). Real money: Lmmsell10 279 fills / 558
+        # contracts, Lmmsell8 22 / 44, 2026-08-15 -> 2026-08-19; exposure verified nil before
+        # removal (no resting orders, no non-zero position on any ticker either ever filled).
+        # Removed from production MMSELL_VARIANTS 2026-09-12 (XOS-000034) — see the A4/A5 note
+        # above for why a configured tag with no arm is worse than untidy under NEW_ONLY.
+        #   Lmmsell8:lo=5,hi=12,only=BTCD+ETH+ASG+HRDERBY
+        #   Lmmsell10:lo=5,hi=10,maxyes=7
     )
     # --- mmsell LIVE entry (maker NO-buy; inert until LIVE_STRATEGIES lists a mmsell tag) ---
     # The mmsell books rest a BUY-NO limit at the no-bid (== sell yes at the ask) and HOLD to

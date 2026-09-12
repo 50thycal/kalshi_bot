@@ -49,11 +49,27 @@ def test_anchor_books_parse_with_their_mechanics(settings):
         # (A1 -4.16c/trade vs the mmsell10 control's +3.14c; p5 -19.0 vs +5.0). Asserted as
         # absence so a re-add has to argue with a test. See docs/MMSELL_ANCHOR_SET.md.
         assert tag not in by_tag, "retired stop-loss book is configured again"
-    assert by_tag["mmsellA4"]["volw"] == 6 and by_tag["mmsellA4"]["volv"] == 6.0
-    assert by_tag["mmsellA5"]["strangle"] is True
-    # the SURVIVING anchors share the mmsell10 entry, so only the mechanic differs
     for tag in ("mmsellA4", "mmsellA5"):
-        assert (by_tag[tag]["lo"], by_tag[tag]["hi"], by_tag[tag]["maxyes"]) == (5.0, 10.0, 7.0)
+        # A4/A5 RETIRED 2026-09-06 on their pre-registered kills (Experiment OS
+        # RETIRE_ON_GATE_FAIL: vol-entry -0.211c/trade at n=1944, 7 consecutive FAILs;
+        # strangle 92.37% <= 93.9% at 422 pairs, 8 consecutive FAILs) and removed from the
+        # default 2026-09-12 (XOS-000034). Under NEW_ONLY a configured book with no active
+        # deployment arm is constructed every scan and refused at the write path, so the
+        # entry is not harmless residue. Asserted as absence, like A1-A3 above.
+        assert tag not in by_tag, f"{tag} was retired 2026-09-06 and is configured again"
+
+    # The MECHANICS still parse — the vol gate and the strangle are parser features the
+    # retired books happened to use, and the tests below still exercise them. Read from an
+    # explicit spec rather than the default, which no longer carries either book.
+    settings.mmsell_variants = (
+        "mmsellA4:lo=5,hi=10,maxyes=7,volw=6,volv=6;"
+        "mmsellA5:lo=5,hi=10,maxyes=7,strangle=1"
+    )
+    explicit = {v["tag"]: v for v in settings.mmsell_variant_list}
+    assert explicit["mmsellA4"]["volw"] == 6 and explicit["mmsellA4"]["volv"] == 6.0
+    assert explicit["mmsellA5"]["strangle"] is True
+    for tag in ("mmsellA4", "mmsellA5"):
+        assert (explicit[tag]["lo"], explicit[tag]["hi"], explicit[tag]["maxyes"]) == (5.0, 10.0, 7.0)
 
 
 def test_control_and_legacy_books_carry_no_anchor_mechanic(settings):
