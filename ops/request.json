@@ -1,1 +1,1 @@
-{"type":"env","id":"var-post-1"}
+{"type":"db","sql":"select strategy, count(*) as n, max(created_at) as last_at from paper_trades where created_at >= now() - interval '6 minutes' group by 1 order by 1","max_rows":50,"id":"var-trades-1"}
