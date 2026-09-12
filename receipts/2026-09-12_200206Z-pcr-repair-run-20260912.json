@@ -1,0 +1,49 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "2ea29a047ec66f6b03e7ed88786eba011de38562",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-12T20:02:03Z",
+  "id": "pcr-repair-run-20260912",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "after": "<redacted 419 bytes, sha256:f5d08bdf599215b0>",
+        "before": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>",
+        "requested": "<redacted 419 bytes, sha256:f5d08bdf599215b0>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_EXPERIMENT_COMMAND is empty \u2014 nothing to overwrite",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_EXPERIMENT_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "ok"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/pcr-repair-run-20260912.receipt.json",
+  "result_file": "ops/results/pcr-repair-run-20260912.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34715856593",
+  "service": "main",
+  "started_at": "2026-09-12T20:01:49Z",
+  "targets": [
+    "EXPERIMENT_OS_EXPERIMENT_COMMAND"
+  ],
+  "type": "env"
+}
