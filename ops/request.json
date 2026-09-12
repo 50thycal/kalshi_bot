@@ -1,1 +1,1 @@
-{"type":"logs","limit":120,"filter":"config-drift","id":"pcr-boot-logs"}
+{"type":"db","id":"pcr-post-merge-2","max_rows":60,"sql":"select id, kind, severity, detected_at, resolved_at, left(coalesce(resolution,''),160) as resolution, (details_json->>'scope') as scope, deployment_id from experiment_integrity_events order by id desc limit 12"}
