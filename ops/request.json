@@ -1,1 +1,1 @@
-{"type":"db","id":"pcr-post-merge-2","max_rows":60,"sql":"select id, kind, severity, detected_at, resolved_at, left(coalesce(resolution,''),160) as resolution, (details_json->>'scope') as scope, deployment_id from experiment_integrity_events order by id desc limit 12"}
+{"type":"db","id":"pcr-post-merge-3","max_rows":30,"sql":"select id, deployment_key, stage, ended_at, (config_json->'material'->>'live_strategies_contains') as registered_live_tags, (config_json->'material'->>'book_params') as book_params from experiment_deployments where kind = 'live' order by id"}
