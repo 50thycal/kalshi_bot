@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-list","args":["--limit","6"],"id":"pcr-close-receipts"}
+{"type":"xos","command":"issue-show","args":["XOS-000035"],"id":"pcr-xos35-final"}
