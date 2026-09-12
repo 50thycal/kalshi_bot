@@ -37,6 +37,35 @@ No new collector or paper book; no ETH-only rescue or parameter sweep. Probe sta
 not a claim that every passive perp policy is disproven. Purchased-tail MMSELL hedge and
 same-asset spot/perp carry remain PARKed on the board, with no new workstreams or tickets.
 
+## IDEA-MODEL 2026-09-12 — broad sweep: 2 promoted, 1 withdrawn, both censuses ran same day (METALHALT KILL, EARNBEAT HOLD)
+
+Full run: `docs/IDEA_MODEL_20260912.md` (18 candidates screened). Three promotions written; one
+withdrawn before probe; the two survivors' censuses ran through ops after PR #395 merged.
+
+**METALHALT — KILL (PREMISE) at census** (`docs/METALHALT_THESIS.md`). The riff on FREEZE claimed
+Kalshi's 15-minute gold/silver windows inside Pyth's published XAU/XAG halt (17:00–18:00 ET daily,
+weekends) are mechanically decided. The calendar-defined universe exists — 62 settled windows,
+$4.6M — but run 2's frozen-reference test shows settlement values **moving inside both halt
+stretches** (2/2), and the "post-pin" tape is just a live market at 7–68¢ mid-window. Kalshi settles
+metals on Pyth's **24/7 indices** (June 2026); the July "Pyth is continuous" exclusion was right.
+Together with `freeze-dark-window-pin`'s retirement (09-06, no grain/soft universe) this answers
+WS-005 D1 on both axes → recommend ABANDONED. Two ops reads, zero paper.
+
+**EARNBEAT — HOLD (ACCRUAL)** (`docs/EARNBEAT_THESIS.md`): consensus-anchoring bias on the
+Public Companies Hub's KPI ladders. Census: 43 settled threshold markets with volume (floor 100),
+36 readable pre-report quotes (floor 60), 396 open. Mid-band gaps carry the predicted sign at
+n=4–5/band — mirage-sized, recorded only as a reason to re-run the week of **2026-11-09**.
+
+**PERPMM — WITHDRAWN** (`docs/PERPMM_THESIS.md`): the both-legs-passive perp premium fade was
+promoted, then the same-day independent PASSIVE-PERP census (WS-017) measured its outright price
+return ≤ a random control under instant fills; a stricter fill model cannot rescue it.
+
+Holds reconciled in the run doc: PERP passive and FREEZE closed; PIN60/ALT15/CROSSFREQ,
+CRYPSUB/NEST, WXRAIN and the MMX-as-holds retired; SEASONPIN fires ~2026-10-01; ECON-REACT re-run
+overdue since 08-08 (one ops request, no build).
+
+---
+
 ## MMSELL10 QUEUE-AWARE CANCEL 2026-09-10 — THE LINE IS CLOSED. Thesis falsified, experiment RETIRED.
 
 **Question.** mmsell10 rests a $1 maker order for 4 h. Some sit thousands of contracts deep and
