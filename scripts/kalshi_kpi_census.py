@@ -51,7 +51,7 @@ KALSHI = "https://api.elections.kalshi.com/trade-api/v2"
 
 KPI_SERIES = re.compile(r"^KX(KPI|EARN|EPS|REV|REVENUE|SUBS|DELIVER|MENTION|EARNINGSMENTION)",
                         re.I)
-KPI_CATEGORY = re.compile(r"compan|financ|business|earnings", re.I)
+KPI_CATEGORY = re.compile(r"compan|financ|business|earnings|mention", re.I)
 KPI_TITLE = re.compile(r"\b(revenue|eps|earnings per share|net income|subscribers?|deliveries|"
                        r"net adds?|gross margin|operating income|free cash flow|daily active|"
                        r"monthly active|units? (sold|shipped)|guidance|quarter(ly)? results?|"

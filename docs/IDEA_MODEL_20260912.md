@@ -73,8 +73,15 @@ that would put numbers on it is queued behind the Control Tower request.
 | Filed / pending: 24/7 metals schedule, US equities, copper, FX, single-stock perps | Sep 2026 | triggers for holds below, not candidates today |
 | Polymarket perps (20× leverage, 67 markets) | 2026-09-03 | not tradeable from the US; symmetric index to Kalshi perps → no lead-lag |
 
-Sports remains the liquidity centre and the mmsell family's home; crypto 15-min/hourly ladders
-remain retail-heavy; economics remains thin and efficient.
+**Live survey (`kalshi_market_survey`, ops `rl-survey-20260912a`, 14 d, open markets only —
+settled 15-minute windows are therefore not in it):** 112,704 markets scanned. By category:
+Elections $543M / Sports $529M / Economics $131M / Politics $100M / Crypto $80M / **Companies
+$14.5M over 533 markets (avg spread 9.9¢)** / **Mentions $2.3M over 857 markets (17.9¢)** /
+**Commodities $1.9M over 580 markets (14.3¢)**. So the KPI hub is real and mid-sized, mention
+markets are numerous but thin, and the commodities hub's *open* book is small — METALHALT's
+capacity clause (P4) is the honest weak axis, and the settled 15-minute tape the census counts
+is not visible from an open-market survey. Sports remains the liquidity centre and the mmsell
+family's home; crypto ladders remain retail-heavy; economics remains thin and efficient.
 
 ## Phase 2 + 3 — slate and screen
 
