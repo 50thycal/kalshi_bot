@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT strategy, status, count(*) AS n, count(DISTINCT split_part(market_ticker,'-',1)) AS series, round(coalesce(sum(pnl),0)::numeric,2) AS pnl, count(*) FILTER (WHERE pnl<0) AS losses, round(avg(100-assumed_price)::numeric,2) AS avg_entry_c FROM paper_trades WHERE strategy IN ('Rmmsell1','Rmmsell2') GROUP BY strategy, status ORDER BY strategy, status", "id": "cc-rmm-tape8"}
+{"type":"noop"}
