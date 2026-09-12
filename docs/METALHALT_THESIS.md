@@ -2,7 +2,7 @@
 
 *Thesis written 2026-09-12, before any validation ran; the falsifiable predictions below are
 pre-registered and must not be re-scoped post-hoc. Promoted from `docs/IDEA_MODEL_20260912.md`
-(candidate S1). Status: **pending recon census** (`scripts/kalshi_metalhalt_census.py`).*
+(candidate S1). Status: **KILLED AT CENSUS 2026-09-12 — premise falsified** (see Results). No probe, no book.*
 
 **This is a riff on FREEZE, and it names the material difference.** FREEZE
 (`docs/FREEZE_THESIS.md`) is the mechanically-decided-but-still-quoted pin: when a contract's
@@ -128,3 +128,40 @@ still trades ≥ 3¢ from certainty — hold to settlement, single leg, taker.
 - **Value to $100/mo:** a candidate uncorrelated ballast stream at near-zero validation cost
   (one census, public data, an existing scorer); and either way it *closes* WS-005 — the
   FREEZE family stops being re-proposed every quarter.
+
+## Results — census runs 1 and 2, 2026-09-12 (KILL — PREMISE)
+
+**Run 1** (ops `metalhalt-census-1`, code `2ea29a04`): the pinned universe *exists* as the calendar
+defines it — 62 settled 15-minute gold/silver windows (`KXGOLD15M` 31, `KXSILVER15M` 31) whose
+entire life sits inside Pyth's published XAU/XAG halt, $4.6M of volume, plus 82 `boundary`
+windows. But the tape read saw zero active candles (a `volume` vs `volume_fp` key miss) and the 12
+sampled "inside" windows resolved to a **mix** of yes and no — impossible if the reference price
+were frozen. Run 1's HOLD was therefore not trusted; the script gained a C0 frozen-reference
+test and the `_fp` fix (PR #399) and was re-run.
+
+**Run 2** (ops `metalhalt-census-2`, code `5fdb57a9`):
+
+| check | result |
+|---|---|
+| C0 — do windows decided inside the *same* halt settle on the *same* value? | **No.** 62 windows with a recorded settlement value, 2 halt stretches, **2 of 2 stretches' settlement values moved** |
+| C3 — post-"pin" tape (`_fp` fixed) | 15/16 active minutes per window; candle-close "discounts" of 7–68¢ — i.e. ordinary live prices on markets whose outcome was still open, not a pinned side trading cheap |
+| verdict as printed | **KILL (PREMISE)** |
+
+**Reading.** The settlement feed Kalshi uses for its metals hub keeps printing through Pyth's
+nominal metals halt. Pyth launched **24/7 gold and silver indices in June 2026** (MarketVector
+governance), and the hub evidently settles on that continuous source, not on the market-hours
+XAU/USD feed this thesis's calendar came from. So nothing is mechanically decided early: P1–P4
+never reach a measurement because the "decided instant" does not exist. The July 2026 FREEZE
+probe's exclusion of metals ("Pyth is continuous") was right for this venue; this thesis's
+material difference was wrong.
+
+**What it closes.** The exchange-closure pin has now been searched on both axes WS-005 named:
+by crop name (grains/softs — no universe, `freeze-dark-window-pin` RETIRED 2026-09-06) and by
+settlement source (metals — source is continuous). **Recommendation for WS-005 D1: `ABANDONED`,
+reasoning preserved**, unless a Kalshi series is listed whose rules text names a source that
+provably stops printing. Nothing here re-scopes P1–P4; they stand as written and were never
+scored.
+
+**Cost:** two read-only ops requests, one 200-line script, zero paper. **Kept:** the halt-calendar
+classifier and the C0 frozen-reference test, reusable for any future source-hours pin claim —
+the test is exactly the check FREEZE's P5 ("zero wrong pins") should have run first.
