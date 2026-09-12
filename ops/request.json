@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-show","args":["XOS-000036"],"id":"pcr-iss36-verify-20260912"}
+{"type":"env","action":"set","values":{"EXPERIMENT_OS_ISSUE_COMMAND":""},"id":"pcr-iss36-clear-20260912"}
