@@ -284,6 +284,10 @@ proposal refusal, drift classification, and the review surface.
 
 ### The verdict (Platform Change Review, 2026-09-12) — integrity event #16
 
+Recorded on **XOS-000035** (adopted from Control Tower candidate `bb335d12…`),
+disposition `OPS_REPAIR`, `requires_platform_revision = false`, linked to
+XOS-000012 as the root system-wide defect.
+
 Routed here by the Experiment Control Tower (ops `ct-active-20260912`) with four
 options on the table: harmless deployment revision, new epoch, new version, or
 platform impact. **The answer is the first one, and no Platform Revision was
