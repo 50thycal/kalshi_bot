@@ -1,1 +1,1 @@
-{"type":"db","id":"pcr-post-merge-1","max_rows":50,"sql":"select id, kind, severity, detected_at, resolved_at, left(coalesce(resolution,''),200) as resolution, (details_json->>'scope') as scope from experiment_integrity_events where resolved_at is null or id in (7,16) order by id"}
+{"type":"logs","limit":120,"filter":"config-drift","id":"pcr-boot-logs"}
