@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT strategy, market_ticker, round(pnl::numeric,2) AS pnl, (100-assumed_price) AS entry_c, created_at FROM paper_trades WHERE strategy IN ('Rmmsell1','Rmmsell2') AND pnl < 0 ORDER BY market_ticker, strategy", "id": "cc-rmm-tape14"}
+{"type":"noop"}
