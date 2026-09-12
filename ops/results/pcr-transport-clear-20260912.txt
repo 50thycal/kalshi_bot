@@ -2,16 +2,19 @@
 ========================================================================
 !! MUTATING OPS REQUEST — this changes the running system !!
 ========================================================================
-# type=env  service=main  vars=EXPERIMENT_OS_ISSUE_COMMAND  id=pcr-iss36-close-20260912
-# code 2ea29a047ec66f6b03e7ed88786eba011de38562 · started 2026-09-12T20:04:05Z
+# type=env  service=main  vars=EXPERIMENT_OS_EXPERIMENT_COMMAND,EXPERIMENT_OS_ISSUE_COMMAND  id=pcr-transport-clear-20260912
+# code 2ea29a047ec66f6b03e7ed88786eba011de38562 · started 2026-09-12T20:05:51Z
 # target service: main
 # BEFORE:
-  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
-  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 3497 bytes, sha256:5ed2aa3e9572ca8c>
-# 1/1 variables set
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 419 bytes, sha256:f5d08bdf599215b0>
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 3497 bytes, sha256:5ed2aa3e9572ca8c>
+  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+  set EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+# 2/2 variables set
 # redeploy triggered — the worker will restart with the new config
 # AFTER:
-  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 3497 bytes, sha256:5ed2aa3e9572ca8c>
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
 # VERDICT: VERIFIED
 
 # post-change canonical checks: enforcement, readiness
@@ -65,7 +68,7 @@
 # $ xos readiness
 #   {
 #     "ok": true,
-#     "checked_at": "2026-09-12 20:04:17.013074+00:00",
+#     "checked_at": "2026-09-12 20:05:56.531380+00:00",
 #     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
 #     "checks": {
 #       "import_ran": {

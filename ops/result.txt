@@ -1,463 +1,128 @@
-# ops request [READ]
-# type=xos  id=pcr-iss36-final-20260912
-# code 2ea29a047ec66f6b03e7ed88786eba011de38562 · started 2026-09-12T20:05:03Z
-{
-  "issue_key": "XOS-000036",
-  "title": "Two open LIVE canaries are outside the config-drift check entirely",
-  "status": "RESOLVED",
-  "classification": "PLATFORM",
-  "severity": "HIGH",
-  "priority": "P1",
-  "owner_role": "PLATFORM_CHANGE_REVIEW",
-  "opened_by_role": "PLATFORM_CHANGE_REVIEW",
-  "opened_at": "2026-09-12 15:57:23.599642+00:00",
-  "scope": "system-wide",
-  "experiment_id": null,
-  "version_id": null,
-  "detector": "manual.reported",
-  "detector_fingerprint": null,
-  "occurrence_count": 1,
-  "disposition": "OPS_REPAIR",
-  "latest_evidence": "DATABASE_QUERY: validation PASSED: Every clause of the plan met. Baselines present on deployment",
-  "problem_statement": "enforcement.runtime_config_check skips any live deployment whose config_json has no 'material' key ('if not material: continue'). mmsell-capacity-live-1 (id 21) and mmsell-contestcap-live-2 (id 33) are both OPEN LIVE_CANARY deployments whose config_json carries a 'risk' block but NO 'material' block, so neither has ever been compared against its runtime config \u2014 before or after PR #394. Both hold real money and both read PASS. mmsell-ceiling-live-1 (id 15) does carry 'material', which is why its drift was detected at all. Each of the three has a config_fingerprint, so registration believed it recorded a baseline while the detector compares only 'material'. Open question for the owner: was the omission a defect in the registration path used for these two packages, or deliberate? Until it is answered, a real config drift on either book is undetectable. Evidence: ops/results/pcr-post-merge-3.txt and pcr-post-merge-4.txt. This ticket changes no lifecycle state, gate or verdict, and asserts no contamination \u2014 nothing is known to have drifted.",
-  "evidence_summary": "Found while verifying XOS-000035 in production. Routed to Live Ops because the cause is a deployment-registration/wiring question, not a shared semantic: the drift check itself behaves as designed.",
-  "proposed_fix": "Three parts. (1) enforcement.live_material_block is the only sanctioned baseline builder, used by every live-arming package, with a test asserting the package-to-check agreement for every such package including future ones. (2) arm_live_canary refuses a live deployment whose config names no live tags. (3) runtime_config_check records EXPERIMENT_CONFIG_UNVERIFIABLE instead of skipping \u2014 non-blocking (a coverage gap is not an accusation against the evidence, and blocking would hold the book's KILL gate) but still ticketed (its cause is undiagnosed, unlike a stand-down), which splits RECORDED_STATE_INTEGRITY_KINDS out of NON_BLOCKING_INTEGRITY_KINDS. The two already-armed rows are repaired, not re-armed: REPAIR_LINEAGE / live-material-baseline-repair writes each package's own reviewed literals after every one agrees with what the row already stores.",
-  "validation_plan": "After PR 396 merges and the operator runs REPAIR_LINEAGE / live-material-baseline-repair: a db read shows config_json['material'] present on deployments 21 and 33, and the LIVE worker's next boot records Dmmsell10's EXPERIMENT_EXECUTION_STOOD_DOWN and either an EXPERIMENT_CONFIG_DRIFT for Fmmsell10 or nothing. Any open EXPERIMENT_CONFIG_UNVERIFIABLE for those deployments resolves itself. A drift finding on Fmmsell10 is the safeguard working and validates this ticket rather than failing it; it would be diagnosed on its own record.",
-  "resolution_summary": "Root cause was a shape defect, not a deliberate omission: four canary packages each wrote their own material_config() and only canary_mmsell10 nested under the 'material' key runtime_config_check reads, so two of three open live canaries were never compared against their runtime config from the day they armed. PR 396 makes enforcement.live_material_block the one builder for every live-arming package with a test asserting that agreement for future packages too, makes arm_live_canary refuse a live deployment with no comparable baseline, and replaces the silent skip with a non-blocking but ticketed EXPERIMENT_CONFIG_UNVERIFIABLE. The two already-armed rows were backfilled by REPAIR_LINEAGE / live-material-baseline-repair from each package's own reviewed literals, and the live worker then resolved both records, recorded Dmmsell10's stand-down and found no drift on Fmmsell10. No Platform Revision: no shared semantic changed.",
-  "resolved_at": "2026-09-12 20:04:52.349725+00:00",
-  "requires_new_version": false,
-  "requires_new_epoch": false,
-  "requires_platform_revision": false,
-  "requires_pause_or_stand_down": false,
-  "duplicate_of_issue_id": null,
-  "supersedes_issue_id": null,
-  "discovered_from_issue_id": null,
-  "first_observed_at": "2026-09-12 15:57:23.599642+00:00",
-  "last_observed_at": "2026-09-12 15:57:23.599642+00:00",
-  "details_json": {
-    "discovery": "Found while verifying XOS-000035 in production. Routed to Live Ops because the cause is a deployment-registration/wiring question, not a shared semantic: the drift check itself behaves as designed.",
-    "reported_via": "issue_command_transport",
-    "manual_report": true
-  },
-  "events": [
-    {
-      "event_type": "CREATED",
-      "occurred_at": "2026-09-12 15:57:23.599642+00:00",
-      "actor": "claude-code",
-      "actor_role": "PLATFORM_CHANGE_REVIEW",
-      "from_status": null,
-      "to_status": "OPEN",
-      "from_owner_role": null,
-      "to_owner_role": "LIVE_OPS",
-      "from_classification": null,
-      "to_classification": "OPS",
-      "reason": "Found while verifying XOS-000035 in production. Routed to Live Ops because the cause is a deployment-registration/wiring question, not a shared semantic: the drift check itself behaves as designed.",
-      "payload": {
-        "scope": "system-wide",
-        "anomaly_kind": null,
-        "recommended_owner": {
-          "priority": "P2",
-          "severity": "MEDIUM",
-          "rationale": "insufficient evidence to classify \u2014 route to Live Ops for operational diagnosis first, or leave with the operator to triage. The owner here is who looks first, NOT a claim that the cause is operational",
-          "owner_role": "LIVE_OPS",
-          "disposition": null,
-          "classification": "UNCLASSIFIED",
-          "requires_operator_triage": true
-        }
-      }
-    },
-    {
-      "event_type": "CLASSIFIED",
-      "occurred_at": "2026-09-12 17:43:01.385802+00:00",
-      "actor": "claude-code",
-      "actor_role": "PLATFORM_CHANGE_REVIEW",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": "OPS",
-      "to_classification": "PLATFORM",
-      "reason": "set during triage: Root cause established from the repository and confirmed in production. The open question this ticket recorded \u2014 defect or deliberate \u2014 is answered: a defect.",
-      "payload": null
-    },
-    {
-      "event_type": "TRIAGED",
-      "occurred_at": "2026-09-12 17:43:01.393752+00:00",
-      "actor": "claude-code",
-      "actor_role": "PLATFORM_CHANGE_REVIEW",
-      "from_status": "OPEN",
-      "to_status": "TRIAGE",
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "Root cause established from the repository and confirmed in production. The open question this ticket recorded \u2014 defect or deliberate \u2014 is answered: a defect.",
-      "payload": {
-        "priority": "P1",
-        "severity": "HIGH"
-      }
-    },
-    {
-      "event_type": "EVIDENCE_ADDED",
-      "occurred_at": "2026-09-12 17:43:01.437318+00:00",
-      "actor": "claude-code",
-      "actor_role": "PLATFORM_CHANGE_REVIEW",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "Of the three OPEN live deployments, only mmsell-ceiling-live-1 carries config_json['material']. mmsell-capacity-live-1 (Dmmsell10, armed 2026-09-02) and mmsell-contestcap-live-2 (Fmmsell10, armed 2026-09-07, the only tag in LIVE_STRATEGIES) carry a 'risk' block and no 'material' block.",
-      "payload": {
-        "source_ref": "ops/results/pcr-depcfg-20260912.txt",
-        "evidence_id": 79,
-        "content_hash": null,
-        "evidence_type": "OPS_RESULT"
-      }
-    },
-    {
-      "event_type": "EVIDENCE_ADDED",
-      "occurred_at": "2026-09-12 17:43:01.476709+00:00",
-      "actor": "claude-code",
-      "actor_role": "PLATFORM_CHANGE_REVIEW",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "DEFECT, not deliberate. Four canary packages each wrote their own material_config(); only canary_mmsell10 nested under 'material'. successor_mmsell10_capacity, successor_mmsell10_contest_cap and recut_mmsell10_contest_cap returned a flat book_spec/twin_tag/risk that runtime_config_check never reads, while two of their docstrings assert the book IS drift-checked. The shape contract between registration and the check was never asserted anywhere.",
-      "payload": {
-        "source_ref": "kalshi_bot/experiment_os/successor_mmsell10_capacity.py::material_config",
-        "evidence_id": 80,
-        "content_hash": null,
-        "evidence_type": "COMMIT"
-      }
-    },
-    {
-      "event_type": "EVIDENCE_ADDED",
-      "occurred_at": "2026-09-12 17:43:01.516284+00:00",
-      "actor": "claude-code",
-      "actor_role": "PLATFORM_CHANGE_REVIEW",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "mmsell-price-ceiling-capacity has zero integrity events of any kind. The missing stand-down for Dmmsell10 that the Control Tower routed to this role is a symptom of the skip above: there was nothing to reclassify because the deployment was never compared.",
-      "payload": {
-        "source_ref": "ops/results/ct-show-cap.txt",
-        "evidence_id": 81,
-        "content_hash": null,
-        "evidence_type": "CONTROL_TOWER"
-      }
-    },
-    {
-      "event_type": "TRANSFERRED",
-      "occurred_at": "2026-09-12 17:43:01.560829+00:00",
-      "actor": "claude-code",
-      "actor_role": "PLATFORM_CHANGE_REVIEW",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": "LIVE_OPS",
-      "to_owner_role": "PLATFORM_CHANGE_REVIEW",
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "The cause is not operational. The runtime is behaving correctly and the books are configured as intended; what is wrong is the Experiment Engine's own contract with whoever registers a live deployment, which this role owns per the narrow PCR list. Same family as XOS-000012 and XOS-000035.",
-      "payload": null
-    },
-    {
-      "event_type": "STATUS_CHANGED",
-      "occurred_at": "2026-09-12 17:43:01.601010+00:00",
-      "actor": "claude-code",
-      "actor_role": "PLATFORM_CHANGE_REVIEW",
-      "from_status": "TRIAGE",
-      "to_status": "INVESTIGATING",
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "remedy authored and validated in PR 396",
-      "payload": null
-    },
-    {
-      "event_type": "FIX_PROPOSED",
-      "occurred_at": "2026-09-12 17:43:01.635963+00:00",
-      "actor": "claude-code",
-      "actor_role": "PLATFORM_CHANGE_REVIEW",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": null,
-      "payload": {
-        "proposed_fix": "Three parts. (1) enforcement.live_material_block is the only sanctioned baseline builder, used by every live-arming package, with a test asserting the package-to-check agreement for every such package including future ones. (2) arm_live_canary refuses a live deployment whose config names no live tags. (3) runtime_config_check records EXPERIMENT_CONFIG_UNVERIFIABLE instead of skipping \u2014 non-blocking (a coverage gap is not an accusation against the evidence, and blocking would hold the book's KILL gate) but still ticketed (its cause is undiagnosed, unlike a stand-down), which splits RECORDED_STATE_INTEGRITY_KINDS out of NON_BLOCKING_INTEGRITY_KINDS. The two already-armed rows are repaired, not re-armed: REPAIR_LINEAGE / live-material-baseline-repair writes each package's own reviewed literals after every one agrees with what the row already stores."
-      }
-    },
-    {
-      "event_type": "STATUS_CHANGED",
-      "occurred_at": "2026-09-12 17:43:01.640951+00:00",
-      "actor": "claude-code",
-      "actor_role": "PLATFORM_CHANGE_REVIEW",
-      "from_status": "INVESTIGATING",
-      "to_status": "ACTION_REQUIRED",
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "a remedy has been proposed",
-      "payload": null
-    },
-    {
-      "event_type": "DISPOSITION_DECIDED",
-      "occurred_at": "2026-09-12 17:43:01.667854+00:00",
-      "actor": "claude-code",
-      "actor_role": "PLATFORM_CHANGE_REVIEW",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "No Platform Revision: no fee model, fill model, taxonomy, execution or settlement semantic, risk semantic, provenance, API interpretation or shared metric definition changed \u2014 minting one to describe a shape bug would put a fabricated semantic boundary in every affected experiment's lineage permanently. No new Version: no experiment's question changed. No new Epoch: the world did not change and no boundary is measurable \u2014 the books ran as registered throughout, which is precisely what was never verified. No stand-down: nothing is known to have drifted, and stopping a running canary over the absence of a check, rather than over evidence, would be a real-money act taken for a paperwork gap. The remedy is a code fix plus a bounded one-shot record repair.",
-      "payload": {
-        "note": "recorded only \u2014 no canonical action is performed by this call",
-        "disposition": "OPS_REPAIR",
-        "requires_new_epoch": false,
-        "requires_new_version": false,
-        "requires_platform_revision": false,
-        "version_and_epoch_rationale": null,
-        "requires_pause_or_stand_down": false
-      }
-    },
-    {
-      "event_type": "LINK_ADDED",
-      "occurred_at": "2026-09-12 17:43:01.700039+00:00",
-      "actor": "claude-code",
-      "actor_role": "PLATFORM_CHANGE_REVIEW",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "one builder, arming refusal, EXPERIMENT_CONFIG_UNVERIFIABLE, and the live-material-baseline-repair package",
-      "payload": {
-        "link_id": 34,
-        "link_type": "PR",
-        "reference": "50thycal/kalshi_bot#396"
-      }
-    },
-    {
-      "event_type": "VALIDATION_PLANNED",
-      "occurred_at": "2026-09-12 17:43:01.731091+00:00",
-      "actor": "claude-code",
-      "actor_role": "PLATFORM_CHANGE_REVIEW",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": null,
-      "payload": {
-        "validation_plan": "After PR 396 merges and the operator runs REPAIR_LINEAGE / live-material-baseline-repair: a db read shows config_json['material'] present on deployments 21 and 33, and the LIVE worker's next boot records Dmmsell10's EXPERIMENT_EXECUTION_STOOD_DOWN and either an EXPERIMENT_CONFIG_DRIFT for Fmmsell10 or nothing. Any open EXPERIMENT_CONFIG_UNVERIFIABLE for those deployments resolves itself. A drift finding on Fmmsell10 is the safeguard working and validates this ticket rather than failing it; it would be diagnosed on its own record."
-      }
-    },
-    {
-      "event_type": "STATUS_CHANGED",
-      "occurred_at": "2026-09-12 17:43:01.736372+00:00",
-      "actor": "claude-code",
-      "actor_role": "PLATFORM_CHANGE_REVIEW",
-      "from_status": "ACTION_REQUIRED",
-      "to_status": "VALIDATING",
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "validation plan recorded",
-      "payload": null
-    },
-    {
-      "event_type": "EVIDENCE_ADDED",
-      "occurred_at": "2026-09-12 20:04:52.246167+00:00",
-      "actor": "claude-code",
-      "actor_role": "PLATFORM_CHANGE_REVIEW",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "First half validated in production. Within seconds of PR 396's deploy (2026-09-12T19:59:33Z) the LIVE worker recorded EXPERIMENT_CONFIG_UNVERIFIABLE on both mmsell-capacity-live-1 and mmsell-contestcap-live-2 \u2014 the gap is visible where it was silent.",
-      "payload": {
-        "source_ref": "ops/results/pcr-postmerge-20260912.txt",
-        "evidence_id": 82,
-        "content_hash": null,
-        "evidence_type": "DATABASE_QUERY"
-      }
-    },
-    {
-      "event_type": "EVIDENCE_ADDED",
-      "occurred_at": "2026-09-12 20:04:52.275949+00:00",
-      "actor": "claude-code",
-      "actor_role": "PLATFORM_CHANGE_REVIEW",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "REPAIR_LINEAGE / live-material-baseline-repair ran at 2026-09-12T20:02:40Z. All three OPEN live deployments now carry config_json['material'] naming their own live tag, twin pairing and book_params; Fmmsell10's carries contestcap=1. Zero open EXPERIMENT_CONFIG_UNVERIFIABLE events remain.",
-      "payload": {
-        "source_ref": "ops/results/pcr-repair-verify-20260912.txt",
-        "evidence_id": 83,
-        "content_hash": null,
-        "evidence_type": "DATABASE_QUERY"
-      }
-    },
-    {
-      "event_type": "EVIDENCE_ADDED",
-      "occurred_at": "2026-09-12 20:04:52.300222+00:00",
-      "actor": "claude-code",
-      "actor_role": "PLATFORM_CHANGE_REVIEW",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "Both unverifiable records resolved through the audited runtime path, not by hand. The same boot then recorded the per-book EXPERIMENT_EXECUTION_STOOD_DOWN for mmsell-capacity-live-1 (Dmmsell10) that the Control Tower reported missing, and recorded NO drift for mmsell-contestcap-live-2 \u2014 the book in the allowlist is running exactly the config it was registered with.",
-      "payload": {
-        "source_ref": "ops/results/pcr-repair-events-20260912.txt",
-        "evidence_id": 84,
-        "content_hash": null,
-        "evidence_type": "DATABASE_QUERY"
-      }
-    },
-    {
-      "event_type": "EVIDENCE_ADDED",
-      "occurred_at": "2026-09-12 20:04:52.323618+00:00",
-      "actor": "claude-code",
-      "actor_role": "PLATFORM_CHANGE_REVIEW",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "validation PASSED: Every clause of the plan met. Baselines present on deployments 21 and 33; unverifiable records self-resolved; Dmmsell10's missing stand-down now recorded; Fmmsell10 compared clean. The originating question \u2014 why Dmmsell10 left LIVE_STRATEGIES with nothing recorded \u2014 is now answered by a record rather than by prose.",
-      "payload": {
-        "source_ref": "ops/results/pcr-repair-events-20260912.txt",
-        "evidence_id": 85,
-        "content_hash": null,
-        "evidence_type": "DATABASE_QUERY"
-      }
-    },
-    {
-      "event_type": "VALIDATION_RECORDED",
-      "occurred_at": "2026-09-12 20:04:52.326484+00:00",
-      "actor": "claude-code",
-      "actor_role": "PLATFORM_CHANGE_REVIEW",
-      "from_status": null,
-      "to_status": null,
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "Every clause of the plan met. Baselines present on deployments 21 and 33; unverifiable records self-resolved; Dmmsell10's missing stand-down now recorded; Fmmsell10 compared clean. The originating question \u2014 why Dmmsell10 left LIVE_STRATEGIES with nothing recorded \u2014 is now answered by a record rather than by prose.",
-      "payload": {
-        "passed": true,
-        "source_ref": "ops/results/pcr-repair-events-20260912.txt"
-      }
-    },
-    {
-      "event_type": "RESOLVED",
-      "occurred_at": "2026-09-12 20:04:52.349764+00:00",
-      "actor": "claude-code",
-      "actor_role": "PLATFORM_CHANGE_REVIEW",
-      "from_status": "VALIDATING",
-      "to_status": "RESOLVED",
-      "from_owner_role": null,
-      "to_owner_role": null,
-      "from_classification": null,
-      "to_classification": null,
-      "reason": "Root cause was a shape defect, not a deliberate omission: four canary packages each wrote their own material_config() and only canary_mmsell10 nested under the 'material' key runtime_config_check reads, so two of three open live canaries were never compared against their runtime config from the day they armed. PR 396 makes enforcement.live_material_block the one builder for every live-arming package with a test asserting that agreement for future packages too, makes arm_live_canary refuse a live deployment with no comparable baseline, and replaces the silent skip with a non-blocking but ticketed EXPERIMENT_CONFIG_UNVERIFIABLE. The two already-armed rows were backfilled by REPAIR_LINEAGE / live-material-baseline-repair from each package's own reviewed literals, and the live worker then resolved both records, recorded Dmmsell10's stand-down and found no drift on Fmmsell10. No Platform Revision: no shared semantic changed.",
-      "payload": {
-        "resolved_at": "2026-09-12 20:04:52.349725+00:00",
-        "resolution_summary": "Root cause was a shape defect, not a deliberate omission: four canary packages each wrote their own material_config() and only canary_mmsell10 nested under the 'material' key runtime_config_check reads, so two of three open live canaries were never compared against their runtime config from the day they armed. PR 396 makes enforcement.live_material_block the one builder for every live-arming package with a test asserting that agreement for future packages too, makes arm_live_canary refuse a live deployment with no comparable baseline, and replaces the silent skip with a non-blocking but ticketed EXPERIMENT_CONFIG_UNVERIFIABLE. The two already-armed rows were backfilled by REPAIR_LINEAGE / live-material-baseline-repair from each package's own reviewed literals, and the live worker then resolved both records, recorded Dmmsell10's stand-down and found no drift on Fmmsell10. No Platform Revision: no shared semantic changed.",
-        "validation_waiver_reason": null
-      }
-    }
-  ],
-  "evidence": [
-    {
-      "evidence_type": "OPS_RESULT",
-      "summary": "Of the three OPEN live deployments, only mmsell-ceiling-live-1 carries config_json['material']. mmsell-capacity-live-1 (Dmmsell10, armed 2026-09-02) and mmsell-contestcap-live-2 (Fmmsell10, armed 2026-09-07, the only tag in LIVE_STRATEGIES) carry a 'risk' block and no 'material' block.",
-      "source_ref": "ops/results/pcr-depcfg-20260912.txt",
-      "captured_at": "2026-09-12 17:43:01.433793+00:00",
-      "captured_by": "claude-code",
-      "content_hash": null
-    },
-    {
-      "evidence_type": "COMMIT",
-      "summary": "DEFECT, not deliberate. Four canary packages each wrote their own material_config(); only canary_mmsell10 nested under 'material'. successor_mmsell10_capacity, successor_mmsell10_contest_cap and recut_mmsell10_contest_cap returned a flat book_spec/twin_tag/risk that runtime_config_check never reads, while two of their docstrings assert the book IS drift-checked. The shape contract between registration and the check was never asserted anywhere.",
-      "source_ref": "kalshi_bot/experiment_os/successor_mmsell10_capacity.py::material_config",
-      "captured_at": "2026-09-12 17:43:01.474420+00:00",
-      "captured_by": "claude-code",
-      "content_hash": null
-    },
-    {
-      "evidence_type": "CONTROL_TOWER",
-      "summary": "mmsell-price-ceiling-capacity has zero integrity events of any kind. The missing stand-down for Dmmsell10 that the Control Tower routed to this role is a symptom of the skip above: there was nothing to reclassify because the deployment was never compared.",
-      "source_ref": "ops/results/ct-show-cap.txt",
-      "captured_at": "2026-09-12 17:43:01.513853+00:00",
-      "captured_by": "claude-code",
-      "content_hash": null
-    },
-    {
-      "evidence_type": "DATABASE_QUERY",
-      "summary": "First half validated in production. Within seconds of PR 396's deploy (2026-09-12T19:59:33Z) the LIVE worker recorded EXPERIMENT_CONFIG_UNVERIFIABLE on both mmsell-capacity-live-1 and mmsell-contestcap-live-2 \u2014 the gap is visible where it was silent.",
-      "source_ref": "ops/results/pcr-postmerge-20260912.txt",
-      "captured_at": "2026-09-12 20:04:52.208711+00:00",
-      "captured_by": "claude-code",
-      "content_hash": null
-    },
-    {
-      "evidence_type": "DATABASE_QUERY",
-      "summary": "REPAIR_LINEAGE / live-material-baseline-repair ran at 2026-09-12T20:02:40Z. All three OPEN live deployments now carry config_json['material'] naming their own live tag, twin pairing and book_params; Fmmsell10's carries contestcap=1. Zero open EXPERIMENT_CONFIG_UNVERIFIABLE events remain.",
-      "source_ref": "ops/results/pcr-repair-verify-20260912.txt",
-      "captured_at": "2026-09-12 20:04:52.274518+00:00",
-      "captured_by": "claude-code",
-      "content_hash": null
-    },
-    {
-      "evidence_type": "DATABASE_QUERY",
-      "summary": "Both unverifiable records resolved through the audited runtime path, not by hand. The same boot then recorded the per-book EXPERIMENT_EXECUTION_STOOD_DOWN for mmsell-capacity-live-1 (Dmmsell10) that the Control Tower reported missing, and recorded NO drift for mmsell-contestcap-live-2 \u2014 the book in the allowlist is running exactly the config it was registered with.",
-      "source_ref": "ops/results/pcr-repair-events-20260912.txt",
-      "captured_at": "2026-09-12 20:04:52.298775+00:00",
-      "captured_by": "claude-code",
-      "content_hash": null
-    },
-    {
-      "evidence_type": "DATABASE_QUERY",
-      "summary": "validation PASSED: Every clause of the plan met. Baselines present on deployments 21 and 33; unverifiable records self-resolved; Dmmsell10's missing stand-down now recorded; Fmmsell10 compared clean. The originating question \u2014 why Dmmsell10 left LIVE_STRATEGIES with nothing recorded \u2014 is now answered by a record rather than by prose.",
-      "source_ref": "ops/results/pcr-repair-events-20260912.txt",
-      "captured_at": "2026-09-12 20:04:52.322047+00:00",
-      "captured_by": "claude-code",
-      "content_hash": null
-    }
-  ],
-  "links": [
-    {
-      "link_type": "PR",
-      "reference": "50thycal/kalshi_bot#396",
-      "label": "one builder, arming refusal, EXPERIMENT_CONFIG_UNVERIFIABLE, and the live-material-baseline-repair package",
-      "created_at": "2026-09-12 17:43:01.696436+00:00"
-    }
-  ]
-}
+# note: value type-check skipped (ModuleNotFoundError: No module named 'kalshi_bot')
+========================================================================
+!! MUTATING OPS REQUEST — this changes the running system !!
+========================================================================
+# type=env  service=main  vars=EXPERIMENT_OS_EXPERIMENT_COMMAND,EXPERIMENT_OS_ISSUE_COMMAND  id=pcr-transport-clear-20260912
+# code 2ea29a047ec66f6b03e7ed88786eba011de38562 · started 2026-09-12T20:05:51Z
+# target service: main
+# BEFORE:
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 419 bytes, sha256:f5d08bdf599215b0>
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 3497 bytes, sha256:5ed2aa3e9572ca8c>
+  set EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+  set EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+# 2/2 variables set
+# redeploy triggered — the worker will restart with the new config
+# AFTER:
+  EXPERIMENT_OS_EXPERIMENT_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+  EXPERIMENT_OS_ISSUE_COMMAND=<redacted 0 bytes, sha256:e3b0c44298fc1c14>
+# VERDICT: VERIFIED
+
+# post-change canonical checks: enforcement, readiness
+# $ xos enforcement
+#   {
+#     "mode": "NEW_ONLY",
+#     "cutover_id": "prod-new-only-20260816",
+#     "effective_at": "2026-08-16 14:34:42.892897+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr3_v1",
+#     "resolver_degraded_alarms_24h": 0,
+#     "deployments": {
+#       "total": 38,
+#       "grandfathered": 12,
+#       "native": 26
+#     },
+#     "post_cutover_unstamped": {
+#       "paper_trades": [],
+#       "live_orders": []
+#     },
+#     "live_canaries": [
+#       {
+#         "deployment": "mmsell-ceiling-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-ceiling-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-capacity-live-1",
+#         "grandfathered": false,
+#         "twin": "mmsell-capacity-twin-1",
+#         "boundary_match": true
+#       },
+#       {
+#         "deployment": "mmsell-contestcap-live-2",
+#         "grandfathered": false,
+#         "twin": "mmsell-contestcap-twin-2",
+#         "boundary_match": true
+#       }
+#     ],
+#     "unresolved_integrity_events": 0,
+#     "recorded_state_events": 4,
+#     "unverifiable_live_config": 0,
+#     "unresolved_config_drift": 0,
+#     "session_counters": {
+#       "blocked": 0,
+#       "warned": 0,
+#       "resolver_degraded": false,
+#       "resolver_loaded_at": null
+#     }
+#   }
+# $ xos readiness
+#   {
+#     "ok": true,
+#     "checked_at": "2026-09-12 20:05:56.531380+00:00",
+#     "system_version": "experiment_os:pr4+metrics_engine:pr6_fill_model_v1",
+#     "checks": {
+#       "import_ran": {
+#         "ok": true,
+#         "detail": "35 experiments recorded"
+#       },
+#       "coverage_complete": {
+#         "ok": true,
+#         "detail": {
+#           "unmapped_tags": []
+#         }
+#       },
+#       "live_books_represented": {
+#         "ok": true,
+#         "detail": {
+#           "registered_live_tags": [
+#             "Cmmsell10",
+#             "Dmmsell10",
+#             "Fmmsell10"
+#           ],
+#           "note": "no Settings supplied \u2014 presence-only check"
+#         }
+#       },
+#       "platform_snapshot_complete": {
+#         "ok": true,
+#         "detail": {
+#           "snapshot": "4f9adf15daa64035",
+#           "missing_components": []
+#         }
+#       },
+#       "grandfathered_identity": {
+#         "ok": true,
+#         "detail": {
+#           "deployments": 38,
+#           "grandfathered": 12,
+#           "native": 26
+#         }
+#       },
+#       "live_twin_links": {
+#         "ok": true,
+#         "detail": "all linked"
+#       },
+#       "no_unresolved_integrity": {
+#         "ok": true,
+#         "detail": "0 unresolved integrity events"
+#       },
+#       "no_unresolved_platform_impact": {
+#         "ok": true,
+#         "detail": "0 platform-impact dispositions awaiting acceptance/application"
+#       },
+#       "lineage_columns_present": {
+#         "ok": true,
+#         "detail": {
+#           "paper_trades": "experiment_deployment_arm_id present",
+#           "live_orders": "experiment_deployment_arm_id present"
+#         }
+#       },
