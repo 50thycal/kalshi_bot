@@ -7,7 +7,8 @@ market."* The request names the scope, so the Phase 0.5 menu was skipped. Sessio
 Research Lab (read + research-write; no live promotion).
 
 Output: **two promotions** — METALHALT (riff), EARNBEAT (new) — each a pre-registered thesis with a
-*built* recon census; a **third, PERPMM (riff), was withdrawn the same day** when an independent
+*built* recon census, **both run the same day after PR #395 merged: METALHALT KILLED at census (premise
+falsified), EARNBEAT HOLD (accrual, re-run week of 2026-11-09)**; a **third, PERPMM (riff), was withdrawn the same day** when an independent
 operator-approved census (WS-017, `docs/PASSIVE_PERP_CENSUS.md`) closed its premise before this run's
 PR merged; and a reconciled holds queue. Nothing here
 changes a lifecycle state, a gate, or a verdict; Experiment OS remains canonical.
@@ -136,7 +137,7 @@ dated triggers (SEASONPIN ~2026-10-01, the overdue ECON-REACT re-run), listed be
 | idea | thesis | census script (allowlisted) | census verdict rule | what a kill closes |
 |---|---|---|---|---|
 | ~~PERPMM~~ | `docs/PERPMM_THESIS.md` (withdrawn) | none shipped | — superseded by `docs/PASSIVE_PERP_CENSUS.md` (HOLD, 2026-09-12) | already closed: passive premium-fade price return ≤ control |
-| **METALHALT** | `docs/METALHALT_THESIS.md` | `scripts/kalshi_metalhalt_census.py` | PROMOTE-TO-PROBE iff ≥ 40 settled `inside`/`tail` windows with volume AND post-halt trading at ≥ 3¢ observed; HOLD (universe absent) if Kalshi lists no halt windows — trigger = the 24/7 metals schedule | the FREEZE family on Kalshi → WS-005 to ABANDONED with reasoning |
+| **METALHALT** | `docs/METALHALT_THESIS.md` | `scripts/kalshi_metalhalt_census.py` | PROMOTE-TO-PROBE iff ≥ 40 settled `inside`/`tail` windows with volume AND post-halt trading at ≥ 3¢ observed; HOLD (universe absent) if Kalshi lists no halt windows — **ran twice 2026-09-12: KILL (PREMISE).** 62 calendar-pinned windows exist, but their settlement values move inside the halt (C0, 2/2 stretches): Kalshi settles metals on Pyth's 24/7 indices, so nothing is decided early | the FREEZE family on Kalshi → WS-005 D1 answered on both axes; recommend ABANDONED |
 | **EARNBEAT** | `docs/EARNBEAT_THESIS.md` | `scripts/kalshi_kpi_census.py` | TESTABLE-NOW iff ≥ 100 settled KPI threshold markets with volume AND ≥ 60 readable pre-report quotes; else HOLD, re-run week of 2026-11-09 — **ran 2026-09-12 (`kpi-census-1`): HOLD (ACCRUAL), 43 / 36 against floors 100 / 60; 396 open** | the consensus-anchoring premise |
 
 Ops requests (run from default-branch code after merge; one at a time on the shared channel):
@@ -155,7 +156,7 @@ decides whether the probe is worth writing.
 | hold | trigger | state |
 |---|---|---|
 | **PERP passive variant** | a fill model in a pre-registration | **CLOSED 2026-09-12** — PASSIVE-PERP census (WS-017) HOLD on the price screen; PERPMM withdrawn. Revisit only with a mechanically distinct premise |
-| **FREEZE** (universe question, WS-005 D1) | a qualifying universe on the settlement-source axis | **FIRED → METALHALT (this run)**; grain/soft axis stays Blocked |
+| **FREEZE** (universe question, WS-005 D1) | a qualifying universe on the settlement-source axis | **CLOSED 2026-09-12** — METALHALT census: the metals source is continuous (KILL, PREMISE); grain/soft axis had no universe (RETIRED 09-06). Recommend WS-005 → ABANDONED |
 | **ECON-REACT re-run** | more genuine econ prints settled | **FIRED, overdue** — run `econ_react_study` v2 via ops; no build |
 | **SEASONPIN** (MLB primary; WNBA borderline) | MLB rungs settle | **FIRES ~2026-10-01** — re-run the census then |
 | **OPTRV** | free options-implied source for CME commodities | parked (fillability fired 07-12; plumbing is the blocker) |
@@ -171,7 +172,7 @@ decides whether the probe is worth writing.
 | **RATELAG** | a live macro shock to the front Fed contract | parked |
 | **HURR** | first landfall-threat storm | parked (below-normal season) |
 | **XLOCK-P1** | a rules-text matcher that finds ≥ 200 pairs | parked |
-| **PIN15-METALS** (S4, this run) | METALHALT census `outside`-window read | parked, folded |
+| **PIN15-METALS** (S4, this run) | METALHALT census `outside`-window read | **RETIRED** — the metals settlement feed is continuous and the 15-min tape is a live market to the last minute; PIN15's own T-window kill transfers |
 | **EQUITY-HUB / single-stock perps** (E1, this run) | first settled month after listing | parked |
 
 ## What this run does NOT do
