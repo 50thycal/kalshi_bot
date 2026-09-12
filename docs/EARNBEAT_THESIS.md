@@ -119,3 +119,26 @@ underpriced — buy it (or maker-sell its complement) at a measured, pre-registe
 - **Value to $100/mo:** the anti-anchor slot — a category the portfolio has never touched,
   with a documented external base rate rather than a homegrown model. If the census comes back
   thin, the cost was one script and a dated trigger.
+
+## Results — census run 1, 2026-09-12
+
+Ops `kpi-census-1`, code `2ea29a04`, run after PR #395 merged (16,000 settled / 14,958 open
+events scanned). Verdict **as printed: HOLD (ACCRUAL)** — the pre-registered floors are not met.
+
+| measure | value | floor |
+|---|---|---|
+| settled `kpi_threshold` markets with volume | 43 (46 settled, $43k total) | 100 |
+| readable pre-report quotes (48 h before close) | 36 | 60 |
+| open `kpi_threshold` markets right now | 396 | — |
+| settled `mention` markets | 3,385 ($24.5M) — dominated by *political* mention series (`KXTRUMPMENTION` etc.), not earnings calls | n/a |
+
+**What the calibration pre-read shows, and why it is not evidence.** In the 30–70¢ bands the
+realized YES rate ran 50–80% against mean prices of 38–59¢ (gaps +11 to +37 points) at both the
+7-day and 48-hour reads — the *sign* the anchoring thesis predicts. Per band n is 4–5. The record's
+top process risk is exactly this shape (five small-n mirages before), so this is recorded as a
+reason the census is worth re-running, not as a result. One market moved ≥30¢ between the two
+reads (the post-release contamination flag); the full probe keys on the earnings-calendar
+timestamp, never `close_time`.
+
+**Trigger unchanged:** re-run the week of **2026-11-09**, after the Q3 season's bulk reports; the
+396 open threshold markets are the accrual. Nothing is registered; no book, no gate.
