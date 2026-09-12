@@ -1,16 +1,16 @@
 {
   "audit_worthy": true,
   "class": "MUTATING",
-  "code_sha": "ca3ab4ae838012ca6bc65376da3f04474b4514bd",
+  "code_sha": "1a541e15ca80c71a1e0241950251843bd18fba41",
   "code_source": "default-branch",
   "exit_status": 0,
-  "finished_at": "2026-09-11T18:03:47Z",
-  "id": "lo-clear-2",
+  "finished_at": "2026-09-12T15:59:41Z",
+  "id": "pcr-slot-clear-2",
   "mutation": {
     "changes": {
       "EXPERIMENT_OS_ISSUE_COMMAND": {
         "after": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>",
-        "before": "<redacted 3476 bytes, sha256:8c95358324ce0613>",
+        "before": "<redacted 4359 bytes, sha256:448ede248afdc379>",
         "requested": "<redacted 0 bytes, sha256:e3b0c44298fc1c14>"
       }
     },
@@ -18,7 +18,7 @@
       "EXPERIMENT_OS_ISSUE_COMMAND": {
         "blocked": false,
         "conclusive": true,
-        "reason": "EXPERIMENT_OS_ISSUE_COMMAND: all 3 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "reason": "EXPERIMENT_OS_ISSUE_COMMAND: all 4 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
         "unconsumed_command_ids": []
       }
     },
@@ -33,18 +33,15 @@
   "outcome": "SUCCEEDED",
   "post_change_checks": {
     "enforcement": "ok",
-    "readiness": "non-zero"
+    "readiness": "ok"
   },
-  "provenance": {
-    "actor": "cal",
-    "purpose": "clear transport after XOS-000033 diagnosis"
-  },
+  "provenance": {},
   "publication": "COMMITTED",
-  "receipt_file": "ops/results/lo-clear-2.receipt.json",
-  "result_file": "ops/results/lo-clear-2.txt",
-  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34631129030",
+  "receipt_file": "ops/results/pcr-slot-clear-2.receipt.json",
+  "result_file": "ops/results/pcr-slot-clear-2.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34703853141",
   "service": "main",
-  "started_at": "2026-09-11T18:03:39Z",
+  "started_at": "2026-09-12T15:59:26Z",
   "targets": [
     "EXPERIMENT_OS_ISSUE_COMMAND"
   ],
