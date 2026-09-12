@@ -1,0 +1,49 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "19b532bc6f98403384d7578bc87a9dd49694a5bb",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-12T14:14:10Z",
+  "id": "pcr-xos35-batch",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 6089 bytes, sha256:4315350e8d3b7609>",
+        "before": "<redacted 229 bytes, sha256:b254423d92fc1461>",
+        "requested": "<redacted 6089 bytes, sha256:4315350e8d3b7609>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_ISSUE_COMMAND: all 1 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/pcr-xos35-batch.receipt.json",
+  "result_file": "ops/results/pcr-xos35-batch.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34698673426",
+  "service": "main",
+  "started_at": "2026-09-12T14:14:05Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
