@@ -1,1 +1,1 @@
-{"type":"db","max_rows":20,"id":"lo-drift-913a","sql":"SELECT twin_tag, live_tag, started_at, ended_at, params_json FROM live_paper_twins WHERE live_tag='Fmmsell10' ORDER BY started_at DESC"}
+{"type":"logs","limit":400,"filter":"drift","id":"lo-drift-913b"}
