@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "101a229147d493a6bf338f110d3c49c1f6e124c9",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-13T23:18:30Z",
+  "id": "lo-enf-913a",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/lo-enf-913a.receipt.json",
+  "result_file": "ops/results/lo-enf-913a.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34789313263",
+  "service": null,
+  "started_at": "2026-09-13T23:18:29Z",
+  "targets": [],
+  "type": "xos"
+}
