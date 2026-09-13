@@ -56,9 +56,10 @@ on named data/interpretation inputs, no longer on merge approval.
 
 ## Next Step
 
-Obtain authoritative API funding-unit and contract-multiplier definitions; verify payment
-schedule, then obtain synchronized executable quotes and applicable account fee tier.
-Continue the frozen capital cash-flow test only when C2/C3 inputs are verified.
+Contract sizes and source selection are now resolved in [source verification](../SPOT_PERP_CARRY_SOURCES.md).
+Obtain explicit API rate conversion and permission for bounded public quote acquisition
+through the approved runner after the workspace HTTP403. No keys or live funds required.
+Fee sensitivity is possible without account access; full replay still needs paired prices.
 
 ## Parked
 

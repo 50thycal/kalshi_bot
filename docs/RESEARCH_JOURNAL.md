@@ -1,5 +1,16 @@
 # Weather-markets research journal
 
+## SPOT-PERP-CARRY 2026-09-13 — definitions and sources narrowed
+
+Verified official BTC 0.0001 / ETH 0.001 coin contract sizes, funding direction and payment
+schedule. Located perp depth and bid/ask candle schemas plus Coinbase spot depth and trade
+candles; distinguished bucket starts from ends and trade prices from executable quotes.
+Direct perp quote check returned HTTP403; Coinbase timed out. No quotes acquired, no bypass.
+An explicitly conditional constant-notional decimal-rate screen at $2,000 cash gives
+$4.41 gross / $2.49 after low hypothetical fees / -$3.91 after middle fees, NOT a fixed-unit
+backtest or annual return. No C2/C3 promotion. [Evidence and limitations](SPOT_PERP_CARRY_SOURCES.md).
+
+
 ## SPOT-PERP-CARRY 2026-09-13 — approved census C1 PASS, economics HOLD
 
 After Calvin merged #402, request `spot-carry-20260913-1` ran code

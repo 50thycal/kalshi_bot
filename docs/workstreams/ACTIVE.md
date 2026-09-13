@@ -7,7 +7,7 @@ where each effort is. Read it first on a continuation.
 
 | ID | Workstream | Phase | Status | Current Next Step | Related PR |
 |---|---|---|---|---|---|
-| [WS-018](WS-018-spot-perp-funding-census.md) | Spot/perp funding carry: $2,000 primary / $4,000 ceiling | REVIEW | Blocked | C1 PASS; verify API units/contract scaling, executable quotes and account fees before cash-flow test | [#402 merged](https://github.com/50thycal/kalshi_bot/pull/402) |
+| [WS-018](WS-018-spot-perp-funding-census.md) | Spot/perp funding carry: $2,000 primary / $4,000 ceiling | REVIEW | Blocked | Sizes/sources resolved; API rate conversion and permission for approved-transport quote check after HTTP403 remain | [#402 merged](https://github.com/50thycal/kalshi_bot/pull/402) |
 | [WS-002](WS-002-mmsell-settlement-taxonomy-repair.md) | MMSELL settlement-taxonomy repair | REVIEW | Blocked | Merge guard: verify in XOS that the revision is registered + impacts accepted | [#257](https://github.com/50thycal/kalshi_bot/pull/257) |
 | [WS-003](WS-003-mmsell-noncrypto-settlement-mode-paper-design.md) | MMSELL non-crypto settlement-mode paper design | DECIDE | Blocked | Waiting on WS-002, the crypto-exclusion defect, and the event-correlation measurement | — |
 | [WS-004](WS-004-live-canary-gate-addressing.md) | Reconciling the recurring blocked-gate anomaly (historical canaries) | DECIDE | Active | Put the reporting-layer options to the operator (explain / accept-condition / live with it) | — |
