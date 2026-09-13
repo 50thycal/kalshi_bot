@@ -2,9 +2,10 @@
 
 *Thesis written 2026-09-12, before any validation ran; the falsifiable predictions below are
 pre-registered and must not be re-scoped post-hoc. Promoted from `docs/IDEA_MODEL_20260912.md`
-(candidate N1, the anti-anchor slot). Status: **pending recon census**
-(`scripts/kalshi_kpi_census.py`) — and **HOLD-by-default under the venue-age rule** until that
-census shows a gradeable tape.*
+(candidate N1, the anti-anchor slot). Status: **CENSUS RUN 1 → HOLD (ACCRUAL), 2026-09-12** —
+43 settled KPI-threshold markets with volume against a floor of 100, 36 readable pre-report quotes
+against 60 (see Results). Re-run `scripts/kalshi_kpi_census.py` the week of **2026-11-09**, after
+the Q3 earnings season. No probe, no book.*
 
 **New venue, new mechanic, no ancestor.** Kalshi's Public Companies Hub (launched 2026-08-04;
 KPI lines set from Fiscal.ai data, earnings calendar from Benzinga) lists ladders on individual
