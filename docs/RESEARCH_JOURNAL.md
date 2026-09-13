@@ -1,5 +1,18 @@
 # Weather-markets research journal
 
+## SPOT-PERP-CARRY 2026-09-13 — capital-bounded funding census prepared
+
+Calvin selected the parked same-asset spot/perp carry idea and requested a test at $2,000
+preferred total cash, $1,000 comparison and $4,000 ceiling. New premise: hedge identical
+asset units, unlike PERP-V1's cross-asset carry or PASSIVE-PERP's outright reversion.
+[Frozen census](SPOT_PERP_CARRY_CENSUS.md), [WS-018](workstreams/WS-018-spot-perp-funding-census.md).
+Current docs distinguish market funding-rate history from the account-payment endpoint
+the old collector used. Direct access returned403; no actual funding return measured.
+The 40/40/20 spot/collateral/reserve model is explicit: $800 hedge notional on $2,000 total
+cash. Even the favorable hypothetical cost scenario needs $105.92/month funding to leave
+$100; this is a capital hurdle, not a yield observation. New read-only module and tests
+prepared; production run waits for the named ops-runner merge approval. MMSELL hedge stays parked.
+
 A running log of every edge hypothesis we've tested on Kalshi daily-temperature
 markets, what the data said, and the verdict. Newest entries at the top. The
 goal: a durable record of *why* each live book exists and why each dead idea was
