@@ -1,5 +1,19 @@
 # Weather-markets research journal
 
+## SPOT-PERP-CARRY 2026-09-13 — approved census C1 PASS, economics HOLD
+
+After Calvin merged #402, request `spot-carry-20260913-1` ran code
+`ed33c037a2d360125d28898363587f02a0fcf637` at 12:45:30 UTC.
+[Raw result](https://github.com/50thycal/kalshi_bot/blob/ops/ops/results/spot-carry-20260913-1.txt):
+90 observations over 30 UTC days for each asset, no validation errors, all gaps eight
+hours, ten history and two context-estimate requests HTTP200. BTC raw signs +/0/- are
+68/21/1; ETH 0/80/10. These are not cash-flow or profitability measurements.
+The prior scratch HTTP403 is superseded as an availability blocker. C1 passes, but C2/C3
+remain open for verified API units/contract scaling, executable quotes and account fees.
+No annual return claim, retrospective asset selection, XOS registration, trades or funding.
+The $2,000 primary / $4,000 ceiling including reserves is unchanged. Ops reset to noop.
+Full provenance and next-input trigger: [census](SPOT_PERP_CARRY_CENSUS.md), [WS-018](workstreams/WS-018-spot-perp-funding-census.md).
+
 ## SPOT-PERP-CARRY 2026-09-13 — capital-bounded funding census prepared
 
 Calvin selected the parked same-asset spot/perp carry idea and requested a test at $2,000
