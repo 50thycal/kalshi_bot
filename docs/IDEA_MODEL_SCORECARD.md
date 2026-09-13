@@ -13,6 +13,9 @@ and **outcome**. Keep the base-rate and per-family tallies below in sync.
 
 ## Base rate (as of 2026-07-26, XLOCK + WIDEQUOTE both probed)
 
+Operator-originated addition 2026-09-13: SPOT-PERP-CARRY, 1 pending funding/capital census,
+0 measured profitability passes; separate from the dated idea-model promotion tally.
+
 *Addendum 2026-09-12:* PMDIV (2026-08-13, KILL) makes it **19 promotions → 0 live paper books**; the
 2026-09-12 broad sweep added two census-first promotions (METALHALT, EARNBEAT) and withdrew a third
 (PERPMM) the same day when the independent PASSIVE-PERP census below closed its premise. The
@@ -91,6 +94,7 @@ highest-leverage screen is **testability-NOW**, not edge cleverness.
 
 | date | idea | family | scope source | verdict date | verdict | outcome |
 |---|---|---|---|---|---|---|
+| 2026-09-13 | **SPOT-PERP-CARRY** | same-asset funding carry | Calvin selected parked idea; $2,000 primary total cash, $4,000 ceiling | — | **pending census** | Correct market-rate endpoint, raw-unit validation and capital hurdles first. No funding history or return measured yet. `docs/SPOT_PERP_CARRY_CENSUS.md`. |
 | 2026-09-12 | **EARNBEAT** | directional on a public base rate (company KPIs) | **broad sweep** (`docs/IDEA_MODEL_20260912.md`, anti-anchor slot) | 2026-09-12 | **CENSUS: HOLD (ACCRUAL)** | Ops `kpi-census-1`: 43 settled KPI-threshold markets w/ volume (floor 100), 36 readable pre-report quotes (floor 60), 396 open. Mid-band gaps have the predicted sign (+11 to +37 pts) at n=4–5/band — a mirage-sized sample, recorded as a reason to re-run, not a result. Trigger: re-run week of 2026-11-09 after Q3 reports. `docs/EARNBEAT_THESIS.md` Results. |
 | 2026-09-12 | **METALHALT** | obs-pin / mechanics-blindness (exchange-closure pin, metals) | **broad sweep** (riff on FREEZE on the settlement-source axis WS-005 asked for) | 2026-09-12 | **KILL (PREMISE) at census** | Two ops runs (`metalhalt-census-1`, `-2`). The calendar-defined universe exists (62 settled 15-min gold/silver windows inside Pyth's published XAU/XAG halt, $4.6M) but the C0 frozen-reference test shows settlement values **moving inside both halt stretches**: Kalshi settles on Pyth's 24/7 metals indices (June 2026), so no window is ever mechanically decided early. July's "Pyth is continuous" exclusion was right. Closes the exchange-closure pin on both WS-005 axes; recommend WS-005 → ABANDONED. `docs/METALHALT_THESIS.md` Results. |
 | 2026-09-12 | **PERPMM** | maker / liquidity provision (perp premium reversion, both legs passive) | **broad sweep** (riff on PERP-V1) | 2026-09-12 | **WITHDRAWN before probe — superseded** | The same-day PASSIVE-PERP census (WS-017, `docs/PASSIVE_PERP_CENSUS.md`, operator-approved, run on the retained tape) measured the premise's *outright price return* under instant maker fills: BTC −4.84 bps / ETH +0.05 bps after 2 bps/leg, both below a random-direction control → HOLD, "revisit only with a mechanically distinct premise". PERPMM's through-price fill model can only be stricter, so it is dominated; its census script was not shipped. `docs/PERPMM_THESIS.md` kept as the withdrawn pre-registration. |

@@ -3,10 +3,11 @@
 The project's active-work control board — what is being designed and built right now, and
 where each effort is. Read it first on a continuation.
 
-**Updated:** 2026-09-12 (WS-017 bounded probe completed) · **Build OS v0.12**
+**Updated:** 2026-09-13 (WS-018 funding carry prepared for approval) · **Build OS v0.12**
 
 | ID | Workstream | Phase | Status | Current Next Step | Related PR |
 |---|---|---|---|---|---|
+| [WS-018](WS-018-spot-perp-funding-census.md) | Spot/perp funding carry: $2,000 primary / $4,000 ceiling | REVIEW | Blocked | Calvin approves new funding probe ops allowlist merge; then run census | [#402](https://github.com/50thycal/kalshi_bot/pull/402) |
 | [WS-002](WS-002-mmsell-settlement-taxonomy-repair.md) | MMSELL settlement-taxonomy repair | REVIEW | Blocked | Merge guard: verify in XOS that the revision is registered + impacts accepted | [#257](https://github.com/50thycal/kalshi_bot/pull/257) |
 | [WS-003](WS-003-mmsell-noncrypto-settlement-mode-paper-design.md) | MMSELL non-crypto settlement-mode paper design | DECIDE | Blocked | Waiting on WS-002, the crypto-exclusion defect, and the event-correlation measurement | — |
 | [WS-004](WS-004-live-canary-gate-addressing.md) | Reconciling the recurring blocked-gate anomaly (historical canaries) | DECIDE | Active | Put the reporting-layer options to the operator (explain / accept-condition / live with it) | — |
@@ -47,7 +48,6 @@ The specific omissions from the 2026-08-24 seeding inventory, with reasons, are 
 ## Parked
 
 - Purchased-tail MMSELL hedge: explore buying a farther-tail YES against a NO threshold position on the same contest with matching settlement rules; evaluate interval loss and hedge cost (Calvin, 2026-09-12).
-- Same-asset spot/perp funding carry: explore long spot plus equal-unit short perp, including funding, fees, basis and capital costs; distinct from cross-asset PERP-V1 carry (Calvin, 2026-09-12).
 
 Deferred candidates. One line each — no ID, no phase, no owner, no PR, no estimate. Nothing
 here is scheduled and **no agent may start anything in it**; it becomes work only when the
