@@ -16,6 +16,10 @@ and **outcome**. Keep the base-rate and per-family tallies below in sync.
 Operator-originated addition 2026-09-13: SPOT-PERP-CARRY, 1 completed funding census (HOLD),
 0 measured profitability passes; separate from the dated idea-model promotion tally.
 
+Continuation: BTC/ETH contract sizes and price-source schemas verified. Raw funding-unit
+conversion and paired quote access remain unresolved; [conditional screen](SPOT_PERP_CARRY_SOURCES.md)
+is not a second probe, a fixed-unit backtest, or a profitability pass.
+
 *Addendum 2026-09-12:* PMDIV (2026-08-13, KILL) makes it **19 promotions → 0 live paper books**; the
 2026-09-12 broad sweep added two census-first promotions (METALHALT, EARNBEAT) and withdrew a third
 (PERPMM) the same day when the independent PASSIVE-PERP census below closed its premise. The

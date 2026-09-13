@@ -1,6 +1,6 @@
 # SPOT-PERP-CARRY — funding availability and total-capital census
 
-**Status:** census executed 2026-09-13 after #402 merged; C1 PASS, overall HOLD pending verified funding units, contract scaling, executable prices and account fees. No realized return measured.
+**Status:** C1 PASS; BTC/ETH contract sizes and funding direction/schedule verified. Overall HOLD pending explicit API rate conversion and paired executable price acquisition. Account fees can be modeled as scenarios. No realized return measured. [Source verification and conditional screen](SPOT_PERP_CARRY_SOURCES.md).
 **Request:** Calvin selected this previously parked idea and requested testing with
 $2,000 preferred total capital, $1,000 comparison and $4,000 ceiling. Research only.
 **Workstream:** [WS-018](workstreams/WS-018-spot-perp-funding-census.md).
