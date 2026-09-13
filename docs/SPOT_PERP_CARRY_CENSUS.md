@@ -36,6 +36,20 @@ Next input required: authoritative API rate-unit and contract-multiplier definit
 then synchronized executable spot/perp quotes and the applicable account fee tier.
 The $2,000 primary / $4,000 ceiling and 40/40/20 allocation remain unchanged.
 
+### Follow-up interpretation check
+
+Official [funding help](https://help.kalshi.com/en/articles/15357613-how-funding-works)
+confirms positive rates pay shorts, negative rates charge shorts, and payments at
+00:00/08:00/16:00 Eastern. All 90 timestamps match that schedule in this frozen
+daylight-saving-time window. Thus schedule coverage and payer direction are supported;
+the raw runner's UNVERIFIED fields remain unchanged as its original output.
+The [BTC specification](https://help.kalshi.com/en/articles/15357587-btc-perpetual-futures-contract-specifications)
+states 0.0001 BTC per contract. ETH sizing and the API numeric rate representation still
+need explicit verification; matching apparent magnitudes is not a unit specification.
+[Fee guidance](https://help.kalshi.com/en/articles/16071417-perps-fees-explained)
+confirms fees on notional at entry and exit with volume tiers, not the applicable
+account-specific rate. These checks narrow C2 but do not pass C2/C3 or justify net P&L.
+
 ## Strategy construction
 
 Long BTC spot plus an equal-unit short BTC perp; same construction for ETH. Funding
