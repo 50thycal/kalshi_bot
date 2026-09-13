@@ -39,22 +39,26 @@ review row does not consume an Active slot on the already over-limit board.
 
 ## Open Decisions / Review State
 
-Calvin's earlier ops-runner approval explicitly covered passive reversion, not this new
-funding module. `docs/STANDING_AUTHORIZATIONS.md` makes a merge touching the ops runner
-a named hard stop. This PR is prepared for approval; no permission bypass is attempted.
+Calvin merged #402; verified merge SHA `ed33c037a2d360125d28898363587f02a0fcf637`.
+The named ops-runner merge hard stop is satisfied. Approved census request
+`spot-carry-20260913-1` completed successfully, with 90 observations / 30 days per asset,
+no errors and eight-hour gaps throughout. C1 PASS; overall HOLD for units/scaling,
+executable prices and actual account fees. Raw result is linked in the Build Spec.
+The owned ops request is reset to noop. No live funds or XOS registration.
 Implementation actor: Codex / spot-carry-20260913. Solo mode; no independent review claimed.
 Framework checked: canonical v0.12 on 2026-09-13, matches project.
 Local verification: 12 tests, ruff and compilation pass. Capital-only mode ran; direct
 public-data mode returned HTTP403 for both histories and HOLD. No funding returns measured.
-Control Tower refresh submitted as `carry-ct-20260913-1`; result not yet available at
-PR publication. Read that request-ID result before any later XOS registration; no claim
-of current canonical experiment state is made by this census.
-Finalization: pushed. This records a blocked review, not completion of the funding test.
+Control Tower `carry-ct-20260913-1` returned integrity clear, IDEA 0 / PROBE 0 at its
+recorded snapshot. Refresh before any later XOS registration; this census registers none.
+Finalization: census evidence recorded in solo mode; full funding test remains blocked
+on named data/interpretation inputs, no longer on merge approval.
 
 ## Next Step
 
-Calvin approves the new funding-census allowlist addition and merge; after green CI,
-run `spot-carry-20260913-1` and continue the pre-registered testability checks.
+Obtain authoritative API funding-unit and contract-multiplier definitions; verify payment
+schedule, then obtain synchronized executable quotes and applicable account fee tier.
+Continue the frozen capital cash-flow test only when C2/C3 inputs are verified.
 
 ## Parked
 

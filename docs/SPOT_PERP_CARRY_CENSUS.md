@@ -1,11 +1,56 @@
 # SPOT-PERP-CARRY — funding availability and total-capital census
 
-**Status:** pre-registered 2026-09-13; 12 local tests pass; direct API run HOLD (HTTP403), approved-runner execution pending.
+**Status:** census executed 2026-09-13 after #402 merged; C1 PASS, overall HOLD pending verified funding units, contract scaling, executable prices and account fees. No realized return measured.
 **Request:** Calvin selected this previously parked idea and requested testing with
 $2,000 preferred total capital, $1,000 comparison and $4,000 ceiling. Research only.
 **Workstream:** [WS-018](workstreams/WS-018-spot-perp-funding-census.md).
 
-## Mechanism and novelty
+## Approved-runner result — 2026-09-13
+
+Request `spot-carry-20260913-1` ran merged code
+`ed33c037a2d360125d28898363587f02a0fcf637` at 12:45:30 UTC.
+[Raw result](https://github.com/50thycal/kalshi_bot/blob/ops/ops/results/spot-carry-20260913-1.txt)
+and [successful runner](https://github.com/50thycal/kalshi_bot/actions/runs/34757956093)
+are the evidence; result blob `82a14c2f50f01924417f53afaf97118468e41bf6`.
+All ten history requests and both context-only estimates returned HTTP200. The earlier
+scratch HTTP403 is not the current blocker. Owned ops request was reset to noop.
+
+| Asset | Observations / UTC days | Positive / zero / negative raw rates | Raw rate sum |
+| --- | --- | --- | --- |
+| BTC | 90 / 30 | 68 / 21 / 1 | 0.012270507428775305 |
+| ETH | 90 / 30 | 0 / 80 / 10 | -0.0012384200729308001 |
+
+Both histories have no validation errors, first timestamp August 14 04:00 UTC,
+last September 12 20:00 UTC, and every interval exactly eight hours. C1 passes.
+Dataset hashes: BTC `d275b1f404f3dfa0a39c8920f2ddbf240d07063f62e03dd104e0e828758e4729`;
+ETH `ac798c30b2056c665b6de5bb87449990e7151bc747064bd3391ee674c7b40bcd`.
+
+These are raw API numbers, not percentages, dollars, or a yield estimate. The historical
+endpoint documentation does not establish the numeric unit conversion. Reported contract
+marks (e.g. BTC 6.3265) require verified scaling; they are not verified whole-coin spot prices.
+The C2 interpretation gate and C3 executable-price/account-fee gate remain open.
+No annualization, economic PASS/KILL, paper promotion or live allocation is justified.
+ETH's absence of positive raw rates is noteworthy but is not yet a signed cash-flow result.
+
+Next input required: authoritative API rate-unit and contract-multiplier definitions,
+then synchronized executable spot/perp quotes and the applicable account fee tier.
+The $2,000 primary / $4,000 ceiling and 40/40/20 allocation remain unchanged.
+
+### Follow-up interpretation check
+
+Official [funding help](https://help.kalshi.com/en/articles/15357613-how-funding-works)
+confirms positive rates pay shorts, negative rates charge shorts, and payments at
+00:00/08:00/16:00 Eastern. All 90 timestamps match that schedule in this frozen
+daylight-saving-time window. Thus schedule coverage and payer direction are supported;
+the raw runner's UNVERIFIED fields remain unchanged as its original output.
+The [BTC specification](https://help.kalshi.com/en/articles/15357587-btc-perpetual-futures-contract-specifications)
+states 0.0001 BTC per contract. ETH sizing and the API numeric rate representation still
+need explicit verification; matching apparent magnitudes is not a unit specification.
+[Fee guidance](https://help.kalshi.com/en/articles/16071417-perps-fees-explained)
+confirms fees on notional at entry and exit with volume tiers, not the applicable
+account-specific rate. These checks narrow C2 but do not pass C2/C3 or justify net P&L.
+
+## Strategy construction
 
 Long BTC spot plus an equal-unit short BTC perp; same construction for ETH. Funding
 received by the short must exceed all costs and losses in the spot/perp basis. Equal
