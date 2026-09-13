@@ -1,1 +1,1 @@
-{"type":"env","id":"lo-env-913a"}
+{"type":"db","max_rows":200,"id":"lo-nat-913a","sql":"SELECT coalesce(parent_outcome,'(none)') AS parent_did, coalesce(live_outcome,'(none)') AS live_did, count(*) AS n, count(DISTINCT series) AS n_series FROM live_paper_parity_events WHERE twin_tag='Fmmsell10_pt4' AND twin_outcome='opened' GROUP BY 1,2 ORDER BY n DESC"}
