@@ -1,1 +1,1 @@
-{"type": "db", "sql": "SELECT strategy, status, count(*) AS n, round(coalesce(sum(pnl),0)::numeric,2) AS pnl, count(*) FILTER (WHERE pnl<0) AS losses, max(created_at) AS last_entry FROM paper_trades WHERE strategy IN ('Rmmsell1','Rmmsell2') GROUP BY strategy, status ORDER BY strategy, status", "id": "cc-rmm-tape15"}
+{"type":"noop"}
