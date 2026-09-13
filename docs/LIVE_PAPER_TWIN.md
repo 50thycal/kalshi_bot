@@ -49,6 +49,16 @@ That leaves **exactly one** difference between twin and live:
 
 > the twin assumes its resting order fills; the live book has to actually get filled.
 
+> [!IMPORTANT]
+> **That sentence was FALSE from 2026-09-05 until `MMSELL_TWIN_APPLIES_LIVE_BARS` is turned
+> on.** Two live-only bars — the review-tier bar (`MMSELL_LIVE_MIN_TIER`, 2026-09-05) and the
+> series pause (`MMSELL_LIVE_SKIP_SERIES`, 2026-09-06) — gate the live mirror only, so the twin
+> kept trading a universe live may not touch. On `Fmmsell10`/`Fmmsell10_pt4` that was 177 of
+> the 194 candidates live "never attempted", across 75 series, and it made
+> `live_paper_parity` report a UNIVERSE difference as an `EXECUTION GAP`. The flag restores the
+> invariant; until it is on, read any mmsell parity verdict against
+> `docs/OPS_FMMSELL10_PARITY_DIAGNOSIS.md` §3 first.
+
 ### Gates the twin applies, and gates it deliberately doesn't
 
 | gate | applied to twin? | why |

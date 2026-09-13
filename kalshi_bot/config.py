@@ -313,6 +313,28 @@ class Settings(BaseSettings):
     # real-money exposure in the safe direction only. Set to "" to restore the
     # pre-2026-09-06 behaviour; that is also the intended lift path if the gate REFUTES.
     mmsell_live_skip_series: str = "KXNFLSPREAD"
+    #: Apply the two live-only bars above (`mmsell_live_min_tier`, `mmsell_live_skip_series`)
+    #: to the PAPER TWIN as well as to the live mirror.
+    #:
+    #: WHY THIS EXISTS. Both bars gate the live mirror only, and that is right for the
+    #: incumbent paper book — paper is how a series earns its way out of quarantine, so barring
+    #: paper would make the quarantine permanent by construction. But the TWIN is not paper: it
+    #: exists to be live's mirror, and `docs/LIVE_PAPER_TWIN.md` states its invariant as "the
+    #: ONLY remaining difference is that the twin assumes its resting order fills." Since the
+    #: tier bar landed on 2026-09-05 that sentence has been false — the twin trades a universe
+    #: live may not touch, so `live_paper_parity` reports a UNIVERSE difference as an
+    #: EXECUTION GAP. Measured on `Fmmsell10`/`Fmmsell10_pt4`:
+    #: 177 of the 194 candidates live "never attempted" were refused at the tier bar and 15 at
+    #: the series pause, while `gate:open_cap` refused none
+    #: (`docs/OPS_FMMSELL10_PARITY_DIAGNOSIS.md`).
+    #:
+    #: WHY IT DEFAULTS OFF. Turning it on changes what an already-running twin trades, and
+    #: retuning a live comparison mid-epoch voids it. The honest activation is this flag AND a
+    #: new twin tag (`LIVE_PAPER_TWIN_SUFFIX`) in the SAME deploy, so the new universe and the
+    #: new epoch start together. Left off, merging this changes nothing that runs.
+    #:
+    #: This can only ever REFUSE a twin entry, never add one.
+    mmsell_twin_applies_live_bars: bool = False
     mmsell_contest_cap_enabled: bool = False
     #: Max open positions across ALL series on one contest. 1 is the honest default when on:
     #: two positions on one game is twice the same bet, not diversification. Mutually-exclusive

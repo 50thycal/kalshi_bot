@@ -180,6 +180,11 @@ ALLOWED_VARS = frozenset({
     "LIVE_PAPER_TWIN_ENABLED", "LIVE_PAPER_TWIN_AUTO", "LIVE_PAPER_TWINS",
     "LIVE_PAPER_TWIN_SUFFIX", "LIVE_PAPER_TWIN_MAX_OPEN_POSITIONS",
     "LIVE_PAPER_TWIN_PARITY_EVENTS", "LIVE_PAPER_TWIN_PARITY_MAX",
+    # Mirrors the two live-only bars onto the twin so it shares live's UNIVERSE, not just its
+    # pricing (docs/OPS_FMMSELL10_PARITY_DIAGNOSIS.md). Settable because its honest activation
+    # is this flag AND a new LIVE_PAPER_TWIN_SUFFIX in the SAME set — a new universe needs a
+    # new epoch, and both live here. Refuse-only: it can never add a twin entry.
+    "MMSELL_TWIN_APPLIES_LIVE_BARS",
     "WEATHER_STRATEGIES", "WEATHER_ENTRY_HOURS", "WEATHER_TOP_N", "WEATHER_TRACK_LOWS",
     "WEATHER_DIST_ENABLED", "WEATHER_DIST_SIGMA", "WEATHER_DIST_MIN_EDGE_CENTS",
     "WEATHER_CITY_WINDOW_ENABLED", "WEATHER_OBS_ENTRY_ENABLED", "WEATHER_POLYMARKET_ENABLED",

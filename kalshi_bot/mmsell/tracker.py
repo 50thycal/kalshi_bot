@@ -102,6 +102,10 @@ class MmSellCycleSummary:
     skipped_contest_cap: int = 0     # too many positions on ONE contest, ACROSS series
     skipped_live_tier: int = 0       # LIVE entry refused: series below the review-tier bar
     skipped_live_paused: int = 0     # LIVE entry refused: real money PAUSED on this series
+    #: The same two bars applied to the TWIN, counted separately so a twin refusal is never
+    #: mistaken for a real-money one. Non-zero only under `mmsell_twin_applies_live_bars`.
+    twin_skipped_live_tier: int = 0
+    twin_skipped_live_paused: int = 0
     #: Books dropped this cycle because their tag resolves to no active Experiment OS
     #: deployment arm. Counted rather than raised: one book's lineage problem must not
     #: cost every other book its cycle (XOS-000011).
@@ -704,6 +708,8 @@ class MmSellTracker:
                     "skipped_contest_cap": summ.skipped_contest_cap,
                     "skipped_live_tier": summ.skipped_live_tier,
                     "skipped_live_paused": summ.skipped_live_paused,
+                    "twin_skipped_live_tier": summ.twin_skipped_live_tier,
+                    "twin_skipped_live_paused": summ.twin_skipped_live_paused,
                     "per_series": dict(sorted(summ.per_series.items(),
                                               key=lambda kv: -kv[1])[:12]),
                     "per_book": summ.per_book,
@@ -1170,6 +1176,23 @@ class MmSellTracker:
                         # The twin prices and sizes exactly as the live executor would, from the
                         # shared live/sizing helpers — the ONLY thing it does differently from
                         # live is assume the resting order fills.
+                        #
+                        # The two LIVE-ONLY bars, mirrored onto the twin. They are checked
+                        # directly rather than through `_live_paused_blocks`/`_live_tier_blocks`
+                        # because those two carry live-mirror counter semantics: they ask
+                        # `_live_would_act`, which rejects paper-twin tags, so a twin would be
+                        # refused WITHOUT recording which bar did it — the exact blindness this
+                        # fixes. Off by default; see `mmsell_twin_applies_live_bars`.
+                        if s.mmsell_twin_applies_live_bars:
+                            if exposure_paused(series, s.mmsell_live_skip_series_list):
+                                summ.twin_skipped_live_paused += 1
+                                self._note(recorder, ticker, tag,
+                                           twin_codes.SKIP_LIVE_PAUSED)
+                                continue
+                            if not universe_admits(series, s.mmsell_live_min_tier):
+                                summ.twin_skipped_live_tier += 1
+                                self._note(recorder, ticker, tag, twin_codes.SKIP_LIVE_TIER)
+                                continue
                         if metrics.spread is not None \
                                 and metrics.spread > s.mmsell_live_max_spread_cents:
                             self._note(recorder, ticker, tag, twin_codes.SKIP_SPREAD)

@@ -157,3 +157,56 @@ $100/month north star. At `size=1` and `LIVE_MAX_ORDER_DOLLARS=1.0` this book ca
 approach that figure whatever the bars do; it is a canary measuring whether the edge
 survives contact with real money, and on that question it is currently reading **yes, but
 small, and only on the universe it is allowed to trade**.
+
+---
+
+## 9. The fix, and how to activate it (added 2026-09-13, Live Ops)
+
+§4's defect is now addressed in code, **switched off**. Merging changes nothing that runs.
+
+`MMSELL_TWIN_APPLIES_LIVE_BARS` (default `false`) applies the two live-only bars —
+`mmsell_live_min_tier` and `mmsell_live_skip_series` — to the **twin** as well as to the live
+mirror. The incumbent paper book is deliberately untouched: paper is still how a series
+accumulates the history that graduates it. Only the twin moves, because the twin is not paper —
+it is live's mirror, and sharing live's universe is what makes it one.
+
+The bars are checked directly in the twin branch rather than through `_live_paused_blocks` /
+`_live_tier_blocks`. Those two ask `_live_would_act`, which rejects paper-twin tags, so routing
+the twin through them would refuse the entry **without recording which bar did it** — the exact
+blindness this fixes. Twin refusals land in their own counters (`twin_skipped_live_tier`,
+`twin_skipped_live_paused`) so a simulated refusal can never be read as a real-money entry the
+bar saved.
+
+### Why it defaults off, and what activation requires
+
+Turning this on changes what an already-running twin trades. **Retuning a live comparison
+mid-epoch voids it** — that is the `PARAM DRIFT` failure this document already records against
+`Fmmsell10_pt4`. So the honest activation sets the flag **and a new twin tag in the same
+request**, so the new universe and the new epoch begin together:
+
+```jsonc
+{"type":"env","action":"set",
+ "values":{"MMSELL_TWIN_APPLIES_LIVE_BARS":"true","LIVE_PAPER_TWIN_SUFFIX":"_pt5"},
+ "id":"twin-rescope-1"}
+```
+
+Both variables are on the ops allowlist. Notes before sending:
+
+- `LIVE_PAPER_TWIN_SUFFIX` is **global**. It is safe here only because `LIVE_STRATEGIES` holds
+  exactly one book (`Fmmsell10`); with a second live book armed, the same set would orphan that
+  book's twin and take it dark under `NEW_ONLY` (the XOS-000011 shape). **Re-read
+  `LIVE_STRATEGIES` immediately before sending.**
+- Setting env **redeploys the worker**. Resting orders live on the exchange and survive it;
+  reconciliation runs on boot.
+- `Fmmsell10_pt4` ends at that instant and is never reused. Its verdict stays what §6 says it
+  is — a universe artefact, not an execution result.
+- The first meaningful parity read on `_pt5` needs n≥30 settled per side, so roughly a week.
+
+### What this fix does NOT do
+
+It repairs the **instrument**, not the book. Measured on the current epoch, restricting the twin
+to live's own universe moves paper from +3.24¢/contract to **+2.37¢**, against live's realised
+**+0.65¢** (`lo-restrict-913a`, `lo-truth-913b`). So the universe mismatch is ~34% of the gap;
+the remaining ~66% is fill selection — the resting orders that never fill are the winners, and
+no bar or cap recovers that. Expect the re-scoped twin to be *honest*, not *flattering*.
+
