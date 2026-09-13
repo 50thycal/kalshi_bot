@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "ed33c037a2d360125d28898363587f02a0fcf637",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-13T11:31:32Z",
+  "id": "lo-drift-913b",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/lo-drift-913b.receipt.json",
+  "result_file": "ops/results/lo-drift-913b.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34754655201",
+  "service": "main",
+  "started_at": "2026-09-13T11:31:31Z",
+  "targets": [],
+  "type": "logs"
+}
