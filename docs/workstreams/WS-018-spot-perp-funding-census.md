@@ -1,6 +1,7 @@
 # WS-018 — Spot/perp funding carry within Calvin's capital budget
 
 **Build OS:** v0.12 · **Phase:** REVIEW · **Status:** Blocked
+**Related PR:** [#402](https://github.com/50thycal/kalshi_bot/pull/402)
 
 ## Goal / Build Card
 
@@ -45,6 +46,10 @@ Implementation actor: Codex / spot-carry-20260913. Solo mode; no independent rev
 Framework checked: canonical v0.12 on 2026-09-13, matches project.
 Local verification: 12 tests, ruff and compilation pass. Capital-only mode ran; direct
 public-data mode returned HTTP403 for both histories and HOLD. No funding returns measured.
+Control Tower refresh submitted as `carry-ct-20260913-1`; result not yet available at
+PR publication. Read that request-ID result before any later XOS registration; no claim
+of current canonical experiment state is made by this census.
+Finalization: pushed. This records a blocked review, not completion of the funding test.
 
 ## Next Step
 
