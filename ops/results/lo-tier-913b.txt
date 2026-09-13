@@ -1,7 +1,0 @@
-# ops request [READ]
-# type=db  id=lo-tier-913b
-# code e56a42636c9fa3e4ffc0844c11910a98385c5b48 · started 2026-09-13T11:27:49Z
-series  barred  twin_pnl_usd  cents_per_ct
-------  ------  ------------  ------------
-
-(0 rows)
