@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"env","action":"set","values":{"MMSELL_TWIN_APPLIES_LIVE_BARS":"true"},"id":"twin-bars-on-1"}
