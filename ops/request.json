@@ -1,1 +1,1 @@
-{"type":"db","max_rows":50,"id":"lo-twinverify-3","sql":"SELECT coalesce(twin_outcome,'(null)') AS twin_did, count(*) AS n, min(recorded_at) AS first_seen, max(recorded_at) AS last_seen FROM live_paper_parity_events WHERE twin_tag='Fmmsell10_pt4' AND recorded_at > now() - interval '25 minutes' GROUP BY 1 ORDER BY n DESC"}
+{"type":"logs","limit":200,"filter":"twin_opened","id":"lo-twinverify-4"}
