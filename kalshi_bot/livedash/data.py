@@ -329,6 +329,10 @@ def build_run(
                                       only_tickers=barred)
             universe = {
                 "barred_tickers": len(barred),
+                # The ticker list itself, so the card can also drop these rows from its
+                # open-market table instead of showing a headline and a table scoped to
+                # two different universes.
+                "tickers": sorted(barred),
                 "bars": list(_UNIVERSE_BARS),
                 "common": common.summary(),
                 "excluded": excluded.summary(),

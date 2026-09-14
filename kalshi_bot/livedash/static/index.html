@@ -491,31 +491,35 @@ function renderHeader(){
     `<div class="banner ${klass}"><b>${esc(v.label)}</b> — ${esc(v.detail)}</div>`;
 }
 
-function universeBlock(u){
-  // Shown only when this pair HAS a universe asymmetry. Both figures are rendered:
-  // the headline card above stays the whole book, and this says what the comparable
-  // subset is. A restricted number is never displayed without saying it is restricted.
+function universeNote(u){
+  // Sits directly under the headline, not below the position table: a reader who has to
+  // scroll past 23 rows to find out the number above them is not comparable has already
+  // been misled. The whole-book figure stays on the card, labelled, so nothing is hidden.
   if (!u) return "";
-  const c = u.common, x = u.excluded;
-  return `<div class="note" style="margin-top:10px;border-left:3px solid var(--warn);padding-left:9px">
-     <b>Same universe as live</b> — the card above includes ${esc(int(u.barred_tickers))} market(s)
-     live's universe bars refused, so it is not comparable to the live leg. On the markets
-     BOTH books could trade:
-     <dl class="kv" style="margin-top:7px">
-       <dt>Realized (common)</dt><dd>${money(c.realized_pnl_usd)}</dd>
-       <dt>Per contract (common)</dt><dd>${cell(cents(c.pnl_per_contract_cents,2), sign(c.pnl_per_contract_cents))}</dd>
-       <dt>Positions closed (common)</dt><dd>${esc(int(c.positions_closed))}</dd>
-       <dt>Excluded slice</dt><dd>${money(x.realized_pnl_usd)} over ${esc(int(x.positions_closed))} closed</dd>
-     </dl>
-     <span class="dim" style="font-size:11px">Excluded = refused at ${esc((u.bars||[]).join(" / "))}.
-     Capacity gates (open cap, contest cap, dedup) are NOT excluded — those are markets live
-     could have taken.</span>
+  const x = u.excluded, w = u.whole;
+  return `<div class="note" style="margin:8px 0 10px;border-left:3px solid var(--warn);padding-left:9px">
+     <b>Same universe as live</b> — ${esc(int(u.barred_tickers))} market(s) live's universe bars
+     refused are excluded above, so this is comparable to the live leg.
+     <div style="margin-top:5px">Whole book was
+       <b>${money(w.total_pnl_usd)}</b> (${esc(int(w.positions_closed))} closed);
+       the excluded slice is ${money(x.realized_pnl_usd)} over ${esc(int(x.positions_closed))}.</div>
+     <div class="dim" style="font-size:11px;margin-top:4px">Excluded = refused at
+     ${esc((u.bars||[]).join(" / "))}. Capacity gates (open cap, contest cap, dedup) are NOT
+     excluded — those are markets live could have taken.</div>
    </div>`;
 }
 
 function positionCard(sel, side, s, positions, tags, universe){
   const cls = side === "live" ? "live" : "paper";
-  const openRows = positions.filter(p => p.status === "open");
+  // With a universe asymmetry the card reports the COMMON slice — headline, metrics and
+  // open-market table all on the one universe live could actually trade. `whole` carries
+  // the unrestricted figures so the note below can still show them.
+  const u = (side === "paper" && universe) ? universe : null;
+  if (u) u.whole = s;
+  const barred = u ? new Set(u.tickers || []) : null;
+  if (u) s = u.common;
+  const shown = barred ? positions.filter(p => !barred.has(p.ticker)) : positions;
+  const openRows = shown.filter(p => p.status === "open");
   const rows = openRows.length ? openRows.map(p => `<tr>
       <td>${mktCell(p.ticker, tags)}</td>
       <td class="r">${esc(int(p.quantity))}</td>
@@ -532,6 +536,7 @@ function positionCard(sel, side, s, positions, tags, universe){
      <div class="dim" style="font-size:11px;margin-bottom:10px">total P&amp;L = realized + unrealized${
        side === "live" ? "" :
        " &middot; simulated — no real order was ever sent for this tag"}</div>
+     ${universeNote(u)}
      <dl class="kv">
        <dt>Realized</dt><dd>${money(s.realized_pnl_usd)}</dd>
        <dt>Unrealized</dt><dd>${money(s.unrealized_pnl_usd)}</dd>
@@ -550,8 +555,7 @@ function positionCard(sel, side, s, positions, tags, universe){
        <thead><tr><th>Open market</th><th class="r">Qty</th><th class="r">Entry</th>
          <th class="r">Mark</th><th class="r">Unreal.</th><th class="r">Held</th></tr></thead>
        <tbody>${rows}</tbody></table></div>
-     ${(s.notes||[]).length ? `<div class="note warn">${s.notes.map(esc).join("<br>")}</div>` : ""}
-     ${side === "paper" ? universeBlock(universe) : ""}`;
+     ${(s.notes||[]).length ? `<div class="note warn">${s.notes.map(esc).join("<br>")}</div>` : ""}`;
 }
 
 function renderComparison(){

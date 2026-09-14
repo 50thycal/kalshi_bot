@@ -172,3 +172,19 @@ def test_paper_leg_default_call_signature_is_unchanged():
 
     leg = legs.paper_leg(s, "mm10_pt", since, marks)
     assert len(leg.positions) == 2
+
+
+def test_the_barred_ticker_list_is_published_for_the_card():
+    """The card filters its own open-market table with this. Without it the headline and
+    the table below it would be scoped to two different universes — the subtler version
+    of the confusion this whole split exists to end."""
+    s = _session()
+    _epoch(s)
+    _paper_trade(s, "KXMLBTOTAL-A", pnl=0.10)
+    _parity(s, "KXMLBTOTAL-A")
+    _paper_trade(s, "KXNCAAFSPREAD-B", pnl=1.00)
+    _parity(s, "KXNCAAFSPREAD-B", parent_outcome="skip_live_tier")
+
+    u = _run(s)["universe"]
+    assert u["tickers"] == ["KXNCAAFSPREAD-B"]
+    assert len(u["tickers"]) == u["barred_tickers"]
