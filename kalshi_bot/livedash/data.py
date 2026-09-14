@@ -23,6 +23,9 @@ import time
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import select
+
+from .. import models as m
 from . import compare, legs, market_meta, pairs, series
 from . import events as events_mod
 from . import marks as marks_mod
@@ -250,6 +253,42 @@ def _run_row(session, pair, now: datetime) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# The common-universe split
+# ---------------------------------------------------------------------------
+
+#: The two LIVE-ONLY bars. A market refused at either of these was outside live's
+#: UNIVERSE — live was never permitted to attempt it, so the twin trading it is not
+#: an execution difference, it is a different book. Everything else (the open cap,
+#: the contest cap, dedup, daily loss) is a CAPACITY or execution difference on a
+#: market live COULD have taken, which the twin exists to price and which therefore
+#: stays in the comparison. See docs/OPS_FMMSELL10_PARITY_DIAGNOSIS.md.
+_UNIVERSE_BARS = ("skip_live_tier", "skip_live_paused")
+
+
+def universe_barred_tickers(session, pair) -> frozenset[str]:
+    """Tickers the twin traded that live's UNIVERSE bars refused, from the recorded tape.
+
+    Read off `live_paper_parity_events.parent_outcome` rather than re-derived from
+    today's tier manifest: the tape is what actually happened, and a manifest that
+    changes later must not silently re-classify history.
+
+    This is an EXCLUSION, not an inclusion, and that is deliberate. A twin trade with
+    no parity row at all stays IN the comparison, so a gap in the tape under-states
+    the correction instead of silently deleting trades from the page. (Measured
+    2026-09-14: 573 twin trades, 573 parity rows, 0 unmatched — the per-cycle
+    `LIVE_PAPER_TWIN_PARITY_MAX` cap is not biting on this book.)
+    """
+    rows = session.scalars(
+        select(m.LivePaperParityEvent.market_ticker).where(
+            m.LivePaperParityEvent.twin_tag == pair.twin_tag,
+            m.LivePaperParityEvent.twin_outcome == "opened",
+            m.LivePaperParityEvent.parent_outcome.in_(_UNIVERSE_BARS),
+        )
+    )
+    return frozenset(rows)
+
+
+# ---------------------------------------------------------------------------
 # /api/runs/<twin_tag>
 # ---------------------------------------------------------------------------
 
@@ -277,6 +316,31 @@ def build_run(
             legs.paper_leg(session, pair.live_tag, None, marks).summary()
             if incumbent else None
         )
+    # The common-universe split. Additive and self-scoping: a pair with no
+    # universe-barred rows gets `None` and this page renders exactly as it did
+    # before the split existed. Nothing above is recomputed, so `paper` keeps
+    # meaning what every existing reader already thinks it means.
+    with stages.stage("universe_split"):
+        barred = universe_barred_tickers(session, pair)
+        if barred:
+            common = legs.paper_leg(session, pair.twin_tag, since, marks,
+                                    exclude_tickers=barred)
+            excluded = legs.paper_leg(session, pair.twin_tag, since, marks,
+                                      only_tickers=barred)
+            universe = {
+                "barred_tickers": len(barred),
+                "bars": list(_UNIVERSE_BARS),
+                "common": common.summary(),
+                "excluded": excluded.summary(),
+                "why": (
+                    "The twin traded markets live's universe bars refused, so the "
+                    "whole-book paper figure is not comparable to live. `common` is "
+                    "the two books on the SAME universe; `excluded` is the slice "
+                    "live was never permitted to attempt."
+                ),
+            }
+        else:
+            universe = None
     with stages.stage("compare_legs"):
         comparison = compare.compare_legs(live, paper, thresholds, now=now)
     with stages.stage("gates"):
@@ -298,6 +362,9 @@ def build_run(
                    "hours": round((until - since).total_seconds() / 3600, 2)},
         "live": {**live.summary(), "positions": [p.to_dict() for p in live.positions]},
         "paper": {**paper.summary(), "positions": [p.to_dict() for p in paper.positions]},
+        # Present only when this pair actually has a universe asymmetry; None
+        # otherwise. `paper` above is untouched either way.
+        "universe": universe,
         # What a naive comparison against the long-running incumbent book would have
         # claimed — carried precisely so it is never mistaken for the twin comparison.
         # It is the one figure here with no window: the incumbent's WHOLE history, which
