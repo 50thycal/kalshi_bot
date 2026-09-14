@@ -491,7 +491,29 @@ function renderHeader(){
     `<div class="banner ${klass}"><b>${esc(v.label)}</b> — ${esc(v.detail)}</div>`;
 }
 
-function positionCard(sel, side, s, positions, tags){
+function universeBlock(u){
+  // Shown only when this pair HAS a universe asymmetry. Both figures are rendered:
+  // the headline card above stays the whole book, and this says what the comparable
+  // subset is. A restricted number is never displayed without saying it is restricted.
+  if (!u) return "";
+  const c = u.common, x = u.excluded;
+  return `<div class="note" style="margin-top:10px;border-left:3px solid var(--warn);padding-left:9px">
+     <b>Same universe as live</b> — the card above includes ${esc(int(u.barred_tickers))} market(s)
+     live's universe bars refused, so it is not comparable to the live leg. On the markets
+     BOTH books could trade:
+     <dl class="kv" style="margin-top:7px">
+       <dt>Realized (common)</dt><dd>${money(c.realized_pnl_usd)}</dd>
+       <dt>Per contract (common)</dt><dd>${cell(cents(c.pnl_per_contract_cents,2), sign(c.pnl_per_contract_cents))}</dd>
+       <dt>Positions closed (common)</dt><dd>${esc(int(c.positions_closed))}</dd>
+       <dt>Excluded slice</dt><dd>${money(x.realized_pnl_usd)} over ${esc(int(x.positions_closed))} closed</dd>
+     </dl>
+     <span class="dim" style="font-size:11px">Excluded = refused at ${esc((u.bars||[]).join(" / "))}.
+     Capacity gates (open cap, contest cap, dedup) are NOT excluded — those are markets live
+     could have taken.</span>
+   </div>`;
+}
+
+function positionCard(sel, side, s, positions, tags, universe){
   const cls = side === "live" ? "live" : "paper";
   const openRows = positions.filter(p => p.status === "open");
   const rows = openRows.length ? openRows.map(p => `<tr>
@@ -528,7 +550,8 @@ function positionCard(sel, side, s, positions, tags){
        <thead><tr><th>Open market</th><th class="r">Qty</th><th class="r">Entry</th>
          <th class="r">Mark</th><th class="r">Unreal.</th><th class="r">Held</th></tr></thead>
        <tbody>${rows}</tbody></table></div>
-     ${(s.notes||[]).length ? `<div class="note warn">${s.notes.map(esc).join("<br>")}</div>` : ""}`;
+     ${(s.notes||[]).length ? `<div class="note warn">${s.notes.map(esc).join("<br>")}</div>` : ""}
+     ${side === "paper" ? universeBlock(universe) : ""}`;
 }
 
 function renderComparison(){
@@ -930,7 +953,8 @@ async function loadRun(gen){
   S.run = await getJSON(runUrl(), gen);
   renderHeader();
   positionCard("#livecard","live", S.run.live, S.run.live.positions, S.run.market_tags);
-  positionCard("#papercard","paper", S.run.paper, S.run.paper.positions, S.run.market_tags);
+  positionCard("#papercard","paper", S.run.paper, S.run.paper.positions, S.run.market_tags,
+               S.run.universe);
   renderComparison();
   renderDivergence();
   renderDiagnostics();

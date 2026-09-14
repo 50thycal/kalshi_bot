@@ -372,16 +372,39 @@ def _latest_position_snapshots(session, tickers: list[str]) -> dict[str, m.Posit
 # ---------------------------------------------------------------------------
 
 
-def paper_leg(session, tag: str, since: datetime | None, marks) -> Leg:
+def paper_leg(session, tag: str, since: datetime | None, marks, *,
+              exclude_tickers: frozenset[str] | None = None,
+              only_tickers: frozenset[str] | None = None) -> Leg:
     """The paper side. `since=None` reads the whole book (used to show what a naive
     all-time paper-vs-live comparison would have claimed); the twin always passes
-    the epoch start so both legs cover the same window."""
+    the epoch start so both legs cover the same window.
+
+    `exclude_tickers` / `only_tickers` narrow the leg to build the common-universe
+    split (see `data.universe_barred_tickers`). Both default to None, so every
+    existing caller reads exactly the book it always did.
+
+    Exclusion is the primary form and that is deliberate: a twin trade the tape has
+    no verdict on stays IN, so a gap in the evidence under-states the correction
+    rather than silently dropping trades off the page.
+    """
     leg = Leg(environment=PAPER, tag=tag)
+    if only_tickers is not None and not only_tickers:
+        # An empty set is a real answer ("nothing qualifies"), not "no filter".
+        # Short-circuiting keeps it from being read as the unfiltered leg.
+        leg.notes.append("no paper trades in this slice")
+        leg.realized_pnl_usd = 0.0
+        leg.unrealized_pnl_usd = 0.0
+        leg.entry_fees_usd = 0.0
+        return leg
     query = select(m.PaperTrade).where(
         m.PaperTrade.strategy == tag, m.PaperTrade.legacy.is_(False)
     )
     if since is not None:
         query = query.where(m.PaperTrade.created_at >= since)
+    if only_tickers is not None:
+        query = query.where(m.PaperTrade.market_ticker.in_(sorted(only_tickers)))
+    if exclude_tickers:
+        query = query.where(m.PaperTrade.market_ticker.notin_(sorted(exclude_tickers)))
     trades = list(session.scalars(query.order_by(m.PaperTrade.created_at)))
     if not trades:
         leg.notes.append("no paper trades in this epoch")
