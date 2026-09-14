@@ -188,3 +188,32 @@ def test_the_barred_ticker_list_is_published_for_the_card():
     u = _run(s)["universe"]
     assert u["tickers"] == ["KXNCAAFSPREAD-B"]
     assert len(u["tickers"]) == u["barred_tickers"]
+
+
+def test_the_pnl_series_is_scoped_to_the_same_universe_as_the_card():
+    """The overlay sits directly under the run card. A chart plotting the whole book
+    beneath a headline scoped to the common slice is the same mismatch one element
+    further down the page."""
+    s = _session()
+    _epoch(s)
+    _paper_trade(s, "KXMLBTOTAL-A", pnl=0.10)
+    _parity(s, "KXMLBTOTAL-A")
+    _paper_trade(s, "KXNCAAFSPREAD-B", pnl=1.00)
+    _parity(s, "KXNCAAFSPREAD-B", parent_outcome="skip_live_tier")
+
+    ser = data.build_series(s, "mm10_pt", now=NOW)
+    assert ser["universe"]["barred_tickers"] == 1
+    # The barred market is gone from the chart's own ticker list.
+    assert "KXNCAAFSPREAD-B" not in ser["available_tickers"]
+    assert "KXMLBTOTAL-A" in ser["available_tickers"]
+
+
+def test_the_pnl_series_is_unaffected_without_an_asymmetry():
+    s = _session()
+    _epoch(s)
+    _paper_trade(s, "KXMLBTOTAL-A", pnl=0.10)
+    _parity(s, "KXMLBTOTAL-A")
+
+    ser = data.build_series(s, "mm10_pt", now=NOW)
+    assert ser["universe"] is None
+    assert "KXMLBTOTAL-A" in ser["available_tickers"]
