@@ -58,6 +58,11 @@ That leaves **exactly one** difference between twin and live:
 > `live_paper_parity` report a UNIVERSE difference as an `EXECUTION GAP`. The flag restores the
 > invariant; until it is on, read any mmsell parity verdict against
 > `docs/OPS_FMMSELL10_PARITY_DIAGNOSIS.md` §3 first.
+>
+> **Activating it is the flag ALONE.** Do not pair it with a fresh `LIVE_PAPER_TWIN_SUFFIX`:
+> an unregistered twin tag cannot write under `NEW_ONLY`, so a suffix bump takes the twin
+> dark instead of restarting it, and a twin registered mid-epoch fails the `live_twin_links`
+> readiness check for a native canary. §9 of that document has the verified reasoning.
 
 ### Gates the twin applies, and gates it deliberately doesn't
 

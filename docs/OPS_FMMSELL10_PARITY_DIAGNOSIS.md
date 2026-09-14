@@ -179,28 +179,70 @@ bar saved.
 
 ### Why it defaults off, and what activation requires
 
-Turning this on changes what an already-running twin trades. **Retuning a live comparison
-mid-epoch voids it** — that is the `PARAM DRIFT` failure this document already records against
-`Fmmsell10_pt4`. So the honest activation sets the flag **and a new twin tag in the same
-request**, so the new universe and the new epoch begin together:
+Turning this on changes what an already-running twin trades, and retuning a live comparison
+mid-epoch normally voids it.
+
+> [!CAUTION]
+> **An earlier revision of this section told you to set `LIVE_PAPER_TWIN_SUFFIX` to a fresh tag
+> alongside the flag. That was WRONG and it would have taken the twin DARK.** Verified against
+> production 2026-09-13 (`lo-pt5-913a`): `xos tag Fmmsell10_pt5` answers *"not mapped to any
+> experiment deployment"*. Under `NEW_ONLY` an unregistered tag is refused at the write path, so
+> a suffix bump does not start a new twin — it stops the existing one and replaces it with a tag
+> that cannot trade. Do not do it.
+
+**A genuinely fresh twin tag is not available for this book, and that is the system working.**
+Three independent reasons, each checked rather than assumed:
+
+1. A new tag must be registered to an active deployment arm before it can write.
+   `register_deployment(kind="paper_twin")` is *not* mode-guarded (only `kind="live"` is), so
+   registering one is technically permitted —
+2. — but readiness check 6, `live_twin_links`, requires a **native** canary's twin to share its
+   live deployment's `started_at`. `mmsell-contestcap-live-2` is native (`grandfathered: false`,
+   `lo-enf-913a`), and a twin registered today cannot match a 2026-09-07 live start. Stamping
+   the old start on it would be *inventing an equal boundary* — precisely what
+   `enforcement.py` refuses to do. It would also leave two twins on one live deployment, which
+   that check reads with `session.scalar`, i.e. it would pick one arbitrarily.
+3. The sanctioned way to get fresh tags — `arm_live_canary` — requires `PAPER`, and
+   `LIVE_CANARY → PAPER` is an illegal rollback. That is the successor-experiment path
+   (`successor_mmsell10_capacity.py`), which re-arms **real money** and is an operator hard stop.
+
+### The activation: ONE variable, keeping `_pt4`
 
 ```jsonc
 {"type":"env","action":"set",
- "values":{"MMSELL_TWIN_APPLIES_LIVE_BARS":"true","LIVE_PAPER_TWIN_SUFFIX":"_pt5"},
- "id":"twin-rescope-1"}
+ "values":{"MMSELL_TWIN_APPLIES_LIVE_BARS":"true"},
+ "id":"twin-bars-on-1"}
 ```
 
-Both variables are on the ops allowlist. Notes before sending:
+Do **not** touch `LIVE_PAPER_TWIN_SUFFIX`.
 
-- `LIVE_PAPER_TWIN_SUFFIX` is **global**. It is safe here only because `LIVE_STRATEGIES` holds
-  exactly one book (`Fmmsell10`); with a second live book armed, the same set would orphan that
-  book's twin and take it dark under `NEW_ONLY` (the XOS-000011 shape). **Re-read
-  `LIVE_STRATEGIES` immediately before sending.**
-- Setting env **redeploys the worker**. Resting orders live on the exchange and survive it;
-  reconciliation runs on boot.
-- `Fmmsell10_pt4` ends at that instant and is never reused. Its verdict stays what §6 says it
-  is — a universe artefact, not an execution result.
-- The first meaningful parity read on `_pt5` needs n≥30 settled per side, so roughly a week.
+Re-scoping the running `_pt4` mid-epoch costs nothing real here: its comparison is *already*
+invalid (that is this entire document) and it already carries `PARAM DRIFT`. Flipping the flag
+stops producing bad data rather than destroying good data.
+
+The one consequence is that `_pt4` then carries a **mixed window** — wide-universe rows before
+the flip, live-scoped rows after. Read it with a date floor rather than whole-epoch, which the
+script supports directly:
+
+```jsonc
+{"type":"script","name":"live_paper_parity","args":["--twin","Fmmsell10_pt4","--days","7"],
+ "id":"parity-postflip-1"}
+```
+
+Record the flip instant when you send it; everything before it is the old regime. The first
+meaningful post-flip read needs n≥30 settled per side, so roughly a week.
+
+Setting env **redeploys the worker**. Resting orders live on the exchange and survive it;
+reconciliation runs on boot.
+
+### No Platform Revision is required
+
+Checked, not assumed. The flag changes none of the ten `STANDARD_PLATFORM_COMPONENTS`
+(`FEE_MODEL`, `FILL_MODEL`, `MARKET_TAXONOMY`, …) — it changes which universe one instrument
+book consults, which is deployment config. The governing precedent is XOS-000035 (Platform
+Change Review, 2026-09-12): a deployment-config change is `OPS_REPAIR` with
+`requires_platform_revision = false`, and "a ticket arriving at this role does not become a
+revision by arriving; the evidence has to call for one."
 
 ### What this fix does NOT do
 
