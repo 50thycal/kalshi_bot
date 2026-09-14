@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "892f4e0e3440a04d35557cedd2418c2e6601509a",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-14T12:53:02Z",
+  "id": "lo-tapecov-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/lo-tapecov-1.receipt.json",
+  "result_file": "ops/results/lo-tapecov-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/34845864218",
+  "service": null,
+  "started_at": "2026-09-14T12:53:01Z",
+  "targets": [],
+  "type": "db"
+}
