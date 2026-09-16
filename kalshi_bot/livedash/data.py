@@ -446,6 +446,17 @@ def build_series(
     stages = Stages(f"build_series {twin_tag}")
     live, paper, marks = load_run(session, pair, now=now, marks=MARKS_FULL, stages=stages)
     epoch_start, epoch_end = pair.window(now)
+    # The overlay is read directly beneath the run card, so it has to be on the SAME
+    # universe. A chart plotting the whole book under a headline scoped to the common
+    # slice is the mismatch this split exists to end, one element further down the page.
+    with stages.stage("universe_split"):
+        barred = universe_barred_tickers(session, pair)
+        universe = None
+        if barred:
+            paper = legs.paper_leg(session, pair.twin_tag, epoch_start, marks,
+                                   exclude_tickers=barred)
+            universe = {"barred_tickers": len(barred), "bars": list(_UNIVERSE_BARS),
+                        "scope": "paper leg excludes markets live's universe bars refused"}
     window_start = max(epoch_start, since) if since else max(
         epoch_start, epoch_end - timedelta(hours=DEFAULT_WINDOW_HOURS)
     )
@@ -473,6 +484,8 @@ def build_series(
             "live": series.excursions(pnl["points"], "live"),
             "paper": series.excursions(pnl["points"], "paper"),
         },
+        # None when this pair has no universe asymmetry, exactly as on the run payload.
+        "universe": universe,
     }
 
 
