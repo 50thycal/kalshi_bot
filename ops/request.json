@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"script","name":"execution_telemetry","args":["--hours","24"],"id":"et-ws019-4"}
