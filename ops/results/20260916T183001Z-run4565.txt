@@ -1,1 +1,0 @@
-Invalid JSON in /home/runner/work/kalshi_bot/kalshi_bot/ops/request.json: Invalid \escape: line 1 column 237 (char 236)
