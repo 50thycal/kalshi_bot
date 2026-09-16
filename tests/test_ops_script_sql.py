@@ -24,7 +24,7 @@ SCRIPTS = pathlib.Path(__file__).resolve().parent.parent / "scripts"
 # Scripts whose SQL is asserted here. Ops scripts run unattended against
 # production; add new ones as they are written.
 CHECKED = ["experiment_os_status.py", "ops_doctor.py", "mmsell_series_pnl.py",
-           "series_registry_review.py"]
+           "series_registry_review.py", "liquidity_incentive_report.py"]
 
 
 def _sql_literals(path: pathlib.Path) -> list[tuple[int, str]]:

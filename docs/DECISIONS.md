@@ -986,3 +986,26 @@ design in [`MMSELL_QUEUE_FILL_TELEMETRY.md`](MMSELL_QUEUE_FILL_TELEMETRY.md). Th
    frozen — Phase 2 fits P(fill) and E[P&L | fill] separately and only then may Phase 3
    propose a rule. `fills.filled_at` (reconcile time) is left as is; changing it is a
    Platform Change Review.
+
+## DEC-015 — The liquidity-incentive strategy starts as a shadow instrument, separate from MMSELL and outside Experiment OS until it can trade (2026-09-16)
+
+Calvin's 2026-09-16 handoff asked for a proof of concept on Kalshi's Liquidity Incentive
+Program that places no orders in its first phase. [WS-020](workstreams/WS-020-liquidity-incentive-shadow.md),
+pre-registration in [`LIQUIDITY_INCENTIVE_THESIS.md`](LIQUIDITY_INCENTIVE_THESIS.md), sources
+and assumptions in [`LIQUIDITY_INCENTIVE_RESEARCH.md`](LIQUIDITY_INCENTIVE_RESEARCH.md). Four choices:
+
+1. **Separation is structural, not a convention.** Its own module, thread, eleven tables,
+   dashboard page and ops script; it imports the execution telemetry's local book and parsers
+   but does not extend the live-money collector's instance or its tables. A tag, experiment,
+   exposure accounting and risk limits would be its own if it ever trades.
+2. **No Experiment OS object for Phase 0.** Under `NEW_ONLY` a registration is what admits a
+   *tag* to trade; an instrument that writes only its own tables has nothing to admit (WS-017,
+   WS-019 precedent). The pre-registered promotion criteria live in the thesis doc and are
+   frozen there; a live POC is a new experiment, armed only through `arm_live_canary`.
+3. **Fill assumptions are three explicit models reported side by side, never a blend**, because
+   `MMSELL_FILL_MODEL.md` already showed the whole paper-vs-live gap hides in that assumption.
+   Promotion reads the conservative model only. The scoring model's five unsettled assumptions
+   are labelled with the direction of their bias, and every derived column is `est_`.
+4. **Default off, one worker, allowlisted enable.** The policies and capital tiers are the
+   pre-registration and are deliberately not settable from the ops channel; cadence and
+   bounds are.

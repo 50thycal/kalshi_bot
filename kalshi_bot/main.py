@@ -428,6 +428,18 @@ def run() -> int:
             telemetry_thread = start_collector(client, settings)
         except Exception:  # noqa: BLE001
             logger.exception("execution telemetry collector failed to start (trading unaffected)")
+    # Liquidity-incentive shadow market maker (docs/LIQUIDITY_INCENTIVE_THESIS.md, WS-020): a
+    # read-only daemon thread that simulates two-sided resting quotes on incentivized markets.
+    # Any mode, DEFAULT OFF; it holds a GET-only client wrapper and cannot place or cancel
+    # anything. Fail-soft: a start failure is logged and recorded, never fatal.
+    incentive_shadow_thread = None
+    if settings.liquidity_incentive_shadow_enabled:
+        try:
+            from .liquidity_incentive.collector import start_shadow
+
+            incentive_shadow_thread = start_shadow(client, settings)
+        except Exception:  # noqa: BLE001
+            logger.exception("liquidity-incentive shadow failed to start (trading unaffected)")
     # Live/paper parallel-run harness (docs/LIVE_PAPER_TWIN.md): for every strategy armed for real
     # money, run a FRESH paper book beside it — started at the same instant and parameterized to
     # the LIVE knobs — so the only difference between the two is the fill assumption paper cannot
@@ -647,6 +659,11 @@ def run() -> int:
                 telemetry_thread.stop()
             except Exception:  # noqa: BLE001
                 logger.exception("execution telemetry collector stop failed")
+        if incentive_shadow_thread is not None:
+            try:
+                incentive_shadow_thread.stop()
+            except Exception:  # noqa: BLE001
+                logger.exception("liquidity-incentive shadow stop failed")
         client.close()
         if evo_runtime is not None:
             evo_runtime.close()

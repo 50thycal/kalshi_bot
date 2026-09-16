@@ -1,5 +1,26 @@
 # Weather-markets research journal
 
+## LIQUIDITY-INCENTIVE MM 2026-09-16 — Phase 0 shadow instrument built, not yet running
+
+Calvin's handoff: test whether genuinely quoting both sides of Kalshi's liquidity-incentive
+markets can net ≥ ~$1/day at ≤ $250–$500, after fees and single-leg adverse selection.
+Verified the API from Kalshi's OpenAPI 3.30.0 (`period_reward` in centi-cents,
+`target_size_fp`, `discount_factor_bps`, series `fee_type`/`fee_multiplier`) and reconstructed
+the published scoring (1 s snapshots; both sides ≥ Target Size or the snapshot pays nobody;
+Reference Price at one fifth of Target Size of cumulative depth; DiscountFactor^ticks below it;
+per-side normalisation; the $16.00 worked example) with five labelled assumptions.
+Built a read-only shadow: three quote policies × five capital tiers × three fill models,
+raw book/trade tape, marks at 1 s–5 min, settlement, a ranking with every component shown,
+livedash `/incentives`, ops `liquidity_incentive_report`. No orders, no XOS registration;
+default off. Pre-registered promotion criteria (14 days, conservative model, ≥ $1/day,
+no single-market dominance, bounded single-leg drawdown) are frozen in
+[the thesis](LIQUIDITY_INCENTIVE_THESIS.md); sources and gaps in
+[the research record](LIQUIDITY_INCENTIVE_RESEARCH.md); [WS-020](workstreams/WS-020-liquidity-incentive-shadow.md).
+Priors worth testing, not believing (another team's same-day scan): ~$106k/day paid
+board-wide against ~$17M resting (0.62%/day), Target Size 1,000 in ~98% of programs, reward
+yield decaying ~119× as a program ages.
+
+
 ## SPOT-PERP-CARRY 2026-09-13 — definitions and sources narrowed
 
 Verified official BTC 0.0001 / ETH 0.001 coin contract sizes, funding direction and payment

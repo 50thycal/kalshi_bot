@@ -1376,6 +1376,33 @@ class Settings(BaseSettings):
     # maintained but rows are dropped AND a `throttled` collector event records how many.
     execution_telemetry_max_markets: int = 200
     execution_book_events_max_per_minute: int = 3000
+    # --- Liquidity-incentive shadow market maker (docs/LIQUIDITY_INCENTIVE_THESIS.md, WS-020) --
+    # A READ-ONLY daemon thread, any BOT_MODE, that discovers Kalshi's active liquidity-incentive
+    # programs, keeps a WebSocket book + trade tape for each incentivized market, and simulates
+    # genuine two-sided resting quotes under three policies x five capital tiers x three fill
+    # models. It places NOTHING: it holds a GET-only client wrapper and writes only the
+    # `incentive_*` tables. DEFAULT OFF — turn it on for exactly one worker (the env channel
+    # allowlists it), because two workers would double-write the same tape.
+    liquidity_incentive_shadow_enabled: bool = False
+    # How often to re-poll GET /incentive_programs (seconds) and reconcile the tracked set.
+    liquidity_incentive_discovery_seconds: float = 300.0
+    # Requote / market-snapshot / reward-accrual cadence per market (seconds).
+    liquidity_incentive_requote_seconds: float = 60.0
+    # Bound on markets subscribed at once (highest period reward first) and on raw rows/min.
+    liquidity_incentive_max_markets: int = 150
+    liquidity_incentive_book_events_max_per_minute: int = 3000
+    # A resting pair is refreshed after this long (recorded as `refresh_max_rest`, not a
+    # cancel), and is cancelled when either side's fresh policy price moves this many ticks.
+    liquidity_incentive_max_rest_seconds: int = 3600
+    liquidity_incentive_move_ticks: int = 2
+    # Policy B's declared paired-loss budget (cents per pair). Never hidden: it is on the row.
+    liquidity_incentive_max_pair_loss_cents: float = 1.0
+    # Per-program capital tiers simulated in parallel (dollars, comma-separated).
+    liquidity_incentive_capital_tiers: str = "25,50,100,250,500"
+    # Skip programs whose period reward is below this (dollars). 0 = track everything.
+    liquidity_incentive_min_reward_usd: float = 0.0
+    # Settlement pass cadence for single-leg outcomes (seconds).
+    liquidity_incentive_settlement_seconds: float = 600.0
     # --- Queue-aware cancellation (docs/MMSELL_QUEUE_AWARE_CANCEL.md) -----------------------
     # DEFAULT OFF. "shadow" evaluates the frozen rule against every resting live order each
     # reconcile and writes an audit row per order per cycle to live_order_queue_decisions —
@@ -2315,6 +2342,7 @@ class Settings(BaseSettings):
             "theta_closeout_max_attempts_per_ticker":
                 self.theta_closeout_max_attempts_per_ticker,
             "perps_collector_enabled": self.perps_collector_enabled,
+            "liquidity_incentive_shadow_enabled": self.liquidity_incentive_shadow_enabled,
             "perps_assets": self.perps_assets,
             "xgame_enabled": self.xgame_enabled,
             "xgame_series": self.xgame_series_list,
