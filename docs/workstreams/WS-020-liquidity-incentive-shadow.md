@@ -99,7 +99,7 @@ Inline: `docs/LIQUIDITY_INCENTIVE_THESIS.md` §1, §3, §4, §8.
 
 ## Implementation State
 
-PR open (this branch), ready for review — solo mode, owner acceptance at merge.
+PR [#415](https://github.com/50thycal/kalshi_bot/pull/415) open, ready for review — solo mode, owner acceptance at merge.
 
 ## Review State
 
@@ -114,7 +114,7 @@ PR open (this branch), ready for review — solo mode, owner acceptance at merge
 
 ## Related PRs
 
-This PR.
+[#415](https://github.com/50thycal/kalshi_bot/pull/415)
 
 ## Parked
 
