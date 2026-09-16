@@ -141,8 +141,23 @@ def coverage(cur, hours: int) -> bool:
     print(f"  book events {be} ({snapshots} snapshots) over {bm} markets;"
           f" trades {te} over {tm} markets; WS fills {fe}; order events {oe};"
           f" lifecycle {me}")
-    if orders and not with_ctx:
-        print("  !! orders exist but no decision context rows — the executor hook is not writing.")
+    # Orders placed BEFORE the collector's first start in the window cannot have a context row
+    # (the hook did not exist when they were sent); only orders after it can indict the hook.
+    since_start = _one(cur, (
+        "SELECT count(*), count(*) FILTER (WHERE EXISTS (SELECT 1 FROM execution_order_context c"
+        "                                                WHERE c.live_order_id = o.id))"
+        " FROM live_orders o"
+        " WHERE o.kalshi_order_id IS NOT NULL"
+        "   AND o.created_at >= (SELECT min(at) FROM execution_collector_events"
+        f"                       WHERE kind = 'thread_started' AND at >= {w})"))
+    after_n, after_ctx = (since_start or (0, 0))
+    print(f"  orders placed since the collector first started: {after_n}"
+          f"  with context row {after_ctx} ({_pct(after_ctx, after_n)})")
+    if after_n and not after_ctx:
+        print("  !! orders placed after the collector started have no decision context rows —")
+        print("     the executor hook is not writing. Check the worker log for 'decision context'.")
+    elif orders and not with_ctx:
+        print("  (no context rows yet: every order in the window predates the collector's start)")
     if orders and not with_any:
         print("  !! orders exist but no queue ticks — the collector's tracked set is empty,")
         print("     or the thread is not running.")

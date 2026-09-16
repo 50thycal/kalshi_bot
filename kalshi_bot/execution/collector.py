@@ -332,19 +332,31 @@ class CollectorState:
                 return []
             if kind in ("ok", "unsubscribed"):
                 return []
+            # Sequence check for EVERY sequenced frame on a known sid, BEFORE dispatch. A sid
+            # carries several frame types (the lifecycle channel emits `event_lifecycle`,
+            # `event_fee_update` and `market_metadata_updated` on the same counter), so a check
+            # inside only the handlers we care about reads every ignored frame as a gap — which
+            # is exactly what the first production hour recorded, eight times.
+            cmds: list[dict] = []
+            if sid is not None and seq is not None:
+                if kind == "orderbook_snapshot":
+                    self._seq[sid] = seq   # a snapshot is the baseline, never a gap
+                else:
+                    cmds = self._check_seq(self.sid_to_channel.get(sid, kind or ""), sid, seq,
+                                           msg.get("market_ticker"))
             if kind == "orderbook_snapshot":
-                return self._on_snapshot(msg, sid, seq, received_at, message)
+                return cmds + self._on_snapshot(msg, sid, seq, received_at, message)
             if kind == "orderbook_delta":
-                return self._on_delta(msg, sid, seq, received_at, message)
+                return cmds + self._on_delta(msg, sid, seq, received_at, message)
             if kind == "trade":
-                return self._on_trade(msg, sid, seq, received_at, message)
+                return cmds + self._on_trade(msg, sid, seq, received_at, message)
             if kind == "fill":
                 return self._on_fill(msg, received_at, message)
             if kind == "user_order":
                 return self._on_user_order(msg, received_at, message)
             if kind in ("market_lifecycle_v2", "market_lifecycle"):
-                return self._on_lifecycle(msg, sid, seq, received_at, message)
-            return []
+                return cmds + self._on_lifecycle(msg, sid, seq, received_at, message)
+            return cmds
         except AuthError:
             raise
         except Exception as exc:  # noqa: BLE001
@@ -364,8 +376,8 @@ class CollectorState:
                      detail_json={"channel": channel, "sid": sid, "tickers": tickers[:50]})
         return []
 
-    def _check_seq(self, mk: TrackedMarket | None, channel: str, sid: int | None,
-                   seq: int | None, ticker: str | None) -> list[dict]:
+    def _check_seq(self, channel: str, sid: int | None, seq: int | None,
+                   ticker: str | None) -> list[dict]:
         """Per-sid sequence check. A gap on the book stream invalidates the local book and
         requests a snapshot for that market; on any stream it is recorded."""
         if sid is None or seq is None:
@@ -409,7 +421,7 @@ class CollectorState:
     def _on_delta(self, msg, sid, seq, received_at, raw) -> list[dict]:
         ticker = msg.get("market_ticker")
         mk = self.markets.get(ticker)
-        cmds = self._check_seq(mk, "orderbook_delta", sid, seq, ticker)
+        cmds: list[dict] = []
         if mk is None:
             return cmds
         side = msg.get("side")
@@ -447,7 +459,7 @@ class CollectorState:
     def _on_trade(self, msg, sid, seq, received_at, raw) -> list[dict]:
         ticker = msg.get("market_ticker")
         mk = self.markets.get(ticker)
-        cmds = self._check_seq(mk, "trade", sid, seq, ticker)
+        cmds: list[dict] = []
         if mk is None:
             return cmds
         trade_id = msg.get("trade_id")
@@ -537,7 +549,7 @@ class CollectorState:
 
     def _on_lifecycle(self, msg, sid, seq, received_at, raw) -> list[dict]:
         ticker = msg.get("market_ticker")
-        cmds = self._check_seq(None, "market_lifecycle_v2", sid, seq, None)
+        cmds: list[dict] = []
         if ticker not in self.markets:
             return cmds
         ts = None
