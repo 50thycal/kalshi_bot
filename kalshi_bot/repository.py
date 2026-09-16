@@ -1655,18 +1655,174 @@ def insert_queue_tick(
     session, *, live_order_id: int | None, kalshi_order_id: str | None, strategy: str | None,
     ticker: str | None, queue_position: int | None, contracts_ahead: int | None,
     limit_price: int | None, rest_seconds: int | None, raw_json: Any | None = None,
+    trigger: str = "reconcile", source: str | None = None,
+    remaining_count: float | None = None, features_json: Any | None = None,
+    captured_at: datetime | None = None,
 ) -> m.LiveOrderQueueTick:
     """Append one queue sample. A null `queue_position` is stored rather than dropped so a
     parse/API failure is COUNTABLE — silently writing nothing would make a broken sampler look
-    exactly like a book with no resting orders."""
+    exactly like a book with no resting orders.
+
+    `trigger` says WHY the sample exists (`reconcile` for the executor's per-cycle sample; the
+    telemetry collector names its own), so a fit can tell scheduled samples from event-driven
+    ones. `features_json` is DERIVED and recomputable from the raw event tables."""
     row = m.LiveOrderQueueTick(
         live_order_id=live_order_id, kalshi_order_id=kalshi_order_id, strategy=strategy,
         market_ticker=ticker, queue_position=queue_position, contracts_ahead=contracts_ahead,
         limit_price=limit_price, rest_seconds=rest_seconds, raw_json=_safe_json(raw_json),
+        trigger=trigger, source=source, remaining_count=remaining_count,
+        features_json=_safe_json(features_json) if features_json is not None else None,
     )
+    if captured_at is not None:
+        row.captured_at = captured_at
     session.add(row)
     session.flush()
     return row
+
+
+# --- execution telemetry (docs/MMSELL_QUEUE_FILL_TELEMETRY.md, WS-019) ---------------------
+
+def insert_execution_order_context(session, **fields) -> m.ExecutionOrderContext:
+    """The decision-time snapshot for one live order. Written by the executor BEFORE the
+    order is sent; every value is what the strategy knew at `decided_at`."""
+    for key in ("context_json", "book_json"):
+        if fields.get(key) is not None:
+            fields[key] = _safe_json(fields[key])
+    row = m.ExecutionOrderContext(**fields)
+    session.add(row)
+    session.flush()
+    return row
+
+
+def get_execution_order_context(session, *, live_order_id: int | None = None,
+                                kalshi_order_id: str | None = None) -> m.ExecutionOrderContext | None:
+    stmt = select(m.ExecutionOrderContext)
+    if live_order_id is not None:
+        stmt = stmt.where(m.ExecutionOrderContext.live_order_id == live_order_id)
+    elif kalshi_order_id:
+        stmt = stmt.where(m.ExecutionOrderContext.kalshi_order_id == kalshi_order_id)
+    else:
+        return None
+    return session.scalars(stmt.order_by(m.ExecutionOrderContext.id.desc())).first()
+
+
+def stamp_execution_order_context(session, live_order_id: int | None, **stamps) -> bool:
+    """Set lifecycle stamps (`acked_at`, `cancel_requested_at`, `terminal_reason`, …) on an
+    order's context row. Fail-soft: returns False when no row exists. Only the explicit
+    post-submit columns may be stamped here — a decision-time column is refused."""
+    allowed = {"kalshi_order_id", "submitted_at", "acked_at", "ack_ts_ms",
+               "cancel_requested_at", "cancel_confirmed_at", "terminal_reason"}
+    bad = set(stamps) - allowed
+    if bad:
+        raise ValueError(f"post-submit stamp refused for decision-time columns: {sorted(bad)}")
+    row = get_execution_order_context(session, live_order_id=live_order_id)
+    if row is None:
+        return False
+    for key, value in stamps.items():
+        if value is None:
+            continue
+        # The FIRST terminal reason wins: a bot-initiated cancel names itself (timeout / drain)
+        # before the exchange feed reports the order canceled, and that name is the fact.
+        if key == "terminal_reason" and row.terminal_reason:
+            continue
+        setattr(row, key, value)
+    session.flush()
+    return True
+
+
+def insert_execution_book_event(session, **fields) -> m.ExecutionBookEvent:
+    if fields.get("raw_json") is not None:
+        fields["raw_json"] = _safe_json(fields["raw_json"])
+    row = m.ExecutionBookEvent(**fields)
+    session.add(row)
+    return row
+
+
+def insert_execution_trade_event(session, **fields) -> m.ExecutionTradeEvent | None:
+    """Idempotent on `trade_id` (a resubscribe can replay a trade)."""
+    exists = session.scalar(select(func.count()).select_from(m.ExecutionTradeEvent).where(
+        m.ExecutionTradeEvent.trade_id == fields["trade_id"]))
+    if exists:
+        return None
+    if fields.get("raw_json") is not None:
+        fields["raw_json"] = _safe_json(fields["raw_json"])
+    row = m.ExecutionTradeEvent(**fields)
+    session.add(row)
+    return row
+
+
+def insert_execution_fill_event(session, **fields) -> m.ExecutionFillEvent | None:
+    """Idempotent on `trade_id` (== REST `fill_id`)."""
+    exists = session.scalar(select(func.count()).select_from(m.ExecutionFillEvent).where(
+        m.ExecutionFillEvent.trade_id == fields["trade_id"]))
+    if exists:
+        return None
+    if fields.get("raw_json") is not None:
+        fields["raw_json"] = _safe_json(fields["raw_json"])
+    row = m.ExecutionFillEvent(**fields)
+    session.add(row)
+    return row
+
+
+def reconcile_execution_fill_events(session, now: datetime | None = None) -> int:
+    """Stamp every WS fill event whose `trade_id` now has a REST `fills` row. Returns rows
+    stamped. Called from reconcile after the REST fills are inserted; a WS fill that never
+    finds its REST twin stays unstamped, and the ops script reports that gap."""
+    now = now or _now()
+    pending = session.scalars(select(m.ExecutionFillEvent).where(
+        m.ExecutionFillEvent.rest_fill_id.is_(None))).all()
+    n = 0
+    for ev in pending:
+        rest = session.scalars(select(m.Fill).where(
+            m.Fill.kalshi_fill_id == ev.trade_id)).first()
+        if rest is None:
+            continue
+        ev.rest_fill_id = rest.id
+        ev.rest_reconciled_at = now
+        n += 1
+    if n:
+        session.flush()
+    return n
+
+
+def insert_execution_order_event(session, **fields) -> m.ExecutionOrderEvent:
+    if fields.get("raw_json") is not None:
+        fields["raw_json"] = _safe_json(fields["raw_json"])
+    row = m.ExecutionOrderEvent(**fields)
+    session.add(row)
+    return row
+
+
+def insert_execution_market_event(session, **fields) -> m.ExecutionMarketEvent:
+    if fields.get("raw_json") is not None:
+        fields["raw_json"] = _safe_json(fields["raw_json"])
+    row = m.ExecutionMarketEvent(**fields)
+    session.add(row)
+    return row
+
+
+def insert_execution_collector_event(
+    session, *, kind: str, market_ticker: str | None = None, connection_id: int | None = None,
+    detail: str | None = None, detail_json: Any | None = None, at: datetime | None = None,
+) -> m.ExecutionCollectorEvent:
+    row = m.ExecutionCollectorEvent(
+        at=at or _now(), kind=kind[:32], market_ticker=market_ticker,
+        connection_id=connection_id, detail=(detail or None) and str(detail)[:2000],
+        detail_json=_safe_json(detail_json) if detail_json is not None else None,
+    )
+    session.add(row)
+    return row
+
+
+def get_trackable_live_orders(session) -> list[m.LiveOrder]:
+    """Every live order the telemetry collector should follow: non-terminal AND carrying a
+    Kalshi order id (a `pending` row without one is not on the book yet)."""
+    return list(session.scalars(
+        select(m.LiveOrder).where(
+            m.LiveOrder.status.in_(LIVE_NONTERMINAL_STATUSES),
+            m.LiveOrder.kalshi_order_id.isnot(None),
+        )
+    ).all())
 
 
 def insert_queue_decision(session, **fields) -> m.LiveOrderQueueDecision:

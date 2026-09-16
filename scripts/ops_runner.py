@@ -206,6 +206,7 @@ ALLOWED_SCRIPTS = (
     "mmsell_quote_parity",
     "mmsell_queue_position",
     "mmsell_queue_cancel_baseline",
+    "execution_telemetry",
     "mmsell_depth_fill_model",
     "mmsell_deconfound_study",
     "mmsell_taxonomy_audit",

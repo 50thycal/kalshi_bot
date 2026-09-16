@@ -126,6 +126,13 @@ ALLOWED_VARS = frozenset({
     # arm of the queue experiment — a separate, later authorization. The rule thresholds
     # are deliberately NOT settable here: they are the pre-registration.
     "LIVE_QUEUE_CANCEL_MODE", "LIVE_QUEUE_CANCEL_TAGS",
+    # Execution telemetry collector (docs/MMSELL_QUEUE_FILL_TELEMETRY.md, WS-019). A read-only
+    # INSTRUMENT: it places nothing and cancels nothing. ENABLED is the kill switch for the
+    # collector alone (default on); the two budget knobs are settable so the queue-poll load
+    # can be retuned against measured 429s without a deploy; the post-window bounds how long
+    # a market stays subscribed after its last order goes terminal.
+    "EXECUTION_TELEMETRY_ENABLED", "EXECUTION_QUEUE_POLL_SECONDS",
+    "EXECUTION_QUEUE_MAX_POLLS_PER_MINUTE", "EXECUTION_TELEMETRY_POST_WINDOW_SECONDS",
     # The book DEFINITIONS themselves. A live mmsell book is an ordinary entry in this
     # string (Lmmsell8 and Lmmsell10 both are), so registering an Experiment OS canary and
     # then being unable to CREATE its book is the same defect class as #266: an approved

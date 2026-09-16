@@ -45,15 +45,18 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 from ..db import session_scope
 from . import data
+from . import execution as execution_mod
 from .events import CATEGORIES, DEFAULT_CATEGORY, ENVIRONMENTS
 
 logger = logging.getLogger("kalshi_bot.livedash")
 
 _INDEX = (Path(__file__).parent / "static" / "index.html").read_text(encoding="utf-8")
+_EXECUTION = (Path(__file__).parent / "static" / "execution.html").read_text(encoding="utf-8")
 
 # Twin tags are String(24) strategy tags: word characters, dash and dot only.
 _TAG_RE = re.compile(r"^[A-Za-z0-9._-]{1,24}$")
 _RUN_PATH_RE = re.compile(r"^/api/runs/(?P<tag>[^/]+)(?P<sub>/series|/orders|/events)?$")
+_ORDER_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
 # Above this, a route is slow enough that an operator notices, so it is logged at
 # WARNING rather than INFO. The page makes six requests on a cold load; anything
@@ -146,6 +149,9 @@ class LiveDashHandler(BaseHTTPRequestHandler):
         if path == "/healthz":
             self._send(200, b"ok", "text/plain; charset=utf-8")
             return
+        if path == "/execution":
+            self._send(200, _EXECUTION.encode("utf-8"), "text/html; charset=utf-8")
+            return
         if not path.startswith("/api/"):
             self._json({"error": "not found"}, 404)
             return
@@ -191,6 +197,23 @@ class LiveDashHandler(BaseHTTPRequestHandler):
                    elapsed_ms, self._bytes_sent)
 
     def _route(self, path: str, params: dict) -> bool:
+        # Execution research view (docs/MMSELL_QUEUE_FILL_TELEMETRY.md): read-only diagnostics
+        # over the queue/fill telemetry tables. No score, no probability — by design.
+        if path == "/api/execution/summary":
+            with session_scope() as session:
+                self._json(execution_mod.build_summary(
+                    session, hours=_int(params, "hours", 72) or 72))
+            return True
+        if path.startswith("/api/execution/orders/"):
+            koid = unquote(path[len("/api/execution/orders/"):])
+            if not _ORDER_ID_RE.match(koid):
+                self._json({"error": "not found"}, 404)
+                return True
+            with session_scope() as session:
+                payload = execution_mod.build_order_trace(session, koid)
+            self._json(payload if payload is not None else {"error": "order not found"},
+                       200 if payload is not None else 404)
+            return True
         if path == "/api/runs":
             # `view=selector` is the cheap half: which pairs exist, so the picker can be
             # rendered before the per-run P&L columns have been reconstructed.

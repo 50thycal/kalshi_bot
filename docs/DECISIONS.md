@@ -966,3 +966,23 @@ separate from PERP-V1's historical scorer and frozen semantics. Funding and pass
 remain unknown; no census outcome authorizes paper or live trading. Purchased-tail MMSELL
 hedges and same-asset spot/perp carry are PARKed. Revisit infrastructure only if the frozen
 price screen survives and a prospective measurement is testable.
+
+## DEC-014 — Measure fill selection before modelling it; the collector rides in the live worker (2026-09-16)
+
+Calvin's 2026-09-16 handoff made queue/fill intelligence the highest-priority research
+problem and asked for evidence before any rule. [WS-019](workstreams/WS-019-mmsell-queue-fill-telemetry.md),
+design in [`MMSELL_QUEUE_FILL_TELEMETRY.md`](MMSELL_QUEUE_FILL_TELEMETRY.md). Three choices:
+
+1. **Kalshi's `queue_position_fp` is the ground truth for queue position.** It is a contract
+   quantity ahead of us, not a rank, and the depth proxy failed validation
+   (`MMSELL_DEPTH_FILL_MODEL.md`), so no synthetic estimator is built or kept.
+2. **The collector is a read-only daemon thread inside the live worker**, not a new service:
+   one credential holder, deployable by the merge, fail-soft by construction, with a GET-only
+   client wrapper so the absence of a write path is structural. A third Railway writer would
+   need configuration the sandbox cannot perform and would duplicate the credentials.
+3. **Raw events first, two clocks always, missing is never zero.** Book, trade, fill, order
+   and lifecycle streams are stored verbatim with exchange and local timestamps; derived
+   features are recomputable; every failure mode is a row. Thresholds and buckets are not
+   frozen — Phase 2 fits P(fill) and E[P&L | fill] separately and only then may Phase 3
+   propose a rule. `fills.filled_at` (reconcile time) is left as is; changing it is a
+   Platform Change Review.

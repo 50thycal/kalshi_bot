@@ -601,6 +601,51 @@ class MmSellTracker:
         books = [control, *s.mmsell_variant_list]
         return [*books, *self._twin_books(books)]
 
+    def _decision_context(self, s, book: dict, tag: str, *, series: str, htc, hte, close_dt,
+                          event_exclusive, open_count, rank, deep, market) -> dict:
+        """The strategy's own decision-time facts for `execution_order_context`
+        (docs/MMSELL_QUEUE_FILL_TELEMETRY.md §5). Pure: reads nothing that postdates the
+        candidate scan, never raises (a telemetry field must not stop an entry)."""
+        try:
+            mtype, mode = classify(series)
+        except Exception:  # noqa: BLE001
+            mtype, mode = None, None
+        twin_tag = None
+        if self.twin_harness is not None:
+            try:
+                twin_tag = self.twin_harness.twin_of(tag)
+            except Exception:  # noqa: BLE001
+                twin_tag = None
+        try:
+            tier = tier_of(series)
+        except Exception:  # noqa: BLE001
+            tier = None
+        try:
+            regime = regime_of(series)
+        except Exception:  # noqa: BLE001
+            regime = None
+        try:
+            contest = contest_key_of(market.get("ticker"))
+        except Exception:  # noqa: BLE001
+            contest = None
+        return {
+            "series": series, "twin_tag": twin_tag, "book_tag": tag,
+            "hours_to_close": htc, "hours_to_expiration": hte, "close_time": close_dt,
+            "band_lo": book.get("lo"), "band_hi": book.get("hi"), "max_yes": book.get("maxyes"),
+            "htc_min": book.get("htcmin"), "htc_max": book.get("htcmax"),
+            "market_type": mtype, "market_mode": mode, "regime": regime, "review_tier": tier,
+            "contest_key": contest, "event_mutually_exclusive": event_exclusive,
+            "open_positions_for_tag": open_count,
+            "open_position_cap": getattr(s, "mmsell_live_max_open_positions", None),
+            "scan_rank": rank, "scanned_deep": bool(deep),
+            "market_volume_inline": market_volume(market),
+            "live_min_tier": getattr(s, "mmsell_live_min_tier", None),
+            "live_price_offset_cents": getattr(s, "mmsell_live_price_offset_cents", None),
+            "live_max_spread_cents": getattr(s, "mmsell_live_max_spread_cents", None),
+            "live_max_order_dollars": getattr(s, "live_max_order_dollars", None),
+            "live_order_timeout_seconds": getattr(s, "live_order_timeout_seconds", None),
+        }
+
     def _twin_books(self, books: list[dict]) -> list[dict]:
         """One twin book per ARMED live mmsell tag: the same market selection as its live parent
         (identical band/htc/series filters — a twin must see exactly the candidate set live saw),
@@ -1302,6 +1347,13 @@ class MmSellTracker:
                                 account_state=self._account_state,
                                 arm_offset=self._book_arm_offset(book, ticker),
                                 max_contracts=book.get("size"),
+                                # Execution telemetry: what THIS loop knew at decision time.
+                                # Every value here exists before the order is sent.
+                                decision_context=self._decision_context(
+                                    s, book, tag, series=series, htc=htc, hte=hte,
+                                    close_dt=close_dt, event_exclusive=event_exclusive,
+                                    open_count=open_count.get(tag), rank=rank, deep=deep,
+                                    market=market),
                             )
                             if recorder is not None:
                                 # Record what live ACTUALLY did (placed, or the specific gate that

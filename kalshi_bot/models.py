@@ -363,6 +363,235 @@ class LiveOrderQueueTick(Base):
     limit_price: Mapped[int | None] = mapped_column(Integer)
     rest_seconds: Mapped[int | None] = mapped_column(Integer)
     raw_json: Mapped[dict | None] = mapped_column(JSONType)
+    # --- WS-019 execution telemetry (docs/MMSELL_QUEUE_FILL_TELEMETRY.md) -----------------
+    # What caused this sample. The executor's once-per-cycle sample is `reconcile`; the
+    # telemetry collector writes `at_rest` (first sighting), `interval`, `event:trade`,
+    # `event:delta`, `event:fill` and `terminal`. A P(fill | queue) fit must know which samples
+    # were taken BECAUSE something happened, or it will over-weight busy moments.
+    trigger: Mapped[str | None] = mapped_column(String(24))
+    # `rest_batch` or `rest_single` — which Kalshi endpoint answered.
+    source: Mapped[str | None] = mapped_column(String(16))
+    # Contracts still resting at this instant, from the last `user_orders`/fill message the
+    # collector saw. NULL when unknown — never inferred from `quantity`.
+    remaining_count: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    # DERIVED book/trade features at this instant (best bid/ask, qty at our price, qty better,
+    # trades since placement, …), computed from the raw event tables beside this one. It is a
+    # convenience; the raw events are the record and can regenerate it.
+    features_json: Mapped[dict | None] = mapped_column(JSONType)
+
+
+class ExecutionOrderContext(Base):
+    """What the strategy knew at the instant it decided to place ONE live order — 1:1 with
+    `live_orders`, written BEFORE the order is sent (docs/MMSELL_QUEUE_FILL_TELEMETRY.md §5).
+
+    Every `decision_*` / `metrics_json` / `book_json` value here was available at
+    `decided_at`. Nothing that happens after submission may be written into those columns; the
+    only post-submit fields are the explicit lifecycle stamps (`acked_at`, `cancel_*`,
+    `terminal_reason`), so a model fitted on this table cannot leak the future by accident."""
+
+    __tablename__ = "execution_order_context"
+    __table_args__ = (
+        Index("ix_eoc_strategy_time", "strategy", "decided_at"),
+        Index("ix_eoc_ticker_time", "market_ticker", "decided_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    live_order_id: Mapped[int | None] = mapped_column(
+        BigIntId, ForeignKey("live_orders.id"), index=True)
+    kalshi_order_id: Mapped[str | None] = mapped_column(String(128), index=True)
+    client_order_id: Mapped[str | None] = mapped_column(String(128), index=True)
+    strategy: Mapped[str | None] = mapped_column(String(32))
+    twin_tag: Mapped[str | None] = mapped_column(String(24))
+    experiment_deployment_arm_id: Mapped[int | None] = mapped_column(BigIntId)
+    market_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    event_ticker: Mapped[str | None] = mapped_column(String(128))
+    series_ticker: Mapped[str | None] = mapped_column(String(32))
+    # --- decision-time facts (pre-submit) ---
+    decided_at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    no_price: Mapped[int | None] = mapped_column(Integer)      # our resting NO price (cents)
+    yes_price: Mapped[int | None] = mapped_column(Integer)     # the YES-side price sent
+    quantity: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    offset_cents: Mapped[int | None] = mapped_column(Integer)
+    hot_entry: Mapped[bool | None] = mapped_column(Boolean)
+    candidate_mid: Mapped[float | None] = mapped_column(Float)
+    best_yes_bid: Mapped[int | None] = mapped_column(Integer)
+    best_yes_ask: Mapped[int | None] = mapped_column(Integer)
+    best_no_bid: Mapped[int | None] = mapped_column(Integer)
+    best_no_ask: Mapped[int | None] = mapped_column(Integer)
+    spread: Mapped[int | None] = mapped_column(Integer)
+    depth_at_best_bid: Mapped[int | None] = mapped_column(Integer)
+    depth_at_best_ask: Mapped[int | None] = mapped_column(Integer)
+    top_depth: Mapped[int | None] = mapped_column(Integer)
+    market_volume: Mapped[int | None] = mapped_column(Integer)
+    open_interest: Mapped[int | None] = mapped_column(Integer)
+    last_price: Mapped[int | None] = mapped_column(Integer)
+    hours_to_close: Mapped[float | None] = mapped_column(Float)
+    hours_to_expiration: Mapped[float | None] = mapped_column(Float)
+    close_time: Mapped[datetime | None] = mapped_column(TS)
+    band_lo: Mapped[float | None] = mapped_column(Float)
+    band_hi: Mapped[float | None] = mapped_column(Float)
+    max_yes: Mapped[int | None] = mapped_column(Integer)
+    market_type: Mapped[str | None] = mapped_column(String(32))
+    market_mode: Mapped[str | None] = mapped_column(String(32))
+    regime: Mapped[str | None] = mapped_column(String(32))
+    review_tier: Mapped[str | None] = mapped_column(String(32))
+    open_positions_for_tag: Mapped[int | None] = mapped_column(Integer)
+    open_position_cap: Mapped[int | None] = mapped_column(Integer)
+    context_json: Mapped[dict | None] = mapped_column(JSONType)   # everything else, pre-submit
+    book_json: Mapped[dict | None] = mapped_column(JSONType)      # the orderbook levels fetched
+    # --- lifecycle stamps (post-submit; the ONLY post-submit columns) ---
+    submitted_at: Mapped[datetime | None] = mapped_column(TS)
+    acked_at: Mapped[datetime | None] = mapped_column(TS)
+    ack_ts_ms: Mapped[int | None] = mapped_column(BigInteger)     # Kalshi's matching-engine ms
+    cancel_requested_at: Mapped[datetime | None] = mapped_column(TS)
+    cancel_confirmed_at: Mapped[datetime | None] = mapped_column(TS)
+    terminal_reason: Mapped[str | None] = mapped_column(String(64))
+
+
+class ExecutionBookEvent(Base):
+    """One raw `orderbook_snapshot` or `orderbook_delta` WebSocket message for a tracked market.
+
+    `price_cents` is on the YES scale for BOTH sides because the collector subscribes with
+    `use_yes_price: true`; `price_convention` says so on every row so a later reader can never
+    silently mix scales. `level_qty_after` is the collector's local reconstruction of the level
+    after applying the delta — derived, and checkable against the next snapshot."""
+
+    __tablename__ = "execution_book_events"
+    __table_args__ = (
+        Index("ix_ebe_ticker_time", "market_ticker", "received_at"),
+        Index("ix_ebe_sid_seq", "sid", "seq"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    market_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)   # snapshot | delta
+    sid: Mapped[int | None] = mapped_column(Integer)
+    seq: Mapped[int | None] = mapped_column(BigInteger)
+    ts_ms: Mapped[int | None] = mapped_column(BigInteger)             # exchange clock
+    received_at: Mapped[datetime] = mapped_column(TS, nullable=False)  # our clock
+    side: Mapped[str | None] = mapped_column(String(8))
+    price_cents: Mapped[int | None] = mapped_column(Integer)
+    price_convention: Mapped[str | None] = mapped_column(String(8))   # "yes"
+    delta_fp: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    level_qty_after: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    ours: Mapped[bool | None] = mapped_column(Boolean)                 # client_order_id present
+    connection_id: Mapped[int | None] = mapped_column(Integer)
+    raw_json: Mapped[dict | None] = mapped_column(JSONType)
+
+
+class ExecutionTradeEvent(Base):
+    """One public trade (`trade` channel) on a tracked market."""
+
+    __tablename__ = "execution_trade_events"
+    __table_args__ = (
+        UniqueConstraint("trade_id", name="uq_ete_trade_id"),
+        Index("ix_ete_ticker_time", "market_ticker", "received_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    trade_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    market_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    ts_ms: Mapped[int | None] = mapped_column(BigInteger)
+    received_at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    yes_price_cents: Mapped[int | None] = mapped_column(Integer)
+    no_price_cents: Mapped[int | None] = mapped_column(Integer)
+    count_fp: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    taker_outcome_side: Mapped[str | None] = mapped_column(String(8))
+    taker_book_side: Mapped[str | None] = mapped_column(String(8))
+    is_block_trade: Mapped[bool | None] = mapped_column(Boolean)
+    sid: Mapped[int | None] = mapped_column(Integer)
+    seq: Mapped[int | None] = mapped_column(BigInteger)
+    raw_json: Mapped[dict | None] = mapped_column(JSONType)
+
+
+class ExecutionFillEvent(Base):
+    """One of OUR fills as the private `fill` channel delivered it — with the exchange
+    millisecond timestamp the REST poll loses. `rest_fill_id` is stamped by reconcile when the
+    matching `fills` row (same `trade_id`) exists; NULL means not yet reconciled, which the ops
+    script reports rather than hides."""
+
+    __tablename__ = "execution_fill_events"
+    __table_args__ = (
+        UniqueConstraint("trade_id", name="uq_efe_trade_id"),
+        Index("ix_efe_order_time", "kalshi_order_id", "received_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    trade_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    kalshi_order_id: Mapped[str | None] = mapped_column(String(128))
+    client_order_id: Mapped[str | None] = mapped_column(String(128))
+    market_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    ts_ms: Mapped[int | None] = mapped_column(BigInteger)
+    received_at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    yes_price_cents: Mapped[int | None] = mapped_column(Integer)
+    count_fp: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    fee_cost: Mapped[float | None] = mapped_column(Numeric(12, 6))
+    is_taker: Mapped[bool | None] = mapped_column(Boolean)
+    outcome_side: Mapped[str | None] = mapped_column(String(8))
+    book_side: Mapped[str | None] = mapped_column(String(8))
+    post_position_fp: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    exchange_index: Mapped[int | None] = mapped_column(Integer)
+    rest_fill_id: Mapped[int | None] = mapped_column(BigIntId)       # fills.id once reconciled
+    rest_reconciled_at: Mapped[datetime | None] = mapped_column(TS)
+    raw_json: Mapped[dict | None] = mapped_column(JSONType)
+
+
+class ExecutionOrderEvent(Base):
+    """One `user_orders` message: Kalshi's view of one of our orders changing (status,
+    filled / remaining count). This is where partial-fill sequences come from."""
+
+    __tablename__ = "execution_order_events"
+    __table_args__ = (Index("ix_eoe_order_time", "kalshi_order_id", "received_at"),)
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    kalshi_order_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    client_order_id: Mapped[str | None] = mapped_column(String(128))
+    market_ticker: Mapped[str | None] = mapped_column(String(128))
+    status: Mapped[str | None] = mapped_column(String(16))
+    fill_count_fp: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    remaining_count_fp: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    initial_count_fp: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    maker_fill_cost_dollars: Mapped[float | None] = mapped_column(Numeric(14, 6))
+    maker_fees_dollars: Mapped[float | None] = mapped_column(Numeric(14, 6))
+    last_updated_ts_ms: Mapped[int | None] = mapped_column(BigInteger)
+    received_at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    raw_json: Mapped[dict | None] = mapped_column(JSONType)
+
+
+class ExecutionMarketEvent(Base):
+    """One `market_lifecycle_v2` message for a tracked market (pause, reopen, close-date
+    change, determination, settlement). A queue that stops moving because trading paused must
+    never be read as liquidity vanishing."""
+
+    __tablename__ = "execution_market_events"
+    __table_args__ = (Index("ix_eme_ticker_time", "market_ticker", "received_at"),)
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    market_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    event_type: Mapped[str | None] = mapped_column(String(48))
+    is_deactivated: Mapped[bool | None] = mapped_column(Boolean)
+    event_ts: Mapped[int | None] = mapped_column(BigInteger)   # the ts the event carries (s)
+    received_at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    sid: Mapped[int | None] = mapped_column(Integer)
+    seq: Mapped[int | None] = mapped_column(BigInteger)
+    raw_json: Mapped[dict | None] = mapped_column(JSONType)
+
+
+class ExecutionCollectorEvent(Base):
+    """The collector's own record: connects, disconnects, sequence gaps, snapshot refreshes,
+    subscribe/unsubscribe, failed or rate-limited polls, throttled writes, thread start/stop.
+    Missing telemetry is a ROW here, never a silent zero elsewhere."""
+
+    __tablename__ = "execution_collector_events"
+    __table_args__ = (Index("ix_ece_kind_time", "kind", "at"),)
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    market_ticker: Mapped[str | None] = mapped_column(String(128))
+    connection_id: Mapped[int | None] = mapped_column(Integer)
+    detail: Mapped[str | None] = mapped_column(Text)
+    detail_json: Mapped[dict | None] = mapped_column(JSONType)
 
 
 class LiveOrderQueueDecision(Base):
