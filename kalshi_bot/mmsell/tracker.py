@@ -29,6 +29,7 @@ from ..live.sizing import (
     maker_no_price,
     maker_offset,
     order_quantity,
+    ticker_partition,
 )
 from ..paper.engine import kalshi_fee
 from ..registry.observe import SeriesObserver
@@ -201,12 +202,31 @@ class MmSellTracker:
         )
 
     def _book_admits_ticker(self, book: dict, ticker: str) -> bool:
-        """False when this is a queue-position ARM book and the ticker belongs to the other arm.
+        """False when this book is one side of a split and the ticker belongs to the other side.
 
-        Every non-arm book (`abarm` unset) admits everything, so this is inert for the whole
-        existing cohort. An arm book whose experiment is switched off (no configured arms) admits
-        NOTHING rather than silently trading at the default offset — an arm book only has a
-        defined price when the experiment is running, so failing closed is the safe direction."""
+        Two independent splits, checked in order:
+
+        1. `part=i/n` — the GENERIC partition. The book takes only the tickers hashing to `i`,
+           and nothing else about it changes. This is what lets two books asking DIFFERENT
+           questions share a band: without it, live order dedup is strategy-agnostic and the
+           book listed first in MMSELL_VARIANTS claims every contested ticker, so the other
+           trades the residue of the winner's gates instead of its own strategy.
+        2. `abarm` — the queue-position A/B, which partitions AND prices (see _book_arm_offset).
+           A book declaring no arms admits NOTHING rather than silently trading at the default
+           offset: an arm book only has a defined price while its experiment runs, so failing
+           closed is the safe direction. `part` has no such failure mode — it decides only the
+           claim, so there is nothing to fail closed about, and a partitioned book keeps trading
+           its half whatever the offset experiment is doing.
+
+        A book declaring neither admits everything, so this stays inert for the whole existing
+        cohort. The config parser refuses a book declaring both.
+        """
+        part = book.get("part")
+        if part is not None:
+            idx, n = part
+            if ticker_partition(ticker, n=n,
+                                salt=self.settings.mmsell_live_partition_salt) != idx:
+                return False
         if book.get("abarm") is None:
             return True
         return self._book_arm_offset(book, ticker) is not None
@@ -674,9 +694,16 @@ class MmSellTracker:
 
     def _twin_params(self, book: dict) -> dict:
         """The parameter snapshot stored on the twin's epoch row. Any later change to these makes
-        the twin/live comparison non-comparable, which the harness flags as param drift."""
+        the twin/live comparison non-comparable, which the harness flags as param drift.
+
+        Adding a key here is not free: `repository.sync_twin_epoch` compares the whole dict with
+        `!=` against what the epoch was OPENED with, so a key that appears unconditionally makes
+        every twin already running report drift on the next deploy — a false alarm on a live
+        comparison, which is the one place a false alarm is most expensive. Anything that only
+        applies to some books is therefore added conditionally below, so an unaffected twin's
+        snapshot stays byte-identical."""
         s = self.settings
-        return {
+        params = {
             "live_tag": book.get("twin_of"),
             "band_cents": [book["lo"], book["hi"]],
             "htc_hours": [book["htcmin"], book["htcmax"]],
@@ -705,6 +732,15 @@ class MmSellTracker:
             "twin_max_open_positions": self.twin_harness.max_open_positions(
                 s.mmsell_live_max_open_positions),
         }
+        # Only for a PARTITIONED book (docs/MMSELL_BOOK_PARTITION.md). The partition and the salt
+        # that computes it decide which half of the candidate flow the book sees, so changing
+        # either mid-flight swaps the twin's universe under it — exactly the drift this snapshot
+        # exists to catch. Omitted entirely when the book is unpartitioned, which is every book
+        # running today, so their snapshots are unchanged and none of them reports false drift.
+        if book.get("part"):
+            params["part"] = list(book["part"])
+            params["live_partition_salt"] = s.mmsell_live_partition_salt
+        return params
 
     def _record_scan_telemetry(self, session, summ: MmSellCycleSummary) -> None:
         """Persist this cycle's scan funnel to `system_events` so it can be QUERIED.
