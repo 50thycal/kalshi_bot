@@ -133,6 +133,14 @@ ALLOWED_VARS = frozenset({
     # a market stays subscribed after its last order goes terminal.
     "EXECUTION_TELEMETRY_ENABLED", "EXECUTION_QUEUE_POLL_SECONDS",
     "EXECUTION_QUEUE_MAX_POLLS_PER_MINUTE", "EXECUTION_TELEMETRY_POST_WINDOW_SECONDS",
+    # Liquidity-incentive shadow market maker (docs/LIQUIDITY_INCENTIVE_THESIS.md, WS-020). A
+    # read-only INSTRUMENT that places nothing: ENABLED turns the daemon thread on for ONE
+    # worker (default off); the cadence/bound knobs let the tape load be retuned without a
+    # deploy; MIN_REWARD narrows the tracked set. Quote policies and capital tiers are the
+    # pre-registration and are deliberately NOT settable here.
+    "LIQUIDITY_INCENTIVE_SHADOW_ENABLED", "LIQUIDITY_INCENTIVE_DISCOVERY_SECONDS",
+    "LIQUIDITY_INCENTIVE_REQUOTE_SECONDS", "LIQUIDITY_INCENTIVE_MAX_MARKETS",
+    "LIQUIDITY_INCENTIVE_BOOK_EVENTS_MAX_PER_MINUTE", "LIQUIDITY_INCENTIVE_MIN_REWARD_USD",
     # The book DEFINITIONS themselves. A live mmsell book is an ordinary entry in this
     # string (Lmmsell8 and Lmmsell10 both are), so registering an Experiment OS canary and
     # then being unable to CREATE its book is the same defect class as #266: an approved

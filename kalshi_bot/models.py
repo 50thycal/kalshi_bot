@@ -1437,3 +1437,357 @@ class SeriesObservation(Base):
     #: The registry state at the moment of first sighting, recorded so a later report can tell
     #: "arrived unknown and still unknown" from "arrived unknown and has since been reviewed".
     state_at_first_seen: Mapped[str | None] = mapped_column(String(32))
+
+
+# ---------------------------------------------------------------------------
+# Liquidity-incentive shadow market maker (docs/LIQUIDITY_INCENTIVE_THESIS.md, WS-020).
+# Phase 0 research instrument: NO orders. Every table below is written by the shadow
+# collector only, and nothing in the trading path reads any of them. Separate from MMSELL by
+# construction — no shared strategy state, no shared tables.
+# ---------------------------------------------------------------------------
+
+
+class IncentiveProgram(Base):
+    """One VERSION of one Kalshi liquidity/volume incentive program's terms.
+
+    Immutable per terms: when a program's reward, Target Size, Discount Factor, dates or
+    status change, the current row gets `superseded_at` stamped and a NEW row is inserted
+    (`terms_hash` differs). `first_seen_at`/`last_seen_at` bound the interval during which
+    these exact terms were observed; the only mutations to a row are `last_seen_at`,
+    `superseded_at` and `disappeared_at`.
+
+    Directly observed facts from `GET /incentive_programs` are stored verbatim in `raw_json`
+    and typed in the named columns. `period_reward_usd` is DERIVED (raw ÷ unit assumption,
+    see `period_reward_unit`) and is labelled as such."""
+
+    __tablename__ = "incentive_programs"
+    __table_args__ = (
+        UniqueConstraint("program_id", "terms_hash", name="uq_incentive_program_terms"),
+        Index("ix_incentive_programs_ticker", "market_ticker"),
+        Index("ix_incentive_programs_current", "superseded_at", "disappeared_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    program_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    market_id: Mapped[str | None] = mapped_column(String(128))
+    market_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    event_ticker: Mapped[str | None] = mapped_column(String(128))
+    series_ticker: Mapped[str | None] = mapped_column(String(64))
+    incentive_type: Mapped[str | None] = mapped_column(String(32))      # liquidity | volume
+    incentive_description: Mapped[str | None] = mapped_column(Text)
+    start_date: Mapped[datetime | None] = mapped_column(TS)
+    end_date: Mapped[datetime | None] = mapped_column(TS)
+    period_reward_raw: Mapped[int | None] = mapped_column(BigInteger)   # verbatim integer
+    period_reward_unit: Mapped[str | None] = mapped_column(String(16))  # assumption label
+    period_reward_usd: Mapped[float | None] = mapped_column(Numeric(14, 4))   # DERIVED
+    target_size: Mapped[float | None] = mapped_column(Numeric(18, 2))   # from target_size_fp
+    discount_factor_bps: Mapped[int | None] = mapped_column(Integer)
+    paid_out: Mapped[bool | None] = mapped_column(Boolean)
+    status_observed: Mapped[str | None] = mapped_column(String(16))     # the query status
+    extra_params_json: Mapped[dict | None] = mapped_column(JSONType)    # any field not typed
+    # Market facts resolved at first sight of these terms (GET /markets/{ticker}).
+    market_title: Mapped[str | None] = mapped_column(Text)
+    market_status: Mapped[str | None] = mapped_column(String(32))
+    close_time: Mapped[datetime | None] = mapped_column(TS)
+    fee_rule_json: Mapped[dict | None] = mapped_column(JSONType)        # liquidity_incentive.fees.FeeRule
+    market_raw_json: Mapped[dict | None] = mapped_column(JSONType)
+    terms_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    raw_json: Mapped[dict | None] = mapped_column(JSONType)
+    first_seen_at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    last_seen_at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    superseded_at: Mapped[datetime | None] = mapped_column(TS)    # terms changed -> new row
+    disappeared_at: Mapped[datetime | None] = mapped_column(TS)   # no longer listed as active
+
+
+class IncentiveDiscoveryCycle(Base):
+    """One poll of the incentive-program endpoint: the coverage denominator for Q1.
+    A cycle that fetched nothing is a row with `errors > 0`, never a missing day."""
+
+    __tablename__ = "incentive_discovery_cycles"
+    __table_args__ = (Index("ix_incentive_discovery_cycles_time", "started_at"),)
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    started_at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    finished_at: Mapped[datetime | None] = mapped_column(TS)
+    programs_listed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    liquidity_programs: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    volume_programs: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    new_terms: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    changed_terms: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    disappeared: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    total_period_reward_usd: Mapped[float | None] = mapped_column(Numeric(14, 4))   # DERIVED
+    pages: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    errors: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    notes_json: Mapped[dict | None] = mapped_column(JSONType)
+
+
+class IncentiveMarketSnapshot(Base):
+    """Periodic program + market state for one incentivized market (one row per requote
+    cycle per market). Observed columns come from the local book; every `est_*` column is
+    DERIVED from the scoring model in `liquidity_incentive.scoring` and says so by name."""
+
+    __tablename__ = "incentive_market_snapshots"
+    __table_args__ = (Index("ix_incentive_market_snapshots_ticker_time", "market_ticker", "at"),)
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    program_row_id: Mapped[int | None] = mapped_column(BigIntId, index=True)
+    market_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    book_valid: Mapped[bool | None] = mapped_column(Boolean)
+    best_yes_bid: Mapped[int | None] = mapped_column(Integer)      # yes cents
+    best_no_bid: Mapped[int | None] = mapped_column(Integer)       # no cents
+    spread_cents: Mapped[int | None] = mapped_column(Integer)
+    yes_depth_at_best: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    no_depth_at_best: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    yes_depth_total: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    no_depth_total: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    yes_levels_json: Mapped[list | None] = mapped_column(JSONType)   # top levels, yes cents
+    no_levels_json: Mapped[list | None] = mapped_column(JSONType)    # top levels, no cents
+    trades_last_5m: Mapped[int | None] = mapped_column(Integer)
+    volume_last_5m: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    price_range_5m_cents: Mapped[int | None] = mapped_column(Integer)
+    last_trade_yes_price: Mapped[int | None] = mapped_column(Integer)
+    # --- derived (scoring model) ---
+    est_reference_price: Mapped[float | None] = mapped_column(Float)       # yes cents
+    est_yes_qualifying_depth: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    est_no_qualifying_depth: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    est_yes_meets_target: Mapped[bool | None] = mapped_column(Boolean)
+    est_no_meets_target: Mapped[bool | None] = mapped_column(Boolean)
+    est_yes_score_total: Mapped[float | None] = mapped_column(Float)       # the field's weighted score
+    est_no_score_total: Mapped[float | None] = mapped_column(Float)
+    scoring_version: Mapped[str | None] = mapped_column(String(32))
+    seq: Mapped[int | None] = mapped_column(BigInteger)
+    market_status: Mapped[str | None] = mapped_column(String(32))
+
+
+class IncentiveShadowQuote(Base):
+    """One hypothetical two-sided resting quote pair, for one policy at one capital tier.
+
+    Written when the pair would have been placed; `ended_at`/`end_reason` are stamped once
+    when it stops resting (a legitimate cancel reason, market close, program end, collector
+    stop, or fully filled under every model). Nothing else on the row changes after insert.
+    Prices are NATIVE (yes cents / no cents); `*_yes_scale` columns give the LocalBook level.
+    `est_*` columns are DERIVED at placement time and never updated."""
+
+    __tablename__ = "incentive_shadow_quotes"
+    __table_args__ = (
+        Index("ix_incentive_shadow_quotes_ticker_time", "market_ticker", "placed_at"),
+        Index("ix_incentive_shadow_quotes_open", "ended_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    program_row_id: Mapped[int | None] = mapped_column(BigIntId, index=True)
+    market_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    policy: Mapped[str] = mapped_column(String(32), nullable=False)
+    capital_tier_usd: Mapped[int] = mapped_column(Integer, nullable=False)
+    placed_at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    yes_bid: Mapped[int] = mapped_column(Integer, nullable=False)
+    no_bid: Mapped[int] = mapped_column(Integer, nullable=False)
+    yes_bid_yes_scale: Mapped[int] = mapped_column(Integer, nullable=False)
+    no_bid_yes_scale: Mapped[int] = mapped_column(Integer, nullable=False)
+    qty_per_side: Mapped[float] = mapped_column(Numeric(18, 2), nullable=False)
+    pair_cost_cents: Mapped[int] = mapped_column(Integer, nullable=False)
+    maker_fee_cents_per_pair: Mapped[float | None] = mapped_column(Float)
+    pair_edge_cents: Mapped[float | None] = mapped_column(Float)        # 100 - cost - fees
+    capital_required_usd: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    capital_unused_usd: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    reason: Mapped[str | None] = mapped_column(String(64))
+    yes_joins_best: Mapped[bool | None] = mapped_column(Boolean)
+    no_joins_best: Mapped[bool | None] = mapped_column(Boolean)
+    yes_queue_ahead: Mapped[float | None] = mapped_column(Numeric(18, 2))   # observed depth at our level
+    no_queue_ahead: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    book_json: Mapped[dict | None] = mapped_column(JSONType)                # book at placement
+    # --- derived at placement ---
+    est_reference_price: Mapped[float | None] = mapped_column(Float)
+    est_yes_score: Mapped[float | None] = mapped_column(Float)      # our weighted score, yes side
+    est_no_score: Mapped[float | None] = mapped_column(Float)
+    est_yes_share: Mapped[float | None] = mapped_column(Float)      # our share of the field
+    est_no_share: Mapped[float | None] = mapped_column(Float)
+    est_reward_per_hour_usd: Mapped[float | None] = mapped_column(Float)
+    scoring_version: Mapped[str | None] = mapped_column(String(32))
+    ended_at: Mapped[datetime | None] = mapped_column(TS)
+    end_reason: Mapped[str | None] = mapped_column(String(48))
+    rest_seconds: Mapped[float | None] = mapped_column(Float)
+
+
+class IncentiveShadowEvent(Base):
+    """A market event relevant to one resting shadow quote: a trade reaching one of its legs
+    (with the per-model fill it produced), the resting quantity at its level changing, a book
+    invalidation, or the reason it stopped resting. Append-only."""
+
+    __tablename__ = "incentive_shadow_events"
+    __table_args__ = (Index("ix_incentive_shadow_events_quote_time", "quote_id", "at"),)
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    quote_id: Mapped[int] = mapped_column(BigIntId, nullable=False)
+    market_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)   # trade_hit | level_change | book_invalid | end
+    side: Mapped[str | None] = mapped_column(String(8))
+    yes_price_cents: Mapped[int | None] = mapped_column(Integer)
+    count: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    taker_outcome_side: Mapped[str | None] = mapped_column(String(8))
+    trade_id: Mapped[str | None] = mapped_column(String(64))
+    detail_json: Mapped[dict | None] = mapped_column(JSONType)
+
+
+class IncentiveShadowFill(Base):
+    """One simulated fill increment for one leg of one quote under ONE fill model. The three
+    models write separate rows; a report that sums across `fill_model` is a bug."""
+
+    __tablename__ = "incentive_shadow_fills"
+    __table_args__ = (Index("ix_incentive_shadow_fills_quote", "quote_id", "fill_model"),)
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    quote_id: Mapped[int] = mapped_column(BigIntId, nullable=False)
+    market_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    fill_model: Mapped[str] = mapped_column(String(16), nullable=False)
+    side: Mapped[str] = mapped_column(String(8), nullable=False)
+    at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    price_cents: Mapped[int] = mapped_column(Integer, nullable=False)     # native side price
+    qty: Mapped[float] = mapped_column(Numeric(18, 2), nullable=False)
+    cumulative_qty: Mapped[float] = mapped_column(Numeric(18, 2), nullable=False)
+    is_full: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    queue_ahead_before: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    seconds_since_placed: Mapped[float | None] = mapped_column(Float)
+    trade_id: Mapped[str | None] = mapped_column(String(64))
+    mid_at_fill: Mapped[float | None] = mapped_column(Float)              # yes cents
+
+
+class IncentiveShadowMark(Base):
+    """Mark-to-market of one leg's simulated position at a fixed horizon after its FIRST fill
+    under one model (1 s, 5 s, 30 s, 60 s, 300 s), plus settlement when known. The adverse-
+    selection record for Q5. Append-only; one row per (quote, model, side, horizon)."""
+
+    __tablename__ = "incentive_shadow_marks"
+    __table_args__ = (Index("ix_incentive_shadow_marks_quote", "quote_id", "fill_model", "side"),)
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    quote_id: Mapped[int] = mapped_column(BigIntId, nullable=False)
+    market_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    fill_model: Mapped[str] = mapped_column(String(16), nullable=False)
+    side: Mapped[str] = mapped_column(String(8), nullable=False)
+    horizon_seconds: Mapped[int] = mapped_column(Integer, nullable=False)   # 0 = settlement
+    at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    fill_price_cents: Mapped[int] = mapped_column(Integer, nullable=False)  # native side price
+    filled_qty: Mapped[float] = mapped_column(Numeric(18, 2), nullable=False)
+    mark_bid_cents: Mapped[int | None] = mapped_column(Integer)      # best bid on OUR side (liquidation)
+    mark_mid_cents: Mapped[float | None] = mapped_column(Float)      # midpoint on our side's scale
+    pnl_at_bid_usd: Mapped[float | None] = mapped_column(Numeric(14, 4))
+    pnl_at_mid_usd: Mapped[float | None] = mapped_column(Numeric(14, 4))
+    book_valid: Mapped[bool | None] = mapped_column(Boolean)
+
+
+class IncentiveShadowOutcome(Base):
+    """The economics of one quote pair under ONE fill model, written once when the pair stops
+    resting. Every component is its own column so no score can hide bad economics:
+    reward estimate (DERIVED), paired P&L, single-leg exposure, fees, capital. Settlement
+    fields are the one later mutation (`settled_at`, `settlement_*`), stamped by the
+    settlement pass when the market resolves; they are NULL until then, never zero."""
+
+    __tablename__ = "incentive_shadow_outcomes"
+    __table_args__ = (
+        UniqueConstraint("quote_id", "fill_model", name="uq_incentive_shadow_outcome"),
+        Index("ix_incentive_shadow_outcomes_ticker_time", "market_ticker", "ended_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    quote_id: Mapped[int] = mapped_column(BigIntId, nullable=False)
+    program_row_id: Mapped[int | None] = mapped_column(BigIntId, index=True)
+    market_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    policy: Mapped[str] = mapped_column(String(32), nullable=False)
+    capital_tier_usd: Mapped[int] = mapped_column(Integer, nullable=False)
+    fill_model: Mapped[str] = mapped_column(String(16), nullable=False)
+    placed_at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    ended_at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    end_reason: Mapped[str | None] = mapped_column(String(48))
+    rest_seconds: Mapped[float | None] = mapped_column(Float)
+    outcome: Mapped[str] = mapped_column(String(24), nullable=False)   # fills.OUTCOME_*
+    yes_filled_qty: Mapped[float] = mapped_column(Numeric(18, 2), nullable=False)
+    no_filled_qty: Mapped[float] = mapped_column(Numeric(18, 2), nullable=False)
+    matched_pairs: Mapped[float] = mapped_column(Numeric(18, 2), nullable=False)
+    yes_first_fill_at: Mapped[datetime | None] = mapped_column(TS)
+    no_first_fill_at: Mapped[datetime | None] = mapped_column(TS)
+    seconds_between_legs: Mapped[float | None] = mapped_column(Float)
+    capital_required_usd: Mapped[float | None] = mapped_column(Numeric(14, 2))
+    capital_hours: Mapped[float | None] = mapped_column(Float)          # capital_required × rest hours
+    est_reward_usd: Mapped[float | None] = mapped_column(Numeric(14, 6))     # DERIVED, both sides
+    est_reward_yes_usd: Mapped[float | None] = mapped_column(Numeric(14, 6))
+    est_reward_no_usd: Mapped[float | None] = mapped_column(Numeric(14, 6))
+    paired_pnl_usd: Mapped[float | None] = mapped_column(Numeric(14, 4))    # matched pairs: 100 - cost
+    fees_usd: Mapped[float | None] = mapped_column(Numeric(14, 4))
+    single_leg_side: Mapped[str | None] = mapped_column(String(8))
+    single_leg_qty: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    single_leg_mtm_5m_usd: Mapped[float | None] = mapped_column(Numeric(14, 4))   # at bid
+    single_leg_max_adverse_usd: Mapped[float | None] = mapped_column(Numeric(14, 4))
+    net_before_settlement_usd: Mapped[float | None] = mapped_column(Numeric(14, 4))
+    settled_at: Mapped[datetime | None] = mapped_column(TS)
+    settlement_result: Mapped[str | None] = mapped_column(String(8))     # yes | no
+    settlement_pnl_usd: Mapped[float | None] = mapped_column(Numeric(14, 4))   # unmatched legs
+    net_after_settlement_usd: Mapped[float | None] = mapped_column(Numeric(14, 4))
+    scoring_version: Mapped[str | None] = mapped_column(String(32))
+
+
+class IncentiveBookEvent(Base):
+    """Raw `orderbook_snapshot`/`orderbook_delta` frames for incentivized markets — the tape
+    the fill models replay. Same shape and YES-scale convention as `execution_book_events`,
+    in its own table so the two instruments never share rows."""
+
+    __tablename__ = "incentive_book_events"
+    __table_args__ = (Index("ix_incentive_book_events_ticker_time", "market_ticker", "received_at"),)
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    market_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    sid: Mapped[int | None] = mapped_column(Integer)
+    seq: Mapped[int | None] = mapped_column(BigInteger)
+    ts_ms: Mapped[int | None] = mapped_column(BigInteger)
+    received_at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    side: Mapped[str | None] = mapped_column(String(8))
+    price_cents: Mapped[int | None] = mapped_column(Integer)
+    price_convention: Mapped[str | None] = mapped_column(String(8))
+    delta_fp: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    level_qty_after: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    connection_id: Mapped[int | None] = mapped_column(Integer)
+    raw_json: Mapped[dict | None] = mapped_column(JSONType)
+
+
+class IncentiveTradeEvent(Base):
+    """Raw public trades on incentivized markets (`trade_id` unique)."""
+
+    __tablename__ = "incentive_trade_events"
+    __table_args__ = (
+        UniqueConstraint("trade_id", name="uq_incentive_trade_id"),
+        Index("ix_incentive_trade_events_ticker_time", "market_ticker", "received_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    trade_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    market_ticker: Mapped[str] = mapped_column(String(128), nullable=False)
+    ts_ms: Mapped[int | None] = mapped_column(BigInteger)
+    received_at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    yes_price_cents: Mapped[int | None] = mapped_column(Integer)
+    no_price_cents: Mapped[int | None] = mapped_column(Integer)
+    count_fp: Mapped[float | None] = mapped_column(Numeric(18, 2))
+    taker_outcome_side: Mapped[str | None] = mapped_column(String(8))
+    taker_book_side: Mapped[str | None] = mapped_column(String(8))
+    is_block_trade: Mapped[bool | None] = mapped_column(Boolean)
+    sid: Mapped[int | None] = mapped_column(Integer)
+    seq: Mapped[int | None] = mapped_column(BigInteger)
+    raw_json: Mapped[dict | None] = mapped_column(JSONType)
+
+
+class IncentiveCollectorEvent(Base):
+    """The shadow collector's own record: connects, disconnects, sequence gaps, throttles,
+    discovery failures, lifecycle changes, thread start/stop. Missing data is a row here."""
+
+    __tablename__ = "incentive_collector_events"
+    __table_args__ = (Index("ix_incentive_collector_events_kind_time", "kind", "at"),)
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    market_ticker: Mapped[str | None] = mapped_column(String(128))
+    connection_id: Mapped[int | None] = mapped_column(Integer)
+    detail: Mapped[str | None] = mapped_column(Text)
+    detail_json: Mapped[dict | None] = mapped_column(JSONType)

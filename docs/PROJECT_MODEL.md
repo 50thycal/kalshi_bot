@@ -118,6 +118,24 @@ client wrapper, never writes `live_orders`, and every failure mode (disconnect, 
 gap, throttled write, failed or rate-limited poll) is a row in `execution_collector_events`
 so missing telemetry is never a silent zero. Kill: `EXECUTION_TELEMETRY_ENABLED=false`.
 
+### Liquidity-incentive shadow — a two-sided market maker that never trades
+
+```text
+any worker (LIQUIDITY_INCENTIVE_SHADOW_ENABLED on ONE service) ──► incentive-shadow thread
+   ├─ GET /incentive_programs every 5 min → versioned program terms (+ market, series fee rule)
+   ├─ WebSocket orderbook_delta + trade per incentivized market (≤150), lifecycle once
+   ├─ per market per minute: field score / reference price / target test; one hypothetical
+   │  resting pair per quote policy × capital tier, ended only for a named reason
+   ├─ per trade: replay against every resting leg under three fill models; marks at 1 s–5 min
+   └─ per pair end: one outcome row per fill model; settlement stamped when the market resolves
+```
+
+Research instrument only (`docs/LIQUIDITY_INCENTIVE_THESIS.md`): a GET-only client wrapper,
+writes confined to the `incentive_*` tables, nothing in the trading path reads them, and no
+Experiment OS object until a live POC is proposed. Every reward number is the scoring model's
+estimate (`est_*`); the three fill models are reported side by side and never averaged. Kill:
+the same variable to `false`.
+
 ### Evidence funnel
 
 Every series-addressed book ends its cycle with a bounded, publishable funnel line naming
@@ -267,6 +285,11 @@ Roughly three families of table, plus Experiment OS's own schema:
   `execution_trade_events`, `execution_fill_events`, `execution_order_events`,
   `execution_market_events`, `execution_collector_events`. Raw exchange facts with both
   clocks; derived features are recomputable from them.
+- **Liquidity-incentive shadow** — `incentive_programs` (versioned terms),
+  `incentive_discovery_cycles`, `incentive_market_snapshots`, `incentive_shadow_quotes`,
+  `incentive_shadow_events`, `incentive_shadow_fills` (one row per fill model),
+  `incentive_shadow_marks`, `incentive_shadow_outcomes`, `incentive_book_events`,
+  `incentive_trade_events`, `incentive_collector_events`. Written by the shadow thread only.
 - **Trading record** — `paper_trades`, `paper_positions`, `live_orders`, `fills`,
   `positions`, `account_snapshots`, and the live/paper twin and parity tables.
 - **Research inputs** — weather forecasts/observations/ensembles, crypto spot and ladder

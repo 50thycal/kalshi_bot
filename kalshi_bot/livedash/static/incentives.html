@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<title>Liquidity Incentive Shadow</title>
+<style>
+  :root{--bg:#0f1117;--panel:#181b24;--panel2:#1f2330;--line:#2a2f3d;--text:#e6e8ee;
+    --muted:#9aa3b2;--dim:#6c7583;--live:#6d8cff;--warn:#e8b64c;--pos:#3ecf8e;--neg:#f2555a}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1600px;margin:0 auto;padding:16px}
+  h1{font-size:18px;margin:0 0 4px} h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--muted);margin:22px 0 10px;font-weight:600}
+  .muted{color:var(--muted)} .dim{color:var(--dim)} .warn{color:var(--warn)} .pos{color:var(--pos)} .neg{color:var(--neg)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+  .card .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .card .v{font-size:20px;font-variant-numeric:tabular-nums}
+  table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+  th,td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left} th{color:var(--muted);font-weight:600;font-size:12px;cursor:pointer}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+  a{color:var(--live)} select,input{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+  .note{font-size:12px;color:var(--dim);margin-top:6px}
+  .state-IGNORE{color:var(--dim)} .state-WATCH{color:var(--warn)} .state-SHADOW{color:var(--live)} .state-POC_CANDIDATE{color:var(--pos)}
+  .scroll{overflow-x:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Liquidity incentive shadow <span class="muted">— genuine two-sided quoting, simulated, no orders</span></h1>
+  <div class="note">Read-only research surface (docs/LIQUIDITY_INCENTIVE_THESIS.md). Every <b>est_</b> number is the scoring
+    model's estimate, never a Kalshi statement. Fill models are shown separately and are never averaged.
+    Nothing on this page can submit, cancel or arm anything. <a href="/">← live vs paper</a> · <a href="/execution">execution telemetry</a></div>
+  <div style="margin:10px 0">
+    policy <select id="policy"><option>A_break_even</option><option>B_reward_efficient</option><option>C_conservative</option></select>
+    tier $<select id="tier"><option>25</option><option>50</option><option selected>100</option><option>250</option><option>500</option></select>
+    window <input id="hours" type="number" value="72" min="1" max="1440" style="width:80px"> h
+    <button id="reload">reload</button>
+  </div>
+  <h2>Collector</h2><div id="collector" class="grid"></div>
+  <h2>Headline — had this run at each tier for the window (per fill model)</h2><div id="headline" class="scroll"></div>
+  <h2>Active programs <span class="dim">(click a column to sort)</span></h2><div id="active" class="scroll"></div>
+  <h2>History</h2><div id="history" class="grid"></div><div id="cells" class="scroll"></div>
+</div>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = (v, nd=2) => v === null || v === undefined ? '—' : (typeof v === 'number' ? v.toFixed(nd) : v);
+const cls = v => v === null || v === undefined ? '' : (v > 0 ? 'pos' : (v < 0 ? 'neg' : ''));
+function card(k, v, c) { return `<div class="card"><div class="k">${esc(k)}</div><div class="v ${c||''}">${v}</div></div>`; }
+let sortKey = 'est_net_per_day_usd';
+
+async function load() {
+  const policy = $('#policy').value, tier = $('#tier').value, hours = $('#hours').value || 72;
+  const a = await (await fetch(`/api/incentives/active?policy=${policy}&tier=${tier}&hours=${hours}&sort=${sortKey}`)).json();
+  const c = a.collector || {}, ev = c.events_24h || {}, d = c.last_discovery || {};
+  $('#collector').innerHTML =
+    card('alive', c.alive ? 'yes' : 'NO', c.alive ? 'pos' : 'neg') +
+    card('last event', c.last_event ? `${esc(c.last_event.kind)}<div class="dim mono">${esc(c.last_event.at)}</div>` : '—') +
+    card('open shadow pairs', c.open_pairs ?? '—') +
+    card('programs listed (last poll)', `${d.programs_listed ?? '—'} <span class="muted">liq ${d.liquidity_programs ?? '—'}</span>`, d.errors ? 'warn' : '') +
+    card('advertised liquidity pool', d.total_period_reward_usd != null ? '$' + fmt(d.total_period_reward_usd) : '—') +
+    card('seq gaps / throttled / errors', `${ev.seq_gap||0} / ${ev.throttled||0} / ${ev.loop_error||0}`, (ev.loop_error||ev.throttled) ? 'warn' : '');
+  const cols = [['ticker','ticker'],['reward/day','reward_per_day_usd'],['pool','period_reward_usd'],['target','target_size'],
+    ['disc bps','discount_factor_bps'],['yes bid','best_yes_bid'],['no bid','best_no_bid'],['yes depth','yes_depth'],['no depth','no_depth'],
+    ['both≥target','both'],['quote','quote'],['capital','capital_required_usd'],['pair cost','pair_cost'],
+    ['est reward/day','est_reward_per_day_usd'],['paired/day','est_paired_value_per_day_usd'],['single-leg cost/day','est_single_leg_cost_per_day_usd'],
+    ['fees/day','est_fees_per_day_usd'],['est net/day','est_net_per_day_usd'],['reward/$/day','reward_per_capital_dollar_per_day'],
+    ['n cons','ncons'],['state','state']];
+  let h = '<table><tr>' + cols.map(([l,k]) => `<th data-k="${k}">${esc(l)}</th>`).join('') + '</tr>';
+  for (const r of a.rows) {
+    const q = r.quote || {};
+    const both = r.yes_meets_target && r.no_meets_target;
+    h += `<tr><td class="mono" title="${esc(r.title)}">${esc(r.ticker)}</td><td>${fmt(r.reward_per_day_usd)}</td><td>${fmt(r.period_reward_usd)}</td>
+      <td>${fmt(r.target_size,0)}</td><td>${r.discount_factor_bps ?? '—'}</td><td>${r.best_yes_bid ?? '—'}</td><td>${r.best_no_bid ?? '—'}</td>
+      <td>${fmt(r.yes_depth,0)}</td><td>${fmt(r.no_depth,0)}</td><td class="${both?'pos':'warn'}">${r.yes_meets_target==null?'—':(both?'yes':'no')}</td>
+      <td class="mono">${q.yes_bid!=null ? `${q.yes_bid}/${q.no_bid} x${fmt(q.qty_per_side,0)}` : '—'}</td>
+      <td>${fmt(q.capital_required_usd)}</td><td>${q.pair_cost_cents ?? '—'}<span class="dim"> (${fmt(q.pair_edge_cents,1)}c)</span></td>
+      <td>${fmt(r.est_reward_per_day_usd,4)}</td><td class="${cls(r.est_paired_value_per_day_usd)}">${fmt(r.est_paired_value_per_day_usd,4)}</td>
+      <td class="${r.est_single_leg_cost_per_day_usd>0?'neg':''}">${fmt(r.est_single_leg_cost_per_day_usd,4)}</td><td>${fmt(r.est_fees_per_day_usd,4)}</td>
+      <td class="${cls(r.est_net_per_day_usd)}"><b>${fmt(r.est_net_per_day_usd,4)}</b></td><td>${fmt(r.reward_per_capital_dollar_per_day,5)}</td>
+      <td>${r.conservative ? r.conservative.n : 0}</td><td class="state-${esc(r.state)}" title="${esc(r.state_reason)}">${esc(r.state)}</td></tr>`;
+  }
+  h += '</table>';
+  $('#active').innerHTML = `<div class="note">${a.n_programs} liquidity programs, advertised pool $${fmt(a.total_period_reward_usd)}; ranking uses the CONSERVATIVE fill model's outcomes over ${a.hours}h. Generated ${esc(a.generated_at)}.</div>` + h;
+  document.querySelectorAll('#active th[data-k]').forEach(th => th.onclick = () => { sortKey = th.dataset.k; load(); });
+
+  const hd = await (await fetch(`/api/incentives/headline?days=14`)).json();
+  let t = `<div class="note">observation span ${fmt(hd.span_days,1)} days. net = est reward + paired P&L + single-leg MTM (5 min, at bid) + settlement − fees. "share of net from largest" flags a result dominated by one market.</div>`;
+  t += '<table><tr><th>policy</th><th>tier</th><th>fill model</th><th>n</th><th>programs</th><th>est reward</th><th>paired</th><th>fees</th><th>single-leg MTM</th><th>settlement</th><th>net</th><th>net/day</th><th>net/capital-hr</th><th>largest share</th></tr>';
+  for (const r of hd.table) {
+    t += `<tr><td>${esc(r.policy)}</td><td>$${r.tier}</td><td>${esc(r.fill_model)}</td><td>${r.n_outcomes}</td><td>${r.programs_quoted}</td>
+      <td>${fmt(r.est_reward_usd,4)}</td><td class="${cls(r.paired_pnl_usd)}">${fmt(r.paired_pnl_usd,4)}</td><td>${fmt(r.fees_usd,4)}</td>
+      <td class="${cls(r.single_leg_mtm_usd)}">${fmt(r.single_leg_mtm_usd,4)}</td><td class="${cls(r.settlement_pnl_usd)}">${fmt(r.settlement_pnl_usd,4)}</td>
+      <td class="${cls(r.net_usd)}"><b>${fmt(r.net_usd,4)}</b></td><td class="${cls(r.net_per_day_usd)}">${fmt(r.net_per_day_usd,4)}</td>
+      <td>${fmt(r.net_per_capital_hour,6)}</td><td class="${(r.share_of_net_from_largest||0)>0.5?'warn':''}">${fmt(r.share_of_net_from_largest,2)}</td></tr>`;
+  }
+  $('#headline').innerHTML = t + '</table>';
+
+  const hi = await (await fetch(`/api/incentives/history?days=14`)).json();
+  const days = Object.entries(hi.by_day || {});
+  const last = days.length ? days[days.length-1][1] : {};
+  const bg = hi.both_given_one || {};
+  $('#history').innerHTML =
+    card('programs today', last.programs ?? '—') + card('advertised reward/day', last.reward_per_day_usd != null ? '$'+fmt(last.reward_per_day_usd) : '—') +
+    card('median reward/day', fmt(last.median_reward_per_day_usd)) + card('median target size', fmt(last.median_target_size,0)) +
+    card('P(both | one) conservative', bg.conservative ? `${fmt(bg.conservative.p_both_given_one,3)} <span class="muted">n=${bg.conservative.n_one_or_more}</span>` : '—') +
+    card('P(both | one) optimistic', bg.optimistic ? `${fmt(bg.optimistic.p_both_given_one,3)} <span class="muted">n=${bg.optimistic.n_one_or_more}</span>` : '—') +
+    card('end reasons', `<span class="mono" style="font-size:11px">${esc(Object.entries(hi.end_reasons||{}).map(([k,n])=>`${k} ${n}`).join(', ')||'—')}</span>`);
+  let ct = '<table><tr><th>day</th><th>programs</th><th>reward/day</th><th>median reward/day</th><th>median target</th></tr>';
+  for (const [d, v] of days) ct += `<tr><td>${d}</td><td>${v.programs}</td><td>${fmt(v.reward_per_day_usd)}</td><td>${fmt(v.median_reward_per_day_usd)}</td><td>${fmt(v.median_target_size,0)}</td></tr>`;
+  ct += '</table><h2>Outcome mix by fill model</h2><table><tr><th>model</th><th>mix</th></tr>';
+  for (const [mo, mix] of Object.entries(hi.outcome_mix||{})) ct += `<tr><td>${esc(mo)}</td><td class="mono">${esc(Object.entries(mix).map(([k,n])=>`${k} ${n}`).join(', '))}</td></tr>`;
+  ct += '</table><h2>Single-leg marks after first fill (P&L at bid)</h2><table><tr><th>model</th><th>horizon s</th><th>n</th><th>mean</th><th>worst</th></tr>';
+  for (const r of hi.marks||[]) ct += `<tr><td>${esc(r.fill_model)}</td><td>${r.horizon_seconds}</td><td>${r.n}</td><td class="${cls(r.mean_pnl_at_bid_usd)}">${fmt(r.mean_pnl_at_bid_usd,4)}</td><td class="neg">${fmt(r.worst_pnl_at_bid_usd,4)}</td></tr>`;
+  ct += '</table><h2>Cells: policy × tier × fill model (window)</h2><table><tr><th>policy</th><th>tier</th><th>model</th><th>n</th><th>rest h</th><th>capital-h</th><th>est reward</th><th>paired</th><th>fees</th><th>single-leg MTM</th><th>settlement</th><th>net before</th><th>net after</th><th>settled</th><th>reward/capital-h</th></tr>';
+  for (const r of hi.cells||[]) ct += `<tr><td>${esc(r.policy)}</td><td>$${r.tier}</td><td>${esc(r.fill_model)}</td><td>${r.n}</td><td>${fmt(r.rest_hours,1)}</td><td>${fmt(r.capital_hours,1)}</td><td>${fmt(r.est_reward_usd,4)}</td><td class="${cls(r.paired_pnl_usd)}">${fmt(r.paired_pnl_usd,4)}</td><td>${fmt(r.fees_usd,4)}</td><td class="${cls(r.single_leg_mtm_usd)}">${fmt(r.single_leg_mtm_usd,4)}</td><td class="${cls(r.settlement_pnl_usd)}">${fmt(r.settlement_pnl_usd,4)}</td><td class="${cls(r.net_before_settlement_usd)}">${fmt(r.net_before_settlement_usd,4)}</td><td class="${cls(r.net_after_settlement_usd)}">${fmt(r.net_after_settlement_usd,4)}</td><td>${r.n_settled}</td><td>${fmt(r.reward_per_capital_hour,6)}</td></tr>`;
+  $('#cells').innerHTML = ct + '</table>';
+}
+$('#reload').onclick = load; $('#policy').onchange = load; $('#tier').onchange = load;
+load().catch(e => { $('#active').innerHTML = `<div class="neg">failed: ${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>

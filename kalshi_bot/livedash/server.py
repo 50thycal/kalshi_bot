@@ -9,6 +9,10 @@ Routes:
   GET /api/runs/<twin_tag>/series     P&L overlay + price/execution series
   GET /api/runs/<twin_tag>/orders     live + paper orders, paired
   GET /api/runs/<twin_tag>/events     the paired-run event timeline
+  GET /incentives                     the liquidity-incentive shadow research page
+  GET /api/incentives/active          active programs + opportunity ranking (read-only)
+  GET /api/incentives/history         daily program counts, pools, outcomes by cell
+  GET /api/incentives/headline        "had this run at $X" per fill model
 
 Read-only by construction: only `do_GET`/`do_HEAD` exist, so every other verb gets
 a 501 from BaseHTTPRequestHandler, and the data layer contains no write. There is
@@ -44,6 +48,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
 from ..db import session_scope
+from ..liquidity_incentive import report as incentive_report
 from . import data
 from . import execution as execution_mod
 from .events import CATEGORIES, DEFAULT_CATEGORY, ENVIRONMENTS
@@ -52,6 +57,8 @@ logger = logging.getLogger("kalshi_bot.livedash")
 
 _INDEX = (Path(__file__).parent / "static" / "index.html").read_text(encoding="utf-8")
 _EXECUTION = (Path(__file__).parent / "static" / "execution.html").read_text(encoding="utf-8")
+_INCENTIVES = (Path(__file__).parent / "static" / "incentives.html").read_text(encoding="utf-8")
+_POLICY_RE = re.compile(r"^[A-Za-z0-9_]{1,32}$")
 
 # Twin tags are String(24) strategy tags: word characters, dash and dot only.
 _TAG_RE = re.compile(r"^[A-Za-z0-9._-]{1,24}$")
@@ -152,6 +159,9 @@ class LiveDashHandler(BaseHTTPRequestHandler):
         if path == "/execution":
             self._send(200, _EXECUTION.encode("utf-8"), "text/html; charset=utf-8")
             return
+        if path == "/incentives":
+            self._send(200, _INCENTIVES.encode("utf-8"), "text/html; charset=utf-8")
+            return
         if not path.startswith("/api/"):
             self._json({"error": "not found"}, 404)
             return
@@ -197,6 +207,26 @@ class LiveDashHandler(BaseHTTPRequestHandler):
                    elapsed_ms, self._bytes_sent)
 
     def _route(self, path: str, params: dict) -> bool:
+        # Liquidity-incentive shadow research view (docs/LIQUIDITY_INCENTIVE_THESIS.md): read-only
+        # over the incentive_* tables. Ranking only; nothing here can submit an order.
+        if path == "/api/incentives/active":
+            policy = _one(params, "policy") or "A_break_even"
+            if not _POLICY_RE.match(policy):
+                policy = "A_break_even"
+            with session_scope() as session:
+                self._json(incentive_report.build_active(
+                    session, policy=policy, tier=_int(params, "tier", 100) or 100,
+                    hours=_int(params, "hours", 72) or 72,
+                    sort=_one(params, "sort") or "est_net_per_day_usd"))
+            return True
+        if path == "/api/incentives/history":
+            with session_scope() as session:
+                self._json(incentive_report.build_history(session, days=_int(params, "days", 14) or 14))
+            return True
+        if path == "/api/incentives/headline":
+            with session_scope() as session:
+                self._json(incentive_report.build_headline(session, days=_int(params, "days", 14) or 14))
+            return True
         # Execution research view (docs/MMSELL_QUEUE_FILL_TELEMETRY.md): read-only diagnostics
         # over the queue/fill telemetry tables. No score, no probability — by design.
         if path == "/api/execution/summary":

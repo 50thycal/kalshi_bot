@@ -411,6 +411,48 @@ class KalshiClient:
             if not cursor or not events:
                 return
 
+    # -- incentive programs + series fee structure (liquidity_incentive; read-only) ---------
+    def get_incentive_programs(
+        self,
+        *,
+        status: str = "active",
+        incentive_type: str = "all",
+        limit: int = 1000,
+        cursor: str | None = None,
+    ) -> dict:
+        """`GET /incentive_programs` (OpenAPI 3.30.0, verified 2026-09-16 from a vendored spec):
+        `{incentive_programs: [...], next_cursor}`. Unauthenticated on Kalshi's side; sent
+        signed anyway because every request through this client is. `period_reward` is in
+        CENTI-CENTS, `target_size_fp` a fixed-point contract string, `discount_factor_bps`
+        basis points. status: all|active|upcoming|closed|paid_out; type: all|liquidity|volume|
+        margin_maker_volume|margin_taker_volume. limit max 10000."""
+        params: dict[str, Any] = {"status": status, "limit": limit}
+        if incentive_type and incentive_type != "all":
+            params["type"] = incentive_type
+        if cursor:
+            params["cursor"] = cursor
+        return self._request("GET", "/incentive_programs", params=params)
+
+    def iter_incentive_programs(
+        self, *, status: str = "active", incentive_type: str = "all", page_size: int = 1000,
+        max_pages: int = 30,
+    ) -> Iterator[dict]:
+        cursor: str | None = None
+        for _ in range(max_pages):
+            page = self.get_incentive_programs(
+                status=status, incentive_type=incentive_type, limit=page_size, cursor=cursor)
+            programs = page.get("incentive_programs") or []
+            yield from programs
+            cursor = page.get("next_cursor") or None
+            if not cursor or not programs:
+                break
+
+    def get_series(self, series_ticker: str) -> dict:
+        """`GET /series/{series_ticker}` -> `{series: {fee_type, fee_multiplier, ...}}`.
+        `fee_type` is one of quadratic | quadratic_with_maker_fees |
+        quadratic_with_combo_maker_fees | flat (OpenAPI 3.30.0 `FeeType`)."""
+        return self._request("GET", f"/series/{series_ticker}")
+
     def get_orderbook(self, ticker: str, depth: int | None = None) -> dict:
         params = {"depth": depth} if depth else None
         return self._request("GET", f"/markets/{ticker}/orderbook", params=params)
