@@ -762,3 +762,32 @@ def test_local_book_features_handle_an_empty_book():
     feats = book.features_for("no", 93)
     assert feats["book_valid"] is False and feats["best_yes_bid"] is None
     assert feats["qty_at_our_price"] == 0.0 and feats["imbalance"] is None
+
+
+def test_other_frame_types_on_a_sequenced_sid_are_not_read_as_gaps(settings):
+    """The lifecycle sid also carries event_lifecycle / event_fee_update frames. Ignoring
+    them must consume their seq — production recorded eight false gaps in its first hour."""
+    state = _state(settings)
+    with db.session_scope() as s:
+        _order(s, koid="K-1")
+    _connect_and_track(state)
+    frames = [
+        {"type": "market_lifecycle_v2", "sid": 15, "seq": 190, "msg": {"market_ticker": "KXT-Z", "event_type": "created"}},
+        {"type": "event_lifecycle", "sid": 15, "seq": 191, "msg": {"event_ticker": "KXT", "title": "t"}},
+        {"type": "event_fee_update", "sid": 15, "seq": 192, "msg": {"event_ticker": "KXT"}},
+        {"type": "market_metadata_updated", "sid": 15, "seq": 193, "msg": {"market_ticker": "KXT-A", "event_type": "metadata_updated"}},
+        {"type": "market_lifecycle_v2", "sid": 15, "seq": 194, "msg": {"market_ticker": "KXT-A", "event_type": "deactivated", "is_deactivated": True}},
+    ]
+    for f in frames:
+        assert state.handle_message(f) == []
+    with db.session_scope() as s:
+        gaps = s.scalars(select(m.ExecutionCollectorEvent).where(
+            m.ExecutionCollectorEvent.kind == c.EV_SEQ_GAP)).all()
+        assert gaps == []
+        assert s.scalar(select(m.ExecutionMarketEvent)).event_type == "deactivated"
+    # and a real gap on that sid is still a gap
+    state.handle_message({"type": "event_lifecycle", "sid": 15, "seq": 196, "msg": {}})
+    with db.session_scope() as s:
+        gap = s.scalar(select(m.ExecutionCollectorEvent).where(
+            m.ExecutionCollectorEvent.kind == c.EV_SEQ_GAP))
+        assert gap.detail_json["expected"] == 195 and gap.detail_json["channel"] == "market_lifecycle_v2"
