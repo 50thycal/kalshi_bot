@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<title>Execution Telemetry</title>
+<style>
+  :root{--bg:#0f1117;--panel:#181b24;--panel2:#1f2330;--line:#2a2f3d;--text:#e6e8ee;
+    --muted:#9aa3b2;--dim:#6c7583;--live:#6d8cff;--warn:#e8b64c;--pos:#3ecf8e;--neg:#f2555a}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1440px;margin:0 auto;padding:16px}
+  h1{font-size:18px;margin:0 0 4px} h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--muted);margin:22px 0 10px;font-weight:600}
+  .muted{color:var(--muted)} .dim{color:var(--dim)} .warn{color:var(--warn)} .pos{color:var(--pos)} .neg{color:var(--neg)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+  .card .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .card .v{font-size:20px;font-variant-numeric:tabular-nums}
+  table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+  th,td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left} th{color:var(--muted);font-weight:600;font-size:12px}
+  tr.row{cursor:pointer} tr.row:hover{background:var(--panel2)}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+  #trace{margin-top:16px}
+  svg{width:100%;height:160px;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+  a{color:var(--live)}
+  input{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+  .note{font-size:12px;color:var(--dim);margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Execution telemetry <span class="muted">— queue / fill record around live resting orders</span></h1>
+  <div class="note">Read-only diagnostics. Coverage first: nothing below it is trustworthy until it is high.
+    No fill probability or expected value is shown here by design. <a href="/">← live vs paper</a></div>
+  <div style="margin:10px 0">window <input id="hours" type="number" value="72" min="1" max="720" style="width:80px"> h
+    <button id="reload">reload</button>
+    &nbsp; order <input id="koid" class="mono" placeholder="kalshi order id" style="width:340px"> <button id="trace-btn">trace</button></div>
+  <h2>Collector</h2><div id="collector" class="grid"></div>
+  <h2>Coverage</h2><div id="coverage" class="grid"></div>
+  <h2>Funnel</h2><div id="funnel"></div>
+  <h2>Queue at rest (contracts ahead at first sample)</h2><div id="queue" class="grid"></div>
+  <h2>Recent orders</h2><div id="orders"></div>
+  <div id="trace"></div>
+</div>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = v => v === null || v === undefined ? '—' : (typeof v === 'number' && !Number.isInteger(v) ? v.toFixed(2) : v);
+const pct = (a, b) => b ? (100 * a / b).toFixed(1) + '%' : '—';
+function card(k, v, cls) { return `<div class="card"><div class="k">${esc(k)}</div><div class="v ${cls||''}">${v}</div></div>`; }
+
+async function loadSummary() {
+  const hours = $('#hours').value || 72;
+  const r = await fetch(`/api/execution/summary?hours=${encodeURIComponent(hours)}`);
+  const d = await r.json();
+  const c = d.collector, ev = c.events || {};
+  $('#collector').innerHTML =
+    card('alive', c.alive ? 'yes' : 'NO', c.alive ? 'pos' : 'neg') +
+    card('last event', c.last_event ? `${esc(c.last_event.kind)}<div class="dim mono">${esc(c.last_event.at)}</div>` : '—') +
+    card('connects / disconnects', `${ev.connected||0} / ${ev.disconnected||0}`, (ev.disconnected||0) >= (ev.connected||0) && (ev.connected||0) ? 'warn' : '') +
+    card('seq gaps', ev.seq_gap||0, ev.seq_gap ? 'warn' : '') +
+    card('throttled', ev.throttled||0, ev.throttled ? 'warn' : '') +
+    card('poll failures / 429', `${ev.poll_failed||0} / ${ev.rate_limited||0}`, ev.rate_limited ? 'neg' : '') +
+    card('loop errors', ev.loop_error||0, ev.loop_error ? 'warn' : '');
+  const v = d.coverage;
+  $('#coverage').innerHTML =
+    card('orders (with kalshi id)', v.orders) +
+    card('with decision context', `${v.with_context} <span class="muted">${pct(v.with_context, v.orders)}</span>`, v.orders && v.with_context < v.orders ? 'warn' : '') +
+    card('with tick at rest', `${v.with_at_rest_tick} <span class="muted">${pct(v.with_at_rest_tick, v.orders)}</span>`) +
+    card('with any tick', `${v.with_any_tick} <span class="muted">${pct(v.with_any_tick, v.orders)}</span>`, v.orders && !v.with_any_tick ? 'neg' : '') +
+    card('with terminal tick', `${v.with_terminal_tick}`) +
+    card('ticks by trigger', `<span class="mono" style="font-size:12px">${esc(Object.entries(v.ticks_by_trigger||{}).map(([k,n])=>`${k} ${n}`).join(', ')||'—')}</span>`) +
+    card('book / trade events', `${v.book_events} / ${v.trade_events}`) +
+    card('WS fills matched to REST', `${v.ws_fills_matched_to_rest} / ${v.ws_fills}`);
+  const f = d.funnel || {};
+  $('#funnel').innerHTML = `<table><tr><th>book</th><th>placed</th><th>filled</th><th>canceled</th><th>open</th><th>refused</th><th>multi-fill</th></tr>` +
+    Object.entries(f).map(([k, r]) => `<tr><td class="mono">${esc(k)}</td><td>${r.placed}</td><td>${r.filled}</td><td>${r.canceled}</td><td>${r.open}</td><td>${r.refused}</td><td>${r.multi_fill}</td></tr>`).join('') +
+    `</table><div class="note">refused = never reached the book (rejected / error / not landed). Kept apart from canceled on purpose.</div>`;
+  const q = d.queue_at_rest;
+  $('#queue').innerHTML = card('orders', q.orders) + card('front of queue', q.front_share === null ? '—' : (100*q.front_share).toFixed(1)+'%') +
+    card('p25', fmt(q.p25)) + card('p50', fmt(q.p50)) + card('p75', fmt(q.p75)) + card('p90', fmt(q.p90));
+  $('#orders').innerHTML = `<table><tr><th>created</th><th>book</th><th>market</th><th>no px</th><th>qty</th><th>status</th><th>first ahead</th><th>ticks</th></tr>` +
+    (d.recent_orders || []).map(o => `<tr class="row" data-id="${esc(o.kalshi_order_id)}"><td class="mono">${esc(o.created_at)}</td><td class="mono">${esc(o.strategy)}</td><td class="mono">${esc(o.market)}</td><td>${fmt(o.no_price)}</td><td>${fmt(o.quantity)}</td><td>${esc(o.status)}</td><td>${fmt(o.first_ahead)}</td><td>${o.ticks}</td></tr>`).join('') + `</table>`;
+  document.querySelectorAll('tr.row').forEach(tr => tr.addEventListener('click', () => { $('#koid').value = tr.dataset.id; loadTrace(); }));
+}
+
+function chart(points) {
+  const vals = points.filter(p => p.ahead !== null && p.ahead !== undefined);
+  if (!vals.length) return '<div class="note">no readable queue samples</div>';
+  const W = 1000, H = 160, pad = 28;
+  const t0 = Date.parse(vals[0].at), t1 = Math.max(Date.parse(vals[vals.length-1].at), t0 + 1000);
+  const maxA = Math.max(1, ...vals.map(p => p.ahead));
+  const x = p => pad + (W - 2*pad) * (Date.parse(p.at) - t0) / (t1 - t0);
+  const y = p => H - pad - (H - 2*pad) * p.ahead / maxA;
+  const path = vals.map((p, i) => `${i ? 'L' : 'M'}${x(p).toFixed(1)},${y(p).toFixed(1)}`).join(' ');
+  const dots = vals.map(p => `<circle cx="${x(p).toFixed(1)}" cy="${y(p).toFixed(1)}" r="2.5" fill="${p.trigger && p.trigger.startsWith('event') ? '#e8b64c' : '#6d8cff'}"><title>${esc(p.at)} ${esc(p.trigger)} ahead=${p.ahead}</title></circle>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><path d="${path}" stroke="#6d8cff" fill="none" stroke-width="1.5"/>${dots}
+    <text x="${pad}" y="14" fill="#9aa3b2" font-size="11">contracts ahead (max ${maxA})</text>
+    <text x="${W-pad}" y="14" fill="#9aa3b2" font-size="11" text-anchor="end">blue = scheduled, amber = event-triggered</text></svg>`;
+}
+
+async function loadTrace() {
+  const koid = $('#koid').value.trim();
+  if (!koid) return;
+  const r = await fetch(`/api/execution/orders/${encodeURIComponent(koid)}`);
+  if (!r.ok) { $('#trace').innerHTML = `<h2>Order</h2><div class="neg">not found</div>`; return; }
+  const d = await r.json(), o = d.order, c = d.context;
+  let html = `<h2>Order ${esc(o.kalshi_order_id)}</h2><div class="grid">` +
+    card('market', `<span class="mono">${esc(o.market)}</span>`) + card('book', `<span class="mono">${esc(o.strategy)}</span>`) +
+    card('our price', `no ${fmt(o.no_price)}c / yes ${fmt(o.our_yes_price)}c`) + card('size', fmt(o.quantity)) +
+    card('status', `${esc(o.status)} <span class="muted">${esc(o.cancel_reason||'')}</span>`) +
+    card('created', `<span class="mono" style="font-size:12px">${esc(o.created_at)}</span>`) + `</div>`;
+  if (c) {
+    html += `<h2>Decision context</h2><div class="grid">` +
+      card('decided → acked', `<span class="mono" style="font-size:11px">${esc(c.decided_at)}<br>${esc(c.acked_at)}</span>`) +
+      card('mid / spread', `${fmt(c.candidate_mid)} / ${fmt(c.spread)}`) + card('yes bid/ask', `${fmt(c.best_yes_bid)} / ${fmt(c.best_yes_ask)}`) +
+      card('depth at best ask', fmt(c.depth_at_best_ask)) + card('hours to close', fmt(c.hours_to_close)) +
+      card('band / maxyes', `${fmt(c.band_lo)}–${fmt(c.band_hi)} / ${fmt(c.max_yes)}`) +
+      card('tier / regime', `${esc(c.review_tier)} / ${esc(c.regime)}`) + card('type / mode', `${esc(c.market_type)} / ${esc(c.market_mode)}`) +
+      card('open / cap', `${fmt(c.open_positions_for_tag)} / ${fmt(c.open_position_cap)}`) +
+      card('hot / offset', `${c.hot_entry ? 'hot' : 'calm'} / ${fmt(c.offset_cents)}`) +
+      card('cancel req → conf', `<span class="mono" style="font-size:11px">${esc(c.cancel_requested_at||'—')}<br>${esc(c.cancel_confirmed_at||'—')}</span>`) +
+      card('terminal reason', esc(c.terminal_reason||'—')) + card('twin', `<span class="mono">${esc(c.twin_tag||'—')}</span>`) + `</div>`;
+  } else html += `<div class="note warn">no decision context row (order predates the telemetry deploy, or the hook failed)</div>`;
+  html += `<h2>Queue history (${d.queue.length} samples)</h2>` + chart(d.queue) +
+    `<table><tr><th>at</th><th>trigger</th><th>ahead</th><th>remaining</th><th>rest s</th><th>yes bid</th><th>yes ask</th><th>qty @ our px</th><th>qty better</th><th>trades since</th><th>book</th></tr>` +
+    d.queue.slice(-300).map(t => `<tr><td class="mono">${esc(t.at)}</td><td>${esc(t.trigger)}</td><td>${t.ahead === null ? '<span class="warn">NULL</span>' : t.ahead}</td><td>${fmt(t.remaining)}</td><td>${fmt(t.rest_seconds)}</td><td>${fmt(t.best_yes_bid)}</td><td>${fmt(t.best_yes_ask)}</td><td>${fmt(t.qty_at_our_price)}</td><td>${fmt(t.qty_better)}</td><td>${fmt(t.trades_since_placement)}</td><td>${t.book_valid === false ? '<span class="warn">invalid</span>' : (t.book_valid ? 'ok' : '—')}</td></tr>`).join('') + `</table>`;
+  html += `<h2>Fills</h2><table><tr><th>exchange ts</th><th>count</th><th>yes px</th><th>fee</th><th>taker</th><th>REST matched</th></tr>` +
+    (d.fills.length ? d.fills.map(f => `<tr><td class="mono">${f.ts_ms ? new Date(f.ts_ms).toISOString() : '—'}</td><td>${fmt(f.count)}</td><td>${fmt(f.yes_price)}</td><td>${fmt(f.fee)}</td><td>${f.is_taker ? 'yes' : 'no'}</td><td>${f.rest_matched ? 'yes' : '<span class="warn">no</span>'}</td></tr>`).join('') : `<tr><td colspan="6" class="dim">none on the stream${d.rest_fills.length ? ` (${d.rest_fills.length} REST fill(s) recorded by reconcile)` : ''}</td></tr>`) + `</table>`;
+  html += `<h2>Public trades since placement (${d.trades.length})</h2><table><tr><th>exchange ts</th><th>yes px</th><th>count</th><th>taker</th><th>at our px</th></tr>` +
+    d.trades.slice(-200).map(t => `<tr><td class="mono">${t.ts_ms ? new Date(t.ts_ms).toISOString() : '—'}</td><td>${fmt(t.yes_price)}</td><td>${fmt(t.count)}</td><td>${esc(t.taker)}</td><td>${t.at_our_price ? '<b>yes</b>' : ''}</td></tr>`).join('') + `</table>`;
+  html += `<h2>Order status events</h2><table><tr><th>at</th><th>status</th><th>filled</th><th>remaining</th></tr>` +
+    d.order_events.map(e => `<tr><td class="mono">${esc(e.at)}</td><td>${esc(e.status)}</td><td>${fmt(e.filled)}</td><td>${fmt(e.remaining)}</td></tr>`).join('') + `</table>`;
+  html += `<div class="note">book events for this market: ${d.book_events}` + (d.lifecycle.length ? ` · lifecycle: ${d.lifecycle.map(l => `${esc(l.event_type)}@${esc(l.at)}`).join(', ')}` : '') + `</div>`;
+  $('#trace').innerHTML = html;
+}
+$('#reload').addEventListener('click', loadSummary);
+$('#trace-btn').addEventListener('click', loadTrace);
+loadSummary();
+</script>
+</body>
+</html>

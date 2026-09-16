@@ -410,6 +410,7 @@ class LiveExecutor:
         self, session, *, strategy: str, event_ticker: str | None, ticker: str, metrics,
         no_price: int | None = None, account_state=None,
         arm_offset: int | None = None, max_contracts: int | None = None,
+        decision_context: dict | None = None,
     ) -> str:
         """Mirror one allowlisted mmsell paper entry into a real resting MAKER order: BUY NO at
         the no-bid (== sell yes at the ask), held to settlement. Self-guarded + fail-closed — any
@@ -539,6 +540,15 @@ class LiveExecutor:
             status="pending", client_order_id=client_order_id, raw_order_json=order,
         )
         session.commit()
+        # Execution telemetry (WS-019): the decision-time snapshot, written BEFORE the POST so
+        # nothing it holds can postdate the order. Fail-soft in its own transaction — the live
+        # order row above is already durable and a telemetry failure must not touch it.
+        decided_at = datetime.now(timezone.utc)
+        self._write_decision_context(
+            session, row=row, strategy=strategy, event_ticker=event_ticker, ticker=ticker,
+            metrics=metrics, no_price=price, yes_price=yes_price, qty=qty, offset=offset,
+            hot=hot, ab_arm=ab_arm, decided_at=decided_at, client_order_id=client_order_id,
+            context=decision_context)
         try:
             resp = self.client.create_events_order(order)
         except AuthError:
@@ -570,11 +580,75 @@ class LiveExecutor:
             koid = o.get("order_id") or o.get("id")
         # A v2 limit maker order rests until filled/canceled (or auto-settles if it fills).
         repo.update_live_order_status(session, row, status="resting", kalshi_order_id=koid, raw=resp)
+        self._stamp_context(session, row, kalshi_order_id=koid,
+                            acked_at=datetime.now(timezone.utc),
+                            ack_ts_ms=_ack_ts_ms(resp))
         self.summary.placed += 1
         logger.info("mmsell live order placed (resting maker no-buy)", extra={"extra_fields": {
             "ticker": ticker, "strategy": strategy, "no_price": price, "sell_yes_price": yes_price,
             "count": qty, "coid": client_order_id, "kalshi_order_id": koid}})
         return "placed"
+
+    # --- execution telemetry hooks (docs/MMSELL_QUEUE_FILL_TELEMETRY.md) -------------------
+
+    def _write_decision_context(self, session, *, row, strategy, event_ticker, ticker, metrics,
+                                no_price, yes_price, qty, offset, hot, ab_arm, decided_at,
+                                client_order_id, context) -> None:
+        """One `execution_order_context` row per live order, from values known before the
+        POST. Own transaction; never raises."""
+        try:
+            ctx = dict(context or {})
+            ctx.update({"ab_arm": ab_arm, "hot_entry": bool(hot), "offset_cents": offset})
+            book = getattr(metrics, "raw_orderbook", None)
+            repo.insert_execution_order_context(
+                session,
+                live_order_id=row.id, client_order_id=client_order_id, strategy=strategy,
+                twin_tag=ctx.get("twin_tag"),
+                experiment_deployment_arm_id=getattr(row, "experiment_deployment_arm_id", None),
+                market_ticker=ticker, event_ticker=event_ticker,
+                series_ticker=(ctx.get("series") or None),
+                decided_at=decided_at, no_price=no_price, yes_price=yes_price,
+                quantity=float(qty), offset_cents=offset, hot_entry=bool(hot),
+                candidate_mid=getattr(metrics, "midpoint", None),
+                best_yes_bid=getattr(metrics, "best_yes_bid", None),
+                best_yes_ask=getattr(metrics, "best_yes_ask", None),
+                best_no_bid=getattr(metrics, "best_no_bid", None),
+                best_no_ask=getattr(metrics, "best_no_ask", None),
+                spread=getattr(metrics, "spread", None),
+                depth_at_best_bid=getattr(metrics, "depth_at_best_bid", None),
+                depth_at_best_ask=getattr(metrics, "depth_at_best_ask", None),
+                top_depth=getattr(metrics, "top_depth", None),
+                market_volume=getattr(metrics, "volume", None),
+                open_interest=getattr(metrics, "open_interest", None),
+                last_price=getattr(metrics, "last_price", None),
+                hours_to_close=ctx.get("hours_to_close"),
+                hours_to_expiration=ctx.get("hours_to_expiration"),
+                close_time=ctx.get("close_time"),
+                band_lo=ctx.get("band_lo"), band_hi=ctx.get("band_hi"),
+                max_yes=ctx.get("max_yes"),
+                market_type=ctx.get("market_type"), market_mode=ctx.get("market_mode"),
+                regime=ctx.get("regime"), review_tier=ctx.get("review_tier"),
+                open_positions_for_tag=ctx.get("open_positions_for_tag"),
+                open_position_cap=ctx.get("open_position_cap"),
+                context_json={k: v for k, v in ctx.items() if k != "close_time"},
+                book_json=book if isinstance(book, dict) else None,
+                submitted_at=decided_at,
+            )
+            session.commit()
+        except Exception:  # noqa: BLE001 — telemetry never breaks placement
+            logger.exception("execution telemetry: decision context not written")
+            try:
+                session.rollback()
+            except Exception:  # noqa: BLE001
+                pass
+
+    @staticmethod
+    def _stamp_context(session, row, **stamps) -> None:
+        """Post-submit lifecycle stamps on the order's context row; fail-soft."""
+        try:
+            repo.stamp_execution_order_context(session, getattr(row, "id", None), **stamps)
+        except Exception:  # noqa: BLE001
+            logger.exception("execution telemetry: context stamp failed")
 
     def mirror_theta_entry(
         self, session, *, strategy: str, event_ticker: str | None, ticker: str, metrics,
@@ -1037,6 +1111,7 @@ class LiveExecutor:
         drained = 0
         for row in targets:
             koid = str(row.kalshi_order_id)
+            self._stamp_context(session, row, cancel_requested_at=datetime.now(timezone.utc))
             try:
                 # Routed to the market's shard, for the same reason the timeout cancel is: an
                 # unrouted cancel for an order on a non-default shard is refused 404 not_found
@@ -1088,6 +1163,8 @@ class LiveExecutor:
                 # ever removed, this give-up branch starts lying again.
                 continue
             repo.update_live_order_status(session, row, status="canceled", cancel_reason=reason)
+            self._stamp_context(session, row, cancel_confirmed_at=datetime.now(timezone.utc),
+                                terminal_reason=str(reason)[:64])
             self._drain_attempts.pop(koid, None)
             self.summary.drained_canceled += 1
             drained += 1
@@ -1168,9 +1245,15 @@ class LiveExecutor:
                                                       cancel_reason="not_found_on_exchange")
                 # else: submitted/resting with no fill yet -> leave; a later cycle resolves it.
                 continue
+            new_status = _map_status(exch.get("status"))
             repo.update_live_order_status(
-                session, row, status=_map_status(exch.get("status")),
+                session, row, status=new_status,
                 kalshi_order_id=exch.get("order_id"), raw=exch)
+            if new_status in ("filled", "canceled"):
+                # Terminal reason as the exchange reported it, unless a bot-initiated cancel
+                # already named its own (timeout / drain / queue rule).
+                self._stamp_context(session, row, terminal_reason=(
+                    "filled" if new_status == "filled" else "exchange_canceled"))
 
         # Record fills idempotently. Kalshi shapes (confirmed via the shape probe):
         # id=trade_id/fill_id; price=yes_price_dollars/no_price_dollars (dollar strings);
@@ -1195,6 +1278,11 @@ class LiveExecutor:
                 ticker=f.get("market_ticker") or f.get("ticker"), filled_at=None, side=side,
                 action=f.get("action"), price=price, quantity=qty, fee=fee, raw_fill_json=f)
             self.summary.new_fills += 1
+        # Match WebSocket fill events (exchange-timestamped) to the REST rows just written.
+        try:
+            repo.reconcile_execution_fill_events(session)
+        except Exception:  # noqa: BLE001
+            logger.exception("execution telemetry: fill reconciliation failed")
 
         # v1 IOC closes aren't in the v2 orders feed; resolve them by their fill (or age-out).
         self._resolve_v1_exits(session)
@@ -1224,6 +1312,7 @@ class LiveExecutor:
             if age <= self.settings.live_order_timeout_seconds:
                 continue
             shard = self._exchange_index_for(row.market_ticker)
+            self._stamp_context(session, row, cancel_requested_at=datetime.now(timezone.utc))
             try:
                 if row.kalshi_order_id:
                     # V2 events endpoint (mmsell is the only book that rests live orders),
@@ -1235,6 +1324,8 @@ class LiveExecutor:
                     self.client.cancel_events_order(row.kalshi_order_id, exchange_index=shard)
                 repo.update_live_order_status(session, row, status="canceled",
                                               cancel_reason="timeout")
+                self._stamp_context(session, row, cancel_confirmed_at=datetime.now(timezone.utc),
+                                    terminal_reason="timeout")
                 self.summary.timed_out_canceled += 1
             except AuthError:
                 raise
@@ -2038,6 +2129,20 @@ def _items(resp, key: str) -> list:
         return []
     val = resp.get(key)
     return val if isinstance(val, list) else []
+
+
+def _ack_ts_ms(resp) -> int | None:
+    """Kalshi's matching-engine timestamp on a V2 create response (`ts_ms`), if present."""
+    if not isinstance(resp, dict):
+        return None
+    inner = resp.get("order") if isinstance(resp.get("order"), dict) else resp
+    value = inner.get("ts_ms") if isinstance(inner, dict) else None
+    if value is None:
+        value = resp.get("ts_ms")
+    try:
+        return int(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
 
 
 def _map_status(kalshi_status: str | None) -> str:

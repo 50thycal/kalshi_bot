@@ -1336,6 +1336,30 @@ class Settings(BaseSettings):
     # of this was a real hole: turning a book off left its orders working on the exchange, and
     # the kill switch used to make that WORSE by blocking the cancel path too.
     live_drain_stood_down: bool = True
+    # --- Execution telemetry collector (docs/MMSELL_QUEUE_FILL_TELEMETRY.md, WS-019) --------
+    # A daemon thread in the LIVE worker that records, for every market with a resting live
+    # order: the WebSocket order book (snapshot + deltas), public trades, our own fills with the
+    # exchange timestamp, order-status updates and lifecycle events — plus queue-position
+    # samples on a finer cadence than the reconcile cycle. READ-ONLY by construction: it holds
+    # a client wrapper with GET methods only and never writes `live_orders`. Default ON so the
+    # merge starts evidence; OFF is the kill switch for the collector alone (trading unaffected).
+    execution_telemetry_enabled: bool = True
+    # How often the thread re-reads `live_orders` for the tracked set (seconds).
+    execution_telemetry_scan_seconds: float = 5.0
+    # Interval queue poll (one batch GET for every resting order). 20 s = 0.5 tokens/s.
+    execution_queue_poll_seconds: float = 20.0
+    # Event-triggered queue polls (trade / book change at our price): debounce window and a
+    # hard cap shared across all orders. 30/min = 5 tokens/s = 1.7% of the ADVANCED budget.
+    execution_queue_event_debounce_seconds: float = 2.0
+    execution_queue_max_polls_per_minute: int = 30
+    # Keep a market's book/trade streams for this long after its last tracked order goes
+    # terminal — the post-fill price path is what separates a good fill from an adverse one.
+    execution_telemetry_post_window_seconds: int = 900
+    # Bounds. Markets subscribed at once (the live book rests ~10-40 orders), and raw event
+    # rows persisted per minute across all markets; beyond the cap the local book is still
+    # maintained but rows are dropped AND a `throttled` collector event records how many.
+    execution_telemetry_max_markets: int = 200
+    execution_book_events_max_per_minute: int = 3000
     # --- Queue-aware cancellation (docs/MMSELL_QUEUE_AWARE_CANCEL.md) -----------------------
     # DEFAULT OFF. "shadow" evaluates the frozen rule against every resting live order each
     # reconcile and writes an audit row per order per cycle to live_order_queue_decisions —

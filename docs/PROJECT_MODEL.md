@@ -100,6 +100,24 @@ twin harness ──────────────────────�
 The twin exists because paper assumes a resting maker order always fills and live does
 not. Measuring the gap is the only way to know whether a paper edge is real.
 
+### Execution telemetry — the record around every resting live order
+
+```text
+live worker ──► execution telemetry thread (daemon, read-only client, own DB sessions)
+                   ├─ reads live_orders every few seconds → the tracked set
+                   ├─ WebSocket orderbook_delta (yes-price convention) + trade per tracked market
+                   ├─ WebSocket fill + user_orders + market_lifecycle_v2 once per connection
+                   ├─ REST queue-position batch: interval + event-triggered (debounced, capped)
+                   └─ keeps a market 15 min after its last order goes terminal, then unsubscribes
+executor ──► execution_order_context (decision-time snapshot, written BEFORE the POST;
+             ack / cancel stamps after) and WS→REST fill reconciliation in reconcile
+```
+
+Instrumentation only (`docs/MMSELL_QUEUE_FILL_TELEMETRY.md`): the thread holds a GET-only
+client wrapper, never writes `live_orders`, and every failure mode (disconnect, sequence
+gap, throttled write, failed or rate-limited poll) is a row in `execution_collector_events`
+so missing telemetry is never a silent zero. Kill: `EXECUTION_TELEMETRY_ENABLED=false`.
+
 ### Evidence funnel
 
 Every series-addressed book ends its cycle with a bounded, publishable funnel line naming
@@ -244,6 +262,11 @@ Roughly three families of table, plus Experiment OS's own schema:
 
 - **Market record** — `markets`, `market_snapshots`, `orderbook_snapshots`, `signals`, and
   the per-book candidate/position tick tables that make replays reproducible.
+- **Execution telemetry** — `execution_order_context` (1:1 with `live_orders`),
+  `live_order_queue_ticks` (all queue samples, with a `trigger`), `execution_book_events`,
+  `execution_trade_events`, `execution_fill_events`, `execution_order_events`,
+  `execution_market_events`, `execution_collector_events`. Raw exchange facts with both
+  clocks; derived features are recomputable from them.
 - **Trading record** — `paper_trades`, `paper_positions`, `live_orders`, `fills`,
   `positions`, `account_snapshots`, and the live/paper twin and parity tables.
 - **Research inputs** — weather forecasts/observations/ensembles, crypto spot and ladder

@@ -416,6 +416,18 @@ def run() -> int:
     # allowlisted paper entries into orders. Built here so the ride-along mmsell tracker can
     # receive it (its NO-maker live path). INERT until the switches + LIVE_STRATEGIES are set.
     live_executor = LiveExecutor(client, settings, scanner.risk) if live else None
+    # Execution telemetry collector (docs/MMSELL_QUEUE_FILL_TELEMETRY.md): a read-only daemon
+    # thread that records queue position, order book, trades, fills and lifecycle around every
+    # resting live order. Live mode only; it holds a GET-only client wrapper and cannot place
+    # or cancel anything. Fail-soft: a start failure is logged and recorded, never fatal.
+    telemetry_thread = None
+    if live:
+        try:
+            from .execution.collector import start_collector
+
+            telemetry_thread = start_collector(client, settings)
+        except Exception:  # noqa: BLE001
+            logger.exception("execution telemetry collector failed to start (trading unaffected)")
     # Live/paper parallel-run harness (docs/LIVE_PAPER_TWIN.md): for every strategy armed for real
     # money, run a FRESH paper book beside it — started at the same instant and parameterized to
     # the LIVE knobs — so the only difference between the two is the fill assumption paper cannot
@@ -630,6 +642,11 @@ def run() -> int:
             if not _interruptible_sleep(settings.scan_interval_seconds):
                 break
     finally:
+        if telemetry_thread is not None:
+            try:
+                telemetry_thread.stop()
+            except Exception:  # noqa: BLE001
+                logger.exception("execution telemetry collector stop failed")
         client.close()
         if evo_runtime is not None:
             evo_runtime.close()

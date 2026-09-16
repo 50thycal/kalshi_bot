@@ -141,6 +141,12 @@ book's rank is the record of what it never got filled at.
 
 Off with `LIVE_DRAIN_STOOD_DOWN=false`.
 
+> **2026-09-16 — superseded in cadence, not in kind.** The sampler and table described here are
+> unchanged and still write once per reconcile (`trigger='reconcile'`). `WS-019` adds a
+> collector that samples the same endpoint every ~20 s and on book/trade events at our price,
+> with the order book, public trades, exchange-timestamped fills and lifecycle beside it:
+> `docs/MMSELL_QUEUE_FILL_TELEMETRY.md`, read with `execution_telemetry`.
+
 ## OUTCOME 2026-08-14 — it delivered the mechanism leg, then its data source was retired
 
 The sampler worked (93% of post-fix samples readable) and **directly observed the thing the offset
