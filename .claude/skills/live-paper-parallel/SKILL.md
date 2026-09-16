@@ -25,6 +25,16 @@ accounting being wrong — a mirage.
 
 ## Phase A — arming a new live strategy
 
+0. **If a live book is ALREADY running, stop and read
+   `docs/MMSELL_BOOK_PARTITION.md` first.** Two concurrent live books do not simply coexist. Per
+   ticker they are made disjoint by `part=i/n` (#413) — without it the book listed later in
+   `MMSELL_VARIANTS` loses every contested market and trades the winner's leftovers rather than
+   its own strategy. Per BUDGET they are still not separated at all: `MAX_TOTAL_EXPOSURE` and
+   `MAX_DAILY_LOSS` are account-wide and are checked before the dedup gate, so the first book
+   scanned can gate the second out of the whole slate. Per-book budgets are **parked, not built**
+   (`docs/workstreams/ACTIVE.md`). Arming a second canary without them produces a number that
+   cannot be read — raise it with the operator rather than arming.
+
 1. **Confirm the book is wired.** mmsell and theta are both wired (`kalshi_bot/mmsell/tracker.py`
    and `kalshi_bot/theta/tracker.py` are the reference implementations — theta's is the one to copy
    when the new book shares the maker-sell convention but needs its OWN live sizing knobs rather

@@ -1,7 +1,23 @@
 # Running two overlapping mmsell experiments at once
 
-**Status:** mechanism shipped, unused. No book declares `part=` in production.
+**Status:** mechanism shipped (#413), unused. No book declares `part=` in production.
 **Scope:** book selection only. Changes no price, no size, no risk limit, no live safeguard.
+
+> ## BEFORE ARMING A SECOND LIVE CANARY — READ THIS
+>
+> **This mechanism is necessary but NOT sufficient.** It makes two books disjoint per *ticker*.
+> It does **not** separate their risk budgets: `MAX_TOTAL_EXPOSURE` and `MAX_DAILY_LOSS` are
+> account-wide and are checked *before* the dedup gate, so whichever book the scan reaches first
+> can exhaust the budget and gate the other out of the entire slate — the same scan-order bias,
+> one level up, where a ticker partition cannot reach.
+>
+> Arming a second live book without per-book budgets means the second canary's numbers are the
+> first one's leftovers, which is exactly the failure this document exists to prevent. Build
+> them first (parked in `docs/workstreams/ACTIVE.md`), as budgets checked **in addition to** the
+> account-level ones, never instead of. That is a live-safeguard change and an operator decision.
+>
+> Arming itself remains a hard stop under `DEC-012` regardless: a pre-registered risk envelope,
+> explicit operator confirmation, and its own registered Experiment OS deployment arm.
 
 ## The problem
 
