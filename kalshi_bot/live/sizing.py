@@ -125,6 +125,40 @@ def maker_no_price(
     return max(1, min(99, price))
 
 
+def ticker_partition(ticker: str, *, n: int, salt: str) -> int:
+    """Which of `n` disjoint books claims this ticker: `sha256(salt:ticker) % n`.
+
+    THE CLAIM, AND ONLY THE CLAIM. This says who trades the market and nothing about how they
+    price it, which is the whole reason it exists as its own function. `offset_arm` below answers
+    both questions at once — it returns an OFFSET as its verdict — so the only way to give two
+    books disjoint tickers used to be to enrol them in the queue-position price experiment, which
+    forces their resting prices to differ. For two books testing unrelated questions that price
+    difference is a confound nobody asked for. Splitting the primitive out lets a book declare
+    "I take half the flow" without also declaring "and I rest a cent better".
+
+    Why a partition is needed at all: `repository.live_open_order_exists` is strategy-AGNOSTIC and
+    the live order row is committed BEFORE the Kalshi POST, so whichever book the cycle evaluates
+    first claims the ticker and every later book gets `gate:dedup`. Book order comes from
+    `MMSELL_VARIANTS`, so without an explicit split the loser is always the same book and it ends
+    up trading the RESIDUE of the winner's gates rather than its own strategy. A resting mmsell
+    order is GTC and held to settlement, so that lockout lasts the life of the position, not a
+    cycle.
+
+    Hashing properties carried over from `offset_arm`, for the same reasons: assignment is
+    deterministic rather than drawn, so the entry-retry path cannot flip a ticker's owner
+    mid-market; it is recomputable from the ticker alone, so attribution needs no new column; and
+    a fixed salt reproduces the same split exactly. Hashing the TICKER rather than the event keeps
+    the books balanced inside a single event's ladder.
+
+    Changing the salt re-randomizes every assignment, which makes evidence collected before and
+    after non-poolable. Raises on n < 2 — a one-book "partition" is not one."""
+    n = int(n)
+    if n < 2:
+        raise ValueError("ticker_partition requires n >= 2")
+    digest = hashlib.sha256(f"{salt}:{ticker}".encode()).digest()
+    return int.from_bytes(digest[:8], "big") % n
+
+
 def offset_arm(ticker: str, *, arms, salt: str) -> tuple[int, int]:
     """(arm_index, offset_cents) for one ticker in the randomized queue-position A/B
     (docs/MMSELL_OFFSET_AB.md).
@@ -145,8 +179,11 @@ def offset_arm(ticker: str, *, arms, salt: str) -> tuple[int, int]:
     arms = tuple(arms)
     if not arms:
         raise ValueError("offset_arm requires at least one arm")
-    digest = hashlib.sha256(f"{salt}:{ticker}".encode()).digest()
-    idx = int.from_bytes(digest[:8], "big") % len(arms)
+    # Deliberately the SAME hash as ticker_partition, so an existing single-arm caller and the
+    # generic partition agree on assignment and the offset A/B's historical split is unchanged
+    # by this refactor. (offset_arm tolerates len(arms) == 1 for callers that pass a single
+    # configured offset; ticker_partition refuses n < 2 because a one-book split is not one.)
+    idx = 0 if len(arms) == 1 else ticker_partition(ticker, n=len(arms), salt=salt)
     return idx, int(arms[idx])
 
 

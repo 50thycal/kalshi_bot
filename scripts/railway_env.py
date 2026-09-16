@@ -164,6 +164,7 @@ ALLOWED_VARS = frozenset({
     # included for completeness but should almost never be touched: changing it mid-experiment
     # re-randomizes every ticker's arm, invalidating comparison with everything already collected.
     "MMSELL_LIVE_OFFSET_AB_ARMS", "MMSELL_LIVE_OFFSET_AB_SALT",
+    "MMSELL_LIVE_PARTITION_SALT",
     # Hot-market defensive pricing + the entry-retry cap: both change how aggressively live
     # chases a fill, so they are the knobs most likely to need tuning mid-test from ops.
     "MMSELL_LIVE_HOT_MARKET_MOVE_CENTS", "MMSELL_LIVE_HOT_MARKET_LOOKBACK_MINUTES",

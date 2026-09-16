@@ -690,6 +690,22 @@ class Settings(BaseSettings):
     # Bump it only to start a genuinely new experiment, and record the change in the doc.
     mmsell_live_offset_ab_salt: str = "mmsell-offset-ab-v1"
 
+    # --- book PARTITION: two concurrent experiments whose universes may overlap ---
+    # Salt for the generic ticker->book claim (live/sizing.py ticker_partition), used by a book
+    # that declares `part=i/n` in MMSELL_VARIANTS. This is NOT the offset A/B: it decides only
+    # WHICH book trades a ticker and says nothing about the price it rests at, so two books
+    # testing unrelated questions can share a band without contesting markets or being forced
+    # into a price difference neither asked for.
+    #
+    # Why it must exist separately: live order dedup is strategy-agnostic and the order row is
+    # committed before the exchange POST, so with overlapping universes the book listed FIRST in
+    # MMSELL_VARIANTS wins every contested ticker and the other trades only what the winner's
+    # gates refused. Partitioned, the split is by hash and neither book sees the other.
+    #
+    # Changing this re-randomizes every assignment, so evidence either side of the change is not
+    # poolable. Bump it only to start a genuinely new split.
+    mmsell_live_partition_salt: str = "mmsell-partition-v1"
+
     # --- mmsell LIVE entry retry (recover the one-shot-per-ticker execution gap) ---
     # Paper never misses a fill, so its position stays open to settlement and the entry loop's
     # skip_already_open guard fires every later cycle — which ALSO skipped the live mirror, giving
@@ -1881,6 +1897,21 @@ class Settings(BaseSettings):
                 # ticker ever contested — which is what makes them a randomized A/B rather than a
                 # race decided by book order.
                 "abarm": None,
+                # Disjoint-universe PARTITION, written `part=i/n` (e.g. part=0/2 and part=1/2 on
+                # two books). This book takes ONLY the tickers whose hash partition equals `i`,
+                # and nothing else about the book changes — no price, no size, no band. None =
+                # unpartitioned, which is every existing book, so this is inert for the running
+                # cohort.
+                #
+                # Distinct from `abarm` above, which also partitions but returns the book's PRICE
+                # as its verdict: `abarm` cannot give two books disjoint tickers without also
+                # making them rest at different offsets. Use `part` when the two books are asking
+                # different questions and the offset must NOT be one of the differences.
+                #
+                # Not combinable with `abarm` — two independent hash splits on one book would
+                # leave it trading a quarter of the flow while its spec reads as half, which is
+                # the invisible no-op the rest of this parser's validation exists to prevent.
+                "part": None,
                 # Per-book live contract cap, overriding the global max_order_size. Lets an
                 # experiment run 1-contract clips beside an incumbent sized differently.
                 "size": None,
@@ -1939,6 +1970,15 @@ class Settings(BaseSettings):
                     elif key in ("stopk", "volw", "abarm", "size", "scanmax",
                                  "contestcap"):
                         v[key] = int(val)
+                    elif key == "part":
+                        # "i/n" -> (i, n). Validated below; a malformed pair fails the spec
+                        # rather than defaulting, because a book that reads as partitioned and
+                        # is not would contest every ticker with its sibling.
+                        i_s, sep, n_s = str(val).partition("/")
+                        if not sep:
+                            ok = False
+                        else:
+                            v[key] = (int(i_s), int(n_s))
                     elif key == "strangle":
                         v[key] = str(val).strip() not in ("", "0", "false", "False")
                     elif key in ("skip", "only", "onlyx"):
@@ -1985,6 +2025,17 @@ class Settings(BaseSettings):
             # validation above exists to prevent.
             if any(not t.isalnum() for t in v["onlyx"]):
                 ok = False
+            # A partition outside 0 <= i < n, or n < 2, admits either nothing or everything
+            # while the spec still reads as a split — the same invisible no-op as above, but
+            # worse, because the sibling book's numbers are wrong too rather than just absent.
+            if v["part"] is not None:
+                i, n = v["part"]
+                if n < 2 or not (0 <= i < n):
+                    ok = False
+                # Both splits on one book means it trades 1/(n*len(arms)) of the flow while its
+                # spec reads as 1/n. Refuse rather than silently run a quarter-sized book.
+                if v["abarm"] is not None:
+                    ok = False
             if ok and v["lo"] < v["hi"] and v["htcmin"] < v["htcmax"]:
                 out.append(v)
         return out
@@ -2224,6 +2275,7 @@ class Settings(BaseSettings):
             "mmsell_live_price_offset_cents": self.mmsell_live_price_offset_cents,
             "mmsell_live_offset_ab_arms": list(self.mmsell_live_offset_ab_arm_list),
             "mmsell_live_offset_ab_salt": self.mmsell_live_offset_ab_salt,
+            "mmsell_live_partition_salt": self.mmsell_live_partition_salt,
             "mmsell_live_max_spread_cents": self.mmsell_live_max_spread_cents,
             "mmsell_live_hot_market_move_cents": self.mmsell_live_hot_market_move_cents,
             "mmsell_live_hot_market_lookback_minutes": self.mmsell_live_hot_market_lookback_minutes,
