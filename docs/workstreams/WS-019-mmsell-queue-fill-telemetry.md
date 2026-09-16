@@ -1,6 +1,6 @@
 # WS-019 — MMSELL queue / fill telemetry (Phase 1: instrumentation only)
 
-**Phase:** BUILDING
+**Phase:** REVIEW
 **Status:** Active
 **Created:** 2026-09-16
 **Updated:** 2026-09-16
@@ -93,7 +93,7 @@ Inline: `docs/MMSELL_QUEUE_FILL_TELEMETRY.md` §0, §6, §11 (goal, flow, defini
 
 ## Implementation State
 
-building — PR pending.
+PR [#411](https://github.com/50thycal/kalshi_bot/pull/411) open, ready for review (solo mode: owner acceptance at merge).
 
 ## Review State
 
@@ -108,7 +108,7 @@ building — PR pending.
 
 ## Related PRs
 
-None yet.
+[#411](https://github.com/50thycal/kalshi_bot/pull/411)
 
 ## Parked
 
@@ -116,4 +116,4 @@ None yet.
 
 ## Next Step
 
-Open the PR with the handoff body; operator merge is a hard stop (live executor diff).
+Operator merge of #411 (hard stop: live executor diff); then read `execution_telemetry` COVERAGE within the first hour of resting orders.

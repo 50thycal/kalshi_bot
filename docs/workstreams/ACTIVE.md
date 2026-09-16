@@ -7,7 +7,7 @@ where each effort is. Read it first on a continuation.
 
 | ID | Workstream | Phase | Status | Current Next Step | Related PR |
 |---|---|---|---|---|---|
-| [WS-019](WS-019-mmsell-queue-fill-telemetry.md) | MMSELL queue / fill telemetry — Phase 1 instrumentation, no behaviour change | BUILDING | Active | Operator merge (hard stop: diff touches the live executor); then confirm `execution_telemetry` coverage on the first resting orders | this PR |
+| [WS-019](WS-019-mmsell-queue-fill-telemetry.md) | MMSELL queue / fill telemetry — Phase 1 instrumentation, no behaviour change | REVIEW | Active | Operator merge (hard stop: diff touches the live executor); then confirm `execution_telemetry` coverage on the first resting orders | [#411](https://github.com/50thycal/kalshi_bot/pull/411) |
 | [WS-018](WS-018-spot-perp-funding-census.md) | Spot/perp funding carry: $2,000 primary / $4,000 ceiling | REVIEW | Blocked | Sizes/sources resolved; API rate conversion and permission for approved-transport quote check after HTTP403 remain | [#402 merged](https://github.com/50thycal/kalshi_bot/pull/402) |
 | [WS-002](WS-002-mmsell-settlement-taxonomy-repair.md) | MMSELL settlement-taxonomy repair | REVIEW | Blocked | Merge guard: verify in XOS that the revision is registered + impacts accepted | [#257](https://github.com/50thycal/kalshi_bot/pull/257) |
 | [WS-003](WS-003-mmsell-noncrypto-settlement-mode-paper-design.md) | MMSELL non-crypto settlement-mode paper design | DECIDE | Blocked | Waiting on WS-002, the crypto-exclusion defect, and the event-correlation measurement | — |
