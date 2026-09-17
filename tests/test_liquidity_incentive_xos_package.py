@@ -159,11 +159,54 @@ def test_every_activation_var_clears_the_env_channel():
 
 
 def test_activation_sets_the_allowlist_last():
-    env = pkg.activation_env()
+    env = pkg.activation_env(current_live_strategies="Fmmsell10")
     assert list(env)[-1] == "LIVE_STRATEGIES"
-    assert env["LIVE_STRATEGIES"] == pkg.LIVE_TAG
     assert env["LIVE_PAPER_TWINS"] == f"{pkg.LIVE_TAG}:{pkg.TWIN_TAG}"
-    assert env["LIVE_PAPER_TWIN_SUFFIX"] == limm.TWIN_SUFFIX
+
+
+def test_activation_appends_to_the_allowlist_and_never_stands_another_book_down():
+    """The hazard this guards, found on 2026-09-17 while arming: an earlier `activation_env`
+    took no arguments and returned `LIVE_STRATEGIES=Alimm1` flat. LIVE_STRATEGIES is the whole
+    fleet's allowlist, so applying that would not have added this book — it would have stood
+    down the running MMSELL canary."""
+    env = pkg.activation_env(current_live_strategies="Fmmsell10")
+    tags = env["LIVE_STRATEGIES"].split(",")
+    assert "Fmmsell10" in tags and pkg.LIVE_TAG in tags
+    assert tags[-1] == pkg.LIVE_TAG, "this book goes last; the running books keep their order"
+    # Several running books all survive, in order.
+    many = pkg.activation_env(current_live_strategies="Fmmsell10,Dmmsell10,Cmmsell10")
+    assert many["LIVE_STRATEGIES"].split(",") == [
+        "Fmmsell10", "Dmmsell10", "Cmmsell10", pkg.LIVE_TAG]
+
+
+def test_activation_is_idempotent_and_keeps_other_books_twin_pairs():
+    env = pkg.activation_env(
+        current_live_strategies=f"Fmmsell10,{pkg.LIVE_TAG}",
+        current_live_paper_twins=f"{pkg.LIVE_TAG}:{pkg.TWIN_TAG},Zbook:Zbook_pt4")
+    assert env["LIVE_STRATEGIES"].split(",") == ["Fmmsell10", pkg.LIVE_TAG]
+    pairs = env["LIVE_PAPER_TWINS"].split(",")
+    assert "Zbook:Zbook_pt4" in pairs, "another book's explicit pair must survive"
+    assert f"{pkg.LIVE_TAG}:{pkg.TWIN_TAG}" in pairs
+    assert len(pairs) == 2, "this book's own entry is replaced, not duplicated"
+
+
+def test_activation_never_emits_the_shared_twin_suffix():
+    """LIVE_PAPER_TWIN_SUFFIX is the FLEET's twin-epoch marker. Production carried `_pt4` while
+    this book registered `_pt3`; emitting this book's value would have re-cut every
+    auto-derived twin onto an unregistered tag, which NEW_ONLY refuses at the write path."""
+    env = pkg.activation_env(current_live_strategies="Fmmsell10")
+    assert "LIVE_PAPER_TWIN_SUFFIX" not in env
+    assert "LIVE_PAPER_TWIN_SUFFIX" not in pkg.RISK_ENVELOPE["settings"]
+    assert "LIVE_PAPER_TWIN_SUFFIX" not in pkg.ACTIVATION_VARS
+    # It is named in `left_alone` instead, so the omission reads as a decision.
+    assert "LIVE_PAPER_TWIN_SUFFIX" in pkg.RISK_ENVELOPE["left_alone"]
+
+
+def test_no_activation_variable_is_a_shared_epoch_marker():
+    """Every variable this package emits is either its own switch or a cap it depends on.
+    A fleet-wide marker whose value re-cuts another book's evidence is not either."""
+    forbidden = {"LIVE_PAPER_TWIN_SUFFIX", "MMSELL_VARIANTS", "BOT_MODE", "KILL_SWITCH"}
+    assert not (pkg.ACTIVATION_VARS & forbidden)
 
 
 def test_the_material_baseline_names_both_tags_with_no_book_params():

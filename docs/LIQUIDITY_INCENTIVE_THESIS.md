@@ -416,9 +416,13 @@ Four steps, each its own act. Steps 2 and 4 are hard stops requiring operator ap
 3. **Turn the runner on** (still places nothing — the allowlist is step 4):
    `{"type":"env","action":"set","service":"live","values":{"LIQUIDITY_INCENTIVE_LIVE_ENABLED":"true"},"id":"limm-live-on-1"}`
 4. **Open the allowlist** (HARD STOP — this is the step at which an order can reach Kalshi).
-   Set the variables `liquidity_incentive_mm.activation_env()` returns, `LIVE_STRATEGIES` last.
-   Note `LIVE_STRATEGIES` matches by **prefix** and is currently `Fmmsell10`; the new value
-   must name **both** books or the running canary stands down.
+   Read the running values first, then set what
+   `liquidity_incentive_mm.activation_env(current_live_strategies=..., current_live_paper_twins=...)`
+   returns, `LIVE_STRATEGIES` last. It takes those arguments so it cannot produce a value that
+   drops a running book: `LIVE_STRATEGIES` is the **whole fleet's** allowlist, and setting it to
+   this book alone stands every other live book down. It also deliberately does **not** emit
+   `LIVE_PAPER_TWIN_SUFFIX`, which is the fleet's twin-epoch marker — this book pins its own
+   twin through the per-book `LIVE_PAPER_TWINS` instead.
 
 **What step 2 does to the shadow probe.** It ends it. `arm_live_canary` carries the epoch's
 open deployments across the live boundary and `carry_deployments_forward` admits `paper` kinds
