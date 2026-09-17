@@ -1,1 +1,1 @@
-{"type":"db","id":"et-ws019-13","sql":"select (select kind from execution_collector_events where kind in ('connected','disconnected') order by at desc limit 1) as newest_state, (select at::text from execution_collector_events where kind in ('connected','disconnected') order by at desc limit 1) as since, (select extract(epoch from now() - max(received_at)) from execution_book_events) as book_age_s, (select extract(epoch from now() - max(captured_at)) from live_order_queue_ticks) as tick_age_s"}
+{"type":"noop"}
