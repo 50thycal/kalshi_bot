@@ -136,6 +136,28 @@ Experiment OS object until a live POC is proposed. Every reward number is the sc
 estimate (`est_*`); the three fill models are reported side by side and never averaged. Kill:
 the same variable to `false`.
 
+### Liquidity-incentive Phase 1a — the one-sided live smoke test
+
+A SECOND, separate path that does place orders. It is inert twice over: default-off
+(`LIQUIDITY_INCENTIVE_LIVE_ENABLED`), and even on it places nothing until `LIVE_STRATEGIES`
+names `Alimm1`, which is a Live Ops act after an `ARM_CANARY`.
+
+```text
+live worker cycle (after the weather tracker, so established books claim their markets first)
+   └─ IncentiveLiveRunner.cycle
+      ├─ current liquidity programmes, soonest-ending first, bounded book GETs
+      ├─ liquidity_incentive.live.build_live_quote → one post-only bid at the cheaper touch
+      │     1 contract · ≤ 25c · ≤ 3 resting · ≤ $10 book, all module CONSTANTS
+      ├─ LiveExecutor.mirror_incentive_entry → nine gates, intent committed before the POST
+      └─ TwinHarness.open_twin_entry → the paper twin's mirror at the same instant
+```
+
+Hold to settlement: `manage_exits` skips `limm.owns_tag` strategies, because production runs
+`tp_sl` and a filled YES bid is a net-long YES position. There is **no cancel branch** — orders
+leave the book by a fill, the shared per-order timeout, or a stand-down drain. Contract, gates
+and arming sequence: `docs/LIQUIDITY_INCENTIVE_THESIS.md` §10; package
+`kalshi_bot/experiment_os/liquidity_incentive_mm.py`.
+
 ### Evidence funnel
 
 Every series-addressed book ends its cycle with a bounded, publishable funnel line naming

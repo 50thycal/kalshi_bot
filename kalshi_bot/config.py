@@ -1403,6 +1403,19 @@ class Settings(BaseSettings):
     liquidity_incentive_min_reward_usd: float = 0.0
     # Settlement pass cadence for single-leg outcomes (seconds).
     liquidity_incentive_settlement_seconds: float = 600.0
+    # --- Phase 1a: the ONE-SIDED live smoke test (docs/LIQUIDITY_INCENTIVE_THESIS.md §10) ---
+    # DEFAULT OFF, and off is not the only guard: even on, `LiveExecutor` refuses every order
+    # unless bot_mode=live, LIVE_ENABLED, the kill switch is clear, and the book's tag is in
+    # LIVE_STRATEGIES. This flag exists so the runner can be deployed dark and turned on as its
+    # own deliberate act, separately from the allowlist that lets it spend anything.
+    liquidity_incentive_live_enabled: bool = False
+    # Order books fetched per cycle, soonest-ending program first. A bound on API calls, not a
+    # ranking: the economics of each book are decided by liquidity_incentive.live.
+    liquidity_incentive_live_max_book_fetches: int = 8
+    # Series this book may never quote (comma-separated tickers), over and above the shared
+    # per-ticker dedup gate. Empty by default; set it to keep the test clear of a series another
+    # armed live book trades, so no two books ever contest the same market.
+    liquidity_incentive_excluded_series: str = ""
     # --- Queue-aware cancellation (docs/MMSELL_QUEUE_AWARE_CANCEL.md) -----------------------
     # DEFAULT OFF. "shadow" evaluates the frozen rule against every resting live order each
     # reconcile and writes an audit row per order per cycle to live_order_queue_decisions —
@@ -2343,6 +2356,7 @@ class Settings(BaseSettings):
                 self.theta_closeout_max_attempts_per_ticker,
             "perps_collector_enabled": self.perps_collector_enabled,
             "liquidity_incentive_shadow_enabled": self.liquidity_incentive_shadow_enabled,
+            "liquidity_incentive_live_enabled": self.liquidity_incentive_live_enabled,
             "perps_assets": self.perps_assets,
             "xgame_enabled": self.xgame_enabled,
             "xgame_series": self.xgame_series_list,

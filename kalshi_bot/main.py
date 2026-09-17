@@ -445,6 +445,16 @@ def run() -> int:
     # the LIVE knobs — so the only difference between the two is the fill assumption paper cannot
     # test. Live mode only, and each twin is gated on its live tag actually being armed.
     twin_harness = TwinHarness(settings) if live else None
+    # Liquidity-incentive one-sided LIVE smoke test (docs/LIQUIDITY_INCENTIVE_THESIS.md §10,
+    # WS-020). Live mode only, and INERT twice over: LIQUIDITY_INCENTIVE_LIVE_ENABLED is off by
+    # default, and even on, the executor refuses every order unless the book's tag is in
+    # LIVE_STRATEGIES with both master switches set. It is constructed here so it can hold the
+    # SAME twin harness the other books use — a live canary without its twin is unmeasurable.
+    incentive_runner = None
+    if live:
+        from .liquidity_incentive.runner import IncentiveLiveRunner
+
+        incentive_runner = IncentiveLiveRunner(client, settings, twin_harness=twin_harness)
     if twin_harness is not None and twin_harness.enabled:
         log_event(logger, logging.INFO, "live/paper twins configured",
                   pairs=[f"{sp.live_tag}->{sp.twin_tag}" for sp in twin_harness.specs],
@@ -623,6 +633,7 @@ def run() -> int:
                         weather_backfill, validation_backfill, mmsell_paper_tracker,
                         theta_tracker, xgame_tracker, tfav_tracker, wcprop_tracker,
                         pin15_tracker, freeze_tracker, regime_history=regime_history,
+                        incentive_runner=incentive_runner,
                     )
                 elif weather:
                     _run_weather_cycle(
@@ -1783,6 +1794,7 @@ def _run_live_cycle(
     settings, client, engine, tracker, executor, backfill=None, validation_backfill=None,
     mmsell_tracker=None, theta_tracker=None, xgame_tracker=None, tfav_tracker=None,
     wcprop_tracker=None, pin15_tracker=None, freeze_tracker=None, regime_history=None,
+    incentive_runner=None,
 ) -> None:
     """Live cycle: reconcile Kalshi truth, manage exits, settle/mark paper, then run the
     tracker (which mirrors allowlisted entries into real orders)."""
@@ -1802,6 +1814,18 @@ def _run_live_cycle(
             executor.close_theta_positions(session)       # one-shot end-of-strategy closeout (off by default)
             engine.manage_open_positions(session)       # paper settle/mark (shadow record)
             summary = tracker.run_once(session)         # mirrors entries for allowlisted books
+            # The liquidity-incentive book runs AFTER the weather tracker, deliberately: it
+            # never contests a ticker another book is already resting in (the executor's
+            # strategy-agnostic dedup gate), so letting the established books claim their
+            # markets first is the order that keeps that property cheap rather than racy.
+            if incentive_runner is not None:
+                try:
+                    incentive_summary = incentive_runner.cycle(session, executor, account_state)
+                    if incentive_summary.get("armed"):
+                        log_event(logger, logging.INFO, "incentive smoke cycle",
+                                  **{k: v for k, v in incentive_summary.items() if k != "armed"})
+                except Exception:  # noqa: BLE001 — never let the smoke test break the cycle
+                    logger.exception("incentive smoke cycle failed (other books unaffected)")
             repo.finish_bot_run(
                 session, run_row, status="completed",
                 markets_scanned=summary.events_seen, candidates_found=summary.tracked,

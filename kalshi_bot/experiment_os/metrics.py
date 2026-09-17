@@ -428,6 +428,64 @@ _UNIVERSAL: tuple[MetricDefinition, ...] = (
         "from the first cancel decision to the order's last observed decision — the "
         "resting time the treatment would have cut",
     ),
+    # --- Liquidity-incentive SHADOW instrument (docs/LIQUIDITY_INCENTIVE_THESIS.md, WS-020).
+    # Read from the incentive_* tables, which are the shadow collector's own record and are NOT
+    # scoped by a trading tag — the instrument observes a market universe, not a book. So every
+    # one of these is an EXPERIMENT-WIDE metric defined only at deployment_kind='probe'; a clause
+    # addressing them as paper or live evidence gets MISSING rather than a number that would read
+    # as though a book had earned it.
+    MetricDefinition(
+        key="incentive_discovery_cycles", direction="neutral", unit="cycles", kind="count",
+        source="incentive_discovery_cycles", revision="limm_v1",
+        description="program-discovery polls in the window — the denominator of discovery "
+        "health, and the reason a day with no data is a row with errors, not a gap",
+    ),
+    MetricDefinition(
+        key="incentive_discovery_error_pct", direction="lower_better", unit="%", kind="rate",
+        source="incentive_discovery_cycles", revision="limm_v1",
+        description="share of discovery polls that recorded at least one error. Reads the "
+        "INSTRUMENT, not the opportunity: a high value means our program list is stale",
+    ),
+    MetricDefinition(
+        key="incentive_programs_observed", direction="neutral", unit="programs", kind="count",
+        source="incentive_programs", revision="limm_v1",
+        description="distinct incentive programs whose observed terms overlap the window. A "
+        "count of what Kalshi advertised, never a count of what is worth quoting",
+    ),
+    MetricDefinition(
+        key="incentive_shadow_quotes", direction="neutral", unit="quotes", kind="count",
+        source="incentive_shadow_quotes", revision="limm_v1",
+        description="simulated quote pairs the shadow placed in the window — the unit of "
+        "evidence for every shadow reading, and the sample floor",
+    ),
+    MetricDefinition(
+        key="incentive_shadow_outcomes", direction="neutral", unit="outcomes", kind="count",
+        source="incentive_shadow_outcomes (conservative fill model)", revision="limm_v1",
+        description="shadow quote pairs that STOPPED resting in the window, counted under the "
+        "CONSERVATIVE fill model only. The three models are never pooled",
+    ),
+    MetricDefinition(
+        key="incentive_shadow_single_leg_pct", direction="lower_better", unit="%", kind="rate",
+        source="incentive_shadow_outcomes (conservative fill model)", revision="limm_v1",
+        description="share of ended shadow pairs where exactly one leg filled — the frequency "
+        "of the adverse-selection exposure this strategy exists to bound, under the "
+        "conservative model. NOT a P&L claim",
+    ),
+    MetricDefinition(
+        key="incentive_shadow_max_adverse_cents_per_contract", direction="lower_better",
+        unit="cents/contract", kind="mean",
+        source="incentive_shadow_outcomes (conservative fill model)", revision="limm_v1",
+        description="worst single-leg adverse excursion the shadow recorded, per contract, "
+        "under the conservative model. An ENVELOPE check: a resting bid cannot lose more than "
+        "the price paid, so a value above 100c means the accounting is wrong, not that the "
+        "market moved",
+    ),
+    MetricDefinition(
+        key="incentive_collector_error_events", direction="lower_better", unit="events",
+        kind="count", source="incentive_collector_events", revision="limm_v1",
+        description="shadow-collector events recording missing data (disconnects, sequence "
+        "gaps, throttles, discovery failures) in the window. Missing data is a row, never a gap",
+    ),
 )
 
 # Declared metrics whose canonical provider does not exist yet. Their reference
@@ -2001,6 +2059,154 @@ def _qac_metric(session, key: str, scope: MetricScope) -> MetricValue:
                        reason=f"metric {key!r} registered but not routed — provider bug")
 
 
+# ---------------------------------------------------------------------------
+# Liquidity-incentive shadow instrument (docs/LIQUIDITY_INCENTIVE_THESIS.md)
+# ---------------------------------------------------------------------------
+
+INCENTIVE_METRICS: frozenset[str] = frozenset({
+    "incentive_discovery_cycles", "incentive_discovery_error_pct",
+    "incentive_programs_observed", "incentive_shadow_quotes",
+    "incentive_shadow_outcomes", "incentive_shadow_single_leg_pct",
+    "incentive_shadow_max_adverse_cents_per_contract",
+    "incentive_collector_error_events",
+})
+
+#: The collector events that mean DATA IS MISSING, as opposed to the lifecycle events that
+#: mean the instrument did its job. A disconnect we recorded is still a hole in the tape.
+_INCENTIVE_ERROR_KINDS: tuple[str, ...] = (
+    "disconnected", "seq_gap", "book_invalid", "ws_error", "throttled", "loop_error",
+    "unparsed",
+)
+
+#: One fill model, named once. The shadow computes three and the thesis forbids collapsing
+#: them; every metric here reads the CONSERVATIVE one, which is the only choice that cannot
+#: flatter the strategy.
+_INCENTIVE_FILL_MODEL = "conservative"
+
+#: Outcomes where exactly one side filled — the adverse-selection exposure, in the shadow's
+#: own vocabulary (`liquidity_incentive.fills`). Partial one-sided fills count: a partly
+#: filled lone leg is still a lone leg.
+_INCENTIVE_SINGLE_LEG = ("yes_only", "no_only", "partial_yes", "partial_no")
+
+
+def _incentive_metric(session, key: str, scope: MetricScope) -> MetricValue:
+    """Providers for the incentive shadow instrument.
+
+    Two scoping rules are enforced here rather than left to a gate author:
+
+      * **probe only.** These read `incentive_*`, which the shadow collector writes for a
+        market universe. No book earned any of it, so a clause addressing them as paper or
+        live evidence gets MISSING with the addressing error named, never a number.
+      * **experiment-wide.** The instrument is not per-arm, so an arm-scoped clause would
+        imply a split that does not exist. `scope: "experiment"` is required.
+    """
+    from ..models import (
+        IncentiveCollectorEvent,
+        IncentiveDiscoveryCycle,
+        IncentiveProgram,
+        IncentiveShadowOutcome,
+        IncentiveShadowQuote,
+    )
+
+    definition = REGISTRY[key]
+    prov = {
+        "source": definition.source,
+        "deployment_kind": scope.deployment_kind,
+        "window": [str(scope.window_start), str(scope.window_end)],
+        "fill_model": _INCENTIVE_FILL_MODEL,
+        "platform_snapshot": scope.platform_snapshot_fingerprint[:16],
+        "scope": scope.label(),
+        "positive_means": definition.positive_means,
+    }
+    if scope.deployment_kind != "probe":
+        return MetricValue(
+            metric=key, value=None, n=0, unit=definition.unit, missing=True,
+            reason=(f"{key!r} is a shadow-instrument metric defined only at "
+                    f"deployment_kind='probe'; this clause addresses "
+                    f"{scope.deployment_kind!r}"),
+            provenance=prov | {"addressing_error": True},
+        )
+    if scope.arm_key is not None:
+        return MetricValue(
+            metric=key, value=None, n=0, unit=definition.unit, missing=True,
+            reason=(f"{key!r} is experiment-wide — the shadow instrument observes a market "
+                    f"universe, not arm {scope.arm_key!r}. Use scope: 'experiment'"),
+            provenance=prov | {"addressing_error": True},
+        )
+    start, end = scope.window_start, scope.window_end
+
+    if key in ("incentive_discovery_cycles", "incentive_discovery_error_pct"):
+        C = IncentiveDiscoveryCycle
+        total = session.scalar(
+            select(func.count()).select_from(C)
+            .where(C.started_at >= start, C.started_at <= end)) or 0
+        if key == "incentive_discovery_cycles":
+            return MetricValue(key, float(total), int(total), definition.unit, provenance=prov)
+        if total == 0:
+            return MetricValue(key, None, 0, "%", reason="no discovery polls in window",
+                               provenance=prov)
+        bad = session.scalar(
+            select(func.count()).select_from(C)
+            .where(C.started_at >= start, C.started_at <= end, C.errors > 0)) or 0
+        return MetricValue(key, round(100.0 * bad / total, 2), int(total), "%",
+                           provenance=prov | {"cycles_with_errors": int(bad)})
+
+    if key == "incentive_programs_observed":
+        P = IncentiveProgram
+        n = session.scalar(
+            select(func.count(func.distinct(P.program_id)))
+            .where(P.first_seen_at <= end, P.last_seen_at >= start)) or 0
+        return MetricValue(key, float(n), int(n), definition.unit, provenance=prov)
+
+    if key == "incentive_shadow_quotes":
+        Q = IncentiveShadowQuote
+        n = session.scalar(
+            select(func.count()).select_from(Q)
+            .where(Q.placed_at >= start, Q.placed_at <= end)) or 0
+        return MetricValue(key, float(n), int(n), definition.unit,
+                           provenance=prov | {"window_basis": "placed_at"})
+
+    if key == "incentive_collector_error_events":
+        E = IncentiveCollectorEvent
+        n = session.scalar(
+            select(func.count()).select_from(E)
+            .where(E.at >= start, E.at <= end, E.kind.in_(_INCENTIVE_ERROR_KINDS))) or 0
+        return MetricValue(key, float(n), int(n), definition.unit,
+                           provenance=prov | {"error_kinds": list(_INCENTIVE_ERROR_KINDS)})
+
+    Out = IncentiveShadowOutcome
+    where = (Out.ended_at >= start, Out.ended_at <= end, Out.fill_model == _INCENTIVE_FILL_MODEL)
+    total = session.scalar(select(func.count()).select_from(Out).where(*where)) or 0
+    prov = prov | {"window_basis": "ended_at"}
+    if key == "incentive_shadow_outcomes":
+        return MetricValue(key, float(total), int(total), definition.unit, provenance=prov)
+    if total == 0:
+        return MetricValue(key, None, 0, definition.unit,
+                           reason="no shadow outcomes ended in window under the conservative "
+                                  "fill model",
+                           provenance=prov)
+    if key == "incentive_shadow_single_leg_pct":
+        single = session.scalar(
+            select(func.count()).select_from(Out)
+            .where(*where, Out.outcome.in_(_INCENTIVE_SINGLE_LEG))) or 0
+        return MetricValue(key, round(100.0 * single / total, 2), int(total), "%",
+                           provenance=prov | {"single_leg_outcomes": int(single)})
+    if key == "incentive_shadow_max_adverse_cents_per_contract":
+        rows = session.execute(
+            select(Out.single_leg_max_adverse_usd, Out.single_leg_qty)
+            .where(*where, Out.single_leg_max_adverse_usd.is_not(None),
+                   Out.single_leg_qty.is_not(None), Out.single_leg_qty > 0)).all()
+        if not rows:
+            return MetricValue(key, None, 0, definition.unit,
+                               reason="no single-leg exposure recorded in window",
+                               provenance=prov)
+        worst = max(abs(float(a)) * 100.0 / float(q) for a, q in rows)
+        return MetricValue(key, round(worst, 4), len(rows), definition.unit,
+                           provenance=prov | {"legs_measured": len(rows)})
+    return MetricValue(metric=key, value=None, n=0, unit=definition.unit, missing=True,
+                       reason=f"metric {key!r} registered but not routed — provider bug")
+
+
 def _provenance(scope: MetricScope) -> dict:
     return {
         "source": "paper_trades",
@@ -2075,6 +2281,8 @@ def _compute_metric(session, key: str, scope: MetricScope) -> MetricValue:
         return _twin_metric(session, key, scope)
     if key in QAC_METRICS:
         return _qac_metric(session, key, scope)
+    if key in INCENTIVE_METRICS:
+        return _incentive_metric(session, key, scope)
     if key in LIVE_ONLY_METRICS:
         # Routed BEFORE the empty-tags fallback below. That fallback answers 0 for
         # a count, which for `live_settled_contracts` under a paper scope would be

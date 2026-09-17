@@ -243,6 +243,7 @@ def _packages() -> dict[str, ExperimentPackage]:
     from . import (
         canary_mmsell10,
         correlation_cap,
+        liquidity_incentive_mm,
         marktangle,
         marktangle2,
         perp_v1,
@@ -258,6 +259,27 @@ def _packages() -> dict[str, ExperimentPackage]:
     )
 
     return {
+        "liquidity-incentive-mm": ExperimentPackage(
+            name="liquidity-incentive-mm",
+            experiment_key=liquidity_incentive_mm.EXPERIMENT_KEY,
+            description=(
+                "WS-020 Phase 1a: the ONE-SIDED live smoke test for liquidity-incentive market "
+                "making. REGISTER_PACKAGE creates the experiment, freezes v1 with its risk "
+                "envelope (one contract, <=25c, three resting orders, a $10 book ceiling) and "
+                "all three gates, opens e1, registers the TAGLESS shadow probe, and stops at "
+                "PROBE — no tag becomes admissible, nothing is armed, nothing trades. "
+                "ARM_CANARY then re-evaluates the probe gate, refuses anything but PASS, walks "
+                "PROBE->PAPER on that result, and arms the canary and its mandatory twin. The "
+                "gates are INSTRUMENT-health bars, not economic ones: at $10 this book cannot "
+                "earn a measurable reward, and the thesis's frozen economic pre-registration "
+                "(§6) is a different question that this package does not touch."
+            ),
+            register=liquidity_incentive_mm.register,
+            arm=liquidity_incentive_mm.arm,
+            activation_vars=liquidity_incentive_mm.ACTIVATION_VARS,
+            strategy_tags=(liquidity_incentive_mm.PAPER_TAG, liquidity_incentive_mm.LIVE_TAG,
+                           liquidity_incentive_mm.TWIN_TAG),
+        ),
         "mmsell-correlation-cap": ExperimentPackage(
             name="mmsell-correlation-cap",
             experiment_key=correlation_cap.EXPERIMENT_KEY,
