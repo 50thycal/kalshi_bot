@@ -96,8 +96,8 @@ Inline: `docs/MMSELL_QUEUE_FILL_TELEMETRY.md` §0, §6, §11 (goal, flow, defini
 Phase 1 is **merged and running in production**: [#411](https://github.com/50thycal/kalshi_bot/pull/411)
 (instrumentation), [#412](https://github.com/50thycal/kalshi_bot/pull/412) and
 [#417](https://github.com/50thycal/kalshi_bot/pull/417) (sequence accounting from the first
-production day), and a fourth PR narrowing wasted polls and correcting the coverage read's
-stream verdict. Evidence is accruing; the acceptance checks above were confirmed against
+production day), and [#419](https://github.com/50thycal/kalshi_bot/pull/419) (narrowing wasted polls,
+correcting the coverage read's stream verdict). Evidence is accruing; the acceptance checks above were confirmed against
 production on 2026-09-16/17 (16/16 post-start orders carry a context row, 13/13 WebSocket fills
 matched REST, 99.6 % of queue ticks readable, zero 429s).
 
