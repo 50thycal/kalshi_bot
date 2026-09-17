@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","sql":"SELECT o.created_at, o.market_ticker, o.side, o.limit_price::text AS price, o.quantity::text AS qty, o.status, coalesce(o.cancel_reason,'-') AS cancel_reason, (SELECT count(*) FROM live_orders x WHERE x.strategy <> 'Alimm1' AND x.market_ticker = o.market_ticker) AS other_books FROM live_orders o WHERE o.strategy = 'Alimm1' ORDER BY o.created_at DESC LIMIT 30","id":"limm-watch-2"}
