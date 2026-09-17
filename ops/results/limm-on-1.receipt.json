@@ -1,0 +1,38 @@
+{
+  "audit_worthy": false,
+  "class": "MUTATING",
+  "code_sha": "dfe40b9de47517a22468f0025b59f2f968637814",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-17T12:24:57Z",
+  "id": "limm-on-1",
+  "mutation": {
+    "changes": {
+      "LIQUIDITY_INCENTIVE_SHADOW_ENABLED": {
+        "after": "true",
+        "before": "(unset)",
+        "requested": "true"
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "LIQUIDITY_INCENTIVE_SHADOW_ENABLED"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {},
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/limm-on-1.receipt.json",
+  "result_file": "ops/results/limm-on-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/35220949909",
+  "service": "evo",
+  "started_at": "2026-09-17T12:24:54Z",
+  "targets": [
+    "LIQUIDITY_INCENTIVE_SHADOW_ENABLED"
+  ],
+  "type": "env"
+}
