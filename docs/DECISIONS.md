@@ -1009,3 +1009,32 @@ and assumptions in [`LIQUIDITY_INCENTIVE_RESEARCH.md`](LIQUIDITY_INCENTIVE_RESEA
 4. **Default off, one worker, allowlisted enable.** The policies and capital tiers are the
    pre-registration and are deliberately not settable from the ops channel; cadence and
    bounds are.
+
+## DEC-016 — The liquidity-incentive live test is ONE SIDE, gated on the instrument rather than on economics, and hold-to-settlement is enforced in code (2026-09-17)
+
+Calvin authorized a real trade the day after the shadow went live, with his own guardrails:
+under $10 total, three orders at a time, $1 per order. Four choices, and the first two are
+concessions the request could not avoid.
+
+1. **One side, not two.** The shared per-ticker dedup gate refuses a second resting order on a
+   ticker, and that gate is what keeps this book out of the running MMSELL canary's markets.
+   Teaching it about two-sided quotes is a Platform Change Review. Kalshi scores YES and NO
+   separately, so one bid still earns — but the test therefore proves the pipe and says nothing
+   about pairing economics, which is stated wherever its result will be read.
+2. **A whole experiment to place one order, and no shortcut taken.** Under `NEW_ONLY` the only
+   route to a live tag is `arm_live_canary`, with its PAPER stage, frozen version, envelope,
+   fresh tags, mandatory twin and a synchronously re-evaluated gate. `stamp_or_block` admits a
+   tag on its deployment arm without checking the deployment *kind*, so a PROBE tag could
+   technically have written a live order — that is a defect to file, not a door to use.
+3. **The promotion gate carries no profitability clause, and says so.** At $10 the reward is
+   cents; a P&L bar would either be unsatisfiable or so loose it certified nothing. What can
+   honestly be certified before spending $10 is that the instrument selecting the markets is
+   healthy over a thick sample, so that is what the gate says. §6 of the thesis — the frozen
+   economic pre-registration — is untouched and is a different question.
+4. **A 25c price cap, and hold-to-settlement in code.** The operator's $1 limit bounds the
+   *order*; at one contract the price bounds the *loss*, so the cap was added on top. And
+   because production runs `LIVE_EXIT_MODE=tp_sl` while this book's contract is hold to
+   settlement, `manage_exits` skips its tags outright — otherwise a filled YES bid would draw
+   exit orders the registered envelope never declared. Every cap is a module constant, not a
+   setting: it cannot drift without a pull request, and a test asserts the registered envelope
+   equals the running constants.

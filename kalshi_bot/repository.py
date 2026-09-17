@@ -1485,6 +1485,37 @@ def live_order_exists(session, event_ticker: str, strategy: str) -> bool:
     ) > 0
 
 
+def live_strategy_exposure(session, strategy: str) -> float:
+    """Dollars this ONE strategy currently has committed to live orders and unsettled positions.
+
+    Deliberately strategy-scoped: the portfolio breaker (`live_total_exposure`) is shared and
+    protects everything, but a new book must also be unable to spend more than its OWN registered
+    budget — otherwise "this strategy is capped at $10" is a sentence in a document rather than a
+    property of the system. Counts a resting order at its committed cost (limit_price x quantity),
+    because an unfilled resting bid is money that can still be taken.
+
+    Mirrors `count_live_book_open`'s notion of still-open: non-terminal or filled, minus anything
+    the latest position snapshot shows as settled flat."""
+    rows = session.execute(
+        select(m.LiveOrder.market_ticker, m.LiveOrder.limit_price, m.LiveOrder.quantity).where(
+            m.LiveOrder.strategy == strategy,
+            m.LiveOrder.action == "buy",
+            m.LiveOrder.status.in_(LIVE_NONTERMINAL_STATUSES + ("filled",)),
+        )
+    ).all()
+    total = 0.0
+    for (ticker, limit_price, quantity) in rows:
+        snap = latest_position_snapshot(session, ticker)
+        if snap is not None:
+            qty = snap.quantity_fp if snap.quantity_fp is not None else snap.quantity
+            if qty is not None and abs(float(qty)) <= 0.01:
+                continue  # settled / flat: no longer exposure
+        if limit_price is None or quantity is None:
+            continue
+        total += float(limit_price) * float(quantity) / 100.0
+    return round(total, 4)
+
+
 def live_buy_exists_for_ticker(session, ticker: str, strategy: str) -> bool:
     """A committed live BUY already exists for this (market, strategy) — per-TICKER entry dedup
     for the mmsell books, which open one position per market (markets share an event, so the

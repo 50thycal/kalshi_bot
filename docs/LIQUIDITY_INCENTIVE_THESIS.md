@@ -201,3 +201,125 @@ same modes the `quantfirm` scan recorded independently (`LIQUIDITY_INCENTIVE_RES
 
 No promotion criterion in §6 is engaged by any of this: the observation window has not
 started accumulating outcomes, and the conservative fill model has produced nothing.
+
+## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
+
+**§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized
+markets can earn $1/day net at $100–$500. §10 asks whether one $1 resting bid survives our own
+plumbing. They are different questions with different bars, and a result under one is never
+evidence for the other. Nothing here retunes §6.
+
+Authorized by the operator on 2026-09-17: *"keep the trading below 10 dollars and only 3
+trades max at a time per test with a limit of one dollar per trade."* Those numbers are taken
+verbatim as the risk envelope, plus one cap the operator did not ask for and this section adds:
+a **25c price ceiling**. The reason is that a per-*order* dollar limit bounds the order while
+the price bounds the **loss** — at one contract the entire downside of a resting bid is the
+price paid — so 25c makes a clip's worst case a quarter rather than a dollar.
+
+### 10.1 Why it is one-sided
+
+Two-sided quoting is the strategy; it is not what this test exercises. The live path refuses a
+second resting order on a ticker that already carries one (`LiveExecutor` gate `dedup`, via
+`live_buy_exists_for_ticker` / `live_open_order_exists`), and that gate is **strategy-agnostic
+on purpose** — it is also what keeps this book from ever contesting a market the running MMSELL
+canary is resting in. Teaching it to understand a two-sided quote changes shared risk semantics
+that guard real money elsewhere: a Platform Change Review, not something to slip into a smoke
+test.
+
+Kalshi scores the YES and NO sides **separately** (§4, R5), so a single resting bid still earns
+liquidity score on its own side. That is enough to prove the pipe end to end. It is **not**
+enough to say anything about the strategy's economics, and at $1 it cannot be: the reward on
+one contract is cents a day against the ~$3/day the §6 bar was written for.
+
+### 10.2 What is placed, and how the side is chosen
+
+One post-only bid, one contract, at the **cheaper side's touch price**. Cheapest-first is the
+safety lever (the downside is the price paid), and resting *at* the touch also sits at or above
+the Reference Price, so the distance multiplier is 1.0 — the cheap side is also the efficient
+side. We never rest deep for safety: a deep order is discounted to nothing by
+`DiscountFactor ** ticks` and would be liquidity nobody is paying for.
+
+A market qualifies only if both sides already meet Target Size (R2 — otherwise no snapshot pays
+anyone, and we are far too small to carry a side over the line), the book is two-sided and
+uncrossed, the programme has ≥ 2h left, and the cheaper touch is ≤ 25c.
+
+### 10.3 The envelope
+
+| Cap | Value | Enforced by |
+|---|---|---|
+| contracts per order | 1 | `live.build_live_quote`, re-asserted at `gate:size` |
+| dollars per order | $1.00 | same |
+| price per contract | ≤ 25c | same |
+| resting orders at once | 3 | `repo.count_live_book_open` (`gate:open_cap`) |
+| book exposure | $10.00 | `repo.live_strategy_exposure` (`gate:strategy_exposure`) |
+| per-market exposure | shared `MAX_MARKET_EXPOSURE` | `gate:exposure` |
+| daily realized loss | shared $5.00 | `gate:daily_loss` |
+| order lifetime | `LIVE_ORDER_TIMEOUT_SECONDS` | `reconcile` timeout-cancel |
+| exits | none — hold to settlement | `manage_exits` skips this book's tags |
+
+Every cap is a **module constant** in `liquidity_incentive/live.py`, not a runtime setting.
+That is stronger than the config-drift detector gives a setting — a constant cannot change
+without a pull request and a redeploy — but it also means the detector has nothing to compare,
+so the deployment's `book_params` is registered as `None` rather than as a spec the runtime
+cannot produce. `tests/test_liquidity_incentive_xos_package.py` asserts the registered envelope
+equals the running constants.
+
+**Hold to settlement is not a setting either.** Production runs `LIVE_EXIT_MODE=tp_sl` for the
+YES/weather books, and a filled YES incentive bid is a net-long YES position, which
+`open_live_positions` returns. Without an explicit skip, `manage_exits` would place exit orders
+this envelope never declared. `LiveExecutor.manage_exits` therefore skips `limm.owns_tag`
+strategies — an exact match on the two registered tags, never a prefix test.
+
+### 10.4 Genuine liquidity
+
+There is **no cancel branch in this book.** Orders leave the book by a fill, the shared
+per-order timeout, or `drain_stood_down_books` when the allowlist drops the tag.
+`tests/test_liquidity_incentive_runner.py::test_the_runner_has_no_cancel_path` asserts it.
+No self-trading, no volume generation, no reward-metric manipulation: the book places one
+resting bid and honours it.
+
+### 10.5 The gates (pre-registered; separate from §6)
+
+Registered by the Experiment OS package `liquidity-incentive-mm`, on experiment
+`liquidity-incentive-mm` v1. All three freeze with the version.
+
+- **`shadow_instrument_ready`** (PROBE→PAPER). Instrument health only: discovery is running
+  and current, and the universe is real. HOLD below 12 discovery polls or 50 shadow quotes;
+  FAIL above 75% poll errors; PASS at ≤ 25% poll errors and ≥ 10 programmes observed.
+- **`paper_to_live_smoke`** (PAPER→LIVE_CANARY). The same health question over a thicker
+  sample, because this is the act that spends money: HOLD below 200 quotes, 50 completed
+  outcomes or 20 programmes; FAIL above 50% poll errors; PASS at ≤ 10%.
+  It contains **no profitability clause, deliberately** — at $10 a P&L bar would be theatre.
+- **`live_canary_keep`** (kill). Sample 3 settled contracts, horizon 25. FAIL at −$5.00
+  realized (half the book budget) or any single settled market losing more than $1.00 (an
+  envelope violation, not a market move). PASS means *the plumbing ran and the envelope held* —
+  it authorizes nothing, and there is no promotion path out of this book.
+
+Evidence clocks start at **registration**, not at the collector's first row. This session had
+already read the day-0 shadow output, and a bar judged over a window whose data was already
+seen is not a pre-registration. The cost is a day of waiting; that day is the whole value of
+the gate.
+
+### 10.6 Operator arming sequence
+
+Four steps, each its own act. Steps 2 and 4 are hard stops requiring operator approval.
+
+1. **Register the contract** (arms nothing, trades nothing, opens no exposure):
+   `EXPERIMENT_OS_EXPERIMENT_COMMAND` = `[{"action":"REGISTER_PACKAGE","package":"liquidity-incentive-mm","actor":"<you>"}]`
+   Leaves the experiment at PROBE with a tagless probe deployment.
+2. **Wait** for the probe gate's evidence, then **arm** (HARD STOP — expands real-money
+   capability): `[{"action":"ARM_CANARY","package":"liquidity-incentive-mm","approved_by":"<person>"}]`
+   This re-evaluates `shadow_instrument_ready` and refuses anything but PASS, walks PROBE→PAPER
+   on that result, then calls `arm_live_canary`, which re-evaluates `paper_to_live_smoke`
+   itself. Two independent fresh PASSes stand between the envelope and an order. It still
+   places nothing.
+3. **Turn the runner on** (still places nothing — the allowlist is step 4):
+   `{"type":"env","action":"set","service":"live","values":{"LIQUIDITY_INCENTIVE_LIVE_ENABLED":"true"},"id":"limm-live-on-1"}`
+4. **Open the allowlist** (HARD STOP — this is the step at which an order can reach Kalshi).
+   Set the variables `liquidity_incentive_mm.activation_env()` returns, `LIVE_STRATEGIES` last.
+   Note `LIVE_STRATEGIES` matches by **prefix** and is currently `Fmmsell10`; the new value
+   must name **both** books or the running canary stands down.
+
+**Stand-down:** remove `Alimm1` from `LIVE_STRATEGIES`. New entries stop on the next cycle,
+resting orders drain within a cycle, and any held contract settles normally — at most $10 in
+total, and at these caps at most $0.25 per market.

@@ -141,6 +141,15 @@ ALLOWED_VARS = frozenset({
     "LIQUIDITY_INCENTIVE_SHADOW_ENABLED", "LIQUIDITY_INCENTIVE_DISCOVERY_SECONDS",
     "LIQUIDITY_INCENTIVE_REQUOTE_SECONDS", "LIQUIDITY_INCENTIVE_MAX_MARKETS",
     "LIQUIDITY_INCENTIVE_BOOK_EVENTS_MAX_PER_MINUTE", "LIQUIDITY_INCENTIVE_MIN_REWARD_USD",
+    # Phase 1a, the one-sided LIVE smoke test (docs/LIQUIDITY_INCENTIVE_THESIS.md §10). ENABLED
+    # turns the runner on; it still places nothing until `LIVE_STRATEGIES` names the book's tag,
+    # which is a separate act. MAX_BOOK_FETCHES bounds API calls per cycle. EXCLUDED_SERIES keeps
+    # the test clear of a series another armed book trades. The CAPS are module constants in
+    # `liquidity_incentive.live`, deliberately NOT settable here: the risk envelope registered on
+    # the frozen version names those constants, and a cap an operator could retune from an env
+    # var is not a pre-registered envelope.
+    "LIQUIDITY_INCENTIVE_LIVE_ENABLED", "LIQUIDITY_INCENTIVE_LIVE_MAX_BOOK_FETCHES",
+    "LIQUIDITY_INCENTIVE_EXCLUDED_SERIES",
     # The book DEFINITIONS themselves. A live mmsell book is an ordinary entry in this
     # string (Lmmsell8 and Lmmsell10 both are), so registering an Experiment OS canary and
     # then being unable to CREATE its book is the same defect class as #266: an approved

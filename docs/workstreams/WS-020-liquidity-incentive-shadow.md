@@ -147,3 +147,59 @@ Kalshi and compare its displayed projected reward against our `est_reward_per_ho
 the only external calibration of the share model, and no `est_` reward figure should be
 believed until it runs. Then let the shadow accumulate to the §6 window (≥ 14 days) before any
 read of the headline table.
+
+## Phase 1a — the one-sided live smoke test (2026-09-17)
+
+Operator authorization, same day: *"I approve you to make a trade to test that out. Build the
+Infra needed to allow the trade to happen... keep the trading below 10 dollars and only 3
+trades max at a time per test with a limit of one dollar per trade."* The operator also chose
+**one-sided now** over waiting for two-sided, on the trade-off below.
+
+**The honest answer to "does anything limit the test".** Yes, two things, and neither is the
+dollar figures — those are fine and already match production (`LIVE_MAX_ORDER_DOLLARS=1.0`,
+`MAX_MARKET_EXPOSURE=1.0`).
+
+1. **Two-sided quoting is structurally blocked.** The live path refuses a second resting order
+   on a ticker that already carries one, and that gate is strategy-agnostic on purpose — it is
+   also what stops this book contesting a market the MMSELL canary is in. Changing it is a
+   Platform Change Review. Kalshi scores YES and NO separately, so one bid still earns; the
+   test therefore proves the pipe and says nothing about two-sided pairing economics.
+2. **One order requires a whole experiment.** Under NEW_ONLY an unregistered tag cannot write,
+   and the only sanctioned route to a live tag is `arm_live_canary`, which needs a PAPER-stage
+   experiment, a frozen version, a pre-registered risk envelope, a mandatory paper twin on
+   fresh tags, and a promotion gate that PASSes on a synchronous re-evaluation. "Just place one
+   trade" is not available, and that is the system working.
+
+And one the size itself imposes: at $1 the reward is ~3c/day against the ~$3/day the §6 bar
+was written for. **This test proves plumbing. It cannot validate the reward model.**
+
+### What was built
+
+- `liquidity_incentive/live.py` — the decision layer. Caps as module constants, ten refusal
+  codes, no relaxation path. Side choice is the safety lever: cheapest touch, rest at it.
+- `liquidity_incentive/runner.py` — one cycle: pick programmes soonest-ending first, fetch a
+  bounded number of books, rank, place up to the open-order cap, mirror each placement to the
+  twin. **No cancel branch**, asserted by a test.
+- `LiveExecutor.mirror_incentive_entry` — nine gates, intent committed before the POST.
+- `LiveExecutor.manage_exits` now skips this book's tags: its contract is hold-to-settlement,
+  and production runs `tp_sl`, which would otherwise place undeclared exit orders on a filled
+  YES bid.
+- `repository.live_strategy_exposure` — the per-strategy budget, in dollars.
+- `experiment_os/metrics.py` — eight `incentive_*` providers over the shadow tables, probe-only
+  and experiment-wide, refusing any other addressing.
+- `experiment_os/liquidity_incentive_mm.py` — the package: experiment, frozen v1 + envelope,
+  three gates, e1, tagless probe deployment, `register` (stops at PROBE) and `arm`.
+
+### Findings recorded, not acted on
+
+- `stamp_or_block` admits a tag on its active-deployment arm without checking the deployment
+  **kind**, so a PROBE tag could technically write a live order. Using that would circumvent
+  `arm_live_canary`, which is the only sanctioned arming path, so it was not used. **This
+  belongs in an Experiment OS issue** and is not fixed here.
+
+## Next Step (Phase 1a)
+
+Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).
+Step 1 (`REGISTER_PACKAGE`) arms nothing and can go now; steps 2 and 4 are hard stops. Note
+that step 4 must name **both** `Alimm1` and the running `Fmmsell10` — `LIVE_STRATEGIES` matches
+by prefix and replacing it would stand the MMSELL canary down.
