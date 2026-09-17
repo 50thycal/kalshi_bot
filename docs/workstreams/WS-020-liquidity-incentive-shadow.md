@@ -3,7 +3,7 @@
 **Phase:** REVIEW
 **Status:** Active
 **Created:** 2026-09-16
-**Updated:** 2026-09-16
+**Updated:** 2026-09-17
 **Build OS:** v0.12
 
 ## Goal
@@ -99,7 +99,7 @@ Inline: `docs/LIQUIDITY_INCENTIVE_THESIS.md` §1, §3, §4, §8.
 
 ## Implementation State
 
-PR [#415](https://github.com/50thycal/kalshi_bot/pull/415) open, ready for review — solo mode, owner acceptance at merge.
+PR [#415](https://github.com/50thycal/kalshi_bot/pull/415) merged 2026-09-16 19:43Z (merge commit `ccf4f9d`), solo mode. Instrument on the default branch; activation recorded below.
 
 ## Review State
 
@@ -122,8 +122,28 @@ PR [#415](https://github.com/50thycal/kalshi_bot/pull/415) open, ready for revie
 - A replay tool over `incentive_book_events` / `incentive_trade_events` for re-scoring under a
   revised scoring version without re-collecting.
 
+## Activation state (2026-09-17) — RUNNING
+
+**Enabled 2026-09-17 12:24:54Z.** D1 is closed: the host is the **evo** Railway service — it
+runs the same main loop with a read-only Kalshi client, was alive and idle
+(`EVO_ENABLED=false`), and a redeploy there cannot touch the live book. The operator
+authorized the mutation in this session; ops `limm-on-1` set
+`LIQUIDITY_INCENTIVE_SHADOW_ENABLED=true` (BEFORE unset → AFTER true, **VERDICT: VERIFIED**,
+redeploy triggered). Ops channel reset to `noop`.
+
+First read (`limm-report-1`, 12:30:02Z, code `dfe40b9d`): collector alive, 3,939 programs
+discovered with 0 errors, 1,155 open shadow pairs over 77 markets, no sequence gaps or
+throttles. Two day-one checks pass (the centi-cents reward unit; Target Size 1000 /
+Discount Factor 0.50 modes). Two findings are recorded in
+[the thesis §9.1](../LIQUIDITY_INCENTIVE_THESIS.md): the reward ranking selects **untraded**
+markets (zero trades in two hours), and the top reward estimates imply ~3%/day against a
+~0.62%/day board rate, so the share model is unvalidated until checked against Kalshi's own
+projected-reward display.
+
 ## Next Step
 
-Operator merge; then set `LIQUIDITY_INCENTIVE_SHADOW_ENABLED=true` on one worker and read
-`liquidity_incentive_report` § COLLECTOR within the first hour (alive, tape landing, programs
-listed, `period_reward_usd` plausible against kalshi.com/incentives).
+Operator: run day-one check 3 — open one named market from the ranking while signed in to
+Kalshi and compare its displayed projected reward against our `est_reward_per_hour`. That is
+the only external calibration of the share model, and no `est_` reward figure should be
+believed until it runs. Then let the shadow accumulate to the §6 window (≥ 14 days) before any
+read of the headline table.
