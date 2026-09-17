@@ -81,7 +81,8 @@ def coverage(cur, hours: int) -> bool:
         return False
     print(f"  thread started {started}  stopped {stopped}  disabled {disabled}"
           f"   last event: {last[0]} at {last[1]}" if last else "")
-    conn, disc, gaps, snaps, thr, pf, rl, unp, loop = _one(cur, (
+    (conn, disc, gaps, snaps, thr, pf, rl, unp, loop,
+     quiet, narrowed, back) = _one(cur, (
         "SELECT count(*) FILTER (WHERE kind='connected'),"
         "       count(*) FILTER (WHERE kind='disconnected'),"
         "       count(*) FILTER (WHERE kind='seq_gap'),"
@@ -90,13 +91,49 @@ def coverage(cur, hours: int) -> bool:
         "       count(*) FILTER (WHERE kind='poll_failed'),"
         "       count(*) FILTER (WHERE kind='rate_limited'),"
         "       count(*) FILTER (WHERE kind='unparsed'),"
-        "       count(*) FILTER (WHERE kind='loop_error')"
+        "       count(*) FILTER (WHERE kind='loop_error'),"
+        "       count(*) FILTER (WHERE kind='poll_missing'),"
+        "       count(*) FILTER (WHERE kind='poll_narrowed'),"
+        "       count(*) FILTER (WHERE kind='poll_recovered')"
         f" FROM execution_collector_events WHERE at >= {w}"))
     print(f"  connections {conn}  disconnects {disc}  seq gaps {gaps} (snapshots re-requested"
           f" {snaps})  throttled {thr}  poll failures {pf}  429s {rl}  unparsed {unp}"
           f"  loop errors {loop}")
-    if disc and conn and disc >= conn:
-        print("  !! as many disconnects as connects — the stream is not staying up.")
+    # One episode per row, not one row per poll: an order whose queue row stops reading back is
+    # counted once when it goes quiet, once when its cadence narrows, once when it returns.
+    print(f"  orders gone quiet on the queue endpoint {quiet}"
+          f"  cadence narrowed {narrowed}  readable again {back}")
+    # "Is the stream staying up?" is two questions: is it up NOW, and how often does it drop.
+    # Comparing the two counts answers neither — a window that opens mid-connection leaves the
+    # original connect outside it, so a healthy stream that dropped once reads as 1 == 1.
+    state = _one(cur, ("SELECT kind, at::text FROM execution_collector_events"
+                       " WHERE kind IN ('connected','disconnected')"
+                       " ORDER BY at DESC LIMIT 1"))
+    fresh = _one(cur, ("SELECT (SELECT extract(epoch FROM now() - max(received_at))"
+                       "          FROM execution_book_events),"
+                       "       (SELECT extract(epoch FROM now() - max(captured_at))"
+                       "          FROM live_order_queue_ticks)"))
+    book_age, tick_age = (fresh or (None, None))
+    if state:
+        up = state[0] == "connected"
+        print(f"  stream {'up' if up else 'DOWN'} since {state[1]}"
+              f" ({disc} drop{'' if disc == 1 else 's'} in {hours}h)")
+        if not up:
+            print("  !! the newest connection event is a DISCONNECT — the stream is down, or it"
+                  " reconnected without recording it.")
+    # The worker stamps `received_at` from its own clock, which can sit microseconds ahead of the
+    # database's, so an age is floored at zero rather than printed as a negative.
+    def _age(x):
+        return None if x is None else max(0.0, float(x))
+    book_age, tick_age = _age(book_age), _age(tick_age)
+    if book_age is not None and book_age > 300:
+        print(f"  !! newest book event is {book_age / 60:.0f} min old — the stream is not"
+              " delivering, whatever the connection events say.")
+    elif book_age is not None:
+        ticks = f"; newest queue tick {tick_age:.0f}s ago" if tick_age is not None else ""
+        print(f"  newest book event {book_age:.0f}s ago{ticks}")
+    if disc > max(1, hours):
+        print(f"  !! {disc} disconnects in {hours}h — more than one an hour is churn, not noise.")
     if rl:
         print("  !! rate-limited polls: lower EXECUTION_QUEUE_MAX_POLLS_PER_MINUTE or raise the")
         print("     interval. Trading shares this budget.")

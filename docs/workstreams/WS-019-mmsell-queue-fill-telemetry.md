@@ -3,7 +3,7 @@
 **Phase:** REVIEW
 **Status:** Active
 **Created:** 2026-09-16
-**Updated:** 2026-09-16
+**Updated:** 2026-09-17
 **Build OS:** v0.12
 
 ## Goal
@@ -93,7 +93,13 @@ Inline: `docs/MMSELL_QUEUE_FILL_TELEMETRY.md` §0, §6, §11 (goal, flow, defini
 
 ## Implementation State
 
-PR [#411](https://github.com/50thycal/kalshi_bot/pull/411) open, ready for review (solo mode: owner acceptance at merge).
+Phase 1 is **merged and running in production**: [#411](https://github.com/50thycal/kalshi_bot/pull/411)
+(instrumentation), [#412](https://github.com/50thycal/kalshi_bot/pull/412) and
+[#417](https://github.com/50thycal/kalshi_bot/pull/417) (sequence accounting from the first
+production day), and [#419](https://github.com/50thycal/kalshi_bot/pull/419) (narrowing wasted polls,
+correcting the coverage read's stream verdict). Evidence is accruing; the acceptance checks above were confirmed against
+production on 2026-09-16/17 (16/16 post-start orders carry a context row, 13/13 WebSocket fills
+matched REST, 99.6 % of queue ticks readable, zero 429s).
 
 ## Review State
 
@@ -113,7 +119,17 @@ PR [#411](https://github.com/50thycal/kalshi_bot/pull/411) open, ready for revie
 ## Parked
 
 - `fills.filled_at` provenance (reconcile time vs exchange time) — Platform Change Review.
+- Phase 2 analysis (fill funnel, queue-conditioned fill curves, adverse-selection and economic
+  curves) — Research Lab, once 2–4 weeks of ticks have accrued.
+
+## Open Decisions — operator
+
+- **D2.** Raw-event retention. The book and trade tapes ran at ~105k–143k rows/day over 17
+  markets, so the raw tables grow by roughly 3–4M rows a month. Either a retention policy or a
+  shorter post-terminal window is needed before the volume becomes the read cost. Not a
+  session's call.
 
 ## Next Step
 
-Operator merge of #411 (hard stop: live executor diff); then read `execution_telemetry` COVERAGE within the first hour of resting orders.
+Let ticks accrue; read `execution_telemetry` weekly for coverage. Phase 2 analysis opens once
+the sample is large enough to fit curves, in a Research Lab session.
