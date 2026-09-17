@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-state-after-reject-1
-# code 223c1b815ba74b58329754868f03ab36806661d4 · started 2026-09-17T15:28:48Z
-state  transitions  open_deployments  open_epochs  gate_results
------  -----------  ----------------  -----------  ------------
-PROBE  2            1                 1            5           
-
-(1 row)
