@@ -1,1 +1,1 @@
-{"type":"db","sql":"SELECT o.strategy, count(*) AS orders, count(*) FILTER (WHERE o.status IN ('resting','submitted','pending')) AS open_now, round(sum((o.limit_price * o.quantity)::numeric)/100.0, 4) AS committed_usd, count(DISTINCT o.market_ticker) AS tickers, (SELECT count(*) FROM live_orders x WHERE x.strategy <> 'Alimm1' AND x.market_ticker IN (SELECT market_ticker FROM live_orders y WHERE y.strategy = 'Alimm1')) AS colliding_other_book_orders FROM live_orders o WHERE o.strategy = 'Alimm1' GROUP BY o.strategy","id":"limm-verify-1"}
+{"type":"noop"}
