@@ -255,6 +255,191 @@ stating plainly that the one-sided smoke test is, on this evidence, measuring th
 actually occurs — no pair has yet completed — and that a live one-contract bid would be
 exposed to the single-leg side of this, bounded by its 25c price cap.
 
+### 9.3 The live smoke test placed (2026-09-17 16:00:47Z) — the pipe works
+
+Operator signed off on the live test at ~15:20Z. Armed and activated the same hour; the first
+real orders rested three minutes after the worker redeployed.
+
+| ticker | side | price | qty | status | Kalshi order id |
+|---|---|---|---|---|---|
+| `KXHORMUZPEAK-26SEP20-T20` | yes | 3c | 1 | resting | `01a0b019-5b98-7a05-9e06-7f5490187b56` |
+| `KXHORMUZPEAK-26SEP20-T30` | yes | 1c | 1 | resting | `01a0b019-5b98-7e81-93a0-41455ba9889a` |
+| `KXHORMUZPEAK-26SEP20-T25` | yes | 1c | 1 | resting | `01a0b019-57b0-75f1-9044-6465d0d66290` |
+
+**Total real money committed: $0.05.** Every declared cap held, verified against the database
+rather than inferred: 1 contract per order, every price far under the 25c ceiling, exactly 3
+open orders at `MAX_OPEN_ORDERS`, $0.05 against the $10 book ceiling, and **0 orders from any
+other book on any of these tickers** — the strategy-agnostic dedup gate did its job, so the
+MMSELL canary was never contested.
+
+**The twin mirrored all three within ~43ms**, same ticker, side, price and size
+(`Alimm1_pt3`). The one-to-one property the live/paper comparison rests on holds by
+construction, not by reconciliation.
+
+**What this establishes:** the decision layer selects a market, the executor's nine gates
+admit it, a post-only order reaches Kalshi and rests, the twin records its counterfactual, and
+the whole path stays inside a pre-registered envelope. That is the entire claim of §10 and it
+is now evidenced. **It establishes nothing about the economics** — see §9.2, and see the
+per-clip arithmetic: 5c of resting size cannot earn a measurable liquidity reward.
+
+**Two honest observations, recorded rather than acted on:**
+
+1. **All three orders landed on ONE event** (`KXHORMUZPEAK-26SEP20`) at three strikes. The
+   envelope bounds contracts, price, order count and book exposure — it has **no event-level
+   concentration cap**, where mmsell carries `max_event_rungs=3`. At $0.05 this is immaterial
+   and the $10 ceiling bounds it absolutely, but it is a real property: this book will put its
+   entire order budget on correlated strikes of a single event if that is where the cheapest
+   touches are. A future version that sizes up needs an event cap; this one does not.
+2. **The cheapest-touch rule selected deep out-of-the-money tails** (1c and 3c YES). That is
+   the rule working as designed — cheapest touch is the safety lever — but it means the test
+   is resting where fills are least likely, which is the conservative end of the very
+   selection effect §9.1 recorded.
+
+**Twin-suffix mismatch, found during activation and pinned.** `activation_env()` derives
+`LIVE_PAPER_TWIN_SUFFIX` from this book's `TWIN_SUFFIX` (`_pt3`), but production carries
+`_pt4` and that variable is **SHARED** — applying it would have re-cut `Fmmsell10`'s twin to an
+unregistered tag and taken the running canary's twin dark under NEW_ONLY. It was not applied.
+The twin is pinned instead with an explicit `LIVE_PAPER_TWINS=Alimm1:Alimm1_pt3`, which
+overrides the suffix for this book alone and leaves every other book on `_pt4`.
+
+### 9.4 Hour 4.5 — the headline turns positive and P(both | one) is still zero (2026-09-17 16:54Z)
+
+Ops `limm-report-3`, 3h event window / 1d aggregate. **Observation span 0.18 days against a
+pre-registered window of ≥ 14. Still HOLD; §6 is not retuned.** Two things moved, in opposite
+directions, and the tension between them is the finding.
+
+**1. The pair premise looks worse, on a 10x bigger sample.**
+
+| model | one-sided fills | both filled | P(both \| one) |
+|---|---|---|---|
+| optimistic | 180 no_only + 85 yes_only = **265** | **0** | 0.000 |
+| queue_aware | 50 | **0** | 0.000 |
+| conservative | 35 | **0** | 0.000 |
+
+§9.2 recorded this at n=25 (optimistic) and called it thin. It is now **n=265 under the model
+most generous to the strategy**, and not one pair has completed in any model. §6 criterion 6
+requires ≥ 0.25.
+
+The nominal arithmetic against a 0.25 bar is overwhelming at this n, and it should not be
+quoted that way: these outcomes are **not independent**. They are repeated quotes on a small
+set of markets with overlapping lifetimes, so the effective sample is materially smaller than
+265. What is fair to say is that the direction has survived a tenfold increase in sample and is
+identical across three fill models — which is a good deal more than §9.2 could claim.
+
+**2. The headline flipped positive — and every measured component of it is still zero or
+negative.**
+
+| policy A, conservative | reward (DERIVED) | paired | fees | single-leg MTM | net | net/day |
+|---|---|---|---|---|---|---|
+| $25 | 2.76 | 0.00 | 0.00 | −1.50 | +1.26 | +6.86 |
+| $100 | 11.02 | 0.00 | 0.00 | −6.04 | +4.98 | +27.00 |
+| $500 | 51.51 | 0.00 | 0.00 | −9.89 | +41.62 | +225.87 |
+
+Read the columns before the total. `paired` is 0.0000 **because there are no pairs** — that is
+the same fact as the table above, not an independent success. `fees` is 0.0000 for the same
+reason. `settle` is n/a. So **100% of the positive net is `est_reward`**, which is the output
+of the share model that §9.1 flagged as unvalidated and that day-one check 3 — comparing one
+market's displayed projected reward against ours, signed in — has still not tested.
+
+$225/day at the $500 tier is not a result; it is an estimate implying a return the board-wide
+pool arithmetic does not support (§9.1: ~3%/day implied against ~0.62%/day available). §6
+anticipated exactly this and says so: *"Do not promote merely because gross estimated rewards
+exceed $1/day."*
+
+**3. Single-leg tails deepened.** Conservative worst mark-to-bid at the 1s horizon is now
+**−$20.00** (was −$2.89); optimistic worst is **−$50.50**. Both recover substantially by the
+30s horizon (−$2.89 and −$15.15), which is consistent with these being marks taken into a
+momentarily empty book rather than realised losses — but the instantaneous tail is real and it
+is what a resting order would face.
+
+**4. Collector.** Healthy but working harder: 38 discovery cycles with **0 errors**, 4,250
+programmes, pool $553,931.67, 177 markets snapshotted, 18,317 book events. 17 sequence gaps and
+3 disconnects were recorded and recovered (5 snapshot re-requests). Public trades on tracked
+markets: **47 in three hours** — up from 9, still almost nothing across 177 markets, so §9.1's
+finding that the reward ranking selects untraded books stands.
+
+**What this means for the live smoke test (§9.3):** nothing changes. Its gates read instrument
+health, not economics. But it reinforces what that test is measuring — a one-sided resting bid
+is not a degraded version of the strategy, it is empirically the only version that has ever
+occurred.
+
+### 9.5 Hour 7.5 — the first completed pairs, and why they do not rescue the premise (2026-09-17 19:58Z)
+
+Ops `limm-report-4`, span **0.31 days** against ≥ 14. Still HOLD. §9.2 and §9.4 both recorded
+`P(both | one) = 0.000`; it has now moved, and the shape of the move is the finding.
+
+| model | one-sided | both filled | P(both \| one) | n | lag between legs |
+|---|---|---|---|---|---|
+| optimistic | 495 | **30** | **0.057** | 525 | mean 887s, median **1,005s** |
+| queue_aware | 75 | 0 | 0.000 | 75 | — |
+| conservative | 45 | 0 | 0.000 | 45 | — |
+
+**Three things have to be said together or the first one misleads.**
+
+1. **Pairs complete only under the OPTIMISTIC model.** That is the model which assumes an order
+   at a touched price fills — the one §4 registered precisely because it cannot be trusted, and
+   the one §6 does **not** gate on. Under the conservative model, which §6 does gate on, the
+   count is still exactly **zero** at n=45. Under queue-aware, zero at n=75.
+2. **0.057 is not 0.25.** Even taking the optimistic model at face value, the observed rate is
+   less than a quarter of the pre-registered bar.
+3. **The lag is the real news, and it points the same way as the zero.** When an optimistic
+   pair does complete, its two legs are **about 17 minutes apart** (median 1,005s). A quote
+   whose second side fills a quarter of an hour after the first is not a two-sided market-making
+   pair in any sense the thesis meant — it is two independent fills with a long, fully
+   one-sided, adversely-selectable interval between them. §2's mechanism assumed the pair is
+   what bounds the risk. At a 17-minute median lag it does not.
+
+**The headline keeps climbing and is still entirely derived.** Policy A conservative: $25 tier
+net/day **+$11.86**, $500 tier **+$279.53**. `paired` is 0.0000, `fees` 0.0000, `settle` n/a,
+single-leg MTM negative and clamped at −$10.00 at the two largest tiers. So, exactly as in
+§9.4, **100% of the positive net is `est_reward`** from the unvalidated share model. Day-one
+check 3 remains unrun and remains the only external test of it.
+
+**Collector: healthy, but the sequence-gap rate is rising and should be watched.** Gaps by
+report: 4 (§9.2) → 17 (§9.4) → **28** now, each recovered by a snapshot re-request (6 so far),
+with the most recent event at 19:55Z being a gap. Discovery is clean — 36 cycles, **0 errors**,
+4,331 programmes, pool $559,466.67. Trades 66 in three hours across 176 markets, up from 47,
+still almost nothing. A rising gap rate does not invalidate anything yet, but the tape is what
+the fill models replay, so it degrades evidence quality quietly rather than loudly. If it keeps
+climbing, it becomes a data-quality item under §6 criterion 7.
+
+**Net effect on the thesis: unchanged, and slightly worse.** The one metric that moved moved in
+the model that does not count, to a value still well under the bar, and brought with it a lag
+that undermines the mechanism the pair was supposed to provide.
+
+### 9.6 The lifecycle closed — timeout, cancel, re-quote (2026-09-17 20:08Z)
+
+§9.3 recorded placement and could only *claim* the rest. Ops `limm-watch-2` closes it.
+
+All three original bids left the book at the 4-hour boundary exactly as designed —
+`status=canceled`, `cancel_reason=timeout`, ~20:00Z against a 16:00:47Z placement and
+`LIVE_ORDER_TIMEOUT_SECONDS=14400`. **This book has no cancel branch of its own**; orders leave
+by a fill, the shared per-order timeout, or a stand-down drain, and the timeout is what fired.
+That is the genuine-liquidity guarantee of §10.4 observed rather than asserted.
+
+Four minutes later the runner re-quoted, on **different markets**:
+
+| ticker | side | price | qty |
+|---|---|---|---|
+| `KXYTVIEWSHIGH-POS26OCT-8.75M` | yes | 4c | 1 |
+| `KXBIGGESTQUAKE-17SEP26-7.0` | yes | 1c | 1 |
+| `KXBIGGESTQUAKE-17SEP26-6.8` | yes | 1c | 1 |
+
+$0.06 committed, 3 open at the cap, every price far under 25c, 0 orders from any other book on
+any of these tickers. **Place → rest → expire → re-place is now demonstrated end to end**, which
+is the whole of §10's claim.
+
+Two things the re-quote confirms rather than reveals:
+
+1. **Selection is dynamic, not stuck.** A completely different market set (video views,
+   earthquake magnitude) replaced the Hormuz strikes, so the ranking is re-running against the
+   live programme list rather than latching.
+2. **The event-concentration pattern from §9.3 repeats**: two of the three new orders sit on
+   one event (`KXBIGGESTQUAKE-17SEP26` at 6.8 and 7.0). That is now a pattern rather than an
+   incident. Still immaterial at $0.06 and still bounded absolutely by the $10 ceiling, and
+   still **not** acted on — but it is the second observation of the same thing, and any sized-up
+   version of this book needs an event cap before it runs.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized
@@ -369,9 +554,13 @@ Four steps, each its own act. Steps 2 and 4 are hard stops requiring operator ap
 3. **Turn the runner on** (still places nothing — the allowlist is step 4):
    `{"type":"env","action":"set","service":"live","values":{"LIQUIDITY_INCENTIVE_LIVE_ENABLED":"true"},"id":"limm-live-on-1"}`
 4. **Open the allowlist** (HARD STOP — this is the step at which an order can reach Kalshi).
-   Set the variables `liquidity_incentive_mm.activation_env()` returns, `LIVE_STRATEGIES` last.
-   Note `LIVE_STRATEGIES` matches by **prefix** and is currently `Fmmsell10`; the new value
-   must name **both** books or the running canary stands down.
+   Read the running values first, then set what
+   `liquidity_incentive_mm.activation_env(current_live_strategies=..., current_live_paper_twins=...)`
+   returns, `LIVE_STRATEGIES` last. It takes those arguments so it cannot produce a value that
+   drops a running book: `LIVE_STRATEGIES` is the **whole fleet's** allowlist, and setting it to
+   this book alone stands every other live book down. It also deliberately does **not** emit
+   `LIVE_PAPER_TWIN_SUFFIX`, which is the fleet's twin-epoch marker — this book pins its own
+   twin through the per-book `LIVE_PAPER_TWINS` instead.
 
 **What step 2 does to the shadow probe.** It ends it. `arm_live_canary` carries the epoch's
 open deployments across the live boundary and `carry_deployments_forward` admits `paper` kinds

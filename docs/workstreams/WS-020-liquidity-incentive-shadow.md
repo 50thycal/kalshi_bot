@@ -248,6 +248,73 @@ collector thread is governed by its own env flag.
 A retry needs a NEW `command_id` (`limm-arm-2`): `command_id` is the exactly-once key and
 `limm-arm-1` is spent.
 
+## LIVE — the smoke test placed (2026-09-17 16:00:47Z)
+
+Full arming sequence completed on the operator's sign-off. `ARM_CANARY` retry (`limm-arm-2`)
+SUCCEEDED 15:52:13Z — `limm-smoke-live-1` (`Alimm1`) + `limm-smoke-twin-1` (`Alimm1_pt3`) at one
+boundary, `boundary_match: true`. Activation (`limm-activate-1`) VERIFIED 15:57Z.
+
+**Three post-only YES bids rested on `KXHORMUZPEAK-26SEP20` strikes at 1c, 1c and 3c — $0.05 of
+real money, all caps held, twin mirrored within 43ms, zero ticker collisions with any other
+book.** Detail and the two concentration observations: [thesis §9.3](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+### Defects found in this package during arming, and how each was handled
+
+1. **Probe deployment blocked arming** (`limm-arm-1` REJECTED). `arm_live_canary` will not
+   carry a PROBE deployment across an epoch boundary. Fixed in #422 by ending it at the
+   PROBE→PAPER transition — NOT by relaxing `_CARRYABLE_KINDS`, which guards the only path
+   that creates live lineage. The rejection was atomic; nothing needed repair.
+2. **`activation_env()` would have broken another live book.** It sets
+   `LIVE_PAPER_TWIN_SUFFIX` from this book's `TWIN_SUFFIX` (`_pt3`); production carries `_pt4`
+   and the variable is SHARED, so applying it would have re-cut `Fmmsell10`'s twin to an
+   unregistered tag and taken it dark under NEW_ONLY. **Not applied** — three variables were
+   set by hand instead and the twin pinned via `LIVE_PAPER_TWINS`. The root cause is that
+   `TWIN_SUFFIX` was copied from the mmsell10 canary's docstring and never re-read against
+   production, and the test asserting `TWIN_TAG == LIVE_TAG + TWIN_SUFFIX` is self-consistent
+   and therefore proved nothing. **`activation_env()` is still wrong for any future use and
+   must be fixed.**
+
+## Shadow read, hour 4.5 (2026-09-17 16:54Z)
+
+Ops `limm-report-3`. Span 0.18 days — still HOLD. Two moves in opposite directions
+([thesis §9.4](../LIQUIDITY_INCENTIVE_THESIS.md)):
+
+- **P(both | one) is still 0.000 at n=265** under the optimistic model (was n=25 at §9.2),
+  and 0.000 under all three. Not one pair has completed. The direction has now survived a
+  tenfold sample increase, though the outcomes are correlated so the effective n is smaller.
+- **The headline turned positive** (+$6.86/day at $25, +$225/day at $500) and **100% of it is
+  `est_reward`**. Paired P&L is 0.0000 because there are no pairs; fees 0.0000 for the same
+  reason; settlement n/a; single-leg MTM negative. Every *measured* component is zero or
+  negative. Day-one check 3 remains the only external test of that model and is unrun.
+
+Collector healthy (0 discovery errors, 4,250 programmes) but 17 sequence gaps and 3
+disconnects, all recovered. Trades 47/3h across 177 markets — still almost nothing.
+
+## Shadow read, hour 7.5 (2026-09-17 19:58Z)
+
+Ops `limm-report-4`, span 0.31 days. **P(both | one) moved off zero — but only in the model
+that does not count** ([thesis §9.5](../LIQUIDITY_INCENTIVE_THESIS.md)):
+
+- **optimistic: 0.057** (30 pairs / n=525), legs a **median 17 minutes apart**
+- **conservative: still 0.000** (n=45) — and conservative is what §6 gates on
+- **queue_aware: still 0.000** (n=75)
+
+The lag matters more than the rate: a second leg filling ~17 minutes after the first is not a
+market-making pair, it is two independent fills with a long one-sided interval between them.
+§2's mechanism assumed the pair bounds the risk; at that lag it does not.
+
+Headline still climbing (+$279/day at $500) and still 100% `est_reward`. Collector clean on
+discovery (0 errors, 4,331 programmes) but **sequence gaps are rising: 4 → 17 → 28**, all
+recovered. Watch it; the tape is what the fill models replay.
+
+## Live lifecycle closed (2026-09-17 20:08Z)
+
+All three original bids timeout-cancelled at the 4-hour boundary (`cancel_reason=timeout`) and
+the runner re-quoted four minutes later on a different market set — $0.06, 3 open at the cap,
+all under 25c, no collisions. **Place → rest → expire → re-place demonstrated end to end.**
+The event-concentration pattern repeated (2 of 3 on one event); second observation, still not
+acted on, but a sized-up version needs an event cap. [Thesis §9.6](../LIQUIDITY_INCENTIVE_THESIS.md).
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).

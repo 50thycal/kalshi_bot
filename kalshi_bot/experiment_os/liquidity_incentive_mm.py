@@ -134,7 +134,6 @@ RISK_ENVELOPE: dict = {
         "MAX_DAILY_LOSS": "5.0",
         "LIVE_KILL_ON_DAILY_LOSS": "true",
         "LIVE_ORDER_TIMEOUT_SECONDS": "14400",
-        "LIVE_PAPER_TWIN_SUFFIX": limm.TWIN_SUFFIX,
     },
     "left_alone": {
         "MAX_TOTAL_EXPOSURE": (
@@ -147,6 +146,16 @@ RISK_ENVELOPE: dict = {
             "already 5.0 in production and SHARED. Named in `settings` above as a fact of the "
             "envelope, not as a change — this book must not move a breaker another live book "
             "is relying on"
+        ),
+        "LIVE_PAPER_TWIN_SUFFIX": (
+            "SHARED, and the one variable in this area that must never carry this book's "
+            "value. It is the fleet's twin-epoch marker: every book whose pair is derived "
+            "automatically takes its twin tag from it, so setting it to this book's `_pt3` "
+            "re-cuts EVERY other book's twin onto an unregistered tag, which under NEW_ONLY "
+            "is refused at the write path — the running canary's twin goes dark. Production "
+            "carried `_pt4` on 2026-09-17 while this book registered `_pt3`, and an earlier "
+            "draft of `activation_env` would have applied it. This book pins its OWN twin "
+            "through LIVE_PAPER_TWINS, which is per-book, and leaves the suffix alone."
         ),
         "LIVE_EXIT_MODE": (
             "production carries tp_sl for the YES/weather books and this book must not change "
@@ -620,15 +629,54 @@ def arm(
     return {"live": live, "twin": twin, "epoch": epoch}
 
 
-def activation_env() -> dict[str, str]:
-    """The EXACT Railway variables the runtime-allowlist step sets, in the order they take
-    effect. Building the mapping is all this does; nothing here applies it, and the step that
-    lets this book spend anything is a Live Ops act through the env channel."""
-    env = dict(RISK_ENVELOPE["settings"])
-    env["LIVE_PAPER_TWINS"] = f"{LIVE_TAG}:{TWIN_TAG}"
+def _append_token(current: str, token: str, *, key: str | None = None) -> str:
+    """`current` with `token` appended, preserving every entry already there.
+
+    `key` names the field an entry is identified by (the live tag, for a `live:twin` pair), so
+    re-running replaces THIS book's entry and no one else's. Order is preserved and the new
+    token goes last."""
+    out: list[str] = []
+    ident = key or token
+    for part in (current or "").split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if part.split(":", 1)[0].strip() == ident:
+            continue  # this book's own previous entry; re-emitted below
+        out.append(part)
+    out.append(token)
+    return ",".join(out)
+
+
+def activation_env(*, current_live_strategies: str, current_live_paper_twins: str = "") -> dict:
+    """The Railway variables the runtime-allowlist step sets, DERIVED from what is running.
+
+    THE CURRENT VALUES ARE REQUIRED ARGUMENTS ON PURPOSE. An earlier version of this function
+    took none and returned `LIVE_STRATEGIES=Alimm1` flat. `LIVE_STRATEGIES` is the whole fleet's
+    allowlist, so applying that would not have added this book — it would have STOOD DOWN every
+    other live book, the running MMSELL canary included. A function that can only be used safely
+    by not using what it returns is a trap, so it now cannot be called without the running value
+    and cannot return one that drops a tag.
+
+    `LIVE_PAPER_TWINS` is appended the same way and keyed by live tag, so this book's pair is
+    replaced on a re-run and no other book's is touched. The fleet-wide
+    `LIVE_PAPER_TWIN_SUFFIX` is deliberately NOT here — see RISK_ENVELOPE['left_alone'].
+
+    Builds the mapping only. Nothing here applies it; that is a Live Ops act through the env
+    channel, and it is the step at which an order can reach Kalshi.
+    """
+    env: dict[str, str] = dict(RISK_ENVELOPE["settings"])
+    env["LIVE_PAPER_TWINS"] = _append_token(
+        current_live_paper_twins, f"{LIVE_TAG}:{TWIN_TAG}", key=LIVE_TAG)
     # Last, so the mapping reads in the order it takes effect: the book is enabled and its caps
     # are pinned before the switch that lets it spend anything.
-    env["LIVE_STRATEGIES"] = LIVE_TAG
+    env["LIVE_STRATEGIES"] = _append_token(current_live_strategies, LIVE_TAG)
+    if LIVE_TAG not in env["LIVE_STRATEGIES"].split(","):
+        raise service.ExperimentOsError("derived allowlist does not name this book")
+    for tag in (t.strip() for t in (current_live_strategies or "").split(",")):
+        if tag and tag not in env["LIVE_STRATEGIES"].split(","):
+            raise service.ExperimentOsError(
+                f"derived allowlist would drop {tag!r}, which is trading real money now")
     return env
 
 
