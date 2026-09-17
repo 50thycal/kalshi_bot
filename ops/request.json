@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"xos","command":"package-preflight","args":["liquidity-incentive-mm"],"id":"limm-preflight-1"}
