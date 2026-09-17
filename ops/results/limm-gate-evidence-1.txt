@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-gate-evidence-1
-# code 223c1b815ba74b58329754868f03ab36806661d4 · started 2026-09-17T15:22:58Z
-cycles  cycles_with_errors  quotes  outcomes_conservative  programs_observed
-------  ------------------  ------  ---------------------  -----------------
-14      0                   3330    3240                   4138             
-
-(1 row)
