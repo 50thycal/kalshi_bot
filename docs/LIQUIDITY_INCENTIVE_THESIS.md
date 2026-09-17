@@ -373,6 +373,16 @@ Four steps, each its own act. Steps 2 and 4 are hard stops requiring operator ap
    Note `LIVE_STRATEGIES` matches by **prefix** and is currently `Fmmsell10`; the new value
    must name **both** books or the running canary stands down.
 
+**What step 2 does to the shadow probe.** It ends it. `arm_live_canary` carries the epoch's
+open deployments across the live boundary and `carry_deployments_forward` admits `paper` kinds
+only, so an open PROBE deployment refuses the whole arming — observed in production on
+2026-09-17 (`limm-arm-1`, REJECTED, rolled back cleanly with no live lineage created). The
+engine is right to refuse: a probe is a validation instrument belonging to the PROBE stage, and
+carrying one into a live epoch would claim the shadow collector is part of the live lineage. So
+the package ends it at the moment its stage ends. The shadow collector itself keeps running —
+it is a daemon thread governed by `LIQUIDITY_INCENTIVE_SHADOW_ENABLED`, not by this deployment
+row, and the `incentive_*` metrics read its tables over a time window rather than by tag.
+
 **Stand-down:** remove `Alimm1` from `LIVE_STRATEGIES`. New entries stop on the next cycle,
 resting orders drain within a cycle, and any held contract settles normally — at most $10 in
 total, and at these caps at most $0.25 per market.
