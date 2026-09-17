@@ -3,7 +3,7 @@
 **Phase:** REVIEW
 **Status:** Active
 **Created:** 2026-09-16
-**Updated:** 2026-09-16
+**Updated:** 2026-09-17
 **Build OS:** v0.12
 
 ## Goal
@@ -99,7 +99,7 @@ Inline: `docs/LIQUIDITY_INCENTIVE_THESIS.md` §1, §3, §4, §8.
 
 ## Implementation State
 
-PR [#415](https://github.com/50thycal/kalshi_bot/pull/415) open, ready for review — solo mode, owner acceptance at merge.
+PR [#415](https://github.com/50thycal/kalshi_bot/pull/415) merged 2026-09-16 19:43Z (merge commit `ccf4f9d`), solo mode. Instrument on the default branch; activation recorded below.
 
 ## Review State
 
@@ -122,8 +122,25 @@ PR [#415](https://github.com/50thycal/kalshi_bot/pull/415) open, ready for revie
 - A replay tool over `incentive_book_events` / `incentive_trade_events` for re-scoring under a
   revised scoring version without re-collecting.
 
+## Activation state (2026-09-17)
+
+Merged, **not yet running**. D1 resolved by evidence: the `evo` Railway service is the host —
+it runs the same main loop with a read-only Kalshi client, is alive and idle
+(`EVO_ENABLED=false`, one "loop disabled" line a minute in its logs, ops `limm-logs-evo-1`),
+and a redeploy there cannot touch the live book. The agent session's attempt to set the
+variable was refused by its own permission layer (a production env mutation), so the
+activation is the operator's one request on the ops channel:
+
+```json
+{"type":"env","service":"evo","action":"set","values":{"LIQUIDITY_INCENTIVE_SHADOW_ENABLED":"true"},"id":"limm-on-1"}
+```
+
+Ops reads that prepared it: `limm-cap-1` (runner on `ccf4f9d`, the new variables and the
+report script allowlisted), `limm-env-evo-1`, `limm-logs-evo-1`. Channel reset to `noop`.
+
 ## Next Step
 
-Operator merge; then set `LIQUIDITY_INCENTIVE_SHADOW_ENABLED=true` on one worker and read
-`liquidity_incentive_report` § COLLECTOR within the first hour (alive, tape landing, programs
-listed, `period_reward_usd` plausible against kalshi.com/incentives).
+Operator sends the `env set` above (redeploys the idle evo service only); then, within the
+first hour, `{"type":"script","name":"liquidity_incentive_report","id":"limm-report-1"}` and
+read § COLLECTOR first: alive, tape landing, programs listed, `period_reward_usd` plausible
+against kalshi.com/incentives.
