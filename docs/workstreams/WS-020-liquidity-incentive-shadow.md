@@ -248,6 +248,32 @@ collector thread is governed by its own env flag.
 A retry needs a NEW `command_id` (`limm-arm-2`): `command_id` is the exactly-once key and
 `limm-arm-1` is spent.
 
+## LIVE — the smoke test placed (2026-09-17 16:00:47Z)
+
+Full arming sequence completed on the operator's sign-off. `ARM_CANARY` retry (`limm-arm-2`)
+SUCCEEDED 15:52:13Z — `limm-smoke-live-1` (`Alimm1`) + `limm-smoke-twin-1` (`Alimm1_pt3`) at one
+boundary, `boundary_match: true`. Activation (`limm-activate-1`) VERIFIED 15:57Z.
+
+**Three post-only YES bids rested on `KXHORMUZPEAK-26SEP20` strikes at 1c, 1c and 3c — $0.05 of
+real money, all caps held, twin mirrored within 43ms, zero ticker collisions with any other
+book.** Detail and the two concentration observations: [thesis §9.3](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+### Defects found in this package during arming, and how each was handled
+
+1. **Probe deployment blocked arming** (`limm-arm-1` REJECTED). `arm_live_canary` will not
+   carry a PROBE deployment across an epoch boundary. Fixed in #422 by ending it at the
+   PROBE→PAPER transition — NOT by relaxing `_CARRYABLE_KINDS`, which guards the only path
+   that creates live lineage. The rejection was atomic; nothing needed repair.
+2. **`activation_env()` would have broken another live book.** It sets
+   `LIVE_PAPER_TWIN_SUFFIX` from this book's `TWIN_SUFFIX` (`_pt3`); production carries `_pt4`
+   and the variable is SHARED, so applying it would have re-cut `Fmmsell10`'s twin to an
+   unregistered tag and taken it dark under NEW_ONLY. **Not applied** — three variables were
+   set by hand instead and the twin pinned via `LIVE_PAPER_TWINS`. The root cause is that
+   `TWIN_SUFFIX` was copied from the mmsell10 canary's docstring and never re-read against
+   production, and the test asserting `TWIN_TAG == LIVE_TAG + TWIN_SUFFIX` is self-consistent
+   and therefore proved nothing. **`activation_env()` is still wrong for any future use and
+   must be fixed.**
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).

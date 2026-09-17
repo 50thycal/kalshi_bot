@@ -255,6 +255,53 @@ stating plainly that the one-sided smoke test is, on this evidence, measuring th
 actually occurs — no pair has yet completed — and that a live one-contract bid would be
 exposed to the single-leg side of this, bounded by its 25c price cap.
 
+### 9.3 The live smoke test placed (2026-09-17 16:00:47Z) — the pipe works
+
+Operator signed off on the live test at ~15:20Z. Armed and activated the same hour; the first
+real orders rested three minutes after the worker redeployed.
+
+| ticker | side | price | qty | status | Kalshi order id |
+|---|---|---|---|---|---|
+| `KXHORMUZPEAK-26SEP20-T20` | yes | 3c | 1 | resting | `01a0b019-5b98-7a05-9e06-7f5490187b56` |
+| `KXHORMUZPEAK-26SEP20-T30` | yes | 1c | 1 | resting | `01a0b019-5b98-7e81-93a0-41455ba9889a` |
+| `KXHORMUZPEAK-26SEP20-T25` | yes | 1c | 1 | resting | `01a0b019-57b0-75f1-9044-6465d0d66290` |
+
+**Total real money committed: $0.05.** Every declared cap held, verified against the database
+rather than inferred: 1 contract per order, every price far under the 25c ceiling, exactly 3
+open orders at `MAX_OPEN_ORDERS`, $0.05 against the $10 book ceiling, and **0 orders from any
+other book on any of these tickers** — the strategy-agnostic dedup gate did its job, so the
+MMSELL canary was never contested.
+
+**The twin mirrored all three within ~43ms**, same ticker, side, price and size
+(`Alimm1_pt3`). The one-to-one property the live/paper comparison rests on holds by
+construction, not by reconciliation.
+
+**What this establishes:** the decision layer selects a market, the executor's nine gates
+admit it, a post-only order reaches Kalshi and rests, the twin records its counterfactual, and
+the whole path stays inside a pre-registered envelope. That is the entire claim of §10 and it
+is now evidenced. **It establishes nothing about the economics** — see §9.2, and see the
+per-clip arithmetic: 5c of resting size cannot earn a measurable liquidity reward.
+
+**Two honest observations, recorded rather than acted on:**
+
+1. **All three orders landed on ONE event** (`KXHORMUZPEAK-26SEP20`) at three strikes. The
+   envelope bounds contracts, price, order count and book exposure — it has **no event-level
+   concentration cap**, where mmsell carries `max_event_rungs=3`. At $0.05 this is immaterial
+   and the $10 ceiling bounds it absolutely, but it is a real property: this book will put its
+   entire order budget on correlated strikes of a single event if that is where the cheapest
+   touches are. A future version that sizes up needs an event cap; this one does not.
+2. **The cheapest-touch rule selected deep out-of-the-money tails** (1c and 3c YES). That is
+   the rule working as designed — cheapest touch is the safety lever — but it means the test
+   is resting where fills are least likely, which is the conservative end of the very
+   selection effect §9.1 recorded.
+
+**Twin-suffix mismatch, found during activation and pinned.** `activation_env()` derives
+`LIVE_PAPER_TWIN_SUFFIX` from this book's `TWIN_SUFFIX` (`_pt3`), but production carries
+`_pt4` and that variable is **SHARED** — applying it would have re-cut `Fmmsell10`'s twin to an
+unregistered tag and taken the running canary's twin dark under NEW_ONLY. It was not applied.
+The twin is pinned instead with an explicit `LIVE_PAPER_TWINS=Alimm1:Alimm1_pt3`, which
+overrides the suffix for this book alone and leaves every other book on `_pt4`.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized
