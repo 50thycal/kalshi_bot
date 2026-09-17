@@ -1,1 +1,1 @@
-{"type":"env","set":{"EXPERIMENT_OS_EXPERIMENT_COMMAND":"{\"command_id\":\"limm-arm-2\",\"action\":\"ARM_CANARY\",\"actor\":\"claude-code\",\"actor_role\":\"LIVE_OPS\",\"payload\":{\"package\":\"liquidity-incentive-mm\",\"approved_by\":\"Calvin 50thycal\"},\"schema_version\":1}"},"id":"limm-arm-2-send"}
+{"type":"xos","command":"experiment-command-show","args":["limm-arm-2"],"id":"limm-arm2-receipt-1"}
