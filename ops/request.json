@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["limm-arm-2"],"id":"limm-arm2-receipt-1"}
+{"type":"env","service":"main","id":"limm-env-read-1"}
