@@ -791,3 +791,45 @@ def test_other_frame_types_on_a_sequenced_sid_are_not_read_as_gaps(settings):
         gap = s.scalar(select(m.ExecutionCollectorEvent).where(
             m.ExecutionCollectorEvent.kind == c.EV_SEQ_GAP))
         assert gap.detail_json["expected"] == 195 and gap.detail_json["channel"] == "market_lifecycle_v2"
+
+
+def test_an_update_subscription_ok_consumes_its_seq(settings):
+    """The `ok` reply to add_markets/delete_markets carries a seq on the sid's counter.
+    Production read 83 one-number gaps in a day, one per subscription change, until this."""
+    state = _state(settings)
+    with db.session_scope() as s:
+        _order(s, koid="K-1")
+    _connect_and_track(state)
+    state.handle_message(_snapshot("KXT-A", no=[["0.9300", "10.00"]], seq=100))
+    state.handle_message(_delta("KXT-A", 93, -1, seq=101))
+    ok = {"id": 9, "type": "ok", "sid": 2, "seq": 102,
+          "msg": {"market_tickers": ["KXT-A", "KXT-B"], "market_ids": []}}
+    assert state.handle_message(ok) == []
+    assert state.handle_message(_delta("KXT-A", 93, -1, seq=103)) == []
+    with db.session_scope() as s:
+        assert s.scalars(select(m.ExecutionCollectorEvent).where(
+            m.ExecutionCollectorEvent.kind == c.EV_SEQ_GAP)).all() == []
+    assert state.markets["KXT-A"].book.valid
+
+
+def test_a_duplicate_trade_from_a_second_process_is_a_no_op_not_an_error(settings):
+    """Two containers overlap during a deploy and both see the same trade. The second
+    insert must not raise into the loop (it did: IntegrityError -> loop_error)."""
+    state = _state(settings)
+    with db.session_scope() as s:
+        _order(s, koid="K-1")
+    _connect_and_track(state)
+    # simulate the OTHER process having written the row already
+    with db.session_scope() as s:
+        repo.insert_execution_trade_event(
+            s, trade_id="t-race", market_ticker="KXT-A", ts_ms=1, received_at=T0,
+            yes_price_cents=93, no_price_cents=7, count_fp=1.0, taker_outcome_side="yes",
+            taker_book_side="bid", is_block_trade=False, sid=3, seq=1, raw_json={})
+    state.handle_message(_trade("KXT-A", 93, 1, trade_id="t-race"))
+    with db.session_scope() as s:
+        rows = s.scalars(select(m.ExecutionTradeEvent)).all()
+        errors = s.scalars(select(m.ExecutionCollectorEvent).where(
+            m.ExecutionCollectorEvent.kind == c.EV_LOOP_ERROR)).all()
+    assert len(rows) == 1 and errors == []
+    # and the in-memory buffer still saw it for features
+    assert len(state.markets["KXT-A"].trades) == 1

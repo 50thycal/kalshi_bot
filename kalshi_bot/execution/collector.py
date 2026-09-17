@@ -330,9 +330,9 @@ class CollectorState:
             if kind == "error":
                 self._record(EV_WS_ERROR, detail=json.dumps(message)[:500])
                 return []
-            if kind in ("ok", "unsubscribed"):
-                return []
-            # Sequence check for EVERY sequenced frame on a known sid, BEFORE dispatch. A sid
+            # Sequence check for EVERY sequenced frame on a known sid, BEFORE dispatch — the `ok`
+            # acknowledgement of an update_subscription included: it carries a seq on the same
+            # counter, and skipping it read as a one-number gap on every market add/remove. A sid
             # carries several frame types (the lifecycle channel emits `event_lifecycle`,
             # `event_fee_update` and `market_metadata_updated` on the same counter), so a check
             # inside only the handlers we care about reads every ignored frame as a gap — which
@@ -344,6 +344,8 @@ class CollectorState:
                 else:
                     cmds = self._check_seq(self.sid_to_channel.get(sid, kind or ""), sid, seq,
                                            msg.get("market_ticker"))
+            if kind in ("ok", "unsubscribed"):
+                return cmds
             if kind == "orderbook_snapshot":
                 return cmds + self._on_snapshot(msg, sid, seq, received_at, message)
             if kind == "orderbook_delta":

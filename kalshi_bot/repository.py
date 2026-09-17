@@ -1738,30 +1738,39 @@ def insert_execution_book_event(session, **fields) -> m.ExecutionBookEvent:
     return row
 
 
-def insert_execution_trade_event(session, **fields) -> m.ExecutionTradeEvent | None:
-    """Idempotent on `trade_id` (a resubscribe can replay a trade)."""
-    exists = session.scalar(select(func.count()).select_from(m.ExecutionTradeEvent).where(
-        m.ExecutionTradeEvent.trade_id == fields["trade_id"]))
+def _insert_unique_event(session, model, fields: dict):
+    """Insert one event row whose `trade_id` is unique, treating a duplicate as a no-op.
+
+    A check-then-insert is not enough: during a deploy overlap two worker containers hold the
+    stream for a few seconds and race on the same trade, and the loser used to surface as a
+    `loop_error`. The insert runs in a savepoint so the unique violation rolls back only itself
+    and the surrounding session stays usable (works on Postgres and SQLite alike)."""
+    from sqlalchemy.exc import IntegrityError
+
+    exists = session.scalar(select(func.count()).select_from(model).where(
+        model.trade_id == fields["trade_id"]))
     if exists:
         return None
     if fields.get("raw_json") is not None:
         fields["raw_json"] = _safe_json(fields["raw_json"])
-    row = m.ExecutionTradeEvent(**fields)
-    session.add(row)
+    row = model(**fields)
+    try:
+        with session.begin_nested():
+            session.add(row)
+            session.flush()
+    except IntegrityError:
+        return None
     return row
+
+
+def insert_execution_trade_event(session, **fields) -> m.ExecutionTradeEvent | None:
+    """Idempotent on `trade_id` (a resubscribe can replay a trade; a deploy overlap can race)."""
+    return _insert_unique_event(session, m.ExecutionTradeEvent, fields)
 
 
 def insert_execution_fill_event(session, **fields) -> m.ExecutionFillEvent | None:
-    """Idempotent on `trade_id` (== REST `fill_id`)."""
-    exists = session.scalar(select(func.count()).select_from(m.ExecutionFillEvent).where(
-        m.ExecutionFillEvent.trade_id == fields["trade_id"]))
-    if exists:
-        return None
-    if fields.get("raw_json") is not None:
-        fields["raw_json"] = _safe_json(fields["raw_json"])
-    row = m.ExecutionFillEvent(**fields)
-    session.add(row)
-    return row
+    """Idempotent on `trade_id` (== REST `fill_id`), including across a deploy overlap."""
+    return _insert_unique_event(session, m.ExecutionFillEvent, fields)
 
 
 def reconcile_execution_fill_events(session, now: datetime | None = None) -> int:
