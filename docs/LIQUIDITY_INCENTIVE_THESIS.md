@@ -148,5 +148,56 @@ capital-hour, never "did $100 earn $1/day".
 
 ## 9. Results
 
-None yet. This section is written by a later session from the ops report and is the only part
-of this document that changes after the run starts; §4–§6 stay as frozen on 2026-09-16.
+Written from the ops reports as the run proceeds. This is the only part of this document that
+changes after the run starts; §4–§6 stay as frozen on 2026-09-16.
+
+### 9.1 Day 0 — the instrument is running (2026-09-17)
+
+`LIQUIDITY_INCENTIVE_SHADOW_ENABLED=true` set on the **evo** service at 12:24:54Z
+(ops `limm-on-1`, VERIFIED, redeploy triggered). First report: ops `limm-report-1`, 12:30:02Z,
+code `dfe40b9d`. **Nothing below is evidence about the thesis** — no pair has ended, so there
+are no outcomes, no fills and no marks. It is a coverage and sanity read only.
+
+**The instrument is alive.** Collector events: `thread_started` 2, `connected` 1,
+`subscribed` 3, `discovery` 1, `market_cap_reached` 1; zero errors, zero sequence gaps, zero
+throttles. One discovery cycle at 12:25Z: **3,939 programs listed (3,938 liquidity, 1 volume),
+0 errors**, total advertised period reward $523,781.67. 79 markets snapshotted, 1,155 open
+shadow pairs (= 77 markets × 3 policies × 5 tiers).
+
+**Day-one check 1 (the `period_reward` unit) PASSES.** Median program pays **$17.36/day**,
+the largest **$500.00/day**, board-wide **$208,292.84/day**. Kalshi's own product copy says
+liquidity pools are "$10–$1,000 per market" per day. The centi-cents reading
+(`period_reward / 10,000` → USD) is therefore confirmed at both ends of the range; a
+wrong unit would have been off by 100× or 10,000×.
+
+**Day-one check 2 (program-term distributions) matches the external prior.** Median Target
+Size **1,000** contracts and Discount Factor **5,000 bps = 0.50** across the board — the
+same modes the `quantfirm` scan recorded independently (`LIQUIDITY_INCENTIVE_RESEARCH.md` §2).
+
+**Two findings that are already actionable, both recorded rather than acted on:**
+
+1. **The highest-reward programs are dead markets.** Across the tracked set (the 150
+   highest-reward programs, of which ~77 are quoting), the tape recorded **184 book events
+   and ZERO public trades in two hours**. The tickers the reward ranking selects —
+   `KXBWAYATTENDANCE`, `KXCAFAIRPLAN`, `KXNYCASKRENT`, `KXILNUCLEAR`, `KXCABUILDPERMITS` —
+   are long-dated, enormously deep (10k–180k contracts resting per side) and untraded.
+   This cuts both ways and the shadow exists to measure which way: no trades means no fills,
+   so no single-leg adverse selection (Q5) and no paired fills (Q4) — but also no evidence
+   on the risk half of the thesis, because **selecting on reward selects away from the risk
+   we came to measure**. `LIQUIDITY_INCENTIVE_MAX_MARKETS` and `_MIN_REWARD_USD` are the
+   ops-settable knobs that could widen the tracked set toward traded markets; the quote
+   policies and capital tiers are the pre-registration and are not touched.
+2. **The top-ranked reward estimates are implausibly high and are NOT to be believed yet.**
+   The best-ranked programs estimate ~$3.00/day of reward on $99.99 of committed capital —
+   ~3%/day, against a board-wide rate on resting capital that the external scan measured at
+   ~0.62%/day. Part of that gap is legitimate selection (the ranking picks the best of 3,938).
+   Part may be assumption **A4**: our hypothetical size is added to the field, and with the
+   Reference Price sitting at the touch, deep resting orders are discounted to near nothing
+   by `0.50^ticks`, so the effective field score is far smaller than the displayed depth and
+   our share (0.6%–8.5%) is correspondingly large. **Day-one check 3 is the discriminator and
+   needs the operator:** compare our `est_reward_per_hour` for one named market against the
+   projected-reward figure Kalshi shows a signed-in user on that same market. Until that
+   check runs, every `est_` reward number here is an unvalidated model output.
+
+No promotion criterion in §6 is engaged by any of this: the observation window has not
+started accumulating outcomes, and the conservative fill model has produced nothing.

@@ -1,5 +1,21 @@
 # Weather-markets research journal
 
+## LIQUIDITY-INCENTIVE MM 2026-09-17 — shadow running; reward unit confirmed, share model not
+
+Enabled on the evo service at 12:24:54Z (ops `limm-on-1`, VERIFIED). First read 12:30Z:
+collector healthy (no gaps, throttles or errors), **3,939 active liquidity programs**
+discovered in one cycle, 1,155 shadow quote pairs open across 77 markets. Two pre-registered
+day-one checks pass: the `period_reward` centi-cents unit (median $17.36/day, max $500/day,
+against Kalshi's published "$10–$1,000 per market" range) and the Target Size 1,000 /
+Discount Factor 0.50 modes. Two things are NOT yet evidence. The reward ranking selects
+**untraded** markets — zero public trades in two hours across the tracked set — so the
+adverse-selection half of the thesis has nothing to measure where the rewards are largest.
+And the top reward estimates imply ~3%/day on $100, against a ~0.62%/day board-wide rate,
+so the share model is unvalidated until someone compares one market's displayed projected
+reward against ours. No outcomes have ended; no §6 promotion criterion is engaged.
+[Thesis §9.1](LIQUIDITY_INCENTIVE_THESIS.md), [WS-020](workstreams/WS-020-liquidity-incentive-shadow.md).
+
+
 ## LIQUIDITY-INCENTIVE MM 2026-09-16 — Phase 0 shadow instrument built, not yet running
 
 Calvin's handoff: test whether genuinely quoting both sides of Kalshi's liquidity-incentive
