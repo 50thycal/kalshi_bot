@@ -20,7 +20,10 @@ from kalshi_bot.livedash import execution as ex
 from kalshi_bot.livedash import server as srv
 from kalshi_bot.models import Base
 
-T0 = datetime(2026, 9, 16, 12, 0, tzinfo=timezone.utc)
+# Relative to the wall clock on purpose. One test reads the summary over HTTP, which has no way
+# to inject `now`, so a fixed date made the whole file pass only for 24 hours after it was
+# written and then start failing on the window boundary.
+T0 = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(hours=1)
 
 
 @pytest.fixture

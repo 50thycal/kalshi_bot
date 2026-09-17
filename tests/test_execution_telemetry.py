@@ -833,3 +833,123 @@ def test_a_duplicate_trade_from_a_second_process_is_a_no_op_not_an_error(setting
     assert len(rows) == 1 and errors == []
     # and the in-memory buffer still saw it for features
     assert len(state.markets["KXT-A"].trades) == 1
+
+
+# ------------------------------- the 2026-09-17 poll burst: one order, 44 unreadable samples
+
+
+def test_an_order_that_never_reads_back_stops_earning_event_polls(settings):
+    """Production, 03:43–03:45: one order, 44 queue samples, zero readable, all wasted.
+
+    A filled or pulled order keeps reading absent until the fill stream or the reconcile marks
+    it terminal, and every book event in its market asked for another poll in the meantime."""
+    clock = _Clock()
+    client = _ReadClient({"queue_positions": []})
+    state = _state(settings, client, clock, execution_queue_poll_seconds=3600,
+                   execution_queue_event_debounce_seconds=2.0,
+                   execution_queue_max_polls_per_minute=60)
+    with db.session_scope() as s:
+        _order(s, koid="K-1", price=7)
+    _connect_and_track(state)
+    state.run_due_polls()                       # at_rest — unreadable #1
+    for i in range(8):
+        state.handle_message(_trade("KXT-A", 93, 1, trade_id=f"t-{i}", seq=i + 1))
+        clock.tick(3)
+        state.run_due_polls()
+    assert len(client.calls) == c.UNREADABLE_STREAK_GATE, (
+        "after the gate an event poll can only write another NULL tick, so it is not run")
+    # the order is still tracked and still active — narrowed, not abandoned
+    assert [o.kalshi_order_id for o in state.active_orders()] == ["K-1"]
+
+
+def test_a_quiet_order_is_still_sampled_on_the_interval(settings):
+    clock = _Clock()
+    client = _ReadClient({"queue_positions": []})
+    state = _state(settings, client, clock, execution_queue_poll_seconds=20,
+                   execution_queue_event_debounce_seconds=2.0)
+    with db.session_scope() as s:
+        _order(s, koid="K-1", price=7)
+    _connect_and_track(state)
+    for i in range(6):
+        state.handle_message(_trade("KXT-A", 93, 1, trade_id=f"t-{i}", seq=i + 1))
+        clock.tick(3)
+        state.run_due_polls()
+    before = len(client.calls)
+    clock.tick(20)
+    assert state.run_due_polls() == c.TRIGGER_INTERVAL
+    assert len(client.calls) == before + 1, "the interval keeps checking whether it came back"
+
+
+def test_a_recovered_order_earns_event_polls_again(settings):
+    clock = _Clock()
+    payload = {"queue_positions": []}
+    client = _ReadClient(lambda: payload)
+    state = _state(settings, client, clock, execution_queue_poll_seconds=20,
+                   execution_queue_event_debounce_seconds=2.0)
+    with db.session_scope() as s:
+        _order(s, koid="K-1", price=7)
+    _connect_and_track(state)
+    for i in range(6):
+        state.handle_message(_trade("KXT-A", 93, 1, trade_id=f"t-{i}", seq=i + 1))
+        clock.tick(3)
+        state.run_due_polls()
+    assert state.orders["K-1"].unreadable_streak >= c.UNREADABLE_STREAK_GATE
+    payload = {"queue_positions": [
+        {"order_id": "K-1", "market_ticker": "KXT-A", "queue_position_fp": "5.00"}]}
+    clock.tick(20)
+    state.run_due_polls()                       # interval poll reads it back
+    assert state.orders["K-1"].unreadable_streak == 0
+    calls = len(client.calls)
+    state.handle_message(_trade("KXT-A", 93, 1, trade_id="t-back", seq=99))
+    clock.tick(3)
+    assert state.run_due_polls() == c.TRIGGER_EVENT_TRADE
+    assert len(client.calls) == calls + 1
+    with db.session_scope() as s:
+        ev = s.scalar(select(m.ExecutionCollectorEvent).where(
+            m.ExecutionCollectorEvent.kind == c.EV_POLL_RECOVERED))
+    assert ev is not None and "readable again" in ev.detail
+
+
+def test_an_absent_row_is_recorded_once_per_episode_not_once_per_poll(settings):
+    clock = _Clock()
+    client = _ReadClient({"queue_positions": []})
+    state = _state(settings, client, clock, execution_queue_poll_seconds=5,
+                   execution_queue_event_debounce_seconds=2.0)
+    with db.session_scope() as s:
+        _order(s, koid="K-1", price=7)
+    _connect_and_track(state)
+    for _ in range(10):
+        clock.tick(6)
+        state.run_due_polls()
+    with db.session_scope() as s:
+        missing = s.scalars(select(m.ExecutionCollectorEvent).where(
+            m.ExecutionCollectorEvent.kind == c.EV_POLL_MISSING)).all()
+        narrowed = s.scalars(select(m.ExecutionCollectorEvent).where(
+            m.ExecutionCollectorEvent.kind == c.EV_POLL_NARROWED)).all()
+        throttled = s.scalars(select(m.ExecutionCollectorEvent).where(
+            m.ExecutionCollectorEvent.kind == c.EV_THROTTLED)).all()
+    assert len(missing) == 1, "one episode is one fact, not one row per poll"
+    assert len(client.calls) == 10, "every interval still polled; only event polls are narrowed"
+    assert len(narrowed) == 1 and "narrowed to the interval" in narrowed[0].detail
+    assert not throttled, "a narrowed cadence is not a dropped raw event"
+
+
+def test_a_terminal_poll_is_never_gated(settings):
+    """The last sample of a filled order is the one we most need, so the gate must not eat it."""
+    clock = _Clock()
+    client = _ReadClient({"queue_positions": []})
+    state = _state(settings, client, clock, execution_queue_poll_seconds=3600,
+                   execution_queue_event_debounce_seconds=2.0)
+    with db.session_scope() as s:
+        _order(s, koid="K-1", price=7)
+        _order(s, koid="K-2", price=7)
+    _connect_and_track(state)
+    for i in range(6):
+        state.handle_message(_trade("KXT-A", 93, 1, trade_id=f"t-{i}", seq=i + 1))
+        clock.tick(3)
+        state.run_due_polls()
+    quiet = len(client.calls)
+    assert state.run_due_polls() is None
+    state.handle_message(_fill("K-2", "KXT-A", 1, trade_id="f-9"))
+    assert state.run_due_polls() == c.TRIGGER_TERMINAL
+    assert len(client.calls) == quiet + 1
