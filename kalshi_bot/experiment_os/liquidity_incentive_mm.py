@@ -510,6 +510,47 @@ def register(session, *, actor: str = "operator", promotion_sample_floor: int | 
             "promotion_gate": promotion_gate, "keep_gate": keep_gate, "registered_at": at}
 
 
+def _end_probe_deployments(session, version: ExperimentVersion, *, at: datetime) -> list[str]:
+    """End every open PROBE deployment on the current epoch. Returns the keys ended.
+
+    WHY THIS IS NOT HOUSEKEEPING. `arm_live_canary` closes the operating epoch and opens a
+    fresh live one, carrying the deployments that were open across the boundary so the paper
+    parent keeps resolving (XOS-000011). `carry_deployments_forward` refuses any kind but
+    `paper`, and a PROBE deployment left open is therefore a hard refusal of the whole arming:
+
+        cannot carry ['limm-shadow-probe-1 (probe)'] across an epoch boundary
+
+    That was observed in production on 2026-09-17 (`limm-arm-1`, REJECTED, rolled back
+    cleanly). The engine is RIGHT to refuse: a probe is a validation instrument belonging to
+    the PROBE stage, and carrying one into a live epoch would claim the shadow collector is
+    part of the live lineage. So the fix is not to make it carryable — it is to end it at the
+    moment its stage ends, which is the PROBE→PAPER transition.
+
+    Ending the deployment does NOT orphan its evidence: metric scopes resolve over every
+    deployment in the epoch, ended or not, and this package's `incentive_*` metrics read the
+    shadow tables over a time window rather than by tag. Only the ENFORCEMENT resolver looks
+    at `ended_at`, and the probe deployment is tagless, so nothing it carried can stop
+    resolving.
+    """
+    from .models import ExperimentEpoch
+
+    epoch = session.scalar(
+        select(ExperimentEpoch).where(
+            ExperimentEpoch.version_id == version.id,
+            ExperimentEpoch.ended_at.is_(None),
+        )
+    )
+    if epoch is None:
+        return []
+    ended: list[str] = []
+    for dep in service.open_deployments(session, epoch):
+        if dep.kind != "probe":
+            continue
+        service.end_deployment(session, dep, ended_at=at)
+        ended.append(dep.deployment_key)
+    return ended
+
+
 def arm(
     session,
     *,
@@ -525,7 +566,12 @@ def arm(
 
     The probe-gate re-evaluation here is STRICTER than the engine: `transition_experiment` does
     not require a PASS for PROBE -> PAPER, and this package requires one anyway, because the
-    only reason this experiment reaches PAPER at all is to become armable."""
+    only reason this experiment reaches PAPER at all is to become armable.
+
+    The PROBE -> PAPER step also ENDS the shadow probe deployment. That is not tidying: an open
+    probe deployment makes `arm_live_canary` refuse outright, because it carries the epoch's
+    open deployments across the live boundary and `carry_deployments_forward` admits `paper`
+    only. See `_end_probe_deployments` for why the engine is right to refuse."""
     from .evaluator import evaluate_gate
 
     at = started_at or _now()
@@ -555,6 +601,7 @@ def arm(
             reason=("the shadow instrument passed its own pre-registered health bar on "
                     "post-registration evidence; PAPER is entered only to become armable"),
         )
+        _end_probe_deployments(session, version, at=at)
     if experiment.state != LifecycleState.PAPER.value:
         raise service.ExperimentOsError(
             f"{EXPERIMENT_KEY} is {experiment.state}; a live canary arms from PAPER")

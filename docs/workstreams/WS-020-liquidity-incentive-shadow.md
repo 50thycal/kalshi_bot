@@ -213,6 +213,41 @@ things changed since day 0:
 
 Nothing was acted on. The pre-registered window is ≥ 14 days.
 
+## Arming (2026-09-17) — step 1 done, step 2 refused and fixed
+
+Operator signed off on the live test at ~15:20Z. Sequence so far:
+
+1. **`xos package-preflight liquidity-incentive-mm` → GO** (15:08Z). NEW_ONLY, complete
+   snapshot `4f9adf15daa6`, experiment unregistered, no tag collisions, transport idle.
+   Its suggested envelope templates `approved_by`/`reason` into a `REGISTER_PACKAGE` payload,
+   which that action rejects as unknown fields — sent with `package` alone.
+2. **`REGISTER_PACKAGE` (`limm-register-1`) SUCCEEDED** 14:11:04Z. v1 frozen, e1 open, three
+   gates registered, risk envelope confirmed in the DB (`smoke_test_stage_1a`, 25c, $10),
+   experiment at PROBE. Evidence clock starts at the freeze instant.
+3. **Gate evidence at 15:22Z, comfortably over every bar**: 14 discovery cycles (0 errors),
+   3,330 shadow quotes, 3,240 ended conservative outcomes, 4,138 programmes.
+4. **`ARM_CANARY` (`limm-arm-1`) REJECTED** 15:25:54Z — a defect in THIS package, not a
+   transient failure:
+
+   > cannot carry ['limm-shadow-probe-1 (probe)'] across an epoch boundary: only ['paper']
+   > deployments may be re-registered automatically.
+
+   `arm_live_canary` closes the operating epoch and carries its open deployments across the
+   live boundary (XOS-000011); `carry_deployments_forward` admits `paper` only. The package
+   left its tagless shadow probe open. **The engine is right to refuse** — a probe is a
+   validation instrument and carrying one into a live epoch would claim the shadow collector
+   is part of the live lineage. The rejection was atomic: state still PROBE, one open epoch,
+   no live lineage, no exposure.
+
+**Fix:** `arm()` now ends the probe deployment at the PROBE→PAPER transition, which is the
+moment its stage ends. Reproduced as a test that fails with the verbatim production error
+without the fix. Ending it orphans no evidence — metric scopes resolve over ended deployments,
+the `incentive_*` metrics read the shadow tables by time window rather than by tag, and the
+collector thread is governed by its own env flag.
+
+A retry needs a NEW `command_id` (`limm-arm-2`): `command_id` is the exactly-once key and
+`limm-arm-1` is spent.
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).
