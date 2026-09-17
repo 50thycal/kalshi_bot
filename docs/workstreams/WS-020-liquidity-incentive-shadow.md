@@ -122,25 +122,28 @@ PR [#415](https://github.com/50thycal/kalshi_bot/pull/415) merged 2026-09-16 19:
 - A replay tool over `incentive_book_events` / `incentive_trade_events` for re-scoring under a
   revised scoring version without re-collecting.
 
-## Activation state (2026-09-17)
+## Activation state (2026-09-17) — RUNNING
 
-Merged, **not yet running**. D1 resolved by evidence: the `evo` Railway service is the host —
-it runs the same main loop with a read-only Kalshi client, is alive and idle
-(`EVO_ENABLED=false`, one "loop disabled" line a minute in its logs, ops `limm-logs-evo-1`),
-and a redeploy there cannot touch the live book. The agent session's attempt to set the
-variable was refused by its own permission layer (a production env mutation), so the
-activation is the operator's one request on the ops channel:
+**Enabled 2026-09-17 12:24:54Z.** D1 is closed: the host is the **evo** Railway service — it
+runs the same main loop with a read-only Kalshi client, was alive and idle
+(`EVO_ENABLED=false`), and a redeploy there cannot touch the live book. The operator
+authorized the mutation in this session; ops `limm-on-1` set
+`LIQUIDITY_INCENTIVE_SHADOW_ENABLED=true` (BEFORE unset → AFTER true, **VERDICT: VERIFIED**,
+redeploy triggered). Ops channel reset to `noop`.
 
-```json
-{"type":"env","service":"evo","action":"set","values":{"LIQUIDITY_INCENTIVE_SHADOW_ENABLED":"true"},"id":"limm-on-1"}
-```
-
-Ops reads that prepared it: `limm-cap-1` (runner on `ccf4f9d`, the new variables and the
-report script allowlisted), `limm-env-evo-1`, `limm-logs-evo-1`. Channel reset to `noop`.
+First read (`limm-report-1`, 12:30:02Z, code `dfe40b9d`): collector alive, 3,939 programs
+discovered with 0 errors, 1,155 open shadow pairs over 77 markets, no sequence gaps or
+throttles. Two day-one checks pass (the centi-cents reward unit; Target Size 1000 /
+Discount Factor 0.50 modes). Two findings are recorded in
+[the thesis §9.1](../LIQUIDITY_INCENTIVE_THESIS.md): the reward ranking selects **untraded**
+markets (zero trades in two hours), and the top reward estimates imply ~3%/day against a
+~0.62%/day board rate, so the share model is unvalidated until checked against Kalshi's own
+projected-reward display.
 
 ## Next Step
 
-Operator sends the `env set` above (redeploys the idle evo service only); then, within the
-first hour, `{"type":"script","name":"liquidity_incentive_report","id":"limm-report-1"}` and
-read § COLLECTOR first: alive, tape landing, programs listed, `period_reward_usd` plausible
-against kalshi.com/incentives.
+Operator: run day-one check 3 — open one named market from the ranking while signed in to
+Kalshi and compare its displayed projected reward against our `est_reward_per_hour`. That is
+the only external calibration of the share model, and no `est_` reward figure should be
+believed until it runs. Then let the shadow accumulate to the §6 window (≥ 14 days) before any
+read of the headline table.
