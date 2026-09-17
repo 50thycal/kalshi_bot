@@ -197,6 +197,22 @@ was written for. **This test proves plumbing. It cannot validate the reward mode
   `arm_live_canary`, which is the only sanctioned arming path, so it was not used. **This
   belongs in an Experiment OS issue** and is not fixed here.
 
+## Shadow read, hour 1.5 (2026-09-17 13:49Z)
+
+Ops `limm-report-2`. Collector healthy (0 discovery errors; 4 sequence gaps and 2 disconnects
+recorded and recovered). Full read in [thesis §9.2](../LIQUIDITY_INCENTIVE_THESIS.md). Three
+things changed since day 0:
+
+1. **First outcomes ended, and P(both | one) = 0.000 at n=15.** Not one pair completed. §6
+   criterion 6 requires ≥ 0.25 on the stated ground that below it the pair premise is wrong.
+   At a 0.06-day span the correct reading is HOLD, and §6 is not retuned — but this is the
+   criterion most likely to decide the thesis and it is pointing one way.
+2. **Single-leg adverse selection dwarfs the reward on that sample**: mean −$1.96 mark-to-bid
+   against $0.0121 of estimated reward, all behind deep competing size.
+3. **Still no trades where the rewards are**: 9 public trades in 3h across 167 markets.
+
+Nothing was acted on. The pre-registered window is ≥ 14 days.
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).

@@ -202,6 +202,59 @@ same modes the `quantfirm` scan recorded independently (`LIQUIDITY_INCENTIVE_RES
 No promotion criterion in §6 is engaged by any of this: the observation window has not
 started accumulating outcomes, and the conservative fill model has produced nothing.
 
+### 9.2 Hour 1.5 — the first fills, and P(both | one) = 0.000 (2026-09-17 13:49Z)
+
+Ops `limm-report-2`, code `7a5f1e6d`, 3h event window / 1d aggregate window. **Observation
+span 0.06 days against a pre-registered window of ≥ 14. Nothing here is a verdict, and §6
+forbids reading one; the criteria are not retuned after seeing results.** What follows is
+recorded because it is the first evidence of the kind the thesis is about, and because it
+points hard enough that the direction should be on the record before it is confirmed or
+overturned.
+
+**The instrument is healthy and the tape is growing.** Last event 13:48:36Z. Discovery at
+13:48Z: 3,959 listed, 3,958 liquidity, **0 errors**, pool $524,941.67, 12 new terms, 11 gone.
+Tape over 3h: 5,307 book events, 5,469 open shadow pairs, 167 markets snapshotted. Four
+sequence gaps and two disconnects were recorded and recovered (4 `snapshot_requested`); 77
+`unsubscribed` and 19 `market_cap_reached` are the tracked set churning against the 150-market
+bound as programmes are added and dropped, not a fault.
+
+**Day-0 finding 1 is confirmed and has not improved: 9 public trades in three hours** across
+167 tracked markets. The reward ranking still selects untraded books.
+
+**Day-0 finding 2 (the share model) is now visible in the ranking and still unvalidated.** The
+top entries are `KXMLBSEASONGAMES` at $500/day advertised, where our estimated share of the
+pool is **0.5–0.6%** against fields of 27k–60k resting contracts per side — which is why they
+read `WATCH(share)` rather than `SHADOW`. Day-one check 3 (comparing one market's displayed
+projected reward against ours, signed in) has still not been run and remains the only external
+calibration of these numbers.
+
+**The first outcomes have ended, and every one of them was one-sided.**
+
+| model | mix | P(both \| one) | n |
+|---|---|---|---|
+| conservative | 1,836 neither · 8 yes_only · 7 partial_yes | **0.000** | 15 |
+| queue_aware | 1,836 neither · 13 yes_only · 2 partial_yes | **0.000** | 15 |
+| optimistic | 1,826 neither · 15 yes_only · 10 no_only | **0.000** | 25 |
+
+§6 criterion 6 requires **P(both | one) ≥ 0.25**, on the stated ground that below it "the
+'pair' premise is wrong and this is a one-sided book". At n=15 the observed value is zero:
+not one pair completed. The honest reading at this sample is HOLD, exactly as §6 says — but
+it is worth naming what a hold on *this* number would mean if it survives the window, because
+it is the criterion most likely to decide the thesis.
+
+**Single-leg adverse selection is large relative to the reward, on the same tiny sample.**
+Conservative single legs: mean mark-to-bid **−$1.96**, worst **−$2.89**, against a mean
+estimated reward of **$0.0121** on those same legs — roughly 160× the reward. Every single-leg
+outcome so far sat behind DEEP competing size at placement. The headline table is negative at
+every policy and tier under every fill model, with one exception that is sampling noise at this
+span (C_conservative at $500, conservative model, +$0.10).
+
+**What this does and does not say about Phase 1a.** It does not authorize or forbid anything:
+§10's gates read instrument health, not economics, and are untouched by this. But it is worth
+stating plainly that the one-sided smoke test is, on this evidence, measuring the case that
+actually occurs — no pair has yet completed — and that a live one-contract bid would be
+exposed to the single-leg side of this, bounded by its 25c price cap.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized
