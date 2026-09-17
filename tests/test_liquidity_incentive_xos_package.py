@@ -220,3 +220,46 @@ def test_the_incentive_metrics_are_all_provided():
     for key, d in REGISTRY.items():
         if key.startswith("incentive_"):
             assert d.provided, key
+
+
+# ------------------------------------------------------- the transport's floor keyword
+
+
+def test_register_accepts_the_transport_floor_keyword():
+    """`_register_package` always passes `promotion_sample_floor=`; a package whose register()
+    cannot take it fails at the WORKER with a TypeError, which is how MARKTANGLE-2's first
+    envelope died."""
+    import inspect
+    assert "promotion_sample_floor" in inspect.signature(pkg.register).parameters
+
+
+def test_the_floor_may_tighten_the_thinness_bar_but_never_loosen_it():
+    registered = next(c["value"] for c in pkg.PROMOTION_GATE_SPEC["hold_if"]
+                      if c["metric"] == "incentive_shadow_quotes")
+    assert pkg._promotion_spec(None) is pkg.PROMOTION_GATE_SPEC
+    raised = pkg._promotion_spec(registered + 300)
+    assert next(c["value"] for c in raised["hold_if"]
+                if c["metric"] == "incentive_shadow_quotes") == registered + 300
+    # The other clauses are untouched, and the registered spec is not mutated.
+    assert raised["pass_all"] == pkg.PROMOTION_GATE_SPEC["pass_all"]
+    assert next(c["value"] for c in pkg.PROMOTION_GATE_SPEC["hold_if"]
+                if c["metric"] == "incentive_shadow_quotes") == registered
+    # Loosening a pre-registered bar from an environment variable is the one thing the
+    # envelope's narrow vocabulary exists to prevent.
+    with pytest.raises(svc.ExperimentOsError, match="BELOW the registered"):
+        pkg._promotion_spec(registered - 1)
+
+
+def test_the_floor_reaches_the_registered_gate(xos_session, xos_platform):
+    out = pkg.register(xos_session, actor="tester", promotion_sample_floor=999)
+    spec = out["promotion_gate"].spec_json
+    assert next(c["value"] for c in spec["hold_if"]
+                if c["metric"] == "incentive_shadow_quotes") == 999
+
+
+def test_book_params_is_declared_none_rather_than_omitted():
+    """`runtime_config_check` recomputes book_params for every NAMED tag. Declaring None keeps
+    declared and running in agreement; an invented spec the runtime cannot produce would put
+    the book permanently in EXPERIMENT_CONFIG_DRIFT."""
+    assert pkg.BOOK_PARAMS is None
+    assert "book_spec" not in pkg.material_config()

@@ -70,6 +70,16 @@ PAPER_TAG = limm.PAPER_TAG
 LIVE_TAG = limm.LIVE_TAG
 TWIN_TAG = limm.TWIN_TAG
 
+#: This book has NO `mmsell_variants` spec, and that is what None states. The live/paper twin
+#: harness builds the book from the runtime allowlist; its economics are the module constants in
+#: `liquidity_incentive.live`, which the config-drift detector does not read. Declaring None
+#: rather than omitting the name is deliberate: `runtime_config_check` recomputes `book_params`
+#: for every named tag and would find None here too, so declared and running agree, and the
+#: live-arming package contract (`tests/test_live_material_baseline_contract.py`) can still hold
+#: this book to the same shape as every other. Registering an invented spec would instead put
+#: the book permanently in EXPERIMENT_CONFIG_DRIFT.
+BOOK_PARAMS: str | None = None
+
 PROBE_DEPLOYMENT_KEY = "limm-shadow-probe-1"
 LIVE_DEPLOYMENT_KEY = "limm-smoke-live-1"
 TWIN_DEPLOYMENT_KEY = "limm-smoke-twin-1"
@@ -318,18 +328,50 @@ OPERATOR_DECISIONS: dict[str, str] = {
 # ---------------------------------------------------------------------------
 
 
+def _promotion_spec(sample_floor: int | None) -> dict:
+    """The promotion gate, with the transport's optional sample floor applied.
+
+    `_register_package` always passes `promotion_sample_floor=`, so every package must accept
+    it. Here it raises the gate's THINNESS bar — the `incentive_shadow_quotes` hold_if — because
+    that clause is this gate's sample floor in all but name. (It is a hold_if rather than a
+    `sample` block for a structural reason: a `sample` floor is keyed by ARM, and an arm-scoped
+    read of an experiment-wide metric is refused by the provider.)
+
+    It can only ever be RAISED. A floor below the registered 200 would loosen a pre-registered
+    bar from an environment variable, which is the one thing the envelope's narrow vocabulary
+    exists to prevent."""
+    if sample_floor is None:
+        return PROMOTION_GATE_SPEC
+    floor = int(sample_floor)
+    registered = next(c["value"] for c in PROMOTION_GATE_SPEC["hold_if"]
+                      if c["metric"] == "incentive_shadow_quotes")
+    if floor < registered:
+        raise service.ExperimentOsError(
+            f"promotion_sample_floor={floor} is BELOW the registered thinness bar "
+            f"({registered} shadow quotes). An envelope may tighten a pre-registered gate, "
+            "never loosen one — register a new version if the bar itself should change."
+        )
+    spec = {k: (list(v) if isinstance(v, list) else v) for k, v in PROMOTION_GATE_SPEC.items()}
+    spec["hold_if"] = [
+        ({**c, "value": floor} if c["metric"] == "incentive_shadow_quotes" else c)
+        for c in PROMOTION_GATE_SPEC["hold_if"]
+    ]
+    return spec
+
+
 def material_config(*, live_tag: str = LIVE_TAG, twin_tag: str = TWIN_TAG) -> dict:
     """The live deployment's `config_json`. `book_params` is None for both tags because this
     book's parameters are CODE constants, not an `mmsell_variants` spec — see RISK_ENVELOPE."""
     from . import enforcement
 
     return {
-        "material": enforcement.live_material_block(books={live_tag: (twin_tag, None)}),
+        "material": enforcement.live_material_block(books={live_tag: (twin_tag, BOOK_PARAMS)}),
         "risk_envelope": RISK_ENVELOPE,
     }
 
 
-def register(session, *, actor: str = "operator", now: datetime | None = None) -> dict:
+def register(session, *, actor: str = "operator", promotion_sample_floor: int | None = None,
+             now: datetime | None = None) -> dict:
     """Create the experiment, freeze v1 with its envelope and all three gates, open e1, register
     the tagless shadow probe deployment, and walk IDEA -> PROBE.
 
@@ -337,6 +379,7 @@ def register(session, *, actor: str = "operator", now: datetime | None = None) -
     so they are judged on data gathered after their bars were frozen. Arms nothing, places
     nothing, opens no exposure."""
     at = now or _now()
+    promo = _promotion_spec(promotion_sample_floor)
     if get_experiment(session, EXPERIMENT_KEY) is not None:
         raise service.ExperimentOsError(
             f"experiment {EXPERIMENT_KEY!r} already exists — this package registers it once"
@@ -429,7 +472,7 @@ def register(session, *, actor: str = "operator", now: datetime | None = None) -
     )
     promotion_gate = service.register_gate(
         session, version, gate_key=PROMOTION_GATE_KEY, kind="promotion",
-        spec=PROMOTION_GATE_SPEC, from_state=LifecycleState.PAPER,
+        spec=promo, from_state=LifecycleState.PAPER,
         to_state=LifecycleState.LIVE_CANARY, registered_at=at,
         notes=("readiness to spend $10, not an economic bar — see the spec's own description"),
     )
@@ -566,7 +609,7 @@ def _gate(session, version: ExperimentVersion, gate_key: str) -> ExperimentGate:
 
 
 __all__ = [
-    "ACTIVATION_VARS", "ARM_KEY", "EXPERIMENT_KEY", "KEEP_GATE_KEY", "KEEP_GATE_SPEC",
+    "ACTIVATION_VARS", "ARM_KEY", "BOOK_PARAMS", "EXPERIMENT_KEY", "KEEP_GATE_KEY", "KEEP_GATE_SPEC",
     "LIVE_DEPLOYMENT_KEY", "LIVE_TAG", "OPERATOR_DECISIONS", "PAPER_TAG",
     "PROBE_DEPLOYMENT_KEY", "PROBE_GATE_KEY", "PROBE_GATE_SPEC", "PROMOTION_GATE_KEY",
     "PROMOTION_GATE_SPEC", "RISK_ENVELOPE", "TWIN_DEPLOYMENT_KEY", "TWIN_TAG",
