@@ -47,6 +47,11 @@ TRIGGER_EVENT_DELTA = "event:delta"
 TRIGGER_EVENT_FILL = "event:fill"
 TRIGGER_TERMINAL = "terminal"
 
+# Consecutive absent-or-unreadable queue rows after which an order stops earning event-driven
+# polls. Three, not one: a single unreadable row can be transient, and the cost of two extra
+# polls is far smaller than the cost of going blind on an order that is genuinely still resting.
+UNREADABLE_STREAK_GATE = 3
+
 # Collector-event kinds (execution_collector_events.kind).
 EV_THREAD_STARTED = "thread_started"
 EV_THREAD_STOPPED = "thread_stopped"
@@ -65,6 +70,8 @@ EV_RATE_LIMITED = "rate_limited"
 EV_THROTTLED = "throttled"
 EV_LOOP_ERROR = "loop_error"
 EV_UNPARSED = "unparsed"
+EV_POLL_NARROWED = "poll_narrowed"
+EV_POLL_RECOVERED = "poll_recovered"
 
 MARKET_CHANNELS = ("orderbook_delta", "trade")
 ACCOUNT_CHANNELS = ("fill", "user_orders", "market_lifecycle_v2")
@@ -99,6 +106,11 @@ class TrackedOrder:
     terminal_reason: str | None = None
     sampled_at_rest: bool = False
     sampled_terminal: bool = False
+    # Consecutive polls whose queue row for this order came back absent or unreadable. An order
+    # that has stopped resting (filled, pulled) reads this way until the fill stream or the
+    # reconcile marks it terminal, which lags — so the streak is what tells us that an
+    # event-driven poll has nothing left to learn about it.
+    unreadable_streak: int = 0
 
 
 @dataclass
@@ -576,6 +588,19 @@ class CollectorState:
             self._event_poll_trigger = trigger
         # keep the earliest-due request; a later trigger does not push it out
 
+    def _event_poll_can_learn(self) -> bool:
+        """False when every active order has gone quiet on the queue endpoint.
+
+        A filled or pulled order keeps reading absent/unreadable until the fill stream or the
+        reconcile marks it terminal, and that lag is measured in minutes. Until then every book
+        delta in its market asks for another poll that can only write another NULL tick. Interval
+        polls keep running, so an order that recovers is picked back up within one interval and
+        its streak resets — this narrows the cadence, it never stops sampling."""
+        active = self.active_orders()
+        if not active:
+            return True
+        return any(o.unreadable_streak < UNREADABLE_STREAK_GATE for o in active)
+
     def _event_budget_ok(self, now: datetime) -> bool:
         cap = int(self.settings.execution_queue_max_polls_per_minute)
         cutoff = now - timedelta(seconds=60)
@@ -596,6 +621,8 @@ class CollectorState:
         if self._event_poll_due is not None and now >= self._event_poll_due:
             trigger = self._event_poll_trigger or TRIGGER_EVENT_DELTA
             self._event_poll_due, self._event_poll_trigger = None, None
+            if trigger != TRIGGER_TERMINAL and not self._event_poll_can_learn():
+                return None
             if self._event_budget_ok(now):
                 self._event_poll_times.append(now)
                 self.poll_queue(trigger, now)
@@ -639,19 +666,30 @@ class CollectorState:
             oid = order_id_of(row)
             if oid is not None:
                 raw_by_id[str(oid)] = row
-        if unreadable:
-            self._record(EV_UNPARSED, detail=f"{len(unreadable)} queue rows unreadable",
-                         detail_json={"sample": str(unreadable[:2])[:600]})
         failed_by_id = {oid: r for r in unreadable if (oid := order_id_of(r)) is not None}
         self._last_interval_poll = now   # any sample restarts the interval clock
         written = 0
         missing: list[str] = []
+        gated: list[str] = []
+        recovered: list[str] = []
         with self.session_factory() as session:
             for od in targets:
                 sample = samples.get(od.kalshi_order_id)
                 raw = raw_by_id.get(od.kalshi_order_id) or failed_by_id.get(od.kalshi_order_id)
-                if sample is None and failure is None and od.terminal_at is None:
-                    missing.append(od.kalshi_order_id)
+                if failure is None and od.terminal_at is None:
+                    # The streak, and the events derived from it, are per EPISODE rather than per
+                    # poll: an order that reads absent for three minutes is one fact, not ninety.
+                    if sample is None:
+                        od.unreadable_streak += 1
+                        if od.unreadable_streak == 1:
+                            missing.append(od.kalshi_order_id)
+                        elif od.unreadable_streak == UNREADABLE_STREAK_GATE:
+                            gated.append(od.kalshi_order_id)
+                    else:
+                        if od.unreadable_streak >= UNREADABLE_STREAK_GATE:
+                            recovered.append(f"{od.kalshi_order_id}"
+                                             f" after {od.unreadable_streak} unreadable")
+                        od.unreadable_streak = 0
                 tick_trigger = TRIGGER_TERMINAL if od.terminal_at is not None else trigger
                 if od.terminal_at is None and not od.sampled_at_rest:
                     tick_trigger = TRIGGER_AT_REST
@@ -670,9 +708,27 @@ class CollectorState:
                     od.sampled_at_rest = True
                 else:
                     od.sampled_terminal = True
+        # An unreadable row is worth a row of its own only while it is news: either it belongs to
+        # no order we track, or to one that has just gone quiet. Repeats are the streak's job.
+        newly_quiet = set(missing)
+        if unreadable and any(
+                (oid := order_id_of(r)) is None or str(oid) in newly_quiet for r in unreadable):
+            self._record(EV_UNPARSED, detail=f"{len(unreadable)} queue rows unreadable",
+                         detail_json={"sample": str(unreadable[:2])[:600]})
         if missing:
             self._record(EV_POLL_MISSING, detail=f"{len(missing)} active orders absent from batch",
                          detail_json={"order_ids": missing[:50], "trigger": trigger})
+        if gated:
+            # Its own kind, not EV_THROTTLED: dropping raw events under load and narrowing the
+            # cadence on an order that has gone quiet are different facts about different things.
+            self._record(EV_POLL_NARROWED,
+                         detail=f"{len(gated)} orders quiet for {UNREADABLE_STREAK_GATE} polls;"
+                                " event polls narrowed to the interval",
+                         detail_json={"order_ids": gated[:50], "trigger": trigger})
+        if recovered:
+            self._record(EV_POLL_RECOVERED,
+                         detail=f"{len(recovered)} orders readable again",
+                         detail_json={"orders": recovered[:50], "trigger": trigger})
         return written
 
     def _features(self, od: TrackedOrder, now: datetime) -> dict:

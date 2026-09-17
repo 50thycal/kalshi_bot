@@ -237,7 +237,10 @@ live_orders row resting with kalshi_order_id
   ├─ every 20 s                → queue poll (interval)
   ├─ trade at our price, or delta at our price/better (excluding our own)
   │                            → queue poll (event:trade | event:delta), debounced 2 s,
-  │                              budget 30/min shared across orders
+  │                              budget 30/min shared across orders, and skipped entirely
+  │                              while every active order has read absent/unreadable for
+  │                              UNREADABLE_STREAK_GATE (3) consecutive polls — interval
+  │                              polls continue, so recovery resets the streak
   ├─ fill (WS)                 → execution_fill_events; queue poll (event:fill) if still resting
   ├─ user_orders               → execution_order_events; remaining count cached
   └─ terminal (executed/canceled in DB or WS) → queue poll attempt (terminal), then keep the
@@ -296,7 +299,7 @@ Mapped to the handoff's 18 required checks:
 | 14 | no post-order leakage into decision features | `test_decision_context_is_written_before_submit_and_carries_no_post_order_keys` |
 | 15 | paper/live linkage keeps gate distinctions | `test_context_row_records_twin_tag_and_never_a_paper_outcome` |
 | 16 | telemetry cannot change exposure | `test_the_collector_client_has_no_write_methods` + `test_collector_thread_never_touches_live_orders_status` |
-| 17 | polling obeys the configured budget | `test_event_polls_are_capped_per_minute_and_debounced` |
+| 17 | polling obeys the configured budget | `test_event_polls_are_capped_per_minute_and_debounced`, `test_an_order_that_never_reads_back_stops_earning_event_polls`, `test_a_quiet_order_is_still_sampled_on_the_interval`, `test_a_recovered_order_earns_event_polls_again`, `test_a_terminal_poll_is_never_gated` |
 | 18 | several resting orders tracked safely | `test_many_orders_on_many_markets_share_one_batch_poll` |
 
 Plus: migration single-head, models/migration column parity for the new tables, ops script
