@@ -1,1 +1,1 @@
-{"type":"xos","command":"experiment-command-show","args":["limm-register-1"],"id":"limm-receipt-1"}
+{"type":"xos","command":"show","args":["liquidity-incentive-mm"],"id":"limm-show-1"}
