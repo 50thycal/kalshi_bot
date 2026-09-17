@@ -363,6 +363,50 @@ health, not economics. But it reinforces what that test is measuring — a one-s
 is not a degraded version of the strategy, it is empirically the only version that has ever
 occurred.
 
+### 9.5 Hour 7.5 — the first completed pairs, and why they do not rescue the premise (2026-09-17 19:58Z)
+
+Ops `limm-report-4`, span **0.31 days** against ≥ 14. Still HOLD. §9.2 and §9.4 both recorded
+`P(both | one) = 0.000`; it has now moved, and the shape of the move is the finding.
+
+| model | one-sided | both filled | P(both \| one) | n | lag between legs |
+|---|---|---|---|---|---|
+| optimistic | 495 | **30** | **0.057** | 525 | mean 887s, median **1,005s** |
+| queue_aware | 75 | 0 | 0.000 | 75 | — |
+| conservative | 45 | 0 | 0.000 | 45 | — |
+
+**Three things have to be said together or the first one misleads.**
+
+1. **Pairs complete only under the OPTIMISTIC model.** That is the model which assumes an order
+   at a touched price fills — the one §4 registered precisely because it cannot be trusted, and
+   the one §6 does **not** gate on. Under the conservative model, which §6 does gate on, the
+   count is still exactly **zero** at n=45. Under queue-aware, zero at n=75.
+2. **0.057 is not 0.25.** Even taking the optimistic model at face value, the observed rate is
+   less than a quarter of the pre-registered bar.
+3. **The lag is the real news, and it points the same way as the zero.** When an optimistic
+   pair does complete, its two legs are **about 17 minutes apart** (median 1,005s). A quote
+   whose second side fills a quarter of an hour after the first is not a two-sided market-making
+   pair in any sense the thesis meant — it is two independent fills with a long, fully
+   one-sided, adversely-selectable interval between them. §2's mechanism assumed the pair is
+   what bounds the risk. At a 17-minute median lag it does not.
+
+**The headline keeps climbing and is still entirely derived.** Policy A conservative: $25 tier
+net/day **+$11.86**, $500 tier **+$279.53**. `paired` is 0.0000, `fees` 0.0000, `settle` n/a,
+single-leg MTM negative and clamped at −$10.00 at the two largest tiers. So, exactly as in
+§9.4, **100% of the positive net is `est_reward`** from the unvalidated share model. Day-one
+check 3 remains unrun and remains the only external test of it.
+
+**Collector: healthy, but the sequence-gap rate is rising and should be watched.** Gaps by
+report: 4 (§9.2) → 17 (§9.4) → **28** now, each recovered by a snapshot re-request (6 so far),
+with the most recent event at 19:55Z being a gap. Discovery is clean — 36 cycles, **0 errors**,
+4,331 programmes, pool $559,466.67. Trades 66 in three hours across 176 markets, up from 47,
+still almost nothing. A rising gap rate does not invalidate anything yet, but the tape is what
+the fill models replay, so it degrades evidence quality quietly rather than loudly. If it keeps
+climbing, it becomes a data-quality item under §6 criterion 7.
+
+**Net effect on the thesis: unchanged, and slightly worse.** The one metric that moved moved in
+the model that does not count, to a value still well under the bar, and brought with it a lag
+that undermines the mechanism the pair was supposed to provide.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized

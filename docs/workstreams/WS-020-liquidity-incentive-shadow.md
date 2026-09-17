@@ -290,6 +290,23 @@ Ops `limm-report-3`. Span 0.18 days — still HOLD. Two moves in opposite direct
 Collector healthy (0 discovery errors, 4,250 programmes) but 17 sequence gaps and 3
 disconnects, all recovered. Trades 47/3h across 177 markets — still almost nothing.
 
+## Shadow read, hour 7.5 (2026-09-17 19:58Z)
+
+Ops `limm-report-4`, span 0.31 days. **P(both | one) moved off zero — but only in the model
+that does not count** ([thesis §9.5](../LIQUIDITY_INCENTIVE_THESIS.md)):
+
+- **optimistic: 0.057** (30 pairs / n=525), legs a **median 17 minutes apart**
+- **conservative: still 0.000** (n=45) — and conservative is what §6 gates on
+- **queue_aware: still 0.000** (n=75)
+
+The lag matters more than the rate: a second leg filling ~17 minutes after the first is not a
+market-making pair, it is two independent fills with a long one-sided interval between them.
+§2's mechanism assumed the pair bounds the risk; at that lag it does not.
+
+Headline still climbing (+$279/day at $500) and still 100% `est_reward`. Collector clean on
+discovery (0 errors, 4,331 programmes) but **sequence gaps are rising: 4 → 17 → 28**, all
+recovered. Watch it; the tape is what the fill models replay.
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).
