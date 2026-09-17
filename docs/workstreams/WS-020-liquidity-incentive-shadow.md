@@ -274,6 +274,22 @@ book.** Detail and the two concentration observations: [thesis §9.3](../LIQUIDI
    and therefore proved nothing. **`activation_env()` is still wrong for any future use and
    must be fixed.**
 
+## Shadow read, hour 4.5 (2026-09-17 16:54Z)
+
+Ops `limm-report-3`. Span 0.18 days — still HOLD. Two moves in opposite directions
+([thesis §9.4](../LIQUIDITY_INCENTIVE_THESIS.md)):
+
+- **P(both | one) is still 0.000 at n=265** under the optimistic model (was n=25 at §9.2),
+  and 0.000 under all three. Not one pair has completed. The direction has now survived a
+  tenfold sample increase, though the outcomes are correlated so the effective n is smaller.
+- **The headline turned positive** (+$6.86/day at $25, +$225/day at $500) and **100% of it is
+  `est_reward`**. Paired P&L is 0.0000 because there are no pairs; fees 0.0000 for the same
+  reason; settlement n/a; single-leg MTM negative. Every *measured* component is zero or
+  negative. Day-one check 3 remains the only external test of that model and is unrun.
+
+Collector healthy (0 discovery errors, 4,250 programmes) but 17 sequence gaps and 3
+disconnects, all recovered. Trades 47/3h across 177 markets — still almost nothing.
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).

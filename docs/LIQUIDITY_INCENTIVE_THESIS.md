@@ -302,6 +302,67 @@ unregistered tag and taken the running canary's twin dark under NEW_ONLY. It was
 The twin is pinned instead with an explicit `LIVE_PAPER_TWINS=Alimm1:Alimm1_pt3`, which
 overrides the suffix for this book alone and leaves every other book on `_pt4`.
 
+### 9.4 Hour 4.5 — the headline turns positive and P(both | one) is still zero (2026-09-17 16:54Z)
+
+Ops `limm-report-3`, 3h event window / 1d aggregate. **Observation span 0.18 days against a
+pre-registered window of ≥ 14. Still HOLD; §6 is not retuned.** Two things moved, in opposite
+directions, and the tension between them is the finding.
+
+**1. The pair premise looks worse, on a 10x bigger sample.**
+
+| model | one-sided fills | both filled | P(both \| one) |
+|---|---|---|---|
+| optimistic | 180 no_only + 85 yes_only = **265** | **0** | 0.000 |
+| queue_aware | 50 | **0** | 0.000 |
+| conservative | 35 | **0** | 0.000 |
+
+§9.2 recorded this at n=25 (optimistic) and called it thin. It is now **n=265 under the model
+most generous to the strategy**, and not one pair has completed in any model. §6 criterion 6
+requires ≥ 0.25.
+
+The nominal arithmetic against a 0.25 bar is overwhelming at this n, and it should not be
+quoted that way: these outcomes are **not independent**. They are repeated quotes on a small
+set of markets with overlapping lifetimes, so the effective sample is materially smaller than
+265. What is fair to say is that the direction has survived a tenfold increase in sample and is
+identical across three fill models — which is a good deal more than §9.2 could claim.
+
+**2. The headline flipped positive — and every measured component of it is still zero or
+negative.**
+
+| policy A, conservative | reward (DERIVED) | paired | fees | single-leg MTM | net | net/day |
+|---|---|---|---|---|---|---|
+| $25 | 2.76 | 0.00 | 0.00 | −1.50 | +1.26 | +6.86 |
+| $100 | 11.02 | 0.00 | 0.00 | −6.04 | +4.98 | +27.00 |
+| $500 | 51.51 | 0.00 | 0.00 | −9.89 | +41.62 | +225.87 |
+
+Read the columns before the total. `paired` is 0.0000 **because there are no pairs** — that is
+the same fact as the table above, not an independent success. `fees` is 0.0000 for the same
+reason. `settle` is n/a. So **100% of the positive net is `est_reward`**, which is the output
+of the share model that §9.1 flagged as unvalidated and that day-one check 3 — comparing one
+market's displayed projected reward against ours, signed in — has still not tested.
+
+$225/day at the $500 tier is not a result; it is an estimate implying a return the board-wide
+pool arithmetic does not support (§9.1: ~3%/day implied against ~0.62%/day available). §6
+anticipated exactly this and says so: *"Do not promote merely because gross estimated rewards
+exceed $1/day."*
+
+**3. Single-leg tails deepened.** Conservative worst mark-to-bid at the 1s horizon is now
+**−$20.00** (was −$2.89); optimistic worst is **−$50.50**. Both recover substantially by the
+30s horizon (−$2.89 and −$15.15), which is consistent with these being marks taken into a
+momentarily empty book rather than realised losses — but the instantaneous tail is real and it
+is what a resting order would face.
+
+**4. Collector.** Healthy but working harder: 38 discovery cycles with **0 errors**, 4,250
+programmes, pool $553,931.67, 177 markets snapshotted, 18,317 book events. 17 sequence gaps and
+3 disconnects were recorded and recovered (5 snapshot re-requests). Public trades on tracked
+markets: **47 in three hours** — up from 9, still almost nothing across 177 markets, so §9.1's
+finding that the reward ranking selects untraded books stands.
+
+**What this means for the live smoke test (§9.3):** nothing changes. Its gates read instrument
+health, not economics. But it reinforces what that test is measuring — a one-sided resting bid
+is not a degraded version of the strategy, it is empirically the only version that has ever
+occurred.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized
