@@ -1,1 +1,1 @@
-{"type":"script","name":"execution_telemetry","args":["--hours","12"],"id":"et-ws019-6"}
+{"type":"db","id":"et-ws019-7","sql":"select kind, count(*) n, min(at) first_at, max(at) last_at, left(coalesce(detail,''),90) sample from execution_collector_events where at > now() - interval '13 hours' group by kind, left(coalesce(detail,''),90) order by kind, n desc limit 40"}
