@@ -407,6 +407,39 @@ climbing, it becomes a data-quality item under §6 criterion 7.
 the model that does not count, to a value still well under the bar, and brought with it a lag
 that undermines the mechanism the pair was supposed to provide.
 
+### 9.6 The lifecycle closed — timeout, cancel, re-quote (2026-09-17 20:08Z)
+
+§9.3 recorded placement and could only *claim* the rest. Ops `limm-watch-2` closes it.
+
+All three original bids left the book at the 4-hour boundary exactly as designed —
+`status=canceled`, `cancel_reason=timeout`, ~20:00Z against a 16:00:47Z placement and
+`LIVE_ORDER_TIMEOUT_SECONDS=14400`. **This book has no cancel branch of its own**; orders leave
+by a fill, the shared per-order timeout, or a stand-down drain, and the timeout is what fired.
+That is the genuine-liquidity guarantee of §10.4 observed rather than asserted.
+
+Four minutes later the runner re-quoted, on **different markets**:
+
+| ticker | side | price | qty |
+|---|---|---|---|
+| `KXYTVIEWSHIGH-POS26OCT-8.75M` | yes | 4c | 1 |
+| `KXBIGGESTQUAKE-17SEP26-7.0` | yes | 1c | 1 |
+| `KXBIGGESTQUAKE-17SEP26-6.8` | yes | 1c | 1 |
+
+$0.06 committed, 3 open at the cap, every price far under 25c, 0 orders from any other book on
+any of these tickers. **Place → rest → expire → re-place is now demonstrated end to end**, which
+is the whole of §10's claim.
+
+Two things the re-quote confirms rather than reveals:
+
+1. **Selection is dynamic, not stuck.** A completely different market set (video views,
+   earthquake magnitude) replaced the Hormuz strikes, so the ranking is re-running against the
+   live programme list rather than latching.
+2. **The event-concentration pattern from §9.3 repeats**: two of the three new orders sit on
+   one event (`KXBIGGESTQUAKE-17SEP26` at 6.8 and 7.0). That is now a pattern rather than an
+   incident. Still immaterial at $0.06 and still bounded absolutely by the $10 ceiling, and
+   still **not** acted on — but it is the second observation of the same thing, and any sized-up
+   version of this book needs an event cap before it runs.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized

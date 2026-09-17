@@ -307,6 +307,14 @@ Headline still climbing (+$279/day at $500) and still 100% `est_reward`. Collect
 discovery (0 errors, 4,331 programmes) but **sequence gaps are rising: 4 → 17 → 28**, all
 recovered. Watch it; the tape is what the fill models replay.
 
+## Live lifecycle closed (2026-09-17 20:08Z)
+
+All three original bids timeout-cancelled at the 4-hour boundary (`cancel_reason=timeout`) and
+the runner re-quoted four minutes later on a different market set — $0.06, 3 open at the cap,
+all under 25c, no collisions. **Place → rest → expire → re-place demonstrated end to end.**
+The event-concentration pattern repeated (2 of 3 on one event); second observation, still not
+acted on, but a sized-up version needs an event cap. [Thesis §9.6](../LIQUIDITY_INCENTIVE_THESIS.md).
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).
