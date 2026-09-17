@@ -1,1 +1,1 @@
-{"type":"xos","command":"show","args":["liquidity-incentive-mm"],"id":"limm-show-1"}
+{"type":"db","sql":"SELECT v.version, v.frozen_at IS NOT NULL AS frozen, v.risk_json->>'stage' AS envelope_stage, v.risk_json->>'max_price_cents' AS max_price_cents, v.risk_json->>'max_book_exposure_usd' AS book_cap, e.state FROM experiment_versions v JOIN experiments e ON e.id = v.experiment_id WHERE e.key = 'liquidity-incentive-mm'","id":"limm-risk-check-1"}
