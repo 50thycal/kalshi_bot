@@ -909,6 +909,72 @@ uncomfortable pair and is exactly why both belong in the record together.
 `seq_gap` 137 over a 72h window — a lower rate than earlier. The new `throttled` counter is noted
 and not yet understood.
 
+### 9.15 Second settlement, and two safeguards not doing what they were meant to (2026-09-18 18:23Z)
+
+**Second settlement.** `KXTRUMPAPPROVE-26SEP18-E39.4` settled at **17:32:14Z**: quantity 0,
+realized **−$0.0100**. Another full loss of premium — a 1c YES expiring worthless, again the
+modal outcome and again uninformative at this n. Running realized: **−$0.0600** across two
+settled contracts.
+
+Two defects surfaced in the same read. Neither risks meaningful money at current size, and both
+are safeguards behaving differently from how they were written.
+
+**Defect 1 — this book has no event-level cap, and it has now doubled up on an event another
+live book already holds.**
+
+| strategy | market | side | price | status | event |
+|---|---|---|---|---|---|
+| `Fmmsell10` | `KXRT-RES-97` | no | 93c | **filled** (14 Sep 20:31:44Z) | `KXRT-RES` |
+| `Alimm1` | `KXRT-RES-93` | no | 3c | **resting** (17:33:50Z) | `KXRT-RES` |
+| `Alimm1` | `KXRT-RES-94` | no | 10c | **resting** (18:21:03Z) | `KXRT-RES` |
+
+`Fmmsell10` is short 1 NO at 93c on `KXRT-RES-97` — **$0.93** at risk, several times the
+incentive book's entire committed capital. `Alimm1` is now resting two more NO bids on the same
+event. All three are the same direction on one event.
+
+`LIVE_ONE_POSITION_PER_EVENT=true` is set, and `repository.event_has_open_live_position` exists
+for exactly this, taking an `exclude_strategy` so a book cannot block itself. **The incentive
+package never calls it.** `live.build_live_quote`'s refusal set is `excluded_series`,
+`open_order_cap`, `not_two_sided`, `post_only_cross`, `no_target_size`, `target_not_met`,
+`program_ending`, `no_book`, `too_expensive`, `exposure_cap` — there is no event cap among them.
+This is the "event-level concentration cap, if this book is ever sized up" that §9.8 parked as a
+follow-up. It is no longer hypothetical.
+
+**Defect 2 — the open-order cap is under-counting, and the book is holding four commitments
+against a cap of three.**
+
+`repository.count_live_book_open` skips any ticker whose latest position snapshot is flat
+(`abs(qty) <= 0.01`), which is correct for a settled position. But `KXRT-RES-93` has a snapshot
+at **quantity 0** with exposure $0.0003 while its order is still **resting and unfilled** — so a
+live resting order is invisible to the cap. The function's own docstring says "A resting/unfilled
+order (no snapshot yet) counts as open"; the failure is that once *any* snapshot exists for that
+ticker at zero, it stops counting. It cannot distinguish "position closed" from "order not filled
+yet".
+
+Actual commitments right now: `KXBIGGESTQUAKE` ×2 filled, plus `KXRT-RES-93` and `-94` resting =
+**four**, against `MAX_OPEN_ORDERS = 3`. The runner is behaving exactly as its code says; the
+code does not implement the cap as intended.
+
+**Also new, and worth recording:** these are the book's **first NO-side quotes** — every prior
+order was YES at 1–5c — and **10c is the highest price it has ever placed**.
+
+**What is and is not at risk.** Committed on the incentive book: 1c + 1c + 3c + 10c = **$0.15**,
+against a $10 strategy cap. The caps that bound real loss — exposure, `qty = 1`, price ≤ 25c —
+all hold, and the price cap is not close. The event concentration matters at *this* size only as
+a demonstration; at any size worth trading it would be the live risk.
+
+**Recorded, not patched.** Both fixes change the caps of a live, armed, real-money arm. That is
+an **OWNER DECISION**, and fixing a safeguard is still a change to one. The two shapes:
+
+1. Call `event_has_open_live_position(event_ticker, exclude_strategy=LIVE_TAG)` in
+   `build_live_quote` and refuse with a new `event_cap` code — reusing the fleet's existing
+   mechanism rather than inventing a second one.
+2. Count a resting order as open regardless of a zero-quantity snapshot — for example by
+   treating a non-terminal order status as open before consulting the snapshot at all, so only a
+   *filled* position can be dismissed as flat.
+
+Neither is taken here. Stand-down remains one step: remove `Alimm1` from `LIVE_STRATEGIES`.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized

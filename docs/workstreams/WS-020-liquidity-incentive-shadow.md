@@ -498,6 +498,30 @@ for a 10× move in one component.
 
 No gate re-interpretation. [Thesis §9.14](../LIQUIDITY_INCENTIVE_THESIS.md).
 
+## SECOND SETTLEMENT + TWO SAFEGUARD DEFECTS (2026-09-18 18:23Z)
+
+`KXTRUMPAPPROVE-26SEP18-E39.4` settled at 17:32:14Z, realized **−$0.0100** — another full loss of
+premium, again the modal outcome, again uninformative at this n. Running realized **−$0.0600**
+over two settled contracts.
+
+**Defect 1: no event-level cap on this book.** `Fmmsell10` holds `KXRT-RES-97` NO at 93c
+(**$0.93** at risk); `Alimm1` is now resting `KXRT-RES-93` at 3c and `KXRT-RES-94` at 10c — same
+event `KXRT-RES`, same direction. `LIVE_ONE_POSITION_PER_EVENT=true` and
+`repository.event_has_open_live_position` exist for this, and **the incentive package never calls
+it**; `build_live_quote` has no event cap among its refusal codes. This is the concentration cap
+§9.8 parked — no longer hypothetical.
+
+**Defect 2: the open-order cap under-counts.** `count_live_book_open` skips a ticker whose latest
+snapshot is flat. `KXRT-RES-93` has a **quantity-0** snapshot while its order is still **resting**,
+so a live resting order is invisible. Real commitments: 4 (2 filled + 2 resting) against
+`MAX_OPEN_ORDERS = 3`.
+
+Also new: first NO-side quotes ever, and 10c is the highest price this book has placed.
+
+Committed $0.15 against a $10 cap; exposure, qty and price caps all hold. **Recorded, not
+patched** — both fixes change a live armed arm's caps. OWNER DECISION.
+[Thesis §9.15](../LIQUIDITY_INCENTIVE_THESIS.md).
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).
