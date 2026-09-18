@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "dc8864849efe85fc9d10cb40d5c69e69a2412a9d",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-18T00:28:25Z",
+  "id": "limm-twin-2",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/limm-twin-2.receipt.json",
+  "result_file": "ops/results/limm-twin-2.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/35291323780",
+  "service": null,
+  "started_at": "2026-09-18T00:28:25Z",
+  "targets": [],
+  "type": "db"
+}
