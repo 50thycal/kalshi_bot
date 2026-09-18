@@ -350,6 +350,8 @@ new book.
 
 ## THE CANARY STOPPED QUOTING — universe starvation (2026-09-18 05:04Z)
 
+**CORRECTED — see the next section. The claim that this is permanent is false.**
+
 No order since 00:08:31Z. Nothing is failing: the worker cycles every ~2.5 min, `Fmmsell10`
 places normally, caps hold, no rejects, no auth errors. The book is **starved**.
 
@@ -373,6 +375,53 @@ drops a zero.
 
 Exposure unchanged: 2c in the two unsettled `KXBIGGESTQUAKE-17SEP26` contracts. A book that
 quotes nothing takes no new risk — the cost is evidence, not money.
+
+## CORRECTION: the starvation is intermittent, and the book is at its cap (2026-09-18 08:04Z)
+
+The `DETAIL_KEYS` fix from the section above falsified that section within ten minutes of
+reaching production. The first cycle line to print its own counters read
+`considered=0 fetched=0 placed=0 outcomes={"no_slots":1}` — the cycle never reached candidate
+selection; it returned at the open-order cap.
+
+**The book quoted again at 06:00:04Z** on `KXUSLEI-26SEP18-T0.2` at 5c and **filled**, roughly
+two hours after the previous section declared it never would. Three filled, unsettled positions
+now count as open, which is exactly `MAX_OPEN_ORDERS = 3`. The cap is holding it quiet — design,
+not defect.
+
+The composition of the two rules is real and can starve the book for hours (the 00:08Z→06:00Z
+gap), but the count of concurrent sub-2-hour programmes varies, so whenever fewer than eight are
+live the window admits day-scale ones and the book recovers on its own. **Intermittent, not
+deterministic.**
+
+The universe question stays open and is now a throughput question, not a liveness one; it should
+be decided on the `outcomes` measurement the logs now carry.
+[Thesis §9.10](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+Exposure 7c across three unsettled contracts (1c + 1c + 5c), against a $10 strategy cap and a
+3-order cap. Both hold.
+
+## SHADOW: the 16.7s lag was n=1 (2026-09-18 08:08Z)
+
+Two pre-registered materiality criteria fired at the 08:08Z health check, span 0.82 days.
+
+**`partial_both` now appears under CONSERVATIVE too** (0 → 10), and queue_aware doubled (10 →
+20). Like-for-like: total span is under a day, so the report's 1d→14d window change covers the
+same data. This also settles the staleness worry from 04:03Z — the rows were not stale.
+
+**The queue-aware lag moved from 16.7s to 1102.8s.** Mean equals median in both non-optimistic
+models, so each rests on a single observation. §9.7 read the 16.7s as a lag "that would bound
+risk"; that was **n=1**, and the next one is 18 minutes. The lag is **not yet estimable** and
+§9.7's favourable gloss must not be carried forward. §9.7 is stamped, not rewritten.
+
+Unmoved: `P(both | one)` still 0.000 under both non-optimistic models — the metric counts only
+full pairs and now hides thirty partial ones. **Not changing it**; §6 is pre-registered.
+Conservative single-leg MTM against deep size is −$1.3802 (n=340) against a mean modelled reward
+of +$0.0692, a factor of twenty the wrong way. The positive headline is still entirely derived
+from an unvalidated `est_reward`.
+
+Live book unchanged and correct: `LIVE_STRATEGIES=Fmmsell10,Alimm1`, twin pinned, kill switch
+off, exposure 7c at the 3-order cap.
+[Thesis §9.11](../LIQUIDITY_INCENTIVE_THESIS.md).
 
 ## Next Step (Phase 1a)
 

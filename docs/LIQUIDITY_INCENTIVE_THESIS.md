@@ -442,6 +442,9 @@ Two things the re-quote confirms rather than reveals:
 
 ### 9.7 Hour 12 — a two-sided fill outside the optimistic model, at a lag that would bound risk (2026-09-18 00:00Z)
 
+> **QUALIFIED BY §9.11.** The 16.7s lag below rests on **n=1**. The next observation was
+> 1102.8s. Do not carry the "would bound risk" reading forward; the lag is not yet estimable.
+
 Ops `limm-report-5`, span **0.48 days** against ≥ 14. Still HOLD. Two of the things §9.5's
 follow-up named as material have happened, and one of them shows a limitation in the
 pre-registered metric that a reader must be told about.
@@ -545,6 +548,12 @@ test of the reward model, and §9.7's reading is unchanged.
 
 ### 9.9 The canary stopped quoting — two correct rules that compose into a filter admitting nothing (2026-09-18 05:04Z)
 
+> **CORRECTED BY §9.10.** The mechanism below is real and the 05:04Z snapshot is accurate, but
+> this entry's central claim — that the starvation is *deterministic* and the book "will never
+> quote again" — is **false**. It quoted at 06:00:04Z and filled. The entry is kept unedited
+> because the record of a wrong call is worth more than a tidy one; read §9.10 for what
+> actually holds.
+
 The book has not placed an order since **00:08:31Z**. It is not broken in any way that shows:
 the worker cycles every ~2.5 minutes and logged 43 consecutive `incentive smoke cycle` lines
 between 03:07Z and 05:00Z; `Fmmsell10` placed normally throughout (04:42:55Z, resting); the
@@ -610,6 +619,115 @@ so a starved cycle and a healthy one printed the identical line. `DETAIL_KEYS` n
 **Exposure is unchanged and safe:** 2c, the two unsettled `KXBIGGESTQUAKE-17SEP26` contracts.
 A book that quotes nothing takes no new risk. The cost is to the experiment, not the account:
 the canary is accruing no evidence.
+
+### 9.10 §9.9 was wrong: the starvation is intermittent, and the book is now at its cap (2026-09-18 08:04Z)
+
+The `DETAIL_KEYS` fix shipped in §9.9 falsified §9.9 within ten minutes of reaching production.
+The first `incentive smoke cycle` line to render its own counters, at 07:57:20Z:
+
+```
+considered| 0
+fetched| 0
+placed| 0
+outcomes| {"no_slots":1}
+```
+
+`considered: 0` means the cycle never reached candidate selection at all. It returned at the
+first guard — `slots = MAX_OPEN_ORDERS - count_live_book_open(...) <= 0` — which is a different
+cause from the one §9.9 asserted, and a benign one.
+
+The order book says why:
+
+| created | market | side | price | status |
+|---|---|---|---|---|
+| **06:00:04Z** | **`KXUSLEI-26SEP18-T0.2`** | yes | **5c** | **filled** |
+| 00:08:31Z | `KXAAAGASDAZ-26SEP18-4.6800` | yes | 1c | canceled |
+| 20:04:27–28Z | `KXBIGGESTQUAKE-17SEP26-7.0` / `-6.8`, `KXYTVIEWSHIGH` | yes | 1c / 4c | filled ×2, canceled |
+
+**The book quoted again at 06:00:04Z and filled**, about two hours after §9.9 declared that it
+never would. Three filled, unsettled positions now count as open — `KXBIGGESTQUAKE` ×2 plus
+`KXUSLEI` — which is exactly `MAX_OPEN_ORDERS = 3`, so the cap is holding the book quiet. That
+is the design working, not a defect.
+
+**Where §9.9's reasoning broke.** It observed that the eight soonest-ending programmes at 05:04Z
+were all 15-minute ones and concluded the window is *permanently* saturated. That does not
+follow: the count of concurrent sub-2-hour programmes varies, and whenever fewer than eight are
+live, day-scale programmes enter the window and quote normally. The composition is real and can
+starve the book for hours at a time — the 00:08Z→06:00Z gap is the observed instance — but it is
+**intermittent**, not deterministic, and the book recovers without intervention.
+
+**What this changes.** The §9.9 universe question stays open but is no longer urgent: it is a
+throughput question (how often the window is wasted on programmes that will always refuse),
+not a liveness one. It should be decided on measurement — the `outcomes` breakdown now in the
+logs is that measurement — rather than on the false premise that the book is dead.
+
+**What it does not change.** The refusal-code fix stands on its own merit and paid for itself
+immediately: the instrument's first reading overturned the conclusion of the entry that shipped
+it. That is the argument for fixing an instrument before trusting a diagnosis made without one.
+
+**Exposure is now 7c** across three unsettled contracts (1c + 1c + 5c), against a $10 strategy
+cap and a 3-order cap. Both caps hold and neither was approached.
+
+### 9.11 The 16.7s lag was n=1, and §9.7 over-read it (2026-09-18 08:08Z)
+
+Two of the pre-registered materiality criteria fired at this check. Span **0.82 days**.
+
+**(b) `partial_both` now appears under the CONSERVATIVE model.** Both non-optimistic models now
+show partially-filled two-sided outcomes:
+
+| model | `partial_both` at 04:03Z | at 08:08Z |
+|---|---|---|
+| conservative | 0 | **10** |
+| queue_aware | 10 | **20** |
+
+The comparison is like-for-like despite the report's window widening from 1 day to 14: total
+observation span is 0.82 days, so both windows cover all data. This also settles the
+carry-forward worry from 04:03Z that the queue-aware rows had gone stale — they had not; they
+doubled. Two independent fill models agreeing that two-sided fills occur strengthens §9.7's
+direction.
+
+**(c) The queue-aware lag moved off ~17s, by a factor of 66.**
+
+| model | lag mean | lag median |
+|---|---|---|
+| queue_aware | 1102.8s | 1102.8s |
+| conservative | 1879.2s | 1879.2s |
+
+**Mean equals median in both**, which means each rests on a single observation. §9.7 reported
+queue-aware `partial_both` at a **16.7s** lag and read it as a lag "that would bound risk". That
+reading was drawn from **n=1**, and the next observation is 18 minutes rather than 17 seconds.
+The honest statement is that the two-sided fill lag under either non-optimistic model is **not
+yet estimable**, and §9.7's favourable gloss on it should not be carried forward. Ten and twenty
+partial pairs do not make a lag distribution.
+
+This cuts against the premise, which is exactly why it is recorded rather than smoothed.
+
+**What has not moved.** `P(both | one)` is still **0.000** under both non-optimistic models
+(n=350 conservative, n=600 queue_aware), because it counts only *full* pairs — the blind spot
+§9.7 recorded now conceals thirty partial pairs. The metric is still **not being changed**: §6
+is pre-registered, and redefining it while it disfavours the premise is precisely the move that
+rule exists to prevent. The optimistic model reads 0.119 (n=1640), the same shape as before at a
+larger n, which is not material.
+
+**The adverse-selection cost still dwarfs the modelled reward.** Conservative single-leg
+outcomes against deep competing size: n=340, mean single-leg MTM **−$1.3802**, against a mean
+`est_reward` of **+$0.0692** — a factor of about twenty, in the wrong direction.
+
+**The headline remains not a result.** Every measured component is zero or negative; the large
+positive net is derived entirely from `est_reward`, which is still externally unvalidated. Day-
+one check 3 is still the operator's and still the thing that would make the number mean
+anything.
+
+**Collector.** The counters are not comparable across this check because the report's window
+also widened (3h → 72h): `seq_gap` reads 125 over 72h against 31 over 3h, which is a *lower*
+rate, not a deterioration. Discovery is clean (246 cycles, 0 errors, pool $510,361.67). Fifteen
+connects against ten thread starts spans two worker redeploys (#424 at 03:04Z, #425 at 07:54Z)
+and is noted without being claimed as understood.
+
+**Live book unchanged and correct:** `LIVE_STRATEGIES=Fmmsell10,Alimm1`,
+`LIVE_PAPER_TWINS=Alimm1:Alimm1_pt3`, `LIQUIDITY_INCENTIVE_LIVE_ENABLED=true`,
+`LIVE_PAPER_TWIN_SUFFIX=_pt4` untouched, `KILL_SWITCH=false`. Exposure 7c at the 3-order cap
+(§9.10).
 
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
