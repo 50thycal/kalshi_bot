@@ -1095,6 +1095,73 @@ That is the §9.9/§9.10 universe question, now with a concrete cost attached.
 credit is cash that is neither a fill nor a settlement — since the page gives a lifetime total
 rather than a per-programme attribution, and no per-user endpoint appears to exist.
 
+### 9.18 The collector got worse and the headline got better, in the same four hours (2026-09-18 20:21Z)
+
+Span **1.33 days**. One pre-registered criterion fired — (d), collector health — and it fired
+next to a large favourable move in the headline. The two together are the entry.
+
+**(d) Collector instability is accelerating.** `seq_gap` is a missed WebSocket sequence, which
+means the shadow tape has holes:
+
+| check | `seq_gap` | Δ over ~4h | `throttled` | connects / disconnects | thread starts |
+|---|---|---|---|---|---|
+| 12:14Z | 127 | — | 3 | 15 / 14 | 10 |
+| 16:18Z | 137 | **+10** | 3 | 17 / 16 | 11 |
+| 20:21Z | **169** | **+32** | **4** | **20 / 19** | **12** |
+
+The gap rate roughly **tripled**, `throttled` climbed, and there were **three reconnects and a
+thread restart with no deployment since 12:46Z** — so these are the collector genuinely dropping,
+not restarts we caused. Discovery itself is clean (395 cycles, 0 errors, pool $570,906.67); the
+instability is in the tape, not the programme poll.
+
+**And the headline improved sharply, in the same window.**
+
+| policy / tier / model | 16:18Z | 20:21Z |
+|---|---|---|
+| A_break_even 500 conservative | −150.53 | **−69.10** |
+| A_break_even 25 conservative | −13.95 | **−9.83** |
+| A_break_even 500 queue_aware | −608.60 | −604.83 |
+
+Under conservative the net roughly **halved**, and the mechanism inverted: reward grew **+20%**
+(462 → 555) while single-leg MTM grew only **+1.8%** (−613.5 → −624.7). Four hours earlier the
+ratio was the other way round, by a factor of six.
+
+**This is not read as economic news, and §9.14 is why.** That entry already named collector
+instability as an unexcluded confound for the negative headline. The instability has since got
+*worse*, and the headline has moved 54% in the favourable direction over the same window. A tape
+with more holes produces fewer and differently-marked single-leg outcomes, which is exactly the
+direction observed. **The honest position is that the last two headline readings are both
+suspect**, not that the economics improved. §9.14's negative was recorded with the same caveat
+and it applies symmetrically — a confound does not only work against the premise.
+
+**Everything else is flat, which is itself informative.** If the swing were economic, something
+in the fill mix should have moved with it. Nothing did:
+
+| | 16:18Z | 20:21Z |
+|---|---|---|
+| `both_filled` conservative / queue_aware | 4 / 4 | **4 / 4** |
+| `partial_both` conservative / queue_aware | 16 / 36 | **16 / 36** |
+| conservative lag | mean = median = 1212.5s (n=1) | **identical, still n=1** |
+| P(both \| one) conservative / queue_aware | 0.007 / 0.004 | 0.006 / 0.003 |
+
+The P(both | one) drift is arithmetic, not signal: the numerators are unchanged and only n grew
+(555 → 626, 1005 → 1160). The conservative lag is **still a single observation** and must still
+not be quoted as a bound.
+
+**One genuinely new component: the shadow settled its first pair.** The collector logs
+`settled 1`, and a `settle` column now carries real numbers in the headline — **−$0.75** at the
+$25 tier, **−$15.15** at $500. Small, negative, n=1, and worth nothing yet except that the
+settlement leg of the shadow's economics is now wired through to the total rather than reading
+`n/a`.
+
+**No gate re-interpretation, and no verdict.** §6 remains pre-registered. What this entry records
+is that the instrument degraded and the number improved at the same time, and that the second
+fact cannot be trusted while the first is true.
+
+**Live configuration re-verified unchanged:** `LIVE_STRATEGIES=Fmmsell10,Alimm1`,
+`LIVE_PAPER_TWINS=Alimm1:Alimm1_pt3`, `LIQUIDITY_INCENTIVE_LIVE_ENABLED=true`,
+`KILL_SWITCH=false`.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized

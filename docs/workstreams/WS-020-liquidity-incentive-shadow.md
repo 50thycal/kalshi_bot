@@ -570,6 +570,34 @@ soonest-end runner has never looked at. The universe question now has a price ta
 
 [Thesis §9.17](../LIQUIDITY_INCENTIVE_THESIS.md).
 
+## THE COLLECTOR GOT WORSE AND THE HEADLINE GOT BETTER (2026-09-18 20:21Z)
+
+Span 1.33 days. Criterion (d) fired, next to a large favourable headline move. The pair is the
+finding.
+
+**Collector instability accelerating:** `seq_gap` 127 → 137 (+10) → **169 (+32)** across the last
+two checks — the rate roughly TRIPLED. `throttled` 3 → 4. Three reconnects and a thread restart
+**with no deployment since 12:46Z**, so the collector is genuinely dropping. Discovery itself is
+clean (395 cycles, 0 errors).
+
+**Headline improved sharply in the same window:** A_break_even/$500 conservative −150.53 →
+**−69.10**; the mechanism inverted, with reward +20% against single-leg MTM +1.8% (four hours
+earlier the ratio was the other way by a factor of six).
+
+**Not read as economic news.** §9.14 already named collector instability as an unexcluded
+confound; it has since got worse. A tape with more holes yields fewer and differently-marked
+single-leg outcomes — the direction observed. Both recent headline readings are suspect. The
+confound cuts both ways, not only against the premise.
+
+**Everything else flat, which is itself the argument:** `both_filled` 4/4 unchanged,
+`partial_both` 16/36 unchanged, conservative lag still mean=median=1212.5s (n=1). The
+P(both | one) drift (0.007→0.006, 0.004→0.003) is n growing, not numerators moving.
+
+**New:** the shadow settled its first pair (`settled 1`); the `settle` column now carries −$0.75
+at $25 and −$15.15 at $500. n=1, worth nothing yet.
+
+Live config re-verified unchanged. [Thesis §9.18](../LIQUIDITY_INCENTIVE_THESIS.md).
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).
