@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","sql":"SELECT p.market_ticker, round(p.period_reward_usd::numeric,2) AS reward_per_period, p.target_size::text AS target, p.end_date, round((EXTRACT(EPOCH FROM (p.end_date - now()))/3600)::numeric,1) AS hours_left, coalesce(p.market_title,'-') AS title FROM incentive_programs p WHERE p.superseded_at IS NULL AND p.disappeared_at IS NULL AND p.incentive_type='liquidity' AND p.end_date > now() ORDER BY p.period_reward_usd DESC NULLS LAST, p.end_date LIMIT 12","id":"limm-topmarkets-1"}
