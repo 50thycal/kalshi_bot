@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-verify-1
-# code 91cf32ddcee75aa22d330158e4c7249108d3693d · started 2026-09-17T16:13:03Z
-strategy  orders  open_now  committed_usd  tickers  colliding_other_book_orders
---------  ------  --------  -------------  -------  ---------------------------
-Alimm1    3       3         0.0500         3        0                          
-
-(1 row)
