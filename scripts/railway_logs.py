@@ -77,7 +77,11 @@ query DeploymentLogs($deploymentId: String!, $limit: Int!, $filter: String) {
 """
 
 #: Structured fields worth printing under their log line. `exc` is the traceback.
-DETAIL_KEYS = ("exc",)
+# The structured fields worth printing under a log line. `exc` is the traceback; the rest are
+# the per-cycle counters a book reports when it places nothing. Without them a starved book and
+# a healthy idle one print the identical line, which is how the incentive canary went an hour
+# without quoting and read as normal (2026-09-18, thesis §9.9).
+DETAIL_KEYS = ("exc", "considered", "fetched", "placed", "outcomes")
 
 
 def _gql(query: str, variables: dict, token: str) -> dict:
@@ -189,7 +193,10 @@ def _details(entry: dict):
     if not isinstance(attributes, list):
         return []
     found = {a.get("key"): a.get("value") for a in attributes if isinstance(a, dict)}
-    return [(k, found[k]) for k in DETAIL_KEYS if found.get(k)]
+    # `is not None`, not truthiness: `placed` is 0 on exactly the cycles worth reading, and a
+    # filter that drops zeros hides the starved case while printing the healthy one.
+    return [(k, found[k]) for k in DETAIL_KEYS
+            if found.get(k) is not None and str(found[k]) != ""]
 
 
 if __name__ == "__main__":
