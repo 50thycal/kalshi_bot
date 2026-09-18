@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-cat-1","sql":"SELECT k AS field, count(*)::text AS n, min(v)::text AS example FROM (SELECT (jsonb_each_text(to_jsonb(p.extra_params_json))).* FROM incentive_programs p WHERE p.superseded_at IS NULL AND p.extra_params_json IS NOT NULL LIMIT 20000) AS kv(k, v) GROUP BY k ORDER BY n DESC LIMIT 25"}
