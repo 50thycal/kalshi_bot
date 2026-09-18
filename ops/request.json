@@ -1,1 +1,1 @@
-{"type":"env","id":"limm-env-2","action":"get","service":"live","names":["LIVE_STRATEGIES","LIVE_PAPER_TWINS","LIQUIDITY_INCENTIVE_LIVE_ENABLED"]}
+{"type":"noop"}
