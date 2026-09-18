@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=et-ws019-13
-# code dfe40b9de47517a22468f0025b59f2f968637814 · started 2026-09-17T12:31:29Z
-newest_state  since                          book_age_s  tick_age_s
-------------  -----------------------------  ----------  ----------
-connected     2026-09-17 12:14:29.159816+00  -0.004261   15.437098 
-
-(1 row)
