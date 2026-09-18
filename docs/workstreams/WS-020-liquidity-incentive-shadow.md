@@ -545,6 +545,31 @@ four.
 `ruff` clean; **4,548 passed, 11 skipped**; nine new tests. The universe rule stays open.
 [Thesis §9.16](../LIQUIDITY_INCENTIVE_THESIS.md).
 
+## DAY-ONE CHECK 3 DONE — units exact, lifetime rewards $0 (2026-09-18 19:19Z)
+
+The operator found the incentives page.
+
+**`period_reward_usd` is EXACT.** The page sums the pool per event; three independent events match
+to the cent and the timestamps to the second: `KXFEATURE` 129 × $100 = **$12,900**;
+`KXMLBPLAYOFFS` 18 × $500 = **$9,000**; `KXWAAEROEMP` 13 × $500 = **$6,500**. The centi-cent unit
+assumption is now a measurement.
+
+**Lifetime rewards: $0.** Consistent with §9.13 — 1 contract in a 27k–60k book is ~0.5% of a
+per-period slice, fractions of a cent, which rounds to zero. It does not refute the mechanism; it
+confirms the smoke test was too small to measure one. It is still the only external reading of
+realized reward we have, and it is zero.
+
+**Neither validates the headline.** The page confirms the POOL, one input. The positive total is
+pool × our modelled SHARE × scoring, and the share model is untouched.
+
+**A dimension we cannot see:** the page's Category column (Low/Medium/High) is not in the API
+(`extra_params_json` is empty for every current programme) and is not derivable — the same three
+events share `target_size=1000` and `discount_factor_bps=5000` yet read Low/High/Medium. The best
+target on that page is Low category with the largest pool, `KXFEATURE` at $12,900, which our
+soonest-end runner has never looked at. The universe question now has a price tag.
+
+[Thesis §9.17](../LIQUIDITY_INCENTIVE_THESIS.md).
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).

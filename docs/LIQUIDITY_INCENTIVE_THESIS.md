@@ -1044,6 +1044,57 @@ it was not among the four. And `scripts/live_book_truth.py` computes its open se
 tickers only while its own docstring says a resting order counts as open: the same class of gap as
 fix 2, in a read-only ops script rather than the enforcer. Recorded, not widened into.
 
+### 9.17 Day-one check 3, at last: the units are exact, and lifetime rewards are $0 (2026-09-18 19:19Z)
+
+The operator found the incentives page. It is the external reading this thesis has been missing
+since §9.1, and it answers two different questions with two different answers.
+
+**1. `period_reward_usd` is EXACT.** The page groups by event and shows the pool summed across
+the event's markets. Our own field is marked DERIVED from `period_reward_raw` under a stated
+*assumption* — centi-cents ÷ 10,000. Three independent events, different per-market values and
+very different market counts:
+
+| Kalshi's page | our rows | pool |
+|---|---|---|
+| GTA VI: The Album · Features — **$12,900**, 17 Sep 11:32 CDT → 24 Sep | `KXFEATURE`, **129** markets × $100.0000 | **$12,900.00** |
+| Pro Baseball Playoff Qualifiers — **$9,000**, 17 Sep 15:46 CDT → 1 Oct | `KXMLBPLAYOFFS`, **18** × $500.0000 | **$9,000.00** |
+| Washington aerospace employment — **$6,500**, 5 Sep 23:16 CDT → 2 Oct 10:46 CDT | `KXWAAEROEMP`, **13** × $500.0000 | **$6,500.00** |
+
+Exact to the cent in all three, and the start/end timestamps match to the second once CDT is
+converted (11:32 CDT = 16:32:33Z, 15:46 = 20:46:39Z, 23:16 = 04:16:31Z next day, 10:46 =
+15:46:41Z). **The unit assumption is now a measurement.** That is day-one check 3 and it passes.
+
+**2. Lifetime rewards: $0. September 2026: $0.** We have earned nothing.
+
+**These do not cancel out, and neither is the headline.** What the page validates is the *pool* —
+one input to `est_reward`. The headline's positive total is pool × **our modelled share of resting
+size** × scoring, and the share model is untouched by this. A validated input to an unvalidated
+model is still an unvalidated model.
+
+**The $0 is consistent with §9.13 rather than a refutation of it.** A single 1-contract bid in a
+27,000–60,000 contract book is roughly a 0.5% share of a per-period slice, which is fractions of
+a cent; $0.00 is what that rounds to, and it is what §9.13 predicted before the page was seen.
+So the zero tells us the smoke test was too small to measure a reward — which we already knew —
+and *not* that the reward mechanism fails. It remains true that it is the only external reading
+of realized reward we have, and it is zero.
+
+**3. A selection dimension we cannot see at all.** The page carries a **Category** column reading
+**Low / Medium / High**. It is not a field we drop: `extra_params_json` is empty for **every**
+current programme, so the API gives us nothing we do not already type. And it is not derivable
+from what we hold — the same three events are all `target_size = 1000` and
+`discount_factor_bps = 5000`, yet the page calls them **Low**, **High** and **Medium**
+respectively; per-market reward does not separate them either, since $500/market appears as both
+High and Medium. Three counterexamples, so this is a checked claim rather than a guess.
+
+If Category means what its name suggests — how hard the liquidity is to supply — then the best
+target visible on that page is the **Low** category with the **largest** pool, which is
+`KXFEATURE` at $12,900. Our runner ranks by soonest programme end and has never looked at it.
+That is the §9.9/§9.10 universe question, now with a concrete cost attached.
+
+**What would actually measure our reward.** Still the balance residual proposed in §9.16 — a
+credit is cash that is neither a fill nor a settlement — since the page gives a lifetime total
+rather than a per-programme attribution, and no per-user endpoint appears to exist.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized
