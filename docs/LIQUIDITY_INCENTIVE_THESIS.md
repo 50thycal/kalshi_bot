@@ -545,6 +545,12 @@ test of the reward model, and §9.7's reading is unchanged.
 
 ### 9.9 The canary stopped quoting — two correct rules that compose into a filter admitting nothing (2026-09-18 05:04Z)
 
+> **CORRECTED BY §9.10.** The mechanism below is real and the 05:04Z snapshot is accurate, but
+> this entry's central claim — that the starvation is *deterministic* and the book "will never
+> quote again" — is **false**. It quoted at 06:00:04Z and filled. The entry is kept unedited
+> because the record of a wrong call is worth more than a tidy one; read §9.10 for what
+> actually holds.
+
 The book has not placed an order since **00:08:31Z**. It is not broken in any way that shows:
 the worker cycles every ~2.5 minutes and logged 43 consecutive `incentive smoke cycle` lines
 between 03:07Z and 05:00Z; `Fmmsell10` placed normally throughout (04:42:55Z, resting); the
@@ -610,6 +616,54 @@ so a starved cycle and a healthy one printed the identical line. `DETAIL_KEYS` n
 **Exposure is unchanged and safe:** 2c, the two unsettled `KXBIGGESTQUAKE-17SEP26` contracts.
 A book that quotes nothing takes no new risk. The cost is to the experiment, not the account:
 the canary is accruing no evidence.
+
+### 9.10 §9.9 was wrong: the starvation is intermittent, and the book is now at its cap (2026-09-18 08:04Z)
+
+The `DETAIL_KEYS` fix shipped in §9.9 falsified §9.9 within ten minutes of reaching production.
+The first `incentive smoke cycle` line to render its own counters, at 07:57:20Z:
+
+```
+considered| 0
+fetched| 0
+placed| 0
+outcomes| {"no_slots":1}
+```
+
+`considered: 0` means the cycle never reached candidate selection at all. It returned at the
+first guard — `slots = MAX_OPEN_ORDERS - count_live_book_open(...) <= 0` — which is a different
+cause from the one §9.9 asserted, and a benign one.
+
+The order book says why:
+
+| created | market | side | price | status |
+|---|---|---|---|---|
+| **06:00:04Z** | **`KXUSLEI-26SEP18-T0.2`** | yes | **5c** | **filled** |
+| 00:08:31Z | `KXAAAGASDAZ-26SEP18-4.6800` | yes | 1c | canceled |
+| 20:04:27–28Z | `KXBIGGESTQUAKE-17SEP26-7.0` / `-6.8`, `KXYTVIEWSHIGH` | yes | 1c / 4c | filled ×2, canceled |
+
+**The book quoted again at 06:00:04Z and filled**, about two hours after §9.9 declared that it
+never would. Three filled, unsettled positions now count as open — `KXBIGGESTQUAKE` ×2 plus
+`KXUSLEI` — which is exactly `MAX_OPEN_ORDERS = 3`, so the cap is holding the book quiet. That
+is the design working, not a defect.
+
+**Where §9.9's reasoning broke.** It observed that the eight soonest-ending programmes at 05:04Z
+were all 15-minute ones and concluded the window is *permanently* saturated. That does not
+follow: the count of concurrent sub-2-hour programmes varies, and whenever fewer than eight are
+live, day-scale programmes enter the window and quote normally. The composition is real and can
+starve the book for hours at a time — the 00:08Z→06:00Z gap is the observed instance — but it is
+**intermittent**, not deterministic, and the book recovers without intervention.
+
+**What this changes.** The §9.9 universe question stays open but is no longer urgent: it is a
+throughput question (how often the window is wasted on programmes that will always refuse),
+not a liveness one. It should be decided on measurement — the `outcomes` breakdown now in the
+logs is that measurement — rather than on the false premise that the book is dead.
+
+**What it does not change.** The refusal-code fix stands on its own merit and paid for itself
+immediately: the instrument's first reading overturned the conclusion of the entry that shipped
+it. That is the argument for fixing an instrument before trusting a diagnosis made without one.
+
+**Exposure is now 7c** across three unsettled contracts (1c + 1c + 5c), against a $10 strategy
+cap and a 3-order cap. Both caps hold and neither was approached.
 
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 

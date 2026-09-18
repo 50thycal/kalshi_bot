@@ -350,6 +350,8 @@ new book.
 
 ## THE CANARY STOPPED QUOTING — universe starvation (2026-09-18 05:04Z)
 
+**CORRECTED — see the next section. The claim that this is permanent is false.**
+
 No order since 00:08:31Z. Nothing is failing: the worker cycles every ~2.5 min, `Fmmsell10`
 places normally, caps hold, no rejects, no auth errors. The book is **starved**.
 
@@ -373,6 +375,30 @@ drops a zero.
 
 Exposure unchanged: 2c in the two unsettled `KXBIGGESTQUAKE-17SEP26` contracts. A book that
 quotes nothing takes no new risk — the cost is evidence, not money.
+
+## CORRECTION: the starvation is intermittent, and the book is at its cap (2026-09-18 08:04Z)
+
+The `DETAIL_KEYS` fix from the section above falsified that section within ten minutes of
+reaching production. The first cycle line to print its own counters read
+`considered=0 fetched=0 placed=0 outcomes={"no_slots":1}` — the cycle never reached candidate
+selection; it returned at the open-order cap.
+
+**The book quoted again at 06:00:04Z** on `KXUSLEI-26SEP18-T0.2` at 5c and **filled**, roughly
+two hours after the previous section declared it never would. Three filled, unsettled positions
+now count as open, which is exactly `MAX_OPEN_ORDERS = 3`. The cap is holding it quiet — design,
+not defect.
+
+The composition of the two rules is real and can starve the book for hours (the 00:08Z→06:00Z
+gap), but the count of concurrent sub-2-hour programmes varies, so whenever fewer than eight are
+live the window admits day-scale ones and the book recovers on its own. **Intermittent, not
+deterministic.**
+
+The universe question stays open and is now a throughput question, not a liveness one; it should
+be decided on the `outcomes` measurement the logs now carry.
+[Thesis §9.10](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+Exposure 7c across three unsettled contracts (1c + 1c + 5c), against a $10 strategy cap and a
+3-order cap. Both hold.
 
 ## Next Step (Phase 1a)
 
