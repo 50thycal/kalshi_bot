@@ -729,6 +729,252 @@ and is noted without being claimed as understood.
 `LIVE_PAPER_TWIN_SUFFIX=_pt4` untouched, `KILL_SWITCH=false`. Exposure 7c at the 3-order cap
 (§9.10).
 
+### 9.12 The first settlement: a full loss of premium, and the slot recycled (2026-09-18 15:47Z)
+
+The last unobserved leg of the pipe has closed. `KXUSLEI-26SEP18-T0.2` **settled NO**, and the
+YES contract we held expired worthless.
+
+| time | side | qty | avg price | exposure | realized P&L |
+|---|---|---|---|---|---|
+| 14:44:40Z | yes | 1 | 5c | $0.0500 | 0.0000 |
+| **14:47:14Z** | no | **0** | — | **$0.0000** | **−$0.0500** |
+
+**Realized: −$0.0500.** The full premium, which is the maximum loss on a 1-contract YES bought
+at 5c. Fee on the entry fill was **$0.0000** — we were the maker, as designed.
+
+**The full lifecycle is now proven end to end**, every leg observed rather than inferred:
+select → place → rest → **fill** → hold → **settle**. Precise fill times from the `fills` table,
+which are later than the times §9.8 records (those were observation times, not fill times):
+
+| market | order placed | filled | price | fee |
+|---|---|---|---|---|
+| `KXBIGGESTQUAKE-17SEP26-6.8` | 2026-09-17 20:04:27Z | 2026-09-17 23:35:47Z | 1c | $0.0000 |
+| `KXBIGGESTQUAKE-17SEP26-7.0` | 2026-09-17 20:04:27Z | 2026-09-17 23:35:47Z | 1c | $0.0000 |
+| `KXUSLEI-26SEP18-T0.2` | 2026-09-18 06:00:04Z | 2026-09-18 07:19:24Z | 5c | $0.0000 |
+| `KXTRUMPAPPROVE-26SEP18-E39.4` | 2026-09-18 14:48:49Z | 2026-09-18 15:24:22Z | 1c | $0.0000 |
+
+**§9.10's prediction held.** The settlement freed a slot at 14:47:14Z; the very next cycle
+placed a new order at **14:48:49Z**, 95 seconds later, and it filled. The book was never
+starved — it was full, exactly as §9.10 said, and it resumed the instant a slot opened. That is
+the cap working as designed, and it is now observed rather than argued.
+
+**What the loss does and does not mean.** It means nothing about the premise, in either
+direction. A YES bought at 5c is a market-implied ~5% event; losing the premium is the modal
+outcome and happens about nineteen times in twenty. One settlement is **n=1** and the sign of a
+single deep-tail resolution carries no information. Reading it as evidence against the strategy
+would be as wrong as reading a win as evidence for it.
+
+**What it does make concrete is the asymmetry the whole thesis rests on.** The ledger so far:
+
+| | amount |
+|---|---|
+| Realized P&L | **−$0.0500** |
+| Open exposure | $0.03 (three contracts at 1c) |
+| Total ever committed | $0.08 across four filled contracts |
+| **Liquidity reward actually credited** | **none observed** |
+
+The adverse-selection leg is now paying out in real money, on schedule, in the direction the
+model expects. The reward leg — the entire reason the book exists — has produced **no observed
+credit at all**. Kalshi credits a liquidity reward only after a programme ends, so an absence
+this early is not yet a finding. But it converts `est_reward` from an unvalidated modelling
+assumption into an unvalidated assumption that is now being *paid against*.
+
+**Not a verdict, and not a gate read.** This is one settlement. `live_canary_keep` needs three
+settled contracts and is still unreadable; no gate has been evaluated and nothing here
+authorizes anything.
+
+**Position now:** `KXBIGGESTQUAKE-17SEP26-7.0` and `-6.8` at 1c, `KXTRUMPAPPROVE-26SEP18-E39.4`
+at 1c — three contracts, 3c open, back at `MAX_OPEN_ORDERS = 3`. Every cap held throughout.
+
+### 9.13 The payout boundary check cannot be run — the instrument cannot see the payout leg (2026-09-18 15:55Z)
+
+The scheduled payout-boundary check was meant to compare a realized liquidity reward against
+`est_reward`. It cannot be run, for three independent reasons, none of which is "no reward was
+paid".
+
+**1. We stop observing a programme before it can pay.** `programs.run_discovery` polls
+`iter_incentive_programs(status="active", ...)`. A programme leaves that listing when it ends,
+so its row freezes at the last state observed *while it was still active*. Every programme the
+live book rested in reads `paid_out = false`, and every one was last seen **before** its own end:
+
+| market | programme end | last seen | gap | `paid_out` |
+|---|---|---|---|---|
+| `KXBIGGESTQUAKE-17SEP26-6.8` / `-7.0` | 17 Sep 23:59:59Z | 17 Sep 23:55:54Z | −4m | false |
+| `KXAAAGASDAZ-26SEP18-4.6800` | 03:59:00Z | 03:55:02Z | −4m | false |
+| `KXUSLEI-26SEP18-T0.2` | 13:59:00Z | 13:58:04Z | −56s | false |
+| `KXTRUMPAPPROVE-26SEP18-E39.4` (prior terms) | 14:02:23Z | 13:58:04Z | −4m | false |
+| `KXYTVIEWSHIGH-POS26OCT-8.75M` (prior terms) | 17 Sep 22:25:00Z | 17 Sep 22:20:42Z | −4m | false |
+
+Each `false` means "false at the last moment we looked, which was minutes before it ended". It
+does **not** mean the programme ended and paid nothing. We simply never look again.
+
+**2. `paid_out` does not mean what the check assumed.** The flag is real and does flip — **23**
+of 7,979 programme-terms rows carry it, **12** of 4,112 currently-live liquidity programmes. But
+several of those have **not ended**: `KXVOTECLARITY-26SEP15-*` ends 20 Sep and reads true today;
+`KXFEAR-26SEP11-*` ends at 20:00Z today and reads true; `KXEOWEEK-26SEP05-*` ends 19 Sep. So
+`paid_out = true` is not "the end-of-programme reward has been distributed", and it cannot be
+used as a payout signal until its actual semantics are established.
+
+**3. The shadow instrument never covered a single market the live book traded.** Querying
+`incentive_shadow_outcomes` for all nine tickers the live book has ever quoted —
+`KXHORMUZPEAK` ×3, `KXYTVIEWSHIGH`, `KXBIGGESTQUAKE` ×2, `KXAAAGASDAZ`, `KXUSLEI`,
+`KXTRUMPAPPROVE` — returns **zero rows**. The live runner ranks by soonest-ending programme; the
+shadow collector snapshots a different, cap-limited subset (`market_cap_reached` fires on every
+discovery cycle). So there is no `est_reward` for the markets we actually traded either.
+
+**Both sides of the estimate-versus-realized comparison are missing for the live book.** That is
+the finding.
+
+**This is not evidence against the reward model.** It is evidence that the instrument cannot
+observe the payout leg at all. Two further reasons a null here would have been uninformative
+even with perfect observation: the live runner selects by cheapest downside and soonest end,
+which steers systematically *away* from the big-pool programmes; and a 1-contract resting bid in
+a 27,000–60,000 contract book is a ~0.5% share, so any credit would round to zero. The smoke
+test was never sized to measure a reward.
+
+**What would be needed, none of it taken here.** Poll ended programmes — by `program_id`, or a
+status other than `active` — so the terminal `paid_out` state is captured rather than frozen
+minutes early. Establish what `paid_out` means, since it is true on programmes that have not
+ended. Make the shadow instrument cover the markets the live book selects, so estimate and
+realized land on the same market. Each is a change to how a live experiment's data is collected,
+and each is an **OWNER DECISION**, not a patch.
+
+**This also explains §9.12's "no liquidity reward credited or observed".** That line is literally
+true and now has a cause: we were never going to see one. It should not be read as the reward
+leg having failed.
+
+### 9.14 P(both | one) leaves zero — and the headline goes negative in the same reading (2026-09-18 16:18Z)
+
+Span **1.16 days**. Three of the five pre-registered materiality criteria fired at once, and they
+do not point the same way.
+
+**(a) FULL `both_filled` appears under both non-optimistic models, for the first time.**
+
+| model | `both_filled` | `partial_both` | P(both \| one) | n |
+|---|---|---|---|---|
+| conservative | **4** | 16 (was 10) | **0.007** (was 0.000) | 555 |
+| queue_aware | **4** | 36 (was 20) | **0.004** (was 0.000) | 1005 |
+| optimistic | 275 | — | 0.104 | 2634 |
+
+The pre-registered §6 metric has moved off zero for the first time since §9.2. Genuine two-sided
+fills exist outside the optimistic model. This is the mechanism the thesis needs, observed.
+
+**(c) The queue-aware lag is now estimable, and it is not 17 seconds.** Mean **828.0s** against
+median **553.2s** — the two have finally diverged, so this rests on several observations rather
+than one. The two-sided fill lag under queue-aware is on the order of **nine to fourteen
+minutes**. §9.7's 16.7s reading, already qualified by §9.11, is now conclusively dead and should
+never be cited again. (Conservative still reads mean = median = 1212.5s, so that one is still
+n=1.)
+
+**And in the same reading, the headline flipped hard negative.** Under `A_break_even`, at every
+tier and every fill model:
+
+| policy / tier | model | reward | single-leg MTM | net | was (12:14Z) |
+|---|---|---|---|---|---|
+| A_break_even 25 | conservative | 26.48 | **−40.73** | **−13.95** | +5.74 |
+| A_break_even 100 | conservative | 104.84 | **−154.16** | **−48.44** | +28.40 |
+| A_break_even 500 | conservative | 462.11 | **−613.53** | **−150.53** | +222.77 |
+| C_conservative 500 | conservative | 261.22 | −30.79 | **+230.43** | +124.99 |
+| C_conservative 500 | queue_aware | 261.21 | −459.69 | **−198.48** | +124.86 |
+
+**The driver is single-leg mark-to-market, not the reward.** Between 08:08Z and now, the
+`A_break_even`/$500 modelled reward grew from 284 to 462 — about 1.6×. Its single-leg MTM grew
+from **−61.63 to −613.53**, about **ten times**. The adverse-selection leg is outrunning the
+reward leg by roughly a factor of six in rate of growth.
+
+The per-placement figures say the same thing. Conservative single-leg marks against deep
+competing size: **−$4.9808** mean (n=506) against a mean `est_reward` of **+$0.1005** — a factor
+of about **fifty** the wrong way, up from twenty at 12:14Z.
+
+**Of the eighteen policy × tier × model cells above, exactly one is still positive:**
+`C_conservative` under the conservative fill model. The aggressive policy's single-leg risk has
+overwhelmed its reward at every tier; the conservative policy's has not. That is a structural
+observation about *policy choice*, not a verdict on the premise, and it is the first time the
+two policies have separated this clearly.
+
+**Two alternative explanations I cannot exclude, and will not paper over.** First, the tail is
+heavy: `worst@bid` is **−$313.10** against a mean of −$5.08, so a handful of outcomes may be
+driving the aggregate rather than a regime change. Second, the collector restarted twice today
+(#425 at 07:54Z, #426 at 12:46Z) and this report carries a new event type, `throttled` (3), with
+17 connects against 16 disconnects and 11 thread starts. An interrupted pair closed at a bad
+mark would land exactly here. Four hours is a short window for a 10× move in one component.
+
+**Not a verdict, and no gate re-interpretation.** §6 is pre-registered and reads the conservative
+model; a negative reading is a reading, not a conclusion I am entitled to draw early, and I am
+not redefining anything after seeing it. What this entry records is that the metric finally moved
+off zero *and* that the economics deteriorated sharply in the same four hours, which is an
+uncomfortable pair and is exactly why both belong in the record together.
+
+**Collector:** discovery clean (345 cycles, 0 errors), `listed=4549`, pool **$559,521.67**,
+`seq_gap` 137 over a 72h window — a lower rate than earlier. The new `throttled` counter is noted
+and not yet understood.
+
+### 9.15 Second settlement, and two safeguards not doing what they were meant to (2026-09-18 18:23Z)
+
+**Second settlement.** `KXTRUMPAPPROVE-26SEP18-E39.4` settled at **17:32:14Z**: quantity 0,
+realized **−$0.0100**. Another full loss of premium — a 1c YES expiring worthless, again the
+modal outcome and again uninformative at this n. Running realized: **−$0.0600** across two
+settled contracts.
+
+Two defects surfaced in the same read. Neither risks meaningful money at current size, and both
+are safeguards behaving differently from how they were written.
+
+**Defect 1 — this book has no event-level cap, and it has now doubled up on an event another
+live book already holds.**
+
+| strategy | market | side | price | status | event |
+|---|---|---|---|---|---|
+| `Fmmsell10` | `KXRT-RES-97` | no | 93c | **filled** (14 Sep 20:31:44Z) | `KXRT-RES` |
+| `Alimm1` | `KXRT-RES-93` | no | 3c | **resting** (17:33:50Z) | `KXRT-RES` |
+| `Alimm1` | `KXRT-RES-94` | no | 10c | **resting** (18:21:03Z) | `KXRT-RES` |
+
+`Fmmsell10` is short 1 NO at 93c on `KXRT-RES-97` — **$0.93** at risk, several times the
+incentive book's entire committed capital. `Alimm1` is now resting two more NO bids on the same
+event. All three are the same direction on one event.
+
+`LIVE_ONE_POSITION_PER_EVENT=true` is set, and `repository.event_has_open_live_position` exists
+for exactly this, taking an `exclude_strategy` so a book cannot block itself. **The incentive
+package never calls it.** `live.build_live_quote`'s refusal set is `excluded_series`,
+`open_order_cap`, `not_two_sided`, `post_only_cross`, `no_target_size`, `target_not_met`,
+`program_ending`, `no_book`, `too_expensive`, `exposure_cap` — there is no event cap among them.
+This is the "event-level concentration cap, if this book is ever sized up" that §9.8 parked as a
+follow-up. It is no longer hypothetical.
+
+**Defect 2 — the open-order cap is under-counting, and the book is holding four commitments
+against a cap of three.**
+
+`repository.count_live_book_open` skips any ticker whose latest position snapshot is flat
+(`abs(qty) <= 0.01`), which is correct for a settled position. But `KXRT-RES-93` has a snapshot
+at **quantity 0** with exposure $0.0003 while its order is still **resting and unfilled** — so a
+live resting order is invisible to the cap. The function's own docstring says "A resting/unfilled
+order (no snapshot yet) counts as open"; the failure is that once *any* snapshot exists for that
+ticker at zero, it stops counting. It cannot distinguish "position closed" from "order not filled
+yet".
+
+Actual commitments right now: `KXBIGGESTQUAKE` ×2 filled, plus `KXRT-RES-93` and `-94` resting =
+**four**, against `MAX_OPEN_ORDERS = 3`. The runner is behaving exactly as its code says; the
+code does not implement the cap as intended.
+
+**Also new, and worth recording:** these are the book's **first NO-side quotes** — every prior
+order was YES at 1–5c — and **10c is the highest price it has ever placed**.
+
+**What is and is not at risk.** Committed on the incentive book: 1c + 1c + 3c + 10c = **$0.15**,
+against a $10 strategy cap. The caps that bound real loss — exposure, `qty = 1`, price ≤ 25c —
+all hold, and the price cap is not close. The event concentration matters at *this* size only as
+a demonstration; at any size worth trading it would be the live risk.
+
+**Recorded, not patched.** Both fixes change the caps of a live, armed, real-money arm. That is
+an **OWNER DECISION**, and fixing a safeguard is still a change to one. The two shapes:
+
+1. Call `event_has_open_live_position(event_ticker, exclude_strategy=LIVE_TAG)` in
+   `build_live_quote` and refuse with a new `event_cap` code — reusing the fleet's existing
+   mechanism rather than inventing a second one.
+2. Count a resting order as open regardless of a zero-quantity snapshot — for example by
+   treating a non-terminal order status as open before consulting the snapshot at all, so only a
+   *filled* position can be dismissed as flat.
+
+Neither is taken here. Stand-down remains one step: remove `Alimm1` from `LIVE_STRATEGIES`.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized

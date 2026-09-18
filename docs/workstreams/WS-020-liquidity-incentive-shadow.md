@@ -423,6 +423,105 @@ Live book unchanged and correct: `LIVE_STRATEGIES=Fmmsell10,Alimm1`, twin pinned
 off, exposure 7c at the 3-order cap.
 [Thesis §9.11](../LIQUIDITY_INCENTIVE_THESIS.md).
 
+## FIRST SETTLEMENT — a full loss of premium (2026-09-18 15:47Z)
+
+`KXUSLEI-26SEP18-T0.2` settled **NO** at 14:47:14Z. The YES contract we held at 5c expired
+worthless: **realized −$0.0500**, the maximum loss on the position. Entry fee $0.0000 — we were
+the maker.
+
+**The lifecycle is now proven end to end with every leg observed:** select → place → rest →
+fill → hold → **settle**.
+
+**§9.10's prediction held.** The settlement freed a slot at 14:47:14Z and the next cycle placed
+at **14:48:49Z**, 95 seconds later, on `KXTRUMPAPPROVE-26SEP18-E39.4` at 1c — which filled. The
+book was full, not starved, and resumed the instant a slot opened.
+
+**The loss carries no information about the premise.** A 5c YES is a market-implied ~5% event;
+losing the premium is the modal outcome. n=1.
+
+What it does make concrete: realized **−$0.05**, open 3c, $0.08 ever committed across four
+filled contracts, and **no liquidity reward credited yet**. The adverse-selection leg is paying
+out in real money; the reward leg the thesis depends on has produced nothing observable. Too
+early to be a finding — Kalshi credits after a programme ends — but `est_reward` is now an
+unvalidated assumption being paid against.
+
+`live_canary_keep` needs three settled contracts and is still unreadable. No gate evaluated,
+nothing authorized. [Thesis §9.12](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## THE PAYOUT LEG IS UNOBSERVABLE (2026-09-18 15:55Z)
+
+The scheduled payout-boundary check cannot be run. Three independent reasons, none of them "no
+reward was paid":
+
+1. **We stop looking before a programme can pay.** Discovery polls `status="active"`, so a row
+   freezes at its last active observation. All six programmes the live book rested in read
+   `paid_out = false`, and every one was last seen 1–4 minutes BEFORE its own end.
+2. **`paid_out` does not mean what we assumed.** It is real (23 of 7,979 rows; 12 of 4,112 live)
+   but is true on programmes that have NOT ended — `KXVOTECLARITY` ends 20 Sep, `KXFEAR` ends
+   20:00Z today. So it is not an end-of-programme distribution signal.
+3. **The shadow instrument never covered a market the live book traded.** Zero
+   `incentive_shadow_outcomes` rows for all nine live tickers. No `est_reward` for them either.
+
+Both sides of estimate-versus-realized are missing for the live book. NOT evidence against the
+reward model — evidence the instrument cannot see the payout leg. A null would have been
+uninformative anyway: the runner steers away from big-pool programmes, and 1 contract in a
+27k–60k book is ~0.5% share.
+
+**OWNER DECISION, not patched:** poll ended programmes so the terminal state is captured;
+establish `paid_out` semantics; make the shadow cover the live book's markets.
+[Thesis §9.13](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## P(both | one) LEAVES ZERO — and the headline goes negative (2026-09-18 16:18Z)
+
+Span 1.16 days. Three materiality criteria fired at once, pointing opposite ways.
+
+**FULL `both_filled` appeared under BOTH non-optimistic models** — 4 each. P(both | one) is no
+longer 0.000: conservative **0.007** (n=555), queue_aware **0.004** (n=1005). The pre-registered
+§6 metric has moved off zero for the first time since §9.2. `partial_both` also grew, 10→16 and
+20→36.
+
+**The queue-aware lag is now estimable**: mean 828.0s vs median 553.2s (diverged, so n>1). Nine
+to fourteen minutes, NOT 17 seconds. §9.7's reading is conclusively dead.
+
+**The headline flipped hard negative in the same reading.** `A_break_even` is negative at every
+tier and model; at $500 conservative, net went +222.77 → **−150.53**. The driver is single-leg
+MTM, not reward: reward grew 1.6× since 08:08Z while single-leg MTM grew **10×** (−61.63 →
+−613.53). Deep-depth single-leg marks are −$4.98 (n=506) against +$0.10 mean est_reward — fifty
+times the wrong way, up from twenty.
+
+**Exactly one of eighteen cells is still positive:** `C_conservative` under the conservative fill
+model. The two policies have separated clearly for the first time.
+
+**Two explanations not excluded:** the tail is heavy (worst@bid −$313.10 vs mean −$5.08), and the
+collector restarted twice today with a new `throttled` event type appearing. Four hours is short
+for a 10× move in one component.
+
+No gate re-interpretation. [Thesis §9.14](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## SECOND SETTLEMENT + TWO SAFEGUARD DEFECTS (2026-09-18 18:23Z)
+
+`KXTRUMPAPPROVE-26SEP18-E39.4` settled at 17:32:14Z, realized **−$0.0100** — another full loss of
+premium, again the modal outcome, again uninformative at this n. Running realized **−$0.0600**
+over two settled contracts.
+
+**Defect 1: no event-level cap on this book.** `Fmmsell10` holds `KXRT-RES-97` NO at 93c
+(**$0.93** at risk); `Alimm1` is now resting `KXRT-RES-93` at 3c and `KXRT-RES-94` at 10c — same
+event `KXRT-RES`, same direction. `LIVE_ONE_POSITION_PER_EVENT=true` and
+`repository.event_has_open_live_position` exist for this, and **the incentive package never calls
+it**; `build_live_quote` has no event cap among its refusal codes. This is the concentration cap
+§9.8 parked — no longer hypothetical.
+
+**Defect 2: the open-order cap under-counts.** `count_live_book_open` skips a ticker whose latest
+snapshot is flat. `KXRT-RES-93` has a **quantity-0** snapshot while its order is still **resting**,
+so a live resting order is invisible. Real commitments: 4 (2 filled + 2 resting) against
+`MAX_OPEN_ORDERS = 3`.
+
+Also new: first NO-side quotes ever, and 10c is the highest price this book has placed.
+
+Committed $0.15 against a $10 cap; exposure, qty and price caps all hold. **Recorded, not
+patched** — both fixes change a live armed arm's caps. OWNER DECISION.
+[Thesis §9.15](../LIQUIDITY_INCENTIVE_THESIS.md).
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).
