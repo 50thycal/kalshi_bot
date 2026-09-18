@@ -543,6 +543,74 @@ positions from 20:04Z have no twin counterpart and that gap is part of the recor
 rest, fill, hold, and expire. It establishes nothing economic — 2c of deep-tail YES is not a
 test of the reward model, and §9.7's reading is unchanged.
 
+### 9.9 The canary stopped quoting — two correct rules that compose into a filter admitting nothing (2026-09-18 05:04Z)
+
+The book has not placed an order since **00:08:31Z**. It is not broken in any way that shows:
+the worker cycles every ~2.5 minutes and logged 43 consecutive `incentive smoke cycle` lines
+between 03:07Z and 05:00Z; `Fmmsell10` placed normally throughout (04:42:55Z, resting); the
+caps held; nothing was rejected and no auth error occurred. The last order,
+`KXAAAGASDAZ-26SEP18-4.6800`, left the book at ~04:00Z after 2,280 queue samples — about nine
+minutes before its own 4-hour timeout would have fired, with no `cancel_reason`, which is the
+exchange closing the market rather than us cancelling it. That part is normal and `Fmmsell10`
+shows the same reasonless cancels.
+
+**What is not normal is that nothing replaced it.** In §9.3 and §9.6 a replacement landed
+about two minutes after the previous order left the book. Here, twenty-two cycles have placed
+nothing.
+
+The cause is the interaction of two rules, each correct on its own:
+
+1. `runner._candidate_programs` orders current liquidity programmes **soonest-ending first**,
+   and the runner fetches books for only the first `LIQUIDITY_INCENTIVE_LIVE_MAX_BOOK_FETCHES`
+   (8) of them. §9 chose that ordering deliberately: Kalshi credits a liquidity reward only
+   after a programme ends, so the soonest-ending programme is the one that can confirm the
+   payout leg first.
+2. `live.build_live_quote` refuses `program_ending` below `MIN_PROGRAM_HOURS_REMAINING = 2.0`.
+   Also deliberate: a reward cannot be earned on a programme that is about to end.
+
+Kalshi now runs a continuous class of **15-minute** liquidity programmes. The eight
+soonest-ending programmes at 05:04Z:
+
+| ends | market | series | reward | target size |
+|---|---|---|---|---|
+| 05:10Z | `KXTTELITEMATCH-26SEP180010JPRWBA-WBA` | `KXTTELITEMATCH` | $20 | 300 |
+| 05:10Z | `KXTTELITEMATCH-26SEP180010PADJNO-JNO` | `KXTTELITEMATCH` | $20 | 300 |
+| 05:10Z | `KXTTELITEMATCH-26SEP180010AGRJZA-JZA` | `KXTTELITEMATCH` | $20 | 300 |
+| 05:15Z | `KXPLATINUM15M-26SEP180115-15` | `KXPLATINUM15M` | $20 | 300 |
+| 05:15Z | `KXCRYPTOLEAD15M-26SEP180115-ETH` | `KXCRYPTOLEAD15M` | $20 | 1000 |
+| 05:15Z | `KXNATGAS15M-26SEP180115-15` | `KXNATGAS15M` | $20 | 300 |
+| 05:15Z | `KXCRYPTOLEAD15M-26SEP180115-HYPE` | `KXCRYPTOLEAD15M` | $20 | 1000 |
+| 05:15Z | `KXGOLD15M-26SEP180115-15` | `KXGOLD15M` | $20 | 300 |
+
+Every one has **≤0.2h** remaining and is refused by rule 2. A fresh batch replaces them every
+fifteen minutes, so the eight-book window is permanently saturated by programmes the quote
+policy will always refuse. This is **deterministic, not intermittent**: while 15-minute
+programmes exist, the book can never reach the other ~3,913 current programmes, and it will
+never quote again.
+
+The earlier orders were placed at 16:00Z, 20:04Z and 00:08Z — times when the soonest-ending
+set still contained day-scale programmes. Nothing about the strategy changed; the world did.
+
+**Recorded, not fixed.** The fix is a change to which markets the book may quote — its
+universe — on a **live, armed** arm. `CLAUDE.md` is explicit that a registered book may not
+silently change rules or universe outside Experiment OS, and a changed world is an epoch, not
+a patch. So this entry is the record and the operator decides. The candidate shapes, none of
+them adopted here: raise the fetch window; order by soonest-ending **among programmes that
+already clear the 2-hour bar**; or exclude sub-2-hour programme series at the candidate stage.
+The second is the smallest change that preserves the original intent of the ordering.
+
+**One thing was fixed**, because it is a read path and not a trading rule: this took a database
+query and a code read to diagnose, because it was invisible in the logs. The runner already
+computes a per-refusal-code breakdown for exactly this purpose — "a cycle that placed nothing
+says which cap or which book stopped it" — and `scripts/railway_logs.py` rendered only `exc`,
+so a starved cycle and a healthy one printed the identical line. `DETAIL_KEYS` now carries
+`considered`, `fetched`, `placed` and `outcomes`, and no longer drops a field for being zero —
+`placed=0` is the value worth reading.
+
+**Exposure is unchanged and safe:** 2c, the two unsettled `KXBIGGESTQUAKE-17SEP26` contracts.
+A book that quotes nothing takes no new risk. The cost is to the experiment, not the account:
+the canary is accruing no evidence.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized

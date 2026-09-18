@@ -348,6 +348,32 @@ so every other book's twin was exposed. Fixed by keeping configured twin tags by
 (`repository.keep_with_configured_twins`). This is the Wmmsell6 failure of 2026-08-04 on a
 new book.
 
+## THE CANARY STOPPED QUOTING — universe starvation (2026-09-18 05:04Z)
+
+No order since 00:08:31Z. Nothing is failing: the worker cycles every ~2.5 min, `Fmmsell10`
+places normally, caps hold, no rejects, no auth errors. The book is **starved**.
+
+Two rules, each correct alone, compose into a filter that admits nothing:
+`_candidate_programs` ranks **soonest-ending first** and fetches only the first 8 books (so the
+payout leg can be observed as early as possible); `build_live_quote` refuses below
+`MIN_PROGRAM_HOURS_REMAINING = 2.0` (a reward cannot be earned on a programme about to end).
+Kalshi now runs a continuous class of **15-minute** liquidity programmes, so the 8 soonest-
+ending programmes are always ≤0.2h from ending and always refused. Deterministic, not
+intermittent — the other ~3,913 current programmes are unreachable.
+
+**Not fixed here.** The fix changes the book's **universe** on a live, armed arm; that is an
+Experiment OS epoch decision, not a patch. OWNER DECISION.
+[Thesis §9.9](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+**Fixed here (read path only):** the diagnosis needed a database query and a code read because
+the logs could not say it. The runner already computes a per-refusal-code breakdown so that a
+cycle placing nothing reports what stopped it, and `scripts/railway_logs.py` rendered only
+`exc`. `DETAIL_KEYS` now carries `considered`, `fetched`, `placed`, `outcomes`, and no longer
+drops a zero.
+
+Exposure unchanged: 2c in the two unsettled `KXBIGGESTQUAKE-17SEP26` contracts. A book that
+quotes nothing takes no new risk — the cost is evidence, not money.
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).
