@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-watch-11","sql":"SELECT created_at::text AS created, market_ticker, coalesce(side,'-') AS side, limit_price::text AS px, coalesce(status,'-') AS status, coalesce(cancel_reason,'-') AS reason FROM live_orders WHERE strategy = 'Alimm1' ORDER BY created_at DESC LIMIT 20"}
+{"type":"noop"}
