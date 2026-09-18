@@ -315,6 +315,23 @@ all under 25c, no collisions. **Place → rest → expire → re-place demonstra
 The event-concentration pattern repeated (2 of 3 on one event); second observation, still not
 acted on, but a sized-up version needs an event cap. [Thesis §9.6](../LIQUIDITY_INCENTIVE_THESIS.md).
 
+## Shadow read, hour 12 (2026-09-18 00:00Z)
+
+Ops `limm-report-5`, span 0.48 days. Two of the material triggers fired
+([thesis §9.7](../LIQUIDITY_INCENTIVE_THESIS.md)):
+
+- **The queue-aware model recorded 10 `partial_both` outcomes** — the first two-sided filling
+  outside the optimistic model. `P(both | one)` counts only FULL pairs, so it still reads
+  0.000 and is now known to be **incomplete**. The metric is NOT being changed: §6 is
+  pre-registered and this is precisely the moment that rule exists for. Recorded so no reader
+  takes the 0.000 at face value.
+- **Queue-aware lag is 16.7s** (vs the optimistic model's 435s median) — in the range that
+  would actually bound one-sided exposure. First evidence the §2 mechanism is mechanically
+  possible. But 10 observations, no full pairs, 0.48 days. A direction, not a finding.
+
+Sequence-gap rise has **plateaued** (4 → 17 → 28 → 28). Discovery clean, 4,449 programmes,
+trades 98/3h and rising but still thin.
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).
