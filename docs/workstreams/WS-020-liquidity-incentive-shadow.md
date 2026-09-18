@@ -471,6 +471,33 @@ uninformative anyway: the runner steers away from big-pool programmes, and 1 con
 establish `paid_out` semantics; make the shadow cover the live book's markets.
 [Thesis §9.13](../LIQUIDITY_INCENTIVE_THESIS.md).
 
+## P(both | one) LEAVES ZERO — and the headline goes negative (2026-09-18 16:18Z)
+
+Span 1.16 days. Three materiality criteria fired at once, pointing opposite ways.
+
+**FULL `both_filled` appeared under BOTH non-optimistic models** — 4 each. P(both | one) is no
+longer 0.000: conservative **0.007** (n=555), queue_aware **0.004** (n=1005). The pre-registered
+§6 metric has moved off zero for the first time since §9.2. `partial_both` also grew, 10→16 and
+20→36.
+
+**The queue-aware lag is now estimable**: mean 828.0s vs median 553.2s (diverged, so n>1). Nine
+to fourteen minutes, NOT 17 seconds. §9.7's reading is conclusively dead.
+
+**The headline flipped hard negative in the same reading.** `A_break_even` is negative at every
+tier and model; at $500 conservative, net went +222.77 → **−150.53**. The driver is single-leg
+MTM, not reward: reward grew 1.6× since 08:08Z while single-leg MTM grew **10×** (−61.63 →
+−613.53). Deep-depth single-leg marks are −$4.98 (n=506) against +$0.10 mean est_reward — fifty
+times the wrong way, up from twenty.
+
+**Exactly one of eighteen cells is still positive:** `C_conservative` under the conservative fill
+model. The two policies have separated clearly for the first time.
+
+**Two explanations not excluded:** the tail is heavy (worst@bid −$313.10 vs mean −$5.08), and the
+collector restarted twice today with a new `throttled` event type appearing. Four hours is short
+for a 10× move in one component.
+
+No gate re-interpretation. [Thesis §9.14](../LIQUIDITY_INCENTIVE_THESIS.md).
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).

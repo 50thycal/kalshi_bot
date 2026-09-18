@@ -843,6 +843,72 @@ and each is an **OWNER DECISION**, not a patch.
 true and now has a cause: we were never going to see one. It should not be read as the reward
 leg having failed.
 
+### 9.14 P(both | one) leaves zero — and the headline goes negative in the same reading (2026-09-18 16:18Z)
+
+Span **1.16 days**. Three of the five pre-registered materiality criteria fired at once, and they
+do not point the same way.
+
+**(a) FULL `both_filled` appears under both non-optimistic models, for the first time.**
+
+| model | `both_filled` | `partial_both` | P(both \| one) | n |
+|---|---|---|---|---|
+| conservative | **4** | 16 (was 10) | **0.007** (was 0.000) | 555 |
+| queue_aware | **4** | 36 (was 20) | **0.004** (was 0.000) | 1005 |
+| optimistic | 275 | — | 0.104 | 2634 |
+
+The pre-registered §6 metric has moved off zero for the first time since §9.2. Genuine two-sided
+fills exist outside the optimistic model. This is the mechanism the thesis needs, observed.
+
+**(c) The queue-aware lag is now estimable, and it is not 17 seconds.** Mean **828.0s** against
+median **553.2s** — the two have finally diverged, so this rests on several observations rather
+than one. The two-sided fill lag under queue-aware is on the order of **nine to fourteen
+minutes**. §9.7's 16.7s reading, already qualified by §9.11, is now conclusively dead and should
+never be cited again. (Conservative still reads mean = median = 1212.5s, so that one is still
+n=1.)
+
+**And in the same reading, the headline flipped hard negative.** Under `A_break_even`, at every
+tier and every fill model:
+
+| policy / tier | model | reward | single-leg MTM | net | was (12:14Z) |
+|---|---|---|---|---|---|
+| A_break_even 25 | conservative | 26.48 | **−40.73** | **−13.95** | +5.74 |
+| A_break_even 100 | conservative | 104.84 | **−154.16** | **−48.44** | +28.40 |
+| A_break_even 500 | conservative | 462.11 | **−613.53** | **−150.53** | +222.77 |
+| C_conservative 500 | conservative | 261.22 | −30.79 | **+230.43** | +124.99 |
+| C_conservative 500 | queue_aware | 261.21 | −459.69 | **−198.48** | +124.86 |
+
+**The driver is single-leg mark-to-market, not the reward.** Between 08:08Z and now, the
+`A_break_even`/$500 modelled reward grew from 284 to 462 — about 1.6×. Its single-leg MTM grew
+from **−61.63 to −613.53**, about **ten times**. The adverse-selection leg is outrunning the
+reward leg by roughly a factor of six in rate of growth.
+
+The per-placement figures say the same thing. Conservative single-leg marks against deep
+competing size: **−$4.9808** mean (n=506) against a mean `est_reward` of **+$0.1005** — a factor
+of about **fifty** the wrong way, up from twenty at 12:14Z.
+
+**Of the eighteen policy × tier × model cells above, exactly one is still positive:**
+`C_conservative` under the conservative fill model. The aggressive policy's single-leg risk has
+overwhelmed its reward at every tier; the conservative policy's has not. That is a structural
+observation about *policy choice*, not a verdict on the premise, and it is the first time the
+two policies have separated this clearly.
+
+**Two alternative explanations I cannot exclude, and will not paper over.** First, the tail is
+heavy: `worst@bid` is **−$313.10** against a mean of −$5.08, so a handful of outcomes may be
+driving the aggregate rather than a regime change. Second, the collector restarted twice today
+(#425 at 07:54Z, #426 at 12:46Z) and this report carries a new event type, `throttled` (3), with
+17 connects against 16 disconnects and 11 thread starts. An interrupted pair closed at a bad
+mark would land exactly here. Four hours is a short window for a 10× move in one component.
+
+**Not a verdict, and no gate re-interpretation.** §6 is pre-registered and reads the conservative
+model; a negative reading is a reading, not a conclusion I am entitled to draw early, and I am
+not redefining anything after seeing it. What this entry records is that the metric finally moved
+off zero *and* that the economics deteriorated sharply in the same four hours, which is an
+uncomfortable pair and is exactly why both belong in the record together.
+
+**Collector:** discovery clean (345 cycles, 0 errors), `listed=4549`, pool **$559,521.67**,
+`seq_gap` 137 over a 72h window — a lower rate than earlier. The new `throttled` counter is noted
+and not yet understood.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized
