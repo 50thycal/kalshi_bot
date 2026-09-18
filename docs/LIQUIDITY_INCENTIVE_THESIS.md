@@ -729,6 +729,63 @@ and is noted without being claimed as understood.
 `LIVE_PAPER_TWIN_SUFFIX=_pt4` untouched, `KILL_SWITCH=false`. Exposure 7c at the 3-order cap
 (§9.10).
 
+### 9.12 The first settlement: a full loss of premium, and the slot recycled (2026-09-18 15:47Z)
+
+The last unobserved leg of the pipe has closed. `KXUSLEI-26SEP18-T0.2` **settled NO**, and the
+YES contract we held expired worthless.
+
+| time | side | qty | avg price | exposure | realized P&L |
+|---|---|---|---|---|---|
+| 14:44:40Z | yes | 1 | 5c | $0.0500 | 0.0000 |
+| **14:47:14Z** | no | **0** | — | **$0.0000** | **−$0.0500** |
+
+**Realized: −$0.0500.** The full premium, which is the maximum loss on a 1-contract YES bought
+at 5c. Fee on the entry fill was **$0.0000** — we were the maker, as designed.
+
+**The full lifecycle is now proven end to end**, every leg observed rather than inferred:
+select → place → rest → **fill** → hold → **settle**. Precise fill times from the `fills` table,
+which are later than the times §9.8 records (those were observation times, not fill times):
+
+| market | order placed | filled | price | fee |
+|---|---|---|---|---|
+| `KXBIGGESTQUAKE-17SEP26-6.8` | 2026-09-17 20:04:27Z | 2026-09-17 23:35:47Z | 1c | $0.0000 |
+| `KXBIGGESTQUAKE-17SEP26-7.0` | 2026-09-17 20:04:27Z | 2026-09-17 23:35:47Z | 1c | $0.0000 |
+| `KXUSLEI-26SEP18-T0.2` | 2026-09-18 06:00:04Z | 2026-09-18 07:19:24Z | 5c | $0.0000 |
+| `KXTRUMPAPPROVE-26SEP18-E39.4` | 2026-09-18 14:48:49Z | 2026-09-18 15:24:22Z | 1c | $0.0000 |
+
+**§9.10's prediction held.** The settlement freed a slot at 14:47:14Z; the very next cycle
+placed a new order at **14:48:49Z**, 95 seconds later, and it filled. The book was never
+starved — it was full, exactly as §9.10 said, and it resumed the instant a slot opened. That is
+the cap working as designed, and it is now observed rather than argued.
+
+**What the loss does and does not mean.** It means nothing about the premise, in either
+direction. A YES bought at 5c is a market-implied ~5% event; losing the premium is the modal
+outcome and happens about nineteen times in twenty. One settlement is **n=1** and the sign of a
+single deep-tail resolution carries no information. Reading it as evidence against the strategy
+would be as wrong as reading a win as evidence for it.
+
+**What it does make concrete is the asymmetry the whole thesis rests on.** The ledger so far:
+
+| | amount |
+|---|---|
+| Realized P&L | **−$0.0500** |
+| Open exposure | $0.03 (three contracts at 1c) |
+| Total ever committed | $0.08 across four filled contracts |
+| **Liquidity reward actually credited** | **none observed** |
+
+The adverse-selection leg is now paying out in real money, on schedule, in the direction the
+model expects. The reward leg — the entire reason the book exists — has produced **no observed
+credit at all**. Kalshi credits a liquidity reward only after a programme ends, so an absence
+this early is not yet a finding. But it converts `est_reward` from an unvalidated modelling
+assumption into an unvalidated assumption that is now being *paid against*.
+
+**Not a verdict, and not a gate read.** This is one settlement. `live_canary_keep` needs three
+settled contracts and is still unreadable; no gate has been evaluated and nothing here
+authorizes anything.
+
+**Position now:** `KXBIGGESTQUAKE-17SEP26-7.0` and `-6.8` at 1c, `KXTRUMPAPPROVE-26SEP18-E39.4`
+at 1c — three contracts, 3c open, back at `MAX_OPEN_ORDERS = 3`. Every cap held throughout.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized

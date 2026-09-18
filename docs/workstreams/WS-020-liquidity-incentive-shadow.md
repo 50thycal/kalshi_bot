@@ -423,6 +423,31 @@ Live book unchanged and correct: `LIVE_STRATEGIES=Fmmsell10,Alimm1`, twin pinned
 off, exposure 7c at the 3-order cap.
 [Thesis §9.11](../LIQUIDITY_INCENTIVE_THESIS.md).
 
+## FIRST SETTLEMENT — a full loss of premium (2026-09-18 15:47Z)
+
+`KXUSLEI-26SEP18-T0.2` settled **NO** at 14:47:14Z. The YES contract we held at 5c expired
+worthless: **realized −$0.0500**, the maximum loss on the position. Entry fee $0.0000 — we were
+the maker.
+
+**The lifecycle is now proven end to end with every leg observed:** select → place → rest →
+fill → hold → **settle**.
+
+**§9.10's prediction held.** The settlement freed a slot at 14:47:14Z and the next cycle placed
+at **14:48:49Z**, 95 seconds later, on `KXTRUMPAPPROVE-26SEP18-E39.4` at 1c — which filled. The
+book was full, not starved, and resumed the instant a slot opened.
+
+**The loss carries no information about the premise.** A 5c YES is a market-implied ~5% event;
+losing the premium is the modal outcome. n=1.
+
+What it does make concrete: realized **−$0.05**, open 3c, $0.08 ever committed across four
+filled contracts, and **no liquidity reward credited yet**. The adverse-selection leg is paying
+out in real money; the reward leg the thesis depends on has produced nothing observable. Too
+early to be a finding — Kalshi credits after a programme ends — but `est_reward` is now an
+unvalidated assumption being paid against.
+
+`live_canary_keep` needs three settled contracts and is still unreadable. No gate evaluated,
+nothing authorized. [Thesis §9.12](../LIQUIDITY_INCENTIVE_THESIS.md).
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).
