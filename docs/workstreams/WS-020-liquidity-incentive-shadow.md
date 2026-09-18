@@ -522,6 +522,29 @@ Committed $0.15 against a $10 cap; exposure, qty and price caps all hold. **Reco
 patched** — both fixes change a live armed arm's caps. OWNER DECISION.
 [Thesis §9.15](../LIQUIDITY_INCENTIVE_THESIS.md).
 
+## FOUR FIXES SHIPPED (2026-09-18 19:10Z)
+
+Operator-authorised. All four tighten a bound or add an observation; none relaxes anything.
+
+1. **Event cap** — `build_live_quote` gains `REFUSE_EVENT_CAP`, refusing a candidate whose event
+   is already held by this book OR by any other live book (via the fleet's existing
+   `event_has_open_live_position`). A placement blocks its own event for the rest of the cycle.
+2. **Open-order cap** — counting moved to `repository._open_live_tickers`, which checks ORDER
+   STATUS BEFORE the position snapshot. A snapshot cannot tell "position closed" from "order not
+   filled yet"; both read 0. Strictly tighter, and shared with MMSELL.
+3. **Terminal listing** — discovery also polls `status="paid_out"`, deduplicated so a programme in
+   both listings records terminal. Failure-tolerant: it never costs the active listing.
+4. **Shadow pinning** — the live book's open markets survive the shadow's reward-ranked cap, so
+   estimate and realized can finally land on the same market.
+
+**On the API:** programme-level payout state IS visible (`status=paid_out` is a first-class
+filter) and always was. Our own credited amount does not appear to have an endpoint; the route to
+it is the residual of a balance change against fills and settlements. Not built — not one of the
+four.
+
+`ruff` clean; **4,548 passed, 11 skipped**; nine new tests. The universe rule stays open.
+[Thesis §9.16](../LIQUIDITY_INCENTIVE_THESIS.md).
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).

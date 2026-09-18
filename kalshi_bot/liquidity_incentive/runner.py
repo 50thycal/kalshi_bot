@@ -149,7 +149,17 @@ class IncentiveLiveRunner:
             summary["fetched"] += 1
             built.append(candidate_from_book(program, ob, now=now))
 
-        ranked = limm.rank_candidates(built, excluded_series=excluded)
+        # One event, one commitment. Two sources of a block, and both are needed: events this
+        # book already holds (its own stacking, which is what happened on 2026-09-18), and events
+        # any live book holds a position on (the fleet's concentration). Computed once per cycle
+        # over the candidates actually in hand, not the whole universe.
+        blocked_events = repo.live_book_open_events(session, limm.LIVE_TAG)
+        for c in built:
+            ev = c.get("event_ticker")
+            if ev and ev not in blocked_events and repo.event_has_open_live_position(session, ev):
+                blocked_events.add(ev)
+        ranked = limm.rank_candidates(built, excluded_series=excluded,
+                                      blocked_event_tickers=frozenset(blocked_events))
         # Every candidate that produced no quote is still reported, by its refusal code, so a
         # cycle that placed nothing says which cap or which book stopped it.
         placeable = {c["market_ticker"] for c, _ in ranked}
@@ -164,6 +174,8 @@ class IncentiveLiveRunner:
                 reference_price_by_side=c["reference_price_by_side"],
                 program_hours_remaining=c["program_hours_remaining"],
                 excluded_series=excluded,
+                event_ticker=c.get("event_ticker"),
+                blocked_event_tickers=frozenset(blocked_events),
             )
             code = getattr(refusal, "code", "unknown")
             summary["outcomes"][code] = summary["outcomes"].get(code, 0) + 1
@@ -173,6 +185,11 @@ class IncentiveLiveRunner:
                 summary["outcomes"][SKIP_NO_SLOTS] = \
                     summary["outcomes"].get(SKIP_NO_SLOTS, 0) + 1
                 break
+            cand_event = candidate.get("event_ticker")
+            if cand_event and cand_event in blocked_events:
+                summary["outcomes"][limm.REFUSE_EVENT_CAP] = \
+                    summary["outcomes"].get(limm.REFUSE_EVENT_CAP, 0) + 1
+                continue
             if exposure_now + quote.collateral_usd > limm.MAX_STRATEGY_EXPOSURE_USD:
                 summary["outcomes"][limm.REFUSE_EXPOSURE_CAP] = \
                     summary["outcomes"].get(limm.REFUSE_EXPOSURE_CAP, 0) + 1
@@ -187,6 +204,9 @@ class IncentiveLiveRunner:
                 continue
             summary["placed"] += 1
             slots -= 1
+            placed_event = candidate.get("event_ticker")
+            if placed_event:
+                blocked_events.add(placed_event)
             exposure_now += quote.collateral_usd
             if self._open_twin(session, quote):
                 summary["twin_opened"] += 1

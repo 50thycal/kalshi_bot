@@ -330,3 +330,64 @@ def test_the_live_book_tag_itself_is_not_a_paper_family(settings):
     kept = repo.keep_with_configured_twins(("weather",), settings)
     assert limm.TWIN_TAG in kept
     assert limm.LIVE_TAG not in kept
+
+
+# ------------------------------------------ the open-order cap under-count (thesis §9.15)
+
+
+def test_a_resting_order_counts_even_with_a_zero_quantity_snapshot(settings):
+    _db(settings)
+    NOW = datetime.now(timezone.utc)
+    """The 2026-09-18 production case.
+
+    `KXRT-RES-93` rested unfilled while a position snapshot for that market read quantity 0.
+    Consulting the snapshot first cannot tell "position closed" from "order not filled yet", so
+    the resting order vanished from the cap and the book ran four commitments against a cap of
+    three."""
+    with db.session_scope() as s:
+        s.add(m.LiveOrder(market_ticker="KXRT-RES-93", event_ticker="KXRT-RES",
+                          strategy="Alimm1", side="no", action="buy", limit_price=3,
+                          quantity=1, status="resting", created_at=NOW))
+        s.add(m.Position(market_ticker="KXRT-RES-93", captured_at=NOW, side="no", quantity=0,
+                         avg_price=3.0, market_exposure=0.0003))
+        s.flush()
+        assert repo.count_live_book_open(s, "Alimm1") == 1
+
+
+def test_a_filled_order_that_settled_flat_does_not_count(settings):
+    _db(settings)
+    NOW = datetime.now(timezone.utc)
+    with db.session_scope() as s:
+        s.add(m.LiveOrder(market_ticker="KXUSLEI-26SEP18-T0.2", event_ticker="KXUSLEI-26SEP18",
+                          strategy="Alimm1", side="yes", action="buy", limit_price=5,
+                          quantity=1, status="filled", created_at=NOW))
+        s.add(m.Position(market_ticker="KXUSLEI-26SEP18-T0.2", captured_at=NOW, side="no",
+                         quantity=0, market_exposure=0.0, realized_pnl=-0.05))
+        s.flush()
+        assert repo.count_live_book_open(s, "Alimm1") == 0
+
+
+def test_a_canceled_order_never_counts(settings):
+    _db(settings)
+    NOW = datetime.now(timezone.utc)
+    with db.session_scope() as s:
+        s.add(m.LiveOrder(market_ticker="KXGONE-1", strategy="Alimm1", side="yes", action="buy",
+                          limit_price=1, quantity=1, status="canceled", created_at=NOW))
+        s.flush()
+        assert repo.count_live_book_open(s, "Alimm1") == 0
+
+
+def test_open_events_share_the_definition_of_open(settings):
+    _db(settings)
+    NOW = datetime.now(timezone.utc)
+    with db.session_scope() as s:
+        s.add(m.LiveOrder(market_ticker="KXRT-RES-93", event_ticker="KXRT-RES",
+                          strategy="Alimm1", side="no", action="buy", limit_price=3,
+                          quantity=1, status="resting", created_at=NOW))
+        s.add(m.Position(market_ticker="KXRT-RES-93", captured_at=NOW, side="no", quantity=0,
+                         avg_price=3.0, market_exposure=0.0003))
+        s.add(m.LiveOrder(market_ticker="KXGONE-1", event_ticker="KXGONE", strategy="Alimm1",
+                          side="yes", action="buy", limit_price=1, quantity=1,
+                          status="canceled", created_at=NOW))
+        s.flush()
+        assert repo.live_book_open_events(s, "Alimm1") == {"KXRT-RES"}

@@ -46,9 +46,12 @@ def _book(yes, no):
     return {"orderbook": {"yes": [list(x) for x in yes], "no": [list(x) for x in no]}}
 
 
-def _program(session, ticker, *, target=100.0, hours=24.0, series="KXTEST"):
+def _program(session, ticker, *, target=100.0, hours=24.0, series="KXTEST", event=None):
+    # One event per market by default. Several markets of one event resolve together, so the
+    # runner treats them as a single commitment (§9.15); a fixture that shares an event across
+    # candidates is testing a shape the book now refuses, so tests that want it say so.
     row = m.IncentiveProgram(
-        program_id=f"p-{ticker}", market_ticker=ticker, event_ticker=series,
+        program_id=f"p-{ticker}", market_ticker=ticker, event_ticker=event or ticker,
         series_ticker=series, incentive_type="liquidity",
         start_date=NOW - timedelta(days=1), end_date=NOW + timedelta(hours=hours),
         period_reward_raw=1_000_000, period_reward_unit="centi_cents", period_reward_usd=100.0,
@@ -265,3 +268,65 @@ def test_the_runner_has_no_cancel_path():
     text = open(src).read()
     assert "cancel_order" not in text
     assert "delete_order" not in text
+
+
+# ------------------------------------------------------- event cap (thesis §9.15)
+
+
+def test_two_markets_of_one_event_are_one_commitment(live_db, settings):
+    """The 2026-09-18 shape: the book stacked KXRT-RES-93 and -94 on one event."""
+    books = {
+        "KXRT-RES-93": _book([(3, 500)], [(90, 500)]),
+        "KXRT-RES-94": _book([(10, 500)], [(80, 500)]),
+    }
+    client = FakeClient(books)
+    client.placed = []
+    ex = _exec(settings, client)
+    with db.session_scope() as s:
+        for t in books:
+            _program(s, t, event="KXRT-RES")
+        s.flush()
+        out = run.IncentiveLiveRunner(client, settings).cycle(s, ex, {"cash_balance": 500.0},
+                                                              now=NOW)
+    assert out["placed"] == 1
+    assert [o["ticker"] for o in client.placed] == ["KXRT-RES-93"]   # cheaper side wins
+    assert out["outcomes"].get(limm.REFUSE_EVENT_CAP) == 1
+
+
+def test_another_live_book_holding_the_event_blocks_it(live_db, settings):
+    """MMSELL was short 93c of KXRT-RES-97 while this book bid the same event."""
+    books = {"KXRT-RES-93": _book([(3, 500)], [(90, 500)])}
+    client = FakeClient(books)
+    client.placed = []
+    ex = _exec(settings, client)
+    with db.session_scope() as s:
+        _program(s, "KXRT-RES-93", event="KXRT-RES")
+        s.add(m.LiveOrder(market_ticker="KXRT-RES-97", event_ticker="KXRT-RES",
+                          strategy="Fmmsell10", side="no", action="buy", limit_price=93,
+                          quantity=1, status="filled", created_at=NOW - timedelta(days=4)))
+        s.add(m.Position(market_ticker="KXRT-RES-97", captured_at=NOW, side="no", quantity=-1,
+                         avg_price=93.0, market_exposure=0.93))
+        s.flush()
+        out = run.IncentiveLiveRunner(client, settings).cycle(s, ex, {"cash_balance": 500.0},
+                                                              now=NOW)
+    assert out["placed"] == 0
+    assert client.placed == []
+    assert out["outcomes"].get(limm.REFUSE_EVENT_CAP) == 1
+
+
+def test_an_unrelated_event_is_not_blocked(live_db, settings):
+    books = {"KXOTHER-1": _book([(4, 500)], [(90, 500)])}
+    client = FakeClient(books)
+    client.placed = []
+    ex = _exec(settings, client)
+    with db.session_scope() as s:
+        _program(s, "KXOTHER-1", event="KXOTHER")
+        s.add(m.LiveOrder(market_ticker="KXRT-RES-97", event_ticker="KXRT-RES",
+                          strategy="Fmmsell10", side="no", action="buy", limit_price=93,
+                          quantity=1, status="filled", created_at=NOW - timedelta(days=4)))
+        s.add(m.Position(market_ticker="KXRT-RES-97", captured_at=NOW, side="no", quantity=-1,
+                         avg_price=93.0, market_exposure=0.93))
+        s.flush()
+        out = run.IncentiveLiveRunner(client, settings).cycle(s, ex, {"cash_balance": 500.0},
+                                                              now=NOW)
+    assert out["placed"] == 1

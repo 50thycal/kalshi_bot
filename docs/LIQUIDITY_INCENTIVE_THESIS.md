@@ -975,6 +975,75 @@ an **OWNER DECISION**, and fixing a safeguard is still a change to one. The two 
 
 Neither is taken here. Stand-down remains one step: remove `Alimm1` from `LIVE_STRATEGIES`.
 
+### 9.16 The four fixes, and what the API can and cannot show us (2026-09-18 19:10Z)
+
+Operator-authorised on 2026-09-18. All four change a live, armed arm, and every one of them
+**tightens** a bound or **adds** an observation — none relaxes anything or expands exposure.
+
+**Can the API show us rewards at all? Partly, and the split matters.**
+
+`GET /incentive_programs` takes `status = all | active | upcoming | closed | paid_out`. So the
+**programme-level payout state is fully visible and always was** — we simply never asked for it.
+That also settles §9.13's second puzzle: `paid_out` is a programme lifecycle state with its own
+listing, which is why it reads true on programmes that have not ended.
+
+What the API does **not** appear to offer is **our own credited amount**. The programme object
+carries the pool (`period_reward`), `target_size` and `discount_factor_bps` — terms, not
+per-user credits — and the portfolio surface is positions, orders, fills, settlements and queue
+positions. Nothing per-user for incentives, and the external client that mapped this API had no
+reward reconciliation either. That is an absence of evidence, not proof of absence.
+
+**The remaining route to our realized reward is arithmetic, not an endpoint.** A liquidity credit
+is cash appearing that is not a fill and not a market settlement, so it is recoverable as the
+residual of a balance change against fills and settlements over the same window. `get_balance`
+and `get_settlements` both already exist. Not built here — it is a new capability, not one of the
+four fixes — but it is the shape of the answer and it needs no new API.
+
+**Fix 1 — the event cap (§9.15 defect 1).** `live.build_live_quote` gains
+`REFUSE_EVENT_CAP` and refuses any candidate whose `event_ticker` is blocked, placed with the
+other hard eligibility rule *before* any pricing. The runner computes the blocked set once per
+cycle from two sources, and both are needed: events this book already holds (its own stacking,
+which is what happened), and events **any** live book holds a position on, via the fleet's
+existing `repository.event_has_open_live_position`. A placement also blocks its own event for the
+rest of the cycle. `build_live_quote` stays a pure function — the flag arrives as a parameter,
+exactly as `excluded_series` does.
+
+**Fix 2 — the open-order cap (§9.15 defect 2).** Counting moved into
+`repository._open_live_tickers`, which checks the **order status before the position snapshot**.
+A non-terminal order is open, full stop; only a *filled* order can be dismissed as flat. That
+ordering is the whole fix: a snapshot cannot tell "position closed" from "order not filled yet",
+because both read quantity 0. `count_live_book_open` delegates, and `live_book_open_events` /
+`live_book_open_tickers` share the definition so the caps cannot disagree. This is a shared
+function — MMSELL uses it too — and it now counts **more** as open, which is strictly tighter.
+
+**Fix 3 — poll the terminal listing (§9.13).** `programs.run_discovery` now also polls
+`status="paid_out"`, listed second and deduplicated by programme id so a programme caught in both
+is recorded in its terminal form, with `status_observed` carrying the real listing instead of a
+hardcoded `"active"`. The extra poll is failure-tolerant: a 503 on it costs an error count and a
+note, never the active listing the live book reads. `DiscoveryResult.errors` now also carries
+`cycle.errors`, which it previously dropped on the success path.
+
+**Fix 4 — pin the live book's markets into the shadow (§9.13).** The shadow ranks by reward size
+and takes the top 150; the live runner ranks by soonest programme end and takes 8. Disjoint by
+construction, which is why `incentive_shadow_outcomes` held zero rows for every ticker the live
+book ever quoted. `refresh_programs` now passes the live book's open tickers to `_reconcile`, and
+they survive the cap. The cap bounds WebSocket volume; it was never meant to decide what is worth
+measuring, and what we are trading always is.
+
+**A fixture told us the event cap works before any test did.** Three candidate markets in
+`tests/test_liquidity_incentive_runner.py` shared one `event_ticker`, and the new cap immediately
+refused two of them. The fixture was corrected to one event per market — the shape it had been
+modelling is the shape the book now forbids — and three tests were added for the rule itself,
+including the exact `KXRT-RES` production case.
+
+**Verification:** `ruff` clean; **4,548 passed, 11 skipped**. Nine new tests across the event cap,
+the open-order cap, the terminal listing and the pinning.
+
+**Not done, and named rather than quietly skipped:** the universe rule (§9.9/§9.10) stays open —
+it was not among the four. And `scripts/live_book_truth.py` computes its open set from *filled*
+tickers only while its own docstring says a resting order counts as open: the same class of gap as
+fix 2, in a read-only ops script rather than the enforcer. Recorded, not widened into.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized

@@ -123,11 +123,11 @@ def run_discovery(client, session, *, now: datetime | None = None,
     session.add(cycle)
     session.flush()
     notes: dict[str, Any] = {}
-    listed: list[dict] = []
+    listed: list[tuple[dict, str]] = []
     pages = 0
     try:
         for prog in client.iter_incentive_programs(status="active", incentive_type="all"):
-            listed.append(prog)
+            listed.append((prog, "active"))
         pages = 1 if listed else 0
     except Exception as exc:  # noqa: BLE001 — the cycle row is the record of the failure
         cycle.errors += 1
@@ -137,6 +137,32 @@ def run_discovery(client, session, *, now: datetime | None = None,
         cycle.notes_json = notes
         return DiscoveryResult(cycle_id=cycle.id, current=current_programs(session), errors=cycle.errors)
 
+    # The payout leg, which polling `active` alone can never see. A programme leaves the active
+    # listing when it ends, so its row froze at the last state observed WHILE it was active —
+    # always minutes before it could pay, so `paid_out` read false for every programme this book
+    # rested in (thesis §9.13). `status=paid_out` is a first-class filter on the same endpoint,
+    # so the terminal state is one extra call away. Listed second on purpose: a programme in both
+    # listings is recorded in its terminal form.
+    #
+    # Failure here must not cost us the active listing, which is what the live book reads: this
+    # is an additional observation, not a dependency.
+    try:
+        for prog in client.iter_incentive_programs(status="paid_out", incentive_type="all"):
+            listed.append((prog, "paid_out"))
+    except Exception as exc:  # noqa: BLE001
+        cycle.errors += 1
+        notes["paid_out_fetch"] = f"{type(exc).__name__}: {str(exc)[:300]}"
+        logger.warning("incentive paid_out fetch failed: %s", notes["paid_out_fetch"])
+
+    # Deduplicate by program id, last write winning, so the `paid_out` view supersedes the
+    # `active` one for a programme caught in both.
+    by_id: dict[str, tuple[dict, str]] = {}
+    for prog, observed in listed:
+        pid_key = str(prog.get("id") or "")
+        if pid_key:
+            by_id[pid_key] = (prog, observed)
+    listed = list(by_id.values())
+
     existing = {(r.program_id, r.terms_hash): r for r in session.scalars(
         select(m.IncentiveProgram).where(m.IncentiveProgram.superseded_at.is_(None))).all()}
     by_program: dict[str, m.IncentiveProgram] = {}
@@ -145,7 +171,7 @@ def run_discovery(client, session, *, now: datetime | None = None,
     seen_ids: set[str] = set()
     result = DiscoveryResult(cycle_id=cycle.id, current=[])
     total_usd = 0.0
-    for prog in listed:
+    for prog, observed_status in listed:
         pid = str(prog.get("id") or "")
         ticker = prog.get("market_ticker")
         if not pid or not ticker:
@@ -198,7 +224,7 @@ def run_discovery(client, session, *, now: datetime | None = None,
             target_size=fp_to_float(prog.get("target_size_fp")),
             discount_factor_bps=int_or_none(prog.get("discount_factor_bps")),
             paid_out=prog.get("paid_out") if isinstance(prog.get("paid_out"), bool) else None,
-            status_observed="active", extra_params_json=extra or None,
+            status_observed=observed_status, extra_params_json=extra or None,
             market_title=(market_raw or {}).get("title"),
             market_status=(market_raw or {}).get("status"),
             close_time=_parse_dt((market_raw or {}).get("close_time")),
@@ -221,4 +247,7 @@ def run_discovery(client, session, *, now: datetime | None = None,
     cycle.notes_json = notes or None
     session.flush()
     result.current = current_programs(session)
+    # The cycle row already carried this; the returned result did not, so a caller checking
+    # `result.errors` saw 0 through a failed fetch.
+    result.errors = cycle.errors
     return result
