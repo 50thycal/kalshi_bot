@@ -598,6 +598,23 @@ at $25 and −$15.15 at $500. n=1, worth nothing yet.
 
 Live config re-verified unchanged. [Thesis §9.18](../LIQUIDITY_INCENTIVE_THESIS.md).
 
+## BOTH KXRT-RES ORDERS FILLED (2026-09-18 20:27Z)
+
+§9.15's two resting NO orders have both filled. The fleet now holds THREE filled NO positions on
+one event across two books: `Fmmsell10` `KXRT-RES-97` at 93c ($0.93), `Alimm1` `KXRT-RES-94` at
+10c ($0.10) and `KXRT-RES-93` at 3c ($0.03) — **$1.06** on one event, all the same direction,
+resolving together. That is ~7x the incentive book's entire committed capital.
+
+The open-order under-count did not merely let a fourth order rest; it let a fourth position FILL.
+`Alimm1` holds four filled commitments against `MAX_OPEN_ORDERS = 3`.
+
+Nothing else breached: committed $0.15 vs a $10 cap, qty=1, max price 10c vs a 25c cap, no
+rejects, no new settlement, no reward. Commitments did not exceed four.
+
+**#428 prevents recurrence but does not unwind this** — the event cap refuses new placements on a
+held event; these positions stay until resolution. Factual update to §9.15, not a new finding.
+[Thesis §9.19](../LIQUIDITY_INCENTIVE_THESIS.md).
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).

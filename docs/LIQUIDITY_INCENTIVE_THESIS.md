@@ -1162,6 +1162,41 @@ fact cannot be trusted while the first is true.
 `LIVE_PAPER_TWINS=Alimm1:Alimm1_pt3`, `LIQUIDITY_INCENTIVE_LIVE_ENABLED=true`,
 `KILL_SWITCH=false`.
 
+### 9.19 Both KXRT-RES orders filled: §9.15's concentration is now real positions (2026-09-18 20:27Z)
+
+The two resting NO orders §9.15 flagged have **both filled**. The fleet now holds **three filled
+NO positions on one event**, across two books:
+
+| strategy | market | side | price | qty | exposure |
+|---|---|---|---|---|---|
+| `Fmmsell10` | `KXRT-RES-97` | no | 93c | −1 | **$0.93** |
+| `Alimm1` | `KXRT-RES-94` | no | 10c | −1 | $0.10 |
+| `Alimm1` | `KXRT-RES-93` | no | 3c | −1 | $0.03 |
+| | | | | **event total** | **$1.06** |
+
+All three are the same direction on the same event, so they resolve together. **$1.06** is small
+absolutely, but it is about **seven times** the incentive book's own entire committed capital,
+and §9.15's warning has stopped being hypothetical.
+
+**Both defects are now realised, not just exposed.** The open-order under-count did not merely
+let a fourth order rest — it let a fourth position **fill**. `Alimm1` holds four open commitments
+(`KXBIGGESTQUAKE` ×2 at 1c, `KXRT-RES-93` at 3c, `KXRT-RES-94` at 10c) against
+`MAX_OPEN_ORDERS = 3`, all filled.
+
+**Nothing else breached, and this is not an escalation.** Committed **$0.15** against the $10
+strategy cap; `qty = 1` everywhere; the highest price is 10c against a 25c cap; no rejects, no
+auth errors; no new settlement; no reward credited. Commitments did not go above four. Every cap
+that bounds real loss holds, and none is close.
+
+**#428 prevents the recurrence but does not unwind this.** The event cap refuses *new*
+placements on an event already held; these three positions stay until their event resolves. That
+is the correct behaviour — a cap is not an unwind instruction, and standing the book down would
+not close them either.
+
+**Recorded as a factual update to §9.15, not a new finding.** The mechanism, the fix and the
+decision were all already written down. What changed is that the risk it described is now
+carried as real, concentrated, same-direction exposure across two live books.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized
