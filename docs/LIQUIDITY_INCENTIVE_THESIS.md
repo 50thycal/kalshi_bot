@@ -440,6 +440,109 @@ Two things the re-quote confirms rather than reveals:
    still **not** acted on — but it is the second observation of the same thing, and any sized-up
    version of this book needs an event cap before it runs.
 
+### 9.7 Hour 12 — a two-sided fill outside the optimistic model, at a lag that would bound risk (2026-09-18 00:00Z)
+
+Ops `limm-report-5`, span **0.48 days** against ≥ 14. Still HOLD. Two of the things §9.5's
+follow-up named as material have happened, and one of them shows a limitation in the
+pre-registered metric that a reader must be told about.
+
+| model | outcome mix (non-empty) | both_filled | P(both \| one) | n | lag |
+|---|---|---|---|---|---|
+| optimistic | 555 no_only, 300 yes_only | **80** | 0.086 | 935 | median **435s** |
+| queue_aware | 109 no_only, 31 yes_only, 66 partial_no, 29 partial_yes, **10 partial_both** | 0 | **0.000** | 245 | **16.7s** |
+| conservative | 54 no_only, 14 yes_only, 66 partial_no, 21 partial_yes | 0 | **0.000** | 155 | — |
+
+**1. `P(both | one)` is still 0.000 in both gated models — and that number is now incomplete.**
+The queue-aware model recorded **10 `partial_both` outcomes**: quotes where *both* legs took
+some fill. `P(both | one)` counts only `both_filled` (both legs FULL), so a partially-completed
+pair scores as though no pair happened at all. Reporting the 0.000 without this would be
+technically true and misleading.
+
+**This is not a reason to change the metric.** §6 criterion 6 is pre-registered on
+`P(both | one)` and is not being retuned after seeing results — that rule exists for exactly
+this moment, when a definition starts to look inconvenient. What is recorded instead is that
+the bar, as written, will read 0.000 through any amount of partial two-sided filling, and any
+future version of this document that wants to count partial pairs must say so **before** it
+looks.
+
+**2. The queue-aware lag is 16.7 seconds.** §9.5's follow-up named "the pair lag dropping to
+something that would actually bound risk (tens of seconds, not ~17 minutes)" as a material
+change. Under the most realistic of the three models it is now 16.7s, against the optimistic
+model's 435s median. At that timescale the pair mechanism of §2 would genuinely bound the
+one-sided exposure — which is the first evidence in this run that the premise is mechanically
+possible rather than merely hoped for.
+
+Held against it: 10 observations, none of them a *full* pair, on a 0.48-day span. This is the
+weakest kind of positive signal and is recorded as a direction to watch, not a finding.
+
+**3. The optimistic model's numbers moved but say no more than before.** P rose 0.057 → 0.086
+(80 pairs / n=935) and its lag halved to a 435s median. It remains the model §4 registered
+because it cannot be trusted and §6 does not gate on.
+
+**4. The sequence-gap rise stopped.** 4 → 17 → 28 → **28**, with 3 snapshot re-requests. The
+trend §9.5 flagged has plateaued; the tape is intact. Discovery clean: 36 cycles, **0 errors**,
+4,449 programmes, pool $568,056.67. Trades **98** in three hours across 176 markets, up from 66
+— rising, still thin.
+
+**Where this leaves the thesis.** Marginally better than §9.5 and still nowhere near the bar.
+The gated metric is zero, the sample is half a day against fourteen, the entire positive
+headline is still `est_reward` from an unvalidated model, and the one encouraging number rests
+on ten partial fills.
+
+### 9.8 The first real fills — and a defect they exposed in the twin (2026-09-18 00:26Z)
+
+§9.3 proved placement, §9.6 proved the expiry loop. The last unproven leg was a fill, and it
+has happened twice.
+
+| ticker | side | price | qty | status |
+|---|---|---|---|---|
+| `KXBIGGESTQUAKE-17SEP26-7.0` | yes | 1c | 1 | **filled** |
+| `KXBIGGESTQUAKE-17SEP26-6.8` | yes | 1c | 1 | **filled** |
+| `KXYTVIEWSHIGH-POS26OCT-8.75M` | yes | 4c | 1 | canceled (timeout) |
+| `KXAAAGASDAZ-26SEP18-4.6800` | yes | 1c | 1 | resting (00:08:31Z) |
+
+**We were the maker.** Post-only bids at 1c on deep-tail earthquake-magnitude markets; a
+counterparty sold YES into them. That is the adverse-selection event this whole thesis is
+about, occurring on real money for the first time. **At risk: 2c.** Kalshi's own position
+snapshots confirm 1 contract in each at an average price of 1c, re-read every ~3 minutes by
+reconcile, realized P&L 0.0000 (unsettled).
+
+**A cap behaved in a way worth writing down.** Only ONE new order replaced the three, not
+three: `MAX_OPEN_ORDERS` counts filled positions as open exposure, so two fills plus one
+resting order is already at the cap of 3. The book cannot accumulate a fourth unit of exposure
+while holding two. Committed: $0.03.
+
+**And the fills exposed a real defect — in the twin, not the live path.**
+
+The twin mirrored all seven orders faithfully. But the mirrors of the two orders that FILLED
+are marked **`abandoned`**, while the live book still holds both positions:
+
+| batch | live | twin |
+|---|---|---|
+| 16:00Z (3 orders) | canceled/timeout | `closed_timeout`, −$0.0102 to −$0.0105 (fees) |
+| 20:04Z (3 orders) | 2 **filled**, 1 timeout | **`abandoned`** |
+
+`repository.abandon_open_paper_trades` runs on every live worker start and closes open paper
+trades whose strategy is not in `keep_prefixes`. In live mode those prefixes are FAMILY names
+(`weather`, `mmsell`, `theta`, …). A twin tag carries its parent's generation letter —
+`Alimm1_pt3` — so it matches none of them. mmsell's twins survive only through the `"mmsell"`
+SUBSTRING special case in `strategy_is_kept`, which is an accident of that family's naming
+rather than a rule, so **every non-mmsell book's twin was exposed**.
+
+This is the Wmmsell6 failure of 2026-08-04 — documented in that same function's docstring — on
+a new book. Its consequence here is precise and serious: `arm_live_canary` requires a paper
+twin because the twin is the comparison instrument, and the twin's record of the only two
+positions that matter had been wiped while live still held them.
+
+**Fixed** by keeping every configured live/paper twin tag by exact tag, not family prefix
+(`repository.keep_with_configured_twins`), which protects every book's twin rather than only
+this one. The already-abandoned rows are historical and are not rewritten: the two live
+positions from 20:04Z have no twin counterpart and that gap is part of the record.
+
+**What this does and does not establish.** The pipe is now proven end to end: select, place,
+rest, fill, hold, and expire. It establishes nothing economic — 2c of deep-tail YES is not a
+test of the reward model, and §9.7's reading is unchanged.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized

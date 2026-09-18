@@ -280,3 +280,53 @@ def test_the_tp_sl_exit_path_skips_this_book(settings, monkeypatch):
         ex.manage_exits(s)
     # The weather book is still managed; neither incentive tag is ever looked at.
     assert seen == ["KXB-1"]
+
+
+# ------------------------------------------------------------------ the twin must survive a restart
+
+
+def test_a_configured_twin_is_never_abandoned_as_foreign(settings):
+    """The defect observed in production on 2026-09-18.
+
+    `abandon_open_paper_trades` runs on every live worker start and wipes open paper positions
+    whose strategy is not in `keep_prefixes`. In live mode those prefixes are family names
+    (`weather`, `mmsell`, ...). A twin tag carries its parent's generation letter — `Alimm1_pt3`
+    — so it matches NONE of them, and the incentive canary's twin had the mirrors of two FILLED
+    live positions marked `abandoned` while the live book still held them. mmsell's twins
+    survive only through the `"mmsell"` substring special case, which is an accident of that
+    family's naming, so every other book's twin was exposed."""
+    settings.live_paper_twin_enabled = True
+    settings.live_strategies = f"Fmmsell10,{limm.LIVE_TAG}"
+    settings.live_paper_twins = f"{limm.LIVE_TAG}:{limm.TWIN_TAG}"
+    base = ("weather", "mmsell")
+
+    # Without the fix the twin tag is foreign to every kept family.
+    assert not repo.strategy_is_kept(limm.TWIN_TAG, base)
+
+    kept = repo.keep_with_configured_twins(base, settings)
+    assert repo.strategy_is_kept(limm.TWIN_TAG, kept)
+    # The families it was given are untouched, and a genuinely foreign tag is still foreign.
+    assert repo.strategy_is_kept("weather_h14", kept)
+    assert repo.strategy_is_kept("Fmmsell10_pt4", kept)
+    assert not repo.strategy_is_kept("someone_elses_book", kept)
+
+
+def test_keep_with_configured_twins_is_idempotent_and_drops_nothing(settings):
+    settings.live_paper_twin_enabled = True
+    settings.live_strategies = limm.LIVE_TAG
+    settings.live_paper_twins = f"{limm.LIVE_TAG}:{limm.TWIN_TAG}"
+    base = ("weather", "mmsell")
+    once = repo.keep_with_configured_twins(base, settings)
+    assert repo.keep_with_configured_twins(once, settings) == once
+    assert all(p in once for p in base), "a configured family must never be dropped"
+
+
+def test_the_live_book_tag_itself_is_not_a_paper_family(settings):
+    """`Alimm1` places REAL orders and writes no paper_trades, so it must not be added to the
+    paper keep list by this helper — only the twin belongs there."""
+    settings.live_paper_twin_enabled = True
+    settings.live_strategies = limm.LIVE_TAG
+    settings.live_paper_twins = f"{limm.LIVE_TAG}:{limm.TWIN_TAG}"
+    kept = repo.keep_with_configured_twins(("weather",), settings)
+    assert limm.TWIN_TAG in kept
+    assert limm.LIVE_TAG not in kept

@@ -315,6 +315,39 @@ all under 25c, no collisions. **Place → rest → expire → re-place demonstra
 The event-concentration pattern repeated (2 of 3 on one event); second observation, still not
 acted on, but a sized-up version needs an event cap. [Thesis §9.6](../LIQUIDITY_INCENTIVE_THESIS.md).
 
+## Shadow read, hour 12 (2026-09-18 00:00Z)
+
+Ops `limm-report-5`, span 0.48 days. Two of the material triggers fired
+([thesis §9.7](../LIQUIDITY_INCENTIVE_THESIS.md)):
+
+- **The queue-aware model recorded 10 `partial_both` outcomes** — the first two-sided filling
+  outside the optimistic model. `P(both | one)` counts only FULL pairs, so it still reads
+  0.000 and is now known to be **incomplete**. The metric is NOT being changed: §6 is
+  pre-registered and this is precisely the moment that rule exists for. Recorded so no reader
+  takes the 0.000 at face value.
+- **Queue-aware lag is 16.7s** (vs the optimistic model's 435s median) — in the range that
+  would actually bound one-sided exposure. First evidence the §2 mechanism is mechanically
+  possible. But 10 observations, no full pairs, 0.48 days. A direction, not a finding.
+
+Sequence-gap rise has **plateaued** (4 → 17 → 28 → 28). Discovery clean, 4,449 programmes,
+trades 98/3h and rising but still thin.
+
+## FIRST FILLS, and a twin defect they exposed (2026-09-18 00:26Z)
+
+Two post-only 1c YES bids on `KXBIGGESTQUAKE-17SEP26` strikes **filled** — we were the maker,
+a counterparty sold into us, 2c at risk. Kalshi position snapshots confirm both. The pipe is
+now proven end to end: select, place, rest, fill, hold, expire.
+[Thesis §9.8](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+**Defect found and fixed:** `abandon_open_paper_trades` runs on every live worker start and
+keeps paper trades by FAMILY PREFIX. A twin tag carries its parent's generation letter
+(`Alimm1_pt3`) and matches no family, so the twin's mirrors of the two filled positions were
+marked `abandoned` while live still held them — breaking the comparison instrument
+`arm_live_canary` requires. mmsell's twins survive only on the `"mmsell"` substring accident,
+so every other book's twin was exposed. Fixed by keeping configured twin tags by exact tag
+(`repository.keep_with_configured_twins`). This is the Wmmsell6 failure of 2026-08-04 on a
+new book.
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).
