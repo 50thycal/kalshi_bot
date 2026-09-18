@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-watch-10","sql":"SELECT end_date::text AS ends, market_ticker, coalesce(series_ticker,'-') AS series, coalesce(period_reward_usd::text,'-') AS reward, coalesce(target_size::text,'-') AS tgt FROM incentive_programs WHERE superseded_at IS NULL AND disappeared_at IS NULL AND incentive_type = 'liquidity' AND (end_date IS NULL OR end_date > now()) ORDER BY end_date ASC NULLS LAST LIMIT 12"}
+{"type":"noop"}
