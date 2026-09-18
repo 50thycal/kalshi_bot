@@ -442,6 +442,9 @@ Two things the re-quote confirms rather than reveals:
 
 ### 9.7 Hour 12 — a two-sided fill outside the optimistic model, at a lag that would bound risk (2026-09-18 00:00Z)
 
+> **QUALIFIED BY §9.11.** The 16.7s lag below rests on **n=1**. The next observation was
+> 1102.8s. Do not carry the "would bound risk" reading forward; the lag is not yet estimable.
+
 Ops `limm-report-5`, span **0.48 days** against ≥ 14. Still HOLD. Two of the things §9.5's
 follow-up named as material have happened, and one of them shows a limitation in the
 pre-registered metric that a reader must be told about.
@@ -664,6 +667,67 @@ it. That is the argument for fixing an instrument before trusting a diagnosis ma
 
 **Exposure is now 7c** across three unsettled contracts (1c + 1c + 5c), against a $10 strategy
 cap and a 3-order cap. Both caps hold and neither was approached.
+
+### 9.11 The 16.7s lag was n=1, and §9.7 over-read it (2026-09-18 08:08Z)
+
+Two of the pre-registered materiality criteria fired at this check. Span **0.82 days**.
+
+**(b) `partial_both` now appears under the CONSERVATIVE model.** Both non-optimistic models now
+show partially-filled two-sided outcomes:
+
+| model | `partial_both` at 04:03Z | at 08:08Z |
+|---|---|---|
+| conservative | 0 | **10** |
+| queue_aware | 10 | **20** |
+
+The comparison is like-for-like despite the report's window widening from 1 day to 14: total
+observation span is 0.82 days, so both windows cover all data. This also settles the
+carry-forward worry from 04:03Z that the queue-aware rows had gone stale — they had not; they
+doubled. Two independent fill models agreeing that two-sided fills occur strengthens §9.7's
+direction.
+
+**(c) The queue-aware lag moved off ~17s, by a factor of 66.**
+
+| model | lag mean | lag median |
+|---|---|---|
+| queue_aware | 1102.8s | 1102.8s |
+| conservative | 1879.2s | 1879.2s |
+
+**Mean equals median in both**, which means each rests on a single observation. §9.7 reported
+queue-aware `partial_both` at a **16.7s** lag and read it as a lag "that would bound risk". That
+reading was drawn from **n=1**, and the next observation is 18 minutes rather than 17 seconds.
+The honest statement is that the two-sided fill lag under either non-optimistic model is **not
+yet estimable**, and §9.7's favourable gloss on it should not be carried forward. Ten and twenty
+partial pairs do not make a lag distribution.
+
+This cuts against the premise, which is exactly why it is recorded rather than smoothed.
+
+**What has not moved.** `P(both | one)` is still **0.000** under both non-optimistic models
+(n=350 conservative, n=600 queue_aware), because it counts only *full* pairs — the blind spot
+§9.7 recorded now conceals thirty partial pairs. The metric is still **not being changed**: §6
+is pre-registered, and redefining it while it disfavours the premise is precisely the move that
+rule exists to prevent. The optimistic model reads 0.119 (n=1640), the same shape as before at a
+larger n, which is not material.
+
+**The adverse-selection cost still dwarfs the modelled reward.** Conservative single-leg
+outcomes against deep competing size: n=340, mean single-leg MTM **−$1.3802**, against a mean
+`est_reward` of **+$0.0692** — a factor of about twenty, in the wrong direction.
+
+**The headline remains not a result.** Every measured component is zero or negative; the large
+positive net is derived entirely from `est_reward`, which is still externally unvalidated. Day-
+one check 3 is still the operator's and still the thing that would make the number mean
+anything.
+
+**Collector.** The counters are not comparable across this check because the report's window
+also widened (3h → 72h): `seq_gap` reads 125 over 72h against 31 over 3h, which is a *lower*
+rate, not a deterioration. Discovery is clean (246 cycles, 0 errors, pool $510,361.67). Fifteen
+connects against ten thread starts spans two worker redeploys (#424 at 03:04Z, #425 at 07:54Z)
+and is noted without being claimed as understood.
+
+**Live book unchanged and correct:** `LIVE_STRATEGIES=Fmmsell10,Alimm1`,
+`LIVE_PAPER_TWINS=Alimm1:Alimm1_pt3`, `LIQUIDITY_INCENTIVE_LIVE_ENABLED=true`,
+`LIVE_PAPER_TWIN_SUFFIX=_pt4` untouched, `KILL_SWITCH=false`. Exposure 7c at the 3-order cap
+(§9.10).
 
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 

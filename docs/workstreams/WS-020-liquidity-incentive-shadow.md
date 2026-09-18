@@ -400,6 +400,29 @@ be decided on the `outcomes` measurement the logs now carry.
 Exposure 7c across three unsettled contracts (1c + 1c + 5c), against a $10 strategy cap and a
 3-order cap. Both hold.
 
+## SHADOW: the 16.7s lag was n=1 (2026-09-18 08:08Z)
+
+Two pre-registered materiality criteria fired at the 08:08Z health check, span 0.82 days.
+
+**`partial_both` now appears under CONSERVATIVE too** (0 → 10), and queue_aware doubled (10 →
+20). Like-for-like: total span is under a day, so the report's 1d→14d window change covers the
+same data. This also settles the staleness worry from 04:03Z — the rows were not stale.
+
+**The queue-aware lag moved from 16.7s to 1102.8s.** Mean equals median in both non-optimistic
+models, so each rests on a single observation. §9.7 read the 16.7s as a lag "that would bound
+risk"; that was **n=1**, and the next one is 18 minutes. The lag is **not yet estimable** and
+§9.7's favourable gloss must not be carried forward. §9.7 is stamped, not rewritten.
+
+Unmoved: `P(both | one)` still 0.000 under both non-optimistic models — the metric counts only
+full pairs and now hides thirty partial ones. **Not changing it**; §6 is pre-registered.
+Conservative single-leg MTM against deep size is −$1.3802 (n=340) against a mean modelled reward
+of +$0.0692, a factor of twenty the wrong way. The positive headline is still entirely derived
+from an unvalidated `est_reward`.
+
+Live book unchanged and correct: `LIVE_STRATEGIES=Fmmsell10,Alimm1`, twin pinned, kill switch
+off, exposure 7c at the 3-order cap.
+[Thesis §9.11](../LIQUIDITY_INCENTIVE_THESIS.md).
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).
