@@ -786,6 +786,63 @@ authorizes anything.
 **Position now:** `KXBIGGESTQUAKE-17SEP26-7.0` and `-6.8` at 1c, `KXTRUMPAPPROVE-26SEP18-E39.4`
 at 1c — three contracts, 3c open, back at `MAX_OPEN_ORDERS = 3`. Every cap held throughout.
 
+### 9.13 The payout boundary check cannot be run — the instrument cannot see the payout leg (2026-09-18 15:55Z)
+
+The scheduled payout-boundary check was meant to compare a realized liquidity reward against
+`est_reward`. It cannot be run, for three independent reasons, none of which is "no reward was
+paid".
+
+**1. We stop observing a programme before it can pay.** `programs.run_discovery` polls
+`iter_incentive_programs(status="active", ...)`. A programme leaves that listing when it ends,
+so its row freezes at the last state observed *while it was still active*. Every programme the
+live book rested in reads `paid_out = false`, and every one was last seen **before** its own end:
+
+| market | programme end | last seen | gap | `paid_out` |
+|---|---|---|---|---|
+| `KXBIGGESTQUAKE-17SEP26-6.8` / `-7.0` | 17 Sep 23:59:59Z | 17 Sep 23:55:54Z | −4m | false |
+| `KXAAAGASDAZ-26SEP18-4.6800` | 03:59:00Z | 03:55:02Z | −4m | false |
+| `KXUSLEI-26SEP18-T0.2` | 13:59:00Z | 13:58:04Z | −56s | false |
+| `KXTRUMPAPPROVE-26SEP18-E39.4` (prior terms) | 14:02:23Z | 13:58:04Z | −4m | false |
+| `KXYTVIEWSHIGH-POS26OCT-8.75M` (prior terms) | 17 Sep 22:25:00Z | 17 Sep 22:20:42Z | −4m | false |
+
+Each `false` means "false at the last moment we looked, which was minutes before it ended". It
+does **not** mean the programme ended and paid nothing. We simply never look again.
+
+**2. `paid_out` does not mean what the check assumed.** The flag is real and does flip — **23**
+of 7,979 programme-terms rows carry it, **12** of 4,112 currently-live liquidity programmes. But
+several of those have **not ended**: `KXVOTECLARITY-26SEP15-*` ends 20 Sep and reads true today;
+`KXFEAR-26SEP11-*` ends at 20:00Z today and reads true; `KXEOWEEK-26SEP05-*` ends 19 Sep. So
+`paid_out = true` is not "the end-of-programme reward has been distributed", and it cannot be
+used as a payout signal until its actual semantics are established.
+
+**3. The shadow instrument never covered a single market the live book traded.** Querying
+`incentive_shadow_outcomes` for all nine tickers the live book has ever quoted —
+`KXHORMUZPEAK` ×3, `KXYTVIEWSHIGH`, `KXBIGGESTQUAKE` ×2, `KXAAAGASDAZ`, `KXUSLEI`,
+`KXTRUMPAPPROVE` — returns **zero rows**. The live runner ranks by soonest-ending programme; the
+shadow collector snapshots a different, cap-limited subset (`market_cap_reached` fires on every
+discovery cycle). So there is no `est_reward` for the markets we actually traded either.
+
+**Both sides of the estimate-versus-realized comparison are missing for the live book.** That is
+the finding.
+
+**This is not evidence against the reward model.** It is evidence that the instrument cannot
+observe the payout leg at all. Two further reasons a null here would have been uninformative
+even with perfect observation: the live runner selects by cheapest downside and soonest end,
+which steers systematically *away* from the big-pool programmes; and a 1-contract resting bid in
+a 27,000–60,000 contract book is a ~0.5% share, so any credit would round to zero. The smoke
+test was never sized to measure a reward.
+
+**What would be needed, none of it taken here.** Poll ended programmes — by `program_id`, or a
+status other than `active` — so the terminal `paid_out` state is captured rather than frozen
+minutes early. Establish what `paid_out` means, since it is true on programmes that have not
+ended. Make the shadow instrument cover the markets the live book selects, so estimate and
+realized land on the same market. Each is a change to how a live experiment's data is collected,
+and each is an **OWNER DECISION**, not a patch.
+
+**This also explains §9.12's "no liquidity reward credited or observed".** That line is literally
+true and now has a cause: we were never going to see one. It should not be read as the reward
+leg having failed.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized

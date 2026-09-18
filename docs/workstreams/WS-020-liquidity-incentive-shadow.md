@@ -448,6 +448,29 @@ unvalidated assumption being paid against.
 `live_canary_keep` needs three settled contracts and is still unreadable. No gate evaluated,
 nothing authorized. [Thesis §9.12](../LIQUIDITY_INCENTIVE_THESIS.md).
 
+## THE PAYOUT LEG IS UNOBSERVABLE (2026-09-18 15:55Z)
+
+The scheduled payout-boundary check cannot be run. Three independent reasons, none of them "no
+reward was paid":
+
+1. **We stop looking before a programme can pay.** Discovery polls `status="active"`, so a row
+   freezes at its last active observation. All six programmes the live book rested in read
+   `paid_out = false`, and every one was last seen 1–4 minutes BEFORE its own end.
+2. **`paid_out` does not mean what we assumed.** It is real (23 of 7,979 rows; 12 of 4,112 live)
+   but is true on programmes that have NOT ended — `KXVOTECLARITY` ends 20 Sep, `KXFEAR` ends
+   20:00Z today. So it is not an end-of-programme distribution signal.
+3. **The shadow instrument never covered a market the live book traded.** Zero
+   `incentive_shadow_outcomes` rows for all nine live tickers. No `est_reward` for them either.
+
+Both sides of estimate-versus-realized are missing for the live book. NOT evidence against the
+reward model — evidence the instrument cannot see the payout leg. A null would have been
+uninformative anyway: the runner steers away from big-pool programmes, and 1 contract in a
+27k–60k book is ~0.5% share.
+
+**OWNER DECISION, not patched:** poll ended programmes so the terminal state is captured;
+establish `paid_out` semantics; make the shadow cover the live book's markets.
+[Thesis §9.13](../LIQUIDITY_INCENTIVE_THESIS.md).
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).
