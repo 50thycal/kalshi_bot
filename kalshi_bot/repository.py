@@ -480,6 +480,28 @@ def strategy_is_kept(strategy: str | None, keep_prefixes: tuple[str, ...]) -> bo
     return "mmsell" in keep_prefixes and "mmsell" in tag
 
 
+def keep_with_configured_twins(keep_prefixes: tuple[str, ...], settings) -> tuple[str, ...]:
+    """`keep_prefixes` plus every configured live/paper TWIN tag, as an exact entry.
+
+    A configured twin is NEVER foreign: its live parent is armed, and the twin is the
+    comparison instrument that parent's canary depends on. Abandoning its open positions while
+    the live book still holds theirs breaks the one-to-one property the whole live-vs-paper
+    comparison rests on.
+
+    Twins are kept by EXACT TAG rather than by family prefix because a twin tag carries its
+    parent's generation letter — `Alimm1_pt3` matches no family prefix at all. mmsell's twins
+    survive today only through the `"mmsell"` substring special case in `strategy_is_kept`,
+    which is an accident of that family's naming rather than a rule, so every non-mmsell book's
+    twin was exposed.
+
+    Observed 2026-09-18: the liquidity-incentive canary's twin had the mirrors of two FILLED
+    live positions marked `abandoned` on a worker restart, while the live book still held them.
+    That is the Wmmsell6 failure of 2026-08-04 (see `strategy_is_kept`) on a new book.
+    """
+    twins = tuple(tt for _lt, tt in settings.live_paper_twin_pairs if tt)
+    return keep_prefixes + tuple(t for t in twins if t not in keep_prefixes)
+
+
 def abandon_open_paper_trades(session, keep_prefixes: tuple[str, ...]) -> int:
     """Close out open paper trades/positions whose strategy isn't in one of the kept book
     families (used to clear a prior experiment when switching modes). See strategy_is_kept —

@@ -598,6 +598,11 @@ def run() -> int:
                 keep += ("wcprop",)
             if xgame_tracker is not None and settings.xgame_book_enabled:
                 keep += ("xgame",)
+            # A configured live/paper twin is never foreign — see keep_with_configured_twins.
+            # Without this, a twin whose tag matches no family prefix (every book but mmsell,
+            # which survives on a substring accident) has its open positions wiped on each
+            # worker start while its live parent still holds them.
+            keep = repo.keep_with_configured_twins(keep, settings)
             with session_scope() as session:
                 n = repo.abandon_open_paper_trades(session, keep_prefixes=keep)
             log_event(logger, logging.INFO, "abandoned foreign paper positions",

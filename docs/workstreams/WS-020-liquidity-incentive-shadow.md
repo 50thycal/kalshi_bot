@@ -332,6 +332,22 @@ Ops `limm-report-5`, span 0.48 days. Two of the material triggers fired
 Sequence-gap rise has **plateaued** (4 → 17 → 28 → 28). Discovery clean, 4,449 programmes,
 trades 98/3h and rising but still thin.
 
+## FIRST FILLS, and a twin defect they exposed (2026-09-18 00:26Z)
+
+Two post-only 1c YES bids on `KXBIGGESTQUAKE-17SEP26` strikes **filled** — we were the maker,
+a counterparty sold into us, 2c at risk. Kalshi position snapshots confirm both. The pipe is
+now proven end to end: select, place, rest, fill, hold, expire.
+[Thesis §9.8](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+**Defect found and fixed:** `abandon_open_paper_trades` runs on every live worker start and
+keeps paper trades by FAMILY PREFIX. A twin tag carries its parent's generation letter
+(`Alimm1_pt3`) and matches no family, so the twin's mirrors of the two filled positions were
+marked `abandoned` while live still held them — breaking the comparison instrument
+`arm_live_canary` requires. mmsell's twins survive only on the `"mmsell"` substring accident,
+so every other book's twin was exposed. Fixed by keeping configured twin tags by exact tag
+(`repository.keep_with_configured_twins`). This is the Wmmsell6 failure of 2026-08-04 on a
+new book.
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).

@@ -489,6 +489,60 @@ The gated metric is zero, the sample is half a day against fourteen, the entire 
 headline is still `est_reward` from an unvalidated model, and the one encouraging number rests
 on ten partial fills.
 
+### 9.8 The first real fills — and a defect they exposed in the twin (2026-09-18 00:26Z)
+
+§9.3 proved placement, §9.6 proved the expiry loop. The last unproven leg was a fill, and it
+has happened twice.
+
+| ticker | side | price | qty | status |
+|---|---|---|---|---|
+| `KXBIGGESTQUAKE-17SEP26-7.0` | yes | 1c | 1 | **filled** |
+| `KXBIGGESTQUAKE-17SEP26-6.8` | yes | 1c | 1 | **filled** |
+| `KXYTVIEWSHIGH-POS26OCT-8.75M` | yes | 4c | 1 | canceled (timeout) |
+| `KXAAAGASDAZ-26SEP18-4.6800` | yes | 1c | 1 | resting (00:08:31Z) |
+
+**We were the maker.** Post-only bids at 1c on deep-tail earthquake-magnitude markets; a
+counterparty sold YES into them. That is the adverse-selection event this whole thesis is
+about, occurring on real money for the first time. **At risk: 2c.** Kalshi's own position
+snapshots confirm 1 contract in each at an average price of 1c, re-read every ~3 minutes by
+reconcile, realized P&L 0.0000 (unsettled).
+
+**A cap behaved in a way worth writing down.** Only ONE new order replaced the three, not
+three: `MAX_OPEN_ORDERS` counts filled positions as open exposure, so two fills plus one
+resting order is already at the cap of 3. The book cannot accumulate a fourth unit of exposure
+while holding two. Committed: $0.03.
+
+**And the fills exposed a real defect — in the twin, not the live path.**
+
+The twin mirrored all seven orders faithfully. But the mirrors of the two orders that FILLED
+are marked **`abandoned`**, while the live book still holds both positions:
+
+| batch | live | twin |
+|---|---|---|
+| 16:00Z (3 orders) | canceled/timeout | `closed_timeout`, −$0.0102 to −$0.0105 (fees) |
+| 20:04Z (3 orders) | 2 **filled**, 1 timeout | **`abandoned`** |
+
+`repository.abandon_open_paper_trades` runs on every live worker start and closes open paper
+trades whose strategy is not in `keep_prefixes`. In live mode those prefixes are FAMILY names
+(`weather`, `mmsell`, `theta`, …). A twin tag carries its parent's generation letter —
+`Alimm1_pt3` — so it matches none of them. mmsell's twins survive only through the `"mmsell"`
+SUBSTRING special case in `strategy_is_kept`, which is an accident of that family's naming
+rather than a rule, so **every non-mmsell book's twin was exposed**.
+
+This is the Wmmsell6 failure of 2026-08-04 — documented in that same function's docstring — on
+a new book. Its consequence here is precise and serious: `arm_live_canary` requires a paper
+twin because the twin is the comparison instrument, and the twin's record of the only two
+positions that matter had been wiped while live still held them.
+
+**Fixed** by keeping every configured live/paper twin tag by exact tag, not family prefix
+(`repository.keep_with_configured_twins`), which protects every book's twin rather than only
+this one. The already-abandoned rows are historical and are not rewritten: the two live
+positions from 20:04Z have no twin counterpart and that gap is part of the record.
+
+**What this does and does not establish.** The pipe is now proven end to end: select, place,
+rest, fill, hold, and expire. It establishes nothing economic — 2c of deep-tail YES is not a
+test of the reward model, and §9.7's reading is unchanged.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized
