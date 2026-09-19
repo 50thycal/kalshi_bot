@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--ticker","KXTOKENUSE-26SEP21-T138","--depth","8","--trades","25"],"id":"desk-d3-tok","actor":"claude-desk","purpose":"desk detail read 2026-09-19"}
+{"type":"script","name":"desk_fetch","args":["https://gasprices.aaa.com/","--find","Diesel","--window","160","--hits","6"],"id":"desk-d3-aaa","actor":"claude-desk","purpose":"desk settlement-source read 2026-09-19"}
