@@ -99,6 +99,14 @@ pnl_usd, postmortem_tag
 | No fill model. The desk sees a quote, not a fill. | A resting bid may never fill; a taker pays the spread and the rounded fee. | The ledger records `limit_price_c` and `fill_price_c` separately; a skipped or unfilled pick still grades. |
 | The `ops` branch is public. | No account, order id or balance ever appears in a request or result. | Picks name tickers and prices only; P&L lives in the ledger here, not in ops results. |
 
+## 6a. What the fetch tool has verified live (2026-09-19)
+
+| source | readable? | what it gives |
+|---|---|---|
+| `gasprices.aaa.com` | yes, server-rendered | today's and yesterday's national diesel average to four decimals, week/month/year-ago, the record and its date |
+| `openrouter.ai/rankings` | yes, server-rendered summary | the settlement table itself: "share of text requests … in the week beginning <Mon>", by author, with week-over-week change — but only the **last complete week**. The in-progress week is loaded client-side from `/api/frontend/v1/rankings/<section>` endpoints named in the page source |
+| `openrouter.ai` community snapshot (`jampongsathorn/openrouter-rankings` on GitHub) | yes | daily copies of the same page; its market-share section has been empty since at least mid-September, so it does not substitute |
+
 ## 7. Base rates the desk leans on (from the repo's own settled history)
 
 Filled as classes are researched; each line names the query or script and the date, so it can

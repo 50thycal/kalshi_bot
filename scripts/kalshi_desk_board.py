@@ -339,10 +339,16 @@ def detail(args) -> int:
         print("  RULES (secondary):")
         print("   ", mk["rules_secondary"].strip().replace("\n", "\n    "))
 
-    book = _get(f"/markets/{args.ticker}/orderbook", {"depth": args.depth}).get("orderbook") or {}
+    book_resp = _get(f"/markets/{args.ticker}/orderbook", {"depth": args.depth})
+    # Kalshi has moved the payload to fixed-point spellings; accept either top-level key.
+    book = book_resp.get("orderbook_fp") or book_resp.get("orderbook") or {}
     yes_levels = _book_levels(book, "yes", args.depth)
     no_levels = _book_levels(book, "no", args.depth)
     print(f"\n  BOOK (resting bids; a NO bid at p is a YES offer at 100-p)  depth {args.depth}")
+    if not yes_levels and not no_levels:
+        # Say what came back so the next field rename is a one-line fix, not a mystery.
+        print(f"    (empty — response keys: {sorted(book_resp.keys())}; "
+              f"book keys: {sorted(book.keys()) if isinstance(book, dict) else type(book).__name__})")
     print("    YES bids           NO bids")
     for i in range(max(len(yes_levels), len(no_levels))):
         y = f"{yes_levels[i][0]:3d}c x{yes_levels[i][1]:<6d}" if i < len(yes_levels) else " " * 12
