@@ -1,1 +1,1 @@
-{"type":"script","name":"desk_fetch","args":["https://openrouter.ai/api/frontend/v1/rankings/market-share","--find","2026-09","--window","900","--hits","3"],"id":"desk-d3-or","actor":"claude-desk","purpose":"desk settlement-source read 2026-09-19"}
+{"type":"script","name":"desk_fetch","args":["https://www.eia.gov/petroleum/supply/weekly/","--find","Strategic","--window","300","--hits","5"],"id":"desk-d3-eia","actor":"claude-desk","purpose":"desk settlement-source read 2026-09-19"}
