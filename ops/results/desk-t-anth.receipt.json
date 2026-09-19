@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "95f66108b79dbdebdc96e630812786849a1f5c38",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-19T02:00:22Z",
+  "id": "desk-t-anth",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/desk-t-anth.receipt.json",
+  "result_file": "ops/results/desk-t-anth.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/35414361066",
+  "service": null,
+  "started_at": "2026-09-19T02:00:21Z",
+  "targets": [],
+  "type": "script"
+}
