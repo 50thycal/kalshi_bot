@@ -1985,3 +1985,56 @@ earn, not evidence the mechanism is absent. Lifetime rewards on Kalshi's page: s
   gap is Fmmsell10's 90–94c NO buys, not this book, whose committed total is unchanged at $0.15.
 
 Rides PR #439.
+
+### 9.30 The universe-rule epoch cannot be recorded without re-arming the book (2026-09-19 19:30Z)
+
+§9.28 ends with an operator guard: the universe rule is a rules change to a live armed arm, so
+it needs a recorded epoch. Attempting it produced a more interesting fact than the epoch would
+have been.
+
+**Current state**, from `xos show liquidity-incentive-mm`: experiment `LIVE_CANARY`, v1 frozen
+2026-09-17T14:11:04Z, **epoch 2 open since 2026-09-17T15:52:12Z**, carrying two open deployments
+— `limm-smoke-live-1` (`Alimm1`, LIVE) and `limm-smoke-twin-1` (`Alimm1_pt3`, PAPER_TWIN).
+
+**The intended cut** was the shape `platform_impact.apply_revision` uses: close epoch 2 at the
+merge instant, open epoch 3, and `carry_deployments_forward` so the same tags keep running —
+"same contract, fresh evidence", no re-arm, no `LIVE_STRATEGIES` change, no new exposure.
+
+**The system refuses it, by design:**
+
+```
+cannot carry ['limm-smoke-live-1 (live)', 'limm-smoke-twin-1 (paper_twin)'] across an epoch
+boundary: only ['paper'] deployments may be re-registered automatically. Stand the live book
+down and re-arm it through arm_live_canary(), which is the only path that may create live
+lineage.
+```
+
+`_CARRYABLE_KINDS` is paper only. **Live lineage can be created exactly one way**, and that is
+the sanctioned arming path. This is not a gap to route around — it is the guard that stops an
+agent manufacturing live deployment rows, and the 2026-08-15 Lmmsell failure is why it exists.
+
+**So the real cost of recording this epoch is not bookkeeping.** It is what
+`recut_mmsell10_contest_cap` had to do on 2026-09-06: FRESH tags (`Blimm1` / `Blimm1_pt3`),
+new live deployments registered through the sanctioned path, and a `LIVE_STRATEGIES` change —
+which means **standing the canary down and re-arming it**. Under `DEC-012` that is a hard stop,
+and it is the highest-risk act in this system, spent here on a $0.15 book.
+
+**And right now the seam is empty.** `Alimm1` has placed no new order since 2026-09-18T18:21:03Z
+because four filled commitments sit against `MAX_OPEN_ORDERS = 3`. There is **no post-rule live
+evidence to separate**, and none can exist until a settlement frees a slot. Re-arming today would
+pay the full price of the boundary to partition nothing.
+
+**Recorded position, pending an operator decision.** The rule change is real and the
+non-poolability is real; what is absent is an Experiment OS object asserting it. Until one
+exists, **this paragraph is the boundary**: live evidence under `Alimm1` from
+**2026-09-19T18:21:57Z** (PR #439 merge) onward was produced under the competing-depth rule and
+**must not be pooled** with anything before it. Any later analysis that spans that instant is
+wrong unless it splits there.
+
+**The open question worth someone's attention**, and a candidate Experiment OS issue: the
+vocabulary has no way to record a *universe or rules* boundary on a live arm short of re-arming
+it. `ARM_CANARY`, `STAND_DOWN`, `RETIRE_ON_GATE_FAIL`, `CLOSE_OUT_RETROSPECTIVE`,
+`REGISTER_PACKAGE` and `REPAIR_LINEAGE` are the six actions; none of them says "the world under
+this running book changed." A platform revision gets `platform_impact`; a book-level rule change
+gets nothing. That asymmetry will recur on every future universe change to any live book, so it
+is worth fixing once rather than re-deciding each time.

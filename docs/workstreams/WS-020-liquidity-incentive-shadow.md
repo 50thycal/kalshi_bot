@@ -893,3 +893,29 @@ Still NO observable liquidity reward; lifetime rewards $0. A +$1.00 settlement l
 resolution the standing check awaits.
 
 [Thesis §9.29](../LIQUIDITY_INCENTIVE_THESIS.md). Rides PR #439.
+
+## Update 2026-09-19 19:30Z — the universe epoch cannot be recorded without re-arming
+
+Attempted the §9.28 epoch cut. `carry_deployments_forward` refuses: `_CARRYABLE_KINDS` is paper
+only, and live lineage may be created ONLY through `arm_live_canary`. Not a gap to route around
+— it is the guard against an agent manufacturing live deployment rows.
+
+So recording this epoch costs what `recut_mmsell10_contest_cap` cost: fresh tags
+(`Blimm1`/`Blimm1_pt3`), re-registration through the sanctioned path, and a `LIVE_STRATEGIES`
+change — i.e. standing the canary down and re-arming it. A DEC-012 hard stop, on a $0.15 book.
+
+And the seam is currently EMPTY: `Alimm1` has placed nothing since 2026-09-18T18:21:03Z (four
+commitments vs MAX_OPEN_ORDERS=3), so there is no post-rule live evidence to separate.
+
+Speculative package + tests were written, refused by the guard, and REVERTED. Nothing landed.
+
+**Interim boundary, in lieu of an XOS object:** live evidence under `Alimm1` from
+2026-09-19T18:21:57Z onward is post-universe-rule and must not be pooled with anything earlier.
+
+OPERATOR DECISION: re-arm on fresh tags to get a formal epoch, or hold and rely on the recorded
+boundary until the book is actually placing again. Recommendation: hold.
+
+OPEN QUESTION (candidate XOS issue): no command action records a universe/rules boundary on a
+live arm. Platform revisions get `platform_impact`; book-level rule changes get nothing.
+
+[Thesis §9.30](../LIQUIDITY_INCENTIVE_THESIS.md).
