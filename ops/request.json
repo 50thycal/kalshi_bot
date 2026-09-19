@@ -1,1 +1,1 @@
-{"type":"script","name":"desk_fetch","args":["https://openrouter.ai/api/frontend/v1/rankings/market-share","--find","2026-09-14","--window","500","--hits","1"],"id":"desk-d5-or","actor":"claude-desk","purpose":"desk pace sample 2026-09-19 20:30Z"}
+{"type":"script","name":"kalshi_desk_board","args":["--ticker","KX30YMORTW-26SEP24-T7.01","--depth","8","--trades","10"],"id":"desk-d5-mort","actor":"claude-desk","purpose":"desk orderbook_fp verification 2026-09-19"}
