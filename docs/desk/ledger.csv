@@ -1,0 +1,1 @@
+pick_id,written_at_utc,ticker,side,limit_price_c,size_usd,order_type,close_time_utc,settlement_source,thesis,edge_class,confidence,expected_win_pct,market_implied_pct,placed,fill_price_c,settled_at_utc,result,pnl_usd,postmortem_tag
