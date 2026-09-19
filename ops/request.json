@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"script","name":"desk_fetch","args":["https://openrouter.ai/rankings","--raw","--find","v1/rankings/","--window","140","--hits","16"],"id":"desk-fetch-6"}
