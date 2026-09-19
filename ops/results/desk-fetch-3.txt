@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=script  id=desk-fetch-3
-# code 82e3240bf821c010610610c25ec33d14e10d9a22 · started 2026-09-19T04:02:03Z
-# desk_fetch https://openrouter.ai/rankings
-# HTTP 200 · text/html; charset=utf-8 · 2354838 bytes
-# 1 window(s) around 'most recent complete week'
----
-tch) mistralai 40M >999% 8 Text Embedding 3 Large openai 1.06M >999% 9 Fugu Max sakana 6.48B >999% 10 DeepSeek V4 Flash Vision Exp (batch) deepseek 3.03M >999% Market Share Absolute Percentage Compare text request share by model author on OpenRouter. Market share by model author, as text Text summary of the Market Share chart above. Share of text requests made on OpenRouter in the week beginning Sep 7, 2026, with the change in each author's requests against the week before it. openai leads at 23.6% of the week's requests. Authors the chart groups as others are listed last, so the rows match the series the chart plots. Model authors ranked by their share of text requests on OpenRouter in the most recent complete week Rank Author Share of requests Change in requests 1 openai 23.6% +28% 2 deepseek 22.6% +3% 3 google 18.6% +2% 4 tencent 7.2% +105% 5 z-ai 7.0% -22% 6 qwen 5.2% +1% 7 anthropic 2.5% -5% 8 mistralai 2.3% 9 meta-llama 2.2% +6% All other authors 8.8% -2% Tool Calls Absolute Percentage Tool usage across models on OpenRouter Images Absolute Percentage Total images processed on OpenRouter
