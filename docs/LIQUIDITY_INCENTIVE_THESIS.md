@@ -1046,6 +1046,11 @@ fix 2, in a read-only ops script rather than the enforcer. Recorded, not widened
 
 ### 9.17 Day-one check 3, at last: the units are exact, and lifetime rewards are $0 (2026-09-18 19:19Z)
 
+> **CORRECTED BY §9.21.** The Low / Medium / High column this entry calls
+> "Category" is labelled **Competition**. `Category` is a separate, unrelated filter.
+> The misreading is left in place below; §9.21 says what the column is and why the
+> difference matters more than the name.
+
 The operator found the incentives page. It is the external reading this thesis has been missing
 since §9.1, and it answers two different questions with two different answers.
 
@@ -1276,6 +1281,81 @@ for four consecutive checks, and must still not be quoted as a bound. Settled pa
 base code `5ea57bd3` and none of the four fixes — including the shadow pinning that adds
 subscriptions — is in this reading. The `seq_gap` figures above are therefore a clean
 pre-deploy baseline for judging whether that fix costs tape quality.
+
+### 9.21 The column is COMPETITION, not Category — and it reads on the term we said was blind (2026-09-19 01:30Z)
+
+The operator sent five screenshots of the incentives page, including the table header and both
+filter dropdowns open. They correct §9.17 on a point of fact, and the correction matters far more
+than the name does.
+
+**The correction.** §9.17 called the Low / Medium / High column "Category". The header reads:
+
+```
+End   |   Program   |   Competition   |   ↓ Reward
+```
+
+It is **Competition**. `Category` is a different control entirely — a market-subject filter whose
+options are All, Economics, Financials, Crypto, Politics, Climate and Weather, Entertainment,
+Science and Technology, Sports, Mentions. I conflated the filter chip beside the search box with
+the column heading, and then reasoned about the wrong field for a whole entry.
+
+**Why this is not a naming quibble.** §9.17 concluded that the page "confirms the *pool*, one
+input" and that "the share model is untouched" — that the page told us nothing about the term the
+headline actually depends on. That conclusion was wrong. *Competition is Kalshi's own published
+read on the denominator of the share term.* The one input we have been calling structurally
+unobservable has had an external reading on it since the page existed. We were looking at it and
+did not know what we were looking at.
+
+To be exact about what the label licenses: **Competition = crowding is the plain reading of the
+word, not a definition we hold.** Nothing in the API, our docs or Kalshi's page defines it. It is
+recorded here as a strong reading, not a fact.
+
+**§9.17's non-derivability argument survives intact, and is now stronger.** A full census of every
+key the API returns, across all **5,332** current programme rows, returns exactly eleven:
+
+```
+id · market_id · market_ticker · incentive_type · incentive_description
+start_date · end_date · period_reward · target_size_fp · discount_factor_bps · paid_out
+```
+
+No competition field, no crowding field, nothing from which Low / Medium / High could be
+computed. `discount_factor_bps` is **5000** on every row and `target_size_fp` takes two values, so
+neither separates the three matched events, which read Low, High and Medium. §9.17 was right that
+the field is invisible to us and wrong about which field it was.
+
+**The cost to the universe rule is now much sharper than §9.17 made it.** `KXFEATURE` — GTA VI:
+The Album · Features — is **$12,900 at LOW competition**: the largest pool on the board paired
+with the lowest published crowding. On a two-by-two of pool size against competition that is the
+best cell available, and the soonest-programme-end universe rule means this book has never once
+looked at it. §9.17 attached a cost to that rule; this makes it the strongest argument in the
+record for revisiting it. It remains an **OWNER DECISION** and nothing here patches it.
+
+**A pre-registered check, written down before it is run.** If Competition means crowding, then our
+own shadow tape must already agree with it: programmes Kalshi marks High should carry
+systematically larger competing depth at placement than those it marks Low, in the same
+`competing depth at placement` split §9.20 reports. That is a falsifiable prediction about data we
+already hold, it costs one query, and it needs no new capability. **Pre-registering it now, before
+looking**: agreement would make Competition a usable external label for the share denominator;
+disagreement would mean the word means something else and §9.17's caution was right for the wrong
+reason. Not run in this entry, deliberately.
+
+**Two structural gaps the screenshots also expose.**
+
+The page carries a **Predictions / Perps** toggle, so incentive programmes exist for Perps as a
+separate universe. We poll `/incentive_programs` and `PERPS_COLLECTOR_ENABLED=false`, so whether
+our listing covers Perps at all is an **open question**, not a known.
+
+The **Rewards** filter (All / Volume / Liquidity) maps onto our `incentive_type`, and that one is
+covered: we poll `incentive_type="all"` and the census shows both `liquidity` and `volume`
+present. No gap there.
+
+**Unchanged:** lifetime rewards still read **$0**, re-read at 07:53 local, with a history control
+beside the figure that we have not opened. §9.17's reading stands.
+
+**No gate re-interpretation and no verdict.** §6 is pre-registered and untouched. What this entry
+records is that a recorded observation was wrong about what it had observed, that the corrected
+reading points at the exact term the thesis calls unvalidated, and that the check which would
+settle it is written down before being run.
 
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 

@@ -644,6 +644,37 @@ selection, but n=45.
 Live config re-verified unchanged. #428 still unmerged, so this ran on base code and is a clean
 pre-deploy `seq_gap` baseline for fix 4. [Thesis §9.20](../LIQUIDITY_INCENTIVE_THESIS.md).
 
+## THE COLUMN IS COMPETITION, NOT CATEGORY (2026-09-19 01:30Z)
+
+The operator's screenshots show the table header: `End | Program | Competition | ↓ Reward`.
+§9.17 called that column "Category" and reasoned about the wrong field for a whole entry.
+`Category` is a separate subject filter (Economics, Financials, Crypto, Politics, Climate and
+Weather, Entertainment, Science and Technology, Sports, Mentions).
+
+**Not a naming quibble.** §9.17 concluded the page "confirms the pool" and left "the share model
+untouched". Wrong: Competition is Kalshi's own published read on the DENOMINATOR of the share
+term — the one input the thesis calls structurally unobservable. It has been on the page all
+along. Competition = crowding is the plain reading of the word, not a definition we hold.
+
+**Non-derivability survives and is stronger.** A census of every API key across all 5,332 current
+programme rows returns exactly eleven, none of them competition. `discount_factor_bps` is 5000 on
+every row; `target_size_fp` takes two values. Neither separates the three matched events.
+
+**Sharper cost to the universe rule:** `KXFEATURE` is $12,900 at LOW competition — biggest pool,
+lowest crowding, the best cell on the board — and the soonest-end rule means this book has never
+looked at it. Strongest argument yet for revisiting the rule. Still an OWNER DECISION.
+
+**Pre-registered before running:** if Competition means crowding, programmes marked High must
+carry larger competing depth at placement in our own tape than those marked Low. One query, data
+we already hold, written down before looking.
+
+**New open question:** the page has a Predictions / Perps toggle, so Perps incentive programmes
+exist as a separate universe. `PERPS_COLLECTOR_ENABLED=false` and we poll `/incentive_programs`,
+so whether our listing covers them is unknown. The Rewards filter (All / Volume / Liquidity) maps
+to `incentive_type` and IS covered.
+
+Lifetime rewards still $0. [Thesis §9.21](../LIQUIDITY_INCENTIVE_THESIS.md).
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).
