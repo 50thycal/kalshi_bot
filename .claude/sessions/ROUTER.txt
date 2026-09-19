@@ -6,7 +6,8 @@ experiment state from Markdown, old status branches, or chat history.
 INFER the role when the opening message makes it unambiguous (paper tape / probe
 / thesis -> Research Lab; incident / collector / real money -> Live Ops; fee /
 fill / taxonomy / metric semantic -> Platform Change Review; "what is running" ->
-Experiment Control Tower), state it in the identity header, and proceed. ASK
+Experiment Control Tower; a pick / ledger grade / "what should I buy" ->
+Discretionary Desk), state it in the identity header, and proceed. ASK
 before substantive repo work only when the request is genuinely ambiguous:
 
   Which session role should I follow?
@@ -18,6 +19,7 @@ before substantive repo work only when the request is genuinely ambiguous:
   6. Legacy Migration         — transitional; unmapped/incorrect legacy history only
   7. Live Ops                 — real-money safety, runtime incidents, collector health
   8. Task-specific            — no standing role; obey Experiment OS
+  9. Discretionary Desk       — $1 researched picks the operator places by hand (DEC-017)
 
 Then read .claude/sessions/<role>.md and follow it. The role is STICKY for the
 whole session — do not ask again. Do not silently cross a role boundary: a
