@@ -701,6 +701,108 @@ Collector deliberately NOT judged here — forty minutes is not an interval. The
 check owns it, entry criterion pre-set above +35/4h against §9.20's pre-deploy baseline of
 seq_gap 200 at ~+31/4h. [Thesis §9.22](../LIQUIDITY_INCENTIVE_THESIS.md).
 
+## REWARD LEDGER BUILT, AND THE UNIVERSE RULE IS THE BINDING CONSTRAINT (2026-09-19 04:30Z)
+
+**Operator-authorised.** Two things.
+
+**1. The reward is now measurable.** Kalshi has no endpoint for our credit (§9.21), so it is
+recovered as the part of a balance change nothing else explains:
+`residual = Dbalance - settlements - sell proceeds + buy cost + fees`. New module
+`reward_ledger.py`, new append-only table `incentive_balance_observations`, collector takes a
+reading every 15 min, ops script `incentive_reward_ledger_report` reads it.
+
+A residual is a CANDIDATE, never a reward. A deposit is the worst false positive, so >= $1.00 is
+marked `presumed_transfer` (two orders of magnitude above what this book could earn). An
+unreported fee pushes the residual NEGATIVE. A failed or truncated read marks the window
+`residual_untrustworthy`. Integer cents throughout — the signal is the size of a float rounding
+error.
+
+**2. §9.13's "too small to earn" was reasoned from the deep books, which are not
+representative.** Competing depth at the best bid spans FOUR ORDERS OF MAGNITUDE across active
+programmes inside the 25c cap: 7 contracts on `KXBWAYATTENDANCE-27MAY23B-14000000` ($497/day
+pool) against 2,563 on `KXNYSECEEMP-27APR30-T230400` (same pool).
+
+The dollar figures from the naive share model are NOT quoted as expectations — that model is the
+unvalidated term, and it ignores `target_size` (1000 vs our 1), the distance discount and
+time-weighting. What survives regardless is the ORDERING: any monotone share function ranks a
+7-deep book far above a 2,563-deep one.
+
+**So the universe rule is the binding constraint.** The runner sorts by soonest programme end and
+fetches 8 books out of ~5,300. Nothing in that ordering looks at depth, so the book has been
+quoting where rewards are unwinnable. Every market in the top rows was invisible to it.
+
+**Pre-registered before the ledger has recorded anything:** if the book is moved onto thin books
+and still records no material residual after a quoted programme ends, that is evidence against
+the share model at any size — not merely that the book is small.
+
+No cap, gate or risk envelope touched; the ledger only reads the balance.
+[Thesis §9.23](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## GATED METRIC MOVED, BUT THE POPULATION MOVED TOO (2026-09-19 04:30Z)
+
+First shadow reading after the 01:53:07Z deploy. Criteria (c) and (d) both fired.
+
+**(c)** Conservative `both_filled` 4 -> 24, `partial_both` 16 -> 46, n 866 -> 1329. P(both|one)
+TRIPLED, 0.005 -> 0.018, and this time by numerator rather than arithmetic. The two
+non-optimistic models re-converged (0.018 vs 0.019) after §9.20 recorded them separating.
+
+**(d)** The conservative lag is estimable at last: mean 1048.4s vs median 993.6s, diverged,
+where four consecutive checks read mean = median = 1212.5s at n=1. About seventeen minutes.
+
+**Why it cannot be banked.** Fix 4 pins the live book's markets into the shadow, and the live
+book picks by SOONEST PROGRAMME END — short-dated, plausibly thinner, more likely to fill both
+sides. The shadow is measuring a different mixture than when 4/16 was recorded, and the change
+landed 2.6h before this reading. Only 4 markets pinned against ~201 tracked argues the effect is
+small, but 4 fill-prone markets could carry a six-fold jump in a numerator that was 4.
+UNRESOLVED. §9.20's "frozen" and this "tripled" are not comparable readings. The next check is
+the first like-for-like one.
+
+**(a)/(b) Fix 4 did NOT cost tape quality — the pre-registered question, cleanly answered.**
+seq_gap rate +27/4h against a +31/4h pre-deploy baseline, criterion was "clearly above +35";
+throttled flat at 5. The added subscriptions did not degrade the tape. The one unconfounded
+finding here.
+
+**New and unexplained:** `thread_started` 12 -> 18 and `thread_stopped` appears for the first
+time (1). A deploy accounts for one restart, not six. Discovery clean (493 cycles, 0 errors).
+Open observation, not a diagnosis.
+
+Headline essentially flat (-158.34 -> -156.24/day) and not news.
+[Thesis §9.24](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## THE FILL RATE HELD, AND THE DECOMPOSITION SPLITS TWO WAYS (2026-09-19 08:35Z)
+
+First reading taken ENTIRELY post-deploy — what §9.24 said was needed. Criterion (a) fired.
+
+**It held.** P(both|one) conservative 0.005 -> 0.018 -> **0.018**; queue_aware 0.019. Over the
+clean 04:30-08:35Z window conservative added 4 both_filled on 189 new observations, an
+incremental rate of ~0.021 — consistent with 0.018, inconsistent with 0.005. Not a one-off burst.
+
+**So the decomposition was run.** Conservative outcomes split by whether the live book holds the
+market:
+
+| group | markets | both_filled | n | P(both\|one) |
+|---|---|---|---|---|
+| pinned (live book) | 2 | 10 | 168 | **0.0595** |
+| rest of shadow | 186 | 18 | 1,350 | **0.0133** |
+
+§9.24's suspicion was RIGHT in direction and bigger than expected: the live book's markets fill
+both sides **4.5x** as often.
+
+**But composition does NOT explain the aggregate.** Remove the pinned markets entirely and the
+rest still reads 0.0133 — ~2.9x the pre-deploy 0.0046, on 186 markets tracked throughout.
+Incrementally: of +24 both_filled since 00:25Z, at most 10 are pinned, leaving >=14 on +484 new
+non-pinned observations, a rate near 0.029. TWO effects, one explained.
+
+**Do NOT generalise the pinned finding.** Those 2 markets are KXRT-RES-93 and -94 — two markets
+of ONE event. Not a sample of "short-dated markets fill better"; one event, observed twice.
+
+**§9.24's thread churn RESOLVES:** thread_started 18 -> 18, thread_stopped 1 -> 1, no new
+restarts in four hours. Deploy-adjacent, did not continue. Closed.
+
+Collector holding: seq_gap rate +31/4h, below the +35 criterion; throttled flat; 546 discovery
+cycles, 0 errors. Headline improved sharply (-156.24 -> -96.02/day) and is still not a result.
+settled still 1. [Thesis §9.25](../LIQUIDITY_INCENTIVE_THESIS.md).
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).

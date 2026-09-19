@@ -132,3 +132,48 @@ def unsettled_single_legs(session) -> list[m.IncentiveShadowOutcome]:
 def open_quotes(session) -> list[m.IncentiveShadowQuote]:
     return list(session.scalars(select(m.IncentiveShadowQuote).where(
         m.IncentiveShadowQuote.ended_at.is_(None))).all())
+
+
+def latest_balance_observation(session) -> m.IncentiveBalanceObservation | None:
+    """The most recent balance reading, which the next one differences against.
+
+    Ordered by `at` and then `id`: two observations can land in the same second, and taking the
+    older of them as "latest" would difference the new balance against a stale one and invent a
+    residual out of a window that was already counted."""
+    return session.execute(
+        select(m.IncentiveBalanceObservation)
+        .order_by(m.IncentiveBalanceObservation.at.desc(),
+                  m.IncentiveBalanceObservation.id.desc())
+        .limit(1)
+    ).scalars().first()
+
+
+def record_balance_observation(session, *, at: datetime, balance_cents: int,
+                               prev_at: datetime | None = None,
+                               prev_balance_cents: int | None = None,
+                               reconciliation: Any | None = None,
+                               notes: dict | None = None,
+                               ) -> m.IncentiveBalanceObservation:
+    """Append one balance reading and, when there was a previous one, its reconciliation.
+
+    `reconciliation` is a `reward_ledger.Reconciliation` or None. None means this is the anchor
+    row — the first reading, with nothing to difference against — and every attribution column
+    stays NULL rather than being filled with zeros. A zero residual and an unmeasurable one are
+    different claims, and only one of them is evidence about rewards."""
+    row = m.IncentiveBalanceObservation(
+        at=at, balance_cents=int(balance_cents),
+        prev_at=prev_at, prev_balance_cents=prev_balance_cents,
+        notes_json=_safe_json(notes) if notes else None,
+    )
+    if reconciliation is not None:
+        row.delta_cents = reconciliation.delta_cents
+        row.buy_cost_cents = reconciliation.buy_cost_cents
+        row.sell_proceeds_cents = reconciliation.sell_proceeds_cents
+        row.fees_cents = reconciliation.fees_cents
+        row.settlement_cents = reconciliation.settlement_cents
+        row.fills_counted = reconciliation.fills_counted
+        row.settlements_counted = reconciliation.settlements_counted
+        row.residual_cents = reconciliation.residual_cents
+        row.presumed_transfer = reconciliation.presumed_transfer
+    session.add(row)
+    return row

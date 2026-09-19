@@ -1405,6 +1405,226 @@ shadow check owns that comparison, with the entry criterion pre-set at a rate cl
 +35/4h — so a worsening cannot later be blamed on §9.18's pre-existing drift, and an improvement
 cannot be claimed either.
 
+### 9.23 A reward ledger, and the first look at whether this book can earn anything at all (2026-09-19 04:30Z)
+
+Two things, one of which changes what the next decision should be.
+
+**1. The reward can now be measured, by arithmetic.**
+
+§9.21 established that Kalshi publishes a programme's *terms* and never our credit against them:
+a census of every key the API returns, across 5,332 current rows, found eleven fields and none
+of them is a payment to us. The only external reading is the "Lifetime rewards" figure on the
+web page, which a human has to go and look at, and which has read **$0** every time.
+
+So it is recovered as a residual. A liquidity credit is cash that is neither a fill nor a
+settlement:
+
+```
+Δbalance = settlements + sell proceeds − buy cost − fees + REWARDS + transfers
+⇒ residual = Δbalance − settlements − sell proceeds + buy cost + fees
+```
+
+Every term on the right is observable through endpoints already in use. `reward_ledger.py`
+computes it, `incentive_balance_observations` stores each reading append-only with every
+component kept separately, and the collector takes one every 15 minutes.
+
+**A residual is a candidate, never a reward, and the failure modes are named rather than
+hoped away.** A deposit reads as a large positive residual — the worst possible false positive —
+so anything at or above **$1.00** is marked `presumed_transfer`, which is two orders of
+magnitude above what this book could plausibly earn. A fee Kalshi charged but did not report on
+its fills pushes the residual **negative**, so a persistent small negative drift is an
+accounting problem, not a reward. A truncated or failed portfolio read marks the whole window
+`residual_untrustworthy` rather than letting an under-explained window read as income.
+Everything is integer cents end to end, because the signal being hunted is of the same order as
+a float rounding error.
+
+**2. Can this book earn a measurable reward at all? The first real look, and it is not what
+§9.13 implied.**
+
+§9.13 reasoned that 1 contract in a 27k–60k book is ~0.5% of a slice and rounds to nothing.
+That reasoning took the *deep* books as representative. They are not. Across active liquidity
+programmes whose cheap side is inside the 25c cap, competing depth at the best bid spans **four
+orders of magnitude**:
+
+| market | reward/day | depth at best (thin side) | naive qty-1 share |
+|---|---|---|---|
+| `KXBWAYATTENDANCE-27MAY23B-14000000` | $497 | **7** | 12.4% |
+| `KXMLBPLAYOFFS-26-CWS` | $39 | **1** | 50% |
+| `KXRT-RES-94` (we hold this) | $129 | 9 | 10.5% |
+| `KXWAAEROEMP-27APR30-T83000` | $497 | 1,887 | 0.05% |
+| `KXNYSECEEMP-27APR30-T230400` | $497 | 2,563 | 0.04% |
+
+**The dollar figures that fall out of the naive share model are not quoted here as
+expectations, and must not be.** That model — share ≈ our size ÷ (our size + competing depth at
+best) — *is* the unvalidated term this thesis keeps flagging. Real LIP scoring involves
+`target_size` (1000 on nearly every row, against our 1), the distance discount, and
+time-weighting across a period, none of which that arithmetic contains. Multiplying $497/day by
+12.4% produces a number this book has never earned a cent of, and treating it as a forecast
+would repeat §9.9's mistake with more decimal places.
+
+**What survives regardless of the share model is the ordering.** Whatever the true share
+function is, it is monotone decreasing in competing depth. A market with **7** contracts resting
+at the touch is strictly better than one with **2,563**, by some factor between "a lot" and "a
+lot more". That conclusion needs no calibration, and it is the actionable part.
+
+**Which makes the universe rule the binding constraint, and sharpens §9.21's cost.** The live
+runner sorts programmes by soonest end and fetches an orderbook for the **first 8** — out of
+~5,300 active liquidity programmes. Nothing in that ordering looks at competing depth. So the
+book has been quoting into whichever books happened to end soonest, with no relationship to
+where a reward is winnable. Every market in the top rows above was invisible to it.
+
+**Pre-registered before the ledger has recorded anything:** if this book is moved onto thin-book
+programmes and still records **no** material residual after a programme it quoted has ended,
+that is evidence against the share model at any size — not merely evidence that the book is
+small. Written down now, before the move, so the result cannot be reinterpreted afterwards.
+
+**Nothing here changes the §6 gate, any cap, or any risk envelope.** The ledger only reads the
+balance. The universe rule is untouched by this entry.
+
+### 9.24 The gated metric finally moved — and the same deploy changed what we were measuring (2026-09-19 04:30Z)
+
+Span **1.67 days**, first shadow reading after the 01:53:07Z deploy. Two pre-registered criteria
+fired, (c) and (d), and they fired 2.6 hours after a change that altered the population being
+measured. Both facts belong in the same entry, because the second is why the first cannot be
+banked.
+
+**(c) Conservative's numerator moved, after four checks frozen.**
+
+| | 00:25Z (pre-deploy) | 04:30Z | |
+|---|---|---|---|
+| `both_filled` conservative / queue_aware | 4 / 6 | **24 / 40** | |
+| `partial_both` conservative / queue_aware | 16 / 44 | **46 / 92** | |
+| n conservative / queue_aware | 866 / 1520 | **1329 / 2123** | |
+| P(both \| one) conservative / queue_aware | 0.005 / 0.004 | **0.018 / 0.019** | |
+
+§9.20 recorded conservative frozen at 4 / 16 across three consecutive checks while its n grew,
+with P(both | one) drifting toward zero by arithmetic. That has reversed: the numerator grew
+**six-fold** while n grew about half, so conservative P(both | one) **tripled** — and this time
+by numerator, not by denominator. The two non-optimistic models have also re-converged (0.018
+against 0.019) after §9.20 recorded them separating.
+
+**(d) The conservative lag is estimable at last.** Mean **1048.4s** against median **993.6s** —
+diverged, so it rests on more than one observation, where §9.20 and the three checks before it
+all read mean = median = 1212.5s at n=1. The conservative two-sided fill lag is on the order of
+**seventeen minutes**.
+
+**Why none of this can be banked yet.** At 01:53:07Z we deployed fix 4, which pins the live
+book's markets into the shadow's tracked set. The live book chooses markets by **soonest
+programme end** — short-dated markets, which are plausibly thinner and more likely to fill both
+sides than the top-by-reward population the shadow tracked before. So the shadow is now
+measuring a **different mixture of markets** than it was when the 4 / 16 numbers were recorded,
+and the change landed 2.6 hours before this reading.
+
+That is not a reason to disbelieve the numbers. It is a reason not to call them an improvement
+in *achievability*: a composition change and a behaviour change produce the same movement in an
+aggregate, and this reading cannot separate them. Only **4** markets were pinned against ~201
+tracked, which argues the effect should be small — but 4 unusually fill-prone markets could
+plausibly carry a six-fold jump in a numerator that was 4, and the arithmetic does not exclude
+it. **Unresolved, and recorded as unresolved.**
+
+**The honest position is that §9.20's "frozen" and this entry's "tripled" are not comparable
+readings**, because the instrument's field of view changed between them. The next check, taken
+entirely after the deploy, is the first like-for-like comparison this metric has had.
+
+**(a)/(b) Fix 4 did NOT cost tape quality — which was the question this check existed to
+answer.**
+
+| check | `seq_gap` | rate | `throttled` | connects / disconnects | thread starts |
+|---|---|---|---|---|---|
+| 20:21Z | 169 | +32/4h | 4 | 20 / 19 | 12 |
+| 00:25Z | 200 | +31/4h | 5 | 22 / 21 | 12 |
+| **04:30Z** (post-deploy) | **228** | **+27/4h** | **5** | **27 / 25** | **18** |
+
+§9.22 pre-set the criterion at a rate clearly above +35/4h, because fix 4 adds WebSocket
+subscriptions and a worsening from there would have been ours. The rate came in at **+27/4h** —
+slightly *better* than the pre-deploy baseline, with `throttled` flat. **The added subscriptions
+did not degrade the tape.** That is a clean answer to a question pre-registered before the
+deploy, and it is the one thing here that is not confounded.
+
+**One new thing in the same table, not yet explained:** `thread_started` jumped **12 → 18** and
+`thread_stopped` appears for the first time ever (1). A deploy accounts for one restart, not six.
+Discovery itself is clean (493 cycles, **0 errors**, 34,881 listed, pool $1.93M — the larger
+listing being fix 3's terminal backlog, per §9.22). Recorded as an open observation rather than
+a diagnosis; if the churn continues into the next check with no deploy behind it, that is its
+own finding.
+
+**Headline: essentially flat and not news.** `A_break_even`/$500 conservative −158.34 →
+**−156.24**/day. `C_conservative`/$500 remains the one positive cell at **+180.71**/day. §9.18
+and §9.20 both record that this number swings on an unstable instrument; it has now stopped
+swinging, which is also not news.
+
+**No gate re-interpretation.** §6 reads conservative and is pre-registered. Its metric moving
+favourably 2.6 hours after we changed what the shadow watches is precisely the moment to restate
+that, not to relax it.
+
+### 9.25 The fill rate held — and decomposing it says composition is real but not the whole story (2026-09-19 08:35Z)
+
+Span **1.84 days**. First reading taken **entirely** after the 01:53:07Z deploy, which is what
+§9.24 said was needed before its numbers could be compared to anything. Criterion (a) fired: the
+movement **held**.
+
+| | 00:25Z (pre-deploy) | 04:30Z (mixed window) | **08:35Z (clean window)** |
+|---|---|---|---|
+| `both_filled` conservative | 4 | 24 | **28** |
+| `partial_both` conservative | 16 | 46 | **62** |
+| n conservative | 866 | 1,329 | **1,518** |
+| **P(both \| one) conservative** | **0.005** | **0.018** | **0.018** |
+| P(both \| one) queue_aware | 0.004 | 0.019 | **0.019** |
+
+Over the four hours from 04:30Z to 08:35Z — a window with no composition change inside it —
+conservative added 4 `both_filled` on 189 new observations, an incremental rate of **~0.021**.
+That is consistent with the 0.018 aggregate and inconsistent with the pre-deploy 0.005. **The
+jump was not a one-off burst from newly-pinned markets; the level is sustained.**
+
+**So the decomposition was run, because "sustained" and "not composition" are different claims.**
+Splitting conservative outcomes over 14 days by whether the market is one the live book holds:
+
+| group | markets | `both_filled` | `partial_both` | n | P(both \| one) |
+|---|---|---|---|---|---|
+| **pinned (live book)** | **2** | 10 | 30 | 168 | **0.0595** |
+| rest of shadow | 186 | 18 | 32 | 1,350 | **0.0133** |
+
+**§9.24's suspicion was right in direction, and larger than expected.** The live book's own
+markets fill both sides **4.5×** as often as the reward-ranked population the shadow otherwise
+tracks. That is a real, measured difference in market character, on our own tape.
+
+**But composition does not explain the aggregate.** The pinned markets are 11% of observations
+and 36% of the `both_filled` events. **Remove them entirely and the rest of the shadow still
+reads 0.0133** — roughly **2.9×** the pre-deploy aggregate of 0.0046, on 186 markets that were
+being tracked the whole time. Incrementally it is starker: of the +24 `both_filled` since 00:25Z,
+at most 10 can be pinned, leaving **≥14 on +484 new non-pinned observations**, a rate near
+**0.029**.
+
+**There are therefore two effects, and only one of them is explained.** Pinning raised the
+average by adding fill-prone markets — measured, quantified, done. Something *else* raised the
+non-pinned shadow's own fill rate over the same window, and this entry does not know what. The
+deploy is the obvious suspect by timing, but the deploy's only measurement-side change was
+adding four markets, which is precisely the effect just subtracted out.
+
+**The pinned finding must not be generalised, and here is why.** Those "2 markets" are
+`KXRT-RES-93` and `KXRT-RES-94` — **two markets of a single event**. n=168 spread across one
+event's microstructure is not a sample of "short-dated markets fill better"; it is one event,
+observed twice. The 4.5× is real about *those* markets and says nothing yet about the class.
+Recording the number and refusing the inference.
+
+**§9.24's open item resolves: the thread churn stopped.** `thread_started` **18 → 18** and
+`thread_stopped` **1 → 1** across four hours, with no new restarts. The 12→18 jump was
+deploy-adjacent and did not continue, so it is closed rather than carried.
+
+**Collector holding.** `seq_gap` 228 → 260, a rate of **+31/4h** against the +27 of the previous
+window and the +31 pre-deploy baseline; `throttled` flat at 5. Below §9.24's +35 criterion, so
+criterion (d) does not fire. Discovery clean: 546 cycles, **0 errors**.
+
+**Headline improved sharply and is still not a result.** `A_break_even`/$500 conservative
+−156.24 → **−96.02**/day, with modelled reward growing faster than single-leg mark-to-market for
+the first time (reward 730.80 → 846.39 against MTM −1000.96 → −1033.28). §9.18 and §9.20 both
+record this number swinging on this instrument; one favourable swing is not a trend, and it is
+noted here only so the next reading has a number to compare against.
+
+**No gate re-interpretation.** §6 is pre-registered and reads conservative. A metric that has now
+held at 0.018 across a clean window is a better *measurement* than §9.24 had; it is not a verdict,
+and `settled` is still **1**, so the settlement leg carries no weight at all.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized
