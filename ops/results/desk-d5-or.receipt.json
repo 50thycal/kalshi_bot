@@ -1,0 +1,22 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "edccc226312d15186bfe25cc5ba4914f4920b1f1",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-19T20:31:17Z",
+  "id": "desk-d5-or",
+  "outcome": "SUCCEEDED",
+  "provenance": {
+    "actor": "claude-desk",
+    "purpose": "desk pace sample 2026-09-19 20:30Z"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/desk-d5-or.receipt.json",
+  "result_file": "ops/results/desk-d5-or.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/35467627727",
+  "service": null,
+  "started_at": "2026-09-19T20:31:17Z",
+  "targets": [],
+  "type": "script"
+}
