@@ -738,6 +738,37 @@ the share model at any size — not merely that the book is small.
 No cap, gate or risk envelope touched; the ledger only reads the balance.
 [Thesis §9.23](../LIQUIDITY_INCENTIVE_THESIS.md).
 
+## GATED METRIC MOVED, BUT THE POPULATION MOVED TOO (2026-09-19 04:30Z)
+
+First shadow reading after the 01:53:07Z deploy. Criteria (c) and (d) both fired.
+
+**(c)** Conservative `both_filled` 4 -> 24, `partial_both` 16 -> 46, n 866 -> 1329. P(both|one)
+TRIPLED, 0.005 -> 0.018, and this time by numerator rather than arithmetic. The two
+non-optimistic models re-converged (0.018 vs 0.019) after §9.20 recorded them separating.
+
+**(d)** The conservative lag is estimable at last: mean 1048.4s vs median 993.6s, diverged,
+where four consecutive checks read mean = median = 1212.5s at n=1. About seventeen minutes.
+
+**Why it cannot be banked.** Fix 4 pins the live book's markets into the shadow, and the live
+book picks by SOONEST PROGRAMME END — short-dated, plausibly thinner, more likely to fill both
+sides. The shadow is measuring a different mixture than when 4/16 was recorded, and the change
+landed 2.6h before this reading. Only 4 markets pinned against ~201 tracked argues the effect is
+small, but 4 fill-prone markets could carry a six-fold jump in a numerator that was 4.
+UNRESOLVED. §9.20's "frozen" and this "tripled" are not comparable readings. The next check is
+the first like-for-like one.
+
+**(a)/(b) Fix 4 did NOT cost tape quality — the pre-registered question, cleanly answered.**
+seq_gap rate +27/4h against a +31/4h pre-deploy baseline, criterion was "clearly above +35";
+throttled flat at 5. The added subscriptions did not degrade the tape. The one unconfounded
+finding here.
+
+**New and unexplained:** `thread_started` 12 -> 18 and `thread_stopped` appears for the first
+time (1). A deploy accounts for one restart, not six. Discovery clean (493 cycles, 0 errors).
+Open observation, not a diagnosis.
+
+Headline essentially flat (-158.34 -> -156.24/day) and not news.
+[Thesis §9.24](../LIQUIDITY_INCENTIVE_THESIS.md).
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).

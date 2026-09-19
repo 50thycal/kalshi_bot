@@ -1481,6 +1481,82 @@ small. Written down now, before the move, so the result cannot be reinterpreted 
 **Nothing here changes the §6 gate, any cap, or any risk envelope.** The ledger only reads the
 balance. The universe rule is untouched by this entry.
 
+### 9.24 The gated metric finally moved — and the same deploy changed what we were measuring (2026-09-19 04:30Z)
+
+Span **1.67 days**, first shadow reading after the 01:53:07Z deploy. Two pre-registered criteria
+fired, (c) and (d), and they fired 2.6 hours after a change that altered the population being
+measured. Both facts belong in the same entry, because the second is why the first cannot be
+banked.
+
+**(c) Conservative's numerator moved, after four checks frozen.**
+
+| | 00:25Z (pre-deploy) | 04:30Z | |
+|---|---|---|---|
+| `both_filled` conservative / queue_aware | 4 / 6 | **24 / 40** | |
+| `partial_both` conservative / queue_aware | 16 / 44 | **46 / 92** | |
+| n conservative / queue_aware | 866 / 1520 | **1329 / 2123** | |
+| P(both \| one) conservative / queue_aware | 0.005 / 0.004 | **0.018 / 0.019** | |
+
+§9.20 recorded conservative frozen at 4 / 16 across three consecutive checks while its n grew,
+with P(both | one) drifting toward zero by arithmetic. That has reversed: the numerator grew
+**six-fold** while n grew about half, so conservative P(both | one) **tripled** — and this time
+by numerator, not by denominator. The two non-optimistic models have also re-converged (0.018
+against 0.019) after §9.20 recorded them separating.
+
+**(d) The conservative lag is estimable at last.** Mean **1048.4s** against median **993.6s** —
+diverged, so it rests on more than one observation, where §9.20 and the three checks before it
+all read mean = median = 1212.5s at n=1. The conservative two-sided fill lag is on the order of
+**seventeen minutes**.
+
+**Why none of this can be banked yet.** At 01:53:07Z we deployed fix 4, which pins the live
+book's markets into the shadow's tracked set. The live book chooses markets by **soonest
+programme end** — short-dated markets, which are plausibly thinner and more likely to fill both
+sides than the top-by-reward population the shadow tracked before. So the shadow is now
+measuring a **different mixture of markets** than it was when the 4 / 16 numbers were recorded,
+and the change landed 2.6 hours before this reading.
+
+That is not a reason to disbelieve the numbers. It is a reason not to call them an improvement
+in *achievability*: a composition change and a behaviour change produce the same movement in an
+aggregate, and this reading cannot separate them. Only **4** markets were pinned against ~201
+tracked, which argues the effect should be small — but 4 unusually fill-prone markets could
+plausibly carry a six-fold jump in a numerator that was 4, and the arithmetic does not exclude
+it. **Unresolved, and recorded as unresolved.**
+
+**The honest position is that §9.20's "frozen" and this entry's "tripled" are not comparable
+readings**, because the instrument's field of view changed between them. The next check, taken
+entirely after the deploy, is the first like-for-like comparison this metric has had.
+
+**(a)/(b) Fix 4 did NOT cost tape quality — which was the question this check existed to
+answer.**
+
+| check | `seq_gap` | rate | `throttled` | connects / disconnects | thread starts |
+|---|---|---|---|---|---|
+| 20:21Z | 169 | +32/4h | 4 | 20 / 19 | 12 |
+| 00:25Z | 200 | +31/4h | 5 | 22 / 21 | 12 |
+| **04:30Z** (post-deploy) | **228** | **+27/4h** | **5** | **27 / 25** | **18** |
+
+§9.22 pre-set the criterion at a rate clearly above +35/4h, because fix 4 adds WebSocket
+subscriptions and a worsening from there would have been ours. The rate came in at **+27/4h** —
+slightly *better* than the pre-deploy baseline, with `throttled` flat. **The added subscriptions
+did not degrade the tape.** That is a clean answer to a question pre-registered before the
+deploy, and it is the one thing here that is not confounded.
+
+**One new thing in the same table, not yet explained:** `thread_started` jumped **12 → 18** and
+`thread_stopped` appears for the first time ever (1). A deploy accounts for one restart, not six.
+Discovery itself is clean (493 cycles, **0 errors**, 34,881 listed, pool $1.93M — the larger
+listing being fix 3's terminal backlog, per §9.22). Recorded as an open observation rather than
+a diagnosis; if the churn continues into the next check with no deploy behind it, that is its
+own finding.
+
+**Headline: essentially flat and not news.** `A_break_even`/$500 conservative −158.34 →
+**−156.24**/day. `C_conservative`/$500 remains the one positive cell at **+180.71**/day. §9.18
+and §9.20 both record that this number swings on an unstable instrument; it has now stopped
+swinging, which is also not news.
+
+**No gate re-interpretation.** §6 reads conservative and is pre-registered. Its metric moving
+favourably 2.6 hours after we changed what the shadow watches is precisely the moment to restate
+that, not to relax it.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized
