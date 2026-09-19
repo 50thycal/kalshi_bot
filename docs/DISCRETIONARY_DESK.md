@@ -106,13 +106,21 @@ pnl_usd, postmortem_tag
 | `gasprices.aaa.com` | yes, server-rendered | today's and yesterday's national diesel average to four decimals, week/month/year-ago, the record and its date |
 | `openrouter.ai/rankings` | yes, server-rendered summary | the settlement table itself: "share of text requests … in the week beginning <Mon>", by author, with week-over-week change — but only the **last complete week**. The in-progress week is loaded client-side from `/api/frontend/v1/rankings/<section>` endpoints named in the page source |
 | `openrouter.ai` community snapshot (`jampongsathorn/openrouter-rankings` on GitHub) | yes | daily copies of the same page; its market-share section has been empty since at least mid-September, so it does not substitute |
-| `openrouter.ai/api/frontend/v1/rankings/market-share` | yes, JSON | weekly buckets `{"x": "<week-start Monday>", "ys": {author: value}}` back to 2025-09, **including the in-progress week**. The values are token totals, not requests: for the week of 2026-09-07 they give anthropic 3.8% and openai 18.9%, while the settlement table says 2.5% and 23.6%. Query params (`?metric=`, `?type=`) are ignored; `market-share-requests`, `requests` and `authors` return "Unknown dataset". The request-share series the `KX*SHARE` markets settle on is therefore still unread mid-week; token share is a proxy, not the metric |
+| `openrouter.ai/api/frontend/v1/rankings/market-share` | yes, JSON | weekly buckets `{"x": "<week-start Monday>", "ys": {author: value}}` back to 2025-09, **including the in-progress week**, updated near real time (two reads 11.7h apart on 2026-09-19 moved the week-of-9/14 bucket by 7.1T). The values are **absolute tokens per author** (`others` is the remainder, so the sum is the platform total): the week of 2026-09-07 sums to 126.8T, the figure the public token-usage trackers publish for that week. They are not the request-share metric the `KX*SHARE` markets settle on (for 2026-09-07 tokens say anthropic 3.8% / openai 18.9%, the settlement table says 2.5% / 23.6%). Query params (`?metric=`, `?type=`) are ignored; `market-share-requests`, `requests` and `authors` return "Unknown dataset". So: the endpoint gives the `KXTOKENUSE` week-to-date total directly, and only a proxy for share |
 
-## 7. Base rates the desk leans on (from the repo's own settled history)
+## 7. Base rates the desk leans on (from the repo's own settled history and the settlement sources)
 
-Filled as classes are researched; each line names the query or script and the date, so it can
-be refreshed. Empty on opening day by design — a number written from memory is a number
-nobody can check.
+Filled as classes are researched; each line names the source and the date, so it can be
+refreshed. A number written from memory is a number nobody can check, so none are.
+
+| class / series | what the desk verified | source, date |
+|---|---|---|
+| `KXDIESELW` (EIA weekly on-highway diesel, Monday survey) | EIA has printed **5.5–6.7¢ above** AAA's same-Monday daily average the last two weeks (6.285 vs 6.23 on 9/14; 5.967 vs ~5.90 on 9/7). AAA daily 9/14→9/19: 6.23, 6.31, 6.40, 6.4476, **6.4866** (Sat 9/19, record). | `desk_fetch gasprices.aaa.com`, EIA release pages, 2026-09-18/19 |
+| `KX30YMORTW` (Freddie Mac PMMS, Thursday) | PMMS is the Thu–Wed window mean of application rates, and it has matched the daily Optimal Blue / Mortgage Daily 30-yr series to **within 1bp**: 9/17 print 6.95 vs mean(9/10 6.88, 9/11 6.95, 9/14–15 6.95, 9/16 7.05) = 6.96. MND's top-tier index runs ~15–25bp above PMMS in a rising week (7.19–7.24 on 9/16–9/18 vs 6.95). So by Friday two of the five window days are known, and the market ladder can be checked against them. | web search (mortgagedaily.com, mortgagenewsdaily.com, freddiemac.com), 2026-09-19 |
+| `KXSPRLVL` (EIA WPSR Table 1, Wednesday) | Weekly SPR changes during the 172M-barrel IEA release: −3.4/wk (8/14→8/28), −1.2 (9/4), −0.4 (9/11); draws are decelerating as the release winds down. The 1M-barrel strike spacing is the same size as the weekly noise, so a strike sits inside the noise unless DOE's delivery schedule is known. | web search (EIA WPSR summaries), 2026-09-19 |
+| `KXSOFRD` (NY Fed SOFR, next business day 08:00 ET) | Markets close before the print. The day after the 9/16 hike SOFR set at 3.85 (IORB−5). The Friday ladder's yes asks summed to 177¢ across seven bins: nothing is takeable, and the desk has no read on day-two drift. | ops event view + web search, 2026-09-19 |
+| `KXTOKENUSE` (OpenRouter weekly tokens) | Week totals: 126.2T (8/31), 126.8T (9/7). Week-to-date is readable from the market-share endpoint (§6a); weekday pace ~19T/day, Friday-night–Saturday pace 0.61T/h (14.6T/day). | `desk_fetch` market-share endpoint, 2026-09-19 |
+| `KX*SHARE` (OpenRouter request share by author) | Settlement metric unreadable mid-week; token share is a proxy the market already tracks (OpenAI tokens 18.9%→13.7% week over week and the market moved from 23.6 to ~17.5). No desk edge without the request series. | §6a, 2026-09-19 |
 
 ## 8. Decisions this model needed from the operator (opened and answered 2026-09-19)
 
