@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--ticker","KX30YMORTW-26SEP24-T7.00","--depth","8","--trades","25"],"id":"desk-d3-mort","actor":"claude-desk","purpose":"desk detail read 2026-09-19"}
+{"type":"script","name":"kalshi_desk_board","args":["--ticker","KXSPRLVL-26SEP23-T284","--depth","8","--trades","25"],"id":"desk-d3-spr","actor":"claude-desk","purpose":"desk detail read 2026-09-19"}
