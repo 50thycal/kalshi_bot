@@ -67,6 +67,19 @@ def test_cents_prefers_the_fixed_point_dollar_string():
     assert board.cents({}, "yes_bid") is None
 
 
+def test_counts_prefer_the_fixed_point_fp_spelling():
+    # The first live run kept 0 of 8,000 events: current payloads carry only `volume_fp`.
+    assert board.count({"volume_fp": "1234.0000"}, "volume") == 1234
+    assert board.count({"volume_fp": "1234.0000", "volume": 5}, "volume") == 1234
+    assert board.count({"volume": 5}, "volume") == 5
+    assert board.count({}, "volume") == 0
+    row = board.row_of(_market(volume=None, volume_24h=None, open_interest=None,
+                               volume_fp="900.0000", volume_24h_fp="250.0000",
+                               open_interest_fp="40.0000"), {}, NOW)
+    assert (row["vol"], row["vol24"], row["oi"]) == (900, 250, 40)
+    assert _keep(row)
+
+
 def test_row_derives_the_missing_ask_from_the_other_side():
     row = board.row_of(_market(yes_ask=None, no_ask=None), {"category": "Economics"}, NOW)
     assert row["yes_ask"] == 44 and row["no_ask"] == 60
@@ -109,6 +122,8 @@ def test_book_levels_sort_best_first_and_tolerate_dollar_strings():
     assert board._book_levels(book, "yes", 6) == [(42, 5), (41, 7), (40, 10)]
     assert board._book_levels(book, "no", 6) == [(56, 3)]
     assert board._book_levels({}, "yes", 6) == []
+    dollars = {"yes": [[40, 10]], "yes_dollars": [["0.4300", "2.0000"], ["0.4100", "7.0000"]]}
+    assert board._book_levels(dollars, "yes", 6) == [(43, 2), (41, 7)]
 
 
 def test_main_scan_uses_the_public_events_endpoint_only(monkeypatch):

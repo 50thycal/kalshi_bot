@@ -117,6 +117,20 @@ def _num(v) -> float:
         return 0.0
 
 
+def count(obj: dict, field: str) -> int:
+    """A contract count from either the fixed-point `<field>_fp` string or the legacy integer.
+
+    Kalshi's v2 payload moved `volume`, `volume_24h`, `open_interest` and trade `count` to
+    `*_fp` strings ('1234.0000'); the bare field is absent on current payloads, so a reader
+    that only knows the old name silently sees 0 (the desk board's first run kept 0 of
+    8,000 events for exactly that reason).
+    """
+    fp = obj.get(f"{field}_fp")
+    if fp not in (None, ""):
+        return int(_num(fp))
+    return int(_num(obj.get(field)))
+
+
 def taker_fee_cents(price_c: int, qty: int = 1) -> float:
     """Kalshi taker fee for one ORDER of `qty` contracts at `price_c`, in cents, rounded up."""
     if price_c is None or not 0 < price_c < 100 or qty <= 0:
@@ -172,9 +186,9 @@ def row_of(market: dict, event: dict | None = None, now: datetime | None = None)
         "yes_bid": yes_bid, "yes_ask": yes_ask, "no_bid": no_bid, "no_ask": no_ask,
         "spread": spread,
         "last": cents(market, "last_price"),
-        "vol": int(_num(market.get("volume"))),
-        "vol24": int(_num(market.get("volume_24h"))),
-        "oi": int(_num(market.get("open_interest"))),
+        "vol": count(market, "volume"),
+        "vol24": count(market, "volume_24h"),
+        "oi": count(market, "open_interest"),
         "close": market.get("close_time") or "",
         "htc": hours_to(market.get("close_time"), now),
         "fee_yes": taker_fee_cents(yes_ask) if yes_ask else None,
@@ -270,7 +284,9 @@ def scan(args) -> int:
 
 
 def _book_levels(book: dict, side: str, depth: int) -> list[tuple[int, int]]:
-    levels = (book or {}).get(side) or []
+    # `yes`/`no` carry [cents, count]; newer payloads add `yes_dollars`/`no_dollars` with
+    # ["0.4100", "7.0000"] pairs. Prefer the dollar spelling when present (same rule as `cents`).
+    levels = (book or {}).get(f"{side}_dollars") or (book or {}).get(side) or []
     out: list[tuple[int, int]] = []
     for lv in levels:
         try:
@@ -334,7 +350,7 @@ def detail(args) -> int:
     for t in trades:
         yp = cents(t, "yes_price")
         print(f"    {str(t.get('created_time') or '')[:19]}  yes {_fmt_c(yp)}c  "
-              f"x{int(_num(t.get('count'))):<5d} taker={t.get('taker_side') or '-'}")
+              f"x{count(t, 'count'):<5d} taker={t.get('taker_side') or '-'}")
     return 0
 
 
