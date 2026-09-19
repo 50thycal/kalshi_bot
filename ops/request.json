@@ -1,1 +1,1 @@
-{"type":"script","name":"incentive_reward_ledger_report","id":"limm-ledger-1"}
+{"type":"db","id":"limm-ledger-2","sql":"SELECT to_regclass('public.incentive_balance_observations') IS NOT NULL AS table_exists, coalesce((SELECT count(*)::text FROM incentive_balance_observations),'0') AS rows, coalesce((SELECT max(at)::text FROM incentive_balance_observations),'-') AS newest, coalesce((SELECT sum(residual_cents)::text FROM incentive_balance_observations WHERE presumed_transfer IS NOT TRUE),'-') AS residual_cents_total"}
