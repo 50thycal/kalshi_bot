@@ -143,3 +143,41 @@ under the wider policy; 5 defaults to the daily line plus the weekly table.
 4. **Network policy.** Widen the sandbox allowlist or accept the ops-runner latency (§6).
 5. **Cadence of the closing brief.** Daily, after picks are written, or weekly with the
    calibration table. Recommendation: a short daily line plus the weekly table.
+
+## 9. Handoff — where the desk stands (rewrite this at the close of every session)
+
+**As of 2026-09-19 ~17:40 UTC (Sat).** Role playbook: `.claude/sessions/discretionary-desk.md`.
+Any session — or any model that can read this repo and push to GitHub — continues from this
+section, the ledger and the postmortems; nothing else was needed to get here.
+
+**Open positions ($2 at risk, both placed by the operator in the app):**
+
+| pick | market | side / fill | settles | grade with |
+|---|---|---|---|---|
+| D-2026-09-19-001 | `KXDIESELW-26SEP21-T6.52` (EIA weekly diesel > $6.52) | YES @ ~76c | Mon 2026-09-21 ~17:00 ET | EIA weekly on-highway diesel, U.S. average (`desk_fetch https://www.eia.gov/petroleum/gasdiesel/`, or web search). AAA was $6.4866 on Sat 9/19; EIA has printed 5.5–6.7c above AAA's same-Monday figure. |
+| D-2026-09-19-002 | `KX30YMORTW-26SEP24-T7.01` (Freddie Mac PMMS > 7.01%) | YES @ ~43c | Thu 2026-09-24 12:00 ET | Freddie Mac PMMS first published value (`freddiemac.com/pmms`, or web search). Window Thu 9/17–Wed 9/23; 9/17 = 7.01 and 9/18 = 7.05 on the Optimal Blue/Mortgage Daily series that tracks PMMS within 1bp. |
+
+**Windows the last session identified but has not traded:**
+
+- `KXTOKENUSE-26SEP21` (OpenRouter tokens Sep 14–20): the week ends Mon 00:00 UTC and the ladder
+  trades until Mon 03:59 UTC. Read the market-share endpoint (§6a) on **Sunday ~20:00 UTC**, project
+  the total from the week-to-date bucket plus the weekend pace in §7, and take a strike only if it
+  is priced more than ~15 points from that projection after the fee. Week-to-date was 103.27T at
+  Sat 13:43 UTC; the ladder centred on ~127T.
+- `KX*SHARE` (OpenRouter request share): still no mid-week read of the settlement metric. Pass.
+
+**Scheduled check-ins are bound to the session that created them** (Claude Code routines):
+"Desk: daily board read and picks" (13:30 UTC daily), "Desk: Saturday OpenRouter pace sample"
+(Sat 20:30 UTC), "Desk: Sunday-evening OpenRouter token pick" (Sun 20:00 UTC). A new session
+re-creates what it needs (playbook, Startup Routine step 3); the operator can also run any step
+by asking.
+
+**Sandbox limits still in force:** Kalshi, EIA, Freddie Mac, NY Fed, Mortgage News Daily and most
+data sites are blocked from the sandbox; use the ops runner (`kalshi_desk_board`, `desk_fetch`) and
+web search. The operator approved widening the environment's network allowlist (DEC-017); until
+that is done, budget minutes per read.
+
+**Lessons so far (n=0 settled — nothing is a pattern yet):** the operator paid 76c on D-001
+against a 55c cap, so the report must carry the cap in the first line, and the board's thin books
+move 20 points between two reads a minute apart on a Saturday morning.
+

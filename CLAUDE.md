@@ -63,7 +63,8 @@ Enforcement is **`NEW_ONLY`** in production since **2026-08-16T14:34:42.892897Z*
 **Infer the role from the request when it is unambiguous** (a paper tape, probe
 or thesis → Research Lab; an incident, collector or real money → Live Ops; a
 fee/fill/taxonomy/metric semantic → Platform Change Review; "what is running" →
-Experiment Control Tower), state it in the identity header, and proceed. Only
+Experiment Control Tower; a pick, a ledger grade or "what should I buy" →
+Discretionary Desk), state it in the identity header, and proceed. Only
 when the request is genuinely ambiguous **ask before substantive repo work**:
 
 ```
@@ -72,6 +73,7 @@ Which session role should I follow?
 2. Evo Control Tower          6. Legacy Migration
 3. Evo Ticket Workshop        7. Live Ops
 4. Platform Change Review     8. Task-specific
+                              9. Discretionary Desk
 ```
 
 Then read `.claude/sessions/<role>.md` and follow it. **The role is sticky** —

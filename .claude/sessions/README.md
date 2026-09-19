@@ -15,6 +15,7 @@ own copy of experiment state.
 | 6 | Legacy Migration | `experiment-migration.md` | WRITE migration only (transitional) |
 | 7 | Live Ops | `live-ops.md` | WRITE operational safety |
 | 8 | Task-specific | *(no file)* | as the task requires, bounded by Experiment OS |
+| 9 | Discretionary Desk | `discretionary-desk.md` | WRITE `docs/desk/` only; operator places orders (`DEC-017`) |
 
 ## How routing works
 
@@ -23,7 +24,8 @@ every new session, and `CLAUDE.md` carries the same rule (it is auto-loaded).
 If the opening message names a role, start immediately. If it makes the role
 unambiguous — a paper tape, probe or thesis is Research Lab; an incident,
 collector or real money is Live Ops; a shared semantic is Platform Change Review;
-"what is running" is the Control Tower — **infer it**, state it in the identity
+"what is running" is the Control Tower; a pick, a ledger grade or "what should I
+buy" is the Discretionary Desk — **infer it**, state it in the identity
 header, and proceed; the operator corrects it in a word. Ask once only when the
 request is genuinely ambiguous. The role is sticky for the session either way.
 
