@@ -106,6 +106,7 @@ pnl_usd, postmortem_tag
 | `gasprices.aaa.com` | yes, server-rendered | today's and yesterday's national diesel average to four decimals, week/month/year-ago, the record and its date |
 | `openrouter.ai/rankings` | yes, server-rendered summary | the settlement table itself: "share of text requests … in the week beginning <Mon>", by author, with week-over-week change — but only the **last complete week**. The in-progress week is loaded client-side from `/api/frontend/v1/rankings/<section>` endpoints named in the page source |
 | `openrouter.ai` community snapshot (`jampongsathorn/openrouter-rankings` on GitHub) | yes | daily copies of the same page; its market-share section has been empty since at least mid-September, so it does not substitute |
+| `kalshi_desk_board --ticker` order book | yes, verified live 2026-09-19 20:31Z | the `orderbook_fp` branch works: `KX30YMORTW-26SEP24-T7.01` printed 8 resting levels a side (YES 40c x94, 36c x600, then a wall of penny bids; NO 59c x60, 37c x2, …). Every earlier empty-book read was the retired key, not an empty market. The desk can now see depth, which is what R4's "rest a bid" needs |
 | `openrouter.ai/api/frontend/v1/rankings/market-share` | yes, JSON | weekly buckets `{"x": "<week-start Monday>", "ys": {author: value}}` back to 2025-09, **including the in-progress week**, updated near real time (two reads 11.7h apart on 2026-09-19 moved the week-of-9/14 bucket by 7.1T). The values are **absolute tokens per author** (`others` is the remainder, so the sum is the platform total): the week of 2026-09-07 sums to 126.8T, the figure the public token-usage trackers publish for that week. They are not the request-share metric the `KX*SHARE` markets settle on (for 2026-09-07 tokens say anthropic 3.8% / openai 18.9%, the settlement table says 2.5% / 23.6%). Query params (`?metric=`, `?type=`) are ignored; `market-share-requests`, `requests` and `authors` return "Unknown dataset". So: the endpoint gives the `KXTOKENUSE` week-to-date total directly, and only a proxy for share |
 
 ## 7. Base rates the desk leans on (from the repo's own settled history and the settlement sources)
@@ -119,7 +120,7 @@ refreshed. A number written from memory is a number nobody can check, so none ar
 | `KX30YMORTW` (Freddie Mac PMMS, Thursday) | PMMS is the Thu–Wed window mean of application rates, and it has matched the daily Optimal Blue / Mortgage Daily 30-yr series to **within 1bp**: 9/17 print 6.95 vs mean(9/10 6.88, 9/11 6.95, 9/14–15 6.95, 9/16 7.05) = 6.96. MND's top-tier index runs ~15–25bp above PMMS in a rising week (7.19–7.24 on 9/16–9/18 vs 6.95). So by Friday two of the five window days are known, and the market ladder can be checked against them. | web search (mortgagedaily.com, mortgagenewsdaily.com, freddiemac.com), 2026-09-19 |
 | `KXSPRLVL` (EIA WPSR Table 1, Wednesday) | Weekly SPR changes during the 172M-barrel IEA release: −3.4/wk (8/14→8/28), −1.2 (9/4), −0.4 (9/11); draws are decelerating as the release winds down. The 1M-barrel strike spacing is the same size as the weekly noise, so a strike sits inside the noise unless DOE's delivery schedule is known. | web search (EIA WPSR summaries), 2026-09-19 |
 | `KXSOFRD` (NY Fed SOFR, next business day 08:00 ET) | Markets close before the print. The day after the 9/16 hike SOFR set at 3.85 (IORB−5). The Friday ladder's yes asks summed to 177¢ across seven bins: nothing is takeable, and the desk has no read on day-two drift. | ops event view + web search, 2026-09-19 |
-| `KXTOKENUSE` (OpenRouter weekly tokens) | Week totals: 126.2T (8/31), 126.8T (9/7). Week-to-date is readable from the market-share endpoint (§6a); weekday pace ~19T/day (Mon–Fri 9/14–18 ≈ 95T); the bucket updates in batches, not per request (two reads 3 min apart were identical), and Sat 04:00→13:00 UTC ran 0.76T/h. The ladder closes Mon 03:59 UTC, four hours after the week ends, so a Sunday-evening read pins the total to ~±2T while the ladder still trades — that is the desk's window, not Saturday. | `desk_fetch` market-share endpoint, 2026-09-19 |
+| `KXTOKENUSE` (OpenRouter weekly tokens) | Week totals: 126.2T (8/31), **126.8T (9/07)**. Week-to-date is readable from the market-share endpoint (§6a) by summing the bucket (the author list rotates — `qwen` left and `meta` entered between two Saturday reads — but `others` absorbs the remainder, so the sum stays the platform total). Week of 9/14 measured: **96.45T at Sat 04:08Z, 103.27T at 13:43Z, 108.99T at 20:31Z** → 0.711 T/h then 0.841 T/h, against a 0.777 T/h average for the week to date. The weekend is **not** materially slower than the weekday pace, which contradicts the first guess. 27.5h remain at the last read; at 0.65–0.84 T/h the week lands **126–132T**. |
 | `KX*SHARE` (OpenRouter request share by author) | Settlement metric unreadable mid-week; token share is a proxy the market already tracks (OpenAI tokens 18.9%→13.7% week over week and the market moved from 23.6 to ~17.5). No desk edge without the request series. | §6a, 2026-09-19 |
 
 ## 8. Decisions this model needed from the operator (opened and answered 2026-09-19)
@@ -146,7 +147,7 @@ under the wider policy; 5 defaults to the daily line plus the weekly table.
 
 ## 9. Handoff — where the desk stands (rewrite this at the close of every session)
 
-**As of 2026-09-19 ~17:40 UTC (Sat).** Role playbook: `.claude/sessions/discretionary-desk.md`.
+**As of 2026-09-19 ~20:45 UTC (Sat).** Role playbook: `.claude/sessions/discretionary-desk.md`.
 Any session — or any model that can read this repo and push to GitHub — continues from this
 section, the ledger and the postmortems; nothing else was needed to get here.
 
@@ -160,10 +161,10 @@ section, the ledger and the postmortems; nothing else was needed to get here.
 **Windows the last session identified but has not traded:**
 
 - `KXTOKENUSE-26SEP21` (OpenRouter tokens Sep 14–20): the week ends Mon 00:00 UTC and the ladder
-  trades until Mon 03:59 UTC. Read the market-share endpoint (§6a) on **Sunday ~20:00 UTC**, project
-  the total from the week-to-date bucket plus the weekend pace in §7, and take a strike only if it
-  is priced more than ~15 points from that projection after the fee. Week-to-date was 103.27T at
-  Sat 13:43 UTC; the ladder centred on ~127T.
+  trades until Mon 03:59 UTC. **Saturday 20:31Z read: 108.99T week-to-date, pace 0.84 T/h**, so the
+  week projects to 126–132T — a band that straddles the >126, >128 and >130 strikes, and no pick was
+  taken (`D-2026-09-19-NP1`). The **Sunday ~20:00 UTC** read is the one that matters: ~4h unread,
+  the ladder still open, and the projection tight enough to price a strike.
 - `KX*SHARE` (OpenRouter request share): still no mid-week read of the settlement metric. Pass.
 
 **Scheduled check-ins are bound to the session that created them** (Claude Code routines):
@@ -178,6 +179,7 @@ web search. The operator approved widening the environment's network allowlist (
 that is done, budget minutes per read.
 
 **Lessons so far (n=0 settled — nothing is a pattern yet):** the operator paid 76c on D-001
-against a 55c cap, so the report must carry the cap in the first line, and the board's thin books
-move 20 points between two reads a minute apart on a Saturday morning.
+against a 55c cap, so the report must carry the cap in the first line; the board's thin books move
+20 points between two reads minutes apart; and a projection band that straddles three strikes is a
+no-pick, logged as one, not a reason to take the nearest strike.
 
