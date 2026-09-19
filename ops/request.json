@@ -1,1 +1,1 @@
-{"type":"script","name":"incentive_reward_ledger_report","args":["--days","1","--limit","12"],"id":"limm-rep-2030"}
+{"type":"db","id":"limm-rawfill-2040","sql":"SELECT left(raw_fill_json::text, 700) AS raw FROM fills ORDER BY id DESC LIMIT 3"}
