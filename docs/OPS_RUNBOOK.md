@@ -573,6 +573,11 @@ To run a request:
      `--ticker <T>` for one market's rules text, resting book and last trades, `--event <E>` for
      a whole ladder, `--search`/`--category`/`--series` to narrow. Public endpoints only, no
      key, no order surface; the sandbox cannot reach Kalshi, so this is how a pick is checked.
+   - **"desk fetch"** -> `{"type":"script","name":"desk_fetch","args":["https://gasprices.aaa.com/","--find","Diesel","--window","200"]}`
+     — one public settlement-source page (OpenRouter rankings, AAA, EIA, Chicago Fed, FRED, BLS,
+     Census, NWS, Polymarket, YouTube charts …) read from the runner and printed as bounded text,
+     or only the windows around `--find`. Hosts are a fixed allowlist in the script; adding one is a
+     PR. Results are public, so the list is public pages only.
    - **"parity"** / **"live paper parity"** -> `{"type":"script","name":"live_paper_parity"}` — is
      our paper trading system telling the truth about a LIVE book? Every live strategy runs a fresh
      paper **twin** beside it (same start instant, same candidates, the LIVE price/size/cap knobs),

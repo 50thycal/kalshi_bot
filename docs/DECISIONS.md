@@ -1038,3 +1038,33 @@ concessions the request could not avoid.
    exit orders the registered envelope never declared. Every cap is a module constant, not a
    setting: it cannot drift without a pull request, and a test asserts the registered envelope
    equals the running constants.
+
+## DEC-017 — The discretionary desk trades outside Experiment OS, by the operator's hand, at $1 a pick (2026-09-19)
+
+Calvin asked for a different kind of trading: no bot, three researched picks a day, placed
+live without a paper stage, one dollar each. Recorded as the operating model in
+`docs/DISCRETIONARY_DESK.md`; four choices, all confirmed by the operator in the session
+that opened it.
+
+1. **The operator places the order in the Kalshi app.** The worker has no path that accepts a
+   ticker from outside, the one legacy probe path is refused by `NEW_ONLY` enforcement, and
+   building a manual order path would weaken the arming safeguards `DEC-004` and the
+   2026-08-15 failure exist for. The app is outside every worker control and needs no code.
+2. **Outside Experiment OS, and said so.** The desk is not a book: no strategy tag, no
+   `paper_trades` rows, no gate, no `arm_live_canary`. Its evidence is `docs/desk/ledger.csv`,
+   written before the operator acts and graded on settlement — including the picks the
+   operator skipped, so the desk's calibration is measured on its judgement, not on the
+   executed subset. `CLAUDE.md`'s "new activity originates in Experiment OS" is therefore
+   not bypassed by pretending; it is stepped around by a recorded decision that this activity
+   is a human process, not an experiment. If the desk ever becomes a rule, it becomes a book
+   and re-enters the front door.
+3. **Envelope.** $1 per pick, at most three picks a day, hold to settlement, no size change on
+   a streak. A step to $5 per pick is a separate decision, taken only after 30 settled picks
+   in an edge class with a realized win rate above that class's break-even. The worker's
+   `MAX_DAILY_LOSS` does not see app trades; the Kalshi balance is the only shared limit.
+4. **One independent unit per settlement print.** Two picks on the same event or the same
+   settlement source count as one pick against the daily three.
+
+Standing rules the desk inherits from the record are R1–R12 in the desk document; the
+board read (`kalshi_desk_board`) and any fetch tool the desk uses are read-only public GETs
+on the ops runner, allowlisted like every other analysis script.
