@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--hours","72","--min-volume","500","--top","80"],"id":"desk-board-3","actor":"claude-desk","purpose":"full board read after PR #431"}
+{"type":"noop"}
