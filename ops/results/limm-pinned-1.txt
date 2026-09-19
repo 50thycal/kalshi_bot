@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-pinned-1
-# code 82e3240bf821c010610610c25ec33d14e10d9a22 · started 2026-09-19T08:36:17Z
-grp                markets  both_filled  partial_both  n_one_or_better  p_both_given_one
------------------  -------  -----------  ------------  ---------------  ----------------
-PINNED(live book)  2        10           30            168              0.0595          
-rest of shadow     186      18           32            1350             0.0133          
-
-(2 rows)
