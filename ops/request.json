@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-ledger-3","sql":"SELECT at::text AS at, balance_cents::text AS bal, coalesce(delta_cents::text,'-') AS delta, coalesce(buy_cost_cents::text,'-') AS buys, coalesce(settlement_cents::text,'-') AS settle, coalesce(fees_cents::text,'-') AS fees, coalesce(residual_cents::text,'-') AS residual, coalesce(presumed_transfer::text,'-') AS transfer, coalesce(left(notes_json::text,60),'-') AS notes FROM incentive_balance_observations ORDER BY at DESC, id DESC LIMIT 10"}
