@@ -1357,6 +1357,54 @@ records is that a recorded observation was wrong about what it had observed, tha
 reading points at the exact term the thesis calls unvalidated, and that the check which would
 settle it is written down before being run.
 
+### 9.22 The four fixes deployed, and three of them are verifiably doing their job (2026-09-19 02:36Z)
+
+PR #428 merged at **01:53:07Z** into the default branch. First production read afterwards. The
+runner reports code `95f66108`, no longer the `5ea57bd3` every reading up to §9.21 ran on, so the
+deploy landed.
+
+**Fix 4 — shadow pinning: WORKING.** Three consecutive discovery cycles (02:21:51, 02:26:50,
+02:31:51Z) each carry **`pinned_live: 4`**. Four is exactly Alimm1's four filled commitments, so
+the live book's markets are now inside the shadow's tracked set. §9.13's structural blindness —
+`incentive_shadow_outcomes` holding zero rows for every ticker the live book ever quoted — is
+closed at the mechanism, though no outcome has been produced through it yet.
+
+**Fix 3 — terminal listing: WORKING, and the cost was larger than the PR said.**
+`status_observed` now splits **29,985 `paid_out`** against **10,197 `active`**, where before the
+column was a hardcoded `"active"` on every row. The payout leg §9.13 called structurally
+invisible is now recorded.
+
+The PR described this as "one paged API call per discovery cycle". That understated it. The
+terminal listing is roughly **six times** the size of the active one: `listed` per cycle went
+from **4,908** at 00:24Z to **35,305**, about seven-fold. Discovery still reports **0 errors**
+and is still cycling on its five-minute schedule, so it is working rather than struggling — but
+the estimate in the handoff was wrong in the direction of under-stating load, and that is worth
+having on the record rather than quietly absorbed.
+
+**Fix 2 — the open-order cap: working by inference, not yet by observation.** No new Alimm1 order
+since 18:21:03Z, which is exactly what the corrected count should produce: four filled
+commitments against `MAX_OPEN_ORDERS = 3` means the book is over cap and must not place. Under
+the old under-count this is the state that let a fourth order rest and then fill (§9.15, §9.19).
+That it is placing nothing is the fix behaving, but it is absence of an action, so it is weaker
+evidence than fixes 3 and 4.
+
+**Fix 1 — the event cap: UNVERIFIED in production.** It can only be observed when the book tries
+to place, and the book cannot place while it is over the open-order cap. A `REFUSE_EVENT_CAP`
+refusal will not appear until a settlement frees a slot. Recorded as untested-live, not as
+working.
+
+**Unchanged and safe.** Five filled positions across the fleet, snapshots fresh at 02:33:59Z, all
+`realized_pnl 0.0000`. Alimm1 committed **$0.15** against a $10 cap, qty 1 everywhere, highest
+price 10c against a 25c cap, no rejects, no auth errors, no new settlement, **no reward
+credited**. Running realized total unchanged at **−$0.0600**.
+
+**The collector question is deliberately not answered here.** Fix 4 adds WebSocket subscriptions,
+and §9.20 pinned the pre-deploy baseline at `seq_gap` **200**, rate **~+31/4h**, measured on base
+code. Judging a rate needs an interval, and forty minutes after a deploy is not one. The 04:30Z
+shadow check owns that comparison, with the entry criterion pre-set at a rate clearly above
++35/4h — so a worsening cannot later be blamed on §9.18's pre-existing drift, and an improvement
+cannot be claimed either.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized

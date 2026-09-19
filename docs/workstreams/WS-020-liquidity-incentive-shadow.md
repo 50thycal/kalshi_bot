@@ -675,6 +675,32 @@ to `incentive_type` and IS covered.
 
 Lifetime rewards still $0. [Thesis §9.21](../LIQUIDITY_INCENTIVE_THESIS.md).
 
+## DEPLOYED, AND THREE FIXES VERIFIED IN PRODUCTION (2026-09-19 02:36Z)
+
+#428 merged 01:53:07Z. Runner reports code `95f66108`, no longer the `5ea57bd3` everything up to
+§9.21 ran on.
+
+- **Fix 4 (shadow pinning) WORKING** — three consecutive discovery cycles carry `pinned_live: 4`,
+  exactly Alimm1's four filled commitments. §9.13's blindness closed at the mechanism.
+- **Fix 3 (terminal listing) WORKING, cost under-stated** — `status_observed` now splits 29,985
+  `paid_out` against 10,197 `active`. But the PR called it "one paged API call per cycle"; the
+  terminal listing is ~6x the active one and `listed` per cycle went 4,908 -> 35,305, about
+  seven-fold. Still 0 errors, still on schedule, so working rather than struggling — recorded
+  rather than absorbed.
+- **Fix 2 (open-order cap) working by inference** — no new Alimm1 order since 18:21:03Z, which is
+  what a correct count must produce at four commitments against a cap of three. Absence of an
+  action, so weaker evidence than 3 and 4.
+- **Fix 1 (event cap) UNVERIFIED live** — only observable when the book places, and it cannot
+  place while over the open-order cap. Recorded as untested, not as working.
+
+Unchanged and safe: five filled positions, snapshots fresh 02:33:59Z, all realized_pnl 0.0000,
+committed $0.15 vs a $10 cap, no rejects, no auth errors, no reward credited. Ledger still
+-$0.0600.
+
+Collector deliberately NOT judged here — forty minutes is not an interval. The 04:30Z shadow
+check owns it, entry criterion pre-set above +35/4h against §9.20's pre-deploy baseline of
+seq_gap 200 at ~+31/4h. [Thesis §9.22](../LIQUIDITY_INCENTIVE_THESIS.md).
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).
