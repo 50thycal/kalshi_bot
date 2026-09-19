@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"script","name":"desk_fetch","args":["https://openrouter.ai/api/frontend/v1/rankings/market-share?metric=requests","--find","2026-09-14","--window","700","--hits","1"],"id":"desk-or-h"}
