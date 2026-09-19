@@ -116,9 +116,10 @@ nobody can check.
 
 ## 8. Decisions this model needed from the operator (opened and answered 2026-09-19)
 
-Recorded as `DEC-017` in `docs/DECISIONS.md`. The operator confirmed 1–3 as recommended;
-4 stays open (the ops runner is the board read until the sandbox allowlist is widened);
-5 defaults to the daily line plus the weekly table.
+Recorded as `DEC-017` in `docs/DECISIONS.md`. The operator confirmed 1–3 as recommended
+(1 with "automate later", parked); 4 is approved — the operator widens the allowlist in the
+claude.ai environment settings, and the ops runner stays the board read until a session starts
+under the wider policy; 5 defaults to the daily line plus the weekly table.
 
 1. **Execution instrument.** The desk assumes the Kalshi app, by hand. The alternative — a new
    worker path that accepts a ticker from an env var — touches the arming path and is a
