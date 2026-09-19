@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "9cefbe102ca6d7f7f9a69fd4d8a18136cd05a915",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-19T18:08:11Z",
+  "id": "limm-ledger-1810",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/limm-ledger-1810.receipt.json",
+  "result_file": "ops/results/limm-ledger-1810.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/35460214264",
+  "service": null,
+  "started_at": "2026-09-19T18:08:10Z",
+  "targets": [],
+  "type": "db"
+}
