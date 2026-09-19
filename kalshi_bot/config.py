@@ -1403,6 +1403,12 @@ class Settings(BaseSettings):
     liquidity_incentive_min_reward_usd: float = 0.0
     # Settlement pass cadence for single-leg outcomes (seconds).
     liquidity_incentive_settlement_seconds: float = 600.0
+    # Reward-ledger cadence (seconds). Slower than the settlement pass on purpose: each reading
+    # costs a paged fills+settlements call, and a balance residual only means anything over a
+    # window long enough for a reward to have been credited in. See
+    # `liquidity_incentive/reward_ledger.py` — this is the only route we have to the number the
+    # whole thesis turns on, because Kalshi publishes programme terms and never our credit.
+    liquidity_incentive_balance_seconds: float = 900.0
     # --- Phase 1a: the ONE-SIDED live smoke test (docs/LIQUIDITY_INCENTIVE_THESIS.md §10) ---
     # DEFAULT OFF, and off is not the only guard: even on, `LiveExecutor` refuses every order
     # unless bot_mode=live, LIVE_ENABLED, the kill switch is clear, and the book's tag is in

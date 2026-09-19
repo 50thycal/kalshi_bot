@@ -1777,6 +1777,47 @@ class IncentiveTradeEvent(Base):
     raw_json: Mapped[dict | None] = mapped_column(JSONType)
 
 
+class IncentiveBalanceObservation(Base):
+    """One reading of the account balance, and what of its change we could explain.
+
+    Append-only. Each row differences its balance against the previous row's and attributes
+    that change to fills and settlements read over the same window; whatever is left is
+    `residual_cents` — the only route we have to a liquidity reward, because Kalshi publishes
+    programme TERMS and never our credit against them (thesis §9.21, and see
+    `liquidity_incentive/reward_ledger.py` for the identity).
+
+    A residual is a CANDIDATE, never a conclusion. Deposits, withdrawals and fees Kalshi did not
+    report on its fills all land here too, which is why the window bounds and the raw component
+    totals are all stored: a residual must stay re-derivable rather than be taken on trust.
+    `notes_json` carries why a given row's residual is not trustworthy — a truncated page, a
+    failed read — and `presumed_transfer` marks a residual too large to be a reward at this
+    book's size."""
+
+    __tablename__ = "incentive_balance_observations"
+    __table_args__ = (Index("ix_incentive_balance_obs_time", "at"),)
+
+    id: Mapped[int] = mapped_column(BigIntId, primary_key=True, autoincrement=True)
+    at: Mapped[datetime] = mapped_column(TS, nullable=False)
+    balance_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    #: The previous observation this row differenced against. Null on the anchor row, which
+    #: exists only so the next one has something to subtract.
+    prev_at: Mapped[datetime | None] = mapped_column(TS)
+    prev_balance_cents: Mapped[int | None] = mapped_column(BigInteger)
+    delta_cents: Mapped[int | None] = mapped_column(BigInteger)
+    #: The explained side of the identity, each component kept separately so a wrong residual
+    #: can be traced to the term that produced it rather than just disbelieved.
+    buy_cost_cents: Mapped[int | None] = mapped_column(BigInteger)
+    sell_proceeds_cents: Mapped[int | None] = mapped_column(BigInteger)
+    fees_cents: Mapped[int | None] = mapped_column(BigInteger)
+    settlement_cents: Mapped[int | None] = mapped_column(BigInteger)
+    fills_counted: Mapped[int | None] = mapped_column(Integer)
+    settlements_counted: Mapped[int | None] = mapped_column(Integer)
+    #: Δbalance minus everything above. Cash that is neither a trade nor a settlement.
+    residual_cents: Mapped[int | None] = mapped_column(BigInteger)
+    presumed_transfer: Mapped[bool | None] = mapped_column(Boolean)
+    notes_json: Mapped[dict | None] = mapped_column(JSONType)
+
+
 class IncentiveCollectorEvent(Base):
     """The shadow collector's own record: connects, disconnects, sequence gaps, throttles,
     discovery failures, lifecycle changes, thread start/stop. Missing data is a row here."""

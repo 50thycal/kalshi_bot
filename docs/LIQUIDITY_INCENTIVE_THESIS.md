@@ -1405,6 +1405,82 @@ shadow check owns that comparison, with the entry criterion pre-set at a rate cl
 +35/4h — so a worsening cannot later be blamed on §9.18's pre-existing drift, and an improvement
 cannot be claimed either.
 
+### 9.23 A reward ledger, and the first look at whether this book can earn anything at all (2026-09-19 04:30Z)
+
+Two things, one of which changes what the next decision should be.
+
+**1. The reward can now be measured, by arithmetic.**
+
+§9.21 established that Kalshi publishes a programme's *terms* and never our credit against them:
+a census of every key the API returns, across 5,332 current rows, found eleven fields and none
+of them is a payment to us. The only external reading is the "Lifetime rewards" figure on the
+web page, which a human has to go and look at, and which has read **$0** every time.
+
+So it is recovered as a residual. A liquidity credit is cash that is neither a fill nor a
+settlement:
+
+```
+Δbalance = settlements + sell proceeds − buy cost − fees + REWARDS + transfers
+⇒ residual = Δbalance − settlements − sell proceeds + buy cost + fees
+```
+
+Every term on the right is observable through endpoints already in use. `reward_ledger.py`
+computes it, `incentive_balance_observations` stores each reading append-only with every
+component kept separately, and the collector takes one every 15 minutes.
+
+**A residual is a candidate, never a reward, and the failure modes are named rather than
+hoped away.** A deposit reads as a large positive residual — the worst possible false positive —
+so anything at or above **$1.00** is marked `presumed_transfer`, which is two orders of
+magnitude above what this book could plausibly earn. A fee Kalshi charged but did not report on
+its fills pushes the residual **negative**, so a persistent small negative drift is an
+accounting problem, not a reward. A truncated or failed portfolio read marks the whole window
+`residual_untrustworthy` rather than letting an under-explained window read as income.
+Everything is integer cents end to end, because the signal being hunted is of the same order as
+a float rounding error.
+
+**2. Can this book earn a measurable reward at all? The first real look, and it is not what
+§9.13 implied.**
+
+§9.13 reasoned that 1 contract in a 27k–60k book is ~0.5% of a slice and rounds to nothing.
+That reasoning took the *deep* books as representative. They are not. Across active liquidity
+programmes whose cheap side is inside the 25c cap, competing depth at the best bid spans **four
+orders of magnitude**:
+
+| market | reward/day | depth at best (thin side) | naive qty-1 share |
+|---|---|---|---|
+| `KXBWAYATTENDANCE-27MAY23B-14000000` | $497 | **7** | 12.4% |
+| `KXMLBPLAYOFFS-26-CWS` | $39 | **1** | 50% |
+| `KXRT-RES-94` (we hold this) | $129 | 9 | 10.5% |
+| `KXWAAEROEMP-27APR30-T83000` | $497 | 1,887 | 0.05% |
+| `KXNYSECEEMP-27APR30-T230400` | $497 | 2,563 | 0.04% |
+
+**The dollar figures that fall out of the naive share model are not quoted here as
+expectations, and must not be.** That model — share ≈ our size ÷ (our size + competing depth at
+best) — *is* the unvalidated term this thesis keeps flagging. Real LIP scoring involves
+`target_size` (1000 on nearly every row, against our 1), the distance discount, and
+time-weighting across a period, none of which that arithmetic contains. Multiplying $497/day by
+12.4% produces a number this book has never earned a cent of, and treating it as a forecast
+would repeat §9.9's mistake with more decimal places.
+
+**What survives regardless of the share model is the ordering.** Whatever the true share
+function is, it is monotone decreasing in competing depth. A market with **7** contracts resting
+at the touch is strictly better than one with **2,563**, by some factor between "a lot" and "a
+lot more". That conclusion needs no calibration, and it is the actionable part.
+
+**Which makes the universe rule the binding constraint, and sharpens §9.21's cost.** The live
+runner sorts programmes by soonest end and fetches an orderbook for the **first 8** — out of
+~5,300 active liquidity programmes. Nothing in that ordering looks at competing depth. So the
+book has been quoting into whichever books happened to end soonest, with no relationship to
+where a reward is winnable. Every market in the top rows above was invisible to it.
+
+**Pre-registered before the ledger has recorded anything:** if this book is moved onto thin-book
+programmes and still records **no** material residual after a programme it quoted has ended,
+that is evidence against the share model at any size — not merely evidence that the book is
+small. Written down now, before the move, so the result cannot be reinterpreted afterwards.
+
+**Nothing here changes the §6 gate, any cap, or any risk envelope.** The ledger only reads the
+balance. The universe rule is untouched by this entry.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized

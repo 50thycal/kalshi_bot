@@ -701,6 +701,43 @@ Collector deliberately NOT judged here — forty minutes is not an interval. The
 check owns it, entry criterion pre-set above +35/4h against §9.20's pre-deploy baseline of
 seq_gap 200 at ~+31/4h. [Thesis §9.22](../LIQUIDITY_INCENTIVE_THESIS.md).
 
+## REWARD LEDGER BUILT, AND THE UNIVERSE RULE IS THE BINDING CONSTRAINT (2026-09-19 04:30Z)
+
+**Operator-authorised.** Two things.
+
+**1. The reward is now measurable.** Kalshi has no endpoint for our credit (§9.21), so it is
+recovered as the part of a balance change nothing else explains:
+`residual = Dbalance - settlements - sell proceeds + buy cost + fees`. New module
+`reward_ledger.py`, new append-only table `incentive_balance_observations`, collector takes a
+reading every 15 min, ops script `incentive_reward_ledger_report` reads it.
+
+A residual is a CANDIDATE, never a reward. A deposit is the worst false positive, so >= $1.00 is
+marked `presumed_transfer` (two orders of magnitude above what this book could earn). An
+unreported fee pushes the residual NEGATIVE. A failed or truncated read marks the window
+`residual_untrustworthy`. Integer cents throughout — the signal is the size of a float rounding
+error.
+
+**2. §9.13's "too small to earn" was reasoned from the deep books, which are not
+representative.** Competing depth at the best bid spans FOUR ORDERS OF MAGNITUDE across active
+programmes inside the 25c cap: 7 contracts on `KXBWAYATTENDANCE-27MAY23B-14000000` ($497/day
+pool) against 2,563 on `KXNYSECEEMP-27APR30-T230400` (same pool).
+
+The dollar figures from the naive share model are NOT quoted as expectations — that model is the
+unvalidated term, and it ignores `target_size` (1000 vs our 1), the distance discount and
+time-weighting. What survives regardless is the ORDERING: any monotone share function ranks a
+7-deep book far above a 2,563-deep one.
+
+**So the universe rule is the binding constraint.** The runner sorts by soonest programme end and
+fetches 8 books out of ~5,300. Nothing in that ordering looks at depth, so the book has been
+quoting where rewards are unwinnable. Every market in the top rows was invisible to it.
+
+**Pre-registered before the ledger has recorded anything:** if the book is moved onto thin books
+and still records no material residual after a quoted programme ends, that is evidence against
+the share model at any size — not merely that the book is small.
+
+No cap, gate or risk envelope touched; the ledger only reads the balance.
+[Thesis §9.23](../LIQUIDITY_INCENTIVE_THESIS.md).
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).
