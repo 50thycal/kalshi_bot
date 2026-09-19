@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-rawfill-2040","sql":"SELECT left(raw_fill_json::text, 700) AS raw FROM fills ORDER BY id DESC LIMIT 3"}
+{"type":"script","name":"desk_fetch","args":["https://openrouter.ai/api/frontend/v1/rankings/market-share","--find","2026-09-14","--window","500","--hits","1"],"id":"desk-d5-or","actor":"claude-desk","purpose":"desk pace sample 2026-09-19 20:30Z"}
