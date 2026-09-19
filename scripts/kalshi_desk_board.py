@@ -131,13 +131,17 @@ def count(obj: dict, field: str) -> int:
     return int(_num(obj.get(field)))
 
 
-def taker_fee_cents(price_c: int, qty: int = 1) -> float:
-    """Kalshi taker fee for one ORDER of `qty` contracts at `price_c`, in cents, rounded up."""
+def taker_fee_cents(price_c: int, qty: int = 1) -> int:
+    """Kalshi taker fee for one ORDER of `qty` contracts at `price_c`, in whole cents, rounded up.
+
+    Always an int: a 100c ask (a market the book has already decided) used to return a float
+    zero, and the board's fixed-width formatter crashed on it mid-scan (desk-board-2).
+    """
     if price_c is None or not 0 < price_c < 100 or qty <= 0:
-        return 0.0
+        return 0
     p = price_c / 100.0
     dollars = 0.07 * qty * p * (1.0 - p)
-    return math.ceil(dollars * 100 - 1e-9)  # cents, ceil'd
+    return int(math.ceil(dollars * 100 - 1e-9))  # cents, ceil'd
 
 
 def breakeven_win_pct(ask_c: int, qty: int = 1) -> float | None:
@@ -218,7 +222,7 @@ def keep(row: dict, *, hours: float, min_volume: int, category: str, series: str
 
 
 def _fmt_c(v) -> str:
-    return "  -" if v is None else f"{v:3d}"
+    return "  -" if v is None else f"{int(round(v)):3d}"
 
 
 def format_row(row: dict) -> str:

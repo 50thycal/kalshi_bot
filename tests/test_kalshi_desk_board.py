@@ -117,6 +117,15 @@ def test_format_row_is_one_bounded_line():
     assert "KXTEST-26SEP20-T1" in line and " 40/ 44" in line
 
 
+def test_format_row_survives_a_decided_market():
+    # desk-board-2 crashed on a 100c ask: the fee came back as a float zero.
+    for ask in (100, 1, 99):
+        row = board.row_of(_market(yes_ask=ask, yes_bid=ask - 1, no_bid=100 - ask, no_ask=101 - ask), {}, NOW)
+        assert isinstance(board.taker_fee_cents(ask), int)
+        assert "\n" not in board.format_row(row)
+    assert board._fmt_c(2.0) == "  2" and board._fmt_c(None) == "  -"
+
+
 def test_book_levels_sort_best_first_and_tolerate_dollar_strings():
     book = {"yes": [[40, 10], [42, 5], ["0.41", "7"]], "no": [[56, 3]]}
     assert board._book_levels(book, "yes", 6) == [(42, 5), (41, 7), (40, 10)]
