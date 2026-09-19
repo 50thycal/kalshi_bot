@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--hours","168","--min-volume","300","--category","Politics","--top","60"],"id":"desk-d2-pol","actor":"claude-desk"}
+{"type":"noop"}
