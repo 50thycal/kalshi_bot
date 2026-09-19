@@ -827,3 +827,21 @@ environment rather than the one it runs in.
 
 No gate, lifecycle state or exposure changes. Lifetime rewards still $0.
 [Thesis §9.26](../LIQUIDITY_INCENTIVE_THESIS.md). PR #436.
+
+## Update 2026-09-19 17:25Z — health check: the universe stepped 6.6x
+
+Discovery reads 35,198 liquidity programmes against the 5,332 the §9.21 census enumerated two
+days ago; total pool $1.97M; median $/day 35.71 -> 150.16; median hours remaining 33 -> 16. The
+opportunity set is materially different from the one the thesis was pre-registered against.
+Strengthens the case for the authorised universe-rule change.
+
+First positive net/day appears (C_conservative, conservative model: +6.15 / +63.09 / +167.90 at
+$100 / $250 / $500) and is a **model artifact** — the reward term is the unvalidated share
+model, actual lifetime rewards are $0. **The gated read (A_break_even, conservative) is
+unchanged in sign: -17.16/day at tier 25.** No criterion met.
+
+Collector holding: 297 discovery cycles, 0 errors; loop_error 3 = the §9.26 ledger failures,
+fixed and pending merge; market_cap_reached 297, so fix 1 still binding not verified; settled
+still 1. P(both|one) conservative 0.018 over 14d.
+
+[Thesis §9.27](../LIQUIDITY_INCENTIVE_THESIS.md).
