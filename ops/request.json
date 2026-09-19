@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--ticker","KX30YMORTW-26SEP24-T7.01","--depth","8","--trades","10"],"id":"desk-d5-mort","actor":"claude-desk","purpose":"desk orderbook_fp verification 2026-09-19"}
+{"type":"script","name":"kalshi_desk_board","args":["--event","KXTOKENUSE-26SEP21"],"id":"desk-d5-tok","actor":"claude-desk","purpose":"desk ladder read 2026-09-19"}
