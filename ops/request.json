@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--hours","72","--min-volume","500","--top","60"],"id":"desk-board-1","actor":"claude-desk","purpose":"first integration run of kalshi_desk_board after PR #429"}
+{"type":"script","name":"kalshi_market_probe","args":["KXELONMARS-99","KXNFLGAME"],"id":"desk-probe-1"}
