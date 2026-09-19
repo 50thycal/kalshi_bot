@@ -160,6 +160,14 @@ def record_balance_observation(session, *, at: datetime, balance_cents: int,
     row — the first reading, with nothing to difference against — and every attribution column
     stays NULL rather than being filled with zeros. A zero residual and an unmeasurable one are
     different claims, and only one of them is evidence about rewards."""
+    notes = dict(notes or {})
+    if reconciliation is not None and reconciliation.unknown_fill_shapes:
+        # A cash direction we could not vouch for means the explained side of the identity rests
+        # on a guess. It joins `residual_untrustworthy` — the same flag a failed or truncated
+        # read raises — so a reader cannot take the number at face value. A warning that never
+        # reaches the stored row is a warning nobody sees.
+        notes["unknown_fill_shapes"] = list(reconciliation.unknown_fill_shapes)
+        notes["residual_untrustworthy"] = True
     row = m.IncentiveBalanceObservation(
         at=at, balance_cents=int(balance_cents),
         prev_at=prev_at, prev_balance_cents=prev_balance_cents,
