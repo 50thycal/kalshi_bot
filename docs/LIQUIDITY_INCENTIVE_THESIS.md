@@ -1760,3 +1760,105 @@ row, and the `incentive_*` metrics read its tables over a time window rather tha
 **Stand-down:** remove `Alimm1` from `LIVE_STRATEGIES`. New entries stop on the next cycle,
 resting orders drain within a cycle, and any held contract settles normally — at most $10 in
 total, and at these caps at most $0.25 per market.
+
+### 9.26 The reward ledger recorded nothing, and the reason is a boundary doing its job (2026-09-19 17:10Z)
+
+§9.23 shipped the reward ledger — the arithmetic route to the one number this thesis turns on,
+since a full census of all 5,332 current programme rows (§9.21) found eleven keys and none of
+them a credit to us. It went live and wrote **zero rows**. Every tick:
+
+```
+2026-09-19 16:31:09Z  loop_error  balance: AttributeError: 'IncentiveReadOnlyKalshi' object has no attribute 'get_balance'
+2026-09-19 16:16:21Z  loop_error  balance: AttributeError: 'IncentiveReadOnlyKalshi' object has no attribute 'get_balance'
+```
+
+**This is not a missing method.** The shadow collector is deliberately handed
+`IncentiveReadOnlyKalshi`, a wrapper exposing `iter_incentive_programs`, `get_market`,
+`get_series`, `get_orderbook`, `ws_url`, `ws_headers` — market data and nothing else — so a
+research tape can never touch the account. The ledger reads the balance, the fills and the
+settlements. Putting it behind that wrapper was the mistake, and it failed in exactly the way
+the wrapper exists to make it fail: loudly, at the boundary, before touching anything.
+
+The tempting fix is to add `get_balance` to the wrapper. That would have traded a measurement
+outage for a permanent hole in a safeguard, which is the trade this project does not make.
+Instead the ledger moved to `IncentiveLiveRunner`, which already holds the authenticated client
+(`main.py:457`), and a test now asserts the wrapper still has no `get_balance` / `get_fills` /
+`get_settlements` so the tempting fix stays closed.
+
+**It runs before the armed gate, deliberately.** Kalshi credits a liquidity reward only *after*
+a programme ends, so a credit for quoting we already did can land days after this book is stood
+down. A ledger that stopped when the book stopped would miss precisely the payment it exists to
+detect. That is the failure mode this whole measurement is built against, so it gets a test
+(`test_the_ledger_runs_even_when_the_book_is_stood_down`) rather than a comment.
+
+**The second fault was mine in the same direction.** The ops report script
+(`scripts/incentive_reward_ledger_report.py`) imported SQLAlchemy; the ops runner installs
+`psycopg[binary]` and nothing else for a `script` request. It died with `ModuleNotFoundError`.
+Rewritten to stdlib + psycopg. Both faults share a root cause worth naming: **I wrote the
+measurement against the application's environment instead of against the environment it was
+going to run in.** In both cases the convention was already there to copy.
+
+**What this does not change.** No gate, no lifecycle state, no exposure. Lifetime rewards remain
+**$0** on Kalshi's own page (§9.17, §9.21), and the ledger has still never observed a window, so
+the question of whether this book can earn anything at all (§9.23) is exactly as open as it was.
+The only thing that changed is that the instrument is now pointed at the account.
+
+PR #436.
+
+### 9.27 The programme universe grew ~6.6x in two days, and the first positive net/day is a model artifact (2026-09-19 17:25Z)
+
+Standing shadow health check, 24h ranking window.
+
+**The landscape changed underneath us.** The §9.21 census, two days ago, enumerated **5,332**
+current programme rows. This discovery cycle (16:55Z) reads `listed=35229 liquidity=35198
+volume=31 errors=0`, total pool **$1,966,890**. Per-day programme counts:
+
+| day | programs | reward/day $ | median $/day | median hours |
+|---|---|---|---|---|
+| 2026-09-17 | 5,871 | 1,601,868 | 29.14 | 107.0 |
+| 2026-09-18 | 8,163 | 3,391,099 | 35.71 | 33.0 |
+| 2026-09-19 | 39,729 | 24,994,878 | 150.16 | 16.0 |
+
+That is not our collector finding more of the same thing — `gone=2, new=0, changed=0` on the
+last cycle says the universe is stable *now*, having stepped. **Median $/day quadrupled and
+median hours remaining fell to 16.** A shorter-lived, larger-pool, far more numerous programme
+population is a different opportunity set from the one this thesis was pre-registered against,
+and it is the single most consequential fact in this reading.
+
+It also makes the authorised universe-rule change (move the live book onto thin-book,
+low-competition programmes) *more* attractive, not less: there are now ~6.6x as many programmes
+to be selective within.
+
+**The first positive net/day appears, and must not be read as a result.** Under policy
+`C_conservative` with the **conservative** fill model:
+
+| tier | reward $ | sl_mtm $ | net/day $ |
+|---|---|---|---|
+| $100 | 150.99 | −137.54 | **+6.15** |
+| $250 | 364.26 | −226.26 | **+63.09** |
+| $500 | 630.11 | −262.85 | **+167.90** |
+
+Every one of those numbers is positive **because the reward term is larger than the adverse
+selection term**, and the reward term is the naive share model — the one that has never been
+validated against a single observed credit. Kalshi's own page still reads lifetime rewards
+**$0** (§9.17, §9.21), and the reward ledger has not yet observed a window (§9.26). A modelled
+income line exceeding a measured cost line is not profit; it is the model's assumption showing
+through. **The §6 gate reads `A_break_even` on conservative, and that is −17.16/day at tier 25
+and −137.05/day at tier 500. Unchanged in sign. No criterion is met.** Recorded here because the
+temptation to quote +$167.90/day is exactly what a pre-registration exists to defeat.
+
+**Collector.** `loop_error 3` — the §9.26 ledger failures, fixed and pending merge, nothing new.
+`market_cap_reached 297` says fix 1 (the event cap) is still binding rather than verified, as in
+§9.22. 297 discovery cycles, 0 errors; `settled` still **1**; thread_started 9 / thread_stopped 2
+over the window. Tape: 501,599 book events, 1,445 trades, 24,429 open shadow pairs, 180 markets
+snapshotted.
+
+**P(both | one), 14 days, conservative: 0.018** (n=1,708). The single-leg mark is where the cost
+lives: conservative mean@bid −3.17 at 1s improving only to −2.35 at 300s, with a worst case of
+−313.10. Competing depth splits it the way §9.21 predicted — `deep` n=1,623 mean −3.97, `medium`
+n=55 mean −0.76, with *higher* mean estimated reward in the medium bucket (0.28 vs 0.13). Thin
+n, so this is a direction and not yet a finding, but it points the same way as the universe rule.
+
+**Top of the 24h ranking** is now genuinely large: `KXTRUMPAPPROVE-26SEP19-E39.4` at $2,937/day
+programme reward, modelled share 0.154, $46.16/day. Three KXTRUMPAPPROVE strikes occupy the top
+three places. None is a POC candidate; all read `SHADOW`.

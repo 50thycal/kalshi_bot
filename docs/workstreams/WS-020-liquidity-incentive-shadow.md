@@ -809,3 +809,39 @@ Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIV
 Step 1 (`REGISTER_PACKAGE`) arms nothing and can go now; steps 2 and 4 are hard stops. Note
 that step 4 must name **both** `Alimm1` and the running `Fmmsell10` — `LIVE_STRATEGIES` matches
 by prefix and replacing it would stand the MMSELL canary down.
+
+## Update 2026-09-19 17:10Z — the reward ledger was measuring nothing
+
+The ledger shipped in #435 wrote **zero rows**: it was wired into the shadow collector, which is
+handed `IncentiveReadOnlyKalshi` — market-data GETs only, by design — and so failed on every
+tick with `AttributeError: ... has no attribute 'get_balance'`.
+
+Fixed by moving the ledger to `IncentiveLiveRunner` (which already holds the authenticated
+client), **not** by widening the read-only wrapper. It runs before the armed gate, because a
+programme's reward is credited after the programme ends and can land after this book is stood
+down. A regression test asserts the wrapper still has no portfolio methods.
+
+Same PR also fixes the ops report script, which imported SQLAlchemy into a runner that installs
+only `psycopg[binary]`. Shared root cause: the measurement was written against the application's
+environment rather than the one it runs in.
+
+No gate, lifecycle state or exposure changes. Lifetime rewards still $0.
+[Thesis §9.26](../LIQUIDITY_INCENTIVE_THESIS.md). PR #436.
+
+## Update 2026-09-19 17:25Z — health check: the universe stepped 6.6x
+
+Discovery reads 35,198 liquidity programmes against the 5,332 the §9.21 census enumerated two
+days ago; total pool $1.97M; median $/day 35.71 -> 150.16; median hours remaining 33 -> 16. The
+opportunity set is materially different from the one the thesis was pre-registered against.
+Strengthens the case for the authorised universe-rule change.
+
+First positive net/day appears (C_conservative, conservative model: +6.15 / +63.09 / +167.90 at
+$100 / $250 / $500) and is a **model artifact** — the reward term is the unvalidated share
+model, actual lifetime rewards are $0. **The gated read (A_break_even, conservative) is
+unchanged in sign: -17.16/day at tier 25.** No criterion met.
+
+Collector holding: 297 discovery cycles, 0 errors; loop_error 3 = the §9.26 ledger failures,
+fixed and pending merge; market_cap_reached 297, so fix 1 still binding not verified; settled
+still 1. P(both|one) conservative 0.018 over 14d.
+
+[Thesis §9.27](../LIQUIDITY_INCENTIVE_THESIS.md).

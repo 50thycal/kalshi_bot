@@ -55,7 +55,6 @@ from . import fills as fm
 from . import live as live_tags
 from . import programs as pg
 from . import quotes as qp
-from . import reward_ledger as rl
 from . import scoring as sc
 from . import store
 from .fees import FeeRule, pair_maker_fee_cents
@@ -81,8 +80,6 @@ EV_BOOK_INVALID = "book_invalid"
 EV_WS_ERROR = "ws_error"
 EV_THROTTLED = "throttled"
 EV_LOOP_ERROR = "loop_error"
-#: A balance reading whose unexplained remainder is worth a human look (see `reward_ledger`).
-EV_REWARD_RESIDUAL = "reward_residual"
 EV_UNPARSED = "unparsed"
 EV_DISCOVERY = "discovery"
 EV_MARKET_CAP = "market_cap_reached"
@@ -222,7 +219,6 @@ class ShadowState:
         self.pending_settlements: dict[int, PendingSettlement] = {}
         self._last_discovery_at: datetime | None = None
         self._last_settlement_at: datetime | None = None
-        self._last_balance_at: datetime | None = None
         self.tiers: tuple[int, ...] = self._tiers()
 
     # -- config --------------------------------------------------------------------------
@@ -643,48 +639,6 @@ class ShadowState:
                 self.settle_pending(now)
             except Exception as exc:  # noqa: BLE001
                 self._record(EV_LOOP_ERROR, detail=f"settle: {type(exc).__name__}: {exc}")
-
-        # The reward ledger. Slower than the settlement pass on purpose: a residual is only
-        # meaningful over a window long enough for a reward to have been credited in, and each
-        # observation costs a paged fills+settlements read. Failure is a recorded event, never
-        # an exception — the measurement must not be able to stop the thing it measures.
-        bal_every = float(self._cfg("balance_seconds", 900.0))
-        if (self._last_balance_at is None
-                or (now - self._last_balance_at).total_seconds() >= bal_every):
-            self._last_balance_at = now
-            try:
-                self.observe_balance(now)
-            except Exception as exc:  # noqa: BLE001
-                self._record(EV_LOOP_ERROR, detail=f"balance: {type(exc).__name__}: {exc}")
-
-    def observe_balance(self, now: datetime) -> dict | None:
-        """Take one balance reading and record what of its change we can explain.
-
-        The unexplained remainder is the only route we have to a liquidity reward, because
-        Kalshi publishes a programme's terms and never our credit against them (§9.21). See
-        `reward_ledger` for the identity and for everything a residual is NOT.
-
-        Returns the recorded attribution, or None when the reading could not be taken. A
-        material residual also writes a `reward_residual` event, so a credit is visible in the
-        collector's own event stream and not only to whoever thinks to query the table."""
-        with self.session_factory() as session:
-            prev = store.latest_balance_observation(session)
-            prev_balance = None if prev is None else int(prev.balance_cents)
-            prev_at = None if prev is None else prev.at
-            balance_cents, rec, notes = rl.observe(
-                self.client, prev_balance_cents=prev_balance, since=prev_at)
-            store.record_balance_observation(
-                session, at=now, balance_cents=balance_cents,
-                prev_at=prev_at, prev_balance_cents=prev_balance,
-                reconciliation=rec, notes=notes or None)
-            session.commit()
-        if rec is None:
-            return None
-        if rec.is_material and not notes.get("residual_untrustworthy"):
-            # Worth a human look: cash moved that no trade and no settlement accounts for, the
-            # window was fully explained, and it is too small to be a transfer.
-            self._record(EV_REWARD_RESIDUAL, detail_json=rec.as_dict())
-        return rec.as_dict()
 
     def _requote(self, mk: TrackedMarket, now: datetime) -> None:
         t = mk.terms

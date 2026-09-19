@@ -39,6 +39,8 @@ from .. import repository as repo
 from ..scanner.metrics import parse_orderbook
 from . import live as limm
 from . import programs as progs
+from . import reward_ledger as rl
+from . import store
 from .scoring import discount_factor, side_score
 
 logger = logging.getLogger(__name__)
@@ -47,6 +49,9 @@ logger = logging.getLogger(__name__)
 PLACED = "placed"
 SKIP_BOOK_ERROR = "book_error"
 SKIP_NO_SLOTS = "no_slots"
+
+#: A balance reading whose unexplained remainder is worth a human look (see `reward_ledger`).
+EV_REWARD_RESIDUAL = "reward_residual"
 
 
 def _aware(dt: datetime | None) -> datetime | None:
@@ -95,6 +100,9 @@ class IncentiveLiveRunner:
         self.client = client
         self.settings = settings
         self.twin_harness = twin_harness
+        #: When the reward ledger last took a reading. None until the first cycle, which is what
+        #: makes the very first cycle after a deploy write the anchor row immediately.
+        self._last_balance_at: datetime | None = None
 
     # --- arming ---------------------------------------------------------------
 
@@ -120,6 +128,14 @@ class IncentiveLiveRunner:
         now = now or datetime.now(timezone.utc)
         summary: dict = {"armed": False, "considered": 0, "fetched": 0, "placed": 0,
                          "twin_opened": 0, "outcomes": {}}
+
+        # The reward ledger runs BEFORE the armed gate, deliberately. Kalshi credits a liquidity
+        # reward only AFTER a programme ends, so a credit for quoting we already did can land
+        # days later — including after this book has been stood down. A ledger that stopped
+        # measuring when the book stopped quoting would miss exactly the payment it exists to
+        # catch.
+        self._observe_rewards(session, now)
+
         if not self.armed(executor):
             return summary
         summary["armed"] = True
@@ -213,6 +229,54 @@ class IncentiveLiveRunner:
         return summary
 
     # --- pieces ---------------------------------------------------------------
+
+    def _observe_rewards(self, session, now: datetime) -> dict | None:
+        """Take one balance reading and record what of its change we can explain.
+
+        WHY THIS LIVES HERE AND NOT IN THE SHADOW COLLECTOR. The first version put it there,
+        and it could not work: the collector is handed an `IncentiveReadOnlyKalshi`, a wrapper
+        that exposes exactly the market-data GETs the research tape needs and nothing else. It
+        has no `get_balance`, and production said so — `AttributeError: 'IncentiveReadOnlyKalshi'
+        object has no attribute 'get_balance'`, twice, in the first fifteen minutes after deploy.
+
+        That wrapper is a boundary, not an oversight: the shadow is research and has no business
+        reading our portfolio. Widening it to reach the balance would have been the easy fix and
+        the wrong one. The ledger measures REAL MONEY, so it belongs with the book that spends
+        it — this runner, which already holds the authenticated client for exactly that reason.
+
+        Failure is a recorded event, never an exception: a missed reading is recoverable, and
+        this must never be able to stop the book from placing or cancelling."""
+        every = float(getattr(self.settings, "liquidity_incentive_balance_seconds", 900.0))
+        if (self._last_balance_at is not None
+                and (now - self._last_balance_at).total_seconds() < every):
+            return None
+        self._last_balance_at = now
+        try:
+            prev = store.latest_balance_observation(session)
+            prev_balance = None if prev is None else int(prev.balance_cents)
+            prev_at = None if prev is None else prev.at
+            balance_cents, rec, notes = rl.observe(
+                self.client, prev_balance_cents=prev_balance, since=prev_at)
+            store.record_balance_observation(
+                session, at=now, balance_cents=balance_cents,
+                prev_at=prev_at, prev_balance_cents=prev_balance,
+                reconciliation=rec, notes=notes or None)
+            if rec is not None and rec.is_material and not (notes or {}).get(
+                    "residual_untrustworthy"):
+                # Cash moved that no trade and no settlement accounts for, the window was fully
+                # explained, and it is too small to be a transfer. Announced in the collector's
+                # event stream so it is visible without querying the new table.
+                store.record_event(session, kind=EV_REWARD_RESIDUAL, at=now,
+                                   detail_json=rec.as_dict())
+            return None if rec is None else rec.as_dict()
+        except Exception as exc:  # noqa: BLE001 — a missed reading must not stop the book
+            logger.warning("incentive reward ledger: %s: %s", type(exc).__name__, exc)
+            try:
+                store.record_event(session, kind="loop_error", at=now,
+                                   detail=f"reward_ledger: {type(exc).__name__}: {exc}")
+            except Exception:  # noqa: BLE001 — recording a failure must not raise either
+                logger.exception("incentive reward ledger: could not record its own failure")
+            return None
 
     def _candidate_programs(self, session, *, now: datetime) -> list:
         """Current liquidity programs worth fetching a book for, soonest-ending first.

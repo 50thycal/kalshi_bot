@@ -10,6 +10,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from sqlalchemy import delete as sa_delete
+from sqlalchemy import select as sa_select
 
 from kalshi_bot import db
 from kalshi_bot import models as m
@@ -330,3 +332,201 @@ def test_an_unrelated_event_is_not_blocked(live_db, settings):
         out = run.IncentiveLiveRunner(client, settings).cycle(s, ex, {"cash_balance": 500.0},
                                                               now=NOW)
     assert out["placed"] == 1
+
+
+# --- the reward ledger (thesis §9.23) -------------------------------------------------------
+#
+# Kalshi publishes a programme's terms and never our credit against them, so a liquidity reward
+# is only visible as the part of a balance change nothing else explains. The arithmetic itself
+# is covered in `test_incentive_reward_ledger.py`; these cover the RUNNER's half — that the
+# reading happens on its own schedule, persists, announces a material residual, survives its own
+# failures, and above all keeps running when the book is stood down.
+#
+# It lives here and not in the collector because the collector is handed an
+# `IncentiveReadOnlyKalshi`, which has no `get_balance` — production said so out loud twice
+# before this moved.
+
+
+class LedgerClient(FakeClient):
+    """`FakeClient` plus the three portfolio reads the ledger makes."""
+
+    def __init__(self, books=None, *, balance=18_651, fills=None, settlements=None, fail=False):
+        super().__init__(books or {})
+        self.balance = balance
+        self._fills = fills or []
+        self._settlements = settlements or []
+        self.fail = fail
+        self.balance_calls = 0
+
+    def get_balance(self):
+        self.balance_calls += 1
+        if self.fail:
+            raise RuntimeError("balance unavailable")
+        return {"balance": self.balance}
+
+    def get_fills(self, **params):
+        return {"fills": self._fills, "cursor": None}
+
+    def get_settlements(self, **params):
+        return {"settlements": self._settlements, "cursor": None}
+
+
+def _ledger_rows():
+    with db.session_scope() as s:
+        return s.execute(
+            sa_select(m.IncentiveBalanceObservation)
+            .order_by(m.IncentiveBalanceObservation.at, m.IncentiveBalanceObservation.id)
+        ).scalars().all()
+
+
+def _clear_ledger():
+    """Each ledger row differences the PREVIOUS one, so a neighbouring test's row would silently
+    become this test's anchor and make its residual meaningless."""
+    with db.session_scope() as s:
+        s.execute(sa_delete(m.IncentiveBalanceObservation))
+        s.execute(sa_delete(m.IncentiveCollectorEvent))
+        s.commit()
+
+
+def test_the_first_cycle_anchors_the_ledger_without_claiming_a_residual(live_db, settings):
+    """Differencing the first balance against nothing would report a credit the size of the
+    whole account. The anchor row leaves every attribution column NULL — a zero residual and an
+    unmeasurable one are different claims."""
+    _clear_ledger()
+    client = LedgerClient(balance=18_651)
+    ex = _exec(settings, client)
+    with db.session_scope() as s:
+        run.IncentiveLiveRunner(client, settings).cycle(s, ex, {"cash_balance": 500.0}, now=NOW)
+    rows = _ledger_rows()
+    assert len(rows) == 1
+    assert rows[0].balance_cents == 18_651
+    assert rows[0].residual_cents is None
+    assert rows[0].prev_balance_cents is None
+
+
+def test_the_ledger_runs_even_when_the_book_is_stood_down(live_db, settings):
+    """THE point of putting this before the armed gate. Kalshi credits only AFTER a programme
+    ends, so a reward for quoting we already did can land days later — including after the book
+    has been switched off. A ledger that stopped with the book would miss the payment it exists
+    to catch."""
+    _clear_ledger()
+    settings.liquidity_incentive_live_enabled = False
+    client = LedgerClient(balance=18_651)
+    ex = _exec(settings, client)
+    with db.session_scope() as s:
+        out = run.IncentiveLiveRunner(client, settings).cycle(s, ex, {"cash_balance": 500.0},
+                                                              now=NOW)
+    assert out["armed"] is False, "the book must still be stood down"
+    assert len(_ledger_rows()) == 1, "but the ledger still took its reading"
+
+
+def test_cash_that_no_trade_explains_is_persisted_as_a_residual(live_db, settings):
+    _clear_ledger()
+    client = LedgerClient(balance=18_651)
+    ex = _exec(settings, client)
+    r = run.IncentiveLiveRunner(client, settings)
+    with db.session_scope() as s:
+        r.cycle(s, ex, {"cash_balance": 500.0}, now=NOW)
+    client.balance = 18_654
+    with db.session_scope() as s:
+        r.cycle(s, ex, {"cash_balance": 500.0}, now=NOW + timedelta(minutes=20))
+    rows = _ledger_rows()
+    assert len(rows) == 2
+    assert rows[1].residual_cents == 3
+    assert rows[1].prev_balance_cents == 18_651
+    assert rows[1].presumed_transfer is False
+
+
+def test_a_material_residual_is_announced_in_the_event_stream(live_db, settings):
+    """A credit must be visible to anyone reading the collector's events, not only to whoever
+    thinks to query the new table."""
+    _clear_ledger()
+    client = LedgerClient(balance=18_651)
+    ex = _exec(settings, client)
+    r = run.IncentiveLiveRunner(client, settings)
+    with db.session_scope() as s:
+        r.cycle(s, ex, {"cash_balance": 500.0}, now=NOW)
+    client.balance = 18_654
+    with db.session_scope() as s:
+        r.cycle(s, ex, {"cash_balance": 500.0}, now=NOW + timedelta(minutes=20))
+    with db.session_scope() as s:
+        kinds = s.execute(
+            sa_select(m.IncentiveCollectorEvent.kind)
+            .where(m.IncentiveCollectorEvent.kind == run.EV_REWARD_RESIDUAL)
+        ).scalars().all()
+    assert kinds == [run.EV_REWARD_RESIDUAL]
+
+
+def test_a_deposit_is_recorded_but_never_announced_as_a_reward(live_db, settings):
+    """The worst possible false positive. A book risking at most $10 did not earn $50."""
+    _clear_ledger()
+    client = LedgerClient(balance=18_651)
+    ex = _exec(settings, client)
+    r = run.IncentiveLiveRunner(client, settings)
+    with db.session_scope() as s:
+        r.cycle(s, ex, {"cash_balance": 500.0}, now=NOW)
+    client.balance = 23_651
+    with db.session_scope() as s:
+        r.cycle(s, ex, {"cash_balance": 500.0}, now=NOW + timedelta(minutes=20))
+    rows = _ledger_rows()
+    assert rows[1].residual_cents == 5_000
+    assert rows[1].presumed_transfer is True
+    with db.session_scope() as s:
+        kinds = s.execute(
+            sa_select(m.IncentiveCollectorEvent.kind)
+            .where(m.IncentiveCollectorEvent.kind == run.EV_REWARD_RESIDUAL)
+        ).scalars().all()
+    assert kinds == []
+
+
+def test_the_reading_has_its_own_slower_schedule(live_db, settings):
+    """Each reading costs paged portfolio calls, and a residual only means anything over a
+    window long enough for a reward to have been credited in — so it must not fire every cycle
+    the way the placement logic does."""
+    _clear_ledger()
+    settings.liquidity_incentive_balance_seconds = 900.0
+    client = LedgerClient(balance=18_651)
+    ex = _exec(settings, client)
+    r = run.IncentiveLiveRunner(client, settings)
+    with db.session_scope() as s:
+        r.cycle(s, ex, {"cash_balance": 500.0}, now=NOW)
+    assert len(_ledger_rows()) == 1
+    with db.session_scope() as s:
+        r.cycle(s, ex, {"cash_balance": 500.0}, now=NOW + timedelta(seconds=60))
+    assert len(_ledger_rows()) == 1, "read again before its interval elapsed"
+    with db.session_scope() as s:
+        r.cycle(s, ex, {"cash_balance": 500.0}, now=NOW + timedelta(seconds=901))
+    assert len(_ledger_rows()) == 2
+
+
+def test_a_portfolio_read_that_fails_cannot_stop_the_book_placing(live_db, settings):
+    """The measurement must never be able to break the thing that spends the money. This is the
+    exact failure that happened in production when the ledger was wired to the read-only shadow
+    client — it recorded a loop_error and carried on, which is the behaviour kept here."""
+    _clear_ledger()
+    client = LedgerClient({"KXTEST-A": _book([(20, 500)], [(70, 500)])}, fail=True)
+    ex = _exec(settings, client)
+    with db.session_scope() as s:
+        _program(s, "KXTEST-A")
+        out = run.IncentiveLiveRunner(client, settings).cycle(s, ex, {"cash_balance": 500.0},
+                                                              now=NOW)
+    assert _ledger_rows() == []
+    assert out["placed"] == 1, "the book must still have placed its order"
+    with db.session_scope() as s:
+        details = s.execute(
+            sa_select(m.IncentiveCollectorEvent.detail)
+            .where(m.IncentiveCollectorEvent.kind == "loop_error")
+        ).scalars().all()
+    assert any("reward_ledger" in (d or "") for d in details)
+
+
+def test_the_ledger_is_not_wired_to_the_read_only_shadow_client(live_db, settings):
+    """Regression guard for the production failure. `IncentiveReadOnlyKalshi` deliberately
+    exposes only market-data GETs; it has no portfolio surface, and widening it to reach the
+    balance would put research code inside our account. If someone re-adds `get_balance` there,
+    this fails and they have to argue for it on purpose."""
+    from kalshi_bot.liquidity_incentive.readonly import IncentiveReadOnlyKalshi
+
+    for name in ("get_balance", "get_fills", "get_settlements"):
+        assert not hasattr(IncentiveReadOnlyKalshi, name), (
+            f"{name} on the shadow's read-only client puts research code in the portfolio")
