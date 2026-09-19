@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--ticker","KXSPRLVL-26SEP23-T284","--depth","8","--trades","25"],"id":"desk-d3-spr","actor":"claude-desk","purpose":"desk detail read 2026-09-19"}
+{"type":"script","name":"kalshi_desk_board","args":["--event","KXSOFRD-26SEP21"],"id":"desk-d3-sofr","actor":"claude-desk","purpose":"desk detail read 2026-09-19"}
