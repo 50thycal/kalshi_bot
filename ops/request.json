@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_market_probe","args":["KXELONMARS-99","KXNFLGAME"],"id":"desk-probe-1"}
+{"type":"db","id":"limm-comp-1","sql":"SELECT k AS key_name, count(*) AS n, min(left(v,60)) AS sample_min, max(left(v,60)) AS sample_max FROM incentive_programs p CROSS JOIN LATERAL jsonb_each_text(p.raw_json) AS e(k,v) WHERE p.superseded_at IS NULL AND p.disappeared_at IS NULL AND jsonb_typeof(p.raw_json) = 'object' GROUP BY k ORDER BY k"}
