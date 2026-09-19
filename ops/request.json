@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--event","KXTOKENUSE-26SEP21"],"id":"desk-d4-tokev","actor":"claude-desk","purpose":"desk detail read 2026-09-19"}
+{"type":"script","name":"kalshi_desk_board","args":["--ticker","KXTOKENUSE-26SEP21-T122","--depth","6","--trades","10"],"id":"desk-d4-tok122","actor":"claude-desk","purpose":"desk detail read 2026-09-19"}
