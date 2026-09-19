@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--ticker","KXTOKENUSE-26SEP21-T122","--depth","6","--trades","10"],"id":"desk-d4-tok122","actor":"claude-desk","purpose":"desk detail read 2026-09-19"}
+{"type":"script","name":"desk_fetch","args":["https://openrouter.ai/api/frontend/v1/rankings/market-share","--find","2026-09-14","--window","500","--hits","1"],"id":"desk-d4-or2","actor":"claude-desk","purpose":"desk settlement-source read 2026-09-19 (second sample for run rate)"}
