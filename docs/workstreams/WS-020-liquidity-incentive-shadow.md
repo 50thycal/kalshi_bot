@@ -919,3 +919,25 @@ OPEN QUESTION (candidate XOS issue): no command action records a universe/rules 
 live arm. Platform revisions get `platform_impact`; book-level rule changes get nothing.
 
 [Thesis §9.30](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## Update 2026-09-19 20:45Z — second ledger defect: `action` is YES-denominated
+
+§9.29's key-name fix works (prices parse), and exposed a second defect underneath it. Three
+post-deploy windows read -186/-188/-186 and each was labelled `presumed deposit/withdrawal`:
+the balance FELL by the price while the ledger booked PROCEEDS of the same amount, doubling the
+error into the residual.
+
+Ground truth from `fills.raw_fill_json`: `{"side": "no", "action": "sell", "count_fp": "1.00"}`
+with cash going OUT. On Kalshi "sell" is YES-denominated — selling YES means acquiring NO and
+paying the NO price, which is what every MMSELL maker fill is.
+
+Fixed as a VERIFIED table, not a condition: `CASH_DIRECTION` holds only pairs checked against an
+observed balance move (today `("no","sell")` alone, three windows reconciling to exactly zero).
+Any other pair prices conservatively as a debit, is named in `unknown_fill_shapes`, sets
+`residual_untrustworthy`, and cannot be material. Two tests asserting `yes/sell` credits were
+rewritten — they encoded the same guess that caused this.
+
+Third payload assumption to ship in one session; all three silent. Standing rules recorded in
+§9.31. Still no reward observed; lifetime $0. Full suite 4,641 passing.
+
+[Thesis §9.31](../LIQUIDITY_INCENTIVE_THESIS.md).

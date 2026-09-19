@@ -102,8 +102,33 @@ def _first(fill: dict, *keys: str):
     return None
 
 
-def _fill_cost_cents(fill: dict) -> tuple[int, int, int]:
-    """`(buy_cost, sell_proceeds, fee)` in cents for one fill, from its own side's price.
+#: Which way cash moves for a `(side, action)` pair, and — the load-bearing part — WHICH PAIRS
+#: WE HAVE ACTUALLY VERIFIED. A pair absent from this table is not assumed; it makes the
+#: window's residual untrustworthy, so the ledger says "I do not know" instead of booking a
+#: confident number in the wrong direction.
+#:
+#: **`action` is YES-denominated, not a cash direction.** This is the trap, and it cost a second
+#: production defect after the key-name one (§9.29). Kalshi's live fills read
+#: `{"side": "no", "action": "sell", ...}` for MMSELL's resting maker orders, and the account
+#: balance FELL by the NO price on every one of them. "Sell" there means *sell YES*, which on an
+#: exchange with no shorting means ACQUIRING NO and paying the NO price. Booking it as proceeds
+#: inverted the sign and doubled the error: at 19:59:49Z on 2026-09-19 a 93c fill against a 93c
+#: balance drop produced a residual of -186c — the drop, plus a credit that never happened.
+#:
+#: Verified against observed balance movements on 2026-09-19 (three windows, each reconciling to
+#: exactly zero under this reading): ("no", "sell").
+#: Everything else is deliberately absent until a window proves it.
+DEBIT = "debit"
+CREDIT = "credit"
+CASH_DIRECTION: dict[tuple[str, str], str] = {
+    ("no", "sell"): DEBIT,
+}
+
+
+def _fill_cost_cents(fill: dict) -> tuple[int, int, int, bool]:
+    """`(buy_cost, sell_proceeds, fee, known)` in cents for one fill, from its own side's price.
+
+    `known` is False when the `(side, action)` pair is not in `CASH_DIRECTION` — see that table.
 
     A Kalshi fill names a side (`yes`/`no`) and an action (`buy`/`sell`), and carries the price
     for BOTH sides. The cash that moved is the price of the side actually traded — using
@@ -134,9 +159,13 @@ def _fill_cost_cents(fill: dict) -> tuple[int, int, int]:
     fee = _to_cents(_first(fill, "fee_cost", "fee", "fee_cents"))
     gross = price * count
     action = str(fill.get("action") or "").strip().lower()
-    if action == "sell":
-        return 0, gross, fee
-    return gross, 0, fee
+    direction = CASH_DIRECTION.get((side, action))
+    if direction == CREDIT:
+        return 0, gross, fee, True
+    # An unverified combination is priced as a DEBIT because that is the conservative guess — it
+    # understates a reward rather than inventing one — but `known=False` is what the caller acts
+    # on, and it marks the whole window untrustworthy.
+    return gross, 0, fee, direction == DEBIT
 
 
 @dataclass(frozen=True)
@@ -151,6 +180,10 @@ class Reconciliation:
     residual_cents: int
     fills_counted: int
     settlements_counted: int
+    #: `(side, action)` shapes in this window that `CASH_DIRECTION` does not vouch for. Non-empty
+    #: means the explained side of the identity rests on a guess, so the residual is not
+    #: attributable — see `is_material`.
+    unknown_fill_shapes: tuple[str, ...] = ()
 
     @property
     def presumed_transfer(self) -> bool:
@@ -159,9 +192,14 @@ class Reconciliation:
 
     @property
     def is_material(self) -> bool:
-        """A residual worth looking at: non-trivial, and not presumed to be a transfer."""
+        """A residual worth looking at: non-trivial, not presumed a transfer, and ATTRIBUTABLE.
+
+        An unvouched fill shape disqualifies the window outright. A residual computed partly
+        from a guessed cash direction is not evidence of anything, and the whole cost of this
+        module's two production defects was announcing such a number as though it were."""
         return (abs(self.residual_cents) >= MATERIAL_RESIDUAL_CENTS
-                and not self.presumed_transfer)
+                and not self.presumed_transfer
+                and not self.unknown_fill_shapes)
 
     def as_dict(self) -> dict:
         d = {
@@ -173,6 +211,7 @@ class Reconciliation:
             "residual_cents": self.residual_cents,
             "fills_counted": self.fills_counted,
             "settlements_counted": self.settlements_counted,
+            "unknown_fill_shapes": list(self.unknown_fill_shapes),
         }
         d["presumed_transfer"] = self.presumed_transfer
         d["is_material"] = self.is_material
@@ -200,11 +239,17 @@ def reconcile(*, prev_balance_cents: int, balance_cents: int,
     sell_proceeds = 0
     fees = 0
     fill_rows = list(fills or ())
+    unknown_shapes: list[str] = []
     for fill in fill_rows:
-        cost, proceeds, fee = _fill_cost_cents(fill)
+        cost, proceeds, fee, known = _fill_cost_cents(fill)
         buy_cost += cost
         sell_proceeds += proceeds
         fees += fee
+        if not known:
+            shape = (f"{str(fill.get('side') or '?').strip().lower()}/"
+                     f"{str(fill.get('action') or '?').strip().lower()}")
+            if shape not in unknown_shapes:
+                unknown_shapes.append(shape)
     settle_rows = list(settlements or ())
     # `revenue` has read as integer cents in production (a 2026-09-19 settlement differenced the
     # balance exactly), so this preserves that. The dollar-string variant is accepted too, for
@@ -217,6 +262,7 @@ def reconcile(*, prev_balance_cents: int, balance_cents: int,
         delta_cents=delta, buy_cost_cents=buy_cost, sell_proceeds_cents=sell_proceeds,
         fees_cents=fees, settlement_cents=settlement, residual_cents=residual,
         fills_counted=len(fill_rows), settlements_counted=len(settle_rows),
+        unknown_fill_shapes=tuple(unknown_shapes),
     )
 
 

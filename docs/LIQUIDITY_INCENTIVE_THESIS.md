@@ -2038,3 +2038,63 @@ it. `ARM_CANARY`, `STAND_DOWN`, `RETIRE_ON_GATE_FAIL`, `CLOSE_OUT_RETROSPECTIVE`
 this running book changed." A platform revision gets `platform_impact`; a book-level rule change
 gets nothing. That asymmetry will recur on every future universe change to any live book, so it
 is worth fixing once rather than re-deciding each time.
+
+### 9.31 `action` is YES-denominated: the ledger inverted every maker fill (2026-09-19 20:45Z)
+
+§9.29's key-name fix deployed and works — prices now parse. It exposed a **second, independent**
+defect underneath it, in the same function, with the same failure mode: a confident wrong number.
+
+Post-deploy ledger, three windows carrying one live fill each:
+
+```
+at                      balance$    delta$    buys$   sells$   settle$  RESIDUAL$  flag
+2026-09-19 19:59:49       172.52     -0.93    +0.00    +0.93     +0.00      -1.86  presumed deposit/withdrawal
+2026-09-19 18:59:53       172.45     -0.94    +0.00    +0.94     +0.00      -1.88  presumed deposit/withdrawal
+2026-09-19 18:25:23       171.39     -0.93    +0.00    +0.93     +0.00      -1.86  presumed deposit/withdrawal
+```
+
+**The balance FELL by the price, and the ledger booked PROCEEDS of the same amount.** Hence
+−186 = −93 (the real drop) − 93 (a credit that never happened): the sign error doubles itself
+into the residual, and again clears `EXTERNAL_TRANSFER_CENTS`, so again the ledger labelled its
+own mistake a deposit.
+
+**Ground truth, from `fills.raw_fill_json` — the payload the executor stores verbatim:**
+
+```json
+{"ts": 1789847652, "side": "no", "action": "sell", "ticker": "KXMLBTOTAL-26SEP191910DETCWS-13",
+ "count_fp": "1.00", "fee_cost": "0.000000", ...}
+```
+
+`side: "no"`, `action: "sell"`, and the cash went **out**.
+
+**`action` is YES-denominated. It is not a cash direction.** On an exchange with no shorting,
+"sell YES" is executed by ACQUIRING NO and paying the NO price — which is exactly what MMSELL's
+resting maker orders do, and why every one of its fills reads `no/sell` while its positions are
+NO holdings. Reading `action == "sell"` as "we received money" is wrong for the only fill shape
+this account actually produces.
+
+**Why the fix is a table and not a condition.** I could write `no/sell → debit` and move on. But
+that is the third time in one session I would have encoded an assumption about a payload I had
+not observed, and the first two both shipped. So `CASH_DIRECTION` now holds **only pairs
+verified against an observed balance movement** — today that is `("no", "sell")` alone, on three
+windows that each reconcile to exactly zero under it. Any other pair:
+
+  * is priced conservatively as a DEBIT (understating a reward rather than inventing one);
+  * is **named** on the row, in `unknown_fill_shapes`, which sets `residual_untrustworthy`;
+  * makes `is_material` **False**, so the window cannot be reported as a candidate reward.
+
+The ledger now says *"I do not know"* where it used to say a number. Two tests that asserted
+`yes/sell` credits the balance were **rewritten, not deleted** — they were encoding the same
+guess that caused this, and they now assert that the guess is declined.
+
+**What this does not change.** Still **no liquidity reward observed**, and lifetime rewards on
+Kalshi's page remain **$0**. Every residual to date is explained by a trade or a settlement once
+the direction is right. The instrument is now closer to trustworthy than it has been, which is
+the only claim being made.
+
+**The pattern, stated plainly, because it is now three for three.** Every defect in this module
+has been an assumption about a payload, and every one of them was silent — no exception, no
+crash, just a wrong number with a plausible label. The `presumed_transfer` threshold hid the
+first two. The standing rules that follow from this: read the repo's existing parser before
+writing one, verify a cash direction against a balance movement before trusting it, and prefer
+an instrument that reports uncertainty over one that reports a number.

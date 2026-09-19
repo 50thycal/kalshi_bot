@@ -59,11 +59,19 @@ class TestTheAccountingIdentity:
                            fills=[], settlements=[{"revenue": 100}])
         assert rec.residual_cents == 3
 
-    def test_a_sale_credits_the_balance_and_is_explained(self):
+    def test_a_yes_sale_is_not_assumed_to_credit_because_nothing_has_verified_it(self):
+        """This test USED to assert `yes/sell` credits the balance, which was a guess dressed as
+        a fact — and the same guess, applied to `no/sell`, is what inverted a 93c fill into a
+        -186c residual in production (§9.31). `no/sell` turned out to DEBIT: on Kalshi "sell"
+        is YES-denominated, so selling YES means acquiring NO and paying for it.
+
+        Whether `yes/sell` credits is plausible but unobserved, so the ledger now declines to
+        decide. It prices conservatively as a debit (understating a reward rather than inventing
+        one) and marks the shape, which disqualifies the window from being called material."""
         rec = rl.reconcile(prev_balance_cents=18_651, balance_cents=18_691,
                            fills=[_fill(action="sell", yes_price=40)], settlements=[])
-        assert rec.sell_proceeds_cents == 40
-        assert rec.residual_cents == 0
+        assert rec.unknown_fill_shapes == ("yes/sell",)
+        assert not rec.is_material, "an unvouched cash direction is not evidence of anything"
 
     def test_a_reported_fee_is_added_back_so_it_is_not_mistaken_for_a_negative_reward(self):
         """Buy at 10c and pay a 2c fee: the balance falls 12c, and all 12c is explained."""
@@ -329,11 +337,26 @@ class TestTheRealKalshiPayloadShape:
                                    "yes_price": 10}], settlements=[])
         assert rec.buy_cost_cents == 10 and rec.residual_cents == 0
 
-    def test_a_sale_in_the_live_shape_credits_the_balance(self):
+    def test_the_verified_no_sell_shape_reconciles_the_window_that_broke_it(self):
+        """19:59:49Z on 2026-09-19: balance fell 93c, one `{"side":"no","action":"sell"}` fill at
+        93c. The old rule booked 93c of PROCEEDS, so the residual read -186c — the real drop
+        plus a credit that never happened — and crossed the transfer threshold, which made the
+        ledger call it a deposit. Under the verified direction it explains itself exactly."""
+        rec = rl.reconcile(
+            prev_balance_cents=17_345, balance_cents=17_252,
+            fills=[self._live_fill(side="no", action="sell", price="0.93")], settlements=[])
+        assert rec.buy_cost_cents == 93
+        assert rec.sell_proceeds_cents == 0
+        assert rec.residual_cents == 0
+        assert rec.unknown_fill_shapes == ()
+        assert not rec.presumed_transfer
+
+    def test_an_unverified_shape_marks_the_window_rather_than_guessing(self):
         rec = rl.reconcile(prev_balance_cents=1_000, balance_cents=1_040,
                            fills=[self._live_fill(side="yes", action="sell", price="0.40")],
                            settlements=[])
-        assert rec.sell_proceeds_cents == 40 and rec.residual_cents == 0
+        assert rec.unknown_fill_shapes == ("yes/sell",)
+        assert not rec.is_material
 
     def test_a_settlement_in_either_shape_is_explained(self):
         """`revenue` read as integer cents in production; the dollar variant is accepted too."""
@@ -355,3 +378,58 @@ class TestTheRealKalshiPayloadShape:
             fills=[{"side": "no", "action": "buy", "count_fp": "x", "no_price_dollars": None}],
             settlements=[])
         assert rec.buy_cost_cents == 0 and rec.fills_counted == 1
+
+
+class TestTheCashDirectionTableIsDeliberate:
+    """The table is a claim about what we have VERIFIED, not a lookup of what seems obvious.
+
+    Both of this module's production defects were confident wrong numbers, not crashes. The
+    table's job is to make the third one impossible by refusing to have an opinion it has not
+    earned (§9.31).
+    """
+
+    def test_only_the_shape_observed_against_a_real_balance_move_is_vouched_for(self):
+        assert rl.CASH_DIRECTION == {("no", "sell"): rl.DEBIT}
+
+    def test_an_unknown_shape_prices_conservatively_as_a_debit(self):
+        """The guess has to fail SAFE. A debit understates a reward; a credit would invent one,
+        and inventing a reward is the single outcome this whole module exists to avoid."""
+        rec = rl.reconcile(
+            prev_balance_cents=1_000, balance_cents=1_000,
+            fills=[{"side": "yes", "action": "sell", "count_fp": "1.00",
+                    "yes_price_dollars": "0.40"}], settlements=[])
+        assert rec.buy_cost_cents == 40 and rec.sell_proceeds_cents == 0
+        assert rec.residual_cents > 0, "a debit pushes the residual up, never down"
+        assert not rec.is_material, "but it is still disqualified from being read as a reward"
+
+    def test_several_unknown_shapes_are_each_named_once(self):
+        rec = rl.reconcile(
+            prev_balance_cents=1_000, balance_cents=1_000,
+            fills=[{"side": "yes", "action": "buy", "count_fp": "1.00"},
+                   {"side": "yes", "action": "buy", "count_fp": "1.00"},
+                   {"side": "no", "action": "buy", "count_fp": "1.00"}],
+            settlements=[])
+        assert sorted(rec.unknown_fill_shapes) == ["no/buy", "yes/buy"]
+
+    def test_a_verified_window_stays_material_when_cash_is_genuinely_unexplained(self):
+        """The guard must not swallow the signal it was built to protect. A verified fill plus
+        real unexplained cash is still a candidate reward."""
+        rec = rl.reconcile(
+            prev_balance_cents=17_345, balance_cents=17_255,
+            fills=[self._verified_fill()], settlements=[])
+        assert rec.unknown_fill_shapes == ()
+        assert rec.residual_cents == 3
+        assert rec.is_material
+
+    @staticmethod
+    def _verified_fill():
+        return {"side": "no", "action": "sell", "count_fp": "1.00",
+                "no_price_dollars": "0.93"}
+
+    def test_the_shape_list_reaches_the_stored_row(self):
+        """`as_dict` is what the collector persists, so a shape that never lands in the row is a
+        warning nobody will ever see."""
+        rec = rl.reconcile(
+            prev_balance_cents=1_000, balance_cents=1_000,
+            fills=[{"side": "yes", "action": "buy", "count_fp": "1.00"}], settlements=[])
+        assert rec.as_dict()["unknown_fill_shapes"] == ["yes/buy"]
