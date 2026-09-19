@@ -1,1 +1,1 @@
-{"type":"script","script":"liquidity_incentive_report","args":["--days","14","--hours","24"],"id":"li-health-1710"}
+{"type":"script","name":"liquidity_incentive_report","args":["--days","14","--hours","24"],"id":"li-health-1720"}
