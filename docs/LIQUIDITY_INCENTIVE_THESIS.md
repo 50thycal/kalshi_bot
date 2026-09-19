@@ -1925,3 +1925,63 @@ narrows.
 > owning role. Until that epoch is recorded, evidence gathered after this deploy is **not
 > poolable** with evidence from before it. The code shipping and the epoch existing are two
 > separate facts and this document is not the second one.
+
+### 9.29 The ledger's first live window was wrong, and it said "deposit" with confidence (2026-09-19 18:20Z)
+
+#436 merged at 17:07Z; the redeploy anchored at 17:11:00Z and the ledger has written a row every
+~15 minutes since. **It records.** Six observations, four of them reconciling to exactly zero.
+
+Then the first window containing live fills:
+
+```
+at                    balance$   delta$   buys$  sells$  fees$  settle$  RESIDUAL$  flag
+2026-09-19 18:07:11     172.32    +0.00   +0.00   +0.00  +0.00    +0.00      +0.00  explained
+2026-09-19 18:03:42     172.32    +1.00   +0.00   +0.00  +0.00    +1.00      +0.00  explained
+2026-09-19 17:48:10     171.32    -1.84   +0.00   +0.00  +0.00    +0.00      -1.84  presumed deposit/withdrawal
+2026-09-19 17:32:59     173.16    +0.00   +0.00   +0.00  +0.00    +0.00      +0.00  explained
+2026-09-19 17:27:16     173.16    +0.00   +0.00   +0.00  +0.00    +0.00      +0.00  explained
+2026-09-19 17:11:00     173.16        -       -       -      -        -          -  anchor
+```
+
+**No deposit happened.** The 17:32:59 → 17:48:10 window contains exactly two Fmmsell10 fills:
+
+| time | market | side | price |
+|---|---|---|---|
+| 17:33:50Z | KXLALIGAGAME-26SEP19RCCSAN-TIE | no | 90c |
+| 17:34:43Z | KXWTACHALLENGERMATCH-26SEP19HERKAB-KAB | no | 94c |
+
+90 + 94 = **184c**. The residual was −184c. The row's own `fills_counted` reads **2**, with
+`buy_cost_cents` **0**: the ledger *saw both fills and valued them at nothing*.
+
+**Root cause.** `_fill_cost_cents` read `no_price` / `yes_price` / `count`. The live fills feed
+ships `no_price_dollars` / `yes_price_dollars` (dollar strings), `count_fp` (a fixed-point
+string) and `fee_cost` (dollars) — the shapes `LiveExecutor.reconcile` has read since its shape
+probe, documented in that file since long before this module existed. **The convention was there
+to copy and, for the third time this session, I wrote against an assumed payload instead of the
+observed one** (§9.26 for the other two). That is now a pattern rather than an accident, and the
+lesson is narrower than "be careful": *when a payload is already parsed somewhere in this repo,
+read that parser first.*
+
+**Why this is worse than a wrong number.** The residual crossed `EXTERNAL_TRANSFER_CENTS`, so
+the ledger did not merely report −$1.84 — it **explained** it, as a deposit or withdrawal. A
+confident wrong label on our own mis-parse is the most damaging failure this module can have: it
+is exactly the output a reader would stop checking. The safeguard designed to prevent an
+embarrassing false positive instead concealed a defect.
+
+**Fixed**, with both shapes accepted (preferred names first, legacy cents as fallback) across
+fills, fees, settlements and the balance itself, and ten regression tests including the exact
+window above reconciling to zero.
+
+**What this does NOT change.** Every residual observed so far is now explained. **No liquidity
+reward has been credited that we can see**, which remains consistent with §9.13/§9.17/§9.23 —
+a 1-contract bid earns a share that rounds to $0.00 — and is evidence the test is too small to
+earn, not evidence the mechanism is absent. Lifetime rewards on Kalshi's page: still **$0**.
+
+**Two live facts recorded in passing**, neither re-reported elsewhere:
+* **A settlement paid +$1.00 at 18:03:42Z**, differencing the balance exactly (171.32 → 172.32).
+  The three KXRT-RES NO positions and both KXBIGGESTQUAKE legs were still open at 18:05:26Z, so
+  this was **not** the KXRT-RES resolution the standing check is waiting for.
+* **Balance is $172.32**, against the $185.51 the operator's 2026-09-19 screenshot showed. The
+  gap is Fmmsell10's 90–94c NO buys, not this book, whose committed total is unchanged at $0.15.
+
+Rides PR #439.

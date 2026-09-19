@@ -67,19 +67,39 @@ EXTERNAL_TRANSFER_CENTS = 100
 MATERIAL_RESIDUAL_CENTS = 1
 
 
-def _int_cents(value, *, default: int = 0) -> int:
-    """A cents field from a JSON payload, as an int, without ever raising.
+def _to_cents(value, *, default: int = 0) -> int:
+    """A MONEY field as integer cents, accepting both shapes Kalshi ships.
 
-    Kalshi returns these as integers, but a payload we cannot parse must not take down the
-    worker loop that calls this — a missed observation is recoverable, a crashed collector is
-    not. An unparseable value reads as `default` and the caller's `counted` totals will not
-    match the raw list length, which is the signal that something was dropped."""
-    if value is None:
+    `'0.94'` is ninety-four cents; `94` is already ninety-four cents. Reading the dollar string
+    as an integer would value a 94c fill at 0, which is precisely the defect §9.29 records.
+    Never raises: a payload we cannot parse must not take down the loop that calls this."""
+    if value is None or isinstance(value, bool):
+        return default
+    if isinstance(value, int):
+        return value
+    try:
+        return int(round(float(value) * 100))
+    except (TypeError, ValueError):
+        return default
+
+
+def _to_count(value, *, default: int = 0) -> int:
+    """A CONTRACT COUNT, as an int. `'2.00'` (fixed-point string) and `2` both mean two."""
+    if value is None or isinstance(value, bool):
         return default
     try:
         return int(round(float(value)))
     except (TypeError, ValueError):
         return default
+
+
+def _first(fill: dict, *keys: str):
+    """First non-None value among `keys`. Kalshi ships several names for the same field."""
+    for k in keys:
+        v = fill.get(k)
+        if v is not None:
+            return v
+    return None
 
 
 def _fill_cost_cents(fill: dict) -> tuple[int, int, int]:
@@ -88,13 +108,30 @@ def _fill_cost_cents(fill: dict) -> tuple[int, int, int]:
     A Kalshi fill names a side (`yes`/`no`) and an action (`buy`/`sell`), and carries the price
     for BOTH sides. The cash that moved is the price of the side actually traded — using
     `yes_price` for a NO fill would be wrong by `100 − price` per contract, which at the
-    canary's 3c and 10c NO bids is an order-of-magnitude error in the thing we are measuring."""
-    count = _int_cents(fill.get("count"))
+    canary's 3c and 10c NO bids is an order-of-magnitude error in the thing we are measuring.
+
+    THE KEY NAMES ARE THE WHOLE PROBLEM, and getting them wrong is silent. The live fills feed
+    ships dollar STRINGS under `*_price_dollars`, a fixed-point string count under `count_fp`,
+    and the fee in DOLLARS under `fee_cost` — the shapes `LiveExecutor.reconcile` has read since
+    its shape probe. This function originally read only `yes_price` / `no_price` / `count`, so
+    against the real payload every price and every count parsed to ZERO: the fills were counted
+    and then valued at nothing, and the cash they moved fell through into the residual.
+
+    That is not a harmless miss. On 2026-09-19 the very first window containing live fills — two
+    Fmmsell10 NO buys at 90c and 94c — produced a residual of exactly -184c, which is exactly
+    those two fills, and the ledger labelled it `presumed deposit/withdrawal` because it crossed
+    `EXTERNAL_TRANSFER_CENTS`. A plausible-sounding label on a number that was really our own
+    mis-parse is the worst failure this module can have, so the preferred names now come first
+    and the legacy cents shapes stay as fallbacks (thesis §9.29)."""
+    count = _to_count(_first(fill, "count_fp", "count", "quantity"))
     side = str(fill.get("side") or "").strip().lower()
-    price = _int_cents(fill.get("no_price")) if side == "no" else _int_cents(fill.get("yes_price"))
+    if side == "no":
+        price = _to_cents(_first(fill, "no_price_dollars", "no_price", "price"))
+    else:
+        price = _to_cents(_first(fill, "yes_price_dollars", "yes_price", "price"))
     # Fee is optional in the payload. When Kalshi does not report it the charge still happened,
     # so it lands in the residual with a NEGATIVE sign — see the module docstring.
-    fee = _int_cents(fill.get("fee", fill.get("fee_cents")))
+    fee = _to_cents(_first(fill, "fee_cost", "fee", "fee_cents"))
     gross = price * count
     action = str(fill.get("action") or "").strip().lower()
     if action == "sell":
@@ -169,7 +206,11 @@ def reconcile(*, prev_balance_cents: int, balance_cents: int,
         sell_proceeds += proceeds
         fees += fee
     settle_rows = list(settlements or ())
-    settlement = sum(_int_cents(s.get("revenue")) for s in settle_rows)
+    # `revenue` has read as integer cents in production (a 2026-09-19 settlement differenced the
+    # balance exactly), so this preserves that. The dollar-string variant is accepted too, for
+    # the same reason the fill parser accepts both: a shape change here would not raise, it
+    # would quietly turn settled cash into a residual and invite it to be read as a reward.
+    settlement = sum(_to_cents(_first(s, "revenue", "revenue_dollars")) for s in settle_rows)
     delta = int(balance_cents) - int(prev_balance_cents)
     residual = delta - settlement - sell_proceeds + buy_cost + fees
     return Reconciliation(
@@ -225,7 +266,10 @@ def observe(client, *, prev_balance_cents: int | None,
     a measurement that cannot be taken must not stop the shadow that is being measured."""
     notes: dict = {}
     balance_raw = client.get_balance() or {}
-    balance_cents = _int_cents(balance_raw.get("balance"))
+    # Integer cents in production (the observed balances difference exactly), but read through
+    # the tolerant parser anyway: a dollar-string `balance` taken as an int would understate the
+    # account hundredfold and manufacture an enormous residual on the very next window.
+    balance_cents = _to_cents(_first(balance_raw, "balance", "balance_dollars"))
     if prev_balance_cents is None:
         notes["anchor"] = "first observation; no previous balance to difference against"
         return balance_cents, None, notes

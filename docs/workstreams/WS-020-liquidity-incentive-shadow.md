@@ -867,3 +867,29 @@ strictly narrows.
 The merge does not record it, and evidence does not pool across it.
 
 [Thesis §9.28](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## Update 2026-09-19 18:20Z — the ledger records, and its first live window was wrong
+
+#436 merged 17:07Z; the ledger anchored at 17:11Z and has written a row every ~15 min since.
+
+Its first window containing live fills read -184c and labelled it `presumed deposit/withdrawal`.
+No deposit happened: the window holds exactly two Fmmsell10 NO buys at 90c and 94c = 184c, and
+the row's own `fills_counted=2` with `buy_cost_cents=0` shows the ledger saw them and valued
+them at nothing.
+
+Root cause: `_fill_cost_cents` read `no_price`/`count`; the live feed ships `no_price_dollars`
+(dollar string), `count_fp` (fixed-point string) and `fee_cost` (dollars) — the shapes
+`LiveExecutor.reconcile` has read since its shape probe. Third time this session I wrote against
+an assumed payload rather than the repo's existing parser.
+
+Worse than a wrong number: crossing `EXTERNAL_TRANSFER_CENTS` meant the ledger *explained* it
+confidently. The safeguard against a false positive concealed a defect.
+
+Fixed, both shapes accepted across fills/fees/settlements/balance, 10 regression tests including
+the exact window reconciling to zero. Full suite 4,634 passing.
+
+Still NO observable liquidity reward; lifetime rewards $0. A +$1.00 settlement landed at
+18:03:42Z but KXRT-RES and KXBIGGESTQUAKE were all still open at 18:05:26Z, so it is not the
+resolution the standing check awaits.
+
+[Thesis §9.29](../LIQUIDITY_INCENTIVE_THESIS.md). Rides PR #439.
