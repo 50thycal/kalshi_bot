@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "662f41e89a2a8c8ad1e5db972f5764eafe3fe0f8",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-19T19:17:33Z",
+  "id": "limm-xos-1830",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/limm-xos-1830.receipt.json",
+  "result_file": "ops/results/limm-xos-1830.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/35463870542",
+  "service": null,
+  "started_at": "2026-09-19T19:17:31Z",
+  "targets": [],
+  "type": "xos"
+}
