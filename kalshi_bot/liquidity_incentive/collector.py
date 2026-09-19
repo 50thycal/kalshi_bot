@@ -46,11 +46,13 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from .. import models as m
+from .. import repository as repo
 from ..execution.book import PRICE_CONVENTION, LocalBook
 from ..execution.parse import dollars_to_cents, envelope, fp_to_float, int_or_none
 from ..kalshi.errors import AuthError
 from . import economics as econ
 from . import fills as fm
+from . import live as live_tags
 from . import programs as pg
 from . import quotes as qp
 from . import scoring as sc
@@ -333,16 +335,24 @@ class ShadowState:
                 result = pg.run_discovery(self.client, session, now=now)
                 current = [pg.current_programs(session, now=now)]
                 terms = {r.market_ticker: ProgramTerms.from_row(r) for r in current[0]}
+                # The markets the live book is actually trading. The shadow ranks by reward
+                # size and the live runner by soonest programme end, so the two sets were
+                # disjoint: `incentive_shadow_outcomes` held ZERO rows for every ticker the live
+                # book had ever quoted, leaving no `est_reward` to compare a payout against
+                # (thesis §9.13). Pinning them costs at most a handful of extra subscriptions.
+                pinned = repo.live_book_open_tickers(session, live_tags.LIVE_TAG)
                 summary = {"listed": len(result.current), "new": result.new_terms,
                            "changed": result.changed_terms, "gone": result.disappeared,
-                           "errors": result.errors, "liquidity_current": len(terms)}
+                           "errors": result.errors, "liquidity_current": len(terms),
+                           "pinned_live": len(pinned)}
         except Exception as exc:  # noqa: BLE001
             self._record(EV_LOOP_ERROR, detail=f"refresh_programs: {type(exc).__name__}: {exc}")
             return []
         self._record(EV_DISCOVERY, detail_json=summary)
-        return self._reconcile(terms, now)
+        return self._reconcile(terms, now, pinned=pinned)
 
-    def _reconcile(self, terms: dict[str, ProgramTerms], now: datetime) -> list[dict]:
+    def _reconcile(self, terms: dict[str, ProgramTerms], now: datetime,
+                   *, pinned: set[str] | None = None) -> list[dict]:
         min_reward = float(self._cfg("min_reward_usd", 0.0))
         cap = int(self._cfg("max_markets", 150))
         wanted = [t for t in terms.values()
@@ -352,6 +362,11 @@ class ShadowState:
             self._record(EV_MARKET_CAP, detail=f"{len(wanted)} eligible, tracking {cap}")
             wanted = wanted[:cap]
         wanted_by_ticker = {t.market_ticker: t for t in wanted}
+        # Pinned markets survive the cap. The cap exists to bound WS volume, not to decide what
+        # is worth measuring, and the one thing always worth measuring is what we are trading.
+        for ticker in sorted(pinned or ()):
+            if ticker not in wanted_by_ticker and ticker in terms:
+                wanted_by_ticker[ticker] = terms[ticker]
         cmds: list[dict] = []
         new_tickers: list[str] = []
         for ticker, t in wanted_by_ticker.items():

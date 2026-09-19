@@ -51,7 +51,16 @@ class _ReadClient:
         self.calls: list[str] = []
 
     def iter_incentive_programs(self, **kw):
-        self.calls.append("programs")
+        status = kw.get("status", "active")
+        self.calls.append(f"programs:{status}")
+        if status == "paid_out":
+            # Discovery polls the terminal listing too (§9.13); a fake that ignores `status`
+            # would hide whether it is asked for at all.
+            paid = getattr(self, "paid_out_programs", None)
+            if isinstance(paid, Exception):
+                raise paid
+            yield from (paid or [])
+            return
         if isinstance(self.programs, Exception):
             raise self.programs
         yield from self.programs
@@ -340,3 +349,88 @@ def test_ops_allowlists_carry_the_instrument():
     import railway_env
     assert "liquidity_incentive_report" in ops_runner.ALLOWED_SCRIPTS
     assert "LIQUIDITY_INCENTIVE_SHADOW_ENABLED" in railway_env.ALLOWED_VARS
+
+
+# --------------------------------------------- the payout leg (thesis §9.13)
+
+
+def test_discovery_polls_the_terminal_paid_out_listing_too(settings):
+    """Polling `active` alone can never see a payout.
+
+    A programme leaves the active listing when it ends, so its row freezes at the last state
+    observed WHILE it was active — always before it could pay. Every programme the live book
+    rested in read `paid_out = false` for exactly this reason."""
+    client = _ReadClient(programs=[_program(pid="p_live", ticker="KXT-LIVE")])
+    client.paid_out_programs = [
+        dict(_program(pid="p_done", ticker="KXT-DONE"), paid_out=True),
+    ]
+    db.init_engine(settings.database_url)
+    db.create_all()
+    with db.session_scope() as s:
+        pg.run_discovery(client, s, now=T0)
+        rows = {r.market_ticker: r for r in s.scalars(
+            select(m.IncentiveProgram).where(m.IncentiveProgram.superseded_at.is_(None))).all()}
+    assert "programs:paid_out" in client.calls
+    assert rows["KXT-DONE"].paid_out is True
+    assert rows["KXT-DONE"].status_observed == "paid_out"
+    assert rows["KXT-LIVE"].paid_out is False
+    assert rows["KXT-LIVE"].status_observed == "active"
+
+
+def test_a_programme_in_both_listings_is_recorded_terminal(settings):
+    client = _ReadClient(programs=[_program(pid="p_both", ticker="KXT-BOTH")])
+    client.paid_out_programs = [dict(_program(pid="p_both", ticker="KXT-BOTH"), paid_out=True)]
+    db.init_engine(settings.database_url)
+    db.create_all()
+    with db.session_scope() as s:
+        pg.run_discovery(client, s, now=T0)
+        rows = s.scalars(select(m.IncentiveProgram).where(
+            m.IncentiveProgram.superseded_at.is_(None))).all()
+    assert len(rows) == 1
+    assert rows[0].status_observed == "paid_out" and rows[0].paid_out is True
+
+
+def test_a_failed_paid_out_fetch_does_not_cost_us_the_active_listing(settings):
+    """The live book reads the active listing; the terminal poll is an addition, not a
+    dependency."""
+    client = _ReadClient(programs=[_program(pid="p_live", ticker="KXT-LIVE")])
+    client.paid_out_programs = RuntimeError("kalshi 503")
+    db.init_engine(settings.database_url)
+    db.create_all()
+    with db.session_scope() as s:
+        result = pg.run_discovery(client, s, now=T0)
+        rows = s.scalars(select(m.IncentiveProgram).where(
+            m.IncentiveProgram.superseded_at.is_(None))).all()
+    assert [r.market_ticker for r in rows] == ["KXT-LIVE"]
+    assert result.errors == 1
+
+
+def test_the_live_books_markets_survive_the_tracking_cap(settings):
+    """The shadow ranks by reward size; the live runner ranks by soonest programme end. The two
+    sets were disjoint, so the shadow never once observed a market the live book traded
+    (thesis §9.13)."""
+    from kalshi_bot.liquidity_incentive.collector import ProgramTerms
+
+    def _terms(row_id, ticker, reward):
+        return ProgramTerms.from_row(m.IncentiveProgram(
+            id=row_id, program_id=f"p{row_id}", market_ticker=ticker, incentive_type="liquidity",
+            period_reward_usd=reward, target_size=1000.0, discount_factor_bps=5000,
+            terms_hash=f"h{row_id}", first_seen_at=T0, last_seen_at=T0,
+            start_date=T0 - timedelta(hours=1), end_date=T0 + timedelta(hours=24)))
+
+    terms = {f"KXRICH-{i}": _terms(i, f"KXRICH-{i}", 1000.0 + i) for i in range(3)}
+    poor = "KXPOOR-LIVE"
+    terms[poor] = _terms(99, poor, 1.0)          # bottom of the reward ranking
+
+    db.init_engine(settings.database_url)
+    db.create_all()
+    col = _state(settings)
+    col._cfg = lambda key, default=None: 3 if key == "max_markets" else default
+
+    col._reconcile(terms, T0, pinned=set())
+    assert poor not in col.markets, "without pinning the cheap market loses to the cap"
+
+    col.markets.clear()
+    col._reconcile(terms, T0, pinned={poor})
+    assert poor in col.markets, "the live book's market must survive the reward-ranked cap"
+    assert len(col.markets) == 4

@@ -1577,27 +1577,64 @@ def live_attempt_stats(session, ticker: str, strategy: str) -> tuple[int, int | 
     return len(rows), (int(first) if first is not None else None)
 
 
-def count_live_book_open(session, strategy: str) -> int:
-    """Count a book's still-open live footprint: distinct tickers with a committed live BUY for
-    `strategy` that have NOT settled flat. A resting/unfilled order (no snapshot yet) counts as
-    open; a filled position counts; a settled (net-flat) position does not. Rejected/canceled
-    orders are excluded. Used to cap concurrent live mmsell positions."""
+def _open_live_tickers(session, strategy: str) -> dict[str, str]:
+    """`{market_ticker: event_ticker}` for a book's still-open live BUY footprint.
+
+    A ticker is open when EITHER a non-terminal order is still working on it — it is a live
+    commitment whether or not it has filled — OR a filled order left a position that has not
+    settled flat. Rejected and canceled orders are excluded.
+
+    The order status is checked BEFORE the position snapshot, and that ordering is the whole
+    point. Consulting the snapshot first cannot tell "position closed" from "order has not
+    filled yet": both read quantity 0. On 2026-09-18 that let `KXRT-RES-93` rest unfilled with a
+    zero-quantity snapshot, become invisible to the cap, and leave the incentive book holding
+    four commitments against a cap of three (thesis §9.15)."""
     rows = session.execute(
-        select(m.LiveOrder.market_ticker).where(
+        select(m.LiveOrder.market_ticker, m.LiveOrder.event_ticker, m.LiveOrder.status).where(
             m.LiveOrder.strategy == strategy,
             m.LiveOrder.action == "buy",
             m.LiveOrder.status.in_(LIVE_NONTERMINAL_STATUSES + ("filled",)),
         ).distinct()
     ).all()
-    n = 0
-    for (ticker,) in rows:
+    statuses: dict[str, set[str]] = {}
+    events: dict[str, str] = {}
+    for ticker, event_ticker, status in rows:
+        statuses.setdefault(ticker, set()).add(status)
+        if event_ticker and ticker not in events:
+            events[ticker] = event_ticker
+    out: dict[str, str] = {}
+    for ticker, seen in statuses.items():
+        if seen - {"filled"}:           # still working on the book: open, no snapshot needed
+            out[ticker] = events.get(ticker, "")
+            continue
         snap = latest_position_snapshot(session, ticker)
         if snap is not None:
             qty = snap.quantity_fp if snap.quantity_fp is not None else snap.quantity
             if qty is not None and abs(float(qty)) <= 0.01:
-                continue  # settled / flat
-        n += 1
-    return n
+                continue                # filled and since settled flat
+        out[ticker] = events.get(ticker, "")
+    return out
+
+
+def count_live_book_open(session, strategy: str) -> int:
+    """Count a book's still-open live footprint — see `_open_live_tickers` for what counts.
+    Used to cap concurrent live positions."""
+    return len(_open_live_tickers(session, strategy))
+
+
+def live_book_open_tickers(session, strategy: str) -> set[str]:
+    """The market tickers this book has an open commitment on — same definition of open as
+    `count_live_book_open`. Used by the shadow collector to guarantee it observes the markets the
+    live book is actually trading, which it otherwise never did (thesis §9.13)."""
+    return set(_open_live_tickers(session, strategy))
+
+
+def live_book_open_events(session, strategy: str) -> set[str]:
+    """The event tickers this book already has an open commitment on.
+
+    Companion to `count_live_book_open`, sharing its definition of open, so a book cannot stack
+    several markets of one event past its own concentration cap."""
+    return {ev for ev in _open_live_tickers(session, strategy).values() if ev}
 
 
 def event_has_open_live_position(session, event_ticker: str, *, exclude_strategy: str | None = None) -> bool:

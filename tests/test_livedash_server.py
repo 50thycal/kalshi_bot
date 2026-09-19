@@ -292,6 +292,20 @@ def test_a_failure_after_the_response_started_does_not_write_a_second_one(
             assert json.loads(body)["summaries"] is True
         except Exception:  # noqa: BLE001 — a truncated read is acceptable here
             pass
+        # `sent` is filled by the SERVER thread, and the client's read returns as
+        # soon as `_send` puts the body on the wire — which is before the handler
+        # records the code and before it decides whether to write a second
+        # response. Reading `sent` here without waiting races the thread that
+        # fills it. That race lost on CI on 2026-09-19: `sent` read empty while
+        # the captured log proved `_send` had run, logged its 200 and raised.
+        #
+        # Wait for the timing line `do_GET` writes in its `finally`. That is the
+        # LAST thing the handler thread does, strictly after both the append and
+        # any second response, so this weakens the assertion by nothing: if a
+        # second response were written it is already in `sent` by the time the
+        # line appears. Same race, and the same bounded fix, as `_await_timing`
+        # was written for further down this file.
+        _await_timing(caplog)
     assert sent == [200], f"a second response was written: {sent}"
 
 

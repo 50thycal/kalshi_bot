@@ -522,6 +522,159 @@ Committed $0.15 against a $10 cap; exposure, qty and price caps all hold. **Reco
 patched** — both fixes change a live armed arm's caps. OWNER DECISION.
 [Thesis §9.15](../LIQUIDITY_INCENTIVE_THESIS.md).
 
+## FOUR FIXES SHIPPED (2026-09-18 19:10Z)
+
+Operator-authorised. All four tighten a bound or add an observation; none relaxes anything.
+
+1. **Event cap** — `build_live_quote` gains `REFUSE_EVENT_CAP`, refusing a candidate whose event
+   is already held by this book OR by any other live book (via the fleet's existing
+   `event_has_open_live_position`). A placement blocks its own event for the rest of the cycle.
+2. **Open-order cap** — counting moved to `repository._open_live_tickers`, which checks ORDER
+   STATUS BEFORE the position snapshot. A snapshot cannot tell "position closed" from "order not
+   filled yet"; both read 0. Strictly tighter, and shared with MMSELL.
+3. **Terminal listing** — discovery also polls `status="paid_out"`, deduplicated so a programme in
+   both listings records terminal. Failure-tolerant: it never costs the active listing.
+4. **Shadow pinning** — the live book's open markets survive the shadow's reward-ranked cap, so
+   estimate and realized can finally land on the same market.
+
+**On the API:** programme-level payout state IS visible (`status=paid_out` is a first-class
+filter) and always was. Our own credited amount does not appear to have an endpoint; the route to
+it is the residual of a balance change against fills and settlements. Not built — not one of the
+four.
+
+`ruff` clean; **4,548 passed, 11 skipped**; nine new tests. The universe rule stays open.
+[Thesis §9.16](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## DAY-ONE CHECK 3 DONE — units exact, lifetime rewards $0 (2026-09-18 19:19Z)
+
+The operator found the incentives page.
+
+**`period_reward_usd` is EXACT.** The page sums the pool per event; three independent events match
+to the cent and the timestamps to the second: `KXFEATURE` 129 × $100 = **$12,900**;
+`KXMLBPLAYOFFS` 18 × $500 = **$9,000**; `KXWAAEROEMP` 13 × $500 = **$6,500**. The centi-cent unit
+assumption is now a measurement.
+
+**Lifetime rewards: $0.** Consistent with §9.13 — 1 contract in a 27k–60k book is ~0.5% of a
+per-period slice, fractions of a cent, which rounds to zero. It does not refute the mechanism; it
+confirms the smoke test was too small to measure one. It is still the only external reading of
+realized reward we have, and it is zero.
+
+**Neither validates the headline.** The page confirms the POOL, one input. The positive total is
+pool × our modelled SHARE × scoring, and the share model is untouched.
+
+**A dimension we cannot see:** the page's Category column (Low/Medium/High) is not in the API
+(`extra_params_json` is empty for every current programme) and is not derivable — the same three
+events share `target_size=1000` and `discount_factor_bps=5000` yet read Low/High/Medium. The best
+target on that page is Low category with the largest pool, `KXFEATURE` at $12,900, which our
+soonest-end runner has never looked at. The universe question now has a price tag.
+
+[Thesis §9.17](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## THE COLLECTOR GOT WORSE AND THE HEADLINE GOT BETTER (2026-09-18 20:21Z)
+
+Span 1.33 days. Criterion (d) fired, next to a large favourable headline move. The pair is the
+finding.
+
+**Collector instability accelerating:** `seq_gap` 127 → 137 (+10) → **169 (+32)** across the last
+two checks — the rate roughly TRIPLED. `throttled` 3 → 4. Three reconnects and a thread restart
+**with no deployment since 12:46Z**, so the collector is genuinely dropping. Discovery itself is
+clean (395 cycles, 0 errors).
+
+**Headline improved sharply in the same window:** A_break_even/$500 conservative −150.53 →
+**−69.10**; the mechanism inverted, with reward +20% against single-leg MTM +1.8% (four hours
+earlier the ratio was the other way by a factor of six).
+
+**Not read as economic news.** §9.14 already named collector instability as an unexcluded
+confound; it has since got worse. A tape with more holes yields fewer and differently-marked
+single-leg outcomes — the direction observed. Both recent headline readings are suspect. The
+confound cuts both ways, not only against the premise.
+
+**Everything else flat, which is itself the argument:** `both_filled` 4/4 unchanged,
+`partial_both` 16/36 unchanged, conservative lag still mean=median=1212.5s (n=1). The
+P(both | one) drift (0.007→0.006, 0.004→0.003) is n growing, not numerators moving.
+
+**New:** the shadow settled its first pair (`settled 1`); the `settle` column now carries −$0.75
+at $25 and −$15.15 at $500. n=1, worth nothing yet.
+
+Live config re-verified unchanged. [Thesis §9.18](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## BOTH KXRT-RES ORDERS FILLED (2026-09-18 20:27Z)
+
+§9.15's two resting NO orders have both filled. The fleet now holds THREE filled NO positions on
+one event across two books: `Fmmsell10` `KXRT-RES-97` at 93c ($0.93), `Alimm1` `KXRT-RES-94` at
+10c ($0.10) and `KXRT-RES-93` at 3c ($0.03) — **$1.06** on one event, all the same direction,
+resolving together. That is ~7x the incentive book's entire committed capital.
+
+The open-order under-count did not merely let a fourth order rest; it let a fourth position FILL.
+`Alimm1` holds four filled commitments against `MAX_OPEN_ORDERS = 3`.
+
+Nothing else breached: committed $0.15 vs a $10 cap, qty=1, max price 10c vs a 25c cap, no
+rejects, no new settlement, no reward. Commitments did not exceed four.
+
+**#428 prevents recurrence but does not unwind this** — the event cap refuses new placements on a
+held event; these positions stay until resolution. Factual update to §9.15, not a new finding.
+[Thesis §9.19](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## FILL MODELS SEPARATE (2026-09-19 00:25Z)
+
+Criterion (c) fired, but only on one model. Over four hours queue-aware added **2** `both_filled`
+(4→6) and **8** `partial_both` (36→44); conservative added **none** (still 4 / 16) while its n
+grew 626→866. Same tape, different queue crediting — model choice is now load-bearing in the
+headline, not a rounding difference.
+
+**Cannot be read as "two-sided fills are achievable."** Queue-aware is the model most sensitive
+to tape completeness and conservative the least; a missed cancel inflates exactly queue-aware.
+The tape carries 200 `seq_gap` events. The asymmetry matches that failure mode precisely, so the
+separation is recorded and its cause left unresolved.
+
+Under the gated metric (conservative) the numerator has been frozen for three checks while n
+grows, so P(both | one) keeps drifting toward zero by arithmetic: 0.007 → 0.006 → 0.005.
+
+**Collector plateaued, not recovered:** `seq_gap` +31/4h against +32 previously (neither
+criterion a nor b), `throttled` 4→5, two reconnects, no thread restart. Discovery clean (446
+cycles, 0 errors).
+
+**Headline reversed and is not news:** `A_break_even`/$500 conservative −150.53 → −69.10 →
+−158.34/day. Recorded only so §9.18's improvement is not later read as a trend.
+
+Carried, not acted on: the competing-depth split gained a **medium** bucket — single-leg MTM
+−$0.9262 with reward +$0.3359 (n=45) against −$4.7731 / +$0.0952 deep (n=817). Points at
+selection, but n=45.
+
+Live config re-verified unchanged. #428 still unmerged, so this ran on base code and is a clean
+pre-deploy `seq_gap` baseline for fix 4. [Thesis §9.20](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## THE COLUMN IS COMPETITION, NOT CATEGORY (2026-09-19 01:30Z)
+
+The operator's screenshots show the table header: `End | Program | Competition | ↓ Reward`.
+§9.17 called that column "Category" and reasoned about the wrong field for a whole entry.
+`Category` is a separate subject filter (Economics, Financials, Crypto, Politics, Climate and
+Weather, Entertainment, Science and Technology, Sports, Mentions).
+
+**Not a naming quibble.** §9.17 concluded the page "confirms the pool" and left "the share model
+untouched". Wrong: Competition is Kalshi's own published read on the DENOMINATOR of the share
+term — the one input the thesis calls structurally unobservable. It has been on the page all
+along. Competition = crowding is the plain reading of the word, not a definition we hold.
+
+**Non-derivability survives and is stronger.** A census of every API key across all 5,332 current
+programme rows returns exactly eleven, none of them competition. `discount_factor_bps` is 5000 on
+every row; `target_size_fp` takes two values. Neither separates the three matched events.
+
+**Sharper cost to the universe rule:** `KXFEATURE` is $12,900 at LOW competition — biggest pool,
+lowest crowding, the best cell on the board — and the soonest-end rule means this book has never
+looked at it. Strongest argument yet for revisiting the rule. Still an OWNER DECISION.
+
+**Pre-registered before running:** if Competition means crowding, programmes marked High must
+carry larger competing depth at placement in our own tape than those marked Low. One query, data
+we already hold, written down before looking.
+
+**New open question:** the page has a Predictions / Perps toggle, so Perps incentive programmes
+exist as a separate universe. `PERPS_COLLECTOR_ENABLED=false` and we poll `/incentive_programs`,
+so whether our listing covers them is unknown. The Rewards filter (All / Volume / Liquidity) maps
+to `incentive_type` and IS covered.
+
+Lifetime rewards still $0. [Thesis §9.21](../LIQUIDITY_INCENTIVE_THESIS.md).
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).

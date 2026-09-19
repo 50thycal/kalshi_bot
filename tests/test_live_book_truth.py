@@ -44,11 +44,18 @@ def test_committed_statuses_match_count_live_book_open():
 
 
 def test_flat_epsilon_matches_the_enforcing_source():
+    """The epsilon moved into `_open_live_tickers` when the cap was fixed to count a resting
+    order regardless of its snapshot (thesis §9.15); the guard follows the enforcing code, and
+    pins the delegation so the chain cannot silently break."""
     source = pathlib.Path(repo.__file__).read_text()
-    body = source[source.index("def count_live_book_open"):]
+    body = source[source.index("def _open_live_tickers"):]
     body = body[:body.index("\ndef ", 1)]
     assert "0.01" in body
     assert lbt.FLAT_EPSILON == 0.01
+
+    counter = source[source.index("def count_live_book_open"):]
+    counter = counter[:counter.index("\ndef ", 1)]
+    assert "_open_live_tickers" in counter
 
 
 def test_the_script_is_on_the_ops_allowlist():

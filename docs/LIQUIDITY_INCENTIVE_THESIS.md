@@ -975,6 +975,388 @@ an **OWNER DECISION**, and fixing a safeguard is still a change to one. The two 
 
 Neither is taken here. Stand-down remains one step: remove `Alimm1` from `LIVE_STRATEGIES`.
 
+### 9.16 The four fixes, and what the API can and cannot show us (2026-09-18 19:10Z)
+
+Operator-authorised on 2026-09-18. All four change a live, armed arm, and every one of them
+**tightens** a bound or **adds** an observation — none relaxes anything or expands exposure.
+
+**Can the API show us rewards at all? Partly, and the split matters.**
+
+`GET /incentive_programs` takes `status = all | active | upcoming | closed | paid_out`. So the
+**programme-level payout state is fully visible and always was** — we simply never asked for it.
+That also settles §9.13's second puzzle: `paid_out` is a programme lifecycle state with its own
+listing, which is why it reads true on programmes that have not ended.
+
+What the API does **not** appear to offer is **our own credited amount**. The programme object
+carries the pool (`period_reward`), `target_size` and `discount_factor_bps` — terms, not
+per-user credits — and the portfolio surface is positions, orders, fills, settlements and queue
+positions. Nothing per-user for incentives, and the external client that mapped this API had no
+reward reconciliation either. That is an absence of evidence, not proof of absence.
+
+**The remaining route to our realized reward is arithmetic, not an endpoint.** A liquidity credit
+is cash appearing that is not a fill and not a market settlement, so it is recoverable as the
+residual of a balance change against fills and settlements over the same window. `get_balance`
+and `get_settlements` both already exist. Not built here — it is a new capability, not one of the
+four fixes — but it is the shape of the answer and it needs no new API.
+
+**Fix 1 — the event cap (§9.15 defect 1).** `live.build_live_quote` gains
+`REFUSE_EVENT_CAP` and refuses any candidate whose `event_ticker` is blocked, placed with the
+other hard eligibility rule *before* any pricing. The runner computes the blocked set once per
+cycle from two sources, and both are needed: events this book already holds (its own stacking,
+which is what happened), and events **any** live book holds a position on, via the fleet's
+existing `repository.event_has_open_live_position`. A placement also blocks its own event for the
+rest of the cycle. `build_live_quote` stays a pure function — the flag arrives as a parameter,
+exactly as `excluded_series` does.
+
+**Fix 2 — the open-order cap (§9.15 defect 2).** Counting moved into
+`repository._open_live_tickers`, which checks the **order status before the position snapshot**.
+A non-terminal order is open, full stop; only a *filled* order can be dismissed as flat. That
+ordering is the whole fix: a snapshot cannot tell "position closed" from "order not filled yet",
+because both read quantity 0. `count_live_book_open` delegates, and `live_book_open_events` /
+`live_book_open_tickers` share the definition so the caps cannot disagree. This is a shared
+function — MMSELL uses it too — and it now counts **more** as open, which is strictly tighter.
+
+**Fix 3 — poll the terminal listing (§9.13).** `programs.run_discovery` now also polls
+`status="paid_out"`, listed second and deduplicated by programme id so a programme caught in both
+is recorded in its terminal form, with `status_observed` carrying the real listing instead of a
+hardcoded `"active"`. The extra poll is failure-tolerant: a 503 on it costs an error count and a
+note, never the active listing the live book reads. `DiscoveryResult.errors` now also carries
+`cycle.errors`, which it previously dropped on the success path.
+
+**Fix 4 — pin the live book's markets into the shadow (§9.13).** The shadow ranks by reward size
+and takes the top 150; the live runner ranks by soonest programme end and takes 8. Disjoint by
+construction, which is why `incentive_shadow_outcomes` held zero rows for every ticker the live
+book ever quoted. `refresh_programs` now passes the live book's open tickers to `_reconcile`, and
+they survive the cap. The cap bounds WebSocket volume; it was never meant to decide what is worth
+measuring, and what we are trading always is.
+
+**A fixture told us the event cap works before any test did.** Three candidate markets in
+`tests/test_liquidity_incentive_runner.py` shared one `event_ticker`, and the new cap immediately
+refused two of them. The fixture was corrected to one event per market — the shape it had been
+modelling is the shape the book now forbids — and three tests were added for the rule itself,
+including the exact `KXRT-RES` production case.
+
+**Verification:** `ruff` clean; **4,548 passed, 11 skipped**. Nine new tests across the event cap,
+the open-order cap, the terminal listing and the pinning.
+
+**Not done, and named rather than quietly skipped:** the universe rule (§9.9/§9.10) stays open —
+it was not among the four. And `scripts/live_book_truth.py` computes its open set from *filled*
+tickers only while its own docstring says a resting order counts as open: the same class of gap as
+fix 2, in a read-only ops script rather than the enforcer. Recorded, not widened into.
+
+### 9.17 Day-one check 3, at last: the units are exact, and lifetime rewards are $0 (2026-09-18 19:19Z)
+
+> **CORRECTED BY §9.21.** The Low / Medium / High column this entry calls
+> "Category" is labelled **Competition**. `Category` is a separate, unrelated filter.
+> The misreading is left in place below; §9.21 says what the column is and why the
+> difference matters more than the name.
+
+The operator found the incentives page. It is the external reading this thesis has been missing
+since §9.1, and it answers two different questions with two different answers.
+
+**1. `period_reward_usd` is EXACT.** The page groups by event and shows the pool summed across
+the event's markets. Our own field is marked DERIVED from `period_reward_raw` under a stated
+*assumption* — centi-cents ÷ 10,000. Three independent events, different per-market values and
+very different market counts:
+
+| Kalshi's page | our rows | pool |
+|---|---|---|
+| GTA VI: The Album · Features — **$12,900**, 17 Sep 11:32 CDT → 24 Sep | `KXFEATURE`, **129** markets × $100.0000 | **$12,900.00** |
+| Pro Baseball Playoff Qualifiers — **$9,000**, 17 Sep 15:46 CDT → 1 Oct | `KXMLBPLAYOFFS`, **18** × $500.0000 | **$9,000.00** |
+| Washington aerospace employment — **$6,500**, 5 Sep 23:16 CDT → 2 Oct 10:46 CDT | `KXWAAEROEMP`, **13** × $500.0000 | **$6,500.00** |
+
+Exact to the cent in all three, and the start/end timestamps match to the second once CDT is
+converted (11:32 CDT = 16:32:33Z, 15:46 = 20:46:39Z, 23:16 = 04:16:31Z next day, 10:46 =
+15:46:41Z). **The unit assumption is now a measurement.** That is day-one check 3 and it passes.
+
+**2. Lifetime rewards: $0. September 2026: $0.** We have earned nothing.
+
+**These do not cancel out, and neither is the headline.** What the page validates is the *pool* —
+one input to `est_reward`. The headline's positive total is pool × **our modelled share of resting
+size** × scoring, and the share model is untouched by this. A validated input to an unvalidated
+model is still an unvalidated model.
+
+**The $0 is consistent with §9.13 rather than a refutation of it.** A single 1-contract bid in a
+27,000–60,000 contract book is roughly a 0.5% share of a per-period slice, which is fractions of
+a cent; $0.00 is what that rounds to, and it is what §9.13 predicted before the page was seen.
+So the zero tells us the smoke test was too small to measure a reward — which we already knew —
+and *not* that the reward mechanism fails. It remains true that it is the only external reading
+of realized reward we have, and it is zero.
+
+**3. A selection dimension we cannot see at all.** The page carries a **Category** column reading
+**Low / Medium / High**. It is not a field we drop: `extra_params_json` is empty for **every**
+current programme, so the API gives us nothing we do not already type. And it is not derivable
+from what we hold — the same three events are all `target_size = 1000` and
+`discount_factor_bps = 5000`, yet the page calls them **Low**, **High** and **Medium**
+respectively; per-market reward does not separate them either, since $500/market appears as both
+High and Medium. Three counterexamples, so this is a checked claim rather than a guess.
+
+If Category means what its name suggests — how hard the liquidity is to supply — then the best
+target visible on that page is the **Low** category with the **largest** pool, which is
+`KXFEATURE` at $12,900. Our runner ranks by soonest programme end and has never looked at it.
+That is the §9.9/§9.10 universe question, now with a concrete cost attached.
+
+**What would actually measure our reward.** Still the balance residual proposed in §9.16 — a
+credit is cash that is neither a fill nor a settlement — since the page gives a lifetime total
+rather than a per-programme attribution, and no per-user endpoint appears to exist.
+
+### 9.18 The collector got worse and the headline got better, in the same four hours (2026-09-18 20:21Z)
+
+Span **1.33 days**. One pre-registered criterion fired — (d), collector health — and it fired
+next to a large favourable move in the headline. The two together are the entry.
+
+**(d) Collector instability is accelerating.** `seq_gap` is a missed WebSocket sequence, which
+means the shadow tape has holes:
+
+| check | `seq_gap` | Δ over ~4h | `throttled` | connects / disconnects | thread starts |
+|---|---|---|---|---|---|
+| 12:14Z | 127 | — | 3 | 15 / 14 | 10 |
+| 16:18Z | 137 | **+10** | 3 | 17 / 16 | 11 |
+| 20:21Z | **169** | **+32** | **4** | **20 / 19** | **12** |
+
+The gap rate roughly **tripled**, `throttled` climbed, and there were **three reconnects and a
+thread restart with no deployment since 12:46Z** — so these are the collector genuinely dropping,
+not restarts we caused. Discovery itself is clean (395 cycles, 0 errors, pool $570,906.67); the
+instability is in the tape, not the programme poll.
+
+**And the headline improved sharply, in the same window.**
+
+| policy / tier / model | 16:18Z | 20:21Z |
+|---|---|---|
+| A_break_even 500 conservative | −150.53 | **−69.10** |
+| A_break_even 25 conservative | −13.95 | **−9.83** |
+| A_break_even 500 queue_aware | −608.60 | −604.83 |
+
+Under conservative the net roughly **halved**, and the mechanism inverted: reward grew **+20%**
+(462 → 555) while single-leg MTM grew only **+1.8%** (−613.5 → −624.7). Four hours earlier the
+ratio was the other way round, by a factor of six.
+
+**This is not read as economic news, and §9.14 is why.** That entry already named collector
+instability as an unexcluded confound for the negative headline. The instability has since got
+*worse*, and the headline has moved 54% in the favourable direction over the same window. A tape
+with more holes produces fewer and differently-marked single-leg outcomes, which is exactly the
+direction observed. **The honest position is that the last two headline readings are both
+suspect**, not that the economics improved. §9.14's negative was recorded with the same caveat
+and it applies symmetrically — a confound does not only work against the premise.
+
+**Everything else is flat, which is itself informative.** If the swing were economic, something
+in the fill mix should have moved with it. Nothing did:
+
+| | 16:18Z | 20:21Z |
+|---|---|---|
+| `both_filled` conservative / queue_aware | 4 / 4 | **4 / 4** |
+| `partial_both` conservative / queue_aware | 16 / 36 | **16 / 36** |
+| conservative lag | mean = median = 1212.5s (n=1) | **identical, still n=1** |
+| P(both \| one) conservative / queue_aware | 0.007 / 0.004 | 0.006 / 0.003 |
+
+The P(both | one) drift is arithmetic, not signal: the numerators are unchanged and only n grew
+(555 → 626, 1005 → 1160). The conservative lag is **still a single observation** and must still
+not be quoted as a bound.
+
+**One genuinely new component: the shadow settled its first pair.** The collector logs
+`settled 1`, and a `settle` column now carries real numbers in the headline — **−$0.75** at the
+$25 tier, **−$15.15** at $500. Small, negative, n=1, and worth nothing yet except that the
+settlement leg of the shadow's economics is now wired through to the total rather than reading
+`n/a`.
+
+**No gate re-interpretation, and no verdict.** §6 remains pre-registered. What this entry records
+is that the instrument degraded and the number improved at the same time, and that the second
+fact cannot be trusted while the first is true.
+
+**Live configuration re-verified unchanged:** `LIVE_STRATEGIES=Fmmsell10,Alimm1`,
+`LIVE_PAPER_TWINS=Alimm1:Alimm1_pt3`, `LIQUIDITY_INCENTIVE_LIVE_ENABLED=true`,
+`KILL_SWITCH=false`.
+
+### 9.19 Both KXRT-RES orders filled: §9.15's concentration is now real positions (2026-09-18 20:27Z)
+
+The two resting NO orders §9.15 flagged have **both filled**. The fleet now holds **three filled
+NO positions on one event**, across two books:
+
+| strategy | market | side | price | qty | exposure |
+|---|---|---|---|---|---|
+| `Fmmsell10` | `KXRT-RES-97` | no | 93c | −1 | **$0.93** |
+| `Alimm1` | `KXRT-RES-94` | no | 10c | −1 | $0.10 |
+| `Alimm1` | `KXRT-RES-93` | no | 3c | −1 | $0.03 |
+| | | | | **event total** | **$1.06** |
+
+All three are the same direction on the same event, so they resolve together. **$1.06** is small
+absolutely, but it is about **seven times** the incentive book's own entire committed capital,
+and §9.15's warning has stopped being hypothetical.
+
+**Both defects are now realised, not just exposed.** The open-order under-count did not merely
+let a fourth order rest — it let a fourth position **fill**. `Alimm1` holds four open commitments
+(`KXBIGGESTQUAKE` ×2 at 1c, `KXRT-RES-93` at 3c, `KXRT-RES-94` at 10c) against
+`MAX_OPEN_ORDERS = 3`, all filled.
+
+**Nothing else breached, and this is not an escalation.** Committed **$0.15** against the $10
+strategy cap; `qty = 1` everywhere; the highest price is 10c against a 25c cap; no rejects, no
+auth errors; no new settlement; no reward credited. Commitments did not go above four. Every cap
+that bounds real loss holds, and none is close.
+
+**#428 prevents the recurrence but does not unwind this.** The event cap refuses *new*
+placements on an event already held; these three positions stay until their event resolves. That
+is the correct behaviour — a cap is not an unwind instruction, and standing the book down would
+not close them either.
+
+**Recorded as a factual update to §9.15, not a new finding.** The mechanism, the fix and the
+decision were all already written down. What changed is that the risk it described is now
+carried as real, concentrated, same-direction exposure across two live books.
+
+### 9.20 The two non-optimistic models separate: queue-aware moves, conservative is frozen (2026-09-19 00:25Z)
+
+Span **1.50 days**. One pre-registered criterion fired — (c), `partial_both` moving off 16/36 —
+and it fired in a way the criterion did not anticipate: only **one** of the two non-optimistic
+models moved.
+
+**(c) The fill mix moved, on the queue-aware side only.**
+
+| | 20:21Z | 00:25Z |
+|---|---|---|
+| `both_filled` conservative / queue_aware | 4 / 4 | **4 / 6** |
+| `partial_both` conservative / queue_aware | 16 / 36 | **16 / 44** |
+| n (one-sided-or-better) conservative / queue_aware | 626 / 1160 | **866 / 1520** |
+| P(both \| one) conservative / queue_aware | 0.006 / 0.003 | **0.005 / 0.004** |
+
+Over four hours queue-aware added **2** two-sided fills and **8** `partial_both`; conservative
+added **none**, while its own n grew by 240. The two models read the *same tape* and differ only
+in how queue position is credited, so the gap between them is no longer a rounding difference —
+**model choice is load-bearing in the headline**, and this is the first reading where the two
+non-optimistic models have visibly separated.
+
+**Under the gated metric the direction is unchanged.** §6 reads conservative. Its numerator has
+now been frozen at 4 `both_filled` / 16 `partial_both` across three consecutive checks while n
+grew from 555 to 866, so conservative P(both | one) keeps drifting toward zero — 0.007 → 0.006 →
+0.005 — by arithmetic, not by new events. That is a reading, not a verdict, and §6 is not being
+re-interpreted.
+
+**The alternative explanation I cannot exclude, and it is specific.** Queue-aware is the model
+*most* sensitive to tape completeness, because it credits progress through the queue ahead of us;
+conservative is the least. A missed cancel makes the queue-aware model believe we advanced when
+we did not, inflating exactly its fills and leaving conservative untouched. The tape now carries
+**200** `seq_gap` events. The observed asymmetry is a precise match for that failure mode, so
+this entry records the separation, **not** a conclusion that two-sided fills are more achievable
+than conservative says. Which of the two models is closer to the truth is unresolved and cannot
+be settled on a gappy tape.
+
+**(a)/(b) Collector: plateaued at the elevated rate, neither recovered nor worse.**
+
+| check | `seq_gap` | Δ over ~4h | `throttled` | connects / disconnects | thread starts |
+|---|---|---|---|---|---|
+| 16:18Z | 137 | +10 | 3 | 17 / 16 | 11 |
+| 20:21Z | 169 | +32 | 4 | 20 / 19 | 12 |
+| 00:25Z | **200** | **+31** | **5** | **22 / 21** | **12** |
+
+The gap rate held at roughly +31/4h rather than falling back toward +10/4h (criterion a) or
+rising again (criterion b), reconnects slowed from three to two, and no thread restarted. The
+tripling recorded in §9.18 has **stopped accelerating but has not reversed**, so the instrument
+is still degraded and §9.18's suspicion of the headline still stands. Discovery remains clean:
+446 cycles, 0 errors, pool $571,826.67, 4,908 programmes listed.
+
+**The headline reversed, and per §9.18 that is not news.** `A_break_even`/$500 conservative went
+−150.53 → −69.10 → **−158.34**/day, and $25 went −9.83 → **−16.96**. A number that halves and
+then doubles back over eight hours on an unstable instrument is measuring the instrument. Both
+directions were pre-committed as untrustworthy while the tape has holes, and the criteria are
+explicit that headline movement alone is not an entry. It is recorded here only so the reversal
+is on the record and nobody later reads §9.18's improvement as a trend.
+
+`C_conservative`/$500 conservative remains the one positive cell (**+203.98**/day, largest single
+programme 1.4% of the total, so not concentration), unchanged in character since §9.16.
+
+**Two observations carried but not acted on.**
+
+The competing-depth split now has a second bucket. Against **deep** competing size the
+conservative single-leg mark is **−$4.7731** (n=817) with mean `est_reward` **+$0.0952**; against
+**medium** it is **−$0.9262** (n=45) with mean `est_reward` **+$0.3359** — five times less
+adverse selection and three and a half times more reward. If it survives n, it points at
+selection rather than pricing. It is n=45 against n=817 and nothing is being changed on it.
+
+The queue-aware lag stayed estimable and grew: mean **1199.2s** / median **718.7s**, against
+§9.16's 828.0 / 553.2. Conservative's lag is **still mean = median = 1212.5s, n=1**, unchanged
+for four consecutive checks, and must still not be quoted as a bound. Settled pairs remain at
+**1**, so criterion (e) is untouched and the settlement leg still carries no weight.
+
+**Live configuration re-verified unchanged:** `LIVE_STRATEGIES=Fmmsell10,Alimm1`,
+`LIVE_PAPER_TWINS=Alimm1:Alimm1_pt3`, `LIQUIDITY_INCENTIVE_LIVE_ENABLED=true`,
+`KILL_SWITCH=false`, `LIVE_ENABLED=true`. PR #428 is **not merged**, so this report ran against
+base code `5ea57bd3` and none of the four fixes — including the shadow pinning that adds
+subscriptions — is in this reading. The `seq_gap` figures above are therefore a clean
+pre-deploy baseline for judging whether that fix costs tape quality.
+
+### 9.21 The column is COMPETITION, not Category — and it reads on the term we said was blind (2026-09-19 01:30Z)
+
+The operator sent five screenshots of the incentives page, including the table header and both
+filter dropdowns open. They correct §9.17 on a point of fact, and the correction matters far more
+than the name does.
+
+**The correction.** §9.17 called the Low / Medium / High column "Category". The header reads:
+
+```
+End   |   Program   |   Competition   |   ↓ Reward
+```
+
+It is **Competition**. `Category` is a different control entirely — a market-subject filter whose
+options are All, Economics, Financials, Crypto, Politics, Climate and Weather, Entertainment,
+Science and Technology, Sports, Mentions. I conflated the filter chip beside the search box with
+the column heading, and then reasoned about the wrong field for a whole entry.
+
+**Why this is not a naming quibble.** §9.17 concluded that the page "confirms the *pool*, one
+input" and that "the share model is untouched" — that the page told us nothing about the term the
+headline actually depends on. That conclusion was wrong. *Competition is Kalshi's own published
+read on the denominator of the share term.* The one input we have been calling structurally
+unobservable has had an external reading on it since the page existed. We were looking at it and
+did not know what we were looking at.
+
+To be exact about what the label licenses: **Competition = crowding is the plain reading of the
+word, not a definition we hold.** Nothing in the API, our docs or Kalshi's page defines it. It is
+recorded here as a strong reading, not a fact.
+
+**§9.17's non-derivability argument survives intact, and is now stronger.** A full census of every
+key the API returns, across all **5,332** current programme rows, returns exactly eleven:
+
+```
+id · market_id · market_ticker · incentive_type · incentive_description
+start_date · end_date · period_reward · target_size_fp · discount_factor_bps · paid_out
+```
+
+No competition field, no crowding field, nothing from which Low / Medium / High could be
+computed. `discount_factor_bps` is **5000** on every row and `target_size_fp` takes two values, so
+neither separates the three matched events, which read Low, High and Medium. §9.17 was right that
+the field is invisible to us and wrong about which field it was.
+
+**The cost to the universe rule is now much sharper than §9.17 made it.** `KXFEATURE` — GTA VI:
+The Album · Features — is **$12,900 at LOW competition**: the largest pool on the board paired
+with the lowest published crowding. On a two-by-two of pool size against competition that is the
+best cell available, and the soonest-programme-end universe rule means this book has never once
+looked at it. §9.17 attached a cost to that rule; this makes it the strongest argument in the
+record for revisiting it. It remains an **OWNER DECISION** and nothing here patches it.
+
+**A pre-registered check, written down before it is run.** If Competition means crowding, then our
+own shadow tape must already agree with it: programmes Kalshi marks High should carry
+systematically larger competing depth at placement than those it marks Low, in the same
+`competing depth at placement` split §9.20 reports. That is a falsifiable prediction about data we
+already hold, it costs one query, and it needs no new capability. **Pre-registering it now, before
+looking**: agreement would make Competition a usable external label for the share denominator;
+disagreement would mean the word means something else and §9.17's caution was right for the wrong
+reason. Not run in this entry, deliberately.
+
+**Two structural gaps the screenshots also expose.**
+
+The page carries a **Predictions / Perps** toggle, so incentive programmes exist for Perps as a
+separate universe. We poll `/incentive_programs` and `PERPS_COLLECTOR_ENABLED=false`, so whether
+our listing covers Perps at all is an **open question**, not a known.
+
+The **Rewards** filter (All / Volume / Liquidity) maps onto our `incentive_type`, and that one is
+covered: we poll `incentive_type="all"` and the census shows both `liquidity` and `volume`
+present. No gap there.
+
+**Unchanged:** lifetime rewards still read **$0**, re-read at 07:53 local, with a history control
+beside the figure that we have not opened. §9.17's reading stands.
+
+**No gate re-interpretation and no verdict.** §6 is pre-registered and untouched. What this entry
+records is that a recorded observation was wrong about what it had observed, that the corrected
+reading points at the exact term the thesis calls unvalidated, and that the check which would
+settle it is written down before being run.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized

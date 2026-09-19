@@ -92,6 +92,7 @@ REFUSE_PROGRAM_ENDING = "program_ending"
 REFUSE_NO_TARGET_SIZE = "no_target_size"
 REFUSE_POST_ONLY_CROSS = "post_only_would_cross"
 REFUSE_EXCLUDED_SERIES = "excluded_series"
+REFUSE_EVENT_CAP = "event_cap"
 REFUSE_OPEN_ORDER_CAP = "open_order_cap"
 REFUSE_EXPOSURE_CAP = "exposure_cap"
 
@@ -145,6 +146,8 @@ def build_live_quote(
     reference_price_by_side: dict[str, int | None] | None = None,
     program_hours_remaining: float | None = None,
     excluded_series: frozenset[str] = frozenset(),
+    event_ticker: str | None = None,
+    blocked_event_tickers: frozenset[str] = frozenset(),
     open_orders_now: int = 0,
     strategy_exposure_now_usd: float = 0.0,
     max_price_cents: int = MAX_PRICE_CENTS,
@@ -157,6 +160,13 @@ def build_live_quote(
     if series and series in excluded_series:
         return Refusal(REFUSE_EXCLUDED_SERIES,
                        f"{series} is reserved for another live book; no ticker collisions")
+    # Concentration, before any pricing: one event, one commitment. Several markets of one event
+    # resolve together, so stacking them is one bet wearing several tickets — and another live
+    # book holding the event makes it the fleet's bet, not just ours. On 2026-09-18 this book put
+    # two NO bids on KXRT-RES while MMSELL was already short 93c of the same event (§9.15).
+    if event_ticker and event_ticker in blocked_event_tickers:
+        return Refusal(REFUSE_EVENT_CAP,
+                       f"{event_ticker} already carries an open live commitment")
     if open_orders_now >= MAX_OPEN_ORDERS:
         return Refusal(REFUSE_OPEN_ORDER_CAP,
                        f"{open_orders_now} resting already, cap {MAX_OPEN_ORDERS}")
@@ -213,6 +223,7 @@ def build_live_quote(
 
 
 def rank_candidates(candidates: list[dict], *, excluded_series: frozenset[str] = frozenset(),
+                    blocked_event_tickers: frozenset[str] = frozenset(),
                     max_price_cents: int = MAX_PRICE_CENTS) -> list[tuple[dict, LiveQuote]]:
     """Every candidate that yields a placeable quote, cheapest downside first, then soonest
     program end (a program that ends sooner pays sooner, which is what the test needs)."""
@@ -227,6 +238,8 @@ def rank_candidates(candidates: list[dict], *, excluded_series: frozenset[str] =
             reference_price_by_side=c.get("reference_price_by_side"),
             program_hours_remaining=c.get("program_hours_remaining"),
             excluded_series=excluded_series, max_price_cents=max_price_cents,
+            event_ticker=c.get("event_ticker"),
+            blocked_event_tickers=blocked_event_tickers,
         )
         if isinstance(q, LiveQuote):
             out.append((c, q))
