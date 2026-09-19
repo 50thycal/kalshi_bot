@@ -809,3 +809,21 @@ Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIV
 Step 1 (`REGISTER_PACKAGE`) arms nothing and can go now; steps 2 and 4 are hard stops. Note
 that step 4 must name **both** `Alimm1` and the running `Fmmsell10` — `LIVE_STRATEGIES` matches
 by prefix and replacing it would stand the MMSELL canary down.
+
+## Update 2026-09-19 17:10Z — the reward ledger was measuring nothing
+
+The ledger shipped in #435 wrote **zero rows**: it was wired into the shadow collector, which is
+handed `IncentiveReadOnlyKalshi` — market-data GETs only, by design — and so failed on every
+tick with `AttributeError: ... has no attribute 'get_balance'`.
+
+Fixed by moving the ledger to `IncentiveLiveRunner` (which already holds the authenticated
+client), **not** by widening the read-only wrapper. It runs before the armed gate, because a
+programme's reward is credited after the programme ends and can land after this book is stood
+down. A regression test asserts the wrapper still has no portfolio methods.
+
+Same PR also fixes the ops report script, which imported SQLAlchemy into a runner that installs
+only `psycopg[binary]`. Shared root cause: the measurement was written against the application's
+environment rather than the one it runs in.
+
+No gate, lifecycle state or exposure changes. Lifetime rewards still $0.
+[Thesis §9.26](../LIQUIDITY_INCENTIVE_THESIS.md). PR #436.

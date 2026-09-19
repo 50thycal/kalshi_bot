@@ -1760,3 +1760,47 @@ row, and the `incentive_*` metrics read its tables over a time window rather tha
 **Stand-down:** remove `Alimm1` from `LIVE_STRATEGIES`. New entries stop on the next cycle,
 resting orders drain within a cycle, and any held contract settles normally — at most $10 in
 total, and at these caps at most $0.25 per market.
+
+### 9.26 The reward ledger recorded nothing, and the reason is a boundary doing its job (2026-09-19 17:10Z)
+
+§9.23 shipped the reward ledger — the arithmetic route to the one number this thesis turns on,
+since a full census of all 5,332 current programme rows (§9.21) found eleven keys and none of
+them a credit to us. It went live and wrote **zero rows**. Every tick:
+
+```
+2026-09-19 16:31:09Z  loop_error  balance: AttributeError: 'IncentiveReadOnlyKalshi' object has no attribute 'get_balance'
+2026-09-19 16:16:21Z  loop_error  balance: AttributeError: 'IncentiveReadOnlyKalshi' object has no attribute 'get_balance'
+```
+
+**This is not a missing method.** The shadow collector is deliberately handed
+`IncentiveReadOnlyKalshi`, a wrapper exposing `iter_incentive_programs`, `get_market`,
+`get_series`, `get_orderbook`, `ws_url`, `ws_headers` — market data and nothing else — so a
+research tape can never touch the account. The ledger reads the balance, the fills and the
+settlements. Putting it behind that wrapper was the mistake, and it failed in exactly the way
+the wrapper exists to make it fail: loudly, at the boundary, before touching anything.
+
+The tempting fix is to add `get_balance` to the wrapper. That would have traded a measurement
+outage for a permanent hole in a safeguard, which is the trade this project does not make.
+Instead the ledger moved to `IncentiveLiveRunner`, which already holds the authenticated client
+(`main.py:457`), and a test now asserts the wrapper still has no `get_balance` / `get_fills` /
+`get_settlements` so the tempting fix stays closed.
+
+**It runs before the armed gate, deliberately.** Kalshi credits a liquidity reward only *after*
+a programme ends, so a credit for quoting we already did can land days after this book is stood
+down. A ledger that stopped when the book stopped would miss precisely the payment it exists to
+detect. That is the failure mode this whole measurement is built against, so it gets a test
+(`test_the_ledger_runs_even_when_the_book_is_stood_down`) rather than a comment.
+
+**The second fault was mine in the same direction.** The ops report script
+(`scripts/incentive_reward_ledger_report.py`) imported SQLAlchemy; the ops runner installs
+`psycopg[binary]` and nothing else for a `script` request. It died with `ModuleNotFoundError`.
+Rewritten to stdlib + psycopg. Both faults share a root cause worth naming: **I wrote the
+measurement against the application's environment instead of against the environment it was
+going to run in.** In both cases the convention was already there to copy.
+
+**What this does not change.** No gate, no lifecycle state, no exposure. Lifetime rewards remain
+**$0** on Kalshi's own page (§9.17, §9.21), and the ledger has still never observed a window, so
+the question of whether this book can earn anything at all (§9.23) is exactly as open as it was.
+The only thing that changed is that the instrument is now pointed at the account.
+
+PR #436.
