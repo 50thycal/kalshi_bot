@@ -1,1 +1,1 @@
-{"type":"db","id":"cc-rmm-detcws1","sql":"SELECT strategy, market_ticker, status, pnl, created_at FROM paper_trades WHERE strategy IN ('Rmmsell1','Rmmsell2') AND market_ticker LIKE '%26SEP181940DETCWS%' ORDER BY market_ticker, strategy"}
+{"type":"noop"}
