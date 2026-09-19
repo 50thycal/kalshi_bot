@@ -1,0 +1,22 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "82e3240bf821c010610610c25ec33d14e10d9a22",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-19T13:42:13Z",
+  "id": "desk-d3-spr",
+  "outcome": "SUCCEEDED",
+  "provenance": {
+    "actor": "claude-desk",
+    "purpose": "desk detail read 2026-09-19"
+  },
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/desk-d3-spr.receipt.json",
+  "result_file": "ops/results/desk-d3-spr.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/35446540239",
+  "service": null,
+  "started_at": "2026-09-19T13:42:13Z",
+  "targets": [],
+  "type": "script"
+}
