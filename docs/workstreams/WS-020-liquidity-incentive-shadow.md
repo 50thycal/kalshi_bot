@@ -845,3 +845,51 @@ fixed and pending merge; market_cap_reached 297, so fix 1 still binding not veri
 still 1. P(both|one) conservative 0.018 over 14d.
 
 [Thesis §9.27](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## Update 2026-09-19 17:55Z — universe rule: refuse books deeper than 3x Target Size
+
+Operator-authorised. `build_live_quote` gains `REFUSE_BOOK_TOO_DEEP` — a market whose THINNER
+side rests more than `MAX_COMPETING_DEPTH_TARGET_MULTIPLE = 3.0` x Target Size is refused — and
+`rank_candidates` sorts on competing depth after collateral, ahead of programme end.
+
+Rationale (§9.27, bucketed at placement, conservative): `medium` books ran mean single-leg MTM
+-0.76 with mean est reward 0.28; `deep` books -3.97 with 0.13. Thinner dominates on both axes.
+3.0 is the report's own pre-existing medium/deep boundary, NOT a fitted threshold.
+
+Pre-registered: `book_too_deep` should become a common refusal. If it refuses nearly everything
+and the book stops placing, that is a FINDING (the universe offers no book thin enough for a
+1-contract order to matter), not a bug.
+
+Risk caps untouched; the XOS envelope test still passes. The rule only ever refuses, so exposure
+strictly narrows.
+
+**Epoch guard:** rules change to a live armed arm = a new XOS epoch, recorded by the owning role.
+The merge does not record it, and evidence does not pool across it.
+
+[Thesis §9.28](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## Update 2026-09-19 18:20Z — the ledger records, and its first live window was wrong
+
+#436 merged 17:07Z; the ledger anchored at 17:11Z and has written a row every ~15 min since.
+
+Its first window containing live fills read -184c and labelled it `presumed deposit/withdrawal`.
+No deposit happened: the window holds exactly two Fmmsell10 NO buys at 90c and 94c = 184c, and
+the row's own `fills_counted=2` with `buy_cost_cents=0` shows the ledger saw them and valued
+them at nothing.
+
+Root cause: `_fill_cost_cents` read `no_price`/`count`; the live feed ships `no_price_dollars`
+(dollar string), `count_fp` (fixed-point string) and `fee_cost` (dollars) — the shapes
+`LiveExecutor.reconcile` has read since its shape probe. Third time this session I wrote against
+an assumed payload rather than the repo's existing parser.
+
+Worse than a wrong number: crossing `EXTERNAL_TRANSFER_CENTS` meant the ledger *explained* it
+confidently. The safeguard against a false positive concealed a defect.
+
+Fixed, both shapes accepted across fills/fees/settlements/balance, 10 regression tests including
+the exact window reconciling to zero. Full suite 4,634 passing.
+
+Still NO observable liquidity reward; lifetime rewards $0. A +$1.00 settlement landed at
+18:03:42Z but KXRT-RES and KXBIGGESTQUAKE were all still open at 18:05:26Z, so it is not the
+resolution the standing check awaits.
+
+[Thesis §9.29](../LIQUIDITY_INCENTIVE_THESIS.md). Rides PR #439.

@@ -48,7 +48,11 @@ def _book(yes, no):
     return {"orderbook": {"yes": [list(x) for x in yes], "no": [list(x) for x in no]}}
 
 
-def _program(session, ticker, *, target=100.0, hours=24.0, series="KXTEST", event=None):
+def _program(session, ticker, *, target=200.0, hours=24.0, series="KXTEST", event=None):
+    # `target` is 200 against the 500-a-side books these tests use, i.e. 2.5x — inside
+    # `MAX_COMPETING_DEPTH_TARGET_MULTIPLE`. It was 100, which made every fixture book 5x target
+    # and therefore refused outright once the universe rule landed. The rule is the change under
+    # test elsewhere; here it would only mean no candidate ever reaches the code being exercised.
     # One event per market by default. Several markets of one event resolve together, so the
     # runner treats them as a single commitment (§9.15); a fixture that shares an event across
     # candidates is testing a shape the book now refuses, so tests that want it say so.

@@ -9,9 +9,14 @@ from kalshi_bot.liquidity_incentive import live as lv
 
 
 def _q(**over):
+    # The resting totals sit just above Target Size and well inside
+    # `MAX_COMPETING_DEPTH_TARGET_MULTIPLE`. They used to be 30,000 / 40,000 — a book so deep
+    # that under the universe rule it is now refused outright, which is the whole point of the
+    # rule and no longer describes a market this book will quote. Tests that care about depth
+    # pass their own numbers.
     base = dict(
         market_ticker="KXTEST-A", best_yes_bid=78, best_no_bid=21,
-        yes_resting_total=30000.0, no_resting_total=40000.0, target_size=1000.0,
+        yes_resting_total=1500.0, no_resting_total=2000.0, target_size=1000.0,
         program_hours_remaining=48.0,
     )
     base.update(over)
@@ -91,12 +96,12 @@ def test_no_quote_ever_exceeds_a_declared_cap(yes_bid, no_bid):
 
 def test_ranking_prefers_cheapest_then_soonest_payout():
     cands = [
-        {"market_ticker": "A", "best_yes_bid": 20, "best_no_bid": 79, "yes_resting_total": 5000,
-         "no_resting_total": 5000, "target_size": 1000, "program_hours_remaining": 100},
-        {"market_ticker": "B", "best_yes_bid": 5, "best_no_bid": 94, "yes_resting_total": 5000,
-         "no_resting_total": 5000, "target_size": 1000, "program_hours_remaining": 50},
-        {"market_ticker": "C", "best_yes_bid": 60, "best_no_bid": 39, "yes_resting_total": 5000,
-         "no_resting_total": 5000, "target_size": 1000, "program_hours_remaining": 10},
+        {"market_ticker": "A", "best_yes_bid": 20, "best_no_bid": 79, "yes_resting_total": 2000,
+         "no_resting_total": 2000, "target_size": 1000, "program_hours_remaining": 100},
+        {"market_ticker": "B", "best_yes_bid": 5, "best_no_bid": 94, "yes_resting_total": 2000,
+         "no_resting_total": 2000, "target_size": 1000, "program_hours_remaining": 50},
+        {"market_ticker": "C", "best_yes_bid": 60, "best_no_bid": 39, "yes_resting_total": 2000,
+         "no_resting_total": 2000, "target_size": 1000, "program_hours_remaining": 10},
     ]
     ranked = lv.rank_candidates(cands)
     assert [c["market_ticker"] for c, _ in ranked] == ["B", "A"]   # C's cheapest touch is 39c
@@ -107,3 +112,79 @@ def test_caps_are_the_ones_the_risk_envelope_will_name():
     # A later test asserts the XOS envelope equals these; pin them here so a silent edit fails.
     assert (lv.MAX_CONTRACTS_PER_ORDER, lv.MAX_ORDER_DOLLARS, lv.MAX_OPEN_ORDERS,
             lv.MAX_STRATEGY_EXPOSURE_USD, lv.MAX_PRICE_CENTS) == (1, 1.00, 3, 10.00, 25)
+
+
+class TestTheUniverseRule:
+    """The competing-depth cap — the one lever this book has on its own reward.
+
+    Reward share is our size over the competing depth. A 1-contract bid in a book resting
+    40,000 earns a share that rounds to zero while taking the same adverse selection as a bid in
+    a book resting 2,000. The shadow tape agrees in both directions at once (§9.27): the `deep`
+    bucket ran a worse mean single-leg mark AND a lower mean estimated reward than `medium`.
+    """
+
+    def test_a_book_far_deeper_than_target_is_refused(self):
+        """The book this canary was actually quoting into: 30k/40k against a 1,000 target."""
+        q = _q(yes_resting_total=30_000.0, no_resting_total=40_000.0, target_size=1000.0)
+        assert isinstance(q, lv.Refusal) and q.code == lv.REFUSE_BOOK_TOO_DEEP
+
+    def test_the_boundary_is_inclusive_so_exactly_the_multiple_still_places(self):
+        """`> cap`, not `>= cap`. A book resting exactly 3x target is the deepest one the
+        report's own `medium` bucket contains, and excluding it would move the line."""
+        exactly = lv.MAX_COMPETING_DEPTH_TARGET_MULTIPLE * 1000.0
+        assert isinstance(_q(yes_resting_total=exactly, no_resting_total=exactly,
+                             target_size=1000.0), lv.LiveQuote)
+        assert _q(yes_resting_total=exactly + 1, no_resting_total=exactly + 1,
+                  target_size=1000.0).code == lv.REFUSE_BOOK_TOO_DEEP
+
+    def test_the_thinner_side_decides_not_the_average(self):
+        """One deep side does not disqualify the market, and does not buy the other a pass.
+        `min`, not `mean`: a lopsided book must read the same whichever way round it is."""
+        assert isinstance(_q(yes_resting_total=1200.0, no_resting_total=99_000.0,
+                             target_size=1000.0), lv.LiveQuote)
+        assert isinstance(_q(yes_resting_total=99_000.0, no_resting_total=1200.0,
+                             target_size=1000.0), lv.LiveQuote)
+
+    def test_under_target_still_reads_as_under_target_not_as_too_deep(self):
+        """Two gates read the same depth number and must stay distinguishable in the refusal
+        record: 'nobody is paid at all' is a different fact from 'our share is negligible'."""
+        assert _q(no_resting_total=900.0).code == lv.REFUSE_TARGET_NOT_MET
+
+    def test_the_cap_scales_with_target_size_rather_than_being_an_absolute_depth(self):
+        """20,000 resting is deep against a 1,000 target and thin against a 10,000 one. The
+        share that matters is relative to what the programme is paying for."""
+        assert _q(yes_resting_total=20_000.0, no_resting_total=20_000.0,
+                  target_size=1000.0).code == lv.REFUSE_BOOK_TOO_DEEP
+        assert isinstance(_q(yes_resting_total=20_000.0, no_resting_total=20_000.0,
+                             target_size=10_000.0), lv.LiveQuote)
+
+
+class TestRankingPrefersTheThinnerBook:
+    @staticmethod
+    def _c(ticker, *, depth, hours, no_bid=21):
+        return {"market_ticker": ticker, "best_yes_bid": 78, "best_no_bid": no_bid,
+                "yes_resting_total": depth, "no_resting_total": depth,
+                "target_size": 1000.0, "program_hours_remaining": hours}
+
+    def test_equally_cheap_orders_break_the_tie_on_depth_not_timing(self):
+        """The change in ordering. Both cost 21c, so the old key fell straight through to
+        program end — which pays nothing. The thinner book is worth strictly more reward for
+        identical risk, so it goes first."""
+        ranked = lv.rank_candidates([
+            self._c("KXDEEP", depth=2900.0, hours=4.0),     # ends soonest, nearly at the cap
+            self._c("KXTHIN", depth=1100.0, hours=60.0),
+        ])
+        assert [c["market_ticker"] for c, _ in ranked] == ["KXTHIN", "KXDEEP"]
+
+    def test_price_still_wins_over_depth(self):
+        """Depth is the second key, never the first. Collateral is the entire downside and
+        stays the safety ordering — a thinner book must not talk us into a dearer order."""
+        ranked = lv.rank_candidates([
+            self._c("KXTHIN_DEAR", depth=1100.0, hours=48.0, no_bid=20),
+            self._c("KXDEEP_CHEAP", depth=2900.0, hours=48.0, no_bid=3),
+        ])
+        assert ranked[0][0]["market_ticker"] == "KXDEEP_CHEAP"
+        assert ranked[0][1].price_cents == 3
+
+    def test_ranking_never_returns_a_book_the_gate_refused(self):
+        assert lv.rank_candidates([self._c("KXWAYDEEP", depth=80_000.0, hours=48.0)]) == []

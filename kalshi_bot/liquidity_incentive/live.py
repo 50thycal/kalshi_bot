@@ -51,6 +51,22 @@ MIN_PROGRAM_HOURS_REMAINING = 2.0
 #: ends, so a short program is what makes the payout leg of the test confirmable in days.
 PREFER_PROGRAM_ENDS_WITHIN_HOURS = 72.0
 
+#: Refuse a market whose THINNER side already rests more than this multiple of Target Size.
+#:
+#: This is the universe rule, and it is the lever this book actually has. Our reward share is
+#: our size divided by the competing depth, so in a book resting 40,000 contracts a 1-contract
+#: bid is a rounding error, while the adverse selection we take is the same either way. The
+#: shadow tape says both halves of that out loud (thesis §9.27): bucketed at placement,
+#: `deep` markets ran a mean single-leg mark of -3.97 against `medium`'s -0.76, and the medium
+#: bucket carried the HIGHER mean estimated reward (0.28 vs 0.13). Worse cost, smaller share.
+#:
+#: The multiple is 3.0 because that is where `scripts/liquidity_incentive_report.py` has always
+#: drawn its `medium`/`deep` line — a boundary chosen before this result was seen, not one
+#: fitted to it. It is deliberately NOT tuned: the honest reading of §9.27 is a direction on
+#: n=55, and a threshold picked to maximise that sample would be exactly the overfit this
+#: project keeps a pre-registration to avoid.
+MAX_COMPETING_DEPTH_TARGET_MULTIPLE = 3.0
+
 #: The live canary's tag, and the paper tag the PAPER stage registers.
 #:
 #: Three constraints shaped them, all load-bearing:
@@ -90,6 +106,7 @@ REFUSE_TARGET_NOT_MET = "target_not_met"
 REFUSE_TOO_EXPENSIVE = "too_expensive"
 REFUSE_PROGRAM_ENDING = "program_ending"
 REFUSE_NO_TARGET_SIZE = "no_target_size"
+REFUSE_BOOK_TOO_DEEP = "book_too_deep"
 REFUSE_POST_ONLY_CROSS = "post_only_would_cross"
 REFUSE_EXCLUDED_SERIES = "excluded_series"
 REFUSE_EVENT_CAP = "event_cap"
@@ -185,6 +202,18 @@ def build_live_quote(
         return Refusal(
             REFUSE_TARGET_NOT_MET,
             f"yes {yes_resting_total:.0f} / no {no_resting_total:.0f} vs target {target_size:.0f}")
+    # The universe rule, and the only lever this book has on its own reward. Placed AFTER the
+    # target-size gate on purpose: both are about the same depth number, and a book that has not
+    # reached Target Size is refused for a different reason (nobody is paid at all), which must
+    # stay readable as itself in the refusal record.
+    competing_depth = min(yes_resting_total, no_resting_total)
+    depth_cap = MAX_COMPETING_DEPTH_TARGET_MULTIPLE * target_size
+    if competing_depth > depth_cap:
+        return Refusal(
+            REFUSE_BOOK_TOO_DEEP,
+            f"thinner side rests {competing_depth:.0f} vs {depth_cap:.0f} "
+            f"({MAX_COMPETING_DEPTH_TARGET_MULTIPLE:g}x target {target_size:.0f}); "
+            f"our share would round to nothing")
     if program_hours_remaining is not None and program_hours_remaining < MIN_PROGRAM_HOURS_REMAINING:
         return Refusal(REFUSE_PROGRAM_ENDING,
                        f"{program_hours_remaining:.1f}h left, need {MIN_PROGRAM_HOURS_REMAINING}")
@@ -222,11 +251,31 @@ def build_live_quote(
     )
 
 
+def _depth_ratio(candidate: dict) -> float:
+    """Competing depth on the thinner side, as a multiple of Target Size. Lower is better.
+
+    This is the share proxy: reward share is our size over the competing depth, so the same
+    1-contract bid is worth proportionally more in a book resting 2x target than 3x. Candidates
+    that got this far are already under `MAX_COMPETING_DEPTH_TARGET_MULTIPLE`, so this only
+    orders WITHIN the allowed band — it can never admit a book the gate refused."""
+    target = float(candidate.get("target_size") or 0.0)
+    if target <= 0:
+        return float("inf")
+    depth = min(float(candidate.get("yes_resting_total") or 0.0),
+                float(candidate.get("no_resting_total") or 0.0))
+    return depth / target
+
+
 def rank_candidates(candidates: list[dict], *, excluded_series: frozenset[str] = frozenset(),
                     blocked_event_tickers: frozenset[str] = frozenset(),
                     max_price_cents: int = MAX_PRICE_CENTS) -> list[tuple[dict, LiveQuote]]:
-    """Every candidate that yields a placeable quote, cheapest downside first, then soonest
-    program end (a program that ends sooner pays sooner, which is what the test needs)."""
+    """Every candidate that yields a placeable quote, best first.
+
+    Order: cheapest downside, then THINNEST competing book, then soonest program end. Collateral
+    stays the primary key because it is the entire downside and the safety lever this module is
+    built around (see the module docstring). Depth is inserted ahead of program end because among
+    two equally cheap orders the thinner book is worth strictly more reward for the same risk
+    (§9.27) — where the old ordering broke ties on timing, which pays nothing."""
     out: list[tuple[dict, LiveQuote]] = []
     for c in candidates:
         q = build_live_quote(
@@ -244,5 +293,6 @@ def rank_candidates(candidates: list[dict], *, excluded_series: frozenset[str] =
         if isinstance(q, LiveQuote):
             out.append((c, q))
     out.sort(key=lambda cq: (cq[1].collateral_usd,
+                             _depth_ratio(cq[0]),
                              cq[0].get("program_hours_remaining") or 1e9))
     return out

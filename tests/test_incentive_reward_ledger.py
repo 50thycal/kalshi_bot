@@ -255,3 +255,103 @@ def test_a_window_is_the_gap_between_two_readings_not_a_fixed_period():
     _, rec, _ = rl.observe(client, prev_balance_cents=18_651, since=t0)
     assert rec.residual_cents == 3
     assert t1 > t0
+
+
+class TestTheRealKalshiPayloadShape:
+    """Regression tests for the defect that made the ledger's first live window wrong.
+
+    The live fills feed ships dollar STRINGS (`no_price_dollars`), a fixed-point string count
+    (`count_fp`) and a DOLLAR fee (`fee_cost`) — the shapes `LiveExecutor.reconcile` has read
+    since its shape probe. The ledger read only `no_price` / `count`, so every real fill priced
+    to zero, and the cash it moved fell through into the residual.
+
+    On 2026-09-19 that produced a -184c residual in the first window containing live fills —
+    exactly the two Fmmsell10 NO buys at 90c and 94c in it — which the ledger then labelled
+    `presumed deposit/withdrawal` because it crossed `EXTERNAL_TRANSFER_CENTS`. A confident
+    wrong label on our own mis-parse is the worst thing this module can do, so the shape is
+    pinned here rather than trusted (§9.29).
+    """
+
+    @staticmethod
+    def _live_fill(*, side="no", action="buy", price="0.94", count="1.00", fee=None):
+        row = {"side": side, "action": action, "count_fp": count,
+               "trade_id": "t-1", "market_ticker": "KXTEST-A",
+               f"{side}_price_dollars": price}
+        if fee is not None:
+            row["fee_cost"] = fee
+        return row
+
+    def test_the_exact_window_that_was_misread_now_reconciles_to_zero(self):
+        """90c + 94c of NO buys against a balance that fell $1.84. Previously: residual -184,
+        flagged as a deposit. Now: fully explained, residual 0."""
+        rec = rl.reconcile(
+            prev_balance_cents=17_316, balance_cents=17_132,
+            fills=[self._live_fill(price="0.90"), self._live_fill(price="0.94")],
+            settlements=[])
+        assert rec.buy_cost_cents == 184
+        assert rec.residual_cents == 0
+        assert not rec.is_material
+        assert not rec.presumed_transfer
+
+    def test_a_dollar_string_price_is_cents_not_units(self):
+        rec = rl.reconcile(prev_balance_cents=1_000, balance_cents=906,
+                           fills=[self._live_fill(price="0.94")], settlements=[])
+        assert rec.buy_cost_cents == 94, "'0.94' is 94c, not 1c"
+        assert rec.residual_cents == 0
+
+    def test_a_fixed_point_count_multiplies_correctly(self):
+        rec = rl.reconcile(prev_balance_cents=1_000, balance_cents=718,
+                           fills=[self._live_fill(price="0.94", count="3.00")], settlements=[])
+        assert rec.buy_cost_cents == 282
+        assert rec.residual_cents == 0
+
+    def test_a_dollar_fee_is_added_back_in_cents(self):
+        """`fee_cost` is DOLLARS. Read as cents it would be 0 and the charge would show up as a
+        negative residual — the signature this module tells readers means an unreported fee."""
+        rec = rl.reconcile(prev_balance_cents=1_000, balance_cents=904,
+                           fills=[self._live_fill(price="0.94", fee="0.02")], settlements=[])
+        assert rec.fees_cents == 2
+        assert rec.residual_cents == 0
+
+    def test_the_no_price_is_still_taken_from_the_no_side(self):
+        """The side-pricing guarantee has to survive the key-name change."""
+        fill = {"side": "no", "action": "buy", "count_fp": "1.00",
+                "no_price_dollars": "0.03", "yes_price_dollars": "0.97"}
+        rec = rl.reconcile(prev_balance_cents=1_000, balance_cents=997,
+                           fills=[fill], settlements=[])
+        assert rec.buy_cost_cents == 3
+        assert rec.residual_cents == 0
+
+    def test_the_legacy_integer_cents_shape_still_parses(self):
+        """Both shapes, because a feed that switches back must not silently zero out again."""
+        rec = rl.reconcile(prev_balance_cents=1_000, balance_cents=990,
+                           fills=[{"side": "yes", "action": "buy", "count": 1,
+                                   "yes_price": 10}], settlements=[])
+        assert rec.buy_cost_cents == 10 and rec.residual_cents == 0
+
+    def test_a_sale_in_the_live_shape_credits_the_balance(self):
+        rec = rl.reconcile(prev_balance_cents=1_000, balance_cents=1_040,
+                           fills=[self._live_fill(side="yes", action="sell", price="0.40")],
+                           settlements=[])
+        assert rec.sell_proceeds_cents == 40 and rec.residual_cents == 0
+
+    def test_a_settlement_in_either_shape_is_explained(self):
+        """`revenue` read as integer cents in production; the dollar variant is accepted too."""
+        assert rl.reconcile(prev_balance_cents=17_132, balance_cents=17_232,
+                            fills=[], settlements=[{"revenue": 100}]).residual_cents == 0
+        assert rl.reconcile(prev_balance_cents=17_132, balance_cents=17_232,
+                            fills=[], settlements=[{"revenue_dollars": "1.00"}]
+                            ).residual_cents == 0
+
+    def test_a_dollar_string_balance_would_not_be_read_as_cents(self):
+        client = _Client()
+        client.balance = "172.32"
+        balance, _, _ = rl.observe(client, prev_balance_cents=None, since=None)
+        assert balance == 17_232, "a dollar-string balance read as cents understates 100x"
+
+    def test_an_unparseable_live_fill_is_still_absorbed_rather_than_raising(self):
+        rec = rl.reconcile(
+            prev_balance_cents=100, balance_cents=100,
+            fills=[{"side": "no", "action": "buy", "count_fp": "x", "no_price_dollars": None}],
+            settlements=[])
+        assert rec.buy_cost_cents == 0 and rec.fills_counted == 1
