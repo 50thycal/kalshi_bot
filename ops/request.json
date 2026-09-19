@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--hours","168","--min-volume","300","--category","Economics","--top","80"],"id":"desk-d2-econ","actor":"claude-desk"}
+{"type":"script","name":"kalshi_desk_board","args":["--hours","168","--min-volume","300","--category","Science","--top","60"],"id":"desk-d2-sci","actor":"claude-desk"}
