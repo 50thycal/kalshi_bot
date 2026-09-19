@@ -1,1 +1,1 @@
-{"type":"script","name":"desk_fetch","args":["https://openrouter.ai/rankings","--find","most recent complete week","--window","700","--hits","3"],"id":"desk-fetch-3"}
+{"type":"script","name":"desk_fetch","args":["https://openrouter.ai/rankings","--raw","--find","\"anthropic\"","--window","260","--hits","14"],"id":"desk-fetch-4"}
