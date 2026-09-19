@@ -1,7 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-paid-3
-# code 89c193491d8b3e010a1d4e0e2c2f91ff78376a6f · started 2026-09-18T15:55:14Z
-market_ticker  fill_model  policy  tier  n  est_reward_sum  cap_hours
--------------  ----------  ------  ----  -  --------------  ---------
-
-(0 rows)
