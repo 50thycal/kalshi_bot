@@ -1,1 +1,1 @@
-{"type":"script","name":"desk_fetch","args":["https://openrouter.ai/api/frontend/v1/rankings/authors","--max-chars","3000"],"id":"desk-or-b"}
+{"type":"script","name":"desk_fetch","args":["https://openrouter.ai/rankings","--raw","--find","anthropic","--window","320","--hits","8"],"id":"desk-or-c"}
