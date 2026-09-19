@@ -845,3 +845,25 @@ fixed and pending merge; market_cap_reached 297, so fix 1 still binding not veri
 still 1. P(both|one) conservative 0.018 over 14d.
 
 [Thesis §9.27](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## Update 2026-09-19 17:55Z — universe rule: refuse books deeper than 3x Target Size
+
+Operator-authorised. `build_live_quote` gains `REFUSE_BOOK_TOO_DEEP` — a market whose THINNER
+side rests more than `MAX_COMPETING_DEPTH_TARGET_MULTIPLE = 3.0` x Target Size is refused — and
+`rank_candidates` sorts on competing depth after collateral, ahead of programme end.
+
+Rationale (§9.27, bucketed at placement, conservative): `medium` books ran mean single-leg MTM
+-0.76 with mean est reward 0.28; `deep` books -3.97 with 0.13. Thinner dominates on both axes.
+3.0 is the report's own pre-existing medium/deep boundary, NOT a fitted threshold.
+
+Pre-registered: `book_too_deep` should become a common refusal. If it refuses nearly everything
+and the book stops placing, that is a FINDING (the universe offers no book thin enough for a
+1-contract order to matter), not a bug.
+
+Risk caps untouched; the XOS envelope test still passes. The rule only ever refuses, so exposure
+strictly narrows.
+
+**Epoch guard:** rules change to a live armed arm = a new XOS epoch, recorded by the owning role.
+The merge does not record it, and evidence does not pool across it.
+
+[Thesis §9.28](../LIQUIDITY_INCENTIVE_THESIS.md).

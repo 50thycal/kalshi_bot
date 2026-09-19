@@ -1862,3 +1862,66 @@ n, so this is a direction and not yet a finding, but it points the same way as t
 **Top of the 24h ranking** is now genuinely large: `KXTRUMPAPPROVE-26SEP19-E39.4` at $2,937/day
 programme reward, modelled share 0.154, $46.16/day. Three KXTRUMPAPPROVE strikes occupy the top
 three places. None is a POC candidate; all read `SHADOW`.
+
+### 9.28 The universe rule: refuse books deeper than 3x Target Size (2026-09-19 17:55Z)
+
+Operator-authorised in this session. This is a **rules change to a live armed arm**, so it is a
+new epoch, and the code landing is not the epoch — see the guard at the end.
+
+**The reasoning, stated before the change runs.** Our reward share is our size divided by the
+competing depth. The canary rests **one contract**. In a book resting 40,000 that share rounds
+to zero, and the adverse selection we take for it is exactly the same as in a book resting 2,000.
+So depth costs us twice: it shrinks the only income and leaves the only cost untouched. §9.27's
+decomposition says both halves out loud, bucketed at placement on the conservative model:
+
+| bucket | n | mean single-leg MTM | mean est reward |
+|---|---|---|---|
+| `medium` (< 3x target) | 55 | **−0.76** | **0.28** |
+| `deep` (>= 3x target) | 1,623 | **−3.97** | **0.13** |
+
+Better mark *and* better reward in the thinner bucket. That is not a trade-off to balance; it is
+one bucket dominating the other on both axes.
+
+**What changed.** `build_live_quote` gains `REFUSE_BOOK_TOO_DEEP`: a market whose **thinner** side
+rests more than `MAX_COMPETING_DEPTH_TARGET_MULTIPLE = 3.0` times Target Size is refused.
+`rank_candidates` inserts competing depth as the second sort key, after collateral and ahead of
+programme end — among two equally cheap orders the thinner book is worth strictly more for
+identical risk, where the old ordering broke that tie on timing, which pays nothing.
+
+**Four choices worth defending:**
+
+1. **3.0 is not tuned.** It is exactly where `scripts/liquidity_incentive_report.py` has always
+   drawn its `medium`/`deep` line — a boundary set before this result was seen. A threshold
+   fitted to maximise an n=55 bucket would be the overfit this thesis keeps a pre-registration
+   to avoid.
+2. **`min(yes, no)`, not the mean.** A lopsided book must read the same whichever way round it
+   is, and the mean lets one deep side buy the other a pass.
+3. **Relative to Target Size, not an absolute depth.** 20,000 resting is deep against a 1,000
+   target and thin against a 10,000 one. The share that matters is relative to what the
+   programme is paying for.
+4. **Collateral stays the primary sort key.** Depth is second. A thinner book must never talk
+   this book into a dearer order; price is the downside and remains the safety ordering.
+
+**Pre-registered expectation — do not reinterpret this after seeing results.** If the mechanism
+is real, the next Alimm1 orders should land in materially thinner books than KXRT-RES and
+KXBIGGESTQUAKE, and `book_too_deep` should become a *common* refusal — plausibly the most common
+one, given §9.27's 1,623-vs-55 split. **If `book_too_deep` refuses nearly everything and the book
+stops placing entirely, that is a FINDING, not a bug**: it would say the incentive universe
+offers almost no book thin enough for a 1-contract order to matter, which is a negative answer to
+the thesis's central question and worth more than a book that keeps trading.
+
+This change **cannot make the book earn**. It removes markets where the modelled share was
+negligible; it does not validate the share model, which has still never been checked against an
+observed credit. Lifetime rewards remain **$0**.
+
+**Not touched:** every risk cap (`MAX_CONTRACTS_PER_ORDER`, `MAX_ORDER_DOLLARS`,
+`MAX_OPEN_ORDERS`, `MAX_STRATEGY_EXPOSURE_USD`, `MAX_PRICE_CENTS`) is unchanged, and the test
+pinning them to the XOS risk envelope still passes. This rule only ever *refuses* — there is no
+input under which it admits a market the old code would have placed in. Exposure strictly
+narrows.
+
+> **OPERATOR GUARD — the merge authorises nothing.** This is a rules/universe change to a live
+> armed arm, and under `NEW_ONLY` that is a **new epoch**, recorded in Experiment OS by the
+> owning role. Until that epoch is recorded, evidence gathered after this deploy is **not
+> poolable** with evidence from before it. The code shipping and the epoch existing are two
+> separate facts and this document is not the second one.
