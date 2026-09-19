@@ -125,6 +125,7 @@ ALLOWED_SCRIPTS = (
     "kalshi_market_probe",
     "kalshi_quote_probe",
     "kalshi_market_survey",
+    "kalshi_desk_board",
     "evo_order_probe",
     "xvenue_probe",
     "xvenue_leadlag",

@@ -567,6 +567,12 @@ To run a request:
      All five sit on the mmsell10 entry, so **mmsell10 is the control** — read them against it, not
      in absolute terms. Paper-only; gates are pre-registered in the doc and `docs/BOOK_REGISTRY.md`.
      They surface in the `mm check 1` skill alongside the other books.
+   - **"desk board"** -> `{"type":"script","name":"kalshi_desk_board","args":["--hours","72"]}` — the
+     discretionary desk's daily read (`docs/DISCRETIONARY_DESK.md`): every open market closing
+     inside the horizon, ranked by 24h volume, with spread and the taker fee at the ask; add
+     `--ticker <T>` for one market's rules text, resting book and last trades, `--event <E>` for
+     a whole ladder, `--search`/`--category`/`--series` to narrow. Public endpoints only, no
+     key, no order surface; the sandbox cannot reach Kalshi, so this is how a pick is checked.
    - **"parity"** / **"live paper parity"** -> `{"type":"script","name":"live_paper_parity"}` — is
      our paper trading system telling the truth about a LIVE book? Every live strategy runs a fresh
      paper **twin** beside it (same start instant, same candidates, the LIVE price/size/cap knobs),
