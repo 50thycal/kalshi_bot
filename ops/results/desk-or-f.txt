@@ -1,7 +1,0 @@
-# ops request [READ]
-# type=script  id=desk-or-f
-# code 82e3240bf821c010610610c25ec33d14e10d9a22 · started 2026-09-19T04:09:42Z
-# desk_fetch https://openrouter.ai/rankings
-# HTTP 200 · text/html; charset=utf-8 · 2354862 bytes
-# 0 window(s) around '2026-09-14'
-(no hits — the page may be rendered client-side; try --raw or an API URL)
