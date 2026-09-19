@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"script","name":"desk_fetch","args":["https://gasprices.aaa.com/","--find","Diesel","--window","160","--hits","8"],"id":"desk-fetch-1"}
