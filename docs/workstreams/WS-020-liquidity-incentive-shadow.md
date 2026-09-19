@@ -769,6 +769,40 @@ Open observation, not a diagnosis.
 Headline essentially flat (-158.34 -> -156.24/day) and not news.
 [Thesis §9.24](../LIQUIDITY_INCENTIVE_THESIS.md).
 
+## THE FILL RATE HELD, AND THE DECOMPOSITION SPLITS TWO WAYS (2026-09-19 08:35Z)
+
+First reading taken ENTIRELY post-deploy — what §9.24 said was needed. Criterion (a) fired.
+
+**It held.** P(both|one) conservative 0.005 -> 0.018 -> **0.018**; queue_aware 0.019. Over the
+clean 04:30-08:35Z window conservative added 4 both_filled on 189 new observations, an
+incremental rate of ~0.021 — consistent with 0.018, inconsistent with 0.005. Not a one-off burst.
+
+**So the decomposition was run.** Conservative outcomes split by whether the live book holds the
+market:
+
+| group | markets | both_filled | n | P(both\|one) |
+|---|---|---|---|---|
+| pinned (live book) | 2 | 10 | 168 | **0.0595** |
+| rest of shadow | 186 | 18 | 1,350 | **0.0133** |
+
+§9.24's suspicion was RIGHT in direction and bigger than expected: the live book's markets fill
+both sides **4.5x** as often.
+
+**But composition does NOT explain the aggregate.** Remove the pinned markets entirely and the
+rest still reads 0.0133 — ~2.9x the pre-deploy 0.0046, on 186 markets tracked throughout.
+Incrementally: of +24 both_filled since 00:25Z, at most 10 are pinned, leaving >=14 on +484 new
+non-pinned observations, a rate near 0.029. TWO effects, one explained.
+
+**Do NOT generalise the pinned finding.** Those 2 markets are KXRT-RES-93 and -94 — two markets
+of ONE event. Not a sample of "short-dated markets fill better"; one event, observed twice.
+
+**§9.24's thread churn RESOLVES:** thread_started 18 -> 18, thread_stopped 1 -> 1, no new
+restarts in four hours. Deploy-adjacent, did not continue. Closed.
+
+Collector holding: seq_gap rate +31/4h, below the +35 criterion; throttled flat; 546 discovery
+cycles, 0 errors. Headline improved sharply (-156.24 -> -96.02/day) and is still not a result.
+settled still 1. [Thesis §9.25](../LIQUIDITY_INCENTIVE_THESIS.md).
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).

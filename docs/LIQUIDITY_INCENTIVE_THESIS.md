@@ -1557,6 +1557,74 @@ swinging, which is also not news.
 favourably 2.6 hours after we changed what the shadow watches is precisely the moment to restate
 that, not to relax it.
 
+### 9.25 The fill rate held — and decomposing it says composition is real but not the whole story (2026-09-19 08:35Z)
+
+Span **1.84 days**. First reading taken **entirely** after the 01:53:07Z deploy, which is what
+§9.24 said was needed before its numbers could be compared to anything. Criterion (a) fired: the
+movement **held**.
+
+| | 00:25Z (pre-deploy) | 04:30Z (mixed window) | **08:35Z (clean window)** |
+|---|---|---|---|
+| `both_filled` conservative | 4 | 24 | **28** |
+| `partial_both` conservative | 16 | 46 | **62** |
+| n conservative | 866 | 1,329 | **1,518** |
+| **P(both \| one) conservative** | **0.005** | **0.018** | **0.018** |
+| P(both \| one) queue_aware | 0.004 | 0.019 | **0.019** |
+
+Over the four hours from 04:30Z to 08:35Z — a window with no composition change inside it —
+conservative added 4 `both_filled` on 189 new observations, an incremental rate of **~0.021**.
+That is consistent with the 0.018 aggregate and inconsistent with the pre-deploy 0.005. **The
+jump was not a one-off burst from newly-pinned markets; the level is sustained.**
+
+**So the decomposition was run, because "sustained" and "not composition" are different claims.**
+Splitting conservative outcomes over 14 days by whether the market is one the live book holds:
+
+| group | markets | `both_filled` | `partial_both` | n | P(both \| one) |
+|---|---|---|---|---|---|
+| **pinned (live book)** | **2** | 10 | 30 | 168 | **0.0595** |
+| rest of shadow | 186 | 18 | 32 | 1,350 | **0.0133** |
+
+**§9.24's suspicion was right in direction, and larger than expected.** The live book's own
+markets fill both sides **4.5×** as often as the reward-ranked population the shadow otherwise
+tracks. That is a real, measured difference in market character, on our own tape.
+
+**But composition does not explain the aggregate.** The pinned markets are 11% of observations
+and 36% of the `both_filled` events. **Remove them entirely and the rest of the shadow still
+reads 0.0133** — roughly **2.9×** the pre-deploy aggregate of 0.0046, on 186 markets that were
+being tracked the whole time. Incrementally it is starker: of the +24 `both_filled` since 00:25Z,
+at most 10 can be pinned, leaving **≥14 on +484 new non-pinned observations**, a rate near
+**0.029**.
+
+**There are therefore two effects, and only one of them is explained.** Pinning raised the
+average by adding fill-prone markets — measured, quantified, done. Something *else* raised the
+non-pinned shadow's own fill rate over the same window, and this entry does not know what. The
+deploy is the obvious suspect by timing, but the deploy's only measurement-side change was
+adding four markets, which is precisely the effect just subtracted out.
+
+**The pinned finding must not be generalised, and here is why.** Those "2 markets" are
+`KXRT-RES-93` and `KXRT-RES-94` — **two markets of a single event**. n=168 spread across one
+event's microstructure is not a sample of "short-dated markets fill better"; it is one event,
+observed twice. The 4.5× is real about *those* markets and says nothing yet about the class.
+Recording the number and refusing the inference.
+
+**§9.24's open item resolves: the thread churn stopped.** `thread_started` **18 → 18** and
+`thread_stopped` **1 → 1** across four hours, with no new restarts. The 12→18 jump was
+deploy-adjacent and did not continue, so it is closed rather than carried.
+
+**Collector holding.** `seq_gap` 228 → 260, a rate of **+31/4h** against the +27 of the previous
+window and the +31 pre-deploy baseline; `throttled` flat at 5. Below §9.24's +35 criterion, so
+criterion (d) does not fire. Discovery clean: 546 cycles, **0 errors**.
+
+**Headline improved sharply and is still not a result.** `A_break_even`/$500 conservative
+−156.24 → **−96.02**/day, with modelled reward growing faster than single-leg mark-to-market for
+the first time (reward 730.80 → 846.39 against MTM −1000.96 → −1033.28). §9.18 and §9.20 both
+record this number swinging on this instrument; one favourable swing is not a trend, and it is
+noted here only so the next reading has a number to compare against.
+
+**No gate re-interpretation.** §6 is pre-registered and reads conservative. A metric that has now
+held at 0.018 across a clean window is a better *measurement* than §9.24 had; it is not a verdict,
+and `settled` is still **1**, so the settlement leg carries no weight at all.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized
