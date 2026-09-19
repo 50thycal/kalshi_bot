@@ -1,6 +1,6 @@
 # Discretionary desk — three researched picks a day, placed by the operator
 
-**Status:** proposed operating model, opened 2026-09-19 on an operator request. Nothing here
+**Status:** active operating model, opened 2026-09-19 on an operator request and adopted the same day (`DEC-017`). Nothing here
 changes an Experiment OS state, a gate, a live safeguard or the arming path. The desk trades
 through the **Kalshi app, by the operator's hand**, outside the worker — see §2 for why.
 
@@ -37,7 +37,8 @@ decides, and taps buy.** The worker keeps running its own books untouched.
 
 1. **Board read** (ops channel, public data): `kalshi_desk_board` — every open market closing
    inside the horizon, ranked by 24h volume, with spread and the taker fee at the ask. Then
-   `--ticker` on each candidate for the rules text, the resting book and the last trades.
+   `--ticker` on each candidate for the rules text, the resting book and the last trades;
+   `desk_fetch` on the settlement source the rules name.
 2. **Research** — web search on the underlying question (the rules-defined settlement source
    first, then the news flow), the repo's own settled history where the series has one
    (`backfill_regime_markets`, `paper_trades`, `weather_forecast_outcomes`), and the base
@@ -104,9 +105,11 @@ Filled as classes are researched; each line names the query or script and the da
 be refreshed. Empty on opening day by design — a number written from memory is a number
 nobody can check.
 
-## 8. Decisions this model needs from the operator (opened 2026-09-19)
+## 8. Decisions this model needed from the operator (opened and answered 2026-09-19)
 
-Recorded here so they are durable; each is a `DECISION` in the Build OS sense.
+Recorded as `DEC-017` in `docs/DECISIONS.md`. The operator confirmed 1–3 as recommended;
+4 stays open (the ops runner is the board read until the sandbox allowlist is widened);
+5 defaults to the daily line plus the weekly table.
 
 1. **Execution instrument.** The desk assumes the Kalshi app, by hand. The alternative — a new
    worker path that accepts a ticker from an env var — touches the arming path and is a
