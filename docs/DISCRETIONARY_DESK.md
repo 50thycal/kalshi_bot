@@ -106,6 +106,7 @@ pnl_usd, postmortem_tag
 | `gasprices.aaa.com` | yes, server-rendered | today's and yesterday's national diesel average to four decimals, week/month/year-ago, the record and its date |
 | `openrouter.ai/rankings` | yes, server-rendered summary | the settlement table itself: "share of text requests … in the week beginning <Mon>", by author, with week-over-week change — but only the **last complete week**. The in-progress week is loaded client-side from `/api/frontend/v1/rankings/<section>` endpoints named in the page source |
 | `openrouter.ai` community snapshot (`jampongsathorn/openrouter-rankings` on GitHub) | yes | daily copies of the same page; its market-share section has been empty since at least mid-September, so it does not substitute |
+| `openrouter.ai/api/frontend/v1/rankings/market-share` | yes, JSON | weekly buckets `{"x": "<week-start Monday>", "ys": {author: value}}` back to 2025-09, **including the in-progress week**. The values are token totals, not requests: for the week of 2026-09-07 they give anthropic 3.8% and openai 18.9%, while the settlement table says 2.5% and 23.6%. Query params (`?metric=`, `?type=`) are ignored; `market-share-requests`, `requests` and `authors` return "Unknown dataset". The request-share series the `KX*SHARE` markets settle on is therefore still unread mid-week; token share is a proxy, not the metric |
 
 ## 7. Base rates the desk leans on (from the repo's own settled history)
 
