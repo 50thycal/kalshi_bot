@@ -1197,6 +1197,86 @@ not close them either.
 decision were all already written down. What changed is that the risk it described is now
 carried as real, concentrated, same-direction exposure across two live books.
 
+### 9.20 The two non-optimistic models separate: queue-aware moves, conservative is frozen (2026-09-19 00:25Z)
+
+Span **1.50 days**. One pre-registered criterion fired — (c), `partial_both` moving off 16/36 —
+and it fired in a way the criterion did not anticipate: only **one** of the two non-optimistic
+models moved.
+
+**(c) The fill mix moved, on the queue-aware side only.**
+
+| | 20:21Z | 00:25Z |
+|---|---|---|
+| `both_filled` conservative / queue_aware | 4 / 4 | **4 / 6** |
+| `partial_both` conservative / queue_aware | 16 / 36 | **16 / 44** |
+| n (one-sided-or-better) conservative / queue_aware | 626 / 1160 | **866 / 1520** |
+| P(both \| one) conservative / queue_aware | 0.006 / 0.003 | **0.005 / 0.004** |
+
+Over four hours queue-aware added **2** two-sided fills and **8** `partial_both`; conservative
+added **none**, while its own n grew by 240. The two models read the *same tape* and differ only
+in how queue position is credited, so the gap between them is no longer a rounding difference —
+**model choice is load-bearing in the headline**, and this is the first reading where the two
+non-optimistic models have visibly separated.
+
+**Under the gated metric the direction is unchanged.** §6 reads conservative. Its numerator has
+now been frozen at 4 `both_filled` / 16 `partial_both` across three consecutive checks while n
+grew from 555 to 866, so conservative P(both | one) keeps drifting toward zero — 0.007 → 0.006 →
+0.005 — by arithmetic, not by new events. That is a reading, not a verdict, and §6 is not being
+re-interpreted.
+
+**The alternative explanation I cannot exclude, and it is specific.** Queue-aware is the model
+*most* sensitive to tape completeness, because it credits progress through the queue ahead of us;
+conservative is the least. A missed cancel makes the queue-aware model believe we advanced when
+we did not, inflating exactly its fills and leaving conservative untouched. The tape now carries
+**200** `seq_gap` events. The observed asymmetry is a precise match for that failure mode, so
+this entry records the separation, **not** a conclusion that two-sided fills are more achievable
+than conservative says. Which of the two models is closer to the truth is unresolved and cannot
+be settled on a gappy tape.
+
+**(a)/(b) Collector: plateaued at the elevated rate, neither recovered nor worse.**
+
+| check | `seq_gap` | Δ over ~4h | `throttled` | connects / disconnects | thread starts |
+|---|---|---|---|---|---|
+| 16:18Z | 137 | +10 | 3 | 17 / 16 | 11 |
+| 20:21Z | 169 | +32 | 4 | 20 / 19 | 12 |
+| 00:25Z | **200** | **+31** | **5** | **22 / 21** | **12** |
+
+The gap rate held at roughly +31/4h rather than falling back toward +10/4h (criterion a) or
+rising again (criterion b), reconnects slowed from three to two, and no thread restarted. The
+tripling recorded in §9.18 has **stopped accelerating but has not reversed**, so the instrument
+is still degraded and §9.18's suspicion of the headline still stands. Discovery remains clean:
+446 cycles, 0 errors, pool $571,826.67, 4,908 programmes listed.
+
+**The headline reversed, and per §9.18 that is not news.** `A_break_even`/$500 conservative went
+−150.53 → −69.10 → **−158.34**/day, and $25 went −9.83 → **−16.96**. A number that halves and
+then doubles back over eight hours on an unstable instrument is measuring the instrument. Both
+directions were pre-committed as untrustworthy while the tape has holes, and the criteria are
+explicit that headline movement alone is not an entry. It is recorded here only so the reversal
+is on the record and nobody later reads §9.18's improvement as a trend.
+
+`C_conservative`/$500 conservative remains the one positive cell (**+203.98**/day, largest single
+programme 1.4% of the total, so not concentration), unchanged in character since §9.16.
+
+**Two observations carried but not acted on.**
+
+The competing-depth split now has a second bucket. Against **deep** competing size the
+conservative single-leg mark is **−$4.7731** (n=817) with mean `est_reward` **+$0.0952**; against
+**medium** it is **−$0.9262** (n=45) with mean `est_reward` **+$0.3359** — five times less
+adverse selection and three and a half times more reward. If it survives n, it points at
+selection rather than pricing. It is n=45 against n=817 and nothing is being changed on it.
+
+The queue-aware lag stayed estimable and grew: mean **1199.2s** / median **718.7s**, against
+§9.16's 828.0 / 553.2. Conservative's lag is **still mean = median = 1212.5s, n=1**, unchanged
+for four consecutive checks, and must still not be quoted as a bound. Settled pairs remain at
+**1**, so criterion (e) is untouched and the settlement leg still carries no weight.
+
+**Live configuration re-verified unchanged:** `LIVE_STRATEGIES=Fmmsell10,Alimm1`,
+`LIVE_PAPER_TWINS=Alimm1:Alimm1_pt3`, `LIQUIDITY_INCENTIVE_LIVE_ENABLED=true`,
+`KILL_SWITCH=false`, `LIVE_ENABLED=true`. PR #428 is **not merged**, so this report ran against
+base code `5ea57bd3` and none of the four fixes — including the shadow pinning that adds
+subscriptions — is in this reading. The `seq_gap` figures above are therefore a clean
+pre-deploy baseline for judging whether that fix costs tape quality.
+
 ## 10. Phase 1a — the ONE-SIDED live smoke test (separate from §6, and much smaller)
 
 **§6 is frozen and is not what this section gates on.** §6 asks whether quoting incentivized

@@ -615,6 +615,35 @@ rejects, no new settlement, no reward. Commitments did not exceed four.
 held event; these positions stay until resolution. Factual update to §9.15, not a new finding.
 [Thesis §9.19](../LIQUIDITY_INCENTIVE_THESIS.md).
 
+## FILL MODELS SEPARATE (2026-09-19 00:25Z)
+
+Criterion (c) fired, but only on one model. Over four hours queue-aware added **2** `both_filled`
+(4→6) and **8** `partial_both` (36→44); conservative added **none** (still 4 / 16) while its n
+grew 626→866. Same tape, different queue crediting — model choice is now load-bearing in the
+headline, not a rounding difference.
+
+**Cannot be read as "two-sided fills are achievable."** Queue-aware is the model most sensitive
+to tape completeness and conservative the least; a missed cancel inflates exactly queue-aware.
+The tape carries 200 `seq_gap` events. The asymmetry matches that failure mode precisely, so the
+separation is recorded and its cause left unresolved.
+
+Under the gated metric (conservative) the numerator has been frozen for three checks while n
+grows, so P(both | one) keeps drifting toward zero by arithmetic: 0.007 → 0.006 → 0.005.
+
+**Collector plateaued, not recovered:** `seq_gap` +31/4h against +32 previously (neither
+criterion a nor b), `throttled` 4→5, two reconnects, no thread restart. Discovery clean (446
+cycles, 0 errors).
+
+**Headline reversed and is not news:** `A_break_even`/$500 conservative −150.53 → −69.10 →
+−158.34/day. Recorded only so §9.18's improvement is not later read as a trend.
+
+Carried, not acted on: the competing-depth split gained a **medium** bucket — single-leg MTM
+−$0.9262 with reward +$0.3359 (n=45) against −$4.7731 / +$0.0952 deep (n=817). Points at
+selection, but n=45.
+
+Live config re-verified unchanged. #428 still unmerged, so this ran on base code and is a clean
+pre-deploy `seq_gap` baseline for fix 4. [Thesis §9.20](../LIQUIDITY_INCENTIVE_THESIS.md).
+
 ## Next Step (Phase 1a)
 
 Operator: the four-step arming sequence in [thesis §10.6](../LIQUIDITY_INCENTIVE_THESIS.md).
