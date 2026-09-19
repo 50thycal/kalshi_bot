@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=script  id=desk-d3-eia
-# actor=claude-desk  purpose=desk settlement-source read 2026-09-19
-# code 82e3240bf821c010610610c25ec33d14e10d9a22 · started 2026-09-19T13:44:01Z
-# desk_fetch https://www.eia.gov/petroleum/supply/weekly/
-# HTTP 200 · text/html; charset=UTF-8 · 73023 bytes
-# 0 window(s) around 'Strategic'
-(no hits — the page may be rendered client-side; try --raw or an API URL)
