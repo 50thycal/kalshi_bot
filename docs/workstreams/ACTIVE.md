@@ -54,6 +54,7 @@ The specific omissions from the 2026-08-24 seeding inventory, with reasons, are 
 
 ## Parked
 
+- Desk automation: once the discretionary desk has 30 settled picks in a class above break-even, decide whether a rule can be written for that class; if so it becomes a paper book through Experiment OS, never a worker path that accepts a ticker from outside (`DEC-017`; Calvin, 2026-09-19).
 - Purchased-tail MMSELL hedge: explore buying a farther-tail YES against a NO threshold position on the same contest with matching settlement rules; evaluate interval loss and hedge cost (Calvin, 2026-09-12).
 - Per-book live risk budgets, **prerequisite for a second concurrent live canary**: `MAX_TOTAL_EXPOSURE` and `MAX_DAILY_LOSS` are account-wide and are checked BEFORE the per-ticker dedup gate, so whichever book the scan reaches first can exhaust the budget and gate the other out of the whole slate — the same scan-order bias `part=i/n` (#413) fixed per-ticker, one level up, where a ticker partition cannot reach. Fix is per-book budgets checked IN ADDITION to the account-level ones, never instead of. Touches the live risk path, so operator-gated. Do not arm two live books without it: the second canary's numbers would be the first one's leftovers. Context: `docs/MMSELL_BOOK_PARTITION.md` "What this does NOT fix" (Calvin, 2026-09-16).
 

@@ -1068,3 +1068,9 @@ that opened it.
 Standing rules the desk inherits from the record are R1–R12 in the desk document; the
 board read (`kalshi_desk_board`) and any fetch tool the desk uses are read-only public GETs
 on the ops runner, allowlisted like every other analysis script.
+
+**Operator's answers, verbatim in substance (2026-09-19, later the same day):** (1) yes, start by
+hand, *automate later* — parked, not scheduled, and any automation re-enters through the front
+door as a book (§2); (2) yes; (3) widening the sandbox network allowlist is allowed — the
+operator sets it in the claude.ai environment settings, the session cannot; until a new session
+starts under the wider policy the ops runner remains the board read.
