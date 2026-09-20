@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "39a8aebc5865abfc65c4752817676566efa9b2de",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-20T02:51:35Z",
+  "id": "limm-watch-0255",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/limm-watch-0255.receipt.json",
+  "result_file": "ops/results/limm-watch-0255.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/35485071761",
+  "service": null,
+  "started_at": "2026-09-20T02:51:35Z",
+  "targets": [],
+  "type": "db"
+}
