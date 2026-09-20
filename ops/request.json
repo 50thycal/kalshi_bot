@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-close-2300","sql":"SELECT market_ticker, coalesce(market_status,'-') AS status, coalesce(end_date::text,'-') AS prog_end, coalesce(last_seen_at::text,'-') AS seen FROM incentive_programs WHERE market_ticker LIKE 'KXRT-RES%' OR market_ticker LIKE 'KXBIGGESTQUAKE-17SEP26%' ORDER BY market_ticker LIMIT 12"}
