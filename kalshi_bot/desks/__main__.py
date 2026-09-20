@@ -30,6 +30,10 @@ def build_service(settings):
     store.initialize(settings.round_id, utcnow())
     providers = {}
     executors = {}
+    ownership = None
+    if settings.account_mode == "shared_primary" and settings.shared_ownership_url.get_secret_value():
+        from kalshi_bot.kalshi.ownership import MarketOwnership
+        ownership = MarketOwnership(settings.shared_ownership_url.get_secret_value(), settings.shared_account_namespace)
     for desk in ("chatgpt", "claude"):
         provider = getattr(settings, f"{desk}_provider")
         # Never even instantiate a paid provider under the accepted $0 budget.
@@ -43,8 +47,13 @@ def build_service(settings):
         key = getattr(settings, f"{desk}_kalshi_key_id").get_secret_value()
         private = getattr(settings, f"{desk}_kalshi_private_key").get_secret_value()
         account = getattr(settings, f"{desk}_subaccount")
-        if key and private and account:
-            exchange = KalshiDeskExchange(settings.kalshi_base_url, key, private, account)
+        if key and private and (account or ownership):
+            if settings.account_mode == "shared_primary":
+                from .shared_account import SharedAccountExchange
+                exchange = SharedAccountExchange(settings.kalshi_base_url, key, private,
+                                                 ownership=ownership, store=store, desk_id=desk)
+            else:
+                exchange = KalshiDeskExchange(settings.kalshi_base_url, key, private, account)
             executors[desk] = DeskExecutor(
                 store, exchange, desk, live_enabled=settings.live_enabled,
                 isolation_verified=False,

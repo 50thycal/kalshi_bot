@@ -19,6 +19,9 @@ class DeskSettings(BaseSettings):
     host: str = "127.0.0.1"
     port: int = Field(default=8090, ge=1, le=65535)
     live_enabled: bool = False
+    account_mode: Literal["isolated", "shared_primary"] = "isolated"
+    shared_ownership_url: SecretStr = SecretStr("")
+    shared_account_namespace: str = "kalshi-primary"
     existing_workers_isolated: bool = False
     external_runners_verified: bool = False
     research_mode: Literal["scheduled", "session"] = "scheduled"
@@ -64,11 +67,14 @@ class DeskSettings(BaseSettings):
             if not self.existing_workers_isolated:
                 raise ValueError("existing worker isolation must be independently verified")
             accounts = [self.chatgpt_subaccount, self.claude_subaccount]
-            if 0 in accounts or len(set(accounts)) != 2:
+            if self.account_mode == "shared_primary":
+                if accounts != [0, 0] or not self.shared_ownership_url.get_secret_value():
+                    raise ValueError("shared desks require primary account and ownership database")
+            elif 0 in accounts or len(set(accounts)) != 2:
                 raise ValueError("live desks require two distinct non-primary subaccounts")
             keys = [self.chatgpt_kalshi_key_id.get_secret_value(),
                     self.claude_kalshi_key_id.get_secret_value()]
-            if not all(keys) or len(set(keys)) != 2:
+            if not all(keys) or (self.account_mode == "isolated" and len(set(keys)) != 2):
                 raise ValueError("live desks require distinct restricted Kalshi keys")
             if not all(getattr(self, f"{d}_kalshi_private_key").get_secret_value()
                        for d in ("chatgpt", "claude")):
@@ -82,11 +88,18 @@ class DeskSettings(BaseSettings):
         if not self.existing_workers_isolated:
             blockers.append("existing_worker_subaccount_isolation_unverified")
         accounts = [self.chatgpt_subaccount, self.claude_subaccount]
-        if 0 in accounts or len(set(accounts)) != 2:
+        if self.account_mode == "shared_primary":
+            if accounts != [0, 0]:
+                blockers.append("shared_primary_account_required")
+            if not self.shared_ownership_url.get_secret_value():
+                blockers.append("shared_ownership_database_required")
+        elif 0 in accounts or len(set(accounts)) != 2:
             blockers.append("two_distinct_non_primary_subaccounts_required")
         for desk in ("chatgpt", "claude"):
             if not getattr(self, f"{desk}_kalshi_key_id").get_secret_value():
                 blockers.append(f"{desk}_exchange_credentials_missing")
+            if not getattr(self, f"{desk}_kalshi_private_key").get_secret_value():
+                blockers.append(f"{desk}_exchange_signing_key_missing")
             if self.research_mode == "session":
                 continue  # App sessions prove readiness through completed leased research.
             if getattr(self, f"{desk}_provider") == "external":

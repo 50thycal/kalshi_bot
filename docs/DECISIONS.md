@@ -1164,3 +1164,21 @@ legacy V1 route still in use before setting DESKS_EXISTING_WORKERS_ISOLATED. A m
 does not establish this fact. No keys are revoked, funds moved, desks started, or existing
 worker exposure expanded by this change. Shared execution changes retain the Platform Change
 Review / revision-impact merge guard.
+
+
+## DEC-021 — Shared primary account with virtual desk books (2026-09-20)
+
+Calvin approved using the existing account and separate accounting instead of provisioning
+non-primary desk accounts. This supersedes the dedicated-subaccount requirement of DEC-018
+and DEC-020 for the selected shared mode; the isolated mode remains supported.
+
+Each desk retains the original $30 allocation and all execution/research limits. Cash is
+pooled and software-limited, not protected by exchange permissions. Existing keys need not
+change. A common immutable market ownership register coordinates main/evo/desk writes;
+main excludes desk-owned market records from management, including legacy V1 order guards.
+No automatic ownership release, balancing trades or discrepancy repair. Unknown external
+consumers and manual trades cannot be controlled by this register.
+
+Implementation and deployment contract: docs/desks/SHARED_ACCOUNT.md. This authorizes the
+software build, not a false worker-verification attestation or live start. Shared execution
+Platform Revision/impact review remains required. No funds or lifecycle state are changed.

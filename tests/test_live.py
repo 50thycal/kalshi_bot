@@ -65,7 +65,7 @@ class FakeLiveClient:
         self.placed.append(order)
         return self._respond({"order": {"order_id": f"K-{len(self.placed)}", "status": "resting"}})
 
-    def create_v1_order(self, user_id, order):
+    def create_v1_order(self, user_id, order, *, ticker=None):
         self.placed.append(order)
         self.v1_user_ids.append(user_id)
         return self._respond({"order": {"order_id": f"K-{len(self.placed)}", "status": "executed"}})

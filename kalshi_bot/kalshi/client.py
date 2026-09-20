@@ -50,6 +50,11 @@ class KalshiClient:
         # never survived. The client only COUNTS; a caller that owns a DB session persists the
         # snapshot (see MmSellTracker._record_scan_telemetry) — the HTTP client stays I/O-pure.
         self._transient_counts: dict[int, int] = {}
+        self._ownership = None
+        ownership_url = settings.shared_account_ownership_url.get_secret_value()
+        if ownership_url:
+            from .ownership import MarketOwnership
+            self._ownership = MarketOwnership(ownership_url, settings.shared_account_namespace)
 
     # -- diagnostics -------------------------------------------------------
     def transient_counts(self) -> dict[int, int]:
@@ -64,6 +69,8 @@ class KalshiClient:
     # -- lifecycle ---------------------------------------------------------
     def close(self) -> None:
         self._client.close()
+        if self._ownership:
+            self._ownership.engine.dispose()
 
     def __enter__(self) -> KalshiClient:
         return self
@@ -90,10 +97,36 @@ class KalshiClient:
             params = self._primary_account_fields(params)
             if json is not None:
                 json = self._primary_account_fields(json)
+            if self._ownership and method != "GET":
+                ticker = (json or {}).get("ticker")
+                if method == "DELETE" and "/orders/" in suffix:
+                    order = self._request("GET", "/portfolio/orders/" + suffix.rsplit("/", 1)[1]).get("order", {})
+                    ticker = order.get("ticker")
+                self._ownership.claim(ticker, "main")
         sign_path = f"{API_PREFIX}{suffix}"
         result = self._send(method, suffix.lstrip("/"), sign_path, params=params, json=json, auth=auth)
         if suffix.startswith("/portfolio/"):
             self._check_primary_response(result)
+            if self._ownership and method == "GET":
+                result = self._filter_desk_records(result)
+        return result
+
+    def _filter_desk_records(self, result):
+        excluded = self._ownership.desk_markets()
+        def visible(row):
+            ticker = row.get("ticker") or row.get("market_ticker")
+            if not ticker:
+                raise AuthError("shared account record lacks market identity")
+            return ticker not in excluded
+        result = dict(result)
+        for key in ("orders", "fills", "market_positions", "settlements", "queue_positions"):
+            if key in result:
+                result[key] = [r for r in result[key] if visible(r)]
+        if "order" in result and not visible(result["order"]):
+            raise AuthError("desk-owned order is outside worker scope")
+        # Exchange event aggregates cannot be split reliably into book records.
+        if "event_positions" in result:
+            result["event_positions"] = []
         return result
 
     @staticmethod
@@ -603,7 +636,7 @@ class KalshiClient:
             return None
         return int(value)
 
-    def create_v1_order(self, user_id: str, order: dict[str, Any]) -> dict:
+    def create_v1_order(self, user_id: str, order: dict[str, Any], *, ticker: str | None = None) -> dict:
         """Place an order via the v1 user-scoped endpoint — the path the web app uses to CLOSE
         range-bucket markets (the v2 endpoint rejects those closes). `order` is the v1 body
         (market_id, user_side, side, order_action, order_type, count_fp, price_dollars,
@@ -612,6 +645,10 @@ class KalshiClient:
         # Legacy user-scoped API: preserve the payload contract, but reject any
         # explicit non-primary selector. Live launch must verify legacy routing.
         self._primary_account_fields(order)
+        if self._ownership:
+            # Caller knows the ticker used to resolve the legacy market UUID.
+            # Missing identity fails closed; it is never guessed from the UUID.
+            self._ownership.claim(ticker, "main")
         return self._request_v1("POST", f"/v1/users/{user_id}/orders", json=order)
 
     def get_v1_event(self, series_ticker: str, event_ticker: str) -> dict:

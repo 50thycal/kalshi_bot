@@ -365,7 +365,7 @@ class LiveExecutor:
         )
         session.commit()
         try:
-            resp = (self.client.create_v1_order(user_id, order) if is_v1
+            resp = (self.client.create_v1_order(user_id, order, ticker=ticker) if is_v1
                     else self.client.place_order(**order))
         except AuthError:
             repo.update_live_order_status(session, row, status="error", cancel_reason="auth")
@@ -1668,7 +1668,7 @@ class LiveExecutor:
             "ticker": ticker, "dollars": dollars, "ask": ask, "buy_price": buy_price,
             "count_fp": f"{count_fp:.2f}", "market_id": market_id, "payload": order}})
         try:
-            resp = self.client.create_v1_order(user_id, order)
+            resp = self.client.create_v1_order(user_id, order, ticker=ticker)
         except AuthError as exc:
             repo.update_live_order_status(session, row, status="error", cancel_reason=f"v1_auth:{exc}")
             logger.error("probe buy v1 AUTH FAILED", extra={"extra_fields": {
@@ -1899,7 +1899,7 @@ class LiveExecutor:
         logger.info("live exit attempt (v1 close)", extra={"extra_fields": {
             "ticker": ticker, "coid": coid, "market_id": market_id, "payload": order}})
         try:
-            resp = self.client.create_v1_order(user_id, order)
+            resp = self.client.create_v1_order(user_id, order, ticker=ticker)
         except AuthError as exc:
             # v1 endpoint auth is experimental (the app used a browser session; we use the API
             # key). If the key isn't accepted on /v1, do NOT crash the worker — log clearly,

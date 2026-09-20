@@ -1,5 +1,11 @@
 # Autonomous ChatGPT and Claude desks
 
+**DEC-021 update:** the operator selected shared-primary accounting with separate virtual
+books. The non-primary account requirements below remain the isolated-mode alternative.
+See [shared-account controls and deployment](desks/SHARED_ACCOUNT.md); all research,
+budget, ownership, reconciliation and common-start guards still apply.
+
+
 **Implementation contract:** DEC-018 / DEC-019 · WS-021 · default off. This document describes the
 new isolated service and its launch requirements, not a deployed or funded service.
 The owner approved this design and implementation on 2026-09-20. Both new sessions must

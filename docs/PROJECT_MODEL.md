@@ -73,7 +73,8 @@ credentials and desk-owned tables; it cannot write worker or XOS state.
 
 `kalshi_bot/desks/` adds a separate default-off service, not a hook in either worker.
 ChatGPT and Claude share deterministic execution/accounting and a common start, but own
-separate research histories and restricted non-primary Kalshi subaccounts. Desk-specific
+separate research histories and virtual books. DEC-021 selects a shared primary-account
+mode with coordinated market ownership; restricted subaccounts remain an alternative. Desk-specific
 configuration is exclusively `DESKS_*`. The desk service owns its persistence; it never
 writes `paper_trades`, XOS state, or the historical manual ledger. An authenticated API
 allows shared reads and own-desk publications/decisions; operator authority controls start
@@ -83,8 +84,8 @@ Durable research jobs accept either externally scheduled session completions or 
 funded provider calls. Default additional model budget is zero. Intent and reservations
 precede orders; ambiguous exchange responses preserve exposure until reconciled. The
 supervisor tracks research progress, failures, learning backlogs and budgets. Live start
-requires verified worker/subaccount isolation, dedicated funds/keys, a working unattended
-runtime, alerts, and readiness from both fresh sessions. Code presence does not imply this
+requires verified worker ownership or subaccount isolation, cash backing/signing credentials,
+a working selected research mode, alerts, and readiness from both fresh sessions. Code presence does not imply this
 service has been deployed or activated. Full contract: `docs/AUTONOMOUS_DESKS.md`.
 
 ## Important data flows
@@ -388,8 +389,19 @@ mode remains scheduled for backward compatibility. See docs/desks/APP_SESSIONS.m
 
 The existing KalshiClient selects subaccount 0 on portfolio REST requests and V2 order
 bodies, rejects non-primary selectors, and rejects explicit foreign-account response rows
-before reconciliation. The desk adapter remains separate with restricted non-primary keys.
+before reconciliation. The desk adapter remains separate; DEC-021 adds an opt-in shared-primary adapter.
 Old worker keys retain account-wide permissions: this boundary is software-enforced and
 does not protect against another consumer of those keys. Legacy user-scoped V1 order
 payloads are preserved and explicit non-primary selectors rejected; routing must be verified
 at deployment before the desk isolation attestation can be set.
+
+
+### Shared-account desk books (DEC-021)
+
+The optional ownership register is shared by main/evo and the desk service; the desk
+financial database stays separate. Ticker claims are atomic and permanent. Shared mode
+uses account 0 and may reuse existing signing credentials, but never account aggregate
+P&L for desk scoring. It audits attributed orders/fills and positions before new orders
+and on runtime checks. Main V1/V2 writes and cancels honor claims; portfolio management
+reads exclude desk markets and omit unsplittable event aggregates. Existing execution
+behavior is unchanged until its ownership URL is configured. See docs/desks/SHARED_ACCOUNT.md.

@@ -224,3 +224,22 @@ The ChatGPT app completed and read back its first no-decision research cycle and
 only its own readiness. Remaining launch gates stay enforced. Next: review/deploy the
 discovery fix and verify the deployed shared board, then continue resolving the recorded
 launch gates without changing existing keys or inventing Claude readiness.
+
+
+## DEC-021 build card — shared-account books
+
+Owner approved replacing subaccount setup with virtual books on the current account.
+Build: explicit shared-primary mode, one atomic persistent market ownership register,
+main V1/V2/cancel and read guards, primary cash backing, desk order/fill/position audits.
+No key rotation, transfers, automatic ownership release, live activation or XOS changes.
+Acceptance: incumbent and peer market conflicts cannot submit; concurrent owners cannot
+win the same ticker; restart preserves claims; unrelated main records remain accessible;
+shared fills affect only the right desk; foreign activity blocks new submissions.
+Spec/deployment contract: ../desks/SHARED_ACCOUNT.md. Implementation is locally complete;
+shared-execution platform review and operator deployment verification remain required.
+
+Validation: 380 tests passed across desk, main client/live, execution telemetry and
+liquidity executor suites; the pre-existing PostgreSQL case skipped locally. After adding
+the PostgreSQL ownership race case and final quote-age guard, 29 focused tests passed
+and the new database-only case skipped locally. Both database cases run in CI. Lint and
+diff checks pass. No production mutation, funds, orders or key changes performed.
