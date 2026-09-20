@@ -21,8 +21,11 @@ other-desk, database or exchange credentials.
 
 The image pins Codex 0.155.1 and Claude Code 2.1.278, checks the required help flags
 at build time, initializes private directories and drops to UID 10001.
-Each service starts with `sleep infinity` for interactive setup; an online container
-in this mode is NOT a functioning researcher.
+Set Railway's start command explicitly to
+`/usr/local/bin/desk-runner-entrypoint sleep infinity` for interactive setup.
+Railway's custom start command bypasses the Docker ENTRYPOINT; `sleep infinity`
+alone leaves PID 1 as root and skips private directory initialization.
+An online container in this mode is NOT a functioning researcher.
 Keep one replica. Preserve volume contents through every redeployment.
 
 Using Railway's authenticated console, run commands as the same identity:
@@ -50,7 +53,8 @@ Python `/opt/desk-venv/bin/python`, checkout `/opt/kalshi_bot`,
 state `/data/runner`, research home `/data/model-home`.
 Select and record an entitled model ID explicitly before running.
 Verify completed publication in authenticated service state. Only then configure
-the service start command for `serve`; a failed/uncertain model call must not be
+the service start command for `serve`, prefixed with
+`/usr/local/bin/desk-runner-entrypoint`; a failed/uncertain model call must not be
 reset or repeated by deleting state. Set restart policy NEVER for a runner until
 its exit-2 handling is explicitly supported by the supervisor; otherwise Railway
 could restart a needs-operator failure repeatedly.
@@ -61,7 +65,9 @@ funding, alerts, working cognition, and common-start authorization remain guards
 ## Setup checkpoint, 2026-09-20
 
 PR #445 merged at `bb7c6a1e5e0a09c6b94a8c86f0939195e9633364`.
-The setup session provisioned a separate service and persistent Postgres.
+The setup session provisioned a separate service and persistent Postgres,
+plus two idle runner services with separate persistent volumes. Both images
+built successfully with pinned native clients. Model login is pending.
 HTTPS and authenticated context were verified; the monitor reports a fresh tick.
 Both sessions remain unready and the round has not started. Exchange credentials,
 restricted subaccounts, alerts, model authentication/billing, completed cycles and
