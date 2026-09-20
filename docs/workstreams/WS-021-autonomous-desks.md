@@ -204,5 +204,23 @@ executor suites; one PostgreSQL-only test skipped locally. Repository lint and d
 The legacy V1 route remains a deployment verification requirement; its undocumented payload
 is not silently changed. Existing unrestricted consumers outside the audited workers are
 not claimed isolated. No live readiness flag has been set.
-Next step: review the primary-account scoping PR; satisfy the shared execution Platform
-Revision/impact merge guard, then verify deployment before resuming launch preflight.
+PR #449 was subsequently merged by the owner and deployed successfully. The shared
+Platform Revision/impact requirement remains unresolved; no cutover is inferred.
+
+## Launch verification continuation — filtered discovery
+
+Owner requested continued construction around existing services. Build card: fix the
+observed combo-only discovery starvation within the isolated desk reader; preserve its
+two-page budget and shared hourly snapshot. Add exchange-side MVE exclusion and reset
+incompatible cached cursors/snapshots. No shared executor or strategy change.
+
+Acceptance: filtered queries return binary candidates; legacy same-hour snapshots and
+cursors cannot suppress the new scan; local combo rejection remains; current filtered
+cursors continue normally and both desks share the result. Offline regression coverage
+and production read-only query evidence are recorded in
+[launch verification](../desks/VERIFICATION-2026-09-20.md).
+
+The ChatGPT app completed and read back its first no-decision research cycle and marked
+only its own readiness. Remaining launch gates stay enforced. Next: review/deploy the
+discovery fix and verify the deployed shared board, then continue resolving the recorded
+launch gates without changing existing keys or inventing Claude readiness.

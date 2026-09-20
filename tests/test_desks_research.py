@@ -164,7 +164,9 @@ def test_progressive_scanner_continues_cursor_and_shares_snapshot(tmp_path):
     from kalshi_bot.desks.research import PublicMarketReader
     requests = []
     def fetch(url, now):
-        cursor = parse_qs(urlsplit(url).query).get("cursor", [""])[0]
+        query = parse_qs(urlsplit(url).query)
+        assert query["mve_filter"] == ["exclude"]
+        cursor = query.get("cursor", [""])[0]
         requests.append(cursor)
         index = int(cursor or 0)
         return {"source_id": "source", "url": url, "retrieved_at": now.isoformat(),
@@ -185,6 +187,42 @@ def test_progressive_scanner_continues_cursor_and_shares_snapshot(tmp_path):
     assert requests == ["", "1", "2", "3"]
     assert later["coverage"]["completed_passes"] == 1
     assert later["coverage"]["cached_markets"] == 4
+
+
+def test_filtered_board_restarts_legacy_cursor_and_same_hour_snapshot(tmp_path):
+    from urllib.parse import parse_qs, urlsplit
+
+    from kalshi_bot.desks.research import PublicMarketReader
+    from kalshi_bot.desks.research_models import ResearchBoard, ResearchMarket
+
+    store = store_at(tmp_path)
+    requests = []
+    def fetch(url, now):
+        query = parse_qs(urlsplit(url).query)
+        requests.append(query)
+        assert query["mve_filter"] == ["exclude"]
+        assert "cursor" not in query
+        base = {"market_type": "binary", "close_time": (now + timedelta(days=1)).isoformat()}
+        return {"source_id": "source", "url": url, "retrieved_at": now.isoformat(),
+                "excerpt": "{}", "sha256": "a" * 64, "_cursor": "",
+                "_market_data": [{**base, "ticker": "BINARY-EVENT-YES"},
+                                 {**base, "ticker": "COMBO", "mve_collection_ticker": "MVE"},
+                                 {**base, "ticker": "LEGS", "mve_selected_legs": [{}]}]}
+    reader = PublicMarketReader(fetch, store=store)
+    with store._tx() as session:
+        board = session.get(ResearchBoard, reader.round_id)
+        board.cursor, board.bucket = "old-unfiltered-cursor", int(NOW.timestamp()) // 3600
+        board.pages_seen, board.completed_passes = 42, 3
+        board.snapshot = {"markets": [], "coverage": {"pages_seen": 42}}
+        session.add(ResearchMarket(key=reader.round_id + ":old", round_id=reader.round_id,
+                                   fetched_at=NOW, payload={"ticker": "OLD"}))
+    result = reader(NOW)
+    assert [m["ticker"] for m in result["markets"]] == ["BINARY-EVENT-YES"]
+    assert result["coverage"]["pages_seen"] == 1
+    assert result["coverage"]["completed_passes"] == 1
+    assert result["coverage"]["cached_markets"] == 1
+    assert reader(NOW)["markets"] == result["markets"]
+    assert len(requests) == 1
 
 
 def test_autonomous_postmortems_clear_settlement_backlog(tmp_path):

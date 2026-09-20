@@ -284,17 +284,25 @@ class PublicMarketReader:
             with self.store._tx() as session:
                 board = session.scalar(select(ResearchBoard).where(
                     ResearchBoard.round_id == self.round_id).with_for_update())
-                if board.bucket == bucket and board.snapshot:
+                # Exchange cursors belong to their query. Never resume an old
+                # unfiltered scan (or serve its same-hour empty snapshot).
+                compatible = board.snapshot.get("coverage", {}).get("mve_filter") == "exclude"
+                if board.bucket == bucket and board.snapshot and compatible:
                     return self._copy_snapshot(board.snapshot)
                 lease = board.lease_until
                 if lease and lease.replace(tzinfo=timezone.utc) > now:
                     raise DeskError("market_scan_in_progress")
-                cursor = board.cursor or ""
+                if compatible:
+                    cursor = board.cursor or ""
+                else:
+                    board.cursor = None
+                    board.pages_seen = board.completed_passes = 0
+                    session.execute(delete(ResearchMarket).where(ResearchMarket.round_id == self.round_id))
                 board.claim_token, board.lease_until = token, now + timedelta(minutes=3)
         collected, sources, pages, completed = [], [], 0, False
         try:
             for _ in range(2):
-                params = urlencode({"status": "open", "limit": 50, "cursor": cursor})
+                params = urlencode({"status": "open", "limit": 50, "mve_filter": "exclude", "cursor": cursor})
                 source = self.fetcher("https://api.elections.kalshi.com/trade-api/v2/markets?" + params, now)
                 rows = source.pop("_market_data", None)
                 next_cursor = source.pop("_cursor", None)
@@ -302,7 +310,8 @@ class PublicMarketReader:
                     parsed = json.loads(source["excerpt"])
                     rows, next_cursor = parsed.get("markets", []), parsed.get("cursor", "")
                 for market in rows:
-                    if market.get("mve_selected_legs") or market.get("market_type", "binary") != "binary":
+                    if (market.get("mve_selected_legs") or market.get("mve_collection_ticker")
+                            or market.get("market_type", "binary") != "binary"):
                         continue
                     fields = ("ticker", "event_ticker", "title", "subtitle", "close_time",
                               "yes_ask_dollars", "no_ask_dollars", "yes_ask", "no_ask",
@@ -378,7 +387,7 @@ class PublicMarketReader:
                 if len(selected) >= 20:
                     break
             result = {"markets": selected, "sources": sources,
-                      "coverage": {"mode": "progressive_binary_board", "pages_seen": pages_seen,
+                      "coverage": {"mode": "progressive_binary_board", "mve_filter": "exclude", "pages_seen": pages_seen,
                                    "cached_markets": len(all_markets), "completed_passes": passes,
                                    "continuation_pending": bool(cursor), "as_of": now.isoformat(),
                                    "note": "Cached quotes retain individual quote_at; fetch fresh full rules and settlement sources before trading. Combos excluded."}}
