@@ -18,7 +18,7 @@ RUN chmod 755 /usr/local/bin/desk-runner-entrypoint \
     && codex --version && claude --version \
     && codex exec --help | grep -q -- '--ignore-user-config' \
     && claude --help | grep -q -- '--json-schema'
-ENV PATH="/opt/desk-venv/bin:/usr/local/bin:/usr/bin:/bin" \
+ENV PATH="/opt/desk-venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
     HOME="/data/model-home" \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
