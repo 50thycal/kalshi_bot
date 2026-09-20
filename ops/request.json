@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"script","name":"kalshi_desk_board","args":["--ticker","KXDIESELW-26SEP21-T6.52","--depth","6","--trades","10"],"id":"desk-d7-dw","actor":"claude-desk","purpose":"verify D-001 settlement source 2026-09-20"}
