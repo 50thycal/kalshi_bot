@@ -1,1 +1,1 @@
-{"type":"script","name":"desk_fetch","args":["https://gasprices.aaa.com/","--find","Diesel","--window","180","--hits","3"],"id":"desk-d6-aaa","actor":"claude-desk","purpose":"diesel settlement proxy 2026-09-20"}
+{"type":"noop"}
