@@ -41,8 +41,14 @@ def _micros(value):
 class Supervisor:
     def __init__(self, store, providers: dict[str, HTTPProvider] | None = None,
                  market_reader=None, source_fetcher=None, submit_decision=None,
-                 interval_seconds=3600, monthly_budget_usd="0", external_runners_verified=False):
+                 interval_seconds=3600, monthly_budget_usd="0", external_runners_verified=False,
+                 research_mode="scheduled"):
         self.store = store
+        if research_mode not in {"scheduled", "session"}:
+            raise ValueError("invalid research mode")
+        if research_mode == "session" and providers:
+            raise ValueError("session mode cannot invoke providers")
+        self.research_mode = research_mode
         self.providers = providers or {}
         self.external_runners_verified = bool(external_runners_verified)
         self.fetcher = source_fetcher or PublicFetcher()
@@ -74,10 +80,12 @@ class Supervisor:
                 ResearchJob.state.in_(["queued", "claimed", "running", "retry", "publishing"])))
             if active:
                 return active.job_id
-            if session.get(ResearchJob, key):
+            if self.research_mode == "session":
+                key = f"session-{self._round_id()}-{desk_id}-{uuid.uuid4().hex}"
+            elif session.get(ResearchJob, key):
                 return key
             session.add(ResearchJob(job_id=key, desk_id=desk_id, round_id=self._round_id(),
-                        created_at=now, updated_at=now, state="queued", context={},
+                        created_at=now, updated_at=now, state="queued", context={"research_mode": self.research_mode},
                         reserved_microusd=0))
         return key
 
@@ -153,6 +161,7 @@ class Supervisor:
         chosen_publications += [p for p in publications if p.get("desk_id") != desk_id][:4]
         context = {"desk_id": desk_id, "round_id": self._round_id(), "now": now.isoformat(),
                    "board": {**board, "sources": [{**source, "excerpt": source["excerpt"][:1000]} for source in board.get("sources", [])]},
+                   "research_mode": self.research_mode,
                    "archive": shared_archive(), "desks": snapshot.get("desks", []),
                    "recent_decisions": decisions, "own_unreviewed_settlements": backlog,
                    "peer_and_own_publications": chosen_publications}
@@ -167,6 +176,7 @@ class Supervisor:
             job = self._job(session, job_id)
             if job.state not in {"queued", "retry"}:
                 return None
+            job.context = {**(job.context or {}), "research_mode": self.research_mode}
             job.state, job.worker_id, job.claim_token = "claimed", worker_id[:200], uuid.uuid4().hex
             job.lease_until, job.updated_at = now + timedelta(minutes=30), now
             token = job.claim_token
@@ -233,6 +243,28 @@ class Supervisor:
         if not any(source["url"] == decision.settlement_source for source in sources):
             raise DeskError("unverified_settlement_source")
 
+    def verify_session_decision(self, decision, now):
+        """New session orders must be part of an accepted, still-active completion.
+
+        Direct /decisions calls cannot reuse an old session's evidence to trade.
+        Publication recovery keeps the original deadline, never renewing authority.
+        """
+        expected = decision.model_dump(mode="json")
+        with self.store._tx() as session:
+            jobs = session.scalars(select(ResearchJob).where(
+                ResearchJob.round_id == decision.round_id,
+                ResearchJob.desk_id == decision.desk_id,
+                ResearchJob.state == "publishing"))
+            for job in jobs:
+                deadline = (job.context or {}).get("session_submit_until")
+                if ((job.context or {}).get("research_mode") != "session" or not deadline
+                        or _utc(now) >= _utc(datetime.fromisoformat(deadline))):
+                    continue
+                if any(item.get("decision") == expected for item in
+                       (job.result or {}).get("output", {}).get("decisions", [])):
+                    return
+        raise DeskError("active_session_completion_required")
+
     def complete_external(self, job_id, claim_token, payload, model_id, now, *, desk_id):
         if not isinstance(model_id, str) or not 1 <= len(model_id) <= 200:
             raise DeskError("research_model_id_required")
@@ -251,6 +283,8 @@ class Supervisor:
                 state = "completed" if job.state == "completed" else "publishing"
                 return {"job_id": job_id, "state": state}
             self._owned(session, job_id, claim_token, desk_id, now)
+            if self.research_mode == "session" and output.source_requests:
+                raise DeskError("research_sources_not_captured")
         self._verify(output, job_id, desk_id, model_id, "session")
         self._publish(job_id, output, desk_id, model_id, now)
         self._finish(job_id, now, 0)
@@ -263,6 +297,8 @@ class Supervisor:
                 raise DeskError("research_completion_already_in_progress")
             job.state = "publishing"
             job.result = {"output": output.model_dump(mode="json"), "model_id": model_id}
+            if self.research_mode == "session" and "session_submit_until" not in job.context:
+                job.context = {**job.context, "session_submit_until": _utc(job.lease_until).isoformat()}
             job.updated_at = now
         # Deterministic publication IDs make restart replay safe. Store.publish
         # rejects different payloads for an existing immutable record ID.
@@ -450,6 +486,8 @@ class Supervisor:
                 self._finish(job_id, now, actual)
             except Exception:
                 self._fail(job_id, "publication_recovery_failed", now, unknown=False, actual=actual)
+        if self.research_mode == "session":
+            return self.status(now)  # Reconcile accepted results; never schedule cognition.
         for desk_id in ("chatgpt", "claude"):
             self.enqueue(desk_id, now)
         with self.store._tx() as session:
@@ -497,7 +535,10 @@ class Supervisor:
                     reasons.append("settlement_learning_backlog")
                 fresh_external = any(j.worker_id and j.state == "completed"
                                      and _utc(now) - _utc(j.updated_at) <= timedelta(hours=24) for j in jobs)
-                if desk_id not in self.providers and not (self.external_runners_verified and fresh_external):
+                if self.research_mode == "session":
+                    if not any((j.context or {}).get("research_mode") == "session" for j in completed):
+                        reasons.append("session_cycle_required")
+                elif desk_id not in self.providers and not (self.external_runners_verified and fresh_external):
                     reasons.append("unattended_runner_missing")
                 elif desk_id in self.providers and self.limit <= 0:
                     reasons.append("paid_research_budget_not_authorized")
@@ -510,10 +551,13 @@ class Supervisor:
                 last = max((_utc(job.updated_at) for job in completed), default=None)
                 stale = (last and _utc(now) - last > timedelta(hours=24)) or (
                     not last and jobs and _utc(now) - min(_utc(j.created_at) for j in jobs) > timedelta(hours=24))
-                if stale:
+                if stale and self.research_mode != "session":
                     reasons.append("no_completed_cycle_24h")
                 state = "needs_operator" if reasons else ("recovering" if failures else "healthy" if completed else "starting")
+                activity = "researching" if any(j.state in {"claimed", "running", "publishing"} for j in jobs) else "waiting_for_continue"
                 result[desk_id] = {"status": state, "state": state, "reasons": reasons,
+                    "research_mode": self.research_mode,
+                    "activity": activity if self.research_mode == "session" else "scheduled",
                     "unreviewed_settlements": len(backlog),
                     "completed_cycles": len(completed), "last_completed_at": last.isoformat() if last else None,
                     "pending_jobs": sum(j.state in {"queued", "claimed", "running", "retry"} for j in jobs),

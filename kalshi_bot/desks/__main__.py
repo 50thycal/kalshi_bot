@@ -52,7 +52,8 @@ def build_service(settings):
     supervisor = Supervisor(store, providers=providers,
                             interval_seconds=settings.research_interval_seconds,
                             monthly_budget_usd=settings.monthly_research_budget_usd,
-                            external_runners_verified=settings.external_runners_verified)
+                            external_runners_verified=settings.external_runners_verified,
+                            research_mode=settings.research_mode)
     notifier = AlertNotifier(store, settings.alert_webhook_url.get_secret_value())
     service = DeskService(settings, store, supervisor, executors, notifier=notifier)
     supervisor.submit_decision = service.submit

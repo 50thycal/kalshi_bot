@@ -21,6 +21,7 @@ class DeskSettings(BaseSettings):
     live_enabled: bool = False
     existing_workers_isolated: bool = False
     external_runners_verified: bool = False
+    research_mode: Literal["scheduled", "session"] = "scheduled"
     alert_webhook_url: SecretStr = SecretStr("")
     kalshi_base_url: str = "https://external-api.kalshi.com/trade-api/v2"
     chatgpt_subaccount: int = Field(default=0, ge=0, le=63)
@@ -56,6 +57,9 @@ class DeskSettings(BaseSettings):
         }
         if self.kalshi_base_url not in allowed:
             raise ValueError("unsupported Kalshi host")
+        if self.research_mode == "session" and (
+                self.chatgpt_provider != "external" or self.claude_provider != "external"):
+            raise ValueError("session mode requires external app sessions for both desks")
         if self.live_enabled:
             if not self.existing_workers_isolated:
                 raise ValueError("existing worker isolation must be independently verified")
@@ -83,6 +87,8 @@ class DeskSettings(BaseSettings):
         for desk in ("chatgpt", "claude"):
             if not getattr(self, f"{desk}_kalshi_key_id").get_secret_value():
                 blockers.append(f"{desk}_exchange_credentials_missing")
+            if self.research_mode == "session":
+                continue  # App sessions prove readiness through completed leased research.
             if getattr(self, f"{desk}_provider") == "external":
                 if not self.external_runners_verified:
                     blockers.append(f"{desk}_unattended_runner_unverified")

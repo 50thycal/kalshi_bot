@@ -1,6 +1,6 @@
 # Autonomous ChatGPT and Claude desks
 
-**Implementation contract:** DEC-018 · WS-021 · default off. This document describes the
+**Implementation contract:** DEC-018 / DEC-019 · WS-021 · default off. This document describes the
 new isolated service and its launch requirements, not a deployed or funded service.
 The owner approved this design and implementation on 2026-09-20. Both new sessions must
 be ready before one common live start. The existing manual desk and its ledger remain
@@ -86,13 +86,22 @@ creating a third desk or resetting the book. Research failure does not prevent o
 reconciliation. A research-only Continue action cannot start a round, unpause trading,
 increase budgets, or override a refusal.
 
-Two cognition transports are implemented:
+The selected app-driven mode is `DESKS_RESEARCH_MODE=session`; the backward-compatible
+default remains `scheduled`. [APP_SESSIONS.md](desks/APP_SESSIONS.md) is the operator and
+app runbook. In session mode, no jobs are enqueued by the timer and no model provider
+is invoked. An active app claims a leased job and submits evidence-backed completion;
+only exact decisions in that accepted completion may execute before its original lease
+expires. Durable notes and identical acknowledgements can recover after expiry without
+new orders. Both desks must complete a session-mode research cycle before common start.
+Idle time is reported as waiting for Continue, not as a missing unattended runner.
+
+Two additional scheduled cognition transports are implemented:
 
 - **External scheduled runner:** `python -m kalshi_bot.desks.runner once|serve` claims
   jobs, invokes a configured existing research command, requests captured sources, and
   completes jobs with durable retry state. Separate ChatGPT and Claude processes use
   their own tokens and private directories. Bounded Codex/Claude CLI adapters translate
-  the shared job protocol to installed model clients. This is the default route without
+  the shared job protocol to installed model clients. This is the scheduled-mode route without
   granting a new paid API allowance; it still requires working client authentication,
   compatible client versions, permitted model usage, and a continuously available host.
   Configuration alone does not prove a completed research cycle. Setup and service
@@ -111,7 +120,7 @@ limitations are recorded, never bypassed by quietly changing another worker's pe
 Health reports distinguish healthy, recovering, and needs-operator states, with reasons.
 The current implementation monitors completed cycles, recent failures, research-job and
 settlement-review backlogs, capital, and research budgets. Defaults include a 24-hour
-completed-cycle freshness check, repeated research failures, and three unreviewed
+completed-cycle freshness check in scheduled mode, repeated research failures, and three unreviewed
 settlements. These are operational checks, not tests that a strategy is profitable.
 Research output includes its next action so stagnation can be inspected; proving that a
 model learned correctly still requires reviewing its evidence.
@@ -171,8 +180,9 @@ Before live start, verify all of the following with concrete evidence:
    these subaccounts. Distinct labels in a database are insufficient. Setting
    `DESKS_EXISTING_WORKERS_ISOLATED` records an actual verified fact, not permission to
    skip the check. If existing workers cannot be isolated, live launch remains blocked.
-3. Each desk's scheduled external runner works, or explicit paid model configuration and
-   approved spending are available. No paid key/allowance is inferred from a chat subscription.
+3. In session mode, both app bridges complete a genuine source-backed research cycle.
+   In scheduled mode, each external runner works or approved paid provider access works.
+   No paid key/allowance is inferred from a chat subscription.
 4. Private durable storage, HTTPS, appropriate desk/operator tokens, operator alert delivery,
    and restart/reconciliation behavior are verified.
 5. Both fresh sessions read their startup packets and mark only their own desk ready.
@@ -191,6 +201,8 @@ tokens in URLs. The UI shell is public but data APIs require authentication.
 | Method/path | Role and purpose |
 |---|---|
 | GET `/api/status` or `/api/context` | Any authenticated role; shared desk state and readiness |
+| GET `/api/research/schema` | Any authenticated role; strict research completion schema |
+| POST `/api/round/preflight` | Operator only; refresh read-only launch checks without starting |
 | GET `/api/decisions/{decision_id}` | Any authenticated role; immutable decision and execution state |
 | POST `/api/desks/{desk}/ready` | Own desk or operator; `{}`; session setup complete |
 | POST `/api/desks/{desk}/continue` | Own desk or operator; `{}`; request research, not activation |

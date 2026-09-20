@@ -39,6 +39,7 @@ research-only; it does not unpause trading or authorize spending.
 
 ## CLOSING STATE
 Persist a handoff publication and next action. Do not claim an ordinary chat keeps running;
-verify the external scheduler or provider worker actually owns the next job. Briefly report
+in session mode wait for Go / Continue in the app; in scheduled mode verify the
+external scheduler or provider worker actually owns the next job. Briefly report
 status and only material decisions to the operator. Secrets and private account details
 stay out of GitHub and public ops results.

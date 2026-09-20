@@ -112,8 +112,9 @@ def make_decision(source, now):
         origin='session')
 
 
+@pytest.mark.parametrize("research_mode", ["scheduled", "session"])
 @pytest.mark.parametrize('yes_payout,expected_pnl,expected_brier', [('0', '-.84', '.64'), ('1', '1.16', '.04')])
-def test_two_desks_evidence_fill_settlement_and_learning(tmp_path, monkeypatch, yes_payout, expected_pnl, expected_brier):
+def test_two_desks_evidence_fill_settlement_and_learning(tmp_path, monkeypatch, yes_payout, expected_pnl, expected_brier, research_mode):
     def network_forbidden(*args, **kwargs):
         raise AssertionError('This integration scenario must remain offline')
     monkeypatch.setattr(socket, 'create_connection', network_forbidden)
@@ -124,7 +125,7 @@ def test_two_desks_evidence_fill_settlement_and_learning(tmp_path, monkeypatch, 
         database_url=f"sqlite:///{tmp_path / 'integration.db'}", round_id='integration-round',
         operator_token='operator-' + 'x'*40, chatgpt_token='chatgpt-' + 'x'*40,
         claude_token='claude-' + 'x'*40, live_enabled=True, existing_workers_isolated=True,
-        external_runners_verified=True, chatgpt_subaccount=1, claude_subaccount=2,
+        research_mode=research_mode, external_runners_verified=research_mode == "scheduled", chatgpt_subaccount=1, claude_subaccount=2,
         chatgpt_kalshi_key_id='offline-chatgpt-key', claude_kalshi_key_id='offline-claude-key',
         chatgpt_kalshi_private_key='offline-chatgpt-private',
         claude_kalshi_private_key='offline-claude-private',
@@ -135,7 +136,7 @@ def test_two_desks_evidence_fill_settlement_and_learning(tmp_path, monkeypatch, 
                  for desk, exchange in exchanges.items()}
     supervisor = Supervisor(store, source_fetcher=verified_source,
                             market_reader=lambda now: {'markets': [], 'sources': []},
-                            external_runners_verified=True)
+                            external_runners_verified=research_mode == "scheduled", research_mode=research_mode)
     service = DeskService(settings, store, supervisor, executors, notifier=OfflineNotifier())
     supervisor.submit_decision = service.submit
     assert not service.check_launch(NOW, refresh=True)['ready']
@@ -188,7 +189,12 @@ def test_two_desks_evidence_fill_settlement_and_learning(tmp_path, monkeypatch, 
     assert filled['status'] == 'terminal' and D(filled['filled_quantity']) == 2
     assert D(filled['fill_cost']) + D(filled['fees']) == D('.84')
     assert len(exchanges['chatgpt'].orders) == 1 and not exchanges['claude'].orders
-    service.submit(decision, trade_at)  # Same immutable decision cannot submit twice.
+    if research_mode == "session":
+        with pytest.raises(DeskError, match="active_session_completion_required"):
+            service.submit(decision, trade_at)
+        complete(supervisor, "chatgpt", job, output, trade_at)  # Lost ack is safe.
+    else:
+        service.submit(decision, trade_at)  # Same immutable decision cannot submit twice.
     assert len(exchanges['chatgpt'].orders) == 1
     books = {row['desk_id']: row for row in store.snapshot(trade_at)['desks']}
     assert books['chatgpt']['filled_today'] == 1 and D(books['chatgpt']['cash']) == D('29.16')

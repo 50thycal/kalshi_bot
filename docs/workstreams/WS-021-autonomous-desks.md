@@ -25,8 +25,8 @@ Canonical Build OS v0.12 was checked by the coordinating implementation session.
 Separate service/database credentials and desk tables; two desk identities and restricted
 Kalshi subaccounts; shared deterministic execution/accounting; durable research jobs and
 publications; authenticated status dashboard and per-role API. Existing worker/XOS paths
-and the historical manual ledger remain separate. The code starts disabled and cannot
-be considered unattended until a scheduled runner or approved paid provider is connected.
+and the historical manual ledger remain separate. The code starts disabled. DEC-019 adds app-driven sessions; scheduled mode still requires
+a working runner or approved provider and must not be inferred from an inactive chat.
 
 ## Decisions Made
 
@@ -42,7 +42,7 @@ be considered unattended until a scheduled runner or approved paid provider is c
 
 No unresolved product decision blocks the build. Deployment must provide verified isolated
 subaccounts, dedicated credentials, private durable storage, operator alert delivery, and
-working scheduled session bridges. If an external bridge cannot run under existing resources,
+working private app-session bridges (or scheduled bridges when that mode is selected). If an external bridge cannot run under existing resources,
 the owner decides any new paid API allowance; no cost is inferred from build approval.
 
 ## Assumptions
@@ -50,7 +50,7 @@ the owner decides any new paid API allowance; no cost is inferred from build app
 - The account can provision distinct restricted non-primary subaccounts. If not, live launch
   remains blocked; database labels are not a substitute.
 - Existing worker access can be proven not to aggregate desk orders or positions.
-- Scheduled model access is an external dependency, not a capability of an idle chat.
+- Private app-to-service access is an external dependency. An idle chat performs no research.
 
 ## Non-Goals
 
@@ -122,13 +122,15 @@ Validation before PR:
 - Browser authentication/status/sign-out pass with no page errors; tokens remain memory-only.
   Mobile rendering passes at 320, 390, 768 and 1280 pixels with long identifiers.
 - Current final-head CI results, including PostgreSQL verification, are recorded on PR #443.
-No deployment or live activation performed by this workstream.
+Historical initial-build checkpoint above excludes later setup: PR #447 provisioned the
+separate service/database and subsequently stopped the deferred runners. No live activation
+has occurred. Current app-session deployment dependencies are recorded below.
 
 ## Review State
 
-**Verdict:** Initial PR merged; continuation self-check complete, pending owner acceptance. No acceptance inferred from merge.
+**Verdict:** App-session PR #448 self-check complete, pending owner acceptance. No acceptance inferred from earlier merges.
 **Accepted head:** —
-**Related PR:** [#445](https://github.com/50thycal/kalshi_bot/pull/445); initial implementation [#443](https://github.com/50thycal/kalshi_bot/pull/443) merged.
+**Related PR:** [#448](https://github.com/50thycal/kalshi_bot/pull/448) (app sessions); [#445](https://github.com/50thycal/kalshi_bot/pull/445); initial implementation [#443](https://github.com/50thycal/kalshi_bot/pull/443) merged.
 **Finalization:** Pushed; no owner acceptance or merge inferred.
 
 The repo remains in solo mode. Plan/build approval is recorded, not represented as acceptance
@@ -142,7 +144,11 @@ DEC-018; DEC-017 retained as historical manual-desk policy; DEC-001 authority bo
 
 [#443 — Isolated autonomous research desks](https://github.com/50thycal/kalshi_bot/pull/443) — merged.
 
-[#445 — External runners and launch diagnostics](https://github.com/50thycal/kalshi_bot/pull/445) — continuation.
+[#445 — External runners and launch diagnostics](https://github.com/50thycal/kalshi_bot/pull/445) — merged.
+
+[#447 — Hosted runner recipe](https://github.com/50thycal/kalshi_bot/pull/447) — merged; runtime use deferred.
+
+[#448 — App-session research and bounded live submissions](https://github.com/50thycal/kalshi_bot/pull/448) — current continuation.
 
 ## Parked
 
@@ -150,4 +156,34 @@ None.
 
 ## Next Step
 
-Review PR #445 after final-head CI; hosted setup and live launch remain separate guards.
+Review PR #448 after CI; then complete the private-access and
+account/alert prerequisites in docs/desks/APP_SESSIONS.md before common start.
+
+
+## App-session continuation — DEC-019
+
+Owner request: implement Go / Continue research and bounded live submission in each app,
+without CLI login or unattended cognition. Significant change to the dedicated desk launch
+mode; no shared XOS/platform semantics changed. Build OS v0.12 checked 2026-09-20.
+
+Build card/spec: add explicit session mode, preserve scheduled default, disable background
+job/provider scheduling in session mode, require a completed own-session cycle from both
+desks for common start, and bind new orders to exact accepted unexpired completions.
+Preserve all financial and evidence guards and reconciliation. Expose mode/activity and
+schema; provide one-time operator preflight and equivalent app startup packets.
+
+Acceptance: offline end-to-end evidence -> common start -> IOC -> settlement -> lesson in
+both modes; idle sessions do not schedule; same-hour continuations work; expired/replayed
+completions cannot duplicate orders; mode cannot invoke paid providers; role isolation and
+all original launch guards still pass their regression tests. No real orders during tests.
+
+Deployment is separately blocked on Calvin providing private bridge access for both apps,
+restricted funded Kalshi subaccounts and verifiable existing-worker isolation, plus an
+operator alert destination and delivery test. Never report ready merely because code merged.
+The selected software mode requires no new product decision. Hosted recipe PR #447 merged during implementation; runtime use stays
+deferred. Implementation and validation results belong in this continuation PR.
+
+App-session validation: 227 passed, 1 skipped in the focused desk suite; the skipped
+PostgreSQL concurrency case requires CI’s database. Repository lint and diff checks pass.
+All exchange/source/model actions in these tests are offline substitutes; no live order,
+model billing, account funding or production activation was performed.

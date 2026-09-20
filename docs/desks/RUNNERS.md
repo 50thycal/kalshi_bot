@@ -1,5 +1,10 @@
 # Running the two research sessions without babysitting
 
+**Current operator choice:** app-driven `Go / Continue`, documented in
+[APP_SESSIONS.md](APP_SESSIONS.md). This file describes the deferred hosted option.
+Do not start model login or enable runners merely to use app-session mode.
+
+
 The desk service owns the trading rules, schedules, database, execution, and settlement.
 Two separate runner processes supply the research: one authenticated as `chatgpt`, the
 other as `claude`. They claim due jobs, run an existing model client, capture requested

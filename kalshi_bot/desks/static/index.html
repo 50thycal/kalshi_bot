@@ -166,12 +166,13 @@
     if (validNumber(amount(desk,'cash')) && Number(amount(desk,'cash')) <= 0) reasons.push('No available book cash. New spending is blocked.');
     if (reasons.length) { const list = element('ul'); [...new Set(reasons.map(stringify))].forEach(reason => list.append(element('li',reasonText(reason)))); healthBox.append(list); }
     else healthBox.append(element('p',health.status === 'healthy' ? 'No intervention reported.' : 'No operational details reported.','muted'));
+    if (state.research_mode === 'session') healthBox.append(element('p', health.activity === 'researching' ? 'Researching in an app session.' : 'Waiting for Continue in the app. No background research runs.','muted'));
     if (desk.last_cycle_at) healthBox.append(element('small','Last research cycle: ' + date(desk.last_cycle_at)));
     if (desk.next_cycle_at) healthBox.append(element('small','Next cycle: ' + date(desk.next_cycle_at)));
     card.append(healthBox);
     const buttons = element('div',null,'actions');
     buttons.append(action(id,'continue','Continue research'), action(id,paused ? 'resume' : 'pause',paused ? 'Resume desk' : 'Pause desk'));
-    card.append(buttons,element('p', 'Continue requests the next research cycle. Trading readiness and limits still apply.', 'muted'));
+    card.append(buttons,element('p', state.research_mode === 'session' ? 'Continue queues work; open the AI app and say Continue to perform it. Trading limits still apply.' : 'Continue requests the next research cycle. Trading readiness and limits still apply.', 'muted'));
     return card;
   }
   function selected(items) { const filter = $('deskfilter').value; return array(items).filter(item => filter === 'all' || item.desk_id === filter).slice(0,30); }

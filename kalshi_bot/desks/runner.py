@@ -220,6 +220,8 @@ class SessionRunner:
             raise RunnerError("research_claim_expired_or_insufficient_time")
 
     def _invoke(self, state, phase):
+        if state["claim"].get("context", {}).get("research_mode") == "session":
+            raise RunnerError("app_session_mode_requires_active_app")
         self._lease_valid(state, self.config.command_timeout)
         state["phase"] = "invoking_" + phase
         self._save(state)

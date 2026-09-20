@@ -59,6 +59,9 @@ def handler_for(service):
             try:
                 if path in ("/api/status", "/api/context"):
                     return self.send(200, service.status())
+                if path == "/api/research/schema":
+                    from .research import ResearchOutput
+                    return self.send(200, ResearchOutput.model_json_schema())
                 if path.startswith("/api/decisions/"):
                     row = service.store.get_decision(path.rsplit("/", 1)[-1])
                     return self.send(200 if row else 404, row or {"error": "not_found"})
@@ -91,6 +94,10 @@ def handler_for(service):
 
         def mutate(self, path, role, body):
             now = utcnow()
+            if path == "/api/round/preflight":
+                if role != "operator":
+                    raise PermissionError
+                return service.check_launch(now, refresh=True)
             if path == "/api/round/start":
                 if role != "operator":
                     raise PermissionError

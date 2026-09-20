@@ -30,11 +30,11 @@ active, and persist findings, rejections and lessons before ending. An inactive 
 does not continue researching. The existing session bridge supports authenticated
 context and publication operations; this choice does not establish a working cycle.
 
-The current live-launch checks still require verified unattended runners. Do not
-mark those checks satisfied for a manual session or bypass them. This initial pilot
-is preparatory research only; session-driven live execution needs an explicit,
-reviewed adjustment to the operating mode plus the existing exchange, isolation,
-alert and common-start requirements. Neither desk is marked ready or started.
+PR #448 / DEC-019 adds explicit app-session mode with the same bounded live execution
+controls. Use `DESKS_RESEARCH_MODE=session` and follow APP_SESSIONS.md after integration.
+Both apps must demonstrate completed research and have private bridge access; restricted
+funding/account isolation, alerts and the operator common start still guard live launch.
+Do not falsely attest to unattended runners. Hosted login remains deferred.
 
 ## Runner image (deferred option)
 

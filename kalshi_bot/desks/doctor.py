@@ -33,6 +33,7 @@ BLOCKERS = {
     'unattended_runner_missing': ('runtime', 'Connect an unattended research runner and complete a research cycle.'),
     'paid_research_budget_not_authorized': ('runtime', 'Use an approved runner or authorize a paid research budget.'),
     'model_credentials_missing': ('deployment', 'Configure this desk’s model access credentials.'),
+    'session_cycle_required': ('desk_readiness', 'Complete a research cycle in this desk’s app session.'),
     'session_not_ready': ('desk_readiness', 'Complete the desk’s readiness setup.'),
     'exchange_unavailable': ('deployment', 'Restore the desk’s exchange connection.'),
     'funding_or_isolation_not_verified': ('trading_gates', 'Verify the starting funds and restricted-account isolation.'),
