@@ -3,10 +3,11 @@
 The project's active-work control board — what is being designed and built right now, and
 where each effort is. Read it first on a continuation.
 
-**Updated:** 2026-09-16 (WS-020 opened on operator handoff: liquidity-incentive shadow MM, Phase 0) · **Build OS v0.12**
+**Updated:** 2026-09-20 (WS-021 admitted on explicit owner request: autonomous desks) · **Build OS v0.12**
 
 | ID | Workstream | Phase | Status | Current Next Step | Related PR |
 |---|---|---|---|---|---|
+| [WS-021](WS-021-autonomous-desks.md) | Autonomous ChatGPT and Claude desks | REVIEW | Active | Verify implementation PR; live launch requires external isolation/runtime readiness | pending |
 | [WS-020](WS-020-liquidity-incentive-shadow.md) | Liquidity-incentive shadow market maker — Phase 0 instrumentation, no orders | REVIEW | Active — **RUNNING** | Shadow RUNNING on evo since 2026-09-17 12:24Z; first outcomes ended at hour 1.5 with **P(both|one)=0.000 at n=15** and single-leg marks ~160x the reward — thin, HOLD, recorded in thesis §9.2, not acted on. Phase 1a added on operator authorization: the one-sided live smoke test (<=$1/order, <=25c, 3 resting, $10 book) with its own XOS package, gates and paper twin — **ARMED AND LIVE** 2026-09-17 15:57Z (#420, #422); first three bids rested 16:00:47Z for $0.05 total, all caps held, twin mirrored. Operator: thesis §10.6 arming sequence (steps 2 and 4 are hard stops); separately, day-one check 3 before any `est_` reward figure is believed | [#415](https://github.com/50thycal/kalshi_bot/pull/415), [#416](https://github.com/50thycal/kalshi_bot/pull/416) merged |
 | [WS-019](WS-019-mmsell-queue-fill-telemetry.md) | MMSELL queue / fill telemetry — Phase 1 instrumentation, no behaviour change | RUNNING | Active | Merged and collecting; let ticks accrue and read `execution_telemetry` weekly. Operator decision open: raw-event retention | [#411](https://github.com/50thycal/kalshi_bot/pull/411), [#412](https://github.com/50thycal/kalshi_bot/pull/412), [#417](https://github.com/50thycal/kalshi_bot/pull/417), [#419](https://github.com/50thycal/kalshi_bot/pull/419) |
 | [WS-018](WS-018-spot-perp-funding-census.md) | Spot/perp funding carry: $2,000 primary / $4,000 ceiling | REVIEW | Blocked | Sizes/sources resolved; API rate conversion and permission for approved-transport quote check after HTTP403 remain | [#402 merged](https://github.com/50thycal/kalshi_bot/pull/402) |
@@ -40,6 +41,10 @@ has been asked which rows pause — that remains the operator's WS-016 D1 answer
 
 ---
 
+WS-021 is the eighth Active row, admitted on Calvin's explicit 2026-09-20 build request.
+The board is four over its declared limit. This admission does not silently pause an existing
+workstream or resolve WS-016's allocation question.
+
 ## What is deliberately not on this board
 
 The board tracks **design/build threads**, not experiments and not tickets. Running
@@ -54,7 +59,6 @@ The specific omissions from the 2026-08-24 seeding inventory, with reasons, are 
 
 ## Parked
 
-- Desk automation: once the discretionary desk has 30 settled picks in a class above break-even, decide whether a rule can be written for that class; if so it becomes a paper book through Experiment OS, never a worker path that accepts a ticker from outside (`DEC-017`; Calvin, 2026-09-19).
 - Purchased-tail MMSELL hedge: explore buying a farther-tail YES against a NO threshold position on the same contest with matching settlement rules; evaluate interval loss and hedge cost (Calvin, 2026-09-12).
 - Per-book live risk budgets, **prerequisite for a second concurrent live canary**: `MAX_TOTAL_EXPOSURE` and `MAX_DAILY_LOSS` are account-wide and are checked BEFORE the per-ticker dedup gate, so whichever book the scan reaches first can exhaust the budget and gate the other out of the whole slate — the same scan-order bias `part=i/n` (#413) fixed per-ticker, one level up, where a ticker partition cannot reach. Fix is per-book budgets checked IN ADDITION to the account-level ones, never instead of. Touches the live risk path, so operator-gated. Do not arm two live books without it: the second canary's numbers would be the first one's leftovers. Context: `docs/MMSELL_BOOK_PARTITION.md` "What this does NOT fix" (Calvin, 2026-09-16).
 

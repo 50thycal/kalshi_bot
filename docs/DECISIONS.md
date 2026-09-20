@@ -1074,3 +1074,48 @@ hand, *automate later* — parked, not scheduled, and any automation re-enters t
 door as a book (§2); (2) yes; (3) widening the sandbox network allowlist is allowed — the
 operator sets it in the claude.ai environment settings, the session cannot; until a new session
 starts under the wider policy the ops runner remains the board read.
+
+
+## DEC-018 — Two isolated autonomous research desks with equal small live envelopes (2026-09-20)
+
+**Authority:** Calvin approved the proposed two-desk plan, selected autonomous operation
+and filled-pick counting, then explicitly requested implementation and breakout sessions in
+the ChatGPT Build OS Design Room thread. This records plan/build authorization, not acceptance
+of an unreviewed implementation, merge authorization, funding, or a live-start verdict.
+
+Create persistent `chatgpt` and `claude` desks. Each owns its research, data, collectors,
+optional paper work, decisions, and learning; both can read and cite the other's publications.
+Both inherit the same historical research and begin fresh books at one common timestamp after
+both new sessions are ready. Preserve all manual ledger entries as legacy history.
+
+The approved envelope is $30 starting capital per desk, at most $10 committed including
+pending orders, $1 per pick including fees, three FILLED picks per America/Chicago day,
+and ten new order attempts daily. Partial fills count; confirmed unfilled attempts release
+the reserved pick slot. Unknown status holds reservations and requires reconciliation.
+Use capped IOC entries, hold to settlement, one filled pick per underlying event per desk,
+no replenishment or sizing increases, and a 30-calendar-day comparison with no promotion.
+
+Scheduled research should continue with minimum owner involvement. Routine choices,
+rejected candidates, optional paper experiments, learning, next actions, and recoverable
+failures are desk publications. Code enforces financial limits; a supervisor exposes
+progress, stale/missing research, failures, backlogs, and resources. Escalate persistent
+blockers, material execution/accounting failures, exhausted resources, and changes outside
+authority. Zero trades is valid. Continue cannot override trading pauses or spending limits.
+
+No additional paid research budget is approved. The default is zero and external scheduled
+session bridges must actually exist and work; an idle chat is not an unattended worker.
+Paid model credentials and any new equal resource allowance require an explicit budget
+choice before use. Unknown provider billing cannot be treated as free retry capacity.
+
+**Narrow prospective boundary change from DEC-017:** its manual-only rule remains true for
+the legacy desk. The newly authorized desks may automate through a separate dedicated
+service with desk-only persistence/configuration/credentials and restricted distinct
+non-primary subaccounts. This does not add arbitrary-order intake to the worker, grant
+XOS writes, change existing variables, weaken any existing book's gate, or create an
+alternative arming route for ordinary XOS strategies. Live launch requires evidence that
+existing worker portfolio access cannot aggregate/manage these desk accounts, dedicated
+funding and restricted keys, working unattended cognition, operator alerts, both sessions
+ready, and a deliberate common start. Failed isolation blocks launch rather than triggering
+a shared-account fallback.
+
+Implementation and launch contract: `docs/AUTONOMOUS_DESKS.md`; workstream WS-021.

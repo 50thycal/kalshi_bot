@@ -65,8 +65,27 @@ Two Railway workers share one Postgres database:
 | main | `live` | The scan/trade cycle, all operator books, Experiment OS boot hooks and gate evaluation |
 | evo | `evo` | The evolutionary agent fleet |
 
-**The worker is the only writer.** Every other path into production data is read-only by
-construction.
+**The existing worker is the only writer to its production data.** Its ops path remains
+read-only. The DEC-018 desk service is a separate default-off deployment with dedicated
+credentials and desk-owned tables; it cannot write worker or XOS state.
+
+### Autonomous research desks (DEC-018)
+
+`kalshi_bot/desks/` adds a separate default-off service, not a hook in either worker.
+ChatGPT and Claude share deterministic execution/accounting and a common start, but own
+separate research histories and restricted non-primary Kalshi subaccounts. Desk-specific
+configuration is exclusively `DESKS_*`. The desk service owns its persistence; it never
+writes `paper_trades`, XOS state, or the historical manual ledger. An authenticated API
+allows shared reads and own-desk publications/decisions; operator authority controls start
+and pause/resume. Startup packets live under `docs/desks/`.
+
+Durable research jobs accept either externally scheduled session completions or explicitly
+funded provider calls. Default additional model budget is zero. Intent and reservations
+precede orders; ambiguous exchange responses preserve exposure until reconciled. The
+supervisor tracks research progress, failures, learning backlogs and budgets. Live start
+requires verified worker/subaccount isolation, dedicated funds/keys, a working unattended
+runtime, alerts, and readiness from both fresh sessions. Code presence does not imply this
+service has been deployed or activated. Full contract: `docs/AUTONOMOUS_DESKS.md`.
 
 ## Important data flows
 
@@ -270,7 +289,7 @@ bug and a funding gap present almost identically.
 
 ## Important invariants
 
-- **The worker is the only writer to production data.** The ops channel is read-only
+- **The worker is the only writer to worker/XOS production data.** The ops channel is read-only
   against Postgres by design (a SELECT-only role, enforced server-side), and no writable
   path may be added to it. A production write reaches the worker as a strictly validated
   envelope in an allowlisted environment variable, executed once at boot against a durable
@@ -320,7 +339,9 @@ Roughly three families of table, plus Experiment OS's own schema:
   results, platform components/revisions/snapshots, impact actions, integrity events,
   issues and their append-only event history.
 
-Schema changes go through Alembic and must leave a single head.
+Existing worker schema changes go through Alembic and must leave a single head.
+The isolated desk service owns separate `DeskBase` metadata, desk execution/research tables,
+and its own initialization command; it does not extend the worker's migration head.
 
 ## Current major architectural constraints
 
