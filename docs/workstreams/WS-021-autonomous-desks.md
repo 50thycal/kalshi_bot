@@ -90,7 +90,7 @@ contracts in `kalshi_bot/desks/contracts.py`/`research.py`.
 
 ## Implementation State
 
-Implementation complete; review and CI verification pending. Five breakout sessions built
+Implementation complete in PR #443; pending owner acceptance. Five breakout sessions built
 storage/scoring, execution, research supervision, API/dashboard, and startup documentation.
 The coordinating session integrated and checked the full offline research-to-settlement path.
 
@@ -102,15 +102,18 @@ Validation before PR:
   The fixture broke even after per-leg fees; corrected its prices to model positive edge,
   without changing scanner implementation. All 16 scanner tests now pass.
 - No live orders, provider charges, alert messages, deployment or production configuration
-  writes were used for verification. Current CI and browser results belong on the PR.
+  writes were used for verification.
+- Browser authentication/status/sign-out pass with no page errors; tokens remain memory-only.
+  Mobile rendering passes at 320, 390, 768 and 1280 pixels with long identifiers.
+- Current final-head CI results, including PostgreSQL verification, are recorded on PR #443.
 No deployment or live activation performed by this workstream.
 
 ## Review State
 
 **Verdict:** Implementation self-check complete; owner review pending
 **Accepted head:** —
-**Related PR:** —
-**Finalization:** —
+**Related PR:** [#443](https://github.com/50thycal/kalshi_bot/pull/443)
+**Finalization:** Pushed; no owner acceptance or merge inferred.
 
 The repo remains in solo mode. Plan/build approval is recorded, not represented as acceptance
 of a finished implementation, independent review, or a live activation verdict.
@@ -121,7 +124,7 @@ DEC-018; DEC-017 retained as historical manual-desk policy; DEC-001 authority bo
 
 ## Related PRs
 
-Pending coordinating session.
+[#443 — Isolated autonomous research desks](https://github.com/50thycal/kalshi_bot/pull/443)
 
 ## Parked
 
@@ -129,4 +132,4 @@ None.
 
 ## Next Step
 
-Open the implementation PR, verify CI including PostgreSQL concurrency, and hand off for owner review.
+Owner review of PR #443 after green final-head CI; merge does not authorize live launch.
