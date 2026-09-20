@@ -382,3 +382,14 @@ reconciliation, settlements, alerts, financial limits and operator common start 
 Idle chats do not research. App bridge access and genuine completed session cycles replace
 unattended-runner verification, never account isolation, funding or alerts. The default
 mode remains scheduled for backward compatibility. See docs/desks/APP_SESSIONS.md.
+
+
+### Primary-account worker boundary (DEC-020)
+
+The existing KalshiClient selects subaccount 0 on portfolio REST requests and V2 order
+bodies, rejects non-primary selectors, and rejects explicit foreign-account response rows
+before reconciliation. The desk adapter remains separate with restricted non-primary keys.
+Old worker keys retain account-wide permissions: this boundary is software-enforced and
+does not protect against another consumer of those keys. Legacy user-scoped V1 order
+payloads are preserved and explicit non-primary selectors rejected; routing must be verified
+at deployment before the desk isolation attestation can be set.

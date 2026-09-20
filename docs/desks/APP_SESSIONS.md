@@ -21,7 +21,10 @@ The following access must be provisioned and verified before live activation:
 - Two distinct non-primary Kalshi subaccounts, $30 each, no inherited orders or positions,
   distinct signing credentials restricted to their respective subaccounts. No funding is
   performed by this PR. Shared-account or unrestricted-key fallback is forbidden.
-- Proof that main/evo workers cannot see/manage these accounts; only then set
+- DEC-020 permits the existing keys to remain unrestricted: verify deployed main/evo
+  software explicitly scopes portfolio operations to primary account 0, including any
+  legacy V1 route in use. Old keys retain broader permissions; unknown external consumers
+  are not covered by this software boundary. Only after verifying active consumers set
   `DESKS_EXISTING_WORKERS_ISOLATED=true`. The desk service also probes own and forbidden
   subaccount reads. If the account cannot support restricted keys, launch is blocked.
 - Operator HTTPS alert webhook, explicitly tested using `test-alerts` below.

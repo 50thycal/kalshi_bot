@@ -1142,3 +1142,25 @@ after account isolation/funding and alerts pass. Go/Continue never starts the ro
 unpauses trading. Hosted runners remain a deferred option; existing scheduled deployments
 keep their behavior unless the operator explicitly selects session mode. No XOS worker,
 legacy manual book, shared execution semantics or platform revision is changed.
+
+
+## DEC-020 — Preserve existing keys with primary-account worker scoping (2026-09-20)
+
+Calvin explicitly approved a targeted change to main that selects primary subaccount 0,
+while preserving both existing unrestricted API keys and their consumers. This supersedes
+the requirement in DEC-018 that the existing workers themselves use exchange-restricted
+credentials. It does not relax the requirement for distinct restricted non-primary desk keys.
+
+The shared worker client explicitly scopes portfolio REST requests and V2 order bodies to 0,
+rejects non-primary overrides before sending, and refuses explicitly foreign-account records
+before reconciliation. Existing shard routing, kill-switch cancellation, XOS gates, budgets
+and strategy settings remain intact. The legacy user-scoped V1 order route retains its payload
+contract and rejects explicit non-primary selectors; its routing still requires verification
+before declaring worker isolation. This is software separation, not revocation of the broader
+permissions held by the old keys. Unknown external consumers remain an operator-managed risk.
+
+Deployment evidence must cover every active consumer, scoped reads/cancellations and any
+legacy V1 route still in use before setting DESKS_EXISTING_WORKERS_ISOLATED. A merge alone
+does not establish this fact. No keys are revoked, funds moved, desks started, or existing
+worker exposure expanded by this change. Shared execution changes retain the Platform Change
+Review / revision-impact merge guard.

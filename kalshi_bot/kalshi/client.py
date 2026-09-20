@@ -84,8 +84,40 @@ class KalshiClient:
         # `sign_path` is the full path including the API prefix (Kalshi signs this).
         # `request_path` is relative to the httpx base_url, which already carries the
         # API prefix — so we must NOT repeat it or the URL ends up doubled.
+        # DEC-020: this client belongs to the PRIMARY-account worker. The desks
+        # use their separate adapter. Omitted account on lists can mean ALL.
+        if suffix.startswith("/portfolio/"):
+            params = self._primary_account_fields(params)
+            if json is not None:
+                json = self._primary_account_fields(json)
         sign_path = f"{API_PREFIX}{suffix}"
-        return self._send(method, suffix.lstrip("/"), sign_path, params=params, json=json, auth=auth)
+        result = self._send(method, suffix.lstrip("/"), sign_path, params=params, json=json, auth=auth)
+        if suffix.startswith("/portfolio/"):
+            self._check_primary_response(result)
+        return result
+
+    @staticmethod
+    def _primary_account_fields(fields: dict | None) -> dict:
+        """Copy caller data, refuse other accounts, and select primary explicitly."""
+        result = dict(fields or {})
+        for name in ("subaccount", "subaccount_number"):
+            if name in result and (type(result[name]) is not int or result[name] != 0):
+                raise ValueError("worker client is restricted to primary subaccount 0")
+        result["subaccount"] = 0
+        return result
+
+    @staticmethod
+    def _check_primary_response(value: Any) -> None:
+        """Reject foreign records before reconciliation; old rows may omit identity."""
+        if isinstance(value, dict):
+            for name in ("subaccount", "subaccount_number"):
+                if name in value and (type(value[name]) is not int or value[name] != 0):
+                    raise AuthError("non-primary account in worker portfolio response")
+            for child in value.values():
+                KalshiClient._check_primary_response(child)
+        elif isinstance(value, list):
+            for child in value:
+                KalshiClient._check_primary_response(child)
 
     def _request_v1(
         self, method: str, path: str, *, json: dict | None = None, auth: bool = True
@@ -577,6 +609,9 @@ class KalshiClient:
         (market_id, user_side, side, order_action, order_type, count_fp, price_dollars,
         sell_position_capped, ...)."""
         self._ensure_live_enabled()
+        # Legacy user-scoped API: preserve the payload contract, but reject any
+        # explicit non-primary selector. Live launch must verify legacy routing.
+        self._primary_account_fields(order)
         return self._request_v1("POST", f"/v1/users/{user_id}/orders", json=order)
 
     def get_v1_event(self, series_ticker: str, event_ticker: str) -> dict:
