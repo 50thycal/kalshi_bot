@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=script  id=desk-d6-or
-# actor=claude-desk  purpose=token pace sample 2026-09-20 13:40Z
-# code bb7c6a1e5e0a09c6b94a8c86f0939195e9633364 · started 2026-09-20T13:37:26Z
-# desk_fetch https://openrouter.ai/api/frontend/v1/rankings/market-share
-# HTTP 200 · application/json · 13407 bytes
-# 1 window(s) around '2026-09-14'
----
- 18536802128948,     "others": 11320459578142,     "tencent": 18672750568930,     "xiaomi": 2623468233546,     "z-ai": 17977716607707    }   },   {    "x": "2026-09-07",    "ys": {     "anthropic": 4826722978852,     "deepseek": 24257683335788,     "google": 7484129162783,     "meta": 2412911836917,     "nvidia": 4801749632353,     "openai": 23953076616364,     "others": 14070304422969,     "tencent": 20624550078250,     "xiaomi": 7994078909370,     "z-ai": 16337815070537    }   },   {    "x": "2026-09-14",    "ys": {     "anthropic": 4425230032242,     "deepseek": 30987447834119,     "google": 6510860389800,     "meta": 2291738885697,     "nvidia": 5184903984212,     "openai": 15965823140729,     "others": 14698172325320,     "tencent": 16649398042634,     "xiaomi": 6938838851376,     "z-ai": 17514986194822    }   }  ] }
