@@ -22,7 +22,7 @@ import httpx
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--desk", choices=("chatgpt", "claude"))
-    parser.add_argument("command", choices=("status", "ready", "continue", "claim", "source", "complete", "publications", "decisions"))
+    parser.add_argument("command", choices=("status", "schema", "ready", "continue", "claim", "source", "complete", "publications", "decisions"))
     parser.add_argument("--worker-id")
     parser.add_argument("--file", type=Path)
     args = parser.parse_args(argv)
@@ -33,7 +33,7 @@ def main(argv=None):
         parser.error("DESK_SERVICE_URL must use HTTPS (loopback HTTP allowed for development)")
     if parsed.username or parsed.password or parsed.query or parsed.fragment or not token:
         parser.error("use a plain service URL and DESK_SESSION_TOKEN environment value")
-    if args.command != "status" and not args.desk:
+    if args.command not in {"status", "schema"} and not args.desk:
         parser.error("--desk is required for a write")
     try:
         body = json.loads(args.file.read_text()) if args.file else {}
@@ -41,8 +41,9 @@ def main(argv=None):
             body["worker_id"] = args.worker_id
         headers = {"Authorization": "Bearer " + token}
         with httpx.Client(timeout=180, follow_redirects=False) as client:
-            if args.command == "status":
-                response = client.get(url + "/api/status", headers=headers)
+            if args.command in {"status", "schema"}:
+                path = "/api/status" if args.command == "status" else "/api/research/schema"
+                response = client.get(url + path, headers=headers)
             else:
                 response = client.post(f"{url}/api/desks/{args.desk}/{args.command}", json=body, headers=headers)
             response.raise_for_status()

@@ -400,3 +400,19 @@ def test_direct_postmortem_requires_valid_own_settled_decision(api, service):
     records = service.store.snapshot(NOW)['publications']
     assert len(records) == 1 and records[0]['desk_id'] == 'chatgpt'
     assert records[0]['payload']['decision_id'] == decision.decision_id
+
+
+def test_preflight_refreshes_checks_without_starting_or_granting_desk_control(api, service):
+    ready_both(service)
+    assert api('/api/round/preflight', role='chatgpt', method='POST', body={})[0] == 403
+    status, result, _ = api('/api/round/preflight', method='POST', body={})
+    assert status == 200 and result['ready'] is True
+    assert service.store.snapshot(NOW)['started_at'] is None
+    assert service._isolation.keys() == {'chatgpt', 'claude'}
+
+
+def test_research_schema_is_available_only_to_authenticated_sessions(api):
+    assert api('/api/research/schema', role=None)[0] == 401
+    status, schema, _ = api('/api/research/schema', role='chatgpt')
+    assert status == 200 and schema['title'] == 'ResearchOutput'
+    assert 'decisions' in schema['properties']

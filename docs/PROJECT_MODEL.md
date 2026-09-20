@@ -372,3 +372,13 @@ and its own initialization command; it does not extend the worker's migration he
 
 *Update this file in the same PR as any change that materially alters architecture,
 important flows, invariants, or system responsibilities. Do not add current standings.*
+
+## App-driven desk continuation (DEC-019)
+
+The isolated desk service supports explicit session and scheduled research modes. In
+session mode, each active app owns one leased research job and completes captured-evidence
+research; decisions execute only from its accepted unexpired completion. Background
+reconciliation, settlements, alerts, financial limits and operator common start remain.
+Idle chats do not research. App bridge access and genuine completed session cycles replace
+unattended-runner verification, never account isolation, funding or alerts. The default
+mode remains scheduled for backward compatibility. See docs/desks/APP_SESSIONS.md.

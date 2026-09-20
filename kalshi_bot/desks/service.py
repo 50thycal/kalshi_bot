@@ -87,12 +87,15 @@ class DeskService:
         if self.last_tick is None or not 0 <= (now - self.last_tick).total_seconds() <= 180:
             raise DeskError("execution_monitor_stale")
         self.supervisor.verify_decision_sources(decision)
+        if self.settings.research_mode == "session":
+            self.supervisor.verify_session_decision(decision, now)
         return executor.submit(decision, now=now)
 
     def status(self, now=None):
         now = now or utcnow()
         result = self.store.snapshot(now)
         research = self.supervisor.status(now)
+        result["research_mode"] = self.settings.research_mode
         result["research"] = research
         result["health"] = research.get("health", research.get("desks", {}))
         result["readiness"] = self.check_launch(now)

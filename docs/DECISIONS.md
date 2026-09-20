@@ -1119,3 +1119,26 @@ ready, and a deliberate common start. Failed isolation blocks launch rather than
 a shared-account fallback.
 
 Implementation and launch contract: `docs/AUTONOMOUS_DESKS.md`; workstream WS-021.
+
+
+## DEC-019 — App-driven research sessions with the same bounded live envelope (2026-09-20)
+
+Calvin chose Go / Continue in the respective ChatGPT and Claude apps, deferred hosted
+client login, then explicitly requested a PR supporting full research and bounded trade
+submission from those sessions. This is the software-mode change to DEC-018, not evidence
+that exchange access, funding, both app bridges or alerts have been provisioned.
+
+Use an explicit session mode for both books. The service does no background cognition
+in this mode; it continues deterministic reconciliation, settlement and alert delivery.
+Each app claims and completes a genuine source-backed job before marking itself ready.
+Idle time is normal. An exact decision in an accepted completion may execute only while
+its original lease remains valid. Lost acknowledgements are idempotent; publication
+recovery cannot extend order authority. Existing source, money, price, event, daily-slot,
+unknown-order and isolation controls remain unchanged. All DEC-018 financial limits and
+zero additional paid research allowance remain in force.
+
+Both sessions still need private own-desk service access and an operator-only common start
+after account isolation/funding and alerts pass. Go/Continue never starts the round or
+unpauses trading. Hosted runners remain a deferred option; existing scheduled deployments
+keep their behavior unless the operator explicitly selects session mode. No XOS worker,
+legacy manual book, shared execution semantics or platform revision is changed.

@@ -266,3 +266,14 @@ def test_sigterm_unwinds_subprocess_cleanup(tmp_path):
         if worker.poll() is None:
             worker.kill()
             worker.wait()
+
+
+def test_hosted_runner_cannot_invoke_model_in_app_session_mode(tmp_path):
+    service = FakeService()
+    service.claim_value['context']['research_mode'] = 'session'
+    def forbidden(*args, **kwargs):
+        pytest.fail('App-session mode must not call the hosted model client')
+    work = runner(tmp_path, service, forbidden)
+    assert work.once() == {'status': 'needs_operator', 'reason': 'app_session_mode_requires_active_app'}
+    assert service.actions == ['claim']
+    assert work.once()['status'] == 'needs_operator'
