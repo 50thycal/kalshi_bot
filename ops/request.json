@@ -1,1 +1,1 @@
-{"type":"script","name":"desk_fetch","args":["https://openrouter.ai/api/frontend/v1/rankings/market-share","--find","2026-09-14","--window","500","--hits","1"],"id":"desk-d6-or","actor":"claude-desk","purpose":"token pace sample 2026-09-20 13:40Z"}
+{"type":"script","name":"desk_fetch","args":["https://gasprices.aaa.com/","--find","Diesel","--window","180","--hits","3"],"id":"desk-d6-aaa","actor":"claude-desk","purpose":"diesel settlement proxy 2026-09-20"}
