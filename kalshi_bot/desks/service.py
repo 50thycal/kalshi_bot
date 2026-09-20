@@ -48,6 +48,8 @@ class DeskService:
                     checked = self._isolation[desk]
                 except Exception:
                     executor.isolation_verified = False
+                    if self.settings.account_mode == "shared_primary" and snapshot.get("started_at"):
+                        self.store.pause(desk, "shared_account_check_failed")
                     self._isolation.pop(desk, None)
                     blockers.append(f"{desk}_funding_or_isolation_not_verified")
             if not checked or now - checked["at"] > timedelta(minutes=5):
@@ -96,6 +98,7 @@ class DeskService:
         result = self.store.snapshot(now)
         research = self.supervisor.status(now)
         result["research_mode"] = self.settings.research_mode
+        result["account_mode"] = self.settings.account_mode
         result["research"] = research
         result["health"] = research.get("health", research.get("desks", {}))
         result["readiness"] = self.check_launch(now)

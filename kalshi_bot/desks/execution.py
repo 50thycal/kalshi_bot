@@ -53,7 +53,10 @@ class DeskExecutor:
             raise DeskError("desk_live_disabled")
         if not self.isolation_verified or not self.existing_workers_isolated:
             raise DeskError("desk_isolation_unverified")
-        if not 1 <= getattr(self.exchange, "subaccount", 0) <= 63:
+        if getattr(self.exchange, "shared_primary", False):
+            if self.exchange.subaccount != 0 or not getattr(self.exchange, "ownership", None):
+                raise DeskError("shared_ownership_required")
+        elif not 1 <= getattr(self.exchange, "subaccount", 0) <= 63:
             raise DeskError("dedicated_subaccount_required")
 
     def _validate(self, decision: Decision, quote: Quote, now: datetime):
@@ -119,6 +122,20 @@ class DeskExecutor:
             raise DeskError("insufficient_conservative_edge")
         if decision.probability * quantity - reserved_cost <= 0:
             raise DeskError("nonpositive_computed_edge")
+        if getattr(self.exchange, "shared_primary", False):
+            checked_at = time.monotonic()
+            try:
+                self.exchange.check_isolation()
+                self.exchange.prepare_market(decision.ticker)
+            except DeskError as exc:
+                if exc.code not in {"market_owned_by_another_book", "market_has_existing_account_activity"}:
+                    self.store.pause(self.desk_id, "shared_account_check_failed")
+                raise
+            except Exception:
+                self.store.pause(self.desk_id, "shared_account_check_failed")
+                raise
+            now += timedelta(seconds=time.monotonic() - checked_at)
+            self._validate(decision, quote, now)
         row = self.store.reserve(decision, quantity, reserved_cost, now)
         if not self.store.claim_submission(decision.decision_id, now):
             return self.store.get_decision(decision.decision_id)

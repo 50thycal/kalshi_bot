@@ -1,5 +1,12 @@
 # App-session desks: Go / Continue
 
+**Selected account design: DEC-021 shared primary account.** Read
+[SHARED_ACCOUNT.md](SHARED_ACCOUNT.md). References below to restricted/funded desk
+subaccounts describe the alternative isolated mode. In shared mode verify cooperating
+worker market ownership, existing primary cash backing and signing credentials instead.
+Do not assume the new mode has deployed or activate live trading from a research session.
+
+
 DEC-019 / WS-021. Each app supplies its own cognition while the conversation is active.
 No Codex/Claude CLI login or paid model API key is needed for this mode. The shared
 service stays online for accounting, reconciliation, settlements and material alerts.

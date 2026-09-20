@@ -63,6 +63,8 @@ class Settings(BaseSettings):
 
     # --- Database ---
     database_url: str
+    shared_account_ownership_url: SecretStr = SecretStr("")
+    shared_account_namespace: str = "kalshi-primary"
 
     # --- Operating mode / safety ---
     bot_mode: str = "scanner"

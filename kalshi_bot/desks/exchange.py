@@ -60,13 +60,15 @@ class KalshiDeskExchange:
     """
 
     def __init__(self, base_url: str, key_id: str, private_key: str, subaccount: int,
-                 *, client: httpx.Client | None = None):
-        if isinstance(subaccount, bool) or not 1 <= subaccount <= 63:
+                 *, client: httpx.Client | None = None, shared_primary: bool = False):
+        if (type(subaccount) is not int or not 0 <= subaccount <= 63
+                or (subaccount == 0) != shared_primary):
             raise DeskError("dedicated_subaccount_required")
         if not base_url.startswith("https://") or not base_url.rstrip("/").endswith(API_PREFIX):
             raise DeskError("invalid_exchange_url")
         self.base_url = base_url.rstrip("/")
         self.subaccount = subaccount
+        self.shared_primary = shared_primary
         self.signer = KalshiSigner(key_id, private_key)
         self.client = client or httpx.Client(timeout=15, follow_redirects=False)
         self._owns_client = client is None
