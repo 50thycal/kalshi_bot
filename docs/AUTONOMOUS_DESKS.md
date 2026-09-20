@@ -88,17 +88,22 @@ increase budgets, or override a refusal.
 
 Two cognition transports are implemented:
 
-- **External scheduled runner:** a separately supported session/agent runtime claims jobs,
-  researches, and returns structured results. This is the default zero-additional-budget
-  route. The API is the bridge, not proof a scheduled ChatGPT/Claude session exists.
-  Each bridge must be connected and verified before claiming unattended readiness.
+- **External scheduled runner:** `python -m kalshi_bot.desks.runner once|serve` claims
+  jobs, invokes a configured existing research command, requests captured sources, and
+  completes jobs with durable retry state. Separate ChatGPT and Claude processes use
+  their own tokens and private directories. Bounded Codex/Claude CLI adapters translate
+  the shared job protocol to installed model clients. This is the default route without
+  granting a new paid API allowance; it still requires working client authentication,
+  compatible client versions, permitted model usage, and a continuously available host.
+  Configuration alone does not prove a completed research cycle. Setup and service
+  recipes: [RUNNERS.md](desks/RUNNERS.md).
 - **Paid model provider:** explicit OpenAI/Anthropic model and dedicated API key, explicit
   current input/output prices, and a positive operator-approved equal monthly allowance.
   Reservations precede calls; uncertain billing keeps its reservation until reconciled.
   No paid allowance was granted by the implementation request.
 
-The service does not keep an ordinary chat alive, install a scheduled session on the user's
-behalf, or provide unlimited browsing/code execution to a model API. Provider cycles use
+The service and runner do not keep an ordinary chat alive, install/authenticate model
+clients, deploy themselves, or provide unlimited browsing/code execution to a model API. Provider cycles use
 bounded market context and allowlisted source fetching. External sessions can develop
 additional desk-owned research tools within their allowed environment. Tool or network
 limitations are recorded, never bypassed by quietly changing another worker's permissions.
@@ -225,6 +230,10 @@ The source request file contains `job_id`, `claim_token`, and `url`. The complet
 contains `job_id`, `claim_token`, `model_id`, and a strict `ResearchOutput` in `payload`.
 Other supported commands are `continue`, `publications`, and `decisions`; pass their JSON
 body through `--file` when needed. Replace `chatgpt` with `claude` for that runner. This
-CLI does not create or schedule either external session and cannot start the round.
+CLI remains useful for manual inspection and structured submissions. For automatic
+claim/research/source/complete cycles, use the dedicated runner in [RUNNERS.md](desks/RUNNERS.md).
+Neither client starts the round. `python -m kalshi_bot.desks.doctor [--json]` provides a
+read-only, redacted launch/operations check; it does not refresh exchange checks or make
+any mutations.
 
 Startup packets: [ChatGPT](desks/CHATGPT_START.md) · [Claude](desks/CLAUDE_START.md).

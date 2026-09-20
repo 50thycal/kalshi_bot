@@ -176,6 +176,7 @@ class Supervisor:
             self._fail(job_id, "market_context_unavailable", now, unknown=False)
             raise DeskError("market_context_unavailable") from None
         return {"job_id": job_id, "claim_token": token, "desk_id": desk_id,
+                "lease_until": (now + timedelta(minutes=30)).isoformat(),
                 "context": context, "system": charter(desk_id)}
 
     def fetch_external_source(self, job_id, claim_token, desk_id, url, now):
@@ -233,9 +234,23 @@ class Supervisor:
             raise DeskError("unverified_settlement_source")
 
     def complete_external(self, job_id, claim_token, payload, model_id, now, *, desk_id):
+        if not isinstance(model_id, str) or not 1 <= len(model_id) <= 200:
+            raise DeskError("research_model_id_required")
         with self.store._tx() as session:
+            job = self._job(session, job_id)
+            if job.desk_id != desk_id or job.claim_token != claim_token:
+                raise DeskError("research_claim_mismatch")
+            # The HTTP acknowledgement can be lost after publication/order intent.
+            # Recognize only the exact previously accepted result under its original
+            # claim. Never publish or submit again while handling an acknowledgement.
+            output = parse_output(payload if isinstance(payload, str) else json.dumps(payload))
+            if job.result and job.state in {"publishing", "running", "completed"}:
+                expected = {"output": output.model_dump(mode="json"), "model_id": model_id}
+                if job.result != expected:
+                    raise DeskError("research_completion_mismatch")
+                state = "completed" if job.state == "completed" else "publishing"
+                return {"job_id": job_id, "state": state}
             self._owned(session, job_id, claim_token, desk_id, now)
-        output = parse_output(payload if isinstance(payload, str) else json.dumps(payload))
         self._verify(output, job_id, desk_id, model_id, "session")
         self._publish(job_id, output, desk_id, model_id, now)
         self._finish(job_id, now, 0)
