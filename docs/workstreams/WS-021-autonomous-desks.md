@@ -104,7 +104,7 @@ Continuation validation: repository lint and diff checks pass; 233 desk/session 
 locally with the PostgreSQL concurrency case reserved for CI. Real local HTTP and subprocess
 integration covers both model adapters using fake native clients, service-captured evidence,
 publication, lost acknowledgement, and restart without regenerating research. No real model
-calls were made. Final CI results are recorded on the continuation PR.
+calls were made. Final CI results are recorded on [PR #445](https://github.com/50thycal/kalshi_bot/pull/445).
 
 The initial implementation used five breakout sessions that built
 storage/scoring, execution, research supervision, API/dashboard, and startup documentation.
@@ -128,7 +128,7 @@ No deployment or live activation performed by this workstream.
 
 **Verdict:** Initial PR merged; continuation self-check complete, pending owner acceptance. No acceptance inferred from merge.
 **Accepted head:** —
-**Related PR:** [#443](https://github.com/50thycal/kalshi_bot/pull/443)
+**Related PR:** [#445](https://github.com/50thycal/kalshi_bot/pull/445); initial implementation [#443](https://github.com/50thycal/kalshi_bot/pull/443) merged.
 **Finalization:** Pushed; no owner acceptance or merge inferred.
 
 The repo remains in solo mode. Plan/build approval is recorded, not represented as acceptance
@@ -140,7 +140,9 @@ DEC-018; DEC-017 retained as historical manual-desk policy; DEC-001 authority bo
 
 ## Related PRs
 
-[#443 — Isolated autonomous research desks](https://github.com/50thycal/kalshi_bot/pull/443)
+[#443 — Isolated autonomous research desks](https://github.com/50thycal/kalshi_bot/pull/443) — merged.
+
+[#445 — External runners and launch diagnostics](https://github.com/50thycal/kalshi_bot/pull/445) — continuation.
 
 ## Parked
 
@@ -148,4 +150,4 @@ None.
 
 ## Next Step
 
-Review the external-worker continuation PR after final-head CI; hosted setup and live launch remain separate guards.
+Review PR #445 after final-head CI; hosted setup and live launch remain separate guards.
