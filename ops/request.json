@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--ticker","KXDIESELD-26SEP21-T6.540","--depth","6","--trades","6"],"id":"desk-d7-dd","actor":"claude-desk","purpose":"compare daily diesel settlement source 2026-09-20"}
+{"type":"noop"}
