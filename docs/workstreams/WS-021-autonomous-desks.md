@@ -187,3 +187,22 @@ App-session validation: 227 passed, 1 skipped in the focused desk suite; the ski
 PostgreSQL concurrency case requires CI’s database. Repository lint and diff checks pass.
 All exchange/source/model actions in these tests are offline substitutes; no live order,
 model billing, account funding or production activation was performed.
+
+
+## DEC-020 continuation — existing worker primary scoping
+
+Owner approved preserving existing keys and limiting main through software. Build card:
+explicit primary-account portfolio requests and V2 placements; local rejection of foreign
+selectors; foreign response rejection; preserve cancellation under kill and shard routing.
+No strategy, XOS lifecycle, funds, keys, or live-start mutation. Acceptance checks cover
+scoped lists excluding a second desk, rejected foreign requests without network traffic,
+foreign response refusal, original payload immutability, and cancellation routing.
+
+Implementation: primary client boundary and regression tests published in draft [PR #449](https://github.com/50thycal/kalshi_bot/pull/449). Finalization: pushed; owner acceptance not inferred.
+Validation: 322 tests passed across client, desk, execution telemetry and liquidity-incentive
+executor suites; one PostgreSQL-only test skipped locally. Repository lint and diff checks pass.
+The legacy V1 route remains a deployment verification requirement; its undocumented payload
+is not silently changed. Existing unrestricted consumers outside the audited workers are
+not claimed isolated. No live readiness flag has been set.
+Next step: review the primary-account scoping PR; satisfy the shared execution Platform
+Revision/impact merge guard, then verify deployment before resuming launch preflight.

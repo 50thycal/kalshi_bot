@@ -176,8 +176,10 @@ Before live start, verify all of the following with concrete evidence:
 
 1. Two distinct non-primary Kalshi subaccounts with $30 each, dedicated restricted API
    keys, and no inherited positions/orders. Account eligibility must support this.
-2. Existing main/evo workers' credentials and portfolio reads cannot aggregate or manage
-   these subaccounts. Distinct labels in a database are insufficient. Setting
+2. DEC-020 permits existing main/evo keys to remain unrestricted, provided the deployed
+   worker software confines account operations to primary subaccount 0. Verify reads,
+   cancellations and any legacy V1 route in use; unknown external consumers are outside
+   this software boundary. Distinct labels in a database are insufficient. Setting
    `DESKS_EXISTING_WORKERS_ISOLATED` records an actual verified fact, not permission to
    skip the check. If existing workers cannot be isolated, live launch remains blocked.
 3. In session mode, both app bridges complete a genuine source-backed research cycle.
