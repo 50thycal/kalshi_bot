@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--category","Economics","--hours","168","--min-volume","200","--top","60"],"id":"desk-d6-econ","actor":"claude-desk","purpose":"daily board read 2026-09-20"}
+{"type":"script","name":"kalshi_desk_board","args":["--search","weather","--hours","120","--min-volume","50","--top","40"],"id":"desk-d6-wx","actor":"claude-desk","purpose":"daily board read 2026-09-20"}
