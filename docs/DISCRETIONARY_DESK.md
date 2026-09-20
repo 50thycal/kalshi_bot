@@ -73,6 +73,7 @@ The catalogue behind these rules is `docs/BOOK_REGISTRY.md`, `docs/RESEARCH_JOUR
 | R10 | **One independent unit per event.** Two picks on the same settlement print are one pick. | 66 crypto ladder markets settle on one spot print; NBA "n=171" was ~6 dates. |
 | R11 | **Sizing is fixed, not remembered.** $1 first; a step up is a recorded decision at a sample floor, never a reaction to the last result. | MARKTANGLE-2 pre-registration; every stop-loss variant lost to hold-to-settlement. |
 | R12 | **Hold to settlement is the default exit.** | Backtest and forward A1–A3: every stop converts small wins into realized losses; the real tail is a gap no stop catches. |
+| R13 | **The settlement source is read from the contract, not inferred from the title.** `--ticker` prints `rules_primary` and `rules_secondary`; if neither names a source, the desk does not know what settles the market and does not have a mechanics edge in it. Two markets with identical rule text settle on one print (R10). | `D-2026-09-19-001`: the thesis assumed `KXDIESELW` was an EIA weekly survey and bought an EIA-over-AAA basis. The contract names no source and its twin daily market carries the identical rule, so both settle on one daily print and the basis does not exist (`POSTMORTEMS.md` §1a). |
 
 ## 5. The ledger
 
@@ -122,7 +123,7 @@ refreshed. A number written from memory is a number nobody can check, so none ar
 
 | class / series | what the desk verified | source, date |
 |---|---|---|
-| `KXDIESELW` (EIA weekly on-highway diesel, Monday survey) | EIA has printed **5.5–6.7¢ above** AAA's same-Monday daily average the last two weeks (6.285 vs 6.23 on 9/14; 5.967 vs ~5.90 on 9/7). AAA daily 9/14→9/19: 6.23, 6.31, 6.40, 6.4476, **6.4866** (Sat 9/19, record). | `desk_fetch gasprices.aaa.com`, EIA release pages, 2026-09-18/19 |
+| `KXDIESELW` / `KXDIESELD` (**one print, not two**) | Both series carry the identical rule — *"If the Diesel Price on September 21, 2026 is above $X"* — the same close and the same expiration, and their ladders overlay strike for strike. `KXDIESELW`'s "this week" title is a coarse-strike ladder on the **daily** print, **not** an EIA weekly average, and neither contract names a source. The AAA daily national average is the readable proxy: 6.23 (Mon 9/14) → 6.4866 (Sat 9/19) → **6.5050 (Sun 9/20, record)**, a decelerating climb (+3.8¢, then +1.84¢). The EIA-over-AAA basis the desk first recorded (+5.5–6.7¢) is real between those two published series but is **not** what this contract pays on. | `--ticker` rules text + `desk_fetch gasprices.aaa.com`, 2026-09-20 |
 | `KX30YMORTW` (Freddie Mac PMMS, Thursday) | PMMS is the Thu–Wed window mean of application rates, and it has matched the daily Optimal Blue / Mortgage Daily 30-yr series to **within 1bp**: 9/17 print 6.95 vs mean(9/10 6.88, 9/11 6.95, 9/14–15 6.95, 9/16 7.05) = 6.96. MND's top-tier index runs ~15–25bp above PMMS in a rising week (7.19–7.24 on 9/16–9/18 vs 6.95). So by Friday two of the five window days are known, and the market ladder can be checked against them. | web search (mortgagedaily.com, mortgagenewsdaily.com, freddiemac.com), 2026-09-19 |
 | `KXSPRLVL` (EIA WPSR Table 1, Wednesday) | Weekly SPR changes during the 172M-barrel IEA release: −3.4/wk (8/14→8/28), −1.2 (9/4), −0.4 (9/11); draws are decelerating as the release winds down. The 1M-barrel strike spacing is the same size as the weekly noise, so a strike sits inside the noise unless DOE's delivery schedule is known. | web search (EIA WPSR summaries), 2026-09-19 |
 | `KXSOFRD` (NY Fed SOFR, next business day 08:00 ET) | Markets close before the print. The day after the 9/16 hike SOFR set at 3.85 (IORB−5). The Friday ladder's yes asks summed to 177¢ across seven bins: nothing is takeable, and the desk has no read on day-two drift. | ops event view + web search, 2026-09-19 |
@@ -153,7 +154,7 @@ under the wider policy; 5 defaults to the daily line plus the weekly table.
 
 ## 9. Handoff — where the desk stands (rewrite this at the close of every session)
 
-**As of 2026-09-19 ~20:45 UTC (Sat).** Role playbook: `.claude/sessions/discretionary-desk.md`.
+**As of 2026-09-20 ~14:00 UTC (Sun).** Role playbook: `.claude/sessions/discretionary-desk.md`.
 Any session — or any model that can read this repo and push to GitHub — continues from this
 section, the ledger and the postmortems; nothing else was needed to get here.
 
@@ -161,7 +162,7 @@ section, the ledger and the postmortems; nothing else was needed to get here.
 
 | pick | market | side / fill | settles | grade with |
 |---|---|---|---|---|
-| D-2026-09-19-001 | `KXDIESELW-26SEP21-T6.52` (EIA weekly diesel > $6.52) | YES @ ~76c | Mon 2026-09-21 ~17:00 ET | EIA weekly on-highway diesel, U.S. average (`desk_fetch https://www.eia.gov/petroleum/gasdiesel/`, or web search). AAA was $6.4866 on Sat 9/19; EIA has printed 5.5–6.7c above AAA's same-Monday figure. |
+| D-2026-09-19-001 | `KXDIESELW-26SEP21-T6.52` | YES @ ~76c | **Mon 2026-09-21**, close 05:59Z | The single "Diesel Price on September 21" the contract names, with **no source stated** (R13, `POSTMORTEMS.md` §1a). AAA's daily national average is the readable proxy and read 6.5050 on Sun 9/20; the strike needs +1.5¢ overnight. Market held 46/53 all Sunday, i.e. a coin flip, against a 0.80 pre-registered confidence that is now known to rest on a wrong mechanism. Grade it on the print, then grade the confidence against it. |
 | D-2026-09-19-002 | `KX30YMORTW-26SEP24-T7.01` (Freddie Mac PMMS > 7.01%) | YES @ ~43c | Thu 2026-09-24 12:00 ET | Freddie Mac PMMS first published value (`freddiemac.com/pmms`, or web search). Window Thu 9/17–Wed 9/23; 9/17 = 7.01 and 9/18 = 7.05 on the Optimal Blue/Mortgage Daily series that tracks PMMS within 1bp. |
 
 **Windows the last session identified but has not traded:**
@@ -186,6 +187,9 @@ that is done, budget minutes per read.
 
 **Lessons so far (n=0 settled — nothing is a pattern yet):** the operator paid 76c on D-001
 against a 55c cap, so the report must carry the cap in the first line; the board's thin books move
-20 points between two reads minutes apart; and a projection band that straddles three strikes is a
-no-pick, logged as one, not a reason to take the nearest strike.
+20 points between two reads minutes apart; a projection band that straddles three strikes is a
+no-pick, logged as one, not a reason to take the nearest strike; and — the one that cost real money
+— **the settlement source is read from the contract before the thesis is written, never inferred
+from the market's title** (R13). Four dominance inversions have now been found on thin ladders and
+none was crossable after the spread, which is R4 accumulating rather than an anomaly.
 
