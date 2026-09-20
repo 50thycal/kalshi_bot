@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--search","weather","--hours","120","--min-volume","50","--top","40"],"id":"desk-d6-wx","actor":"claude-desk","purpose":"daily board read 2026-09-20"}
+{"type":"script","name":"desk_fetch","args":["https://openrouter.ai/api/frontend/v1/rankings/market-share","--find","2026-09-14","--window","500","--hits","1"],"id":"desk-d6-or","actor":"claude-desk","purpose":"token pace sample 2026-09-20 13:40Z"}
