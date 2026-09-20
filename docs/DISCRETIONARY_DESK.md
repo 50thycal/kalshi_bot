@@ -74,6 +74,7 @@ The catalogue behind these rules is `docs/BOOK_REGISTRY.md`, `docs/RESEARCH_JOUR
 | R11 | **Sizing is fixed, not remembered.** $1 first; a step up is a recorded decision at a sample floor, never a reaction to the last result. | MARKTANGLE-2 pre-registration; every stop-loss variant lost to hold-to-settlement. |
 | R12 | **Hold to settlement is the default exit.** | Backtest and forward A1–A3: every stop converts small wins into realized losses; the real tail is a gap no stop catches. |
 | R13 | **The settlement source is read from the contract, not inferred from the title.** `--ticker` prints `rules_primary` and `rules_secondary`; if neither names a source, the desk does not know what settles the market and does not have a mechanics edge in it. Two markets with identical rule text settle on one print (R10). | `D-2026-09-19-001`: the thesis assumed `KXDIESELW` was an EIA weekly survey and bought an EIA-over-AAA basis. The contract names no source and its twin daily market carries the identical rule, so both settle on one daily print and the basis does not exist (`POSTMORTEMS.md` §1a). |
+| R14 | **The uncertainty band is built from the measurements, not padded for comfort.** Widening a projection beyond what the observations support is a claim about the data, and it is the same error as narrowing one. Both show up as a miscalibrated confidence against the ledger. | `D-2026-09-19-NP1`: a 0.65 T/h lower bound no reading supported turned a projection entirely above the 128 strike into one that "straddled three strikes", and the desk passed at 58¢ on a market now bid 93¢ (`POSTMORTEMS.md` §1a). |
 
 ## 5. The ledger
 
@@ -127,7 +128,7 @@ refreshed. A number written from memory is a number nobody can check, so none ar
 | `KX30YMORTW` (Freddie Mac PMMS, Thursday) | PMMS is the Thu–Wed window mean of application rates, and it has matched the daily Optimal Blue / Mortgage Daily 30-yr series to **within 1bp**: 9/17 print 6.95 vs mean(9/10 6.88, 9/11 6.95, 9/14–15 6.95, 9/16 7.05) = 6.96. MND's top-tier index runs ~15–25bp above PMMS in a rising week (7.19–7.24 on 9/16–9/18 vs 6.95). So by Friday two of the five window days are known, and the market ladder can be checked against them. | web search (mortgagedaily.com, mortgagenewsdaily.com, freddiemac.com), 2026-09-19 |
 | `KXSPRLVL` (EIA WPSR Table 1, Wednesday) | Weekly SPR changes during the 172M-barrel IEA release: −3.4/wk (8/14→8/28), −1.2 (9/4), −0.4 (9/11); draws are decelerating as the release winds down. The 1M-barrel strike spacing is the same size as the weekly noise, so a strike sits inside the noise unless DOE's delivery schedule is known. | web search (EIA WPSR summaries), 2026-09-19 |
 | `KXSOFRD` (NY Fed SOFR, next business day 08:00 ET) | Markets close before the print. The day after the 9/16 hike SOFR set at 3.85 (IORB−5). The Friday ladder's yes asks summed to 177¢ across seven bins: nothing is takeable, and the desk has no read on day-two drift. | ops event view + web search, 2026-09-19 |
-| `KXTOKENUSE` (OpenRouter weekly tokens) | Week totals: 126.2T (8/31), **126.8T (9/07)**. Week-to-date is readable from the market-share endpoint (§6a) by summing the bucket (the author list rotates — `qwen` left and `meta` entered between two Saturday reads — but `others` absorbs the remainder, so the sum stays the platform total). Week of 9/14 measured: **96.45T at Sat 04:08Z, 103.27T at 13:43Z, 108.99T at 20:31Z** → 0.711 T/h then 0.841 T/h, against a 0.777 T/h average for the week to date. The weekend is **not** materially slower than the weekday pace, which contradicts the first guess. 27.5h remain at the last read; at 0.65–0.84 T/h the week lands **126–132T**. |
+| `KXTOKENUSE` (OpenRouter weekly tokens) | Week totals: 126.2T (8/31), 126.8T (9/07). **Week of 9/14 measured five times**: 96.45T (Sat 04:08Z), 103.27T (13:43Z), 108.99T (20:31Z), 121.17T (Sun 13:39Z), **126.21T (Sun 20:00Z)** → paces 0.711, 0.841, 0.711, **0.794** T/h. The pace is far more stable than first assumed and the weekend is not slower than the weekday. **Lag is under an hour**: 96.45T over 124.1h elapsed averages 0.777 T/h against an instantaneous ~0.78, so time-to-close is the right multiplier. Final projection 128.6–130.2T. **The market repriced to match between Sat afternoon and Sun evening** (>128 went 11/58 → 93/98), so this series' edge lives in the *early* read, not the late one — the opposite of what the desk assumed on Saturday. | `desk_fetch` market-share endpoint ×5 + two ladder reads, 2026-09-19/20 |
 | `KX*SHARE` (OpenRouter request share by author) | Settlement metric unreadable mid-week; token share is a proxy the market already tracks (OpenAI tokens 18.9%→13.7% week over week and the market moved from 23.6 to ~17.5). No desk edge without the request series. | §6a, 2026-09-19 |
 
 ## 8. Decisions this model needed from the operator (opened and answered 2026-09-19)
@@ -154,7 +155,7 @@ under the wider policy; 5 defaults to the daily line plus the weekly table.
 
 ## 9. Handoff — where the desk stands (rewrite this at the close of every session)
 
-**As of 2026-09-20 ~14:00 UTC (Sun).** Role playbook: `.claude/sessions/discretionary-desk.md`.
+**As of 2026-09-20 ~20:15 UTC (Sun).** Role playbook: `.claude/sessions/discretionary-desk.md`.
 Any session — or any model that can read this repo and push to GitHub — continues from this
 section, the ledger and the postmortems; nothing else was needed to get here.
 
@@ -167,11 +168,11 @@ section, the ledger and the postmortems; nothing else was needed to get here.
 
 **Windows the last session identified but has not traded:**
 
-- `KXTOKENUSE-26SEP21` (OpenRouter tokens Sep 14–20): the week ends Mon 00:00 UTC and the ladder
-  trades until Mon 03:59 UTC. **Saturday 20:31Z read: 108.99T week-to-date, pace 0.84 T/h**, so the
-  week projects to 126–132T — a band that straddles the >126, >128 and >130 strikes, and no pick was
-  taken (`D-2026-09-19-NP1`). The **Sunday ~20:00 UTC** read is the one that matters: ~4h unread,
-  the ladder still open, and the projection tight enough to price a strike.
+- `KXTOKENUSE-26SEP21` **closed without a pick** (`D-2026-09-20-NP2`). The Sunday 20:00Z read put the week at
+  126.21T with 4h left, projecting 128.6–130.2T, and every strike was within a few points of that estimate
+  (>126 98/99, >128 93/98, >130 3/14). Settles Mon 10:00 ET. **Carry forward**: for this series the edge is in the
+  Saturday read, not the Sunday one — see R14 and `POSTMORTEMS.md` §1a, where passing on Saturday's 58¢ offer is
+  recorded as an under-confidence failure. Next week's ladder opens Monday; the first read should be early Saturday.
 - `KX*SHARE` (OpenRouter request share): still no mid-week read of the settlement metric. Pass.
 
 **Scheduled check-ins are bound to the session that created them** (Claude Code routines):
