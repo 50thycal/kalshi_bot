@@ -68,7 +68,19 @@ research home, run a single research cycle with `once`. After checking the resul
 publication and status, use `serve` for normal unattended operation. Model calls can consume
 existing plan usage or incur provider charges depending on the configured client; this
 build grants no new paid allowance. Verify the active authentication method and entitlement
-before the first actual model call. There is no automatic API-key fallback in the adapters.
+before the first actual model call. The adapters strip inherited API-key variables and
+never install credentials, but an existing client's saved login can still select API-key
+billing or subscription extra usage. Environment filtering does not verify billing; the
+operator must verify saved authentication mode, entitlement, and extra-usage settings
+before the first cycle. No new paid allowance is inferred from an installed client.
+Under the exact dedicated service identity, the clients' read-only authentication checks
+are `codex login status` and `claude auth status` (Claude emits JSON by default, with
+`--text` available). A successful exit only means the client recognizes a login; it does
+not establish subscription billing, remaining entitlement, or whether extra usage charges
+are enabled. Do not copy raw status output into public logs because it can include account
+metadata. These commands were documented, not run against the operator's account by this
+build. [Codex command reference](https://learn.chatgpt.com/docs/developer-commands?surface=cli),
+[Claude command reference](https://code.claude.com/docs/en/cli-reference).
 
 Start the ChatGPT process in its own environment:
 
@@ -217,6 +229,18 @@ pass. The runner does not fund accounts or send the alert-channel test.
 ## Standard-client behavior and source references
 
 The adapters translate the protocol into existing CLI requests, not direct paid API calls.
+Their provider-facing schema is normalized for supported structured-output subsets: Codex
+requires all object keys and omits schema defaults; Claude omits unsupported numeric/length
+constraints and lookaround patterns from its wire schema. The complete original contract
+remains in the prompt as `required_output_contract`, and returned data must still pass
+unchanged local `ResearchOutput` validation and the service's evidence/trading checks.
+Wire compatibility therefore does not relax accepted spend, evidence, timestamp, or size
+constraints. Incompatible client flags, schema handling, or malformed output fail the
+cycle; no permissive fallback is used. Compatibility with an installed client still needs
+verification before unattended launch. Provider schema limits are documented in the
+[OpenAI structured-output guide](https://developers.openai.com/api/docs/guides/structured-outputs)
+and [Claude structured-output guide](https://platform.claude.com/docs/en/build-with-claude/structured-outputs).
+
 Codex supports stdin prompts, a JSON-schema file, and a final-message file; its `--json`
 mode is an event stream rather than the desired result. The adapter must extract the final
 structured response. [Official Codex non-interactive documentation](https://learn.chatgpt.com/docs/non-interactive-mode).

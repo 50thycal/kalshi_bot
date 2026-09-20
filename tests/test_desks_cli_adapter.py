@@ -53,7 +53,11 @@ assert not (pathlib.Path.cwd()/'CLAUDE.md').exists()
 prompt = sys.stdin.read()
 assert 'Research only the supplied evidence.' in prompt
 assert '"desk_id": "chatgpt"' in prompt and '"model_id": "test-model"' in prompt
-assert json.loads(pathlib.Path(args[args.index('--output-schema')+1]).read_text())['properties']['summary']
+wire = json.loads(pathlib.Path(args[args.index('--output-schema')+1]).read_text())
+assert set(wire['required']) == set(wire['properties'])
+for definition in wire['$defs'].values():
+    if definition.get('type') == 'object':
+        assert set(definition['required']) == set(definition['properties'])
 print('private provider progress that must not escape')
 pathlib.Path(args[args.index('-o')+1]).write_text(''' + repr(json.dumps(output)) + ''')
 '''
@@ -146,3 +150,52 @@ def test_failure_output_is_redacted(fake_cli, tmp_path):
         capture_output=True, timeout=15)
     assert result.returncode == 1 and result.stdout == b""
     assert result.stderr == b"research_cli_failed\n"
+
+
+def test_codex_strict_schema_preserves_nullable_constraints_and_protocol():
+    source = ResearchOutput.model_json_schema()
+    original = json.dumps(source, sort_keys=True)
+    wire = cli_adapter._codex_schema(source)
+    def verify(node):
+        if isinstance(node, list):
+            for item in node:
+                verify(item)
+        elif isinstance(node, dict):
+            assert "default" not in node
+            if node.get("type") == "object":
+                assert set(node["required"]) == set(node["properties"])
+                assert node["additionalProperties"] is False
+            for item in node.values():
+                verify(item)
+    verify(wire)
+    candidate = wire["$defs"]["Candidate"]["properties"]["probability"]
+    assert {"type": "null"} in candidate["anyOf"]
+    assert wire["$defs"]["Decision"]["properties"]["probability"]["anyOf"] == source["$defs"]["Decision"]["properties"]["probability"]["anyOf"]
+    assert json.dumps(source, sort_keys=True) == original
+    assert cli_adapter._validate(envelope(), "codex")["output_schema"] == source
+
+
+def test_claude_wire_subset_keeps_full_contract_locally():
+    source = ResearchOutput.model_json_schema()
+    original = json.dumps(source, sort_keys=True)
+    wire = cli_adapter._claude_schema(source)
+    unsupported = {"minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum",
+                   "multipleOf", "minLength", "maxLength", "maxItems"}
+    def verify(node):
+        if isinstance(node, list):
+            for item in node:
+                verify(item)
+        elif isinstance(node, dict):
+            assert not unsupported.intersection(node)
+            assert "(?" not in node.get("pattern", "")
+            assert node.get("minItems", 0) in (0, 1)
+            for item in node.values():
+                verify(item)
+    verify(wire)
+    assert wire["$defs"]["Decision"]["properties"]["max_spend"]["default"] == "1.00"
+    assert "maxLength" in wire["properties"]["summary"]["description"]
+    assert {"type": "null"} in wire["$defs"]["Candidate"]["properties"]["probability"]["anyOf"]
+    assert json.dumps(source, sort_keys=True) == original
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        cli_adapter.parse_output(json.dumps({"summary": "x", "next_action": "Still invalid short summary"}))

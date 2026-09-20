@@ -100,7 +100,7 @@ The continuation supplies the external research worker, saved-login Codex/Claude
 safe completion acknowledgement replay, and a read-only launch check. It does not deploy
 or activate trading. Model clients still require provisioned supported access and a host.
 
-Continuation validation: repository lint and diff checks pass; 233 desk/session tests pass
+Continuation validation: repository lint and diff checks pass; 235 desk/session tests pass
 locally with the PostgreSQL concurrency case reserved for CI. Real local HTTP and subprocess
 integration covers both model adapters using fake native clients, service-captured evidence,
 publication, lost acknowledgement, and restart without regenerating research. No real model
