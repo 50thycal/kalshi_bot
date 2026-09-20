@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="referrer" content="no-referrer">
+<title>Research desks · Operator overview</title>
+<style>
+:root{--bg:#10151b;--panel:#19212b;--line:#354250;--text:#f3f6f8;--muted:#b4c2d0;--green:#91e2bd;--amber:#ffd18b;--red:#ffb4b4;--blue:#a9caff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}main{overflow-wrap:anywhere;max-width:1120px;margin:auto;padding:28px 22px 64px}header,.row,.actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}header{justify-content:space-between;margin-bottom:24px}.eyebrow{font-size:12px;font-weight:750;text-transform:uppercase;letter-spacing:.12em;color:var(--green)}h1{font-size:clamp(26px,4vw,36px);letter-spacing:-.04em;line-height:1.2;margin:5px 0}h2{font-size:19px;margin:0 0 12px}h3{font-size:16px;margin:0}p{margin:8px 0}.muted,small{color:var(--muted)}small{font-size:12px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:18px}.login{max-width:600px;margin:56px auto}.login label{display:block;font-weight:650;margin-top:22px}.login .row{margin-top:8px}.login input{flex:1;min-width:160px}button,input,select{font:inherit;color:var(--text);background:var(--bg);border:1px solid #6a7b8e;border-radius:9px;min-height:44px;padding:10px 14px}button{cursor:pointer;font-weight:650}button:hover:enabled{background:#293647}button.primary{background:var(--green);border-color:var(--green);color:#10231d}button.primary:hover:enabled{background:#b0efd2}button:disabled{opacity:.45;cursor:not-allowed}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--blue);outline-offset:3px}input{width:100%}.badge{max-width:100%;display:inline-flex;align-items:center;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700;line-height:1.45;background:#2f3d4b;color:var(--text)}.good{color:var(--green);background:#183e30}.warn{color:var(--amber);background:#493623}.bad{color:var(--red);background:#4a2c30}.neutral{color:var(--blue);background:#273850}.connection{font-size:13px;color:var(--muted)}.notice{border-left:4px solid var(--amber)}.notice.bad{background:var(--panel);border-left-color:var(--red);color:var(--text)}.notice ul{margin:8px 0 0;padding-left:20px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.desk{position:relative;overflow:hidden}.desk:before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--blue)}.desk.claude:before{background:#d5b4eb}.deskhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}.deskhead h2{margin:0}.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}.metrics>div{min-width:0}.metrics dt{font-size:12px;color:var(--muted)}.metrics dd{margin:2px 0 0;font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.03em}.metrics.secondary{border-top:1px solid var(--line);padding-top:16px}.metrics.secondary dd{font-size:18px}.health{background:var(--bg);padding:13px;border-radius:10px;margin:14px 0}.health ul{padding-left:18px;margin:6px 0}.actions{padding-top:8px}.actions button{flex:1;white-space:nowrap}.sectionhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin:20px 0 12px}.sectionhead h2{margin:0}.empty{color:var(--muted);padding:18px 0}.entry{border-top:1px solid var(--line);padding:16px 0}.entry:first-child{border-top:0;padding-top:0}.entry:last-child{padding-bottom:0}.entrytitle{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:5px}.entrytitle strong{overflow-wrap:anywhere}.entry p{overflow-wrap:anywhere}.entry small{display:block}.entry summary{cursor:pointer;color:var(--blue);padding:9px 0;min-height:44px}.entry pre{font:12px/1.5 ui-monospace,SFMono-Regular,monospace;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--bg);border-radius:8px;padding:12px;max-height:300px;overflow:auto}.rules{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}.message{min-height:24px;overflow-wrap:anywhere}.message.error{color:var(--red)}.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}[hidden]{display:none!important}
+@media(max-width:720px){main{padding:20px 14px 40px}.grid{grid-template-columns:1fr;gap:0}.panel{padding:18px}.login{margin:28px auto}.metrics dd{font-size:23px}header{align-items:flex-start}.headeractions{width:100%;justify-content:space-between}.sectionhead{align-items:flex-start}.actions button{font-size:13px;padding:10px}.entrytitle{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<main>
+<header><div><div class="eyebrow">Kalshi research experiment</div><h1>Two desks. One clear view.</h1><p class="muted">Research, trade, learn, iterate.</p></div><div class="row headeractions"><span id="connection" class="connection" role="status">Not connected</span><button id="refresh" hidden>Refresh</button><button id="logout" hidden>Sign out</button></div></header>
+<section id="login" class="panel login" aria-labelledby="login-title"><h2 id="login-title">Connect to your desks</h2><p class="muted">Enter your operator access token to see live status and desk controls.</p><form id="authform"><label for="token">Operator access token</label><div class="row"><input id="token" type="password" autocomplete="off" spellcheck="false" autocapitalize="off" required placeholder="Access token"><button class="primary" type="submit">Connect</button></div></form><p><small>Your token stays in this page’s memory and is cleared when you sign out or reload.</small></p></section>
+<p id="message" class="message" role="status" aria-live="polite"></p>
+<div id="dashboard" hidden>
+<section id="readiness" class="panel notice" aria-labelledby="readiness-title"><h2 id="readiness-title">Launch readiness</h2><div id="readiness-body"></div></section>
+<div class="sectionhead"><div><h2>Desk overview</h2><small id="round"></small></div><span class="badge neutral">$1 per pick · 3 filled picks/day</span></div>
+<div id="desks" class="grid"></div>
+<div class="panel"><div class="sectionhead"><h2>Recent decisions</h2><label><span class="sr">Filter decisions and publications by desk</span><select id="deskfilter"><option value="all">Both desks</option><option value="chatgpt">ChatGPT</option><option value="claude">Claude</option></select></label></div><p class="muted">Passing is a valid decision. No trades does not mean no progress.</p><div id="decisions"></div></div>
+<div class="panel"><h2>Research & learning</h2><p class="muted">Published findings, candidate rejections, paper experiments, and postmortems.</p><div id="publications"></div></div>
+<p class="rules">Shared limits: $30 initial allocation · $10 maximum committed risk per desk · $1 maximum per pick, including fees · 3 filled picks and 10 new order attempts per day. Trading day: America/Chicago. Continue schedules research; it does not enable live trading or change limits. Research costs are separate from trading P&amp;L.</p>
+</div>
+</main>
+<script>
+'use strict';
+(() => {
+  let token = '', state = null, timer = null, lastSuccess = 0, generation = 0, refreshing = false, mutating = false, unreachable = false;
+  const $ = id => document.getElementById(id);
+  const names = {chatgpt: 'ChatGPT', claude: 'Claude'};
+  const knownDesks = ['chatgpt', 'claude'];
+  const array = value => Array.isArray(value) ? value : [];
+  const stringify = value => typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+  function element(tag, text, cls) {
+    const node = document.createElement(tag);
+    if (text !== undefined && text !== null) node.textContent = String(text);
+    if (cls) node.className = cls;
+    return node;
+  }
+  function validNumber(value) { return value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value)); }
+  function dollars(value) { return validNumber(value) ? new Intl.NumberFormat('en-US', {style:'currency',currency:'USD'}).format(Number(value)) : '—'; }
+  function amount(data, key) { return data[key] !== undefined ? data[key] : validNumber(data[key + '_cents']) ? Number(data[key + '_cents']) / 100 : undefined; }
+  function count(value) { return validNumber(value) ? String(Number(value)) : '—'; }
+  function date(value) { const dt = value ? new Date(value) : null; return dt && !Number.isNaN(dt.getTime()) ? dt.toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : 'Time not reported'; }
+  function human(value) { return String(value || 'unknown').replaceAll('_', ' '); }
+  function reasonText(value) {
+    if (typeof value !== 'string') return stringify(value);
+    if (value.startsWith('trading_paused:')) return 'Trading paused: ' + reasonText(value.slice(15));
+    const match = value.match(/^(chatgpt|claude)_(.+)$/);
+    const code = match ? match[2] : value;
+    const labels = {
+      live_execution_disabled: 'Live trading is not enabled.',
+      existing_worker_subaccount_isolation_unverified: 'Separation from existing bot accounts needs verification.',
+      two_distinct_non_primary_subaccounts_required: 'Each desk needs its own separate trading subaccount.',
+      exchange_credentials_missing: 'Trading credentials are not configured.',
+      unattended_runner_unverified: 'The unattended research runner has not been verified.',
+      unattended_runner_missing: 'An active unattended research runner is needed.',
+      paid_research_budget_not_authorized: 'Paid research has no approved operating budget.',
+      model_credentials_missing: 'Model access credentials are not configured.',
+      session_not_ready: 'The desk has not completed its readiness setup.',
+      exchange_unavailable: 'The trading connection is unavailable.',
+      funding_or_isolation_not_verified: 'Starting funds or account separation could not be verified.',
+      fresh_isolation_check_required: 'Account separation needs a fresh verification.',
+      operator_alert_channel_not_configured: 'An operator alert channel needs to be configured.',
+      operator_alert_delivery_not_verified: 'Successful operator alert delivery needs verification.',
+      research_not_ready: 'Research is not ready to run unattended.',
+      capital_exhausted: 'Available trading capital is exhausted.',
+      settlement_learning_backlog: 'Settled trades are waiting for review.',
+      research_budget_exhausted: 'The research operating budget is exhausted.',
+      repeated_research_failures: 'Several research attempts have failed.',
+      provider_bill_requires_reconciliation: 'A model charge needs to be reconciled before more spending.',
+      no_completed_cycle_24h: 'No research cycle has completed in the past 24 hours.',
+      order_reconciliation_failed: 'An order could not be reconciled; trading is paused.',
+      reconciliation_failed: 'Order reconciliation failed; trading is paused.',
+      operator: 'Paused by the operator.',
+      operator_pause: 'Paused by the operator.'
+    };
+    return (match ? names[match[1]] + ': ' : '') + (labels[code] || human(code));
+  }
+  function tone(status) { return /healthy|running|ready|completed/.test(status) ? 'good' : /fail|critical|error|unreachable/.test(status) ? 'bad' : /pause|block|unfund|degrad|stale|attention/.test(status) ? 'warn' : 'neutral'; }
+  function message(text, error = false) { $('message').textContent = text; $('message').className = 'message' + (error ? ' error' : ''); }
+  function controls(disabled) {
+    document.querySelectorAll('[data-action]').forEach(button => { button.disabled = disabled || button.dataset.unavailable === 'true'; });
+    $('refresh').disabled = refreshing || mutating;
+  }
+  async function api(path, method = 'GET', body) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    try {
+      const response = await fetch(path, {method, cache:'no-store', credentials:'omit', redirect:'error', signal:controller.signal,
+        headers:{Authorization:'Bearer ' + token, ...(body !== undefined ? {'Content-Type':'application/json'} : {})},
+        ...(body !== undefined ? {body:JSON.stringify(body)} : {})});
+      if (response.status === 401 || response.status === 403) throw new Error('Access token was rejected. Sign out and reconnect with an operator token.');
+      if (!response.ok) {
+        let detail = '';
+        try { const data = await response.json(); detail = stringify(data.detail || data.error || ''); } catch (_) {}
+        throw new Error(detail ? 'Request refused: ' + detail : 'Request failed (HTTP ' + response.status + ').');
+      }
+      return response.status === 204 ? {} : await response.json();
+    } finally { clearTimeout(timeout); }
+  }
+  function connection(failed = false) {
+    if (!token) { $('connection').textContent = 'Not connected'; return; }
+    const stale = failed || unreachable || (lastSuccess && Date.now() - lastSuccess > 90000);
+    $('connection').textContent = stale ? 'Connection unavailable · displayed data may be stale' : lastSuccess ? 'Updated ' + date(lastSuccess) : 'Connecting…';
+    controls(stale || mutating || !state);
+  }
+  async function refresh() {
+    if (!token || refreshing) return;
+    refreshing = true;
+    const current = generation;
+    controls(mutating || !state);
+    try {
+      const data = await api('/api/status');
+      if (current !== generation) return;
+      if (!data || !Array.isArray(data.desks)) throw new Error('Unexpected status response. Controls are disabled until the service recovers.');
+      state = data; lastSuccess = Date.now(); unreachable = false;
+      $('login').hidden = true; $('dashboard').hidden = false;
+      $('logout').hidden = false; $('refresh').hidden = false;
+      render(); connection();
+    } catch (error) {
+      if (current !== generation) return;
+      unreachable = true; connection(true);
+      message(error.name === 'AbortError' ? 'The desk service did not respond in time. Automatic refresh will retry.' : error.message, true);
+    } finally {
+      if (current === generation) { refreshing = false; $('refresh').disabled = mutating; }
+    }
+  }
+  function metric(list, label, value) {
+    const block = element('div'); block.append(element('dt', label), element('dd', value)); list.append(block);
+  }
+  function action(desk, kind, label, unavailable = false) {
+    const button = element('button', label, kind === 'continue' ? 'primary' : '');
+    button.type = 'button'; button.dataset.action = kind; button.dataset.unavailable = String(unavailable);
+    button.disabled = unavailable || mutating;
+    button.setAttribute('aria-label', label + ' for ' + names[desk]);
+    button.addEventListener('click', () => mutate(desk, kind));
+    return button;
+  }
+  function renderDesk(id) {
+    const desk = state.desks.find(item => item.desk_id === id);
+    const card = element('section', null, 'panel desk ' + id);
+    card.setAttribute('aria-label', names[id] + ' desk');
+    const head = element('div', null, 'deskhead'); head.append(element('h2', names[id] + ' Desk'));
+    if (!desk) { head.append(element('span', 'Not provisioned', 'badge warn')); card.append(head,element('p','No book has been reported for this desk.','muted')); return card; }
+    const health = state.health && state.health[id] || {};
+    const paused = desk.paused === true || desk.status === 'paused';
+    const status = paused ? 'paused' : desk.status || health.status || 'unknown';
+    head.append(element('span', human(status), 'badge ' + tone(status))); card.append(head);
+    const metrics = element('dl', null, 'metrics');
+    metric(metrics, 'Book cash', dollars(amount(desk,'cash')));
+    metric(metrics, 'Committed risk', dollars(amount(desk,'committed')));
+    metric(metrics, 'Realized P&L', dollars(amount(desk,'pnl'))); card.append(metrics);
+    const secondary = element('dl', null, 'metrics secondary');
+    metric(secondary, 'Filled picks today', count(desk.filled_today) + ' / 3');
+    metric(secondary, 'Order attempts', count(desk.attempts_today) + ' / 10');
+    metric(secondary, 'Research costs', dollars(amount(desk,'research_cost'))); card.append(secondary);
+    const healthBox = element('div', null, 'health');
+    healthBox.append(element('strong','Operations: ' + human(health.status || desk.status || 'not reported')));
+    const reasons = array(health.reasons).slice();
+    if (desk.pause_reason) reasons.unshift(desk.pause_reason);
+    if (validNumber(amount(desk,'cash')) && Number(amount(desk,'cash')) <= 0) reasons.push('No available book cash. New spending is blocked.');
+    if (reasons.length) { const list = element('ul'); [...new Set(reasons.map(stringify))].forEach(reason => list.append(element('li',reasonText(reason)))); healthBox.append(list); }
+    else healthBox.append(element('p',health.status === 'healthy' ? 'No intervention reported.' : 'No operational details reported.','muted'));
+    if (desk.last_cycle_at) healthBox.append(element('small','Last research cycle: ' + date(desk.last_cycle_at)));
+    if (desk.next_cycle_at) healthBox.append(element('small','Next cycle: ' + date(desk.next_cycle_at)));
+    card.append(healthBox);
+    const buttons = element('div',null,'actions');
+    buttons.append(action(id,'continue','Continue research'), action(id,paused ? 'resume' : 'pause',paused ? 'Resume desk' : 'Pause desk'));
+    card.append(buttons,element('p', 'Continue requests the next research cycle. Trading readiness and limits still apply.', 'muted'));
+    return card;
+  }
+  function selected(items) { const filter = $('deskfilter').value; return array(items).filter(item => filter === 'all' || item.desk_id === filter).slice(0,30); }
+  function details(parent, payload) {
+    const box = element('details'); box.append(element('summary','Read full record'),element('pre',stringify(payload || {}))); parent.append(box);
+  }
+  function renderFeed() {
+    const decisions = $('decisions'); decisions.replaceChildren();
+    const rows = selected(state.decisions);
+    if (!rows.length) decisions.append(element('p','No decisions reported for this selection.','empty'));
+    rows.forEach(item => {
+      const payload = item.payload || {}, row = element('article',null,'entry'), title = element('div',null,'entrytitle');
+      title.append(element('strong',item.ticker || payload.ticker || 'Research decision'),element('span',human(item.status || item.state || 'recorded'),'badge neutral'));
+      row.append(title,element('small',(names[item.desk_id] || item.desk_id || 'Desk not reported') + ' · ' + date(item.created_at || item.recorded_at || payload.created_at)));
+      const facts = [];
+      if (payload.side) facts.push(String(payload.side).toUpperCase());
+      if (validNumber(payload.probability)) facts.push('Estimated probability: ' + (Number(payload.probability)*100).toFixed(1) + '%');
+      if (validNumber(payload.max_price)) facts.push('Price cap: ' + dollars(payload.max_price));
+      if (facts.length) row.append(element('p',facts.join(' · ')));
+      if (payload.thesis) row.append(element('p',payload.thesis));
+      details(row,item); decisions.append(row);
+    });
+    const publications = $('publications'); publications.replaceChildren();
+    const notes = selected(state.publications);
+    if (!notes.length) publications.append(element('p','No publications reported for this selection.','empty'));
+    notes.forEach(item => {
+      const payload = item.payload || {}, row = element('article',null,'entry');
+      row.append(element('h3',payload.title || human(item.kind || 'publication')),
+        element('small',(names[item.desk_id] || item.desk_id || 'Desk not reported') + ' · ' + date(item.created_at || item.recorded_at)));
+      const summary = payload.summary || payload.finding || payload.reason || payload.thesis || payload.text;
+      if (summary) row.append(element('p',stringify(summary)));
+      details(row,item); publications.append(row);
+    });
+  }
+  function render() {
+    $('round').textContent = (state.round_id ? 'Round ' + state.round_id : 'Round not reported') + ' · ' + (state.started_at || state.start_at ? 'Started ' + date(state.started_at || state.start_at) : 'Common start pending');
+    const readiness = state.readiness || {}, body = $('readiness-body'); body.replaceChildren();
+    $('readiness-title').textContent = readiness.ready === true ? 'Launch checks passed' : 'Launch checks need attention';
+    body.append(element('p',readiness.ready === true ? 'Readiness checks passed. Each desk’s current operational status is shown below.' : 'Live launch is not ready. Research may proceed where its dependencies are available.'));
+    const blockers = array(readiness.blockers);
+    if (blockers.length) { const list = element('ul'); blockers.forEach(item => list.append(element('li', reasonText(item)))); body.append(list); }
+    else if (readiness.ready !== true) body.append(element('p','Readiness details have not been reported.','muted'));
+    $('desks').replaceChildren(...knownDesks.map(renderDesk)); renderFeed();
+  }
+  async function mutate(desk, actionName) {
+    if (!token || mutating || !state || !knownDesks.includes(desk)) return;
+    mutating = true; controls(true); const current = generation;
+    message('Sending ' + human(actionName) + ' request for ' + names[desk] + '…');
+    try {
+      await api('/api/desks/' + desk + '/' + actionName,'POST',actionName === 'pause' ? {reason:'operator pause'} : {});
+      if (current !== generation) return;
+      message(actionName === 'continue' ? names[desk] + ': research continuation requested. Existing trading gates remain in force.' : names[desk] + ': ' + actionName + ' request accepted.');
+      await refresh();
+    } catch (error) {
+      if (current !== generation) return;
+      message(error.name === 'AbortError' ? 'The request timed out. Its outcome is unknown; refresh status before retrying.' : error.message,true);
+      await refresh();
+    } finally { if (current === generation) { mutating = false; connection(); } }
+  }
+  $('authform').addEventListener('submit',event => {
+    event.preventDefault(); token = $('token').value.trim(); $('token').value = '';
+    if (!token) return;
+    generation++; lastSuccess = 0; state = null; refreshing = false; unreachable = false; message('');
+    $('logout').hidden = false; $('refresh').hidden = false; connection(); refresh();
+    clearInterval(timer); timer = setInterval(() => { connection(); refresh(); },30000);
+  });
+  $('logout').addEventListener('click',() => {
+    generation++; token = ''; state = null; lastSuccess = 0; refreshing = false; mutating = false; unreachable = false; clearInterval(timer);
+    $('dashboard').hidden = true; $('login').hidden = false; $('logout').hidden = true; $('refresh').hidden = true;
+    $('desks').replaceChildren(); $('decisions').replaceChildren(); $('publications').replaceChildren();
+    $('readiness-body').replaceChildren(); $('round').textContent = ''; message('Signed out.'); connection(); $('token').focus();
+  });
+  $('refresh').addEventListener('click',() => { message(''); refresh(); });
+  $('deskfilter').addEventListener('change',() => { if (state) renderFeed(); });
+})();
+</script>
+</body>
+</html>

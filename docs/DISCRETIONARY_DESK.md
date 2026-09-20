@@ -1,5 +1,11 @@
 # Discretionary desk — three researched picks a day, placed by the operator
 
+> **Scope update (2026-09-20, DEC-018):** this document and `docs/desk/` preserve the
+> original manual desk and its ledger. The separately authorized autonomous ChatGPT and
+> Claude desks use `docs/AUTONOMOUS_DESKS.md` and `docs/desks/` startup packets. Their books
+> start fresh; the historical picks below are not reassigned. Manual-only instructions
+> here do not prohibit the new isolated service, and grant it no worker/XOS authority.
+
 **Status:** active operating model, opened 2026-09-19 on an operator request and adopted the same day (`DEC-017`). Nothing here
 changes an Experiment OS state, a gate, a live safeguard or the arming path. The desk trades
 through the **Kalshi app, by the operator's hand**, outside the worker — see §2 for why.

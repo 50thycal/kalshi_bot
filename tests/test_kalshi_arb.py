@@ -214,13 +214,13 @@ def test_scan_event_suppresses_arb_when_range_ladder_has_a_gap():
 
 
 def test_scan_event_still_flags_a_genuine_gapless_range_arb():
-    """The guard must not eat real hits: a fully-tiled range ladder priced under $1 must still
-    fire BUY-ALL-YES."""
+    """The guard must not eat real hits: a fully-tiled range ladder priced under $1
+    including per-leg fees must still fire BUY-ALL-YES."""
     event = _range_event([
         ("$10 or below", 0.10, 0.12),
         ("$10 to $19.99", 0.20, 0.22),
         ("$20 to $29.99", 0.25, 0.27),
-        ("$30 or above", 0.30, 0.32),
+        ("$30 or above", 0.28, 0.30),
     ])
     out = arb.scan_event(event, fee_buf=0.0, max_close=0)
     assert out["gapped"] is False
