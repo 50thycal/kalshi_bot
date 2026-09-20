@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"script","name":"desk_fetch","args":["https://openrouter.ai/api/frontend/v1/rankings/market-share","--find","2026-09-14","--window","500","--hits","1"],"id":"desk-d8-or","actor":"claude-desk","purpose":"token pick window 2026-09-20 20:00Z"}
