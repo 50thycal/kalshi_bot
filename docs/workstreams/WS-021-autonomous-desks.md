@@ -128,9 +128,9 @@ has occurred. Current app-session deployment dependencies are recorded below.
 
 ## Review State
 
-**Verdict:** Initial PR merged; continuation self-check complete, pending owner acceptance. No acceptance inferred from merge.
+**Verdict:** App-session PR #448 self-check complete, pending owner acceptance. No acceptance inferred from earlier merges.
 **Accepted head:** —
-**Related PR:** [#445](https://github.com/50thycal/kalshi_bot/pull/445); initial implementation [#443](https://github.com/50thycal/kalshi_bot/pull/443) merged.
+**Related PR:** [#448](https://github.com/50thycal/kalshi_bot/pull/448) (app sessions); [#445](https://github.com/50thycal/kalshi_bot/pull/445); initial implementation [#443](https://github.com/50thycal/kalshi_bot/pull/443) merged.
 **Finalization:** Pushed; no owner acceptance or merge inferred.
 
 The repo remains in solo mode. Plan/build approval is recorded, not represented as acceptance
@@ -146,7 +146,9 @@ DEC-018; DEC-017 retained as historical manual-desk policy; DEC-001 authority bo
 
 [#445 — External runners and launch diagnostics](https://github.com/50thycal/kalshi_bot/pull/445) — merged.
 
-[#447 — Hosted runner recipe](https://github.com/50thycal/kalshi_bot/pull/447) — deferred draft.
+[#447 — Hosted runner recipe](https://github.com/50thycal/kalshi_bot/pull/447) — merged; runtime use deferred.
+
+[#448 — App-session research and bounded live submissions](https://github.com/50thycal/kalshi_bot/pull/448) — current continuation.
 
 ## Parked
 
@@ -154,7 +156,7 @@ None.
 
 ## Next Step
 
-Review the app-session continuation PR after CI; then complete the private-access and
+Review PR #448 after CI; then complete the private-access and
 account/alert prerequisites in docs/desks/APP_SESSIONS.md before common start.
 
 
@@ -178,8 +180,8 @@ all original launch guards still pass their regression tests. No real orders dur
 Deployment is separately blocked on Calvin providing private bridge access for both apps,
 restricted funded Kalshi subaccounts and verifiable existing-worker isolation, plus an
 operator alert destination and delivery test. Never report ready merely because code merged.
-The selected software mode requires no new product decision. Hosted recipe PR #447 stays
-separate/deferred. Implementation and validation results belong in this continuation PR.
+The selected software mode requires no new product decision. Hosted recipe PR #447 merged during implementation; runtime use stays
+deferred. Implementation and validation results belong in this continuation PR.
 
 App-session validation: 227 passed, 1 skipped in the focused desk suite; the skipped
 PostgreSQL concurrency case requires CI’s database. Repository lint and diff checks pass.
