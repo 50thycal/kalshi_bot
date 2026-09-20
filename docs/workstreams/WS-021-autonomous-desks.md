@@ -198,7 +198,7 @@ No strategy, XOS lifecycle, funds, keys, or live-start mutation. Acceptance chec
 scoped lists excluding a second desk, rejected foreign requests without network traffic,
 foreign response refusal, original payload immutability, and cancellation routing.
 
-Implementation: primary client boundary and regression tests prepared for owner review.
+Implementation: primary client boundary and regression tests published in draft [PR #449](https://github.com/50thycal/kalshi_bot/pull/449). Finalization: pushed; owner acceptance not inferred.
 Validation: 322 tests passed across client, desk, execution telemetry and liquidity-incentive
 executor suites; one PostgreSQL-only test skipped locally. Repository lint and diff checks pass.
 The legacy V1 route remains a deployment verification requirement; its undocumented payload
