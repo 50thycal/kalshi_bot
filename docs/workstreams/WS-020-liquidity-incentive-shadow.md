@@ -941,3 +941,23 @@ Third payload assumption to ship in one session; all three silent. Standing rule
 §9.31. Still no reward observed; lifetime $0. Full suite 4,641 passing.
 
 [Thesis §9.31](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## Update 2026-09-20 02:55Z — cash-direction fix VERIFIED in production
+
+Three consecutive windows with real maker fills reconcile to residual 0: buy_cost 187 / 94 /
+187 against balance deltas of -1.87 / -0.94 / -1.87. `notes_json` null throughout, so
+`unknown_fill_shapes` never fired — every shape met was the verified ("no","sell") pair.
+
+Pre-fix, these same windows would have read `sells` = price, residual ~ -2x price, flagged
+`presumed deposit/withdrawal`.
+
+Closes the three-defect sequence (§9.26 wrong client -> §9.29 zero-valued fills -> §9.31
+inverted direction -> balances to the cent). All three were silent wrong numbers; none raised.
+
+Balance 173.85 -> 169.17 over the hour is Fmmsell10 deploying capital, NOT loss. Alimm1
+committed $0.15, realized -$0.06, both unchanged.
+
+Still NO reward observed; lifetime $0. Alimm1 still blocked at the order cap; KXBIGGESTQUAKE
+closed but unsettled ~2.5 days.
+
+[Thesis §9.32](../LIQUIDITY_INCENTIVE_THESIS.md).

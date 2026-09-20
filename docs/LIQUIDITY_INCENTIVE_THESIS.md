@@ -2098,3 +2098,46 @@ crash, just a wrong number with a plausible label. The `presumed_transfer` thres
 first two. The standing rules that follow from this: read the repo's existing parser before
 writing one, verify a cash direction against a balance movement before trusting it, and prefer
 an instrument that reports uncertainty over one that reports a number.
+
+### 9.32 The ledger reconciles live maker fills to exactly zero — verified (2026-09-20 02:55Z)
+
+§9.31 shipped the cash-direction fix at 21:11Z and it sat **unexercised** for five hours: every
+post-deploy window was a zero-delta or a settlement, so nothing tested it. Refusing to call it
+verified on that basis was correct — three consecutive windows have now passed real maker fills
+through it, and they reconcile exactly:
+
+| at | balance$ | Δbalance | buy_cost | residual | notes |
+|---|---|---|---|---|---|
+| 02:50:50 | 169.17 | −1.87 | **187** | **0** | null |
+| 02:35:09 | 171.04 | −0.94 | **94** | **0** | null |
+| 02:17:22 | 171.98 | −1.87 | **187** | **0** | null |
+| 02:00:40 | 173.85 | −0.94 | **94** | **0** | null |
+| 01:45:21 | 172.79 | — | **94** | **0** | null |
+
+94c and 187c are one and two Fmmsell10 NO fills at 93–94c. **Every balance movement is now
+fully explained by the trade that caused it.** Under the pre-fix rule these same windows would
+have read `sells` = the price with a residual near −2x it, and each would have been labelled
+`presumed deposit/withdrawal` — the exact failure §9.29 and §9.31 record.
+
+**`notes_json` is null on every row**, so `unknown_fill_shapes` never fired: every shape the
+ledger met was the one verified pair, `("no", "sell")`. The guard is armed and silent, which is
+what a correct guard looks like.
+
+**This closes the three-defect sequence.** The instrument went: wired to a client that could not
+read the account (§9.26) → valuing every fill at zero (§9.29) → booking every fill backwards
+(§9.31) → arithmetic that balances to the cent. All three were silent wrong numbers wearing
+plausible labels; none raised. The ledger is now trustworthy for the first time, and — worth
+stating plainly — it earned that by being caught three times, not by being right.
+
+**The balance is falling, and that is not a loss.** 173.85 → 169.17 over an hour is Fmmsell10
+deploying capital into NO contracts it holds to settlement, not money lost. Alimm1's own
+committed total is unchanged at $0.15 and its realized P&L is unchanged at −$0.06.
+
+**Still no reward.** Every residual to date is explained by a fill or a settlement. Lifetime
+rewards on Kalshi's page: **$0**. The instrument is now capable of seeing one; there has not
+been one to see.
+
+**Unchanged and still blocking:** Alimm1 has placed nothing since 2026-09-18T18:21:03Z — four
+commitments against `MAX_OPEN_ORDERS = 3`. KXBIGGESTQUAKE-17SEP26-6.8 and -7.0 remain **closed
+but unsettled** (still held at 02:48:55Z, now ~2.5 days past close). Their settlement is what
+frees a slot and finally tests the universe rule (§9.28) and the event cap.
