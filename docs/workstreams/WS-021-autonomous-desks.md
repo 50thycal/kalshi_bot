@@ -67,6 +67,11 @@ Each requires fail-closed behavior or explicit disclosure, not a silent optimist
 
 ## Acceptance Checks
 
+Continuation checks: a configured research command completes a leased job unattended;
+source requests are captured by the service; ambiguous completion retries do not rerun
+research or trade submission; private local state survives a worker restart; launch checking
+is read-only and reports missing dependencies without claiming readiness.
+
 - Dedicated configuration/storage/service does not alter the existing worker execution path.
 - Both sessions have equivalent startup packets; one durable start requires both ready.
 - Fee-inclusive caps, committed exposure, daily attempts/filled picks, event concentration,
@@ -90,7 +95,18 @@ contracts in `kalshi_bot/desks/contracts.py`/`research.py`.
 
 ## Implementation State
 
-Implementation complete in PR #443; pending owner acceptance. Five breakout sessions built
+PR #443 merged at `d1736c7c`. The owner requested continued implementation after merge.
+The continuation supplies the external research worker, saved-login Codex/Claude adapters,
+safe completion acknowledgement replay, and a read-only launch check. It does not deploy
+or activate trading. Model clients still require provisioned supported access and a host.
+
+Continuation validation: repository lint and diff checks pass; 233 desk/session tests pass
+locally with the PostgreSQL concurrency case reserved for CI. Real local HTTP and subprocess
+integration covers both model adapters using fake native clients, service-captured evidence,
+publication, lost acknowledgement, and restart without regenerating research. No real model
+calls were made. Final CI results are recorded on the continuation PR.
+
+The initial implementation used five breakout sessions that built
 storage/scoring, execution, research supervision, API/dashboard, and startup documentation.
 The coordinating session integrated and checked the full offline research-to-settlement path.
 
@@ -110,7 +126,7 @@ No deployment or live activation performed by this workstream.
 
 ## Review State
 
-**Verdict:** Implementation self-check complete; owner review pending
+**Verdict:** Initial PR merged; continuation self-check complete, pending owner acceptance. No acceptance inferred from merge.
 **Accepted head:** —
 **Related PR:** [#443](https://github.com/50thycal/kalshi_bot/pull/443)
 **Finalization:** Pushed; no owner acceptance or merge inferred.
@@ -132,4 +148,4 @@ None.
 
 ## Next Step
 
-Owner review of PR #443 after green final-head CI; merge does not authorize live launch.
+Review the external-worker continuation PR after final-head CI; hosted setup and live launch remain separate guards.
