@@ -11,7 +11,32 @@ Keep `DESKS_LIVE_ENABLED=false`, both verification flags false, and the monthly
 paid-research budget zero during setup. Store three distinct random role tokens
 as service secrets. Never copy worker/Evo variables.
 
-## Runner image
+## Current operator choice: app-driven pilot
+
+On 2026-09-20 the operator chose research in the ChatGPT and Claude app sessions,
+triggered by saying `continue`, before considering unattended runners. Hosted model
+login and billing setup are deferred. Do not resume either login or hosted cognition
+unless the operator requests that mode later.
+
+Both runner service start commands are set to
+`/usr/local/bin/desk-runner-entrypoint /bin/true` with restart policy NEVER so they
+exit without research or model calls, including after source-triggered deployments.
+Keep their private volumes and image recipe for a possible later activation. The
+shared desk service and Postgres remain available; retained infrastructure can still
+incur hosting/storage charges.
+
+Each app session should resume its own persisted desk context, perform research while
+active, and persist findings, rejections and lessons before ending. An inactive chat
+does not continue researching. The existing session bridge supports authenticated
+context and publication operations; this choice does not establish a working cycle.
+
+The current live-launch checks still require verified unattended runners. Do not
+mark those checks satisfied for a manual session or bypass them. This initial pilot
+is preparatory research only; session-driven live execution needs an explicit,
+reviewed adjustment to the operating mode plus the existing exchange, isolation,
+alert and common-start requirements. Neither desk is marked ready or started.
+
+## Runner image (deferred option)
 
 Deploy `deploy/desks/Dockerfile.runner` to one separate service per desk.
 Attach one private persistent volume per service at `/data`. There is no public
