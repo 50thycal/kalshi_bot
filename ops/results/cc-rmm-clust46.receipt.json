@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "66d2007c5a0cab1a40bcfb3559d30e1c55de94cf",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-21T11:26:04Z",
+  "id": "cc-rmm-clust46",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/cc-rmm-clust46.receipt.json",
+  "result_file": "ops/results/cc-rmm-clust46.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/35594009562",
+  "service": null,
+  "started_at": "2026-09-21T11:26:03Z",
+  "targets": [],
+  "type": "db"
+}
