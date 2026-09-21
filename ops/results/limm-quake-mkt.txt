@@ -1,7 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-quake-mkt
-# code 6bfcdfb18af60b6c37738488a6cbeadd05e0085f · started 2026-09-21T01:41:24Z
-ticker  status  close_utc  exp_utc  upd_utc  title
-------  ------  ---------  -------  -------  -----
-
-(0 rows)
