@@ -413,3 +413,10 @@ research warnings through authenticated status and skips webhook delivery; it is
 valid with app-session research. Doctor labels it session visibility, not verified push
 delivery. Operators must return to the app to see warnings. Durable execution/research
 records and protective pauses do not depend on an external alert destination.
+
+The Platform Change Review `CUTOVER` transport supports an execution-source proof
+alongside the existing taxonomy proof. Execution proof requires an enabled ownership
+registry configuration and expected namespace, plus an exact fingerprint bound to the
+registered execution revision. A mismatch defers without consuming the command.
+It retains the canonical impact/epoch gates and cannot attest other workers or activate
+trading. Deployment procedure: `docs/desks/WORKER_PROTECTION.md`.

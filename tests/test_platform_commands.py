@@ -695,3 +695,103 @@ def test_concurrent_platform_claims_on_postgres():
         assert check.query(PlatformRevision).filter_by(version=marker).count() == 1
     finally:
         check.close()
+
+
+@pytest.fixture
+def execution_settings(monkeypatch, settings):
+    from pydantic import SecretStr
+
+    from kalshi_bot import config
+
+    settings.shared_account_ownership_url = SecretStr('postgresql://private-unused')
+    settings.shared_account_namespace = 'test-primary'
+    monkeypatch.setattr(config, 'get_settings', lambda: settings)
+    return settings
+
+
+def _execution_cutover(cid, **overrides):
+    payload = {
+        'revision': 'EXECUTION_ENGINE:shared-ownership-v1',
+        'expect_execution_fingerprint': pc.execution_fingerprint(),
+        'expect_ownership_namespace': 'test-primary',
+        'new_epoch_experiments': [],
+    }
+    payload.update(overrides)
+    return _env(cid, 'CUTOVER', payload)
+
+
+@pytest.mark.parametrize('failure,code', [
+    ('code', 'EXECUTION_NOT_DEPLOYED'),
+    ('url', 'OWNERSHIP_NOT_CONFIGURED'),
+    ('namespace', 'OWNERSHIP_NOT_CONFIGURED'),
+])
+def test_execution_proof_defers_without_consuming_command(
+    xos_session, execution_settings, failure, code
+):
+    from pydantic import SecretStr
+
+    env = _execution_cutover('execution-defer')
+    if failure == 'code':
+        env['payload']['expect_execution_fingerprint'] = '0' * 64
+    elif failure == 'url':
+        execution_settings.shared_account_ownership_url = SecretStr('')
+    else:
+        execution_settings.shared_account_namespace = 'wrong'
+    receipt = pc.run_boot_command(xos_session, json.dumps(env), now=BOOT)
+    assert receipt['status'] == 'DEFERRED'
+    assert receipt['code'] == code
+    assert xos_session.query(ExperimentOsPlatformCommand).count() == 0
+
+
+@pytest.mark.parametrize('overrides', [
+    {'expect_taxonomy_fingerprint': 'a' * 64},
+    {'expect_execution_fingerprint': 'not-a-digest'},
+    {'expect_ownership_namespace': ''},
+])
+def test_execution_proof_rejects_ambiguous_or_incomplete_input(
+    xos_session, execution_settings, overrides
+):
+    with pytest.raises(pc.PlatformCommandRejected):
+        pc.execute_envelope(xos_session, _execution_cutover('execution-bad', **overrides))
+
+
+def test_execution_cutover_requires_accounted_impacts_and_records_one_boundary(
+    xos_session, xos_platform, execution_settings
+):
+    s = xos_session
+    exp, _, old_epoch = _experiment(s, 'execution-exp')
+    revision = svc.register_platform_revision(
+        s, 'EXECUTION_ENGINE', version='shared-ownership-v1',
+        fingerprint=pc.execution_fingerprint(),
+    )
+    env = _execution_cutover('execution-unaccounted', new_epoch_experiments=['execution-exp'])
+    assert pc.execute_envelope(s, env, now=BOOT)['status'] == 'REJECTED'
+    assert revision.status == 'pending'
+    impact = pi.propose_impact(s, revision, exp, impact_class='I2', action='NEW_EPOCH',
+                              rationale='shared ownership changes live market eligibility',
+                              decided_by='operator')
+    pi.accept_impact(s, impact, accepted_by='operator')
+    env['command_id'] = 'execution-accounted'
+    result = pc.execute_envelope(s, env, now=BOOT)
+    assert result['status'] == 'SUCCEEDED'
+    assert revision.activated_at.replace(tzinfo=UTC) == BOOT
+    assert old_epoch.ended_at.replace(tzinfo=UTC) == BOOT
+    assert impact.status == 'applied'
+    assert pc.execute_envelope(s, env, now=BOOT)['executed'] is False
+
+
+@pytest.mark.parametrize('proof', ['taxonomy', 'wrong-revision-fingerprint'])
+def test_execution_revision_cannot_be_activated_with_unrelated_proof(
+    xos_session, xos_platform, execution_settings, proof
+):
+    s = xos_session
+    revision = svc.register_platform_revision(
+        s, 'EXECUTION_ENGINE', version='shared-ownership-v1', fingerprint='f' * 64,
+    )
+    env = _execution_cutover('execution-unrelated')
+    if proof == 'taxonomy':
+        env['payload'] = {'revision': 'EXECUTION_ENGINE:shared-ownership-v1',
+                          'expect_taxonomy_fingerprint': pc.taxonomy_fingerprint()}
+    receipt = pc.execute_envelope(s, env, now=BOOT)
+    assert receipt['status'] == 'REJECTED'
+    assert revision.status == 'pending'
