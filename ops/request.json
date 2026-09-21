@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-quake-evt","sql":"select to_char(at,'YYYY-MM-DD HH24:MI:SS') at_utc, kind, market_ticker, left(coalesce(detail,''),120) detail from incentive_collector_events where market_ticker like 'KXBIGGESTQUAKE%' order by at desc limit 20"}
+{"type":"noop"}
