@@ -1,5 +1,21 @@
 # App-session desks: Go / Continue
 
+## Session-only alerts (DEC-022)
+
+The operator selected alerts inside the active app sessions. Set
+`DESKS_ALERT_MODE=session` with `DESKS_RESEARCH_MODE=session`; the configuration default
+remains `webhook` for existing deployments. Session mode does not send webhook messages
+or require an external destination. It does not claim push delivery or wake a closed app.
+The older webhook setup requirements below apply only to webhook mode.
+
+At every Go/Continue, read authenticated status first and surface `alerts.notices`,
+paused desks, unknown orders, worker errors, research failures and readiness blockers.
+The underlying pause reasons, order reservations and research jobs remain durable.
+No alert acknowledgement clears a pause, reconciles an order or authorizes spending.
+All account ownership, cash, research readiness and shared-start guards remain required.
+Between sessions the service keeps monitoring/reconciling and applying protective pauses,
+but the operator may not learn about a problem until returning to the app.
+
 **Selected account design: DEC-021 shared primary account.** Read
 [SHARED_ACCOUNT.md](SHARED_ACCOUNT.md). References below to restricted/funded desk
 subaccounts describe the alternative isolated mode. In shared mode verify cooperating

@@ -33,6 +33,17 @@ def healthy():
                       for desk in ('chatgpt', 'claude')]}
 
 
+def test_session_alerts_are_not_misrepresented_as_push_delivery():
+    status = healthy()
+    status['research_mode'] = 'session'
+    status['alerts'] = {'mode': 'session', 'configured': True, 'push_delivery': False}
+    report = assess(status, now=NOW)
+    assert 'session_alerts_configured' in json.dumps(report)
+    assert 'alerts_unverified' not in json.dumps(report)
+    status['research_mode'] = 'scheduled'
+    assert 'alerts_unverified' in json.dumps(assess(status, now=NOW))
+
+
 @pytest.mark.parametrize('url', [
     'https://desk.example.invalid', 'https://desk.example.invalid/service/',
     'http://localhost:8090', 'http://127.0.0.1:8090', 'http://[::1]:8090',

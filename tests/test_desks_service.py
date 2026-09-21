@@ -158,6 +158,34 @@ def decision_body(desk='chatgpt'):
     }
 
 
+def test_session_alerts_need_no_webhook_but_keep_other_gates(service):
+    service.settings = service.settings.model_copy(update={"alert_mode": "session", "research_mode": "session"})
+    service.notifier = None
+    blocked = service.check_launch(NOW, refresh=True)
+    assert "operator_alert_channel_not_configured" not in blocked["blockers"]
+    assert "operator_alert_delivery_not_verified" not in blocked["blockers"]
+    assert "claude_session_not_ready" in blocked["blockers"]
+    ready_both(service)
+    assert service.check_launch(NOW, refresh=True)["ready"]
+    service.store.pause("chatgpt", "shared_account_check_failed")
+    alerts = service.status(NOW)["alerts"]
+    assert alerts["push_delivery"] is False
+    assert any(n["pause_reason"] == "shared_account_check_failed" for n in alerts["notices"])
+
+
+def test_session_alerts_never_send_to_old_webhook(service):
+    service.settings = service.settings.model_copy(update={"alert_mode": "session", "research_mode": "session"})
+    def forbidden(*args):
+        raise AssertionError("session alerts must not send webhook messages")
+    service.notifier.observe = service.notifier.deliver = forbidden
+    service.tick(NOW)
+
+
+def test_session_alerts_refuse_scheduled_mode():
+    with pytest.raises(ValueError, match="app-session research"):
+        settings(alert_mode="session", research_mode="scheduled")
+
+
 def test_public_shell_and_health_expose_no_book_or_credentials(api):
     status, shell, headers = api('/', role=None)
     assert status == 200 and 'Operator access token' in shell

@@ -243,3 +243,13 @@ liquidity executor suites; the pre-existing PostgreSQL case skipped locally. Aft
 the PostgreSQL ownership race case and final quote-age guard, 29 focused tests passed
 and the new database-only case skipped locally. Both database cases run in CI. Lint and
 diff checks pass. No production mutation, funds, orders or key changes performed.
+
+## DEC-022 continuation — alerts inside the sessions
+
+Owner selected in-session alerts. Build/acceptance: explicit session-only notification
+mode is valid only for app-session research; no external webhook required or sent; report
+pause and research warnings on authenticated status; doctor must not claim push delivery.
+All remaining safety and common-start gates stay enforced. Implementation complete locally:
+125 service, notification, integration and doctor tests passed. No production flags changed.
+Next: review/deploy this opt-in notification change; remaining worker ownership verification
+and Claude readiness are still required, not waived by the alert choice.

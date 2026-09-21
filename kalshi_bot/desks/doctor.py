@@ -210,9 +210,16 @@ def assess(status, *, now=None):
     add('trading_gates', 'service_launch_ready' if launch_claim else 'service_launch_blocked',
         'The service reports its current launch checks passed; this command did not perform or renew them.' if launch_claim else 'The service has not reported all live launch checks passed.', good=launch_claim)
     alerts = _dict(status.get('alerts'))
-    alert_ready = alerts.get('configured') is True and alerts.get('verified') is True
-    add('trading_gates', 'alerts_verified' if alert_ready else 'alerts_unverified',
-        'The service reports verified operator alert delivery.' if alert_ready else 'Configure and verify operator alert delivery before live trading.', good=alert_ready)
+    if alerts.get('mode') == 'session':
+        alert_ready = (alerts.get('configured') is True and status.get('research_mode') == 'session'
+                       and alerts.get('push_delivery') is False)
+        add('trading_gates', 'session_alerts_configured' if alert_ready else 'alerts_unverified',
+            'Session-only alerts: read status on Go/Continue; no background notification.'
+            if alert_ready else 'Session-only alerts require explicit app-session configuration.', good=alert_ready)
+    else:
+        alert_ready = alerts.get('configured') is True and alerts.get('verified') is True
+        add('trading_gates', 'alerts_verified' if alert_ready else 'alerts_unverified',
+            'The service reports verified operator alert delivery.' if alert_ready else 'Configure and verify operator alert delivery before live trading.', good=alert_ready)
     health = _dict(status.get('health'))
     rows = status.get('desks') if isinstance(status.get('desks'), list) else []
     desk_health, desk_readiness = [], []

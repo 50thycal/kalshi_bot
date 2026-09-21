@@ -1182,3 +1182,15 @@ consumers and manual trades cannot be controlled by this register.
 Implementation and deployment contract: docs/desks/SHARED_ACCOUNT.md. This authorizes the
 software build, not a false worker-verification attestation or live start. Shared execution
 Platform Revision/impact review remains required. No funds or lifecycle state are changed.
+
+## DEC-022 — Session-visible desk alerts without an external channel (2026-09-21)
+
+Calvin selected alerts in the app sessions rather than an external destination.
+`DESKS_ALERT_MODE=session` is valid only with app-session research. It replaces the
+webhook configuration/delivery launch requirement for that selected mode. The default
+remains webhook, so existing deployments do not silently change delivery behavior.
+The operator sees material status on Go/Continue; no background push, app wake-up or
+immediate human response is promised. The service continues protective pauses and
+reconciliation while sessions are inactive. Ownership, cash backing, research readiness,
+unknown-order reservations and common-start gates are unchanged. No production activation
+is authorized by this configuration choice. See docs/desks/APP_SESSIONS.md.

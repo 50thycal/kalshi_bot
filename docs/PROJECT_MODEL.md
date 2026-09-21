@@ -405,3 +405,11 @@ P&L for desk scoring. It audits attributed orders/fills and positions before new
 and on runtime checks. Main V1/V2 writes and cancels honor claims; portfolio management
 reads exclude desk markets and omit unsplittable event aggregates. Existing execution
 behavior is unchanged until its ownership URL is configured. See docs/desks/SHARED_ACCOUNT.md.
+
+### Desk notification modes (DEC-022)
+
+Webhook remains the default. The selected session-only option surfaces current pause and
+research warnings through authenticated status and skips webhook delivery; it is only
+valid with app-session research. Doctor labels it session visibility, not verified push
+delivery. Operators must return to the app to see warnings. Durable execution/research
+records and protective pauses do not depend on an external alert destination.

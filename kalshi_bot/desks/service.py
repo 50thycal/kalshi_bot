@@ -54,7 +54,10 @@ class DeskService:
                     blockers.append(f"{desk}_funding_or_isolation_not_verified")
             if not checked or now - checked["at"] > timedelta(minutes=5):
                 blockers.append(f"{desk}_fresh_isolation_check_required")
-        if not self.settings.alert_webhook_url.get_secret_value():
+        if self.settings.alert_mode == "session":
+            if self.settings.research_mode != "session":
+                blockers.append("session_alerts_require_session_research")
+        elif not self.settings.alert_webhook_url.get_secret_value():
             blockers.append("operator_alert_channel_not_configured")
         elif self.notifier is None or not self.notifier.verified():
             blockers.append("operator_alert_delivery_not_verified")
@@ -81,7 +84,9 @@ class DeskService:
         other = "claude" if decision.desk_id == "chatgpt" else "chatgpt"
         if any(not blocker.startswith(other + "_") for blocker in self.settings.static_blockers()):
             raise DeskError("runtime_configuration_not_ready")
-        if self.notifier is None or not self.notifier.verified():
+        if self.settings.alert_mode == "session" and self.settings.research_mode != "session":
+            raise DeskError("session_alerts_require_session_research")
+        if self.settings.alert_mode == "webhook" and (self.notifier is None or not self.notifier.verified()):
             raise DeskError("operator_alert_delivery_not_verified")
         checked = self._isolation.get(decision.desk_id)
         if not checked or not 0 <= (now - checked["at"]).total_seconds() <= 300:
@@ -110,6 +115,15 @@ class DeskService:
             desk["research_cost_unresolved"] = costs.get("unresolved_reserved_usd")
             desk["last_cycle_at"] = result["health"].get(desk["desk_id"], {}).get("last_completed_at")
         result["alerts"] = self.notifier.status() if self.notifier else {"configured": False, "verified": False}
+        if self.settings.alert_mode == "session":
+            result["alerts"] = {
+                "mode": "session", "configured": True, "push_delivery": False,
+                "delivery": "Read authenticated status at each Go/Continue; no notification while the app is inactive.",
+                "notices": [{"desk_id": row["desk_id"], "pause_reason": row.get("pause_reason"),
+                             "health_reasons": result["health"].get(row["desk_id"], {}).get("reasons", [])}
+                            for row in result["desks"] if row.get("paused") or row.get("pause_reason")
+                            or result["health"].get(row["desk_id"], {}).get("reasons")],
+            }
         result["generated_at"] = now.isoformat()
         result["worker"] = {"last_tick": self.last_tick.isoformat() if self.last_tick else None,
                             "error": self.last_error}
@@ -151,7 +165,7 @@ class DeskService:
             self.last_error = "research_cycle_failed"
             logger.warning("desk research cycle failed; see authenticated status")
             result = {"status": "needs_operator", "reason": self.last_error}
-        if self.notifier:
+        if self.notifier and self.settings.alert_mode == "webhook":
             self.notifier.observe(self.status(now), now)
             self.notifier.deliver(now)
         return result
