@@ -1,4 +1,29 @@
 # ops request [READ]
-# type=noop
-# code 66d2007c5a0cab1a40bcfb3559d30e1c55de94cf · started 2026-09-21T03:46:15Z
-(noop — nothing to do)
+# type=db  id=limm-ci-0547
+# code 66d2007c5a0cab1a40bcfb3559d30e1c55de94cf · started 2026-09-21T05:47:56Z
+sec  a               b       c                             d        e       
+---  --------------  ------  ----------------------------  -------  --------
+1    09-18 18:21:03  Alimm1  KXRT-RES-94                   no       filled  
+1    09-18 17:33:50  Alimm1  KXRT-RES-93                   no       filled  
+1    09-18 14:48:49  Alimm1  KXTRUMPAPPROVE-26SEP18-E39.4  yes      filled  
+1    09-18 06:00:04  Alimm1  KXUSLEI-26SEP18-T0.2          yes      filled  
+1    09-18 00:08:31  Alimm1  KXAAAGASDAZ-26SEP18-4.6800    yes      canceled
+1    09-17 20:04:28  Alimm1  KXYTVIEWSHIGH-POS26OCT-8.75M  yes      canceled
+1    09-17 20:04:27  Alimm1  KXBIGGESTQUAKE-17SEP26-7.0    yes      filled  
+1    09-17 20:04:27  Alimm1  KXBIGGESTQUAKE-17SEP26-6.8    yes      filled  
+1    09-17 16:00:47  Alimm1  KXHORMUZPEAK-26SEP20-T20      yes      canceled
+1    09-17 16:00:47  Alimm1  KXHORMUZPEAK-26SEP20-T30      yes      canceled
+1    09-17 16:00:46  Alimm1  KXHORMUZPEAK-26SEP20-T25      yes      canceled
+2    09-21 05:46:06  pos     KXBIGGESTQUAKE-17SEP26-6.8    yes 1            
+2    09-21 05:46:06  pos     KXBIGGESTQUAKE-17SEP26-7.0    yes 1            
+3    09-21 05:35:34  ledger  17283c res=0                  f=0 s=0  null    
+3    09-21 05:20:27  ledger  17283c res=0                  f=0 s=0  null    
+3    09-21 05:04:10  ledger  17283c res=0                  f=0 s=2  null    
+3    09-21 04:48:33  ledger  17183c res=0                  f=0 s=0  null    
+3    09-21 04:32:24  ledger  17183c res=0                  f=1 s=1  null    
+3    09-21 04:15:41  ledger  17177c res=0                  f=0 s=0  null    
+3    09-21 03:59:43  ledger  17177c res=0                  f=0 s=0  null    
+3    09-21 03:42:24  ledger  17177c res=0                  f=1 s=1  null    
+3    09-21 03:25:08  ledger  17171c res=0                  f=0 s=0  null    
+
+(22 rows)
