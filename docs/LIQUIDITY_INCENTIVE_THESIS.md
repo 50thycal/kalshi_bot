@@ -2141,3 +2141,48 @@ been one to see.
 commitments against `MAX_OPEN_ORDERS = 3`. KXBIGGESTQUAKE-17SEP26-6.8 and -7.0 remain **closed
 but unsettled** (still held at 02:48:55Z, now ~2.5 days past close). Their settlement is what
 frees a slot and finally tests the universe rule (§9.28) and the event cap.
+
+### 9.33 A capacity cap that counts held positions is hostage to the exchange's settlement clock (2026-09-21 01:42Z)
+
+Pre-registered at the 24h-past-close mark; recorded because the mark passed.
+
+**What is verifiable from stored state.** Alimm1's two KXBIGGESTQUAKE-17SEP26 orders (-6.8 and
+-7.0) filled at **2026-09-17T20:04:27Z**. Both were still held, quantity 1 YES each, in the
+positions snapshot at **2026-09-21T01:37:40Z** — **~77.5 hours**, three days and change, with no
+settlement row. Over that whole span Alimm1 placed **nothing**: its last order of any kind is
+2026-09-18T18:21:03Z.
+
+**The mechanism.** `MAX_OPEN_ORDERS = 3` is enforced through `repo.count_live_book_open`, which
+counts open *commitments* — filled positions plus resting orders — not just resting orders. Two
+unsettled quake positions plus two other commitments is four against a cap of three, so the book
+is refused at the placement path. Nothing is broken; the cap is doing exactly what it says.
+
+**The finding is about what the cap is coupled to.** A cap on *resting orders* is a limit the bot
+controls: it can cancel. A cap that also counts *held positions* is a limit the **exchange's
+settlement clock** controls, and that clock is set by the slowest series in the universe. Here the
+binding resource was never risk — the two positions are $0.15 of committed capital against a
+$10.00 strategy exposure limit, ~1.5% — it was **slots**. Real money was idle for three days
+because of a settlement queue, not because of exposure. This is recorded as an **observation**.
+It is not a recommendation to raise or restructure the cap; the operator has decided to let the
+book run as configured.
+
+**A second, smaller finding fell out of trying to verify the first.** The intended headline was
+"N hours past close". It could not be written honestly: `markets` has **no row** for either quake
+ticker, `incentive_collector_events` has none either, and `incentive_market_snapshots` carries no
+`status` or `close_time` column at all. The `closed` transition at 2026-09-20T00:20:58Z is a
+**session observation, not reproducible from stored state**. So: the incentive book records the
+book, the quote, the fill and the balance, but **not the lifecycle of the markets it trades** —
+and "how long has this position been stuck past close?" is therefore a question the system cannot
+answer about itself. That is a gap in the instrument, of the same family as §9.26/§9.29/§9.31:
+not a wrong number this time, just an absent one. Noted, not fixed — fixing it is a change to the
+collector and belongs to a session with that scope.
+
+**What is still waiting on the slot.** Unchanged from §9.32: the universe rule's refusal-code mix
+(§9.28), the event cap (fix 1), and whether the book places at all. Three pre-registered
+questions, all blocked behind one exchange settlement.
+
+**Ledger status: clean.** ~30 consecutive windows since the §9.31 fix reconcile to residual 0 with
+`notes_json` null; `unknown_fill_shapes` has never fired. One isolated −1c residual at
+2026-09-20T17:54:29Z did not recur and is read as a one-cent rounding artifact.
+
+**Lifetime liquidity rewards: $0.** Still none ever observed.
