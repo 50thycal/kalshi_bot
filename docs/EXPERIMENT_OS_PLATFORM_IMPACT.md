@@ -234,6 +234,22 @@ claimed, nothing is consumed, and it stays armed for the boot that really does
 serve the change. A terminal receipt there would burn the cutover and strand the
 revision as pending forever.
 
+### Execution ownership cutovers
+
+`CUTOVER` also accepts `expect_execution_fingerprint` with
+`expect_ownership_namespace`, instead of `expect_taxonomy_fingerprint`.
+`execution_fingerprint()` hashes the installed worker client, ownership guard,
+executors, main and configuration source files, without secrets. A code mismatch,
+missing ownership URL or namespace mismatch defers before receipt claim. The
+registered `EXECUTION_ENGINE` revision must have that exact fingerprint. Taxonomy
+proof cannot activate another component. This does not verify other workers or
+shared database identity; those remain deployment acceptance checks.
+
+The existing activation gate and epoch helpers are unchanged. No command enables
+trading. For already-deployed changes, a later boot must not be passed off as the
+historical deployment boundary. Procedure and evidence:
+`docs/desks/WORKER_PROTECTION.md`.
+
 ### Reading what happened
 
 The receipt view is logged at boot (`"experiment OS platform command"`), so

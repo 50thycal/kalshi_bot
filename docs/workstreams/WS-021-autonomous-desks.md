@@ -253,3 +253,21 @@ All remaining safety and common-start gates stay enforced. Implementation comple
 125 service, notification, integration and doctor tests passed. No production flags changed.
 Next: review/deploy this opt-in notification change; remaining worker ownership verification
 and Claude readiness are still required, not waived by the alert choice.
+
+## Worker protection continuation — execution deployment proof
+
+Owner requested fixing worker protection next. Runtime checks confirmed all three
+services loaded the shared-account configuration; a temporary-schema PostgreSQL
+contention probe passed with no exchange requests. Evidence and canonical completion
+sequence: [worker protection](../desks/WORKER_PROTECTION.md).
+
+Build card / acceptance: add an execution-source fingerprint option to the existing
+Platform Change Review cutover. Defer before receipt claim on source/config mismatch;
+require the registered execution revision to match; keep impact and epoch gates;
+prevent taxonomy-only proof from activating execution revisions. No live activation,
+worker attestation, XOS disposition or historical boundary is inferred from deployment.
+
+Implemented and verified: 58 focused tests passed, two database-only cases skipped
+locally; deployed PostgreSQL contention verified separately. Solo implementation,
+no independent review claimed. Next: owner merge of the transport fix, then canonical
+execution impact accounting and recorded cutover before worker attestation is cleared.

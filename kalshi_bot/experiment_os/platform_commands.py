@@ -46,8 +46,9 @@ EXACTLY ONCE, AND THE ONE DELIBERATE EXCEPTION
 executes nothing. Every outcome after the claim is a durable terminal receipt.
 
 The exception is a PRECONDITION DEFERRAL, checked BEFORE the claim. `CUTOVER`
-asserts that the code this worker is running actually contains the taxonomy the
-revision describes, by recomputing its fingerprint in-process. If it does not
+asserts that this worker contains the reviewed taxonomy or execution sources,
+by recomputing their fingerprint in-process. Execution proof also requires the
+configured ownership URL and the expected namespace. If it does not
 match, the command is NOT claimed and NOT consumed: it stays armed for the boot
 that really does serve the new table. A terminal receipt there would be worse than
 useless — an unrelated redeploy landing first would burn the cutover and leave the
@@ -62,6 +63,7 @@ import logging
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import select
@@ -145,6 +147,23 @@ def taxonomy_fingerprint() -> str:
     from ..mmsell.market_types import SERIES_TYPES
 
     return service.canonical_hash(sorted(tuple(row) for row in SERIES_TYPES))
+
+
+def execution_fingerprint() -> str:
+    """Fingerprint the installed worker guard and its callers, without secrets.
+
+    Called at worker boot, before any trading cycle. A source mismatch defers
+    the command; configuration is checked separately and is never hashed here.
+    """
+    root = Path(__file__).resolve().parents[1]
+    paths = (
+        "kalshi/client.py", "kalshi/ownership.py", "live/executor.py",
+        "liquidity_incentive/live.py", "config.py", "main.py",
+    )
+    return service.canonical_hash({
+        path: hashlib.sha256((root / path).read_bytes()).hexdigest()
+        for path in paths
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -422,13 +441,27 @@ def _cutover(session, env: _Envelope, now: datetime):
     boundary is this worker's own boot time — not the merge commit, not now() at
     some later convenience — and the fingerprint precondition (checked before the
     claim, see the module docstring) is what makes that instant honest: the
-    command refuses to run at all on a worker whose loaded taxonomy is not the one
-    the revision describes.
+    command refuses to run on a worker whose taxonomy or execution sources do not
+    match the revision being introduced.
 
     Activation is never forced. If the gate is not safe the whole transaction
     rolls back to the savepoint and the receipt says so.
     """
     revision = _revision_or_refuse(session, env.payload["revision"])
+    if "expect_execution_fingerprint" in env.payload:
+        # A matching checkout must never authorize a different component or a
+        # revision whose immutable fingerprint describes different code.
+        if (not env.payload["revision"].startswith("EXECUTION_ENGINE:")
+                or revision.fingerprint != env.payload["expect_execution_fingerprint"]):
+            raise PlatformCommandRejected(
+                "execution cutover must match the registered execution revision",
+                "EXECUTION_REVISION_MISMATCH",
+            )
+    elif not env.payload["revision"].startswith("MARKET_TAXONOMY:"):
+        raise PlatformCommandRejected(
+            "taxonomy proof cannot activate another platform component",
+            "CUTOVER_COMPONENT_MISMATCH",
+        )
     if revision.status != "pending":
         raise PlatformCommandRejected(
             f"revision is {revision.status}, not pending — a cutover activates a "
@@ -519,8 +552,9 @@ ACTIONS: dict[str, _Action] = {
         doc="Record the measured activation boundary of an already-active revision.",
     ),
     "CUTOVER": _Action(
-        required=frozenset({"revision", "expect_taxonomy_fingerprint"}),
-        optional=frozenset({"new_epoch_experiments"}),
+        required=frozenset({"revision"}),
+        optional=frozenset({"new_epoch_experiments", "expect_taxonomy_fingerprint",
+                            "expect_execution_fingerprint", "expect_ownership_namespace"}),
         run=_cutover,
         doc="Atomic pre-cycle cutover: activate at the measured boot instant and "
             "re-epoch the accepted NEW_EPOCH experiments at exactly that instant.",
@@ -536,14 +570,39 @@ ACTIONS: dict[str, _Action] = {
 def check_preconditions(env: _Envelope) -> None:
     """Raise `PlatformCommandDeferred` when this worker must not run this command.
 
-    Only CUTOVER has one, and it is the property that makes the recorded boundary
-    an actual measurement: the fingerprint of the taxonomy loaded in THIS process
-    must equal the one the envelope names. On any other boot — a redeploy for an
-    unrelated merge that happens to land first — the command is left untouched and
+    Only CUTOVER has one. The selected taxonomy or execution fingerprint must
+    match THIS worker; execution proof also checks ownership configuration. On an
+    unrelated redeploy that lands first, the command is left untouched and
     armed rather than burned on a worker that is not serving the change.
     """
     if env.action != "CUTOVER":
         return
+    if "expect_execution_fingerprint" in env.payload:
+        if "expect_taxonomy_fingerprint" in env.payload:
+            raise PlatformCommandRejected("choose one cutover fingerprint", "AMBIGUOUS_FINGERPRINT")
+        expected = env.payload["expect_execution_fingerprint"]
+        namespace = env.payload.get("expect_ownership_namespace")
+        if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{64}", expected):
+            raise PlatformCommandRejected("invalid execution fingerprint", "BAD_FINGERPRINT")
+        if not isinstance(namespace, str) or not namespace or len(namespace) > 100:
+            raise PlatformCommandRejected("ownership namespace is required", "BAD_NAMESPACE")
+        from ..config import get_settings
+
+        settings = get_settings()
+        if (not settings.shared_account_ownership_url.get_secret_value()
+                or settings.shared_account_namespace != namespace):
+            raise PlatformCommandDeferred(
+                "worker ownership protection is not configured as required",
+                "OWNERSHIP_NOT_CONFIGURED",
+            )
+        if execution_fingerprint() != expected:
+            raise PlatformCommandDeferred(
+                "worker execution sources do not match the reviewed revision",
+                "EXECUTION_NOT_DEPLOYED",
+            )
+        return
+    if "expect_ownership_namespace" in env.payload:
+        raise PlatformCommandRejected("ownership requires execution fingerprint", "BAD_FINGERPRINT")
     expected = env.payload.get("expect_taxonomy_fingerprint")
     if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{64}", expected):
         raise PlatformCommandRejected(
