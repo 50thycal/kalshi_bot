@@ -26,6 +26,7 @@ class DeskSettings(BaseSettings):
     external_runners_verified: bool = False
     research_mode: Literal["scheduled", "session"] = "scheduled"
     alert_webhook_url: SecretStr = SecretStr("")
+    alert_mode: Literal["webhook", "session"] = "webhook"
     kalshi_base_url: str = "https://external-api.kalshi.com/trade-api/v2"
     chatgpt_subaccount: int = Field(default=0, ge=0, le=63)
     claude_subaccount: int = Field(default=0, ge=0, le=63)
@@ -49,6 +50,8 @@ class DeskSettings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_isolation(self):
+        if self.alert_mode == "session" and self.research_mode != "session":
+            raise ValueError("session-only alerts require app-session research")
         tokens = [getattr(self, f"{role}_token").get_secret_value()
                   for role in ("operator", "chatgpt", "claude")]
         if any(len(t) < 32 for t in tokens) or len(set(tokens)) != 3:

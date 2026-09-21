@@ -60,7 +60,8 @@ No production configuration, credentials or live flags are changed by this PR.
    flag alone does not prove it. Only then attest `DESKS_EXISTING_WORKERS_ISOLATED=true`.
    Here the flag means verified cooperating-worker ownership, not restricted keys.
 7. Verify both app sessions, existing account cash backing (initially at least $60),
-   alerts and the operator preflight. Live enable and the single common start remain
+   the selected alert mode and the operator preflight. DEC-022 permits session-only
+   warnings instead of an external webhook; see APP_SESSIONS.md. Live enable and the single common start remain
    separate operator actions. Neither Go/Continue nor a merge activates them.
 
 No new Kalshi subaccount, fresh deposit or key revocation is required if the existing
