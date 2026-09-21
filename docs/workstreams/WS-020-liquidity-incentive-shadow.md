@@ -961,3 +961,38 @@ Still NO reward observed; lifetime $0. Alimm1 still blocked at the order cap; KX
 closed but unsettled ~2.5 days.
 
 [Thesis §9.32](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## Update 2026-09-21 01:42Z — the order cap is coupled to the exchange's settlement clock
+
+Pre-registered at the 24h-past-close mark; recorded because the mark passed.
+
+Alimm1's two KXBIGGESTQUAKE-17SEP26 positions filled 2026-09-17T20:04:27Z and were still held,
+unsettled, at 2026-09-21T01:37:40Z — ~77.5 hours. Alimm1 has placed nothing since
+2026-09-18T18:21:03Z.
+
+`MAX_OPEN_ORDERS = 3` counts open COMMITMENTS (filled positions + resting orders) via
+`repo.count_live_book_open`. Four commitments against three is a refusal at the placement path.
+The cap is behaving as specified; the finding is what it is coupled to. A resting-order cap is a
+limit the bot controls (it can cancel). A commitment cap is a limit the EXCHANGE'S SETTLEMENT
+CLOCK controls, set by the slowest series in the universe. The binding resource was slots, not
+risk: $0.15 committed against a $10.00 exposure limit, ~1.5%.
+
+Recorded as an OBSERVATION, not a recommendation to change the cap. The operator has decided to
+let the book run as configured.
+
+Secondary finding, found while trying to verify the first: the intended "N hours past close"
+could not be written honestly. `markets` has no row for either quake ticker,
+`incentive_collector_events` none either, and `incentive_market_snapshots` has no `status` or
+`close_time` column. The book records the book, quote, fill and balance but NOT the lifecycle of
+the markets it trades, so it cannot answer "how long has this been stuck past close?" about
+itself. Noted, not fixed — a collector change belongs to a session with that scope.
+
+Still blocked behind this one settlement: the universe rule's refusal-code mix (§9.28), the event
+cap (fix 1), and whether the book places at all.
+
+Ledger clean: ~30 consecutive windows at residual 0, `notes_json` null, `unknown_fill_shapes`
+never fired. One isolated -1c residual (2026-09-20T17:54:29Z) did not recur.
+
+Lifetime liquidity rewards: $0.
+
+[Thesis §9.33](../LIQUIDITY_INCENTIVE_THESIS.md).
