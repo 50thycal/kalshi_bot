@@ -16,11 +16,10 @@ All account ownership, cash, research readiness and shared-start guards remain r
 Between sessions the service keeps monitoring/reconciling and applying protective pauses,
 but the operator may not learn about a problem until returning to the app.
 
-**Selected account design: DEC-021 shared primary account.** Read
-[SHARED_ACCOUNT.md](SHARED_ACCOUNT.md). References below to restricted/funded desk
-subaccounts describe the alternative isolated mode. In shared mode verify cooperating
-worker market ownership, existing primary cash backing and signing credentials instead.
-Do not assume the new mode has deployed or activate live trading from a research session.
+**Selected account design: DEC-023 isolated numbered subaccounts.** Each desk uses its own
+funded restricted key and account. DEC-021 shared-primary support remains in the code but is
+not the selected deployment route. Do not set shared ownership configuration or activate
+live trading from a research session.
 
 
 DEC-019 / WS-021. Each app supplies its own cognition while the conversation is active.
@@ -79,10 +78,36 @@ operator action after both sessions and all guards pass; both books receive the 
 persistent timestamp. Check `status` after any lost response. The desk tokens cannot
 preflight, start, pause or resume. Never give either research session the operator token.
 
-**Deployment checkpoint:** the previous setup verified HTTPS/database and both idle
+### One-shot ChatGPT live write smoke
+
+After ChatGPT is ready, isolated credentials/funding are verified, and before common start,
+test the exchange write path from the **desk-service** Railway console. This is operator-only;
+do not run it from either research session or the temporary setup service. Have ChatGPT identify
+an open binary market that closes more than ten minutes away, then preview it:
+
+```sh
+python scripts/desk_live_smoke.py --ticker MARKET-TICKER --side yes
+```
+
+The preview is read-only and requires an observed ask of at least 10 cents. Review the printed
+ticker, side, 1-cent limit and subaccount, then run the same command once with `--execute`.
+The command writes an immutable claim before exactly one IOC POST, uses a stable order ID,
+reconciles the result, and records it in desk publications. The expected result is `terminal`
+with `filled_quantity` equal to `0`. It never starts the round and never grants Claude readiness.
+
+If the result is pending, unknown, filled, or the command reports ambiguity, stop. Do not change
+the ticker, create a new order ID, retry the POST, or manually unwind. Re-running the identical
+command only recovers an exchange-visible order or returns the saved result; an unresolved claim
+remains fail-closed. A fill makes the clean-book launch check fail until it is settled and flat.
+Only after a clean zero-fill result, both genuine app cycles, and `preflight` may the operator
+use the single common `start` command.
+
+**Historical deployment checkpoint (2026-09-20):** the initial setup verified HTTPS/database and both idle
 containers, but did not provision restricted exchange access, prove funding/isolation,
 verify alert delivery, or establish both app bridges. This code PR cannot claim those
 external requirements passed. Do not call the deployment ready until preflight passes.
+Later operator evidence and the remaining current gates are recorded in
+`VERIFICATION-2026-09-20.md`.
 
 ## Each Go / Continue in the app
 

@@ -3,7 +3,7 @@
 **Phase:** REVIEW
 **Status:** Active
 **Created:** 2026-09-20
-**Updated:** 2026-09-20
+**Updated:** 2026-09-22
 **Build OS:** v0.12
 
 ## Goal
@@ -271,3 +271,29 @@ Implemented and verified: 58 focused tests passed, two database-only cases skipp
 locally; deployed PostgreSQL contention verified separately. Solo implementation,
 no independent review claimed. Next: owner merge of the transport fix, then canonical
 execution impact accounting and recorded cutover before worker attestation is cleared.
+
+## DEC-023 continuation — isolated accounts and ChatGPT write smoke
+
+Owner selected the newly provisioned restricted subaccounts and funded each with $30,
+superseding shared-primary mode as the live deployment choice. The operator supplied Railway
+console evidence of distinct restricted-key verification, funding, isolated configuration and
+a healthy desk-service deployment. This does not infer Claude app readiness or common start.
+
+Build card: add a one-shot operator tool for the ChatGPT subaccount only. It previews first;
+requires live isolated configuration, a ready/unpaused ChatGPT book, no common start, fresh
+restricted-key isolation, at least the initial $30 balance, a clean book, an open supported
+market, at least one offered contract, more than ten minutes to close and at least a 9-cent
+gap above its fixed 1-cent IOC. Persist an immutable claim before the sole POST, use a stable
+client order ID, reconcile an existing order on recovery, and refuse a claim with no visible
+order as ambiguous. Record the result durably. Any fill or unresolved order blocks launch;
+no automatic unwind. Normal decisions still require both sessions and the common start.
+
+Acceptance: preview performs no write; execution cannot submit twice; ambiguity cannot retry;
+an existing order is recovered without POST; common start and insufficient price gap refuse;
+the exchange adapter can find the fixed order across markets. Update startup docs so isolated
+mode, not DEC-021, is selected. No trade is placed by this PR.
+
+Validation: repository lint and diff checks pass; the 269-test desk/bridge/board suite has
+267 passes and two expected PostgreSQL-only skips. The 27 directly affected smoke/exchange
+tests pass. All exchange actions use offline substitutes. No production request, order,
+transfer, deployment or common-start mutation occurred.

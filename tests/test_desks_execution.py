@@ -260,6 +260,37 @@ def test_absent_order_stays_unknown(rsa_keypair):
     assert exchange.reconcile(str(uuid4()), "TEST").status == "unknown"
 
 
+def test_find_order_discovers_ticker_then_reconciles(rsa_keypair):
+    client_id = str(uuid4())
+
+    def handler(request):
+        assert request.url.params["subaccount"] == "1"
+        return httpx.Response(
+            200,
+            json={
+                "orders": [
+                    {
+                        "order_id": "smoke",
+                        "client_order_id": client_id,
+                        "subaccount_number": 1,
+                        "outcome_side": "yes",
+                        "ticker": "SMOKE-MARKET",
+                        "status": "canceled",
+                        "fill_count_fp": "0",
+                        "remaining_count_fp": "0",
+                    }
+                ],
+                "cursor": "",
+            },
+        )
+
+    found = adapter(rsa_keypair, handler).find_order(client_id)
+    assert found is not None
+    assert found[0] == "SMOKE-MARKET"
+    assert found[1].status == "terminal"
+    assert found[1].filled_quantity == D(0)
+
+
 def test_isolation_requires_denied_other_account(rsa_keypair):
     exchange = adapter(rsa_keypair, lambda req: httpx.Response(200, json={"balance": 3000}))
     with pytest.raises(DeskError, match="unrestricted_exchange_key"):

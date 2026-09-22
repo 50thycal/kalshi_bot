@@ -256,6 +256,31 @@ class KalshiDeskExchange:
                            status="terminal" if terminal else "pending", filled_quantity=qty,
                            fill_cost=cost, fees=fees, observed_at=now)
 
+    def find_order(self, client_order_id: str) -> tuple[str, OrderReport] | None:
+        """Find one own-subaccount order without guessing its market.
+
+        This is intentionally read-only and primarily supports recovery after an
+        ambiguous one-shot submission. It never treats an absent row as proof that a
+        POST is safe to repeat.
+        """
+        UUID(client_order_id)
+        matches = [
+            row
+            for row in self._pages(
+                "/portfolio/orders", "orders", {"subaccount": self.subaccount}
+            )
+            if row.get("client_order_id") == client_order_id
+        ]
+        if not matches:
+            return None
+        if len(matches) != 1:
+            raise DeskError("duplicate_exchange_order")
+        row = matches[0]
+        ticker = row.get("ticker")
+        if row.get("subaccount_number") != self.subaccount or not isinstance(ticker, str):
+            raise DeskError("order_identity_mismatch")
+        return ticker, self.reconcile(client_order_id, ticker)
+
     def settlement(self, ticker: str) -> Settlement | None:
         market = self._request("GET", f"/markets/{urlquote(ticker, safe='')}")["market"]
         if market.get("ticker") != ticker:

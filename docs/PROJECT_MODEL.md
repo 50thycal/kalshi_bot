@@ -406,6 +406,15 @@ and on runtime checks. Main V1/V2 writes and cancels honor claims; portfolio man
 reads exclude desk markets and omit unsplittable event aggregates. Existing execution
 behavior is unchanged until its ownership URL is configured. See docs/desks/SHARED_ACCOUNT.md.
 
+### Selected isolated desks and pre-start write smoke (DEC-023)
+
+The selected deployment uses distinct restricted non-primary subaccounts; DEC-021 remains an
+unselected optional adapter. Existing workers stay on primary account 0. An operator-only,
+ChatGPT-only pre-start smoke may send one fixed-ID 1-cent IOC after isolation, clean-book,
+balance and price-gap checks. Its durable claim precedes the sole POST, so an ambiguous result
+can only be reconciled, never resubmitted. The smoke does not enter the desk performance ledger,
+start the round or relax two-desk readiness. A nonzero or unresolved fill blocks common start.
+
 ### Desk notification modes (DEC-022)
 
 Webhook remains the default. The selected session-only option surfaces current pause and
