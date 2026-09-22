@@ -1210,3 +1210,11 @@ immutable pre-submit claim, one POST and reconciliation prevent retries after am
 expected result is terminal with zero fills. Any fill, pending/unknown state, dirty book or
 failed isolation stops launch; there is no automatic unwind. Claude readiness is not inferred,
 the round is not started, and normal research trades still require the single common start.
+
+The first production smoke invocation recorded its v1 claim and then surfaced an unclassified
+HTTP error. Two delayed authenticated reads found no order under its fixed ID, and the account
+remained flat with the original $30. Calvin selected a one-time versioned recovery rather than
+clearing or reusing that claim. V2 uses a distinct fixed order ID and is available only after a
+five-minute delay, continued v1-order absence, a clean book and an exactly unchanged $30 balance.
+It records safe HTTP status evidence separately for the submit and reconciliation stages. V2 has
+no successor recovery attempt: a fill, visible v1 order or v2 ambiguity remains a hard stop.

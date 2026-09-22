@@ -99,6 +99,14 @@ If the result is pending, unknown, filled, or the command reports ambiguity, sto
 the ticker, create a new order ID, retry the POST, or manually unwind. Re-running the identical
 command only recovers an exchange-visible order or returns the saved result; an unresolved claim
 remains fail-closed. A fill makes the clean-book launch check fail until it is settled and flat.
+
+The sole approved exception is the versioned recovery selected after the 2026-09-22 v1 incident.
+It does not clear or reuse the v1 claim. After at least five minutes, it first requires the v1
+order to remain absent, the restricted book to be clean and the exchange balance to remain exactly
+$30. Preview with `--recovery-v2`, then use the same flag with `--execute` only after reviewing the
+new fixed v2 order ID. The v2 path has no further recovery version: any v2 ambiguity remains
+fail-closed. HTTP write failures record their submit-versus-reconcile stage and safe exchange status.
+
 Only after a clean zero-fill result, both genuine app cycles, and `preflight` may the operator
 use the single common `start` command.
 

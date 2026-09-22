@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from kalshi_bot.desks.contracts import Decision, DeskError, OrderReport, Quote, utcnow
-from kalshi_bot.desks.exchange import KalshiDeskExchange
+from kalshi_bot.desks.exchange import ExchangeWriteHTTPError, KalshiDeskExchange
 from kalshi_bot.desks.execution import DeskExecutor, conservative_cost
 from kalshi_bot.desks.store import DeskStore
 
@@ -251,6 +251,43 @@ def test_post_timeout_never_retried(rsa_keypair):
     with pytest.raises(httpx.ReadTimeout):
         adapter(rsa_keypair, handler).submit_ioc(str(uuid4()), "TEST", "yes", 1, D(".4"))
     assert len(calls) == 1
+
+
+def test_post_http_error_identifies_submit_stage(rsa_keypair):
+    exchange = adapter(
+        rsa_keypair,
+        lambda request: httpx.Response(
+            422,
+            json={"code": "invalid_order", "message": "request rejected"},
+            request=request,
+        ),
+    )
+    with pytest.raises(ExchangeWriteHTTPError) as caught:
+        exchange.submit_ioc(str(uuid4()), "TEST", "yes", 1, D(".01"))
+    assert caught.value.operator_payload() == {
+        "stage": "submit",
+        "http_status": 422,
+        "exchange_code": "invalid_order",
+        "exchange_message": "request rejected",
+    }
+
+
+def test_post_success_get_error_identifies_reconcile_stage(rsa_keypair):
+    client_id = str(uuid4())
+
+    def handler(request):
+        if request.method == "POST":
+            return httpx.Response(
+                201,
+                json={"order_id": "one", "client_order_id": client_id},
+                request=request,
+            )
+        return httpx.Response(429, json={"code": "rate_limited"}, request=request)
+
+    with pytest.raises(ExchangeWriteHTTPError) as caught:
+        adapter(rsa_keypair, handler).submit_ioc(client_id, "TEST", "yes", 1, D(".01"))
+    assert caught.value.stage == "reconcile"
+    assert caught.value.status_code == 429
 
 
 def test_absent_order_stays_unknown(rsa_keypair):

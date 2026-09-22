@@ -297,3 +297,17 @@ Validation: repository lint and diff checks pass; the 269-test desk/bridge/board
 267 passes and two expected PostgreSQL-only skips. The 27 directly affected smoke/exchange
 tests pass. All exchange actions use offline substitutes. No production request, order,
 transfer, deployment or common-start mutation occurred.
+
+### DEC-023 incident recovery — versioned smoke v2
+
+The deployed v1 smoke wrote its immutable claim, then returned a generic HTTP error. Two delayed
+reads found no order under the fixed ID and no result; the command correctly refused a retry.
+Owner selected a fix and one new smoke attempt. Preserve v1. Add one distinct fixed-ID v2 path
+requiring a five-minute delay, old-order absence, clean book and exactly unchanged $30 balance.
+Normalize Railway PostgreSQL URLs in the store itself. Classify and durably record safe HTTP
+status evidence as submit-stage versus reconciliation-stage. V2 remains single-POST and has no
+v3 recovery. Common start and Claude readiness remain unchanged.
+
+Acceptance: v1 cannot be retried; a late v1 order is recovered instead of v2 submission; v2
+preview is read-only; v2 submits at most once; changed balance, position, resting order, early
+retry or existing v1 result refuses; HTTP submit/reconcile failures are distinct and persisted.
