@@ -13,7 +13,7 @@ if not __package__:
 
 from kalshi_bot.desks.config import DeskSettings
 from kalshi_bot.desks.contracts import DeskError
-from kalshi_bot.desks.exchange import KalshiDeskExchange
+from kalshi_bot.desks.exchange import ExchangeWriteHTTPError, KalshiDeskExchange
 from kalshi_bot.desks.smoke import run_chatgpt_smoke
 from kalshi_bot.desks.store import DeskStore
 
@@ -28,6 +28,11 @@ def main(argv=None) -> int:
         "--execute",
         action="store_true",
         help="place the single live IOC; without this flag the command is read-only",
+    )
+    parser.add_argument(
+        "--recovery-v2",
+        action="store_true",
+        help="use the one-time v2 recovery path after an unresolved v1 claim",
     )
     args = parser.parse_args(argv)
     exchange = None
@@ -45,7 +50,12 @@ def main(argv=None) -> int:
         )
         store = DeskStore(settings.database_url.get_secret_value())
         result = run_chatgpt_smoke(
-            store, exchange, args.ticker, args.side, execute=args.execute
+            store,
+            exchange,
+            args.ticker,
+            args.side,
+            execute=args.execute,
+            recovery_v2=args.recovery_v2,
         )
         print(json.dumps(result, indent=2, sort_keys=True))
         report = result.get("report")
@@ -57,7 +67,10 @@ def main(argv=None) -> int:
         return 0
     except Exception as exc:
         code = exc.code if isinstance(exc, DeskError) else type(exc).__name__
-        print(json.dumps({"ok": False, "error": code}), file=sys.stderr)
+        payload = {"ok": False, "error": code}
+        if isinstance(exc, ExchangeWriteHTTPError):
+            payload.update(exc.operator_payload())
+        print(json.dumps(payload, sort_keys=True), file=sys.stderr)
         return 2
     finally:
         if exchange is not None:

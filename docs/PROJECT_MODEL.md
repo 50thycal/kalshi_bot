@@ -414,6 +414,10 @@ ChatGPT-only pre-start smoke may send one fixed-ID 1-cent IOC after isolation, c
 balance and price-gap checks. Its durable claim precedes the sole POST, so an ambiguous result
 can only be reconciled, never resubmitted. The smoke does not enter the desk performance ledger,
 start the round or relax two-desk readiness. A nonzero or unresolved fill blocks common start.
+The selected 2026-09-22 incident recovery preserves the unresolved v1 claim and permits one
+distinct fixed-ID v2 attempt only after a delay, old-order absence, a flat book and the unchanged
+$30 balance. Write HTTP failures identify and durably record whether the POST or reconciliation
+read failed; there is no v3 path.
 
 ### Desk notification modes (DEC-022)
 

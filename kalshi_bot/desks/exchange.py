@@ -22,6 +22,37 @@ D = Decimal
 API_PREFIX = "/trade-api/v2"
 
 
+class ExchangeWriteHTTPError(DeskError):
+    """A safe, stage-specific write failure suitable for durable operator evidence."""
+
+    def __init__(self, stage: str, exc: httpx.HTTPStatusError):
+        response = exc.response
+        self.stage = stage
+        self.status_code = response.status_code
+        self.exchange_code = None
+        self.exchange_message = None
+        try:
+            payload = response.json()
+        except (ValueError, TypeError):
+            payload = None
+        if isinstance(payload, dict):
+            code = payload.get("code")
+            message = payload.get("message") or payload.get("details")
+            if isinstance(code, str):
+                self.exchange_code = code[:200]
+            if isinstance(message, str):
+                self.exchange_message = message[:500]
+        super().__init__(f"exchange_{stage}_http_error")
+
+    def operator_payload(self) -> dict:
+        return {
+            "stage": self.stage,
+            "http_status": self.status_code,
+            "exchange_code": self.exchange_code,
+            "exchange_message": self.exchange_message,
+        }
+
+
 def rules_hash(market: dict) -> str:
     """Versioned canonical hash of the exact settlement terms reviewed by a desk."""
     fields = ("ticker", "event_ticker", "rules_primary", "rules_secondary", "close_time",
@@ -189,18 +220,26 @@ class KalshiDeskExchange:
         if not 0 < price < 1 or price % D("0.01"):
             raise DeskError("invalid_limit_price")
         self._sides[client_order_id] = side
-        result = self._request("POST", "/portfolio/events/orders", body={
-            "ticker": ticker, "client_order_id": client_order_id,
-            "side": "bid" if side == "yes" else "ask", "count": f"{quantity:.2f}",
-            "price": f"{price if side == 'yes' else 1-price:.4f}",
-            "time_in_force": "immediate_or_cancel", "self_trade_prevention_type": "taker_at_cross",
-            "cancel_order_on_pause": True, "subaccount": self.subaccount, "exchange_index": -1,
-        })
+        try:
+            result = self._request("POST", "/portfolio/events/orders", body={
+                "ticker": ticker, "client_order_id": client_order_id,
+                "side": "bid" if side == "yes" else "ask", "count": f"{quantity:.2f}",
+                "price": f"{price if side == 'yes' else 1-price:.4f}",
+                "time_in_force": "immediate_or_cancel",
+                "self_trade_prevention_type": "taker_at_cross",
+                "cancel_order_on_pause": True, "subaccount": self.subaccount,
+                "exchange_index": -1,
+            })
+        except httpx.HTTPStatusError as exc:
+            raise ExchangeWriteHTTPError("submit", exc) from exc
         if result.get("client_order_id", client_order_id) != client_order_id or not result.get("order_id"):
             raise DeskError("order_identity_mismatch")
         # POST average fields do not replace authoritative cumulative accounting.
         # Reconcile GET immediately; if delayed, retain the full reservation.
-        report = self.reconcile(client_order_id, ticker)
+        try:
+            report = self.reconcile(client_order_id, ticker)
+        except httpx.HTTPStatusError as exc:
+            raise ExchangeWriteHTTPError("reconcile", exc) from exc
         if report.order_id is None:
             report = report.model_copy(update={"order_id": str(result["order_id"])})
         return report
