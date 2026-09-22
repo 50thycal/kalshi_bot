@@ -38,16 +38,17 @@ not a claim that the new scanner has deployed.
 
 ## Remaining launch gates
 
-- Two distinct restricted, funded desk subaccounts and their dedicated credentials.
-  Only primary account `0` existed at the last authenticated setup check. The temporary
-  setup credentials remain separate from desk-service; its setup process is stopped.
-- Complete existing-worker isolation evidence, including legacy V1 and the unknown
-  external consumers of existing unrestricted keys. Preserve both existing keys.
-  PR #449's shared Platform Revision/impact requirement remains unresolved; a merge
-  is not a measured cutover or retroactive platform acceptance.
+- Operator-provided Railway console evidence on 2026-09-21 shows two numbered subaccounts,
+  distinct restricted keys, $30 funded to each, isolated desk-service configuration, and a
+  healthy redeploy. Existing workers remain on primary account 0. This evidence selects the
+  DEC-023 route; it does not prove a live order write.
+- Run the one-shot ChatGPT 1-cent IOC smoke from the deployed desk-service and require a
+  terminal zero-fill result. Any fill or unresolved state blocks launch. Shared-primary
+  Platform Revision work remains separate because DEC-021 is no longer the selected route.
 - Claude must complete its own app-session research and readiness. ChatGPT must not
   impersonate Claude or set its readiness flag.
-- Configure an operator alert destination and verify delivery.
+- Session-visible alerts are selected under DEC-022; verify current notices on each app
+  continuation. No webhook destination is required in this mode.
 - After those gates, separately verify live preflight and coordinate the single
   common start. No accounts, transfers or trading actions were performed in this check.
 

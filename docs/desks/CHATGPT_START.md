@@ -1,10 +1,9 @@
 # ChatGPT Desk — fresh-session startup packet
 
-**Selected account design: DEC-021 shared primary account.** Read
-[SHARED_ACCOUNT.md](SHARED_ACCOUNT.md). References below to restricted/funded desk
-subaccounts describe the alternative isolated mode. In shared mode verify cooperating
-worker market ownership, existing primary cash backing and signing credentials instead.
-Do not assume the new mode has deployed or activate live trading from a research session.
+**Selected account design: DEC-023 isolated numbered subaccounts.** This desk uses its own
+funded restricted key and account. DEC-021 shared-primary support remains available but is
+not selected. The operator-only write smoke does not start the round or authorize research
+trades from this session.
 
 
 Paste this packet into the new ChatGPT session after it can access this repository and the

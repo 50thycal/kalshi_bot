@@ -1194,3 +1194,19 @@ immediate human response is promised. The service continues protective pauses an
 reconciliation while sessions are inactive. Ownership, cash backing, research readiness,
 unknown-order reservations and common-start gates are unchanged. No production activation
 is authorized by this configuration choice. See docs/desks/APP_SESSIONS.md.
+
+## DEC-023 — Isolated desk subaccounts with a one-shot ChatGPT write smoke (2026-09-22)
+
+Calvin selected two funded, restricted non-primary subaccounts after they became available,
+superseding DEC-021 as the deployment choice. Shared-primary mode remains supported code,
+but it is not the selected desk route and its unresolved Platform Revision is not a launch
+dependency for isolated mode. Existing workers remain scoped to primary account 0. The two
+research books retain equal $30 bankrolls and every DEC-018 execution limit.
+
+Before the common start, the operator may run one ChatGPT-only exchange write smoke. It is
+an infrastructure probe, not a research pick: one contract, 1-cent IOC, only when the observed
+ask is at least 10 cents, on a clean restricted ChatGPT subaccount. A fixed client order ID,
+immutable pre-submit claim, one POST and reconciliation prevent retries after ambiguity. The
+expected result is terminal with zero fills. Any fill, pending/unknown state, dirty book or
+failed isolation stops launch; there is no automatic unwind. Claude readiness is not inferred,
+the round is not started, and normal research trades still require the single common start.
