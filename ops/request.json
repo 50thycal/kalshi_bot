@@ -1,1 +1,1 @@
-{"type":"db","id":"et-ws019-23","sql":"select date_trunc('hour', at) hr, count(*)::text n from execution_collector_events where kind='poll_failed' and at > now() - interval '18 hours' group by 1 order by 1 desc limit 18"}
+{"type":"noop"}
