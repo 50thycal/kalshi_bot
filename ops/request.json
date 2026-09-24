@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-reward-check-2","sql":"select to_char(at,'YYYY-MM-DD HH24:MI:SS') at_utc, kind, left(coalesce(detail_json::text,''),300) detail from incentive_collector_events where kind ilike '%reward%' order by at"}
+{"type":"noop"}
