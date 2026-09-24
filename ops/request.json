@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--hours","96","--min-volume","300","--top","70"],"id":"desk-c1-main","actor":"claude-desk","purpose":"catchup board read 2026-09-24"}
+{"type":"db","id":"et-ws019-21","sql":"select date_trunc('hour', at) hr, count(*)::text n, (array_agg(distinct left(coalesce(detail,''),100)))[1] sample from execution_collector_events where kind='poll_failed' and at > now() - interval '144 hours' group by 1 order by 1 desc limit 24"}
