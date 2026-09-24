@@ -1,1 +1,1 @@
-{"type":"script","name":"desk_fetch","args":["https://fred.stlouisfed.org/graph/fredgraph.csv?id=MORTGAGE30US","--max-chars","2000"],"id":"desk-20260924-fred1"}
+{"type":"script","name":"desk_fetch","args":["https://fred.stlouisfed.org/series/MORTGAGE30US","--find","2026-09","--window","400"],"id":"desk-20260924-fred2"}
