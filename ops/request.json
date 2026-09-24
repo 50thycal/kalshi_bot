@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--ticker","KX30YMORTW-26SEP24-T7.01"],"id":"desk-20260924-grade1"}
+{"type":"script","name":"kalshi_desk_board","args":["--hours","40","--min-volume","300","--top","100"],"id":"desk-20260924-tmrw1"}
