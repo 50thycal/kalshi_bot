@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "94424a42333b735184c9af54262b9540ff2d8a5b",
+  "code_source": "default-branch",
+  "exit_status": 1,
+  "finished_at": "2026-09-24T16:13:42Z",
+  "id": "lo-iss-resolve-18",
+  "outcome": "FAILED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/lo-iss-resolve-18.receipt.json",
+  "result_file": "ops/results/lo-iss-resolve-18.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/36025825182",
+  "service": null,
+  "started_at": "2026-09-24T16:13:40Z",
+  "targets": [],
+  "type": "xos"
+}
