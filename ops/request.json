@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--ticker","KX30YMORTW-26SEP24-T7.01","--depth","6","--trades","8"],"id":"desk-c1-mort","actor":"claude-desk","purpose":"D-002 pre-settlement check 2026-09-24"}
+{"type":"db","id":"limm-catchup-0924e","sql":"select to_char(at,'MM-DD HH24:MI:SS') at_utc, kind, market_ticker, left(coalesce(detail,''),150) detail from incentive_collector_events order by at desc limit 15"}
