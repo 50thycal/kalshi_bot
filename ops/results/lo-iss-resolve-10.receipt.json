@@ -1,0 +1,49 @@
+{
+  "audit_worthy": true,
+  "class": "MUTATING",
+  "code_sha": "94424a42333b735184c9af54262b9540ff2d8a5b",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-24T15:48:28Z",
+  "id": "lo-iss-resolve-10",
+  "mutation": {
+    "changes": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "after": "<redacted 878 bytes, sha256:6f987d4c0a1c8db2>",
+        "before": "<redacted 318 bytes, sha256:021d942371c6b58c>",
+        "requested": "<redacted 878 bytes, sha256:6f987d4c0a1c8db2>"
+      }
+    },
+    "command_guard": {
+      "EXPERIMENT_OS_ISSUE_COMMAND": {
+        "blocked": false,
+        "conclusive": true,
+        "reason": "EXPERIMENT_OS_ISSUE_COMMAND: all 1 command(s) in the current value have terminal receipts \u2014 the slot is spent and safe to replace",
+        "unconsumed_command_ids": []
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "EXPERIMENT_OS_ISSUE_COMMAND"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {
+    "enforcement": "ok",
+    "readiness": "non-zero"
+  },
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/lo-iss-resolve-10.receipt.json",
+  "result_file": "ops/results/lo-iss-resolve-10.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/36022812595",
+  "service": "main",
+  "started_at": "2026-09-24T15:48:17Z",
+  "targets": [
+    "EXPERIMENT_OS_ISSUE_COMMAND"
+  ],
+  "type": "env"
+}
