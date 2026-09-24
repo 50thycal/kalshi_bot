@@ -1,1 +1,1 @@
-{"type":"script","name":"execution_telemetry","args":["--hours","144"],"id":"et-ws019-20"}
+{"type":"script","name":"desk_fetch","args":["https://openrouter.ai/rankings","--find","2026-09-14","--window","400","--hits","3"],"id":"desk-c1-or","actor":"claude-desk","purpose":"catchup grading token week 2026-09-24"}
