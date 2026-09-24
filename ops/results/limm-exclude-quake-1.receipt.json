@@ -1,0 +1,38 @@
+{
+  "audit_worthy": false,
+  "class": "MUTATING",
+  "code_sha": "94424a42333b735184c9af54262b9540ff2d8a5b",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-24T15:58:39Z",
+  "id": "limm-exclude-quake-1",
+  "mutation": {
+    "changes": {
+      "LIQUIDITY_INCENTIVE_EXCLUDED_SERIES": {
+        "after": "KXBIGGESTQUAKE",
+        "before": "(unset)",
+        "requested": "KXBIGGESTQUAKE"
+      }
+    },
+    "redeploy": "TRIGGERED",
+    "set_failed": [],
+    "set_ok": 1,
+    "targets": [
+      "LIQUIDITY_INCENTIVE_EXCLUDED_SERIES"
+    ],
+    "verdict": "VERIFIED"
+  },
+  "outcome": "SUCCEEDED",
+  "post_change_checks": {},
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/limm-exclude-quake-1.receipt.json",
+  "result_file": "ops/results/limm-exclude-quake-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/36024048428",
+  "service": "main",
+  "started_at": "2026-09-24T15:58:37Z",
+  "targets": [
+    "LIQUIDITY_INCENTIVE_EXCLUDED_SERIES"
+  ],
+  "type": "env"
+}
