@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=script  id=desk-d5-or
-# actor=claude-desk  purpose=desk pace sample 2026-09-19 20:30Z
-# code edccc226312d15186bfe25cc5ba4914f4920b1f1 · started 2026-09-19T20:31:17Z
-# desk_fetch https://openrouter.ai/api/frontend/v1/rankings/market-share
-# HTTP 200 · application/json · 13407 bytes
-# 1 window(s) around '2026-09-14'
----
- 18536802128948,     "others": 11320459578142,     "tencent": 18672750568930,     "xiaomi": 2623468233546,     "z-ai": 17977716607707    }   },   {    "x": "2026-09-07",    "ys": {     "anthropic": 4826722978852,     "deepseek": 24257683335788,     "google": 7484129162783,     "meta": 2412911836917,     "nvidia": 4801749632353,     "openai": 23953076616364,     "others": 14070304422969,     "tencent": 20624550078250,     "xiaomi": 7994078909370,     "z-ai": 16337815070537    }   },   {    "x": "2026-09-14",    "ys": {     "anthropic": 4144367906351,     "deepseek": 27768555117611,     "google": 5979190464970,     "meta": 2070651051759,     "nvidia": 4535864936477,     "openai": 14789470952966,     "others": 13222384515078,     "tencent": 14747639399218,     "xiaomi": 6311533981946,     "z-ai": 15418773012815    }   }  ] }
