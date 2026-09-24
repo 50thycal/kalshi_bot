@@ -1,1 +1,1 @@
-{"type":"db","id":"lo-db-9","sql":"SELECT left(message,40) m, to_char(date_trunc('day',created_at),'MM-DD') d, count(*) FROM system_events WHERE message LIKE '%ENTIRE configured universe%' AND created_at > now()-interval '10 days' GROUP BY 1,2 ORDER BY 2,1"}
+{"type":"db","id":"cc-rmm-tape49","sql":"SELECT strategy, status, count(*) AS n, round(coalesce(sum(pnl),0)::numeric,2) AS pnl, count(*) FILTER (WHERE pnl<0) AS losses, max(created_at) AS last_entry FROM paper_trades WHERE strategy IN ('Rmmsell1','Rmmsell2') GROUP BY strategy, status ORDER BY strategy, status"}
