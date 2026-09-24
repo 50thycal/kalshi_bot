@@ -2048,7 +2048,12 @@ def open_live_positions(session) -> list[tuple]:
     snapshot per ticker with a net-long YES position), so a position is managed even if its
     local entry order row is corrupted (e.g. a 409 recorded as rejected). Strategy/entry come
     from the most recent YES entry order for the ticker. Returns
-    (ticker, strategy, entry_price_cents, entry_at, qty)."""
+    (ticker, strategy, entry_price_cents, entry_at, qty).
+
+    `strategy` is None when no bot order opened the position (a hand-placed pick, DEC-017):
+    the bot never owned it, so no book's exit rules apply and no tag may be invented for it.
+    Inventing one (the old `"live"` fallback) made `manage_exits` try to trade an unregistered
+    tag, which NEW_ONLY refuses — and that refusal aborted every live cycle (2026-09-23)."""
     midnight = _now().replace(hour=0, minute=0, second=0, microsecond=0)
     snaps = session.scalars(
         select(m.Position).where(m.Position.captured_at >= midnight)
@@ -2067,7 +2072,7 @@ def open_live_positions(session) -> list[tuple]:
             continue
         qty = int(snap.quantity or 0)
         entry = _entry_order_for(session, tkr)
-        strategy = (entry.strategy if entry else None) or "live"
+        strategy = (entry.strategy or None) if entry else None
         entry_price = int(entry.limit_price) if (entry and entry.limit_price) \
             else int(round(snap.avg_price or 0))
         entry_at = entry.created_at if entry else snap.captured_at

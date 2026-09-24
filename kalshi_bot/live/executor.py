@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
 from .. import repository as repo
+from ..experiment_os.enforcement import LineageBlocked
 from ..kalshi.errors import AuthError, KalshiAPIError, TransientError
 from ..liquidity_incentive import live as limm_live
 from ..paper.engine import kalshi_fee
@@ -115,6 +116,7 @@ class LiveExecutor:
         self.summary = LiveCycleSummary()
         self._daily_loss_tripped = False
         self._exit_abandoned: set[tuple[str, str]] = set()
+        self._unowned_noted: set[str] = set()  # tickers with no bot entry order, already logged
         self._closeout_abandoned: set[tuple[str, str]] = set()  # (book, ticker) past its attempt cap
         self._market_ids: dict[str, str] = {}  # ticker -> v1 market UUID (cached)
         self._cell_skips_noted: set = set()  # (book, event, reason, day) already logged this run
@@ -1695,6 +1697,9 @@ class LiveExecutor:
         for ticker, strategy, _entry_price, _entry_at, entry_qty in repo.open_live_positions(session):
             if not ticker.startswith(prefix):
                 continue  # ONLY the probe's ticker(s) — never the strategy's positions
+            if strategy is None:
+                self._note_unowned(ticker, entry_qty)
+                continue
             remaining = self._remaining_open_qty(session, ticker, entry_qty)
             if remaining < 0.01:
                 continue
@@ -1738,6 +1743,11 @@ class LiveExecutor:
             # YES bids too, so it needs saying rather than inheriting.
             if limm_live.owns_tag(strategy):
                 continue
+            # No bot order opened this position (a hand-placed pick): it belongs to no book, so
+            # no book's TP/SL applies and there is no registered tag to close it under.
+            if strategy is None:
+                self._note_unowned(ticker, entry_qty)
+                continue
             # The position snapshot (refreshed by reconcile, which runs first) is the source of
             # truth — an exit is "done" only when Kalshi shows the position flat.
             remaining = self._remaining_open_qty(session, ticker, entry_qty)
@@ -1763,8 +1773,23 @@ class LiveExecutor:
                 # rather than leaving a partial/stuck position because the trigger no longer holds.
                 kind = "reattempt"
                 self.summary.exits_reattempted += 1
-            self._place_exit(session, ticker, strategy, live_bid, remaining, kind,
-                             attempt=attempts + 1, level=self._escalation_level(attempts))
+            try:
+                self._place_exit(session, ticker, strategy, live_bid, remaining, kind,
+                                 attempt=attempts + 1, level=self._escalation_level(attempts))
+            except LineageBlocked as exc:
+                # Admission refused this one close (raised before any order row or POST — the
+                # refusal stands). One position's tag must never abort the whole live cycle:
+                # reconcile, every book's scan and every other exit share its transaction.
+                self._log_exit_abandoned(ticker, strategy, remaining, attempts)
+                logger.error("live exit refused by Experiment OS admission; skipping", extra={
+                    "extra_fields": {"ticker": ticker, "strategy": strategy, "error": str(exc)}})
+
+    def _note_unowned(self, ticker: str, qty) -> None:
+        if ticker in self._unowned_noted:
+            return
+        self._unowned_noted.add(ticker)
+        logger.warning("live position has no bot entry order; not managing its exit", extra={
+            "extra_fields": {"ticker": ticker, "quantity": qty}})
 
     def _resolve_v1_exits(self, session) -> None:
         """Resolve submitted v1 exit (close) orders, which the v2 orders feed can't see. The v1

@@ -819,6 +819,63 @@ def test_exit_primary_sell_yes_close(settings):
         assert len(client.placed) == 1
 
 
+def test_exit_skips_position_with_no_bot_entry_order(settings, caplog):
+    # Regression (2026-09-23): a hand-placed YES position has no live_orders row. It used to be
+    # tagged "live", manage_exits tried to close it under that unregistered tag, NEW_ONLY raised
+    # LineageBlocked and every live cycle crashed. It belongs to no book -> leave it alone, and
+    # keep managing the bot's own positions in the same pass.
+    _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_cents=10)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        repo.insert_position_snapshot(
+            session, ticker="WX-D1-B2", side="yes", quantity=2, quantity_fp=2.34,
+            avg_price=41.0, market_exposure=0.96, realized_pnl=0.0)
+        _filled_entry(session, price=48)  # the bot's own position: bid 60 - 48 >= tp -> close
+        assert {p[0]: p[1] for p in repo.open_live_positions(session)}["WX-D1-B2"] is None
+        with caplog.at_level("WARNING"):
+            ex.manage_exits(session)
+            ex.manage_exits(session)
+        assert [o["market_id"] for o in client.placed] == ["MID-WX-D1-B1"]
+        assert all(o.strategy != "live" for o in session.scalars(select(m.LiveOrder)).all())
+    notes = [r for r in caplog.records if "no bot entry order" in r.getMessage()]
+    assert len(notes) == 1  # logged once, not every cycle
+
+
+def test_exit_lineage_blocked_does_not_abort_manage_exits(settings, monkeypatch, caplog):
+    # One position whose close admission refuses must not raise out of manage_exits (which
+    # would abort the whole live cycle); the refused close is not placed, others still are.
+    from kalshi_bot.experiment_os import enforcement as xos_enforcement
+    from kalshi_bot.experiment_os.enforcement import LineageBlocked
+
+    _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_cents=10)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    client = FakeLiveClient()
+    client.v1_market_tickers = ["WX-D1-B1", "WX-D1-B3"]  # both closes are buildable
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        _filled_entry(session, ticker="WX-D1-B3", strategy="blocked_tag", price=48)
+        _filled_entry(session, ticker="WX-D1-B1", price=48)
+        real = xos_enforcement.stamp_or_block
+
+        def fake(session, tag, channel="paper"):
+            if tag == "blocked_tag":
+                raise LineageBlocked(tag, "is not registered")
+            return real(session, tag, channel=channel)
+
+        monkeypatch.setattr(xos_enforcement, "stamp_or_block", fake)
+        with caplog.at_level("ERROR"):
+            ex.manage_exits(session)  # must not raise
+        assert [o["market_id"] for o in client.placed] == ["MID-WX-D1-B1"]
+        assert any("refused by Experiment OS admission" in r.getMessage() for r in caplog.records)
+        assert ex.summary.exits_abandoned == 1
+        assert not [o for o in session.scalars(select(m.LiveOrder)).all()
+                    if o.client_order_id.startswith("exit:blocked_tag")]
+
+
 def test_exit_rejection_escalates_and_does_not_block(settings):
     _live_settings(settings, live_exit_mode="tp_sl", live_take_profit_cents=10,
                    live_exit_slippage_cents=3, live_exit_max_attempts=3)
