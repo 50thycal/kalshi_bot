@@ -4,14 +4,14 @@
   "code_sha": "94424a42333b735184c9af54262b9540ff2d8a5b",
   "code_source": "default-branch",
   "exit_status": 0,
-  "finished_at": "2026-09-24T15:53:57Z",
-  "id": "lo-iss-resolve-13",
+  "finished_at": "2026-09-24T16:12:56Z",
+  "id": "lo-iss-resolve-17",
   "mutation": {
     "changes": {
       "EXPERIMENT_OS_ISSUE_COMMAND": {
-        "after": "<redacted 878 bytes, sha256:ef672edbfe8df162>",
-        "before": "<redacted 308 bytes, sha256:6bb86cb2aff96ac3>",
-        "requested": "<redacted 878 bytes, sha256:ef672edbfe8df162>"
+        "after": "<redacted 878 bytes, sha256:df08a0d8e8c375bc>",
+        "before": "<redacted 298 bytes, sha256:8321712f7e6f7a18>",
+        "requested": "<redacted 878 bytes, sha256:df08a0d8e8c375bc>"
       }
     },
     "command_guard": {
@@ -37,11 +37,11 @@
   },
   "provenance": {},
   "publication": "COMMITTED",
-  "receipt_file": "ops/results/lo-iss-resolve-13.receipt.json",
-  "result_file": "ops/results/lo-iss-resolve-13.txt",
-  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/36023475676",
+  "receipt_file": "ops/results/lo-iss-resolve-17.receipt.json",
+  "result_file": "ops/results/lo-iss-resolve-17.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/36025748716",
   "service": "main",
-  "started_at": "2026-09-24T15:53:47Z",
+  "started_at": "2026-09-24T16:12:52Z",
   "targets": [
     "EXPERIMENT_OS_ISSUE_COMMAND"
   ],
