@@ -38,11 +38,17 @@ def test_the_registered_envelope_equals_the_running_constants():
 
 
 def test_the_operator_guardrails_are_not_exceeded():
-    """The operator authorized: under $10 total, at most 3 at a time, $1 per trade."""
+    """The operator authorized: under $10 total, at most 5 at a time, $1 per trade.
+
+    Originally 3; raised to 5 on 2026-09-24 by direct operator decision (thesis §9.34), edited
+    straight into the running constant rather than through a re-arm — see the comment on
+    `MAX_OPEN_ORDERS` in `liquidity_incentive/live.py` for why the formal path was infeasible
+    same-day. This line is the new authorization on record for the CODE; the XOS-registered
+    envelope on the live deployment still reads 3 and is not updated by this test."""
     assert limm.MAX_STRATEGY_EXPOSURE_USD <= 10.00
-    assert limm.MAX_OPEN_ORDERS <= 3
+    assert limm.MAX_OPEN_ORDERS <= 5
     assert limm.MAX_ORDER_DOLLARS <= 1.00
-    # And the caps are mutually consistent: three orders at the per-order cap stay inside the
+    # And the caps are mutually consistent: five orders at the per-order cap stay inside the
     # book budget, so no combination of allowed orders can breach it.
     assert limm.MAX_OPEN_ORDERS * limm.MAX_ORDER_DOLLARS <= limm.MAX_STRATEGY_EXPOSURE_USD
 

@@ -996,3 +996,37 @@ never fired. One isolated -1c residual (2026-09-20T17:54:29Z) did not recur.
 Lifetime liquidity rewards: $0.
 
 [Thesis §9.33](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## Update 2026-09-24 16:31 UTC — quake excluded; order cap raised 3->5 outside the formal re-arm path
+
+Two changes, both operator-directed, in response to §9.33 (settlement-lag coupling) and its
+consequence: Alimm1 blocked a full week on 3 unsettled KXBIGGESTQUAKE positions.
+
+1. `LIQUIDITY_INCENTIVE_EXCLUDED_SERIES=KXBIGGESTQUAKE` set via ops env channel. Existing
+   mechanism, no code change, redeployed and verified. Stops re-entry into the series that
+   trapped the book.
+
+2. `MAX_OPEN_ORDERS` raised 3 -> 5, edited directly into `liquidity_incentive/live.py` rather
+   than through `service.arm_live_canary`. The formal path was checked and found infeasible
+   same-day: the lifecycle model has no LIVE_CANARY -> PAPER transition, so a registered risk
+   change here means permanently retiring `liquidity-incentive-mm` and walking a successor
+   through IDEA -> PROBE -> PAPER -> LIVE_CANARY from scratch (days of fresh gate evidence).
+   Operator instruction, verbatim: "why not just raise the cap on the existing? I approve if it
+   'breaks' the experiment, we just need to make that note."
+
+   Checked before shipping: `runtime_config_check`'s drift detector compares `config_json.
+   material`, not `risk_envelope`, and this book's `book_params` is None either way — nothing
+   live-blocking trips. What breaks, permanently: the deployment's frozen `config_json.
+   risk_envelope.max_open_orders` still reads 3; the running constant now reads 5;
+   `test_the_registered_envelope_equals_the_running_constants` only ever compared the in-repo
+   dict to the in-repo constant, so it can't and doesn't catch this. $10 total exposure
+   ceiling unchanged (5 * $1 = $5 <= $10) — this was a slots-only change.
+
+   Tests updated: the pinned-tuple test, the ceiling-test assertion + docstring, one runner
+   fixture's slot arithmetic (now derives from the constant instead of hardcoding 3). Full
+   suite + `ruff check .` clean.
+
+The 3 existing stuck quake positions are untouched, per explicit operator instruction — they
+settle naturally; this change is about what the book does next, not about them.
+
+[Thesis §9.34](../LIQUIDITY_INCENTIVE_THESIS.md).

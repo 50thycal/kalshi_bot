@@ -39,7 +39,19 @@ MAX_CONTRACTS_PER_ORDER = 1
 #: Dollars of collateral per resting order.
 MAX_ORDER_DOLLARS = 1.00
 #: Resting orders this strategy may hold at once, across all markets.
-MAX_OPEN_ORDERS = 3
+#:
+#: Raised 3 -> 5 on 2026-09-24 by direct operator decision (thesis §9.34), NOT through
+#: `service.arm_live_canary`. The lifecycle model has no path back from LIVE_CANARY to PAPER on
+#: the same experiment (`docs/EXPERIMENT_OPERATING_SYSTEM_SPEC.md` §7: "No silent rollback"), so
+#: the only XOS-sanctioned way to change this number is to retire `liquidity-incentive-mm`
+#: permanently and re-walk a successor through PROBE -> PAPER -> LIVE_CANARY from scratch — days
+#: of fresh gate evidence before it could place an order again. The operator chose the smaller,
+#: honest break instead: this constant is now AHEAD of the risk envelope frozen into the
+#: deployment's `config_json` at arm time, which still reads 3. `RISK_ENVELOPE` below (and the
+#: test asserting it equals this constant) reflect the RUNNING number, not the REGISTERED one —
+#: that divergence is deliberate and permanent for this experiment's record, not a defect to
+#: reconcile. See thesis §9.34 for the full reasoning and what does and does not still apply.
+MAX_OPEN_ORDERS = 5
 #: Total dollars this strategy may have committed at once (its own budget, not the shared one).
 MAX_STRATEGY_EXPOSURE_USD = 10.00
 #: Refuse any order priced above this. Caps the per-contract downside directly, and is the
