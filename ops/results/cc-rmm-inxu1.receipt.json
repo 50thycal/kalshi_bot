@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "d2bc71b3c99d36b5590cae4b1cb227a38daf48c6",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-24T19:17:47Z",
+  "id": "cc-rmm-inxu1",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/cc-rmm-inxu1.receipt.json",
+  "result_file": "ops/results/cc-rmm-inxu1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/36047154326",
+  "service": null,
+  "started_at": "2026-09-24T19:17:47Z",
+  "targets": [],
+  "type": "db"
+}
