@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-show","args":["XOS-000037"],"id":"lo-iss-resolve-6"}
+{"type": "env", "set": {"EXPERIMENT_OS_ISSUE_COMMAND": "{\"command_id\": \"lo-live-cycle-crash-triage-20260924\", \"action\": \"TRIAGE\", \"actor\": \"claude-code\", \"actor_role\": \"LIVE_OPS\", \"schema_version\": 1, \"payload\": {\"issue\": \"XOS-000037\", \"reason\": \"Root cause diagnosed and fixed (PR #461, merged/deployed), fix validated in production over ~45 min (see recorded PASSED validation result). Moving to resolve.\"}}"}, "id": "lo-iss-triage-1"}
