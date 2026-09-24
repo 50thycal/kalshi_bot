@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "94424a42333b735184c9af54262b9540ff2d8a5b",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-24T13:56:20Z",
+  "id": "lo-iss-triage-2",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/lo-iss-triage-2.receipt.json",
+  "result_file": "ops/results/lo-iss-triage-2.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/36009121989",
+  "service": null,
+  "started_at": "2026-09-24T13:56:18Z",
+  "targets": [],
+  "type": "xos"
+}
