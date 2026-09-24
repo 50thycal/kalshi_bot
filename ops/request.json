@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--ticker","KX30YMORTW-26SEP24-T7.01"],"id":"desk-20260924-mort2"}
+{"type": "env", "set": {"EXPERIMENT_OS_ISSUE_COMMAND": "{\"command_id\": \"lo-live-cycle-crash-status3b-20260924\", \"action\": \"STATUS\", \"actor\": \"claude-code\", \"actor_role\": \"LIVE_OPS\", \"schema_version\": 1, \"payload\": {\"issue\": \"XOS-000037\", \"status\": \"VALIDATING\", \"reason\": \"Fix deployed and PASSED validation already recorded; final hop before RESOLVE.\"}}"}, "id": "lo-iss-status3-3"}
