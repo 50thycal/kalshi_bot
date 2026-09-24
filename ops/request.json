@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"logs","id":"limm-deploy-check-1","query":"deployment","hours":1}
