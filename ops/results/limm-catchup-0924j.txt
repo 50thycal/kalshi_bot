@@ -1,7 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-catchup-0924j
-# code e81faf472b6f336ffe56cda87d32c6deeda4a40f · started 2026-09-24T03:11:10Z
-strategy  market_ticker  status  side  created
---------  -------------  ------  ----  -------
-
-(0 rows)
