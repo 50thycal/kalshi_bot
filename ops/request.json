@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-catchup-0924e","sql":"select to_char(at,'MM-DD HH24:MI:SS') at_utc, kind, market_ticker, left(coalesce(detail,''),150) detail from incentive_collector_events order by at desc limit 15"}
+{"type":"script","name":"kalshi_desk_board","args":["--hours","96","--min-volume","300","--top","70"],"id":"desk-c1-main","actor":"claude-desk","purpose":"catchup board read 2026-09-24"}
