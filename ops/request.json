@@ -1,1 +1,1 @@
-{"type":"db","id":"cc-rmm-byseries1","sql":"SELECT split_part(market_ticker,'-',1) AS series, count(*) AS n, count(*) FILTER (WHERE pnl<0) AS losses, count(*) FILTER (WHERE pnl>=0) AS wins, round(coalesce(sum(pnl),0)::numeric,2) AS pnl FROM paper_trades WHERE strategy='Rmmsell1' AND status='settled' GROUP BY 1 ORDER BY n DESC"}
+{"type":"xos","command":"issue-command-show","args":["lo-live-cycle-crash-resolve4-20260924"],"id":"lo-iss-resolve-12"}
