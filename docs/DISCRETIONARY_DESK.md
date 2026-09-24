@@ -127,6 +127,7 @@ refreshed. A number written from memory is a number nobody can check, so none ar
 | `KXDIESELW` / `KXDIESELD` (**one print, not two**) | Both series carry the identical rule — *"If the Diesel Price on September 21, 2026 is above $X"* — the same close and the same expiration, and their ladders overlay strike for strike. `KXDIESELW`'s "this week" title is a coarse-strike ladder on the **daily** print, **not** an EIA weekly average, and neither contract names a source. The AAA daily national average is the readable proxy: 6.23 (Mon 9/14) → 6.4866 (Sat 9/19) → **6.5050 (Sun 9/20, record)**, a decelerating climb (+3.8¢, then +1.84¢). The EIA-over-AAA basis the desk first recorded (+5.5–6.7¢) is real between those two published series but is **not** what this contract pays on. | `--ticker` rules text + `desk_fetch gasprices.aaa.com`, 2026-09-20 |
 | `KXDIESELW-26SEP21-T6.52` **graded 2026-09-24**: EIA's own weekly on-highway diesel print for the week of Mon 9/21 was **$6.529**; AAA's Sun 9/20 daily average was **$6.5050**. Both clear the $6.52 strike, so `D-2026-09-19-001` settled **YES** — a win, but on a thesis whose mechanism was still wrong (§1a): the entry at 76¢ was a real overpay against a market that was correctly pricing this near a coin flip, independent of how it happened to land. |
 | `KX30YMORTW` (Freddie Mac PMMS, Thursday) | PMMS is the Thu–Wed window mean of application rates, and it has matched the daily Optimal Blue / Mortgage Daily 30-yr series to **within 1bp**: 9/17 print 6.95 vs mean(9/10 6.88, 9/11 6.95, 9/14–15 6.95, 9/16 7.05) = 6.96. MND's top-tier index runs ~15–25bp above PMMS in a rising week (7.19–7.24 on 9/16–9/18 vs 6.95). So by Friday two of the five window days are known, and the market ladder can be checked against them. | web search (mortgagedaily.com, mortgagenewsdaily.com, freddiemac.com), 2026-09-19 |
+| `KX30YMORTW-26SEP24-T7.01` **graded 2026-09-24, WIN, +$1.33**: Kalshi's own settlement field read `result=yes` at 16:20:57 UTC (~21min after the 15:59Z close), so PMMS for the week of 9/24 published above 7.01%. Freddie Mac's own page, FRED and every third-party mirror the desk tried were unreachable from the sandbox (FRED's own fetch through the ops runner timed out twice) — the first grade to rest on Kalshi's determined result alone rather than a second independent source. The book itself had already moved to 75–80¢ on YES in the final hour before close, consistent with the outcome. | `kalshi_desk_board --ticker` (`result` field) + two failed `desk_fetch` attempts on FRED, 2026-09-24 |
 | `KXSPRLVL` (EIA WPSR Table 1, Wednesday) | Weekly SPR changes during the 172M-barrel IEA release: −3.4/wk (8/14→8/28), −1.2 (9/4), −0.4 (9/11); draws are decelerating as the release winds down. The 1M-barrel strike spacing is the same size as the weekly noise, so a strike sits inside the noise unless DOE's delivery schedule is known. | web search (EIA WPSR summaries), 2026-09-19 |
 | `KXSOFRD` (NY Fed SOFR, next business day 08:00 ET) | Markets close before the print. The day after the 9/16 hike SOFR set at 3.85 (IORB−5). The Friday ladder's yes asks summed to 177¢ across seven bins: nothing is takeable, and the desk has no read on day-two drift. | ops event view + web search, 2026-09-19 |
 | `KXTOKENUSE` (OpenRouter weekly tokens) | Week totals: 126.2T (8/31), 126.8T (9/07). **Week of 9/14 measured five times**: 96.45T (Sat 04:08Z), 103.27T (13:43Z), 108.99T (20:31Z), 121.17T (Sun 13:39Z), **126.21T (Sun 20:00Z)** → paces 0.711, 0.841, 0.711, **0.794** T/h. The pace is far more stable than first assumed and the weekend is not slower than the weekday. **Lag is under an hour**: 96.45T over 124.1h elapsed averages 0.777 T/h against an instantaneous ~0.78, so time-to-close is the right multiplier. Final projection 128.6–130.2T. **The market repriced to match between Sat afternoon and Sun evening** (>128 went 11/58 → 93/98), so this series' edge lives in the *early* read, not the late one — the opposite of what the desk assumed on Saturday. | `desk_fetch` market-share endpoint ×5 + two ladder reads, 2026-09-19/20 |
@@ -158,35 +159,39 @@ under the wider policy; 5 defaults to the daily line plus the weekly table.
 
 ## 9. Handoff — where the desk stands (rewrite this at the close of every session)
 
-**As of 2026-09-24 ~13:41 UTC (Thu).** Role playbook: `.claude/sessions/discretionary-desk.md`.
+**As of 2026-09-24 ~16:22 UTC (Thu).** Role playbook: `.claude/sessions/discretionary-desk.md`.
 Any session — or any model that can read this repo and push to GitHub — continues from this
 section, the ledger and the postmortems; nothing else was needed to get here.
 
-**PR #460** (the ~03:20 UTC catch-up: D-001 graded, token projection graded, the finalized-market
-crash fix) is still open as of this handoff — CI green, `mergeable_state: clean`, no review
-threads, waiting only on the operator's merge (solo mode). A background check-in loop is watching
-it; nothing further to do there until it merges.
+**No open real-money positions.** Both picks written so far are now settled and both won. This
+is the first point since the desk opened (2026-09-19) with zero dollars at risk.
 
-**Open position ($1 at risk):**
+**PR #460** (the ~03:20 UTC catch-up + today's daily update) **merged** at ~13:44 UTC. The desk
+branch was fast-forwarded and pushed right after. Nothing pending there.
 
-| pick | market | side / fill | settles | status |
-|---|---|---|---|---|
-| D-2026-09-19-002 | `KX30YMORTW-26SEP24-T7.01` (Freddie Mac PMMS > 7.01%) | YES @ ~43c | **today**, Thu 2026-09-24 12:00 ET (16:00Z) | **Still not gradeable as of 13:41 UTC** — PMMS publishes at close, ~2.3h out. Market trades 50/54 as of 13:36Z (implied ~50–54%) against the desk's 0.65 pre-registered confidence. Grade with Freddie Mac's first published value; window is Thu 9/17–Wed 9/23. A reminder is already scheduled for ~16:20 UTC today with the full grading steps embedded — do not duplicate it if it's still armed. |
+**Settled since the last handoff:**
 
-**Settled since the last handoff:** nothing new — D-001 and the token projection were already
-graded before 03:20 UTC; see §7.
+- `D-2026-09-19-002` (`KX30YMORTW-26SEP24-T7.01`, Freddie Mac PMMS > 7.01%, YES @ 43¢) **graded
+  WIN, +$1.33**. Kalshi's own settlement field (surfaced by this session's earlier crash fix)
+  read `result=yes` at 16:20:57 UTC, ~21 minutes after the 15:59Z close. This is the **first grade
+  to rest on Kalshi's own determined result alone**: Freddie Mac's page, FRED, and every
+  third-party mirror the desk tried were unreachable from the sandbox, and the ops runner's own
+  attempt to fetch FRED timed out twice. The book itself had already drifted to 75–80¢ on YES in
+  the final hour before close, consistent with the outcome. See §7.
+
+**Score so far: 2 settled picks, 2 wins (+$0.32, +$1.33 = +$1.65 realized), 3 no-picks logged.**
+Sample is still far too small to read as calibration (R6 — no claim before ~30 settled picks),
+and D-001's win came on a thesis later found broken (§1a) — a reminder that a win is not the same
+thing as a correct process, and losses are not the only thing worth a postmortem.
 
 **Today's daily routine (13:34 UTC) — zero-pick day, logged as `D-2026-09-24-NP1`:** branch
-restarted from `origin/claude/confident-goldberg-83u3q` (clean merge, no conflicts), then a 72h/
-500-vol board scan (75 markets kept: mostly YouTube ranking noise, ActBlue fundraiser guesses,
-and the diesel/mortgage/EV series already known). Investigated the one candidate that looked live
-— `KXDIESELD-26SEP25-T6.520` ("Diesel prices tomorrow," ~9% implied YES — a new print, Sep 25, so
-R10 doesn't block it) — read its rules (still names no source, R13), then `desk_fetch`'d AAA's
-live page rather than trusting last week's trend: diesel has actually **turned down** two days
-running ($6.5276 → $6.5217 → $6.5141), which lines up with the market's own ~9% pricing. No edge;
-recorded as a new §7 base-rate line. A Climate/Weather category pass at a 50-vol floor came back
-empty — nothing in that space inside 72h. Nothing else on the board named a source readable
-within its own close window. Zero picks; a valid day.
+restarted from `origin/claude/confident-goldberg-83u3q` (clean merge), then a 72h/500-vol board
+scan (75 markets: mostly YouTube ranking noise, ActBlue fundraiser guesses, and the diesel/EV
+series already known). Investigated `KXDIESELD-26SEP25-T6.520` ("Diesel prices tomorrow," ~9%
+implied YES) — rules name no source (R13), so `desk_fetch`'d AAA's live page rather than trust
+last week's trend: diesel has actually **turned down** two days running ($6.5276 → $6.5217 →
+$6.5141), lining up with the market's own ~9% pricing. No edge; recorded as a new §7 line. A
+Climate/Weather pass at a 50-vol floor came back empty. Zero picks; a valid day.
 
 **Standing windows:**
 
@@ -195,19 +200,23 @@ within its own close window. Zero picks; a valid day.
 - `KX*SHARE` (OpenRouter request share): still no mid-week read of the settlement metric. Pass.
 
 **Scheduled check-ins bound to this session** (Claude Code routines/triggers, not durable state —
-a new session re-creates what it needs, playbook Startup Routine step 3):
-"Desk: daily board read and picks" (13:30 UTC daily, just fired and re-armed for tomorrow); a
-PR #460 re-check loop (~1-2h cadence until merged); the D-002 grading reminder (~16:20 UTC today).
+a new session re-creates what it needs, playbook Startup Routine step 3): "Desk: daily board read
+and picks" (13:30 UTC daily) is the only one still armed. The PR #460 watch loop and the D-002
+grading reminder have both fired and completed their work; neither needs re-arming.
 
-**Sandbox limits still in force:** Kalshi, EIA, Freddie Mac, NY Fed, Mortgage News Daily and most
-data sites are blocked from the sandbox; use the ops runner (`kalshi_desk_board`, `desk_fetch`) and
-web search. The operator approved widening the environment's network allowlist (DEC-017); still not
-done as of this session.
+**Sandbox limits still in force:** Kalshi, EIA, Freddie Mac, FRED, NY Fed, Mortgage News Daily and
+most data sites are blocked from the sandbox; use the ops runner (`kalshi_desk_board`,
+`desk_fetch`) and web search. FRED is on `desk_fetch`'s host allowlist but timed out twice this
+session (both `fredgraph.csv` and the series HTML page) — worth a retry another day before
+concluding it's unreachable in practice, not just blocked in principle. The operator approved
+widening the environment's network allowlist (DEC-017); still not done as of this session.
 
-**Lessons so far (n=1 settled, win; n=2 graded no-pick):** the operator paid 76c on D-001 against a
-55c cap, so the report must carry the cap in the first line; the board's thin books move 20 points
-between reads minutes apart; a projection band built from actual measurements (not padded) predicted
-the token outcome correctly; the settlement source is read from the contract before the thesis is
-written (R13); a finalized market needs its own read path tested, not assumed to behave like a live
-one; and a trend from last week is not this week's data — check the live print (R14 in the same
-spirit) before ever assuming a market is mispriced, the way today's diesel check did.
+**Lessons so far (n=2 settled, both wins; n=3 graded no-pick):** the operator paid 76¢ on D-001
+against a 55¢ cap, so the report must carry the cap in the first line; the board's thin books move
+20 points between reads minutes apart; a projection band built from actual measurements (not
+padded) predicted the token outcome correctly; the settlement source is read from the contract
+before the thesis is written (R13); a finalized market needs its own read path tested (fixed this
+session); a trend from last week is not this week's data — check the live print before assuming a
+market is mispriced; and when every named source is unreachable, Kalshi's own `result` field is a
+legitimate single source to grade on, not a fallback to apologize for — it's the thing the contract
+actually resolves against.
