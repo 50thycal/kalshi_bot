@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-catchup-0924j","sql":"select strategy, market_ticker, status, side, to_char(created_at,'MM-DD HH24:MI:SS') created from live_orders where strategy = 'live' order by created_at desc limit 10"}
+{"type":"noop"}
