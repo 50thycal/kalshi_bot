@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-catchup-0924i","sql":"select distinct strategy, market_ticker, status, to_char(created_at,'MM-DD HH24:MI:SS') created from live_orders where strategy = 'live' order by created_at desc limit 10"}
+{"type":"script","name":"kalshi_desk_board","args":["--event","KXTOKENUSE-26SEP21"],"id":"desk-c2-tokev","actor":"claude-desk","purpose":"token market final settlement check 2026-09-24"}
