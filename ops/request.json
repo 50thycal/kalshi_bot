@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"incident","service":"main","window_minutes":15,"id":"lo-inc-1"}
