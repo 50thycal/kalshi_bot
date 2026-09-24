@@ -1,1 +1,1 @@
-{"type":"db","id":"lo-db-8","sql":"SELECT component, to_char(created_at,'HH24:MI:SS') at FROM system_events WHERE created_at > now()-interval '45 min' AND (component IN ('mmsell_scan') OR level IN ('ERROR','CRITICAL')) ORDER BY created_at"}
+{"type":"logs","service":"main","limit":800,"id":"lo-logs-4"}
