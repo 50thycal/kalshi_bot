@@ -1,1 +1,1 @@
-{"type":"db","id":"lo-db-4","sql":"SELECT 'bot_run' k, to_char(max(finished_at),'MM-DD HH24:MI:SS') last, count(*) FILTER (WHERE started_at > now() - interval '15 min') n15 FROM bot_runs UNION ALL SELECT component, to_char(max(created_at),'MM-DD HH24:MI:SS'), count(*) FILTER (WHERE created_at > now() - interval '15 min') FROM system_events WHERE component IN ('mmsell_scan','mmsell_quote_parity') GROUP BY component"}
+{"type":"logs","service":"main","limit":400,"id":"lo-logs-2"}
