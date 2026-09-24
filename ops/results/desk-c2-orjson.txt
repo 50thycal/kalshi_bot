@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=script  id=desk-c2-orjson
-# actor=claude-desk  purpose=final token week tally 2026-09-24
-# code e81faf472b6f336ffe56cda87d32c6deeda4a40f · started 2026-09-24T03:10:13Z
-# desk_fetch https://openrouter.ai/api/frontend/v1/rankings/market-share
-# HTTP 200 · application/json · 13417 bytes
-# 1 window(s) around '2026-09-14'
----
- 18536802128948,     "others": 11320459578142,     "tencent": 18672750568930,     "xiaomi": 2623468233546,     "z-ai": 17977716607707    }   },   {    "x": "2026-09-07",    "ys": {     "anthropic": 4826722978852,     "deepseek": 24257683335788,     "google": 7484129162783,     "meta": 2412911836917,     "nvidia": 4801749632353,     "openai": 23953076616364,     "others": 14070304422969,     "tencent": 20624550078250,     "xiaomi": 7994078909370,     "z-ai": 16337815070537    }   },   {    "x": "2026-09-14",    "ys": {     "anthropic": 4636736592673,     "deepseek": 33074488904425,     "google": 6921100715668,     "meta": 2451238012783,     "nvidia": 5600916411883,     "openai": 16886183981309,     "others": 15713986243142,     "tencent": 17307764687800,     "xiaomi": 7337446346326,     "z-ai": 18965408083068    }   },   {    "x": "2026-09-21",    "ys": {     "anthropic": 2354714824041,     "deepseek": 14787788829530,     "google": 3316923402988,     "nvidia": 2442157216843,     "openai": 7912640
