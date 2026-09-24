@@ -321,6 +321,8 @@ def detail(args) -> int:
     print(f"  category   {row['category']}   series {row['series']}   event {row['event']}")
     htc_s = "-" if row["htc"] is None else f"{row['htc']:.1f}h"
     print(f"  status     {row['status']}   close {row['close']}   ({htc_s})")
+    if mk.get("result"):
+        print(f"  result     {mk['result']}")
     print(f"  expiration {mk.get('expiration_time') or '-'}   strike {row['strike_type'] or '-'} "
           f"floor={mk.get('floor_strike')} cap={mk.get('cap_strike')}")
     print(f"  yes bid/ask {_fmt_c(row['yes_bid'])}/{_fmt_c(row['yes_ask'])}   "
@@ -329,10 +331,16 @@ def detail(args) -> int:
     print(f"  volume {row['vol']}   vol24 {row['vol24']}   open interest {row['oi']}   "
           f"liquidity {mk.get('liquidity') or mk.get('liquidity_dollars') or '-'}")
     for side, ask in (("YES", row["yes_ask"]), ("NO", row["no_ask"])):
-        if ask:
-            be = breakeven_win_pct(ask)
+        be = breakeven_win_pct(ask) if ask else None
+        if ask and be is not None:
             print(f"  buy {side:<3} @ {ask:3d}c  taker fee {taker_fee_cents(ask):.0f}c  "
                   f"break-even win {be:.1f}%   (maker at bid: fee ~0)")
+        elif ask:
+            # ask==100c (an empty derived book on a closed/expired market): no live edge to
+            # quote. breakeven_win_pct(100) is None by design (desk-board-3) — printing the
+            # crash-prone line here is wrong, not just fragile: a 100c ask is never a real
+            # taker fill.
+            print(f"  {side:<3} ask is 100c (no live book) — market is closed/expired, not tradeable")
     print("\n  RULES (primary):")
     print("   ", (mk.get("rules_primary") or "-").strip().replace("\n", "\n    "))
     if mk.get("rules_secondary"):
