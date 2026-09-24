@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "de5efeb7d35136accbd4794ebcb857dfbd585e5f",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-24T22:40:28Z",
+  "id": "limm-postdeploy-1",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/limm-postdeploy-1.receipt.json",
+  "result_file": "ops/results/limm-postdeploy-1.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/36068722734",
+  "service": null,
+  "started_at": "2026-09-24T22:40:24Z",
+  "targets": [],
+  "type": "db"
+}
