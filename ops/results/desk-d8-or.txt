@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=script  id=desk-d8-or
-# actor=claude-desk  purpose=token pick window 2026-09-20 20:00Z
-# code 6bfcdfb18af60b6c37738488a6cbeadd05e0085f · started 2026-09-20T20:01:12Z
-# desk_fetch https://openrouter.ai/api/frontend/v1/rankings/market-share
-# HTTP 200 · application/json · 13407 bytes
-# 1 window(s) around '2026-09-14'
----
- 18536802128948,     "others": 11320459578142,     "tencent": 18672750568930,     "xiaomi": 2623468233546,     "z-ai": 17977716607707    }   },   {    "x": "2026-09-07",    "ys": {     "anthropic": 4826722978852,     "deepseek": 24257683335788,     "google": 7484129162783,     "meta": 2412911836917,     "nvidia": 4801749632353,     "openai": 23953076616364,     "others": 14070304422969,     "tencent": 20624550078250,     "xiaomi": 7994078909370,     "z-ai": 16337815070537    }   },   {    "x": "2026-09-14",    "ys": {     "anthropic": 4560189810731,     "deepseek": 32348291111797,     "google": 6778910720404,     "meta": 2398312259345,     "nvidia": 5437385295951,     "openai": 16592502116215,     "others": 15370351766740,     "tencent": 17207378858356,     "xiaomi": 7222778584159,     "z-ai": 18296636474325    }   }  ] }
