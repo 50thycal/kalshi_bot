@@ -1,7 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-catchup-0924f
-# code e81faf472b6f336ffe56cda87d32c6deeda4a40f · started 2026-09-24T03:07:08Z
-at_utc  level  component  message
-------  -----  ---------  -------
-
-(0 rows)
