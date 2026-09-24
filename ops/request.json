@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-catchup-0924g","sql":"select 'balance_obs' as tbl, max(at) as latest from incentive_balance_observations union all select 'live_orders_limm', max(created_at) from live_orders where strategy ilike '%limm%' union all select 'live_orders_any', max(created_at) from live_orders union all select 'collector_evt', max(at) from incentive_collector_events"}
+{"type":"noop"}
