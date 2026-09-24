@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "e81faf472b6f336ffe56cda87d32c6deeda4a40f",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-24T03:07:48Z",
+  "id": "limm-catchup-0924g",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/limm-catchup-0924g.receipt.json",
+  "result_file": "ops/results/limm-catchup-0924g.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/35950144074",
+  "service": null,
+  "started_at": "2026-09-24T03:07:48Z",
+  "targets": [],
+  "type": "db"
+}
