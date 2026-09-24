@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-catchup-0924f","sql":"select to_char(created_at,'MM-DD HH24:MI:SS') at_utc, level, component, left(message,200) message from system_events where message ilike '%balance%' or message ilike '%limm%' or message ilike '%incentive%' or component ilike '%incentive%' order by created_at desc limit 20"}
+{"type":"noop"}
