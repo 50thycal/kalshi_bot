@@ -1,1 +1,1 @@
-{"type":"logs","service":"main","limit":800,"id":"lo-logs-4"}
+{"type":"db","id":"lo-db-9","sql":"SELECT left(message,40) m, to_char(date_trunc('day',created_at),'MM-DD') d, count(*) FROM system_events WHERE message LIKE '%ENTIRE configured universe%' AND created_at > now()-interval '10 days' GROUP BY 1,2 ORDER BY 2,1"}
