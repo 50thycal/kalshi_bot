@@ -1,1 +1,1 @@
-{"type":"script","name":"desk_fetch","args":["https://fred.stlouisfed.org/series/MORTGAGE30US","--find","2026-09","--window","400"],"id":"desk-20260924-fred2"}
+{"type":"script","name":"kalshi_desk_board","args":["--ticker","KX30YMORTW-26SEP24-T7.01"],"id":"desk-20260924-mort2"}
