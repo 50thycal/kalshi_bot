@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--ticker","KXDIESELD-26SEP25-T6.520"],"id":"desk-20260924-t1"}
+{"type":"script","name":"desk_fetch","args":["https://gasprices.aaa.com/","--find","Diesel","--window","300"],"id":"desk-20260924-aaa1"}
