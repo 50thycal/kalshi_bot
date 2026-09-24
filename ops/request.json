@@ -1,1 +1,1 @@
-{"type":"xos","command":"issue-command-show","args":["lo-live-cycle-crash-resolve5-20260924"],"id":"lo-iss-resolve-16"}
+{"type": "env", "set": {"EXPERIMENT_OS_ISSUE_COMMAND": "{\"command_id\": \"lo-live-cycle-crash-status3-20260924\", \"action\": \"STATUS\", \"actor\": \"claude-code\", \"actor_role\": \"LIVE_OPS\", \"schema_version\": 1, \"payload\": {\"issue\": \"XOS-000037\", \"status\": \"VALIDATING\", \"reason\": \"Fix deployed and PASSED validation already recorded; final hop before RESOLVE.\"}}"}, "id": "lo-iss-status3-1"}
