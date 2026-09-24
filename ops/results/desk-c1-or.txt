@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=script  id=desk-c1-or
-# actor=claude-desk  purpose=catchup grading token week 2026-09-24
-# code e81faf472b6f336ffe56cda87d32c6deeda4a40f · started 2026-09-24T03:05:51Z
-# desk_fetch https://openrouter.ai/rankings
-# HTTP 200 · text/html; charset=utf-8 · 2365176 bytes
-# 0 window(s) around '2026-09-14'
-(no hits — the page may be rendered client-side; try --raw or an API URL)
