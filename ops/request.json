@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"env","action":"set","values":{"LIQUIDITY_INCENTIVE_EXCLUDED_SERIES":"KXBIGGESTQUAKE"},"id":"limm-exclude-quake-1"}
