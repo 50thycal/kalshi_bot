@@ -1,1 +1,1 @@
-{"type":"db","id":"lo-db-5","sql":"SELECT 'bot_run' k, to_char(max(finished_at),'MM-DD HH24:MI:SS') last FROM bot_runs UNION ALL SELECT component, to_char(max(created_at),'MM-DD HH24:MI:SS') FROM system_events WHERE component IN ('mmsell_scan') OR level IN ('ERROR','CRITICAL') AND created_at > now() - interval '20 min' GROUP BY component"}
+{"type":"noop"}
