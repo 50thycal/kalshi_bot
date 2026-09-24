@@ -1,1 +1,1 @@
-{"type":"script","name":"desk_fetch","args":["https://openrouter.ai/api/frontend/v1/rankings/market-share","--find","2026-09-14","--window","500","--hits","1"],"id":"desk-c2-orjson","actor":"claude-desk","purpose":"final token week tally 2026-09-24"}
+{"type":"db","id":"limm-catchup-0924i","sql":"select distinct strategy, market_ticker, status, to_char(created_at,'MM-DD HH24:MI:SS') created from live_orders where strategy = 'live' order by created_at desc limit 10"}
