@@ -125,11 +125,14 @@ refreshed. A number written from memory is a number nobody can check, so none ar
 | class / series | what the desk verified | source, date |
 |---|---|---|
 | `KXDIESELW` / `KXDIESELD` (**one print, not two**) | Both series carry the identical rule — *"If the Diesel Price on September 21, 2026 is above $X"* — the same close and the same expiration, and their ladders overlay strike for strike. `KXDIESELW`'s "this week" title is a coarse-strike ladder on the **daily** print, **not** an EIA weekly average, and neither contract names a source. The AAA daily national average is the readable proxy: 6.23 (Mon 9/14) → 6.4866 (Sat 9/19) → **6.5050 (Sun 9/20, record)**, a decelerating climb (+3.8¢, then +1.84¢). The EIA-over-AAA basis the desk first recorded (+5.5–6.7¢) is real between those two published series but is **not** what this contract pays on. | `--ticker` rules text + `desk_fetch gasprices.aaa.com`, 2026-09-20 |
+| `KXDIESELW-26SEP21-T6.52` **graded 2026-09-24**: EIA's own weekly on-highway diesel print for the week of Mon 9/21 was **$6.529**; AAA's Sun 9/20 daily average was **$6.5050**. Both clear the $6.52 strike, so `D-2026-09-19-001` settled **YES** — a win, but on a thesis whose mechanism was still wrong (§1a): the entry at 76¢ was a real overpay against a market that was correctly pricing this near a coin flip, independent of how it happened to land. |
 | `KX30YMORTW` (Freddie Mac PMMS, Thursday) | PMMS is the Thu–Wed window mean of application rates, and it has matched the daily Optimal Blue / Mortgage Daily 30-yr series to **within 1bp**: 9/17 print 6.95 vs mean(9/10 6.88, 9/11 6.95, 9/14–15 6.95, 9/16 7.05) = 6.96. MND's top-tier index runs ~15–25bp above PMMS in a rising week (7.19–7.24 on 9/16–9/18 vs 6.95). So by Friday two of the five window days are known, and the market ladder can be checked against them. | web search (mortgagedaily.com, mortgagenewsdaily.com, freddiemac.com), 2026-09-19 |
 | `KXSPRLVL` (EIA WPSR Table 1, Wednesday) | Weekly SPR changes during the 172M-barrel IEA release: −3.4/wk (8/14→8/28), −1.2 (9/4), −0.4 (9/11); draws are decelerating as the release winds down. The 1M-barrel strike spacing is the same size as the weekly noise, so a strike sits inside the noise unless DOE's delivery schedule is known. | web search (EIA WPSR summaries), 2026-09-19 |
 | `KXSOFRD` (NY Fed SOFR, next business day 08:00 ET) | Markets close before the print. The day after the 9/16 hike SOFR set at 3.85 (IORB−5). The Friday ladder's yes asks summed to 177¢ across seven bins: nothing is takeable, and the desk has no read on day-two drift. | ops event view + web search, 2026-09-19 |
 | `KXTOKENUSE` (OpenRouter weekly tokens) | Week totals: 126.2T (8/31), 126.8T (9/07). **Week of 9/14 measured five times**: 96.45T (Sat 04:08Z), 103.27T (13:43Z), 108.99T (20:31Z), 121.17T (Sun 13:39Z), **126.21T (Sun 20:00Z)** → paces 0.711, 0.841, 0.711, **0.794** T/h. The pace is far more stable than first assumed and the weekend is not slower than the weekday. **Lag is under an hour**: 96.45T over 124.1h elapsed averages 0.777 T/h against an instantaneous ~0.78, so time-to-close is the right multiplier. Final projection 128.6–130.2T. **The market repriced to match between Sat afternoon and Sun evening** (>128 went 11/58 → 93/98), so this series' edge lives in the *early* read, not the late one — the opposite of what the desk assumed on Saturday. | `desk_fetch` market-share endpoint ×5 + two ladder reads, 2026-09-19/20 |
+| `KXTOKENUSE` **graded 2026-09-24**: the week of 9/14 finalized at **128.895T** (summed from the market-share endpoint's now-closed 2026-09-14 bucket). The desk's pre-registered projection from Sunday evening (`D-2026-09-20-NP2`) was **128.6–130.2T** — the actual figure landed just inside the low end. The market's implied odds also called it right: >128 closed 98/98 (true, by 0.895T) and >130 closed near 0 (false). This is the first live test of the projection method and it held. The Saturday counterfactual (`D-2026-09-19-NP1`) is also confirmed: the >128 strike the desk passed on at 58¢ did clear, and the postmortem's lesson about a padded uncertainty band stands. |
 | `KX*SHARE` (OpenRouter request share by author) | Settlement metric unreadable mid-week; token share is a proxy the market already tracks (OpenAI tokens 18.9%→13.7% week over week and the market moved from 23.6 to ~17.5). No desk edge without the request series. | §6a, 2026-09-19 |
+| `KXDIESELD` daily ladder, 2026-09-24 check | AAA national diesel average has **turned down**, not up: $6.5276 (record, Tue 9/22) → $6.5217 (Wed 9/23) → $6.5141 (Thu 9/24), roughly −0.6 to −0.8¢/day. The T6.520 strike for Fri 9/25 traded ~9% implied YES, which lines up with a continued small decline landing just under $6.52 — the market looks efficient here, not mispriced. Worth recording because a naive trend read from the prior week (which was climbing) would have pointed the wrong way; checking the live print before trading averted a second R13-style error. | `desk_fetch gasprices.aaa.com` + `--ticker`, 2026-09-24 |
 
 ## 8. Decisions this model needed from the operator (opened and answered 2026-09-19)
 
@@ -155,42 +158,56 @@ under the wider policy; 5 defaults to the daily line plus the weekly table.
 
 ## 9. Handoff — where the desk stands (rewrite this at the close of every session)
 
-**As of 2026-09-20 ~20:15 UTC (Sun).** Role playbook: `.claude/sessions/discretionary-desk.md`.
+**As of 2026-09-24 ~13:41 UTC (Thu).** Role playbook: `.claude/sessions/discretionary-desk.md`.
 Any session — or any model that can read this repo and push to GitHub — continues from this
 section, the ledger and the postmortems; nothing else was needed to get here.
 
-**Open positions ($2 at risk, both placed by the operator in the app):**
+**PR #460** (the ~03:20 UTC catch-up: D-001 graded, token projection graded, the finalized-market
+crash fix) is still open as of this handoff — CI green, `mergeable_state: clean`, no review
+threads, waiting only on the operator's merge (solo mode). A background check-in loop is watching
+it; nothing further to do there until it merges.
 
-| pick | market | side / fill | settles | grade with |
+**Open position ($1 at risk):**
+
+| pick | market | side / fill | settles | status |
 |---|---|---|---|---|
-| D-2026-09-19-001 | `KXDIESELW-26SEP21-T6.52` | YES @ ~76c | **Mon 2026-09-21**, close 05:59Z | The single "Diesel Price on September 21" the contract names, with **no source stated** (R13, `POSTMORTEMS.md` §1a). AAA's daily national average is the readable proxy and read 6.5050 on Sun 9/20; the strike needs +1.5¢ overnight. Market held 46/53 all Sunday, i.e. a coin flip, against a 0.80 pre-registered confidence that is now known to rest on a wrong mechanism. Grade it on the print, then grade the confidence against it. |
-| D-2026-09-19-002 | `KX30YMORTW-26SEP24-T7.01` (Freddie Mac PMMS > 7.01%) | YES @ ~43c | Thu 2026-09-24 12:00 ET | Freddie Mac PMMS first published value (`freddiemac.com/pmms`, or web search). Window Thu 9/17–Wed 9/23; 9/17 = 7.01 and 9/18 = 7.05 on the Optimal Blue/Mortgage Daily series that tracks PMMS within 1bp. |
+| D-2026-09-19-002 | `KX30YMORTW-26SEP24-T7.01` (Freddie Mac PMMS > 7.01%) | YES @ ~43c | **today**, Thu 2026-09-24 12:00 ET (16:00Z) | **Still not gradeable as of 13:41 UTC** — PMMS publishes at close, ~2.3h out. Market trades 50/54 as of 13:36Z (implied ~50–54%) against the desk's 0.65 pre-registered confidence. Grade with Freddie Mac's first published value; window is Thu 9/17–Wed 9/23. A reminder is already scheduled for ~16:20 UTC today with the full grading steps embedded — do not duplicate it if it's still armed. |
 
-**Windows the last session identified but has not traded:**
+**Settled since the last handoff:** nothing new — D-001 and the token projection were already
+graded before 03:20 UTC; see §7.
 
-- `KXTOKENUSE-26SEP21` **closed without a pick** (`D-2026-09-20-NP2`). The Sunday 20:00Z read put the week at
-  126.21T with 4h left, projecting 128.6–130.2T, and every strike was within a few points of that estimate
-  (>126 98/99, >128 93/98, >130 3/14). Settles Mon 10:00 ET. **Carry forward**: for this series the edge is in the
-  Saturday read, not the Sunday one — see R14 and `POSTMORTEMS.md` §1a, where passing on Saturday's 58¢ offer is
-  recorded as an under-confidence failure. Next week's ladder opens Monday; the first read should be early Saturday.
+**Today's daily routine (13:34 UTC) — zero-pick day, logged as `D-2026-09-24-NP1`:** branch
+restarted from `origin/claude/confident-goldberg-83u3q` (clean merge, no conflicts), then a 72h/
+500-vol board scan (75 markets kept: mostly YouTube ranking noise, ActBlue fundraiser guesses,
+and the diesel/mortgage/EV series already known). Investigated the one candidate that looked live
+— `KXDIESELD-26SEP25-T6.520` ("Diesel prices tomorrow," ~9% implied YES — a new print, Sep 25, so
+R10 doesn't block it) — read its rules (still names no source, R13), then `desk_fetch`'d AAA's
+live page rather than trusting last week's trend: diesel has actually **turned down** two days
+running ($6.5276 → $6.5217 → $6.5141), which lines up with the market's own ~9% pricing. No edge;
+recorded as a new §7 base-rate line. A Climate/Weather category pass at a 50-vol floor came back
+empty — nothing in that space inside 72h. Nothing else on the board named a source readable
+within its own close window. Zero picks; a valid day.
+
+**Standing windows:**
+
+- `KXTOKENUSE` (OpenRouter weekly tokens): next week's ladder opens Monday. Read early Saturday —
+  this series' edge is in the early read, not Sunday evening (R14).
 - `KX*SHARE` (OpenRouter request share): still no mid-week read of the settlement metric. Pass.
 
-**Scheduled check-ins are bound to the session that created them** (Claude Code routines):
-"Desk: daily board read and picks" (13:30 UTC daily), "Desk: Saturday OpenRouter pace sample"
-(Sat 20:30 UTC), "Desk: Sunday-evening OpenRouter token pick" (Sun 20:00 UTC). A new session
-re-creates what it needs (playbook, Startup Routine step 3); the operator can also run any step
-by asking.
+**Scheduled check-ins bound to this session** (Claude Code routines/triggers, not durable state —
+a new session re-creates what it needs, playbook Startup Routine step 3):
+"Desk: daily board read and picks" (13:30 UTC daily, just fired and re-armed for tomorrow); a
+PR #460 re-check loop (~1-2h cadence until merged); the D-002 grading reminder (~16:20 UTC today).
 
 **Sandbox limits still in force:** Kalshi, EIA, Freddie Mac, NY Fed, Mortgage News Daily and most
 data sites are blocked from the sandbox; use the ops runner (`kalshi_desk_board`, `desk_fetch`) and
-web search. The operator approved widening the environment's network allowlist (DEC-017); until
-that is done, budget minutes per read.
+web search. The operator approved widening the environment's network allowlist (DEC-017); still not
+done as of this session.
 
-**Lessons so far (n=0 settled — nothing is a pattern yet):** the operator paid 76c on D-001
-against a 55c cap, so the report must carry the cap in the first line; the board's thin books move
-20 points between two reads minutes apart; a projection band that straddles three strikes is a
-no-pick, logged as one, not a reason to take the nearest strike; and — the one that cost real money
-— **the settlement source is read from the contract before the thesis is written, never inferred
-from the market's title** (R13). Four dominance inversions have now been found on thin ladders and
-none was crossable after the spread, which is R4 accumulating rather than an anomaly.
-
+**Lessons so far (n=1 settled, win; n=2 graded no-pick):** the operator paid 76c on D-001 against a
+55c cap, so the report must carry the cap in the first line; the board's thin books move 20 points
+between reads minutes apart; a projection band built from actual measurements (not padded) predicted
+the token outcome correctly; the settlement source is read from the contract before the thesis is
+written (R13); a finalized market needs its own read path tested, not assumed to behave like a live
+one; and a trend from last week is not this week's data — check the live print (R14 in the same
+spirit) before ever assuming a market is mispriced, the way today's diesel check did.

@@ -126,6 +126,33 @@ def test_format_row_survives_a_decided_market():
     assert board._fmt_c(2.0) == "  2" and board._fmt_c(None) == "  -"
 
 
+def test_detail_survives_a_finalized_market_with_no_live_book(monkeypatch):
+    # A finalized/expired market comes back with an empty book: both asks fall back to
+    # 100c, and breakeven_win_pct(100) is None by design. The detail view crashed trying
+    # to format that None as a percentage (desk-board-3). It must not crash, and it must
+    # say the market's settlement result when Kalshi reports one.
+    market = _market(
+        status="finalized", result="yes", yes_bid=0, yes_ask=None, no_bid=0, no_ask=None,
+        last_price=43, rules_primary="If X then Yes.",
+    )
+
+    def fake_get(path, params=None):
+        if path.startswith("/markets/"):
+            return {"market": market}
+        if path.startswith("/events/"):
+            return {"event": {"category": "Economics", "title": "Test event"}}
+        return {}
+
+    monkeypatch.setattr(board, "_get", fake_get)
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        rc = board.main(["--ticker", "KXTEST-26SEP20-T1"])
+    assert rc == 0
+    text = out.getvalue()
+    assert "result     yes" in text
+    assert "no live book" in text
+
+
 def test_book_levels_sort_best_first_and_tolerate_dollar_strings():
     book = {"yes": [[40, 10], [42, 5], ["0.41", "7"]], "no": [[56, 3]]}
     assert board._book_levels(book, "yes", 6) == [(42, 5), (41, 7), (40, 10)]
