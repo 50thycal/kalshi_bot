@@ -153,8 +153,9 @@ def test_a_book_that_cannot_be_fetched_is_an_outcome_not_an_exception(live_db, s
 
 
 def test_it_places_the_cheapest_downside_first_and_stops_at_the_open_order_cap(live_db, settings):
-    # Three candidates, cheap sides at 5c, 9c and 12c. The cap is 3, so all three place, in
-    # order — but the ORDER is the property under test, so make the cap bind at two.
+    # Three candidates, cheap sides at 5c, 9c and 12c. The cap is MAX_OPEN_ORDERS (5), so all
+    # three would place, in order — but the ORDER is the property under test, so make the cap
+    # bind at two by pre-occupying every other slot.
     books = {
         "KXTEST-A": _book([(12, 500)], [(80, 500)]),
         "KXTEST-B": _book([(5, 500)], [(90, 500)]),
@@ -166,10 +167,12 @@ def test_it_places_the_cheapest_downside_first_and_stops_at_the_open_order_cap(l
     with db.session_scope() as s:
         for t in books:
             _program(s, t)
-        # Two slots: one order already resting under this tag.
-        s.add(m.LiveOrder(market_ticker="KXOTHER-Z", strategy=limm.LIVE_TAG, side="yes",
-                          action="buy", limit_price=10, quantity=1, status="resting",
-                          created_at=NOW))
+        # limm.MAX_OPEN_ORDERS - 2 slots pre-occupied by resting orders under this tag, leaving
+        # exactly two free — however high the cap, the binding property under test is unchanged.
+        for i in range(limm.MAX_OPEN_ORDERS - 2):
+            s.add(m.LiveOrder(market_ticker=f"KXOTHER-{i}", strategy=limm.LIVE_TAG, side="yes",
+                              action="buy", limit_price=10, quantity=1, status="resting",
+                              created_at=NOW))
         s.flush()
         out = run.IncentiveLiveRunner(client, settings).cycle(s, ex, {"cash_balance": 500.0},
                                                               now=NOW)

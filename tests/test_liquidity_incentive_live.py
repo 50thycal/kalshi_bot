@@ -110,8 +110,12 @@ def test_ranking_prefers_cheapest_then_soonest_payout():
 
 def test_caps_are_the_ones_the_risk_envelope_will_name():
     # A later test asserts the XOS envelope equals these; pin them here so a silent edit fails.
+    # MAX_OPEN_ORDERS raised 3 -> 5 on 2026-09-24, direct operator decision (thesis §9.34) — see
+    # the comment on the constant in liquidity_incentive/live.py for why this bypassed the
+    # formal re-arm path, and test_liquidity_incentive_xos_package.py::
+    # test_the_operator_guardrails_are_not_exceeded for the new authorized ceiling.
     assert (lv.MAX_CONTRACTS_PER_ORDER, lv.MAX_ORDER_DOLLARS, lv.MAX_OPEN_ORDERS,
-            lv.MAX_STRATEGY_EXPOSURE_USD, lv.MAX_PRICE_CENTS) == (1, 1.00, 3, 10.00, 25)
+            lv.MAX_STRATEGY_EXPOSURE_USD, lv.MAX_PRICE_CENTS) == (1, 1.00, 5, 10.00, 25)
 
 
 class TestTheUniverseRule:

@@ -2186,3 +2186,72 @@ questions, all blocked behind one exchange settlement.
 2026-09-20T17:54:29Z did not recur and is read as a one-cent rounding artifact.
 
 **Lifetime liquidity rewards: $0.** Still none ever observed.
+
+### 9.34 The order cap was raised 3 -> 5 outside the formal re-arm path, by direct operator decision (2026-09-24)
+
+Two changes shipped together, in response to the §9.33 finding (the settlement-lag coupling)
+and its live consequence: Alimm1 sat blocked for a week, holding three unsettled
+KXBIGGESTQUAKE positions against `MAX_OPEN_ORDERS = 3`.
+
+**Change 1 — quake markets excluded from the universe.** `LIQUIDITY_INCENTIVE_EXCLUDED_SERIES`
+was set to `KXBIGGESTQUAKE` via the ops env channel. No code change; the exclusion mechanism
+(`live.build_live_quote`'s `excluded_series` gate) already existed. This stops the book
+re-entering the series that trapped it, going forward. Verified via ops: before `(unset)`,
+after `KXBIGGESTQUAKE`, redeploy triggered.
+
+**Change 2 — `MAX_OPEN_ORDERS` raised 3 -> 5.** This one is NOT a clean change, and the record
+should say so plainly.
+
+`MAX_OPEN_ORDERS` is a pre-registered value: `tests/test_liquidity_incentive_xos_package.py`
+carried the literal docstring *"the operator authorized: under $10 total, at most 3 at a time,
+$1 per trade"*, and the number is embedded in the `RISK_ENVELOPE` dict that was frozen into
+`liquidity-incentive-mm`'s deployment `config_json` at arm time (2026-09-17). The intended path
+to change a registered live risk parameter is `service.arm_live_canary` on a fresh version. It
+does not apply here: the lifecycle model (`docs/EXPERIMENT_OPERATING_SYSTEM_SPEC.md` §7) has NO
+transition from `LIVE_CANARY` back to `PAPER` — "No silent rollback: a PAPER experiment that
+changes its scientific rules does not go back to PROBE on the same version; that is a new
+version or successor," and `LIVE_CANARY` is stricter still: its only forward moves are
+`PRODUCTION` or terminal `RETIRED`. The formal path to a higher cap is retiring
+`liquidity-incentive-mm` **permanently** (RETIRED is terminal — "it never reopens the old
+record") and walking a successor experiment through `IDEA -> PROBE -> PAPER -> LIVE_CANARY`
+from scratch, which means days of fresh gate evidence before it could place an order again —
+this is the same wall §9.30 found for the universe-rule epoch, in a stricter form.
+
+The operator was told this plainly and chose the smaller, honest break instead: edit
+`MAX_OPEN_ORDERS` directly (`kalshi_bot/liquidity_incentive/live.py`), from 3 to 5, and record
+the divergence rather than pretend to reconcile it. Explicit instruction: *"why not just raise
+the cap on the existing? I approve if it 'breaks' the experiment, we just need to make that
+note."* This is that note.
+
+**What actually breaks, checked before shipping, not asserted:** `runtime_config_check`
+(`experiment_os/enforcement.py`) is the live mechanism that could have objected — it compares
+each live deployment's `config_json["material"]` against running `Settings` and raises
+`EXPERIMENT_CONFIG_DRIFT` on a mismatch, which can block gate evaluation and, under `STRICT`,
+block trading. It does **not** reach `risk_envelope`: this book declares `book_params=None`
+(the LIMM package docstring: "this book's parameters are CODE constants, not an `mmsell_variants`
+spec"), so the material comparison is None==None regardless of `MAX_OPEN_ORDERS`. Confirmed by
+reading `material_config()` and `runtime_config_check` before editing anything — this was not
+assumed. **Nothing live-blocking trips.** What breaks is narrower and permanent: the `risk_json`
+frozen into `limm-smoke-live-1`'s `config_json` at 2026-09-17 still reads `max_open_orders: 3`;
+the running code now enforces 5; and `test_the_registered_envelope_equals_the_running_constants`
+only checks the in-repo `RISK_ENVELOPE` dict against the in-repo constant (both move together on
+an edit) — it was never able to catch drift against the database, and does not now either. The
+deployment's historical record and the running book are deliberately, permanently out of sync
+from 2026-09-24 onward. Anyone reading `config_json` off that deployment row later is reading
+the ORIGINAL envelope, not the operating one — this paragraph is the pointer back.
+
+**What was NOT reconsidered:** the exposure ceiling. `MAX_OPEN_ORDERS * MAX_ORDER_DOLLARS <=
+MAX_STRATEGY_EXPOSURE_USD` still holds (5 * $1.00 = $5.00 <= $10.00), so the operator's original
+$10-total authorization is not exceeded by this change — only the count-at-once number moved.
+
+**Tests updated to match, not to explain away:** the pinned-tuple test in
+`test_liquidity_incentive_live.py`, the ceiling test's assertion and docstring in
+`test_liquidity_incentive_xos_package.py`, and one runner-test fixture whose slot arithmetic
+assumed a cap of 3 (rewritten to derive from `MAX_OPEN_ORDERS` so it no longer hardcodes a
+number the constant now contradicts). Full suite and `ruff check .` clean.
+
+Unchanged: `MAX_STRATEGY_EXPOSURE_USD` ($10), `MAX_ORDER_DOLLARS` ($1), `MAX_CONTRACTS_PER_ORDER`
+(1), `MAX_PRICE_CENTS` (25) — this was a slots change only.
+
+Still true from §9.33: the three existing stuck quake positions are left alone to settle
+naturally, at the operator's explicit instruction — not force-closed, not part of what moved.
