@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"logs","service":"main","limit":600,"id":"lo-logs-3"}
