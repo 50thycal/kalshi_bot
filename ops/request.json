@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-ci-1731c","sql":"select created_at, side, action, status, limit_price, quantity, left(client_order_id,30) coid from live_orders where strategy='Alimm1' and market_ticker='KXTRUMPENDORSEMENTS-26SEP25-A25' order by created_at"}
+{"type":"logs","id":"limm-ci-1731d","service":"main","filter":"incentive","lines":60}
