@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-pnl-1","sql":"select strategy, status, count(*) n, round(coalesce(sum(quantity*limit_price)::numeric,0)/100.0,2) as committed_dollars from live_orders where strategy='Alimm1' group by strategy, status order by status"}
