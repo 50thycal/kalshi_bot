@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-ci-2139b","sql":"select filled_at, side, action, price, quantity, fee from fills where market_ticker='KXAAAGASDCA-26SEP26-6.3150' order by filled_at"}
+{"type":"noop"}
