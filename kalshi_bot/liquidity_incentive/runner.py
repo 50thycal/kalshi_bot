@@ -156,7 +156,7 @@ class IncentiveLiveRunner:
             return summary
 
         excluded = self.excluded_series()
-        candidates = self._candidate_programs(session, now=now)
+        candidates = self._candidate_programs(session, now=now, excluded_series=excluded)
         summary["considered"] = len(candidates)
         max_fetch = max(1, int(getattr(self.settings,
                                        "liquidity_incentive_live_max_book_fetches", 8)))
@@ -410,17 +410,25 @@ class IncentiveLiveRunner:
                 logger.exception("incentive reward ledger: could not record its own failure")
             return None
 
-    def _candidate_programs(self, session, *, now: datetime) -> list:
+    def _candidate_programs(self, session, *, now: datetime,
+                            excluded_series: frozenset[str] = frozenset()) -> list:
         """Current liquidity programs worth fetching a book for, SOONEST-CLOSING first.
 
         The close-time window is applied here as well as in `live.build_pair_quote`, so the
         bounded book fetches are never spent on a market the decision would refuse anyway.
         Soonest-closing first because capital that resolves sooner is capital redeployed
-        sooner (thesis §9.37)."""
+        sooner (thesis §9.37).
+
+        Excluded series are dropped HERE, before any book is fetched. Filtering them only in
+        the decision layer spent the whole bounded fetch budget on markets that could never be
+        quoted: on 2026-09-25 the eight soonest-closing programmes were all in excluded series,
+        so every cycle fetched the same eight, refused all eight, and placed nothing (§9.39)."""
         rows = progs.current_programs(session, now=now, liquidity_only=True)
         out = []
         for row in rows:
             if row.market_status and row.market_status not in ("active", "open"):
+                continue
+            if (row.market_ticker or "").split("-", 1)[0].upper() in excluded_series:
                 continue
             end = _aware(row.end_date)
             if end is None:
