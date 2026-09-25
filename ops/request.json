@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-ci-1731","sql":"select created_at, ticker, side, action, status, price_cents, count, filled_count, left(client_order_id,30) coid from live_orders where strategy='Alimm1' and created_at > now() - interval '3 hours' order by created_at desc limit 30"}
+{"type":"db","id":"limm-ci-1731b","sql":"select created_at, market_ticker, side, action, status, limit_price, quantity, left(client_order_id,30) coid, left(cancel_reason,40) cr from live_orders where strategy='Alimm1' and created_at > now() - interval '3 hours' order by created_at desc limit 30"}
