@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--hours","48","--min-volume","50","--search","ERCOT","--top","30"],"id":"desk-20260925-ercot1"}
+{"type":"script","name":"kalshi_desk_board","args":["--ticker","KXTXERCOTPEAKD-26SEP26-T82000"],"id":"desk-20260925-ercot2"}
