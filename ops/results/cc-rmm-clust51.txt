@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=cc-rmm-clust51
-# code d3a09029f7b03f0d57ab46361ea0e6e743ccedc4 · started 2026-09-25T03:21:00Z
-contest                        legs                         r1  r2  entered   
------------------------------  ---------------------------  --  --  ----------
-KXMLBSPREAD-26SEP241805MILPHI  MIL4:Rmmsell1 MIL4:Rmmsell2  1   1   2026-09-24
-KXMLBSPREAD-26SEP241905TBNYY   NYY2:Rmmsell1 NYY2:Rmmsell2  1   1   2026-09-25
-
-(2 rows)
