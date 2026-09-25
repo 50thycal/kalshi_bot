@@ -109,9 +109,13 @@ def _now() -> datetime:
 #:     None below rather than as a spec the runtime does not carry. Registering a spec the
 #:     runtime cannot produce would put this book permanently in EXPERIMENT_CONFIG_DRIFT.
 #:
-#: Sizing arithmetic: the book rests ONE contract on the cheaper side at a price capped at 25c,
-#: so a clip costs at most $0.25 and the entire downside of a filled clip is that $0.25. The
-#: per-order dollar cap is $1.00 and binds only if the price cap is ever raised.
+#: Sizing arithmetic, updated 2026-09-25 (thesis §9.36): the book rests up to
+#: `MAX_CONTRACTS_PER_ORDER` contracts on the cheaper side at a price capped at 25c. The DOLLAR
+#: cap binds in every case this book actually trades (a 25c clip already hits it at 80
+#: contracts, well under the 500-contract ceiling), so the entire downside of a filled clip is
+#: `MAX_ORDER_DOLLARS`, not the per-contract price. That is what `max_loss_per_clip_usd` now
+#: names — when this was a 1-contract book the two were the same number and the distinction
+#: didn't matter; raising size is exactly what makes it matter.
 RISK_ENVELOPE: dict = {
     "stage": "smoke_test_stage_1a",
     "question": "does one resting bid survive our own plumbing end to end",
@@ -120,7 +124,7 @@ RISK_ENVELOPE: dict = {
     "max_price_cents": limm.MAX_PRICE_CENTS,
     "max_open_orders": limm.MAX_OPEN_ORDERS,
     "max_book_exposure_usd": limm.MAX_STRATEGY_EXPOSURE_USD,
-    "max_loss_per_clip_usd": round(limm.MAX_PRICE_CENTS / 100.0, 2),
+    "max_loss_per_clip_usd": round(limm.MAX_ORDER_DOLLARS, 2),
     "sides_quoted": 1,
     "exit_policy": (
         "hold to settlement. NOT a setting: `LiveExecutor.manage_exits` skips this book's tags "

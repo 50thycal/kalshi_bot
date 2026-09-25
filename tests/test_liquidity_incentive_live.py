@@ -27,14 +27,18 @@ def test_picks_the_cheaper_side_and_rests_at_its_touch():
     q = _q()
     assert isinstance(q, lv.LiveQuote)
     assert q.side == lv.SIDE_NO and q.price_cents == 21      # no 21 is cheaper than yes 78
-    assert q.quantity == 1
-    assert q.collateral_usd == 0.21 and q.max_loss_usd == 0.21
+    # Quantity is whatever MAX_ORDER_DOLLARS buys at this price (thesis §9.36) — sized here to
+    # match the sizing formula itself, not a number that breaks every time the budget moves.
+    expected_qty = min(lv.MAX_CONTRACTS_PER_ORDER, int(lv.MAX_ORDER_DOLLARS * 100 // 21))
+    assert q.quantity == expected_qty
+    assert q.collateral_usd == q.max_loss_usd == pytest.approx(expected_qty * 0.21)
 
 
 def test_picks_yes_when_yes_is_the_cheap_side():
     q = _q(best_yes_bid=9, best_no_bid=90)
     assert isinstance(q, lv.LiveQuote) and q.side == lv.SIDE_YES and q.price_cents == 9
-    assert q.max_loss_usd == 0.09
+    expected_qty = min(lv.MAX_CONTRACTS_PER_ORDER, int(lv.MAX_ORDER_DOLLARS * 100 // 9))
+    assert q.max_loss_usd == pytest.approx(expected_qty * 0.09)
 
 
 def test_downside_cap_refuses_an_expensive_touch():
@@ -105,17 +109,21 @@ def test_ranking_prefers_cheapest_then_soonest_payout():
     ]
     ranked = lv.rank_candidates(cands)
     assert [c["market_ticker"] for c, _ in ranked] == ["B", "A"]   # C's cheapest touch is 39c
-    assert ranked[0][1].max_loss_usd == 0.05
+    expected_qty = min(lv.MAX_CONTRACTS_PER_ORDER, int(lv.MAX_ORDER_DOLLARS * 100 // 5))
+    assert ranked[0][1].max_loss_usd == pytest.approx(expected_qty * 0.05)
 
 
 def test_caps_are_the_ones_the_risk_envelope_will_name():
     # A later test asserts the XOS envelope equals these; pin them here so a silent edit fails.
-    # MAX_OPEN_ORDERS raised 3 -> 5 on 2026-09-24, direct operator decision (thesis §9.34) — see
-    # the comment on the constant in liquidity_incentive/live.py for why this bypassed the
-    # formal re-arm path, and test_liquidity_incentive_xos_package.py::
-    # test_the_operator_guardrails_are_not_exceeded for the new authorized ceiling.
+    # History: MAX_OPEN_ORDERS 3 -> 5 on 2026-09-24 (thesis §9.34). Then, on 2026-09-25 (thesis
+    # §9.36): MAX_CONTRACTS_PER_ORDER 1 -> 500, MAX_ORDER_DOLLARS 1.00 -> 20.00, MAX_OPEN_ORDERS
+    # 5 -> 2, MAX_STRATEGY_EXPOSURE_USD 10.00 -> 50.00 -- sized so a resting bid could reach the
+    # scoring floor on Kalshi's own Target Sizes. See the module comment on
+    # MAX_CONTRACTS_PER_ORDER in liquidity_incentive/live.py, and
+    # test_liquidity_incentive_xos_package.py::test_the_operator_guardrails_are_not_exceeded for
+    # the current authorized ceiling.
     assert (lv.MAX_CONTRACTS_PER_ORDER, lv.MAX_ORDER_DOLLARS, lv.MAX_OPEN_ORDERS,
-            lv.MAX_STRATEGY_EXPOSURE_USD, lv.MAX_PRICE_CENTS) == (1, 1.00, 5, 10.00, 25)
+            lv.MAX_STRATEGY_EXPOSURE_USD, lv.MAX_PRICE_CENTS) == (500, 20.00, 2, 50.00, 25)
 
 
 class TestTheUniverseRule:

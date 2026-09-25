@@ -187,9 +187,10 @@ def test_the_book_budget_bounds_the_cycle_even_with_slots_free(live_db, settings
     ex = _exec(settings, client)
     with db.session_scope() as s:
         _program(s, "KXTEST-A")
-        # $9.90 already committed: a 20c clip would take the book past its $10 ceiling.
+        # $35.00 already committed: a 20c clip (100 contracts @ 20c = $20.00, thesis §9.36's
+        # sizing formula) would take the book past its $50.00 ceiling.
         s.add(m.LiveOrder(market_ticker="KXOTHER-Z", strategy=limm.LIVE_TAG, side="yes",
-                          action="buy", limit_price=99, quantity=10, status="resting",
+                          action="buy", limit_price=35, quantity=100, status="resting",
                           created_at=NOW))
         s.flush()
         out = run.IncentiveLiveRunner(client, settings).cycle(s, ex, {"cash_balance": 500.0},
@@ -263,7 +264,8 @@ def test_every_placed_order_is_mirrored_to_the_twin(live_db, settings):
         # differently from live is not a twin.
         assert trades[0].market_ticker == "KXTEST-A"
         assert trades[0].side == limm.SIDE_YES and int(trades[0].assumed_price) == 20
-        assert int(trades[0].quantity) == 1
+        expected_qty = min(limm.MAX_CONTRACTS_PER_ORDER, int(limm.MAX_ORDER_DOLLARS * 100 // 20))
+        assert int(trades[0].quantity) == expected_qty
 
 
 # ------------------------------------------------------------------ genuine liquidity

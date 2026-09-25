@@ -118,7 +118,10 @@ def test_refuses_a_quote_above_the_registered_contract_cap(settings):
     _db(settings)
     _live_settings(settings)
     ex = _exec(settings)
-    bad = _quote(qty=limm.MAX_CONTRACTS_PER_ORDER + 1)
+    # A 1c price keeps collateral well under the strategy budget even at cap+1 contracts, so the
+    # size gate is the one that actually trips (thesis §9.36 — budget and count are now
+    # independent caps, not the same number).
+    bad = _quote(price=1, qty=limm.MAX_CONTRACTS_PER_ORDER + 1)
     assert _place(ex, settings, quote=bad) == "gate:size"
     assert ex.client.placed == []
 
@@ -127,12 +130,12 @@ def test_strategy_budget_is_enforced_from_the_database(settings):
     _db(settings)
     _live_settings(settings)
     ex = _exec(settings)
-    # Pre-load this strategy with orders worth more than its own budget.
+    # Pre-load this strategy with orders worth more than its own budget ($50.00, thesis §9.36).
     with db.session_scope() as s:
         for i in range(12):
             s.add(m.LiveOrder(
                 market_ticker=f"KXOTHER-{i}", event_ticker="KXOTHER", strategy=TAG, side="no",
-                action="buy", limit_price=99, quantity=1, status="resting",
+                action="buy", limit_price=99, quantity=5, status="resting",
                 client_order_id=f"c-{i}", created_at=datetime.now(timezone.utc)))
     with db.session_scope() as s:
         assert repo.live_strategy_exposure(s, TAG) > limm.MAX_STRATEGY_EXPOSURE_USD

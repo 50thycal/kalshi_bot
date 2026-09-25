@@ -34,26 +34,41 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 
 # --- the strategy's own caps. The XOS risk envelope names these; a test asserts they match. ---
-#: Contracts per resting order. One. The whole downside of the test is price x this.
-MAX_CONTRACTS_PER_ORDER = 1
-#: Dollars of collateral per resting order.
-MAX_ORDER_DOLLARS = 1.00
+#:
+#: Every number in this block is now AHEAD of the risk envelope frozen into the deployment's
+#: `config_json` at arm time (2026-09-17), by deliberate, repeated operator decision — not
+#: through `service.arm_live_canary`, because the lifecycle model has no path back from
+#: LIVE_CANARY to PAPER on the same experiment (`docs/EXPERIMENT_OPERATING_SYSTEM_SPEC.md` §7:
+#: "No silent rollback"). The only XOS-sanctioned way to register a new number here is to retire
+#: `liquidity-incentive-mm` permanently and re-walk a successor through PROBE -> PAPER ->
+#: LIVE_CANARY from scratch. See thesis §9.34 (the order-count raise) and §9.36 (this one, the
+#: size raise) for the full reasoning each time.
+#:
+#: Contracts per resting order. Raised 1 -> 500 on 2026-09-25 (thesis §9.36) as a ceiling that
+#: rarely binds — `MAX_ORDER_DOLLARS` below is meant to be the number that actually constrains
+#: quantity at any real price this book trades at.
+MAX_CONTRACTS_PER_ORDER = 500
+#: Dollars of collateral per resting order. Raised 1.00 -> 20.00 on 2026-09-25 (thesis §9.36):
+#: Kalshi's own incentive-program Target Sizes run 300-1,000 contracts, and a resting bid earns
+#: nothing until it reaches roughly a fifth of that (`scoring.py` R2/A1) — the original $1 cap
+#: could never buy enough contracts to register a reward at all, only prove the order path
+#: worked. $20 is sized to sit safely under the shared per-ticker exposure ceiling below, not to
+#: reach full Target Size on the largest programs.
+MAX_ORDER_DOLLARS = 20.00
 #: Resting orders this strategy may hold at once, across all markets.
 #:
-#: Raised 3 -> 5 on 2026-09-24 by direct operator decision (thesis §9.34), NOT through
-#: `service.arm_live_canary`. The lifecycle model has no path back from LIVE_CANARY to PAPER on
-#: the same experiment (`docs/EXPERIMENT_OPERATING_SYSTEM_SPEC.md` §7: "No silent rollback"), so
-#: the only XOS-sanctioned way to change this number is to retire `liquidity-incentive-mm`
-#: permanently and re-walk a successor through PROBE -> PAPER -> LIVE_CANARY from scratch — days
-#: of fresh gate evidence before it could place an order again. The operator chose the smaller,
-#: honest break instead: this constant is now AHEAD of the risk envelope frozen into the
-#: deployment's `config_json` at arm time, which still reads 3. `RISK_ENVELOPE` below (and the
-#: test asserting it equals this constant) reflect the RUNNING number, not the REGISTERED one —
-#: that divergence is deliberate and permanent for this experiment's record, not a defect to
-#: reconcile. See thesis §9.34 for the full reasoning and what does and does not still apply.
-MAX_OPEN_ORDERS = 5
+#: Raised 3 -> 5 on 2026-09-24 (thesis §9.34), then DROPPED 5 -> 2 on 2026-09-25 (thesis §9.36)
+#: in the same move that raised the per-order size: five $1 positions and two $20 ones both fit
+#: under the $50 total budget, but holding many concurrent LARGE positions is the opposite of
+#: what a size increase is for — fewer, bigger, individually measurable bids, not more small
+#: ones. `MAX_OPEN_ORDERS * MAX_ORDER_DOLLARS <= MAX_STRATEGY_EXPOSURE_USD` must keep holding;
+#: the operator guardrail test asserts it.
+MAX_OPEN_ORDERS = 2
 #: Total dollars this strategy may have committed at once (its own budget, not the shared one).
-MAX_STRATEGY_EXPOSURE_USD = 10.00
+#: Raised 10.00 -> 50.00 on 2026-09-25 (thesis §9.36) — the operator's own choice among three
+#: tiers, picked as the smallest budget where a reward, if the strategy works at all, has a real
+#: chance of showing up.
+MAX_STRATEGY_EXPOSURE_USD = 50.00
 #: Refuse any order priced above this. Caps the per-contract downside directly, and is the
 #: reason the test prefers a market whose cheap side is at the touch.
 MAX_PRICE_CENTS = 25
@@ -283,11 +298,22 @@ def rank_candidates(candidates: list[dict], *, excluded_series: frozenset[str] =
                     max_price_cents: int = MAX_PRICE_CENTS) -> list[tuple[dict, LiveQuote]]:
     """Every candidate that yields a placeable quote, best first.
 
-    Order: cheapest downside, then THINNEST competing book, then soonest program end. Collateral
-    stays the primary key because it is the entire downside and the safety lever this module is
-    built around (see the module docstring). Depth is inserted ahead of program end because among
-    two equally cheap orders the thinner book is worth strictly more reward for the same risk
-    (§9.27) — where the old ordering broke ties on timing, which pays nothing."""
+    Order: cheapest PRICE, then THINNEST competing book, then soonest program end.
+
+    The primary key is `price_cents`, not `collateral_usd` (changed 2026-09-25, thesis §9.36).
+    It used to be collateral, and the two were the same ranking back when every quote rested
+    exactly one contract — collateral_usd was just price_cents/100. Raising size broke that
+    equivalence: quantity is now `min(MAX_CONTRACTS_PER_ORDER, MAX_ORDER_DOLLARS // price)`, so
+    whenever the dollar budget binds (the normal case at any real price this book trades),
+    collateral_usd converges toward the SAME number — roughly `MAX_ORDER_DOLLARS` — for every
+    candidate regardless of price, and stops discriminating on the thing it was meant to rank:
+    per-contract downside, "a bid at 3c risks 3c per contract, a bid at 90c risks 90c" (module
+    docstring). Sorting on collateral_usd after that change was sorting on integer-truncation
+    noise, not on risk. Price is what still varies meaningfully and is the actual safety lever.
+
+    Depth is inserted ahead of program end because among two equally cheap orders the thinner
+    book is worth strictly more reward for the same risk (§9.27) — where the old ordering broke
+    ties on timing, which pays nothing."""
     out: list[tuple[dict, LiveQuote]] = []
     for c in candidates:
         q = build_live_quote(
@@ -304,7 +330,7 @@ def rank_candidates(candidates: list[dict], *, excluded_series: frozenset[str] =
         )
         if isinstance(q, LiveQuote):
             out.append((c, q))
-    out.sort(key=lambda cq: (cq[1].collateral_usd,
+    out.sort(key=lambda cq: (cq[1].price_cents,
                              _depth_ratio(cq[0]),
                              cq[0].get("program_hours_remaining") or 1e9))
     return out

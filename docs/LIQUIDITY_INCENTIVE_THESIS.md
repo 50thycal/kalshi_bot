@@ -2289,3 +2289,124 @@ unaffected); one new test reconciles the exact flagged window (93c + 5c = 98c, r
 
 **Still true:** no liquidity reward has ever been observed. This fixes what the ledger can
 *vouch for*, not what it has found.
+
+### 9.36 Sizing raised so a resting bid can actually reach the scoring floor — $1 -> $20 per
+order, $10 -> $50 total, 5 -> 2 concurrent (2026-09-25)
+
+A week of live trading under §9.34/§9.35's 5-slot, 1-contract regime still had zero observed
+liquidity reward. The operator's read, verbatim: *"I think we need to do a lot larger sizes for
+positions to be able to measure and actually get rewards."* Checked against the real mechanism
+before touching any constant, not assumed: `scoring.py`'s `RULE_REFERENCE_FRACTION = 0.2` means a
+side scores **nothing at all** until the resting order reaches one-fifth of the program's own
+`target_size` (`incentive_programs.target_size` in the database). Real Target Sizes observed
+across active programs run 300-1,000 contracts — so the scoring floor on a typical program is
+60-200 contracts. A 1-contract bid was never close; it could only prove the order path worked,
+never earn anything, however long it rested. That is the actual reason a week produced zero
+rewards, not bad luck or an unlucky book selection.
+
+**The same wall as §9.34, confirmed again rather than re-litigated.** The registered risk
+envelope on `limm-smoke-live-1` is frozen at arm time (2026-09-17); the XOS lifecycle model has
+no `LIVE_CANARY -> PAPER` transition on the same experiment (§7, "No silent rollback"); the only
+sanctioned path to a new number is retiring `liquidity-incentive-mm` permanently and re-walking a
+successor through `IDEA -> PROBE -> PAPER -> LIVE_CANARY` from scratch — days of fresh gate
+evidence before it could place an order again. Put to the operator plainly a second time; the
+answer was the same shape as §9.34's, explicit: *"why not just raise the cap on the existing? I
+approve if it 'breaks' the experiment, we just need to make that note."* This is that note, for
+the size raise.
+
+**What was raised, and why each number is what it is, not a round guess:**
+
+- `MAX_CONTRACTS_PER_ORDER`: 1 -> 500. A ceiling that should rarely bind — `MAX_ORDER_DOLLARS` is
+  meant to be the number that actually constrains quantity at any real price this book trades.
+- `MAX_ORDER_DOLLARS`: $1.00 -> $20.00. Sized to sit safely under the shared per-ticker exposure
+  ceiling (`MAX_MARKET_EXPOSURE`, raised alongside it — see below), not to reach full Target Size
+  on the largest programs. At a typical touch price this buys tens to low hundreds of contracts —
+  within reach of the 60-200-contract scoring floor for the first time, not a guarantee of it.
+- `MAX_OPEN_ORDERS`: 5 -> **2** (a drop, not a raise). Five $1 positions and two $20 ones both fit
+  under the new $50 total budget, but holding many concurrent LARGE positions is the opposite of
+  what a size increase is for. The point is fewer, bigger, individually measurable bids, so a
+  reward showing up (or not) can be attributed to a specific order — not more small ones diluting
+  the same budget back toward where it started.
+- `MAX_STRATEGY_EXPOSURE_USD`: $10.00 -> **$50.00**. Offered as one of three sizing tiers; the
+  operator picked this one explicitly via the smallest-budget-with-a-real-chance framing, not the
+  largest available. `MAX_OPEN_ORDERS * MAX_ORDER_DOLLARS <= MAX_STRATEGY_EXPOSURE_USD` (2 * $20
+  = $40 <= $50) keeps holding — the operator guardrail test asserts it, same invariant §9.34 held.
+
+**Two SHARED live-trading safety settings also had to move, because they gate every live book,
+not just this one — checked line by line before touching either, and one candidate correctly
+left alone:**
+
+- `MAX_MARKET_EXPOSURE` (production 1.0 -> **25.0**): gate 8 of `LiveExecutor.mirror_incentive_entry`
+  — `if self._market_exposure(session, ticker) >= self.settings.max_market_exposure`. At the old
+  $1 ceiling a single $20 order would have been refused by this gate before ever reaching LIMM's
+  own caps; raising it to $25 is the minimum that lets a $20 clip through with headroom, and it
+  applies identically to mmsell and theta, which is why this is a shared setting and not a LIMM
+  constant.
+- `MAX_DAILY_LOSS` (production 5.0 -> **25.0**): gate 2 of the same function, the portfolio-wide
+  realized-loss kill switch (`LIVE_KILL_ON_DAILY_LOSS=true`) — "protects the whole portfolio,
+  mmsell included" per its own code comment. A $5 daily-loss ceiling could trip on a single bad
+  LIMM fill at the new size and halt every live book, not just this one; raised to $25 for the
+  same reason as the exposure ceiling, with the same blast radius acknowledged.
+- `LIVE_MAX_ORDER_DOLLARS` (production 1.0) — **deliberately left untouched.** Read the code
+  before assuming it mattered: it gates the generic mmsell/theta mirror paths only
+  (`executor.py` lines 322, 349, 498). `mirror_incentive_entry` — the LIMM path — never calls
+  through it. Raising it would have widened mmsell's and theta's own live order sizes for no
+  reason connected to this change; not touching it is itself part of the record, not an omission.
+- `MAX_TOTAL_EXPOSURE` (production 100.0) — checked, already generous relative to the new $50
+  strategy budget, left unchanged.
+
+**What actually breaks, checked before shipping, not asserted — same verification as §9.34, run
+again because the change is different code:** `runtime_config_check` compares each live
+deployment's `config_json["material"]` against running `Settings`; LIMM's `book_params` is `None`
+regardless of any of these constants, so nothing here can trip `EXPERIMENT_CONFIG_DRIFT`, and
+nothing live-blocking trips. What breaks is the same permanent, deliberate kind as before: the
+`risk_json` frozen into `limm-smoke-live-1`'s `config_json` at 2026-09-17 still reads the
+1-contract, $1, 5-slot, $10 numbers; the running code now enforces 500-contract-ceiling, $20,
+2-slot, $50; `test_the_registered_envelope_equals_the_running_constants` only checks the in-repo
+`RISK_ENVELOPE` dict against the in-repo constant (both move together on an edit), so it does not
+and never did catch drift against the database. `max_loss_per_clip_usd` in the XOS package itself
+also needed correcting alongside the constants — its old formula (`MAX_PRICE_CENTS / 100.0`) named
+the per-*contract* price as the per-order downside, which was only true when quantity was fixed
+at 1. Now that quantity is budget-derived, the true per-order downside is `MAX_ORDER_DOLLARS`
+itself, so the field was changed to name that instead of silently reporting a now-wrong number.
+
+**A genuine bug found and fixed mid-implementation, not assumed away — the pattern this thesis
+has called out since §9.29/§9.31: a plausible-looking number that quietly stopped being correct.**
+`rank_candidates`' sort key was `collateral_usd` (dollars = price × quantity), primary key, "the
+entire downside and the safety lever this module is built around" per its own prior docstring.
+That was true, and monotonic with price, only because quantity was fixed at 1 — collateral_usd
+was just price_cents/100 for every candidate. Once quantity became
+`min(MAX_CONTRACTS_PER_ORDER, MAX_ORDER_DOLLARS*100 // price)`, collateral_usd converges toward
+the *same* number (roughly `MAX_ORDER_DOLLARS`) for nearly every candidate, whenever the dollar
+budget binds — which it now does at any real price this book trades. Sorting on it was sorting on
+integer-truncation noise, not on price risk. Caught by a test that stated its own expectation
+plainly (`test_it_places_the_cheapest_downside_first_and_stops_at_the_open_order_cap`, expecting
+the two cheapest of three candidates by price) and failed against the real ranking output — not
+by inspection first. Fixed by changing the primary sort key from `cq[1].collateral_usd` to
+`cq[1].price_cents`, which is the number that still varies meaningfully post-budget-cap and is
+what the module's own docstring already says the safety lever is: "a bid at 3c risks 3c per
+contract, a bid at 90c risks 90c." `rank_candidates`'s docstring was corrected to explain the
+change and why the old key broke, not just to describe the new one. The test's original
+cheapest-first expectation needed no change — it was right; the code was wrong.
+
+**Tests updated to match the real formulas, not hardcoded to the new magic numbers (so they will
+not silently break on the next resize):** the pinned-constants tuple in
+`test_liquidity_incentive_live.py`; three tests (`test_picks_the_cheaper_side_and_rests_at_its_touch`,
+`test_picks_yes_when_yes_is_the_cheap_side`, `test_ranking_prefers_cheapest_then_soonest_payout`)
+rewritten to derive `expected_qty` from `min(MAX_CONTRACTS_PER_ORDER, MAX_ORDER_DOLLARS*100 //
+price)` instead of asserting `1`; the operator-guardrail and registered-envelope tests in
+`test_liquidity_incentive_xos_package.py` updated to $50/2/$20 and to the corrected
+`max_loss_per_clip_usd` formula; three runner-test fixtures whose numbers assumed the old $10
+ceiling or 1-contract fills (`test_the_book_budget_bounds_the_cycle_even_with_slots_free`'s
+pre-committed amount recalculated so it still sits just under the new $50 ceiling;
+`test_every_placed_order_is_mirrored_to_the_twin`'s quantity assertion derived from the sizing
+formula) and two executor-test fixtures in `test_liquidity_incentive_live_executor.py`
+(`test_refuses_a_quote_above_the_registered_contract_cap` now quotes at 1c so an over-cap
+quantity trips the size gate rather than the budget gate first; the budget-enforcement test's
+pre-loaded orders sized up so twelve of them still clear the new $50 ceiling). Full suite and
+`ruff check .` clean.
+
+**Still true:** the three stuck quake positions from §9.33 are untouched by this change — held to
+settle naturally, not force-closed, not part of what moved. No liquidity reward has ever been
+observed under any sizing tried so far; this raise is what makes a reward possible to observe at
+all, not a claim that one is coming.

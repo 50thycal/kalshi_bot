@@ -1053,3 +1053,67 @@ ruff + full suite clean.
 Still $0 lifetime rewards. This fixes what the ledger can vouch for, not what it has found.
 
 [Thesis §9.35](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## Update 2026-09-25 — sizing raised: $1 -> $20/order, $10 -> $50 total, 5 -> 2 concurrent
+
+A week under §9.34/§9.35's regime still had $0 rewards. Root cause, checked in `scoring.py`
+before changing anything: a side scores nothing until it reaches `RULE_REFERENCE_FRACTION =
+0.2` (one-fifth) of the program's Target Size, and real Target Sizes run 300-1,000 contracts —
+so a 1-contract bid could never reach the scoring floor, however long it rested. Operator,
+verbatim: "I think we need to do a lot larger sizes for positions to be able to measure and
+actually get rewards."
+
+Same wall as §9.34 (no LIVE_CANARY -> PAPER transition; formal re-arm means retiring the
+experiment permanently), same operator resolution, put to them again and answered the same way:
+"why not just raise the cap on the existing? I approve if it 'breaks' the experiment, we just
+need to make that note." This is that note, for the size raise.
+
+Changed, all direct edits to `liquidity_incentive/live.py`:
+- `MAX_CONTRACTS_PER_ORDER` 1 -> 500 (a ceiling meant to rarely bind)
+- `MAX_ORDER_DOLLARS` $1.00 -> $20.00 (buys tens-to-low-hundreds of contracts at typical touch
+  prices — within reach of the 60-200-contract scoring floor for the first time)
+- `MAX_OPEN_ORDERS` 5 -> **2** (a drop — fewer, bigger, individually measurable bids is the
+  point of a size increase, not more small ones)
+- `MAX_STRATEGY_EXPOSURE_USD` $10.00 -> **$50.00** (operator's pick among 3 offered tiers)
+- Invariant held: `MAX_OPEN_ORDERS * MAX_ORDER_DOLLARS <= MAX_STRATEGY_EXPOSURE_USD` (2*$20=$40
+  <= $50), same guardrail test as §9.34.
+
+Two SHARED live-trading settings also raised via the ops env channel, because they gate every
+live book (mmsell, theta included), not just this one — checked line-by-line first:
+- `MAX_MARKET_EXPOSURE` 1.0 -> 25.0 (gate 8 of `mirror_incentive_entry`; a $20 order would have
+  been refused at the old $1 ceiling before reaching LIMM's own caps)
+- `MAX_DAILY_LOSS` 5.0 -> 25.0 (gate 2, the portfolio-wide kill switch; a single bad fill at the
+  new size could have tripped the old $5 ceiling and halted every live book, not just LIMM)
+- `LIVE_MAX_ORDER_DOLLARS` deliberately left at 1.0 — confirmed by reading the code that it
+  gates only the generic mmsell/theta mirror paths, never `mirror_incentive_entry`; raising it
+  would have widened those books' sizing for no reason connected to this change.
+- `MAX_TOTAL_EXPOSURE` (100.0) checked, already generous, left unchanged.
+
+Checked before shipping, same verification as §9.34: `runtime_config_check` compares
+`config_json.material` only, LIMM's `book_params` is None regardless — nothing live-blocking
+trips. What breaks, permanently: the deployment's frozen `config_json.risk_envelope` still
+reads the old 1/$1/5/$10 numbers; the running code now reads 500-ceiling/$20/2/$50. Also
+corrected `max_loss_per_clip_usd` in the XOS package itself — its old formula named the
+per-contract price as the per-order downside, true only when quantity was fixed at 1; now names
+`MAX_ORDER_DOLLARS`, the real number once quantity is budget-derived.
+
+**A genuine bug found and fixed, not assumed away:** `rank_candidates`'s primary sort key was
+`collateral_usd`, which used to be monotonic with price only because quantity was fixed at 1.
+Once quantity became budget-derived, collateral_usd converges to roughly the same number for
+every candidate whenever the dollar cap binds — which it now does at any real price — so the
+"prefer cheapest" ranking had quietly stopped discriminating on price. Caught by a test
+(`test_it_places_the_cheapest_downside_first_and_stops_at_the_open_order_cap`) that stated its
+own cheapest-first expectation and failed against the real output. Fixed by changing the
+primary key to `price_cents`, the number that still varies meaningfully post-cap and is the one
+the module's own docstring already calls the safety lever. The test's original expected order
+needed no change — it was right; the ranking code was wrong.
+
+Tests updated to derive expected values from the real sizing formula rather than hardcode new
+magic numbers, across `test_liquidity_incentive_live.py`, `test_liquidity_incentive_xos_package.py`,
+`test_liquidity_incentive_runner.py`, and `test_liquidity_incentive_live_executor.py`. Full
+suite + `ruff check .` clean.
+
+The 3 stuck quake positions from §9.33 are untouched. Still $0 lifetime rewards under every
+sizing tried so far — this raise makes a reward possible to observe, not a claim one is coming.
+
+[Thesis §9.36](../LIQUIDITY_INCENTIVE_THESIS.md).

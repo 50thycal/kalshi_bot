@@ -27,29 +27,34 @@ GATE_SPECS = (pkg.PROBE_GATE_SPEC, pkg.PROMOTION_GATE_SPEC, pkg.KEEP_GATE_SPEC)
 
 def test_the_registered_envelope_equals_the_running_constants():
     e = pkg.RISK_ENVELOPE
-    assert e["contracts_per_order"] == limm.MAX_CONTRACTS_PER_ORDER == 1
+    assert e["contracts_per_order"] == limm.MAX_CONTRACTS_PER_ORDER
     assert e["max_order_dollars"] == limm.MAX_ORDER_DOLLARS
     assert e["max_price_cents"] == limm.MAX_PRICE_CENTS
     assert e["max_open_orders"] == limm.MAX_OPEN_ORDERS
     assert e["max_book_exposure_usd"] == limm.MAX_STRATEGY_EXPOSURE_USD
-    # The stated per-clip downside must be what the price cap actually allows, not a rounder
-    # number someone liked better.
-    assert e["max_loss_per_clip_usd"] == pytest.approx(limm.MAX_PRICE_CENTS / 100.0)
+    # The stated per-clip downside must be what the dollar cap actually allows (thesis §9.36:
+    # the dollar cap binds before the contract-count ceiling does at any price this book
+    # trades), not a rounder number someone liked better.
+    assert e["max_loss_per_clip_usd"] == pytest.approx(limm.MAX_ORDER_DOLLARS)
 
 
 def test_the_operator_guardrails_are_not_exceeded():
-    """The operator authorized: under $10 total, at most 5 at a time, $1 per trade.
+    """The operator authorized: under $50 total, at most 2 at a time, $20 per trade.
 
-    Originally 3; raised to 5 on 2026-09-24 by direct operator decision (thesis §9.34), edited
-    straight into the running constant rather than through a re-arm — see the comment on
-    `MAX_OPEN_ORDERS` in `liquidity_incentive/live.py` for why the formal path was infeasible
-    same-day. This line is the new authorization on record for the CODE; the XOS-registered
-    envelope on the live deployment still reads 3 and is not updated by this test."""
-    assert limm.MAX_STRATEGY_EXPOSURE_USD <= 10.00
-    assert limm.MAX_OPEN_ORDERS <= 5
-    assert limm.MAX_ORDER_DOLLARS <= 1.00
-    # And the caps are mutually consistent: five orders at the per-order cap stay inside the
-    # book budget, so no combination of allowed orders can breach it.
+    History: originally $10 / 3-at-a-time / $1 per trade. Raised to 5-at-a-time on 2026-09-24
+    (thesis §9.34). Raised again on 2026-09-25 (thesis §9.36) to $50 / 2-at-a-time / $20 per
+    trade, specifically so a resting bid could reach the scoring floor on Kalshi's own
+    incentive-program Target Sizes (300-1,000 contracts) instead of only proving the order path
+    worked. Both raises were edited straight into the running constants rather than through a
+    re-arm — see the module comment on `MAX_CONTRACTS_PER_ORDER` in `liquidity_incentive/live.py`
+    for why the formal path is infeasible without permanently retiring the experiment. This line
+    is the new authorization on record for the CODE; the XOS-registered envelope on the live
+    deployment still reads the original numbers and is not updated by this test."""
+    assert limm.MAX_STRATEGY_EXPOSURE_USD <= 50.00
+    assert limm.MAX_OPEN_ORDERS <= 2
+    assert limm.MAX_ORDER_DOLLARS <= 20.00
+    # And the caps are mutually consistent: every open slot at the per-order cap stays inside
+    # the book budget, so no combination of allowed orders can breach it.
     assert limm.MAX_OPEN_ORDERS * limm.MAX_ORDER_DOLLARS <= limm.MAX_STRATEGY_EXPOSURE_USD
 
 
