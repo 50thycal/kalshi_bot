@@ -2289,3 +2289,233 @@ unaffected); one new test reconciles the exact flagged window (93c + 5c = 98c, r
 
 **Still true:** no liquidity reward has ever been observed. This fixes what the ledger can
 *vouch for*, not what it has found.
+
+### 9.36 Sizing raised so a resting bid can actually reach the scoring floor — $1 -> $20 per
+order, $10 -> $50 total, 5 -> 2 concurrent (2026-09-25)
+
+> **Correction (§9.37):** the "scoring floor" below is a misreading of `scoring.py`. The
+> one-fifth rule (R3) sets the *Reference Price* from the whole book's cumulative depth; it is
+> not a minimum size for our order. Our share of a qualifying snapshot is simply our size over
+> the field (R4/R5), so reward is proportional to size from the first contract. The decision —
+> more size, more reward — stands; the stated mechanism does not.
+
+A week of live trading under §9.34/§9.35's 5-slot, 1-contract regime still had zero observed
+liquidity reward. The operator's read, verbatim: *"I think we need to do a lot larger sizes for
+positions to be able to measure and actually get rewards."* Checked against the real mechanism
+before touching any constant, not assumed: `scoring.py`'s `RULE_REFERENCE_FRACTION = 0.2` means a
+side scores **nothing at all** until the resting order reaches one-fifth of the program's own
+`target_size` (`incentive_programs.target_size` in the database). Real Target Sizes observed
+across active programs run 300-1,000 contracts — so the scoring floor on a typical program is
+60-200 contracts. A 1-contract bid was never close; it could only prove the order path worked,
+never earn anything, however long it rested. That is the actual reason a week produced zero
+rewards, not bad luck or an unlucky book selection.
+
+**The same wall as §9.34, confirmed again rather than re-litigated.** The registered risk
+envelope on `limm-smoke-live-1` is frozen at arm time (2026-09-17); the XOS lifecycle model has
+no `LIVE_CANARY -> PAPER` transition on the same experiment (§7, "No silent rollback"); the only
+sanctioned path to a new number is retiring `liquidity-incentive-mm` permanently and re-walking a
+successor through `IDEA -> PROBE -> PAPER -> LIVE_CANARY` from scratch — days of fresh gate
+evidence before it could place an order again. Put to the operator plainly a second time; the
+answer was the same shape as §9.34's, explicit: *"why not just raise the cap on the existing? I
+approve if it 'breaks' the experiment, we just need to make that note."* This is that note, for
+the size raise.
+
+**What was raised, and why each number is what it is, not a round guess:**
+
+- `MAX_CONTRACTS_PER_ORDER`: 1 -> 500. A ceiling that should rarely bind — `MAX_ORDER_DOLLARS` is
+  meant to be the number that actually constrains quantity at any real price this book trades.
+- `MAX_ORDER_DOLLARS`: $1.00 -> $20.00. Sized to sit safely under the shared per-ticker exposure
+  ceiling (`MAX_MARKET_EXPOSURE`, raised alongside it — see below), not to reach full Target Size
+  on the largest programs. At a typical touch price this buys tens to low hundreds of contracts —
+  within reach of the 60-200-contract scoring floor for the first time, not a guarantee of it.
+- `MAX_OPEN_ORDERS`: 5 -> **2** (a drop, not a raise). Five $1 positions and two $20 ones both fit
+  under the new $50 total budget, but holding many concurrent LARGE positions is the opposite of
+  what a size increase is for. The point is fewer, bigger, individually measurable bids, so a
+  reward showing up (or not) can be attributed to a specific order — not more small ones diluting
+  the same budget back toward where it started.
+- `MAX_STRATEGY_EXPOSURE_USD`: $10.00 -> **$50.00**. Offered as one of three sizing tiers; the
+  operator picked this one explicitly via the smallest-budget-with-a-real-chance framing, not the
+  largest available. `MAX_OPEN_ORDERS * MAX_ORDER_DOLLARS <= MAX_STRATEGY_EXPOSURE_USD` (2 * $20
+  = $40 <= $50) keeps holding — the operator guardrail test asserts it, same invariant §9.34 held.
+
+**Two SHARED live-trading safety settings also had to move, because they gate every live book,
+not just this one — checked line by line before touching either, and one candidate correctly
+left alone:**
+
+- `MAX_MARKET_EXPOSURE` (production 1.0 -> **25.0**): gate 8 of `LiveExecutor.mirror_incentive_entry`
+  — `if self._market_exposure(session, ticker) >= self.settings.max_market_exposure`. At the old
+  $1 ceiling a single $20 order would have been refused by this gate before ever reaching LIMM's
+  own caps; raising it to $25 is the minimum that lets a $20 clip through with headroom, and it
+  applies identically to mmsell and theta, which is why this is a shared setting and not a LIMM
+  constant.
+- `MAX_DAILY_LOSS` (production 5.0 -> **25.0**): gate 2 of the same function, the portfolio-wide
+  realized-loss kill switch (`LIVE_KILL_ON_DAILY_LOSS=true`) — "protects the whole portfolio,
+  mmsell included" per its own code comment. A $5 daily-loss ceiling could trip on a single bad
+  LIMM fill at the new size and halt every live book, not just this one; raised to $25 for the
+  same reason as the exposure ceiling, with the same blast radius acknowledged.
+- `LIVE_MAX_ORDER_DOLLARS` (production 1.0) — **deliberately left untouched.** Read the code
+  before assuming it mattered: it gates the generic mmsell/theta mirror paths only
+  (`executor.py` lines 322, 349, 498). `mirror_incentive_entry` — the LIMM path — never calls
+  through it. Raising it would have widened mmsell's and theta's own live order sizes for no
+  reason connected to this change; not touching it is itself part of the record, not an omission.
+- `MAX_TOTAL_EXPOSURE` (production 100.0) — checked, already generous relative to the new $50
+  strategy budget, left unchanged.
+
+**What actually breaks, checked before shipping, not asserted — same verification as §9.34, run
+again because the change is different code:** `runtime_config_check` compares each live
+deployment's `config_json["material"]` against running `Settings`; LIMM's `book_params` is `None`
+regardless of any of these constants, so nothing here can trip `EXPERIMENT_CONFIG_DRIFT`, and
+nothing live-blocking trips. What breaks is the same permanent, deliberate kind as before: the
+`risk_json` frozen into `limm-smoke-live-1`'s `config_json` at 2026-09-17 still reads the
+1-contract, $1, 5-slot, $10 numbers; the running code now enforces 500-contract-ceiling, $20,
+2-slot, $50; `test_the_registered_envelope_equals_the_running_constants` only checks the in-repo
+`RISK_ENVELOPE` dict against the in-repo constant (both move together on an edit), so it does not
+and never did catch drift against the database. `max_loss_per_clip_usd` in the XOS package itself
+also needed correcting alongside the constants — its old formula (`MAX_PRICE_CENTS / 100.0`) named
+the per-*contract* price as the per-order downside, which was only true when quantity was fixed
+at 1. Now that quantity is budget-derived, the true per-order downside is `MAX_ORDER_DOLLARS`
+itself, so the field was changed to name that instead of silently reporting a now-wrong number.
+
+**A genuine bug found and fixed mid-implementation, not assumed away — the pattern this thesis
+has called out since §9.29/§9.31: a plausible-looking number that quietly stopped being correct.**
+`rank_candidates`' sort key was `collateral_usd` (dollars = price × quantity), primary key, "the
+entire downside and the safety lever this module is built around" per its own prior docstring.
+That was true, and monotonic with price, only because quantity was fixed at 1 — collateral_usd
+was just price_cents/100 for every candidate. Once quantity became
+`min(MAX_CONTRACTS_PER_ORDER, MAX_ORDER_DOLLARS*100 // price)`, collateral_usd converges toward
+the *same* number (roughly `MAX_ORDER_DOLLARS`) for nearly every candidate, whenever the dollar
+budget binds — which it now does at any real price this book trades. Sorting on it was sorting on
+integer-truncation noise, not on price risk. Caught by a test that stated its own expectation
+plainly (`test_it_places_the_cheapest_downside_first_and_stops_at_the_open_order_cap`, expecting
+the two cheapest of three candidates by price) and failed against the real ranking output — not
+by inspection first. Fixed by changing the primary sort key from `cq[1].collateral_usd` to
+`cq[1].price_cents`, which is the number that still varies meaningfully post-budget-cap and is
+what the module's own docstring already says the safety lever is: "a bid at 3c risks 3c per
+contract, a bid at 90c risks 90c." `rank_candidates`'s docstring was corrected to explain the
+change and why the old key broke, not just to describe the new one. The test's original
+cheapest-first expectation needed no change — it was right; the code was wrong.
+
+**Tests updated to match the real formulas, not hardcoded to the new magic numbers (so they will
+not silently break on the next resize):** the pinned-constants tuple in
+`test_liquidity_incentive_live.py`; three tests (`test_picks_the_cheaper_side_and_rests_at_its_touch`,
+`test_picks_yes_when_yes_is_the_cheap_side`, `test_ranking_prefers_cheapest_then_soonest_payout`)
+rewritten to derive `expected_qty` from `min(MAX_CONTRACTS_PER_ORDER, MAX_ORDER_DOLLARS*100 //
+price)` instead of asserting `1`; the operator-guardrail and registered-envelope tests in
+`test_liquidity_incentive_xos_package.py` updated to $50/2/$20 and to the corrected
+`max_loss_per_clip_usd` formula; three runner-test fixtures whose numbers assumed the old $10
+ceiling or 1-contract fills (`test_the_book_budget_bounds_the_cycle_even_with_slots_free`'s
+pre-committed amount recalculated so it still sits just under the new $50 ceiling;
+`test_every_placed_order_is_mirrored_to_the_twin`'s quantity assertion derived from the sizing
+formula) and two executor-test fixtures in `test_liquidity_incentive_live_executor.py`
+(`test_refuses_a_quote_above_the_registered_contract_cap` now quotes at 1c so an over-cap
+quantity trips the size gate rather than the budget gate first; the budget-enforcement test's
+pre-loaded orders sized up so twelve of them still clear the new $50 ceiling). Full suite and
+`ruff check .` clean.
+
+**Still true:** the three stuck quake positions from §9.33 are untouched by this change — held to
+settle naturally, not force-closed, not part of what moved. No liquidity reward has ever been
+observed under any sizing tried so far; this raise is what makes a reward possible to observe at
+all, not a claim that one is coming.
+
+### 9.37 Two-sided pairs and the book's own exits — capital protection first (2026-09-25)
+
+The operator asked the question §9.36 left open — with $20 on a fill, is all of it at risk? —
+and the answer was yes: the book rested ONE bid, and a fill rode to settlement, $1 or $0, with no
+stop and no exit. Two operator decisions followed, verbatim: *"I'm good with the two-sided logic.
+Make it a shared self gate is just fine. … make each side $10. So each position is still $20"*,
+and, after two ideas each for protecting capital and for getting it back out were laid out,
+*"implement all 4 of those ideas along with the ideas we just had from the other message"* — i.e.
+two-sided pairs, a resting exit order the moment a leg fills, a real stop-loss, an early
+take-profit, and a hard cap on how long a market may take to close. The stated priorities, in
+order: protect the capital; then free it quickly so it can earn again.
+
+**Two-sided pairs.** Each market now carries a YES bid at the YES touch and a NO bid at the NO
+touch, `y + n <= 99`. Kalshi nets YES against NO in one market, so when both fill the pair closes
+itself and realises `100 - y - n` per contract, whatever the market does after. Both legs carry
+the SAME quantity — otherwise both filling leaves a naked residual — so the operator's $10 is a
+PER-LEG cap that binds on the dearer leg (`live.pair_quantity`). Consequence, stated plainly: a
+pair usually commits LESS than $20 (a 20c/75c book gives 13 contracts a side, $12.35), and the
+cheap side rests far fewer contracts than §9.36's one-sided $20 did (13 vs 100 at 20c). Reward
+share is proportional to size (see the §9.36 correction), so per dollar committed this earns less
+score than one-sided $20 — it is now scored on both sides, but the dear side is capital-hungry.
+That is the price of the hedge, and it was the operator's call to make capital protection first.
+
+The one-sided book's 25c cheap-side cap cannot apply to a pair (a pair always has a dear side);
+it is replaced by a 90c per-leg cap (`MAX_PRICE_CENTS`) that keeps a single-leg fill off
+near-certain favourites, plus the $10 per-leg dollar cap. Ranking is now thinnest book first
+(§9.27, reward share), then soonest close (capital back sooner), then widest edge.
+
+**The shared dedup gate did not change.** The executor's gate 4 (strategy-agnostic: never enter a
+ticker any live book has an order or position on) is exactly as before. `mirror_incentive_pair`
+checks it ONCE for the pair, as one decision, before either leg is sent; the second leg is part of
+that admitted decision. No other book's protection moved, and this book still cannot stack a
+second pair on a market it is working. This is narrower than the "self gate" the operator
+approved — the same outcome without editing shared semantics that also guard mmsell.
+
+**Exits — this book's own, registered, pre-set before any has fired** (`live.decide_exit`, run by
+`IncentiveLiveRunner._manage_positions` each cycle, exits before entries):
+
+- *stop-loss* — held side's bid down 40% of the entry price (floor 3c);
+- *take-profit* — held side's bid up 40% of the remaining upside `100 - entry` (floor 3c). While
+  the opposite leg still rests it usually takes profit first, at the pair's smaller edge; the
+  explicit rule is the backstop when it does not;
+- *pre-close flatten* — anything held comes off inside the last hour before close.
+
+An exit cancels this book's working orders on the market first, then sends a marketable IOC 2c
+past the touch in the mmsell closeout's recorded-201 wire shape (V2, `taker_at_cross`, no
+`post_only`, no `reduce_only`). At most 3 attempts per market, then it logs and leaves the
+position to settle. The fee is the taker schedule's `0.07 x P x (1-P)` — about 1.75c per contract
+at worst, at 50c.
+
+*The resting exit leg:* when a leg is held, no rule fires, and nothing of ours rests on the
+market (the opposite leg was never placed, was rejected, or timed out), the runner rests a
+post-only bid on the opposite side at the opposite touch, never paying more than leaves 1c — the
+"resting sell the moment it fills". It earns liquidity score while it waits.
+
+**The close-time window, and what it would NOT have caught.** Entries are refused unless the
+market closes in 3–72 hours. Measured 2026-09-25: of ~6,300 current liquidity programs, ~1,000
+close within 3 days, so the universe survives. But the same query showed the three
+KXBIGGESTQUAKE positions' markets CLOSED on 2026-09-17 — eight days before this entry, still
+unsettled. That trap was settlement lag after close, not a long-dated market, and a close-time
+cutoff alone would not have prevented it. That is why the pre-close flatten exists: nothing this
+book holds is allowed to ride through close into settlement limbo.
+
+**What makes an exit safe to send.** Kalshi has no reduce-only for these orders, so a marketable
+exit sent against a position that is already flat OPENS a new one. The manager therefore does
+nothing unless: the position snapshot was taken this cycle (≤300s); Kalshi's position and this
+book's own fills (signed by our order rows, not the fill's YES-denominated fields — §9.29/§9.31)
+agree on the side; and every working order of ours on the market was confirmed cancelled. The
+exit size is the smaller of Kalshi's position and our own net fills, so it can never sell a
+position another hand holds. A market another live book has entered is left alone
+(`shared_ticker`). A closed market is left alone (`closed_awaiting_settlement`) — which is also
+what keeps the operator's standing "leave the quake positions alone" true. Exits are NOT behind
+the daily-loss breaker or the budget caps (they reduce exposure; a loss stop that blocked the
+stop-loss would be backwards) but ARE behind the live switches and the allowlist.
+
+**The twin** mirrors both legs of every pair and never exits. It therefore records the both-filled
+case, which settles to exactly the locked edge; live diverges from it only through single-leg
+fills and the exits they trigger, which is precisely the cost the twin now measures.
+
+**Also corrected:** the XOS package's `activation_env` still named `MAX_MARKET_EXPOSURE=1.0` and
+`MAX_DAILY_LOSS=5.0` — stale since §9.36 raised both to 25.0 in production. A re-run of activation
+would have quietly reset them and blocked this book's orders. Both now read 25.0.
+
+**What breaks, again deliberately:** as §9.34/§9.36, the deployment's frozen `config_json` still
+reads the original one-sided, hold-to-settlement envelope; the in-repo `RISK_ENVELOPE` now
+describes what runs (`sides_quoted: 2`, the exit policy, the close window). `runtime_config_check`
+compares `material` only and this book's `book_params` is None, so nothing live-blocking trips.
+The registration strings in `register()` are left verbatim as the as-registered record.
+
+**Expect after deploy:** exit and NO-side fills are shapes the reward ledger's `CASH_DIRECTION`
+may not have verified; it will price them conservatively and mark those windows untrustworthy
+until each shape is verified against a real balance window (the §9.35 procedure). Positions this
+book already holds become subject to the exit rules on the first cycle, except closed markets.
+
+Tests: the decision layer, executor and runner suites were rewritten for pairs and exits
+(stop-loss, take-profit, pre-close, exit leg, stale snapshot, side disagreement, oversize
+snapshot, closed market, shared ticker, failed cancel, in-flight, attempt cap, round-trip
+cleanup, never cancelling an unfilled resting pair); the XOS package tests assert the envelope
+names the running exit rules. `ruff check .` and the full suite clean.
+
+**Still true:** no liquidity reward has been observed yet. This changes what a fill can cost and
+how fast capital comes back — not whether the programme pays.

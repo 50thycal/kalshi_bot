@@ -109,29 +109,43 @@ def _now() -> datetime:
 #:     None below rather than as a spec the runtime does not carry. Registering a spec the
 #:     runtime cannot produce would put this book permanently in EXPERIMENT_CONFIG_DRIFT.
 #:
-#: Sizing arithmetic: the book rests ONE contract on the cheaper side at a price capped at 25c,
-#: so a clip costs at most $0.25 and the entire downside of a filled clip is that $0.25. The
-#: per-order dollar cap is $1.00 and binds only if the price cap is ever raised.
+#: Shape updated 2026-09-25 (thesis §9.37), after §9.36's size raise: the book now rests a PAIR
+#: — a YES bid and a NO bid of equal quantity — on each market, and closes its own held legs by
+#: registered exit rules instead of holding to settlement. `max_order_dollars` is per LEG and
+#: binds on the dearer leg; `max_open_orders` counts MARKETS (a pair is one); the single-leg worst
+#: case is one leg filled alone and lost, i.e. `max_order_dollars` — which is what
+#: `max_loss_per_clip_usd` names. Like §9.34/§9.36 this is AHEAD of the envelope frozen into the
+#: deployment's `config_json` at arm time, by operator decision; see the thesis for the record.
 RISK_ENVELOPE: dict = {
-    "stage": "smoke_test_stage_1a",
-    "question": "does one resting bid survive our own plumbing end to end",
+    "stage": "live_stage_1b_two_sided",
+    "question": "does a two-sided resting pair earn liquidity reward net of single-leg losses",
     "contracts_per_order": limm.MAX_CONTRACTS_PER_ORDER,
     "max_order_dollars": limm.MAX_ORDER_DOLLARS,
     "max_price_cents": limm.MAX_PRICE_CENTS,
     "max_open_orders": limm.MAX_OPEN_ORDERS,
     "max_book_exposure_usd": limm.MAX_STRATEGY_EXPOSURE_USD,
-    "max_loss_per_clip_usd": round(limm.MAX_PRICE_CENTS / 100.0, 2),
-    "sides_quoted": 1,
-    "exit_policy": (
-        "hold to settlement. NOT a setting: `LiveExecutor.manage_exits` skips this book's tags "
-        "outright (limm.owns_tag), because the process-wide TP/SL rules would be an exit rule "
-        "this envelope never declared, placed with real money and real fees"
-    ),
+    "max_loss_per_clip_usd": round(limm.MAX_ORDER_DOLLARS, 2),
+    "sides_quoted": 2,
+    "min_pair_edge_cents": limm.MIN_PAIR_EDGE_CENTS,
+    "close_window_hours": [limm.MIN_HOURS_TO_CLOSE, limm.MAX_HOURS_TO_CLOSE],
+    "exit_policy": {
+        "stop_loss_fraction_of_entry": limm.STOP_LOSS_FRACTION,
+        "take_profit_fraction_of_upside": limm.TAKE_PROFIT_FRACTION,
+        "min_exit_distance_cents": limm.EXIT_MIN_DISTANCE_CENTS,
+        "flatten_hours_before_close": limm.FLATTEN_HOURS_BEFORE_CLOSE,
+        "exit_slippage_cents": limm.EXIT_SLIPPAGE_CENTS,
+        "exit_max_attempts": limm.EXIT_MAX_ATTEMPTS,
+        "position_fresh_seconds": limm.POSITION_FRESH_SECONDS,
+        "note": (
+            "this book's OWN rules, run by the incentive runner; `LiveExecutor.manage_exits` "
+            "still skips its tags (limm.owns_tag) so the process-wide TP/SL never fires on it"
+        ),
+    },
     "settings": {
         "LIQUIDITY_INCENTIVE_LIVE_ENABLED": "true",
         "LIVE_MAX_ORDER_DOLLARS": "1.0",
-        "MAX_MARKET_EXPOSURE": "1.0",
-        "MAX_DAILY_LOSS": "5.0",
+        "MAX_MARKET_EXPOSURE": "25.0",
+        "MAX_DAILY_LOSS": "25.0",
         "LIVE_KILL_ON_DAILY_LOSS": "true",
         "LIVE_ORDER_TIMEOUT_SECONDS": "14400",
     },
@@ -143,9 +157,10 @@ RISK_ENVELOPE: dict = {
             "entries alongside every other when the portfolio cap is reached"
         ),
         "MAX_DAILY_LOSS": (
-            "already 5.0 in production and SHARED. Named in `settings` above as a fact of the "
-            "envelope, not as a change — this book must not move a breaker another live book "
-            "is relying on"
+            "SHARED. Raised 5.0 -> 25.0 in production on 2026-09-25 by explicit operator "
+            "decision (thesis §9.36), because one bad fill at the larger size could trip the old "
+            "breaker and halt every live book. Named in `settings` above as that fact, so a "
+            "re-run of activation_env cannot quietly put it back"
         ),
         "LIVE_PAPER_TWIN_SUFFIX": (
             "SHARED, and the one variable in this area that must never carry this book's "
@@ -159,35 +174,38 @@ RISK_ENVELOPE: dict = {
         ),
         "LIVE_EXIT_MODE": (
             "production carries tp_sl for the YES/weather books and this book must not change "
-            "it. Its own hold-to-settlement contract is enforced by the tag skip in "
-            "manage_exits instead, which touches no other book"
+            "it. This book's own exit rules run from its runner; the tag skip in manage_exits "
+            "keeps the process-wide rules off it, which touches no other book"
         ),
     },
     "enforced_by": {
-        "contracts_per_order": "liquidity_incentive.live.build_live_quote, re-asserted by "
-                               "LiveExecutor.mirror_incentive_entry (gate:size)",
-        "max_price_cents": "build_live_quote refuses a cheaper-touch price above the cap; "
-                           "mirror_incentive_entry re-asserts it",
+        "contracts_per_order": "liquidity_incentive.live.build_pair_quote, re-asserted by "
+                               "LiveExecutor.mirror_incentive_pair (gate:size)",
+        "max_price_cents": "build_pair_quote refuses a leg above the cap; "
+                           "mirror_incentive_pair re-asserts it",
         "max_open_orders": "repo.count_live_book_open (gate:open_cap)",
         "max_book_exposure_usd": "repo.live_strategy_exposure (gate:strategy_exposure)",
-        "market_exposure": "LiveExecutor._market_exposure (gate:exposure)",
+        "market_exposure": "LiveExecutor._market_exposure + the pair (gate:exposure)",
         "daily_loss": "LiveExecutor._daily_loss_hit (gate:daily_loss) — SHARED with mmsell",
         "no_contested_markets": "repo.live_buy_exists_for_ticker / live_open_order_exists, "
-                                "strategy-agnostic ON PURPOSE (gate:dedup): this book will "
-                                "never place a second order on a ticker another book is "
-                                "resting in, and that is also why it can only quote ONE side",
+                                "strategy-agnostic ON PURPOSE (gate:dedup), UNCHANGED: the "
+                                "pair passes it once, as one decision, before either leg",
+        "exits": "liquidity_incentive.live.decide_exit, applied by "
+                 "IncentiveLiveRunner._manage_positions via LiveExecutor."
+                 "close_incentive_position / place_incentive_exit_leg",
         "order_lifetime": "LiveExecutor.reconcile timeout-cancel at LIVE_ORDER_TIMEOUT_SECONDS",
     },
     "genuine_liquidity": (
-        "There is no branch in this book that pulls a resting quote. Orders leave the book by "
-        "the shared paths only — a fill, the per-order timeout, or drain_stood_down_books when "
-        "the allowlist drops the tag. A quote we would cancel the moment it might trade is not "
-        "liquidity, and the whole premise of this strategy is that ours is."
+        "No branch pulls a resting quote because it might trade. The runner cancels only on "
+        "the way OUT of a position — before a marketable exit and after a completed round "
+        "trip — and otherwise orders leave by a fill, the per-order timeout, or "
+        "drain_stood_down_books when the allowlist drops the tag."
     ),
     "stand_down": (
         "Clearing LIVE_STRATEGIES of Alimm1 stops new entries on the next cycle and drains "
         "resting orders within a cycle; any held contract settles normally and remains real "
-        "money — at most $10, and at these caps at most $0.25 per market. The twin stands down "
+        "money — at most the book budget, and at most one leg's $10 per market once the "
+        "opposite leg is gone. Exits run only while armed. The twin stands down "
         "with live, because the pairing derives from LIVE_STRATEGIES."
     ),
 }
@@ -393,6 +411,9 @@ def register(session, *, actor: str = "operator", promotion_sample_floor: int | 
         raise service.ExperimentOsError(
             f"experiment {EXPERIMENT_KEY!r} already exists — this package registers it once"
         )
+    # The strings below are the text REGISTERED on 2026-09-17 for the one-sided smoke test, kept
+    # verbatim because they are what the experiment record says. The book has since moved on by
+    # operator decision (thesis §9.34, §9.36, §9.37); RISK_ENVELOPE above describes what runs.
     experiment = service.create_experiment(
         session,
         key=EXPERIMENT_KEY,

@@ -1,5 +1,6 @@
-"""Phase 1a one-sided live smoke test — the decision layer. Every test here is a safety
-property: the function must refuse rather than spend, and must never exceed a declared cap."""
+"""The two-sided live book — the decision layer (thesis §9.37). Every test is a safety property:
+the function must refuse rather than spend, must never exceed a declared cap, and must get out
+when a registered exit rule says so."""
 
 from __future__ import annotations
 
@@ -8,187 +9,214 @@ import pytest
 from kalshi_bot.liquidity_incentive import live as lv
 
 
-def _q(**over):
-    # The resting totals sit just above Target Size and well inside
-    # `MAX_COMPETING_DEPTH_TARGET_MULTIPLE`. They used to be 30,000 / 40,000 — a book so deep
-    # that under the universe rule it is now refused outright, which is the whole point of the
-    # rule and no longer describes a market this book will quote. Tests that care about depth
-    # pass their own numbers.
+def _p(**over):
+    # The resting totals sit just above Target Size and inside the universe rule; the close is
+    # a day out, inside the close-time window. Tests that care about either pass their own.
     base = dict(
-        market_ticker="KXTEST-A", best_yes_bid=78, best_no_bid=21,
+        market_ticker="KXTEST-A", best_yes_bid=40, best_no_bid=55,
         yes_resting_total=1500.0, no_resting_total=2000.0, target_size=1000.0,
-        program_hours_remaining=48.0,
+        hours_to_close=24.0, program_hours_remaining=48.0,
     )
     base.update(over)
-    return lv.build_live_quote(**base)
+    return lv.build_pair_quote(**base)
 
 
-def test_picks_the_cheaper_side_and_rests_at_its_touch():
-    q = _q()
-    assert isinstance(q, lv.LiveQuote)
-    assert q.side == lv.SIDE_NO and q.price_cents == 21      # no 21 is cheaper than yes 78
-    assert q.quantity == 1
-    assert q.collateral_usd == 0.21 and q.max_loss_usd == 0.21
+# ------------------------------------------------------------------ the pair
 
 
-def test_picks_yes_when_yes_is_the_cheap_side():
-    q = _q(best_yes_bid=9, best_no_bid=90)
-    assert isinstance(q, lv.LiveQuote) and q.side == lv.SIDE_YES and q.price_cents == 9
-    assert q.max_loss_usd == 0.09
+def test_quotes_both_touches_with_one_quantity():
+    q = _p()
+    assert isinstance(q, lv.PairQuote)
+    assert (q.yes.side, q.yes.price_cents) == (lv.SIDE_YES, 40)
+    assert (q.no.side, q.no.price_cents) == (lv.SIDE_NO, 55)
+    # Equal quantity is what makes it a hedge: both legs filled nets flat at the locked edge.
+    assert q.yes.quantity == q.no.quantity == q.quantity
+    assert q.edge_cents == 5
 
 
-def test_downside_cap_refuses_an_expensive_touch():
-    q = _q(best_yes_bid=49, best_no_bid=50)          # cheapest is 49c, above the 25c cap
+def test_the_dear_leg_sets_the_quantity_and_neither_leg_exceeds_its_cap():
+    q = _p(best_yes_bid=20, best_no_bid=75)
+    expected = min(lv.MAX_CONTRACTS_PER_ORDER, int(lv.MAX_ORDER_DOLLARS * 100 // 75))
+    assert q.quantity == expected
+    assert q.no.collateral_usd <= lv.MAX_ORDER_DOLLARS
+    assert q.yes.collateral_usd <= lv.MAX_ORDER_DOLLARS
+    assert q.collateral_usd == pytest.approx(q.yes.collateral_usd + q.no.collateral_usd)
+    # The single-leg worst case is the dearer leg filled alone and lost.
+    assert q.max_loss_usd == pytest.approx(q.no.collateral_usd)
+
+
+def test_refuses_a_pair_with_no_edge():
+    assert _p(best_yes_bid=45, best_no_bid=55).code == lv.REFUSE_NO_EDGE      # 100: nothing locked
+    assert isinstance(_p(best_yes_bid=45, best_no_bid=54), lv.PairQuote)    # 1c edge places
+
+
+def test_refuses_a_leg_above_the_per_leg_price_cap():
+    q = _p(best_yes_bid=3, best_no_bid=lv.MAX_PRICE_CENTS + 1)
     assert isinstance(q, lv.Refusal) and q.code == lv.REFUSE_TOO_EXPENSIVE
 
 
+def test_refuses_crossed_and_one_sided_books():
+    assert _p(best_yes_bid=60, best_no_bid=60).code == lv.REFUSE_POST_ONLY_CROSS
+    assert _p(best_no_bid=None).code == lv.REFUSE_NOT_TWO_SIDED
+    assert _p(best_yes_bid=None).code == lv.REFUSE_NOT_TWO_SIDED
+
+
 def test_refuses_when_either_side_is_under_target_size():
-    assert _q(no_resting_total=900.0).code == lv.REFUSE_TARGET_NOT_MET
-    assert _q(yes_resting_total=10.0).code == lv.REFUSE_TARGET_NOT_MET
-    # a snapshot that does not qualify pays nobody, so there is nothing to smoke-test
+    assert _p(no_resting_total=900.0).code == lv.REFUSE_TARGET_NOT_MET
+    assert _p(yes_resting_total=10.0).code == lv.REFUSE_TARGET_NOT_MET
 
 
-def test_refuses_a_one_sided_or_crossed_book():
-    assert _q(best_no_bid=None).code == lv.REFUSE_NOT_TWO_SIDED
-    assert _q(best_yes_bid=None).code == lv.REFUSE_NOT_TWO_SIDED
-    assert _q(best_yes_bid=60, best_no_bid=60).code == lv.REFUSE_POST_ONLY_CROSS
+def test_refuses_a_program_about_to_end_or_without_target():
+    assert _p(program_hours_remaining=0.5).code == lv.REFUSE_PROGRAM_ENDING
+    assert _p(target_size=None).code == lv.REFUSE_NO_TARGET_SIZE
 
 
-def test_refuses_a_program_about_to_end():
-    assert _q(program_hours_remaining=0.5).code == lv.REFUSE_PROGRAM_ENDING
-    assert _q(target_size=None).code == lv.REFUSE_NO_TARGET_SIZE
+def test_refuses_excluded_series_and_blocked_events():
+    assert _p(market_ticker="KXMLBSEASONGAMES-27-1215",
+              excluded_series=frozenset({"KXMLBSEASONGAMES"})).code == lv.REFUSE_EXCLUDED_SERIES
+    assert _p(event_ticker="EV", blocked_event_tickers=frozenset({"EV"})).code == lv.REFUSE_EVENT_CAP
 
 
-def test_refuses_a_ticker_reserved_for_another_live_book():
-    q = _q(market_ticker="KXMLBSEASONGAMES-27-1215",
-           excluded_series=frozenset({"KXMLBSEASONGAMES"}))
-    assert isinstance(q, lv.Refusal) and q.code == lv.REFUSE_EXCLUDED_SERIES
+def test_open_market_and_exposure_caps_refuse():
+    assert _p(open_orders_now=lv.MAX_OPEN_ORDERS).code == lv.REFUSE_OPEN_ORDER_CAP
+    assert _p(strategy_exposure_now_usd=lv.MAX_STRATEGY_EXPOSURE_USD).code == lv.REFUSE_EXPOSURE_CAP
 
 
-def test_open_order_and_exposure_caps_refuse():
-    assert _q(open_orders_now=lv.MAX_OPEN_ORDERS).code == lv.REFUSE_OPEN_ORDER_CAP
-    assert _q(strategy_exposure_now_usd=lv.MAX_STRATEGY_EXPOSURE_USD).code == lv.REFUSE_EXPOSURE_CAP
-    # just under the cap still places
-    assert isinstance(_q(strategy_exposure_now_usd=9.5), lv.LiveQuote)
-
-
-def test_reference_price_is_reported_not_enforced():
-    q = _q(reference_price_by_side={lv.SIDE_NO: 21})
-    assert isinstance(q, lv.LiveQuote) and q.at_or_above_reference is True
-    deep = _q(reference_price_by_side={lv.SIDE_NO: 24})
-    assert isinstance(deep, lv.LiveQuote) and deep.at_or_above_reference is False
-
-
-@pytest.mark.parametrize("yes_bid,no_bid", [(a, b) for a in range(1, 100, 7) for b in range(1, 100, 7)])
-def test_no_quote_ever_exceeds_a_declared_cap(yes_bid, no_bid):
-    """The property that matters: across the whole price grid, anything returned is inside
-    every cap, and everything else is a refusal."""
-    q = _q(best_yes_bid=yes_bid, best_no_bid=no_bid)
+@pytest.mark.parametrize("yes_bid,no_bid", [(a, b) for a in range(1, 100, 6) for b in range(1, 100, 6)])
+def test_no_pair_ever_exceeds_a_declared_cap(yes_bid, no_bid):
+    q = _p(best_yes_bid=yes_bid, best_no_bid=no_bid)
     if isinstance(q, lv.Refusal):
         return
-    assert q.quantity <= lv.MAX_CONTRACTS_PER_ORDER
-    assert q.collateral_usd <= lv.MAX_ORDER_DOLLARS
-    assert q.price_cents <= lv.MAX_PRICE_CENTS
-    assert 1 <= q.price_cents <= 99
-    assert q.max_loss_usd == q.collateral_usd          # a resting bid risks exactly its collateral
-    assert yes_bid + no_bid <= 100                      # never quoted into a crossed book
+    assert yes_bid + no_bid <= 100 - lv.MIN_PAIR_EDGE_CENTS
+    for leg in q.legs:
+        assert 1 <= leg.price_cents <= lv.MAX_PRICE_CENTS
+        assert 1 <= leg.quantity <= lv.MAX_CONTRACTS_PER_ORDER
+        assert leg.collateral_usd <= lv.MAX_ORDER_DOLLARS
+    assert q.yes.quantity == q.no.quantity
 
 
-def test_ranking_prefers_cheapest_then_soonest_payout():
-    cands = [
-        {"market_ticker": "A", "best_yes_bid": 20, "best_no_bid": 79, "yes_resting_total": 2000,
-         "no_resting_total": 2000, "target_size": 1000, "program_hours_remaining": 100},
-        {"market_ticker": "B", "best_yes_bid": 5, "best_no_bid": 94, "yes_resting_total": 2000,
-         "no_resting_total": 2000, "target_size": 1000, "program_hours_remaining": 50},
-        {"market_ticker": "C", "best_yes_bid": 60, "best_no_bid": 39, "yes_resting_total": 2000,
-         "no_resting_total": 2000, "target_size": 1000, "program_hours_remaining": 10},
-    ]
-    ranked = lv.rank_candidates(cands)
-    assert [c["market_ticker"] for c, _ in ranked] == ["B", "A"]   # C's cheapest touch is 39c
-    assert ranked[0][1].max_loss_usd == 0.05
+# ------------------------------------------------------------------ the close-time window
+
+
+def test_the_close_time_window_is_a_hard_refusal():
+    assert _p(hours_to_close=None).code == lv.REFUSE_NO_CLOSE_TIME
+    assert _p(hours_to_close=lv.MIN_HOURS_TO_CLOSE - 0.1).code == lv.REFUSE_CLOSES_TOO_SOON
+    assert _p(hours_to_close=lv.MAX_HOURS_TO_CLOSE + 0.1).code == lv.REFUSE_CLOSES_TOO_LATE
+    assert isinstance(_p(hours_to_close=lv.MIN_HOURS_TO_CLOSE), lv.PairQuote)
+    assert isinstance(_p(hours_to_close=lv.MAX_HOURS_TO_CLOSE), lv.PairQuote)
+
+
+def test_the_window_leaves_time_to_rest_before_the_flatten():
+    assert lv.MIN_HOURS_TO_CLOSE > lv.FLATTEN_HOURS_BEFORE_CLOSE
+
+
+def test_a_market_that_already_closed_is_refused():
+    """The KXBIGGESTQUAKE shape: closed days ago, never settled."""
+    assert _p(hours_to_close=-190.0).code == lv.REFUSE_CLOSES_TOO_SOON
+
+
+# ------------------------------------------------------------------ exits
+
+
+def test_stop_loss_fires_at_the_registered_distance():
+    entry = 40
+    dist = lv.stop_distance_cents(entry)
+    assert lv.decide_exit(entry_cents=entry, mark_bid_cents=entry - dist + 1,
+                          hours_to_close=24) is None
+    assert lv.decide_exit(entry_cents=entry, mark_bid_cents=entry - dist,
+                          hours_to_close=24) == lv.EXIT_STOP_LOSS
+
+
+def test_take_profit_fires_at_the_registered_distance():
+    entry = 40
+    dist = lv.take_profit_distance_cents(entry)
+    assert lv.decide_exit(entry_cents=entry, mark_bid_cents=entry + dist - 1,
+                          hours_to_close=24) is None
+    assert lv.decide_exit(entry_cents=entry, mark_bid_cents=entry + dist,
+                          hours_to_close=24) == lv.EXIT_TAKE_PROFIT
+
+
+def test_distances_have_a_floor_so_a_cheap_leg_is_not_stopped_by_one_tick():
+    assert lv.stop_distance_cents(2) == lv.EXIT_MIN_DISTANCE_CENTS
+    assert lv.take_profit_distance_cents(99) == lv.EXIT_MIN_DISTANCE_CENTS
+
+
+def test_pre_close_flatten_wins_and_needs_no_mark():
+    assert lv.decide_exit(entry_cents=40, mark_bid_cents=None,
+                          hours_to_close=lv.FLATTEN_HOURS_BEFORE_CLOSE) == lv.EXIT_PRE_CLOSE
+    # Even a position that is winning comes off before close: capital must not ride into
+    # settlement lag.
+    assert lv.decide_exit(entry_cents=40, mark_bid_cents=41, hours_to_close=0.5) == lv.EXIT_PRE_CLOSE
+
+
+def test_no_mark_and_no_close_means_hold():
+    assert lv.decide_exit(entry_cents=40, mark_bid_cents=None, hours_to_close=24) is None
+    assert lv.decide_exit(entry_cents=40, mark_bid_cents=40, hours_to_close=None) is None
+
+
+def test_exit_leg_joins_the_opposite_touch_but_never_gives_up_the_edge():
+    # Held YES at 40: a NO bid at p realises 100 - 40 - p. Joining a 50c touch locks 10c.
+    assert lv.exit_leg_price(entry_cents=40, best_opposite_bid=50) == 50
+    # A touch that would lock less than the minimum edge is capped.
+    assert lv.exit_leg_price(entry_cents=40, best_opposite_bid=65) == 100 - 40 - lv.MIN_PAIR_EDGE_CENTS
+    assert lv.exit_leg_price(entry_cents=40, best_opposite_bid=None) == 59
+    assert lv.exit_leg_price(entry_cents=99, best_opposite_bid=5) is None
+
+
+# ------------------------------------------------------------------ ranking
+
+
+def _c(ticker, *, depth=1500.0, hours=24.0, yes=40, no=55):
+    return {"market_ticker": ticker, "best_yes_bid": yes, "best_no_bid": no,
+            "yes_resting_total": depth, "no_resting_total": depth, "target_size": 1000.0,
+            "hours_to_close": hours, "program_hours_remaining": 48.0}
+
+
+def test_ranking_prefers_thinner_then_sooner_close_then_wider_edge():
+    ranked = lv.rank_candidates([
+        _c("DEEP", depth=2900.0, hours=4.0),
+        _c("LATE", hours=60.0),
+        _c("SOON", hours=5.0),
+        _c("SOON_WIDE", hours=5.0, yes=40, no=50),
+    ])
+    assert [c["market_ticker"] for c, _ in ranked] == ["SOON_WIDE", "SOON", "LATE", "DEEP"]
+
+
+def test_ranking_never_returns_a_refused_market():
+    assert lv.rank_candidates([_c("WAYDEEP", depth=80_000.0), _c("LATE", hours=500.0)]) == []
 
 
 def test_caps_are_the_ones_the_risk_envelope_will_name():
-    # A later test asserts the XOS envelope equals these; pin them here so a silent edit fails.
-    # MAX_OPEN_ORDERS raised 3 -> 5 on 2026-09-24, direct operator decision (thesis §9.34) — see
-    # the comment on the constant in liquidity_incentive/live.py for why this bypassed the
-    # formal re-arm path, and test_liquidity_incentive_xos_package.py::
-    # test_the_operator_guardrails_are_not_exceeded for the new authorized ceiling.
+    # Pinned so a silent edit fails. History: MAX_OPEN_ORDERS 3 -> 5 (§9.34); 1 -> 500 contracts,
+    # $1 -> $20, 5 -> 2 markets, $10 -> $50 budget (§9.36); two-sided at $10 a leg with a per-leg
+    # price cap of 90c replacing the one-sided 25c cheap-side cap (§9.37).
     assert (lv.MAX_CONTRACTS_PER_ORDER, lv.MAX_ORDER_DOLLARS, lv.MAX_OPEN_ORDERS,
-            lv.MAX_STRATEGY_EXPOSURE_USD, lv.MAX_PRICE_CENTS) == (1, 1.00, 5, 10.00, 25)
+            lv.MAX_STRATEGY_EXPOSURE_USD, lv.MAX_PRICE_CENTS) == (500, 10.00, 2, 50.00, 90)
+    assert (lv.MIN_HOURS_TO_CLOSE, lv.MAX_HOURS_TO_CLOSE, lv.FLATTEN_HOURS_BEFORE_CLOSE) == (
+        3.0, 72.0, 1.0)
+    assert (lv.STOP_LOSS_FRACTION, lv.TAKE_PROFIT_FRACTION, lv.EXIT_MIN_DISTANCE_CENTS) == (
+        0.40, 0.40, 3)
 
 
 class TestTheUniverseRule:
-    """The competing-depth cap — the one lever this book has on its own reward.
-
-    Reward share is our size over the competing depth. A 1-contract bid in a book resting
-    40,000 earns a share that rounds to zero while taking the same adverse selection as a bid in
-    a book resting 2,000. The shadow tape agrees in both directions at once (§9.27): the `deep`
-    bucket ran a worse mean single-leg mark AND a lower mean estimated reward than `medium`.
-    """
+    """The competing-depth cap — the one lever this book has on its own reward share (§9.27)."""
 
     def test_a_book_far_deeper_than_target_is_refused(self):
-        """The book this canary was actually quoting into: 30k/40k against a 1,000 target."""
-        q = _q(yes_resting_total=30_000.0, no_resting_total=40_000.0, target_size=1000.0)
+        q = _p(yes_resting_total=30_000.0, no_resting_total=40_000.0, target_size=1000.0)
         assert isinstance(q, lv.Refusal) and q.code == lv.REFUSE_BOOK_TOO_DEEP
 
-    def test_the_boundary_is_inclusive_so_exactly_the_multiple_still_places(self):
-        """`> cap`, not `>= cap`. A book resting exactly 3x target is the deepest one the
-        report's own `medium` bucket contains, and excluding it would move the line."""
+    def test_the_boundary_is_inclusive(self):
         exactly = lv.MAX_COMPETING_DEPTH_TARGET_MULTIPLE * 1000.0
-        assert isinstance(_q(yes_resting_total=exactly, no_resting_total=exactly,
-                             target_size=1000.0), lv.LiveQuote)
-        assert _q(yes_resting_total=exactly + 1, no_resting_total=exactly + 1,
+        assert isinstance(_p(yes_resting_total=exactly, no_resting_total=exactly), lv.PairQuote)
+        assert _p(yes_resting_total=exactly + 1,
+                  no_resting_total=exactly + 1).code == lv.REFUSE_BOOK_TOO_DEEP
+
+    def test_the_thinner_side_decides(self):
+        assert isinstance(_p(yes_resting_total=1200.0, no_resting_total=99_000.0), lv.PairQuote)
+        assert isinstance(_p(yes_resting_total=99_000.0, no_resting_total=1200.0), lv.PairQuote)
+
+    def test_the_cap_scales_with_target_size(self):
+        assert _p(yes_resting_total=20_000.0, no_resting_total=20_000.0,
                   target_size=1000.0).code == lv.REFUSE_BOOK_TOO_DEEP
-
-    def test_the_thinner_side_decides_not_the_average(self):
-        """One deep side does not disqualify the market, and does not buy the other a pass.
-        `min`, not `mean`: a lopsided book must read the same whichever way round it is."""
-        assert isinstance(_q(yes_resting_total=1200.0, no_resting_total=99_000.0,
-                             target_size=1000.0), lv.LiveQuote)
-        assert isinstance(_q(yes_resting_total=99_000.0, no_resting_total=1200.0,
-                             target_size=1000.0), lv.LiveQuote)
-
-    def test_under_target_still_reads_as_under_target_not_as_too_deep(self):
-        """Two gates read the same depth number and must stay distinguishable in the refusal
-        record: 'nobody is paid at all' is a different fact from 'our share is negligible'."""
-        assert _q(no_resting_total=900.0).code == lv.REFUSE_TARGET_NOT_MET
-
-    def test_the_cap_scales_with_target_size_rather_than_being_an_absolute_depth(self):
-        """20,000 resting is deep against a 1,000 target and thin against a 10,000 one. The
-        share that matters is relative to what the programme is paying for."""
-        assert _q(yes_resting_total=20_000.0, no_resting_total=20_000.0,
-                  target_size=1000.0).code == lv.REFUSE_BOOK_TOO_DEEP
-        assert isinstance(_q(yes_resting_total=20_000.0, no_resting_total=20_000.0,
-                             target_size=10_000.0), lv.LiveQuote)
-
-
-class TestRankingPrefersTheThinnerBook:
-    @staticmethod
-    def _c(ticker, *, depth, hours, no_bid=21):
-        return {"market_ticker": ticker, "best_yes_bid": 78, "best_no_bid": no_bid,
-                "yes_resting_total": depth, "no_resting_total": depth,
-                "target_size": 1000.0, "program_hours_remaining": hours}
-
-    def test_equally_cheap_orders_break_the_tie_on_depth_not_timing(self):
-        """The change in ordering. Both cost 21c, so the old key fell straight through to
-        program end — which pays nothing. The thinner book is worth strictly more reward for
-        identical risk, so it goes first."""
-        ranked = lv.rank_candidates([
-            self._c("KXDEEP", depth=2900.0, hours=4.0),     # ends soonest, nearly at the cap
-            self._c("KXTHIN", depth=1100.0, hours=60.0),
-        ])
-        assert [c["market_ticker"] for c, _ in ranked] == ["KXTHIN", "KXDEEP"]
-
-    def test_price_still_wins_over_depth(self):
-        """Depth is the second key, never the first. Collateral is the entire downside and
-        stays the safety ordering — a thinner book must not talk us into a dearer order."""
-        ranked = lv.rank_candidates([
-            self._c("KXTHIN_DEAR", depth=1100.0, hours=48.0, no_bid=20),
-            self._c("KXDEEP_CHEAP", depth=2900.0, hours=48.0, no_bid=3),
-        ])
-        assert ranked[0][0]["market_ticker"] == "KXDEEP_CHEAP"
-        assert ranked[0][1].price_cents == 3
-
-    def test_ranking_never_returns_a_book_the_gate_refused(self):
-        assert lv.rank_candidates([self._c("KXWAYDEEP", depth=80_000.0, hours=48.0)]) == []
+        assert isinstance(_p(yes_resting_total=20_000.0, no_resting_total=20_000.0,
+                             target_size=10_000.0), lv.PairQuote)

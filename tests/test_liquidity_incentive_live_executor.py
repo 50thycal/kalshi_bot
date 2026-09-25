@@ -1,8 +1,8 @@
-"""The liquidity-incentive LIVE path (`LiveExecutor.mirror_incentive_entry`, WS-020 Phase 1a).
+"""The liquidity-incentive LIVE path — pair entry and the book's own exits (thesis §9.37).
 
 Every test is a safety property. The default posture is INERT; each gate is proved to place
-nothing; and the one test that does place proves the exact wire format of a post-only resting
-bid on each side. If a change makes this file pass while spending more, the change is wrong.
+nothing; the placing tests prove the exact wire format of both legs and of each exit order. If a
+change makes this file pass while spending more, the change is wrong.
 """
 
 from __future__ import annotations
@@ -22,15 +22,26 @@ TAG = "Limm1"
 
 
 class FakeLiveClient:
-    def __init__(self, fail=None):
+    def __init__(self, fail=None, cancel_fail=None):
         self.placed: list[dict] = []
+        self.canceled: list[str] = []
         self.fail = fail
+        self.cancel_fail = cancel_fail
 
     def create_events_order(self, order):
         self.placed.append(order)
         if self.fail is not None:
             raise self.fail
         return {"order": {"order_id": f"K-{len(self.placed)}", "status": "resting"}}
+
+    def cancel_events_order(self, order_id, *, exchange_index=None):
+        if self.cancel_fail is not None:
+            raise self.cancel_fail
+        self.canceled.append(order_id)
+        return {}
+
+    def get_market(self, ticker):
+        return {"market": {"ticker": ticker}}
 
 
 def _live_settings(settings):
@@ -50,7 +61,7 @@ def _db(settings):
     db.create_all()
 
 
-def _quote(side=limm.SIDE_NO, price=21, qty=1, ticker="KXTEST-A"):
+def _leg(side, price, qty, ticker="KXTEST-A"):
     return limm.LiveQuote(
         market_ticker=ticker, side=side, price_cents=price, quantity=qty,
         collateral_usd=round(price * qty / 100.0, 4), max_loss_usd=round(price * qty / 100.0, 4),
@@ -58,17 +69,27 @@ def _quote(side=limm.SIDE_NO, price=21, qty=1, ticker="KXTEST-A"):
     )
 
 
+def _pair(yes=40, no=55, qty=None, ticker="KXTEST-A", no_qty=None):
+    q = qty if qty is not None else limm.pair_quantity(yes, no)
+    y, n = _leg(limm.SIDE_YES, yes, q, ticker), _leg(limm.SIDE_NO, no, no_qty or q, ticker)
+    return limm.PairQuote(
+        market_ticker=ticker, yes=y, no=n, quantity=q, edge_cents=100 - yes - no,
+        collateral_usd=round(y.collateral_usd + n.collateral_usd, 4),
+        max_loss_usd=max(y.collateral_usd, n.collateral_usd), hours_to_close=24.0)
+
+
 def _exec(settings, client=None):
     return LiveExecutor(client or FakeLiveClient(), settings, RiskManager(settings))
 
 
-def _place(ex, settings, *, quote=None, account_state=None, ticker="KXTEST-A", strategy=TAG):
+def _place(ex, settings, *, pair=None, account_state=None, ticker="KXTEST-A", strategy=TAG):
     with db.session_scope() as s:
-        return ex.mirror_incentive_entry(
+        outcome, _legs = ex.mirror_incentive_pair(
             s, strategy=strategy, event_ticker="KXTEST", ticker=ticker,
-            quote=quote or _quote(ticker=ticker),
+            pair=pair or _pair(ticker=ticker),
             account_state=account_state if account_state is not None else {"cash_balance": 500.0},
         )
+        return outcome
 
 
 # ------------------------------------------------------------------ inert by default
@@ -76,7 +97,6 @@ def _place(ex, settings, *, quote=None, account_state=None, ticker="KXTEST-A", s
 
 def test_inert_unless_every_switch_is_on(settings):
     _db(settings)
-    _live_settings(settings)
     for attr, value in (("bot_mode", "paper"), ("kill_switch", True), ("live_enabled", False),
                         ("live_strategies", "")):
         _live_settings(settings)
@@ -105,21 +125,39 @@ def test_missing_balance_fails_closed(settings):
 # ------------------------------------------------------------------ the caps
 
 
-def test_refuses_a_quote_above_the_registered_price_cap(settings):
+def test_refuses_a_leg_above_the_registered_price_cap(settings):
     _db(settings)
     _live_settings(settings)
     ex = _exec(settings)
-    bad = _quote(price=limm.MAX_PRICE_CENTS + 1)
-    assert _place(ex, settings, quote=bad) == "gate:size"
+    assert _place(ex, settings, pair=_pair(yes=2, no=limm.MAX_PRICE_CENTS + 1, qty=1)) == "gate:size"
     assert ex.client.placed == []
 
 
-def test_refuses_a_quote_above_the_registered_contract_cap(settings):
+def test_refuses_a_leg_above_the_registered_contract_cap(settings):
     _db(settings)
     _live_settings(settings)
     ex = _exec(settings)
-    bad = _quote(qty=limm.MAX_CONTRACTS_PER_ORDER + 1)
-    assert _place(ex, settings, quote=bad) == "gate:size"
+    assert _place(ex, settings,
+                  pair=_pair(yes=1, no=1, qty=limm.MAX_CONTRACTS_PER_ORDER + 1)) == "gate:size"
+    assert ex.client.placed == []
+
+
+def test_refuses_a_leg_above_the_per_leg_dollar_cap(settings):
+    _db(settings)
+    _live_settings(settings)
+    ex = _exec(settings)
+    too_many = int(limm.MAX_ORDER_DOLLARS * 100 // 55) + 1
+    assert _place(ex, settings, pair=_pair(yes=40, no=55, qty=too_many)) == "gate:size"
+    assert ex.client.placed == []
+
+
+def test_refuses_unequal_legs_and_a_pair_with_no_edge(settings):
+    """Unequal legs are not a hedge; a pair that locks nothing is not a pair."""
+    _db(settings)
+    _live_settings(settings)
+    ex = _exec(settings)
+    assert _place(ex, settings, pair=_pair(yes=40, no=55, qty=5, no_qty=6)) == "gate:size"
+    assert _place(ex, settings, pair=_pair(yes=45, no=55, qty=5)) == "gate:size"
     assert ex.client.placed == []
 
 
@@ -127,12 +165,11 @@ def test_strategy_budget_is_enforced_from_the_database(settings):
     _db(settings)
     _live_settings(settings)
     ex = _exec(settings)
-    # Pre-load this strategy with orders worth more than its own budget.
     with db.session_scope() as s:
         for i in range(12):
             s.add(m.LiveOrder(
                 market_ticker=f"KXOTHER-{i}", event_ticker="KXOTHER", strategy=TAG, side="no",
-                action="buy", limit_price=99, quantity=1, status="resting",
+                action="buy", limit_price=99, quantity=5, status="resting",
                 client_order_id=f"c-{i}", created_at=datetime.now(timezone.utc)))
     with db.session_scope() as s:
         assert repo.live_strategy_exposure(s, TAG) > limm.MAX_STRATEGY_EXPOSURE_USD
@@ -140,7 +177,7 @@ def test_strategy_budget_is_enforced_from_the_database(settings):
     assert ex.client.placed == []
 
 
-def test_open_order_cap_is_this_strategys_own(settings):
+def test_open_market_cap_is_this_strategys_own(settings):
     _db(settings)
     _live_settings(settings)
     ex = _exec(settings)
@@ -155,7 +192,7 @@ def test_open_order_cap_is_this_strategys_own(settings):
 
 
 def test_never_contests_a_market_another_book_is_resting_in(settings):
-    """The cross-strategy guard: an mmsell order on this ticker must block us, and vice versa."""
+    """The shared, strategy-agnostic dedup gate is UNCHANGED by two-sided quoting."""
     _db(settings)
     _live_settings(settings)
     ex = _exec(settings)
@@ -165,6 +202,24 @@ def test_never_contests_a_market_another_book_is_resting_in(settings):
             action="buy", limit_price=92, quantity=1, status="resting",
             client_order_id="mmsell-1", created_at=datetime.now(timezone.utc)))
     assert _place(ex, settings) == "gate:dedup"
+    assert ex.client.placed == []
+
+
+def test_never_stacks_a_second_pair_on_its_own_market(settings):
+    _db(settings)
+    _live_settings(settings)
+    ex = _exec(settings)
+    assert _place(ex, settings) == "placed"
+    assert _place(ex, settings) == "gate:dedup"
+    assert len(ex.client.placed) == 2
+
+
+def test_the_pair_is_counted_against_the_shared_market_exposure_cap(settings):
+    _db(settings)
+    _live_settings(settings)
+    settings.max_market_exposure = 5.0          # below one pair's collateral
+    ex = _exec(settings)
+    assert _place(ex, settings) == "gate:exposure"
     assert ex.client.placed == []
 
 
@@ -180,35 +235,44 @@ def test_shared_daily_loss_stop_blocks_entry(settings):
 # ------------------------------------------------------------------ the wire format
 
 
-def test_places_a_post_only_no_bid_with_the_right_yes_side_price(settings):
+def test_places_both_legs_post_only_with_the_right_yes_side_prices(settings):
     _db(settings)
     _live_settings(settings)
     ex = _exec(settings)
-    assert _place(ex, settings, quote=_quote(side=limm.SIDE_NO, price=21)) == "placed"
-    order = ex.client.placed[0]
-    assert order["side"] == "ask"                    # selling YES == buying NO
-    assert order["price"] == "0.7900"                # a NO bid at 21c is a YES ask at 79c
-    assert order["count"] == "1.00"                  # decimal STRINGS, not numbers
-    assert order["post_only"] is True
-    assert order["time_in_force"] == "good_till_canceled"
+    pair = _pair(yes=40, no=55)
+    assert _place(ex, settings, pair=pair) == "placed"
+    yes_order, no_order = ex.client.placed
+    assert (yes_order["side"], yes_order["price"]) == ("bid", "0.4000")    # buying YES
+    assert (no_order["side"], no_order["price"]) == ("ask", "0.4500")      # NO 55c == YES ask 45c
+    for o in (yes_order, no_order):
+        assert o["count"] == f"{pair.quantity:.2f}"                        # decimal STRINGS
+        assert o["post_only"] is True and o["time_in_force"] == "good_till_canceled"
     with db.session_scope() as s:
-        row = s.scalars(select(m.LiveOrder)).one()
-        assert (row.side, row.action, row.limit_price, row.quantity) == ("no", "buy", 21, 1)
-        assert row.status == "resting" and row.strategy == TAG
+        rows = s.scalars(select(m.LiveOrder).order_by(m.LiveOrder.id)).all()
+        assert [(r.side, r.action, r.limit_price, r.quantity, r.status) for r in rows] == [
+            ("yes", "buy", 40, pair.quantity, "resting"),
+            ("no", "buy", 55, pair.quantity, "resting")]
 
 
-def test_places_a_post_only_yes_bid_when_yes_is_the_cheap_side(settings):
+def test_a_failed_second_leg_leaves_the_first_resting_and_says_so(settings):
+    from kalshi_bot.kalshi.errors import KalshiAPIError
+
+    class SecondFails(FakeLiveClient):
+        def create_events_order(self, order):
+            self.placed.append(order)
+            if len(self.placed) == 2:
+                raise KalshiAPIError(400, "post only cross", "/portfolio/events/orders")
+            return {"order": {"order_id": "K-1", "status": "resting"}}
+
     _db(settings)
     _live_settings(settings)
-    ex = _exec(settings)
-    assert _place(ex, settings, quote=_quote(side=limm.SIDE_YES, price=9)) == "placed"
-    order = ex.client.placed[0]
-    assert order["side"] == "bid"                    # buying YES
-    assert order["price"] == "0.0900"
-    assert order["post_only"] is True
+    ex = _exec(settings, client=SecondFails())
     with db.session_scope() as s:
-        row = s.scalars(select(m.LiveOrder)).one()
-        assert (row.side, row.limit_price) == ("yes", 9)
+        outcome, legs = ex.mirror_incentive_pair(
+            s, strategy=TAG, event_ticker="KXTEST", ticker="KXTEST-A", pair=_pair(),
+            account_state={"cash_balance": 500.0})
+    assert outcome == "partial:rejected"
+    assert [leg.side for leg in legs] == [limm.SIDE_YES]
 
 
 def test_intent_is_committed_before_the_post(settings):
@@ -235,34 +299,171 @@ def test_a_transient_error_is_never_read_as_not_placed(settings):
         assert s.scalars(select(m.LiveOrder)).one().status == "unknown"
 
 
-def test_one_order_per_call_and_the_whole_test_cannot_exceed_its_budget(settings):
-    """End to end: place until the strategy's own caps stop it, and prove the total spent is
+def test_the_whole_book_cannot_exceed_its_budget(settings):
+    """End to end: place until the strategy's own caps stop it, and prove the total committed is
     bounded by the registered budget — the property the operator is actually relying on."""
     _db(settings)
     _live_settings(settings)
     ex = _exec(settings)
-    codes = []
-    for i in range(10):
-        codes.append(_place(ex, settings, ticker=f"KXTEST-{i}"))
+    codes = [_place(ex, settings, ticker=f"KXTEST-{i}") for i in range(10)]
     assert codes.count("placed") == limm.MAX_OPEN_ORDERS
     assert all(c == "gate:open_cap" for c in codes[limm.MAX_OPEN_ORDERS:])
     with db.session_scope() as s:
         spent = repo.live_strategy_exposure(s, TAG)
         n = s.scalar(select(func.count()).select_from(m.LiveOrder))
-    assert n == limm.MAX_OPEN_ORDERS
+    assert n == 2 * limm.MAX_OPEN_ORDERS
     assert spent <= limm.MAX_STRATEGY_EXPOSURE_USD
-    assert spent <= limm.MAX_OPEN_ORDERS * limm.MAX_ORDER_DOLLARS
+    assert spent <= limm.MAX_OPEN_ORDERS * 2 * limm.MAX_ORDER_DOLLARS
 
 
-# ------------------------------------------------------------------ hold to settlement
+# ------------------------------------------------------------------ the book's own exits
+
+
+def _close(ex, *, held_side, mark, qty=10, rule=limm.EXIT_STOP_LOSS, strategy=TAG):
+    with db.session_scope() as s:
+        return ex.close_incentive_position(
+            s, strategy=strategy, ticker="KXTEST-A", held_side=held_side, qty=qty,
+            mark_bid_cents=mark, rule=rule)
+
+
+def test_closing_a_yes_leg_sells_yes_marketably(settings):
+    _db(settings)
+    _live_settings(settings)
+    ex = _exec(settings)
+    assert _close(ex, held_side=limm.SIDE_YES, mark=30) == "placed"
+    order = ex.client.placed[0]
+    sell_at = 30 - limm.EXIT_SLIPPAGE_CENTS
+    assert order["side"] == "ask"                                   # sell YES
+    assert order["price"] == f"{sell_at / 100:.4f}"
+    assert order["time_in_force"] == "immediate_or_cancel"
+    # The mmsell closeout's recorded-201 field set: no post_only (contradicts IOC), no
+    # reduce_only (400 invalid_parameters on these contracts).
+    assert "post_only" not in order and "reduce_only" not in order
+    assert order["self_trade_prevention_type"] == "taker_at_cross"
+    with db.session_scope() as s:
+        row = s.scalars(select(m.LiveOrder)).one()
+        assert (row.side, row.action, row.limit_price, row.quantity) == ("yes", "sell", sell_at, 10)
+        assert row.client_order_id.startswith("limmexit:stop_loss:")
+        assert row.status == "submitted"
+
+
+def test_closing_a_no_leg_buys_yes_like_the_mmsell_closeout(settings):
+    _db(settings)
+    _live_settings(settings)
+    ex = _exec(settings)
+    assert _close(ex, held_side=limm.SIDE_NO, mark=60) == "placed"
+    order = ex.client.placed[0]
+    sell_at = 60 - limm.EXIT_SLIPPAGE_CENTS
+    assert order["side"] == "bid"                                   # buy YES flattens NO
+    assert order["price"] == f"{(100 - sell_at) / 100:.4f}"
+
+
+def test_an_exit_is_not_blocked_by_the_loss_breaker(settings):
+    """A loss stop that also blocked the stop-loss would be the wrong way round."""
+    _db(settings)
+    _live_settings(settings)
+    ex = _exec(settings)
+    ex._daily_loss_tripped = True
+    assert _close(ex, held_side=limm.SIDE_YES, mark=30) == "placed"
+
+
+def test_an_exit_still_respects_the_switches(settings):
+    _db(settings)
+    _live_settings(settings)
+    settings.live_enabled = False
+    ex = _exec(settings)
+    assert _close(ex, held_side=limm.SIDE_YES, mark=30) == "gate:switches"
+    assert ex.client.placed == []
+
+
+def test_the_exit_leg_rests_post_only_on_the_opposite_side(settings):
+    _db(settings)
+    _live_settings(settings)
+    ex = _exec(settings)
+    with db.session_scope() as s:
+        assert ex.place_incentive_exit_leg(s, strategy=TAG, ticker="KXTEST-A",
+                                           held_side=limm.SIDE_YES, qty=10, price=55) == "placed"
+    order = ex.client.placed[0]
+    assert (order["side"], order["price"], order["post_only"]) == ("ask", "0.4500", True)
+    with db.session_scope() as s:
+        row = s.scalars(select(m.LiveOrder)).one()
+        assert (row.side, row.action, row.limit_price) == ("no", "buy", 55)
+        assert row.client_order_id.startswith("limmexitleg:")
+
+
+def test_the_exit_leg_never_joins_a_market_with_something_working(settings):
+    _db(settings)
+    _live_settings(settings)
+    ex = _exec(settings)
+    with db.session_scope() as s:
+        s.add(m.LiveOrder(market_ticker="KXTEST-A", strategy="Fmmsell10", side="no",
+                          action="buy", limit_price=92, quantity=1, status="resting",
+                          client_order_id="x", created_at=datetime.now(timezone.utc)))
+        s.flush()
+        assert ex.place_incentive_exit_leg(s, strategy=TAG, ticker="KXTEST-A",
+                                           held_side=limm.SIDE_YES, qty=1,
+                                           price=55) == "gate:dedup"
+    assert ex.client.placed == []
+
+
+def _working(s, *, strategy=TAG, koid="K-9", status="resting", coid="c"):
+    s.add(m.LiveOrder(market_ticker="KXTEST-A", strategy=strategy, side="no", action="buy",
+                      limit_price=55, quantity=10, status=status, kalshi_order_id=koid,
+                      client_order_id=coid, created_at=datetime.now(timezone.utc)))
+    s.flush()
+
+
+def test_cancel_takes_only_this_books_working_orders(settings):
+    _db(settings)
+    _live_settings(settings)
+    ex = _exec(settings)
+    with db.session_scope() as s:
+        _working(s, koid="K-OURS", coid="a")
+        _working(s, strategy="Fmmsell10", koid="K-THEIRS", coid="b")
+        assert ex.cancel_incentive_orders(s, strategy=TAG, ticker="KXTEST-A") is True
+        statuses = {r.kalshi_order_id: r.status for r in s.scalars(select(m.LiveOrder))}
+    assert ex.client.canceled == ["K-OURS"]
+    assert statuses == {"K-OURS": "canceled", "K-THEIRS": "resting"}
+
+
+def test_cancel_reports_failure_so_no_exit_follows(settings):
+    """An exit sent while a leg may still rest would let that leg reopen the position."""
+    _db(settings)
+    _live_settings(settings)
+    ex = _exec(settings, client=FakeLiveClient(cancel_fail=RuntimeError("404")))
+    with db.session_scope() as s:
+        _working(s)
+        assert ex.cancel_incentive_orders(s, strategy=TAG, ticker="KXTEST-A") is False
+        assert s.scalars(select(m.LiveOrder)).one().status == "resting"
+
+
+def test_cancel_refuses_to_vouch_for_an_order_with_no_exchange_id(settings):
+    _db(settings)
+    _live_settings(settings)
+    ex = _exec(settings)
+    with db.session_scope() as s:
+        _working(s, koid=None, status="pending")
+        assert ex.cancel_incentive_orders(s, strategy=TAG, ticker="KXTEST-A") is False
+
+
+def test_exit_attempts_count_only_marketable_exits(settings):
+    _db(settings)
+    _live_settings(settings)
+    ex = _exec(settings)
+    with db.session_scope() as s:
+        _working(s, coid="limmexit:stop_loss:1", status="canceled")
+        _working(s, coid="limmexitleg:2", status="resting")
+        _working(s, coid="plain", status="filled")
+        assert ex.incentive_exit_attempts(s, strategy=TAG, ticker="KXTEST-A") == 1
+
+
+# ------------------------------------------------------------------ the process-wide exits
 
 
 def test_the_tp_sl_exit_path_skips_this_book(settings, monkeypatch):
-    """This book's registered contract is HOLD TO SETTLEMENT. Production runs LIVE_EXIT_MODE
-    =tp_sl for the YES/weather books, and `open_live_positions` returns net-LONG YES positions
-    — which a filled YES incentive bid is. Without the tag skip, `manage_exits` would place
-    exit orders this book's risk envelope never declared, spending real money and real fees to
-    leave a position whose entire downside is the <=$1 already paid."""
+    """This book runs its OWN exit rules from its runner. The process-wide TP/SL (production
+    runs LIVE_EXIT_MODE=tp_sl for the YES/weather books) must never also fire on it: two rule
+    sets on one real-money position, and one of them can only close YES."""
     _db(settings)
     _live_settings(settings)
     settings.live_exit_mode = "tp_sl"
@@ -273,7 +474,6 @@ def test_the_tp_sl_exit_path_skips_this_book(settings, monkeypatch):
         lambda _s: [("KXA-1", limm.LIVE_TAG, 20, datetime.now(timezone.utc), 1),
                     ("KXA-2", limm.TWIN_TAG, 20, datetime.now(timezone.utc), 1),
                     ("KXB-1", "wx20", 60, datetime.now(timezone.utc), 1)])
-    monkeypatch.setattr(repo, "_remaining_open_qty", lambda *a, **k: 1.0, raising=False)
     monkeypatch.setattr(LiveExecutor, "_remaining_open_qty",
                         lambda self, s, t, q: (seen.append(t) or 1.0))
     with db.session_scope() as s:

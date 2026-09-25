@@ -1713,6 +1713,14 @@ def live_open_order_exists(session, ticker: str) -> bool:
     ) > 0
 
 
+def live_orders_on_ticker(session, ticker: str) -> list[m.LiveOrder]:
+    """Every live order row on one market, oldest first, any strategy and status."""
+    return list(session.scalars(
+        select(m.LiveOrder).where(m.LiveOrder.market_ticker == ticker)
+        .order_by(m.LiveOrder.created_at, m.LiveOrder.id)
+    ).all())
+
+
 def get_live_order_by_client_id(session, client_order_id: str) -> m.LiveOrder | None:
     return session.scalar(
         select(m.LiveOrder).where(m.LiveOrder.client_order_id == client_order_id)

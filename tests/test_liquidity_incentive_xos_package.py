@@ -27,30 +27,41 @@ GATE_SPECS = (pkg.PROBE_GATE_SPEC, pkg.PROMOTION_GATE_SPEC, pkg.KEEP_GATE_SPEC)
 
 def test_the_registered_envelope_equals_the_running_constants():
     e = pkg.RISK_ENVELOPE
-    assert e["contracts_per_order"] == limm.MAX_CONTRACTS_PER_ORDER == 1
+    assert e["contracts_per_order"] == limm.MAX_CONTRACTS_PER_ORDER
     assert e["max_order_dollars"] == limm.MAX_ORDER_DOLLARS
     assert e["max_price_cents"] == limm.MAX_PRICE_CENTS
     assert e["max_open_orders"] == limm.MAX_OPEN_ORDERS
     assert e["max_book_exposure_usd"] == limm.MAX_STRATEGY_EXPOSURE_USD
-    # The stated per-clip downside must be what the price cap actually allows, not a rounder
-    # number someone liked better.
-    assert e["max_loss_per_clip_usd"] == pytest.approx(limm.MAX_PRICE_CENTS / 100.0)
+    # The stated per-clip downside must be what the dollar cap actually allows (thesis §9.36:
+    # the dollar cap binds before the contract-count ceiling does at any price this book
+    # trades), not a rounder number someone liked better.
+    assert e["max_loss_per_clip_usd"] == pytest.approx(limm.MAX_ORDER_DOLLARS)
+    # Two-sided with registered exits (thesis §9.37): the envelope names the rules that run.
+    assert e["sides_quoted"] == 2
+    assert e["min_pair_edge_cents"] == limm.MIN_PAIR_EDGE_CENTS
+    assert e["close_window_hours"] == [limm.MIN_HOURS_TO_CLOSE, limm.MAX_HOURS_TO_CLOSE]
+    x = e["exit_policy"]
+    assert x["stop_loss_fraction_of_entry"] == limm.STOP_LOSS_FRACTION
+    assert x["take_profit_fraction_of_upside"] == limm.TAKE_PROFIT_FRACTION
+    assert x["flatten_hours_before_close"] == limm.FLATTEN_HOURS_BEFORE_CLOSE
+    assert x["exit_max_attempts"] == limm.EXIT_MAX_ATTEMPTS
 
 
 def test_the_operator_guardrails_are_not_exceeded():
-    """The operator authorized: under $10 total, at most 5 at a time, $1 per trade.
+    """The operator authorized: under $50 total, at most 2 markets at a time, $10 a side.
 
-    Originally 3; raised to 5 on 2026-09-24 by direct operator decision (thesis §9.34), edited
-    straight into the running constant rather than through a re-arm — see the comment on
-    `MAX_OPEN_ORDERS` in `liquidity_incentive/live.py` for why the formal path was infeasible
-    same-day. This line is the new authorization on record for the CODE; the XOS-registered
-    envelope on the live deployment still reads 3 and is not updated by this test."""
-    assert limm.MAX_STRATEGY_EXPOSURE_USD <= 10.00
-    assert limm.MAX_OPEN_ORDERS <= 5
-    assert limm.MAX_ORDER_DOLLARS <= 1.00
-    # And the caps are mutually consistent: five orders at the per-order cap stay inside the
-    # book budget, so no combination of allowed orders can breach it.
-    assert limm.MAX_OPEN_ORDERS * limm.MAX_ORDER_DOLLARS <= limm.MAX_STRATEGY_EXPOSURE_USD
+    History: $10 / 3-at-a-time / $1 per trade originally; 5-at-a-time on 2026-09-24 (thesis
+    §9.34); $50 / 2 / $20 per trade on 2026-09-25 (§9.36); then two-sided the same day (§9.37) —
+    "make each side $10, so each position is still $20". Every raise was edited straight into
+    the running constants rather than through a re-arm (see `liquidity_incentive/live.py`). This
+    is the authorization on record for the CODE; the XOS-registered envelope on the live
+    deployment still reads the original numbers and is not updated by this test."""
+    assert limm.MAX_STRATEGY_EXPOSURE_USD <= 50.00
+    assert limm.MAX_OPEN_ORDERS <= 2
+    assert limm.MAX_ORDER_DOLLARS <= 10.00
+    # Mutually consistent: every open market carrying BOTH legs at the per-leg cap stays inside
+    # the book budget, so no combination of allowed orders can breach it.
+    assert limm.MAX_OPEN_ORDERS * 2 * limm.MAX_ORDER_DOLLARS <= limm.MAX_STRATEGY_EXPOSURE_USD
 
 
 # ------------------------------------------------------- tags
