@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-target-size-1","sql":"select market_ticker, target_size, period_reward_usd, max_reward_per_account from incentive_programs order by discovered_at desc limit 15"}
+{"type":"db","id":"limm-target-size-2","sql":"select market_ticker, target_size, period_reward_usd, to_char(end_date,'MM-DD') as ends from incentive_programs order by id desc limit 15"}
