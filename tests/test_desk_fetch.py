@@ -25,6 +25,7 @@ def test_the_script_is_allowlisted_on_the_ops_channel():
 def test_only_https_on_allowlisted_hosts():
     assert df.host_allowed("https://gasprices.aaa.com/")
     assert df.host_allowed("https://openrouter.ai/rankings?view=week")
+    assert df.host_allowed("https://www.ercot.com/content/cdr/html/loadForecastVsActualCurrentDay.html")
     assert not df.host_allowed("http://gasprices.aaa.com/")          # plain http
     assert not df.host_allowed("https://evil.example.com/gasprices.aaa.com")
     assert not df.host_allowed("https://gasprices.aaa.com.evil.example/")

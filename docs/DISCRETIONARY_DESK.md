@@ -116,6 +116,7 @@ pnl_usd, postmortem_tag
 | `openrouter.ai` community snapshot (`jampongsathorn/openrouter-rankings` on GitHub) | yes | daily copies of the same page; its market-share section has been empty since at least mid-September, so it does not substitute |
 | `kalshi_desk_board --ticker` order book | yes, verified live 2026-09-19 20:31Z | the `orderbook_fp` branch works: `KX30YMORTW-26SEP24-T7.01` printed 8 resting levels a side (YES 40c x94, 36c x600, then a wall of penny bids; NO 59c x60, 37c x2, …). Every earlier empty-book read was the retired key, not an empty market. The desk can now see depth, which is what R4's "rest a bid" needs |
 | `openrouter.ai/api/frontend/v1/rankings/market-share` | yes, JSON | weekly buckets `{"x": "<week-start Monday>", "ys": {author: value}}` back to 2025-09, **including the in-progress week**, updated near real time (two reads 11.7h apart on 2026-09-19 moved the week-of-9/14 bucket by 7.1T). The values are **absolute tokens per author** (`others` is the remainder, so the sum is the platform total): the week of 2026-09-07 sums to 126.8T, the figure the public token-usage trackers publish for that week. They are not the request-share metric the `KX*SHARE` markets settle on (for 2026-09-07 tokens say anthropic 3.8% / openai 18.9%, the settlement table says 2.5% / 23.6%). Query params (`?metric=`, `?type=`) are ignored; `market-share-requests`, `requests` and `authors` return "Unknown dataset". So: the endpoint gives the `KXTOKENUSE` week-to-date total directly, and only a proxy for share |
+| `www.ercot.com` | **added to the allowlist 2026-09-25, not yet live-tested** | `KXTXERCOTPEAKD` names a specific, readable-in-principle source (`Actual System Load by Forecast Zone` CSV, and the load-forecast-vs-actual CDR page). The host wasn't live in time to check today's ladder — the ops runner runs the merged base branch, not an uncommitted change — so the first real read is next session's to do |
 
 ## 7. Base rates the desk leans on (from the repo's own settled history and the settlement sources)
 
@@ -159,64 +160,63 @@ under the wider policy; 5 defaults to the daily line plus the weekly table.
 
 ## 9. Handoff — where the desk stands (rewrite this at the close of every session)
 
-**As of 2026-09-24 ~16:22 UTC (Thu).** Role playbook: `.claude/sessions/discretionary-desk.md`.
+**As of 2026-09-25 ~13:45 UTC (Fri).** Role playbook: `.claude/sessions/discretionary-desk.md`.
 Any session — or any model that can read this repo and push to GitHub — continues from this
 section, the ledger and the postmortems; nothing else was needed to get here.
 
-**No open real-money positions.** Both picks written so far are now settled and both won. This
-is the first point since the desk opened (2026-09-19) with zero dollars at risk.
+**No open real-money positions.** Both picks written so far are settled and both won
+(+$0.32, +$1.33 = +$1.65 realized). Unchanged since yesterday's close.
 
-**PR #460** (the ~03:20 UTC catch-up + today's daily update) **merged** at ~13:44 UTC. The desk
-branch was fast-forwarded and pushed right after. Nothing pending there.
+**Today's daily routine (13:34 UTC) — zero-pick day, logged as `D-2026-09-25-NP1`:** branch
+restarted from `origin/claude/confident-goldberg-83u3q` (clean merge). A fresh week of `KX*SHARE`
+(OpenRouter request-share) ladders opened for 26SEP28 with large volume (18.6k on one strike) —
+still no live read of the actual request-share metric (only the token-count proxy, which is known
+to diverge — §6a), so R2 still forbids trading these regardless of size. Diesel unchanged from
+yesterday's read, not re-underwritten.
 
-**Settled since the last handoff:**
+**The day's real find: `KXTXERCOTPEAKD-26SEP26`** (Texas ERCOT peak electricity demand, strikes at
+80,000 / 82,000 / 84,500 MW, settling ~15h out). Its rules are the most specific the desk has seen
+— *"the highest value in the TOTAL column of the first complete Actual System Load by Forecast Zone
+CSV report published by ERCOT"* — a real, nameable, R2/R13-compliant source. But `ercot.com`,
+`gridstatus.io` and one third-party ERCOT tracker were all blocked from the sandbox, and web
+search's AI summaries **contradicted themselves within the same research pass** (one said the heat
+had broken and load was a mundane 58,129 MW; another quoted an 80,400 MW peak forecast with
+above-normal temperatures) — the same unreliable-source pattern already flagged this week. No pick
+without a primary-source read. **Added `www.ercot.com` to `desk_fetch`'s allowlist this session**
+(code + a new host-allowlist test, both green) so the next read goes straight to the source instead
+of through web search — it landed too late in the day to check today's own ladder (the ops runner
+executes the merged base branch, not an uncommitted change), so **the first live ERCOT read is the
+next session's to do**, and today's ladder went unverified either way.
 
-- `D-2026-09-19-002` (`KX30YMORTW-26SEP24-T7.01`, Freddie Mac PMMS > 7.01%, YES @ 43¢) **graded
-  WIN, +$1.33**. Kalshi's own settlement field (surfaced by this session's earlier crash fix)
-  read `result=yes` at 16:20:57 UTC, ~21 minutes after the 15:59Z close. This is the **first grade
-  to rest on Kalshi's own determined result alone**: Freddie Mac's page, FRED, and every
-  third-party mirror the desk tried were unreachable from the sandbox, and the ops runner's own
-  attempt to fetch FRED timed out twice. The book itself had already drifted to 75–80¢ on YES in
-  the final hour before close, consistent with the outcome. See §7.
-
-**Score so far: 2 settled picks, 2 wins (+$0.32, +$1.33 = +$1.65 realized), 3 no-picks logged.**
-Sample is still far too small to read as calibration (R6 — no claim before ~30 settled picks),
-and D-001's win came on a thesis later found broken (§1a) — a reminder that a win is not the same
-thing as a correct process, and losses are not the only thing worth a postmortem.
-
-**Today's daily routine (13:34 UTC) — zero-pick day, logged as `D-2026-09-24-NP1`:** branch
-restarted from `origin/claude/confident-goldberg-83u3q` (clean merge), then a 72h/500-vol board
-scan (75 markets: mostly YouTube ranking noise, ActBlue fundraiser guesses, and the diesel/EV
-series already known). Investigated `KXDIESELD-26SEP25-T6.520` ("Diesel prices tomorrow," ~9%
-implied YES) — rules name no source (R13), so `desk_fetch`'d AAA's live page rather than trust
-last week's trend: diesel has actually **turned down** two days running ($6.5276 → $6.5217 →
-$6.5141), lining up with the market's own ~9% pricing. No edge; recorded as a new §7 line. A
-Climate/Weather pass at a 50-vol floor came back empty. Zero picks; a valid day.
+**Score so far: 2 settled picks, 2 wins (+$1.65 realized), 4 no-picks logged.** Sample is still far
+too small to read as calibration (R6 — no claim before ~30 settled picks).
 
 **Standing windows:**
 
 - `KXTOKENUSE` (OpenRouter weekly tokens): next week's ladder opens Monday. Read early Saturday —
   this series' edge is in the early read, not Sunday evening (R14).
-- `KX*SHARE` (OpenRouter request share): still no mid-week read of the settlement metric. Pass.
+- `KX*SHARE` (OpenRouter request share): still no read of the settlement metric, at any point in
+  the week. Pass, including on the newly-opened 26SEP28 week.
+- `KXTXERCOTPEAKD` (Texas ERCOT peak demand, daily): now readable in principle via `www.ercot.com`
+  — untested. First priority for tomorrow's session, before the routine's own board scan.
 
-**Scheduled check-ins bound to this session** (Claude Code routines/triggers, not durable state —
-a new session re-creates what it needs, playbook Startup Routine step 3): "Desk: daily board read
-and picks" (13:30 UTC daily) is the only one still armed. The PR #460 watch loop and the D-002
-grading reminder have both fired and completed their work; neither needs re-arming.
+**Scheduled check-ins bound to this session:** none armed — no open PR, no open position, nothing
+pending. The "Desk: daily board read and picks" routine (13:30 UTC daily) is the only standing
+trigger and needs no action; a new session re-creates anything else it needs (playbook Startup
+Routine step 3).
 
-**Sandbox limits still in force:** Kalshi, EIA, Freddie Mac, FRED, NY Fed, Mortgage News Daily and
-most data sites are blocked from the sandbox; use the ops runner (`kalshi_desk_board`,
-`desk_fetch`) and web search. FRED is on `desk_fetch`'s host allowlist but timed out twice this
-session (both `fredgraph.csv` and the series HTML page) — worth a retry another day before
-concluding it's unreachable in practice, not just blocked in principle. The operator approved
-widening the environment's network allowlist (DEC-017); still not done as of this session.
+**Sandbox limits still in force:** Kalshi, EIA, Freddie Mac, FRED, NY Fed, Mortgage News Daily,
+ercot.com (pre-merge), gridstatus.io and most data sites are blocked from the sandbox; use the ops
+runner (`kalshi_desk_board`, `desk_fetch`) and web search — but treat web search's AI-generated
+summaries as unreliable on anything numeric (two separate ERCOT queries this session returned
+contradictory numbers); verify through a primary-source `desk_fetch` before trading on one. FRED
+timed out twice yesterday and wasn't retried today. The operator approved widening the
+environment's own network allowlist (DEC-017); still not done as of this session.
 
-**Lessons so far (n=2 settled, both wins; n=3 graded no-pick):** the operator paid 76¢ on D-001
-against a 55¢ cap, so the report must carry the cap in the first line; the board's thin books move
-20 points between reads minutes apart; a projection band built from actual measurements (not
-padded) predicted the token outcome correctly; the settlement source is read from the contract
-before the thesis is written (R13); a finalized market needs its own read path tested (fixed this
-session); a trend from last week is not this week's data — check the live print before assuming a
-market is mispriced; and when every named source is unreachable, Kalshi's own `result` field is a
-legitimate single source to grade on, not a fallback to apologize for — it's the thing the contract
-actually resolves against.
+**Lessons so far:** the operator paid 76¢ on D-001 against a 55¢ cap, so the report must carry the
+cap in the first line; a projection band built from actual measurements (not padded) predicted the
+token outcome correctly; the settlement source is read from the contract before the thesis is
+written (R13); when every named source is unreachable, Kalshi's own `result` field is a legitimate
+single source to grade on; a trend from last week is not this week's data; and a contract naming a
+real, specific source is necessary but not sufficient — the desk also has to be able to *read* that
+source itself, not take a web search's word for a number it can't check.
