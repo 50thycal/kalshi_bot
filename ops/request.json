@@ -1,1 +1,1 @@
-{"type":"env","action":"get","id":"limm-size-env-check-1"}
+{"type":"env","action":"set","values":{"MAX_MARKET_EXPOSURE":"25.0","MAX_DAILY_LOSS":"25.0"},"id":"limm-size-env-set-1"}
