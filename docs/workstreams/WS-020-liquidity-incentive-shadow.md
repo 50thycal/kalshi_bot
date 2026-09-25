@@ -1030,3 +1030,26 @@ The 3 existing stuck quake positions are untouched, per explicit operator instru
 settle naturally; this change is about what the book does next, not about them.
 
 [Thesis §9.34](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## Update 2026-09-25 00:49 UTC — second cash-direction shape verified: ("yes","buy")
+
+Direct consequence of the cap raise (previous update): Alimm1's first post-raise trade on a new
+market (KXTRUMPMENTIONB-26SEP24-BOEI) filled ("yes","buy") -- a shape CASH_DIRECTION had never
+seen. Guard worked as designed: priced it conservatively (debit), still flagged the window
+residual_untrustworthy rather than claim a verified answer.
+
+Verified against the window itself: two fills, known ("no","sell") at 93c + this ("yes","buy")
+at 5c, balance fell exactly 98c. 93+5=98, zero residual. No trap here unlike the no/sell case --
+"buy" means what it says, no acquire-the-other-side inversion. ("yes","buy"): DEBIT added to
+CASH_DIRECTION.
+
+What changed: not the number (unverified-shape pricing was already debit-at-price, same as
+verified), only whether the window has to call itself untrustworthy to report it.
+
+Tests: table-pin test updated; 3 tests using yes/buy as an "unverified" example moved to
+yes/sell (still genuinely unverified); 1 new test reconciles the actual flagged window exactly.
+ruff + full suite clean.
+
+Still $0 lifetime rewards. This fixes what the ledger can vouch for, not what it has found.
+
+[Thesis §9.35](../LIQUIDITY_INCENTIVE_THESIS.md).
