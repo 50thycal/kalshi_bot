@@ -1622,6 +1622,36 @@ def count_live_book_open(session, strategy: str) -> int:
     return len(_open_live_tickers(session, strategy))
 
 
+def market_close_time(session, ticker: str) -> datetime | None:
+    """A market's close time, from the most recently seen incentive-program row that carries one.
+    None when no program row for the ticker names a close time."""
+    close = session.scalar(
+        select(m.IncentiveProgram.close_time)
+        .where(m.IncentiveProgram.market_ticker == ticker,
+               m.IncentiveProgram.close_time.is_not(None))
+        .order_by(m.IncentiveProgram.last_seen_at.desc()).limit(1))
+    if close is not None and close.tzinfo is None:
+        close = close.replace(tzinfo=timezone.utc)
+    return close
+
+
+def count_live_book_open_tradeable(session, strategy: str, now: datetime) -> int:
+    """`count_live_book_open`, minus markets that have already CLOSED.
+
+    A closed market awaiting settlement can take no further order and changes no decision, but
+    under the plain count it holds a slot until the exchange settles it — which on
+    KXBIGGESTQUAKE took more than eight days and blocked the liquidity-incentive book outright
+    (thesis §9.33, §9.38). Its money is still counted by `live_strategy_exposure`; only the
+    concurrency slot is released. A market with no known close time is still counted."""
+    n = 0
+    for ticker in _open_live_tickers(session, strategy):
+        close = market_close_time(session, ticker)
+        if close is not None and close <= now:
+            continue
+        n += 1
+    return n
+
+
 def live_book_open_tickers(session, strategy: str) -> set[str]:
     """The market tickers this book has an open commitment on — same definition of open as
     `count_live_book_open`. Used by the shadow collector to guarantee it observes the markets the

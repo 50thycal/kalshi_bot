@@ -629,8 +629,10 @@ class LiveExecutor:
                 or repo.live_open_order_exists(session, ticker)):
             self.summary.skipped_dedup += 1
             return "gate:dedup", []
-        # 5. this strategy's OWN open-market cap
-        if repo.count_live_book_open(session, strategy) >= limm_live.MAX_OPEN_ORDERS:
+        # 5. this strategy's OWN open-market cap. Closed markets awaiting settlement do not hold
+        #    a slot (they cannot trade); their money still counts in gate 6.
+        if repo.count_live_book_open_tradeable(
+                session, strategy, datetime.now(timezone.utc)) >= limm_live.MAX_OPEN_ORDERS:
             self.summary.skipped_gate += 1
             return "gate:open_cap", []
         # 6. this strategy's OWN dollar budget, re-read from the database at submit time

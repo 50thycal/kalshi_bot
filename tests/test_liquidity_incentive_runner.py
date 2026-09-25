@@ -727,3 +727,56 @@ def test_the_ledger_is_not_wired_to_the_read_only_shadow_client(live_db, setting
     for name in ("get_balance", "get_fills", "get_settlements"):
         assert not hasattr(IncentiveReadOnlyKalshi, name), (
             f"{name} on the shadow's read-only client puts research code in the portfolio")
+
+
+# --- closed markets do not hold slots (thesis §9.38) ----------------------------------------
+
+
+def _stuck_quake(s, ticker, *, close_hours=-190.0):
+    """A filled leg on a market that closed long ago and has not settled — the KXBIGGESTQUAKE
+    shape that held every slot on 2026-09-25."""
+    _program(s, ticker, close_hours=close_hours)
+    s.add(m.LiveOrder(market_ticker=ticker, event_ticker=ticker, strategy=limm.LIVE_TAG,
+                      side="yes", action="buy", limit_price=1, quantity=1, status="filled",
+                      kalshi_order_id=f"K-{ticker}", client_order_id=ticker, created_at=NOW))
+    s.add(m.Position(market_ticker=ticker, captured_at=NOW, side="yes", quantity=1,
+                     quantity_fp=1, avg_price=1.0))
+
+
+def test_closed_markets_awaiting_settlement_do_not_block_new_pairs(live_db, settings):
+    """Production 2026-09-25: three closed, unsettled quake positions against a cap of two left
+    `no_slots` on every cycle — the book could never quote again until Kalshi settled them."""
+    client = FakeClient({"KXTEST-A": _book([(20, 500)], [(70, 500)])})
+    with db.session_scope() as s:
+        for t in ("KXQUAKE-1", "KXQUAKE-2", "KXQUAKE-3"):
+            _stuck_quake(s, t)
+        _program(s, "KXTEST-A")
+        s.flush()
+        from kalshi_bot import repository as repo
+        assert repo.count_live_book_open(s, limm.LIVE_TAG) == 3
+        assert repo.count_live_book_open_tradeable(s, limm.LIVE_TAG, NOW) == 0
+        out = _cycle(client, settings, s)
+    assert out["placed"] == 1
+    assert out["managed"] == {"closed_awaiting_settlement": 3}
+    assert {o["ticker"] for o in client.placed} == {"KXTEST-A"}
+
+
+def test_a_market_that_has_not_closed_still_holds_its_slot(live_db, settings):
+    from kalshi_bot import repository as repo
+
+    with db.session_scope() as s:
+        _stuck_quake(s, "KXOPEN-1", close_hours=5.0)       # held, but still trading
+        s.add(m.LiveOrder(market_ticker="KXNOCLOSE-1", strategy=limm.LIVE_TAG, side="yes",
+                          action="buy", limit_price=4, quantity=1, status="resting",
+                          created_at=NOW))                  # no known close time: counted
+        s.flush()
+        assert repo.count_live_book_open_tradeable(s, limm.LIVE_TAG, NOW) == 2
+
+
+def test_closed_markets_still_count_against_the_budget(live_db, settings):
+    from kalshi_bot import repository as repo
+
+    with db.session_scope() as s:
+        _stuck_quake(s, "KXQUAKE-1")
+        s.flush()
+        assert repo.live_strategy_exposure(s, limm.LIVE_TAG) == pytest.approx(0.01)

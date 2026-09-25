@@ -33,9 +33,6 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-from sqlalchemy import select
-
-from .. import models as m
 from .. import repository as repo
 from ..scanner.metrics import parse_orderbook
 from . import live as limm
@@ -151,7 +148,7 @@ class IncentiveLiveRunner:
         # frees the slot and the budget an entry below might use.
         summary["managed"] = self._manage_positions(session, executor, now)
 
-        open_now = repo.count_live_book_open(session, limm.LIVE_TAG)
+        open_now = repo.count_live_book_open_tradeable(session, limm.LIVE_TAG, now)
         exposure_now = repo.live_strategy_exposure(session, limm.LIVE_TAG)
         slots = limm.MAX_OPEN_ORDERS - int(open_now)
         if slots <= 0:
@@ -256,6 +253,11 @@ class IncentiveLiveRunner:
         if any(r.strategy != limm.LIVE_TAG and r.action == "buy"
                and r.status in repo.LIVE_NONTERMINAL_STATUSES + ("filled",) for r in rows):
             return "shared_ticker"   # another book is in this market; its position is not ours
+        hours_to_close = self._hours_to_close(session, ticker, now)
+        if hours_to_close is not None and hours_to_close <= 0:
+            # Closed and not yet settled: nothing can trade it. The KXBIGGESTQUAKE positions sit
+            # here, which is also what keeps the operator's "leave them alone" true.
+            return "closed_awaiting_settlement"
         ours = [r for r in rows if r.strategy == limm.LIVE_TAG]
         working = [r for r in ours if r.status in repo.LIVE_NONTERMINAL_STATUSES]
 
@@ -285,11 +287,6 @@ class IncentiveLiveRunner:
         if qty < 1 or entry is None:
             return "unsettled_state"
 
-        hours_to_close = self._hours_to_close(session, ticker, now)
-        if hours_to_close is not None and hours_to_close <= 0:
-            # Closed and not yet settled: nothing can trade it. The KXBIGGESTQUAKE positions sit
-            # here, which is also what keeps the operator's "leave them alone" true.
-            return "closed_awaiting_settlement"
         try:
             yes_levels, no_levels = parse_orderbook(self.client.get_orderbook(ticker) or {})
         except Exception:  # noqa: BLE001 — no book, no decision
@@ -360,12 +357,7 @@ class IncentiveLiveRunner:
 
     @staticmethod
     def _hours_to_close(session, ticker: str, now: datetime) -> float | None:
-        close = session.scalar(
-            select(m.IncentiveProgram.close_time)
-            .where(m.IncentiveProgram.market_ticker == ticker,
-                   m.IncentiveProgram.close_time.is_not(None))
-            .order_by(m.IncentiveProgram.last_seen_at.desc()).limit(1))
-        close = _aware(close)
+        close = repo.market_close_time(session, ticker)
         return None if close is None else (close - now).total_seconds() / 3600.0
 
     # --- pieces ---------------------------------------------------------------
