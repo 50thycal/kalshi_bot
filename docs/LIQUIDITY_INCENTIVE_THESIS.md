@@ -2293,6 +2293,12 @@ unaffected); one new test reconciles the exact flagged window (93c + 5c = 98c, r
 ### 9.36 Sizing raised so a resting bid can actually reach the scoring floor — $1 -> $20 per
 order, $10 -> $50 total, 5 -> 2 concurrent (2026-09-25)
 
+> **Correction (§9.37):** the "scoring floor" below is a misreading of `scoring.py`. The
+> one-fifth rule (R3) sets the *Reference Price* from the whole book's cumulative depth; it is
+> not a minimum size for our order. Our share of a qualifying snapshot is simply our size over
+> the field (R4/R5), so reward is proportional to size from the first contract. The decision —
+> more size, more reward — stands; the stated mechanism does not.
+
 A week of live trading under §9.34/§9.35's 5-slot, 1-contract regime still had zero observed
 liquidity reward. The operator's read, verbatim: *"I think we need to do a lot larger sizes for
 positions to be able to measure and actually get rewards."* Checked against the real mechanism
@@ -2410,3 +2416,106 @@ pre-loaded orders sized up so twelve of them still clear the new $50 ceiling). F
 settle naturally, not force-closed, not part of what moved. No liquidity reward has ever been
 observed under any sizing tried so far; this raise is what makes a reward possible to observe at
 all, not a claim that one is coming.
+
+### 9.37 Two-sided pairs and the book's own exits — capital protection first (2026-09-25)
+
+The operator asked the question §9.36 left open — with $20 on a fill, is all of it at risk? —
+and the answer was yes: the book rested ONE bid, and a fill rode to settlement, $1 or $0, with no
+stop and no exit. Two operator decisions followed, verbatim: *"I'm good with the two-sided logic.
+Make it a shared self gate is just fine. … make each side $10. So each position is still $20"*,
+and, after two ideas each for protecting capital and for getting it back out were laid out,
+*"implement all 4 of those ideas along with the ideas we just had from the other message"* — i.e.
+two-sided pairs, a resting exit order the moment a leg fills, a real stop-loss, an early
+take-profit, and a hard cap on how long a market may take to close. The stated priorities, in
+order: protect the capital; then free it quickly so it can earn again.
+
+**Two-sided pairs.** Each market now carries a YES bid at the YES touch and a NO bid at the NO
+touch, `y + n <= 99`. Kalshi nets YES against NO in one market, so when both fill the pair closes
+itself and realises `100 - y - n` per contract, whatever the market does after. Both legs carry
+the SAME quantity — otherwise both filling leaves a naked residual — so the operator's $10 is a
+PER-LEG cap that binds on the dearer leg (`live.pair_quantity`). Consequence, stated plainly: a
+pair usually commits LESS than $20 (a 20c/75c book gives 13 contracts a side, $12.35), and the
+cheap side rests far fewer contracts than §9.36's one-sided $20 did (13 vs 100 at 20c). Reward
+share is proportional to size (see the §9.36 correction), so per dollar committed this earns less
+score than one-sided $20 — it is now scored on both sides, but the dear side is capital-hungry.
+That is the price of the hedge, and it was the operator's call to make capital protection first.
+
+The one-sided book's 25c cheap-side cap cannot apply to a pair (a pair always has a dear side);
+it is replaced by a 90c per-leg cap (`MAX_PRICE_CENTS`) that keeps a single-leg fill off
+near-certain favourites, plus the $10 per-leg dollar cap. Ranking is now thinnest book first
+(§9.27, reward share), then soonest close (capital back sooner), then widest edge.
+
+**The shared dedup gate did not change.** The executor's gate 4 (strategy-agnostic: never enter a
+ticker any live book has an order or position on) is exactly as before. `mirror_incentive_pair`
+checks it ONCE for the pair, as one decision, before either leg is sent; the second leg is part of
+that admitted decision. No other book's protection moved, and this book still cannot stack a
+second pair on a market it is working. This is narrower than the "self gate" the operator
+approved — the same outcome without editing shared semantics that also guard mmsell.
+
+**Exits — this book's own, registered, pre-set before any has fired** (`live.decide_exit`, run by
+`IncentiveLiveRunner._manage_positions` each cycle, exits before entries):
+
+- *stop-loss* — held side's bid down 40% of the entry price (floor 3c);
+- *take-profit* — held side's bid up 40% of the remaining upside `100 - entry` (floor 3c). While
+  the opposite leg still rests it usually takes profit first, at the pair's smaller edge; the
+  explicit rule is the backstop when it does not;
+- *pre-close flatten* — anything held comes off inside the last hour before close.
+
+An exit cancels this book's working orders on the market first, then sends a marketable IOC 2c
+past the touch in the mmsell closeout's recorded-201 wire shape (V2, `taker_at_cross`, no
+`post_only`, no `reduce_only`). At most 3 attempts per market, then it logs and leaves the
+position to settle. The fee is the taker schedule's `0.07 x P x (1-P)` — about 1.75c per contract
+at worst, at 50c.
+
+*The resting exit leg:* when a leg is held, no rule fires, and nothing of ours rests on the
+market (the opposite leg was never placed, was rejected, or timed out), the runner rests a
+post-only bid on the opposite side at the opposite touch, never paying more than leaves 1c — the
+"resting sell the moment it fills". It earns liquidity score while it waits.
+
+**The close-time window, and what it would NOT have caught.** Entries are refused unless the
+market closes in 3–72 hours. Measured 2026-09-25: of ~6,300 current liquidity programs, ~1,000
+close within 3 days, so the universe survives. But the same query showed the three
+KXBIGGESTQUAKE positions' markets CLOSED on 2026-09-17 — eight days before this entry, still
+unsettled. That trap was settlement lag after close, not a long-dated market, and a close-time
+cutoff alone would not have prevented it. That is why the pre-close flatten exists: nothing this
+book holds is allowed to ride through close into settlement limbo.
+
+**What makes an exit safe to send.** Kalshi has no reduce-only for these orders, so a marketable
+exit sent against a position that is already flat OPENS a new one. The manager therefore does
+nothing unless: the position snapshot was taken this cycle (≤300s); Kalshi's position and this
+book's own fills (signed by our order rows, not the fill's YES-denominated fields — §9.29/§9.31)
+agree on the side; and every working order of ours on the market was confirmed cancelled. The
+exit size is the smaller of Kalshi's position and our own net fills, so it can never sell a
+position another hand holds. A market another live book has entered is left alone
+(`shared_ticker`). A closed market is left alone (`closed_awaiting_settlement`) — which is also
+what keeps the operator's standing "leave the quake positions alone" true. Exits are NOT behind
+the daily-loss breaker or the budget caps (they reduce exposure; a loss stop that blocked the
+stop-loss would be backwards) but ARE behind the live switches and the allowlist.
+
+**The twin** mirrors both legs of every pair and never exits. It therefore records the both-filled
+case, which settles to exactly the locked edge; live diverges from it only through single-leg
+fills and the exits they trigger, which is precisely the cost the twin now measures.
+
+**Also corrected:** the XOS package's `activation_env` still named `MAX_MARKET_EXPOSURE=1.0` and
+`MAX_DAILY_LOSS=5.0` — stale since §9.36 raised both to 25.0 in production. A re-run of activation
+would have quietly reset them and blocked this book's orders. Both now read 25.0.
+
+**What breaks, again deliberately:** as §9.34/§9.36, the deployment's frozen `config_json` still
+reads the original one-sided, hold-to-settlement envelope; the in-repo `RISK_ENVELOPE` now
+describes what runs (`sides_quoted: 2`, the exit policy, the close window). `runtime_config_check`
+compares `material` only and this book's `book_params` is None, so nothing live-blocking trips.
+The registration strings in `register()` are left verbatim as the as-registered record.
+
+**Expect after deploy:** exit and NO-side fills are shapes the reward ledger's `CASH_DIRECTION`
+may not have verified; it will price them conservatively and mark those windows untrustworthy
+until each shape is verified against a real balance window (the §9.35 procedure). Positions this
+book already holds become subject to the exit rules on the first cycle, except closed markets.
+
+Tests: the decision layer, executor and runner suites were rewritten for pairs and exits
+(stop-loss, take-profit, pre-close, exit leg, stale snapshot, side disagreement, oversize
+snapshot, closed market, shared ticker, failed cancel, in-flight, attempt cap, round-trip
+cleanup, never cancelling an unfilled resting pair); the XOS package tests assert the envelope
+names the running exit rules. `ruff check .` and the full suite clean.
+
+**Still true:** no liquidity reward has been observed yet. This changes what a fill can cost and
+how fast capital comes back — not whether the programme pays.

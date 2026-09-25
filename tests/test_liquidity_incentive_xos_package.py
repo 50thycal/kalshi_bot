@@ -36,26 +36,32 @@ def test_the_registered_envelope_equals_the_running_constants():
     # the dollar cap binds before the contract-count ceiling does at any price this book
     # trades), not a rounder number someone liked better.
     assert e["max_loss_per_clip_usd"] == pytest.approx(limm.MAX_ORDER_DOLLARS)
+    # Two-sided with registered exits (thesis §9.37): the envelope names the rules that run.
+    assert e["sides_quoted"] == 2
+    assert e["min_pair_edge_cents"] == limm.MIN_PAIR_EDGE_CENTS
+    assert e["close_window_hours"] == [limm.MIN_HOURS_TO_CLOSE, limm.MAX_HOURS_TO_CLOSE]
+    x = e["exit_policy"]
+    assert x["stop_loss_fraction_of_entry"] == limm.STOP_LOSS_FRACTION
+    assert x["take_profit_fraction_of_upside"] == limm.TAKE_PROFIT_FRACTION
+    assert x["flatten_hours_before_close"] == limm.FLATTEN_HOURS_BEFORE_CLOSE
+    assert x["exit_max_attempts"] == limm.EXIT_MAX_ATTEMPTS
 
 
 def test_the_operator_guardrails_are_not_exceeded():
-    """The operator authorized: under $50 total, at most 2 at a time, $20 per trade.
+    """The operator authorized: under $50 total, at most 2 markets at a time, $10 a side.
 
-    History: originally $10 / 3-at-a-time / $1 per trade. Raised to 5-at-a-time on 2026-09-24
-    (thesis §9.34). Raised again on 2026-09-25 (thesis §9.36) to $50 / 2-at-a-time / $20 per
-    trade, specifically so a resting bid could reach the scoring floor on Kalshi's own
-    incentive-program Target Sizes (300-1,000 contracts) instead of only proving the order path
-    worked. Both raises were edited straight into the running constants rather than through a
-    re-arm — see the module comment on `MAX_CONTRACTS_PER_ORDER` in `liquidity_incentive/live.py`
-    for why the formal path is infeasible without permanently retiring the experiment. This line
-    is the new authorization on record for the CODE; the XOS-registered envelope on the live
+    History: $10 / 3-at-a-time / $1 per trade originally; 5-at-a-time on 2026-09-24 (thesis
+    §9.34); $50 / 2 / $20 per trade on 2026-09-25 (§9.36); then two-sided the same day (§9.37) —
+    "make each side $10, so each position is still $20". Every raise was edited straight into
+    the running constants rather than through a re-arm (see `liquidity_incentive/live.py`). This
+    is the authorization on record for the CODE; the XOS-registered envelope on the live
     deployment still reads the original numbers and is not updated by this test."""
     assert limm.MAX_STRATEGY_EXPOSURE_USD <= 50.00
     assert limm.MAX_OPEN_ORDERS <= 2
-    assert limm.MAX_ORDER_DOLLARS <= 20.00
-    # And the caps are mutually consistent: every open slot at the per-order cap stays inside
+    assert limm.MAX_ORDER_DOLLARS <= 10.00
+    # Mutually consistent: every open market carrying BOTH legs at the per-leg cap stays inside
     # the book budget, so no combination of allowed orders can breach it.
-    assert limm.MAX_OPEN_ORDERS * limm.MAX_ORDER_DOLLARS <= limm.MAX_STRATEGY_EXPOSURE_USD
+    assert limm.MAX_OPEN_ORDERS * 2 * limm.MAX_ORDER_DOLLARS <= limm.MAX_STRATEGY_EXPOSURE_USD
 
 
 # ------------------------------------------------------- tags

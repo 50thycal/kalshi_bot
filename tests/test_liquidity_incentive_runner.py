@@ -1,8 +1,9 @@
-"""The live smoke-test RUNNER and the incentive shadow METRIC providers (WS-020 Phase 1a).
+"""The live RUNNER — pair entries, the book's own exits, and the incentive reward ledger.
 
-The runner is the piece that turns a decision into an order, so its tests are about what it
-does NOT do: it is inert unless armed, it never exceeds a cap, it places no order it did not
-also mirror to the twin, and it has no branch that pulls a resting quote.
+The runner is the piece that turns decisions into orders, so its tests are about what it does
+and does NOT do: it is inert unless armed, never exceeds a cap, mirrors every leg to the twin,
+exits a held leg when a registered rule fires — and does NOTHING when it cannot establish the
+position with certainty, because a marketable exit sent against a flat position opens one.
 """
 
 from __future__ import annotations
@@ -26,9 +27,12 @@ NOW = datetime(2026, 9, 18, 12, 0, tzinfo=timezone.utc)
 class FakeClient:
     """GETs a canned book per ticker; a ticker mapped to an Exception raises it."""
 
-    def __init__(self, books):
+    def __init__(self, books, cancel_fail=None):
         self.books = books
         self.asked: list[str] = []
+        self.placed: list[dict] = []
+        self.canceled: list[str] = []
+        self.cancel_fail = cancel_fail
 
     def get_orderbook(self, ticker, depth=None):
         self.asked.append(ticker)
@@ -41,25 +45,29 @@ class FakeClient:
         self.placed.append(order)
         return {"order": {"order_id": f"K-{len(self.placed)}", "status": "resting"}}
 
-    placed: list = []
+    def cancel_events_order(self, order_id, *, exchange_index=None):
+        if self.cancel_fail is not None:
+            raise self.cancel_fail
+        self.canceled.append(order_id)
+        return {}
+
+    def get_market(self, ticker):
+        return {"market": {"ticker": ticker}}
 
 
 def _book(yes, no):
     return {"orderbook": {"yes": [list(x) for x in yes], "no": [list(x) for x in no]}}
 
 
-def _program(session, ticker, *, target=200.0, hours=24.0, series="KXTEST", event=None):
-    # `target` is 200 against the 500-a-side books these tests use, i.e. 2.5x — inside
-    # `MAX_COMPETING_DEPTH_TARGET_MULTIPLE`. It was 100, which made every fixture book 5x target
-    # and therefore refused outright once the universe rule landed. The rule is the change under
-    # test elsewhere; here it would only mean no candidate ever reaches the code being exercised.
-    # One event per market by default. Several markets of one event resolve together, so the
-    # runner treats them as a single commitment (§9.15); a fixture that shares an event across
-    # candidates is testing a shape the book now refuses, so tests that want it say so.
+def _program(session, ticker, *, target=200.0, hours=24.0, close_hours=24.0, series="KXTEST",
+             event=None):
+    # `target` 200 against the 500-a-side fixture books is 2.5x — inside the universe rule.
+    # One event per market by default (§9.15). The close is a day out, inside the window.
     row = m.IncentiveProgram(
         program_id=f"p-{ticker}", market_ticker=ticker, event_ticker=event or ticker,
         series_ticker=series, incentive_type="liquidity",
         start_date=NOW - timedelta(days=1), end_date=NOW + timedelta(hours=hours),
+        close_time=None if close_hours is None else NOW + timedelta(hours=close_hours),
         period_reward_raw=1_000_000, period_reward_unit="centi_cents", period_reward_usd=100.0,
         target_size=target, discount_factor_bps=9000, market_status="active",
         terms_hash=f"h-{ticker}", first_seen_at=NOW - timedelta(days=1), last_seen_at=NOW,
@@ -84,6 +92,12 @@ def _live_settings(settings):
 
 def _exec(settings, client):
     return LiveExecutor(client, settings, RiskManager(settings))
+
+
+def _cycle(client, settings, s, **kw):
+    ex = _exec(settings, client)
+    return run.IncentiveLiveRunner(client, settings, **kw).cycle(
+        s, ex, {"cash_balance": 500.0}, now=NOW)
 
 
 @pytest.fixture
@@ -112,89 +126,88 @@ def test_not_armed_unless_every_switch_is_on(live_db, settings):
 def test_an_unarmed_cycle_fetches_no_books_and_places_nothing(live_db, settings):
     settings.liquidity_incentive_live_enabled = False
     client = FakeClient({"KXTEST-A": _book([(20, 500)], [(70, 500)])})
-    ex = _exec(settings, client)
     with db.session_scope() as s:
         _program(s, "KXTEST-A")
-        out = run.IncentiveLiveRunner(client, settings).cycle(s, ex, {"cash_balance": 500.0},
-                                                              now=NOW)
+        out = _cycle(client, settings, s)
     assert out == {"armed": False, "considered": 0, "fetched": 0, "placed": 0,
-                   "twin_opened": 0, "outcomes": {}}
+                   "twin_opened": 0, "outcomes": {}, "managed": {}}
     assert client.asked == []
 
 
 # ------------------------------------------------------------------ candidate construction
 
 
-def test_candidate_carries_native_per_side_prices_and_a_reference_per_side(live_db, settings):
+def test_candidate_carries_native_prices_references_and_the_close(live_db, settings):
     with db.session_scope() as s:
-        program = _program(s, "KXTEST-A", target=100.0)
+        program = _program(s, "KXTEST-A", target=100.0, close_hours=30.0)
         c = run.candidate_from_book(
             program, _book([(20, 60), (19, 200)], [(70, 300), (69, 50)]), now=NOW)
     assert c["best_yes_bid"] == 20 and c["best_no_bid"] == 70
     assert c["yes_resting_total"] == 260.0 and c["no_resting_total"] == 350.0
-    # Reference price walks down from the best bid to one fifth of Target Size (20 contracts):
-    # the yes book's top level (60) already covers it, the no book's (300) likewise.
     assert c["reference_price_by_side"] == {limm.SIDE_YES: 20, limm.SIDE_NO: 70}
     assert c["program_hours_remaining"] == pytest.approx(24.0)
+    assert c["hours_to_close"] == pytest.approx(30.0)
 
 
 def test_a_book_that_cannot_be_fetched_is_an_outcome_not_an_exception(live_db, settings):
     client = FakeClient({"KXTEST-A": RuntimeError("502")})
-    ex = _exec(settings, client)
     with db.session_scope() as s:
         _program(s, "KXTEST-A")
-        out = run.IncentiveLiveRunner(client, settings).cycle(s, ex, {"cash_balance": 500.0},
-                                                              now=NOW)
+        out = _cycle(client, settings, s)
     assert out["outcomes"] == {run.SKIP_BOOK_ERROR: 1}
     assert out["placed"] == 0
 
 
-# ------------------------------------------------------------------ selection + caps
+# ------------------------------------------------------------------ the close-time window
 
 
-def test_it_places_the_cheapest_downside_first_and_stops_at_the_open_order_cap(live_db, settings):
-    # Three candidates, cheap sides at 5c, 9c and 12c. The cap is MAX_OPEN_ORDERS (5), so all
-    # three would place, in order — but the ORDER is the property under test, so make the cap
-    # bind at two by pre-occupying every other slot.
-    books = {
-        "KXTEST-A": _book([(12, 500)], [(80, 500)]),
-        "KXTEST-B": _book([(5, 500)], [(90, 500)]),
-        "KXTEST-C": _book([(9, 500)], [(85, 500)]),
-    }
-    client = FakeClient(books)
-    client.placed = []
-    ex = _exec(settings, client)
+@pytest.mark.parametrize("close_hours", [None, limm.MIN_HOURS_TO_CLOSE - 1,
+                                         limm.MAX_HOURS_TO_CLOSE + 1, -190.0])
+def test_a_market_outside_the_close_window_is_never_fetched(live_db, settings, close_hours):
+    client = FakeClient({"KXTEST-A": _book([(20, 500)], [(70, 500)])})
     with db.session_scope() as s:
-        for t in books:
-            _program(s, t)
-        # limm.MAX_OPEN_ORDERS - 2 slots pre-occupied by resting orders under this tag, leaving
-        # exactly two free — however high the cap, the binding property under test is unchanged.
-        for i in range(limm.MAX_OPEN_ORDERS - 2):
-            s.add(m.LiveOrder(market_ticker=f"KXOTHER-{i}", strategy=limm.LIVE_TAG, side="yes",
-                              action="buy", limit_price=10, quantity=1, status="resting",
-                              created_at=NOW))
-        s.flush()
-        out = run.IncentiveLiveRunner(client, settings).cycle(s, ex, {"cash_balance": 500.0},
-                                                              now=NOW)
-    assert out["placed"] == 2
-    assert [o["ticker"] for o in client.placed] == ["KXTEST-B", "KXTEST-C"]
+        _program(s, "KXTEST-A", close_hours=close_hours)
+        out = _cycle(client, settings, s)
+    assert out["considered"] == 0 and client.asked == [] and client.placed == []
+
+
+# ------------------------------------------------------------------ pair entries + caps
+
+
+def test_places_a_pair_on_one_market(live_db, settings):
+    client = FakeClient({"KXTEST-A": _book([(20, 500)], [(70, 500)])})
+    with db.session_scope() as s:
+        _program(s, "KXTEST-A")
+        out = _cycle(client, settings, s)
+    assert out["placed"] == 1
+    assert [(o["ticker"], o["side"]) for o in client.placed] == [
+        ("KXTEST-A", "bid"), ("KXTEST-A", "ask")]
+    assert client.placed[0]["count"] == client.placed[1]["count"]
+
+
+def test_soonest_closing_first_and_stops_at_the_market_cap(live_db, settings):
+    books = {t: _book([(20, 500)], [(70, 500)]) for t in ("KXTEST-A", "KXTEST-B", "KXTEST-C")}
+    client = FakeClient(books)
+    with db.session_scope() as s:
+        _program(s, "KXTEST-A", close_hours=40.0)
+        _program(s, "KXTEST-B", close_hours=6.0)
+        _program(s, "KXTEST-C", close_hours=20.0)
+        out = _cycle(client, settings, s)
+    assert out["placed"] == limm.MAX_OPEN_ORDERS
+    placed_markets = list(dict.fromkeys(o["ticker"] for o in client.placed))
+    assert placed_markets == ["KXTEST-B", "KXTEST-C"]
 
 
 def test_the_book_budget_bounds_the_cycle_even_with_slots_free(live_db, settings):
-    books = {"KXTEST-A": _book([(20, 500)], [(75, 500)])}
-    client = FakeClient(books)
-    client.placed = []
-    ex = _exec(settings, client)
+    client = FakeClient({"KXTEST-A": _book([(20, 500)], [(75, 500)])})
     with db.session_scope() as s:
         _program(s, "KXTEST-A")
-        # $35.00 already committed: a 20c clip (100 contracts @ 20c = $20.00, thesis §9.36's
-        # sizing formula) would take the book past its $50.00 ceiling.
+        # $40 committed elsewhere; a 20/75 pair commits ~$12 more, past the $50 ceiling.
         s.add(m.LiveOrder(market_ticker="KXOTHER-Z", strategy=limm.LIVE_TAG, side="yes",
-                          action="buy", limit_price=35, quantity=100, status="resting",
+                          action="buy", limit_price=40, quantity=100, status="resting",
                           created_at=NOW))
         s.flush()
-        out = run.IncentiveLiveRunner(client, settings).cycle(s, ex, {"cash_balance": 500.0},
-                                                              now=NOW)
+        out = _cycle(client, settings, s)
     assert out["placed"] == 0
     assert out["outcomes"].get(limm.REFUSE_EXPOSURE_CAP) == 1
     assert client.placed == []
@@ -203,23 +216,18 @@ def test_the_book_budget_bounds_the_cycle_even_with_slots_free(live_db, settings
 def test_an_excluded_series_is_never_quoted(live_db, settings):
     settings.liquidity_incentive_excluded_series = "kxtest"   # case-insensitive on purpose
     client = FakeClient({"KXTEST-A": _book([(10, 500)], [(85, 500)])})
-    client.placed = []
-    ex = _exec(settings, client)
     with db.session_scope() as s:
         _program(s, "KXTEST-A")
-        out = run.IncentiveLiveRunner(client, settings).cycle(s, ex, {"cash_balance": 500.0},
-                                                              now=NOW)
+        out = _cycle(client, settings, s)
     assert out["placed"] == 0
     assert out["outcomes"].get(limm.REFUSE_EXCLUDED_SERIES) == 1
 
 
 def test_a_program_ending_too_soon_is_never_selected(live_db, settings):
     client = FakeClient({"KXTEST-A": _book([(10, 500)], [(85, 500)])})
-    ex = _exec(settings, client)
     with db.session_scope() as s:
         _program(s, "KXTEST-A", hours=limm.MIN_PROGRAM_HOURS_REMAINING - 0.5)
-        out = run.IncentiveLiveRunner(client, settings).cycle(s, ex, {"cash_balance": 500.0},
-                                                              now=NOW)
+        out = _cycle(client, settings, s)
     assert out["considered"] == 0 and out["fetched"] == 0
     assert client.asked == []
 
@@ -228,88 +236,54 @@ def test_book_fetches_are_bounded_per_cycle(live_db, settings):
     settings.liquidity_incentive_live_max_book_fetches = 2
     books = {f"KXTEST-{i}": _book([(10, 500)], [(85, 500)]) for i in range(5)}
     client = FakeClient(books)
-    client.placed = []
-    ex = _exec(settings, client)
     with db.session_scope() as s:
         for i, t in enumerate(books):
-            _program(s, t, hours=10.0 + i)
-        out = run.IncentiveLiveRunner(client, settings).cycle(s, ex, {"cash_balance": 500.0},
-                                                              now=NOW)
+            _program(s, t, close_hours=10.0 + i)
+        out = _cycle(client, settings, s)
     assert out["considered"] == 5 and out["fetched"] == 2
-    # Soonest-ending first: those are the programs whose payout can be confirmed first.
     assert client.asked == ["KXTEST-0", "KXTEST-1"]
 
 
 # ------------------------------------------------------------------ the twin
 
 
-def test_every_placed_order_is_mirrored_to_the_twin(live_db, settings):
+def test_both_legs_are_mirrored_to_the_twin(live_db, settings):
     from kalshi_bot.twin.harness import TwinHarness
 
     settings.live_paper_twin_enabled = True
     settings.live_paper_twins = f"{limm.LIVE_TAG}:{limm.TWIN_TAG}"
     client = FakeClient({"KXTEST-A": _book([(20, 500)], [(75, 500)])})
-    client.placed = []
-    ex = _exec(settings, client)
-    harness = TwinHarness(settings)
     with db.session_scope() as s:
         _program(s, "KXTEST-A")
-        out = run.IncentiveLiveRunner(client, settings, twin_harness=harness).cycle(
-            s, ex, {"cash_balance": 500.0}, now=NOW)
-    assert out["placed"] == 1 and out["twin_opened"] == 1
+        out = _cycle(client, settings, s, twin_harness=TwinHarness(settings))
+    assert out["placed"] == 1 and out["twin_opened"] == 2
+    qty = limm.pair_quantity(20, 75)
     with db.session_scope() as s:
         trades = s.query(m.PaperTrade).filter(m.PaperTrade.strategy == limm.TWIN_TAG).all()
-        assert len(trades) == 1
-        # Same ticker, same side, same price, same size as the live order — a twin that sizes
-        # differently from live is not a twin.
-        assert trades[0].market_ticker == "KXTEST-A"
-        assert trades[0].side == limm.SIDE_YES and int(trades[0].assumed_price) == 20
-        expected_qty = min(limm.MAX_CONTRACTS_PER_ORDER, int(limm.MAX_ORDER_DOLLARS * 100 // 20))
-        assert int(trades[0].quantity) == expected_qty
-
-
-# ------------------------------------------------------------------ genuine liquidity
-
-
-def test_the_runner_has_no_cancel_path():
-    """The strategy's claim is that its quotes are genuine. A branch here that pulled a resting
-    order when it looked likely to trade would make that claim false, so there must not be one:
-    orders leave the book only by a fill, the shared per-order timeout, or a stand-down drain."""
-    src = (run.__file__).replace(".pyc", ".py")
-    text = open(src).read()
-    assert "cancel_order" not in text
-    assert "delete_order" not in text
+        assert sorted((t.side, int(t.assumed_price), int(t.quantity)) for t in trades) == [
+            ("no", 75, qty), ("yes", 20, qty)]
 
 
 # ------------------------------------------------------- event cap (thesis §9.15)
 
 
 def test_two_markets_of_one_event_are_one_commitment(live_db, settings):
-    """The 2026-09-18 shape: the book stacked KXRT-RES-93 and -94 on one event."""
     books = {
         "KXRT-RES-93": _book([(3, 500)], [(90, 500)]),
         "KXRT-RES-94": _book([(10, 500)], [(80, 500)]),
     }
     client = FakeClient(books)
-    client.placed = []
-    ex = _exec(settings, client)
     with db.session_scope() as s:
         for t in books:
             _program(s, t, event="KXRT-RES")
-        s.flush()
-        out = run.IncentiveLiveRunner(client, settings).cycle(s, ex, {"cash_balance": 500.0},
-                                                              now=NOW)
+        out = _cycle(client, settings, s)
     assert out["placed"] == 1
-    assert [o["ticker"] for o in client.placed] == ["KXRT-RES-93"]   # cheaper side wins
+    assert {o["ticker"] for o in client.placed} == {"KXRT-RES-94"}   # wider edge wins the tie
     assert out["outcomes"].get(limm.REFUSE_EVENT_CAP) == 1
 
 
 def test_another_live_book_holding_the_event_blocks_it(live_db, settings):
-    """MMSELL was short 93c of KXRT-RES-97 while this book bid the same event."""
-    books = {"KXRT-RES-93": _book([(3, 500)], [(90, 500)])}
-    client = FakeClient(books)
-    client.placed = []
-    ex = _exec(settings, client)
+    client = FakeClient({"KXRT-RES-93": _book([(3, 500)], [(90, 500)])})
     with db.session_scope() as s:
         _program(s, "KXRT-RES-93", event="KXRT-RES")
         s.add(m.LiveOrder(market_ticker="KXRT-RES-97", event_ticker="KXRT-RES",
@@ -318,18 +292,13 @@ def test_another_live_book_holding_the_event_blocks_it(live_db, settings):
         s.add(m.Position(market_ticker="KXRT-RES-97", captured_at=NOW, side="no", quantity=-1,
                          avg_price=93.0, market_exposure=0.93))
         s.flush()
-        out = run.IncentiveLiveRunner(client, settings).cycle(s, ex, {"cash_balance": 500.0},
-                                                              now=NOW)
-    assert out["placed"] == 0
-    assert client.placed == []
+        out = _cycle(client, settings, s)
+    assert out["placed"] == 0 and client.placed == []
     assert out["outcomes"].get(limm.REFUSE_EVENT_CAP) == 1
 
 
 def test_an_unrelated_event_is_not_blocked(live_db, settings):
-    books = {"KXOTHER-1": _book([(4, 500)], [(90, 500)])}
-    client = FakeClient(books)
-    client.placed = []
-    ex = _exec(settings, client)
+    client = FakeClient({"KXOTHER-1": _book([(4, 500)], [(90, 500)])})
     with db.session_scope() as s:
         _program(s, "KXOTHER-1", event="KXOTHER")
         s.add(m.LiveOrder(market_ticker="KXRT-RES-97", event_ticker="KXRT-RES",
@@ -338,9 +307,228 @@ def test_an_unrelated_event_is_not_blocked(live_db, settings):
         s.add(m.Position(market_ticker="KXRT-RES-97", captured_at=NOW, side="no", quantity=-1,
                          avg_price=93.0, market_exposure=0.93))
         s.flush()
-        out = run.IncentiveLiveRunner(client, settings).cycle(s, ex, {"cash_balance": 500.0},
-                                                              now=NOW)
+        out = _cycle(client, settings, s)
     assert out["placed"] == 1
+
+
+# ------------------------------------------------------------------ held positions (§9.37)
+#
+# A held leg: this book's YES bid at 40 filled 13, its NO leg at 55 may still rest. The
+# snapshot Kalshi reported THIS cycle agrees. Each test changes one thing.
+
+HELD = "KXHELD-1"
+
+
+def _held(s, *, side="yes", entry=40, qty=13, snap_qty=None, snap_age_s=0, other_leg=True,
+          close_hours=24.0):
+    _program(s, HELD, close_hours=close_hours)
+    s.add(m.LiveOrder(market_ticker=HELD, event_ticker=HELD, strategy=limm.LIVE_TAG, side=side,
+                      action="buy", limit_price=entry, quantity=qty, status="filled",
+                      kalshi_order_id="K-HELD", client_order_id="held", created_at=NOW))
+    s.add(m.Fill(kalshi_fill_id="F-HELD", kalshi_order_id="K-HELD", market_ticker=HELD,
+                 side=side, action="buy", price=entry, quantity=qty))
+    if other_leg:
+        s.add(m.LiveOrder(market_ticker=HELD, event_ticker=HELD, strategy=limm.LIVE_TAG,
+                          side=limm.other_side(side), action="buy", limit_price=55, quantity=qty,
+                          status="resting", kalshi_order_id="K-LEG", client_order_id="leg",
+                          created_at=NOW))
+    signed = snap_qty if snap_qty is not None else (qty if side == "yes" else -qty)
+    s.add(m.Position(market_ticker=HELD, captured_at=NOW - timedelta(seconds=snap_age_s),
+                     side=side, quantity=signed, quantity_fp=signed, avg_price=float(entry)))
+    s.flush()
+
+
+def _managed(out):
+    return out["managed"]
+
+
+def test_stop_loss_cancels_the_resting_leg_then_sells_marketably(live_db, settings):
+    client = FakeClient({HELD: _book([(20, 500)], [(75, 500)])})   # YES bid fell 40 -> 20
+    with db.session_scope() as s:
+        _held(s)
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"stop_loss:placed": 1}
+    assert client.canceled == ["K-LEG"]
+    exit_order = client.placed[0]
+    assert exit_order["ticker"] == HELD and exit_order["side"] == "ask"
+    assert exit_order["time_in_force"] == "immediate_or_cancel"
+    assert exit_order["count"] == "13.00"
+    assert exit_order["price"] == f"{(20 - limm.EXIT_SLIPPAGE_CENTS) / 100:.4f}"
+
+
+def test_take_profit_on_a_held_no_leg_buys_yes(live_db, settings):
+    client = FakeClient({HELD: _book([(10, 500)], [(80, 500)])})   # NO bid rose 55 -> 80
+    with db.session_scope() as s:
+        _held(s, side="no", entry=55, other_leg=False)
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"take_profit:placed": 1}
+    exit_order = client.placed[0]
+    assert exit_order["side"] == "bid"
+    assert exit_order["price"] == f"{(100 - (80 - limm.EXIT_SLIPPAGE_CENTS)) / 100:.4f}"
+
+
+def test_pre_close_flattens_even_a_flat_mark(live_db, settings):
+    client = FakeClient({HELD: _book([(40, 500)], [(55, 500)])})
+    with db.session_scope() as s:
+        _held(s, close_hours=0.5)
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"pre_close:placed": 1}
+
+
+def test_a_held_leg_with_nothing_resting_gets_a_profitable_exit_leg(live_db, settings):
+    client = FakeClient({HELD: _book([(41, 500)], [(50, 500)])})
+    with db.session_scope() as s:
+        _held(s, other_leg=False)
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"exit_leg:placed": 1}
+    leg = client.placed[0]
+    # Held YES at 40: rest a NO bid at the 50c touch (== YES ask 50c), locking 10c on 13.
+    assert (leg["side"], leg["price"], leg["post_only"], leg["count"]) == (
+        "ask", "0.5000", True, "13.00")
+
+
+def test_a_held_leg_with_its_opposite_leg_resting_is_left_alone(live_db, settings):
+    client = FakeClient({HELD: _book([(38, 500)], [(55, 500)])})
+    with db.session_scope() as s:
+        _held(s)
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"holding": 1}
+    assert client.placed == [] and client.canceled == []
+
+
+def test_a_stale_snapshot_means_do_nothing(live_db, settings):
+    """A marketable exit against a position that is already flat OPENS one."""
+    client = FakeClient({HELD: _book([(20, 500)], [(75, 500)])})
+    with db.session_scope() as s:
+        _held(s, snap_age_s=int(limm.POSITION_FRESH_SECONDS) + 60)
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"no_fresh_position": 1}
+    assert client.placed == [] and client.canceled == []
+
+
+def test_kalshi_and_our_own_fills_must_agree_on_the_side(live_db, settings):
+    client = FakeClient({HELD: _book([(20, 500)], [(75, 500)])})
+    with db.session_scope() as s:
+        _held(s, snap_qty=-13)            # Kalshi says NO, our fills say YES: mid-update
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"unsettled_state": 1}
+    assert client.placed == [] and client.canceled == []
+
+
+def test_exit_size_never_exceeds_our_own_fills(live_db, settings):
+    client = FakeClient({HELD: _book([(20, 500)], [(75, 500)])})
+    with db.session_scope() as s:
+        _held(s, snap_qty=40)             # the account holds more than this book bought
+        _cycle(client, settings, s)
+    assert client.placed[0]["count"] == "13.00"
+
+
+def test_a_closed_market_awaiting_settlement_is_left_alone(live_db, settings):
+    """The KXBIGGESTQUAKE shape — and the operator's standing "leave them alone"."""
+    client = FakeClient({HELD: _book([(20, 500)], [(75, 500)])})
+    with db.session_scope() as s:
+        _held(s, close_hours=-190.0)
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"closed_awaiting_settlement": 1}
+    assert client.placed == [] and client.canceled == [] and HELD not in client.asked
+
+
+def test_a_market_another_book_is_in_is_not_ours_to_close(live_db, settings):
+    client = FakeClient({HELD: _book([(20, 500)], [(75, 500)])})
+    with db.session_scope() as s:
+        _held(s)
+        s.add(m.LiveOrder(market_ticker=HELD, strategy="Fmmsell10", side="no", action="buy",
+                          limit_price=90, quantity=1, status="filled", created_at=NOW))
+        s.flush()
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"shared_ticker": 1}
+    assert client.placed == [] and client.canceled == []
+
+
+def test_a_failed_cancel_blocks_the_exit(live_db, settings):
+    client = FakeClient({HELD: _book([(20, 500)], [(75, 500)])}, cancel_fail=RuntimeError("404"))
+    with db.session_scope() as s:
+        _held(s)
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"stop_loss:cancel_pending": 1}
+    assert client.placed == []
+
+
+def test_an_exit_in_flight_is_not_doubled(live_db, settings):
+    client = FakeClient({HELD: _book([(20, 500)], [(75, 500)])})
+    with db.session_scope() as s:
+        _held(s, other_leg=False)
+        s.add(m.LiveOrder(market_ticker=HELD, strategy=limm.LIVE_TAG, side="yes", action="sell",
+                          limit_price=18, quantity=13, status="submitted",
+                          client_order_id="limmexit:stop_loss:x", created_at=NOW))
+        s.flush()
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"stop_loss:in_flight": 1}
+    assert client.placed == []
+
+
+def test_exits_give_up_after_the_attempt_cap(live_db, settings):
+    client = FakeClient({HELD: _book([(20, 500)], [(75, 500)])})
+    with db.session_scope() as s:
+        _held(s, other_leg=False)
+        for i in range(limm.EXIT_MAX_ATTEMPTS):
+            s.add(m.LiveOrder(market_ticker=HELD, strategy=limm.LIVE_TAG, side="yes",
+                              action="sell", limit_price=18, quantity=13, status="canceled",
+                              client_order_id=f"limmexit:stop_loss:{i}", created_at=NOW))
+        s.flush()
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"stop_loss:exhausted": 1}
+    assert client.placed == []
+
+
+def test_a_completed_round_trip_cancels_whatever_still_rests(live_db, settings):
+    client = FakeClient({HELD: _book([(20, 500)], [(75, 500)])})
+    with db.session_scope() as s:
+        _held(s, snap_qty=0)             # YES 13 bought ...
+        s.add(m.LiveOrder(market_ticker=HELD, strategy=limm.LIVE_TAG, side="yes", action="sell",
+                          limit_price=45, quantity=13, status="filled", kalshi_order_id="K-OUT",
+                          client_order_id="limmexit:take_profit:x", created_at=NOW))
+        s.add(m.Fill(kalshi_fill_id="F-OUT", kalshi_order_id="K-OUT", market_ticker=HELD,
+                     side="yes", action="sell", price=45, quantity=13))   # ... and 13 sold
+        s.flush()
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"round_trip_cleanup": 1}
+    assert client.canceled == ["K-LEG"]
+
+
+def test_an_evenly_part_filled_pair_keeps_quoting(live_db, settings):
+    """YES and NO each filled 5 of 13: flat, but 8 a side still rest as a balanced pair."""
+    client = FakeClient({})
+    with db.session_scope() as s:
+        for side, price, koid in (("yes", 40, "K-Y"), ("no", 55, "K-N")):
+            s.add(m.LiveOrder(market_ticker="KXPART-1", strategy=limm.LIVE_TAG, side=side,
+                              action="buy", limit_price=price, quantity=13, status="partial",
+                              kalshi_order_id=koid, client_order_id=koid, created_at=NOW))
+            s.add(m.Fill(kalshi_fill_id=f"F-{koid}", kalshi_order_id=koid,
+                         market_ticker="KXPART-1", side=side, action="buy", price=price,
+                         quantity=5))
+        s.add(m.Position(market_ticker="KXPART-1", captured_at=NOW, side="yes", quantity=0,
+                         quantity_fp=0))
+        s.flush()
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"flat": 1}
+    assert client.canceled == []
+
+
+def test_a_resting_pair_that_never_filled_is_never_cancelled(live_db, settings):
+    """Genuine liquidity: nothing held, nothing pulled."""
+    client = FakeClient({})
+    with db.session_scope() as s:
+        for side, price, koid in (("yes", 40, "K-1"), ("no", 55, "K-2")):
+            s.add(m.LiveOrder(market_ticker="KXREST-1", strategy=limm.LIVE_TAG, side=side,
+                              action="buy", limit_price=price, quantity=13, status="resting",
+                              kalshi_order_id=koid, client_order_id=koid, created_at=NOW))
+        s.add(m.Position(market_ticker="KXREST-1", captured_at=NOW, side="yes", quantity=0,
+                         quantity_fp=0))
+        s.flush()
+        out = _cycle(client, settings, s)
+    assert _managed(out) == {"flat": 1}
+    assert client.canceled == [] and client.placed == []
 
 
 # --- the reward ledger (thesis §9.23) -------------------------------------------------------

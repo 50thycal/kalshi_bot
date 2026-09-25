@@ -1,32 +1,43 @@
-"""Phase 1a — the ONE-SIDED live smoke test: which order to place, and whether it may be placed.
+"""Phase 1b — the TWO-SIDED live book: which pair to quote, and when to get out.
 
-This module is the decision half of the smoke test. It places nothing: it returns a
-`LiveQuote` (or a refusal reason) and the executor decides what to do with it. Every number it
-produces is bounded by the strategy's OWN caps, declared here as module constants that the
-Experiment OS risk envelope names and a test asserts equal — so "the registered envelope is the
-running envelope" is a property of the code, not a promise.
+This module is the decision half of the live book. It places nothing: it returns a `PairQuote`
+(or a refusal), and, for a position it already holds, the name of the exit rule that fired (or
+None). The executor places orders; the runner decides which markets to look at. Every number
+here is bounded by the strategy's OWN caps, declared as module constants that the Experiment OS
+risk envelope names and a test asserts equal.
 
-WHY ONE SIDE, AND WHY THIS SIDE
--------------------------------
-Two-sided quoting is the strategy; it is NOT what this test exercises, because the live path
-refuses a second resting order on a ticker that already has one (`LiveExecutor` gate 4:
-`live_buy_exists_for_ticker(...) or live_open_order_exists(...)`, which is strategy-agnostic).
-Making that gate understand a two-sided quote changes shared risk semantics that also guard the
-running MMSELL canary — a Platform Change Review, not a thing to slip into a smoke test.
+WHY TWO SIDES (thesis §9.37)
+----------------------------
+Phase 1a rested ONE bid on the cheaper side and held it to settlement. A fill left a naked
+position riding to $1 or $0. Resting a YES bid at y and a NO bid at n (y + n <= 99) changes that:
 
-Kalshi scores the YES and NO sides SEPARATELY (`scoring.py` R5), so a single resting bid still
-earns liquidity score on its own side. That is enough to prove the whole pipe: order accepted,
-rests as genuine liquidity, appears in our own collector's book, earns score, gets credited,
-cancels and settles. It is NOT enough to say anything about the strategy's economics, and this
-module's output must never be read that way.
+  * if BOTH fill, Kalshi nets YES against NO in the same market, so the pair closes itself and
+    realises (100 - y - n) cents per contract immediately — whatever the market does next. The
+    second leg's fill is, mechanically, a maker exit of the first;
+  * if ONE fills, the other is still resting as a take-profit at a fixed, profitable price —
+    the "resting sell the moment it fills" — and the exit rules below cap the loss if the market
+    runs the other way instead;
+  * both legs earn liquidity score while they rest (Kalshi scores YES and NO separately, R5).
 
-**Side choice is the safety lever.** A resting bid's entire downside is the price paid: a NO bid
-at 3c risks 3c per contract, a NO bid at 90c risks 90c. So we pick the side whose touch price is
-CHEAPEST, and rest AT the touch. Resting at the touch also means sitting at or above the
-Reference Price (which is walked down from the best bid), so the distance multiplier is 1.0 and
-the order earns full weight for its size — the cheap side is also the efficient side. The one
-thing we never do is rest deep for safety: a deep order is discounted to nothing
-(`DiscountFactor ** ticks`) and would be liquidity nobody is paying for.
+Both legs carry the SAME quantity. That is what makes the pair a hedge: unequal quantities
+leave a naked residual when both fill. The per-leg dollar cap therefore binds on the dearer leg,
+and the pair usually commits less than twice the cap.
+
+WHY EXITS (thesis §9.37)
+-----------------------
+The operator's two priorities, in order: protect the capital, then get it back out fast enough
+to redeploy. A held leg is closed by a marketable order when any of three rules fires:
+
+  * stop-loss   — the held side's bid has fallen a fixed fraction of what we paid;
+  * take-profit — the held side's bid has risen a fixed fraction of the remaining upside (the
+                  resting opposite leg usually takes profit first, at a smaller edge; this is the
+                  backstop when it is not resting);
+  * pre-close   — the market closes within the hour. Nothing held here may ride through close
+                  into settlement: the three KXBIGGESTQUAKE positions closed on 2026-09-17 and
+                  had still not settled eight days later, which is capital doing nothing.
+
+Entries are also refused outside a close-time window, so capital is never committed to a market
+that cannot resolve within days.
 """
 
 from __future__ import annotations
@@ -35,63 +46,63 @@ from dataclasses import asdict, dataclass
 
 # --- the strategy's own caps. The XOS risk envelope names these; a test asserts they match. ---
 #:
-#: Every number in this block is now AHEAD of the risk envelope frozen into the deployment's
+#: Every number in this block is AHEAD of the risk envelope frozen into the deployment's
 #: `config_json` at arm time (2026-09-17), by deliberate, repeated operator decision — not
 #: through `service.arm_live_canary`, because the lifecycle model has no path back from
 #: LIVE_CANARY to PAPER on the same experiment (`docs/EXPERIMENT_OPERATING_SYSTEM_SPEC.md` §7:
-#: "No silent rollback"). The only XOS-sanctioned way to register a new number here is to retire
-#: `liquidity-incentive-mm` permanently and re-walk a successor through PROBE -> PAPER ->
-#: LIVE_CANARY from scratch. See thesis §9.34 (the order-count raise) and §9.36 (this one, the
-#: size raise) for the full reasoning each time.
+#: "No silent rollback"). See thesis §9.34 (order count), §9.36 (size) and §9.37 (two sides and
+#: exits) for the reasoning each time.
 #:
-#: Contracts per resting order. Raised 1 -> 500 on 2026-09-25 (thesis §9.36) as a ceiling that
-#: rarely binds — `MAX_ORDER_DOLLARS` below is meant to be the number that actually constrains
-#: quantity at any real price this book trades at.
+#: Contracts per leg. A ceiling that rarely binds — `MAX_ORDER_DOLLARS` is the one that does.
 MAX_CONTRACTS_PER_ORDER = 500
-#: Dollars of collateral per resting order. Raised 1.00 -> 20.00 on 2026-09-25 (thesis §9.36):
-#: Kalshi's own incentive-program Target Sizes run 300-1,000 contracts, and a resting bid earns
-#: nothing until it reaches roughly a fifth of that (`scoring.py` R2/A1) — the original $1 cap
-#: could never buy enough contracts to register a reward at all, only prove the order path
-#: worked. $20 is sized to sit safely under the shared per-ticker exposure ceiling below, not to
-#: reach full Target Size on the largest programs.
-MAX_ORDER_DOLLARS = 20.00
-#: Resting orders this strategy may hold at once, across all markets.
-#:
-#: Raised 3 -> 5 on 2026-09-24 (thesis §9.34), then DROPPED 5 -> 2 on 2026-09-25 (thesis §9.36)
-#: in the same move that raised the per-order size: five $1 positions and two $20 ones both fit
-#: under the $50 total budget, but holding many concurrent LARGE positions is the opposite of
-#: what a size increase is for — fewer, bigger, individually measurable bids, not more small
-#: ones. `MAX_OPEN_ORDERS * MAX_ORDER_DOLLARS <= MAX_STRATEGY_EXPOSURE_USD` must keep holding;
-#: the operator guardrail test asserts it.
+#: Dollars of collateral per LEG. 1.00 -> 20.00 (§9.36, one leg per market) -> 10.00 (§9.37):
+#: the operator's "$10 a side, still $20 a position". Both legs share one quantity, so the dearer
+#: leg is the one this cap binds.
+MAX_ORDER_DOLLARS = 10.00
+#: Markets this strategy may be working at once. `repository.count_live_book_open` counts open
+#: TICKERS, so a two-legged pair is one. 3 -> 5 (§9.34) -> 2 (§9.36); unchanged by §9.37.
 MAX_OPEN_ORDERS = 2
-#: Total dollars this strategy may have committed at once (its own budget, not the shared one).
-#: Raised 10.00 -> 50.00 on 2026-09-25 (thesis §9.36) — the operator's own choice among three
-#: tiers, picked as the smallest budget where a reward, if the strategy works at all, has a real
-#: chance of showing up.
+#: Total dollars committed at once. `MAX_OPEN_ORDERS * 2 * MAX_ORDER_DOLLARS` must stay within it.
 MAX_STRATEGY_EXPOSURE_USD = 50.00
-#: Refuse any order priced above this. Caps the per-contract downside directly, and is the
-#: reason the test prefers a market whose cheap side is at the touch.
-MAX_PRICE_CENTS = 25
+#: Refuse a leg priced above this. Was the one-sided book's 25c cheap-side cap; a pair always
+#: has a dear side, so the cap now bounds each leg instead, keeping a single-leg fill off the
+#: near-certain favourites where a fill is almost always the losing side of news.
+MAX_PRICE_CENTS = 90
+#: A pair must lock at least this much if both legs fill: yes_bid + no_bid <= 100 - edge.
+MIN_PAIR_EDGE_CENTS = 1
 #: A program must still have at least this long to run, so the order can rest and be scored.
 MIN_PROGRAM_HOURS_REMAINING = 2.0
-#: Prefer a program ending within this many hours: Kalshi credits rewards only AFTER a program
-#: ends, so a short program is what makes the payout leg of the test confirmable in days.
-PREFER_PROGRAM_ENDS_WITHIN_HOURS = 72.0
+
+#: The close-time window, in hours from now. Outside it, no entry.
+#:   * the ceiling keeps capital out of markets that cannot resolve within days (§9.37: a
+#:     72-hour cutoff still leaves ~1,000 of ~6,300 live programs, measured 2026-09-25);
+#:   * the floor leaves time to rest before the pre-close flatten below takes the position off.
+MAX_HOURS_TO_CLOSE = 72.0
+MIN_HOURS_TO_CLOSE = 3.0
+#: Flatten anything still held this close to the market's close.
+FLATTEN_HOURS_BEFORE_CLOSE = 1.0
+
+#: Exit distances, as fractions, with a floor so a cheap leg is not stopped out by one tick.
+#: Stop when the held side's bid is down STOP_LOSS_FRACTION of the entry price; take profit
+#: when it is up TAKE_PROFIT_FRACTION of the remaining upside (100 - entry). Pre-registered
+#: starting values, chosen before any exit has fired — not tuned to a result.
+STOP_LOSS_FRACTION = 0.40
+TAKE_PROFIT_FRACTION = 0.40
+EXIT_MIN_DISTANCE_CENTS = 3
+#: A marketable exit crosses this many cents past the touch so it fills rather than expires.
+EXIT_SLIPPAGE_CENTS = 2
+#: Exit orders fired at one ticker before giving up and leaving it to settle (and to a human).
+EXIT_MAX_ATTEMPTS = 3
+#: An exit acts only on a position snapshot at most this old. Kalshi has no reduce-only for
+#: these orders, so a marketable exit sent against a position that is already flat OPENS one.
+POSITION_FRESH_SECONDS = 300.0
 
 #: Refuse a market whose THINNER side already rests more than this multiple of Target Size.
 #:
-#: This is the universe rule, and it is the lever this book actually has. Our reward share is
-#: our size divided by the competing depth, so in a book resting 40,000 contracts a 1-contract
-#: bid is a rounding error, while the adverse selection we take is the same either way. The
-#: shadow tape says both halves of that out loud (thesis §9.27): bucketed at placement,
-#: `deep` markets ran a mean single-leg mark of -3.97 against `medium`'s -0.76, and the medium
-#: bucket carried the HIGHER mean estimated reward (0.28 vs 0.13). Worse cost, smaller share.
-#:
-#: The multiple is 3.0 because that is where `scripts/liquidity_incentive_report.py` has always
-#: drawn its `medium`/`deep` line — a boundary chosen before this result was seen, not one
-#: fitted to it. It is deliberately NOT tuned: the honest reading of §9.27 is a direction on
-#: n=55, and a threshold picked to maximise that sample would be exactly the overfit this
-#: project keeps a pre-registration to avoid.
+#: This is the universe rule. Reward share is our size over the competing depth, so a deep book
+#: pays a rounding error while the adverse selection is the same (§9.27). 3.0 is the
+#: `medium`/`deep` line `scripts/liquidity_incentive_report.py` always drew — chosen before the
+#: result, deliberately not tuned to it.
 MAX_COMPETING_DEPTH_TARGET_MULTIPLE = 3.0
 
 #: The live canary's tag, and the paper tag the PAPER stage registers.
@@ -115,16 +126,21 @@ TWIN_TAG = LIVE_TAG + TWIN_SUFFIX
 def owns_tag(strategy: str | None) -> bool:
     """True for this strategy's own live or twin tag.
 
-    Used by shared live paths that must treat this book differently — today only
-    `LiveExecutor.manage_exits`, which must NOT apply the process-wide TP/SL exit rules to a
-    book whose registered contract is hold-to-settlement. Deliberately an exact-match over the
-    two registered tags rather than a prefix test: a prefix test would silently capture a
-    future book whose contract nobody has read."""
+    Used by shared live paths that must treat this book differently — today
+    `LiveExecutor.manage_exits`, whose process-wide TP/SL rules must never touch this book: it
+    manages its own exits (`decide_exit`, run by the incentive runner) with rules registered for
+    it, on both YES and NO legs, which the process-wide path cannot close. Exact-match over the
+    two registered tags: a prefix test would silently capture a future book nobody has read."""
     return strategy in (LIVE_TAG, TWIN_TAG)
 
 
 SIDE_YES = "yes"
 SIDE_NO = "no"
+
+
+def other_side(side: str) -> str:
+    return SIDE_NO if side == SIDE_YES else SIDE_YES
+
 
 # Refusal codes. Each is a reason NOT to place; the caller records them verbatim.
 REFUSE_NO_BOOK = "no_book"
@@ -135,25 +151,55 @@ REFUSE_PROGRAM_ENDING = "program_ending"
 REFUSE_NO_TARGET_SIZE = "no_target_size"
 REFUSE_BOOK_TOO_DEEP = "book_too_deep"
 REFUSE_POST_ONLY_CROSS = "post_only_would_cross"
+REFUSE_NO_EDGE = "no_pair_edge"
+REFUSE_NO_CLOSE_TIME = "no_close_time"
+REFUSE_CLOSES_TOO_SOON = "closes_too_soon"
+REFUSE_CLOSES_TOO_LATE = "closes_too_late"
 REFUSE_EXCLUDED_SERIES = "excluded_series"
 REFUSE_EVENT_CAP = "event_cap"
 REFUSE_OPEN_ORDER_CAP = "open_order_cap"
 REFUSE_EXPOSURE_CAP = "exposure_cap"
 
+# Exit rules. Each names why a held leg is being closed; the executor records it on the order.
+EXIT_STOP_LOSS = "stop_loss"
+EXIT_TAKE_PROFIT = "take_profit"
+EXIT_PRE_CLOSE = "pre_close"
+
 
 @dataclass(frozen=True)
 class LiveQuote:
-    """One resting post-only bid the smoke test would place. Prices are that side's own cents."""
+    """One resting post-only bid on one side. Prices are that side's own cents."""
 
     market_ticker: str
     side: str                 # "yes" | "no" — the side the bid rests on
     price_cents: int          # what we pay per contract on that side
     quantity: int
-    collateral_usd: float     # price x qty: the entire downside if it fills and loses
+    collateral_usd: float     # price x qty: this leg's entire downside if it fills alone and loses
     max_loss_usd: float       # identical to collateral for a resting bid; named for the record
     reference_price_cents: int | None
     at_or_above_reference: bool
     reason: str               # how the price was chosen (audit)
+
+    def as_dict(self) -> dict:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class PairQuote:
+    """A YES bid and a NO bid of equal quantity on one market."""
+
+    market_ticker: str
+    yes: LiveQuote
+    no: LiveQuote
+    quantity: int
+    edge_cents: int              # 100 - yes - no: locked per contract if both legs fill
+    collateral_usd: float        # both legs, as committed while both rest
+    max_loss_usd: float          # the dearer leg alone, filled and lost — the single-leg worst case
+    hours_to_close: float | None
+
+    @property
+    def legs(self) -> tuple[LiveQuote, LiveQuote]:
+        return (self.yes, self.no)
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -168,18 +214,25 @@ class Refusal:
         return asdict(self)
 
 
-def _cheapest_side(best_yes_bid: int | None, best_no_bid: int | None) -> tuple[str, int] | None:
-    """The side whose touch is cheaper, and that price. Ties go to NO, arbitrarily but fixedly."""
-    if best_yes_bid is None and best_no_bid is None:
-        return None
-    if best_no_bid is None:
-        return SIDE_YES, int(best_yes_bid)
-    if best_yes_bid is None:
-        return SIDE_NO, int(best_no_bid)
-    return (SIDE_YES, int(best_yes_bid)) if int(best_yes_bid) < int(best_no_bid) else (SIDE_NO, int(best_no_bid))
+def pair_quantity(yes_price: int, no_price: int) -> int:
+    """The one quantity both legs carry: as many contracts as the DEARER leg's budget buys."""
+    dearer = max(int(yes_price), int(no_price))
+    if dearer < 1:
+        return 0
+    return min(MAX_CONTRACTS_PER_ORDER, int(MAX_ORDER_DOLLARS * 100 // dearer))
 
 
-def build_live_quote(
+def _leg(ticker: str, side: str, price: int, qty: int, ref: int | None) -> LiveQuote:
+    collateral = round(price * qty / 100.0, 4)
+    return LiveQuote(
+        market_ticker=ticker, side=side, price_cents=price, quantity=qty,
+        collateral_usd=collateral, max_loss_usd=collateral,
+        reference_price_cents=ref, at_or_above_reference=(ref is None or price >= ref),
+        reason=f"joined the {side} touch at {price}c as one leg of a pair",
+    )
+
+
+def build_pair_quote(
     *,
     market_ticker: str,
     best_yes_bid: int | None,
@@ -187,6 +240,7 @@ def build_live_quote(
     yes_resting_total: float,
     no_resting_total: float,
     target_size: float | None,
+    hours_to_close: float | None,
     reference_price_by_side: dict[str, int | None] | None = None,
     program_hours_remaining: float | None = None,
     excluded_series: frozenset[str] = frozenset(),
@@ -195,44 +249,44 @@ def build_live_quote(
     open_orders_now: int = 0,
     strategy_exposure_now_usd: float = 0.0,
     max_price_cents: int = MAX_PRICE_CENTS,
-) -> LiveQuote | Refusal:
-    """The whole decision, as one pure function. Returns the order to place, or why not.
+) -> PairQuote | Refusal:
+    """The whole entry decision, as one pure function. Returns the pair to place, or why not.
 
-    Every refusal is a reason the smoke test declines to spend money; there is deliberately no
-    path that returns a quote by relaxing a cap."""
+    There is deliberately no path that returns a quote by relaxing a cap."""
     series = market_ticker.split("-", 1)[0] if market_ticker else ""
     if series and series in excluded_series:
         return Refusal(REFUSE_EXCLUDED_SERIES,
                        f"{series} is reserved for another live book; no ticker collisions")
-    # Concentration, before any pricing: one event, one commitment. Several markets of one event
-    # resolve together, so stacking them is one bet wearing several tickets — and another live
-    # book holding the event makes it the fleet's bet, not just ours. On 2026-09-18 this book put
-    # two NO bids on KXRT-RES while MMSELL was already short 93c of the same event (§9.15).
+    # Concentration before pricing: several markets of one event resolve together, so stacking
+    # them is one bet wearing several tickets (§9.15).
     if event_ticker and event_ticker in blocked_event_tickers:
-        return Refusal(REFUSE_EVENT_CAP,
-                       f"{event_ticker} already carries an open live commitment")
+        return Refusal(REFUSE_EVENT_CAP, f"{event_ticker} already carries an open live commitment")
     if open_orders_now >= MAX_OPEN_ORDERS:
         return Refusal(REFUSE_OPEN_ORDER_CAP,
-                       f"{open_orders_now} resting already, cap {MAX_OPEN_ORDERS}")
+                       f"{open_orders_now} markets open already, cap {MAX_OPEN_ORDERS}")
+    # The close-time window comes before the book: it is the capital-recycling rule, and a market
+    # that cannot resolve within days is refused whatever its book looks like.
+    if hours_to_close is None:
+        return Refusal(REFUSE_NO_CLOSE_TIME, "market carries no close time")
+    if hours_to_close < MIN_HOURS_TO_CLOSE:
+        return Refusal(REFUSE_CLOSES_TOO_SOON,
+                       f"closes in {hours_to_close:.1f}h, need {MIN_HOURS_TO_CLOSE:g}h")
+    if hours_to_close > MAX_HOURS_TO_CLOSE:
+        return Refusal(REFUSE_CLOSES_TOO_LATE,
+                       f"closes in {hours_to_close:.1f}h, cap {MAX_HOURS_TO_CLOSE:g}h")
     if best_yes_bid is None or best_no_bid is None:
         return Refusal(REFUSE_NOT_TWO_SIDED, "a one-sided book cannot produce a qualifying snapshot")
-    # Structural validity of the book comes BEFORE any pricing decision: a crossed book means the
-    # feed is wrong or stale, and "the cheap side is too expensive" would be the wrong diagnosis.
-    if best_yes_bid + best_no_bid > 100:
-        return Refusal(REFUSE_POST_ONLY_CROSS,
-                       f"crossed book: yes {best_yes_bid} + no {best_no_bid} > 100")
+    y, n = int(best_yes_bid), int(best_no_bid)
+    # A crossed book means the feed is wrong or stale; say so rather than blame the price.
+    if y + n > 100:
+        return Refusal(REFUSE_POST_ONLY_CROSS, f"crossed book: yes {y} + no {n} > 100")
     if target_size is None or target_size <= 0:
         return Refusal(REFUSE_NO_TARGET_SIZE, "program carries no Target Size")
-    # Both sides must already meet Target Size or NO snapshot pays anyone (scoring R2) — and we
-    # are far too small to carry a side over the line ourselves.
+    # Both sides must already meet Target Size or no snapshot pays anyone (scoring R2).
     if yes_resting_total < target_size or no_resting_total < target_size:
         return Refusal(
             REFUSE_TARGET_NOT_MET,
             f"yes {yes_resting_total:.0f} / no {no_resting_total:.0f} vs target {target_size:.0f}")
-    # The universe rule, and the only lever this book has on its own reward. Placed AFTER the
-    # target-size gate on purpose: both are about the same depth number, and a book that has not
-    # reached Target Size is refused for a different reason (nobody is paid at all), which must
-    # stay readable as itself in the refusal record.
     competing_depth = min(yes_resting_total, no_resting_total)
     depth_cap = MAX_COMPETING_DEPTH_TARGET_MULTIPLE * target_size
     if competing_depth > depth_cap:
@@ -244,47 +298,84 @@ def build_live_quote(
     if program_hours_remaining is not None and program_hours_remaining < MIN_PROGRAM_HOURS_REMAINING:
         return Refusal(REFUSE_PROGRAM_ENDING,
                        f"{program_hours_remaining:.1f}h left, need {MIN_PROGRAM_HOURS_REMAINING}")
-
-    picked = _cheapest_side(best_yes_bid, best_no_bid)
-    if picked is None:
-        return Refusal(REFUSE_NO_BOOK, "no best bid on either side")
-    side, price = picked
-    if price > max_price_cents:
-        return Refusal(
-            REFUSE_TOO_EXPENSIVE,
-            f"cheapest touch is {side} at {price}c, above the {max_price_cents}c downside cap")
-    if price < 1:
-        return Refusal(REFUSE_NO_BOOK, f"{side} touch at {price}c is not a placeable price")
-    # Joining the touch on our own side cannot cross: the opposing side's price lives on the
-    # other book, and the yes+no <= 100 identity checked above is what guarantees it.
-    qty = min(MAX_CONTRACTS_PER_ORDER, int(MAX_ORDER_DOLLARS * 100 // price))
+    if y < 1 or n < 1:
+        return Refusal(REFUSE_NO_BOOK, f"touch yes {y} / no {n} is not a placeable pair")
+    edge = 100 - y - n
+    if edge < MIN_PAIR_EDGE_CENTS:
+        return Refusal(REFUSE_NO_EDGE, f"yes {y} + no {n} leaves {edge}c, need {MIN_PAIR_EDGE_CENTS}c")
+    if max(y, n) > max_price_cents:
+        return Refusal(REFUSE_TOO_EXPENSIVE,
+                       f"dear leg at {max(y, n)}c, above the {max_price_cents}c per-leg cap")
+    qty = pair_quantity(y, n)
     if qty < 1:
         return Refusal(REFUSE_TOO_EXPENSIVE,
-                       f"{price}c exceeds the ${MAX_ORDER_DOLLARS:.2f} per-order budget")
-    collateral = round(price * qty / 100.0, 4)
+                       f"{max(y, n)}c exceeds the ${MAX_ORDER_DOLLARS:.2f} per-leg budget")
+    refs = reference_price_by_side or {}
+    yes_leg = _leg(market_ticker, SIDE_YES, y, qty, refs.get(SIDE_YES))
+    no_leg = _leg(market_ticker, SIDE_NO, n, qty, refs.get(SIDE_NO))
+    collateral = round(yes_leg.collateral_usd + no_leg.collateral_usd, 4)
     if strategy_exposure_now_usd + collateral > MAX_STRATEGY_EXPOSURE_USD:
         return Refusal(
             REFUSE_EXPOSURE_CAP,
             f"${strategy_exposure_now_usd:.2f} committed + ${collateral:.2f} exceeds "
             f"${MAX_STRATEGY_EXPOSURE_USD:.2f}")
-
-    ref = (reference_price_by_side or {}).get(side)
-    at_or_above = ref is None or price >= ref
-    return LiveQuote(
-        market_ticker=market_ticker, side=side, price_cents=price, quantity=qty,
-        collateral_usd=collateral, max_loss_usd=collateral,
-        reference_price_cents=ref, at_or_above_reference=at_or_above,
-        reason=f"joined the cheaper touch ({side} at {price}c); downside is the collateral",
+    return PairQuote(
+        market_ticker=market_ticker, yes=yes_leg, no=no_leg, quantity=qty, edge_cents=edge,
+        collateral_usd=collateral,
+        max_loss_usd=max(yes_leg.collateral_usd, no_leg.collateral_usd),
+        hours_to_close=hours_to_close,
     )
 
 
-def _depth_ratio(candidate: dict) -> float:
-    """Competing depth on the thinner side, as a multiple of Target Size. Lower is better.
+# ------------------------------------------------------------------ exits
 
-    This is the share proxy: reward share is our size over the competing depth, so the same
-    1-contract bid is worth proportionally more in a book resting 2x target than 3x. Candidates
-    that got this far are already under `MAX_COMPETING_DEPTH_TARGET_MULTIPLE`, so this only
-    orders WITHIN the allowed band — it can never admit a book the gate refused."""
+
+def stop_distance_cents(entry_cents: int) -> int:
+    return max(EXIT_MIN_DISTANCE_CENTS, round(int(entry_cents) * STOP_LOSS_FRACTION))
+
+
+def take_profit_distance_cents(entry_cents: int) -> int:
+    return max(EXIT_MIN_DISTANCE_CENTS, round((100 - int(entry_cents)) * TAKE_PROFIT_FRACTION))
+
+
+def decide_exit(*, entry_cents: int, mark_bid_cents: int | None,
+                hours_to_close: float | None) -> str | None:
+    """Which exit rule fires for one held leg, or None to keep holding.
+
+    `mark_bid_cents` is the best bid on the HELD side, in that side's own cents — what the leg
+    could be sold for now. Pre-close is checked first and needs no mark: a position about to
+    close must come off whatever the price, or it rides into settlement."""
+    if hours_to_close is not None and hours_to_close <= FLATTEN_HOURS_BEFORE_CLOSE:
+        return EXIT_PRE_CLOSE
+    if mark_bid_cents is None:
+        return None
+    entry = int(entry_cents)
+    mark = int(mark_bid_cents)
+    if mark <= entry - stop_distance_cents(entry):
+        return EXIT_STOP_LOSS
+    if mark >= entry + take_profit_distance_cents(entry):
+        return EXIT_TAKE_PROFIT
+    return None
+
+
+def exit_leg_price(*, entry_cents: int, best_opposite_bid: int | None) -> int | None:
+    """The resting bid on the OPPOSITE side that closes a held leg at a profit when it fills.
+
+    Buying the opposite side nets the held one flat, so a bid at p realises
+    (100 - entry - p) per contract. Join the opposite touch, but never pay more than leaves
+    MIN_PAIR_EDGE_CENTS. None when no profitable price exists."""
+    cap = 100 - int(entry_cents) - MIN_PAIR_EDGE_CENTS
+    price = cap if best_opposite_bid is None else min(int(best_opposite_bid), cap)
+    return price if price >= 1 else None
+
+
+# ------------------------------------------------------------------ ranking
+
+
+def _depth_ratio(candidate: dict) -> float:
+    """Competing depth on the thinner side, as a multiple of Target Size. Lower is better: reward
+    share is our size over the competing depth. Only orders WITHIN the allowed band — it can never
+    admit a book the gate refused."""
     target = float(candidate.get("target_size") or 0.0)
     if target <= 0:
         return float("inf")
@@ -293,44 +384,42 @@ def _depth_ratio(candidate: dict) -> float:
     return depth / target
 
 
+def quote_candidate(c: dict, *, excluded_series: frozenset[str] = frozenset(),
+                    blocked_event_tickers: frozenset[str] = frozenset(),
+                    max_price_cents: int = MAX_PRICE_CENTS) -> PairQuote | Refusal:
+    """`build_pair_quote` over one runner candidate dict."""
+    return build_pair_quote(
+        market_ticker=c.get("market_ticker", ""),
+        best_yes_bid=c.get("best_yes_bid"), best_no_bid=c.get("best_no_bid"),
+        yes_resting_total=float(c.get("yes_resting_total") or 0.0),
+        no_resting_total=float(c.get("no_resting_total") or 0.0),
+        target_size=c.get("target_size"),
+        hours_to_close=c.get("hours_to_close"),
+        reference_price_by_side=c.get("reference_price_by_side"),
+        program_hours_remaining=c.get("program_hours_remaining"),
+        excluded_series=excluded_series, max_price_cents=max_price_cents,
+        event_ticker=c.get("event_ticker"),
+        blocked_event_tickers=blocked_event_tickers,
+    )
+
+
 def rank_candidates(candidates: list[dict], *, excluded_series: frozenset[str] = frozenset(),
                     blocked_event_tickers: frozenset[str] = frozenset(),
-                    max_price_cents: int = MAX_PRICE_CENTS) -> list[tuple[dict, LiveQuote]]:
-    """Every candidate that yields a placeable quote, best first.
+                    max_price_cents: int = MAX_PRICE_CENTS) -> list[tuple[dict, PairQuote]]:
+    """Every candidate that yields a placeable pair, best first.
 
-    Order: cheapest PRICE, then THINNEST competing book, then soonest program end.
-
-    The primary key is `price_cents`, not `collateral_usd` (changed 2026-09-25, thesis §9.36).
-    It used to be collateral, and the two were the same ranking back when every quote rested
-    exactly one contract — collateral_usd was just price_cents/100. Raising size broke that
-    equivalence: quantity is now `min(MAX_CONTRACTS_PER_ORDER, MAX_ORDER_DOLLARS // price)`, so
-    whenever the dollar budget binds (the normal case at any real price this book trades),
-    collateral_usd converges toward the SAME number — roughly `MAX_ORDER_DOLLARS` — for every
-    candidate regardless of price, and stops discriminating on the thing it was meant to rank:
-    per-contract downside, "a bid at 3c risks 3c per contract, a bid at 90c risks 90c" (module
-    docstring). Sorting on collateral_usd after that change was sorting on integer-truncation
-    noise, not on risk. Price is what still varies meaningfully and is the actual safety lever.
-
-    Depth is inserted ahead of program end because among two equally cheap orders the thinner
-    book is worth strictly more reward for the same risk (§9.27) — where the old ordering broke
-    ties on timing, which pays nothing."""
-    out: list[tuple[dict, LiveQuote]] = []
+    Order: THINNEST competing book (reward share per contract, §9.27), then SOONEST close
+    (capital comes back to be redeployed sooner), then WIDEST edge (more locked if both fill).
+    Price is no longer a ranking key: a pair always holds both sides, so "the cheap side" is not
+    a choice this book makes, and the dollar downside of a single-leg fill is capped per leg."""
+    out: list[tuple[dict, PairQuote]] = []
     for c in candidates:
-        q = build_live_quote(
-            market_ticker=c.get("market_ticker", ""),
-            best_yes_bid=c.get("best_yes_bid"), best_no_bid=c.get("best_no_bid"),
-            yes_resting_total=float(c.get("yes_resting_total") or 0.0),
-            no_resting_total=float(c.get("no_resting_total") or 0.0),
-            target_size=c.get("target_size"),
-            reference_price_by_side=c.get("reference_price_by_side"),
-            program_hours_remaining=c.get("program_hours_remaining"),
-            excluded_series=excluded_series, max_price_cents=max_price_cents,
-            event_ticker=c.get("event_ticker"),
-            blocked_event_tickers=blocked_event_tickers,
-        )
-        if isinstance(q, LiveQuote):
+        q = quote_candidate(c, excluded_series=excluded_series,
+                            blocked_event_tickers=blocked_event_tickers,
+                            max_price_cents=max_price_cents)
+        if isinstance(q, PairQuote):
             out.append((c, q))
-    out.sort(key=lambda cq: (cq[1].price_cents,
-                             _depth_ratio(cq[0]),
-                             cq[0].get("program_hours_remaining") or 1e9))
+    out.sort(key=lambda cq: (_depth_ratio(cq[0]),
+                             cq[1].hours_to_close if cq[1].hours_to_close is not None else 1e9,
+                             -cq[1].edge_cents))
     return out

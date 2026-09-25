@@ -592,91 +592,118 @@ class LiveExecutor:
             "count": qty, "coid": client_order_id, "kalshi_order_id": koid}})
         return "placed"
 
-    def mirror_incentive_entry(
+    def mirror_incentive_pair(
         self, session, *, strategy: str, event_ticker: str | None, ticker: str,
-        quote, account_state=None,
-    ) -> str:
-        """Place ONE resting post-only bid for the liquidity-incentive smoke test (WS-020 Phase 1a).
+        pair, account_state=None,
+    ) -> tuple[str, list]:
+        """Place a YES bid and a NO bid of equal quantity on one market (WS-020 thesis §9.37).
 
-        `quote` is a `liquidity_incentive.live.LiveQuote` — the decision was already made and
-        capped by that module; this method's only job is to re-check the live switches and the
-        shared portfolio breakers, then submit. It deliberately does NOT re-decide the price or
-        size: two places computing the same number is how they drift apart.
+        `pair` is a `liquidity_incentive.live.PairQuote`, already decided and capped there; this
+        method re-checks the live switches and the shared portfolio breakers, then submits both
+        legs. Returns (outcome, legs actually placed).
 
-        Distinct from `mirror_mmsell_entry` in three ways that matter:
-          * it reads the incentive strategy's OWN caps, never mmsell's, so neither book can move
-            the other's limits;
-          * it can rest on EITHER side (mmsell is always a NO-buy), because the cheap side is the
-            safe side and which one that is depends on the market;
-          * it keeps the shared per-ticker guard, which is what stops this book and mmsell ever
-            contesting the same market.
+        THE SHARED DEDUP GATE IS UNCHANGED. Gate 4 is still strategy-agnostic and still refuses a
+        ticker any live book — this one included — already has an order or a position on. The
+        pair passes it ONCE, as one decision, before either leg is sent; the second leg is part
+        of that admitted decision, not a second entry. No other book's protection moves, and
+        this book still cannot stack a second pair on a market it is already working.
 
-        Fail-closed and fail-soft: any gate places nothing, any exception is swallowed, and the
-        shadow record is untouched either way. Returns a short outcome code."""
-        from ..liquidity_incentive import live as limm
-
+        Fail-closed and fail-soft: any gate places nothing. If the first leg lands and the second
+        does not, the first rests alone — the one-sided state this book ran in for a week — and
+        the runner's exit rules still cover it if it fills."""
         # 1. the three live switches + this tag's allowlist entry
         if not self._allowed(strategy) or not self._switches_on():
             self.summary.skipped_gate += 1
-            return "gate:switches"
+            return "gate:switches", []
         # 2. the shared daily realized-loss stop (protects the whole portfolio, mmsell included)
         if self._daily_loss_tripped or self._daily_loss_hit(session):
             self.summary.skipped_gate += 1
-            return "gate:daily_loss"
+            return "gate:daily_loss", []
         # 3. the shared portfolio exposure breaker
         if self._total_exposure_hit(session):
             self.summary.risk_blocked += 1
-            return "gate:total_exposure"
+            return "gate:total_exposure", []
         # 4. per-ticker dedup, strategy-agnostic ON PURPOSE: never contest a market another live
-        #    book is already resting in, and never double-enter our own.
+        #    book is already resting in, and never double-enter our own. Checked once per pair.
         if (repo.live_buy_exists_for_ticker(session, ticker, strategy)
                 or repo.live_open_order_exists(session, ticker)):
             self.summary.skipped_dedup += 1
-            return "gate:dedup"
-        # 5. this strategy's OWN open-order cap
-        if repo.count_live_book_open(session, strategy) >= limm.MAX_OPEN_ORDERS:
+            return "gate:dedup", []
+        # 5. this strategy's OWN open-market cap
+        if repo.count_live_book_open(session, strategy) >= limm_live.MAX_OPEN_ORDERS:
             self.summary.skipped_gate += 1
-            return "gate:open_cap"
+            return "gate:open_cap", []
         # 6. this strategy's OWN dollar budget, re-read from the database at submit time
         committed = repo.live_strategy_exposure(session, strategy)
-        if committed + float(quote.collateral_usd) > limm.MAX_STRATEGY_EXPOSURE_USD:
+        if committed + float(pair.collateral_usd) > limm_live.MAX_STRATEGY_EXPOSURE_USD:
             self.summary.risk_blocked += 1
-            return "gate:strategy_exposure"
+            return "gate:strategy_exposure", []
         # 7. fail-closed on a missing real balance, exactly as the mmsell path does
         balance = None if account_state is None else account_state.get("cash_balance")
         if balance is None:
             self.summary.skipped_gate += 1
-            return "gate:no_balance"
-        # 8. the shared per-market exposure cap
-        if self._market_exposure(session, ticker) >= self.settings.max_market_exposure:
+            return "gate:no_balance", []
+        # 8. the shared per-market exposure cap, counting the pair about to be committed
+        if (self._market_exposure(session, ticker) + float(pair.collateral_usd)
+                > self.settings.max_market_exposure):
             self.summary.risk_blocked += 1
-            return "gate:exposure"
-        # 9. re-assert the decision layer's caps here too. The quote cannot exceed them by
-        #    construction, so this is a belt on a brace — and it is the check that would catch a
-        #    caller passing a hand-built quote.
-        price = int(quote.price_cents)
-        qty = int(quote.quantity)
-        if not (1 <= price <= limm.MAX_PRICE_CENTS) or not (1 <= qty <= limm.MAX_CONTRACTS_PER_ORDER):
+            return "gate:exposure", []
+        # 9. re-assert the decision layer's caps. The pair cannot exceed them by construction, so
+        #    this is a belt on a brace — and it is what would catch a hand-built pair.
+        if not self._incentive_pair_within_caps(pair):
             self.summary.skipped_gate += 1
-            return "gate:size"
-        if quote.side not in (limm.SIDE_YES, limm.SIDE_NO):
-            self.summary.skipped_gate += 1
-            return "gate:size"
+            return "gate:size", []
 
+        placed: list = []
+        outcome = "placed"
+        for leg in pair.legs:
+            leg_outcome = self._submit_incentive_bid(
+                session, strategy=strategy, event_ticker=event_ticker, ticker=ticker,
+                side=leg.side, price=int(leg.price_cents), qty=int(leg.quantity),
+                coid_prefix="", reason=f"incentive_pair:{leg.side}@{leg.price_cents}c")
+            if leg_outcome == "placed":
+                placed.append(leg)
+            else:
+                outcome = leg_outcome if not placed else f"partial:{leg_outcome}"
+                break
+        return outcome, placed
+
+    @staticmethod
+    def _incentive_pair_within_caps(pair) -> bool:
+        legs = pair.legs
+        if {leg.side for leg in legs} != {limm_live.SIDE_YES, limm_live.SIDE_NO}:
+            return False
+        if len({int(leg.quantity) for leg in legs}) != 1:
+            return False
+        if sum(int(leg.price_cents) for leg in legs) > 100 - limm_live.MIN_PAIR_EDGE_CENTS:
+            return False
+        for leg in legs:
+            price, qty = int(leg.price_cents), int(leg.quantity)
+            if not (1 <= price <= limm_live.MAX_PRICE_CENTS):
+                return False
+            if not (1 <= qty <= limm_live.MAX_CONTRACTS_PER_ORDER):
+                return False
+            if price * qty > limm_live.MAX_ORDER_DOLLARS * 100 + 1e-9:
+                return False
+        return True
+
+    def _submit_incentive_bid(self, session, *, strategy: str, event_ticker: str | None,
+                              ticker: str, side: str, price: int, qty: int, coid_prefix: str,
+                              reason: str) -> str:
+        """POST one post-only resting bid on `side` at `price` (that side's cents). No gates."""
         repo.insert_risk_event(session, None, ticker, RiskDecision(
-            approved=True, reason_codes=[f"incentive_smoke:{quote.side}@{price}c"],
+            approved=True, reason_codes=[reason],
             max_allowed_quantity=qty, max_allowed_price=price))
-
         # Kalshi V2 order. `side` is expressed on the YES book: "bid" buys YES, "ask" sells YES
         # (== buys NO), which is why the mmsell NO-buy sends "ask". `price` is always the YES-side
         # price in dollars, so a NO bid at n cents is a YES ask at (100 - n). count and price must
         # be decimal STRINGS. post_only keeps it a pure maker: a post-only cross is cancelled by
         # Kalshi rather than crossing, which is the safe failure.
-        if quote.side == limm.SIDE_NO:
+        if side == limm_live.SIDE_NO:
             order_side, yes_price = "ask", max(1, min(99, 100 - price))
         else:
             order_side, yes_price = "bid", max(1, min(99, price))
-        client_order_id = str(uuid.uuid4())
+        client_order_id = f"{coid_prefix}{uuid.uuid4()}"
         order = {
             "ticker": ticker,
             "client_order_id": client_order_id,
@@ -691,7 +718,7 @@ class LiveExecutor:
         # real order if a later cycle rolls back. `limit_price` keeps OUR side's price.
         row = repo.create_live_order(
             session, signal_id=None, ticker=ticker, event_ticker=event_ticker,
-            strategy=strategy, side=quote.side, action="buy", limit_price=price, quantity=qty,
+            strategy=strategy, side=side, action="buy", limit_price=price, quantity=qty,
             status="pending", client_order_id=client_order_id, raw_order_json=order,
         )
         session.commit()
@@ -727,10 +754,131 @@ class LiveExecutor:
         repo.update_live_order_status(session, row, status="resting", kalshi_order_id=koid, raw=resp)
         self.summary.placed += 1
         logger.info("incentive live order placed (resting post-only bid)", extra={"extra_fields": {
-            "ticker": ticker, "strategy": strategy, "side": quote.side, "price_cents": price,
-            "sent_yes_price": yes_price, "count": qty, "collateral_usd": quote.collateral_usd,
+            "ticker": ticker, "strategy": strategy, "side": side, "price_cents": price,
+            "sent_yes_price": yes_price, "count": qty, "reason": reason,
             "coid": client_order_id, "kalshi_order_id": koid}})
         return "placed"
+
+    # --- liquidity-incentive exits (thesis §9.37) ------------------------------------------
+    #
+    # This book closes its own positions; `manage_exits` skips it (limm_live.owns_tag). Every
+    # method here REDUCES exposure, so none of them is behind the daily-loss stop or the budget
+    # caps — a loss breaker that also blocked the stop-loss would be the wrong way round. They
+    # are behind the live switches and this tag's allowlist entry, like everything else.
+
+    def cancel_incentive_orders(self, session, *, strategy: str, ticker: str) -> bool:
+        """Cancel every still-working order this strategy has on `ticker`. True only when none is
+        left working — the caller must not send a marketable exit otherwise, because a resting
+        leg that fills AFTER the exit flattens the book opens a fresh position."""
+        ok = True
+        for row in repo.live_orders_on_ticker(session, ticker):
+            if row.strategy != strategy or row.status not in repo.LIVE_NONTERMINAL_STATUSES:
+                continue
+            if not row.kalshi_order_id:
+                ok = False  # in flight with no exchange id yet: its state is unknown
+                continue
+            try:
+                self.client.cancel_events_order(
+                    row.kalshi_order_id,
+                    exchange_index=self._exchange_index_for(row.market_ticker))
+            except AuthError:
+                raise
+            except Exception as exc:  # noqa: BLE001 — retried next cycle; exit waits for it
+                ok = False
+                logger.warning(
+                    f"incentive exit: cancel failed for {strategy} {ticker} "
+                    f"{row.kalshi_order_id}: {type(exc).__name__}: {str(exc)[:200]}")
+                continue
+            repo.update_live_order_status(session, row, status="canceled",
+                                          cancel_reason="incentive_exit")
+        return ok
+
+    def incentive_exit_attempts(self, session, *, strategy: str, ticker: str) -> int:
+        return sum(1 for r in repo.live_orders_on_ticker(session, ticker)
+                   if r.strategy == strategy and (r.client_order_id or "").startswith("limmexit:"))
+
+    def close_incentive_position(self, session, *, strategy: str, ticker: str, held_side: str,
+                                 qty: int, mark_bid_cents: int, rule: str) -> str:
+        """Sell a held leg with a MARKETABLE immediate-or-cancel order. Returns an outcome code.
+
+        Same wire shape as the mmsell closeout, the one exit on the V2 endpoint with recorded
+        201s: `self_trade_prevention_type` and no `reduce_only` / `post_only`. Kalshi nets YES
+        against NO in one market, so selling YES is an "ask" and flattening NO is a "bid" (buy
+        YES) — the closeout's own move. The price crosses EXIT_SLIPPAGE_CENTS past the held
+        side's bid so it fills rather than expires."""
+        if not self._allowed(strategy) or not self._switches_on():
+            return "gate:switches"
+        if qty < 1:
+            return "gate:size"
+        sell_at = max(1, int(mark_bid_cents) - limm_live.EXIT_SLIPPAGE_CENTS)
+        if held_side == limm_live.SIDE_YES:
+            order_side, yes_price = "ask", max(1, min(99, sell_at))
+        else:
+            order_side, yes_price = "bid", max(1, min(99, 100 - sell_at))
+        coid = f"limmexit:{rule}:{uuid.uuid4()}"
+        order = {
+            "ticker": ticker,
+            "client_order_id": coid,
+            "side": order_side,
+            "count": f"{int(qty):.2f}",
+            "price": f"{yes_price / 100.0:.4f}",
+            "time_in_force": "immediate_or_cancel",
+            "self_trade_prevention_type": "taker_at_cross",
+        }
+        row = repo.create_live_order(
+            session, signal_id=None, ticker=ticker, event_ticker=None, strategy=strategy,
+            side=held_side, action="sell", limit_price=sell_at, quantity=int(qty),
+            status="pending", client_order_id=coid, raw_order_json=order)
+        session.commit()  # durable intent before POST — survives a later cycle rollback
+        logger.warning(f"incentive EXIT ({rule}) {ticker}: sell {qty} {held_side} at {sell_at}c",
+                       extra={"extra_fields": {"ticker": ticker, "rule": rule, "coid": coid,
+                                               "payload": order}})
+        try:
+            resp = self.client.create_events_order(order)
+        except AuthError:
+            repo.update_live_order_status(session, row, status="error", cancel_reason="auth")
+            raise
+        except TransientError as exc:
+            repo.update_live_order_status(session, row, status="unknown", cancel_reason=str(exc))
+            return "unknown"
+        except KalshiAPIError as exc:
+            if getattr(exc, "status_code", None) == 409:
+                repo.update_live_order_status(session, row, status="submitted",
+                                              cancel_reason="409_already_exists")
+                self.summary.exits_placed += 1
+                return "placed"
+            repo.update_live_order_status(session, row, status="rejected", cancel_reason=str(exc))
+            self.summary.rejected += 1
+            logger.error(f"incentive exit REJECTED {ticker}: {str(exc)[:300]}")
+            return "rejected"
+        except Exception as exc:  # noqa: BLE001 — one failure must not break the cycle
+            repo.update_live_order_status(session, row, status="error", cancel_reason=str(exc))
+            logger.exception("incentive exit order failed")
+            return "error"
+        koid = None
+        if isinstance(resp, dict):
+            o = resp.get("order") if isinstance(resp.get("order"), dict) else resp
+            koid = o.get("order_id") or o.get("id")
+        repo.update_live_order_status(session, row, status="submitted", kalshi_order_id=koid,
+                                      raw=resp)
+        self.summary.exits_placed += 1
+        return "placed"
+
+    def place_incentive_exit_leg(self, session, *, strategy: str, ticker: str, held_side: str,
+                                 qty: int, price: int) -> str:
+        """Rest a post-only bid on the side OPPOSITE a held leg: when it fills, the position nets
+        flat at a profit. The operator's "resting sell the moment it fills", and it earns
+        liquidity score while it waits. Only for a ticker with nothing else working on it."""
+        if not self._allowed(strategy) or not self._switches_on():
+            return "gate:switches"
+        if repo.live_open_order_exists(session, ticker):
+            return "gate:dedup"
+        if not (1 <= int(price) <= 99) or not (1 <= int(qty) <= limm_live.MAX_CONTRACTS_PER_ORDER):
+            return "gate:size"
+        return self._submit_incentive_bid(
+            session, strategy=strategy, event_ticker=None, ticker=ticker,
+            side=limm_live.other_side(held_side), price=int(price), qty=int(qty),
+            coid_prefix="limmexitleg:", reason=f"incentive_exit_leg:{held_side}")
 
     # --- execution telemetry hooks (docs/MMSELL_QUEUE_FILL_TELEMETRY.md) -------------------
 
@@ -1734,13 +1882,13 @@ class LiveExecutor:
         if s.live_exit_mode != "tp_sl" or not self._switches_on():
             return
         for ticker, strategy, entry_price, entry_at, entry_qty in repo.open_live_positions(session):
-            # The liquidity-incentive book's registered contract is HOLD TO SETTLEMENT, so the
-            # process-wide TP/SL rules do not apply to it. Applying them would place exit orders
-            # this book's pre-registered risk envelope never declared — an unregistered exit rule
-            # on real money — and would spend fees to leave a position whose entire downside is
-            # the <=$1 already paid. mmsell reaches the same place structurally (it is net-SHORT
-            # yes, and `open_live_positions` returns net-LONG positions only); this book rests
-            # YES bids too, so it needs saying rather than inheriting.
+            # The liquidity-incentive book runs its OWN exit rules (stop-loss, take-profit,
+            # pre-close flatten — `liquidity_incentive.live.decide_exit`, thesis §9.37) from its
+            # runner, on YES and NO legs alike. The process-wide TP/SL here would be a second,
+            # different rule set firing on the same real-money position, and it can only close
+            # YES anyway. mmsell reaches the same place structurally (it is net-SHORT yes, and
+            # `open_live_positions` returns net-LONG positions only); this book holds YES legs
+            # too, so it needs saying rather than inheriting.
             if limm_live.owns_tag(strategy):
                 continue
             # No bot order opened this position (a hand-placed pick): it belongs to no book, so

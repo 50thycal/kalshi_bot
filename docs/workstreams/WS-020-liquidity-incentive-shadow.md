@@ -1117,3 +1117,39 @@ The 3 stuck quake positions from §9.33 are untouched. Still $0 lifetime rewards
 sizing tried so far — this raise makes a reward possible to observe, not a claim one is coming.
 
 [Thesis §9.36](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## Update 2026-09-25 — two-sided pairs, the book's own exits, close-time window (§9.37)
+
+Operator: "I'm good with the two-sided logic … make each side $10. So each position is still
+$20", then "implement all 4 of those ideas along with the ideas we just had". Priorities: protect
+capital, then free it fast.
+
+- **Pairs.** YES bid + NO bid, equal quantity, `y + n <= 99`; both filling nets flat at the
+  locked edge. $10 is per LEG and binds on the dearer leg, so a pair usually commits < $20. The
+  25c cheap-side cap is replaced by a 90c per-leg cap. Rank: thinnest book, soonest close, widest
+  edge.
+- **Shared dedup gate unchanged** — the pair passes it once, as one decision
+  (`LiveExecutor.mirror_incentive_pair`).
+- **Exits** (`live.decide_exit`, runner, exits before entries): stop-loss at -40% of entry,
+  take-profit at +40% of remaining upside (3c floors), pre-close flatten in the last hour.
+  Cancel-then-IOC, mmsell closeout wire shape, 3 attempts max. When a leg is held and nothing
+  rests, a post-only opposite-side bid is rested as the profitable exit.
+- **Close window** 3–72h for entries (~1,000 of ~6,300 programs qualify). The quake markets
+  closed 2026-09-17 and are still unsettled: settlement lag, which only the pre-close flatten
+  addresses.
+- **Safety:** act only on a this-cycle snapshot that agrees with our own fills; size = min of
+  the two; confirmed cancels before any exit; skip shared tickers and closed markets (quake
+  positions untouched). Exits bypass the loss breaker, not the switches.
+- **Twin** mirrors both legs, never exits — so it measures single-leg cost.
+- Fixed `activation_env` still naming MAX_MARKET_EXPOSURE=1.0 / MAX_DAILY_LOSS=5.0 (both 25.0
+  in production since §9.36).
+- Corrected §9.36's "scoring floor" claim: reward share is proportional to size from contract
+  one; the one-fifth rule sets the Reference Price, not a minimum order.
+
+Trade-off on record: per dollar committed, a pair rests fewer contracts on the cheap side than
+§9.36's one-sided $20, so it earns less score per dollar. Accepted for the hedge.
+
+Tests rewritten for pairs + exits; `ruff check .` and full suite clean. Still $0 lifetime
+rewards.
+
+[Thesis §9.37](../LIQUIDITY_INCENTIVE_THESIS.md).
