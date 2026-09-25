@@ -389,7 +389,7 @@ class TestTheCashDirectionTableIsDeliberate:
     """
 
     def test_only_the_shape_observed_against_a_real_balance_move_is_vouched_for(self):
-        assert rl.CASH_DIRECTION == {("no", "sell"): rl.DEBIT}
+        assert rl.CASH_DIRECTION == {("no", "sell"): rl.DEBIT, ("yes", "buy"): rl.DEBIT}
 
     def test_an_unknown_shape_prices_conservatively_as_a_debit(self):
         """The guess has to fail SAFE. A debit understates a reward; a credit would invent one,
@@ -405,11 +405,11 @@ class TestTheCashDirectionTableIsDeliberate:
     def test_several_unknown_shapes_are_each_named_once(self):
         rec = rl.reconcile(
             prev_balance_cents=1_000, balance_cents=1_000,
-            fills=[{"side": "yes", "action": "buy", "count_fp": "1.00"},
-                   {"side": "yes", "action": "buy", "count_fp": "1.00"},
+            fills=[{"side": "yes", "action": "sell", "count_fp": "1.00"},
+                   {"side": "yes", "action": "sell", "count_fp": "1.00"},
                    {"side": "no", "action": "buy", "count_fp": "1.00"}],
             settlements=[])
-        assert sorted(rec.unknown_fill_shapes) == ["no/buy", "yes/buy"]
+        assert sorted(rec.unknown_fill_shapes) == ["no/buy", "yes/sell"]
 
     def test_a_verified_window_stays_material_when_cash_is_genuinely_unexplained(self):
         """The guard must not swallow the signal it was built to protect. A verified fill plus
@@ -431,5 +431,22 @@ class TestTheCashDirectionTableIsDeliberate:
         warning nobody will ever see."""
         rec = rl.reconcile(
             prev_balance_cents=1_000, balance_cents=1_000,
-            fills=[{"side": "yes", "action": "buy", "count_fp": "1.00"}], settlements=[])
-        assert rec.as_dict()["unknown_fill_shapes"] == ["yes/buy"]
+            fills=[{"side": "yes", "action": "sell", "count_fp": "1.00"}], settlements=[])
+        assert rec.as_dict()["unknown_fill_shapes"] == ["yes/sell"]
+
+    def test_the_yes_buy_shape_reconciles_the_window_that_flagged_it(self):
+        """23:51:56Z on 2026-09-24: two fills in one window, a known 93c ("no","sell") debit and
+        a 5c ("yes","buy") fill, against a 98c balance drop. Before this shape was verified, the
+        window's own conservative pricing already got the number right (93 + 5 = 98) but had to
+        mark itself untrustworthy anyway, because pricing it right by construction is not the
+        same as being able to say so. This is that verification (thesis §9.35)."""
+        rec = rl.reconcile(
+            prev_balance_cents=11_429, balance_cents=11_331,
+            fills=[self._verified_fill(),
+                   {"side": "yes", "action": "buy", "count_fp": "1.00",
+                    "yes_price_dollars": "0.05"}],
+            settlements=[])
+        assert rec.buy_cost_cents == 98
+        assert rec.residual_cents == 0
+        assert rec.unknown_fill_shapes == ()
+        assert rec.is_material is False  # a clean zero residual is not a reward candidate

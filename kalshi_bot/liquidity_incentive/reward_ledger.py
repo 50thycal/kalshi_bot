@@ -117,11 +117,20 @@ def _first(fill: dict, *keys: str):
 #:
 #: Verified against observed balance movements on 2026-09-19 (three windows, each reconciling to
 #: exactly zero under this reading): ("no", "sell").
+#:
+#: ("yes", "buy") added 2026-09-24 (thesis §9.35), the first fill shape the raised
+#: `MAX_OPEN_ORDERS` cap let this book trade. No trap here — buying YES costs the YES price with
+#: no acquire-the-other-side subtlety, so "buy" already meant what it says. Verified anyway,
+#: against the window that flagged it as unknown: two fills, a known 93c ("no","sell") debit and
+#: this 5c ("yes","buy") fill, against a 98c balance drop — 93 + 5 = 98 exactly. The conservative
+#: default had already priced it correctly (a debit at the fill price); what changed is that the
+#: window no longer has to mark itself untrustworthy to say so.
 #: Everything else is deliberately absent until a window proves it.
 DEBIT = "debit"
 CREDIT = "credit"
 CASH_DIRECTION: dict[tuple[str, str], str] = {
     ("no", "sell"): DEBIT,
+    ("yes", "buy"): DEBIT,
 }
 
 

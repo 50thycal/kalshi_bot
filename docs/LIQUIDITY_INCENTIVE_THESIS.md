@@ -2255,3 +2255,37 @@ Unchanged: `MAX_STRATEGY_EXPOSURE_USD` ($10), `MAX_ORDER_DOLLARS` ($1), `MAX_CON
 
 Still true from §9.33: the three existing stuck quake positions are left alone to settle
 naturally, at the operator's explicit instruction — not force-closed, not part of what moved.
+
+### 9.35 A second fill shape verified: `("yes", "buy")` is a debit (2026-09-24)
+
+Direct consequence of §9.34: raising `MAX_OPEN_ORDERS` let Alimm1 trade candidates the old cap
+never reached, and the first of them, KXTRUMPMENTIONB-26SEP24-BOEI, filled `{"side": "yes",
+"action": "buy"}` — a shape `CASH_DIRECTION` (§9.31) had never seen. The guard did exactly what
+it was built to do: the window at 2026-09-24T23:59:57Z priced the fill conservatively (a debit,
+the safe default for an unverified shape) and still marked itself `residual_untrustworthy` with
+`unknown_fill_shapes: ["yes/buy"]`, because a correct-looking number from an unverified rule is
+not the same as a verified one.
+
+**No trap this time.** Unlike `("no", "sell")` — where "sell" meant *sell YES*, i.e. acquire NO
+and pay the NO price, the whole reason §9.29/§9.31 happened — "buy" carries no such inversion.
+Buying YES costs the YES price. There is no second reading to get wrong.
+
+**Verified anyway, against the window itself, not against intuition.** The flagged window held
+two fills: the already-verified `("no", "sell")` at 93c, and this `("yes", "buy")` at 5c. Balance
+fell exactly 98c. 93 + 5 = 98. Zero residual, both fills debits, nothing left unexplained.
+`("yes", "buy"): DEBIT` added to `CASH_DIRECTION`.
+
+**What actually changed, precisely:** nothing about the NUMBER this fill produces — the
+conservative unverified-shape default was already pricing it as a debit at the fill price, which
+is what a verified debit does too. What changed is that a window containing only this shape and
+already-verified shapes no longer has to call itself untrustworthy to report a clean residual.
+The guard's job was never to produce a different number; it was to refuse to vouch for one it
+had not earned. It has now earned this one.
+
+Tests updated: the table-pin test now includes the new entry; three tests that used `yes/buy` as
+their example of an *unverified* shape were moved to `yes/sell` (still genuinely unverified,
+unaffected); one new test reconciles the exact flagged window (93c + 5c = 98c, residual 0,
+`unknown_fill_shapes == ()`). `ruff check .` and the full suite clean.
+
+**Still true:** no liquidity reward has ever been observed. This fixes what the ledger can
+*vouch for*, not what it has found.
