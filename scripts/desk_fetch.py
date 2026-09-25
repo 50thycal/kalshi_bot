@@ -49,6 +49,8 @@ ALLOWED_HOSTS: tuple[str, ...] = (
     "www.weather.gov",
     "api.open-meteo.com",
     "ensemble-api.open-meteo.com",
+    # grid load settlement sources
+    "www.ercot.com",
     # cross-venue prices (signal only)
     "gamma-api.polymarket.com",
     "clob.polymarket.com",
