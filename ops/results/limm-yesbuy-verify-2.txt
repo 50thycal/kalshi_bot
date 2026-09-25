@@ -1,8 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-yesbuy-verify-2
-# code de5efeb7d35136accbd4794ebcb857dfbd585e5f · started 2026-09-25T00:46:31Z
-id    at_utc               market_ticker                 side  action  price  quantity  fee     raw_fill_json                                                                                                                                                                                           
-----  -------------------  ----------------------------  ----  ------  -----  --------  ------  --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-3969  2026-09-24 23:51:56  KXTRUMPMENTIONB-26SEP24-BOEI  yes   buy     5      1         0.0000  {'ts': 1790293794, 'side': 'yes', 'action': 'buy', 'ticker': 'KXTRUMPMENTIONB-26SEP24-BOEI', 'fill_id': '0723823d-e081-8c98-f7a9-167e8b59a115', 'count_fp': '1.00', 'fee_cost': '0.000000', 'is_taker':…
-
-(1 row)
