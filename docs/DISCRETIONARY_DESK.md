@@ -116,7 +116,7 @@ pnl_usd, postmortem_tag
 | `openrouter.ai` community snapshot (`jampongsathorn/openrouter-rankings` on GitHub) | yes | daily copies of the same page; its market-share section has been empty since at least mid-September, so it does not substitute |
 | `kalshi_desk_board --ticker` order book | yes, verified live 2026-09-19 20:31Z | the `orderbook_fp` branch works: `KX30YMORTW-26SEP24-T7.01` printed 8 resting levels a side (YES 40c x94, 36c x600, then a wall of penny bids; NO 59c x60, 37c x2, …). Every earlier empty-book read was the retired key, not an empty market. The desk can now see depth, which is what R4's "rest a bid" needs |
 | `openrouter.ai/api/frontend/v1/rankings/market-share` | yes, JSON | weekly buckets `{"x": "<week-start Monday>", "ys": {author: value}}` back to 2025-09, **including the in-progress week**, updated near real time (two reads 11.7h apart on 2026-09-19 moved the week-of-9/14 bucket by 7.1T). The values are **absolute tokens per author** (`others` is the remainder, so the sum is the platform total): the week of 2026-09-07 sums to 126.8T, the figure the public token-usage trackers publish for that week. They are not the request-share metric the `KX*SHARE` markets settle on (for 2026-09-07 tokens say anthropic 3.8% / openai 18.9%, the settlement table says 2.5% / 23.6%). Query params (`?metric=`, `?type=`) are ignored; `market-share-requests`, `requests` and `authors` return "Unknown dataset". So: the endpoint gives the `KXTOKENUSE` week-to-date total directly, and only a proxy for share |
-| `www.ercot.com` | **added to the allowlist 2026-09-25, not yet live-tested** | `KXTXERCOTPEAKD` names a specific, readable-in-principle source (`Actual System Load by Forecast Zone` CSV, and the load-forecast-vs-actual CDR page). The host wasn't live in time to check today's ladder — the ops runner runs the merged base branch, not an uncommitted change — so the first real read is next session's to do |
+| `www.ercot.com` | **live-tested 2026-09-25, mixed** | The dashboard page (`content/cdr/html/loadForecastVsActualCurrentDay.html`) returns HTTP 200 but is a JS shell with no numbers in the raw HTML — same pattern as OpenRouter's in-progress week. The report the contract actually names (`misapp/GetReports.do?reportTypeId=14836`, ERCOT's NP6-346-CD "Actual System Load by Forecast Zone") **does** return real, dated, listable files — but it is a **next-day retrospective report**: the file published the morning of day N+1 (e.g. one dated 20260925, published ~05:50 that morning) covers day N's (2026-09-24's) already-complete actuals, not day N's own in-progress day. `KXTXERCOTPEAKD`'s close (just after midnight the night of its operating day) is *before* ERCOT's own file for that day exists — so this source can **grade** a settled ERCOT pick the next morning, but cannot **inform** a same-day pick; a same-day thesis needs an actual live forecast feed, which this session did not find a working read for. Getting from the file list to real numbers also needs the zip download links (not present in the stripped-text view `desk_fetch` returns) and an unzip/CSV-parse step `desk_fetch` doesn't do today — both are next session's problem if this series is worth pursuing further |
 
 ## 7. Base rates the desk leans on (from the repo's own settled history and the settlement sources)
 
@@ -160,7 +160,7 @@ under the wider policy; 5 defaults to the daily line plus the weekly table.
 
 ## 9. Handoff — where the desk stands (rewrite this at the close of every session)
 
-**As of 2026-09-25 ~13:45 UTC (Fri).** Role playbook: `.claude/sessions/discretionary-desk.md`.
+**As of 2026-09-25 ~14:05 UTC (Fri).** Role playbook: `.claude/sessions/discretionary-desk.md`.
 Any session — or any model that can read this repo and push to GitHub — continues from this
 section, the ledger and the postmortems; nothing else was needed to get here.
 
@@ -183,10 +183,20 @@ search's AI summaries **contradicted themselves within the same research pass** 
 had broken and load was a mundane 58,129 MW; another quoted an 80,400 MW peak forecast with
 above-normal temperatures) — the same unreliable-source pattern already flagged this week. No pick
 without a primary-source read. **Added `www.ercot.com` to `desk_fetch`'s allowlist this session**
-(code + a new host-allowlist test, both green) so the next read goes straight to the source instead
-of through web search — it landed too late in the day to check today's own ladder (the ops runner
-executes the merged base branch, not an uncommitted change), so **the first live ERCOT read is the
-next session's to do**, and today's ladder went unverified either way.
+(code + a new host-allowlist test, both green), merged (PR #467), and **live-tested end to end**:
+the host resolves (HTTP 200), and the exact report the contract names — ERCOT's NP6-346-CD
+("Actual System Load by Forecast Zone", `misapp/GetReports.do?reportTypeId=14836`) — returns real,
+dated files. The catch: it's a **next-day retrospective report**. The file published the morning of
+day N+1 covers day N's already-complete actuals — today's file (dated 9/25) held 9/24's data, not
+9/25's. `KXTXERCOTPEAKD`'s own close (just after midnight the night of its operating day) is
+*before* ERCOT ever publishes that day's file, so this source **grades a settled pick the next
+morning** but **cannot inform a same-day one** — a live pick still needs an actual forecast feed,
+and this session didn't find a working read for one (the dashboard page is a JS shell with no
+numbers in the raw HTML, same pattern as OpenRouter's in-progress week). Getting from the file list
+to real numbers also needs the zip download links (not in `desk_fetch`'s stripped-text view) and an
+unzip/CSV-parse step the script doesn't have yet — real, but smaller, next steps if this series is
+worth the effort. Full detail in §6a. Today's own ladder still went untraded — this was verification,
+not a live read of it.
 
 **Score so far: 2 settled picks, 2 wins (+$1.65 realized), 4 no-picks logged.** Sample is still far
 too small to read as calibration (R6 — no claim before ~30 settled picks).
@@ -197,8 +207,9 @@ too small to read as calibration (R6 — no claim before ~30 settled picks).
   this series' edge is in the early read, not Sunday evening (R14).
 - `KX*SHARE` (OpenRouter request share): still no read of the settlement metric, at any point in
   the week. Pass, including on the newly-opened 26SEP28 week.
-- `KXTXERCOTPEAKD` (Texas ERCOT peak demand, daily): now readable in principle via `www.ercot.com`
-  — untested. First priority for tomorrow's session, before the routine's own board scan.
+- `KXTXERCOTPEAKD` (Texas ERCOT peak demand, daily): `www.ercot.com`'s actuals report is confirmed
+  live but only grades the day after — a same-day pick still needs a working forecast read, which
+  doesn't exist yet. Worth a look if a forecast feed turns up, not worth chasing further otherwise.
 
 **Scheduled check-ins bound to this session:** none armed — no open PR, no open position, nothing
 pending. The "Desk: daily board read and picks" routine (13:30 UTC daily) is the only standing
