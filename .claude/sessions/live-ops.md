@@ -58,6 +58,18 @@ assigned.
 - A ticket records that a canonical action is required; it never performs one. No
   disposition arms a canary, changes exposure, moves a lifecycle state or touches
   a gate.
+- **Send the WHOLE planned command sequence as one batch, not one command per
+  redeploy.** `EXPERIMENT_OS_ISSUE_COMMAND` takes a JSON array of envelopes (see
+  "One boot, several commands" in `docs/EXPERIMENT_OS_ISSUES.md`); each `env` set
+  redeploys the live trading worker and costs ~60-90s, so working the status
+  graph (`docs/EXPERIMENT_OS_ISSUES.md`, "The lifecycle") one command at a time —
+  OPEN, discovering by trial-and-error that RESOLVE needs TRIAGE →
+  INVESTIGATING → ACTION_REQUIRED → VALIDATING first, plus a
+  `RECORD_VALIDATION_RESULT` — is exactly the mistake `XOS-000037`'s resolution
+  made (six redeploys and a shared-`ops`-branch push conflict, for paperwork on
+  an already-diagnosed, already-fixed incident). **Before sending the first
+  command**, read the status graph and plan every hop plus
+  `RECORD_VALIDATION_RESULT` up front, then submit them together as one array.
 
 ## STANDARD OUTPUT
 Identity header, then REAL-MONEY / INTEGRITY anomalies first, then what you
