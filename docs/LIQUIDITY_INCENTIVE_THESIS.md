@@ -2519,3 +2519,33 @@ names the running exit rules. `ruff check .` and the full suite clean.
 
 **Still true:** no liquidity reward has been observed yet. This changes what a fill can cost and
 how fast capital comes back — not whether the programme pays.
+
+### 9.38 Closed markets stop holding slots — the §9.33 block, reintroduced by §9.36 (2026-09-25)
+
+PR #466 (§9.36 + §9.37) deployed at 14:24Z (deployment `59194b8d`, SUCCESS). Its first cycle
+did exactly what §9.37 was built for: the position manager fired a **take-profit** on the old
+KXEARNINGSMENTIONCOST NO leg (bought 17c, NO bid ~99c) — `limmexit:take_profit`, sold 1 at 97c,
+**filled**, position flat. The first exit on this book, end to end, about +80c.
+
+Every cycle after that read `outcomes: {"no_slots": 1}`. The book was working four markets
+against a cap of two: the three KXBIGGESTQUAKE positions (markets closed 2026-09-17/21, still
+unsettled) and one old one-sided resting bid. The quake positions can never trade and may not
+settle for days more, so the book could not place a single pair. This is §9.33's finding
+exactly — a cap that counts held positions is hostage to the exchange's settlement clock — and
+**§9.36 reintroduced it**: dropping `MAX_OPEN_ORDERS` 5 -> 2 while three stuck positions were
+held left no slot at all. That was missed when §9.36 was written; this entry is the record.
+
+**Fix.** The open-market cap now counts only markets that have not closed
+(`repository.count_live_book_open_tradeable`, used by the runner's slot count and by
+`mirror_incentive_pair` gate 5). A closed market awaiting settlement cannot take an order or
+change a decision; its money is still counted by `live_strategy_exposure` (gate 6), so the $50
+budget is unchanged. A market with no known close time is still counted. This is the operator's
+own earlier direction for the stuck positions — *"ignore them and clear up the book to be open"*
+— applied structurally, so the next slow settlement cannot block the book again.
+
+The position manager now checks for a closed market FIRST (before snapshot and fill checks), so
+the quake positions read `closed_awaiting_settlement` — untouched, as instructed.
+
+Tests reproduce the production shape (three closed filled legs + an open candidate: the old
+count is 3, the tradeable count 0, and a pair places) and pin that an open or unknown-close
+market still holds its slot and that closed markets still count against the budget.

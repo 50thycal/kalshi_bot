@@ -1153,3 +1153,14 @@ Tests rewritten for pairs + exits; `ruff check .` and full suite clean. Still $0
 rewards.
 
 [Thesis §9.37](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## Update 2026-09-25 — deployed; first exit filled; closed markets release their slots (§9.38)
+
+PR #466 live at 14:24Z. First cycle: take-profit on the old KXEARNINGSMENTIONCOST NO (17c ->
+sold 97c, filled, flat) — the first exit on this book. Then `no_slots` every cycle: the 3
+closed, unsettled quake positions + 1 old resting bid filled a cap of 2 — §9.33's block,
+reintroduced by §9.36's 5 -> 2 cut (missed at the time). Fix: the open-market cap counts only
+markets that have not closed (`count_live_book_open_tradeable`); their money still counts in
+the budget. Quake positions untouched (`closed_awaiting_settlement`).
+
+[Thesis §9.38](../LIQUIDITY_INCENTIVE_THESIS.md).
