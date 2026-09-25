@@ -1,0 +1,19 @@
+{
+  "audit_worthy": false,
+  "class": "READ",
+  "code_sha": "d3a09029f7b03f0d57ab46361ea0e6e743ccedc4",
+  "code_source": "default-branch",
+  "exit_status": 0,
+  "finished_at": "2026-09-25T13:26:06Z",
+  "id": "limm-tick-1325",
+  "outcome": "SUCCEEDED",
+  "provenance": {},
+  "publication": "COMMITTED",
+  "receipt_file": "ops/results/limm-tick-1325.receipt.json",
+  "result_file": "ops/results/limm-tick-1325.txt",
+  "run_url": "https://github.com/50thycal/kalshi_bot/actions/runs/36140908838",
+  "service": null,
+  "started_at": "2026-09-25T13:26:06Z",
+  "targets": [],
+  "type": "db"
+}
