@@ -1,9 +1,0 @@
-# ops request [READ]
-# type=db  id=limm-yesbuy-verify-3
-# code de5efeb7d35136accbd4794ebcb857dfbd585e5f · started 2026-09-25T00:47:15Z
-id    at_utc               market_ticker                       side  action  price  quantity  fee   
-----  -------------------  ----------------------------------  ----  ------  -----  --------  ------
-3968  2026-09-24 23:48:52  KXMLBSPREAD-26SEP241915CINATL-CIN2  no    sell    93     1         0.0000
-3969  2026-09-24 23:51:56  KXTRUMPMENTIONB-26SEP24-BOEI        yes   buy     5      1         0.0000
-
-(2 rows)
