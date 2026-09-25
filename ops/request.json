@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-yesbuy-verify-1","sql":"select f.id, to_char(f.created_at,'YYYY-MM-DD HH24:MI:SS') at_utc, f.market_ticker, f.raw_fill_json from fills f where f.market_ticker='KXTRUMPMENTIONB-26SEP24-BOEI' order by f.created_at desc limit 5"}
+{"type":"db","id":"limm-yesbuy-verify-2","sql":"select id, to_char(filled_at,'YYYY-MM-DD HH24:MI:SS') at_utc, market_ticker, side, action, price, quantity, fee, raw_fill_json from fills where market_ticker='KXTRUMPMENTIONB-26SEP24-BOEI' order by filled_at desc limit 5"}
