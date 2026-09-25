@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-yesbuy-verify-3","sql":"select id, to_char(filled_at,'YYYY-MM-DD HH24:MI:SS') at_utc, market_ticker, side, action, price, quantity, fee from fills where filled_at between '2026-09-24 23:43:00' and '2026-09-25 00:00:00' order by filled_at"}
+{"type":"noop"}
