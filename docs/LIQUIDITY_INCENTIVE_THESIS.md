@@ -2549,3 +2549,19 @@ the quake positions read `closed_awaiting_settlement` — untouched, as instruct
 Tests reproduce the production shape (three closed filled legs + an open candidate: the old
 count is 3, the tradeable count 0, and a pair places) and pin that an open or unknown-close
 market still holds its slot and that closed markets still count against the budget.
+
+### 9.39 Excluded series were filtered after fetching — the fetch budget never reached a tradeable market (2026-09-25)
+
+PR #469 (§9.38) deployed at 16:34Z (`3d2cfb04`, SUCCESS) and cleared `no_slots`: the next cycles
+considered 995 candidates. They still placed nothing — every cycle read
+`outcomes: {"excluded_series": 8}`. The runner fetches at most
+`LIQUIDITY_INCENTIVE_LIVE_MAX_BOOK_FETCHES` (8) books per cycle, soonest-closing first, and the
+excluded-series rule ran only afterwards, in the decision layer. The eight soonest-closing
+programmes were all in excluded series (other live books' markets), so the whole budget went on
+the same eight unquotable markets every cycle. Latent since the fetch cap existed; it only bites
+once the close-time window (§9.37) ranks by soonest close, where those series cluster.
+
+**Fix.** `_candidate_programs` drops excluded series before any book is fetched, with the same
+rule the decision layer uses (series = ticker prefix before the first `-`, case-insensitive); the
+decision layer keeps its own check. Tests: a book whose soonest programmes are all excluded now
+spends its fetches on the eligible market and places a pair.

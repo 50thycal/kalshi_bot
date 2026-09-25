@@ -1164,3 +1164,9 @@ markets that have not closed (`count_live_book_open_tradeable`); their money sti
 the budget. Quake positions untouched (`closed_awaiting_settlement`).
 
 [Thesis §9.38](../LIQUIDITY_INCENTIVE_THESIS.md).
+
+## Update 2026-09-25 — excluded series filtered before fetching (§9.39)
+
+§9.38 deployed, `no_slots` gone (995 candidates), but every cycle fetched the same 8
+soonest-closing markets — all in excluded series — and placed nothing. Excluded series are now
+dropped before the bounded book fetch. [Thesis §9.39](../LIQUIDITY_INCENTIVE_THESIS.md).

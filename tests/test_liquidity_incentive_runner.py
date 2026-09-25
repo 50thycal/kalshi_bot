@@ -220,7 +220,8 @@ def test_an_excluded_series_is_never_quoted(live_db, settings):
         _program(s, "KXTEST-A")
         out = _cycle(client, settings, s)
     assert out["placed"] == 0
-    assert out["outcomes"].get(limm.REFUSE_EXCLUDED_SERIES) == 1
+    # Dropped before any book is fetched (§9.39); the decision layer still refuses it too.
+    assert out["considered"] == 0 and client.asked == []
 
 
 def test_a_program_ending_too_soon_is_never_selected(live_db, settings):
@@ -780,3 +781,24 @@ def test_closed_markets_still_count_against_the_budget(live_db, settings):
         _stuck_quake(s, "KXQUAKE-1")
         s.flush()
         assert repo.live_strategy_exposure(s, limm.LIVE_TAG) == pytest.approx(0.01)
+
+
+# --- excluded series never consume the fetch budget (thesis §9.39) ---------------------------
+
+
+def test_excluded_series_are_dropped_before_any_book_is_fetched(live_db, settings):
+    """Production 2026-09-25: the eight soonest-closing programmes were all in excluded series,
+    so the bounded fetch budget was spent on them every cycle and nothing was ever placed."""
+    settings.liquidity_incentive_excluded_series = "KXOTHERBOOK"
+    settings.liquidity_incentive_live_max_book_fetches = 2
+    books = {f"KXOTHERBOOK-{i}": _book([(20, 500)], [(70, 500)]) for i in range(3)}
+    books["KXTEST-OK"] = _book([(20, 500)], [(70, 500)])
+    client = FakeClient(books)
+    with db.session_scope() as s:
+        for i in range(3):
+            _program(s, f"KXOTHERBOOK-{i}", series="KXOTHERBOOK", close_hours=4.0 + i)
+        _program(s, "KXTEST-OK", close_hours=40.0)
+        out = _cycle(client, settings, s)
+    assert out["considered"] == 1
+    assert client.asked == ["KXTEST-OK"]
+    assert out["placed"] == 1
