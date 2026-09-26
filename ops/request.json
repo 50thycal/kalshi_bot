@@ -1,1 +1,1 @@
-{"type":"db","id":"limm-ci-1357d","sql":"select captured_at, quantity, realized_pnl, raw_json::text from positions where market_ticker='KXAAAGASDCO-26SEP26-4.2350' order by captured_at desc limit 3"}
+{"type":"noop"}
