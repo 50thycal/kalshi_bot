@@ -1,1 +1,1 @@
-{"type":"noop"}
+{"type":"db","id":"limm-elig-0205","sql":"select o.created_at, o.market_ticker, o.side, o.limit_price, o.quantity, p.incentive_type, p.end_date, p.period_reward_raw, p.incentive_description from live_orders o left join lateral (select * from incentive_programs ip where ip.market_ticker=o.market_ticker order by ip.id desc limit 1) p on true where o.strategy='Alimm1' and o.status='resting' order by o.created_at"}
