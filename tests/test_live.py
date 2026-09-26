@@ -1099,6 +1099,48 @@ def test_reconcile_records_settlement_pnl_for_daily_loss(settings):
         assert abs(repo.live_realized_pnl_today(session) - (-0.8304)) < 1e-6
 
 
+def _co_gas_settlement(settled_time: str) -> dict:
+    """The real 2026-09-26 CO gas settlement: 35 NO bought, 16 of them closed by buying YES
+    (each YES netted a NO for $1), 19 NO held into a YES result (thesis §9.40)."""
+    return {"ticker": "KXAAAGASDCO-26SEP26-4.2350", "market_result": "yes", "value": 100,
+            "revenue": 0, "fee_cost": "0.098900", "yes_count_fp": "16.00",
+            "no_count_fp": "35.00", "yes_total_cost_dollars": "14.430000",
+            "no_total_cost_dollars": "9.800000", "settled_time": settled_time}
+
+
+def test_settlement_pnl_counts_the_netting_credit():
+    from kalshi_bot.live.executor import settlement_realized_pnl
+    # 16 netted pairs paid $16 that `revenue` does not carry: -24.33 without it, -8.33 with it
+    pnl = settlement_realized_pnl(_co_gas_settlement("2026-09-26T11:06:46Z"))
+    assert abs(pnl - (-8.3289)) < 1e-6
+    # a one-sided settlement is unchanged: nothing netted
+    plain = {"revenue": 0, "yes_total_cost_dollars": "0.82", "no_total_cost_dollars": "0.00",
+             "fee_cost": "0.0104"}
+    assert abs(settlement_realized_pnl(plain) - (-0.8304)) < 1e-6
+
+
+def test_reconcile_heals_a_settlement_recorded_without_netting(settings):
+    _live_settings(settings)
+    db.init_engine(settings.database_url)
+    db.create_all()
+    from datetime import datetime, timezone
+    st = _co_gas_settlement(datetime.now(timezone.utc).isoformat())
+    client = FakeLiveClient()
+    client.settlements = [st]
+    ex = _exec(settings, client)
+    with db.session_scope() as session:
+        # the row the old formula wrote: -$24.33, enough on its own to trip a $25 breaker
+        repo.insert_position_snapshot(session, ticker=st["ticker"], side="yes", quantity=0,
+                                      avg_price=None, market_exposure=0.0,
+                                      realized_pnl=-24.3289, raw_json=st)
+        ex.reconcile(session)
+        ex.reconcile(session)  # healed once, then idempotent
+        snaps = session.scalars(
+            select(m.Position).where(m.Position.market_ticker == st["ticker"])).all()
+        assert len(snaps) == 2
+        assert abs(repo.live_realized_pnl_today(session) - (-8.3289)) < 1e-6
+
+
 def test_manage_exits_noop_in_settlement_mode(settings):
     _live_settings(settings, live_exit_mode="settlement")
     db.init_engine(settings.database_url)

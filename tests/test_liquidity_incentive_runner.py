@@ -655,6 +655,36 @@ def test_a_material_residual_is_announced_in_the_event_stream(live_db, settings)
     assert kinds == [run.EV_REWARD_RESIDUAL]
 
 
+def test_the_ledger_nets_an_exit_against_the_position_it_saw_last_window(live_db, settings):
+    """Thesis §9.40: each reading stores where every market stands, so the next window can
+    credit the $1 Kalshi pays when a YES we buy meets a NO we hold. The CO gas stop-loss —
+    16 of 35 held NO closed by buying YES at 90c — must reconcile to zero, not +1600c."""
+    _clear_ledger()
+
+    class PosLedgerClient(LedgerClient):
+        positions = [{"ticker": "KXCO", "position_fp": "-35.00"}]
+
+        def get_positions(self, **params):
+            return {"market_positions": self.positions, "cursor": None}
+
+    client = PosLedgerClient(balance=10_000)
+    ex = _exec(settings, client)
+    r = run.IncentiveLiveRunner(client, settings)
+    with db.session_scope() as s:
+        r.cycle(s, ex, {"cash_balance": 500.0}, now=NOW)
+    client.balance = 10_160
+    client._fills = [{"ticker": "KXCO", "side": "yes", "action": "buy", "count_fp": "16.00",
+                      "yes_price_dollars": "0.90"}]
+    client.positions = [{"ticker": "KXCO", "position_fp": "-19.00"}]
+    with db.session_scope() as s:
+        r.cycle(s, ex, {"cash_balance": 500.0}, now=NOW + timedelta(minutes=20))
+    rows = _ledger_rows()
+    assert rows[0].notes_json["positions"] == {"KXCO": -35}
+    assert rows[1].residual_cents == 0
+    assert rows[1].presumed_transfer is False
+    assert rows[1].notes_json["positions"] == {"KXCO": -19}
+
+
 def test_a_deposit_is_recorded_but_never_announced_as_a_reward(live_db, settings):
     """The worst possible false positive. A book risking at most $10 did not earn $50."""
     _clear_ledger()
