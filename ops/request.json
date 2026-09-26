@@ -1,1 +1,1 @@
-{"type":"script","name":"kalshi_desk_board","args":["--hours","72","--min-volume","500","--top","80"],"id":"desk-20260926-scan1"}
+{"type":"script","name":"desk_fetch","args":["https://openrouter.ai/api/frontend/v1/rankings/market-share","--max-chars","6000"],"id":"desk-20260926-tokens1"}
